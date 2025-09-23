@@ -1,0 +1,56 @@
+Header
+
+  + name    := ITM_WRITE_CODE;
+
+  /*Assignment slot with new code*/
+
+Inherit
+
+  + parent_itm_write:Expanded ITM_WRITE
+
+Public
+
+  - type:STRING_ALIAS <- "<-"
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + itm_read:ITM_READ
+    + loc:LOCAL
+    + rec:EXPR
+    + node:NODE
+    + result:EXPR
+    + typ:TYPE_FULL
+    + slot:SLOT
+    + name:STRING_ALIAS
+
+    itm_read ?= assign
+    name := itm_read.name
+    ? {itm_read != NULL}
+    loc := lookup "Self"
+    rec := loc.read position
+    //
+    typ  := rec.static_type
+    slot := typ.get_slot name
+    (slot = NULL).if {
+      string_tmp.copy "Slot `";
+      string_tmp.append name
+      string_tmp.append "' not found in static type "
+      typ.append_name_in string_tmp
+      string_tmp.add_last '.'
+      semantic_error (position,string_tmp)
+    }
+    //
+    node := NODE.new_write position slot slot receiver rec code value
+    list_current.add_last node
+    result := node.result_expr
+
+    result
+  )
+
+
+
+
+

@@ -1,0 +1,572 @@
+Header
+
+  + name    := ANY;
+
+  /*Common parent for compiler*/
+
+Inherit
+
+  - parent_any_option:ANY_OPTION := ANY_OPTION
+
+Public
+  
+  - is_ansi:BOOLEAN
+
+  - last_index_str (n:STRING,c:CHARACTER) :INTEGER <-
+  // BSBS: A Mettre dans STRING_BUFFER.
+  ( + result:INTEGER
+    result := n.upper
+    {(result < n.lower) || {n.at result = c}}.until_do {
+      result := result-1
+    }
+    result
+  )
+  
+  //
+  // Statistic information.
+  //
+
+  - count_equal_const:INTEGER
+  - count_equal_ident:INTEGER
+  - count_equal_null :INTEGER
+  - count_equal_inter:INTEGER
+  - count_equal_gener:INTEGER
+
+  - count_equal_parse:INTEGER
+  - count_equal_live :INTEGER
+  - count_equal_creat:INTEGER
+  - count_equal_remov:INTEGER
+
+  - count_na_expanded:INTEGER
+  - count_na_null:INTEGER
+  - count_na_not_null:INTEGER
+  - count_na_mono:INTEGER
+  - count_na_always_null:INTEGER
+
+  - count_local_expanded:INTEGER
+  - count_local_null:INTEGER
+  - count_local_not_null:INTEGER
+  - count_local_mono:INTEGER
+  - count_local_always_null:INTEGER
+
+  - count_switch:INTEGER
+  - count_switch_merging:INTEGER
+
+  //
+  // Invariant loop system.
+  //
+  - count_invariant:INTEGER
+
+  - loop_list:LIST
+  - loop_seq_index:INTEGER
+  - loop_seq_call_local_and_loop:INTEGER
+  - loop_seq_call_and_loop:INTEGER
+  - loop_invariant:LOOP
+
+  //
+
+  - late_binding_counter:INTEGER
+  - late_binding_expanded_counter:INTEGER
+  - late_binding_self_counter:INTEGER
+
+  - null_counter:INTEGER
+
+  - polymorphic_counter:INTEGER
+
+  //
+  // Display debug tools.
+  //
+
+  + object_id:INTEGER <-
+  ( + result:INTEGER
+    - object_counter:INTEGER
+
+    result := object_counter
+    object_counter := object_counter + 1
+    object_id := result
+  )
+
+  //
+  // Compiler Options.
+  //
+
+  - debug_level_option:INTEGER
+  - debug_with_code:BOOLEAN
+
+  - is_all_warning:BOOLEAN
+
+  - is_optimization:BOOLEAN
+  - is_optimization_type_set:BOOLEAN
+  - inline_level:INTEGER := 17
+
+  - is_statistic:BOOLEAN
+  - is_quiet:BOOLEAN
+
+  //
+  //
+  //
+
+  - verbose_level:INTEGER
+  - is_verbose:BOOLEAN <- (verbose_level != 0)
+
+  - is_readable:BOOLEAN
+  - is_graph:BOOLEAN
+  - is_speed_push:BOOLEAN
+
+  //
+  // Other flags.
+  //
+
+  - is_cop:BOOLEAN
+
+  - is_library:BOOLEAN
+
+  - is_copy_local:BOOLEAN
+
+  - pass_count:INTEGER
+
+  - modify_count:INTEGER
+
+  - new_depend_pass <-
+  (
+    modify_count := modify_count + 1
+    //(pass_count > 60).if {
+    //  crash
+    //}
+  )
+
+  - new_execute_pass <-
+  (
+    new_depend_pass
+  )
+
+  - is_executing_pass:BOOLEAN
+
+  //
+  // Sequence counter.
+  //
+
+  - seq_inline:UINTEGER_32
+
+  - seq_index              :UINTEGER_32; // Global index sequence.
+  - seq_or_and             :UINTEGER_32; // || or &&
+  - seq_call_and_loop      :UINTEGER_32; // Call or loop (or function).
+  - seq_call_local_and_loop:UINTEGER_32; // Call sensitive or loop.
+  - seq_list:ARRAY LIST := ARRAY LIST.create_with_capacity 64
+
+  - is_seq_list l:LIST :BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+
+    j := seq_list.upper
+    {(j >= seq_list.lower) && {! result}}.while_do {
+      result := seq_list.at j = l
+      j := j - 1
+    }
+    result
+  )
+
+  //
+  // Runtime.
+  //
+
+  - list_main:LIST
+  - context_main:LOCAL
+
+  - profil_main:PROFIL_SLOT := // BSBS: A REVOIR (a uniformiser ((graph)))
+  ( + result:PROFIL_SLOT
+
+    result := PROFIL_SLOT.my_clone
+    result.alloc_profil_main
+    result
+  )
+
+  - list_current:LIST
+
+  - current_list_level:INTEGER
+
+  - stack_local:ARRAY LOCAL := ARRAY LOCAL.create_with_capacity 64
+
+  - profil_slot:PROFIL_SLOT; // Principal slot.
+  - profil_current:PROFIL;   // Sub-profil or (profil = profil_slot)
+
+  - display_stack_local <-
+  (
+    string_tmp.clear
+    (stack_local.lower).to (stack_local.upper) do { j:INTEGER
+      stack_local.at j.display string_tmp
+      string_tmp.add_last '\n'
+    }
+    string_tmp.print
+  )
+
+  //
+  // Output Buffer and service.
+  //
+
+  - output_decl:STRING_BUFFER := STRING_BUFFER.create 60_000
+  - output_glob:STRING_BUFFER := STRING_BUFFER.create 10_000
+  - output:STRING_BUFFER := STRING_BUFFER.create 4_000_000
+
+  - title txt:STRING_ALIAS in buf:STRING_BUFFER <-
+  (
+    buf.append "\n/*"
+    3.to 28 do { j:INTEGER
+      buf.add_last '='
+    }
+    buf.append "*/\n/* "
+    buf.append txt
+    (txt.count+5).to 28 do { j:INTEGER
+      buf.add_last ' '
+    }
+    buf.append " */\n/*"
+    3.to 28 do { j:INTEGER
+      buf.add_last '='
+    }
+    buf.append "*/\n\n"
+  )
+
+
+  - indent:STRING_BUFFER := STRING_BUFFER.create 128
+
+  - operator typ:STRING name op:STRING :STRING_ALIAS <-
+  ( + c:CHARACTER
+    string_tmp.copy typ
+    string_tmp2.clear
+    utf8 op to_ascii FALSE in string_tmp2
+    0.to (string_tmp2.upper) do { j:INTEGER
+      c := string_tmp2.at j
+      (c = '+').if {
+	string_tmp.append "_add"
+      }.elseif { c = '-' } then {
+	string_tmp.append "_sub"
+      }.elseif { c = '~' } then {
+	string_tmp.append "_logicnot"
+      }.elseif { c = '!' } then {
+	string_tmp.append "_not"
+      }.elseif { c = '/' } then {
+	string_tmp.append "_div"
+      }.elseif { c = '*' } then {
+	string_tmp.append "_mul"
+      }.elseif { c = '^' } then {
+	string_tmp.append "_xor"
+      }.elseif { c = '%' } then {
+	string_tmp.append "_mod"
+      }.elseif { c = '>' } then {
+	string_tmp.append "_greater"
+      }.elseif { c = '<' } then {
+	string_tmp.append "_less"
+      }.elseif { c = '=' } then {
+	string_tmp.append "_equal"
+      }.elseif { c = '\\' } then {
+	string_tmp.append "_notdiv"
+      }.elseif { c = '|' } then {
+	string_tmp.append "_or"
+      }.elseif { c = '&' } then {
+	string_tmp.append "_and"
+      }.elseif { c = '$' } then {
+	string_tmp.append "_dollar"
+      }.elseif { c = '#' } then {
+	string_tmp.append "_diese"
+      }.elseif { c = '@' } then {
+	string_tmp.append "_at"
+      }.elseif { c = '?' } then {
+        string_tmp.append "_ask"
+      } else {
+        string_tmp.add_last c
+      }
+    }
+    string_tmp.to_string_alias
+  )
+  
+  - get_intern str:STRING type low:BOOLEAN :STRING_ALIAS <-
+  ( + v,m:INTEGER
+    - count_variable:INTEGER
+    
+    (is_readable).if {
+      string_tmp2.clear
+      utf8 str to_ascii low in string_tmp2
+      0.to (string_tmp2.upper) do { j:INTEGER
+        v := ",() .{};".last_index_of (string_tmp2.at j)
+        (v != -1).if { string_tmp2.at j put ("xoo__bb_".at v); }
+      }
+      string_tmp2.append "__"
+    } else {
+      string_tmp2.copy "li__"
+    }
+    count_variable := count_variable + 1
+    v := count_variable
+    {v = 0}.until_do {
+      m := v & 31
+      (m < 26).if {
+        string_tmp2.add_last ('A' +# m)
+      } else {
+        string_tmp2.add_last ('0' +# (m-26))
+      }
+      v := v >> 5
+    }
+    ALIAS STRING_BUFFER TO STRING_ALIAS.force_register string_tmp2
+  )
+
+  //
+  // Error manager.
+  //
+
+  - syntax  :INTEGER := 0
+  - semantic:INTEGER := 1
+  - warning :INTEGER := 2
+  - message :INTEGER := 3
+
+  - syntax_error (pos:POSITION,txt:STRING) <-
+  (
+    pos.put_error syntax text txt
+    pos.put_position
+    POSITION.send_error
+  )
+
+  - syntax_error2 (p1:POSITION, p2:POSITION,txt:STRING) <-
+  (
+    p1.put_error syntax text txt
+    p1.put_position
+    p2.put_position
+    POSITION.send_error
+  )
+
+  - semantic_error (pos:POSITION,txt:STRING) <-
+  (    
+    pos.put_error semantic text txt
+    pos.put_position
+    POSITION.send_error
+  )
+
+  - semantic_error2 (p1:POSITION, p2:POSITION,txt:STRING) <-
+  (
+    p1.put_error semantic text txt
+    p1.put_position
+    p2.put_position
+    POSITION.send_error
+  )
+
+  - warning_error (pos:POSITION,txt:STRING) <-
+  (
+    pos.put_error warning text txt
+    pos.put_position
+    POSITION.send_error
+  )
+
+  - warning_error2 (p1:POSITION, p2:POSITION,txt:STRING) <-
+  (
+    p1.put_error warning text txt
+    p1.put_position
+    p2.put_position
+    POSITION.send_error
+  )
+
+  - message_error (pos:POSITION,txt:STRING) <-
+  (
+    is_verbose.if {
+      pos.put_error message text txt
+      pos.put_position
+      POSITION.send_error
+    }
+  )
+
+  //
+  // String temporary.
+  //
+
+  - string_tmp :STRING_BUFFER := STRING_BUFFER.create 256
+  - string_tmp2:STRING_BUFFER := STRING_BUFFER.create 256
+  - string_tmp3:STRING_BUFFER := STRING_BUFFER.create 256
+  - string_tmp4:STRING_BUFFER := STRING_BUFFER.create 256
+
+  //
+  // Path directory and command front end.
+  //
+
+  - input_path:STRING_ALIAS
+
+  - path_file:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 3000
+  - path_begin:INTEGER := 0
+
+  - path_lisaac:STRING_ALIAS <- COMMON.path_lisaac
+    
+  - utf8_dico:HMAP STRING_ALIAS KEY STRING_ALIAS :=
+  ( + r:HMAP STRING_ALIAS KEY STRING_ALIAS
+    r := HMAP STRING_ALIAS KEY STRING_ALIAS.create
+    r.add "z" to "ℤ"
+    r
+  )
+  
+  //
+  // Alias type.
+  //
+  
+  - type_object           :TYPE
+  - type_input            :TYPE
+  - type_integer          :TYPE
+  - type_real_64          :TYPE
+  - type_character        :TYPE
+  - type_block            :TYPE
+  - type_true             :TYPE
+  - type_false            :TYPE
+  - type_boolean          :TYPE
+  - type_integer_32       :TYPE
+  - type_uinteger_32      :TYPE
+  - type_pointer          :TYPE
+  - type_string_alias     :TYPE
+  - type_n_a_character    :TYPE
+  - type_n_a_n_a_character:TYPE
+  //- type_alias            :TYPE
+
+  //
+  // Usage Variable.
+  //
+
+  - last_position:POSITION
+
+  - load_lip file_lip:STRING <-
+    load_lip file_lip in NULL
+
+  - load_lip file_lip:STRING in lip_dir:STRING_ALIAS <-
+  ( + path_lip:STRING_ALIAS
+    + is_good:BOOLEAN
+    + count:INTEGER
+        
+    //
+    // Search in lip_dir
+    //
+    string_tmp.clear
+    (lip_dir != NULL).if {
+      string_tmp.append lip_dir
+      (string_tmp.last != '/').if {
+        string_tmp.add_last '/'
+      }
+      string_tmp.append file_lip
+      path_lip := string_tmp.to_string_alias
+      (! (is_good := PARSER.read_lip path_lip)).if {
+        LIP_CALL.load_dir lip_dir img NULL is_rec FALSE
+        string_tmp.remove_tail (file_lip.count)
+      } else {
+        "Load lip file: ".print; path_lip.println
+      }
+    }
+
+    //
+    // Search in 5 parent directories
+    //
+    {(count < 5) && {! is_good}}.while_do {
+      string_tmp.append file_lip
+      path_lip := string_tmp.to_string_alias
+      (! (is_good := PARSER.read_lip path_lip)).if {
+        string_tmp.copy path_lip
+        string_tmp.remove_tail (file_lip.count)
+        string_tmp.append "../"
+        count := count + 1
+      } else {
+        // Display which lip file to use if we had to look parent directories
+        (count > 0).if {
+          "Load lip file: ".print; path_lip.println
+        }
+      }
+    }
+
+    //
+    // Load default make.lip in LISAAC_DIRECTORY
+    //
+    (! is_good).if {
+      string_tmp.copy path_lisaac
+      string_tmp.append "make.lip"
+      path_lip := string_tmp.to_string_alias
+      (! (is_good := PARSER.read_lip path_lip)).if {
+        "File `".print;
+        path_lip.print
+        "' not found !\nIncorrect installation.\n".print
+        exit exit_failure_code
+      }
+    }
+
+    //
+    // Load parent .lip (inheritance)
+    //
+    {LIP_CODE.list_parent.is_empty}.until_do {
+      path_lip := LIP_CODE.list_parent.first
+      LIP_CODE.list_parent.remove_first
+      (path_lip.is_empty).if {
+        string_tmp.copy path_lisaac
+        string_tmp.append "make.lip"
+        path_lip := string_tmp.to_string_alias
+      }
+      (! PARSER.read_lip path_lip).if {
+        "File `".print;
+        path_lip.print
+        "' not found ! (see `*.lip')\n".print;
+        exit exit_failure_code
+      }
+    }
+    // Auto-load 'lisaac' variable.
+    LIP_CODE.put_string path_lisaac to "lisaac"
+  )
+  
+  - is_integer n:STRING_ALIAS :BOOLEAN <-
+  (
+    (n = "UINTEGER_64") || {n = "UINTEGER_32"} || {n = "UINTEGER_16"} ||
+    {n = "UINTEGER_8" } || {n = "INTEGER_64" } || {n = "INTEGER_32" } ||
+    {n = "INTEGER_16" } || {n = "INTEGER_8"  } || {n = "INTEGER"    }
+  )
+/*
+  - is_section n:STRING_ALIAS :BOOLEAN <-
+  (
+    (n = "Inherit"  ) ||
+    {n = "Insert"   } ||
+    {n = "Interrupt"} ||
+    {n = "Private"  } ||
+    {n = "Public"   } ||
+    {n = "Mapping"  } ||
+    {n = "Directory"} ||
+    {n = "External" }
+  )
+*/
+  //
+  // Activate debug
+  //
+
+  - debug_proto_bestname :BOOLEAN <- FALSE
+  // Debug the name of the prototypes choosen to avoid conflicts
+  // See PROTOTYPE.insert_prototype
+  
+Private
+  
+  - utf8 s:STRING to_ascii low:BOOLEAN in buf:STRING_BUFFER <-
+  // Convert UTF8 -> ASCII
+  ( + j:INTEGER
+    + n,r,c:UINTEGER_8
+    + base:CHARACTER
+    + odd:BOOLEAN
+    base := low.ok 'a' or 'A'
+    {j <= s.upper}.while_do {    
+      n := s.at j
+      j := j + 1
+      ((n & 80h) = 0).if {
+        buf.add_last (n.to_character)
+      } else {
+        buf.add_last (base +# (n&1111b))
+        r := (n >> 2) & 1100b
+        odd := TRUE
+        {
+          c := s.at j
+          buf.add_last (base +# (c&1111b))
+          (odd).if {
+            buf.add_last (base +# (r | ((c >> 4) & 11b)))
+          } else {
+            r := (c >> 2) & 1100b
+          }
+          odd := ! odd
+          //
+          n := n << 1
+          j := j + 1
+        }.do_until {(n & 40h) = 0}
+        odd.if { buf.add_last (base +# r); }
+      }
+    }
+  )

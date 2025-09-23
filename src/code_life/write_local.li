@@ -1,0 +1,126 @@
+Header
+
+  + name    := WRITE_LOCAL;
+
+  /*Write local*/
+
+Inherit
+
+  + parent_write:Expanded WRITE
+
+Public
+
+  + local:LOCAL
+
+  - variable:VARIABLE <- local
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with val:EXPR in l:LOCAL :SELF <-
+  ( + result:SELF
+    ? {p.code != 0}
+    result := clone
+    result.make p with val in l
+    result
+  )
+
+  - make p:POSITION with val:EXPR in l:LOCAL <-
+  (
+    position := p
+    local    := l
+    value    := val
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute_access_unlink:INSTR <- NULL
+
+  - execute_access_link
+
+  - execute_argument:BOOLEAN <-
+  // BSBS: Cette methode foireuse ne doit plus etre necessaire (utilise execute normal)
+  ( + new_val:INSTR
+    + read:READ
+    + result:BOOLEAN
+
+    ? { variable != NULL }
+    ? { value    != NULL }
+
+    read ?= value
+    (ensure_count = 0).if {
+      //
+      // Supprime affectation.
+      //
+      new_val := value.execute_unlink
+      (new_val = NULL).if {
+	result := TRUE
+      }.elseif {list_current.old_seq_or_and = seq_or_and} then {
+	list_current.insert_before new_val
+	result := TRUE
+      } else {
+	value ?= new_val
+      }
+    } else {
+      //
+      // Execution normal.
+      //
+      execute_access_link
+      value := value.execute_link
+    }
+    result
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <-
+  ( + idf:STRING_ALIAS
+
+    idf := ALIASER_LOCAL.write Self
+
+    (quiet_generation).if_false {
+      (local.is_result).if {
+        output.add_last '*'
+        output.append (local.intern_name)
+      } else {
+        output.append idf
+      }
+      //
+      ((value.static_type.raw = TYPE_NULL) && {variable.type.raw.is_block}).if {
+        output.append ".__id=0"
+      } else {
+        output.add_last '='
+        genere_value
+      }
+    }
+  )
+  
+  - genere_first_result <-
+  ( + idf:STRING_ALIAS
+
+    idf := ALIASER_LOCAL.write Self
+    (local.is_result).if {
+      output.add_last '*'
+    }
+    output.append idf
+    //
+    output.add_last '='
+  )
+  
+  - genere_argument_result <-
+  ( + idf:STRING_ALIAS
+
+    idf := ALIASER_LOCAL.write Self
+    output.add_last '&'
+    output.append idf
+  )
+
+
+
+
+

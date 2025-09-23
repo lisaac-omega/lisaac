@@ -1,0 +1,55 @@
+Header
+  
+  + name := NSIEVE;
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Private  
+  
+  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 64
+  
+  - flags:NATIVE_ARRAY(BOOLEAN)
+
+  - primes m:INTEGER <-
+  ( + result,j,i,tmp: INTEGER
+
+    tmp := m - 1
+    flags.set_all_with TRUE until tmp
+    i   := 2
+    {i <= tmp}.while_do {      
+      (flags.at i).if {
+        j := i << 1
+        {j <= tmp}.while_do {        
+          flags.put FALSE to j
+          j := j + i
+        }
+        result := result + 1
+      }
+      i := i + 1
+    }
+
+    "Primes up to ".print
+    string_tmp.clear
+    m.append_in string_tmp format 8
+    string_tmp.add_last ' '
+    result.append_in string_tmp format 8
+    string_tmp.add_last '\n'
+    string_tmp.print
+  )
+
+Public
+
+  - main <-
+  ( + n:INTEGER
+    + m:INTEGER
+    n := COMMAND_ARGS.at 1.to_integer
+    m := 10_000 * (1 << n)
+    flags := NATIVE_ARRAY(BOOLEAN).calloc_intern m
+    primes m
+    m := m >> 1
+    primes m
+    m := m >> 1
+    primes m
+  )

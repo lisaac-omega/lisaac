@@ -1,0 +1,88 @@
+Header
+  + name := MT19937;
+  
+  /*
+   The Mersenne Twister is a general-purpose pseudorandom number generator (PRNG)
+   developed in 1997 by Makoto Matsumoto and Takuji Nishimura. 
+   Its name derives from the choice of a Mersenne prime as its period length.
+   The standard implementation of that, MT19937, uses a 32-bit word length.
+  */
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Private
+  - cst_n:INTEGER := 624
+  - cst_m:INTEGER := 397
+  - cst_w:INTEGER := 32
+  - cst_r:INTEGER := 31
+  - umask:INTEGER := 8000_0000h; //(0FFFF_FFFFh << cst_r)
+  - lmask:INTEGER := (0FFFF_FFFFh >> (cst_w-cst_r))
+  - cst_a:INTEGER := 09908B0DFh
+  - cst_u:INTEGER := 11
+  - cst_s:INTEGER := 7
+  - cst_t:INTEGER := 15
+  - cst_l:INTEGER := 18
+  - cst_b:INTEGER := 09D2C5680h
+  - cst_c:INTEGER := 0EFC60000h
+  - cst_f:INTEGER := 1812433253
+  
+  + state_array:NATIVE_ARRAY UINTEGER_32
+  + state_index:INTEGER
+  
+Public
+  
+  - new:SELF <- clone
+  
+  - init seed:UINTEGER_32 :SELF <-
+  ( + s:UINTEGER_32
+    (state_array = NULL).if {
+      state_array := NATIVE_ARRAY UINTEGER_32.create cst_n
+    }
+    (seed = 0).if { s := 19650218; } else { s := seed; }
+    state_array.at 0 put s
+    1.to (cst_n-1) do { i:INTEGER
+      s := cst_f * (s ^ (s >> (cst_w-2))) + i
+      state_array.at i put s
+    }
+    state_index := 0
+    Self
+  )
+
+  - uint32:UINTEGER_32 <-
+  ( + k,j:INTEGER
+    + x,xa,y,z:UINTEGER_32
+    
+    k := state_index
+    j := k - (cst_n-1)
+    (j < 0).if { j := j + cst_n; }
+
+    x := (state_array.at k & umask) | (state_array.at j & lmask)
+    xa := x >> 1
+    ((x & 01h) != 0).if { xa := xa ^ cst_a; }
+    
+    j := k - (cst_n-cst_m)
+    (j < 0).if { j := j + cst_n; }
+    
+    x := state_array.at j ^ xa
+    state_array.at k put x
+    k := k + 1
+    
+    (k >= cst_n).if { k := 0; }
+    state_index := k
+    
+    y := x ^ (x >> cst_u)
+    y := y ^ ((y << cst_s) & cst_b)
+    y := y ^ ((y << cst_t) & cst_c)
+    z := y ^ (y >> cst_l)
+    z
+  )
+  
+  - real_64:REAL_64 <- uint32.to_real_64 / 0FFFF_FFFFh
+  
+  - real_32:REAL_32 <- uint32.to_real_32 / 0FFFF_FFFFh
+  
+  - real_32 min:REAL_32 to max:REAL_32 :REAL_32 <- real_32 * (max-min) + min
+  
+  - real_64 min:REAL_64 to max:REAL_64 :REAL_64 <- real_64 * (max-min) + min
+

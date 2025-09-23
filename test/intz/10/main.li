@@ -1,0 +1,96 @@
+Header
+  + name := MAIN;
+  
+Private
+  - values:ARRAY ℤ
+  
+  - valook: ARRAY STRING_ALIAS
+  
+  - valhex: ARRAY STRING_ALIAS
+  
+  - operations:STRING_ALIAS := "***+***++**++**++**++**++****+++++++++++"
+  
+Public
+  - main <-
+  ( + intz:ℤ
+    + a,b,c:ℤ
+    + j:INTEGER
+    + op:CHARACTER
+    values := ARRAY ℤ .create_with_capacity 1024
+    valook := ARRAY STRING_ALIAS .create_with_capacity 1024
+    valhex := ARRAY STRING_ALIAS .create_with_capacity 1024
+    intz := 1
+    values_add intz
+    intz := 3
+    values_add intz
+    0.to (operations.upper) do { i:INTEGER
+      a := value_at (values.upper - 1)
+      b := value_at (values.upper)
+      op := operations.at i
+      (op = '+').if {
+        values_add (a + b)
+      }.elseif {op = '-'} then {
+        values_add (a - b)
+      }.elseif {op = '*'} then {
+        values_add (a * b)
+      }.elseif {op = '/'} then {
+        values_add (a / b)
+      } else {
+        TEST.check FALSE
+      }
+      "========".println; a.println; op.println; b.println ; " = ".println; values.last.println
+    }
+    j := values.upper
+    (operations.upper).downto 0 do { i:INTEGER
+      c := value_at (values.upper)
+      b := value_at (values.upper - 1)
+      a := value_at (values.upper - 2)
+      op := operations.at i
+      (op = '+').if {
+        op := '-'; intz := c - b
+      }.elseif {op = '-'} then {
+        op := '+'; intz := c + b
+      }.elseif {op = '*'} then {
+        op := '/'; intz := c / b
+      } else {
+        TEST.check FALSE
+      }
+      "--------".println; c.print; op.println; b.println ; " = ".print; intz.println
+      TEST.check (intz == a)
+      TEST.check (intz.to_string) string (valook.at (values.upper - 2))
+      TEST.check (intz.to_hexadecimal) string (valhex.at (values.upper - 2))
+      remove_last
+    }
+    TEST.check (values.count = 2)
+    TEST.check (valook.count = 2)
+    TEST.check (valhex.count = 2)
+  )
+  
+  - values_add z:ℤ <-
+  (
+    TEST.check (values.upper = valook.upper)
+    TEST.check (values.upper = valhex.upper)
+    values.add_last z
+    valook.add_last (z.to_string)
+    valhex.add_last (z.to_hexadecimal)
+  )
+  
+  - value_at idx:INTEGER :ℤ <-
+  ( + result:ℤ
+    TEST.check (values.upper = valook.upper)
+    TEST.check (values.upper = valhex.upper)
+    result := values.at idx
+    TEST.check (result.to_hexadecimal) string (valhex.at idx)
+    TEST.check (result.to_string) string (valook.at idx)
+    result
+  )
+  
+  - remove_last <-
+  (
+    TEST.check (values.upper = valook.upper)
+    TEST.check (values.upper = valhex.upper)
+    values.remove_last
+    valook.remove_last
+    valhex.remove_last
+  )
+  

@@ -1,0 +1,35 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Public
+  - main <-
+  ( + data:STRING
+    + regex:REGEX
+    + status:INTEGER
+    regex := REGEX.create_nmatch 4; // 1 plus 3 sub-expressions
+    status := regex.regcomp "(tat)([a-z])([a-z])rr\\3\\2\\1" cflag (REGEX.extended)
+    TEST.check status integer 0
+    data := "The longest palindrome in English is often considered tattarrattat, coined by James Joyce in his 1922 Ulysses to imitate the sound of a knock on the door. "
+    status := regex.regexec data start 0 cflag 0
+    TEST.check status integer 0
+    // tattarrattat:
+    TEST.check (regex.offset_start_index 0) integer 54
+    TEST.check (regex.offset_end_index 0) integer 66
+    // tat:
+    TEST.check (regex.offset_start_index 1) integer 54
+    TEST.check (regex.offset_end_index 1) integer 57
+    // t:
+    TEST.check (data.item 57) char 't'
+    TEST.check (regex.offset_start_index 2) integer 57
+    TEST.check (regex.offset_end_index 2) integer 58
+    // t:
+    TEST.check (data.item 58) char 'a'
+    TEST.check (regex.offset_start_index 3) integer 58
+    TEST.check (regex.offset_end_index 3) integer 59
+    // 
+    regex.regfree
+  )
+  

@@ -1,0 +1,72 @@
+Header
+  
+  + name := Expanded COMPOSITE_OPERATION_STATE;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+        
+Public
+  
+  + src_rgb:INTEGER
+  + src_alpha:INTEGER
+  + dst_rgb:INTEGER
+  + dst_alpha:INTEGER
+
+  - make op:INTEGER <-
+  ( + sfactor,dfactor:INTEGER
+    op.when source_over then {
+      sfactor := cst_one
+      dfactor := cst_one_minus_src_alpha
+    }.when source_in then {
+      sfactor := cst_dst_alpha
+      dfactor := cst_zero
+    }.when source_out then {	
+      sfactor := cst_one_minus_dst_alpha
+      dfactor := cst_zero
+    }.when atop then {
+      sfactor := cst_dst_alpha
+      dfactor := cst_one_minus_src_alpha
+    }.when destination_over then {
+      sfactor := cst_one_minus_dst_alpha
+      dfactor := cst_one
+    }.when destination_in then {	
+      sfactor := cst_zero
+      dfactor := cst_src_alpha
+    }.when destination_out then {
+      sfactor := cst_zero
+      dfactor := cst_one_minus_src_alpha
+    }.when destination_atop then {
+      sfactor := cst_one_minus_dst_alpha
+      dfactor := cst_src_alpha
+    }.when lighter then {
+      sfactor := cst_one
+      dfactor := cst_one
+    }.when cst_copy then {
+      sfactor := cst_one
+      dfactor := cst_zero
+    }.when xor then {      
+      sfactor := cst_one_minus_dst_alpha
+      dfactor := cst_one_minus_src_alpha
+    }
+    src_rgb := src_alpha := sfactor
+    dst_rgb := dst_alpha := dfactor
+  )
+  
+  - convert_blend_func_factor factor:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    result := `GL_INVALID_ENUM`:INTEGER
+    (factor)
+    .when cst_zero                then { result := `GL_ZERO`:INTEGER; }
+    .when cst_one                 then { result := `GL_ONE`:INTEGER;  }
+    .when cst_src_color           then { result := `GL_SRC_COLOR`:INTEGER; }
+    .when cst_one_minus_src_color then { result := `GL_ONE_MINUS_SRC_COLOR`:INTEGER; }
+    .when cst_dst_color           then { result := `GL_DST_COLOR`:INTEGER; }
+    .when cst_one_minus_dst_color then { result := `GL_ONE_MINUS_DST_COLOR`:INTEGER; }
+    .when cst_src_alpha           then { result := `GL_SRC_ALPHA`:INTEGER; }
+    .when cst_one_minus_src_alpha then { result := `GL_ONE_MINUS_SRC_ALPHA`:INTEGER; }
+    .when cst_dst_alpha           then { result := `GL_DST_ALPHA`:INTEGER; }
+    .when cst_one_minus_dst_alpha then { result := `GL_ONE_MINUS_DST_ALPHA`:INTEGER; }
+    .when cst_src_alpha_saturate  then { result := `GL_SRC_ALPHA_SATURATE`:INTEGER; }
+    result
+  )

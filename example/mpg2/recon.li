@@ -1,0 +1,472 @@
+Header
+  
+  + name         := RECON;
+  /*
+  motion compensation routines.
+  */
+  
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Private
+  
+  - dmv:ARRAY2(INTEGER) := ARRAY2(INTEGER).create (2,2)
+  
+Public
+  
+  - form_predictions (bx,by,macroblock_type,motion_type:INTEGER,pmv:PMV,
+  motion_vertical_field_select:ARRAY2(BOOLEAN),dmvector:VECTOR,stwtype:INTEGER) <-
+  //
+  // motion_vertical_field_select[2][2]
+  ( + currentfield:BOOLEAN
+    + predframe:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8))
+    + stwtop, stwbot:INTEGER
+        
+    stwtop := stwtype % 3; // 0:temporal, 1:(spat+temp)/2, 2:spatial 
+    stwbot := stwtype / 3
+
+    (((macroblock_type & macroblock_motion_forward) != 0) || {picture_coding_type = p_type}).if {
+      (picture_structure = frame_picture).if {
+	((motion_type = mc_frame) || {(macroblock_type & macroblock_motion_forward) = 0}).if {
+	  // frame-based prediction (broken into top and bottom halves
+	  // for spatial scalability prediction purposes) 
+	  (stwtop < 2).if {
+	    form_prediction (forward_reference_frame,FALSE,current_frame,FALSE,
+	    coded_picture_width,(coded_picture_width << 1),16,8,bx,by,
+	    (pmv.at (0,0,0)),(pmv.at (0,0,1)),(stwtop!=0))
+	  }
+	  (stwbot < 2).if {
+	    form_prediction (forward_reference_frame,TRUE,current_frame,TRUE,
+	    coded_picture_width,(coded_picture_width << 1),16,8,bx,by,
+	    (pmv.at (0,0,0)),(pmv.at (0,0,1)),(stwbot!=0))
+	  }
+	} else {
+	  (motion_type = mc_field).if {
+	    // field-based prediction 	   
+	    (stwtop < 2).if {
+	      // top field prediction
+	      form_prediction
+	      (forward_reference_frame,(motion_vertical_field_select.at (0,0)),
+		current_frame,FALSE,(coded_picture_width << 1),(coded_picture_width << 1),16,8,
+	      bx,(by >> 1),(pmv.at (0,0,0)),(pmv.at (0,0,1) >> 1),(stwtop!=0))
+	    }
+	    
+	    (stwbot < 2).if {
+	      // bottom field prediction
+	      form_prediction
+	      (forward_reference_frame,(motion_vertical_field_select.at (1,0)),
+		current_frame,TRUE,(coded_picture_width << 1),(coded_picture_width << 1),16,8,
+	      bx,(by >> 1),(pmv.at (1,0,0)),(pmv.at (1,0,1) >> 1),(stwbot!=0))
+	    }
+	  } else {
+	    (motion_type = mc_dmv).if { 
+	      // dual prime prediction 
+	      
+	      // calculate derived motion vectors 
+	      MOTION.dual_prime_arithmetic (dmv,dmvector,(pmv.at (0,0,0)),(pmv.at
+	      (0,0,1) >> 1))
+	      
+	      (stwtop < 2).if {
+		// predict top field from top field 
+		form_prediction (forward_reference_frame,FALSE,current_frame,FALSE,
+		  (coded_picture_width << 1),(coded_picture_width << 1),16,8,bx,(by >> 1),
+		(pmv.at (0,0,0)),(pmv.at (0,0,1) >> 1),FALSE)
+		
+		// predict and add to top field from bottom field 
+		form_prediction (forward_reference_frame,TRUE,current_frame,FALSE,
+		  (coded_picture_width << 1),(coded_picture_width << 1),16,8,bx,(by >> 1),
+		(dmv.at (0,0)),(dmv.at (0,1)),TRUE)
+	      }
+	      
+	      (stwbot < 2).if {
+		// predict bottom field from bottom field 
+		form_prediction (forward_reference_frame,TRUE,current_frame,TRUE,
+		  (coded_picture_width << 1),(coded_picture_width << 1),16,8,bx,(by >> 1),
+		(pmv.at (0,0,0)),(pmv.at (0,0,1) >> 1),FALSE)
+		
+		// predict and add to bottom field from top field 
+		form_prediction (forward_reference_frame,FALSE,current_frame,TRUE,
+		  (coded_picture_width << 1),(coded_picture_width << 1),16,8,bx,(by >> 1),
+		(dmv.at (1,0)),(dmv.at (1,1)),TRUE)
+	      }
+	    } else {
+	      // invalid motion_type 
+	      "invalid motion_type\n".print
+	    }
+	  }
+	}
+      } else {
+	// TOP_FIELD or BOTTOM_FIELD 
+	
+	// field picture 
+	currentfield := (picture_structure = bottom_field)
+	
+	// determine which frame to use for prediction 
+	((picture_coding_type = p_type) && {second_field} && 
+	{currentfield != motion_vertical_field_select.at (0,0)}).if {
+	  predframe := backward_reference_frame; // same frame 
+	} else {
+	  predframe := forward_reference_frame; // previous frame 
+	}
+	
+	((motion_type = mc_field) || {(macroblock_type & macroblock_motion_forward) = 0}).if {
+	  // field-based prediction 
+	  (stwtop < 2).if {
+	    form_prediction (predframe,(motion_vertical_field_select.at (0,0)),current_frame,FALSE,
+	    (coded_picture_width << 1),(coded_picture_width << 1),16,16,bx,by,
+	    (pmv.at (0,0,0)),(pmv.at (0,0,1)),(stwtop!=0))
+	  }
+	} else {
+	  (motion_type = mc_16x8).if {
+	    (stwtop < 2).if {
+	      form_prediction (predframe,(motion_vertical_field_select.at (0,0)),current_frame,FALSE,
+		(coded_picture_width << 1),(coded_picture_width << 1),16,8,bx,by,
+	      (pmv.at (0,0,0)),(pmv.at (0,0,1)),(stwtop!=0))
+	      
+	      // determine which frame to use for lower half prediction 
+	      ((picture_coding_type = p_type) && {second_field} &&
+	      {currentfield != motion_vertical_field_select.at (1,0)}).if {
+		predframe := backward_reference_frame; // same frame 
+	      } else {
+		predframe := forward_reference_frame; // previous frame 
+	      }
+	      
+	      form_prediction (predframe,(motion_vertical_field_select.at (1,0)),current_frame,FALSE,
+		(coded_picture_width << 1),(coded_picture_width << 1),16,8,bx,(by + 8),
+	      (pmv.at (1,0,0)),(pmv.at (1,0,1)),(stwtop!=0))
+	    }
+	  } else {
+	    (motion_type = mc_dmv).if {
+	      // dual prime prediction 
+	      (second_field).if {
+		predframe := backward_reference_frame; // same frame
+	      } else {
+		predframe := forward_reference_frame; // previous frame
+	      }
+	      
+	      // calculate derived motion vectors 
+	      MOTION.dual_prime_arithmetic (dmv,dmvector,(pmv.at (0,0,0)),(pmv.at
+	      (0,0,1)))
+	      
+	      // predict from field of same parity 
+	      form_prediction (forward_reference_frame,currentfield,current_frame,FALSE,
+		(coded_picture_width << 1),(coded_picture_width << 1),16,16,bx,by,
+	      (pmv.at (0,0,0)),(pmv.at (0,0,1)),FALSE)
+	      
+	      // predict from field of opposite parity 
+	      form_prediction (predframe,(! currentfield),current_frame,FALSE,
+		(coded_picture_width << 1),(coded_picture_width << 1),16,16,bx,by,
+	      (dmv.at (0,0)),(dmv.at (0,1)),TRUE)
+	    } else {
+	      // invalid motion_type 
+	      "invalid motion_type\n".print
+	    }
+	  }
+	}
+      }
+      stwtop := stwbot := 1
+    }
+    
+    ((macroblock_type & macroblock_motion_backward) != 0).if {
+      (picture_structure = frame_picture).if {
+	(motion_type = mc_frame).if {
+	  // frame-based prediction 
+	  (stwtop < 2).if {
+	    form_prediction (backward_reference_frame,FALSE,current_frame,FALSE,
+	    coded_picture_width,(coded_picture_width << 1),16,8,bx,by,
+	    (pmv.at (0,1,0)),(pmv.at (0,1,1)),(stwtop!=0))
+	  }
+	  
+	  (stwbot < 2).if {
+	    form_prediction (backward_reference_frame,TRUE,current_frame,TRUE,
+	    coded_picture_width,(coded_picture_width << 1),16,8,bx,by,
+	    (pmv.at (0,1,0)),(pmv.at (0,1,1)),(stwbot!=0))
+	  }
+	} else { // field-based prediction          
+	  (stwtop < 2).if {
+	    // top field prediction
+	    form_prediction
+		 (backward_reference_frame,(motion_vertical_field_select.at (0,1)),
+	    current_frame,FALSE,(coded_picture_width << 1),(coded_picture_width << 1),16,8,
+	    bx,(by >> 1),(pmv.at (0,1,0)),(pmv.at (0,1,1) >> 1),(stwtop!=0))
+	  }
+	  
+	  (stwbot < 2).if {
+	    // bottom field prediction 
+	    form_prediction
+		 (backward_reference_frame,(motion_vertical_field_select.at (1,1)),
+	    current_frame,TRUE,(coded_picture_width << 1),(coded_picture_width << 1),16,8,
+	    bx,(by >> 1),(pmv.at (1,1,0)),(pmv.at (1,1,1) >> 1),(stwbot!=0))
+	  }
+	}
+      } else {
+	// TOP_FIELD or BOTTOM_FIELD 
+	(motion_type = mc_field).if {
+	  // field-based prediction 
+	  form_prediction
+	  (backward_reference_frame,(motion_vertical_field_select.at (0,1)),
+	  current_frame,FALSE,(coded_picture_width << 1),(coded_picture_width << 1),16,16,
+	  bx,by,(pmv.at (0,1,0)),(pmv.at (0,1,1)),(stwtop!=0))
+	} else {
+	  (motion_type = mc_16x8).if {
+	    form_prediction
+	    (backward_reference_frame,(motion_vertical_field_select.at (0,1)),
+	      current_frame,FALSE,(coded_picture_width << 1),(coded_picture_width << 1),16,8,
+	    bx,by,(pmv.at (0,1,0)),(pmv.at (0,1,1)),(stwtop!=0))
+	    
+	    form_prediction
+	    (backward_reference_frame,(motion_vertical_field_select.at (1,1)),
+	      current_frame,FALSE,(coded_picture_width << 1),(coded_picture_width << 1),16,8,
+	    bx,(by + 8),(pmv.at (1,1,0)),(pmv.at (1,1,1)),(stwtop!=0))
+	  } else {
+	    // invalid motion_type 
+	    "invalid motion_type\n".print
+	  }
+	}
+      }
+    }
+  )
+  
+Private
+  
+  - form_prediction
+	 (src:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)),sfield:BOOLEAN,dst:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)),
+  dfield:BOOLEAN,plx,plx2,pw,ph,px,py,pdx,pdy:INTEGER,average_flag:BOOLEAN) <-
+  // unsigned char *src[];    prediction source buffer 
+  // int sfield;              prediction source field number (0 or 1) 
+  // unsigned char *dst[];    prediction destination buffer 
+  // int dfield;              prediction destination field number (0 or 1)
+  // int lx,lx2;              line strides 
+  // int w,h;                 prediction block/sub-block width, height 
+  // int x,y;                 pixel co-ordinates of top-left sample in current MB 
+  // int dx,dy;               horizontal, vertical prediction address 
+  // int average_flag;        add prediction error to prediction ? 
+  ( + tmp_src,tmp_dst:INTEGER
+    + lx,lx2,w,x,dx,h,y,dy:INTEGER
+    
+    lx  := plx
+    lx2 := plx2
+    w   := pw
+    x   := px
+    dx  := pdx
+    h   := ph
+    y   := py
+    dy  := pdy
+    
+    // Y 
+    (sfield).if {
+      tmp_src := lx2 >> 1
+    } else {
+      tmp_src := 0
+    }
+
+    (dfield).if {
+      tmp_dst := lx2 >> 1
+    } else {
+      tmp_dst := 0
+    }
+
+    form_component_prediction ((src.at 0),tmp_src,(dst.at 0),
+    tmp_dst,lx,lx2,w,h,x,y,dx,dy,average_flag)
+    
+    (chroma_format != chroma444).if {
+      lx  := lx  >> 1
+      lx2 := lx2 >> 1
+      w   := w   >> 1
+      x   := x   >> 1
+      dx  := dx  /  2
+    }
+    
+    (chroma_format = chroma420).if {
+      h  := h >> 1
+      y  := y >> 1
+      dy := dy / 2
+    }
+    
+    (sfield).if {
+      tmp_src := lx2 >> 1
+    } else {
+      tmp_src := 0
+    }
+    (dfield).if {
+      tmp_dst := lx2 >> 1
+    } else {
+      tmp_dst := 0
+    }
+    
+    // Cb 
+    form_component_prediction ((src.at 1),tmp_src,(dst.at 1),tmp_dst,
+    lx,lx2,w,h,x,y,dx,dy,average_flag)
+    
+    // Cr 
+    form_component_prediction ((src.at 2),tmp_src,(dst.at 2),tmp_dst,
+    lx,lx2,w,h,x,y,dx,dy,average_flag)
+  )
+
+
+  - form_component_prediction (src:NATIVE_ARRAY(UINTEGER_8),idx_src:INTEGER,
+  dst:NATIVE_ARRAY(UINTEGER_8),idx_dst:INTEGER,
+  lx,lx2,w,h,x,y,dx,dy:INTEGER,average_flag:BOOLEAN) <-
+  // ISO/IEC 13818-2 section 7.6.4: Forming predictions 
+  // NOTE: the arithmetic below produces numerically equivalent results
+  // to 7.6.4, yet is more elegant. It differs in the following ways:
+  //
+  // 1. the vectors (dx, dy) are based on cartesian frame 
+  //    coordiantes along a half-pel grid (always positive numbers)
+  //    In contrast, vector[r][s][t] are differential (with positive and 
+  //    negative values). As a result, deriving the integer vectors 
+  //    (int_vec[t]) from dx, dy is accomplished by a simple right shift.
+  //
+  // 2. Half pel flags (xh, yh) are equivalent to the LSB (Least
+  //    Significant Bit) of the half-pel coordinates (dx,dy).
+  //
+  // NOTE: the work of combining predictions (ISO/IEC 13818-2 section 7.6.7)
+  // is distributed among several other stages.  This is accomplished by 
+  // folding line offsets into the source and destination (src,dst)
+  // addresses (note the call arguments to form_prediction() in Predict()),
+  // line stride variables lx and lx2, the block dimension variables (w,h), 
+  // average_flag, and by the very order in which Predict() is called.  
+  // This implementation design (implicitly different than the spec) 
+  // was chosen for its elegance.
+  //
+  // int lx;              raster line increment 
+  // int average_flag;    flag that signals bi-directional or Dual-Prime 
+  //                      averaging (7.6.7.1 and 7.6.7.4). if average_flag==1,
+  //                      a previously formed prediction has been stored in 
+  //                      pel_pred[] 
+  ( + xint:INTEGER;      // horizontal integer sample vector: analogous to int_vec[0] 
+    + yint:INTEGER;      // vertical integer sample vectors: analogous to int_vec[1] 
+    + xh:BOOLEAN;        // horizontal half sample flag: analogous to half_flag[0]  
+    + yh:BOOLEAN;        // vertical half sample flag: analogous to half_flag[1]  
+    + v:INTEGER
+    + s:INTEGER;         // source pointer: analogous to pel_ref[][]   
+    + d:INTEGER;         // destination pointer:  analogous to pel_pred[][]  
+    + si,sil,di,wm1,hm1:INTEGER
+    + psrc,pdst:NATIVE_ARRAY(UINTEGER_8)
+    
+    // half pel scaling for integer vectors 
+    xint := dx >> 1
+    yint := dy >> 1
+
+    // derive half pel flags 
+    xh := (dx & 1).to_boolean
+    yh := (dy & 1).to_boolean
+
+    // compute the linear address of pel_ref[][] and pel_pred[][] 
+    // based on cartesian/raster cordinates provided 
+    s := idx_src + lx * (y + yint) + x + xint
+    d := idx_dst + lx * y + x
+    
+    wm1 := w-1
+    hm1 := h-1
+    // BSBS:Warning!
+    psrc := src
+    pdst := dst
+        
+    ((! xh) && {! yh}).if {
+      // no horizontal nor vertical half-pel 
+      (average_flag).if {
+	hm1.downto 0 do { j:INTEGER
+	  wm1.downto 0 do { i:INTEGER
+	    di := d+i
+	    v := (1 + pdst.at di + psrc.at (s+i)) >> 1
+	    pdst.at di put (v.to_uinteger_8)
+	  }
+	  s := s + lx2
+	  d := d + lx2
+	}
+      } else {
+	hm1.downto 0 do { j:INTEGER
+	  wm1.downto 0 do { i:INTEGER
+	    pdst.at (d+i) put (psrc.at (s+i))
+	  }
+	  s := s + lx2
+	  d := d + lx2
+	}
+      }
+    } else {
+      ((! xh) && {yh}).if {
+	// no horizontal but vertical half-pel 
+	(average_flag).if {
+	  hm1.downto 0 do { j:INTEGER
+	    wm1.downto 0 do { i:INTEGER
+	      di := d + i
+	      si := s + i
+	      v := (((1 + psrc.at si + psrc.at (si+lx)) >> 1) + pdst.at di + 1) >> 1
+	      pdst.at di put (v.to_uinteger_8)
+	    }
+	    s := s + lx2
+	    d := d + lx2
+	  }
+	} else {
+	  hm1.downto 0 do { j:INTEGER
+	    wm1.downto 0 do { i:INTEGER
+	      si := s + i
+	      v := (1 + psrc.at si + psrc.at (si+lx)) >> 1
+	      pdst.at (d+i) put (v.to_uinteger_8)
+	    }
+	    s := s + lx2
+	    d := d + lx2
+	  }
+	}
+      } else {
+	(xh && {! yh}).if {
+	  // horizontal but no vertical half-pel 
+	  (average_flag).if {	
+	    hm1.downto 0 do { j:INTEGER
+	      wm1.downto 0 do { i:INTEGER
+		si := s + i
+		di := d + i
+		v := (((1 + psrc.at si + psrc.at (si+1)) >> 1) + pdst.at di + 1) >> 1
+		pdst.at di put (v.to_uinteger_8)
+	      }
+	      s := s + lx2
+	      d := d + lx2
+	    }
+	  } else {
+	    hm1.downto 0 do { j:INTEGER
+	      wm1.downto 0 do { i:INTEGER
+		si := s + i
+		v := (1 + psrc.at si + psrc.at (si+1)) >> 1
+		pdst.at (d+i) put (v.to_uinteger_8)
+	      }
+	      s := s + lx2
+	      d := d + lx2
+	    }
+	  }
+	} else { 
+	  // if (xh && yh) horizontal and vertical half-pel 
+	  (average_flag).if {
+	    hm1.downto 0 do { j:INTEGER
+	      wm1.downto 0 do { i:INTEGER
+		si  := s  + i
+		sil := si + lx
+		di  := d + i
+		v := (((2 + psrc.at si + psrc.at (si+1) + 
+		psrc.at sil + psrc.at (sil+1)) >> 2) + pdst.at di + 1) >> 1
+		pdst.at di put (v.to_uinteger_8)
+	      }
+	      s := s + lx2
+	      d := d + lx2
+	    }
+	  } else {
+	    hm1.downto 0 do { j:INTEGER
+	      wm1.downto 0 do { i:INTEGER
+		si  := s  + i
+		sil := si + lx
+		v := (2 + 
+		  psrc.at si  + psrc.at (si+1 ) + 
+		  psrc.at sil + psrc.at (sil+1)
+		) >> 2
+		pdst.at (d+i) put (v.to_uinteger_8)
+	      }
+	      s := s + lx2
+	      d := d + lx2
+	    }
+	  }
+	}
+      }
+    }
+    
+  )

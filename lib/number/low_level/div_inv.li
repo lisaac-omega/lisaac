@@ -1,0 +1,362 @@
+Header
+  + name := DIV_INV;
+  
+Insert
+  - parent_clone:CLONE := CLONE
+  
+Private
+  - free_div:ARRAY DIV_INV := ARRAY DIV_INV.create_with_capacity 2
+    
+Public
+  
+  + shift:INTEGER;  // Normalization shift count. 
+  
+  + d0:UINTEGER_64; // Normalized divisor (d0 unused for qr_1) 
+  + d1:UINTEGER_64
+  
+  + di:UINTEGER_64; // Inverse, for 2/1 or 3/2. 
+  
+  - create:DIV_INV <-
+  ( + result:DIV_INV
+    (free_div.is_empty).if {      
+      result := clone
+    } else {
+      result := free_div.pop
+    }
+    result    
+  )
+  
+  - free <- free_div.add_last Self
+  
+  - qr_invert (dp:NATIVE_ARRAY UINTEGER_64, dn:INTEGER) <-
+  [ ? {dn != 0}; ]
+  ( 
+    (dn = 1).if {
+      qr_1_invert (dp.at 0)
+    }.elseif {dn = 2} then {
+      qr_2_invert (dp.at 1, dp.at 0)
+    } else {      
+      d1 := dp.at (dn-1)
+      d0 := dp.at (dn-2)
+      ? {d1 > 0}
+      shift := ASM_BUILTIN.clz d1
+      (shift > 0).if {	
+        d1 := (d1 << shift) | (d0 >> (64 - shift))
+        d0 := (d0 << shift) | (dp.at (dn-3) >> (64 - shift))
+      }
+      di := invert_3by2 (d1, d0)
+    }
+  )
+  
+  - qr_1_invert (d:UINTEGER_64) <-
+  [ ? {d > 0}; ]
+  ( 
+    shift := ASM_BUILTIN.clz d
+    d1 := d << shift
+    di := invert_3by2 (d1,0)
+  )
+
+  - qr_2_invert (pd1,pd0:UINTEGER_64) <-
+  [ ? {pd1 > 0}; ]
+  ( + ld0,ld1:UINTEGER_64
+    (ld0,ld1) := (pd0,pd1)
+    ((shift := ASM_BUILTIN.clz ld1) > 0).if {
+      ld1 := (ld1 << shift) | (ld0 >> (64 - shift))
+      ld0 := ld0 << shift
+    }
+    d1 := ld1;  d0 := ld0;  di := invert_3by2 (ld1, ld0)
+  )
+  
+  - qr_preinv (qp,np:NATIVE_ARRAY UINTEGER_64, nn:INTEGER, dp:NATIVE_ARRAY UINTEGER_64, dn:INTEGER) <-
+  [ ? {dn > 0};  ? {nn >= dn}; ]
+  (    
+    (dn = 1).if {      
+      np.at 0 put (qr_1_preinv (qp, np, nn))
+    }.elseif {dn = 2} then {
+      qr_2_preinv (qp, np, nn)
+    } else {
+      + nh:UINTEGER_64
+      ? {d1 = dp.at (dn-1)};  ? {d0 = dp.at (dn-2)}
+      ? {(d1 & 8000_0000_0000_0000h) != 0}
+
+      (shift > 0).if {        
+        nh := ℤ.lshift_n (np, np, nn-1, shift)
+      }
+      qr_pi1 (qp, np, nn, nh, dp, dn, di)
+      (shift > 0).if {
+        + cy:UINTEGER_64
+        cy := ℤ.rshift_n (np, np, dn-1, shift)
+        ? {cy = 0}
+      }
+    }
+  )
+  
+  - invert_3by2 (u1,u0:UINTEGER_64) :UINTEGER_64 <-
+  // The 3/2 inverse is defined as  
+  // m = floor( (B^3-1) / (B u1 + u0)) - B    
+  ( + r, m:UINTEGER_64
+    + p, ql:UINTEGER_64
+    + ul, uh, qh:UINTEGER_64
+    
+    // For notation, let b denote the half-limb base, so that B = b^2.
+    // Split u1 = b uh + ul.
+    ul := u1 & 0FFFF_FFFFh
+    uh := u1 >> (64 / 2)
+
+    // Approximation of the high half of quotient. Differs from the 2/1
+    // inverse of the half limb uh, since we have already subtracted u0.    
+    //(uh = 0).if { crash_with_message "DIV_INV:div zero"; }
+    qh := (u1 ^ UINTEGER_64.maximum) / uh
+
+    // Adjust to get a half-limb 3/2 inverse, i.e., we want
+    //   qh' = floor( (b^3 - 1) / u) - b = floor ((b^3 - b u - 1) / u
+    //       = floor( (b (~u) + b-1) / u),
+    // and the remainder
+    //   r = b (~u) + b-1 - qh (b uh + ul)
+    //     = b (~u - qh uh) + b-1 - qh ul
+    // Subtraction of qh ul may underflow, which implies adjustments.
+    // But by normalization, 2 u >= B > qh ul, so we need to adjust by
+    // at most 2.    
+    r := ((~u1 - qh * uh) << (64 / 2)) | 0FFFF_FFFFh
+    p := qh.to_uinteger_64 * ul
+    // Adjustment steps taken from udiv_qrnnd_c
+    (r < p).if {
+      qh := qh - 1
+      r := r + u1
+      (r >= u1).if { // i.e. we didn't get carry when adding to r
+        (r < p).if {
+          qh := qh - 1
+          r := r + u1
+        }
+      }
+    }
+    r := r - p
+    // Low half of the quotient is
+    //   ql = floor ( (b r + b-1) / u1).
+    // This is a 3/2 division (on half-limbs), for which qh is a
+    // suitable inverse.
+    p := (r >> (64 / 2)) * qh + r
+    // Unlike full-limb 3/2, we can add 1 without overflow. For this to
+    // work, it is essential that ql is a full mp_limb_t.
+    ql := (p >> (64 / 2)) + 1
+    // By the 3/2 trick, we don't need the high half limb.
+    r := (r << (64 / 2)) + 0FFFF_FFFFh - ql * u1
+    (r >= (UINTEGER_64.maximum & (p << (64 / 2)))).if {
+      ql := ql - 1
+      r := r + u1
+    }
+    m := (qh.to_uinteger_64 << (64 / 2)) + ql
+    (r >= u1).if {
+      m := m + 1
+      r := r - u1
+    }
+    // Now m is the 2/1 inverse of u1. If u0 > 0, adjust it to become a
+    // 3/2 inverse.
+    (u0 > 0).if {
+      + th, tl:UINTEGER_64
+      r := ~r
+      r := r + u0
+      (r < u0).if {
+        m := m - 1
+        (r >= u1).if {
+          m := m - 1
+          r := r - u1
+        }
+        r := r - u1
+      }
+      (th,tl) := ℤ.umul_128 (u0, m)
+      r := r + th
+      (r < th).if {
+        m := m - 1
+        m := m - ((r > u1) || {(r = u1) && {tl > u0}}).to_integer
+      }
+    }
+    m
+  )
+  
+  - qr_pi1 (qp,np:NATIVE_ARRAY UINTEGER_64, nn:INTEGER, n1p:UINTEGER_64,
+  dp:NATIVE_ARRAY UINTEGER_64, dn:INTEGER, dinv:UINTEGER_64) <-
+  [ ? {dn > 2};  ? {nn >= dn}; ]
+  ( + i:INTEGER
+    + ld1,ld0,cy,cy1,q,n1:UINTEGER_64
+    n1 := n1p
+    ld1 := dp.at (dn - 1)
+    ld0 := dp.at (dn - 2)
+
+    ? {(ld1 & 8000_0000_0000_0000h) != 0}
+    // Iteration variable is the index of the q limb.
+    // We divide <n1, np[dn-1+i], np[dn-2+i], np[dn-3+i],..., np[i]>
+    // by            <d1,          d0,        dp[dn-3],  ..., dp[0] >
+    i := nn - dn
+    { + n0:UINTEGER_64
+      n0 := np.at (dn-1+i)
+      ((n1 = ld1) && {n0 = ld0}).if {
+        q := UINTEGER_64.maximum
+        submul_1 (np+i, dp, dn, q)
+        n1 := np.at (dn-1+i);	// update n1, last loop's value will now be invalid 
+      } else {
+        (q,n1,n0) := qr_3by2 (n1, n0, np.at (dn-2+i), ld1, ld0, dinv)
+        cy := submul_1 (np + i, dp, dn-2, q)
+
+        cy1 := (n0 < cy).to_integer
+        n0 := n0 - cy
+        cy := (n1 < cy1).to_integer
+        n1 := n1 - cy1
+        np.at (dn-2+i) put n0
+        (cy != 0).if {
+          n1 := n1 + ld1 + ℤ.add_n (np + i, np + i, dp, dn - 1 -1)
+          q := q - 1
+        }
+      }
+      //(qp != NULL).if {
+      qp.at i put q
+      //}
+      i := i - 1
+    }.do_while {i >= 0}
+    np.at (dn - 1) put n1
+  )
+  
+  - qr_1_preinv (qp,npa:NATIVE_ARRAY UINTEGER_64, n:INTEGER) :UINTEGER_64 <-
+  ( + d, r:UINTEGER_64
+    + q:UINTEGER_64
+    + np:NATIVE_ARRAY UINTEGER_64
+    + nn:INTEGER
+    np := npa
+    nn := n
+    (shift > 0).if {    
+      // Shift, reusing qp area if possible. In-place shift if qp == np.
+      r := ℤ.lshift_n (qp, np, nn-1, shift)
+      np := qp
+    } else {
+      np := npa
+    }
+    d := d1
+    {nn > 0}.while_do {
+      nn := nn - 1
+      (q,r) := qrnnd_preinv (r, np.at nn, d)
+      qp.at nn put q
+    }
+    r >> shift
+  )
+
+  - qr_2_preinv (qp,np:NATIVE_ARRAY UINTEGER_64, nn:INTEGER) <-
+  [ ? {nn >= 2}; ]
+  ( + i:INTEGER
+    + r1, r0:UINTEGER_64
+    + n0, q:UINTEGER_64
+    (shift > 0).if {
+      r1 := ℤ.lshift_n (np, np, nn-1, shift)
+    }
+    r0 := np.at (nn - 1)
+
+    i := nn - 2
+    {      
+      n0 := np.at i
+      (q,r1,r0) := qr_3by2 (r1, r0, n0, d1, d0, di)
+      (qp != NULL).if {
+        qp.at i put q
+      }
+      i := i - 1
+    }.do_while {i >= 0}
+
+    (shift > 0).if {
+      ? {(r0 & (UINTEGER_64.maximum >> (64 - shift))) = 0}
+      r0 := (r0 >> shift) | (r1 << (64 - shift))
+      r1 := r1 >> shift
+    }
+    np.at 1 put r1;  np.at 0 put r0
+  )
+
+  - qrnnd_preinv(nh, nl, d:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
+  ( + qh, ql, r, mask:UINTEGER_64
+    (qh,ql) := ℤ.umul_128 (nh, di)
+    (qh,ql) := add_ssaaaa (qh, ql, nh + 1, nl)
+    r := nl - qh * d
+    mask := - (r > ql).to_integer; // both > and >= are OK 
+    qh := qh + mask
+    r := r + mask & d
+    (r >= d).if {
+      r := r - d
+      qh := qh + 1
+    }
+    qh,r
+  )
+  
+  - qr_3by2(n2, n1, n0, pd1, pd0, dinv:UINTEGER_64) :(UINTEGER_64,UINTEGER_64,UINTEGER_64) <-
+  ( + q0, t1, t0, mask:UINTEGER_64
+    + q,r1,r0:UINTEGER_64
+    (q,q0) := ℤ.umul_128 (n2, dinv)
+    (q,q0) := add_ssaaaa (q, q0, n2, n1)
+
+    // Compute the two most significant limbs of n - q'd 
+    r1 := n1 - d1 * q
+    (r1,r0) := sub_ddmmss (r1, n0, pd1, pd0)
+    (t1,t0) := ℤ.umul_128 (pd0, q)
+    (r1,r0) := sub_ddmmss (r1, r0, t1, t0)
+    q := q + 1
+
+    // Conditionally adjust q and the remainders 
+    mask := - (r1 >= q0).to_integer
+    q := q + mask
+    (r1,r0) := add_ssaaaa (r1, r0, mask & pd1, mask & pd0)
+    (r1 >= pd1).if {
+      ((r1 > pd1) || {r0 >= pd0}).if {
+        q := q + 1
+        (r1,r0) := sub_ddmmss (r1, r0, pd1, pd0)
+      }
+    }
+    q,r1,r0
+  )
+  
+  - add_ssaaaa(ah, al, bh, bl:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
+  ( + x:UINTEGER_64
+    x := al + bl
+    (ah + bh) + (x < al).to_integer,
+    x
+  )
+
+  - sub_ddmmss (ah, al, bh, bl:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
+  ( + x:UINTEGER_64
+    x := al - bl
+    (ah - bh) - (al < bl).to_integer,
+    x
+  )
+  
+  - get_str (sp:NATIVE_ARRAY UINTEGER_8, wa:UINTEGER_64) :INTEGER <-
+  // We generate digits from the least significant end, and reverse at
+  // the end.
+  ( + i:INTEGER
+    + w:UINTEGER_64
+    w := wa
+    {w > 0}.while_do {
+      + h,l,r:UINTEGER_64
+      h := w >> (64 - shift)
+      l := w << shift
+      (w,r) := qrnnd_preinv (h, l, d1)
+      ? {(r & (UINTEGER_64.maximum >> (64 - shift))) = 0}
+      r := r >> shift
+      sp.at i put (r.to_uinteger_8)
+      i := i + 1
+    }
+    i
+  )
+  
+Private
+  
+  - submul_1 (rp,up:NATIVE_ARRAY UINTEGER_64, n:INTEGER, vl:UINTEGER_64) :UINTEGER_64 <-
+  [ ? {n >= 1}; ]
+  ( + ul, cl, hpl, lpl, rl:UINTEGER_64
+    + i:INTEGER
+    {
+      ul := up.at i
+      (hpl,lpl) := ℤ.umul_128 (ul, vl)
+      lpl := lpl + cl
+      cl := hpl + (lpl < cl).to_integer
+      rl := rp.at i
+      lpl := rl - lpl
+      cl := cl + (lpl > rl).to_integer
+      rp.at i put lpl
+      i := i + 1
+    }.do_while {i < n}
+    cl
+  )

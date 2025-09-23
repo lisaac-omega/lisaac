@@ -1,0 +1,943 @@
+Header
+  + name := NODE;
+  
+Inherit
+  //- parent_lutils:LUTILS :=LUTILS
+  - parent_clone:CLONE := CLONE
+//  - parent_ia:IA := IA
+  
+Public
+  
+  - rtype:NODE
+  - rslot:NODE
+  
+  - rprefix:NODE
+  - rpostfix:NODE
+  - rinfix:NODE
+    
+  - init <-
+  ( 
+    (rtype,rslot) := (clone,clone)
+    (rprefix,rpostfix,rinfix) := (clone,clone,clone)
+  )
+  
+  + cidf:Expanded ARRAY N_IDF
+  + carg:Expanded ARRAY N_ARG; // A optimiser pour la mémoire.
+  + crec:Expanded ARRAY N_ARG
+  
+  + slot:Expanded ARRAY SLOT
+  //- add_slot s:SLOT <- ( slot := s; )
+  
+  + proto:PROTO
+  - set_proto p:PROTO <- ( proto := p; )
+  
+  + flag:UINTEGER_8
+  - idf_bit:UINTEGER_8 := 00_0001b
+  - arg_bit:UINTEGER_8 := 00_0010b
+  - rec_bit:UINTEGER_8 := 00_0100b
+  - typ_bit:UINTEGER_8 := 00_1000b
+  - gly_bit:UINTEGER_8 := 01_0000b
+  - is f:UINTEGER_8 :BOOLEAN <- (flag & f) = f
+  - set f:UINTEGER_8 :SELF <- ( flag := flag | f; Self)
+      
+  //
+  // Leaf
+  //  
+  
+  - add_rec t:TPRO <-
+  (
+    (type = NULL).if { type := ARRAY TPRO.create_with_capacity 2; }
+    (! rec_ok t).if { type.add_last t; }
+  )
+  
+  //- rec_ok t:TYPE :BOOLEAN <- TRUE
+  /*
+  - rec_ok t:TYPE :BOOLEAN <-
+  [ ? {is rec_bit}; ]
+  ( + i:INTEGER
+    + result:BOOLEAN
+    + tp:TPRO
+    tp ?= t
+    // Debug !!
+    (type = NULL).if {
+      "Rec. NULL: ".print
+      do { w:STRING; w.print; ' '.print; } param {i:INTEGER; "() ".print; }
+      '\n'.print
+    } else {
+      // Fin debug.
+      (tp != NULL).if {
+        {(i <= type.upper) && {! (tp <= type.at i)}}.while_do {
+          i := i + 1
+        }
+        result := i <= type.upper
+      }
+    }
+    result
+  );*/
+    
+  + line:INTEGER
+  - line_one:INTEGER := +1
+  - line_mul:INTEGER := -1
+  - line_inc i:INTEGER <- ( line := line + i; )
+  - is_one_line:BOOLEAN <- line >= 0
+  
+  + freq:INTEGER
+  - freq_inc <- ( freq := freq + 1; )
+    
+  - search_slot_in p:PROTO :SLOT <-
+  ( + i:INTEGER
+    + result,s:SLOT
+    {(i <= slot.upper) && {(s := slot.at i).proto != p}}.while_do { i := i + 1; }
+    (i <= slot.upper).if { result := s; }
+    result
+  )
+  
+  - print_slot <-
+  // Debug.
+  (
+    slot.foreach { s:SLOT
+      s.proto.name.node.word.print; ": ".print
+      s.print_debug
+    }
+  )
+    
+  //
+  // Function
+  //
+  - find w:TXT_BUF at ib:INTEGER up up:INTEGER :NODE <-
+  ( + n:NODE
+    + p:INTEGER
+    (n,p) := (Self,ib)
+    //p.print; '-'.print
+    {(n != NULL) && {p <= up}}.while_do {
+      (n,p) := n.get_idf w at p up up
+    }
+    //p.print; '/'.print; up.println
+    n
+  )
+  
+  - get_idf w:TXT_BUF at ib:INTEGER up up:INTEGER :(N_IDF,INTEGER) <-
+  ( + l,r,m,i,j,vup:INTEGER
+    + n:N_IDF
+    + v:STRING_ALIAS
+    r := cidf.upper
+    {(l <= r) && {i = 0}}.while_do {
+      m := (l + r) >> 1
+      n := cidf.at m
+      v := n.idf; vup := v.upper
+      (i,j) := (0,ib)
+      j := skip_sp w at j up up
+      {(j <= up) && {i <= vup} && {w.at j = v.at i}}.while_do {
+        j := j + 1; j := skip_sp w at j up up
+        i := i + 1
+      }
+      //v.print; " i=".print; i.println
+      (i = 0).if {
+        (w.at ib > v.first).if {
+          l := m + 1
+        } else {
+          r := m - 1
+        }
+      }
+    }
+    (i <= vup).if { n := NULL; j := ib; }
+    n,j
+  )
+  
+  - skip_sp w:TXT_BUF at ib:INTEGER up up:INTEGER :INTEGER <-
+  ( + j:INTEGER; j := ib; {(j <= up) && {w.at j = ' '}}.while_do { j := j + 1; }; j)
+      
+  - dicho_idf w:STRING_BUFFER :(N_IDF,INTEGER,INTEGER) <-
+  ( + l,r,m,i:INTEGER
+    + n:N_IDF
+    + v:STRING_ALIAS
+    r := cidf.upper
+    {(l <= r) && {i = 0}}.while_do {
+      m := (l + r) >> 1
+      n := cidf.at m
+      v := n.idf
+      i := 0
+      {(i <= w.upper) && {i <= v.upper} && {w.at i = v.at i}}.while_do { i := i + 1; }
+      (i = 0).if {
+        (w.first > v.first).if {
+          m := l := m + 1
+        } else {
+          r := m - 1
+        }
+      }
+    }
+    n,m,i
+  )
+  
+  - tsb:STRING_BUFFER := STRING_BUFFER.create 64
+  
+  - f_idf_fn w:STRING_ALIAS :N_IDF <-
+  ( + l,r,m,d,wl,i:INTEGER
+    + n:N_IDF
+    r := cidf.upper; d := 1
+    wl := w.count; // - 1
+    {(l <= r) && {d != 0}}.while_do {
+      m := (l + r) >> 1
+      d := cidf.at m.idf.count - wl
+      (d > 0).if {
+        l := m + 1
+      } else {
+        r := m - 1
+      }
+    }
+    (d = 0).if {
+      i := m
+      {(i >= 0) && {(n := cidf.at i).idf != w}}.while_do { i := i - 1; }
+      (i < 0).if {
+        i := m + 1
+        {(i <= cidf.upper) && {(n := cidf.at i).idf != w}}.while_do { i := i + 1; }
+        (i > cidf.upper).if { n := NULL; }
+      }
+    }
+    n
+  )
+  
+  - n_idf_fn w:STRING_BUFFER :N_IDF <-
+  ( + l,r,m,d,wl,i:INTEGER
+    + n:N_IDF
+    r := cidf.upper; d := 1
+    wl := w.count; // - 1
+    {(l <= r) && {d != 0}}.while_do {
+      m := (l + r) >> 1
+      d := cidf.at m.idf.count - wl
+      (d > 0).if {
+        l := m + 1
+      } else {
+        r := m - 1
+      }
+    }
+    (d = 0).if {
+      i := m
+      {(i >= 0) && {(n := cidf.at i).idf !== w}}.while_do { i := i - 1; }
+      (i < 0).if {
+        i := m + 1
+        {(i <= cidf.upper) && {(n := cidf.at i).idf !== w}}.while_do { i := i + 1; }
+        (i > cidf.upper).if {
+          n := N_IDF.new (w.to_string_alias); cidf.add n to m
+        }
+      }
+    } else {    
+      n := N_IDF.new (w.to_string_alias); cidf.add n to m
+    }
+    n
+  )
+  
+  - n_idf w:STRING_BUFFER :NODE <-
+  ( + result:NODE
+    + n,n2,n3:N_IDF
+    + i,j:INTEGER
+    (cidf.is_empty).if {
+      result := n := N_IDF.new (w.to_string_alias); cidf.add_last n
+    } else {
+      (n,j,i) := dicho_idf w
+      (i > w.upper).if {
+        (n.idf.count = i).if {
+          result := n
+        } else {          
+          tsb.copy (n.idf) from i to (n.idf.upper)
+          n.set_idf (tsb.to_string_alias)
+          n2 := N_IDF.new (w.to_string_alias)
+          cidf.at j put n2
+          n2.cidf.add_last n
+          result := n2
+        }
+      }.elseif {i = 0} then {
+        result := n := N_IDF.new (w.to_string_alias); cidf.at j add n
+      } else {
+        (n.idf.count = i).if {
+          w.remove_head i
+          result := n.n_idf w
+        } else {          
+          tsb.copy (n.idf) from i to (n.idf.upper)
+          n.set_idf (tsb.to_string_alias)
+          tsb.copy w from 0 to (i-1)
+          n2 := N_IDF.new (tsb.to_string_alias)
+          cidf.at j put n2
+          n2.cidf.add_last n
+          tsb.copy w from i to (w.upper)
+          n3 := N_IDF.new (tsb.to_string_alias)
+          (w.at i > n.idf.first).if {
+            n2.cidf.add_last n3
+          } else {
+            n2.cidf.add_first n3
+          }
+          result := n3
+        }
+      }
+    }
+    result
+  )
+  
+  - n_arg t:TYPE rec r:BOOLEAN :N_ARG <-
+  ( + result:N_ARG
+    + i:INTEGER
+    + to:TPRO
+    (r).if {
+      {(i <= crec.upper) && {t != crec.at i.type}}.while_do {
+        i := i + 1
+      }
+      (i <= crec.upper).if {
+        result := crec.at i
+      } else {
+        result := N_ARG.new t rec TRUE
+        crec.add_last result
+      }
+    } else {
+      to ?= t
+      (to = NULL).if {
+        {(i <= carg.upper) && {t != carg.at i.type}}.while_do {
+          i := i + 1
+        }
+      } else {
+        {(i <= carg.upper) && {! (to <= carg.at i.type)}}.while_do {
+          i := i + 1
+        }
+      }
+      (i <= carg.upper).if {
+        result := carg.at i
+      } else {
+        result := N_ARG.new t rec FALSE
+        carg.add_last result
+      }
+    }
+    result
+  )
+  
+  /*
+  - f_idf w:STRING_ALIAS flag f:UINTEGER_8 :NODE <-
+  ( + result,n:NODE
+    + i:INTEGER
+    {(i <= child.upper) && {(! (n := child.at i).is f) || {n.idf != w}}}.while_do {
+      i := i + 1
+    }
+    (i <= child.upper).if { result := n; }
+    result
+  );*/
+  
+  - append_in b:STRING_BUFFER with a:{INTEGER; STRING} <-
+  ( + n:NODE
+    + s:N_IDF
+    + i:INTEGER
+    node_tmp.clear
+    n := Self
+    {n != NULL}.while_do { node_tmp.add_last n; n := n.parent; }
+    node_tmp.foreach_backward { o:NODE
+      s ?= o
+      (s != NULL).if { b.append (s.idf); } else { b.append (a.value i); i := i + 1; }
+    }
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    (Self = rslot)   .if   { b += "Slot";    }.elseif
+    {Self = rtype}    then { b += "Type";    }.elseif
+    {Self = rprefix}  then { b += "Prefix";  }.elseif
+    {Self = rpostfix} then { b += "Postfix"; }.elseif
+    {Self = rinfix}   then { b += "Infix";   } else { b += "???"; }
+  )
+  
+  - print_rec s:STRING_BUFFER <-
+  ( + u:INTEGER
+    append_in s; s | '|'
+    ((cidf.is_empty) && {carg.is_empty} && {crec.is_empty}).if {
+      s.println
+    } else {
+      u := s.upper
+      cidf.foreach { n:N_IDF
+        n.print_rec s
+        s.set_upper u
+      }
+      carg.foreach { n:N_ARG
+        n.print_rec s
+        s.set_upper u
+      }
+      crec.foreach { n:N_ARG
+        n.print_rec s
+        s.set_upper u
+      }
+    }
+  )
+  
+  - print_all_op m:STRING <-
+  ( "---".print; m.print; "---".println
+    crec.foreach { na:N_ARG; na.type.print; ':'.print
+      na.cidf.foreach { ni:N_IDF; ni.idf.print; '('.print; ni.idf.count.print; ')'.print; ','.print; }
+      '\n'.print
+    }
+    cidf.foreach { ni:N_IDF
+      ni.idf.print; '('.print; ni.idf.count.print; ')'.print; ':'.print
+      ni.crec.foreach { na:N_ARG; na.type.print; ','.print; }
+      '\n'.print
+    }
+  )
+  
+  - print_all n:STRING <-
+  ( + i:INTEGER
+    "---".print; n.print; "---".println
+    STRING.tmp { tmp:STRING_BUFFER
+      print_rec tmp
+      {(i <= crec.upper)}.while_do {
+        //(crec.at i.type = TYPE.numeric).if {
+          crec.at i.print_rec tmp
+          "------ Fin -----".println
+        //}
+        i := i + 1
+      }
+    }
+  )
+  
+  
+  //
+  // SLOT
+  //
+    
+  - get_local i:INTEGER to up:INTEGER :UINTEGER_64 <-
+  ( + msk:UINTEGER_64
+    + dl,ds:INTEGER
+    + l:STRING_ALIAS
+    + s:STRING_BUFFER
+    + t:TYPE
+    + to:TPRO
+    //"-------------- GET LOCAL".print; locals.count.println
+    locals.foreach {ll:LOCAL; l := ll.name
+      (dl,ds) := diff l src src from i to up
+      ((dl > l.upper) || {ds > up}).if {
+        msk  := msk | (1 << (ds-i-1))
+        to ?= t := ll.type
+        crec.until_do { n:N_ARG
+          (to <= n.type).if {
+            str.add_last (I_LOC.new (i,ds-1) is ll err 0)
+            (dl > l.upper).if {
+              n.i_next ds to up
+            } else {
+              s := STRING.new_tmp; s.copy l from dl to (l.upper)
+              n.add_sol ds add s
+            }
+            str.pop.free
+          } && {str.is_empty} && {ds > up}
+        }
+        carg.until_do { n:N_ARG
+          str.add_last (I_LOC.new (i,ds-1) is ll err 0)
+          (dl > l.upper).if {
+            n.i_next ds to up
+          } else {
+            s := STRING.new_tmp; s.copy l from dl to (l.upper)
+            n.add_sol ds add s
+          }
+          str.pop.free
+          (str.is_empty) && {ds > up}
+        }
+      }
+    }
+    //"------------------ FIn".println
+    msk
+  )
+  
+  - i_next i:INTEGER to up:INTEGER <-
+  ( + ib,ic,j,u:INTEGER
+    + ni:N_IDF
+    + s:STRING_BUFFER
+    + na:STRING_ALIAS
+    + e:EXPR
+    + to:TPRO
+    + t:TYPE
+    + msk:UINTEGER_64
+    ib := skip_sp i to up
+    (ib <= up).if {            
+      (src.at ib = '\0').if {
+        // Expr. Extern.
+        ((! carg.is_empty) || {! crec.is_empty}).if {
+          e := src_arg.at arg_i; to ?= t := e.type
+          crec.until_do { n:N_ARG
+            (to <= n.type).if {
+              str.add_last (I_EXPR.new ib expr e)
+              arg_i := arg_i + 1
+              //"Node : ".print; n.type.println
+              n.i_next (ib+1) to up
+              arg_i := arg_i - 1
+              str.pop.free
+            } && {str.is_empty} && {ib = up}
+          }
+          carg.until_do { n:N_ARG
+            str.add_last (I_EXPR.new ib expr e)
+            arg_i := arg_i + 1
+            n.i_next (ib+1) to up
+            arg_i := arg_i - 1
+            str.pop.free
+            (str.is_empty) && {ib = up}
+          }
+        }
+      } else {
+        ((id = 'S') && {! slot.is_empty}).if {
+          + isl:I_STR
+          isl := I_STR.new str node Self add NULL
+          ((isl.type != NULL) && {(to?=isl.type) != NULL} && {to != TYPE.void}).if {
+            str := push_ino
+            str.add_last isl
+            NODE.rslot.crec.foreach { n:N_ARG
+              (to <= n.type).if {
+                n.i_next ib to up
+              }
+            }
+            str.pop.free
+            str := pop_ino
+          } else { isl.free; }
+        }
+        //
+        (!cidf.is_empty).if {
+          // Idf next.
+          (ni,ic,j) := get_idf src at ib up up
+          (ni != NULL).if {
+            str.add_last (I_IDF.new (i,j-1) is ni err 0)
+            na := ni.idf
+            (ic > na.upper).if {
+              ni.i_next j to up
+            } else {              
+              s := STRING.new_tmp; s.copy na from ic to (na.upper)
+              ni.add_sol j add s
+            }
+            str.pop.free
+          }
+        }
+        // Implicite receiver
+        crec.foreach { n:N_ARG
+          (proto.type <= n.type).if {
+            str.add_last (I_EXPR.new ib type (proto.type))
+            n.i_next ib to up
+            str.pop.free
+          }
+        }
+        // Local.
+        msk := get_local ib to up
+        // Local needed.
+        (! carg.is_empty).if {
+          j := 0
+          u := LOCAL.length_max.min (up-ib)
+          {(j <= u) && {src.at (ib+j) != '\0'}}.while_do {
+            {(j <= u) && {src.at (ib+j) = ' '}}.while_do { j := j + 1; }
+            ((j <= u) && {(msk & (1 << j)) = 0}).if {
+              carg.foreach { n:N_ARG
+                str.add_last (I_NIL.new ib to (ib+j))
+                n.i_next (ib+j+1) to up
+                str.pop.free
+              }
+            }
+            j := j + 1
+          }
+        }
+      }
+    } else {      
+      add_sol ib add NULL
+    }
+  )
+    
+  - add_sol i:INTEGER add add:STRING_BUFFER <-
+  (   
+    ((!str.is_empty) && {(str.count > 1) || {str.first.dynamic_type != I_NIL}}).if {
+      (id = 'S').if {
+        /*(
+          (! sol_slot.is_empty) && {str.count = 1} && {add != NULL} &&
+          {add.is_empty}// && {str.first.dynamic_type = I_LOC}
+        ).if {
+          (
+            (sol_slot.last.str.count != 1) ||
+            //{sol_slot.last.str.first.dynamic_type != I_LOC} ||
+            {sol_slot.last.fix = NULL} ||
+            {!sol_slot.last.fix.is_empty}
+          ).if {
+            sol_slot.add_last (I_STR.new.init str node Self add add)
+          }
+        } else {*/
+          sol_slot.add_last (I_STR.new.init str node Self add add)
+        //}
+      } else { ? {id = 'T'}
+        sol_type.add_last (I_STR.new.init str node Self add add)
+      }
+    }
+  )
+  
+  /*
+  - add_arg i:INTEGER to up:INTEGER <-
+  (
+    (id = 'S').if {
+      slot_arg i to up
+    } else { ? {id = 'T'}
+      not_yet_implemented
+      //type_arg i to up
+    }
+  );*/
+  
+  /*
+  - slot_arg i:INTEGER to up:INTEGER <-
+  ( + dl,ds,u,solup:INTEGER
+    + l:STRING_ALIAS
+    + s:STRING_BUFFER
+    + stop:BOOLEAN
+    //+ e:I_STR
+    u := i
+    {      
+      solup := sol_slot.upper
+      stop := FALSE
+      // Local.
+      locals.while_do {ll:LOCAL; l := ll.name
+        (dl,ds) := diff l and src from i to u
+        (ds > u).if {          
+          ((is arg_bit) || /*{is rec_bit} ||*/ {rec_ok (ll.type)}).if {
+            str.add_last (I_LOC.new (i,ds-1) is ll err 0)
+            (dl > l.upper).if {
+              i_next_idf ds to src_up
+              stop := TRUE
+            } else {
+              ((u = src_up) && {dl > 1}).if {
+                s := STRING.new_tmp; s.copy l from dl to (l.upper)
+                add_sol ds add s
+              }
+            }
+            str.pop.free
+          }
+        }
+        ! stop
+      }
+      // Short Msg.
+      /*(! stop).if {
+        NODE.i_next i to u in
+      };*/
+      // Type.
+      /*
+      ((! stop) && {! src.at i.is_lower}).if {
+        sol_type.clear
+        str := push_ino; id := 'T'; src_up := u
+        NODE.rtype.i_next i to u
+        ? {str.is_empty}
+        str := pop_ino; id := 'S'; src_up := Old src_up
+        (! sol_type.is_empty).if {
+          sol_type.quick_sort {(a,b:I_STR)
+            (a.error>>8)+(a.error&0FFh) < (b.error>>8)+(b.error&0FFh)}
+          IA.print_type
+          (u = src_up).if {
+            sol_type.foreach { ee:I_STR
+              ee.init_type
+              str.add_last ee
+              add_sol (u+1) add (ee.add.twin); // Pas top!
+              str.pop.free
+            }
+          } else {
+            ((! sol_type.is_empty) && {(e := sol_type.first).add = NULL}).if {
+              e.init_type
+              str.add_last e
+              i_next (u+1) to src_up
+              str.pop.free
+            }
+          }
+        }
+      }
+      */  
+      // Merde
+      ((solup = sol_slot.upper) && {!stop} && {is arg_bit}).if {
+        ? {! is rec_bit}
+        str.add_last (I_NIL.new i to u)
+        i_next_idf (u+1) to src_up
+        str.pop.free
+      }
+      u := skip_sp (u+1) to up
+    }.do_while {u <= up}
+  );*/
+  
+  /*
+  - type_arg i:INTEGER to up:INTEGER <-
+  ( + u,j,dl,ds,solup:INTEGER
+    + l:STRING
+    + s:STRING_BUFFER
+    + n:NODE
+    + stop:BOOLEAN
+    u := i
+    {
+      solup := sol_slot.upper
+      stop := FALSE
+      //
+      j := 0
+      {(j <= NODE.rtype.child.upper) && {!stop}}.while_do {
+        n := NODE.rtype.child.at j
+        (n.is typ_bit).if {
+          l := n.idf
+          (dl,ds) := diff l and src from i to u
+          (ds > u).if {
+            str.add_last (I_STR.new_t (i,u) is n err 0)
+            (dl > l.upper).if {
+              i_next ds to src_up; stop := TRUE
+            } else {
+              ((u = src_up) && {dl > 1}).if {
+                s := STRING.new_tmp; s.copy l from dl to (l.upper)
+                add_sol ds add s
+              }
+            }
+            str.pop.free
+          }
+        }
+        j := j + 1
+      }
+      // Merde.
+      ((solup = sol_slot.upper) && {is_typ i to u}).if {
+        str.add_last (I_NIL.new i to u)
+        i_next (u+1) to src_up
+        str.pop.free
+      }
+      u := skip_sp (u+1) to up
+    }.do_while {u <= up}
+  );*/
+      
+    
+  - fonc <-
+  ( + i,ib,ie,p0,p1,u,d,dt:INTEGER
+    + to:TPRO
+    + a:ARRAY EXPR
+    + e:EXPR
+    + ni:N_IDF
+    + ls:ARRAY N_IDF
+    "Entry fonc.... (".print; src_arg.count.print; " args)".println
+    // Post:
+    "Post...".println
+    p0 := src.index_of '\0'
+    i := 0
+    {i <= src_arg.upper}.while_do {
+      p1 := src.index_of '\0' since (p0+1)
+      p1.println
+      {
+        e := NULL
+        ib := skip_sp (p0 + 1) to (src.upper)
+        ie := skip_sp_inv (p1-1)
+        "Post:".print; ib.print; '-'.print; ie.println
+        ((ib <= src.upper) && {(i = src_arg.upper) || {ib < ie}}).if {
+          to ?= src_arg.at i.type
+          rpostfix.crec.until_do { na:N_ARG
+            (to <= na.type).if {
+              na.cidf.until_do { ni:N_IDF
+                u := ib + ni.idf.upper
+                (((i = src_arg.upper) || {u < ie}) && {ni.post ib}).if {
+                  a := push_expr; a.add_last (src_arg.at i)
+                  "Found:".print; ni.idf.println
+                  e := CAS.new (ni.slot.first.name) arg a self 0 fn TRUE.set_slot (ni.slot.first)
+                  src_arg.put e to i
+                  src.remove (p0+1) to u
+                  dt := u - ni.idf.upper - p0 - 1
+                  (dt != 1).if { d := d + (dt=0).ok 1 else {- dt + 1}; }
+                  p1 := p1 - (u - p0)
+                  pop_expr
+                }
+                e != NULL
+              }
+            }
+            e != NULL
+          }
+        }
+      }.do_while {e != NULL}
+      p0 := p1
+      i := i + 1
+    }
+    // Pre:
+    "Pre....".println
+    p0 := -1
+    i := 0
+    {i <= src_arg.upper}.while_do {
+      p1 := src.index_of '\0' since (p0+1)
+      {
+        e := NULL
+        ib := skip_sp_inv (p1 - 1)
+        ie := skip_sp (p0+1) to p1
+        "Pre:".print; ie.print; '-'.print; ib.println
+        ((ib >= 0) && {(i = 0) || {ib > ie}}).if {
+          to ?= src_arg.at i.type
+          rprefix.crec.until_do { na:N_ARG
+            (to <= na.type).if {
+              na.cidf.until_do { ni:N_IDF
+                u := ib-ni.idf.upper
+                (((i = 0) || {u > ie}) && {ni.pre ib}).if {
+                  a := push_expr; a.add_last (src_arg.at i)
+                  e := CAS.new (ni.slot.first.name) arg a self 0 fn TRUE.set_slot (ni.slot.first)
+                  "Pre:".print; ni.idf.println
+                  src_arg.put e to i
+                  src.remove u to (p1-1)
+                  dt := p1 - 1 - ni.idf.upper - u
+                  //"DT=".print; dt.println
+                  (dt != 1).if { d := d + (dt=0).ok 1 else {- dt + 1}; }
+                  p1 := u; //p1 - (ib - u + 1)
+                  pop_expr
+                }
+                e != NULL
+              }
+            }
+            e != NULL
+          }
+        }
+      }.do_while {e != NULL}
+      p0 := p1
+      i := i + 1
+    }
+    // Infix:
+    ((src_arg.count > 1) && {src.first = '\0'} && {src.last = '\0'}).if {
+      "Infix...".println
+      i := 0
+      p0 := 0; // src.index_of '\0'
+      ni := N_IDF
+      ls := push_nidf
+      {(i <= src_arg.upper-1) && {ni != NULL}}.while_do {
+        p1 := src.index_of '\0' since (p0+1)
+        STRING.tmp { w:STRING_BUFFER
+          (p0+1).to (p1-1) do { j:INTEGER
+            (src.at j != ' ').if { w | src.at j; }
+          }
+          "Op bin:".print; w.print
+          ni := rinfix.f_idf_fn (w.to_string_alias)
+          (ni != NULL).if {
+            " OK".println
+            ls.add_last ni
+          } else { " NO!".println; }
+        }
+        p0 := p1
+        i := i + 1
+      }
+      ((ni != NULL) && {ls.count = src_arg.count - 1}).if {
+        dt := src.occurrences ' ' from 1 to (src.upper-1)
+        d := d + src_arg.upper*2 - dt
+        //
+        e := CPX.new src_arg ope ls
+        src_arg.clear; src.clear
+        src_arg.add_last e; src.add_last '\0'
+      }
+      pop_nidf
+    }
+    "Fin fonc...".println
+    ( + t:TYPE
+      i := 0
+      src.foreach { c:CHARACTER
+        (c = '\0').if {
+          '('.print
+          t := src_arg.at i.type
+          (t = NULL).if { "Pas de Type".print; } else { t.print; }
+          ')'.print
+          i := i + 1
+        } else {
+          c.print
+        }
+      }
+      "\n".print
+    )
+    "DIS POS=".print; d.println
+    IA.set_pos (IA.pos + d)
+  )
+  
+Private
+  
+  - txt:STRING_BUFFER := STRING_BUFFER.create 128
+  
+  - node_tmp:Expanded ARRAY NODE
+  
+  - stacktb:Expanded ARRAY (ARRAY NODE)
+  
+  - diff s0:STRING src s1:STRING from b:INTEGER to u1:INTEGER :(INTEGER,INTEGER) <-
+  ( + i0,i1,u0:INTEGER
+    (u0,i1) := (s0.upper,b)
+    {(i0 <= u0) && {i1 <= u1} && {s0.at i0 = s1.at i1}}.while_do {      
+      i0 := i0 + 1; {(i0 <= u0) && {s0.at i0 = ' '}}.while_do { i0 := i0 + 1; }
+      i1 := i1 + 1; {(i1 <= u1) && {s1.at i1 = ' '}}.while_do { i1 := i1 + 1; }
+    }
+    (i0 <= u0).if {
+      {(s0.at i0 & 0C0h) = 80h}.while_do {
+        (i0,i1) := (i0 - 1,i1 - 1)
+      }
+    }
+    (i0,i1)
+  )
+  
+  - is_loc lo:INTEGER to up:INTEGER :BOOLEAN <-
+  ( + i:INTEGER
+    + c:CHARACTER
+    i := lo
+    {(i <= up) && {!(c := src.at i).is_upper} && {c != '\0'}}.while_do {
+      i := i + 1
+    }
+    i > up
+  )
+  
+  - is_typ lo:INTEGER to up:INTEGER :BOOLEAN <-
+  ( + i:INTEGER
+    + c:CHARACTER
+    (! src.at lo.is_lower).if {
+      i := lo + 1
+      {(i <= up) && {!(c := src.at i).is_upper} && {c != '\0'}}.while_do {
+        i := i + 1
+      }
+    }
+    i > up
+  )
+  
+  - skip_sp i:INTEGER to up:INTEGER :INTEGER <-
+  ( + ir:INTEGER
+    ir := i
+    {(ir <= up) && {src.at ir = ' '}}.while_do {      
+      ir := ir + 1
+    }
+    ir
+  )
+  
+  - skip_sp_inv i:INTEGER :INTEGER <-
+  ( + ib:INTEGER
+    ib := i
+    {(ib >= 0) && {src.at ib = ' '}}.while_do { ib := ib - 1; }
+    ib
+  )
+  
+CSLOT,NODE
+  
+  //
+  // PARSER SLOT
+  //
+  
+  - rd_type t:TYPE on w:TXT_BUF at ib:INTEGER :(INTEGER,NODE) <-
+  ( + ni:N_IDF
+    + n,n_mx:NODE
+    + p,p_mx:INTEGER
+    //"NODE:".print; t.println
+    crec.foreach { nr:N_ARG
+      //t.print; "<=".print; nr.type.print
+      (t <= nr.type).if {        
+        (ni,p) := nr.get_idf w at ib up (w.upper)
+        (ni != NULL).if {
+          "In ".print; nr.print; " Found!".println
+          (p,n) := ni.rd_on w at p
+          (p > p_mx).if { "Je prend!".println; (p_mx,n_mx) := (p,n); }
+        }
+      }
+    }
+    p_mx,n_mx
+  )
+  
+  - rd_on w:TXT_BUF at ib:INTEGER :(INTEGER,NODE) <-
+  ( + n:NODE
+    + p,p_mx:INTEGER
+    + n_mx:NODE
+    + e:EXPR
+    (! slot.is_empty).if {
+      "Slot not empty!".println
+      (p_mx,n_mx) := (ib,Self)
+    }
+    (n,p) := get_idf w at ib up (w.upper)
+    (n != NULL).if {
+      (p,n) := n.rd_on w at p
+      (p > p_mx).if { (p_mx,n_mx) := (p,n); }
+    }
+    (! carg.is_empty).if {
+      ? {carg.count = 1}
+      e := EXPR.rd_atom
+      (e != NULL).if {        
+        (p,n) := carg.first.rd_on w at ib
+        (p > p_mx).if { (p_mx,n_mx) := (p,n); }
+      }
+    }
+    p_mx,n_mx
+  )

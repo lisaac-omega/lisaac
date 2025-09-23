@@ -1,0 +1,105 @@
+Header
+
+  + name    := ITM_ARG;
+
+  /*One argument*/
+
+Inherit
+
+  + parent_itm_argument:Expanded ITM_ARGUMENT
+
+Public
+
+  + name:STRING_ALIAS
+  //+ pretty_name:STRING_ALIAS
+
+  + type:ITM_TYPE
+
+  - upper:INTEGER := 0
+  
+  - is_self:BOOLEAN <- name = "Self"
+  
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS type t:ITM_TYPE :SELF <-
+  ( + result:SELF
+
+    result := SELF.clone
+    result.make p name n type t
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS type t:ITM_TYPE <-
+  (
+    position := p
+    name     := n
+    type     := t
+  )
+
+  //
+  // Running.
+  //
+
+  - at idx:INTEGER :ITM_TYPE <-
+  ( ? {idx = 0}
+    type
+  )
+
+  - to_run_in arg_lst:ARRAY LOCAL for p:PARAMETER_TO_TYPE <-
+  ( + t:ITM_TYPE
+
+    (name = "Self").if {
+      t := ITM_TYPE_SIMPLE.type_self
+    } else {
+      t := type
+    }
+        
+    arg_lst.add_last (      
+      LOCAL.create position name name style ' ' type (t.to_run_for p pos (position.prototype.filename))
+    )
+    (verify).if {
+      check_local_with_slot position name name
+    }
+  )
+
+  - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-
+  ( + result:INTEGER
+    (type != p).if {
+      result := 1
+    }
+    result
+  )
+
+  - check larg:ARRAY EXPR index idx:INTEGER for p:PARAMETER_TO_TYPE :INTEGER <-
+  ( + new_expr:EXPR
+
+    new_expr := larg.at idx.check_type (type.to_run_for p pos (position.prototype.filename)) with position
+    larg.at idx put new_expr
+    idx + 1
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+    buffer.add_last ':'
+    type.append_in buffer
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    (name = "Self").if {
+      put name to buf like "keyword"
+    } else {
+      put name to buf like "local"
+    }
+    buf.add_last ':'
+    type.shorter_in buf
+  )
+
+

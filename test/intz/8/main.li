@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + intz:ℤ 
+    intz := 1; //4611686018427387904; // 2^62    
+    400.times {
+      intz := intz * 2
+    }
+    400.times {
+      intz := intz / 2
+    }
+    TEST.check (intz.to_hexadecimal) string "1"
+  )
+  

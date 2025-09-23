@@ -1,0 +1,240 @@
+Header
+  + name := IA;
+  
+  /*
+   EXPR    -> 
+   INFIX   -> PREFIX { infix PREFIX }
+   PREFIX  -> { prefix } POSTFIX
+   POSTFIX -> MSG { postfix }      ok
+   MSG     -> { { idf } ARG }
+   ARG     -> Local
+            | Type
+            | Sm_msg
+            | Term
+  */
+Public
+    
+  // Stack I_NODE
+  - init <- stack_ino.add_last (ARRAY I_NODE)
+  - top_ino:INTEGER
+  - stack_ino:Expanded ARRAY (ARRAY I_NODE)
+  - push_ino:ARRAY I_NODE <-
+  ( + result:ARRAY I_NODE
+    top_ino := top_ino + 1
+    (top_ino > stack_ino.upper).if {
+      result := ARRAY I_NODE.create_with_capacity 8
+      stack_ino.add_last result
+    } else {
+      result := stack_ino.at top_ino
+      ? {result.is_empty}
+      //result.clear
+    }
+    result
+  )
+  - pop_ino:ARRAY I_NODE <- ( top_ino := top_ino - 1; stack_ino.at top_ino)
+  
+  - sol_slot:ARRAY I_STR := ARRAY I_STR.create_with_capacity 128
+  - sol_type:ARRAY I_STR := ARRAY I_STR.create_with_capacity 128
+    
+  - str:ARRAY I_NODE
+  - id:CHARACTER
+  
+  - src:STRING_BUFFER
+  - src_up:INTEGER
+  - sty:ARRAY UINTEGER_16
+  - src_arg:ARRAY EXPR
+  - arg_i:INTEGER
+  - proto:PROTO
+  - pos:INTEGER_64
+  - set_pos p:INTEGER_64 <- ( pos := p; )
+  
+  - inc_arg_i <- ( arg_i := arg_i + 1; )
+  - set_arg_i i:INTEGER <- ( arg_i := i; )
+  
+  - find_slot l:INTEGER to u:INTEGER arg a:INTEGER <-
+  (
+    sol_slot.foreach { n:I_STR; n.free; }
+    sol_slot.clear
+    str := push_ino
+    id := 'S'
+    arg_i := a
+    //
+    NODE.rslot.i_next l to u
+    //
+    ? {str.is_empty}
+    str := pop_ino
+    ? {str = ARRAY I_NODE}
+    //
+    sol_slot.quick_sort {(a,b:I_STR); a.error < b.error}
+    print_slot
+  )
+  
+  - find <-
+  ( + i0,i1,a0,a1,ce,cne:INTEGER
+    + ex:EXPR
+    {      
+      i0 := skip_op i0
+      "i0=".print; i0.print; '/'.print; src.upper.println
+      i1 := skip_sl i0
+      "i1=".print; i1.print; '/'.print; src.upper.println
+      //STY.put (STY.cfn) to i0 in sty
+      (i0 <= src.upper).if {
+        "Find slot ".print; i0.print; " to ".print; i1.println
+        find_slot i0 to i1 arg a0
+        a1 := a0 + src.occurrences '\0' from i0 to i1 - 1
+        (sol_slot.is_empty).if {
+          "IA nothing".println
+          STY.put (STY.ul_red|STY.non) to i0 in sty; STY.put (STY.ul_red) to (i1+1) in sty
+          ex := NULL
+        } else {
+          "Solve found".println
+          ex := sol_slot.first.put_sty 0
+        }
+        (ex != NULL).if {
+          ce := ce + 1
+          //"A0=".print; a0.print; '-'.print; (a0+an-1).println
+          (a0 <= a1).if { src_arg.remove a0 to a1; }
+          src_arg.add ex to a0
+          set_pos (pos - src.occurrences ' ' from i0 to i1)
+          src.remove i0 to (i1-1)
+          src.put '\0' to i0
+          a0 := a0 + 1
+          i0 := i0 + 1
+        } else {
+          cne := cne + 1
+          a0 := a1 + 1
+          i0 := i1 + 1
+        }
+      } else {
+        i0 := i1 + 1
+      }
+    }.do_while {i0 <= src.upper}
+    ((ce > 0) && {cne = 0}).if {
+      NODE.fonc
+    }
+  )
+  
+  
+  - start err:ERR proto p:PROTO pos ps:INTEGER_64 :(EXPR,INTEGER_64) <-
+  ( + i:INTEGER
+    + typ:TYPE
+    + stop:BOOLEAN
+    + re:EXPR
+    pos := ps
+    I_STR.msg_err.clear
+    //
+    (proto,src,src_arg,src_up,sty) := (p,err.txt,err.exp,err.txt.upper,err.sty)
+    sty.clear
+    //
+    " on `".print; 
+    src.foreach { c:CHARACTER
+      (c = '\0').if {
+        '('.print
+        typ := src_arg.at i.type
+        (typ = NULL).if { "Pas de Type".print; stop := TRUE; } else { typ.print; }
+        ')'.print
+        i := i + 1
+      } else {
+        c.print
+      }
+    }
+    "' (".print; src_arg.count.print; " args)".println
+    (! stop).if { find
+      ((src.count = 1) && {src.first = '\0'}).if {
+        ? {src_arg.count = 1}
+        re := src_arg.first
+      }
+    }
+    "============Error-Report============".println
+    (I_STR.msg_err.is_empty).if {
+      "Not error.".println
+      DIV_HELP.set_msg ""
+    } else {
+      DIV_HELP.set_msg (I_STR.msg_err)
+      I_STR.msg_err.println
+    }
+    "====================================".println
+    re,pos
+  )
+    
+  - print_type <-
+  (
+    "-TYPE- ".print; sol_type.count.println
+    sol_type.foreach { n:I_STR; n.print; }
+  )
+  
+  - print_slot <-
+  ( + r:REAL_32
+    r := 40.0
+    //DCPX.ia (1.0,0.5,0.2) color (COLOR.white,LUTILS.look.type,COLOR.red)
+    //to (TO_SCREEN.x_max-54-r,TO_SCREEN.y_max-96-r) radius r
+    "-SLOT- ".print; sol_slot.count.println
+    //"Root slot:".print; NODE.rslot.child.count.println
+    sol_slot.foreach { n:I_STR; n.print; }
+  )
+  
+  - cutf8:STRING_BUFFER := STRING_BUFFER.create 4
+  - skip_op i0:INTEGER :INTEGER <-
+  [ ? {i0 <= src.upper}; ]
+  ( + c:UINTEGER_8
+    + i,ib:INTEGER
+    + ch:STRING_ALIAS
+    i := ib := i0
+    {
+      ib := i
+      c := src.at i.to_uinteger_8; i := i + 1
+      cutf8.clear; cutf8.add_last (c.to_character)
+      ((c & 1000_0000b) != 0).if {
+        i.print; '/'.print; src.upper.println
+        cutf8.add_last (src.at i); i := i + 1
+        ((c & 1110_0000b) = 1110_0000b).if { cutf8.add_last (src.at i); i := i + 1
+          ((c & 1111_0000b) = 1111_0000b).if { cutf8.add_last (src.at i); i := i + 1; }
+        }
+      }
+      ch := cutf8.to_string_alias
+    }.do_while {(i <= src.upper) && {(ch = " ") || {ope_list.fast_has ch}}}
+    ((i > src.upper) && {(ch = " ") || {ope_list.fast_has ch}}).if { ib := src.count; }
+    ib
+  )
+  
+  - skip_sl i0:INTEGER :INTEGER <-
+  ( + c:UINTEGER_8
+    + i,ib:INTEGER
+    + ch:STRING_ALIAS
+    i := ib := i0
+    (i <= src.upper).if {
+      {
+        ib := i
+        c := src.at i.to_uinteger_8; i := i + 1
+        cutf8.clear; cutf8.add_last (c.to_character)
+        ((c & 1000_0000b) != 0).if { cutf8.add_last (src.at i); i := i + 1
+          ((c & 1110_0000b) = 1110_0000b).if { cutf8.add_last (src.at i); i := i + 1
+            ((c & 1111_0000b) = 1111_0000b).if { cutf8.add_last (src.at i); i := i + 1; }
+          }
+        }
+        ch := cutf8.to_string_alias
+      }.do_while {(i <= src.upper) && {! ope_list.fast_has ch}}
+      (ope_list.fast_has ch).if { ib := ib - 1; } else { ib := src.upper; }
+      {(ib > 0) && {src.at ib = ' '}}.while_do { ib := ib - 1; }
+    }
+    ib
+  )
+  
+  - ope_list:HSET STRING_ALIAS :=
+  ( + r:HSET STRING_ALIAS
+    r := HSET STRING_ALIAS.create
+    r.fast_add_without_control "˛"; // Old
+    r.fast_add_without_control "˿"; // <-
+    r.fast_add_without_control "˷"; // <?
+    r.fast_add_without_control "≤"; // <=
+    r.fast_add_without_control "≥"; // >=
+    r.fast_add_without_control "≠"; // !=
+    r.fast_add_without_control "≡"; // ==
+    r.fast_add_without_control "×"; // *    
+    //
+    "&~#|\\^@/+-%$*:=<>!?".foreach { c:CHARACTER
+      r.fast_add_without_control (c.to_string_alias)
+    }
+    r
+  )
+  

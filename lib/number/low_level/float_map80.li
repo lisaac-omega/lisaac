@@ -1,0 +1,38 @@
+Header
+
+  + name    := FLOAT_MAP80;
+
+  /*Mapping for REAL_80.*/
+
+Inherit
+
+  - parent_float_map:FLOAT_MAP := FLOAT_MAP
+
+Mapping,Private
+
+  + exp_16:UINTEGER_16
+  + man_64:UINTEGER_64
+
+REAL, REAL_32, REAL_64, REAL_80
+
+  - get_map f:SELF <-
+  ( + tab:NATIVE_ARRAY(SELF)
+    tab := CAST FLOAT_MAP80 TO (NATIVE_ARRAY SELF).on FLOAT_MAP80
+    tab.put f to 0
+  )
+
+Public
+  
+  - sign:BOOLEAN         <- (exp_16 >> 15) = 0; // TRUE if positif, FALSE else.
+
+  - exponent:UINTEGER_32 <- exp_16 & 07F_FFh
+
+  - mantissa:UINTEGER_64 <- man_64
+
+
+  // Format.
+
+  - mantissa_bits:INTEGER_8 := 64
+
+  - exponent_bits:INTEGER_8 := 15
+

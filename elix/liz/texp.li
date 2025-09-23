@@ -1,0 +1,39 @@
+Header
+  + name := TEXP;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  - parent_txt_buf:TXT_BUF := TXT_BUF
+    
+Public
+  
+  //  - set_parent_txt_buf t:TXT_BUF <- ( parent_txt_buf := t; )
+
+  - new:SELF <- clone
+
+  - stk:Expanded ARRAY REAL_32
+  - bp:INTEGER
+  
+  - begin s:INTEGER <-
+  (
+    bp := stk.count
+    stk.resize (bp + s)
+    stk.at (bp+3) put (tex.x)
+    stk.at (bp+4) put (tex.y)
+    stk.at (bp+5) put (TXT_BUF.x_space)
+    stk.at (bp+6) put (TXT_BUF.asc_c)
+    stk.at (bp+7) put (TXT_BUF.des_c)
+  )
+  
+  - end s:INTEGER bp b:INTEGER <-
+  (
+    stk.set_upper (stk.upper - s)
+    bp := b
+  )
+  
+  - run <- ( abstract; )
+  - eval:REAL_32 <- ( abstract; 0)
+  
+  
+  
+  

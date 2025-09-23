@@ -1,0 +1,504 @@
+Header
+
+  + name        := LIDOC;
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Private
+
+  - is_lip:BOOLEAN
+
+  - output_name : STRING_ALIAS
+
+  - input_name  : STRING_ALIAS
+
+  - format_name : STRING_ALIAS
+
+  - proto_input:PROTOTYPE
+
+  //
+  // Buffer.
+  //
+
+  - directory_list:STRING_BUFFER
+
+  - file_list:STRING_BUFFER
+
+  - current_list:STRING_BUFFER
+
+  //
+  // Command.
+  //
+
+  - usage:STRING_ALIAS :=
+  "Usage:                                                      \n\
+  \  lidoc <input_file[.li]> [Options]                       \n\
+  \                                                            \n\
+  \Options:                                                    \n\
+  \  -o <output>      : output file or directory               \n\
+  \                     (default: <input_file.ext>)            \n\
+  \  -p               : include `Section Private'              \n\
+  \  -c               : include code source                    \n\
+  \  -r               : recursive builder documentation        \n\
+  \  -f <format_file> : formatting description file            \n\
+  \                     (see `/lisaac/lidoc_style/')               \n\
+  \  -d               : Lisaac doc style (no -c, -r)           \n\
+  \  -h               : Help                                   \n\
+  \  -version         : Show version information               \n\
+  \                                                            \n\
+  \Examples:                                                   \n\
+  \  * Output format file:                                     \n\
+  \      lidoc -c -p -f latex hello_world.li                 \n\
+  \                                                            \n\
+  \  * Build html documentation:                               \n\
+  \      lidoc -r -f html ~/lisaac/lib                       \n\
+  \                                                            \n\
+  \  * Build html documentation style JavaDoc:                 \n\
+  \   - With directory:                                        \n\
+  \      lidoc -d -f belinda ~/lisaac/lib                    \n\
+  \   - With current `make.lip'                                \n\
+  \      lidoc -d -f belinda                                 \n\
+  \   - With specific `make.lip'                               \n\
+  \      lidoc -d -f belinda ../make.lip                     \n"
+
+  - display_usage <-
+  (
+    COMMON.command_line_header "Lidoc".print
+    usage.print
+    COMMON.command_line_footer.print
+    exit exit_failure_code
+  )
+
+  - display_version <-
+  (
+    COMMON.command_line_header "Lidoc".print
+    COMMON.print_info
+    COMMON.command_line_footer.print
+    exit exit_failure_code
+  )
+
+  //
+  // Options.
+  //
+
+  - read_options <-
+  ( + cmd:STRING_BUFFER
+    + j:INTEGER
+    + var_lisaac:STRING_ALIAS
+
+    // Read argument.
+    is_shorter := TRUE
+    j := 1
+    {j > COMMAND_LINE.upper}.until_do {
+      cmd := COMMAND_LINE.at j
+      (cmd.at 1='-').if {
+	//
+	// Lecture des options :
+	//
+	(cmd.at 2 = 'o').if {
+	  // Output name.
+	  j := j+1
+	  (j > COMMAND_LINE.count).if {
+	    display_usage
+	  }
+	  output_name := COMMAND_LINE.at j.to_string_alias
+	}.elseif {cmd.at 2 = 'f'} then {
+	  j := j+1
+	  (j > COMMAND_LINE.count).if {
+	    display_usage
+	  }
+	  format_name := COMMAND_LINE.at j.to_string_alias
+	}.elseif {cmd.at 2 = 'c'} then {
+	  is_short_code := TRUE
+	}.elseif {cmd.at 2 = 'p'} then {
+	  is_short_private := TRUE
+	}.elseif {cmd.at 2 = 'r'} then {
+          is_short_recursive := TRUE
+        }.elseif {cmd.at 2 = 'd'} then {
+          is_shorter  := FALSE
+          is_shorter2 := TRUE
+          is_short_recursive := TRUE
+        }.elseif {cmd ~= "-version"} then {
+          display_version
+	} else {
+	  display_usage
+	}
+      } else {
+	//
+	// Input name.
+	//
+	(input_name != NULL).if {
+	  display_usage
+	}
+	string_tmp.copy (COMMAND_LINE.at j)
+	input_name := string_tmp.to_string_alias
+      }
+      j := j+1
+    }
+
+    (input_name = NULL).if {
+      (is_shorter2).if {
+        load_lip "make.lip"
+        is_lip := TRUE
+      } else {
+        display_usage
+      }
+    }.elseif {input_name.has_suffix ".lip"} then {
+      load_lip input_name
+      is_lip := TRUE
+    }
+
+    (format_name != NULL).if {
+      var_lisaac := COMMON.path_lisaac
+      string_tmp.copy var_lisaac
+      ((var_lisaac.last != '/') &&
+      {var_lisaac.last != '\\'}).if {
+	string_tmp.add_last '/'
+      }
+      string_tmp.append "lidoc_style/"
+      string_tmp.append format_name
+      string_tmp.append ".li"
+      PARSER.parse_format (string_tmp.to_string_alias)
+    }
+  )
+
+  - extract_proto_name st:STRING :STRING_ALIAS <-
+  ( + i:INTEGER
+
+    string_tmp.copy st
+    string_tmp.replace_all '\\' with '/'
+    i := last_index_str (string_tmp,'/')
+    (i >= string_tmp.lower).if {
+      string_tmp.remove_first i
+    }
+    i := last_index_str (string_tmp,'.')
+    ? {i > string_tmp.lower}
+    string_tmp.remove_last (string_tmp.upper-i+1)
+    string_tmp.to_upper
+    string_tmp.to_string_alias
+  )
+
+  - add_ext n:STRING_ALIAS :STRING_ALIAS <-
+  ( + txt:STRING_ALIAS
+    string_tmp.copy n
+    (PARSER.short_dico.fast_has "type_file").if {
+      txt := PARSER.short_dico.fast_at "type_file".first
+      string_tmp.append txt
+    } else {
+      string_tmp.append ".txt"
+    }
+    string_tmp.to_string_alias
+  )
+
+  - save_file n:STRING_ALIAS with buf:STRING_BUFFER <-
+  ( + file:FILE
+    + entry:DIRENT
+
+    (is_short_recursive).if {
+      (output_name != NULL).if {
+        string_tmp.copy output_name
+        ((string_tmp.last != '/') || {string_tmp.last != '\\'}).if {
+          string_tmp.add_last '/'
+        }
+      } else {
+        string_tmp.clear
+      }
+      string_tmp.append n
+    } else {
+      string_tmp.copy output_name
+    }
+    entry := FILE_SYSTEM.make_file string_tmp
+    (entry = NULL).if {
+      STDERR.put_string "Error: File "
+      STDERR.put_string string_tmp
+      STDERR.put_string " is not created !\n"
+      exit exit_failure_code
+    }
+    (! entry.open).if {
+      STDERR.put_string "Error: File "
+      STDERR.put_string string_tmp
+      STDERR.put_string " is not open !\n"
+      exit exit_failure_code
+    }
+    file ?= entry
+    file.write buf from (buf.lower) size (buf.count)
+    file.close
+  )
+
+  - build_with_path_file <-
+  ( + tok,tok2,t,old_tok:STRING_ALIAS
+    + tok_lst:LINKED_LIST(STRING_ALIAS)
+    + idx,j:INTEGER
+    
+    old_tok := ""
+    (path_file.lower).to (path_file.upper) do { i:INTEGER
+      string_tmp.copy (path_file.at i)
+      idx := last_index_str (string_tmp,'/')
+      (idx >= string_tmp.lower).if {
+        string_tmp.remove_first idx
+      }
+      string_tmp.remove_last 3
+      string_tmp.to_upper
+      tok := string_tmp.to_string_alias
+      (PARSER.short_dico.fast_has "file_list_item").if {
+        tok_lst := PARSER.short_dico.fast_at "file_list_item"
+        (tok_lst.lower).to (tok_lst.upper) do { j:INTEGER
+          (tok_lst.at j = NULL).if {
+            current_list.append tok
+            file_list.append tok
+          } else {
+            current_list.append (tok_lst.at j)
+            file_list.append (tok_lst.at j)
+          }
+        }
+      } else {
+        current_list.append tok
+        current_list.add_last '\n'
+        file_list.append tok
+        file_list.add_last '\n'
+      }
+      // Creation prototype file.
+      (PROTOTYPE.prototype_dico.fast_has tok).if {
+        "Error: Double definition prototype:\n".print
+        PROTOTYPE.prototype_dico.fast_at tok.filename.print; '\n'.print
+        path_file.at i.print; '\n'.print
+        exit exit_failure_code
+      }
+      proto_input := PROTOTYPE.create (path_file.at i) name tok generic_count 0
+      //
+      PARSER.go_on proto_input
+      (is_shorter).if {
+        save_file (add_ext tok) with output_code
+      }
+      (
+        (i = path_file.upper) ||
+        {path_file.at (i+1).first_difference_index (path_file.at i) < idx} ||
+        {last_index_str (path_file.at (i+1),'/') != idx}
+      ).if {
+        // Detect new directory.
+        current_list.is_empty.if_false {
+          (PARSER.short_dico.fast_has "file_list_begin").if {
+            tok := PARSER.short_dico.fast_at "file_list_begin".first
+            current_list.prepend tok
+          }
+          (PARSER.short_dico.fast_has "file_list_end").if {
+            tok := PARSER.short_dico.fast_at "file_list_end".first
+            current_list.append tok
+          }
+          string_tmp.copy (path_file.at i)
+          string_tmp.remove_last (string_tmp.upper-idx+1)
+          string_tmp.remove_first path_begin
+          string_tmp.is_empty.if_false {
+            string_tmp2.copy string_tmp
+            string_tmp.replace_all '/' with '-'
+            tok  := string_tmp.to_string_alias
+            tok2 := string_tmp2.to_string_alias
+            
+            j := tok2.lower
+            {(j < tok2.upper) && {j < old_tok.upper} && {tok2.at j = old_tok.at j}}.while_do { j := j + 1; }
+            {(j > tok2.lower) && {(tok2.at j != '/') || {old_tok.at j != '/'}}}.while_do { j := j - 1; }
+            
+            // New:
+            (PARSER.short_dico.fast_has "directory_list_item_new").if {
+              tok_lst := PARSER.short_dico.fast_at "directory_list_item_new"
+              string_tmp2.append (tok_lst.last)
+              (j <= tok2.lower).if {
+                string_tmp2.prepend (tok_lst.first)
+              } else {
+                string_tmp2.insert_string (tok_lst.first) to j
+              }
+            }
+            
+            // Current:
+            (j > tok2.lower).if {
+              (PARSER.short_dico.fast_has "directory_list_item_cur").if {
+                tok_lst := PARSER.short_dico.fast_at "directory_list_item_cur"
+                string_tmp2.insert_string (tok_lst.last) to j
+                t := tok_lst.first
+              } else {
+                t := ""
+              }
+              j := j - 1
+              {(j >= tok2.lower) && {tok2.at j != '/'}}.while_do { j := j - 1; }
+              (j <= tok2.lower).if {
+                string_tmp2.prepend t
+              } else {
+                string_tmp2.insert_string t to j
+              }
+            }
+            
+            // Old:
+            ((j > tok2.lower) && {PARSER.short_dico.fast_has "directory_list_item_old"}).if {
+              tok_lst := PARSER.short_dico.fast_at "directory_list_item_old"
+              string_tmp2.insert_string (tok_lst.last) to j
+              string_tmp2.prepend (tok_lst.first)
+            }
+            
+            (PARSER.short_dico.fast_has "directory_list_item").if {
+              t := tok
+              tok_lst := PARSER.short_dico.fast_at "directory_list_item"
+              (tok_lst.lower).to (tok_lst.upper) do { j:INTEGER
+                (tok_lst.at j = NULL).if {
+                  directory_list.append t
+                  t := string_tmp2.to_string_alias
+                } else {
+                  directory_list.append (tok_lst.at j)
+                }
+              }
+            } else {
+              directory_list.append tok2
+              directory_list.add_last '\n'
+            }
+            
+            old_tok := tok2
+            save_file (add_ext tok) with current_list
+            current_list.clear
+          }
+        }
+      }
+    }
+  )
+
+  - check_in entry:DIRENT begin n:INTEGER <-
+  ( + name:STRING_ALIAS
+    + dir:DIRECTORY
+
+    (! entry.open).if {
+      "Warning: directory `".print;
+      entry.path.print
+      "\' not open.\n".print
+    } else {
+      dir ?= entry
+      // Directory
+      (dir.lower).to (dir.upper) do { i:INTEGER
+	(dir.at i.is_directory).if {
+	  check_in (dir.at i) begin n
+	}
+      }
+      // Lisaac file `.li'
+      (dir.lower).to (dir.upper) do { i:INTEGER
+	(! dir.at i.is_directory).if {
+	  name := dir.at i.name
+          (name.has_suffix ".li").if {
+            path_file.add_last (dir.at i.path)
+	  }
+	}; // Lisaac file `.li'
+      }
+    }
+  )
+
+Public
+
+  //
+  // Creation.
+  //
+
+  - main <-
+  ( + txt:STRING_ALIAS
+    + p:PROTOTYPE
+    
+    //
+    read_options
+
+    // SELF, NULL, VOID, CONTEXT
+    TYPE_NULL.make_null
+    TYPE_VOID.make_void
+    TYPE_CONTEXT.make_context
+    TYPE_ID.make_type_id; // Pas utile !
+
+    (is_short_recursive).if {
+      + dir:DIRECTORY
+      + ent:DIRENT
+
+      directory_list := STRING_BUFFER.create 100
+      file_list      := STRING_BUFFER.create 100
+      current_list   := STRING_BUFFER.create 100
+
+      (is_lip).if {
+        LIP_CODE.call_front_end
+      } else {
+        ent := FILE_SYSTEM.get input_name
+        ((ent = NULL) || {! ent.is_directory}).if {
+          "Error: directory `".print;
+          input_name.print
+          "\' not found.\n".print
+          exit exit_failure_code
+        }
+        (! ent.open).if {
+          "Error: directory `".print;
+          input_name.print
+          "\' not open.\n".print
+          exit exit_failure_code
+        }
+        dir ?= ent
+        path_begin := dir.path.count
+        check_in dir begin path_begin
+      }
+      LIP_CODE.init_path_file TRUE
+      build_with_path_file
+      // index file.
+      (PARSER.short_dico.fast_has "index").if {
+	txt := PARSER.short_dico.fast_at "index".first
+	save_file (add_ext "index") with (txt.to_string_buffer)
+      }
+      // Default file.
+      (PARSER.short_dico.fast_has "default").if {
+	txt := PARSER.short_dico.fast_at "default".first
+	save_file (add_ext "default") with (txt.to_string_buffer)
+      }
+      // Directory_list file.
+      (PARSER.short_dico.fast_has "directory_list_begin").if {
+	txt := PARSER.short_dico.fast_at "directory_list_begin".first
+	directory_list.prepend txt
+      }
+      (PARSER.short_dico.has "directory_list_end").if {
+	txt := PARSER.short_dico.at "directory_list_end".first
+	directory_list.append txt
+      }
+      save_file (add_ext "directory_list") with directory_list
+
+      // file_list file.
+      (PARSER.short_dico.fast_has "file_list_begin").if {
+	txt := PARSER.short_dico.fast_at "file_list_begin".first
+	file_list.prepend txt
+      }
+      (PARSER.short_dico.fast_has "file_list_end").if {
+	txt := PARSER.short_dico.fast_at "file_list_end".first
+	file_list.append txt
+      }
+      save_file (add_ext "file_list") with file_list
+    } else {
+      // Input.
+      (input_name.has_suffix ".li").if_false {
+	string_tmp.copy input_name
+	string_tmp.append ".li"
+	input_name := string_tmp.to_string_alias
+      }
+
+      proto_input := PROTOTYPE.create input_name
+      name (extract_proto_name input_name)
+      generic_count 0
+      PARSER.go_on proto_input
+
+      (output_name = NULL).if {
+	output_name := add_ext (proto_input.name)
+      }
+      save_file output_name with output_code
+    }
+    (is_shorter2).if {
+      (PROTOTYPE.prototype_list.lower).to (PROTOTYPE.prototype_list.upper) do { j:INTEGER
+        p := PROTOTYPE.prototype_list.at j
+        output_code.clear
+        put "" to output_code like "begin"
+        p.shorter_out output_code
+        put "" to output_code like "end"
+        save_file (add_ext (p.name)) with output_code
+      }
+    }
+  )
+
+
+
+

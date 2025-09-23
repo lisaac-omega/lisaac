@@ -1,0 +1,12 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  
+  - main <-
+  (
+    STDOUT.put_string "out\n"
+    STDERR.put_string "err\n"
+    STDOUT.flush
+  )

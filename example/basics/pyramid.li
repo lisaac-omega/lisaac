@@ -1,0 +1,174 @@
+Header
+  
+  + name := PYRAMID;
+
+  /*
+  Solving the problem of the Pyramid for small pyramid only.
+  This program uses the back-tracking method.
+  Its goal is to try to fill a pyramid by making a substraction
+  between two succesive columns and to take its absolute value.
+  The result is put on the next line.
+  Example with 5:
+   6   14   15   3   13
+     8    1   12  10
+        7   11   2
+          4    9 
+            5
+  See also pyramid2, which run faster than this first solution.
+  */
+  
+Private
+
+  + size:INTEGER
+
+  - max:INTEGER <- (size * (size + 1)) / 2
+
+  - belongs_to nb:INTEGER :BOOLEAN <-
+  ( + i:INTEGER
+    + found:BOOLEAN
+    ? { nb.in_range 1 to max}
+    i := 1
+    {(i > max) | found}.until_do {
+      found := (nb = elem.at i)
+      i := i + 1
+    }
+    found
+  )
+
+  - propagate (col,val_column_1:INTEGER) :BOOLEAN <-
+  ( + stop:BOOLEAN
+    + line:INTEGER
+    + val:INTEGER
+    + result:BOOLEAN
+    ? { val_column_1.in_range 1 to max}
+    ? { col.in_range 1 to size}
+    if (belongs_to val_column_1) then {
+      result := FALSE 
+    } else {
+      elem.at (indice (1,col)) put val_column_1
+      line := 1
+      val := val_column_1
+      result := TRUE
+      {stop}.until_do {
+        line := line + 1
+        if (line > col) then {
+          stop := TRUE
+        } else {
+          val := val - elem.at (indice (line-1,col-line+1))
+          val := val.abs
+          if (belongs_to val) then {
+            clear_column col
+            stop := TRUE
+            result := FALSE
+          } else {
+            elem.at (indice (line,col-line+1)) put val
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - fill_up col:INTEGER :BOOLEAN <-
+  ( + stop,result:BOOLEAN
+    + nb:INTEGER
+    ? { col >= 1}
+    if (col > size) then {
+      result := TRUE
+    } else {
+      nb := max
+      {stop}.until_do {
+        if (belongs_to nb) then {
+          nb := nb - 1
+          stop := nb = 0
+        }.elseif {propagate (col,nb)} then {
+          if (fill_up (col + 1)) then {
+            stop := TRUE
+          } else {
+            clear_column col
+            nb := nb - 1
+            stop := nb = 0
+          }
+        } else {
+          nb := nb - 1
+          stop := nb = 0
+        }
+      }
+      result := nb > 0
+    }
+    result
+  )
+
+  + elem:RANGE_ARRAY(INTEGER)
+
+  - empty_slot:INTEGER <- 0
+
+  + biggest_one:INTEGER := 10
+
+  - indice (line,col:INTEGER) :INTEGER <-
+  ( + l:INTEGER
+    + result:INTEGER
+    ? {line.in_range 1 to size}
+    ? {col.in_range 1 to size}
+    l:= size - line + 1
+    result := max - ((l * (l + 1)) / 2) + col
+    ? {result.in_range 1 to max}
+    result
+  )
+
+  - clear_column col:INTEGER <-
+  (
+    ? {col.in_range 1 to size}
+    1.to col do { line:INTEGER
+      elem.at (indice (line,col-line+1)) put empty_slot
+    }
+  )
+
+Public
+
+  - print <-
+  ( + line,col:INTEGER
+    line := 1
+    col := 1
+    1.to max do { nb:INTEGER
+      if (col = 1) then {
+        '\n'.print
+      }
+      elem.at (indice (line,col)).print
+      ' '.print
+      if (col = size - line + 1) then {
+        col := 1
+        line := line + 1
+      } else {
+        col := col + 1
+      }
+    }
+    '\n'.print
+  )
+
+  - main <-
+  (
+    if (COMMAND_ARGS.upper = 0) then {
+      "Want to compute a small pyramid ?\n\
+      \Enter a small number (> 1): ".print
+      STDIN.read_integer
+      size := STDIN.last_integer
+    }.elseif {COMMAND_ARGS.upper = 1} then {
+      size := COMMAND_ARGS.at 1.to_integer
+    } else {
+      size := COMMAND_ARGS.at 1.to_integer
+    }
+    if (size <= 1) then {
+      "You feel sick ?\n".print
+    }.elseif {size > biggest_one} then {
+      "Value too big for this method.\n".print
+    } else {
+      elem := RANGE_ARRAY(INTEGER).create 1 to max
+      if (fill_up 1) then {
+        "Full pyramid:\n".print
+        print
+      } else {
+        "Unable to fill_up such one.\n".print
+      }
+    }
+  )

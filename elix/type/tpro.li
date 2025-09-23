@@ -1,0 +1,136 @@
+Header
+  + name := TPRO;
+  
+Inherit
+  + parent_tone:Expanded TONE
+  - parent_expr:EXPR := EXPR
+    
+Public
+  - is_complex:BOOLEAN <- generic != NULL
+  
+  + attr:UINTEGER_8
+  + generic:ARRAY TYPE
+  + proto:PROTO
+   
+  - type:TYPE <- Self
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    (proto = NULL).if {
+      b.append "<proto=NULL>"
+    } else {
+      b.append (proto.key)
+    }
+  )
+  
+  - Self:SELF '<=' o:TYPE :BOOLEAN <- 
+  ( + result:BOOLEAN
+    + i:INTEGER
+    + s:SLOT
+    + tp:TPRO
+    (Self = o).if {
+      result := TRUE
+    } else {      
+      {
+        (i <= proto.slot.upper) && {(s := proto.slot.at i).section.is_parent} && {! result}
+      }.while_do {
+        tp ?= s.type
+        result := tp <= o
+        i := i + 1
+      }
+    }
+    result
+  )
+  
+  - key p:PROTO gen gen:ARRAY TYPE attr f:UINTEGER_8 :STRING_ALIAS <-
+  ( + k:STRING_ALIAS
+    + i,j:INTEGER
+    + c:CHARACTER
+    + err:BOOLEAN
+    STRING.tmp { tmp:STRING_BUFFER
+      (f = expanded).if { tmp += "Expanded "; }
+      (f = strict).if { tmp += "Strict "; }
+      {(!err) && {j <= p.key.upper}}.while_do {
+        c := p.key.at j
+        (c != '\0').if { tmp | c; } else {
+          tmp | ' '
+          k := gen.at i.key
+          err := k.is_empty
+          tmp += k
+          tmp | ' '
+          i := i + 1
+        }
+        j := j + 1
+      }
+      (err).if { k := ""; } else { k := tmp.to_string_alias; }
+    }
+    k
+  )
+    
+  - new p:PROTO gen gen:ARRAY TYPE attr f:UINTEGER_8 :TPRO <-
+  ( + result:TPRO
+    + k:STRING_ALIAS
+    k := key p gen gen attr f
+    (k.is_empty).if {
+      result := TERR
+    } else {
+      result ?= dico.fast_reference_at k
+      (result = NULL).if {
+        result := clone.init k proto p gen gen attr f
+      }
+    }
+    result    
+  )
+  
+  - init (k:STRING_ALIAS) proto (p:PROTO) gen (g:ARRAY TYPE) attr f:UINTEGER_8 :SELF <-
+  (
+    (g.is_empty).if_false { generic := g.twin; }
+    (key,proto,attr) := (k,p,f)
+    dico.add Self to k
+    Self
+  )
+        
+  - txt_in s:STRING_BUFFER sty st:STY <-
+  ( + i,j:INTEGER
+    + t:TYPE
+    + c:CHARACTER
+    (name = NULL).if {
+      type_name.println
+    }
+    ? {name != NULL}
+    {j <= name.upper}.while_do {
+      c := name.at j
+      j := j + 1
+      (c != '\0').if {
+        s | c
+        (st != NULL).if { st.put (STY.typ) to (s.upper); }
+        {(j <= name.upper) && {(c := name.at j) != '\0'}}.while_do {
+          (c = ' ').if { s += "·"; } else { s | c; }
+          j := j + 1
+        }
+      } else {
+        t := generic.at i; i := i + 1
+        (t.is_complex).if {
+          s | '('; t.txt_in s sty st; s | ')'
+        } else {
+          (st != NULL)
+          .ok { st.put (STY.italic) to (s.count); }
+          do { t.txt_in s sty st; }
+          ok { st.put (STY.italic) to (s.count); }
+        }
+      }
+      s | ' '
+    }
+    s.remove_last
+  )
+   
+  - run_default <-
+  (
+    (default = NULL).if {
+      EXPR.push TONE
+    } else {
+      default.run
+    }
+  )
+  
+  - out_c <- ( outbuf += key; )

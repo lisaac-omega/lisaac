@@ -1,0 +1,165 @@
+Header
+  + name := BUF_ITM;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  - list:Expanded ARRAY BUF_ITM
+  
+  - new:SELF <- ( + r:SELF; r := parent_win.new; list.add_last r; r)
+  
+  - margin_x:REAL_32 := 8
+  - fsize:REAL_32 <- FONT.size_sys - 4
+  
+  + idx:INTEGER
+  + fx:STRING_ALIAS
+  
+  - name:STRING_ALIAS <- BUFFER.catalog.at idx.shortname
+  
+  - width_min:REAL_32 <-
+  ( + w1,w2,x0,y0,x1,y1,result:REAL_32
+    (idx <= BUFFER.catalog.upper).if {
+      text_align align_middle
+      font_face_id (FONT.sys (FONT.roman))
+      font_size (fsize-4)
+      (w1,x0,y0,x1,y1) := text_bounds (xo+margin_x,yo) msg "F"
+      font_face_id (FONT.sys (FONT.bold))
+      (w1,x0,y0,x1,y1) := text_bounds (x1,yo) msg fx
+      font_face_id (FONT.sys (FONT.bold))
+      font_size fsize
+      (w2,x0,y0,x1,y1) := text_bounds (x1,yo) msg name
+      result := x1 - xo + margin_x
+    }
+    result
+  )
+  
+  - copy o:SELF <-
+  ( (idx,fx) := (o.idx,o.fx); )
+  
+  - init p:WIN idx i:INTEGER :SELF <-
+  ( idx := i
+    STRING.tmp { tmp:STRING_BUFFER; (idx+1).append_in tmp; tmp | ' '; fx := tmp.to_string_alias; }
+    init p
+  )
+  
+  - draw <-
+  ( + p:PAINT
+    + py,px:REAL_32
+    + txt:STRING_ALIAS
+    + col:COLOR
+    + j,fnt:INTEGER
+    + buf:BUFFER
+    (idx <= BUFFER.catalog.upper).if {
+      (fnt,col) := (FONT.roman,LOOK.text_ui)
+      buf := BUFFER.catalog.at idx
+      txt := buf.shortname
+      {(j <= PAGE.pages_upper) && {PAGE.pages.at j.buf_pg.buffer != buf}}.while_do { j := j + 1; }
+      (j <= PAGE.pages_upper).if { fnt := FONT.bold; }
+      (is inside).if {        
+        begin_path
+        fill_color (LOOK.border_on)
+        rect (xo,yo+2) size (width, height-4) radius 8
+        fill
+      }
+      (buf = PAGE.cur_pg.buf_pg.buffer).if {
+        begin_path
+        p := PAINT.create_box (xo+6,yo+8) size (width-12, height-16) radius 8 feather 12
+        color (COLOR.rgbaf(1,1,1,0.3)) to (LOOK.border_off)
+        rect (xo,yo+2) size (width, height-4) radius 8
+        fill_paint p
+        fill
+        p.free
+      }
+      text_align align_middle
+      (px,py) := (xo + margin_x, yo + height/2)
+      font_size (fsize-4)
+      fill_color (LOOK.short_ui)
+      font_face_id (FONT.sys (FONT.roman))
+      px := text (px,py+1) msg "F"
+      font_face_id (FONT.sys (FONT.bold))
+      px := text (px,py+1) msg fx
+      (! buf.is_save).if {
+        begin_path
+        fill_color (COLOR.rgb (250,0,0))
+        rect (px,py+fsize/2 - 3) to (xmax - margin_x,py+fsize/2)
+        fill
+      }
+      font_face_id (FONT.sys fnt)
+      font_size fsize
+      fill_color col
+      text (px,py) msg txt
+    }
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + result:BOOLEAN
+    (idx <= BUFFER.catalog.upper).if {
+      result :=
+      ((ev & ~1) = HAND.in).if {
+        set inside with (ev = HAND.in)
+      }.elseif {ev = HAND.clic} then {
+        PAGE.cur_pg.set_buffer (BUFFER.catalog.at idx)
+      }.elseif {ev = HAND.lclic} then {
+        BUFFER.catalog.at idx.save_buffer
+      }
+    }
+    result
+  )
+  
+  // PARSE CFG
+  
+  - read <- read_object
+  
+  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  ( + b:BUFFER
+    buffer_read_ok.if { b := BUFFER.catalog.at array_index; }
+    id
+    .case "point" then { buffer_read_ok.if { b.set_last_pos (v.min (b.like TXT_BUF.upper)); }; }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN <-
+  ( + b:BUFFER
+    buffer_read_ok.if { b := BUFFER.catalog.at array_index; }
+    id
+    .case "pos_x" then { buffer_read_ok.if { b.set_last_pos_x v; }; }
+    .case "pos_y" then { buffer_read_ok.if { b.set_last_pos_y v; }; }
+    = STRING_ALIAS
+  )
+  
+  - buffer_read_ok:BOOLEAN
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "buffer"   then { buffer_read_ok := BUFFER.put v to (array_index); }
+    = STRING_ALIAS
+  )
+  
+  - write_object <-
+  ( + b:BUFFER
+    + pt:INTEGER
+    + t:TXT_BUF
+    b := BUFFER.catalog.at idx
+    put_object {
+      put "buffer" value { put_str (rel_path (b.name)); }
+      put "pos_x"  value { put_real (b.last_pos_x); }
+      put "pos_y"  value { put_real (b.last_pos_y); }
+      put "point"  value {
+        t ?= b
+        (t != NULL).if {
+          (t.last_pos.is_ico).if {
+            pt := t.toks.at (t.last_pos.tok).my_pos.pt
+          } else {
+            pt := t.last_pos.pt
+          }
+        }
+        put_int pt
+      }
+    }
+  )
+
+  

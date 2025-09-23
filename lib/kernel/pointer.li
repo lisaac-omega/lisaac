@@ -1,0 +1,62 @@
+Header
+  + name    := Expanded POINTER;
+  /*References to objects (POINTER is mapped as C type 'void *')*/
+  - type    := `void *`;
+  - default := `NULL`:POINTER;
+  - export  := UINTEGER_CPU;
+
+Insert
+  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+
+Public
+
+  - in_range low:SELF to up:SELF :BOOLEAN <- TRUE; // BSBS: A revoir.
+
+  - object_size:INTEGER <- `sizeof(void *)`:INTEGER
+
+  - is_null:BOOLEAN <- (Self = NULL)
+  // Is the external POINTER a NULL pointer ?
+
+  - is_not_null:BOOLEAN <- ! is_null
+  // Is the external POINTER a non-NULL pointer ?
+
+
+  - to_native_array:NATIVE_ARRAY(UINTEGER_8) <- CAST SELF TO (NATIVE_ARRAY UINTEGER_8).on Self
+  // Convert `pointer' into 'native_array' type.
+
+//  - to_uinteger_32:UINTEGER_32 <- `(unsigned int)@Self`:UINTEGER_32
+  // convert `pointer' into uinteger type (adress of the pointer)
+
+//  - from_uinteger p:UINTEGER_32 :POINTER <- CAST UINTEGER_32 TO POINTER.on p
+  // create POINTER from an adress
+
+//  - to_integer:INTEGER <- to_raw_integer
+
+  // Convertion format without test.
+
+  - to_raw_uinteger_cpu:UINTEGER_CPU <- CAST SELF TO UINTEGER_CPU.on Self
+
+  - to_raw_integer:INTEGER           <- CAST UINTEGER_CPU TO INTEGER.on to_raw_uinteger_cpu
+
+  - to_raw_uinteger:UINTEGER         <- CAST UINTEGER_CPU TO UINTEGER.on to_raw_uinteger_cpu
+
+  - to_raw_uinteger_8:UINTEGER_8     <- CAST UINTEGER_CPU TO UINTEGER_8.on to_raw_uinteger_cpu
+
+  - to_raw_uinteger_16:UINTEGER_16   <- CAST UINTEGER_CPU TO UINTEGER_16.on to_raw_uinteger_cpu
+
+  - to_raw_uinteger_32:UINTEGER_32   <- CAST UINTEGER_CPU TO UINTEGER_32.on to_raw_uinteger_cpu
+
+  - to_raw_uinteger_64:UINTEGER_64   <- CAST UINTEGER_CPU TO UINTEGER_64.on to_raw_uinteger_cpu
+
+  - to_raw_integer_8:INTEGER_8       <- CAST UINTEGER_CPU TO INTEGER_8 .on to_raw_uinteger_cpu
+
+  - to_raw_integer_16:INTEGER_16     <- CAST UINTEGER_CPU TO INTEGER_16.on to_raw_uinteger_cpu
+
+  - to_raw_integer_32:INTEGER_32     <- CAST UINTEGER_CPU TO INTEGER_32.on to_raw_uinteger_cpu
+
+  - to_raw_integer_64:INTEGER_64     <- CAST UINTEGER_CPU TO INTEGER_64.on to_raw_uinteger_cpu
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    append_in b base 16
+  )

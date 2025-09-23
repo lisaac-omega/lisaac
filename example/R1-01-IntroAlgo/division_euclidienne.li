@@ -1,0 +1,28 @@
+Section Header
+  
+  + name := DIVISION_EUCLIDIENNE;
+  /*
+  Poly exercice page 2.
+  */
+  
+Section Public
+  
+  - division (a:ℤ, b:ℤ) : (ℤ,ℤ) <-
+  ( + q,r:ℤ;
+    r := a;
+    q := 0;
+    while { r >= b } do {
+      q := q + 1
+      r := r - b
+    }
+    (q,r)
+  )
+  
+  - main <-
+  ( + va, vb, q, r:ℤ
+    va := (COMMAND_ARGS at 1) to_integer
+    vb := (COMMAND_ARGS at 1) to_integer
+    (q, r) := division (va,vb)
+    "quotient=" print; q.println
+    "reste=" print; r.println
+  )

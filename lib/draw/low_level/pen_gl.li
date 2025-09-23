@@ -1,0 +1,1141 @@
+Header
+  
+  + name := PEN_GL;
+  
+Inherit
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Private
+  
+  - gl_unpack_row_length:INTEGER <- `GL_UNPACK_ROW_LENGTH`:INTEGER
+  - gl_unpack_skip_pixels:INTEGER <- `GL_UNPACK_SKIP_PIXELS`:INTEGER
+  - gl_unpack_skip_rows:INTEGER <- `GL_UNPACK_SKIP_ROWS`:INTEGER
+  - gl_unpack_alignment:INTEGER <- `GL_UNPACK_ALIGNMENT`:INTEGER
+  - gl_texture_2d:INTEGER <- `GL_TEXTURE_2D`:INTEGER
+  - gl_unsigned_byte:INTEGER <- `GL_UNSIGNED_BYTE`:INTEGER
+  - gl_rgba:INTEGER <- `GL_RGBA`:INTEGER
+  - gl_bgra:INTEGER <- `GL_BGRA`:INTEGER; //JUJU
+  - gl_depth:INTEGER <- `GL_DEPTH_COMPONENT`:INTEGER; //JUJU
+  - gl_depth2:INTEGER <- `GL_DEPTH_STENCIL`:INTEGER; //JUJU
+  - gl_float:INTEGER <- `GL_FLOAT`:INTEGER; //JUJU
+  - gl_linear_mipmap_linear:INTEGER <- `GL_LINEAR_MIPMAP_LINEAR`:INTEGER
+  - gl_linear:INTEGER <- `GL_LINEAR`:INTEGER
+  
+Public
+    
+  + shader:SHADER
+  + textures:ARRAY TEXTURE
+  + view0:REAL_32
+  + view1:REAL_32
+  + texture_id:INTEGER
+  + vert_buf:UINTEGER_32
+  + vert_arr:UINTEGER_32; // GL3  
+  + frag_buf:UINTEGER_32
+  + frag_size:INTEGER
+  + flags:INTEGER
+  + calls:ARRAY PEN_CALL
+  + verts:ARRAY VERTEX
+  + paths:ARRAY PATH_LOW
+  + uniforms:ARRAY_ALIGN FRAG
+  // cached state
+  + bound_texture:UINTEGER_32
+  + stencil_mask:UINTEGER_32
+  + stencil_func:INTEGER
+  + stencil_func_ref:INTEGER
+  + stencil_func_mask:UINTEGER_32
+  
+  - new:SELF <- clone
+  
+  - init f:INTEGER <-
+  ( + a:INTEGER
+    flags := f
+    textures := ARRAY TEXTURE.create_with_capacity 16
+    calls    := ARRAY PEN_CALL.create_with_capacity 64
+    verts    := ARRAY (Expanded VERTEX).create_with_capacity 512
+    a := gl_get_integerv `GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT`:INTEGER
+    uniforms := ARRAY_ALIGN FRAG.create_with_capacity 256 align a
+    frag_size := FRAG.object_size + a - (FRAG.object_size % a)
+    paths    := ARRAY PATH_LOW.create_with_capacity 512
+  )
+  
+  - set_flags f:INTEGER <-
+  (
+    flags := f
+  )
+    
+  // SANS GL
+  /*
+  - dump_program_error(GLuint prog, const char* name) <-
+  (
+    GLchar str[512+1]
+    GLsizei len = 0
+    gl_get_program_info_log (prog, 512, &len, str)
+    if (len > 512) len = 512
+    str[len] = '\0'
+    "Program ".print;  name.print
+    " error:\n".print; str.print; '\n'.print
+  )
+  */
+
+  - unpremultiply_alpha image:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) stride stride:INTEGER <-
+  ( + x,y,r,g,b,a:INTEGER
+    + row:NATIVE_ARRAY UINTEGER_8
+    // Unpremultiply
+    0.to (h-1) do { y:INTEGER
+      row := image + (y*stride)
+      0.to (w-1) do { x:INTEGER
+        (r,g,b,a) := (row.item 0, row.item 1, row.item 2, row.item 3)
+        (a != 0).if {
+          row.put ((r*255/a).min 255) to 0
+          row.put ((g*255/a).min 255) to 1
+          row.put ((b*255/a).min 255) to 2
+        }
+        row := row + 4
+      }
+    }
+
+    // Defringe
+    0.to (h-1) do { y:INTEGER
+      row := image + (y*stride)
+      0.to (w-1) do { x:INTEGER
+        + n:INTEGER
+        r := g := b := 0
+        a := row.item 3
+        (a = 0).if {
+          ((x-1 > 0) && {row.item (-1) != 0}).if {
+            r := r + row.item (-4)
+            g := g + row.item (-3)
+            b := b + row.item (-2)
+            n := n + 1
+          }
+          ((x+1 < w) && {row.item 7 != 0}).if {
+            r := r + row.item 4
+            g := g + row.item 5
+            b := b + row.item 6
+            n := n + 1
+          }
+          ((y-1 > 0) && {row.item (-stride+3) != 0}).if {
+            r := r + row.item (-stride)
+            g := g + row.item (-stride+1)
+            b := b + row.item (-stride+2)
+            n := n + 1
+          }
+          ((y+1 < h) && {row.item (stride+3) != 0}).if {
+            r := r + row.item stride
+            g := g + row.item (stride+1)
+            b := b + row.item (stride+2)
+            n := n + 1
+          }
+          (n > 0).if {
+            row.put (r/n) to 0
+            row.put (g/n) to 1
+            row.put (b/n) to 2
+          }
+        }
+        row := row + 4
+      }
+    }
+  )
+
+  - set_alpha image:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) stride stride:INTEGER value a:UINTEGER_8 <-
+  ( + x, y:INTEGER
+    + row:NATIVE_ARRAY UINTEGER_8
+    0.to (h-1) do { y:INTEGER
+      row := image + (y*stride)
+      0.to (w-1) do { x:INTEGER
+        row.put a to (x*4+3)
+      }
+    }
+  )
+
+  - blend_composite_operation op:COMPOSITE_OPERATION_STATE <-
+  ( + src_rgb,dst_rgb,src_alpha,dst_alpha,err:INTEGER
+    + c:COMPOSITE_OPERATION_STATE
+    c := COMPOSITE_OPERATION_STATE
+    src_rgb   := c.convert_blend_func_factor (op.src_rgb)
+    dst_rgb   := c.convert_blend_func_factor (op.dst_rgb)
+    src_alpha := c.convert_blend_func_factor (op.src_alpha)
+    dst_alpha := c.convert_blend_func_factor (op.dst_alpha)
+    err := `GL_INVALID_ENUM`:INTEGER
+    (
+      (src_rgb   = err) || {dst_rgb   = err} || {src_alpha = err} || {dst_alpha = err}
+    ).if {
+      gl_blend_func(`GL_ONE`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
+    } else {
+      gl_blend_func_separate(src_rgb, dst_rgb, src_alpha, dst_alpha)
+    }
+  )
+
+  // AVEC GL
+  
+  - render_viewport (width,height:INTEGER) <-
+  (
+    view0 := width .to_real_32
+    view1 := height.to_real_32
+  )
+
+  - render_cancel <-
+  (
+    0.to (calls.upper) do { i:INTEGER
+      calls.at i.free
+    }
+    verts.clear
+    paths.clear
+    calls.clear
+    uniforms.clear
+    paths.clear
+  )
+
+  - bind_texture tex:UINTEGER_32 <-
+  ( 
+    (bound_texture != tex).if {
+      bound_texture := tex
+      gl_bind_texture (`GL_TEXTURE_2D`:INTEGER, tex)
+    }
+  )
+
+  - set_stencil_mask mask:INTEGER <-
+  (
+    (stencil_mask != mask).if {
+      stencil_mask := mask
+      gl_stencil_mask mask
+    }
+  )
+
+  - set_stencil_func (func:INTEGER,ref:INTEGER_32,mask:UINTEGER_32) <-
+  (
+    (
+      (stencil_func      != func) ||
+      {stencil_func_ref  != ref } ||
+      {stencil_func_mask != mask}
+    ).if {     
+      stencil_func      := func
+      stencil_func_ref  := ref
+      stencil_func_mask := mask
+      gl_stencil_func(func, ref, mask)
+    }
+  )
+
+  - alloc_texture (w,h:INTEGER) type typ:INTEGER flags f:INTEGER :TEXTURE <-
+  ( + result:TEXTURE
+    texture_id := texture_id + 1
+    result := TEXTURE.create texture_id size (w,h) type typ flags f
+    textures.add_last result
+    result
+  )
+
+  - find_texture id:INTEGER :TEXTURE <-
+  ( + i:INTEGER
+    + result:TEXTURE
+    {(i < textures.count) && {textures.at i .id != id}}.while_do {      
+      i := i + 1
+    }
+    (i < textures.count).if {
+      result := textures.at i
+    }
+    result
+  )
+
+  - delete_texture id:INTEGER <-
+  ( + i:INTEGER
+    {(i < textures.count) && {textures.at i.id != id}}.while_do {      
+      i := i + 1
+    }
+    (i < textures.count).if {
+      ((textures.at i.tex != 0) && {(textures.at i.flags & image_nodelete) = 0}).if {
+        gl_delete_textures(1,textures.at i.tex)
+      }
+      //memset(&gl->textures[i], 0, sizeof(gl->textures[i]))
+    }
+  )
+
+  - check_error str:STRING_ALIAS <-
+  ( + err:INTEGER
+    ((flags & debug) != 0).if {
+      err := gl_get_error
+      (err != 0).if {
+        "Error ".print; err.print_hex
+        err
+        .when `GL_INVALID_VALUE`:INTEGER then { " GL_INVALID_VALUE\n".print; }
+        .when `GL_INVALID_OPERATION`:INTEGER then { " GL_INVALID_OPERATION\n".print; }
+        " after ".print; str.print; '\n'.print
+        crash_with_message "Error..."
+        //exit 0
+      }
+    }
+  )
+/*
+  - render_delete <-
+  (
+    delete_shader shader
+    (vert_buf != 0).if {
+      gl_delete_buffers(1, vert_buf)
+    }
+    (vert_arr != 0).if {
+      gl_delete_vertex_arrays(1,vert_arr)
+      vert_arr := 0
+    }
+    0.to (textures.upper) do { i:INTEGER
+      ((textures.at i.tex != 0) && {(textures.at i.flags & image_nodelete) = 0}).if {
+        gl_delete_textures(1, textures.at i.tex)
+        textures.put NULL to i
+      }
+    }
+    free textures
+    free paths
+    free verts
+    free uniforms
+    free calls
+    free gl
+  )
+*/  
+  - render_flush composite_operation:COMPOSITE_OPERATION_STATE <-
+  ( + dta:NATIVE_ARRAY REAL_32
+    + call:PEN_CALL
+    (calls.count > 0).if {
+      //check_error "av prog"
+      gl_use_program (shader.prog)
+      //check_error "ap prog"
+      //"Prog: ".print; shader.prog.print; '\n'.print
+      blend_composite_operation composite_operation
+      gl_enable `GL_CULL_FACE`:INTEGER
+      gl_cull_face `GL_BACK`:INTEGER
+      gl_front_face `GL_CCW`:INTEGER
+      gl_enable `GL_BLEND`:INTEGER
+      gl_disable `GL_DEPTH_TEST`:INTEGER
+      gl_disable `GL_SCISSOR_TEST`:INTEGER
+      gl_color_mask (TRUE,TRUE,TRUE,TRUE)
+      gl_stencil_mask 0FFFF_FFFFh
+      gl_stencil_op (`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER)
+      gl_stencil_func (`GL_ALWAYS`:INTEGER, 0, 0FFFF_FFFFh)
+      gl_active_texture `GL_TEXTURE0`:INTEGER
+      gl_bind_texture (`GL_TEXTURE_2D`:INTEGER,0)
+      
+      bound_texture := 0
+      stencil_mask  := 0FFFF_FFFFh
+      stencil_func  := `GL_ALWAYS`:INTEGER
+      stencil_func_ref := 0
+      stencil_func_mask := 0FFFF_FFFFh
+      //">> ".print; vert_buf.print; '\n'.print
+      // Upload ubo for frag shaders
+      //check_error "av bind"
+      
+      gl_bind_buffer(`GL_UNIFORM_BUFFER`:INTEGER,frag_buf)
+      dta := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY REAL_32).on (uniforms.storage)
+      gl_buffer_data(`GL_UNIFORM_BUFFER`:INTEGER,uniforms.count * frag_size, 
+      dta, `GL_STREAM_DRAW`:INTEGER)
+      
+      //(PAPER.is_gl).if {
+        gl_bind_vertex_array vert_arr
+      //}
+      gl_bind_buffer (`GL_ARRAY_BUFFER`:INTEGER,vert_buf)
+      dta := CAST (NATIVE_ARRAY(Expanded VERTEX)) TO (NATIVE_ARRAY(REAL_32)).on (verts.storage)
+      gl_buffer_data (`GL_ARRAY_BUFFER`:INTEGER,verts.count * VERTEX.object_size, dta,`GL_STREAM_DRAW`:INTEGER)
+            
+      gl_vertex_attrib_pointer(0, 2,`GL_FLOAT`:INTEGER,FALSE, VERTEX.object_size, 0)
+      gl_vertex_attrib_pointer(1, 2,`GL_FLOAT`:INTEGER,FALSE, VERTEX.object_size, 2*REAL_32.object_size)
+      gl_enable_vertex_attrib_array 0
+      gl_enable_vertex_attrib_array 1
+            
+      gl_uniform1i(shader.loc_tex, 0)
+      gl_uniform2f(shader.loc_view,1.0/view0,1.0/view1)
+      gl_bind_buffer(`GL_UNIFORM_BUFFER`:INTEGER,frag_buf)
+      //check_error "ap merde2"
+      //"pen_gl L235:".print
+      0.to (calls.upper) do { i:INTEGER
+        call := calls.at i
+        call.run
+        call.free
+      }
+      gl_disable_vertex_attrib_array 0
+      gl_disable_vertex_attrib_array 1
+      gl_disable `GL_CULL_FACE`:INTEGER
+      gl_bind_buffer (`GL_ARRAY_BUFFER`:INTEGER,0)
+      gl_use_program 0
+      bind_texture 0
+    }
+    
+    //0.to (calls.upper) do { i:INTEGER
+    //  calls.at i.free
+    //}
+    // Reset calls
+    verts.clear
+    paths.clear
+    calls.clear
+    uniforms.clear
+  )
+
+  - render_create <-
+  ( 
+    check_error "init"
+    ((flags & antialias) != 0).if {
+      shader.make /* := SHADER.create*/ ("shader",shader_header,"#define EDGE_AA 1\n", 
+      fill_vert_shader, fill_frag_shader)
+    } else {
+      shader.make /* := SHADER.create*/ ("shader", shader_header,NULL, 
+      fill_vert_shader, fill_frag_shader)
+    }
+    check_error "uniform locations"
+    shader.get_uniforms
+    //(PAPER.is_gl).if {
+    vert_arr := gl_gen_vertex_arrays 1
+    //}
+    vert_buf := gl_gen_buffers 1
+    //"GENLI: ".print; vert_buf.print; '\n'.print
+    // Create UBOs GLES3
+    gl_uniform_block_binding(shader.prog,shader.loc_frag, frag_binding)
+    frag_buf := gl_gen_buffers 1
+    //align := gl_get_integerv `GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT`:INTEGER
+    //align := 4; // GLES2
+    // fin GLES3    
+    //"PEN GL: align=".print; frag_size.print; '\n'.print
+        
+    check_error "create done"
+    gl_finish
+  )
+
+  - render_create_texture typ:INTEGER size (w,h:INTEGER) 
+  flags image_flags:INTEGER data dta:NATIVE_ARRAY UINTEGER_8 :INTEGER <-
+  ( + tex:TEXTURE
+    
+    tex := alloc_texture (w,h) type typ flags image_flags
+    tex.set_tex (gl_gen_textures 1)
+    
+    bind_texture(tex.tex)
+
+    gl_pixel_storei(gl_unpack_alignment, 1)
+    gl_pixel_storei(gl_unpack_row_length,tex.width)
+    gl_pixel_storei(gl_unpack_skip_pixels,0)
+    gl_pixel_storei(gl_unpack_skip_rows,0)
+    
+    (typ = texture_rgba).if {
+      gl_tex_image_2d(gl_texture_2d,0,gl_rgba,w,h,0,gl_rgba,gl_unsigned_byte,dta)
+    } else {
+      gl_tex_image_2d(gl_texture_2d,0,`GL_R8`:INTEGER,w,h,0,`GL_RED`:INTEGER,gl_unsigned_byte,dta)
+    }
+
+    ((image_flags & image_generate_mipmaps) != 0).if {
+      gl_tex_parameteri(gl_texture_2d,2801h,gl_linear_mipmap_linear)
+    } else {
+      gl_tex_parameteri(gl_texture_2d,2801h,gl_linear)
+    }
+    
+    gl_tex_parameteri(gl_texture_2d,2800h,gl_linear)
+    ((image_flags & image_repeatx) != 0).if {      
+      gl_tex_parameteri(gl_texture_2d,2802h,2901h)
+    } else {
+      gl_tex_parameteri(gl_texture_2d,2802h,812Fh)
+    }
+    
+    ((image_flags & image_repeaty) != 0).if {
+      gl_tex_parameteri(gl_texture_2d,2803h,2901h)
+    } else {
+      gl_tex_parameteri(gl_texture_2d,2803h,812Fh)
+    }
+    gl_pixel_storei(gl_unpack_alignment,4)
+    gl_pixel_storei(gl_unpack_row_length,0)
+    gl_pixel_storei(gl_unpack_skip_pixels,0)
+    gl_pixel_storei(gl_unpack_skip_rows,0)
+    ((image_flags & image_generate_mipmaps) != 0).if {
+      gl_generate_mipmap gl_texture_2d
+    }
+    //check_error "create tex"
+    bind_texture 0
+    
+    tex.id
+  )
+  
+  - render_create_texture_bgra typ:INTEGER size (w,h:INTEGER)
+  flags image_flags:INTEGER data dta:NATIVE_ARRAY UINTEGER_8 :INTEGER <-
+  ( + tex:TEXTURE
+
+    tex := alloc_texture (w,h) type typ flags image_flags
+    tex.set_tex (gl_gen_textures 1)
+    
+    bind_texture(tex.tex)
+
+    gl_pixel_storei(gl_unpack_alignment, 1)
+    gl_pixel_storei(gl_unpack_row_length,tex.width)
+    gl_pixel_storei(gl_unpack_skip_pixels,0)
+    gl_pixel_storei(gl_unpack_skip_rows,0)
+
+    (typ = texture_rgba).if {
+      gl_tex_image_2d(gl_texture_2d,0,gl_bgra,w,h,0,gl_bgra,gl_unsigned_byte,dta)
+    } else {
+      gl_tex_image_2d(gl_texture_2d,0,`GL_R8`:INTEGER,w,h,0,`GL_RED`:INTEGER,gl_unsigned_byte,dta)
+    }
+
+    ((image_flags & image_generate_mipmaps) != 0).if {
+      gl_tex_parameteri(gl_texture_2d,2801h,gl_linear_mipmap_linear)
+    } else {
+      gl_tex_parameteri(gl_texture_2d,2801h,gl_linear)
+    }
+    
+    gl_tex_parameteri(gl_texture_2d,2800h,gl_linear)
+    ((image_flags & image_repeatx) != 0).if {
+      gl_tex_parameteri(gl_texture_2d,2802h,2901h)
+    } else {
+      gl_tex_parameteri(gl_texture_2d,2802h,812Fh)
+    }
+    
+    ((image_flags & image_repeaty) != 0).if {
+      gl_tex_parameteri(gl_texture_2d,2803h,2901h)
+    } else {
+      gl_tex_parameteri(gl_texture_2d,2803h,812Fh)
+    }
+    gl_pixel_storei(gl_unpack_alignment,4)
+    gl_pixel_storei(gl_unpack_row_length,0)
+    gl_pixel_storei(gl_unpack_skip_pixels,0)
+    gl_pixel_storei(gl_unpack_skip_rows,0)
+    ((image_flags & image_generate_mipmaps) != 0).if {
+      gl_generate_mipmap gl_texture_2d
+    }
+    //check_error "create tex"
+    bind_texture 0
+    
+    tex.id
+  )
+  
+  - render_delete_texture image:INTEGER <- delete_texture image
+
+  - render_update_texture image:INTEGER to (x,y:INTEGER) 
+  size (w,h:INTEGER) data dta:NATIVE_ARRAY UINTEGER_8 <-
+  ( + tex:TEXTURE
+    tex := find_texture image
+    bind_texture (tex.tex)
+    gl_pixel_storei(gl_unpack_alignment,1)
+    gl_pixel_storei(gl_unpack_row_length,tex.width)
+    gl_pixel_storei(gl_unpack_skip_pixels,x)
+    gl_pixel_storei(gl_unpack_skip_rows,y)
+    (tex.type = texture_rgba).if {      
+      gl_tex_sub_image_2d(gl_texture_2d,0,x,y,w,h,gl_rgba,gl_unsigned_byte,dta)
+    } else {
+      /*0.to 15 do { yy:INTEGER
+        0.to 13 do { xx:INTEGER
+          //" .:ioVM@".item (dta.item (yy*8+xx)>>5).print
+          dta.item (yy*13+xx).print
+        }
+        '\n'.print
+      }
+      x.print; ','.print; y.print; ' '.print; w.print; ','.print; h.print; '\n'.print;*/
+      gl_tex_sub_image_2d(gl_texture_2d,0,x,y,w,h,`GL_RED`:INTEGER,gl_unsigned_byte,dta)
+    }
+    gl_pixel_storei(gl_unpack_alignment,4)
+    gl_pixel_storei(gl_unpack_row_length,0)
+    gl_pixel_storei(gl_unpack_skip_pixels,0)
+    gl_pixel_storei(gl_unpack_skip_rows,0)
+    bind_texture 0
+  )
+  
+  - render_update_texture_bgra image:INTEGER to (x,y:INTEGER) 
+  size (w,h:INTEGER) data dta:NATIVE_ARRAY UINTEGER_8 <-
+  ( + tex:TEXTURE
+    tex := find_texture image
+    bind_texture (tex.tex)
+    gl_pixel_storei(gl_unpack_alignment,1)
+    gl_pixel_storei(gl_unpack_row_length,tex.width)
+    gl_pixel_storei(gl_unpack_skip_pixels,x)
+    gl_pixel_storei(gl_unpack_skip_rows,y)
+    (tex.type = texture_rgba).if {      
+      gl_tex_sub_image_2d(gl_texture_2d,0,x,y,w,h,gl_bgra,gl_unsigned_byte,dta)
+    } else {
+      gl_tex_sub_image_2d(gl_texture_2d,0,x,y,w,h,`GL_RED`:INTEGER,gl_unsigned_byte,dta)
+    }
+    gl_pixel_storei(gl_unpack_alignment,4)
+    gl_pixel_storei(gl_unpack_row_length,0)
+    gl_pixel_storei(gl_unpack_skip_pixels,0)
+    gl_pixel_storei(gl_unpack_skip_rows,0)
+    bind_texture 0
+  )
+  
+  - render_get_texture_size image:INTEGER :(INTEGER,INTEGER) <-
+  ( + tex:TEXTURE
+    tex := find_texture image
+    tex.width,tex.height
+  )
+
+  - set_uniforms (uniform_offset,image:INTEGER) <-
+  ( //- cpt:INTEGER
+    //+ frag:FRAG
+    //+ t:NATIVE_ARRAY REAL_32
+    //+ r:REAL_32
+    // GLES3    
+    //"bind buffer range ".print; cpt.println; cpt := cpt + 1
+    /*
+    t := CAST UINTEGER_32 TO (NATIVE_ARRAY REAL_32).on frag_buf
+    0.to 3 do { y:INTEGER
+      0.to 10 do { x:INTEGER
+        r := t.item (y*11+x)
+        (r = 0).if {
+          "0.0000".print
+        } else {
+          r.print
+        }
+        ' '.print
+      }
+      '\n'.print
+    }
+    */  
+    gl_bind_buffer_range(`GL_UNIFORM_BUFFER`:INTEGER,frag_binding,frag_buf,uniform_offset, FRAG.object_size)
+    // GLES2
+    //frag := uniforms.item uniform_offset
+    //"uniform_offset: ".print; uniform_offset.print; '\n'.print
+    //frag.print2
+    //gl_uniform4fv(shader.loc_frag, 11,frag.to_array)
+    (image != 0).if {
+      + tex:TEXTURE
+      //check_error " (0)PEN_GL: tex paint tex"
+      tex := find_texture image
+      bind_texture ((tex != NULL).ok (tex.tex) or 0)
+      check_error "PEN_GL: tex paint tex"
+    } else {      
+      bind_texture 0
+    }
+  )
+
+  - fill call:PEN_CALL_2D <-
+  ( + pb,pe:INTEGER
+    + p:PATH_LOW
+ 
+    gl_enable `GL_STENCIL_TEST`:INTEGER
+    set_stencil_mask 0FFh
+    set_stencil_func (`GL_ALWAYS`:INTEGER,0,0FFh)
+    gl_color_mask (FALSE,FALSE,FALSE,FALSE)
+    set_uniforms (call.uniform_offset, 0)
+    check_error "fill simple"
+    gl_stencil_op_separate(`GL_FRONT`:INTEGER,`GL_KEEP`:INTEGER, 
+    `GL_KEEP`:INTEGER,`GL_INCR_WRAP`:INTEGER)
+    gl_stencil_op_separate(`GL_BACK`:INTEGER,`GL_KEEP`:INTEGER,
+    `GL_KEEP`:INTEGER,`GL_DECR_WRAP`:INTEGER)
+    gl_disable `GL_CULL_FACE`:INTEGER
+    pb := call.path_offset
+    pe := pb+call.path_count-1
+    pb.to pe do { i:INTEGER
+      p := paths.at i
+      gl_draw_arrays(`GL_TRIANGLE_FAN`:INTEGER,p.fill_offset,p.fill_count)
+    }
+    gl_enable `GL_CULL_FACE`:INTEGER
+    gl_color_mask (TRUE,TRUE,TRUE,TRUE)
+    set_uniforms(call.uniform_offset + frag_size, call.image)
+    check_error "fill fill"
+    ((flags & antialias) != 0).if {
+      set_stencil_func(`GL_EQUAL`:INTEGER, 000h, 0FFh)
+      gl_stencil_op(`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER)
+      pb.to pe do { i:INTEGER
+        p := paths.at i
+        gl_draw_arrays(`GL_TRIANGLE_STRIP`:INTEGER,p.stroke_offset,p.stroke_count)
+      }
+    }
+    set_stencil_func(`GL_NOTEQUAL`:INTEGER, 0, 0FFh)
+    gl_stencil_op(0, 0, 0)
+    gl_draw_arrays(`GL_TRIANGLES`:INTEGER, call.triangle_offset, call.triangle_count)
+    gl_disable `GL_STENCIL_TEST`:INTEGER
+  )
+
+  - convex_fill call:PEN_CALL_2D <-
+  ( + pb,pe:INTEGER
+    + p:PATH_LOW
+    //"convex_fill ".print
+    //call.uniform_offset.print; ' '.print; call.image.print; '\n'.print
+    //"aff ok\n".print
+    //uniforms.item (call.uniform_offset/frag_size).print1
+    
+    set_uniforms (call.uniform_offset,call.image)
+    check_error "convex fill"
+    //"T_FAN ".print; call.fill_low.print; " - ".print; call.fill_count.print; '\n'.print
+    // BSBS: BUG LISAAC :      
+    /*( + v:VERTEX; + r:REAL_32
+      v := verts.item 0
+      r := v.x+v.y+v.u+v.v; `/* @r */`
+    );*/
+      
+    pb := call.path_offset
+    pe := pb+call.path_count-1
+    pb.to pe do { i:INTEGER
+      p := paths.at i
+      gl_draw_arrays(`GL_TRIANGLE_FAN`:INTEGER,p.fill_offset,p.fill_count)
+    }
+    ((flags & antialias) != 0).if {
+      //"T_STRIP ".print; call.stroke_low.print
+      //" - ".print; call.stroke_count.print; '\n'.print
+      pb.to pe do { i:INTEGER
+        p := paths.at i
+        gl_draw_arrays(`GL_TRIANGLE_STRIP`:INTEGER,p.stroke_offset,p.stroke_count)
+      }
+    }
+    //"Fin\n".print
+  )
+
+  - stroke call:PEN_CALL_2D <-
+  ( + pb,pe:INTEGER
+    + p:PATH_LOW
+    pb := call.path_offset
+    pe := pb+call.path_count-1
+    ((flags & stencil_strokes) != 0).if {
+      gl_enable `GL_STENCIL_TEST`:INTEGER
+      set_stencil_mask 0FFh
+      set_stencil_func (`GL_EQUAL`:INTEGER,0,0FFh)
+      gl_stencil_op(`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER,`GL_INCR`:INTEGER)
+      set_uniforms (call.uniform_offset+frag_size,call.image)
+      check_error "stroke fill 0"
+      pb.to pe do { i:INTEGER
+        p := paths.at i
+        gl_draw_arrays(`GL_TRIANGLE_STRIP`:INTEGER,p.stroke_offset,p.stroke_count)
+      }
+      set_uniforms(call.uniform_offset,call.image)
+      set_stencil_func(`GL_EQUAL`:INTEGER,0,0FFh)
+      gl_stencil_op(`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER,`GL_KEEP`:INTEGER)
+      pb.to pe do { i:INTEGER
+        p := paths.at i
+        gl_draw_arrays(`GL_TRIANGLE_STRIP`:INTEGER,p.stroke_offset,p.stroke_count)
+      }
+      gl_color_mask (FALSE,FALSE,FALSE,FALSE)
+      set_stencil_func(`GL_ALWAYS`:INTEGER,0,0FFh)
+      gl_stencil_op(0,0,0)
+      check_error "stroke fill 1"
+      pb.to pe do { i:INTEGER
+        p := paths.at i
+        gl_draw_arrays(`GL_TRIANGLE_STRIP`:INTEGER,p.stroke_offset,p.stroke_count)
+      }
+      gl_color_mask(TRUE,TRUE,TRUE,TRUE)
+      gl_disable `GL_STENCIL_TEST`:INTEGER
+    } else {
+      set_uniforms(call.uniform_offset,call.image)
+      check_error "stroke fill"
+      pb.to pe do { i:INTEGER
+        p := paths.at i
+        gl_draw_arrays(`GL_TRIANGLE_STRIP`:INTEGER,p.stroke_offset,p.stroke_count)
+      }
+    }
+  )
+
+  - triangles call:PEN_CALL_2D <-
+  (
+    set_uniforms(call.uniform_offset,call.image)
+    check_error "triangles fill"
+    //"TRI:".print; call.triangle_offset.print; ' '.print; call.triangle_count.print; '\n'.print
+    gl_draw_arrays(`GL_TRIANGLES`:INTEGER,call.triangle_offset,call.triangle_count)
+  )
+/*
+  - alloc_paths n:INTEGER :INTEGER <-
+  ( + ret:INTEGER
+    ret := paths.count
+    n.times {
+      paths.add_last (GLPATH.create)
+    }
+    ret
+  )
+*/
+  - alloc_verts n:INTEGER :INTEGER <-
+  ( + ret:INTEGER
+    ret := verts.count
+    n.times {
+      verts.add_last (VERTEX.create)
+    }
+    ret
+  )
+
+  //- frag_uniform_ptr i:INTEGER :FRAG <- uniforms.item i
+
+  - image_handle_gles3 image:INTEGER :INTEGER <-
+  ( + tex:TEXTURE
+    + gl:PEN_GL
+    not_yet_implemented
+    //gl := internal_params.user_ptr
+    tex := find_texture image
+    tex.tex
+  )
+   
+Private   
+
+  - shader_header:STRING_ALIAS :=
+  ( + result:STRING_ALIAS
+    (PAPER.is_gl).if {
+      // 330 core  ? 150 core
+      result := "#version 330 core\n\
+      \precision highp float;\n"
+    } else {
+      result := "#version 300 es\n\
+      \precision highp float;\n"
+    }
+    result
+  )
+  
+  - fill_vert_shader:STRING_ALIAS :=
+  "uniform vec2 viewSize;\n\
+  \uniform vec2 viewTrans;\n\
+  \in vec2 vertex;\n\
+  \in vec2 tcoord;\n\
+  \out vec2 ftcoord;\n\
+  \out vec2 fpos;\n\
+  \void main(void) {\n\
+  \  ftcoord = tcoord;\n\
+  \  fpos = vertex;\n\
+  \  gl_Position = vec4(2.0*(vertex.x+viewTrans.x)*viewSize.x - 1.0, 1.0 - 2.0*(vertex.y+viewTrans.y)*viewSize.y, 0, 1);\n\
+  \}\n"
+  
+  - fill_frag_shader:STRING_ALIAS :=
+  "  layout(std140) uniform frag {\n\
+  \    mat3 scissorMat;\n\
+  \    mat3 paintMat;\n\
+  \    vec4 innerCol;\n\
+  \    vec4 outerCol;\n\
+  \    vec2 scissorExt;\n\
+  \    vec2 scissorScale;\n\
+  \    vec2 extent;\n\
+  \    float radius;\n\
+  \    float feather;\n\
+  \    float strokeMult;\n\
+  \    float strokeThr;\n\
+  \    int texType;\n\
+  \    int type;\n\
+  \  };\n\
+  \  uniform sampler2D tex;\n\
+  \  uniform vec2 trans_post;\n\
+  \  in vec2 ftcoord;\n\
+  \  in vec2 fpos;\n\
+  \  out vec4 outColor;\n\
+  \\n\
+  \float sdroundrect(vec2 pt, vec2 ext, float rad) {\n\
+  \        vec2 ext2 = ext - vec2(rad,rad);\n\
+  \        vec2 d = abs(pt) - ext2;\n\
+  \        return min(max(d.x,d.y),0.0) + length(max(d,0.0)) - rad;\n\
+  \}\n\
+  \\n\
+  \// Scissoring\n\
+  \float scissorMask(vec2 p) {\n\
+  \        vec2 sc = (abs((scissorMat * vec3(p,1.0)).xy) - scissorExt);\n\
+  \        sc = vec2(0.5,0.5) - sc * scissorScale;\n\
+  \        return clamp(sc.x,0.0,1.0) * clamp(sc.y,0.0,1.0);\n\
+  \}\n\
+  \#ifdef EDGE_AA\n\
+  \// Stroke - from [0..1] to clipped pyramid, where the slope is 1px.\n\
+  \float strokeMask() {\n\
+  \        return min(1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * min(1.0, ftcoord.y);\n\
+  \}\n\
+  \#endif\n\
+  \\n\
+  \void main(void) {\n\
+  \   vec4 result;\n\
+  \ /*vec2 test=vec2(-50,-50);*/\n\
+  \        float scissor = scissorMask(fpos+trans_post);\n\
+  \#ifdef EDGE_AA\n\
+  \        float strokeAlpha = strokeMask();\n\
+  \#else\n\
+  \        float strokeAlpha = 1.0;\n\
+  \#endif\n\
+  \        if (type == 0) {                        // Gradient\n\
+  \                // Calculate gradient color using box gradient\n\
+  \                vec2 pt = (paintMat * vec3(fpos,1.0)).xy;\n\
+  \                float d = clamp((sdroundrect(pt, extent, radius) + feather*0.5) / feather, 0.0, 1.0);\n\
+  \                vec4 color = mix(innerCol,outerCol,d);\n\
+  \                // Combine alpha\n\
+  \                color *= strokeAlpha * scissor;\n\
+  \                result = color;\n\
+  \        } else if (type == 1) {                // Image\n\
+  \                // Calculate color from texture\n\
+  \                vec2 pt = (paintMat * vec3(fpos,1.0)).xy / extent;\n\
+  \                vec4 color = texture(tex, pt);\n\
+  \                if (texType == 1) color = vec4(color.xyz*color.w,color.w);\
+  \                if (texType == 2) color = vec4(color.x);\
+  \                // Apply color tint and alpha.\n\
+  \                color *= innerCol;\n\
+  \                // Combine alpha\n\
+  \                color *= strokeAlpha * scissor;\n\
+  \                result = color;\n\
+  \        } else if (type == 2) {                // Stencil fill\n\
+  \                result = vec4(1,1,1,1);\n\
+  \        } else if (type == 3) {                // Textured tris\n\
+  \                vec4 color = texture(tex, ftcoord);\n\
+  \                if (texType == 1) color = vec4(color.xyz*color.w,color.w);\
+  \                if (texType == 2) color = vec4(color.x);\
+  \                color *= scissor;\n\
+  \                result = color * innerCol;\n\
+  \        }\n\
+  \#ifdef EDGE_AA\n\
+  \        if (strokeAlpha < strokeThr) discard;\n\
+  \#endif\n\
+  \        outColor = result;\n\
+  \}\n"
+  
+Public
+  
+  - gl_attach_shader (prog:UINTEGER_32,shad:UINTEGER_32) <- 
+  `glAttachShader(@prog,@shad)`
+  
+  - gl_active_texture (tex:INTEGER) <- 
+  `glActiveTexture(@tex)`
+  
+  - gl_bind_attrib_location (prog:UINTEGER_32,index:UINTEGER_32,name:STRING_ALIAS) <- 
+  ( + n:NATIVE_ARRAY CHARACTER; n := name.to_external
+  `glBindAttribLocation(@prog,@index,@n)`; )
+  
+  - gl_bind_buffer_range(target:INTEGER,index:UINTEGER_32,
+  buffer:UINTEGER_32,offset:INTEGER,size:INTEGER_64) <- 
+  (
+    //"gl_bind_buffer_range:".print; index.print; '/'.print
+    //buffer.print; '/'.print; offset.print; '/'.print; size.print; '\n'.print
+    `glBindBufferRange(@target,@index,@buffer,@offset,@size)`
+  )
+  
+  - gl_bind_buffer (target:INTEGER,buffer:UINTEGER_32) <- 
+  `glBindBuffer(@target,@buffer)`
+  
+  - gl_buffer_data (target:INTEGER,size:INTEGER_64,
+  data:NATIVE_ARRAY REAL_32,usage:INTEGER) <- 
+  `glBufferData(@target,@size,@data,@usage)`
+  
+  - gl_buffer_data_ptr (target:INTEGER,size:INTEGER_64,
+  data:POINTER,usage:INTEGER) <- 
+  `glBufferData(@target,@size,@data,@usage)`
+  
+  - gl_blend_func (sfactor,dfactor:INTEGER) <- 
+  `glBlendFunc(@sfactor,@dfactor)`
+  
+  - gl_blend_func_separate (sfactor_rgb,dfactor_rgb,sfactor_alpha,dfactor_alpha:INTEGER) <- 
+  `glBlendFuncSeparate(@sfactor_rgb,@dfactor_rgb,@sfactor_alpha,@dfactor_alpha)`
+  
+  - gl_bind_texture (target:INTEGER,tex:UINTEGER_32) <- 
+  ( 
+    `glBindTexture(@target,@tex)`
+  )
+  
+  - gl_bind_vertex_array array:UINTEGER_32 <- 
+  (    
+    `glBindVertexArray(@array)`
+  )
+  
+  - gl_cull_face (mode:INTEGER) <- 
+  `glCullFace(@mode)`
+  
+  - gl_color_mask(red,green,blue,alpha:BOOLEAN) <- 
+  `glColorMask(@red,@green,@blue,@alpha)`
+  
+  - gl_create_program:UINTEGER_32 <- 
+  `glCreateProgram()`:UINTEGER_32
+  
+  - gl_create_shader type:INTEGER :UINTEGER_32 <- 
+  `glCreateShader(@type)`:UINTEGER_32
+  
+  - gl_compile_shader id_shader:UINTEGER_32 <- 
+  `glCompileShader(@id_shader)`
+  
+  - gl_disable cap:INTEGER <- 
+  `glDisable(@cap)`
+  
+  - gl_draw_arrays(mode:INTEGER,first:INTEGER_32,count:INTEGER_64) <- 
+  (
+    // DEBUG
+    /*
+    "----------------------\n".print
+    0.to (count-1) do { i:INTEGER
+      verts.item (i+first).x.print; ','.print
+      verts.item (i+first).y.print; '\n'.print
+    }
+    */
+    `glDrawArrays(@mode,@first,@count)`
+  )
+  
+  - gl_draw_elements(mode:INTEGER,count:INTEGER_64,type:INTEGER,first:INTEGER) <- 
+  (
+    `glDrawElements(@mode,@count,@type,(const void *)(@first*4))`
+  )
+  
+  - gl_delete_buffers (n:INTEGER_64,buffers:NATIVE_ARRAY UINTEGER_32) <- 
+  `glDeleteBuffers(@n,@buffers)`
+  
+  - gl_delete_program program:UINTEGER_32 <- 
+  `glDeleteProgram(@program)`
+  
+  - gl_delete_shader shad:UINTEGER_32 <- 
+  `glDeleteShader(@shad)`
+  
+  - gl_delete_textures (n:INTEGER_64,tex:UINTEGER_32) <- 
+  `glDeleteTextures(@n,&@tex)`
+  
+  - gl_disable_vertex_attrib_array (index:UINTEGER_32) <- 
+  `glDisableVertexAttribArray(@index)`
+  
+  - gl_delete_vertex_arrays (n:INTEGER_64,arrays:NATIVE_ARRAY UINTEGER_32) <- 
+  `glDeleteVertexArrays(@n,@arrays)`
+  
+  - gl_enable cap:INTEGER <- 
+  `glEnable(@cap)`
+  
+  - gl_enable_vertex_attrib_array index:UINTEGER_32 <- 
+  `glEnableVertexAttribArray(@index)`
+  
+  - gl_finish <- `glFinish()`
+  
+  - gl_front_face mode:INTEGER <- 
+  `glFrontFace(@mode)`
+  
+  - gl_stencil_func (func:INTEGER,ref:INTEGER_32,mask:UINTEGER_32) <- 
+  `glStencilFunc(@func,@ref,@mask)`
+
+  - gl_shader id_shader:UINTEGER_32 source (str0,str1,str2:STRING_ALIAS) <- 
+  ( + t0,t1,t2:NATIVE_ARRAY CHARACTER
+    (t0,t1,t2) := (str0.to_external,str1.to_external,str2.to_external)
+    `{ const static char* str[3]; str[0]=@t0; str[1]=@t1; str[2]=@t2`
+    `glShaderSource(@id_shader,3,str,0); }`
+  )
+  
+  /*
+  - gl_shader id_shader:UINTEGER_32 source str:STRING_ALIAS <- 
+  ( + t:NATIVE_ARRAY CHARACTER
+    t := str.to_external
+    `{ const static char* str[1]; str[0]=@t`
+    `glShaderSource(@id_shader,1,str,0); }`
+  );*/
+  
+  - gl_gen_buffers n:INTEGER_64 :UINTEGER_32 <- 
+  ( + buffers:UINTEGER_32
+    `{ unsigned int b; glGenBuffers(@n,&b)`
+    buffers := `b`:UINTEGER_32; `}`
+    buffers
+  )
+  
+  - gl_get_error:INTEGER <- `glGetError()`:INTEGER
+  
+  - gl_get_integerv pname:INTEGER :INTEGER_32 <- 
+  ( + status:INTEGER
+    `{ int s; glGetIntegerv(@pname,&s)`
+    status := `s`:INTEGER; `}`
+    status
+  )
+  
+  - gl_generate_mipmap target:INTEGER <- 
+  `glGenerateMipmap(@target)`
+  
+  - gl_get_programiv(program:UINTEGER_32,pname:INTEGER) :INTEGER <- 
+  ( + status:INTEGER
+    `{ int s; glGetProgramiv(@program,@pname,&s)`
+    status := `s`:INTEGER; `}`
+    status
+  )
+  
+  - gl_get_program_info_log (program:INTEGER,size,length:INTEGER_64,
+  infolog:NATIVE_ARRAY CHARACTER) <- 
+  `glGetProgramInfoLog(@program,@size,@length,@infolog)`
+  
+  - gl_get_shader_info_log shader:UINTEGER_32 :STRING_BUFFER <- 
+  ( + result:STRING_BUFFER
+    `{ char str[513]; int len; `
+    `glGetShaderInfoLog(@shader,512,&len,str)`
+    `str[(len>512)?512:len] = 0`
+    result := STRING_BUFFER.create_from_external (`str`:NATIVE_ARRAY CHARACTER); `}`
+    result
+  )
+  
+  - gl_get_shaderiv(id_shader:UINTEGER_32,pname:INTEGER) :INTEGER <- 
+  ( + status:INTEGER
+    `{ int s; glGetShaderiv(@id_shader,@pname,&s)`
+    status := `s`:INTEGER; `}`
+    status
+  )
+  
+  - gl_gen_textures n:INTEGER_64 :UINTEGER_32 <- 
+  ( + result:UINTEGER_32
+    `{ GLuint t; glGenTextures(@n,&t)`
+    result := `t`:UINTEGER_32
+    `}`
+    result
+  )
+  
+  - gl_get_uniform_location (program:UINTEGER_32,name:STRING_ALIAS) :INTEGER <- 
+  ( + n:NATIVE_ARRAY CHARACTER
+    n := name.to_external
+    `glGetUniformLocation(@program,@n)`:INTEGER
+  )
+  
+  - gl_get_uniform_block_index (program:UINTEGER_32,name:STRING_ALIAS):INTEGER <- 
+  ( + ext:NATIVE_ARRAY CHARACTER
+    ext := name.to_external
+    `glGetUniformBlockIndex(@program,@ext)`:INTEGER
+  )
+  
+  - gl_gen_vertex_arrays n:INTEGER :UINTEGER_32 <-
+  ( + result:UINTEGER_32
+    `{ unsigned int r`
+    `glGenVertexArrays(@n,&r)`
+    result := `r`:UINTEGER_32
+    `}`
+    result
+  )
+    
+  - gl_stencil_op(fail,zfail,zpass:INTEGER) <- 
+  `glStencilOp(@fail,@zfail,@zpass)`
+  
+  - gl_stencil_op_separate(face,sfail,dpfail,dppass:INTEGER) <- 
+  `glStencilOpSeparate(@face,@sfail,@dpfail,@dppass)`
+  
+  - gl_link_program program:UINTEGER_32 <- 
+  `glLinkProgram(@program)`
+  
+  - gl_stencil_mask mask:UINTEGER_32 <- 
+  `glStencilMask(@mask)`
+  
+  - gl_pixel_storei (pname:INTEGER,param:INTEGER_32) <- 
+  `glPixelStorei(@pname,@param)`
+  
+  - gl_tex_parameteri(target:INTEGER,pname:INTEGER,param:INTEGER_32) <- 
+  `glTexParameteri(@target,@pname,@param)`
+  
+  - gl_tex_image_2d (target:INTEGER,level,internalformat:INTEGER_32,
+    width,height:INTEGER_64,border:INTEGER_32,format,type:INTEGER,
+  pixels:NATIVE_ARRAY UINTEGER_8) <- 
+  `glTexImage2D(@target,@level,@internalformat,@width,@height,@border,@format,@type,@pixels)`
+  
+  - gl_tex_sub_image_2d (target:INTEGER,level,xoffset,yoffset:INTEGER_32,
+  width,height:INTEGER_64,format,type:INTEGER,pixels:NATIVE_ARRAY UINTEGER_8) <- 
+  `glTexSubImage2D(@target,@level,@xoffset,@yoffset,@width,@height,@format,@type,@pixels)`
+  
+  - gl_uniform4fv(location:INTEGER_32,count:INTEGER_64,value:NATIVE_ARRAY REAL_32) <- 
+  `glUniform4fv(@location,@count,@value)`
+  
+  - gl_uniform1i (location,v0:INTEGER_32) <- 
+  `glUniform1i(@location,@v0)`
+  
+  - gl_uniform1f (location,v0:REAL_32) <- 
+  `glUniform1f(@location,@v0)`
+  
+  - gl_uniform2fv(location:INTEGER_32,val:VEC2) <- 
+  ( 
+    `glUniform2fv(@location,1,@val)`
+  )
+  
+  - gl_uniform3fv(location:INTEGER_32,val:VEC3) <- 
+  ( 
+    `glUniform3fv(@location,1,(const float *)@val)`
+  )
+  
+  - gl_uniform2f(location:INTEGER_32,val0,val1:REAL_32) <- 
+  ( //`{ static float v2[2]; v2[0]=@val0; v2[1]=@val1`
+    //`glUniform2fv(@location,1,v2); }`
+    `glUniform2f(@location,@val0,@val1)`
+  )
+  
+  - gl_uniform3f(location:INTEGER_32,val0,val1,val2:REAL_32) <- 
+  ( 
+    `glUniform3f(@location,@val0,@val1,@val2)`
+  )
+  
+  - gl_uniform4f(location:INTEGER_32,val0,val1,val2,val3:REAL_32) <- 
+  ( 
+    `glUniform4f(@location,@val0,@val1,@val2,@val3)`
+  )
+  
+  - gl_uniform_block_binding (program,index,binding:UINTEGER_32) <- 
+  `glUniformBlockBinding(@program,@index,@binding)`
+  
+  - gl_use_program program:UINTEGER_32 <- 
+  `glUseProgram(@program)`
+  
+  - gl_vertex_attrib_pointer(index:UINTEGER_32,size:INTEGER_32,
+  type:INTEGER,normalized:BOOLEAN,stride:INTEGER_64,pointer:POINTER) <- 
+  `glVertexAttribPointer(@index,@size,@type,@normalized,@stride,@pointer)`
+  
+  - gl_uniform_matrix4fv(location:INTEGER_32,val:MAT4X4) <- 
+  ( 
+    `glUniformMatrix4fv(@location,1,GL_FALSE,(const GLfloat *)@val)`
+  )

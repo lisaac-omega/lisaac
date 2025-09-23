@@ -1,0 +1,217 @@
+Header
+
+  + name    := EXPR;
+
+  /* Parent for all expression */
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  - cardinality:INTEGER <- 1
+
+  //
+  // Comparison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <- FALSE
+
+  - Self:SELF '!~=' Right 60 other:EXPR :BOOLEAN <- ! (Self ~= other)
+
+  //
+  // Type.
+  //
+
+  - static_type:TYPE_FULL <-
+  (
+    abstract
+    NULL
+  )
+
+  - get_type t:TYPES_TMP <- abstract
+
+  //
+  // Flag.
+  //
+
+  - is_constant:BOOLEAN <- FALSE
+
+  //
+  // Check type.
+  //
+  
+  - to_export t:TYPE_FULL pos p:POSITION :EXPR <-
+  ( + local:VARIABLE
+    + instr:INSTR
+    + rec:EXPR
+    + slot_name:STRING_ALIAS
+    + slot_msg:SLOT
+    + node:NODE
+    + ts:ITM_TYPE_SIMPLE
+    local := static_type.get_temporary position
+    instr := local.write position value Self
+    list_current.add_last instr
+    //
+    slot_name := TYPE.last_cast_name.to_string_alias
+    slot_msg  := static_type.get_slot slot_name
+    (slot_msg = NULL).if {
+      string_tmp.clear
+      static_type.append_name_in string_tmp
+      string_tmp.append " -> "
+      t.append_name_in string_tmp
+      string_tmp.append ". Slot `";
+      string_tmp.append slot_name
+      string_tmp.append "' not found in `";
+      static_type.append_name_in string_tmp
+      string_tmp.append "'."
+      POSITION.put_error semantic text string_tmp
+      p.put_position
+      static_type.prototype.position.put_position
+      POSITION.send_error
+    }
+    (slot_msg.argument_count != 1).if {
+      semantic_error (slot_msg.position,"No argument for this slot.")
+    }
+    ts ?= slot_msg.result_type
+    ((ts = NULL) || {! (ts.to_run_for (t.raw) pos (position.prototype.filename) == t)}).if {
+      string_tmp.copy "Type result `";
+      slot_msg.result_type.append_in string_tmp
+      string_tmp.append "' is incorrect (Used for auto-conversion to `";
+      t.append_name_in string_tmp
+      string_tmp.append "')."
+      POSITION.put_error semantic text string_tmp
+      slot_msg.position.put_position
+      position.put_position
+      POSITION.send_error
+    }
+    //
+    rec  := local.read position
+    node := NODE.new_read position slot slot_msg receiver rec self rec intern FALSE
+    list_current.add_last node
+    //
+    node.result_expr
+  )
+  
+  - to_import t:TYPE_FULL pos p:POSITION :EXPR <-
+  ( + local:VARIABLE
+    + instr:INSTR
+    + slot_name:STRING_ALIAS
+    + slot_msg:SLOT
+    + node:NODE
+    + args:ARRAY EXPR
+    + ts:ITM_TYPE_SIMPLE
+    local := static_type.get_temporary position
+    instr := local.write position value Self
+    list_current.add_last instr
+    //
+    slot_name := TYPE.last_cast_name.to_string_alias
+    slot_msg  := t.get_slot slot_name
+    (slot_msg = NULL).if {
+      string_tmp.clear
+      t.append_name_in string_tmp
+      string_tmp.append " <- "
+      static_type.append_name_in string_tmp
+      string_tmp.append ". Slot `";
+      string_tmp.append slot_name
+      string_tmp.append "' not found in `";
+      t.append_name_in string_tmp
+      string_tmp.append "'."
+      POSITION.put_error semantic text string_tmp
+      p.put_position
+      t.prototype.position.put_position
+      POSITION.send_error
+    }
+    (slot_msg.argument_count != 2).if {
+      semantic_error (slot_msg.position,"Incorrect argument for this slot.")
+    }
+    ts ?= slot_msg.result_type
+    ((ts = NULL) || {! (ts == ITM_TYPE_PARAMETER.type_self)}).if {
+      string_tmp.copy "Type result `";
+      slot_msg.result_type.append_in string_tmp
+      string_tmp.append "' is incorrect (Used for auto-conversion to `";
+      t.append_name_in string_tmp
+      string_tmp.append "')."
+      POSITION.put_error semantic text string_tmp
+      slot_msg.position.put_position
+      position.put_position
+      POSITION.send_error
+    }
+    //
+    args := ARRAY EXPR .create_with_capacity 2
+    args.add_last (PROTOTYPE_CST.create position type t)
+    args.add_last (local.read position)
+    node := NODE.new_read position slot slot_msg
+    receiver (args.first.my_copy) with args intern FALSE
+    list_current.add_last node
+    //
+    node.result_expr
+  )
+  
+  - check_type t:TYPE_FULL with p:POSITION :EXPR <-
+  ( + result:EXPR
+    ? {static_type != NULL}
+    ? {t != NULL}
+
+    (t.affect_with static_type).if {
+      result := Self
+    } else {
+      ? {list_current != NULL}
+      (static_type.is_export_to t).if {
+        result := to_export t pos p
+      }.elseif {t.is_import_to static_type} then {
+        result := to_import t pos p
+      } else {        
+        // Type Error
+	string_tmp.copy "Type `";
+	t.append_name_in string_tmp
+	string_tmp.append "' is invalid with `";
+	static_type.append_name_in string_tmp
+	string_tmp.append "'."
+	POSITION.put_error semantic text string_tmp
+	p.put_position
+        position.put_position
+	POSITION.send_error
+      }
+    }
+    result
+  )
+  
+  //
+  // Contract Slot in/out, Section in/out, Prototype in/out
+  //
+  
+  - to_run_contract msg:STRING_ALIAS <-
+  (
+    "EXPR 179: ".print
+    type_name.print
+    list_current.add_last Self
+  )
+  
+  //
+  // Execute.
+  //
+
+  - execute:INSTR <-
+  (
+    execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  (
+    abstract
+    NULL
+  )
+  //[ ? {Result != NULL}; ]
+
+  - execute_unlink:INSTR <-
+  (
+    abstract
+    NULL
+  )
+  
+  
+  
+  
+

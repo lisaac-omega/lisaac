@@ -1,0 +1,40 @@
+Header
+  
+  + name := PAIR;
+  
+Inherit
+  
+  - parent_any: ANY_CHAMENEOS_REDUX := ANY_CHAMENEOS_REDUX
+
+Public 
+  
+  + two_met: BOOLEAN
+  + sameid:  BOOLEAN
+  + colour:  INTEGER
+
+  - copy p:PAIR <-
+  (
+    sameid  := p.sameid
+    two_met := p.two_met
+    colour  := p.colour
+  )
+
+  - meet (smid:BOOLEAN, c:INTEGER) <-
+  (
+    sameid  := smid
+    colour  := c
+    two_met := TRUE
+  )
+
+  - create :SELF <-
+  ( + result :SELF
+
+    result := clone
+    result.make
+    result
+  )
+
+  - make <-
+  (
+    two_met := FALSE
+  )

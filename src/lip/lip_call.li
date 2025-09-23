@@ -1,0 +1,264 @@
+Header
+
+  + name      := LIP_CALL;
+
+Inherit
+
+  + parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + receiver:LIP_CODE
+
+  + name:STRING_ALIAS
+
+  + argument:LIP_CODE
+    
+  - add_path:{(STRING_ALIAS,STRING_ALIAS); } := {(pth,img:STRING_ALIAS)
+    path_file.add_last pth
+  }
+  - img_ok:BOOLEAN
+  
+  - set_add_path a:{(STRING_ALIAS,STRING_ALIAS); } img b:BOOLEAN <-
+  ( add_path := a
+    img_ok := b
+  )
+  
+  //
+  // Creation.
+  //
+
+  - create p:POSITION receiver rec:LIP_CODE name n:STRING_ALIAS with arg:LIP_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p receiver rec name n with arg
+    result
+  )
+
+  - make p:POSITION receiver rec:LIP_CODE name n:STRING_ALIAS with arg:LIP_CODE <-
+  [
+    -? {p.code != 0}
+  ]
+  (
+    position := p
+    receiver := rec
+    name := n
+    argument := arg
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  ( + slot:LIP_SLOT_CODE
+    + dta:LIP_SLOT_DATA
+    + cal:LIP_CALL
+    + val,rec:LIP_CONSTANT
+    + str:LIP_STRING
+    + int:LIP_INTEGER
+    + path:STRING_ALIAS
+    + is_rec:BOOLEAN
+    + idx:INTEGER
+
+
+    (receiver != NULL).if {
+      rec := receiver.run_expr
+    }
+    (argument != NULL).if {
+      val := argument.run_expr
+    }
+    (name = "print").if {
+      (rec = NULL).if {
+        semantic_error (position,"Incorrect type.")
+      }
+      (val != NULL).if {
+        warning_error (position,"No argument for `print' method.");
+      }
+      rec.print
+    }.elseif {name = "build_label"} then {
+      ((val = NULL) || {(str ?= val) = NULL}).if {
+        semantic_error (position,"String argument needed.")
+      }
+      BUILD_LABEL.on (str.value)
+    }.elseif {name = "die_with_code"} then {
+      int ?= val
+      (int = NULL).if {
+        semantic_error (position,"Integer argument needed.")
+      }
+      exit (int.value)
+    }.elseif {name = "help_command"} then {
+      (val != NULL).if {
+        warning_error (position,"No argument for `help_command' method.");
+      }
+      LISAAC.show_help
+    }.elseif {name = "compiler_version"} then {
+      (val != NULL).if {
+        warning_error (position,"No argument for `compiler_version' method.");
+      }
+      LISAAC.show_version
+    }.elseif {name = "path"} then {
+      str ?= val
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      path := str.value
+      ((! path.is_empty) && {path.last = '*'}).if {
+        string_tmp.copy path
+        string_tmp.remove_last
+        path := string_tmp.to_string_alias
+        is_rec := TRUE
+      }
+      ((path.is_empty) || {path.first != '/'}).if {
+        string_tmp.copy (position.prototype.filename)
+        idx := last_index_str (string_tmp,'/')
+        (idx < string_tmp.lower).if {
+          string_tmp.copy "./"
+        } else {
+          string_tmp.remove_tail (string_tmp.upper-idx)
+        }
+        string_tmp.append path
+        path := string_tmp.to_string_alias
+      }
+      (path.is_empty).if_false {
+        load_dir path img NULL is_rec is_rec
+      }
+    }.elseif {name = "run"} then {
+      str ?= val
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      string_tmp.clear
+      str.append_in string_tmp
+      ENVIRONMENT.run string_tmp
+    }.elseif {name = "run_in"} then {
+      str ?= rec
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      string_tmp.clear
+      str.append_in string_tmp
+      string_tmp2.clear
+      ENVIRONMENT.execute string_tmp in string_tmp2
+      ((!string_tmp2.is_empty) && {string_tmp2.last = '\n'}).if { string_tmp2.remove_last; }
+      cal ?= argument
+      (str = NULL).if {
+        semantic_error (position,"Variable needed.")
+      }
+      dta := get_data (cal.name)
+      (dta = NULL).if {
+        string_tmp.copy "Slot `";
+        string_tmp.append (cal.name)
+        string_tmp.append "' not found."
+        semantic_error (position,string_tmp)
+      }
+      str ?= dta.value
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      str.set_value (string_tmp2.to_string_alias)
+      //get_data (val
+    } else {
+      slot := get_method name
+      (slot = NULL).if {
+        string_tmp.copy "Slot `";
+        string_tmp.append name
+        string_tmp.append "' not found."
+        semantic_error (position,string_tmp)
+      }
+      (slot.run_with val).if_false {
+        semantic_error (position,"Invalid argument.")
+      }
+    }
+    (rec != NULL).if {
+      rec.free
+    }
+    (val != NULL).if {
+      val.free
+    }
+  )
+
+  - run_expr:LIP_CONSTANT <-
+  ( + slot:LIP_SLOT_DATA
+    + str:LIP_STRING
+    + val:LIP_CONSTANT
+    + result:LIP_CONSTANT
+    + res:INTEGER
+
+    (argument != NULL).if {
+      val := argument.run_expr
+    }
+    (name = "run").if {
+      str ?= val
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      string_tmp.clear
+      str.append_in string_tmp
+      res := ENVIRONMENT.run string_tmp
+      result := LIP_INTEGER.get res
+    }.elseif {name = "get_integer"} then {
+      {
+        STDIN.read_line
+        (STDIN.last_string.is_integer).if_false {
+          "Error INTEGER needed.\n".print
+        }
+      }.do_until {STDIN.last_string.is_integer}
+      result := LIP_INTEGER.get (STDIN.last_string.to_integer)
+    }.elseif {name = "get_string"} then {
+      STDIN.read_line
+      result := LIP_STRING.get (STDIN.last_string.to_string_alias)
+    } else {
+      slot := get_data name
+      (slot = NULL).if {
+        slot := stack.last
+        (slot = NULL).if {
+          string_tmp.copy "Slot `";
+          string_tmp.append name
+          string_tmp.append "' not found."
+          semantic_error (position,string_tmp)
+        }
+      }
+      result := slot.get_value
+    }
+    (val != NULL).if {
+      val.free
+    }
+    result
+  )
+
+  - load_dir path:STRING img img:STRING_ALIAS is_rec is_rec:BOOLEAN <-
+  ( + entry:DIRENT
+    + dir:DIRECTORY
+    + wimg:STRING_ALIAS
+    + i:INTEGER
+    
+    entry := FILE_SYSTEM.get path
+    ((entry != NULL) && {entry.is_directory} && {entry.open}).if {
+      dir ?= entry
+      // Search picture
+      (img_ok).if {
+        {(i <= dir.upper) && {wimg = NULL}}.while_do {
+          (dir.at i.name.has_prefix "DIR.").if {
+            wimg := dir.at i.path
+          }
+          i := i + 1
+        }
+        (wimg = NULL).if { wimg := img; }
+      }
+      //dir.print
+      (dir.lower).to (dir.upper) do { j:INTEGER
+        entry := dir.at j
+        (entry.name.has_suffix ".li").if {
+          add_path.value (entry.path, wimg)
+        }.elseif {(is_rec) && {entry.is_directory}} then {
+          load_dir (entry.path) img wimg is_rec TRUE
+        }
+      }
+    } else {
+      string_tmp.copy "Incorrect directory `";
+      string_tmp.append path
+      string_tmp.append "'."
+      warning_error (position,string_tmp)
+    }
+  )

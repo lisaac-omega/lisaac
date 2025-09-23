@@ -1,0 +1,184 @@
+Header
+  + name := ENVIRONMENT;
+  /*To get/set environment variables. Hence include cd, pwd builtins.*/
+
+  - external := `
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+
+#ifdef _WIN32
+#define WEXITSTATUS(status) (status)
+#else
+#include <sys/wait.h>
+#endif
+
+#ifdef _WIN32
+    #include <process.h>   // pour _spawnl
+    #include <windows.h>
+#endif
+
+/******************* Run background *************************/
+
+int run_background(const char *cmd) {
+#ifdef _WIN32
+    // Version Windows : _spawnl passe par cmd.exe /C "cmd"
+    return _spawnl(_P_NOWAIT, "C:\\Windows\\System32\\cmd.exe",
+                   "cmd.exe", "/C", cmd, NULL);
+#else
+    // Version POSIX : fork + execlp "sh -c cmd"
+    pid_t pid = fork();
+    if (pid == 0) {
+        execlp("sh", "sh", "-c", cmd, (char*)NULL);
+        exit(1);
+    }
+    else if (pid < 0) {
+        return -1;
+    }
+    return pid; // le parent continue immédiatement
+#endif
+}
+`;
+  
+Public
+  - read_variable variable:STRING in buffer:STRING_BUFFER <-
+  // append `variable' value in `buffer'. 
+  ( + p:NATIVE_ARRAY CHARACTER
+    p := getenv(variable.to_external)
+    (p != NULL).if {
+      mybuffer.from_external_copy p
+      buffer.append mybuffer
+    }
+  )
+  
+  - read_variable variable:STRING :STRING_ALIAS <-
+  ( + p:NATIVE_ARRAY CHARACTER
+    + result:STRING_ALIAS
+    p := getenv(variable.to_external)
+    (p != NULL).if {
+      mybuffer.from_external_copy p
+      result := mybuffer.to_string_alias
+    }
+    result
+  )
+
+  - write_variable variable:STRING value value:STRING <-
+  // setenv `variable' with `value'.
+  [
+    ? { ! variable.is_empty}
+    ? { value != NULL }
+  ]
+  ( + na1,na2:NATIVE_ARRAY CHARACTER
+    mybuffer.copy variable
+    na1 := mybuffer.to_external
+    mybuffer2.copy value
+    na2 := mybuffer2.to_external
+    `setenv((char*)@na1,(char*)@na2,1)`
+    ? {(read_variable variable) == value}.txt {read_variable variable}
+  )
+
+  - run system_command_line:STRING  :INTEGER <-
+  // To execute a `system_command_line' as for example, "ls -l" on UNIX.
+  // The `Result' gives the usual exit status.
+  ( + na:NATIVE_ARRAY CHARACTER
+    + r:INTEGER
+    na := system_command_line.to_external
+    `{`
+    r := `system((char*)(@na))`:(INTEGER)
+    `}`
+    `WEXITSTATUS(@r)`:(INTEGER)
+  )
+
+  - run cmd:STRING background <-
+  ( + c:NATIVE_ARRAY CHARACTER
+    c := cmd.to_external
+    `run_background(@c)`
+  )
+
+  - run cmd:STRING back b:BOOLEAN :INTEGER <-
+  ( + result:INTEGER
+    if b then {
+      run cmd background
+    } else {
+      result := run cmd
+    }
+    result
+  )
+  
+Public
+  
+  - fork:INTEGER <- `fork()`:INTEGER
+  - waitpid pid:INTEGER :BOOLEAN <-
+  ( + r:INTEGER
+    `{ int status`
+    r := `waitpid(@pid,&status,WNOHANG)`:INTEGER
+    `}`
+    r = pid
+  )
+  
+  - pwd_in buffer:STRING_BUFFER <-
+  // Access to the `get_current_dir_name` C function or equivalent.
+  ( + na:NATIVE_ARRAY CHARACTER
+    + cap:INTEGER
+    na := buffer.to_external
+    cap := buffer.capacity
+    `getcwd(@na,@cap)`
+    buffer.restore_after_external
+    buffer.add_last '/'
+  )
+  
+  - pwd:STRING_ALIAS <-
+  (
+    mybuffer.clear
+    pwd_in mybuffer
+    mybuffer.to_string_alias
+  )
+  
+  - chdir destination:STRING :INTEGER <-
+  // Access to the `chdir` C function or equivalent.
+  ( + na:NATIVE_ARRAY CHARACTER
+    mybuffer.copy destination
+    na := mybuffer.to_external
+    `chdir((char*)@na)`:INTEGER
+  )
+  
+  - execute s:STRING in b:STRING_BUFFER <-
+  ( + buf:NATIVE_ARRAY CHARACTER
+    + cap/*,idx*/:INTEGER
+    buf := s.to_external
+    `{ FILE *cmd; cmd = popen(@buf,"r")`
+    mybuffer.clear
+    cap := mybuffer.capacity
+    buf := mybuffer.to_external
+    mybuffer.set_upper (`fread(@buf,1,@cap,cmd)`:INTEGER - 1)
+    `pclose(cmd); }`
+    b.append mybuffer
+  )
+  
+  - which s:STRING in b:STRING_BUFFER <-
+  ( + c:INTEGER
+    c := b.count
+    mybuffer.copy "which "
+    mybuffer.append s
+    execute mybuffer in b
+    ((b.count = c) || {b.at c = '.'}).if {
+      b.set_upper (c-1)
+      b.append (ENVIRONMENT.read_variable "PWD")
+      b.add_last '/'
+      b.append s
+      FILE_SYSTEM.reduce_path b
+    } else {
+      b.remove_last; // Remove '\n'
+    }
+  )
+
+Private
+  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 1024
+  
+  - mybuffer2:STRING_BUFFER := STRING_BUFFER.create 1024
+  
+  - getenv variable:NATIVE_ARRAY(CHARACTER) :NATIVE_ARRAY(CHARACTER) <-
+  (
+    `getenv((char*)@variable)`:NATIVE_ARRAY(CHARACTER){NATIVE_ARRAY(CHARACTER),NULL}
+  )
+  

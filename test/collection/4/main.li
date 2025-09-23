@@ -1,0 +1,65 @@
+Header  
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Private  
+  + cltn_aaa:ARRAY INTEGER
+  + cltn_bbb:ARRAY_RING INTEGER
+  
+  - long:INTEGER <- 300
+  
+Public
+  - main <-
+  ( + x:INTEGER
+    RANDOM.init 6
+    cltn_aaa := ARRAY INTEGER .create_with_capacity 4
+    cltn_bbb := ARRAY_RING INTEGER .create_with_capacity 4
+    x := 1
+    cltn_aaa     .add_last x
+    cltn_bbb.add_last x
+    idem
+    x := 2
+    cltn_aaa     .add_last x
+    cltn_bbb.add_last x
+    idem
+    1000.times {
+      + idx:INTEGER
+      x := x + 1
+      idx := cltn_aaa.upper
+      cltn_aaa.at idx add x
+      cltn_bbb.at idx add x
+      idem
+    }
+    {cltn_aaa.is_empty}.until_do {
+      + idx:INTEGER
+      (cltn_aaa.count = 1).if {
+        idx := 0
+      } else {
+        idx := RANDOM.range 0 to (cltn_aaa.upper)
+      }
+      TEST.check (cltn_aaa.valid_index idx)
+      TEST.check (cltn_bbb.valid_index idx)
+      cltn_bbb.remove idx
+      cltn_aaa.remove idx
+      idem
+    }
+  )
+  
+  - idem <-
+  ( + i:INTEGER
+    TEST.check (cltn_aaa.lower = cltn_bbb.lower)
+    TEST.check (cltn_aaa.upper = cltn_bbb.upper)
+    TEST.check (cltn_aaa.count = cltn_bbb.count)
+    cltn_aaa.is_empty.if_false {
+      TEST.check (cltn_aaa.last) integer (cltn_bbb.last)
+      TEST.check (cltn_aaa.first) integer (cltn_bbb.first)
+    }
+    i := 0
+    {i <= cltn_aaa.upper}.while_do {
+      TEST.check (cltn_aaa.at i) integer (cltn_bbb.at i)
+      i := i + 1
+    }
+  )
+  

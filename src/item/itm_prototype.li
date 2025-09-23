@@ -1,0 +1,74 @@
+Header
+
+  + name        := ITM_PROTOTYPE;
+
+  /*Prototype constant*/
+
+Inherit
+
+  + parent_itm_constant:Expanded ITM_CONSTANT
+
+Public
+
+  + type:ITM_TYPE
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION type n:ITM_TYPE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p type n
+    result
+  )
+
+  - make p:POSITION type n:ITM_TYPE <-
+  (
+    position := p
+    type := n
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + t:TYPE_FULL
+    + result:EXPR
+
+    t := type.to_run_for profil_slot pos (position.prototype.filename)
+    (t = NULL).if {
+      string_tmp.copy "Type `";
+      type.append_in string_tmp
+      string_tmp.append "' not found (Undefine type parameter)."
+      semantic_error (position,string_tmp)
+    }
+    // TYPE Classic.
+    (
+      (t.is_expanded_c) && {t.raw != type_boolean} &&
+      {t.raw != type_true} && {t.raw != type_false}
+    ).if {
+      result := t.default_value position
+      result := result.check_type t with position
+    } else {
+      result := PROTOTYPE_CST.create position type t
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    type.append_in buffer
+  )
+
+
+
+
+
+
+

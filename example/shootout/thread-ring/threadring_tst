@@ -1,0 +1,7 @@
+% ../../../../src/lisaac threadring -boost 
+% gcc -pipe -Wall -O3 -fomit-frame-pointer -march=pentium4 -lpthread threadring_c.c -o threadring_c
+echo Lisaac: 
+time ./threadring 10000000 > out_li.txt
+echo C:
+time ./threadring_c 10000000 > out_c.txt
+diff out_li.txt out_c.txt

@@ -1,0 +1,378 @@
+Header
+
+  + name    := ITM_SLOT;
+
+  /*Slot item*/
+
+Inherit
+
+  + parent_named:Expanded NAMED
+  
+  + parent_pattern:Expanded ITM_PATTERN
+  
+Public
+
+  //
+  // Shorter information.
+  //
+
+  + comment:STRING_ALIAS
+
+  - set_comment str:STRING_ALIAS <-
+  (
+    comment := str
+  )
+
+  + comment_chapter:STRING_ALIAS
+
+  - set_comment_chapter c:STRING_ALIAS <-
+  (
+    comment_chapter := c
+  )
+
+  + stat_shorter:INTEGER_8
+
+  - set_stat_shorter s:INTEGER_8 <-
+  (
+    stat_shorter := s
+  )
+
+  //
+  // Profil
+  //
+  
+  + is_used:BOOLEAN
+  
+  - set_used <-
+  (
+    is_used := TRUE
+  )
+
+  + id_section:SECTION_
+
+  - argument_count:INTEGER <-
+  ( + result:INTEGER
+
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      result := result + argument_list.at j.count
+    }
+    result
+  )
+  
+  + idf_first:BOOLEAN
+  + argument_list:ARRAY ITM_ARGUMENT
+
+  + result_type:ITM_TYPE
+
+  - set_result_type t:ITM_TYPE <-
+  ( + tm:ITM_TYPE_MONO
+
+    (id_section.is_inherit_or_insert).if {
+      tm ?= t
+      (
+        (tm = NULL) ||
+        {tm = ITM_TYPE_SIMPLE.type_self} ||
+        {tm = ITM_TYPE_SIMPLE.type_void}
+      ).if {
+	semantic_error (position,"Incorrect type for inheritance slot.")
+      }
+    }
+    /*
+    "ITM_SLOT : ".print
+    name.print; ' '.print
+    ( +tmu:ITM_TYPE_MULTI
+      tmu ?= t
+      (tmu != NULL).if {
+        tmu.count.print
+      }
+    )
+    '\n'.print
+    */
+    result_type := t
+  )
+
+  - set_argument_list p:ARRAY ITM_ARGUMENT <-
+  (
+    ((p.count > 1) || {p.first.count > 1}).if {
+      (id_section.is_interrupt).if {
+	semantic_error (p.last.position,"No argument for interrupt slot.")
+      }
+      (id_section.is_inherit_or_insert).if {
+	semantic_error (p.last.position,"No argument for inheritance slot.")
+      }
+    }
+    argument_list := p
+  )
+
+  - get_argument_type i:INTEGER :ITM_TYPE <-
+  ( + idx,j:INTEGER
+    + arg:ITM_ARGUMENT
+
+    {
+      arg := argument_list.at j
+      idx := idx + arg.count
+      j := j + 1
+    }.do_while {idx <= i}
+    arg.at (i-(idx - arg.count))
+  )
+
+  - is_equal_profil other:ITM_SLOT <-
+  (
+    (Self != other).if {
+      (result_type != other.result_type).if {
+	string_tmp.copy "Invariance type result invalid."; // ("
+	//type.to_run.append_name_in string_tmp
+	//string_tmp.append " != "
+	//other.type.to_run.append_name_in string_tmp
+        //string_tmp.append ")."
+        /*
+        ( + tm:ITM_TYPE_PARAMETER
+          tm ?= other.result_type
+          tm.to_run_for .print
+          '\n'.print
+        )
+        */
+	POSITION.put_error warning text string_tmp
+	position.put_position
+	(other.position).put_position
+	POSITION.send_error
+      }
+      (id_section == other.id_section).if_false {
+	POSITION.put_error warning text "Invariance section declaration invalid."
+        id_section.position.put_position
+        position.put_position
+        other.id_section.position.put_position
+        other.position.put_position
+	POSITION.send_error
+      }
+      (
+        ((other.argument_list = NULL) ^ (argument_list = NULL)) ||
+        {(argument_list != NULL) && {argument_list.count != other.argument_list.count}}
+      ).if {
+        POSITION.put_error warning text "Invariance argument number."
+        position.put_position
+        (other.position).put_position
+        POSITION.send_error
+      } else {
+        (argument_list != NULL).if {
+          (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+            argument_list.at j.is_equal (other.argument_list.at j)
+          }
+        }
+      }
+    }
+  )
+
+  //
+  // Data.
+  //
+
+  + affect:CHARACTER; // ':', '?', '<'
+
+  - set_affect a:CHARACTER <-
+  (
+    affect := a
+  )
+
+  + next:ITM_SLOT
+
+  - set_next n:ITM_SLOT <-
+  (
+    next := n
+  )
+
+  //
+  // Access associativity & priority level.
+  //
+
+  - priority_and_level:INTEGER <-
+  (
+    crash_with_message "ITM_SLOT.priority_and_level."
+    0
+  )
+
+  - associativity:STRING_ALIAS <-
+  (
+    crash_with_message "ITM_SLOT.associativity."
+    NULL
+  )
+
+  - priority:INTEGER <-
+  (
+    crash_with_message "ITM_SLOT.priority."
+    0
+  )
+  
+  - comm:BOOLEAN <- FALSE
+  
+  //
+  // Value.
+  //
+
+  + value:ITM_CODE
+
+  - set_value e:ITM_CODE type p:PROTOTYPE <-
+  // Static definition.
+  [
+    -? {affect != '\0'}
+  ]
+  (
+    (affect = '<').if {
+      value := e
+    } else {
+      //semantic_error (position,"not_yet_implemented")
+      value := default_value e in p
+    }
+  )
+
+  //
+  // Constructeur.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS idf_first df:BOOLEAN feature sec:SECTION_ :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n idf_first df feature sec
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS idf_first df:BOOLEAN feature sec:SECTION_ <-
+  (
+    name        := n
+    idf_first   := df
+    position    := p
+    id_section  := sec
+  )
+
+  //
+  // Runnable.
+  //
+
+  - get_index_argument_type p:ITM_TYPE_PARAMETER :INTEGER <-
+  ( + i,result,max:INTEGER
+    + arg:ITM_ARGUMENT
+
+    i := argument_list.lower
+    {(i <= argument_list.upper) && {result = max}}.while_do {
+      arg    := argument_list.at i
+      max    := max    + arg.count
+      result := result + arg.get_index_type p
+      i := i +1
+    }
+    (result = max).if {
+      result := -1
+    }
+    result
+  )
+
+  - check_argument_type larg:ARRAY EXPR for p:PARAMETER_TO_TYPE <-
+  ( + idx:INTEGER
+    + a:ITM_ARGUMENT
+
+    (argument_list.lower).to (argument_list.upper) do { i:INTEGER
+      a := argument_list.at i
+      idx := a.check larg index idx for p
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      buffer.add_last ' '
+      argument_list.at j.append_in buffer
+    }
+    buffer.add_last ' '
+    buffer.add_last ':'
+    result_type.append_in buffer
+  )
+  
+  - pretty_name:STRING_ALIAS <- ( crash; NULL)
+  
+  - pretty_name_in buffer:STRING_BUFFER <-
+  ( buffer.append name; )
+  
+/*
+  - shorter_profile_in buf:STRING_BUFFER <-
+  (
+    // style.
+    (style = '+').if {
+      put "+" to buf like "slot_style"
+    } else {
+      put "-" to buf like "slot_style"
+    }
+    shorter_profile_intern_in buf
+    // Result.
+    (result_type != ITM_TYPE_SIMPLE.type_void).if {
+      buf.add_last ':'
+      result_type.shorter_in buf
+    }
+  )
+*/
+ITM_SLOT
+/*
+  - shorter_profile_intern_in buf:STRING_BUFFER <-
+  ( + j,i:INTEGER
+    // Name + arguments.
+    string_tmp.clear
+    j := name.lower
+    argument_list.first.shorter_in buf
+    buf.add_last '.'
+    i := argument_list.lower+1
+    {j < name.upper}.while_do {
+      ((name.at j = '_') && {name.at (j+1) = '_'}).if {
+        put string_tmp to buf like "slot"
+        buf.add_last ' '
+        argument_list.at i.shorter_in buf
+        buf.add_last ' '
+        string_tmp.clear
+        j := j + 2
+        i := i + 1
+      } else {
+        string_tmp.add_last (name.at j)
+        j := j + 1
+      }
+    }
+    string_tmp.add_last (name.last)
+    put string_tmp to buf like "slot"
+    (i <= argument_list.upper).if {
+      buf.add_last ' '
+      argument_list.last.shorter_in buf
+      buf.add_last ' '
+    }
+  )
+*/
+Private
+
+  - default_value v:ITM_CODE in t:PROTOTYPE :ITM_CODE <-
+  ( //+ lst:ITM_LIST
+    + s:ITM_SLOT
+    + n:STRING_ALIAS
+    + larg:ARRAY ITM_ARGUMENT
+    + a:ITM_CODE
+
+    // Add function for init.
+    string_tmp.copy "__init_"
+    string_tmp.append name
+    n := string_tmp.to_string_alias
+    larg := ARRAY ITM_ARGUMENT .create_with_capacity 1
+    larg.add_last (
+      ITM_ARG.create (v.position) name "Self" type (ITM_TYPE_SIMPLE.type_self)
+    )
+    s := ITM_SLOT.create (v.position) name n idf_first FALSE feature (SECTION_.standard_public)
+    s.set_affect '<'
+    ? {result_type != NULL}
+    s.set_value v type t
+    s.set_argument_list larg
+    s.set_result_type result_type
+    t.slot_list.fast_put s to (s.name)
+    (t.generic_count = 0).if {
+      a := ITM_PROTOTYPE.create (v.position) type (ITM_TYPE_SIMPLE.get (t.name))
+    }
+
+    ITM_READ_ARG1.create (v.position) name n arg a
+  )

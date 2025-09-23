@@ -1,0 +1,17 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  + foo:INTEGER
+  
+  - bar foo:INTEGER <-
+  ( 
+    // conflict for foo
+  )
+  
+  - main <-
+  ( 
+    bar 2
+  )

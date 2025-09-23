@@ -1,0 +1,136 @@
+Header
+
+  + name := FILE_UTILS;
+  
+  /*Basic low-level FILE_SYSTEM calls.*/
+
+  - external := `
+#undef  __wur
+#define __wur
+#include <unistd.h>
+`;
+
+Inherit
+  - parent_utils:UTILS := UTILS
+
+Public
+      
+  - open_read n:STRING :POINTER <-
+  ( + buf:NATIVE_ARRAY(CHARACTER)
+    buf := n.to_external
+    `fopen((char*)@buf,"rb")`:(POINTER)
+  )
+
+  - open_write n:STRING :POINTER <-
+  ( + buf:NATIVE_ARRAY(CHARACTER)
+    buf := n.to_external
+    `fopen((char*)@buf,"wb")`:(POINTER)
+  )
+  
+  - read_line f:POINTER in buf:STRING_BUFFER :BOOLEAN <-
+  ( + ptr:NATIVE_ARRAY(CHARACTER)
+    + result:POINTER
+    + sz:INTEGER
+    sz := buf.capacity
+    ptr := buf.to_external
+    result := `fgets((void *)(@ptr),@sz,(FILE*)(@f))`:(POINTER)
+ //   ptr.put '\0' to sz
+    buf.from_external ptr
+    result != NULL
+  )
+
+  - read f:POINTER in buf:STRING_BUFFER size sz:INTEGER :INTEGER <-
+  [
+    ? {buf.capacity >= sz}
+  ]
+  ( + ptr:NATIVE_ARRAY(CHARACTER)
+    + result:INTEGER
+    ptr := buf.storage
+    result := `fread((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(INTEGER)
+    buf.set_upper (sz-1)
+    result
+  )
+  
+  - force_read_raw f:POINTER in ptr:NATIVE_ARRAY UINTEGER_8 size sz:INTEGER <-
+  ( (read_raw f in ptr size sz != sz).if {
+      "Error: `fread()' on ".print; sz.print; "bytes.".println;
+      exit (-1)
+    }
+  )
+  
+  - read_raw f:POINTER in ptr:NATIVE_ARRAY UINTEGER_8 size sz:INTEGER :INTEGER <-
+  ( `fread((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(INTEGER) )
+
+  - read_native_char f:POINTER in ptr:NATIVE_ARRAY CHARACTER size sz:INTEGER :INTEGER <-
+  ( `fread((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(INTEGER) )
+
+  - write f:POINTER with buf:STRING size sz:INTEGER :INTEGER <-
+  [
+    ? {sz <= buf.count}
+  ]
+  ( + ptr:NATIVE_ARRAY(CHARACTER)
+    + result:INTEGER
+    ptr := buf.storage; // Warning: Not used `to_external'    
+    result := `fwrite((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(INTEGER)
+    result
+  )
+  
+  - write f:POINTER string str:STRING :INTEGER <- write f with str size (str.count)
+  
+  - write f:POINTER buffer buf:NATIVE_ARRAY UINTEGER_8 size sz:INTEGER :INTEGER <-
+  `fwrite((void *)(@buf),(size_t)(1),(size_t)(@sz),(FILE *)(@f))`:(INTEGER)
+  
+  - write f:POINTER native_char buf:NATIVE_ARRAY CHARACTER size sz:INTEGER :INTEGER <-
+  `fwrite((void *)(@buf),(size_t)(1),(size_t)(@sz),(FILE *)(@f))`:(INTEGER)
+  
+  - close p:POINTER <- `fclose((FILE*)(@p))`
+
+  - size p:POINTER :INTEGER <-
+  ( + result:INTEGER
+    `fseek((FILE*)(@p),0,SEEK_END)`
+    result := `ftell((FILE *)@p)`:INTEGER
+    `fseek((FILE*)(@p),0,SEEK_SET)`
+    result
+  )
+  
+  - seek p:POINTER at i:INTEGER <- `fseek((FILE*)(@p),@i,SEEK_SET)`
+
+  - make_empty_file new_path:STRING :BOOLEAN <-
+  ( + p:NATIVE_ARRAY(CHARACTER)
+    + stream:POINTER
+    + result:BOOLEAN
+    p := new_path.to_external
+    stream := `fopen((char*)@p,"w+b")`:POINTER
+    (result := (stream != NULL)).if {
+      close stream
+    }
+    result
+  )
+
+  - file_exists some_path:STRING :BOOLEAN <-
+  ( + result:BOOLEAN
+    + p:POINTER
+    ((p := open_read some_path).is_not_null).if {
+      result := TRUE
+      close p
+    }
+    result
+  )
+
+  - remove some_path:STRING :INTEGER <-
+  ( + p:NATIVE_ARRAY CHARACTER
+    p := some_path.to_external
+    `remove((char*)@p)`:(INTEGER)
+  )
+  
+  - create_directory some_path:STRING :BOOLEAN <-
+  ( + p:NATIVE_ARRAY CHARACTER
+    p := some_path.to_external
+    `mkdir((char*)@p,0700)`:(INTEGER) = 0
+  )
+  
+  - working_directory_in buffer:STRING_BUFFER <-
+  ENVIRONMENT.pwd_in buffer
+  [
+    ? {buffer.last = '/'}
+  ]

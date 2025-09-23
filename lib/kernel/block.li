@@ -1,0 +1,230 @@
+Header
+
+  + name    := BLOCK;
+
+  /*Block instruction library { ... } .*/
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  
+  - do Self:{} while test:{BOOLEAN} <-
+  ( 
+    value
+    if (test.value) then {
+      do Self while test
+    } else { }
+  )
+  
+  - while Self:{BOOLEAN} do blk:{} <-
+  (
+    if (value) then {
+      blk.value
+      while Self do blk
+    } else { }
+  )
+  
+  - until Self:{BOOLEAN} do body:{} <-
+  (
+    if (value) then {
+    } else { 
+      body.value
+      until Self do body      
+    }
+  )
+    
+  - Self:{BOOLEAN} if true_blc:{} <-
+  (
+    (Self.value).if true_blc
+  )
+  
+  // Conditional :
+
+  - Self:{BOOLEAN} '||' Left 10 other:{BOOLEAN} :BOOLEAN <-
+  (
+    value || other
+  )
+
+  - Self:{BOOLEAN} '&&' Left 20 other:{BOOLEAN} :BOOLEAN <-
+  (
+    value && other
+  )
+  
+  /*
+  - Self:{}.if test:BOOLEAN <-
+  (
+    test.if_true {
+      value
+    }
+  )
+  */
+  
+  // Loop :
+
+  - Self:{} endless_loop <-
+  (
+    BOOLEAN.unpredictable.if {
+      value
+      endless_loop
+    }
+  )
+  
+  - Self:{BOOLEAN} while_loop <-
+  (
+    (value).if { while_loop; }
+  )
+    
+  - Self:{BOOLEAN} while_do body:{} <-
+  ( //? {body!=NULL}
+    (value).if {
+      body.value
+      while_do body
+    }
+  )
+  
+  - Self:{BOOLEAN} while_do body:{} stop_if tst2:{BOOLEAN} <-
+  (
+    while_do body stop_if tst2 first TRUE
+  )
+  
+Private
+  
+  - Self:{BOOLEAN} while_do body:{} stop_if tst2:{BOOLEAN} first b:BOOLEAN <-
+  (
+    ((b || {!tst2.value}) && {value}).if {
+      body.value
+      while_do body stop_if tst2 first FALSE
+    }
+  )
+  
+Public
+  
+  - Self:{} do_while test:{BOOLEAN} <-
+  ( //? {test!=NULL}
+
+    value
+    ((test.value) && {BOOLEAN.unpredictable}).if {
+      do_while test
+    }
+  )
+
+  - Self:{BOOLEAN} until_do body:{} <-
+  ( // ? {body!=NULL}
+    (! value).if {
+      body.value
+      until_do body
+    }
+  )
+ 
+  - Self:{} do_until test:{BOOLEAN} <-
+  ( //? {test!=NULL}
+
+    value
+    (! test.value).if {
+      do_until test
+    }
+  )
+
+  - Self:{BOOLEAN} while_do body:{} ensure test:{BOOLEAN} <-
+  // Mix loop version beetween `while_do' and `do_while'
+  (
+    value.if {
+      body.value
+      test.value.if {
+        while_do body ensure test
+      }
+    }
+  )
+
+  /*
+  - until_do body:BLOCK or_until test:BLOCK <-
+  (
+    (! value).if {
+      body.value
+      (! test.value).if {
+        until_do body or_until test
+      }
+    }
+  )
+  */
+
+  // Debug: Require / Ensure / Check
+    
+  - Self:{BOOLEAN} '?' msg:STRING <-
+  // User assertion with message.
+  (
+    ((debug_level >=10) && {! value}).if {
+      crash_with_message msg after 7
+    }
+  )
+  
+  - Self:{BOOLEAN} txt m:{STRING} :{BOOLEAN} <-
+  // User assertion with message.
+  ( + result:{BOOLEAN}
+    ((debug_level >= 10) && {! value}).if {
+      result := {crash_with_message (m.value) after 8}
+    } else {
+      result := {TRUE}
+    }
+    result
+  )
+  
+  - '?' Self:{BOOLEAN} <-
+  // User assertion without message.
+  (     
+    ((debug_level >=10) && {! value}).if {
+      crash_with_message "User assertion violated." after 7
+    }
+  )
+
+  - Self:{BOOLEAN} '-?' msg:STRING_ALIAS <-
+  // Require assertion with message.
+  ( 
+    ((debug_level >= 5) && {! value}).if {
+      crash_with_message msg after 7
+    }
+  )
+
+  - '-?' Self:{BOOLEAN} <-
+  // Require assertion without message.
+  ( 
+    ((debug_level >= 5) && {! value}).if {
+      crash_with_message "Require assertion violated." after 7
+    }
+  )
+
+  - Self:{BOOLEAN} '+?' msg:STRING_ALIAS <-
+  // Ensure assertion with message.
+  ( 
+    ((debug_level >= 15) && {! value}).if {
+      crash_with_message msg after 7
+    }
+  )
+
+  - '+?' Self:{BOOLEAN} <-
+  // Require assertion without message.
+  (
+    ((debug_level >= 15) && {! value}).if {
+      crash_with_message "Ensure assertion violated." after 7
+    }
+  )
+
+  - Self:{BOOLEAN} '?#' val:INTEGER <-
+  // Other assertion without message.
+  (
+    ((debug_level >= val) && {! value}).if {
+      crash_with_message "Assertion violated." after 7
+    }
+  )
+
+  // Code debug.
+
+  - '!' Self:{BOOLEAN} <-
+  (
+    (debug_level >=10).if {
+      value
+    }
+  )

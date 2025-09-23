@@ -1,0 +1,26 @@
+Header
+  
+  + name := PNGCHUNK;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+
+  + length:UINTEGER_32
+  + type:UINTEGER_32
+  
+  - create_length l:UINTEGER_32 type t:UINTEGER_32 :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make_length l type t
+    result
+  )
+  
+  - make_length l:UINTEGER_32 type t:UINTEGER_32 <-
+  (
+    length := l
+    type := t
+  )
+    

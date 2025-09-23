@@ -1,0 +1,26 @@
+Header
+  
+  + name := RECTANGLE_PRINT;
+  /*
+  Exercice .
+  */
+  
+Public
+  
+  
+  - main <-
+  ( + size:INTEGER
+    if ((COMMAND_ARGS upper < 1) || {! (COMMAND_ARGS.first) is_integer}) then {
+      "usage: ./rectangle_print <size>" println
+      SYSTEM exit 1.
+    }    
+    size := (COMMAND_ARGS.at 1).to_integer
+    from 1 to size do { line:INTEGER
+      from 1 to line do { col:INTEGER
+        col .print
+        ' '.print
+      }
+      '\n'.print
+    }
+  )
+  

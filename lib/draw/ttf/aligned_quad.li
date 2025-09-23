@@ -1,0 +1,68 @@
+Header
+  + name := ALIGNED_QUAD;
+
+Mapping
+  + x0:REAL_32;
+  + y0:REAL_32;
+  + s0:REAL_32;
+  + t0:REAL_32;
+  + x1:REAL_32;
+  + y1:REAL_32;
+  + s1:REAL_32;
+  + t1:REAL_32;
+  
+Public
+  
+  - get_packed_quad (chardata:ARRAY PACKED_CHAR,char_index:INTEGER) 
+  size (pw,ph:INTEGER) pos (xpos,ypos:REAL_32) 
+  align (align_to_int:INTEGER) :REAL_32 <-
+  ( + ipw,iph,x,y:REAL_32
+    + b:PACKED_CHAR
+    (ipw,iph) := (1.0 / pw, 1.0 / ph)
+    b := chardata.item char_index
+
+    (align_to_int != 0).if {
+      x := ((xpos + b.xoff) + 0.5).floor
+      y := ((ypos + b.yoff) + 0.5).floor
+      x0 := x
+      y0 := y
+      x1 := x + b.xoff2 - b.xoff
+      y1 := y + b.yoff2 - b.yoff
+    } else {
+      x0 := xpos + b.xoff
+      y0 := ypos + b.yoff
+      x1 := xpos + b.xoff2
+      y1 := ypos + b.yoff2
+    }
+    s0 := b.x0 * ipw
+    t0 := b.y0 * iph
+    s1 := b.x1 * ipw
+    t1 := b.y1 * iph
+    xpos + b.xadvance
+  )
+ 
+  - get_baked_quad chardata:BACKED_CHAR size (pw,ph:INTEGER) 
+  index char_index:INTEGER pos (xpos,ypos:REAL_32) 
+  align (q:ALIGNED_QUAD,opengl_fillrule:INTEGER) :REAL_32 <-
+  ( + d3d_bias,ipw,iph:REAL_32
+    + b:BACKED_CHAR
+    + round_x,round_y:INTEGER
+    
+    d3d_bias := (opengl_fillrule!=0).ok 0 or (-0.5)
+    (ipw,iph) := (1.0 / pw, 1.0 / ph)
+    b := chardata.item char_index
+    round_x := ((xpos + b.xoff) + 0.5).floor
+    round_y := ((ypos + b.yoff) + 0.5).floor
+
+    x0 := round_x + d3d_bias
+    y0 := round_y + d3d_bias
+    x1 := round_x + b.x1 - b.x0 + d3d_bias
+    y1 := round_y + b.y1 - b.y0 + d3d_bias
+
+    s0 := b.x0 * ipw
+    t0 := b.y0 * iph
+    s1 := b.x1 * ipw
+    t1 := b.y1 * iph
+
+    xpos + b.xadvance
+  )

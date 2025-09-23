@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+
+Public
+
+  - main <-
+  ( + l1,l2:LINKED_LIST CHARACTER
+    l1 := LINKED_LIST CHARACTER .new
+    l1.add_last '2'
+    l2 := l1.twin
+    TEST.check (l1.upper = l2.upper)
+    TEST.check (l1.first = l2.last)
+    //UTILS.exit 0
+    //("bug " + "init_string_alias").to_string_alias
+  )
+

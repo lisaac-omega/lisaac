@@ -1,0 +1,100 @@
+Header  
+  + name := L3D;
+  
+Inherit  
+  + parent_o3d:Expanded O3D
+  
+Private
+  
+  - free_list:ARRAY L3D := ARRAY L3D.create_with_capacity 4
+  
+O3D
+  + list:ARRAY O3D
+  
+  - create l:O3D and r:O3D :L3D <-
+  ( + result:L3D
+    (free_list.is_empty).if {
+      result := L3D.clone
+      result.make l and r
+    } else {
+      result := free_list.pop
+      result.reset l and r
+    }
+    result
+  )
+  
+  - free <- free_list.add_last Self
+  
+  - make l:O3D and r:O3D <-
+  (
+    model := MAT4X4.create
+    list := ARRAY O3D.create_with_capacity 2
+    reset l and r
+  )
+  
+  - reset l:O3D and r:O3D <-
+  (    
+    model.identity
+    list.clear
+    list.add_last l
+    list.add_last r
+  )
+  
+Public
+    
+  - Self:SELF '+' other:O3D :O3D <-
+  ( + r3d:L3D
+    apply_model
+    r3d ?= other
+    (r3d = NULL).if {
+      list.add_last other
+    } else {
+      r3d.apply_model
+      list.append_collection (r3d.list)
+      r3d.free
+    }
+    Self
+  )
+  
+  - apply_model <-
+  ( + new_model:MAT4X4
+    list.foreach { o:O3D
+      new_model := model * o.model
+      o.set_model new_model
+    }
+    model.identity
+  )
+    
+  - Self:SELF '<>' other:O3D :O3D <-
+  (
+    apply_model
+    other.translate (list.last.model.extract_translate)
+    Self + other
+  )
+    
+  // Draw
+  
+  - color c:COLOR :SELF <-
+  (
+    list.foreach { o:O3D
+      o.color c
+    }
+    Self
+  )
+  
+O3D
+  
+  - draw_intern <-
+  ( apply_model
+    list.quick_sort_with { (o1,o2:O3D)
+      + p1,p2:P3D
+      p1 ?= o1; p2 ?= o2
+      p1.col.af > p2.col.af
+    }
+    list.foreach { o:O3D
+      o.draw_intern
+    }
+    free
+  )
+  
+

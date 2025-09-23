@@ -1,0 +1,490 @@
+Header
+  + name := LIST;
+
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Private  
+  - stack_lst:Expanded ARRAY (Strict LIST)
+  
+Public
+  
+  - is_block:BOOLEAN <- buf.at (pt_b + db) = '{'
+    
+  + arg:ARG
+  + loc:Expanded ARRAY LOCAL
+  + exp:Expanded ARRAY EXPR
+  
+  + is_line:BOOLEAN
+   
+Public
+  
+  - is_simple_expr:BOOLEAN <- (!is_block) && {arg = NULL} && {loc.is_empty}
+  
+  - list:ARRAY LIST := ARRAY LIST.create_with_capacity 8
+  
+  - type:TYPE <-
+  ( /*+ t:ARRAY TONE
+    + t0:TYPE
+    + i,le,ll:INTEGER
+    + c:CHARACTER;*/
+    + result:TYPE
+    (exp.is_empty).if {
+      result := TYPE.void
+    } else {
+      not_yet_implemented
+      /*t := push_tone
+      ll := le := -1
+      {i <= txt.upper}.while_do {
+        c := txt.at i
+        c
+        .when '\0' then { le := le + 1; }
+        .when ',' then { ll := le
+          t0 := exp.at le.type
+          t0.foreach {to:TONE; t.add_last to; }
+        }
+        i := i + 1
+      }
+      (ll != exp.upper).if {
+        t0 := exp.last.type
+        (t0 = NULL).if { "BBBBUUUGGG LIST:".print; exp.last.type_name.println
+          t0 := TYPE.void
+        }
+        t0.foreach {to:TONE; t.add_last to; }
+      }
+      (t.count = 1).if { result := t.first; } else { result := TVEC.new t; }
+      pop_tone;*/
+    }
+    is_block.if {
+      not_yet_implemented
+      /*(arg != NULL).if {
+        t0 := DECL.arg_to_type arg self (TO_SCREEN.proto.type); // BSBS: Self=Merdique!
+      } else { t0 := TYPE.void; }
+      result := result.to_block t0; */
+    }
+    result
+  )
+  
+  - new:SELF <-
+  ( + r:SELF; (stack_lst.is_empty).if { r := clone; } else { r := stack_lst.pop; }; r)
+  - free <-
+  ( 
+    (arg != NULL).if { arg.free; arg := NULL; }
+    loc.foreach { l:LOCAL; l.free; }; loc.clear
+    exp.foreach { e:EXPR;  e.free; }; exp.clear
+    stack_lst.add_last Self
+    is_line := FALSE
+  )
+  
+  //
+  // PARSER / DRAW
+  //
+  
+  - new_parse t:INTEGER <-  
+  (
+    t
+    .when 0 then { rd_list; }
+    .when 1 then { rd_contract; }
+  )
+  
+  - rd_contract <-
+  //++ CONTRACT     -> '[' GROUP ']'
+  (    
+    (read_c '[').if {
+      col (LOOK.symbol) sub 1
+      rd_group
+      (read_c ']').if {
+        col (LOOK.symbol) sub 1
+      } else { err warning msg "Added ']'. (5)"; }
+    }
+  )
+  
+  - rd_list <-
+  ( + ok:BOOLEAN
+    (read_c '(').if {
+      col (LOOK.symbol) sub 1
+      rd_group
+      (read_c ')').if {
+        col (LOOK.symbol) sub 1
+        ok := TRUE
+      } else { err warning msg "Added ')'. (5)"; }
+    }.elseif {read_c '{' } then {
+      col (LOOK.symbol) sub 1
+      arg := ARG.parse_sp 10b
+      (arg != NULL).if {
+        (read_c ';').if {
+          col (LOOK.symbol) sub 1
+        } else { err warning msg "Added ';'. (1)"; }
+      }
+      rd_group
+      (read_c '}').if {        
+        col (LOOK.symbol) sub 1
+        ok := TRUE
+      } else {
+        ((pos_i <= upper) && {at pos_i = '.'}).if {
+          err syntax msg "Receiver missing."
+        } else { err warning msg "Added '}'. (2)"; }
+      }
+    }
+    ok.if { is_line := nl = Old nl; }
+  )
+
+  - rd_group <-
+  //++ GROUP        -> DEF_LOCAL {EXPR ';'} [ EXPR {',' {EXPR ';'} EXPR } ]
+  ( + e:EXPR
+    skip_spln_expr
+    rd_def_local
+    //
+    loc.foreach { l:LOCAL; local_list.add_last l; }
+    (arg != NULL).if { arg.lst.foreach { l:LOCAL; local_list.add_last l; }; }
+    //
+    {
+      e := rd_expr_op
+      (e != NULL).if {
+        (read_c ';').if {
+          col (LOOK.symbol) sub 1
+          exp.add_last e
+        }.elseif {read_c ','} then {
+          col (LOOK.symbol) sub 1
+          exp.add_last (WLOC.new.res e)
+        } else {
+          exp.add_last (WLOC.new.res e)
+          e := NULL
+        }
+      }
+    }.do_while {e != NULL}
+    skip_spln_expr
+    //
+    local_list.set_upper (Old local_list.upper)
+  )
+  
+  - rd_def_local <-
+  //++ DEF_LOCAL    -> { style LOCAL ';' } !! AMBIGU !!
+  ( + lo,ln:INTEGER
+    + pt:POS
+    + c:CHARACTER
+    + stop:BOOLEAN
+    + l:LOCAL
+    + t:TTOK
+    
+    {(pos_i <= upper) && {((c := at pos_i) = '+') || {c = '-'}} && {!stop}}.while_do {
+      col (LOOK.style) sub 0
+      (pt,ln) := (pos_i,toks.at tok_cur.nl)
+      pos_i := pos_i + 1
+      lo := loc.count
+      t := rd_local
+      (t != NULL).if {
+        lo.to (loc.upper) do { i:INTEGER
+          l := loc.at i
+          l.set_ttok t
+          (c = '-').if { l.set (LOCAL.f_static); }
+        }
+        (read_c ';').if {
+          col (LOOK.symbol) sub 1
+        } else { err warning msg "Added ';'. (2)"; }
+      } else {
+        toks.at tok_cur.sty.set_upper (Old toks.at tok_cur.sty.upper)
+        lo.to (loc.upper) do { j:INTEGER; loc.at j.free; }
+        loc.set_upper (lo - 1)
+        stop := TRUE
+        pos_i := pt
+        toks.at tok_cur.set_nl ln
+      }
+      skip_spln
+    }
+  )
+  
+  - rd_local:TTOK <-
+  //++ LOCAL        -> identifier { ',' identifier } ':' TYPE_RESULT
+  ( + t:TTOK
+    + l:LOCAL
+    (read_idf).if {
+      {
+        l := LOCAL.new.set_name last_str
+        col (LOOK.local) sub (last_str.count)
+        l.finalize 0 db (pos_i.pt-last_str.count) de pos_i
+        loc.add_last l
+      }.do_while {(read_c ',') && {col (LOOK.symbol) sub 1; read_idf}}
+      ((read_c ':') && {(pos_i > upper) || {at pos_i != '='}}).if {
+        col (LOOK.symbol) sub 1
+        t := TTOK.parse_sp (TTOK.tres)
+        l.set_dd (pos_i.pt-(pt_b.pt+l.db))
+        (t = NULL).if { err syntax msg "Incorrect local type."; }
+      }
+    }
+    t
+  )
+  
+  + c_e:INTEGER
+  + c_l:INTEGER
+  
+  - draw_body <-  
+  // Without ( )
+  [ ? {is_simple_expr}; ]
+  (    
+    pos_i := pos_i + 1
+    dd := dd - 2
+    db := db + 1
+    is_line := FALSE
+    draw
+    is_line := Old is_line
+    db := db - 1
+    dd := dd + 2
+  )
+  
+  - col_peer:COLOR := COLOR.orange
+  
+  - begin_draw <-
+  ( 
+    c_e := c_l := 0
+    //fill_color (LOOK.none)
+    //((pos_i.pt+1 = pos.pt) || {pos_i.pt+dd = pos.pt}).if {
+    //  FONT.app (FONT.bold) in txt_buf
+    //}
+    (is_line).if {
+      tex.push (0,0)
+      tmp_c.copy " "
+      draw_tmp_c
+      pos_i := pos_i + 1
+    }.elseif {(pos_i.pt+1 = pos.pt) || {pos_i.pt+dd = pos.pt}} then {
+      fill_color col_peer
+    }
+  )
+  
+  - sub_draw <-
+  ( + e:EXPR
+    + l:LOCAL
+    //
+    /*
+    (
+      ((pos_i.pt = pt_b.pt+db+1) || {pos_i.pt = pt_b.pt+db+dd}) &&
+      {FONT.last_app_id = FONT.bold}
+    ).if {      
+      FONT.app (FONT.roman) in txt_buf
+    };*/
+    //
+    ((arg != NULL) && {arg.now pos_i}).if { arg.draw; }
+    //
+    (c_l <= loc.upper).if {
+      l := loc.at c_l
+      (l.now pos_i).if { l.draw; c_l := c_l + 1; }
+    }
+    //
+    (c_e <= exp.upper).if {
+      e := exp.at c_e
+      (e.now pos_i).if { e.draw; c_e := c_e + 1; }
+    }
+    //
+    (pos_i.pt = pt_b.pt+db+dd-1).if {
+      (is_line).if {
+        tmp_c.copy " "
+        draw_tmp_c
+        pos_i := pos_i + 1
+      }.elseif {(pt_b.pt+db+1 = pos.pt) || {pt_b.pt+db+dd = pos.pt}} then {
+        fill_color col_peer
+      }
+    }
+  )
+  
+  - end_draw <-
+  ( + x,a,d:REAL_32
+    + c:COLOR
+    (is_line).if {
+      ((pt_b.pt+db+1 = pos.pt) || {pt_b.pt+db+dd = pos.pt}).if {
+        c := col_peer
+      } else {
+        c := LOOK.cols.at (LOOK.symbol)
+      }
+      lstblc c
+      (x,a,d) := (tex.x,tex.asc,tex.des)
+      tex.pop
+      tex.set_x x
+      tex.ascdes (a,d)
+    }
+  )
+  
+/* OLD OLD OLD  - end_draw <-
+  (
+    FONT.app (FONT.roman) in Self
+  )
+  
+  - begin_draw <-
+  (
+    (is_line).if {
+      tex.push (0,0)
+      tmp_c.copy " "
+      draw_tmp_c
+    } else {
+      end_line
+      tex.push (0,0)
+      states.last.update_call_count; stackd.put_last (child.upper+1)
+      save; stackd.add_last (child.upper+1)
+    }
+    pt_ci := pt_ci + 1
+  )
+  
+  - end_draw <-
+  ( + x,a,d:REAL_32
+    (is_line).if {
+      lstblc (((pt_ci = pt_i) || {pt_i = pt_b+db+1}).ok (COLOR.red) or (COLOR.black))
+      (x,a,d) := (tex.x,tex.asc,tex.des)
+      tex.pop
+      tex.set_x x
+      tex.ascdes (a,d)
+    } else {
+      end_line
+      lstblc_big FALSE
+      lirestore (x_space*2,0)
+      tex.pop_add_y 0
+      begin_line
+    }
+  )
+  
+  - sub_draw <-
+  ( + i:INTEGER
+    (cpt <= loc.upper).if { loc.at cpt.draw; } else {
+      ((i := cpt-loc.count) <= exp.upper).if { exp.at i.draw; } else {
+        (pt_ci = pt_b+db+dd-1).if {
+          (is_line).if {
+            tmp_c.copy " "
+            draw_tmp_c
+          }
+          pt_ci := pt_ci + 1
+        }
+      }
+    }
+  );*/
+  
+Private
+  
+  - lstblc_big s:BOOLEAN <-
+  ( + ym,x,y0,y1,w:REAL_32
+    
+    (x,y0,y1) := (tex.x-x_space*0.5,tex.ymin, tex.y)
+    ym := (y1+y0)/2
+    save
+    begin_path
+    move_to (x,y0)
+    (is_block).if { // {
+      arc_to (x-5,y0) to (x-5,y0+5) radius 5.0
+      line_to (x-5,ym-5)
+      arc_to (x-5,ym) to (x-10,ym) radius 5.0
+      arc_to (x-5,ym) to (x-5,ym+5) radius 5.0
+      line_to (x-5,y1-5)
+      arc_to (x-5,y1) to (x,y1) radius 5.0
+    } else { // (
+      //quad_w (x-10,ym) to (x,y1); // Version 1
+      bezier_w1 (x-10,y0) w2 (x-10,y1) to (x,y1); // Version 2
+      //arc_to (x-10,y0) to (x-10,ym) radius 10.0; // Version 3
+      //arc_to (x-10,y1) to (x,y1) radius 10.0
+    }
+    w := s.ok 2.5 or 1.0
+    stroke_width (w+0.7)
+    stroke_color (COLOR.white)
+    stroke
+    stroke_width w
+    stroke_color (COLOR.rgb (180,180,180))
+    stroke
+    restore
+  )
+  
+  - lstblc c:COLOR <-
+  ( + ym:REAL_32
+    + x0,y0,x1,y1,a,d,w,c0,c1:REAL_32
+    //lirestore (0,0)
+    (a,d) := (tex.asc.max asc_c,tex.des.min des_c)
+    x0 := tex.xmin
+    x1 := tex.x - x_space
+    (y0,y1) := (tex.y-a+4,tex.y-d-2)
+    ym := (y1+y0)/2
+    //lirestore (0,0)
+    save
+    (is_block).if {
+      //text (x0-x_space*0,LINE.y) msg "{"
+      begin_path
+      stroke_color c
+      stroke_width 2.0
+      line_cap butt
+      //line_join (bevel)
+      x0 := x0 + x_space*0.7
+      move_to (x0,y0)
+      arc_to (x0-5,y0) to (x0-5,y0+5) radius 5.0
+      line_to (x0-5,ym-5)
+      arc_to (x0-5,ym) to (x0-10,ym) radius 5.0
+      arc_to (x0-5,ym) to (x0-5,ym+5) radius 5.0
+      line_to (x0-5,y1-5)
+      arc_to (x0-5,y1) to (x0,y1) radius 5.0
+      //
+      //x1 := x1 + x_space
+      x0 := x1 + x_space*0.3
+      move_to (x0,y0)
+      arc_to (x0+5,y0) to (x0+5,y0+5) radius 5.0
+      line_to (x0+5,ym-5)
+      arc_to (x0+5,ym) to (x0+10,ym) radius 5.0
+      arc_to (x0+5,ym) to (x0+5,ym+5) radius 5.0
+      line_to (x0+5,y1-5)
+      arc_to (x0+5,y1) to (x0,y1) radius 5.0
+      stroke
+      //text (x1+x_space*0,LINE.y) msg "}"
+    } else {
+      //text (x0-x_space*1,LINE.y) msg "("
+      begin_path
+      fill_color c
+      w := 2; c0 := 0.66; c1 := 0.35
+      move_to (x0+x_space*c0-w,y0)
+      line_to (x0+x_space*c0,y0)
+      quad_w (x0+x_space*c1+1,(ym+y0)/2) to (x0+x_space*c1+1,ym)
+      quad_w (x0+x_space*c1+1,(ym+y1)/2) to (x0+x_space*c0,y1)
+      line_to (x0+x_space*c0-w,y1)
+      quad_w (x0+x_space*c1-w,(ym+y1)/2) to (x0+x_space*c1-w,ym)
+      quad_w (x0+x_space*c1-w,(ym+y0)/2) to (x0+x_space*c0-w,y0)
+      close_path
+      fill
+      //
+      //x1 := x1 + x_space
+      begin_path
+      move_to (x1+x_space*c1-w,y0)
+      line_to (x1+x_space*c1,y0)
+      quad_w (x1+x_space*c0,(ym+y0)/2) to (x1+x_space*c0,ym)
+      quad_w (x1+x_space*c0,(ym+y1)/2) to (x1+x_space*c1,y1)
+      line_to (x1+x_space*c1-w,y1)
+      quad_w (x1+x_space*c0-w-1,(ym+y1)/2) to (x1+x_space*c0-w-1,ym)
+      quad_w (x1+x_space*c0-w-1,(ym+y0)/2) to (x1+x_space*c1-w,y0)
+      close_path
+      fill
+      //text (x1+x_space*1,LINE.y) msg ")"
+    }
+    restore
+    tex.ascdes (a,d)
+    //tex.set_x x1
+  )
+  
+Public
+  //
+  // RUN
+  //
+  
+  - run <-
+  ( + up,i:INTEGER
+    + old_loc:ARRAY LOCAL
+    + old_bas:INTEGER
+    (old_loc,old_bas) := LS.push loc
+    (loc != NULL).if {
+      loc.foreach { l:LOCAL
+        i := LS.new (l.type);      // BSBS: ca ne va pas pour les blocks
+        l.type.run_default
+        0.to (l.type.upper) do { j:INTEGER
+          OP + LASS.new (i+j) val pop
+        }
+      }
+    }
+    exp.foreach { e:EXPR
+      up := stack_result.upper
+      e.run
+      e.same_dynamic_type ASSIGN_RESULT.if_false {
+        {stack_result.upper != up}.while_do { stack_result.pop.free; }
+      }
+    }
+    LS.pop (old_loc,old_bas)
+  )
+  

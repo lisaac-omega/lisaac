@@ -1,0 +1,9 @@
+Header
+  + name := Expanded POINT;
+  
+Public
+  + x:REAL_32
+  + y:REAL_32
+  
+  - set (px,py:REAL_32) <- ( (x,y) := (px,py); )
+  

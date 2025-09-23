@@ -1,0 +1,71 @@
+Header
+  + name := ICO;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ ICO
+  
+Private
+  - stk:Expanded ARRAY (Strict ICO)
+  
+Public
+    
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - margin:INTEGER := 8
+  
+  - mute:INTEGER  := 1 << 15
+  - barre:INTEGER := 1 << 16
+  - dark:INTEGER  := 1 << 17
+  - no_back:INTEGER := 1 << 18
+    
+  + img:IMG
+  + act:{ICO;BOOLEAN}
+  
+  - width_min:REAL_32  <- zom * img.width
+  - height_min:REAL_32 <- zom * img.height
+  
+  - init i:STRING_ALIAS do d:{ICO;BOOLEAN} :SELF <-
+  (
+    img := IMG.load i asset TRUE
+    act := d
+    init_obj
+  )
+  
+  - draw <-
+  ( + y,x,z,w,h:REAL_32
+    //+ c:COLOR
+    //draw_debug
+    //
+    (! is no_back).if {
+      (is inside).if {
+        fill_color (LOOK.border_on)
+      } else {
+        fill_color (LOOK.border_off); //COLOR.rgba (0,0,0,10))
+      }
+      begin_path
+      rect (xo,yo) size (width, height) radius 8
+      fill
+    }
+    //
+    (x,y) := (xo + width/2, yo + height/2)
+    z := (width/img.width).min (height/img.height)
+    (w,h) := (z*img.width, z*img.height)
+    img.draw Self to (x - w/2,y - h/2) height h alpha 1
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    (is mute).if {
+      // Nothing.
+    }.elseif {e = HAND.in} then {
+      set inside with (ev = HAND.in)
+    }.elseif {e = HAND.clic} then {
+      //"Act:".print; act.text_l.println
+      //MENU.close_all_except act
+      act.value Self.if_false { beep; }
+    }
+  )

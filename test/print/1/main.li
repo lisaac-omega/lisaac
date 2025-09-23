@@ -1,0 +1,8 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  (
+    1.print
+  )

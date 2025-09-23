@@ -1,0 +1,33 @@
+Header
+  + name := CODE_OUT;
+  
+Inherit
+  + parent_tok_drw:Expanded TOK_DRW
+  
+Insert
+  - parent_lix_buf:LIX_BUF := LIX_BUF
+  
+Private
+  - stk:Expanded ARRAY (Strict CODE_OUT)
+  
+Public
+     
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+    
+  //
+  // PARSER / DRAW
+  //
+  
+  - detect:BOOLEAN <- look "  /*"
+  
+  - parse <-
+  (
+    pos_i := pos_i + 2
+    rd_rem_c
+    skip_until '\n'
+    (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }
+  )
+    
+  - begin_draw <- fill_color (COLOR.gray)

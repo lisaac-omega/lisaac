@@ -1,0 +1,18 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  
+  - eb:Expanded STRING_BUFFER
+  
+  - main <-
+  (
+    eb.copy "toto"
+    STRING.tmp { tmp:STRING_BUFFER
+      eb.foreach {c:CHARACTER
+        tmp.add_last c
+      }
+      TEST.check (tmp.to_string_alias = "toto")
+    }
+  )

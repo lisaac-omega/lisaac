@@ -1,0 +1,371 @@
+Header
+  + name := WEBCAM;
+  
+  - external := `
+#include <linux/videodev2.h>
+struct v4l2_buffer bf;
+`;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - verbose:BOOLEAN := FALSE
+  
+  - init src:STRING_ALIAS size (w,h:INTEGER) :SELF <-
+  [ ? {src != NULL}; ]
+  (
+    palette := -1
+    (width,height) := (w,h)
+    // Open the device.
+    fd := DEV.open src
+    (fd < 0).if {	
+      "Error opening device: ".print; src.println
+      "open: ".print; STRING.errno.println
+    }
+    (verbose).if {
+      src.print; " opened.\n".print
+      get_capability
+    }
+    set_input; // Set the input.      
+    set_pix_format; // Set the pixel format.
+    // Set the frame-rate if > 0
+    set_mmap
+    Self
+  )
+
+  - close <-
+  (
+    free_mmap
+    (fd >= 0).if { DEV.close fd; fd := -1; }
+  )
+
+  - grab <-
+  ( + f,time:INTEGER
+    + r,idx:INTEGER
+    //`struct v4l2_buffer bf`
+    f := fd
+    `fd_set fds`
+    `struct timeval tv`
+
+    // Is a frame ready?
+    `FD_ZERO(&fds)`
+    `FD_SET(@f, &fds)`
+    time := 5
+    `tv.tv_sec = @time`
+    `tv.tv_usec = 0`
+    r := `select(@f + 1, &fds, NULL, NULL, &tv)`:INTEGER
+    (r = -1).if {
+      "select: ".print; STRING.errno.println
+    }
+    (r = 0).if {
+      "Timed out waiting for frame!\n".print
+    }
+    `bf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+    `bf.memory = V4L2_MEMORY_MMAP`
+    (DEV.ioctl fd cmd `VIDIOC_DQBUF`:INTEGER ptr `&bf`:POINTER = -1).if {
+      "VIDIOC_DQBUF: ".print; STRING.errno.println
+    }
+    idx := `bf.index`:INTEGER
+    //"index:".print; idx.println
+    img := mbuf.at idx
+    len := mlen.at idx
+  )
+  
+  - reset_buf <-
+  ( 
+    (DEV.ioctl fd cmd `VIDIOC_QBUF`:INTEGER ptr `&bf`:POINTER = -1).if {
+      "VIDIOC_QBUF: ".print; STRING.errno.println
+    }
+  )
+      
+  // Last captured image
+  + len:UINTEGER_32
+  + img:NATIVE_ARRAY UINTEGER_8
+  
+  + width:UINTEGER_32
+  + height:UINTEGER_32
+  
+  - nb_buf:INTEGER <- mbuf.count
+  
+  - is_open:BOOLEAN <- fd >= 0
+  
+Private
+  //------------- Beg src v4l2
+  + fd:INTEGER := -1
+  
+  + mbuf:ARRAY (NATIVE_ARRAY UINTEGER_8)
+  + mlen:ARRAY INTEGER
+
+  // Image Options
+  + palette:INTEGER
+    
+  - get_capability <-
+  ( + cap:INTEGER
+    `struct v4l2_capability cap`
+    (DEV.ioctl fd cmd `VIDIOC_QUERYCAP`:INTEGER ptr `&cap`:POINTER < 0).if {
+      "Not a V4L2 device?".println
+    } else {
+      "V4l2 information:".println
+      "cap.driver: \"".print;      PRINT.extern `cap.driver`:NATIVE_ARRAY CHARACTER; "\"".println
+      "cap.card: \"".print;        PRINT.extern `cap.card`:NATIVE_ARRAY CHARACTER; "\"".println
+      "cap.bus_info: \"".print;    PRINT.extern `cap.bus_info`:NATIVE_ARRAY CHARACTER; "\"".println
+      cap := `cap.capabilities`:INTEGER
+      "cap.capabilities=0x".print; cap.print_hex; '\n'.print
+      ((cap & `V4L2_CAP_VIDEO_CAPTURE`:INTEGER)!=0).if { "- VIDEO_CAPTURE\n".print; }
+      ((cap & `V4L2_CAP_VIDEO_OUTPUT`:INTEGER)!=0).if  { "- VIDEO_OUTPUT\n".print; }
+      ((cap & `V4L2_CAP_VIDEO_OVERLAY`:INTEGER)!=0).if { "- VIDEO_OVERLAY\n".print; }
+      ((cap & `V4L2_CAP_VBI_CAPTURE`:INTEGER)!=0).if   { "- VBI_CAPTURE\n".print; }
+      ((cap & `V4L2_CAP_VBI_OUTPUT`:INTEGER)!=0).if    { "- VBI_OUTPUT\n".print; }
+      ((cap & `V4L2_CAP_RDS_CAPTURE`:INTEGER)!=0).if   { "- RDS_CAPTURE\n".print; }
+      ((cap & `V4L2_CAP_TUNER`:INTEGER)!=0).if         { "- TUNER\n".print; }
+      ((cap & `V4L2_CAP_AUDIO`:INTEGER)!=0).if         { "- AUDIO\n".print; }
+      ((cap & `V4L2_CAP_RADIO`:INTEGER)!=0).if         { "- RADIO\n".print; }
+      ((cap & `V4L2_CAP_READWRITE`:INTEGER)!=0).if     { "- READWRITE\n".print; }
+      ((cap & `V4L2_CAP_ASYNCIO`:INTEGER)!=0).if       { "- ASYNCIO\n".print; }
+      ((cap & `V4L2_CAP_STREAMING`:INTEGER)!=0).if     { "- STREAMING\n".print; }
+      ((cap & `V4L2_CAP_TIMEPERFRAME`:INTEGER)!=0).if  { "- TIMEPERFRAME\n".print; }
+      ((cap & `V4L2_CAP_VIDEO_CAPTURE`:INTEGER)=0).if {
+        "Device does not support capturing.\n".print
+      }
+    }
+  )
+
+  - set_input <-
+  ( + typ,stat:INTEGER
+    `struct v4l2_input in`
+    `int i=0`
+    `in.index = 0`
+    (DEV.ioctl fd cmd `VIDIOC_ENUMINPUT`:INTEGER ptr `&in`:POINTER = -1).if {
+      "Unable to query input 0.\n".print
+      "VIDIOC_ENUMINPUT: ".print; STRING.errno.println
+    }
+    (verbose).if {
+      "V4l2 Input 0 information:\n".print
+      "name = \"".print; PRINT.extern `in.name`:NATIVE_ARRAY CHARACTER; "\"".println
+      (typ,stat) := (`in.type`:INTEGER,`in.status`:INTEGER)
+      "type = ".print; typ.print_hex; '\n'.print
+      ((typ & `V4L2_INPUT_TYPE_TUNER`:INTEGER)  != 0).if { "- TUNER\n".print; }
+      ((typ & `V4L2_INPUT_TYPE_CAMERA`:INTEGER) != 0).if { "- CAMERA\n".print; }
+      "audioset = ".print; `in.audioset`:INTEGER.print_hex; '\n'.print
+      "tuner = ".print; `in.tuner`:INTEGER.print_hex; '\n'.print
+      "status = ".print; stat.print_hex; '\n'.print
+      ((stat & `V4L2_IN_ST_NO_POWER`:INTEGER)  != 0).if { "- NO_POWER\n".print; }
+      ((stat & `V4L2_IN_ST_NO_SIGNAL`:INTEGER) != 0).if { "- NO_SIGNAL\n".print; }
+      ((stat & `V4L2_IN_ST_NO_COLOR`:INTEGER)  != 0).if { "- NO_COLOR\n".print; }
+      ((stat & `V4L2_IN_ST_NO_H_LOCK`:INTEGER) != 0).if { "- NO_H_LOCK\n".print; }
+      ((stat & `V4L2_IN_ST_COLOR_KILL`:INTEGER)!= 0).if { "- COLOR_KILL\n".print; }
+      ((stat & `V4L2_IN_ST_NO_SYNC`:INTEGER)   != 0).if { "- NO_SYNC\n".print; }
+      ((stat & `V4L2_IN_ST_NO_EQU`:INTEGER)    != 0).if { "- NO_EQU\n".print; }
+      ((stat & `V4L2_IN_ST_NO_CARRIER`:INTEGER)!= 0).if { "- NO_CARRIER\n".print; }
+      ((stat & `V4L2_IN_ST_MACROVISION`:INTEGER)!= 0).if { "- MACROVISION\n".print; }
+      ((stat & `V4L2_IN_ST_NO_ACCESS`:INTEGER) != 0).if { "- NO_ACCESS\n".print; }
+      ((stat & `V4L2_IN_ST_VTR`:INTEGER)       != 0).if { "- VTR\n".print; }
+    }
+    (DEV.ioctl fd cmd `VIDIOC_S_INPUT`:INTEGER ptr `&i`:POINTER = -1).if {
+      "Error selecting input ".print; `i`:INTEGER.println
+      "VIDIOC_S_INPUT: ".print; STRING.errno.println
+    }
+
+    // If this input is attached to a tuner, set the frequency.
+    ((typ & `V4L2_INPUT_TYPE_TUNER`:INTEGER) != 0).if {
+      + range:STRING_ALIAS
+      + tuner_typ,tuner_cap:INTEGER
+      + freq:UINTEGER_32
+      `struct v4l2_tuner tuner`
+      `struct v4l2_frequency freq`
+      // Query the tuners capabilities. 		
+      //memset(&tuner, 0, sizeof(tuner))
+      `tuner.index = in.tuner`
+      (DEV.ioctl fd cmd `VIDIOC_G_TUNER`:INTEGER ptr `&tuner`:POINTER = -1).if {
+        "Error querying tuner ".print; `in.tuner`:INTEGER.print; ".\n".print
+        "VIDIOC_G_TUNER: ".print; STRING.errno.println
+      }
+      (verbose).if {
+        range := ((`tuner.capability`:INTEGER & `V4L2_TUNER_CAP_LOW`:INTEGER) != 0).ok "kHz" or "MHz"
+        
+        "V4l2 Tuner ".print; `in.tuner`:INTEGER.print; " information:\n".print
+        "name = \"".print; PRINT.extern `tuner.name`:NATIVE_ARRAY CHARACTER; "\"\n".print
+        tuner_typ := `tuner.type`:INTEGER
+        "type = ".print; tuner_typ.print_hex; '\n'.print
+        (tuner_typ = `V4L2_TUNER_RADIO`:INTEGER).if     { "- RADIO\n".print; }
+        (tuner_typ = `V4L2_TUNER_ANALOG_TV`:INTEGER).if { "- ANALOG_TV\n".print; }
+        tuner_cap := `tuner.capability`:INTEGER
+        "capability = ".print; tuner_cap.print_hex; '\n'.print
+        ((tuner_cap & `V4L2_TUNER_CAP_LOW`:INTEGER)    != 0).if { "- LOW\n".print; }
+        ((tuner_cap & `V4L2_TUNER_CAP_NORM`:INTEGER)   != 0).if { "- NORM\n".print; }
+        ((tuner_cap & `V4L2_TUNER_CAP_STEREO`:INTEGER) != 0).if { "- STEREO\n".print; }
+        ((tuner_cap & `V4L2_TUNER_CAP_LANG1`:INTEGER)  != 0).if { "- LANG1\n".print; }
+        ((tuner_cap & `V4L2_TUNER_CAP_LANG2`:INTEGER)  != 0).if { "- LANG2\n".print; }
+        ((tuner_cap & `V4L2_TUNER_CAP_SAP`:INTEGER)    != 0).if { "- SAP\n".print; }
+        //
+        "rangelow = ".print; `tuner.rangelow`:INTEGER.print_hex
+        ", (".print; ((`tuner.rangelow`:INTEGER * 16).to_real_32 / 1000).print; range.print; ")\n".print
+        "rangehigh = ".print; `tuner.rangehigh`:INTEGER.print_hex
+        ", (".print; ((`tuner.rangehigh`:INTEGER * 16).to_real_32 / 1000).print; range.print; ")\n".print
+        "signal = ".print; `tuner.signal`:INTEGER.print_hex; '\n'.print
+        "afc = ".print; `tuner.afc`:INTEGER.print_hex; '\n'.print
+        
+        // Set the frequency.
+        freq := 0
+        `freq.tuner = in.tuner`
+        `freq.type = V4L2_TUNER_ANALOG_TV`
+        `freq.frequency = (@freq / 1000) * 16`
+        (DEV.ioctl fd cmd `VIDIOC_S_FREQUENCY`:INTEGER ptr `&freq`:POINTER = -1).if {
+          "Error setting frequency ".print
+          (freq.to_real_32 / 16.0).print; range.print; '\n'.print
+          "VIDIOC_S_FREQUENCY: ".print; STRING.errno.println
+        }
+        "Set frequency to ".print
+        (freq / 1000).print; range.println
+      }
+    }
+  )
+
+  - set_pix_format <-
+  ( + v4l2_pal,w,h:INTEGER
+    + pix:UINTEGER_32
+    `struct v4l2_fmtdesc fmtdesc`
+    `struct v4l2_format fmt`
+    // Dump a list of formats the device supports.
+    (verbose).if {
+      "Device offers the following V4L2 pixel formats:\n".print
+    }
+    //memset(&fmt, 0, sizeof(fmt))
+    `fmtdesc.index = @v4l2_pal`
+    `fmtdesc.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+    {DEV.ioctl fd cmd `VIDIOC_ENUM_FMT`:INTEGER ptr `&fmtdesc`:POINTER != -1}.while_do {
+      pix := `fmtdesc.pixelformat`:INTEGER
+      (verbose).if {
+        v4l2_pal.print; ": [0x".print
+        pix.print_hex; "] '".print
+        (pix >> 0).to_character.print;  (pix >> 8).to_character.print
+        (pix >> 16).to_character.print; (pix >> 24).to_character.print
+        "' (".print; PRINT.extern `fmtdesc.description`:NATIVE_ARRAY CHARACTER; ")\n".print
+      }
+      ((pix = 47504A4Dh) || {pix = 4745504Ah}).if { palette := pix; }; // MJPG
+      //(pix = 56595559h).if { palette := pix; }; // YUYV
+      //memset(&fmt, 0, sizeof(fmt))
+      v4l2_pal := v4l2_pal + 1
+      `fmtdesc.index = @v4l2_pal`
+      `fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+    }
+    (palette != -1).if {
+      (w,h,pix) := (width,height,palette)
+      `fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+      `fmt.fmt.pix.width       = @w`
+      `fmt.fmt.pix.height      = @h`
+      `fmt.fmt.pix.pixelformat = @pix`
+      `fmt.fmt.pix.field       = V4L2_FIELD_ANY`
+      (
+        (DEV.ioctl fd cmd `VIDIOC_TRY_FMT`:INTEGER ptr `&fmt`:POINTER != -1) &&
+        {`fmt.fmt.pix.pixelformat`:INTEGER = palette}
+      ).if {
+        (verbose).if {
+          "Using palette ".print
+          (pix >> 0).to_character.print;  (pix >> 8).to_character.print
+          (pix >> 16).to_character.print; (pix >> 24).to_character.println
+        }
+        (w,h) := (`fmt.fmt.pix.width`:INTEGER,`fmt.fmt.pix.height`:INTEGER)
+        ((w != width) || {h != height}).if {
+          (verbose).if {
+            "Adjusting resolution from ".print
+            width.print; 'x'.print; height.print; " to ".print
+            w.print;     'x'.print; h.print;      ".\n".print
+          }
+          (width,height) := (w,h)
+        }
+        (DEV.ioctl fd cmd `VIDIOC_S_FMT`:INTEGER ptr `&fmt`:POINTER = -1).if {
+          "Error setting pixel format.\n".print
+          "VIDIOC_S_FMT: ".print; STRING.errno.println
+        }
+      }
+    }
+  )
+
+  - free_mmap <-
+  ( + pimg:NATIVE_ARRAY UINTEGER_8
+    + plen:INTEGER
+    0.to (mbuf.upper) do { b:INTEGER
+      (pimg,plen) := (mbuf.at b,mlen.at b)
+      `munmap(@pimg, @plen)`
+    }
+  )
+
+  - set_mmap <-
+  ( + f,cnt:INTEGER
+    `enum v4l2_buf_type type`
+    `struct v4l2_requestbuffers req`
+    `struct v4l2_buffer buf`
+    
+    mbuf := ARRAY (NATIVE_ARRAY UINTEGER_8).create_with_capacity 4
+    mlen := ARRAY INTEGER.create_with_capacity 4
+    //memset(req, 0, sizeof(req))
+    `req.count  = 4`
+    `req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+    `req.memory = V4L2_MEMORY_MMAP`
+    f := fd
+    (DEV.ioctl fd cmd `VIDIOC_REQBUFS`:INTEGER ptr `&req`:POINTER = -1).if {
+      "Error requesting buffers for memory map.\n".print
+      "VIDIOC_REQBUFS: ".print; STRING.errno.println
+    }
+    cnt := `req.count`:INTEGER
+    (verbose).if {
+      "mmap information:\n".print
+      "frames=".print; cnt.println
+    }
+    (cnt < 2).if {
+      "Insufficient buffer memory.\n".print
+    }
+    0.to (cnt-1) do { b:INTEGER
+      `memset(&buf, 0, sizeof(buf))`
+      `buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+      `buf.memory = V4L2_MEMORY_MMAP`
+      `buf.index  = @b`
+      (DEV.ioctl fd cmd `VIDIOC_QUERYBUF`:INTEGER ptr `&buf`:INTEGER = -1).if {
+        "Error querying buffer ".print; b.println
+        "VIDIOC_QUERYBUF: ".print; STRING.errno.println
+      }
+      mlen.add_last (`buf.length`:INTEGER)
+      mbuf.add_last (`mmap(NULL, buf.length,PROT_READ | PROT_WRITE, MAP_SHARED, @f, buf.m.offset)`:NATIVE_ARRAY UINTEGER_8)
+      (mbuf.last = `MAP_FAILED`:NATIVE_ARRAY UINTEGER_8).if {
+        "Error mapping buffer 0".println
+        "mmap: ".print; STRING.errno.println
+        free_mmap
+      }
+      (verbose).if {
+        b.print; " length=".print; mlen.last.println
+      }
+      
+      (DEV.ioctl fd cmd `VIDIOC_QBUF`:INTEGER ptr `&buf`:POINTER = -1).if {
+        "VIDIOC_QBUF: ".print; STRING.errno.println
+        free_mmap
+      }
+    }
+    `type = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+    (DEV.ioctl fd cmd `VIDIOC_STREAMON`:INTEGER ptr `&type`:POINTER = -1).if {
+      "Error starting stream.\n".print
+      "VIDIOC_STREAMON: ".print; STRING.errno.println
+      free_mmap
+    }
+    /*
+    0.to (mbuf.upper) do { b:INTEGER
+      `buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+      `buf.memory = V4L2_MEMORY_MMAP`
+      `buf.index  = @b`
+      (DEV.ioctl fd cmd `VIDIOC_QBUF`:INTEGER ptr `&buf`:POINTER = -1).if {
+        "VIDIOC_QBUF: ".print; STRING.errno.println
+        free_mmap
+        exit (-1)
+      }
+      `type = V4L2_BUF_TYPE_VIDEO_CAPTURE`
+      (DEV.ioctl fd cmd `VIDIOC_STREAMON`:INTEGER ptr `&type`:POINTER = -1).if {
+        "Error starting stream.\n".print
+        "VIDIOC_STREAMON: ".print; STRING.errno.println
+        free_mmap
+        exit (-1)
+      }
+    };*/
+  )
+  

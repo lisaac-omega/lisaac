@@ -1,0 +1,390 @@
+Header
+  
+  + name := IMG_GIF;
+  
+Inherit
+  
+  - parent_image:IMAGE := IMAGE
+  
+Public
+  
+  - name:STRING_ALIAS := "GIF - Graphics Interchange Format (CompuServe)"
+      
+  // struct gif:
+  + w:INTEGER
+  + h:INTEGER
+  + out:NATIVE_ARRAY UINTEGER_8; // output buffer (always 4 components)
+  + old_out:NATIVE_ARRAY UINTEGER_8
+  + flags:INTEGER
+  + bgindex:INTEGER
+  + ratio:INTEGER
+  + transparent:INTEGER
+  + eflags:INTEGER
+  + delay:INTEGER
+  + pal:NATIVE_ARRAY UINTEGER_8  := NATIVE_ARRAY UINTEGER_8.create (256*4); // pal[256][4]
+  + lpal:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create (256*4); // lpal[256][4]
+  + codes:NATIVE_ARRAY GIF_LZW := NATIVE_ARRAY GIF_LZW.create 4096
+  + color_table:NATIVE_ARRAY UINTEGER_8
+  + parse:INTEGER
+  + step:INTEGER
+  + lflags:INTEGER
+  + start_x:INTEGER
+  + start_y:INTEGER
+  + max_x:INTEGER
+  + max_y:INTEGER
+  + cur_x:INTEGER
+  + cur_y:INTEGER
+  + line_size:INTEGER
+
+  - test:BOOLEAN <- header TRUE
+  
+  - info:BOOLEAN <- header TRUE
+
+  - parse_colortable pl:NATIVE_ARRAY UINTEGER_8 size num_entries:INTEGER transp transp:INTEGER <-
+  ( + r,g,b,a:UINTEGER_8
+    + ii:INTEGER
+    0.to (num_entries-1) do { i:INTEGER
+      (b,g,r) := (get8,get8,get8)
+      //b.print; ','.print; g.print; ','.print; r.print; ' '.print
+      a := (transp = i).ok 0 or 255
+      pl.at  ii put r
+      pl.at (ii+1) put g
+      pl.at (ii+2) put b
+      pl.at (ii+3) put a
+      ii := ii + 4
+    }
+    //'\n'.print
+  )
+
+  - header is_info:BOOLEAN :BOOLEAN <-
+  ( + version,c:UINTEGER_8
+    rewind
+    (
+      (
+        (((c:=get8) = 'G') || {c = 'B'}) && {get8 = 'I'} && {get8 = 'F'} && {get8 = '8'}
+      ) && {
+        version := get8
+        ((version = '7') || {version = '9'}) && {get8 = 'a'}
+      }
+    ).if {
+      (img_x, img_y) := (w, h) := (get16le, get16le)
+      flags := get8;  bgindex     := get8
+      ratio := get8;  transparent := -1
+      img_n := 4; // can't actually tell whether it's 3 or 4 until we parse the comments
+      old_out := out := NULL
+      eflags := 0
+      parse := step := lflags := start_x := start_y :=
+      max_x := max_y := cur_x := cur_y := line_size := 0
+      ((! is_info) && {(flags & 80h) != 0}).if {
+        parse_colortable pal size (2 << (flags & 7)) transp (-1)
+      }
+    }
+  )
+
+  - out_gif_code code:INTEGER_16 <-
+  ( + p,c:NATIVE_ARRAY UINTEGER_8
+    //"**Code:".print; code.println
+    // recurse to decode the prefixes, since the linked-list is backwards,
+    // and working backwards through an interleaved image would be nasty
+    (codes.at code.prefix >= 0).if {
+      out_gif_code (codes.at code.prefix)
+    }
+
+    (cur_y < max_y).if {
+      p := out + (cur_x + cur_y)
+      c := color_table + (codes.at code.suffix.to_integer * 4)
+//      (cur_x + cur_y).print; '='.print; (codes.at code.suffix.to_integer * 4).print; ' '.print
+//      '('.print; c.at 0.print; ' '.print
+//      c.at 1.print; ' '.print; c.at 2.print; ')'.print
+      (c.at 3 >= 128).if {
+        p.at 0 put (c.at 2)
+        p.at 1 put (c.at 1)
+        p.at 2 put (c.at 0)
+        p.at 3 put (c.at 3)
+      }
+      cur_x := cur_x + 4
+      
+      (cur_x >= max_x).if {
+//        '\n'.print; exit 0
+        cur_x := start_x
+        cur_y := cur_y + step
+        {(cur_y >= max_y) && {parse > 0}}.while_do {
+          step  := (1 << parse) * line_size
+          cur_y := start_y + (step >> 1)
+          parse := parse - 1
+        }
+      }
+    }
+  )
+
+  - process_gif_raster:NATIVE_ARRAY UINTEGER_8 <-
+  ( + lzw_cs:UINTEGER_8
+    + len:INTEGER_32
+    + first:UINTEGER_32
+    + codesize, codemask, oldcode, bits, valid_bits:INTEGER_32
+    + avail, clear:INTEGER_32
+    + init_code8:UINTEGER_8
+    + ret:NATIVE_ARRAY UINTEGER_8
+    
+    ret := error := NULL
+    lzw_cs := get8
+    //"lzw_cs=".print; lzw_cs.println
+    //(lzw_cs>12).if { exit 1; }
+    (lzw_cs <= 12).if { 
+      clear := 1 << lzw_cs
+      first := 1
+      codesize := lzw_cs + 1
+      codemask := (1 << codesize) - 1
+      //"codemask:".print; codemask.println
+      //"Clear:".print; clear.println
+      0.to (clear-1) do { init_code:INTEGER
+        init_code8 := init_code.to_uinteger_8
+        codes.at init_code.prefix (-1) first init_code8 suffix init_code8
+      }
+      
+      // support no starting clear code
+      avail := clear+2
+      //"Avail:".print; avail.println
+      oldcode := -1
+      
+      {(ret = NULL) && {error = NULL}}.while_do {
+        (valid_bits < codesize).if {
+          (len = 0).if {
+            len := get8; // start new block
+            (len = 0).if {
+              ret := out
+            }
+          }
+          (ret = NULL).if { // BSBS
+            len := len - 1
+            bits := bits | (get8.to_integer_32 << valid_bits)
+            valid_bits := valid_bits + 8
+          }
+        } else {
+          + code:INTEGER_32
+          code := (bits & codemask).to_integer_16
+          bits := bits >> codesize
+          valid_bits := valid_bits - codesize
+          // @OPTIMIZE: is there some way we can accelerate the non-clear path?
+          (code = clear).if {  // clear code
+            codesize := lzw_cs + 1
+            codemask := (1 << codesize) - 1
+            avail := clear + 2
+            //"Avail2:".print; avail.println
+            oldcode := -1
+            first := 0
+          }.elseif {code = clear + 1} then { // end of stream code
+            skip len
+            {(len := get8) > 0}.while_do { skip len; }
+            ret := out
+          }.elseif {code <= /*3FFFh*/ avail} then {
+            (first != 0).if { return_error "no clear code"; }
+            (oldcode >= 0).if {
+              codes.at avail.set_prefix (oldcode.to_integer_16)
+              codes.at avail.set_first  (codes.at oldcode.first)
+              codes.at avail.set_suffix ((code = avail+1).ok (codes.at avail.first) or (codes.at code.first))
+              /*"code".print; code.print; ' '.print; (avail+1).println
+              "prefix=".print; codes.at avail.prefix.print
+              " first=".print; codes.at avail.first.print
+              " suffix=".print; codes.at avail.suffix.println; */
+              avail := avail + 1
+              //(avail > 4090).if { "Avail3:".print; avail.println; }
+              (avail > 4096).if { return_error "too many codes"; }
+            }.elseif {code = avail} then {
+              error := "illegal code in raster (1)"
+            }
+            //"Code:".print; code.println
+            out_gif_code (code.to_raw_integer_16)
+            (((avail.to_integer_32 & codemask) = 0) && {avail <= 0FFFh}).if {
+              codesize := codesize + 1
+              codemask := (1 << codesize) - 1
+              //"codemask:".print; codemask.println
+            }
+            oldcode := code
+          } else {
+            STRING.tmp { tmp:STRING_BUFFER
+              tmp.copy "illegal code in raster. (code:"
+              code.append_in tmp
+              tmp.append ", avail:"
+              avail.append_in tmp
+              tmp.append ")"
+              tmp.println
+              exit 1
+              error := tmp.to_string_alias
+            }
+          }
+        }
+      }
+    }
+    ret
+  )
+
+  // this function is designed to support animated gifs
+  - load_next req_comp:INTEGER begin start:BOOLEAN :NATIVE_ARRAY UINTEGER_8 <-
+  ( + prev_out,ret:NATIVE_ARRAY UINTEGER_8
+    + break,end:BOOLEAN
+    + sz:INTEGER
+    + typ:UINTEGER_8
+    
+    (start).if { header FALSE; }
+    prev_out := out
+    sz := 4 * w * h
+    //"Alloc: ".print; w.print; 'x'.print; h.println
+    ret := out := NATIVE_ARRAY UINTEGER_8.create sz
+    ((eflags & 01Ch) >> 2)
+    .when 0 then { // unspecified (also always used on 1st frame)
+      //"Type: Background\n".print
+      fill_gif_background (0, 0) to (4*w, sz)
+    }
+    .when 1 then { // do not dispose
+      //"Type: Prev out\n".print
+      (prev_out != NULL).if { `memcpy(@ret, @prev_out, @sz)`; }
+      old_out := prev_out
+    }
+    .when 2 then { // dispose to background
+      //"Type: Prev out + Background\n".print
+      (prev_out != NULL).if { `memcpy(@ret, @prev_out, @sz)`; }
+      fill_gif_background (start_x,start_y) to (max_x, max_y)
+    }
+    .when 3 then { // dispose to previous
+      //"Type: Part old_out\n".print
+      (old_out != NULL).if {
+        + tsrc,tdst:NATIVE_ARRAY UINTEGER_8
+        sz := max_x - start_x
+        start_y.to (max_y-1) by (4 * w) do { i:INTEGER
+          tdst :=     out + (i+start_x)
+          tsrc := old_out + (i+start_x)
+          `memcpy(@tdst, @tsrc, @sz)`
+        }
+      }
+    }
+    error := NULL
+    ret := NULL
+    break := FALSE
+    {(ret = NULL) && {error = NULL} && {! break}}.while_do {
+      typ := get8
+      (typ = 2Ch).if { /* Image Descriptor */
+        + prev_trans:INTEGER
+        + dx, dy, dw, dh:INTEGER_32
+        + o:NATIVE_ARRAY UINTEGER_8
+        //"Desc Img\n".print
+        prev_trans := -1
+        dx := get16le
+        dy := get16le
+        dw := get16le
+        dh := get16le
+        //dx.print; ','.print; dy.print; ' '.print; dw.print; " x ".print; dh.println
+        (((dx + dw) > w) || {(dy + dh) > h}).if {
+          error := "bad Image Descriptor"
+        } else {
+          line_size := w * 4
+          start_x := dx * 4
+          start_y := dy * line_size
+          max_x   := start_x + dw * 4
+          max_y   := start_y + dh * line_size; //??
+          cur_x   := start_x
+          cur_y   := start_y
+
+          lflags := get8
+
+          ((lflags & 40h) != 0).if {
+            step := 8 * line_size; // first interlaced spacing
+            parse := 3
+          } else {
+            step := line_size
+            parse := 0
+          }
+
+          ((lflags & 80h) != 0).if {
+            //"A\n".print
+            parse_colortable lpal size (2 << (lflags & 7)) transp (((eflags & 01h) != 0).ok transparent or (-1))
+            color_table := lpal
+          }.elseif {(flags & 80h) != 0} then {
+            //"T\n".print
+            //"trans:".print; transparent.println
+            ((transparent >= 0) && {(eflags & 01h) != 0}).if {
+              prev_trans := pal.at (transparent*4+3)
+              pal.at (transparent*4+3) put 0
+            }
+            color_table := pal
+          } else {
+            error := "missing color table"
+          }
+          (error = NULL).if {
+            o := process_gif_raster
+            ? {o != NULL}
+            (prev_trans != -1).if {
+              pal.at (transparent*4+3) put prev_trans
+            }
+            ret := o
+          }
+        }
+      }
+      .elseif {typ = 21h} then { // Comment Extension.        
+        + len:INTEGER
+        //"Comment ext.\n".print
+        (get8 = 0F9h).if { // Graphic Control Extension.
+          len := get8
+          (len = 4).if {
+            eflags := get8
+            delay  := get16le
+            transparent := get8
+          } else {
+            skip len
+            break := TRUE
+          }
+        }
+        (! break).if {
+          {(len := get8) != 0}.while_do {
+            skip len
+          }
+        }
+      }
+      .elseif {typ = 3Bh} then { // gif stream termination code
+        //"Fin Anime\n".print
+        end := break := TRUE; // Loop Animated...
+        //"Fin\n".print
+        //ret := s; // using '1' causes warning on some compilers 
+      } else {
+        error := "unknown code"
+      }
+    }
+    //(error != NULL).if { error.println; exit 1; }
+    //"Ok\n".print
+    (end).if {      
+      ret := NULL
+    }
+    ret
+  )
+
+  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
+  ( + u:NATIVE_ARRAY UINTEGER_8
+    u := load_next req_comp begin TRUE
+    //if (u = (UINTEGER_8 *) s) u = 0;  // end of animated gif marker
+    (u != NULL).if {
+      img_x := w
+      img_y := h
+      ((req_comp != 0) && {req_comp != 4}).if {
+        u := convert_format u from 4 to req_comp
+      }
+    }.elseif {out != NULL} then {
+      //STBI_FREE(g.out)
+    }
+    u
+  )
+  
+Private
+  
+  - fill_gif_background (x0,y0:INTEGER) to (x1,y1:INTEGER) <-
+  ( + c,p:NATIVE_ARRAY UINTEGER_8
+    c := pal + (bgindex*4)
+    y0.to (y1-1) by (4 * w) do { y:INTEGER
+      x0.to (x1-1) by 4 do { x:INTEGER
+        p := out + (y + x)
+        p.at 0 put (c.at 2)
+        p.at 1 put (c.at 1)
+        p.at 2 put (c.at 0)
+        p.at 3 put       0 
+      }
+    }
+  )

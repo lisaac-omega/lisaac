@@ -1,0 +1,43 @@
+Section Header
+  + name := PRINT;
+    
+  - comment := "print, append_in, to_string, etc.";
+  
+Section Public
+  
+  - extern s:NATIVE_ARRAY CHARACTER <-
+  ( + i:INTEGER;
+    STRING.tmp { tmp:STRING_BUFFER;
+      {s.at i != '\0'}.while_do { tmp | s.at i; i := i + 1; };
+      tmp.print;
+    };
+  );
+  
+  - print <-
+  (
+    STRING.tmp { tmp:STRING_BUFFER;
+      append_in tmp;
+      tmp.print;
+    };
+  );
+  
+  - to_string:STRING_ALIAS <-
+  ( + result:STRING_ALIAS;
+    STRING.tmp { tmp:STRING_BUFFER;
+      append_in tmp;
+      result := tmp.to_string_alias;
+    };
+    result
+  );
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    to_pointer.append_in b;
+  );
+  
+  - println <-
+  (
+    print;
+    '\n'.print;    
+  );
+  

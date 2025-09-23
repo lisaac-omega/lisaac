@@ -1,0 +1,26 @@
+Header
+  + name := PARENT_MAIN;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+    
+  - slot1 <-
+  [ "Require Parent slot 1\n".print; ]
+  (
+    abstract
+  )
+  [ "Ensure Parent slot 1\n".print; ]
+
+  - slot2 <-
+  [ "Require Parent slot 2\n".print; ]
+  (
+    abstract
+  )
+  [ "Ensure Parent slot 2\n".print; ]
+  
+  
+
+  

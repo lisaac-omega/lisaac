@@ -1,0 +1,143 @@
+Header  
+  + name := Strict VEC4;
+  
+Insert  
+  - parent_vec:VEC := VEC
+  
+SELF  
+  - dim:INTEGER := 4
+  
+  - free_list:ARRAY VEC4 := ARRAY VEC4.create_with_capacity 4
+  
+Mapping, Public
+  + xyz:Expanded VEC3
+  + w:REAL_32
+  
+Public
+  
+  - x:REAL_32 <- `((float *)@Self)[0]`:REAL_32
+  - y:REAL_32 <- `((float *)@Self)[1]`:REAL_32
+  - z:REAL_32 <- `((float *)@Self)[2]`:REAL_32
+  
+  - create:SELF <-
+  ( + result:SELF
+    (free_list.is_empty).if {
+      result := clone
+    } else {
+      result := free_list.pop
+    }
+    result
+  )
+  
+  - free <- free_list.add_last Self
+
+  - make (px,py,pz,pw:REAL_32) <- ( xyz.make (px,py,pz); w := pw; )
+  
+  - put_xyz v:VEC3 <- ( xyz := v; )
+  - put_w v:REAL_32 <- ( w := v; )
+  
+  - Self:SELF '**' other:SELF :SELF <-
+  ( + result:SELF
+    result := create
+    result.put_xyz (xyz ** other)
+    result.put_w 1.0
+    result
+  )
+  
+  - reflect other:SELF <-
+  ( + p:REAL_32
+    p := (Self #* other) * 2.0
+    0.to 3 do { i:INTEGER
+      put (item i - p * other.item i) to i
+    }
+  )
+  
+  - Self:SELF '*##' other:MAT4X4 :VEC4 <-
+  ( + t:REAL_32
+    + result:VEC4
+    result := create
+    0.to 3 do { j:INTEGER
+      t := 0.0
+      0.to 3 do { i:INTEGER
+        t := t + other.x i y j * item i
+      }
+      result.put t to j
+    }
+    result
+  )
+  
+  - identity <-
+  (
+    make (0.0, 0.0, 0.0, 1.0)
+  )
+  
+  - Self:SELF '*' q:SELF :SELF <- 
+  ( + tmp:VEC3
+    + r:SELF
+    r := create
+    tmp := xyz ** q.xyz
+    r.put_xyz tmp
+    tmp.free
+    tmp := xyz *# w
+    r.xyz.add tmp
+    tmp.free
+    tmp := q.xyz *# w
+    r.xyz.add tmp
+    tmp.free
+    r.put_w (w * q.w - Self #* q )
+    r
+  )
+
+  - conj <-
+  ( 
+    0.to 2 do { i:INTEGER
+      put (-item i) to i
+    }
+  )
+
+  - rotate (angle:REAL_32, axis:VEC3) <-
+  ( + s,c:REAL_32
+    put_xyz axis
+    xyz.normalize
+    (s, c) := ((angle / 2).sin, (angle / 2).cos)
+    xyz.mul_scale s
+    put_w c
+  )
+  
+  - mul_vec3 v:VEC3 :VEC3 <-
+  ( + t,u:VEC3
+    // Method by Fabian 'ryg' Giessen (of Farbrausch)
+    // t = 2 * cross(q.xyz, v)
+    // v' = v + q.w * t + cross(q.xyz, t)    
+    t := xyz ** v
+    t.mul_scale 2.0
+    
+    u := xyz ** t
+    t.mul_scale w
+
+    t.add v
+    t.add u
+    u.free
+    t
+  )
+  
+  - to_mat4x4:MAT4X4 <- 
+  ( + m:MAT4X4
+    + a,b,c,d:REAL_32
+    + a2,b2,c2,d2:REAL_32
+    (a,b,c,d) := (w,x,y,z)
+    (a2,b2,c2,d2) := (a*a,b*b,c*c,d*d)
+    m := create
+    m.c0.make (a2 + b2 - c2 - d2,   2.0*(b*c + a*d),   2.0*(b*d - a*c), 0.0)
+    m.c1.make (  2.0*(b*c - a*d), a2 - b2 + c2 - d2,   2.f*(c*d + a*b), 0.0)
+    m.c2.make (  2.0*(b*d + a*c),   2.0*(c*d - a*b), a2 - b2 - c2 + d2, 0.0)
+    m.c3.make (              0.0,               0.0,               0.0, 1.0)
+    m
+  )
+
+  - print <-
+  (
+    '['.print
+    x.print; ','.print; y.print; ','.print; z.print; ','.print; w.print
+    ']'.print
+  )

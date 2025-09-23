@@ -1,0 +1,1317 @@
+Header
+  + name := TXT_BUF;
+  
+Inherit
+  + parent_buffer:Expanded BUFFER
+  - parent_text_pg:TXT_PG := TXT_PG
+  
+TXT, TXT_PG, CMD
+  - tmp_c:STRING_BUFFER := STRING_BUFFER.create 4
+  - stackd:Expanded ARRAY INTEGER
+  
+Public
+  
+  - current:TXT_BUF; // TOK_DRW
+  - buf_pg:BUF_PG := TXT_PG
+  - set_parent_buffer p:BUF_PG <- ( parent_text_pg ?= p; )
+    
+  + buf:Expanded ARRAY_BLOCK CHARACTER
+      
+  - init_path p:STRING_ALIAS :SELF <-
+  ( buf.init; init_buf p)
+  
+  - load_file:SELF <-
+  ( + f:POINTER
+    + e:DIRENT
+    (! (f := FILE_UTILS.open_read name).is_null).if {
+      buf.read_file f
+      FILE_UTILS.close f
+      e := FILE_SYSTEM.get name
+      buf.add_last '\0'
+      (date_create,date_update) := (e.create_date,e.update_date)
+      is_save := TRUE
+      undo.last_save;
+    } else {
+      //f := FILE_UTILS.open_write name
+      date_create := date_update := DATE.create_now
+      //"NAME:".print; type_name.println
+      buf.add_last '\0'
+      pre_create
+    }
+    Self
+  )
+  
+  - pre_create
+  
+  - copy_buffer o:BUFFER :BOOLEAN <-
+  ( + oo:TXT_BUF
+    oo ?= o
+    (oo != NULL).if {
+      toks.foreach { t:TOK_DRW; t.free; }
+      toks.clear
+      buf.copy (oo.buf)
+      parse_all
+    }
+  )
+  
+  + backup_ok:BOOLEAN
+  - save_buffer:BOOLEAN <-
+  ( + f:POINTER
+    + e:DIRENT
+    (! backup_ok).if {
+      backup_ok := TRUE
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp += "cp -f -p " += name += " " += name += "~ 2>/dev/null"
+        ENVIRONMENT.run tmp
+      }
+    }
+    f := FILE_UTILS.open_write name
+    (f.is_not_null).if {
+      ? {buf.last = '\0'}
+      buf.remove_last
+      buf.save_file f
+      buf.add_last '\0'
+      FILE_UTILS.close f
+      e := FILE_SYSTEM.get name
+      date_update := e.update_date
+      is_save := TRUE
+      undo.last_save;
+      footnote_left.copy "Wrote `";
+      footnote_left += rel_path name += "'"
+    }
+  )
+  
+  - upper:INTEGER <- buf.upper
+  - is_empty:BOOLEAN <- buf.is_empty
+  
+  - from l:INTEGER to u:INTEGER in tmp:STRING_BUFFER <-
+  ( l.to u do { i:INTEGER; tmp | at i; }; )
+  /*
+  - from l:INTEGER to u:INTEGER :STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      from l to u in tmp
+      result := tmp.to_string_alias
+    }
+    result
+  )
+  */
+  
+  - at i:INTEGER add_str s:STRING <-
+  ( 0.to (s.upper) do { j:INTEGER; buf.at (i+j) add (s.at j); }; )
+  
+  - at_tmp i:INTEGER :INTEGER <- ( tmp_c.clear; at i in tmp_c; tmp_c.count)
+  - at_back_tmp i:INTEGER :INTEGER <- ( tmp_c.clear; at_back i in tmp_c; tmp_c.count)
+  
+  - at i:INTEGER in b:STRING_BUFFER :INTEGER <-
+  ( + n:UINTEGER_8
+    + c:CHARACTER
+    + j:INTEGER
+    j := i
+    n := (c := buf.at j).to_uinteger_8
+    b.add_last c
+    (((n & 80h) != 0) || {c = '\r'}).if {
+      { j := j + 1
+        b.add_last (buf.at j)
+        n := n << 1
+      }.do_until {(n & 40h) = 0}
+    }
+    b.upper - Old b.upper
+  )
+  
+  - at_back i:INTEGER in b:STRING_BUFFER :INTEGER <-
+  ( + n:UINTEGER_8
+    + c:CHARACTER
+    + j,a:INTEGER
+    j := i
+    a := b.count
+    {
+      j := j - 1
+      n := (c := buf.at j).to_uinteger_8
+      b.at a add c
+    }.do_while {
+      (j >= 0) && {((n & 0C0h) = 80h) || {(c='\n') && {at (j-1) = '\r'}}}
+    }
+    b.upper - Old b.upper
+  )
+  
+  - size_at i:INTEGER :INTEGER <-
+  ( + cpt:INTEGER
+    + n:UINTEGER_8
+    n := buf.at i.to_uinteger_8
+    (((n & 80h) != 0) || {n.to_character = '\r'}).if {
+      { cpt := cpt + 1; n := n << 1; }.do_until {(n & 40h) = 0}
+    }
+    cpt + 1
+  )
+  
+  - size_back_at i:INTEGER :INTEGER <-
+  ( + n:UINTEGER_8
+    + j:INTEGER
+    j := i
+    { j := j - 1; n := buf.at j.to_uinteger_8; }.do_while {
+      (j >= 0) && {((n & 0C0h) = 80h) || {(n.to_character='\n') && {at (j-1) = '\r'}}}
+    }
+    i - j
+  )
+  
+  - at i:INTEGER :CHARACTER <- buf.at i
+  //- at i:INTEGER put c:CHARACTER <- buf.at i put c
+  - intern_at i:INTEGER add txt:STRING_ALIAS <-
+  ( 0.to (txt.upper) do { j:INTEGER; buf.at (i+j) add (txt.at j); }; )
+  
+  - line_col pi:INTEGER :(INTEGER,INTEGER) <-
+  ( + l,c,i,p:INTEGER
+    + t:TOK_DRW
+    + cc:CHARACTER
+    {(i < toks.upper) && {p + (t := toks.at i).di < pi}}.while_do {
+      l := l + t.nl
+      p := p + t.di
+      i := i + 1
+    }
+    {p < pi}.while_do {      
+      (((cc := at p) = '\n') || {cc = '\r'}).if { (l,c) := (l + 1,0); } else { c := c + 1; }
+      p := p + size_at p
+    }
+    (p != pi).if {
+      "BUG ds TXT_BUF: p=".print; p.print; " pi:".print; pi.println
+    }
+    l+1,c
+  )
+    
+  - search s:STRING at p:INTEGER :INTEGER <-  
+  ( + res,bas,i,ofs:INTEGER
+    + t:TOK_DRW
+    res := -1
+    (bas,i) := pos_to_tok p
+    ofs := p - bas; ? {ofs >= 0}
+    {(i <= toks.upper) && {res = -1}}.while_do {
+      t := toks.at i
+      TOK_ITM.set_parent_tok_drw t
+      res := t.search s base bas at ofs
+      (res = -1).if {
+        i := i + 1
+        bas := bas + t.di
+        ofs := 0
+      }
+    }
+    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    res
+  )
+  
+  - search s:STRING range idx:INTEGER to up:INTEGER  :INTEGER <-
+  ( + p,i:INTEGER
+    p := idx
+    {(p + s.count <= up) && {i <= s.upper}}.while_do {
+      i := 0
+      {(i <= s.upper) && {buf.at (p+i) = s.at i}}.while_do { i := i + 1; }
+      (i <= s.upper).if { p := p + size_at p; }
+    }
+    (i > s.upper).ok p or (-1)
+  )
+  
+  - search_back s:STRING at p:INTEGER :INTEGER <-  
+  ( + res,bas,i,ofs:INTEGER
+    + t:TOK_DRW
+    res := -1
+    (bas,i) := pos_to_tok p
+    ofs := p - bas; ? {ofs >= 0}
+    t := toks.at i
+    {(i >= 0) && {res = -1}}.while_do {
+      TOK_ITM.set_parent_tok_drw t
+      res := t.search_back s base bas at ofs
+      (res = -1).if {
+        i := i - 1
+        (i >= 0).if {
+          t := toks.at i
+          bas := bas - t.di
+          ofs := t.di
+        }
+      }
+    }
+    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    res
+  )
+  
+  - search_back s:STRING range idx:INTEGER downto low:INTEGER :INTEGER <-
+  ( + p,i:INTEGER
+    p := idx.min (upper-s.upper)
+    {(p >= low) && {i <= s.upper}}.while_do {
+      i := 0
+      {(i <= s.upper) && {buf.at (p+i) = s.at i}}.while_do { i := i + 1; }
+      (i <= s.upper).if { p := p - (p=0).ok 1 else {size_back_at p}; }
+    }
+    (i > s.upper).ok p or (-1)
+  )
+  
+  // High level update buffer (with undo/redo manager)
+  
+  + undo:UNDO
+  
+  - cmd_undo:BOOLEAN <- undo.do Self
+  - cmd_redo:BOOLEAN <- undo.redo Self
+    
+  - at i:INTEGER add s:STRING :INTEGER <-
+  [ ? {s.count <= 4}; ]
+  ( + c:CHARACTER
+    + u:UINTEGER_32
+    0.to (s.upper) do { j:INTEGER
+      c := s.at j
+      u := (u << 8) | c.to_uinteger_8
+      buf.at (i+j) add c
+    }
+    undo.rm i char u
+    update i pg (s.count)
+    s.count
+  )
+  
+  - at i:INTEGER add_text s:STRING <- at i add_text s range (0,s.upper)
+  
+  - at i:INTEGER add_text s:STRING range (l,u:INTEGER) <-
+  ( + j,p:INTEGER
+    + n:UINTEGER_8
+    + c:CHARACTER
+    + cc:UINTEGER_32
+    j := l
+    {j <= u}.while_do {    
+      n := (c := s.at j).to_uinteger_8
+      cc := n
+      p := i+j-l
+      buf.at p add c
+      j := j + 1
+      ((n & 80h) != 0).if {        
+        {
+          c := s.at j
+          cc := (cc << 8) | c.to_uinteger_8
+          buf.at (i+j-l) add c
+          n := n << 1
+          j := j + 1
+        }.do_until {(n & 40h) = 0}
+      }
+      undo.rm p char cc
+    }
+    update i pg (upper - Old upper)
+  )
+  
+  - rm i:INTEGER :INTEGER <-
+  ( + n:UINTEGER_8
+    + c:CHARACTER
+    + u:UINTEGER_32
+    + s:INTEGER
+    n := (c := buf.at i).to_uinteger_8
+    u := n
+    buf.remove i
+    (((n & 80h) != 0) || {c = '\r'}).if {
+      { u := u << 8 | buf.at i.to_uinteger_8
+        buf.remove i
+        n := n << 1
+      }.do_until {(n & 40h) = 0}
+    }
+    undo.add i char u
+    s := upper - Old upper
+    update i pg s
+    -s
+  )
+  
+  - rm i:INTEGER times ss:INTEGER :INTEGER <-
+  ( + n:UINTEGER_8
+    + c:CHARACTER
+    + u:UINTEGER_32
+    + s:INTEGER
+    {s < ss}.while_do {
+      n := (c := buf.at i).to_uinteger_8
+      u := n
+      buf.remove i; s := s + 1
+      ((n & 80h) != 0).if {
+        { u := u << 8 | buf.at i.to_uinteger_8
+          buf.remove i; s := s + 1
+          n := n << 1
+        }.do_until {(n & 40h) = 0}
+      }
+      undo.add i char u
+    }
+    ? {-s = upper - Old upper}
+    update i pg (-s)
+    s
+  )
+  
+  - update i:INTEGER pg (d_i:INTEGER) <-
+  ( + di, pi,tcur, sav_pt,sav_cur, end:INTEGER
+    + bug:BOOLEAN
+    bug := ! TRUE
+    current := Self
+    is_save := FALSE
+    tok_cur := tcur := 0
+    pos_i := 0
+    pi := 0
+    {
+      (tcur < toks.upper) && {pi + (di := toks.at tcur.di_major) <= i}
+    }.while_do {
+      (pos_i,tok_cur) := (pi,tcur)
+      pi := pi + di
+      { tcur := tcur + 1; }.do_while {(tcur <= toks.upper) && {! toks.at tcur.is_major}}
+    }
+    //
+    {
+      (tcur < toks.upper) && {pi + (di := toks.at tcur.di_major) <= i+d_i.abs}
+    }.while_do {
+      pi := pi + di
+      { tcur := tcur + 1; }.do_while {(tcur <= toks.upper) && {! toks.at tcur.is_major}}
+      //(pi + toks.at tcur.di_major).print; '/'.print; (i+d_i.abs).println
+    }
+    (tcur <= toks.upper).if { pi := pi + toks.at tcur.di_major; }
+    //
+    (sav_pt,sav_cur) := (pos_i,tok_cur)
+    end := pi
+    (bug).if {
+      OUT # "Debut #" # tok_cur # " pt:" # pos_i.pt # '\n'
+      OUT # "Rebuild from " # pos_i.pt # " to " # end # "\n\n"
+    }
+    // Suppr:
+    ( tcur := tok_cur; ); // Just debug
+    pi := pos_i
+    {pi < end}.while_do {
+      di := toks.at tok_cur.di
+      (bug).if { OUT # "Suppr Old #" # tcur # " from " # pi # " to " # (pi+di) # '\n'; }
+      toks.at tok_cur.free
+      toks.remove tok_cur
+      pi := pi + di
+      ( tcur := tcur + 1; ); // Just debug
+    }
+    ? {pi = end}
+    (pi != end).if { "BUG!!!! TXT_BUF l379".println; }
+    // Re-Parse:
+    (pos_i,tok_cur) := (sav_pt,sav_cur); // Pas utils
+    // BSBS un doute sur le upper-1
+    {(pos_i < upper) && {pos_i < end+d_i}}.while_do {
+      (bug).if { OUT # "New #" # tok_cur # " from " # pos_i.pt; }
+      parse_drw
+      (bug).if { OUT # " to " # pos_i.pt # '\n'; }
+      //(bug).if { `getchar()`; }
+      tok_cur := tok_cur + 1
+    }
+    {pos_i.pt > end+d_i}.while_do {
+      (bug).if { OUT # "Suppr Old " # tcur # '\n'; tcur := tcur + 1; }
+      end := end + toks.at tok_cur.di
+      toks.at tok_cur.free
+      toks.remove tok_cur
+    }
+    (pos_i.pt != end+d_i).if {
+      OUT # "BUG !!! pos_i=" # pos_i.pt # " pi=" # (end+d_i) # '\n'
+    }
+    ? {pos_i.pt = end+d_i}
+    //
+    (pos_i >= upper).if {
+      (tok_cur > toks.upper).if {
+        ((upper = 0) || {at (upper-1) = '\n'}).if {
+          tok_cur := toks.count
+          (bug).if { OUT # "New END #" # tok_cur # " from " # pos_i.pt; }
+          parse_drw
+          (bug).if { OUT # " to " # pos_i.pt # '\n'; }
+          //(bug).if { `getchar()`; }
+        }
+      } else {
+        (at (upper-1) != '\n').if {
+          (bug).if { OUT # "Suppr End.\n"; }
+          toks.last.free
+          toks.remove_last
+        }
+      }
+    }
+    
+    (bug).if { "--------------".println; }
+    //(bug).if { `getchar()`; }
+  )
+      
+  // Parsing Tools
+    
+  + toks:Expanded ARRAY TOK_DRW
+  
+  - pos_to_tok p:INTEGER :(INTEGER,INTEGER) <-
+  ( + i,n:INTEGER
+    + t:TOK_DRW
+    {(i <= toks.upper) && {p >= n + (t := toks.at i).di}}.while_do {
+      n := n + t.di
+      i := i + 1
+    }
+    n,i
+  )
+  
+  - get_prev_tok t:E :E <-
+  ( + i:INTEGER
+    + r:E
+    i := tok_cur - 1
+    {(i >= 0) && {(r ?= toks.at i) = NULL}}.while_do {      
+      i := i - 1
+    }
+    r
+  )
+    
+  - str_tmp:STRING_BUFFER := STRING_BUFFER.create 256
+  - last_str:STRING_ALIAS
+  - last_int:INTEGER
+  - last_real:REAL_64
+  - is_real:BOOLEAN
+
+  - word w:STRING_ALIAS :BOOLEAN <-
+  ( + i:INTEGER
+    + old:POS
+    skip_sp
+    old := pos_i
+    {(i <= w.upper) && {buf.at pos_i = w.at i}}.while_do {
+      i := i + 1; pos_i := pos_i + 1
+    }
+    (i > w.upper).if { last_str := w; } else { pos_i := old; }    
+  )
+    
+  - skip_until c:CHARACTER <-
+  ( + l:CHARACTER
+    {((l := buf.at pos_i) != c) && {l != '\0'}}.while_do { pos_i := pos_i + 1; }
+  )
+  
+  - skip_line:BOOLEAN <-
+  ( + l:CHARACTER
+    {(l := at pos_i) = ' '}.while_do { pos_i := pos_i + 1; }
+    (l = '\n').if { pos_i := pos_i + 1; }
+  )
+  
+  - ln_limit:INTEGER
+    
+  - skip_spln <-
+  ( + c:CHARACTER
+    {
+      rd_rem_c; rd_rem_cpp
+      (((c := buf.at pos_i) = ' ') || {c = '\n'}) &&
+      {c != '\0'} && {(ln_limit = 0) || {pos_i.pt != ln_limit}}
+    }.while_do {
+      //(c = '\r').if { pos_i := pos_i + 1; c := buf.at pos_i; }
+      (c = '\n').if { toks.at tok_cur.inc_nl; }
+      pos_i := pos_i + 1
+    }
+  )
+  
+  - skip_spln_expr <-
+  (
+    skip_spln
+    ((pos_i > 0) && {at (pos_i-1) = '\n'}).if {
+      toks.at tok_cur.set_nl (Old toks.at tok_cur.nl)
+      pos_i := Old pos_i
+    }
+  )
+  
+  - skip_sp_only <-
+  ( + c:CHARACTER
+    {((c := buf.at pos_i) = ' ') && {c != '\0'} && {pos_i.pt != ln_limit}}.while_do { pos_i := pos_i + 1; }
+  )
+
+  - skip_sp <-
+  ( + p:POS
+    + c:CHARACTER
+    {
+      p := pos_i
+      {
+        ((c := buf.at pos_i) != '\0') && {pos_i.pt != ln_limit} && {c <= ' '} &&
+        {(c != '\n') || {(pos_i > 0) && {buf.at (pos_i-1) = '\r'}}}
+      }.while_do {
+        (c = '\n').if { toks.at tok_cur.inc_nl; }
+        pos_i := pos_i + 1
+      }
+      rd_rem_cpp
+      rd_rem_c1
+    }.do_while {pos_i != p}
+  )
+  
+  - skip_sp_ln <-
+  ( skip_sp
+    (buf.at pos_i = '\n').if {
+      toks.at tok_cur.inc_nl;
+      pos_i := pos_i + 1
+      skip_sp
+    };
+  );
+    
+  - rd_rem_c1:BOOLEAN <-
+  (look "/*" && {pos_i.pt != ln_limit}).if {
+    + lev,p:INTEGER
+    + c:CHARACTER
+    col (LOOK.dead) sub 0
+    pos_i := pos_i + 2
+    lev := 1
+    p := pos_i
+    {((c := at pos_i) != '\0') && {c != '\n'} && {pos_i.pt != ln_limit} && {lev != 0}}.while_do {
+      (look "/*").if {
+        lev := lev + 1
+        pos_i := pos_i + 2
+      }.elseif {look "*/"} then {
+        lev := lev - 1
+        pos_i := pos_i + 2
+      } else {
+        c := at pos_i
+        (c = ' ').if { p := pos_i; }.elseif
+        {c = '.'} then {
+          (look ".gif" || {look ".png"} || {look ".jpg"}).if {
+            img (p+1) to (pos_i + 4); pos_i := pos_i + 3
+          }
+        }
+        pos_i := pos_i + 1
+      }
+    }
+    (lev != 0).if {	
+      err syntax msg "End of comment mono-line not found !"
+    }
+  }
+  
+  - rd_rem_c:BOOLEAN <-
+  (look "/*" && {pos_i.pt != ln_limit}).if {
+    + lev,p:INTEGER
+    + c:CHARACTER
+    col (LOOK.dead) sub 0
+    pos_i := pos_i + 2
+    p := pos_i
+    lev := 1
+    {(at pos_i != '\0') && {pos_i.pt != ln_limit} && {lev != 0}}.while_do {
+      (look "/*").if {
+        lev := lev + 1
+        pos_i := pos_i + 2
+      }.elseif {look "*/"} then {
+        lev := lev - 1
+        pos_i := pos_i + 2
+      } else {
+        c := at pos_i
+        (c = '\n').if { toks.at tok_cur.inc_nl; p := pos_i; }.elseif
+        {c = ' '} then { p := pos_i; }.elseif
+        {c = '.'} then {
+          (look ".gif" || {look ".png"} || {look ".jpg"}).if {            
+            img (p+1) to (pos_i + 4); pos_i := pos_i + 3
+            /*
+            (name.has_suffix "array.li").if {
+              (p+1).to (pos_i.pt) do { i:INTEGER; at i.print; }
+              '\n'.print
+            };*/            
+          }
+        }
+        pos_i := pos_i + 1
+      }
+    }
+    (lev != 0).if {	
+      err syntax msg "End of comment not found !"
+    }
+  }
+  
+  - rd_rem_cpp:BOOLEAN <-
+  (look "//" && {pos_i.pt != ln_limit}).if {
+    + p:INTEGER
+    + c:CHARACTER
+    col (LOOK.rmk) sub 0
+    pos_i := pos_i + 2
+    p := pos_i
+    {((c := at pos_i) != '\0') && {c != '\n'} /*&& {c != '\r'}*/}.while_do {      
+      (c = ' ').if { p := pos_i; }.elseif
+      {c = '.'} then {
+        (look ".gif" || {look ".png"} || {look ".jpg"}).if {
+          img (p+1) to (pos_i + 4); pos_i := pos_i + 3
+        }
+      }
+      pos_i := pos_i + 1
+    }
+    //(c = '\n').if { pos_i := pos_i - 1; }
+    (c != '\0').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+  }
+  
+  - rd_escape_char <-
+  //-- escape         -> '\\' separator {separator} '\\'
+  //--                 | '\\' escape_seq
+  //--                 | '\\' integer '\\'
+  //-- escape_seq     -> 'a' | 'b'  | 'f' | 'n'  | 'r'  | 't'
+  //--                 | 'v' | '\\' | '?' | '\'' | '\"' | '0'
+  ( + val:INTEGER
+    + c:CHARACTER
+    (c := at pos_i).is_separator.if {
+      skip_spln
+      (at pos_i != '\\').if { err syntax msg "Unknown escape sequence. (1)"; }
+      pos_i := pos_i + 1
+    }.elseif {
+      ("abfnrtv\\?'\"".has c) ||
+      {(c = '0') && {! at (pos_i+1).is_hexadecimal_digit}}
+    } then {      
+      pos_i := pos_i + 1
+    }.elseif {c.is_digit} then {      
+      read_num FALSE
+      ((last_int > 255) || {is_real}).if { err syntax msg "Invalid range character number [0,255]."; }
+      val := last_int.to_integer
+      (at pos_i != '\\').if { err syntax msg "Character '\' is needed."; }
+      pos_i := pos_i + 1
+    } else {
+      err syntax msg "Unknown escape sequence."
+    }
+  )
+
+  - rd_chars:BOOLEAN <-
+  //-- character      -> '\'' ascii '\''
+  ( + count:INTEGER
+    + c:CHARACTER
+    //skip_sp
+    (at pos_i = '\'').if {      
+      pos_i := pos_i + 1
+      {((c := at pos_i) != '\0') && {c != '\n'} && {c != '\''}}.while_do {        
+        (c = '\\').if {
+          pos_i := pos_i + 1
+          rd_escape_char
+          count := count + 1
+        } else {
+          pos_i := pos_i + 1
+          count := count + 1
+        }
+      }
+      ((c = '\'') && {count = 1}).if {
+        pos_i := pos_i + 1
+      } else {
+        err syntax msg "Character constant too long."
+      }
+    }
+  )
+
+  - rd_str:BOOLEAN <-
+  //-- string         -> '\"' string_char '\"'
+  ( + c:CHARACTER
+    //skip_sp
+    (at pos_i = '\"').if {      
+      pos_i := pos_i + 1
+      {((c := at pos_i) != '\0') && {c != '\n'} && {c != '\"'}}.while_do {        
+        (c = '\\').if {
+          pos_i := pos_i + 1
+          rd_escape_char
+        } else {
+          pos_i := pos_i + 1
+        }
+      }
+      (c = '\"').if {
+        pos_i := pos_i + 1
+      } else {
+        err syntax msg "Unterminated string constant."
+      }
+    }
+  )
+
+  - rd_ext:BOOLEAN <-
+  //-- external       -> '`' ascii_c_code '`'
+  ( + c:CHARACTER
+    //skip_sp
+    (at pos_i = '`').if {
+      pos_i := pos_i + 1
+      {((c := at pos_i) != '\0') && {c != '`'}}.while_do {        
+        (c = '\\').if {
+          pos_i := pos_i + 1
+          ((c := at pos_i) = '\0').if {
+            err syntax msg "Unterminated external."
+          }
+        }
+        pos_i := pos_i + 1
+      }
+      (c = '`').if {
+        pos_i := pos_i + 1
+      } else {
+        err syntax msg "Unterminated external."
+      }
+    }
+  )
+  
+  - read_c c:CHARACTER :BOOLEAN <-
+  ( + old:POS
+    skip_sp
+    old := pos_i
+    (buf.at pos_i = c).if {
+      pos_i := pos_i + 1
+    } else { pos_i := old; }
+  )
+  
+  - skip_c c:CHARACTER <-
+  ( ? {buf.at pos_i = c}; pos_i := pos_i + 1; )
+  
+  - prev_line_empty:INTEGER <-
+  ( + p,l:INTEGER
+    + c:CHARACTER
+    p := pos_i - 1
+    {(p >=0) && {((c := at p) = '\n') || {c = ' '}}}.while_do {
+      (c = '\n').if { l := l + 1; }
+      p := p - 1
+    }
+    l - (p >= 0).to_integer
+  )
+  
+  - look c:STRING at p:INTEGER :BOOLEAN <-
+  ( + i:INTEGER
+    + l:CHARACTER
+    {((l := at (p+i)) != '\0') && {i <= c.upper} && {l = c.at i}}.while_do { i := i + 1; }
+    i > c.upper
+  )
+  - look c:STRING :BOOLEAN <- look c at pos_i
+       
+  - read_idf:BOOLEAN <-
+  //-- identifier     -> 'a'-'z' {'a'-'z' | '0'-'9' | '_'}
+  (
+    skip_sp
+    (char TRUE ascii {c:CHARACTER; c.is_lower} utf8 {UTF8.is_lower last_utf8}).if {
+      {char FALSE ascii {c:CHARACTER; c.is_lower} utf8 {UTF8.is_lower last_utf8}}.while_loop
+      last_str := str_tmp.to_string_alias
+    }
+  )
+
+  - read_cap_idf:BOOLEAN <-
+  //-- cap_identifier -> 'A'-'Z' {'A'-'Z' | '0'-'9' | '_'}
+  ( 
+    skip_sp
+    (char TRUE ascii {c:CHARACTER; c.is_upper} utf8 {UTF8.is_upper last_utf8}).if {
+      {char FALSE ascii {c:CHARACTER; c.is_upper} utf8 {UTF8.is_upper last_utf8}}.while_loop
+      last_str := str_tmp.to_string_alias
+      //is_parameter_type := last_str.count = 1
+    }
+  )
+
+  
+Private
+  - char first:BOOLEAN ascii ascii:{CHARACTER;BOOLEAN} utf8 utf8:{BOOLEAN} :BOOLEAN <-
+  ( + c:CHARACTER
+    (ascii.value (c := at pos_i) || {(!first) && {c.is_digit || {c = '_'}}}).if {
+      first.if {
+        str_tmp.clear
+      }.elseif {(c = '_') && {str_tmp.last = '_'}} then {
+        err syntax msg "Identifier is incorrect."
+      }
+      str_tmp.add_last c; pos_i := pos_i + 1
+    }.elseif {read_utf8 && utf8} then {
+      first.if { str_tmp.clear; }
+      str_tmp.append last_utf8; pos_i := pos_i + last_utf8.count
+    }
+  )
+    
+  - butf8:STRING_BUFFER := STRING_BUFFER.create 8
+  - last_utf8:STRING_ALIAS
+  
+  - read_utf8:BOOLEAN <-
+  ( + n:UINTEGER_8
+    n := at pos_i
+    ((n & 80h) != 0).if {
+      butf8.clear
+      butf8.add_last (n.to_character)
+      { pos_i := pos_i + 1
+        butf8.add_last (at pos_i)
+        n := n << 1
+      }.do_until {(n & 40h) = 0}
+      last_utf8 := butf8.to_string_alias
+      pos_i := Old pos_i
+    }
+  )
+  
+  - char_operator:BOOLEAN <-
+  ( + c:CHARACTER
+    ("!@#$%^&<|*-+=~/?\\>".has (c := at pos_i)).if {
+      str_tmp.add_last c; pos_i := pos_i + 1
+    }.elseif {read_utf8 && {UTF8.is_symbol last_utf8}} then {      
+      str_tmp.append last_utf8; pos_i := pos_i + last_utf8.count
+    }
+  )
+  
+Public
+  
+  - read_symbol :BOOLEAN <-
+  ( + old:POS
+    skip_sp
+    old := pos_i
+    str_tmp.clear
+    {char_operator}.while_loop
+    (! str_tmp.is_empty).if {
+      last_str := str_tmp.to_string_alias
+    } else { pos_i := old; }
+  )
+  
+  - read_num n:BOOLEAN :BOOLEAN <-
+  // n:TRUE for negative number.
+  // BSBS: Ocptim (version identique a JSON.li) (Cette version la mieux)
+  ( + c:CHARACTER
+    + e0,e1:INTEGER
+    + old:POS
+    + neg,eneg,dec:BOOLEAN
+    skip_sp
+    old := pos_i
+    (
+      (pos_i <= upper) &&
+      {
+        ((c := at pos_i).is_digit) ||
+        { // Negative ?
+          n && {neg := c = '-'} && {pos_i < upper} && {(c := at (pos_i+1)).is_digit}
+        }
+      }
+    ).if {
+      is_real := FALSE
+      dec := TRUE
+      str_tmp.clear
+      str_tmp | c; pos_i := pos_i + 1 + neg.to_integer
+      {(pos_i <= upper) && {((c := at pos_i).is_hexadecimal_digit) || {c = '_'} || {c = '\''}}}.while_do {
+        (c.is_hexadecimal_digit).if { str_tmp | c; dec := dec && {c.is_digit}; }
+        pos_i := pos_i + 1
+      }
+      ((c = '.') && {dec} && {pos_i+1 <= upper} && {(c := at (pos_i+1)).is_digit}).if {
+        str_tmp | c; pos_i := pos_i + 2
+        is_real := TRUE
+        e0 := 1
+        {(pos_i <= upper) && {((c := at pos_i).is_digit) || {c = '_'} || {c = '\''}}}.while_do {
+          (c.is_digit).if { str_tmp | c; e0 := e0 + 1; }
+          pos_i := pos_i + 1
+        }
+        (c = 'E').if { 
+          ((pos_i <= upper) && {(at pos_i = '-') || {at pos_i = '+'}}).if {
+            eneg := at pos_i = '-'
+            pos_i := pos_i + 1
+          }
+          {(pos_i <= upper) && {(c := at pos_i).is_digit}}.while_do { e1 := e1 * 10 + c.to_digit; pos_i := pos_i + 1; }
+          (eneg).if { e1 := -e1; }
+        }
+        e1 := e1 - e0
+        (str_tmp.is_integer_64).if {
+          last_real := str_tmp.to_integer_64.to_real_32 * 10.0.pow e1
+        } else {
+          err syntax msg "Not number."; last_real := 0
+        }
+        neg.if { last_real := -last_real; }
+      }.elseif {c = 'h'} then {        
+        last_int := str_tmp.to_hexadecimal
+        pos_i := pos_i + 1
+      } else {
+        (str_tmp.last > '9').if { str_tmp.remove_last; pos_i := pos_i - 1; }
+        (pos_i <= upper).if {
+          ((c := at pos_i) = 'o').if {
+            (str_tmp.is_octal).if {
+              last_int := str_tmp.to_octal
+            } else {
+              err syntax msg "Incorrect octal number."; last_int := 0
+            }
+            pos_i := pos_i + 1
+          }.elseif {c = 'b'} then {
+            (str_tmp.is_bit).if {
+              last_int := str_tmp.to_binary
+            } else {
+              err syntax msg "Incorrect binary number."; last_int  := 0
+            }
+            pos_i := pos_i + 1
+          } else {                      
+            (str_tmp.is_integer_64).if {
+              last_int := str_tmp.to_integer_64
+              last_real := last_int
+            } else {              
+              err syntax msg "Incorrect decimal number."; last_int := 0
+            }
+            (c = 'd').if { pos_i := pos_i + 1; }
+          }
+        } else {
+          (str_tmp.is_integer_64).if {
+            last_int := str_tmp.to_integer_64
+            last_real := last_int
+          } else {
+            err syntax msg "Incorrect decimal number."; last_int := 0
+          }
+        }
+      }
+    } else { pos_i := old; }
+  )
+  
+  - warning:STRING_ALIAS  := "Warning"
+  - syntax:STRING_ALIAS   := "Syntax"
+  - semantic:STRING_ALIAS := "Semantic"
+  
+  - error_active:BOOLEAN := TRUE
+  - set_error_active b:BOOLEAN <- ( error_active := b; )
+  
+  - err t:STRING_ALIAS msg s:STRING <-
+  ( + l,c,i:INTEGER
+    (error_active).if {
+      '\n'.print; t.print; " error in ".print
+      rel_path name.print
+      " line ".print
+      (l,c) := line_col_err
+      l.print
+      " :".println
+      s.println
+      i := pos_i
+      //cpti.print; '/'.print; upper.println
+      {(i > 0) && {buf.at (i-1) != '\n'}}.while_do { i := i - size_back_at i; }
+      {(i <= upper) && {buf.at i != '\n'}}.while_do {
+        i := i + at_tmp i
+        tmp_c.print
+      }
+      '\n'.print
+      c.times { ' '.print; }
+      '^'.println
+      //crash
+      (t != warning).if { exit 1; }
+    }
+  )
+  
+Private
+  
+  - line_col_err:(INTEGER,INTEGER) <-
+  ( + l,c,i:INTEGER
+    //"cpti:".print; cpti.print; '/'.print; upper.println
+    {(i <= upper) && {i != pos_i.pt}}.while_do {
+      (at i = '\n').if { l := l + 1; c := 0; } else { c := c + 1; }
+      i := i + 1
+    }
+    l+1,c
+  )
+  
+Public
+    
+  - detect_drw:TOK_DRW <- TOK_TXT.new
+  
+  - parse_drw <-
+  ( + t:TOK_DRW
+    current := Self
+    t := detect_drw
+    toks.at tok_cur add t
+    t.product
+    t.next_parse
+  )
+  
+  - parse_all:SELF <-
+  (    
+    pos_i := 0
+    {at pos_i != '\0'}.while_do {
+      tok_cur := toks.count
+      parse_drw
+    }
+    
+    ((upper = 0) || {at (upper-1) = '\n'}).if {
+      tok_cur := toks.count
+      parse_drw
+    }
+    //
+    (pos_i.pt = upper).if { /*shortname.print; " Ok".println;*/ } else {
+      shortname.print; "  ".print; pos_i.pt.print; ' '.print; upper.print
+      ' '.print; toks.count.println
+    }
+    // Restore Old global variables.    
+    TOK_DRW.begin (Old TOK_DRW.pt_b)
+    tok_cur := Old tok_cur
+    pos_i := Old pos_i
+    current := Old current
+    Self
+  )
+  
+  // Draw
+    
+  - x_space:REAL_32
+  - asc_c:REAL_32
+  - des_c:REAL_32
+  - interline_default:REAL_32 := 3
+  - interline:REAL_32 := interline_default
+  - hline_default:REAL_32 <- asc_c - des_c + interline
+  
+  - hline:REAL_32 <- tex.asc - tex.des + interline
+  
+  - stop_line <- ( (last_div != NULL).if { last_div.fix_size; detect_cur; }; last_div := NULL; )
+  
+  - begin_line <-
+  (
+    states.last.update_call_count; stackd.put_last (child.upper+1)
+  )
+    
+  - end_text <-
+  ( (last_div = NULL).if { 
+      draw_tmp_c
+    } else {
+      end_line
+    }
+  )
+  
+  - end_line   <-
+  ( 
+    stop_line
+    translate_calls (0,tex.asc)
+    stackd.last.to (child.upper) do { i:INTEGER; child.at i.add_xy (0,tex.asc); }
+    tex.set_xy (tex.xmin, tex.y + hline)
+    tex.set_ascdes (0,0)
+  )
+  
+  - lisave <- ( parent_buf_pg.save; stackd.add_last (child.upper+1); )
+  - lirestore (dx,dy:REAL_32) <-
+  ( restore_and_translate (dx,dy)
+    stackd.remove_last
+    stackd.last.to (child.upper) do { i:INTEGER; child.at i.add_xy (dx,dy); }
+  )
+  
+  - restore_to (dx,dy:REAL_32) <-
+  ( translate_and_copy (dx,dy)
+    stackd.last.to (child.upper) do { i:INTEGER; child.at i.add_xy (dx,dy); }
+    stackd.remove_last
+  )
+    
+  - busy:BOOLEAN
+  - tok_cur:INTEGER
+  
+  - pre_draw
+  
+  - draw <-
+  ( + t:TOK_DRW
+    + y,yb,ye,x:REAL_32
+    + debug_tok_beg,end_bg,di,nxt:INTEGER
+    + d:DIV
+    pre_draw
+    /*
+    ( + b:INTEGER
+      "=================".println
+      toks.foreach { a:TOK_DRW; a.print_sty b; b := b + a.di; }
+    )
+    */    
+    //(pos_y = 13).if { "TXT_BUF.draw".println; exit 1; }
+    //+ bug:INTEGER
+    start_bg := trace_pointer
+    debug_tok_beg := toks.count
+    //draw_background
+    y := - pos_y
+    tex.push (-pos_x+xo+8,y+yo+8)
+    //OUT # xo # " pos_x=" # pos_x # '\n'
+    pos_i := 0
+    tok_cur := 0
+    //"TXT_BUF:".print; pos_y.println
+    ((!pos.is_xy) && {PAGE.cur_pg != page}).if { pos := pos.undefine_xy; }
+    stackd.clear
+    lisave
+    lisave
+    //"--- DRAW ---".println; //pos.pt.println;
+    (yb,ye) := (yo-height + margin_cursor_y, yo+height + height - margin_cursor_y)
+    //"y=[".print; yb.print; " - ".print; ye.print; "]".println
+    {(tok_cur <= toks.upper) && {{! pos.is_define_all} || {tex.y < ye}}}.while_do {
+      t := toks.at tok_cur
+      ? {t.is_major}
+      y  := tex.y
+      di := t.di_major
+      {
+        nxt := nxt + 1
+      }.do_while {(nxt <= toks.upper) && {! toks.at nxt.is_major}}
+      (
+        (t.dh = 0) || {y + t.dh >= yb} ||
+        {(! pos.is_ico) && {pos <= pos_i.pt+di}} ||
+        {(  pos.is_ico) && {pos.tok < nxt}}
+      ).if { // Draw  
+        //debug_tok_beg := debug_tok_beg.min tok_cur
+        //OUT # "Draw " # tok_cur # '\n';
+        t.draw
+        ((tex.y < yb) && {! pos.is_define_all}).if {
+          child.foreach { d:WIN; d.free; }
+          child.clear
+        }
+        (tok_cur + 1 != nxt).if {
+          "TXT_BUF 1057 ".print
+          (tok_cur+1).print; " != ".print; nxt.print; " / ".print; toks.upper.println
+        }
+        ? {tok_cur + 1 = nxt}
+      } else { // Skip draw
+        //OUT # "Skip " # tok_cur # '\n';
+        tex.add_y (t.dh)
+        pos_i := pos_i + di
+      }
+      tok_cur := nxt
+    }
+    //"Begin draw : ".print; debug_tok_beg.println
+    /*
+    begin_path
+    stroke_color (COLOR.white)
+    stroke_width 2.0
+    line (0,19860.0-pos_y+600) to (xmax,19860.0-pos_y+600)
+    stroke
+    */
+    //tok_cur.print; '/'.print; toks.upper.println
+    //pos_i.pt.print; '/'.print; upper.println
+    //" pt=".print; pti.print; '.'.print; ptv.print
+    //" ptoi=".print; ptoi.print; '.'.print; ptov.println
+    /*( + i:INTEGER
+      {(i <= child.upper) && {child.at i.like DIV.ptoi != ptoi}}.while_do { i := i + 1; }
+      (i > child.upper).if {
+        "ptoi:".print; ptoi.println
+        "pti: ".print; pti.println
+        (child.is_empty).if {
+          "Child empty !".println
+        } else {
+          0.to (child.upper) do { i:INTEGER
+            child.at i.like DIV.ptoi.print; ' '.print
+          }
+        }
+        crash
+      }
+    );*/
+    /*
+    "---------------".println
+    pos.print
+    "---".println
+    0.to 9 do { i:INTEGER
+      + dd:DIV
+      dd := child.at i.like DIV
+      dd.pos.hook.print; " [".print; dd.pos.offset.print; '-'.print; dd.pte.offset.print
+      "]".println
+    };    */
+    
+    // Elevator upper:    
+    height_upper := (pos_y+tex.y)/pos_i.pt.to_real_32 * text.upper + height/2
+    width_upper := pos_x + tex.xmax + 100
+    //"--------------".println
+    //"pt_div=".print; ptoi.print; '/'.print; child.upper.print
+    //':'.print; child.first.like DIV.ptoi.println
+    
+    (! drag_pos_y).if {
+      d ?= child.at pt_div
+      y := d.abs_y - yo
+      //"y=".print; y.println
+      (y < margin_cursor_y).if { // Top
+        pos_y := (pos_y + y - margin_cursor_y).max 0
+      }
+      y := y + d.height
+      (y > height-margin_cursor_y).if { // Bottom
+        pos_y := pos_y + y + margin_cursor_y - height
+      }
+    } else { drag_pos_y := FALSE; }
+    
+    (! drag_pos_x).if {
+      d ?= child.at pt_div
+      x := d.abs_x - xo
+      (x < margin_cursor_x).if { // Left
+        pos_x := (pos_x + x - margin_cursor_x).max 0
+      }
+      (x > width-margin_cursor_x).if { // Right
+        pos_x := pos_x + x + margin_cursor_x - width
+      }
+    } else { drag_pos_x := FALSE; }
+    
+    //lirestore (0,0)
+    restore; stackd.remove_last
+    //"translate: ".print; (-(pos_y - Old pos_y)).println
+    restore_to (-(pos_x - Old pos_x),-(pos_y - Old pos_y))
+    ? {stackd.count = 0}
+    tex.pop; ? {tex = TEX}
+    end_bg := trace_pointer
+    draw_background
+    foreground start_bg to end_bg
+    draw_foreground
+  )
+    
+  - draw_all <-
+  ( //+ check_upper:INTEGER
+    //check_upper := states.upper
+    busy := TRUE
+    reset_scissor
+    intersect_scissor (xo,yo) size (width,height)
+    child.foreach { c:WIN; c.free; }; child.clear; last_div := NULL
+    DIV.set_parent parent_text_pg
+    font_size (FONT.size_app)
+    FONT.app (FONT.roman) in Self
+    text_align (align_left | align_baseline)
+    line_join round; line_cap round
+    ( + w,x0,y0,x1,y1:REAL_32
+      (asc_c,des_c,w) := text_metrics
+      (w,x0,y0,x1,y1) := text_bounds (0,0) msg " "
+      x_space := w
+    )
+    draw
+    reset_scissor
+    child.foreach { d:WIN; /*d.add_xy (xo,yo);*/ d.draw; }
+    /*
+    (check_upper != states.upper).if {
+      "Old:".print; check_upper.println
+      "Now:".print; states.upper.println
+    }
+    ? {check_upper = states.upper}
+    */
+    busy := FALSE
+    //"END:".print; child.last.yo.println
+  )
+  
+  - refresh
+  
+  - start_bg:INTEGER
+
+  - draw_background <-
+  ( + p:PAINT
+    + d:DIV
+    + x,y,w,h:REAL_32
+    + id:INTEGER
+    + c:COLOR
+    
+    (LOOK.background != NULL).if {
+      id := LOOK.background.idf
+      (w,h) := image_size id
+      p := PAINT.create_pattern (-pos_x+xo,-pos_y+yo) size (w,h) img_id id angle 0 alpha 1.0
+      begin_path
+      rect (xo,yo) size (width,height)
+      fill_paint p
+      fill
+      p.free
+    } else {
+      begin_path
+      fill_color (LOOK.background_color)
+      rect (xo,yo) size (width,height)
+      fill
+    }
+    (page = PAGE.cur_pg).if {      
+      d ?= child.at pt_div
+      (x,y) := (d.abs_x,d.abs_y)
+      c := LOOK.cols.at (LOOK.cursor)
+      begin_path
+      p := PAINT.create_radial (x,y) radius (10,512)
+      color c to (c.set_af 0.0)
+      rect (xo,yo) size (width,height)
+      fill_paint p
+      fill
+      p.free
+    }
+  )
+  
+  - draw_foreground
+  
+  // Graphics elements
+  /*
+  - txt_dir:STRING_BUFFER
+  - drw_directive <-
+  ( ((txt_dir != NULL) && {page = PAGE.cur_pg}).if {
+      fill_color (LOOK.directive)
+      tex.set_x (text (tex.x,tex.y) msg txt_dir)
+      LINE.ascdes (asc_c,des_c)
+      txt_dir := NULL
+    }
+  );*/
+  
+  - draw_tmp_c <- draw_tmp_c_std
+    
+  - draw_tmp_c_std <-
+  (
+    (last_div = NULL).if {
+      (tex.x = tex.xmin).if { begin_line; }
+      last_div := DIV.new.text
+    }
+    tex.ascdes (asc_c,des_c)
+    ((pos_i = upper) || {tmp_c.first = '\n'}).if {      
+      end_line
+    }.elseif {tmp_c == "\r\n"} then {
+      save; fill_color (COLOR.gray); text (tex.x,tex.y) msg "↩"; restore
+      end_line
+    } else {
+      tex.set_x (text (tex.x,tex.y) msg tmp_c)
+      (TOK_DRW.underline).if {
+        begin_path
+        fill_color (get_state.fill.inner_color)
+        rect (Old tex.x,tex.y + 2) to (tex.x,tex.y + 3)
+        fill
+      }
+      detect_cur
+    }
+  )
+  
+  - put_image pth:STRING :BOOLEAN <-
+  ( + img:IMG
+    + h:REAL_32
+    ((img := IMG.load pth asset FALSE) != NULL).if {
+      IMG.update WIN
+      h := des_c + img.height
+      img.draw WIN to (tex.x,tex.y - h) alpha 1 bar TRUE
+      tex.add_x (img.width)
+      tex.ascdes (h,des_c)
+    }
+  )

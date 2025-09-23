@@ -1,0 +1,17 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + str:USTRING_BUFFER
+    str := "vélo"
+    TEST.check (str.count) integer 4
+    str := "é"
+    TEST.check (str.count) integer 1
+    str := "e"
+    TEST.check (str.count) integer 1
+    str := ""
+    TEST.check (str.count) integer 0
+  )
+  
+  

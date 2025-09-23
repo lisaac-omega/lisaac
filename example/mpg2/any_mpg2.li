@@ -1,0 +1,270 @@
+Header
+  
+  + name         := ANY_MPG2;
+  /*
+  Global variable and Define symbol.
+  */
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  //
+  // X11 Interface.
+  //
+  
+  - scr:NATIVE_ARRAY UINTEGER_8
+  - width_scr:INTEGER
+  - height_scr:INTEGER
+  - id_scr:INTEGER
+  
+  //
+  // Compiler Flags.
+  //
+  
+  - trace:BOOLEAN := FALSE
+  
+  - verbose:BOOLEAN := FALSE
+  
+  - verbose_flag:INTEGER
+  
+  // Layers: used by Verbose_Flag, Verifier_Flag, Stats_Flag, and Trace_Flag 
+  - no_layer        :INTEGER := 0
+  - sequence_layer  :INTEGER := 1
+  - picture_layer   :INTEGER := 2
+  - slice_layer     :INTEGER := 3
+  - macroblock_layer:INTEGER := 4
+  - block_layer     :INTEGER := 5
+  - event_layer     :INTEGER := 6
+  - all_layers      :INTEGER := 7
+  - filename_length :INTEGER := 256
+  - mb_weight       :INTEGER := 32
+  - mb_class4       :INTEGER := 64
+  
+  //
+  // Error manager.
+  //
+  
+  - error_text:STRING_BUFFER := STRING_BUFFER.create 256
+  
+  - error text:STRING <-
+  (
+    STDERR.put_string text
+    exit exit_failure_code
+  )
+
+  - print_bits (code, bits, len :INTEGER) <-
+  // Trace_Flag output 
+  (
+    0.to (len-1) do { i:INTEGER
+      ((code >> (bits-1-i)) & 1).print
+    }
+  )
+  
+  //
+  // Define constant.
+  //
+ 
+  - error_code:INTEGER := (-1)
+  
+  - picture_start_code     :INTEGER := 0100h
+  - slice_start_code_min   :INTEGER := 0101h
+  - slice_start_code_max   :INTEGER := 01AFh
+  - user_data_start_code   :INTEGER := 01B2h
+  - sequence_header_code   :INTEGER := 01B3h
+  - extension_start_code   :INTEGER := 01B5h
+  - sequence_end_code      :INTEGER := 01B7h
+  - group_start_code       :INTEGER := 01B8h
+  - iso_end_code           :INTEGER := 01B9h
+  - pack_start_code        :INTEGER := 01BAh
+  - system_start_code      :INTEGER := 01BBh
+  - video_elementary_stream:INTEGER := 01E0h
+
+  // scalable_mode 
+  - sc_none:INTEGER := 0
+  - sc_dp  :INTEGER := 1
+  - sc_spat:INTEGER := 2
+  - sc_snr :INTEGER := 3
+  - sc_temp:INTEGER := 4
+
+  // picture coding type 
+  - i_type:INTEGER := 1
+  - p_type:INTEGER := 2
+  - b_type:INTEGER := 3
+  - d_type:INTEGER := 4
+
+  // picture structure 
+  - top_field    :INTEGER := 1
+  - bottom_field :INTEGER := 2
+  - frame_picture:INTEGER := 3
+
+  // macroblock type 
+  - macroblock_intra                       :INTEGER := 1
+  - macroblock_pattern                     :INTEGER := 2
+  - macroblock_motion_backward             :INTEGER := 4
+  - macroblock_motion_forward              :INTEGER := 8
+  - macroblock_quant                       :INTEGER := 16
+  - spatial_temporal_weight_code_flag      :INTEGER := 32
+  - permitted_spatial_temporal_weight_class:INTEGER := 64
+
+  // motion_type 
+  - mc_field:INTEGER := 1
+  - mc_frame:INTEGER := 2
+  - mc_16x8 :INTEGER := 2
+  - mc_dmv  :INTEGER := 3
+
+  // mv_format 
+  - mv_field:BOOLEAN := FALSE
+  - mv_frame:BOOLEAN := TRUE
+
+  // chroma_format 
+  - chroma420:INTEGER := 1
+  - chroma422:INTEGER := 2
+  - chroma444:INTEGER := 3
+
+  // extension start code IDs 
+  - sequence_extension_id                 :INTEGER := 1
+  - sequence_display_extension_id         :INTEGER := 2
+  - quant_matrix_extension_id             :INTEGER := 3
+  - copyright_extension_id                :INTEGER := 4
+  - sequence_scalable_extension_id        :INTEGER := 5
+  - picture_display_extension_id          :INTEGER := 7
+  - picture_coding_extension_id           :INTEGER := 8
+  - picture_spatial_scalable_extension_id :INTEGER := 9
+  - picture_temporal_scalable_extension_id:INTEGER := 10
+  - zig_zag                               :INTEGER := 0
+  - profile_422                           :INTEGER := (128+5)
+  - main_level                            :INTEGER := 8
+
+
+  // choose between declaration (GLOBAL undefined)
+  // and definition (GLOBAL defined)
+  // GLOBAL is defined in exactly one file mpeg2dec.c)
+  
+  // output types (Output_Type) 
+  - t_x11   :INTEGER := 0
+  - t_yuv   :INTEGER := 1
+  - t_sif   :INTEGER := 2
+  - t_tga   :INTEGER := 3
+  - t_ppm   :INTEGER := 4
+
+  //
+  // Global varibale.
+  //
+
+  // decoder operation control variables 
+  - output_type:INTEGER
+  - hiqdither  :INTEGER
+
+  // decoder operation control flags 
+//  - quiet_flag              :BOOLEAN
+//  - trace_flag              :BOOLEAN
+  - fault_flag              :BOOLEAN
+//  - verbose_flag            :INTEGER
+  - spatial_flag            :BOOLEAN
+  - system_stream_flag      :BOOLEAN
+  - big_picture_flag        :BOOLEAN
+  - user_data_flag          :BOOLEAN
+  
+  // filenames 
+  - output_picture_filename             :STRING_ALIAS
+  - main_bitstream_filename             :STRING_ALIAS
+  //- output_picture_filename             :STRING_ALIAS
+  //- main_bitstream_filename             :STRING_ALIAS
+  
+  // buffers for multiuse purposes   
+  - clip:NATIVE_ARRAY UINTEGER_8 :=
+  // Clip table
+  ( + result:NATIVE_ARRAY UINTEGER_8
+     
+    result := (NATIVE_ARRAY UINTEGER_8.create (640+384)) + 384; //(-384) to 639
+    1.to 254 do { i:INTEGER
+      result.at i put i
+    }
+    255.to 639 do { i:INTEGER; result.at i put 255; }
+    //result.set_slice 255 to 639 with 255
+    result
+  )
+
+  // pointers to generic picture buffers 
+  - backward_reference_frame:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)); // [3][]
+  - forward_reference_frame :NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)); // [3][]
+  - auxframe                :NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)); // [3][]
+  - current_frame           :NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)); // [3][]
+  
+  // pointers to scalability picture buffers 
+  - llframe0:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)); // [3][]
+  - llframe1:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)); // [3][]
+  - lltmp:NATIVE_ARRAY(INTEGER_16)
+
+  // non-normative variables derived from normative elements 
+  - coded_picture_width :INTEGER
+  - coded_picture_height:INTEGER
+  - chroma_width        :INTEGER
+  - chroma_height       :INTEGER
+  - block_count         :INTEGER
+  - second_field        :BOOLEAN
+  - profile             :INTEGER
+  - level               :INTEGER
+
+  // normative derived variables (as per ISO/IEC 13818-2) 
+  - horizontal_size:INTEGER
+  - vertical_size  :INTEGER
+  - mb_width       :INTEGER
+  - mb_height      :INTEGER
+
+  // headers 
+      
+  // ISO/IEC 13818-2 section 6.2.2.3:  sequence_extension() 
+  - profile_and_level_indication:INTEGER
+  - progressive_sequence        :BOOLEAN
+  - chroma_format               :INTEGER
+  
+  // ISO/IEC 13818-2 section 6.2.2.4:  sequence_display_extension()   
+  - matrix_coefficients     :INTEGER
+    
+  // ISO/IEC 13818-2 section 6.2.3: picture_header() 
+  - temporal_reference      :INTEGER
+  - picture_coding_type     :INTEGER
+  - full_pel_forward_vector :BOOLEAN
+  - forward_f_code          :INTEGER
+  - full_pel_backward_vector:BOOLEAN
+  - backward_f_code         :INTEGER
+    
+  // ISO/IEC 13818-2 section 6.2.3.1: picture_coding_extension() header 
+//  - f_code:FIXED_ARRAY2(INTEGER) := FIXED_ARRAY2(INTEGER).create 2,2
+  - f_code:ARRAY2(INTEGER) := ARRAY2(INTEGER).create(2,2)
+  - intra_dc_precision        :INTEGER
+  - picture_structure         :INTEGER
+  - top_field_first           :BOOLEAN
+  - frame_pred_frame_dct      :BOOLEAN
+  - concealment_motion_vectors:BOOLEAN
+  - intra_vlc_format          :BOOLEAN
+  - repeat_first_field        :BOOLEAN
+  - chroma_420_type           :INTEGER
+  - progressive_frame         :BOOLEAN
+   
+  // ISO/IEC 13818-2 section 6.2.2.5: sequence_scalable_extension() header 
+  - lower_layer_prediction_horizontal_size:INTEGER
+  - lower_layer_prediction_vertical_size  :INTEGER
+  - horizontal_subsampling_factor_m       :INTEGER
+  - horizontal_subsampling_factor_n       :INTEGER
+  - vertical_subsampling_factor_m         :INTEGER
+  - vertical_subsampling_factor_n         :INTEGER
+  
+  // ISO/IEC 13818-2 section 6.2.3.5: picture_spatial_scalable_extension() header 
+  - lower_layer_temporal_reference          :INTEGER
+  - lower_layer_horizontal_offset           :INTEGER
+  - lower_layer_vertical_offset             :INTEGER
+  - spatial_temporal_weight_code_table_index:INTEGER
+  - lower_layer_progressive_frame           :BOOLEAN
+  - lower_layer_deinterlaced_field_select   :BOOLEAN
+
+  - decode_layer :INTEGER
+  - global_mba   :INTEGER
+  - global_pic   :INTEGER
+  - true_framenum:INTEGER
+
+  // layer specific variables (needed for SNR and DP scalability) 
+  - ld   :LAYER_DATA

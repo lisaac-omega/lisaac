@@ -1,0 +1,167 @@
+Header
+  
+  + name := TRANSFORM;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Private
+  
+  - stack:ARRAY TRANSFORM := ARRAY TRANSFORM.create_with_capacity 16
+  
+Public
+  
+  + t0:REAL_32
+  + t1:REAL_32
+  + t2:REAL_32
+  + t3:REAL_32
+  + t4:REAL_32
+  + t5:REAL_32
+  
+  - create:TRANSFORM <- 
+  ( + result:TRANSFORM
+    (stack.is_empty).if {
+      result := clone
+    } else {
+      result := stack.pop
+    }
+    result
+  )
+
+  - free <-
+  ( 
+    stack.add_last Self
+  )
+  
+  - copy other:TRANSFORM <- 
+  (
+    (t0,t1) := (other.t0,other.t1)
+    (t2,t3) := (other.t2,other.t3)
+    (t4,t5) := (other.t4,other.t5)
+  )
+  
+  - clear <-
+  (
+    t0 := t1 := t2 := 0
+    t3 := t4 := t5 := 0
+  )
+  
+  - set_all (p0,p1:REAL_32) and (p2,p3:REAL_32) and (p4,p5:REAL_32) <-
+  (
+    (t0,t1) := (p0,p1)
+    (t2,t3) := (p2,p3)
+    (t4,t5) := (p4,p5)
+  )
+  
+  - set_radial (cx,cy:REAL_32) <-
+  (
+    t0 := t3 := 1
+    t1 := t2 := 0
+    (t4,t5) := (cx,cy)
+  )
+  
+  - identity <-
+  (
+    t0 := t3 := 1
+    t1 := t2 := t4 := t5 := 0
+  )
+
+  - translate (tx,ty:REAL_32) <-
+  (
+    t0 := t3 := 1
+    t1 := t2 := 0
+    (t4,t5) := (tx,ty)
+  )
+  
+  - add_translate (tx,ty:REAL_32) <-
+  (
+    (t4,t5) := (t4+tx,t5+ty)
+  )
+
+  - scale (sx,sy:REAL_32) <-
+  (
+    t1 := t2 := t4 := t5 := 0
+    (t0,t3) := (sx,sy)
+  )
+
+  - rotate a:REAL_32 <-
+  ( + cs,sn:REAL_32
+    (cs,sn) := (a.cos,a.sin)
+    (t0,t1) := ( cs,sn)
+    (t2,t3) := (-sn,cs)
+    t4 := t5 := 0
+  )
+
+  - skew_x a:REAL_32 <-
+  (
+    t0 := t3 := 1
+    t1 := t4 := t5 := 0
+    t2 := a.tan
+  )
+
+  - skew_y a:REAL_32 <-
+  (
+    t0 := t3 := 1
+    t1 := a.tan
+    t2 := t4 := t5 := 0
+  )
+
+  - multiply s:TRANSFORM <-
+  ( + tt0,tt2,tt4:REAL_32
+    tt0 := t0 * s.t0 + t1 * s.t2
+    tt2 := t2 * s.t0 + t3 * s.t2
+    tt4 := t4 * s.t0 + t5 * s.t2 + s.t4
+    t1 := t0 * s.t1 + t1 * s.t3
+    t3 := t2 * s.t1 + t3 * s.t3
+    t5 := t4 * s.t1 + t5 * s.t3 + s.t5
+    t0 := tt0
+    t2 := tt2
+    t4 := tt4
+  )
+
+  - premultiply s:TRANSFORM <-
+  ( + tt0,tt1,tt2,tt3,tt4,tt5:REAL_32
+    tt0 := s.t0 * t0 + s.t1 * t2
+    tt1 := s.t0 * t1 + s.t1 * t3
+    tt2 := s.t2 * t0 + s.t3 * t2
+    tt3 := s.t2 * t1 + s.t3 * t3
+    tt4 := s.t4 * t0 + s.t5 * t2 + t4
+    tt5 := s.t4 * t1 + s.t5 * t3 + t5
+    (t0,t1) := (tt0,tt1)
+    (t2,t3) := (tt2,tt3)
+    (t4,t5) := (tt4,tt5)
+  )
+
+  - inverse o:TRANSFORM :BOOLEAN <-
+  ( + result:BOOLEAN
+    + invdet,det:REAL_64
+    det := o.t0.to_real_64 * o.t3 - o.t2.to_real_64 * o.t1
+    ((det > -0.000001) && {det < 0.000001}).if {
+      identity
+    } else {
+      invdet := 1.0 / det
+      t0 := ( o.t3 * invdet).to_real_32
+      t2 := (-o.t2 * invdet).to_real_32
+      t4 := ((o.t2.to_real_64 * o.t5 - o.t3.to_real_64 * o.t4) * invdet).to_real_32
+      t1 := (-o.t1 * invdet).to_real_32
+      t3 := ( o.t0 * invdet).to_real_32
+      t5 := ((o.t1.to_real_64 * o.t4 - o.t0.to_real_64 * o.t5) * invdet).to_real_32
+      result := TRUE
+    }
+    result
+  )
+  
+  - average_scale:REAL_32 <-
+  ( + sx,sy:REAL_32
+    sx := (t0*t0 + t2*t2).sqrt
+    sy := (t1*t1 + t3*t3).sqrt
+    (sx + sy) * 0.5
+  )
+  
+  - transform_point (sx,sy:REAL_32) :(REAL_32,REAL_32) <-
+  (
+    sx*t0 + sy*t2 + t4,
+    sx*t1 + sy*t3 + t5
+  )
+  

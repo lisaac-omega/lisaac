@@ -1,0 +1,446 @@
+Header  
+  + name := JSON;
+  
+Inherit  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN
+  - item id:STRING_ALIAS int  v:INTEGER :BOOLEAN
+  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN
+  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN
+  
+  - object_null id:STRING_ALIAS :BOOLEAN
+  - object id:STRING_ALIAS :BOOLEAN
+  - object_in id:STRING_ALIAS :BOOLEAN
+  
+  - new_value id:STRING_ALIAS :BOOLEAN
+    
+  - put_str v:STRING <-
+  ( puts "\""; puts v; puts "\""
+    pre_print := ",\n"
+  )
+  
+  - put_int v:INTEGER <-
+  ( tmp_json.clear; v.append_in tmp_json
+    puts tmp_json
+    pre_print := ",\n"
+  )
+  
+  - put_real v:REAL_32 <-
+  ( tmp_json.clear; v.append_in tmp_json
+    puts tmp_json
+    pre_print := ",\n"
+  )
+  
+  - put_bool v:BOOLEAN <-
+  ( v.if {
+      puts "true"
+    } else {
+      puts "false"
+    }
+    pre_print := ",\n"
+  )
+  
+  - put_null <-
+  ( puts "null"
+    pre_print := ",\n"
+  )
+  
+  - put_object_in v:STRING <-
+  ( puts "'"; puts v; puts "'"
+    pre_print := ",\n"
+  )
+  
+  - put v:STRING value b:{} <-
+  ( puts pre_print
+    put_indent
+    puts v
+    puts " : "
+    pre_print := ""
+    b.value
+    pre_print := ",\n"
+  )
+
+  - put_array b:{INTEGER; BOOLEAN} <-
+  ( + tst:BOOLEAN
+    + i:INTEGER
+    puts pre_print
+    puts "[\n"
+    sp_indent := sp_indent + 2
+    { put_indent
+      pre_print := ""
+      tst := b.value i
+      (! tst).if {
+        puts pre_print
+      }
+      i := i + 1
+    }.do_until {tst}
+    sp_indent := sp_indent - 2
+    puts "\n"
+    put_indent; puts "]"
+    pre_print := ",\n"
+  )
+  
+  - put_object b:{} <-
+  ( + tst:BOOLEAN
+    puts pre_print
+    puts "{\n"
+    sp_indent := sp_indent + 2
+    pre_print := ""
+    b.value
+    sp_indent := sp_indent - 2
+    puts "\n"
+    put_indent; puts "}"
+    pre_print := ",\n"
+  )
+   
+  - read_object <-
+  (
+    (read_pair).if {
+      {read_char ','}.while_do {
+        (! read_pair).if { err warning msg "Pair needed."; }
+      }
+    }
+    (! read_char '}').if { err warning msg "End object '}' needed."; }
+  )
+  
+  - read p:STRING_ALIAS src s:STRING_BUFFER :BOOLEAN <-
+  ( + r:BOOLEAN
+    (src,filename,cur) := (s,p,0)
+    {
+      (! read_pair).if { err warning msg "Pair needed."; }
+    }.do_while {read_char ','}
+    (cur = src.upper+1).if {
+      r := TRUE
+    } else {
+      err warning msg "End of file incorrect."
+      cur.print; '/'.print; (src.upper+1).println
+    }
+    (src,filename,cur) := (Old src,Old filename,Old cur)
+    r
+  )
+  
+  - update p:STRING_ALIAS src s:STRING_BUFFER <-
+  ( is_update := TRUE; read p src s; )
+  
+  - syntax  :INTEGER := 0
+  - semantic:INTEGER := 1
+  - warning :INTEGER := 2
+  - message :INTEGER := 3
+  
+  - err typ:INTEGER msg tx:STRING <-
+  ( + y,x,i:INTEGER
+    + c:CHARACTER
+    STRING.tmp2 { (msg,spc:STRING_BUFFER)
+      msg += "--"
+      typ
+      .when syntax  then { msg += "SYNTAX--"; }.when semantic then { msg += "SEMANTIC"; }
+      .when warning then { msg += "WARNING-"; }.when message  then { msg += "MESSAGE-"; }
+      msg += "----------------------------\n" += tx
+      (x,y) := column_line
+      msg += "\nLine ";  y.append_in msg
+      msg += " column "; x.append_in msg
+      msg += " in `" += filename += "':\n";
+      (y-1).times { {src.at i = '\n'}.until_do { i := i + 1; }; i := i + 1; }
+      {(i > src.upper) || {(c:=src.at i) = '\n'}}.until_do {
+        msg | c
+        (x != 0).if { spc | (c = '\t').ok '\t' or ' '; x := x - 1; }
+        i := i + 1
+      }
+      msg | '\n'
+      msg += spc
+      msg += "^\n\n"
+      msg.print_error
+    }
+    (typ != warning).if { exit exit_failure_code; }
+  )
+
+Private
+  
+  - puts s:STRING <-
+  ( src.insert_string s to cur; cur := cur + s.count; )
+  
+  - pre_print:STRING_ALIAS := ""
+  
+  - tmp_json:STRING_BUFFER := STRING_BUFFER.create 128
+  
+  - is_update:BOOLEAN
+    
+  + filename:STRING_ALIAS
+  
+  + src:STRING_BUFFER
+  + cur:INTEGER
+
+  - column_line:(INTEGER,INTEGER) <-
+  ( + l,c,i:INTEGER
+    {(i > src.upper) || {i = cur}}.until_do {
+      ((i <= src.upper) && {src.at i = '\n'}).if { (c,l) := (0,l + 1); } else { c := c + 1; }
+      i := i + 1
+    }
+    c,l+1
+  )
+  
+  + last_char:CHARACTER
+  + last_str:STRING_ALIAS
+  
+  + last_int:INTEGER
+  + last_real:REAL_32
+  + is_real:BOOLEAN
+  
+  - sp_indent:INTEGER
+  - put_indent <-
+  ( (sp_indent > 0).if { src.insert ' ' to cur on sp_indent; cur := cur + sp_indent; }; )
+  
+  - skip_sp:BOOLEAN <-
+  ( + old_cur:INTEGER
+    + level:INTEGER
+    + c:CHARACTER
+    old_cur := -1
+    {old_cur = cur}.until_do {
+      old_cur := cur
+      {(cur > src.upper) || {(c:=src.at cur) > ' '}}.until_do { cur := cur + 1; }; // Spaces      
+      ((cur < src.upper) && {c = '/'}).if {
+        ((c := src.at (cur + 1)) = '/').if { // C++ comment style
+          cur := cur + 2
+          {(cur > src.upper) || {(c := src.at cur) = '\n'}}.until_do { cur := cur + 1; }
+        }.elseif {c = '*'} then { // C comment style.
+          (cur, level) := (cur+2, 1)
+          {(cur >= src.upper) || {level = 0}}.until_do {            
+            (((c := src.at cur) = '/') && {src.at (cur+1) = '*'}).if {
+              (cur, level) := (cur+2, level+1)
+            }.elseif {(c = '*') && {src.at (cur+1) = '/'}} then {
+              (cur, level) := (cur+2, level-1)
+            } else {
+              cur := cur + 1
+            }
+          }
+          (level != 0).if { cur := old_cur; err syntax msg "End of comment not found !"; }
+        }
+      }
+    }
+    cur != Old cur
+  )
+  
+  - read_char ch:CHARACTER :BOOLEAN <-
+  ( skip_sp; ((cur <= src.upper) && {src.at cur = ch}).if { (cur, last_char) := (cur+1, ch); })
+  
+  - read_word st:STRING_ALIAS :BOOLEAN <-
+  ( + i:INTEGER
+    skip_sp
+    {(cur+i > src.upper) || {i > st.upper} || {src.at (cur+i) != st.at i}}.until_do { i := i + 1; }
+    ((i > st.upper) && {(cur+i > src.upper) || {! src.at (cur+i).is_identifier}}).if { cur := cur + i; last_str := st; }
+  )
+  
+  - read_utf8:BOOLEAN <-
+  (cur <= src.upper).if {
+    + n:UINTEGER_8
+    + c:CHARACTER
+    tmp_json.clear
+    n := (c := src.at cur).to_uinteger_8
+    tmp_json.add_last c
+    cur := cur + 1
+    ((n & 80h) != 0).if {
+      { tmp_json.add_last (src.at cur)
+        cur := cur + 1
+        n := n << 1
+      }.do_until {(n & 40h) = 0}
+    }
+    last_str := tmp_json.to_string_alias
+  }
+  
+  - read_str e:CHARACTER :BOOLEAN <-
+  ( + c:CHARACTER
+    + old_cur,i:INTEGER
+    skip_sp
+    old_cur := cur
+    (cur <= src.upper).if {
+      ((c := src.at cur) = e).if {
+        cur := cur + 1
+        tmp_json.clear
+        {(cur > src.upper) || {(c := src.at cur) = e}}.until_do {
+          cur := cur + 1
+          ((c = '\\') && {cur <= src.upper}).if {
+            i := "abfnrtv\\?\'\"".last_index_of (src.at cur)
+            (i >= 0).if {
+              tmp_json | "\a\b\f\n\r\t\v\\\?\'\"".at i
+            } else { err syntax msg "Escape character incorrect !"; }
+            cur := cur + 1
+          } else { tmp_json | c; }
+        }
+        (cur > src.upper).if { cur := old_cur; err syntax msg "End of String not found !"; }
+        cur := cur + 1
+        last_str := tmp_json.to_string_alias
+      }.elseif {c.is_letter} then {
+        tmp_json.clear
+        { tmp_json | c; cur := cur + 1; }.do_while {(cur <= src.upper) && {(c := src.at cur).is_identifier}}
+        last_str := tmp_json.to_string_alias
+      }
+    }
+    old_cur != cur
+  )
+              
+  - read_num:BOOLEAN <-
+  ( + c:CHARACTER
+    + e0,e1,old_cur:INTEGER
+    + neg,f:BOOLEAN
+    skip_sp
+    old_cur := cur
+    (cur <= src.upper).if {
+      (((c := src.at cur).is_digit) || {(neg := c = '-') && {cur < src.upper} && {(c := src.at (cur+1)).is_digit}}).if {
+        is_real := FALSE
+        tmp_json.clear
+        tmp_json | c; cur := cur + 1 + neg.to_integer
+        {(cur <= src.upper) && {((c := src.at cur).is_hexadecimal_digit) || {c = '_'} || {c = '\''} || {c = '.'}}}.while_do {
+          (c.is_hexadecimal_digit).if { tmp_json | c; e0 := e0 + f.to_integer; }
+          (c = '.').if { f.if { err syntax msg "Float invalid."; }; f := TRUE; }
+          cur := cur + 1
+        }
+        (f && {e0 = 0}).if {
+          f := FALSE
+          cur := cur - 1
+        }
+        (c = 'h').if {
+          f.if { err syntax msg "Float invalid."; }
+          last_int := tmp_json.to_hexadecimal; cur := cur + 1
+        } else {
+          (tmp_json.last > '9').if { tmp_json.remove_last; cur := cur - 1; }
+          (cur <= src.upper).if {
+            ((c := src.at cur) = 'o').if {
+              (f || {! tmp_json.is_octal}).if { err syntax msg "Incorrect octal number."; }
+              last_int := tmp_json.to_octal; cur := cur + 1
+            }.elseif {c = 'b'} then {
+              (f || {! tmp_json.is_bit}).if { err syntax msg "Incorrect binary number."; }
+              last_int := tmp_json.to_binary; cur := cur + 1
+            }.elseif {c = 'd'} then {
+              (f || {! tmp_json.is_integer_64}).if { err syntax msg "Incorrect decimal number."; }
+              last_int := tmp_json.to_integer_64; cur := cur + 1
+            } else {
+              (c.to_upper = 'E').if { f := TRUE; cur := cur + 1
+                read_char '-' || {read_char '+'}
+                {(cur <= src.upper) && {(c := src.at cur).is_digit}}.while_do { e1 := e1 * 10 + c.to_digit; cur := cur + 1; }
+                (last_char = '-').if { e1 := -e1; }
+              }
+              f.if {
+                e1 := e1 - e0
+                (! tmp_json.is_integer_64).if { err syntax msg "Not number."; }
+                last_real := tmp_json.to_integer_64.to_real_32 * 10.0.pow e1
+                is_real := TRUE
+              } else {                
+                last_int := tmp_json.to_integer_64
+                last_real := last_int
+              }
+            }
+          } else {
+            last_int := tmp_json.to_integer_64
+            last_real := last_int
+          }
+        }
+        (neg).if {
+          last_real := -last_real
+          last_int := -last_int
+        }
+      }
+    }
+    old_cur != cur
+  )
+  
+  - skip_value <-
+  ( + cro,acc:INTEGER
+    + c:CHARACTER
+    {(cur <= src.upper) && {((c := src.at cur) != ',') || {cro != 0} || {acc != 0}}}.while_do {
+      ((! skip_sp) && {! read_str '\"'}).if {        
+        (c = '{').if   { acc := acc + 1; }.elseif
+        {c = '}'} then { acc := acc - 1; }.elseif
+        {c = '['} then { cro := cro + 1; }.elseif
+        {c = ']'} then { cro := cro - 1; }
+        cur := cur + 1
+      }
+    }
+  )
+  
+  // Grammar JSON
+          
+  - read_pair:BOOLEAN <-
+  (read_str '\"').if {
+    + cur0,cur1:INTEGER
+    + n:STRING_ALIAS
+    n := last_str
+    (! read_char ':').if { err warning msg "':' needed."; }
+    skip_sp
+    cur0 := cur
+    (is_update).if {      
+      skip_value
+      cur1 := cur-1
+      pre_print := ""
+      new_value n.if {
+        src.remove cur0 to cur1
+        cur := cur - (cur1-cur0+1)
+      } else {
+        cur := cur0
+        traverse_value n array FALSE
+      }
+    } else {
+      (! read_value n array FALSE).if {
+        cur := cur0
+        tmp_json.copy "Value not found for `";
+        tmp_json += n += "'."
+        err semantic msg tmp_json
+      }
+    }
+  }
+  
+  - stack_array:Expanded ARRAY INTEGER
+  - array_index:INTEGER <- stack_array.last
+  
+  - read_value id:STRING_ALIAS array is_tab:BOOLEAN :BOOLEAN <-
+  ( + result:BOOLEAN
+    {
+      (read_word "true" || {read_word "false"}).if {
+        result := item id bool (last_str = "true")
+      }.elseif {read_word "null"} then {
+        result := object_null id
+      }.elseif {read_str '\"'} then {
+        result := item id str last_str
+      }.elseif {read_num} then {
+        (is_real).if {
+          result := item id real last_real
+        } else {
+          result := item id int last_int || {item id real (last_int.to_real_64)}
+        }
+      }.elseif {read_char '\''} then {
+        result := object_in id
+        (! read_char '\'').if { err warning msg "End ' value needed."; }
+      }.elseif {read_char '{'} then {
+        result := object id
+      }.elseif {read_char '['} then {
+        stack_array.add_last 0
+        result := read_value id array TRUE
+        stack_array.remove_last
+        (! read_char ']').if { err warning msg "End array ']' needed."; }
+      }
+      (is_tab).if { stack_array.put_last (stack_array.last + 1); }
+    }.do_while {result && {is_tab} && {read_char ','}}
+    result || {is_tab}
+  )
+  
+  - traverse_value id:STRING_ALIAS array is_tab:BOOLEAN <-
+  ( 
+    (
+      (read_word "true") || {read_word "false"} ||
+      {read_word "null"} || {read_str '\"'} ||
+      {read_num} || {read_str '\''}
+    ).if {
+      // Nothing.
+    }.elseif {read_char '{'} then {
+      object id
+    }.elseif {read_char '['} then {
+      traverse_value id array TRUE
+      (! read_char ']').if { err warning msg "End array ']' needed."; }
+    }
+    (is_tab).if {
+      (read_char ',').if { traverse_value id array TRUE; }
+    }
+  )
+  

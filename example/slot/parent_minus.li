@@ -1,0 +1,20 @@
+Header
+
+  + name        := PARENT_MINUS; // OBJ can to be clonable.
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Private
+
+  + parent_value_minus:INTEGER
+
+  - set_parent_value_minus new:INTEGER <-
+  (
+    parent_value_minus := new
+  )
+  
+Public
+  
+  - create:SELF <- clone

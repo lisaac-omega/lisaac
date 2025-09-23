@@ -1,0 +1,264 @@
+Header
+  + name := PANEL;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ PANEL
+  + parent_elevator:Expanded ELEVATOR
+  
+Private
+  - stk:Expanded ARRAY (Strict PANEL)
+  
+  - sub_width_min:REAL_32 <-
+  ( + r,v:REAL_32
+    child.foreach { win:WIN
+      v := win.width_min
+      (win.is width_locked).if { v := win.width.max v; }
+      is vertical.if { // r := Max (width)
+        (v > r).if { r := v; }
+      } else { // r := Sum (width)
+        r := r + v
+      }
+    }
+    r
+  )
+  
+  - sub_height_min:REAL_32 <-
+  ( + r,v:REAL_32
+    child.foreach { win:WIN
+      v := win.height_min
+      (win.is height_locked).if { v := win.height.max v; }
+      is vertical.if { // r := Sum (height)
+        r := r + v
+      } else { // r := Max (height)
+        (v > r).if { r := v; }
+      }
+    }
+    r
+  )
+  
+Public
+  - margin:REAL_32 <- FONT.size_sys + 4
+  
+  - vertical:INTEGER := 1<<15
+  - border:INTEGER   := 1<<14
+  
+  + text:STRING_ALIAS
+  + height_upper:REAL_32
+  + width_upper:REAL_32
+  
+  - width_min:REAL_32 <-
+  ( + result:REAL_32
+    result := sub_width_min
+    (is border).if { result := result + margin*2; }
+    result
+  )
+  
+  - height_min:REAL_32 <-
+  ( + result:REAL_32
+    result := sub_height_min
+    (is border).if { result := result + margin*2; }
+    result
+  )
+  
+  - refresh <-
+  ( + p,d,minh,minw,m,w,h,x,y:REAL_32
+    + cpt:INTEGER
+    
+    (minw,minh) := (sub_width_min,sub_height_min)
+    (width  = 0).if { width  := minw; }
+    (height = 0).if { height := minh; }
+    (is border).if { m := margin; }
+    (width_upper,height_upper) := (minw+m*2,minh+m*2)
+    is vertical.if { // Vertical:
+      p := yo + m; // Top by default
+      (is align_bottom).if {
+        p := ymax-m - minh
+      }.elseif {(is align_middle) || {is full_height}} then { // middle or full
+        p := yo + (height-minh)/2
+        (is full_height).if {
+          child.foreach { win:WIN
+            (win.is height_locked).if { cpt := cpt + 1; }
+          }
+          (cpt != child.count).if {
+            p := yo+m
+            d := (height-m*2 - minh)/(child.count - cpt)
+          }
+        }
+      }
+      child.foreach { win:WIN
+        (w,h) := (win.width_min, win.height_min)
+        // width:
+        (win.is width_locked).if {
+          win.set_width (win.width.max w)
+        } else {
+          (is full_width).if {
+            win.set_width (width-m*2)
+          } else {
+            win.set_width (win.width_min)
+          }
+        }
+        // xo:
+        x := xo + m; // Left by default
+        (is align_right).if {
+          x := xmax-m-win.width
+        }.elseif {(is align_center) || {is full_width}} then {
+          x := xo+(width-win.width)/2
+        }
+        win.set_xo x
+        // height:
+        (win.is height_locked).if {
+          win.set_height (win.height.max h)
+        } else {
+          (is full_height).if {
+            win.set_height (h+d)
+          } else {
+            win.set_height h
+          }
+        }
+        // yo:
+        win.set_yo p; p := p+win.height
+        win.refresh
+      }
+    } else { // Horizontal
+      p := xo+m; // Left by default        
+      (is align_right).if {
+        p := xmax-m - minw
+      }.elseif {(is align_center) || {is full_width}} then { 
+        p := xo + (width-minw)/2
+        (is full_width).if {
+          child.foreach { win:WIN
+            (win.is width_locked).if { cpt := cpt + 1; }
+          }
+          (cpt != child.count).if {
+            p := xo+m
+            d := (width-m*2 - minw)/(child.count - cpt)
+          }
+        }
+      }
+      child.foreach { win:WIN
+        (w,h) := (win.width_min, win.height_min)
+        // height:
+        (win.is height_locked).if {
+          win.set_height (win.height.max h)
+        } else {
+          (is full_height).if {
+            win.set_height (height-m*2)
+          } else {
+            win.set_height h
+          }
+        }
+        // yo:
+        y := yo + m; // Top by default
+        (is align_bottom).if {
+          y := ymax-m-win.height
+        }.elseif {(is align_middle) || {is full_height}} then {
+          y := yo+(height-win.height)/2
+        }
+        win.set_yo y
+        // width:        
+        (win.is width_locked).if {
+          win.set_width (win.width.max w)
+        } else {
+          (is full_width).if {
+            win.set_width (w+d)
+          } else {
+            win.set_width w
+          }
+        }
+        // xo:
+        win.set_xo p; p := p+win.width
+        win.refresh
+      }
+    }
+  )
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+    
+  - txt t:STRING_ALIAS :SELF <- ( text := t; set border; Self)
+  
+  - free <- ( child.foreach { w:WIN; w.free; }; child.clear; text := NULL; stk.add_last Self; )
+      
+  - Self:SELF '/' other:WIN :PANEL <-
+  ( + result:PANEL
+    ((is vertical) && {text = NULL} && {!is fix_panel}).if {
+      result := add other
+    } else {
+      result := PANEL.new.init_obj.add Self.add other.set vertical
+    }
+    result
+  )
+  
+  - Self:SELF '|' other:WIN :PANEL <-
+  ( + result:PANEL
+    ((is vertical) || {text != NULL} || {is fix_panel}).if {
+      result := PANEL.new.init_obj.add Self.add other
+    } else {
+      result := add other
+    }
+    result
+  )
+  
+  - add w:WIN :SELF <-
+  ( + p:WIN
+    p := w.parent
+    (p != NULL).if {
+      //w.type_name.print; " a comme parent ".print; p.type_name.println
+      p.child.remove_value w
+    }
+    w.init_parent Self
+    Self
+  )
+  
+  - move_pos_y dy:REAL_32 <- ( child.foreach {w:WIN; w.add_xy (0,-dy); }; )
+  - move_pos_x dx:REAL_32 <- ( child.foreach {w:WIN; w.add_xy (-dx,0); }; )
+  
+  - draw_child <-
+  ( + m:REAL_32
+    is border.if { m := margin; }
+    ((width < width_upper) || {height < height_upper}).if {
+      intersect_scissor (xo+m,yo+m) size (width-m*2,height-m*2)
+      parent_win.draw_child
+      reset_scissor
+    } else {
+      parent_win.draw_child
+    }
+  )
+  
+  - draw <-
+  ( + x,y,m,r:REAL_32
+    + t:STRING
+    //child.foreach { w:WIN; w.draw_debug; }
+    is border.if {
+      m := margin/2
+      r := m/2
+      fill_color (LOOK_GUI.text_ui)
+      font_face_id (FONT.sys (FONT.roman))
+      font_size (FONT.size_sys)
+      text_align (align_left | align_middle)
+      (x,y) := (xo+margin,yo+m)
+      (text != NULL).if {
+        t := text
+        (! t.is_empty).if { x := text (x+1,y) msg t + 2; }
+      }
+      begin_path
+      stroke_width 1.0
+      line_cap butt
+      stroke_color (LOOK_GUI.text_ui)
+      move_to (x,y)
+      x := xmax-m; line_to (x-r,y); arc_to (x,y) to (x,y+r) radius r
+      y := ymax-m; line_to (x,y-r); arc_to (x,y) to (x-r,y) radius r
+      x := xo + m; line_to (x+r,y); arc_to (x,y) to (x,y-r) radius r
+      y := yo + m; line_to (x,y+r); arc_to (x,y) to (x+r,y) radius r
+      x := xo + margin; line_to (x,y)
+      stroke
+    }
+    draw_elevator
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    (event_elevator ev) || {
+      FALSE
+    }
+  )

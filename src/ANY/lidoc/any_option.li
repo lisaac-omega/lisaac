@@ -1,0 +1,34 @@
+Header
+
+  + name        := ANY_OPTION;
+
+Inherit
+
+  - parent_object:OBJECT := OBJECT
+
+Public
+
+  - is_shorter2:BOOLEAN
+
+  - is_shorter :BOOLEAN
+
+  - is_short_code:BOOLEAN
+  - is_short_private:BOOLEAN
+  - is_short_recursive:BOOLEAN
+
+  - put tok:STRING to buf:STRING_BUFFER like key:STRING_ALIAS <-
+  ( + lst:LINKED_LIST(STRING_ALIAS)
+
+    (key != NULL).if {
+      lst := PARSER.short_dico.fast_reference_at key
+      (lst != NULL).if {
+        (lst.lower).to (lst.upper) do { j:INTEGER
+          (lst.item j = NULL).if {
+            buf.append tok
+          } else {
+            buf.append (lst.item j)
+          }
+        }
+      }
+    }
+  )

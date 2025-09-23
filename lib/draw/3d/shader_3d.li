@@ -1,0 +1,139 @@
+Header
+  
+  + name := SHADER_3D;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - pen_gl:PEN_GL <- PAPER.wins.first.pen.gl
+  
+  + id:INTEGER
+  
+  - create hs:STRING_ALIAS geometry gs:STRING_ALIAS vertex vs:STRING_ALIAS frag fs:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make hs geometry gs vertex vs frag fs
+    result
+  )
+  
+  - make hs:STRING_ALIAS geometry gs:STRING_ALIAS vertex vs:STRING_ALIAS frag fs:STRING_ALIAS  <-
+  ( + igeom,ivert,ifrag,status:INTEGER
+    + gl:PEN_GL
+    gl := PAPER.wins.first.pen.gl
+    id := gl.gl_create_program
+    (gs != NULL).if {
+      igeom := gl.gl_create_shader `GL_GEOMETRY_SHADER`:INTEGER
+    }
+    ivert := gl.gl_create_shader `GL_VERTEX_SHADER`:INTEGER
+    ifrag := gl.gl_create_shader `GL_FRAGMENT_SHADER`:INTEGER
+    (gs != NULL).if {
+      gl.gl_shader igeom source (hs,gs,"")
+    }
+    gl.gl_shader ivert source (hs,vs,"")
+    gl.gl_shader ifrag source (hs,fs,"")
+    (gs != NULL).if { 
+      gl.gl_compile_shader igeom
+      status := gl.gl_get_shaderiv (igeom,`GL_COMPILE_STATUS`:INTEGER)
+      ? {status = 1}
+    }
+    gl.gl_compile_shader ivert
+    status := gl.gl_get_shaderiv (ivert,`GL_COMPILE_STATUS`:INTEGER)
+    ? {status = 1}
+    gl.gl_compile_shader ifrag
+    status := gl.gl_get_shaderiv (ifrag,`GL_COMPILE_STATUS`:INTEGER)
+    ? {status = 1}
+    (gs != NULL).if {
+      gl.gl_attach_shader(id, igeom)
+    }
+    gl.gl_attach_shader(id, ivert)
+    gl.gl_attach_shader(id, ifrag)
+    gl.gl_link_program id
+    (gs != NULL).if {
+      gl.gl_delete_shader igeom
+    }
+    gl.gl_delete_shader ivert
+    gl.gl_delete_shader ifrag
+    gl.check_error "End shader"
+  )
+/*  
+  - use <-
+  (
+    pen_gl.gl_use_program id
+  )
+*/  
+  // utility uniform functions
+  - set name:STRING_ALIAS bool value:BOOLEAN <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform1i (loc,value.to_integer)
+  )
+    
+  - set name:STRING_ALIAS int value:INTEGER <-
+  ( + loc:UINTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform1i (loc,value)
+  )
+    
+  - set name:STRING_ALIAS float value:REAL_32 <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform1f (loc,value)
+  )
+    
+  - set name:STRING_ALIAS vec2 value:VEC2 <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform2fv (loc, value)
+  )
+  - set name:STRING_ALIAS xy (x,y:REAL_32) <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform2f (loc, x, y)
+  )
+    
+  - set name:STRING_ALIAS vec3 value:VEC3 <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform3fv(loc, value)
+  )
+  
+  - set name:STRING_ALIAS xyz (x,y,z:REAL_32) <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform3f(loc, x, y, z)
+  )
+
+  - set name:STRING_ALIAS vec4 value:VEC4 <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    not_yet_implemented
+    //pen_gl.gl_uniform4fv(loc, 1, &value[0])
+  )
+  
+  - set name:STRING_ALIAS xyzw (x,y,z,w:REAL_32) <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform4f (loc, x, y, z, w)
+  )
+
+//  - set name:STRING_ALIAS mat2 mat:MAT2 <-
+//  ( + loc:INTEGER_32
+//    loc := pen_gl.gl_get_uniform_location (id, name)
+//    not_yet_implemented
+    //pen_gl.gl_uniform_matrix2fv(loc, 1, GL_FALSE, &mat[0][0])
+//  )
+
+//  - set name:STRING_ALIAS mat3 mat:MAT3 <-
+//  ( + loc:INTEGER_32
+//    loc := pen_gl.gl_get_uniform_location (id, name)
+//    not_yet_implemented
+    //pen_gl.gl_uniform_matrix3fv(loc, 1, GL_FALSE, &mat[0][0])
+//  )
+
+  - set name:STRING_ALIAS mat4 mat:MAT4X4 <-
+  ( + loc:INTEGER_32
+    loc := pen_gl.gl_get_uniform_location (id, name)
+    pen_gl.gl_uniform_matrix4fv(loc,mat)
+  )

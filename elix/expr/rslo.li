@@ -1,0 +1,466 @@
+Header
+  + name := Strict RSLO;
+
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Private
+  - stk_cslot:Expanded ARRAY RSLO
+  
+Public
+  
+  + name_id:STRING_ALIAS
+  + param:Expanded ARRAY EXPR
+    
+  - self_type:TPRO <-
+  ( + to:TPRO
+    /*+ e:EXPR
+    e := param.at self
+    (e = NULL).if {
+      to := TO_SCREEN.proto.type
+    } else {      
+      to ?= e.type.at 0
+      };*/
+    not_yet_implemented
+    to
+  )
+    
+Public
+  
+  - type:TYPE <-
+  ( + result:TYPE
+    result := node.slot.first.type
+    (result.is_self).if { result := self_type; }
+    result
+  )
+      
+  - new:SELF <-
+  ( + r:SELF; (stk_cslot.is_empty).if { r := clone; } else { r := stk_cslot.pop; }; r)
+  - free <- ( param.foreach {e:EXPR; (e != NULL).if { e.free; }; }; param.clear; stk_cslot.add_last Self; )
+  
+  - add_first e:EXPR <-
+  (
+    param.add_first e
+    (e != NULL).if {      
+      finalize 0 db (pt_b+e.db) de (pt_b.pt+db+dd)
+    }
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.add_last '\0'
+      tmp.append name_id
+      name_id := tmp.to_string_alias
+    }
+  )
+  
+/*  - or_rloc:EXPR <-
+  ( + l:LOCAL
+    + result:EXPR
+    (
+      (param.is_empty) &&
+      {(l := get_local name_id) != NULL}
+    ).if {
+      result := RLOC.new.set_local l
+      result.copy_itm Self
+      free
+    } else {
+      add_first NULL
+      result := Self
+    }
+    result
+  );*/
+  
+  // PARSER
+  
+  - new_parse t:INTEGER <-
+  ( name_id := "BUG";
+    t
+    .when 0 then {
+      rd_send_msg
+      ((param.is_empty) && {get_local name_id != NULL}).if {        
+        sty.set_upper (Old sty.upper)
+        pos_i := Old pos_i
+      }
+    }
+    .when 1 then { rd_send_msg; }
+    .when 2 then { rd_send_small_msg; }    
+  )
+  
+  - rd_send_small_msg <-
+  (
+    read_idf.if {
+      fnt (FONT.italic) sub (last_str.count)
+      col (LOOK.slot) sub (last_str.count)
+      fnt (FONT.roman) sub 0
+      name_id := last_str
+    }
+  )
+    
+  - rd_send_msg <-
+  //++ SEND_MSG     -> identifier { ARGUMENT [ identifier ] }
+  ( + arg:EXPR
+    read_idf.if {
+      //
+      ((! sty.is_empty) && {pos_i.pt - pt_b.pt - last_str.count < sty.second_last}).if {
+        name.print; ' '.print
+        pos_i.pt.println
+        print_sty pt_b
+      }
+      col (LOOK.slot) sub (last_str.count)
+      itm Self sub (last_str.count)
+      itm Self sub 0
+      //
+      STRING.tmp { n:STRING_BUFFER
+        n.append last_str
+        {((arg := rd_arg) != NULL) && {read_idf}}.while_do {
+          //
+          col (LOOK.slot) sub (last_str.count)
+          itm Self sub (last_str.count)
+          itm Self sub 0
+          //
+          param.add_last arg
+          n.add_last '\0'
+          n.append last_str
+        }
+        (arg != NULL).if {
+          param.add_last arg
+          n.add_last '\0'
+        }
+        name_id := n.to_string_alias
+      }
+      {at (pos_i-1) = ' '}.while_do { pos_i := pos_i - 1; }
+    }
+  )
+
+  - rd_arg:EXPR <-
+  //++ ARGUMENT     -> EXPR_PRIMARY
+  //++               | identifier
+  ( + result:EXPR
+    skip_sp
+    ((result := rd_expr_prim) != NULL) ||
+    {(result := RLOC.parse_sp 0) != NULL} ||
+    {(result := RSLO.parse_sp 2) != NULL}
+    result
+  )
+  
+  // DRAW
+  
+  - begin_draw <-
+  ( + liz:LIZ
+    i_param := 0
+    (((liz := LIZ.find name_id) != NULL) && {! inside_glyph}).if {
+      //print_sty (pt_b.pt)
+      //"----------- DEB------------".println
+      liz.drw txt_buf color (LOOK.cols.at (LOOK.slot)) arg { i:INTEGER; param.at i}
+      pos_i := pt_b + db + dd
+      //"----------- FIN------------".println
+      //toks.at tok_cur.sty_run
+    }
+  )
+  
+  - inside_glyph:BOOLEAN <-
+  ( + r:BOOLEAN
+    + i:INTEGER
+    + itm:TOK_ITM
+    ((!pos.is_xy) && {pos.pt.in_range (pt_b+db) to (pt_b+db+dd)}).if {
+      r := TRUE
+      {(r) && {i <= param.upper}}.while_do {
+        itm := param.at i
+        r := ! pos.pt.in_range (pt_b+itm.db+1) to (pt_b+itm.db+itm.dd-1)
+        //pos.pt.print; '/'.print; (pt_b+itm.db+itm.dd).print; ' '.print; r.println
+        i := i + 1
+      }
+    }
+    r
+  )
+  
+  + i_param:INTEGER
+  - sub_draw <-
+  (
+    (i_param <= param.upper).if {
+      (param.at i_param = NULL).if {
+        i_param := i_param + 1
+      }.elseif {param.at i_param.now pos_i} then {
+        param.at i_param.draw
+        i_param := i_param + 1
+      }
+    }
+  )
+  
+  - end_draw <- ( )
+  
+  //
+  // ///////////////////////////////////////  OLD
+  //
+  
+  - name s:{STRING; } param p:{INTEGER; } <- node.name s param p
+    
+  - is_glyph:BOOLEAN <- TIKZ.get name != NULL
+    
+  - pi:INTEGER := -1; // BSBS A virer !  
+  - txt_in err:ERR <-
+  ( + pb:INTEGER
+    + k,i:INTEGER
+    + par:EXPR
+    + cax:CAX
+    + c:CHARACTER
+    (is_glyph).if {
+      err.txt | '\0'
+      err.exp.add_last Self
+    } else {
+      ((Self = MSG.cax) && {SPOT.old_stack_last = MSG}).if { pi := MSG.old_pi; }
+      pb := err.txt.count
+      
+      {i <= name.upper}.while_do {
+        c := name.at i; i := i + 1
+        (c != '\0').if {
+          (is_sp).if { err.txt | ' '; }
+          (i != 1).if {
+            (self = k).if { STY.put (STY.rec_left) to (err.txt.count) in (err.sty); }
+            k := k + 1
+          }
+          STY.put (is_fn.ok (STY.cfn) or (STY.ctx)) to (err.txt.count) in (err.sty)
+          err.txt | c
+          {(i <= name.upper) && {(c := name.at i) != '\0'}}.while_do {
+            (c = ' ').if { err.txt += "·"; } else { err.txt | c; }
+            i := i + 1
+          }
+          (self = k).if { STY.put (STY.rec_right) to (err.txt.upper) in (err.sty); }
+          is_sp := TRUE
+        } else {
+          par := param.at k
+          (par != NULL).if {
+            (is_sp).if { err.txt | ' '; }; is_sp := FALSE
+            (((cax ?= par) != NULL) && {! cax.is_glyph}).if {
+              ((cax.is_tx) && {!is_fn} && {(k != self) || {cax.nb_param = 0}})
+              .ok { STY.put (STY.italic) to (err.txt.count) in (err.sty); }
+              do { cax.txt_in err; }
+              ok { STY.put (STY.italic) to (err.txt.count) in (err.sty); }
+            } else {
+              err.txt | '\0'
+              err.exp.add_last par
+              is_sp := (par != NULL) && {(par.dynamic_type != LIST) || {LIST.cast par.one_line}}
+            }
+          }
+        }
+      }
+    }
+  )
+  
+  - drw_fn:(REAL_32,REAL_32) <- (10.0,10.0)
+  
+  - drw_fn_old:(REAL_32,REAL_32) <-
+  ( + i,w:INTEGER
+    + a,d:REAL_32
+    + lst,ll:LIST
+    + t:TIKZ
+    t := TIKZ.get name
+    (t = TIKZ).if {
+      lst ?= param.second
+      (lst = NULL).if {
+        (a,d) := TIKZ.mat { param.put (param.at 1.drw) to 1; } count 1 width (NUM.cast (param.first).view.to_integer)
+      } else {
+        (param.first.dynamic_type = NUM).if {
+          w := NUM.cast (param.first).view.to_integer
+        }.elseif { ll ?= param.first
+          (ll != NULL) && {ll.one_expr} && {ll.exp.first.dynamic_type = NUM}
+        } then {
+          w := NUM.cast (ll.exp.first).view.to_integer
+        } else {
+          crash_with_message "CSLOT: MTX width receiver not constant."
+        }
+        (a,d) := TIKZ.mat {
+          lst.exp.put (lst.exp.at i.drw) to i; i := i + 1
+        } count (lst.exp.count) width w
+      }
+    } else {
+      (a,d) := t.drw  {
+        + l:LIST
+        + e:EXPR
+        (((l ?= param.at i) != NULL) && {l.one_expr} && {l.exp.count = 1}/* && {FALSE}*/).if {
+          GRP.set_option TRUE
+        }
+        e := IBASE.drw (param.at i)
+        param.put e to i
+        i := i + 1
+      }
+    }
+    a,d
+  )
+  
+  - drw <-
+  ( 
+    (is_glyph).if {
+      FN.drw {drw_fn} cas Self
+    } else {
+      parent_cax.drw
+    }
+  )
+    
+  - run <-
+  ( + up,lo,old_up,min_i,tmp,lself:INTEGER
+    + o:OP
+    + idx:LIARRAY INTEGER
+    + s:SLOT
+    + n:STRING_ALIAS
+    + t:TYPE
+    idx := LIARRAY INTEGER.new
+    old_up := stack_result.upper
+    (self = -1).if {
+      idx.add_last (stack_result.upper + 1)
+      push (LOC.new (LS.lookup_self))
+    } else {
+      lself := self
+    }
+    param.foreach { e:EXPR
+      idx.add_last (stack_result.upper + 1)
+      e.run
+    }
+    idx.add_last (stack_result.upper + 1)
+    "IDX=".print
+    idx.foreach { n:INTEGER; n.print; ' '.print; }
+    '\n'.print
+    // A REVOIR
+    STRING.tmp { tmp:STRING_BUFFER
+      n := ((tmp | 'X') += name).to_string_alias
+    }
+    "Search: ".print; n.print; " in ".print; stack_result.at (idx.at lself).static_type.key.print
+    //
+    s := stack_result.at (idx.at lself).static_type.lookup n
+    (s = NULL).if { " FAIL !".println; } else { " OK.".println; }
+    lo := idx.first
+    min_i := -1
+    idx.put (LS.upper + 1) to 0
+    1.to (idx.upper) do { i:INTEGER
+      up := idx.at i
+      lo.to (up-1) do { j:INTEGER
+        o := stack_result.at j
+        tmp := LS.new (o.static_type)
+        OP + LASS.new tmp val o
+        //"Analyse: ".print; o.out_std; '\n'.print
+        ((min_i = -1) && {o.type.same_dynamic_type LIST_BLOCK}).if { 
+          min_i := tmp
+        }
+      }
+      lo := up
+      idx.put (LS.upper + 1) to i
+    }
+    ((t := s.type) != NULL).if { LS.new t; }
+    idx.add_last (LS.upper);// BSBS: upper or upper+1 ?
+    stack_result.set_upper old_up
+    OP + SWITCH.new (SWITCH.typ) on (idx.at lself) slot s hmap min_i idx idx do { (sw:SWITCH,t:TYPE)
+      product_read (sw,t)
+    }
+  )
+    
+  - run_ass <-
+  [ ? {param.is_empty}; ]
+  ( + l:INTEGER
+    + s:SLOT
+    + idx:LIARRAY INTEGER
+    l := LS.lookup_self
+    s := LS.at l.static_type.lookup name
+    idx := LIARRAY INTEGER.new
+    idx.add_last (LS.upper+1)
+    LS.new (s.type)
+    idx.add_last (LS.upper)
+    (idx.first).to (idx.second) do { i:INTEGER
+      OP + LASS.new i val pop
+    }
+    OP + SWITCH.new (SWITCH.typ) on l slot s hmap (-2) idx idx do { (sw:SWITCH,t:TYPE)
+     // product_write (sw,t)
+    }
+  )
+  
+  - lookup (sw:SWITCH,t:TYPE) <-
+  ( + idx:LIARRAY INTEGER
+    + s,p:SLOT
+    + i,tmp_p:INTEGER
+    + n:STRING_ALIAS
+    {
+      p := parent.at i
+      i := i + 1
+    }.do_while {p.type.lookup name = NULL}
+    tmp_p := LS.new (p.type); // id
+    p.init
+    OP + LASS.new tmp_p value (SLO.new (sw.op) slot (p,0))
+    idx := LIARRAY INTEGER.new
+    idx.add_last (LS.new (p.type))
+    idx.add_last (idx.first)
+    OP + SWITCH.new (SWITCH.blk) on tmp_p slot p hmap 0 idx idx do {(sww:SWITCH,tt:TYPE)
+      + tb:LIST_BLOCK
+      + o:OP
+      tb ?= tt
+      (tb != NULL).if {
+        tb.arg.copy (sww.slot.arg)
+        tb.run tb arg (sww.idx)
+      } else {
+        o := SLO.new (sww.op) slot (sww.slot,0)
+        OP + LASS.new (sww.idx.first) value o
+      }
+    }
+    OP + SWITCH.new (idx.first) copy sw; // ->id
+  )
+  
+  - product_read (sw:SWITCH,t:TYPE) <- // BSBS: t:TYPE_TXT (ca devrait etre tjrs le cas)
+  ( + s:SLOT
+    + tt:TONE
+    + tmp:INTEGER
+    + n:STRING_ALIAS
+    n := sw.slot.key
+    tt ?= t
+    ((s := tt.slot.fast_reference_at n) = NULL).if {
+      not_yet_implemented
+      //lookup (sw,t)
+    } else {
+      s.init
+      tmp := LS.new (TYPE.numeric)
+      OP + LASS.new tmp val (SLO.new (sw.op) slot (s,0))
+      ? {LS.at tmp.type != NULL}
+      OP + SWITCH.new (SWITCH.blk) on tmp slot s hmap (sw.hmap) idx (sw.idx) do {(sww:SWITCH,tt:TYPE)
+        + tb,tbmap:LIST_BLOCK
+        + ss:SLOT
+        ss := sww.slot
+        tb ?= tt
+        (tb != NULL).if {
+          //tb.arg.copy (ss.arg); // BSBS: A revoir !
+          (sww.hmap = -1).if {
+            tbmap := tb
+          } else {
+            tbmap ?= LS.at (sww.hmap).type
+          }
+          crash
+          //OP + tbmap.run tb arg (sww.idx)
+        } else {
+          + i:INTEGER
+          (sww.idx.second_last).to (sww.idx.last) do { v:INTEGER
+            OP + LASS.new v val (SLO.new (sww.op) slot (ss,i))
+            i := i + 1
+          }
+        }
+      }
+    }
+  )
+  
+  
+  /*
+  - product_write (sw:SWITCH,t:TYPE) <-
+  ( + s,p:SLOT
+    + i,tmp_p:INTEGER
+    + n:STRING_ALIAS
+    n := sw.slot.name
+    ((s := t.slot.fast_reference_at n) = NULL).if {
+      lookup (sw,t)
+    } else {      
+      + tb:LIST_BLOCK
+      tb ?= t
+      i := s.index
+      (sw.idx.first).to (sw.idx.second) do { v:INTEGER
+        (s.clonable).if {
+          OP + SASS.new (sw.op.dup,i) value (LOC.new v)
+        } else {
+          OP + GASS.new i value (LOC.new v)
+        }
+        i := i + 1
+      }
+    }
+  );*/
+  

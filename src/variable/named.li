@@ -1,0 +1,40 @@
+Header
+
+  + name        := NAMED;
+
+  /*Parent for all slot*/
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  //
+  // Data.
+  //
+
+  + style:CHARACTER;  // '+': Clonable,
+                      // '-': Shared.
+                      // ' ': Argument
+                      // 'R': Result
+		      // 'T': Temporary
+		      // 'C': Cast
+
+  + name:STRING_ALIAS
+    
+  - set_style s:CHARACTER <-
+  (
+    style := s
+  )
+
+  //
+  // Hashable.
+  //
+
+  - hash_code: INTEGER <- name.hash_code
+
+
+
+
+

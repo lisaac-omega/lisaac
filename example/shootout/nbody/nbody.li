@@ -1,0 +1,132 @@
+Header
+
+  + name := NBODY;
+  
+Inherit
+  
+  - parent_clone : CLONE := CLONE
+  
+Private
+  
+  - nbodies : INTEGER
+  
+  - bodies:NATIVE_ARRAY(PLANET)
+  
+  - b:PLANET
+  - b2:PLANET
+  - dx:REAL_64
+  - dy:REAL_64
+  - dz:REAL_64
+  - distance:REAL_64
+  - mag:REAL_64
+  
+External
+  
+  - advance (dt:REAL_64,n:INTEGER) <-
+  (     
+    0.to n do { i : INTEGER
+      b := bodies.at i
+
+      (i + 1).to n do { j : INTEGER
+
+        b2 := bodies.at j
+
+        dx := b.x - b2.x
+        dy := b.y - b2.y
+        dz := b.z - b2.z
+
+        distance := (dx * dx + dy * dy + dz * dz).sqrt
+
+        mag := dt / (distance * distance * distance)
+
+        b.set_vx (b.vx - dx * b2.mass * mag)
+        b.set_vy (b.vy - dy * b2.mass * mag)
+        b.set_vz (b.vz - dz * b2.mass * mag)
+
+        b2.set_vx (b2.vx + dx * b.mass * mag)
+        b2.set_vy (b2.vy + dy * b.mass * mag)
+        b2.set_vz (b2.vz + dz * b.mass * mag)
+      }
+    }
+    0.to n do { i : INTEGER
+      b := bodies.at i
+
+      b.set_x (b.x + dt * b.vx)
+      b.set_y (b.y + dt * b.vy)
+      b.set_z (b.z + dt * b.vz)
+    }
+  )
+
+  - energy n:INTEGER :REAL_64 <-
+  ( + e:REAL_64
+    + lb:PLANET
+    + lb2:PLANET
+    + ldx,ldy,ldz:REAL_64
+    + dis:REAL_64
+
+    0.to nbodies do { i : INTEGER
+      lb := bodies.at i
+      e := e + lb.mass * 0.5 * (lb.vx * lb.vx + lb.vy * lb.vy + lb.vz * lb.vz)
+      (i + 1).to nbodies do { j : INTEGER
+        lb2 := bodies.at j
+
+        ldx := lb.x - lb2.x
+        ldy := lb.y - lb2.y
+        ldz := lb.z - lb2.z
+        dis := (ldx * ldx + ldy * ldy + ldz * ldz).sqrt
+        
+        e := e - (lb.mass * lb2.mass) / dis
+      }
+    }
+
+    e		
+  )
+
+  - offset_momentum n:INTEGER <-
+  ( + px,py,pz:REAL_64
+    + lb:PLANET
+    
+    0.to n do { i:INTEGER
+      lb := bodies.at i
+      px := px + lb.vx * lb.mass
+      py := py + lb.vy * lb.mass
+      pz := pz + lb.vz * lb.mass
+    }
+
+    bodies.first.set_speed_to (
+      - px / PLANET.solar_mass,
+      - py / PLANET.solar_mass,
+      - pz / PLANET.solar_mass
+    )
+  )
+  
+Public
+
+  - main <-
+  ( + n:INTEGER
+    
+    (COMMAND_ARGS.count < 2).if {
+      n := 1_000
+    } else {
+      n := COMMAND_ARGS.at 1.to_integer
+    }
+    nbodies := 4
+    bodies  := NATIVE_ARRAY(PLANET).calloc_intern (nbodies+1)
+
+    bodies.put (PLANET.create.sun)     to 0
+    bodies.put (PLANET.create.jupiter) to 1
+    bodies.put (PLANET.create.saturn)  to 2
+    bodies.put (PLANET.create.uranus)  to 3
+    bodies.put (PLANET.create.neptune) to 4
+
+    offset_momentum nbodies
+
+    energy nbodies.print_format_c "%.9f\n"
+
+    1.to n do { i:INTEGER
+      advance (0.01,nbodies)
+    }
+    
+    energy nbodies.print_format_c "%.9f\n"
+  )
+	

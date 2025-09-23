@@ -1,0 +1,65 @@
+Header
+  
+  + name := TEST;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  - parent_print:PRINT := PRINT
+  
+Public  
+  + counter:INTEGER
+  
+  - check assert:BOOLEAN <-
+  (
+    counter := counter + 1
+    assert.if_false {
+      crash_with_message "TEST.check failed."
+    }
+  )
+  
+  - check_false assert:BOOLEAN <- check (! assert)
+
+  - check str1:STRING string str2:STRING <-
+  (
+    counter := counter + 1
+    (str1 == str2).if_false {
+      crash_with_message ("TEST.check failed: \"" + str1 + "\" != \"" + str2 + "\"")
+    }
+  )
+  
+  - check i1:INTEGER integer i2:INTEGER <-
+  (
+    counter := counter + 1
+    (i1 = i2).if_false {
+      crash_with_message ("TEST.check failed: " + i1.to_string + " != " + i2.to_string)
+    }
+  )
+  
+  - check assert:BOOLEAN txt txt:{STRING} <-
+  (
+    counter := counter + 1
+    assert.if_false {
+      crash_with_message ("TEST.check failed: " + txt.value)
+    }
+  )
+  
+  - check_not_null o:E <- check (o != NULL)
+  
+  - check_null o:E <-
+  (
+    counter := counter + 1
+    (o = NULL).if_false {
+      o.println
+      crash_with_message ("TEST.check failed: " + o.to_string)
+    }
+  )
+  
+  - check c1:CHARACTER char c2:CHARACTER <-
+  (
+    counter := counter + 1
+    (c1 = c2).if_false {
+      crash_with_message ("TEST.check failed: '" + c1.to_string + "' != '" + c2.to_string + "'")
+    }
+  )
+  
+  

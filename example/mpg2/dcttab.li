@@ -1,0 +1,26 @@
+Header
+  
+  + name         := DCTTAB;
+  /*
+  Simple struct for table.
+  */
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Mapping
+  
+  + map_run:INTEGER_8
+  
+  + map_level:INTEGER_8
+
+  + map_len:INTEGER_8
+
+Public
+  
+  - run:INTEGER_8 <- map_run
+  
+  - level:INTEGER_8 <- map_level
+
+  - len:INTEGER_8 <- map_len

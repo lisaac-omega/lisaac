@@ -1,0 +1,26 @@
+Header
+
+  + name        := COUPLE(E,F);
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  + first :E
+  + second:F
+
+  - create elt1:E and elt2:F :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make elt1 and elt2
+    result
+  )
+
+  - make elt1:E and elt2:F <-
+  (
+    first  := elt1
+    second := elt2
+  )

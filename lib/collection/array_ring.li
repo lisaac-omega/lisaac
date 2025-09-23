@@ -1,0 +1,253 @@
+Header
+
+  + name := ARRAY_RING V;
+
+  /*Resizable, fixed lower bound array. Circular handling of the storage area.*/
+
+Inherit
+  - parent_collection:COLLECTION V := COLLECTION V
+  
+Public
+  - lower:INTEGER <- 0
+  
+Private
+  + storage:NATIVE_ARRAY V
+  
+  + ring_low:INTEGER; // corresponding lower in storage
+  
+  - ring_msk:INTEGER <- capacity - 1
+  
+  - ring_up:INTEGER <- (ring_low + count - 1) & ring_msk
+  
+Public
+  + capacity:INTEGER; // Which must be a power of 2 to ease computing overlays.
+  
+  + count:INTEGER
+  
+  - upper:INTEGER <- ( count - 1 )
+  
+  - create_with_capacity new_count:INTEGER :SELF <-
+  // Create an empty array with at least `needed_capacity'.
+  ( + result:SELF
+    result := clone
+    result.with_capacity new_count
+    result
+  )
+  
+Private
+  - with_capacity needed_capacity:INTEGER <-
+  // Create an empty array with at least `needed_capacity'.
+  [
+    ? {needed_capacity >= 0}
+  ]
+  (
+    ? {capacity = 0}
+    capacity := 1024
+    {capacity >= needed_capacity}.until_do {
+      capacity := capacity << 1
+    }
+    storage := NATIVE_ARRAY V .create capacity
+    ring_low := 0
+    count := 0
+  )
+  [
+    ? {capacity >= needed_capacity}
+    ? {is_empty}
+  ]
+  
+Public
+  
+  - is_empty:BOOLEAN <- (count = 0)
+  
+  - at i:INTEGER :V <-
+  ( + result:V
+    result := storage.at ((ring_low + i) & ring_msk)
+    result
+  )
+  
+  - at i:INTEGER put v:V  <-
+  ( 
+    storage.at ((ring_low + i) & ring_msk) put v
+  )
+  
+  - add_last element:V <-
+  (
+    ensure_capacity
+    ? {ring_low.in_range 0 to capacity}
+    storage.at ((ring_low + count) & ring_msk) put element
+    count := count + 1
+  )
+  
+  - add_first element:V <-
+  (
+    ensure_capacity
+    ring_low := (ring_low - 1) & ring_msk
+    storage.at ring_low put element
+    count := count + 1
+  )
+  
+  - at i:INTEGER add v:V <-
+  ( + idx,up,lo,foo:INTEGER
+    (i = 0).if {
+      add_first v
+    }.elseif {i = count} then {
+      add_last v
+    } else {
+      ensure_capacity
+      idx := (ring_low + i) & ring_msk
+      (i < (count - i)).if {
+        foo := ring_low
+        lo := ring_low := (ring_low - 1) & ring_msk
+        {foo = idx}.until_do {
+          storage.at lo put (storage.at foo)
+          lo := foo
+          foo := (foo + 1) & ring_msk
+        }
+        idx := lo
+      } else {
+        up := (ring_low + count) & ring_msk
+        foo := (up - 1) & ring_msk
+        {idx = up}.until_do {
+          storage.at up put (storage.at foo)
+          up := foo
+          foo := (foo - 1) & ring_msk
+        }
+      }
+      storage.at idx put v
+      count := count + 1
+    }
+  )
+  
+  - remove_last <-
+  (
+    count := count - 1
+  )
+  
+  - remove_first <-
+  (
+    ring_low := (ring_low + 1) & ring_msk
+    count := count - 1
+  )
+  
+  - remove index:INTEGER <-
+  ( + idx,i,up:INTEGER
+    (index = lower).if {
+      remove_first
+    }.elseif {index = upper} then {
+      remove_last
+    } else {
+      idx := i := (ring_low + index) & ring_msk
+      (index < (count - index)).if {
+        {idx = ring_low}.until_do {
+          idx := i
+          i := (i - 1) & ring_msk
+          storage.at idx put (storage.at i)
+        }
+        ring_low := (ring_low + 1) & ring_msk
+      } else {
+        up := (ring_low + count - 1) & ring_msk
+        {i = up}.until_do {
+          idx := i
+          i := (i + 1) & ring_msk
+          storage.at idx put (storage.at i)
+        }
+      }
+      count := count - 1
+    }
+  )
+  
+Private
+  - ensure_capacity <-
+  [
+    ? {capacity > 0}
+  ]
+  ( + new_capacity,oldx,newx:INTEGER
+    + new_storage,old_storage:NATIVE_ARRAY V
+    (count = capacity).if {
+      oldx := ring_low
+      old_storage := storage
+      new_capacity := capacity << 1
+      new_storage := NATIVE_ARRAY V .create new_capacity
+      {oldx < capacity}.while_do {
+        new_storage.at newx put (old_storage.at oldx)
+        newx := newx + 1
+        oldx := oldx + 1
+      }
+      oldx := 0
+      {newx < capacity}.while_do {
+        new_storage.at newx put (old_storage.at oldx)
+        newx := newx + 1
+        oldx := oldx + 1
+      }
+      `free(@old_storage)`
+      storage := new_storage
+      ring_low := 0
+      capacity := new_capacity
+    } else {
+      ? {count < capacity}
+    }
+  )
+  - old_ensure_capacity <-
+  [
+    ? {capacity > 0}
+  ]
+  ( + new_capacity,old_area,new_area,times:INTEGER
+    (count = capacity).if {
+      times := ring_up + 1
+      new_capacity := capacity << 1
+      storage := storage.realloc capacity with new_capacity
+      new_area := capacity
+      times.times {
+        storage.at new_area put (storage.at old_area)
+        new_area := new_area + 1
+        old_area := old_area + 1
+      }
+      capacity := new_capacity
+      //("ensure_capacity " + to_string).print
+    } else {
+      ? {count < capacity}
+    }
+  )
+  
+Public
+  - to_string:STRING_ALIAS <-
+  ( + i:INTEGER
+    + result:STRING_ALIAS
+    + v:V
+    STRING.tmp { ts:STRING_BUFFER
+      ts.append "-----------------\n"
+      ts.append "capacity="; capacity.append_in ts; ts.add_last '\n'
+      ts.append "count="; count.append_in ts; ts.add_last '\n'
+      ts.append "upper="; upper.append_in ts; ts.add_last '\n'
+      ts.append "ring_low="; ring_low.append_in ts; ts.add_last '\n'
+      ts.append "ring_msk="; ring_msk.append_in ts; ts.add_last '\n'
+      i := ring_low
+      /*
+      count.times {
+        ts.append "i="; i.append_in ts
+        ts.add_last ' '
+        v := storage.at i
+        (v = NULL).if {
+          ts.append "NULL"
+        } else {
+          ts.append (v.to_string)
+        }
+        ts.add_last '\n'
+        i := (i + 1) & ring_msk
+      }
+      */
+      result := ts.to_string_alias
+    }
+    result
+  )
+  
+Public
+  - twin:SELF <-
+  ( + result:SELF
+    result := SELF.create_with_capacity (count)
+    0.to upper do { i:INTEGER
+      result.add_last (at i)
+    }
+    result
+  )
+    

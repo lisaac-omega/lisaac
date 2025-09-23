@@ -1,0 +1,25 @@
+Section Header
+  
+  + name := CALCULER_NOMBRE_UN;
+  /*
+  Poly exercice 5 page 2.
+  */
+  
+Section Public
+  
+  - calculer_nombre_de_un (n:INTEGER) : INTEGER <-
+  ( + q,nb1:INTEGER;
+    q := n;
+    nb1 := 0;
+    while { q != 0 } do {
+      nb1 := nb1 + (q % 2);
+      q := q / 2
+    }
+    nb1
+  )
+  
+  - main <-
+  ( + n:INTEGER
+    n := (COMMAND_ARGS at 1) to_integer
+    OUT # "nombre de un: " # (calculer_nombre_de_un n) # '\n'
+  )

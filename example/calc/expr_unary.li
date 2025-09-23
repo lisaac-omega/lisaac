@@ -1,0 +1,31 @@
+Header
+
+  + name        := EXPR_UNARY;
+  /*
+  Unary Expression.
+  */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  + expr:EXPR
+
+  //
+  // Constructor
+  //
+
+  - create e:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make e
+    result
+  )
+
+  - make e:EXPR <-
+  (
+    expr := e
+  )

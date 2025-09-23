@@ -1,0 +1,8 @@
+Longueur 1 : 60                       
+Longueur 2 : 1 704                    
+Longueur 3 : 30 432                   
+Longueur 4 : 382 164                  
+Longueur 5 : 3 568 212          (24s)
+Longueur 6 : 25 507 512         (4mn)
+Longueur 7 : 141 639 780        (36mn)
+Longueur 8 : 614 568 102        (3h47)

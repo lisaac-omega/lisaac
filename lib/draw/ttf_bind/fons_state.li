@@ -1,0 +1,32 @@
+Header
+
+  + name := FONS_STATE;
+
+Inherit
+  
+  - parent_fontstash:FONTSTASH := FONTSTASH
+  
+Public
+
+  + font:INTEGER
+  + align:INTEGER
+  + size:REAL_32
+  + color:UINTEGER_32
+  + blur:REAL_32
+  + spacing:REAL_32
+  
+  - my_clone:SELF <- clone
+  
+  - size s:REAL_32 color c:UINTEGER_32 
+  font f:INTEGER blur b:REAL_32 spacing sp:REAL_32 align a:INTEGER <-
+  (
+    size := s; color := c; font := f
+    blur := b; spacing := sp; align := a
+  )
+  
+  - size s:REAL_32 spacing sp:REAL_32 blur b:REAL_32 align a:INTEGER 
+  font f:INTEGER <-
+  (
+    size := s; font := f
+    blur := b; spacing := sp; align := a
+  )

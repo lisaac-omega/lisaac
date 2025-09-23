@@ -1,0 +1,72 @@
+Header
+  + name := MAIN;
+ 
+Private
+  + pwd:STRING_ALIAS
+  
+  + mybuffer:STRING_BUFFER := STRING_BUFFER.create 256
+  
+  - pwd_update <-
+  (
+    mybuffer.clear
+    ENVIRONMENT.pwd_in mybuffer
+    pwd := mybuffer.to_string_alias
+    //("MAIN.14 " + pwd).println
+  )
+  
+  - check_point_1 <-
+  (
+    (SYSTEM.name != "Windows").if {
+      TEST.check (pwd.has_suffix "/lisaac/test/cd-pwd/1/")
+    } else {
+      TEST.check (pwd.has_suffix "\\lisaac\\test\\cd-pwd\\1\\")
+    }
+  )
+  
+Public
+  - main <-
+  (
+    pwd_update
+    (pwd.has_suffix "1/").if {
+      check_point_1
+    }.elseif {pwd.has_suffix "cd-pwd/"} then {
+      TEST.check (ENVIRONMENT.chdir "1") integer 0
+      pwd_update
+      check_point_1
+    }.elseif {pwd.has_suffix "test/"} then {
+      TEST.check (ENVIRONMENT.chdir "cd-pwd") integer 0
+      pwd_update
+      TEST.check (ENVIRONMENT.chdir "1") integer 0
+      pwd_update
+      check_point_1
+    } else {
+      UTILS.crash_with_message (pwd + " here to do or error ?")
+    }
+    TEST.check (pwd.has_suffix "1/") txt {pwd}
+    // Now going up to "lisaac" directory:
+    TEST.check (ENVIRONMENT.chdir "..") integer 0
+    pwd_update
+    TEST.check (pwd.has_suffix "cd-pwd/") txt {pwd}
+    TEST.check (ENVIRONMENT.chdir "..") integer 0
+    pwd_update
+    TEST.check (pwd.has_suffix "test/") txt {pwd}
+    TEST.check (ENVIRONMENT.chdir "..") integer 0
+    pwd_update
+    TEST.check (pwd.has_suffix "lisaac/") txt {pwd}
+    (SYSTEM.name != "Windows").if {
+      TEST.check (FILE_UTILS.file_exists "test/cd-pwd/1/main.li")
+    } else {
+      TEST.check (FILE_UTILS.file_exists "test\\cd-pwd\\1\\main.li")
+    }
+    // Now going down:
+    TEST.check (ENVIRONMENT.chdir "test") integer 0
+    pwd_update
+    TEST.check (pwd.has_suffix "test/") txt {pwd}
+    TEST.check (ENVIRONMENT.chdir "cd-pwd") integer 0
+    pwd_update
+    TEST.check (pwd.has_suffix "cd-pwd/") txt {pwd}
+    TEST.check (ENVIRONMENT.chdir "1") integer 0
+    pwd_update
+    TEST.check (pwd.has_suffix "1/") txt {pwd}
+    TEST.check (FILE_UTILS.file_exists "main.li")
+  )

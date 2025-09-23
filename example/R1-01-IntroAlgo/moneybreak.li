@@ -1,0 +1,29 @@
+Section Header
+  
+  + name := MONEYBREAK;
+  /*
+  Exercice cours page 4.
+  */
+  
+Section Public
+  
+  - main <-
+  ( + somme:INTEGER // somme à décomposer
+    + b50:INTEGER
+    + b10:INTEGER
+    + p2:INTEGER
+    + p1:INTEGER
+    
+    somme := (COMMAND_ARGS at 1) to_integer
+    "somme=" print; somme.println
+    
+    (b50, somme) := somme /% 50
+    (b10, somme) := somme /% 10
+    (p2, p1)     := somme /% 2
+    
+    "b50=" print; b50.println
+    "b10=" print; b10.println 
+    "p2="  print; p2 .println
+    "p1="  print; p1 .println 
+  )
+  

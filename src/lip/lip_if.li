@@ -1,0 +1,64 @@
+Header
+  + name      := LIP_IF;
+
+Inherit
+
+  + parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + condition:LIP_CODE
+
+  + then:ARRAY LIP_CODE
+
+  + else:ARRAY LIP_CODE
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION if rec:LIP_CODE then the:ARRAY LIP_CODE
+  else els:ARRAY LIP_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p if rec then the else els
+    result
+  )
+
+  - make p:POSITION if rec:LIP_CODE then the:ARRAY LIP_CODE
+  else els:ARRAY LIP_CODE <-
+  (
+    position := p
+    condition := rec
+    then := the
+    else := els
+    (then.last != NULL).if {
+      warning_error (then.last.position,"Unreachable expression.")
+    }
+    ((else != NULL) && {else.last != NULL}).if {
+      warning_error (else.last.position,"Unreachable expression.")
+    }
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  ( + val:LIP_BOOLEAN
+
+    val ?= condition.run_expr
+    (val = NULL).if {
+      semantic_error (position,"BOOLEAN needed.")
+    }
+    (val.value).if {
+      (then.lower).to (then.upper-1) do { i:INTEGER
+        then.at i.run
+      }
+    }.elseif {else != NULL} then {
+      (else.lower).to (else.upper-1) do { i:INTEGER
+        else.at i.run
+      }
+    }
+    val.free
+  )

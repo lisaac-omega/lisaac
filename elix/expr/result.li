@@ -1,0 +1,37 @@
+Header
+  + name := RESULT; 
+  
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Private
+  - stack_res:Expanded ARRAY RESULT
+  
+Public
+  
+  - type:TYPE <- ( not_yet_implemented; TYPE)
+  
+  + item:STRING_ALIAS; // '0'..'9'
+  
+  - init s:STRING_ALIAS :RESULT <- ( item := s; Self)
+  
+  - new i:INTEGER :RESULT <-
+  (
+    (stack_res.is_empty).if {
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp.copy "ˬ0"
+        0.to 9 do { j:INTEGER
+          tmp.put ('0' +# j) to 2
+          stack_res.add_last (clone.init (tmp.to_string_alias))
+        }
+      }
+    }
+    stack_res.at i
+  )
+  
+  - drw <-
+  ( 
+    //ret := PRE.drw item
+  )
+  
+  - run <- ( not_yet_implemented; )

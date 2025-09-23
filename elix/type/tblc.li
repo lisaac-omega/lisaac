@@ -1,0 +1,77 @@
+Header
+  + name := TBLC;
+  
+Inherit  
+  + parent_tone:Expanded TONE
+  
+Public
+  - dicotb:HMAP TBLC KEY STRING_ALIAS := HMAP TBLC KEY STRING_ALIAS.create
+  
+  - Self:SELF '<=' o:TYPE :BOOLEAN <-
+  ( + ob:TBLC
+    + result:BOOLEAN
+    ob ?= o
+    (ob != NULL).if {
+      result := 
+      (
+        ((arg = NULL) && {ob.arg = NULL}) || {arg <= ob.arg}
+      ) && {        
+        (ob.res = NULL) || {res <= ob.res}
+      }
+    }
+    result    
+  )
+  
+  + arg:TYPE
+  + res:TYPE
+  
+  - init k:STRING_ALIAS arg art:TYPE type rt:TYPE :TBLC <-
+  (
+    (key,arg,res) := (k,art,rt)
+    dicotb.add Self to k
+    Self
+  )
+  
+  - new art:TYPE type rt:TYPE :TONE <-
+  ( + k:STRING_ALIAS
+    + result:TONE
+    + err:BOOLEAN
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp | '{'
+      (art != NULL).if {
+        k := art.key
+        err := k.is_empty
+        tmp += k
+        tmp | ';'
+      }
+      ((!err) && {rt != NULL}).if {
+        k := rt.key
+        err := k.is_empty
+        tmp += k
+      }
+      tmp | '}'
+      k := tmp.to_string_alias
+    }
+    (err).if {
+      result := TERR
+    } else {
+      result := dicotb.fast_reference_at k
+      (result = NULL).if {
+        result := clone.init k arg art type rt
+      }
+    }
+    result
+  )
+  
+  - txt_in s:STRING_BUFFER sty st:STY <-
+  (
+    (arg != NULL).if {
+      (st!=NULL)
+      .ok { st.put (STY.arg_on) to (s.count); }
+       do { arg.txt_in s sty st; }
+       ok { st.put (STY.arg_off) to (s.count); }
+    }
+    s | '{'
+    (res != NULL).if { res.txt_in s sty st; }
+    s | '}'
+  )

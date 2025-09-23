@@ -1,0 +1,44 @@
+Header
+  + name := NODE_COMPOSITE;
+  /*
+  The composite tree node.
+  */
+
+Inherit
+
+  + parent_node:Expanded NODE
+
+Public
+
+  + children:LINKED_LIST NODE
+
+  - add n:NODE <-
+  (
+    children.add_last n
+  )
+
+  //
+  // Creation.
+  //
+
+  - make lab:STRING <-
+  (
+    parent_node.make lab
+    children := LINKED_LIST NODE.create
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    parent_node.print
+    (children.is_empty).if_false {
+      indent.append "  "
+      (children.lower).to (children.upper) do { j:INTEGER
+        children.item j.print
+      }
+      indent.remove_tail 2
+    }
+  )

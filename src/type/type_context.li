@@ -1,0 +1,45 @@
+Header
+
+  + name        := TYPE_CONTEXT;
+
+  /*Type Context for debug mode*/
+
+Inherit
+
+  + parent_type:Expanded TYPE
+
+Public
+
+  - name:STRING_ALIAS <- "___CONTEXT"
+
+  - intern_name:STRING_ALIAS <- name
+
+  - type_c:STRING_ALIAS <- "_____CONTEXT"
+
+  //
+  // Creation.
+  //
+
+  - make_context <-
+  (
+    dico_type.fast_put Self to name
+    //slot_run := ARRAY SLOT .create_with_capacity 1; // BSBS: Plus utile !
+    default := TYPE_FULL.create Self with (TYPE_FULL.expanded_bit)
+  )
+
+  - genere_typedef <-
+  (
+    // Nothing.
+  )
+
+  - genere_struct <-
+  (
+    output_decl.append
+    "/* ___CONTEXT */\n\
+    \typedef struct ___CONTEXT_struct _____CONTEXT; \n\
+    \struct ___CONTEXT_struct {\n\
+    \  uint64_t code; \n\
+    \  _____CONTEXT *back; \n\
+    \};\n\
+    \uintptr_t top_context; \n\n"
+  )

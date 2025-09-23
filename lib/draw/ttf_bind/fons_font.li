@@ -1,0 +1,81 @@
+Header
+  
+  + name := FONS_FONT;
+
+Inherit
+  
+  - parent_fontstash:FONTSTASH := FONTSTASH
+
+Public
+  
+  + font:FONTINFO
+  
+  + name:STRING_ALIAS
+  
+  + data:ARRAY UINTEGER_8
+  
+  + free_data:BOOLEAN
+  
+  + ascender:REAL_32
+  + descender:REAL_32
+  + lineh:REAL_32
+  
+  + glyphs:ARRAY FONS_GLYPH
+    
+  + lut:ARRAY INTEGER
+  + fallbacks:ARRAY INTEGER
+  + nfallbacks:INTEGER
+  
+  - create n:STRING_ALIAS data dta:ARRAY UINTEGER_8 
+  free f_dta:BOOLEAN :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make n data dta free f_dta
+    result
+  )
+  
+  - make n:STRING_ALIAS data dta:ARRAY UINTEGER_8 free f_dta:BOOLEAN <-
+  ( + fh:INTEGER
+    + ascent,descent,line_gap:INTEGER
+    glyphs := ARRAY FONS_GLYPH.create_with_capacity fons_init_glyphs
+    lut := ARRAY INTEGER.create fons_hash_lut_size
+    fallbacks := ARRAY INTEGER.create_with_capacity fons_max_fallbacks
+    
+    name := n
+    // Init hash lookup.
+    0.to (fons_hash_lut_size-1) do { i:INTEGER
+      lut.at i put (-1)
+    }
+    // Read in the font data.
+    data := dta
+    free_data := f_dta
+    // Init font    
+    font := FONTINFO.create_font (dta.storage) start 0
+    // Store normalized line height. The real line height is got
+    // by multiplying the lineh by font size.
+    (ascent,descent,line_gap) := font.get_font_v_metrics
+    fh := ascent - descent
+    ascender := ascent.to_real_32 / fh
+    descender := descent.to_real_32 / fh
+    lineh := (fh + line_gap).to_real_32 / fh
+  )
+  
+  - scale_for_pixel_height height:REAL_32 :REAL_32 <-
+  (
+    font.scale_for_pixel_height height
+  )
+  
+  - get_vert_align alig:INTEGER size isize:INTEGER_16 :REAL_32 <-
+  ( + result:REAL_32
+    
+    ((alig & fons_align_top) != 0).if {
+      result := ascender * isize.to_real_32/10.0
+    }.elseif {(alig & fons_align_middle) != 0} then {
+      result := (ascender+descender)/2.0 * isize.to_real_32/10.0
+    }.elseif {(alig & fons_align_baseline) != 0} then {
+      // result := 0.0
+    }.elseif {(alig & fons_align_bottom) != 0} then {
+      result := descender * isize.to_real_32/10.0
+    }
+    result
+  )

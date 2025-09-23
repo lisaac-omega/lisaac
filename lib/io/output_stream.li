@@ -1,0 +1,92 @@
+Header
+  + name := OUTPUT_STREAM;
+
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Public
+  - put_string str:STRING <-
+  (
+    str.foreach {c:CHARACTER
+      put_character c
+    }
+  )
+  
+  - put_character c:CHARACTER <-
+  (
+    abstract
+  )
+
+  - put_integer i:INTEGER <-
+  // Output `i' to current output device.
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      i.append_in tmp
+      put_string tmp
+    }
+  )
+
+  - put_integer_format (i, s:INTEGER) <-
+  // Output `i' to current output device using at most
+  // `s' character.
+  (
+    not_yet_implemented
+    /*
+    STRING.tmp { tmp:STRING_BUFFER
+      i.append_in_format (tmp,s)
+      put_string tmp
+    };*/
+  )
+
+  // Other features:
+
+  - put_boolean b:BOOLEAN <-
+  // Output `b' to current output device according
+  // to the Eiffel format.
+  (
+    put_string (b.to_string)
+  )
+
+  - put_pointer p:POINTER <-
+  // Output a viewable version of `p'.
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      p.append_in tmp
+      put_string tmp
+    }
+  )
+
+  - put_new_line <-
+  // Output a newline character.
+  (
+    put_character '\n'
+  )
+
+  - put_spaces nb:INTEGER <-
+  // Output `nb' spaces character.
+  ( ? {nb >= 0}
+
+    nb.times {
+      put_character ' '
+    }
+  )
+
+  - file_exists path:STRING :BOOLEAN<-
+  (
+    not_yet_implemented
+    //DIRECTORY.scan_current_working_directory
+    //DIRECTORY.has path
+  )
+
+  - flush <-
+  // forces a write of unwritten character (write my have been
+  // delayed, flush writes buffered characters)
+  (
+    abstract
+  )
+
+Private
+
+  - basic_io_putc c:CHARACTER <- SYSTEM_IO.print_char c
+
+  - basic_error_putc c:CHARACTER <- SYSTEM_IO.print_error_char c

@@ -1,0 +1,229 @@
+Header
+  + name := BLOB;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  - host_t:UINTEGER_8 := 0
+  - cuda_t:UINTEGER_8 := 1
+  
+  - new:SELF <- clone
+  
+  - init2 (np, cp:INTEGER) :SELF <- init4 (np,cp, 1,1)
+  
+  - init4 (np, cp, hp, wp:INTEGER) :SELF <-
+  (
+    (n,c,h,w) := (np,cp,hp,wp)
+    h_ptr := NATIVE_ARRAY REAL_32.create len
+    Self
+  )
+  
+  - init (shap:NATIVE_ARRAY INTEGER) :SELF <-
+  (
+    (n,c,h,w) := (shap.at 0,shap.at 1,shap.at 2,shap.at 3)
+    h_ptr := NATIVE_ARRAY REAL_32.create len
+    Self
+  )
+  
+  - free <-
+  ( 
+    (h_ptr != NULL).if {
+      //h_ptr.free
+    }
+    (d_ptr != NULL).if {
+      CUDA.free d_ptr
+    }
+    (is_tensor).if {
+      CUDA.destroy_tensor_descriptor tensor_desc
+    }
+  )
+
+  - reset4 (np,cp,hp,wp:INTEGER) <-
+  // reset the current blob with the new size information
+  (
+    // update size information
+    (n,c,h,w) := (np,cp,hp,wp)
+
+    // terminate current buffers
+    (h_ptr != NULL).if {
+      //h_ptr.free
+      h_ptr := NULL
+    }
+    (d_ptr != NULL).if {
+      CUDA.free d_ptr
+      d_ptr := NULL
+    }
+    // create new buffer
+    h_ptr := NATIVE_ARRAY REAL_32.create len
+    cuda
+
+    // reset tensor descriptor if it was tensor
+    (is_tensor).if {
+      CUDA.destroy_tensor_descriptor tensor_desc
+      is_tensor := FALSE
+    }
+  )
+
+  - reset (shap:NATIVE_ARRAY INTEGER) <-
+  ( reset4 (shap.at 0, shap.at 1, shap.at 2, shap.at 3); )
+
+  // returns array of tensor shape
+  - shape:NATIVE_ARRAY INTEGER <-
+  ( shape_buf.at 0 put n;  shape_buf.at 1 put c
+    shape_buf.at 2 put h;  shape_buf.at 3 put w
+    shape_buf
+  )
+    
+  // returns number of elements for 1 batch
+  - size:INTEGER <- ( c * h * w )
+
+  // returns number of total elements in blob including batch
+  - len:INTEGER <- ( n * c * h * w )
+    
+  // returns size of allocated memory
+  - buf_size:INTEGER <- REAL_32.object_size * len
+
+  // Tensor Control
+  + is_tensor:BOOLEAN
+  + tensor_desc:POINTER; //cudnnTensorDescriptor_t
+  
+  - tensor:POINTER <- // cudnnTensorDescriptor_t 
+  (
+    (! is_tensor).if {        
+      tensor_desc := CUDA.create_tensor_descriptor
+      CUDA.set_tensor4d_descriptor tensor_desc param (n, c, h, w)
+      is_tensor := TRUE
+    }
+    tensor_desc
+  )
+
+  // Memory Control
+  // get specified memory pointer
+  - mem:NATIVE_ARRAY REAL_32 <- h_ptr
+
+  // get cuda memory
+  - cuda:NATIVE_ARRAY REAL_32 <-
+  (
+    (d_ptr = NULL).if { d_ptr := CUDA.malloc buf_size; }
+    d_ptr
+  )
+  
+  - print_mem <-
+  ( + tmp:REAL_32
+    0.to (len-1) do { i:INTEGER
+      tmp := mem.at i
+      `printf("%5.3f",@tmp)`
+      ' '.print
+    }
+    '\n'.print
+  )
+  - somme_bug:REAL_32 <-
+  ( + s:REAL_32
+    0.to (len-1) do { i:INTEGER
+      s := s + mem.at i
+    }
+    s
+  )
+  
+  // transfer data between memory
+  - to (target:UINTEGER_8) :NATIVE_ARRAY REAL_32 <-
+  ( + ptr:NATIVE_ARRAY REAL_32
+    + s:INTEGER
+    
+    s := REAL_32.object_size * len
+    (target = host_t).if {
+      CUDA.memcpy_dev cuda to_host h_ptr size s
+      //`cudaMemcpy(h_ptr_, cuda(), @s, cudaMemcpyDeviceToHost)`
+      ptr := h_ptr
+    } else { // DeviceType::cuda
+      CUDA.memcpy_host h_ptr to_dev cuda size s
+      //`cudaMemcpy(cuda(), h_ptr_, @s, cudaMemcpyHostToDevice)`
+      ptr := d_ptr
+    }
+    ptr
+  )
+  
+  - print (name:STRING) param view_param:BOOLEAN <- print name param view_param size (1,16)
+  
+  - print (name:STRING) param view_param:BOOLEAN size (num_batch,width:INTEGER) <-
+  ( + offset,count,print_line_count,s,max_print_line:INTEGER
+    + tmp:REAL_32
+    to host_t
+    "**".print; name.print; "\t: (".print; size.print; ")\t".print
+    ".n: ".print; n.print; ", .c: ".print; c.print; ", .h: ".print; h.print; ", .w: ".print; w.print
+    "\t(h:0x".print; h_ptr.print; ", d:0x".print; d_ptr.print; ")".println
+    
+    (view_param).if {
+      max_print_line := 4
+      (width = 28).if {
+        max_print_line := 28
+      }
+      
+      0.to (num_batch-1) do { ni:INTEGER
+        (num_batch > 1).if {
+          "<--- batch[".print; ni.print; "] --->".println
+        }
+        {(count < size) && {print_line_count < max_print_line}}.while_do {
+          "\t".print
+          s := 0
+          {(s < width) && {count < size}}.while_do {
+            tmp := h_ptr.at (size*ni + count + offset)
+            `printf("%8.6f",@tmp)`
+            "\t".print
+            count := count + 1
+            s := s + 1
+          }
+          '\n'.print
+          print_line_count := print_line_count + 1
+        }
+      }
+      
+    }
+  )
+
+  // pretrained parameter load and save
+  - file_read (filename:STRING) <-
+  (
+    "BLOB 0".println
+    not_yet_implemented
+    /*
+    std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary)
+    if (!file.is_open())
+    {
+      std::cout << "fail to access " << filename << std::endl
+      return -1
+    }
+
+    file.read((char*)h_ptr_, sizeof(float) * this->len())
+    this->to(cuda_t)
+    file.close();*/
+  )
+
+  - file_write (filename:STRING) <-
+  (
+    "BLOB 1".println
+    not_yet_implemented
+    /*
+    std::ofstream file(filename.c_str(), std::ios::out | std::ios::binary )
+    if (!file.is_open())
+    {
+      std::cout << "fail to write " << filename << std::endl
+      return -1
+    }
+    file.write((char*)this->to(host_t), sizeof(float) * this->len())
+    file.close()
+    */
+  )
+
+LAYER, LOSS, NETWORK
+  
+  - shape_buf:NATIVE_ARRAY INTEGER := NATIVE_ARRAY INTEGER.create 4
+  
+  + h_ptr:NATIVE_ARRAY REAL_32
+  + d_ptr:NATIVE_ARRAY REAL_32
+
+  + n:INTEGER := 1
+  + c:INTEGER := 1
+  + h:INTEGER := 1
+  + w:INTEGER := 1

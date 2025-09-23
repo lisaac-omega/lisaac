@@ -1,0 +1,48 @@
+Header
+
+  + name      := LIP_UNARY;
+
+Inherit
+
+  + parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + value:LIP_CODE
+
+  + operator:CHARACTER
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION operator op:CHARACTER with v:LIP_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p operator op with v
+    result
+  )
+
+  - make p:POSITION operator op:CHARACTER with v:LIP_CODE <-
+  (
+    position := p
+    operator := op
+    value := v
+  )
+
+  //
+  // Run.
+  //
+
+  - run_expr:LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+
+    result := value.run_expr
+    (operator)
+    .when '-' then { result := - result; }
+    .when '!' then { result := ! result; }
+    (result = NULL).if {
+      semantic_error (position,"Incorrect type.")
+    }
+    result
+  )

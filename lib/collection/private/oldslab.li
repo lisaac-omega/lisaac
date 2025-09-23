@@ -1,0 +1,285 @@
+Header
+  + name := OLDSLAB V;
+  
+  - external := `
+#include <string.h>
+`;
+
+Insert
+  - parent_clone:CLONE := CLONE
+  
+ARRAY_LIST
+  - capacity:INTEGER <- 1024; // 1024; //512; //1024; //2048 //4096
+  
+  + storage: NATIVE_ARRAY V
+  
+  + count:INTEGER
+  
+  + low:INTEGER
+  
+  + cache_tic:UINTEGER_64
+  
+  + cache_lower:INTEGER; // user index of element at 0
+  
+  - new:SELF <-
+  ( + result:SELF
+    result := clone
+    result.init_clear
+    result
+  )
+  
+  - valid_cache clock_tic:UINTEGER_64 :BOOLEAN <- (cache_tic = clock_tic)
+  
+  - init_clear <-
+  (
+    count := 0
+    low := 0
+    cache_tic := 0
+    storage.is_null.if {
+      storage := NATIVE_ARRAY V.create capacity
+    }
+  )
+  [
+    ? {is_empty}
+    ? {count = 0}
+  ]
+  
+  - first:V <-
+  [
+    ? {! is_empty}
+  ]
+  (
+    storage.at low
+  )
+  
+  - last:V <-
+  [
+    ? {! is_empty}
+  ]
+  ( + idx:INTEGER
+    idx := adjust low incr (count - 1)
+    storage.at idx
+  )
+  
+  - at user_idx:INTEGER :V <-
+  // Assumes cache_lower is correct.
+  [
+    ? {! is_empty}
+  ]
+  ( + idx:INTEGER
+    idx := adjust low incr (user_idx - cache_lower)
+    storage.at idx
+  )
+  
+  - is_full:BOOLEAN <-
+  [
+    ? {! storage.is_null}
+  ]
+  (
+    count = capacity
+  )
+  
+  - add_last v:V <-
+  [
+    ? {! is_full}
+  ]
+  ( + idx:INTEGER
+    idx := adjust low incr count
+    storage.at idx put v
+    count := count + 1
+  )
+  
+  - cache_update clock_tic:UINTEGER_64 <-
+  [
+    ? {! storage.is_null}
+    ? {! is_empty}
+  ]
+  (
+    cache_tic := clock_tic
+  )
+  
+  - cache clock_tic:UINTEGER_64 update new_lower:INTEGER <-
+  [
+    ? {! storage.is_null}
+    ? {! is_empty}
+  ]
+  (
+    cache_tic := clock_tic
+    cache_lower := new_lower
+  )
+  
+  - add_first v:V <-
+  [
+    ? {! is_full}
+  ]
+  (
+    low := adjust low decr 1
+    storage.at low put v
+    count := count + 1
+  )
+  
+  - is_empty:BOOLEAN <-
+  [
+    ? {! storage.is_null}
+  ]
+  (
+    count = 0
+  )
+  
+  - contains idx:INTEGER :BOOLEAN <-
+  // Assumes cache_lower is correct.
+  [
+    ? {! storage.is_null}
+  ]
+  ( + result:BOOLEAN
+    (idx >= cache_lower).if {
+      result := (idx < (cache_lower + count))
+    }
+    result
+  )
+  
+  - remove_first <-
+  [
+    ? {! is_empty}
+  ]
+  (
+    low := adjust low incr 1
+    count := count - 1
+  )
+  
+  - remove user_idx:INTEGER <-
+  // Assumes cache_lower is correct.
+  [
+    ? {! is_empty}
+    ? {contains user_idx}
+  ]
+  ( + i,idx,up:INTEGER
+    idx := adjust low incr (user_idx - cache_lower)
+    (idx = low).if {
+      low := adjust low incr 1
+    }.elseif {idx = (up := adjust low incr (count - 1))} then {
+      // nothing      
+    } else {
+      // DCDC Prendre le plus court....
+      i := idx
+      {i = up}.until_do {
+        + right:INTEGER
+        right := adjust i incr 1
+        //("OLDSLAB.remove user_idx=" + user_idx.to_string + " low=" + low.to_string + " i=" + idx.to_string + " right=" + right.to_string  + " up=" + up.to_string + " count=" + count.to_string).println
+        storage.at i put (storage.at right)
+        i := right
+      }
+    }
+    count := count - 1
+  )
+  
+  - remove_last <-
+  [
+    ? {! is_empty}
+  ]
+  (
+    count := count - 1
+  )
+  
+  - add v:V to user_idx:INTEGER <-
+  // Assumes cache_lower is correct.
+  [
+    ? {! is_full}
+    ? {! is_empty}
+    ? {contains user_idx}
+  ]
+  ( + i,up,idx:INTEGER
+    //("OLDSLAB.add user_idx=" + user_idx.to_string + " v=" + v.to_string).println
+    //print_block
+    idx := adjust low incr (user_idx - cache_lower)
+    (idx = low).if {
+      low := adjust low decr 1
+      storage.at low put v
+    }.elseif {idx = (up := adjust low incr (count - 1))} then {
+      //("OLDSLAB.add idx=up  idx=" + idx.to_string + " up=" + up.to_string).println
+      storage.at (adjust up incr 1) put (storage.at up)
+      storage.at up put v
+    } else {
+      // DCDC PRENDRE LE PLUS COURT....
+      low := i := adjust low decr 1
+      {i = idx}.until_do {
+        storage.at i put (storage.at (adjust i incr 1))
+        i := adjust i incr 1
+      }
+      storage.at (adjust low incr (user_idx - cache_lower)) put v
+    }
+    count := count + 1
+    //print_block
+  )
+  
+  - split block2:OLDSLAB V <-
+  [
+    ? {is_full}
+    ? {block2.is_empty}
+  ]
+  ( + c,idx:INTEGER
+    c := capacity / 2
+    idx := adjust low incr (count - 1)
+    {count = c}.until_do {
+      block2.add_first (storage.at idx)
+      idx := adjust idx decr 1
+      count := count - 1
+    }
+  )
+  [
+    ? {(count + block2.count) = capacity}
+  ]
+  
+  - at user_idx:INTEGER put v:V <-
+  [
+    ? {! is_empty}
+    ? {contains user_idx}
+  ]
+  ( + idx:INTEGER
+    idx := adjust low incr (user_idx - cache_lower)
+    storage.at idx put v
+  )
+  
+Private
+  - adjust idx:INTEGER incr incr:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    result := idx + incr
+    (result >= capacity).if {
+      result := result - capacity
+    }
+    result
+  )
+  
+  - adjust idx:INTEGER decr decr:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    result := idx - decr
+    (result < 0).if {
+      result := result + capacity
+    }
+    result
+  )
+  
+  - print_block <-
+  ( + i:INTEGER
+    "---".println
+    ("cache_lower=" + cache_lower.to_string).println
+    ("count=" + count.to_string).println
+    ("low=" + low.to_string).println
+    0.to (capacity - 1) do {i:INTEGER
+      ("s(" + i.to_string + ")=" + storage.at i .to_string + " ").print
+      (i = low).if {
+        "<- low".print
+      }
+      '\n'.print
+    }
+    "list: ".print
+    i := low
+    count.times {
+      storage.at i .print
+      ' '.print
+      i := adjust i incr 1
+    }
+    '\n'.print
+    "---".println
+  )
+  

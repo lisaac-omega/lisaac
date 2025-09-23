@@ -1,0 +1,107 @@
+Header
+
+  + name        := IS_EXPANDED;
+
+  /*True, if `Self' is Expanded type.*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- TRUE
+
+  + receiver:EXPR
+
+  - static_type:TYPE_FULL <- type_boolean.default
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add type_true
+    t.add type_false
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION receiver e:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p receiver e
+    result
+  )
+
+  - make p:POSITION receiver e:EXPR <-
+  (
+    position := p
+    receiver := e
+  )
+
+  - my_copy:SELF <- SELF.create position receiver (receiver.my_copy)
+
+  //
+  // Remove
+  //
+
+  - remove <-
+  (
+    receiver.remove
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_unlink:INSTR <-
+  (
+    receiver.execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  ( + result:EXPR
+    + instr:INSTR
+
+    (receiver.static_type.is_expanded).if {
+      result := PROTOTYPE_CST.create position type (type_true.default)
+    } else {
+      result := PROTOTYPE_CST.create position type (type_false.default)
+    }
+    instr := receiver.execute_unlink
+    (instr != NULL).if {
+      list_current.insert_before instr
+    }
+    new_execute_pass
+    result
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    crash_with_message "IS_EXPANDED.genere !"
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "is_expanded("
+    receiver.display buffer
+    buffer.add_last ')'
+  )
+
+
+
+
+
+
+
+
+

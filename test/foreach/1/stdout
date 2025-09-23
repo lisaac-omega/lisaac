@@ -1,0 +1,14 @@
+foreach a:1
+foreach a:2
+foreach a:3
+foreach a:4
+foreach a:5
+foreach b:5
+foreach b:4
+foreach b:3
+foreach b:2
+foreach b:1
+foreach c:1
+foreach c:2
+foreach c:3
+foreach d:5

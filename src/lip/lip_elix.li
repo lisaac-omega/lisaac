@@ -1,0 +1,16 @@
+Header
+  + name := LIP_ELIX;
+  /* Used by Elix.*/
+  
+Inherit
+  - parent_any:ANY := ANY
+  
+Public
+  
+  - load in:STRING_ALIAS do do:{(STRING_ALIAS,STRING_ALIAS);} <-
+  (
+    LIP_CALL.set_add_path do img TRUE
+    load_lip "make.lip"
+    LIP_CALL.load_dir in img NULL is_rec FALSE
+    LIP_CODE.call_front_end
+  )

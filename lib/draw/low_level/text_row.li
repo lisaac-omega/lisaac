@@ -1,0 +1,57 @@
+Header
+  
+  + name := TEXT_ROW;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Private  
+  
+  - stock_text_row:ARRAY TEXT_ROW := ARRAY TEXT_ROW.create_with_capacity 32
+    
+  - new:TEXT_ROW <-
+  ( + result:TEXT_ROW
+    (stock_text_row.is_empty).if {
+      result := TEXT_ROW.clone
+    } else {
+      result := stock_text_row.pop
+    }
+    result
+  )
+
+Public
+  
+  + start:INTEGER;        // Pointer to the input text where the row starts.
+  + end:INTEGER;        // Pointer to the input text where the row ends (one past the last character).
+  + next:INTEGER;        // Pointer to the beginning of the next row.
+  + width:REAL_32;        // Logical width of the row.
+  + minx:REAL_32;       // Actual bounds of the row. Logical with and 
+  + maxx:REAL_32;        // bounds can differ because of kerning and some parts over extending.
+  
+  - create st:INTEGER to ed:INTEGER width w:REAL_32 range (xmi,xma:REAL_32) next nxt:INTEGER :TEXT_ROW <-
+  ( + result:TEXT_ROW
+    result := new
+    result.make st to ed width w range (xmi,xma) next nxt
+    result
+  )
+  
+  - make st:INTEGER to ed:INTEGER width w:REAL_32 range (xmi,xma:REAL_32) next nxt:INTEGER <-
+  (
+    (start,end) := (st,ed)
+    (minx,maxx) := (xmi,xma)
+    next := nxt
+    width := w
+  )
+  
+  - free <-
+  (
+    stock_text_row.add_last Self
+  )
+  
+  - print <-
+  (
+    "Start:".print; start.print; " end:".print; end.print
+    " width:".print; width.print; " next:".print; next.print
+    " [".print; minx.print; '-'.print; maxx.print; "]\n".print
+  )

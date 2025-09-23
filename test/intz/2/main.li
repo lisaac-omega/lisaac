@@ -1,0 +1,141 @@
+Header
+  + name := MAIN;
+  
+Private
+  - values:ARRAY ℤ
+  
+  - valook: ARRAY STRING_ALIAS
+  
+  - operations:STRING_ALIAS := "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
+  \++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  
+Public
+  - str:STRING_BUFFER := STRING_BUFFER.create 128
+  - main_bug <-
+  ( + a,b,c:ℤ
+    a := ℤ.init "27F80DDAA1BA7878" base 16
+    b := ℤ.init "4FF01BB54374F0F0" base 16
+    a.print_hex; " + ".print; b.print_hex; " = ".print
+    c := a + b
+    c.append_in str base 16
+    str.println
+    //str.clear
+    //c.append_in str base 10
+    //str.println
+  )
+  
+  - main <-
+  ( + intz:ℤ
+    + a,b,c:ℤ
+    + j:INTEGER
+    + op:CHARACTER
+    values := ARRAY ℤ .create_with_capacity 1024
+    valook := ARRAY STRING_ALIAS .create_with_capacity 1024
+    values_add 1
+    values_add 2
+    0.to (operations.upper) do { i:INTEGER
+      a := values.at (values.upper - 1)
+      b := values.at (values.upper)
+      op := operations.at i
+      (op = '+').if {
+        add (a,b)
+      } else {
+        TEST.check FALSE
+      }
+    }
+    TEST.check (values.upper = valook.upper)
+    
+    /*
+    "=============".println
+    0.to (valook.upper) do { idx:INTEGER
+      (idx.to_string + " " + (valook.at idx)).println
+    }
+    "=============".println
+    */    
+    
+    j := values.upper
+    (operations.upper).downto 0 do { i:INTEGER
+      c := values.at (values.upper)
+      TEST.check (c.to_string_hex) string (valook.at (values.upper))
+      b := values.at (values.upper - 1)
+      TEST.check (b.to_string_hex) string (valook.at (values.upper - 1))
+      a := values.at (values.upper - 2)
+      TEST.check (a.to_string_hex) string (valook.at (values.upper - 2))
+      op := operations.at i
+      (op = '+').if {        
+        intz := sub(c,b)
+        TEST.check (intz.to_string_hex) string (a.to_string_hex)
+      } else {
+        TEST.check FALSE
+      }
+      values.remove_last
+      valook.remove_last
+    }
+    TEST.check (values.upper = 1)
+    TEST.check (valook.upper = 1)
+    
+  )
+  
+  - add (a1,b1:ℤ) <-
+  ( + c1:ℤ
+    + a2,b2,c2:MPZ
+    //a1.print_hex; " + ".print; b1.print_hex; '\n'.print
+    c1 := a1 + b1
+    //c1.print_hex; '\n'.print
+    values_add c1
+    a2.init
+    a2.set (a1.to_hexadecimal) base 16
+    b2.init
+    b2.set (b1.to_hexadecimal) base 16
+    c2.init
+    c2.add(a2,b2)
+    (!c2.equal_intz3 c1).if {
+      a1.print_hex; " + ".print; b1.print_hex; " = ".print; c1.print_hex; '\n'.print
+      "=>".print; c2.print_hex; '\n'.print
+      UTILS.exit 0
+    }
+    TEST.check (c2.equal_intz3 c1)
+  )
+  
+  - sub (a1,b1:ℤ) :ℤ <-
+  ( + c1:ℤ
+    + a2,b2,c2:MPZ
+    c1 := a1 - b1
+    a2.init
+    a2.set (a1.to_hexadecimal) base 16
+    b2.init
+    b2.set (b1.to_hexadecimal) base 16
+    c2.init
+    c2.sub(a2,b2)
+    (!c2.equal_intz3 c1).if {
+      a1.print_hex; " - ".print; b1.print_hex; " = ".print; c1.print_hex; '\n'.print
+      "=>".print; c2.print_hex; '\n'.print
+      UTILS.exit 0
+    }
+    TEST.check (c2.equal_intz3 c1)
+    c1
+  )
+  
+  - values_add (a:ℤ) <-
+  (
+    values.add_last a
+    valook.add_last (a.to_string_hex)
+  )
+  

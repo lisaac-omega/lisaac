@@ -1,0 +1,44 @@
+Header
+  
+  + name         := PMV;
+  /*
+  Simple struct for table.
+  */
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Private
+  
+  - buffer:NATIVE_ARRAY(INTEGER) := NATIVE_ARRAY(INTEGER).create 8
+  
+  - get_index (i0,i1,i2:INTEGER) :INTEGER <-
+  (
+    ? {i0.in_range 0 to 1}
+    ? {i1.in_range 0 to 1}
+    ? {i2.in_range 0 to 1}
+    (i0 << 2) | (i1 << 1) | i2
+  )
+  
+Public
+    
+  
+  //
+  // Manager.
+  //
+  
+  - clear <-
+  (
+    buffer.clear_all 7
+  )
+  
+  - at (i0,i1,i2:INTEGER) :INTEGER <-
+  ( 
+    buffer.at (get_index (i0,i1,i2))
+  )
+
+  - at (i0,i1,i2:INTEGER) put elt:INTEGER <-
+  (
+    buffer.at (get_index (i0,i1,i2)) put elt
+  )

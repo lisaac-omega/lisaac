@@ -1,0 +1,43 @@
+Header
+  
+  + name := Expanded VERTEX;
+  
+Inherit 
+  
+  - parent_clone:CLONE := CLONE
+  
+Mapping, Public
+  
+  + x:REAL_32
+  + y:REAL_32
+  + u:REAL_32
+  + v:REAL_32
+  
+Public
+  
+  - make (px,py:REAL_32) axes (pu,pv:REAL_32) :SELF <-
+  ( (x,y) := (px,py)
+    (u,v) := (pu,pv)
+    Self
+  )
+  
+  - print <-
+  (
+    "x:".print; x.print; " y:".print; y.print; ' '.print
+    "u:".print; u.print; " v:".print; v.print; '\n'.print
+  )
+/*  
+                                                   __
+                                              _.-~`  `~-.
+                  _.--~~~---,.__          _.,;; .   -=(@'`\
+               .-`              ``~~~~--~~` ';;;       ____)
+            _.'            '.              ';;;;;    '`_.'
+         .-~;`               `\           ' ';;;;;__.~`
+       .' .'          `'.     |           /  /;''
+        \/      .---'''``)   /'-._____.--'\  \
+       _/|    (`        /  /`              `\ \__
+',    `/- \   \      __/  (_                /-\-\-`
+  `;'-..___)   |     `/-\-\-`
+    `-.       .'
+       `~~~~``  
+*/    

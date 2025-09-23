@@ -1,0 +1,158 @@
+Header
+  
+  + name         := METEOR_CONTEST;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+  - external := `
+const unsigned int s_first_one[32] = {
+   0, 0, 1, 0,   2, 0, 1, 0,
+   3, 0, 1, 0,   2, 0, 1, 0,
+
+   4, 0, 1, 0,   2, 0, 1, 0,
+   3, 0, 1, 0,   2, 0, 1, 0,
+};
+
+unsigned int g_first_region[] = {
+   0x00, 0x01, 0x02, 0x03,   0x04, 0x01, 0x06, 0x07,
+   0x08, 0x01, 0x02, 0x03,   0x0c, 0x01, 0x0e, 0x0f,
+
+   0x10, 0x01, 0x02, 0x03,   0x04, 0x01, 0x06, 0x07,
+   0x18, 0x01, 0x02, 0x03,   0x1c, 0x01, 0x1e, 0x1f
+};
+
+unsigned int g_flip[] = {
+   0x00, 0x10, 0x08, 0x18, 0x04, 0x14, 0x0c, 0x1c,
+   0x02, 0x12, 0x0a, 0x1a, 0x06, 0x16, 0x0e, 0x1e,
+
+   0x01, 0x11, 0x09, 0x19, 0x05, 0x15, 0x0d, 0x1d,
+   0x03, 0x13, 0x0b, 0x1b, 0x07, 0x17, 0x0f, 0x1f,
+};
+`;
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Public
+
+  - get_mask i_pos:UINTEGER_32 :UINTEGER_32 <- 1 << i_pos
+  
+  - x:INTEGER     := 0
+  - y:INTEGER     := 1
+  - n_dim:INTEGER := 2
+  
+  - even:INTEGER     := 0
+  - odd:INTEGER      := 1
+  - n_parity:INTEGER := 2
+  
+  - good:INTEGER       := 0
+  - bad:INTEGER        := 1
+  - always_bad:INTEGER := 2
+  
+  - open:INTEGER    := 0
+  - closed:INTEGER  := 1
+  - n_fixed:INTEGER := 2
+  
+  - max_island_offset:INTEGER := 1024
+
+  - n_col:INTEGER  := 5
+  - n_row:INTEGER  := 10
+  - n_cell:INTEGER := n_col * n_row
+  - n_piece_type:INTEGER := 10
+
+  - g_ok_pieces:ARRAY2(OK_PIECES) := ARRAY2(OK_PIECES).create (n_row,n_col)
+
+  - g_island_info:ARRAY(ISLAND_INFO) := ARRAY(ISLAND_INFO).create (max_island_offset)
+
+  - g_n_island_info:INTEGER
+
+  - floor (top,bot:INTEGER) :INTEGER <-
+  ( + to_zero:INTEGER
+    
+    to_zero := top / bot
+    // negative numbers should be rounded down, not towards zero
+    ((to_zero * bot != top) && {(top < 0) != (bot <= 0)}).if {
+      to_zero := to_zero - 1
+    }
+    to_zero
+  )
+
+  - get_first_one v:UINTEGER_32 :UINTEGER_32 <-
+  ( + res,result_low,result,i_pos:UINTEGER_32
+    + mask:UINTEGER_32
+    
+    (v != 0).if {      
+      i_pos := 0; //start_pos; = 0
+      mask := 0FFh << 0; //start_pos
+      {(mask & v) = 0}.while_do {
+	mask := mask << 8
+	i_pos := i_pos + 8
+      }
+      result := ((mask & v) >> i_pos).to_uinteger_32
+      result_low := result & 0Fh
+      (result_low != 0).if {
+	i_pos := i_pos + s_first_one.at result_low
+      } else {
+	i_pos := i_pos + 4 + s_first_one.at (result >> 4)
+      }
+      res := i_pos
+    }
+    res
+  )
+
+  - count_ones v:UINTEGER_32 :UINTEGER_32 <-
+  ( + n:UINTEGER_32
+    
+    {v != 0}.while_do {
+      n := n + 1
+      v := v & (v - 1)
+    }
+    n
+  )
+
+  - flip_two_rows bits:UINTEGER_32 :UINTEGER_32 <-
+  ( + flipped:UINTEGER_32
+    
+    flipped := g_flip.at (bits >> n_col) << n_col
+    flipped | g_flip.at (bits & BOARD.top_row)
+  )
+
+  - mark_bad (info:ISLAND_INFO, mask:UINTEGER_32, eo:INTEGER, always:BOOLEAN) <-
+  ( + elt:UINTEGER_32
+    
+    elt := info.has_bad.at (eo,open) | mask
+    info.has_bad.put elt to (eo,open)
+    
+    elt := info.has_bad.at (eo,closed) | mask
+    info.has_bad.put elt to (eo,closed)
+
+    (always).if {
+      elt := info.always_bad.at eo | mask
+      info.always_bad.put elt to eo
+    }
+  )
+
+Public 
+
+  - main <-
+  ( //+ b:BOARD
+    
+    (COMMAND_ARGS.count > 2).if {
+      exit 1; // spec says this is an error
+    }
+    
+    PIECE.gen_all_orientations
+    /*
+    BOARD.calc_always_bad
+    b.gen_all_solutions (0, 0, 0)
+
+    b.m_n_soln.print
+    " solutions found\n\n".print
+    b.m_min_soln.print
+    '\n'.print
+    b.m_max_soln.print
+    '\n'.print
+    */
+  )

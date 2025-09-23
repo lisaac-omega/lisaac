@@ -1,0 +1,39 @@
+Header
+  
+  + name := PAIR_IMPAIR;
+  /*
+  Exemple de récursivité croisée
+  */
+
+Public
+  
+  - pair n:ℤ :BOOLEAN <-
+  ( + result:BOOLEAN
+    if (n = 0) then {
+      result := TRUE
+    } else {
+      result := impair(n - 1)
+    }
+    result
+  )
+  
+  - impair n:ℤ :BOOLEAN <-
+  ( + result:BOOLEAN
+    if (n = 0) then {
+      result := FALSE
+    } else {
+      result := pair(n - 1)
+    }
+    result
+  )
+  
+  - main <-
+  ( + n:ℤ;  
+    if (COMMAND_ARGS upper != 1) then {
+      OUT # "usage: " # COMMAND_ARGS.at 0 # " <n>" # '\n'
+      SYSTEM exit 1
+    }
+    n := COMMAND_ARGS at 1 .to_integer
+    OUT # "pair(" # n # ")=" # (pair(n)) # '\n';
+  );
+  

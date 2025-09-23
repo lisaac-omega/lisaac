@@ -1,0 +1,7 @@
+lisaac binary_trees -q -O -i20
+gcc binary_trees_c.c -o binary_trees_c -O3 -fomit-frame-pointer -lm
+echo Lisaac: 
+time ./binary_trees 16 > out_li.txt
+echo C:
+time ./binary_trees_c 16 > out_c.txt
+diff out_li.txt out_c.txt

@@ -1,0 +1,48 @@
+Header
+  + name := FILE_KEY;
+  
+Inherit
+  - parent_any:ANY := ANY
+  - parent_file_key_gui:FILE_KEY_GUI := FILE_KEY_GUI
+  
+Public
+  
+  - function c0:STRING_ALIAS :(BOOLEAN,{BOOLEAN}) <-
+  ( + b:{BOOLEAN}
+    + ok:BOOLEAN
+    (ok,b) := parent_file_key_gui.function c0
+    (!ok).if {
+      ok := c0
+      .case "compile"       then { b := {compile}; }
+      .case "compile_boost" then { b := {compile_boost := !compile_boost; TRUE}; }
+      = STRING_ALIAS
+    }
+    ok,b
+  )
+  
+  - function c0:STRING_ALIAS with_str :(BOOLEAN,{STRING_ALIAS; BOOLEAN}) <-
+  ( + b:{STRING_ALIAS; BOOLEAN}
+    + ok:BOOLEAN
+    (ok,b) := parent_file_key_gui.function c0 with_str
+    (!ok).if {
+      ok := c0
+      .case "target" then {
+        b := { s:STRING_ALIAS; set_target s}
+      }
+      = STRING_ALIAS
+    }
+    ok,b
+  )
+  
+  - function c0:STRING_ALIAS check :(BOOLEAN,{ACT; BOOLEAN}) <-
+  ( + b:{ACT; BOOLEAN}
+    + ok:BOOLEAN
+    (ok,b) := parent_file_key_gui.function c0 check
+    (!ok).if {
+      ok := c0
+      .case "compile_boost_check" then { b := {a:ACT; compile_boost}; }
+      .case "target_radio" then { b := {a:ACT; target_radio a}; }
+      = STRING_ALIAS
+    }
+    ok,b
+  )

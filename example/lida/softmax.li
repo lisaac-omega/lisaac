@@ -1,0 +1,115 @@
+Header
+  + name := SOFTMAX;
+  
+Inherit
+  + parent_layer:Expanded LAYER
+  
+Private
+  + loss:LOSS := LOSS.init
+  
+Public
+  
+  - init n:STRING_ALIAS :SELF <-
+  (
+    name := n
+    Self
+  )
+  
+  - free
+  
+  - forward (in:BLOB) :BLOB <-
+  (
+    ((input = NULL) || {batch_size != in.n}).if {
+      input := in
+      input_desc := input.tensor
+      batch_size := input.n
+
+      (output = NULL).if {
+        output := BLOB.new.init (input.shape)
+      } else {
+        output.reset (input.shape)
+      }
+      output_desc := output.tensor
+    }
+    
+    cud.softmax_forward (CUDA.softmax_accurate,CUDA.softmax_mode_channel)    alpha 1 x (input_desc, input.cuda)    beta  0 y (output_desc,output.cuda)
+
+    output
+  )
+
+  - backward (grad_out:BLOB) :BLOB <-
+  ( + grad_out_size:INTEGER
+    + scale:REAL_32
+    
+    //input.print "softmax.input.before backward" param TRUE
+    
+    CUDA.device_synchronize
+
+    ((grad_input = NULL) || {batch_size != grad_out.n}).if {
+      (grad_input = NULL).if {
+        grad_input := BLOB.new.init (input.shape)
+      } else {
+        grad_input.reset (input.shape)
+      }
+    }
+
+    // set grad_input_ as predict    
+    CUDA.memcpy_async (grad_input.cuda,output.cuda) size (output.buf_size)
+    // set grad_input_ = predict - grad_out	
+    cud.saxpy (grad_out.len) alpha (-1)    x (grad_out.cuda  ,1)    y (grad_input.cuda,1)
+
+    // normalize the grad_output by the batch size
+    grad_out_size := grad_out.n * grad_out.c * grad_out.h * grad_out.w
+    scale := 1.0 / grad_out.n
+    cud.sscal grad_out_size alpha scale x (grad_input.cuda,1)
+    
+    //input.print "softmax.input.after backward" param TRUE
+    //output.print "softmax.output" param TRUE
+    
+    grad_input
+  )
+
+  - get_loss (target:BLOB) :REAL_32 <-
+  (
+    //input.print "softmax.input" param TRUE
+    //output.print "softmax.output" param TRUE
+    loss.loss (output, target)
+  )
+
+  - get_accuracy (target:BLOB) :INTEGER <-
+  ( + bat_size,out_size:INTEGER
+    + h_output,h_target:NATIVE_ARRAY REAL_32
+    + idx_output, idx_target:INTEGER
+    + hit_count:INTEGER
+    
+    bat_size := output.n
+    out_size := output.size
+
+    ? {bat_size = target.n}
+    ? {out_size = target.size}
+    
+    // get predicts and targets
+    h_output := output.to (BLOB.host_t)
+    h_target := target.to (BLOB.host_t)
+
+    // idx_output = idx_target = 0
+    0.to (bat_size-1) do { b:INTEGER
+      idx_output := 0
+      idx_target := 0
+      
+      1.to 9 do { i:INTEGER
+        (h_output.at (b * out_size + i) > h_output.at (b * out_size + idx_output)).if {
+          idx_output := i
+        }
+        (h_target.at (b * out_size + i) > h_target.at (b * out_size + idx_target)).if {
+          idx_target := i
+        }
+      }
+      (idx_output = idx_target).if {
+        hit_count := hit_count + 1
+      }
+    }
+    hit_count
+  )
+
+

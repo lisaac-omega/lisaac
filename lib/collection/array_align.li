@@ -1,0 +1,204 @@
+Header
+
+  + name     := ARRAY_ALIGN V;
+  
+  - external := `#include <string.h>`;
+  
+Insert
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  + storage:NATIVE_ARRAY UINTEGER_8
+  
+  + capacity:INTEGER
+  
+  + upper:INTEGER
+  
+  + align:INTEGER := 1
+  
+  - item_size:INTEGER <- 
+  (
+    (V.object_size + align) - (V.object_size % align)
+  )
+  
+  - lower:INTEGER := 0; // Frozen lower bound.
+
+  // Creation and modification:
+
+  - create new_count:INTEGER align a:INTEGER :SELF <-
+  // Make array with range [0 .. `new_count' - 1].
+  // When `new_count' = 0 the array is empty.
+  ( + result:SELF
+
+    result := clone
+    result.make new_count align a
+    result
+  )
+
+  - create_with_capacity new_count:INTEGER align a:INTEGER :SELF <-
+  // Create an empty array with at least `needed_capacity'.
+  ( + result:SELF
+
+    result := clone
+    result.with_capacity new_count align a
+    result
+  )
+
+  - make new_count:INTEGER align a:INTEGER <-
+  // Make array with range [0 .. `new_count' - 1].
+  // When `new_count' = 0 the array is empty.
+  [ /* BSBS Old; */
+    -? { new_count >= 0}
+  ]
+  (
+    align := a
+    ( new_count.to_integer > capacity).if {
+      // The new one is bigger:
+      storage := NATIVE_ARRAY(UINTEGER_8).create (new_count * item_size)
+      capacity := new_count
+    }.elseif { (capacity > 0) && { upper >= 0}} then {
+      // The new one is smaller and just need to be cleared:
+      storage.clear 0 to ((upper+1)*item_size-1)
+    }
+    upper := new_count - 1
+  )
+  [ /* BSBS Old; */
+    +? { count = new_count }
+    +? { capacity >= Old capacity }
+    +? { (upper >= 0) ->> {all_default} }
+  ]
+
+  - with_capacity needed_capacity:INTEGER align a:INTEGER <-
+  // Create an empty array with at least `needed_capacity'.
+  [ /* BSBS Old; */
+    -? { needed_capacity >= 0 }
+  ]
+  (
+    align := a
+    (capacity < needed_capacity).if {
+      storage := NATIVE_ARRAY(UINTEGER_8).create (needed_capacity*item_size)
+      capacity := needed_capacity
+      /*
+      ( + ofs:NATIVE_ARRAY UINTEGER_8
+        ofs := storage
+        storage := `(((long long)@ofs) + 255) & ~255`:NATIVE_ARRAY UINTEGER_8
+      )
+      "************************************************\n".print
+      */
+    //}.elseif { capacity > needed_capacity } then {
+    //  storage.clear 0 to upper; // BSBS: Ca serre a quoi de le vider !
+    }
+    upper := -1
+  )
+  [ /* BSBS Old; */
+    +? { capacity >= needed_capacity }
+    +? { is_empty }
+  ]
+
+  // Modification:
+
+  - set_capacity new_capacity:INTEGER <-
+  // Resize capacity the array, but not count.
+  [
+    -? {new_capacity >= 0}
+  ]
+  (
+    (new_capacity > capacity).if {
+      (capacity = 0).if {
+        storage := NATIVE_ARRAY(UINTEGER_8).create (new_capacity*item_size)
+      } else {
+  	storage := storage.realloc (capacity*item_size) with (new_capacity*item_size)
+      }
+      capacity := new_capacity
+    }
+  )
+  [
+    +? { capacity >= Old capacity }
+  ]
+
+  - resize new_count:INTEGER <-
+  // Resize the array. When `new_count' is greater than
+  // `count', new positions are initialized with appropriate
+  // default values.
+  [ /* BSBS Old; */
+    -? {new_count >= 0}
+  ]
+  ( + new_capacity:INTEGER
+
+    ( new_count > count).if {
+      (capacity = 0).if {
+	storage := NATIVE_ARRAY(UINTEGER_8).create (new_count*item_size)
+	capacity := new_count
+      }.elseif { capacity < new_count } then {
+	new_capacity := capacity * 2
+	{ new_capacity >= new_count }.until_do {
+	  new_capacity := new_capacity * 2
+	}
+	storage := storage.realloc (capacity*item_size) with (new_capacity*item_size)
+	capacity := new_capacity
+      }
+    }.elseif { new_count != count } then {
+      storage.clear (new_count*item_size) to (count*item_size - 1)
+    }
+
+    upper := new_count - 1
+  )
+  [ /* BSBS Old; */
+    +? { count = new_count }
+    +? { capacity >= Old capacity }
+  ]
+
+  // Implementation of abstract:
+
+  - is_empty:BOOLEAN <- ( upper < 0 ); // end is_empty
+
+  - item i:INTEGER :V <-
+  ( + st:NATIVE_ARRAY UINTEGER_8
+    + ofs:INTEGER
+    st := storage
+    ofs := i*item_size
+    (st = NULL).if { "ARRAY_ALIGN L.172\n".print; }; // BSBS: Bug Compilo!
+    `&@st[@ofs]`:V
+  )
+  
+  - last:V <- item upper
+
+  - put element:V to i:INTEGER <-
+  ( + st:NATIVE_ARRAY UINTEGER_8
+    + ofs,sz:INTEGER
+    st := storage
+    sz := V.object_size
+    ofs := i*item_size
+    (st = NULL).if { "ARRAY_ALIGN L.172\n".print; }; // BSBS: Bug Compilo!
+    `memcpy(&@st[@ofs],@element,@sz)`
+  )
+
+  - add_last element:V <-
+  ( + new_capacity:INTEGER
+    (upper + 1 < capacity).if {
+      upper := upper + 1
+    }.elseif {capacity = 0} then {
+      storage := NATIVE_ARRAY(UINTEGER_8).create (2*item_size)
+      capacity := 2
+      upper := 0
+    } else {
+      new_capacity := 2 * capacity
+      storage := storage.realloc (capacity*item_size) with (new_capacity*item_size)
+      capacity := new_capacity
+      upper := upper + 1
+    }
+    put element to upper
+  )
+
+  - count:INTEGER <- ( upper + 1 ); // end count
+
+  - clear <-
+  (
+    upper := -1
+  )
+  [ /* BSBS Old; */
+    +? { capacity = Old capacity }
+  ]
+

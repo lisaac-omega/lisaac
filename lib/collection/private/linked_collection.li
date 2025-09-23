@@ -1,0 +1,88 @@
+Header
+  + name    := LINKED_COLLECTION V;
+  /*
+  Common root of LINKED_LIST and TWO_WAY_LINKED_LIST.
+  */
+
+Inherit
+  - parent_collection:COLLECTION V := COLLECTION V
+
+Public
+  - lower:INTEGER := 0
+  // Lower index bound is frozen.
+
+  + upper:INTEGER
+  // Memorized upper index bound.
+  
+  - count:INTEGER <- (upper + 1)
+  
+  - new:SELF <-
+  // Make an empty list
+  ( + result:SELF
+    result := clone
+    result.make
+    result
+  )
+  [
+    ? {Result.count = 0}
+  ]
+  
+Private
+  - make <-
+  (
+    upper := -1
+  )
+  
+Public  
+  - remove_head n:INTEGER <-
+  ( + i:INTEGER
+    i := n
+    {i = 0}.until_do {
+      remove_first
+      i := i - 1
+    }
+  )
+
+  - remove_tail n:INTEGER <-
+  ( + i:INTEGER
+
+    i := n
+    {i = 0}.until_do {
+      remove_last
+      i := i - 1
+    }
+  )
+
+  - first_index_of element:V :INTEGER <-
+  (
+    index_of element start lower
+  )
+
+  - fast_first_index_of element:V :INTEGER <-
+  (
+    fast_index_of element start lower
+  )
+
+  // Implement manifest generic creation.
+
+  - manifest_make needed_capacity:INTEGER <-
+  // Manifest creation of a list of items of type E.
+  (
+    create
+  )
+
+  - manifest_put index:INTEGER to element:V <-
+  (
+    add_last element
+  )
+  
+Public
+  - twin:SELF <-
+  ( + result:SELF
+    result := SELF.new
+    0.to upper do { i:INTEGER
+      result.add_last (at i)
+    }
+    result
+  )
+  

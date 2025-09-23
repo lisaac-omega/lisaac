@@ -1,0 +1,57 @@
+Header
+  + name := I_IDF;
+  
+Inherit
+  + parent_inode:Expanded I_NODE
+  
+Public
+  
+  - stck:Expanded ARRAY I_IDF
+
+  - new:I_IDF <-
+  ( + result:I_IDF
+    (stck.is_empty).if { result := I_IDF.clone; } else { result := stck.pop; }
+    //result := clone
+    result
+  )
+  
+Public
+  
+  + ref:N_IDF
+  + error:INTEGER
+  
+  - new (l,u:INTEGER) is r:N_IDF err d:INTEGER :I_IDF <- new.init (l,u) is r err d
+  
+  - copy:I_NODE <- new.init (lower,upper) is ref err error
+  
+  - init (l,u:INTEGER) is r:N_IDF err d:INTEGER :I_IDF <-
+  [ ? {l <= u}; ? {u <= IA.src.upper};  ]
+  (
+    (lower,upper,ref,error) := (l,u,r,d)
+    {IA.src.at upper = ' '}.while_do { upper := upper - 1; }
+    Self
+  )
+  
+  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  (
+    STY.put u to lower in (IA.sty)
+    STY.put u to (upper+1) in (IA.sty)
+  )
+  
+  - txt_in s:STRING_BUFFER <-
+  (
+    s.add_last '\"'
+    s.append (IA.src) from lower to upper
+    s.add_last '\"'
+  )
+  
+  - rtxt_in s:STRING_BUFFER <-
+  (    
+    s.add_last '\"'
+    (ref != NULL).if {
+      s.append (ref.idf)
+    } else { s.append "I_IDF(NULL)"; }
+    s.add_last '\"'
+  )
+  
+  - free <- stck.add_last Self

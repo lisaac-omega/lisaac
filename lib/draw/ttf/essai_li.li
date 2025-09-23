@@ -1,0 +1,41 @@
+Header
+  
+  + name := ESSAI_LI;
+  
+  - external := `#include <string.h>`;
+  
+Public
+  
+  - ttf_buffer:ARRAY UINTEGER_8
+
+  - main <-
+  ( + font:FONTINFO
+    + bmp:BITMAP
+    + c,size,idx,void1,void2:INTEGER
+    //+ e:ENTRY
+    + height:REAL_32
+    + f:FILE
+    + buf:NATIVE_ARRAY UINTEGER_8
+    
+    c := 'a'.code
+    size := 20; // ?? Size ??
+    
+    f ?= FILE_SYSTEM.get "Roboto-Bold.ttf"
+    f.open
+    ttf_buffer := ARRAY UINTEGER_8.create_with_capacity (f.size)
+    f.read ttf_buffer size (f.size)
+    f.close
+    
+    buf := ttf_buffer.storage
+    idx := TTF.get_font_offset buf for_index 0
+    font := FONTINFO.create_font buf start idx
+    height := font.scale_for_pixel_height size
+    (bmp,void1,void2) := font.get_codepoint_bitmap (0,height) code c
+
+    0.to (bmp.h-1) do { j:INTEGER
+      0.to (bmp.w-1) do { i:INTEGER
+        " .:ioVM@".at (bmp.at (i,j)>>5).print
+      }
+      '\n'.print
+    }
+  )

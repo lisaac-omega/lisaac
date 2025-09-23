@@ -1,0 +1,141 @@
+Header
+  + name := ANY;
+  
+Insert
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  - target:STRING_ALIAS := lip "target" str
+  - set_target t:STRING_ALIAS :BOOLEAN <- ( target := t; TRUE)
+  - target_radio a:ACT :BOOLEAN <- (a.text_l = target)
+  
+  - compile_boost:BOOLEAN
+  - compile:BOOLEAN <-
+  ( + ok:BOOLEAN
+    + n:STRING_ALIAS
+    + t:TXT_PG
+    t ?= PAGE.cur_pg.buf_pg
+    n := t.name
+    STRING.tmp { s:STRING_BUFFER
+      s # "lisaac " # n # " -target " # target
+      (compile_boost).if { s # " -boost"; }
+      s.println
+      ok := ENVIRONMENT.run s = 0
+      (ok).if {
+        s.copy n
+        s.remove_suffix ".li"
+        s # " &"
+        s.println
+        ENVIRONMENT.run s background
+      }
+    }
+    ok
+  )
+        
+  - lib_path:STRING_ALIAS <- abs_path "lib/"
+
+  // Stack EXPR
+  - top_expr:INTEGER := -1
+  - stack_expr:ARRAY (ARRAY EXPR) := ARRAY (ARRAY EXPR).create_with_capacity 8
+  - push_expr:ARRAY EXPR <-
+  ( + result:ARRAY EXPR
+    top_expr := top_expr + 1
+    (top_expr > stack_expr.upper).if {
+      result := ARRAY EXPR.create_with_capacity 256
+      stack_expr.add_last result
+    } else {
+      result := stack_expr.at top_expr
+      result.clear
+    }
+    result
+  )
+  - pop_expr <- ( top_expr := top_expr - 1; )
+  
+  // Stack TYPE
+  - top_type:INTEGER := -1
+  - stack_type:ARRAY (ARRAY TYPE) := ARRAY (ARRAY TYPE).create_with_capacity 8
+  - push_type:ARRAY TYPE <-
+  ( + result:ARRAY TYPE
+    top_type := top_type + 1
+    (top_type > stack_type.upper).if {
+      result := ARRAY TYPE.create_with_capacity 8
+      stack_type.add_last result
+    } else {
+      result := stack_type.at top_type
+      result.clear
+    }
+    result
+  )
+  - pop_type <- ( top_type := top_type - 1; )
+  
+  // Stack TONE
+  - top_tone:INTEGER := -1
+  - stack_tone:ARRAY (ARRAY TONE) := ARRAY (ARRAY TONE).create_with_capacity 8
+  - push_tone:ARRAY TONE <-
+  ( + result:ARRAY TONE
+    top_tone := top_tone + 1
+    (top_tone > stack_tone.upper).if {
+      result := ARRAY TONE.create_with_capacity 8
+      stack_tone.add_last result
+    } else {
+      result := stack_tone.at top_tone
+      result.clear
+    }
+    result
+  )
+  - pop_tone <- ( top_tone := top_tone - 1; )
+  
+  // Stack STRING_BUFFER
+  - top_str:INTEGER := -1
+  - stack_str:ARRAY STRING_BUFFER := ARRAY STRING_BUFFER.create_with_capacity 8
+  - push_str:STRING_BUFFER <-
+  ( + result:STRING_BUFFER
+    top_str := top_str + 1
+    (top_str > stack_str.upper).if {
+      result := STRING_BUFFER.create 64
+      stack_str.add_last result
+    } else {
+      result := stack_str.at top_str
+      result.clear
+    }
+    result
+  )
+  - pop_str <- ( top_str := top_str - 1; )
+  
+  // Stack DECL
+  - stack_decl:ARRAY (ARRAY LOCAL) := ARRAY (ARRAY LOCAL).create_with_capacity 8
+  - new_decl:ARRAY LOCAL <-
+  ( + result:ARRAY LOCAL
+    (stack_decl.is_empty).if {
+      result := ARRAY LOCAL.create_with_capacity 8
+    } else {
+      result := stack_decl.pop
+      result.clear
+    }
+    result
+  )
+  - free_decl t:ARRAY LOCAL <- stack_decl.add_last t
+
+  // Stack ARRAY STRING_ALIAS
+  - top_nidf:INTEGER := -1
+  - stack_nidf:ARRAY (ARRAY N_IDF) := ARRAY (ARRAY N_IDF).create_with_capacity 8
+  - push_nidf:ARRAY N_IDF <-
+  ( + result:ARRAY N_IDF
+    top_nidf := top_nidf + 1
+    (top_nidf > stack_nidf.upper).if {
+      result := ARRAY N_IDF.create_with_capacity 8
+      stack_nidf.add_last result
+    } else {
+      result := stack_nidf.at top_nidf
+      result.clear
+    }
+    result
+  )
+  - pop_nidf <- ( top_nidf := top_nidf - 1; )
+  
+  - about_cmd:BOOLEAN <-
+  (
+    ABOUT.open
+    TRUE
+  )

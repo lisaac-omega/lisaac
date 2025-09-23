@@ -1,0 +1,13 @@
+v0 <- SP * 0.46
+v1 <- 2
+Push
+Push
+v2 <- Max(A0.Width,A1.Width)
+Pop ((A0.Width - A1.Width) / 2,A1.Ascent-A0.Descent+v1*2)
+Pop ((v2 - A0.Width) / 2 + 5,A0.Descent-v1-v0)
+Move (Ox + 3, Oy - v0)
+Line (Ox + v2 + 7, Oy - v0)
+Stroke 3
+Ascent <- A0.Ascent - A0.Descent + v1 + v0
+Descent <- -A1.Ascent + A1.Descent - v1 + v0
+Width <- v2 + 10

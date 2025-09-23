@@ -1,0 +1,286 @@
+Header
+  + name := DIV;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stkdiv:Expanded ARRAY (Strict DIV)
+      
+Public
+  - txt_pg:TXT_PG <- ( + t:TXT_PG; t ?= parent; t)
+  
+  - is_mute:INTEGER
+  - begin_mute <- ( is_mute := is_mute + 1; )
+  - end_mute   <- ( is_mute := is_mute - 1; )
+    
+  + style:INTEGER
+  - set_style s:INTEGER <- ( style := s; )
+  
+  + data:CLONE
+      
+  + pos:POS
+  + pte:POS
+  - set_pos p:POS <- ( pos := p; )
+  - set_pos p:POS pte pe:POS <- ( (pos,pte) := (p,pe); )
+  
+  + act_clic:{DIV; }
+  - clic a:{DIV; } :SELF <- ( (Self != SELF).if { act_clic := a; }; Self)
+  
+  - abs_x:REAL_32 <- [ ? {txt_pg.pos.inside Self}; ](xo + txt_pg.pos.x)
+  - abs_y:REAL_32 <- [ ? {txt_pg.pos.inside Self}; ](yo + txt_pg.pos.y)
+      
+  - mute b:{} <- ( begin_mute; b.value; end_mute; )
+  
+  - text:SELF <-
+  (
+    (Self != SELF).if {      
+      pos := txt_pg.pos_i
+      (xo,width,style,act_clic) := (tex.x,-1,0,NULL)
+    }
+    Self
+  )
+
+  - new:SELF <- 
+  ( + result:SELF
+    (is_mute != 0).if { result := SELF; } else {
+      (stkdiv.is_empty).if { result := clone; } else { result := stkdiv.pop; }
+      result.init (DIV.parent)
+    }
+    result
+  )
+  
+  - free <- ( stkdiv.add_last Self; )
+ 
+  - good_y:REAL_32 <-
+  ( + y:REAL_32
+    y := height * 0.5
+    /*
+    m := TXT_PG.margin_cursor_y
+    (yo + y > parent.height - m).if { y := (parent.height - (m+5) - yo).max 0; }
+    (yo + y < m).if { y := ((m+5) - yo).min height; }
+    */
+    y
+  )
+  
+  - pt (x,y:REAL_32) size (w,h:REAL_32) :SELF <-
+  ( (Self != SELF).if { (xo,yo,width,height) := (x,y,w,h); }; Self)
+  
+  - fix_size <-  
+  ( (Self != SELF).if {
+      (pte,yo,width,height) := (txt_pg.pos_i,tex.y0,tex.x-xo,tex.y1-tex.y0)
+      tex.add_x 0
+    }
+  )
+  [ ? {width>=0}; ]
+  
+  - zone (x0,y0:REAL_32) size (w,h:REAL_32) style s:INTEGER act a:{DIV;} :SELF <-
+  ( 
+    (Self != SELF).if {      
+      pos := TXT_PG.pos_i
+      (pte,style,act_clic) := (TXT_PG.pos_i,s,a)
+      (xo,yo,width,height) := (x0,y0,w,h)
+      txt_pg.detect_ico Self
+      TXT_PG.set_pos_i (pos+1)
+    }
+    Self
+  )
+  
+  - drw d:{} act b:{DIV;} :SELF <- drw d data NULL act b
+  
+  - drw d:{} data dta:CLONE act b:{DIV;} :SELF <-
+  ( + x:REAL_32
+    data := dta
+    x := tex.x
+    d.value
+    zone (x,tex.y-tex.asc) size (tex.x-x,tex.asc - tex.des) style 1 act b
+    Self
+  )
+  
+  - ico img:IMG alpha a:REAL_32 act b:{DIV;} <-
+  ( + w,x,y,h:REAL_32
+    (x,y,h) := (tex.x,tex.y-TXT_BUF.asc_c, FONT.size_app)
+    w := img.draw Self to (x,y) height h alpha a
+    tex.ascdes (TXT_BUF.asc_c,TXT_BUF.des_c)
+    zone (x,y) size (w,h) style 1 act b
+    tex.add_x (w+8)
+  )
+  
+  - draw_out drw:TOK_DRW :SELF <-
+  ( + y:REAL_32
+    data := drw
+    y := tex.y-tex.asc
+    mute { drw.draw_extern; }
+    zone (8,y) size (parent.width-12,tex.y - y) style codeout act
+    { d:DIV
+      + t:TOK_DRW
+      t := d.data.like TOK_DRW
+      t.set_last_pos (t.my_pos+5)
+      PAGE.cur_pg.set_buffer (t.txt_buf)
+    }
+    txt_pg.footnote_right_tok drw
+    Self
+  )
+    
+  - cursor:INTEGER  := 0
+  - button:INTEGER  := 1
+  - pointer:INTEGER := 2
+  - codeout:INTEGER := 3
+  
+  - debug_div:BOOLEAN :=  FALSE
+  
+  - draw <-
+  (
+    intersect_scissor (parent.xo,parent.yo) size (parent.width,parent.height)
+    style
+    .when 1 then { style_button;  }
+    .when 2 then { style_pointer; }
+    .when 3 then { style_codeout; }
+    (debug_div).if {      
+      save
+      draw_debug
+      (width <= 0).if {  
+        (height = 0).if {
+          stroke { circle (xo,yo) radius 6; } width 2 color (COLOR.blue)
+        } else {
+          fill { rect (xo,yo) size (5,height+5); } color (COLOR.blue)
+        }
+        (width = -1).if {
+          fill { rect (xo,yo) size (5,height+5); } color (COLOR.red)
+        }
+      }
+      (txt_pg.pos.inside Self).if {
+        //ptoi.println
+        fill { circle (abs_x,abs_y) radius 4; } color (COLOR.blue)
+        stroke { rect (xo,yo) size (width,height); } width 1 color (COLOR.blue)
+      }
+      STRING.tmp { tmp:STRING_BUFFER; idx.append_in tmp
+        fill { font_size 15; text (xo,yo+height+4) msg tmp; } color (COLOR.magenta)
+        //idx.print; '='.print; yo.print; ' '.print
+      }
+      restore
+    }
+    reset_scissor
+  )
+  
+  - idx:INTEGER <-
+  ( + i:INTEGER
+    {(i <= parent.child.upper) && {parent.child.at i != Self}}.while_do { i := i + 1; }
+    i
+  )
+  
+  - run <-
+  ( stop_cmd
+    PAGE.set_cur_pg (txt_pg.page)
+    txt_pg.fix_buffer
+    act_clic.value Self
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ((ev = HAND.clic) && {act_clic != NULL}).if {    
+    txt_pg.set_pos pos
+    run
+  }
+        
+Private
+  
+  - style_button <-
+  ( + p:PAINT
+    + b:REAL_32
+    (txt_pg.pos.inside Self).if {      
+      b := 8
+      begin_path
+      p := PAINT.create_linear (xo,yo+b) to (xo,yo-b)
+      color (COLOR.rgbaf (1.0,0.0,0.0,0.12)) to (COLOR.rgbaf (1.0,0.0,0.0,0.0))
+      rect (xo,yo-b) size (width,b+height/2)
+      fill_paint p
+      fill
+      p.free
+      begin_path
+      p := PAINT.create_linear (xo,yo+height-b) to (xo,yo+height+b)
+      color (COLOR.rgbaf (1.0,0.0,0.0,0.12)) to (COLOR.rgbaf (1.0,0.0,0.0,0.0))
+      rect (xo,yo+height/2) size (width,b+height/2)
+      fill_paint p
+      fill
+      p.free
+    }
+  )
+  
+  - style_pointer <-
+  ( + rr,aa,t,r,a,x,y:REAL_32
+    + col:COLOR
+    + d:INTEGER
+    (txt_pg.pos.inside Self).if {
+      (x,y) := (abs_x.max (xo+15).min (xmax-15),abs_y.max (yo+15).min (ymax-15))
+      col := (txt_pg.page = PAGE.cur_pg).ok (COLOR.red) else {COLOR.gray}
+      d := TIME.gettimeofday
+      r := 15.0; //+10.random_upper
+      a := 1.0; //+4.random_upper
+      t := ((d/10_000+r.to_integer)%10_000).to_real_32/100
+      rr := r + t.cos * 5
+      aa := a + t.cos * 3
+      stroke {
+        arc (x,y) radius rr angle (aa,aa+REAL_32.pi/3) direction 2
+      } width (aa.abs) color col
+      stroke {
+        arc (x,y) radius rr angle (aa-0.4,aa+REAL_32.pi/3+0.4) direction 2
+      } width 1.0 color col
+      aa := aa + REAL_32.pi
+      stroke {
+        arc (x,y) radius rr angle (aa,aa+REAL_32.pi/3) direction 2
+      } width (aa.abs) color col
+      aa := aa*2 + REAL_32.pi/6 + r.sin
+      stroke {
+        arc (x,y) radius rr angle (aa-0.4,aa+REAL_32.pi/3+0.4) direction 2
+      } width 1.0 color col
+    }
+  )
+  
+  - style_codeout <-
+  ( + p:PAINT
+    + aa,a,px,py,l:REAL_32
+    + c:COLOR
+    (txt_pg.pos.inside Self).if {      
+      + d:INTEGER
+      d := TIME.gettimeofday
+      aa := ((((d&0FFFF_FFFFh)/33_000).to_real_32/10.0).cos+1.0)/2.0
+      a := aa / 10.0
+    }
+    c := LOOK.cols.at (LOOK.codeout)
+    begin_path
+    p := PAINT.create_linear (xo,yo) to (xo+width,yo)
+    color (c.set_af (a+0.2)) to (c.set_af 0)
+    rect (xo,yo) size (width,height)
+    fill_paint p
+    fill
+    p.free
+    (txt_pg.pos.inside Self).if {      
+      (px,py) := (abs_x,abs_y); //(xo+width/2,yo+height*0.1+aa*10.0)
+      l := TXT_BUF.asc_c - TXT_BUF.des_c
+      save
+      begin_path
+      p := PAINT.create_radial (px,py) radius (l*0.3,l*0.6)
+      color (COLOR.rgbaf (1,1,1,0.5)) to (COLOR.rgbaf (1,1,1,0))
+      circle (px,py) radius (l*0.6)
+      fill_paint p
+      fill
+      p.free
+      begin_path
+      l := l * 0.6
+      py := py - l/2
+      move_to (px-l/4,py+l/4)
+      line_to (px,py)
+      line_to (px+l/4,py+l/4)
+      move_to (px,py)
+      line_to (px,py+l)
+      stroke_color (COLOR.red)
+      stroke_width 3.0
+      stroke
+      /*
+      text (px,py) msg "1↑  2⇑  3↑  4⇪  5⬆"
+      */
+      restore
+      PAPER.refresh_again
+    }
+  )

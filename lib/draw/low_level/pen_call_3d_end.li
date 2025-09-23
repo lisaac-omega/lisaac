@@ -1,0 +1,27 @@
+Header
+  
+  + name := PEN_CALL_3D_END;
+  
+Inherit
+  
+  + parent_pen_call:Expanded PEN_CALL
+  
+Public
+    
+  - create shader:SHADER_3D :PEN_CALL_3D_END <-
+  (
+    PEN_CALL_3D_BEGIN.last.set_shader shader
+    Self
+  )
+  
+  - free
+  
+  - run <-
+  ( + fb_width,fb_height:INTEGER
+    (fb_width,fb_height) := PAPER.framebuffer_size (PAPER.wins.first.win_ptr); // window_size
+    `glViewport(0,0,@fb_width,@fb_height)`
+    `glDisable(GL_DEPTH_TEST)`
+    pen_gl.gl_use_program (pen_gl.shader.prog)
+    pen_gl.gl_bind_vertex_array (pen_gl.vert_arr)
+  )
+  

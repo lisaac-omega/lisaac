@@ -1,0 +1,294 @@
+Header
+
+  + name := ACTIVE_EDGE;
+  
+Inherit  
+  
+  - parent_clone:CLONE := CLONE
+  
+Private  
+  
+  - stock_active_edge:ARRAY ACTIVE_EDGE := ARRAY ACTIVE_EDGE.create_with_capacity 32
+  
+  - busy_active_edge:ARRAY ACTIVE_EDGE := ARRAY ACTIVE_EDGE.create_with_capacity 32
+  
+  - new:ACTIVE_EDGE <-
+  ( + result:ACTIVE_EDGE
+    (stock_active_edge.is_empty).if {
+      result := ACTIVE_EDGE.clone
+    } else {
+      result := stock_active_edge.pop
+    }
+    busy_active_edge.add_last result
+    result
+  )
+      
+Public
+
+  + next:ACTIVE_EDGE
+  + fx:REAL_32
+  + fdx:REAL_32
+  + fdy:REAL_32
+  + direction:REAL_32
+  + sy:REAL_32
+  + ey:REAL_32
+  
+  - set_direction d:REAL_32 <- ( direction := d; )
+  - set_next n:ACTIVE_EDGE <- ( next := n; )
+  - set_fx x:REAL_32 <- ( fx := x; )
+  
+  - create e:EDGE offset off_x:INTEGER start start_point:REAL_32 :ACTIVE_EDGE <-
+  ( + result:ACTIVE_EDGE
+    result := new
+    result.make e offset off_x start start_point
+    result
+  )
+
+  - make e:EDGE offset off_x:INTEGER start start_point:REAL_32 <-
+  ( + dxdy:REAL_32
+    dxdy := (e.x1 - e.x0) / (e.y1 - e.y0)
+    //"==>2 ".print; dxdy.print; '\n'.print
+    fdx := dxdy
+    fdy := (dxdy != 0.0).ok (1.0/dxdy) or 0.0
+    fx := e.x0 + dxdy * (start_point - e.y0)
+    fx := fx - off_x
+    direction := e.invert.ok 1.0 or (-1.0)
+    sy := e.y0
+    ey := e.y1
+    next := NULL
+  )
+
+  // the edge passed in here does not cross the 
+  // vertical line at x or the vertical line at x+1
+  // (i.e. it has already been clipped to those)
+  - handle_clipped_edge scanline:NATIVE_ARRAY REAL_32 pos_x x:INTEGER 
+  with e:ACTIVE_EDGE from (px0,py0:REAL_32) to (px1,py1:REAL_32) <-
+  ( + x0,y0,x1,y1:REAL_32
+    //x.print; ' '.print; px0.print; ','.print; py0.print; '-'.print
+    //px1.print; ','.print; py1.print; '\n'.print
+    (x0,y0) := (px0,py0)
+    (x1,y1) := (px1,py1)
+    ((y0 != y1) && {y0 <= e.ey} && {y1 >= e.sy}).if {
+      ? {y0 < y1}
+      ? {e.sy <= e.ey}
+      (y0 < e.sy).if {
+        x0 := x0 + (x1-x0) * (e.sy - y0) / (y1-y0)
+        y0 := e.sy
+      }
+      (y1 > e.ey).if {
+        x1 := x1 + (x1-x0) * (e.ey - y1) / (y1-y0)
+        y1 := e.ey
+      }
+      /* Bug Compilo Janv.2018
+      (x0 = x).if {
+        ? {x1 <= x+1}
+      }.elseif {x0 = x+1} then {
+        ? {x1 >= x}
+      }.elseif {x0 <= x} then {
+        ? {x1 <= x}
+      }.elseif {x0 >= x+1} then {
+        ? {x1 >= x+1}
+      } else {
+        ? {(x1 >= x) && {x1 <= x+1}}
+      }
+      */
+      ((x0 <= x) && {x1 <= x}).if {
+        scanline.at x put (scanline.at x + e.direction * (y1-y0))
+      }.elseif {(x0 >= x+1) && {x1 >= x+1}} then {
+        // Nothing.
+      } else {
+        ? {(x0 >= x) && {x0 <= x+1} && {x1 >= x} && {x1 <= x+1}}
+        // coverage = 1 - average x position
+        scanline.at x put (scanline.at x + e.direction * (y1-y0) * (1.0-((x0-x)+(x1-x))/2))
+      }
+    }
+  )
+
+  - fill_active_edges_new scanline:NATIVE_ARRAY REAL_32 
+  and scanline_fill:NATIVE_ARRAY REAL_32 
+  length len:INTEGER with pe:ACTIVE_EDGE top_y y_top:REAL_32 <-
+  ( + y_bottom:REAL_32
+    + e:ACTIVE_EDGE
+    //"-----------------\n".print; len.print; '\n'.print
+    e := pe
+    y_bottom := y_top+1
+    {e != NULL}.while_do {
+      // brute force every pixel
+
+      // compute intersection points with top & bottom
+      //e.ey.print; " / ".print; y_top.print; `printf(" %6.2f ",@y_top)`; '\n'.print
+      ? {e.ey >= y_top}
+
+      (e.fdx = 0).if {
+        + x0:REAL_32
+        x0 := e.fx
+        //'A'.print
+        (x0 < len).if {
+          (x0 >= 0).if {
+            handle_clipped_edge scanline pos_x (x0.to_integer) 
+            with e from (x0,y_top) to (x0,y_bottom)
+            handle_clipped_edge (scanline_fill-1) pos_x (x0.to_integer+1)
+            with e from (x0,y_top) to (x0,y_bottom)
+          } else {
+            handle_clipped_edge(scanline_fill-1) pos_x 0 
+            with e from (x0,y_top) to (x0,y_bottom)
+          }
+        }
+      } else {        
+        + x0,dx,dy,xb,x_top,x_bottom,sy0,sy1:REAL_32
+        //'B'.print
+        x0 := e.fx
+        dx := e.fdx
+        xb := x0 + dx
+        dy := e.fdy
+        ? {(e.sy <= y_bottom) && {e.ey >= y_top}}
+        
+        (e.sy > y_top).if {
+          x_top := x0 + dx * (e.sy - y_top)
+          sy0 := e.sy
+        } else {
+          x_top := x0
+          sy0 := y_top
+        }
+        (e.ey < y_bottom).if {
+          x_bottom := x0 + dx * (e.ey - y_top)
+          sy1 := e.ey
+        } else {
+          x_bottom := xb
+          sy1 := y_bottom
+        }
+        
+        (
+          (x_top >= 0) && {x_bottom >= 0} && {x_top < len} && {x_bottom < len}
+        ).if {
+          // from here on, we don't have to range check x values
+          //'C'.print
+          (x_top.to_integer = x_bottom.to_integer).if {
+            + height,tmp:REAL_32
+            + x:INTEGER
+            //'D'.print
+            // simple case, only spans one pixel
+            x := x_top.to_integer
+            height := sy1 - sy0
+            ? {(x >= 0) && {x < len}}
+            tmp := e.direction*(1.0-((x_top - x)+(x_bottom-x))/2)*height
+            scanline.at x put (scanline.at x + tmp)
+            
+            // everything right of this pixel is filled
+            tmp := e.direction * height
+            scanline_fill.at x put (scanline_fill.at x + tmp)
+            //`printf("[%6.4f] ",@tmp)`
+          } else {
+            + x1,x2:INTEGER
+            + y_crossing, step, sign, area,tmp:REAL_32
+            // covers 2+ pixels
+          //  'd'.print
+            (x_top > x_bottom).if {
+              // flip scanline vertically; signed area is the same
+              + t:REAL_32
+              sy0 := y_bottom - (sy0 - y_top)
+              sy1 := y_bottom - (sy1 - y_top)
+              t := sy0; sy0 := sy1; sy1 := t
+              t := x_bottom
+              x_bottom := x_top
+              x_top := t
+              dx := -dx
+              dy := -dy
+              t := x0; x0 := xb; xb := t
+            }
+            
+            x1 := x_top.to_integer
+            x2 := x_bottom.to_integer
+            // compute intersection with y axis at x1+1
+            y_crossing := ((x1+1).to_real_32 - x0) * dy + y_top
+
+            sign := e.direction
+            // area of the rectangle covered from y0..y_crossing
+            area := sign * (y_crossing-sy0)
+            // area of the triangle (x_top,y0), (x+1,y0), (x+1,y_crossing)
+            tmp := area * (1.0-((x_top - x1)+(x1+1-x1))/2)
+            //`printf("%6.4f\n",@tmp)`
+            scanline.at x1 put (scanline.at x1 + tmp)
+
+            step := sign * dy
+            (x1+1).to (x2-1) do { x:INTEGER
+              tmp := area + step/2
+              scanline.at x put (scanline.at x + tmp)
+              //scanline.at x.print; ' '.print
+              area := area + step
+            }
+            //'\n'.print
+            y_crossing := y_crossing + dy * (x2 - (x1+1))
+
+            ? {area.abs <= 1.01}
+            
+            tmp := area+sign*(1.0-((x_bottom-x2)+(x2-x2))/2)*(sy1-y_crossing)
+            scanline.at x2 put (scanline.at x2 + tmp)
+            
+            tmp := sign * (sy1-sy0)
+            scanline_fill.at x2 put (scanline_fill.at x2 + tmp)
+          }
+        } else {
+          //'c'.print
+          0.to (len-1) do { x:INTEGER
+            + y0,x1,x2,x3,y3,y1,y2:REAL_32
+            // rename variables to clear pairs
+            y0 := y_top
+            x1 := x.to_real_32
+            x2 := (x+1).to_real_32
+            x3 := xb
+            y3 := y_bottom
+            
+            y1 := ( x   .to_real_32 - x0) / dx + y_top
+            y2 := ((x+1).to_real_32 - x0) / dx + y_top
+            
+            ((x0 < x1) && {x3 > x2}).if {
+              // three segments descending down-right
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x1,y1)
+              handle_clipped_edge scanline pos_x x with e from (x1,y1) to (x2,y2)
+              handle_clipped_edge scanline pos_x x with e from (x2,y2) to (x3,y3)
+            }.elseif {(x3 < x1) && {x0 > x2}} then {  
+              // three segments descending down-left
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x2,y2)
+              handle_clipped_edge scanline pos_x x with e from (x2,y2) to (x1,y1)
+              handle_clipped_edge scanline pos_x x with e from (x1,y1) to (x3,y3)
+            }.elseif {(x0 < x1) && {x3 > x1}} then {  
+              // two segments across x, down-right
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x1,y1)
+              handle_clipped_edge scanline pos_x x with e from (x1,y1) to (x3,y3)
+            }.elseif {(x3 < x1) && {x0 > x1}} then {  
+              // two segments across x, down-left
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x1,y1)
+              handle_clipped_edge scanline pos_x x with e from (x1,y1) to (x3,y3)
+            }.elseif {(x0 < x2) && {x3 > x2}} then {  
+              // two segments across x+1, down-right
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x2,y2)
+              handle_clipped_edge scanline pos_x x with e from (x2,y2) to (x3,y3)
+            }.elseif {(x3 < x2) && {x0 > x2}} then {  
+              // two segments across x+1, down-left
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x2,y2)
+              handle_clipped_edge scanline pos_x x with e from (x2,y2) to (x3,y3)
+            } else {  // one segment
+              handle_clipped_edge scanline pos_x x with e from (x0,y0) to (x3,y3)
+            }
+            //scanline.at x.print; ' '.print
+          }
+          //'\n'.print
+        }
+      }
+      e := e.next
+    }
+    //"****************************\n".print
+  )
+  /*
+  - free <-
+  (
+    stock_active_edge.add_last Self
+  );*/
+  
+  - free_all <-
+  (
+    {busy_active_edge.is_empty}.until_do {
+      stock_active_edge.add_last (busy_active_edge.pop)
+    }
+  )

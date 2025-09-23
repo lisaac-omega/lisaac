@@ -1,0 +1,37 @@
+Header
+  
+  + name := PRINT_ARGS;
+  /*How to get command arguments and how to print in Lisaac Ω. 
+  
+To run this example in a terminal window, as usual:
+
+
+  cd lisaac/example
+
+
+  lisaac print_args
+
+
+  ./print_args monday tuesday 3 or 4
+*/
+
+Public
+  
+  - main <-
+  ( + arg:STRING;
+    + value:INTEGER;
+    if (COMMAND_ARGS upper < 1) then {
+      "usage: ./print_args foo bar ..." println
+      SYSTEM exit 1
+    }
+    from 1 to (COMMAND_ARGS.upper) do { i:INTEGER;
+      arg := COMMAND_ARGS at i
+      if (arg.is_integer) then {
+        value := arg.to_integer;
+        "value is ".print; value.print ; '\n' .print;
+      } else {
+        OUT # "arg " # i # " = \"" # arg # "\"\n"
+      }
+    }
+    "Have " print ; "fun using Lisaac Ω" println
+  )

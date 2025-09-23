@@ -1,0 +1,935 @@
+Header
+  + name := UINTEGER_BIG;
+  /*Integer without bits limit! (Just for fun!)*/
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+UINTEGER_BIG
+
+  + storage:ARRAY UINTEGER_32
+
+  - last_modulo:UINTEGER_32
+
+  - count:INTEGER <- storage.count
+
+  - lower:INTEGER <- storage.lower
+
+  - upper:INTEGER <- storage.upper
+
+  - item idx:INTEGER :UINTEGER_32 <- storage.item idx
+
+  - copy other:UINTEGER_BIG <- storage.copy (other.storage)
+
+  - force elt:UINTEGER_32 to idx:INTEGER <- storage.force elt to idx
+
+  - put elt:UINTEGER_32 to idx:INTEGER <- storage.put elt to idx
+
+  - add_last elt:UINTEGER_32 <- storage.add_last elt
+
+  - resize new_size:INTEGER <-
+  (
+    ? { new_size > 0}
+    storage.resize new_size
+  )
+
+  - last:UINTEGER_32 <- storage.last
+
+  - normalize <-
+  (
+    {(storage.count != 1) && {storage.last == 0}}.while_do {
+      storage.remove_last
+    }
+  )
+
+Public
+
+  - create init:UINTEGER_32 :UINTEGER_BIG <-
+  ( + result:SELF
+
+    result := clone
+    result.make init
+    result
+  )
+
+  - make init:UINTEGER_32 :SELF <-
+  (
+    (storage = NULL).if {
+      storage := ARRAY(UINTEGER_32).create_with_capacity 4
+    } else {
+      storage.clear
+    }
+    storage.add_last 0
+  )
+
+  // Conversion format with test.
+
+  - to_uinteger_64:UINTEGER_64   <-
+  [ -? {count <= 2}; ] // Bound limit control.
+  ( + result:UINTEGER_64
+
+    result := storage.first
+    (count > 1).if {
+      result := result | (storage.item 1.to_uinteger_64 << 32)
+    }
+    result
+  )
+
+  - to_uinteger_32:UINTEGER_32   <-
+  [ -? {count = 1}; ]
+  (
+    storage.first
+  )
+
+  - to_uinteger_16:UINTEGER_16 <-
+  [ -? {count = 1}; ]
+  (
+    storage.first.to_uinteger_16
+  )
+
+  - to_uinteger_8:UINTEGER_8 <-
+  [ -? {count = 1}; ]
+  (
+    storage.first.to_uinteger_8
+  )
+
+  - to_integer_64:INTEGER_64     <-
+  [ -? {(to_uinteger_64 >> 63) = 0}; ]
+  (
+    to_uinteger_64.to_integer_64
+  )
+
+  - to_integer:INTEGER     <-
+  [ -? {(to_uinteger_64 >> 31) = 0}; ]
+  (
+    storage.first.to_integer
+  )
+
+  - to_integer_16:INTEGER_16   <-
+  [ -? {(to_uinteger_16 >> 15) = 0}; ]
+  (
+    storage.first.to_uinteger_16
+  )
+
+  - to_integer_8:INTEGER_8   <-
+  [ -? {(to_uinteger_8 >> 7) = 0}; ]
+  (
+    storage.first.to_integer_8
+  )
+
+  // binary operator :
+
+  - substract other:SELF :SELF <-
+  [ ? {Self >= other}; ]
+  ( + over,substr,part1,part2:UINTEGER_64
+    + idx:INTEGER
+
+    (Self == other).if {
+      set_with_zero
+    } else {
+      idx := lower
+      {idx > other.upper}.until_do {
+        part1 := item idx
+        part2 := other.item idx.to_uinteger_64 + over
+        substr := part1 - part2
+        over := substr >> 32
+        put ((substr & 0FFFF_FFFFh).to_uinteger_32) to idx
+        idx := idx + 1
+      }
+      {over = 0}.until_do {
+        part1 := item idx
+        substr := part1 - over
+        over := substr >> 32
+        put ((substr & 0FFFF_FFFFh).to_uinteger_32) to idx
+        idx := idx + 1
+      }
+      normalize
+    }
+  )
+
+  - substract_integer other:INTEGER :SELF <-
+  [ ? {Self >=# other}; ]
+  ( + part1,over,substr:UINTEGER_64
+    + idx:INTEGER
+
+    (Self ==# other).if {
+      set_with_zero
+    } else {
+      part1 := item 0
+      substr := part1 - other
+      over := substr >> 32
+      put ((substr & 0FFFF_FFFFh).to_uinteger_32) to 0
+      idx := idx + 1
+      {over = 0}.until_do {
+        part1 := item idx
+        substr := part1 - over
+        over := substr >> 32
+        put ((substr & 0FFFF_FFFFh).to_uinteger_32) to idx
+        idx := idx + 1
+      }
+      normalize
+    }
+  )
+
+  - addition other:SELF :SELF <-
+  [ -? {Self >= other}; ]
+  ( + part1,part2,sum,over:UINTEGER_64
+    + idx:INTEGER
+
+    idx := lower
+    {idx > other.upper}.until_do {
+      part1 := item idx
+      part2 := other.item idx
+      sum := part1 + part2 + over
+      put ((sum & 0FFFF_FFFFh).to_uinteger_32) to idx
+      over := sum >> 32
+      idx := idx + 1
+    }
+    {(idx <= upper) && {over != 0}}.while_do {
+      part1 := item idx
+      sum   := part1 + over
+      put ((sum & 0FFFF_FFFFh).to_uinteger_32) to idx
+      over := sum >> 32
+    }
+    (over != 0).if {
+      add_last (over.to_uinteger_32)
+    }
+  )
+
+  - addition_integer other:INTEGER :SELF <-
+  ( + part1,sum,over:UINTEGER_64
+    + idx:INTEGER
+
+    part1 := item 0
+    sum := part1 + other
+    put ((sum & 0FFFF_FFFFh).to_uinteger_32) to 0
+    idx  := idx + 1
+    over := sum >> 32
+    {(idx <= upper) && {over != 0}}.while_do {
+      part1 := item idx
+      sum := part1 + over
+      put ((sum & 0FFFF_FFFFh).to_uinteger_32) to idx
+      idx  := idx + 1
+      over := sum >> 32
+    }
+    (over != 0).if {
+      add_last (over.to_uinteger_32)
+    }
+  )
+
+  - multiply other:SELF :SELF <-
+  ( + part1,part2,product:UINTEGER_64
+    + index_result:INTEGER
+
+    lower.to upper do { idx:INTEGER
+      + result_current:UINTEGER_BIG
+
+      result_current := 0
+      result_current.resize count
+      part1 := item idx
+      index_result := idx
+      (other.lower).to (other.upper) do { idx_other:INTEGER
+        part2 := other.item idx_other
+        product := part1 * part2
+        (product < (UINTEGER_32.maximum.to_uinteger_64)).if {
+          result_current.put (product.to_uinteger_32) to index_result
+        } else {
+          result_current.put ((product & (UINTEGER_32.maximum.to_uinteger_64)).to_uinteger_32) to index_result
+          index_result := index_result + 1
+          result_current.force ((product >> 32).to_uinteger_32) to index_result
+          index_result := index_result + 1
+        }
+      }
+
+      result := result + result_current
+
+    }
+    result.clean
+    result
+  )
+
+  - Self:SELF '*#' Left 90 other:INTEGER :SELF <-
+  (
+    + result:UINTEGER_BIG
+    + part1,product,over:UINTEGER_64
+
+    result := 0
+    result.resize count
+    lower.to upper do { idx:INTEGER
+      part1 := item idx
+      product :=  part1 * other + over
+      (product < (UINTEGER_32.maximum.to_uinteger_64)).if {
+        result.put (product.to_uinteger_32) to idx
+        over := 0
+      } else {
+        result.put ((product & (UINTEGER_32.maximum.to_uinteger_64)).to_uinteger_32) to idx
+        over := product >> 32
+      }
+    }
+
+    (over!==0).if {
+      result.add_last (over.to_uinteger_32)
+    }
+
+    result.clean
+    result
+  )
+
+  - Self:SELF '/'  Left 90 other:SELF :SELF <-
+  ( + result:UINTEGER_BIG
+
+
+  )
+
+
+  - Self:SELF '/#' Left 90 other:INTEGER :SELF <-
+  ( + result:SELF
+    + last_mod,div:UINTEGER_64
+    + idx:INTEGER
+
+    result.resize count
+    idx := upper
+    last_mod := item idx
+    {idx < lower}.until_do {
+      div := 0
+      (last_mod < other).if {
+        idx := idx - 1
+        (idx >= lower).if {
+          last_mod := (last_mod << 32) + item idx.to_uinteger_64
+          div := last_mod / (other.to_uinteger_64)
+          last_mod := last_mod % (other.to_uinteger_64)
+        }
+      } else {
+        div := last_mod / (other.to_uinteger_64)
+        last_mod := last_mod % (other.to_uinteger_64)
+      }
+      (div !== 0).if {
+        result.put ((div & (UINTEGER_32.maximum.to_uinteger_64)).to_uinteger_32) to idx
+      }
+    }
+    last_modulo := last_mod.to_uinteger_32
+    result.clean
+    result
+  )
+
+  - and_binary other:SELF :SELF <-
+  (
+    (other.upper < upper).if {
+      storage.remove_tail (upper - other.upper)
+    }
+    lower.to upper do { i:INTEGER
+      put (item i & other.item i) to i
+    }
+    normalize
+  )
+
+  - or_binary other:SELF :SELF <-
+  (
+    lower.to (upper.min (other.upper)) do { i:INTEGER
+      put (item i | other.item i) to i
+    }
+    upper.to (other.upper) do { i:INTEGER
+      add_last (other.item i)
+    }
+  )
+
+  // Test binary operator :
+
+  - Self:SELF '>'   Right 60 other:SELF :BOOLEAN <-
+  (
+    + result:BOOLEAN
+    (count > (other.count)).if {
+      result := TRUE
+    }.elseif {count < other.count} then {
+      result  := FALSE
+    } else {
+      + i:INTEGER
+      + find:BOOLEAN
+      i := lower
+
+      {find || {i > upper}}.until_do {
+        (item i > other.item i).if {
+          result := TRUE
+          find := TRUE
+        }.elseif {item i < other.item i} then {
+          result := FALSE
+          find := TRUE
+        }
+
+        i := i + 1
+      }
+    }
+
+    result
+  )
+
+
+  - Self:SELF '>#' Right 60 other:INTEGER :BOOLEAN <-
+  (
+    + result:BOOLEAN
+    (count > 1).if {
+      result := TRUE
+    } else {
+      result := item 0 > other
+    }
+    result
+  )
+
+  - Self:SELF '=='  Right 60 other:SELF :BOOLEAN <-
+  (
+    + result:BOOLEAN
+    + idx:INTEGER
+    (count == other.count).if {
+      idx := upper
+      { (idx >= lower) && {item idx == other.item idx} }.while_do {
+        idx := idx - 1
+      }
+      (idx < lower).if {
+        result := TRUE
+      }
+    }
+
+    result
+  )
+
+  // Function.
+
+  - factorial_integer n:INTEGER <-
+  [ -? {n >= 0}; ]
+  (
+    (n = 0).if {
+      set_with_zero
+      put 1 to 0
+    } else {
+      2.to n do { i:INTEGER
+        multiply_integer i
+      }
+    }
+  )
+
+  // conversion
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+  ( + value:UINTEGER_BIG
+    + mod:UINTEGER_32
+    + counter:INTEGER
+    + old_upper,new_upper:INTEGER
+
+    old_upper:=b.upper + 1
+
+    (upper = 0).if {
+      item 0.append_in b
+    } else {
+      value:=Self
+      {
+        value:=value /# 1000000000
+        mod:=last_modulo
+        {counter==0}.until_do {
+          b.extend '0'
+          counter:=counter-1
+        }
+        counter := 9
+        {
+          b.extend ((mod % 10).digit)
+          mod := mod / 10
+          counter := counter-1
+        }.do_while {mod!==0}
+      }.do_while {value!==0}
+
+      new_upper := b.upper
+
+      // Swap.
+      {old_upper >= new_upper}.until_do {
+        b.swap old_upper with new_upper
+        new_upper := new_upper - 1
+        old_upper := old_upper + 1
+      }
+    }
+  )
+
+  - print_positif <-
+  (
+    string_tmp.clear
+    append_in string_tmp
+    string_tmp.print
+  )
+/*
+  - append_in b:STRING_BUFFER <-
+  ( + val:SELF
+    + i,j:INTEGER
+    ? {b!=NULL}
+
+    (self == 0).if {
+      b.extend '0'
+    } else {
+      i := b.upper + 1
+      val.copy Self
+      {val == 0}.until_do {
+        b.extend ((val %# 10).digit)
+        val := val /# 10
+      }
+      j := b.upper
+
+      {i >= j}.until_do {
+        b.swap i with j
+        j := j - 1
+        i := i + 1
+      }
+    }
+  )
+  */
+Public
+
+  - set_with_zero <-
+  (
+    storage.clear
+    storage.add_last 0
+  )
+
+  - is_zero:BOOLEAN <- ((storage.count = 1) && {storage.first = 0})
+
+  - compare other:SELF :INTEGER <-
+  // -1 if Self < other
+  //  0 if Self = other
+  // +1 if Self > other
+  ( + result,up_s,up_o:INTEGER
+    + v_s,v_o:INTEGER_32
+    + i:INTEGER
+
+    up_s := upper
+    up_o := other.upper
+    (up_s = up_o).if {
+      i := upper
+      {
+        v_s := item i
+        v_o := other.item i
+        (v_s < v_o).if {
+          result := -1
+        } else {
+          (v_s > v_o).if {
+            result := 1
+          }
+        }
+        i := i - 1
+      }.do_until {(i < lower) || {result != 0}}
+    } else {
+      (up_s < up_o).if {
+        result := -1
+      } else {
+        result := 1
+      }
+    }
+    result
+  )
+
+  - divide_one_word divisor:UINTEGER_32 :UINTEGER_32 <-
+  // This method is used by `divide'. The one word divisor is
+  // specified by `divisor' is saw as unsigned.
+  // `Self' is the dividend (saw positive) at invocation but is replaced by
+  // the quotient. The remainder is returned as unsigned INTEGER.
+  // Note: `Current' is modified by this method.
+  [ -? {divisor != 0}; ]
+  ( + i, remainder_word1, remainder_word0:INTEGER
+    + result:UINTEGER_32
+    + x:UINTEGER_64
+
+    (count = 1).if {
+      result := first
+      (result < divisor).if {
+        set_with_zero
+      } else {
+        storage.clear
+        storage.add_last (result / divisor)
+        result := result % divisor
+      }
+    } else {
+      i := upper
+      {i < lower}.until_do {
+        remainder_word0 := item i
+        x := (remainder_word1.to_uinteger_64 << 32) | remainder_word0
+        remainder_word1 := x % divisor
+        put (x / divisor) to i
+        i := i - 1
+      }
+      (item upper = 0).if {
+        storage.remove_last
+        ? {item upper != 0}
+      }
+      result := remainder_word1
+    }
+    result
+  )
+
+  - normalize_shift:INTEGER_8 <-
+  // Shift left until the most significant bit is on.
+  // Result give the number of left shift.
+  [ -? {! is_zero}; ]
+  ( + head:UINTEGER_32
+    + result:INTEGER_8
+
+    head := item upper
+    {(head & 8000_0000h) != 0}.until_do {
+      head := head << 1
+      result := result + 1
+    }
+    (result > 0).if {
+      shift_left result
+    }
+    result
+  )
+  [ +? {item upper < 0}; ]
+
+  - shift_left n:INTEGER <-
+  // Shift bits of magnitude by `n' position left. (Note that no bit can
+  // be lost because the `storage' area is automatically extended when
+  // it is necessary.)
+  [ -? {n > 0}; ]
+  ( + left,right: INTEGER_8
+    + word_shift:INTEGER
+    + new_value:UINTEGER_32
+
+    (last != 0).if {
+      word_shift := n >> 5
+      left  := (n & 1Fh).to_integer_8; // Optimistic prediction
+      right := 32 - left
+      ((last >> right) = 0).if {
+        storage.add 0 first (word_shift+1)
+        word_shift.to (upper-1) do { i:INTEGER
+          new_value := (item (i+1) << left) | (item i >> right)
+        }
+        new_value := item upper >> right
+        storage.put new_value to upper
+      } else {
+        storage.add 0 first word_shift
+        upper.downto (word_shift+1) do { i:INTEGER
+          new_value := (item i << left) | (item (i-1) >> right)
+          storage.put new_value to i
+        }
+        new_value := item word_shift << left
+        storage.put new_value to word_shift
+      }
+    }
+  )
+
+  - shift_right n:INTEGER <-
+  // Shift bits of magnitude by `n' position right.
+  [ -? {n > 0}; ]
+  ( + left,right: INTEGER_8
+    + word_right:INTEGER
+    + new_value:UINTEGER_32
+
+    (last != 0).if {
+      word_right := n >> 5
+      right := (n & 1Fh).to_integer_8; // Optimistic prediction
+      left  := 32 - right
+      word_shift.to (upper-1) do { i:INTEGER
+        new_value := (item (i+1) << left) | (item i >> right)
+        storage.put new_value to (i - word_shift)
+      }
+      new_value := item upper >> right
+      (new_value = 0).if {
+        storage.remove_tail (word_shift + 1)
+      } else {
+        storage.put new_value to (upper - word_shift)
+        storage.remove_tail word_shift
+      }
+    }
+  )
+
+  - multiply_and_subtract (u1, qhat: INTEGER, d_storage: ARRAY(UINTEGER_32),
+  d_offset:INTEGER, r_storage:ARRAY(UINTEGER_32),r_offset, length: INTEGER):BOOLEAN <-
+  // Only used by `divide'.
+  [ -? {qhat != 0}; ]
+  ( + i, j, jmax, m1, m2: INTEGER
+    + dec,result:BOOLEAN
+
+    (qhat = 1).if {
+      i := d_offset
+      j := r_offset
+      jmax := r_offset + length
+      {j = jmax}.until_do {
+        (dec).if {
+          x_32 := r_storage.item j - d_storage.item i - 1
+          dec := x_32 >= r_storage.item j
+          r_storage.put x_32 to j
+        } else {
+          x_32 := r_storage.item j - d_storage.item i
+          dec := x_32 > r_storage.item j
+          r_storage.put x_32 to j
+        }
+        i := i + 1
+        j := j + 1
+      }
+      (dec).if {
+        (u1 = 0).if {
+          result := TRUE
+        } else {
+          x_32 := r_storage.item j - 1
+          result := r_storage.item j = 0
+          r_storage.put x_32 to j
+          ? {! result}
+        }
+      }
+    } else {
+      i := d_offset
+      j := r_offset
+      jmax := r_offset + length
+      {j = jmax}.until_do {
+        x := qhat.to_uinteger_64 * d_storage.item i + m1
+        m2 := (x & 0FFFF_FFFFh).to_uinteger_32
+        m1 := (x >> 32).to_uinteger_32
+        (dec).if {
+          x_32 := r_storage.item j - m2 - 1
+          dec := x_32 >= r_storage.item j
+          r_storage.put x_32 to j
+        } else {
+          x_32 := r_storage.item j - m2
+          dec := x_32 > r_storage.item j
+          r_storage.put x_32 to j
+        }
+        i := i + 1
+        j := j + 1
+      }
+      (dec).if {
+        (u1 = 0).if {
+          result := TRUE
+        } else {
+          x_32 := r_storage.item j - m1 - 1
+          result := x_32 >= r_storage.item j
+          r_storage.put x_32 to j
+        }
+      }.elseif {m1 = 0} then {
+        // nothing to do
+      }.elseif {u1 = 0} then {
+        result := TRUE
+      } else {
+        x_32 := r_storage.item j - m1
+        result := x_32 > r_storage.item j
+        r_storage.put x_32 to j
+      }
+    }
+    result
+  )
+
+  - add_back (old_u1:INTEGER, d_storage:ARRAY(UINTEGER_32),d_offset:INTEGER,
+    r_storage:ARRAY(UINTEGER_32),r_offset, length:INTEGER):BOOLEAN <-
+  // Only used by `divide'.
+  // `old_u1' is the value of `u1' before `multiply_and_subtract'.
+  ( + i, j, jmax:INTEGER
+    + inc,result:BOOLEAN
+
+    i := d_offset
+    j := r_offset
+    jmax := r_offset + length
+    {j = jmax}.until_do {
+      (inc).if {
+        x_32 := r_storage.item j + d_storage.item i + 1
+        inc := x_32 <= r_storage.item j
+        r_storage.put x_32 to j
+      } else {
+        x_32 := r_storage.item j + d_storage.item i
+        inc := x_32 < r_storage.item j
+        r_storage.put x_32 to j
+      }
+      i := i + 1
+      j := j + 1
+    }
+    (inc).if {
+      (old_u1 = 0).if {
+        result := TRUE
+      } else {
+        x_32 := r_storage.item j + 1
+        r_storage.put x_32 to j
+        result := x_32 = 0
+      }
+    }
+  )
+
+  - is_a_good_divide (other, quotient, remainder:SELF) :BOOLEAN <-
+  [
+    -? {other     != NULL}
+    -? {quotient  != NULL}
+    -? {remainder != NULL}
+  ]
+  ( + v:SELF
+    v := other.twin
+    v.multiply quotient
+    v.add remainder
+    Self == v
+  )
+
+  - divide_to (other, quotient, remainder:SELF) <-
+  // Euclidian division.
+  // Calculates the `quotient' and `remainder' of `Current'
+  // divided by `other'. (The contents of `Current' and `other' are
+  // not changed.)
+  // Note: Uses Algorithm D in Knuth
+  [ -? {! other.is_zero}
+    -? {quotient  != NULL}
+    -? {remainder != NULL}
+    -? {quotient  != other}
+    -? {quotient  != Self}
+    -? {remainder != other}
+    -? {remainder != Self}
+  ]
+  ( + cmp, shift, nlen, dlen, qlen, j, k, v1, v2, u1, u2, rem: INTEGER
+    + qhat, rhat, v2qhat_1, v2qhat_2, d_offset: INTEGER
+    + q_storage, r_storage, d_storage:ARRAY(UINTEGER_32)
+    + q_capacity, r_capacity:INTEGER
+    + borrow:BOOLEAN
+
+    (is_zero).if {
+      // Dividend is zero:
+      quotient.set_with_zero
+      remainder.set_with_zero
+    } else {
+      cmp := compare other
+      (cmp < 0).if {
+        // Dividend less than divisor:
+        quotient.set_with_zero
+        remainder.copy Self
+      }.elseif {cmp = 0} then {
+        // Dividend equal to divisor:
+        quotient.from_integer 1
+        remainder.set_with_zero
+      }.elseif {other.count = 1} then {
+        // Special case one word divisor:
+        quotient.copy Self
+        remainder.storage.clear
+        rem := quotient.divide_one_word (other.first)
+        remainder.add_last rem
+      } else {
+        // Copy divisor storage to protect divisor:
+        register1.copy other
+        remainder.copy Self
+        // D1 normalize the divisor:
+        shift := register1.normalize_shift
+        (shift != 0).if {
+          remainder.shift_left shift
+        }
+        // D2 Initialize j:
+        r_storage := remainder.storage
+        r_capacity := remainder.capacity
+        nlen := remainder.count;  // To avoid invariant class violation
+        remainder.set_with_zero
+        d_storage := register1.storage
+        d_offset := 0
+        dlen := register1.count
+        j := nlen - 1
+        u2 := r_storage.item j
+        k := dlen - 1
+        v1 := register1.item k
+        v2 := register1.item (k - 1)
+        (u2 >= v1).if {
+          k := nlen - dlen
+          qlen := k + 1
+        } else {
+          qlen := nlen - dlen
+          k := qlen - 1
+          j := j - 1
+          u1 := u2
+          u2 := r_storage.item j
+        }
+        // Resize quotient if necessary
+        q_capacity := quotient.capacity
+        (q_capacity < qlen).if {
+          // reallocation
+          q_capacity := capacity_from_lower_bound(q_capacity, qlen)
+          q_storage := storage.calloc q_capacity
+        } else {
+          q_storage := quotient.storage
+        }
+        // To avoid invariant violation on quotient
+        quotient.set_with_zero
+        {k < 0}.until_do {
+          j := j - 1; // D3 Calculate qhat - estimate qhat
+          (u1 = v1).if {
+            qhat := ~0
+          } else {
+            x := (u1.to_uinteger_64 << 32) | u2
+            rhat := (x % v1).to_uinteger_32
+            qhat := (x / v1).to_uinteger_32; // Correct qhat
+            (qhat = 0).if {
+            } else {
+              x := v2.to_uinteger_64 * qhat
+              v2qhat_2 := (x & 0FFFF_FFFFh).to_uinteger_32
+              v2qhat_1 := (x >> 32).to_uinteger_32
+              (v2qhat_1 > rhat).if {
+                qhat := qhat - 1
+                x_32 := v2qhat_2
+                v2qhat_2 := x_32 - v2
+                (v2qhat_2 > x_32).if {
+                  v2qhat_1 := v2qhat_1 - 1
+                }
+                x_32 := rhat
+                rhat := x_32 + v1
+                (rhat < x_32).if {
+                }.elseif {v2qhat_1 > rhat} then {
+                  qhat := qhat - 1
+                }.elseif {j < 0} then {
+                  ((v2qhat_1 = rhat) && {v2qhat_2 != 0}).if {
+                    qhat := qhat - 1
+                  }
+                }.elseif {(v2qhat_1 = rhat) && {v2qhat_2 > r_storage.item j}} then {
+                  qhat := qhat - 1
+                }
+              }.elseif {j < 0} then {
+                ((v2qhat_1 = rhat) && {v2qhat_2 != 0}).if {
+                  qhat := qhat - 1
+                }
+              }.elseif {(v2qhat_1 = rhat) && {v2qhat_2 > r_storage.item j}} then {
+                qhat := qhat - 1
+              }
+            }
+          }
+          // D4 Multiply and subtract:
+          (qhat = 0).if {
+            q_storage.put 0 to k
+          } else {
+            borrow := multiply_and_subtract
+            (u1, qhat, d_storage, d_offset, r_storage, j - dlen + 2, dlen)
+            // D5 Test remainder: Result is negative ?
+            (borrow).if {
+              // D6 Add back
+              borrow := add_back(u1, d_storage, d_offset, r_storage, j - dlen + 2, dlen)
+              ? {borrow}
+              q_storage.put (qhat - 1) to k
+            } else {
+              q_storage.put qhat to k
+            }
+          }
+          // D7 loop on j
+          k := k - 1
+          u1 := r_storage.item (j + 1)
+          u2 := r_storage.item j
+        }
+        // Remove leading zero of quotient
+        k := qlen - 1
+        (q_storage.item k = 0).if {
+          qlen := k
+        }
+        quotient.set_all(q_storage, q_capacity, qlen, 0, FALSE)
+        // Remove leading zero of remainder
+        j := dlen - 1
+        {(j < 0) || {r_storage.item j != 0}}.until_do {
+          j := j - 1
+        }
+        j := j + 1
+        ? {j >= 0}
+        (j = 0).if {
+          ? {remainder.is_zero}
+        } else {
+          remainder.set_all(r_storage, r_capacity, j, 0, FALSE)
+        }
+        // D8 Unnormalize:
+        (shift > 0).if {
+          remainder.shift_right shift
+        }
+      }
+    }
+  )
+  [
+    ? {is_a_good_divide(other, quotient, remainder)}
+  ]

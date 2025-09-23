@@ -1,0 +1,126 @@
+Header
+  + name := Strict ICON_LINE;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stock:ARRAY ICON_LINE := ARRAY ICON_LINE.create_with_capacity 2
+  
+  - init_open o:WIN <-
+  ( + pop:POPUP
+    line_open ?= o; pop ?= o.child.first; pop.set (pop.on)
+  )
+  
+Public
+  + line_open:ICON
+
+  - set_open o:ICON <-
+  ( + pop:POPUP
+    (line_open != NULL).if { pop ?= line_open.child.first; pop.set_open NULL; }
+    line_open := o
+    (line_open != NULL).if { pop ?= line_open.child.first; pop.set_open line_open; }
+  )
+    
+  - refresh <-
+  ( + x:REAL_32
+    (width,height) := (parent.width,ICON.dim)
+    child.foreach { w:WIN; w.xy (x,yo); w.refresh; x := x + w.width; }
+  )
+  
+  - copy o:SELF <-
+  ( + ico:ICON
+    o.child.foreach { w:WIN
+      ico := ICON.cast (w.dup Self)
+      (w = o.line_open).if { init_open ico; }
+    }
+  )
+  
+  - new:SELF <-
+  ( + r:SELF
+    (stock.is_empty).if { r := clone; } else { r := stock.pop; }
+    r
+  )
+  
+  - free <-
+  ( child.foreach { w:WIN; w.free; }; child.clear
+    stock.add_last Self
+  )
+  
+  - init p:WIN :SELF <- ( read_object; init_parent p)
+  
+  // Parsing.
+  
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  ( 
+    id
+    .case "ICON" then {
+      (
+        v
+        .case "MENU_BAR"   then {          
+          ICON.new.init Self name v bar { b:WIN
+            MENU.list.foreach { m:MENU
+              ((m.text_l != "Theme") && {m.text_l != "Keymap"}).if { // C'est Naze
+                ACT_ITM.new.init b act m
+              }
+            }
+          }
+        }
+        .case "BUFFER_BAR" then {
+          ICON.new.init Self name v bar { b:WIN
+            0.to 11 do { i:INTEGER; BUF_ITM.new.init b idx i; }
+          }
+        }
+        .case "SETUP_BAR" then {
+          ICON.new.init Self name v bar { b:WIN
+            build_menu_setup b
+          }
+        }
+        != STRING_ALIAS
+      ).if {
+        STRING.tmp { tmp:STRING_BUFFER
+          tmp += "Tools box `" += v += "' not found.";
+          err warning msg tmp
+        }
+      }
+    }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  (
+    id
+    .case "open" then { (v != -1).if { init_open (child.at v); }; }
+    = STRING_ALIAS
+  )
+  
+  - write_object <-
+  (
+    put_object {
+      put "ICON" value {
+        put_array { i:INTEGER
+          put_str (child.at i.like ICON.id_name)
+          i = child.upper
+        }
+      }
+      put "open" value {
+        (line_open = NULL).if {
+          put_int (-1)
+        } else {
+          put_int (child.fast_index_of line_open)
+        }
+      }
+    }
+  )
+  
+Private
+  
+  - build_menu_setup b:WIN <-
+  ( + m:MENU
+    m := MENU.new.make_sty
+    ACT_ITM.new.init b act m
+    m := MENU.new.make_key
+    ACT_ITM.new.init b act m
+  )

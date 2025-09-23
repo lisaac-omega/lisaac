@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+
+Public
+  - main <-
+  ( + a1,a2:ARRAY_RING INTEGER
+    a1 := ARRAY_RING INTEGER .create_with_capacity 1024
+    a1.add_last 2
+    a2 := a1.twin
+    TEST.check (a1.upper = a2.upper)
+    TEST.check (a1.first = a2.last)
+    TEST.check (a1.capacity <= a2.capacity)
+    //UTILS.exit 0
+    //("bug " + "init_string_alias").to_string_alias
+  )
+

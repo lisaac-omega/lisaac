@@ -1,0 +1,17 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + v1:INTEGER
+    + v2:INTEGER
+    RANDOM.init(3)
+    v1 := RANDOM.range 1 to 1000
+    RANDOM.init(2)
+    v2 := RANDOM.range 1 to 1000
+    TEST.check (v1 != v2)
+    20.times {
+      (RANDOM.range (-5) to 5).println
+    }
+  )
+  

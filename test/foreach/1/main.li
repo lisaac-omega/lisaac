@@ -1,0 +1,30 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + array:ARRAY INTEGER
+    array := ARRAY INTEGER .create_with_capacity 4
+    1.to 5 do { i:INTEGER
+      array.add_last i
+    }
+    array.foreach { i:INTEGER
+      "foreach a:".print
+      i.println
+    }
+    array.foreach_backward { i:INTEGER
+      "foreach b:".print
+      i.println
+    }
+    array.while_do { i:INTEGER
+      "foreach c:".print
+      i.println
+      i < 3
+    }
+    array.while_do_backward { i:INTEGER
+      "foreach d:".print
+      i.println
+      i < 3
+    }
+    
+  )

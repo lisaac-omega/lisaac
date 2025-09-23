@@ -1,0 +1,122 @@
+Header
+
+  + name    := ITM_ARGS;
+
+  /*One argument vector*/
+
+Inherit
+
+  + parent_itm_argument:Expanded ITM_ARGUMENT
+
+Public
+
+  + name:ARRAY STRING_ALIAS
+
+  + type:ITM_TYPE_MULTI
+
+  - upper:INTEGER <- name.upper
+  
+  - is_self:BOOLEAN <- name.first = "Self"
+  
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:ARRAY STRING_ALIAS type t:ITM_TYPE_MULTI :SELF <-
+  ( + result:SELF
+
+    result := SELF.clone
+    result.make p name n type t
+    result
+  )
+
+  - make p:POSITION name n:ARRAY STRING_ALIAS type t:ITM_TYPE_MULTI <-
+  (
+    position := p
+    name     := n
+    type     := t
+  )
+
+  //
+  // Running.
+  //
+
+  - at idx:INTEGER :ITM_TYPE <-
+  ( ? {idx.in_range 0 to upper}
+    type.at idx
+  )
+
+  - to_run_in arg_lst:ARRAY LOCAL for p:PARAMETER_TO_TYPE <-
+  ( + t:TYPE_FULL
+  
+    (name.lower).to (name.upper) do { j:INTEGER
+      t := type.at j.to_run_for p pos (position.prototype.filename)
+     
+      arg_lst.add_last (
+	LOCAL.create position name (name.at j) style ' ' type t
+      )
+      (verify).if {
+        check_local_with_slot position name (name.at j)
+      }
+    }
+  )
+
+  - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-
+  ( + i:INTEGER
+
+    i := name.lower
+    {(i <= name.upper) && {type.at i != p}}.while_do {
+      i := i + 1
+    }
+    i
+  )
+
+  - check larg:ARRAY EXPR index idx:INTEGER for p:PARAMETER_TO_TYPE :INTEGER <-
+  ( + new_expr:EXPR
+
+    (type.lower).to (type.upper) do { i:INTEGER
+      new_expr := larg.at (idx+i).check_type (type.at i.to_run_for p pos (position.prototype.filename)) with position
+      larg.at (idx+i) put new_expr
+    }
+    idx + type.count
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    (name.lower).to (name.upper - 1) do { j:INTEGER
+      buffer.append (name.at j)
+      buffer.add_last ':'
+      type.at j.append_in buffer
+      buffer.add_last ','
+    }
+    buffer.append (name.last)
+    buffer.add_last ':'
+    type.last.append_in buffer
+    buffer.add_last ')'
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    buf.add_last '('
+    (name.lower).to (name.upper - 1) do { j:INTEGER
+      (name.at j = "Self").if {
+        put (name.at j) to buf like "keyword"
+      } else {
+        put (name.at j) to buf like "local"
+      }
+      buf.add_last ':'
+      type.at j.shorter_in buf
+      buf.add_last ','
+    }
+    put (name.last) to buf like "local"
+    buf.add_last ':'
+    type.last.shorter_in buf
+    buf.add_last ')'
+  )
+
+

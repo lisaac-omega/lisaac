@@ -1,0 +1,46 @@
+Header
+
+  + name    := ITM_TYPE_PARAMETER;
+
+  /*Parameter type for argument define.*/
+
+Inherit
+
+  + parent_itm_type_simple:Expanded ITM_TYPE_SIMPLE
+
+Public
+
+  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  ( + result:TYPE_FULL
+    (p != NULL).if { result := p.parameter_to_type Self; }
+    (result = NULL).if {
+    //((p = NULL) || {(result := p.parameter_to_type Self) = NULL}).if { // BSBS: BUG LISAAC 0.42
+      string_tmp.copy "Cannot resolve type for type parameter "
+      append_in string_tmp
+      (p != NULL).if {
+        semantic_error(p.position, string_tmp)
+      } else {
+        semantic_error(profil_slot.position, string_tmp)
+      }
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+  
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append "Generic:"
+    parent_itm_type_simple.append_in buffer
+  )
+  
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    (style != NULL).if {
+      put style to buf like "keyword"
+      buf.add_last ' '
+    }
+    put name to buf like "keyprototype"
+  )

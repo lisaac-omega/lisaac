@@ -1,0 +1,222 @@
+Header
+
+  + name        := READ;
+
+  /* Read for local, global or slot */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_slot:BOOLEAN <- FALSE
+
+  - variable:VARIABLE <-
+  (
+    abstract
+    NULL
+  )
+
+  - static_type:TYPE_FULL <-
+  (
+    variable.type
+  )
+  
+  - ensure_count:INTEGER <- variable.ensure_count
+
+  - my_copy:SELF <-
+  ( + result:SELF
+    result ?= variable.read position
+    result
+  )
+
+  //
+  // Searching.
+  //
+
+  - get_type t:TYPES_TMP <-
+  (
+    variable.get_type t
+  )
+
+  - get_last_value:EXPR <- variable.get_last_value NULL
+
+  //
+  // Executing pass.
+  //
+
+  - remove <-
+  (
+    variable.unread Self
+  )
+
+  - is_require_constant:CONSTANT <-
+  ( + result:CONSTANT
+    + j:INTEGER
+    + val:EXPR
+    + req_list:ARRAY WRITE
+    //? { variable.require_first != NULL }
+    /* BSBS: A REVOIR
+    ((variable.require_first = NULL) && {!variable.type.is_expanded}).if {
+      variable.intern_name.print; '\n'.print
+      "style [".print; variable.style.print; "]\n".print
+      warning_error (position,"READ : Compiler BUG! (require_first = NULL) ")
+      //list_current.debug_display
+      //die_with_code 0
+      //crash_with_message "BUG READ : require_first = NULL"
+    }
+    */
+    (variable.require_first != NULL).if {
+      val := variable.require_first.value
+      (val.is_constant).if {
+	result   ?= val
+	req_list := variable.require_list
+	(req_list != NULL).if {
+	  j := req_list.lower
+	  {(j > req_list.upper) || {result = NULL}}.until_do {
+	    val := req_list.at j.value
+	    ((! val.is_constant) || {result !~= val}).if {
+	      result := NULL
+	    }
+	    j := j + 1
+	  }
+	}
+      }
+    }
+    result
+  )
+
+  - execute_access_unlink:INSTR <-
+  (
+    abstract
+    NULL
+  )
+
+  - execute_access_link <- abstract
+
+  - execute_unlink:INSTR <-
+  // Delete read
+  (
+    variable.unread Self
+    new_execute_pass
+    execute_access_unlink
+  )
+
+  - execute_link:EXPR <-
+  ( + cst:CONSTANT
+    + rec:INSTR
+    + result:EXPR
+    + val:EXPR
+    + s:SLOT_DATA
+    + l:LOCAL
+    + wrt:WRITE
+    //+ old_loop_invariant:LOOP
+
+    simplify_type variable
+
+    //
+    s ?= variable
+    (
+      (s = NULL) || {
+	((s.style != '+') || {! s.id_section.is_mapping}) &&
+	{(! variable.type.is_expanded) || {variable.type.is_default_expanded}}
+      }
+    ).if {
+      cst := is_require_constant;  // BSBS: Ce cas devrait rentrer dans get_last_value
+      ((cst != NULL) && {variable.style != 'R'}).if {
+	//
+	// CONSTANT propagation.
+	//
+	variable.unread Self
+	rec := execute_access_unlink
+	(rec != NULL).if {
+	  list_current.insert_before rec
+	}
+	result := cst.my_copy
+	new_execute_pass
+      }.elseif {
+	(val := get_last_value) != NULL
+      } then {
+	//
+	// VALUE_EXPR propagation, step by step.
+        //
+	result := val
+	variable.unread Self
+	new_execute_pass
+      }
+    }
+
+    (result = NULL).if {
+      //
+      // Normal.
+      //
+      ((is_slot) && {loop_invariant != NULL} && {is_invariant}).if {
+	//old_loop_invariant := loop_invariant
+	//loop_invariant := NULL
+	//
+	l := static_type.get_temporary position
+	wrt := l.write position value Self
+	loop_list.insert_before wrt
+	result := l.read position
+	//
+	//wrt.execute
+	//result := result.execute_link
+	//
+	//loop_invariant := old_loop_invariant
+	count_invariant := count_invariant + 1
+      } else {
+	variable.set_read
+	execute_access_link
+	result := Self
+      }
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - display_ref buffer:STRING_BUFFER <-
+  ( + req_list:ARRAY WRITE
+    //is_verbose.if {
+      buffer.add_last '<'
+      //buffer.append (object_id.to_string_buffer)
+      buffer.add_last 'R'
+      (variable.require_first != NULL).if {
+	variable.require_first.object_id.append_in buffer
+	req_list := variable.require_list
+	(req_list != NULL).if {
+	  (req_list.lower).to (req_list.upper) do { j:INTEGER
+	    buffer.add_last ','
+	    req_list.at j.object_id.append_in buffer
+	  }
+	}
+      } else {
+	buffer.add_last '*'
+      }
+      buffer.append "/E"
+      variable.ensure_count.append_in buffer
+      buffer.add_last '>'
+    //}
+  )
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append (variable.intern_name)
+    buffer.add_last '['
+    variable.type.append_name_in buffer
+    buffer.add_last ']'
+    display_ref buffer
+  )
+
+
+
+
+
+
+
+
+
+

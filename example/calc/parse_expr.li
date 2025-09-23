@@ -1,0 +1,163 @@
+Header
+
+  + name := PARSE_EXPR;
+  /*
+  Parse arithmetic expression.
+  */
+
+Insert
+  - parent_utils:UTILS := UTILS
+
+Private
+
+  //
+  // Service and terminal parsing.
+  //
+
+  - index:INTEGER
+  - source:STRING
+
+  - last_character:CHARACTER
+
+  - read_character car:CHARACTER :BOOLEAN <-
+  ( + result:BOOLEAN
+
+    ((index <= source.upper) && {car = source.item index}).if {
+      last_character := car
+      index  := index + 1
+      result := TRUE
+    }
+    result
+  )
+
+  - last_constant:INTEGER
+
+  - read_constant:BOOLEAN <-
+  ( + result:BOOLEAN
+
+    ((index <= source.upper) && {source.item index.in_range '0' to '9'}).if {
+      result := TRUE
+      last_constant := 0
+      {
+        last_constant := last_constant * 10 + source.item index.decimal_value
+        index := index + 1
+      }.do_while {(index <= source.upper) && {source.item index.in_range '0' to '9'}}
+    }
+    result
+  )
+
+  - error <-
+  (
+    "Error : \n".print
+    source.print
+    '\n'.print
+    1.to (index-1) do { j:INTEGER
+      ' '.print
+    }
+    "^\n".print
+    SYSTEM.exit exit_failure_code
+  )
+
+  //
+  // Grammar parsing.
+  //
+
+  - read_expr:EXPR <-
+  // EXPR <- EXPR_MUL { ( '+' | '-') EXPR_MUL }
+  ( + result,right:EXPR
+    + oper:CHARACTER
+
+    result := read_expr_mul
+    (result != NULL).if {
+      {(read_character '+') || {read_character '-'}}.while_do {
+        oper  := last_character
+        right := read_expr_mul
+        (right = NULL).if {
+          error
+        }
+        (oper = '+').if {
+          result := EXPR_ADD.create result and right
+        } else {
+          result := EXPR_SUB.create result and right
+        }
+      }
+    }
+    result
+  )
+
+  - read_expr_mul:EXPR <-
+  // EXPR_MUL <- EXPR_UNARY { ( '*' | '/') EXPR_UNARY }
+  ( + result,right:EXPR
+    + oper:CHARACTER
+
+    result := read_expr_unary
+    (result != NULL).if {
+      {(read_character '*') || {read_character '/'}}.while_do {
+        oper  := last_character
+        right := read_expr_unary
+        (right = NULL).if {
+          error
+        }
+        (oper = '*').if {
+          result := EXPR_MUL.create result and right
+        } else {
+          result := EXPR_DIV.create result and right
+        }
+      }
+    }
+    result
+  )
+
+  - read_expr_unary:EXPR <-
+  // EXPR_UNARY <- ( '+' | '-') EXPR_UNARY
+  //             |  EXPR_CST
+  ( + result:EXPR
+    + oper:CHARACTER
+
+    ((read_character '+') || {read_character '-'}).if {
+      oper   := last_character
+      result := read_expr_unary
+      (result = NULL).if {
+        error
+      }
+      (oper = '-').if {
+        result := EXPR_NEG.create result
+      }
+    } else {
+      result := read_expr_cst
+    }
+    result
+  )
+
+  - read_expr_cst:EXPR <-
+  // EXPR_CST <- '(' EXPR ')'
+  //           |  constant
+  ( + result:EXPR
+
+    (read_character '(').if {
+      result := read_expr
+      (result = NULL).if {
+        error
+      }
+      (read_character ')').if_false {
+        error
+      }
+    }.elseif {read_constant} then {
+      result := EXPR_CST.create last_constant
+    }
+    result
+  )
+
+Public
+
+  - parse src:STRING :EXPR <-
+  ( + result:EXPR
+
+    source := src
+    index  := source.lower
+    result := read_expr
+    ((result = NULL) || {index <= source.upper}).if {
+      error
+    }
+    result
+  )

@@ -1,0 +1,158 @@
+Header
+
+  + name := PARSE_EXPR;
+  /*
+  Parse arithmetic expression.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Private
+
+  //
+  // Service and terminal parsing.
+  //
+
+  - index:INTEGER
+  - source:STRING
+
+  - last_character:CHARACTER
+
+  - read_character car:CHARACTER :BOOLEAN <-
+  ( + result:BOOLEAN
+
+    ((index <= source.upper) && {car = source.item index}).if {
+      last_character := car
+      index  := index + 1
+      result := TRUE
+    }
+    result
+  )
+
+  - last_constant:REAL_32
+
+  - read_constant:BOOLEAN <-
+  ( + result:BOOLEAN
+    + div:REAL_32
+
+    ((index <= source.upper) && {source.item index.in_range '0' to '9'}).if {
+      result := TRUE
+      last_constant := 0
+      {
+        last_constant := last_constant * 10 + source.item index.decimal_value
+        index := index + 1
+      }.do_while {(index <= source.upper) && {source.item index.in_range '0' to '9'}}
+      ((index < source.upper) && {source.item index = '.'}).if {
+        index := index + 1
+        div := 1
+        {(index <= source.upper) && {source.item index.in_range '0' to '9'}}.while_do {
+          last_constant := last_constant * 10 + source.item index.decimal_value
+          index := index + 1
+          div := div * 10
+        }
+        last_constant := last_constant / div
+      }
+    }
+    result
+  )
+
+  - error <-
+  (
+    (error_message.is_empty).if {
+      0.to index do { j:INTEGER
+        error_message.add_last (source.item j)
+      }
+      error_message.append "<- Error!"
+    }
+  )
+
+  //
+  // Grammar parsing.
+  //
+
+  - read_expr:REAL_32 <-
+  // EXPR <- EXPR_MUL { ( '+' | '-') EXPR_MUL }
+  ( + result,right:REAL_32
+    + oper:CHARACTER
+
+    result := read_expr_mul
+    {(read_character '+') || {read_character '-'}}.while_do {
+      oper  := last_character
+      right := read_expr_mul
+      (oper = '+').if {
+        result := result + right
+      } else {
+        result := result - right
+      }
+    }
+    result
+  )
+
+  - read_expr_mul:REAL_32 <-
+  // EXPR_MUL <- EXPR_UNARY { ( 'x' | '*' | '/') EXPR_UNARY }
+  ( + result,right:REAL_32
+    + oper:CHARACTER
+
+    result := read_expr_unary
+    {(read_character 'x') || {read_character '/'} || {read_character '*'}}.while_do {
+      oper  := last_character
+      right := read_expr_unary
+      (oper = '/').if {
+        result := result / right
+      } else {
+        result := result * right
+      }
+    }
+    result
+  )
+
+  - read_expr_unary:REAL_32 <-
+  // EXPR_UNARY <- ( '+' | '-') EXPR_UNARY
+  //             |  EXPR_CST
+  ( + result:REAL_32
+    + oper:CHARACTER
+
+    ((read_character '+') || {read_character '-'}).if {
+      oper   := last_character
+      result := read_expr_unary
+      (oper = '-').if {
+        result := - result
+      }
+    } else {
+      result := read_expr_cst
+    }
+    result
+  )
+
+  - read_expr_cst:REAL_32 <-
+  // EXPR_CST <- '(' EXPR ')'
+  //           |  constant
+  ( + result:REAL_32
+
+    (read_character '(').if {
+      result := read_expr
+      (read_character ')').if_false {
+        error
+      }
+    }.elseif {read_constant} then {
+      result := last_constant
+    }
+    result
+  )
+
+Public
+
+  - error_message:STRING_BUFFER := STRING_BUFFER.create 50
+
+  - parse src:STRING :REAL_32 <-
+  ( + result:REAL_32
+
+    source := src
+    index  := source.lower
+    error_message.clear
+    result := read_expr
+    (index <= source.upper).if { error; }
+    result
+  )

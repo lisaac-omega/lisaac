@@ -1,0 +1,27 @@
+Header
+  + name := TFN2;
+  
+Inherit
+  + parent_tmove:Expanded TMOVE
+  
+Public
+  
+  + exec:{(REAL_32,REAL_32); REAL_32}
+  
+  - init (x,y:TEXP) with b:{(REAL_32,REAL_32); REAL_32} :TFN2 <-
+  (
+    (val_x,val_y) := (x,y)
+    exec := b
+    Self
+  )
+    
+  - eval:REAL_32 <- exec.value (val_x.eval,val_y.eval)
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "FN2("
+    val_x.append_in b
+    b | ','
+    val_y.append_in b
+    b | ')'
+  )

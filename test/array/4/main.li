@@ -1,0 +1,22 @@
+Header
+  + name := MAIN;
+  
+Public
+  - max:INTEGER <- 99
+  
+  - main <-
+  ( + a:ARRAY INTEGER
+    a := ARRAY INTEGER .create_with_capacity max
+    1.to max do { k:INTEGER
+      a.add_first (max - k)
+    }
+    1.to max do { k:INTEGER
+      TEST.check (a.at (k - 1)) integer (k - 1)
+    }
+    TEST.check (a.first) integer 0
+    TEST.check (a.last) integer (max - 1)
+    1.to max do { k:INTEGER
+      a.remove_first
+    }
+    TEST.check (a.is_empty)
+  )

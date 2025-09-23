@@ -1,0 +1,182 @@
+Header  
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Private  
+  + cltn_bbb:ARRAY INTEGER
+  + cltn_aaa:ARRAY_RING INTEGER
+  
+  - long:INTEGER <- 300
+  
+Public
+  - main <-
+  ( + x,idx:INTEGER
+    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
+    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+    idem
+    6.times {
+      x := x + 1
+      cltn_bbb.add_last x
+      cltn_aaa.add_last x
+      idem
+    }
+    idx := cltn_bbb.upper
+    cltn_bbb.remove idx
+    cltn_aaa.remove idx
+    idem
+    idx := cltn_bbb.lower
+    cltn_bbb.remove idx
+    cltn_aaa.remove idx
+    idem
+    main_1
+  )
+  
+  - main_1 <-
+  ( + x:INTEGER
+    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
+    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+    x := 1
+    cltn_bbb.at 0 add x
+    cltn_aaa.at 0 add x
+    idem
+    x := 2
+    cltn_bbb.at 0 add x
+    cltn_aaa.at 0 add x
+    idem
+    1000.times {
+      + idx:INTEGER
+      x := x + 1
+      idx := cltn_bbb.upper
+      cltn_bbb.at idx add x
+      cltn_aaa.at idx add x
+      //"cltn_bbb: ".print; cltn_bbb.foreach { v:INTEGER; v.print; ' '.print; }; '\n'.print
+      //"cltn_aaa: ".print; cltn_aaa.foreach { v:INTEGER; v.print; ' '.print; }; '\n'.print
+      idem
+    }
+    main_3
+  )
+  
+  - main_3 <-
+  ( + x:INTEGER
+    RANDOM.init 5
+    //
+    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
+    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+    cltn_bbb.add_last 1
+    cltn_aaa.add_last 1
+    idem
+    cltn_bbb.add_last 2
+    cltn_aaa.add_last 2
+    idem
+    cltn_bbb.at 0 put 3
+    cltn_aaa.at 0 put 3
+    idem
+    cltn_bbb.at 1 put 4
+    cltn_aaa.at 1 put 4
+    idem
+    cltn_bbb.at 0 put 1
+    cltn_aaa.at 0 put 1
+    idem
+    cltn_bbb.at 1 put 3
+    cltn_aaa.at 1 put 3
+    idem
+    cltn_bbb.at 1 add 2
+    cltn_aaa.at 1 add 2
+    idem
+    cltn_bbb.at 3 add 5
+    cltn_aaa.at 3 add 5
+    idem
+    cltn_bbb.at 3 add 4
+    cltn_aaa.at 3 add 4
+    idem
+    cltn_bbb.at 4 add 6
+    cltn_aaa.at 4 add 6
+    idem
+    //
+    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
+    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+    idem
+    cltn_bbb.add_last 1
+    cltn_aaa.add_last 1
+    idem
+    cltn_bbb.add_last 2
+    cltn_aaa.add_last 2
+    idem
+    long.times {
+      x := cltn_bbb.last
+      x := x + 1
+      cltn_bbb.add_last x
+      cltn_aaa.add_last x
+      idem
+    }
+    {cltn_bbb.is_empty}.until_do {
+      cltn_bbb.remove_last
+      cltn_aaa.remove_last
+      idem
+    }
+    x := 0
+    long.times {
+      x := x + 1
+      cltn_bbb.add_first x
+      cltn_aaa.add_first x
+      idem
+    }
+    {cltn_bbb.is_empty}.until_do {
+      cltn_bbb.remove_first
+      cltn_aaa.remove_first
+      idem
+    }
+    x := 1
+    cltn_bbb.at 0 add x
+    cltn_aaa.at 0 add x
+    idem
+    long.times {
+      + idx:INTEGER
+      idx := RANDOM.range 0 to (cltn_bbb.count)
+      //("cltn_bbb.count=" + cltn_bbb.count.to_string + " idx=" + idx.to_string).println
+      cltn_bbb.at idx add x
+      cltn_aaa.at idx add x
+      idem
+      x := x + 1
+    }
+    {cltn_bbb.is_empty}.until_do {
+      + idx:INTEGER
+      (cltn_bbb.upper > 0).if {
+        idx := RANDOM.range 0 to (cltn_bbb.upper)
+      } else {
+        idx := 0
+      }
+      cltn_bbb.remove idx
+      cltn_aaa.remove idx
+      idem
+    }
+  )
+  
+  - idem <-
+  ( + i:INTEGER
+    (cltn_bbb.lower != cltn_aaa.lower).if {
+      crash_with_message "ERREUR"
+    }
+    (cltn_bbb.upper != cltn_aaa.upper).if {
+      crash_with_message "ERREUR"
+      "ERREUR".println
+      SYSTEM.exit 1
+    }
+    (cltn_bbb.count != cltn_aaa.count).if {
+      crash_with_message "ERREUR"
+      "ERREUR".println
+      SYSTEM.exit 1
+    }
+    cltn_bbb.is_empty.if_false {
+      TEST.check (cltn_bbb.last) integer (cltn_aaa.last)
+      TEST.check (cltn_bbb.first) integer (cltn_aaa.first)
+    }
+    i := 0
+    {i <= cltn_bbb.upper}.while_do {
+      TEST.check (cltn_bbb.at i) integer (cltn_aaa.at i)
+      i := i + 1
+    }
+  )
+  

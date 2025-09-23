@@ -1,0 +1,121 @@
+Header
+  
+  + name := HUFFMAN_JPG;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  // zlib-style huffman encoding
+  // (jpegs packs from left, zlib from right, so can't share code)
+  + fast:NATIVE_ARRAY UINTEGER_8
+  + code:NATIVE_ARRAY UINTEGER_16
+  + values:NATIVE_ARRAY UINTEGER_8
+  + size:NATIVE_ARRAY UINTEGER_8
+  + maxcode:NATIVE_ARRAY INTEGER
+  + delt:NATIVE_ARRAY INTEGER; // old 'firstsymbol' - old 'firstcode'
+  
+  // huffman decoding acceleration
+  - fast_bits:INTEGER := 9; // larger handles more cases; smaller stomps less cache
+  
+  - new:SELF <- clone.init
+    
+  - init:SELF <-
+  ( fast := NATIVE_ARRAY UINTEGER_8.create (1 << fast_bits)
+    code := NATIVE_ARRAY UINTEGER_16.create 256
+    values := NATIVE_ARRAY UINTEGER_8.create 256
+    size := NATIVE_ARRAY UINTEGER_8.create 257
+    maxcode := NATIVE_ARRAY INTEGER.create 18
+    delt := NATIVE_ARRAY INTEGER.create 17
+    Self
+  )
+  
+  - make count:NATIVE_ARRAY INTEGER <- // JPEG
+  ( + k,cod:INTEGER
+    //"1\n".print
+    // build size list for each symbol (from JPEG spec)
+    0.to 15 do { i:INTEGER
+      0.to (count.at i-1) do { j:INTEGER
+        size.at k put (i+1)
+        k := k + 1
+      }
+    }
+    size.at k put 0
+//"2\n".print
+    // compute actual symbols (from jpeg spec)
+    cod := 0
+    k := 0
+    1.to 16 do { j:INTEGER
+      // compute delta to add to code to compute symbol id
+//      "2.1\n".print
+      delt.at j put (k - cod)
+      (size.at k = j).if {
+        {size.at k = j}.while_do {
+//          "2.2 k=".print; k.println
+          code.at k put cod
+          k := k + 1
+          cod := cod + 1
+        }
+        (cod-1 >= (1 << j)).if {
+          "bad code lengths\n".print
+          exit 0
+        }
+      }
+//      "3\n".print
+      // compute largest code + 1 for this size, preshifted as needed later
+//      "j=".print; j.println
+      maxcode.at j put (cod << (16-j))
+      cod := cod << 1
+    }
+    maxcode.at 17 put 0FFFF_FFFFh
+//"4\n".print
+    // build non-spec acceleration table; 255 is flag for not-accelerated
+    fast.set_all_with 255 until ((1 << fast_bits)-1)
+    0.to (k-1) do { i:INTEGER
+      + s:INTEGER
+      s := size.at i
+      (s <= fast_bits).if {
+        + c,m:INTEGER
+        c := code.at i << (fast_bits-s)
+        m := 1 << (fast_bits-s)
+        0.to (m-1) do { j:INTEGER
+          fast.at (c+j) put i
+        }
+      }
+    }
+//    "5\n".print
+  )
+  
+  - build_fast_ac (fast_ac:NATIVE_ARRAY INTEGER_16) <- // JPEG
+  // build a table that decodes both magnitude and value of small ACs in
+  // one go.
+  ( + lfast:UINTEGER_8
+    + rs,run,magbits,len:INTEGER
+    0.to ((1 << fast_bits)-1) do { i:INTEGER
+      lfast := fast.at i
+      fast_ac.at i put 0
+      (lfast < 255).if {
+        rs := values.at lfast
+        run := (rs >> 4) & 15
+        magbits := rs & 15
+        len := size.at lfast
+
+        ((magbits!=0) && {len + magbits <= fast_bits}).if {
+          + k,m:INTEGER
+          // magnitude code followed by receive_extend code
+          k := ((i << len) & ((1 << fast_bits) - 1)) >> (fast_bits - magbits)
+          m := 1 << (magbits - 1)
+          (k < m).if {
+            k := k + (-1 << magbits) + 1
+          }
+          // if the result is small enough, we can fit it in fast_ac table
+          ((k >= -128) && {k <= 127}).if {
+            fast_ac.at i put (((k << 8) + (run << 4) + (len + magbits)).to_integer_16)
+          }
+        }
+      }
+    }
+  )
+  

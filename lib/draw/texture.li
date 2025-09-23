@@ -1,0 +1,53 @@
+Header
+  
+  + name := TEXTURE;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+
+  + id:INTEGER
+  + tex:UINTEGER_32
+  + width:INTEGER
+  + height:INTEGER
+  + type:INTEGER
+  + flags:INTEGER
+  
+  - set_tex t:UINTEGER_32 <- ( tex := t; )
+  
+  - create pid:INTEGER size (w,h:INTEGER) 
+  type typ:INTEGER flags f:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make pid size (w,h) type typ flags f
+    result    
+  )
+  
+  - make pid:INTEGER size (w,h:INTEGER) 
+  type typ:INTEGER flags f:INTEGER <-
+  ( 
+    id := pid
+    (width,height) := (w,h)
+    type := typ
+    flags := f
+  )
+  
+  /*
+  - create_image_from_handle_gles3 (GLuint textureId, int w, int h, int imageFlags) :INTEGER <-
+  (
+    GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr
+    GLNVGtexture* tex = glnvg__allocTexture(gl)
+
+    if (tex == ((void *)0)) return 0
+
+    type  := texture_rgba
+    tex   := texture_id
+    flags := image_flags
+    width := w
+    height:= h
+    
+    tex.id
+  )
+*/

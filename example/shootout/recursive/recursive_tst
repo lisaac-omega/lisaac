@@ -1,0 +1,8 @@
+../../../../src/lisaac recursive -boost -i 20
+%lisaac recursive -O -i20
+gcc recursive_c.c -o recursive_c -O3  
+echo Lisaac: 
+time ./recursive 11 > out_li.txt
+echo C:
+time ./recursive_c 11 > out_c.txt
+diff out_li.txt out_c.txt

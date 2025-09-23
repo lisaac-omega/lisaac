@@ -1,0 +1,61 @@
+Header
+  
+  + name := NANO_TEST;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_paper:PAPER := PAPER
+  
+Private
+  
+  - draw_mouse p:PEN <-
+  ( + t:TOUCH
+    (p.touch.lower).to (p.touch.upper) do { i:INTEGER
+      t := p.touch.item i
+      (t.z != 0).if {        
+        p.begin_path
+        p.circle (t.x,t.y) radius 100
+        p.stroke_color (COLOR.rgb (255,255,255))
+        p.stroke
+      }
+    }
+  )
+  
+Public  
+  
+  - draw pen:PEN <-
+  ( + t:REAL_32
+    + c:PAINT
+    + x,y,w,h:INTEGER
+    
+    t := CLOCK.seconds
+    
+    (x,y) := (512/2-32,860/2-32)
+    (w,h) := (64,64)
+    
+    c := PAINT.create_radial (x+w/2,y+h/2) radius (3,(t*5).sin*32)
+    color (COLOR.rgba(255,0,0,255)) 
+    to (COLOR.rgba(72, 116, 80,0))
+    /*
+    c := PAINT.create_linear (x,y) to (x+w,y+h)
+    color (COLOR.rgba(255,  0,  0,255)) 
+    to    (COLOR.rgba(  0,255,  0,255))
+    */
+    pen.begin_path
+    pen.rect (x,y) size (w,h)
+    pen.fill_paint c
+    pen.stroke_color (COLOR.rgba (0,0,0,0))
+    pen.fill
+    c.free
+    
+    draw_mouse pen
+  )
+  
+  - main <-
+  ( 
+    PAPER.make (512,860) title "Nano Test"
+    PAPER.set_animation 1
+    PAPER.run Self
+  )
+  

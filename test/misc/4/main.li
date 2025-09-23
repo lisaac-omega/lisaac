@@ -1,0 +1,14 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + string:STRING_BUFFER
+    
+    string := STRING_BUFFER.create 256
+    STDIN.read_line_in string
+    STDERR.put_string string
+  )
+  

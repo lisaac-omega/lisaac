@@ -1,0 +1,68 @@
+Header
+  + name := MAIN;
+  
+Private
+  + n:INTN
+  
+  - next_pow3 s:STRING_ALIAS <-
+  (
+    n := n * 3
+    STRING.tmp { tmp:STRING_BUFFER
+      n.append_in tmp
+      TEST.check tmp string s
+    }
+  )
+  
+  
+Public
+  - main <-
+  (
+    n := 1.to_intn
+    next_pow3 "3"
+    next_pow3 "9"
+    next_pow3 "27"
+    next_pow3 "81"
+    next_pow3 "243"
+    next_pow3 "729"
+    next_pow3 "2187"
+    next_pow3 "6561"
+    next_pow3 "19683"
+    next_pow3 "59049"
+    next_pow3 "177147"
+    next_pow3 "531441"
+    next_pow3 "1594323"
+    next_pow3 "4782969"
+    next_pow3 "14348907"
+    next_pow3 "43046721"
+    next_pow3 "129140163"
+    next_pow3 "387420489"
+    next_pow3 "1162261467"
+    next_pow3 "3486784401"
+    next_pow3 "10460353203"
+    next_pow3 "31381059609"
+    next_pow3 "94143178827"
+    next_pow3 "282429536481"
+    next_pow3 "847288609443"
+    next_pow3 "2541865828329"
+    next_pow3 "7625597484987"
+    next_pow3 "22876792454961"
+    next_pow3 "68630377364883"
+    next_pow3 "205891132094649"
+    next_pow3 "617673396283947"
+    next_pow3 "1853020188851841"
+    next_pow3 "5559060566555523"
+    next_pow3 "16677181699666569"
+    next_pow3 "50031545098999707"
+    next_pow3 "150094635296999121"
+    next_pow3 "450283905890997363"
+    next_pow3 "1350851717672992089"
+    next_pow3 "4052555153018976267"
+    next_pow3 "12157665459056928801"
+    next_pow3 "36472996377170786403"
+    next_pow3 "109418989131512359209"
+    next_pow3 "328256967394537077627"
+    next_pow3 "984770902183611232881"
+    next_pow3 "2954312706550833698643"
+    next_pow3 "8862938119652501095929"
+  )
+  

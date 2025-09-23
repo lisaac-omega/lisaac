@@ -1,0 +1,101 @@
+Header
+  + name := LOCAL;
+
+Inherit
+  + parent_decl:Expanded DECL
+  + parent_tok_itm:Expanded TOK_ITM
+  
+Private
+  - stk:Expanded ARRAY (Strict LOCAL)
+  
+Public 
+  
+  + name_id:STRING_ALIAS
+  - set_name n:STRING_ALIAS :SELF <- ( name_id := n; Self)
+  
+  + style:UINTEGER_8
+  - set_style f:INTEGER :SELF <- ( style := style | f; Self)
+  - style_is f:INTEGER :BOOLEAN <- (style & f) != 0
+      
+  - type:TYPE <- ttok.type
+  + ttok:TTOK
+  - set_ttok t:TTOK <- ( ? {t != NULL}; ttok := t; )
+  
+  + index:INTEGER
+  - set_index i:INTEGER <- ( index := i; )
+  
+  - cur_index:INTEGER
+  - reset_index <- ( cur_index := 0; )
+  
+Public
+  
+  - length_max:INTEGER
+    
+  - new:SELF <- ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <-
+  ( style := 0
+    (ttok != NULL).if { ttok.free; ttok := NULL; }
+    //stk.foreach { l:Strict LOCAL; (l = Self).if { crash; }; };
+    stk.add_last Self
+  )
+  
+  /*
+  - set_type t:TYPE style f:UINTEGER_8 <-
+  (
+    style := style | f
+    type := t
+    index := cur_index
+    (is value).if {
+      cur_index := cur_index + t.upper + 1
+    } else {
+      cur_index := cur_index + 1
+    }
+  );
+  */
+  
+  //
+  // PARSE / DRAW
+  //
+  
+  - in_list:BOOLEAN
+  - set_list l:BOOLEAN <- ( in_list := l; )
+  
+  - new_parse t:INTEGER <-
+  ( //+ tb:TBLC
+    + c:INTEGER
+    c := LOOK.keyword
+    (
+      ((t & 1 = 1) && {word "Self"}) || 
+      {c := LOOK.local; read_idf}
+    ).if {      
+      col c sub (last_str.count)
+      ((t & 100b) != 0).if {
+        fnt (FONT.italic) sub (last_str.count)
+        fnt (FONT.roman) sub 0
+        style := style | f_ro
+      }
+      name_id := last_str
+      length_max := length_max.max (last_str.count)
+      rd_type.if {
+        
+      } else {
+        ((t & 10b) = 10b).if {
+          sty.set_upper (Old sty.upper); // BSBS: Doublon avec arg.li ??
+          pos_i := Old pos_i
+        }
+      }
+    }
+  )
+  
+  - rd_type:BOOLEAN <-
+  ((read_c ':') && {(pos_i > upper) || {at pos_i != '='}}).if {
+    col (LOOK.symbol) sub 1
+    ttok := TTOK.parse_sp (TTOK.tres); //read_type_result
+    (ttok = NULL).if { err syntax msg "Type expected."; }
+  }
+      
+  - sub_draw <-
+  (
+    ((ttok != NULL) && {ttok.now pos_i}).if { ttok.draw; }
+  )
+

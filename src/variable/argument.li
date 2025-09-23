@@ -1,0 +1,57 @@
+Header
+
+  + name      := ARGUMENT;
+
+  /*Argument runnable*/
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  + name:STRING_ALIAS
+
+  + type:TYPE_FULL
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS type t:TYPE_FULL :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p name n type t
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS type t:TYPE_FULL <-
+  (
+    position := p
+    name := n
+    type := t
+  )
+
+  //
+  // To profil
+  //
+
+  - to_local:LOCAL <-
+  (
+    LOCAL.create position name name style ' ' type (type.fix)
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    string_tmp.clear
+    string_tmp.append name
+    string_tmp.add_last ':'
+    type.append_name_in string_tmp
+    string_tmp.print
+  )
+

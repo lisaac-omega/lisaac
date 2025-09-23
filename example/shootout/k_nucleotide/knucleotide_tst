@@ -1,0 +1,7 @@
+lisaac knucleotide -q -O -i20
+gcc knucleotide_c.c -o knucleotide_c -O3 -fomit-frame-pointer -lm
+echo Lisaac: 
+time ./knucleotide < input10000000.txt > out_li.txt
+echo C:
+time ./knucleotide_c < input10000000.txt > out_c.txt
+diff out_li.txt out_c.txt

@@ -1,0 +1,80 @@
+Header
+  + name := MAIN;
+  
+Private
+  - values:ARRAY INTN
+  
+  - valook: ARRAY STRING_ALIAS
+  
+  - operations:STRING_ALIAS := "+++++++++++++++++++++++*****"
+  
+Public
+  - main <-
+  ( + intn:INTN
+    + a,b,c:INTN
+    + j:INTEGER
+    + op:CHARACTER
+    values := ARRAY INTN .create_with_capacity 1024
+    valook := ARRAY STRING_ALIAS .create_with_capacity 1024
+    intn := 1
+    values_add intn
+    intn := 2
+    values_add intn
+    0.to (operations.upper) do { i:INTEGER
+      a := values.at (values.upper - 1)
+      b := values.at (values.upper)
+      op := operations.at i
+      (op = '+').if {
+        values_add (a + b)
+      }.elseif {op = '-'} then {
+        values_add (a - b)
+      }.elseif {op = '*'} then {
+        values_add (a * b)
+      } else {
+        TEST.check FALSE
+      }
+    }
+    TEST.check (values.upper = valook.upper)
+    j := values.upper
+    (operations.upper).downto 0 do { i:INTEGER
+      c := values_at (values.upper)
+      b := values_at (values.upper - 1)
+      a := values_at (values.upper - 2)
+      op := operations.at i
+      (op = '+').if {
+        intn := c - b
+      }.elseif {op = '-'} then {
+        intn := c + b
+      }.elseif {op = '*'} then {
+        intn := c / b
+      } else {
+        TEST.check FALSE
+      }
+      TEST.check (intn == a)
+      TEST.check (intn.to_string) string (a.to_string)
+      remove_last
+    }
+    TEST.check (values.upper = 1)
+    TEST.check (valook.upper = 1)
+  )
+  
+  - values_add z:INTN <-
+  (
+    values.add_last z
+    valook.add_last (z.to_string)
+    TEST.check ((valook.last) == (z.to_string))
+  )
+  
+  - values_at z:INTEGER :INTN <-
+  ( + result:INTN
+    result := values.at z
+    TEST.check (result.to_string) string (valook.at z)
+    result
+  )
+
+  - remove_last <-
+  (
+    values.remove_last
+    valook.remove_last
+  )
+  

@@ -1,0 +1,18 @@
+Header
+  
+  + name := MAIN;
+
+Inherit
+
+  //- parent_clone:CLONE := CLONE
+
+Public
+  
+  + flag:BOOLEAN
+  
+  - main <-  
+  ( + m:MAIN
+    + b:BOOLEAN
+    b := TRUE && {(m ?= NULL) && {m.flag}}
+    ? {b}
+  )

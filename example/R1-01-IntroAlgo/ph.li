@@ -1,0 +1,26 @@
+Section Header
+  
+  + name := PH;
+  /*
+  Exercice 7 du poly des exercices.
+  */
+  
+Section Public
+  
+  - main <-
+  ( + ph:INTEGER;
+    ph := (COMMAND_ARGS.at 1).to_integer
+    "ph=".print; ph.println
+    if ( ph = 7 ) then {
+      "neutre".println
+    }.elseif { ph < 2 } then {
+      "très acide".println
+    }.elseif { ph < 7 } then {
+      "acide".println
+    }.elseif { ph < 12 } then {
+      "alcaline".println
+    } else {      
+      "très alcaline".println
+    }    
+  )
+  

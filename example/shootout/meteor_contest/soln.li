@@ -1,0 +1,165 @@
+Header
+  
+  + name         := SOLN;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Private
+  
+  - no_piece:INTEGER := -1
+  
+Public
+  
+  + m_pieces:ARRAY[S_PIECE]
+  + m_n_piece:UINTEGER_32
+  
+  + m_cells:ARRAY2[INTEGER_8]
+  + m_synched:BOOLEAN
+  
+  - create fill_val:INTEGER :SELF <-
+  ( + result:SELF
+    
+    result := clone
+    result.make fill_val
+    result
+  )
+  
+  - make fill_val:INTEGER <-
+  (
+    m_pieces := ARRAY[S_PIECE].create n_piece_type
+    m_cells  := ARRAY2[INTEGER_8].create (n_row,n_col)
+    fill fill_val
+  )
+
+  - to_string:STRING_BUFFER <-
+  ( + result:STRING_BUFFER
+    + val:INTEGER
+    
+    result := STRING_BUFFER.create (n_cell * 2)
+    
+    0.to (n_row - 1) do { y:INTEGER
+      0.to (n_col - 1) do { x:INTEGER
+	val := m_cells.item (y,x)
+	(val = no_piece).if {
+	  result.add_last '.'
+	} else {
+	  result.add_last ('0' + val)
+	}
+	result.add_last ' '
+      }
+      result.add_last '\n'
+
+      // indent every second line
+      (y % 2 = 0).if {
+	result.add_last ' '
+      }
+    }
+    result
+  )
+ 
+  - fill val:INTEGER <-
+  (
+    m_synched := false
+    m_cells.set_all_with val
+  )
+
+  - is_empty:BOOLEAN <- (m_n_piece = 0)
+
+  - pop_piece <- 
+  (
+    m_n_piece := m_n_piece - 1
+    m_synched := FALSE
+  )
+   
+  - push_piece (vec:UINTEGER_32, i_piece,row:INTEGER) <-
+  ( + p:S_PIECE
+    
+    p := m_pieces.item m_n_piece
+    m_n_piece := m_n_piece + 1
+    p.set_vec vec
+    p.set_i_piece i_piece
+    p.set_row row
+  )
+
+  - set_cells <-
+  ( + vec:UINTEGER_32
+    + pid:INTEGER_8
+    + row_offset,n_new_cells:INTEGER
+    
+    (m_synched).if_false {
+      0.to (m_n_piece-1) do { i_piece:UINTEGER_32
+	const SPiece & p := m_pieces.item i_piece
+	vec := p.vec
+	pid := p.i_piece.to_integer8
+	row_offset := p.row
+
+	n_new_cells := 0
+	row_offset.to (n_row - 1) do { y:INTEGER
+	  0.to (n_col-1) do { x:INTEGER
+	    ((vec & 1) != 0).if {
+	      m_cells.put pid to (y,x)
+	      n_new_cells := n_new_cells + 1
+	    }
+	    vec := vec >> 1
+	  }
+	  (n_new_cells = PIECE.n_elem).if {
+	    break
+	  }
+	}
+      }
+      m_synched := TRUE
+    }
+  )
+  
+  - less_than r:SOLN :BOOLEAN <-
+  ( + result,stop:BOOLEAN
+    + lval,rval,x,y:INTEGER
+    
+    (m_pieces.item 0.i_piece != r.m_pieces.item 0.i_piece).if {
+      result := m_pieces.item 0.i_piece < r.m_pieces.item 0.i_piece
+    } else {
+
+      set_cells
+      r.set_cells
+      
+      y := 0
+      {(y < n_raw) && {! stop}}.while_do { 
+	x := 0
+	{(x < n_col) && {! stop}}.while_do { 
+	  lval := m_cells.item (y,x)
+	  rval := r.m_cells.item (y,x)
+	  
+	  (lval != rval).if {
+	    stop := TRUE
+	    result := (lval < rval)
+	  }
+	  x := x + 1
+	}
+	y := y + 1
+      }
+    }
+    result
+  )
+
+  - spin spun:SOLN <-
+  ( + flipped:INTEGER_8
+    
+    set_cells
+
+    // swap cells
+    0.to (n_row - 1) do { y:INTEGER
+      0.to (n_col - 1) do { x:INTEGER
+	flipped := m_cells.item (n_row - y - 1,n_col - x - 1)
+	spun.m_cells.put flipped to (y,x)
+      }
+    }
+    
+    // swap first and last pieces (the rest aren t used)
+    spun.m_pieces.item 0.i_piece := m_pieces.item (n_piece_type - 1).i_piece
+    spun.m_synched := TRUE
+  )

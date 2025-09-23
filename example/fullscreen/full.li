@@ -1,0 +1,18 @@
+Header
+  + name := FULL;
+  
+Inherit
+  + parent_window:Expanded WINDOW
+  
+Public
+    
+  - main <-
+  (
+    fullscreen := TRUE
+    
+    init "Full screen" size (512,860)
+    BUTTON.new.init "Exit" do { b:BUTTON; exit 0; TRUE}
+    .init_parent Self.size (width,height)
+    
+    PAPER.run
+  )

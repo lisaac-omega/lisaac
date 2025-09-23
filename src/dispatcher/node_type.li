@@ -1,0 +1,244 @@
+Header
+
+  + name    := NODE_TYPE;
+
+  /*Switch node for type*/
+
+Inherit
+
+  + parent_node:Expanded NODE
+
+Public
+
+  - result_expr:EXPR <- data.result_expr
+
+  + is_self:BOOLEAN
+
+  //
+  // Creation.
+  //
+
+  - create e:EXPR with d:DTA :SELF <-
+  // Create with back-link.
+  [ -? {d.position != 0}; ]
+  ( + result:SELF
+
+    result := clone
+    result.make e with d
+    result
+  )
+
+  - make e:EXPR with d:DTA <-
+  (
+    expr := e
+    data := d
+    late_binding_counter := late_binding_counter + 1
+    ((e.static_type.is_expanded) || {e.static_type.raw = type_boolean}).if {
+      late_binding_expanded_counter := late_binding_expanded_counter + 1
+    } else {
+      + self:READ_LOCAL
+      self ?= e
+      ((self != NULL) && {self.variable.name = "Self"}).if {
+        late_binding_self_counter := late_binding_self_counter + 1
+      }
+    }
+  )
+
+  //
+  // Just for ITM_EXPRESSION
+  //
+
+  - create_partial d:DTA :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make_partial d
+    result
+  )
+
+  - make_partial d:DTA <-
+  (
+    data := d
+  )
+
+Public
+
+  - my_copy:SELF <-
+  ( + result:SELF
+
+    result := SELF.create (expr.my_copy) with data
+    node_list.add_last result
+    result
+  )
+
+  //
+  // Update.
+  //
+
+  - update:BOOLEAN <-
+  (
+    update_case NULL & update_depth NULL
+  )
+
+NODE, DTA
+
+  - update_link self_type:TYPE_FULL :BOOLEAN <-
+  (
+    update_case self_type & update_depth self_type
+  )
+
+Private
+
+  - update_case type_self:TYPE_FULL :BOOLEAN <-
+  ( + typ_f:TYPE_FULL
+    + typ:TYPE
+    + lst_typ:TYPES_TMP
+    + list:ARRAY CASE
+    + case:CASE
+    + result:BOOLEAN
+    + idx,idx2:INTEGER
+
+    typ_f := expr.static_type
+    /*
+    ((data.slot != NULL) && {data.slot.name != NULL} && {data.slot.name == "tmp_name"}).if {
+      warning_error (position,"NODE_TYPE")
+      typ_f.raw.name.print
+      '\n'.print
+      TYPES_TMP.print_all
+    }
+    */
+    
+    ((typ_f.is_expanded || {typ_f.is_strict}) && {typ_f.raw != type_boolean}).if {
+      (first_code = NULL).if {
+	first_type := typ_f.raw
+	first_code := data.product first_type with expr self type_self
+      }
+      result := TRUE
+    }.elseif {(typ_f.raw = type_boolean) && {count = 2}} then {
+      result := TRUE
+    } else {
+      ((typ_f.raw.is_block) || {typ_f.raw.subtype_list.count != count}).if {
+	lst_typ := TYPES_TMP.new
+        expr.get_type lst_typ
+
+        /*
+        ((typ_f.raw = type_boolean) && {! lst_typ.is_empty}).if {
+          expr.debug_display; '\n'.print
+          (lst_typ.first = type_boolean).if {
+
+            crash_with_message "NODE_TYPE : BUG"
+          }
+          /*
+          lst_typ.print
+          '\n'.print
+          warning_error (position,"ICI")
+          */
+        }
+        */
+	(! lst_typ.is_empty).if {
+	  (lst_typ.count = 1).if {
+            (first_code = NULL).if {
+              idx := lst_typ.first_index
+	      first_type := lst_typ.at idx
+	      first_code := data.product first_type with expr self type_self
+	    }
+	  } else {
+	    (switch = NULL).if {
+	      switch := SWITCH.create Self with expr size (lst_typ.count)
+	    }
+            list := switch.list
+            
+            
+            // MHMH:
+            /*
+            (expr.static_type.raw.name == "STRING").if {
+              
+              lst_typ.print_types
+              warning_error (position,"LA")
+              "----------------------\n".print
+            };*/
+            
+            (list.count != lst_typ.count).if {
+              idx  := lst_typ.first_index
+              idx2 := 0
+	      {idx != -1}.while_do {
+                typ := lst_typ.at idx
+                ((idx2 > list.upper) || {typ != list.at idx2.id}).if { 
+		  add_stack_type typ
+		  //
+		  case := CASE.create typ with (data.product typ with expr self type_self)
+		  list.at idx2 add case
+		  //
+		  stack_type.remove_last
+                }
+                idx := lst_typ.next_index idx
+                idx2 := idx2 + 1
+	      }
+	    }
+	  }
+	}
+	lst_typ.free
+      } else {
+	//count_flat := count_flat + 1
+	//"Yes\n".print
+      }
+    }
+    result
+  )
+
+  - update_depth self_type:TYPE_FULL :BOOLEAN <-
+  ( + result:BOOLEAN
+    + list:ARRAY CASE
+    + new_type_self:TYPE_FULL
+
+    (switch = NULL).if {
+      (first_code != NULL).if {
+        (self_type = NULL).if {
+          new_type_self := expr.static_type
+          ((! new_type_self.is_expanded) || {new_type_self.raw = type_boolean}).if {
+            new_type_self := first_type.default.to_strict
+            //new_type_self := new_type_self.get_with (new_type_self.flag | TYPE_FULL.generic_bit)
+	  }
+	} else {
+	  new_type_self := self_type
+        }
+
+	add_stack_type first_type
+	result := data.update_branch first_code self new_type_self
+	stack_type.remove_last
+      }
+    } else {
+      list := switch.list
+      //result := TRUE; BSBS: Pas d'impact
+      (list.lower).to (list.upper) do { j:INTEGER
+        (self_type = NULL).if {
+          new_type_self := list.at j.id.default.to_strict
+          //new_type_self := new_type_self.get_with (new_type_self.flag | TYPE_FULL.generic_bit)
+	} else {
+	  new_type_self := self_type
+	}
+	add_stack_type (list.at j.id)
+	/*result := result &*/ data.update_branch (list.at j.code) self new_type_self
+	stack_type.remove_last
+      }
+    }
+    result
+  )
+
+Private
+
+  - stack_type:ARRAY TYPE := ARRAY TYPE .create_with_capacity 16
+
+  - add_stack_type t:TYPE <-
+  (
+    stack_type.add_last t
+    ((stack_type.count > 1) && {stack_type.first = t}).if {
+      string_tmp.copy "Cyclic inheritance : "
+      (stack_type.lower).to (stack_type.upper) do { j:INTEGER
+	stack_type.at j.append_name_in string_tmp
+	string_tmp.append ", "
+      }
+      string_tmp.append "..."
+      semantic_error (data.position, string_tmp)
+    }
+  )

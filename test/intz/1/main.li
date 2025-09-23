@@ -1,0 +1,14 @@
+Header
+  + name := MAIN;
+  
+Public
+  
+  - main <-
+  ( + a,b:ℤ
+    a := -15
+    "Affect ok\n".print
+    b := 3
+    "-----\n".print
+    (a + b).println
+  )
+  

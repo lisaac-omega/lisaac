@@ -1,0 +1,285 @@
+Header
+
+  + name    := TYPE_BLOCK;
+
+  /*Virtual type for BLOCK manager*/
+
+Inherit
+
+  + parent_type:Expanded TYPE
+
+Private
+
+  - dico:ARRAY TYPE_BLOCK := ARRAY TYPE_BLOCK .create_with_capacity 2048
+
+TYPE_BLOCK //,PROFIL_BLOCK
+
+  //
+  // Creation.
+  //
+
+  - create a_list:ARRAY TYPE_FULL and_result r_list:ARRAY TYPE_FULL :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make a_list and_result r_list
+    result
+  )
+
+  - make a_list:ARRAY TYPE_FULL and_result r_list:ARRAY TYPE_FULL <-
+  (
+    argument_list := a_list
+    result_list   := r_list
+    default := TYPE_FULL.create Self with 0
+  )
+
+Public
+
+  - set_late_binding <-
+  (
+    type_block.set_late_binding
+  )
+
+  - intern_name:STRING_ALIAS <- type_block.intern_name
+
+  - is_block:BOOLEAN := TRUE
+
+  + argument_list:ARRAY TYPE_FULL
+  + result_list:ARRAY TYPE_FULL
+
+  - get_expr_for p:POSITION :EXPR <-
+  ( + result:EXPR
+    + lst:ARRAY EXPR
+
+    (result_list.count > 1).if {
+      lst := ARRAY EXPR.create_with_capacity (result_list.count)
+      (result_list.lower).to (result_list.upper) do { j:INTEGER
+        lst.add_last (result_list.at j.get_temporary_expr p)
+      }
+      result := EXPR_MULTIPLE.create lst
+    }.elseif {result_list.count = 1} then {
+      result := result_list.first.get_temporary_expr p
+    } else {
+      result := PROTOTYPE_CST.create p type (TYPE_VOID.default)
+    }
+    result
+  )
+
+  - get t:ITM_TYPE_BLOCK with p:PARAMETER_TO_TYPE :TYPE_FULL <-
+  ( + a_list:ARRAY TYPE_FULL
+    + r_list:ARRAY TYPE_FULL
+
+    // Argument.
+    a_list := ALIAS_ARRAY TYPE_FULL.new
+    (t.type_argument != NULL).if {
+      t.type_argument.to_run_in a_list for p pos (p.position.prototype.filename)
+    }
+    a_list := ALIAS_ARRAY TYPE_FULL.alias a_list
+    // Result.
+    r_list := ALIAS_ARRAY TYPE_FULL.new
+    (t.type_result != NULL).if {
+      t.type_result.to_run_in r_list for p pos (p.position.prototype.filename)
+    }
+    r_list := ALIAS_ARRAY TYPE_FULL.alias r_list
+    //
+    get_direct a_list and_result r_list.default
+  )
+
+  - get_direct a_list:ARRAY TYPE_FULL and_result r_list:ARRAY TYPE_FULL :TYPE_BLOCK <-
+  ( + idx:INTEGER
+    + result:TYPE_BLOCK
+
+    idx := dico.lower
+    {
+      (idx <= dico.upper) && {
+        {dico.at idx.argument_list != a_list} ||
+        {dico.at idx.result_list   != r_list}
+      }
+    }.while_do {
+      idx := idx + 1
+    }
+    (idx <= dico.upper).if {
+      result := dico.at idx
+    } else {
+      result := create a_list and_result r_list
+      dico.add_last result
+    }
+    result
+  )
+  
+  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
+  ( + result:BOOLEAN
+    + o:TYPE_BLOCK
+    + oo:PROFIL_BLOCK
+    + i:INTEGER
+    oo ?= other
+    (oo != NULL).if {
+      o := oo.to_type_block
+    } else {
+      o ?= other
+    }
+    /*
+    (o != NULL).if {
+      string_tmp.clear
+      append_name_in string_tmp
+      string_tmp.append " <=> "
+      o.append_name_in string_tmp
+      string_tmp.add_last '\n'
+      string_tmp.print
+    };*/
+    (
+      (o != NULL) && 
+      {argument_list.count = o.argument_list.count} && 
+      {result_list.count = o.result_list.count}
+    ).if {
+      //"Test arg & result...\n".print
+      result := TRUE
+      i := argument_list.lower
+      {(result) && {i <= argument_list.upper}}.while_do {
+        result := argument_list.at i == o.argument_list.at i
+        /*
+        (result).if_false {
+          string_tmp.clear
+          argument_list.at i.display string_tmp
+          string_tmp.append " != "
+          o.argument_list.at i.display string_tmp
+          string_tmp.add_last '\n'
+          string_tmp.print
+        };*/
+        i := i + 1
+      }
+      i := result_list.lower
+      {(result) && {i <= result_list.upper}}.while_do {
+        result := result_list.at i == o.result_list.at i
+        /*
+        (result).if_false {
+          string_tmp.clear
+          result_list.at i.display string_tmp
+          string_tmp.append " != "
+          o.result_list.at i.display string_tmp
+          string_tmp.add_last '\n'
+          string_tmp.print
+        };*/
+        i := i + 1
+      }
+    }
+    //(result).if_true { "OK!!\n".print; }
+    result    
+  )
+  
+  - prototype:PROTOTYPE <- type_block.prototype
+
+  - get_slot n:STRING_ALIAS :SLOT <-
+  (
+    type_block.get_slot n
+  )
+
+  - get_local_slot n:STRING_ALIAS :SLOT <-
+  (
+    type_block.get_local_slot n
+  )
+
+  - get_path_slot n:STRING_ALIAS :SLOT <-
+  (
+    type_block.get_path_slot n
+  )
+
+  - genere_struct <- type_block.genere_struct
+
+  - get_type_creation:TYPE <-
+  (
+    TYPE_CREATION(TYPE_BLOCK).create_type_creation Self
+  )
+
+  //
+  // Code source generation.
+  //
+
+  - put_id buffer:STRING_BUFFER <- index.append_in buffer
+
+  - put_access_id e:EXPR <-
+  (
+    output.append "(int)"
+    e.genere
+  )
+
+  - put_value buffer:STRING_BUFFER <-
+  (
+    buffer.append "(void *)"
+    index.append_in buffer
+  )
+
+  - is_sub_type other:TYPE :BOOLEAN <-
+  ( + me:TYPE_BLOCK    
+    me ?= other
+    (me != NULL) && 
+    {me.argument_list = argument_list} && 
+    {me.result_list = result_list}
+  )
+
+  - is_sub_type_result other:TYPE_BLOCK :BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+    (result_list = other.result_list) || {
+      (result_list != NULL) && {other.result_list != NULL} /* BSBS c'est jamais null*/ && 
+      {result_list.count = other.result_list.count} && {
+        result := TRUE
+        j := result_list.lower
+        {(j <= result_list.upper) && {result}}.while_do {
+          result := result_list.at j.is_sub_type (other.result_list.at j)
+          j := j + 1
+        }
+        result
+      }
+    }
+  )
+  
+  - is_invariant_type_arg other:TYPE_BLOCK :BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+    (argument_list = other.argument_list) || {      
+      (argument_list.count = other.argument_list.count) && {
+        result := TRUE
+        j := argument_list.lower
+        {(j <= argument_list.upper) && {result}}.while_do {
+          result := argument_list.at j == other.argument_list.at j
+          j := j + 1
+        }
+        result
+      }
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - append_name_in buf:STRING_BUFFER <-
+  (
+    buf.add_last '{'
+    (argument_list.is_empty).if_false {
+      (argument_list.count > 1).if {
+        buf.add_last '('
+        (argument_list.lower).to (argument_list.upper-1) do { j:INTEGER
+          argument_list.at j.display buf
+          buf.add_last ','
+        }
+        argument_list.last.display buf
+        buf.add_last ')'
+      } else {
+        argument_list.first.display buf
+      }
+      buf.add_last ';'
+      buf.add_last ' '
+    }
+    (result_list.is_empty).if_false {
+      (result_list.lower).to (result_list.upper-1) do { j:INTEGER
+        result_list.at j.display buf
+        buf.add_last ','
+      }
+      result_list.last.display buf
+    }
+    buf.add_last '}'
+    // Debug
+    //buf.append "(TYPE_BLOCK)"
+  )
+  

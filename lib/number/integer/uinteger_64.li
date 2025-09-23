@@ -1,0 +1,80 @@
+Header
+
+  + name    := Expanded UINTEGER_64;
+
+  /*Unsigned 64 bits integer.*/
+  - type    := `uint64_t`;
+  - default := (0.to_raw_uinteger_64);
+  - export  := INTEGER;
+  - external := `#include <stdint.h>`;
+
+Insert
+
+  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 8
+
+  // Range.
+
+  - maximum:UINTEGER_64 := `0xFFFFFFFFFFFFFFFFLLU`:UINTEGER_64; //BSBS pb C 0FFFFFFFFFFFFFFFFh
+  
+  - clz:INTEGER <-
+  // Count Leading Zeros.
+  ASM_BUILTIN.clz Self
+  
+  // Conversion with test.
+  
+  - ep0:SELF <- ((Self @> 28) ^ (Self @> 34) ^ (Self @> 39))
+  - ep1:SELF <- ((Self @> 14) ^ (Self @> 18) ^ (Self @> 41))
+  
+  - sig0:SELF  <- ((Self @>  1) ^ (Self @>  8) ^ (Self >>  7))
+  - sig1:SELF  <- ((Self @> 19) ^ (Self @> 61) ^ (Self >>  6))
+  
+  - rev:SELF <-
+  ( + tmp:SELF
+    tmp := (Self >> 32) | (Self << 32)
+    tmp := ((tmp & 0FF00FF00FF00FF00h) >> 8) | ((tmp & 000FF00FF00FF00FFh) << 8)
+    ((tmp & 0FFFF0000FFFF0000h) >> 16) | ((tmp & 00000FFFF0000FFFFh) << 16)
+  )
+  
+  - to_uinteger_64:UINTEGER_64   <- Self
+  
+  - append_in b:STRING_BUFFER base base:INTEGER :INTEGER <-
+  ( + bits:INTEGER
+    + sn:INTEGER
+    + map:STRING_ALIAS
+    + spu:NATIVE_ARRAY UINTEGER_8
+    (Self = 0).if {
+      b.add_last '0'
+      sn := 1
+    } else {
+      + low,new_cap,i:INTEGER
+      + x,msk:UINTEGER_64
+      low := b.count
+      new_cap := low + 64
+      b.set_capacity new_cap
+      x := Self
+      map := (base = 64).ok (ℤ.base64) or (ℤ.digits)
+      spu := CAST (NATIVE_ARRAY CHARACTER) TO (NATIVE_ARRAY UINTEGER_8).on (b.storage) + low
+      bits := ASM_BUILTIN.base_power_of_two base
+      (bits != 0).if {
+        msk := (1 << bits) - 1
+        i := (ASM_BUILTIN.size_in_base_2 x + bits-1) / bits
+        sn := sn + i
+        {x != 0}.while_do {
+          i := i - 1
+          spu.at i put ((x & msk).to_uinteger_8)
+          x := x >> bits
+        }
+      } else {       
+        not_yet_implemented
+      }
+      b.set_upper (low+sn-1)
+      low.to (b.upper) do { j:INTEGER
+        b.at j put (map.item (b.item j.to_uinteger_8))
+      }
+    }
+    sn
+  )

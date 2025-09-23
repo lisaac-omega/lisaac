@@ -1,0 +1,19 @@
+Header
+  + name := PACKED_CHAR;
+  /*Proto utile ?*/
+  
+Mapping
+  
+  + x0:UINTEGER_16;
+  + y0:UINTEGER_16;
+  + x1:UINTEGER_16;
+  + y1:UINTEGER_16;
+  + xoff:REAL_32;
+  + yoff:REAL_32;
+  + xadvance:REAL_32;
+  + xoff2:REAL_32;
+  + yoff2:REAL_32;
+  
+Public
+  
+  - reset_box <- ( x0:=y0:=x1:=y1:=0; )

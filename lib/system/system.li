@@ -1,0 +1,38 @@
+Header
+
+  + name := SYSTEM;
+  
+  - external := `
+char *system_name()
+{ char *n; 
+#if defined(_WIN32)
+n = "windows";
+#elif defined(__ANDROID__)
+n = "android";
+#elif defined(__APPLE__)
+n = "apple";
+#else 
+n = "unix";
+#endif
+return n;
+}`;
+
+Private
+  
+  + name_memory:STRING_ALIAS
+    
+Public
+  
+  - name:STRING_ALIAS <- // "Linux" "Android" "Apple" "Windows"
+  ( + n:NATIVE_ARRAY CHARACTER
+    + r:STRING_ALIAS
+    n := `system_name()`:NATIVE_ARRAY CHARACTER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.from_external_copy n
+      r := tmp.to_string_alias
+    }
+    r
+  )
+  
+  - exit code:INTEGER <- `exit(@code)`
+  

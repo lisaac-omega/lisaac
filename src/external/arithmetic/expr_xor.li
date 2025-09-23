@@ -1,0 +1,67 @@
+Header
+
+  + name        := EXPR_XOR;
+
+  /*Xor Binary arithmetic expression.*/
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  + symbol:STRING_ALIAS := "^"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0  ^ E -> E
+  //-- -1 ^ E -> ~ E
+  ( + result:EXPR
+
+    (left_cst.value = 0).if {
+      result := right
+      left_cst.remove
+    }.elseif {left_cst.is_saturated} then {
+      result := EXPR_NOT.create position with right
+      left_cst.remove
+    }
+    result
+  )
+
+  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  //-- E ^ 0  -> E
+  //-- E ^ -1 -> ~ E
+  ( + result:EXPR
+
+    (right_cst.value = 0).if {
+      result := left
+      right_cst.remove
+    }.elseif {right_cst.is_saturated} then {
+      result := EXPR_NOT.create position with left
+      right_cst.remove
+    }
+    result
+  )
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 ^ C2 -> C3
+  (
+    left_cst.set_value (left_cst.value ^ right_cst.value)
+    right_cst.remove
+    left_cst
+  )
+
+  - exec:EXPR <-
+  //-- E ^ E -> 0
+  ( + result:EXPR
+
+    (left ~= right).if {
+      result := INTEGER_CST.create position value 0 type static_type
+      left .remove
+      right.remove
+    }
+    result
+  )

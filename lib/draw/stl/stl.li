@@ -1,0 +1,98 @@
+Header
+  + name := STL;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Private
+  
+  - buf:NATIVE_ARRAY UINTEGER_8
+  - cap:INTEGER
+  
+Public
+  
+  - body:ARRAY PTSTL := ARRAY PTSTL.create_with_capacity 1024
+  
+  - info:BOOLEAN
+  
+  - ox:REAL_32
+  - oy:REAL_32
+  - oz:REAL_32
+  
+  - gx:REAL_32
+  - gy:REAL_32
+  - gz:REAL_32
+  
+  - xmin:REAL_32
+  - ymin:REAL_32
+  - zmin:REAL_32
+  
+  - xmax:REAL_32
+  - ymax:REAL_32
+  - zmax:REAL_32
+  
+  - update_info <-
+  ( + n:REAL_32
+    xmin := xmax := body.first.x1
+    ymin := ymax := body.first.y1
+    zmin := zmax := body.first.z1
+    gx := gy := gz := 0
+    body.foreach { p:PTSTL
+      (xmin,xmax) := (p.x_min.min xmin,p.x_max.max xmax)
+      (ymin,ymax) := (p.y_min.min ymin,p.y_max.max ymax)
+      (zmin,zmax) := (p.z_min.min zmin,p.z_max.max zmax)
+      (gx,gy,gz) := (gx + p.gx, gy + p.gy, gz + p.gz)
+    }
+    (ox,oy,oz) := ((xmax + xmin)/2, (ymax + ymin)/2, (zmax + zmin)/2)
+    n := body.count
+    (gx,gy,gz) := (gx / n, gy / n, gz / n)
+    info := TRUE
+  )
+  
+  - center <-
+  (
+    (!info).if { update_info; }
+    body.foreach { p:PTSTL
+      p.translate (-ox,-oy,-oz)
+    }
+  )
+  
+  - rotate_x_p90 <- ( body.foreach { p:PTSTL; p.rotate_x_p90; }; )
+  - rotate_x_m90 <- ( body.foreach { p:PTSTL; p.rotate_x_m90; }; )
+  
+  - load n:NATIVE_ARRAY UINTEGER_8 size s:INTEGER <-
+  ( + nb:UINTEGER_32
+    + nr:NATIVE_ARRAY UINTEGER_8
+    nb := `*(unsigned long *)&@n[80]`:UINTEGER_32
+    //"Triangles: ".print; nb.println
+    body.set_capacity nb
+    nr := CAST (NATIVE_ARRAY PTSTL) TO (NATIVE_ARRAY UINTEGER_8).on (body.storage)
+    nr.slice_copy n to 0 from 84 to (s-1)
+    body.set_upper (nb-1)
+    info := FALSE
+    //body.foreach { p:PTSTL; p.print; }
+  )
+  
+  - load pth:STRING  <-
+  ( + f:POINTER
+    + s:INTEGER
+    //pth.println
+    f := FILE_UTILS.open_read pth
+    (f.is_null).if {
+      "Error: ".print
+      pth.print
+      " not open.".println
+    }
+    s := FILE_UTILS.file_size f
+    (cap < s).if {
+      (cap = 0).if {
+        buf := NATIVE_ARRAY UINTEGER_8.calloc_intern s
+      } else {        
+        buf := buf.realloc cap with s
+      }
+      cap := s
+    }
+    FILE_UTILS.read_raw f in buf size s
+    FILE_UTILS.close f
+    load buf size s
+  )

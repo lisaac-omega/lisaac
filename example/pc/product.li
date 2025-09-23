@@ -1,0 +1,52 @@
+Header
+  
+  - name := PRODUCT;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  + storage:STORAGE
+  
+  + text:MUTEX
+  
+  //
+  // Creation.
+  //
+
+  - create s:STORAGE print m:MUTEX :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make s print m
+    result
+  )
+
+  - make s:STORAGE print m:MUTEX <-
+  ( 
+    storage := s
+    text := m
+  )
+  
+  - run <- 
+  (    
+    "Product ready!\n".print
+    1.to 10 do { j:INTEGER
+      storage.put j
+      
+      text.lock
+      "Product #".print
+      j.print
+      '\n'.print
+      text.unlock
+      /*
+      30.random.times { 
+        `usleep(1)`
+      }
+      */
+    }
+  )
+        
+      
+

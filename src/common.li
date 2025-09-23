@@ -1,0 +1,79 @@
+Header
+
+  + name     := COMMON;
+
+  /*Common code to shorter and the compiler*/
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  - version :STRING_ALIAS := "0.5 (Ω)"
+
+  - command_line_header name:STRING_ALIAS :STRING_ALIAS <-
+  ( + before, after :STRING_ALIAS
+    + total_length:INTEGER
+    total_length := 60
+    before :=
+    "----------------------------------------------------------------\n\
+    \--               Lisaac IS An Advanced Compiler               --\n\
+    \--"
+    after :=                                                      "--\n\
+    \--             UL - UDS - LORIA - INRIA - FRANCE              --\n\
+    \--         Benoit SONNTAG - benoit.sonntag@lisaac.org         --\n\
+    \--         Dominique COLNET - Dominique.Colnet@loria.fr       --\n\
+    \--                   http://www.lisaac.org/                   --\n\
+    \----------------------------------------------------------------\n"
+    string_tmp.copy name
+    string_tmp.append " - version "
+    string_tmp.append version
+    string_tmp2.copy before
+    ((total_length - string_tmp.count + 1) / 2).times {
+      string_tmp .add_last ' '
+      string_tmp2.add_last ' '
+    }
+    string_tmp2.append string_tmp
+    (string_tmp2.count.is_even).if { string_tmp2.add_last ' '; }
+    string_tmp2.append after
+    string_tmp2.to_string_alias
+  )
+
+  - print_info <-
+  ( + debug_code, lisaac_optim :STRING_ALIAS
+    
+    compiler_debug_with_code.if {
+      debug_code := " (with source code)"
+    } else {
+      debug_code := " (without source code)"
+    }
+    debug_code.println
+    compiler_optimization.if {
+      lisaac_optim := "yes"
+    } else {
+      lisaac_optim := "no"
+    }
+    "Version:               ".print; version.print; '\n'.print
+    "Built on:              ".print; compile_date.print; ' '.print; compile_time.print; '\n'.print
+    "Debug Level:           ".print; debug_level.print; debug_code.println
+    "Inline Level:          ".print; compiler_inlining_level.println
+    "Lisaac optimizations:  ".print; lisaac_optim.println
+
+    '\n'.print
+    "Lisaac directory path: ".print; path_lisaac.println
+  )
+
+  - path_lisaac:STRING_ALIAS :=
+  ( + r:STRING_ALIAS
+    + i:INTEGER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy (COMMAND_ARGS.executable_directory)
+      tmp.remove_last
+      i := tmp.last_path_separator
+      (i != -1).if { tmp.set_upper i; }
+      r := tmp.to_string_alias
+    }
+    r
+  )
+

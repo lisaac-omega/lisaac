@@ -1,0 +1,16 @@
+Header
+  + name := TFILL;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  - run <-
+  (
+    fill_color (LOOK.cols.at (LOOK.slot))
+    fill
+    fill_color (TOK_DRW.last_color)
+  )
+  
+  - append_in b:STRING_BUFFER <- ( b += "Fill"; )

@@ -1,0 +1,219 @@
+Header
+
+  + name        := EXTERNAL_C;
+
+  /*External C instruction.*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  + is_persistant:BOOLEAN
+
+  + static_type:TYPE_FULL
+
+  + living_type:TYPES
+
+  - set_living_type l:TYPES <-
+  (
+    living_type := l
+  )
+
+  - get_type t:TYPES_TMP <-
+  (
+    (living_type = NULL).if {
+      t.add (static_type.raw)
+    } else {
+      t.union living_type
+    }
+  )
+
+  //
+  // External value.
+  //
+
+  + code:STRING_ALIAS
+  + access_list:ARRAY EXPR
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION
+  text c:STRING_ALIAS
+  access ac:ARRAY EXPR
+  persistant per:BOOLEAN
+  type t:TYPE_FULL :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p text c access ac persistant per type t
+    result
+  )
+
+  - make p:POSITION
+  text c:STRING_ALIAS
+  access ac:ARRAY EXPR
+  persistant per:BOOLEAN
+  type t:TYPE_FULL <-
+  (
+    position      := p
+    static_type   := t
+    is_persistant := per
+    code          := c
+    access_list   := ac
+  )
+
+  - my_copy:SELF <-
+  ( + result:SELF
+    + new_access:ARRAY EXPR
+    + val:EXPR
+
+    (access_list != NULL).if {
+      new_access := ARRAY EXPR.create_with_capacity (access_list.count)
+      (access_list.lower).to (access_list.upper) do { j:INTEGER
+	val := access_list.at j.my_copy
+	new_access.add_last val
+      }
+    }
+    result := SELF.create position text code
+    access new_access persistant is_persistant type static_type
+    result.set_living_type living_type
+    result
+  )
+
+  //
+  // Generation.
+  //
+
+  - remove <-
+  (
+    (access_list != NULL).if {
+      (access_list.lower).to (access_list.upper) do { j:INTEGER
+	access_list.at j.remove
+      }
+    }
+  )
+
+  - execute_unlink:INSTR <-
+  ( + result,instr:INSTR
+
+    (is_persistant).if {
+      // Normal.
+      static_type := TYPE_VOID.default
+      result := execute_link
+    } else {
+      // Remove.
+      (access_list != NULL).if {
+	(access_list.lower).to (access_list.upper) do { j:INTEGER
+	  instr := access_list.at j.execute_unlink
+	  (instr != NULL).if {
+	    list_current.insert_before instr
+	  }
+	}
+      }
+    }
+    result
+  )
+
+  - execute_link:EXPR <-
+  ( + e:EXPR
+
+    // Normal
+    (access_list != NULL).if {
+      (access_list.lower).to (access_list.upper) do { j:INTEGER
+	e := access_list.at j.execute_link
+	access_list.at j put e
+      }
+    }
+    Self
+  )
+
+  - genere <-
+  ( + idx,beg:INTEGER
+
+    ((is_graph) && {is_persistant}).if {
+      (profil_current != NULL).if {
+        profil_current.set_external_present TRUE
+      } else {
+        profil_main.set_external_present TRUE
+      }
+      output.append "/* PERSISTANT */"
+    }
+
+    (static_type.raw != TYPE_VOID).if {
+      output.append "(("
+      static_type.genere_declaration output
+      output.add_last ' '
+      static_type.genere_star_declaration output
+      output.append ")("
+    } else {
+    //  output.append "if ("
+    }
+
+    (access_list != NULL).if {
+      beg := code.lower
+      idx := code.index_of '@' since beg
+      (access_list.lower).to (access_list.upper) do { j:INTEGER
+	beg.to (idx-1) do { k:INTEGER
+	  output.add_last (code.at k)
+	}
+	beg := idx + 1
+	access_list.at j.genere
+	idx := code.index_of '@' since beg
+      }
+      // Copy end.
+      beg.to (code.upper) do { k:INTEGER
+	output.add_last (code.at k)
+      }
+    } else {
+      output.append code
+    }
+    (static_type.raw != TYPE_VOID).if {
+      output.append "))"
+    } else {
+    //  output.add_last ')'
+    }
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  ( + j:INTEGER
+    buffer.add_last '`';
+    buffer.append code
+    ((access_list != NULL) && { ! access_list.is_empty}).if {
+      buffer.add_last '('
+      access_list.lower.to (access_list.upper - 1) do { j:INTEGER
+	access_list.at j.display buffer
+	buffer.add_last ','
+      }
+      access_list.last.display buffer
+      buffer.add_last ')'
+    }
+    buffer.add_last '`';
+    static_type.append_name_in buffer
+    (living_type != NULL).if {
+      buffer.add_last '('
+      j := living_type.first_index
+      {j != -1}.while_do {        
+	buffer.append (living_type.at j.intern_name)
+        buffer.add_last ','
+        j := living_type.next_index j
+      }
+      buffer.at (buffer.upper) put ')'
+    }
+    display_ref buffer
+  )
+
+
+
+
+
+
+
+
+

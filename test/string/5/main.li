@@ -1,0 +1,30 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + str:USTRING
+    + char:CHAR
+    + i:STRIDX
+    str := USTRING_BUFFER.from_alias "vélo"
+    char := str.at (str.lower)
+    TEST.check (char.to_uinteger_8) integer ('v'.to_uinteger_8)
+    char := str.at (str.upper)
+    TEST.check (char.to_uinteger_8) integer ('o'.to_uinteger_8)
+    i := str.upper
+    char := str.at i
+    TEST.check (char.to_uinteger_32) integer ('o'.to_uinteger_8)
+    i := i - 1
+    char := str.at i
+    TEST.check (char.to_uinteger_32) integer ('l'.to_uinteger_8)
+    i := i - 1
+    char := str.at i
+    TEST.check 43459 integer (0000_1010_1001_1100_0011b)
+    ? {char.to_uinteger_32 != 0}.txt {char.to_uinteger_32.to_string}
+    TEST.check (char.to_uinteger_32) integer 43459
+    TEST.check (`@char`:UINTEGER_64) integer (0000_1010_1001_1100_0011b)
+    TEST.check (char.to_uinteger_32) integer (0000_1010_1001_1100_0011b)
+    char.println
+  )
+  
+  

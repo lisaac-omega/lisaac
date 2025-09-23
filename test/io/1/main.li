@@ -1,0 +1,10 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  
+  - main <-
+  (
+    TEST.check (COMMAND_ARGS.count) integer 1
+  )

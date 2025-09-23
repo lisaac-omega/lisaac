@@ -1,0 +1,37 @@
+Header
+  + name := TSPLINE;
+  
+Inherit
+  + parent_tmove:Expanded TMOVE
+  
+Public
+  
+  + w1_x:TEXP
+  + w1_y:TEXP
+  
+  + w2_x:TEXP
+  + w2_y:TEXP
+    
+  - init_w1 (w1x,w1y:TEXP) w2 (w2x,w2y:TEXP) to (x,y:TEXP) :SELF <-
+  (
+    (w1_x,w1_y) := (w1x,w1y)
+    (w2_x,w2_y) := (w2x,w2y)
+    (val_x,val_y) := (x,y)
+    Self
+  )
+  
+  - run <-
+  (
+    bezier_w1 (w1_x.eval,w1_y.eval) w2 (w2_x.eval,w2_y.eval) to (val_x.eval,val_y.eval)
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "Spline w1 ("
+    w1_x.append_in b;  b | ',';  w1_y.append_in b
+    b += ") w2 ("
+    w2_x.append_in b;  b | ',';  w2_y.append_in b
+    b += ") to ("
+    val_x.append_in b; b | ',';  val_y.append_in b
+    b | ')'
+  )

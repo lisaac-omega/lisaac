@@ -1,0 +1,111 @@
+Header
+  + name := TEX;
+  
+Inherit
+//  - parent_win:WIN := WIN
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_clone:CLONE := CLONE
+  
+Private
+  - list:ARRAY TEX := ( + r:ARRAY TEX; r := ARRAY TEX.create_with_capacity 16; r.add_last TEX; r )
+  - list_upper:INTEGER
+  
+  - new_push <-
+  (
+    (list_upper = list.upper).if { list.add_last clone; }
+    list_upper := list_upper + 1
+    tex := list.at list_upper
+  )
+  
+Public
+  + xmin:REAL_32
+  + ymin:REAL_32
+  
+  + xmax:REAL_32
+  - set_xmax xm:REAL_32 <- ( xmax := xm; )
+  //- ymax:REAL_32 <- y - des
+  
+  + x:REAL_32
+  - set_x px:REAL_32 <- ( last_x := x; x := px;     xmax := xmax.max x; )
+  - add_x px:REAL_32 <- ( last_x := x; x := x + px; xmax := xmax.max x; )
+  
+  + y:REAL_32
+  - set_y py:REAL_32 <- ( y := py; )
+  - add_y py:REAL_32 <- ( y := y + py; )
+  - set_xy (px,py:REAL_32) <- ( (x,y) := (px,py); last_x := x; xmax := xmax.max x; )
+  
+  + asc:REAL_32
+  + des:REAL_32
+  - last_asc:REAL_32
+  - last_des:REAL_32
+  - last_x:REAL_32
+  
+  - ascdes (a,d:REAL_32) <- ( (last_asc,last_des) := (a,d); (asc,des) := (asc.max a, des.min d); )
+  - set_ascdes (a,d:REAL_32) <- ( (last_asc,last_des) := (asc,des) := (a,d); )
+  - set_x_ascdes (px,a,d:REAL_32) <- ( set_x px; ascdes (a,d); )
+  
+  - reset (px,py:REAL_32) <- ( asc := des := 0; xmax := px; (xmin,ymin) := (x,y) := (px,py); last_x := x; )
+  
+  - y0:REAL_32 <- y - asc
+  - y1:REAL_32 <- y - des
+   
+  - push (px,py:REAL_32) <-
+  ( new_push
+    tex.reset (px + x, py + y)
+  )
+  
+  - push_line <-
+  ( new_push
+    tex.reset (xmin,y)
+    tex.set_x x
+  )
+  
+  - pop <-
+  ( 
+    list_upper := list_upper - 1
+    tex := list.at list_upper
+    tex.set_xmax (tex.xmax.max xmax)
+  )
+  
+  - pop_add_y dy:REAL_32 <-
+  ( + old_y:REAL_32
+    old_y := y
+    pop
+    tex.set_y (old_y + dy)
+  )
+    
+  
+  
+  /* C'est naze ça, il faut avoir un contexte 
+  
+  - non:UINTEGER_32 := 0000h
+  - dir:UINTEGER_32 := 0100h
+  - rmo:UINTEGER_32 := 0200h
+  - rmc:UINTEGER_32 := 0300h
+  - ctx:UINTEGER_32 := 0400h
+  - cfn:UINTEGER_32 := 0500h
+  - clo:UINTEGER_32 := 0600h
+  - car:UINTEGER_32 := 0700h
+  - typ:UINTEGER_32 := 0800h
+  - num:UINTEGER_32 := 0900h
+  - txt:UINTEGER_32 := 0A00h; // 1010b
+  - ext:UINTEGER_32 := 0B00h; // 1011b
+  - tp :UINTEGER_32 := 0C00h
+  - slo:UINTEGER_32 := 0D00h
+  - dlo:UINTEGER_32 := 0E00h; ?
+  - dar:UINTEGER_32 := 0F00h; ?
+    
+  - light:UINTEGER_32  := 1000h
+  //- bold:UINTEGER_32   := 2000h
+  //- italic:UINTEGER_32 := 4000h
+  
+  - ul_red:UINTEGER_32    := 0_8000h
+  - ul_green:UINTEGER_32  := 1_0000h
+  - ul_orange:UINTEGER_32 := 2_0000h
+    
+  - rec_right:UINTEGER_32 := 4_0000h
+  - rec_left:UINTEGER_32  := 8_0000h
+  
+  //- big:UINTEGER_32   := 4_0000h; // Alias rec_right ( ) { }
+  - graph:UINTEGER_32 := 8_0000h; // Alias rec_left
+  */

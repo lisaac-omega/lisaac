@@ -1,0 +1,89 @@
+Header
+
+  - name        := TABLE;
+
+  /*Display array manager.*/
+
+Inherit
+
+  - parent_object:OBJECT := OBJECT
+
+Private
+
+  - table:ARRAY2 STRING := ARRAY2 STRING .create (10,10)
+
+  - size:ARRAY INTEGER := ARRAY INTEGER .create_with_capacity 10
+
+  - line:INTEGER
+  - column:INTEGER
+
+Public
+
+  - new_table (l,c:INTEGER) <-
+  (
+    table.make (l,c)
+    line := column := 0
+  )
+
+  - add n:STRING <-
+  (
+    ? {n != NULL}
+
+    table.put n to (line,column)
+    (column = table.upper2).if {
+      column := 0
+      line   := line + 1
+    } else {
+      column := column + 1
+    }
+  )
+
+  - append_in buffer:STRING_BUFFER <-
+  ( + siz:INTEGER
+    + append_line,append_bar:BLOCK
+
+    // Size column.
+    size.make (table.count2)
+    0.to (table.upper1) do { l:INTEGER
+      0.to (table.upper2) do { c:INTEGER
+	siz := table.at (l,c).count
+	(siz > size.at c).if {
+	  size.put siz to c
+	}
+      }
+    }
+
+    // Sub-code for one line.
+    append_line :=
+    { l:INTEGER
+      + n:STRING
+      buffer.append "// "
+      0.to (table.upper2) do { c:INTEGER
+	n := table.at (l,c)
+	buffer.append "| "
+	buffer.append n
+	buffer.extend_multiple ' ' by (size.at c - n.count + 1)
+      }
+      buffer.append "|\n"
+    }
+    append_bar :=
+    {
+      buffer.append "// "
+      0.to (table.upper2) do { c:INTEGER
+	buffer.add_last '+'
+	buffer.extend_multiple '-' by (size.at c + 2)
+      }
+      buffer.append "+\n"
+    }
+
+    // Display Header.
+    append_bar.value
+    append_line.value 0
+    append_bar.value
+    // Display table.
+    1.to (table.upper1) do { l:INTEGER
+      append_line.value l
+    }
+    // Display End.
+    append_bar.value
+  )

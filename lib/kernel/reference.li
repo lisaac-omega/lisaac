@@ -1,0 +1,32 @@
+Header
+  + name      := REFERENCE E;
+  /*Reference on object (Expanded)*/
+  - export    := E,POINTER;
+  - import    := E;
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  + value:E
+
+  // Creation.
+
+  - create v:E :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make v
+    result
+  )
+
+  - make v:E <-
+  (
+    value := v
+  )
+
+  // Cast.
+
+  - to_e:E <- value
+
+  - from_e v:E :SELF <- create v

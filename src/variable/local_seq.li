@@ -1,0 +1,79 @@
+Header
+
+  + name        := LOCAL_SEQ;
+
+  /*Local slot*/
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Private
+
+  - list_busy:ARRAY LOCAL := ARRAY LOCAL .create_with_capacity 512
+
+  - list_free:ARRAY LOCAL_SEQ := ARRAY LOCAL_SEQ .create_with_capacity 512
+
+  - clean <-
+  (
+    last_write := NULL
+  )
+
+Public
+
+  + last_write:WRITE
+  + last_seq_index:UINTEGER_32
+  + last_seq_or_and:UINTEGER_32
+  + last_seq_call_and_loop:UINTEGER_32
+  + last_seq_call_local_and_loop:UINTEGER_32
+
+  + last_list_current:LIST
+  + last_index:INTEGER
+
+  - set_last_write w:WRITE <-
+  (
+    last_write := w
+  )
+
+  - set_last_index i:INTEGER <-
+  (
+    last_index := i
+  )
+
+  - new l:LOCAL <-
+  ( + result:LOCAL_SEQ
+
+    (list_free.is_empty).if {
+      result := clone
+    } else {
+      result := list_free.last
+      list_free.remove_last
+    }
+    result.clean
+    list_busy.add_last l
+    l.set_last_seq result
+  )
+
+  - set_seq w:WRITE <-
+  (
+    // Save context
+    last_write                  := w
+    last_seq_index              := seq_index
+    last_seq_or_and             := seq_or_and
+    last_seq_call_and_loop      := seq_call_and_loop
+    last_seq_call_local_and_loop:= seq_call_local_and_loop
+    //
+    last_list_current := list_current
+    last_index        := list_current.index
+  )
+
+  - clear <-
+  ( + l:LOCAL
+
+    (list_busy.upper).downto (list_busy.lower) do { j:INTEGER
+      l := list_busy.at j
+      list_free.add_last (l.last_seq)
+      l.set_last_seq NULL
+    }
+    list_busy.clear
+  )

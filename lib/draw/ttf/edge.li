@@ -1,0 +1,55 @@
+Header
+  
+  + name := EDGE;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Private  
+  
+  - stock:ARRAY EDGE := ARRAY EDGE.create_with_capacity 32
+
+  - new:EDGE <-
+  ( + result:EDGE
+    (stock.is_empty).if {
+      result := EDGE.clone
+    } else {
+      result := stock.pop
+    }
+    result
+  )
+  
+Public
+  
+  - create:EDGE <- new
+  
+  + x0:REAL_32
+  + y0:REAL_32
+  + x1:REAL_32
+  + y1:REAL_32
+  + invert:BOOLEAN
+  
+  - set_y0 y:REAL_32 <- ( y0 := y; )
+    
+  - create i:BOOLEAN x0 px0:REAL_32 y0 py0:REAL_32 
+  x1 px1:REAL_32 y1 py1:REAL_32 :EDGE <-
+  ( + result:EDGE
+    result := new
+    result.make i x0 px0 y0 py0 x1 px1 y1 py1
+    result
+  )
+  
+  - free <- stock.add_last Self
+  
+Private
+  
+  - make i:BOOLEAN x0 px0:REAL_32 y0 py0:REAL_32 
+  x1 px1:REAL_32 y1 py1:REAL_32 :SELF <-
+  (
+    invert := i
+    (x0,y0) := (px0,py0)
+    (x1,y1) := (px1,py1)
+    Self
+  )
+  

@@ -1,0 +1,192 @@
+Header
+
+  + name      := ALIASER_LOCAL;
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+ALIASER_LOCAL,LIST
+
+  - free_context:ARRAY LOCAL := ARRAY LOCAL.create_with_capacity 64
+
+  - top_context:INTEGER
+
+  - var_size:ARRAY (ARRAY LOCAL) :=
+  ( + result:ARRAY (ARRAY LOCAL)
+
+    result := ARRAY (ARRAY LOCAL).create_with_capacity 4
+    0.to 3 do { j:INTEGER
+      result.add_last (ARRAY LOCAL.create_with_capacity 32)
+    }
+    result
+  )
+
+Public
+
+  - is_on:BOOLEAN := TRUE
+
+  - reset <-
+  (
+    (var_size.lower).to (var_size.upper) do { i:INTEGER
+      var_size.at i.clear
+    }
+    free_context.clear
+    top_context := -1
+    current_list_level := 0
+  )
+
+  - write wr:WRITE_LOCAL :STRING_ALIAS <-
+  ( + loc,loc2:LOCAL
+    + result:STRING_ALIAS
+
+    loc  := wr.local
+    ((is_on) && {loc.style = '+'}).if {
+      loc2 := loc.my_alias
+      (loc2 = NULL).if {
+        loc2 := search_alias loc
+        (loc2 = loc).if {
+          add_var_size loc
+        } else {
+          loc2.set_ensure_count (loc.ensure_count)
+          loc2.set_require (loc.require_first) list (loc.require_list)
+        }
+        loc2.set_list_level current_list_level
+        loc.set_my_alias loc2
+      }
+      loc2.unwrite wr
+      result := loc2.intern_name
+    } else {
+      (loc.style = '+').if {
+        add_var_size loc
+      }
+      //loc.unwrite wr
+      result := loc.intern_name
+    }
+    result
+  )
+
+  - read rd:READ_LOCAL :STRING_ALIAS <-
+  ( + loc,loc2:LOCAL
+    + result:STRING_ALIAS
+
+    loc := rd.local
+    loc2 := loc.my_alias
+    loc.unread rd
+    ((loc2 = NULL) || {! is_on}).if {
+      result := loc.intern_name
+    } else {
+      loc2.set_ensure_count (loc.ensure_count)
+      result := loc2.intern_name
+    }
+    result
+  )
+
+  - push p:PUSH :STRING_ALIAS <-
+  ( + loc,loc2:LOCAL
+    + result:STRING_ALIAS
+
+    loc  := p.context
+    (is_on).if {
+      (p.is_first).if {
+        top_context := top_context + 1
+        (top_context <= free_context.upper).if {
+          loc2 := free_context.at top_context
+        } else {
+          free_context.add_last loc
+          loc2 := loc
+          add_var_size loc
+        }
+        loc.set_my_alias loc2
+        loc.set_list_level top_context
+      } else {
+        top_context := loc.list_level
+      }
+      /*
+      (loc.my_alias = NULL).if {
+        (p.is_first).if {
+          add_var_size loc
+        }
+        result := loc.intern_name
+      } else {*/
+        result := loc.my_alias.intern_name
+      //}
+    } else {
+      (p.is_first).if {
+        add_var_size loc
+      }
+      result := loc.intern_name
+    }
+    result
+  )
+
+  - add_var_size v:LOCAL <-
+  ( + tab:ARRAY LOCAL
+    + j:INTEGER
+    + t:TYPE_FULL
+
+    //? {(v.style = '+') || {v.style = 'R'}}
+
+    ((v.style != '+') && {v.style != 'R'}).if {
+      v.intern_name.print; " style [".print; v.style.print; "] ".print
+      '\n'.print
+      warning_error (v.position,"BUG ALIASER_LOCAL.add_var_size Error")
+    }
+    // BSBS: C'est pas top, avec des HSET ce serait mieux...
+    t := v.type
+    tab := var_size.at (v.type.size)
+    j := tab.lower
+    {(j <= tab.upper) && {tab.at j.type != t}}.while_do {
+      j := j + 1
+    }
+    (j > tab.upper).if {
+      tab.add_last v
+    } else {
+      {(j <= tab.upper) && {tab.at j != v} && {tab.at j.type = t}}.while_do {
+	j := j + 1
+      }
+      ((j > tab.upper) || {tab.at j != v}).if {
+	tab.at j add v
+      }
+    }
+  )
+
+Private
+
+  - search_alias v:LOCAL :LOCAL <-
+  ( + tab:ARRAY LOCAL
+    + j:INTEGER
+    + t:TYPE_FULL
+    + result:LOCAL
+    + is_void:BOOLEAN
+
+    (v.name.first = 'R').if {
+      result := v
+    } else {
+      t := v.type
+      is_void := (! t.is_expanded) && {! t.is_strict} && {! t.raw.is_block}
+      tab := var_size.at (v.type.size)
+      j := tab.lower
+      {
+        (j <= tab.upper) && {
+          (
+            (tab.at j.type != t) && {
+              (! is_void) || {tab.at j.type.is_expanded} ||
+              {tab.at j.type.is_strict} || {tab.at j.type.raw.is_block}
+            }
+          ) ||
+          {tab.at j.ensure_count != 0} ||
+          {tab.at j.require_count != 0} ||
+          {tab.at j.list_level < current_list_level}
+        }
+      }.while_do {
+        j := j + 1
+      }
+      (j > tab.upper).if {
+        result := v
+      } else {
+        result := tab.at j
+      }
+    }
+    result
+  )

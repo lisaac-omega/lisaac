@@ -1,0 +1,54 @@
+Section Inherit
+
+  + parent:STRING;
+
+Section Private
+  
+  + any:STRING;
+  
+  + is_valid:BOOLEAN;
+
+  //
+  // Execute function.
+  //
+
+  - front_end <-
+  (
+    (input_file = "").if {
+      input_file := "lisaac";
+    };
+    (input_file = "lisaac").if {
+      any := "compiler";
+    } else {
+      any := "lidoc";        
+    };    
+    path "./*";
+    (is_valid).if {
+      boost;
+    };       
+    general_front_end;
+  );
+
+  - back_end <-
+  (
+    general_back_end;
+    (is_valid).if {
+      (any = "compiler").if {
+        execute "cp lisaac.c ../bin/.";
+        execute "cp lisaac ../bin/.";
+      } else {
+        execute "cp lidoc.c ../bin/.";
+        execute "cp lidoc ../bin/.";
+      };      
+    };
+  );
+
+Section Public
+  
+  - valid <-
+  // Compile the Lisaac compiler with `-boost' option and
+  // update your `/bin' compiler version.
+  (
+    is_valid := TRUE;
+  );
+

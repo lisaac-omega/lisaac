@@ -1,0 +1,123 @@
+Header
+  + name := ARG;
+  
+Inherit
+  + parent_decl:Expanded DECL
+  + parent_tok_itm:Expanded TOK_ITM
+  
+Private
+  - stk:Expanded ARRAY (Strict ARG)
+  
+Public
+  + lst:Expanded ARRAY LOCAL
+  
+  - is_self:BOOLEAN <- (! lst.is_empty) && {lst.first.name_id = "Self"}
+  
+  - type:TYPE <-
+  ( + t:TYPE
+    (upper = 0).if { t := first.type; } else {
+      + ts:ARRAY TONE
+      + to:TONE
+      ts := push_tone
+      0.to upper do { i:INTEGER
+        to ?= lst.at i.type; ? {to != NULL}
+        ts.add_last to
+      }
+      t := TVEC.new ts
+      pop_tone
+    }
+    t    
+  )
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- ( lst.foreach { l:LOCAL; l.free; }; lst.clear; stk.add_last Self; )
+  
+  - new_parse t:INTEGER <-
+  (
+    rd_arg (t | 100b)
+  )
+  
+  - rd_arg op:INTEGER <-
+  //++ ARG          -> identifier ':' TYPE_RESULT
+  //++               | '(' ARG_VEC ')'
+  ( + mute:BOOLEAN
+    + l:LOCAL
+    
+    mute := (op&10b) != 0
+    (read_c '(').if {
+      col (LOOK.symbol) sub 1
+      rd_arg_vec op
+      ((lst.is_empty) && {!mute}).if { err syntax msg "Incorrect argument definition."; }
+      skip_spln
+      (read_c ')').if {
+        col (LOOK.symbol) sub 1
+      } else { (!mute).if { err warning msg "Added ')'. (2)"; }; }
+    } else {
+      ((l := LOCAL.parse_sp op) != NULL).if { lst.add_last l; }
+    }
+    (((lst.is_empty) || {lst.last.ttok = NULL}) && {mute}).if {
+      sty.set_upper (Old sty.upper)
+      pos_i := Old pos_i
+    }
+  )
+  
+  - rd_arg_vec op:INTEGER <-
+  //++ ARG0         -> identifier [ ':' TYPE ] { , identifier [ ':' TYPE ] }
+  ( + lop:INTEGER
+    + i:INTEGER
+    + mute:BOOLEAN
+    + l:LOCAL
+    + t:TTOK
+    + c:INTEGER
+    mute := (op&10b) != 0
+    lop := op
+    {
+      skip_spln
+      c := LOOK.local
+      ((read_idf) || {c := LOOK.keyword; word "Self" && {(lop & 01b) = 01b}}).if {
+        l := LOCAL.new.set_name last_str.set_style f_ro;
+        col c sub (last_str.count)
+        fnt (FONT.italic) sub (last_str.count)
+        fnt (FONT.roman) sub 0
+        l.finalize 0 db (pos_i-last_str.count) de pos_i
+        lst.add_last l
+        lop := lop & 110b
+        ((read_c ':') && {(pos_i > upper) || {at pos_i != '='}}).if {
+          col (LOOK.symbol) sub 1
+          t := TTOK.parse_sp (TTOK.tres)
+          l.set_dd (pos_i-(pt_b.pt+l.db))
+          (t != NULL).if {
+            i := lst.upper
+            {(i >= 0) && {lst.at i.ttok = NULL}}.while_do {
+              lst.at i.set_ttok t
+              i := i - 1
+            }
+          }
+        }
+      } else {
+        (!mute).if { err warning msg "Local needed."; }
+      }
+      (read_c ',').if {
+        col (LOOK.symbol) sub 1
+      }
+    }.while_loop
+    ((!mute) && {l != NULL} && {l.ttok = NULL}).if {
+      err warning msg "Type needed."
+    }
+  )
+  
+  // DRAW
+  
+  - begin_draw <- ( ia := 0; )
+  - ia:INTEGER
+  
+  - sub_draw <-
+  ( 
+    ((!lst.is_empty) && {ia.in_range 0 to (lst.upper)} && {lst.at ia.now pos_i}).if {            
+      lst.at ia.draw
+      ia := ia + 1
+    }
+  )
+  

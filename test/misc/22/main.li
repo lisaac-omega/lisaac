@@ -1,0 +1,20 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + i:FILE
+    + s:STRING_BUFFER
+    
+    s ?= i; // au moins un warning ?? 
+
+    (s = i).if {
+      "Error 1\n".print
+    }
+    
+    (s = 1).if {
+      "Error\n".print
+    }
+  )

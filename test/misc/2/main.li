@@ -1,0 +1,12 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  (
+    "Hello\n".print
+  )
+  
+  

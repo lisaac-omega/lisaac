@@ -1,0 +1,80 @@
+Header  
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Private  
+  + cltn_aaa:ARRAY INTEGER
+  + cltn_bbb:ARRAY_BLOCK INTEGER
+  
+  - long:INTEGER <- 300
+  
+Public
+  - main <-
+  ( + x:INTEGER
+    cltn_aaa := ARRAY INTEGER .create_with_capacity 2
+    cltn_bbb := ARRAY_BLOCK INTEGER .new
+    x := -1
+    cltn_aaa.at 0 add x
+    cltn_bbb.at 0 add x
+    idem
+    x := -2
+    cltn_aaa.at 0 add x
+    cltn_bbb.at 0 add x
+    idem
+    //cltn_bbb.debug_print
+    x := 0
+    1000.times {
+      + idx:INTEGER
+      x := x + 1
+      idx := cltn_aaa.upper
+      cltn_aaa.at idx add x
+      cltn_bbb.at idx add x
+      //"cltn_aaa      : ".print; cltn_aaa     .foreach { v:INTEGER; v.print; ' '.print; }; '\n'.print
+      //"cltn_bbb: ".print; cltn_bbb.foreach { v:INTEGER; v.print; ' '.print; }; '\n'.print
+      //cltn_bbb.debug_print
+      idem
+    }
+    {cltn_aaa.is_empty}.until_do {
+      + idx:INTEGER
+      (cltn_aaa.count = 1).if {
+        idx := 0
+      } else {
+        idx := RANDOM.range 0 to (cltn_aaa.upper)
+      }
+      TEST.check (cltn_aaa.valid_index idx)
+      TEST.check (cltn_bbb.valid_index idx)
+      //"cltn_bbb.count=".print; cltn_bbb.count.println
+      cltn_bbb.remove idx
+      cltn_aaa.remove idx
+     idem
+    }
+  )
+  
+  - idem <-
+  ( + i:INTEGER
+    (cltn_aaa.lower != cltn_bbb.lower).if {
+      crash_with_message "ERREUR"
+    }
+    (cltn_aaa.upper != cltn_bbb.upper).if {
+      crash_with_message "ERREUR"
+      "ERREUR".println
+      SYSTEM.exit 1
+    }
+    (cltn_aaa.count != cltn_bbb.count).if {
+      crash_with_message "ERREUR"
+      "ERREUR".println
+      SYSTEM.exit 1
+    }
+    cltn_aaa.is_empty.if_false {
+      TEST.check (cltn_aaa.last) integer (cltn_bbb.last)
+      TEST.check (cltn_aaa.first) integer (cltn_bbb.first)
+    }
+    i := 0
+    {i <= cltn_aaa.upper}.while_do {
+      TEST.check (cltn_aaa.at i) integer (cltn_bbb.at i)
+      i := i + 1
+    }
+  )
+  

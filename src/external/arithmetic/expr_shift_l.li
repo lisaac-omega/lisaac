@@ -1,0 +1,69 @@
+Header
+
+  + name        := EXPR_SHIFT_L;
+
+  /*Add Binary Expression.*/
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  + symbol:STRING_ALIAS := "<<"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  //-- E <<  0 -> E
+  ( + result:EXPR
+
+    (right_cst.value = 0).if {
+      result := left
+      right_cst.remove
+    }
+    result
+  )
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 << C2  -> C3
+  //-- C1 << -C2 -> Error.
+  (
+    (right_cst.value < 0).if {
+      warning_error (position,"Left shift count is negative.")
+      left_cst.set_value 0
+    } else {
+      left_cst.set_value (left_cst.value << right_cst.value)
+    }
+    right_cst.remove
+    left_cst
+  )
+
+  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0 << E   -> 0
+  ( + result:EXPR
+
+    (left_cst.value = 0).if {
+      result := left_cst
+      right.remove
+    }
+    result
+  )
+
+  - exec_right right_cst:INTEGER_CST :EXPR <-
+  //-- E << -C2 -> Error.
+  ( + result:EXPR
+
+    (right_cst.value < 0).if {
+      warning_error (position,"Left shift count is negative.")
+      right_cst.set_value 0
+      right_cst.cast_type static_type
+      result := right_cst
+      left.remove
+    }
+    result
+  )
+
+

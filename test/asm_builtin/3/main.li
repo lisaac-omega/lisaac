@@ -1,0 +1,125 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + i:INTEGER
+    TEST.check (ASM_BUILTIN.clz 1) integer 63
+    TEST.check (ASM_BUILTIN.clz 2) integer 62
+    TEST.check (ASM_BUILTIN.clz 3) integer 62
+    TEST.check (ASM_BUILTIN.clz 4) integer 61
+    TEST.check (ASM_BUILTIN.clz 5) integer 61
+    TEST.check (ASM_BUILTIN.clz 6) integer 61
+    TEST.check (ASM_BUILTIN.clz 7) integer 61
+    TEST.check (ASM_BUILTIN.clz 8) integer 60
+    i := 9
+    {i < 16}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 60
+      i := i + 1
+    }
+    TEST.check i integer 16
+    {i < 32}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 59
+      i := i + 1
+    }
+    TEST.check i integer 32
+    {i < 64}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 58
+      i := i + 1
+    }
+    TEST.check i integer 64
+    {i < 128}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 57
+      i := i + 1
+    }
+    TEST.check i integer 128
+    {i < 256}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 56
+      i := i + 1
+    }
+    TEST.check i integer 256
+    {i < 512}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 55
+      i := i + 1
+    }
+    TEST.check i integer 512
+    {i < 1024}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 54
+      i := i + 1
+    }
+    TEST.check i integer 1024
+    {i < 2048}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 53
+      i := i + 1
+    }
+    TEST.check i integer 2048
+    {i < 4096}.while_do {
+      TEST.check (ASM_BUILTIN.clz i) integer 52
+      i := i + 1
+    }
+    TEST.check i integer 4096
+    check 4096 bits 51
+    check 8192 bits 50
+    check 16384 bits 49
+    check 32768 bits 48
+    check 65536 bits 47
+    check 131072 bits 46
+    check 1000000000000000000b bits 45
+    check 10000000000000000000b bits 44
+    check 100000000000000000000b bits 43
+    check 1000000000000000000000b bits 42
+    check 10000000000000000000000b bits 41
+    check 100000000000000000000000b bits 40
+    check 1000000000000000000000000b bits 39
+    check 10000000000000000000000000b bits 38
+    check 100000000000000000000000000b bits 37
+    check 1000000000000000000000000000b bits 36
+    check 10000000000000000000000000000b bits 35
+    check 100000000000000000000000000000b bits 34
+    check 1000000000000000000000000000000b bits 33
+    check 10000000000000000000000000000000b bits 32
+    check 100000000000000000000000000000000b bits 31
+    check 200000000h bits 30
+    check 400000000h bits 29
+    check 800000000h bits 28
+    check 1000000000h bits 27
+    check 2000000000h bits 26
+    check 4000000000h bits 25
+    check 8000000000h bits 24
+    check 10000000000h bits 23
+    check 20000000000h bits 22
+    check 40000000000h bits 21
+    check 80000000000h bits 20
+    check 100000000000h bits 19
+    check 200000000000h bits 18
+    check 400000000000h bits 17
+    check 800000000000h bits 16
+    check 1000000000000h bits 15
+    check 2000000000000h bits 14
+    check 4000000000000h bits 13
+    check 8000000000000h bits 12
+    check 10000000000000h bits 11
+    check 20000000000000h bits 10
+    check 40000000000000h bits 9
+    check 80000000000000h bits 8
+    check 100_0000_0000_0000h bits 7
+    check 200_0000_0000_0000h bits 6
+    check 400_0000_0000_0000h bits 5
+    check 800_0000_0000_0000h bits 4
+    check 1000_0000_0000_0000h bits 3
+    check 2000_0000_0000_0000h bits 2
+    check 4000_0000_0000_0000h bits 1
+    check 8000_0000_0000_0000h bits 0
+    // DCDC august 16th 2025, isn't that funny code :-)
+  )
+  
+  - check value:UINTEGER_64 bits bits:INTEGER <-
+  (
+    TEST.check (ASM_BUILTIN.clz value) integer bits
+    TEST.check (ASM_BUILTIN.clz (value + 1)) integer bits
+    TEST.check (ASM_BUILTIN.clz (value + 2)) integer bits
+    TEST.check (ASM_BUILTIN.clz (value + 3)) integer bits
+    TEST.check (ASM_BUILTIN.clz (value - 1)) integer (bits + 1)
+    TEST.check (ASM_BUILTIN.clz (value - 2)) integer (bits + 1)
+    TEST.check (ASM_BUILTIN.clz (value - 3)) integer (bits + 1)
+  )

@@ -1,0 +1,55 @@
+Header
+
+  + name        := ITM_TYPE_STYLE;
+
+  /*Type with style*/
+
+Inherit
+
+  + parent_itm_type_simple:Expanded ITM_TYPE_SIMPLE
+
+Private
+
+  - dico_ts:ARRAY ITM_TYPE_STYLE := ARRAY ITM_TYPE_STYLE .create_with_capacity 32
+
+  - create n:STRING_ALIAS style s:UINTEGER_8 :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make n style s
+    result
+  )
+
+  - make n:STRING_ALIAS style s:UINTEGER_8 <-
+  (
+    name  := n
+    style := s
+  )
+
+Public
+    
+  + style:UINTEGER_8
+  
+  - get n:STRING_ALIAS style s:UINTEGER_8 :SELF <-
+  ( + result:SELF
+    + idx:INTEGER
+
+    idx := dico_ts.lower
+    {
+      (idx <= dico_ts.upper) && {
+	(dico_ts.at idx.name  != n) ||
+ {dico_ts.at idx.style != s} 
+      }
+    }.while_do {
+      idx := idx + 1
+    }
+    (idx <= dico_ts.upper).if {
+      result ?= dico_ts.at idx
+    } else {
+      result := create n style s
+      dico_ts.add_last result
+    }
+    result
+  )
+
+

@@ -1,0 +1,450 @@
+Header
+  
+  + name := IMG_ZLIB;
+  
+  - external := `
+  static int zlength_base[31] = {
+   3,4,5,6,7,8,9,10,11,13,
+   15,17,19,23,27,31,35,43,51,59,
+   67,83,99,115,131,163,195,227,258,0,0 };
+
+  static int zlength_extra[31]=
+  { 0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0 };
+
+  static int zdist_base[32] = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,
+  257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577,0,0};
+
+  static int zdist_extra[32] =
+  { 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13};
+  
+  static unsigned char length_dezigzag[19] = { 16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15 };
+  `;
+  
+Inherit
+  
+  - parent_image:IMAGE := IMAGE
+  
+Public
+  
+  // fast-way is faster to check than jpeg huffman, but slow way is slower
+  - zfast_bits:INTEGER := 9; // accelerate all cases in default tables
+  - zfast_mask:INTEGER := ((1 << zfast_bits) - 1)
+
+  + zbuffer:NATIVE_ARRAY UINTEGER_8
+  + zbuffer_end:NATIVE_ARRAY UINTEGER_8
+  + num_bits:INTEGER
+  + code_buffer:UINTEGER_32
+
+  + zout:NATIVE_ARRAY UINTEGER_8
+  + zout_start:NATIVE_ARRAY UINTEGER_8
+  + zout_end:NATIVE_ARRAY UINTEGER_8
+  + z_expandable:BOOLEAN
+
+  + z_length:HUFFMAN_PNG
+  + z_distance:HUFFMAN_PNG
+
+  // zlib-from-memory implementation for PNG reading
+  //    because PNG allows splitting the zlib stream arbitrarily,
+  //    and it's annoying structurally to have PNG call ZLIB call PNG,
+  //    we require PNG read all the IDATs and combine them into a single
+  //    memory buffer
+  
+  - zget8:UINTEGER_8 <-
+  ( + r:UINTEGER_8
+    (zbuffer.to_pointer < zbuffer_end.to_pointer).if { 
+      r := zbuffer.first
+      zbuffer := zbuffer + 1
+    }
+    r
+  )
+
+  - fill_bits <-
+  (
+    {
+      ? {code_buffer < (1 << num_bits)}
+      code_buffer := code_buffer | zget8.to_uinteger_32 << num_bits
+      num_bits := num_bits + 8
+    }.do_while {num_bits <= 24}
+  )
+
+  - zhuffman_decode_slowpath z:HUFFMAN_PNG :INTEGER <-
+  ( + b,s,k,result:INTEGER
+    // not resolved by fast table, so compute it the slow way
+    // use jpeg approach, which requires MSbits at top
+    k := code_buffer.to_raw_uinteger_16.bit_reverse
+    s := zfast_bits+1
+    //"k:".print; k.print; " maxcode:".print; z.maxcode.at s.println
+    {k >= z.maxcode.at s}.while_do {
+      //"k:".print; k.print; " maxcode:".print; z.maxcode.at s.println
+      s := s + 1
+    }
+    //"s:".print; s.println
+    (s = 16).if { 
+      result := -1;  // invalid code!
+    } else {
+      // code size is s, so:
+      b := (k >> (16-s)) - z.firstcode.at s + z.firstsymbol.at s
+      //z.size.at b.print; ' '.print; s.println
+      ? {z.size.at b = s}
+      code_buffer := code_buffer >> s
+      num_bits := num_bits - s
+      result := z.value.at b
+    }
+    result
+  )
+  
+  - zreceive n:INTEGER :UINTEGER_32 <- 
+  ( + k:UINTEGER_32
+    ? {n.in_range 1 to 32}
+    (num_bits < n).if { fill_bits; }
+    k := code_buffer & ((1 << n) - 1)
+    code_buffer := code_buffer >> n
+    num_bits := num_bits - n
+    //"n:".print; n.print; " num:".print; num_bits.print; " k:".print; k.print; " code_buffer:".print; code_buffer.println
+    k
+  )
+  
+  - zhuffman_decode z:HUFFMAN_PNG :INTEGER <-
+  ( + b,s,r:INTEGER
+    (num_bits < 16).if { fill_bits; }
+    b := z.fast.at (code_buffer & zfast_mask)
+    //0.to ((1<<IMG_ZLIB.zfast_bits)-1) do { i:INTEGER
+    //  z.fast.at i.print; ' '.print
+    //}
+    //"\nb:".print; b.print; " code_buffer:".print; code_buffer.println
+    (b != 0).if {
+      s := b >> 9
+      code_buffer := code_buffer >> s
+      num_bits := num_bits - s
+      r := b & 511
+    } else {
+      r := zhuffman_decode_slowpath z
+    }
+    r
+  )
+
+  - zexpand pzout:NATIVE_ARRAY UINTEGER_8 size n:INTEGER <-  // need to make room for n bytes
+  ( + q:NATIVE_ARRAY UINTEGER_8
+    + cur, limit, old_limit:INTEGER
+    zout := pzout
+    (!z_expandable).if { return_error "output buffer limit"; }
+    cur   := zout #- zout_start
+    limit := old_limit := zout_end #- zout_start
+    {cur + n > limit}.while_do {
+      limit := limit * 2
+    }
+    //"old_limit: ".print; old_limit.print; " limit:".print; limit.print
+    //" cur:".print; cur.print; " n:".print; n.println
+    q := zout_start.realloc old_limit with limit
+    zout_start := q
+    zout       := q + cur
+    zout_end   := q + limit
+  )
+
+  - zlength_base i:INTEGER :INTEGER  <- `zlength_base[@i]`:INTEGER
+  - zlength_extra i:INTEGER :INTEGER <- `zlength_extra[@i]`:INTEGER
+  - zdist_base i:INTEGER :INTEGER    <- `zdist_base[@i]`:INTEGER
+  - zdist_extra i:INTEGER :INTEGER   <- `zdist_extra[@i]`:INTEGER
+
+  - parse_huffman_block <-
+  ( + z:INTEGER
+    + p,pzout:NATIVE_ARRAY UINTEGER_8
+    pzout := zout
+    //"====> ".print; (pzout #- zout_start).println
+    {z != 256}.while_do {
+      z := zhuffman_decode z_length
+      //"z:".print; z.println
+      //exit 0
+      (z < 256).if {
+        (z < 0).if { return_error "bad huffman code"; }; // error in huffman codes
+        (pzout.to_pointer >= zout_end.to_pointer).if {
+          //"A\n".print
+          zexpand zout size 1
+          pzout := zout
+        }
+        pzout.at 0 put ((z&0FFh).to_uinteger_8)
+        pzout := pzout + 1
+      } else {
+        + len,dist:INTEGER
+        (z != 256).if {          
+          z := z - 257
+          len := zlength_base z
+          //"len:".print; len.print; " z:".print; z.println
+          (zlength_extra z != 0).if {
+            len := len + zreceive (zlength_extra z)
+            //"=>len:".print; len.println
+          }
+          z := zhuffman_decode z_distance
+          (z < 0).if { return_error "bad huffman code"; }
+          dist := zdist_base z
+          (zdist_extra z != 0).if { dist := dist + zreceive (zdist_extra z); }
+          //"zout:0x".print; zout.print; " pzout:0x".print; pzout.print
+          //" zout_start:0x".print; zout_start.print; " dist:".print; dist.println
+          //(pzout #- zout_start).println
+          ((pzout #- zout_start) < dist).if { return_error "bad dist 1"; }
+          ((pzout + len).to_pointer > zout_end.to_pointer).if {
+            //"Alloc\n".print
+            //"B\n".print
+            zexpand pzout size len
+            pzout := zout
+          }
+          p := pzout - dist
+          (dist = 1).if { // run of one byte; common in images.
+            + v:UINTEGER_8
+            v := p.first
+            //"1-len:".print; len.println
+            (len!=0).if { { pzout.at 0 put v; pzout := pzout + 1; len := len - 1; }.do_while {len != 0}; }
+          } else {
+            //"2-len:".print; len.println
+            (len!=0).if { { pzout.at 0 put (p.first); pzout := pzout + 1; p := p + 1; len := len - 1; }.do_while {len != 0}; }
+          }
+        }
+      }
+    }
+    zout := pzout
+    //"B====> ".print; (zout #- zout_start).println
+  )
+  
+  - length_dezigzag i:INTEGER :UINTEGER_8 <- `length_dezigzag[@i]`:UINTEGER_8
+
+  - compute_huffman_codes <-
+  ( + z_codelength:HUFFMAN_PNG
+    + lencodes:NATIVE_ARRAY UINTEGER_8;//padding for maximum single op
+    + codelength_sizes:NATIVE_ARRAY UINTEGER_8
+    + n,hlit,hdist,hclen:INTEGER
+    lencodes := NATIVE_ARRAY UINTEGER_8.create (286+32+137)
+    codelength_sizes := NATIVE_ARRAY UINTEGER_8.create 19
+    hlit  := zreceive 5 + 257
+    hdist := zreceive 5 + 1
+    hclen := zreceive 4 + 4
+    
+    //"hlit:  ".print; hlit.println
+    //"hdist: ".print; hdist.println
+    //"hclen: ".print; hclen.println
+    
+    codelength_sizes.clear_all 18
+    0.to (hclen-1) do { i:INTEGER
+      + s:INTEGER
+      s := zreceive 3
+      codelength_sizes.at (length_dezigzag i) put (s.to_uinteger_8)
+    }
+    z_codelength := HUFFMAN_PNG.zbuild_huffman codelength_sizes size 19
+    
+    //0.to 18 do { i:INTEGER
+    //  codelength_sizes.at i.print; ' '.print
+    //}; '\n'.print
+    
+    n := 0
+    {n < hlit + hdist}.while_do {
+      + c:INTEGER
+      c := zhuffman_decode z_codelength
+      //"c:".print; c.println
+      ((c < 0) || {c >= 19}).if { return_error "bad codelengths"; }
+      (c < 16).if {
+        lencodes.at n put (c.to_uinteger_8)
+        n := n + 1
+      }.elseif {c = 16} then {
+        c := zreceive 2 + 3
+        (lencodes+n).set_all_with (lencodes.at (n-1)) until (c-1)
+        n := n + c
+      }.elseif {c = 17} then {
+        c := zreceive 3 + 3
+        (lencodes + n).clear_all (c-1)
+        n := n + c
+      } else {
+        ? {c = 18}
+        c := zreceive 7 + 11
+        (lencodes+n).clear_all (c-1)
+        n := n + c
+      }
+    }
+    (n != hlit+hdist).if { return_error "bad codelengths"; }
+    //"Create 2\n".print
+    z_length := HUFFMAN_PNG.zbuild_huffman lencodes size hlit
+    z_distance := HUFFMAN_PNG.zbuild_huffman (lencodes+hlit) size hdist
+    // FREE lencodes
+    // FREE codelength_sizes
+  )
+
+  - parse_uncomperssed_block <-
+  ( + header:NATIVE_ARRAY UINTEGER_8
+    + len,nlen,k:INTEGER
+    header := NATIVE_ARRAY UINTEGER_8.create 4
+    ((num_bits & 7) != 0).if {
+      zreceive (num_bits & 7); // discard
+    }
+    // drain the bit-packed data into header
+    k := 0
+    
+    {num_bits > 0}.while_do {
+      header.at k put ((code_buffer & 255).to_uinteger_8); // suppress MSVC run-time check
+      k := k + 1
+      code_buffer := code_buffer >> 8
+      num_bits := num_bits - 8
+    }
+    ? {num_bits = 0}
+    // now fill header the normal way
+    {k < 4}.while_do {
+      header.at k put zget8
+      k := k + 1
+    }
+    len  := header.at 1.to_integer * 256 + header.at 0
+    nlen := header.at 3.to_integer * 256 + header.at 2
+    (nlen != (len ^ 0FFFFh)).if { return_error "zlib corrupt"; }
+    ((zbuffer + len).to_pointer > zbuffer_end.to_pointer).if { return_error "read past buffer"; }
+    ((zout + len).to_pointer > zout_end.to_pointer).if {
+      //"C\n".print
+      zexpand zout size len
+    }
+    memcpy(zout, zbuffer, len)
+    zbuffer := zbuffer + len
+    zout := zout + len
+    //"A====> 0x".print; (zout #- zout_start).print; '\n'.print
+    // FREE header   
+  )
+
+  - parse_zlib_header <-
+  ( + cmf,cm,flg:INTEGER
+    cmf := zget8
+    cm  := cmf & 15
+    // int cinfo = cmf >> 4
+    flg := zget8
+    ((cmf*256+flg) % 31 != 0).if { return_error "bad zlib header"; }; // zlib spec
+    ((flg & 32) != 0).if { return_error "no preset dict"; }; // preset dictionary not allowed in png
+    (cm != 8).if { return_error "bad compression"; }; // DEFLATE required for png
+    // window = 1 << (8 + cinfo)... but who cares, we fully buffer output    
+  )
+
+  // @TODO: should statically initialize these for optimal thread safety
+  + zdefault_length  :NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 288
+  + zdefault_distance:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 32
+  
+  - init_zdefaults <-
+  ( + i:INTEGER
+    // use <= to match clearly with spec
+    {i <= 143}.while_do { zdefault_length.at i put 8; i := i + 1; }
+    {i <= 255}.while_do { zdefault_length.at i put 9; i := i + 1; }
+    {i <= 279}.while_do { zdefault_length.at i put 7; i := i + 1; }
+    {i <= 287}.while_do { zdefault_length.at i put 8; i := i + 1; }
+    i := 0
+    {i <=  31}.while_do { zdefault_distance.at i put 5; i := i + 1; }
+  )
+
+  - parse_zlib parse_header:BOOLEAN :BOOLEAN <-
+  ( + final, type:INTEGER
+    + result:BOOLEAN
+    (parse_header).if {
+      parse_zlib_header
+    }
+    num_bits := 0
+    code_buffer := 0
+    {
+      final := zreceive 1
+      type := zreceive 2
+      (type = 0).if {
+        parse_uncomperssed_block
+      }.elseif {type = 3} then {
+        result := TRUE
+      } else {
+        (type = 1).if {
+          // use fixed code lengths
+          (zdefault_distance.at 31 = 0).if { init_zdefaults; }
+          //"Create 1\n".print
+          z_length := HUFFMAN_PNG.zbuild_huffman zdefault_length   size 288
+          z_distance := HUFFMAN_PNG.zbuild_huffman zdefault_distance size  32
+        } else {
+          compute_huffman_codes
+        }
+        parse_huffman_block
+      }
+    }.do_while {(final = 0) && {!result}}
+    ! result
+  )
+
+  - do_zlib (obuf:NATIVE_ARRAY UINTEGER_8,olen:INTEGER) flag (exp,parse_header:BOOLEAN) :BOOLEAN <-
+  (
+    zout_start := obuf
+    zout       := obuf
+    zout_end   := obuf + olen
+    z_expandable := exp
+
+    parse_zlib parse_header
+  )
+
+  - decode_malloc_guesssize(buffer:NATIVE_ARRAY UINTEGER_8, len,initial_size:INTEGER) :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
+  ( + p,result:NATIVE_ARRAY UINTEGER_8
+    + outlen:INTEGER
+    p := NATIVE_ARRAY UINTEGER_8.create initial_size
+    zbuffer := buffer
+    zbuffer_end := buffer + len
+    (do_zlib(p, initial_size) flag (TRUE,TRUE)).if {
+      outlen := (zout - zout_start)
+      result := zout_start
+    } else {
+      //STBI_FREE(a.zout_start)
+    }
+    result, outlen
+  )
+
+  - decode_malloc (buffer:NATIVE_ARRAY UINTEGER_8, len:INTEGER):(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
+  (
+    decode_malloc_guesssize(buffer, len, 16384)
+  )
+
+  - decode_malloc_guesssize_headerflag (buffer:NATIVE_ARRAY UINTEGER_8,len,initial_size:INTEGER) 
+  header parse_header:BOOLEAN :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
+  ( + outlen:INTEGER
+    + p,result:NATIVE_ARRAY UINTEGER_8
+    p := NATIVE_ARRAY UINTEGER_8.create initial_size
+    zbuffer := buffer
+    zbuffer_end := buffer + len
+    (do_zlib(p, initial_size) flag (TRUE, parse_header) != 0).if {
+      outlen := (zout #- zout_start)
+      result := zout_start
+    } else {
+      //STBI_FREE(a.zout_start)
+    }
+    result, outlen
+  )
+
+  - decode_buffer (obuffer:NATIVE_ARRAY UINTEGER_8, olen:INTEGER) 
+  input (ibuffer:NATIVE_ARRAY UINTEGER_8,ilen:INTEGER):INTEGER <-
+  ( + result:INTEGER
+    zbuffer := ibuffer
+    zbuffer_end := ibuffer + ilen
+    (do_zlib(obuffer, olen) flag (FALSE,TRUE)).if {
+      result := (zout - zout_start)
+    } else {
+      result := -1
+    }
+    result
+  )
+
+  - decode_noheader_malloc (buffer:NATIVE_ARRAY UINTEGER_8, len:INTEGER) :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
+  ( + p,result:NATIVE_ARRAY UINTEGER_8
+    + outlen:INTEGER
+    p := NATIVE_ARRAY UINTEGER_8.create 16_384
+    zbuffer := buffer
+    zbuffer_end := buffer+len
+    (do_zlib(p, 16384) flag (TRUE,FALSE)).if {
+      outlen := (zout - zout_start)
+      result := zout_start
+    } else {
+      //STBI_FREE(zout_start)
+    }
+    result, outlen
+  )
+
+  - decode_noheader_buffer(obuffer:NATIVE_ARRAY UINTEGER_8, olen:INTEGER) 
+  input (ibuffer:NATIVE_ARRAY UINTEGER_8, ilen:INTEGER):INTEGER <-
+  ( + result:INTEGER
+    zbuffer := ibuffer
+    zbuffer_end := ibuffer + ilen
+    (do_zlib(obuffer, olen) flag (FALSE,FALSE)).if {
+      result := zout - zout_start
+    } else {
+      result := -1
+    }
+    result
+  )
+

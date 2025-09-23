@@ -1,0 +1,19 @@
+Header
+  + name := SWAP_ME;
+  /*It is possible to assign several variables at once.
+It is also possible for a function to return multiple results.
+
+
+  */
+  
+Public
+  
+  - main <-
+  ( + swap,me:STRING
+    swap := "swap"
+    me := "me"  
+    (swap,me) := (me,swap)
+    OUT # swap # ' ' # me # '\n'
+    (swap,me) := ("swap","me")
+    OUT # swap # ' ' # me # '\n'
+  )

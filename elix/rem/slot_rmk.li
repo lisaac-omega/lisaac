@@ -1,0 +1,82 @@
+Header
+  + name := SLOT_RMK;
+  
+Inherit
+  + parent_tok_drw:Expanded TOK_DRW
+  
+Insert
+  - parent_lix_buf:LIX_BUF := LIX_BUF
+  
+Private
+  - stk:Expanded ARRAY (Strict SLOT_RMK)
+  
+Public
+  - is_major:BOOLEAN := FALSE
+     
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+    
+  // PARSER
+  
+  - key:STRING_ALIAS := "  // "
+  
+  - detect:BOOLEAN <- look key
+  
+  - parse <-
+  ( 
+    {look key}.while_do {
+      pos_i := pos_i + 2
+      rd_rem_cpp
+    }
+  )
+  
+  - cmd_new_line:BOOLEAN <-
+  (
+    txt_buf.at pos add_text "\n  // "
+    pos := pos + 6
+    TRUE
+  )
+  
+  - cmd_suppr:BOOLEAN <-
+  (
+    (txt_buf.at (pos - 5) = '\n').if {
+      pos := pos - 2
+      txt_buf.rm pos times 3
+    } else {
+      txt_buf.rm pos
+    }
+    TRUE
+  )
+  
+  // DRAW
+    
+  - begin_draw <-
+  (  
+    tex.push (x_space*2,0)
+    pos_i := pos_i + 4
+  )
+  
+  - sub_draw <-
+  (
+    ((at (pos_i-1) = '\n') && {pos_i != pt_b+di}).if {
+      pos_i := pos_i + 4
+    }
+  )
+  
+  - end_draw <-
+  (
+    rmk (tex.x,tex.ymin) to (tex.xmax,tex.y)
+    tex.pop_add_y 0
+  )
+    
+Private
+  
+  - rmk (x0,y0:REAL_32) to (x1,y1:REAL_32) <-
+  ( 
+    begin_path
+    stroke_color (LOOK.cols.at (LOOK.rmk))
+    stroke_width 3
+    line (x0,y0) to (x0,y1)
+    stroke
+  )

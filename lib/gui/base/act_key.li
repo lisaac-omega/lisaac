@@ -1,0 +1,78 @@
+Header
+  + name := Strict ACT_KEY;
+  
+Inherit
+  + parent_act_itm:Expanded ACT_ITM
+  
+Private
+  - stkk:Expanded ARRAY ACT_KEY
+  
+Public
+  
+  - new:SELF <-
+  ( + r:SELF; (stkk.is_empty).if { r := clone; } else { r := stkk.pop; }; r)
+  
+  - free <- stkk.add_last Self
+  
+  - draw <-
+  ( + y,x,s,d:REAL_32
+    + t:STRING_ALIAS
+    //draw_debug
+    (x,y) := (xo + width/2, yo + height/2)
+    (is inside).if {
+      begin_path
+      fill_color (COLOR.white)
+      stroke_color (COLOR.gray)
+      stroke_width 1
+      rect (xo,yo) size (width, height) radius 8
+      fill
+      stroke
+    }
+    fill_color (COLOR.black)
+    stroke_color (COLOR.black)
+    t := act.text_l
+    s := FONT.size_sys
+    (t = "⬆").if { // Arrow up fill
+      begin_path
+      move_to (x-s*0.5,y); line_to (x,y-s*0.5);       line_to (x+s*0.5,y)
+      line_to (x+s*0.2,y); line_to (x+s*0.2,y+s*0.5); line_to (x-s*0.2,y+s*0.5)
+      line_to (x-s*0.2,y)
+      fill
+    }.elseif {t = "⇧"} then { // Arrow up stroke
+      begin_path
+      move_to (x-s*0.5,y); line_to (x,y-s*0.5);       line_to (x+s*0.5,y)
+      line_to (x+s*0.2,y); line_to (x+s*0.2,y+s*0.5); line_to (x-s*0.2,y+s*0.5)
+      line_to (x-s*0.2,y); close_path
+      stroke_width (s*0.08)
+      stroke
+    }.elseif {t = "⌫"} then { // Arrow left
+      begin_path
+      d := s*0.49
+      move_to (x-s*0.8,y);   line_to (x-d,y-d); line_to (x+s*0.6,y-d)
+      line_to (x+s*0.6,y+d); line_to (x-d,y+d); close_path
+      stroke_width (s*0.08)
+      stroke
+      d := s*0.25
+      begin_path; line (x-d,y-d) to (x+d,y+d); stroke
+      begin_path; line (x+d,y-d) to (x-d,y+d); stroke
+    }.elseif {t = "🔢"} then { // ?123
+      font_face_id (FONT.sys ((is inside).ok (FONT.bold) or (FONT.roman)))
+      font_size (s*0.9)
+      text_align (align_center | align_middle)
+      text (x,y) msg "?123"
+    }.elseif {t = " "} then { // Space
+      begin_path; rect (x-width*0.45,y-s*0.5) to (x+width*0.45,y+s*0.5) radius 8
+      fill_color (COLOR.gray); fill
+    }.elseif {t = "⏎"} then { // Enter
+      begin_path; rect (x-s*1.0,y-s*0.7) to (x+s*1.0,y+s*0.7) radius 8
+      fill_color (COLOR.rgbf (0.1,0.45,0.91)); fill
+      begin_path; line (x+s*0.5,y-s*0.4) to (x+s*0.5,y); line_to (x-s*0.5,y)
+      line (x-s*0.2,y-s*0.3) to (x-s*0.5,y); line_to (x-s*0.2,y+s*0.3)
+      stroke_width (s*0.09); stroke_color (COLOR.white); stroke
+    } else {
+      font_face_id (FONT.sys ((is inside).ok (FONT.bold) or (FONT.roman)))
+      font_size s
+      text_align (align_center | align_middle)
+      text (x,y) msg t
+    }
+  )

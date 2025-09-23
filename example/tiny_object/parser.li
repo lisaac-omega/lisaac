@@ -1,0 +1,390 @@
+Header
+
+  + name := PARSER;
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Private
+
+  - position:INTEGER
+
+  - current_class:CLASS
+
+  //
+  // Syntax parser.
+  //
+
+  - last_character:CHARACTER <-
+  ( + result:CHARACTER
+    (position > source.upper).if {
+      result := 0.to_character
+      } else {
+      result := source.item position
+    }
+    result
+  )
+
+  - last_string:STRING_ALIAS
+
+  - read_space:BOOLEAN <-
+  ( + posold,pos,pos2:INTEGER
+    + level_comment:INTEGER
+
+    pos := position
+    posold := -1
+    {posold = position}.until_do {
+      posold := position
+      // Skip spaces :
+      {(last_character = 0.to_character) || {last_character > ' '}}.until_do {
+	position := position + 1
+      }
+
+      (position < source.upper).if {
+	// Skip C++ comment style :
+	((last_character = '/') & (source.item (position + 1) = '/')).if {
+	  position := position + 2
+	  pos2 := position
+	  {
+	    (last_character = 0.to_character) ||
+	    {last_character = '\n'}
+	  }.until_do {
+	    position := position + 1
+	  }
+	}
+      }
+      (position < source.upper).if {
+	// Skip C comment style :
+	pos2 := position
+	((last_character = '/') && {source.item (position+1) = '*'}).if {
+	  position := position + 2
+	  level_comment := 1
+	  {
+	    (last_character = 0.to_character) || {level_comment = 0}
+	  }.until_do {
+	    ((last_character = '/') && {source.item (position+1) = '*'}).if {
+	      level_comment := level_comment + 1
+	      position := position + 2
+	    }.elseif {
+	      (last_character = '*') && {source.item (position+1) = '/'}
+	    } then {
+	      level_comment := level_comment - 1
+	      position := position + 2
+	    } else {
+	      position := position+1
+	    }
+	  }
+	  (level_comment != 0).if {
+	    position := pos2
+	    syntax_error position message "End of comment not found !"
+	  }
+	}
+      }
+    }
+    ((position != pos) | (last_character != 0.to_character))
+  )
+
+  - read_keyword st:STRING :BOOLEAN <-
+  ( + posold,j:INTEGER
+    + result:BOOLEAN
+    (read_space).if {
+      posold := position
+      j := st.lower
+      {(last_character = 0.to_character) || {(j > st.upper) || {last_character != st.item j}}}.until_do {
+	j := j+1
+	position := position+1
+      }
+      (j > st.upper).if {
+	result := TRUE
+      } else {
+	position := posold
+	result := FALSE
+      }
+    }
+    result
+  )
+
+  - read_character ch:CHARACTER :BOOLEAN <-
+  (
+    ((read_space) && {last_character = ch}).if {
+      position := position + 1
+    }
+  )
+
+  //-- identifier    -> 'a'-'z' {'a'-'z' | '0'-'9' | '_'}
+  - read_identifier:BOOLEAN <-
+  (
+    ((read_space) && {last_character.is_lower}).if {
+      string_tmp.clear
+      {
+	(last_character = 0.to_character) ||
+	{
+	  (! last_character.is_lower) &&
+	  {! last_character.is_digit} &&
+	  {last_character != '_'}
+	}
+      }.until_do {
+	string_tmp.add_last last_character
+	position := position+1
+      }
+      last_string := get_alias string_tmp
+    }
+  )
+
+  //-- cap_identifier -> 'A'-'Z' {'A'-'Z' | '0'-'9' | '_'}
+  - read_cap_identifier:BOOLEAN <-
+  (
+    ((read_space) && {last_character.is_upper}).if {
+      string_tmp.clear
+      {
+	(last_character = 0.to_character) ||
+	{
+	  (! last_character.is_upper) &&
+	  {! last_character.is_digit} &&
+	  {last_character != '_'}
+	}
+      }.until_do {
+	string_tmp.add_last last_character
+	position := position+1
+      }
+      last_string := get_alias string_tmp
+    }
+  )
+
+  //-- string -> '\"' ascii_string '\"'
+  - read_string_cst:BOOLEAN <-
+  ( + old_pos:INTEGER
+
+    ((read_space) && {last_character='"'}).if {
+      old_pos := position
+      position := position + 1
+      string_tmp.clear
+      { (last_character = 0.to_character) || {last_character='"'} }.until_do {
+        string_tmp.add_last last_character
+        position := position + 1
+      }
+      (last_character='\"').if {
+	position := position + 1
+	last_string := get_alias string_tmp
+      } else {
+	position := old_pos
+	syntax_error position message "Unterminated string constant."
+      }
+    }
+  )
+
+  //
+  // Grammar
+  //
+
+  - read_program:BOOLEAN <-
+  //++ program    : { CAP_IDENTIFIER [ inherit ] '(' slot_list ')' }
+  (
+    {read_cap_identifier}.while_do {
+      current_class := CLASS.create position name last_string
+      (program.fast_has last_string).if {
+        semantic_error position message "Doucle définition class."
+      }
+      program.add current_class to last_string
+      read_inherit
+      (read_character '(').if_false {
+        warning_error position message "Added `('.";
+      }
+      (read_slot_list).if_false {
+        syntax_error position message "Slots is absent."
+      }
+      (read_character ')').if_false {
+        warning_error position message "Added `)'.";
+      }
+    }
+    ! program.is_empty
+  )
+
+  - read_inherit:BOOLEAN <-
+  //++ inherit    : 'Inherit' CAP_IDENTIFIER { ',' CAP_IDENTIFIER }
+  ( + result:BOOLEAN
+    + t:CLASS
+    (read_keyword keyword_inherit).if {
+      result := TRUE
+      (read_cap_identifier).if_false {
+        syntax_error position message "Parent is absent."
+      }
+      t := program.fast_reference_at last_string
+      (t = NULL).if {
+        semantic_error position message "Declaration class is needed."
+      }
+      current_class.add_parent t
+      {read_character ','}.while_do {
+        (read_cap_identifier).if_false {
+          syntax_error position message "Parent is absent."
+        }
+        t := program.fast_reference_at last_string
+        (t = NULL).if {
+          semantic_error position message "Declaration class is needed."
+        }
+        current_class.add_parent t
+      }
+    }
+    result
+  )
+
+  - read_slot_list:BOOLEAN <-
+  //++ slot_list  : { IDENTIFIER '=' body }
+  ( + result:BOOLEAN
+    + slot:SLOT
+    {read_identifier}.while_do {
+      slot := SLOT.create position name last_string
+      (last_string = keyword_master).if {
+        (class_master != NULL).if {
+          semantic_error position message "Double master slot declaration."
+        }
+        class_master := current_class
+      }
+      (read_character '=').if_false {
+        warning_error position message "Added `='.";
+      }
+      (read_body slot).if_false {
+        syntax_error position message "Body slot is absent."
+      }
+      current_class.add_slot slot
+    }
+    result := TRUE
+    result
+  )
+
+  - read_body slot:SLOT :BOOLEAN <-
+  //++ body       : '(' [ local_list ] '|' { code ';' } ')'
+  ( + result:BOOLEAN
+    + lst:HMAP LOCAL KEY STRING_ALIAS
+    + code:EXPR
+    + this:LOCAL
+    (read_character '(').if {
+      result := TRUE
+      this := LOCAL.create position name keyword_this type current_class
+      lst := read_local_list
+      lst.add this to (this.name)
+      slot.set_local_list lst
+      (read_character '|').if_false {
+        warning_error position message "Added `|'.";
+      }
+      {(code := read_code slot) != NULL}.while_do {
+        slot.add_expr code
+        (read_character ';').if_false {
+          warning_error position message "Added `;'.";
+        }
+      }
+      (read_character ')').if_false {
+        warning_error position message "Added `}'.";
+      }
+    }
+    result
+  )
+
+  - read_local_list:HMAP LOCAL KEY STRING_ALIAS <-
+  //++ local_list : local { ',' local }
+  ( + result:HMAP LOCAL KEY STRING_ALIAS
+    + loc:LOCAL
+
+    result := HMAP LOCAL KEY STRING_ALIAS.create
+    loc := read_local
+    (loc != NULL).if {
+      result.add loc to (loc.name)
+      {read_character ','}.while_do {
+        loc := read_local
+        (loc = NULL).if {
+          syntax_error position message "local is absent."
+        }
+        result.add loc to (loc.name)
+      }
+    }
+    result
+  )
+
+  - read_local:LOCAL <-
+  //++ local      : IDENTIFIER ':' CAP_IDENTIFIER
+  ( + result:LOCAL
+    + n:STRING_ALIAS
+    + t:CLASS
+    (read_identifier).if {
+      n := last_string
+      (read_character ':').if_false {
+        warning_error position message "Added `:'.";
+      }
+      (read_cap_identifier).if_false {
+        syntax_error position message "TYPE is absent."
+      }
+      t := program.fast_reference_at last_string
+      (t = NULL).if {
+        semantic_error position message "Declaration class is needed."
+      }
+      result := LOCAL.create position name n type t
+    }
+    result
+  )
+
+  - read_code slot:SLOT :EXPR <-
+  //++ code       : IDENTIFIER [ expr ]
+  //++            | STRING '.' 'print'
+  ( + result:EXPR
+    + loc:LOCAL
+
+    (read_identifier).if {
+      loc := slot.get_local last_string
+      (loc = NULL).if {
+        loc := slot.get_local keyword_this
+        result := CALL.create position receiver loc message last_string
+      } else {
+        result := read_expr loc
+        (result = NULL).if {
+          syntax_error position message "Call is absent."
+        }
+      }
+    }.elseif {read_string_cst} then {
+      result := PRINT.create position text last_string
+      (read_character '.').if_false {
+        warning_error position message "Added `.'.";
+      }
+      (read_keyword keyword_print).if_false {
+        warning_error position message "Added `print'.";
+      }
+    }
+    result
+  )
+
+  - read_expr loc:LOCAL :EXPR <-
+  //++ expr       : '=' 'New' CAP_IDENTIFIER
+  //++            | '.' IDENTIFIER
+  ( + result:EXPR
+    + t:CLASS
+    (read_character '=').if {
+      (read_keyword keyword_new).if_false {
+        warning_error position message "Added `new'.";
+      }
+      (read_cap_identifier).if_false {
+        syntax_error position message "TYPE is absent."
+      }
+      t := program.fast_reference_at last_string
+      (t = NULL).if {
+        semantic_error position message "Declaration class is needed."
+      }
+      result := ASSIGN.create position local loc type t
+    }.elseif {read_character '.'} then {
+      (read_identifier).if_false {
+        syntax_error position message "Message is absent."
+      }
+      result := CALL.create position receiver loc message last_string
+    }
+    result
+  )
+
+Public
+
+  - parse <-
+  (
+    position := source.lower
+    //
+    (read_program).if_false {
+      syntax_error position message "File is empty."
+    }
+  )

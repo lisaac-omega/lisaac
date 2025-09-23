@@ -1,0 +1,70 @@
+Header
+  + name    := Expanded  REAL_24_8;
+  /*signed 24.8 fixed float.*/
+  - type    := `signed long`;
+  - default := (0.to_raw_real_24_8);
+  - export  := REAL_32, REAL_64;
+Insert
+  - parent_signed_fixed_real:SIGNED_FIXED_REAL := SIGNED_FIXED_REAL
+
+SELF
+
+  - shift_bits:INTEGER <- 8
+
+Public
+  
+  - round:INTEGER <-
+  // Rounded integral value.
+  ( + result:INTEGER
+    result := to_raw_integer
+    ((result & 80h) != 0).if {
+      result := (result >> 8) + 1
+    } else {
+      result := result >> 8
+    }
+    result
+  )
+
+  // Range.
+
+  - minimum:INTEGER_64 <- - 7F_FFFFh.to_raw_integer_64
+
+  - maximum:UINTEGER_64 <- 7F_FFFFh.to_raw_uinteger_64
+
+  // Convertion format with test.
+
+  - to_real_24_8:REAL_24_8 <- Self
+
+  // Convertion
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+  ( + val:INTEGER
+    + old_count,new_count:INTEGER
+    ? {b!=NULL}
+    val := to_raw_integer
+    (val < 0).if {
+      val := - val
+      b.extend '-'
+    }
+    (val >> 8).append_in b
+    b.extend '.'
+    old_count:=b.count
+    //     1/256 = 0.00390625 => 8 digit.
+    (((val & 255).to_uinteger_64 * 100000000)>>8).to_integer.append_in b
+    new_count:=old_count+8
+    {b.count!=new_count}.while_do {
+      b.insert '0' to old_count
+    }
+  )
+
+
+
+
+
+
+
+
+
+

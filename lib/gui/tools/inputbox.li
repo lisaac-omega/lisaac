@@ -1,0 +1,194 @@
+Header
+  + name := Strict INPUTBOX;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ INPUTBOX
+  
+Private
+  - stk:Expanded ARRAY INPUTBOX
+  
+  - bit_int:INTEGER := (1<<21)
+  - bit_float:INTEGER := (1<<20)
+  
+Public
+  
+  - integer:INTEGER := bit_int | align_right
+  - float:INTEGER   := bit_float | integer
+    
+  + width_min:REAL_32
+  
+  - height_min:REAL_32 <- FONT.size_sys * zom
+  
+  + read:{STRING_BUFFER;}
+  + write:{STRING_BUFFER;}
+  + txt:STRING_BUFFER
+  + cur:INTEGER := -1
+  + x_cur:REAL_32 := -1
+  
+  //- update_text:BOOLEAN <- ( read.value txt; TRUE)
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init g:{STRING_BUFFER;} set s:{STRING_BUFFER;} width w:REAL_32 :SELF <-
+  (
+    (txt = NULL).if { txt := STRING_BUFFER.create 64; }
+    (read,write) := (g,s)
+    width_min := w
+    init_obj
+  )
+    
+  - draw <-
+  ( + x,xc,y:REAL_32
+    begin_path
+    is inside.if {
+      fill_color (LOOK_GUI.text_ui)
+    } else {
+      fill_color (LOOK_GUI.text_bg_ui)
+    }
+    rect (xo,yo) size (width,height) radius 4
+    fill
+    //
+    load_txt
+    y := (yo+ymax)/2
+    (x,xc) := x_txt
+    (xc != -1).if {
+      begin_path
+      stroke_color (COLOR.red)
+      line_cap square
+      stroke_width 3.0
+      line (xc+1,y-FONT.size_sys/2) to (xc+1,y+FONT.size_sys/2)
+      stroke
+    }
+    //
+    save
+    intersect_scissor (xo,yo) size (width,height)
+    fill_color (LOOK_GUI.txt_nui)
+    text (x,y) msg txt
+    reset_scissor
+    restore
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  (
+    (ev & ~1 = HAND.in).if {
+      set inside with (ev = HAND.in)
+    }.elseif {ev = HAND.clic} then {
+      (vkeyb_dyn).if {
+        ((is bit_int) || {is bit_float}).if { VKEYB.load 2; } else { VKEYB.load 0; }
+        set_vkeyb TRUE
+      }
+      get_focus
+      x_cur := HAND.x_cur
+    }
+    TRUE
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  ( 
+    ((c & KEYBOARD.msk_cmd) = 0).if {
+      (
+        (!is bit_int) || {s.first.is_digit} ||
+        {is bit_float && {s.first = '.'} && {!txt.has '.'}}
+      ).if {        
+        txt.insert_string s to cur
+        cur := cur + s.count
+      }
+    } else {      
+      (s.first)
+      .when '\n'   then { write.value txt; cur := -1; exit_focus; }
+      .when 'B'    then { (cur = 0).if { ANY_GUI.beep; } else { cur := 0; }; }
+      .when 'E'    then { (cur = txt.count).if { ANY_GUI.beep; } else { cur := txt.count; }; }
+      .when 'R'    then { inc_cur.if_false { ANY_GUI.beep; }; }
+      .when 'L'    then { dec_cur.if_false { ANY_GUI.beep; }; }
+      .when 'S'    then { suppr.if_false { ANY_GUI.beep; }; }
+      .when '\8d\' then { ((dec_cur) && {suppr}).if_false { ANY_GUI.beep; }; }
+      .when '\27d\' then { exit_focus; }
+    }
+  )
+  
+Private
+  
+  - exit_focus <-
+  ( focus := NULL
+    (vkeyb_dyn).if { set_vkeyb FALSE; }
+  )
+  
+  - width_txt up:INTEGER :REAL_32 <-
+  ( + x0,y0,x1,y1,wt:REAL_32
+    (up >= 0).if {
+      (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt from 0 to up
+    }
+    wt
+  )
+  
+  - load_txt <-
+  (
+    font_face_id (FONT.sys (FONT.roman))
+    font_size (FONT.size_sys * zom)
+    text_align (align_left | align_middle)
+    (focus != Self).if {
+      txt.clear
+      read.value txt
+    }
+  )
+  
+  - x_txt:(REAL_32,REAL_32) <-  
+  ( + old_xc,xc,w,xp:REAL_32
+    + old_cur:INTEGER
+    xp := xo
+    (is (align_center | align_right)).if {
+      w := width_txt (txt.upper)
+      (is align_center).if {
+        xp := xo+(width-w)/2
+      } else { // align_right
+        xp := xmax-w
+      }
+    }
+    ((x_cur != -1) || {cur != -1}).if {
+      (x_cur != -1).if {        
+        cur := 0
+        xc := xp
+        ((x_cur > xp) && {!txt.is_empty}).if {
+          {
+            (old_xc,old_cur) := (xc,cur)
+            inc_cur
+            xc := xp+width_txt (cur-1)
+          }.do_while {(cur <= txt.upper) && {x_cur > (xc+old_xc)/2}}
+          (x_cur <= (xc+old_xc)/2).if {
+            (xc,cur) := (old_xc,old_cur)
+          }
+        }
+        x_cur := -1
+      } else {
+        xc := xp + width_txt (cur-1)
+      }
+      (xc<  xo).if { xp := xp + xo  -xc; xc := xo;   }
+      (xc>xmax).if { xp := xp + xmax-xc; xc := xmax; }
+    } else { xc := -1; }
+    xp,xc
+  )
+  
+  - suppr:BOOLEAN <-
+  (cur < txt.count).if {
+    + n:UINTEGER_8
+    n := txt.at cur.to_uinteger_8
+    ((n & 80h) != 0).if { { txt.remove cur; n := n << 1; }.do_until {(n & 40h) = 0}; }
+    txt.remove cur
+  }
+  
+  - inc_cur:BOOLEAN <-
+  (cur < txt.count).if {
+    + n:UINTEGER_8
+    n := txt.at cur.to_uinteger_8
+    ((n & 80h) != 0).if { { cur := cur + 1; n := n << 1; }.do_until {(n & 40h) = 0}; }
+    cur := cur + 1
+  }
+  
+  - dec_cur:BOOLEAN <-
+  (cur > 0).if {
+    + n:UINTEGER_8
+    { cur := cur - 1; n := txt.at cur.to_uinteger_8; }.do_while {(cur >= 0) && {(n & 0C0h) = 80h}}
+  }

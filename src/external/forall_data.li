@@ -1,0 +1,99 @@
+Header
+
+  + name    := FORALL_DATA;
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  + action:ITM_READ_ARG2
+
+  + list_data:ARRAY (COUPLE (SLOT_DATA,EXPR))
+
+  //
+  // Creation.
+  //
+
+  - create t:TYPE_FULL action ac:ITM_BLOCK :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make t action ac
+    result
+  )
+
+  - make t:TYPE_FULL action ac:ITM_BLOCK <-
+  ( + lst:ARRAY SLOT
+    + dta:SLOT_DATA
+    + c:COUPLE(SLOT_DATA,EXPR)
+
+    action := ITM_READ_ARG2.create (ac.position) name "value" args (,)
+    list_data := ARRAY (COUPLE (SLOT_DATA,EXPR)).create
+    t.add_reflexivity Self
+    lst := t.slot_run
+    (lst.lower).to (lst.upper) do { i:INTEGER
+      dta := lst.at i.slot_data_intern
+      (dta != NULL).if {
+        c := COUPLE(SLOT_DATA,LIST).create dta and ()
+        list_data.add_last c
+      }
+    }
+  )
+
+  //
+  //
+  //
+
+  - my_copy:SELF <-
+  (
+    clone
+  )
+
+  //
+  // Depend.
+  //
+
+  - add var:SLOT_DATA <-
+  (
+
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute:INSTR <-
+  (
+
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    (list_data.lower).to (list_data.upper) do { i:INTEGER
+      list_data.at i.second.genere
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "Forall_data:\n"
+    indent.append "  "
+    (list_data.lower).to (list_data.upper) do { i:INTEGER
+      buffer.append indent
+      buffer.append "- "
+      buffer.append (list_data.at i.first.intern_name)
+      buffer.append ":\n"
+      buffer.append indent
+      list_data.at i.second.genere buffer
+    }
+    indent.remove_last 2
+  )

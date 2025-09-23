@@ -1,0 +1,821 @@
+Header
+  + name := Strict TXT_PG;
+  
+Inherit
+  + parent_buf_pg:Expanded BUF_PG
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stk_pg:Expanded ARRAY TXT_PG
+  
+Public
+  
+  /*
+  - draw_child <-
+  ( parent_buf_pg.draw_child
+    '\n'.print
+    "txt_pg, count=".print; parent_buf_pg.child.count.println
+  )
+  */
+  
+  - fix_buffer <- ( parent_buf_pg.fix_buffer; )
+  
+  - text:TXT_BUF <- ( + t:TXT_BUF; t ?= buffer; t)
+  
+  - footnote_right_pos p:POS <-
+  ( + l,c:INTEGER
+    (l,c) := text.line_col p
+    footnote_right += "L"
+    l.append_in footnote_right
+    footnote_right += "  C"
+    c.append_in footnote_right
+    footnote_right += "  P"
+    p.pt.append_in footnote_right
+  )
+  
+  - footnote_right_tok t:TOK_DRW <-
+  ( + l,c:INTEGER
+    (pos === pos_i-1).if {
+      (l,c) := t.line_col (t.my_pos)
+      footnote_right += "L"
+      l.append_in footnote_right
+      footnote_right += " in " += t.shortname
+    }
+  )
+  
+  + height_upper:REAL_32
+  + width_upper:REAL_32
+    
+  // Two types of position: Coord (o,x,y) or (absolute point)
+          
+  + pos:POS
+  - set_pos (p:POS) <- ( pos := p.undefine_xy; )
+  //- set_pos (p:POS) xy (x,y:REAL_32) <- ( pos := p.set_xy (x,y); )
+  - set_pos_raw (p:INTEGER) <- ( pos := p; )
+    
+  - last_div:DIV
+  - pos_i:POS
+  - set_pos_i p:POS <- ( pos_i := p; )
+  
+  - init p:WIN buf b:BUFFER :SELF <-
+  ( set_pos (b.last_pos)
+    parent_buf_pg.init p buf b
+  )
+  
+  - save_last_pos <-
+  (
+    (buffer != NULL).if { buffer.set_last_pos pos; }
+    parent_buf_pg.save_last_pos
+  )
+  
+  /*
+  - addi d:INTEGER <-
+  [ ? {d>=0}; ]
+  ( /*+ b:INTEGER
+    (pos_i.pt = 0).if {
+      b := pos_i.pt
+    } else {
+      b := pos_i.pt + 1
+    }
+    ((ptv = 0) && {pti.in_range b to (cpti+d-1)}).if { set_pt (cpti + d,0); };*/
+    pos_i := pos_i + d
+  )
+  */
+  
+  //- goi p:INTEGER <- addi (p - pos_i.pt)
+      
+  + sel:POS := POS.undefine; // Selection (Physical)
+  - set_sel p:POS <-
+  ( + i:INTEGER
+    ((! p.is_undefine) && {p.is_ico}).if {
+      i := pt_div_for p + 1
+      {(i <= child.upper) && {child.at i.like DIV.pos.is_ico}}.while_do { i := i + 1; }
+      (i <= child.upper).if {
+        sel := child.at i.like DIV.pos
+      }
+    } else {
+      sel := p
+    }
+  )
+  
+  - get_sel:(POS,POS) <-
+  ( + bi,ei:POS
+    (bi,ei) := (sel,pos)
+    ((bi.is_undefine) || {bi = ei}).if { bi := ei := POS.undefine; } else {
+      (bi.pt > ei.pt).if { (bi,ei) := (ei,bi); }
+      ei := ei - 1
+    }
+    bi,ei
+  )
+  
+  - pt_div:INTEGER <- pt_div_for pos
+  
+  - pt_div_for p:POS :INTEGER <-
+  ( + i:INTEGER
+    //"-------------".println
+    //pos.print
+    {(i <= child.upper) && {!p.inside (child.at i.like DIV)}}.while_do { i := i + 1; }
+    (i > child.upper).if {
+      "BUG TXT_PG.pt_div".println
+      p.print; ' '.print
+      name.println
+      "Toks.count = ".print; text.toks.count.println
+      "---".println
+      0.to (child.upper) do { j:INTEGER
+        child.at j.like DIV.pos.print
+        "->".print; child.at j.like DIV.pte.print
+      }
+      //child.last.like DIV.pos.print
+      crash
+    }
+    i
+  )
+  
+  - copy o:SELF <-
+  ( buffer := o.buffer
+    pos := o.pos
+    (pos_x,pos_y) := (o.pos_x,o.pos_y)
+  )
+    
+  - new:SELF <-
+  ( + result:SELF
+    (stk_pg.is_empty).if { result := clone; } else { result := stk_pg.pop; }
+    result
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    (
+      (ev = HAND.ldrag) && 
+      {HAND.x_begin <= xmax - 20} && {HAND.y_begin <= ymax - 20}
+    ).if {
+      (HAND.is_begin).if {
+        stop_cmd
+        PAGE.set_cur_pg page
+        (sel.is_undefine).if { put_pos_xy (HAND.x_cur,HAND.y_cur); }
+      } else {
+        (sel.is_undefine).if { select_on; }
+        put_pos_xy (HAND.x_cur,HAND.y_cur)
+      }
+    }.elseif {ev = HAND.clic} then {      
+      (HAND.nb_clic % 3)
+      .when 0 then {
+        stop_cmd
+        PAGE.set_cur_pg page
+        put_pos_xy (HAND.x_cur,HAND.y_cur)
+      }
+      .when 1 then { HAND.run "2Clic"; }
+      .when 2 then { HAND.run "3Clic"; }
+    } || {event_elevator ev}
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    ((c & KEYBOARD.msk_cmd) = 0).if {
+      cmd_add s
+    }
+  )
+  
+  - put_pos_xy (x,y:REAL_32) <-
+  ( + i:INTEGER
+    + ok:DIV
+    {
+      {(i <= child.upper) && {child.at i.ymax < y}}.while_do { i := i + 1; }
+      (i <= child.upper).if { ok ?= child.at i; }
+      i := i + 1
+    }.do_while {(i <= child.upper) && {child.at i.yo < y} && {child.at i.xo < x}}
+    (ok != NULL).if {
+      pos := POS.div ok xy (x-ok.xo, (y-ok.yo).max 1)
+    }
+  )
+  
+  - detect_cur <-
+  ( ((! pos.is_ico) && {DIV.is_mute = 0}).if {
+      + x1,x2,y:REAL_32
+      + d:DIV
+      + ok:BOOLEAN
+      (x1,x2,y) := (tex.last_x,tex.x,tex.y)
+      d := last_div
+      //(d = NULL).if {
+      //  "Bug TXT_PG.detect_cur: last_div = NULL".println
+      //} else {
+      (d.style = d.cursor).if {
+        (pos.is_xy).if {
+          ok := pos =| d.pos.set_xy ((x1+x2)/2-d.xo,1)
+        } else {
+          ok := pos ~= pos_i
+        }
+        (ok).if {
+          pos := pos.set_pt pos_i
+          (pos.is_undefine_xy).if { pos := pos.set_xy (x1-last_div.xo,tex.asc); }
+          cursor (x1,y) ascdes (tex.last_asc,tex.last_des) col ((page = PAGE.cur_pg).ok (COLOR.red) else {COLOR.gray})
+          footnote_right_pos pos
+        }
+      }
+      //}
+    
+      ( // Selection
+        (!sel.is_undefine) && {
+          ((pos_i.pt >= sel.pt) && {(pos.is_xy) || {pos_i.pt < pos.pt}}) ||
+          {(!pos.is_xy) && {pos_i.pt >= pos.pt} && {pos_i.pt < sel.pt}}          
+        }
+      ).if {
+        save
+        begin_path
+        fill_color (LOOK.select_ui)
+        rect (x1,y-tex.last_asc) to (x2-1,y-tex.last_des)
+        fill
+        restore
+      }
+      // Search
+      (
+        ((cmd_cur = CMD_SEARCH) || {cmd_cur = CMD_REPLACE}) &&
+        {! text.is_empty} && {pos_i < text.upper}
+      ).if {
+        + ip,ib,jp:INTEGER
+        + pat:STRING_BUFFER
+        (pos_i.pt.in_range (cmd_cur.start) to (cmd_cur.end-1)).if {
+          save
+          begin_path
+          fill_color (COLOR.rgbaf (1,0,0,0.15))
+          rect (x1,y-tex.last_asc) to (x2-1,y-tex.last_des)
+          fill
+          restore
+        } else {
+          pat := cmd_cur.text
+          {
+            ip := pat.index_of (text.at pos_i) since ip
+            (ip <= pat.upper).if {
+              ib := pos_i.pt- ip
+              jp := 0
+              {
+                (jp <= pat.upper) && {ib.in_range 0 to (text.upper)} && {text.at ib = pat.at jp}
+              }.while_do {
+                ib := ib + 1
+                jp := jp + 1
+              }
+              (jp > pat.upper).if {
+                save
+                begin_path
+                fill_color (COLOR.rgbaf (0,0,0,0.15))
+                rect (x1,y-tex.last_asc) to (x2-1,y-tex.last_des)
+                fill
+                restore
+                ip := pat.upper + 1
+              } else {
+                ip := ip + 1
+              }
+            }
+          }.do_while {ip <= pat.upper}
+        }
+      }
+    }
+  )
+  
+  - detect_ico d:DIV <- 
+  (
+    (pos === pos_i).if { ? {pos_i.is_ico}; ? {pos.is_ico}
+      pos := pos_i.set_xy (d.width/2,d.good_y)
+    }
+  )
+  
+  - margin_cursor_y:REAL_32 := 40
+  - drag_pos_y:BOOLEAN
+  - move_pos_y dy:REAL_32 <-
+  ( + i:INTEGER
+    + x:REAL_32
+    + d:DIV
+    i := pt_div
+    d ?= child.at i
+    x := d.abs_x
+    (dy > 0).if { // Search bottom
+      {(i < child.upper) && {child.at i.yo - yo < dy + margin_cursor_y*2}}.while_do { i := i + 1; }
+      //"dy:".print; dy.print; " i=".print; i.println
+      sub_next_line x div i
+    } else { // Search top
+      {(i > 0) && {child.at i.ymax - yo > height + dy - margin_cursor_y*2}}.while_do { i := i - 1; }
+      sub_prev_line x div i
+    }
+    drag_pos_y := TRUE
+  )
+  
+  - margin_cursor_x:REAL_32 := 20
+  - drag_pos_x:BOOLEAN
+  - move_pt_dy dy:REAL_32 <-
+  ( + i:INTEGER
+    + x,y:REAL_32
+    + d:DIV
+    i := pt_div
+    d ?= child.at i
+    x := d.abs_x
+    y := d.yo
+    (dy > 0).if { // Search bottom
+      {(i < child.upper) && {child.at i.yo-y < dy}}.while_do { i := i + 1; }
+      //"dy:".print; dy.print; " i=".print; i.println
+      sub_next_line x div i
+    } else { // Search top
+      {(i > 0) && {child.at i.ymax-y > dy}}.while_do { i := i - 1; }
+      sub_prev_line x div i
+    }
+    drag_pos_x := TRUE
+  )
+  
+  - cmd_middle_pg:BOOLEAN <-
+  ( + i:INTEGER
+    + y:REAL_32
+    + d:DIV
+    i := pt_div
+    d ?= child.at i
+    y := d.yo - yo + d.height / 2
+    pos_y := pos_y - (height/2 - y)
+    TRUE
+  )
+    
+  - cmd_add s:STRING :BOOLEAN <-
+  ( + d:DIV
+    (! pos.is_ico).if {
+      pos := pos + text.at pos add s
+    }.elseif {((s.first = ' ') || {s.first = '\n'}) && {(d := child.at pt_div.like DIV).act_clic != NULL}} then {
+      d.run
+    }
+  )
+  
+  - cmd_suppr:BOOLEAN <-
+  ( + r:BOOLEAN
+    + i,n:INTEGER
+    + bi,ei,e:POS
+    + d:DIV
+    (bi,ei) := get_sel
+    (! bi.is_undefine).if {
+      pos := bi
+      text.rm bi times (ei.pt - bi.pt + 1)
+      //current_page.stack_upper
+      set_sel (POS.undefine)
+      r := TRUE
+    }.elseif {
+      (! pos.is_ico) && { 
+        i := pt_div
+        e := child.at i.like DIV.pte
+        (pos != e) || {
+          (i != child.upper) &&
+          {
+            ((d ?= child.at (i+1)).pos.pt = e.pt+1) ||
+            {(d.pos.pt = e.pt+2) && {text.at (e.pt) = '\r'}}
+          } &&
+          {! d.pos.is_ico}
+        }        
+      }
+    } then {
+      (n,i) := text.pos_to_tok pos
+      (i <= text.toks.upper).if {
+        r := text.toks.at i.cmd_suppr        
+      }
+      //text.rm pos
+    }
+    r.if { set_pos pos }
+  )
+  
+  - cmd_new_line:BOOLEAN <-
+  ( + n,i:INTEGER
+    + r:BOOLEAN
+    (pos.is_ico).if {
+      r := cmd_add "\n"
+    } else {
+      (n,i) := text.pos_to_tok pos
+      (i > text.toks.upper).if { i := i - 1; }
+      r := text.toks.at i.cmd_new_line
+    }
+    r
+  )
+  
+  - cmd_new_line2:BOOLEAN <-
+  ( + n,i:INTEGER
+    + r:BOOLEAN
+    (pos.is_ico).if {
+      r := cmd_add "\n"
+    } else {
+      (n,i) := text.pos_to_tok pos
+      (i > text.toks.upper).if { i := i - 1; }
+      r := text.toks.at i.cmd_new_line2
+    }
+    r
+  )
+  
+  - cmd_next_char:BOOLEAN <-
+  ( + i:INTEGER
+    + d:DIV
+    i := pt_div; d ?= child.at i
+    //"POS:".print; pos.print; '\n'.print
+    //"d.POS:".print; d.pte.print
+    (pos !== d.pte).if {
+      //"Next".println
+      set_pos (pos + text.size_at pos)
+    }.elseif {i < child.upper} then {
+      d ?= child.at (i+1)
+      //"d+1 : ".print; d.pos.print
+      set_pos (d.pos)
+      //"YES".println
+      //"NEW:".print; pos.print
+    }
+  )
+  
+  - cmd_prev_char:BOOLEAN <-  
+  ( + i:INTEGER
+    + d:DIV
+    i := pt_div; d ?= child.at i
+    //"----------------------------------------".println
+    //"POS:".print; pos.print; '\n'.print
+    //"d.POS:".print; d.pos.print
+    (pos !== d.pos).if { // Text
+      set_pos (pos - text.size_back_at pos)
+    }.elseif {i > 0} then {
+      //"YES".println
+      d ?= child.at (i-1)
+      set_pos (d.pte)
+    }
+  )
+  
+  - cmd_next_word:BOOLEAN <-
+  (pos < text.upper).if {
+    + s:INTEGER
+    + t:BOOLEAN
+    { 
+      set_pos_raw (pos.pt + text.at_tmp pos)
+    }.do_while {(pos < text.upper) && {! UTF8.is_idf (text.tmp_c)}}
+    t := TRUE
+    {(pos < text.upper) && {t}}.while_do {
+      s := text.at_tmp pos
+      (t := UTF8.is_idf (text.tmp_c)).if {
+        set_pos_raw (pos.pt + s)
+      }
+    }
+  }
+  
+  - cmd_prev_word:BOOLEAN <-
+  (pos > 0).if {
+    + s:INTEGER
+    + t:BOOLEAN
+    {
+      set_pos_raw (pos.pt - text.at_back_tmp pos)
+    }.do_while {(pos > 0) && {! UTF8.is_idf (text.tmp_c)}}
+    t := TRUE
+    {(pos > 0) && {t}}.while_do {
+      s := text.at_back_tmp pos
+      (t := UTF8.is_idf (text.tmp_c)).if { set_pos_raw (pos.pt - s); }
+    }
+  }
+  
+  - cmd_beg_line:BOOLEAN <-
+  ( + i,i0:INTEGER
+    + y,x:REAL_32
+    + d:DIV
+    i := pt_div; d ?= child.at i
+    i0 := i
+    (x,y) := (d.abs_x,d.yo)
+    {(i > 0) && {child.at (i-1).ymax > y}}.while_do { i := i - 1; }
+    d ?= child.at i
+    pos := POS.div d xy (0, d.good_y)
+    (i != i0) || {Old pos.x != 0}    
+  )
+  
+  - cmd_end_line:BOOLEAN  <-
+  ( + i,i0:INTEGER
+    + y,x:REAL_32
+    + d:DIV
+    i := pt_div; d ?= child.at i
+    i0 := i
+    (x,y) := (d.abs_x,d.ymax)
+    {(i < child.upper) && {child.at (i+1).yo < y}}.while_do { i := i + 1; }
+    d ?= child.at i
+    pos := POS.div d xy (d.width, d.good_y)
+    (i != i0) || {d.width != Old pos.x}    
+  )
+  
+  - cmd_next_line:BOOLEAN <-
+  ( + i:INTEGER
+    + y,x:REAL_32
+    + d:DIV
+    i := pt_div; d ?= child.at i
+    (x,y) := (d.abs_x,d.ymax)
+    {(i <= child.upper) && {(d ?= child.at i).yo < y}}.while_do { i := i + 1; }
+    (i <= child.upper).if { sub_next_line x div i; }
+  )
+  
+  - sub_next_line x:REAL_32 div n:INTEGER <-
+  ( + y:REAL_32
+    + i:INTEGER
+    + d:DIV
+    i := n
+    d ?= child.at i
+    y := d.ymax
+    {
+      (i < child.upper)       && {(d ?= child.at i).xmax < x} &&
+      {child.at (i+1).yo < y} && {child.at (i+1).xo > d.xo}
+    }.while_do {
+      y := d.ymax
+      i := i + 1
+    }
+    {(i < child.upper) && {child.at i.yo < y}}.while_do { i := i + 1; }
+    pos := POS.div d xy (x-d.xo, d.good_y)
+  )
+  
+  - cmd_prev_line:BOOLEAN <-
+  ( + i:INTEGER
+    + y,x:REAL_32
+    + d:DIV
+    i := pt_div; d ?= child.at i
+    (x,y) := (d.abs_x,d.yo)
+    {(i >= 0) && {(d ?= child.at i).ymax > y}}.while_do { i := i - 1; }
+    (i >= 0).if { sub_prev_line x div i; }
+  )
+  
+  - sub_prev_line x:REAL_32 div n:INTEGER <-
+  ( + y:REAL_32
+    + i:INTEGER
+    + d:DIV
+    i := n
+    d ?= child.at i
+    y := d.yo
+    {(i >= 0) && {(d ?= child.at i).xo > x} && {(i = 0) || {child.at (i-1).ymax > y}}}.while_do { i := i - 1; }
+    (i < 0).if { d ?= child.at 0; }
+    //{(i > 0) && {child.at i.ymax > y}}.while_do { i := i - 1; }
+    //"SUB_PREV:".print; d.pos.print
+    pos := POS.div d xy (x-d.xo, d.good_y)
+  )
+  
+  - cmd_up_pg:BOOLEAN   <- (pt_div > 0).if { move_pt_dy (-height + margin_cursor_y*2); }
+  - cmd_down_pg:BOOLEAN <- (pt_div < child.upper).if { move_pt_dy ( height - margin_cursor_y*2); }
+    
+  - cmd_copy s:BOOLEAN :BOOLEAN <-
+  ( + bi,ei:POS
+    (bi,ei) := get_sel
+    (bi.is_undefine).if {
+      CLIPBOARD.put ""
+    } else {
+      clipboard.clear
+      (bi.pt).to (ei.pt) do { i:INTEGER; clipboard.add_last (text.buf.at i); }
+      CLIPBOARD.put clipboard
+      s.if { set_sel (POS.undefine); }
+    }
+    ! bi.is_undefine
+  )
+  
+  - cmd_paste:BOOLEAN <-
+  ( + up:INTEGER
+    + bi,ei:POS
+    CLIPBOARD.get_in clipboard
+    (! clipboard.is_empty).if {
+      //current_page.stack_upper
+      (bi,ei) := get_sel
+      (! bi.is_undefine).if {
+        set_pos_raw bi
+        up := text.buf.upper - (ei.pt - bi.pt + 1)
+        {text.buf.upper != up}.while_do { text.rm bi; }
+        set_sel (POS.undefine)
+      }
+      text.at pos add_text clipboard
+      set_pos_raw (pos.pt + clipboard.count)
+      //current_page.stack_upper
+      //paste_state := 0
+    }
+  )
+    
+  - cmd_go_line n:INTEGER <-
+  ( + i,s,p,nn:INTEGER
+    + t:TOK_DRW
+    
+    nn := (n - 1).max 0
+    {(i < text.toks.upper) && {s + (t := text.toks.at i).nl < nn}}.while_do {
+      s := s + t.nl
+      p := p + t.di
+      i := i + 1
+    }
+    {(p < text.upper) && {s < nn}}.while_do {
+      (text.at p = '\n').if { s := s + 1; }
+      p := p + 1
+    }
+    //"Line:".print; n.print; " Point:".print; p.println
+    set_pos_raw p
+  )
+  
+  - cmd_to_upper:BOOLEAN <-
+  (pos < text.upper).if {    
+    + c:STRING_ALIAS
+    + t:BOOLEAN
+    + ch:CHARACTER
+    {
+      text.at_tmp pos
+      c := text.tmp_c.to_string_alias
+      (t := ! UTF8.is_idf c).if {
+        set_pos_raw (pos.pt + c.count)
+      }
+    }.do_while {(pos < text.upper) && {t}}
+    t := TRUE
+    {(pos < text.upper) && {t}}.while_do {
+      text.at_tmp pos
+      ((ch := text.tmp_c.first).is_ascii).if {
+        (t := ch.is_identifier).if {
+          text.rm pos
+          text.tmp_c.at 0 put (ch.to_upper)
+          text.at pos add (text.tmp_c)
+          set_pos_raw (pos.pt + 1)
+        };
+      } else {
+        c := text.tmp_c.to_string_alias
+        (t := UTF8.is_idf c).if {
+          text.rm pos
+          text.at pos add (UTF8.to_upper c)
+          set_pos_raw (pos.pt + c.count)
+        };
+      }
+    }
+  }
+  
+  - cmd_to_lower:BOOLEAN <-
+  (pos < text.upper).if {    
+    + c:STRING_ALIAS
+    + t:BOOLEAN
+    + ch:CHARACTER
+    {
+      text.at_tmp pos
+      c := text.tmp_c.to_string_alias
+      (t := ! UTF8.is_idf c).if {
+        pos := pos + c.count
+      }
+    }.do_while {(pos < text.upper) && {t}}
+    t := TRUE
+    {(pos < text.upper) && {t}}.while_do {
+      text.at_tmp pos
+      ((ch := text.tmp_c.first).is_ascii).if {
+        (t := ch.is_identifier).if {
+          text.rm pos
+          text.tmp_c.at 0 put (ch.to_lower)
+          text.at pos add (text.tmp_c)
+          set_pos_raw (pos.pt + 1)
+        };
+      } else {
+        c := text.tmp_c.to_string_alias
+        (t := UTF8.is_idf c).if {
+          text.rm pos
+          text.at pos add (UTF8.to_lower c)
+          pos := pos + c.count
+        }
+      }
+    }
+  }
+  
+  - cmd_to_snake:BOOLEAN <-
+  (pos < text.upper).if {    
+    + c:STRING_ALIAS
+    + t:BOOLEAN
+    {
+      text.at_tmp pos
+      c := text.tmp_c.to_string_alias
+      (t := ! UTF8.is_idf c).if {
+        pos := pos + c.count
+      }
+    }.do_while {(pos < text.upper) && {t}}
+    t := TRUE
+    {(pos < text.upper) && {t}}.while_do {
+      text.at_tmp pos
+      c := text.tmp_c.to_string_alias
+      (t := UTF8.is_idf c).if {
+        (UTF8.is_upper c).if {
+          text.rm pos
+          text.at pos add "_"
+          pos := pos + 1
+          (c.first.is_ascii).if {
+            text.tmp_c.at 0 put (c.first.to_lower)
+            text.at pos add (text.tmp_c)
+          } else {
+            text.at pos add (UTF8.to_lower c)
+          }
+        }
+        pos := pos + c.count
+      }
+    }
+  }
+  
+  - cmd_insert s:STRING_ALIAS :BOOLEAN <-
+  ( + j:INTEGER
+    + c:CHARACTER
+    + n:UINTEGER_8
+    STRING.tmp { tmp:STRING_BUFFER
+      {j <= s.upper}.while_do {
+        n := (c := s.at j).to_uinteger_8
+        tmp.clear
+        tmp | c
+        ((n & 80h) != 0).if {
+          { j := j + 1
+            tmp | s.at j
+            n := n << 1
+          }.do_until {(n & 40h) = 0}
+        }
+        j := j + 1
+        cmd_add tmp
+      }
+    }
+    TRUE
+  )
+  
+  - indent_line pi:INTEGER :INTEGER <-
+  ( + ii,prev,cur,ind,i,base,bi,nsp,d:INTEGER
+    + is_ok:BOOLEAN
+    i := pi
+    {(i > 0) && {text.at (i-1) != '\n'}}.while_do { i := i - 1; }; // Beg. line
+    bi := i
+    (i > 0).if {
+      //"debut: ".print; i.println
+      ii := i
+      {(ii < text.upper) && {text.at ii = ' '}}.while_do { ii := ii + 1; }
+      nsp := ii - i
+      (! begin_section ii).if {
+        {
+          is_ok := FALSE
+          i := i - 1
+          {(i > 0) && {text.at (i-1) != '\n'}}.while_do {
+            i := i - 1
+            is_ok := is_ok || {text.at i != ' '}
+          }
+        }.do_until {(i = 0) || {is_ok}}
+        (begin_section i).if {
+          ind := 2
+        } else {
+          //"Prev.:".print; i.println
+          {(i < text.upper) && {text.at i = ' '}}.while_do {
+            i := i + 1
+            base := base + 1
+          }
+          //"base#:".print; base.println
+          prev := count_block i dir 1
+          //"prev#:".print; prev.println
+          i := pi
+          {(i < text.upper) && {text.at i != '\n'}}.while_do { i := i + 1; }
+          i := i - 1
+          cur := count_block i dir (-1)
+          //"cur#:".print; cur.println
+          ind := (base+prev - cur) & ~1
+          //"ind#:".print; ind.println
+        }
+      }
+    }
+    d := ind - nsp
+    (d > 0).if {
+      //"add x ".print; (+d).println
+      (+d).times { text.at bi add " "; }
+    }.elseif {d < 0} then {
+      //"rm x ".print; (-d).println
+      (-d).times { text.rm bi; }
+    }
+    d
+  )
+  
+  - begin_section i:INTEGER :BOOLEAN <-
+  (
+    (text.look "Section" at i)   || 
+    {text.look "Inherit" at i}   || {text.look "Insert" at i}    || 
+    {text.look "Interrupt" at i} || {text.look "External" at i}  || 
+    {text.look "Mapping" at i}   || {text.look "Public" at i}    || 
+    {text.look "Private" at i}   || {text.look "Directory" at i} || 
+    { + ok:BOOLEAN
+      ((i < text.upper-1) && {text.at i.is_upper} && {text.at (i+1).is_upper}).if {
+        + j:INTEGER
+        j := i - 1
+        {(j > 0) && {text.at j = ' '}}.while_do { j := j - 1; }
+        ((j > 0) && {i-j <= 3} && {text.at j = '\n'}).if {
+          j := j - 1
+          {(j > 0) && {text.at j = ' '}}.while_do { j := j - 1; }
+          ok := (j > 0) && {text.at j = '\n'}
+        }
+      }
+      ok
+    }
+  )
+  
+  - cmd_indent_line:BOOLEAN <-
+  // BSBS: ça n'a rien a faire la (ds lib) ! A refaire ! c'est naze !
+  (     
+    pos := pos + indent_line pos
+    {(pos < text.upper) && {text.at pos != '\n'}}.while_do { pos := pos + 1; }
+    // Delete space in end of line:
+    TRUE
+  )
+    
+  - free <- stk_pg.add_last Self
+  
+Private
+  
+  - count_block ii:INTEGER dir d:INTEGER :INTEGER <-
+  ( + n,i:INTEGER
+    + c:CHARACTER
+    i := ii
+    {(i < text.upper) && {(c := text.at i) != '\n'}}.while_do {      
+      ((c = '(') || {c = '['} || {c = '{'}).if {
+        n := (n + d*2).max 0
+      }.elseif {(c = ')') || {c = ']'} || {c = '}'}} then {
+        n := (n - d*2).max 0
+      }
+      i := i + d
+    }
+    n
+  )

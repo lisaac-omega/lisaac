@@ -1,0 +1,99 @@
+Header
+  + name := NAYELI;
+  /*How to do image mapping in Lisaac Ω. 
+  
+As usual, to this example in a terminal window, cd in the good directory:
+
+
+  lisaac nayeli
+
+
+  ./nayeli
+  
+*/
+  
+Inherit
+  + parent_window:Expanded WINDOW
+  
+Public
+  - zoom:REAL_32 := 65
+  - cama:REAL_32 := REAL_32.pi/2
+  
+  - camera:CAMERA := CAMERA.create 3 zoom zoom
+  
+  - img:Expanded ARRAY INTEGER
+  - bufile:ARRAY UINTEGER_8 := ARRAY UINTEGER_8.create_with_capacity 40_000
+  
+  - draw <-
+  ( + m:NATIVE_ARRAY UINTEGER_8
+    //+ p:PAINT
+    (img.is_empty).if {
+      PEN3D.init {}
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp.copy "face?.jpg"
+        1.to 6 do { i:INTEGER
+          tmp.put (i.digit) to 4
+          bufile.clear
+          SYSTEM_IO.read_asset tmp in bufile
+          IMAGE.init (bufile.to_native_array) size (bufile.count)
+          m := IMAGE.load (IMAGE.rgb_alpha)
+          img.add_last (create_image_rgba m size (IMAGE.img_x,IMAGE.img_y) flags 0)
+        }
+      }
+    }
+    /*
+    p := PAINT.create_pattern (0,0) size (256,256) img_id (img.first) angle 0 alpha 1.0
+    begin_path
+    rect (0,0) size (256,256)
+    fill_paint p
+    fill
+    p.free
+    */
+    
+    O3D.begin (0,0) size (width.to_integer,height.to_integer) camera camera
+    (
+      P3D.square.up 0.5.img (img.at 0) +
+      P3D.square.up 0.5.rotate_x (REAL_32.pi).img (img.at 1) +
+      P3D.square.up 0.5.rotate_z (REAL_32.pi/2).img (img.at 2) +
+      P3D.square.up 0.5.rotate_z (-REAL_32.pi/2).img (img.at 3) +
+      P3D.square.up 0.5.rotate_y (REAL_32.pi/2).rotate_x (REAL_32.pi/2).img (img.at 4) +
+      P3D.square.up 0.5.rotate_y (REAL_32.pi/2).rotate_x (-REAL_32.pi/2).img (img.at 5)
+    ).scale (50.cm,50.cm,50.cm).map
+    //P3D.sphere.color (COLOR.red).scale (50.cm,50.cm,50.cm).fill
+    reset_scissor
+  )
+  
+  - main <-
+  (
+    init "Cube Mapping" size (800,600)
+    PAPER.run
+  )
+  
+  // Moving
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    (e = HAND.drag).if {
+      camera.set_position (HAND.dx,HAND.dy) alpha 0 ray (camera.ray)
+    }
+    TRUE
+  )
+  
+  /*
+  - select (x0,y0,x1,y1:REAL_32) end is_end:BOOLEAN  :BOOLEAN <-
+  ( + nz:REAL_32
+    nz := (zoom + y1-y0).min 120.max 30
+    camera.set_zoom nz
+    (is_end).if { zoom := nz; }
+    TRUE
+  )
+    
+  - rotozoom (c,a:REAL_32) end is_end:BOOLEAN  :BOOLEAN <-
+  ( + nz:REAL_32
+    nz := (zoom / c).min 120.max 30
+    camera.set_position (0,0) alpha (- a) ray (camera.ray)
+    camera.set_zoom nz
+    (is_end).if { zoom := nz; cama := cama - a; }
+    TRUE    
+  );*/

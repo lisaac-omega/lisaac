@@ -1,0 +1,683 @@
+Header
+  
+  + name         := STORE;
+  /*
+  picture output routines.
+  */
+  
+//  - external := `#include <fcntl.h>`;
+  
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Public 
+  
+  - checksum:INTEGER
+  
+Private
+  
+  - my_write (file:FILE,buf:ARRAY(UINTEGER_8),len:INTEGER) <-
+  (
+    outfile.write buf from 0 size len
+  )
+  
+  - obfrsize:INTEGER := 4096
+  - obfr:ARRAY(UINTEGER_8) := ARRAY(UINTEGER_8).create obfrsize
+  - optr:INTEGER
+
+  - outfile:FILE
+  - outname:STRING_BUFFER := STRING_BUFFER.create 256
+  
+  - openfile <-
+  ( 
+    outfile := FILE_SYSTEM.make_file outname
+    outfile.open
+    optr := 0
+  )
+  
+  - closefile <-
+  ( 
+    (optr != 0).if {          
+      my_write (outfile,obfr,optr)
+    }
+    outfile.close
+  )
+
+  - putbyte c:UINTEGER_8 <-
+  (     
+    obfr.at optr put c
+    optr := optr + 1
+
+    (optr = obfrsize).if {    
+      my_write (outfile,obfr,optr)
+      optr := 0
+    }
+  )
+    
+Public
+
+  - write_frame (src:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)),frame:INTEGER) <-
+  // store a picture as either one frame or two fields  
+  ( //+ ofs:INTEGER
+    (output_type = 0).if {
+      
+      (scr = NULL).if {
+        (width_scr,height_scr) := (horizontal_size,vertical_size)
+        //width_scr.print; 'x'.print; height_scr.println
+        scr := NATIVE_ARRAY UINTEGER_8.create (width_scr*height_scr*4)
+        id_scr := MPEG2DEC.create_image_rgba scr size (width_scr,height_scr) flags 0
+      }
+      output src bitmap scr
+      MPEG2DEC.update_image scr id id_scr
+    } else {      
+      outname.copy output_picture_filename
+      frame.append_in outname
+      
+      output_type    
+      .when t_yuv then {
+	store_yuv src
+      }    
+      .when t_sif then {
+	store_sif src
+      }
+      .when t_tga then {
+	store_ppm_tga src is_tga TRUE
+      }
+      .when t_ppm then {
+	store_ppm_tga src is_tga FALSE
+      }
+    }
+  )
+  
+Private
+      
+  - store_yuv src:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)) <-
+  // separate headerless files for y, u and v   
+  ( + hsize,vsize,incr:INTEGER
+        
+    incr  := coded_picture_width
+    vsize := vertical_size
+    hsize := horizontal_size
+    
+    outname.append ".Y"
+    store_yuv1 ((src.at 0),incr,hsize,vsize)
+    
+    (chroma_format != chroma444).if {      
+      incr  := incr  >> 1
+      hsize := hsize >> 1
+    }
+    (chroma_format = chroma420).if {
+      vsize := vsize >> 1
+    }
+    
+    outname.at (outname.upper) put 'U'
+    store_yuv1 ((src.at 1),incr,hsize,vsize)
+        
+    outname.at (outname.upper) put 'V'
+    store_yuv1 ((src.at 2),incr,hsize,vsize)
+  )
+
+  - store_yuv1 (src:NATIVE_ARRAY(UINTEGER_8),incr,hsize,vsize:INTEGER) <-
+  // auxiliary routine   
+  ( + psrc:NATIVE_ARRAY(UINTEGER_8)
+    + hsize_m1:INTEGER
+    + idx:INTEGER
+
+    openfile
+    hsize_m1 := hsize -1
+    psrc := src
+    0.to (vsize-1) do { y:INTEGER
+      0.to hsize_m1 do { x:INTEGER
+	     putbyte (psrc.at idx)
+        idx := idx + 1
+      }
+    }
+/*	 for (i=0; i<height; i++)
+  {
+    p = src + offset + incr*i
+    for (j=0; j<width; j++)
+      putbyte(*p++)
+  }*/
+   
+    closefile
+  )
+
+  - store_sif src:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)) <-
+  // store as headerless file in U,Y,V,Y format  
+  ( + incr_uv,py,hsize:INTEGER
+    + u422,v422,y444:NATIVE_ARRAY(UINTEGER_8)
+    
+    (chroma_format = chroma444).if {
+      error "4:4:4 not supported for SIF format"
+    }
+    
+    y444 := src.at 0
+    (chroma_format = chroma420).if {      
+      conv420to422 (src.at 1) and (src.at 2)
+      u422 := u422buf
+      v422 := v422buf
+    } else {
+      u422 := src.at 1
+      v422 := src.at 2
+    }
+    
+    outname.append ".SIF"
+    
+    openfile
+    
+    incr_uv := coded_picture_width >> 1
+    hsize   := (horizontal_size-1) >> 1
+    0.to ((vertical_size-1)*incr_uv) by incr_uv do { luv:INTEGER
+      luv.to (luv+hsize) do { puv:INTEGER
+	py := puv << 1
+	putbyte (u422.at puv)
+	putbyte (y444.at py)
+	putbyte (v422.at puv)
+	putbyte (y444.at (py|1))
+      }
+    }
+    
+    closefile
+  )
+
+  - store_ppm_tga src:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)) is_tga tgaflag:BOOLEAN <-
+  // store as PPM (PBMPLUS) or uncompressed Truevision TGA ('Targa') file
+  (         
+    (tgaflag).if {
+      // TGA header       
+      outname.append ".tga"
+      openfile
+      
+      0.to 11 do { i:INTEGER
+	putbyte 0
+      }
+      obfr.at 2 put 2
+      putbyte ((horizontal_size & 0FFh).to_uinteger_8)
+      putbyte ((horizontal_size >> 8  ).to_uinteger_8)
+      putbyte ((vertical_size   & 0FFh).to_uinteger_8)
+      putbyte ((vertical_size   >> 8  ).to_uinteger_8)
+      putbyte 24
+      putbyte 32
+      
+      output_rgb src flag TRUE
+    } else {
+      // PPM header 
+      outname.append ".ppm"
+      openfile
+      error_text.copy "P6\n"
+      horizontal_size.append_in error_text
+      error_text.add_last ' '
+      vertical_size.append_in error_text
+      error_text.append "\n255\n"
+      (error_text.lower).to (error_text.upper) do { k:INTEGER
+	putbyte (error_text.at k.to_uinteger_8)
+      }
+      output_rgb src flag FALSE
+    }
+        
+    closefile
+  )
+  
+  //
+  // RGB action.
+  //
+  
+  - output_rgb src:NATIVE_ARRAY(NATIVE_ARRAY(UINTEGER_8)) flag tga_flag:BOOLEAN <-
+  ( + y, u, v:INTEGER
+    + r, g, b:UINTEGER_8
+    + crv, cbu, cgu, cgv:INTEGER
+    + u444, v444, y444,ptr_clip:NATIVE_ARRAY(UINTEGER_8)
+    + line,col,hs:INTEGER
+    //+ py,pu,pv:NATIVE_ARRAY(UINTEGER_8)
+    
+    y444 := src.at 0
+    (chroma_format != chroma444).if {      
+      (chroma_format = chroma420).if {	      
+	conv420to422 (src.at 1) and (src.at 2)
+        conv422to444 u422buf and v422buf
+      } else {
+	conv422to444 (src.at 1) and (src.at 2)
+      }
+      u444 := u444buf
+      v444 := v444buf
+    } else {
+      u444 := src.at 1
+      v444 := src.at 2
+    }
+        
+    // matrix coefficients 
+    
+    crv := TABLE.inverse_table_6_9 (matrix_coefficients,0)
+    cbu := TABLE.inverse_table_6_9 (matrix_coefficients,1)
+    cgu := TABLE.inverse_table_6_9 (matrix_coefficients,2)
+    cgv := TABLE.inverse_table_6_9 (matrix_coefficients,3)
+
+    ptr_clip := clip; //.storage+384
+    hs := horizontal_size-1
+    0.to (vertical_size-1) do { i:INTEGER
+      //py := y444 + i
+      //pu := u444 + i
+      //pv := v444 + i
+      col := line
+      0.to hs do { j:INTEGER
+        /*
+	u :=  pu.at 0.to_integer - 128
+	pu := pu + 1
+	v :=  pv.at 0.to_integer - 128
+	pv := pv + 1
+	y :=  (py.at 0.to_integer - 16 ) * 76309; // (255/219)*65536 
+	py := py + 1
+	*/
+	u :=  u444.at col.to_integer - 128
+	v :=  v444.at col.to_integer - 128
+	y := (y444.at col.to_integer - 16 ) * 76309; // (255/219)*65536 
+	
+	r := ptr_clip.at ((y + crv * v           + 32768) >> 16)
+	g := ptr_clip.at ((y - cgu * u - cgv * v + 32768) >> 16)
+	b := ptr_clip.at ((y + cbu * u           + 32786) >> 16)
+	
+	(tga_flag).if {
+	  putbyte b
+	  putbyte g
+	  putbyte r
+	} else {
+	  putbyte r
+	  putbyte g
+	  putbyte b
+	}
+	
+	col := col + 1
+      }
+      line := line + coded_picture_width
+    }
+  )
+  
+  - output src:NATIVE_ARRAY(NATIVE_ARRAY UINTEGER_8) bitmap bmp:NATIVE_ARRAY UINTEGER_8 <-
+  ( + y, u, v:INTEGER
+    + r, g, b:UINTEGER_8
+    + color:UINTEGER_32
+    + crv, cbu, cgu, cgv:INTEGER
+    + u444, v444, y444,ptr_clip:NATIVE_ARRAY(UINTEGER_8)
+    + line,col,hs:INTEGER
+    + bmp_line:NATIVE_ARRAY UINTEGER_32
+    + tmp:INTEGER
+    
+    y444 := src.at 0
+    (chroma_format != chroma444).if {      
+      (chroma_format = chroma420).if {	
+	conv420to422 (src.at 1) and (src.at 2)
+	conv422to444 u422buf and v422buf
+      } else {
+	conv422to444 (src.at 1) and (src.at 2)
+      }
+      u444 := u444buf
+      v444 := v444buf
+    } else {
+      u444 := src.at 1
+      v444 := src.at 2
+    }
+        
+    // matrix coefficients 
+    
+    crv := TABLE.inverse_table_6_9 (matrix_coefficients,0)
+    cbu := TABLE.inverse_table_6_9 (matrix_coefficients,1)
+    cgu := TABLE.inverse_table_6_9 (matrix_coefficients,2)
+    cgv := TABLE.inverse_table_6_9 (matrix_coefficients,3)
+        
+    ptr_clip := clip; //.storage+384
+    hs := horizontal_size-1
+    bmp_line := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on bmp
+    0.to (vertical_size-1) do { i:INTEGER
+      col := line
+      0.to hs do { j:INTEGER
+	u :=  u444.at col.to_integer - 128
+	v :=  v444.at col.to_integer - 128
+	y := 76309 * (y444.at col.to_integer - 16 ); // (255/219)*65536 
+        // BSBS: PATCH! BUG ! C LA MERDE !!!!!!
+        tmp := (y + crv * v           + 32768) >> 16
+        tmp := tmp.max 0.min 255
+        r := ptr_clip.at tmp
+
+        tmp := (y - cgu * u - cgv * v + 32768) >> 16
+        tmp := tmp.max 0.min 255
+        g := ptr_clip.at tmp
+        
+        tmp := (y + cbu * u           + 32786) >> 16
+        tmp := tmp.max 0.min 255
+        b := ptr_clip.at tmp
+        
+        color := 0FF000000h | (b.to_uinteger_32 << 16) | (g.to_uinteger_32 << 8) | r
+        bmp_line.at j put color
+
+	col := col + 1
+      }
+      line := line + coded_picture_width
+      bmp_line := bmp_line + width_scr
+    }
+  )
+  
+  //
+  // Conversion.
+  //
+  
+  - u422buf:NATIVE_ARRAY(UINTEGER_8)
+  - v422buf:NATIVE_ARRAY(UINTEGER_8)
+  
+  - conv420to422 u420:NATIVE_ARRAY(UINTEGER_8) and v420:NATIVE_ARRAY(UINTEGER_8) <-
+  ( + size:INTEGER
+    (u422buf = NULL).if {
+      size    := (coded_picture_width >> 1) * coded_picture_height
+      u422buf := NATIVE_ARRAY(UINTEGER_8).calloc_intern size
+      v422buf := NATIVE_ARRAY(UINTEGER_8).calloc_intern size
+    }
+    conv420 (u420) to422 (u422buf)
+    conv420 (v420) to422 (v422buf)
+  )
+
+  - u444buf:NATIVE_ARRAY(UINTEGER_8)
+  - v444buf:NATIVE_ARRAY(UINTEGER_8)
+  
+  - conv422to444 u422:NATIVE_ARRAY(UINTEGER_8) and v422:NATIVE_ARRAY(UINTEGER_8) <-
+  ( + size:INTEGER
+    (u444buf = NULL).if {
+      size    := coded_picture_width * coded_picture_height
+      u444buf := NATIVE_ARRAY(UINTEGER_8).calloc_intern size
+      v444buf := NATIVE_ARRAY(UINTEGER_8).calloc_intern size
+    }
+    conv422 (u422) to444 (u444buf)
+    conv422 (v422) to444 (v444buf)
+  )
+   
+  //
+  // Conversion Vertical / Horizontal
+  //
+  
+  - conv420 sc:NATIVE_ARRAY(UINTEGER_8) to422 dt:NATIVE_ARRAY(UINTEGER_8) <-  
+  // vertical 1:2 interpolation filter   
+  ( + w, h, j2,y_up,x_up:INTEGER
+    + jm6, jm5, jm4, jm3, jm2, jm1, jp1, jp2, jp3, jp4, jp5, jp6, jp7:INTEGER
+    + p1,p2,p3,p4,p5,p6,p7:INTEGER
+    + idx:INTEGER
+    + pclip:NATIVE_ARRAY(UINTEGER_8)
+    + src,dst:NATIVE_ARRAY(UINTEGER_8)
+        
+    src := sc
+    dst := dt
+    
+    pclip := clip; //.storage + 384
+    
+    w := coded_picture_width  >> 1
+    h := coded_picture_height >> 1
+    
+    y_up := h - 1
+    x_up := w - 1
+    //w2   := w << 1
+    //w3   := w2 + w
+            
+    (progressive_frame).if {
+      // intra frame 
+      0.to x_up do { i:INTEGER
+	0.to y_up do { j:INTEGER
+	  j2   := j << 1
+	  //j2p1 := j2 + w
+	
+	  jm3 := 0.max (j-3)
+	  jm2 := 0.max (j-2)
+	  jm1 := 0.max (j-1)
+	  
+	  jp1 := (j+1).min y_up
+	  jp2 := (j+2).min y_up
+	  jp3 := (j+3).min y_up
+	  
+	  p1 := src.at (jm3 * w)
+	  p2 := src.at (jm2 * w)
+	  p3 := src.at (jm1 * w)
+	  p4 := src.at (j   * w)
+	  p5 := src.at (jp1 * w)
+	  p6 := src.at (jp2 * w)
+	  p7 := src.at (jp3 * w)
+	  // FIR filter coefficients (*256): 5 -21 70 228 -37 11 
+	  // New FIR filter coefficients (*256): 3 -16 67 227 -32 7 
+          idx := (3*p1 - 16*p2 + 67*p3 + 227*p4 - 32*p5 + 7*p6 + 128) >> 8
+          
+          // BSBS: PATCH 4012 :
+          idx := idx.max 0.min 255
+          
+	  dst.at (j2 * w) put (pclip.at idx)
+	  
+          idx := (3*p7 - 16*p6 + 67*p5 + 227*p4 - 32*p3 + 7*p2 + 128) >> 8
+          
+          // BSBS: PATCH 2 ! BUG C la le méga merde !!!
+          idx := idx.max 0.min 255
+          
+	  dst.at ((j2 + 1) * w) put (pclip.at idx)
+	}
+	src := src + 1
+	dst := dst + 1
+      }
+      /*
+      0.to (w*y_up) by w do { j:INTEGER
+	j2   := j << 1
+	j2p1 := j2 + w
+	
+	jm3 := 0.max (j-w3)
+	jm2 := 0.max (j-w2)
+	jm1 := 0.max (j-w)
+	  
+	jp1 := y_up.min (j+w)
+	jp2 := y_up.min (j+w2)
+	jp3 := y_up.min (j+w3)
+	
+	0.to x_up do { x:INTEGER
+	  p1 := src.at (jm3 + x)
+	  p2 := src.at (jm2 + x)
+	  p3 := src.at (jm1 + x)
+	  p4 := src.at (j   + x)
+	  p5 := src.at (jp1 + x)
+	  p6 := src.at (jp2 + x)
+	  p7 := src.at (jp3 + x)
+	  // FIR filter coefficients (*256): 5 -21 70 228 -37 11 
+	  // New FIR filter coefficients (*256): 3 -16 67 227 -32 7 
+	  idx := (3*p1 - 16*p2 + 67*p3 + 227*p4 - 32*p5 + 7*p6 + 128) >> 8
+	  dst.at (j2   + x) put (pclip.at idx)
+	  
+	  idx := (3*p7 - 16*p6 + 67*p5 + 227*p4 - 32*p3 + 7*p2 + 128) >> 8
+	  dst.at (j2p1 + x) put (pclip.at idx)
+	}
+      }
+      */
+    } else {
+      // intra field 
+      //w3 := w2 + w
+      //w4 := w << 2
+      //w5 := w4 + w
+      //w6 := w4 + w2
+      //w7 := w6 + w
+      0.to x_up do { i:INTEGER
+        0.to y_up do { j:INTEGER
+          j2   := j << 1
+          // Top field
+          jm6 := 0.max (j-6)
+          jm4 := 0.max (j-4)
+          jm2 := 0.max (j-2)
+	  	
+          jp2 := (y_up-1).min (j+2)
+          jp4 := (y_up-1).min (j+4)
+          jp6 := (y_up-1).min (j+6)
+		
+	  p1 := src.at (jm6 * w)
+	  p2 := src.at (jm4 * w)
+	  p3 := src.at (jm2 * w)
+	  p4 := src.at (j   * w)
+	  p5 := src.at (jp2 * w)
+	  p6 := src.at (jp4 * w)
+	  p7 := src.at (jp6 * w)
+	  // Polyphase FIR filter coefficients (*256): 2 -10 35 242 -18 5 
+	  // New polyphase FIR filter coefficients (*256): 1 -7 30 248 -21 5 
+	  idx := (1*p1 - 7*p2 + 30*p3 + 248*p4 - 21*p5 + 5*p6 + 128) >> 8
+	  dst.at (j2 * w) put (pclip.at idx)
+	  
+	  // Polyphase FIR filter coefficients (*256): 11 -38 192 113 -30 8 
+	  // New polyphase FIR filter coefficients (*256):7 -35 194 110 -24 4 
+	  idx := (7*p2 - 35*p3 + 194*p4 + 110*p5 - 24*p6 + 4*p7 + 128) >> 8
+	  dst.at ((j2 + 2) * w) put (pclip.at idx)
+	  // Polyphase FIR filter coefficients (*256): 11 -38 192 113 -30 8 
+          // New polyphase FIR filter coefficients (*256):7 -35 194 110 -24 4 
+          
+          // bottom field 
+          jm5 := (j-5).max 1
+          jm3 := (j-3).max 1
+          jm1 := (j-1).max 1
+          jp1 := (j+1).min y_up
+          jp3 := (j+3).min y_up
+          jp5 := (j+5).min y_up
+          jp7 := (j+7).min y_up
+          
+          p1 := src.at (jp5 * w)
+	  p2 := src.at (jp3 * w)
+	  p3 := src.at (jp1 * w)
+	  p4 := src.at (jm1 * w)
+	  p5 := src.at (jm3 * w)
+	  p6 := src.at (jm5 * w)
+	  p7 := src.at (jp7 * w)
+	  idx := (7*p1 - 35*p2 + 194*p3 + 110*p4 - 24*p5 + 4*p6 + 128) >> 8
+	  dst.at ((j2+1) * w) put (pclip.at idx)
+	  
+	  idx := (1*p7 - 7*p1 + 30*p2 + 248*p3 - 21*p4 + 5*p5 + 128) >> 8
+	  dst.at ((j2+3) * w) put (pclip.at idx)
+        }
+        src := src + 1
+        dst := dst + 1
+      }
+    }
+  )
+  
+  - conv422 sc:NATIVE_ARRAY(UINTEGER_8) to444 dt:NATIVE_ARRAY(UINTEGER_8) <-
+  // horizontal 1:2 interpolation filter  
+  ( + w, im3, im2, im1, ip1, ip2, ip3:INTEGER
+    + x_up,y_up/*,y_up_x_w*/:INTEGER
+    + idx,i2:INTEGER
+    + p1,p2,p3,p4,p5,p6,p7:INTEGER
+    + pclip:NATIVE_ARRAY(UINTEGER_8)
+    + src,dst:NATIVE_ARRAY(UINTEGER_8)
+    src := sc
+    dst := dt
+    
+    pclip := clip; //.storage+384
+    
+    w := coded_picture_width >> 1
+    x_up := w - 1
+    y_up := coded_picture_height - 1
+    //y_up_x_w := y_up * w
+    `/* POINT 2 */`
+    (ld.mpeg2_flag).if {
+      0.to y_up do { j:INTEGER
+	0.to x_up do { i:INTEGER
+	  i2 := i << 1
+	  im2 := 0.max (i-2)
+	  im1 := 0.max (i-1)
+	  ip1 := x_up.min (i+1)
+	  ip2 := x_up.min (i+2)
+	  ip3 := x_up.min (i+3)
+	  
+	  // FIR filter coefficients (*256): 21 0 -52 0 159 256 159 0 -52 0 21 
+	  // even samples (0 0 256 0 0) 	  
+	  dst.at i2 put (src.at i)
+	  
+	  // odd samples (21 -52 159 159 -52 21) 
+	  idx := (
+	    21  * (src.at im2.to_integer + src.at ip3) -
+	    52  * (src.at im1.to_integer + src.at ip2) +
+	    159 * (src.at i  .to_integer + src.at ip1) + 128
+	  ).to_integer >> 8
+	  
+	  dst.at (i2 + 1) put (pclip.at idx)
+	}
+	src := src + w
+	dst := dst + coded_picture_width
+      }
+      /*
+      0.to x_up do { i:INTEGER
+	im2 := 0.max (i-2)
+	im1 := 0.max (i-1)
+	ip1 := x_up.min (i+1)
+	ip2 := x_up.min (i+2)
+	ip3 := x_up.min (i+3)
+	0.to y_up_x_w by w do { j:INTEGER
+	  // FIR filter coefficients (*256): 21 0 -52 0 159 256 159 0 -52 0 21 
+	  // even samples (0 0 256 0 0) 
+	  j2 := (j + i) << 1
+	  dst.put (src.at (j+i)) to j2
+	  
+	  // odd samples (21 -52 159 159 -52 21) 
+	  idx := (
+	    21  * (src.at (j+im2).to_integer + src.at (j+ip3)) -
+	    52  * (src.at (j+im1).to_integer + src.at (j+ip2)) +
+	    159 * (src.at (j+i  ).to_integer + src.at (j+ip1)) + 128
+	  ).to_integer >> 8
+	  
+	  dst.put (pclip.at idx) to (j2 + 1)
+	}
+      }
+      */
+    } else {
+      0.to y_up do { j:INTEGER
+	0.to x_up do { i:INTEGER
+	  i2 := i << 1
+	  im3 := 0.max (i-3)
+	  im2 := 0.max (i-2)
+	  im1 := 0.max (i-1)
+	  ip1 := x_up.min (i+1)
+	  ip2 := x_up.min (i+2)
+	  ip3 := x_up.min (i+3)
+	  
+	  p1 := src.at im3
+	  p2 := src.at im2
+	  p3 := src.at im1
+	  p4 := src.at i  
+	  p5 := src.at ip1
+	  p6 := src.at ip2
+	  p7 := src.at ip3
+	  // FIR filter coefficients (*256): 5 -21 70 228 -37 11 
+	  idx := (5*p1 - 21*p2 + 70*p3 + 228*p4 - 37*p5 + 11*p6 + 128) >> 8
+	  dst.at i2 put (pclip.at idx)
+	  
+          idx := (5*p7 - 21*p6 + 70*p5 + 228*p4 - 37*p3 + 11*p2 + 128) >> 8
+          // BSBS: PATCH 3 C'est la merde !
+          idx := idx.max 0.min 255
+          
+	  dst.at (i2 + 1) put (pclip.at idx)
+	}
+	src := src + w
+	dst := dst + coded_picture_width
+      }
+      
+      /*
+      0.to x_up do { i:INTEGER
+	im3 := 0.max (i-3)
+	im2 := 0.max (i-2)
+	im1 := 0.max (i-1)
+	ip1 := x_up.min (i+1)
+	ip2 := x_up.min (i+2)
+	ip3 := x_up.min (i+3)
+	0.to y_up_x_w by w do { j:INTEGER
+	  j2 := (j+i) << 1
+	  p1 := src.at (j+im3)
+	  p2 := src.at (j+im2)
+	  p3 := src.at (j+im1)
+	  p4 := src.at (j+i  )
+	  p5 := src.at (j+ip1)
+	  p6 := src.at (j+ip2)
+	  p7 := src.at (j+ip3)
+      	  // FIR filter coefficients (*256): 5 -21 70 228 -37 11 
+	  idx := (5*p1 - 21*p2 + 70*p3 + 228*p4 - 37*p5 + 11*p6 + 128) >> 8
+	  dst.put (pclip.at idx) to j2
+	  
+	  idx := (5*p7 - 21*p6 + 70*p5 + 228*p4 - 37*p3 + 11*p2 + 128) >> 8
+	  dst.put (pclip.at idx) to (j2 + 1)
+	}
+      }
+      */
+    }
+  )

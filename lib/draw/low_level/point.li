@@ -1,0 +1,73 @@
+Header
+  
+  + name := POINT;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+
+Private
+  
+  - stack:ARRAY POINT := ARRAY POINT.create_with_capacity 16
+    
+Public
+  // Flags values
+  - pt_corner:INTEGER     := 01h
+  - pt_left:INTEGER       := 02h
+  - pt_bevel:INTEGER      := 04h
+  - pr_innerbevel:INTEGER := 08h
+  
+  + x:REAL_32
+  + y:REAL_32
+  + dx:REAL_32
+  + dy:REAL_32
+  + len:REAL_32
+  + dmx:REAL_32
+  + dmy:REAL_32
+  + flags:UINTEGER_8
+  
+  - create (px,py:REAL_32) flags f:INTEGER :POINT <-
+  ( + result:POINT
+    (stack.is_empty).if {
+      result := clone
+    } else {
+      result := stack.last
+      stack.remove_last
+    }
+    result.make (px,py) flags f
+    result
+  )
+
+  - free <-
+  ( 
+    stack.add_last Self
+  )
+  
+  - make (px,py:REAL_32) flags f:INTEGER <-
+  (
+    (x,y) := (px,py)
+    dx := dy := len := dmx := dmy := 0; // BSBS: Utile ??
+    flags := f
+  )
+  
+  - normalize_and_distance p:POINT <-
+  ( + id,ddx,ddy:REAL_32
+    (ddx,ddy) := (p.x - x, p.y - y)
+    len := (ddx*ddx + ddy*ddy).sqrt
+    (len > 0.000001).if { 
+      id := 1.0 / len
+      (dx,dy) := (ddx*id,ddy*id)
+    } else {
+      (dx,dy) := (ddx,ddy)
+    }
+  )
+  
+  - set_dmxy (px,py:REAL_32) <-
+  (
+    (dmx,dmy) := (px,py)
+  )
+  
+  - set_flags f:INTEGER <-
+  (
+    flags := f
+  )

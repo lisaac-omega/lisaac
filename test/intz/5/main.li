@@ -1,0 +1,42 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + a,b,c,a_prim:ℤ
+    + str1,str2,str3:STRING_ALIAS
+    a := (1 << 30)
+    str1 := a.to_string
+    b := a
+    str2 := b.to_string
+    c := a * b
+    str3 := c.to_string
+    //
+    a := b
+    b := c
+    c := a * b
+    str3 := c.to_string
+    //
+    a := b
+    b := c
+    c := a * b
+    str3 := c.to_string
+    //
+    a := b
+    b := c
+    c := a * b
+    str3 := c.to_string
+    //
+    a := b
+    b := c
+    c := a * b
+    str3 := c.to_string
+    //
+    a_prim := c / b
+    TEST.check (a_prim == a)
+    TEST.check (a_prim.to_string) string (a.to_string)
+    //
+    a := b
+    b := c
+    
+  )

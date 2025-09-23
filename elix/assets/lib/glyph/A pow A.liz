@@ -1,0 +1,9 @@
+Push
+Pop (0,0)
+Push
+v0 <- A0.Ascent - 16
+Pop (A0.Width, - v0)
+v1 <- Max (A0.Ascent, v0 + A1.Ascent)
+Ascent <- v1
+Descent <- A0.Descent - ( v1 - A0.Ascent)
+Width <- A0.Width + A1.Width

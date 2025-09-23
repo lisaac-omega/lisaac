@@ -1,0 +1,17 @@
+Header
+
+  + name        := EXPR_MUL;
+  /*
+  Add Expression.
+  */
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  - value:INTEGER <-
+  (
+    left.value * right.value
+  )

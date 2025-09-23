@@ -1,0 +1,429 @@
+Header  
+  + name := STARTREK;
+  /*
+  Try the 3 following recipes below.
+  
+  # (recipe #1) To compile as a standalone executable in a terminal window:
+  lisaac startrek -boost  
+  # then run with:
+  ./startrek
+  
+
+  # (recipe #2) To compile an app for android:
+  # Do not forget to plug your android device
+  # Do not forget to turn on the developper mode on your android device
+  # then compile using:
+  lisaac startrek -boost -target android
+  # then run the updated app on your android device. 
+  
+  (recipe #3) To compile in a web window:
+  lisaac startrek -boost -target web
+  # then run:
+  ./run.sh
+  */
+  
+Inherit 
+  + parent_window:Expanded WINDOW
+  
+Public 
+  
+  - star (x,y:REAL_32) radius r:REAL_32 <-
+  ( + l:INTEGER
+    + p,p2:PAINT
+    save
+    l := (r * 8).to_integer.min 255 
+    save
+    begin_path
+    circle (x,y) radius r
+    p := PAINT.create_radial (x,y) 
+              radius (1,r) 
+              color (COLOR.rgba(255,255,255,l/2))
+              to (COLOR.rgba(255,255,255,0))
+    fill_paint p
+    fill
+    p.free
+    restore
+    
+    save
+    begin_path
+    move_to (x-2.0*r,   y)
+    line_to (x,         y-r/20.0)
+    line_to (x+2.0*r,   y)
+    line_to (x,         y+r/20.0)
+    line_to (x-2.0*r,   y)
+    
+    move_to (x       ,y-2.0*r)
+    line_to (x-r/20.0,y)
+    line_to (x       ,y+2.0*r)
+    line_to (x+r/20.0,y)
+    line_to (x       ,y-2.0*r)
+        
+    p2 := PAINT.create_radial (x,y) 
+    radius (1,2.0*r) color (COLOR.rgba(255,255,255,l)) to (COLOR.rgba(255,255,255,0))
+    fill_paint p2
+    fill
+    p2.free
+    restore
+    
+    save
+    begin_path
+    stroke_color (COLOR.rgba(255,128,128,l/4))
+    circle (x,y) radius (1.2*r)
+    stroke_width 1.0
+    stroke
+    restore
+    
+    restore
+  )
+  
+  - star:ARRAY REAL_32
+  - draw_space (px,py:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  ( + p:PAINT
+    + x,y,r,c,rr:REAL_32
+    (star = NULL).if {
+      star := ARRAY REAL_32.create_with_capacity (100*4)
+      0.to 99 do { i:INTEGER
+        star.add_last (w.to_integer.random_upper)
+        star.add_last (h.to_integer.random_upper)
+        star.add_last (16.random_upper.max 2)
+        star.add_last (100.0/(1000.random_upper.max 50))
+      }
+    }
+        
+    save
+    p := PAINT.create_box (px+50,py+50) size (w-100,h-100) radius 200
+    feather 100 color (COLOR.rgba(14,23,56,255)) to (COLOR.rgba(0,0,0,0))
+    //COLOR.rgb(14,23,56)
+    begin_path
+    rect (px,py) size (w,h)
+    //rounded_rect (px+10,py+20) size (w-20,h-30) radius corner
+    //path_winding (cst_hole)
+    fill_paint p
+    fill
+    p.free
+    
+    restore
+    
+    0.to (star.upper) by 4 do { i:INTEGER
+      x := star.at (i+0)
+      y := star.at (i+1)
+      r := star.at (i+2)
+      c := star.at (i+3)
+      rr := (r+(t*c).cos*5).max 1.0
+      (rr = 1.0).if {
+        star.at (i+0) put (w.to_integer.random_upper)
+        star.at (i+1) put (h.to_integer.random_upper)
+        star.at (i+2) put (16.random_upper.max 2)
+        star.at (i+3) put (100.0/(1000.random_upper.max 50))
+      } else {
+        star.at (i+2) put ((r-0.005).max 0.0)
+      }
+      star (x,y) radius rr
+    }
+  )
+
+  - draw_title (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  ( //+ c:COLOR
+    + p:PAINT
+    save
+    transform(
+      w*0.00625,0.0,
+      0.0,w*0.00625,
+      -w*1.25,-w*2.87
+    )
+    
+    p := PAINT.create_radial (310.0+t.cos*60,476.0+t.sin*35) 
+    radius (5,40) color (COLOR.rgb(255,255,255)) to (COLOR.rgb(78h,21h,21h))
+/*    
+    begin_path
+    fill_paint p
+    rect (x,y) size (w,h)
+    fill
+*/
+    //c := COLOR.rgb(78h,21h,21h)
+    begin_path
+    fill_paint p
+    move_to(268.3133,463.4106)
+    line_to(279.4191,463.4106)
+    line_to(278.8081,466.8917)
+    line_to(275.0349,466.8917)
+    line_to(271.6818,485.9994)
+    line_to(268.1230,485.9996)
+    line_to(271.4761,466.8917)
+    line_to(267.7024,466.8917)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(298.4387,475.9621)
+    line_to(300.9367,485.9996)
+    line_to(297.3495,485.9996)
+    line_to(295.2303,477.4840)
+    line_to(294.4676,477.8457)
+    line_to(293.0368,485.9994)
+    line_to(289.4781,485.9996)
+    line_to(293.4419,463.4108)
+    line_to(300.3950,463.4108)
+    bezier_w1(302.8913,463.4108)w2(303.2537,464.7183)to(302.8725,466.8917)
+    line_to(301.5391,474.4914)
+    path_winding (cst_hole)
+    move_to(298.3234,472.5356)
+    line_to(299.3136,466.8917)
+    line_to(296.3896,466.8917)
+    line_to(295.1338,474.0486)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(328.6887,475.9621)
+    line_to(331.1868,485.9996)
+    line_to(327.5995,485.9996)
+    line_to(325.4803,477.4840)
+    line_to(324.7176,477.8457)
+    line_to(323.2868,485.9994)
+    line_to(319.7281,485.9996)
+    line_to(323.6919,463.4108)
+    line_to(330.6450,463.4108)
+    bezier_w1(333.1413,463.4108)w2(333.5037,464.7183)to(333.1225,466.8917)
+    line_to(331.7891,474.4914)
+    path_winding (cst_hole)
+    move_to(328.5734,472.5356)
+    line_to(329.5636,466.8917)
+    line_to(326.6396,466.8917)
+    line_to(325.3838,474.0486)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(352.4894,472.9012)
+    line_to(355.5138,485.9996)
+    line_to(351.7465,485.9996)
+    line_to(349.9234,476.5244)
+    line_to(347.9530,479.5212)
+    line_to(346.8162,485.9994)
+    line_to(343.2573,485.9996)
+    line_to(347.2211,463.4106)
+    line_to(350.7800,463.4108)
+    line_to(349.2890,471.9076)
+    line_to(354.6201,463.4108)
+    line_to(358.5455,463.4108)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(260.0739,463.4108)
+    line_to(263.8772,463.4108)
+    bezier_w1(266.3735,463.4108)w2(266.7481,464.7183)to(266.3669,466.8917)
+    line_to(266.3388,467.0525)
+    line_to(262.4568,468.8939)
+    line_to(262.8080,466.8917)
+    line_to(259.8840,466.8917)
+    line_to(258.8418,472.8323)
+    line_to(265.9131,469.4782)
+    line_to(263.6250,482.5187)
+    bezier_w1(263.1799,485.0561)w2(262.1030,485.9996)to(259.8640,485.9996)
+    line_to(256.0607,485.9996)
+    bezier_w1(253.5644,485.9996)w2(253.2020,484.6922)to(253.5832,482.5187)
+    line_to(253.8677,480.8968)
+    line_to(257.7496,479.0554)
+    line_to(257.1421,482.5187)
+    line_to(260.0661,482.5187)
+    line_to(261.3647,475.1170)
+    line_to(254.2934,478.4713)
+    line_to(256.3129,466.8917)
+    bezier_w1(256.7579,464.3544)w2(257.8349,463.4108)to(260.0739,463.4108)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(311.1991,463.4106)
+    line_to(322.3049,463.4106)
+    line_to(321.6939,466.8917)
+    line_to(317.9205,466.8917)
+    line_to(314.5676,485.9994)
+    line_to(311.0088,485.9996)
+    line_to(314.3616,466.8917)
+    line_to(310.5882,466.8917)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(282.4660,473.9787)
+    line_to(285.6556,472.4658)
+    line_to(286.6336,466.8917)
+    line_to(283.7096,466.8917)
+    path_winding (cst_hole)
+    move_to(290.1927,466.8917)
+    line_to(286.8396,485.9996)
+    line_to(283.2807,485.9999)
+    line_to(284.9894,476.2629)
+    line_to(281.7998,477.7758)
+    line_to(280.3567,485.9996)
+    line_to(276.7979,485.9999)
+    line_to(280.1510,466.8917)
+    bezier_w1(280.5960,464.3544)w2(281.6730,463.4108)to(283.9119,463.4108)
+    line_to(287.7152,463.4108)
+    bezier_w1(290.2115,463.4108)w2(290.5739,464.7183)to(290.1927,466.8917)
+    fill
+
+    begin_path
+    fill_paint p
+    move_to(338.0841,473.0642)
+    line_to(343.9584,470.2778)
+    line_to(343.2922,474.0750)
+    line_to(337.4179,476.8614)
+    line_to(336.4252,482.5187)
+    line_to(341.8106,482.5187)
+    line_to(341.1996,485.9994)
+    line_to(332.2554,485.9994)
+    line_to(335.6083,466.8917)
+    bezier_w1(336.0533,464.3544)w2(337.1303,463.4108)to(339.3692,463.4108)
+    line_to(345.1634,463.4108)
+    line_to(344.5525,466.8917)
+    line_to(339.1671,466.8917)
+    fill
+    p.free
+    
+    restore
+  )
+
+  - draw_logo (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  ( + p,pf:PAINT
+    + s,cs,sn:REAL_32
+    /*
+    + w,h,xx,yy:INTEGER
+    + corner:REAL_32
+    
+    w := 100; h:=80
+    xx := 100; yy := 400
+    
+    */
+    
+    save
+    cs := (t*0.2).cos.abs + 0.1
+    sn := (t*0.13).sin.abs
+    transform(
+      cs, sn,
+      0.0,cs,
+      0.0,0.0
+    )
+    
+    save
+    s := width.to_real_64/270.0
+    transform(
+      1.333333*s,0.0,
+      0.0     ,-1.333333*s,
+      1.0     ,height - 10
+    )
+
+    begin_path
+    
+    stroke_color (COLOR.rgb(35, 31, 32))
+    line_cap  (butt)
+    line_join (round)
+
+    miter_limit  2.61313
+    stroke_width 5.0
+    
+    move_to(98.6883,254.277)
+    bezier_w1(143.083,193.760)w2(165.987,118.402)to(168.030, 41.7719)
+    bezier_w1(155.250,66.6664)w2(141.456,90.5699)to(126.858, 111.731)
+    bezier_w1(122.123,119.078)w2(119.686,118.052)to(109.425, 111.853)
+    bezier_w1(75.8008, 89.341)w2(52.5004,58.2691)to(29.3172, 25.9234)
+    bezier_w1(34.7055,104.713)w2(49.2313,192.909)to(98.6883, 254.277)
+
+    p := PAINT.create_linear (29,25) to (168,254) 
+    color (COLOR.rgbf(0.3*2,0.3*2,0.32*2)) to (COLOR.rgbf(0.15,0.15,0.16))
+    stroke_paint p
+    stroke
+    p.free
+    
+    //pf := PAINT.create_linear (29,25) to (168,254) 
+    //color (COLOR.rgb(35*2,31*2,32*2)) to (COLOR.rgb(15,15,16))
+    pf := PAINT.create_radial (29.0+10.0+t.cos*20,175.0+(t*0.47).sin*50) 
+    radius (10,100) color (COLOR.rgb(35*2,31*2,32*2)) to (COLOR.rgb(15,15,16))
+    fill_paint pf
+    fill
+    pf.free
+    
+
+    begin_path
+    stroke_width 5.0
+    
+    pf := PAINT.create_radial (29.0+10.0+t.cos*20,175.0+(t*0.47).sin*50) 
+    radius (10,100) color (COLOR.rgbf(0.3+0.1,0.3,0.32)) to (COLOR.rgbf(0.0,0.0,0.0))
+    fill_paint pf
+    //fill_color (COLOR.rgbaf(0.3,0.3,0.32,0.9))
+    move_to(98.3379, 233.091)
+    line_to(106.239, 163.495)
+    line_to(129.580, 157.890)
+    line_to(108.142, 150.704)
+    line_to(110.466, 134.116)
+    line_to(97.8379, 149.220)
+    line_to(85.9223, 133.967)
+    line_to( 87.818, 150.720)
+    line_to(66.7813, 157.889)
+    line_to( 89.275, 163.488)
+    line_to(98.3379, 233.091)
+    
+    p := PAINT.create_linear (66,133) to (130,234) 
+    color (COLOR.rgbf(0.15,0.15,0.16)) to (COLOR.rgbf(0.3*2,0.3*2,0.32*2))
+    stroke_paint p
+    stroke
+    fill
+    p.free
+    pf.free
+    
+    restore
+    restore
+  )
+  
+  - draw_mouse <-
+  ( /*+ t:TOUCH
+    + pa:PAINT
+    (p.touch.lower).to (p.touch.upper) do { i:INTEGER
+      t := p.touch.at i
+      (t.is_pressed).if {
+        
+        pa := PAINT.create_radial (t.x,t.y)        
+        radius (2,100) 
+        color (COLOR.rgba(255,255,255,128)) to (COLOR.rgba(0,0,0,0))
+        
+        p.begin_path
+        p.circle (t.x,t.y) radius 100
+        p.fill_paint pa
+        p.fill
+        
+        pa.free
+      }
+    };*/
+  )
+      
+  - draw <-
+  ( + t:REAL_32
+        
+    t := CLOCK.seconds
+        
+    draw_space (0,0) size (width,height) time t
+    draw_logo  (0,0) size (width,height) time t
+    /*
+    intersect_scissor (400,400) size (50,50)
+        
+    begin_path
+    fill_color (COLOR.white)
+    rect (300,300) size (800,800)
+    fill
+    
+    reset_scissor
+    */    
+    draw_title (0,0) size (width,height) time t
+    draw_mouse
+    PAPER.refresh_again
+  )
+  
+Public  
+  - main <-
+  (
+    init "StarTrek" size (600,800)
+    PAPER.run
+  )

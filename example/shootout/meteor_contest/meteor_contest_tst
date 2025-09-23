@@ -1,0 +1,7 @@
+lisaac meteor_contest -q -O -i20
+g++ -pipe -O3 -fomit-frame-pointer -march=pentium4   meteor_contest_c.cpp -o meteor_contest_c
+echo Lisaac: 
+time ./meteor_contest > out_li.txt
+echo C:
+time ./meteor_contest_c > out_c.txt
+diff out_li.txt out_c.txt

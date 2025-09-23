@@ -1,0 +1,39 @@
+Header
+  
+  + name := MUTEX;
+  
+  - type := `pthread_mutex_t`;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - create:SELF <-
+  ( + result:SELF
+    result := clone
+    result.make
+    result    
+  )
+  
+  - make <-
+  (
+    (is_cop_active).if {
+      `pthread_mutex_init(@Self,NULL)`
+    }
+  )
+  
+  - lock <-
+  (
+    (is_cop_active).if {
+      `pthread_mutex_lock(@Self)`
+    }
+  )
+  
+  - unlock <-
+  (
+    (is_cop_active).if {
+      `pthread_mutex_unlock(@Self)`
+    }
+  )

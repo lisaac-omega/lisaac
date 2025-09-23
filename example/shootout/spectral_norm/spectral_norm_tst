@@ -1,0 +1,7 @@
+lisaac spectral_norm -q -O -i10
+gcc spectral_norm_c.c -o spectral_norm_c -O3 -fomit-frame-pointer -lm
+echo Lisaac: 
+time ./spectral_norm 5500 > out_li.txt
+echo C:
+time ./spectral_norm_c 5500 > out_c.txt
+diff out_li.txt out_c.txt

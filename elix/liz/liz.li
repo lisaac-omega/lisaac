@@ -1,0 +1,621 @@
+Header
+  + name := LIZ;
+  
+Inherit
+  - parent_json:JSON := JSON
+  - parent_texp:TEXP := TEXP
+  - parent_any:ANY := ANY
+
+Private
+    
+  - vars:HMAP INTEGER KEY STRING_ALIAS := HMAP INTEGER KEY STRING_ALIAS.create
+  - push_count:INTEGER
+  
+  + texps:Expanded ARRAY TEXP
+
+  - read_liz <-
+  //** TIKZ -> { INTR '\n' }
+  ( + i:TEXP
+    vars.clear; push_count := 0
+    vars.add 0 to "Ascent"
+    vars.add 1 to "Descent"
+    vars.add 2 to "Width"
+    vars.add 3 to "Ox"
+    vars.add 4 to "Oy"
+    vars.add 5 to "SP"
+    vars.add 6 to "AC"
+    vars.add 7 to "DC"
+    {
+      {read_char '\n'}.while_loop
+      i := read_intr
+      (i = NULL).if { err syntax msg "Instr not found."; }
+      texps.add_last i
+    }.do_while {cur <= src.upper}
+  )
+
+  - read_intr:TEXP <-
+  //** INTR -> ('Move'|'Line') COORD
+  //**       | 'Spline' 'w1' COORD 'w2' COORD 'to' COORD
+  //**       | 'Quad' COORD 'to' COORD
+  //**       | 'Arc' COORD radius EXPR angle COORD ('clock'|'trigo')
+  //**       | 'Fill' | 'Stroke' Real
+  //**       | 'Push' 'A'<num>
+  //**       | 'Pop' COORD
+  //**       | (Identifier | 'Ascent' | 'Descent' | 'Width') '<-' EXPR
+  //**       | num 'to' num 'do' VAR '{' TIKZ '}'
+  ( + result:TEXP
+    + a/*,l,u*/:INTEGER
+    //+ loop:TLOOP
+    + w1x,w1y,w2x,w2y,r:TEXP
+    + d:INTEGER
+    (read_word "Move").if {
+      result := TMOVE.new.init_xy read_coord
+    }.elseif {read_word "Line"} then {
+      result := TLINE.new.init_xy read_coord
+    }.elseif {read_word "Spline"} then {
+      (! read_word "w1").if { err syntax msg "'w1' needed."; }
+      (w1x,w1y) := read_coord
+      (! read_word "w2").if { err syntax msg "'w2' needed."; }
+      (w2x,w2y) := read_coord
+      (! read_word "to").if { err syntax msg "'to' needed."; }
+      result := TSPLINE.new.init_w1 (w1x,w1y) w2 (w2x,w2y) to read_coord
+    }.elseif {read_word "Quad"} then {
+      (w1x,w1y) := read_coord
+      (! read_word "to").if { err syntax msg "'to' needed."; }
+      result := TQUAD.new.init_w (w1x,w1y) to read_coord
+    }.elseif {read_word "Arc"} then {
+      (w1x,w1y) := read_coord
+      (! read_word "radius").if { err syntax msg "'radius' needed."; }
+      r := read_expr
+      (r = NULL).if { err syntax msg "radius invalid."; }
+      (! read_word "angle").if { err syntax msg "'angle' needed."; }
+      (w2x,w2y) := read_coord
+      (read_word "clock").if   { d := 2; }.elseif
+      {read_word "trigo"} then { d := 1; } else {
+        err syntax msg "'clock' or 'trigo' needed."
+      }
+      result := TARC.new.init (w1x,w1y) radius r angle (w2x,w2y) dir d
+    }.elseif {read_word "Fill"} then {
+      result := TFILL
+    }.elseif {read_word "Stroke"} then {
+      (! read_num).if { err syntax msg "Real invalid."; }
+      result := TSTROKE.new.init_w last_real
+    }.elseif {read_word "Push"} then {
+      result := TPUSH.new.init_b (vars.count)
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp | 'A'; push_count.append_in tmp; push_count := push_count + 1; tmp | '.'
+        tmp += "Ascent"
+        vars.add (vars.count) to (tmp.to_string_alias)
+        tmp.remove_suffix "Ascent"
+        tmp += "Descent"
+        vars.add (vars.count) to (tmp.to_string_alias)
+        tmp.remove_suffix "Descent"
+        tmp += "Width"
+        vars.add (vars.count) to (tmp.to_string_alias)
+      }
+    }.elseif {read_word "Pop"} then {
+      result := TPOP.new.init_xy read_coord
+    }.elseif {read_str '\"'} then {
+      (vars.fast_has last_str).if {
+        a := vars.fast_at last_str
+      } else {
+        a := vars.count
+        vars.add a to last_str
+      }
+      result := TASS.new.init a with read_ass_expr
+    /*}.elseif {read_integer} then {
+      l := last_integer
+      (! read_word "to").if { syntax_error "'to' needed."; }
+      (! read_integer).if { syntax_error "Integer invalid."; }
+      u := last_integer
+      (! read_word "do").if { syntax_error "'do' needed."; }
+      ((a := read_var) = -1).if { syntax_error "Variable needed."; }
+      (! read_char '{').if { syntax_error "'{' needed."; }
+      loop := TLOOP.new.init l to u with a
+      {! read_char '}'}.while_do {
+        
+      }
+      result := loop;*/
+    }
+    result        
+  )
+  
+  - read_ass_expr:TEXP <-  
+  ( + result:TEXP
+    (! read_word "<-").if { err syntax msg "'<-' needed."; }
+    result := read_expr
+    (result = NULL).if { err syntax msg "Expr invalid."; }
+    result
+  )
+  
+  - read_coord:(TEXP,TEXP) <-
+  //** COORD-> '(' EXPR ',' EXPR ')'
+  ( + e1,e2:TEXP
+    (! read_char '(').if { err syntax msg "'(' needed."; }
+    e1 := read_expr
+    (e1 = NULL).if { err syntax msg "Expr invalid."; }
+    (! read_char ',').if { err syntax msg "',' needed."; }
+    e2 := read_expr
+    (e2 = NULL).if { err syntax msg "Expr invalid."; }
+    (! read_char ')').if { err syntax msg "')' needed."; }
+    e1,e2
+  )
+        
+  - read_expr:TEXP <-
+  //** EXPR -> MUL { ( '+' | '-' ) MUL }
+  ( + result,r:TEXP
+    + op:CHARACTER
+    result := read_mul
+    {(read_char '+') || {read_char '-'}}.while_do {
+      op := last_char
+      r := read_mul
+      (r = NULL).if { err syntax msg "Expr needed."; }
+      (op = '+').if {
+        result := TFN2.new.init (result,r) with {(v1,v2:REAL_32); v1+v2}
+      } else {
+        result := TFN2.new.init (result,r) with {(v1,v2:REAL_32); v1-v2}
+      }
+    }
+    result
+  )
+        
+  - read_mul:TEXP <-
+  //** MUL  -> UNA { ( '*' | '/' ) UNA }
+  ( + result,r:TEXP
+    + op:CHARACTER
+    result := read_una
+    {(read_char '*') || {read_char '/'}}.while_do {
+      op := last_char
+      r := read_una
+      (r = NULL).if { err syntax msg "Expr needed."; }
+      (op = '*').if {
+        result := TFN2.new.init (result,r) with {(v1,v2:REAL_32); v1*v2}
+      } else {
+        result := TFN2.new.init (result,r) with {(v1,v2:REAL_32); v1/v2}
+      }
+    }
+    result
+  )
+  
+  - read_una:TEXP <-
+  //** UNA  -> ( '+' | '-' ) UNA
+  //**       | CST
+  ( + neg:BOOLEAN
+    + result:TEXP
+    {(read_char '+') || {read_char '-'}}.while_do {
+      (last_char = '-').if { neg := ! neg; }
+    }
+    result := read_cst
+    (neg).if {
+      (result = NULL).if { err syntax msg "Expr needed."; }
+      result := TFN1.new.init result with {v:REAL_32; -v}
+    }
+    result
+  )
+  
+  - read_cst:TEXP <-
+  //** CST  -> '(' EXPR ')'
+  //**       | FN
+  ( + result:TEXP
+    (read_char '(').if {
+      result := read_expr
+      (! read_char ')').if { err warning msg ") needed."; }
+    } else {
+      result := read_fn
+    }
+    result
+  )
+  
+  - read_fn:TEXP <-
+  //** FN   -> ('Max'|'Min') COORD
+  //**       | VAR
+  //**       | 'Ox' | 'Oy' | 'SP' | 'AC' | 'DC' | 'PI'
+  //**       | ARG<num> '.' ('Ascent' | 'Descent'|'Width')
+  //**       | <Real>
+  ( + result:TEXP
+    (read_word "Max").if {
+      result := TFN2.new.init read_coord with {(v1,v2:REAL_32); v1.max v2}
+    }.elseif {read_word "Min"} then {
+      result := TFN2.new.init read_coord with {(v1,v2:REAL_32); v1.min v2}
+    }.elseif {read_word "PI"} then {
+      result := TREAL.new.init_r (REAL_32.pi)
+    }.elseif {(src.at cur = 'A') && {src.at (cur+1).is_digit}} then {
+      cur := cur + 1
+      last_int := src.at cur -! '0'
+      cur := cur + 1
+      (! read_char '.').if { err syntax msg "'.' needed."; }
+      STRING.tmp { tmp:STRING_BUFFER; tmp | 'A'; last_int.append_in tmp; tmp | '.'
+        ((!read_word "Ascent") && {!read_word "Descent"} && {!read_word "Width"}).if {
+          err syntax msg "Expr invalid."
+        }
+        tmp += last_str
+        last_str := tmp.to_string_alias
+        (! vars.fast_has last_str).if {
+          err syntax msg ("Variable \'"+last_str+"' not found.")
+        }
+        result := TRD.new.init_v (vars.fast_at last_str)
+      }
+    }.elseif {read_str '\"'} then {
+      (! vars.fast_has last_str).if {
+        err syntax msg ("Variable \'"+last_str+"' not found.")
+      }
+      result := TRD.new.init_v (vars.fast_at last_str)
+    }.elseif {read_num} then {      
+      result := TREAL.new.init_r last_real
+    }
+    result
+  )
+    
+  - dico:HMAP LIZ KEY STRING_ALIAS := HMAP LIZ KEY STRING_ALIAS.create
+  
+  - mtx:STRING_ALIAS := // Bug ASCII compilo
+  ( + r:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER; ((tmp | '\0') += "mtx") | '\0'; r := tmp.to_string_alias; }
+    r
+  )
+   
+  - src:STRING_BUFFER := STRING_BUFFER.create 4096
+  
+Public
+  
+  - find n:STRING_ALIAS :LIZ <-
+  ( + result:LIZ
+    //"Search:".print; n.println
+    //"DICO:".println
+    //dico.foreach { l:LIZ; l.name.println; }
+    //"----".println
+    (n = mtx).if { result := LIZ; } else {      
+      result := dico.fast_reference_at n
+    }
+    result
+  )
+  
+  + name:STRING_ALIAS
+  + stack_size:INTEGER := 8
+    
+  - drw p:TXT_BUF color c:COLOR arg arg:{INTEGER; TOK_ITM} <-
+  ( + old_bp,iarg:INTEGER
+    + a,d:REAL_32
+    + tp:TPUSH
+    parent_txt_buf := p
+    //fill_color c
+    //stroke_color c
+    stop_line
+    (Self = SELF).if {      
+      (a,d) := mat arg
+    } else {
+      old_bp := TEXP.bp
+      TEXP.begin stack_size
+      texps.foreach { e:TEXP
+        tp ?= e
+        (tp = NULL).if {
+          e.run
+        } else {
+          tp.run_arg (arg.value iarg)
+          iarg := iarg + 1
+        }
+      }
+      (a,d) := (TEXP.stk.at (TEXP.bp + 0), TEXP.stk.at (TEXP.bp + 1))
+      tex.add_x (TEXP.stk.at (TEXP.bp + 2))
+      TEXP.end stack_size bp old_bp
+    }
+    tex.ascdes (a,d)
+  )
+      
+  - read_tikz pth:STRING <-
+  ( + f:POINTER
+    + sz:INTEGER
+    + i:INTEGER
+    + c:CHARACTER
+    
+    STRING.tmp { tmp:STRING_BUFFER
+      i := pth.last_index_of '/' + 1
+      {(c := pth.at i) != '.'}.while_do {
+        (c = 'A').if {
+          ((! tmp.is_empty) && {tmp.last = ' '}).if { tmp.remove_last; }
+          tmp | '\0'
+          (pth.at (i+1) = ' ').if { i := i + 1; }
+        } else {
+          tmp | c
+        }
+        i := i + 1
+      }
+      name := tmp.to_string_alias
+    }
+    
+    filename := pth.to_string_alias
+    ((f := FILE_UTILS.open_read filename).is_null).if {
+      "Attempt to open-read file path \"".print; filename.print; "\" failed.\n".print
+      exit 1
+    }.elseif {(sz := FILE_UTILS.size f) > 0} then {
+      cur := 0
+      src.resize sz
+      FILE_UTILS.read f in src size sz
+      FILE_UTILS.close f
+      cur := 0
+      //"Read ".print; pth.print; " ok.".println
+      read_liz
+      stack_size := vars.count
+      /*(filename.has_suffix "A gor A.liz").if {
+        texps.foreach { e:TEXP; e.println; }
+      };*/
+    }
+  )
+  
+  - load_all <-
+  ( + dirent:DIRENT
+    + dir:DIRECTORY
+    + npth:STRING_ALIAS
+    + liz:LIZ
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy lib_path; tmp += "glyph/"
+      dirent := FILE_SYSTEM.get tmp
+      (dirent = NULL).if {
+        "Error: Non access path `".print; tmp.print; "'.\n".print; exit 0;
+      }
+    }
+    (dirent.open).if {
+      dir ?= dirent
+      (dir.lower).to (dir.upper) do { j:INTEGER
+        npth := dir.at j.path
+        (npth.has_suffix ".liz").if {
+          liz := clone
+          liz.read_tikz npth
+          dico.add liz to (liz.name)
+        }
+      }
+    }
+    "Glyph ok\n".print
+  )
+
+Private
+  
+  - tabr:Expanded ARRAY (ARRAY REAL_32)
+  - newr:ARRAY REAL_32 <-
+  ( + r:ARRAY REAL_32
+    (tabr.is_empty).if {
+      r := ARRAY REAL_32.create_with_capacity 16
+    } else {
+      r := tabr.pop
+      r.clear
+    }
+    r
+  )
+  - freer t:ARRAY REAL_32 <- tabr.add_last t
+      
+  - mat arg:{INTEGER; TOK_ITM} :(REAL_32,REAL_32) <-
+  ( + ta,td,tw:ARRAY REAL_32
+    + ma,md,mw:ARRAY REAL_32
+    + ox,oy,a,d,am,dm,tmp,dx,dy,ty,tx,px,py,xx,yy:REAL_32
+    + x0,x1,y0,y1:REAL_32
+    + sh,i,sw,s:INTEGER
+    + c:CHARACTER
+    + elt:TOK_ITM
+    + num:NUM
+    + lst:LIST
+    
+    0.to 1 do { j:INTEGER
+      elt := arg.value j
+      (elt != NULL).if {
+        (j = 0).if {
+          num ?= elt
+          sw := 2; // BUG ??? DIV by 0
+          (num != NULL).if {
+            sw := num.int_val
+          } else { err warning msg "Constant integer. (Format: <const>.mtx <list>)"; }
+        } else { lst ?= elt; }
+      }
+    }
+    
+    ((lst != NULL) && {sw > 0}).if {
+      s := lst.exp.count
+    
+      px := x_space*1.5; // Margin cellular
+      py := 4
+      (ox,oy) := (tex.x,tex.y)
+      //
+      (ta,td,tw) := (newr,newr,newr)
+      (ma,md,mw) := (newr,newr,newr)
+      0.to (s-1) do { j:INTEGER
+        tex.set_xy (ox,oy)
+        tex.push (0,0)
+        lisave
+        
+        begin_line
+        elt := lst.exp.at j
+        (elt != NULL).if {
+          pos_i := elt.pt_b + elt.db
+          elt.draw
+        } else { err warning msg "Arg not found."; }
+        (a,d) := (tex.asc,tex.des)
+        dx := tex.xmax - ox
+        stop_line
+              
+        tex.pop
+        ta.add_last a; td.add_last d; tw.add_last dx
+      }
+      
+      sh := ta.count / sw
+      mw.resize sw;  ma.resize sh;  md.resize sh
+      0.to (sh-1) do { y:INTEGER
+        am := dm := 0
+        0.to (sw-1) do { x:INTEGER
+          (mw.at x < (tmp := tw.at i)).if { mw.at x put tmp; }
+          (am,dm) := (am.max (ta.at i), dm.min (td.at i))
+          i := i + 1
+        }
+        ma.at y put (am+py);  md.at y put (dm-py)
+      }
+      0.to (mw.upper-1) do { j:INTEGER
+        mw.at j put (mw.at j + px)
+        tx := tx + mw.at j
+      }
+      mw.at (mw.upper) put (mw.last + px)
+      xx := tx + mw.last
+      1.to (ma.upper) do { j:INTEGER; yy := yy + ma.at j - md.at j; }
+      (x0,x1) := (ox + px/2, ox + xx - px/2)
+      (y0,y1) := (oy - ma.first + py/2, oy + yy - md.first - py/2)
+      (sh-1).downto 0 do { y:INTEGER
+        dy := 0
+        (sw-1).downto 0 do { x:INTEGER
+          i := i - 1
+          dx := (mw.at x - tw.at i)/2
+          (x = 0).if {
+            (y = 0).if { // The Last !
+              ty := ty / 2
+              dy := - ty
+            } else {
+              //stroke { line (x0-dx,oy - ma.at y) to (x1-dx,oy - ma.at y); } width 2.0
+              //color (COLOR.white)
+              dx := dx - tx - (mw.last - tw.at (i-1))/2
+              dy := ma.at y - md.at (y-1)
+              ty := ty + dy
+            }
+          } else {
+            (y = 0).if {
+              //stroke { line (ox-dx,y0) to (ox-dx,y1); } width 2.0
+              //color (COLOR.white)
+            }
+            dx := dx + mw.at (x-1) - (mw.at (x-1)-tw.at (i-1))/2
+          }
+          restore_to (dx,dy)
+        }
+      }
+      (x0,y0) := (ox   ,oy-ma.first-ty)
+      (x1,y1) := (ox+xx,oy-md.first+yy-ty)
+      stroke_color (LOOK.cols.at (LOOK.slot))
+      //
+      begin_path
+      stroke_width 3.5
+      line_cap (butt)
+      line (x0,y0) to (x0,y1)
+      line (x1,y0) to (x1,y1)
+      stroke
+      //
+      px := 10
+      begin_path
+      stroke_width 2
+      line (x0,y0) to (x0+px,y0); line (x0,y1) to (x0+px,y1)
+      line (x1-px,y0) to (x1,y0); line (x1-px,y1) to (x1,y1)
+      stroke
+      //
+      stroke_color (TOK_DRW.last_color)
+      //
+      tex.add_x (xx+3)
+      freer ta; freer td; freer tw
+      freer ma; freer md; freer mw
+      (a,d) := (ty+ma.first+4,-ty+md.last-4)
+    }
+    a,d
+  )
+  
+  /* A VOIR
+  - drw_fns <-
+  ( - fns:ARRAY SLOT
+    + a,d,ox,oy,x,y,r,h,ht:REAL_32
+    + th,tx,ty:LIARRAY REAL_32
+    + s:SLOT
+    (fns = NULL).if { fns := ARRAY SLOT.create_with_capacity 8; } else { fns.clear; }
+    (!n_div.slot.is_empty).if { fns.add_last (n_div.slot.first); }
+    (!n_exp.slot.is_empty).if { fns.add_last (n_exp.slot.first); }
+    (!n_ind.slot.is_empty).if { fns.add_last (n_ind.slot.first); }
+    (!n_sum.slot.is_empty).if { fns.add_last (n_sum.slot.first); }
+    (!n_sqr.slot.is_empty).if { fns.add_last (n_sqr.slot.first); }
+    (!n_gor.slot.is_empty).if { fns.add_last (n_gor.slot.first); }
+    (!n_gxo.slot.is_empty).if { fns.add_last (n_gxo.slot.first); }
+    (!n_gan.slot.is_empty).if { fns.add_last (n_gan.slot.first); }
+    (!n_ang.slot.is_empty).if { fns.add_last (n_ang.slot.first); }
+    //
+    (th,tx,ty) := (LIARRAY REAL_32.new,LIARRAY REAL_32.new,LIARRAY REAL_32.new)
+    (ox,oy) := (LINE.x,LINE.y)
+    0.to (fns.upper) do { i:INTEGER
+      s := fns.at i
+      LINE.set_xy (ox,oy)
+      LINE.push (0,0)
+      lisave
+      KDIV.mute { STY.put (STY.light); STY.no_ul { (a,d) := s.drw_fn; }; }
+      stroke {
+        rect (ox-5,oy-a-5) to (LINE.x+5,oy-d+10) radius 8
+      } width 1.5 color (look.type)
+      begin_path
+      rect (ox-5+2,oy-a-5+2) to (LINE.x+5+2,oy-d+10+2) radius 8
+      fill_color (COLOR.rgbaf (0,0.15,0,0.2))
+      fill
+      ( + w,x0,y0,x1,y1:REAL_32
+        save
+        font_size 20
+        text_align (align_center|align_middle)
+        (x,y) := ((LINE.x + ox)/2,oy-d+5)
+        (w,x0,y0,x1,y1) := text_bounds (x,y) msg (s.node.idf)
+        begin_path
+        rect (x0-2,y0-1) to (x1+2,y1+1) radius 4
+        fill_color (COLOR.white)
+        fill
+        stroke_color (look.type)
+        stroke
+        fill_color (look.rmk)
+        text (x,y) msg (s.node.idf)
+        restore
+      )
+      a := a + 10; d := d - 20
+      /*stroke { line (ox,oy) to (LINE.x,oy); } width 1.0 color (COLOR.red);*/
+      LINE.pop
+      th.add_last a; th.add_last (-d)
+      ht := ht + a - d
+      //s.node.idf.print; ' '.print; "i=".print; (th.count/2-1).print; ":".print;  a.print; '-'.print; (-d).println
+      (i >= fns.count/2).if { h := h - d; }
+      (i >= (fns.count+1)/2).if { h := h + a; }
+    }
+    h := h + d
+    //"Rayon:".print; (ht*0.7).println
+    r := ht*0.7
+    (fns.upper).downto 0 do { i:INTEGER
+      a := (h/r).asin
+      //"Angle ".print; i.print; '='.print; a.to_degres.to_real_32.println
+      x := r * a.cos
+      y := r * a.sin
+      //"x=".print; x.print; " y=".print; y.print; " ".print; h.println
+      tx.add_last x; ty.add_last y
+      (i != 0).if {
+        //">i=".print; i.print; ":".print; th.at (i*2); ' '.print; th.at ((i-1)*2+1).println
+        h := h - th.at (i*2) - th.at ((i-1)*2+1)
+      }
+    }
+    //
+    0.to (tx.upper-1) do { i:INTEGER
+      x := tx.at i - tx.at (i+1)
+      y := ty.at i - ty.at (i+1)
+      lirestore (x,y)
+    }
+    lirestore (tx.last,ty.last)
+    stroke {
+      0.to (tx.upper) do { i:INTEGER
+        line (ox+x_space,oy-asc_c/2) to (ox+tx.at i-5-2,oy+ty.at i)
+      }
+    } width 3.0 color (look.type)
+    th.free; tx.free; ty.free
+  )
+  
+  
+  - ang dot:{} :(REAL_32,REAL_32) <-
+  ( + x0,x1,y,m:REAL_32
+    save
+    dot.value; SPOT.end_line
+    x0 := LINE.x+x_space
+    dot.value; SPOT.end_line
+    restore
+    (x1,y) := (LINE.x-x_space,LINE.y - LINE.asc)
+    m := (x0 + x1) / 2
+    begin_path
+    move_to (x0,y-1)
+    line_to (m,y-9)
+    line_to (x1,y-1)
+    line_to (x1,y)
+    line_to (m,y-6)
+    line_to (x0,y)
+    line_to (x0,y-1)
+    fill
+    LINE.asc + 10,LINE.des
+  )
+
+*/

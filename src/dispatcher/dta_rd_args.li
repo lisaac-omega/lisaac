@@ -1,0 +1,124 @@
+Header
+
+  + name        := DTA_RD_ARGS;
+
+  /*Read site with arguments*/
+
+Inherit
+
+  + parent_dta_rd:Expanded DTA_RD
+
+Public
+
+  - self_arg:EXPR <- argument_list.first
+
+  // Add.
+
+  + argument_list:ARRAY EXPR
+
+  + copy_argument:BOOLEAN
+
+  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  ( + result:TYPE_FULL
+    + idx:INTEGER
+    // For Genericity.
+    result := slot.receiver_type.parameter_to_type p
+    (result = NULL).if {
+      // For Self + type parametric.
+      idx := slot.get_index_argument_type p
+      (idx != - 1).if {
+        result := argument_list.at idx.static_type
+      }
+    }
+    result
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION call sl:SLOT with args:ARRAY EXPR intern flag:BOOLEAN :SELF <-
+  [ -? {p != 0}; ]
+  ( + result:SELF
+
+    result := clone
+    result.make p call sl with args intern flag
+    result
+  )
+
+  - make p:POSITION call sl:SLOT with args:ARRAY EXPR intern flag:BOOLEAN <-
+  (         
+    slot := sl
+    position      := p
+    argument_list := args
+    result_expr   := get_expr_result
+    is_intern     := flag
+    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
+      (profil_current = NULL).if {
+        context := context_main
+      } else {
+        context := profil_current.context
+      }
+    }
+    slot.check_argument_type args for Self
+  )
+
+  //
+  // Just for ITM_EXPRESSION
+  //
+
+  - create_partial p:POSITION call sl:SLOT :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make_partial p call sl
+    result
+  )
+
+  - make_partial p:POSITION call sl:SLOT <-
+  (
+    position := p
+    slot := sl
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA_RD_ARGS:"
+    buffer.append (slot.name)
+  )
+
+  //
+  // Service
+  //
+
+  - remove <-
+  (
+    (! copy_argument).if {
+      (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+	argument_list.at j.remove
+      }
+      copy_argument := TRUE
+    }
+  )
+
+NODE_STYLE, SELF
+
+  - get_argument:ARRAY EXPR <-
+  ( + result:ARRAY EXPR
+
+    (copy_argument).if {
+      result := ARRAY EXPR .create_with_capacity (argument_list.count)
+      (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+	result.add_last (argument_list.at j.my_copy)
+      }
+    } else {
+      result := argument_list
+      copy_argument := TRUE
+    }
+    result
+  )
+

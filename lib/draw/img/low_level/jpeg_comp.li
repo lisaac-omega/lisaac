@@ -1,0 +1,59 @@
+Header
+  
+  + name := Expanded JPEG_COMP;
+  
+Insert
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + id:INTEGER
+  - set_id i:INTEGER <- ( id := i; )
+  
+  + h:INTEGER
+  + v:INTEGER
+  + tq:INTEGER
+  - h ph:INTEGER v pv:INTEGER tq ptq:INTEGER <- ( (h,v,tq) := (ph,pv,ptq); )
+  
+  + hd:INTEGER
+  - set_hd h:INTEGER <- ( hd := h; )
+  
+  + ha:INTEGER
+  - set_ha h:INTEGER <- ( ha := h; )
+  
+  + dc_pred:INTEGER
+  - set_dc_pred d:INTEGER <- ( dc_pred := d; )
+
+  + x:INTEGER
+  + y:INTEGER
+  - x px:INTEGER y py:INTEGER <- ( (x,y) := (px,py); )
+  
+  + w2:INTEGER
+  + h2:INTEGER
+  - w2 pw2:INTEGER h2 ph2:INTEGER raw_data prd:NATIVE_ARRAY UINTEGER_8 <-
+  ( (w2,h2,raw_data) := (pw2,ph2,prd); )
+  
+  + data:NATIVE_ARRAY UINTEGER_8
+  - set_data d:NATIVE_ARRAY UINTEGER_8 <- ( data := d; )
+  - data d:NATIVE_ARRAY UINTEGER_8 raw_data rd:NATIVE_ARRAY UINTEGER_8 <-
+  ( (data,raw_data) := (d,rd); )
+  
+  + raw_data:NATIVE_ARRAY UINTEGER_8;  // void *
+  - set_raw_data prd:NATIVE_ARRAY UINTEGER_8 <- ( raw_data := prd; )
+  
+  + raw_coeff:NATIVE_ARRAY INTEGER_16; // void *
+  - coeff c:NATIVE_ARRAY INTEGER_16 raw_coeff rc:NATIVE_ARRAY INTEGER_16 <-
+  ( (coeff,raw_coeff) := (c,rc); )
+  - raw_data rd:NATIVE_ARRAY UINTEGER_8 raw_coeff rc:NATIVE_ARRAY INTEGER_16 <-
+  ( (raw_data,raw_coeff) := (rd,rc); )
+  
+  + linebuf:NATIVE_ARRAY UINTEGER_8
+  - set_linebuf d:NATIVE_ARRAY UINTEGER_8 <- ( linebuf := d; )
+  
+  + coeff:NATIVE_ARRAY INTEGER_16;   // progressive only
+  + coeff_w:INTEGER
+  + coeff_h:INTEGER; // number of 8x8 coefficient blocks
+  - coeff_w cw:INTEGER coeff_h ch:INTEGER
+  raw_coeff rc:NATIVE_ARRAY INTEGER_16 coeff c:NATIVE_ARRAY INTEGER_16 <-
+  ( (coeff_w,coeff_h) := (cw,ch);  (raw_coeff,coeff) := (rc,c); )

@@ -1,0 +1,331 @@
+Header  
+  + name := BIG_CHECK;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Private  
+  
+  + nsize:INTEGER
+  
+  + array:ARRAY INTEGER
+  + array_block:ARRAY_BLOCK INTEGER
+  + single_list:SINGLE_LIST INTEGER
+  + array_ring:ARRAY_RING INTEGER
+  + linked_list:LINKED_LIST INTEGER
+  
+Public
+  - main <-
+  (
+    nsize := 3
+    nsize_test
+    nsize := 5
+    nsize_test
+    nsize := 200
+    nsize_test
+  )
+  
+Private
+  - nsize_test <-
+  (
+    ? {nsize > 1}
+    check_add_last_bench
+    check_add_first_bench
+    check_add
+    check_remove
+    test_1
+    test_2
+    check_fair_bench
+    check_bjarne_stroustrup
+  )
+  
+Private
+  - check_add_first_bench <-
+  ( + n:INTEGER
+    new
+    n := nsize
+    {n = 0}.until_do {
+      add_first n
+      n := n - 1
+    }
+    nsize.times {
+      remove_first
+    }
+  )
+  
+  - check_add_last_bench <-
+  ( + n:INTEGER
+    new
+    n := nsize
+    {n = 0}.until_do {
+      add_last n
+      n := n - 1
+    }
+    nsize.times {
+      remove_last
+    }
+  )
+  
+  - new <-
+  (
+    array := ARRAY INTEGER .create_with_capacity 1024
+    array_block := ARRAY_BLOCK INTEGER .new
+    single_list := SINGLE_LIST INTEGER .new
+    array_ring := ARRAY_RING INTEGER .create_with_capacity 1024
+    linked_list := LINKED_LIST INTEGER .new
+    idem
+  )
+  
+Private 
+  - test_1 <-
+  ( + x,idx:INTEGER
+    RANDOM.init 2
+    new
+    6.times {
+      x := x + 1
+      add_last x
+    }
+    idx := array.upper - 1
+    remove idx
+    remove idx
+    idx := array.lower + 1
+    remove idx
+    remove idx
+  )
+  
+  - test_2 <-
+  ( + x,idx:INTEGER
+    RANDOM.init 2
+    new
+    add 1 to 0
+    add 12 to 1
+    add 11 to 1
+    add 10 to 1
+    add 9 to 1
+    add 8 to 1
+    add 7 to 1
+    add 6 to 1
+    add 5 to 1
+    add 4 to 1
+    add 3 to 1
+    add 2 to 1
+    add (-1) to 0
+    add (13) to (array.upper + 1)
+    x := 13
+    nsize.times {
+      x := x + 1
+      idx := RANDOM.range 0 to (array.count)
+      add x to idx
+    }
+    {array.is_empty}.until_do {
+      idx := RANDOM.range 0 to (array.upper)
+      remove idx
+    }
+  )
+  
+  - check_add <-
+  ( + i,x:INTEGER
+    + list:ARRAY INTEGER
+    list := ARRAY INTEGER .create_with_capacity nsize
+    1.to nsize do { v:INTEGER
+      list.add_last v
+    }
+    new
+    {list.is_empty}.until_do {
+      i := (RANDOM.range 0 to (list.upper))
+      ? {list.valid_index i}
+      x := list.at i
+      list.remove i
+      array.is_empty.if {
+        add x to 0
+      } else {
+        i := 0
+        {(i <= array.upper) && {array.at i < x}}.while_do {
+          i := i + 1
+        }
+        ? {i.in_range 0 to (array.upper + 1)}.txt {i.to_string + " " + array.upper.to_string}
+        add x to i
+      }
+    }
+  )
+  
+  - check_remove <-
+  ( + i:INTEGER
+    new
+    1.to nsize do { v:INTEGER
+      add_last v
+    }
+    {array.is_empty}.until_do {
+      i := RANDOM.range 0 to (array.upper)
+      ? {array.valid_index i}
+      remove i
+    }
+  )
+  
+  - idem <-
+  ( + i:INTEGER
+    TEST.check (array.lower) integer (array_block.lower)
+    TEST.check (array.lower) integer (single_list.lower)
+    TEST.check (array.lower) integer (array_ring.lower)
+    TEST.check (array.lower) integer (linked_list.lower)
+    //  
+    TEST.check (array.upper) integer (array_block.upper)
+    TEST.check (array.upper) integer (single_list.upper)
+    TEST.check (array.upper) integer (array_ring.upper)
+    TEST.check (array.upper) integer (linked_list.upper)
+    //
+    TEST.check (array.count) integer (array_block.count)
+    TEST.check (array.count) integer (single_list.count)
+    TEST.check (array.count) integer (array_ring.count)
+    TEST.check (array.count) integer (linked_list.count)
+    //
+    array.is_empty.if {
+      TEST.check (array_block.is_empty)
+      TEST.check (single_list.is_empty)
+      TEST.check (array_ring.is_empty)
+      TEST.check (linked_list.is_empty)
+    } else {
+      TEST.check (! array_block.is_empty)
+      TEST.check (! single_list.is_empty)
+      TEST.check (! array_ring.is_empty)
+      TEST.check (! linked_list.is_empty)
+    }
+    //
+    array.is_empty.if_false {
+      TEST.check (array.last) integer (array_block.last)
+      TEST.check (array.last) integer (single_list.last)
+      TEST.check (array.last) integer (array_ring.last)
+      TEST.check (array.last) integer (linked_list.last)
+    }
+    array.is_empty.if_false {
+      TEST.check (array.first) integer (array_block.first)
+      TEST.check (array.first) integer (single_list.first)
+      TEST.check (array.first) integer (array_ring.first)
+      TEST.check (array.first) integer (linked_list.first)
+    }
+    
+    i := 0
+    {i <= array.upper}.while_do {
+      TEST.check (array.at i) integer (array_block.at i)
+      TEST.check (array.at i) integer (single_list.at i)
+      TEST.check (array.at i) integer (array_ring.at i)
+      TEST.check (array.at i) integer (linked_list.at i)
+      i := i + 1
+    }
+  )
+  
+  - add_last v:INTEGER <-
+  (
+    array.add_last v
+    array_block.add_last v
+    single_list.add_last v
+    array_ring.add_last v
+    linked_list.add_last v
+    idem
+  )
+  
+  - remove_last <-
+  (
+    array.remove_last
+    array_block.remove_last
+    single_list.remove_last
+    array_ring.remove_last
+    linked_list.remove_last
+    idem
+  )
+  
+  - add_first v:INTEGER <-
+  (
+    array.add_first v
+    array_block.add_first v
+    single_list.add_first v
+    array_ring.add_first v
+    linked_list.add_first v
+    idem
+  )
+  
+  - remove_first <-
+  (
+    array.remove_first
+    array_block.remove_first
+    single_list.remove_first
+    array_ring.remove_first
+    linked_list.remove_first
+    idem
+  )
+  
+  - remove idx:INTEGER <-
+  (
+    ? {array.valid_index idx}.txt {"idx=" + idx.to_string + " upper=" + array.upper.to_string}
+    array.remove idx
+    array_block.remove idx
+    single_list.remove idx
+    array_ring.remove idx
+    linked_list.remove idx
+    idem
+  )
+  
+  - add v:INTEGER to idx:INTEGER <-
+  (
+    array.at idx add v
+    array_block.at idx add v
+    single_list.at idx add v
+    array_ring.at idx add v
+    linked_list.at idx add v
+    idem
+  )
+  
+  - check_fair_bench <-
+  ( + n,tier,idx:INTEGER
+    new
+    tier := (nsize.max 3) / 3
+    tier.times {
+      n := n + 1
+      add_last n
+    }
+    idx := 0
+    tier.times {
+      n := n + 1
+      idx := idx + 1
+      add n to idx
+    }
+    tier.times {
+      n := n + 1
+      add_first n
+    }
+    tier.times {
+      remove_first
+    }
+    idx := 0
+    tier.times {
+      idx := idx + 1
+      remove idx
+    }
+    {array.is_empty}.until_do {
+      remove_last
+    }
+  )
+  
+  - check_bjarne_stroustrup <-
+  (
+    new
+    RANDOM.init 7
+    nsize.times {
+      + v:INTEGER
+      + idx:INTEGER
+      v := (RANDOM.range 1 to nsize)
+      idx := array.lower
+      {(idx <= array.upper) && {(array.at idx) < v}}.while_do {
+        idx := idx + 1
+      }
+      add v to idx
+    }
+    TEST.check (array.count) integer nsize
+    nsize.times {
+      + ridx:INTEGER
+      ridx := RANDOM.range 0 to (array.upper)
+      remove ridx
+    }
+    TEST.check (array.is_empty)
+  )
+  

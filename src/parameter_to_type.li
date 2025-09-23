@@ -1,0 +1,19 @@
+Header
+
+  + name        := PARAMETER_TO_TYPE;
+
+  /*Type parameter -> type full*/
+
+Public
+
+  - position:POSITION <-
+  ( + result:POSITION
+    abstract
+    result
+  )
+
+  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  (
+    abstract
+    NULL
+  )

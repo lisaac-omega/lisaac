@@ -1,0 +1,147 @@
+Header
+  + name := AVL_DICTIONARY_NODE V KEY K;
+
+  /*Auxiliary class to implement AVL_DICTIONARY.*/
+
+Inherit
+
+  + parent_avl_tree_node:Expanded AVL_TREE_NODE(K)
+
+Public
+
+  - key:K <- item
+
+  - set_key i:K <- set_item i
+
+Public
+
+  + value:V
+
+  - set_value v:V <-
+  (
+    value := v
+  )
+  [
+    +? {value = v}
+  ]
+
+  - fast_at k:K :AVL_DICTIONARY_NODE V KEY K <-
+  // Is element `e' in the tree?
+  ( + result:AVL_DICTIONARY_NODE V KEY K
+
+    (key = k).if {
+      result := Self
+    }.elseif {key == k } then {
+      // because otherwise there would be an infinite recursion
+      // result := NULL
+    }.elseif {k < key} then {
+      (left != NULL).if {
+        result := left.fast_at k
+      }
+    } else {
+      (right != NULL).if {
+        result := right.fast_at k
+      }
+    }
+    result
+  )
+
+  - occurrences v:V :INTEGER <-
+  (
+    occurrences v start 0
+  )
+
+  - fast_occurrences v:V :INTEGER <-
+  (
+    fast_occurrences v start 0
+  )
+
+  - key_at v:V :K <-
+  ( + result:K
+
+    (v == value ).if {
+      result := key
+    }.elseif {left != NULL} then {
+      result := left.key_at v
+    }.elseif {right != NULL} then {
+      result := right.key_at v
+    }
+    result
+  )
+
+  - fast_key_at v:V :K <-
+  ( + result:K
+
+    (v = value).if {
+      result := key
+    }.elseif {left != NULL} then {
+      result := left.fast_key_at v
+    }.elseif {right != NULL} then {
+      result := right.fast_key_at v
+    }
+    result
+  )
+
+Public
+
+  - occurrences v:V start cnt:INTEGER :INTEGER <-
+  ( + result:INTEGER
+
+    result := cnt
+    (v == value).if {
+      result := result + 1
+    }
+    (left != NULL).if {
+      result := left.occurrences v start result
+    }
+    (right != NULL).if {
+      result := right.occurrences v start result
+    }
+    result
+  )
+  [
+    +? {Result >= cnt}
+  ]
+
+  - fast_occurrences v:V start cnt:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    result := cnt
+    (v = value).if {
+      result := result + 1
+    }
+    (left != NULL).if {
+      result := left.fast_occurrences v start result
+    }
+    (right != NULL).if {
+      result := right.fast_occurrences v start result
+    }
+    result
+  )
+  [
+    +? {Result >= cnt}
+  ]
+
+Public
+
+  // Creation:
+
+  - create (v:V,k:K) :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make (v,k)
+    result
+  )
+
+  - make (v:V,k:K) <-
+  (
+    set_balance balanced
+    left  := NULL
+    right := NULL
+    set_value v
+    set_key k
+  )
+  [
+    +? {value = v}
+    +? {key = k}
+  ]

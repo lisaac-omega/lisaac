@@ -1,0 +1,19 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Public
+  - main <-
+  ( + regex:REGEX
+    + status:BOOLEAN
+    regex := REGEX.create
+    status := regex.compile "www\\.[-_[:alnuuuuuum:]]+\\.[[:lower:]]{2,4}"
+    TEST.check (! status); // because the regex is NOT correct
+    STRING.tmp { tmp:STRING_BUFFER
+      regex.last_error_in tmp
+      TEST.check tmp string "Invalid character class name"
+    }
+  )
+  

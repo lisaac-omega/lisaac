@@ -1,0 +1,120 @@
+Header
+  
+  + name := CHAMENEOS_REDUX;
+  
+  - external :=
+`
+    #include <pthread.h>
+`;
+
+  - lip <-
+  (
+    add_lib "-lpthread";
+  );
+  
+Inherit
+  
+  - parent_any: ANY_CHAMENEOS_REDUX := ANY_CHAMENEOS_REDUX
+
+Private  
+
+  - colour_name: ARRAY(STRING_ALIAS) := ARRAY(STRING_ALIAS).create_with_capacity 3
+
+  - init_colour_name <-
+  (
+    colour_name.add_last "blue"
+    colour_name.add_last "red"
+    colour_name.add_last "yellow"
+  )
+
+  - do_compliment a:INTEGER and b:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    
+    a
+    .when blue then   { b
+                        .when blue   then {result := blue;  }
+                        .when red    then {result := yellow;}
+                        .when yellow then {result := red;   }
+                      }
+    .when red then    { b
+                        .when blue   then {result := yellow;}
+                        .when red    then {result := red;   }
+                        .when yellow then {result := blue;  }
+                      }
+    .when yellow then { b
+                        .when blue   then {result := red;   }
+                        .when red    then {result := blue;  }
+                        .when yellow then {result := yellow;}
+                      }
+    result
+  )
+
+  - print_colours a:INTEGER and b:INTEGER <-
+  (
+    (colour_name.at a).print
+    " + ".print
+    (colour_name.at b).print
+    " -> ".print
+    (colour_name.at (do_compliment a and b)).print
+    '\n'.print
+  )
+
+  - print_colours <-
+  (
+    print_colours blue   and blue
+    print_colours blue   and red
+    print_colours blue   and yellow
+    print_colours red    and blue
+    print_colours red    and red
+    print_colours red    and yellow
+    print_colours yellow and blue
+    print_colours yellow and red
+    print_colours yellow and yellow
+  )
+
+  - get_number (n:INTEGER, outbuf:STRING_BUFFER) :STRING_BUFFER <-
+  ( + numbers: ARRAY(STRING_ALIAS)
+    + tmp: ARRAY(CHARACTER)
+    + ichar :INTEGER
+    + ochar :INTEGER
+
+    numbers := ARRAY(STRING_ALIAS).create_with_capacity 10
+    tmp := ARRAY(CHARACTER).create_with_capacity 64
+
+    numbers.add_last "zero"
+    numbers.add_last "one"
+    numbers.add_last "two"
+    numbers.add_last "three"
+    numbers.add_last "four"
+    numbers.add_last "five"
+    numbers.add_last "six"
+    numbers.add_last "seven"
+    numbers.add_last "eight"
+    numbers.add_last "nine"
+
+    // int ichar = sprintf(tmp, "%d", n)
+    //ichar := 1
+    //tmp.add_last n
+
+    0.to ichar do { i:INTEGER
+      //ochar += sprintf( outbuf + ochar, " %s", NUMBERS[ tmp[i] -'0' ] )
+    }
+
+    outbuf
+  )
+
+Public
+
+  - main <-
+  ( + n:INTEGER
+
+    (COMMAND_ARGS.count = 2).if {
+      n := COMMAND_ARGS.at 1.to_integer
+    } else {
+      n := 600
+    }
+    
+    init_colour_name
+    print_colours
+
+  )

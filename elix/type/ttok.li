@@ -1,0 +1,249 @@
+Header
+  + name := TTOK;
+  
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Insert
+  - parent_lix_buf:LIX_BUF := LIX_BUF
+  
+Private
+  - stk_ttok:Expanded ARRAY (Strict TTOK)
+  
+Public
+  
+  + type:TYPE
+  - set_type t:TYPE <- ( type := t; )
+    
+  - new:SELF <-
+  ( + r:SELF; (stk_ttok.is_empty).if { r := SELF.clone; } else { r := stk_ttok.pop; }; r)
+  
+  - free <- ((stk_ttok.is_empty) || {stk_ttok.last != Self}).if { stk_ttok.add_last Self }
+  
+  - begin_draw <-
+  (
+    //STY.color (LOOK.type)
+    //type.draw
+  )
+    
+  //- end_draw <- FONT.app (FONT.roman) in txt_buf
+  
+//  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- type.draw_to (x,y)
+  
+  - tone:INTEGER := 00h
+  - tvec:INTEGER := 01h
+  - tres:INTEGER := 02h
+  - tpro:INTEGER := 03h
+  //- no_section:INTEGER := 20h
+  
+  - new_parse t:INTEGER <-
+  (
+    //(((t & force) = 0) || {(pos_i > 0) && {at (pos_i-1) != '\n'}}).if {
+      (t & 0Fh)
+      .when tone then { type := rd_type; }
+      .when tvec then { type := rd_type_vector; }
+      .when tres then { type := rd_type_result; }
+      .when tpro then { type := rd_prototype; }
+      //
+      (t & force != 0).if {
+        + op:INTEGER;
+        op := pos_i;
+        skip_until '\n'
+        {at (pos_i - 1) = ' '}.while_do { pos_i := pos_i - 1; }
+        (at (pos_i-1) = ';').if { pos_i := pos_i - 1; }
+        (pos_i.pt != op).if { col (LOOK.erro) sub (pos_i.pt - op); };
+      };
+    //}
+  )
+  
+  //
+  // Parser
+  //
+  
+  - rd_type_result:TYPE <-
+  //++ TYPE_RESULT  -> TYPE
+  //++               | '(' TYPE_VECTOR ')'
+  ( + result:TYPE
+    result := rd_type
+    ((result = NULL) && {read_c '('}).if {
+      col (LOOK.symbol) sub 1
+      result := rd_type_vector
+      (result = NULL).if { err syntax msg "Incorrect type."; }
+      (read_c ')').if {
+        col (LOOK.symbol) sub 1
+      } else { err warning msg "Added ')'. (1)"; }
+    }
+    result
+  )
+  
+  - rd_type_vector:TYPE <-
+  //++ TYPE_VECTOR  -> TYPE { ',' TYPE }   
+  ( + lst:ARRAY TONE
+    + t0,t1:TONE
+    + result:TYPE
+    result := t0 := rd_type
+    ((result != NULL) && {read_c ','}).if {
+      skip_spln_expr
+      t1 := rd_type
+      (t1 != NULL).if {        
+        lst := push_tone
+        lst.add_last t0
+        lst.add_last t1
+        {read_c ','}.while_do {
+          skip_spln_expr
+          t1 := rd_type
+          (t1 = NULL).if { err syntax msg "Incorrect type vector."; }
+          lst.add_last t1
+        }
+        result := TVEC.new lst
+        pop_tone
+      } else { err syntax msg "Incorrect type vector."; }
+    }
+    result
+  )
+
+  - rd_type:TONE <-
+  //++ TYPE         -> PROTOTYPE
+  //++               | TYPE_BLOCK
+  ( + result:TONE
+    result := rd_prototype
+    (result = NULL).if { result := rd_type_block; }
+    result
+  )
+  
+  - rd_type_block:TONE <-
+  //++ TYPE_BLOCK   -> '{' [ TYPE_RESULT ';' ] [ TYPE_VECTOR ] '}'
+  ( + t,typ_arg,typ_res:TYPE
+    + to,result:TONE
+    + lst:ARRAY TONE
+    (read_c '{').if {
+      col (LOOK.type) sub 1
+      // '{' [ TYPE_RESULT ';' ] [ TYPE_VECTOR ] '}'
+      t := rd_type_result
+      (t != NULL).if {
+        (read_c ';').if {
+          col (LOOK.symbol) sub 1
+          typ_arg := t
+          typ_res := rd_type_vector
+        } else {
+          to ?= t
+          (to = NULL).if {
+            typ_res := t
+          } else {
+            lst := push_tone
+            lst.add_last to
+            {read_c ','}.while_do {
+              col (LOOK.symbol) sub 1
+              to := rd_type
+              (to = NULL).if { err syntax msg "Type not found."; }
+              lst.add_last to
+            }
+            (lst.count > 1).if {
+              typ_res := TVEC.new lst
+            } else {
+              typ_res := lst.first
+            }
+            pop_tone
+          }
+        }
+      }
+      (read_c '}').if {
+        col (LOOK.type) sub 1
+      } else { err warning msg "Added '}'. (1)"; }
+      result := TBLC.new typ_arg type typ_res
+    }
+    result
+  )
+  
+  - rd_prototype:TPRO <-
+  //++ PROTOTYPE    -> TYPE_BEGIN { TYPE_ARG [ cap_identifier ] }
+  //++ TYPE_BEGIN   -> {"Strict" | "Expanded"} cap_identifier  
+  ( + gen:ARRAY TYPE
+    + t:TYPE
+    + result:TPRO
+    + attr:UINTEGER_8
+    + n:NODE
+    (word "Expanded").if { col (LOOK.keyword) sub 8; attr := attr | TYPE.expanded; }
+    (word "Strict").if   { col (LOOK.keyword) sub 6; attr := attr | TYPE.strict;   }
+    (((attr & TYPE.expanded) != 0) && {attr != TYPE.expanded}).if {
+      err warning msg "Expanded only."
+      attr := TYPE.expanded
+    }
+    (read_cap_idf).if {
+      col (LOOK.type) sub (last_str.count)
+      (last_str.count = 1).if {        
+        result := TP.letter (last_str.first - 'A')
+      }.elseif {last_str = "SELF"} then {
+        ((attr & (TYPE.expanded|TYPE.strict)) != 0).if {
+          err warning msg "Style Expanded or Strict ignored."
+        }
+        result := TP.letter 26
+      } else {
+        fsz 1 sub (last_str.count - 1)
+        fsz 0 sub 0
+        gen := push_type
+        n := NODE.rtype.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
+        {((t := rd_type_arg) != NULL) && {read_cap_idf}}.while_do {
+          
+          ((n != NULL) && {!n.carg.is_empty}).if { n := n.carg.first; } else { n := NULL; }
+          (n != NULL).if {
+            n := n.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
+          }
+          gen.add_last t
+        }
+        (t != NULL).if {
+          ((n != NULL) && {! n.carg.is_empty}).if {
+            n := n.carg.first
+          } else {            
+            n := NULL
+          }
+          gen.add_last t
+        }
+        ((n != NULL) && {n.proto != NULL}).if {          
+          result := TPRO.new (n.proto) gen gen attr attr
+        } else {
+          result := TERR
+        }
+        pop_type
+      }
+    } else {
+      (attr != 0).if { err warning msg "Style (Expanded or Strict) ignored."; }
+    }
+    result
+  )
+     
+  - rd_type_arg:TYPE <-
+  //++ TYPE_ARG     -> cap_identifier
+  //++               | TYPE_BLOCK
+  //++               | '(' TYPE_VECTOR ')'
+  ( + result:TYPE
+    + n:NODE
+    (read_cap_idf).if {
+      fnt (FONT.italic) sub (last_str.count)
+      col (LOOK.type) sub (last_str.count)
+      (last_str.count = 1).if {        
+        result := TP.letter (last_str.first - 'A')
+      }.elseif {last_str = "SELF"} then {
+        result := TP.letter 26
+      } else {
+        fsz 1 sub (last_str.count - 1)
+        fsz 0 sub 0
+        n := NODE.rtype.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
+        ((n != NULL) && {n.proto != NULL}).if {
+          result := TPRO.new (n.proto) gen (ARRAY TYPE) attr 0
+        } else {
+          result := TERR
+        }
+      }
+      fnt (FONT.roman) sub 0
+    }.elseif {read_c '('} then {
+      result := rd_type_vector
+      (result = NULL).if { err syntax msg "Incorrect vector type."; }
+      (! read_c ')').if { err warning msg "Added ')' (4)."; }
+    } else {
+      result := rd_type_block
+    }
+    result
+  )
+  
+  

@@ -1,0 +1,19 @@
+Header
+  
+  + name := IFTHENDOT;
+  /*
+
+  */
+
+Public
+  
+  - main <-
+  (
+    (if TRUE then {
+        TEST.check TRUE
+    }) elseif {FALSE} then {
+      TEST.check TRUE      
+    }
+    TEST.check (TEST.counter = 1)
+  );
+  

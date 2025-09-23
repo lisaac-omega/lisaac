@@ -1,0 +1,14 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + t:ARRAY_BLOCK INTEGER
+    t := ARRAY_BLOCK INTEGER.new
+    0.to 11 do { i:INTEGER
+      t.add_last i
+    }
+    t.at 5 add 100
+    UTILS.exit 0
+    ("Hello" + " Dom").to_string_alias; // Bug compilo ASCII    
+  )

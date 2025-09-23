@@ -1,0 +1,25 @@
+Header
+  
+  + name := Expanded TT_POINT;
+  
+Insert
+  
+  - parent_clone:CLONE := CLONE
+  
+Mapping,Public
+  
+  + x:REAL_32
+  + y:REAL_32
+  
+  - make (px,py:REAL_32) :TT_POINT <- 
+  (
+    (x,y) := (px,py)
+    TT_POINT
+  )
+  
+Public
+  
+  - print <-
+  (
+    '('.print; x.print; ','.print; y.print; ')'.print
+  )

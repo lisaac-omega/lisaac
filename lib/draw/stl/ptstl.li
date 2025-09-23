@@ -1,0 +1,74 @@
+Header
+  + name := Expanded PTSTL;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Mapping,Public
+  + xn:REAL_32
+  + yn:REAL_32
+  + zn:REAL_32
+  
+  + x1:REAL_32
+  + y1:REAL_32
+  + z1:REAL_32
+  
+  + x2:REAL_32
+  + y2:REAL_32
+  + z2:REAL_32
+  
+  + x3:REAL_32
+  + y3:REAL_32
+  + z3:REAL_32
+  
+  + ctrl:UINTEGER_16
+  
+Public
+  
+  - x_min:REAL_32 <- x1.min x2.min x3
+  - y_min:REAL_32 <- y1.min y2.min y3
+  - z_min:REAL_32 <- z1.min z2.min z3
+  
+  - x_max:REAL_32 <- x1.max x2.max x3
+  - y_max:REAL_32 <- y1.max y2.max y3
+  - z_max:REAL_32 <- z1.max z2.max z3
+  
+  - gx:REAL_32 <- (x1+x2+x3) / 3
+  - gy:REAL_32 <- (y1+y2+y3) / 3
+  - gz:REAL_32 <- (z1+z2+z3) / 3
+  
+  - translate (tx,ty,tz:REAL_32) <-
+  (
+    (x1,y1,z1) := (x1 + tx, y1 + ty, z1 + tz)
+    (x2,y2,z2) := (x2 + tx, y2 + ty, z2 + tz)
+    (x3,y3,z3) := (x3 + tx, y3 + ty, z3 + tz)
+  )
+  
+  - rotate_x_p90 <-
+  (
+    (z1,z2,z3) := (y1,y2,y3)
+    (y1,y2,y3) := (- Old z1, - Old z2, - Old z3)
+  )
+  
+  - rotate_x_m90 <-
+  (
+    (z1,z2,z3) := (-y1,-y2,-y3)
+    (y1,y2,y3) := (Old z1, Old z2, Old z3)
+  )
+    
+Public
+  
+  - print <-
+  (
+    '['.print
+    xn.print; ';'.print
+    yn.print; ';'.print
+    zn.print
+    ']'.print
+    '('.print; x1.print; ';'.print; y1.print; ';'.print; z1.print; ')'.print
+    '('.print; x2.print; ';'.print; y2.print; ';'.print; z2.print; ')'.print
+    '('.print; x3.print; ';'.print; y3.print; ';'.print; z3.print; ')'.print
+    '\n'.print
+  )
+    
+  

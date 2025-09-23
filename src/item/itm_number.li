@@ -1,0 +1,53 @@
+Header
+
+  + name        := ITM_NUMBER;
+
+  /*Integer constant*/
+
+Inherit
+
+  + parent_itm_constant:Expanded ITM_CONSTANT
+
+Public
+
+  //
+  // Data
+  //
+
+  + value:INTEGER_64
+
+  //
+  // Constructor
+  //
+  - create p:POSITION value n:INTEGER_64 :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p value n
+    result
+  )
+
+  - make p:POSITION value n:INTEGER_64 <-
+  (
+    position:=p
+    value:=n
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  (
+    INTEGER_CST.create position value value type (type_integer.default)
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    value.append_in buffer
+  )
+
+

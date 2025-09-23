@@ -1,0 +1,23 @@
+Header
+  + name    := Expanded INTEGER_16;
+  /*Signed 16 bits integer.*/
+  - type    := `signed short`;
+  - default := (0.to_raw_integer_16);
+  - export  := INTEGER, INTEGER_64, INTEGER_32;
+
+Insert
+  - parent_signed_integer:SIGNED_INTEGER := SIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 2
+
+  // Range
+
+  - maximum:UINTEGER_64 <- 32767.to_raw_uinteger_64
+
+  - minimum:INTEGER_64 <- - 32768.to_raw_integer_64
+
+  // Conversion with test.
+
+  - to_integer_16:INTEGER_16 <- Self

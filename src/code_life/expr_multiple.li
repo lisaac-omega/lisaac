@@ -1,0 +1,125 @@
+Header
+
+  + name        := EXPR_MULTIPLE;
+
+  /* Multiple expression manager 
+
+  // BSBS: Utiliser ca une seule fois ! cela doit etre possible!
+  */
+
+Inherit
+
+  - parent_expr:EXPR := EXPR
+
+Public
+
+  + expr_list:ARRAY EXPR
+
+  - cardinality:INTEGER <- expr_list.count
+
+  - static_type:TYPE_FULL <-
+  (
+    expr_list.first.static_type
+  )
+
+  - get_type t:TYPES_TMP <-
+  (
+    crash_with_message "EXPR_MULTIPLE.get_type"
+  )
+
+  //
+  // Creation
+  //
+
+  // BSBS: Optim : Il faut que ce soit alouer et free après !!!
+  - create l:ARRAY EXPR :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make l
+    result
+  )
+
+  - make l:ARRAY EXPR <-
+  (
+    expr_list := l
+    position  := l.last.position
+  )
+
+  - my_copy:SELF <-
+  ( + new_lst:ARRAY EXPR
+
+    new_lst := ARRAY EXPR .create_with_capacity (expr_list.count)
+    (expr_list.lower).to (expr_list.upper) do { j:INTEGER
+      new_lst.add_last (expr_list.at j.my_copy)
+    }
+    SELF.create new_lst
+  )
+
+  //
+  // Remove.
+  //
+
+  - remove <-
+  (
+    (expr_list.lower).to (expr_list.upper) do { j:INTEGER
+      expr_list.at j.remove
+    }
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute_unlink:INSTR <-
+  (
+    (expr_list.lower).to (expr_list.upper) do { j:INTEGER
+      expr_list.at j.remove
+    }
+    NULL
+  )
+
+  - execute_link:EXPR <-
+  (
+    list_current.debug_display
+    crash_with_message "EXPR_MULTIPLE.execute_link"
+    NULL
+  )
+
+  //
+  // Contract Slot in/out, Section in/out, Prototype in/out
+  //
+  
+  - to_run_contract msg:STRING_ALIAS <-
+  (
+    expr_list.lower.to (expr_list.upper) do { j:INTEGER
+      expr_list.at j.to_run_contract msg
+    }
+  )
+
+  //
+  // Access facility.
+  //
+
+  - lower:INTEGER <- expr_list.lower
+  - upper:INTEGER <- expr_list.upper
+
+  - at i:INTEGER :EXPR <- expr_list.at i
+  - last:EXPR          <- expr_list.last
+  - first:EXPR         <- expr_list.first
+
+  - count:INTEGER <- expr_list.count
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    (expr_list.lower).to (expr_list.upper - 1) do { j:INTEGER
+      expr_list.at j.display buffer
+      buffer.add_last ','
+    }
+    expr_list.last.display buffer
+    buffer.add_last ')'
+  )

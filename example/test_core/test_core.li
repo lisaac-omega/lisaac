@@ -1,0 +1,165 @@
+Header
+
+  + name := TEST_CORE;
+  
+  /*
+  Mandelbrot generation for test core capacities. (COP project)
+  Put -cop option.
+  */
+  
+  - external := `
+  #define PTHREAD_STACK_MIN 16384
+  `;
+    
+Inherit
+  + parent_window:Expanded WINDOW
+    
+Public
+  
+  - core_list:ARRAY CORE
+  - result_list:ARRAY INTEGER
+  
+  - physical_core:INTEGER
+  - sample_max:INTEGER
+  
+  - busy:MUTEX
+  
+  - main <-
+  ( + core:CORE
+    (
+      (COMMAND_ARGS.count != 3) || 
+      {!COMMAND_ARGS.at 1.is_integer} || {COMMAND_ARGS.at 1.to_integer<1} || 
+      {!COMMAND_ARGS.at 2.is_integer} || {COMMAND_ARGS.at 2.to_integer<1}
+    ).if {
+      "Usage:\n\
+      \  test_core <physical_nb_core> <sample_max>\n\n\
+      \Example with 4 physicals cores and until 10 samples parallel: \n\
+      \  test_core 4 10\n".print
+      exit 0
+    }
+    
+    physical_core := COMMAND_ARGS.at 1.to_integer
+    sample_max := COMMAND_ARGS.at 2.to_integer
+    busy := MUTEX.create
+
+    result_list := ARRAY INTEGER.create_with_capacity sample_max
+    core_list := ARRAY CORE.create_with_capacity sample_max
+    0.to (sample_max-1) do { i:INTEGER
+      core := CORE.create i
+      core_list.add_last core
+    }
+    
+    init "Core test" size ((width_min+50).to_integer, (height_min+50).to_integer)
+            
+    "Please wait...".println
+    
+    PAPER.run
+  )
+  
+  - compute <-
+  ( - j:INTEGER
+    + core:CORE
+    + begin,end:UINTEGER_64
+            
+    (j < sample_max).if {
+      busy.lock
+      j := j + 1
+      begin := TIME.gettimeofday
+      0.to (j-1) do { i:INTEGER
+        core := core_list.at i
+        `/* BUG */`
+        core.mandelbrot
+      }
+      wait_all
+      end := TIME.gettimeofday
+      result_list.add_last ((end-begin) / 1_000_000)
+      //
+      "For ".print
+      j.print
+      " times: ".print
+      result_list.last.print
+      "s.\n".print
+      busy.unlock
+    }
+  )
+
+  - width_min:REAL_32  := 512
+
+  - height_min:REAL_32 := 400
+
+  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 50
+  
+  - draw <-
+  ( + xx,yy:REAL_32
+    + time_base:INTEGER
+    compute
+    font_size 18.0
+    font_face_id (FONT.sys (FONT.roman))
+    text_align (align_left|align_top)
+    (result_list.count > 0).if { 
+      time_base := result_list.at 0
+      
+      begin_path
+      line (0,height-20) to (width,height-20) color (COLOR.white)
+      stroke
+      
+      0.to (sample_max-1) do { j:INTEGER
+        begin_path
+        line (j*32+4,64) to (j*32+4,height) color (COLOR.white)
+        stroke
+        
+        string_tmp.clear
+        (j+1).append_in string_tmp
+        fill_color (COLOR.white)
+        text ((j+1)*32-16,height-18) msg string_tmp
+        //
+        xx := j*32+12
+        yy := (height-20-time_base*(j+1)*2).max 0
+        begin_path
+        rect (xx-3,yy) to (xx+3,height-21)
+        fill_color (COLOR.rgb (0,80h,0))
+        fill
+        //
+        xx := j*32+20
+        (j < physical_core).if { 
+          yy := height-20-time_base*2
+        } else {
+          yy := height-20-(time_base*(j+1)/physical_core)*2
+        }
+        begin_path
+        rect (xx-3,yy) to (xx+3,height-21)
+        fill_color (COLOR.blue)
+        fill
+        //
+        (j < result_list.count).if {
+          xx := j*32+28
+          yy := height-20-(result_list.at j)*2
+          begin_path
+          rect (xx-3,yy) to (xx+3,height-21)
+          fill_color (COLOR.red)
+          fill
+        }
+      }
+      begin_path
+      rect (2,2) to (250,60)
+      fill_color (COLOR.rgb (0DDh,0DDh,0DDh))
+      fill
+      
+      fill_color (COLOR.rgb (0,80h,0))
+      text (4,4) msg "Theoretical times with 1 core"
+      //
+      string_tmp.copy "Theoretical times with "
+      physical_core.append_in string_tmp
+      string_tmp.append " cores"
+      fill_color (COLOR.blue)
+      text (4,24) msg string_tmp
+      //
+      fill_color (COLOR.red)
+      text (4,44) msg "Real times"
+    } else {
+      fill_color (COLOR.red)
+      text (4,4) msg "Please wait..."
+    }
+    //
+    PAPER.refresh_again
+  )

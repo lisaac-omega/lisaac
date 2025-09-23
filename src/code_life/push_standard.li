@@ -1,0 +1,55 @@
+Header
+
+  + name        := PUSH_STANDARD;
+
+  /* Push context for debug mode */
+
+Inherit
+
+  + parent_push:Expanded PUSH
+  
+Public
+  
+  //
+  // Genere
+  //
+
+  - genere <-
+  ( + id:INTEGER
+    + idf:STRING_ALIAS
+
+    idf := ALIASER_LOCAL.push Self
+    
+    (is_first).if {
+      output.append "lisaac_push_first(&"
+    } else {
+      output.append "lisaac_push(&"
+    }
+    output.append idf
+    output.add_last ','
+    
+    (debug_with_code).if {      
+      id := source_line.fast_last_index_of position
+      (id < 0).if {
+        source_line.add_last position
+        id := source_line.upper
+      }
+      id.append_in output
+    } else { 
+      position.code.append_in output
+    }
+    output.add_last ')'
+
+    output.append "; /* L"
+    position.line.append_in output
+    output.add_last ' '
+    output.append (position.prototype.name)
+    output.append "*/"
+  )
+  
+
+
+
+
+
+

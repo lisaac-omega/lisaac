@@ -1,0 +1,42 @@
+Header
+  + name := TPUSH;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + base:INTEGER
+  
+  - init_b b:INTEGER :SELF <- ( base := b; Self)
+  
+  - run <-
+  (
+    crash_with_message "Not call."
+  )
+  
+  - run_arg elt:TOK_ITM <-
+  ( + a,d,x,y:REAL_32
+    tex.push (0,0)
+    lisave
+    //    
+    begin_line
+    (elt != NULL).if {
+      pos_i := elt.pt_b + elt.db
+      ((elt.dynamic_type = LIST) && {elt.like LIST.is_simple_expr}).if {
+        elt.like LIST.draw_body
+      } else {
+        elt.draw
+      }
+      //pos_i.pt.println
+    } else { err warning msg "Arg not found."; }
+    (a,d) := (tex.asc,tex.des)
+    (x,y) := (tex.xmax,tex.y)
+    stop_line
+    tex.pop
+    stk.at (bp+base+0) put a
+    stk.at (bp+base+1) put d
+    stk.at (bp+base+2) put (x - tex.x)
+  )
+  
+  - append_in b:STRING_BUFFER <- ( b += "Push"; )

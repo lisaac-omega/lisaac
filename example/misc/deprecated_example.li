@@ -1,0 +1,32 @@
+Header
+  
+  + name := DEPRECATED_EXAMPLE;
+  
+Insert
+  
+  - parent_utils:UTILS := UTILS
+  
+Public
+  
+  - m1 <-
+  [
+    ? { deprecated FALSE msg "You got one year to use another method." }
+  ]
+  (
+    deprecated FALSE msg "What the hell are you still doing here ?"
+  )
+  
+  - m2 <-
+  [
+    ? { deprecated TRUE msg "You must now use another method." }
+  ]
+  (
+  )
+  
+  - main <-
+  (
+    m1
+    m2
+    // Also note that FALSE deprecated can be there in -boost mode.
+  )
+  

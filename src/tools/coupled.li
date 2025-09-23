@@ -1,0 +1,28 @@
+Header
+
+  + name        := COUPLED(E);
+
+  /*Couple object*/
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  + first :E
+  + second:E
+
+  - create elt1:E and elt2:E :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make elt1 and elt2
+    result
+  )
+
+  - make elt1:E and elt2:E <-
+  (
+    first  := elt1
+    second := elt2
+  )

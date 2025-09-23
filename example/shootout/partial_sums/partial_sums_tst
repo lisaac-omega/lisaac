@@ -1,0 +1,7 @@
+lisaac partial_sums -q -O -i20
+gcc partial_sums_c.c -o partial_sums_c -O3 -msse2 -lm
+echo Lisaac: 
+time ./partial_sums 2500000 > out_li.txt
+echo C:
+time ./partial_sums_c 2500000 > out_c.txt
+diff out_li.txt out_c.txt

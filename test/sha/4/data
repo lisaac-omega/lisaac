@@ -1,0 +1,29 @@
+Section Header
+  
+  + name := MAIN;  // Do not chnage me !
+  // Compare result with unix command: sha512sum <main.li >sha512sum
+  
+Section Public
+  - working_directory:STRING_BUFFER := STRING_BUFFER.create 256;
+  - sum_buffer1:STRING_BUFFER := STRING_BUFFER.create 128;
+  - sum_buffer2:STRING_BUFFER := STRING_BUFFER.create 128;
+  
+  - main <-
+  ( + file_input:POINTER;
+    + sz:INTEGER;    
+    working_directory.copy (COMMAND_ARGS.executable_path);
+    working_directory.remove_tail 4;
+    TEST.check (ENVIRONMENT.basic_cd working_directory) integer 0;
+    TEST.check (FILE_SYSTEM.file_exists "main.li");
+    TEST.check (sum_buffer1.is_empty);
+    //
+    SHA512.sum "main.li" in sum_buffer1;
+    //
+    file_input := FILE_SYSTEM.open_read "sha512sum";
+    TEST.check (file_input != NULL);
+    sz := FILE_SYSTEM.file_size file_input;
+    sum_buffer2.make (sz + 1);
+    FILE_SYSTEM.read file_input in sum_buffer2 size sz;
+    FILE_SYSTEM.close file_input;
+    TEST.check sum_buffer1 string sum_buffer2;
+  );

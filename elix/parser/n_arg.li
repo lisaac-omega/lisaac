@@ -1,0 +1,29 @@
+Header
+  + name := N_ARG;
+  
+Inherit
+  + parent_node:Expanded NODE
+  
+Public
+  
+  + type:TYPE
+  - set_type t:TYPE :SELF <- ( type := t; Self)
+  
+  + is_rec:BOOLEAN
+  - set_rec r:BOOLEAN :SELF <- ( is_rec := r; Self)
+  
+  - new t:TYPE rec r:BOOLEAN :SELF <- clone.set_type t.set_rec r
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    is_rec.if { b | '['; }
+    b | '('
+    (type = NULL).if {
+      b += "NULL"
+    } else {
+      type.append_in b
+    }
+    b | ')'
+    is_rec.if { b | ']'; }
+  )
+  

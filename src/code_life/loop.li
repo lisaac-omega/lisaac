@@ -1,0 +1,232 @@
+Header
+
+  + name    := LOOP;
+
+  /*Loop (call tail recursive).*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  + link_count:INTEGER
+
+  + body:LIST
+
+  + name:STRING_ALIAS
+
+  - set_link <-
+  (
+    link_count := link_count + 1
+  )
+
+  - unset_link <-
+  (
+    link_count := link_count - 1
+    ? {link_count >= 0}
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name lab:STRING_ALIAS body lst:LIST :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name lab body lst
+    result
+  )
+
+  - make p:POSITION name lab:STRING_ALIAS body lst:LIST <-
+  (
+    position := p
+    name := lab
+    body := lst
+  )
+
+  - my_copy:SELF <-
+  ( + result:SELF
+    + new_body:LIST
+    + switch:SWITCH
+    + case:LIST
+    + loop_end:LOOP_END
+
+    new_body := body.my_copy
+    result :=  Strict LOOP.create position name (get_intern name type FALSE) body new_body
+    //
+    switch ?= new_body.last
+    (switch.list.lower).to (switch.list.upper) do { k:INTEGER
+      case := switch.list.at k.code
+      (! case.is_empty).if {
+	loop_end ?= case.last
+	(loop_end != NULL).if {
+	  ? {loop_end.loop = Self}
+	  (loop_end.loop != Self).if {
+	    semantic_error (position,"LOOP.my_copy BUG!!!")
+	  }
+	  loop_end := LOOP_END.create (loop_end.position) loop result
+	  case.at (case.upper) put loop_end
+	}
+      }
+    }
+
+    (result.link_count != link_count).if {
+      name.print
+      " Origin:".print
+      link_count.print
+      " copy:".print
+      result.link_count.print
+      '\n'.print
+
+      body.debug_display
+
+      semantic_error (position,"LOOP: Bug in copy.")
+    }
+
+    ? {result.link_count = link_count}
+    result
+  )
+
+  //
+  // Generation.
+  //
+
+  - remove <-
+  (
+    body.remove
+    ? {link_count = 0}
+  )
+
+  - execute:INSTR <-
+  ( + result:INSTR
+    + cur_seq_call_local_and_loop:INTEGER
+    + cur_seq_call_and_loop:INTEGER
+
+    (link_count = 0).if {
+      result := body.execute
+      new_execute_pass
+    } else {
+      cur_seq_call_local_and_loop :=
+      seq_call_local_and_loop     := seq_call_local_and_loop + link_count
+      //
+      cur_seq_call_and_loop :=
+      seq_call_and_loop     := seq_call_and_loop + link_count
+      //
+      seq_inline := seq_inline + 1
+      //
+      result := Self
+      body.execute_case
+      (loop_invariant = Self).if {
+	loop_list := list_current
+	loop_seq_index := Old seq_index
+	//
+	loop_seq_call_local_and_loop := cur_seq_call_local_and_loop
+	loop_seq_call_and_loop       := cur_seq_call_and_loop
+	//
+	seq_call_local_and_loop := seq_call_local_and_loop + link_count
+	seq_call_and_loop       := seq_call_and_loop + link_count
+	body.execute_case
+	loop_invariant := NULL
+      }
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+    display_ref buffer
+    buffer.append ":\n"
+    buffer.append indent
+    body.display buffer
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    (! genere_while).if {
+
+      current_list_level := current_list_level + link_count
+
+      output.append name
+      output.append ":\n"
+      output.append indent
+      body.genere
+    }
+  )
+  
+  - genere_while:BOOLEAN <-
+  ( + switch:SWITCH
+    + lst_true,lst_false,lst:LIST
+    + inverse:BOOLEAN
+    + result:BOOLEAN
+
+    (body.is_empty).if {
+      semantic_error (position,"LOOP BUG: Body loop empty !")
+    }
+    switch ?= body.last
+    (
+      (switch != NULL) && {switch.list.count = 2} &&
+      {switch.list.first.id = type_true } && {switch.list.second.id = type_false}
+    ).if {
+      lst_true  := switch.list.first.code
+      lst_false := switch.list.second.code
+      ((lst_true.is_empty) || {lst_false.is_empty}).if {
+	(! lst_false.is_empty).if {
+	  inverse := TRUE
+	  lst := lst_true
+	  lst_true := lst_false
+	  lst_false := lst
+        }
+
+        current_list_level := current_list_level + 1
+
+	(body.count = 1).if {
+	  //
+	  // While (...) do {...}.
+	  //
+	  result := TRUE
+	  inverse.if {
+	    output.append "while (!"
+	  } else {
+	    output.append "while ("
+	  }
+	  switch.expr.genere
+	  //
+	  output.append ") "
+	  lst_true.remove_last
+	  lst_true.genere
+	}.elseif {lst_true.count = 1} then {
+	  //
+	  // Do {...} while (...).
+	  //
+	  result := TRUE
+	  output.append "do "
+	  body.remove_last
+	  body.genere
+	  inverse.if {
+	    output.append " while (!"
+	  } else {
+	    output.append " while ("
+	  }
+	  //
+	  switch.expr.genere
+	  output.add_last ')'
+        }
+
+        current_list_level := current_list_level - 1
+
+      }
+    }
+    result
+  )
+  
+

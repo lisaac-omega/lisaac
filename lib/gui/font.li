@@ -1,0 +1,109 @@
+Header
+  + name := FONT;
+  
+Inherit
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  - n_sys:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create 4
+  - n_app:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create 4
+  
+  - id_sys:ARRAY INTEGER := ARRAY INTEGER.create 4
+  - id_app:ARRAY INTEGER := ARRAY INTEGER.create 4
+  
+  - roman:INTEGER  := 0
+  - bold:INTEGER   := 1
+  - italic:INTEGER := 2
+  
+  - sys i:INTEGER :INTEGER <- id_sys.at i
+  - app i:INTEGER :INTEGER <- id_app.at i
+  
+  - size_sys:REAL_32 := 25
+  - size_app:REAL_32 := 25
+  
+  - inc_size_sys a:REAL_32 :BOOLEAN <-
+  ((size_sys + a).in_range 20 to 80).if { size_sys := size_sys + a; PAPER.refresh_all; }
+  - inc_size_app a:REAL_32 :BOOLEAN <-
+  ((size_app + a).in_range 20 to 80).if { size_app := size_app + a; PAPER.refresh_all; }
+  
+  - size c:REAL_32 do do:{} <-
+  (
+    size_app := size_app * c
+    WIN.font_size size_app
+    do.value
+    size_app := Old size_app
+    WIN.font_size size_app
+  )
+  
+  - last_app_id:INTEGER
+  - app i:INTEGER in pen:PEN <-
+  ( last_app_id := i
+    pen.font_face_id (id_app.at i)
+  )
+  
+  - load pen:PEN <-
+  (
+    0.to (n_sys.upper) do { i:INTEGER; id_sys.at i put (load pen name (n_sys.at i)); }
+    0.to (n_app.upper) do { i:INTEGER; id_app.at i put (load pen name (n_app.at i)); }
+  )
+  
+  - load_default <-
+  (
+    n_sys.at roman         put "Roboto-Regular.ttf"
+    n_sys.at bold          put "Roboto-Bold.ttf"
+    n_sys.at italic        put "Roboto-Italic.ttf"
+    n_sys.at (bold|italic) put "Roboto-BoldItalic.ttf"
+    n_app.copy_collection n_sys
+  )
+  
+  - read <- read_object
+ 
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "roman"       then { tab.at roman put v;         }
+    .case "bold"        then { tab.at bold put v;          }
+    .case "italic"      then { tab.at italic put v;        }
+    .case "bold_italic" then { tab.at (bold|italic) put v; }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN <-
+  (
+    id
+    .case "size"     then { (tab = n_sys).if { size_sys := v; } else { size_app := v; }; }
+    = STRING_ALIAS
+  )
+  
+  - new_value id:STRING_ALIAS :BOOLEAN <-
+  (   
+    id
+    .case "size" then { put_real ((tab = n_sys).ok (FONT.size_sys) or (FONT.size_app)); }
+    = STRING_ALIAS
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "sys"     then { tab := n_sys; read_object; }
+    .case "app"     then { tab := n_app; read_object; }
+    = STRING_ALIAS
+  )
+  
+Private
+  
+  - tab:ARRAY STRING_ALIAS
+  
+  - load pen:PEN name n:STRING_ALIAS :INTEGER <-
+  ( + id:INTEGER
+    bufraw.clear
+    STRING.tmp { pth:STRING_BUFFER
+      pth += "font/" += n
+      SYSTEM_IO.read_asset pth in bufraw
+      ((id := pen.create_font_mem n data (bufraw.twin) free TRUE) = -1).if {
+        "Warning in FONT: `".print; pth.print; "' not open.".println;
+      }
+    }
+    id
+  )

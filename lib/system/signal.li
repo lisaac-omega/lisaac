@@ -1,0 +1,39 @@
+Header
+  + name := SIGNAL;
+  
+  - external := `
+#include <signal.h>
+#include <unistd.h>
+  `;
+    
+External,Public
+
+  - handle s:INTEGER_32 <-
+  [
+    ? {s = `SIGSEGV`:INTEGER_32}
+  ]
+  (
+    UTILS.is_debug_mode.if {
+      `lisaac_stack_print(10)`
+      `print_string("Stack overflow (INFINITE RECURSION)\n")`
+    }
+    `_exit(EXIT_FAILURE)`
+  )
+  
+Public
+  - infinite_recursion <-
+  (
+    UTILS.is_debug_mode.if {
+      `stack_t sigstack`
+      `struct sigaction act`
+      
+      `sigstack.ss_sp = malloc(SIGSTKSZ)`
+      `sigstack.ss_size = SIGSTKSZ`
+      `sigstack.ss_flags = 0`
+      `sigaltstack(&sigstack, NULL)`
+      `act.sa_flags = SA_ONSTACK`
+      `sigemptyset(&act.sa_mask)`
+      `act.sa_handler = handle`
+      `sigaction(SIGSEGV, &act, NULL)`
+    }
+  )

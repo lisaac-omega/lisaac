@@ -1,0 +1,38 @@
+Header
+
+  + name    := FLOAT_MAP32;
+
+  /*Mapping for REAL_32.*/
+
+Inherit
+
+  - parent_float_map:FLOAT_MAP := FLOAT_MAP
+
+Mapping,Private
+
+  + map_32:UINTEGER_32
+
+REAL, REAL_32, REAL_64, REAL_80
+
+  - get_map f:SELF <-
+  ( + tab:NATIVE_ARRAY(SELF)
+    tab := CAST FLOAT_MAP32 TO (NATIVE_ARRAY SELF).on FLOAT_MAP32
+    `/* Bug GCC -Wall */`
+    tab.at 0 put f
+  )
+  
+Public
+
+  - sign:BOOLEAN         <- (map_32 >> 31) = 0; // TRUE if positif, FALSE else.
+
+  - exponent:UINTEGER_32 <- (map_32 >> mantissa_bits) & 0FFh
+
+  - mantissa:UINTEGER_64 <- (map_32 & 7F_FFFFh)
+
+    
+  // Format.
+
+  - mantissa_bits:INTEGER_8 := 23
+
+  - exponent_bits:INTEGER_8 := 8
+

@@ -1,0 +1,127 @@
+Header
+
+  + name := PYRAMID2;
+
+  /*
+  Run faster than pyramid.e
+  */
+
+Private
+
+  + pyramid:ARRAY2 INTEGER
+
+  + used:ARRAY BOOLEAN; // Already used numbers in `pyramid'.
+
+  - fill size:INTEGER <-
+  // Fill in a `pyramid' of `size' elements.
+  (
+    ? {size > 1}
+    used := ARRAY(BOOLEAN).create ((size+1) * size / 2)
+    pyramid := ARRAY2(INTEGER).create (size,size)
+    (solution 1).if {
+      print
+    } else {
+      "Sorry I can't find a solution.\n".print
+    }
+  )
+
+  - put value:INTEGER to (line,column:INTEGER) <-
+  // Updtate `pyramid' and `used'.
+  (
+    used.at value put TRUE
+    pyramid.at (line,column) put value
+  )
+
+  - remove (line,column:INTEGER) <-
+  // Updtate `pyramid' and `used'.
+  (
+    (pyramid.at (line,column) != 0).if {
+      used.at (pyramid.at (line,column)) put FALSE
+      pyramid.at (line,column) put 0
+    }
+  )
+
+  - solution column:INTEGER :BOOLEAN <-
+  // Search a solution using a back-tracking algorithm.
+  ( + nb,i:INTEGER
+    + result:BOOLEAN
+    (column > pyramid.upper1).if {
+      result := TRUE
+    } else {
+      nb := used.upper
+      {result || {nb = 0}}.until_do {
+        (! used.at nb).if {
+          result := fill_column column with nb
+        }
+        (result).if_false {
+          i := pyramid.lower1
+          {(pyramid.at (i,column) = 0) || { i > pyramid.upper1 }}.until_do {
+            remove (i,column)
+            i := i + 1
+          }
+        }
+        nb := nb - 1
+      }
+    }
+    result
+  )
+
+  - fill_column col:INTEGER with val:INTEGER :BOOLEAN <-
+  ( + v,i:INTEGER
+    + result:BOOLEAN
+    i := 1
+    put val to (0,col)
+    {(i > col) | result}.until_do {
+      v := (pyramid.at (i-1,col-1) - pyramid.at (i-1,col)).abs
+      (used.at v).if {
+        result := TRUE
+      } else {
+        put v to (i,col)
+        i := i + 1
+      }
+    }
+    result.if {
+      {i < used.lower}.until_do {
+        remove (i,col)
+        i := i - 1
+      }
+      result := FALSE
+    } else {
+      result := solution (col+1)
+    }
+    result
+  )
+
+Public
+
+  - print <-
+  // Display the pyramid to the standart output.
+  ( + blanks:STRING_BUFFER
+    "\nSolution found : \n".print
+    blanks := STRING_BUFFER.create 10
+    pyramid.lower1.to (pyramid.upper1) do { line:INTEGER
+      blanks.print
+      pyramid.lower2.to (pyramid.upper2) do { column:INTEGER
+        (pyramid.at (line,column) != 0).if {
+          pyramid.at (line,column).print
+          ' '.print
+        }
+      }
+      '\n'.print
+      blanks.add_last ' '
+    }
+  )
+
+  - main <-
+  ( + size: INTEGER
+    // Read argument.
+    (COMMAND_ARGS.upper = 0).if {
+      "Size of the pyramid (a small number greater than 1) : ".print
+      STDIN.read_integer
+      size := STDIN.last_integer
+    } else {
+      size := COMMAND_ARGS.at 1.to_integer
+    }
+    "I am working...\n".print
+    fill size
+  )

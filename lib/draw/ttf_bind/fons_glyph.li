@@ -1,0 +1,64 @@
+Header
+  
+  + name := FONS_GLYPH;
+
+Inherit
+  
+  - parent_fontstash:FONTSTASH := FONTSTASH
+  
+Private
+  
+  - stock:ARRAY FONS_GLYPH := ARRAY FONS_GLYPH.create_with_capacity 512
+  
+  - new:FONS_GLYPH <-
+  ( + result:FONS_GLYPH
+    (stock.is_empty).if {
+      result := clone
+    } else {
+      result := stock.pop
+    }
+    result
+  )
+  
+Public
+  
+  + codepoint:UINTEGER_32
+  + index:INTEGER
+  + next:INTEGER
+  + size:INTEGER_16
+  + blur:INTEGER_16
+  
+  + x0:INTEGER_16
+  + y0:INTEGER_16
+  + x1:INTEGER_16
+  + y1:INTEGER_16
+  
+  + xadv:INTEGER_16
+  + xoff:INTEGER_16
+  + yoff:INTEGER_16
+  
+  - create c:UINTEGER_32 size s:INTEGER_16 blur b:INTEGER_16 
+  index i:INTEGER xy0 (px0,py0:INTEGER_16) xy1 (px1,py1:INTEGER_16) 
+  xadv xa:INTEGER_16 off (xo,yo:INTEGER_16) next n:INTEGER :FONS_GLYPH <-
+  ( + result:FONS_GLYPH
+    result := new
+    result.make c size s blur b index i xy0 (px0,py0) xy1 (px1,py1) xadv xa off (xo,yo) next n
+    result
+  )
+  
+  - make c:UINTEGER_32 size s:INTEGER_16 blur b:INTEGER_16 
+  index i:INTEGER xy0 (px0,py0:INTEGER_16) xy1 (px1,py1:INTEGER_16) 
+  xadv xa:INTEGER_16 off (xo,yo:INTEGER_16) next n:INTEGER <-
+  (
+    codepoint := c; size := s; blur := b; index := i
+    (x0,y0) := (px0,py0)
+    (x1,y1) := (px1,py1)
+    xadv := xa
+    (xoff,yoff) := (xo,yo)
+    next := n
+  )
+  
+  - free <-
+  (
+    stock.add_last Self
+  )

@@ -1,0 +1,667 @@
+Header
+  
+  + name         := GETBLK;
+  /*
+  DCT block decoding.
+  */
+  
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Public
+
+  - decode_mpeg1_intra_block (comp:INTEGER, dc_dct_pred:NATIVE_ARRAY(INTEGER)) <-
+  // decode one intra coded MPEG-1 block 
+  ( + val, i, j:INTEGER
+    + code, idx:INTEGER
+    + tab_len, tab_run, tab_level:INTEGER_8
+    + bp:NATIVE_ARRAY(INTEGER_16)
+    + end,sign:BOOLEAN
+        
+    bp := ld.block.at comp
+    
+    // ISO/IEC 11172-2 section 2.4.3.7: Block layer. 
+    // decode DC coefficients 
+    (comp < 4).if {
+      val := dc_dct_pred.at 0 + GETVLC.get_luma_dc_dct_diff
+      dc_dct_pred.at 0 put val
+    } else {
+      (comp = 4).if {
+	val := dc_dct_pred.at 1 + GETVLC.get_chroma_dc_dct_diff
+	dc_dct_pred.at 1 put val
+      } else {
+	val := dc_dct_pred.at 2 + GETVLC.get_chroma_dc_dct_diff
+	dc_dct_pred.at 2 put val
+      }
+    }
+    bp.at 0 put ((val << 3).to_integer_16)
+    
+    // D-pictures do not contain AC coefficients 
+    ((! fault_flag) && {picture_coding_type != d_type}).if {
+    
+      // decode AC coefficients 
+      i := 1
+      {
+	code := ld.show_bits 16
+	(code >= 16384).if {
+	  idx := (code >> 12) - 4
+	  tab_level := TABLE.dcttabnext_level idx
+	  tab_run := TABLE.dcttabnext_run idx
+	  tab_len := TABLE.dcttabnext_len idx
+	} else {
+	  (code >= 1024).if {
+	    idx := (code >> 8) - 4
+	    tab_level := TABLE.dcttab0_level idx
+	    tab_run := TABLE.dcttab0_run idx
+	    tab_len := TABLE.dcttab0_len idx
+	  } else { 
+	    (code >= 512).if {
+	      idx := (code >> 6) - 8
+	      tab_level := TABLE.dcttab1_level idx
+	      tab_run := TABLE.dcttab1_run idx
+	      tab_len := TABLE.dcttab1_len idx
+	    } else {
+	      (code >= 256).if {
+		idx := (code >> 4) - 16
+		tab_level := TABLE.dcttab2_level idx
+		tab_run := TABLE.dcttab2_run idx
+		tab_len := TABLE.dcttab2_len idx
+	      } else {
+		(code >= 128).if {
+		  idx := (code >> 3) - 16
+		  tab_level := TABLE.dcttab3_level idx
+		  tab_run := TABLE.dcttab3_run idx
+		  tab_len := TABLE.dcttab3_len idx
+		} else {
+		  (code >= 64).if {
+		    idx := (code >> 2) - 16
+		    tab_level := TABLE.dcttab4_level idx
+		    tab_run := TABLE.dcttab4_run idx
+		    tab_len := TABLE.dcttab4_len idx
+		  } else {
+		    (code >= 32).if {
+		      idx := (code >> 1) - 16
+		      tab_level := TABLE.dcttab5_level idx
+		      tab_run := TABLE.dcttab5_run idx
+		      tab_len := TABLE.dcttab5_len idx
+		    } else {
+		      (code >= 16).if {
+			idx := code - 16
+			tab_level := TABLE.dcttab6_level idx
+			tab_run := TABLE.dcttab6_run idx
+			tab_len := TABLE.dcttab6_len idx
+		      } else {
+			(trace).if {
+			  "invalid Huffman code in Decode_MPEG1_Intra_Block()\n".print
+			}
+			fault_flag := TRUE
+			end := TRUE
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+	
+	(end).if_false {
+	  ld.flush_buffer (tab_len)
+	
+	  (tab_run = 64).if { // end_of_block 
+	    end := TRUE
+	  } else {
+	
+	    (tab_run = 65).if { // escape 
+	      i := i + ld.get_bits 6
+	      
+	      val := ld.get_bits 8
+	      (val = 0).if {
+		val := ld.get_bits 8
+	      } else {
+		(val = 128).if {
+		  val := ld.get_bits 8 - 256
+		} else {
+		  (val > 128).if {
+		    val := val - 256
+		  }
+		}
+	      }
+	      
+	      sign := (val < 0)
+	      (sign).if {
+		val := -val
+	      }
+	    } else {
+	      i    := i + tab_run
+	      val  := tab_level
+	      sign := ld.get_boolean
+	    }
+	    
+	    (i >= 64).if {
+	      (trace).if {
+		STDERR.put_string "DCT coeff index (i) out of bounds (intra)\n"
+	      }
+	      fault_flag := TRUE
+	      end := TRUE
+	    } else {
+	    
+	      j   := TABLE.scan (zig_zag,i)
+	      val := (val * ld.quantizer_scale * ld.intra_quantizer_matrix.at j) >> 3
+	      
+	      // mismatch control ('oddification') 
+	      (val != 0).if { // should always be true, but it's not guaranteed 
+		     val := (val - 1) | 1; // equivalent to: if ((val&1)==0) val = val - 1
+	      }
+	      
+	      // saturation 
+	      (! sign).if {
+           // positive
+		     (val > 2047).if {
+		       bp.at j put 2047
+		     } else {
+		       bp.at j put (val.to_integer_16)
+		     }
+	      } else {
+		     // negative 
+		     (val > 2048).if {
+		       bp.at j put (-2048)
+		     } else {
+		       bp.at j put (-val.to_integer_16)
+		     }
+	      }
+	      i := i + 1
+	    }
+	  }
+	}
+      }.do_until {end}
+    }
+  )
+
+  - decode_mpeg1_non_intra_block comp:INTEGER <-
+  // decode one non-intra coded MPEG-1 block 
+  ( + val, i, j:INTEGER
+    + sign:BOOLEAN
+    + code, idx:INTEGER
+    + tab_len, tab_level, tab_run:INTEGER_8
+    + bp:NATIVE_ARRAY(INTEGER_16)
+    + end:BOOLEAN
+        
+    bp := ld.block.at comp
+    
+    // decode AC coefficients 
+    {
+      code := ld.show_bits 16
+      (code >= 16384).if {
+	idx := (code >> 12) - 4
+	(i = 0).if {
+	  tab_level := TABLE.dcttabfirst_level idx
+	  tab_run := TABLE.dcttabfirst_run idx
+	  tab_len := TABLE.dcttabfirst_len idx
+	} else {
+	  tab_level := TABLE.dcttabnext_level idx
+	  tab_run := TABLE.dcttabnext_run idx
+	  tab_len := TABLE.dcttabnext_len idx
+	}
+      } else {
+	(code >= 1024).if {
+	  idx := (code >> 8) - 4
+	  tab_level := TABLE.dcttab0_level idx
+	  tab_run := TABLE.dcttab0_run idx
+	  tab_len := TABLE.dcttab0_len idx
+	} else {
+	  (code >= 512).if {
+	    idx := (code >> 6) - 8
+	    tab_level := TABLE.dcttab1_level idx
+	    tab_run := TABLE.dcttab1_run idx
+	    tab_len := TABLE.dcttab1_len idx
+	  } else {
+	    (code >= 256).if {
+	      idx := (code >> 4) - 16
+	      tab_level := TABLE.dcttab2_level idx
+	      tab_run := TABLE.dcttab2_run idx
+	      tab_len := TABLE.dcttab2_len idx
+	    } else {
+	      (code >= 128).if {
+		idx := (code >> 3) - 16
+		tab_level := TABLE.dcttab3_level idx
+		tab_run := TABLE.dcttab3_run idx
+		tab_len := TABLE.dcttab3_len idx
+	      } else {
+		(code >= 64).if {
+		  idx := (code >> 2) - 16
+		  tab_level := TABLE.dcttab4_level idx
+		  tab_run := TABLE.dcttab4_run idx
+		  tab_len := TABLE.dcttab4_len idx
+		} else {
+		  (code >= 32).if {
+		    idx := (code >> 1) - 16
+		    tab_level := TABLE.dcttab5_level idx
+		    tab_run := TABLE.dcttab5_run idx
+		    tab_len := TABLE.dcttab5_len idx
+		  } else {
+		    (code >= 16).if {
+		      idx := code - 16
+		      tab_level := TABLE.dcttab6_level idx
+		      tab_run := TABLE.dcttab6_run idx
+		      tab_len := TABLE.dcttab6_len idx
+		    } else {
+		      (trace).if {
+			"invalid Huffman code in Decode_MPEG1_Non_Intra_Block()\n".print
+		      }
+		      fault_flag := TRUE
+		      end := TRUE
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+      
+      (end).if_false {
+	ld.flush_buffer (tab_len)
+
+	(tab_run = 64).if { // end_of_block 
+	  end := TRUE
+	} else {
+	
+	  (tab_run = 65).if { // escape 
+	    i := i + ld.get_bits 6
+	    
+	    val := ld.get_bits 8
+	    (val = 0).if {
+	      val := ld.get_bits 8
+	    } else {
+	      (val = 128).if {
+		val := ld.get_bits 8 - 256
+	      } else {
+		(val > 128).if {
+		  val := val - 256
+		}
+	      }
+	    }
+	    
+	    sign := (val < 0)
+	    (sign).if {
+	      val := -val
+	    }
+	  } else {
+	    i    := i + tab_run
+	    val  := tab_level
+	    sign := ld.get_boolean
+	  }
+	  
+	  (i >= 64).if {
+	    (trace).if {
+	      STDERR.put_string "DCT coeff index (i) out of bounds (inter)\n"
+	    }
+	    fault_flag := TRUE
+	    end := TRUE
+	  } else {
+	    
+	    j   := TABLE.scan (zig_zag,i)
+	    val := (((val << 1) + 1) * ld.quantizer_scale * ld.non_intra_quantizer_matrix.at j) >> 4
+	    
+	    // mismatch control ('oddification') 
+	    (val != 0).if { // should always be true, but it's not guaranteed 
+	      val := (val - 1) | 1; // equivalent to: if ((val&1)==0) val = val - 1
+	    }
+	    
+	    // saturation 
+	    (! sign).if {
+	      // positive 
+	      (val > 2047).if {
+		bp.at j put 2047
+	      } else {
+		bp.at j put (val.to_integer_16)
+	      }
+	    } else {
+	      // negative 
+	      (val > 2048).if {
+		bp.at j put (-2048)
+	      } else {
+		bp.at j put (-val.to_integer_16)
+	      }
+	    }
+	    i := i + 1
+	  }
+	}
+      }
+    }.do_until {end}
+  )
+
+  - decode_mpeg2_intra_block (comp:INTEGER,dc_dct_pred:NATIVE_ARRAY(INTEGER)) <-
+  // decode one intra coded MPEG-2 block 
+  ( + val, i, j, nc, cc, run:INTEGER
+    + sign:BOOLEAN
+    + code,idx:INTEGER
+    + tab_len,tab_run,tab_level:INTEGER_8
+    + bp:NATIVE_ARRAY(INTEGER_16)
+    + qmat:NATIVE_ARRAY(INTEGER)
+    + end:BOOLEAN
+        
+    // with data partitioning, data always goes to base layer     
+    bp := ld.block.at comp
+            
+    (comp < 4).if {
+      cc := 0
+    } else {
+      cc := (comp & 1) + 1
+    }
+    
+    ((comp < 4) || {chroma_format = chroma420}).if {
+      qmat := ld.intra_quantizer_matrix
+    } else {
+      qmat := ld.chroma_intra_quantizer_matrix
+    }
+    
+    // ISO/IEC 13818-2 section 7.2.1: decode DC coefficients 
+    (cc = 0).if {
+      val := dc_dct_pred.at 0 + GETVLC.get_luma_dc_dct_diff
+      dc_dct_pred.at 0 put val
+    } else {
+      (cc = 1).if {
+	val := dc_dct_pred.at 1 + GETVLC.get_chroma_dc_dct_diff
+	dc_dct_pred.at 1 put val
+      } else {
+	val := dc_dct_pred.at 2 + GETVLC.get_chroma_dc_dct_diff
+	dc_dct_pred.at 2 put val
+      }
+    }
+    
+    (fault_flag).if_false {    
+      bp.at 0 put ((val << (3-intra_dc_precision)).to_integer_16)
+      nc := 0
+                
+      // decode AC coefficients 
+      i := 1
+      {
+	code := ld.show_bits 16
+	((code >= 16384) && {! intra_vlc_format}).if {
+	  idx := (code >> 12) - 4
+	  tab_level := TABLE.dcttabnext_level idx
+	  tab_run := TABLE.dcttabnext_run idx
+	  tab_len := TABLE.dcttabnext_len idx
+	} else {
+	  (code >= 1024).if {
+	    idx := (code >> 8) - 4
+	    (intra_vlc_format).if {	    
+	      tab_len := TABLE.dcttab0a_len idx
+	      tab_level := TABLE.dcttab0a_level idx
+	      tab_run := TABLE.dcttab0a_run idx
+	    } else {
+	      tab_len := TABLE.dcttab0_len idx
+	      tab_level := TABLE.dcttab0_level idx
+	      tab_run := TABLE.dcttab0_run idx
+	    }
+	  } else {
+	    (code >= 512).if {
+	      idx := (code >> 6) - 8
+	      (intra_vlc_format).if {
+		tab_len := TABLE.dcttab1a_len idx
+		tab_level := TABLE.dcttab1a_level idx
+		tab_run := TABLE.dcttab1a_run idx
+	      } else {
+		tab_len := TABLE.dcttab1_len idx
+		tab_level := TABLE.dcttab1_level idx
+		tab_run := TABLE.dcttab1_run idx
+	      }
+	    } else {
+	      (code >= 256).if {
+		idx := (code >> 4) - 16
+		tab_len := TABLE.dcttab2_len idx
+		tab_level := TABLE.dcttab2_level idx
+		tab_run := TABLE.dcttab2_run idx
+	      } else {
+		(code >= 128).if {
+		  idx := (code >> 3) - 16
+		  tab_len := TABLE.dcttab3_len idx
+		  tab_level := TABLE.dcttab3_level idx
+		  tab_run := TABLE.dcttab3_run idx
+		} else {
+		  (code >= 64).if {
+		    idx := (code >> 2) - 16
+		    tab_len := TABLE.dcttab4_len idx
+		    tab_level := TABLE.dcttab4_level idx
+		    tab_run := TABLE.dcttab4_run idx
+		  } else {
+		    (code >= 32).if {
+		      idx := (code >> 1) - 16
+		      tab_len := TABLE.dcttab5_len idx
+		      tab_level := TABLE.dcttab5_level idx
+		      tab_run := TABLE.dcttab5_run idx
+		    } else {
+		      (code >= 16).if {
+			idx := code - 16
+			tab_len := TABLE.dcttab6_len idx
+			tab_level := TABLE.dcttab6_level idx
+			tab_run := TABLE.dcttab6_run idx
+		      } else {
+			(trace).if {
+			  "invalid Huffman code in Decode_MPEG2_Intra_Block()\n".print
+			}
+			fault_flag := TRUE
+			end := TRUE
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+	
+	(end).if_false {
+	
+	  ld.flush_buffer (tab_len)
+	  	
+	  (tab_run = 64).if { // end_of_block 
+	    end := TRUE
+	  } else {
+	    
+	    (tab_run = 65).if { // escape 
+	      run := ld.get_bits 6
+	      i := i + run
+	  
+	      val := ld.get_bits 12
+	      ((val & 2047) = 0).if {
+		(trace).if {
+		  "invalid escape in Decode_MPEG2_Intra_Block()\n".print
+		}
+		fault_flag := TRUE
+		end := TRUE
+	      } else {
+		sign := (val >= 2048)
+		(sign).if {
+		  val := 4096 - val
+		}
+	      }
+	    } else {
+	      run  := tab_run
+	      i    := i + run
+	      val  := tab_level
+	      sign := ld.get_boolean
+	    }
+	    
+	    (end).if_false {
+	    
+	      (i >= 64).if {
+		(trace).if {
+		  STDERR.put_string "DCT coeff index (i) out of bounds (intra2)\n"
+		}
+		fault_flag := TRUE
+		end := TRUE
+	      } else {	    
+		j := TABLE.scan ((ld.alternate_scan),i)
+		val := (val * ld.quantizer_scale * qmat.at j) >> 4
+		(sign).if {
+		  bp.at j put (-val.to_integer_16)
+		} else {
+		  bp.at j put (val.to_integer_16)
+		}
+		nc := nc + 1
+		
+		((ld.scalable_mode = sc_dp) && {nc = (ld.priority_breakpoint - 63)}).if {
+		  not_yet_implemented
+		}
+		i := i + 1
+	      }
+	    }
+	  }
+	}
+      }.do_until {end}
+    }
+  )
+  
+  - decode_mpeg2_non_intra_block comp:INTEGER <-
+  // decode one non-intra coded MPEG-2 block 
+  ( + val, i, j, nc, run:INTEGER
+    + sign:BOOLEAN
+    + code,idx:INTEGER
+    + tab_len,tab_run,tab_level:INTEGER_8
+    + bp:NATIVE_ARRAY(INTEGER_16)
+    + qmat:NATIVE_ARRAY(INTEGER)
+    + end:BOOLEAN
+    
+    bp := ld.block.at comp
+        
+    ((comp < 4) || {chroma_format = chroma420}).if {
+      qmat := ld.non_intra_quantizer_matrix
+    } else {
+      qmat := ld.chroma_non_intra_quantizer_matrix
+    }
+    
+    nc := 0
+        
+    // decode AC coefficients 
+    {
+      code := ld.show_bits 16
+      (code >= 16384).if {
+	idx := (code >> 12) - 4
+	(i = 0).if {
+	  tab_len := TABLE.dcttabfirst_len idx
+	  tab_level := TABLE.dcttabfirst_level idx
+	  tab_run := TABLE.dcttabfirst_run idx
+	} else {
+	  tab_len := TABLE.dcttabnext_len idx
+	  tab_level := TABLE.dcttabnext_level idx
+	  tab_run := TABLE.dcttabnext_run idx
+	}
+      } else {
+	(code >= 1024).if {
+	  idx := (code >> 8) - 4
+	  tab_len := TABLE.dcttab0_len idx
+	  tab_level := TABLE.dcttab0_level idx
+	  tab_run := TABLE.dcttab0_run idx
+	} else {
+	  (code >= 512).if {
+	    idx := (code >> 6) - 8
+	    tab_len := TABLE.dcttab1_len idx
+	    tab_level := TABLE.dcttab1_level idx
+	    tab_run := TABLE.dcttab1_run idx
+	  } else {
+	    (code >= 256).if {
+	      idx := (code >> 4) - 16
+	      tab_len := TABLE.dcttab2_len idx
+	      tab_level := TABLE.dcttab2_level idx
+	      tab_run := TABLE.dcttab2_run idx
+	    } else {
+	      (code >= 128).if {
+		idx := (code >> 3) - 16
+		tab_len := TABLE.dcttab3_len idx
+		tab_level := TABLE.dcttab3_level idx
+		tab_run := TABLE.dcttab3_run idx
+	      } else {
+		(code >= 64).if {
+		  idx := (code >> 2) - 16
+		  tab_len := TABLE.dcttab4_len idx
+		  tab_level := TABLE.dcttab4_level idx
+		  tab_run := TABLE.dcttab4_run idx
+		} else {
+		  (code >= 32).if {
+		    idx := (code >> 1) - 16
+		    tab_len := TABLE.dcttab5_len idx
+		    tab_level := TABLE.dcttab5_level idx
+		    tab_run := TABLE.dcttab5_run idx
+		  } else {
+		    (code >= 16).if {
+		      idx := code - 16
+		      tab_len := TABLE.dcttab6_len idx
+		      tab_level := TABLE.dcttab6_level idx
+		      tab_run := TABLE.dcttab6_run idx
+		    } else {
+		      (trace).if {
+			"invalid Huffman code in Decode_MPEG2_Non_Intra_Block()\n".print
+		      }
+		      fault_flag := TRUE
+		      end := TRUE
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+      
+      (end).if_false {
+      
+	ld.flush_buffer (tab_len)
+	
+	(tab_run = 64).if { // end_of_block 	
+	  end := TRUE
+	} else {
+	
+	  (tab_run = 65).if { // escape 
+	    run := ld.get_bits 6
+	    i := i + run
+	    
+	    val := ld.get_bits 12
+	    ((val & 2047) = 0).if {
+	      (trace).if {
+		"invalid escape in Decode_MPEG2_Intra_Block()\n".print
+	      }
+	      fault_flag := TRUE
+	      end := TRUE
+	    } else {
+	      sign := (val >= 2048)
+	      (sign).if {
+		val := 4096 - val
+	      }
+	    }
+	  } else {
+	    run  := tab_run
+	    i    := i + run
+	    val  := tab_level
+	    sign := ld.get_boolean
+	  }
+	  
+	  (end).if_false {
+	    (i >= 64).if {
+	      (trace).if {
+		STDERR.put_string "DCT coeff index (i) out of bounds (inter2)\n"
+	      }
+	      fault_flag := TRUE
+	      end := TRUE
+	    }
+	    
+	    (end).if_false {	    
+	      j   := TABLE.scan ((ld.alternate_scan),i)
+	      val := (((val << 1) + 1) * ld.quantizer_scale * qmat.at j) >> 5
+	      (sign).if {
+		bp.at j put (-val.to_integer_16)
+	      } else {
+		bp.at j put (val.to_integer_16)
+	      }
+	      nc := nc + 1
+	      
+	      i := i + 1
+	    }
+	  }
+	}
+      }
+    }.do_until {end}
+  )

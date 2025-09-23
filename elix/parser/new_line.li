@@ -1,0 +1,115 @@
+Header
+  + name := NEW_LINE;
+  
+Inherit
+  + parent_tok_drw:Expanded TOK_DRW
+  
+Private
+  - stk:Expanded ARRAY (Strict NEW_LINE)
+  
+Public
+  
+  + expr:EXPR
+  - set_expr e:EXPR <- ( expr := e; )
+  
+  - is_require:BOOLEAN <- look_cc "˯" at pt_b
+  - is_ensure:BOOLEAN  <- look_cc "˰" at pt_b
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+      
+  - parse:TOK_DRW <-
+  ( + result:NEW_LINE
+    + e:EXPR
+    (cur <= upper).if {      
+      begin cur
+      result := new_or_not
+      (read_cc "˯") || {read_cc "˰"}
+      e := EXPR.rd_expr
+      result.set_expr e
+      skip_line
+      result.end cur
+    }
+    result
+  )
+  
+  - ptr_bg:INTEGER
+  
+  - begin_draw <-
+  (
+    ((is_require) || {is_ensure}).if {
+      tex.push (x_space*4,0)
+      pt_ci := pt_ci + 2
+      ptr_bg := trace_pointer
+    } else {
+      tex.push (x_space*3,0)
+    }
+    fill_color (COLOR.gray)
+  )
+  
+  - sub_draw <-
+  (
+    ((expr != NULL) && {expr.now pt_ci}).if {
+      expr.draw
+    }
+  )
+   
+  - end_draw <-
+  ( + y0,y1:REAL_32
+    + ptr_bg2:INTEGER
+    (y0,y1) := (tex.ymin,tex.y)
+    (is_require || {is_ensure}).if {
+      ptr_bg2 := trace_pointer
+      contract (tex.x,y0) to (tex.xmax,y1) req is_require
+      foreground ptr_bg to ptr_bg2
+    }
+    tex.pop_add_y 0
+    SECTION.draw y0 to y1
+  )
+  
+  - contract (x0,y0:REAL_32) to (x1,y1:REAL_32) req d:BOOLEAN <-
+  ( + e,y,xb,xm,dx,r,l:REAL_32
+    + x,h,w,stp,hx:REAL_32
+    + a:REAL_32
+    + col:COLOR
+    e := 3
+    y := (y0+y1)/2
+    (l,r) := (x0-x_space+e, x0-e)
+    d.if { (xb,xm) := (l,r); dx := -e*2; } else { (xb,xm) := (r,l); dx := e*2; }
+    begin_path
+    stroke_color (LOOK.require)
+    stroke_width (e*2)
+    move_to (xb,y0+e)
+    line_to (xm,y)
+    line_to (xb,y1-e)
+    line_to (xm+dx,y)
+    line_to (xb,y0+e)
+    stroke
+    // Background
+    w := 16
+    a := 0.4; // 50
+    h := y1-y0
+    intersect_scissor (x0,xo) size (width,height)
+    col := LOOK.require.set_af a
+    fill_color col
+    stp := (w*w*2).sqrt
+    x := x0+d.ok (-h) or 0
+    hx := d.ok h or (-h)
+    {x <= x1+stp}.while_do {
+      begin_path
+      move_to (x,y0); line_to (x+stp,y0); line_to (x+stp+hx,y1); line_to (x+hx,y1)
+      fill
+      x := x + stp*2
+    }
+    4.times {
+      col := col.set_af a
+      fill_color col
+      begin_path
+      move_to (x,y0); line_to (x+stp,y0); line_to (x+stp+hx,y1); line_to (x+hx,y1)
+      fill
+      a := a - 0.12
+      x := x + stp*2
+    }
+    reset_scissor
+  )

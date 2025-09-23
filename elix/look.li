@@ -1,0 +1,382 @@
+Header  
+  + name := LOOK;
+  
+Inherit
+  - parent_look_gui:LOOK_GUI := LOOK_GUI
+  - parent_tok_drw:TOK_ITM := TOK_ITM
+      
+Public
+  
+  //
+  // Icones
+  //
+  
+  - entry:IMG
+  - comment:IMG
+  - card:IMG
+  - path:IMG
+  - calendar:IMG
+  - export:IMG
+  - import:IMG
+  - type_c:IMG
+  - extern_c:IMG
+  - lip:IMG
+  - default:IMG
+  
+  - inherit:IMG
+  - eye_open:IMG
+  - eye_close:IMG
+  
+  - swap:IMG
+  - left:IMG
+  - right:IMG
+    
+  //
+  // Color
+  //
+    
+  // Used by STY :
+  - erro:INTEGER     := 0
+  - symbol:INTEGER   := 1
+  - rmk:INTEGER      := 2
+  - sub_rmk:INTEGER  := 3
+  - type:INTEGER     := 4
+  - slot:INTEGER     := 5
+  - local:INTEGER    := 6
+  - operator:INTEGER := 7
+  - string:INTEGER   := 8
+  - external:INTEGER := 9
+  - number:INTEGER   := 10
+  - keyword:INTEGER  := 11
+  - style:INTEGER    := 12
+  - codeout:INTEGER  := 13
+  - cursor:INTEGER   := 14
+  - dead:INTEGER     := 15
+  
+  - cols_size:INTEGER := 16
+  /*
+  - rmk:COLOR        := COLOR.rgb (159,  0, 10)
+  - sub_rmk:COLOR    := COLOR.rgb (130, 46, 51)
+  - type:COLOR       := COLOR.rgb (  0,118, 17)
+  - slot:COLOR       := COLOR.rgb (  0,  0,255)
+  - local:COLOR      := COLOR.rgb ( 48, 45, 53)
+  - operator:COLOR   := COLOR.rgb (145, 76, 38)
+  - string:COLOR     := COLOR.rgb (254,115, 33)
+  - external:COLOR   := COLOR.rgb (171,165,  0)
+  - number:COLOR     := COLOR.rgb (160, 32,240)
+  - keyword:COLOR    := COLOR.rgb (145, 76, 38); // OK
+  */
+  - rem:COLOR        := COLOR.rgb (200,200,200)
+  - directive:COLOR  := COLOR.rgb (200,200,200)
+  
+  // Other:
+  - header:COLOR     := COLOR.rgb (128,  0,  0)
+  - contract:COLOR   := COLOR.rgb (248,206, 95)
+//  - require:COLOR    := COLOR.rgb (219,194,  6)
+//  - req_parent:COLOR := COLOR.rgb (152,134,  0)
+  - text_bg:COLOR    := COLOR.rgb ( 64, 64, 64)
+  
+  - error:COLOR      := COLOR.rgb ( 60,  0,  0)
+  
+  - section:ARRAY COLOR := ARRAY COLOR.create 4
+            
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "entry"     then { entry     := IMG.load v asset TRUE; }
+    .case "comment"   then { comment   := IMG.load v asset TRUE; }    
+    .case "card"      then { card      := IMG.load v asset TRUE; }
+    .case "path"      then { path      := IMG.load v asset TRUE; }
+    .case "calendar"  then { calendar  := IMG.load v asset TRUE; }
+    .case "export"    then { export    := IMG.load v asset TRUE; }
+    .case "import"    then { import    := IMG.load v asset TRUE; }
+    .case "type_c"    then { type_c    := IMG.load v asset TRUE; }
+    .case "lip"       then { lip       := IMG.load v asset TRUE; }
+    .case "extern_c"  then { extern_c  := IMG.load v asset TRUE; }
+    .case "default"   then { default   := IMG.load v asset TRUE; }
+    .case "inherit"   then { inherit   := IMG.load v asset TRUE; }
+    .case "eye_open"  then { eye_open  := IMG.load v asset TRUE; }
+    .case "eye_close" then { eye_close := IMG.load v asset TRUE; }
+    //
+    .case "swap"  then { swap  := IMG.load v asset TRUE; }
+    .case "left"  then { left  := IMG.load v asset TRUE; }
+    .case "right" then { right := IMG.load v asset TRUE; }
+    = STRING_ALIAS
+  ) || {parent_look_gui.item id str v}
+  
+  - put id:STRING_ALIAS col c:COLOR :BOOLEAN <-
+  (    
+    id
+    .case "none"       then { none := c;     }
+    
+    .case "dead"       then { cols.at dead put c;  }
+    .case "symbol"     then { cols.at symbol put c;  }
+    .case "rmk"        then { cols.at rmk put c;     }
+    .case "sub_rmk"    then { cols.at sub_rmk put c; }
+    .case "type"       then { cols.at type put c;    }
+    .case "slot"       then { cols.at slot put c;    }
+    .case "local"      then { cols.at local put c;   }    
+    .case "operator"   then { cols.at operator put c;}
+    .case "string"     then { cols.at string put c;  }
+    .case "external"   then { cols.at external put c;}
+    .case "number"     then { cols.at number put c;  }
+    .case "keyword"    then { cols.at keyword put c; }
+    .case "style"      then { cols.at style put c;   }
+    .case "codeout"    then { cols.at codeout put c; }
+    .case "cursor"     then { cols.at cursor put c; }
+    
+    .case "header"     then { header := c;    }
+    .case "directive"  then { directive := c; }
+    .case "rem"        then { rem := c;       }
+    .case "contract"   then { contract := c;  }
+ //   .case "req_parent" then { req_parent := c; }
+    .case "text_bg"    then { text_bg := c;   }
+    .case "error"      then { error := c; cols.at erro put c; }
+    //
+    .case "slot_private"   then { section.at (SECTION.a_private) put c;   }
+    .case "slot_public"    then { section.at (SECTION.a_public) put c;    }
+    .case "slot_list"      then { section.at (SECTION.a_list) put c;      }
+    .case "slot_directory" then { section.at (SECTION.a_directory) put c; }
+    = STRING_ALIAS
+  ) || {parent_look_gui.put id col c}
+  
+  - to_alpha a:REAL_32 <-
+  (
+    rmk := rmk.set_af a
+    rem := rem.set_af a
+    require := require.set_af a
+    //reqparent := reqparent.set_af a
+    string := string.set_af a
+    external := external.set_af a
+    text_bg := text_bg.set_af a
+    slot_txt := slot_txt.set_af a
+    slot_fn := slot_fn.set_af a
+    number := number.set_af a
+    type := type.set_af a
+    call_txt := call_txt.set_af a
+    call_loc := call_loc.set_af a
+    call_arg := call_arg.set_af a
+    keyword := keyword.set_af a
+    error := error.set_af a
+    //
+    parent_look_gui.to_alpha a
+  )
+  
+  - to_gray <-
+  (
+    rmk := rmk.to_gray
+    rem := rem.to_gray
+    require := require.to_gray
+    //reqparent := reqparent.to_gray
+    string := string.to_gray
+    external := external.to_gray
+    text_bg := text_bg.to_gray
+    slot_txt := slot_txt.to_gray
+    slot_fn := slot_fn.to_gray
+    number := number.to_gray
+    type := type.to_gray
+    call_txt := call_txt.to_gray
+    call_loc := call_loc.to_gray
+    call_arg := call_arg.to_gray
+    keyword := keyword.to_gray
+    error := error.to_gray
+    //
+    parent_look_gui.to_gray
+  )
+  
+  //
+  // Draw
+  //
+  
+  - drw c:INTEGER :REAL_32 <-
+  ( + x:REAL_32
+    c
+    .when 0 then { x := clone (at pos_i = '+') exp FALSE to (tex.x,tex.y); }
+    x
+  )
+  
+  - x_space:REAL_32 <- TXT_BUF.x_space
+  
+  - type_self <-
+  ( + radius:REAL_32
+    save
+    radius := get_state.font_size * 0.3; // 9
+    begin_path
+    stroke_color (LOOK.type)
+    stroke_width 3.6
+    circle (tex.x+radius+3,tex.y-radius) radius radius
+    stroke
+    restore
+    tex.add_x (radius * 2 + 6)
+    tex.ascdes (asc_c,des_c)
+  )
+  
+  - type_param <-
+  ( + x0,y0,x1,y1,w:REAL_32
+    save
+    font_size (get_state.font_size*0.7)
+    fill_color (LOOK.type)
+    (w,x0,y0,x1,y1) := text_bounds (tex.x+2,tex.y-2) msg c
+    text (tex.x+2,tex.y) msg tmp_c
+    begin_path
+    rect (x0-2,y0) to (x1,y1)
+    stroke_width 2
+    stroke_color (LOOK.type)
+    stroke
+    restore
+    tex.add_x x_space
+    tex.ascdes (asc_c,des_c)
+  )
+  
+  - arg_self <-
+  ( + radius:REAL_32
+    save
+    radius := get_state.font_size * 0.266; // 8    
+    begin_path
+    fill_color (COLOR.rgb(145, 76, 38))
+    circle (tex.x+radius,tex.y-radius) radius radius
+    fill
+    restore
+    tex.add_x (radius * 2 + 2)
+    tex.ascdes (asc_c,des_c)
+  )
+  
+  - exp_res <-
+  ( + x,y:REAL_32
+    + des_n:REAL_32
+    save
+    des_n := 6
+    (x,y) := (tex.x+3,tex.y-6)
+    begin_path
+    line (x+4,y) to (x,y)
+    y := y - x_space; line_to (x,y)
+    x := x + x_space; line_to (x,y)
+    y := y + x_space; line_to (x,y)
+    line_to (x-4,y)
+    stroke_width 2.5
+    stroke_color (LOOK.keyword)
+    stroke
+    begin_path
+    (x,y) := (x-x_space/2,y-x_space/2)
+    circle (x,y) radius 4.0
+    fill_color (LOOK.keyword)
+    fill
+    begin_path
+    move_to (x,y)
+    y := tex.y-des_c-2; line_to (x,y)
+    (x,y) := (x-5,y-5)
+    line (x,y) to (x+5,y+5); line_to (x+10,y)
+    stroke_width 3.0
+    stroke_color (LOOK.keyword)
+    stroke
+    tex.add_x (x_space+5)
+    (buf.at (pt_ci+2).in_range '0' to '9').if {      
+      fill_color (LOOK.keyword)
+      font_size (get_state.font_size - 8)
+      tmp_c.clear; tmp_c | buf.at (pt_ci+2)
+      tex.set_x (text (tex.x,tex.y+des_n) msg tmp_c)
+      tmp_c.copy "123"; // tmp_c.count = 3
+      //(a,d,l) := text_metrics
+    }
+    restore
+    tex.ascdes (asc_c,des_c)
+  )
+  
+  - exp_old <-
+  ( + x,y:REAL_32
+    save
+    fill_color (LOOK.keyword)
+    (x,y) := (tex.x + 30,tex.y)
+    begin_path
+    move_to (x,y-10)
+    arc_to (x,y) to (x-10,y) radius 10
+    arc_to (x-20,y) to (x-20,y-10) radius 10
+    line_to (x-20,y-15)
+    line_to (x-15,y-15)
+    line_to (x-22.5,y-20)
+    line_to (x-30,y-15)
+    line_to (x-25,y-15)
+    line_to (x-25,y-10)
+    arc (x-12.5,y-10) radius 12.5 angle (REAL_32.pi,0) direction (1)
+    fill
+    restore
+    tex.add_x (x_space + 30)
+    tex.ascdes (asc_c,des_c)
+  )
+
+  - assign c:BOOLEAN <-
+  ( + t:REAL_32
+    t := x_space * 0.46; //7; //(x_space*2)/3
+    tex.add_x (x_space)
+    save
+    stroke_width 2.5
+    stroke_color (COLOR.black)
+    begin_path
+    move_to (tex.x+t,tex.y-t*2)
+    line_to (tex.x,tex.y-t)
+    line_to (tex.x+t,tex.y)
+    (c).if {
+      + px,py:REAL_32
+      (px,py) := (tex.x+x_space-3,tex.y-t)
+      line (tex.x,tex.y-t) to (px,tex.y-t)
+      line (px+10,tex.y-t) to (tex.x+x_space*2,tex.y-t)
+      stroke
+      font_size (get_state.font_size-7.5)
+      text_align (align_middle)
+      font_face "CB"
+      fill_color (COLOR.rgb (0,118, 17))
+      text (px,py) msg "?"
+    } else {
+      move_to (tex.x,tex.y-t)
+      line_to (tex.x+x_space*2,tex.y-t)
+      stroke
+    }
+    restore
+    tex.add_x (x_space*3)
+    tex.ascdes (asc_c,des_c)
+  )
+      
+  - clone c:BOOLEAN exp e:BOOLEAN to (x,y:REAL_32) :REAL_32 <-
+  ( + radius,xx,x0:REAL_32
+    save
+    radius := get_state.font_size * 0.266; // 8
+    begin_path
+    x0 := x+radius+2+c.ok 0 or 2
+    (e).if {
+      fill_color (COLOR.gray)
+      circle (x0,y-radius) radius (radius+3.6/2)
+      fill
+      begin_path
+      stroke_color (COLOR.white)
+      stroke_width 1.5
+      circle (x0,y-radius) radius radius
+      stroke
+    } else {
+      stroke_color (COLOR.gray)
+      stroke_width 3.6
+      circle (x0,y-radius) radius radius
+      stroke
+    }
+    (c).if {
+      begin_path
+      (e).if {
+        circle (x+radius+9,y-radius) radius (radius+1.5/2)
+        fill
+        begin_path
+        circle (x+radius+9,y-radius) radius (radius-1.5)
+        stroke
+      } else {
+        stroke_width 1.5
+        circle (x+radius+9,y-radius) radius radius
+        stroke
+      }
+      xx := 7
+    }
+    /*
+    fill_color (LOOK.cols.at (LOOK.style))
+    text_align align_center
+    text (x+radius,y) msg (c.ok "+" or "-")
+    */
+    restore
+    x+xx+(radius * 2 + 4)    
+  )
+  

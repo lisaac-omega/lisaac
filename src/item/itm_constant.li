@@ -1,0 +1,13 @@
+Header
+
+  + name        := ITM_CONSTANT;
+
+  /*Parent for all constant*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  - is_constant:BOOLEAN := TRUE

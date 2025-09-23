@@ -1,0 +1,37 @@
+Header
+  
+  + name := PEN_LINE;
+  
+Inherit
+  
+  + parent_pen_move:Expanded PEN_MOVE
+  
+Public
+  
+  - create (xx,yy:REAL_32) :PEN_MOVE <-
+  ( + result:PEN_MOVE
+    (stack_line.is_empty).if {
+      result := clone
+    } else {
+      result := stack_line.last
+      stack_line.remove_last
+    }
+    result.make (xx,yy)
+    result
+  )
+
+  - to_path pc:PATH_CACHE <-
+  (
+    pc.paths.last.add_point (x,y) flags pt_corner
+  )
+  
+  - free <-
+  ( 
+    stack_line.add_last Self
+  )
+  
+  - svg_append_in buf:STRING_BUFFER <-
+  (
+    buf.add_last 'L'
+    svg_put (x,y) in buf
+  )

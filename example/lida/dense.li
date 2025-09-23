@@ -1,0 +1,113 @@
+Header
+  + name := DENSE;
+  
+Inherit
+  + parent_layer:Expanded LAYER
+  
+Private
+  
+  + input_size:INTEGER
+  + output_size:INTEGER
+
+  + d_one_vec:NATIVE_ARRAY REAL_32
+
+Public
+  
+  - init (n:STRING_ALIAS, out_size:INTEGER) :SELF <-
+  (
+    (name, output_size) := (n, out_size)
+    Self
+  )
+
+  - free <-
+  (
+    (d_one_vec != NULL).if { CUDA.free d_one_vec; }
+  )
+  
+  /*
+  //__global__
+  - init_one_vec (d_one_vec:NATIVE_ARRAY REAL_32, length:INTEGER) <-
+  ( + i:INTEGER
+    i := block_idx.x * block_dim.x + thread_idx.x
+    (i < length).if { 
+      d_one_vec.at i put 1
+    }
+  );*/
+
+  - forward (in:BLOB) :BLOB <-
+  ( + tmp_af:NATIVE_ARRAY REAL_32
+    + tmp_sz:UINTEGER
+    // initialize weights and biases
+    (weights = NULL).if {
+      // setup parameter size information
+      input_size := in.c * in.h * in.w
+      // initialize weight, bias, and output
+      weights := BLOB.new.init4 (1, 1, input_size, output_size)
+      biases  := BLOB.new.init4 (1, 1, output_size, 1)
+    }
+    // initilaize input and output
+    ((input = NULL) || {batch_size != in.n}).if {
+      input := in
+      batch_size := input.n
+      (output = NULL).if {
+        output := BLOB.new.init2 (batch_size, output_size)
+      } else {
+        output.reset4 (batch_size, output_size, 1, 1)
+      }
+      output.tensor
+
+      (d_one_vec != NULL).if { CUDA.free d_one_vec; }
+      d_one_vec := CUDA.malloc (REAL_32.object_size * batch_size)
+      
+      (tmp_af,tmp_sz) := (d_one_vec,batch_size)
+      `init_one_vec<<< (@tmp_sz+BLOCK_DIM_1D-1)/BLOCK_DIM_1D, BLOCK_DIM_1D >>>(@tmp_af,@tmp_sz)`
+
+      // initialize weights and biases
+      (load_pretrain && {!freeze}).if {
+        (load_parameter != 0).if {
+          "error occurred..".println
+          exit (-1)
+        }
+      }.elseif {!freeze} then {
+        init_weight_bias
+      } else {
+        /* do nothing */
+      }
+    }
+    // output = weights^T * input (without biases)
+    cud.sgemm (CUDA.op_t,CUDA.op_n)    size (output_size, batch_size, input_size)    alpha 1    a (weights.cuda,input_size)    b (input.cuda,input_size)    beta 0    c (output.cuda,output_size)
+    // output += biases * d_one_vec^T
+    cud.sgemm (CUDA.op_n,CUDA.op_n)    size (output_size, batch_size, 1)    alpha 1 a (biases.cuda, output_size) b (d_one_vec, 1) beta 1    c (output.cuda, output_size)
+    output
+  )
+
+  - backward (grad_out:BLOB) :BLOB <-
+  (
+    (grad_weights = NULL).if {
+      grad_weights := BLOB.new.init (weights.shape)
+      grad_biases  := BLOB.new.init (biases.shape)
+    }
+
+    ((grad_input = NULL) || {batch_size != grad_out.n}).if {
+      grad_output := grad_out
+
+      (grad_input = NULL).if {
+        grad_input := BLOB.new.init (input.shape)
+      } else {
+        grad_input.reset (input.shape)
+      }
+    }
+
+    // db = (dy) * d_one_vec
+    cud.sgemv (CUDA.op_n) size (output_size, batch_size) alpha 1    a (grad_output.cuda, output_size)    x (d_one_vec,1) beta 0    y (grad_biases.cuda,1)
+    
+    // dw = x * (dy)^T
+    cud.sgemm (CUDA.op_n,CUDA.op_t)    size (input_size, output_size, batch_size)    alpha 1 a (input.cuda,input_size) b (grad_output.cuda,output_size) beta 0    c (grad_weights.cuda,input_size)
+    
+    // dx = W * dy
+    (!gradient_stop).if {
+      cud.sgemm (CUDA.op_n,CUDA.op_n)      size (input_size, batch_size, output_size)      alpha 1 a (weights.cuda,input_size) b (grad_output.cuda,output_size) beta 0      c (grad_input.cuda,input_size)
+    }
+    grad_input
+  )
+

@@ -1,0 +1,11 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + p:POINTER
+    TEST.check (p.is_null); // should not be... in the next release.
+    p := `"toto"`:POINTER
+    TEST.check (! p.is_null); // should not be... in the next release.
+  )
+  

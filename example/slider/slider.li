@@ -1,0 +1,220 @@
+Header
+  
+  + name := SLIDER;
+  
+Inherit
+  + parent_window:Expanded WINDOW
+  
+Public  
+  
+  - count:INTEGER := 18
+  
+  - bufile:ARRAY UINTEGER_8 := ARRAY UINTEGER_8.create_with_capacity (512*1024)
+  
+  - png:Expanded ARRAY INTEGER; // := ARRAY INTEGER.create_with_capacity 64
+  - pos_i:INTEGER
+  - pos_dx:REAL_32
+  - moving:BOOLEAN
+  
+  - points:Expanded ARRAY REAL_32
+  
+  - draw_idx i:INTEGER to (x,y:REAL_32) size (w,h:REAL_32) <-
+  ( + p:PAINT
+    p := PAINT.create_pattern (x,y) size (w,h) img_id (png.at i) angle 0 alpha 1
+    begin_path
+    rect (x,y) size (w,h)
+    fill_paint p
+    fill
+    p.free
+  )
+    
+  - load <-
+  ( + i,id:INTEGER
+    + map1:NATIVE_ARRAY UINTEGER_8
+    i := 1
+    STRING.tmp { tmp:STRING_BUFFER
+      {
+        tmp.copy "diapo-"
+        i.append_in tmp
+        tmp.append ".png"
+        bufile.clear
+        SYSTEM_IO.read_asset tmp in bufile
+        IMAGE.init (bufile.to_native_array) size (bufile.count)
+        map1 := IMAGE.load (IMAGE.rgb_alpha)
+        id := create_image_rgba map1 size (IMAGE.img_x,IMAGE.img_y) flags 0
+        (id <= 0).if {
+          "Could not load `".print;
+          tmp.print
+          "'.\n".print
+        } else {
+          png.add_last id
+          tmp.print; " OK.\n".print
+        }
+        i := i + 1
+      }.do_while {(i <= count) && {id > 0}}
+    }
+  )
+  
+  - col:COLOR := COLOR.rgba (255,50,50,200)
+  
+  - draw_point (x,y:REAL_32) style (r,a:REAL_32) <-
+  ( + rr,aa,t:REAL_32
+    t := ((TIME.gettimeofday/10_000+r.to_integer)%10_000).to_real_32/100
+    rr := r + t.cos * 5
+    aa := a + t.cos * 3
+    //stroke { circle (x,y) radius rr; } width 1.0 color (COLOR.green)
+    stroke {
+      arc (x,y) radius rr angle (aa,aa+REAL_32.pi/3) direction 2
+    } width (aa.abs) color col
+    stroke {
+      arc (x,y) radius rr angle (aa-0.4,aa+REAL_32.pi/3+0.4) direction 2
+    } width 1.0 color col
+    aa := aa + REAL_32.pi
+    stroke {    
+      arc (x,y) radius rr angle (aa,aa+REAL_32.pi/3) direction 2
+    } width (aa.abs) color col
+    aa := aa*2 + REAL_32.pi/6 + r.sin
+    stroke {    
+      arc (x,y) radius rr angle (aa-0.4,aa+REAL_32.pi/3+0.4) direction 2
+    } width 1.0 color col
+  )
+    
+  - draw <-
+  ( + t:UINTEGER_64
+    + dx:REAL_32
+    begin_path
+    fill_color (COLOR.white)
+    rect (0,0) size (width,height)
+    fill
+    //
+    (png.is_empty).if { load; }
+    /*stroke {
+      rect (10,10) size (width-20,height-20)
+    } width 2.0 color (COLOR.red);*/    
+    t := TIME.gettimeofday - time_clic
+    (moving).if {
+      (t < during).if {
+        dx := (t.to_real_32/during.to_real_32)*width
+        pos_dx := (pos_dx < 0).ok (-dx) or dx
+        PAPER.refresh_again
+      } else {
+        (pos_dx < 0).if { pos_i := (pos_i - 1).max (-png.upper); } else { pos_i := (pos_i + 1).min 0; }
+        pos_dx := 0
+        moving := FALSE
+      }
+    }
+    0.to (png.upper) do { i:INTEGER
+      draw_idx i to (width*(i + pos_i)+pos_dx,0) size (width,height)
+    }
+    (points.is_empty).if_false {
+      0.to (points.upper) by 4 do { i:INTEGER
+        draw_point (points.at i,points.at (i+1)) style (points.at (i+2),points.at (i+3))
+      }
+      PAPER.refresh_again
+    }
+    draw_drag
+  )
+  
+  - during:UINTEGER_64 := 300_000; // 0.3s
+  - time_clic:UINTEGER_64
+  
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  (
+    if (ev = HAND clic) then {
+      points.clear
+      pos_dx := pos_dx - 10
+      (pos_i = -png.upper).if { pos_i := -png.count; pos_dx := width + pos_dx; }
+      time_clic := TIME.gettimeofday - (during.to_real_32 / width * pos_dx).to_integer.abs
+      moving := TRUE
+    }.elseif {ev = HAND lclic} then {
+      points.clear
+      new_pt (HAND x_cur,HAND y_cur)
+    }.elseif {ev = HAND drag} then {
+      drag (HAND dx,HAND dy) end (HAND is_end)
+    }.elseif {ev = HAND ldrag} then {
+      select (HAND x_begin,HAND y_begin,HAND x_last,HAND y_last) end (HAND is_end)
+    }
+    TRUE
+  )
+    
+  - drag (dx,dy:REAL_32) end is_end:BOOLEAN  :BOOLEAN <-
+  ( + x0,y0,x1,y1,t0,t1:REAL_32
+    ((KEYBOARD.cmd & 1) = 0).if {
+      points.clear
+      pos_dx := pos_dx + dx
+      (is_end).if {
+        ((pos_i = 0)          && {pos_dx > 0}).if { pos_i := 1;          pos_dx := pos_dx - width; }
+        ((pos_i = -png.upper) && {pos_dx < 0}).if { pos_i := -png.count; pos_dx := width + pos_dx; }
+        time_clic := TIME.gettimeofday - (during.to_real_32 / width * pos_dx).to_integer.abs
+        moving := TRUE
+      }
+    } else {
+      (is_end).if {
+        drag.clear
+        drag.add_last (PAPER.last_x)
+        drag.add_last (PAPER.last_y)
+      } else {
+        (x0,y0,t0) := (PAPER.first_x,PAPER.first_y,PAPER.first_t)
+        (drag.is_empty).if { drag.add_last x0; drag.add_last y0; drag.add_last t0; }
+        (x1,y1,t1) := (PAPER.last_x,PAPER.last_y,PAPER.last_t)
+        drag.add_last x1; drag.add_last y1; drag.add_last t1
+      }
+    }
+    TRUE
+  )
+  
+  - select (x0,y0,x1,y1:REAL_32) end is_end:BOOLEAN  :BOOLEAN <-
+  ( + dx,m:REAL_32
+    points.clear
+    dx := x1-x0
+    m := 32
+    (dx < 0).if {      
+      pos_dx := pos_i.to_real_32 / (x0-m) * dx * width
+    } else {
+      pos_dx := -(png.upper + pos_i).to_real_32 / (width-x0-m) * dx * width
+    }
+    (is_end).if {
+      pos_i := pos_i + (pos_dx / width).round
+      pos_dx := 0
+    }
+    TRUE
+  )
+  
+  - new_pt (x,y:REAL_32) <-
+  (
+    points.add_last x; points.add_last y
+    points.add_last (30.0+20.random_upper)
+    points.add_last (1.0+4.random_upper)
+  )
+  
+  - main <-
+  ( 
+    init "Slider" size (1280,960)
+    PAPER.run
+  )
+  
+  - draw_drag <-
+  (
+    (! drag.is_empty).if {
+      + x0,y0,x1,y1,t0,t1,d,xx,yy,w:REAL_32
+      (drag.count = 2).if {
+        fill { circle (drag.first,drag.second) radius 15; } color (COLOR.blue)
+        drag.clear
+      } else {
+        (x0,y0,t0) := (drag.at 0,drag.at 1,drag.at 2)
+        line_cap (round)
+        3.to (drag.upper) by 3 do { i:INTEGER
+          (x1,y1,t1) := (drag.at i,drag.at (i+1),drag.at (i+2))
+          (xx,yy) := (x1-x0,y1-y0)
+          d := (xx*xx + yy*yy).sqrt
+          (d > 4).if {
+            w := (w + ((t1-t0) > 0.02).to_integer*4 - 2).max 0.min 20
+            stroke { line (x0,y0) to (x1,y1); } width (w + 2.0) color (COLOR.blue)
+            (x0,y0,t0) := (x1,y1,t1)
+          }
+        }
+      }
+    }
+  )
+  - drag:Expanded ARRAY REAL_32

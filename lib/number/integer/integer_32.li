@@ -1,0 +1,28 @@
+Header
+  + name := Expanded INTEGER_32;
+
+  /*Signed 32 bits integer.*/
+  - type := `int32_t`;
+  - default := (0.to_raw_integer_32);
+  - export := INTEGER, INTEGER_64, POINTER;
+
+Insert
+  - parent_signed_integer:SIGNED_INTEGER := SIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 4
+
+  // Range
+
+  - maximum:UINTEGER_64 <- 7FFF_FFFFh.to_raw_uinteger_64
+
+  - minimum:INTEGER_64 <- - 8000_0000h.to_raw_integer_64
+    
+  // Conversion with test.
+
+  - to_integer_32:INTEGER_32     <- Self
+
+
+
+

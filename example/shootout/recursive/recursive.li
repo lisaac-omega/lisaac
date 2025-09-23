@@ -1,0 +1,185 @@
+Header
+  
+  + name := RECURSIVE;
+  
+Private  
+
+  - ack (x,y:INTEGER) :INTEGER <-
+  ( + result:INTEGER
+  
+    (x = 0).if {
+      result := y + 1
+    }.elseif {y = 0} then {
+      result := ack (x - 1,1)
+    } else {
+      result := ack (x - 1,ack (x,y - 1))
+    }
+    result
+  )
+  
+  - ack_rec (n,m:INTEGER) :INTEGER <-
+  ( + m2,n2:INTEGER
+    m2 := m
+    n2 := n
+    {n2 != 0}.while_do {
+      (m2 = 0).if {
+        m2 := 1
+      } else {
+        m2 := ack_rec (n2, m2 - 1)
+      }
+      n2 := n2 - 1
+    }
+    m2 + 1
+  )
+
+  - fib n:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    
+    (n < 2).if { 
+      result := 1
+    } else { 
+      result := fib (n - 2) + fib (n - 1)
+    }
+    result		
+  )
+  
+  // BSBS: fib derecursive
+  - fib_rec (n,fn1,fn:INTEGER) :INTEGER <-
+  ( + result:INTEGER
+        
+    (n < 2).if {
+      result := fn
+    } else {
+      result := fib_rec (n - 1, fn, fn + fn1)
+    }
+    result
+  )
+  - fib_rec2 (p_n,p_fn1,p_fn:INTEGER) :INTEGER <-
+  ( + result:INTEGER
+    `{ int result,n,fn1,fn,p_n,p_fn1,p_fn;
+      p_n   = @p_n
+      p_fn1 = @p_fn1
+      p_fn  = @p_fn
+      lab:    
+      n   = p_n
+      fn1 = p_fn1
+      fn  = p_fn
+      if (n < 2) {
+        result = fn
+      } else {
+        p_n = n -1
+        p_fn1 = fn
+        p_fn = fn + fn1
+        goto lab
+      }`;
+      result := `result`:INTEGER
+    `}`
+    result
+  )
+
+  - fibfp n:REAL_64 :REAL_64 <-
+  ( + result:REAL_64
+    
+    (n < 2).if {
+      result := 1
+    } else {
+      result := fibfp (n - 2) + fibfp (n - 1)
+    }
+    result
+  )
+
+  - tak (x,y,z:INTEGER) :INTEGER <-
+  ( + result:INTEGER
+    
+    (y < x).if {
+      result := tak(tak(x - 1,y, z), tak(y - 1, z, x), tak(z - 1, x, y) )
+    } else {
+      result := z
+    }
+    result
+  )
+  
+  - tak_rec (x,y,z:INTEGER) :INTEGER <- 
+  ( + result,rx,ry,rz,new_rx,new_ry,new_rz:INTEGER
+    
+    rx := x
+    ry := y
+    rz := z
+    {ry < rx}.while_do {
+      new_rx := tak_rec(rx - 1,ry,rz)
+      new_ry := tak_rec(ry - 1, rz, rx)
+      new_rz := tak_rec(rz - 1, rx, ry)
+      rx := new_rx
+      ry := new_ry
+      rz := new_rz
+    }
+    result := rz
+    result
+  )
+
+  - takfp (x,y,z:REAL_64) :REAL_64 <-
+  ( + result: REAL_64
+    
+    (y < x).if {
+      result := takfp(takfp(x - 1,y, z), takfp(y - 1, z, x), takfp(z - 1, x, y) )
+    } else {
+      result := z
+    }
+    result
+  )
+  
+  - print_format_c r:REAL_64 <-
+  (
+    `printf("%.1f",@r)`
+  )
+
+Public
+
+  - main <-
+  ( + n:INTEGER
+/*        
+    (COMMAND_ARGS.count = 2).if {
+      n := COMMAND_ARGS.item 1.to_integer - 1
+    } else {
+      */
+      n := 3
+ //   }
+   /* 
+    "Ack(3,".print
+    (n + 1).print
+    "): ".print
+    */
+    ack (3,n+1).print
+    '\n'.print
+/*
+    "Fib(".print
+    (28 + n).print
+    ".0): ".print
+    
+    //fibfp ((28 + n).to_real_64).print_format_c "%.1f"
+    //fib (28 + n).to_real_64.print_format_c "%.1f"
+    print_format_c (fib_rec2 (28 + n,1,1).to_real_64); //.print_format_c "%.1f"
+    // BSBS: il faut déduire que les Float sont pas utile
+    '\n'.print
+
+    "Tak(".print
+    ( 3 * n).print
+    ','.print
+    ( 2 * n).print
+    ','.print
+    n.print
+    "): ".print
+    tak_rec(3*n, 2*n, n).print
+    '\n'.print
+	
+    "Fib(3): ".print
+    // BSBS: Precalculer !!!!
+    3.print; //fib 3.print
+    '\n'.print
+
+    "Tak(3.0,2.0,1.0): ".print
+    // BSBS: Precalculer !!!!
+    print_format_c 2.0; ///*takfp(3.0,2.0,1.0)*/.print_format_c "%.1f"
+  */  
+    '\n'.print
+  )

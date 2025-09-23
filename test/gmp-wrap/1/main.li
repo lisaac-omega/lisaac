@@ -1,0 +1,31 @@
+Header
+  
+  + name := MAIN;
+  
+/*
+  - external :=
+ `
+ #include <stdlib.h>
+ void die_with_code(long c){exit(1);};
+ `;
+*/
+
+Public
+  - main <-
+  ( + a,b,c:MPZ
+    a.init
+    a.set "33333333333333333333" base 10
+    a.println
+    b.init
+    b.set "99999999999999999999999999999" base 10
+    b.println
+    c.init
+    c.mul(a, b)
+    c.println
+    TEST.check (a.to_string) string "33333333333333333333"
+    TEST.check (b.to_string) string "99999999999999999999999999999"
+    TEST.check (c.to_string) string "3333333333333333333299999999966666666666666666667"
+    a.clear
+    b.clear
+    c.clear
+  )

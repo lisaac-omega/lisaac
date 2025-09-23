@@ -1,0 +1,113 @@
+Header
+
+  + name    := ITM_TYPE_BLOCK;
+
+  /*Type block definition*/
+
+Inherit
+
+  + parent_itm_type_mono:Expanded ITM_TYPE_MONO
+
+ITM_TYPE_SIMPLE, ITM_TYPE_SELF
+
+  - dico:ARRAY ITM_TYPE_BLOCK := ARRAY ITM_TYPE_BLOCK .create_with_capacity 32
+
+Private
+
+  - create typ_arg:ITM_TYPE and typ_res:ITM_TYPE :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make typ_arg and typ_res
+    result
+  )
+
+  - make typ_arg:ITM_TYPE and typ_res:ITM_TYPE <-
+  (
+    type_argument := typ_arg
+    type_result   := typ_res
+  )
+
+Public
+
+  + type_argument:ITM_TYPE
+  + type_result:ITM_TYPE
+
+  - get typ_arg:ITM_TYPE and typ_res:ITM_TYPE :ITM_TYPE_BLOCK <-
+  ( + result:ITM_TYPE_BLOCK
+    + idx:INTEGER
+
+    idx := dico.lower
+    {
+      (idx <= dico.upper) && {
+        {dico.at idx.type_argument != typ_arg} ||
+        {dico.at idx.type_result   != typ_res}
+      }
+    }.while_do {
+      idx := idx + 1
+    }
+    (idx <= dico.upper).if {
+      result := dico.at idx
+    } else {
+      result := create typ_arg and typ_res
+      dico.add_last result
+    }
+    result
+  )
+
+  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  (
+    TYPE_BLOCK.get Self with p
+  )
+
+  - hash_code:INTEGER <-
+  (
+    '{'.to_integer
+  )
+
+  - append_in buffer:STRING_BUFFER <-
+  ( + typ_mul:ITM_TYPE_MULTI
+    buffer.add_last '{'
+    (type_argument != NULL).if {
+      type_argument.append_in buffer
+      buffer.add_last ';'
+      buffer.add_last ' '
+    }
+    (type_result != NULL).if {
+      typ_mul ?= type_result
+      (typ_mul = NULL).if {
+	type_result.append_in buffer
+      } else {
+	typ_mul.display_raw buffer
+      }
+    }
+    buffer.add_last '}'
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  ( + typ_mul:ITM_TYPE_MULTI
+    put "{" to buf like "block"
+    (type_argument != NULL).if {
+      type_argument.shorter_in buf
+      buf.add_last ';'
+      buf.add_last ' '
+    }
+    (type_result != NULL).if {
+      typ_mul ?= type_result
+      (typ_mul = NULL).if {
+	type_result.shorter_in buf
+      } else {
+	typ_mul.shorter_raw_in buf
+      }
+    }
+    put "}" to buf like "block"
+  )
+
+  //
+  // Cast.
+  //
+
+  - append_cast_name_in buf:STRING_BUFFER <-
+  (
+    crash_with_message "ITM_TYPE_BLOCK.append_cast_name_in "
+  )

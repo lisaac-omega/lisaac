@@ -1,0 +1,261 @@
+Header
+  + name := IMG_TGA;
+  /*Targa Truevision - TGA*/
+  
+Inherit
+  - parent_image:IMAGE := IMAGE
+  
+Public
+  
+  - name:STRING_ALIAS := "TGA - Truevision Targa"
+  
+  + is_rgb16:BOOLEAN
+  - raw_data:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 4
+  
+  // returns rgb or whatever, 0 on error
+  - tga_get_comp bits_per_pixel:INTEGER grey is_grey:BOOLEAN :INTEGER <-
+  ( + result:INTEGER
+    // only RGB or RGBA (incl. 16bit) or grey allowed
+    is_rgb16 := FALSE
+    (bits_per_pixel)
+    .when  8 then { result := grey; }
+    .when 16 then { (is_grey).if { result := grey_alpha; } else { is_rgb16 := TRUE; result := rgb; }; }
+    .when 15 then { is_rgb16 := TRUE; result := rgb; }
+    .when 24 or 32 then { result := bits_per_pixel / 8; }
+    result
+  )
+  
+  // read 16bit value and convert to 24bit RGB
+  - tga_read_rgb16 out:NATIVE_ARRAY UINTEGER_8 <-
+  ( + px,five_bit_mask:UINTEGER_16
+    + r,g,b:INTEGER
+    px := get16le
+    five_bit_mask := 31
+    // we have 3 channels with 5bits each
+    r := (px >> 10) & five_bit_mask
+    g := (px >> 5) & five_bit_mask
+    b := px & five_bit_mask
+    // Note that this saves the data in RGB(A) order, so it doesn't need to be swapped later
+    out.at 0 put (((r * 255)/31).to_uinteger_8)
+    out.at 1 put (((g * 255)/31).to_uinteger_8)
+    out.at 2 put (((b * 255)/31).to_uinteger_8)
+    // some people claim that the most significant bit might be used for alpha
+    // (possibly if an alpha-bit is set in the "image descriptor byte")
+    // but that only made 16bit test images completely translucent..
+    // so let's treat all 15 and 16bit TGAs as RGB with no alpha.
+  )
+
+Public
+  
+  + tga_color_type:INTEGER
+  + tga_image_type:INTEGER
+  + tga_colormap_bpp:INTEGER
+  + tga_bits_per_pixel:INTEGER
+  
+  - test:BOOLEAN <- info
+
+  - info:BOOLEAN <-
+  ( + sz:INTEGER
+    + res:BOOLEAN
+    + tga_inverted:INTEGER
+    //"------ info?\n".print
+    rewind
+    get8;                   // discard Offset
+    tga_color_type := get8; // colormap type
+    (tga_color_type <= 1).if {
+      //"B\n".print
+      tga_image_type := get8; // image type
+      (tga_color_type = 1).if { // colormapped (paletted) image        
+        //"A\n".print
+        ((tga_image_type = 1) || {tga_image_type = 9}).if {
+          skip 4;       // skip index of first colormap entry and number of entries
+          sz := get8;    //   check bits per palette color entry
+          res := ((sz = 8) || {sz = 15} || {sz = 16} || {sz = 24} || {sz = 32}).if {
+            skip 4;       // skip image x and y origin
+            tga_colormap_bpp := sz
+          }
+        }
+      } else { // "normal" image w/o colormap - only RGB or grey allowed, +/- RLE
+        res := ((tga_image_type = 2) || {tga_image_type = 3} || {tga_image_type = 10} || {tga_image_type = 11}).if {
+          skip 9; // skip colormap specification and image x/y origin
+          tga_colormap_bpp := 0
+        }
+      }
+      (res).if {
+        img_x := get16le
+        img_y := get16le
+        res := ((img_x >= 1) && {img_y >= 1}).if {
+          img_n := tga_bits_per_pixel := get8; // bits per pixel          
+          tga_inverted := get8
+        }
+      }
+    }
+    //"Size: ".print; img_x.print; 'x'.print; img_y.println
+    //"img_n: ".print; img_n.println
+    //"Fin: ".print; res.println
+    res // seems to have passed everything
+  )
+
+  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
+  ( + tga_offset,tga_indexed:INTEGER
+    + tga_is_rle:BOOLEAN
+    + tga_palette_start,tga_palette_len,tga_palette_bits:INTEGER
+    + tga_comp:INTEGER
+    + tga_x_origin,tga_y_origin,tga_width,tga_height:INTEGER
+    + tga_inverted:INTEGER
+    + tga_data,tga_palette:NATIVE_ARRAY UINTEGER_8
+    + rle_count:INTEGER
+    + rle_repeating:INTEGER
+    + read_next_pixel:INTEGER
+    rewind
+    // read in the TGA header stuff
+    tga_offset := get8
+    tga_indexed := get8
+    tga_image_type := get8
+    tga_palette_start := get16le
+    tga_palette_len := get16le
+    tga_palette_bits := get8
+    tga_x_origin := get16le
+    tga_y_origin := get16le
+    tga_width := get16le
+    tga_height := get16le
+    tga_bits_per_pixel := get8
+    tga_inverted := get8
+    // image data            
+    read_next_pixel := 1
+    // do a tiny bit of precessing
+    
+    //"bpp: ".print; tga_bits_per_pixel.println
+    
+    (tga_image_type >= 8).if {
+      tga_image_type := tga_image_type - 8
+      tga_is_rle := TRUE
+    }
+    tga_inverted := 1 - ((tga_inverted >> 5) & 1)
+
+    // If I'm paletted, then I'll use the number of bits from the palette
+    (tga_indexed != 0).if { 
+      tga_comp := tga_get_comp tga_palette_bits grey FALSE
+    } else { 
+      tga_comp := tga_get_comp tga_bits_per_pixel grey (tga_image_type = 3)
+    }
+    //"Comp: ".print; tga_comp.println
+    // tga info
+    img_x := tga_width
+    img_y := tga_height
+    img_n := tga_comp
+
+    tga_data := NATIVE_ARRAY UINTEGER_8.create (tga_width * tga_height * tga_comp)
+    // skip to the data's starting position (offset usually = 0)
+    skip tga_offset
+    ((tga_indexed = 0) && {!tga_is_rle} && {!is_rgb16}).if {
+      + row:INTEGER
+      + tga_row:NATIVE_ARRAY UINTEGER_8
+      0.to (tga_height-1) do { i:INTEGER
+        row := (tga_inverted != 0).ok (tga_height -i - 1) or i
+        tga_row := tga_data + (row*tga_width*tga_comp)
+        getn tga_row size (tga_width * tga_comp)
+      }
+    } else { // do I need to load a palette?
+      (tga_indexed != 0).if { // any data to skip? (offset usually = 0)
+        skip tga_palette_start; // load the palette
+        tga_palette := NATIVE_ARRAY UINTEGER_8.create (tga_palette_len * tga_comp)
+        (is_rgb16).if {
+          + pal_entry:NATIVE_ARRAY UINTEGER_8
+          pal_entry := tga_palette
+          ? {tga_comp = rgb}
+          0.to (tga_palette_len-1) do { i:INTEGER
+            tga_read_rgb16 pal_entry
+            pal_entry := pal_entry + tga_comp
+          }
+        }.elseif {!getn tga_palette size (tga_palette_len * tga_comp)} then {
+          // STBI_FREE(tga_data)
+          // STBI_FREE(tga_palette)
+          crash_with_message "bad palette"
+        }
+      }
+      // load the data
+      0.to (tga_width * tga_height-1) do { i:INTEGER
+         (tga_is_rle).if { // if I'm in RLE mode, do I need to get a RLE pngchunk?         
+          (rle_count = 0).if { //   yep, get the next byte as a RLE command
+            + rle_cmd:INTEGER
+            rle_cmd := get8
+            rle_count := 1 + (rle_cmd & 127)
+            rle_repeating := rle_cmd >> 7
+            read_next_pixel := 1
+          }.elseif {rle_repeating = 0} then {
+            read_next_pixel := 1
+          }
+        } else {
+          read_next_pixel := 1
+        }
+        // OK, if I need to read a pixel, do it now
+        (read_next_pixel != 0).if { // load however much data we did have
+          (tga_indexed != 0).if { // read in index, then perform the lookup
+            + pal_idx:INTEGER
+            (tga_bits_per_pixel = 8).if {
+              pal_idx := get8
+            } else {
+              pal_idx := get16le
+            }
+            (pal_idx >= tga_palette_len).if { // invalid index
+              pal_idx := 0
+            }
+            pal_idx := pal_idx * tga_comp
+            0.to (tga_comp-1) do { j:INTEGER
+              raw_data.at j put (tga_palette.at (pal_idx+j))
+            }
+          }.elseif {is_rgb16} then {
+            ? {tga_comp = rgb}
+            tga_read_rgb16 raw_data
+          } else { // read in the data raw           
+            0.to (tga_comp-1) do { j:INTEGER
+              raw_data.at j put get8
+            }
+          }
+          // clear the reading flag for the next pixel
+          read_next_pixel := 0
+        }; // end of reading a pixel
+        // copy data
+        0.to (tga_comp-1) do { j:INTEGER
+          tga_data.at (i*tga_comp+j) put (raw_data.at j)
+        }
+        rle_count := rle_count - 1; // in case we're in RLE mode, keep counting down
+      }
+      (tga_inverted != 0).if { // do I need to invert the image?
+        + index1,index2:INTEGER
+        + temp:UINTEGER_8
+        0.to (tga_height/2-1) do { j:INTEGER
+          index1 := j * tga_width * tga_comp
+          index2 := (tga_height - 1 - j) * tga_width * tga_comp
+          (tga_width * tga_comp).times { 
+            temp := tga_data.at index1
+            tga_data.at index1 put (tga_data.at index2)
+            tga_data.at index2 put temp
+            index1 := index1 + 1
+            index2 := index2 + 1
+          }
+        }
+      }
+      (tga_palette != NULL).if { // clear my palette, if I had one
+        // STBI_FREE( tga_palette )
+      }
+    }
+    // swap RGB - if the source data was RGB16, it already is in the right order
+    ((tga_comp >= 3) && {!is_rgb16}).if {
+      + tga_pixel:NATIVE_ARRAY UINTEGER_8
+      + temp:UINTEGER_8
+      tga_pixel := tga_data
+      (tga_width * tga_height).times {
+        temp := tga_pixel.at 0
+        tga_pixel.at 0 put (tga_pixel.at 2)
+        tga_pixel.at 2 put temp
+        tga_pixel := tga_pixel + tga_comp
+      }
+    }
+    // convert to target component count
+    ((req_comp != 0) && {req_comp != tga_comp}).if {
+      tga_data := convert_format tga_data from tga_comp to req_comp
+    }
+    tga_data
+  )

@@ -1,0 +1,405 @@
+Header
+
+  + name    := PROFIL_BLOCK;
+
+  /*Method with costomization*/
+
+Inherit
+
+  + parent_profil:Expanded PROFIL
+
+  + parent_type:Expanded TYPE
+
+Public
+
+  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  ( + result:TYPE_FULL
+    result := profil_slot.parameter_to_type p
+    result
+  )
+
+  - slot:SLOT <-
+  (
+    //crash_with_message "PROFIL_BLOCK.slot"
+    NULL
+  )
+
+  - type_c:STRING_ALIAS <- type_block.intern_name
+
+  + to_type_block:TYPE_BLOCK
+
+  + slot_self:SLOT_DATA
+  + slot_value:SLOT_DATA
+
+  - inc_id <-
+  (
+    slot_value.set_ensure_count (slot_value.ensure_count + 1)
+  )
+
+  - dec_id <-
+  (
+    slot_value.set_ensure_count (slot_value.ensure_count - 1)
+    ? {slot_value.ensure_count >= 0}
+  )
+
+  + context_extern:LOCAL
+
+  + profil_list:ARRAY PROFIL_SLOT
+  + node_list:ARRAY NODE_TYPE
+
+  - is_context_sensitive:BOOLEAN <- context_extern != NULL
+
+  //
+  // Creation.
+  //
+
+  - create base:ITM_BLOCK :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make base
+    result
+  )
+  
+  + index_copy:INTEGER
+  
+  - make base:ITM_BLOCK <-
+  ( + list:ITM_LIST
+    + old_node_list:ARRAY NODE_TYPE
+    + var:LOCAL
+    + old_list:LIST
+    + old_profil:PROFIL
+    + result:EXPR
+    + mul:EXPR_MULTIPLE
+    + rd:READ_LOCAL
+    + a_list:ARRAY TYPE_FULL
+    + r_list:ARRAY TYPE_FULL
+    + old_stack_top,old_bottom_index:INTEGER
+    + old_context:LOCAL
+
+    name := get_intern "value" type FALSE
+
+    (is_graph).if {
+      set_call := HMAP INTEGER KEY PROFIL.create
+      set_back := HSET(PROFIL).create
+    }
+
+    list := base.list
+    position := list.position
+    //stack_top := stack_local .upper + 1
+
+    PROFIL_LIST.add Self
+    type_self   := ITM_TYPE_SIMPLE.type_self.to_run_for profil_slot pos (position.prototype.filename)
+    default := TYPE_FULL.create Self with (
+      TYPE_FULL.expanded_bit | TYPE_FULL.default_expanded_bit
+    )
+    //
+    slot_self := SLOT_DATA.create position name "self" style '+' base NULL type type_self
+    slot_self.set_intern_name "self"
+    //
+    slot_value := SLOT_DATA.create position name "__id" style '+' base NULL type default
+    slot_value.set_intern_name "__id"
+    //
+    profil_list := ARRAY PROFIL_SLOT .create_with_capacity 2
+    node_list   := ARRAY NODE_TYPE .create_with_capacity 8
+    old_node_list := NODE.node_list
+    NODE.set_node_list node_list
+
+    // index TYPE
+    (index != 0).if {
+      crash_with_message "PROFIL_BLOCK: Saloooooope!"
+    }
+    //type_list.add_last Self
+    index := index_max
+    index_max := index_max + 1
+    index_copy := index
+
+    // Create code.
+    old_profil := profil_current
+    old_list   := list_current
+    profil_current := Self
+    list_current := LIST.create position
+
+    (old_stack_top,old_bottom_index,old_context) := ITM_OBJECT.push_context
+    // Add context debug.
+    (debug_level_option != 0).if {
+      context := TYPE_CONTEXT.default.new_local position name "__pos" style '+'
+      context.set_ensure_count 1
+      list_current.add_last (PUSH.create position context context first TRUE)
+    }
+
+    // Append arguments.
+    a_list := ALIAS_ARRAY TYPE_FULL .new
+    (base.argument != NULL).if {
+      //arg_type_tmp :=
+      argument_list := ARRAY LOCAL .create_with_capacity (base.argument.count+1)
+      argument_list.add_last NULL
+      base.argument.to_run_in argument_list for Self
+      1.to (argument_list.upper) do { j:INTEGER
+        a_list.add_last (argument_list.at j.type)
+      }
+    } else {
+      argument_list := ARRAY LOCAL .create 1
+    }
+    var := LOCAL.create position name "Self" style ' ' type type_self
+
+    argument_list.at 0 put var
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      stack_local.add_last (argument_list.at j)
+    }    
+    a_list := ALIAS_ARRAY TYPE_FULL .alias a_list
+    //
+    code := list_current
+    //
+    result := list.to_run_expr
+    // Result.
+    r_list := ALIAS_ARRAY TYPE_FULL .new
+    (result.static_type.raw != TYPE_VOID).if {
+      mul ?= result
+      (mul != NULL).if {
+        result_list := SLIM_ARRAY LOCAL .create_with_capacity (mul.count)
+        (mul.lower).to (mul.upper) do { j:INTEGER
+          rd ?= mul.at j
+          var := rd.local
+          var.set_style 'R'
+          result_list.add_last var
+          r_list.add_last (var.type)
+        }
+      } else {
+        rd ?= result
+        var := rd.local
+        var.set_style 'R'
+        result_list := SLIM_ARRAY LOCAL .create_with_capacity 1
+        result_list.add_last var
+        r_list.add_last (var.type)
+      }
+    } else {
+      result_list := SLIM_ARRAY LOCAL .create_with_capacity 0
+    }
+    result.remove; // BSBS: Il y a un petit gachi...
+    r_list := ALIAS_ARRAY TYPE_FULL .alias r_list
+    //
+    context_extern := ITM_OBJECT.context_extern
+    to_type_block  := TYPE_BLOCK.get_direct a_list and_result r_list
+    ITM_OBJECT.pop_context (old_stack_top,old_bottom_index,old_context)
+    //
+    NODE.set_node_list old_node_list
+    profil_current := old_profil
+    list_current := old_list
+  )
+
+  //
+  // Genere Profil.
+  //
+
+  - is_static:BOOLEAN <- TRUE
+
+  - genere_handler_intern <-
+  (
+    (is_context_sensitive).if {
+      warning_error (code.position,
+	"Compiler limit : This block is context sensitive, and \
+	\evaluation too far away from the context."
+      )
+    }
+    parent_profil.genere_handler_intern
+  )
+
+  //
+  // TYPE BLOCK.
+  //
+
+  - intern_name:STRING_ALIAS <- name
+
+  - write_argument args:ARRAY EXPR :ARRAY WRITE <-
+  ( + rd:READ
+    + rec:EXPR
+
+    rec := args.first
+    rd := slot_self.read (rec.position) with rec
+    args.at 0 put rd
+    parent_profil.write_argument args
+  )
+
+  - set_late_binding <-
+  (
+    type_block.set_late_binding
+  )
+
+  - link call:CALL_SLOT <-
+  (
+    (link_count = 0).if {
+      NODE.node_list.append_collection node_list
+    }
+    link_count := link_count + 1
+  )
+
+  - get_expr_result:EXPR <-
+  ( + result:EXPR
+    + lst:ARRAY EXPR
+    + loc:LOCAL
+    
+    ((result_list = NULL) || {result_list.is_empty}).if {
+      result := PROTOTYPE_CST.create (code.position) type (TYPE_VOID.default); //BSBS: Alias.
+    }.elseif {result_list.count > 1} then {
+      lst := ARRAY EXPR .create_with_capacity (result_list.count)
+      (result_list.lower).to (result_list.upper) do { k:INTEGER
+	loc := result_list.at k
+	lst.add_last (loc.type.get_temporary_expr (loc.position))
+      }
+      result := EXPR_MULTIPLE.create lst
+    } else {
+      loc := result_list.first
+      result := loc.type.get_temporary_expr (loc.position)
+    }
+    result
+  )
+  
+  - get_type_creation:TYPE <-
+  (
+    TYPE_CREATION(PROFIL_BLOCK).create_type_creation Self    
+  )
+
+  - is_block:BOOLEAN := TRUE
+
+  - Self:SELF '~=' Right 60 other:TYPE :BOOLEAN <-
+  (
+    other = to_type_block
+  )
+  
+  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
+  ( + result:BOOLEAN
+    + o:PROFIL_BLOCK
+    o ?= other
+    (o = NULL).if {
+      result := to_type_block == other
+    } else {
+      result := to_type_block == o.to_type_block
+    }
+    result
+  )
+  
+  - append_name_in buf:STRING_BUFFER <-
+  (
+    buf.add_last '{'
+    (argument_list.count > 1).if {
+      (argument_list.count > 2).if {
+        buf.add_last '('
+        (argument_list.lower+1).to (argument_list.upper-1) do { j:INTEGER
+          argument_list.at j.type.display buf
+          buf.add_last ','
+        }
+        argument_list.last.type.display buf
+        buf.add_last ')'
+      } else {
+        (argument_list.last = NULL).if {
+          buf.append "Arg0:<>"
+        } else {
+          argument_list.last.type.display buf
+        }
+      }
+      buf.add_last ';'
+      buf.add_last ' '
+    }
+    (result_list != NULL).if {
+      (result_list.lower).to (result_list.upper-1) do { j:INTEGER
+        result_list.at j.type.display buf
+        buf.add_last ','
+      }
+      (result_list.is_empty).if_false {
+        (result_list.last = NULL).if {
+          "PROFIL_BLOCK:type = NULL (bug)".println
+        } else {
+          result_list.last.type.display buf
+        }
+      }
+    }
+    buf.add_last '}'
+    // Debug
+    buf.append "(PROFIL_BLOCK)"
+  )
+  
+  - append_contract_name_in buf:STRING_BUFFER <- 
+  (
+    buf.append "block"
+    ((result_list != NULL) && {result_list.count = 1}).if {
+      buf.add_last '_'
+      result_list.last.type.append_contract_name_in buf
+    }
+  )
+  
+  - prototype:PROTOTYPE <- type_block.prototype
+
+  - subtype_list:HSET TYPE <- type_block.subtype_list
+  - add_subtype t:TYPE <- type_block.add_subtype t
+
+  - get_slot n:STRING_ALIAS :SLOT <-
+  (
+    type_block.get_slot n
+  )
+
+  - get_local_slot n:STRING_ALIAS :SLOT <-
+  (
+    type_block.get_local_slot n
+  )
+
+  - get_path_slot n:STRING_ALIAS :SLOT <-
+  (
+    type_block.get_path_slot n
+  )
+
+  - genere_struct <-
+  (
+    to_type_block.genere_struct
+  )
+
+  //
+  // Code source generation.
+  //
+
+  - put_id buffer:STRING_BUFFER <- index.append_in buffer
+
+  - put_access_id e:EXPR <-
+  (
+    e.genere
+    output.append ".__id"
+  )
+
+  - put_value buffer:STRING_BUFFER <-
+  (
+    index.append_in buffer
+  )
+
+  - put_expanded_declaration buffer:STRING_BUFFER <-
+  (
+    // BSBS: A revoir car c'est un gros bordel entre PROFIL_BLOCK et TYPE_BLOCK!
+    buffer.append "__"
+    buffer.append type_c
+  )
+
+Public
+
+  - is_sub_type other:TYPE :BOOLEAN <-
+  ( + result:BOOLEAN
+    + t:TYPE_BLOCK
+    result := Self ~= other
+    (result).if_false {
+      t ?= other      
+      result := (
+        (t != NULL) && {to_type_block.is_invariant_type_arg t} &&
+        {(to_type_block.is_sub_type_result t) || {t.result_list.is_empty}}
+        /* BSBS: t.result_list.is_empty NO ERROR RESULT */
+      )
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "BLOCK SEND "
+    append_type buffer
+  )

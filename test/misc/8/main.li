@@ -1,0 +1,16 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - foo x:INTEGER <-
+  ( + foo:INTEGER; // pourquoi pas
+    
+    foo := x
+  )
+
+  - main <-
+  ( 
+    foo(3)
+  )

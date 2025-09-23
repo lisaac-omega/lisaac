@@ -1,0 +1,259 @@
+Header
+
+  + name        := TYPE_GENERIC;
+
+  /*Type generic*/
+
+Inherit
+
+  + parent_type:Expanded TYPE
+
+Private
+
+  // BSBS: Vu que les ITM_TYPE sont aliaser, il n'est pas necessary d'aliaser les TYPE !
+  // Mais attention au pb des TYPE_GENERIC et de leur alias de slot_run...
+
+  - dicog_type:HMAP TYPE_GENERIC KEY STRING_ALIAS :=
+  HMAP TYPE_GENERIC KEY STRING_ALIAS.create
+
+Public
+
+  + name:STRING_ALIAS
+
+  + key:STRING_ALIAS
+
+  + generic_list:ARRAY TYPE_FULL
+
+  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  ( + idx:INTEGER
+    + tab:ARRAY ITM_TYPE_PARAMETER
+    + result:TYPE_FULL
+
+    tab := prototype.idf_generic_list
+    idx := tab.fast_first_index_of p
+    (idx <= tab.upper).if {
+      result := generic_list.at idx
+    }
+    result
+  )
+
+  //
+  // Detect Alias.
+  //
+
+  - detect_alias <-
+  (
+    (dicog_type.lower).to (dicog_type.upper) do { j:INTEGER
+      dicog_type.at j.detect_alias_struct
+    }
+  )
+
+
+  //
+  // Import / Export
+  //
+
+  - is_export_to t:TYPE_FULL :BOOLEAN <-
+  (
+    is_cast t with "to_" on export_list and (prototype.import_list)
+  )
+
+  - is_import_to t:TYPE_FULL :BOOLEAN <-
+  (
+    is_cast t with "from_" on import_list and (prototype.import_list)
+  )
+
+Private
+
+  + export_list:ARRAY TYPE_FULL
+  + import_list:ARRAY TYPE_FULL
+
+  - is_cast t:TYPE_FULL with msg:STRING_ALIAS
+  on  lst:ARRAY TYPE_FULL
+  and lstp:ITM_TYPE :BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+
+    (lst != NULL).if {
+      j := lst.fast_first_index_of t
+      (j <= lst.upper).if {
+	result := TRUE
+	last_cast_name.copy msg
+	lstp.at j.append_cast_name_in last_cast_name
+      }
+    }
+    result
+  )
+
+Public
+
+  //
+  // Get
+  //
+
+  - get itm_typ:ITM_TYPE_SIMPLE :TYPE_FULL <-
+  (
+    crash_with_message "`get' in TYPE_GENERIC !";
+    NULL
+  )
+
+  - get (path:STRING_ALIAS,itm_typ:ITM_TYPE_SIMPLE) with gen:ARRAY TYPE_FULL :TYPE_FULL <-
+  ( + base:TYPE_GENERIC
+    + result,t:TYPE_FULL
+    + k:STRING_ALIAS
+    + proto:PROTOTYPE
+    + styl:UINTEGER_8
+
+    proto := load_prototype (path,itm_typ.name) generic_count (gen.count)
+    string_tmp.copy (proto.filename)
+    (gen.lower).to (gen.upper) do { j:INTEGER
+      string_tmp.add_last ' '
+      t := gen.at j
+      (t.flag & 1111b).append_in string_tmp
+      string_tmp.append (t.raw.key);  // BSBS: transformer la key par un numero de fichier...
+      // BSBS: parce que la, tu as des key immense ! (prends l'index de file_list)
+    }
+    k := string_tmp.to_string_alias
+    //
+    base := dicog_type.fast_reference_at k
+    (base = NULL).if {
+      base := TYPE_GENERIC.clone
+      dicog_type.fast_put base to k
+      base.make itm_typ with proto generic gen key k
+    }
+    //
+    styl := itm_typ.style
+    (styl = 0).if {
+      result := base.default
+    } else {
+      result := base.default + styl
+    }
+    result
+  )
+  
+  - Self:SELF '==' Right 60 other:E :BOOLEAN <- 
+  ( + result:BOOLEAN
+    + i:INTEGER
+    + o:TYPE_GENERIC
+    o ?= other
+    result := (o != NULL) && {name = other.name}
+    (result).if {
+      i := generic_list.lower
+      {(result) && {i <= generic_list.upper}}.while_do {
+        result := generic_list.at i == o.generic_list.at i
+        i := i + 1
+      }
+    }
+    result
+  )
+  
+  - get_type_creation:TYPE <-
+  (
+    TYPE_CREATION(TYPE_GENERIC).create_type_creation Self
+  )
+
+  //
+  // Life Type for collection (see PUT_TO and ITEM)
+  //
+
+  + native_array_variable:VARIABLE
+
+Public
+
+  //
+  // Declaration generation.
+  //
+
+  - put_reference_declaration buffer:STRING_BUFFER <-
+  (
+    (prototype.name = "NATIVE_ARRAY").if {      
+      generic_list.first.genere_declaration buffer
+    }.elseif {prototype.name = "NATIVE_ARRAY_VOLATILE"} then {
+      buffer.append "volatile "
+      generic_list.first.genere_declaration buffer
+    } else {            
+      parent_type.put_reference_declaration buffer
+    }
+  )
+
+  - put_reference_star_declaration buffer:STRING_BUFFER <-
+  (
+    (
+      (prototype.name = "NATIVE_ARRAY") ||
+      {prototype.name = "NATIVE_ARRAY_VOLATILE"}
+    ).if {      
+      buffer.add_last '*'
+      generic_list.first.genere_star_declaration buffer
+    } else {
+      parent_type.put_reference_star_declaration buffer
+    }
+  )
+
+Public
+
+  - paper_list:ARRAY TYPE_GENERIC := ARRAY TYPE_GENERIC.create_with_capacity 8192
+
+  - make itm_typ:ITM_TYPE_SIMPLE with proto:PROTOTYPE
+  generic gen:ARRAY TYPE_FULL key k:STRING_ALIAS <-
+  ( + mask_bit:UINTEGER_8
+    + typ:ITM_TYPE
+
+    //type_list.add_last Self
+    index     := index_max
+    index_max := index_max + 1
+    //
+    string_tmp.copy (itm_typ.name)
+    string_tmp.add_last '('
+    (gen.lower).to (gen.upper - 1) do { j:INTEGER
+      gen.at j.append_name_in string_tmp
+      string_tmp.add_last ','
+    }
+    gen.last.append_name_in string_tmp
+    string_tmp.add_last ')'
+    name := string_tmp.to_string_alias
+    key := k
+    generic_list := gen
+        
+    intern_name := get_intern name type TRUE
+    (itm_typ.name = "NATIVE_ARRAY").if {
+      native_array_variable := SLOT_DATA.create (proto.position) name intern_name type (gen.first)
+      //native_array_variable := VARIABLE.create (proto.position) name intern_name type (gen.first)
+      paper_list.add_last Self
+    }
+
+    //
+    prototype   := proto
+    itm_type    := itm_typ
+    slot_run    := ARRAY SLOT.create_with_capacity 10; // BSBS: A voir.
+    (prototype.type_style = "Expanded").if {
+      // Expanded.
+      mask_bit := TYPE_FULL.expanded_bit | TYPE_FULL.default_expanded_bit
+    }.elseif {prototype.type_style = "Strict"} then {
+      // Strict.
+      mask_bit := TYPE_FULL.strict_bit | TYPE_FULL.default_strict_bit
+    }
+    default := TYPE_FULL.create Self with mask_bit
+    prototype.init_slot_for Self
+    //
+    subtype_list := HSET(TYPE).create
+    subtype_list.fast_add TYPE_NULL
+    add_subtype Self
+    // BSBS: Size ???
+
+    // Import / Export.
+    (prototype.export_list != NULL).if {
+      typ := prototype.export_list
+      export_list := ARRAY TYPE_FULL.create_with_capacity (typ.count)
+      (typ.lower).to (typ.upper) do { j:INTEGER
+        export_list.add_last (typ.at j.to_run_for Self pos (prototype.filename))
+      }
+    }
+    (prototype.import_list != NULL).if {
+      typ := prototype.import_list
+      import_list := ARRAY TYPE_FULL.create_with_capacity (typ.count)
+      (typ.lower).to (typ.upper) do { j:INTEGER
+        import_list.add_last (typ.at j.to_run_for Self pos (prototype.filename))
+      }
+    }
+  )
+

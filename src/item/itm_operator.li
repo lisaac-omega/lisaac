@@ -1,0 +1,54 @@
+Header
+
+  + name        := ITM_OPERATOR;
+
+  /*operator list message*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  + name:STRING_ALIAS
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION name n:STRING_ALIAS :SELF <-
+  [
+    -? {p.code != 0}
+  ]
+  ( + result:SELF
+    result := clone
+    result.make p name n
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS <-
+  (
+    position := p
+    name := n
+  )
+
+  //
+  // Runnable.
+  //
+
+  - to_run_expr:EXPR <-
+  (
+    crash_with_message "ITM_OPERATOR.to_run_expr"
+    NULL
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+  )
+
+

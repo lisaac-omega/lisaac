@@ -1,0 +1,13 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  + foo:INTEGER
+  
+  - main <-
+  ( + foo:INTEGER
+    
+    foo := 1; // qui c'est qui qu'on écrit ?
+  )

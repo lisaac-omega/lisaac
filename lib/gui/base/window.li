@@ -1,0 +1,89 @@
+Header
+  + name := WINDOW;
+  /*
+  X Window
+  */
+  
+Inherit
+  + parent_win:Expanded WIN
+  
+Public
+  
+  + pen:PEN
+  - set_pen p:PEN <- ( pen := p; )
+  
+  + win_ptr:POINTER
+  + fullscreen:BOOLEAN
+  
+  - window:WINDOW <- Self
+  
+  + refresh_ok:BOOLEAN
+  - ask_refresh <- ( refresh_ok := FALSE; )
+  
+  - get_pos:(REAL_32,REAL_32) <-
+  ( + x,y:INTEGER
+    (x,y) := PAPER.get_window_pos win_ptr
+    x.to_real_32, y.to_real_32
+  )
+  
+  - get_cursor_pos:(REAL_32,REAL_32) <-
+  ( + x,y:INTEGER
+    (x,y) := PAPER.get_cursor_pos win_ptr
+    x.to_real_32, y.to_real_32
+  )
+  
+  - set_pos (x,y:REAL_32) :SELF <-
+  ( PAPER.set_window win_ptr pos (x.to_integer,y.to_integer); Self)
+  
+  - size (w,h:REAL_32) :SELF <-
+  ( parent_win.size (w,h)
+    (! win_ptr.is_null).if { PAPER.set_window win_ptr size (w.to_integer,h.to_integer); }
+    ask_refresh
+    Self
+  )
+  
+  - draw_all <-
+  (
+    //"Begin Frame".println
+    //(pen.states != NULL).if { "OK1".println; } else { "no1".println; }
+    parent_pen := pen
+    //(pen.states != NULL).if { "OK2".println; } else { "no2".println; }
+    //(states != NULL).if { "OK3".println; } else { "no3".println; }
+    pen.load_gl
+    begin_frame (width.to_integer,height.to_integer) ratio 1.0; //px_ratio
+    (! refresh_ok).if { refresh_ok := TRUE; refresh; }
+    draw
+    draw_child
+    draw_forward
+    end_frame
+    //"End Frame".println
+  )
+  
+  - init p:WIN :SELF <-
+  [ ? {p = NULL}; ]
+  (
+    win_ptr := PAPER.create_window (width.to_integer,height.to_integer) title id_name for Self
+    // BSBS: Bug Old compilo:
+    child.add_last WIN
+    child.remove_last
+    (SYSTEM.name != "Android").if {
+      // BSBS: Bug dans PEN...
+      detect_memory_leak := FALSE
+      pen := PEN.new_pen
+      detect_memory_leak := Old detect_memory_leak
+    }
+    (FONT.n_sys.at 0 = NULL).if {
+      FONT.load_default
+      FONT.load pen
+    }
+    Self
+  )
+  
+  - init n:STRING_ALIAS size (w,h:INTEGER) :SELF <-
+  (
+    (id_name,width,height) := (n,w,h)
+    init NULL
+  )
+    
+  - mouse_scroll (dx,dy:REAL_64) <- ( abstract; )
+  

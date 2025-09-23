@@ -1,0 +1,157 @@
+Header
+
+  + name    := ITM_WRITE;
+
+  /*Parent for all write*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  //
+  // Data
+  //
+
+  + assign:ITM_CODE
+
+  + value:ITM_CODE
+
+  - type:STRING_ALIAS <-
+  (
+    abstract
+    NULL
+  )
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION assign n:ITM_CODE with v:ITM_CODE :SELF <-
+  [ -? {p != 0}; ]
+  ( + result:SELF
+    result := clone
+    result.make p assign n with v
+    result
+  )
+
+  - make p:POSITION assign n:ITM_CODE with v:ITM_CODE <-
+  (
+    position := p
+    assign   := n
+    value    := v
+  )
+
+  //
+  // Access.
+  //
+
+  - get_simple_name:STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    + without_arg:ITM_READ
+
+    without_arg ?= assign
+    (without_arg != NULL).if {
+      result := without_arg.name
+    } else {
+      semantic_error (position,"ITM_WRITE: Not yet implemented.")
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    assign.append_in buffer
+    buffer.append type
+    value.append_in buffer
+  )
+
+Private
+
+  - affect name:STRING_ALIAS with v:EXPR :EXPR <-
+  ( + loc:LOCAL
+    + result:EXPR
+
+    loc := lookup name
+    (loc != NULL).if {
+      result := affect_local loc with v
+    } else {
+      result := affect_slot name with v
+    }
+    result
+  )
+
+  - affect_local loc:LOCAL with v:EXPR :EXPR <-
+  ( + e:INSTR
+    + result:EXPR
+    + val:EXPR
+
+    (loc.style = '-').if {
+      result := affect_slot (loc.intern_name) with v
+    } else {
+      (loc.style = ' ').if {
+	POSITION.put_error semantic text "Argument assignment is not possible."
+	loc.position.put_position
+	position.put_position
+	POSITION.send_error
+      }
+      val := v.check_type (loc.type) with position
+      e := loc.write position value val
+      list_current.add_last e
+      result := loc.read position
+    }
+    result
+  )
+
+  - affect_slot name:STRING_ALIAS with v:EXPR :EXPR <-
+  ( + loc:VARIABLE
+    + slot:SLOT
+    + slot_dta:SLOT_DATA
+    + node:NODE
+    + result:EXPR
+    + rec:EXPR
+    + typ:TYPE
+    + em:EXPR_MULTIPLE
+    + new_val:EXPR
+    + lst:ARRAY EXPR
+
+    loc := lookup "Self"
+    rec := loc.read position
+    //
+    typ := rec.static_type.raw
+    slot := typ.get_slot name
+    (slot = NULL).if {
+      string_tmp.copy "Slot `";
+      string_tmp.append name
+      string_tmp.append "' not found in static type "
+      typ.append_name_in string_tmp
+      string_tmp.add_last '.'
+      semantic_error (position,string_tmp)
+    }
+    // Control type.
+    em ?= v
+    slot_dta := slot.slot_data
+    (em != NULL).if {
+      lst := em.expr_list
+      (lst.lower).to (lst.upper - 1) do { j:INTEGER
+	new_val := (lst.at j).check_type (slot.slot_data_list.at j.type) with (slot.position)
+	lst.at j put new_val
+      }
+      new_val := (lst.last).check_type (slot_dta.type) with (slot.position)
+      lst.at (lst.upper) put new_val
+      new_val := em
+    } else {
+      new_val := v.check_type (slot_dta.type) with (slot.position)
+    }
+    //
+    node := NODE.new_write position slot slot receiver rec value new_val
+    list_current.add_last node
+    result := node.result_expr
+    result
+  )
+

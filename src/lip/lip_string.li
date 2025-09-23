@@ -1,0 +1,123 @@
+Header
+
+  + name      := LIP_STRING;
+
+Inherit
+
+  + parent_lip_constant:Expanded LIP_CONSTANT
+
+Private
+
+  - storage:ARRAY LIP_STRING := ARRAY LIP_STRING .create_with_capacity 10
+
+Public
+
+  + value:STRING_ALIAS
+
+  - set_value v:STRING_ALIAS <-
+  (
+    value := v
+  )
+
+  //
+  // Creation.
+  //
+
+  - get str:STRING_ALIAS :LIP_STRING <-
+  ( + result:LIP_STRING
+    (storage.is_empty).if {
+      result := clone
+    } else {
+      result := storage.last
+      storage.remove_last
+    }
+    result.set_value str
+    result
+  )
+
+  - free <-
+  (
+    storage.add_last Self
+  )
+
+  //
+  // Operation.
+  //
+
+  - name:STRING_ALIAS <- "STRING"
+
+  - copy:LIP_CONSTANT <-
+  (
+    get value
+  )
+
+  - print <-
+  (
+    string_tmp.clear
+    append_in string_tmp
+    string_tmp.print
+  )
+
+  - append_in str:STRING_BUFFER <-
+  ( + i:INTEGER
+    + car:CHARACTER
+
+    i := value.lower
+    {i <= value.upper}.while_do {
+      car := value.at i
+      (car = '\\').if {
+        i := i + 1
+        (i <= value.upper).if {
+          car := value.at i
+          (car)
+          .when 'a'  then { str.add_last '\a'; }
+          .when 'b'  then { str.add_last '\b'; }
+          .when 'f'  then { str.add_last '\f'; }
+          .when 'n'  then { str.add_last '\n'; }
+          .when 'r'  then { str.add_last '\r'; }
+          .when 't'  then { str.add_last '\t'; }
+          .when 'v'  then { str.add_last '\v'; }
+          .when '\\' then { str.add_last '\\'; }
+          .when '?'  then { str.add_last '\?'; }
+          .when '\'' then { str.add_last '\''; }
+          .when '\"' then { str.add_last '\"'; }
+        } else {
+          str.add_last car
+        }
+      } else {
+        str.add_last car
+      }
+      i := i + 1
+    }
+  )
+
+LIP_CONSTANT
+
+  - my_copy other:SELF :LIP_CONSTANT <-
+  (
+    value := other.value
+    Self
+  )
+
+  - Self:SELF '=#'  other:SELF :LIP_CONSTANT <-
+  (
+    other.free
+    free
+    LIP_BOOLEAN.get (value = other.value)
+  )
+
+  - Self:SELF '!=#' other:SELF :LIP_CONSTANT <-
+  (
+    other.free
+    free
+    LIP_BOOLEAN.get (value != other.value)
+  )
+
+  - Self:SELF '+#'  other:SELF :LIP_CONSTANT <-
+  (
+    string_tmp.copy value
+    string_tmp.append (other.value)
+    value := string_tmp.to_string_alias
+    other.free
+    Self
+  )

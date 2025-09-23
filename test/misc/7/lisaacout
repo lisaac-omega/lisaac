@@ -1,0 +1,10 @@
+--SEMANTIC---------
+Double slot declaration.
+Line 7 column 7 in MAIN(.../test/misc/7/main.li):
+  - foo:INTEGER
+       ^
+
+Line 9 column 18 in MAIN(.../test/misc/7/main.li):
+  - foo x:INTEGER <- ( )
+                  ^
+Load lip file: /home/colnet/lisaac/test/misc/7/../../../make.lip

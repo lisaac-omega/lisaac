@@ -1,0 +1,96 @@
+Header
+
+  + name := MANDELBROT2;
+  /*
+  Mandelbrot set generation shootout benchmarck, based on the C version
+  */
+  
+    
+Inherit
+  
+  - parent_clone : CLONE := CLONE
+  
+Public
+  
+  - display c:UINTEGER_8 <-
+  ( + r:CHARACTER
+    c
+    .when   0 to  15 then { r:=' '; }
+    .when  16 to  31 then { r:='.'; }
+    .when  32 to  47 then { r:='-'; }
+    .when  48 to  63 then { r:=':'; }
+    .when  64 to  79 then { r:=';'; }
+    .when  80 to  95 then { r:='^'; }
+    .when  96 to 111 then { r:='~'; }
+    .when 112 to 127 then { r:='|'; }
+    .when 128 to 143 then { r:='o'; }
+    .when 144 to 159 then { r:='+'; }
+    .when 160 to 175 then { r:='*'; }
+    .when 176 to 191 then { r:='%'; }
+    .when 192 to 207 then { r:='Y'; }
+    .when 208 to 223 then { r:='G'; }
+    .when 224 to 239 then { r:='@'; }
+    .when 240 to 255 then { r:='#'; }
+    r.print
+    r.print
+  )
+  
+  - main <-
+  ( + size, i, iter: INTEGER
+    + zr, zi, cr, ci, pr, pi, limit: REAL_64
+    + stop, gone: BOOLEAN
+    + bit, bit_accu: UINTEGER_8
+    
+    size := 300
+      
+    // compute mandelbrot's bitmap
+    limit := 4.0
+    iter  := 2_000_000
+    bit   := 080h
+    0.to (size-1) do { y:INTEGER
+      ci := (y * 2).to_real_64 / size - 1.0
+
+      0.to (size-1) do { x:INTEGER
+        cr := (x * 2).to_real_64 / size - 1.5
+
+        zr:=zi:=pr:=pi:=0
+        i := 0
+        stop := FALSE
+        {stop}.until_do {
+          zi := zr * zi * 2 + ci
+          zr := pr - pi + cr
+          pi := zi * zi
+          pr := zr * zr
+          (pi+pr > limit).if {
+            stop := TRUE
+            gone := TRUE
+          } else {
+            i := i+1
+            stop := (i = iter)
+          }
+        }
+
+        (gone).if {
+          gone := FALSE
+        } else {
+          bit_accu := bit_accu | bit
+        }
+
+        (bit = 1).if {
+          display bit_accu
+          '.'.print
+          bit_accu := 0
+          bit := 80h
+        } else {
+          bit := bit >> 1
+        }
+      }
+      
+      (bit != 80h).if {
+        display bit_accu
+        bit_accu := 0
+        bit := 80h
+      }
+      '\n'.print
+    }
+  )

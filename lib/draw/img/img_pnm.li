@@ -1,0 +1,102 @@
+Header  
+  + name := IMG_PNM;
+  /*
+    Portable Gray Map and Portable Pixel Map loader
+     
+    Known limitations:
+      Does not support comments in the header section
+      Does not support ASCII image data (formats P2 and P3)
+      Does not support 16-bit-per-channel
+  */
+  
+Inherit
+  - parent_image:IMAGE := IMAGE
+  
+Public
+  
+  - name:STRING_ALIAS := "PnM: PPM - Portable PixMap / PGM - Portable GrayMap"
+  
+  - is_binary:BOOLEAN
+  
+  - test:BOOLEAN <-
+  ( + p, t:CHARACTER
+    rewind
+    p := get8.to_character
+    t := get8.to_character
+    ((p = 'P') && {(t = '5') || {t = '6'} || {t = '2'} || {t = '3'}}).if { 
+      is_binary := (t = '5') || {t = '6'}
+      img_n := ((t = '6') || {t = '3'}).ok 3 or 1; // '5' is 1-component .pgm; '6'/'3' is 3-component .ppm 
+      get8
+    }
+  )
+  
+  - info:BOOLEAN <-
+  ( + result:BOOLEAN
+    (test).if {      
+      skip_space
+      img_x := get_integer; // read width
+      skip_space
+      img_y := get_integer; // read height
+      skip_space
+      result := get_integer <= 255; // read max value
+    }
+    result
+  )
+  
+  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
+  ( + out:NATIVE_ARRAY UINTEGER_8
+    + siz:INTEGER
+    (info).if {
+      siz := img_n * img_x * img_y
+      out := NATIVE_ARRAY UINTEGER_8.create siz
+      (((is_binary) && {getn out size siz}) || {get_ascii out size siz}).if {        
+        ((req_comp != 0) && {req_comp != img_n}).if {
+          out := convert_format out from img_n to req_comp
+        }
+      } else {
+        //FREE out
+        out := NULL
+      }
+    }
+    out
+  )
+
+Private
+  
+  - get_ascii out:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :BOOLEAN <-
+  ( + i,v:INTEGER
+    {(! at_eof) && {i < s} && {v != -1}}.while_do {
+      skip_space
+      v := get_integer
+      (v >= 0).if { 
+        out.at i put (v.to_integer)
+        i := i + 1
+      }
+    }
+    i = s
+  )
+  
+  - skip_space <-
+  ( 
+    {(! at_eof) && {(last_get8.to_character.is_separator) || {last_get8 = '#'}}}.while_do {
+      (last_get8.to_character = '#').if { // Skip comment.
+        get8
+        {(! at_eof) && {get8.to_character != '\n'}}.while_do { }
+      } else {
+        get8
+      }
+    }
+  )
+
+  - get_integer:INTEGER <-
+  ( + value:INTEGER
+    ((! at_eof) && {last_get8.to_character.is_digit}).if {      
+      {(! at_eof) && {last_get8.to_character.is_digit}}.while_do {
+        value := value * 10 + (last_get8 - '0'.to_integer)
+        get8
+      }
+    } else {
+      value := -1
+    }
+    value
+  )

@@ -1,0 +1,16 @@
+Header
+
+  + name        := PARENT_PLUS_EXPANDED; // OBJ can to be clonable.
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Private
+
+  + parent_value_plus_expanded:INTEGER
+
+  - set_parent_value_plus_expanded new:INTEGER <-
+  (
+    parent_value_plus_expanded := new
+  )

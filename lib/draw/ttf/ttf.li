@@ -1,0 +1,624 @@
+Header  
+  + name := TTF;
+  /*PACK_CONTEXT*/
+  
+Inherit
+  - parent_ttf_constant:TTF_CONSTANT := TTF_CONSTANT
+  
+Public
+  
+  + user_allocator_context:NATIVE_ARRAY UINTEGER_8
+  + pack_info:CONTEXT
+  + width:INTEGER_32
+  + height:INTEGER_32
+  + stride_in_bytes:INTEGER_32
+  + padding:INTEGER_32
+  + h_oversample:UINTEGER_32
+  + v_oversample:UINTEGER_32
+  + pixels:ARRAY UINTEGER_8
+  + nodes:ARRAY UINTEGER_8; // NODE (x:INTEGER_8)
+
+/*
+unsigned char ttf_buffer[1<<20]
+unsigned char temp_bitmap[512*512]
+
+stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
+GLuint ftex
+
+void my_stbtt_initfont(void)
+{
+   fread(ttf_buffer, 1, 1<<20, fopen("c:/windows/fonts/times.ttf", "rb"))
+   stbtt_BakeFontBitmap(ttf_buffer,0, 32.0, temp_bitmap,512,512, 32,96, cdata); // no guarantee this fits!
+   // can free ttf_buffer at this point
+   glGenTextures(1, &ftex)
+   glBindTexture(GL_TEXTURE_2D, ftex)
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap)
+   // can free temp_bitmap at this point
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+}
+
+void my_stbtt_print(float x, float y, char *text)
+{
+   // assume orthographic projection with units = screen pixels, origin at top left
+   glEnable(GL_TEXTURE_2D)
+   glBindTexture(GL_TEXTURE_2D, ftex)
+   glBegin(GL_QUADS)
+   while (*text) {
+      if (*text >= 32 && *text < 128) {
+         stbtt_aligned_quad q
+         stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
+         glTexCoord2f(q.s0,q.t1); glVertex2f(q.x0,q.y0)
+         glTexCoord2f(q.s1,q.t1); glVertex2f(q.x1,q.y0)
+         glTexCoord2f(q.s1,q.t0); glVertex2f(q.x1,q.y1)
+         glTexCoord2f(q.s0,q.t0); glVertex2f(q.x0,q.y1)
+      }
+      ++text
+   }
+   glEnd()
+}
+*/
+
+  - isfont font:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
+  (
+    // check the version number
+    (tag4 font with ('1',0,0,0)) || // TrueType 1
+    {tag font with "typ1"}       || // Type 1 font -- No support!
+    {tag font with "OTTO"}       || // OpenType with CFF
+    {tag4 font with (0,1,0,0)}    // OpenType 1.0
+  )
+
+  - get_font_offset font_collection:NATIVE_ARRAY UINTEGER_8 
+  for_index index:INTEGER :INTEGER <- 
+  ( + n:INTEGER_32
+    + result:INTEGER
+    // if it's just a font, there's only one valid index
+    (isfont font_collection).if {
+      result := (index = 0).ok 0 or (-1)
+    } else {
+      // check if it's a TTC
+      result := -1
+      (tag font_collection with "ttcf").if {
+        // version 1?
+        ((ttulong(font_collection+4) = 00010000h) || 
+        {ttulong(font_collection+4) = 00020000h}).if {
+          n := ttlong(font_collection+8)
+          (index < n).if {
+            result := ttulong(font_collection+12+index*4)
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - get_glyph_bitmap info:FONTINFO scale (scale_x,scale_y:REAL_32) 
+  glyph glyf:INTEGER :(BITMAP,INTEGER,INTEGER) <-
+  (
+    get_glyph_bitmap_subpixel info scale (scale_x, scale_y)
+    shift (0.0,0.0) glyph glyf
+  )
+
+  - make_codepoint_bitmap info:FONTINFO output output:ARRAY UINTEGER_8
+  size (out_w,out_h:INTEGER) stride out_stride:INTEGER  
+  scale (scale_x,scale_y:REAL_32) glyph codepoint:INTEGER <-
+  (
+    make_codepoint_bitmap_subpixel info output output size (out_w,out_h) 
+    stride out_stride scale (scale_x, scale_y) shift (0.0,0.0) glyph codepoint
+  )
+
+  // bitmap baking
+
+  - bake_font_bitmap(data:ARRAY UINTEGER_8,offset:INTEGER)  
+  height pixel_height:REAL_32 img pixels:ARRAY UINTEGER_8 
+  size (pw,ph:INTEGER) first (first_char,num_chars:INTEGER)
+  to chardata:ARRAY BACKED_CHAR :INTEGER <-
+  ( + scale:REAL_32
+    + x,y,bottom_y, i:INTEGER
+    + f:Expanded FONTINFO
+    
+    f.init_font data start offset
+    
+    0.to (pw*ph) do { i:INTEGER; pixels.put 0 to i; }; // background of 0 around pixels
+    x := y := 1
+    bottom_y := 1
+
+    scale := f.scale_for_pixel_height pixel_height
+
+    0.to (num_chars-1) do { i:INTEGER
+      + advance, lsb, x0,y0,x1,y1,gw,gh,g:INTEGER
+      
+      g := f.find_glyph_index (first_char + i)
+      (advance,lsb) := f.get_glyph_h_metrics g
+      (x0,y0,x1,y1) := f.get_glyph_bitmap_box g scale (scale,scale)
+      gw := x1-x0
+      gh := y1-y0
+      (x + gw + 1 >= pw).if {
+        y := bottom_y; x := 1; // advance to next row
+      }
+      // check if it fits vertically AFTER potentially moving to next row
+      (y + gh + 1 >= ph).if { // BSBS: Pas utile.
+        crash_with_message "TTF: l.560"
+      }
+      ? {x+gw < pw}
+      ? {y+gh < ph}
+      make_glyph_bitmap f output (pixels+x+y*pw) size (gw,gh) 
+      stride pw scale (scale,scale) glyph g
+      
+      chardata.item i.make (x.to_integer_16,y.to_integer_16)
+      to ((x + gw).to_integer_16,(y + gh).to_integer_16)
+      offset (x0.to_real_32,y0.to_real_32) 
+      to (0.0,0.0) // ??? Pas sur !
+      xadvance (scale * advance)
+      
+      x := x + gw + 1
+      (y+gh+1 > bottom_y).if {
+        bottom_y := y+gh+1
+      }
+    }
+    bottom_y
+  )
+
+  // bitmap baking
+
+  - pack_begin pixel:ARRAY UINTEGER_8
+  size (pw,ph,stride,pad:INTEGER) 
+  alloc alloc_ctxt:NATIVE_ARRAY UINTEGER_8 :INTEGER <-
+  ( not_yet_implemented
+    /*
+    + node:ARRAY NODE
+    + ctxt:CONTEXT
+    
+    ctxt := CONTEXT.create
+    node := ARRAY NODE.create_with_capacity (pw - pad)
+
+    user_allocator_context := alloc_ctxt
+    width := pw
+    height := ph
+    pixels := pixel
+    pack_info := ctxt
+    nodes := node
+    padding := pad
+    stride_in_bytes := (stride != 0).ok stride or pw
+    h_oversample := 1
+    v_oversample := 1
+    ctxt.init_target(pw-pad, ph-pad)
+    (pixel).if {
+      pixel.set_all 0
+    }; */
+  )
+/*  
+  - pack_end spc:PACK_CONTEXT <-
+  (
+    not_yet_implemented
+    //STBTT_free(spc->nodes    , spc->user_allocator_context)
+    //STBTT_free(spc->pack_info, spc->user_allocator_context)
+  )
+
+  - pack_set_oversampling spc:PACK_CONTEXT
+  size (h_oversample,v_oversample:UINTEGER) <-
+  (
+    ? {h_oversample <= max_oversample}
+    ? {v_oversample <= max_oversample}
+    (h_oversample <= max_oversample).if {
+      spc.set_h_oversample h_oversample
+    }
+    (v_oversample <= max_oversample).if {
+      spc.set_v_oversample v_oversample
+    }
+  )
+*/
+Private
+  /*
+  - buffer:ARRAY UINTEGER_8 := 
+  ARRAY UINTEGER_8.create_with_capacity max_oversample
+  */
+Public
+  /*
+  - h_prefilter (pixels:ARRAY UINTEGER_8) 
+  size (w,h,stride_in_bytes:INTEGER) 
+  width kernel_width:UINTEGER <-
+  ( + safe_w:INTEGER
+    + total,ofs,ofs2:UINTEGER
+    safe_w := w - kernel_width
+    0.to (h-1) do { j:INTEGER
+      buffer.make kernel_width
+      total := 0
+      ofs2 := ofs
+      0.to safe_w do { i:INTEGER
+        total := total + pixels.item ofs2 - buffer.item (i & over_mask)
+        buffer.put (pixels.item ofs2) to (buffer.item ((i+kernel_width)&over_mask))
+        pixels.put ((total / kernel_width).to_uinteger_8) to ofs2
+        ofs2 := ofs2 + 1
+      }
+      (safe_w+1).to (w-1) do { i:INTEGER
+        ? {pixels.item ofs2 = 0}
+        total := total - buffer.item (i & over_mask)
+        pixels.put ((total / kernel_width).to_uinteger_8) to ofs2
+        ofs2 := ofs2 + 1
+      }
+      ofs := ofs + stride_in_bytes
+    }
+  )
+
+  - v_prefilter (pixels:ARRAY UINTEGER_8) 
+  size (w,h,stride_in_bytes:INTEGER)
+  width kernel_width:UINTEGER <-
+  ( + safe_h,ofs:INTEGER
+    + total:UINTEGER
+    
+    safe_h := h - kernel_width
+    0.to (w-1) do { j:INTEGER
+      buffer.make kernel_width
+      total := 0
+      ofs := j
+      0.to safe_h do { i:INTEGER
+        total := total+pixels.item ofs-buffer.item (i & over_mask)
+        buffer.put (pixels.item ofs) to ((i+kernel_width) & over_mask)
+        pixels.put ((total / kernel_width).to_uinteger_8) to ofs
+        ofs := ofs + stride_in_bytes
+      }
+      (safe_h+1).to (h-1) do { i:INTEGER
+        ? {pixels.item ofs = 0}
+        total := total - buffer.item (i & over_mask)
+        pixels.put ((total / kernel_width).to_uinteger_8) to ofs
+        ofs := ofs + stride_in_bytes
+      }
+    }
+  );*/
+
+  - oversample_shift oversample:INTEGER :REAL_32 <-
+  ( + result:REAL_32
+    (oversample != 0).if {
+      result := -(oversample - 1).to_real_32 / (oversample*2)
+    }
+    result
+  )
+
+  // rects array must be big enough to accommodate 
+  // all characters in the given ranges
+  - pack_font_ranges_gather_rects (info:FONTINFO,ranges:ARRAY PACK_RANGE, rects:ARRAY RECT) :INTEGER <-
+  ( + i,j,k:INTEGER
+    not_yet_implemented
+    /*
+    0.to (ranges.upper) do { i:INTEGER
+      + fh,scal:REAL_32
+      fh := ranges.item i.font_size
+      scal := (fh > 0).ok (info.scale_for_pixel_height fh) 
+      or (info.scale_for_mapping_em_to_pixels (-fh))
+      ranges.item i.hv_oversample (h_oversample,v_oversample)
+      0.to (ranges.item i.num_chars-1) do { j:INTEGER
+        + x0,y0,x1,y1,codepoint,glyph:INTEGER
+        codepoint := (ranges.item i.array_of_unicode_codepoints = NULL)
+        .ok (ranges.item i.first_unicode_codepoint_in_range + j)
+        or  (ranges.item i.array_of_unicode_codepoints.item j)
+        glyph := info.find_glyph_index codepoint
+        (x0,y0,x1,y1) := info.get_glyph_bitmap_box_subpixel glyph
+        scale (scal * h_oversample,scale * v_oversample)
+        shift (0,0)
+                                         
+        rects.item k.set_size (
+          x1-x0 + padding + h_oversample-1,
+          y1-y0 + padding + v_oversample-1
+        )
+        k := k + 1
+      }
+    };*/
+    k
+  )
+
+  // rects array must be big enough to accommodate 
+  // all characters in the given ranges
+  - pack_font info:FONTINFO 
+  ranges_render ranges:ARRAY PACK_RANGE 
+  into_rects rects:ARRAY RECT <-
+  ( + i,j,k,return_value:INTEGER
+    + old_h_over,old_v_over:INTEGER
+    + fh,scale,recip_h,recip_v,sub_x,sub_y:REAL_32
+    + r:RECT
+    not_yet_implemented
+    /*
+    // save current values
+    old_h_over := h_oversample
+    old_v_over := v_oversample
+    return_value := 1
+    0.to (num_ranges-1) do { i:INTEGER
+      fh := ranges.item i.font_size
+      scale := (fh > 0).ok (scale_for_pixel_height(info, fh))
+      or (scale_for_mapping_em_to_pixels(info, -fh))
+      h_oversample := ranges.item i.h_oversample
+      v_oversample := ranges.item i.v_oversample
+      recip_h := 1.0 / h_oversample
+      recip_v := 1.0 / v_oversample
+      sub_x := oversample_shift h_oversample
+      sub_y := oversample_shift v_oversample
+      0.to (ranges.item i.num_chars-1) do { j:INTEGER
+        r := rects.item k
+        (r.was_packed).if {
+          not_yet_implemented
+          /*
+          + bc:PACKED_CHAR
+          + advance, lsb, x0,y0,x1,y1:INTEGER
+          + codepoint,glyph:INTEGER
+          + pad:COORD
+          bc := ranges.item i.chardata_for_range.item j
+          codepoint := (ranges.item i.array_of_unicode_codepoints = NULL).ok 
+          (ranges.item i.first_unicode_codepoint_in_range + j) or 
+          (ranges.item i.array_of_unicode_codepoints.item j)
+          glyph := info.find_glyph_index codepoint
+          pad := padding
+          
+          // pad on left and top
+          r.move_pad pad
+          (advance,lsb) := info.get_glyph_h_metrics glyph
+          (x0,y0,x1,y1) := info.get_glyph_bitmap_box glyph
+          size (scale * h_oversample,scale * v_oversample)
+
+          make_glyph_bitmap_subpixel(info,
+            pixels + r.x + r.y*stride_in_bytes,
+            r.w - h_oversample+1,
+            r.h - v_oversample+1,
+            stride_in_bytes,
+            scale * h_oversample,
+            scale * v_oversample,
+          0,0,glyph)
+          
+          (h_oversample > 1).if {
+            h_prefilter(pixels + r.x + r.y*stride_in_bytes,
+            r.w, r.h, stride_in_bytes,h_oversample)
+          }
+          (v_oversample > 1).if {
+            v_prefilter(pixels + r.x + r.y*stride_in_bytes,
+            r.w, r.h, stride_in_bytes,v_oversample)
+          }
+          bc.make (r.x,r.y) to (r.x + r.w,r.y + r.h)
+          offset (x0 * recip_h + sub_x,y0 * recip_v + sub_y)
+          to ((x0 + r.w) * recip_h + sub_x,(y0 + r.h) * recip_v + sub_y)
+          xadvance (scale * advance)
+          */
+        } else {
+          return_value := 0; // if any fail, report failure
+        }
+        k := k + 1
+      }
+    }
+    // restore original values
+    h_oversample := old_h_over
+    v_oversample := old_v_over
+    */
+    return_value
+  )
+
+  - pack_font_ranges_pack_rects prects:ARRAY RECT <-
+  (
+    pack_info.pack_rects prects
+  )
+  
+  - rects:ARRAY RECT := ARRAY RECT.create_with_capacity 32
+  - pack_font_ranges fontdata:ARRAY UINTEGER_8
+  index font_index:INTEGER ranges ranges:ARRAY PACK_RANGE <-
+  ( + info:FONTINFO
+    + i,j,n,return_value:INTEGER
+    not_yet_implemented
+    /*
+    // flag all characters as NOT packed
+    0.to (num_ranges-1) do { i:INTEGER
+      0.to (ranges.item i.num_chars-1) do { j:INTEGER
+        ranges.item i.chardata_for_range.item j.reset_box
+      }
+    }
+    0.to (num_ranges-1) do { i:INTEGER
+      n := n + ranges.item i.num_chars
+    }
+         
+    rects.with_capacity n
+    
+    info.set_userdata user_allocator_context
+    info.init_font fontdata start (get_font_offset fontdata for_index font_index)
+
+    n := pack_font info ranges ranges gather_rects rects
+    
+    pack_font_ranges_pack_rects (rects, n)
+    return_value := pack_font info ranges_render ranges into_rects rects
+    */
+    return_value
+  )
+
+  // check if a utf8 string contains a prefix which 
+  // is the utf16 string; if so return length of matching utf8 string
+  - compare_utf8 s1:ARRAY UINTEGER_8 to_utf16 s2:ARRAY UINTEGER_8 :INTEGER_32 <-
+  ( + i,i2,result:INTEGER_32
+    + ch,ch2:UINTEGER_16
+    + c:UINTEGER_32
+    + len1:INTEGER
+    
+    len1 := s1.count
+    {(i2 < s2.count) && {result != -1}}.while_do {
+      ch := s2.item i2 *256 + s2.item (i2+1)
+      (ch < 80h).if {
+        ((i >= len1) || {s1.item i != ch}).if { 
+          result := -1
+        } else { 
+          i := i + 1
+        }
+      }.elseif {ch < 800h} then {
+        (
+          (i+1 >= len1) || 
+          {s1.item  i    != 0C0h + (ch >>  6)} ||
+          {s1.item (i+1) != 080h + (ch & 3Fh)}
+        ).if { result := -1; } 
+        else { i := i + 2; }
+      }.elseif {(ch >= 0D800h) && {ch < 0DC00h}} then {
+        ch2 := s2.item (i2+2) *256 + s2.item (i2+3)
+        c := ((ch - 0D800h) << 10) + (ch2 - 0DC00h) + 10000h
+        (
+          (i+3 >= len1) ||        
+          {s1.item  i    != 0F0h +  (c >> 18)       } || 
+          {s1.item (i+1) != 080h + ((c >> 12) & 3Fh)} ||
+          {s1.item (i+2) != 080h + ((c >>  6) & 3Fh)} || 
+          {s1.item (i+3) != 080h + ((c      ) & 3Fh)}
+        ).if { result := -1; } 
+        else { i := i + 4; i2 := i2 + 2; }
+      }.elseif {(ch >= 0DC00h) && {ch < 0E000h}} then {
+        result := -1
+      } else {
+        (
+          (i+2 >= len1) ||
+          {s1.item  i    != 0E0h +  (ch >>12)} ||
+          {s1.item (i+1) != 080h + ((ch >> 6) & 3Fh)} ||
+          {s1.item (i+2) != 080h + ((ch     ) & 3Fh)}
+        ).if { result := -1; } 
+        else { i := i + 3; }
+      }
+      i2 := i2 + 2
+    }
+    (result = 0).if { result := i; }
+    result
+  )
+
+  - get_font_name_string font:FONTINFO
+  platform platform_id:INTEGER encoding encoding_id:INTEGER
+  language language_id:INTEGER name name_id:INTEGER 
+  :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
+  ( + i,count,string_offset,length:INTEGER
+    + offset,nm:UINTEGER_32
+    + fc,result:NATIVE_ARRAY UINTEGER_8
+    fc := font.data
+    offset := font.fontstart
+    nm := find_table(fc, offset) name "name"
+    (nm).if { 
+      count := ttushort(fc+nm+2)
+      string_offset := nm + ttushort(fc+nm+4)
+      {(i < count) && {result = 0}}.while_do {
+        + loc:UINTEGER_32
+        loc := nm + 6 + 12 * i
+        (
+          (platform_id = ttushort(fc+loc+0)) &&
+          {encoding_id = ttushort(fc+loc+2)} &&
+          {language_id = ttushort(fc+loc+4)} &&
+          {name_id = ttushort(fc+loc+6)}
+        ).if {
+          length := ttushort(fc+loc+8)
+          result := fc+string_offset+ttushort(fc+loc+10)
+        }
+        i := i + 1
+      }
+    }
+    result, length
+  )
+
+  - matchpair(fc:ARRAY UINTEGER_8,nm:UINTEGER_32) name nam:STRING_ALIAS 
+  target tgt_id:INTEGER_32 next nxt_id:INTEGER_32 :INTEGER <-
+  ( + i,id,count,string_offset,platform,encoding,language:INTEGER_32
+    + matchlen,slen,off:INTEGER_32
+    + loc:UINTEGER_32
+    + result:INTEGER
+    count := ttushort(fc+nm+2)
+    string_offset := nm + ttushort(fc+nm+4)
+    {(i < count) && {result = 0}}.while_do {
+      loc := nm + 6 + 12 * i
+      id := ttushort(fc+loc+6)
+      (id = tgt_id).if {
+        // find the encoding
+        platform := ttushort(fc+loc+0)
+        encoding := ttushort(fc+loc+2)
+        language := ttushort(fc+loc+4)
+        // is this a Unicode encoding?
+        ((platform = 0) || {(platform = 3) && {encoding = 1}} || 
+        {(platform = 3) && {encoding = 10}}).if {
+          slen := ttushort(fc+loc+8)
+          off := ttushort(fc+loc+10)
+          // check if there's a prefix match
+          matchlen := compare_utf8 (nam, nam.count) 
+          to_utf16 (fc+string_offset+off,slen)
+          (matchlen >= 0).if {
+            // check for target_id+1 immediately following, 
+            // with same encoding & language
+            (
+              (i+1 < count) && 
+              {ttushort(fc+loc+12+6) = nxt_id } && 
+              {ttushort(fc+loc+12)   = platform} && 
+              {ttushort(fc+loc+12+2) = encoding} && 
+              {ttushort(fc+loc+12+4) = language}
+            ).if {
+              slen := ttushort(fc+loc+12+8)
+              off  := ttushort(fc+loc+12+10)
+              (slen = 0).if {
+                (matchlen = nam.count).if {
+                  result := 1
+                }
+              }.elseif {
+                (matchlen < nam.count) && {nam.item matchlen = ' '}
+              } then {
+                matchlen := matchlen + 1
+                (compare_utf8 (nam+matchlen, nam.count-matchlen) 
+                to_utf16 (fc+string_offset+off,slen)).if {
+                  result := 1
+                }
+              }
+            }.elseif {matchlen = nam.count} then {
+              // if nothing immediately following
+              result := 1
+            }
+          }
+        }
+        // @TODO handle other encodings
+      }
+      i := i + 1
+    }
+    result
+  )
+
+  - matches (fc:STRING_ALIAS,offset:UINTEGER_32) 
+  name nam:STRING_ALIAS flags flag:UINTEGER_32 :INTEGER <-
+  ( + nm,hd:UINTEGER_32
+    + result:INTEGER
+    
+    (isfont(fc+offset)).if {
+      // check italics/bold/underline flags in macStyle...
+      (flag).if {
+        hd := find_table(fc, offset) name "head"
+        ((ttushort(fc+hd+44) & 7) = (flag & 7)).if {
+          nm := find_table(fc, offset) name "name"
+          (nm).if {
+            // if we checked the macStyle flags, then just 
+            // check the family and ignore the subfamily
+            (
+              (matchpair(fc, nm) name nam target 16 next (-1)) ||
+              {matchpair(fc, nm) name nam target  1 next (-1)} ||
+              {matchpair(fc, nm) name nam target  3 next (-1)}
+            ).if {
+              result := 1
+            }
+          }
+        }
+      } else {
+        nm := find_table(fc, offset) name "name"
+        (nm).if {
+          (
+            (matchpair(fc, nm) name nam target 16 next 17) ||
+            {matchpair(fc, nm) name nam target  1 next  2} ||
+            {matchpair(fc, nm) name nam target  3 next(-1)}
+          ).if {
+            result := 1
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - find_matching_font font_collection:STRING_ALIAS 
+  name name_utf8:STRING_ALIAS flags flag:UINTEGER_32 :INTEGER <-
+  ( + i,off:INTEGER_32
+    + result:INTEGER
+    {result = 0}.while_do {
+      off := get_font_offset font_collection for_index i
+      ((off < 0) ||
+      {matches(font_collection, off) name name_utf8 flags flag}).if {
+        result := off
+      }
+      i := i + 1
+    }
+    result
+  )
+

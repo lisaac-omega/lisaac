@@ -1,0 +1,8 @@
+Depending pass:  \--WARNING----------
+`STRING_BUFFER' ?= `Expanded INTEGER_32': always NULL assignment.
+Line 11 column 8 in MAIN(.../test/18/main.li):
+    s ?= i; // au moins un warning ?? 
+        ^
+|/4
+Executing pass: *....*.. (8)
+ => 1 warning(s).

@@ -1,0 +1,97 @@
+Header
+
+  + name        := SIZE_OF;
+
+  /*Size of object*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- TRUE
+
+  + receiver:TYPE_FULL
+
+  - static_type:TYPE_FULL <- type_integer.default
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add type_integer
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION receiver e:TYPE_FULL :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p receiver e
+    result
+  )
+
+  - make p:POSITION receiver e:TYPE_FULL <-
+  (
+    position := p
+    receiver := e
+  )
+
+  - my_copy:SELF <- SELF.create position receiver receiver
+  // BSBS: Tu peux meme juste renvoyer Self! Non ?
+
+  //
+  // Remove
+  //
+
+  - remove <-
+  (
+    // Nothing.
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_unlink:INSTR <-
+  (
+    NULL
+  )
+
+  - execute_link:EXPR <-
+  (
+    Self
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    output.append "sizeof("
+    receiver.raw.put_expanded_declaration output
+    output.add_last ')'
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "size_of("
+    receiver.display buffer
+    buffer.add_last ')'
+  )
+
+
+
+
+
+
+
+
+

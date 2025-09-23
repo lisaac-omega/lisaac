@@ -1,0 +1,110 @@
+Header
+  + name := SHA;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+SHA
+  
+  + data:ARRAY UINTEGER_8
+  + bitlen:UINTEGER_64
+    
+  - data32:NATIVE_ARRAY UINTEGER_32 <-
+  CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on (data.storage)
+  - data64:NATIVE_ARRAY UINTEGER_64 <-
+  CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_64).on (data.storage)
+  
+  - data_size:INTEGER   <- INTEGER.abstract
+  
+  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 2048
+  
+  - map:STRING_ALIAS := "0123456789abcdef"
+  
+  - prepare_digest <-
+  (
+    add_bitlen (data.count)
+    data.add_last 80h
+    (data.count <= short_data_size).if {      
+      {data.count < short_data_size}.while_do {
+        data.add_last 0
+      }
+    } else {
+      {data.count < data_size}.while_do {
+        data.add_last 0
+      }
+      transform
+      data.clear
+      short_data_size.times { data.add_last 0; }
+    }
+    ? {data.count = short_data_size}
+    data.set_upper (data_size-1)
+    put_bitlen
+    transform
+  )
+  
+Public
+  
+  - digest_size:INTEGER <- ( abstract; 0); // in number of bytes
+  
+  - create:SELF <-
+  ( + result:SELF
+    result := clone
+    result.reset
+    result
+  )
+  
+  - reset <- abstract
+  
+  - update dta:ARRAY UINTEGER_8 <-
+  ( 
+    0.to (dta.upper) do { i:INTEGER
+      data.add_last (dta.item i)
+      (data.count = data_size).if {
+        transform
+        add_bitlen data_size
+        data.clear
+      }
+    }
+  )
+  
+  - update_str dta:STRING <-
+  ( 
+    0.to (dta.upper) do { i:INTEGER
+      data.add_last (dta.item i); //.code)
+      (data.count = data_size).if {
+        transform
+        add_bitlen data_size
+        data.clear
+      }
+    }
+  )
+  
+  
+  - sum_in digest:ARRAY UINTEGER_8 <- ( abstract; )
+  
+  - sum_in_string buffer:STRING_BUFFER <- ( abstract; )
+  
+  - sum file_path:STRING in buffer:STRING_BUFFER <-
+  ( + file_input:POINTER
+    + sz:INTEGER
+    reset
+    file_input := FILE_UTILS.open_read file_path
+    ? {file_input != NULL}
+    sz := FILE_UTILS.size file_input
+    {sz = 0}.until_do {
+      + s,blksize:INTEGER
+      blksize := 512
+      (sz >= blksize).if {
+        s := blksize
+        sz := sz - blksize
+      } else {
+        s := sz
+        sz := 0
+      }
+      mybuffer.clear
+      FILE_UTILS.read file_input in mybuffer size s
+      update_str mybuffer
+    }
+    FILE_UTILS.close file_input
+    sum_in_string buffer
+  )

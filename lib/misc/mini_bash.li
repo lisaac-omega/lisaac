@@ -1,0 +1,228 @@
+Header  
+  + name := MINI_BASH;
+  /*
+   mini /bin/bash :-)
+   To know how to use it, search for RunMe.li files
+  */
+
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Private
+  
+  + verbose:BOOLEAN := FALSE
+  
+  + working_directory:STRING_BUFFER := STRING_BUFFER.create 2048
+  
+  + first_error_exit:BOOLEAN := TRUE
+  
+  + error_counter:INTEGER
+  
+  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 128
+  
+  - mybuffer2:STRING_BUFFER := STRING_BUFFER.create 128
+  
+  - mini_bash_init <-
+  // Not mandatory, just an example.
+  ( 
+    FILE_UTILS.working_directory_in working_directory
+    ? {working_directory.last = '/'}
+    verbose := COMMAND_ARGS.option_shift "--verbose"
+    first_error_exit := COMMAND_ARGS.option_shift "--first-error-exit"
+  )
+  
+  - working_directory_map action:{DIRENT;} <-
+  ( + dirent:DIRENT
+    dirent := FILE_SYSTEM.get working_directory
+    ((dirent != NULL) && {dirent.is_directory} && {dirent.open}).if {
+      + directory:DIRECTORY
+      directory ?= dirent
+      ? {directory != NULL}
+      verbose.if {
+        "working_directory_map \"".print
+        directory.path.print
+        "\" (".print
+        directory.count.print
+        " entries).".println
+      }
+      directory.sort_with { (d1,d2:DIRENT)
+        + r:INTEGER
+        + p1,p2:STRING
+        + i1,i2:INTEGER
+        + c1,c2:CHARACTER
+        p1 := d1.path
+        p2 := d2.path
+        {(r != 0) || {i1 > p1.upper} || {i2 > p2.upper}}.until_do {
+          c1 := p1.item i1
+          c2 := p2.item i2
+          (c1 = c2).if {
+            // nothing:
+          }.elseif {c1 < c2} then {
+            r := 1
+          } else  {
+            r := -1
+          }
+          i1 := i1 + 1
+          i2 := i2 + 1
+        }
+        (r = 0).if {
+          (p1.count < p2.count).if {
+            r := 1
+          } else {
+            r := -1
+          }
+        }.elseif {(c1.is_digit) && {c2.is_digit} && {p1.count != p2.count}} then {
+          (p1.count < p2.count).if {
+            r := 1
+          } else {
+            r := - 1
+          }
+        }
+        (r = 1)
+      }
+      directory.foreach { dirent:DIRENT
+        action.value dirent
+      }
+    } else {
+      "exXXXecute_command:".println
+    }
+  )
+  
+  - working_directory_mapfile action:{FILE;} <-
+  ( + file:FILE
+    working_directory_map { dirent:DIRENT
+      ((file ?= dirent) != NULL).if {
+        action.value file
+      }
+    }
+  )
+  
+  - working_directory_mapdir action:{DIRECTORY;} <-
+  ( + directory:DIRECTORY
+    working_directory_map { dirent:DIRENT
+      ((directory ?= dirent) != NULL).if {
+        action.value directory
+      }
+    }
+  )
+  
+  - verbose force:BOOLEAN do action:{} <-
+  ( + oldverb:BOOLEAN
+    oldverb := verbose
+    verbose := force
+    action.value
+    verbose := oldverb
+  )
+  
+  - execute_command cmd:STRING background bg:BOOLEAN :INTEGER <-
+  ( + exit_status:INTEGER
+    verbose.if {
+      cmd.println
+    }
+    `fflush(stdout)`
+    exit_status := ENVIRONMENT.run cmd back bg
+    (verbose && {exit_status != 0}).if {
+      "exit status:".print
+      exit_status.println
+    }
+    ((exit_status != 0) && {first_error_exit}).if {
+      exit exit_status
+    }
+    exit_status
+  )
+  
+  - execute_command cmd:STRING :INTEGER <-
+  (
+    execute_command cmd background FALSE
+  )
+    
+  - first_error_exit force:BOOLEAN do action:{} <-
+  ( + oldverb:BOOLEAN
+    oldverb := first_error_exit
+    first_error_exit := force
+    action.value
+    first_error_exit := oldverb
+  )
+  
+  - file_exists name:STRING in dirpath:STRING :BOOLEAN <-
+  (
+    mybuffer2.copy dirpath
+    mybuffer2.append name
+    //FILE_SYSTEM.file_exists mybuffer2
+    FILE_UTILS.file_exists mybuffer2
+  )
+  
+  - file_remove path:STRING :INTEGER <-
+  ( + exit_status:INTEGER
+    verbose.if {
+      "rm ".print
+      path.println
+    }
+    exit_status := FILE_UTILS.remove path
+    (verbose && {exit_status != 0}).if {
+      "rm failed".println
+    }
+    exit_status
+  )
+  
+  - diff dirpath:STRING n1 n1:STRING_ALIAS n2 n2:STRING_ALIAS :INTEGER <-
+  ( + exit_status:INTEGER
+    + p1,p2:STRING_BUFFER
+    p1 := mybuffer
+    p2 := mybuffer2
+    p1.copy dirpath
+    p1.append n1
+    p2.copy dirpath
+    p2.append n2
+    verbose.if {
+      "diff ".print
+      p1.print
+      ' '.print
+      p2.println
+    }
+    exit_status := DIFF.path p1 path p2
+    (exit_status != 0).if {
+      error_counter := error_counter + 1
+      "diff ".print
+      p1.print
+      ' '.print
+      p2.println
+      "diff failed".println
+      first_error_exit.if {
+        exit exit_status
+      }
+    }
+    exit_status
+  )
+  
+  - execute_exit cmd:STRING <-
+  ( + exit_status:INTEGER
+    exit_status := execute_command cmd
+    (exit_status != 0).if {
+      "Command \"".print
+      cmd.print
+      "\" failed (exitstatus=".print
+      exit_status.print
+      ").".println
+      SYSTEM.exit exit_status
+    }
+  )
+  
+  - open_read tag:STRING in content: STRING_BUFFER :BOOLEAN <-
+  ( + result:BOOLEAN
+    + file_input:POINTER
+    + sz:INTEGER
+    file_input := FILE_UTILS.open_read tag
+    (file_input != NULL).if {
+      result := TRUE
+      //sz := FILE_UTILS.file_size file_input
+      sz := FILE_UTILS.size file_input
+      content.make sz
+      //FILE_SYSTEM.read file_input in content size sz
+      FILE_UTILS.read file_input in content size sz
+      //FILE_SYSTEM.close file_input
+      FILE_UTILS.close file_input
+    }
+    result
+  )
+    

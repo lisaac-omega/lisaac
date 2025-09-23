@@ -1,0 +1,437 @@
+Header
+  + name := RANGE_ARRAY V;
+  /*
+    General purpose resizable ARRAYs .
+    The `lower' bound can be any arbitrary value, even a negative one.
+    
+    This implementation uses only one chunk of memory, the `storage' area which is a
+    NATIVE_ARRAY. One must keep in mind that this internal `storage' area is always kept
+    left align. Thus, you can expect good performances while using an ARRAY to modelize a
+    stack behavior with `add_last' / `last' / `remove_last'.
+    
+    Conversely `add_first' and `remove_first' are likely to slow down your program if
+    they are too often used. If the fact that `lower' is always stuck to 0 is not a 
+    problem for you, also consider ARRAY to get better performances.
+  */
+
+Inherit
+  - parent_arrayed:ARRAYED := ARRAYED
+  - parent_collection:COLLECTION V := COLLECTION V
+
+Public
+  // Indexing:
+  + lower:INTEGER
+  
+  + upper:INTEGER
+  
+  + storage:NATIVE_ARRAY V
+  
+  + capacity:INTEGER
+  
+  - at i:INTEGER :V <-
+  (
+    storage.at (i - lower)
+  )
+  
+  // Creation and Modification:
+
+  - create min_index:INTEGER to max_index:INTEGER :SELF <-
+  // Prepare the array to hold values for indexes in range
+  // [`min_index' .. `max_index']. Set all values to default.
+  // When `max_index' = `min_index' - 1, the array `is_empty'.
+  ( + result:SELF
+    result := SELF.clone
+    result.make min_index to max_index
+    result
+  )
+
+  - make min_index:INTEGER to max_index:INTEGER <-
+  // Prepare the array to hold values for indexes in range
+  // [`min_index' .. `max_index']. Set all values to default.
+  // When `max_index' = `min_index' - 1, the array `is_empty'.
+  // * Require: `min_index' inferior or equal to `max_index' + 1
+  // * Ensure: `lower' is equal to `min_index'
+  // * Ensure: `upper' is equal to `max_index'
+  // * Ensure: all values are in default
+  [ // Old
+    {min_index <= max_index + 1} -? "Valid bounds."
+  ]
+  (
+    ensure_capacity (max_index - min_index + 1) and_bounds min_index to max_index
+  )
+  [ // Old
+    "Lower set." +? { lower = min_index }
+    "Upper set." +? { upper = max_index }
+    "Items set." +? { all_default }
+  ]
+
+  - create_with_capacity needed_capacity:INTEGER lower low:INTEGER :SELF <-
+  // Create an empty array with `capacity' initialized
+  // at least to `needed_capacity' and `lower' set to `low'.
+  ( + result:SELF
+
+    result := clone
+    result.with_capacity needed_capacity lower low
+    result
+  )
+
+  - with_capacity needed_capacity:INTEGER lower low:INTEGER <-
+  // Create an empty array with `capacity' initialized
+  // at least to `needed_capacity' and `lower' set to `low'.
+  [ // Old
+    -? { needed_capacity >= 0}
+  ]
+  (
+    ensure_capacity needed_capacity and_bounds low to (low-1)
+  )
+  [ // Old
+    +? { is_empty }
+    +? { needed_capacity <= capacity }
+    +? { lower = low }
+  ]
+
+Public
+
+  - ensure_capacity needed_capacity:INTEGER and_bounds low:INTEGER to up:INTEGER <-
+  // Extend needed capacity and bouds if necessary
+  // * Require: `up' superior or equal to `low' - 1
+  [ // Old
+    -? { up >= low - 1 }
+    -? { needed_capacity >= up - low + 1 }
+  ]
+  (
+    (capacity < needed_capacity).if {
+      storage := NATIVE_ARRAY(V).create needed_capacity
+      capacity := needed_capacity
+    }
+    lower := low
+    upper := up
+  )
+  [ // Old
+    +? { needed_capacity <= capacity }
+    +? { lower = low }
+    +? { upper = up }
+    +? {all_default}
+  ]
+
+  // Modification:
+
+  - resize min_index:INTEGER to max_index:INTEGER <-
+  // Resize to bounds `min_index' and `max_index'. Do not lose any
+  // item whose index is in both [`lower' .. `upper'] and
+  // [`min_index' .. `max_index']. New positions if any are
+  // initialized with the appropriate default value.
+  // * Require: `min_index' inferior or equal to `max_index' + 1
+  // * Ensure: `lower' is equal to `min_index'
+  // * Ensure: `upper' is equal to `max_index'
+  [ // Old
+    -? { min_index <= max_index + 1 }
+  ]
+  ( + needed, offset, intersize:INTEGER
+
+    needed := max_index - min_index + 1
+    (needed > 0).if {
+      (needed > capacity).if {
+      (capacity = 0).if {
+        storage := NATIVE_ARRAY(V).calloc_intern needed
+        capacity := needed
+      } else {
+        storage := storage.realloc capacity with needed
+        capacity := needed
+      }
+      }
+      offset := lower - min_index
+      intersize := max_index.min upper - min_index.max lower + 1
+      (intersize > 0).if {
+      (offset = 0).if {
+        (intersize < capacity).if {
+          storage.clear intersize to (capacity - 1)
+        }
+      }.elseif { offset < 0 } then {
+        storage.move (- offset) to (intersize - offset - 1) by offset
+        (intersize < capacity).if {
+          storage.clear intersize to (capacity - 1)
+        }
+      } else {
+        storage.move 0 to (intersize - 1) by offset
+        storage.clear 0 to (offset - 1)
+        ((intersize + offset) < capacity).if {
+          storage.clear (intersize + offset) to (capacity - 1)
+        }
+      }
+      } else {
+      storage.clear 0 to (capacity - 1)
+      }
+    }
+    lower := min_index
+    upper := max_index
+  )
+  [ // Old
+    +? { lower = min_index }
+    +? { upper = max_index }
+  ]
+
+
+  - reindex new_lower:INTEGER <-
+  // Change indexing to take in account the expected `new_lower'
+  // index. The `upper' index is translated accordingly.
+  // * Ensure: `lower' is equal to `new_lower'
+  // * Ensure: `count' is equal to `count' before
+  ( + i:INTEGER
+
+    i := new_lower - lower
+    lower := lower + i
+    upper := upper + i
+  )
+  [ // Old
+    +? { lower = new_lower }
+    +? { count = Old count }
+  ]
+
+  // Implementation of abstract:
+
+  - subarray min:INTEGER to max:INTEGER :SELF <-
+  // Return the subarray between `min' to `max'
+  // * Ensure: `Result.lower' is equal to `min' before
+  ( + result:SELF
+
+    result := slice min to max
+    result.reindex min
+    result
+  )
+  [ // Old
+    +? { Result.lower = min }
+  ]
+
+  - is_empty:BOOLEAN <-
+  (upper < lower)
+
+  - count:INTEGER <-
+  (upper - lower + 1)
+
+  - at i:INTEGER put v:V <-
+  (
+    storage.at (i - lower) put v
+  )
+  
+  - at i:INTEGER add v:V <-
+  (
+    add_last v
+    (i != upper).if {
+      move i to (upper - 1) by 1
+      at i put v
+    }
+  )
+  
+  - force element:V to index:INTEGER <-
+  (
+    (upper < index).if {
+      (index = upper + 1).if {
+      add_last element
+      } else {
+      resize (lower,index)
+      put element to index
+      }
+    }.elseif { index < lower } then {
+      resize (index,upper)
+      put element to index
+    } else {
+      put element to index
+    }
+  )
+  [ // Old
+    +? { lower = index.min (Old lower) }
+  ]
+
+  - copy other:SELF <-
+  ( +  needed_capacity:INTEGER
+    lower := other.lower
+    upper := other.upper
+    needed_capacity := upper - lower + 1
+    (capacity < needed_capacity).if {
+      storage := storage.create needed_capacity
+      capacity := needed_capacity
+    }
+    (needed_capacity > 0).if {
+      storage.copy_from (other.storage) until (needed_capacity - 1)
+    }
+  )
+
+  - set_all_with v:V <-
+  (
+    storage.set_all_with v until (upper - lower)
+  )
+
+  - remove_first <-
+  (
+    storage.remove_first (upper - lower)
+    lower := lower + 1
+  )
+  [ // Old
+    +? {upper = Old upper}
+  ]
+  
+  - remove_last <-
+  (
+    upper := upper - 1
+  )
+  
+  - remove_head n:INTEGER <-
+  (
+    storage.move (n - lower + 1) to (upper - lower) by (-n)
+    lower := lower + n
+  )
+  [ // Old
+    +? {upper = Old upper}
+  ]
+
+  - remove index:INTEGER <-
+  (
+    storage.remove (index - lower) until (upper - lower)
+    upper := upper - 1
+  )
+
+  - clear <-
+  (
+    upper := lower - 1
+  )
+  [ // Old
+    +? {capacity = Old capacity}
+  ]
+
+  - add_first element:V <-
+  (
+    add_last element
+    (lower < upper).if {
+      move lower to (upper - 1) by 1
+      at lower put element
+    }
+  )
+
+  - add_last element:V <-
+  ( + new_capacity:INTEGER
+    (capacity < count + 1).if {
+      (capacity = 0).if {
+        new_capacity := 16
+        storage := storage.create new_capacity
+        capacity := new_capacity
+      } else {
+      new_capacity := 2 * capacity
+      storage := storage.realloc capacity with new_capacity
+      capacity := new_capacity
+      }
+    }
+    upper := upper + 1
+    at upper put element
+  )
+
+  - from_collection model:COLLECTION(V) <-
+  (
+    with_capacity ((model.count),(model.lower))
+    upper := model.upper
+    (model.lower).to (model.upper) do { i:INTEGER
+      put ((model.item i),i)
+    }
+  )
+  [ // Old
+    +? { lower = model.lower }
+    +? { upper = model.upper }
+  ]
+
+  - all_default:BOOLEAN <-
+  (
+    storage.all_default (upper - lower)
+  )
+
+  - occurrences element:V :INTEGER <-
+  (
+    storage.occurrences element until (upper - lower)
+  )
+
+  - fast_occurrences element:V :INTEGER <-
+  (
+    storage.fast_occurrences element until (upper - lower)
+  )
+
+  - first_index_of element:V :INTEGER <-
+  ( + result:INTEGER
+
+    (upper >= lower).if {
+      result := lower + storage.first_index_of element until (upper - lower)
+    } else {
+      result := lower
+    }
+  )
+
+  - index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + result:INTEGER
+
+    (upper >= lower).if {
+      result := lower + storage.index_of (element,start_index - lower) until (upper - lower)
+    } else {
+      result := lower
+    }
+    result
+  )
+
+  - reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + result:INTEGER
+
+    (upper >= lower).if {
+      result := lower + storage.reverse_index_of element from (start_index - lower)
+    } else {
+      result := lower
+    }
+  )
+
+  - fast_index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + result:INTEGER
+
+    (upper >= lower).if {
+      result := lower + storage.fast_index_of (element,start_index - lower) until (upper - lower)
+    } else {
+      result := lower
+    }
+    result
+  )
+
+  - fast_reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + result:INTEGER
+
+    (upper >= lower).if {
+      result := lower + storage.fast_reverse_index_of element from (start_index - lower)
+    } else {
+      result := lower
+    }
+    result
+  )
+
+  - Self:SELF '=='  Right 60 other:SELF :BOOLEAN <-
+  ( + result:BOOLEAN
+    (Self = other).if {
+      result := TRUE
+    }.elseif {(lower = other.lower) && {upper = other.upper}} then {
+      result := storage.fast_memcmp (other.storage) until upper
+    }
+    result
+  )
+
+  - is_equal_map other:SELF :BOOLEAN <-
+  ( + result:BOOLEAN
+    (Self = other).if {
+      result := TRUE
+    }.elseif {(lower = other.lower) && {upper = other.upper}} then {
+      result := storage.memcmp (other.storage) until upper
+    }
+    result
+  )
+
+  - slice min:INTEGER to max:INTEGER :SELF <-
+  ( + result:SELF
+    result := SELF.create lower to (lower + max - min)
+    (max >= min).if {
+      // Slice not empty
+      result.storage.slice_copy storage to 0 from (min - lower) to (max - lower)
+    }
+  )
+

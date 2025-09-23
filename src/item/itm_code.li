@@ -1,0 +1,62 @@
+Header
+
+  + name        := ITM_CODE;
+
+  /*Parent for all item code*/
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  // Use by PARSER, for left expr assignment ( in EXPR1 := EXPR2, EXPR1.is_affect).
+  - is_affect:POSITION <- position
+
+  //
+  // Flags.
+  //
+
+  - is_constant:BOOLEAN <- FALSE
+
+  //
+  // Runnable.
+  //
+
+  - to_run:INSTR <-
+  (
+    to_run_expr
+  )
+
+  - to_run_expr:EXPR <-
+  (
+    warning_error (position,"Error: ITM_CODE.to_run")
+    abstract
+    NULL
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    "ITM_CODE : Type:".print
+    type_id_intern.print
+    '\n'.print
+    abstract
+  )
+
+  - print <-
+  (
+    string_tmp.clear
+    append_in string_tmp
+    string_tmp.print
+  )
+
+
+
+
+
+
+

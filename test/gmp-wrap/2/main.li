@@ -1,0 +1,17 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + a:MPZ
+    + b:MPZ
+    a.init
+    b.init
+    a.set "FFFF" base 16
+    TEST.check (a.to_string) string "65535"
+    b.set (a.to_string) base 10
+    TEST.check (b.to_hexadecimal) string "FFFF"
+    a.clear
+    b.clear
+  )

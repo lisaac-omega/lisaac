@@ -1,0 +1,44 @@
+Header
+  + name    := Expanded UINTEGER_32;
+  /*
+  Unsigned 32 bits integer.
+  */
+  - type    := `uint32_t`;
+  - default := (0.to_raw_uinteger_32);
+  - export  := INTEGER, UINTEGER_64, INTEGER_64;
+
+Insert
+  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 4
+
+  // Range.
+
+  - maximum:UINTEGER_64 := ~ 0.to_raw_uinteger_32
+  
+  - clz:INTEGER <-
+  // Count Leading Zeros.
+    (ASM_BUILTIN.clz Self) - 32
+  
+  - ctz:INTEGER <-
+  // Count Trailing Zeros
+  ( 32 - 1 - (Self & -Self).clz)
+
+  // Conversion with test.
+  - ep0:SELF <- (Self @> 2) ^ (Self @> 13) ^ (Self @> 22)
+  - ep1:SELF <- (Self @> 6) ^ (Self @> 11) ^ (Self @> 25)
+  
+  - sig0:SELF <- (Self @>  7) ^ (Self @> 18) ^ (Self >>  3)
+  - sig1:SELF <- (Self @> 17) ^ (Self @> 19) ^ (Self >> 10)
+
+  - rev:SELF <-
+  ( + tmp:SELF
+    tmp := (Self >> 16) | (Self << 16)
+    ((tmp & 0FF00FF00h) >> 8) | ((tmp & 000FF00FFh) << 8)
+  )
+
+  - to_uinteger_32:UINTEGER_32 <- Self
+
+  - to_uinteger_64:UINTEGER_64 <- to_raw_uinteger_64

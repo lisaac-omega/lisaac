@@ -1,0 +1,278 @@
+Header
+  + name := DIRENT;
+
+  /*Abstract Entry.*/
+  
+  - external := `#include <time.h>`;
+  
+Insert
+  - parent_clone:CLONE := CLONE
+  
+DIRENT
+  - dico:HMAP DIRENT KEY STRING_ALIAS := HMAP DIRENT KEY STRING_ALIAS.create
+  
+  + key:STRING_ALIAS
+  
+Public
+  - path:STRING_ALIAS <- key; // absolute
+
+  + name:STRING_ALIAS
+  
+  + is_open:BOOLEAN
+  
+  // Date / Time.
+  
+  - access:UINTEGER_16 <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + result:UINTEGER_16
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      result := `t.st_mode`:UINTEGER_16 & 111_111_111b
+    `}`
+    result
+  )
+
+  - access_time:TIME <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + tt:POINTER
+    + result:TIME
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      tt := `localtime(&(t.st_atime))`:POINTER
+      result := to_time tt
+    `}`
+    result
+  )
+
+  - access_date:DATE <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + tt:POINTER
+    + result:DATE
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      tt := `localtime(&(t.st_atime))`:POINTER
+      result := to_date tt
+    `}`
+    result
+  )
+
+  - update_time:TIME   <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + tt:POINTER
+    + result:TIME
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      tt := `localtime(&(t.st_mtime))`:POINTER
+      result := to_time tt
+    `}`
+    result
+  )
+
+  - update_date:DATE <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + tt:POINTER
+    + result:DATE
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      tt := `localtime(&(t.st_mtime))`:POINTER
+      result := to_date tt
+    `}`
+    result
+  )
+
+  - create_time:TIME <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + tt:POINTER
+    + result:TIME
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      tt := `localtime(&(t.st_ctime))`:POINTER
+      result := to_time tt
+    `}`
+    result
+  )
+
+  - create_date:DATE <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + tt:POINTER
+    + result:DATE
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      tt := `localtime(&(t.st_ctime))`:POINTER
+      result := to_date tt
+    `}`
+    result
+  )
+
+  // type.
+
+  - is_directory:BOOLEAN <- FALSE
+    
+  - is_file:BOOLEAN <- FALSE
+
+  - open:BOOLEAN <- BOOLEAN.abstract
+
+Public 
+  //    ENTRY
+  
+  - reduce_path st:STRING_BUFFER <-
+  ( + i:INTEGER
+    + stat:INTEGER
+    + car:CHARACTER
+    st.replace_all '\\' with '/'
+    i := st.lower
+    {i > st.upper}.until_do {
+      car := st.at i
+      (car = '/').if {
+        // Separator character.
+        stat.when 0 then {
+          // foo/bar => foo/bar
+          //    ^          ^
+          stat := 1
+        }.when 1 then {
+          // foo//bar => /bar
+          //     ^       ^
+          st.remove_head i
+          i := st.lower
+        }.when 2 then {
+          // foo/./bar => foo/bar
+          //      ^          ^
+          st.remove (i-1) to i
+          i := i - 2
+          stat := 1
+        }.when 3 then {
+          // toto/foo/../bar => toto/bar
+          //            ^           ^
+          + idx:INTEGER
+          idx := st.last_index_of '/' since (i-4)
+          // st.last_index_of '/' since (i-4)
+          (idx = -1).if {
+            st.remove_head i
+            i := st.lower
+          } else {
+            st.remove idx to (i-1)
+            i := idx
+          }
+          stat := 1
+        }
+      }.elseif {car = '.'} then {
+        // Point character.
+        (stat)
+        .when 0 then {
+          // foo.bar => foo.bar
+        }.when 1 then {
+          // foo/.bar => foo/.bar
+          stat := 2
+        }.when 2 then {
+          // foo/..bar => foo/..bar
+          stat := 3
+        }.when 3 then {
+          // foo/...bar => foo/...bar
+          stat := 0
+        }
+      }.elseif {
+        (car = ':') && {i > 1} && {st.at (i-1).is_letter} && {st.at (i-2) = '/'}
+      } then {
+        st.remove_head (i-1)
+        i := st.lower
+      } else {
+        // Other character.
+        stat := 0
+      }
+      i := i + 1
+    }
+    stat.when 0 then {
+      // foo/bar  => foo/bar
+      //        ^           ^
+    }.when 1 then {
+      // foo/  => foo/
+      //     ^        ^
+    }.when 2 then {
+      // foo/.  => foo/
+      //      ^        ^
+      st.remove_last
+    }.when 3 then {
+      // toto/foo/..  => toto/
+      //            ^         ^
+      + idx:INTEGER
+      idx := st.last_index_of '/' since (i-4)
+      (idx = -1).if {
+        st.clear
+      } else {
+        st.remove (idx+1) to (i-1)
+      }
+    }
+    (st.is_empty).if {
+      st.add_last '/'
+    }
+  )
+  
+DIRENT
+  - init n:STRING_ALIAS :SELF <-
+  ( + idx,up:INTEGER
+    key := n
+    up := (key.last!='/').ok (key.upper) else {key.upper - 1}
+    idx := key.last_index_of '/' since up
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.append n
+      tmp.remove_head (idx+1)
+      name := tmp.to_string_alias
+    }
+    Self
+  )
+  
+  - new n:STRING_ALIAS :SELF <- clone.init n
+  
+  - physical_get new_path:STRING_ALIAS :DIRENT <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + result:DIRENT
+    //? {DIRECTORY.list.upper = -1}
+    pe := new_path.to_external
+    `{ struct stat t`
+      (`stat(@pe,&t)`:INTEGER = 0).if {
+        (`S_ISDIR(t.st_mode)`:INTEGER = 0).if {
+          result := FILE.new new_path
+        } else {
+          //? {DIRECTORY.list.upper = -1}
+          //"New:".print; new_path.println
+          (new_path.last != '/').if { 
+            STRING.tmp { tmp:STRING_BUFFER
+              tmp.copy new_path
+              tmp.add_last '/'
+              result := DIRECTORY.new (tmp.to_string_alias)
+            }
+          } else {
+            result := DIRECTORY.new new_path
+          }
+        }
+      }
+    `}`
+    //? {DIRECTORY.list.upper = -1}
+    result
+  )
+
+Private
+
+  // Time / Date: Unix -> Lisaac
+
+  - to_date t:POINTER :DATE <-
+  ( + result:DATE
+    + wd,md,m:UINTEGER_8
+    + y:UINTEGER_16
+
+    y  := `((struct tm *)@t)->tm_year`:UINTEGER_16
+    m  := `((struct tm *)@t)->tm_mon` :UINTEGER_8
+    md := `((struct tm *)@t)->tm_mday`:UINTEGER_8
+    wd := `((struct tm *)@t)->tm_wday`:UINTEGER_8
+    result := DATE.create (y,m,md,wd)
+  )
+
+  - to_time t:POINTER :TIME <-
+  (
+    TIME.create
+    ((`((struct tm *)@t)->tm_hour`:UINTEGER_8),
+    (`((struct tm *)@t)->tm_min` :UINTEGER_8),
+    (`((struct tm *)@t)->tm_sec` :UINTEGER_8),
+    0)
+  )
+

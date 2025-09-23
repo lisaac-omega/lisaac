@@ -1,0 +1,21 @@
+Header
+  + name := TASS;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + var:INTEGER
+  + value:TEXP
+  
+  - init v:INTEGER with e:TEXP :TASS <- ( (var,value) := (v,e); Self)
+  
+  - run <- ( stk.at (bp+var) put (value.eval); )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b | 'V'; var.append_in b
+    b += " <- "
+    value.append_in b
+  )

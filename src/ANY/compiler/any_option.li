@@ -1,0 +1,23 @@
+Header
+
+  + name        := ANY_OPTION;
+
+  /*Option for compiler (see shorter)*/
+
+Inherit
+
+  - parent_object:OBJECT := OBJECT
+
+Public
+
+  - is_shorter :BOOLEAN := FALSE
+
+  - is_shorter2:BOOLEAN := FALSE
+
+  //
+  // Option du Shorter.
+  //
+
+  - is_short_private:BOOLEAN
+  - is_short_code:BOOLEAN
+

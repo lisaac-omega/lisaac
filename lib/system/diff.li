@@ -1,0 +1,17 @@
+Header  
+  + name := DIFF;
+  /*diff unix-like command*/
+  
+Public
+  - path p1:STRING path p2:STRING : INTEGER <-
+  ( + result:INTEGER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.append "diff "
+      tmp.append p1
+      tmp.add_last ' '
+      tmp.append p2
+      result := ENVIRONMENT.run tmp
+    }
+    result
+  )
+    

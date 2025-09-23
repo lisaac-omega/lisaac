@@ -1,0 +1,26 @@
+Header
+  + name    := Expanded UINTEGER_CPU;
+  /*Unsigned integer (variable size according to CPU word).*/
+  - type    := `uintptr_t`;
+  - default := (0.to_raw_uinteger_cpu);
+  - export  := UINTEGER_64, POINTER, INTEGER;
+
+Insert
+  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER <- `sizeof(uintptr_t)`:INTEGER
+
+  // Range.
+
+  - maximum:UINTEGER_64 := (~ 0.to_uinteger_cpu).to_raw_uinteger_64
+
+  // Conversion with test.
+
+
+  - to_integer:INTEGER <- to_raw_integer
+
+  - to_uinteger_64:UINTEGER_64 <- to_raw_uinteger_64
+
+  - to_pointer:POINTER <- to_raw_pointer

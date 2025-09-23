@@ -1,0 +1,28 @@
+Header
+
+  + name := Expanded RECT;
+
+Public
+
+  + x:INTEGER
+  + y:INTEGER
+  + id:INTEGER
+  + w:INTEGER
+  + h:INTEGER
+  + was_packed:INTEGER
+  
+  - move_pad pad:INTEGER <-
+  (
+    (x,y) := (x + pad,y + pad)
+    (w,h) := (w - pad,h - pad)
+  )
+  
+  - set_xy (px,py:INTEGER) <- 
+  (
+    (x,y) := (px,py)
+  )
+  
+  - set_was_packed i:INTEGER <-
+  (
+    was_packed := i
+  )

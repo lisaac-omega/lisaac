@@ -1,0 +1,26 @@
+Header
+  + name := Expanded MEVENT;
+  
+  - external := `#include <time.h>`;
+  
+Mapping, Public
+  
+  + x:REAL_32
+  + y:REAL_32
+  + time:REAL_32
+  
+Public
+  
+  - d:REAL_32 <- (x*x + y*y).sqrt
+  
+  - make (px,py:REAL_32) <-
+  (
+    (x,y) := (px,py)
+    time := `(float)clock()/CLOCKS_PER_SEC`
+  )
+  
+  - delta (px,py:REAL_32) <-
+  (
+    (x,y) := (px - MEVENT.x,py - MEVENT.y)
+    time := `(float)clock()/CLOCKS_PER_SEC` - MEVENT.t
+  )

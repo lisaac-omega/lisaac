@@ -1,0 +1,458 @@
+Header
+
+  + name    := INPUT_STREAM;
+
+  /*
+    This abstract class is the superclass of all classes 
+    representing an input stream of bytes.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - push_back_flag:BOOLEAN
+  // True if one char is already pushed back.
+
+  - last_integer:INTEGER
+  // Last integer read using `read_integer'.
+
+  - last_string:STRING_BUFFER :=
+  // Access to the unique common buffer to get for example the result
+  // computed by `read_line', `read_word', `newline', etc. This is a once
+  // function (the same common buffer is used for all streams).
+  (
+    STRING_BUFFER.create 1024
+  )
+
+
+  - is_connected:BOOLEAN <-
+  // True when the corresponding stream is connected
+  // to some physical input device.
+  (
+    abstract
+    TRUE
+  )
+
+  - end_of_input:BOOLEAN <-
+  // Has end-of-input been reached ?
+  // True when the last character has been read.
+  (
+    ? { is_connected }
+    abstract
+    TRUE
+  )
+
+
+  // To read one character at a time:
+
+  - read_character:CHARACTER <-
+  // Read a character and assign it to `last_character'.
+  ( + result:CHARACTER
+    ? {! end_of_input}
+    abstract
+    ? {! push_back_flag}
+    result
+  )
+
+
+  - last_character:CHARACTER <-
+  // Last character read with `read_character'.
+  (
+    ? { is_connected }
+    abstract
+  )
+
+  - unread_character <-
+  // Un-read the last character read.
+  (
+    ? { !push_back_flag }
+    abstract
+    ? { push_back_flag }
+  )
+
+  // Skipping separators:
+
+  - skip_separators <-
+  // Skip all separators (see `is_separator' of class CHARACTER) and
+  // make the first non-separator available in `last_character'. This
+  // non-separator character is pushed back into the stream (see
+  // `unread_character') to be available one more time (the next
+  // `read_character' will consider this non-separator). When
+  // `end_of_input' occurs, this process is automatically stopped.
+  (
+    { end_of_input || {!last_character.is_separator}}.until_do {
+      read_character
+    }
+    ( !end_of_input && {! push_back_flag} ).if {
+      unread_character
+    }
+  )
+
+  - skip_separators_using separators:STRING_BUFFER <-
+  // Same job as `skip_separators' using the `separators' set.
+  (
+    ? { separators != NULL }
+
+    { end_of_input ||{!separators.has last_character}}.until_do {
+      read_character
+    }
+    ( !end_of_input && {!push_back_flag} ).if {
+      unread_character
+    }
+  )
+
+  - skip_remainder_of_line <-
+  // Skip all the remainder of the line including the end of
+  // line character itself.
+  (
+    + stop:BOOLEAN
+    stop := FALSE
+    stop.until_do {
+      end_of_input.if {
+        stop := TRUE
+      } else {
+        (( last_character = '\n') || {last_character = '\b'}).if {
+          read_character
+          stop := TRUE
+        } else {
+          read_character
+        }
+      }
+    }
+  )
+
+  // To read one number at a time:
+
+  - read_integer <-
+  // Read an integer according to the Lisaac Ω syntax.
+  // Make result available in `last_integer'.
+  // Heading separators are automatically skipped using
+  // `is_separator' of class CHARACTER.
+  // Trailing separators are not skipped.
+  (
+    + state:INTEGER
+    + sign:BOOLEAN
+    // state = 0 :waiting sign or first digit.
+    // state = 1 :sign read, waiting first digit.
+    // state = 2 :in the number.
+    // state = 3 :end state.
+    // state = 4 :error state.
+
+    ? { !end_of_input }
+
+    { state > 2 }.until_do {
+      read_character
+      (state = 0).if {
+        (last_character.is_separator).if {
+        }.elseif { last_character.is_digit} then {
+          last_integer := last_character.decimal_value
+          state := 2
+        }.elseif { last_character = '-'} then {
+          sign := TRUE
+          state := 1
+        }.elseif { last_character = '+'} then {
+          state := 1
+        } else {
+          state := 4
+        }
+      }.elseif {state = 1} then {
+        (last_character.is_separator).if {
+        }.elseif { last_character.is_digit }  then {
+          last_integer := last_character.decimal_value
+          state := 2
+        } else {
+          state := 4
+        }
+      } else { // 2
+        ( last_character.is_digit ).if {
+          last_integer := (last_integer * 10) + last_character.decimal_value
+        } else {
+          state := 3
+        }
+      }
+
+      end_of_input.if {
+        state.when 0 to 1 then {
+          state := 4
+        }.when 2 to 3 then {
+          state := 3
+        }
+      }
+    }
+
+    !end_of_input.if {
+      unread_character
+    }
+    ( state = 4 ).if {
+      "Error in INPUT_STREAM.read_integer.\n".print
+      crash
+    }
+    sign.if {
+      last_integer := - last_integer
+    }
+  )
+
+
+  
+  - read_real <-
+  // Read a REAL and make the result available in `last_real'
+  // and in `last_double'.
+  // The integral part is available in `last_integer'.
+  (
+    ? { !end_of_input }
+    read_double
+    last_real := last_double.to_real
+  )
+
+  - last_real:REAL
+  // Last real read with `read_real'.
+
+  - read_double <-
+  // Read a DOUBLE and make the result available in `last_double'.
+  (
+    + state:INTEGER
+    + sign:BOOLEAN
+    // state = 0 :waiting sign or first digit.
+    // state = 1 :sign read, waiting first digit.
+    // state = 2 :in the integral part.
+    // state = 3 :in the fractional part.
+    // state = 4 :end state.
+    // state = 5 :error state.
+
+    ? { !end_of_input }
+
+    last_string.clear
+
+    { state >= 4 }.until_do {
+      read_character
+      ( state = 0).if {
+        (last_character.is_separator).if {
+        }.elseif { last_character.is_digit } then {
+          last_string.add_last last_character
+          state := 2
+        }.elseif { last_character = '-' } then {
+          sign := TRUE
+          state := 1
+        }.elseif { last_character = '+' } then {
+          state := 1
+        }.elseif { last_character = '.' } then {
+          last_string.add_last last_character
+          state := 3
+        } else {
+          state := 5
+        }
+      }.elseif { state = 1 } then {
+        ( last_character.is_separator ).if {
+        }.elseif { last_character.is_digit } then {
+          last_string.add_last last_character
+          state := 2
+        } else {
+          state := 5
+        }
+      }.elseif { state = 2 } then {
+        ( last_character.is_digit ).if {
+          last_string.add_last last_character
+        }.elseif { last_character = '.' } then {
+          last_string.add_last last_character
+          state := 3
+        } else {
+          state := 4
+        }
+      } else { // 3
+        ( last_character.is_digit ).if {
+          last_string.add_last last_character
+        } else {
+          state := 4
+        }
+      }
+
+      end_of_input.if {
+        state.when 2 to 4 then {
+          state := 4
+        } else {
+          state := 5
+        }
+      }
+    }
+
+    (! end_of_input).if {
+      unread_character
+    }
+
+    ( state = 5 ).if {
+      "Error in INPUT_STREAM.read_double.\n".print
+      crash
+    }
+
+    ( last_string.count > 0).if {
+      last_double := last_string.to_real_64
+    } else {
+      last_double := 0; // NaN
+    }
+    sign.if {
+      last_double := - last_double
+    }
+  )
+
+
+  - last_double:REAL_64
+  // Last double read with `read_double'.
+
+  // To read one line or one word at a time:
+
+  - read_line <-
+  // Read a complete line ended by '\n' or `end_of_input'. Make the
+  // result available in `last_string' common buffer. The end of line
+  // character (usually '\n') is not added in the `last_string' buffer.
+  (
+    ? { !end_of_input }
+    last_string.clear
+    read_line_in last_string
+  )
+
+
+  - read_word <-
+  // Read a word using `is_separator' of class CHARACTER. Result is
+  // available in the `last_string' common buffer. Heading separators are
+  // automatically skipped. Trailing separators are not skipped
+  // (`last_character' is left on the first one). If `end_of_input' is
+  // encountered, Result can be the empty string.
+  (
+    ? { !end_of_input }
+
+    skip_separators
+    !end_of_input.if {
+      read_character
+    }
+
+    last_string.clear
+    { end_of_input || { last_character.is_separator }}.until_do {
+      last_string.extend last_character
+      read_character
+    }
+  )
+
+  - newline <-
+  // Consume input until newline ('\n') is found. Corresponding
+  // STRING_BUFFER is stored in `last_string' common buffer.
+  (
+    + stop:BOOLEAN
+
+    last_string.clear
+    stop := end_of_input
+
+    {stop}.until_do {
+      read_character
+      ( end_of_input || { last_character = '\n' }).if {
+        stop := TRUE
+      } else {
+        last_string.extend last_character
+      }
+    }
+  )
+
+  - reach_and_skip keyword:STRING_BUFFER <-
+  // Try to skip enough characters in order to reach the `keyword'
+  // which is skipped too. If the `keyword' is not in the remainder of
+  // this stream, the process is stopped as soon  as `end_of_input'
+  // occurs. As for `skip_separators' the following character of the
+  // `keyword' is available in `last_character' and not yet read.
+  (
+    + stop:BOOLEAN
+    + i:INTEGER
+    + first:CHARACTER
+
+    ? { !keyword.is_empty }
+
+    last_string.clear
+    first := keyword.first
+
+    { end_of_input || stop }.until_do {
+      // Reach the first character of the `keyword':
+      i := 2
+      { (i > last_string.count) || { last_string.item i = first }}.until_do {
+        i := i + 1
+      }
+
+      ( i <= last_string.count ).if {
+        last_string.remove_first (i - 1)
+      } else {
+        last_string.clear
+        !end_of_input.if {
+          read_character
+        }
+        { end_of_input || { last_character = first } }.until_do {
+          read_character
+        }
+        last_string.extend last_character
+      }
+
+      ? { !end_of_input ->> {last_string.item 1 = first}}
+      ? { last_string.count <= keyword.count }
+
+      // Now we need as many characters as in `keyword':
+      { end_of_input || { last_string.count = keyword.count } }.until_do {
+        read_character
+        last_string.extend last_character
+      }
+      stop := last_string == keyword
+    }
+
+    !end_of_input.if {
+      read_character
+      unread_character
+    }
+
+    ? {!end_of_input ->> { last_string == keyword} }
+  )
+
+  // Other features:
+
+  - read_line_in buffer:STRING_BUFFER <-
+  // Same jobs as `read_line' but storage is directly done in `buffer'.
+  (
+    ? { !end_of_input }
+    ? { buffer != NULL }
+    abstract
+  )
+
+  - read_word_using separators:STRING_BUFFER <-
+  // Same jobs as `read_word' using `separators'.
+  (
+    ? { !end_of_input }
+    ? { separators != NULL }
+
+    skip_separators_using separators
+    !end_of_input.if {
+      read_character
+    }
+    last_string.clear
+    { end_of_input || { separators.has last_character } }.until_do {
+      last_string.extend last_character
+      read_character
+    }
+  )
+
+  - read_tail_in str:STRING_BUFFER <-
+  // Read all remaining character of the file in `str'.
+  (
+    ? { str != NULL }
+
+    end_of_input.until_do {
+      read_character
+      !end_of_input.if {
+        str.extend last_character
+      }
+    }
+
+    ? { end_of_input }
+  )
+
+Private
+
+  - basic_io_getc :CHARACTER <- SYSTEM_IO.get_char
+
+  - basic_io_eof :CHARACTER <- SYSTEM_IO.eof

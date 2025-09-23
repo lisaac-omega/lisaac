@@ -1,0 +1,122 @@
+Header
+
+  + name    := ITM_TYPE_SIMPLE;
+
+  /*Simple type*/
+
+Inherit
+
+  + parent_itm_type_mono:Expanded ITM_TYPE_MONO
+
+ITM_TYPE_SIMPLE, ITM_TYPE_SELF
+
+  - dico:HMAP ITM_TYPE_SIMPLE KEY STRING_ALIAS :=
+  HMAP ITM_TYPE_SIMPLE KEY STRING_ALIAS.create
+
+ITM_TYPE_SIMPLE
+
+  - create n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make n
+    result
+  )
+
+  - make n:STRING_ALIAS <-
+  (
+    name := n
+    dico.fast_put Self to n
+  )
+
+Public
+
+  - type_null:ITM_TYPE_SIMPLE := ITM_TYPE_SIMPLE.get "NULL"
+  - type_void:ITM_TYPE_SIMPLE := ITM_TYPE_SIMPLE.get "VOID"
+  - type_self:ITM_TYPE_SIMPLE := ITM_TYPE_PARAMETER.create "SELF"
+  - type_self_with_escape:ITM_TYPE_SIMPLE := type_self; // BSBS A revoir...
+
+  - hash_code:INTEGER <- name.hash_code
+
+  + name:STRING_ALIAS
+
+  - style:UINTEGER_8 <- 0
+
+  - is_expanded:BOOLEAN <- (style & TYPE_FULL.expanded_bit) != 0
+  
+  - is_strict:BOOLEAN   <- (style & TYPE_FULL.strict_bit) != 0
+  
+  - is_escape:BOOLEAN   <- (style & TYPE_FULL.escape_bit) != 0
+  
+  - get n:STRING_ALIAS :ITM_TYPE_SIMPLE <-
+  [
+    -? {n != NULL}
+  ]
+  ( + result:ITM_TYPE_SIMPLE
+
+    result := dico.fast_reference_at n
+    (result = NULL).if {
+      result := create n
+    }
+    result
+  )
+
+  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  ( + result:TYPE_FULL
+
+    (Self = type_null).if {
+      result := TYPE_NULL.default
+    }.elseif {Self = type_void} then {
+      result := TYPE_VOID.default
+    } else {      
+      result := TYPE.get (path,Self)
+    }
+    result
+  )
+  
+  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
+  ( + o:SELF
+    
+    o ?= other
+    (o != NULL) && {Self = o}
+  )
+  
+  - append_in buffer:STRING_BUFFER <-
+  (
+    append_style_in buffer
+    buffer.append name
+  )
+  
+  - append_style_in buffer:STRING_BUFFER <-
+  (
+    (is_expanded).if {
+      buffer.append "Expanded "
+    }
+    (is_strict).if {
+      buffer.append "Strict "
+    }
+    (is_escape).if {
+      buffer.add_last '\\'
+    }
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    (style != NULL).if {
+      put style to buf like "keyword"
+      buf.add_last ' '
+    }
+    put name to buf like "prototype"
+  )
+
+  //
+  // Cast.
+  //
+
+  - append_cast_name_in buf:STRING_BUFFER <-
+  (
+    (name.lower).to (name.upper) do { j:INTEGER
+      buf.add_last (name.at j.to_lower)
+    }
+  )
+

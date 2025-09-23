@@ -1,0 +1,162 @@
+Header
+  + name := CMD_REPLACE;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+
+Public
+  - old_text:STRING_BUFFER   := STRING_BUFFER.create 32
+  - new_text:STRING_BUFFER   := STRING_BUFFER.create 32
+
+  - state:INTEGER
+    
+  - open:BOOLEAN <-
+  (
+    (old_text.is_empty).if {
+      mesg.copy "Query replace:"
+    } else {
+      mesg.copy "Query replace (default `";
+      mesg.append old_text
+      mesg.append "' → `";
+      mesg.append new_text
+      mesg.append "'):"
+    }
+    start := end := cur_txt.pos
+    state := 0
+    text.clear
+    SUBACT.get "Replace0".load Self
+    parent_cmd.open
+  )
+      
+  - action:BOOLEAN <-
+  ( ? {state < 2}
+    (state = 0).if {
+      (text.is_empty).if {        
+        go_state2
+      } else {
+        old_text.copy text
+        mesg.copy "Query replace `";
+        mesg.append text
+        mesg.append "' with:"
+        state := 1
+        text.clear
+        cur := 0
+      }
+    } else { // state = 1
+      new_text.copy text
+      go_state2
+    }
+    TRUE
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    (state >= 2).if {
+      ((c & KEYBOARD.msk_cmd) = 0).if {        
+        (s.first = '?').if { help := TRUE; ask_refresh; }
+      } else {
+        (state = 10).if { close; }
+        (s.first)
+        .when '\27d\' then { cancel; }
+      }
+    } else {
+      parent_cmd.key s cmd c
+      ((c & KEYBOARD.msk_cmd) = 0).if {
+        //search start
+      } else {
+        //s.first.println
+        ((c & 111b) = 0).if {
+          (s.first)
+          .when 'U' then { close; }
+          .when 'D' then { close; }
+        }
+      }
+    }
+  )
+    
+  - to_next:BOOLEAN <-
+  ( + p:INTEGER
+    (start > cur_txt.text.upper).if {
+      p := start
+    } else {
+      p := start + cur_txt.text.size_at start
+    }
+    search p
+  )
+  
+  - rep_one:BOOLEAN <-
+  ( one_replace
+    search start.if_false { close; }
+    TRUE
+  )
+  
+  - rep_all:BOOLEAN <-
+  ( { one_replace; }.do_while {search start}
+    close
+    TRUE
+  )
+  
+  - cancel:BOOLEAN <-
+  ( close
+    TRUE
+  )
+     
+Private
+  
+  - search b:INTEGER :BOOLEAN <-
+  ( + p:INTEGER
+    p := cur_txt.text.search text at b
+    (p != -1).if {
+      cnt_found := cnt_found + 1
+      start := p
+      end := p + text.count
+      cur_txt.set_pos_raw (end)
+    } else {
+      state := 10
+      update_info
+    }
+    p != -1
+  )
+  
+  - go_state2 <-
+  (
+    close
+    cnt_replace := cnt_found := 0
+    state := 2
+    text.copy old_text
+    mesg.copy "Query replacing `";
+    mesg.append old_text
+    mesg.append "' with `";
+    mesg.append new_text
+    mesg.append "':"
+    (! help).if { mesg.append " (? for help)"; }
+    SUBACT.get "Replace".load Self
+    search start
+    parent_cmd.open
+  )
+  
+  - cnt_found:INTEGER
+  - cnt_replace:INTEGER
+  
+  - one_replace <-
+  (
+    cnt_replace := cnt_replace + 1
+    {end > start}.while_do { end := end - cur_txt.text.rm start; }
+    cur_txt.text.at start add_text new_text
+    start := start + new_text.count
+    cur_txt.set_pos_raw start; //(start + new_text.count)
+  )
+  
+  - update_info <-
+  ( + s:STRING_BUFFER
+    s := cur_txt.footnote_left
+    s.copy "Replaced "
+    cnt_replace.append_in s
+    s.append " occurence"
+    (cnt_replace != cnt_found).if {
+      s.append ", "
+      (cnt_found - cnt_replace).append_in s
+      s.append " skiped"
+    }
+    s.add_last '.'
+  )

@@ -1,0 +1,150 @@
+Header
+  + name := Strict PAGE_SPLIT;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_json:JSON := JSON
+  
+Private
+  - stock:ARRAY PAGE_SPLIT := ARRAY PAGE_SPLIT.create_with_capacity 8
+  
+Public
+  
+  - width_min:REAL_32 <-
+  ( + result:REAL_32
+    (is line).if {
+      result := child.first.width_min + child.second.width_min
+    } else {
+      result := child.first.width_min.max (child.second.width_min)
+    }
+    result
+  )
+  
+  - height_min:REAL_32 <-
+  ( + result:REAL_32
+    (is line).if {
+      result := child.first.height_min.max (child.second.height_min)
+    } else {
+      result := child.first.height_min + child.second.height_min
+    }
+    result
+  )
+  
+  - line:INTEGER := 1<<15
+  
+  + cut:REAL_32
+    
+  - refresh <-
+  ( + v,nv:REAL_32
+    (is line).if {
+      v := width
+      nv := (v*cut).max (child.first.width_min).min (v-child.second.width_min)
+      child.first.xy (xo,yo).size (nv,height)
+      child.second.xy (xo+nv,yo).size (v-nv,height)
+    } else {
+      v := height
+      nv := (v*cut).max (child.first.height_min).min (v-child.second.height_min)
+      child.first.xy (xo,yo).size (width,nv)
+      child.second.xy (xo,yo+nv).size (width,v-nv)
+    }
+    child.foreach { w:WIN; w.refresh; }
+  )
+  
+  - move psh:PAGE_SPLIT and psv:PAGE_SPLIT win me:WIN <-
+  ( + win:POINTER
+    + wind:WINDOW
+    + w,h,wn,hn,x,y:INTEGER
+    (psh != NULL).if { psh.move; }
+    (psv != NULL).if { psv.move; }
+    ((psh = NULL) || {psv = NULL}).if {
+      - dx,dy:INTEGER
+      wind := me.window
+      win := wind.win_ptr
+      (w,h) := PAPER.get_window_size win
+      (HAND.is_begin).if { (dx,dy) := (w-HAND.x_begin.to_integer, h-HAND.y_begin.to_integer); }
+      (x,y) := PAPER.get_cursor_pos win
+      wn := (psh = NULL).ok (x + dx) or w
+      hn := (psv = NULL).ok (y + dy) or h
+      ((wn != w) || {hn != h}).if {        
+        me.ask_refresh
+        PAPER.set_window win size (wn.max (wind.width_min.to_integer),hn.max (wind.height_min.to_integer))
+      }
+    }
+  )
+  
+  - move <-
+  ( + new_cut:REAL_32
+    - dx,dy:REAL_32
+    (Self != PAGE_SPLIT).if {
+      (HAND.is_begin).if {
+        (is line).if {
+          dx := child.first.xmax+1-HAND.x_begin
+        } else {
+          dy := child.first.ymax+1-HAND.y_begin
+        }
+      }
+      (is line).if { new_cut := (HAND.x_cur+dx - xo) / width;  }
+      else         { new_cut := (HAND.y_cur+dy - yo) / height; }
+      (new_cut != cut).if { cut := new_cut; ask_refresh; }
+    }
+  )
+  
+  - dup c:PAGE line is_l:BOOLEAN <-  
+  ( cut := 0.5
+    set line with is_l
+    parent := c.parent
+    parent.child.at ((parent.child.at 1 = c).to_integer) put Self
+    c.set_parent Self; child.add_last c
+    c.dup Self
+    ask_refresh
+  )
+    
+  // Parsing
+  
+  - new:SELF <-
+  ( + r:PAGE_SPLIT
+    (stock.is_empty).if { r := clone; } else { r := stock.pop; r.child.clear; }
+    r
+  )
+  
+  - free <- stock.add_last Self
+  
+  - init p:WIN :SELF <- ( parent_win.init p; read_object; Self)
+  
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  (    
+    id
+    .case "type"   then { set line with (v = "line"); }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN <-
+  (
+    id
+    .case "cut"    then { cut := v; }
+    = STRING_ALIAS
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "PAGE_SPLIT" then { PAGE_SPLIT.new.init Self; }
+    .case "PAGE"       then { PAGE.new.init Self;       }
+    = STRING_ALIAS
+  )
+  
+  - write_object <-
+  ( + w:WIN
+    put_object {
+      put "type" value { put_str (is line.ok "line" or "column"); }
+      put "cut" value { put_real cut; }
+      0.to 1 do { i:INTEGER
+        w := child.at i
+        (w.dynamic_type = PAGE).if {
+          put "PAGE" value { w.like PAGE.write_object; }
+        } else {
+          put "PAGE_SPLIT" value { w.like PAGE_SPLIT.write_object; }
+        }
+      }
+    }
+  )

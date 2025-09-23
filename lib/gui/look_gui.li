@@ -1,0 +1,120 @@
+Header  
+  + name := LOOK_GUI;
+  
+Inherit
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+      
+Public
+  
+  // Icones
+  
+  - background:IMG
+  - background_color:COLOR := COLOR.black
+  
+  - menu_ico:IMG
+  - buffer_ico:IMG
+  - setup_ico:IMG
+  
+  // Color
+  
+  - cols:Expanded ARRAY COLOR
+  - cols_size:INTEGER <- ( abstract; 0)
+  
+  - text_ui:COLOR    := COLOR.rgb (0,0,0)
+  - txt_nui:COLOR    := COLOR.rgb (255,255,255)
+  - text_bg_ui:COLOR := COLOR.rgb ( 40, 40, 40)
+  - short_ui:COLOR   := COLOR.rgb (  0,  0,255)
+  //- menu_bar:COLOR
+  - border_on:COLOR   := COLOR.rgb (215, 215, 255)
+  - border_off:COLOR  := COLOR.rgb (115, 115, 155)
+  - help_ui:COLOR     := COLOR.rgb (219,166,0)
+  - elevator_ui:COLOR := COLOR.rgba (0,0,0, 77)
+  - select_ui:COLOR   := COLOR.rgba (0,0,0, 38)
+  
+  // Used by STY :
+  - none:COLOR       := COLOR.rgb (  0,  0,   0)
+  - fmt_li:COLOR     := COLOR.rgb (  0,118,  17)
+  - fmt_c:COLOR      := COLOR.rgb (  0, 18, 118)
+  - fmt_txt:COLOR    := COLOR.rgb (  0,118, 170)
+  - fmt_img:COLOR    := COLOR.rgb (118,118,  17)
+  
+  - read:BOOLEAN <-
+  ( + pth:STRING_ALIAS
+    buftxt.clear
+    cols.make cols_size
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy look_file
+      tmp.append ".sty"
+      pth := tmp.to_string_alias
+    }
+    SYSTEM_IO.read_asset pth in_txt buftxt
+    read pth src buftxt
+  )
+  
+  //- read:SELF <- ( read_object; Self)
+          
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "background" then { background := IMG.load v asset TRUE; }
+    .case "menu_ico"   then { menu_ico   := IMG.load v asset TRUE; }
+    .case "buffer_ico" then { buffer_ico := IMG.load v asset TRUE; }
+    .case "setup_ico"  then { setup_ico  := IMG.load v asset TRUE; }
+    = STRING_ALIAS
+  )
+  
+  - put id:STRING_ALIAS col c:COLOR :BOOLEAN <-
+  (
+    id
+    .case "background" then { background := NULL; background_color := c; }
+    .case "text_ui"    then { text_ui := c; }
+    .case "txt_nui"    then { txt_nui := c; }
+    .case "short_ui"   then { short_ui := c; }
+    .case "text_bg_ui" then { text_bg_ui := c; }
+    .case "help_ui"    then { help_ui := c; }
+    .case "elevator_ui" then { elevator_ui := c; }
+    .case "select_ui"  then { select_ui := c; }
+   // .case "menu_bar"   then { menu_bar := c;  }
+    .case "border_on"  then { border_on := c; }
+    .case "border_off" then { border_off := c;}
+    .case "fmt_li"     then { fmt_li := c;}
+    .case "fmt_c"      then { fmt_c := c;}
+    .case "fmt_txt"    then { fmt_txt := c;}
+    .case "fmt_img"    then { fmt_img := c;}
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  ( - r,g,b,a:UINTEGER_8
+    - i:INTEGER
+    + ok:BOOLEAN
+    ok := TRUE
+    i
+    .when 0 then { r := v.to_uinteger_8; }
+    .when 1 then { g := v.to_uinteger_8; }
+    .when 2 then { b := v.to_uinteger_8; }
+    .when 3 then { a := v.to_uinteger_8
+      ok := put id col (COLOR.rgba (r,g,b,a))
+    }
+    i := (i + 1) & 11b
+    ok
+  )
+  
+  - to_alpha a:REAL_32 <-
+  (    
+    none := none.set_af a
+  )
+  
+  - to_gray <-
+  (
+    none := none.to_gray
+  )
+  
+  // Draw.
+  
+  - drw c:INTEGER :REAL_32 <-
+  (
+    abstract
+    0
+  )
+  

@@ -1,0 +1,11 @@
+Header
+
+  + name        := EXPR;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - value:INTEGER <- abstract

@@ -1,0 +1,64 @@
+Header
+  + name := TP;
+
+Inherit
+  + parent_tpro:Expanded TPRO
+  
+Public
+    
+  + local:LOCAL
+  
+  + attr:UINTEGER_8
+  
+  + index:UINTEGER_8; // iiii.gggg : Index vector, Genericity index - 1
+  // Ex.: local:(SELF,A,HMAP V KEY K)
+  // - for A : index = 20h
+  // - for SELF : index = 00h
+  // - for K : index = 32h
+  
+  - set_local l:LOCAL      <- [ ? {l!=NULL}; ]( local := l; )
+  - set_index i:UINTEGER_8 <- ( index := i; )
+  
+  - is_self:BOOLEAN <- key.first = 'Ë'
+  
+  - list:Expanded ARRAY TP
+  - set_key k:STRING_ALIAS :SELF <- ( key := k; Self)
+  
+Public
+  - type:TYPE <-
+  ( + t:TYPE
+    + tg:TPRO
+    t := local.type.at (index >> 4)
+    ((index & 0Fh) != 0).if {
+      tg ?= t
+      t := tg.generic.at ((index & 0Fh)-1)
+    }
+    t
+  )
+  
+  - self:TP <- letter 26
+  
+  - new:SELF <- ( crash; Self)
+  
+  - letter let:UINTEGER_8 :TP <-
+  (
+    (list.is_empty).if {
+      0.to 25 do { i:INTEGER
+        list.add_last (clone.set_key (('A' +# i).to_string_alias))
+      }
+      list.add_last (clone.set_key "Ëš")
+    }
+    list.at let
+  )
+    
+  - txt_in s:STRING_BUFFER sty st:STY <-
+  (
+    (st != NULL).if { st.put (STY.tp) to (s.count); }
+    s += key
+    (st != NULL).if { st.put (STY.typ) to (s.count); }
+  )
+      
+  - dup:TP <- new letter flag attr
+  
+  - out_c <- ( crash; )
+  

@@ -1,0 +1,49 @@
+Header
+  
+  - name := THREAD;
+    
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + index:INTEGER
+  
+  + data:INTEGER
+  
+  + next:THREAD
+  
+  - set_next nxt:THREAD <-
+  (
+    next := nxt
+  )
+  
+  - set_data n:INTEGER <-
+  (
+    (n = 0).if {      
+      index.print
+      '\n'.print
+      exit 0
+    } else {            
+      next.set_data (n-1)
+    }
+    data := n
+  )
+  
+  - create idx:INTEGER with nxt:THREAD :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make idx with nxt
+    result
+  )
+  
+  - make idx:INTEGER with nxt:THREAD <-
+  ( 
+    next := nxt
+    index := idx
+  )
+
+
+
+  

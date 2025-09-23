@@ -1,0 +1,429 @@
+Header
+  
+  + name         := LAYER_DATA;
+  /*
+  layer specific variables (needed for SNR and DP scalability).
+  */
+  
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Private
+  
+  //
+  // BitStream manager.
+  //
+  
+  - buffer:ARRAY(UINTEGER_8)
+  - pos:INTEGER
+  - max:INTEGER
+    
+  - cache:INTEGER
+  - n_cache:INTEGER
+    
+Public
+
+  //
+  // Data.
+  //  
+  
+  // bit input 
+  - infile:POINTER
+     
+  // sequence header and quant_matrix_extension() 
+  - intra_quantizer_matrix:NATIVE_ARRAY(INTEGER)
+  - non_intra_quantizer_matrix:NATIVE_ARRAY(INTEGER)
+  - chroma_intra_quantizer_matrix:NATIVE_ARRAY(INTEGER)
+  - chroma_non_intra_quantizer_matrix:NATIVE_ARRAY(INTEGER)
+  
+  - mpeg2_flag:BOOLEAN
+  - set_mpeg2_flag b:BOOLEAN <-
+  (
+    mpeg2_flag := b
+  )
+  
+  // sequence scalable extension 
+  - scalable_mode:INTEGER
+  - set_scalable_mode m:INTEGER <-
+  (
+    scalable_mode := m
+  )
+  
+  // picture coding extension 
+  - q_scale_type:BOOLEAN
+  - set_q_scale_type n:BOOLEAN <-
+  (
+    q_scale_type := n
+  )
+  
+  - alternate_scan:INTEGER
+  - set_alternate_scan n:INTEGER <-
+  (
+    alternate_scan := n
+  )
+  
+  // picture spatial scalable extension 
+  - pict_scal:BOOLEAN
+  - set_pict_scal b:BOOLEAN <-
+  (
+    pict_scal := b
+  )
+  
+  // slice/macroblock 
+  - priority_breakpoint:INTEGER
+  - set_priority_breakpoint n:INTEGER <- // BSBS: GETHDR only
+  (
+    priority_breakpoint := n
+  )
+  
+  - quantizer_scale:INTEGER
+  - set_quantizer_scale n:INTEGER <-
+  (
+    quantizer_scale := n
+  )
+    
+  - block:NATIVE_ARRAY(NATIVE_ARRAY(INTEGER_16)); // [12][64]
+  
+Public
+  
+  //
+  // Creation.
+  //
+  
+  - make name:STRING <-
+  ( + code:INTEGER
+        
+    // Open file.        
+    infile := FILE_UTILS.open_read name
+    
+    (infile.is_null).if {
+      error_text.copy "Base layer input file "
+      error_text.append name
+      error_text.append " not found\n"
+      error error_text
+    }
+            
+    // initialize_buffer.
+    buffer := ARRAY(UINTEGER_8).create 2048
+    pos    := 2048
+    max    := 2048
+    n_cache := cache := pos := 0
+    
+    // Check format.    
+    flush_buffer 0; // fills valid data into bfr 
+    (show_bits 8 = 47h).if {
+      error "Decoder currently does not parse transport streams\n"
+    }
+    next_start_code
+    code := show_bits 32
+    ((code = pack_start_code) || {code = video_elementary_stream}).if {
+      system_stream_flag := TRUE
+    } else {
+      (code != sequence_header_code).if { 
+	error "Unable to recognize stream type\n"
+      }
+    }
+    // Reset.
+    //? {infile = 2048}
+    //? {infile.cursor = 2048}
+    n_cache := cache := pos := 0
+    flush_buffer 0
+    
+    // Init Structure.
+    intra_quantizer_matrix            := NATIVE_ARRAY(INTEGER).create 64
+    non_intra_quantizer_matrix        := NATIVE_ARRAY(INTEGER).create 64
+    chroma_intra_quantizer_matrix     := NATIVE_ARRAY(INTEGER).create 64
+    chroma_non_intra_quantizer_matrix := NATIVE_ARRAY(INTEGER).create 64
+    
+    block := NATIVE_ARRAY(NATIVE_ARRAY(INTEGER_16)).create 12
+    0.to 11 do { j:INTEGER
+      block.at j put (NATIVE_ARRAY(INTEGER_16).calloc_intern 64)
+    }
+  )
+    
+  //
+  // BitStream manager.
+  //
+    
+  - show_bits n:INTEGER :INTEGER <-
+  // return next n bits (right adjusted) without advancing 
+  (
+    //(cache.to_raw_uinteger >> (32 - n)).to_integer
+    (cache.to_uinteger_32 >> (32 - n)).to_integer
+  )
+  
+  - show_boolean:BOOLEAN <- show_bits 1.to_boolean
+  
+  - flush_buffer n:INTEGER <-
+  // advance by n bits 
+  (     
+    cache   := cache << n
+    n_cache := n_cache - n
+    ? {n_cache >= 0}
+    
+    (n_cache <= 24).if {
+      (system_stream_flag && {pos >= (max-4)}).if {
+	{
+	  (pos >= max).if {
+	    next_packet
+	  }
+	  cache   := cache | (get_byte << (24 - n_cache))
+	  n_cache := n_cache + 8
+	}.do_while {n_cache <= 24}
+      } else {
+	(pos < 2044).if {  
+	  {
+	    cache   := cache | (buffer.at pos.to_integer << (24 - n_cache))
+	    pos     := pos + 1
+	    n_cache := n_cache + 8
+	  }.do_while {n_cache <= 24}
+	} else {
+	  {
+	    (pos >= 2048).if {
+	      fill_buffer
+	    }
+	    cache   := cache | (buffer.at pos.to_integer << (24 - n_cache))
+	    pos     := pos + 1
+	    n_cache := n_cache + 8
+	  }.do_while {n_cache <= 24}
+	}
+      }
+    }
+  )
+
+  - get_bits n:INTEGER :INTEGER <-
+  // return next n bits (right adjusted) 
+  ( + val:INTEGER
+    
+    val := show_bits n
+    flush_buffer n
+    
+    val
+  )
+  
+  - get_boolean:BOOLEAN <- get_bits 1.to_boolean
+  
+  - flush_buffer32 <-
+  (     
+    cache := 0
+    
+    n_cache := n_cache - 32
+    
+    (system_stream_flag && {pos >= (max-4)}).if {
+      {n_cache <= 24}.while_do {
+	(pos >= max).if {
+	  next_packet
+	}
+	cache   := cache | (get_byte << (24 - n_cache))
+	n_cache := n_cache + 8
+      }
+    } else {
+      {n_cache <= 24}.while_do {
+	(pos >= 2048).if {
+	  fill_buffer
+	}
+	cache   := cache | (buffer.at pos.to_integer << (24 - n_cache))
+	pos     := pos + 1
+	n_cache := n_cache + 8
+      }
+    }
+  )
+
+  - get_bits32:INTEGER <-
+  ( + l:INTEGER
+
+    l := show_bits 32
+    flush_buffer32
+    l
+  )
+
+  - next_start_code <-
+  // align to start of next next_start_code 
+  (
+    // byte align 
+    flush_buffer (n_cache & 7)
+    
+    {show_bits 24 != 1}.while_do {
+      flush_buffer 8
+    }
+  )
+
+Private
+  
+  - fill_buffer <-
+  ( + buffer_level:INTEGER
+            
+    buffer_level := FILE_UTILS.read_raw infile in (buffer.storage) size 2048
+    pos := 0
+    
+    (system_stream_flag).if {
+      max := max - 2048
+    }
+    
+    // end of the bitstream file 
+    (buffer_level < 2048).if {
+      FILE_UTILS.close infile
+      // just to be safe 
+      (buffer_level < 0).if {
+	buffer_level := 0
+      }
+      
+      // pad until the next to the next 32-bit word boundary 
+      {(buffer_level & 3) != 0}.while_do {
+	buffer.at buffer_level put 0
+	buffer_level := buffer_level + 1
+      }
+      
+      // pad the buffer with sequence end codes 
+      {buffer_level < 2048}.while_do {
+        buffer.at buffer_level put ((sequence_end_code >> 24).to_uinteger_8)
+        buffer_level := buffer_level + 1
+        buffer.at buffer_level put (((sequence_end_code >> 16) & 0FFh).to_uinteger_8)
+        buffer_level := buffer_level + 1
+        buffer.at buffer_level put (((sequence_end_code >> 8 ) & 0FFh).to_uinteger_8)
+        buffer_level := buffer_level + 1
+        buffer.at buffer_level put ((sequence_end_code & 0FFh).to_uinteger_8)
+        buffer_level := buffer_level + 1
+      }
+    }
+  )
+  
+  - get_byte:INTEGER <-
+  // MPEG-1 system layer demultiplexer 
+  ( + result:INTEGER
+        
+    {pos >= 2048}.while_do {      
+      //buffer.clear
+      FILE_UTILS.read_raw infile in (buffer.storage) size 2048
+      pos := pos - 2048
+      max := max - 2048
+    }
+    result := buffer.at pos
+    pos    := pos + 1
+    result
+  )
+  
+  - get_word:INTEGER <-
+  // extract a 16-bit word from the bitstream buffer 
+  ( + val:INTEGER
+
+    val := get_byte
+    (val << 8) | get_byte
+  )
+  
+  - next_packet <-
+  // initialize buffer, call once before first getbits or showbits 
+  // parse system layer, ignore everything we don't need 
+  ( + code:INTEGER
+    + l:INTEGER
+    + is_read:BOOLEAN
+    + end:BOOLEAN
+    
+    {
+      code := get_long
+      
+      // remove system layer byte stuffing 
+      {(code & 0FFFFFF00h) != 0100h}.while_do {
+	code := (code << 8) | get_byte
+      }
+      
+      is_read := FALSE
+      (code)
+      .when pack_start_code then { // pack header 
+	// skip pack header (system_clock_reference and mux_rate) 
+	is_read := TRUE
+	pos     := pos + 8
+      }
+      .when video_elementary_stream then {   
+	is_read := TRUE
+	code    := get_word;             // packet_length 
+	max     := pos + code
+	code    := get_byte
+	
+	((code >> 6) = 02h).if {
+	  pos  := pos + 1
+	  code := get_byte;     // parse PES_header_data_length 
+	  pos  := pos + code;   // advance pointer by PES_header_data_length 
+	  //"MPEG-2 PES packet\n".print
+	  end := TRUE
+	} else {
+	  (code = 0FFh).if {
+	    // parse MPEG-1 packet header 
+	    {(code := get_byte) = 0FFh}.while_do { 
+	      // Nothing.
+	    }
+	  }
+	}
+	(end).if_false {
+	  // stuffing bytes 
+	  (code >= 040h).if {
+	    (code >= 080h).if {
+	      STDERR.put_string "Error in packet header\n"
+	      exit 1
+	    }
+	    // skip STD_buffer_scale 
+	    pos  := pos + 1
+	    code := get_byte
+	  }
+	  
+	  (code >= 030h).if {
+	    (code >= 040h).if {
+	      STDERR.put_string "Error in packet header\n"
+	      exit 1
+	    }
+	    // skip presentation and decoding time stamps 
+	    pos := pos + 9
+	  } else {
+	    (code >= 020h).if {
+	      // skip presentation time stamps 
+	      pos := pos + 4
+	    } else {
+	      (code != 00Fh).if {
+		STDERR.put_string "Error in packet header\n"
+		exit 1
+	      }
+	    }
+	  }
+	  end := TRUE
+	}
+      }
+      .when iso_end_code then { // end       
+	// simulate a buffer full of sequence end codes 
+	is_read := TRUE
+	l := 0
+	{l < 2048}.while_do {
+	  buffer.at l put ((sequence_end_code >> 24).to_uinteger_8)
+	  l := l + 1
+	  buffer.at l put (((sequence_end_code >> 16)&0FFh).to_uinteger_8)
+	  l := l + 1
+	  buffer.at l put (((sequence_end_code >> 8)&0FFh).to_uinteger_8)
+	  l := l + 1
+	  buffer.at l put ((sequence_end_code & 0FFh).to_uinteger_8)
+	  l := l + 1
+	}
+	pos := 0
+	max := 2048
+	end := TRUE
+      }
+      (is_read).if_false {
+	(code >= system_start_code).if {
+	  // skip system headers and non-video packets
+	  code := get_word
+	  pos  := pos + code
+	} else {
+	  STDERR.put_string "Unexpected startcode "
+	  STDERR.put_integer code
+	  STDERR.put_string " in system layer\n"
+	  exit 1
+	}
+      }
+    }.do_until {end}
+  )
+
+  - get_long:INTEGER <-
+  ( + i:INTEGER
+
+    i := get_word
+    (i << 16) | get_word
+  )

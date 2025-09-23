@@ -1,0 +1,120 @@
+Header  
+  + name := VEC;
+  
+Insert
+  - parent_clone:CLONE := CLONE
+  
+SELF  
+  - dim:INTEGER <- ( abstract; 0)
+        
+Public
+  - create:SELF <-
+  ( + result:SELF
+    abstract
+    result
+  )
+  
+  - free <- abstract
+  
+  - item i:INTEGER :REAL_32    <- `((float *)@Self)[@i]`:REAL_32
+  
+  - put e:REAL_32 to i:INTEGER <- `((float *)@Self)[@i] = @e`
+  
+  - dup:SELF <-
+  ( + result:SELF
+    result := create
+    0.to (dim-1) do { i:INTEGER
+      result.put (item i) to i
+    }
+    result
+  )
+  
+  - add other:SELF <-
+  ( 
+    0.to (dim-1) do { i:INTEGER
+      put (item i + other.item i) to i
+    }
+  )
+  
+  - Self:SELF '+' other:SELF :SELF <-
+  ( + result:SELF
+    result := dup
+    result.add other
+    result
+  )
+  
+  - sub other:SELF <-
+  ( 
+    0.to (dim-1) do { i:INTEGER
+      put (item i - other.item i) to i
+    }
+  )
+  
+  - Self:SELF '-' other:SELF :SELF <-
+  ( + result:SELF
+    result := dup
+    result.sub other
+    result
+  )
+  
+  - mul_scale scale:REAL_32 <-
+  ( 
+    0.to (dim-1) do { i:INTEGER
+      put (item i * scale) to i
+    }
+  )
+  
+  - Self:SELF '*#' scale:REAL_32 :SELF <-
+  ( + result:SELF
+    result := dup
+    result.mul_scale scale
+    result
+  )
+  
+  - Self:SELF '#*' other:SELF :REAL_32 <-
+  ( + result:REAL_32
+    0.to (dim-1) do { i:INTEGER
+      result := result + (item i * other.item i)
+    }
+    result
+  )
+  
+  - length:REAL_32 <- (Self #* Self).sqrt
+  
+  - normalize <-
+  ( + k:REAL_32
+    k := 1.0 / length
+    mul_scale k
+  )
+  
+  - min other:SELF <-
+  ( 
+    0.to (dim-1) do { i:INTEGER
+      put (item i.min (other.item i)) to i
+    }
+  )
+  
+  - max other:SELF <-
+  ( 
+    0.to (dim-1) do { i:INTEGER
+      put (item i.max (other.item i)) to i
+    }
+  )
+  
+  - print <-
+  (
+    "[ ".print
+    0.to (dim-1) do { i:INTEGER
+      item i.print_format_c "%4.2f"; ' '.print
+    }
+    "]".print
+  )
+  
+  - print_cm <-
+  (
+    "[ ".print
+    0.to (dim-1) do { i:INTEGER
+      item i.to_cm.print; "cm ".print
+    }
+    "]".print
+  )

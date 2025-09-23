@@ -1,0 +1,130 @@
+Header
+  + name := CMD_SEARCH;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+
+Public
+  - old_text:STRING_BUFFER   := STRING_BUFFER.create 32
+  - stack:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 64
+  - state:INTEGER
+  
+  - is_back:BOOLEAN
+  
+  - start:INTEGER <- stack.second_last
+  - end:INTEGER   <- stack.last
+  
+  - open_forward:BOOLEAN <- sub_open FALSE msg "I-search:" key "Search forward"
+  
+  - open_backward:BOOLEAN <- sub_open TRUE msg "I-search backward:" key "Search backward"
+  
+  - sub_open s:BOOLEAN msg m:STRING_ALIAS key key:STRING_ALIAS :BOOLEAN <-
+  (
+    mesg.copy m
+    is_back := s
+    state := 0
+    stack.clear
+    stack.add_last (cur_txt.pos)
+    stack.add_last (cur_txt.pos)
+    text.clear
+    SUBACT.get key.load Self
+    open
+  )
+      
+  - action:BOOLEAN <-
+  ( old_text.copy text
+    close
+    TRUE
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  ( parent_cmd.key s cmd c
+    ((c & KEYBOARD.msk_cmd) = 0).if {
+      search start
+    } else {
+      //s.first.println
+      ((c & 111b) = 0).if {
+        (s.first)
+        .when 'R' or 'U' then { action; }
+        .when 'L' or 'D' then { action; }
+      }
+    }
+  )
+  
+  - switch:BOOLEAN <-
+  ( old_text.copy text
+    close
+    (is_back).if { open_forward; } else { open_backward; }
+    key old_text cmd 0
+    TRUE
+  )
+  
+  - to_prev:BOOLEAN <-
+  (stack.count > 2).if {
+    stack.remove_tail 2
+    cur_txt.set_pos_raw (is_back.ok start or end)
+    text.clear
+    start.to (end-1) do { i:INTEGER; text.add_last (cur_txt.text.at i); }
+    cur := text.count
+  }
+  
+  - to_next:BOOLEAN <-
+  ( + p:INTEGER
+    (state = 1).if {
+      info.copy "[Looped]"
+      p := (is_back).ok (cur_txt.text.upper) or 0
+      state := 0
+    } else {
+      (text.is_empty).if {
+        (old_text.is_empty).if {
+          info.copy "[No previous search string]"
+        } else {
+          text.copy old_text
+          cur := text.count
+          p := start
+        }
+      } else {
+        (is_back).if {
+          (start = 0).if {
+            p := -1
+          } else {
+            p := start - cur_txt.text.size_back_at start
+          }
+        } else {
+          (start > cur_txt.text.upper).if {
+            p := start
+          } else {            
+            p := start + cur_txt.text.size_at start
+          }
+        }
+        info.clear
+      }
+    }
+    (!text.is_empty) && {search p}
+  )
+    
+  - cancel:BOOLEAN <-
+  ( cur_txt.set_pos_raw (stack.first)
+    close
+    TRUE
+  )
+  
+Private
+  
+  - search b:INTEGER :BOOLEAN <-
+  ( + p:INTEGER
+    (is_back).if {
+      p := cur_txt.text.search_back text at b
+    } else {
+      p := cur_txt.text.search text at b
+    }
+    (p != -1).if {
+      stack.add_last p
+      stack.add_last (p + text.count)
+      cur_txt.set_pos_raw ((is_back).ok p else {p+text.count})
+    } else {
+      state := 1
+      info.copy "[Failing]"
+    }
+    p != -1
+  )

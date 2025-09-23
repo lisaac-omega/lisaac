@@ -1,0 +1,48 @@
+Header
+  + name := Strict SEPARATOR;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ SEPARATOR
+  
+Private
+  - stk:Expanded ARRAY SEPARATOR
+Public
+  
+  - width_min:REAL_32  <- is vertical.ok 16 or 0
+  - height_min:REAL_32 <- is vertical.ok 0 or 16
+  
+  - vertical:INTEGER := 1 << 15
+  
+  + col:COLOR
+  - color c:COLOR  :SELF <- (col := c; Self)
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init_h:SELF <- init_obj
+  
+  - init_v:SELF <-
+  (
+    init_obj
+    set vertical
+    Self
+  )
+    
+  - draw <-
+  ( + c:COLOR
+    + v:REAL_32
+    c := (col=COLOR).ok (LOOK.text_ui) or col
+    begin_path
+    stroke_color c
+    stroke_width 1
+    (is vertical).if {
+      v := xo + width/2
+      line (v,yo+2) to (v,ymax-2)
+    } else {
+      v := yo + height/2
+      line (xo+2,v) to (xmax-2,v)
+    }
+    stroke
+  )

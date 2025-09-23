@@ -1,0 +1,22 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_print:PRINT := PRINT
+  
+  - parent_utils:UTILS := UTILS
+  
+  
+Public
+  
+  + buffer:STRING
+  
+  - main <-
+  ( + hexa:STRING_ALIAS
+    hexa := to_string
+    //hexa.println
+    hexa.foreach { c:CHARACTER
+      TEST.check ("0123456789ABCDEF" .has c)
+    }
+    '.'.println
+  )

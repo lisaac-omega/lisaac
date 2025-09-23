@@ -1,0 +1,118 @@
+Header
+
+  + name := AVL_SET V;
+
+Inherit
+
+  + parent_set:Expanded SET V
+
+  + parent_avl_tree:Expanded AVL_TREE V
+
+Public
+
+  - add e:V <-
+  (
+    item_memory := e
+    root := do_insert root
+  )
+
+  - fast_add e:V <-
+  (
+    item_memory := e
+    root := fast_do_insert root
+  )
+
+  - clear_count <-
+  (
+    (! is_empty).if {
+      clear_nodes root
+      root := NULL
+      count := 0
+      map_dirty := TRUE
+    }
+  )
+
+  - reference_at e:V :V <-
+  ( + n:AVL_SET_NODE(V)
+    + result:V
+
+    (root != NULL).if {
+      n := root.at e
+      (n != NULL).if {
+        result := n.item
+      }
+    }
+    result
+  )
+
+  - item index:INTEGER :V <-
+  ( + result:V
+
+    (map_dirty).if {
+      build_map
+    }
+    map.item (index - 1).item
+  )
+
+Private
+
+  - set_item n:AVL_SET_NODE(V) <-
+  (
+    n.make item_memory
+  )
+
+  - set_value n:AVL_SET_NODE(V)
+
+  - exchange_and_discard (n1, n2:AVL_SET_NODE(V)) <-
+  (
+    map_dirty := TRUE
+    n1.set_item (n2.item)
+    rebalance := TRUE
+    count := count - 1
+    discard_node n2
+  )
+
+  - discard_node n:AVL_SET_NODE(V) <-
+  ( //+ i:V
+
+    //n.make i
+    //n.set_left (lost_nodes.item)
+    //lost_nodes.set_item n
+  )
+
+  - a_new_node:AVL_SET_NODE(V) <-
+  (
+    AVL_SET_NODE(V).create
+  )
+
+Public
+
+  - create:SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make
+    result
+  )
+
+  - make <-
+  (
+    //(lost_nodes != NULL).if {
+    //  clear_count
+    //} else {
+    //  create map.make 0
+    //  lost_nodes ::= common_lost_nodes.reference_at generating_type
+    //  (lost_nodes = NULL).if {
+//        create lost_nodes.set_item NULL
+//        common_lost_nodes.add (lost_nodes, generating_type)
+//      }
+//    }
+  )
+
+  // Invariant.
+
+//  [
+//    -? {lost_nodes != NULL}
+//    -? {lost_nodes = common_lost_nodes.at generating_type}
+//  ]
+

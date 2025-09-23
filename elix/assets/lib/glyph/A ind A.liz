@@ -1,0 +1,8 @@
+v0 <- 8
+Push
+Pop (0,0)
+Push
+Pop (A0.Width, v0)
+Ascent <- Max (A0.Ascent, A1.Ascent + v0)
+Descent <- Min (A0.Descent, A1.Descent - v0)
+Width <- A0.Width + A1.Width

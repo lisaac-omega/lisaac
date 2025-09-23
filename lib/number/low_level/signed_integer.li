@@ -1,0 +1,111 @@
+Header
+
+  + name := SIGNED_INTEGER;
+
+  /*Generic Signed Integer.*/
+
+Insert
+
+  - parent_integer:INTEGER := INTEGER
+
+Public
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'.
+  // No memory allocation during the process.
+  [ ? {b != NULL}; ]
+  ( + val:SELF
+    + i,j:INTEGER
+    (Self = 0).if {
+      b.extend '0'
+    } else {
+      (Self > 0).if {
+        val := Self
+      } else {
+        val := - Self
+        b.extend '-'
+      }
+      i := b.upper + 1
+      {val = 0}.until_do {
+        b.extend ((val % 10).digit)
+        val := val / 10
+      }
+      j := b.upper
+      {i >= j}.until_do {
+        b.swap i with j
+        j := j - 1
+        i := i + 1
+      }
+    }
+  )
+  
+  - to_octal:SELF <-
+  // Gives coresponding octal value.
+  ( + result,unit,current:SELF
+    (Self < 0).if {
+      result := -((-Self).to_octal)
+    } else {
+      current := Self
+      unit := 1
+      {current != 0}.while_do {
+        result := result + ((current & 7)*unit)
+        unit := (unit << 3) + (unit << 1)
+        current := current >> 3
+      }
+    }
+    result
+  )
+  
+  - to_hexadecimal_in buffer:STRING_BUFFER <-
+  // Append in `buffer' the equivalent of `to_hexadecimal'. No new STRING_BUFFER
+  // creation during the process.
+  [ -? {buffer!=NULL}; ]
+  ( + val:SELF
+    + i,old_count,j,sz:INTEGER
+    
+    (Self = 0).if {
+      buffer.extend '0'
+    } else {
+      (Self < 0).if {
+        buffer.extend '-'
+        val := -Self
+      } else {
+        val := Self
+      }
+      i := buffer.count
+      sz := object_size * 2
+      {(val != 0) && {j < sz}}.while_do {
+        buffer.extend ((val & 0Fh).hexadecimal_digit)
+        val := val >> 4
+        j := j + 1
+      }
+      old_count := buffer.upper
+      {i >= old_count}.until_do {
+        buffer.swap i with old_count
+        old_count := old_count - 1
+        i := i + 1
+      }
+    }
+  )
+  
+  // Hashing:
+
+  - hash_code:INTEGER <-
+  ( + result:INTEGER
+    (Self < 0).if {
+      result := ~ Self
+    } else {
+      result := Self
+    }
+    result
+  )
+  [
+    +? {Result>=0}
+  ]
+
+  // Bound test
+
+  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  (
+    (low < to_raw_integer_64) && {up.to_raw_integer_64 > to_raw_integer_64}
+  )

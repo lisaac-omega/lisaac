@@ -1,0 +1,520 @@
+Header
+
+  + name    := SLOT_DATA;
+
+  /*Slot with data style*/
+
+Inherit
+
+  + parent_variable:Expanded VARIABLE
+
+  + parent_slot:SLOT := SLOT
+
+Public
+  
+  - data_hash_code_alias:SLOT_DATA
+  
+  // BUG COMPILO 0.11
+
+  - id_section:SECTION_ <-
+  ( + result:SECTION_
+
+    (parent_slot != NULL).if {
+      result := parent_slot.id_section
+    } else {
+      result := SECTION_.standard_private
+    }
+    result
+  )
+
+  - receiver_type:TYPE <-
+  ( + result:TYPE
+
+    (parent_slot != NULL).if {
+      result := parent_slot.receiver_type
+    } else {
+      result := type_block
+    }
+    result
+  )
+
+  //
+
+  - common_slot:SLOT <- parent_slot
+
+  //
+  // Sequence optimizer
+  //
+
+  + last_write:WRITE
+  + last_seq_index:UINTEGER_32
+  + last_seq_or_and:UINTEGER_32
+  + last_seq_call_and_loop:UINTEGER_32
+  + last_seq_call_local_and_loop:UINTEGER_32
+
+  + last_list_current:LIST
+  + last_index:INTEGER
+
+  - is_invariant rec:EXPR :BOOLEAN <-
+  (
+    ((rec = NULL) || {rec.is_invariant}) &&
+    {last_write != NULL} &&
+    {loop_seq_call_and_loop = seq_call_and_loop} &&
+    {last_seq_index <= loop_seq_index}
+  )
+
+  - reset_last_write w:WRITE <-
+  (
+    (last_write = w).if {
+      last_write := NULL
+    }
+  )
+
+  - set_read <-
+  (
+    last_index := -1
+  )
+
+  - get_last_index:INTEGER <- last_index
+
+  - set_write w:WRITE <-
+  (
+    /* A FAIRE
+    (
+      (! PROFIL.mode_recursive) &&
+      {style = '-'} &&
+      {last_write != NULL} &&
+      {last_index < list_current.index} &&
+      {last_sequence = sequence_global}
+    ).if {
+      ? {list_current.at last_index = last_write}
+      list_current.put (last_write.value) to last_index
+      unwrite last_write
+      new_execute_pass
+    }
+    */
+    last_write                  := w
+    last_seq_index              := seq_index
+    last_seq_or_and             := seq_or_and
+    last_seq_call_and_loop      := seq_call_and_loop
+    last_seq_call_local_and_loop:= seq_call_local_and_loop
+    //
+    last_list_current := list_current
+    last_index        := list_current.index
+  )
+
+  - get_last_value rec:EXPR :EXPR <-
+  ( + result:EXPR
+    + val:EXPR
+    + rd:READ
+    + rd_loc:READ_LOCAL
+    + wrt_slot:WRITE_SLOT
+    + l:LOCAL
+    + g:SLOT_DATA
+    + is_rec_ok:BOOLEAN
+    + my_require_count:INTEGER
+    + pb:PROFIL_BLOCK
+    + i:INSTR
+
+    ((! PROFIL.mode_recursive) && {loop_invariant = NULL} && {last_write != NULL}).if {
+
+      my_require_count := require_count
+      (rec != NULL).if {
+	// Block exception.
+	pb ?= rec.static_type.raw
+	((pb != NULL) && {require_list != NULL}).if {
+	  rd_loc ?= rec
+	  l      := rd_loc.local
+	  wrt_slot ?= require_first
+	  rd_loc ?= wrt_slot.receiver
+	  (rd_loc.local = l).if {
+	    my_require_count := 1
+	  } else {
+	    my_require_count := 0
+	  }
+	  (require_list.lower).to (require_list.upper) do { j:INTEGER
+	    wrt_slot ?= require_list.at j
+	    rd_loc   ?= wrt_slot.receiver
+	    (rd_loc.local = l).if {
+	      my_require_count := my_require_count + 1
+	    }
+	  }
+	}
+      }
+
+      (
+	(
+	  (last_seq_call_and_loop = seq_call_and_loop) && {is_seq_list last_list_current}
+	) || {my_require_count = 1}
+      ).if {
+	// Receiver test.
+	(rec = NULL).if {
+	  is_rec_ok := TRUE
+	}.elseif {rec.is_constant} then {
+	  wrt_slot ?= last_write
+	  is_rec_ok := rec ~= wrt_slot.receiver
+	} else {
+	  rd ?= rec
+	  (rd != NULL).if {
+	    l ?= rd.variable
+	    g ?= rd.variable
+	    wrt_slot ?= last_write
+	    rd ?= wrt_slot.receiver
+	    is_rec_ok := (rd != NULL) && {
+	      (
+		{l = rd.variable} && {is_seq_list last_list_current} && {
+		  (
+		    (l.last_seq != NULL) && {l.last_seq.last_write != NULL} &&
+		    {l.last_seq.last_seq_index < last_seq_index} &&
+		    {last_seq_call_local_and_loop = seq_call_local_and_loop}
+		  ) || {l.require_count <= 1} || {l.style = ' '}
+		}
+	      ) ||
+	      {
+		{g = rd.variable} && {g.style = '-'} && {
+		  (
+		    (g.last_write != NULL) && {g.last_seq_index < last_seq_index} &&
+		    {last_seq_call_and_loop = seq_call_and_loop} &&
+		    {is_seq_list (g.last_list_current)}
+		  ) || {g.require_count = 1}
+		}
+	      }
+	    }
+	  }
+	}
+	(is_rec_ok).if {
+	  val := last_write.value
+	  rd  ?= val
+	  (rd = NULL).if {
+	    l := NULL
+	    g := NULL
+	  } else {
+	    l ?= rd.variable
+	    g ?= rd.variable
+	  }
+	  (
+	    ( // Constant propagation.
+	      val.is_constant
+	    ) ||
+            { // Local propagation.
+              (l != NULL) && {is_seq_list last_list_current} && {
+                (
+                  (l.last_seq != NULL) && {l.last_seq.last_write != NULL} &&
+                  {l.last_seq.last_seq_index < last_seq_index} &&
+                  {last_seq_call_local_and_loop = seq_call_local_and_loop}
+                ) || {l.require_count <= 1} || {l.style = ' '}
+              }
+            } ||
+            { // Global propagation.
+              (g != NULL) && {g.style = '-'} && {
+                (
+                  (g.last_write != NULL) && {g.last_seq_index < last_seq_index} &&
+                  {last_seq_call_and_loop = seq_call_and_loop} &&
+                  {is_seq_list (g.last_list_current)}
+                ) || {g.require_count = 1}
+              }
+            }
+          ).if {
+	    (rec != NULL).if {
+	      rec.remove
+	    }
+	    result := val.my_copy
+	  }.elseif {
+            // Propagation step by step.
+            (last_seq_or_and = seq_or_and) && {ensure_count = 1} &&
+            {list_current.index > list_current.lower} &&
+            {list_current.at (list_current.index - 1) = last_write}
+          } then {
+	    (rec != NULL).if {
+	      rec.remove
+	      wrt_slot ?= last_write
+	      wrt_slot.receiver.remove
+	    }
+	    unwrite last_write
+	    list_current.at (list_current.index - 1) put NOP
+	    result := val
+          }.elseif {
+            (rec != NULL) && {is_seq_list last_list_current} &&
+{my_require_count = 1} && {ensure_count = 1} &&
+{last_index.in_range (last_list_current.lower) to (last_list_current.upper)} &&
+{last_list_current.at last_index = last_write}
+          } then {
+	    // Local conversion.
+	    l := type.get_temporary position
+	    i := l.write (last_write.position) value val
+	    last_list_current.at last_index put i
+	    result := l.read (rec.position)
+	    //
+	    rec.remove
+	    wrt_slot ?= last_write
+	    wrt_slot.receiver.remove
+	    unwrite last_write
+	  }
+	}
+      }
+    }
+    result
+  )
+
+  //
+  // Constructeur.
+  //
+
+  - create b:SLOT type_full t:TYPE_FULL :SELF <-
+  (
+    create (b.position) name (b.name) style (b.style) base b type t
+  )
+
+  - create pos:POSITION name n:STRING_ALIAS
+  style s:CHARACTER base b:SLOT type t:TYPE_FULL :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make pos name n style s base b type t
+    result
+  )
+  
+  - make pos:POSITION name n:STRING_ALIAS style s:CHARACTER base b:SLOT type t:TYPE_FULL <-
+  ( + tmp:TYPES_TMP
+    + typ_sim:TYPE
+        
+    parent_slot := b
+    //
+    position    := pos
+    name        := n
+    style       := s
+    intern_name := get_intern name type FALSE
+    //
+    (parent_slot != NULL).if {
+      typ_sim := parent_slot.receiver_type
+      (
+        (data_hash_code_alias = NULL) && {typ_sim.itm_type != NULL} && 
+        {typ_sim.itm_type.name = "STRING_ALIAS"} && 
+        {name = "hash_code"}
+      ).if {        
+        data_hash_code_alias := Self
+      }
+    }
+    //
+    type := t
+    (is_static).if {
+      tmp := TYPES_TMP.new
+      tmp.add (type.raw)
+      type_set := tmp.to_types
+    } else {
+      type_set := TYPES_TMP.types_empty
+    }
+    ((type.raw.is_block) && {name != "__id"} && {name != "self"}).if {            
+      list_variable_block.add_last Self
+    }
+    ? {type != NULL}
+  )
+
+  //
+  // Context
+  //
+  
+  - init_list:LIST := LIST.create POSITION
+  
+  + value_init:LIST
+
+  - init <-
+  ( + val,rec,rec_call:EXPR
+    + wrt:WRITE
+    + old_list:LIST
+    + rd:ITM_READ_ARG1
+    + old_profil_current:PROFIL
+    + old_profil_slot:PROFIL_SLOT
+    /*
+    string_tmp.copy "init : "
+    string_tmp.append name
+    warning_error (position,string_tmp)
+    */
+    ((value_init = NULL) && {(affect != '<') || {Self = slot_id}}).if {      
+      (Self = slot_id).if {     
+        val := PROTOTYPE_CST.create position type type
+        (style = '+').if {
+          rec := PROTOTYPE_CST.create position type (receiver_type.default)
+        }
+        wrt := write position with rec value val
+        init_list.add_first wrt
+        value_init := LIST; // BSBS: Pas utile (Faire en sorte de faire un init unique!)
+        ? {init_list.index = -1}
+      } else {
+        // Init with complex code.
+        old_list := list_current
+        old_profil_current := profil_current
+        old_profil_slot    := profil_slot
+        profil_current := profil_slot := NULL
+        value_init := list_current := LIST.create position
+        (value = NULL).if {
+          val := type.default_value position
+        } else {
+          rd ?= value
+          ((rd != NULL) && {rd.arg = NULL}).if {
+            rec_call := PROTOTYPE_CST.create position type (receiver_type.default)
+            val := rd.to_run NULL with_self (rec_call,FALSE,FALSE) args NULL
+          } else {
+            val := value.to_run_expr; // ICI
+            //(type.raw.is_block).if { list_current.debug_display; }
+          }
+        }
+	val := val.check_type type with position
+        (style = '+').if {
+          rec := PROTOTYPE_CST.create position type (receiver_type.default)
+        }
+        (debug_level_option != 0).if {
+          value_init.add_last (
+            PUSH.create position context context_main first FALSE
+          )
+        }
+        wrt := write position with rec value val
+        (is_zero val).if { wrt.set_quiet_generation; }
+        value_init.add_last wrt
+        
+        list_current   := old_list
+        profil_current := old_profil_current
+        profil_slot    := old_profil_slot
+      }
+    }
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute <-
+  ( + lst:ARRAY SLOT
+    + slot:SLOT_DATA
+    + s:SLOT
+    + val:LIST
+    + old_list_current:LIST
+    //- last_idx:INTEGER
+    + old_profil_current:PROFIL
+    + old_profil_slot:PROFIL_SLOT
+    //+ insert_index:INTEGER
+
+    ((value_init != NULL) && {value_init != LIST}).if {      
+      val := value_init
+      value_init := NULL
+      // For a good order.
+      (type.is_expanded).if {
+        lst := type.slot_run
+        (lst != NULL).if {
+          (lst.lower).to (lst.upper) do { j:INTEGER
+            s := lst.at j
+            (s.style = '+').if {
+              slot := s.slot_data_intern
+              (slot != NULL).if {
+                slot.execute
+              }
+              
+              slot := s.slot_id
+              (slot != NULL).if {
+                slot.execute
+              }
+              
+            }
+          }
+        }
+      }
+            
+      old_list_current   := list_current
+      old_profil_current := profil_current
+      old_profil_slot    := profil_slot
+      list_current   := NULL
+      profil_current := NULL
+      profil_slot    := NULL
+
+      val.execute
+      
+      profil_slot    := old_profil_slot
+      profil_current := old_profil_current
+      list_current   := old_list_current
+      ? {init_list.index = -1}
+      init_list.add_last val
+    }
+  )
+
+  //
+  // Genere
+  //
+
+  - genere buf:STRING_BUFFER <-
+  (
+    type.genere_declaration buf
+    buf.add_last ' '
+    type.genere_star_declaration buf
+    buf.append intern_name
+    buf.append ";\n"
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append intern_name
+    buffer.add_last ' '
+    buffer.add_last ':'
+    type.display buffer
+  )
+
+  - display_all <-
+  (
+    string_tmp.clear
+    display string_tmp
+    string_tmp.print
+  )
+
+VARIABLE
+
+  - new_read p:POSITION with r:EXPR :READ <-
+  ( + result:READ
+    (style = '-').if {
+      ? {r = NULL}
+      result := READ_GLOBAL.create p with Self
+    } else {
+      ? {r != NULL}
+      result := READ_SLOT.create p with (r,Self)
+    }
+    result
+  )
+
+  - new_write p:POSITION with r:EXPR value v:EXPR :WRITE <-
+  ( + result:WRITE
+    (style = '-').if {
+      ? {r = NULL}
+      result := WRITE_GLOBAL.create p with v in Self
+    } else {
+      ? {r != NULL}
+      result := WRITE_SLOT.create p with v in (r,Self)
+    }
+    result
+  )
+
+  /*
+  - new_access r:EXPR :ACCESS <-
+  ( + result:ACCESS
+
+    (style = '-').if {
+      result := ACCESS_GLOBAL.create Self
+    } else {
+      result := ACCESS_SLOT.create Self with r
+    }
+    result
+  )
+  */
+  - is_zero e:EXPR :BOOLEAN <-
+  ( + pro:PROTOTYPE_CST
+    + int:INTEGER_CST
+    (
+      pro ?= e
+      (pro != NULL) && {
+        (pro.static_type.raw = TYPE_NULL) || {pro.static_type.raw = type_false}
+      }
+    ) || {
+      int ?= e
+      (int != NULL) && {int.value = 0}
+    }
+  )

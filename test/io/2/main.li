@@ -1,0 +1,24 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  
+  - main <-
+  (
+    TEST.check (COMMAND_ARGS.count) integer 4
+    TEST.check (COMMAND_ARGS.executable_directory.has_suffix "io/2/")
+    TEST.check (COMMAND_ARGS.at 1) string "a"
+    TEST.check (COMMAND_ARGS.first) string "a"
+    TEST.check (COMMAND_ARGS.at 2) string "b"
+    TEST.check (COMMAND_ARGS.at 3) string "c"
+    COMMAND_ARGS.shift
+    TEST.check (COMMAND_ARGS.first) string "b"
+    TEST.check (COMMAND_ARGS.at 2) string "c"
+    TEST.check (COMMAND_ARGS.count) integer 3
+    COMMAND_ARGS.shift
+    TEST.check (COMMAND_ARGS.first) string "c"
+    TEST.check (COMMAND_ARGS.count) integer 2
+    COMMAND_ARGS.shift
+    TEST.check (COMMAND_ARGS.count) integer 1
+  )

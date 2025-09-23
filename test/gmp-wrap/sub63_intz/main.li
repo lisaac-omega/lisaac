@@ -1,0 +1,50 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + a, b:MPZ
+    + c:ℤ
+    + loop:INTEGER
+    + decr:UINTEGER_64
+    + init:STRING
+    a.init
+    b.init
+    loop := 1 << 25
+    init := "800000000000FFFF"
+    a.set init base 16
+    b.set init base 16
+    c := ℤ.init init base 16
+    TEST.check (a.equal_intz3 c)
+    //"avant: ".print; a.to_hexadecimal.print; " ".print; a.println
+    //"avant: ".print; c.to_hexadecimal.print; " ".print; c.println
+    {loop > 0}.while_do {
+      decr := (CLOCK.clock & 111111b)
+      //decr.println
+      a.sub_ui decr
+      // Same computation with ℤ
+      c := c - (decr.to_z)
+      (a.equal_intz3 c).if {
+        //"OK".println
+      } else {
+        b.print
+        " + ".print
+        decr.print
+        " = ".println
+        a.println
+        c.println
+        //
+        a.to_hexadecimal.println
+        c.to_hexadecimal.println
+        //
+        SYSTEM.exit 1
+      }
+      b.sub_ui decr
+      loop := loop - 1
+    }
+    //"after: ".print; a.to_hexadecimal.print; " ".print; a.println
+    //"after: ".print; c.to_hexadecimal.print; " ".print; c.println
+    a.clear
+    b.clear
+  )

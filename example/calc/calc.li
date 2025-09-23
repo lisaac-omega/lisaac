@@ -1,0 +1,31 @@
+Header
+
+  + name        := CALC;
+  /*
+  Calc application.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - main <-
+  ( + e:EXPR
+    + result:INTEGER
+    (COMMAND_ARGS.count != 2).if {
+      "Usage :\n  ".print
+      COMMAND_ARGS.at 0.print
+      " <Arithmetic expression>\n\
+      \Example :\n  ".print
+      COMMAND_ARGS.at 0.print
+      " \"(1-2)+(3+2*-5)\"\n".print
+    } else {      
+      e := PARSE_EXPR.parse (COMMAND_ARGS.at 1)
+      result := e.value
+      "Result : ".print
+      result.print
+      '\n'.print
+    }
+  )

@@ -1,0 +1,114 @@
+Header
+
+  + name    := UNSIGNED_FIXED_REAL;
+
+  /*Unsigned real number of fixed decimal part.*/
+
+Inherit
+
+  - parent_fixed_real:FIXED_REAL := FIXED_REAL
+
+Public
+
+  // Bound test
+
+  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  (
+    (up > to_raw_uinteger_64)
+  )
+
+  // Around
+
+  - object_size:INTEGER := 4
+
+  - minimum:INTEGER_64 <- 0
+
+  - floor:INTEGER <-
+  // Greatest integral value no greater than Current.
+  (
+    to_raw_uinteger_32 >> shift_bits
+  )
+  [
+    +? {Self <= Result}
+    +? {(Self - Result) < 1}
+  ]
+
+  - ceiling:INTEGER <-
+  // Smallest integral value no smaller than Current.
+  (
+    (to_raw_uinteger_32 + ((1 << shift_bits) - 1)) >> shift_bits
+  )
+  [
+    +? {Self >= Result}
+    +? {(Self - Result) < 1}
+  ]
+
+  - rounded:INTEGER <-
+  // Rounded integral value.
+  (
+    (to_raw_uinteger_32 + ((1 << shift_bits) / 2)) >> shift_bits
+  )
+
+  - truncated_to_integer:INTEGER <- floor
+  // Integer part (largest absolute value no greater than Current).
+
+  // binary operator :
+
+  - Self:SELF '-'  Left 80  other:SELF :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 - other.to_raw_uinteger_32)
+  )
+
+  - Self:SELF '*#' Left 90 other:INTEGER :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 * other)
+  )
+
+  - Self:SELF '*'  Left 90 other:SELF :SELF <-
+  (
+    CAST UINTEGER_64 TO SELF.on ((to_raw_uinteger_64 * other.to_raw_uinteger_64) >> shift_bits)
+  )
+
+  - Self:SELF '/#' Left 90 other:INTEGER :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 / other)
+  )
+
+  - Self:SELF '/'  Left 90 other:SELF :SELF <-
+  (
+    CAST UINTEGER_64 TO SELF.on ((to_raw_uinteger_64 << shift_bits) / other.to_raw_uinteger_64)
+  )
+
+  - Self:SELF '&'  Left 90 other:SELF :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 & other.to_raw_uinteger_32)
+  )
+
+  - Self:SELF '>>' Left 90 other:INTEGER :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 >> other)
+  )
+
+  - Self:SELF '<<' Left 90 other:INTEGER :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 << other)
+  )
+
+  // Test binary operator :
+
+  - Self:SELF '>'   Right 60 other:SELF :BOOLEAN <-
+  (
+    to_raw_uinteger_32 > other.to_raw_uinteger_32
+  )
+
+  // prefix : Unary operator
+
+  - '~' Self:SELF :SELF <-
+  (
+    CAST UINTEGER_32 TO SELF.on (~ to_raw_uinteger_32)
+  )
+
+
+
+
+

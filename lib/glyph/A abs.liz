@@ -1,0 +1,12 @@
+Push
+v0 <- 10
+Pop (v0,0)
+Move (Ox + 3, Oy - A0.Ascent)
+Line (Ox + 3, Oy - A0.Descent)
+Stroke 3
+Move (Ox + A0.Width + v0*2 - 3, Oy - A0.Ascent)
+Line (Ox + A0.Width + v0*2 - 3, Oy - A0.Descent)
+Stroke 3
+Ascent <- A0.Ascent + 4
+Descent <- A0.Descent - 4
+Width <- A0.Width + v0*2 + 4

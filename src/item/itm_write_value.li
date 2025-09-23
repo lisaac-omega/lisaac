@@ -1,0 +1,112 @@
+Header
+
+  + name        := ITM_WRITE_VALUE;
+
+  /*Write with a value*/
+
+Inherit
+
+  + parent_itm_write:Expanded ITM_WRITE
+
+Public
+
+  - type:STRING_ALIAS <- ":="
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + ass_multiple:ITM_LIST_IDF
+    + val:EXPR
+    + val_multiple:EXPR_MULTIPLE
+    + j:INTEGER
+    + lst_idf:ARRAY STRING_ALIAS
+    + itm_read:ITM_READ
+    + lst_exp:ARRAY EXPR
+    + result:EXPR
+
+    val := value.to_run_expr
+
+    val_multiple ?= val
+    (val_multiple != NULL).if {
+      //
+      // Assignment Vector.
+      //
+      lst_exp := ARRAY EXPR .create_with_capacity (val_multiple.count)
+      ass_multiple ?= assign
+      (ass_multiple != NULL).if {
+	lst_idf := ass_multiple.list_name
+	(lst_idf.lower).to (lst_idf.upper-1) do { i:INTEGER
+	  j := affect (lst_idf.at i) with val_multiple index j in lst_exp
+	}
+	j := affect (lst_idf.last) with val_multiple index j in lst_exp
+      } else {
+	itm_read ?= assign
+	? {itm_read != NULL}
+	j := affect (itm_read.name) with val_multiple index j in lst_exp
+      }
+      (j <= val_multiple.upper).if {
+	semantic_error (position,"Incorrect size vector.")
+      }
+      result := EXPR_MULTIPLE.create lst_exp
+    } else {
+      //
+      // Assignment simple.
+      //
+      itm_read ?= assign
+      (itm_read = NULL).if {
+        semantic_error (position,"Incorrect size result vector.")
+      };      
+      result := affect (itm_read.name) with val
+    }
+    result
+  )
+
+Private
+
+  - affect idf:STRING_ALIAS with val:EXPR_MULTIPLE
+  index n:INTEGER in lst:ARRAY EXPR :INTEGER <-
+  ( + loc:LOCAL
+    + result:INTEGER
+    + slot:SLOT
+    + typ_multi:ITM_TYPE_MULTI
+    + lst_expr:ARRAY EXPR
+
+    (n > val.upper).if {
+      semantic_error (position,"Incorrect size vector.")
+    }
+
+    loc := lookup idf
+    (loc != NULL).if {
+      lst.add_last (affect_local loc with (val.at n))
+      result := n + 1
+    } else {
+      slot := profil_slot.type_self.get_slot idf
+      (slot = NULL).if {
+	string_tmp.copy "Slot `";
+	string_tmp.append idf
+	string_tmp.append "' not found in static type "
+	profil_slot.type_self.append_name_in string_tmp
+	string_tmp.add_last '.'
+	semantic_error (position,string_tmp)
+      }
+      typ_multi ?= slot.result_type
+      (typ_multi != NULL).if {
+	result := n + typ_multi.count
+	(result > val.count).if {
+	  semantic_error (position,"Incorrect size vector.")
+	}
+	//BSBS: Recycle les EXPR_MULTIPLE
+	lst_expr := ARRAY EXPR .create_with_capacity (typ_multi.count)
+	0.to (typ_multi.upper) do { i:INTEGER
+	  lst_expr.add_last (val.at (n+i))
+	}
+	lst.add_last (affect_slot idf with (EXPR_MULTIPLE.create lst_expr))
+      } else {
+	lst.add_last (affect_slot idf with (val.at n))
+	result := n + 1
+      }
+    }
+    result
+  )

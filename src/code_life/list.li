@@ -1,0 +1,541 @@
+Header
+
+  + name        := LIST;
+
+  /* Expression list, immediate evaluation*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Private
+
+  + expr_list:NATIVE_ARRAY INSTR
+
+  + capacity:INTEGER
+
+  - move lower_index:INTEGER to upper_index:INTEGER <-
+  (
+    upper_index.downto lower_index do { i:INTEGER
+      expr_list.at (i + 1) put (expr_list.at i)
+    }
+  )
+  [
+    +? {count = Old count}
+  ]
+
+  - swap idx1:INTEGER with idx2:INTEGER <-
+  ( + e:INSTR
+
+    e := expr_list.at idx1
+    expr_list.at idx1 put (expr_list.at idx2)
+    expr_list.at idx2 put e
+  )
+
+Public
+
+  - is_invariant:BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+
+    result := TRUE
+    j := lower
+    {(j <= upper) && {result}}.while_do {
+      result := at j.is_invariant
+      j := j + 1
+    }
+    result
+  )
+
+  - old_seq_or_and:UINTEGER_32
+
+  //
+  // Linked list INSTR.
+  //
+
+  - lower:INTEGER <- 0
+  + upper:INTEGER
+  - count:INTEGER <- upper + 1
+
+  - first:INSTR  <-
+  [ -? {upper >= 0}; ]
+  (
+    expr_list.at 0
+  )
+
+  - second:INSTR <-
+  [ -? {upper >= 1}; ]
+  (
+    expr_list.at 1
+  )
+
+  - at i:INTEGER :INSTR <-
+  [ -? {i.in_range 0 to upper}; ]
+  (
+    expr_list.at i
+  )
+
+  - current_item:INSTR <- at index
+
+  - last:INSTR <- at upper
+
+  - add_first i:INSTR <-
+  (
+    add_last i
+    (upper = 0).if {
+    }.elseif {upper = 1} then {
+      swap 0 with 1
+    } else {
+      move 0 to (upper - 1)
+      expr_list.at 0 put i
+    }
+  )
+
+  - add_last i:INSTR <-
+  ( + new_capacity:INTEGER
+
+    (upper + 1 >= capacity).if {
+      new_capacity := 2 * capacity
+      expr_list := expr_list.realloc capacity with new_capacity
+      capacity := new_capacity
+    }
+    upper := upper + 1
+    expr_list.at upper put i
+  )
+
+  - add element:INSTR to idx:INTEGER <-
+  [ -? {idx.in_range 0 to (upper+1)}; ]
+  (
+    add_last element
+    (idx != upper).if {
+      move idx to (upper - 1)
+      expr_list.at idx put element
+    }
+  )
+
+  - at idx:INTEGER put e:INSTR <-
+  [ -? {idx.in_range 0 to upper}; ]
+  (
+    expr_list.at idx put e
+  )
+
+  - remove_last <-
+  [ -? {upper >= 0}; ]
+  (
+    upper := upper - 1
+  )
+
+  - remove_index idx:INTEGER <-
+  [ -? {idx.in_range 0 to upper}; ]
+  (
+    expr_list.remove idx until upper
+    upper := upper - 1
+  )
+
+  //
+  // Iterator.
+  //
+  
+//Section Private
+  
+  + index:INTEGER := -1
+    
+//Section Public
+  
+  - inc_index <-
+  (
+    index := index + 1
+  )
+
+  - insert_before e:INSTR <-
+  [ -? {e != NULL}; ]
+  (
+    add e to index
+    index := index + 1
+  )
+
+  - insert e:INSTR to idx:INTEGER <-
+  [ -? {e != NULL}; ]
+  (
+    add e to idx
+    (idx <= index).if {
+      index := index + 1
+    }
+  )
+
+  //
+  // Flags.
+  //
+
+  - is_empty:BOOLEAN <- count = 0
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p
+    result
+  )
+
+  - make p:POSITION <-
+  (
+    new_depend_pass
+    position  := p
+    upper     := -1
+    capacity  := 2
+    expr_list := NATIVE_ARRAY INSTR .calloc_intern capacity
+    index := -1; // BSBS: PAs utile !
+  )
+
+  - my_copy:SELF <-
+  ( + result:SELF
+
+    result := SELF.create position
+    (lower).to (upper) do { j:INTEGER
+      result.add_last (at j.my_copy)
+    }
+    result
+  )
+
+  //
+  // Remove.
+  //
+
+  - remove <-
+  (
+    (lower).to (upper) do { j:INTEGER
+      at j.remove
+    }
+  )
+
+  //
+  // Execute.
+  //
+
+  - i_am_the_last i:INSTR :BOOLEAN <-
+  (
+    last.i_am_the_last i
+  )
+
+  - execute:INSTR <-
+  ( + result:INSTR
+    
+    POSITION.push_context Self
+        
+    execute_case
+    //                         
+    (
+      (list_current != NULL) && 
+      {Self != SLOT_DATA.init_list} /*Pas utile */ && 
+      {Self != PROTOTYPE.external_list}
+    ).if {
+      // Merge the child list in the parent list
+      //
+      // Optimization: don't copy the last instruction but instead return it
+      // so it avoid shifting all elements of 1 position before shifting them
+      // back because the list is no longer there.
+      (is_empty).if_false {
+        lower.to (upper-1) do { j:INTEGER
+          list_current.insert_before (at j)
+        }
+        result := last
+        ? {result != NULL}
+        new_execute_pass
+      }
+    } else {
+      result := Self
+    }
+    POSITION.pop_context
+    
+    result
+  )
+
+  - execute_case <-
+  ( + new_expr:INSTR
+    + old_list_current:LIST
+
+    //
+    seq_list.add_last Self
+    seq_inline := seq_inline + 1
+
+    // Update Context.
+    old_list_current := list_current
+    list_current := Self
+
+    // Execute expression list.
+    
+    (index != -1).if {
+      index.print; '\n'.print
+      string_tmp.clear
+      current_item.display string_tmp
+      string_tmp.print
+      '\n'.print
+      "---------------------------\n".print
+      string_tmp.clear
+      display string_tmp
+      string_tmp.print
+      '\n'.print
+      "===========================\n".print
+      syntax_error (position,"BUG LISAAC ! (list l.262)")
+    }
+    ? {index = -1}
+
+    //"LIST BEG : ".print; print; '\n'.print
+
+    index := lower
+    {index <= upper}.while_do {
+      old_seq_or_and := seq_or_and
+
+      new_expr := at index.execute
+      (new_expr != NULL).if {
+        at index put new_expr
+        index := index + 1
+        (new_expr = CALL_NULL).if {
+          // Delete all ...
+          {index <= upper}.while_do {
+            at index.remove
+            remove_index index
+          }
+        }
+      } else {
+	remove_index index
+      }
+    }
+
+    //"LIST END : ".print; print; '\n'.print
+
+    // Last.
+    old_seq_or_and := seq_or_and
+    index := -1; // Debug necessity
+
+    // Restore Context.
+    list_current := old_list_current
+    //
+    seq_list.remove_last
+    seq_inline := seq_inline + 1
+  )
+
+Public
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    (Self != PROTOTYPE.external_list).if {
+      output.append "{\n"
+      indent.append "  "
+      
+      current_list_level := current_list_level + 1
+      
+      genere_body
+      
+      current_list_level := current_list_level - 1
+      
+      indent.remove_tail 2
+      output.append indent
+      output.add_last '}'
+    }
+  )
+  
+  - genere_extern_result result_list:SLIM_ARRAY LOCAL <-
+  ( + pos_local,i_result:INTEGER
+    + t:TYPE_FULL
+    + loc:LOCAL
+    + idf:STRING
+
+    // Local.
+    pos_local := output.count+1
+    stack_local.clear
+
+    ALIASER_LOCAL.reset
+
+    genere_body
+    
+    // Result.
+    ((result_list != NULL) && {! result_list.is_empty}).if {
+      {(i_result <= result_list.upper) && {result_list.at i_result = NULL}}.while_do {
+        i_result := i_result + 1
+      }
+      (i_result <= result_list.upper).if {
+        loc := result_list.at i_result
+        output.append indent
+        output.append "return("
+        t := loc.type
+        (
+          (t.is_expanded) && {! t.is_expanded_ref} && {! t.is_expanded_c}
+        ).if {
+          output.add_last '&'
+        }
+        (loc.my_alias = NULL).if {
+          idf := loc.intern_name
+        } else {
+          idf := loc.my_alias.intern_name
+        }
+        ALIASER_LOCAL.add_var_size loc
+        output.append idf
+        output.append ");\n"
+      }
+    }
+    
+    // Local.
+    string_tmp.clear
+    add_local (ALIASER_LOCAL.var_size.at 3) in string_tmp; // 64 bits
+    add_local (ALIASER_LOCAL.var_size.at 2) in string_tmp; // 32 bits
+    add_local (ALIASER_LOCAL.var_size.at 1) in string_tmp; // 16 bits
+    add_local (ALIASER_LOCAL.var_size.at 0) in string_tmp; //  8 bits
+    output.insert_string string_tmp to pos_local
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    // Begin List.
+    buffer.add_last '('
+
+    // Code.
+    buffer.add_last '\n'
+    indent.append "  "
+
+    lower.to upper do { j:INTEGER
+      buffer.append indent
+      at j.display buffer
+      buffer.add_last '\n'
+    }
+    indent.remove_tail 2
+    buffer.append indent
+
+    // End List.
+    buffer.add_last ')'
+    display_ref buffer
+  )
+
+Private
+
+  - genere_body <-
+  ( + old_count,j:INTEGER
+
+    j := lower
+    {j <= upper}.while_do {
+      output.append indent
+      old_count := output.count
+      {
+        at j.genere
+        j := j + 1
+      }.do_while {(j <= upper) && {old_count = output.count}}
+      output.append ";\n"
+    }
+  )
+  
+Public
+/*
+  - stat_local:ARRAY INTEGER := ARRAY INTEGER .create 128
+  - stat_local_null:ARRAY INTEGER := ARRAY INTEGER .create 128
+*/
+Private
+
+  - add_local tab:ARRAY LOCAL in buf:STRING_BUFFER <-
+  // Generate C code to add locals
+  ( + loc:LOCAL
+    + t:TYPE_FULL
+    + cur:INTEGER
+    //+ i:INTEGER
+
+    (! tab.is_empty).if {
+      (tab.lower).to (tab.upper) do { j:INTEGER
+        loc := tab.at j
+        loc.is_result.if_false {
+          /*
+          (loc.type.is_expanded).if {
+            count_local_expanded := count_local_expanded + 1
+            stat_local.at 0 put (stat_local.at 0 + 1)
+          } else {
+            ((loc.type_set != NULL) && {! loc.type_set.is_empty}).if {
+              (loc.type.raw.subtype_list != NULL).if {
+                idx := loc.type.raw.subtype_list.count; //loc.type_set.count
+              } else {
+                idx := loc.type_set.count
+              }
+              stat_local.at idx put (stat_local.at idx + 1)
+
+
+              (loc.type_set.last = TYPE_MARK).if {
+
+                stat_local_null.at idx put (stat_local_null.at idx + 1)
+
+                (loc.type_set.count = 1).if {
+                  count_local_always_null := count_local_always_null + 1
+                } else {
+                  count_local_null := count_local_null + 1
+                }
+              }.elseif {loc.type_set.count = 1} then {
+                count_local_mono := count_local_mono + 1
+              } else {
+                count_local_not_null := count_local_not_null + 1
+              }
+            } else {
+              count_local_not_null := count_local_not_null + 1
+            }
+          }
+          */
+          (loc.type.raw = TYPE_CONTEXT).if {
+            context_counter := context_counter + 1
+          } else {
+            local_counter := local_counter + 1
+          }
+          //
+          simplify_type loc; // BSBS: Pas utile (c est un pb de result non utiliser)
+          //
+          (((buf.count + loc.intern_name.count - cur) > 70) || {t != loc.type}).if {
+            // New line
+            (t != NULL).if {
+              buf.append ";\n"
+            }
+            cur := buf.count
+            t := loc.type
+            buf.append indent
+            t.genere_declaration buf
+            buf.add_last ' '
+          } else {
+            buf.add_last ','
+          }
+          t.genere_star_declaration buf
+          buf.append (loc.intern_name)
+        }
+      }
+      buf.append ";\n"
+    }
+  )
+/*  
+  - add_local_gros tab:ARRAY LOCAL in buf:STRING_BUFFER <-
+  // Generate C code to add locals
+  ( + loc:LOCAL
+    
+    (! tab.is_empty).if {
+      (tab.lower).to (tab.upper) do { j:INTEGER
+        loc := tab.at j
+        loc.is_result.if_false {
+          buf.append indent
+          buf.append "Var "
+          buf.append (loc.intern_name)
+          buf.add_last ':'
+          buf.append (loc.type.raw.intern_name)
+          buf.append ";\n"
+        }
+      }
+    }
+  )
+*/
+LISAAC
+
+  - local_counter:INTEGER
+
+  - context_counter:INTEGER

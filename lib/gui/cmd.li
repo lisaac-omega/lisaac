@@ -1,0 +1,282 @@
+Header
+  + name := CMD;
+  
+Inherit
+  + parent_popup:Expanded POPUP
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - h_no_help:REAL_32 <- height_line + height_bot
+  
+Public  
+  - height_line:REAL_32 <- FONT.size_sys + 8
+  - height_bot:REAL_32 := 8
+  - height_help:REAL_32
+    
+  + height_min:REAL_32
+  - height_max:REAL_32 <- h_no_help + (help.ok height_help or 0)
+  
+  - refresh <-
+  ( refresh_popup.if {
+      + x,y,h,w,hi,wt:REAL_32
+      + c,i:INTEGER
+      width := parent.width
+      yo := parent.height - height
+      h := height - height_line - height_bot - 1
+      (! child.is_empty).if {
+        height_help := FONT.size_sys
+        (h > 0).if {
+          child.foreach { win:WIN; w := w.max (win.width_min); }
+          wt := width - 32
+          i := c := (wt / w).to_integer.max 1.min (child.count)
+          (x,y,w) := (xo+16,yo+height_line,wt/c)
+          child.foreach { win:WIN
+            win.xy (x,y).size (w,(hi := win.height_min))
+            i := i - 1
+            (i = 0).if { (x,y,i) := (xo+16, y+hi, c); } else { x := x + w; }
+          }
+          height_help := child.last.ymax - child.first.yo
+        } else { child.foreach { win:WIN; win.size (0,0); }; }
+      } else { height_help := 0; }
+    }
+  )
+      
+  - mesg:STRING_BUFFER := STRING_BUFFER.create 128
+  - text:STRING_BUFFER := STRING_BUFFER.create 128
+  - info:STRING_BUFFER := STRING_BUFFER.create 128
+  - cur:INTEGER
+  - cur_x:REAL_32
+  - no_cursor:BOOLEAN
+  
+  - start:INTEGER
+  - end:INTEGER
+
+  - asc:REAL_32
+  - des:REAL_32
+  
+  - cur_txt:TXT_PG <- PAGE.cur_pg.buf_pg.like TXT_PG
+  
+  - draw_all <-
+  ( + h,x,y:REAL_32
+    + c:COLOR
+    + p:PAINT
+    + i:INTEGER
+    + win:WIN
+    h := height - height_line - height_bot - 1
+    (h > 0).if {
+      begin_path
+      fill_color (LOOK.help_ui)
+      rect (xo+16,yo+height_line-1) size (width-32,h+2)
+      fill
+      intersect_scissor (xo+16,yo+height_line-1) size (width-32,h+2)
+      {(i <= child.upper) && {(win := child.at i).xmax < width-32}}.while_do {
+        begin_path
+        stroke_width 3
+        stroke_color (COLOR.black)
+        line (win.xmax+1,win.yo) to (win.xmax+1,win.yo+h)
+        stroke
+        win.draw_all
+        i := i + 1
+      }
+      {i <= child.upper}.while_do { child.at i.draw_all; i := i + 1; }
+      reset_scissor
+    }
+    intersect_scissor (xo,yo) size (width,height)
+    stroke_color (COLOR.black)
+    stroke_width 1
+    fill_color (LOOK.border_off)
+    begin_path
+    move_to (xo+1,yo+height_line-1)
+    arc (xo+16,yo+16) radius 15 angle (REAL_32.pi,-REAL_32.pi/2) direction 2
+    arc (xmax-height_line,yo+height_line) radius (height_line) angle (-REAL_32.pi/2,0) direction 2
+    line_to (xmax,yo+height_line)
+    line_to (xo+1,yo+height_line)
+    stroke
+    fill
+    (height > height_line).if {
+      (x,y) := window.get_cursor_pos
+      begin_path
+      ((y.in_range (ymax-height_bot) to ymax) && {x.in_range 0 to width}).if {
+        c := LOOK.border_on
+      } else {
+        c := LOOK.border_off
+      }
+      fill_color c
+      rect_varying (xo+1,ymax-height_bot+1) size (width-2,height_bot-2) radius (0,0,height_bot,height_bot)
+      stroke
+      fill
+      begin_path
+      line (xo+1,ymax-height_bot+2) to (xmax-1,ymax-height_bot+2)
+      stroke_color (LOOK.border_on)
+      stroke
+    }
+    font_face_id (FONT.sys (FONT.bold))
+    text_align align_baseline
+    font_size (FONT.size_sys)
+    (asc,des,y) := text_metrics
+    fill_color (LOOK.text_bg_ui)
+    y := yo + asc + 4
+    x := text (xo + 8,y) msg mesg
+    begin_path
+    p := PAINT.create_linear (0,0) to (xmax-24,height_line) color (LOOK.border_on) to (LOOK.border_off)
+    rect (x + 4, yo + 4) to (xmax-24, yo + 4 + FONT.size_sys) radius 8
+    //fill_color (LOOK.border_on)
+    fill_paint p
+    fill
+    p.free
+    x := print_text (x+8,y)
+    (! info.is_empty).if {
+      fill_color (LOOK.text_bg_ui)
+      text (x + 32,y) msg info
+    }
+    reset_scissor
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    //s.first.to_integer.print; '='.print; '\n'.to_integer.println
+    info.clear
+    ((c & KEYBOARD.msk_cmd) = 0).if {
+      text.insert_string s to cur
+      cur := cur + s.count
+    } else {      
+      //s.first.println
+      (s.first)
+      .when '\n'   then { action; }
+      .when 'B'    then { (cur = 0).if { beep; } else { cur := 0; }; }
+      .when 'E'    then { (cur = text.count).if { beep; } else { cur := text.count; }; }
+      .when 'R'    then { inc_cur.if_false { beep; }; }
+      .when 'L'    then { dec_cur.if_false { beep; }; }
+      .when 'S'    then { suppr.if_false { beep; }; }
+      .when '\8d\' then { ((dec_cur) && {suppr}).if_false { beep; }; }
+      .when '\27d\' then { close; }
+    }
+  )
+  
+  - open:BOOLEAN <-
+  ( close; cmd_cur := Self
+    height_min := 0
+    cur := text.count
+    set_open (PAGE.cur_pg.window) at 2
+    TRUE
+  )
+  
+  - close <-
+  ( (cmd_cur.is on).if { ? {cmd_cur != CMD}
+      info.clear
+      no_cursor := FALSE
+      height_min := 0
+      cmd_cur := CMD; SUBACT.restore; set_open NULL at (-1)
+    }
+  )
+  
+  - cancel:BOOLEAN <- ( abstract; TRUE)
+  
+  - action:BOOLEAN <- ( abstract; TRUE)
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  (
+    (ev = HAND.clic).if {
+      (HAND.y_cur < ymax-height_bot).if {
+        (cur,cur_x) := (-1,HAND.x_cur)
+      } else {
+        (! child.is_empty).if {
+          help := ! help
+          height_min := h_no_help
+          set_open parent
+        }
+      }
+    }
+  )
+  
+  - print_text (px,y:REAL_32) :REAL_32 <-
+  ( + n:UINTEGER_8
+    + c:CHARACTER
+    + i:INTEGER
+    + x:REAL_32
+    fill_color (LOOK.none)
+    x := drw (px,y) cur i
+    STRING.tmp { tmp:STRING_BUFFER
+      {i <= text.upper}.while_do {
+        tmp.clear
+        n := (c := text.at i).to_uinteger_8
+        tmp | c
+        ((n & 80h) != 0).if {
+          { i := i + 1
+            tmp | text.at i
+            n := n << 1
+          }.do_until {(n & 40h) = 0}
+        }
+        x := text (x,y) msg tmp
+        i := i + 1
+        x := drw (x,y) cur i
+      }
+    }
+    x
+  )
+  
+  - drw (x,y:REAL_32) cur i:INTEGER :REAL_32 <-
+  ( + xx:REAL_32
+    (
+      (
+        (i = cur) || {(cur = -1) && {(cur_x < x) || {i > text.upper}}}
+      ) && {! no_cursor}
+    ).if {
+      cur := i
+      cursor (x+2,y) ascdes (asc,des) col (COLOR.red)
+      xx := x + 4
+    } else { xx := x; }
+    xx
+  )
+  
+  - paste:BOOLEAN <-
+  ( CLIPBOARD.get_in clipboard
+    (! clipboard.is_empty).if { key clipboard cmd 0; }
+  )
+  
+  - exp_word:BOOLEAN <-
+  ( + i:INTEGER
+    + s:INTEGER
+    + t:BOOLEAN
+    i := end
+    (i <= cur_txt.text.upper).if {      
+      {
+        i := i + cur_txt.text.at_tmp i
+        key (cur_txt.text.tmp_c) cmd 0
+      }.do_while {
+        (i <= cur_txt.text.upper) && {! UTF8.is_idf (cur_txt.text.tmp_c.to_string_alias)}
+      }
+      t := TRUE
+      {(i <= cur_txt.text.upper) && {t}}.while_do {
+        s := cur_txt.text.at_tmp i
+        (t := UTF8.is_idf (cur_txt.text.tmp_c.to_string_alias)).if {
+          i := i + s
+          key (cur_txt.text.tmp_c) cmd 0
+        }
+      }
+    }
+  )
+  
+Private
+  
+  - suppr:BOOLEAN <-
+  (cur < text.count).if {
+    + n:UINTEGER_8
+    n := text.at cur.to_uinteger_8
+    ((n & 80h) != 0).if { { text.remove cur; n := n << 1; }.do_until {(n & 40h) = 0}; }
+    text.remove cur
+  }
+  
+  - inc_cur:BOOLEAN <-
+  (cur < text.count).if {
+    + n:UINTEGER_8
+    n := text.at cur.to_uinteger_8
+    ((n & 80h) != 0).if { { cur := cur + 1; n := n << 1; }.do_until {(n & 40h) = 0}; }
+    cur := cur + 1
+  }
+  
+  - dec_cur:BOOLEAN <-
+  (cur > 0).if {
+    + n:UINTEGER_8
+    { cur := cur - 1; n := text.at cur.to_uinteger_8; }.do_while {(cur >= 0) && {(n & 0C0h) = 80h}}
+  }

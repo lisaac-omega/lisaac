@@ -1,0 +1,71 @@
+Header
+  + name := LOSS;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Private
+  
+  + h_loss:REAL_32
+  + d_loss:NATIVE_ARRAY REAL_32
+
+  + d_workspace:NATIVE_ARRAY REAL_32
+    
+Public
+  
+  - init:SELF <-
+  (
+    d_loss := CUDA.malloc (REAL_32.object_size)
+    Self
+  )
+
+  - free <-
+  (
+    (d_loss != NULL).if {
+      CUDA.free d_loss
+      d_loss := NULL
+    }
+
+    (d_workspace != NULL).if {
+      CUDA.free d_workspace
+    }
+  )
+  
+  - init_workspace (batch_size:INTEGER) <-
+  (
+    (d_workspace = NULL).if {
+      d_workspace := CUDA.malloc (REAL_32.object_size * batch_size)
+    }
+  )
+
+  - loss (predict,target:BLOB) :REAL_32 <-
+  ( + num_sms,num_blocks_per_sm:INTEGER
+    + batch_size,num_outputs,num_blocks:INTEGER
+    
+    num_sms := CUDA.device_get_attribute
+    num_blocks_per_sm := CUDA.occupancy_max_active_blocks_per_multiprocessor
+
+    batch_size := target.n
+    num_outputs := target.c
+
+    init_workspace batch_size
+    
+    //predict.print "predict" param TRUE
+    //target.print "target" param TRUE
+    
+    num_blocks := (num_blocks_per_sm * num_sms).min ((target.size + CUDA.block_dim_1d - 1) / CUDA.block_dim_1d)
+    
+    //"num_blocks:".print; num_blocks.println
+    
+    CUDA.softmax_loss_kernel num_blocks param
+    (d_loss, predict.cuda, target.cuda, d_workspace, batch_size, num_outputs)
+    CUDA.memcpy_dev d_loss to_host tmp_f size (REAL_32.object_size)
+    h_loss := tmp_f.at 0
+    
+    // batch mean loss 
+    h_loss / batch_size.to_real_32
+  )
+  
+Private
+  - tmp_f:NATIVE_ARRAY REAL_32 := NATIVE_ARRAY REAL_32.create 1
+

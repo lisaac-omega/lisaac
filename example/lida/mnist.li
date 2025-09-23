@@ -1,0 +1,224 @@
+Header
+  + name := MNIST;
+  
+Inherit
+  - parent_utils:UTILS := UTILS
+  
+Private
+  + dir:STRING_ALIAS
+  - train_data_file:STRING_ALIAS  := "train-images-idx3-ubyte"
+  - train_label_file:STRING_ALIAS := "train-labels-idx1-ubyte"
+  - test_data_file:STRING_ALIAS   := "t10k-images-idx3-ubyte"
+  - test_label_file:STRING_ALIAS  := "t10k-labels-idx1-ubyte"
+  
+  + data_pool:Expanded ARRAY (NATIVE_ARRAY REAL_32)
+  + target_pool:Expanded ARRAY (NATIVE_ARRAY REAL_32)
+  
+  + step:INTEGER := -1
+  + shuffle:BOOLEAN
+  + batch_size:INTEGER
+  + channels:INTEGER := 1
+  + height:INTEGER
+  + width:INTEGER
+  + num_classes:INTEGER := 10
+  + num_steps:INTEGER
+  
+  - mnist_class:INTEGER := 10
+  
+Public
+  
+  + data:BLOB
+  + target:BLOB
+  
+  - init pth:STRING_ALIAS :SELF <- ( dir := pth; Self)
+  
+  - free <-
+  (
+    data.free
+    target.free
+  )
+  
+  - train (sz:INTEGER) shuffle (shuf:BOOLEAN) <-
+  [ ? {sz >= 1}; ]
+  (
+    (batch_size, shuffle) := (sz, shuf)
+
+    load_data train_data_file
+    load_target train_label_file
+
+    (shuffle).if { shuffle_dataset; }
+    create_shared_space
+
+    step := 0
+  )
+
+  - test (sz:INTEGER) <-
+  [ ? {sz >= 1}; ]
+  (
+    batch_size := sz
+    
+    load_data test_data_file
+    load_target test_label_file
+
+    create_shared_space
+
+    step := 0
+  )
+
+  - get_batch <-
+  [ ? {step>=0}; ] // You must initialize dataset first..
+  ( + data_idx,data_size:INTEGER
+
+    // index clipping
+    data_idx := (step % num_steps) * batch_size
+    // prepare data blob
+    data_size := channels * width * height
+
+    // copy data
+    0.to (batch_size-1) do { i:INTEGER
+      data.mem.copy (data_pool.at (data_idx+i)) to (data_size*i) until data_size
+      /*
+      std::copy(data_pool_[data_idx+i].data(),
+      &data_pool_[data_idx+i].data()[data_size],
+      &data_->ptr()[data_size*i])
+      */
+    }
+    // copy target with one-hot encoded
+    0.to (batch_size-1) do { i:INTEGER
+      target.mem.copy (target_pool.at (data_idx+i)) to (mnist_class*i) until mnist_class
+      /*
+      std::copy(target_pool_[data_idx+i].data(),
+      &target_pool_[data_idx+i].data()[MNIST_CLASS],
+      &target_->ptr()[MNIST_CLASS*i])
+      */
+    }
+  )
+
+  - next:INTEGER <-
+  (
+    step := step + 1
+    get_batch
+    step
+  )
+  
+  - print n:INTEGER <- print (target_pool.at n) data (data_pool.at n)
+  
+  - print t:NATIVE_ARRAY REAL_32 data d:NATIVE_ARRAY REAL_32 <-
+  ( + i,mx:INTEGER
+    0.to (num_classes-1) do { j:INTEGER
+      (t.at j > t.at mx).if { mx := j; }
+    }
+    mx.print; " (".print; (t.at mx*100).print; "%)".println
+    height.times {
+      width.times { ascii.at ((d.at i * 3 + 0.4).to_integer).print; i := i + 1; }
+      '\n'.print
+    }
+        
+  )
+  
+Private
+  
+  - ascii:STRING_ALIAS := " .:#"
+  
+  - create_shared_space <-
+  (
+    // create blobs with batch size and sample size
+    data := BLOB.new.init4 (batch_size, channels, height, width)
+    data.tensor
+    target := BLOB.new.init2 (batch_size, num_classes)
+  )
+
+  - load_data (fn:STRING) <-
+  ( + file:POINTER
+    + magic_number,num_data,sz:INTEGER
+    + image:NATIVE_ARRAY REAL_32
+    
+    data_pool.clear
+    STRING.tmp { pth:STRING_BUFFER
+      pth.copy dir
+      pth.add_last '/'
+      pth.append fn
+      "loading ".print; pth.println
+      file := FILE_UTILS.open_read pth
+    }
+    (file.is_null).if {      
+      "Error: Open file!!".println
+      exit (-1)
+    }
+
+    FILE_UTILS.force_read_raw file in ptr size 4; magic_number := to_int
+    ? {(magic_number & 0FFFh) = 0803h}
+    FILE_UTILS.force_read_raw file in ptr size 4; num_data := to_int
+    FILE_UTILS.force_read_raw file in ptr size 4; height := to_int
+    FILE_UTILS.force_read_raw file in ptr size 4; width  := to_int
+    
+    sz := channels * height * width
+    (ptr,ptr_sz) := NATIVE_ARRAY UINTEGER_8.update_size (ptr,ptr_sz) new sz
+    num_data.times {          
+      image := NATIVE_ARRAY REAL_32.create sz
+      FILE_UTILS.force_read_raw file in ptr size sz
+      0.to (sz-1) do { j:INTEGER
+        image.at j put (ptr.at j.to_real_32 / 255.0)
+      }
+      data_pool.add_last image
+    }
+    num_steps := num_data / batch_size
+
+    "loaded ".print
+    data_pool.count.print
+    " items..".println
+
+    FILE_UTILS.close file
+  )
+
+  - load_target (fn:STRING) <-
+  ( + file:POINTER
+    + magic_number,num_target:INTEGER
+    + target_batch:NATIVE_ARRAY REAL_32
+    
+    target_pool.clear
+    STRING.tmp { pth:STRING_BUFFER
+      pth.copy dir
+      pth.add_last '/'
+      pth.append fn
+      //"loading ".print; pth.println
+      file := FILE_UTILS.open_read pth
+    }
+    (file.is_null).if {      
+      "Error: Open file!!".println
+      exit (-1)
+    }
+
+    FILE_UTILS.force_read_raw file in ptr size 4; magic_number := to_int
+    ? {(magic_number & 0FFFh) = 0801h}
+    FILE_UTILS.force_read_raw file in ptr size 4; num_target := to_int
+    // prepare input buffer for label
+    // read all labels and converts to one-hot encoding
+    num_target.times {
+      target_batch := NATIVE_ARRAY REAL_32.create mnist_class
+      FILE_UTILS.force_read_raw file in ptr size 1
+      target_batch.at (ptr.at 0) put 1.0
+      target_pool.add_last target_batch
+    }
+
+    FILE_UTILS.close file
+  )
+
+  - shuffle_dataset <-
+  [ ? {data_pool.count = target_pool.count}; ]
+  ( + j:INTEGER
+    RANDOM.init (TIME.gettimeofday.to_raw_uinteger_16)
+    (data_pool.upper).downto (data_pool.lower+1) do { i:INTEGER
+      j := RANDOM.range (data_pool.lower) to i
+      data_pool  .swap i with j
+      target_pool.swap i with j
+    }
+  )
+
+  - to_int:INTEGER <-
+  (
+    (ptr.at 0.to_integer << 24) |     (ptr.at 1.to_integer << 16) |     (ptr.at 2.to_integer <<  8) |     (ptr.at 3.to_integer <<  0)
+  )
+  
+  - ptr_sz:INTEGER := 28*28
+  - ptr:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create ptr_sz

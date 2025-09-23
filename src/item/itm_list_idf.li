@@ -1,0 +1,48 @@
+Header
+
+  + name        := ITM_LIST_IDF;
+
+  /*List identifier for assignment.*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  - is_affect:POSITION; // Nothing (it s good with 0).
+  // BSBS: A quoi ca sert ca ??? 
+
+  //
+  // Data
+  //
+
+  + list_name:ARRAY STRING_ALIAS
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION with lst:ARRAY STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p with lst
+    result
+  )
+
+  - make p:POSITION with lst:ARRAY STRING_ALIAS <-
+  (
+    position  := p
+    list_name := lst
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  (
+    semantic_error (position,"ITM_LIST_IDF.to_run_expr")
+    NULL
+  )
+

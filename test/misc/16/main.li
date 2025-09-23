@@ -1,0 +1,14 @@
+Header
+
+  + name := MAIN;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  - main <-
+  (
+    ? {type_name == "MAIN"}
+  )

@@ -1,0 +1,63 @@
+Header
+  + name := I_LOC;
+  
+Inherit
+  + parent_inode:Expanded I_NODE
+  
+Public
+  
+  - stck:Expanded ARRAY I_LOC
+
+  - new:I_LOC <-
+  ( + result:I_LOC
+    (stck.is_empty).if { result := I_LOC.clone; } else { result := stck.pop; }
+    result
+  )
+  
+Public
+  
+  + ref:LOCAL
+  
+  - type:TYPE <- ref.type
+  
+  + error:INTEGER
+    
+  - new (l,u:INTEGER) is r:LOCAL err d:INTEGER :I_LOC <- new.init (l,u) is r err d
+  
+  - copy:I_NODE <- new.init (lower,upper) is ref err error
+  
+  - init (l,u:INTEGER) is r:LOCAL err d:INTEGER :I_LOC <-
+  (
+    (lower,upper,ref,error) := (l,u,r,d)
+    {IA.src.at upper = ' '}.while_do { upper := upper - 1; }
+    Self
+  )
+  
+  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  ( + m:UINTEGER_16
+    m := ref.is (LOCAL.readonly).ok (STY.car) or (STY.clo)|u
+    m := m | type_check s
+    STY.put m to lower in (IA.sty)
+    STY.put m to (upper+1) in (IA.sty)
+    IA.inc_arg_i
+  )
+  
+  - txt_in s:STRING_BUFFER <-
+  (
+    s.append "˻"
+    s.append (IA.src) from lower to upper
+    s.append "˼"
+  )
+  
+  - rtxt_in s:STRING_BUFFER <-
+  ( + t:TYPE
+    s.append "˻"
+    t := type
+    (t != NULL).if { t.txt_in s sty NULL; }
+    s.append "˼"
+  )
+  
+  - size:INTEGER <- ref.name.count; //upper - lower + 1
+  - to_expr:EXPR <- CAL.new ref arg NULL
+  
+  - free <- stck.add_last Self

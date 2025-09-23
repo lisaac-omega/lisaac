@@ -1,0 +1,90 @@
+Header
+
+  + name        := ITM_EXTERN;
+
+  /*Parent for externals*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  //
+  // Data
+  //
+
+  + extern:STRING_ALIAS
+
+  //
+  // Constructor.
+  //
+
+  - last_code:STRING_ALIAS
+
+  - get_access:ARRAY EXPR <-
+  ( + idx,base:INTEGER
+    + e:EXPR
+    + loc:STRING_ALIAS
+    + var:VARIABLE
+    + access_list:ARRAY EXPR
+
+    string_tmp2.copy extern
+    idx := string_tmp2.index_of '@' since (string_tmp2.lower)
+    (idx <= string_tmp2.upper).if {
+      access_list := ALIAS_ARRAY EXPR .new
+      {idx > string_tmp2.upper}.until_do {
+	base := idx
+	idx  := idx + 1
+	string_tmp.clear
+	{
+	  (idx > string_tmp2.upper) ||
+	  {
+	    (! string_tmp2.at idx.is_letter_or_digit) &&
+	    {string_tmp2.at idx != '_'}
+	  }
+	}.until_do {
+	  string_tmp.add_last (string_tmp2.at idx)
+	  idx := idx + 1
+	}
+	string_tmp.is_empty.if {
+	  syntax_error (position,"Incorrect external local slot access.")
+	}
+	loc := string_tmp.to_string_alias
+	var := lookup loc
+	(var = NULL).if {
+	  string_tmp.copy "External local slot access `";
+	  string_tmp.append loc
+	  string_tmp.append "' is not found."
+	  semantic_error (position,string_tmp)
+	}.elseif {var.style = '-'} then {
+	  string_tmp.copy "External local slot access `";
+	  string_tmp.append loc
+	  string_tmp.append "' must be in `+' style.";
+	  semantic_error (position,string_tmp)
+	}
+	e := var.read position
+	access_list.add_last e
+
+	string_tmp2.remove base to (base+loc.count)
+	string_tmp2.insert_string "(@)" to base
+	idx := string_tmp2.index_of '@' since (base+2)
+      }
+      access_list := ALIAS_ARRAY EXPR .copy access_list
+    }
+    last_code := string_tmp2.to_string_alias
+    access_list
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '`';
+    buffer.append extern
+    buffer.add_last '`';
+  )
+
+

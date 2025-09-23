@@ -1,0 +1,60 @@
+Header
+  
+  + name := PEN_CALL_3D;
+   
+Inherit
+  
+  + parent_pen_call:Expanded PEN_CALL
+  
+Private
+  
+  - stack:ARRAY PEN_CALL_3D := ARRAY PEN_CALL_3D.create_with_capacity 16
+  
+Public
+  
+  + img:INTEGER
+  + color:COLOR
+  + model:MAT4X4
+  
+  + start:INTEGER
+  + count:INTEGER
+    
+  - create (col:COLOR,i:INTEGER) start st:INTEGER count cnt:INTEGER model m:MAT4X4 :PEN_CALL_3D <-
+  ( + result:PEN_CALL_3D
+    (stack.is_empty).if { result := clone; } else { result := stack.pop; }
+    result.make (col,i) start st count cnt model m
+  )
+  
+  - make (col:COLOR,i:INTEGER) start st:INTEGER count cnt:INTEGER model m:MAT4X4 :PEN_CALL_3D <-
+  (
+    (color,img) := (col,i)
+    start := st
+    count := cnt
+    model := m.dup
+    Self
+  )
+  
+  - free <-
+  (
+    model.free
+    stack.add_last Self
+  )
+  
+  - run <-
+  ( + shader:SHADER_3D
+    + model_norm,model_inv:MAT4X4
+    shader := PEN_CALL_3D_BEGIN.shader
+    shader.set "model" mat4 model
+    model_inv := model.invert
+    model_norm := model_inv.transpose
+    shader.set "modelNorm" mat4 model
+    (img = -1).if {
+      shader.set "objectColor" xyzw (color.rf, color.gf, color.bf,color.af)
+    } else {
+      pen_gl.gl_bind_texture (`GL_TEXTURE_2D`:INTEGER,img)
+    }
+    pen_gl.gl_draw_elements (`GL_TRIANGLES`:INTEGER,3*count, `GL_UNSIGNED_INT`:INTEGER, start)
+    model_inv.free
+    model_norm.free
+  )
+  

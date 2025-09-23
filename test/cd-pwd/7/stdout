@@ -1,0 +1,13 @@
+/lisaac/test/cd-pwd/7/a/
+count=3
+/lisaac/test/cd-pwd/7/a/b/
+/lisaac/test/cd-pwd/7/a/b/
+count=0
+/lisaac/test/cd-pwd/7/a/c/
+/lisaac/test/cd-pwd/7/a/c/
+count=1
+/lisaac/test/cd-pwd/7/a/c/d/
+/lisaac/test/cd-pwd/7/a/c/d/
+count=0
+/lisaac/test/cd-pwd/7/a/e
+/lisaac/test/cd-pwd/7/a/e

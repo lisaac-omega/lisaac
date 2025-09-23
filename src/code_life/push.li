@@ -1,0 +1,125 @@
+Header
+
+  + name        := PUSH;
+
+  /*Push context for debug mode*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+PUSH,LISAAC
+
+  - source_line:ARRAY POSITION :=
+  ARRAY POSITION .create_with_capacity 32_000
+  
+  - my_clone:SELF <- clone
+  
+Public
+    
+  + context:LOCAL
+
+  + is_first:BOOLEAN
+
+  - set_first f:BOOLEAN <-
+  (
+    is_first := f
+  )
+
+  //
+  // Creation.
+  //
+
+  - create pos:POSITION context v:LOCAL first f:BOOLEAN :PUSH <-
+  ( + result:PUSH
+        
+    (is_speed_push).if {
+      result := PUSH_SPEED.my_clone
+    } else {
+      result := PUSH_STANDARD.my_clone
+    }
+    result.make pos context v first f
+    result
+  )
+
+  - make pos:POSITION context v:LOCAL first f:BOOLEAN <-
+  [
+    ? {pos.code != 0}
+    ? {v != NULL}
+  ]
+  (   
+    position := pos
+    context := v
+    is_first := f
+  )
+
+  - my_copy:SELF <-
+  ( + result:SELF
+    + new_context:LOCAL
+    
+    result := clone
+    (LOCAL.is_alias).if {
+      new_context := context.get_alias
+      new_context.set_ensure_count 1
+      result.make position context new_context first is_first
+    } else {
+      result.make position context context first is_first
+    }
+    result
+  )
+
+  //
+  // Execute.
+  //
+
+  - remove <-
+  (
+    // Nothing.
+  )
+
+  - execute:INSTR <-
+  ( + result:INSTR
+    + other:SELF
+
+    result := Self
+    (list_current.index < list_current.upper).if {
+      other ?= list_current.at (list_current.index + 1)
+      (other != NULL).if {
+	(other.context = context).if {
+	  result := NULL
+	  (is_first).if {
+	    other.set_first TRUE
+	  }
+	}.elseif {(is_first) && {! other.is_first}} then {
+	  result := NULL
+	}
+      }
+    }
+    result
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <-
+  ( 
+    abstract
+  )
+    
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "push("
+    buffer.append (context.intern_name)
+    buffer.add_last ')'
+  )
+
+
+
+
+
+

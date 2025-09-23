@@ -1,0 +1,21 @@
+Header
+  
+  + name := THREADRING;
+    
+Public
+    
+  - threads:INTEGER := 503
+  
+  - main <-
+  ( + first,last:THREAD
+    
+    first := last := THREAD.create threads with NULL
+    (threads-1).downto 1 do { i:INTEGER
+      first := THREAD.create i with first
+    }
+    last.set_next first
+ 
+    first.set_data (COMMAND_ARGS.at 1 .to_integer)
+    CLONE.wait_all_the_time
+  )
+    

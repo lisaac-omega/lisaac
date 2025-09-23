@@ -1,0 +1,18 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + i,x:INTEGER
+    
+    {"tst1".println; i < 10}.while_do {
+      i := i + 1
+      x := i !
+      x.println
+    } stop_if {"tst2".println; x >= 24}
+    
+  )
+  
+  

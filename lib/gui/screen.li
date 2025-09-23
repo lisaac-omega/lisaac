@@ -1,0 +1,184 @@
+Header
+  + name := Strict SCREEN;
+  
+Inherit
+  + parent_window:Expanded WINDOW
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stk:Expanded ARRAY SCREEN
+  
+Public
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <-
+  ( child.foreach {c:WIN; c.free; }
+    child.clear
+    stk.add_last Self
+    PAPER.destroy_window Self
+  )
+  
+  - width_min:REAL_32 <- child.first.width_min.max (child.second.width_min)
+  - height_min:REAL_32 <- child.first.height_min + child.second.height_min
+  
+  - is_split:BOOLEAN
+  
+  - draw <-
+  ( 
+    IMG.update pen
+  )
+  
+  - draw_child <-
+  ( + ps:PAGE_SPLIT
+    + x1,x2,y1,y2:REAL_32
+    + w:WIN
+    parent_window.draw_child
+    PAGE.cur_pg.buf_pg.fix_buffer
+    ((HAND.window_cur = Self) && {(ps ?= child.second) != NULL}).if {
+      w := ps.child.first
+      (ps.is (ps.line) != 0).if {
+        (x1,y1,y2) := (w.xmax-2, 0, ymax)
+        x2 := x1 + 2
+        is_split := HAND.x_cur.in_range x1 to x2
+      } else {
+        (y1,x1,x2) := (w.ymax-2, 0, xmax)
+        y2 := y1 + 2
+        is_split := HAND.y_cur.in_range y1 to y2
+      }
+      (is_split).if {
+        begin_path
+        rect (x1,y1) to (x2,y2)
+        fill_color (COLOR.red)
+        fill
+      }
+    }
+    (! acts_wait.is_empty).if {
+      PAPER.refresh_again
+      (! acts_wait.pop_first.run).if { beep; acts_wait.clear; }
+    }
+  )
+  
+  - refresh <-
+  ( + head:WIN
+    + l:INTEGER
+    head := child.first; head.refresh
+    l := 2
+    (VKEYB.parent = Self).if {
+      VKEYB.refresh
+      (VKEYB.parent = Self).if {
+        height:= height - VKEYB.height
+        l := l + 1
+      }
+    }
+    (CMD.parent = Self).if {
+      child.at 2.refresh; // Current CMD
+      (CMD.parent = Self).if {
+        height:= height - CMD.height
+        l := l + 1
+      }
+    }
+    child.upper.downto l do { i:INTEGER; child.at i.refresh; }
+    height := height - head.height
+    child.at 1.xy (0,head.height).size (width,height).refresh
+    height := Old height
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    (is_split && {ev & ~1 = HAND.clic}).if {
+      split_win
+    }
+  )
+  
+  - mouse_scroll (dx,dy:REAL_64) <-
+  ( + d:REAL_64
+    d := dy * PAGE.cur_pg.height * -0.20
+    PAGE.cur_pg.buf_pg.set_pos_y (PAGE.cur_pg.buf_pg.pos_y + d)
+    PAGE.cur_pg.buf_pg.move_pos_y d
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  ( 
+    BUF_PG.footnote_left.clear
+    (focus != NULL).if {      
+      focus.key s cmd c
+    } else {
+      (SHORTCUT.key s cmd c).if_false {
+        (cmd_cur.is (cmd_cur.on)).if {
+          cmd_cur.key s cmd c
+        } else {
+          PAGE.cur_pg.buf_pg.key s cmd c
+        }
+      }
+    }
+    //"key:".print; c.print; ' '.print; s.println
+  )
+  
+  - init_pos (x,y:REAL_32) size (w,h:REAL_32) :SELF <-
+  ( (xo,yo,width,height) := (x,y,w,h); init_common)
+    
+  - read:SELF <-
+  ( read_object
+    ((vkeyb) && {VKEYB.parent = NULL}).if { VKEYB.set_open Self; }
+    init_common
+  )
+    
+  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  (
+    id
+    .case "x"      then { xo := v;     }
+    .case "y"      then { yo := v;     }
+    .case "width"  then { width := v;  }
+    .case "height" then { height := v; }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN <-
+  (
+    id
+    .case "fullscreen" then { (! home_directory.has_suffix "/ben/").if { fullscreen := v; }; }
+    = STRING_ALIAS
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "HEADER"     then { HEADER.new.init Self;     }
+    .case "PAGE_SPLIT" then { PAGE_SPLIT.new.init Self; }
+    .case "PAGE"       then { PAGE.new.init Self;       }
+    = STRING_ALIAS
+  )
+  
+  - write_object <-
+  ( + x,y:REAL_32
+    + w:WIN
+    put_object {      
+      put "fullscreen" value { put_bool fullscreen; }
+      (x,y) := get_pos
+      put "x" value { put_int (x.to_integer); }
+      put "y" value { put_int (y.to_integer); }
+      put "width"  value { put_int (width.to_integer); }
+      put "height" value { put_int (height.to_integer); }
+      put "HEADER" value { child.first.like HEADER.write_object; }
+      w := child.second
+      (w.dynamic_type = PAGE).if {
+        put "PAGE" value { w.like PAGE.write_object; }
+      } else {
+        put "PAGE_SPLIT" value { w.like PAGE_SPLIT.write_object; }
+      }
+    }
+  )
+  
+Private
+  
+  - init_common:SELF <-
+  ( init NULL
+    FONT.load pen
+    set_pos (xo,yo)
+    KEYBOARD.listen Self
+    (xo, yo) := (0, 0)
+    Self
+  )

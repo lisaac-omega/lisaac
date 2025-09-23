@@ -1,0 +1,114 @@
+Header
+  + name := Expanded UNDO;
+  
+Inherit
+  - parent_utils:UTILS := UTILS
+  
+Public
+  - stack_size:INTEGER := 32_768; // Power 2 !!
+  - stack_mask:INTEGER := stack_size - 1
+  
+  + stack:Expanded ARRAY UNDO_ELT
+  + lower:INTEGER
+  + count:INTEGER
+  - upper:INTEGER <- count - 1
+  + ptr:INTEGER
+  + ptr_save:INTEGER
+  
+  + auto:BOOLEAN := TRUE
+  - set_auto b:BOOLEAN <- ( auto := b; )
+  
+  - is_empty:BOOLEAN <- count = 0
+  
+  - rm i:INTEGER  char c:UINTEGER_32 <- gen i char c type t_rm
+  - add i:INTEGER char c:UINTEGER_32 <- gen i char c type t_add
+  - add_stop                         <- ((!is_empty) && {at upper != NULL}).if { add NULL; }
+  
+  - last_save <- ( ptr_save := ptr; );
+  
+  - do t:TXT_BUF :BOOLEAN <-
+  ( + u:UNDO_ELT
+    + p:INTEGER
+    p := ptr - 1
+    {(p >= 0) && {at p = NULL}}.while_do { p := p - 1; }
+    (p >= 0).if {
+      //print "Before UNDO"
+      busy := TRUE
+      {(p >= 0) && {(u := at p) != NULL}}.while_do {
+        u.run t dir 0
+        p := p - 1
+      }
+      ptr := p + 1
+      busy := FALSE
+      //OUT # "ptr=" # ptr # " ptr_save=" # ptr_save # '\n'
+      (ptr = ptr_save).if { t.set_save TRUE }
+      //print "After UNDO"
+    }
+  )
+  
+  - redo t:TXT_BUF :BOOLEAN <-
+  (ptr < count).if {
+    + u:UNDO_ELT
+    //print "Before REDO"
+    busy := TRUE
+    {(ptr < count) && {(u := at ptr) != NULL}}.while_do {
+      u.run t dir 1
+      ptr := ptr + 1
+    }
+    {(ptr < count) && {at ptr = NULL}}.while_do { ptr := ptr + 1; }
+    (ptr = ptr_save).if { t.set_save TRUE }
+    busy := FALSE
+    //print "After REDO"
+  }
+  
+  - print t:STRING <-
+  ( + u:UNDO_ELT
+    "----------------".print; t.println
+    0.to upper do { i:INTEGER
+      (i = ptr).if { "> ".print; } else { "  ".print; }
+      i.print; ':'.print
+      u := at i
+      (u = NULL).if { "Null".println; } else { u.print; }
+    }
+    (count = ptr).if { "> ".println; }
+  )
+  
+UNDO, UNDO_ELT
+  
+  - busy:BOOLEAN
+  
+  - t_rm:INTEGER_8  := 0
+  - t_add:INTEGER_8 := 1
+  - t_sav:INTEGER_8 := 2
+  
+  - at i:INTEGER :UNDO_ELT <- stack.at ((lower + i) & stack_mask)
+  - at i:INTEGER put e:UNDO_ELT <- stack.at ((lower + i) & stack_mask) put e
+  
+  - add e:UNDO_ELT <-
+  ( + u:UNDO_ELT
+    (! busy).if {
+      (stack.capacity = 0).if { stack.make stack_size; }
+      ((u := at ptr) != NULL).if { u.free; }
+      at ptr put e
+      (ptr = stack_size).if {
+        (ptr_save = lower).if { ptr_save := -1 }
+        lower := (lower + 1) & stack_mask
+      } else {
+        ((e = NULL) && {ptr = ptr_save}).if { ptr_save := ptr_save + 1 }
+        ptr := ptr + 1
+        count := ptr
+      }
+    }
+  )
+  
+  - gen i:INTEGER char c:UINTEGER_32 type t:INTEGER_8 <-
+  ( + new_t:UINTEGER_64
+    - time:UINTEGER_64
+    ((auto) && {(ptr = 0) || {at (ptr-1) != NULL}}).if {
+      new_t := CLOCK.time_raw
+      ((new_t - time) >= 1).if { add NULL; }
+      time := new_t
+    }
+    add (UNDO_ELT.new.init i char c type t)
+  )
+  

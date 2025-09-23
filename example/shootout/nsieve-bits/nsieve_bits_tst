@@ -1,0 +1,7 @@
+lisaac nsieve_bits  -O 
+gcc nsieve_bits_c.c -o nsieve_bits_c -O3  
+echo Lisaac: 
+time ./nsieve_bits 11 > out_li.txt
+echo C:
+time ./nsieve_bits_c 11 > out_c.txt
+diff out_li.txt out_c.txt

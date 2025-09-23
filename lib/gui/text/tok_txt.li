@@ -1,0 +1,28 @@
+Header
+  + name := TOK_TXT;
+  
+Inherit
+  + parent_tok_drw:Expanded TOK_DRW
+  
+Private
+  - stk:Expanded ARRAY (Strict TOK_TXT)
+  
+Public
+     
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - begin_draw <-
+  (    
+    fill_color (LOOK.none)
+  )
+    
+  - detect:BOOLEAN <- TRUE
+  
+  - parse <-
+  (    
+    skip_until '\n'
+    (at pos_i = '\n').if { nl := nl + 1; pos_i := pos_i + 1; }
+  )
+    
+  - free <- stk.add_last Self

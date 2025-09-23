@@ -1,0 +1,899 @@
+Header
+
+  + name := TETRIS;
+  /*
+  The TeTriS puzzle game.
+  */
+
+Inherit
+  + parent_window:Expanded WINDOW
+
+Private
+
+  - level:UINTEGER_8
+  - line_count:UINTEGER_32
+
+  - face:ARRAY3(INTEGER)
+
+  - scr_game:ARRAY2(UINTEGER_8)
+
+  - face_to_color n:UINTEGER_8 :COLOR <-
+  ( + result:COLOR
+    n
+    .when 1 then { result := COLOR.rgb (020h,020h,0E0h); }  // Blue.
+    .when 2 then { result := COLOR.rgb (0E0h,070h,020h); }  // Orange.
+    .when 3 then { result := COLOR.rgb (0E0h,0E0h,020h); }  // Yellow.
+    .when 4 then { result := COLOR.rgb (020h,0E0h,0E0h); }  // Cyan.
+    .when 5 then { result := COLOR.rgb (0E0h,020h,020h); }  // Red.
+    .when 6 then { result := COLOR.rgb (0E0h,020h,0E0h); }  // Magenta.
+    .when 7 then { result := COLOR.rgb (020h,0E0h,020h); }; // Green.
+    result
+  )
+
+  - case_busy (x,y:INTEGER) face n:UINTEGER_8 <-
+  ( + x0,y0:INTEGER
+    + col:COLOR
+    x0 := x * 25
+    y0 := y * 25
+    col := face_to_color n
+    // Fill.
+    begin_path
+    fill_color col
+    rect (x0+1,y0+1) size (23,23)
+    fill
+  )
+
+  - delete_line <-
+  ( + x,y:INTEGER
+    y := 18
+    do {
+      x := 0
+      while {(x < 10) && {scr_game.at (x,y) != 0}} do {
+        x := x+1
+      }
+      if (x = 10) then {
+        from y down_to 1 do { yy:INTEGER
+          from 0 to 9 do { xx:INTEGER
+            scr_game.at (xx,yy) put (scr_game.at (xx,yy-1))
+          }
+        }
+        line_count := line_count + 1
+        if (((line_count % 10) = 0) && {level < 19}) then {
+          level := level + 1
+        }
+       
+      } else {
+        y := y-1
+      }
+    } while {y != 0}
+  )
+
+  - load_face p:INTEGER <-
+  //   0 |  1  |  2  |  3  |  4  |  5  |  6  |
+  // ----|-----|-----|-----|-----|-----|-----|
+  //   1 |     |     |     |     |     |     |
+  //   2 | 3 1 | 2   | 3   |   2 |     | 2   |
+  //   X | X   | X 1 | X   | X 1 | X 1 | X 1 |
+  //   3 | 2   | 3   | 2 1 | 3   | 2 3 |   3 |
+  ( + tmp:BOOLEAN
+    + tmp1,tmp2:INTEGER
+
+    // First graph.
+    face.put ((p!=0).to_integer)      to (0,1,0)
+    face.put ((p-2)*(p<4).to_integer) to (0,1,1)
+    tmp1:=((p&1)<<1)-1
+    face.put ((p=4).to_integer) to (0,2,0)
+    face.put tmp1               to (0,2,1)
+    tmp:=(p>4)
+    tmp2:=tmp.to_integer
+    face.put tmp2                           to (0,3,0)
+    face.put (-tmp1*(!tmp).to_integer+tmp2) to (0,3,1)
+
+    // 3 rotations (+pi/2).
+    from 1 to 3 do { r:INTEGER
+      from 0 to 3 do { c:INTEGER
+        tmp1 := r - 1
+        face.put (-face.at (tmp1,c,1)) to (r,c,0);  // x' = -y
+        face.put (+face.at (tmp1,c,0)) to (r,c,1);  // y' = +x
+      }
+    }
+  )
+
+  - pos_r:INTEGER
+
+  - pos_x:INTEGER
+
+  - pos_y:INTEGER
+
+  - n_face:UINTEGER_8
+
+  - move (x,y:INTEGER) rotation r:INTEGER :BOOLEAN <-
+  ( + j,px,py:INTEGER
+    j:=0
+    while {
+      (j < 4) &&
+      {(px:=x + face.at (r,j,0)).in_range 0 to 9}  &&
+      {(py:=y + face.at (r,j,1)).in_range 0 to 18} &&
+      {scr_game.at (px,py) = 0}
+    } do {
+      j := j + 1
+    }
+    if (j = 4) then {
+      pos_x := x
+      pos_y := y
+      pos_r := r
+    }
+  )
+
+  - put_face <-
+  ( + x,y:INTEGER
+    from 0 to 3 do { j:INTEGER
+      x := pos_x + face.at (pos_r,j,0)
+      y := pos_y + face.at (pos_r,j,1)
+      scr_game.at (x,y) put n_face
+    }
+  )
+
+  - remove_face <-
+  ( + x,y:INTEGER
+    from 0 to 3 do { j:INTEGER
+      x := pos_x + face.at (pos_r,j,0)
+      y := pos_y + face.at (pos_r,j,1)
+      scr_game.at (x,y) put 0
+    }
+  )
+
+Public
+  
+  - info:STRING_BUFFER := STRING_BUFFER.create 80
+  
+  - main <-
+  (    
+    // Initialization.
+    face := ARRAY3 INTEGER .create (4,4,2)
+    scr_game := ARRAY2 UINTEGER_8 .create (10,19)
+    stat  := 0
+    // Init window.    
+    init "TetLIS" size (25 * 10,25 * 19 + 20)
+    //PAPER.set_animation 1
+    PAPER.run
+  )
+
+  - draw <-
+  ( + n:UINTEGER_8
+    PAPER.refresh_again
+    timer_event
+        
+    // Game array.
+    0.to 18 do { y:INTEGER
+      0.to 9 do { x:INTEGER
+        n := scr_game.at (x,y)
+        (n != 0).if {
+          case_busy (x,y) face n
+        } else {
+          begin_path
+          fill_color (COLOR.white)
+          rect (x*25,y*25) size (23,23)
+          fill
+        }
+      }
+    }
+    
+    //line (0,6*25) to (x_max,6*25) color red
+    //line (0,9*25) to (x_max,9*25) color blue
+
+    // Game info.
+    info.copy "Level:"
+    level.append_in info format 2 with '0'
+    info.append " Lines:"
+    line_count.append_in info format 4 with '0'
+    stat
+    .when 0 to 1 then { info.append " Play"; }
+    .when 2 then { info.append " Stop";  }
+    .when 3 then { info.append " Pause"; }
+  )
+
+  //
+  // Events.
+  //
+  - delay:REAL_32
+  - stat:UINTEGER_8
+  - old_stat:UINTEGER_8
+
+  - timer_event <-
+  ( + speed:UINTEGER_32
+    + t:REAL_32
+    
+    t := CLOCK.seconds
+
+    ia
+
+    speed := 10 - (level >> 1)
+    //((t-delay)*10.0).to_uinteger_32.println
+    ((((t-delay)*10.0).to_uinteger_32 > speed) | TRUE).if {
+      delay := t
+      stat
+      .when 0 then {
+        // Stat #0 : Load new face.
+        n_face := 6.random_upper
+        load_face n_face
+        n_face := n_face + 1
+        (move (4,2) rotation 0).if {
+          stat := 1
+          put_face
+        } else {
+          // Game over.
+          stat := 2
+        }
+      }
+      .when 1 then {
+        // Stat #1 : Moving bottom face.
+        remove_face
+        (move (pos_x,pos_y+1) rotation pos_r).if {
+          put_face
+        } else {
+          stat := 0
+          put_face
+          delete_line
+        }
+      }.when 2 to 3 then {
+        // Stat #2, #3 : Nothing (Stop or Pause game).
+      }
+    }
+  )
+
+  - key_event k:UINTEGER_16 <-
+  (
+    (((k & 0800h) != 0) && {stat=1}).if {
+      remove_face
+      (k & 0FFh).to_character
+      .when 'U' then {
+        // Rotation.
+        move (pos_x,pos_y) rotation ((pos_r+1) & 3)
+      }
+      .when 'R' then {
+        // Right.
+        move (pos_x+1,pos_y) rotation pos_r
+      }
+      .when 'L' then {
+        // Left.
+        move (pos_x-1,pos_y) rotation pos_r
+      }
+      .when 'D' then {
+        // Speed Down.
+        {move (pos_x,pos_y+1) rotation pos_r}.while_do {
+          put_face
+          remove_face
+        }
+      }
+      put_face
+    } else {
+      ((k & 0FFh).to_character = ' ').if {
+        (stat = 2).if {
+          // New game.
+          scr_game.clear_all
+          line_count := stat := 0
+          level := 0; //19
+        }.elseif {stat = 3} then {
+          // Restart (after pause).
+          stat := old_stat
+        } else {
+          // Pause.
+          old_stat := stat
+          stat := 3
+        }
+      }
+    }
+  )
+
+  - touch_event t:TOUCH <-
+  (
+    ((t.id = 0) && {t.z != 0}).if {
+      ((pos_x*25) < t.x).if {
+        remove_face
+        move (pos_x+1,pos_y) rotation pos_r
+        put_face
+      }
+      ((pos_x*25) > t.x).if {
+        remove_face
+        move (pos_x-1,pos_y) rotation pos_r
+        put_face
+      }
+    }
+    ((t.id = 1) && {t.z != 0}).if {
+      remove_face
+      move (pos_x,pos_y) rotation ((pos_r+1) & 3)
+      put_face
+    }
+    /*
+    (win != Self).if {
+      // Pause.
+      (stat < 2).if {
+        old_stat := stat
+        stat := 3
+        
+      }
+      DESK.receive evt
+    } else {
+      (evt.left_down).if {
+        (stat = 2).if {
+          // New game.
+          scr_game.clear_all
+          line_count := stat := 0
+          level := 19; //19
+        }.elseif {stat = 3} then {
+          // Restart (after pause).
+          stat := old_stat
+        } else {
+          // Pause.
+          old_stat := stat
+          stat := 3
+        }
+        
+      }
+    };*/
+  )
+
+  //
+  // IA
+  //
+
+  - form:ARRAY3(INTEGER) := ARRAY3(INTEGER).create (4,4,2)
+
+  - screen_ia:ARRAY2(UINTEGER_8) := ARRAY2(UINTEGER_8).create (10,19)
+
+  - stat_ia:INTEGER
+
+  - ia <-
+  ( + cnt,dx,dy,tmp,px,py,max,x,y:INTEGER
+    + firs,is_ok:BOOLEAN
+    - px_max,pr_max:INTEGER
+
+    // Copy game.
+    0.to 18 do { cy:INTEGER
+      0.to 9 do { cx:INTEGER
+        (scr_game.at (cx,cy) != 0).if {
+          screen_ia.at (cx,cy) put 1
+        } else {
+          screen_ia.at (cx,cy) put 0
+        }
+      }
+    }
+
+    (stat_ia = 0).if {
+      // Detect face.
+      dx := dy := 10
+      y := 0
+      {(cnt != 4) && {y < 4}}.while_do {
+        x := 3
+        {(cnt != 4) && {x < 7}}.while_do {
+          (screen_ia.at (x,y) != 0).if {
+            dx := dx.min x
+            dy := dy.min y
+            form.put x to (0,cnt,0)
+            form.put y to (0,cnt,1)
+            cnt := cnt + 1
+          }
+          x := x + 1
+        }
+        y := y + 1
+      }
+      (cnt = 4).if {
+        //"Face detect!\n".print
+        // Normalize.
+        from 0 to 3 do { i:INTEGER
+          form.put (form.at (0,i,0)-dx) to (0,i,0)
+          form.put (form.at (0,i,1)-dy) to (0,i,1)
+        }
+        // 3 rotation (+pi/2).
+        from 1 to 3 do { r:INTEGER
+          dx := dy := 10
+          px_max := pr_max := 10
+          0.to 3 do { c:INTEGER
+            tmp := r - 1
+            px := -form.at (tmp,c,1)
+            py := +form.at (tmp,c,0)
+            dx := dx.min px
+            dy := dy.min py
+            ((py < pr_max) || {(py = pr_max) && {px < px_max}}).if {
+              pr_max := py
+              px_max := px
+              max := c
+            }
+            form.put px to (r,c,0);  // x' = -y
+            form.put py to (r,c,1);  // y' = +x
+          }
+          (max != 0).if {
+            // Swap for 0 is always first point.
+            tmp := form.at (r,0,0)
+            form.put (form.at (r,max,0)) to (r,0,0)
+            form.put tmp to (r,max,0)
+            tmp := form.at (r,0,1)
+            form.put (form.at (r,max,1)) to (r,0,1)
+            form.put tmp to (r,max,1)
+          }
+          // Normalize.
+          0.to 3 do { i:INTEGER
+            form.put (form.at (r,i,0)-dx) to (r,i,0)
+            form.put (form.at (r,i,1)-dy) to (r,i,1)
+          }
+        }
+        //print_form
+        // Evaluation.
+        abyss_list.clear
+        result_list.clear
+        mesure_abyss screen_ia in abyss_list
+        0.to 3 do { pr:INTEGER
+          px := 0
+          {
+            is_ok := mesure pr pos px
+            px := px + 1
+          }.do_while {is_ok}
+        }
+        (pr_max,px_max) := choice_best
+        /*
+        "Rotation : ".print
+        pr_max.print
+        " pos_x : ".print
+        px_max.print; '\n'.print
+        */
+        //IO.read_character
+
+        1.to pr_max do { i:INTEGER
+          key_event (0800h | 'U'.to_integer)
+        }
+
+        stat_ia := 1
+        //"Position...\n".print
+      }
+    }.elseif {stat_ia = 1} then {
+      // Game.
+      y := 0
+      {(!firs) && {y < 19}}.while_do {
+        x := 0
+        {(!firs) && {x < 10}}.while_do {
+          (screen_ia.at (x,y) != 0).if {
+            px := x - form.at (pr_max,0,0)
+            (px = px_max).if {
+
+              //(line_count < 34).if {
+              //  keyboard_event (0800h | 'D'.to_integer)
+              //}
+
+              stat_ia := 2
+              //"Wait...\n".print
+            } else {
+              1.to (px - px_max) do { t:INTEGER
+                key_event (0800h | 'L'.to_integer)
+              }
+              1.to (px_max - px) do { t:INTEGER
+                key_event (0800h | 'R'.to_integer)
+              }
+            }
+            firs := TRUE
+          }
+          x := x + 1
+        }
+        y := y + 1
+      }
+    }.elseif {stat_ia = 2} then {
+      // Wait other face.
+      y := 0
+      {(cnt != 4) && {y < 4}}.while_do {
+        x := 3
+        {(cnt != 4) && {x < 7}}.while_do {
+          (screen_ia.at (x,y) != 0).if {
+            cnt := cnt + 1
+          }
+          x := x + 1
+        }
+        y := y + 1
+      }
+      (cnt != 4).if {
+        stat_ia := 0
+        "Detect...\n".print
+      }
+    }
+  )
+
+  - screen_after:ARRAY2(UINTEGER_8) := ARRAY2(UINTEGER_8).create (10,19)
+
+  - result_list:ARRAY(INTEGER) := ARRAY(INTEGER).create_with_capacity (40*7)
+
+  - mesure pr:INTEGER pos px:INTEGER :BOOLEAN <-
+  ( + py:INTEGER
+    + m1,m2,m3,m4,m5:INTEGER
+    + result:BOOLEAN
+
+    screen_after.copy_collection screen_ia
+    py := put_ia pr pos px
+    (py != -1).if {
+      // Evaluation.
+      m1 := mesure_link screen_after
+      m3 := mesure_subhole screen_after * -3
+      m5 := mesure_line screen_after
+      m2 := mesure_ymax screen_after detect 2
+
+      abyss_list_after.clear
+      mesure_abyss screen_after in abyss_list_after
+      (m5 >= 2).if {
+        // Si tu gagnes 2 lignes, tu acceptes deux abyss.
+        m4 := ((abyss_list_after.count/2)-1).max 0 * -100
+      } else {
+        m4 := (abyss_list_after.count/2) * -100
+      }
+      (abyss_list_after.count < abyss_list.count).if {
+        m2 := m2 + 4
+      }
+      (m2 <= 9).if {
+        (m2 <= 4).if {
+          m2 := m2 - 1000
+        } else {
+          m2 := m2 - 100; //25 * (13 - m2)
+        }
+      }
+      (mesure_ymax screen_ia detect 1 <= 7).if {
+        (m5 >= 2).if {
+          m2 := m2 + 1000
+        }
+      }
+
+      /*
+      (m4 = 1).if {
+        (abyss_list_after.lower).to (abyss_list_after.upper) by 2 do { i:INTEGER
+          "X=".print
+          abyss_list_after.at i.print
+          " Depth=".print
+          abyss_list_after.at (i+1).print
+          ','.print
+        }
+        print_screen screen_after
+      }
+      */
+
+      result_list.add_last m1
+      result_list.add_last m2
+      result_list.add_last m3
+      result_list.add_last m4
+      result_list.add_last m5
+      //
+      result_list.add_last pr
+      result_list.add_last px
+      // Remove.
+      result := TRUE
+    }
+    result
+  )
+
+  - choice_best:(INTEGER,INTEGER) <-
+  ( + idx_global,idx:INTEGER
+    + idx_left,idx_right:INTEGER
+
+    print_result
+
+    idx_global := best_in_range 0 to 9
+
+    (abyss_list.is_empty).if {
+      // Pas d'abyss.
+      idx := idx_global
+    } else {
+      idx := -1
+      idx_left   := best_in_range 0 to (abyss_list.first - 1)
+      idx_right  := best_in_range (abyss_list.first - 1) to 9
+      (idx_left = -1).if {
+        idx := idx_right
+      }
+      (idx_right = -1).if {
+        idx := idx_left
+      }
+      (idx = -1).if {
+        (score idx_left > score idx_right).if {
+          idx := idx_left
+        } else {
+          idx := idx_right
+        }
+      }
+    }
+
+    "Best : ".print; (idx/7).print; '\n'.print
+    result_list.at (idx+5),result_list.at (idx+6)
+  )
+
+  - score i:INTEGER :INTEGER <-
+  (
+    result_list.at (i+0) + result_list.at (i+1) +
+    result_list.at (i+2) + result_list.at (i+3) +
+    result_list.at (i+4)
+  )
+
+  - best_in_range low:INTEGER to up:INTEGER :INTEGER <-
+  ( + idx:INTEGER
+    + max,tmp:INTEGER
+
+    idx := -1
+    (low <= up).if {
+      max := -1000_000
+      0.to (result_list.upper) by 7 do { i:INTEGER
+        (result_list.at (i+6).in_range low to up).if {
+          tmp := score i
+          (tmp > max).if {
+            idx := i
+            max := tmp
+          }
+        }
+      }
+    }
+    idx
+  )
+
+
+  - put_ia r:INTEGER pos x:INTEGER :INTEGER <-
+  ( + j,px,py,y:INTEGER
+    + in:BOOLEAN
+
+    y := 3
+    {
+      j := 0
+      y := y + 1
+      {
+        (j < 4) &&
+        {in := ((px:=x + form.at (r,j,0)).in_range 0 to 9)}  &&
+        {(py:=y + form.at (r,j,1)).in_range 0 to 18} &&
+        {screen_after.at (px,py) = 0}
+      }.while_do {
+        j := j + 1
+      }
+    }.do_while {j = 4}
+    (! in).if {
+      y := -1
+    } else {
+      y := y - 1
+      0.to 3 do { i:INTEGER
+        px := x + form.at (r,i,0)
+        py := y + form.at (r,i,1)
+        screen_after.at (px,py) put 2
+      }
+    }
+    y
+  )
+
+  //
+  // Sub-routine mesure.
+  //
+
+  - abyss_list:ARRAY(INTEGER) := ARRAY(INTEGER).create_with_capacity 5
+
+  - abyss_list_after:ARRAY(INTEGER) := ARRAY(INTEGER).create_with_capacity 5
+
+  - mesure_abyss tab:ARRAY2(UINTEGER_8) in ab:ARRAY(INTEGER) <-
+  ( + y,yl,yr,ymx,depth,i:INTEGER
+
+    0.to 9 do { x:INTEGER
+      y := 4
+      yl := yr := -1
+      {(y < 19) && {tab.at (x,y) = 0}}.while_do {
+        ((x != 0) && {yl = -1} && {tab.at (x-1,y) != 0}).if {
+          yl := y
+        }
+        ((x != 9) && {yr = -1} && {tab.at (x+1,y) != 0}).if {
+          yr := y
+        }
+        y := y + 1
+      }
+      (x = 0).if {
+        ymx := yr
+      }.elseif {x = 9} then {
+        ymx := yl
+      }.elseif {(yl != -1) && {yr != -1}} then {
+        ymx := yl.max yr
+      } else {
+        ymx := -1
+      }
+
+      (ymx != -1).if {
+        depth := y-ymx
+        (depth >= 3).if {
+          i := ab.lower
+          {(i <= ab.upper) && {depth < ab.at i}}.while_do {
+            i := i + 1
+          }
+          ab.at i add x
+          ab.at (i+1) add depth
+        }
+      }
+    }
+  )
+
+  - mesure_ymax tab:ARRAY2(UINTEGER_8) detect n:INTEGER :INTEGER <-
+  ( + result,x:INTEGER
+
+    result := 4
+    {
+      x := 0
+      {(x < 10) && {tab.at (x,result) != n}}.while_do {
+        x := x + 1
+      }
+      result := result + 1
+    }.do_while {(result < 19) && {x = 10}}
+    result - 1
+  )
+
+  - mesure_line tab:ARRAY2(UINTEGER_8) :INTEGER <-
+  ( + result:INTEGER
+    + y,x:INTEGER
+
+    y := 18
+    {
+      x := 0
+      {(x < 10) && {tab.at (x,y) != 0}}.while_do {
+        x := x + 1
+      }
+      (x = 10).if {
+        y.downto 5 do { yy:INTEGER
+          0.to 9 do { xx:INTEGER
+            tab.at (xx,yy) put (tab.at (xx,yy-1))
+          }
+        }
+        result := result + 1
+      } else {
+        y := y - 1
+      }
+    }.do_while {y != 4}
+    result
+  )
+
+  - mesure_link tab:ARRAY2(UINTEGER_8) :INTEGER <-
+  ( + y,yb:INTEGER
+    + result:INTEGER
+
+    0.to 9 do { x:INTEGER
+      y := 4
+      {(y < 19) && {tab.at (x,y) != 2}}.while_do {
+        y := y + 1
+      }
+      {(y < 19) && {tab.at (x,y) = 2}}.while_do {
+        // Left.
+        ((x = 0) || {tab.at (x-1,y) = 1}).if {
+          result := result + 1
+        }
+        // Right.
+        ((x = 9) || {tab.at (x+1,y) = 1}).if {
+          result := result + 1
+        }
+        // Bottom.
+        ((y = 18) || {tab.at (x,y+1) = 1}).if {
+          result := result + 1
+        }
+        ((y != 18) && {tab.at (x,y+1) = 0}).if {
+          result := result-100
+          yb := y+2
+          {(yb < 19) && {tab.at (x,yb) = 0}}.while_do {
+            result := result - 50
+            yb := yb + 1
+          }
+        }
+        y := y + 1
+      }
+    }
+
+    (result = 4).if {
+      print_screen tab
+    }
+
+    result
+  )
+
+  - mesure_subhole tab:ARRAY2(UINTEGER_8) :INTEGER <-
+  ( + y,y_mx:INTEGER
+    + result:INTEGER
+
+    0.to 9 do { x:INTEGER
+      y := 4
+      {(y < 19) && {tab.at (x,y) != 2}}.while_do {
+        y := y + 1
+      }
+      (y < 19).if {
+        {(y < 19) && {tab.at (x,y) = 2}}.while_do {
+          y := y + 1
+        }
+        y_mx := 19.min (y+4)
+        {y < y_mx}.while_do {
+          (tab.at (x,y) = 0).if {
+            result := result + 1
+          }
+          y := y + 1
+        }
+      }
+    }
+    result
+  )
+
+  //
+  // Debug.
+  //
+
+  - screen_txt:ARRAY2(CHARACTER) := ARRAY2(CHARACTER).create (4*5*2,4)
+
+  - print_form <-
+  ( + px,py:INTEGER
+    screen_txt.set_all_with '-'
+    0.to 3 do { r:INTEGER
+      px := (r*5+form.at (r,0,0)) * 2
+      py := form.at (r,0,1)
+      screen_txt.put '(' to (px,py)
+      screen_txt.put ')' to (px+1,py)
+      1.to 3 do { p:INTEGER
+        px := (r*5+form.at (r,p,0)) * 2
+        py := form.at (r,p,1)
+        screen_txt.put '[' to (px,py)
+        screen_txt.put ']' to (px+1,py)
+      }
+      0.to 3 do { y:INTEGER
+        px := (r*5+4)*2
+        screen_txt.put ' ' to (px,y)
+        screen_txt.put ' ' to (px+1,y)
+      }
+    }
+    0.to 3 do { y:INTEGER
+      0.to 39 do { x:INTEGER
+        screen_txt.at (x,y).print
+      }
+      '\n'.print
+    }
+  )
+
+  - print_screen tab:ARRAY2(UINTEGER_8) <-
+  (
+    0.to 18 do { y:INTEGER
+      0.to 9 do { x:INTEGER
+        tab.at (x,y)
+        .when 0 then {
+          "--".print
+        }
+        .when 1 then {
+          "[]".print
+        }
+        .when 2 then {
+          "{}".print
+        }
+      }
+      '\n'.print
+    }
+    0.to 9 do { x:INTEGER
+      x.print
+      ' '.print
+    }
+    '\n'.print
+  )
+
+  - print_result <-
+  ( + tmp:INTEGER
+    "|N \t||Link\t|Ymax\t|Hole\t|Abys\t|Line\t||Rot.\t|X   \t||Value\n".print
+    (result_list.lower).to (result_list.upper) by 7 do { i:INTEGER
+      '|'.print
+      (i/7).print; "\t||".print
+      0.to 4 do { j:INTEGER
+        result_list.at (i+j).print
+        "\t|".print
+      }
+      '|'.print
+      result_list.at (i+5).print
+      "\t|".print
+      result_list.at (i+6).print
+      "\t||".print
+      tmp := result_list.at (i+0) + result_list.at (i+1) + result_list.at (i+2)
+      tmp := tmp + result_list.at (i+3)
+      tmp := tmp + result_list.at (i+4)
+      tmp.print
+      '\n'.print
+    }
+    (abyss_list.lower).to (abyss_list.upper) by 2 do { i:INTEGER
+      "Abyss : x=".print
+      abyss_list.at i.print
+      " depth=".print
+      abyss_list.at (i+1).print
+      '\n'.print
+    }
+  )
+
+

@@ -1,0 +1,258 @@
+Header
+
+  + name    := TYPES_TMP;
+
+  /*Aliser TYPE collection.*/
+
+Inherit
+
+  + parent_types_set:Expanded TYPES_SET
+
+Private
+
+  - bucket:ARRAY (Strict TYPES_SET) := ARRAY (Strict TYPES_SET).create_with_capacity 3000; // BSBS: A mettre dans TYPES_SET
+
+  - free_list:ARRAY TYPES_TMP := ARRAY TYPES_TMP.create_with_capacity 200
+
+  + capacity:INTEGER
+
+  - create_types_tmp:TYPES_TMP <-
+  ( + result:TYPES_TMP
+
+    result := clone
+    result.make_types_tmp
+    result
+  )
+  
+  - make_types_tmp <-
+  (
+    count := 0
+    capacity := 128
+    storage  := NATIVE_ARRAY TYPE .calloc_intern capacity
+  )
+  [ +? {is_empty}; ]
+
+Public
+
+  - print_all <-
+  ( + t:TYPES
+    
+    (bucket.lower).to (bucket.upper) do { j:INTEGER
+      t := bucket.at j
+      t.types_print
+      '\n'.print
+    }
+  )
+
+Public
+
+  - types_empty:TYPES := TYPES_SET
+
+  //
+  // Creation.
+  //
+  
+  - new:TYPES_TMP <-
+  ( + result:TYPES_TMP
+    
+    (free_list.is_empty).if {
+      result := create_types_tmp
+    } else {
+      result := free_list.last
+      free_list.remove_last
+    }
+    result
+  )
+
+  - update t:TYPES :TYPES <-
+  [
+    -? { + tmp:TYPES_TMP; tmp ?= t; tmp = NULL}
+  ]
+  ( + result:TYPES
+
+    ((t != NULL) && {t.count = count}).if {
+      result := t
+      free
+    } else {
+      result := to_types
+    }
+    result
+  )
+
+  - to_types:TYPES <-
+  ( + result:TYPES
+    + nw,t:Strict TYPES_SET
+    + j,i:INTEGER
+
+    (is_empty).if {
+      result := types_empty
+    } else {
+        
+      (count = 1).if {
+        result := first
+      }/*.elseif {(count = 2) && {first = TYPE_NULL}} then {
+        result := at 1.types_with_null
+        (result = NULL).if {
+          t := TYPES_SET.create Self
+          at 1.set_types_with_null t
+          result := t
+        }
+      }*/ else {
+        j := bucket.lower
+        {(j < bucket.count) && {result = NULL}}.while_do { 
+          t := bucket.at j
+          ((count = t.count) && {at 1 = t.at 1} && {first = t.first}).if {
+            i := 2
+            {(i < count) && {at i = t.at i}}.while_do { i := i + 1; }
+            (i = count).if {
+              result := t
+            }
+          }
+          j := j + 1
+        }
+        (result = NULL).if {
+          nw := TYPES_SET.create Self
+          ? {nw != NULL}
+          bucket.add_last nw
+          result := nw
+        }
+      }
+    }
+    free
+    result
+  )
+
+  - clear <-
+  (
+    count := 0
+  )
+
+  - free <-
+  (
+    clear
+    free_list.add_last Self
+  )
+
+  //
+  // Update list.
+  //
+  
+  - remove i:INTEGER <-
+  ( 
+    (i+1).to (count-1) do { j:INTEGER
+      storage.put (at j) to (j - 1)
+    }
+    count := count - 1
+  )
+
+  - add t:TYPE <-
+  ( + idx:INTEGER
+
+    (is_empty).if {
+      add_last t
+    } else {
+      idx := search t from 0 to count
+      (idx = count).if {
+	add_last t
+      }.elseif {at idx != t} then {
+	add t to idx
+      }
+    }
+    (order_test).if_false { "MERDE!\n".print; }
+  )
+    
+  - union other:TYPES <-
+  ( + idx1,idx2,t2idx:INTEGER
+    + t2:TYPE
+    
+    {idx2 = other.count}.until_do {
+      t2    := other.at idx2
+      t2idx := t2.index
+      {(idx1 < count) && {at idx1.index < t2idx}}.while_do {
+	idx1 := idx1 + 1
+      }
+      {(idx1 < count) && {at idx1.index = t2idx} && {at idx1 != t2}}.while_do {
+        idx1 := idx1 + 1
+      }
+      ((idx1 = count) || {at idx1 != t2}).if {
+	add t2 to idx1
+      }
+      idx1 := idx1 + 1
+      idx2 := idx2 + 1
+    }
+    (order_test).if_false { "MERDE UNION!\n".print; }
+  )
+
+Private
+  
+  - add_last t:TYPE <-
+  ( + new_capacity:INTEGER
+
+    (count + 1 > capacity).if {
+      new_capacity := capacity * 2
+      storage := storage.realloc capacity with new_capacity
+      capacity := new_capacity
+    }
+    count := count + 1
+    storage.put t to (count - 1)
+  )
+
+  - add t:TYPE to index:INTEGER <-
+  ( + new_capacity:INTEGER
+    (index = count).if {
+      add_last t
+    } else {
+      (count > capacity - 1 ).if {
+        new_capacity := capacity * 2
+	storage := storage.realloc capacity with new_capacity
+	capacity := new_capacity
+      }
+      count := count + 1
+      (count - 2).downto index do { i:INTEGER
+	storage.put (at i) to (i + 1)
+      }
+      storage.put t to index
+    }
+  )
+
+  - search t:TYPE from beg:INTEGER to end:INTEGER :INTEGER <-
+  // Dichotomic research.
+  ( + middle,result:INTEGER
+
+    ((end - beg) < 2).if {
+      (t.index > at beg.index).if {
+	result := end
+      } else {
+	result := beg
+      }
+    } else {
+      middle := (beg + end) >> 1
+     
+      (t.index > at middle.index).if {
+	result := search t from middle to end
+      }.elseif {t.index < at middle.index} then {
+	result := search t from beg to middle
+      } else {
+        {(middle > beg) && {at middle.index = t.index}}.while_do {
+          middle := middle - 1
+        }
+        {(middle <= end) && {at middle != t}}.while_do {
+          middle := middle + 1
+        }
+        result := middle
+      }
+    }
+    result
+  )
+
+  - order_test:BOOLEAN <-
+  ( + j:INTEGER
+
+    {(j < count-1) && {at j.index <= at (j+1).index}}.while_do {
+      j := j + 1
+    }
+    j >= count - 1
+  )
+
+
+  

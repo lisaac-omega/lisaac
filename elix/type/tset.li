@@ -1,0 +1,13 @@
+Header
+  + name := TSET;
+  
+Inherit
+  + parent_type:TYPE := TYPE
+  
+Public
+  + set:Expanded HMAP TYPE KEY STRING_ALIAS
+  
+  - has t:TYPE :BOOLEAN <- set.fast_has t
+  
+  - drw <- crash_with_message "TSET.drw"
+  

@@ -1,0 +1,41 @@
+Header
+  + name    :=Expanded INTEGER_8;
+
+  /*Signed 8 bits integer.*/
+  - type    := `signed char`;
+  - default := (`(0)`:INTEGER_8); 
+  - export  := INTEGER, INTEGER_64, INTEGER_32, INTEGER_16;
+  
+Insert
+
+  - parent_signed_integer:SIGNED_INTEGER := SIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 1
+
+  // Range
+
+  - maximum:UINTEGER_64 <- 127.to_raw_uinteger_64
+
+  - minimum:INTEGER_64  <- - 128.to_raw_integer_64
+
+  // Conversion.
+
+  - to_integer_8:INTEGER_8 <-
+  [ ]
+  (
+    Self
+  )
+  [ ]
+
+  - to_character:CHARACTER <- `@Self`:CHARACTER; // `13`
+
+
+
+
+
+
+
+
+

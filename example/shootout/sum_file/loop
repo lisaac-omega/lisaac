@@ -1,0 +1,6 @@
+i=0
+while [ $i -lt 1000 ]
+do
+  $1 < sumcol-input.txt > $2
+  i=$[$i + 1]
+done

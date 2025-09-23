@@ -1,0 +1,143 @@
+Header
+
+  + name        := EXPR_NOT_EQUAL;
+
+  /*Not equal binary comparison expression.*/
+
+Inherit
+
+  + parent_expr_binary_cmp:Expanded EXPR_BINARY_CMP
+
+Public
+
+  - symbol:STRING_ALIAS := "!="
+
+  //
+  // Execute.
+  //
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 != C2 -> TRUE/FALSE
+  ( + result:PROTOTYPE_CST
+
+    (left_cst.value != right_cst.value).if {
+      result := PROTOTYPE_CST.create position type (type_true.default)
+    } else {
+      result := PROTOTYPE_CST.create position type (type_false.default)
+    }
+    left_cst .remove
+    right_cst.remove
+
+    count_equal_const := count_equal_const + 1
+
+    result
+  )
+
+  - exec:EXPR <-
+  //-- E != E -> FALSE
+  //-- Expanded != NULL -> TRUE
+  //-- intersection (type_set(E),type_set(E')) = Empty -> TRUE
+  ( + result:PROTOTYPE_CST
+    + r:PROTOTYPE_CST
+    + type_set_r,type_set_l:TYPES_TMP
+    
+    + ls,rs:STRING_CST
+    ls ?= left; rs ?= right
+    ((ls != NULL) && {rs != NULL}).if {
+      + t:TYPE_FULL
+      t := ((ls.string = rs.string).ok type_false or type_true).default
+      result := PROTOTYPE_CST.create position type t
+      left .remove
+      right.remove
+    
+    }.elseif {left ~= right} then {
+      result := PROTOTYPE_CST.create position type (type_false.default)
+      left .remove
+      right.remove
+
+      (left.static_type.raw = TYPE_NULL).if {
+        count_equal_null := count_equal_null + 1
+      } else {
+        count_equal_ident := count_equal_ident + 1
+      }
+
+    } else {
+      r ?= right
+      (
+	(r != NULL) &&
+	{r.static_type.raw = TYPE_NULL} &&
+	{left.static_type.is_expanded}  &&
+	{left.static_type.raw != type_pointer}
+      ).if {
+        left .remove
+        right.remove
+        result := PROTOTYPE_CST.create position type (type_true.default)
+
+        count_equal_const := count_equal_const + 1
+
+      }.elseif {(! left.static_type.is_expanded) && {! right.static_type.is_expanded}} then {
+        type_set_l := TYPES_TMP.new
+        left.get_type type_set_l
+        type_set_r := TYPES_TMP.new
+        right.get_type type_set_r
+        (
+          (type_set_l.count = 1)         && {type_set_r.count = 1} &&
+          {type_set_l.first = TYPE_NULL} && {type_set_r.first = TYPE_NULL}
+        ).if {
+          left .remove
+          right.remove
+          result := PROTOTYPE_CST.create position type (type_false.default)
+
+          count_equal_null := count_equal_null + 1
+
+        }.elseif {type_set_l.intersection_is_empty type_set_r} then {
+          left .remove
+          right.remove
+          result := PROTOTYPE_CST.create position type (type_true.default)
+
+          count_equal_inter := count_equal_inter + 1
+
+        }
+        type_set_r.free
+        type_set_l.free
+      }
+    }
+
+    result
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <- // BSBS: a factoriser avec EXPR_EQUAL
+  (
+
+    count_equal_gener := count_equal_gener + 1
+
+    (
+      (left.static_type.is_expanded)  &&
+      {right.static_type.is_expanded} &&
+      {right.static_type.raw.type_c = NULL}
+    ).if {
+      output.append "(memcmp("
+      (left.static_type.is_expanded_ref).if_false {
+        output.add_last '&'
+      }
+      left.genere
+      output.add_last ','
+      (right.static_type.is_expanded_ref).if_false {
+        output.add_last '&'
+      }
+      right.genere
+      output.append ",sizeof("
+      left.static_type.raw.put_expanded_declaration output
+      output.append ")) != 0)"
+    } else {
+      parent_expr_binary_cmp.genere
+    }
+  )
+
+
+
+

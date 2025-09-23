@@ -1,0 +1,242 @@
+Header
+  
+  + name := TEST_TTF;
+  /**/
+  
+Inherit 
+  + parent_window:Expanded WINDOW
+ 
+Public 
+  
+  - draw_button pen:PEN text txt:STRING_ALIAS to (x,y:REAL_32) 
+  size (w,h:REAL_32) color col:COLOR <-
+  ( + bg:PAINT
+    + corner,tw,iw:REAL_32
+    + x0,y0,x1,y1:REAL_32
+    corner := 4.0
+    
+    bg := PAINT.create_linear (x,y) to (x,y+h)
+    color (COLOR.rgba(255,255,255,col.is_black.ok 16 or 32))
+    to    (COLOR.rgba(  0,  0,  0,col.is_black.ok 16 or 32))
+    
+    pen.begin_path
+    pen.rect (x+1,y+1) size (w-2,h-2) radius (corner-1)
+    (! col.is_black).if {
+      pen.fill_color col
+      pen.fill
+    }
+    pen.fill_paint bg
+    pen.fill
+    bg.free
+
+    pen.begin_path
+    pen.rect (x+0.5,y+0.5) size (w-1,h-1) radius (corner-0.5)
+    pen.stroke_color (COLOR.rgba(0,0,0,48))
+    pen.stroke
+    
+    pen.font_size 20.0
+    pen.font_face "sans-bold"
+    (tw,x0,y0,x1,y1) := pen.text_bounds (0,0) msg txt from 0 to (-1)
+    //"tw:".print; tw.print
+    //" [".print; x0.print; ','.print; y0.print; " - ".print; x1.print; ','.print; y1.print; "]\n".print
+	
+    pen.font_size 20.0
+    pen.font_face "sans-bold"
+    pen.text_align (align_left|align_middle)
+    pen.fill_color (COLOR.rgba(255,255,255,160))
+    pen.text (x+w*0.5-tw*0.5+iw*0.25,y+h*0.5-1) msg txt
+    pen.fill_color (COLOR.rgba(0,0,0,160))
+    pen.text (x+w*0.5-tw*0.5+iw*0.25,y+h*0.5) msg txt
+  )
+  
+  - draw_paragraph pen:PEN text txt:STRING_ALIAS to (x,y:REAL_32) width w:REAL_32
+  pointer (mx,my:REAL_32) <-
+  ( - rows:ARRAY TEXT_ROW
+    - glyphs:ARRAY GLYPH_POSITION
+    + row:TEXT_ROW
+    + start,end:INTEGER
+    + asc,des,lineh:REAL_32
+    + caretx, px,py:REAL_32
+    + gx,gy:REAL_32
+    
+    (rows = NULL).if {
+      rows := ARRAY TEXT_ROW.create_with_capacity 20
+      glyphs := ARRAY GLYPH_POSITION.create_with_capacity 100
+    } else {
+      {rows.is_empty}.until_do { rows.pop.free; }
+      {glyphs.is_empty}.until_do { glyphs.pop.free; }
+    }
+    
+    pen.save
+  
+    pen.font_size 18.0
+    pen.font_face "sans"
+    pen.text_align (align_left|align_top)
+    (asc,des,lineh) := pen.text_metrics
+    py := y
+    
+    //pen.text_box (x,y) width 300 msg txt
+    
+    // The text break API can be used to fill a large buffer of rows,
+    // or to iterate over the text just few lines (or just one) at a time.
+    // The "next" variable of the last returned item tells where to continue.
+    end := txt.count
+    {
+      pen.text_break_lines txt from start to end width w row rows
+      rows.count != 0
+    }.while_do {    
+      0.to (rows.upper) do { i:INTEGER
+        row := rows.item i
+        pen.fill_color (COLOR.rgba(0,0,0,255))
+        pen.text (x,py) msg txt from (row.start) to (row.end)
+        
+        ((mx > x) && {mx < (x+w)} && {my >= py} && {my < (py+lineh)}).if {
+          pen.begin_path
+          pen.fill_color (COLOR.rgba(255,255,255,64))
+          pen.rect (x, py) size (row.width, lineh)
+          pen.fill
+          
+          caretx := (mx < x+row.width/2).ok x or (x+row.width)
+          px := x
+          glyphs.clear
+          pen.text_glyph_positions(x, py) msg txt from (row.start) to (row.end) glyph glyphs
+          0.to (glyphs.upper) do { j:INTEGER
+            + x0,x1:REAL_32
+            x0 := glyphs.item j.x
+            (j+1 < glyphs.count).if {
+              x1 := glyphs.item (j+1).x
+            } else {
+              x1 := x+row.width
+            }
+            gx := x0 * 0.3 + x1 * 0.7
+            ((mx >= px) && {mx < gx}).if {
+              caretx := glyphs.item j.x
+            }
+            px := gx
+          }
+          pen.begin_path
+          pen.fill_color (COLOR.rgba(255,0,0,255))
+          pen.rect (caretx, py) size (1, lineh)
+          pen.fill
+          
+          gx := x - 10
+          gy := py + lineh/2
+        }
+        py := py+lineh
+      }
+      start := rows.last.next
+      {rows.is_empty}.until_do { rows.pop.free; }
+    }
+    pen.restore
+  )
+  
+  - draw_scroll pen:PEN text txt:STRING_ALIAS to (x,y:REAL_32) <-
+  ( + w,x0,y0,x1,y1,px:REAL_32
+    pen.save
+    pen.font_size 300.0
+    pen.font_blur 20.0
+    pen.font_face "sans-bold"
+    pen.text_align (align_left|align_top)
+    pen.fill_color (COLOR.rgba(160,160,200,160))
+    (w,x0,y0,x1,y1) := pen.text_bounds (0,0) msg txt from 0 to (-1)
+    px := w - (x%w)
+    pen.text (px,y) msg txt
+    px := px-w
+    pen.text (px,y) msg txt
+    pen.restore
+  )
+  
+  - accelerometer pen:PEN to (x,y:REAL_32) <-
+  ( - txt:STRING_BUFFER
+    (txt = NULL).if { txt := STRING_BUFFER.create 64; }
+    txt.copy "Accelerometer:\n- X = "
+    ACCELEROMETER.x.append_in txt
+    txt.append "\n- Y = "
+    ACCELEROMETER.y.append_in txt
+    txt.append "\n- Z = "
+    ACCELEROMETER.z.append_in txt
+    
+    pen.font_size 30.0
+    pen.font_face "sans-bold"
+    pen.text_align align_left
+    pen.fill_color (COLOR.rgba(0,0,0,160))
+    pen.text_box (x,y) width 400 msg txt
+  )
+  
+  - effect3d pen:PEN radius r:REAL_32 to (x,y:REAL_32) <-
+  ( + bg:PAINT
+    + px,py,dx,dy:REAL_32
+        
+    pen.save
+    /*
+    pen.begin_path
+    pen.circle (x,y) radius (r-0.5)
+    pen.stroke_width 1
+    pen.stroke_color (COLOR.rgba(0,0,0,255))
+    pen.stroke
+    */
+
+    (dx,dy) := ACCELEROMETER.dxy
+    
+    px := x + dx
+    py := y + dy
+    pen.begin_path
+    pen.circle (px,py) radius r
+    pen.fill_color (COLOR.rgba(0,0,0,16))
+    pen.fill
+    
+    px := x - dx
+    py := y - dy
+    
+    bg := PAINT.create_radial (px+r/10.0,py+r/10.0) radius (r/1.6,r)
+    color (COLOR.rgba(230,230,255,255))
+    to    (COLOR.rgba(255,255,255,255))
+    pen.begin_path
+    pen.circle (px,py) radius r
+    pen.fill_paint bg
+    pen.fill
+    bg.free
+    
+    pen.begin_path
+    pen.circle (px,py) radius (r-0.5)
+    pen.stroke_width 1
+    pen.stroke_color (COLOR.rgba(0,0,0,48))
+    pen.stroke
+      
+    pen.restore
+  )
+  
+Public
+   
+  - draw <-
+  ( + t:REAL_32
+    + x,y:INTEGER
+    t := CLOCK.seconds
+    
+    draw_scroll pen text "Lisaac " to (t*100,-30)
+    
+    draw_button pen text "Startrek" to (10,10) size (110,28) color (COLOR.rgba(0,0,0,0))
+    
+    (x,y) := (pen.touch.first.x,pen.touch.first.y)
+    
+    draw_paragraph pen text my_text  to (50, 50) width (512-100) pointer (x,y)
+            
+    accelerometer pen to (50,300)
+    effect3d pen radius 64 to (256,600)
+  )
+  
+  - main <-
+  (
+    //PAPER.make_color (COLOR.rgb(200,200,220)) title "Test LI2D-TTF"
+    init "Test LI2D-TTF" size (400,800)
+    //PAPER.set_animation 1
+    //PAPER.run Self
+    PAPER.run
+  )
+  
+  - my_text:STRING_ALIAS :=  
+  "Star Trek is an American space opera media franchise based on the science fiction\
+  \ television series created by Gene Roddenberry.\n\nIt followed the interstellar\
+  \ adventures of Captain James T. Kirk and his crew aboard the starship USS Enterprise,\
+  \ a space exploration vessel, built by the United Federation of Planets in the\
+  \ twenty-third century."

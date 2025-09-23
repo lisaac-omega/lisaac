@@ -1,0 +1,120 @@
+Header
+  + name := TYPE;
+
+Inherit
+  - parent_clone:CLONE := CLONE
+  - parent_any:ANY := ANY
+  
+//Section Insert
+//  - parent_print:PRINT := PRINT
+  
+Public
+  
+  - is_complex:BOOLEAN <- FALSE
+  
+  - hash_code:UINTEGER_32 <- key.hash_code
+  
+  - Self:SELF '==' other:E :BOOLEAN <-
+  (Self = other) || {(other.dynamic_type = TERR) && {TERR.cast other.p_type = Self}}
+  
+  + key:STRING_ALIAS; // 0: NULL
+  
+  - dico:HMAP TYPE KEY STRING_ALIAS := HMAP TYPE KEY STRING_ALIAS.create
+  
+  - attr:UINTEGER_8 := 0
+  - expanded:UINTEGER_8 := 001b
+  - strict:UINTEGER_8   := 010b
+  - is msk:UINTEGER_8 :BOOLEAN <- (attr & msk) != 0
+  
+  - is_vector:BOOLEAN := FALSE
+  - foreach_until b:{TONE;BOOLEAN} :BOOLEAN <- ( + a:TONE; a ?= Self; b.value a)
+  
+  - is_self:BOOLEAN <- FALSE
+  
+Public
+  - type:TYPE <- ( crash; TYPE)
+  
+  - to_block a:TYPE :TBLC <-
+  ( + argt,rest:TYPE
+    (Self != void).if { rest := Self; }
+    (a != void).if { argt := Self; }
+    TBLC.new argt type rest
+  )
+  
+  - twin:SELF <- Self
+  - free
+  
+  - null:TONE
+  - void:TPRO
+  - numeric:TPRO
+  - boolean:TPRO
+  - true:TPRO
+  - false:TPRO
+  - character:TPRO
+  - string_alias:TPRO
+
+  - init_base n:STRING with t:TPRO <-
+  ( 
+    n
+    .case "VOID"         then { void := t;         }
+    .case "NUMERIC"      then { numeric := t;      }
+    .case "BOOLEAN"      then { boolean := t;      }
+    .case "TRUE"         then { true := t;         }
+    .case "FALSE"        then { false := t;        }
+    .case "CHARACTER"    then { character := t;    }
+    .case "STRING_ALIAS" then { string_alias := t; }
+  )
+  
+  - new_power n:INTEGER :TYPE <-
+  ( + result:TYPE
+    (n = 1).if {
+      result := Self
+    } else {
+      + ts:LIARRAY TYPE
+      ts := LIARRAY TYPE.new
+      foreach { t:TONE; ts.add_last t; }
+      result := TVEC.new ts
+      ts.free
+    }
+    result
+  )
+  
+//  - tdrw:TYPE <- TYPE.abstract
+  
+//  - upper:INTEGER := 0
+//  - at i:INTEGER :TONE <- ( abstract; TONE)
+//  - foreach b:{TONE; } <- ( abstract; )
+  
+  - lookup n:NODE :SLOT <-
+  (
+    "Lookup ".print; n.print; " in ".print; type_name.println
+    SLOT.abstract
+  )
+  
+  - lookup_idf n:STRING_ALIAS :SLOT <-
+  (
+    "Lookup idf ".print; n.print; " in ".print; type_name.println
+    SLOT.abstract
+  )
+    
+  - run_default <- ( abstract; )
+    
+  - Self:SELF '<=' o:TYPE :BOOLEAN <- BOOLEAN.abstract
+  
+  //
+  // Output
+  //
+  
+  - node tn:ARRAY NODE map s:STRING_BUFFER predict tp:ARRAY NODE :INTEGER <- INTEGER.abstract
+  
+  - txt_in s:STRING_BUFFER sty st:STY <- ( abstract; )
+  
+  - append_in b:STRING_BUFFER <- key.append_in b; //txt_in b sty NULL
+  
+//  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- ( abstract; 0,0,0)
+  
+  - out_c <- ( crash; )
+  
+  - out_id <- out_c
+  
+  

@@ -1,0 +1,51 @@
+Header
+  + name := CMD_CUT_RIGHT;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+
+Public
+  
+  - open:BOOLEAN <-
+  ( 
+    (cmd_cur != Self).if {
+      clipboard.clear
+      cmd_cur := Self
+      set on
+      SUBACT.get "CutRight".load Self
+    }
+    cut
+  )
+
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    close
+    SCREEN.key s cmd c
+  )
+  
+  - close <-
+  ( 
+    SUBACT.restore
+    unset on
+    CLIPBOARD.put clipboard
+    cmd_cur := CMD
+  )
+  
+Private
+  
+  - cut:BOOLEAN <-
+  ( + p0,p:INTEGER
+    + c:CHARACTER
+    
+    p := p0 := cur_txt.pos.pt
+    {((c := cur_txt.text.at p) != '\n') && {c != '\r'} && {c != '\0'}}.while_do {
+      clipboard.add_last c
+      p := p + 1
+    }
+    ((p = p0) && {c != '\0'}).if {
+      (c = '\r').if { clipboard.add_last '\r'; p := p + 1; }
+      clipboard.add_last '\n'; p := p + 1
+    }
+    p := p - p0
+    (p != 0).if { cur_txt.text.rm p0 times p; }
+  )

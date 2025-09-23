@@ -1,0 +1,135 @@
+Header
+  + name := ACT_ITM;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stkai:Expanded ARRAY (Strict ACT_ITM)
+  
+Public
+    
+  - new:SELF <-
+  ( + r:SELF; (stkai.is_empty).if { r := clone; } else { r := stkai.pop; }; r)
+  
+  - free <- stkai.add_last Self
+  
+  - margin:REAL_32 := 8
+      
+  + act:ACT
+
+  + col:COLOR
+    
+  - color c:COLOR :SELF <- ( col := c; Self)
+  
+  - is_separator:BOOLEAN <- act = NULL
+  
+  - width_min:REAL_32 <-
+  ( + x0,y0,x1,y1,w,wt:REAL_32
+    (! is_separator).if {      
+      font_face_id (FONT.sys (FONT.bold))
+      font_size (FONT.size_sys)
+      (wt,x0,y0,x1,y1) := text_bounds (0,0) msg (act.text_l)
+      (act.text_r != NULL).if {
+        font_size (FONT.size_sys-4)
+        (w,x0,y0,x1,y1) := text_bounds (0,0) msg (act.text_r)
+        wt := wt + w + 16
+      }
+      (act.is (act.case)).if { wt := wt + FONT.size_sys; }
+    }
+    wt + margin*2
+  )
+  
+  - copy o:SELF <-
+  ( act := o.act
+    col := o.col
+  )
+  
+  - height_min:REAL_32 <- is_separator.ok 16.0 or (FONT.size_sys)
+   
+  - init p:WIN act a:ACT :SELF <-
+  ( act := a; init p)
+  
+  - draw <-
+  ( + y,x,s:REAL_32
+    + c:COLOR
+    //draw_debug
+    (x,y) := (xo+margin, yo + height/2)
+    is_separator.if {
+      begin_path
+      stroke_width 2
+      stroke_color (COLOR.rgbaf (0,0,0,0.5))
+      line (x,y-1) to (xmax-margin,y-1)
+      stroke
+      begin_path
+      stroke_color (COLOR.rgbaf (1,1,1,0.5))
+      line (x,y+1) to (xmax-margin,y+1)
+      stroke
+    } else {
+      (is inside).if {        
+        begin_path
+        fill_color (LOOK.border_on)
+        rect (xo,yo) size (width, height) radius 8
+        fill
+      }
+      (act.is (act.mute)).if {
+        c := LOOK.text_bg_ui
+      } else {
+        c := (col=COLOR).ok (LOOK.text_ui) or col
+      }
+      fill_color c
+      (act.is (act.case)).if {
+        begin_path
+        stroke_color c
+        stroke_width 2.0
+        s := FONT.size_sys / 2 - 5
+        (act.is (act.radio)).if {
+          circle (x+s,y) radius s
+          stroke
+          (act.get_case.value act).if {
+            begin_path
+            circle (x+s,y) radius (s-4)
+            fill
+          }
+        } else {
+          rect (x, y - s) size (s * 2, s * 2)
+          (act.get_case.value act).if {
+            line (x, y - s) to (x + s * 2, y + s)
+            line (x + s * 2, y - s) to (x, y + s)
+          }
+          stroke
+        }
+        x := x + FONT.size_sys
+      }
+      font_face_id (FONT.sys (is inside.ok (FONT.bold) or (FONT.roman)))
+      font_size (FONT.size_sys)
+      (is align_center).if {
+        text_align (align_center | align_middle)
+        x := xo + width/2
+      } else {
+        text_align (align_left | align_middle)
+      }
+      text (x,y) msg (act.text_l)
+      (act.text_r != NULL).if {
+        fill_color (LOOK.short_ui)
+        font_size (FONT.size_sys-4)
+        text_align (align_right | align_middle)
+        text (xmax-margin,y) msg (act.text_r)
+      }
+    }
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    ((act = NULL) || {act.is (act.mute)}).if {
+      // Nothing.
+    }.elseif {e = HAND.in} then {
+      set inside with (ev = HAND.in)
+    }.elseif {e = HAND.clic} then {
+      //"Act:".print; act.text_l.println
+      MENU.close_all_except act
+      act.run.if_false { beep; }
+    }
+  )

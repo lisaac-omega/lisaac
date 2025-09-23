@@ -1,0 +1,2131 @@
+Header
+  + name := Expanded ℤ;
+  /*
+  The set ℤ (from the German Zahlen, meaning numbers) denotes the set of integers,
+  which includes all positive whole numbers, their negatives, and zero.
+  */
+  - type := `signed long long`;
+  - default := (CAST INTEGER TO ℤ.on 0); 
+    
+Insert
+  - parent_utils:UTILS := UTILS
+  - parent_print:PRINT := PRINT
+  - parent_hexadecimal:HEXADECIMAL := HEXADECIMAL
+  
+DIV_INV, NUMBER, UINTEGER_64
+  
+  - digits:STRING_ALIAS := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+  - base64:STRING_ALIAS := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  
+  // Assembler
+  
+  - last_bit x:INTEGER :INTEGER <-
+  [ ? {x != 0}; ]
+  ( + pos:INTEGER
+    `{ unsigned long pos,x=@x`
+    `  __asm__ ("bsrq %1, %0" : "=r" (pos) : "r" (x))`
+    pos := `pos`:INTEGER
+    `}`
+    pos
+  )
+  
+  - umul_128 (u, v:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
+  ( + rh,rl:UINTEGER_64
+    `{ unsigned long rh=0,rl=0;
+    asm(
+    "movq %2,%%rax \n"  
+    "mulq %3       \n"
+    "movq %%rax,%0 \n"
+    "movq %%rdx,%1 ":"+g" (rl),"+g" (rh):"g" (@u),"r" (@v):"rax","rdx")`;    
+    rh := `rh`:UINTEGER_64
+    rl := `rl`:UINTEGER_64
+    `}`
+    rh,rl
+  )
+    
+DIV_INV
+  // Memory manager
+  
+  - stck:NATIVE_ARRAY (Expanded ARRAY (NATIVE_ARRAY UINTEGER_64)) :=
+  ( + r:NATIVE_ARRAY (Expanded ARRAY (NATIVE_ARRAY UINTEGER_64))
+    r := NATIVE_ARRAY (Expanded ARRAY (NATIVE_ARRAY UINTEGER_64)).create 32
+    0.to 31 do { i:INTEGER; r.at i.set_upper (-1); }; // BUG COMPILO
+    r
+  )
+  
+  - new cap:INTEGER :NATIVE_ARRAY UINTEGER_64 <-
+  [ ? {cap.in_range 0 to 31}; ]
+  ( + r:NATIVE_ARRAY UINTEGER_64
+    (stck.at cap.is_empty).if {
+      r := NATIVE_ARRAY UINTEGER_64.calloc_intern ((1<<cap) + 1) + 1
+    } else {
+      r := stck.at cap.pop
+    }
+    r
+  )
+  
+  - free n:NATIVE_ARRAY UINTEGER_64 cap cap:INTEGER <- ( stck.at cap.add_last n; )
+      
+  // Extract info.
+  
+  - nocarry b:{UINTEGER_64} <-
+  ( + cf:UINTEGER_64
+    cf := b.value
+    ? {cf = 0}
+  )
+  
+  - imsk:INTEGER := 0_FFFF_FFFF_FFFF_FFFEh
+  - smsk:INTEGER := 8000_0000_0000_0000h
+  - nmsk:INTEGER := 0000_FFFF_FFFF_FFFEh
+  
+  - is_big:BOOLEAN <- CAST ℤ TO INTEGER_64.on Self .is_odd; // Dynamic version by default    
+  - to_raw:UINTEGER_64 <- CAST ℤ TO UINTEGER_64.on Self
+  - to_sraw:INTEGER_64 <- CAST ℤ TO INTEGER_64.on Self
+  - to_i64:INTEGER_64 <- CAST ℤ TO INTEGER_64.on Self >> 1
+  - to_abs64:UINTEGER_64 <- to_i64.abs.to_uinteger_64
+  - to_na:NATIVE_ARRAY UINTEGER_64 <- CAST UINTEGER_64 TO (NATIVE_ARRAY UINTEGER_64).on (to_raw & nmsk)
+  - capacity:INTEGER <- (to_raw >> 48).to_raw_integer_8
+  - sign:UINTEGER_64 <- to_raw & smsk
+  - is_neg:BOOLEAN <- sign != 0
+  - same_sign (a,b:ℤ) :BOOLEAN <- (a.to_raw ^ b.to_raw) & smsk = 0
+  - upper a:NATIVE_ARRAY UINTEGER_64 :INTEGER <- a.at (-1)
+  
+  - na na:NATIVE_ARRAY UINTEGER_64 cap c:INTEGER up up:INTEGER sign s:UINTEGER_64 :ℤ <-
+  [ ? {na.at up != 0}; ]
+  ( + r:UINTEGER_64
+    na.at (-1) put up
+    r := CAST (NATIVE_ARRAY UINTEGER_64) TO UINTEGER_64.on na
+    CAST UINTEGER_64 TO ℤ.on (r | (c << 48) | s | 1)
+  )
+  
+  - upper_to_cap x:INTEGER :INTEGER <-  
+  ( + r:INTEGER
+    (x != 0).if {
+      r := last_bit x + 1
+    }
+    r
+  )
+   
+  - normalize_upper (d:NATIVE_ARRAY UINTEGER_64,up:INTEGER) :INTEGER <-
+  ( + r:INTEGER
+    r := up
+    {(r > 0) && {d.at r = 0}}.while_do { r := r - 1; }
+    r
+  )
+  
+  - normalize rr:NATIVE_ARRAY UINTEGER_64 cap cap:INTEGER up up:UINTEGER_64 sign s:UINTEGER_64 :SELF <-
+  ( + u:UINTEGER_64
+    + nup:INTEGER
+    + r:SELF
+    nup := normalize_upper (rr,up)
+    ((nup = 0) && {(u := rr.first) <= 3FFF_FFFF_FFFF_FFFFh}).if { // 2^62 - 1
+      (s != 0).if { u := -u; }
+      r := CAST UINTEGER_64 TO ℤ.on (u << 1)
+      free rr cap cap
+    } else {
+      r := na rr cap cap up nup sign s
+    }
+    r
+  )
+  
+  // Comparaison tools
+  
+  - cmp4 (a:NATIVE_ARRAY UINTEGER_64,as:INTEGER,b:NATIVE_ARRAY UINTEGER_64,bs:INTEGER) :INTEGER <-
+  ( + result:INTEGER
+    (as != bs).if {
+      result := ((as > bs).to_integer << 1) - 1
+    } else {
+      result := cmp_n(a,b,as)
+    }
+    result    
+  )
+  
+  - cmp_n (ap,bp:NATIVE_ARRAY UINTEGER_64,n:INTEGER) :INTEGER <-  
+  ( + result:INTEGER
+    + i:INTEGER
+    + a,b:UINTEGER_64
+    i := n
+    {(i >= 0) && {result = 0}}.while_do {
+      (a,b) := (ap.at i,bp.at i)
+      (a != b).if { result := ((a > b).to_integer << 1) -1; }
+      i := i - 1
+    }
+    result
+  )
+  
+  - cmp other:SELF :INTEGER <-
+  // Self > other => +, Self < other => -, else Self = other => 0
+  ( + r:INTEGER
+    is_big.if {      
+      ((other.is_big) && {same_sign (Self, other)}).if {
+        + a,b:NATIVE_ARRAY UINTEGER_64
+        (a,b) := (to_na,other.to_na)
+        r := cmp4 (a,upper a,b,upper b)
+        is_neg.if { r := -r; }
+      } else {        
+        r := to_raw
+      }
+    } else {
+      other.is_big.if {
+        r := ~other.to_raw
+      } else {
+        r := to_i64 - other.to_i64
+      }
+    }
+    r
+  )
+  
+  // Addition tools
+  
+  - add_1 (rp,ap:NATIVE_ARRAY UINTEGER_64, n:INTEGER,b:UINTEGER_64) :UINTEGER_64 <-  
+  ( + i:INTEGER
+    + r,v:UINTEGER_64
+    v := b
+    {(v != 0) && {i <= n}}.while_do {
+      r := ap.at i + v
+      v := (r < v).to_integer
+      rp.at i put r
+      i := i + 1
+    }
+    {i <= n}.while_do { // Just copy
+      rp.at i put (ap.at i)
+      i := i + 1
+    }
+    v
+  )
+  
+  /*
+  - add_n_old (rp,ap,bp:NATIVE_ARRAY UINTEGER_64, n:INTEGER) :UINTEGER_64 <-
+  ( + cy,a,b,r:UINTEGER_64
+    0.to n do { i:INTEGER
+      (a,b) := (ap.at i, bp.at i)
+      r := a + cy
+      cy := (r < cy).to_integer
+      r := r + b
+      cy := cy | (r < b).to_integer
+      rp.at i put r
+    }
+    cy
+  );*/
+  
+  - add_n (rp,ap,bp:NATIVE_ARRAY UINTEGER_64, n:INTEGER) :UINTEGER_64 <-
+  ( + cy,cy2,a,b,r:UINTEGER_64
+    + dn:INTEGER
+    dn := (n+1) >> 1
+    0.to (dn-1) do { i:INTEGER
+      (a,b) := (ap.at i, bp.at i)
+      r := a + cy
+      cy := (r < cy).to_integer
+      r := r + b
+      cy := cy | (r < b).to_integer
+      rp.at i put r
+      (a,b) := (ap.at (i+dn), bp.at (i+dn))
+      r := a + cy2
+      cy2 := (r < cy2).to_integer
+      r := r + b
+      cy2 := cy2 | (r < b).to_integer
+      rp.at (i+dn) put r
+    }
+    (n.is_even).if {      
+      (a,b) := (ap.at n, bp.at n)
+      r := a + cy2
+      cy2 := (r < cy2).to_integer
+      r := r + b
+      cy2 := cy2 | (r < b).to_integer
+      rp.at n put r
+    }
+    (cy != 0).if { cy2 := cy2 | propagate_cf_n (rp+dn, n-dn); }
+    cy2 
+  )
+    
+  - add4 (r,a:NATIVE_ARRAY UINTEGER_64,as:INTEGER,b:NATIVE_ARRAY UINTEGER_64,bs:INTEGER) :UINTEGER_64 <-
+  [ ? {as >= bs}; ]
+  ( + cy:UINTEGER_64
+    cy := add_n (r, a, b, bs)
+    (as > bs).if { cy := add_1 (r+bs + 1, a+bs + 1, as-bs - 1, cy); }
+    cy    
+  )
+  
+  - add (aa:NATIVE_ARRAY UINTEGER_64,an:INTEGER) sign s:UINTEGER_64 ui v:UINTEGER_64 :SELF <-
+  ( + rr:NATIVE_ARRAY UINTEGER_64
+    + cf:UINTEGER_64
+    + cap,up:INTEGER
+    cap := upper_to_cap (an+1)
+    rr := new cap
+    cf := add_1 (rr,aa,an,v)
+    (cf != 0).if {
+      up := an + 1
+      rr.at up put cf
+    } else { up := an; }
+    na rr cap cap up up sign s
+  )
+  
+  - add a:SELF si b:SELF :ℤ <-
+  [ ? {a.is_big}; ? {!b.is_big}; ]
+  ( + aa:NATIVE_ARRAY UINTEGER_64
+    + up:INTEGER
+    + r:ℤ
+    + v:UINTEGER_64
+    aa := a.to_na
+    up := upper aa
+    v := b.to_abs64
+    (same_sign (a,b)).if {
+      r := add (aa,up) sign (a.sign) ui v
+    } else {
+      r := sub (aa,up) cap (a.capacity) sign (a.sign) ui v
+    }
+    r
+  )
+  
+  - add_abs (a,b:SELF) :SELF <-
+  ( + aa,bb,rr:NATIVE_ARRAY UINTEGER_64
+    + cap,cf:UINTEGER_64
+    + an,bn:INTEGER
+    (aa,bb) := (a.to_na,b.to_na)
+    (an,bn) := (upper aa,upper bb)
+    (bn > an).if { (aa,bb) := (bb,aa); (an,bn) := (bn,an); }
+    cap := upper_to_cap (an+1)
+    rr := new cap
+    cf := add4 (rr,aa,an,bb,bn)
+    rr.at (an+1) put cf
+    na rr cap cap up (an+cf) sign (a.sign)
+  )
+  
+  - addz (a,b:SELF) :SELF <-
+  [ ? {a.is_big}; ? {b.is_big}; ]
+  ( + r:SELF
+    (same_sign (a,b)).if {
+      r := add_abs (a,b)
+    } else {
+      r := sub_abs (a,b)
+    }
+    r
+  )
+  
+  // Substract tools
+  
+  - sub_1 (rp,ap:NATIVE_ARRAY UINTEGER_64, n:INTEGER, b:UINTEGER_64) :UINTEGER_64 <-
+  ( + i:INTEGER
+    + a,v,cy:UINTEGER_64
+    v := b
+    {
+      a := ap.at i
+      cy := (a < v).to_integer
+      rp.at i put (a - v)
+      v := cy
+      i := i + 1
+    }.do_while {i <= n}
+    v
+  )
+  
+  - sub_n (rp,ap,bp:NATIVE_ARRAY UINTEGER_64, n:INTEGER) :UINTEGER_64 <-
+  ( + cy,a,b:UINTEGER_64
+    0.to n do { i:INTEGER
+      (a,b) := (ap.at i, bp.at i)
+      b := b + cy
+      cy := (b < cy).to_integer + (a < b).to_integer
+      rp.at i put (a - b)
+    }
+    cy
+  )
+  
+  - sub4 (r,a:NATIVE_ARRAY UINTEGER_64,an:INTEGER,b:NATIVE_ARRAY UINTEGER_64,bn:INTEGER) :UINTEGER_64 <-
+  [ ? {an >= bn}; ]
+  ( + cy:UINTEGER_64
+    cy := sub_n (r, a, b, bn)
+    (an > bn).if { cy := sub_1 (r+bn + 1, a+bn + 1, an-bn - 1, cy); }
+    cy
+  )
+  
+  - sub (aa:NATIVE_ARRAY UINTEGER_64,an:INTEGER) cap cap:INTEGER sign s:UINTEGER_64 ui v:UINTEGER_64 :SELF <-
+  ( + rr:NATIVE_ARRAY UINTEGER_64
+    + cf:UINTEGER_64
+    rr := new cap
+    cf := sub_1 (rr,aa,an,v)
+    ? {cf = 0}
+    normalize rr cap cap up an sign s
+  )
+  
+  - sub a:SELF si b:SELF sign s:UINTEGER_64 :ℤ <-
+  [ ? {a.is_big}; ? {!b.is_big}; ]
+  ( + aa:NATIVE_ARRAY UINTEGER_64
+    + up:INTEGER
+    + r:ℤ
+    + v:UINTEGER_64
+    aa := a.to_na
+    up := upper aa
+    v := b.to_abs64
+    (same_sign (a,b)).if {
+      r := sub (aa,up) cap (a.capacity) sign s ui v
+    } else {
+      r := add (aa,up) sign s ui v
+    }
+    r
+  )
+  
+  - sub_abs (a,b:SELF) :SELF <-
+  ( + aa,bb,rr:NATIVE_ARRAY UINTEGER_64
+    + an,bn,cap,cf,s:UINTEGER_64
+    + c:INTEGER
+    + r:SELF
+    (aa,bb) := (a.to_na,b.to_na)
+    (an,bn) := (upper aa,upper bb)
+    c := cmp4(aa,an,bb,bn)
+    (c != 0).if {
+      (c < 0).if { (aa,bb) := (bb,aa); (an,bn) := (bn,an); s := smsk; }
+      cap := upper_to_cap an
+      rr := new cap
+      cf := sub4 (rr,aa,an,bb,bn)
+      ? {cf = 0}
+      (a.is_neg).if { s := s ^ smsk; }
+      r := normalize rr cap cap up an sign s
+    }
+    r
+  )
+ 
+  - subz (a,b:SELF) :SELF <-
+  [ ? {a.is_big}; ? {b.is_big}; ]
+  ( + r:SELF
+    (same_sign (a,b)).if {
+      r := sub_abs (a,b)
+    } else {
+      r := add_abs (a,b)
+    }
+    r
+  )
+      
+  - neg_big:SELF <-
+  [ ? {is_big}; ]
+  CAST UINTEGER_64 TO ℤ.on (copy.to_raw ^ smsk)
+  
+  - not_big:SELF <-
+  ( + a,rp:NATIVE_ARRAY UINTEGER_64
+    + c,up:INTEGER
+    + cf:UINTEGER_64
+    + r:SELF
+    a := to_na
+    up := upper a
+    (is_neg).if {
+      c := capacity
+      rp := new c
+      sub_1 (rp,a,up,1)
+      r := normalize rp cap c up up sign 0
+    } else {
+      c := upper_to_cap (up + 1)
+      rp := new c
+      cf := add_1 (rp,a,up,1)
+      (cf != 0).if { up := up + 1; rp.at up put cf; }
+      r := na rp cap c up up sign smsk
+    }
+    r
+  )
+  
+  // Multiplication tools
+  
+  - mul_si (aa,bb:SELF) :SELF <-
+  [ ? {!aa.is_big}; ? {!bb.is_big}; ]
+  ( + a,b:INTEGER_64
+    + h,l:UINTEGER_64
+    + neg:BOOLEAN
+    + na:NATIVE_ARRAY UINTEGER_64
+    + cap:INTEGER
+    + r:SELF
+    (a,b) := (aa.to_i64,bb.to_i64)
+    neg := a^b < 0
+    (h,l) := umul_128 (a.abs.to_uinteger_64,b.abs.to_uinteger_64)
+    ((h = 0) && {l <= 3FFF_FFFF_FFFF_FFFFh}).if {
+      (neg).if { l := -l; }
+      r := CAST UINTEGER_64 TO ℤ.on (l<<1)
+    } else {
+      cap := (h != 0).to_integer
+      na := new cap
+      na.at 0 put l
+      (h != 0).if { na.at 1 put h; }
+      r := na na cap cap up cap sign (neg.to_integer << 63)
+    }
+    r
+  )
+
+  - addmul_1 (rp,v:NATIVE_ARRAY UINTEGER_64,vn:INTEGER, u:UINTEGER_64) :UINTEGER_64 <-
+  ( + cf,l,h,r:UINTEGER_64
+    0.to vn do { j:INTEGER
+      (h,l) := umul_128 (u,v.at j)
+      l := l + cf
+      cf := h + (l < cf).to_integer
+      r := rp.at j
+      l := l + r
+      cf := cf + (l < r).to_integer
+      rp.at j put l
+    }
+    cf
+  )
+  
+  - mul_1 (rp,up:NATIVE_ARRAY UINTEGER_64, n:INTEGER, vl:UINTEGER_64) :UINTEGER_64 <-  
+  ( + cf, h, l:UINTEGER_64
+    0.to n do { i:INTEGER
+      (h,l) := umul_128 (up.at i, vl)
+      l := l + cf
+      cf := h + (l < cf).to_integer
+      rp.at i put l
+    }
+    cf
+  )
+  
+  - mul4 (rp,u:NATIVE_ARRAY UINTEGER_64, un:INTEGER, v:NATIVE_ARRAY UINTEGER_64, vn:INTEGER) :UINTEGER_64 <-
+  ( // BSBS: c'est une connerie de l'appeller avec un<vn
+    rp.at (vn+1) put (mul_1(rp,v,vn,u.first))
+    1.to un do { i:INTEGER
+      rp.at (i + vn+1) put (addmul_1 (rp+i,v,vn,u.at i))
+    }
+    rp.at (un+vn+1)
+  )
+  
+  - mul u:SELF ui v:UINTEGER_64 sign s:UINTEGER_64 :SELF <-
+  ( + aa,rr:NATIVE_ARRAY UINTEGER_64
+    + cf:UINTEGER_64
+    + an,cap,up:INTEGER
+    + r:SELF
+    (v != 0).if {
+      aa := u.to_na
+      an := upper aa
+      cap := upper_to_cap (an+1)
+      rr := new cap
+      cf := mul_1 (rr,aa,an,v)
+      (cf > 0).if {
+        up := an+1
+        rr.at up put cf
+      } else { up := an; }
+      r := na rr cap cap up up sign s
+    }
+    r
+  )
+  
+  - mul a:SELF si b:SELF :SELF <- mul a ui (b.to_abs64) sign ((a.to_raw ^ b.to_raw) & smsk)
+  
+  /*
+  - mulz_old (a,b:SELF) :SELF <-
+  [ ? {a.is_big}; ? {b.is_big}; ]
+  ( + aa,bb,rr:NATIVE_ARRAY UINTEGER_64
+    + cf:UINTEGER_64
+    + an,bn,cap,up:INTEGER
+    (aa,bb) := (a.to_na,b.to_na)
+    (an,bn) := (upper aa,upper bb)
+    (an > bn).if { (aa,bb) := (bb,aa); (an,bn) := (bn,an); }
+    up := an+bn+1
+    cap := upper_to_cap up
+    rr := new cap
+    cf := mul4 (rr,aa,an,bb,bn)
+    (cf = 0).if { up := up - 1; }
+    na rr cap cap up up sign ((a.to_raw ^ b.to_raw) & smsk)
+  )
+  */
+  
+  - limit_toom22:INTEGER := 26; // 26
+  
+  /*
+  - mulz_old (a,b:SELF) :SELF <-
+  [ ? {a.is_big}; ? {b.is_big}; ]
+  ( + aa,bb,rr:NATIVE_ARRAY UINTEGER_64
+    + an,bn,cap,up,itch_cap:INTEGER
+    + itch:NATIVE_ARRAY UINTEGER_64
+    (aa,bb) := (a.to_na,b.to_na)
+    (an,bn) := (upper aa,upper bb)
+    (an < bn).if { (aa,bb) := (bb,aa); (an,bn) := (bn,an); }
+    up := an+bn+1
+    cap := upper_to_cap up
+    rr := new cap
+    mul4 (rr,bb,bn,aa,an)
+    (rr.at up = 0).if { up := up - 1; }
+    na rr cap cap up up sign ((a.to_raw ^ b.to_raw) & smsk)
+  )
+  */  
+  
+  - mulz (a,b:SELF) :SELF <-
+  [ ? {a.is_big}; ? {b.is_big}; ]
+  ( + up,vp,dp:NATIVE_ARRAY UINTEGER_64
+    + un,vn,cap,dp_up:INTEGER
+    (up,vp) := (a.to_na,b.to_na)
+    (un,vn) := (upper up,upper vp)
+    (un < vn).if { (up,vp) := (vp,up); (un,vn) := (vn,un); }
+    dp_up := un+vn+1
+    cap := upper_to_cap dp_up
+    dp := new cap
+    
+    mul (dp, up,un+1, vp,vn+1)
+    
+    (dp.at dp_up = 0).if { dp_up := dp_up - 1; }
+    na dp cap cap up dp_up sign ((a.to_raw ^ b.to_raw) & smsk)
+  )
+  
+  - mul (dpp, upp:NATIVE_ARRAY UINTEGER_64,unp:INTEGER, vpp:NATIVE_ARRAY UINTEGER_64,vnp:INTEGER) <-
+  ( + up,vp,dp:NATIVE_ARRAY UINTEGER_64
+    + un,vn:INTEGER
+    (dp, up,un, vp,vn) := (dpp, upp,unp, vpp,vnp)
+    
+    (un < limit_toom22).if {
+      mul4 (dp, up, un-1, vp, vn-1)
+    }.elseif {vn < limit_toom22} then {
+      ((un <= 500) || {vn = 1}).if {
+	mul4 (dp, up, un-1, vp, vn-1)
+      } else {	  
+        + tp:NATIVE_ARRAY UINTEGER_64
+        + cap_tp:INTEGER
+        + cy:UINTEGER_64
+        cap_tp := upper_to_cap (limit_toom22-1)
+        tp := new cap_tp
+        
+        mul4 (dp, up, 500-1, vp, vn-1)
+        dp := dp + 500
+        tp.copy_from dp until (vn-1); // preserve high triangle 
+        up := up + 500
+        un := un - 500
+        {un > 500}.while_do {
+          mul4 (dp, up, 500-1, vp, vn-1)
+          cy := add_n (dp, dp, tp, vn-1); // add back preserved triangle 
+          incr_u (dp + vn, cy)
+          dp := dp + 500
+          tp.copy_from dp until (vn-1); // preserve high triangle 
+          up := up + 500
+          un := un - 500
+        }
+        (un > vn).if {
+          mul4 (dp, up, un-1, vp, vn-1)
+        } else {
+          ? {un > 0}
+          mul4 (dp, vp, vn-1, up, un-1)
+        }
+        cy := add_n (dp, dp, tp, vn-1); // add back preserved triangle 
+        incr_u (dp + vn, cy)
+        
+        free tp cap cap_tp
+      }
+        
+    } else { // Use ToomX2 variants 
+      + scratch:NATIVE_ARRAY UINTEGER_64
+      + cap_scratch:INTEGER
+      
+      cap_scratch := upper_to_cap (9 * vn / 2 + 64 * 2 -1)
+      scratch := new cap_scratch
+      
+      //mul4 (dp, up, un-1, vp, vn-1)
+      
+      (un >= 3 * vn).if {
+        + cy:UINTEGER_64
+        + ws:NATIVE_ARRAY UINTEGER_64
+        + cap_ws:INTEGER
+        cap_ws := upper_to_cap (vn*4-1)
+        ws := new cap_ws
+        
+        toom42_mul (dp, up, 2 * vn, vp, vn, scratch)
+        
+        un := un - 2 * vn
+        up := up + 2 * vn
+        dp := dp + 2 * vn
+        {un >= 3 * vn}.while_do {
+          toom42_mul (ws, up, 2 * vn, vp, vn, scratch)
+          un := un - 2 * vn
+          up := up + 2 * vn
+          cy := add_n (dp, dp, ws, vn-1)
+          (dp + vn).copy_from (ws + vn) until (2 * vn-1)
+          incr_u (dp + vn, cy)
+          dp := dp + 2 * vn
+        }
+
+        // vn <= un < 3vn
+        (4 * un < 5 * vn).if {
+          toom22_mul (ws, up, un, vp, vn, scratch)
+        }.elseif {4 * un < 7 * vn} then {
+          toom32_mul (ws, up, un, vp, vn, scratch)
+        } else {
+          toom42_mul (ws, up, un, vp, vn, scratch)
+        }
+        cy := add_n (dp, dp, ws, vn-1)
+        (dp + vn).copy_from (ws + vn) until (un-1)
+        incr_u (dp + vn, cy)
+        free ws cap cap_ws
+      } else {        
+        (4 * un < 5 * vn).if {          
+          toom22_mul (dp, up, un, vp, vn, scratch)
+        }.elseif {4 * un < 7 * vn} then {
+          toom32_mul (dp, up, un, vp, vn, scratch)
+        } else {
+          toom42_mul (dp, up, un, vp, vn, scratch)
+        }
+      }
+      free scratch cap cap_scratch
+    }
+    )
+  
+  - toom22_rec (pp, ap:NATIVE_ARRAY UINTEGER_64,an:INTEGER, bp:NATIVE_ARRAY UINTEGER_64,bn:INTEGER,scratch:NATIVE_ARRAY UINTEGER_64) <-
+  (
+    (bn < limit_toom22).if {
+      mul4(pp, bp, bn-1, ap, an-1)
+    }.elseif {an*4 < bn*5} then {      
+      toom22_mul (pp,ap,an,bp,bn,scratch)
+    } else {      
+      toom32_mul (pp,ap,an,bp,bn,scratch)
+    }
+  )
+  
+  - toom22_n_rec (pp, ap,bp:NATIVE_ARRAY UINTEGER_64,n:INTEGER, scratch:NATIVE_ARRAY UINTEGER_64) <-
+  (
+    (n < limit_toom22).if { 
+      mul4(pp, bp, n-1, ap, n-1)
+    } else {
+      toom22_mul (pp,ap,n,bp,n,scratch)
+    }
+  )
+  
+  - propagate_cf_n (p:NATIVE_ARRAY UINTEGER_64,n:INTEGER) :UINTEGER_64 <-
+  ( + v:UINTEGER_64
+    + i:INTEGER
+    {
+      v := p.at i + 1
+      p.at i put v
+      i := i + 1
+    }.do_while {(i<=n) && {v = 0}}
+    (v = 0).to_integer
+  )
+
+  - incr_u (p:NATIVE_ARRAY UINTEGER_64,cf:INTEGER) <-
+  ( + v:UINTEGER_64
+    + i:INTEGER
+    v := p.at 0 + cf
+    p.at 0 put v
+    (v < cf).if {
+      {
+        i := i + 1
+        v := p.at i + 1
+        p.at i put v
+      }.do_while {v = 0}
+    }
+  )
+  
+  - decr_u (p:NATIVE_ARRAY UINTEGER_64,cf:UINTEGER_64) <-
+  ( + v:UINTEGER_64
+    + i:INTEGER
+    v := p.at 0
+    p.at 0 put (v - cf)
+    (v < cf).if {
+      {
+        i := i + 1
+        v := p.at i
+        p.at i put (v-1)
+      }.do_while {v = 0}
+    }
+  )
+  
+  - zero_p (p:NATIVE_ARRAY UINTEGER_64,n:INTEGER):BOOLEAN <-
+  // Return TRUE if X is zero, FALSE if it is non-zero.
+  ( + i:INTEGER
+    {(i <= n) && {p.at i = 0}}.while_do { i := i + 1; }
+    i > n
+  )
+  
+  - addlsh1_n (rp,u,v:NATIVE_ARRAY UINTEGER_64, n:INTEGER) :UINTEGER_64 <-
+  ( + cf,a,b,r:UINTEGER_64
+    0.to n do { j:INTEGER
+      (a,b) := (u.at j, v.at j)
+      r := b + cf
+      cf := (r < cf).to_integer
+      r := r + b
+      cf := cf + (r < b).to_integer
+      r := r + a
+      cf := cf + (r < a).to_integer
+      rp.at j put r
+    }
+    cf
+  )
+  
+  - bdiv_dbm1c (qp, ap:NATIVE_ARRAY UINTEGER_64, n:INTEGER, bd,hp:UINTEGER_64) :UINTEGER_64 <-
+  ( + a, p0, p1, cy,h:UINTEGER_64
+    h := hp
+    0.to (n-1) do { i:INTEGER
+      a := ap.at i
+      (p1,p0) := umul_128 (a, bd); // bd << GMP_NAIL_BITS
+      //p0 >>= GMP_NAIL_BITS
+      cy := (h < p0).to_integer
+      h := h - p0
+      qp.at i put h
+      h := h - p1 - cy
+    }
+    h
+  )
+  
+  - divexact_by3 (qp, ap:NATIVE_ARRAY UINTEGER_64, n:INTEGER) :UINTEGER_64 <-
+  (bdiv_dbm1c (qp,ap,n,5555_5555_5555_5555h,0) & 3); // 0FFFF_FFFF_FFFF_FFFFh/3 = 5555_...5555h
+  
+  - toom_eval_dgr3_pm1 (xp1,xm1,xp:NATIVE_ARRAY UINTEGER_64, n,x3n:INTEGER, tp:NATIVE_ARRAY UINTEGER_64) :INTEGER <-
+  ( + neg:INTEGER
+    ? {x3n > 0}
+    ? {x3n <= n}
+    xp1.at n put (add_n (xp1, xp, xp + 2*n, n-1))
+    tp.at n put (add4 (tp, xp + n, n-1, xp + 3*n, x3n-1))
+
+    neg := (cmp_n (xp1, tp, n + 1-1) < 0).ok (-1) or 0
+
+    /*
+    (neg).if {
+      add_n_sub_n (xp1, xm1, tp, xp1, n + 1)
+    } else {
+      add_n_sub_n (xp1, xm1, xp1, tp, n + 1)
+    }
+    */
+    (neg != 0).if {
+      sub_n (xm1, tp, xp1, n + 1-1)
+    } else {
+      sub_n (xm1, xp1, tp, n + 1-1)
+    }
+    add_n (xp1, xp1, tp, n + 1-1)
+    
+    ? {xp1.at n <= 3}
+    ? {xm1.at n <= 1}
+    neg
+  )
+  
+  - toom_interpolate_5pts (c,v2,vm1:NATIVE_ARRAY UINTEGER_64,k,twor,sa:INTEGER,vinf0p:UINTEGER_64) <-
+  ( + cy, saved,vinf0:UINTEGER_64
+    + twok,kk1:INTEGER
+    + v0, c1, v1, c3, vinf:NATIVE_ARRAY UINTEGER_64
+    vinf0 := vinf0p
+    
+    twok := k + k
+    kk1 := twok + 1
+
+    c1 := c  + k
+    v1 := c1 + k
+    c3 := v1 + k
+    vinf := c3 + k
+    
+    v0 := c
+    (sa != 0).if {
+      nocarry {add_n (v2, v2, vm1, kk1-1)}
+    } else {
+      nocarry {sub_n (v2, v2, vm1, kk1-1)}
+    }
+    nocarry {divexact_by3 (v2, v2, kk1)}; // v2 <- v2 / 3
+
+    (sa != 0).if {      
+      // rsh1add_n (vm1, v1, vm1, kk1)
+      nocarry {add_n (vm1, v1, vm1, kk1-1)}
+      nocarry {rshift_n (vm1, vm1, kk1-1, 1)}
+    } else {
+      // rsh1sub_n (vm1, v1, vm1, kk1)
+      nocarry {sub_n (vm1, v1, vm1, kk1-1)}
+      nocarry {rshift_n (vm1, vm1, kk1-1, 1)}
+    }
+
+    vinf.at 0 put (vinf.at 0 - sub_n (v1, v1, c, twok-1))
+    
+    // rsh1sub_n (v2, v2, v1, kk1)
+    nocarry {sub_n (v2, v2, v1, kk1-1)}
+    nocarry {rshift_n (v2, v2, kk1-1, 1)}
+
+    nocarry {sub_n (v1, v1, vm1, kk1-1)}
+
+    // We do not need to read the value in vm1, so we add it in {c+k, ...}
+    cy := add_n (c1, c1, vm1, kk1-1)
+    incr_u (c3 + 1, cy); // 2n-(3k+1) = 2r+k-1 
+    // Memory allocated for vm1 is now free, it can be recycled ...
+
+    saved := vinf.at 0;  // Remember v1's highest byte (will be overwritten).
+    vinf.at 0 put vinf0; // Set the right value for vinf0 
+    
+    // Overwrite unused vm1
+    //cy := sublsh1_n_ip1 (v2, vinf, twor)
+    cy := lshift_n (vm1, vinf, twor-1, 1)
+    cy := cy + sub_n (v2, v2, vm1, twor-1)
+    
+    decr_u (v2 + twor, cy)
+
+    // Add the high half of t2 in {vinf}
+    (twor > k + 1).if { // This is the expected flow
+      cy := add_n (vinf, vinf, v2 + k, k + 1-1)
+      incr_u (c3 + kk1, cy); // 2n-(5k+1) = 2r-k-1 
+    } else { // triggered only by very unbalanced cases like (k+k+(k-2))x(k+k+1) , should be handled by toom32 
+      nocarry {add_n (vinf, vinf, v2 + k, twor-1)}
+    }
+    cy := sub_n (v1, v1, vinf, twor-1); // vinf is at most twor long.
+    vinf0 := vinf.at 0;               // Save again the right value for vinf0 
+    vinf.at 0 put saved
+    decr_u (v1 + twor, cy); // Treat the last bytes.
+    
+    cy := sub_n (c1, c1, v2, k-1)
+    decr_u (v1, cy)
+
+    // Beginning the final phase
+    // Most of the recomposition was done
+    // add t2 in {c+3k, ...}, but only the low half
+    cy := add_n (c3, c3, v2, k-1)
+    vinf.at 0 put (vinf.at 0 + cy)
+    ? {vinf.at 0 >= cy}; // No carry 
+    incr_u (vinf, vinf0); // Add vinf0, propagate carry. 
+  )
+  
+  - add_nc (rp,up,vp:NATIVE_ARRAY UINTEGER_64, n:INTEGER, ci:UINTEGER_64) :UINTEGER_64 <-
+  ( add_n (rp, up, vp, n) + add_1 (rp, rp, n, ci) )
+  
+  - sub_nc (rp,up,vp:NATIVE_ARRAY UINTEGER_64, n:INTEGER, ci:UINTEGER_64) :UINTEGER_64 <-
+  ( sub_n (rp, up, vp, n) + sub_1 (rp, rp, n, ci) )
+    
+  - toom22_mul (pp, ap:NATIVE_ARRAY UINTEGER_64,an:INTEGER, bp:NATIVE_ARRAY UINTEGER_64,bn:INTEGER,scratch:NATIVE_ARRAY UINTEGER_64) <-
+  [ ? {an >= bn}; ]
+  ( + n, s, t:INTEGER
+    + vm1_neg:INTEGER
+    + cy, cy2:UINTEGER_64
+    + asm1,bsm1:NATIVE_ARRAY UINTEGER_64
+    
+    + a0,a1,b0,b1:NATIVE_ARRAY UINTEGER_64
+    + v0,vinf,vm1,scratch_out:NATIVE_ARRAY UINTEGER_64
+    //"     T22 an=".print; an.print; " bn=".print; bn.println
+    s := an >> 1
+    n := an - s
+    t := bn - n
+    
+    a0 := ap
+    a1 := ap + n
+    b0 := bp
+    b1 := bp + n
+    
+    ? {(0 < s) && {s <= n} && {s >= n - 1}}
+    ? {(0 < t) && {t <= s}}
+    
+    asm1 := pp
+    bsm1 := pp + n
+    // Compute asm1.
+    (s = n).if {
+      (cmp_n (a0,a1, n-1) < 0).if {
+        sub_n (asm1, a1,a0, n-1)
+        vm1_neg := 1
+      } else {
+        sub_n (asm1, a0,a1, n-1)
+      }
+    } else { // n - s = 1
+      ((a0.at s = 0) && {cmp_n (a0,a1, s-1) < 0}).if {
+        sub_n (asm1, a1,a0, s-1)
+        asm1.at s put 0
+        vm1_neg := 1
+      } else {
+        asm1.at s put (a0.at s - sub_n (asm1, a0,a1, s-1))
+      }
+    }
+    // Compute bsm1.
+    (t = n).if {
+      (cmp_n (b0,b1, n-1) < 0).if {
+        sub_n (bsm1, b1,b0, n-1)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        sub_n (bsm1, b0,b1, n-1)
+      }
+    } else {
+      ((zero_p (b0 + t, n - t-1)) && {cmp_n (b0,b1, t-1) < 0}).if {
+        sub_n (bsm1, b1,b0, t-1)
+        (bsm1 + t).clear_all (n - t - 1)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        sub4 (bsm1, b0,n-1, b1,t-1)
+      }
+    }
+    
+    v0 := pp;                 // 2n
+    vinf := pp + 2 * n;       // s+t
+    vm1 := scratch;           // 2n
+    scratch_out := scratch + 2 * n
+    
+    // vm1, 2n
+    toom22_n_rec (vm1, asm1,bsm1, n, scratch_out)
+    (s > t).if {
+      toom22_rec (vinf, a1,s, b1,t, scratch_out)
+    } else {
+      toom22_n_rec (vinf, a1,b1, s, scratch_out)
+    }
+    // v0, 2n
+    toom22_n_rec (v0, ap,bp, n, scratch_out)
+    // H(v0) + L(vinf)
+    cy := add_n (pp + 2 * n, v0 + n, vinf, n-1)
+    // L(v0) + H(v0)
+    cy2 := cy + add_n (pp + n, pp + 2 * n, v0, n-1)
+    // L(vinf) + H(vinf)
+    cy := cy + add4 (pp + 2 * n, pp + 2 * n, n-1, vinf + n, s + t - n-1)
+    
+    (vm1_neg != 0).if {
+      cy := cy + add_n (pp + n, pp + n, vm1, 2 * n-1)
+    } else {
+      cy := cy - sub_n (pp + n, pp + n, vm1, 2 * n-1)
+      ? {cy+1 != 0}
+      // cy is negative (we simply fill the area with zeros: (pp+2*n).clear_all (n-1); )
+    }
+    ? {cy  <= 2}
+    ? {cy2 <= 2}
+    incr_u (pp + 2 * n, cy2)
+    // if s+t==n, cy is zero, but we should not access pp[3*n] at all.
+    incr_u (pp + 3 * n, cy)
+  )
+  
+  - toom32_mul (pp,ap:NATIVE_ARRAY UINTEGER_64,an:INTEGER,bp:NATIVE_ARRAY UINTEGER_64,bn:INTEGER,scratch:NATIVE_ARRAY UINTEGER_64) <-
+  ( + n, s, t:INTEGER
+    + vm1_neg:INTEGER
+    + cy:UINTEGER_64
+    + ap1_hi, bp1_hi,hi:UINTEGER_64
+    
+    + a0,a1,a2,b0,b1:NATIVE_ARRAY UINTEGER_64
+    + ap1,bp1,am1,bm1,v1,vm1,scratch_out:NATIVE_ARRAY UINTEGER_64
+    //"T32".println
+    // Required, to ensure that s + t >= n.
+    //"an=".print; an.print; " bn=".print; bn.println
+    //"     T32 an=".print; an.print; " bn=".print; bn.println
+
+    ? {(bn + 2 <= an) && {an + 6 <= 3*bn}}
+    
+    (2 * an >= 3 * bn).if {
+      n := 1 + (an - 1) / 3
+    } else {
+      n := 1 + (bn - 1) >> 1
+    }
+
+    s := an - 2 * n
+    t := bn - n
+
+    ? {(0 < s) && {s <= n}}
+    ? {(0 < t) && {t <= n}}
+    ? {s + t >= n}
+  
+    a0 := ap
+    a1 := ap + n
+    a2 := ap + 2 * n
+    b0 := bp
+    b1 := bp + n
+        
+    // Product area of size an + bn = 3*n + s + t >= 4*n + 2.
+    ap1 := pp;        // n, most significant limb in ap1_hi
+    bp1 := pp + n;    // n, most significant bit in bp1_hi
+    am1 := pp + 2*n;  // n, most significant bit in hi
+    bm1 := pp + 3*n;  // n
+    v1 := scratch;    // 2n + 1
+    vm1 := pp;        // 2n + 1
+    scratch_out := scratch + 2*n + 1; // Currently unused.
+    // Scratch need: 2*n + 1 + scratch for the recursive multiplications.
+    
+    // Compute ap1 = a0 + a1 + a2, am1 = a0 - a1 + a2
+    ap1_hi := add4 (ap1, a0, n-1, a2, s-1)
+    /*
+    ((ap1_hi = 0) && {cmp (ap1, a1, n) < 0}).if {
+      ap1_hi := add_n_sub_n (ap1, am1, a1, ap1, n) >> 1
+      hi := 0
+      vm1_neg := 1
+    } else {
+      cy := add_n_sub_n (ap1, am1, ap1, a1, n)
+      hi := ap1_hi - (cy & 1)
+      ap1_hi := ap1_hi + (cy >> 1)
+      vm1_neg := 0
+    };*/
+    ((ap1_hi = 0) && {cmp_n (ap1, a1, n-1) < 0}).if {
+      nocarry {sub_n (am1, a1, ap1, n-1)}
+      hi := 0
+      vm1_neg := 1
+    } else {
+      hi := ap1_hi - sub_n (am1, ap1, a1, n-1)
+      vm1_neg := 0
+    }
+    ap1_hi := ap1_hi + add_n (ap1, ap1, a1, n-1)
+
+    // Compute bp1 = b0 + b1 and bm1 = b0 - b1.
+    (t = n).if {
+      /*
+      (cmp (b0, b1, n) < 0).if {
+        cy := add_n_sub_n (bp1, bm1, b1, b0, n)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        cy := add_n_sub_n (bp1, bm1, b0, b1, n)
+      }
+      bp1_hi := cy >> 1
+      */
+      bp1_hi := add_n (bp1, b0, b1, n-1)
+      (cmp_n (b0, b1, n-1) < 0).if {
+        nocarry {sub_n (bm1, b1, b0, n-1)}
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        nocarry {sub_n (bm1, b0, b1, n-1)}
+      }
+    } else {      
+      bp1_hi := add4 (bp1, b0, n-1, b1, t-1)
+      (zero_p (b0 + t, n - t-1) && {cmp_n (b0, b1, t-1) < 0}).if {
+        nocarry {sub_n (bm1, b1, b0, t-1)}
+        (bm1 + t).clear_all (n - t - 1)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        nocarry {sub4 (bm1, b0, n-1, b1, t-1)}
+      }
+    }
+
+    toom22_n_rec (v1, ap1, bp1, n, scratch_out)
+    (ap1_hi = 1).if {
+      cy := bp1_hi + add_n (v1 + n, v1 + n, bp1, n-1)
+    }.elseif {ap1_hi = 2} then {
+      cy := 2 * bp1_hi + addlsh1_n (v1 + n, v1 + n, bp1, n-1)
+    } else {
+      cy := 0
+    }
+    (bp1_hi != 0).if {
+      cy := cy + add_n (v1 + n, v1 + n, ap1, n-1)
+    }
+    v1.at (2 * n) put cy
+
+    toom22_n_rec (vm1, am1, bm1, n, scratch_out)
+    (hi != 0).if {
+      hi := add_n (vm1+n, vm1+n, bm1, n-1)
+    }
+    vm1.at (2*n) put hi
+
+    // v1 <-- (v1 + vm1) / 2 = x0 + x2
+    (vm1_neg != 0).if {
+      // rsh1sub_n (v1, v1, vm1, 2*n+1)
+      sub_n (v1, v1, vm1, 2*n+1-1)
+      nocarry {rshift_n (v1, v1, 2*n+1-1, 1)}
+    } else {
+      // rsh1add_n (v1, v1, vm1, 2*n+1)
+      add_n (v1, v1, vm1, 2*n+1-1)
+      nocarry {rshift_n (v1, v1, 2*n+1-1, 1)}
+    }
+    hi := vm1.at (2*n)
+    cy := add_n (pp + 2*n, v1, v1 + n, n-1)
+    incr_u (v1 + n, cy + v1.at (2*n)); // size : n + 1
+
+    (vm1_neg != 0).if {
+      cy := add_n (v1, v1, vm1, n-1)
+      hi := hi + add_nc (pp + 2*n, pp + 2*n, vm1 + n, n-1, cy)
+      incr_u (v1 + n, hi); // Size : n+1
+    } else {
+      cy := sub_n (v1, v1, vm1, n-1)
+      hi := hi + sub_nc (pp + 2*n, pp + 2*n, vm1 + n, n-1, cy)
+      decr_u (v1 + n, hi); // Size : n+1
+    }
+    
+    toom22_n_rec (pp, a0, b0, n, scratch_out)
+    // vinf, s+t limbs.  Use mpn_mul for now, to handle unbalanced operands 
+    (s > t).if {
+      mul (pp+3*n, a2, s, b1, t)
+    } else {
+      mul (pp+3*n, b1, t, a2, s)
+    }
+
+    cy := sub_n (pp + n, pp + n, pp+3*n, n-1)
+    hi := scratch.at (2*n) + cy
+
+    cy := sub_nc (pp + 2*n, pp + 2*n, pp, n-1, cy)
+    hi := hi - sub_nc (pp + 3*n, scratch + n, pp + n, n-1, cy)
+
+    hi := hi + add4 (pp + n, pp + n, 3*n-1, scratch, n-1)
+    (s + t > n).if {
+      hi := hi - sub4 (pp + 2*n, pp + 2*n, 2*n-1, pp + 4*n, s+t-n-1)
+      (hi.to_integer_64 < 0).if { 
+        decr_u (pp + 4*n, -hi); // size s+t-n
+      } else {
+        incr_u (pp + 4*n, hi); // size s+t-n
+      }
+    } else {
+      ? {hi = 0}
+    }
+  )
+  
+  - toom42_mul (pp, ap:NATIVE_ARRAY UINTEGER_64,an:INTEGER, bp:NATIVE_ARRAY UINTEGER_64,bn:INTEGER,scratch:NATIVE_ARRAY UINTEGER_64) <-
+  ( + n, s, t,tmp_cap:INTEGER
+    + vm1_neg:INTEGER
+    + cy, vinf0:UINTEGER_64
+    + a0_a2:NATIVE_ARRAY UINTEGER_64
+    + as1, asm1, as2:NATIVE_ARRAY UINTEGER_64
+    + bs1, bsm1, bs2:NATIVE_ARRAY UINTEGER_64
+    + tmp:NATIVE_ARRAY UINTEGER_64
+    
+    + a0,a1,a2,a3,b0,b1:NATIVE_ARRAY UINTEGER_64
+    + v0,v1,vinf,vm1,v2,scratch_out:NATIVE_ARRAY UINTEGER_64
+    
+    (an >= 2 * bn).if {
+      n := (an + 3) >> 2
+    } else {
+      n := (bn + 1) >> 1
+    }
+    s := an - 3 * n
+    t := bn - n
+
+    ? {(0 < s) && {s <= n}}
+    ? {(0 < t) && {t <= n}}
+  
+    a0 := ap
+    a1 := ap + n
+    a2 := ap + 2*n
+    a3 := ap + 3*n
+    b0 := bp
+    b1 := bp + n
+
+    tmp_cap := upper_to_cap (6 * n + 5-1)
+    tmp := new tmp_cap
+    as1  := tmp
+    asm1 := as1  + n + 1
+    as2  := asm1 + n + 1
+    bs1  := as2  + n + 1
+    bsm1 := bs1  + n + 1
+    bs2  := bsm1 + n
+
+    a0_a2 := pp
+
+    // Compute as1 and asm1.
+    vm1_neg := toom_eval_dgr3_pm1 (as1, asm1, ap, n, s, a0_a2) & 1
+
+    // Compute as2.
+    cy  := addlsh1_n (as2, a2, a3, s-1)
+    (s != n).if { cy := add_1 (as2 + s, a2 + s, n - s-1, cy); }
+    cy := 2 * cy + addlsh1_n (as2, a1, as2, n-1)
+    cy := 2 * cy + addlsh1_n (as2, a0, as2, n-1)
+    
+    as2.at n put cy
+
+    // Compute bs1 and bsm1.
+    (t = n).if {
+      /*
+      (cmp (b0, b1, n) < 0).if {
+        cy := add_n_sub_n (bs1, bsm1, b1, b0, n)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        cy := add_n_sub_n (bs1, bsm1, b0, b1, n)
+      }
+      bs1.at n put (cy >> 1)
+      */
+      bs1.at n put (add_n (bs1, b0, b1, n-1))
+      (cmp_n (b0, b1, n-1) < 0).if {
+        sub_n (bsm1, b1, b0, n-1)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        sub_n (bsm1, b0, b1, n-1)
+      }
+    } else {
+      bs1.at n put (add4 (bs1, b0, n-1, b1, t-1))
+      ((zero_p (b0 + t, n - t-1)) && {cmp_n (b0, b1, t-1) < 0}).if {
+        sub_n (bsm1, b1, b0, t-1)
+        (bsm1 + t).clear_all (n - t -1)
+        vm1_neg := vm1_neg ^ 1
+      } else {
+        sub4 (bsm1, b0, n-1, b1, t-1)
+      }
+    }
+
+    // Compute bs2, recycling bs1. bs2=bs1+b1
+    add4 (bs2, bs1, n + 1-1, b1, t-1)
+
+    ? {as1.at n <= 3}
+    ? {bs1.at n <= 1}
+    ? {asm1.at n <= 1}
+    //? {bsm1.at n = 0}
+    ? {as2.at n <= 14}
+    ? {bs2.at n <= 2}
+        
+    v0 := pp;                  // 2n
+    v1 := pp + 2 * n;          // 2n+1
+    vinf := pp + 4 * n;        // s+t
+    vm1 := scratch;            // 2n+1
+    v2 := scratch + 2 * n + 1; // 2n+2
+    scratch_out := scratch + 4 * n + 4; // Currently unused.
+
+    // vm1, 2n+1 limbs
+    toom22_n_rec (vm1, asm1, bsm1, n, scratch_out)
+    cy := 0
+    (asm1.at n != 0).if { cy := add_n (vm1 + n, vm1 + n, bsm1, n-1); }
+    vm1.at (2 * n) put cy
+    toom22_n_rec (v2, as2, bs2, n + 1, scratch_out); // v2, 2n+1 limbs 
+
+    // vinf, s+t limbs
+    (s > t).if {
+      mul (vinf, a3, s, b1, t)
+    } else {
+      mul (vinf, b1, t, a3, s)
+    }
+    vinf0 := vinf.at 0; // v1 overlaps with this
+
+    // v1, 2n+1 limbs
+    toom22_n_rec (v1, as1, bs1, n, scratch_out)
+    (as1.at n = 1).if {
+      cy := bs1.at n + add_n (v1 + n, v1 + n, bs1, n-1)
+    }.elseif {as1.at n = 2} then {      
+      cy := 2 * bs1.at n + addlsh1_n (v1 + n, v1 + n, bs1, n-1)
+    }.elseif {as1.at n = 3} then {
+      cy := 3 * bs1.at n + addmul_1 (v1 + n, bs1, n-1, 3)
+    } else {
+      cy := 0
+    }
+    (bs1.at n != 0).if { cy := cy + add_n (v1 + n, v1 + n, as1, n-1); }
+    v1.at (2 * n) put cy
+
+    toom22_n_rec (v0, ap, bp, n, scratch_out); // v0, 2n limbs 
+
+    toom_interpolate_5pts (pp, v2, vm1, n, s + t, vm1_neg, vinf0)
+    free tmp cap tmp_cap
+  )
+  
+  // Shift tools
+  /*
+  - lshift_n_old (rp,up:NATIVE_ARRAY UINTEGER_64, n:INTEGER, cnt:INTEGER) :UINTEGER_64 <-
+  [ ? {cnt.in_range 1 to 63}; ]
+  ( + h, l, r:UINTEGER_64
+    + tnc:UINTEGER_64
+    + i:INTEGER
+    i := n
+    tnc := 64 - cnt
+    l := up.at i
+    r := l >> tnc
+    h := l << cnt
+    {i != 0}.while_do {
+      l := up.at (i-1)
+      rp.at i put (h | (l >> tnc))
+      h := (l << cnt)
+      i := i - 1
+    }
+    rp.at i put h
+    r
+  )
+  */
+  - lshift_n (rp,up:NATIVE_ARRAY UINTEGER_64, n:INTEGER, cnt:INTEGER) :UINTEGER_64 <-
+  [ ? {cnt.in_range 1 to 63}; ]
+  ( + h, l, r:UINTEGER_64
+    + tnc:UINTEGER_64
+    + i,stop:INTEGER
+    stop := n & 1
+    i := n
+    tnc := 64 - cnt
+    l := up.at i
+    r := l >> tnc
+    h := l << cnt
+    {i != stop}.while_do {
+      l := up.at (i-1)
+      rp.at i put (h | (l >> tnc))
+      h := (l << cnt)
+      i := i - 1
+      l := up.at (i-1)
+      rp.at i put (h | (l >> tnc))
+      h := (l << cnt)
+      i := i - 1
+    }
+    (i != 0).if {
+      l := up.at 0
+      rp.at 1 put (h | (l >> tnc))
+      h := (l << cnt)
+    }
+    rp.at 0 put h
+    r
+  )
+  /*
+  - rshift_n_old (rp,up:NATIVE_ARRAY UINTEGER_64,n:INTEGER, cnt:INTEGER) :UINTEGER_64 <-
+  [ ? {cnt.in_range 1 to 63}; ]
+  ( + h, l, r:UINTEGER_64
+    + tnc:INTEGER
+    + i:INTEGER
+    tnc := 64 - cnt
+    h := up.at 0
+    i := 1
+    r := h << tnc
+    l := h >> cnt
+    {i <= n}.while_do {
+      h := up.at i
+      rp.at (i-1) put (l | (h << tnc))
+      l := h >> cnt
+      i := i + 1
+    }
+    rp.put l to (i-1); // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
+    r
+  )
+  */
+  - rshift_n (rp,up:NATIVE_ARRAY UINTEGER_64,n:INTEGER, cnt:INTEGER) :UINTEGER_64 <-
+  [ ? {cnt.in_range 1 to 63}; ]
+  ( + h, l, r:UINTEGER_64
+    + tnc:INTEGER
+    + i,stop:INTEGER
+    tnc := 64 - cnt
+    h := up.at 0
+    i := 1
+    stop := n & ~1
+    r := h << tnc
+    l := h >> cnt
+    {i <= stop}.while_do {
+      h := up.at i
+      rp.at (i-1) put (l | (h << tnc))
+      l := h >> cnt
+      i := i + 1
+      h := up.at i
+      rp.at (i-1) put (l | (h << tnc))
+      l := h >> cnt
+      i := i + 1
+    }
+    (i = n).if {
+      h := up.at i
+      rp.at (i-1) put (l | (h << tnc))
+      l := h >> cnt
+    }
+    rp.at n put l; // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
+    r
+  )
+  
+  - lshift_si (v:INTEGER_64,bits:INTEGER) :SELF <-
+  ( + tiny:BOOLEAN
+    + r:SELF
+    (v != 0).if {
+      (v > 0).if {
+        tiny := (last_bit v + bits) < 62
+      } else {
+        (v = -1).if {
+          tiny := bits < 63
+        } else {
+          tiny := last_bit (~v) + bits < 62
+        }
+      }
+      (tiny).if {
+        r := CAST INTEGER_64 TO ℤ.on (v << (bits+1))
+      } else {
+        + up,cap,lo,mod:INTEGER
+        + na:NATIVE_ARRAY UINTEGER_64
+        + va:UINTEGER_64
+        + p:INTEGER
+        va := v.abs.to_uinteger_64
+        p := last_bit va
+        up := (p + bits) / 64
+        cap := upper_to_cap up
+        na := new cap
+        na.clear_all (up-1)
+        lo := bits / 64
+        mod := bits & 63
+        (lo = up).if {
+          na.at up put (va << mod)
+        } else { ? {lo+1 = up}
+          na.at lo put (va << mod)
+          na.at up put (va >> (64-mod))
+        }
+        r := na na cap cap up up sign ((v < 0).ok smsk or 0)
+      }
+    }
+    r
+  )
+  
+  - lshift bits:INTEGER :SELF <-
+  [ ? {is_big}; ]
+  ( + up,cap,lo,mod,nn:INTEGER
+    + na,rp:NATIVE_ARRAY UINTEGER_64
+    + cf:UINTEGER_64
+    na := to_na
+    nn := upper na
+    up := (nn * 64 + last_bit (na.at nn) + bits) >> 6
+    cap := upper_to_cap up
+    rp := new cap
+    lo := bits / 64
+    rp.clear_all lo
+    mod := bits & 63
+    (mod != 0).if {
+      cf := lshift_n (rp+lo,na,nn,mod)
+      (cf != 0).if { rp.at up put cf; }
+    } else {            
+      rp.copy_dec na to lo until nn
+      ? {rp.at up != 0}
+    }
+    na rp cap cap up up sign sign
+  )
+  
+  - rshift_si (v:INTEGER_64,bits:INTEGER) :SELF <-
+  [ ? {bits > 0}; ]
+  CAST INTEGER_64 TO ℤ.on ((v >> (bits-1)) & imsk)
+    
+  - rshift bits:INTEGER :SELF <-
+  [ ? {is_big}; ]
+  ( + up,cap,lo,mod,nn,p,l:INTEGER
+    + v:UINTEGER_64
+    + na,rp:NATIVE_ARRAY UINTEGER_64
+    + r:SELF
+    na := to_na
+    nn := upper na
+    l := last_bit (na.at nn)
+    p := nn*64 + l - bits
+    up := p >> 6
+    (up >= 0).if {
+      mod := bits & 63
+      p := p & 63
+      (up = 0).if {
+        v := na.at nn
+        (nn = 0).if {
+          v := v >> mod
+        } else {          
+          v := (v << (64-mod)) | (na.at (nn-1) >> mod)
+        }
+        (v <= 3FFF_FFFF_FFFF_FFFFh).if {
+          (is_neg).if { v := -v; }
+          r := CAST UINTEGER_64 TO ℤ.on (v << 1)
+        } else {
+          rp := new 0
+          rp.at 0 put v
+          r := na rp cap 0 up 0 sign sign
+        }
+      } else {
+        cap := upper_to_cap (up+(l<mod).to_integer); // Patch (see rshift_n)
+        rp := new cap
+        lo := bits / 64
+        (mod != 0).if {
+          rshift_n (rp,na+lo,nn-lo,mod)
+          // Ignore cf result
+        } else {          
+          rp.copy_inc (na+lo) to 0 until (nn-lo)
+        }
+        r := na rp cap cap up up sign sign
+      }
+    }; // else r := 0
+    r
+  )
+  
+  // Division tools
+  
+  - div_qr_5 (qp,np:NATIVE_ARRAY UINTEGER_64, nn:INTEGER, dp:NATIVE_ARRAY UINTEGER_64, dn:INTEGER) <-
+  // qp := np / dp   and np := np % dp
+  [ ? {nn >= dn}; ]
+  ( + shift:UINTEGER_64
+    + tp:NATIVE_ARRAY UINTEGER_64
+    + tpcap:INTEGER
+    DIV_INV.qr_invert (dp, dn+1)
+    shift := DIV_INV.shift
+    ((dn > 1) && {shift > 0}).if {
+      + cy:UINTEGER_64
+      tpcap := upper_to_cap dn
+      tp := new tpcap
+      cy := lshift_n (tp, dp, dn, shift)
+      ? {cy = 0}
+    } else { tp := dp; }
+    DIV_INV.qr_preinv (qp, np, nn+1, tp, dn+1)
+  )
+  
+  - div_qr (n,d:SELF) :(SELF,SELF) <-
+  [ ? {d.is_big}; ? {n.is_big}; ] // Division by zero it's not possible.
+  ( + ns, ds, qs,rcap,qcap:INTEGER
+    + nn,dd,rr,qq:NATIVE_ARRAY UINTEGER_64
+    + q,r:SELF
+    (nn,dd) := (n.to_na,d.to_na)
+    (ns,ds) := (upper nn,upper dd)
+    rcap := n.capacity
+    rr := new rcap
+    rr.copy_from nn until ns
+    (ns < ds).if { // q = 0, r = n
+      r := na rr cap rcap up ns sign (n.sign)
+    } else {      
+      qs := ns - ds
+      qcap := upper_to_cap qs
+      qq := new qcap
+      div_qr_5 (qq, rr, ns, dd, ds)
+      //qs := qs - (qq.at qs = 0).to_integer; DO by normalize.
+      r := normalize rr cap rcap up ds sign (n.sign)
+      q := normalize qq cap qcap up qs sign ((n.to_raw ^ d.to_raw) & smsk)
+    }
+    q,r
+  )
+  
+  - div n:SELF si d:SELF :(SELF,SELF) <-
+  [ ? {n.is_big}; ? {!d.is_big}; ? {d.to_i64 != 0}; ] // Division by zero.
+  ( + q,r,d2:SELF
+    + dd:NATIVE_ARRAY UINTEGER_64
+    + si:INTEGER_64
+    + s:UINTEGER_64
+    dd := new 0
+    si := d.to_i64
+    (si < 0).if { si := -si; s := smsk; }
+    dd.at 0 put (si.to_uinteger_64)
+    d2 := na dd cap 0 up 0 sign s
+    (q,r) := div_qr (n,d2)
+    free dd cap 0
+    q,r
+  )
+  
+  // Input/Output tools
+  
+  - get_base_info (b:UINTEGER_64) :(INTEGER,UINTEGER_64) <-
+  ( + m,bb:UINTEGER_64
+    + exp:INTEGER
+    m := UINTEGER_64.maximum / b
+    exp := 1;  bb := b
+    {bb <= m}.while_do {
+      bb := bb * b
+      exp := exp + 1
+    }
+    exp,bb
+  )
+  
+  - sizeinbase (base:INTEGER) :INTEGER <-  
+  [ ? {base.in_range 2 to 62}; ? {is_big}; ]
+  ( + un:INTEGER
+    + bits,n:INTEGER
+    + result:INTEGER
+    + d:NATIVE_ARRAY UINTEGER_64
+    d := to_na
+    un := upper d
+    ((un = 0) && {d.first = 0}).if {
+      result := 1
+    } else {      
+      bits := un * 64 + last_bit (d.at un) + 1
+      (base = 10).if {
+        // Major approximation. 
+        result := (bits * 1292913987 + 4294967295) >> 32; // Log(2)
+      } else {
+        n := last_bit base
+        (base = 1<<n).if {
+          result := (bits + n - 1) / n
+        } else {          
+          + tp,u:NATIVE_ARRAY UINTEGER_64
+          + ndigits,cap:INTEGER
+          cap := capacity
+          tp := new cap
+          u := to_na
+          un := upper u
+          tp.copy_from u until un
+          DIV_INV.qr_1_invert base
+          {
+            ndigits := ndigits + 1
+            DIV_INV.qr_1_preinv (tp, tp, un+1)
+            un := un - (tp.at un = 0).to_integer
+          }.do_while {un >= 0}
+          free tp cap cap
+          result := ndigits
+        }
+      }
+    }
+    result
+  )
+
+  - native_put_in (sp:NATIVE_ARRAY UINTEGER_8) bits bits:INTEGER :INTEGER <-
+  // bits = 1:Binary, 3:Octal, 4:Hexa, 6:FORMAT64
+  ( + mask,digit:UINTEGER_8
+    + sn, j,i:INTEGER
+    + shift,up:INTEGER
+    + d:NATIVE_ARRAY UINTEGER_64
+    d := to_na
+    up := upper d
+    sn := (up * 64 + last_bit (d.at up) + bits) / bits
+    mask := (1 << bits) - 1
+    j := sn
+    {j > 0}.while_do {
+      j := j - 1
+      digit := (d.at i >> shift).to_uinteger_8
+      shift := shift + bits
+      (shift >= 64).if {
+        i := i + 1
+        (i <= up).if {
+          shift := shift - 64
+          digit := digit | (d.at i << (bits - shift)).to_uinteger_8
+        }
+      }
+      sp.at j put (digit & mask)
+    }
+    sn
+  )
+    
+  - native_from (sp:NATIVE_ARRAY UINTEGER_8,sn:INTEGER) bits (bits:INTEGER) in (rp:NATIVE_ARRAY UINTEGER_64,up:INTEGER) <-
+  ( + rn,j,idx:INTEGER
+    + shift:INTEGER
+    j := sn
+    {j > 0}.while_do {
+      j := j - 1
+      (shift = 0).if {
+        rp.at rn put (sp.at j)
+        rn := rn + 1
+        shift := shift + bits
+      } else {
+        idx := rn-1
+        rp.at idx put (rp.at idx | (sp.at j.to_integer << shift))
+        shift := shift + bits
+        (shift >= 64).if {
+          shift := shift - 64
+          (shift > 0).if {
+            rp.at rn put (sp.at j.to_integer >> (bits - shift))
+            rn := rn + 1
+          }
+        }
+      }
+    }
+    ? {rn-1 = up}
+  )
+  
+  - native_from (sp:NATIVE_ARRAY UINTEGER_8, sn:INTEGER) base (b:UINTEGER)
+  info (exp:INTEGER,bb:UINTEGER_64) in (rp:NATIVE_ARRAY UINTEGER_64,up:INTEGER) <-
+  // Result is usually normalized, except for all-zero input, in which
+  // case a single zero limb is written at *RP, and 1 is returned.
+  [ ? {sn > 0}; ]
+  ( + rn:INTEGER
+    + w:UINTEGER_64
+    + k:UINTEGER
+    + j:INTEGER
+    k := (sn - 1) % exp
+    w := sp.at j
+    j := j + 1
+    {k != 0}.while_do {
+      w := w * b + sp.at j
+      j := j + 1
+      k := k - 1
+    }
+    rp.at 0 put w
+    {j < sn}.while_do {
+      + cy:UINTEGER_64
+      w := sp.at j
+      j := j + 1
+      1.to (exp-1) do { k:INTEGER
+        w := w * b + sp.at j
+        j := j + 1
+      }
+      cy := mul_1 (rp, rp, rn, bb)
+      cy := cy + add_1 (rp, rp, rn, w)
+      (cy > 0).if {
+        rn := rn + 1
+        rp.at rn put cy
+      }
+    }
+    ? {j = sn}
+    ? {up >= rn}
+  )
+  
+  - native_put_in (sp:NATIVE_ARRAY UINTEGER_8) base (base:INTEGER)
+  info (exp:UINTEGER,bb:UINTEGER_64) with (na:NATIVE_ARRAY UINTEGER_64,up:INTEGER) :INTEGER <-
+  ( + binv:DIV_INV
+    + sn,un:INTEGER
+    binv := DIV_INV.create
+    binv.qr_1_invert base
+    (up > 0).if {
+      + bbinv:DIV_INV
+      bbinv := DIV_INV.create
+      bbinv.qr_1_invert bb
+      un := up+1
+      {
+        + w:UINTEGER_64
+        + done:INTEGER
+        w := bbinv.qr_1_preinv (na, na, un)
+        un := un - (na.at (un-1) = 0).to_integer
+        done := binv.get_str (sp + sn, w)
+        sn := sn + done
+        {done.to_uinteger < exp}.while_do {
+          sp.at sn put 0
+          sn := sn + 1
+          done := done + 1
+        }
+      }.do_while {un > 1}
+      bbinv.free
+    }
+    sn := sn + binv.get_str (sp + sn, na.at 0)
+    // Reverse order
+    0.to (sn/2-1) do { i:INTEGER
+      sp.swap i with (sn - i - 1)
+    }
+    binv.free
+    sn
+  )
+  
+Public
+  
+  // ******************* User Interface *********************
+  
+  // Init / Input
+  
+  - init_si i:INTEGER_64 :SELF <-
+  ( + r:SELF
+    (i.abs < 4000_0000_0000_0000h).if {
+      r := CAST INTEGER_64 TO ℤ.on (i << 1)
+    } else {
+      + na:NATIVE_ARRAY UINTEGER_64
+      + s,v:UINTEGER_64
+      na := new 0
+      (i < 0).if {
+        v := (-i).to_raw_uinteger_64
+        s := smsk
+      } else {
+        v := i.to_raw_uinteger_64
+      }
+      na.at 0 put v
+      r := na na cap 0 up 0 sign s
+    }
+    r
+  )
+  
+  - init_ui i:UINTEGER_64 :SELF <-
+  ( + r:SELF
+    (i < 4000_0000_0000_0000h).if {
+      r := CAST UINTEGER_64 TO ℤ.on (i << 1)
+    } else {
+      + na:NATIVE_ARRAY UINTEGER_64
+      na := new 0
+      na.at 0 put i
+      r := na na cap 0 up 0 sign 0
+    }
+    r    
+  )
+  
+  - init (sp:STRING) from idx:INTEGER base (base:INTEGER) :SELF <-
+  ( + bits, value_of_a:INTEGER
+    + dn,i,j:INTEGER
+    + c,digit:UINTEGER_8
+    + dp:NATIVE_ARRAY UINTEGER_8
+    + natmp,na:NATIVE_ARRAY UINTEGER_64
+    + captmp,cap,up:INTEGER
+    + s:UINTEGER_64
+    
+    dn := sp.count - idx
+    i := idx
+    (sp.at idx = '-').if { s := smsk; i := i + 1; dn := dn - 1; }
+    captmp := upper_to_cap (((dn+7)>>3) - 1)
+    natmp := new captmp
+    dp := CAST (NATIVE_ARRAY UINTEGER_64) TO (NATIVE_ARRAY UINTEGER_8).on natmp
+    value_of_a := (base > 36).ok 36 or 10
+    {i <= sp.upper}.while_do {
+      c := sp.at i
+      (c.in_range '0' to '9').if {
+        digit := c - '0'
+      }.elseif {c.in_range 'a' to 'z'} then {
+        digit := (c - 'a') + value_of_a
+      }.elseif {c.in_range 'A' to 'Z'} then {
+        digit := (c - 'A') + 10
+      } else {
+        ? {FALSE}
+      }
+      dp.at j put digit
+      i := i + 1
+      j := j + 1
+    }
+    bits := last_bit base
+    (base = 1<<bits).if {
+      up := (dn * bits + 63) / 64 - 1
+      cap := upper_to_cap up
+      na := new cap
+      native_from (dp,dn) bits bits in (na,up)
+    } else {      
+      + exp:INTEGER
+      + bb:UINTEGER_64
+      (exp,bb) := get_base_info base
+      up := (dn + exp - 1) / exp - 1; // dp.count*ln(base)/ln(64) ?      
+      cap := upper_to_cap up
+      na := new cap
+      native_from (dp, dn) base base info (exp,bb) in (na,up)
+    }
+    free natmp cap captmp
+    normalize na cap cap up up sign s
+  )
+  
+  - init (sp:STRING) base (base:INTEGER) :SELF <- init sp from 0 base base
+    
+  - init (sp:STRING) :SELF <- init sp base 10
+  
+  - copy:SELF <-
+  ( + r:SELF
+    is_big.if {
+      + na,rp:NATIVE_ARRAY UINTEGER_64
+      + nn,cap:INTEGER
+      na := to_na
+      nn := upper na
+      cap := capacity
+      rp := new cap
+      rp.copy_from na until nn
+      r := na rp cap cap up nn sign sign
+    } else {
+      r := Self
+    }
+    r
+  )
+  
+  - free <- ( is_big.if { free to_na cap capacity; }; )
+  
+  - bit_length:INTEGER <-
+  ( + r:INTEGER
+    is_big.if {      
+      r := (upper to_na+1) * 64
+    } else {
+      r := 64
+    }
+    r
+  )
+  
+  // Arithmetic standard.
+  
+  - Self:SELF '+' other:SELF :SELF <-
+  ( + r:SELF
+    //((Self.to_raw | other.to_raw) >= 0).if { Alternative a tester...
+    //  r := init_si (to_i64 + other.to_i64)
+    //} else { ...
+    //r := addz (Self,other)
+    (is_big).if {      
+      (other.is_big).if {
+        r := addz (Self,other)
+      } else {
+        r := add Self si other
+      }
+    } else {
+      (other.is_big).if {        
+        r := add other si Self
+      } else {
+        r := init_si (to_i64 + other.to_i64)
+      }
+    }
+    r
+  )
+  
+  /*
+  - Self:SELF '++' other:SELF :SELF <-
+  ( + r:SELF
+    ((to_raw | other.to_raw).to_integer_64 < 0).if { 
+      (is_big).if {
+        (other.is_big).if {          
+          r := addz (Self,other)
+        } else {
+          r := add Self si other
+        }
+      } else {      
+        r := add other si Self
+      }
+    } else {
+      r := init_si (to_i64 + other.to_i64)
+    }
+    r
+  );*/
+      
+  - Self:SELF '-' other:SELF :SELF <-
+  ( + r:SELF
+    (is_big).if {      
+      (other.is_big).if {
+        r := subz (Self,other)
+      } else {
+        r := sub Self si other sign sign
+      }
+    } else {
+      (other.is_big).if {        
+        r := sub other si Self sign (other.sign ^ smsk)
+      } else {
+        r := init_si (to_i64 - other.to_i64)
+      }
+    }
+    r
+  )
+  
+  - Self:SELF '*' other:SELF :SELF <-
+  ( + r:SELF
+    (is_big).if {      
+      (other.is_big).if {
+        r := mulz (Self,other)
+      } else {
+        r := mul Self si other
+      }
+    } else {
+      (other.is_big).if {
+        r := mul other si Self
+      } else {
+        r := mul_si (Self,other)
+      }
+    }
+    r
+  )
+    
+  - Self:SELF '/' other:SELF :SELF <-
+  ( + q,r:SELF
+    (is_big).if {      
+      (other.is_big).if {
+        (q,r) := div_qr (Self,other)
+      } else {
+        (q,r) := div Self si other
+      }
+      r.free
+    } else {
+      (! other.is_big).if {
+        ? {other.to_i64 != 0}; // div zero
+        q := CAST INTEGER_64 TO ℤ.on ((to_i64 / other.to_i64) << 1)
+      }
+    }
+    q
+  )
+  
+  - Self:SELF '%' other:SELF :SELF <-
+  ( + q,r:SELF
+    (is_big).if {      
+      (other.is_big).if {
+        (q,r) := div_qr (Self,other)
+      } else {
+        (q,r) := div Self si other
+      }
+      q.free
+    } else {
+      (other.is_big).if {        
+        r := Self
+      } else {
+        ? {other.to_i64 != 0}
+        r := CAST INTEGER_64 TO ℤ.on ((to_i64 % other.to_i64) << 1)
+      }
+    }
+    r
+  )
+  
+  - Self:SELF '/%' other:SELF :(SELF,SELF) <-
+  ( + q,r:SELF
+    (is_big).if {      
+      (other.is_big).if {
+        (q,r) := div_qr (Self,other)
+      } else {                
+        (q,r) := div Self si other
+      }
+    } else {      
+      (other.is_big).if {        
+        r := Self; // q := 0
+      } else {        
+        + a,b,d,m:INTEGER_64
+        ? {other.to_i64 != 0}
+        (a,b) := (to_i64,other.to_i64)
+        (d,m) := (a / b, a % b)
+        q := CAST INTEGER_64 TO ℤ.on (d << 1)
+        r := CAST INTEGER_64 TO ℤ.on (m << 1)
+      }
+    }
+    q,r
+  )
+  
+  - '~' Self:SELF :SELF <-
+  ( + r:SELF
+    (is_big).if {
+      r := not_big
+    } else {
+      r := CAST UINTEGER_64 TO ℤ.on ((~ to_raw) & imsk)
+    }
+    r
+  )
+  
+  - '-' Self:SELF :SELF <-
+  ( + r:SELF
+    (is_big).if {
+      r := neg_big
+    } else {
+      r := CAST UINTEGER_64 TO ℤ.on (- to_raw); // ;)
+    }
+    r
+  )
+  
+  - '+' Self:SELF :SELF <- copy
+  
+  - Self:SELF '!' :SELF <-
+  [ ? {!is_big}; ? {Self >= 0}; ]
+  ( + r,tmp,i:SELF
+    r := 1
+    i := Self
+    {i > 1}.while_do {
+      tmp := r * i
+      r.free
+      r := tmp
+      i := i - 1
+    }
+    r
+  )
+  
+  // Comparaison
+  
+  - Self:SELF '=' Right 50 <> other:SELF :BOOLEAN <- cmp other =  0
+  
+  - Self:SELF '!=='other:SELF :BOOLEAN <- cmp other != 0
+  - Self:SELF '==' other:SELF :BOOLEAN <- cmp other =  0
+  - Self:SELF '>'  other:SELF :BOOLEAN <- cmp other >  0
+  - Self:SELF '<'  other:SELF :BOOLEAN <- cmp other <  0
+  - Self:SELF '>=' other:SELF :BOOLEAN <- cmp other >= 0
+  - Self:SELF '<=' other:SELF :BOOLEAN <- cmp other <= 0
+  
+  // Shift
+  
+  - Self:SELF '<<' bits:INTEGER :SELF <-
+  [ ? {bits >= 0}; ]
+  ( + r:SELF
+    (is_big).if {
+      r := lshift bits
+    } else {
+      r := lshift_si (to_i64,bits)
+    }
+    r
+  )
+  
+  - Self:SELF '>>' bits:INTEGER :SELF <-
+  [ ? {bits >= 0}; ]
+  ( + r:SELF
+    (bits = 0).if {
+      r := copy
+    } else {
+      (is_big).if {
+        r := rshift bits
+      } else {
+        r := rshift_si (to_i64,bits)
+      }
+    }
+    r
+  )
+  
+  // Ouput
+  
+  - append_in b:STRING_BUFFER base base:INTEGER <-
+  ( + x:INTEGER_64
+    + bits:INTEGER
+    + res:INTEGER
+    + map:STRING_ALIAS
+    + spu:NATIVE_ARRAY UINTEGER_8
+    + low,new_cap:INTEGER
+    (is_big).if {      
+      (is_neg).if { b.add_last '-'; }
+      map := (base = 64).ok base64 or digits
+      low := b.count
+      new_cap := low + sizeinbase base
+      b.set_capacity new_cap
+      spu := CAST (NATIVE_ARRAY CHARACTER) TO (NATIVE_ARRAY UINTEGER_8).on (b.storage + low)
+      bits := last_bit base
+      (base = 1<<bits).if {        
+        res := native_put_in spu bits bits
+      } else {        
+        + tp,u:NATIVE_ARRAY UINTEGER_64
+        + exp,un,cap:INTEGER
+        + bb:UINTEGER_64
+        (exp,bb) := get_base_info base
+        u := to_na
+        un := upper u
+        cap := capacity
+        tp := new cap
+        tp.copy_from u until un
+        res := native_put_in spu base base info (exp,bb) with (tp,un)
+        free tp cap cap
+      }
+      b.set_upper (low+res-1)
+      low.to (b.upper) do { i:INTEGER
+        b.put (map.at (spu.at (i-low))) to i
+      }
+    } else {
+      ? {(base = 10) || {base = 16}}; // Other: Not yet implemented      
+      x := to_i64
+      (base = 16).if {
+        x.to_hexadecimal_in b
+      } else { // base = 10
+        x.append_in b
+      }
+    }
+  )
+  
+  - append_in b:STRING_BUFFER <- append_in b base 10
+  
+  - to_string_hex:STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp base 16
+      result := tmp.to_string_alias
+    }
+    result    
+  )
+      
+  - print_hex <-
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp base 16
+      tmp.print
+    }
+  )
+  
+  - println_hex <- ( print_hex; '\n'.print; )
+  
+  - print_hex_size s:INTEGER <-
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp base 16
+      (s-tmp.count).times { ' '.print; }
+      tmp.print
+    }
+  )
+  

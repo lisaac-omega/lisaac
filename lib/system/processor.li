@@ -1,0 +1,42 @@
+Header
+  + name        := PROCESSOR;
+  /*Processor object.*/
+
+Public
+
+  - to_intel_ulong v:UINTEGER_64 :UINTEGER_64 <- abstract
+
+  - to_intel_uint v:UINTEGER_32 :UINTEGER_32 <- abstract
+
+  - to_intel_ushort v:UINTEGER_16 :UINTEGER_16 <- abstract
+
+  - to_motorola_ulong v:UINTEGER_64 :UINTEGER_64 <-
+  (
+    (v << 56) | ((v & 0FF00h) << 40) | ((v & 0FF0000h) << 24) | ((v & 0FF000000h) << 8) |
+           (v >> 56)   | ((v >> 40) & 0FF00h) | ((v >> 24) & 0FF0000h) | ((v >> 8) & 0FF000000h)
+  )
+
+  - to_motorola_uint v:UINTEGER_32 :UINTEGER_32 <-
+  (
+    (v << 24) | ((v & 0FF00h) << 8) | ((v >> 8) & 0FF00h) | (v >> 24)
+  )
+  
+  - to_motorola_ureal_16_16 v:UREAL_16_16 :UREAL_16_16 <- CAST UINTEGER_32 TO UREAL_16_16.on (to_motorola_uint (v.to_raw_uinteger_32))
+
+  - to_motorola_int v:INTEGER :INTEGER <-
+  (
+    // Conversion in uxxx to cut the sign
+    (v  << 24) | (((v & 0FF00h) << 8).to_uinteger_16) | (((v >> 8) & 0FF00h).to_uinteger_16) | ((v >> 24).to_uinteger_8)
+  )
+
+  - to_motorola_ushort v:UINTEGER_16 :UINTEGER_16 <-
+  (
+    (v  << 8) | (v >> 8)
+  )
+
+  - to_motorola_short v:INTEGER_16 :INTEGER_16 <-
+  (
+    // Conversion in usmall to cut the sign
+    ((v << 8) | ((v >> 8) & 0FFh))
+  )
+

@@ -1,0 +1,61 @@
+Header
+  + name := MUSIC
+  
+  - lip <-
+  (
+    (target = "windows").if {
+      add_lib "-lwinmm";
+    };
+    (target = "apple").if {
+      add_lib "-framework AudioToolbox -framework CoreFoundation";
+    };
+  );
+  
+  - external := `  
+  /****************** Play wav *********************/
+#ifdef _WIN32
+    #include <windows.h>
+    #include <mmsystem.h>
+    #pragma comment(lib, "winmm.lib")
+#elif __APPLE__
+    #include <AudioToolbox/AudioToolbox.h>
+    #include <CoreFoundation/CoreFoundation.h>
+#else
+    #include <unistd.h>
+    #include <stdio.h>
+#endif
+
+void play_wav(const char *filename) {
+#ifdef _WIN32
+    // Windows : WAV uniquement
+    PlaySoundA(filename, NULL, SND_FILENAME | SND_ASYNC);
+
+#elif __APPLE__
+    // macOS : utiliser CoreAudio
+    CFStringRef path = CFStringCreateWithCString(NULL, filename, kCFStringEncodingUTF8);
+    CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, kCFURLPOSIXPathStyle, false);
+    SystemSoundID soundID;
+    if (AudioServicesCreateSystemSoundID(url, &soundID) == kAudioServicesNoError) {
+        AudioServicesPlaySystemSound(soundID);
+    }
+    CFRelease(url);
+    CFRelease(path);
+
+#else
+    // Linux / BSD : utiliser paplay (PulseAudio)
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),"paplay \"%s\" >/dev/null 2>&1 &",filename);
+    system(cmd);
+#endif
+}
+`;
+
+Public
+  
+  - play_wav pth:STRING <-
+  ( + p:NATIVE_ARRAY CHARACTER
+    p := pth.to_external
+    `play_wav(@p)`
+  )
+
+  

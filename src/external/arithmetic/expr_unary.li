@@ -1,0 +1,147 @@
+Header
+
+  + name        := EXPR_UNARY;
+
+  /*Unary Expression.*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- right.is_invariant
+
+  + right:EXPR
+
+  - symbol:CHARACTER <-
+  (
+    abstract
+    ' '
+  )
+
+  - static_type:TYPE_FULL <- right.static_type
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add (static_type.raw)
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with r:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p with r
+    result
+  )
+
+  - make p:POSITION with r:EXPR <-
+  (
+    position := p
+    right := r
+  )
+
+  - my_copy:SELF <- SELF.create position with (right.my_copy)
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + same:SELF
+
+    same ?= other
+    (same != NULL) && {right ~= same.right}
+  )
+
+  - remove <-
+  (
+    right.remove
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute_unlink:INSTR <-
+  (
+    right.execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  ( + result:EXPR
+    + old_seq:UINTEGER_32
+    + right_cst:INTEGER_CST
+
+    old_seq := seq_call_and_loop
+    right := right.execute_link
+    //
+    right_cst ?= right
+    // Conservator transformation.
+    result := exec_conservator
+    ((result = NULL) && {right_cst != NULL}).if {
+      result := exec_right right_cst
+    }
+    ((result = NULL) && {old_seq = seq_call_and_loop}).if {
+      // No conservator transformation.
+      result := exec
+    }
+    (result = NULL).if {
+      result := Self
+    } else {
+      result.set_position position
+      new_execute_pass
+    }
+
+    result
+  )
+
+  - exec_conservator:EXPR <- NULL
+
+  - exec_right right_cst:INTEGER_CST :EXPR <- NULL
+
+  - exec:EXPR <- NULL
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    output.add_last '('
+    static_type.genere_declaration output
+    output.add_last ')'
+    //
+    output.add_last '('
+    output.add_last symbol
+    output.add_last ' '
+    right.genere
+    output.add_last ')'
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    buffer.add_last symbol
+    buffer.add_last ' '
+    right.display buffer
+    buffer.add_last ')'
+  )
+
+
+
+
+
+
+
+
+
+

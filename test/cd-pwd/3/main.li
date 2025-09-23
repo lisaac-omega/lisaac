@@ -1,0 +1,29 @@
+Header
+  
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + p1,p2:STRING_ALIAS
+    p1 := ENVIRONMENT.pwd
+    TEST.check (ENVIRONMENT.chdir "..") integer 0
+    p2 := ENVIRONMENT.pwd
+    (p2.has_suffix "test/").if {
+      TEST.check (ENVIRONMENT.chdir "cd-pwd") integer 0
+      TEST.check (ENVIRONMENT.chdir "3") integer 0
+      p1 := ENVIRONMENT.pwd
+    }.elseif {p2.has_suffix "cd-pwd/"} then {
+      TEST.check (ENVIRONMENT.chdir "3") integer 0
+    }.elseif {p2.has_suffix "lisaac/"} then {
+      TEST.check (ENVIRONMENT.chdir "test") integer 0
+      TEST.check (ENVIRONMENT.chdir "cd-pwd") integer 0
+      TEST.check (ENVIRONMENT.chdir "3") integer 0
+      p1 := ENVIRONMENT.pwd
+    } else {
+      UTILS.crash_with_message (p1 + " " + p2)
+    }
+    TEST.check p1 string (ENVIRONMENT.pwd)
+    TEST.check (ENVIRONMENT.chdir "..") integer 0
+    TEST.check (ENVIRONMENT.chdir "..") integer 0
+    TEST.check (ENVIRONMENT.pwd.has_suffix "test/")
+  )

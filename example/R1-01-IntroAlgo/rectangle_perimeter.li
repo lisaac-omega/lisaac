@@ -1,0 +1,21 @@
+Section Header
+  
+  + name := RECTANGLE_PERIMETER;
+  /*
+  Exercice .
+  */
+  
+Section Public
+  
+  - perimeter (longueur:REAL_64, largeur:REAL_64): REAL_64 <-
+  (
+    2 * (longueur + largeur)
+  )
+  
+  - main <-
+  ( + p:REAL_64
+    
+    p := perimeter(3,4);
+    
+  )
+  

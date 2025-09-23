@@ -1,0 +1,141 @@
+Header
+
+  + name        := PUT_TO;
+
+  /*Put for NATIVE_ARRAY E (see ITEM)*/
+
+Inherit
+
+  + parent_write:Expanded WRITE
+
+  + parent_expr:Expanded EXPR; // Note: C'est une INSTR, mais pb dans ITM_EXTERNAL
+
+Public
+
+  - is_invariant:BOOLEAN <-
+  receiver.is_invariant && {index.is_invariant} && {value.is_invariant}
+
+  + receiver:EXPR
+
+  + index:EXPR
+
+  - static_type:TYPE_FULL <- TYPE_VOID.default
+
+  - variable:VARIABLE <-
+  ( + typ_gen:TYPE_GENERIC
+
+    typ_gen ?= receiver.static_type.raw
+    typ_gen.native_array_variable
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION base rec:EXPR index idx:EXPR value v:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p base rec index idx value v
+    result
+  )
+
+  - make p:POSITION base rec:EXPR index idx:EXPR value v:EXPR <-
+  (
+    position := p
+    receiver := rec
+    index    := idx
+    value    := v
+    //
+    variable.add_write Self
+  )
+
+  - my_copy:SELF <-
+  SELF.create position base (receiver.my_copy) index (index.my_copy) value (value.my_copy)
+
+  //
+  // Remove
+  //
+
+  - remove <-
+  (
+    variable.unwrite Self
+    //
+    receiver.remove
+    index.remove
+    value.remove
+  )
+
+  //
+  // Execute
+  //
+
+  - execute:INSTR <- execute_unlink
+
+  - execute_unlink:INSTR <-
+  (
+    execute_link
+  )
+
+  - execute_link:EXPR <-
+  (
+    receiver := receiver.execute_link
+    index    := index.execute_link
+    value    := value.execute_link
+    //variable.set_write Self
+    Self
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  ( + type_generic:TYPE_GENERIC
+    + first_type:TYPE_FULL
+
+    receiver.genere
+    output.add_last '['
+    index.genere
+    output.add_last ']'
+    type_generic ?= receiver.static_type.raw
+    first_type := type_generic.generic_list.first
+    ((first_type.raw.is_block) && {value.static_type.raw = TYPE_NULL}).if {
+      output.append ".__id=0"
+    } else {
+      output.add_last '='
+      ((first_type.is_expanded) && {! first_type.is_expanded_c}).if {
+        (value.static_type.is_expanded_ref).if {
+          output.append "*("
+          value.genere
+          output.add_last ')'
+        } else {
+          value.genere
+        }
+      } else {
+        value.genere
+      }
+    }
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    receiver.display buffer
+    buffer.add_last '['
+    index.display buffer
+    buffer.append "]="
+    value.display buffer
+  )
+
+
+
+
+
+
+
+
+

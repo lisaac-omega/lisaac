@@ -1,0 +1,39 @@
+Header
+  + name := MAIN;
+  
+Private
+  - check n:INTN string s:STRING_ALIAS <-
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      n.append_in tmp
+      TEST.check tmp string s
+    }
+  )
+  
+Public
+  - main <-
+  ( + n1,n2,n3:INTN
+    
+    n1 := 4294967296
+    n2 := n1 * 2
+    check n2 string "8589934592"
+    
+    n3 := 1.to_intn
+    32.times {
+      n3 := n3 * 2
+    }
+    check n3 string "4294967296"
+    
+    n3 := n3 + 1
+    check n3 string "4294967297"
+    
+    n3 := n3 * 3
+    check n3 string "12884901891"
+    
+    n3 := n3 * n3
+    check n3 string "166020696740695375881"
+        
+    n3 := n3 * n3
+    check n3 string "27562871746265940204120106203495876526161"
+  )
+  

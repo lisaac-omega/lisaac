@@ -1,0 +1,93 @@
+Header
+  + name := WIN_ERROR;
+  /* Use:
+  WIN_ERROR.msg "texte";
+  or
+  WIN_ERROR.msg "texte" do { action after error };
+  */
+  
+Inherit
+  + parent_win:Expanded WIN
+  
+Public
+  
+  - refresh <-
+  ( + w:WINDOW
+    + s,x,y:REAL_32
+    w := window
+    size (w.width,w.height)
+    //
+    s := FONT.size_app * 2
+    (x,y) := (width/2,height/2 + s*2)
+    child.first.xy (x-s*4,y).size (s*8,s*2)
+    child.foreach { w:WIN; w.refresh; }
+  )
+  
+  - msg t:STRING_ALIAS <- msg t do {}
+  
+  - msg t:STRING_ALIAS do d:{} <-
+  ( + w:WINDOW
+    w := PAGE.cur_pg.window
+    init w
+    (width,height) := (w.width,w.height)
+    old_focus := focus
+    focus := Self
+    text := t
+    do_after := d
+    (child.is_empty).if {
+      //BUTTON.new.init " OK " do { b:BUTTON; continue; TRUE}.set align_center
+      ACT_ITM.new.init Self act (ACT0.new.txt_l " OK ".fn {
+          continue
+      TRUE}).set align_center
+    }
+    refresh
+  )
+  
+  - draw <-
+  ( + s,x,y:REAL_32
+    begin_path
+    fill_color (COLOR.rgbaf (0,0,0,0.7))
+    rect (0,0) size (width,height)
+    fill
+    //
+    s := FONT.size_app * 2
+    (x,y) := (width/2,height/2)
+    fill_color (COLOR.red)
+    font_face_id (FONT.sys (FONT.roman))
+    font_size s
+    text_align (align_center | align_middle)
+    text (x,y - s*2) msg "ERREUR DÉTECTÉE"
+    //
+    fill_color (COLOR.white)
+    text (x,y) msg text
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  (    
+    TRUE
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  ( + ch:CHARACTER
+    ch := s.first
+    ((ch = ' ') || {ch = '\n'}).if {
+      continue
+    }
+  )
+  
+Private
+  
+  - do_after:{}
+  
+  - continue <-
+  (
+    window.child_rm Self
+    focus := old_focus
+    do_after.value
+  )
+    
+  - old_focus:WIN
+  
+  - text:STRING_ALIAS
+  
+    

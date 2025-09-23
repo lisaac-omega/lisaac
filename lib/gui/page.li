@@ -1,0 +1,230 @@
+Header
+  + name := Strict PAGE;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  - width_min:REAL_32  := 128
+  - height_min:REAL_32 := 128
+  
+  - pages:ARRAY PAGE := ARRAY PAGE.create_with_capacity 8
+  - pages_upper:INTEGER := -1; // 0..pages_upper = BUSY, pages_upper+1..pages.upper = FREE
+  
+  - cur_pg:PAGE
+  - set_cur_pg p:PAGE <- ( cur_pg := p; )
+  
+  - buf_pg:BUF_PG <- ( + r:BUF_PG; r ?= child.at 2; ? {r != NULL}; r)
+  - set_buffer b:BUFFER <-
+  ( 
+    (child.upper = 2).if {
+      buf_pg.save_last_pos
+      child.pop.free
+    }
+    ? {child.upper = 1}
+    b.buf_pg.new.init Self buf b
+    b.put_first
+    ? {child.upper = 2}
+  )
+  
+  - save_all_last_pos <-
+  (
+    pages.foreach { p:PAGE; p.buf_pg.save_last_pos; }
+  )
+    
+  - margin_right:REAL_32 := 8
+  - margin_bottom:REAL_32 <- FONT.size_sys + 8
+    
+  - refresh <-
+  (
+    child.at 0.xy (xo,ymax-margin_bottom).size (width - margin_bottom,margin_bottom - margin_right)
+    child.at 1.xy (xmax-margin_bottom,ymax-margin_bottom).size (margin_bottom+1,margin_bottom+1)
+    child.at 2.xy (xo,yo).size (width - margin_right, height - margin_bottom)
+    child.at 2.refresh
+  )
+  
+  - draw_all <-
+  ( + ri,ro,h:REAL_32
+    + p:PAINT
+    //"PAGE".println
+    h := margin_bottom
+    (ri,ro) := (16, h + 8)
+    buf_pg.draw_all
+    //"END PAGE:".print; buf_pg.child.first.yo.print; " - ".print; buf_pg.child.last.yo.println
+    begin_path
+    p := PAINT.create_box (xo-ri,yo-ri) size (width+ri-margin_right, height+ri-h) radius ri feather 12
+    color (COLOR.none) to (COLOR.rgbaf (0,0,0,0.8))
+    rect (xo,yo) size (width-margin_right, height-h)
+    fill_paint p
+    fill
+    p.free
+    begin_path
+    p := PAINT.create_box (xo,yo) size (width+ri, height+ri) radius ri feather 12
+    color (COLOR.none) to (COLOR.rgbaf (1,1,1,0.8))
+    rect (xo,yo) size (width-margin_right, height-h)
+    fill_paint p
+    fill
+    p.free
+    //(width,height) := (width + margin_right, height + h)
+    begin_path
+    arc (xmax-7,yo+7) radius 6 angle (-REAL_32.pi/2,0) direction 2
+    arc (xmax - ro, ymax - ro) radius (ro-1) angle (0, REAL_32.pi/2) direction 2
+    arc (xo+1 + ri, ymax - ri - 1) radius ri angle (REAL_32.pi/2, REAL_32.pi) direction 2
+    line_to (xo+1, ymax - h)
+    arc (xmax - 7 - ri, ymax - h - ri) radius ri angle (REAL_32.pi/2, 0) direction 1
+    fill_color ((cur_pg = Self).ok (LOOK.border_on) or (LOOK.border_off))
+    stroke_color (LOOK.border_off); //black)
+    stroke_width 2
+    stroke
+    fill
+    child.at 0.draw
+    child.at 1.draw
+    //(width,height) := (Old width, Old height)
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + p:POINTER
+    - psh,psv:PAGE_SPLIT
+    (ev = HAND.in).if {
+      p := (HAND.x_cur >= xmax-margin_right).ok cursor_h or cursor_v
+      PAPER.set_cursor (window.win_ptr) img p
+    }.elseif {ev = HAND.out} then {
+      PAPER.set_cursor (window.win_ptr) img cursor_std
+    }.elseif {(ev & ~1) = HAND.drag} then {
+      (HAND.is_begin).if {
+        (HAND.x_begin >= xmax-margin_right).if {
+          (psh,psv) := (get_split TRUE,PAGE_SPLIT)
+        } else {
+          (psh,psv) := (PAGE_SPLIT,get_split FALSE)
+        }
+      }
+      PAGE_SPLIT.move psh and psv win Self
+    }
+  )
+  
+  - get_split is_h:BOOLEAN :PAGE_SPLIT <-
+  ( + w:WIN
+    + ps:PAGE_SPLIT
+    w := Self
+    { w := w.parent; ps ?= w; }.do_until {
+      (ps = NULL) || {is_h  && {ps.xmax != xmax}} || {!is_h && {ps.ymax != ymax}}
+    }
+    ps
+  )
+  
+  - close:BOOLEAN <-
+  ( + ps:PAGE_SPLIT
+    + pp,op:WIN
+    
+    ((ps ?= parent) != NULL).if {
+      op := ps.child.at ((ps.child.at 0 = Self).to_integer)
+      pp := ps.parent
+      pp.child.at ((pp.child.at 1 = ps).to_integer) put op
+      op.set_parent pp
+      ps.free
+      free
+      {
+        cur_pg ?= op
+        op := op.child.first
+      }.do_while {cur_pg = NULL}
+      ask_refresh
+    }
+  )
+  
+  - split l:BOOLEAN :BOOLEAN <-
+  ((l && {width >= width_min * 2}) || {(!l) && {height >= height_min * 2}}).if {
+    PAGE_SPLIT.new.dup Self line l
+  }
+  
+  - change:BOOLEAN <-
+  (pages_upper > 0).if {
+    + i:INTEGER
+    {pages.at i != Self}.while_do { i := i + 1; }
+    i := (i + 1) % (pages_upper + 1)
+    cur_pg := pages.at i
+  }
+  
+  - save_buffer:BOOLEAN <- buf_pg.buffer.save_buffer
+  
+  // Parsing
+  
+  - copy o:SELF <-
+  ( ? {child.count = 2}
+    o.buf_pg.dup Self
+    ? {child.count = 3}
+  )
+  
+  - new:SELF <-
+  ( + result:SELF
+    pages_upper := pages_upper + 1
+    (pages_upper <= pages.upper).if {
+      result := pages.at pages_upper
+    } else {
+      result := clone
+      FOOTNOTE.new.init result
+      RESIZE.new.init result
+      pages.add_last result
+      pages.swap pages_upper with (pages.upper)
+    }
+    result
+  )
+  
+  - free <-
+  [ ? {child.count = 3}; ]
+  ( + i:INTEGER
+    child.pop.free
+    {pages.at i != Self}.while_do { i := i + 1; }
+    (i != pages_upper).if { pages.swap i with pages_upper; }
+    pages_upper := pages_upper - 1
+  )
+  
+  - init p:WIN :SELF <-
+  ( read_object; cur_pg := Self
+    parent_win.init p
+  )
+/*  
+  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  (
+    id
+    .case "point" then { + p:INTEGER
+      + t:TXT_BUF
+      t := buf_pg.like TXT_PG.text
+      p := v.min (t.upper + 1)
+      {(p.in_range 1 to (t.upper)) && {(t.at p & 1100_0000b) = 1000_0000b}}.while_do { p := p - 1; }
+      buf_pg.like TXT_PG.set_pos_raw p
+      //"Init:".print; buf_pg.like TXT_PG.pos.print
+    }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN <-
+  (
+    id
+    .case "pos_x" then { buf_pg.set_pos_x v; }
+    .case "pos_y" then { buf_pg.set_pos_y v; }
+    = STRING_ALIAS
+  )
+*/
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "buffer"   then { set_buffer (BUFFER.get v); }
+    = STRING_ALIAS
+  )
+  
+  - write_object <-
+  ( + b:BUF_PG
+    + t:TXT_PG
+    t ?= b := buf_pg
+    put_object {
+      put "buffer" value { put_str (rel_path (b.name)); }
+/*      put "pos_x"  value { put_real (b.pos_x); }
+      put "pos_y"  value { put_real (b.pos_y); }
+      (t != NULL).if {
+        put "point"  value { put_int (t.pos.pt); }
+      };*/
+    }
+  )

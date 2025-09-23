@@ -1,0 +1,109 @@
+Header
+  + name := Strict TRACKBAR E;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ (TRACKBAR E)
+  
+Private
+  
+  - stk:Expanded ARRAY (TRACKBAR E)
+  - radius:REAL_32 := 8
+  
+Public
+  
+  - margin:REAL_32 := 16
+  
+  - width_min:REAL_32 := margin * 2
+  - height_min:REAL_32 := width_min
+  
+  - vertical:INTEGER := 1 << 15
+  
+  + min:E
+  + max:E
+    
+  + read:{E}
+  + write:{E;}
+  + txt:{STRING_BUFFER;}
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init (mn,mx:E) get g:{E} set s:{E;} txt t:{STRING_BUFFER;} :SELF <-
+  ( (min,max) := (mn,mx)
+    (write,read,txt) := (s,g,t)
+    init_obj
+  )
+    
+  - draw <-
+  ( + y,x:REAL_32
+    + x0,y0,x1,y1,wt:REAL_32
+    begin_path
+    stroke_width 4
+    line_cap round
+    stroke_color (LOOK.text_ui)
+    (is vertical).if {
+      x := xo + width/2
+      y := yo + margin + (height-margin*2) / (max-min) * (read.value - min)
+      line (x, yo+margin) to (x,y)
+      stroke
+      begin_path
+      stroke_color (LOOK.text_bg_ui)
+      line (x,y) to (x, ymax-margin)
+      stroke
+    } else {
+      x := xo + margin + (width-margin*2) / (max-min) * (read.value - min)
+      y := yo + height/2
+      line (xo+margin,y) to (x,y)
+      stroke
+      begin_path
+      stroke_color (LOOK.text_bg_ui)
+      line (x,y) to (xmax-margin,y)
+      stroke
+    }
+    fill_color (LOOK.text_ui)
+    (((HAND.x_cur - x).abs < margin*2) && {(HAND.y_cur - y).abs < margin*2}).if {
+      STRING.tmp { tmp:STRING_BUFFER
+        txt.value tmp
+        (tmp.is_empty).if {
+          begin_path
+          circle (x,y) radius radius
+          fill
+        } else {
+          font_face_id (FONT.sys (FONT.roman))
+          font_size (radius*2)
+          text_align (align_center | align_middle)
+          (wt,x0,y0,x1,y1) := text_bounds (x,y) msg tmp
+          begin_path
+          rect (x0-2,y0-2) to (x1+2,y1+2) radius (radius/2)
+          fill
+          fill_color (LOOK.txt_nui)
+          text (x,y) msg tmp
+        }
+      }
+    } else {
+      begin_path
+      circle (x,y) radius radius
+      fill
+    }
+  )
+    
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    + d:REAL_32
+    + v:E
+    e := ev & ~1
+    ((e = HAND.clic) || {e = HAND.drag}).if {
+      (is vertical).if {
+        d := HAND.y_cur - (yo+margin)
+        v := CAST REAL_32 TO E.on (d * (max - min) / (height-margin*2) + min)
+      } else {
+        d := HAND.x_cur - (xo+margin)
+        v := CAST REAL_32 TO E.on (d * (max - min) / (width-margin*2) + min)
+      }
+      v := v.min max.max min
+      write.value v
+    }
+    TRUE
+  )

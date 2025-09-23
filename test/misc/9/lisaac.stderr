@@ -1,0 +1,30 @@
+Depending pass:  \--WARNING----------
+Conflict `foo' name between slot and local.
+Line 7 column 20 in MAIN(.../test/9/main.li):
+  - foo foo:INTEGER <-
+                    ^
+
+Line 7 column 11 in MAIN(.../test/9/main.li):
+  - foo foo:INTEGER <-
+           ^
+--WARNING----------
+Double declaration for `foo' slot.
+Line 7 column 11 in MAIN(.../test/9/main.li):
+  - foo foo:INTEGER <-
+           ^
+
+Line 8 column 9 in MAIN(.../test/9/main.li):
+  ( + foo:INTEGER;
+         ^
+--WARNING----------
+Conflict `foo' name between slot and local.
+Line 7 column 20 in MAIN(.../test/9/main.li):
+  - foo foo:INTEGER <-
+                    ^
+
+Line 8 column 9 in MAIN(.../test/9/main.li):
+  ( + foo:INTEGER;
+         ^
+|3
+Executing pass: *...*.. (7)
+ => 3 warning(s).

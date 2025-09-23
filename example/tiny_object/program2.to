@@ -1,0 +1,42 @@
+A (
+  f_a =
+  ( |
+    "A".print;
+  )
+)
+B Inherit A (
+  f_b =
+  ( | 
+    "B".print;
+  )
+)
+D (
+  f_d =
+  ( | 
+    "D".print;
+  )
+)
+C Inherit D, A (
+  f_c =
+  ( | 
+    "C".print;
+  )
+  f_a =
+  ( | 
+    "Redefine A in C".print;
+  )
+)
+E Inherit B, C (
+  f_e =
+  ( | 
+    "E".print;
+  )
+  f_d =
+  ( |
+    "redefine D in E".print;
+  )
+  master =
+  ( |
+    f_e;
+  )
+)

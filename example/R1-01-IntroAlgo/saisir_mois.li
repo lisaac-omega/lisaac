@@ -1,0 +1,37 @@
+Section Header
+  
+  + name := SAISIR_MOIS;
+  /*
+  Poly exercice 5 page 2.
+  */
+  
+Section Private
+  
+  - read_integer: INTEGER <-
+  ( + result:INTEGER
+    STDIN.read_line;
+    if (STDIN.last_string.is_integer) then {
+      result := STDIN.last_string.to_integer
+    }
+    result
+  )
+ 
+Section Public
+   
+  - saisir_mois : INTEGER <-
+  ( + result:INTEGER
+    "Entrez le numéro du mois: " print
+    result := read_integer
+    while {(result < 1) || {result > 12}} do {
+      "Entrez le numéro du mois (1 .. 12): " print
+      result := read_integer
+    }
+    result
+  )
+  
+  - main <-
+  ( + m:INTEGER 
+    m := saisir_mois
+    "Numéro de mois = ".print
+    m.println
+  )

@@ -1,0 +1,82 @@
+Header
+
+  + name        := ITM_WRITE_CAST;
+
+  /*Assignment slot `?=' style*/
+
+Inherit
+
+  + parent_itm_write:Expanded ITM_WRITE
+
+Public
+
+  - type:STRING_ALIAS <- "?="
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + val:EXPR
+    + loc:LOCAL
+    + node:NODE
+    + nm:STRING_ALIAS
+    + typ_cast:TYPE_FULL
+    + slot:SLOT
+    + ts:ITM_TYPE_SIMPLE
+
+    // Value -> local.
+    val := value.to_run_expr
+    loc := val.static_type.get_temporary position
+    list_current.add_last (loc.write position value val)
+    val := loc.read position
+    // Assign.
+    nm  := get_simple_name
+    loc := lookup nm
+    (loc != NULL).if {
+      typ_cast := loc.type
+    } else {
+      slot := profil_slot.type_self.get_slot nm
+      (slot = NULL).if {
+	string_tmp.copy "Slot `";
+	string_tmp.append nm
+	string_tmp.append "' not found in static type "
+	profil_slot.type_self.append_name_in string_tmp
+	string_tmp.add_last '.'
+	semantic_error (position,string_tmp)
+      }
+      ts ?= slot.result_type
+      typ_cast := ts.to_run_for profil_slot pos (position.prototype.filename)
+    }
+    (verify).if {
+      (! val.static_type.is_generic).if {
+        /*
+        (typ_cast.affect_with (val.static_type)).if {
+          STRING.tmp { tmp:STRING_BUFFER
+            typ_cast.append_name_in tmp
+            tmp.append " ?= "
+            val.static_type.append_name_in tmp
+            tmp.append " `?=' is not necessary, use `:='."
+            warning_error (position,tmp)
+          }
+        };*/
+        ((! val.static_type.affect_with typ_cast) && {! val.static_type.is_strict}).if {
+          string_tmp.copy "`";
+          typ_cast.append_name_in string_tmp
+          string_tmp.append "' ?= `";
+          val.static_type.append_name_in string_tmp
+          string_tmp.append "': always NULL assignment."
+          warning_error (position,string_tmp)
+        }
+      }
+    }
+    // Dispatch case.
+    node := NODE.new_cast position type typ_cast with val
+    list_current.add_last node
+    // Assignment result.
+    affect nm with (node.result_expr)
+    // Value result.
+    //assign.to_run_expr
+  )
+
+

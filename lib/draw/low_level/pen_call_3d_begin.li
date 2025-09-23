@@ -1,0 +1,64 @@
+Header
+  
+  + name := PEN_CALL_3D_BEGIN;
+  
+Inherit
+  
+  + parent_pen_call:Expanded PEN_CALL
+  
+Private
+  
+  - stack:ARRAY PEN_CALL_3D_BEGIN := ARRAY PEN_CALL_3D_BEGIN.create_with_capacity 16
+  
+Public
+    
+  + camera:CAMERA
+  + shader:SHADER_3D
+  - last:PEN_CALL_3D_BEGIN
+  
+  - set_shader s:SHADER_3D <- ( shader := s; )
+  - set_camera cam:CAMERA  <- ( camera := cam; )
+  
+  - create cam:CAMERA :PEN_CALL_3D_BEGIN <-
+  ( + result:PEN_CALL_3D_BEGIN
+    (stack.is_empty).if {
+      result := clone
+    } else {
+      result := stack.pop
+    }
+    result.make cam
+    last := result
+    result
+  )
+  
+  - make cam:CAMERA <-
+  (    
+    camera := cam
+  )
+  
+  - free <-
+  (    
+    stack.add_last Self
+  )
+  
+  - run <-
+  ( + px,py,w,h:INTEGER
+    + fb_w,fb_h:INTEGER
+    (fb_w,fb_h) := PAPER.framebuffer_size (PAPER.wins.first.win_ptr)
+    (px,py) := (camera.xo,fb_h - (camera.yo+camera.height))
+    (w,h) := (camera.width,camera.height)
+    `glViewport(@px,@py,@w,@h)`
+    `glEnable(GL_DEPTH_TEST)`
+    `glFrontFace(GL_CCW)`
+    //`glDisable(GL_CULL_FACE)`
+        
+    pen_gl.gl_use_program (shader.id)
+    pen_gl.check_error "Use program 3D light"
+    pen_gl.gl_bind_vertex_array (PEN3D.vao)
+        
+    camera.on shader
+    // Current state
+    PEN_CALL_3D_BEGIN.set_shader shader
+    PEN_CALL_3D_BEGIN.set_camera camera
+  )
+  

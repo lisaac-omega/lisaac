@@ -1,0 +1,24 @@
+Header
+  + name := STDOUT;
+
+  /*STanDard OUTput.*/
+
+Inherit
+  - inherit_output_stream:OUTPUT_STREAM := OUTPUT_STREAM
+
+Public
+  - flush <-
+  (
+    `fflush(stdout)`
+  )
+  
+  - put_character c:CHARACTER <- basic_io_putc c
+
+
+
+
+
+
+
+
+

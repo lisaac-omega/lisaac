@@ -1,0 +1,54 @@
+Header
+
+  + name    := CONSTANT;
+
+  /*Parent for all constants*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  //
+  // Comparison.
+  //
+
+  - is_constant:BOOLEAN <- TRUE
+
+  - is_invariant:BOOLEAN <- TRUE
+
+  //
+  // Typing.
+  //
+
+  + static_type:TYPE_FULL
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add (static_type.raw)
+  )
+
+  //
+  // Generation.
+  //
+
+  - remove <-
+  (
+    // Nothing.
+  )
+
+  - execute_unlink:INSTR <-
+  (
+    new_execute_pass
+    NULL
+  )
+
+  - execute_link:EXPR <- Self
+
+  //
+  // Generation.
+  //
+
+
+

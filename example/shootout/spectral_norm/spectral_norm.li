@@ -1,0 +1,79 @@
+Header
+  
+  + name := SPECTRAL_NORM;
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Private
+  
+  - n:INTEGER
+  
+  - eval_a(i,j:INTEGER) :REAL_64 <- 
+  (
+    1.0 /((i+j)*(i+j+1)/2+i+1)
+  )
+
+  - eval_a_times_u(u,au:NATIVE_ARRAY(REAL_64)) <- 
+  ( 
+    0.to n do { i:INTEGER
+      au.put 0 to i
+      0.to n do { j:INTEGER
+        au.put (au.at i + eval_a(i,j) * u.at j) to i
+      }
+    }
+  )
+
+  - eval_at_times_u(u,au:NATIVE_ARRAY(REAL_64)) <-
+  (
+    0.to n do { i:INTEGER
+      au.put 0 to i
+      0.to n do { j:INTEGER
+        au.put (au.at i + eval_a(j,i) * u.at j) to i
+      }
+    }
+  )
+  
+  - vtmp:NATIVE_ARRAY(REAL_64)
+  
+  - eval_ata_times_u(u,atau:NATIVE_ARRAY(REAL_64)) <-
+  ( 
+    eval_a_times_u(u,vtmp)
+    eval_at_times_u(vtmp,atau)
+  )
+
+Public
+ 
+  - main <-
+  ( + vbv,vv:REAL_64
+    + u :NATIVE_ARRAY(REAL_64)
+    + v :NATIVE_ARRAY(REAL_64)
+ 
+    ( COMMAND_ARGS.upper = 1).if {
+      n := COMMAND_ARGS.at 1.to_integer
+    } else {
+      n := 2000
+    }
+    
+    u    := NATIVE_ARRAY(REAL_64).calloc_intern n
+    vtmp := NATIVE_ARRAY(REAL_64).calloc_intern n
+    v    := NATIVE_ARRAY(REAL_64).calloc_intern n
+    
+    n := n - 1
+    0.to n do { i:INTEGER
+      u.put 1 to i
+    }
+
+    0.to 9 do { i:INTEGER
+      eval_ata_times_u(u,v)
+      eval_ata_times_u(v,u)
+    }
+
+    0.to n do { i:INTEGER
+      vbv := vbv + u.at i * v.at i
+      vv  :=  vv + v.at i * v.at i
+    }
+     
+    ((vbv/vv).sqrt).print_format_c "%.9f\n"
+  )

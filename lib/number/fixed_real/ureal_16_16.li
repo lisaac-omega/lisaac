@@ -1,0 +1,59 @@
+Header
+  + name    := Expanded UREAL_16_16;
+  /*unsigned 16.16 fixed float.*/
+  - type    := `unsigned int`;
+  - default := (0.to_raw_ureal_16_16);
+  - export  := REAL_32, REAL_64;
+
+Insert
+  - parent_unsigned_fixed_real:UNSIGNED_FIXED_REAL := UNSIGNED_FIXED_REAL
+
+SELF
+
+  - shift_bits:INTEGER <- 16
+
+Public
+
+  // Range.
+
+  - maximum:UINTEGER_64 <- UINTEGER_16.maximum
+
+  // Convertion format with test.
+
+  - to_real_16_16:REAL_16_16 <- Self
+
+  // Convertion
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+  ( + val:INTEGER
+    + old_count,new_count:INTEGER
+    ? {b!=NULL}
+
+    val := to_raw_integer
+
+    (val < 0).if {
+      val := - val
+      b.extend '-'
+    }
+    (val >> 16).append_in b
+    b.extend '.'
+
+    old_count:=b.count
+    //     1/65536 = 0.00390625 => 8 digit.
+    (((val & 0FFFFh).to_uinteger_64 * 100000000)>>16).to_integer.append_in b
+    new_count:=old_count+8
+    {b.count!=new_count}.while_do {
+      b.insert '0' to old_count
+    }
+  )
+
+
+
+
+
+
+
+
+

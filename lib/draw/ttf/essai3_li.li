@@ -1,0 +1,65 @@
+Header
+  
+  + name := ESSAI3_LI;
+  
+Private
+  
+  - height:INTEGER := 64
+  - width:INTEGER := 185
+  
+  + buffer:ARRAY UINTEGER_8
+    
+  + screen:ARRAY UINTEGER_8 := ARRAY UINTEGER_8.create (width*height)
+
+Public
+  
+  - main <-
+  ( + font:FONTINFO
+    + ascent,descent,linegap,baseline:INTEGER
+    + scal,xpos:REAL_32; // leave a little padding in case the character extends left
+    + text:STRING_ALIAS
+    + f:FILE
+    + buf,scr:NATIVE_ARRAY UINTEGER_8
+    xpos := 2.0
+    text := "Lisaac !"; // intentionally misspelled to show 'lj' brokenness
+    
+    f ?= FILE_SYSTEM.get "Roboto-Bold.ttf"
+    f.open
+    buffer := ARRAY UINTEGER_8.create_with_capacity (f.size)
+    f.read buffer size (f.size)
+    f.close
+    
+    buf := buffer.storage
+    scr := screen.storage
+    //idx := TTF.get_font_offset buf for_index 0
+    font := FONTINFO.create_font buf start 0; // idx
+
+    scal := font.scale_for_pixel_height height
+    (ascent,descent,linegap) := font.get_font_v_metrics
+    baseline := (scal*ascent).to_integer
+    
+    0.to (text.upper) do { ch:INTEGER
+      + advance,lsb,x0,y0,x1,y1:INTEGER
+      + x_shift:REAL_32
+      + car:INTEGER
+      car := text.item ch.code
+      x_shift := xpos - xpos.floor
+      (advance,lsb) := font.get_codepoint_h_metrics car
+      (x0,y0,x1,y1) := font.get_codepoint_bitmap_box_subpixel car scale (scal,scal) shift (x_shift,0)
+      
+      font.make_codepoint_bitmap_subpixel (scr+((baseline + y0)*width+(xpos.to_integer + x0)))
+      size (x1-x0,y1-y0,width) scale (scal,scal) shift (x_shift,0) code car
+      
+      xpos := xpos + scal * advance
+      (ch < text.upper).if {
+        xpos := xpos + scal*font.get_codepoint_kern_advance (car,text.item (ch+1).code)
+      }
+    }
+
+    0.to (height-1) do { j:INTEGER
+      0.to (width-1) do { i:INTEGER
+        " .:ioVM@".at (screen.at (j*width+i)>>5).print
+      }
+      '\n'.print
+    }
+  )

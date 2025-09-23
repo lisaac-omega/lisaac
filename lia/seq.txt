@@ -1,0 +1,16 @@
+------------------- START ---------------------------
++-Main
++-CreateThread
+Start - Resume - InputChanged - InitWin - GainedFocus
+                                +-InitWin
+				+-InitGl
+				+-InitPen
+------------------- ROTATE --------------------------
+SaveState - Pause - Stop - TermWin - InputChanged - Destroy - START 
+                                                    +-Exit
+                                                    +-EndDraw
+------------------- EXIT ----------------------------
+SaveState - Pause - LostFocus - Stop - TermWin
+
+------------------- FREE MEM ------------------------
+(Nothing)

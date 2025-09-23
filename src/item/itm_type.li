@@ -1,0 +1,82 @@
+Header
+
+  + name    := ITM_TYPE;
+
+  /*Parent for all type*/
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+  
+  + is_list:BOOLEAN
+  
+  - count:INTEGER <- 1
+
+  - lower:INTEGER <- 0
+
+  - upper:INTEGER <- 0
+
+  - at i:INTEGER :ITM_TYPE <- Self
+
+  - last:ITM_TYPE <- Self
+
+  - first:ITM_TYPE <- Self
+  
+  //
+  //
+  //
+  
+  - set_list <-
+  (
+    is_list := TRUE
+  )
+  
+  - print <-
+  (
+    string_tmp.clear
+    append_in string_tmp
+    string_tmp.print
+  )
+  
+  - hash_code:INTEGER <-
+  (
+    string_tmp.clear
+    append_in string_tmp
+    string_tmp.print; '\n'.print
+    abstract
+    0
+  )
+  
+  - append_in buffer:STRING_BUFFER <- abstract
+
+  - shorter_in buf:STRING_BUFFER <- abstract
+  
+  - to_run:TYPE_FULL <- to_run_for NULL pos input_path
+  
+  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  (
+    string_tmp.clear
+    append_in string_tmp
+    string_tmp.print; '\n'.print
+    abstract
+    NULL
+  )
+
+  - to_run_in lst:ARRAY TYPE_FULL for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS <-
+  (
+    abstract
+  )
+
+  - get_expr_for p:PARAMETER_TO_TYPE :EXPR <-
+  (
+    abstract
+    NULL
+  )
+  
+  //
+  // Cast.
+  //
+
+  - append_cast_name_in buf:STRING_BUFFER <- ( abstract; )

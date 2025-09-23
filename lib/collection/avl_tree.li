@@ -1,0 +1,559 @@
+Header
+  + name := AVL_TREE V;
+  /*
+    Definition of a mathematical set of comparable objects. All common
+    operations on mathematical sets are available.
+  */
+
+Insert
+  - parent_avl_constants:AVL_CONSTANTS := AVL_CONSTANTS
+
+Public
+
+  + count:INTEGER
+
+Public
+
+  // Adding and removing:
+
+  - remove e:V <-
+  (
+    root := do_remove (root, e)
+  )
+
+  - fast_remove e:V <-
+  (
+    root := fast_do_remove (root, e)
+  )
+
+SELF
+
+  + root:AVL_TREE_NODE(V)
+
+  + rebalance:BOOLEAN
+
+  + item_memory:V
+
+  - set_value_and_key n:AVL_TREE_NODE(V) <-
+  (
+    abstract
+  )
+
+  - set_value n:AVL_TREE_NODE(V) <-
+  (
+    abstract
+  )
+
+  - fast_do_insert n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  ( + result:AVL_TREE_NODE(V)
+
+    (n = NULL).if {
+      result := new_node
+      set_value_and_key result
+      count := count + 1
+      map_dirty := TRUE
+      rebalance := TRUE
+    }.elseif {item_memory = n.item} then {
+      result := n
+      set_value result
+      rebalance := FALSE
+    }.elseif {item_memory < n.item} then {
+      n.set_left (do_insert (n.left))
+      (rebalance).if {
+        result := left_grown n
+      } else {
+        result := n
+      }
+    } else {
+      ? {item_memory > n.item}
+      n.set_right (do_insert (n.right))
+      (rebalance).if {
+        result := right_grown n
+      } else {
+        result := n
+      }
+    }
+    result
+  )
+  [
+    +? {Result != NULL}
+    +? {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    +? {rebalance = (node_height Result > Old node_height n)}
+  ]
+
+  - do_insert n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  ( + result:AVL_TREE_NODE(V)
+
+    (n = NULL).if {
+      result := new_node
+      set_value_and_key result
+      count := count + 1
+      map_dirty := TRUE
+      rebalance := TRUE
+    }.elseif {item_memory < n.item} then {
+      n.set_left (do_insert (n.left))
+      (rebalance).if {
+        result := left_grown n
+      } else {
+        result := n
+      }
+    }.elseif {item_memory > n.item} then {
+      n.set_right (do_insert (n.right))
+      (rebalance).if {
+        result := right_grown n
+      } else {
+        result := n
+      }
+    } else {
+      ? {item_memory == n.item}
+      result := n
+      set_value result
+      rebalance := FALSE
+    }
+    result
+  )
+  [
+    +? {Result != NULL}
+    +? {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    +? {rebalance = (node_height Result > Old node_height n)}
+  ]
+
+  - left_grown n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  [
+    -? {rebalance}
+    -? {n != NULL}
+    -? {node_height (n.right) - node_height (n.left) + 1 = n.balance}
+  ]
+  ( + result:AVL_TREE_NODE(V)
+
+    (n.balance)
+    .when imbalanced_left then {
+      (n.left.balance = imbalanced_left).if {
+        n.set_balance balanced
+        n.left.set_balance balanced
+      } else {
+        (n.left.right.balance)
+        .when imbalanced_left then {
+          n.set_balance imbalanced_right
+          n.left.set_balance balanced
+        }
+        .when balanced then {
+          n.set_balance balanced
+          n.left.set_balance balanced
+        }
+        .when imbalanced_right then {
+          n.set_balance balanced
+          n.left.set_balance imbalanced_left
+        }
+        n.left.right.set_balance balanced
+        n.set_left (n.left.rotate_left)
+      }
+      result := n.rotate_right
+      rebalance := FALSE
+    }
+    .when balanced then {
+      n.set_balance imbalanced_left
+      result := n
+    }
+    .when imbalanced_right then {
+      n.set_balance balanced
+      result := n
+      rebalance := FALSE
+    }
+    result
+  )
+  [
+    +? {Result != NULL}
+    +? {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    +? {
+      rebalance = (node_height Result > 1 +
+      Old node_height (n.right).max (node_height (n.left) - 1))
+    }
+  ]
+
+  - right_grown n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  [
+    -? {rebalance}
+    -? {n != NULL}
+    -? {node_height (n.right) - 1 - node_height (n.left) = n.balance}
+  ]
+  ( + result:AVL_TREE_NODE(V)
+
+    (n.balance)
+    .when imbalanced_right then {
+      (n.right.balance = imbalanced_right).if {
+        n.set_balance balanced
+        n.right.set_balance balanced
+      } else {
+        (n.right.left.balance)
+        .when imbalanced_right then {
+          n.set_balance imbalanced_left
+          n.right.set_balance balanced
+        }
+        .when balanced then {
+          n.set_balance balanced
+          n.right.set_balance balanced
+        }
+        .when imbalanced_left then {
+          n.set_balance balanced
+          n.right.set_balance imbalanced_right
+        }
+
+        n.right.left.set_balance balanced
+        n.set_right (n.right.rotate_right)
+      }
+      result := n.rotate_left
+      rebalance := FALSE
+    }
+    .when balanced then {
+      n.set_balance imbalanced_right
+      result := n
+    }
+    .when imbalanced_left then {
+      n.set_balance balanced
+      result := n
+      rebalance := FALSE
+    }
+    result
+  )
+  [
+    +? {Result != NULL}
+    +? {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    +? {
+      rebalance = (node_height Result > 1 +
+      Old node_height (n.left).max (node_height (n.right) - 1))
+    }
+  ]
+
+  - fast_do_remove (n:AVL_TREE_NODE(V),e:V) :AVL_TREE_NODE(V) <-
+  ( + result:AVL_TREE_NODE(V)
+
+    (n = NULL).if {
+      rebalance := FALSE
+    }.elseif {e = n.item} then {
+      (n.left = NULL).if {
+        result := n.right
+        exchange_and_discard (n, n)
+      }.elseif {n.right = NULL} then {
+        result := n.left
+        exchange_and_discard (n, n)
+      } else {
+        n.set_left (remove_right (n, n.left))
+        (rebalance).if {
+          result := left_shrunk n
+        } else {
+          result := n
+        }
+      }
+    }.elseif {e < n.item} then {
+      n.set_left (do_remove (n.left, e))
+      (rebalance).if {
+        result := left_shrunk n
+      } else {
+        result := n
+      }
+    } else {
+      ? {e > n.item}
+      n.set_right (do_remove (n.right, e))
+      (rebalance).if {
+        result := right_shrunk n
+      } else {
+        result := n
+      }
+    }
+    result
+  )
+  [
+    +? {Result = NULL ||
+      {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    }
+    +? {rebalance = (node_height Result < Old node_height n)}
+  ]
+
+  - do_remove (n:AVL_TREE_NODE(V),e:V) :AVL_TREE_NODE(V) <-
+  ( + result:AVL_TREE_NODE(V)
+
+    (n = NULL).if {
+      rebalance := FALSE
+    }.elseif {e < n.item} then {
+      n.set_left (do_remove (n.left, e))
+      (rebalance).if {
+        result := left_shrunk n
+      } else {
+        result := n
+      }
+    }.elseif {e > n.item} then {
+      n.set_right (do_remove (n.right, e))
+      (rebalance).if {
+        result := right_shrunk n
+      } else {
+        result := n
+      }
+    }.elseif {n.left = NULL} then {
+      result := n.right
+      exchange_and_discard (n, n)
+    }.elseif {n.right = NULL} then {
+      result := n.left
+      exchange_and_discard (n, n)
+    } else {
+      n.set_left (remove_right (n, n.left))
+      (rebalance).if {
+        result := left_shrunk n
+      } else {
+        result := n
+      }
+    }
+    result
+  )
+  [
+    +? {Result = NULL ||
+    {Result.balance = node_height (Result.right) - node_height (Result.left)}}
+    +? {rebalance = (node_height Result < Old node_height n)}
+  ]
+
+  - remove_right (n1, n2:AVL_TREE_NODE(V)) :AVL_TREE_NODE(V) <-
+  [
+    -? {n1 != NULL}
+    -? {n2 != NULL}
+  ]
+  ( + result:AVL_TREE_NODE(V)
+
+    (n2.right = NULL).if {
+      result := n2.left
+      exchange_and_discard (n1, n2)
+    } else {
+      n2.set_right (remove_right (n1, n2.right))
+      (rebalance).if {
+        result := right_shrunk n2
+      } else {
+        result := n2
+      }
+    }
+    result
+  )
+  [
+    +? {Result = NULL ||
+    {Result.balance = node_height (Result.right) - node_height (Result.left)}}
+    +? {rebalance = (node_height Result < Old node_height n2)}
+  ]
+
+  - left_shrunk n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  [
+    -? {rebalance}
+    -? {n != NULL}
+    -? {node_height (n.right) - node_height (n.left) - 1 = n.balance}
+  ]
+  ( + result:AVL_TREE_NODE(V)
+
+    (n.balance)
+    .when imbalanced_left then {
+      n.set_balance balanced
+      result := n
+    }
+    .when balanced then {
+      n.set_balance imbalanced_right
+      result := n
+      rebalance := FALSE
+    }
+    .when imbalanced_right then {
+      (n.right.balance)
+      .when imbalanced_left then {
+        (n.right.left.balance)
+        .when imbalanced_left then {
+          n.set_balance balanced
+          n.right.set_balance imbalanced_right
+        }
+        .when balanced then {
+          n.set_balance balanced
+          n.right.set_balance balanced
+        }
+        .when imbalanced_right then {
+          n.set_balance imbalanced_left
+          n.right.set_balance balanced
+        }
+
+        n.right.left.set_balance balanced
+        n.set_right (n.right.rotate_right)
+      }
+      .when balanced then {
+        n.set_balance imbalanced_right
+        n.right.set_balance imbalanced_left
+        rebalance := FALSE
+      }
+      .when imbalanced_right then {
+        n.set_balance balanced
+        n.right.set_balance balanced
+      }
+      result := n.rotate_left
+    }
+    result
+  )
+  [
+    +? {Result != NULL}
+    +? {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    +? {rebalance = (node_height Result < 1 +
+    Old node_height (n.right).max (node_height (n.left) + 1))}
+  ]
+
+  - right_shrunk n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  [
+    -? {rebalance}
+    -? {n != NULL}
+    -? {node_height (n.right) + 1 - node_height (n.left) = n.balance}
+  ]
+  ( + result:AVL_TREE_NODE(V)
+
+    (n.balance)
+    .when imbalanced_right then {
+      n.set_balance balanced
+      result := n
+    }
+    .when balanced then {
+      n.set_balance imbalanced_left
+      result := n
+      rebalance := FALSE
+    }
+    .when imbalanced_left then {
+      (n.left.balance)
+      .when imbalanced_right then {
+        (n.left.right.balance)
+        .when imbalanced_right then {
+          n.set_balance balanced
+          n.left.set_balance imbalanced_left
+        }
+        .when balanced then {
+          n.set_balance balanced
+          n.left.set_balance balanced
+        }
+        .when imbalanced_left then {
+          n.set_balance imbalanced_right
+          n.left.set_balance balanced
+        }
+        n.left.right.set_balance balanced
+        n.set_left (n.left.rotate_left)
+      }
+      .when balanced then {
+        n.set_balance imbalanced_left
+        n.left.set_balance imbalanced_right
+        rebalance := FALSE
+      }
+      .when imbalanced_left then {
+        n.set_balance balanced
+        n.left.set_balance balanced
+      }
+      result := n.rotate_right
+    }
+    result
+  )
+  [
+    +? {Result != NULL}
+    +? {Result.balance = node_height (Result.right) - node_height (Result.left)}
+    +? {rebalance = (node_height Result < 1 +
+    Old node_height (n.left).max (node_height (n.right) + 1))}
+  ]
+
+  - exchange_and_discard (n1, n2:AVL_TREE_NODE(V)) <-
+  [
+    -? {n1 != NULL}
+    -? {n2 != NULL}
+  ]
+  (
+    abstract
+  )
+  [
+    +? {map_dirty}
+    +? {count = Old count - 1}
+    +? {rebalance}
+  ]
+
+  - clear_nodes node:AVL_TREE_NODE(V) <-
+  (
+    (node.left != NULL).if {
+      clear_nodes (node.left)
+    }
+    (node.right != NULL).if {
+      clear_nodes (node.right)
+    }
+    discard_node node
+  )
+
+  - node_height node:AVL_TREE_NODE(V) :INTEGER <-
+  ( + result:INTEGER
+
+    (node != NULL).if {
+      result := node.height
+    }
+    result
+  )
+
+Public
+
+  // Looking and searching:
+
+  - has e:V :BOOLEAN <-
+  // Is element `e' in the set?
+  (
+    (root != NULL) && {root.has e}
+  )
+
+  - fast_has e:V :BOOLEAN <-
+  // Is element `e' in the set?
+  (
+    (root != NULL) && {root.fast_has e}
+  )
+
+SELF
+
+  // Iterating internals:
+
+  - build_map <-
+  [
+    "build_needed" -? {map_dirty}
+  ]
+  (
+    map.clear; //_count
+    (count > 0).if {
+      root.map_in map
+    }
+    map_dirty := FALSE
+  )
+  [
+    "build_done" +? {! map_dirty}
+  ]
+
+  + map:ARRAY(AVL_TREE_NODE(V))
+  // Elements in a row for iteration. See `build_map'.
+
+  + map_dirty:BOOLEAN
+  // True when the map needs to be built again for the iterators.
+  // See `build_map'.
+
+SELF
+
+  - new_node:AVL_TREE_NODE(V) <-
+  (
+    a_new_node
+  )
+
+  - a_new_node:AVL_TREE_NODE(V) <-
+  (
+    abstract
+    NULL
+  )
+
+  - discard_node n:AVL_TREE_NODE(V) <-
+  [
+    -? {n != NULL}
+  ]
+  (
+    abstract
+  )
+
+  // invariant
+
+//  [
+//    -? {map != NULL}
+//    -? {(! map_dirty) -> (map.count = count)}
+//    -? {(count > 0) -> ((root != NULL) && {root.count = count})}
+//  ]
+

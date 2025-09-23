@@ -1,0 +1,58 @@
+Header
+
+  + name        := EXPR_SUP;
+
+  /*Superior binary comparison expression.*/
+
+Inherit
+
+  + parent_expr_binary_cmp:Expanded EXPR_BINARY_CMP
+
+Public
+
+  - symbol:STRING_ALIAS := ">"
+
+  //
+  // Execute.
+  //
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 > C2 -> TRUE/FALSE
+  ( + result:PROTOTYPE_CST
+
+    (left_cst.value > right_cst.value).if {
+      result := PROTOTYPE_CST.create position type (type_true.default)
+    } else {
+      result := PROTOTYPE_CST.create position type (type_false.default)
+    }
+    left_cst .remove
+    right_cst.remove
+
+    result
+  )
+
+  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0 > E (unsigned) -> FALSE
+  ( + result:EXPR
+
+    ((left_cst.value = 0) && {right.static_type.raw.name.first = 'U'}).if {
+      result := PROTOTYPE_CST.create position type (type_false.default)
+      left .remove
+      right.remove
+    }
+    result
+  )
+
+  - exec:EXPR <-
+  //-- E > E -> FALSE
+  ( + result:PROTOTYPE_CST
+
+    (left ~= right).if {
+      result := PROTOTYPE_CST.create position type (type_false.default)
+      left .remove
+      right.remove
+    }
+
+    result
+  )
+

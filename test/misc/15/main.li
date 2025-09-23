@@ -1,0 +1,10 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  (
+    crash; // ok normal, vu que pas de Section Inherit
+  )

@@ -1,0 +1,13 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + i1,i2:ℤ
+    i1 := ℤ.init "F0123456789ABCDEF" base 16
+    i2 := i1 >> 4
+    //i1.print_hex; ' '.print
+    //i2.print_hex; '\n'.print
+    TEST.check (i2.to_hexadecimal) string "F0123456789ABCDE"
+  )
+ 

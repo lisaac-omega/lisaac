@@ -1,0 +1,56 @@
+Header
+  
+  + name         := VECTOR;
+  /*
+  Simple struct for table.
+  */
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + first:INTEGER
+  
+  + second:INTEGER
+  
+  //
+  // Creation.
+  //
+  
+  - create:SELF <- clone
+  
+  - create f:INTEGER and s:INTEGER :SELF <-
+  ( + result:SELF
+    
+    result := clone
+    result.make f and s
+    result
+  )
+  
+  - make f:INTEGER and s:INTEGER <-
+  (
+    first  := f
+    second := s
+  )
+  
+  //
+  // Manager.
+  //
+  
+  - clear <-
+  (
+    first  := 0
+    second := 0
+  )
+  
+  - put_first n:INTEGER <-
+  (
+    first := n
+  )
+
+  - put_second n:INTEGER <-
+  (
+    second := n
+  )

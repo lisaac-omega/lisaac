@@ -1,0 +1,53 @@
+Header
+  + name := EXT; 
+
+Inherit
+  //+ parent_tok_itm:Expanded TOK_ITM
+  + parent_expr:Expanded EXPR
+  //- parent_op:OP := OP
+  
+Private  
+  - stack_ext:Expanded ARRAY (Strict EXT)
+        
+Public
+  
+  + ttok:TTOK
+  - type:TYPE <- ttok.type
+  
+  + lttok:TTOK
+  
+  + persistant:BOOLEAN
+  
+  - new:SELF <-
+  ( + r:SELF; (stack_ext.is_empty).if { r := clone; } else { r := stack_ext.pop; }; r)
+  - free <- stack_ext.add_last Self
+  
+  //
+  // PARSER / DRAW
+  //
+  
+  - new_parse t:INTEGER <-
+  (
+    (rd_ext).if {
+      col (LOOK.external) sub (pos_i.pt - Old pos_i.pt)
+      (read_c ':').if {
+        persistant := read_c '('
+        ttok := TTOK.parse_sp (TTOK.tpro)
+        (ttok = NULL).if { err syntax msg "Incorrect type."; }
+        (read_c '{').if {
+          lttok := TTOK.parse_sp (TTOK.tvec)
+          (lttok = NULL).if { err syntax msg "Incorrect live type list."; }
+          (! read_c '}').if { err warning msg "Added '}'. (3)"; }
+        }
+        ((persistant) && {! read_c ')'}).if { err warning msg "Added ')'. (6)"; }
+      } else { ttok := NULL; }
+    }
+  )
+  
+  - finalize t:INTEGER db l:INTEGER de e:INTEGER <-
+  ( t
+    .when 0 then { parent_tok_itm.finalize t db l de e; }
+    .when 1 then { parent_tok_itm.finalize t db (l+1) de (e-1); }
+  )
+        
+  - run <- push Self

@@ -1,0 +1,106 @@
+Header
+
+  + name := MANDELBROT;
+  
+Inherit
+  
+  - parent_clone : CLONE := CLONE
+  
+Public
+   
+  - main <-
+  ( + w,wbyte, h, bit_num:INTEGER
+    + iter:INTEGER
+    + byte_acc:INTEGER_8
+    + four:REAL_64
+    + delta0,delta1:REAL_64
+    + mod_w,wm1,h2,y,ofs:INTEGER
+    + civ:REAL_64
+    + scr:ARRAY(INTEGER_8)
+    
+    iter := 100
+    four := 4.0
+            
+    h := w := 100
+    
+    h2 := h / 2
+    scr := ARRAY(INTEGER_8).create_with_capacity (h2*w)
+        
+    mod_w := 8 - (w & 7)
+    wm1   := w - 1
+    wbyte := (w + 7) / 8
+        
+    {y <= h2}.while_do {
+      
+      civ := (y * 2).to_real_64 / h - 1.0
+      
+      0.to wm1 by 2 do { x:INTEGER
+        + crv0,crv1:REAL_64
+        + zrv0,zrv1:REAL_64
+        + ziv0,ziv1:REAL_64
+        + trv0,trv1:REAL_64
+        + tiv0,tiv1:REAL_64
+        + i:INTEGER
+        
+        crv0 := (x * 2).to_real_64 / w - 1.5
+        crv1 := ((x + 1) * 2).to_real_64 / w - 1.5
+        {
+          ziv0 := (zrv0 * ziv0) + (zrv0 * ziv0) + civ
+          ziv1 := (zrv1 * ziv1) + (zrv1 * ziv1) + civ
+          
+          zrv0 := trv0 - tiv0 + crv0
+          zrv1 := trv1 - tiv1 + crv1
+          
+          trv0 := zrv0 * zrv0
+          trv1 := zrv1 * zrv1
+          
+          tiv0 := ziv0 * ziv0
+          tiv1 := ziv1 * ziv1
+          
+          delta0 := four - trv0 - tiv0
+          delta1 := four - trv1 - tiv1
+          
+          i  := i + 1
+        }.do_while {
+          (i < iter) && {
+            (delta0 >= 0) || {delta1 >= 0}
+          }
+        }
+        byte_acc := byte_acc << 2
+        
+        (delta0 >= 0).if {
+          byte_acc := byte_acc | 02h
+        }
+        (delta1 >= 0).if {
+          byte_acc := byte_acc | 01h
+        }
+
+        bit_num := bit_num + 2
+        (bit_num = 8).if {          
+          scr.add_last byte_acc
+          byte_acc := bit_num := 0
+        }
+      }
+      (bit_num != 0).if {
+        byte_acc := byte_acc << mod_w
+        scr.add_last byte_acc
+        byte_acc := bit_num := 0
+      }
+      y := y + 1
+    }
+    (scr.lower).to (scr.upper) do { o:INTEGER
+      scr.at o.to_character.print
+    }
+    
+    ((h & 1) = 0).if {      
+      ofs := scr.count - wbyte*2
+    } else {
+      ofs := scr.count - wbyte
+    }
+    {      
+      ofs.to (ofs+wbyte-1) do { x:INTEGER
+        scr.at x.to_character.print
+      }
+      ofs := ofs - wbyte
+    }.do_while {ofs > 0}
+  )

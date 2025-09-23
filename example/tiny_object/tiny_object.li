@@ -1,0 +1,90 @@
+Header
+
+  + name := TINY_OBJECT;
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Private
+
+  //
+  // Command.
+  //
+
+  - usage: STRING_ALIAS := "Usage: tiny_object <input_file[.to]>\n"
+
+  - display_usage <-
+  (
+    usage.print
+    exit exit_failure_code
+  )
+
+  //
+  // Options.
+  //
+
+  - read_options <-
+  ( + cmd:STRING_ALIAS
+    + j:INTEGER
+
+    j := 1
+    {j > COMMAND_ARGS.upper}.until_do {
+      cmd := COMMAND_ARGS.at j
+      (input_name != NULL).if {
+        display_usage
+      }
+      input_name := cmd
+      j := j+1
+    }
+
+    (input_name = NULL).if {
+      display_usage
+    }
+  )
+
+Public
+
+  - main <-
+  ( + file_input:POINTER
+    + sz:INTEGER
+    + slot_master:SLOT
+
+    read_options
+
+    // Read file.
+    file_input := FILE_UTILS.open_read input_name
+    sz := FILE_UTILS.size file_input
+    source := STRING_BUFFER.create (sz+1)
+    FILE_UTILS.read file_input in source size sz
+    FILE_UTILS.close file_input
+
+    // Parse grammar.
+    PARSER.parse
+    /*
+    "Parsing ok\n".print
+
+    "Display\n".print
+    (program.lower).to (program.upper) do { i:INTEGER
+      program.item i.print
+    }
+    */
+    // -- VFT --
+    (is_vft).if {
+      CLASS.compute_vft
+      CALL.compute_index
+    }
+    // -- VFT --
+
+    "Display VFT :\n".print
+    (program.lower).to (program.upper) do { i:INTEGER
+      program.at i.print_vft
+    }
+    "Execute...\n".print
+    (class_master = NULL).if {
+      semantic_error (program.first.position) message "Slot master is needed."
+    }
+    slot_master := class_master.get_slot keyword_master
+    slot_master.run (class_master)
+  )
+  

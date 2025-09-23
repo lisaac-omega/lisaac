@@ -1,0 +1,188 @@
+Header
+  + name := ALIAS V TO A; 
+  /*
+   Aliaser with table + linked list.
+   ALIAS V TO A; Example: ALIAS STRING_BUFFER TO STRING_ALIAS
+  */
+  - external := `
+#ifndef H_TABLE
+unsigned int hash_table[]={
+193,389,769,1543,3079,6151,12289,24593,49157,98317,196613,393241,
+786433,1572869,3145739,6291469,12582917,25165843,50331653,100663319,
+201326611,402653189,805306457,1610612741};
+#define H_TABLE
+#endif
+`;
+  
+Private
+
+  - buckets:NATIVE_ARRAY(HASHED_SET_NODE A)
+  - id_capacity:INTEGER
+  - capacity:INTEGER; // Of the `buckets' storage area.
+  
+Private
+  
+  - is_registered_intern e:A :BOOLEAN <-
+  //[ ? {e.hash_code >= 0}; ]
+  ( + hash:INTEGER
+    + node:HASHED_SET_NODE A
+    + elt:A
+    + result:BOOLEAN
+    
+    (capacity != 0).if {
+      hash := e.hash_code
+      node := buckets.at (hash % capacity)
+      {(node = NULL) || {((elt := node.item).hash_code = hash) && {elt = e}}}.until_do {
+        node := node.next
+      }
+      result := node != NULL
+    }
+    result
+  )
+  
+  - init <-
+  ( + idx:INTEGER
+    idx := id_capacity
+    capacity := `hash_table[@idx]`:INTEGER
+    buckets := NATIVE_ARRAY(HASHED_SET_NODE A).create capacity
+    id_capacity := id_capacity + 1
+  )
+  
+  - add e:A <-
+  [
+    //? {e != NULL}
+    /*? {! is_registered_intern e};*/
+  ]
+  ( + idx,i:INTEGER
+    + node,node2:HASHED_SET_NODE A
+    + old_buckets:NATIVE_ARRAY(HASHED_SET_NODE A)
+    
+//    e.refresh_hash_code
+    /*
+    (is_registered_intern e).if {
+      e.print; '\n'.print
+      print
+      UTILS.crash_with_message "ALIAS.add"
+    }
+    */    
+    (capacity = count).if { // increase_capacity.      
+      i := capacity - 1
+      old_buckets := buckets
+      idx := id_capacity
+      capacity := `hash_table[@idx]`:INTEGER
+      buckets := NATIVE_ARRAY(HASHED_SET_NODE A).create capacity
+      id_capacity := id_capacity + 1
+      {i < 0}.until_do {
+        node := old_buckets.at i
+        {node = NULL}.until_do {
+          node2 := node.next
+          idx := node.item.hash_code % capacity
+          (idx < 0).if {
+            + t:NATIVE_ARRAY CHARACTER
+            "Crash ALIAS TO : hash code < 0".println
+            node.item.hash_code.println
+            t := node.item.to_external
+            `printf("%p\n",(void*)@t)`
+            //node.item.println
+            idx := 0
+          }
+          node.set_next (buckets.at idx)
+          buckets.at idx put node
+          node := node2
+        }
+        i := i - 1
+      }
+    }
+    idx := e.hash_code % capacity
+    node := HASHED_SET_NODE A.create e next (buckets.at idx)
+    buckets.at idx put node
+    count := count + 1
+  )
+  
+Public
+  
+  - count:INTEGER
+  
+  - is_registered e:V :BOOLEAN <-
+  //[ ? {e.hash_code >= 0}; ]
+  ( + hash:INTEGER
+    + node:HASHED_SET_NODE A
+    + elt:A
+    + result:BOOLEAN
+    
+    (capacity != 0).if {
+      hash := e.hash_code
+      node := buckets.at (hash % capacity)
+      {(node = NULL) || {((elt := node.item).hash_code = hash) && {e.is_equal_alias elt}}}.until_do {
+        node := node.next
+      }
+      result := node != NULL
+    }
+    result
+  )
+  
+  - register e:V :A <-
+  //[ ? {e.hash_code >= 0}; ]
+  ( + hash:INTEGER
+    + node:HASHED_SET_NODE A
+    + result,elt:A
+    
+    (capacity = 0).if {
+      result := e.create_alias; //A.create_copy e
+      add result
+    } else {      
+      hash := e.hash_code
+      node := buckets.at (hash % capacity)
+      {(node = NULL) || {
+          ((elt := node.item).hash_code = hash) && {e.is_equal_alias elt}
+      }}.until_do {
+        node := node.next
+      }
+      (node = NULL).if {      
+        result := e.create_alias; //A.create_copy e
+        add result
+      } else {
+        result := node.item
+      }
+    }
+    result
+  )
+  
+  - force_register e:V :A <-
+  //[ ? {e.hash_code >= 0}; ]
+  ( + result:A
+    /*
+    (is_registered e).if {
+      UTILS.crash_with_message "ALIAS.force_register (1)"
+    }
+    */
+    result := A.create_copy e
+    add result
+    /*
+    (result.hash_code != e.hash_code).if {
+      UTILS.crash_with_message "ALIAS.force_register (2)"
+    }
+    */
+    result
+  )
+  
+  - print <-
+  ( + node:HASHED_SET_NODE A
+    0.to (capacity-1) do { i:INTEGER
+      node := buckets.at i
+      (node != NULL).if {
+        i.print; '='.print
+        {
+          node.item.print
+          '('.print
+          node.item.hash_code.print
+          '@'.print
+          node.item.to_pointer.print
+          ')'.print
+          ' '.print
+          node := node.next
+        }.do_until {node = NULL}
+        '\n'.print
+      }
+    }
+  )

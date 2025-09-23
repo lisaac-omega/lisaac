@@ -1,0 +1,24 @@
+Header
+  
+  + name := PEN_CLOSE;
+  
+Inherit
+  
+  + parent_pen_cmd:Expanded PEN_CMD
+  
+Public
+  
+  - to_path pc:PATH_CACHE <-
+  (
+    pc.paths.last.close
+  )
+  
+  - free <- 
+  (
+    // Nothing.
+  )
+  
+  - svg_append_in buf:STRING_BUFFER <-
+  (
+    buf.add_last 'Z'
+  )

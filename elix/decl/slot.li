@@ -1,0 +1,1021 @@
+Header
+  + name := SLOT;
+
+Inherit
+  + parent_decl:Expanded DECL
+  + parent_tok_drw:Expanded TOK_DRW
+Insert
+  - parent_lix_buf:LIX_BUF := LIX_BUF
+    
+Private
+  - stk_s:Expanded ARRAY (Strict SLOT)
+  
+Public
+  - di_major:INTEGER <-
+  ( + r:INTEGER
+    r := di
+    (rmk     != NULL).if { r := r + rmk.di;     }
+    (require != NULL).if { r := r + require.di; }
+    (big_body!= NULL).if { r := r + big_body.di;}
+    (ensure  != NULL).if { r := r + ensure.di; }
+    r
+  )
+  
+  //  + key:STRING_ALIAS; // Basic name
+  + node:NODE
+  + name_id:STRING_ALIAS
+  + name_idz:STRING_ALIAS; // \0 name \0 (For Liz)
+
+  + style:CHARACTER; // 'T' or 'O'
+  
+  + chapter:CHAPTER
+  + section:SECTION
+    
+  + proto:PROTO; // A FAIRE <- toks.first.like PROTO
+    
+  + index:INTEGER := -1
+  
+  + self:INTEGER
+  + clonable:BOOLEAN
+  
+  + arg:Expanded ARRAY ARG
+  
+  - type:TYPE <- ttok.type
+  + ttok:TTOK
+  
+  + rmk:SLOT_RMK
+  
+  + require:SLOT_CONTRACT
+  + req_add:BOOLEAN := TRUE
+  
+  + affect:CHARACTER; // '?' or ':' or '<' (?=, :=, <-)
+  + big_body:SLOT_BODY
+  + body:EXPR
+      
+  + ensure:SLOT_CONTRACT
+  + ens_add:BOOLEAN := TRUE
+    
+  + inlinable:BOOLEAN
+  
+  + prio:INTEGER
+  + right:BOOLEAN
+  + swap:BOOLEAN
+  
+  + eye:INTEGER
+  - eye_open:BOOLEAN <- proto.src.look eye_str at (my_pos+eye)
+   
+Public
+    
+  - init_node <- // A METTRE DANS NODE...
+  ( + i,j:INTEGER
+    + c:CHARACTER
+    + sl:SLOT
+    + ty:TYPE
+    
+    // ATT. la position du self est toujours à 0 pour l'instant !!!
+    "SLOT:init nide".println
+    ((sl := proto.lookup name_id filter (3+4)) != NULL).if {
+      node := sl.node
+      //"In ".print; proto.type.name_id.print; " slot ".print; name_id.print; " redefined.".println
+    } else { // New slot !      
+      STRING.tmp { w:STRING_BUFFER
+        (style = 'T').if {
+          node := NODE.rslot
+          /*
+          {i <= name_id.upper}.while_do {
+            c := name_id.at i
+            (c = '\0').if {
+              ty := arg.at j.type
+              node := node.n_arg ty rec (j=self)
+              (i,j) := (i + 1,j + 1)
+            } else {
+              i := parse_idf i with w
+            }
+          };*/
+        } else {
+          /*
+          ty := arg.at 0.type
+          (arg.count = 2).if {
+            node := NODE.rinfix
+            parse_idf 1 with w
+            node := node.n_arg ty rec TRUE
+          } else {  
+            node := (name_id.first = '\0').ok (NODE.rpostfix) or (NODE.rprefix)
+            parse_idf ((name_id.first = '\0').to_integer) with w
+            node := node.n_arg ty rec TRUE
+          }
+          */
+        }
+      }
+    }
+    //((n.at 1 = 'a') && {n.at 2 = 'n'} && {n.at 3 = 'g'}).if { node.set (NODE.gly_bit); }
+    node.slot.add_last Self
+    ? {index = -1}
+  )
+  
+  - new:SELF <- ( + r:SELF; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
+  
+  - free <-
+  ( + tp:TPRO
+    stk_s.add_last Self
+    parse_level := 0
+    proto.slot.remove_value_force Self
+    ((ttok != NULL) && {(tp ?= type) != NULL} && {tp.proto != NULL}).if { 
+      (section.is_inherit).if {
+        tp.proto.child_inherit.remove_value_force Self
+      } else { // Insert
+        tp.proto.child_insert .remove_value_force Self
+      }
+    }
+    arg.foreach { a:ARG; (a != NULL).if { a.free; }; }; arg.clear
+    (ttok != NULL).if { ttok.free; ttok := NULL; }
+    req_add := ens_add := TRUE
+    require := ensure := big_body := rmk := NULL
+    (body != NULL).if { body.free; body := NULL; }
+  )
+  
+  /*
+  - go_here <-
+  ( + t,p:INTEGER
+    (t,p) := proto.src.tok_drw_to_pti Self
+    proto.src.set_last_pti p
+    PAGE.cur_pg.set_buffer (proto.src)
+  );*/
+   
+  - print_debug <-
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      proto.type.txt_in tmp sty NULL
+      tmp.print; ':'.print
+    }
+    name_id.print
+    (type != NULL).if { ':'.print; type.print; }
+    '\n'.print
+  )
+  
+Private
+  
+  - slot_parent:Expanded ARRAY SLOT
+  
+  - lookup p:PROTO <-
+  ( + s,sp:SLOT
+    + np:PROTO
+    + to:TPRO
+    + i:INTEGER
+    {
+      (i <= p.slot_order.upper) &&
+      {((sp := p.slot_order.at i).section.style & SECTION.p_insert) != 0}
+    }.while_do {
+      to ?= sp.type
+      ((to != NULL) && {to.proto != NULL}).if {
+        np := to.proto
+        s := node.search_slot_in np
+        (s != NULL).if { slot_parent.add_last s; }
+        lookup np
+      }
+      i := i + 1
+    }
+  )
+  
+Public
+  + end_name:INTEGER
+  + end_mark:INTEGER
+  
+  + end_code:INTEGER
+  //+ pt_asso:INTEGER
+  
+  //
+  // PARSE / DRAW
+  //
+  
+  + parse_level:INTEGER
+  
+  - detect:BOOLEAN <-
+  (pos_i + 2 < upper) && {look "  "} && {(at (pos_i+2) = '+') || {at (pos_i+2) = '-'}} && {
+    (section,chapter) := get_section_chapter;
+    section != NULL
+  }
+  
+  - get_section_chapter:(SECTION,CHAPTER) <-
+  ( + s:SECTION;
+    + c:CHAPTER;
+    + i:INTEGER;
+    i := tok_cur - 1
+    {(i > 0) && {(s = NULL) || {c = NULL}}}.while_do {
+      (s = NULL).if { s ?= toks.at i; }
+      (c = NULL).if { c ?= toks.at i; }
+      i := i - 1
+    }
+    s,c
+  );
+  
+  - parse <-
+  ( + a:ARG
+    + idf_beg:BOOLEAN
+  
+    LOCAL.reset_index
+    // SECTION    
+    (section,chapter) := (SLOT section, SLOT chapter)
+    
+    // PROTO
+    proto := txt_buf.like LIX_BUF.proto
+    //
+    pos_i := pos_i + 2
+    clonable := buf.at pos_i = '+'
+    ? {(buf.at pos_i = '+') || {buf.at pos_i = '-'}}
+    drw 0 sub 0
+    pos_i := pos_i + 1
+    //
+    STRING.tmp2 { (n,nz:STRING_BUFFER)
+      (read_idf).if {
+        col (LOOK.slot) sub (last_str.count)
+        n.copy last_str; idf_beg := TRUE
+        nz.copy last_str
+      }
+      a := ARG.parse_sp 01b; //read_arg FALSE self TRUE
+      (read_c '\'').if {
+        (idf_beg).if { err syntax msg "Incorrect slot identifier."; }
+        (a != NULL).if {
+          (! a.is_self).if { err syntax msg "Incorrect slot identifier."; }
+          arg.add_last a
+        }
+        rd_operator
+      } else {
+        ((a = NULL) || {! a.is_self}).if {
+          arg.add_last NULL; // -> Self
+          nz.add_first '\0'
+          idf_beg := FALSE
+        }
+        style := 'T'
+        (a != NULL).if {
+          arg.add_last a
+          nz.add_last '\0'
+          skip_sp_ln
+          {read_idf}.while_do {
+            col (LOOK.slot) sub (last_str.count)
+            (! n.is_empty).if { n.add_last ' '; }
+            n.append last_str; nz.append last_str
+            ((a := ARG.parse_sp 00b) != NULL).if {
+              arg.add_last a; nz.add_last '\0'
+            }
+            skip_sp_ln
+          }
+        }
+        name_id := n.to_string_alias
+        name_idz:= nz.to_string_alias
+        //name_id.println
+        ((arg.count > 2) && {section.is_external}).if {
+          err syntax msg "Incorrect in `Section External'.";
+        }
+      }
+    }
+    end_name := pos_i.pt - pt_b.pt
+    //
+    (read_affect).if {
+      affect := last_str.first
+      col (LOOK.symbol) sub (last_str.count)
+    } else { affect := ' '; }
+    ((affect = ' ') && {read_c ':'}).if {
+      col (LOOK.symbol) sub 1
+      eye := pos_i.pt - pt_b
+      ttok := TTOK.parse_sp (TTOK.tres)
+      ((ttok = NULL) || {ttok.type = NULL}).if {
+        err syntax msg "Type result not found."
+      }
+      (read_affect).if {
+        affect := last_str.first
+        col (LOOK.symbol) sub (last_str.count)
+      } else { affect := ' '; }
+    } else {
+      ((section != NULL) && {section.is_parent}).if {
+        err semantic msg "Type result is needed for inheritance slot."
+      }
+    }
+    skip_sp; // Pas utile
+    end_mark := pos_i.pt - pt_b.pt
+    //
+    (affect = ' ').if {
+      (read_c ';').if { col (LOOK.symbol) sub 1; }
+      skip_sp
+      rd_rem_cpp.if {
+        end_code := pos_i.pt - pt_b.pt
+      } else {
+        end_code := pos_i.pt - pt_b.pt
+        skip_until '\n'
+        (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+      }
+      parse_level := 2
+    } else {
+      (read_c '\n').if {
+        toks.at tok_cur.inc_nl
+        parse_level := 1
+      } else {
+        skip_until '\n'
+        (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+        parse_level := 2
+      }
+    }
+    add_slot_in_proto
+    //end_code := cpti - pt_b
+    //cpti := pt_b + di
+  )
+  
+  - next_parse <-
+  (    
+    (parse_level)
+    .when 1 then {
+      (SLOT_RMK.detect).if {
+        rmk := SLOT_RMK.new
+        tok_cur := tok_cur + 1
+        toks.at tok_cur add rmk
+        rmk.product
+      }
+      (SLOT_CONTRACT.detect).if {
+        require := SLOT_CONTRACT.new
+        require.set_slot Self
+        require.set_require
+        tok_cur := tok_cur + 1
+        toks.at tok_cur add require
+        require.product
+      }
+      (SLOT_BODY.detect).if {
+        big_body := SLOT_BODY.new
+        big_body.set_slot Self
+        tok_cur := tok_cur + 1
+        toks.at tok_cur add big_body
+        big_body.product
+      }
+      (SLOT_CONTRACT.detect).if {
+        ensure := SLOT_CONTRACT.new
+        ensure.set_slot Self
+        tok_cur := tok_cur + 1
+        toks.at tok_cur add ensure
+        ensure.product
+      }
+    }
+    .when 2 then { // Small body or no body, Just append comment
+      (SLOT_RMK.detect).if {
+        rmk := SLOT_RMK.new
+        tok_cur := tok_cur + 1
+        toks.at tok_cur add rmk
+        rmk.product
+      }
+    }
+  )
+    
+  - rd_operator <-
+  ( + a:ARG
+    style := 'O'
+    (! read_symbol).if { err syntax msg "Operator is needed."; }
+    (last_str = "!=").if { err syntax msg "Incorrect operator."; }
+    name_id := last_str
+    (! read_c '\'').if { err warning msg "Added `''."; };
+    col (LOOK.operator) sub (last_str.count+2)
+    swap := word "<>"
+    ((word "Left") || {word "Right"}).if {
+      col (LOOK.keyword) sub (last_str.count)
+      right := (last_str = "Right")
+      ((! read_num FALSE) || {is_real}).if { err syntax msg "Priority level is needed or invalid."; }
+      prio := last_int
+      (! prio.in_range 1 to 99).if { err warning msg "Priority level is invalid [1..99]."; }
+      (! swap).if { swap := word "<>"; }
+    }
+    (arg.is_empty).if { // Prefix operator.
+      a := ARG.parse_sp 01b; /*read_arg FALSE self TRUE;*/
+      (a = NULL).if { err syntax msg "Operator declaration invalid."; }
+      arg.add_last a
+      prio := 100
+    } else {
+      a := ARG.parse_sp 00b; /*read_arg FALSE self FALSE;*/
+      (a != NULL).if { // Infix operator.        
+        arg.add_last a
+      } else { // suffix operator.	        
+        prio := 1000
+      }
+    }
+  )
+  
+Private
+  
+  - add_slot_in_proto <-
+  // Add slot in proto
+  ( + i:INTEGER
+    + ok:BOOLEAN
+    + tp:TPRO
+    (name_id != "\0").if {
+      /*(name.has_suffix "tst_child.li").if {
+        "Ajout slot ".print; name_id.println
+      };*/
+      ((section != NULL) && {section.is_parent}).if { // Parent
+        ((ttok = NULL) || {(tp ?= type) = NULL} || {tp.proto = NULL}).if {          
+          //err warning msg "Type incorrect."
+          //"Err type".println
+        } else {          
+          (tp.proto.src.is_empty).if { tp.proto.src.parse_all; }
+          (section.is_inherit).if {            
+            tp.proto.child_inherit.add_last Self
+          } else { // Insert
+            tp.proto.child_insert .add_last Self
+          }
+          ok := TRUE
+        }
+      } else { ok := TRUE; }
+    }
+    (ok).if {
+      {(i <= proto.slot.upper) && {pt_b > proto.slot.at i.my_pos}}.while_do {
+        i := i + 1
+      }
+      /*
+      ((name.has_suffix "tst_child.li") && {section.is_parent}).if {
+        "Slot ".print; name_id.print; " ".print; i.println
+      };*/
+      proto.slot.at i add Self
+    }
+  )
+  
+Public
+  
+  - eye_str:STRING_ALIAS := " /*EYE*/ "
+  
+  - draw_eye (x,y:REAL_32) <-
+  ( + p:POS
+    + mute:BOOLEAN
+    (proto.src != TOK_ITM.txt_buf).if { mute := TRUE; DIV.begin_mute; }
+    tex.push (0,0)
+    tex.set_xy (x,y)
+    p := my_pos
+    DIV.new.ico ((proto.src.look eye_str at (p+eye)).ok (LOOK.eye_open) or (LOOK.eye_close)) alpha 1 act
+    {b:DIV
+      + pp:POS
+      //"----------------".println
+      pp := my_pos
+      (proto.src.look eye_str at (pp+eye)).if {
+        proto.src.rm (pp+eye) times (eye_str.count)
+      } else {        
+        proto.src.at (pp+eye) add_text eye_str
+      }
+    }
+    tex.pop
+    (mute).if { DIV.end_mute; }
+  )
+    
+  - y_section:REAL_32
+  - super_slot:ARRAY SLOT := ARRAY SLOT.create_with_capacity 16
+  - begin_draw <-
+  (
+    (parse_level != 10).if { // Just for first draw.      
+      EXPR.local_list.clear
+      arg.foreach { a:ARG; (a != NULL).if { a.lst.foreach { l:LOCAL; EXPR.local_list.add_last l; }; }; }
+    };
+    //
+    y_section := tex.y
+    super_slot.copy_collection (proto.collect_parent Self)
+    (! super_slot.is_empty).if {
+      + t:TOK_DRW
+      t := super_slot.first
+      begin_line
+      pos_i := POS.new_ico 0
+      DIV.new.drw {
+        fill_color (LOOK.none)
+        text (tex.x+x_space/2,tex.y) msg "|"
+        text (tex.x+x_space/2,tex.y) msg "^"
+        tex.add_x (x_space*2)
+        tex.ascdes (asc_c,des_c)
+      } data t act { b:DIV
+        + td:TOK_DRW; // BSBS: doublon avec draw_out
+        td := b.data.like TOK_DRW
+        td.set_last_pos (td.my_pos+5)
+        PAGE.cur_pg.set_buffer (td.txt_buf)
+      }
+      footnote_right_tok t
+      last_div := NULL
+      pos_i := Old pos_i
+      pos_i := pos_i + 2
+    }
+  )
+    
+  - sub_draw <-
+  ( + liz:LIZ
+    - ia:INTEGER
+    + ri:INTEGER
+    + a:ARG
+    ri := pos_i.pt - pt_b.pt
+    //(ri = pt_asso).if { draw_asso_comm; }
+    (ri < end_mark).if {      
+      //
+      // Header
+      //
+      //"Header".println
+      (ri < end_name).if { // Name + Argument        
+        (ri = 3).if {          
+          ia := 0; //(arg.first = NULL).ok 1 or 0
+          //fill_color (LOOK.cols.at ((style = 'T').ok (LOOK.slot) or (LOOK.operator)))
+          //"Color".println
+        }
+        (ri >= 3).if {
+          (
+            (ri = 4) && {name_idz != NULL} &&
+            {(liz := LIZ.find name_idz) != NULL} && {liz != LIZ} && {! inside_glyph}
+          ).if {
+            liz.drw txt_buf color (LOOK.cols.at (LOOK.slot)) arg 
+            { i:INTEGER; (i <= arg.upper).ok (arg.at i) or NULL}
+            pos_i := pt_b + end_name
+          }.elseif {ia <= arg.upper} then {
+            a := arg.at ia
+            (a = NULL).if {
+              ia := ia + 1
+            }.elseif {a.now pos_i} then {
+              a.draw
+              ia := ia + 1
+              //fill_color (LOOK.cols.at ((style = 'T').ok (LOOK.slot) or (LOOK.operator)))
+            }
+          }
+        }
+      } else { // Type
+        ((ttok != NULL) && {ttok.now pos_i}).if { ttok.draw }
+      }
+    } else {      
+      //
+      // Body Short
+      //
+      ((parse_level = 2) && {body = NULL} && {affect != ' '}).if {        
+        ln_limit := pt_b.pt + di
+        body    := EXPR.rd_expr_op
+        (read_c ';').if {
+          col (LOOK.symbol) sub 1
+        } else { err warning msg "Added `;'."; };
+        skip_spln
+        ln_limit := 0
+        //
+        end_code := pos_i.pt - pt_b.pt
+        //OUT # "end_code=" # end_code # '\n';
+        ? {end_code <= di}
+        pos_i := Old pos_i
+        nl := Old nl
+      }
+      (ri < end_code).if {        
+        ((body != NULL) && {body.now pos_i}).if { body.draw;    }
+      } else {
+        fill_color (COLOR.red)
+      }
+    }
+  )
+  
+  - inside_glyph:BOOLEAN <-
+  // BSBS: Doublon RSLO
+  ( + r:BOOLEAN
+    + i:INTEGER
+    + itm:TOK_ITM
+    ((!pos.is_xy) && {pos.pt.in_range (pt_b+4) to (pt_b+end_name)}).if {
+      r := TRUE
+      {(r) && {i <= arg.upper}}.while_do {
+        itm := arg.at i
+        r := ! pos.pt.in_range (pt_b+itm.db+1) to (pt_b+itm.db+itm.dd-1)
+        //pos.pt.print; '/'.print; (pt_b+itm.db+itm.dd).print; ' '.print; r.println
+        i := i + 1
+      }
+    }
+    r
+  )
+  
+  - post_draw <-
+  ( + lst,lst2:ARRAY SLOT
+    + here:POS
+    // Rmk
+    here := pos_i    
+    (DIV.is_mute = 0).if {
+      // Rmk
+      (extend_code).if {
+        pos_i := POS.new_ico 100
+        super_slot.foreach_backward { s:SLOT
+          (s.rmk != NULL).if { DIV.new.draw_out (s.rmk); }
+        }
+      }
+      (rmk != NULL).if {
+        (tok_cur,pos_i) := (tok_cur + 1,here)
+        rmk.draw
+        here := pos_i
+      }
+      // Require
+      (extend_code).if {
+        pos_i := POS.new_ico 200; // A REVOIR avec un compteur dans TOK_DRW (en - ?)
+        super_slot.foreach_backward { s:SLOT
+          (s.require != NULL).if { DIV.new.draw_out (s.require); }
+        }
+      }
+      (require != NULL).if {
+        (tok_cur,pos_i) := (tok_cur + 1,here)
+        require.draw
+        here := pos_i
+      }
+      // Body
+      (big_body != NULL).if {
+        (tok_cur,pos_i) := (tok_cur + 1,here)        
+        big_body.draw
+        here := pos_i
+      }
+      // Ensure
+      (extend_code).if {
+        pos_i := POS.new_ico 300; // A REVOIR avec un compteur dans TOK_DRW (en - ?)
+        super_slot.foreach_backward { s:SLOT
+          (s.ensure != NULL).if { DIV.new.draw_out (s.ensure); }
+        }
+      }
+      (ensure != NULL).if {
+        (tok_cur,pos_i) := (tok_cur + 1,here)
+        ensure.draw
+        here := pos_i
+      }
+      // Child
+      (extend_code).if {
+        (lst,lst2) := proto.collect_child Self
+        ((! lst.is_empty) || {! lst2.is_empty}).if {
+          pos_i := POS.new_ico 400; // A REVOIR avec un compteur dans TOK_DRW (en - ?)
+          begin_line
+          tex.add_x (x_space*2)
+          lst.foreach { s:SLOT; button s type TRUE; }
+          lst2.foreach { s:SLOT; button s type FALSE; }
+          last_div := NULL
+          end_line
+        }
+      }
+    }
+    pos_i := here
+    parse_level := 10;
+    (section != NULL).if { section.draw_section y_section; }
+  )
+  
+  - button s:SLOT type t:BOOLEAN <-
+  ( + x0:REAL_32
+    x0 := tex.x
+    DIV.new.drw { 
+      tex.add_x 4
+      FONT.size 0.8 do { s.proto.draw_name; }
+      tex.add_x 4
+      tex.set_ascdes (tex.asc*0.8,tex.des*0.8)
+    } data s act { b:DIV
+      + td:TOK_DRW; // BSBS: doublon avec draw_out
+      td := b.data.like TOK_DRW
+      td.set_last_pos (td.my_pos)
+      PAGE.cur_pg.set_buffer (td.txt_buf)
+    }
+    border (x0,tex.y - tex.asc) to (tex.x,tex.y - tex.des) type t
+    tex.add_x x_space
+  )
+  
+  - border (x0,y0:REAL_32) to (x1,y1:REAL_32) type t:BOOLEAN <-
+  (
+    begin_path
+    stroke_width 1
+    stroke_color (LOOK.none)
+    (t).if { rect (x0,y0) to (x1,y1); } else {
+      line_p (x0,y0) to (x1,y0); line_p (x1,y0) to (x1,y1)
+      line_p (x0,y1) to (x1,y1); line_p (x0,y0) to (x0,y1)
+    }
+    stroke
+  )
+  
+  - draw_asso_comm <-
+  ( 
+    ((style = 'O') && {arg.count = 2}).if { + p:INTEGER; ? {asso_comm != '\0'}
+      stop_line
+      lisave
+      p := pt_b.pt+section.dd
+      DIV.new.ico (right.ok (LOOK.right) or (LOOK.left)) i (p+1) alpha 1.0 act
+      {b:DIV; at (b.pt_oi) chg (asso_comm ^ 01b); }
+      DIV.new.ico (LOOK.swap) i (p+1) alpha (((asso_comm & 10b) = 0).ok 0.1 or 1.0) act
+      {b:DIV; at (b.pt_oi) chg (asso_comm ^ 10b); }
+      DIV.new.drw { draw_prio; } i (p+2) act
+      {b:DIV; prio := (prio + 1) % 10; at (b.pt_oi) chg ('0' +# prio); }
+      restore_to (width - tex.x - 40,0)
+    }
+  )
+  
+  - draw_prio <-
+  ( + x,y,r,a,p2:REAL_32
+    + col:COLOR
+    save
+    //
+    r := FONT.size_app / 2
+    col := LOOK.header; //COLOR.rgb(145, 76, 38)
+    p2 := - REAL_32.pi/2
+    (x,y) := (tex.x+r+2,tex.y-asc_c + r)
+    a := (REAL_32.pi * 2) / 9 * prio
+    begin_path; circle (x,y) radius r; stroke_color (COLOR.white); stroke_width 3; stroke
+    begin_path; circle (x,y) radius r; stroke_color col; stroke_width 1; stroke
+    //
+    begin_path
+    line_cap butt
+    arc (x,y) radius (r - 3) angle (p2,a+p2) direction 2
+    stroke_width 4
+    stroke
+    //
+    text_align (align_center | align_middle)
+    font_size (get_state.font_size - 6)
+    tmp_c.clear; tmp_c | ('0' +# prio)
+    fill_color (COLOR.black)
+    text (x,y+1) msg tmp_c
+    //
+    restore
+    tex.add_x (r*2+4)
+    tex.ascdes (asc_c,des_c)
+  )
+  
+  - draw_type_extern_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <-
+  ( + rx,ra,rd:REAL_32
+    lisave
+    tex.push (0,0)
+    tex.set_xy (x,y-asc_c)
+    // Load environnement    
+    tok_cur := 0
+    begin my_pos
+    styi := 2
+    // Draw
+    DIV.new.drw {
+      DIV.mute {
+        + old:POS
+        old := pos_i
+        pos_i := pt_b + ttok.db
+        ttok.draw
+        pos_i := old
+      }
+    } act {d:DIV
+      + tp:TPRO
+      tp ?= type
+      (tp != NULL).if {
+        PAGE.cur_pg.set_buffer (tp.proto.src)
+      }
+    }
+    (rx,ra,rd) := (tex.x,tex.asc,tex.des)
+    end_line
+    // Restore Old environnement
+    begin (Old pt_b)
+    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    styi := Old styi
+    tok_cur := Old tok_cur
+    //
+    tex.pop
+    restore_to (0,0)
+    rx,ra,rd
+  )
+  
+  //
+  // OLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLDOLD
+  //
+  
+  /*
+  - set_body b:EXPR <- ( body := b; )
+  - set_require (a:BOOLEAN,r:LIST) <- ( (req_add,require) := (a,r); )
+  - set_ensure (a:BOOLEAN,r:LIST) <- ( (ens_add,ensure) := (a,r); )
+  - set_rmk s:STRING_BUFFER <- ( rmk := s; )
+  - set_rmo s:STRING_BUFFER <- ( rmo := s; )
+  */
+  
+  - drw_fn:(REAL_32,REAL_32) <-
+  ( + i:INTEGER
+    TIKZ.get name_id.drw { DLS.drw (arg.at i) arg TRUE; i := i + 1; }
+  )
+  
+  - is_glyph:BOOLEAN <- TIKZ.get name_id != NULL
+    
+  - drw_sec sec:BOOLEAN rmo is_rmo:BOOLEAN bdy is_bdy:BOOLEAN <-
+  ( + l:LIST
+    + small_body:BOOLEAN
+    + x:REAL_32
+    + to:TONE
+    + div:KDIV
+    + b:BUT
+   
+    ((rmo != NULL) && {is_rmo}).if {
+      LINE.add_y (DRW.x_space*4)
+      rmo := REM.drw rmo type c_rmo
+      LINE.add_y (-DRW.x_space)
+      SECTION.set_last_sec NULL
+    }
+    
+    section := section.drw Self
+        
+    //DRW.sp ""
+        
+    slot_parent.clear
+    lookup proto
+    //
+    locals.clear
+    arg.foreach { ls:ARRAY LOCAL; locals.append_collection ls; }
+    
+    (! slot_parent.is_empty).if {
+      DIV_HELP.up_to (slot_parent.first.proto)
+      (b,div) := BUT.new {sl:CLONE
+      } with (slot_parent.first) to (LINE.x,LINE.y) size (0,0)
+      b.set_action2 {sl:CLONE; go_slot (SLOT.cast sl); }
+      KDIV.begin_mute
+    }
+    // Header Slot
+    (is_glyph).if {
+      FN.drw_fn {drw_fn}
+    } else {
+      DSL.drw Self
+    }
+    (type != TYPE.void).if {
+      DRW.drw_c ((name_id.last = '\0').ok " :" or ":") col (look.none) fnt "C"
+      type := TYP.drw_p type
+    }
+    (! slot_parent.is_empty).if {
+      KDIV.end_mute
+      div.set_coord (div.xo,LINE.y0,LINE.x-div.xo,LINE.y1-LINE.y0)
+      div.set_style 3
+    }
+    
+    ((body != NULL) || {SPOT.pos = SPOT.pos_c}).if {
+      DRW.stroke_color (COLOR.black); DCHAR.as FALSE
+    }
+    // Body (small)
+    small_body := (require = NULL) && {l ?= body; ((l = NULL) || {l.one_line})}
+    (small_body).if {
+    //  body := IBASE.drw body
+    }
+    SPOT.end_line
+    
+    (src != NULL).if {
+      + e:EXPR
+      EXPR.set_src src
+      e := PARSE0.run
+      e.drw
+      IBASE.drw e
+      e.println
+    }
+    
+    ((style != '') && {arg.count = 2}).if {      
+      LINE.set_x (TO_SCREEN.width - (42.5+8)*3)
+      b := BUT.new {c:CLONE; prio := (prio + 1) % 6; } draw {
+        DCHAR.priority prio
+      }
+      b.set_action2 {c:CLONE; prio := (prio - 1).max 0; }
+      LINE.add_x 8
+      BUT.new {c:CLONE; right := ! right; } draw {        
+        DHDR.drw_img (right.ok (DHDR.right_img) or (DHDR.left_img)) alpha 1
+      }
+      LINE.add_x 8
+      BUT.new {c:CLONE; swap := ! swap; } draw {
+        DHDR.drw_img (DHDR.swap_img) alpha (swap.ok 1.0 or 0.1)
+      }
+    }
+    DRW.raw_ln
+    // Comment
+    slot_parent.foreach_backward { s:SLOT
+      (s.rmk != NULL).if {
+        DIV_HELP.up_to (s.proto)
+        (b,div) := BUT.new {sl:CLONE
+        } with s to (LINE.x,LINE.y) size (0,0)
+        b.set_action2 {sl:CLONE; go_slot (SLOT.cast sl); }
+        KDIV.mute {      
+          REM.drw (s.rmk) type c_rms
+        }
+        div.set_coord (div.xo,div.yo,TO_SCREEN.width - div.xo,LINE.y-div.yo)
+        div.set_style 3
+      }
+    }
+    (rmk != NULL).if { rmk := REM.drw rmk type c_rms; }
+    // Require
+    require := draw {ss:SLOT; ss.req_add} req {ss:SLOT; ss.require} do {o:CLONE; req_add := ! req_add; } dir TRUE
+    // Body (big)
+    ((! small_body) && {body != NULL}).if {
+      (is_bdy).if {
+        //body := IBASE.drw body
+        SPOT.end_line
+      } else { DCHAR.ldots; }
+    }
+    (LINE.x > LINE.x_min).if { DRW.drw_ln; }
+    // Ensure
+    ensure := draw {ss:SLOT; ss.ens_add} req {ss:SLOT; ss.ensure} do {o:CLONE; ens_add := ! ens_add; } dir FALSE
+    //
+    is_bdy.if {
+      to := proto.type
+      DRW.save
+      DRW.font_size (DRW.get_state.font_size*0.66)
+      node.slot.foreach { s:SLOT
+        ((s != Self) && {s.proto.type <= to}).if {
+          //"TYPE: ".print; s.proto.name.node.word.println
+          b := BUT.new { ss:CLONE; } with s draw {
+            x := LINE.x
+            LINE.add_x 4
+            KDIV.mute { TYP.drw_type (s.proto.type); }
+            LINE.set_ascdes (DRW.asc_c*0.66+4,DRW.des_c*0.66-4)
+            LINE.add_x 4
+            DRW.stroke {
+              DRW.begin_path
+              DRW.rect (x+2,LINE.y0+3) to (LINE.x-2,LINE.y1-2) radius 4
+            } width 1.5 color (look.header)
+          }
+          b.set_action2 {sl:CLONE; go_slot (SLOT.cast sl); }
+        }
+      }
+      DRW.restore
+    }
+    //
+    section.drw_end
+  )
+  
+  - draw tst:{SLOT; BOOLEAN} req req:{SLOT; LIST} do do:{CLONE;} dir d:BOOLEAN :LIST <-
+  ( + result:LIST
+    + b:BUT
+    + div,d2:KDIV
+    + add,first:BOOLEAN
+    + x,y:REAL_32
+    + b_req:{}
+    + i:INTEGER
+    + s:SLOT
+    
+    b_req := {
+      (b,div) := BUT.new do with NULL
+      to (LINE.x,LINE.y) size (DRW.x_space*2,0)
+      DCPX.req_l_bg; first := TRUE; (x,y) := (LINE.x,LINE.y)
+    }
+    
+    
+    i := 0; add := TRUE
+    {(i <= slot_parent.upper) && {add}}.while_do {
+      s := slot_parent.at i
+      add := tst.value s
+      (req.value s != NULL).if {
+        (!first).if {
+          b_req.value
+          (! tst.value Self).if { DCPX.req_l; DCHAR.ldots_req; DCPX.req_r ' '; add := FALSE; }
+        }
+        (tst.value Self).if {
+          DIV_HELP.up_to (s.proto)
+          (b,d2) := BUT.new {sl:CLONE
+          } with s to (LINE.x,LINE.y) size (0,0)
+          b.set_action2 {sl:CLONE; go_slot (SLOT.cast sl); }
+          DCPX.req_l
+          KDIV.mute { req.value s.drw_body; }
+          DCPX.req_r ' '
+          d2.set_coord (d2.xo,d2.yo,TO_SCREEN.width - d2.xo,LINE.y-d2.yo)
+          d2.set_style 3
+        }
+      }
+      i := i + 1
+    }
+    
+    //
+    (req.value Self != NULL).if {
+      (!first).if b_req
+      DCPX.req_l; result := req.value Self.drw_body; DCPX.req_r '.'
+    }
+    (first).if {
+      DCPX.req_add (tst.value Self) to (x,y)
+      div.set_height (LINE.y - div.yo + 6)
+      DCPX.req_r_bg d; first := FALSE
+    }
+    result
+  )
+  
+  - parse_idf b:INTEGER with w:STRING_BUFFER :INTEGER <-
+  ( + c:CHARACTER
+    + i:INTEGER
+    i := b
+    w.clear
+    {(i <= name_id.upper) && {(c := name_id.at i) != '\0'}}.while_do {
+      (c = 'Ë').if { i := i + 1; }.elseif {c != ' '} then { w | c; }
+      i := i + 1
+    }
+    (style = '').if {
+      node := node.n_idf w
+    } else {
+      node := node.n_idf_fn w
+    }
+    i
+  )
+    
+  - init <-
+  ( + lst:LST
+    + l:LIARRAY LOCAL
+    + t:LIARRAY TYPE
+    + old_loc:ARRAY LOCAL
+    + old_bas:INTEGER
+    (index = -1).if {
+      (clonable).if {
+        index := proto.ss_new type
+      } else {
+        index := GS.new type
+      }
+      l := LIARRAY LOCAL.new
+      t := LIARRAY TYPE.new
+      //
+      (old_loc,old_bas) := LS.push l
+      lst := LST.new
+      l.add_last (LOCAL.new "Self" args t flag (LOCAL.value))
+      OP.stack_lst.add_last lst
+      //
+      OP + LASS.new (LS.new (proto.name)) val (proto.name)
+      (body = NULL).if { type.run_default; } else { body.run; }
+      ASS.new (proto.name) slot Self val {EXPR.pop}
+      //
+      OP.stack_lst.remove_last
+      OP.stack_lst.first.add_last lst
+      LS.pop (old_loc,old_bas)
+      //
+      l.free; t.free
+    }
+  )
+  

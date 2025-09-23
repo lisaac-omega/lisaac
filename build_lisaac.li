@@ -1,0 +1,354 @@
+Header
+  + name := BUILD_LISAAC;
+  /*Install and configure Lisaac. */
+
+  - external := `#include <unistd.h>`;
+
+Insert
+  - parent_mini_bash:MINI_BASH := MINI_BASH
+
+Private
+  + lisaac_dir:STRING_ALIAS
+  + system:STRING_ALIAS
+  + user_homedir:STRING_ALIAS; // "" for windows
+  + shell:STRING_ALIAS; // $SHELL or ""
+  + lisaac_bin_dir:STRING_ALIAS
+  + elix_dir:STRING_ALIAS
+  + rc_file:STRING_ALIAS
+  
+Private
+  - chdir arg:STRING_ALIAS or_exit <-
+  (
+    if verbose then {
+      ("cd \"" + arg + "\"").println
+    }
+    if (ENVIRONMENT.chdir arg != 0) then {
+      die "Fail." exit 1
+    }
+    FILE_UTILS.working_directory_in working_directory
+  )
+  
+  - cc_compile_bin_lisaac <-
+  ( + exit_status:INTEGER
+    "C compiling lisaac/bin/lisaac.c ... wait...".println
+    chdir lisaac_bin_dir or_exit
+    STRING.tmp {cmd: STRING_BUFFER
+      cmd.append "gcc lisaac.c -o lisaac -O2"
+      exit_status := execute_command cmd
+    }
+  )
+  
+  - check_update_export_path <-
+  (
+    if (shell = "/bin/bash") then {
+      export_path ".bashrc" create TRUE
+    }.elseif {shell = "/bin/zsh"} then {
+      export_path ".zshrc" create TRUE
+    }.elseif {system = "windows"} then {
+      export_path ".bashrc" create TRUE
+    } else {
+      export_path ".bashrc" create FALSE
+      export_path ".zshrc" create FALSE
+      export_path ".cshrc" create FALSE
+    }
+    if verbose then {
+      if (rc_file = NULL) then { 
+        "No rc_file.".println
+      }
+    }
+  )
+  
+  - export_path rc:STRING_ALIAS create create:BOOLEAN <-
+  ( + index:INTEGER
+    ("Create/Update \"" + rc + "\".").println
+    if verbose then {
+      ("Checking export PATH for \"" + rc + "\".").println
+    }
+    chdir user_homedir or_exit
+    if ((! FILE_UTILS.file_exists rc) && {create}) then {
+      if verbose then {
+        ("Creating \"" + rc + "\".").println
+      }
+      FILE_UTILS.make_empty_file rc
+    }
+    if (FILE_UTILS.file_exists rc) then {
+      rc_file := rc
+      STRING.tmp2 { (rc_txt, export_txt :STRING_BUFFER)
+        export_txt.append "export PATH=\""
+        export export_txt add lisaac_bin_dir
+        export export_txt add elix_dir
+        export_txt.append "$PATH\"\n"
+        (open_read rc in rc_txt).if {
+          if ((index := rc_txt.first_substring_index comment_unix) < 0) then {
+            rc_txt.append comment_unix
+            rc_txt.append export_txt
+          } else {
+            index := index + comment_unix.count
+            {rc_txt.at index = '\n'}.until_do {
+              rc_txt.remove index
+            }
+            rc_txt.remove index
+            rc_txt.insert_string export_txt to index
+          }
+          write rc content rc_txt
+        } else {
+          die ("Cannot read \"" + rc + "\".") exit 1
+        }
+      }
+    }
+  )
+  
+  - update_make_lip <-
+  ( + index:INTEGER
+    "Update lisaac/make.lip config.".println
+    chdir lisaac_dir or_exit
+    STRING.tmp { (lip_txt:STRING_BUFFER)
+      (open_read "make.lip" in lip_txt).if_false {
+        die "Cannot read make.lip." exit 1
+      }
+      //
+      index := idx_after "+ target:STRING := \"" in lip_txt from "make.lip"
+      {lip_txt.at index = '\"'}.until_do {
+        lip_txt.remove index
+      }
+      lip_txt.insert_string system to index
+      write "make.lip" content lip_txt
+    }
+  )
+  
+  /*
+  - update_elix_cfg <-
+  ( + index:INTEGER
+    "Update lisaac/elix/assets/elix.cfg.".println
+    chdir elix_dir or_exit
+    chdir "assets" or_exit
+    STRING.tmp { (elix_cfg:STRING_BUFFER)
+      (open_read "elix.cfg" in elix_cfg).if_false {
+        die "Cannot read lisaac/elix/assets/elix.cfg." exit 1
+      }
+      //
+      index := idx_after "target : \"" in elix_cfg from "elix.cfg"
+      {elix_cfg.at index = '\"'}.until_do {
+        elix_cfg.remove index
+      }
+      elix_cfg.insert_string system to index
+      write "elix.cfg" content elix_cfg
+    }
+  );*/
+  
+  - idx_after tag:STRING in txt:STRING from file_name:STRING_ALIAS :INTEGER <-
+  ( + index:INTEGER
+    index := txt.first_substring_index tag
+    if (index < 0) then {
+      die ("Tag \"" + tag + "\" not in " + file_name + ".") exit 1
+    }
+    index + tag.count
+  )
+
+  - comment_unix    :STRING_ALIAS := "\n# **** LISAAC-OMEGA TOOLS ****\n"
+  
+  - user_homedir_detection <-
+  (
+    if ((user_homedir := ENVIRONMENT.read_variable "HOME") = NULL) then {
+      die "Warning: No $HOME variable." exit 1
+    }
+  )
+    
+  - system_detection <-
+  (
+    system := SYSTEM.name
+    if verbose then {
+      ("system=\"" + system + "\".").println
+    }
+  )
+
+Public
+  - main <-
+  (
+    "Installing Lisaac - Omega Compiler and Tools.".println
+    FILE_UTILS.working_directory_in working_directory
+    ? {working_directory.last = '/'}
+    verbose := COMMAND_ARGS.option_shift "--verbose"
+    if (COMMAND_ARGS.count != 1) then {
+      ("Unknow option \"" + (COMMAND_ARGS.at 1) + "\".").println
+      "Usage: build_lisaac [--verbose]".println
+      SYSTEM.exit 1
+    }
+    if verbose then {
+      ("Running from \"" + working_directory + "\".").println
+    }
+    system_detection
+    
+    lisaac_dir := working_directory.to_string_alias
+    if (! lisaac_dir.has_suffix "lisaac/") then {
+      die "buid_lisaac must be run from lisaac directory." exit 1
+    }
+    if verbose then {
+      ("lisaac_dir=\"" + lisaac_dir + "\".").println
+    }
+    lisaac_bin_dir_set
+    elix_dir_set
+    user_homedir_detection
+    if verbose then {
+      ("user_homedir=\"" + user_homedir + "\".").println
+    }
+    remove_old_elix_cfg
+    shell_detection
+    cc_compile_bin_lisaac
+    check_update_export_path
+    update_make_lip
+    //update_elix_cfg
+    update_misc_new_assets_sh
+    compile_elix
+    welcome_omega
+    "Installation Completed Successfully.".println
+    "Open a new terminal window.".println
+    "or:".println
+    ("source ~/" + rc_file).println
+    
+  )
+  
+Private
+  - shell_detection <-
+  (
+    shell := ENVIRONMENT.read_variable "SHELL"
+    if ( shell = NULL ) then {
+      die "No $SHELL variable." exit 1
+    }.elseif { (shell = "/usr/bin/bash") && {system = "windows"} } then {
+      shell := "/bin/bash"
+    }
+    if (verbose) then {
+      ("shell=\"" + shell + "\".").println
+    }
+  )
+  
+  - die msg:STRING exit status:INTEGER <-
+  (
+    msg.println
+    if (! verbose) then {
+      "Rerun using --verbose to try to debug.".println
+    }
+    SYSTEM.exit status
+  )
+  
+  - lisaac_bin_dir_set <-
+  (
+    chdir lisaac_dir or_exit
+    chdir "bin" or_exit
+    lisaac_bin_dir := working_directory.to_string_alias
+    if verbose then {
+      ("lisaac_bin_dir=\"" + lisaac_bin_dir + "\".").println
+    }
+  )
+  
+  - elix_dir_set <-
+  (
+    chdir lisaac_dir or_exit
+    chdir "elix" or_exit
+    elix_dir := working_directory.to_string_alias
+    if verbose then {
+      ("elix_dir=\"" + elix_dir + "\".").println
+    }
+  )
+
+  - write file_name:STRING_ALIAS content content:STRING_BUFFER <-
+  ( + file:POINTER
+    + s:INTEGER
+    if verbose then {
+      ("Open write \"" + file_name + "\".").println
+    }
+    file := FILE_UTILS.open_write file_name
+    s := FILE_UTILS.write file with content size (content.count)
+    if verbose then {
+      ("writen " + s.to_string + " bytes.").println
+    }
+    FILE_UTILS.close file
+    if verbose then {
+      ("Close \"" + file_name + "\".").println
+    }
+  )
+  
+  - export export_txt:STRING_BUFFER add dir:STRING_ALIAS <-
+  (
+    export_txt.append dir
+    if ("/\\".has (export_txt.last)) then {
+      export_txt.remove_last
+    }
+    export_txt.append ":"
+  )
+  
+  - compile_elix <-
+  ( + exit_status:INTEGER
+    "Compiling lisaac/elix ... wait...".println
+    chdir elix_dir or_exit
+    STRING.tmp { cmd:STRING_BUFFER
+      cmd.append lisaac_bin_dir
+      cmd.extend_unless '/'
+      cmd.append "lisaac elix -q -boost"
+      exit_status := execute_command cmd
+    }
+  )
+  
+  - welcome_omega <-
+  (
+    "Compiling lisaac/example/welcome.li ... wait...".println
+    chdir lisaac_dir or_exit
+    chdir "example" or_exit
+    chdir "welcome" or_exit
+    STRING.tmp { cmd:STRING_BUFFER
+      cmd.append elix_dir
+      cmd.extend_unless '/'
+      cmd.append "elix welcome.li"
+      execute_command cmd background TRUE
+    }
+    STRING.tmp { cmd:STRING_BUFFER
+      cmd.append lisaac_bin_dir
+      cmd.extend_unless '/'
+      cmd.append "lisaac welcome -q -boost"
+      execute_command cmd
+    }
+    STRING.tmp { cmd:STRING_BUFFER
+      cmd.append lisaac_dir
+      cmd.extend_unless '/'
+      cmd.append "example/welcome/welcome"
+      execute_command cmd background TRUE
+    }
+  )
+  
+  - remove_old_elix_cfg <-
+  (
+    STRING.tmp { path:STRING_BUFFER
+      path.append user_homedir
+      path.extend_unless '/'
+      path.append ".elix.cfg"
+      if ( verbose ) then {
+        ("Remove old \"" + path + "\".").println
+      }
+      FILE_UTILS.remove path
+      if (FILE_UTILS.file_exists path) then {
+        die ("Cannot remove \"" + path + "\".") exit 1
+      }
+    }
+  )
+  
+  - update_misc_new_assets_sh <-
+  (
+    ? {shell != NULL}
+    if (shell != "") then {
+      "Update lisaac/misc/new_assets.sh.".println
+      chdir lisaac_dir or_exit
+      chdir "misc" or_exit
+      STRING.tmp { (new_assets_sh:STRING_BUFFER)
+        (open_read "new_assets.sh" in new_assets_sh).if_false {
+          die "Cannot read lisaac/elix/assets/new_assets.sh." exit 1
+        }
+        {new_assets_sh.first = '\n'}.until_do {
+          new_assets_sh.remove_first
+        }
+        new_assets_sh.insert_string ("#!" + shell) to 0
+        write "new_assets.sh" content new_assets_sh
+      }
+    } else {
+      "lisaac/misc/new_assets.sh not updated.".println
+    }
+  )

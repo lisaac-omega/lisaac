@@ -1,0 +1,54 @@
+Header
+  
+  + name := CALL_CLIP;
+  
+Inherit
+  
+  + parent_pen_call_2d:Expanded PEN_CALL_2D
+  
+Private
+  
+  - stack_clip:ARRAY CALL_CLIP := ARRAY CALL_CLIP.create_with_capacity 16
+
+Public
+  
+  + clip_x:REAL_32
+  
+  + clip_y:REAL_32
+  
+  + width:REAL_32
+  
+  + height:REAL_32
+  
+  - create (xx,yy:REAL_32) size (wp,hp:REAL_32) :CALL_CLIP <-
+  ( + result:CALL_CLIP
+    (stack_clip.is_empty).if {
+      result := clone
+    } else {
+      result := stack_clip.last
+      stack_clip.remove_last
+    }
+    result.make (xx,yy) size (wp,hp)
+    result
+  )
+  
+  - free <-
+  ( 
+    stack_clip.add_last Self
+  )
+  
+  - make (xx,yy:REAL_32) size (wp,hp:REAL_32) <-
+  (    
+    (clip_x,clip_y) := (xx,yy)
+    (width,height) := (wp,hp)
+  )
+  
+  - run <-
+  ( + lx,ly,lw,lh:REAL_32
+    (lx,ly) := (clip_x,clip_y)
+    (lw,lh) := (width+0.9,height+0.9)
+    pen_gl.gl_uniform2f(pen_gl.shader.loc_view,1.0/width,1.0/height)
+    `glViewport(@lx, @ly, @lw, @lh)`
+    //run_2d
+  )
+  

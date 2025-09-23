@@ -1,0 +1,31 @@
+Header
+
+  + name        := EXPR_CST;
+  /*
+  Constant Expression.
+  */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  + value:INTEGER
+
+  //
+  // Constructor
+  //
+
+  - create v:INTEGER :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make v
+    result
+  )
+
+  - make v:INTEGER <-
+  (
+    value := v
+  )

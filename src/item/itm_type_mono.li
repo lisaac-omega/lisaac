@@ -1,0 +1,39 @@
+Header
+
+  + name        := ITM_TYPE_MONO;
+
+  /*Type simple*/
+
+Inherit
+
+  + parent_itm_type:Expanded ITM_TYPE
+
+Public
+
+  //
+  // Runnable.
+  //
+
+  - to_run_in lst:ARRAY TYPE_FULL for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS <-
+  (
+    lst.add_last (to_run_for p pos path)
+  )
+
+  - get_expr_for p:PARAMETER_TO_TYPE :EXPR <-
+  ( + t:TYPE_FULL
+    + result:EXPR
+
+    t := to_run_for p pos (p.position.prototype.filename)
+    result := t.get_temporary_expr (p.position)
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    abstract
+  )
+

@@ -1,0 +1,20 @@
+Header  
+  + name := Expanded PATH_LOW;
+  
+Inherit  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + fill_offset:INTEGER
+  + fill_count:INTEGER
+  
+  + stroke_offset:INTEGER
+  + stroke_count:INTEGER
+    
+  - make (fofs,fcnt:INTEGER) stroke (sofs,scnt:INTEGER) :SELF <-
+  (
+    (fill_offset,fill_count)     := (fofs,fcnt)
+    (stroke_offset,stroke_count) := (sofs,scnt)
+    Self
+  )

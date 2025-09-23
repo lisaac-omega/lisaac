@@ -1,0 +1,84 @@
+Header
+  + name := ABOUT;
+  /**/
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_any:ANY := ANY
+//  + parent_box:Expanded BOX
+  
+Public
+  
+  - open <-
+  ( + win:WINDOW
+    + w,h:REAL_32
+    + blk:{INTEGER; WIN}
+    win := PAGE.cur_pg.window
+    init win
+    (width,height) := (800,500)
+    (xo,yo) := ((win.width-width)/2, (win.height-height)/2)
+    old_focus := focus
+    focus := Self
+    (child.is_empty).if {
+      blk := {d:INTEGER; WIN.new.init NULL.size (d,d).set size_locked}
+      (w,h) := (150,96)
+      (
+        (
+          blk.value 16 /
+          BUTIMG.new.init "img/lisaac.png" asset TRUE do {b:BUTIMG
+            ENVIRONMENT.run "open https://lisaac.org/" = 0
+          }.size (300,150) / 
+          TXT.new.init_str "Elix, the editor of" /
+          TXT.new.init_str "Lisaac Ω".zoom 2 / 
+          blk.value 16
+        ).set align_center / (
+          BUTIMG.new.init "img/partner_ul.png" asset TRUE do {b:BUTIMG
+            ENVIRONMENT.run "open https://www.univ-lorraine.fr/" = 0
+          }.size (w,h) |
+          BUTIMG.new.init "img/partner_uds.png" asset TRUE do {b:BUTIMG
+            ENVIRONMENT.run "open https://www.unistra.fr/" = 0
+          }.size (w,h) |
+          BUTIMG.new.init "img/partner_loria.png" asset TRUE do {b:BUTIMG
+            ENVIRONMENT.run "open https://www.loria.fr/fr/" = 0
+          }.size (w,h) |
+          BUTIMG.new.init "img/partner_inria.png" asset TRUE do {b:BUTIMG
+            ENVIRONMENT.run "open https://www.inria.fr/fr" = 0
+          }.size (w,h) |
+          BUTIMG.new.init "img/partner_libot.png" asset TRUE do {b:BUTIMG
+            ENVIRONMENT.run "open https://www.libot.fr/" = 0
+          }.size (w,h)
+        ) / (
+          blk.value 16 / 
+          BUTTON.new.init "OK" do {b:BUTTON; close; TRUE}.size (120,48) / 
+          blk.value 16
+        ) / (
+          TXT.new.init_str "Benoît Sonntag & Dominique Colnet".color (LOOK_GUI.text_ui.set_af 0.2)
+        )
+      ).size (width-16,height-16).init_parent Self
+    }
+    refresh
+  )
+  
+  
+  - refresh <-
+  ( 
+    (! child.is_empty).if {      
+      child.first.xy (xo+8, yo+8)
+      child.foreach { w:WIN; w.refresh; }
+    }
+  )
+  
+  - draw <-
+  (
+    rect_shadow (xo,yo) size (width,height) radius (8,8)
+  )
+  
+Private
+  
+  - old_focus:WIN
+  
+  - close <-
+  (
+    window.child_rm Self
+    focus := old_focus
+  )

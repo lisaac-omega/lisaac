@@ -1,0 +1,29 @@
+Header  
+  + name      := CAST_CREATION;
+
+Inherit
+
+  + parent_cast:Expanded CAST
+
+Public
+  
+  + type_creation:TYPE
+  
+  //
+  // Creation.
+  //
+  
+  - make t:TYPE_FULL value v:EXPR <-
+  (
+    parent_cast.make t value v
+    type_creation := t.raw.get_type_creation
+  )
+
+  //
+  // Searching.
+  //
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add type_creation
+  )

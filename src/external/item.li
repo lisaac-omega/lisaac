@@ -1,0 +1,115 @@
+Header
+
+  + name        := ITEM;
+
+  /*Item for NATIVE_ARRAY E.*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- receiver.is_invariant && {index.is_invariant}
+
+  + receiver:EXPR
+
+  + index:EXPR
+
+  - static_type:TYPE_FULL <-
+  ( + t:TYPE_GENERIC
+
+    t ?= receiver.static_type.raw
+    t.generic_list.first
+  )
+
+  - get_type t:TYPES_TMP <-
+  ( + typ_gen:TYPE_GENERIC
+
+    typ_gen ?= receiver.static_type.raw
+    typ_gen.native_array_variable.get_type t
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION base rec:EXPR index idx:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p base rec index idx
+    result
+  )
+
+  - make p:POSITION base rec:EXPR index idx:EXPR <-
+  (
+    position := p
+    receiver := rec
+    index    := idx
+  )
+
+  - my_copy:SELF <- SELF.create position base (receiver.my_copy) index (index.my_copy)
+
+  //
+  // Remove
+  //
+
+  - remove <-
+  (
+    receiver.remove
+    index.remove
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_unlink:INSTR <-
+  ( + instr:INSTR
+    instr := receiver.execute_unlink
+    (instr != NULL).if {
+      list_current.insert_before instr
+    }
+    index.execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  (
+    receiver := receiver.execute_link
+    index    := index.execute_link
+    Self
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (    
+    receiver.genere
+    output.add_last '['
+    index.genere
+    output.add_last ']'
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    receiver.display buffer
+    buffer.add_last '['
+    index.display buffer
+    buffer.add_last ']'
+  )
+
+
+
+
+
+
+
+
+

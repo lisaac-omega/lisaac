@@ -1,0 +1,177 @@
+Header
+
+  + name        := PUSH_SPEED;
+
+  /* Push context for debug mode */
+
+Inherit
+
+  + parent_push:Expanded PUSH
+  
+Public
+  
+  + index:INTEGER
+  
+  + back_link:PUSH_SPEED
+  
+  - name:STRING_ALIAS
+  
+  - stack:ARRAY PUSH_SPEED := ARRAY PUSH_SPEED .create_with_capacity 64
+  
+  - start_c_function nam:STRING_ALIAS <-
+  (     
+    stack.clear
+    name := nam
+  )
+  
+  //
+  // Genere
+  //
+  
+  - get_old ctxt:LOCAL :PUSH_SPEED <-
+  ( + i:INTEGER
+    + result:PUSH_SPEED
+    i := stack.upper
+    {(i >= 0) && {stack.at i.context != ctxt}}.while_do {
+      i := i - 1
+    }
+    (i>=0).if {
+      result := stack.at i
+    }
+    result
+  )
+  
+  - genere <-
+  ( + id:INTEGER
+    + old:PUSH_SPEED
+    
+    (stack.is_empty).if {
+      output.append "asm(\"# @LI "
+      output.append "method"
+      output.append "\": : : );\n  "
+    }
+    //
+    output.append "asm(\"# @LI "
+    //
+    // Position.
+    (debug_with_code).if {
+      id := source_line.fast_last_index_of position
+      (id < 0).if {
+        source_line.add_last position
+        id := source_line.upper
+      }
+      id.append_in output
+    } else { 
+      position.code.append_in output
+    }
+    output.add_last ','
+    //
+    // Label.
+    old := get_old context
+    ((old = NULL) && {!is_first}).if { crash_with_message "push without push_first."; }
+    (old != NULL).if {
+      index := old.index + 1
+    }
+    //    
+    (is_first).if {
+      (! stack.is_empty).if {
+        back_link := stack.last
+      }
+    } else {
+      back_link := old.back_link
+    }
+    stack.add_last Self
+    //
+    output.append (context.intern_name)
+    output.add_last '_'
+    index.append_in output
+    output.add_last ','
+    //
+    // Back link 
+    (back_link != NULL).if {
+      output.append (back_link.context.intern_name)
+      output.add_last '_'
+      back_link.index.append_in output
+    } else {
+      (name = NULL).if {
+        output.append "-2"
+      } else {
+        output.append "-1"
+      }
+    }
+    //
+    output.append "\": : : );  /* L"
+    position.line.append_in output
+    output.add_last ' '
+    output.append (position.prototype.name)
+    output.append " */"
+  )
+  
+/*
+  - genere buffer:STRING_BUFFER <-
+  ( + back:PUSH_SPEED
+    + i:INTEGER
+    + id:UINTEGER_32
+        
+    (is_first).if {
+      ? {index = 0}
+      (push_stack.is_empty).if {
+        back_link := NULL
+      } else {
+        back_link := push_stack.last
+      }
+    } else {
+      i := push_stack.upper
+      {push_stack.at i.context != context}.while_do {
+        i := i - 1
+        (i<0).if { crash_with_message "PUSH_SPEED line 123\n"; }
+        ? {i>=0}
+      }
+      back := push_stack.at i
+      index := back.index + 1
+      back_link := back.back_link
+    }
+    push_stack.add_last Self
+    //
+    buffer.append "asm(\"# @LI "
+    //
+    // Position.
+    id := position.code
+    (debug_with_code).if {
+      (! source_line.fast_has id).if {
+        source_line.fast_put (position.extract_line) to id
+      }
+    }
+    id.append_in buffer
+    buffer.add_last ','
+    // @Label
+    buffer.append (context.intern_name)
+    buffer.add_last '_'
+    index.append_in buffer
+    buffer.add_last ','
+    // Back link 
+    (back_link != NULL).if {
+      buffer.append (back_link.context.intern_name)
+      buffer.add_last '_'
+      back_link.index.append_in buffer
+    } else {
+      (name = NULL).if {
+        buffer.append "-2"
+      } else {
+        buffer.append "-1"
+      }
+    }
+    //
+    buffer.append "\": : : );  /* L"
+    position.line.append_in buffer
+    buffer.add_last ' '
+    buffer.append (position.prototype.name)
+    buffer.append " */"
+  )
+*/  
+
+
+
+
+
+

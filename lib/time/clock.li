@@ -1,0 +1,84 @@
+Header
+
+  + name    := CLOCK;
+
+  - external := `#include <time.h>
+  #include <unistd.h>`;
+
+Insert
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  - date_time:(DATE,TIME) <-
+  ( + wd,d,mo:UINTEGER_8
+    + s,m,h:UINTEGER_8
+    + y:UINTEGER_16
+    `{
+    struct tm *t; time_t tt
+    tt = time(NULL)
+    t = localtime(&tt)`;
+    wd := `t->tm_wday`:UINTEGER_8 + 1
+    d  := `t->tm_mday`:UINTEGER_8
+    mo := `t->tm_mon` :UINTEGER_8 + 1
+    y  := `t->tm_year`:UINTEGER_16 + 1900
+    h := `t->tm_hour`:UINTEGER_8
+    m := `t->tm_min` :UINTEGER_8
+    s := `t->tm_sec` :UINTEGER_8
+    `}`
+    DATE.create (y,mo,d,wd),TIME.create (h,m,s,0)
+  )
+  
+  - date:DATE <-
+  ( + wd,d,mo:UINTEGER_8
+    + y:UINTEGER_16
+
+    `{
+      struct tm *t; time_t tt
+      tt = time(NULL)
+      t = localtime(&tt)`;
+      wd := `t->tm_wday`:UINTEGER_8 + 1
+      d  := `t->tm_mday`:UINTEGER_8
+      mo := `t->tm_mon` :UINTEGER_8 + 1
+      y  := `t->tm_year`:UINTEGER_16 + 1900
+    `}`
+    DATE.create (y,mo,d,wd)
+  )
+
+  - time:TIME <-
+  ( + s,m,h:UINTEGER_8
+
+    `{
+      struct tm *t; time_t tt
+      tt = time(NULL)
+      t = localtime(&tt)`;
+      h := `t->tm_hour`:UINTEGER_8
+      m := `t->tm_min` :UINTEGER_8
+      s := `t->tm_sec` :UINTEGER_8
+    `}`
+    TIME.create (h,m,s,0)
+  )
+  
+  - time_raw:UINTEGER_64 <- `time(NULL)`:UINTEGER_64
+  
+  - clock:UINTEGER_64 <- `clock()`:UINTEGER_64
+  
+  - usleep usec:UINTEGER_64 <- `usleep(@usec)`
+  
+  - clocks_per_sec:UINTEGER_64 <- `CLOCKS_PER_SEC`:UINTEGER_64
+  
+  //- seconds:REAL_32 <- clock.to_real_32 / clocks_per_sec.to_real_32
+  
+  - seconds:REAL_32 <- nanoseconds.to_real_32 / 1000_000_000.0
+  
+  - nanoseconds:UINTEGER_64 <-
+  ( `struct timespec now`
+    `clock_gettime(CLOCK_MONOTONIC, &now)`
+    `now.tv_sec*1000000000LL + now.tv_nsec`:UINTEGER_64
+  )
+    
+  - make <-
+  (
+    // Nothing.
+  )

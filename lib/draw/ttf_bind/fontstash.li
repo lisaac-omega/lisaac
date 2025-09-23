@@ -1,0 +1,215 @@
+Header
+  
+  + name := FONTSTASH;
+  
+  - external := `
+//void exit(long c) { exit(c); };
+
+unsigned char utf8d[] = {
+  // The first part of the table maps bytes to character classes that
+  // to reduce the size of the transition table and create bitmasks.
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,
+  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+  8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+  10,3,3,3,3,3,3,3,3,3,3,3,3,4,3,3, 11,6,6,6,5,8,8,8,8,8,8,8,8,8,8,8,
+  // The second part is a transition table that maps a combination
+  // of a state of the automaton and a character class to a state.
+  0,12,24,36,60,96,84,12,12,12,48,72, 12,12,12,12,12,12,12,12,12,12,12,12,
+  12, 0,12,12,12,12,12, 0,12, 0,12,12, 12,24,12,12,12,12,12,24,12,24,12,12,
+  12,12,12,12,12,12,12,24,12,12,12,12, 12,24,12,12,12,12,12,12,12,24,12,12,
+  12,12,12,12,12,12,12,36,12,36,12,12, 12,36,12,12,12,12,12,36,12,36,12,12,
+  12,36,12,12,12,12,12,12,12,12,12,12,
+};
+`;
+
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Private
+  
+  - utf8d:NATIVE_ARRAY UINTEGER_8 <- `utf8d`:NATIVE_ARRAY UINTEGER_8
+
+Public
+
+  - fons_invalid:INTEGER := -1
+
+  // FONSflags: 
+  - fons_zero_topleft:INTEGER := 1
+  - fons_zero_bottomleft:INTEGER := 2
+
+  // FONSalign:
+  // Horizontal align
+  - fons_align_left:INTEGER   := 1<<0; // Default
+  - fons_align_center:INTEGER := 1<<1
+  - fons_align_right:INTEGER  := 1<<2
+  // Vertical align
+  - fons_align_top:INTEGER      := 1<<3
+  - fons_align_middle:INTEGER   := 1<<4
+  - fons_align_bottom:INTEGER   := 1<<5
+  - fons_align_baseline:INTEGER := 1<<6; // Default
+
+  //FONSerrorCode:
+  // Font atlas is full.
+  - fons_atlas_full:INTEGER   := 1
+  // Scratch memory used to render glyphs is full, requested 
+  // size reported in 'val', 
+  // you may need to bump up FONS_SCRATCH_BUF_SIZE.
+  - fons_scratch_full:INTEGER := 2
+  // Calls to fonsPushState has created too large stack, 
+  // if you need deep state stack bump up FONS_MAX_STATES.
+  - fons_states_overflow:INTEGER  := 3
+  // Trying to pop too many states fonsPopState().
+  - fons_states_underflow:INTEGER := 4
+
+  - fons_scratch_buf_size:INTEGER := 64000
+  - fons_hash_lut_size:UINTEGER_32 := 256
+  - fons_init_fonts:INTEGER := 4
+  - fons_init_glyphs:INTEGER := 256
+  - fons_init_atlas_nodes:INTEGER := 256
+  - fons_vertex_count:INTEGER := 1024
+  - fons_max_states:INTEGER := 20
+  - fons_max_fallbacks:INTEGER := 20
+  
+  - hashint a:UINTEGER_32 :UINTEGER_32 <-
+  ( + r:UINTEGER_32
+    r := a + ~(a<<15)
+    r := r ^  (r>>10)
+    r := r +  (r<< 3)
+    r := r ^  (r>> 6)
+    r := r + ~(r<<11)
+    r := r ^  (r>>16)
+    r
+  )
+/*
+static void* fons__tmpalloc(size_t size, void* up)
+{
+	unsigned char* ptr
+	FONScontext* stash = (FONScontext*)up
+
+	// 16-byte align the returned pointer
+	size = (size + 0xf) & ~0xf
+
+	if (stash->nscratch+(int)size > FONS_SCRATCH_BUF_SIZE) {
+		if (stash->handleError)
+			stash->handleError(stash->errorUptr, FONS_SCRATCH_FULL, stash->nscratch+(int)size)
+		return NULL
+	}
+	ptr = stash->scratch + stash->nscratch
+	stash->nscratch += (int)size
+	return ptr
+}
+
+static void fons__tmpfree(void* ptr, void* up)
+{
+	(void)ptr
+	(void)up
+	// empty
+}
+
+#endif // STB_TRUETYPE_IMPLEMENTATION
+*/
+// Copyright (c) 2008-2010 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
+
+  + fons_utf8_accept:INTEGER := 0
+  + fons_utf8_reject:INTEGER := 12
+
+  - decutf8 (state:UINTEGER_32,codep:UINTEGER_32, byte:UINTEGER_8) 
+  :(UINTEGER_32,UINTEGER_32) <-
+  ( + new_state,new_codep,type:UINTEGER_32
+    
+    type := utf8d.at byte
+    new_codep := (state != fons_utf8_accept).ok
+    ((byte & 03Fh).to_uinteger_32 | (codep << 6)) or 
+    ((0FFh >> type).to_uinteger_32 & byte)
+    new_state := utf8d.at (256 + state + type)
+    new_state,new_codep
+  )
+
+// Atlas based on Skyline Bin Packer by Jukka Jylänki
+
+/*
+static FONSglyph* fons__allocGlyph(FONSfont* font)
+{
+	if (font->nglyphs+1 > font->cglyphs) {
+		font->cglyphs = font->cglyphs == 0 ? 8 : font->cglyphs * 2
+		font->glyphs = (FONSglyph*)realloc(font->glyphs, sizeof(FONSglyph) * font->cglyphs)
+		if (font->glyphs == NULL) return NULL
+	}
+	font->nglyphs++
+	return &font->glyphs[font->nglyphs-1]
+}
+*/
+
+  // Based on Exponential blur, Jani Huhtanen, 2006
+
+  - cst_aprec:INTEGER := 16
+  - cst_zprec:INTEGER :=  7
+
+  - blur_cols pdst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) 
+  stride dst_stride:INTEGER alpha alfa:INTEGER <-
+  ( + z:INTEGER
+    + dst:NATIVE_ARRAY UINTEGER_8
+    dst := pdst
+    0.to (h-1) do { y:INTEGER
+      z := 0; // force zero border
+      1.to (w-2) do { x:INTEGER
+        z := z + (alfa * ((dst.at x.to_integer << cst_zprec) - z)) >> cst_aprec
+        dst.at x put ((z >> cst_zprec).to_uinteger_8)
+      }
+      dst.at (w-1) put 0; // force zero border
+      z := 0
+      (w-2).downto 1 do { x:INTEGER
+        z := z + (alfa * ((dst.at x.to_integer << cst_zprec) - z)) >> cst_aprec
+        dst.at x put ((z >> cst_zprec).to_uinteger_8)
+      }
+      dst.at 0 put 0; // force zero border
+      dst := dst + dst_stride
+    }
+  )
+
+  - blur_rows pdst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) 
+  stride dst_stride:INTEGER alpha alfa:INTEGER <-
+  ( + z:INTEGER
+    + dst:NATIVE_ARRAY UINTEGER_8
+    dst := pdst
+    0.to (w-1) do { x:INTEGER
+      z := 0; // force zero border
+      dst_stride.to ((h-2)*dst_stride) by dst_stride do { y:INTEGER
+        z := z + (alfa * ((dst.at y.to_integer << cst_zprec) - z)) >> cst_aprec
+        dst.at y put ((z >> cst_zprec).to_uinteger_8)
+      }
+      dst.at ((h-1)*dst_stride) put 0; // force zero border
+      z := 0
+      ((h-2)*dst_stride).downto dst_stride by dst_stride do { y:INTEGER
+        z := z + (alfa * ((dst.at y.to_integer << cst_zprec) - z)) >> cst_aprec
+        dst.at y put ((z >> cst_zprec).to_uinteger_8)
+      }
+      dst.at 0 put 0; // force zero border
+      dst := dst + 1
+    }
+  )
+
+  - blur dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) 
+  stride dst_stride:INTEGER blur blr:INTEGER <-
+  ( + alfa:INTEGER
+    + sigma:REAL_32
+    (blr >= 1).if {	
+      // Calculate the alpha such that 90% of the kernel is within the radius. 
+      // (Kernel extends to infinity)
+      sigma := blr.to_real_32 * 0.57735; // 1 / sqrt(3)
+      alfa := ((1.0 - (-2.3 / (sigma+1.0)).exp) * (1<<cst_aprec)).to_integer
+      blur_rows dst size (w,h) stride dst_stride alpha alfa
+      blur_cols dst size (w,h) stride dst_stride alpha alfa
+      blur_rows dst size (w,h) stride dst_stride alpha alfa
+      blur_cols dst size (w,h) stride dst_stride alpha alfa
+      //blurrows(dst, w, h, dstStride, alpha)
+      //blurcols(dst, w, h, dstStride, alpha)
+    }
+  )
+

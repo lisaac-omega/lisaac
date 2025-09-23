@@ -1,0 +1,35 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + euro:USTRING
+    + char:CHAR
+    + i:STRIDX
+    euro := USTRING_BUFFER.from_alias "x€x"
+    TEST.check ((euro.at_utf8 0) = 'x')
+    TEST.check ((euro.at_utf8 4) = 'x')
+    TEST.check ((euro.at_utf8 1) = 00e2h)
+    TEST.check ((euro.at_utf8 2) = 0082h)
+    TEST.check ((euro.at_utf8 3) = 00ach)
+    i := euro.upper
+    char := euro.at i
+    TEST.check (char.to_uinteger_32) integer ('x'.to_uinteger_8)
+    i := euro.lower
+    char := euro.at i
+    TEST.check (char.to_uinteger_32) integer ('x'.to_uinteger_8)
+    i := i + 1
+    char := euro.at i
+    TEST.check (char.to_uinteger_32) integer (11305698)
+    i := i + 1
+    char := euro.at i
+    TEST.check (char.to_uinteger_32) integer ('x'.to_uinteger_8)
+    TEST.check (! euro.valid_index (i + 1))
+    i := i - 1
+    char := euro.at i
+    TEST.check (char.to_uinteger_32) integer (11305698)
+    i := i - 1
+    char := euro.at i
+    TEST.check (char.to_uinteger_32) integer ('x'.to_uinteger_8)
+    TEST.check (! euro.valid_index (i - 1))
+  )

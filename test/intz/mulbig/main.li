@@ -1,0 +1,112 @@
+Header
+  + name := MAIN;
+  /**/
+  
+Private
+  - verbose:BOOLEAN <- !TRUE
+  
+  + time:TIME
+  
+  + mpz1:MPZ
+  + mpz2:MPZ
+  + mpz3:MPZ
+  
+  + big1:ℤ
+  + big2:ℤ
+  + big3:ℤ
+  
+Private  
+  - word_to_hex w:INTEGER :INTEGER <- w * 16; // 1 mot = 16 hex
+  
+  - randomize <-
+  (
+    verbose.if { "randomize".println; }
+    mpz1.random_hex (RANDOM.range (word_to_hex 1900) to (word_to_hex 2100)); // DCDC -> BSBS Good ?
+    big1.free; big1 := mpz1.new_intz3
+    //
+    mpz2.random_hex (RANDOM.range (word_to_hex 3) to (word_to_hex 5)); // DCDC -> BSBS Good ?
+    big2.free; big2 := mpz2.new_intz3
+    //
+    mpz3.init_set_ui 0
+    big3.free; big3 := 0
+  )
+  
+Public
+  - main <-
+  ( + loop:INTEGER
+    time := TIME.now
+    RANDOM.init(time.to_raw.to_integer_32)
+    loop := 1000
+    /*
+    ("loop=" + loop.to_string).println
+    "x=0; while ./main ; do echo yes $x; x=$((x+1)); done".println
+    */
+    {loop > 0}.while_do {
+      randomize
+      check_mul
+      check_vars
+      loop := loop - 1
+    }
+    ("init_string_alias" + loop.to_string + "bug").to_string_alias.println
+    //print_vars TRUE; // DCDC Whaou, c'est du gros et cela marche!
+  )
+  
+  - check_mul <-
+  (
+    verbose.if { "check_mul".println; }
+    mpz3.mul (mpz1,mpz2)
+    big3.free; big3 := big1 * big2
+    check_vars
+  )
+  
+  - vars_in code:STRING_BUFFER mode full:BOOLEAN <-
+  (
+    code.append "--------------\n"
+    code.append "mpz1="
+    mpz1.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "big1="
+      big1.append_in code base 16
+      code.add_last '\n'
+    }
+    code.append "mpz2="
+    mpz2.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "big2="
+      big2.append_in code base 16
+      code.add_last '\n'
+    }
+    code.append "mpz3="
+    mpz3.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "big3="
+      big3.append_in code base 16
+      code.add_last '\n'
+    }
+    code.append "--------------\n"
+  )
+  
+  - print_vars full:BOOLEAN <-
+  (
+    STRING.tmp { code:STRING_BUFFER
+      vars_in code mode full
+      code.print
+    }
+  )
+  
+  - check_vars <-
+  (
+    verbose.if { "check_vars".println; }
+    (
+      (! mpz1.equal_intz3 big1) ||
+      {! mpz2.equal_intz3 big2} ||
+      {! mpz3.equal_intz3 big3}
+    ).if {
+      print_vars TRUE
+      UTILS.crash_with_message ("check_vars")
+    }
+  )
+  

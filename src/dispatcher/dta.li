@@ -1,0 +1,126 @@
+Header
+
+  + name        := DTA;
+
+  /*Parent for all late binding*/
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  + result_expr:EXPR
+
+  + slot:SLOT
+
+  + self_arg:EXPR
+
+  + context:LOCAL
+  
+  //
+  // Service
+  //
+
+  - remove <-
+  (
+    // Nothing.
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA"
+    abstract
+  )
+
+NODE_TYPE, DTA
+
+  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
+  ( + result:LIST
+
+    result := LIST.create (e.position)
+    (t = TYPE_NULL).if {
+      TYPE_NULL.product_error position in result with context
+      ? {result.count != 0}
+    } else {
+      lookup t with e in result
+    }
+    result
+  )
+
+  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  [
+    -? {type_self != NULL}
+  ]
+  ( + node:NODE
+    + result:BOOLEAN
+
+    node ?= l.first
+    (node = NULL).if {
+      result := TRUE
+    } else {
+
+      /*
+      "DTA: ".print
+      type_self.print
+      '\n'.print
+      */
+      node.update_link type_self
+      node ?= l.second
+      (node != NULL).if {
+	node.update_link type_self
+      }
+    }
+    result
+  )
+
+NODE_STYLE, SELF
+
+  - get_argument:ARRAY EXPR <-
+  ( + result:ARRAY EXPR
+
+    result := ARRAY EXPR .create_with_capacity 1
+    result.add_last (self_arg.my_copy)
+    result
+  )
+
+DTA
+
+  - finalise typ:TYPE with (expr:EXPR,s:SLOT) in lst:LIST <-
+  ( + node:NODE_STYLE
+
+    node := NODE_STYLE.create (expr.my_copy,s) with Self result result_expr
+    lst.add_last node
+  )
+
+Private
+
+  - lookup typ:TYPE with expr:EXPR in lst:LIST <-
+  ( + s:SLOT
+    + name:STRING_ALIAS
+    + node_style:NODE_STYLE
+    + r:EXPR
+
+    name := slot.name
+    s := typ.get_local_slot name
+    (s = NULL).if {
+      
+      // Lookup parent.
+      // First, evaluate the parent slot in the EXPR r
+      // Then chain another NODE_TYPE to dispatch on r
+      s := typ.get_path_slot name
+      r := s.result_type.get_expr_for typ
+      node_style := NODE_STYLE.create (expr.my_copy,s) with Self result r
+      lst.add_last node_style
+      lst.add_last (NODE_TYPE.create r with Self)
+    } else {
+      // Direct call.
+      s.is_equal_profil slot
+      finalise typ with (expr,s) in lst
+    }
+    lst.add_last (PROTOTYPE_CST.create (expr.position) type (TYPE_VOID.default)); // BSBS: Alias.
+  )

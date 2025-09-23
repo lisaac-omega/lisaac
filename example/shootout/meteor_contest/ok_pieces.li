@@ -1,0 +1,28 @@
+Header
+  
+  + name         := OK_PIECES;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Public
+  
+  + n_pieces:ARRAY(INTEGER_8)
+  
+  + piece_vec:ARRAY2(UINTEGER_32)
+  
+  - create:SELF <-
+  ( + result:SELF
+    result := clone
+    result.make
+  )
+  
+  - make <-
+  (  
+    n_pieces := ARRAY(INTEGER_8).create n_piece_type
+    piece_vec := ARRAY2(UINTEGER_32).create (n_piece_type,PIECE.n_orient)
+  )

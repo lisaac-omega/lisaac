@@ -1,0 +1,96 @@
+Header
+  + name := ARDCOM;
+  
+  - external := `
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+`;
+
+Inherit
+  - parent_utils:UTILS := UTILS
+  
+Public
+
+  - serial_path:STRING_ALIAS := "/dev/ttyUSB0"
+  
+  - serial_port:INTEGER
+  
+  - size:INTEGER := 64
+  - buf_in:NATIVE_ARRAY CHARACTER := NATIVE_ARRAY CHARACTER.create size
+  - buf_out:NATIVE_ARRAY CHARACTER := NATIVE_ARRAY CHARACTER.create size
+  
+  - full_buffer:BOOLEAN
+  
+  - init_serial_port <-
+  ( + pth:NATIVE_ARRAY CHARACTER
+    + por:INTEGER
+    `struct termios tty`
+    pth := serial_path.to_external
+    por := serial_port := `open(@pth, O_RDWR | O_NOCTTY /*| O_NONBLOCK*/)`:(INTEGER)
+    (serial_port = -1).if { "Error open ".print; serial_path.println; exit 1; }
+    `tcgetattr(@por, &tty)`
+    `cfmakeraw(&tty)`
+    `cfsetispeed(&tty, B9600)`
+    `cfsetospeed(&tty, B9600)`
+    `tty.c_cflag |= (CLOCAL | CREAD)`
+//    `tty.c_cflag &= ~CSIZE`
+//    `tty.c_cflag |= CS8`
+//    `tty.c_cflag &= ~PARENB`
+//    `tty.c_cflag &= ~CSTOPB`
+    `tty.c_cflag &= ~CRTSCTS`
+    //
+    `tty.c_cflag &= ~HUPCL`;   // - HUPCL
+//    `tty.c_iflag |= BRKINT`;   // BRKINT
+//    `tty.c_iflag |= IGNPAR`;   // IGNPAR
+//    `tty.c_iflag &= ~ICRNL`;   // - ICRNL
+//    `tty.c_oflag &= ~OPOST`;   // - OPOST
+//    `tty.c_oflag &= ~ONLCR`;   // - ONLCR
+//    `tty.c_lflag &= ~ISIG`;    // - ISIG
+//    `tty.c_lflag &= ~ICANON`;  // - ICANON
+//    `tty.c_lflag &= ~ECHO`;    // - ECHO
+    //`tty.c_iflag |= IXON | IXOFF`
+    `tty.c_cc[VMIN]  = 0`
+    `tty.c_cc[VTIME] = 1`
+    (`tcsetattr(@por, TCSANOW, &tty)`:INTEGER < 0).if { "Error !".println; exit 1; }
+  )
+  
+  - input <-
+  ( + s,cnt,por:INTEGER
+    + b:NATIVE_ARRAY CHARACTER
+    (!full_buffer).if {
+      (b,s,por) := (buf_in,size,serial_port)
+      cnt := `read(STDIN_FILENO, @b,1)`:INTEGER_16.max 0
+      (cnt > 0).if {        
+        `write(@por,@b,1)`
+        (b.at 0 = '\n').if { full_buffer := TRUE; }
+      }
+    }
+  )
+  
+  - output <-
+  ( + cnt,s,por:INTEGER
+    + b:NATIVE_ARRAY CHARACTER
+    + c:CHARACTER
+    (b,s,por) := (buf_out,size,serial_port)
+    cnt := `read(@por,@b,1)`:(INTEGER)
+    (cnt = 1).if {
+      c := buf_out.at 0
+      (c = '!').if { full_buffer := FALSE; /*"ACK!".println;*/ } else { c.print; }
+    }
+  )
+  
+  - main <-
+  (
+    `int flags = fcntl(STDIN_FILENO, F_GETFL, 0)`
+    `fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK)`
+    ((COMMAND_ARGS.count = 2) && {COMMAND_ARGS.first.has_prefix "/dev/tty"}).if {
+      serial_path := COMMAND_ARGS.first
+    }
+    "Serial path:".print; serial_path.println
+    init_serial_port
+    {
+      output
+      input
+    }.endless_loop
+  )

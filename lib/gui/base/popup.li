@@ -1,0 +1,82 @@
+Header
+  + name := POPUP;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  - free <- ( parent := NULL; unset on; )
+  
+  + timestamp:UINTEGER_64
+  - on:INTEGER := 1<<12
+    
+  - width_max:REAL_32
+  - height_max:REAL_32
+  
+  - percent:REAL_32 <-
+  ( + dt:UINTEGER_64
+    + result:REAL_32
+    dt := TIME.gettimeofday - timestamp
+    (dt <= delay_popup).if {
+      PAPER.refresh_again
+      ask_refresh
+      result := dt.to_real_32 / delay_popup.to_real_32
+    } else {
+      result := 1.0
+    }
+    result
+  )
+  
+  - refresh_popup:BOOLEAN <-
+  ( + p0,p1,p,r:REAL_32
+    p := percent
+    (! is on).if { p := 1.0 - p; }
+    ((p1 := height_max) != 0).if {
+      p0 := height_min
+      r := height := p0 + (p1 - p0) * p
+    } else {
+      (p0,p1) := (width_min,width_max)
+      r := width := p0 + (p1 - p0) * p
+    }
+    ! ((! is on) && {p = 0} && {r = 0} && {parent != NULL}).if {      
+      parent.child_rm Self; parent := NULL
+    }
+  )
+  
+  - draw_all <-
+  (
+    /*begin_path
+    rect (xo,yo) size (width,height)
+    stroke_color (COLOR.red)
+    stroke;*/
+    intersect_scissor (xo,yo) size (width,height)
+    draw
+    draw_child
+    reset_scissor
+  )
+  
+  - set_open w:WIN <- set_open w at 1000
+  
+  - set_open w:WIN at i:INTEGER <-
+  ( 
+    (w = NULL).if {
+      (is on).if {
+        timestamp := TIME.gettimeofday - delay_popup + (percent * delay_popup.to_real_64).to_uinteger_64
+        unset on
+        ask_refresh
+      }
+    } else {
+      (parent != w).if {
+        (parent != NULL).if { parent.child_rm Self; ask_refresh; }
+        init_parent w at i
+      }
+      timestamp := TIME.gettimeofday - delay_popup + (percent * delay_popup.to_real_64).to_uinteger_64
+      set on
+      ask_refresh
+    }
+  )
+  
+  - close <- set_open NULL at 0
+  

@@ -1,0 +1,101 @@
+Header
+
+  + name        := EXPR_OR;
+
+  /*Or binary arithmetic expression.*/
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  - symbol:STRING_ALIAS := "|"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0  | E -> E
+  ( + result:EXPR
+
+    (left_cst.value = 0).if {
+      result := right
+      left_cst.remove
+    }
+    result
+  )
+
+  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  //-- E | 0  -> E
+  ( + result:EXPR
+
+    (right_cst.value = 0).if {
+      result := left
+      right_cst.remove
+    }
+    result
+  )
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 | C2 -> C3
+  (
+    left_cst.set_value (left_cst.value | right_cst.value)
+    right_cst.remove
+    left_cst
+  )
+
+  - exec:EXPR <-
+  //-- (! E1 & E2) | (E1 & ! E2) -> E1 ^ E2 (A lot of possibilities, but see '^' in INTEGER)
+  //-- E | E                     -> E
+  ( + result:EXPR
+    + and_l,and_r:EXPR_AND
+    + not_l,not_r:EXPR_NOT
+
+    (left ~= right).if {
+      right.remove
+      result := left
+    } else {
+      and_l ?= left
+      and_r ?= right
+      ((and_l != NULL) && {and_r != NULL}).if {
+	not_l ?= and_l.left
+	not_r ?= and_r.right
+	((not_l != NULL) && {not_r != NULL}).if {
+	  ((not_l.right ~= and_r.left) && {and_l.right ~= not_r.right}).if {
+	    result := EXPR_XOR.create position with (not_l.right) and (and_l.right)
+	    right.remove
+	  }
+	}
+      }
+    }
+    result
+  )
+
+  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  //-- -1 | E -> -1
+  ( + result:EXPR
+
+    (left_cst.is_saturated).if {
+      result := left_cst
+      right.remove
+    }
+    result
+  )
+
+  - exec_right right_cst:INTEGER_CST :EXPR <-
+  //-- E | -1 -> -1
+  ( + result:EXPR
+
+    (right_cst.is_saturated).if {
+      result := right_cst
+      left.remove
+    }
+    result
+  )
+
+
+
+
+

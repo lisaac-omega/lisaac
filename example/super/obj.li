@@ -1,0 +1,22 @@
+Header
+
+  + name        := OBJ;
+  /*
+  Example the `super' call.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  + name:STRING_ALIAS := "OBJ"
+
+  + method <-
+  (
+    "\tThis method is in OBJ.\n".print
+    "\tMy context is ".print
+    name.print
+    '\n'.print
+  )

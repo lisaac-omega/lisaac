@@ -1,0 +1,145 @@
+Header
+
+  + name    := READ_LOCAL;
+
+  /* Read for local.*/
+
+Inherit
+
+  + parent_read:Expanded READ
+
+Public
+
+  - is_invariant:BOOLEAN <- local.is_invariant
+
+  + local:LOCAL
+
+  - variable:VARIABLE <- local
+
+  //
+  // Comparison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + rd:READ_LOCAL
+
+    rd ?= other
+    ((rd != NULL) && {local = rd.local})
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with l:LOCAL :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p with l
+    result
+  )
+
+  - make p:POSITION with l:LOCAL <-
+  (
+    position := p
+    local    := l
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_access_unlink:INSTR <- NULL
+
+  - execute_access_link
+  
+  //
+  // Contract Slot in/out, Section in/out, Prototype in/out
+  //
+  
+  - to_run_contract msg:STRING_ALIAS <-
+  ( + slot_msg:SLOT_CODE
+    + slot_nam:STRING_ALIAS
+    + my_profil:PROFIL
+    + wrt_lst:ARRAY WRITE
+    + args:ARRAY EXPR
+    + call:CALL_SLOT
+      
+    + old_profil_current:PROFIL
+    + old_profil_slot:PROFIL_SLOT
+    + old_list_current:LIST
+    (static_type.raw = TYPE_VOID).if {
+      list_current.add_last Self
+    } else {    
+      string_tmp.copy "contract "
+      static_type.append_contract_name_in string_tmp
+      slot_nam := string_tmp.to_string_alias
+      slot_msg ?= type_object.get_slot slot_nam
+      (slot_msg = NULL).if {
+        string_tmp.copy "Slot `";
+        string_tmp.append slot_nam
+        string_tmp.append "' for contract not found in OBJECT."
+        semantic_error (position,string_tmp)
+      }
+      args := ALIAS_ARRAY EXPR .new
+      args.add_last (PROTOTYPE_CST.create position type (type_object.default))
+      args.add_last (STRING_CST.create position text msg length (msg.count))
+      args.add_last Self
+      args := ALIAS_ARRAY EXPR .alias args
+      //
+      old_profil_slot := profil_slot
+      old_profil_current := profil_current
+      old_list_current := list_current
+      (my_profil, wrt_lst) := slot_msg.get_profil args self (type_object.default)
+      list_current := old_list_current
+      profil_current := old_profil_current
+      profil_slot := old_profil_slot
+      //
+      (debug_level_option != 0).if {
+        list_current.add_last (
+          PUSH.create position context (profil_current.context) first FALSE
+        )
+      }
+      call := CALL_SLOT.create position profil my_profil with wrt_lst cop NULL
+      list_current.add_last call
+    }
+  )
+  
+  //
+  // Genere
+  //
+
+  - genere <-
+  ( + tb:PROFIL_BLOCK
+    + idf:STRING_ALIAS
+    + idx:INTEGER
+
+    idf := ALIASER_LOCAL.read Self
+    (local.is_result /*ensure_count = -100*/).if {
+      output.add_last '*'
+    }
+    output.append idf
+    //
+
+    tb ?= local.type.raw
+    (tb != NULL).if {
+      ALIASER_LOCAL.add_var_size local
+    }
+
+    ((variable.type_set.count = 1) && {
+        idx := variable.type_set.first_index
+        variable.type_set.at idx = TYPE_NULL
+    }).if {
+      output.append " /* Always NULL */ "
+    }
+
+  )
+
+
+
+
+
+
+
+
+

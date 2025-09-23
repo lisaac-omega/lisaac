@@ -1,0 +1,234 @@
+Header
+
+  + name := SYSTEM_IO_DEFAULT;
+
+  /*Lower level for Input / Output*/
+  
+Public
+  
+  - asset_open pth:STRING :POINTER <-
+  ( + result:POINTER
+    (lip "target" str = "android").if {
+      + n:NATIVE_ARRAY CHARACTER
+      n := pth.to_external
+      result := `AAssetManager_open(((struct android_app*)my_app)->activity->assetManager, @n, AASSET_MODE_BUFFER)`:(POINTER)
+    } else {
+      + i:INTEGER
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp += COMMAND_ARGS.executable_directory
+        i := tmp.last_index_of '/'
+        (i != -1).if { tmp.set_upper i; }
+        tmp += "assets/" += pth
+        result := FILE_UTILS.open_read tmp
+      }
+    }
+    result
+  )
+  
+  - asset_close p:POINTER <-
+  (
+    (lip "target" str = "android").if {
+      `AAsset_close((AAsset *)@p)`
+    } else {
+      FILE_UTILS.close p
+    }
+  )
+  
+  - asset_read p:POINTER in buf:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    (lip "target" str = "android").if {
+      result := `AAsset_read((AAsset *)@p, @buf, @s)`:(INTEGER)
+    } else {
+      result := FILE_UTILS.read_raw p in buf size s
+    }
+    result
+  )
+    
+  - asset_size p:POINTER :INTEGER <- 
+  ( + result:INTEGER
+    (lip "target" str = "android").if {
+      result := `AAsset_getLength((AAsset *)@p)`:INTEGER
+    } else {
+      result := FILE_UTILS.size p
+    }
+    result
+  )
+  
+  - asset_open_dir pth:STRING :POINTER <-
+  ( + n:NATIVE_ARRAY CHARACTER
+    + result:POINTER
+    (lip "target" str = "android").if {
+      n := pth.to_external
+      result := `AAssetManager_openDir(((struct android_app*)my_app)->activity->assetManager, @n)`:POINTER
+    } else {
+      + i:INTEGER
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp += COMMAND_ARGS.executable_directory
+        i := tmp.last_index_of '/'
+        (i != -1).if { tmp.set_upper i; }
+        tmp += "assets/" += pth
+        n := tmp.to_external
+        result := `opendir(@n)`:(POINTER)
+      }
+    }
+    result
+  )
+  
+  - asset_close_dir p:POINTER <-
+  (
+    (lip "target" str = "android").if {
+      `AAssetDir_close((AAssetDir *)@p)`
+    } else {
+      `closedir(@p)`
+    }
+  )
+  
+  - asset_rewind_dir p:POINTER <-
+  (
+    (lip "target" str = "android").if {
+      `AAssetDir_rewind(@p)`
+    } else {
+      `rewinddir(@p)`
+    }
+  )
+  
+  - asset_get_next_file_name p:POINTER in str:STRING_BUFFER :BOOLEAN <-
+  ( + t:NATIVE_ARRAY CHARACTER
+    + c:CHARACTER
+    + i:INTEGER
+    + result:BOOLEAN
+    (lip "target" str = "android").if {
+      t := `AAssetDir_getNextFileName((AAssetDir *)@p)`:NATIVE_ARRAY CHARACTER
+      result := t != NULL
+    } else {
+      + dirent:POINTER
+      ((dirent := `readdir(@p)`:POINTER).is_not_null).if {
+        t := `((struct dirent *)@dirent)->d_name`:NATIVE_ARRAY CHARACTER
+        result := TRUE
+      }
+    }
+    (result).if {
+      {(c := t.at i) != '\0'}.while_do {
+        str.add_last c
+        i := i + 1
+      }
+    }
+  )
+  
+  - read_asset fn:STRING in dta:ARRAY UINTEGER_8 <-
+  ( + i:INTEGER
+    (lip "target" str = "android").if {
+      + b:NATIVE_ARRAY UINTEGER_8
+      + len:INTEGER
+      + file:POINTER
+      //fn.print
+      file := asset_open fn
+      (file.is_null).if {
+        "Error `".print; fn.print; "' not found in assets.".println;
+        exit 1
+      }
+      len := asset_size file
+      dta.set_capacity len
+      b := dta.storage
+      asset_read file in b size len
+      //" ... ok".println
+      asset_close file
+      dta.set_upper (len-1)
+    } else {
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp += (COMMAND_ARGS.executable_directory)
+        i := tmp.last_index_of '/'
+        (i != -1).if { tmp.set_upper i; }
+        tmp += "assets/"
+        (read_assets_intern (tmp,fn) in dta || {
+            tmp.clear
+            tmp.append "web/assets/"
+            read_assets_intern (tmp,fn) in dta
+        }).if {
+          //fn.print; " assets Ok.".println
+        } else {
+          "Error `".print; fn.print; "' not found in assets.".println;
+          exit 1
+        }
+      }
+    }
+  )
+  
+  - read_asset fn:STRING in_txt dta:STRING_BUFFER <-
+  ( + i:INTEGER
+    (lip "target" str = "android").if {
+      UTILS.not_yet_implemented
+    } else {
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp += (COMMAND_ARGS.executable_directory)
+        i := tmp.last_index_of '/'
+        (i != -1).if { tmp.set_upper i; }
+        tmp += "assets/"
+        (read_assets_intern_txt (tmp,fn) in dta || {
+            tmp.clear
+            tmp.append "web/assets/"
+            read_assets_intern_txt (tmp,fn) in dta
+        }).if {
+          //fn.print; " assets Ok.".println
+        } else {
+          "Error `".print; fn.print; "' not found in assets.".println;
+          exit 1
+        }
+      }
+    }
+  )
+  
+Private
+  - read_assets_intern (tmp:STRING_BUFFER,fn:STRING) in dta:ARRAY UINTEGER_8 :BOOLEAN <-
+  ( + f:FILE
+    tmp += fn
+    f ?= FILE_SYSTEM.get tmp
+    ((f != NULL) && {f.open}).if {
+      dta.set_capacity (f.size)
+      f.read dta size (f.size)
+      f.close
+      //tmp.println
+    }
+  )
+  
+  - read_assets_intern_txt (tmp:STRING_BUFFER,fn:STRING) in dta:STRING_BUFFER :BOOLEAN <-
+  ( + f:POINTER
+    + s:INTEGER
+    tmp += fn
+    f := FILE_UTILS.open_read tmp
+    (f.is_not_null).if {
+      s := FILE_UTILS.size f
+      dta.set_capacity s
+      FILE_UTILS.read f in dta size s
+      FILE_UTILS.close f
+      //tmp.println
+    }
+  )
+  
+  /*
+  - test pth:STRING <-
+  ( + p:POINTER
+    + n,i:INTEGER
+    + c:CHARACTER
+    + na:NATIVE_ARRAY CHARACTER
+    p := asset_open_dir pth
+    n := 10; //`((AAssetDir *)@p)->mAssetDir->getFileCount()`:INTEGER
+    "Nombre:".print; n.println
+    STRING.tmp { tmp:STRING_BUFFER
+      0.to (n-1) do { idx:INTEGER
+        tmp.clear
+        //`((AAssetDir *)@p)->mCachedFileName = ((AAssetDir *)@p)->mAssetDir->getFileName(@idx)`
+        //na := `((AAssetDir *)@p)->mCachedFileName.string()`:NATIVE_ARRAY CHARACTER
+        na := `AAssetDir_getFileName((AAssetDir *)@p,@idx)`:NATIVE_ARRAY CHARACTER
+        i := 0
+        {(c := na.at i) != '\0'}.while_do {
+          tmp.add_last c
+          i := i + 1
+        }
+        tmp.println
+      }
+    }
+    asset_close_dir p
+    "Fin du test\n".print
+  )
+  */

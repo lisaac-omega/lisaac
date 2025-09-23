@@ -1,0 +1,269 @@
+Header
+  + name := Strict CPX;
+
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Private
+  - stk_bin:Expanded ARRAY CPX
+  
+Public
+  + exp:Expanded ARRAY EXPR
+  + ope:Expanded ARRAY STRING_ALIAS
+  + tree:EXPR
+    
+Public
+  
+  - type:TYPE <-
+  ( 
+    (tree = NULL).if { get_tree; }
+    tree.type
+  )
+  
+  - init l:ARRAY EXPR ope o:ARRAY N_IDF :CPX <-
+  (
+    (exp = NULL).if { exp := l.twin; } else { exp.copy_collection l; }
+    (ope = NULL).if { ope := o.twin; } else { ope.copy_collection o; }
+    Self
+  )
+  
+  - new:SELF <-
+  ( + r:SELF; (stk_bin.is_empty).if { r := clone; } else { r := stk_bin.pop; }; r)
+  
+  - free <-
+  ( (tree != NULL).if { tree.free; tree := NULL; }
+    exp.foreach { e:EXPR; e.free; }; exp.clear; ope.clear; stk_bin.add_last Self
+  )
+  
+  - new_parse t:INTEGER <-
+  ( + e:EXPR
+    {read_symbol}.while_do { col (LOOK.operator) sub (last_str.count); ope.add_last last_str; }
+    {(e := rd_expr_msg) != NULL}.while_do {
+      exp.add_last e
+      ope.add_last NULL
+      //
+      skip_sp
+      ((look ":=") || {look "<-"} || {look "?="}).if {
+        ope.add_last ":="
+        pos_i := pos_i + 2
+        col (LOOK.symbol) sub 2
+      }
+      //
+      {read_symbol}.while_do { col (LOOK.operator) sub (last_str.count); ope.add_last last_str; }
+      skip_spln_expr
+    }
+    (exp.is_empty && {!ope.is_empty}).if { err syntax msg "Expr needed."; }
+  )
+  
+  + ai:INTEGER
+  
+  - begin_draw <-
+  (
+    ai := 0
+   // fill_color (LOOK.operator)
+  )
+  
+  - sub_draw <-
+  (
+    ((ai <= exp.upper) && {exp.at ai.now pos_i}).if {
+      exp.at ai.draw
+      ai := ai + 1
+    }
+  )
+  
+  - simplify:EXPR <-
+  ( + result:EXPR
+    ((ope.count = 1) && {ope.first = NULL}).if {
+      ? {exp.count = 1}
+      result := exp.first
+    } else {
+      result := Self
+    }
+    (result != Self).if { exp.clear; free; }
+    result
+  )
+  
+  - ex:ARRAY EXPR := ARRAY EXPR.create_with_capacity 8
+  - op:ARRAY N_IDF := ARRAY N_IDF.create_with_capacity 8
+  - ar:ARRAY EXPR := ARRAY EXPR.create_with_capacity 2
+  - get_tree <-
+  ( + t0:TPRO
+    + s,mx_s:SLOT
+    + i,mx_pow,mx_i:INTEGER
+    + ni:N_IDF
+    + cas:CAS
+    
+    (tree != NULL).if { tree.free; }
+    ex.copy_collection exp
+    op.copy_collection ope
+    
+    {! op.is_empty}.while_do {
+      mx_pow := -1
+      i := 0
+      {i <= op.upper}.while_do {
+        t0 ?= ex.at i.type
+        ni := op.at i
+        "T0=".print; t0.println
+        ni.crec.until_do { nr:N_ARG
+          "NR=".print; nr.type.println
+          ((t0 <= nr.type) && {!nr.slot.is_empty}).if {
+            s := nr.slot.first
+            "s=".print; s.name.println
+            (
+              (s.prio > mx_pow) ||
+              {(s.prio = mx_pow) && {s.right} && {s.right = mx_s.right}}
+            ).if {
+              (mx_pow,mx_i,mx_s) := (s.prio,i,s)
+            }
+          }
+        }
+        i := i + 1
+      }
+      ar.clear; ar.add_last (ex.at mx_i); ar.add_last (ex.at (mx_i+1))
+      cas := CAS.new (mx_s.name) arg ar self 0 fn FALSE.set_slot mx_s
+      ex.put cas to mx_i; ex.remove (mx_i+1); op.remove mx_i
+    }
+    ? {ex.count = 1}
+    tree := ex.first
+  )
+  
+  - txt_in err:ERR <-
+  (     
+    0.to (exp.upper - 1) do { i:INTEGER
+      exp.at i.to_err err
+      err.txt.add_last ' '
+      STY.put (STY.cfn) to (err.txt.count) in (err.sty)
+      err.txt += ope.at i.idf
+      err.txt.add_last ' '
+    }
+    exp.last.to_err err
+  )
+  
+  - run <-
+  ( + max_pos,max_pow,i,i_post,i_pre,low:INTEGER
+    + continue:BOOLEAN
+    + max_ass:BOOLEAN
+    + val:LIARRAY OP
+    + slo:LIARRAY SLOT
+    + siz:LIARRAY INTEGER
+    //+ v:EXPR
+    + t:TYPE
+    + s:SLOT
+    + op:OPERATOR
+    + up,st1,st2:INTEGER
+    val := LIARRAY OP.new
+    slo := LIARRAY SLOT.new
+    siz := LIARRAY INTEGER.new
+    i := -1
+    {
+      up := stack_result.upper
+      // Next operande.
+      i := expr.index_of_false {e:EXPR; e.same_dynamic_type OPERATOR} start i
+      (i > expr.upper).if { crash_with_message "Operator postfix not found."; }
+      expr.at i.run
+      (up = stack_result.upper).if { crash_with_message "Expression without value."; }
+      t := stack_result.last.static_type
+      // Suffix.
+      i_post := i + 1
+      continue := TRUE
+      {(i_post <= expr.upper) && {continue}}.while_do {
+        continue := FALSE
+        ((i_post = expr.upper) || {expr.at (i_post+1).same_dynamic_type OPERATOR}).if {          
+          op ?= expr.at i_post
+          s := t.lookup (suffix op)
+          (s != NULL).if {            
+            // ? = pop
+            //INVOKE.new ? slot s arg ?            
+            t := stack_result.last.static_type
+            i_post := i_post + 1
+            continue := TRUE
+          }
+        }
+      }
+      // Prefix.
+      i_pre := i - 1
+      continue := TRUE
+      {(i_pre >= low) && {continue}}.while_do {
+        continue := FALSE
+        ((i_pre = low) || {expr.at (i_pre-1).same_dynamic_type OPERATOR}).if {
+          op ?= expr.at i_pre
+          s := t.lookup (prefix op)
+          (s = NULL).if { crash_with_message "Operator Prefix not found."; }
+          // ? = pop
+          //INVOKE.new ? slot s arg ?          
+          t := stack_result.last.static_type
+          i_pre := i_pre - 1
+          continue := TRUE
+        }
+      }
+      (up = stack_result.upper).if { crash_with_message "Expression without value."; }
+      //
+      siz.add_last (val.count)
+      (up+1).to (stack_result.upper) do { j:INTEGER
+        val.add_last (stack_result.at j)
+      }
+      siz.add_last (val.upper)
+      stack_result.set_upper up
+      //
+      i := i_post
+      (i < expr.upper).if {
+        // Infix.
+        t := val.last.static_type
+        op ?= expr.at i
+        s := t.lookup (infix op left TRUE)
+        (s = NULL).if { crash_with_message "Operator Infix not found."; }
+        slo.add_last s
+      }
+      low := i_post + 1
+    }.do_while {i <= expr.upper}
+    /*
+    "\nVal: ".print
+    val.foreach { o:OP; o.print; ' '.print; }
+    "\nSlo: ".print
+    slo.foreach { s:SLOT; s.name.print; ' '.print; }
+    "\nSiz: ".print
+    siz.foreach { i:INTEGER; i.print; (i.odd.ok ' ' or '-').print; }
+    '\n'.print
+    */
+    {slo.is_empty}.until_do {
+      // Search max level.
+      max_pow := -1
+      0.to (slo.upper) do { j:INTEGER
+        s := slo.at j
+        (
+          (s.priority > max_pow) ||
+          {(s.priority = max_pow) && {s.right = max_ass} && {max_ass}}
+        ).if {
+          max_pow := s.priority
+          max_ass := s.right
+          max_pos := j
+        }
+      }
+      st1 := stack_result.count
+      (siz.at (max_pos*2)).to (siz.at (max_pos*2+1)) do { i:INTEGER
+        stack_result.add_last (val.at i)
+      }
+      st2 := stack_result.count
+      (siz.at (max_pos*2+2)).to (siz.at (max_pos*2+3)) do { i:INTEGER
+        stack_result.add_last (val.at i)
+      }
+      s := slo.at max_pos
+      // ? = pop
+      // ? = pop
+      //INVOKE.new ? slot s arg ?      
+      siz.put (val.count) to (max_pos*2)
+      st1.to (stack_result.upper) do { i:INTEGER
+        val.add_last (stack_result.at i)
+      }
+      siz.put (val.upper) to (max_pos*2+1)
+      stack_result.set_upper (st1-1)
+      // Delete operator.
+      slo.remove max_pos
+      siz.remove (max_pos*2+2) to (max_pos*2+3)
+    }
+    (siz.first).to (siz.second) do { i:INTEGER
+      stack_result.add_last (val.at i)
+    }
+    siz.free; slo.free; val.free
+  )
+  

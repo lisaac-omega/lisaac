@@ -1,0 +1,109 @@
+Header
+  + name := VKEYB;
+  
+Inherit
+  + parent_popup:Expanded POPUP
+  - parent_json:JSON := JSON
+  
+Private
+        
+  - map:NATIVE_ARRAY (ARRAY STRING_ALIAS) :=
+  ( + lap:NATIVE_ARRAY (ARRAY STRING_ALIAS)
+    lap := NATIVE_ARRAY (ARRAY STRING_ALIAS).create 4
+    0.to 3 do { i:INTEGER; lap.at i put (ARRAY STRING_ALIAS.create_with_capacity 35); }
+    35.times { ACT_KEY.new.init Self act (ACT1 STRING_ALIAS.new); }
+    lap
+  )
+  
+Public
+  
+  - load n:INTEGER <-
+  [ ? {n.in_range 0 to 3}; ]
+  ( + r:ARRAY STRING_ALIAS
+    + t:STRING_ALIAS
+    + a:ACT1 STRING_ALIAS
+    //+ ak:ACT_KEY
+    r := map.at n
+    ? {child.count = r.count}
+    0.to (r.upper) do { i:INTEGER
+      t := r.at i
+      //ak ?= 
+      a ?= child.at i.like ACT_KEY.act
+      a.txt_l t
+      (t = "⬆").if    {
+        a.fn {tt:STRING_ALIAS; load 1; BOOLEAN.unpredictable} val t
+      }.elseif {(t = "⇧") || {t = "ABC"}} then {
+        a.fn {tt:STRING_ALIAS; load 0; BOOLEAN.unpredictable} val t
+      }.elseif {t = "=/<"}  then {
+        a.fn {tt:STRING_ALIAS; load 3; BOOLEAN.unpredictable} val t
+      }.elseif {t = "🔢"} then {
+        a.fn {tt:STRING_ALIAS; load 2; BOOLEAN.unpredictable} val t
+      }.elseif {t = "⏎"} then {
+        a.fn {tt:STRING_ALIAS; KEYBOARD.put "\n" cmd (KEYBOARD.key_cmd); BOOLEAN.unpredictable} val t
+      }.elseif {t = "⌫"} then {
+        a.fn {tt:STRING_ALIAS; KEYBOARD.put "\b" cmd (KEYBOARD.key_cmd); BOOLEAN.unpredictable} val t
+      } else {
+        a.fn {tt:STRING_ALIAS; KEYBOARD.put tt cmd 0; BOOLEAN.unpredictable} val t
+      }
+    }
+  )
+  
+  - refresh <-
+  ( + x,y,w,h:REAL_32
+    refresh_popup.if {
+      yo := parent.height - height
+      width := parent.width
+      (w,h) := (width/10,height_max/4)
+      // Line 1 and 2:
+      (x,y) := (xo,yo)
+      00.to 09 do { i:INTEGER; child.at i.xy (x,y).size (w,h); x := x + w; }
+      (x,y) := (xo,y + h)
+      10.to 19 do { i:INTEGER; child.at i.xy (x,y).size (w,h); x := x + w; }
+      // Line 3:
+      (x,y) := (xo,y + h)
+      child.at 20.xy (x,y).size (w*1.5,h); x := x + w*1.5
+      21.to 27 do { i:INTEGER; child.at i.xy (x,y).size (w,h); x := x + w; }
+      child.at 28.xy (x,y).size (w*1.5,h)
+      // Line 4:
+      (x,y) := (xo,y + h)
+      child.at 29.xy (x,y).size (w*1.5,h); x := x + w*1.5
+      child.at 30.xy (x,y).size (w,h); x := x + w; child.at 31.xy (x,y).size (w,h); x := x + w
+      child.at 32.xy (x,y).size (w*4,h); x := x + w*4; // Space
+      child.at 33.xy (x,y).size (w,h); x := x + w
+      child.at 34.xy (x,y).size (w*1.5,h); // Enter
+    }
+  )
+    
+  - height_max:REAL_32 <- (parent.height / 3).max 200
+  
+  - draw <-
+  (    
+    begin_path
+    //xo.print; ','.print; yo.print; '/'.print; parent.height.println
+    rect (xo,yo) size (width,height) radius 8
+    fill_color (COLOR.rgbaf (1,1,1,0.85))
+    stroke_color (COLOR.black)
+    stroke_width 2.0
+    fill
+    stroke
+  )
+  
+  // Parser
+  
+  - read:SELF <-
+  (
+    0.to 3 do { i:INTEGER; map.at i.clear; }
+    read_object
+    load 0
+    Self
+  )
+  
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "map0" then { map.at 0.add_last v; }
+    .case "map1" then { map.at 1.add_last v; }
+    .case "map2" then { map.at 2.add_last v; }
+    .case "map3" then { map.at 3.add_last v; }
+    = STRING_ALIAS
+  )

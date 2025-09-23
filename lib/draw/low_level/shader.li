@@ -1,0 +1,85 @@
+Header
+  
+  + name := Expanded SHADER;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Public
+
+  - shader_fillgrad:INTEGER := 0
+  - shader_fillimg:INTEGER  := 1
+  - shader_simple:INTEGER   := 2
+  - shader_img:INTEGER      := 3
+
+Public
+  
+  + prog:UINTEGER_32
+  //+ frag:UINTEGER_32
+  //+ vert:UINTEGER_32
+  + loc_view_trans:INTEGER
+  + loc_view:INTEGER
+  + loc_trans_post:INTEGER
+  + loc_tex :INTEGER
+  + loc_frag:INTEGER
+
+  - make (name,header,opts,vshader,fshader:STRING_ALIAS) <-
+  ( + status:INTEGER
+    + iprog, ivert, ifrag:UINTEGER_32
+    + opt:STRING_ALIAS
+    iprog := pen_gl.gl_create_program
+    //"Create Prog #".print; iprog.print; '\n'.print
+    ivert := pen_gl.gl_create_shader `GL_VERTEX_SHADER`:INTEGER
+    ifrag := pen_gl.gl_create_shader `GL_FRAGMENT_SHADER`:INTEGER
+    opt := (opts != NULL).ok opts or ""
+    pen_gl.gl_shader ivert source (header,opt,vshader)
+    pen_gl.gl_shader ifrag source (header,opt,fshader)
+    pen_gl.gl_compile_shader ivert
+    status := pen_gl.gl_get_shaderiv (ivert,`GL_COMPILE_STATUS`:INTEGER)
+    ? {status = 1}
+    pen_gl.gl_compile_shader ifrag
+    status := pen_gl.gl_get_shaderiv (ifrag,`GL_COMPILE_STATUS`:INTEGER)
+    ? {status = 1}
+    pen_gl.gl_attach_shader(iprog, ivert)
+    pen_gl.gl_attach_shader(iprog, ifrag)
+    
+    pen_gl.gl_bind_attrib_location(iprog, 0, "vertex")
+    pen_gl.gl_bind_attrib_location(iprog, 1, "tcoord")
+
+    pen_gl.gl_link_program iprog
+    status := pen_gl.gl_get_programiv (iprog,`GL_LINK_STATUS`:INTEGER)
+    ? {status = 1}
+    prog := iprog
+    pen_gl.gl_delete_shader ivert
+    pen_gl.gl_delete_shader ifrag
+    //vert := ivert
+    //frag := ifrag
+  )
+
+  - delete_shader <-
+  (
+    (prog != 0).if { gl_delete_program prog; prog := 0; }
+    //(vert != 0).if { gl_delete_shader vert;  }
+    //(frag != 0).if { gl_delete_shader frag;  }
+  )
+
+  - get_uniforms <-
+  (
+    loc_view_trans := pen_gl.gl_get_uniform_location (prog, "viewTrans")
+    loc_view := pen_gl.gl_get_uniform_location (prog, "viewSize")
+    loc_trans_post := pen_gl.gl_get_uniform_location (prog, "trans_post")
+    //"Shader prog #".print; prog.print; " viewSize:".print; loc_view.print; '\n'.print
+    loc_tex  := pen_gl.gl_get_uniform_location (prog, "tex")
+    //"Shader prog #".print; prog.print; " tex:".print; loc_tex.print; '\n'.print
+    // GLES3
+    loc_frag := pen_gl.gl_get_uniform_block_index (prog, "frag")
+    //"Shader prog #".print; prog.print; " frag:".print; loc_frag.print; '\n'.print
+  )
+  
+  - dump_shader_error (name,type:STRING_ALIAS) <-
+  ( + str:STRING_BUFFER
+    str := pen_gl.gl_get_shader_info_log shader
+    "Shader ".print;   name.print; '/'.print; type.print
+    " error:\n".print; str.print;  '\n'.print
+  )

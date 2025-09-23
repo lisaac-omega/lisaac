@@ -1,0 +1,17 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + i1,i2:ℤ
+    + m1,m2:MPZ
+    i1 := ℤ.init "-82B26F9A71E397BBA495D2A" base 16
+    m1.init
+    m1.set "-82B26F9A71E397BBA495D2A" base 16
+    i2 := i1 >> 4
+    m2.init
+    m2.shift_right (m1, 4)
+    TEST.check (m2.to_hexadecimal) string "-82B26F9A71E397BBA495D2"
+    TEST.check (i2.to_hexadecimal) string "-82B26F9A71E397BBA495D2"
+  )
+ 

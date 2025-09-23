@@ -1,0 +1,17 @@
+Header
+  + name := FILE_SYSTEM;
+
+Inherit  
+  - parent_directory:DIRECTORY := DIRECTORY
+  
+Public
+  
+  - path:STRING_ALIAS <-
+  ( + p:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      ENVIRONMENT.pwd_in tmp
+      p := tmp.to_string_alias
+    }
+    p
+  )
+    

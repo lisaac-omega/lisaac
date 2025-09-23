@@ -1,0 +1,48 @@
+Header
+
+  + name      := Expanded BASE;
+
+  - type := `unsigned char`;
+
+  - default := `0`:BASE;
+
+Insert
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - value:UINTEGER_8 <- CAST BASE TO UINTEGER_8 .on Self
+
+  //
+  // Creation.
+  //
+
+  - create c:UINTEGER_8 :SELF <-
+  (
+    CAST UINTEGER_8 TO SELF .on c
+  )
+
+  //
+  // Print.
+  //
+
+  - print <-
+  (
+    acgt.at ((value>>4) & 11b).print
+    acgt.at ((value>>2) & 11b).print
+    acgt.at (value      & 11b).print
+  )
+
+Private
+
+  - acgt:ARRAY(CHARACTER) :=
+  ( + result:ARRAY(CHARACTER)
+
+    result := ARRAY(CHARACTER).create_with_capacity 4
+    result.add_last 'A'
+    result.add_last 'C'
+    result.add_last 'G'
+    result.add_last 'T'
+    result
+  )

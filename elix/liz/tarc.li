@@ -1,0 +1,41 @@
+Header
+  + name := TARC;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + c_x:TEXP
+  + c_y:TEXP
+  
+  + rad:TEXP
+  
+  + a_0:TEXP
+  + a_1:TEXP
+  
+  + dir:INTEGER
+  
+  - init (cx,cy:TEXP) radius r:TEXP angle (a0,a1:TEXP) dir d:INTEGER :SELF <-
+  (
+    (c_x,c_y) := (cx,cy)
+    (a_0,a_1) := (a0,a1)
+    (rad,dir) := (r,d)
+    Self
+  )
+    
+  - run <-
+  (
+    arc (c_x.eval,c_y.eval) radius (rad.eval) angle (a_0.eval,a_1.eval) direction dir
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "Arc ("
+    c_x.append_in b;  b | ',';  c_y.append_in b
+    b += ") radius "
+    rad.append_in b
+    b += " angle "
+    a_0.append_in b;  b | ',';  a_1.append_in b
+    (dir = 1).if { b += " trigo"; } else { b += " clock"; }
+  )

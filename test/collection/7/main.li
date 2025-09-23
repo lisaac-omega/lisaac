@@ -1,0 +1,78 @@
+Header
+  + name := MAIN; // clear and copy
+  
+Private
+  
+  + array:ARRAY INTEGER
+  + array_block:ARRAY_BLOCK INTEGER
+  
+  - new <-
+  (
+    array := ARRAY INTEGER .create_with_capacity 1024
+    array_block := ARRAY_BLOCK INTEGER .new
+    idem
+    clear
+    add_last 2
+    clear
+    add_last 2
+    add_last 1
+    clear
+    1.to ((SLAB_UTILS.slab_cap * 2) + 1) do {i:INTEGER
+      add_last i
+    }
+    twin
+    clear
+  )
+  
+  - idem <-
+  ( + i:INTEGER
+    TEST.check (array.lower) integer (array_block.lower)
+    TEST.check (array.upper) integer (array_block.upper)
+    TEST.check (array.count) integer (array_block.count)
+    array.is_empty.if {
+      TEST.check (array_block.is_empty)
+    } else {
+      TEST.check (! array_block.is_empty)
+    }
+    array.is_empty.if_false {
+      TEST.check (array.last) integer (array_block.last)
+    }
+    array.is_empty.if_false {
+      TEST.check (array.first) integer (array_block.first)
+    }
+    
+    i := 0
+    {i <= array.upper}.while_do {
+      TEST.check (array.at i) integer (array_block.at i)
+      i := i + 1
+    }
+  )
+  
+  - add_last v:INTEGER <-
+  (
+    array.add_last v
+    array_block.add_last v
+    idem
+  )
+  
+Public
+  - main <-
+  (
+    new
+  )
+  
+Private
+  - clear <-
+  (
+    array.clear
+    array_block.clear
+    idem
+  )
+  
+  - twin <-
+  (
+    array := array.twin
+    array_block := array_block.twin
+    idem
+  )
+  

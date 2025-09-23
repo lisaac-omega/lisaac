@@ -1,0 +1,12 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + i1:ℤ
+    i1 := ℤ.init "FF" base 16
+    TEST.check (i1.bit_length) integer 64
+    i1 := ℤ.init "FFFF0000FFFF0000FFFF0" base 16
+    TEST.check (i1.bit_length) integer 128
+  )
+ 

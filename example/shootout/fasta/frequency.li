@@ -1,0 +1,32 @@
+Header
+  
+  + name := FREQUENCY;
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Public
+ 
+  + c :CHARACTER
+
+  + p :REAL_64
+
+  - create (p_c:CHARACTER, p_p:REAL_64) :SELF <-
+  ( + result :SELF
+
+    result := clone
+    result.make(p_c,p_p)
+    result
+  )
+
+  - make (p_c:CHARACTER, p_p:REAL_64) <-
+  (
+    c := p_c
+    p := p_p
+  )
+
+  - put_p r:REAL_64  <-
+  (
+    p := r
+  )

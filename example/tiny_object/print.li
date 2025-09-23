@@ -1,0 +1,52 @@
+Header
+
+  + name := PRINT;
+  /*
+  The print
+  */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  + text:STRING_ALIAS
+
+  //
+  // Creation.
+  //
+
+  - create p:INTEGER text t:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p text t
+    result
+  )
+
+  - make p:INTEGER text t:STRING_ALIAS <-
+  (
+    position := p
+    text     := t
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  (
+    text.print; '\n'.print
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    '\"'.print
+    text.print
+    "\".print".print
+  )
+

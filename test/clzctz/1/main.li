@@ -1,0 +1,45 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + uinteger_32:UINTEGER_32
+    uinteger_32 := 1
+    TEST.check (uinteger_32.clz) integer 31
+    TEST.check (uinteger_32.ctz) integer 0
+    uinteger_32 := 2
+    TEST.check (uinteger_32.clz) integer 30
+    TEST.check (uinteger_32.ctz) integer 1
+    uinteger_32 := 4
+    TEST.check (uinteger_32.clz) integer 29
+    TEST.check (uinteger_32.ctz) integer 2
+    uinteger_32 := 8
+    TEST.check (uinteger_32.clz) integer 28
+    TEST.check (uinteger_32.ctz) integer 3
+    uinteger_32 := 16
+    TEST.check (uinteger_32.clz) integer 27
+    TEST.check (uinteger_32.ctz) integer 4
+    uinteger_32 := 32
+    TEST.check (uinteger_32.clz) integer 26
+    TEST.check (uinteger_32.ctz) integer 5
+    uinteger_32 := 64
+    TEST.check (uinteger_32.clz) integer 25
+    TEST.check (uinteger_32.ctz) integer 6
+    uinteger_32 := 128
+    TEST.check (uinteger_32.clz) integer 24
+    TEST.check (uinteger_32.ctz) integer 7
+    uinteger_32 := 256
+    TEST.check (uinteger_32.clz) integer 23
+    TEST.check (uinteger_32.ctz) integer 8
+    uinteger_32 := 512
+    TEST.check (uinteger_32.clz) integer 22
+    TEST.check (uinteger_32.ctz) integer 9
+    uinteger_32 := 1024
+    TEST.check (uinteger_32.clz) integer 21
+    TEST.check (uinteger_32.ctz) integer 10
+    uinteger_32 := 1023
+    TEST.check (uinteger_32.clz) integer 22
+    TEST.check (uinteger_32.ctz) integer 0
+  )
+  
+  

@@ -1,0 +1,73 @@
+Header
+
+  + name    := WRITE_GLOBAL;
+
+  /*Write global*/
+
+Inherit
+
+  + parent_write:Expanded WRITE
+
+Public
+
+  + global:SLOT_DATA
+
+  - variable:VARIABLE <- global
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with val:EXPR in g:SLOT_DATA :SELF <-
+  ( + result:SELF
+    ? {p.code != 0}
+    result := clone
+    result.make p with val in g
+    result
+  )
+
+  - make p:POSITION with val:EXPR in g:SLOT_DATA <-
+  (
+    position := p
+    value    := val
+    global   := g
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute_access_unlink:INSTR <-
+  (
+    global.execute
+    NULL
+  )
+
+  - execute_access_link <-
+  (
+    global.execute
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <-
+  (
+    TYPE.add_genere_global global
+    (quiet_generation).if_false {
+      output.append (global.intern_name)
+      //
+      ((value.static_type.raw = TYPE_NULL) && {variable.type.raw.is_block}).if {
+        output.append ".__id=0"
+      } else {
+        output.add_last '='
+        genere_value
+      }
+    }
+  )
+  
+
+
+
+

@@ -1,0 +1,7 @@
+# cp nbody_c.sav nbody_c.c
+gcc nbody_c.c -o nbody_c -O3 -lm
+lisaac nbody -q  
+echo Lisaac: 
+time ./nbody 1000 > out_li.txt
+time ./nbody_c 1000 > out_c.txt
+diff out_li.txt out_c.txt

@@ -1,0 +1,174 @@
+Header
+  + name := UTF8;
+  
+Inherit
+  - parent_json:JSON := JSON
+
+Public
+  
+  - lower:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 32
+  - upper:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 32
+  - low:HSET STRING_ALIAS := HSET STRING_ALIAS.create
+  - up:HSET STRING_ALIAS := HSET STRING_ALIAS.create
+  - symbol:HSET STRING_ALIAS := HSET STRING_ALIAS.create
+  - other:HSET STRING_ALIAS := HSET STRING_ALIAS.create
+  
+  - is_idf s:STRING :BOOLEAN   <-
+  ( + ss:STRING_ALIAS
+    ss := s.to_string_alias
+    (s.first.is_identifier) || {low.fast_has ss} || {up.fast_has ss} || {other.fast_has ss}
+  )
+  
+  - is_lower s:STRING :BOOLEAN <- (s.first.is_lower) || {low.fast_has (s.to_string_alias)}
+  
+  - is_upper s:STRING :BOOLEAN <- (s.first.is_upper) || {up.fast_has (s.to_string_alias)}
+  
+  - is_symbol s:STRING :BOOLEAN <- "!@#$%^&<|*-+=~/?\\>".has (s.first) || {symbol.fast_has (s.to_string_alias)}
+  
+  - to_upper s:STRING_ALIAS :STRING_ALIAS <-
+  [ ! s.first.is_ascii ]
+  ( + i:INTEGER      
+    i := lower.first_index_of s
+    (i > lower.upper).ok s else {upper.at i}
+  )
+    
+  - to_lower s:STRING_ALIAS :STRING_ALIAS <-
+  [ ! s.first.is_ascii ]
+  ( + i:INTEGER
+    i := upper.first_index_of s
+    (i > upper.upper).ok s else {lower.at i}
+  )
+  
+  // Parsing.
+  
+  - read <-
+  (
+    read_object
+    (lower.count != upper.count).if { err semantic msg "Set upper != set lower."; }
+  )
+  
+  - object_in id:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "lower" then { read_set {s:STRING_ALIAS; lower.add_last s; low.add s; }; }
+    .case "upper" then { read_set {s:STRING_ALIAS; upper.add_last s; up.add s; }; }
+    .case "lower_star" then { read_set {s:STRING_ALIAS; low.add s; }; }
+    .case "upper_star" then { read_set {s:STRING_ALIAS; up.add s; }; }
+    .case "symbol" then { read_set {s:STRING_ALIAS; symbol.add s; }; }
+    .case "other"  then { read_set {s:STRING_ALIAS; other.add s; }; }
+    = STRING_ALIAS
+  )
+  
+  - read_set ad:{STRING_ALIAS; } <-
+  ( + l,u,cur,err:STRING_ALIAS
+    + i:INTEGER
+    {
+      (read_utf8).if_false { err syntax msg "UTF8 character needed."; }
+      l := last_str
+      ad.value l
+      (read_char '-').if {
+        (read_utf8).if_false { err syntax msg "UTF8 character needed."; }
+        u := last_str
+        err := from l to u with ad
+        (err != NULL).if { err semantic msg err; }
+      }
+    }.do_while {read_char ','}
+  )
+  
+  - load id:STRING_ALIAS value s:STRING_ALIAS :STRING_ALIAS <-
+  ( + err:STRING_ALIAS
+    (
+      id
+      .case "lower" then { err := load s with {s:STRING_ALIAS; lower.add_last s; low.add s; }; }
+      .case "upper" then { err := load s with {s:STRING_ALIAS; upper.add_last s; up.add s; }; }
+      .case "lower_star" then { err := load s with {s:STRING_ALIAS; low.add s; }; }
+      .case "upper_star" then { err := load s with {s:STRING_ALIAS; up.add s; }; }
+      .case "symbol" then { err := load s with {s:STRING_ALIAS; symbol.add s; }; }
+      .case "other"  then { err := load s with {s:STRING_ALIAS; other.add s; }; }
+    != STRING_ALIAS
+    ).if {
+      err := "Incorrect id"
+    }
+    err
+  )
+  
+  - load s:STRING_ALIAS with ad:{STRING_ALIAS; } :STRING_ALIAS <-
+  ( + tmp:STRING_BUFFER
+    + i:INTEGER
+    + l,u,err:STRING_ALIAS
+    tmp := STRING.new_tmp
+    {
+      i := i + s.at i utf8_in tmp
+      (tmp.first != ',').if {
+        l := tmp.to_string_alias
+        ad.value l
+        (i <= s.upper).if {
+          i := i + s.at i utf8_in tmp
+          (tmp.first = '-').if {
+            i := i + s.at i utf8_in tmp
+            u := tmp.to_string_alias
+            err := from l to u with ad
+          }
+        }
+      }
+    }.do_while {(err = NULL) && {i <= s.upper} && {tmp.first = ','}}
+    tmp.free_tmp
+    err
+  )
+  
+  - from l:STRING_ALIAS to u:STRING_ALIAS with ad:{STRING_ALIAS; } :STRING_ALIAS <-
+  ( + err,cur:STRING_ALIAS
+    + tmp:STRING_BUFFER
+    + i:INTEGER
+    (l > u).if { err := "Range incorrect."; } else {
+      (l.count != u.count).if { err := "Diff. size not yet implemented."; } else {
+        (l.count = 1).if {
+          (l.first +# 1).to (u.first) do { c:CHARACTER
+            ad.value (c.to_string_alias)
+          }
+        } else {          
+          tmp := STRING.new_tmp
+          tmp.copy l
+          {
+            i := l.upper
+            {tmp.at i = '\1011_1111b\'}.while_do {
+              tmp.at i put '\1000_0000b\'
+              i := i - 1
+              ? {i >= 0}
+            }
+            tmp.at i put (tmp.at i +# 1)
+            cur := tmp.to_string_alias
+            ad.value cur
+          }.do_while {cur != u}
+          tmp.free_tmp
+        }
+      }
+    }
+    err
+  )
+  
+  - print <-
+  ( + v:STRING_ALIAS
+    (! lower.is_empty).if {
+      "\nlower: ".print
+      0.to (lower.upper) do { i:INTEGER; lower.at i.print; ' '.print; }
+      "\nupper: ".print
+      0.to (upper.upper) do { i:INTEGER; upper.at i.print; ' '.print; }
+      "\nlower star: ".print
+      (low.lower).to (low.upper) do { i:INTEGER
+        v := low.at i
+        (to_upper v = v).if { v.print; ' '.print; }
+      }
+      "\nupper star: ".print
+      (up.lower).to (up.upper) do { i:INTEGER
+        v := up.at i
+        (to_lower v = v).if { v.print; ' '.print; }
+      }
+      "\nsymbol: ".print
+      (symbol.lower).to (symbol.upper) do { i:INTEGER; symbol.at i.print; ' '.print; }
+      (! other.is_empty).if {
+        "\nother: ".print
+        (other.lower).to (other.upper) do { i:INTEGER; other.at i.print; ' '.print; }
+      }
+    }
+  )
+    

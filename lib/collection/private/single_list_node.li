@@ -1,0 +1,64 @@
+Header
+
+  + name := SINGLE_LIST_NODE V;
+  /*
+  To implement SINGLE_LIST(V).
+  */
+
+Insert
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  + item:V
+
+  + next:SINGLE_LIST_NODE V
+
+SINGLE_LIST
+
+  - create i:V next n:SINGLE_LIST_NODE V :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make i next n
+    result
+  )
+
+  - make i:V next n:SINGLE_LIST_NODE(V) <-
+  (
+    item := i
+    next := n
+  )
+  [
+    +? {item = i}
+    +? {next = n}
+  ]
+
+
+SINGLE_LIST_NODE,SINGLE_LIST
+
+  - set_item i:V <-
+  (
+    item := i
+  )
+  [
+    +? {item = i}
+  ]
+
+  - set_next n:SINGLE_LIST_NODE(V) <-
+  (
+    next := n
+  )
+  [
+    +? {next = n}
+  ]
+
+  - set_all_with v:V <-
+  ( + lnk:SELF
+
+    lnk := Self
+    {lnk = NULL}.until_do {
+      lnk.set_item v
+      lnk := lnk.next
+    }
+  )
+

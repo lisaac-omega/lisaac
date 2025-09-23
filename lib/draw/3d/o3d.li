@@ -1,0 +1,117 @@
+Header  
+  + name := O3D;
+  
+Inherit  
+  - parent_object:OBJECT := OBJECT
+    
+Public
+  
+  + model:MAT4X4
+  
+  - set_model m:MAT4X4 <-
+  (
+    model.free
+    model := m
+  )
+    
+  - begin (x,y:INTEGER) size (w,h:INTEGER) camera cam:CAMERA :P3D <-
+  ( + call:PEN_CALL
+    cam.update (x,y) size (w,h)
+    call := PEN_CALL_3D_BEGIN.create cam
+    PAPER.wins.first.pen.gl.calls.add_last call
+    P3D
+  )
+  
+  - Self:SELF '+' other:O3D :O3D <-
+  (
+    abstract
+    NULL
+  )
+       
+  - Self:SELF '<>' other:O3D :O3D <-
+  (     
+    abstract
+    NULL
+  )
+  
+  - translate (x,y,z:REAL_32) :SELF <-
+  ( 
+    model.translate_direct (x,y,z)
+    Self
+  )
+  
+  - down v:REAL_32 :SELF     <- translate (0.0,-v,0.0)
+  - up v:REAL_32 :SELF       <- translate (0.0,+v,0.0)
+  - right v:REAL_32 :SELF    <- translate (+v,0.0,0.0)
+  - left v:REAL_32 :SELF     <- translate (-v,0.0,0.0)
+  - forward v:REAL_32 :SELF  <- translate (0.0,0.0,+v)
+  - backward v:REAL_32 :SELF <- translate (0.0,0.0,-v)
+  
+  - translate_x v:REAL_32 :SELF <- translate (v,0,0)
+  - translate_y v:REAL_32 :SELF <- translate (0,v,0)
+  - translate_z v:REAL_32 :SELF <- translate (0,0,v)
+  
+O3D
+  
+  - draw_intern <- abstract
+  
+Public
+  
+  - normal <-
+  ( + call:PEN_CALL
+    draw_intern
+    not_yet_implemented
+    //call := PEN_CALL_3D_END.create (PEN3D.shader_normal)
+    pen_gl.calls.add_last call
+  )
+  
+  - stroke <-
+  ( + call:PEN_CALL
+    draw_intern
+    call := PEN_CALL_3D_END.create (PEN3D.shader_stroke)
+    pen_gl.calls.add_last call
+  )
+  
+  - fill <-
+  ( + call:PEN_CALL
+    draw_intern
+    call := PEN_CALL_3D_END.create (PEN3D.shader_fill)
+    pen_gl.calls.add_last call
+  )
+  
+  - map <-
+  ( + call:PEN_CALL
+    draw_intern
+    call := PEN_CALL_3D_END.create (PEN3D.shader_map)
+    PAPER.wins.first.pen.gl.calls.add_last call
+  )
+    
+  - color c:COLOR :SELF <- ( abstract; Self)
+  
+  - print_with txt:STRING :SELF <-
+  (
+    "--- ".print; txt.print; " ---\n".print
+    model.print
+    Self
+  )
+  
+  - scale (x,y,z:REAL_32) :SELF <-
+  ( model.mul3_scale (x,y,z)
+    Self
+  )
+  
+  - rotate_x a:REAL_32 :SELF <-
+  ( model.rotate_x a
+    Self
+  )
+  
+  - rotate_y a:REAL_32 :SELF <-
+  ( model.rotate_y a
+    Self
+  )
+  
+  - rotate_z a:REAL_32 :SELF <-
+  ( model.rotate_z a
+    Self
+  )
+  

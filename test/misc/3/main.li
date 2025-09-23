@@ -1,0 +1,17 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  (
+    1.to (COMMAND_ARGS.upper) do { k:INTEGER
+      k.print
+      ' '.print
+      COMMAND_ARGS.at k .print
+      '\n'.print
+    }
+  )
+  
+  

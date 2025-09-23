@@ -1,0 +1,11 @@
+Header
+  + name := Strict OUT;
+  
+Public
+  
+  - Self:SELF '#' e:E :SELF <-
+  (
+    e.print
+    Self
+  )
+  

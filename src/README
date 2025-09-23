@@ -1,0 +1,14 @@
+In this directory, you will find the code for the lisaac command,
+which is the compiler for the Lisaac Ω language.
+To compile lisaac with assertions enabled:
+
+   lisaac lisaac
+
+To compile without assertions and without crash information:
+
+   lisaac lisaac -boost
+
+To see all the options of the lisaac command:
+
+   lisaac -help
+   

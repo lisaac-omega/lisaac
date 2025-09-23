@@ -1,0 +1,360 @@
+Header
+
+  + name      := SLOT_CODE;
+
+  /*Slot with method*/
+
+Inherit
+
+  + parent_slot:SLOT := SLOT
+
+Public
+
+  - common_slot:SLOT <- parent_slot
+
+  + index:INTEGER
+
+  //
+  // Static and Dynamic profil.
+  //
+
+  + value:ITM_CODE
+
+  //
+  // Dynamic profil.
+  //
+
+  + profil:ARRAY PROFIL_SLOT
+
+  - get_profil args:ARRAY EXPR self type_self:TYPE_FULL :(PROFIL, ARRAY WRITE) <-
+  [
+    -? {type_self != NULL}
+  ]
+  ( + result:PROFIL_SLOT
+    + res_lst:ARRAY WRITE
+    + pro:PROFIL_SLOT
+    + j,i,idx:INTEGER
+    + loc:LOCAL
+    + typ:TYPE_FULL
+    + typ_block:PROFIL_BLOCK
+    + typ_list:TYPES_TMP
+    + pro_list:ARRAY PROFIL_SLOT
+    + is_new:BOOLEAN
+
+    (id_section.is_external).if {
+      // For auto-load external section.
+      (profil.is_empty).if {
+        result := PROFIL_SLOT.my_clone
+        profil.add_last result
+        is_new := TRUE
+      } else {
+        result := profil.first
+      }
+    } else {
+      // Block Detect.
+      j := args.lower
+      {(j <= args.upper) && {(typ = NULL) || {! typ.raw.is_block}}}.while_do {
+        typ := args.at j.static_type
+        (typ.raw.is_block).if {
+          typ_list := TYPES_TMP.new
+          args.at j.get_type typ_list
+          idx := typ_list.first_index
+          (idx = -1).if {
+            args.at j.debug_display
+            ( + rd:READ
+              rd ?= args.at j
+              rd.variable.require_first.debug_display
+              rd ?= rd.variable.require_first.value
+              rd.variable.require_first.debug_display
+            )
+            //list_current.debug_display
+            semantic_error (position,"Lisaac BUG!!! SLOT_CODE l.61")
+          }
+          (typ_list.at idx = TYPE_NULL).if {
+            (typ_list.count > 1).if {
+              idx := typ_list.next_index idx
+              typ_block ?= typ_list.at idx
+            } else {
+              typ := NULL
+            }
+          } else {
+            typ_block ?= typ_list.at idx
+          }
+          typ_list.free
+        }
+        j := j + 1
+      }
+
+      (typ_block != NULL).if {
+        pro_list := typ_block.profil_list
+        i := pro_list.lower
+        {(i <= pro_list.upper) && {result = NULL}}.while_do {
+          pro := pro_list.at i
+          (
+            (pro.slot = Self) && {
+              (pro.type_self = NULL) || {pro.type_self == type_self}
+            } // BSBS: il fo aussi tester les args comme plus bas...
+          ).if {
+            result := pro; // Rmq. : It s limit for dispatching (See...)
+          }
+          i := i + 1
+        }
+
+        (result = NULL).if {
+          result := PROFIL_SLOT.my_clone
+          result.set_context_sensitive
+          typ_block.profil_list.add_last result
+          is_new := TRUE
+        }
+      } else { // Normal call (without BLOCK)
+        j := profil.lower
+        {(j <= profil.upper) && {result = NULL}}.while_do {
+          pro := profil.at j
+          ((pro.type_self = NULL) || {pro.type_self == type_self}).if {
+            result := pro
+            i := args.lower + 1
+            {(i <= args.upper) && {result != NULL}}.while_do {
+              loc := pro.argument_list.at i
+              (
+                (loc != NULL) && {loc.require_first != NULL} &&
+                {args.at i.static_type != loc.require_first.value.static_type} //&&
+                //{loc.type.raw != type_boolean} 2025
+              ).if {
+                result := NULL
+              }
+              i := i + 1
+            }
+          }
+          j := j + 1
+        }
+        //
+        (result = NULL).if {
+          result := PROFIL_SLOT.my_clone
+          profil.add_last result
+          is_new := TRUE
+        }
+      }
+    }
+    (is_new).if {
+      res_lst := result.make Self with (type_self, args) verify (profil.count = 1)
+    } else {
+      res_lst := result.write_argument args
+    }
+    result, res_lst
+  )
+
+  //
+  // Constructeur.
+  //
+
+  - create base:SLOT with val:ITM_CODE :SLOT_CODE <-
+  ( + result:SELF
+    result := clone
+    result.make base with val
+    result
+  )
+
+  - count_slot:INTEGER
+
+  - make base:SLOT with val:ITM_CODE <-
+  (
+    count_slot := count_slot + 1
+
+    parent_slot := base
+    value := val
+    profil := ARRAY PROFIL_SLOT .create_with_capacity 1
+  )
+
+  //
+  // Execute.
+  //
+
+  + last_type_contract:TYPE
+  + is_require:BOOLEAN
+/*
+  - previous_contract:ITM_LIST <-
+  ( + slot:ITM_SLOT
+    + contract:ITM_LIST
+
+    (is_require).if {
+      slot := last_type_contract.search_require name
+    } else {
+      slot := last_type_contract.search_ensure name
+    }
+    (slot != NULL).if {
+      (is_require).if {
+	contract := slot.pattern_in
+      } else {
+	contract := slot.pattern_out
+      }
+      last_type_contract := last_type_contract.last_type_contract
+    }
+    contract
+  )
+*/
+  - create_code is_first:BOOLEAN <-
+  ( + contract:ITM_LIST
+    + slot:ITM_SLOT
+    + result,res:EXPR
+    + mul:EXPR_MULTIPLE
+    + nb_list,nb_profil:INTEGER
+    
+    verify := is_first
+    
+    // Invariant in
+    last_type_contract := receiver_type
+    (last_type_contract.pattern_in != NULL).if {
+      res := last_type_contract.pattern_in.to_run_expr
+      res.to_run_contract "Prototype entry violated"
+    }
+        
+    // Section in
+    (id_section.pattern_in != NULL).if {
+      res := id_section.pattern_in.to_run_expr
+      res.to_run_contract "Section entry violated"
+    }
+      
+    // Require    
+    is_require := TRUE
+    last_type_contract := receiver_type
+    contract := pattern_in
+    (contract = NULL).if {
+      slot := receiver_type.search_require name
+      (slot != NULL).if {
+	(verify).if {
+	  is_equal_profil slot
+	}
+	contract := slot.pattern_in
+	last_type_contract := receiver_type.last_type_contract
+      }
+    }
+    (contract != NULL).if {
+      res := contract.to_run_expr
+      res.to_run_contract "Require violated"
+    }
+    
+    ? {profil_slot.result_list != NULL}
+    nb_profil := profil_slot.result_list.count
+    // Body.
+    result := value.to_run_expr
+    // BSBS nb_profil = 0 NO ERROR BLOCK
+    ((result.static_type.raw = TYPE_VOID) || {nb_profil = 0}).if {
+      list_current.add_last result
+      nb_list := 0
+    } else {
+      mul ?= result
+      (mul != NULL).if {
+        nb_list := mul.count
+      } else {
+        nb_list := 1
+      }
+    }
+    
+    (nb_profil != nb_list).if {
+      string_tmp.copy "Incorrect value result (slot:"
+      nb_profil.append_in string_tmp
+      string_tmp.append ", list:"
+      nb_list.append_in string_tmp
+      string_tmp.append ")."
+      semantic_error (result.position,string_tmp)
+    }
+    (nb_list = 1).if {
+      put_result result in (profil_slot.result_list.first)
+    }.elseif {nb_list > 1} then {
+      (mul.lower).to (mul.upper) do { j:INTEGER
+        put_result (mul.at j) in (profil_slot.result_list.at j)
+      }
+    }
+
+    // Ensure
+    is_require := FALSE
+    contract := pattern_out
+    last_type_contract := receiver_type
+    (contract = NULL).if {
+      slot := receiver_type.search_ensure name
+      (slot != NULL).if {
+	(verify).if {
+	  is_equal_profil slot
+	}
+        contract := slot.pattern_out
+	last_type_contract := receiver_type.last_type_contract
+      }
+    }
+    (contract != NULL).if {
+      res := contract.to_run_expr
+      res.to_run_contract "Ensure violated"
+    }
+    
+    // Section out
+    (id_section.pattern_out != NULL).if {
+      res := id_section.pattern_out.to_run_expr
+      res.to_run_contract "Section exit violated"
+    }
+    
+    // Invariant out
+    last_type_contract := receiver_type
+    (last_type_contract.pattern_out != NULL).if {
+      res := last_type_contract.pattern_out.to_run_expr
+      res.to_run_contract "Prototype exit violated"
+    }
+        
+    // Result.
+    (id_section.is_interrupt).if {
+      list_current.add_first (
+        EXTERNAL_C.create position text "__BEGIN_INTERRUPT__" access NULL
+        persistant TRUE type (TYPE_VOID.default)
+      )
+      list_current.add_last (
+        EXTERNAL_C.create position text "__END_INTERRUPT__" access NULL
+        persistant TRUE type (TYPE_VOID.default)
+      )
+    }
+  )
+
+  - remove_profil prof:PROFIL_SLOT <-
+  ( + idx:INTEGER
+
+    idx := profil.fast_first_index_of prof
+    (idx <= profil.upper).if { // Else, This profil is in BLOCK
+      profil.remove idx
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      buffer.add_last ' '
+      argument_list.at j.display buffer
+    }
+    buffer.add_last ' '
+    buffer.add_last ':'
+    type.display buffer
+  )
+
+  - display_all <-
+  ( + prof:PROFIL
+
+    string_tmp.clear
+    (profil != NULL).if {
+      (profil.upper).downto (profil.lower) do { k:INTEGER
+	prof := profil.at k
+	prof.display_all string_tmp
+      }
+    }
+    string_tmp.print
+  )
+
+Private
+
+  - put_result e:EXPR in v:LOCAL <-
+  ( + val:EXPR
+    + wrt:WRITE
+    val := e.check_type (v.type) with (v.position)
+    wrt := v.write position value val
+    list_current.add_last wrt
+  )

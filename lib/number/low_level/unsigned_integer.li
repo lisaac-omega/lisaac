@@ -1,0 +1,114 @@
+Header
+
+  + name    := UNSIGNED_INTEGER;
+
+  /*Generic Unsigned Integer.*/
+
+Insert
+
+  - parent_integer:INTEGER := INTEGER
+
+Public
+
+  // Range
+
+  - minimum:INTEGER_64 := 0.to_raw_integer_64
+
+  // Function :
+
+  - sign:INTEGER <-
+  // Sign of Current (0 -1 or 1).
+  (
+    (Self != 0).to_integer
+  )
+
+  - abs:SELF <- Self; // Absolute value of `self'.
+
+  // Convertion
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+  ( + val:SELF
+    + i,j:INTEGER
+    ? {b!=NULL}
+
+    (Self = 0).if {
+      b.extend '0'
+    } else {
+
+      i := b.upper+1
+
+      val := Self
+      {val = 0}.until_do {
+        b.extend ((val % 10).digit)
+        val := val / 10
+      }
+      j := b.upper
+
+      {i >= j}.until_do {
+        b.swap i with j
+        j := j - 1
+        i := i + 1
+      }
+
+    }
+  )
+
+  - print <-
+  (
+    print_positif
+  )
+
+  - to_octal:SELF <-
+  // Gives coresponding octal value.
+  ( + result, unit, current:SELF
+
+    current := Self
+    unit := 1
+    {current!=0}.while_do {
+      result := result + ((current & 7)*unit)
+      unit := (unit << 3) + (unit << 1)
+      current := current >> 3
+    }
+    result
+  )
+
+  // Hashing:
+
+  - hash_code:INTEGER <- to_integer
+
+  // Looping
+
+  - downto limit_down:SELF do blc:{SELF; } <-
+  (
+    (Self+1).downto_unsigned limit_down do blc
+  )
+
+  // Bound test
+
+  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  (
+    (up > to_raw_uinteger_64)
+  )
+
+  - number_bits:INTEGER <- object_size * 8
+  
+  - Self:SELF '@<' other:SELF :SELF <- (Self << other) | (Self >> (number_bits - other)); // rol: Rotation left
+  - Self:SELF '@>' other:SELF :SELF <- (Self >> other) | (Self << (number_bits - other)); // ror
+  
+  // Crypto (SHAxyz)
+  
+  - ch (y,z:SELF) :SELF <- (Self & y) ^ (~Self & z)
+  - maj (y,z:SELF) :SELF <- (Self & y) ^ (Self & z) ^ (y & z)
+        
+Private
+
+  - downto_unsigned limit_down:SELF do blc:{SELF; } <-
+  (
+    (Self > limit_down).if {
+      blc.value (Self - 1)
+      (Self - 1).downto_unsigned limit_down do blc
+    }
+  )
+  

@@ -1,0 +1,130 @@
+Header
+  + name := MPZ_BASE;
+  /* To be shared by MPZ and MINI_MPZ.*/
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  - parent_print:PRINT := PRINT
+  - parent_hexadecimal:HEXADECIMAL := HEXADECIMAL
+  
+Public  
+  - init <- 
+  (
+    `mpz_init(@Self)`
+  )
+  
+  - init_set_ui x:UINTEGER_64 <-
+  (
+    `mpz_init_set_ui(@Self,@x)`
+  )
+  
+  - set_str (str:STRING, base:INTEGER) <- 
+  ( + nac:NATIVE_ARRAY CHARACTER
+    nac := str.to_external
+    `mpz_set_str(((mpz_ptr)@Self),@nac,@base)`
+  )
+  
+  - set str:STRING base b:INTEGER <- set_str (str,b)
+  
+  - set_ui ui:UINTEGER_64 <-
+  (
+    `mpz_set_ui(@Self, @ui)`
+  )
+  
+  - set (m:MPZ) <-
+  (
+    `mpz_set(@Self, @m)`
+  )
+  
+  - sizeinbase b:INTEGER :INTEGER <-
+  (
+    `mpz_sizeinbase((void*)@Self,@b)`:INTEGER
+  )
+  
+  - sgn:INTEGER <- (`mpz_sgn(((mpz_ptr)@Self))`:INTEGER)
+  
+  - append_in b:STRING_BUFFER <- append_in b base 10
+
+  - append_in buf:STRING_BUFFER base b:INTEGER <-
+  ( + s,c:INTEGER
+    + nac:NATIVE_ARRAY CHARACTER
+    + char:CHARACTER
+    s := (sizeinbase b) + 1; // \0
+    s := s + 5; // DCDC to be sure...
+    (`mpz_sign(@Self) < 0`:BOOLEAN).if {
+      s := s + 1; // -
+    }
+    c := buf.count
+    buf.set_capacity (c + s)
+    ? {c = buf.count}
+    nac := buf.to_external
+    `mpz_get_str(((char*)(@nac))+@c,@b,(void*)@Self)`
+    buf.set_upper c
+    {(char := buf.at c) != '\0'}.while_do {
+      buf.at c put (char.to_upper)
+      c := c + 1
+      buf.set_upper c
+    }
+    buf.set_upper (c - 1)
+  )
+
+  - print <- `mpz_out_str(stdout,10,@Self)`
+  
+  - print_hex <-
+  (
+    STRING.tmp { buf:STRING_BUFFER
+      append_in buf base 16
+      buf.print
+    }
+  )
+  
+  - add_ui i:UINTEGER_64 <-
+  (
+    `mpz_add_ui(@Self, @Self, @i)`
+  )
+
+  - sub_ui i:UINTEGER_64 <-
+  (
+    `mpz_sub_ui(@Self, @Self, @i)`
+  )
+  
+  - clear <-
+  (
+    `mpz_clear(@Self)`
+  )
+  
+Public
+  - equal_intz3 intz:ℤ :BOOLEAN <-
+  ( + result:BOOLEAN
+    STRING.tmp2 { (buf1,buf2:STRING_BUFFER)
+      Self.append_in buf1 base 16
+      intz.append_in buf2 base 16
+      result := buf1 == buf2
+    }
+    result
+  )
+  
+Public
+  - random_hex size:INTEGER <-
+  // Where size is the number of hexadecimal digits.
+  [ ? {size > 0}; ]
+  ( + i:INTEGER
+    STRING.tmp { hex:STRING_BUFFER
+      i := size
+      {i <= 0}.until_do {
+        hex.add_last (RANDOM.hexadecimal_digit)
+        i := i - 1
+      }
+      set hex base 16
+    }
+  )
+  
+  - new_intz3:ℤ <-
+  ( + result:ℤ
+    STRING.tmp { buf:STRING_BUFFER
+      append_in buf base 16
+      result := ℤ.init buf base 16
+    }
+    result
+  )
+  

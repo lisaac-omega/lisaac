@@ -1,0 +1,74 @@
+Header
+  + name := ARDUINO;
+  
+  - lip <-
+  (
+    (target != "arduino").if {
+      "Sorry, `ARDUINO' prototype is for only arduino target.\n".print;
+      die_with_code 1;
+    };
+  );
+  
+  - external := `
+#include <Arduino.h>
+#include <SPI.h> 
+#include <Wire.h>
+`;
+
+Inherit
+  - parent_clone:CLONE := CLONE
+  //- parent_var:VAR := VAR
+
+Public
+  
+  // Basic command
+  
+  - low:UINTEGER_8 <- `LOW`:UINTEGER_8
+  - high:UINTEGER_8 <- `HIGH`:UINTEGER_8
+  - led_builtin:UINTEGER_8 <- `LED_BUILTIN`:UINTEGER_8
+  - output:UINTEGER_8 <- `OUTPUT`:UINTEGER_8
+  - input_pullup:UINTEGER_8 <- `INPUT_PULLUP`:UINTEGER_8
+  
+  - pin pin:UINTEGER_8 mode mode:UINTEGER_8 <- `pinMode(@pin,@mode)`
+  
+  - digital pin:UINTEGER_8 write val:UINTEGER_8 <- `digitalWrite(@pin,@val)`
+  
+  - analog pin:UINTEGER_8 write val:UINTEGER_8 <- `analogWrite(@pin,@val)`
+  
+  - digital_read pin:UINTEGER_8 :UINTEGER_8 <- `digitalRead(@pin)`:UINTEGER_8
+  
+  - delay ms:UINTEGER_16 <- `delay(@ms)`
+  
+  - micros:UINTEGER_32 <- `micros()`:UINTEGER_32
+  
+  - serial_begin bd:UINTEGER_16 <- `Serial.begin(9600)`
+  
+  - serial_available:INTEGER_16 <- `Serial.available()`:INTEGER_16; // 0..128
+  
+  - serial_read:INTEGER_8 <- `Serial.read()`:(INTEGER_8)
+  
+  // Interruption manager
+  
+  //- low:UINTEGER_8     <- `LOW`:UINTEGER_8
+  - change:UINTEGER_8  <- `CHANGE`:UINTEGER_8
+  - rising:UINTEGER_8  <- `RISING`:UINTEGER_8
+  - falling:UINTEGER_8 <- `FALLING`:UINTEGER_8
+  
+  - attach_interrupt_pin pin:UINTEGER_8 fnc ptr:POINTER type t:UINTEGER_8 <-
+  `attachInterrupt(digitalPinToInterrupt(@pin), @ptr, @t)`
+  
+  // Other
+  
+  - reset_all <- ( abstract; )
+  
+  - reboot <- reset_all
+  
+  - tools_main; //
+  
+  - tools_setup <-
+  (
+    `main_old(0,NULL)`
+    `SPI.begin()`
+  )
+    
+  

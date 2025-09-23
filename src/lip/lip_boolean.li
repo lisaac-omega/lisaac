@@ -1,0 +1,82 @@
+Header
+
+  + name      := LIP_BOOLEAN;
+
+Inherit
+
+  + parent_lip_constant:Expanded LIP_CONSTANT
+
+Private
+
+  - true:LIP_BOOLEAN :=
+  ( + result:LIP_BOOLEAN
+    result := clone
+    result.set_value TRUE
+    result
+  )
+
+  - false:LIP_BOOLEAN := LIP_BOOLEAN
+
+  - set_value i:BOOLEAN <-
+  (
+    value := i
+  )
+
+Public
+
+  + value:BOOLEAN
+
+  //
+  // Creation.
+  //
+
+  - get b:BOOLEAN :LIP_BOOLEAN <-
+  ( + result:LIP_BOOLEAN
+    b.if {
+      result := true
+    } else {
+      result := false
+    }
+    result
+  )
+
+  - free; // Nothing.
+
+  //
+  // Operation.
+  //
+
+  - name:STRING_ALIAS <- "BOOLEAN"
+
+  - '!' Self:SELF :LIP_CONSTANT <- get (! value)
+
+  - copy:LIP_CONSTANT <- Self
+
+  - print <-
+  (
+    value.print
+  )
+
+LIP_CONSTANT
+
+  - my_copy other:SELF :LIP_CONSTANT <- other
+
+  - Self:SELF '|#'  other:SELF :LIP_CONSTANT <-
+  (
+    get (value | other.value)
+  )
+
+  - Self:SELF '&#'  other:SELF :LIP_CONSTANT <-
+  (
+    get (value & other.value)
+  )
+
+  - Self:SELF '=#'  other:SELF :LIP_CONSTANT <-
+  (
+    get (value = other.value)
+  )
+
+  - Self:SELF '!=#' other:SELF :LIP_CONSTANT <-
+  (
+    get (value != other.value)
+  )

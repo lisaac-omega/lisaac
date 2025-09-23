@@ -1,0 +1,114 @@
+Header
+  + name := LIX_BUF;
+    
+Inherit
+  + p_txtbuf:Expanded TXT_BUF
+    
+Public
+  
+  + proto:PROTO
+  
+  - pre_create <-
+  ( 
+    at 0 add_str
+    "Header\n\
+    \  + name := "
+    STRING.tmp { t:STRING_BUFFER
+      t.copy name from (name.last_index_of '/'+1) to (name.upper-3)
+      t.to_upper
+      at upper add_str t
+    }
+    at upper add_str "\n\n"
+    //(at upper != '\0').if { "MERDE".println; }
+    ? {at upper = '\0'}
+  )
+  
+  - init pth:STRING_ALIAS proto p:PROTO :SELF <-
+  (
+    proto := p
+    init_path pth
+  )
+  
+  - detect_drw:TOK_DRW <-
+  ( + t:TOK_DRW
+    //? {proto != NULL}
+    (pos_i.pt = 0).if {      
+      t := proto
+      //t := TOK_TXT; // SUPPR
+      //t := t.new;   // SUPPR
+      ? {t != NULL}
+    } else {
+      ((t := SECTION).detect)  || {(t := CODE_OUT).detect} ||
+      {(t := SLOT).detect}     || {(t := CHAPTER).detect}  ||
+      {(t := TOK_LINE).detect}
+      t := t.new
+    }
+    t
+  )
+      
+  - pre_draw <-
+  ( proto.collect_slot_parent; )
+  
+  - draw_background <-
+  ( + w,h:REAL_32
+    + img:IMG
+    p_txtbuf.draw_background
+    (proto.web_path != NULL).if {      
+      img := IMG.load (proto.web_path) asset FALSE
+      (img != NULL).if {
+        IMG.update Self
+        (w,h) := image_size (img.idf)
+        (pos_y < h).if {          
+          img.draw Self to (xo+width-w,yo-pos_y) alpha 0.7 bar FALSE
+        }
+      }
+    }
+  )
+  
+  
+  - old_draw_tmp_c <-
+  ( + c:CHARACTER
+    (last_div = NULL).if { last_div := DIV.new; }
+    c := tmp_c.first
+    (c = 'Ë').if {
+      (c := tmp_c.second)
+      /*.when '…' then { escape := TRUE; exp_l; }   // Indice (
+      .when '‡' then { escape := TRUE; exp_r 6; } // Indice )
+      .when '„' then { escape := TRUE; exp_l; }   // Exposant (
+      .when '†' then { escape := TRUE; exp_r (-6); } // Exposant )*/
+      // Other.
+      .when '–' then { LIX_BUF.local_bar; }
+      .when 'š' then { DRW.type_self; }           // SELF
+      .when '™' then { DRW.arg_self;  }           // Self
+      .when '' then { DRW.dcl TRUE  exp FALSE; } // Clonable Pointer
+      .when '­' then { DRW.dcl TRUE  exp TRUE;  } // Clonable Expanded
+      .when '‘' then { DRW.dcl FALSE exp FALSE; } // Shared Pointer
+      .when '‰' then { DRW.dcl FALSE exp TRUE;  } // Shared Expanded
+      .when '¬' then { DRW.exp_res; }             // Result
+      .when '›' then { DRW.exp_old; }             // Old
+      .when '¿' then { DRW.assign FALSE; }        // <-
+      .when '·' then { DRW.assign TRUE;  }        // <?
+      .when '½' then { tex.set_x (text (tex.x,tex.y) msg "_"); }      // Joker
+      .when '¢' then { DRW.put_image; }
+      .when '' then { tex.set_x (text (tex.x,tex.y) msg "\""); }
+    } else {
+      (",;:'\"".last_index_of c != -1).if {
+        save
+        fill_color (LOOK.none)
+        FONT.app (FONT.roman) in Self
+        tex.set_x (text (tex.x,tex.y) msg tmp_c)
+        FONT.app (Old FONT.last_app_id) in Self
+        restore
+      } else {
+        tex.set_x (text (tex.x,tex.y) msg tmp_c)
+      }
+      tex.ascdes (asc_c,des_c)
+    }
+    detect_cur
+  )
+          
+  - read_affect:BOOLEAN <-
+  //-- affect         -> ":=" | "<-" | "?="
+  (word ":=") || {word "?="} || {word "<-"}
+
+  

@@ -1,0 +1,51 @@
+Header
+  
+  + name := PASCAL_TRIANGLE;
+  /*
+  Le triangle de Pascal en fonctionnel (ni boucle ni affectations).
+  */
+
+Public
+  
+  - pascal (l:ℤ, c:ℤ) :ℤ <-
+  ( + result:ℤ
+    if ((c = 1) || {c = l} || {l = 1}) then {
+      result := 1
+    } else {
+      result := pascal(l-1,c-1) + pascal(l-1,c)
+    }
+    result
+  )
+  
+  - main <-
+  ( + n:ℤ;  
+    if (COMMAND_ARGS upper != 1) then {
+      OUT # "usage: " # COMMAND_ARGS.at 0 # " <n>" # '\n'
+      SYSTEM exit 1
+    }
+    n := COMMAND_ARGS at 1 .to_integer
+    afficher_pascal n
+  );
+  
+Private
+  
+  - afficher (l:ℤ , c:ℤ) pascal n:ℤ <-
+  ( 
+    if (l <= n) then {
+      if (c <= l) then {
+        OUT # pascal (l,c) # ' ';
+        afficher (l, c + 1) pascal n
+      } else {
+        OUT # '\n'
+        afficher (l + 1, 1) pascal n        
+      };
+    };
+  );
+  
+Public
+  
+  - afficher_pascal n:ℤ <-
+  ( 
+    afficher (1,1) pascal n;
+  );
+  

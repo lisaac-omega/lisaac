@@ -1,0 +1,82 @@
+Header
+  + name    := HASH_TABLE_SIZE;
+  /*
+   Prime INTEGER list.
+   Some useful features to deal with prime INTEGER values in order to select
+   an appropriate size for some hash table (used for example by the DICTIONARY
+   class as well as by the SET class).
+  */
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - prime_number_ceiling integer:INTEGER :INTEGER <-
+  // A good prime number, large enough, and no smaller than `integer'.
+  ( + result:INTEGER
+
+    (integer <= 11).if {
+      // This seems to be a good minimum value to start hashing with.
+      result := 11
+    }.elseif { integer <= 23 } then {
+      result := 23
+    }.elseif { integer <= 53 } then {
+      result := 53
+    }.elseif { integer <= 97 } then {
+      result := 97
+    }.elseif { integer <= 193 } then {
+      result := 193
+    }.elseif { integer <= 389 } then {
+      result := 389
+    }.elseif { integer <= 769 } then {
+      result := 769
+    }.elseif { integer <= 1543 } then {
+      result := 1543
+    }.elseif { integer <= 3079 } then {
+      result := 3079
+    }.elseif { integer <= 6151 } then {
+      result := 6151
+    }.elseif { integer <= 12289 } then {
+      result := 12289
+    }.elseif { integer <= 24593 } then {
+      result := 24593
+    }.elseif { integer <= 49157 } then {
+      result := 49157
+    }.elseif { integer <= 98317 } then {
+      result := 98317
+    }.elseif { integer <= 196613 } then {
+      result := 196613
+    }.elseif { integer <= 393241 } then {
+      result := 393241
+    }.elseif { integer <= 786433 } then {
+      result := 786433
+    }.elseif { integer <= 1572869 } then {
+      result := 1572869
+    }.elseif { integer <= 3145739 } then {
+      result := 3145739
+    }.elseif { integer <= 6291469 } then {
+      result := 6291469
+    }.elseif { integer <= 12582917 } then {
+      result := 12582917
+    }.elseif { integer <= 25165843 } then {
+      result := 25165843
+    }.elseif { integer <= 50331653 } then {
+      result := 50331653
+    }.elseif { integer <= 100663319 } then {
+      result := 100663319
+    }.elseif { integer <= 201326611 } then {
+      result := 201326611
+    }.elseif { integer <= 402653189 } then {
+      result := 402653189
+    }.elseif { integer <= 805306457 } then {
+      result := 805306457
+    } else {
+      result := 1610612741
+      // This should be enough !
+    }
+
+    ? {result >= integer}
+
+    result
+  )

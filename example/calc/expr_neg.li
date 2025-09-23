@@ -1,0 +1,17 @@
+Header
+
+  + name        := EXPR_NEG;
+  /*
+  Neg Expression.
+  */
+
+Inherit
+
+  + parent_expr_unary:Expanded EXPR_UNARY
+
+Public
+
+  - value:INTEGER <-
+  (
+    - expr.value
+  )

@@ -1,0 +1,252 @@
+Header
+  + name := WIN;
+  
+Inherit
+  - parent_pen:PEN := PEN
+    
+Public
+  
+  - get_pen:PEN <- parent_pen
+  
+  + id_name:STRING_ALIAS := "Win"
+  - idn n:STRING_ALIAS :SELF <- ( id_name := n; Self)
+  
+  + parent:WIN
+  - set_parent p:WIN :SELF <- ( parent := p; Self)
+  
+  + child:Expanded ARRAY WIN
+  - child_rm w:WIN <-
+  ( + i:INTEGER
+    {child.at i != w}.while_do { i := i + 1; }
+    child.remove i
+  )
+  
+  + xo:REAL_32
+  + yo:REAL_32
+  - set_xo x:REAL_32 :SELF <- ( xo := x; Self)
+  - set_yo y:REAL_32 :SELF <- ( yo := y; Self)
+  - xy (x,y:REAL_32) :SELF <- ( (xo,yo) := (x,y); Self)
+  - add_xy (dx,dy:REAL_32)  <-
+  ( (xo,yo) := (xo+dx, yo+dy)
+    child.foreach {w:WIN; w.add_xy (dx,dy); }
+  )
+  
+  + width:REAL_32
+  + height:REAL_32
+  - set_width w:REAL_32 :SELF  <- ( width  := w; Self)
+  - set_height h:REAL_32 :SELF <- ( height := h; Self)
+  - size (w,h:REAL_32) :SELF <-
+  (
+    (w = -1).if { width  := width_min;  } else { width  := w; set width_locked;  }
+    (h = -1).if { height := height_min; } else { height := h; set height_locked; }
+    Self
+  )
+  - size_min:SELF <- size (-1,-1)
+  
+  - width_min:REAL_32
+  - height_min:REAL_32
+  
+  - xmax:REAL_32 <- xo + width  - 1
+  - ymax:REAL_32 <- yo + height - 1
+  
+  - new:SELF <- clone
+  - free
+  
+  - copy o:SELF <-
+  ( + sav_s:NATIVE_ARRAY WIN
+    + sav_c:INTEGER
+    (sav_s,sav_c) := (child.storage,child.capacity)
+    o.copy_intern_in Self
+    child.set_storage sav_s cap sav_c up (-1)
+    o.child.foreach { w:WIN; w.dup Self; }
+  )
+  
+  - dup p:WIN :SELF <-
+  ( + res:SELF
+    (res := SELF.new).copy Self
+    res.init_parent p
+  )
+  
+  - init p:WIN :SELF <-
+  (
+    flag := 0
+    init_parent p
+  )
+  
+  - init_parent p:WIN at i:INTEGER :SELF <- 
+  ( (p != NULL).if { p.child.at (i.min (p.child.count)) add Self; }
+    ? {p != Self}
+    parent := p
+    Self
+  )
+  
+  - init_parent p:WIN :SELF <-
+  [ ? {p != Self}; ]
+  (    
+    (p != NULL).if { p.child.add_last Self; }
+    parent := p
+    Self
+  )
+  
+  - window:WINDOW <- parent.window
+  - ask_refresh <- parent.ask_refresh
+  - refresh <- child.foreach { w:WIN; w.refresh; }
+  
+  - draw
+  - draw_child <- child.foreach { w:WIN; w.draw_all; }
+  - draw_forward
+  
+  - draw_all <-
+  (
+    draw
+    draw_child
+    draw_forward
+    //draw_debug
+  )
+  
+  - draw_debug <-
+  (
+    begin_path
+    stroke_color (COLOR.green)
+    stroke_width 1
+    rect_varying (xo,yo) size (width,height) radius (8,0,8,0)
+    stroke
+    //(is inside).if {
+      save
+      STRING.tmp { tmp:STRING_BUFFER
+        (flag&11_1111_1111b).append_in tmp
+        fill_color (COLOR.magenta)
+        font_size 15; text (xo+width/2,yo+height/2) msg tmp
+      }
+      restore
+    //}
+  )
+  
+  - line_p (x0,y0:REAL_32) to (x1,y1:REAL_32) <-
+  [ ? {(x0 = x1) || {y0 = y1}}; ]
+  ( + p,b,e:REAL_32
+    (x0 = x1).if {
+      (y0 < y1).if { (b,e) := (y0,y1); } else { (b,e) := (y1,y0); }
+      p := b
+      {p < e}.while_do { line (x0, p) to (x0,(p + 3).min e); p := p + 8; }
+    } else {
+      (x0 < x1).if { (b,e) := (x0,x1); } else { (b,e) := (x1,x0); }
+      p := b
+      {p < e}.while_do { line (p,y0) to ((p + 3).min e,y0); p := p + 8; }
+    }
+  )
+  
+  - print <-
+  ( '['.print; xo.print; ' '.print; yo.print; ' '.print; width.print; 'x'.print; height.print; ']'.println; )
+  
+  - is_inside (x,y:REAL_32) :BOOLEAN <- (x.in_range xo to xmax) && {y.in_range yo to ymax}
+  
+  - get_win (x,y:REAL_32) :WIN <-
+  ( + result:WIN
+    + i:INTEGER
+    (is_inside (x,y)).if {      
+      i := child.upper
+      {
+        (i >= 0) && {(result := child.at i.get_win (x,y)) = NULL}
+      }.while_do {
+        i := i - 1
+      }
+      (result = NULL).if { result := Self; }
+    }
+    result
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN
+  
+  - focus:WIN
+  - get_focus <-
+  ( + pg:BUF_PG
+    + w:WIN
+    w := parent
+    {
+      pg ?= w
+      w := w.parent
+    }.do_while {(w != NULL) && {pg = NULL}}
+    (pg != NULL).if { PAGE.set_cur_pg (pg.page); }
+    focus := Self
+  )
+  - release_focus <- ( focus := NULL; )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    (focus != NULL).if { focus.key s cmd c; }
+  )
+  
+  - depth_event ev:UINTEGER_8 :WIN <- send { w:WIN; w.event ev}
+  
+  - send a:{WIN; BOOLEAN} :WIN <-
+  ( + dd:WIN
+    dd := Self
+    {(dd != NULL) && {! a.value dd}}.while_do { dd := dd.parent; }
+    dd
+  )
+  
+  + flag:INTEGER
+  - full_width:INTEGER    := 1<<7
+  - full_height:INTEGER   := 1<<8
+  - stretch:INTEGER       := full_width | full_height
+  - width_locked:INTEGER  := 1<<9
+  - height_locked:INTEGER := 1<<10
+  - size_locked:INTEGER   := width_locked | height_locked
+  - inside:INTEGER        := 1<<11
+  - fix_panel:INTEGER     := 1<<12
+  
+  - is f:INTEGER :BOOLEAN <- flag & f != 0
+  - set f:INTEGER :SELF <-
+  (
+    (f & 01000_0111b != 0).if { flag := flag & ~01000_0111b; }
+    {f & 10011_1000b != 0}.if { flag := flag & ~10011_1000b; }
+    flag := flag |  f
+    Self
+  )
+  - unset f:INTEGER :SELF <- ( flag := flag & ~f; Self)
+  - set f:INTEGER with b:BOOLEAN <- ( b.if { set f; } else { unset f; }; )
+  
+  - setr f:INTEGER :SELF <-
+  (
+    set f
+    child.foreach { w:WIN
+      ((w.flag & 11_1111_1111b) = 0).if { w.setr f; }
+    }
+    Self
+  )
+  
+  - print_flag <-
+  (
+    (is align_left   ).if { "Left ".print; };   // 1
+    (is align_center ).if { "Center ".print; }; // 2
+    (is align_right  ).if { "Right ".print; };  // 4
+    (is align_top    ).if { "Top ".print; };    // 8
+    (is align_middle ).if { "Middle ".print; }; // 16
+    (is align_bottom ).if { "Bottom ".print; }; // 32
+    (is full_width   ).if { "Full_width ".print; };   // 128
+    (is full_height  ).if { "Full_height ".print; };  // 256
+    (is width_locked ).if { "Width_locked ".print; }; // 512
+    (is height_locked).if { "Height_locked ".print; };// 1024
+    '\n'.print
+  )
+  
+  - Self:SELF '/' other:WIN :PANEL <- PANEL.new.init_obj.add Self.add other.set (PANEL.vertical)
+  - Self:SELF '|' other:WIN :PANEL <- PANEL.new.init_obj.add Self.add other
+  
+  - cursor (x,y:REAL_32) ascdes (a,d:REAL_32) col c:COLOR <-
+  ( + y0,y1:REAL_32
+    stroke_width 4
+    stroke_color c
+    begin_path
+    (y0,y1) := (y-a,y-d)
+    line (x,y0+4) to (x,y1-4)
+    stroke
+    begin_path
+    stroke_width 2
+    move_to (x-4,y0); arc_to (x-1,y0) to (x-1,y0+4) radius 4
+    move_to (x+4,y0); arc_to (x+1,y0) to (x+1,y0+4) radius 4
+    move_to (x-4,y1); arc_to (x-1,y1) to (x-1,y1-4) radius 4
+    move_to (x+4,y1); arc_to (x+1,y1) to (x+1,y1-4) radius 4
+    stroke
+  )

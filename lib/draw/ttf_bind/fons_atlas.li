@@ -1,0 +1,198 @@
+Header
+  
+  + name := FONS_ATLAS;
+
+Inherit
+  
+  - parent_fontstash:FONTSTASH := FONTSTASH
+  
+Public
+
+  + width:INTEGER
+  + height:INTEGER
+  + nodes:ARRAY FONS_ATLAS_NODE
+  
+  - create (w,h:INTEGER) capacity nnodes:INTEGER :SELF <-
+  ( + result:SELF
+    
+    result := clone
+    result.make (w,h) capacity nnodes
+    result
+  )
+    
+  - make (w,h:INTEGER) capacity nnodes:INTEGER <- 
+  (    
+    (width,height) := (w,h)
+    // Allocate space for skyline nodes
+    (nnodes != 0).if {
+      nodes := ARRAY FONS_ATLAS_NODE.create_with_capacity nnodes
+    }
+    // Init root node.
+    nodes.add_last (
+      FONS_ATLAS_NODE.create (0,0) width (w.to_integer_16)
+    )
+  )
+  
+Private
+  
+  - delete_atlas <-
+  (    
+    //"Del\n".print
+    {nodes.is_empty}.until_do { nodes.pop.free; }
+    //free(atlas->nodes)
+    //free(atlas)
+  )
+  
+  - insert_node (x,y,w:INTEGER) to idx:INTEGER <-
+  (     
+    ? {x+w <= width}
+    nodes.at idx add (FONS_ATLAS_NODE.create (x,y) width w)
+  )
+
+  - remove_node idx:INTEGER <-
+  (
+    //"Remove line\n".print
+    nodes.at idx.free
+    nodes.remove idx
+  )
+
+  - expand (w,h:INTEGER) <-
+  (
+    "Expand...\n".print
+    // Insert node for empty space
+    (w > width).if {
+      insert_node (width,0,w-width) to (nodes.count)
+    }
+    (width,height) := (w,h)
+  )
+
+  - add_skyline_level (idx,x,y,w,h:INTEGER) <-
+  ( + i:INTEGER
+    + break:BOOLEAN
+    // Insert new node    
+    insert_node (x,y+h,w) to idx
+    
+    // Delete skyline segments that fall under the shadow of the new segment.
+    i := idx+1
+    {(i < nodes.count) && {! break}}.while_do {
+      (nodes.at i.x < nodes.at (i-1).x + nodes.at (i-1).width).if {
+        + shrink:INTEGER
+        shrink := nodes.at (i-1).x + nodes.at (i-1).width - nodes.at i.x
+        nodes.at i.set_x ((nodes.at i.x+shrink).to_integer_16)
+        nodes.at i.set_width ((nodes.at i.width-shrink).to_integer_16)
+        (nodes.at i.width <= 0).if {
+          remove_node i
+          i := i - 1
+        } else {
+          break := TRUE
+        }
+      } else {
+        break := TRUE
+      }
+      i := i + 1
+    }
+
+    // Merge same height skyline segments that are next to each other.
+    i := 0
+    {i < nodes.upper}.while_do { 
+      (nodes.at i.y = nodes.at (i+1).y).if {
+        nodes.at i.set_width (nodes.at i.width+nodes.at (i+1).width)
+        remove_node (i+1)
+      } else {
+        i := i + 1
+      }
+    }
+  )
+  
+Public
+  
+  - reset (w,h:INTEGER) <-
+  (
+    //"reset\n".print
+    (width,height) := (w,h)
+    {nodes.is_empty}.until_do { nodes.pop.free; }
+
+    // Init root node.
+    nodes.add_last (
+      FONS_ATLAS_NODE.create (0,0) width (w.to_integer_16)
+    )
+  )
+  
+  - rect_fits (pi,w,h:INTEGER) :INTEGER <-
+  ( + result,x,y,space_left,i:INTEGER
+    // Checks if there is enough space at the location of skyline span 'i',
+    // and return the max height of all skyline spans under that at that location,
+    // (think tetris block being dropped at that position). Or -1 if no space found.
+    //"rect_fits:".print; pi.print; ','.print; w.print; ','.print; h.print; ':'.print
+    i := pi
+    (x,y) := (nodes.at i.x,nodes.at i.y)
+    (x + w > width).if {
+      result := -1
+    } else {
+      space_left := w
+      {(space_left > 0) && {result = 0}}.while_do {
+        (i = nodes.count).if {
+          result := -1
+        } else {
+          y := nodes.at i.y.max y
+          (y + h > height).if {
+            result := -1
+          } else {
+            space_left := space_left - nodes.at i.width
+            i := i + 1
+          }
+        }
+      }
+      (result = 0).if {
+        result := y
+      }
+      /*
+      {(i < nodes.count) && {space_left > 0} && {y + h <= height}}.while_do {        
+        y := nodes.at i.y.max y
+        space_left := space_left - nodes.at i.width
+        i := i + 1
+      }
+      (space_left <= 0).if {
+        result := y
+      };*/
+    }
+    //result.println
+    result
+  )
+
+  - add_rect (rw,rh:INTEGER) :(INTEGER,INTEGER) <-
+  ( + besth,bestw,besti,bestx,besty:INTEGER
+    
+    (besth,bestw) := (height,width)
+    besti := bestx := besty := -1
+    //"------------------\n".print
+    //"rw:".print; rw.print; " (".print; width.print; ") ".print
+    //"rh:".print; rh.print; " (".print; height.print; ") ".print; '\n'.print
+    ? {! nodes.is_empty}
+    // Bottom left fit heuristic.
+    0.to (nodes.upper) do { i:INTEGER
+      + y:INTEGER
+      y := rect_fits (i, rw, rh)
+      //nodes.at i.print; '\n'.print
+      (y != -1).if {
+        //"Search Best...\n".print
+        (
+          (y + rh < besth) || {(y + rh = besth) && {nodes.at i.width < bestw}}
+        ).if {
+          besti := i
+          bestw := nodes.at i.width
+          besth := y + rh
+          bestx := nodes.at i.x
+          besty := y
+        }
+      }
+    }
+    //? {besti != -1}
+    // Perform the actual packing.
+    (besti != -1).if {
+      add_skyline_level(besti, bestx, besty, rw, rh)
+    }
+    //"besti:".print; besti.print; '\n'.print
+    //? {bestx != -1}
+    bestx,besty
+  )

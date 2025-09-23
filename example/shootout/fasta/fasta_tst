@@ -1,0 +1,9 @@
+lisaac fasta -q -O -i20
+gcc fasta_c.c -o fasta_c -O3 -fomit-frame-pointer -lm
+echo Lisaac: 
+time ./fasta 25000000 > out_li.txt
+# time ./fasta 10 > out_li.txt
+echo C:
+time ./fasta_c 25000000 > out_c.txt
+# time ./fasta_c 10 > out_c.txt
+diff out_li.txt out_c.txt

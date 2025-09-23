@@ -1,0 +1,98 @@
+Header
+  
+  + name := SCISSOR;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Private
+  
+  - stack:ARRAY SCISSOR := ARRAY SCISSOR.create_with_capacity 16
+  
+Public
+  
+  + xform:TRANSFORM
+  + extent0:REAL_32
+  + extent1:REAL_32
+  
+  - set_xform x:TRANSFORM <- ( xform := x; )
+  
+  - create:SCISSOR <-
+  ( + result:SCISSOR
+    (stack.is_empty).if {
+      result := clone
+    } else {
+      result := stack.pop
+    }
+    result.make
+    result
+  )
+  
+  - free <- stack.add_last Self
+  
+  - make <-
+  (
+    (xform = NULL).if { xform := TRANSFORM.create; }
+    extent0 := extent1 := -1.0
+  )
+    
+  - make (x,y:REAL_32) size (w,h:REAL_32) transform t:TRANSFORM <-
+  ( + ww,hh:REAL_32
+    ww := w.max 0
+    hh := h.max 0
+    //(xform = NULL).if { xform := TRANSFORM.create; }
+    xform.translate (x+ww*0.5,y+hh*0.5)
+    xform.multiply t
+    (extent0,extent1) := (ww*0.5,hh*0.5)
+  )
+  
+  - copy o:SCISSOR <-
+  (
+    (extent0,extent1) := (o.extent0,o.extent1)
+    xform.copy (o.xform)
+  )
+  
+  - intersect (x,y:REAL_32) size (w,h:REAL_32) with state_xform:TRANSFORM <-
+  ( + pxform,invxorm:TRANSFORM
+    + ex, ey, tex, tey:REAL_32
+    + ax,ay,aw,ah,minx,miny,maxx,maxy:REAL_32
+    
+    // If no previous scissor has been set, set the scissor as current scissor.
+    (extent0 < 0).if {      
+      make (x,y) size (w,h) transform state_xform
+    } else {
+      //rect    := NATIVE_ARRAY REAL_32.create 4
+      pxform  := TRANSFORM.create
+      invxorm := TRANSFORM.create
+      // Transform the current scissor rect into current transform space.
+      // If there is difference in rotation, this will be approximation.
+      pxform.copy xform
+      (ex,ey) := (extent0,extent1)
+      invxorm.inverse state_xform
+      pxform.multiply invxorm
+      tex := ex*pxform.t0.abs + ey*pxform.t2.abs
+      tey := ex*pxform.t1.abs + ey*pxform.t3.abs
+      
+      // Intersect rects.            
+      ax := pxform.t4-tex
+      ay := pxform.t5-tey
+      aw := ah := tex*2
+      minx := ax.max x
+      miny := ay.max y
+      maxx := (ax+aw).min (x+w)
+      maxy := (ay+ah).min (y+h)
+      //OUT ## minx ## ';' ## miny ## " size=" ## (maxx-minx) ## 'x' ## (maxy-miny) ## '\n'
+      make (minx,miny) size (maxx-minx,maxy-miny) transform state_xform
+      //rect.free
+      pxform.free
+      invxorm.free
+    }
+  )
+
+  - reset <-
+  (
+    xform.clear
+    extent0 := extent1 := -1
+  )
+  

@@ -1,0 +1,61 @@
+Header
+
+  + name      := LOCAL;
+
+  /*
+  The local
+  */
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  + name:STRING_ALIAS
+
+  + type:CLASS
+
+  //
+  // Creation.
+  //
+
+  - create p:INTEGER name n:STRING_ALIAS type t:CLASS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n type t
+    result
+  )
+
+  - make p:INTEGER name n:STRING_ALIAS type t:CLASS <-
+  (
+    position := p
+    name     := n
+    type     := t
+  )
+
+  //
+  // Run.
+  //
+
+  + the_dynamic_type:CLASS
+
+  - set_the_dynamic_type c:CLASS <-
+  [
+    ? {c.is_sub_type type}
+  ]
+  (
+    the_dynamic_type := c
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    name.print
+    ':'.print
+    type.name.print
+  )
+

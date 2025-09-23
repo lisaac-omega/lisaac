@@ -1,0 +1,10 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + r:REAL_16_16
+    r := (0.5).to_real_16_16
+    r.print
+    TEST.check (r.to_string) string "0.50000000"
+  )

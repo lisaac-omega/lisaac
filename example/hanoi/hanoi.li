@@ -1,0 +1,78 @@
+Header
+
+  + name := HANOI;
+  /*
+  The classic Tower of Hanoi problem.
+  */
+
+Insert
+  - parent_utils:UTILS := UTILS
+
+Private
+
+  + nb:INTEGER
+
+  + tower1:TOWER
+  + tower2:TOWER
+  + tower3:TOWER
+
+Public
+
+  - main <-
+  (
+    (COMMAND_ARGS.upper = 0).if {
+      "Number of discus: ".print
+      STDIN.read_integer
+      nb := STDIN.last_integer
+    }.elseif {COMMAND_ARGS.upper != 1} then {
+      "Usage: hanoi <NumberOfDiscus>\n".print
+      exit exit_failure_code
+    }.elseif {(COMMAND_ARGS.at 1).is_integer} then {
+      nb := (COMMAND_ARGS.at 1).to_integer.max 1
+    } else {
+      "hanoi: bad argument (not an integer)\n".print
+      exit exit_failure_code
+    }
+
+    tower1 := TOWER.full nb
+    tower2 := TOWER.empty nb
+    tower3 := TOWER.empty nb
+
+    "Situation at the beginning:\n".print
+    move (nb,tower1,tower2,tower3)
+    "Situation at the end:\n".print
+    print
+  )
+
+Private
+
+  - move (how_many:INTEGER, source, intermediate, destination:TOWER) <-
+  ( + discus:INTEGER
+    (how_many > 0).if {
+      move (how_many-1,source,destination,intermediate)
+      print
+      discus := source.remove_discus
+      destination.add_discus discus
+      move ((how_many-1),intermediate,source,destination)
+    }
+  )
+
+Public
+
+  - print <-
+  (
+    '\n'.print
+    (nb-1).downto 0 do { i:INTEGER
+      ' '.print
+      tower1.show_a_discus i
+      ' '.print
+      tower2.show_a_discus i
+      ' '.print
+      tower3.show_a_discus i
+      '\n'.print
+    }
+    ((((2 * (nb + 1)) + 1) * 3) - 2).downto 1 do { i:INTEGER
+      '-'.print
+    }
+    '\n'.print
+  )

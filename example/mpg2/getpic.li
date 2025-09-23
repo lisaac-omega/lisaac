@@ -1,0 +1,860 @@
+Header
+  
+  + name         := GETPIC;
+  /*
+  picture decoding.
+  */
+  
+  - external := `
+  static unsigned char stwc_table[3][4]
+  = { {6,3,7,4}, {2,1,5,4}, {2,5,7,4} };
+  static unsigned char stwclass_table[9]
+  = {0, 1, 2, 1, 1, 2, 3, 3, 4};
+  `;
+  
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Public
+
+  - decode_picture (bitstream_framenum, sequence_framenum:INTEGER) <-
+  // decode one frame or field picture 
+  (
+
+    ((picture_structure = frame_picture) && {second_field}).if {
+      // recover from illegal number of field pictures 
+      "odd number of field pictures\n".print
+      second_field := FALSE
+    }
+
+    // IMPLEMENTATION: update picture buffer pointers 
+    update_picture_buffers
+
+    // form spatial scalable picture 
+ 
+    // form spatial scalable picture 
+    // ISO/IEC 13818-2 section 7.7: Spatial scalability 
+    (ld.pict_scal && {! second_field}).if {
+      not_yet_implemented
+    }
+
+    // decode picture data ISO/IEC 13818-2 section 6.2.3.7 
+    picture_data bitstream_framenum
+
+    // write or display current or previously decoded reference frame 
+    // ISO/IEC 13818-2 section 6.1.1.11: Frame reordering 
+    frame_reorder (bitstream_framenum, sequence_framenum)
+
+    (picture_structure != frame_picture).if {
+      second_field := ! second_field
+    }
+  )
+
+Private
+
+  - picture_data framenum:INTEGER <- 
+  // decode all macroblocks of the current picture 
+  // stages described in ISO/IEC 13818-2 section 7 
+  ( + mbamax:INTEGER
+
+    // number of macroblocks per picture 
+    mbamax := mb_width * mb_height
+    
+    (picture_structure != frame_picture).if {
+      mbamax := mbamax >> 1; // field picture has half as mnay macroblocks as frame 
+    }
+   
+    {slice (framenum, mbamax) < 0}.until_do { 
+      // Nothing.
+    }
+  )
+  
+  - motion_vertical_field_select:ARRAY2(BOOLEAN) := ARRAY2(BOOLEAN).create (2,2)
+  - dc_dct_pred:NATIVE_ARRAY(INTEGER) := NATIVE_ARRAY(INTEGER).create 3
+  - pmv:PMV                           := PMV
+  - dmvector:VECTOR                   := VECTOR.create
+    
+  - slice (framenum, mbamax:INTEGER) :INTEGER <-
+  // decode all macroblocks of the current picture 
+  // ISO/IEC 13818-2 section 6.3.16   
+  ( + mba:INTEGER
+    + mbainc, macroblock_type, motion_type:INTEGER
+    + dct_type:BOOLEAN
+    + stwtype, stwclass:INTEGER
+    + ret:INTEGER
+    // Local `start_of_slice'
+    + code:INTEGER
+    + slice_vert_pos_ext:INTEGER
+    // Local `decode_macroblock'
+    + quantizer_scale_code:INTEGER
+    + comp:INTEGER
+    + motion_vector_count:INTEGER
+    + mv_format:BOOLEAN
+    + dmv:BOOLEAN
+    + mvscale:BOOLEAN
+    + coded_block_pattern:INTEGER
+    + marker:BOOLEAN
+    
+    // BSBS: Begin Inlining `start_of_slice'. 
+    
+    // return==-1 means go to next picture 
+    // the expression "start of slice" is used throughout the normative
+    // body of the MPEG specification       
+    ret := 1
+    
+    fault_flag := FALSE
+
+    ld.next_start_code
+    code := ld.show_bits 32
+
+    ((code < slice_start_code_min) || {code > slice_start_code_max}).if {
+      // only slice headers are allowed in picture_data 
+      (trace).if {
+	"start_of_slice(): Premature end of picture\n".print
+      }
+      ret := -1;  // trigger: go to next picture 
+    } else {
+    
+      ld.flush_buffer32
+    
+      // decode slice header (may change quantizer_scale) 
+      slice_vert_pos_ext := GETHDR.slice_header
+      
+      // SCALABILITY: Data Partitioning 
+      (ld.scalable_mode = sc_dp).if {
+	not_yet_implemented
+      }
+      
+      (ret != -1).if {
+	// decode macroblock address increment 
+	mbainc := GETVLC.get_macroblock_address_increment
+	
+	(fault_flag).if {
+	  "start_of_slice(): MBAinc unsuccessful\n".print
+	  ret := 0;   // trigger: go to next slice 
+	} else {
+	  
+	  // set current location 
+	  // NOTE: the arithmetic used to derive macroblock_address below is
+	  //       equivalent to ISO/IEC 13818-2 section 6.3.17: Macroblock
+	  mba    := ((slice_vert_pos_ext << 7) + (code & 255) - 1) * mb_width + mbainc - 1
+	  mbainc := 1; // first macroblock in slice: not skipped 
+	  
+	  // reset all DC coefficient and motion vector predictors 
+	  // reset all DC coefficient and motion vector predictors 
+	  // ISO/IEC 13818-2 section 7.2.1: DC coefficients in intra blocks 
+	  dc_dct_pred.set_all_with 0 until 2; // BSBS: [0..2] => 0
+	  
+	  // ISO/IEC 13818-2 section 7.6.3.4: Resetting motion vector predictors 
+	  pmv.clear; // BSBS: [0..1][0..1][0..1] => 0       
+	}
+      }
+    }
+    
+    // BSBS: End Inlining `start_of_slice'.
+    
+    (ret = 1).if {
+
+      fault_flag := FALSE
+      
+      // this is how we properly exit out of picture 
+      (mba >= mbamax).if {
+	ret := -1; // all macroblocks decoded 
+      } else {
+	{		  	
+	  (mbainc = 0).if {
+	    ((ld.scalable_mode = sc_dp) && {ld.priority_breakpoint = 1}).if {
+	      not_yet_implemented
+	    }
+	    
+	    ((ld.show_bits 23 = 0) || {fault_flag}).if { // next_start_code or fault 	      
+	      fault_flag := FALSE
+	      ret := 0;     // trigger: go to next slice 
+	    } else { // neither next_start_code nor Fault_Flag 
+	      ((ld.scalable_mode = sc_dp) && {ld.priority_breakpoint = 1}).if {
+		not_yet_implemented
+	      }
+	      
+	      // decode macroblock address increment 
+	      mbainc := GETVLC.get_macroblock_address_increment
+	      
+	      (fault_flag).if {
+		fault_flag := FALSE
+		ret := 0
+	      }
+	    }
+          }
+
+          (ret != 0).if {
+
+            (mba >= mbamax).if {
+              // MBAinc points beyond picture dimensions
+              (trace).if {
+                "Too many macroblocks in picture\n".print
+              }
+              ret := -1
+            } else {
+              
+              (mbainc = 1).if {
+                // not skipped
+
+                // BSBS: Begin Inlining `decode_macroblock'
+                // ISO/IEC 13818-2 sections 7.2 through 7.5
+                ret := 1
+
+                // SCALABILITY: Data Patitioning
+                (ld.scalable_mode = sc_dp).if {
+                  not_yet_implemented
+                }
+
+                // ISO/IEC 13818-2 section 6.3.17.1: Macroblock modes
+                macroblock_modes
+                // BSBS: Multiple results
+                macroblock_type := pmacroblock_type
+                stwtype := pstwtype
+                stwclass := pstwclass
+                motion_type := pmotion_type
+                motion_vector_count := pmotion_vector_count
+                mv_format := pmv_format
+                dmv := pdmv
+                mvscale := pmvscale
+                dct_type := pdct_type
+
+                (fault_flag).if {
+                  ret := 0;  // trigger: go to next slice
+                } else {
+                  ((macroblock_type & macroblock_quant) != 0).if {
+                    quantizer_scale_code := ld.get_bits 5
+                    // ISO/IEC 13818-2 section 7.4.2.2: Quantizer scale factor
+                    (ld.mpeg2_flag).if {
+                      (ld.q_scale_type).if {
+                        ld.set_quantizer_scale (TABLE.non_linear_quantizer_scale quantizer_scale_code)
+                      } else {
+                        ld.set_quantizer_scale (quantizer_scale_code << 1)
+                      }
+                    } else {
+                      ld.set_quantizer_scale quantizer_scale_code
+                    }
+
+                    // SCALABILITY: Data Partitioning
+                    (ld.scalable_mode = sc_dp).if {
+                      // make sure base.quantizer_scale is valid
+                      not_yet_implemented
+                      //base.set_quantizer_scale (ld.quantizer_scale)
+                    }
+                  }
+                  // motion vectors
+                  // ISO/IEC 13818-2 section 6.3.17.2: Motion vectors
+                  // decode forward motion vectors
+                  (
+                    ((macroblock_type & macroblock_motion_forward) != 0) ||
+                    {((macroblock_type & macroblock_intra) != 0) && {concealment_motion_vectors}}
+                  ).if {
+                    (ld.mpeg2_flag).if {
+                      MOTION.motion_vectors (pmv,dmvector,motion_vertical_field_select,
+                        0,motion_vector_count,mv_format,(f_code.at (0,0) - 1),(f_code.at (0,1) - 1),
+                      dmv,mvscale)
+                    } else {
+                      MOTION.motion_vector (pmv,0,0,dmvector,
+                      (forward_f_code - 1),(forward_f_code - 1),FALSE,FALSE,full_pel_forward_vector)
+                    }
+                  }
+
+                  (fault_flag).if {
+                    ret := 0;  // trigger: go to next slice
+                  } else {
+                    // decode backward motion vectors
+                    ((macroblock_type & macroblock_motion_backward) != 0).if {
+                      (ld.mpeg2_flag).if {
+                        MOTION.motion_vectors (pmv,dmvector,motion_vertical_field_select,
+                          1,motion_vector_count,mv_format,(f_code.at (1,0) - 1),(f_code.at (1,1) - 1),FALSE,
+                        mvscale)
+                      } else {
+                        MOTION.motion_vector (pmv,0,1,dmvector,
+                        (backward_f_code - 1),(backward_f_code - 1),FALSE,FALSE,full_pel_backward_vector)
+                      }
+                    }
+                    (fault_flag).if {
+                      ret := 0;  // trigger: go to next slice
+                    } else {
+                      (((macroblock_type & macroblock_intra) != 0) && {concealment_motion_vectors}).if {
+                        ld.flush_buffer 1; // remove marker_bit
+                      }
+                      ((ld.scalable_mode = sc_dp) && {ld.priority_breakpoint = 3}).if {
+                        not_yet_implemented
+                      }
+                      // macroblock_pattern
+                      // ISO/IEC 13818-2 section 6.3.17.4: Coded block pattern
+                      ((macroblock_type & macroblock_pattern) != 0).if {
+                        coded_block_pattern := GETVLC.get_coded_block_pattern
+                        (chroma_format = chroma422).if {
+                          // coded_block_pattern_1
+                          coded_block_pattern := (coded_block_pattern << 2) | ld.get_bits 2
+                        } else {
+                          (chroma_format = chroma444).if {
+                            // coded_block_pattern_2
+                            coded_block_pattern := (coded_block_pattern << 6) | ld.get_bits 6
+                          }
+                        }
+                      } else {
+                        ((macroblock_type & macroblock_intra) != 0).if {
+                          coded_block_pattern := (1 << block_count) - 1
+                        } else {
+                          coded_block_pattern := 0
+                        }
+                      }
+
+                      (fault_flag).if {
+                        ret := 0;  // trigger: go to next slice
+                      } else {
+                        // decode blocks
+                        comp := 0
+                        {(comp < block_count) && {ret != 0}}.while_do {
+                          // SCALABILITY: Data Partitioning
+                          (ld.scalable_mode = sc_dp).if {
+                            not_yet_implemented
+                          }
+
+                          clear_block comp
+
+                          ((coded_block_pattern & (1 << (block_count-1-comp))) != 0).if {
+                            ((macroblock_type & macroblock_intra) != 0).if {
+                              (ld.mpeg2_flag).if {
+                                GETBLK.decode_mpeg2_intra_block (comp,dc_dct_pred)
+                              } else {
+                                GETBLK.decode_mpeg1_intra_block (comp,dc_dct_pred)
+                              }
+                            } else {
+                              (ld.mpeg2_flag).if {
+                                GETBLK.decode_mpeg2_non_intra_block comp
+                              } else {
+                                GETBLK.decode_mpeg1_non_intra_block comp
+                              }
+                            }
+
+                            (fault_flag).if {
+                              ret := 0;  // trigger: go to next slice
+                            }
+                          }
+                          comp := comp + 1
+                        }
+
+                        (ret != 0).if {
+                          (picture_coding_type = d_type).if {
+                            // remove end_of_macroblock (always 1, prevents startcode emulation)
+                            // ISO/IEC 11172-2 section 2.4.2.7 and 2.4.3.6
+                            marker := ld.get_boolean
+                            ? {marker}
+                          }
+
+                          // reset intra_dc predictors
+                          // ISO/IEC 13818-2 section 7.2.1: DC coefficients in intra blocks
+                          ((macroblock_type & macroblock_intra) = 0).if {
+                            dc_dct_pred.set_all_with 0 until 2; // BSBS: [0..2] => 0
+                          }
+
+                          // reset motion vector predictors
+                          (((macroblock_type & macroblock_intra) != 0) && {! concealment_motion_vectors}).if {
+                            // intra mb without concealment motion vectors
+                            // ISO/IEC 13818-2 section 7.6.3.4: Resetting motion vector predictors
+                            pmv.clear; // BSBS [0..1][0..1][0..1] => 0
+                          }
+ 
+                          // special "No_MC" macroblock_type case
+                          // ISO/IEC 13818-2 section 7.6.3.5: Prediction in P pictures
+                          ((picture_coding_type = p_type) &&
+                          {(macroblock_type & (macroblock_motion_forward|macroblock_intra)) = 0}).if {
+                            // non-intra mb without forward mv in a P picture
+                            // ISO/IEC 13818-2 section 7.6.3.4: Resetting motion vector predictors
+                            pmv.at (0,0,0) put 0
+                            pmv.at (0,0,1) put 0
+                            pmv.at (1,0,0) put 0
+                            pmv.at (1,0,1) put 0
+
+                            // derive motion_type
+                            // ISO/IEC 13818-2 section 6.3.17.1: Macroblock modes, frame_motion_type
+                            (picture_structure = frame_picture).if {
+                              motion_type := mc_frame
+                            } else {
+                              motion_type := mc_field
+                              // predict from field of same parity
+                              motion_vertical_field_select.at (0,0) put (picture_structure = bottom_field)
+                            }
+                          }
+
+                          (stwclass = 4).if {
+                            // purely spatially predicted macroblock
+                            // ISO/IEC 13818-2 section 7.7.5.1: Resetting motion vector predictions
+                            pmv.clear; // BSBS [0..1][0..1][0..1] => 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+
+                // BSBS: End Inlining `decode_macroblock'
+
+                (ret = 0).if {
+                  fault_flag := FALSE
+                }
+              } else {
+                // MBAinc!=1: skipped macroblock
+                // ISO/IEC 13818-2 section 7.6.6
+
+                // BSBS: Begin Inlining `skipped_macroblock'
+                ( + bool:BOOLEAN
+
+                  // SCALABILITY: Data Paritioning
+                  (ld.scalable_mode = sc_dp).if {
+                    not_yet_implemented
+                  }
+
+                  0. to (block_count-1) do { comp3:INTEGER
+                    clear_block comp3
+                  }
+
+                  // reset intra_dc predictors
+                  // ISO/IEC 13818-2 section 7.2.1: DC coefficients in intra blocks
+                  dc_dct_pred.set_all_with 0 until 2; // BSBS: [0..2] => 0
+
+                  // reset motion vector predictors
+                  // ISO/IEC 13818-2 section 7.6.3.4: Resetting motion vector predictors
+                  (picture_coding_type = p_type).if {
+                    pmv.at (0,0,0) put 0
+                    pmv.at (0,0,1) put 0
+                    pmv.at (1,0,0) put 0
+                    pmv.at (1,0,1) put 0
+                  }
+
+                  // derive motion_type
+                  (picture_structure = frame_picture).if {
+                    motion_type := mc_frame
+                  } else {
+                    motion_type := mc_field
+
+                    // predict from field of same parity
+                    // ISO/IEC 13818-2 section 7.6.6.1 and 7.6.6.3: P field picture and B field
+                    // picture
+                    bool := (picture_structure = bottom_field)
+                    motion_vertical_field_select.at (0,0) put bool
+                    motion_vertical_field_select.at (0,1) put bool
+                  }
+
+                  // skipped I are spatial-only predicted,
+                  // skipped P and B are temporal-only predicted
+                  // ISO/IEC 13818-2 section 7.7.6: Skipped macroblocks
+                  (picture_coding_type = i_type).if {
+                    stwtype := 8
+                  } else {
+                    stwtype := 0
+                  }
+    
+		  // IMPLEMENTATION: clear MACROBLOCK_INTRA 
+		  macroblock_type := macroblock_type & (~ macroblock_intra)
+		)
+		// BSBS: End Inlining `skipped_macroblock'
+	      }
+	    
+	      ((ret != -1) && {ret != 0}).if {
+			      
+		// ISO/IEC 13818-2 section 7.6 
+		motion_compensation (mba, macroblock_type, motion_type, stwtype, dct_type)
+		
+		// advance to next macroblock 
+		mba    := mba + 1
+		mbainc := mbainc - 1
+				
+		(mba >= mbamax).if {
+		  ret := -1; // all macroblocks decoded 
+		}
+	      }
+	    }
+	  }
+	}.do_until {(ret = -1) || {ret = 0}}
+      }
+    }
+    ret
+  )
+  
+  // BSBS: Multiple Result.
+  - pmacroblock_type:INTEGER
+  - pstwtype:INTEGER
+  - pstwclass:INTEGER
+  - pmotion_type:INTEGER
+  - pmotion_vector_count:INTEGER
+  - pmv_format:BOOLEAN
+  - pdmv:BOOLEAN
+  - pmvscale:BOOLEAN
+  - pdct_type:BOOLEAN
+  - macroblock_modes <-
+  // ISO/IEC 13818-2 section 6.3.17.1: Macroblock modes 
+  // int *pmacroblock_type, *pstwtype, *pstwclass
+  // int *pmotion_type, *pmotion_vector_count, *pmv_format, *pdmv, *pmvscale
+  // int *pdct_type
+  ( + macroblock_type:INTEGER
+    + stwtype, stwcode, stwclass:INTEGER
+    + motion_type:INTEGER
+    + motion_vector_count:INTEGER
+    + mv_format:BOOLEAN
+    + dmv,mvscale:BOOLEAN
+    + dct_type:BOOLEAN
+    + tmp:INTEGER
+
+    // get macroblock_type 
+    macroblock_type := GETVLC.get_macroblock_type
+    
+    (fault_flag).if_false {
+    
+      // get spatial_temporal_weight_code 
+      ((macroblock_type & mb_weight) != 0).if {
+	(spatial_temporal_weight_code_table_index = 0).if {
+	  stwtype := 4
+	} else {
+	  stwcode := ld.get_bits 2
+	  tmp := spatial_temporal_weight_code_table_index-1
+	  stwtype := `stwc_table[@tmp][@stwcode]`:UINTEGER_8
+	}
+      } else {
+	((macroblock_type & mb_class4) != 0).if {
+	  stwtype := 8
+	} else {
+	  stwtype := 0
+	}
+      }
+      
+      // SCALABILITY: derive spatial_temporal_weight_class (Table 7-18) 
+      stwclass := `stwclass_table[@stwtype]`:UINTEGER_8
+      
+      // get frame/field motion type 
+      ((macroblock_type & (macroblock_motion_forward|macroblock_motion_backward)) != 0).if {
+	(picture_structure = frame_picture).if { 
+	  // frame_motion_type 
+	  (frame_pred_frame_dct).if {
+	    motion_type := mc_frame
+	  } else { 
+	    motion_type := ld.get_bits 2
+	  }
+	} else { 
+	  // field_motion_type 
+	  motion_type := ld.get_bits 2
+	}
+      } else {
+	(((macroblock_type & macroblock_intra) != 0) && {concealment_motion_vectors}).if {
+	  // concealment motion vectors 
+	  (picture_structure = frame_picture).if {
+	    motion_type := mc_frame
+	  } else {
+	    motion_type := mc_field
+	  }
+	}
+      }
+      
+      // derive motion_vector_count, mv_format and dmv, (table 6-17, 6-18) 
+      (picture_structure = frame_picture).if {
+	((motion_type = mc_field) && {stwclass < 2}).if {
+	  motion_vector_count := 2
+	} else {
+	  motion_vector_count := 1
+	}
+	(motion_type = mc_frame).if {
+	  mv_format := mv_frame
+	} else {
+	  mv_format := mv_field
+	}
+      } else {
+	(motion_type = mc_16x8).if {
+	  motion_vector_count := 2
+	} else { 
+	  motion_vector_count := 1
+	}
+	mv_format := mv_field
+      }
+      
+      dmv := (motion_type = mc_dmv); // dual prime 
+      
+      // field mv predictions in frame pictures have to be scaled
+      // ISO/IEC 13818-2 section 7.6.3.1 Decoding the motion vectors
+      // IMPLEMENTATION: mvscale is derived for later use in motion_vectors()
+      // it displaces the stage:
+      //
+      //    if((mv_format=="field")&&(t==1)&&(picture_structure=="Frame picture"))
+      //      prediction = PMV[r][s][t] DIV 2
+      
+      mvscale := ((mv_format = mv_field) && {picture_structure = frame_picture})
+      
+      // get dct_type (frame DCT / field DCT) 
+      ((picture_structure = frame_picture) && {!frame_pred_frame_dct} &&
+      {(macroblock_type & (macroblock_pattern|macroblock_intra)) != 0}).if {    
+	dct_type := ld.get_boolean
+      } else {
+	dct_type := FALSE
+      }
+            
+      // return values 
+      pmacroblock_type := macroblock_type
+      pstwtype := stwtype
+      pstwclass := stwclass
+      pmotion_type := motion_type
+      pmotion_vector_count := motion_vector_count
+      pmv_format := mv_format
+      pdmv := dmv
+      pmvscale := mvscale
+      pdct_type := dct_type
+    }
+  )
+
+  - add_block (comp,pbx,pby:INTEGER,dct_type,addflag:BOOLEAN) <-
+  // move/add 8x8-Block from block[comp] to backward_reference_frame 
+  // copy reconstructed 8x8 block from block[comp] to current_frame[]
+  // ISO/IEC 13818-2 section 7.6.8: Adding prediction and coefficient data
+  // This stage also embodies some of the operations implied by:
+  //   - ISO/IEC 13818-2 section 7.6.7: Combining predictions
+  //   - ISO/IEC 13818-2 section 6.1.3: Macroblock
+  ( + cc, iincr:INTEGER
+    + frame:NATIVE_ARRAY(UINTEGER_8)
+    + rfp:INTEGER
+    + b:NATIVE_ARRAY(INTEGER_16)
+    + bp,bx,by:INTEGER
+    + pclip:NATIVE_ARRAY(UINTEGER_8)
+    
+    bx := pbx
+    by := pby
+    
+    // derive color component index 
+    // equivalent to ISO/IEC 13818-2 Table 7-1 
+    (comp >= 4).if {
+      cc := (comp&1) + 1; // color component index 
+    }
+        
+    (cc = 0).if {
+      // luminance 
+      
+      (picture_structure = frame_picture).if {
+	(dct_type).if {
+	  // field DCT coding 
+	  rfp   := coded_picture_width*(by+((comp&2)>>1)) + bx + ((comp&1)<<3)
+	  iincr := (coded_picture_width << 1) - 8
+	} else {
+	  // frame DCT coding 
+	  rfp   := coded_picture_width*(by+((comp&2)<<2)) + bx + ((comp&1)<<3)
+	  iincr := coded_picture_width - 8
+	}
+      } else {
+	// field picture 
+	rfp   := (coded_picture_width<<1)*(by+((comp&2)<<2)) + bx + ((comp&1)<<3)
+	iincr := (coded_picture_width << 1) - 8
+      }
+    } else {
+      // chrominance 
+
+      // scale coordinates 
+      (chroma_format != chroma444).if {
+	bx := bx >> 1
+      }
+      (chroma_format = chroma420).if {
+	by := by >> 1
+      }
+      (picture_structure = frame_picture).if {
+	(dct_type && {chroma_format != chroma420}).if {
+	  // field DCT coding 
+	  rfp   := chroma_width*(by+((comp&2)>>1)) + bx + (comp&8)
+	  iincr := (chroma_width << 1) - 8
+	} else {
+	  // frame DCT coding 
+	  rfp   := chroma_width*(by+((comp&2)<<2)) + bx + (comp&8)
+	  iincr := chroma_width - 8
+	}
+      } else {
+	// field picture 
+	rfp   := (chroma_width << 1)*(by+((comp&2)<<2)) + bx + (comp&8)
+	iincr := (chroma_width << 1) - 8
+      }
+    }
+    
+    // BSBS: Warning!
+    b     := ld.block.at comp
+    pclip := clip; //+384
+    frame := current_frame.at cc
+        
+    (addflag).if {
+      7.downto 0 do { i:INTEGER
+	7.downto 0 do { j:INTEGER
+	  frame.at rfp put (pclip.at (b.at bp.to_integer + frame.at rfp+384))
+	  bp   := bp  + 1
+	  rfp  := rfp + 1
+	}
+	rfp := rfp + iincr
+      }
+    } else {
+      7.downto 0 do { i:INTEGER
+	7.downto 0 do { j:INTEGER
+	  frame.at rfp put (pclip.at ((b.at bp + 128).to_integer+384))
+	  bp   := bp  + 1
+	  rfp  := rfp + 1
+	}
+	rfp := rfp + iincr
+      }
+    }
+  )
+
+  - clear_block comp:INTEGER <-
+  // IMPLEMENTATION: set scratch pad macroblock to zero 
+  (    
+    ld.block.at comp.set_all_with 0 until 63; // 0..63 en Short (128 bytes) -> 0    
+  )
+
+  - saturate block_ptr:NATIVE_ARRAY(INTEGER_16) <-
+  // limit coefficients to -2048..2047 
+  // ISO/IEC 13818-2 section 7.4.3 and 7.4.4: Saturation and Mismatch control 
+  ( + sum, val:INTEGER
+    
+    // ISO/IEC 13818-2 section 7.4.3: Saturation 
+    0.to 63 do { i:INTEGER
+      val := block_ptr.at i
+
+      (val > 2047).if {
+	val := 2047
+      } else {
+	(val < -2048).if {
+	  val := -2048
+	}
+      }
+
+      block_ptr.at i put (val.to_integer_16)
+      sum := sum + val
+    }
+
+    // ISO/IEC 13818-2 section 7.4.4: Mismatch control 
+    ((sum&1) = 0).if {
+      val := block_ptr.at 63 ^ 1
+      block_ptr.at 63 put (val.to_integer_16)
+    }
+  )
+
+  - update_picture_buffers <-
+  // reuse old picture buffers as soon as they are no longer needed 
+  // based on life-time axioms of MPEG 
+  ( + tmp:NATIVE_ARRAY(UINTEGER_8);  // temporary swap pointer 
+    
+    0.to 2 do { cc:INTEGER
+      // B pictures do not need to be save for future reference 
+      (picture_coding_type = b_type).if {
+	current_frame.at cc put (auxframe.at cc)
+      } else {
+	// only update at the beginning of the coded frame 
+	(! second_field).if {
+	  tmp := forward_reference_frame.at cc
+
+	  // the previously decoded reference frame is stored
+	  // coincident with the location where the backward 
+	  // reference frame is stored (backwards prediction is not
+	  // needed in P pictures) 
+	  forward_reference_frame.at cc put (backward_reference_frame.at cc)
+        
+	  // update pointer for potential future B pictures 
+	  backward_reference_frame.at cc put tmp
+	}
+
+	// can erase over old backward reference frame since it is not used
+	// in a P picture, and since any subsequent B pictures will use the 
+	// previously decoded I or P frame as the backward_reference_frame 
+	current_frame.at cc put (backward_reference_frame.at cc)
+      }
+
+      // IMPLEMENTATION:
+      // one-time folding of a line offset into the pointer which stores the
+      // memory address of the current frame saves offsets and conditional 
+      // branches throughout the remainder of the picture processing loop 
+      (picture_structure = bottom_field).if {
+	"GETPIC line 883\nNot yet implemented\n".print
+	//not_yet_implemented
+	/*
+	(cc = 0).if {
+	  current_frame.at 0 put (current_frame.at  0 + coded_picture_width)
+	} else {
+	  current_frame.at cc put (current_frame.at cc + chroma_width)
+	}
+	*/
+      }
+    }
+  )
+
+Public
+
+  - output_last_frame_of_sequence framenum:INTEGER <-
+  // store last frame 
+  (
+    (second_field).if {
+      "last frame incomplete, not stored\n".print
+    } else {
+      STORE.write_frame (backward_reference_frame,(framenum - 1))
+    }
+  )
+
+Private
+
+  - oldref_progressive_frame:BOOLEAN
+  - newref_progressive_frame:BOOLEAN
+  - frame_reorder (bitstream_framenum, sequence_framenum:INTEGER) <-
+  ( // tracking variables to insure proper output in spatial scalability 
+   
+    (sequence_framenum != 0).if {
+      ((picture_structure = frame_picture) || {second_field}).if {
+	(picture_coding_type = b_type).if {
+	  STORE.write_frame (auxframe,(bitstream_framenum - 1))
+	} else {
+	  newref_progressive_frame := progressive_frame
+	  progressive_frame := oldref_progressive_frame
+	  
+	  STORE.write_frame (forward_reference_frame,(bitstream_framenum - 1))
+	  
+	  oldref_progressive_frame := progressive_frame := newref_progressive_frame
+	}
+      }
+    } else {
+      oldref_progressive_frame := progressive_frame
+    }
+  )
+
+  - motion_compensation (mba, macroblock_type, motion_type:INTEGER, stwtype:INTEGER, dct_type:BOOLEAN) <-
+  // ISO/IEC 13818-2 section 7.6 
+  // 
+  // int motion_vertical_field_select[2][2]
+  ( + bx, by:INTEGER
+    
+    // derive current macroblock position within picture 
+    // ISO/IEC 13818-2 section 6.3.1.6 and 6.3.1.7 
+    bx := 16 * (mba % mb_width)
+    by := 16 * (mba / mb_width)
+
+    // motion compensation 
+    ((macroblock_type & macroblock_intra) = 0).if {      
+      RECON.form_predictions (bx,by,macroblock_type,motion_type,pmv,
+      motion_vertical_field_select,dmvector,stwtype)
+    }
+  
+    // SCALABILITY: Data Partitioning 
+    (ld.scalable_mode = sc_dp).if {
+      not_yet_implemented
+    }
+
+    // copy or add block data into picture 
+    0.to (block_count-1) do { comp:INTEGER
+      
+      // MPEG-2 saturation and mismatch control 
+      // base layer could be MPEG-1 stream, enhancement MPEG-2 SNR 
+      // ISO/IEC 13818-2 section 7.4.3 and 7.4.4: Saturation and Mismatch control 
+      (ld.mpeg2_flag).if {
+	saturate (ld.block.at comp)
+      }
+      
+      // ISO/IEC 13818-2 section Annex A: inverse DCT       
+      IDCT.idct (ld.block.at comp)
+    
+      // ISO/IEC 13818-2 section 7.6.8: Adding prediction and coefficient data 
+      add_block (comp,bx,by,dct_type,((macroblock_type & macroblock_intra) = 0))
+    }
+  )
+

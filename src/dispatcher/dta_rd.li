@@ -1,0 +1,80 @@
+Header
+
+  + name    := DTA_RD;
+
+  /*Read site*/
+
+Inherit
+
+  + parent_dta:Expanded DTA
+
+  - parent_parameter_to_type:Expanded PARAMETER_TO_TYPE
+
+Public
+
+  + is_intern:BOOLEAN
+
+  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  ( + result:TYPE_FULL
+
+    (p.name = "SELF").if {
+      // For Self.
+      result := self_arg.static_type
+    } else {
+      // For genericity.
+      result := slot.receiver_type.parameter_to_type p
+      //result := self_arg.static_type.raw.parameter_to_type p
+    }
+
+    result
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION call sl:SLOT self arg:EXPR intern flag:BOOLEAN :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p call sl self arg intern flag
+    result
+  )
+
+  - make p:POSITION call sl:SLOT self arg:EXPR intern flag:BOOLEAN <-
+  ( ? {sl != NULL}
+    position    := p
+    slot        := sl
+    self_arg    := arg
+    result_expr := get_expr_result
+    is_intern   := flag
+    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
+      (profil_current = NULL).if {
+        context := context_main
+      } else {
+        context := profil_current.context
+      }
+    }
+  )
+
+  //
+  //
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA_READ"
+  )
+
+DTA_RD
+
+  - get_expr_result:EXPR <-
+  ( + result:EXPR
+
+    (slot.id_section.is_interrupt).if {
+      result := type_pointer.default.get_temporary_expr position
+    } else {
+      result := slot.result_type.get_expr_for Self
+    }
+    result
+  )

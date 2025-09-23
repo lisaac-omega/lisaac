@@ -1,0 +1,134 @@
+Header
+  + name := SHA512;
+  
+Inherit
+  + parent_sha:Expanded SHA
+  
+SHA
+  
+  + bitlen1:UINTEGER_64
+  + state:ARRAY UINTEGER_64; // 8
+  
+  - data_size:INTEGER  := 128
+  - short_data_size:INTEGER   := (data_size - 16)
+    
+  - add_bitlen x:INTEGER <-
+  ( + tmp:UINTEGER_64
+    tmp := x << 3
+    bitlen := bitlen + tmp
+    (bitlen < tmp).if { bitlen1 := bitlen1 + 1; }
+  )
+  
+  - put_bitlen <-
+  (
+    data64.at (short_data_size / 8) put (bitlen1.rev)
+    data64.at (short_data_size / 8 + 1) put (bitlen .rev)
+  )
+  
+  - add (a,b,c,d:UINTEGER_64) in t:ARRAY UINTEGER_64 <-
+  (
+    t.add_last a; t.add_last b; t.add_last c; t.add_last d
+  )
+              
+  - k:ARRAY UINTEGER_64 :=
+  ( + r:ARRAY UINTEGER_64
+    r := ARRAY UINTEGER_64.create_with_capacity 80
+    add (0428A2F98D728AE22h,07137449123EF65CDh,0B5C0FBCFEC4D3B2Fh,0E9B5DBA58189DBBCh) in r
+    add (03956C25BF348B538h,059F111F1B605D019h,0923F82A4AF194F9Bh,0AB1C5ED5DA6D8118h) in r
+    add (0D807AA98A3030242h,012835B0145706FBEh,0243185BE4EE4B28Ch,0550C7DC3D5FFB4E2h) in r
+    add (072BE5D74F27B896Fh,080DEB1FE3B1696B1h,09BDC06A725C71235h,0C19BF174CF692694h) in r
+    add (0E49B69C19EF14AD2h,0EFBE4786384F25E3h,00FC19DC68B8CD5B5h,0240CA1CC77AC9C65h) in r
+    add (02DE92C6F592B0275h,04A7484AA6EA6E483h,05CB0A9DCBD41FBD4h,076F988DA831153B5h) in r
+    add (0983E5152EE66DFABh,0A831C66D2DB43210h,0B00327C898FB213Fh,0BF597FC7BEEF0EE4h) in r
+    add (0C6E00BF33DA88FC2h,0D5A79147930AA725h,006CA6351E003826Fh,0142929670A0E6E70h) in r
+    add (027B70A8546D22FFCh,02E1B21385C26C926h,04D2C6DFC5AC42AEDh,053380D139D95B3DFh) in r
+    add (0650A73548BAF63DEh,0766A0ABB3C77B2A8h,081C2C92E47EDAEE6h,092722C851482353Bh) in r
+    add (0A2BFE8A14CF10364h,0A81A664BBC423001h,0C24B8B70D0F89791h,0C76C51A30654BE30h) in r
+    add (0D192E819D6EF5218h,0D69906245565A910h,0F40E35855771202Ah,0106AA07032BBD1B8h) in r
+    add (019A4C116B8D2D0C8h,01E376C085141AB53h,02748774CDF8EEB99h,034B0BCB5E19B48A8h) in r
+    add (0391C0CB3C5C95A63h,04ED8AA4AE3418ACBh,05B9CCA4F7763E373h,0682E6FF3D6B2B8A3h) in r
+    add (0748F82EE5DEFB2FCh,078A5636F43172F60h,084C87814A1F0AB72h,08CC702081A6439ECh) in r
+    add (090BEFFFA23631E28h,0A4506CEBDE82BDE9h,0BEF9A3F7B2C67915h,0C67178F2E372532Bh) in r
+    add (0CA273ECEEA26619Ch,0D186B8C721C0C207h,0EADA7DD6CDE0EB1Eh,0F57D4F7FEE6ED178h) in r
+    add (006F067AA72176FBAh,00A637DC5A2C898A6h,0113F9804BEF90DAEh,01B710B35131C471Bh) in r
+    add (028DB77F523047D84h,032CAAB7B40C72493h,03C9EBE0A15C9BEBCh,0431D67C49C100D4Ch) in r
+    add (04CC5D4BECB3E42B6h,0597F299CFC657E2Ah,05FCB6FAB3AD6FAECh,06C44198C4A475817h) in r
+    r
+  )
+    
+  - transform <-
+  ( + a,b,c,d, e,f,g,h, t1,t2, new:UINTEGER_64
+    + step:{(INTEGER,UINTEGER_64); }
+    
+    step := { (j:INTEGER,dta:UINTEGER_64)
+      t1 := h + e.ep1 + e.ch (f,g) + k.at j + dta
+      t2 := a.ep0 + a.maj (b,c)
+      h := g;  g := f
+      f := e;  e := d + t1
+      d := c;  c := b
+      b := a;  a := t1 + t2
+    }
+    
+    (a,b,c,d) := (state.at 0,state.at 1,state.at 2,state.at 3)
+    (e,f,g,h) := (state.at 4,state.at 5,state.at 6,state.at 7)
+    
+    0.to 15 do { i:INTEGER
+      new := data64.at i.rev
+      data64.at i put new
+      step.value (i,new)
+    }
+    16.to 79 do { i:INTEGER
+      new := (
+        data64.at ( i   &0Fh) + data64.at ((i+ 1)&0Fh).sig0 +
+        data64.at ((i+9)&0Fh) + data64.at ((i+14)&0Fh).sig1
+      )
+      data64.at (i&0Fh) put new
+      step.value (i,new)
+    }
+        
+    (a,b,c,d) := (state.at 0+a, state.at 1+b, state.at 2+c, state.at 3+d)
+    (e,f,g,h) := (state.at 4+e, state.at 5+f, state.at 6+g, state.at 7+h)
+    state.at 0 put a;  state.at 1 put b;  state.at 2 put c;  state.at 3 put d
+    state.at 4 put e;  state.at 5 put f;  state.at 6 put g;  state.at 7 put h
+  )
+  
+Public
+  
+  - digest_size:INTEGER := 64
+  
+  - reset <-
+  (
+    (data = NULL).if {
+      data := ARRAY UINTEGER_8.create_with_capacity data_size
+      state := ARRAY UINTEGER_64.create_with_capacity digest_size
+    }
+    data.clear
+    state.clear
+    add (06A09E667F3BCC908h,0BB67AE8584CAA73Bh,03C6EF372FE94F82Bh,0A54FF53A5F1D36F1h) in state
+    add (0510E527FADE682D1h,09B05688C2B3E6C1Fh,01F83D9ABFB41BD6Bh,05BE0CD19137E2179h) in state
+    bitlen := bitlen1 := 0
+  )
+  
+  - sum_in digest:ARRAY UINTEGER_8 <-
+  ( + dig64:NATIVE_ARRAY UINTEGER_64
+    prepare_digest
+    dig64 := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_64).on (digest.storage)
+    0.to 7 do { j:INTEGER
+      dig64.at j put (state.at j.rev)
+    }
+  )
+  
+  - sum_in_string buffer:STRING_BUFFER <-
+  (
+    prepare_digest
+    0.to 7 do { j:INTEGER
+      + u64:UINTEGER_64
+      u64 := (state.at j).rev
+      8.times {
+        buffer.add_last (map.at ((u64 & 000000F0h) >> 4))
+        buffer.add_last (map.at (u64 & 0000000Fh))
+        u64 := u64 >> 8
+      }
+    }
+  )
+  

@@ -1,0 +1,18 @@
+program    : { CAP_IDENTIFIER [ inherit ] '(' slot_list ')' }
+           ;
+inherit    : 'Inherit' CAP_IDENTIFIER { ',' CAP_IDENTIFIER }
+           ;
+slot_list  : { IDENTIFIER '=' body }
+           ;
+body       : '(' [ local_list ] '|' { code ';' } ')'
+           ;
+local_list : local { ',' local }
+           ;
+local      : IDENTIFIER ':' CAP_IDENTIFIER
+           ;
+code       : IDENTIFIER [ expr ]
+           | STRING '.' 'print'
+           ;
+expr       : '=' "New" CAP_IDENTIFIER
+           | '.' IDENTIFIER
+           ;

@@ -1,0 +1,24 @@
+Header
+  + name := DO_WHILE1;
+  /**/
+  
+    
+Public
+  
+  - main <-
+  ( + i:INTEGER
+    TEST.check (2 + 2 = 4)
+    TEST.check (i = 0)
+    
+    do {
+      i := i + 1
+    } while {i = 1} 
+    
+    TEST.check (i = 2)
+    
+    do {
+      i := i + 1
+    } while {i < 2} 
+    
+    TEST.check (i = 3)
+  )

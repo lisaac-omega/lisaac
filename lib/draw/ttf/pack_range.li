@@ -1,0 +1,27 @@
+Header
+  + name := PACK_RANGE;
+
+Mapping
+  + font_size:REAL_32;
+  + first_unicode_codepoint_in_range:INTEGER_32; 
+  + array_of_unicode_codepoints:ARRAY INTEGER_32;
+  + num_chars:INTEGER_32;
+  + chardata_for_range:ARRAY PACKED_CHAR; 
+  + h_oversample:UINTEGER_8;
+  + v_oversample:UINTEGER_8; 
+  
+Public  
+/*  
+  - pack_font_range (spc:ARRAY PACK_CONTEXT,fontdata:ARRAY UINTEGER_8,
+    font_index:INTEGER,size:REAL_32,first_unicode:INTEGER, 
+  n_char:INTEGER,chardata:PACKED_CHAR) :INTEGER <-
+  ( 
+    // BSBS: Il faut faire ça dans un clone avant !
+    first_unicode_codepoint_in_range := first_unicode
+    array_of_unicode_codepoints := NULL
+    num_chars                   := n_char
+    chardata_for_range          := chardata
+    font_size                   := size
+    pack_font_ranges (spc, fontdata, font_index, &range, 1)
+  )
+*/

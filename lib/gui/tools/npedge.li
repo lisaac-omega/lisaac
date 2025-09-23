@@ -1,0 +1,211 @@
+Header
+
+  + name        := NPEDGE;
+
+  /*Sub prototype for BITMAP.polygone*/
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  // Make.
+
+  + y:INTEGER
+  + x:INTEGER
+
+  + width:INTEGER
+  + dx:INTEGER;  // REAL_16_16
+
+  + is_down:BOOLEAN
+  + is_point:BOOLEAN
+
+  - x0:INTEGER <- x
+  - y0:INTEGER <- y
+  - x1:INTEGER <- dx
+  - y1:INTEGER <- width
+
+  + next_y:NPEDGE
+
+  + prev_x:NPEDGE;  // doubly linked list
+  + next_x:NPEDGE
+
+  //
+  // Function.
+  //
+  
+  - create:SELF <- clone
+  
+  - make (xx,yy:INTEGER) add inc:INTEGER <-
+  // Flat.
+  (
+    next_y   := NULL
+    is_point := TRUE
+    dx       := inc
+    width    := 0
+    x := xx
+    y := yy
+  )
+
+  - make (xx,yy:INTEGER) to (xx1,yy1:INTEGER) <-
+  // Line.
+  (
+    next_y   := NULL
+    is_point := FALSE
+    (is_down := yy < yy1).if {
+      // Down.
+      y  := yy
+      x  := xx
+      dx := xx1
+      width := yy1
+    } else {
+      // up.
+      y  := yy1
+      x  := xx1
+      dx := xx
+      width := yy
+    }
+  )
+
+  - set_next_x new:NPEDGE <-
+  (
+    next_x:=new
+  )
+
+  - set_prev_x new:NPEDGE <-
+  (
+    prev_x:=new
+  )
+
+  - set_next_y new:NPEDGE <-
+  (
+    next_y := new
+  )
+
+  - add old_root:NPEDGE :NPEDGE <-
+  // Double link and sort with X.
+  ( + pos,prv:NPEDGE
+    + new_root:NPEDGE
+
+    to_run
+    pos:=old_root
+    {(pos!=NULL) && {(pos.x<x) || {(pos.x=x) && {pos.dx<dx}} } }.while_do {
+      prv := pos
+      pos := pos.next_x
+    }
+    next_x := pos
+    prev_x := prv
+    (next_x != NULL).if {
+      next_x.set_prev_x Self
+    }
+    (prev_x!=NULL).if {
+      prev_x.set_next_x Self
+      new_root:=old_root
+    } else {
+      new_root:=Self
+    }
+
+    new_root
+  )
+
+  - next_line old_root:NPEDGE :NPEDGE <-
+  // Remove double link.
+  ( + new_root:NPEDGE
+
+    (next_y = NULL).if {
+      // Remove
+      (next_x!=NULL).if {
+	next_x.set_prev_x prev_x
+      }
+      (prev_x!=NULL).if {
+	prev_x.set_next_x next_x
+	new_root:=old_root
+      } else {
+	new_root:=next_x
+      }
+    } else {
+      // Replace next_y
+      next_y.to_run
+      next_y.set_next_x next_x
+      next_y.set_prev_x prev_x
+      (next_x!=NULL).if {
+	next_x.set_prev_x next_y
+      }
+      (prev_x!=NULL).if {
+	prev_x.set_next_x next_y
+	new_root:=old_root
+      } else {
+	new_root:=next_y
+      }
+    }
+    new_root
+  )
+
+  - new_step <-
+  (
+    width:=width-1
+    x:=x+dx
+  )
+
+Private
+
+  - to_run <-
+  ( + dy:INTEGER
+
+    (is_point).if {
+      // Point (Flat)
+      x := x0 << 16
+    } else {
+      // Line
+      dy := y1 - y0
+      dx := ((x1 - x0)<<16) / dy
+      x  := x0 << 16
+
+      (next_y = NULL).if {
+	width := dy
+      } else {
+	width := dy - 1
+      }
+    }
+  )
+
+  - display <-
+  (
+    '{'.print
+    x0.print
+    ','.print
+    y0.print
+    '-'.print
+    x1.print
+    ','.print
+    y1.print
+    '}'.print
+  )
+
+  - display_2 <-
+  (
+    '{'.print
+    (x>>16).print
+    ','.print
+    y.print
+    'W'.print
+    width.print
+    'D'.print
+    dx.print
+    'N'.print
+    (next_y=NULL).if {
+      "null".print
+    } else {
+      "=>".print
+    }
+    '@'.print
+    INTEGER.force_conversion Self .print
+    '}'.print
+  )
+
+
+
+
+
+

@@ -1,0 +1,480 @@
+Header
+  + name   := Expanded UINTEGER;
+  /*Generic Integer.*/
+  - type    := `uint64_t`;
+  - default := 0;
+  - export := UINTEGER_8,  UINTEGER_16, UINTEGER_32, UINTEGER_64,
+  INTEGER_8 ,  INTEGER_16 , INTEGER_32 , INTEGER_64 ,
+  UINTEGER_BIG,
+  UREAL_16_16, UREAL_24_8 , UREAL_26_6 ,
+  REAL_16_16 , REAL_24_8  , REAL_26_6  ,
+  REAL, REAL_32, REAL_64, REAL_80,
+  POINTER;
+
+Insert
+  - parent_numeric:NUMERIC := NUMERIC
+
+Public
+
+  // Range.
+
+  - maximum:UINTEGER_64 <- 07FFFFFFFh.to_raw_uinteger_64
+
+  - minimum:INTEGER_64  <- (0).to_raw_integer_64
+
+  // Binary Operator.
+
+  - Self:SELF '%'  Left 90 other:SELF    :SELF <- Self - ((Self / other) * other)
+
+  - Self:SELF '%#' Left 90 other:INTEGER :SELF <- Self % other
+
+  - Self:SELF '**' Right 99 exp:SELF :SELF <-
+  ( + result:SELF
+
+    (exp = 0).if {
+      result := 1
+    } else {
+      ((exp & 1) = 0).if {
+        result := (Self * Self) ** (exp / 2)
+      } else {
+        result := Self * (Self ** (exp - 1))
+      }
+    }
+    result
+  )
+
+  - pow exp:SELF :SELF <-
+  (
+    Self ** exp
+  )
+
+  // Conversion format with test.
+
+  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  (
+    TRUE
+  )
+
+//  - to_integer:INTEGER <- Self
+
+  - to_pointer:POINTER <-
+  (
+    to_raw_pointer
+  )
+
+  // BCD Format.
+
+  - to_binary:SELF <-
+  // Self is BCD formatted, convert to binary value
+  ( + result:SELF
+    + val,mul:SELF
+
+    val := Self
+    mul := 1
+    {val!=0}.while_do {
+      result := result + (val & 0Fh) * mul
+      mul    := mul * 10
+      val    := val >> 4
+    }
+
+    result
+  )
+
+  - to_bcd:SELF <-
+  // Self is binary formatted, convert to bcd value
+  ( + result:SELF
+    + val,mul:SELF
+
+    val := Self
+    {val != 0}.while_do {
+      result := result | ((val % 10) << mul)
+      mul    := mul + 4
+      val    := val / 10
+    }
+
+    result
+  )
+
+  // Facility typing.
+
+  - kb:SELF <- Self << 10
+  // Self in Kilobyte (ie. 1kb = 1024 bytes)
+
+  - mb:SELF <- Self << 20
+  // Self in megabytes
+
+  - gb:SELF <- Self << 30
+  // Self in gigabytes
+
+  - tb:SELF <- Self << 40
+  // Self in terabytes
+
+  // Logic Operator
+
+  - Self:SELF '&'  Left 90 other:SELF :SELF <- `6`
+  // AND operator
+
+  - Self:SELF '|'  Left 80  other:SELF :SELF <- ~(~Self & ~other)
+  // OR operator
+
+  - Self:SELF '^'  Left 80  other:SELF :SELF <- (~Self & other) | (Self & ~other)
+  // XOR operator
+
+  - Self:SELF '>>' Left 90 other:INTEGER :SELF <- `7`
+  // Shift right
+
+  - Self:SELF '<<' Left 90 other:INTEGER :SELF <- `8`
+  // Shift left
+
+  // Unary operator
+
+  - '~' Self:SELF :SELF <- -Self - SELF.one; //(-SELF.one) - Self
+
+  // Test.
+
+  - align_power step:SELF :SELF <-
+  [
+    -? {step.is_power_2}
+  ]
+  ( + a:SELF
+
+    a := step - 1
+    (Self + a) & (~ a)
+  )
+
+  - is_power_2:BOOLEAN <-
+  // TRUE is Self is power of 2
+  ( + val:SELF
+    + result:BOOLEAN
+
+    (Self != 0).if {
+      val := Self
+      {val.is_even}.while_do {
+        val := val >> 1
+      }
+      result := val = 1
+    }
+    result
+  )
+
+  // Function :
+
+  - sqrt:SELF <-
+  // Square root
+  ( + r,x:SELF
+
+    x:=(Self + 1) >> 1
+    {x > r}.while_do {
+      x:=x-r
+      r:=r+1
+    }
+    r
+  )
+
+  - fibonacci:SELF <-
+  // Fibonacci
+  // * Require: Self >= 0
+  [
+    -? {Self >= 0}
+  ]
+  ( + result:SELF
+
+    (Self <= 1).if {
+      result := 1
+    } else {
+      result := (Self-1).fibonacci + (Self-2).fibonacci
+    }
+    result
+  )
+
+  - is_odd:BOOLEAN  <- (Self & 1) = 1;  // Is odd ?
+
+  - is_even:BOOLEAN <- ! is_odd; // Is even ?
+
+  - gcd other:SELF :SELF <-
+  // Great Common Divisor of `self' and `other'.
+  [
+    -? {Self  >= 0}
+    -? {other >= 0}
+  ]
+  ( + result:SELF
+
+    (other = 0).if {
+      result := Self
+    } else {
+      result := other.gcd (Self % other)
+    }
+
+    result
+  )
+  [
+    +? {Result == other.gcd Self}
+  ]
+
+  // Random
+
+  - random :SELF <-
+  // Random number between 0 to `maximum' in SELF.
+  ( 
+    randomize_seed := (110351524 * randomize_seed + 12345) % 214748364
+    CAST UINTEGER_64 TO SELF.on (maximum & randomize_seed)
+  )
+  [
+    +? {Result >= 0}
+  ]
+
+  - random_upper upper:SELF :SELF <-
+  // Random number between 0 to `upper'.
+  [
+    -? {upper > 0}
+  ]
+  (
+    random % (upper+1)
+  )
+  [
+    +? {Result.in_range 0 to upper}
+  ]
+
+  - random_between lower:SELF and upper:SELF :SELF <-
+  // Random number between `lower' to `upper'.
+  [
+    -? {lower < upper}
+  ]
+  (
+    lower + random_upper (upper-lower)
+  )
+  [
+    +? {Result.in_range lower to upper}
+  ]
+
+  // Looping.
+
+  - times action:BLOCK <-
+  (
+    1.to Self do { i:INTEGER
+      action.value
+    }
+  )
+
+  // Convertion
+
+  // *French, Slot, Description : Renvoi une chaîne représentant le nombre en base 10
+  // *English, Slot, Description : String of the number in base 10
+
+  - to_string : STRING_BUFFER <-
+  ( + result : STRING_BUFFER
+    result := STRING_BUFFER.create 0
+    append_in result
+    result
+  )
+
+  - append_in b:STRING_BUFFER <- to_integer_32.append_in b
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+
+  - decimal_digit:CHARACTER <-
+  // Gives the corresponding CHARACTER for range 0..9.
+  [
+    -? {in_range 0 to 9}
+  ]
+  (
+    (Self.to_integer_8 + '0'.code).to_character
+  )
+  [
+    +? {"0123456789".has Result}
+    +? {Result.decimal_value = Self}
+  ]
+
+  - digit:CHARACTER <- decimal_digit
+
+  - hexadecimal_digit:CHARACTER <-
+  // Gives the corresponding CHARACTER for range 0..15.
+  [
+    -? {in_range 0 to 15}
+  ]
+  ( + result:CHARACTER
+
+    (Self <= 9).if {
+      result := digit
+    } else {
+      result := ('A'.code + (Self - 10).to_integer_8).to_character
+    }
+    result
+  )
+  [
+    +? {"0123456789ABCDEF".has Result}
+  ]
+
+  - to_character:CHARACTER <- to_integer_8.to_character
+  // Return the coresponding ASCII character.
+
+  - to_octal:SELF <-
+  // Gives coresponding octal value.
+  ( + result:SELF
+
+    abstract
+    result
+  )
+
+  - to_hexadecimal:STRING_BUFFER <-
+  // Convert the hexadecimal view of `self' into a new allocated
+  // STRING_BUFFER. For example, if `self' is -1 the new STRING_BUFFER is
+  // "FFFFFFFF" on a 32 bit machine.
+  // * See:  `to_hexadecimal_in' to save memory.
+  ( + result:STRING_BUFFER
+
+    result := STRING_BUFFER.create 8
+    to_hexadecimal_in result
+    result
+  )
+
+  - to_hexadecimal_format s:INTEGER :STRING_BUFFER <-
+  // Convert the hexadecimal view of `self' into a new allocated
+  // STRING_BUFFER. For example, if `self' is -1 the new STRING_BUFFER is
+  // "FFFFFFFF" on a 32 bit machine.
+  // * See:  `to_hexadecimal_in' to save memory.
+  ( + result:STRING_BUFFER
+
+    result := STRING_BUFFER.create 8
+    to_hexadecimal_in result format s
+    result
+  )
+
+  - to_hexadecimal_in b:STRING_BUFFER <-
+  // Append in `b' the equivalent of `to_hexadecimal'. No new STRING_BUFFER
+  // creation during the process.
+  [ -? {b!=NULL}; ]
+  ( + val:SELF
+    + i,old_count:INTEGER
+
+    (Self = 0).if {
+      b.extend '0'
+    } else {
+      i := b.count + 1
+      val := Self
+      {val != 0}.while_do { //JBJB
+        b.extend ((val & 15).hexadecimal_digit)
+        val := val >> 4
+      }
+      old_count := b.count
+      {i >= old_count}.until_do {
+        b.swap i with old_count
+        old_count := old_count - 1
+        i := i + 1
+      }
+    }
+  )
+
+  - to_hexadecimal_in b:STRING_BUFFER format s:INTEGER <-
+  // Append in `b' the equivalent of `to_hexadecimal'. No new STRING_BUFFER
+  // creation during the process.
+  [ -? {b!=NULL}; ]
+  ( + val:SELF
+    + i,old_count:INTEGER
+
+    (Self = 0).if {
+      b.extend '0'
+    } else {
+      i := b.count + 1
+      val := Self
+      {val != 0}.while_do { //JBJB
+        b.extend ((val & 15).hexadecimal_digit)
+        val := val >> 4
+      }
+      old_count := b.count
+      {i >= old_count}.until_do {
+        b.swap i with old_count
+        old_count := old_count - 1
+        i := i + 1
+      }
+    }
+    b.precede_multiple '0' by (s.to_integer - b.count)
+  )
+
+  - to_binary_in b:STRING_BUFFER format s:INTEGER <-
+  // Append in `b' the equivalent of `to_binary_string'. No new STRING_BUFFER
+  // creation during the process.
+  [ -? {b!=NULL}; ]
+  ( + val:SELF
+    + i,old_count:INTEGER
+
+    (Self = 0).if {
+      b.extend '0'
+    } else {
+      i := b.count + 1
+      val := Self
+      {val != 0}.while_do {
+        b.extend ('0' +# (val.to_integer & 1))
+        val := val >> 1
+      }
+      old_count := b.upper
+      {i >= old_count}.until_do {
+        b.swap i with old_count
+        old_count := old_count - 1
+        i := i + 1
+      }
+    }
+    b.precede_multiple '0' by ((s.to_integer) - b.count)
+  )
+  
+  - rev:SELF <- abstract; // Big/little endian.
+  
+  - ffs:SELF <- Self ^ (~ - Self); // Extract first bit ;) I like binary <3
+  
+  // Hashing:
+
+  - hash_code:INTEGER <- to_integer_32.hash_code; // BSBS:  Il faut revoir => Depending processor
+
+  // Print
+
+  - print <-
+  (
+    (Self = 0).if {
+      '0'.print
+    }.elseif {Self < 0} then {
+      '-'.print
+      (-Self).print_positif
+    } else {
+      print_positif
+    }
+  )
+
+  - print_positif <-
+  // Display this number without memory.
+  [ -? {Self >=# 0}; ]
+  ( + char:CHARACTER
+    + val:SELF
+
+    char := (Self % 10).decimal_digit
+    val  := Self / 10
+    (val != 0).if {
+      val.print_positif
+    }
+    char.print
+  )
+
+  - print_hexa <-
+  // Print without the need of some STRING_BUFFER.
+  ( + char:CHARACTER
+    + val:SELF
+
+    char := (Self & 0Fh).hexadecimal_digit
+    val  := Self / 16
+    (val != 0).if {
+      val.print_hexa
+    }
+    char.print
+  )
+
+  // Debug manager facility.
+
+  - Self:SELF '?' blc:BLOCK <-  blc ?# Self
+
+INTEGER
+
+  - to_raw_pointer:POINTER         <- CAST SELF TO POINTER.on Self
+
+Private
+  
+  - randomize_seed:UINTEGER_64
+

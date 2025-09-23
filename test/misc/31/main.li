@@ -1,0 +1,15 @@
+Header
+  
+  + name      := MAIN;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+      
+  - main <-  
+  (        
+    { "Not used!\n".print; }; // Warning !!!
+    
+  )

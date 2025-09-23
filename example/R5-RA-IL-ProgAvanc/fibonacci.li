@@ -1,0 +1,51 @@
+Header
+  + name := FIBONACCI;
+  /*
+  Function with multiple results example. The gain is not only syntactical!
+  Example below shows an efficient, still recursive, solution for the
+  Fibonacci example. Thanks to the usage of two results, the exponential
+  runtime complexity is avoided.
+  */
+  
+Private
+  - fiborec n:ℤ : (ℤ, ℤ) <-
+  ( + f0,f1:ℤ
+    (n <= 1).if {
+      (f0,f1) := (0,1)
+    } else {
+      (f0,f1) := fiborec (n-1)
+      (f0,f1) := (f1, f0+f1)
+    }
+    (f0,f1)
+  )
+  
+Public
+  - fibonacci n:ℤ : ℤ <-
+  ( + f1,f2:ℤ
+    (f1,f2) := fiborec n
+    f2
+  )
+  
+  - fibonacci n:ℤ slow : ℤ <-
+  ( + result:ℤ
+    if (n <= 1) then {
+      result := n
+    } else { 
+      result := fibonacci (n - 1) slow + fibonacci (n - 2) slow
+    }
+    result
+  )
+  
+  - main <-
+  ( + n:ℤ
+    `setvbuf(stdout, NULL, _IONBF, 0)`;
+    if ((COMMAND_ARGS.count = 1) || {! COMMAND_ARGS at 1.is_integer}) then {
+      OUT # "usage: " (COMMAND_ARGS.at 0) # " <integer>\n"
+      SYSTEM exit 1
+    }
+    n := COMMAND_ARGS.first .to_integer
+    ? {n >= 1};
+    OUT # "fibonacci(" # n # ")=" # (fibonacci n slow) # '\n'
+    STDOUT.flush
+    OUT # "fibonacci(" # n # ")=" # (fibonacci n) # '\n'
+  )

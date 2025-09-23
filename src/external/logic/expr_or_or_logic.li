@@ -1,0 +1,113 @@
+Header
+
+  + name        := EXPR_OR_OR_LOGIC;
+
+  /*Or Binary Expression.*/
+
+Inherit
+
+  + parent_expr_or_logic:Expanded EXPR_OR_LOGIC
+
+Public
+
+  + symbol:STRING_ALIAS := "||"
+
+  //
+  // Execute.
+  //
+
+  - execute_unlink:INSTR <-
+  (
+    execute_link
+  )
+
+  - execute_link:EXPR <-
+  ( + result:EXPR
+    + old_seq:UINTEGER_32
+    + left_cst,right_cst:PROTOTYPE_CST
+    + left_t,right_t:TYPE
+
+    old_seq := seq_call_and_loop
+    left  := left.execute_link
+    //
+    seq_or_and := seq_or_and + 1
+    seq_inline := seq_inline + 1
+    //
+    right := right.execute_link
+    //
+    left_cst  ?= left
+    right_cst ?= right
+
+    (left_cst != NULL).if { // BSBS : Peux faire mieux !!!
+      (left_cst.static_type.raw = type_true).if {
+	left_t := type_true
+      } else {
+	left_t := type_false
+      }
+    }
+    (right_cst != NULL).if {
+      (right_cst.static_type.raw = type_true).if {
+	right_t := type_true
+      } else {
+	right_t := type_false
+      }
+    }
+
+    // Conservator transformation.
+    result := exec_conservator
+    ((result = NULL) && {left_cst != NULL}).if {
+      result := exec_conservator_left left_t
+    }
+    ((result = NULL) && {right_cst != NULL}).if {
+      result := exec_conservator_right right_t
+    }
+    (
+      (result = NULL) && {right_cst != NULL} && {left_cst != NULL}
+    ).if {
+      result := exec left_t and right_t
+    }
+    ((result = NULL) && {(old_seq + 1) = seq_call_and_loop}).if {
+      // No conservator transformation.
+      result := exec
+      ((result = NULL) && {left_cst != NULL}).if {
+	result := exec_left left_t
+      }
+      ((result = NULL) && {right_cst != NULL}).if {
+	result := exec_right right_t
+      }
+    }
+    //
+    (result = NULL).if {
+      result := Self
+    } else {
+      new_execute_pass
+    }
+
+    result
+  )
+
+  - exec_conservator:EXPR <-
+  //-- E || Var -> E | Var
+  ( + rd:READ
+    + result:EXPR
+
+    rd ?= right
+    (rd != NULL).if {
+      result := EXPR_OR_LOGIC.create position with left and right
+    }
+    result
+  )
+
+  //-- for || same |
+
+  - exec_conservator_left  left_cst :TYPE :EXPR <-
+  //-- TRUE || E -> TRUE
+  ( + result:EXPR
+    result := parent_expr_or_logic.exec_conservator_left left_cst
+    ((result = NULL) && {left_cst = type_true}).if {
+      result := left
+      right.remove
+    }
+    result
+  )
+

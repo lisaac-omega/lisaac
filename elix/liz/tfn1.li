@@ -1,0 +1,22 @@
+Header
+  + name := TFN1;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + val:TEXP
+  + exec:{REAL_32; REAL_32}
+  
+  - init x:TEXP with b:{REAL_32; REAL_32} :TFN1 <-
+  ( val := x; exec := b; Self)
+  
+  - eval:REAL_32 <- exec.value (val.eval)
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "FN1("
+    val.append_in b
+    b | ')'
+  )

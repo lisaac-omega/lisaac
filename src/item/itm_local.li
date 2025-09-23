@@ -1,0 +1,119 @@
+Header
+
+  + name    := ITM_LOCAL;
+
+  /*Local declaration slot*/
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  //
+  // Data
+  //
+
+  + type:ITM_TYPE
+
+  + name:STRING_ALIAS
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION name n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n
+    result
+  )
+
+  - create p:POSITION name n:STRING_ALIAS type t:ITM_TYPE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n
+    result.set_type t
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS <-
+  (
+    name     := n
+    position := p
+  )
+
+  //
+  // Set
+  //
+
+  - set_type t:ITM_TYPE <-
+  (
+    type := t
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run:LOCAL <-
+  ( + pos:POSITION
+    + result:LOCAL
+
+    last_position := position
+    
+    result := LOCAL.create position name name style '+' type (type.to_run_for profil_slot pos (position.prototype.filename))
+    last_position := pos
+    result
+  )
+
+  - to_run_static:LOCAL <-
+  // Static local slot.
+  ( + result:LOCAL
+    + slot:ITM_SLOT
+    + larg:ARRAY ITM_ARGUMENT
+    + arg:ITM_ARGUMENT
+    + proto:PROTOTYPE
+
+    (type = ITM_TYPE_SIMPLE.type_self).if {
+      semantic_error (position,"Type `SELF' is not possible for `-' style local.")
+    }
+    
+    result := LOCAL.create position name name style '-' type (type.to_run_for profil_slot pos (position.prototype.filename))
+    //
+    proto := position.prototype
+    slot := proto.first_slot
+    {(slot != NULL) && {slot.position != position}}.while_do {
+      slot := slot.next
+    }
+    (slot = NULL).if {
+      slot := ITM_SLOT.create position name (result.intern_name) idf_first FALSE feature (SECTION_.standard_private)
+      slot.set_style '-'
+      slot.set_result_type type
+      larg := ALIAS_ARRAY ITM_ARGUMENT .new
+      arg := ITM_ARG.create position name "Self" type (ITM_TYPE_SIMPLE.type_self)
+      larg.add_last arg
+      larg := ALIAS_ARRAY ITM_ARGUMENT .copy larg
+      slot.set_argument_list larg
+      proto.add_slot slot
+    } else {
+      result.set_intern_name (slot.name)
+    }
+    //
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+    buffer.add_last ':'
+    type.append_in buffer
+  )
+
+
+
+

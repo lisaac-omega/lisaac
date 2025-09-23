@@ -1,0 +1,40 @@
+Header
+
+  + name := BOTTLES;
+    
+  /*
+  From Luis Araujo <araujo@gentoo.org>
+  
+  The cool song 99 bottles of beer!
+  */
+
+Private
+  - b:STRING_ALIAS := " bottles "
+
+Public
+
+  - main <-
+  ( + v:INTEGER
+    99.downto 1 do { i:INTEGER
+      i.print
+      b.print
+      "of beer on the wall, ".print
+      i.print
+      b.print
+      "of beer.\nTake one down and pass it around, ".print
+
+      v := i - 1
+      (v = 0).if {
+        "no more bottles of beer on the wall.\n\n\
+        \No more bottles of beer on the wall, no more bottles of beer.\n\
+        \Go to the store and buy some more, 99 bottles of beer on the wall.\n".print
+      } else {
+        v.print
+        (v = 1).if_true {
+          b := " bottle "
+        }
+        b.print
+        "of beer on the wall.\n\n".print
+      }
+    }
+  )

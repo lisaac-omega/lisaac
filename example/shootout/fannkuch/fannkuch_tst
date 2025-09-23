@@ -1,0 +1,7 @@
+lisaac fannkuch -q -O -i20
+gcc fannkuch_c.c -o fannkuch_c -O3 -fomit-frame-pointer -lm
+echo Lisaac: 
+time ./fannkuch 11 > out_li.txt
+echo C:
+time ./fannkuch_c 11 > out_c.txt
+diff out_li.txt out_c.txt

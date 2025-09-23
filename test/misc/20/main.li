@@ -1,0 +1,7 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main := "Hello world!\n".print

@@ -1,0 +1,14 @@
+Header
+  + name := HEXADECIMAL;
+  
+Public
+  - to_hexadecimal:STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp base 16
+      result := tmp.to_string_alias
+    }
+    result
+  )
+  
+  

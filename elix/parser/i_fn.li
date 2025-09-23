@@ -1,0 +1,96 @@
+Header
+  + name := I_FN;
+  
+Inherit
+  + parent_inode:Expanded I_NODE
+  - parent_expr:EXPR := EXPR
+  
+Public
+  
+  - stck:Expanded ARRAY I_FN
+  
+  - new:I_FN <-
+  ( + result:I_FN
+    (stck.is_empty).if { result := I_FN.clone; } else { result := stck.pop; }
+    result
+  )
+  
+Public
+    
+  - error:INTEGER <- 0
+  
+  + arg1:EXPR
+  + arg2:EXPR
+  + slot:SLOT
+  + type:TYPE
+    
+  - new (e1,e2:EXPR) slot s:SLOT at (l,u:INTEGER) :I_FN <- new.init (e1,e2) slot s at (l,u)
+  
+  - copy:I_NODE <- new.init (arg1,arg2) slot slot at (lower,upper)
+  
+  - init (e1,e2:EXPR) slot s:SLOT at (l,u:INTEGER) :I_FN <-
+  (
+    (arg1,arg2,slot,lower,upper) := (e1,e2,s,l,u)
+    (slot != NULL).if {      
+      type := slot.type
+      (type.is_self).if { type := slot.proto.type; }
+    } else { type := e1.type; }
+    Self
+  )
+  
+  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  (
+    /*+ m:UINTEGER_16
+    (lower <= upper).if {
+      (error != 0).if {
+        m := STY.ul_red
+      } else {
+        m := u | type_check s
+      }
+      "EXPR:".print; ref.type_name.println
+      STY.put m to lower in (IA.sty)
+      STY.put m to (upper+1) in (IA.sty)
+    }
+    IA.inc_arg_i;*/
+  )
+  
+  - txt_in s:STRING_BUFFER <-
+  ( 
+    s.add_last '('
+    type.append_in s
+    s.add_last ')'
+  )
+  
+  - rtxt_in s:STRING_BUFFER <- 
+  ( + i1,i2:I_FN
+    (slot = NULL).if {
+      s.append "(˂"
+      (type != NULL).if { type.txt_in s sty NULL; }
+      s.append "˃)"
+    } else {
+      i1 ?= arg1; i2 ?= arg2
+      s | '['
+      (slot.name.first != '\0').if { s += slot.name; }
+      (i1 != NULL).if { i1.rtxt_in s; }
+      (slot.name.first = '\0').if { s += slot.name; }
+      s | ' '
+      (i2 != NULL).if { i2.rtxt_in s; }
+      s | ']'
+    }
+  )
+  
+  - to_expr:EXPR <-
+  ( + result:EXPR
+    + a:ARRAY EXPR
+    (slot = NULL).if {
+      result := arg1
+    } else {
+      a := push_expr; a.add_last arg1
+      (arg2 != NULL).if { a.add_last arg2; }
+      result := CAS.new (slot.name) arg a self (slot.self) fn TRUE
+      pop_expr
+    }
+    result      
+  )
+  
+  - free <- stck.add_last Self

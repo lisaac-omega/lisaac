@@ -1,0 +1,25 @@
+Header
+  + name := RESIZE;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_any_gui:ANY_GUI := ANY_GUI
+    
+Public
+    
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    (ev = HAND.in).if {
+      PAPER.set_cursor (window.win_ptr) img cursor_sz
+    }.elseif {ev = HAND.out} then {
+      PAPER.set_cursor (window.win_ptr) img cursor_std
+    }.elseif {(ev & ~1) = HAND.drag} then {
+      - psh,psv:PAGE_SPLIT
+      (HAND.is_begin).if {
+        psh := PAGE.cast parent.get_split TRUE
+        psv := PAGE.cast parent.get_split FALSE
+      }
+      PAGE_SPLIT.move psh and psv win Self
+    }
+  )
+  

@@ -1,0 +1,109 @@
+Header
+  + name := COMMAND_ARGS;
+  /*
+    Gives access to the command line arguments.
+    Unix-like spirit: arg 0 is the command, other arguments can be shifted.
+  */
+  
+  - external := `
+#include <unistd.h>
+
+#if defined(_WIN32)
+  #include <windows.h>
+#elif defined(__APPLE__)
+  #include <mach-o/dyld.h>
+#elif defined(__linux__)
+  #include <unistd.h>
+#endif
+
+void get_executable_path(char *buf, int64_t size) {
+#if defined(_WIN32)
+    int len = GetModuleFileNameA(NULL, (char*)buf, size - 1);
+    buf[len] = '\0';
+#elif defined(__APPLE__)
+    uint32_t s = size;
+    _NSGetExecutablePath((char*)buf, &s);
+#elif defined(__linux__)
+    int len = readlink("/proc/self/exe", (char*)buf, size - 1);
+    buf[len] = '\0';
+#endif
+}
+  `;
+  
+Private  
+  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 512
+  
+  - arg_vector idx:INTEGER :NATIVE_ARRAY(CHARACTER) <- `arg_vector[@idx]`:NATIVE_ARRAY(CHARACTER)
+
+  - arg_count:INTEGER <- `arg_count`:INTEGER
+
+  - args:ARRAY STRING_ALIAS :=
+  ( + result:ARRAY STRING_ALIAS
+    result := ARRAY STRING_ALIAS.create_with_capacity arg_count
+    0.to (arg_count - 1) do { j:INTEGER
+      mybuffer.from_external_copy (arg_vector j)
+      result.add_last (mybuffer.to_string_alias)
+    }
+    result
+  )
+  
+Public
+  - count:INTEGER <- args.count
+
+  - lower:INTEGER := 0; // As in Unix, the first one is 0 and is the executable name
+
+  - upper:INTEGER <- args.upper
+
+  - at i:INTEGER :STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    (args.valid_index i).if {
+      result := args.at i
+    }
+    result
+  )
+  
+  - first:STRING_ALIAS <- at 1; // just after the executable.
+  
+  - executable_directory:STRING_ALIAS :=
+  // Try to compute the absolute directory path. 
+  ( + buf:NATIVE_ARRAY CHARACTER
+    + cap,i:INTEGER
+    buf := mybuffer.to_external
+    cap := mybuffer.capacity
+    `get_executable_path(@buf, @cap)`
+    mybuffer.restore_after_external
+    i := mybuffer.last_path_separator
+    (i != -1).if { mybuffer.set_upper i; }
+    mybuffer.replace_all '\\' with '/'
+    mybuffer.to_string_alias
+  )
+  
+  - shift <-
+  // Mimic bash/sh shift.
+  ( + i:INTEGER
+    i := 1
+    {i >= upper}.until_do {
+      args.at i put (args.at (i + 1))
+      i := i + 1
+    }
+    (upper >= 1).if {
+      args.remove_last
+    }
+  )
+  
+  - option_shift name:STRING_ALIAS :BOOLEAN <-
+  // Search for name and remove it when present.
+  ( + result:BOOLEAN
+    + i:INTEGER
+    i := 1
+    {i > upper}.until_do {
+      (args.at i = name).if {
+        result := TRUE
+        args.remove i
+        i := upper
+      }
+      i := i + 1
+    }
+    result
+  )
+  

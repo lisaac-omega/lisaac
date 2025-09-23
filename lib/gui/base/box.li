@@ -1,0 +1,70 @@
+Header
+  + name := BOX;
+  
+Inherit
+  + parent_popup:Expanded POPUP
+//  + parent_elevator:Expanded ELEVATOR
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+      
+//  - height_upper:REAL_32 <- child.last.ymax - child.first.yo
+//  - width_upper:REAL_32  <- child.last.xmax - child.first.xo
+
+  - height_max:REAL_32 <- PAGE.cur_pg.window.child.second.height - 64
+  
+  - open <-
+  (
+    xy (64,PAGE.cur_pg.window.child.second.yo + 32)
+    set_open (PAGE.cur_pg.window)
+  )
+  
+  - refresh <-
+  ( refresh_popup.if {
+      width := PAGE.cur_pg.window.width - 128
+    }
+    (! child.is_empty).if {      
+      child.first.xy (xo+8+300, yo+8+300)
+      child.foreach { w:WIN; w.refresh; }
+    }
+  )
+  
+  - draw_all <-
+  (    
+    rect_shadow (xo,yo) size (width,height) radius (8,8)
+    save
+    intersect_scissor (xo+7,yo+7) size (width-14,height-14)
+    draw
+    draw_child
+    reset_scissor
+    restore
+    height := height - 16
+    yo := yo + 8
+    //draw_elevator
+    (height,yo) := (Old height, Old yo)
+  )
+    
+  - cmd_down_pg:BOOLEAN <-
+  (pos_y + height < height_upper).if {
+    + dy,h:REAL_32
+    h := child.first.height_min
+    dy := h * (height / h).to_integer
+    pos_y := pos_y + dy
+    move_pos_y dy
+    ask_refresh
+  }
+  
+  - cmd_top_pg:BOOLEAN <-
+  (pos_y != 0).if {
+    move_pos_y (- pos_y)
+    pos_y := 0
+    ask_refresh
+  }
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    /*(event_elevator ev) || {
+      FALSE
+      }*/
+    TRUE  
+  )

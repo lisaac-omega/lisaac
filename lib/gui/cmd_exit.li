@@ -1,0 +1,70 @@
+Header
+  + name := CMD_EXIT;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+
+Public
+  
+  - idx:INTEGER
+  
+  - exit_value:INTEGER
+  
+  - open_with v:INTEGER :BOOLEAN <-
+  (
+    exit_value := v
+    idx := -1
+    (next_buf).if {
+      mesg.copy "Save file "
+      info.copy "?  [y]es / [n]o / [a]ll / [e]dit."
+      SUBACT.empty Self
+      no_cursor := TRUE
+      open
+    } else {
+      exil
+    }
+    TRUE
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    ((c & KEYBOARD.msk_cmd) = 0).if {
+      (s.first)
+      .when 'y' or ' ' then { save_buf; (!next_buf).if { exil; }; }
+      .when 'n'        then { (!next_buf).if { exil; }; }
+      .when 'a' or '!' then { { save_buf; }.do_while {next_buf}; exil; }
+      .when 'e'        then { cur_txt.page.set_buffer (BUFFER.catalog.at idx); close; }
+    } else {      
+      //s.first.println
+      (s.first)      
+      .when '\27d\' then { close; }
+    }
+  )
+
+Private
+  
+  - exil <-
+  ( 
+    FILE_CFG.update
+    COMMAND_ARGS.at 0.print; " exit.".println
+    PAPER.destroy_all_window
+    exit exit_value
+  )
+  
+  - save_buf <-
+  ( (BUFFER.catalog.at idx.save_buffer).if_false { beep; }; )
+  
+  - next_buf:BOOLEAN <-
+  ( + good:BOOLEAN
+    
+    {
+      idx := idx + 1
+      good := FALSE
+      (idx <= BUFFER.catalog.upper).if { // BSBS: Bug compilo du {}.do_while {} optim du &&
+        good := BUFFER.catalog.at idx.is_save
+      }
+    }.do_while {good}
+    (idx <= BUFFER.catalog.upper).if {
+      text.copy (BUFFER.catalog.at idx.name)
+    }
+  )

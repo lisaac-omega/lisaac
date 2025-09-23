@@ -1,0 +1,43 @@
+Header
+
+  + name        := EXPR_NEG;
+
+  /*Negatif unary arithmetic expression.*/
+
+Inherit
+
+  + parent_expr_unary:Expanded EXPR_UNARY
+
+Public
+
+  - symbol:CHARACTER <- '-'
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator:EXPR <-
+  //-- - - E -> E
+  ( + sub:EXPR_NEG
+    + result:EXPR
+
+    sub ?= right
+    (sub != NULL).if {
+      result := sub.right
+    }
+    result
+  )
+
+  - exec_right right_cst:INTEGER_CST :EXPR <-
+  //-- - C1 -> C2
+  ( + result:EXPR
+    (right_cst.is_signed).if {
+      right_cst.set_value (- right_cst.value)
+      result := right_cst
+    }
+    result
+  )
+
+
+
+

@@ -1,0 +1,24 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + i:STRIDX
+    + c:INTEGER
+    + str:USTRING
+    + charo:CHAR
+    str := USTRING_BUFFER.from_alias "Toto fait du vélo!"
+    TEST.check (str.upper.to_string) string "18+0"
+    charo := CHAR.from_alias "o"
+    
+    i := str.last_index_of charo start (str.upper)
+    {str.valid_index i}.while_do {
+      c := c + 1
+      i := i - 1
+      i := str.last_index_of charo start i
+      TEST.check (c <= 100)
+    }
+    TEST.check c integer 3
+  )
+  
+  

@@ -1,0 +1,19 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + n1,n2,n3:INTN
+    n1 := 32765
+    n2 := n1 + n1
+    
+    STRING.tmp { tmp:STRING_BUFFER
+      n2.append_in tmp
+      TEST.check tmp string "65530"
+    
+      tmp.clear
+      n3.append_in tmp
+      TEST.check tmp string "0"
+    }
+  )
+  

@@ -1,0 +1,37 @@
+Header
+  + name := CMD_GO;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+
+Public
+  
+  - is_line:BOOLEAN
+  
+  - open_line:BOOLEAN <- sub_open TRUE msg "Go line:"
+  
+  - open_point:BOOLEAN <- sub_open FALSE msg "Go point:"
+  
+  - sub_open s:BOOLEAN msg m:STRING_ALIAS :BOOLEAN <-
+  (
+    mesg.copy m
+    is_line := s
+    text.clear
+    SUBACT.empty Self
+    open
+  )
+      
+  - action:BOOLEAN <-
+  ( + n:INTEGER
+    ((text.is_integer) && {(n := text.to_integer) >= 0}).if {
+      is_line.if { cur_txt.cmd_go_line n; } else {
+        n := n.min (cur_txt.text.upper)
+        cur_txt.set_pos_raw (n)
+      }
+      close
+    } else {
+      beep
+      info.copy "Please enter a number."
+    }
+    TRUE
+  )

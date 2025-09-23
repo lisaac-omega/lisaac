@@ -1,0 +1,106 @@
+Header
+
+  + name        := EXPR_OR_LOGIC;
+
+  /*Or binary logical expression.*/
+
+Inherit
+
+  + parent_expr_binary_logic:Expanded EXPR_BINARY_LOGIC
+
+Public
+
+  + symbol:STRING_ALIAS := "|"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_left  left_cst :TYPE :EXPR <-
+  //-- FALSE | E -> E
+  ( + result:EXPR
+
+    (left_cst = type_false).if {
+      result := right
+      left.remove
+    }
+    result
+  )
+
+  - exec_conservator_right right_cst:TYPE :EXPR <-
+  //-- E | FALSE -> E
+  ( + result:EXPR
+
+    (right_cst = type_false).if {
+      result := left
+      right.remove
+    }
+    result
+  )
+
+  - exec left_cst:TYPE and right_cst:TYPE :EXPR <-
+  //-- C1 | C2 -> C3
+  ( + result:EXPR
+
+    (left_cst = type_true).if {
+      result := left
+      right.remove
+    } else {
+      result := right
+      left.remove
+    }
+    result
+  )
+
+  - exec:EXPR <-
+  //-- (E1 > E2) | (E1 = E2) -> E1 >= E2 (a lot of possibilities, but see INTEGER)
+  //-- E | E -> E
+  ( + result:EXPR
+    + sup:EXPR_SUP
+    + eq:EXPR_EQUAL
+
+    (left ~= right).if {
+      result := left
+      right.remove
+    } else {
+      sup ?= left
+      eq  ?= right
+      ((sup != NULL) && {eq != NULL}).if {
+	((sup.left ~= eq.left) && {sup.right ~= eq.right}).if {
+	  result := EXPR_SUP_EQ.create position with (sup.left) and (sup.right)
+	  right.remove
+	}
+      }
+    }
+    result
+  )
+
+  - exec_left  left_cst :TYPE :EXPR <-
+  //-- TRUE | E -> TRUE
+  ( + result:EXPR
+
+    (left_cst = type_true).if {
+      result := left
+      right.remove
+    }
+    result
+  )
+
+  - exec_right right_cst:TYPE :EXPR <-
+  //-- E | TRUE -> TRUE
+  ( + result:EXPR
+
+    (right_cst = type_true).if {
+      result := right
+      left.remove
+    }
+    result
+  )
+
+
+
+
+
+
+
+

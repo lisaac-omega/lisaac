@@ -1,0 +1,59 @@
+Header
+  + name := MAIN;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - test:ARRAY MAIN := ARRAY MAIN.create_with_capacity 64
+  
+  - set (s1,t1:STRING, l,d:INTEGER) :MAIN <-
+  ( (s,t,leven,damer) := (s1,t1,l,d); Self )
+  
+  - new (s1,t1:STRING, l,d:INTEGER) <-
+  test.add_last (clone.set (s1,t1, l,d))
+  
+  - load <-
+  (
+    new ("a","c", 1, 1 );          new ( "a","bc", 2, 2 );        new ( "ab","ba", 2, 1 )
+    new ( "a","abc", 2, 2 );       new ( "a","bcdef", 5, 5 );     new ( "a","abcdegh", 6, 6 )
+    new ( "a","acdeghi", 6, 6 );   new ( "a","acedghi", 6, 6 );   new ( "a","abcdfgi", 6, 6 )
+    new ( "a","abcfgi", 5, 5 );    new ( "a","abcfig", 5, 5 );    new ( "c","bc", 1, 1 )
+    new ( "c","abc", 2, 2 );       new ( "c","bcdef", 4, 4 );     new ( "c","abcdegh", 6, 6 )
+    new ( "c","acdeghi", 6, 6 );   new ( "c","acedghi", 6, 6 );   new ( "c","abcdfgi", 6, 6 )
+    new ( "c","abcfgi", 5, 5 );    new ( "c","abcfig", 5, 5 );    new ( "bc","abc", 1, 1 )
+    new ( "abcd","badc", 3, 2 );   new ( "bc","bcdef", 3, 3 );    new ( "bc","abcdegh", 5, 5 )
+    new ( "bc","acdeghi", 6, 6 );  new ( "bc","acedghi", 6, 6 );  new ( "bc","abcdfgi", 5, 5 )
+    new ( "bc","abcfgi", 4, 4 );   new ( "bc","abcfig", 4, 4 );   new ( "abc","bcdef", 4, 4 )
+    new ( "abc","abcdegh", 4, 4 ); new ( "abc","acdeghi", 6, 6 ); new ( "abc","acedghi", 6, 6 )
+    new ( "abc","abcdfgi", 4, 4 ); new ( "abc","abcfgi", 3, 3 );  new ( "abc","abcfig", 3, 3 )
+    new ( "bcdef","abcdegh", 3, 3 );   new ( "bcdef","acdeghi", 4, 4 );   new ( "bcdef","acedghi", 5, 5 )
+    new ( "bcdef","abcdfgi", 4, 4 );   new ( "bcdef","abcfgi", 4, 4 );    new ( "bcdef","abcfig", 4, 4 )
+    new ( "abcdegh","acdeghi", 2, 2 ); new ( "abcdegh","acedghi", 4, 3 ); new ( "abcdegh","abcdfgi", 2, 2 )
+    new ( "abcdegh","abcfgi", 3, 3 );  new ( "abcdegh","abcfig", 3, 3 );  new ( "acdeghi","acedghi", 2, 1 )
+    new ( "cadeghi","acedghi", 3, 2 ); new ( "acdeghi","abcdfgi", 3, 3 ); new ( "acdeghi","abcfgi", 4, 4 )
+    new ( "acdeghi","abcfig", 5, 5 );  new ( "acedghi","abcdfgi", 4, 4 ); new ( "acedghi","abcfgi", 4, 4 )
+    new ( "acedghi","abcfig", 5, 5 );  new ( "abcdfgi","abcfgi", 1, 1 );  new ( "abcdfgi","abcfig", 3, 2 )
+    new ( "abcfgi","abcfig", 2, 1 )
+    new ( "kitten","sitting", 3, 3 ); new ( "Saturday","Sunday", 3, 3 ); new ( "rosettacode","raisethysword",8,8)
+  )
+    
+  + s:STRING
+  + t:STRING
+  + leven:INTEGER
+  + damer:INTEGER
+  
+  - play <-
+  (
+    s.print; " <-> ".print; t.println
+    "Levenshtein: ".print; s.lev t.println; ? {s.lev t = leven}
+    "Damerau    : ".print; s.dam t.println; ? {s.dam t = damer}
+    "--------------------------------------\n".print
+  )
+  
+  - main <-
+  (
+    load
+    0.to (test.upper) do { i:INTEGER; test.at i.play; }
+  )

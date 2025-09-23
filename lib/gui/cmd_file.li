@@ -1,0 +1,230 @@
+Header
+  + name := CMD_FILE;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+  
+Private
+  - cmd_open_file:INTEGER   := 0
+  - cmd_save_file:INTEGER   := 1
+  - cmd_open_buffer:INTEGER := 2
+  
+  - sub_open m:STRING_ALIAS cmd f:INTEGER :BOOLEAN <-
+  ( + pth:STRING_ALIAS
+    open_cmd := f
+    mesg.copy m
+    text.clear
+    (open_cmd != cmd_open_buffer).if {
+      pth := PAGE.cur_pg.buf_pg.name
+      pth.substring 0 to (pth.last_index_of '/') in text
+    }
+    SUBACT.get "List".load Self
+    BOX_LIST STRING_ALIAS.color { s:STRING_ALIAS
+      + c:COLOR
+      c := LOOK.none
+      ((s.last = '~') || {s.last = '#'}).if { c := COLOR.gray; }.elseif
+      {(s.has_suffix ".li") || {s.has_suffix ".lip"}} then {
+        c := LOOK.fmt_li
+      }.elseif {(s.has_suffix ".c")  || {s.has_suffix ".cpp"}} then {
+        c := LOOK.fmt_c
+      }.elseif {s.has_suffix ".txt"} then {
+        c := LOOK.fmt_txt
+      }.elseif {
+        (s.has_suffix ".jpg") || {s.has_suffix ".png"} || {s.has_suffix ".bmp"} ||
+        {s.has_suffix ".gif"} || {s.has_suffix ".ppm"} || {s.has_suffix ".pgm"} ||
+        {s.has_suffix ".psd"} || {s.has_suffix ".tga"} 
+      } then {
+        c := LOOK.fmt_img
+      }
+      c
+    }
+    open
+  )
+  
+  - open_cmd:INTEGER
+  
+Public
+  
+  - open_file:BOOLEAN   <- sub_open "Find file:" cmd cmd_open_file    
+  - save_file:BOOLEAN   <- sub_open "Write file:" cmd cmd_save_file
+  - open_buffer:BOOLEAN <- sub_open "Switch to buffer:" cmd cmd_open_buffer
+  
+  - value:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 128
+  
+  - old_text:STRING_BUFFER := STRING_BUFFER.create 256
+  - listfile:BOOLEAN <-
+  ( info.clear
+    (open_cmd != cmd_open_buffer).if {
+      DIRENT.reduce_path text
+    }
+    ((old_text == text) && {! text.is_empty}).if {
+      (BOX_LIST STRING_ALIAS.is on).if {
+        BOX_LIST STRING_ALIAS.cmd_down_pg.if_false {
+          BOX_LIST STRING_ALIAS.cmd_top_pg
+        }
+      }
+    } else {
+      old_text.copy text     
+      (match_file > 1).if {
+        BOX_LIST STRING_ALIAS.update value label { s:STRING_ALIAS; s} action {s:STRING_ALIAS
+          text.keep_head (text.last_index_of '/' + 1)
+          text.append s; cur := text.count
+          (s == s)
+        }
+      } else {
+        BOX_LIST STRING_ALIAS.close
+      }        
+    }
+    cur := text.count
+    TRUE
+  )
+  
+  - close <-
+  ( BOX_LIST STRING_ALIAS.close
+    old_text.clear
+    parent_cmd.close
+  )
+  
+  - action:BOOLEAN <-
+  ( + b:BUFFER
+    + pth:STRING_ALIAS
+    (text.last = '/').if {
+      listfile
+    } else {
+      close
+      pth := text.to_string_alias
+      (open_cmd = cmd_open_buffer).if {
+        //OUT # "Open :" # text # '\n'
+        b := BUFFER.catalog.search_until {buf:BUFFER; buf.shortname = pth}
+      } else {
+        b := BUFFER.get pth
+        (open_cmd = cmd_save_file).if {
+          b.copy_buffer (PAGE.cur_pg.buf_pg.buffer).if_false { beep; }
+          b.save_buffer
+        }
+      }
+      PAGE.cur_pg.set_buffer b
+    }
+    TRUE
+  )
+  
+  - cut:BOOLEAN <-
+  (cur != text.count).if {    
+    clipboard.clear
+    cur.to (text.upper) do { i:INTEGER
+      clipboard.add_last (text.at i)
+    }
+    CLIPBOARD.put clipboard
+    text.set_upper (cur-1)
+  }
+  
+Private
+  
+  - match_file:INTEGER <-
+  ( + idx,pre:INTEGER    
+    + result:INTEGER
+
+    value.clear
+    (open_cmd = cmd_open_buffer).if {
+      (pre,idx) := list_buffer
+    } else {
+      (pre,idx) := list_file
+    }
+    //"idx / count = ".print; idx.print; '/'.print; text.count.println;
+    // Completion.
+    (! value.is_empty).if {
+      (idx > pre).if {
+        pre.to (idx-1) do { i:INTEGER
+          text.add_last (value.first.at i)
+        }
+        (open_cmd != cmd_open_buffer).if {
+          DIRENT.reduce_path text
+        }
+      } else {
+        ((idx = value.first.count) && {idx = pre}).if {
+          info.copy "[Sole completion]"
+        }
+        value.quick_sort
+        result := value.count
+        (open_cmd != cmd_open_buffer).if {
+          ((text.count != 1) && {text.last = '/'}).if {
+            value.add_first "../"
+          }
+        }        
+      }
+    } else { result := -1; info.copy "[No match]"; }    
+    result
+  )
+  
+  
+  - list_buffer:(INTEGER,INTEGER) <-
+  ( + idx:INTEGER
+    idx := 4096    
+    BUFFER.catalog.foreach { b:BUFFER
+      (b.shortname.has_prefix text).if {
+        value.add_last (b.shortname)
+        idx := value.first.first_diff (value.last).min idx
+      }
+    }
+    text.count ,idx
+  )
+  
+  - list_file:(INTEGER,INTEGER) <-
+  ( + idx:INTEGER
+    + pre:STRING_ALIAS
+    + e:DIRENT
+    + d:DIRECTORY
+    STRING.tmp2 { (tmp,tmp2:STRING_BUFFER)
+      tmp.copy text
+      tmp2.copy text
+      idx := tmp.last_index_of '/'
+      (idx < 0).if {
+        tmp.copy "./"
+      } else {
+        tmp.keep_head (idx+1)        
+        DIRENT.reduce_path tmp
+        tmp2.remove_head (idx+1)
+      }
+      pre := tmp2.to_string_alias
+      e := FILE_SYSTEM.get tmp
+      ((e != NULL) && {e.is_directory}).if {
+        d ?= e
+        d.open
+        idx := 4096
+        (d.lower).to (d.upper) do { i:INTEGER
+          e := d.at i
+          (e.name.has_prefix pre).if {
+            (e.is_directory).if {
+              tmp.copy (e.name); //tmp.add_last '/'
+              value.add_last (tmp.to_string_alias)
+              //tmp.println
+            } else {
+              value.add_last (e.name)
+              //e.name.println
+            }
+            idx := value.first.first_diff (value.last).min idx
+            //result := result | (value.last.count = text.count).to_integer
+          }
+        }
+        d.close
+      }
+    }
+    pre.count, idx
+  )
+  
+  /*
+  - extract_name txt:STRING_ALIAS :STRING_ALIAS <-
+  ( + idx:INTEGER
+    + result:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy txt
+      (tmp.last = '/').if {
+        idx := tmp.last_index_of '/' since (tmp.upper-1)
+      } else {
+        idx := tmp.last_index_of '/'
+      }
+      tmp.remove_head (idx+1)
+      result := tmp.to_string_alias
+    }
+    result
+  );*/

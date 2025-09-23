@@ -1,0 +1,128 @@
+Header
+  
+  + name := Expanded RESAMPLE;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+      
+  + line0:NATIVE_ARRAY UINTEGER_8
+  - set_line0 l:NATIVE_ARRAY UINTEGER_8 <- ( line0 := l; )
+  
+  + line1:NATIVE_ARRAY UINTEGER_8
+  - set_line1 l:NATIVE_ARRAY UINTEGER_8 <- ( line1 := l; )
+  
+  + hs:INTEGER;      // expansion factor in each axis
+  + vs:INTEGER
+  + w_lores:INTEGER; // horizontal pixels pre-expansion
+  
+  + ystep:INTEGER;   // how far through vertical expansion we are
+  - set_ystep ys:INTEGER <- ( ystep := ys; )
+  
+  + ypos:INTEGER;    // which pre-expansion row we're on
+  - set_ypos yp:INTEGER <- ( ypos := yp; )
+
+  - hs phs:INTEGER vs pvs:INTEGER ystep pys:INTEGER w_lores wl:INTEGER ypos yp:INTEGER
+  line0 l0:NATIVE_ARRAY UINTEGER_8 line1 l1:NATIVE_ARRAY UINTEGER_8 <-
+  (
+    (hs,vs,ystep,w_lores,ypos) := (phs,pvs,pys,wl,yp)
+    (line0,line1) := (l0,l1)
+  )
+  
+  - resample out:NATIVE_ARRAY UINTEGER_8 :NATIVE_ARRAY UINTEGER_8 <-
+  ( + result,near,far:NATIVE_ARRAY UINTEGER_8
+    + y_bot:BOOLEAN
+    y_bot := ystep >= (vs >> 1)
+    (y_bot).if {
+      near := line1
+      far  := line0
+    } else {
+      near := line0
+      far  := line1
+    }
+    ((hs = 1) && {vs = 1}).if           { result := resample_row_1 (out,near,far);      }
+    .elseif {(hs = 1) && {vs = 2}} then { result := resample_row_v_2 (out,near,far);    }
+    .elseif {(hs = 2) && {vs = 1}} then { result := resample_row_h_2 (out,near,far);    }
+    .elseif {(hs = 2) && {vs = 2}} then { result := resample_row_hv_2 (out,near,far);   }
+    else                               { result := resample_row_generic (out,near,far);}
+    result
+  )
+  
+Private
+  
+  // static jfif-centered resampling (across block boundaries)
+
+  - resample_row_1 (out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  ( in_near )
+
+  - resample_row_v_2 (out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  ( 
+    // need to generate two samples vertically for every one in input
+    0.to (w_lores-1) do { i:INTEGER
+      out.at i put ((3*in_near.at i + in_far.at i + 2)>>2)
+    }
+    out
+  )
+
+  - resample_row_h_2(out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  ( + input:NATIVE_ARRAY UINTEGER_8
+    + c:UINTEGER_8
+    + i:INTEGER
+    // need to generate two samples horizontally for every one in input
+    input := in_near
+    (w_lores = 1).if {
+      // if only one sample, can't do any interpolation
+      c := input.first
+      out.at 0 put c;  out.at 1 put c
+    } else {
+      out.at 0 put (input.at 0)
+      out.at 1 put ((input.at 0.to_integer * 3 + input.at 1 + 2)>>2)
+      i := 1
+      {i < (w_lores-1)}.while_do {
+        + n:INTEGER
+        n := 3*input.at i + 2
+        out.at (i*2+0) put ((n+input.at (i-1))>>2)
+        out.at (i*2+1) put ((n+input.at (i+1))>>2)
+        i := i + 1
+      }
+      out.at (i*2+0) put ((input.at (w_lores-2).to_integer*3 + input.at (w_lores-1) + 2)>>2)
+      out.at (i*2+1) put ( input.at (w_lores-1))
+      //STBI_NOTUSED(in_far)
+    }
+    out
+  )
+
+  - resample_row_hv_2(out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  ( + t0,t1:INTEGER
+    + c:UINTEGER_8
+    // need to generate 2x2 samples for every one in input
+    (w_lores = 1).if {
+      c := (3*in_near.first + in_far.first + 2)>>2
+      out.at 0 put c;  out.at 1 put c
+    } else {
+      t1 := 3*in_near.first + in_far.first
+      out.at 0 put ((t1+2)>>2)
+      1.to (w_lores-1) do { i:INTEGER
+        t0 := t1
+        t1 := 3*in_near.at i + in_far.at i
+        c := (3*t0 + t1 + 8) >> 4
+        out.at (i*2-1) put c
+        out.at (i*2  ) put c
+      }
+      out.at (w_lores*2-1) put ((t1+2)>>2)
+    }
+    out
+  )
+
+  - resample_row_generic (out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  (
+    // resample with nearest-neighbor
+    0.to (w_lores-1) do { i:INTEGER
+      0.to (hs-1) do { j:INTEGER
+        out.at (i*hs+j) put (in_near.at i)
+      }
+    }
+    out
+  )

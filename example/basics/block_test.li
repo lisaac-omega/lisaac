@@ -1,0 +1,31 @@
+Header
+
+  + name     := BLOCK_TEST;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Private
+
+  - action n:INTEGER if_odd odd_block:{} if_even even_block:{} <-
+  (
+    (n.is_even).if {
+      even_block.value
+    } else {
+      odd_block.value
+    }
+  )
+
+Public
+
+  - main <-
+  ( + n:INTEGER
+
+    "Entry a number:\n".print
+    STDIN.read_integer
+    n := STDIN.last_integer
+    action n
+    if_odd  { "This integer is odd.\n".print;  }
+    if_even { "This integer is even.\n".print; }
+  )

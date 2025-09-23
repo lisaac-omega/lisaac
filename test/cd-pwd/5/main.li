@@ -1,0 +1,21 @@
+Header
+  
+  + name := MAIN;
+  
+Inherit
+  
+  - parent_utils:UTILS := UTILS
+  
+Public
+  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 256
+  
+  - main <-
+  (
+    (SYSTEM.name = "Windows").if {
+      not_yet_implemented
+    } else {
+      TEST.check (FILE_UTILS.file_exists "/bin/bash")
+      TEST.check  (ENVIRONMENT.chdir "/bin") integer 0
+      TEST.check (FILE_UTILS.file_exists "sh")
+    }
+  )

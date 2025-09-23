@@ -1,0 +1,143 @@
+Header
+
+  + name    := READ_LIP;
+
+  /* Read lip variable. */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- var.is_invariant
+
+  + static_type:TYPE_FULL
+
+  + var:EXPR
+
+  //
+  // Creation.
+  //
+
+  - create v:EXPR type t:TYPE_FULL :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make v type t
+    result
+  )
+
+  - make v:EXPR type t:TYPE_FULL <-
+  (
+    position    := v.position
+    static_type := t
+    var         := v
+  )
+
+  - my_copy:SELF <-
+  (
+    create (var.my_copy) type static_type
+  )
+
+  //
+  // Searching.
+  //
+
+  - get_type t:TYPES_TMP <-
+  (
+    (static_type = type_boolean.default).if {
+      t.add type_false
+      t.add type_true
+    } else {
+      t.add (static_type.raw)
+    }
+  )
+
+  //
+  // Executing pass.
+  //
+
+  - remove <-
+  (
+    var.remove
+  )
+
+  - execute_unlink:INSTR <-
+  (
+    var.execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  ( + result:EXPR
+    + str:STRING_CST
+    
+    var  := var.execute_link
+    str ?= var
+    (str != NULL).if {
+      + v:LIP_SLOT_DATA
+      + i:LIP_INTEGER
+      + b:LIP_BOOLEAN
+      + s:LIP_STRING
+      + t:TYPE
+      + tf:TYPE_FULL
+      v := LIP_CODE.get_data (str.string)
+      var.remove
+      (v = NULL).if { semantic_error (position,"Lip Variable not found."); }
+      i ?= v.value
+      (i != NULL).if {
+        result := INTEGER_CST.create position value (i.value) type (type_integer.default)
+        t := type_integer
+      }
+      b ?= v.value
+      (b != NULL).if {        
+        tf := b.value.ok (type_true.default) or (type_false.default)
+        result := PROTOTYPE_CST.create position type tf
+        t := type_boolean
+      }
+      s ?= v.value
+      (s != NULL).if {
+        result := STRING_CST.create position text (s.value) length (s.value.count)
+        t := type_string_alias
+      }
+      ((result = NULL) || {static_type.raw != t}).if {
+        semantic_error (position,"Type incorrect.")
+      }
+      new_execute_pass
+    } else {      
+      result := Self
+    }
+    result
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    semantic_error (position,"Sorry, expression no constant.")
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "READ_LIP "
+    static_type.append_name_in buffer
+    buffer.add_last '('
+    var.display buffer
+    buffer.add_last ')'
+  )
+
+
+
+
+
+
+
+
+
+

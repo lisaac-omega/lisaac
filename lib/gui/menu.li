@@ -1,0 +1,161 @@
+Header
+  + name := MENU;
+  
+Inherit 
+  + parent_popup:Expanded POPUP
+  + parent_act:Expanded ACT
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public  
+  - list:ARRAY MENU := ARRAY MENU.create_with_capacity 8
+  
+  - height_max:REAL_32 <-
+  ( + result:REAL_32
+    child.foreach { win:WIN; result := result + win.height_min; }
+    result + ACT_ITM.margin*2
+  )
+  
+  - refresh <-
+  ( + w,y,x,mar:REAL_32
+    refresh_popup.if {
+      mar := ACT_ITM.margin
+      y := yo + height - mar
+      x := xo + mar
+      child.foreach_backward { win:WIN
+        (y,w) := (y - win.height_min, w.max (win.width_min))
+        win.xy (x,y)
+      }
+      child.foreach { win:WIN
+        win.size (w,win.height_min)
+        win.like ACT_ITM.color (LOOK.text_ui)
+      }
+      width := w+mar*2
+    }
+  )
+    
+  - draw_all <-
+  ( intersect_scissor (xo,yo) size (width + 8,height + 8)
+    rect_shadow (xo,yo) size (width,height) radius (0,8)
+    draw
+    draw_child
+    reset_scissor
+  )
+  
+  - read:SELF <-
+  ( list.add_last Self
+    read_object
+    Self
+  )
+  
+  - get_open:MENU <- list.search_until { m:MENU; m.is on}
+  
+  - close_all <- close_all_except NULL
+  
+  - close_all_except x:ACT <-
+  ( + i:MENU
+    i := get_open
+    ((i != NULL) && {i != x}).if { i.set_open NULL; }
+  )
+      
+  - run:BOOLEAN <-
+  ( 
+    ((! is on) || {parent != HAND.window_cur}).if {      
+      (xo,yo,height) := (HAND.win_cur.xo,HAND.win_cur.ymax,0)
+      set_open (HAND.window_cur)
+    } else { set_open NULL; }
+    TRUE
+  )
+  
+  - object_in id:STRING_ALIAS :BOOLEAN
+  
+  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "name" then { text_l := v; }
+    = STRING_ALIAS
+  )
+  
+  - object_null id:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "ACT" then { ACT_ITM.new.init Self act NULL; }
+    = STRING_ALIAS
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "ACT" then { ACT_ITM.new.init Self act (ACT.new_read); }
+    = STRING_ALIAS
+  )
+  
+ICON_LINE
+  
+  - make_sty:SELF <-
+  ( + d:DIRENT
+    + dir:DIRECTORY
+    + i:INTEGER
+    + a:ACT
+    + nn:STRING_ALIAS
+    list.add_last Self
+    text_l := "Theme"
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp += COMMAND_ARGS.executable_directory
+      i := tmp.last_index_of '/'
+      (i != -1).if { tmp.set_upper i; }
+      tmp += "assets/"
+      d := FILE_SYSTEM.get tmp
+      ((d = NULL) || {! d.open}).if {
+        "Error MENU: ".print; d.print; " not open.".println
+        exit 1
+      }
+      dir ?= d
+      dir.foreach { dd:DIRENT
+        (dd.name.has_suffix ".sty").if {
+          tmp.copy (dd.name)
+          tmp.remove_suffix ".sty"
+          nn := tmp.to_string_alias
+          a := ACT1 STRING_ALIAS.new.fn { n:STRING_ALIAS
+            look_file := n
+            LOOK.read
+          } val nn
+          a.txt_l nn
+          ACT_ITM.new.init Self act a
+        }
+      }
+    }
+    Self
+  )
+  
+  - make_key:SELF <-
+  ( + d:DIRENT
+    + dir:DIRECTORY
+    + i:INTEGER
+    + a:ACT
+    + nn:STRING_ALIAS
+    list.add_last Self
+    text_l := "Keymap"
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp += COMMAND_ARGS.executable_directory
+      i := tmp.last_index_of '/'
+      (i != -1).if { tmp.set_upper i; }
+      tmp += "assets/"
+      d := FILE_SYSTEM.get tmp
+      ((d = NULL) || {! d.open}).if {
+        "Error MENU: ".print; d.print; " not open.".println
+        exit 1
+      }
+      dir ?= d
+      dir.foreach { dd:DIRENT
+        (dd.name.has_suffix ".key").if {
+          tmp.copy (dd.name)
+          tmp.remove_suffix ".key"
+          nn := tmp.to_string_alias
+          a := ACT1 STRING_ALIAS.new.fn { n:STRING_ALIAS
+            shortcut_file := n
+            FILE_KEY.read
+          } val nn
+          a.txt_l nn
+          ACT_ITM.new.init Self act a
+        }
+      }
+    }
+    Self
+  )

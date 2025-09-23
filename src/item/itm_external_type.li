@@ -1,0 +1,96 @@
+Header
+
+  + name        := ITM_EXTERNAL_TYPE;
+
+  /*External C with type result*/
+
+Inherit
+
+  + parent_itm_extern:Expanded ITM_EXTERN
+
+Public
+
+  //
+  // Data
+  //
+
+  + type:ITM_TYPE
+
+  + type_list:ITM_TYPE
+
+  + is_persistant:BOOLEAN
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION text n:STRING_ALIAS persistant per:BOOLEAN :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p text n persistant per
+    result
+  )
+
+  - make p:POSITION text n:STRING_ALIAS persistant per:BOOLEAN <-
+  (
+    position      := p
+    extern        := n
+    is_persistant := per
+  )
+
+  //
+  // Added
+  //
+
+  - set_type t:ITM_TYPE <-
+  (
+    type := t
+  )
+
+  - set_type_list t:ITM_TYPE <-
+  (
+    type_list := t
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + e:EXTERNAL_C
+    + lt:TYPES_TMP
+    + lst_acc:ARRAY EXPR
+    + typ:TYPE
+    + tmp:VARIABLE
+    + typ_mul:ITM_TYPE_MULTI
+    + typ_mon:ITM_TYPE_MONO
+
+    lst_acc := get_access
+    last_position := position
+    e := EXTERNAL_C.create position text last_code
+    access lst_acc persistant is_persistant type (type.to_run_for profil_slot pos (position.prototype.filename))
+
+    (type_list != NULL).if {
+      lt := TYPES_TMP.new
+      typ_mul ?= type_list
+      (typ_mul != NULL).if {
+        (typ_mul.lower).to (typ_mul.upper) do { j:INTEGER
+          typ := typ_mul.at j.to_run_for profil_slot pos (position.prototype.filename).raw
+          lt.add typ
+        }
+      } else {
+        typ_mon ?= type_list
+        typ := typ_mon.to_run_for profil_slot pos (position.prototype.filename).raw
+        lt.add typ
+      }
+      e.set_living_type (lt.to_types)
+    }
+    // For argument.
+    tmp := e.static_type.get_temporary position
+    list_current.add_last (tmp.write position value e)
+    tmp.read position
+  )
+
+
+
+

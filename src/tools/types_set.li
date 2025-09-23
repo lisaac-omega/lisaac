@@ -1,0 +1,85 @@
+Header
+
+  + name        := TYPES_SET;
+
+  /*Aliser TYPE collection.*/
+
+Inherit
+
+  - parent_types:TYPES := TYPES
+
+TYPES_SET
+
+  + storage:NATIVE_ARRAY TYPE
+  
+Public
+  
+  - first_index:INTEGER <-
+  ( + result:INTEGER
+    (count = 0).if {
+      result := -1
+    }
+    result
+  )
+  
+  + count:INTEGER
+  
+  - next_index i:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    
+    (i < count-1).if {
+      result := i + 1
+    } else {
+      result := -1
+    }
+    result
+  )
+  
+  - first:TYPE <-
+  (
+    at 0
+  )
+  
+  - at i:INTEGER :TYPE <-
+  (    
+    storage.at i
+  )
+  
+  //
+  // Display.
+  //
+
+  - types_append_in buf:STRING_BUFFER <-
+  ( 
+    (! is_empty).if {
+      0.to (count - 2) do { j:INTEGER
+	at j.append_name_in buf
+	buf.add_last '('
+	at j.index.append_in buf
+	buf.append ") x "
+      }
+      at (count-1).append_name_in buf
+      buf.add_last '('
+      at (count-1).index.append_in buf
+      buf.add_last ')'
+    } else {
+      buf.append "<Vide>"
+    }
+  )
+
+TYPES_TMP
+
+  - create tab:TYPES_TMP :Strict TYPES_SET <-
+  ( + result:SELF
+
+    result := clone
+    result.make tab
+    result
+  )
+
+  - make tab:TYPES_TMP <-
+  ( 
+    count := tab.count
+    storage := NATIVE_ARRAY TYPE .calloc_intern count
+    storage.copy_from (tab.storage) until (count-1)
+  )

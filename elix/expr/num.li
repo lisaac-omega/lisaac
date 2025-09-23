@@ -1,0 +1,104 @@
+Header
+  + name := NUM;
+  /* NUMerical Constant*/
+
+Inherit
+  //+ parent_tok_itm:Expanded TOK_ITM
+  + parent_expr:Expanded EXPR
+  //- parent_type_numeric:TPRO := TPRO
+  
+Private
+  - stack_num:Expanded ARRAY (Strict NUM)
+  
+Public
+  
+  + is_int:BOOLEAN
+  + int_val:INTEGER
+  
+Public
+  //- set_parent_tpro t:TPRO <- ( ? {t != NULL}; parent_type_numeric := t; )
+  
+  - type:TYPE <- TYPE.numeric
+    
+  - new:SELF <-
+  ( + r:SELF; (stack_num.is_empty).if { r := clone; } else { r := stack_num.pop; }; r)
+  - free <- ( stack_num.add_last Self; )
+  
+  //
+  // PARSER / DRAW
+  //
+  
+  - new_parse t:INTEGER <-
+  ( 
+    (read_num FALSE).if {
+      col (LOOK.number) sub (pos_i.pt - Old pos_i.pt)
+      int_val := (is_int := ! is_real).ok last_int or 0
+    }
+  )
+      
+  //
+  // RUN
+  //
+  
+  - run <-
+  ( + base:INTEGER
+    (view.last)
+    .when 'h' then { base := 16; }
+    .when 'd' then { base := 10; }
+    .when 'o' then { base := 8; }
+    .when 'b' then { base := 2; }
+    STRING.tmp { tmp:STRING_BUFFER; tmp += view
+      (base = 0).if {
+        base := 10
+      } else {
+        tmp.remove_last
+      }
+      tmp.remove_all_occurrences ' '
+      value := INTN.init tmp base base
+    }
+    push Self
+  )
+  
+  //
+  // Output
+  //
+  
+  - out_c <-
+  ( + x:UINTEGER_64
+    (value <= UINTEGER_64.maximum.to_intn).if {
+      x := value.to_uinteger_64
+      (x <= 999).if {
+        x.append_in outbuf base 10
+      } else {
+        outbuf += "0x"
+        x.append_in outbuf base 16
+        (x <= UINTEGER_32.maximum).if {
+          (x > UINTEGER_16.maximum).if {
+            outbuf += "LU"
+          }
+        } else {
+          outbuf += "LLU"
+        }
+      }
+    } else {
+      outbuf += "__LI_intn(\""
+      value.append_in outbuf base 64
+      outbuf += "\")"
+    }
+  )
+  
+  - is_number t:STRING :BOOLEAN <-
+  ( + result:BOOLEAN
+    + i:INTEGER
+    + c:CHARACTER
+    result := TRUE
+    {
+      (i <= t.upper) &&
+      {((c := t.at i).is_hexadecimal_digit) || {c = '\''}}
+    }.while_do {
+      i := i + 1
+    }
+    ((i = t.upper) && {"bodh".has (t.last)}).if { i := i + 1; }
+    i > t.upper
+  )
+  

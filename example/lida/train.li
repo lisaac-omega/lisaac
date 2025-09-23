@@ -1,0 +1,172 @@
+Header
+  + name := TRAIN;
+  /*
+  Compile with -cuda
+  */
+  
+Inherit
+  - parent_utils:UTILS := UTILS
+  
+Public
+  
+  - batch_size_train:INTEGER := 256
+  - num_steps_train:INTEGER  := 2400; //2400; //2400
+  - monitoring_step:INTEGER  := 200; //200
+  
+  - batch_size_test:INTEGER := 10
+  - num_steps_test:INTEGER  := 1000
+  
+  - initial_learning_rate:REAL_64 := 0.02
+  - learning_rate:REAL_64         := 0.0
+  - lr_decay:REAL_64              := 0.0005
+
+  - load_pretrain:BOOLEAN := FALSE
+  - file_save:BOOLEAN     := FALSE
+  
+  - main <-
+  ( + model:NETWORK
+    + train_data,train_target:BLOB
+    + test_data,test_target:BLOB
+    + loss,accuracy:REAL_32
+    + step,tp_count:INTEGER
+    + data:MNIST
+    
+    // Welcome Message 
+    "== MNIST training with CUDNN ==".println
+    data := MNIST.init "./dataset"
+
+    // phase 1. training
+    "[TRAIN]".println
+
+    // step 1. loading dataset    
+    data.train batch_size_train shuffle FALSE; //TRUE
+    
+    //0.to 100 do { i:INTEGER; data.print i; }
+
+    // step 2. model initialization
+    model := NETWORK.new
+    model.add_layer (CONV2D.new.init ("conv1", 20, 5))
+    model.add_layer (POOLING.new.init ("pool", 2, 0, 2, POOLING.max_t))
+    
+    model.add_layer (CONV2D.new.init ("conv2", 50, 5))
+    model.add_layer (POOLING.new.init ("pool", 2, 0, 2, POOLING.max_t))
+    
+    model.add_layer (DENSE.new.init ("dense1", 500))
+    model.add_layer (ACTIVATION.new.init ("relu", ACTIVATION.relu_t))
+    
+    model.add_layer (DENSE.new.init ("dense2", 10))
+    model.add_layer (SOFTMAX.new.init ("softmax"))
+    model.cuda
+
+    (load_pretrain).if { model.load_pretrain; }
+    model.train
+        
+    // step 3. train
+    step := 0
+    train_data := data.data
+    train_target := data.target
+    data.get_batch
+    
+    tp_count := 0
+    {step < num_steps_train}.while_do {
+      // nvtx profiling start      
+      CUDA.nvtx_range_push_a "step" idx step
+
+      // update shared buffer contents
+      train_data.to   (BLOB.cuda_t)
+      train_target.to (BLOB.cuda_t)
+            
+      // forward
+      model.forward train_data
+      tp_count := tp_count + model.get_accuracy train_target
+      
+      //"Forward:\n".print
+      //model.bug_check
+      
+      // back-propagation
+      model.backward train_target
+      
+      // update parameter
+      // we will use learning rate decay to the learning rate
+      learning_rate := initial_learning_rate / (1.0 + lr_decay * step)
+      /*( + tmp:REAL_64
+        tmp := learning_rate
+        `printf("%5.3f\n",@tmp)`
+      );*/
+      model.update learning_rate
+      
+      // fetch next data
+      step := data.next
+      
+      // nvtx profiling end
+      CUDA.nvtx_range_pop
+
+      // calculation softmax loss
+      ((step % monitoring_step) = 0).if {
+        loss := model.loss train_target
+        accuracy :=  100.0 * tp_count / monitoring_step / batch_size_train
+            
+        "step: ".print
+        step.print_format 4
+        ", loss: ".print
+        `printf("%5.3f",@loss)`; //loss.print
+        ", accuracy: ".print
+        `printf("%5.3f",@accuracy)`; //accuracy.print
+        "%".println
+        
+        tp_count := 0
+      }
+    }
+    //exit 0
+    // trained parameter save
+    (file_save).if { model.write_file; }
+
+    // phase 2. inferencing
+    // step 1. load test set
+    "[INFERENCE]".println
+    data.test batch_size_test
+
+    // step 2. model initialization
+    model.test
+    
+    // step 3. iterates the testing loop
+    test_data := data.data
+    test_target := data.target
+    data.get_batch
+    tp_count := 0
+    step := 0
+    {step < num_steps_test}.while_do {
+      // nvtx profiling start
+      CUDA.nvtx_range_push_a "step" idx step
+
+      // update shared buffer contents
+      test_data.to   (BLOB.cuda_t)
+      test_target.to (BLOB.cuda_t)
+            
+      // forward
+      model.forward test_data
+      tp_count := tp_count + model.get_accuracy test_target
+      
+     MNIST.print (model.layers.last.output.mem) data (test_data.mem)
+      `getchar()`
+      
+      // fetch next data
+      step := data.next
+      
+      // nvtx profiling stop
+      CUDA.nvtx_range_pop
+    }
+
+    // step 4. calculate loss and accuracy    
+    loss := model.loss test_target
+    accuracy := 100.0 * tp_count / num_steps_test / batch_size_test
+    
+    "loss: ".print
+    `printf("%7.5f",@loss)`; //loss.print
+    ", accuracy: ".print
+    `printf("%5.3f",@accuracy)`; //accuracy.print
+    "%".println
+
+    // Good bye
+    "Done.".println
+  )

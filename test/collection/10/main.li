@@ -1,0 +1,135 @@
+Header  
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Private  
+  
+  + nsize:INTEGER
+  
+  + array_block_1:ARRAY_BLOCK INTEGER
+  + array_block_2:ARRAY_BLOCK INTEGER
+  
+Public
+  
+  - main <-
+  (
+    ".".print
+    nsize := 500_000_000
+    nsize_test
+    exit 0
+    ("Hello" + " Dom").to_string_alias; // Bug compilo ASCII
+  )
+  
+Private
+  - nsize_test <-
+  (
+    ? {nsize > 1}
+    check_fair_bench
+  )
+  
+Private
+  - new <-
+  (
+    array_block_1 := ARRAY_BLOCK INTEGER .new_tiny
+    array_block_2 := ARRAY_BLOCK INTEGER .new
+  )
+  
+Private 
+  - idem <-
+  ( + i:INTEGER
+    TEST.check (array_block_2.lower) integer (array_block_1.lower)
+    TEST.check (array_block_2.upper) integer (array_block_1.upper)
+    TEST.check (array_block_2.count) integer (array_block_1.count)
+    //
+    array_block_2.is_empty.if {
+      TEST.check (array_block_1.is_empty)
+    } else {
+      TEST.check (! array_block_1.is_empty)
+    }
+    //
+    array_block_2.is_empty.if_false {
+      TEST.check (array_block_2.last) integer (array_block_1.last)
+      TEST.check (array_block_2.first) integer (array_block_1.first)
+    }
+    i := 0
+    {i <= array_block_2.upper}.while_do {
+      TEST.check (array_block_2.at i) integer (array_block_1.at i)
+      i := i + 1
+    }
+  )
+  
+  - add_last v:INTEGER <-
+  (
+    array_block_1.add_last v
+    array_block_2.add_last v
+  )
+  
+  - remove_last <-
+  (
+    array_block_1.remove_last
+    array_block_2.remove_last
+  )
+  
+  - add_first v:INTEGER <-
+  (
+    array_block_1.add_first v
+    array_block_2.add_first v
+  )
+  
+  - remove_first <-
+  (
+    array_block_1.remove_first
+    array_block_2.remove_first
+  )
+  
+  - remove idx:INTEGER <-
+  (
+    array_block_1.remove idx
+    array_block_2.remove idx
+  )
+  
+  - add v:INTEGER to idx:INTEGER <-
+  (
+    array_block_1.at idx add v
+    array_block_2.at idx add v
+  )
+  
+  - check_fair_bench <-
+  ( + n,tier,idx:INTEGER
+    new
+    tier := (nsize.max 3) / 3
+    tier.times {
+      n := n + 1
+      add_last n
+    }
+    idem
+    idx := 0
+    tier.times {
+      n := n + 1
+      idx := idx + 1
+      add n to idx
+    }
+    idem
+    tier.times {
+      n := n + 1
+      add_first n
+    }
+    idem
+    tier.times {
+      remove_first
+    }
+    //array_block_2.remove_last
+    idem
+    idx := 0
+    tier.times {
+      idx := idx + 1
+      remove idx
+    }
+    idem
+    {array_block_2.is_empty}.until_do {
+      remove_last
+    }
+    idem
+  )

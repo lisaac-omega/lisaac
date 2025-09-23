@@ -1,0 +1,371 @@
+Header
+  + name := MAIN;
+  
+Private
+  - verbose:BOOLEAN <-  !TRUE
+  
+  + time:TIME
+  
+  + mpz1:MPZ
+  + mpz2:MPZ
+  + mpz3:MPZ
+  + rem_mpz:MPZ
+  
+  + big1:ℤ
+  + big2:ℤ
+  + big3:ℤ
+  + rem_big:ℤ
+  
+  + shift_mem:INTEGER
+  
+  - shift <-
+  ( + mtmp:MPZ
+    + btmp:ℤ
+    mtmp := mpz1
+    mpz1 := mpz2
+    mpz2 := mpz3
+    mpz3 := mtmp
+    btmp := big1
+    big1 := big2
+    big2 := big3
+    big3 := btmp
+  )
+  
+Public
+  - main <-
+  ( + loop:INTEGER
+    time := TIME.now
+    //RANDOM.init(51579904)
+    RANDOM.init(time.to_raw.to_integer_32)
+    mpz1.init
+    mpz2.init
+    mpz3.init
+    rem_mpz.init
+    randomize
+    {loop > 1_000_000}.until_do {
+      check_vars "loop start"
+      verbose.if { print_vars TRUE; }
+      (RANDOM.range 1 to 16)
+      .when 1 then { check_add; }
+      .when 2 then { check_sub; }
+      .when 3 then { check_mul; }
+      .when 4 then { check_div; }
+      .when 5 then {
+        verbose.if {
+          "loop=".print; loop.println
+          "mpz3/big3 size in base 16 =".print; (mpz3.sizeinbase 16).print; '\n'.print
+        }
+      }
+      .when 7 then { zero_track; }
+      .when 8 then { randomize; }
+      .when 9 then { check_append_in_base_10; }
+      .when 10 then { check_shift_left (loop & 111b); }
+      .when 11 then { check_shift_right (loop & 111b); }
+      .when 12 then { check_comparison; }
+      .when 13 then { check_unary_minus; }
+      .when 14 then { check_unary_plus; }
+      .when 15 then { check_unary_tilde; }
+      .when 16 then { toobig_track; }
+      shift
+      loop := loop + 1
+    }
+  )
+  
+  - check mpz:MPZ init big:ℤ <-
+  (
+    STRING.tmp2 {(mpz_hex,big_hex:STRING_BUFFER)
+      mpz.append_in mpz_hex base 16
+      big.append_in big_hex base 16
+      (mpz_hex !== big_hex).if {
+        "mpz_hex=".print; mpz_hex.println
+        "big_hex=".print; big_hex.println
+        print_vars TRUE
+        UTILS.crash_with_message "Error check_init."
+      }
+    }
+  )
+  
+  - check_add <-
+  (
+    verbose.if { "check_add".println; }
+    mpz3.add (mpz1,mpz2)
+    big3.free; big3 := big1 + big2
+    check_vars "check_add"
+  )
+  
+  - check_sub <-
+  (
+    verbose.if { "check_sub".println; }
+    mpz3.sub (mpz1,mpz2)
+    big3.free; big3 := big1 - big2
+    check_vars "check_sub"
+  )
+  
+  - check_mul <-
+  (
+    verbose.if { "check_mul".println; }
+    mpz3.mul (mpz1,mpz2)
+    big3.free; big3 := big1 * big2
+    check_vars "check_mul"
+  )
+  
+  - check_div <-
+  (
+    verbose.if { "check_div".println; }
+    (mpz2.sgn = 0).if {
+      mpz2.random_hex (RANDOM.range 4 to 10)
+      big2 := ℤ.init(mpz2.to_hexadecimal) base 16
+    } else {
+      mpz3.tdiv_qr(rem_mpz,mpz1,mpz2)
+      big3.free; rem_big.free; (big3,rem_big) := big1 /% big2
+    }
+    check_vars "check_div"
+  )
+  
+  - vars_in code:STRING_BUFFER mode full:BOOLEAN <-
+  (
+    code.append "--------------\n"
+    code.append "mpz1="
+    mpz1.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "big1="
+      big1.append_in code base 16
+      code.add_last '\n'
+    }
+    code.append "mpz2="
+    mpz2.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "big2="
+      big2.append_in code base 16
+      code.add_last '\n'
+    }
+    code.append "mpz3="
+    mpz3.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "big3="
+      big3.append_in code base 16
+      code.add_last '\n'
+    }
+    code.append "rem_mpz="
+    rem_mpz.append_in code base 16
+    code.add_last '\n'
+    full.if {
+      code.append "rem_big="
+      rem_big.append_in code base 16
+      code.add_last '\n'
+    }
+    full.if {
+      code.append "shift_mem="
+      shift_mem.append_in code
+      code.add_last '\n'
+    }
+    code.append "--------------\n"
+  )
+  
+  - print_vars full:BOOLEAN <-
+  (
+    STRING.tmp { code:STRING_BUFFER
+      vars_in code mode full
+      code.print
+    }
+  )
+  
+  - check_vars after:STRING_ALIAS <-
+  (
+    verbose.if { "check_vars".println; }
+    (
+      (! mpz1.equal_intz3 big1) ||
+      {! mpz2.equal_intz3 big2} ||
+      {! mpz3.equal_intz3 big3} ||
+      {! rem_mpz.equal_intz3 rem_big}
+    ).if {
+      print_vars TRUE
+      UTILS.crash_with_message ("check_vars error after " + after)
+    }
+  )
+  
+  - random_hexdigits:INTEGER <-  (RANDOM.range 1 to 32)
+  
+  - randomize <-
+  (
+    verbose.if { "randomize".println; }
+    mpz1.random_hex random_hexdigits
+    big1.free
+    big1 := ℤ.init(mpz1.to_hexadecimal) base 16
+    check mpz1 init big1
+    //
+    mpz2.random_hex random_hexdigits
+    big2.free
+    big2 := ℤ.init(mpz2.to_hexadecimal) base 16
+    check mpz2 init big2
+    //
+    mpz3.random_hex random_hexdigits
+    big3.free
+    big3 := ℤ.init(mpz3.to_hexadecimal) base 16
+    check mpz3 init big3
+    //
+    rem_mpz.init_set_ui 0
+    rem_big.free
+    rem_big := 0
+    check rem_mpz init rem_big
+  )
+  
+  - zero_track <-
+  (
+    verbose.if { "zero_track".println; }
+    (mpz1, big1) := zero_random (mpz1, big1)
+    (mpz2, big2) := zero_random (mpz2, big2)
+    (mpz3, big3) := zero_random (mpz3, big3)
+    (rem_mpz, rem_big) := zero_random (rem_mpz, rem_big)
+  )
+  
+  - zero_random (m:MPZ, b:ℤ): (MPZ, ℤ) <-
+  ( + m2: MPZ
+    + b2: ℤ
+    (m2, b2) := (m, b)
+    (m2.sgn = 0).if {
+      //m2.print; " -> ".print
+      m2.random_hex (RANDOM.range 4 to 5)
+      b2.free; b2 := ℤ.init(m2.to_hexadecimal) base 16
+      check m2 init b2
+      //m2.println
+    }
+    (m2 , b2)
+  )
+  
+  - toobig_track <-
+  (
+    verbose.if { "toobig_track".println; }
+    (mpz1, big1) := toobig (mpz1, big1)
+    (mpz2, big2) := toobig (mpz2, big2)
+    (mpz3, big3) := toobig (mpz3, big3)
+    (rem_mpz, rem_big) := toobig (rem_mpz, rem_big)
+  )
+  
+  - toobig (m:MPZ, b:ℤ): (MPZ, ℤ) <-
+  ( + m2: MPZ
+    + b2: ℤ
+    + s1, s2:INTEGER
+    (m2, b2) := (m, b)
+    ((s1 := m2.sizeinbase 16) > 1024).if {
+      m2.random_hex random_hexdigits
+      b2.free; b2 := ℤ.init(m2.to_hexadecimal) base 16
+      s2 := m2.sizeinbase 16
+      check m2 init b2
+      verbose.if {
+        "toobig ".print
+        s1.print
+        " reduced ".print
+        s2.print
+        '\n'.print
+      }
+    }
+    (m2 , b2)
+  )
+  
+  - check_append_in_base_10 <-
+  ( + ok:BOOLEAN
+    verbose .if { "append_in_base_10".println; }
+    STRING.tmp2 { (buf1,buf2:STRING_BUFFER)
+      mpz3.append_in buf1 base 10
+      big3.append_in buf2 base 10
+      ok := buf1 == buf2
+      ok.if_false {
+        "buf1=".print; buf1.println
+        "buf2=".print; buf2.println
+        UTILS.crash_with_message "append_in_base_10"
+      }
+    }
+  )
+  
+  - check_shift_right (i:INTEGER) <-
+  [
+    ? {i >= 0}
+  ]
+  (
+    (mpz2.sgn >= 0).if {
+      verbose .if { "shift_right".println; }
+      shift_mem := i
+      mpz3.shift_right(mpz2,i)
+      big3.free; big3 := big2 >> i
+      check_vars "shift_right"
+    } else {
+      check_shift_left i
+    }
+  )
+  
+  - check_shift_left (i:INTEGER) <-
+  [
+    ? {i >= 0}
+  ]
+  (
+    //big2.print_hex; " shift_left ".print; i.println
+    verbose .if { "shift_left".println; }
+    shift_mem := i
+    mpz3.shift_left(mpz2,i)
+    big3.free; big3 := big2 << i
+    check_vars "shift_left"
+  )
+  
+  - check_comparison <-
+  ( 
+    verbose .if { "check_comparison".println; }
+    (big2 < big3).if {
+      ((mpz2.cmp mpz3) >= 0).if {
+        print_vars TRUE
+        UTILS.crash_with_message ("ERROR INF")
+      }
+    }.elseif {big2 > big3} then {
+      ((mpz2.cmp mpz3) <= 0).if {
+        print_vars TRUE
+        UTILS.crash_with_message ("ERROR SUP")
+      }
+    } else  {
+      ((mpz2.cmp mpz3) != 0).if {
+        UTILS.crash_with_message ("ERROR EQ STRICT")
+      }
+    }
+    (big2 <= big3).if {
+      ((mpz2.cmp mpz3) > 0).if {
+        UTILS.crash_with_message ("ERROR INF OR EQ")
+      }
+    }.elseif {big2 >= big3} then {
+      ((mpz2.cmp mpz3) < 0).if {
+        UTILS.crash_with_message ("ERROR SUP OR EQ")
+      }
+    } else  {
+      ((mpz2.cmp mpz3) = 0).if {
+        UTILS.crash_with_message ("ERROR EQ")
+      }
+    }
+    check_vars "check_comparison"
+  )
+  
+  - check_unary_minus <-
+  (
+    verbose .if { "check_unary_minus".println; }
+    big1.free; big1 := - big2
+    mpz1.neg mpz2
+    check_vars "check_unary_minus"
+  )
+  
+  - check_unary_plus <-
+  ( + tmp:ℤ
+    verbose .if { "check_unary_plus".println; }
+    tmp := big3
+    big3 := + big3
+    tmp.free
+    check_vars "check_unary_plus"
+  )
+  
+  - check_unary_tilde <-
+  (
+    verbose .if { "check_unary_tilde".println; }
+    mpz3.com mpz2
+    big3.free; big3 := ~ big2
+    check_vars "check_unary_tilde"
+  )
+  

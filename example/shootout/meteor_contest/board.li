@@ -1,0 +1,328 @@
+Header
+  
+  + name         := BOARD;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+  
+Public
+  
+  + m_cur_soln:SOLN
+  + m_min_soln:SOLN
+  + m_max_soln:SOLN
+  + m_n_soln:UINTEGER_32
+  
+Private
+  
+  - l_edge_mask:UINTEGER_32 :=
+  (
+    (1 <<  0) | (1 <<  5) | (1 << 10) | (1 << 15) |
+    (1 << 20) | (1 << 25) | (1 << 30)
+  )
+  - r_edge_mask:UINTEGER_32 := l_edge_mask << 4
+  - top_row:UINTEGER_32 := (1 << n_col) - 1
+  - row_0_mask:UINTEGER_32 :=
+  (
+    top_row | (top_row << 10) | (top_row << 20) | (top_row << 30)
+  )
+  - row_1_mask:UINTEGER_32 := row_0_mask << 5
+  - board_mask:UINTEGER_32 := (1 << 30) - 1
+   
+Public
+
+  - get_index (x,y:UINTEGER_32) :UINTEGER_32 <- // static
+  ( 
+    y * METEOR_CONTEST.n_col + x
+  )
+  
+  - calc_always_bad <- // static
+  ( + mask,board_vec,flip_mask:UINTEGER_32
+    + has_bad:INTEGER
+    + always:BOOLEAN
+    + isle_info,flipped:ISLAND_INFO
+    
+    1.to (max_island_offset-1) do { i_word:UINTEGER_32
+      isle_info := g_island_info.item i_word
+      flipped   := g_island_info.item (flip_two_rows i_word)
+      
+      mask := 1
+      0.to 31 do { i:UINTEGER_32
+	board_vec := (i << (2 * n_col)) | i_word
+	((isle_info.is_known.item (0,open) & mask) = 0).if {
+	  has_bad := calc_bad_islands (board_vec, 0)
+	  (has_bad != good).if {
+	    always := (has_bad = always_bad)
+            mark_bad (isle_info, mask, even, always)
+
+            flip_mask := get_mask (g_flip.item i)
+            mark_bad (flipped, flip_mask, odd, always)
+	  }
+	}
+	mask := mask << 1
+      }
+      flipped  .is_known.put 0FFFF_FFFFh to (1,open)
+      isle_info.is_known.put 0FFFF_FFFFh to (0,open)
+    }
+  )
+
+  - has_bad_islands_single (board_vec:UINTEGER_32 ,row:INTEGER) :BOOLEAN <- // static
+  ( + to_fill,start_region,last_row,board_msk:UINTEGER_32
+    + is_odd,result:BOOLEAN
+    
+    to_fill := ~ board_vec
+    is_odd  := raw.is_odd
+    (is_odd).if {
+      row := row - 1
+      to_fill := to_fill << n_col; // shift to even aligned
+      to_fill := to_fill | top_row
+    }
+
+    start_region := top_row
+    last_row     := top_row << (5 * n_col)
+    board_msk    := board_mask; // all but the first two bits
+    (row >= 4).if {
+      board_msk := board_msk >> ((row - 4) * n_col)
+    } else {
+      (is_odd || (row = 0)).if {
+	start_region := last_row
+      }
+    }
+
+    to_fill := to_fill & board_msk
+    start_region := start_region & to_fill
+    
+    {to_fill && {! result}}.while_do {
+      (bad_region (to_fill, start_region)).if {
+	result := TRUE
+      }
+      start_region := get_mask (get_first_one to_fill)
+    }
+    result
+  )
+
+  - gen_all_solutions (board_vec:UINTEGER_32, placed_pieces:UINTEGER_32, row:UINTEGER_32) <-
+  ( + i_next_fill,piece_vec:UINTEGER_32
+    + i_piece,piece_mask:INTEGER
+    + allowed:OK_PIECES
+    
+    {(board_vec & top_row) = top_row}.while_do {
+      board_vec := board_vec >> n_col
+      row := row + 1
+    }
+    i_next_fill := s_first_one.item (~board_vec & top_row)
+    allowed := g_ok_pieces.item (row,i_next_fill)
+
+    i_piece := get_first_one (~placed_pieces)
+    piece_mask := get_mask i_piece
+    {i_piece < n_piece_type}.while_do { 
+      // skip if we've already used this piece
+      ((piece_mask & placed_pieces) = 0).if {
+	placed_pieces := placed_pieces | piece_mask
+	0.to (allowed.n_pieces.item i_piece - 1) do { i_orient:INTEGER
+	  piece_vec := allowed.piece_vec.item (i_piece,i_orient)
+	  
+	  // check if piece conflicts with other pieces
+	  ((piece_vec & board_vec) = 0).if {
+
+	    // add the piece to the board
+	    board_vec := board_vec | piece_vec
+
+	    (has_bad_islands (board_vec, row)).if {
+	      board_vec := board_vec ^ piece_vec
+	    } else {
+	      m_cur_soln.push_piece (piece_vec, i_piece, row)
+
+	      // recur or record solution
+	      (placed_pieces != PIECE.all_piece_mask).if {
+		gen_all_solutions (board_vec, placed_pieces, row)
+	      } else {
+		record_solution m_cur_soln
+	      }
+
+	      // remove the piece before continuing with a new piece
+	      board_vec := board_vec ^ piece_vec
+	      m_cur_soln.pop_piece
+	    }
+	  }
+	}
+	
+	placed_pieces := placed_pieces ^ piece_mask
+      }
+      i_piece := i_piece + 1
+      piece_mask := piece_mask << 1
+    }
+  )
+
+  - record_solution s:SOLN <-
+  ( + spun:SOLN
+    
+    m_n_soln := m_n_soln + 2; // add solution and its rotation
+
+    (m_min_soln.is_empty).if {
+      m_min_soln := m_max_soln := s
+    } else {
+      (s.less_than m_min_soln).if {
+	m_min_soln := s
+      } else {
+	(m_max_soln.less_than s).if {
+	  m_max_soln := s
+	}
+      }
+
+      s.spin spun
+      (spun.less_than m_min_soln).if {
+	m_min_soln := spun
+      } else { 
+	(m_max_soln.less_than spun).if {
+	  m_max_soln := spun
+	}
+      }
+    }
+  )
+  
+  - calc_bad_islands (board_vec:UINTEGER_32 , row:INTEGER) :INTEGER <- // static
+  ( + to_fill,bottom:UINTEGER_32
+    + board_msk,start_region:UINTEGER_32
+    + board_mask_shift:INTEGER
+    + filled:BOOLEAN
+    
+    to_fill := ~board_vec
+    ((row & 1) != 0).if {
+      row := row - 1
+      to_fill := to_fill << n_col
+    }
+
+    board_msk := board_mask; // all but the first two bits
+    (row > 4).if {
+      board_mask_shift := (row - 4) * n_col
+      board_msk := board_msk >> board_mask_shift
+    }
+    to_fill := to_fill & board_msk
+
+    // a little pre-work to speed things up
+    bottom := (top_row << (5 * n_col))
+    filled := ((bottom & to_fill) = bottom)
+    {(bottom & to_fill) = bottom}.while_do {
+      to_fill := to_fill ^ bottom
+      bottom := bottom >> n_col
+    }
+
+    (filled || {row < 4}).if {
+      start_region := bottom & to_fill
+    } else {
+      start_region := g_first_region.item (to_fill & top_row)
+      (start_region = 0).if {
+	start_region := (to_fill >> n_col) & top_row
+	start_region := g_first_region.item start_region
+	start_region := start_region << n_col
+      }
+      start_region := start_region | ((start_region << n_col) & to_fill)
+    }
+    
+    result := good
+    {to_fill && {result = good}}.while_do {
+      (bad_region (to_fill, start_region)).if {
+	(to_fill).if {
+	  result := always_bad
+	} else { 
+	  result := bad
+	}
+      }
+      start_region := get_mask (get_first_one to_fill)
+    }
+    result    
+  )
+
+  - bad_region (to_fill:UINTEGER_32, r_new:UINTEGER_32) :(UINTEGER_32,BOOLEAN) <-
+  (
+    // grow empty region, until it doesn't change any more
+    + region,even_region,odd_region:UINTEGER_32
+    
+    {
+      region := r_new
+
+      // simple grow up/down
+      r_new := r_new | (region >> n_col)
+      r_new := r_new | (region << n_col)
+
+      // grow right/left
+      r_new := r_new | ((region & ~l_edge_mask) >> 1)
+      r_new := r_new | ((region & ~r_edge_mask) << 1)
+
+      // tricky growth
+      even_region := region & (row_0_mask & ~l_edge_mask)
+      r_new := r_new | (even_region >> (n_col + 1))
+      r_new := r_new | (even_region << (n_col - 1))
+      odd_region := region & (row_1_mask & ~r_edge_mask)
+      r_new := r_new | (odd_region >> (n_col - 1))
+      r_new := r_new | (odd_region << (n_col + 1))
+
+      // clamp against existing pieces
+      r_new := r_new & to_fill
+    }.do_while {(r_new != to_fill) && {r_new != region}}
+
+    // subtract empty region from board
+    to_fill := to_fill ^ r_new
+    
+    to_fill,
+    (count_ones to_fill % PIECE.n_elem) != 0
+  )
+
+  - has_bad_islands (board_vec:UINTEGER_32, row:INTEGER) :INTEGER <- // static
+  ( + i_info,last_row,mask,is_odd:UINTEGER_32
+    + result,is_closed,has_bad:INTEGER
+    + info:ISLAND_INFO
+    + always_bad,is_known_vector,bad_isle_vector:UINTEGER_32
+    
+    
+    // skip over any filled rows
+    {(board_vec & top_row) = top_row}.while_do {
+      board_vec := board_vec >> n_col
+      row := row + 1
+    }
+
+    i_info := board_vec & ((1 << 2 * n_col) - 1)
+    info := g_island_info.item i_info
+
+    last_row := (board_vec >> (2 * n_col)) & top_row
+    mask := get_mask last_row
+    is_odd := row & 1
+    always_bad := info.always_bad.item is_odd
+
+    ((always_bad & mask) != 0).if {
+      result := bad
+    } else {
+
+      (board_vec & (top_row << n_col * 3)).if {
+	result := calc_bad_islands (board_vec, row)
+      } else {
+
+	is_closed := (row > 6); // because we track 3 rows
+	is_known_vector := info.is_known.item (is_odd,is_closed)
+	bad_isle_vector := info.has_bad.item (is_odd,is_closed)
+
+	((is_known_vector & mask) != 0).if {
+	  result := ((bad_isle_vector & mask) != 0)
+	} else {
+
+	  (board_vec = 0).if {
+	    result := good
+	  } else {
+	    has_bad := calc_bad_islands (board_vec, row)
+
+	    is_known_vector := is_known_vector | mask
+	    (has_bad).if {
+	      bad_isle_vector := bad_isle_vector | mask
+	    }
+	    result := has_bad
+	  }
+	}
+      }
+    }
+    result
+  )
+

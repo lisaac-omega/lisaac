@@ -1,0 +1,241 @@
+Header
+  + name    := FIXED_REAL;
+
+  /*Real number of fixed decimal part.*/
+
+Insert
+  - parent_real:REAL := REAL
+
+SELF
+  - shift_bits:INTEGER <-
+  (
+    abstract
+    0
+  )
+
+Public
+  - floor:INTEGER <-
+  (
+    abstract
+  )
+  
+  - round:INTEGER <-
+  // Rounded integral value.
+  (
+    abstract
+    0
+  )
+
+  // Conversions with tests
+
+  // - To unsigned integers
+
+  - to_uinteger_8:UINTEGER_8     <-
+  (
+    floor.to_raw_uinteger_8
+  )
+
+  - to_uinteger_16:UINTEGER_16   <-
+  (
+    floor.to_raw_uinteger_16
+  )
+
+  - to_uinteger_32:UINTEGER_32   <-
+  (
+    floor.to_raw_uinteger_32
+  )
+
+  - to_uinteger_64:UINTEGER_64   <-
+  (
+    floor.to_raw_uinteger_64
+  )
+
+  // - To signed integers
+
+  - to_integer_8:INTEGER_8   <-
+  (
+    floor.to_raw_integer_8
+  )
+
+  - to_integer_16:INTEGER_16 <-
+  (
+    floor.to_raw_integer_16
+  )
+
+  - to_integer_32:INTEGER_32 <-
+  (
+    floor.to_raw_integer_32
+  )
+
+  - to_integer_64:INTEGER_64 <-
+  (
+    floor.to_raw_integer_64
+  )
+
+  - to_integer:INTEGER <-
+  (
+    floor
+  )
+
+  // - To unsigned fixed reals
+
+  - to_ureal_16_16:UREAL_16_16 <-
+  ( + result:UINTEGER_32
+    (shift_bits < 16).if {
+      result := to_raw_uinteger_32 << (16 - shift_bits)
+    } else {
+      result := to_raw_uinteger_32 >> (shift_bits - 16)
+    }
+    result.to_raw_ureal_16_16
+  )
+
+  - to_ureal_24_8:UREAL_24_8   <-
+  ( + result:UINTEGER_32
+    (shift_bits < 8).if {
+      result := to_raw_uinteger_32 << (8 - shift_bits)
+    } else {
+      result := to_raw_uinteger_32 >> (shift_bits - 8)
+    }
+    result.to_raw_ureal_24_8
+  )
+
+  - to_ureal_26_6:UREAL_26_6   <-
+  ( + result:UINTEGER_32
+    (shift_bits < 6).if {
+      result := to_raw_uinteger_32 << (6 - shift_bits)
+    } else {
+      result := to_raw_uinteger_32 >> (shift_bits - 6)
+    }
+    result.to_raw_ureal_26_6
+  )
+
+  // - To signed fixed reals
+
+  - to_real_16_16:REAL_16_16 <-
+  ( + result:UINTEGER_32
+    (shift_bits < 16).if {
+      result := to_raw_integer_32 << (16 - shift_bits)
+    } else {
+      result := to_raw_integer_32 >> (shift_bits - 16)
+    }
+    result.to_raw_real_16_16
+  )
+
+  - to_real_24_8:REAL_24_8   <-
+  ( + result:UINTEGER_32
+    (shift_bits < 8).if {
+      result := to_raw_integer_32 << (8 - shift_bits)
+    } else {
+      result := to_raw_integer_32 >> (shift_bits - 8)
+    }
+    result.to_raw_real_24_8
+  )
+
+  - to_real_26_6:REAL_26_6 <-
+  ( + result:UINTEGER_32
+    (shift_bits < 6).if {
+      result := to_raw_integer_32 << (6 - shift_bits)
+    } else {
+      result := to_raw_integer_32 >> (shift_bits - 6)
+    }
+    result.to_raw_ureal_26_6
+  )
+
+  // - To float reals
+
+  - to_real_32:REAL_32 <-
+  (
+    to_raw_real_32 / (1 << shift_bits)
+  )
+
+  - to_real_64:REAL_64 <-
+  (
+    to_raw_real_64 / (1 << shift_bits)
+  )
+
+  - to_real_80:REAL_80 <-
+  (
+    to_raw_real_80 / (1 << shift_bits)
+  )
+
+  - atan:SELF <- not_yet_implemented
+
+  - sqrt:SELF <-
+  // The Heron approximation Algorithm.
+  [ -? {Self > 0}; ]
+  ( + result:SELF
+    result := Self
+    0.to 7 do { j:INTEGER
+      result := (result + Self / result) /# 2
+    }
+    result
+  )
+
+  - log:SELF  <- not_yet_implemented
+
+  - sin:SELF  <- 
+  [
+    ? {in_range 0 to (pi *# 2)}
+  ]
+  ( + a:SELF
+    a := pi /# 2 - Self
+    (a < 0).if {
+      a := a + pi *# 2
+    }
+    a.cos
+  )
+
+  - cos:SELF  <- 
+  // Taylor progression.
+  [
+    ? {in_range 0 to (pi *# 2)}
+  ]
+  ( + result,x2,xx:SELF
+    
+    (Self <= pi /# 2).if { 
+      (Self != pi /# 2).if {        
+        result := 1
+        x2 := Self * Self
+        result := result - x2 /# 2
+        xx := x2 * x2
+        result := result + xx /# 24
+        xx := xx * x2
+        result := result - xx /# 720
+        xx := xx * x2
+        result := result + xx /# 40_320
+        xx := xx * x2
+        result := result - xx /# 3_628_800
+      }
+    }.elseif {Self <= pi} then {
+      result := - (pi - Self).cos
+    } else {
+      result := (pi *# 2 - Self).cos
+    }
+    result
+  )
+
+  - pow exp:SELF :SELF <- not_yet_implemented
+
+  // Comparaison.
+
+  - Self:SELF '~=' other:SELF :BOOLEAN <-
+  (
+    Self = other
+  )
+
+  - is_nan:BOOLEAN <- FALSE
+
+  - is_infinite:BOOLEAN <- FALSE
+
+  // Print.
+
+  - append_in b:STRING_BUFFER decimal n:INTEGER <-
+  (
+    not_yet_implemented
+  )
+
+  - scientific_append_in b:STRING_BUFFER <-
+  (
+    not_yet_implemented
+  )
+

@@ -1,0 +1,6 @@
+lisaac mandelbrot -q -O
+echo Lisaac: 
+time ./mandelbrot 5 > out_li.txt
+echo C:
+time ./mandelbrot_c 5 > out_c.txt
+diff out_li.txt out_c.txt

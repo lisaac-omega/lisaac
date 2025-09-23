@@ -1,0 +1,13 @@
+Header
+  
+  + name := PEN_CALL;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Public
+      
+  - free <- abstract
+  
+  - run <- abstract

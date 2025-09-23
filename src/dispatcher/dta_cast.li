@@ -1,0 +1,87 @@
+Header
+
+  + name        := DTA_CAST;
+
+  /*Cast base*/
+
+Inherit
+
+  - parent_dta:DTA := DTA
+
+Public
+
+  + position:POSITION
+
+  + result_expr:EXPR
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION type t:TYPE_FULL :SELF <-
+  [ -? {p != 0}; ]
+  ( + result:SELF
+
+    result := clone
+    result.make p type t
+    result
+  )
+
+  - make p:POSITION type t:TYPE_FULL <-
+  (
+    position := p
+    result_expr := t.get_temporary_expr p
+    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
+      (profil_current = NULL).if {
+        context := context_main
+      } else {
+        context := profil_current.context
+      }
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA_CAST"
+  )
+
+  //
+  // Service
+  //
+
+NODE_TYPE, DTA
+
+  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
+  ( + mycast:LOCAL
+    + rd:READ
+    + new_value:EXPR
+    + result:LIST
+
+    result := LIST.create (e.position)
+    rd   ?= result_expr
+    mycast ?= rd.variable
+    (t != TYPE_NULL).if {
+      (mycast.type.is_strict).if {
+	(mycast.type.raw = t).if {
+	  new_value := CAST.create (mycast.type) value (e.my_copy)
+	}
+      }.elseif {t.is_sub_type (mycast.type.raw)} then {
+	new_value := CAST.create (t.default) value (e.my_copy)
+      }
+    }
+    (new_value = NULL).if {
+      new_value := PROTOTYPE_CST.create (e.position) type (TYPE_NULL.default)
+    }
+    result.add_last (mycast.write (e.position) value new_value)
+    result.add_last (PROTOTYPE_CST.create (e.position) type (TYPE_VOID.default)); // BSBS : Alias.
+    result
+  )
+
+  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  (
+    TRUE
+  )

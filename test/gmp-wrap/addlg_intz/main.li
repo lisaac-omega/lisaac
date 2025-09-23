@@ -1,0 +1,44 @@
+Header
+  
+  + name := MAIN;
+  
+Public
+  - init:STRING_BUFFER := STRING_BUFFER.create 2048
+  
+  - main <-
+  ( + a1,b1,c1:MPZ
+    + a2,b2,c2:ℤ
+    a1.init
+  //GMP_TEST.inithex2power 23 bits init start 'A'
+    GMP_TEST.init init hex_digits 6 first 'A'
+    a1.set init base 16
+    a2 := ℤ.init init base 16
+    TEST.check (a1.equal_intz3 a2)
+    b1.init
+  //GMP_TEST.inithex2power 4 bits init start '7'
+    GMP_TEST.init init hex_digits 1 first '7'
+    b1.set init base 16
+    b2 := ℤ.init init base 16
+    TEST.check (b1.equal_intz3 b2)
+    
+    c1.add (a1,b1)
+    c2 := a2 + b2
+    TEST.check (c1.equal_intz3 c2)
+    
+    c1.sub (a1,b1)
+    c2 := a2 - b2
+    TEST.check (c1.equal_intz3 c2)
+        
+    c1.div (a1,b1)
+    c2 := a2 / b2
+    //c2.print_hex
+    TEST.check (c1.equal_intz3 c2)
+    
+    c1.mul (a1,b1)
+    c2 := a2 * b2
+    TEST.check (c1.equal_intz3 c2)
+        
+    a1.clear
+    b1.clear
+    c1.clear
+  )

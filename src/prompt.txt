@@ -1,0 +1,49 @@
+L'objectif est de moderniser le site www.lisaac.org.
+Donc, je te demande de refaire entièrement le site dans un style plus moderne
+en deux Langues que l'on pourra facilement switcher : Français et anglais.
+Il ne sera composé que de deux pages.
+Je vais te décrire la première page de haut en bas.
+Le logo Lisaac en haut avec comme slogan : The power of simplicity.
+Une image bannière qui montre du code.
+Une description du langage, tu peux t'inspirer de https://lisaac.org/about.html
+en ajoutant que c'est le premier langage à prototype compilé et que c'est
+le premier langage symbolique graphique en 2D.
+Pour cette nouvelle version il y a aussi une gestion native de l'UTF8 et
+d'un IDE intégré entièrement écrit en Lisaac.
+Aussi, il supporte les plateformes suivantes:
+Linux, MacOS, Windows, Android, Wasm (WebApp) et Arduino (Robotique avancée).
+
+Ensuite, on passe au téléchargement du produit.
+Un lien vers un github (que je n'ai pas encore fait).
+Puis, un lien de téléchargement pour le lisaac.zip (version 0.5 Omega)
+Il y aura des directives et des commandes à copier/coller dans un terminal.
+
+Pour Linux, les commandes sont :
+  sudo apt-get install libglu1-mesa-dev
+  sudo apt-get install libglew-dev
+  
+Pour MacOS :
+  brew install glfw pkg-config
+  
+Pour Windows :
+  Installer l'application www.msys2.org
+  Prendre comme terminal : MSYS2 MINGW64
+  Ensuite dans le terminal :
+  pacman -S mingw-w64-x86_64-glfw
+
+Puis, pour tous les OSes:
+  unzip lisaac.zip
+  cd lisaac
+  ./install
+
+On termine avec une bannière en fin de page avec les partenaires:
+Avec les logos suivants:
+- Université de Lorraine (https://upload.wikimedia.org/wikipedia/commons/5/5b/Logo_Universit%C3%A9_de_Lorraine.svg)
+- Univeristé de Strasbourg (https://upload.wikimedia.org/wikipedia/commons/f/f9/Universit%C3%A9_de_Strasbourg.svg)
+- Centre du Loria (https://upload.wikimedia.org/wikipedia/fr/6/6e/Logo_loria_abrege_couleur.png)
+- Libot (https://www.libot.fr/)
+
+Pour la seconde page, ce sera l'ensemble des publications.
+Tu pompes cette pages là : https://lisaac.org/papers.html
+
+Tu me fais un zip de ton travail et on en discute après...

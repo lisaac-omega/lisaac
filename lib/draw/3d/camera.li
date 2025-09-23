@@ -1,0 +1,183 @@
+Header
+  + name := CAMERA;
+  
+Inherit  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  /*
+  Supposons que u = [1, 0, 0] et v = [0, 1, 0].
+
+    Normalisez les vecteurs :
+    ||u|| = sqrt(1^2 + 0^2 + 0^2) = 1
+    ||v|| = sqrt(0^2 + 1^2 + 0^2) = 1
+    u = [1, 0, 0]
+    v = [0, 1, 0]
+
+    Calculez l'axe de rotation n :
+    n = u × v / ||u × v||            produit vectoriel
+    n = [0, 0, 1]
+
+    Calculez l'angle de rotation r :
+    r = acos(u * v / (||u|| * ||v||))
+    r = acos(0 / (1 * 1)) = 90°
+
+    Construisez la matrice de rotation de Rodrigues R :
+    (
+       R = I * cos(r) + n * n^T * (1 - cos(r)) + [n]_x * sin(r)
+       [n]_x = [[0, -n3, n2], [n3, 0, -n1], [-n2, n1, 0]]
+    )
+    cos(r) = cos(90°) = 0
+    sin(r) = sin(90°) = 1
+    n * n^T = [0, 0, 1] * [0, 0, 1]^T = [0, 0, 1] * [0, 0, 1] = [0, 0, 1]
+    [n]_x = [[0, -n3, n2], [n3, 0, -n1], [-n2, n1, 0]] = [[0, 0, 0], [0, 0, -1], [0, 1, 0]]
+    R = I * cos(r) + n * n^T * (1 - cos(r)) + [n]_x * sin(r)
+    = [[1, 0, 0], [0, 1, 0], [0, 0, 1]] * 0 + [0, 0, 1] * [0, 0, 1] * (1 - 0) + [[0, 0, 0], [0, 0, -1], [0, 1, 0]] * 1
+    = [[0, 0, 0], [0, 0, -1], [0, 1, 0]]
+
+    Multipliez le vecteur u par la matrice de rotation R :
+    u_rotated = R * u
+    u_rotated = [[0, 0, 0], [0, 0, -1], [0, 1, 0]] * [1, 0, 0]
+    u_rotated = [0, 0, 1]
+  */  
+  
+  - sin_45:REAL_32 := 2.0.sqrt / 2
+  
+  + alpha:REAL_32; // angle 
+  + ray:REAL_32
+  + zoom:REAL_32
+  
+  + center:VEC3
+  + position:VEC3
+  + dir:VEC3
+  + right:VEC3
+  + up:VEC3
+  
+  - up_ref:VEC3    := VEC3.create_xyz (0.0, 1.0, 0.0)
+  - right_ref:VEC3 := VEC3.create_xyz (0.0, 0.0, 1.0)
+  
+  + view:MAT4X4
+  + projection:MAT4X4
+  
+  + light:VEC3
+  + xo:INTEGER
+  + yo:INTEGER
+  + width:INTEGER
+  + height:INTEGER
+
+  - create r:REAL_32 zoom zo:REAL_32 :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make r zoom zo
+    result
+  )
+  
+  - make r:REAL_32 zoom zo:REAL_32 <-
+  (
+    center   := VEC3.create_xyz (0.0, 0.0, 0.0)
+    position := VEC3.create_xyz (0.0, 0.0, r)
+    dir      := VEC3.create_xyz (0.0, 0.0, 1.0)
+    up       := VEC3.create_xyz (0.0, 1.0, 0.0)
+    right    := VEC3.create_xyz (1.0, 0.0, 0.0)
+    light    := VEC3.create_xyz (0.0, 0.0, r)
+    projection := MAT4X4.create
+    view := MAT4X4.create
+    ray := r
+    set_zoom zo
+  )
+  
+  - set_position (dx,dy:REAL_32) alpha a:REAL_32 ray r:REAL_32 <-
+  ( + d_ri,d_up:VEC3
+    (alpha,ray) := (alpha + a, r)
+    d_ri := right *# (-dx/100)
+    d_up := up *# (dy/100)
+    position.add d_ri
+    position.add d_up
+    position.normalize
+    position.mul_scale r
+    d_ri.free; d_up.free
+    /*
+    (! position.y.in_range (-sin_45*r) to (+sin_45*r)).if {
+      position.make (Old position.x,Old position.y,Old position.z)
+    };*/
+  )
+  
+  - set_zoom zo:REAL_32 <- ( zoom := zo; )
+  
+  - update (wx,wy:INTEGER) size (w,h:INTEGER) <-
+  ( + aspect,rl:REAL_32
+        
+    (xo,yo) := (wx,wy)
+    (width,height) := (w,h)
+    aspect := w.to_real_32 / h
+/*    
+    glm::vec3 center; // Centre de la sphère Arcball
+float radius; // Rayon de la sphère Arcball
+
+// Variables pour la rotation de la caméra
+glm::vec3 start_vec, end_vec; // Vecteurs de départ et d'arrivée sur la sphère Arcball
+glm::vec3 rotation_axis; // Axe de rotation
+float rotation_angle; // Angle de rotation
+
+...
+
+// Calculation of the rotation axis and angle
+rotation_axis = glm::normalize(glm::cross(start_vec, end_vec)); // Produit vectoriel
+rotation_angle = acos(glm::dot(start_vec, end_vec)); // Produit scalaire
+
+// Calculation of the rotation matrix
+glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.0f), rotation_angle, rotation_axis)
+
+// Application of the rotation to the view matrix
+glm::mat4 view_matrix = ...; // initial view matrix
+view_matrix = rotation_matrix * view_matrix
+*/    
+    
+    // View
+    dir.make (- position.x, - position.y, - position.z)
+    dir.normalize
+        
+    right.free; right := dir ** up_ref; rl := right.length;  right.normalize
+    up.free;    up := right ** dir
+    
+    up.normalize
+    view.c0.make ( right.x, up.x, -dir.x, 0.0)
+    view.c1.make ( right.y, up.y, -dir.y, 0.0)
+    view.c2.make ( right.z, up.z, -dir.z, 0.0)
+    view.c3.make (     0.0,  0.0,    0.0, 1.0)
+    view.translate_in_place (-position.x, -position.y, -position.z)
+    //view.look_at (position,center,up)
+    
+    // Perspective
+    projection.perspective (
+      zoom.to_radian, // Zoom
+      aspect, 
+      0.1, 100.0 // distance min, max
+    )
+       
+    // Light
+    /*a := (alpha+20).to_radian
+    b := (beta-20).to_radian
+    r := ray * a.cos
+    x := r * b.cos
+    y := ray * a.sin
+    z := r * b.sin;*/
+    light.make (position.x, position.y, position.z)
+  )
+  
+  - on shader:SHADER_3D <-
+  (     
+    shader.set "viewPos" xyz (position.x,position.y,position.z)
+    shader.set "projection" mat4 projection
+    shader.set "view" mat4 view
+    shader.set "lightColor" xyz (1.0, 1.0, 1.0)
+    shader.set "lightPos" xyz (light.x,light.y,light.z)
+    /*
+    "-----Projection:\n".print
+    projection.print
+    "\n--------View:\n".print
+    view.print
+    "\n-------------\n".print
+    */
+  )
+  

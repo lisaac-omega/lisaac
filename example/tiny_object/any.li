@@ -1,0 +1,160 @@
+Header
+
+  + name := ANY;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - input_name:STRING_ALIAS
+
+  - source:STRING_BUFFER
+
+  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 250
+
+  //
+  // Program
+  //
+
+  - program:HMAP CLASS KEY STRING_ALIAS :=
+  HMAP CLASS KEY STRING_ALIAS.create
+
+  - class_master:CLASS
+
+  //
+  // Error manager.
+  //
+
+  - syntax_error p:INTEGER message msg:STRING <-
+  (
+    error p style "--SYNTAX---------\n" message msg
+    exit exit_failure_code
+  )
+
+  - semantic_error p:INTEGER message msg:STRING <-
+  (
+    error p style "--SEMANTIC-------\n" message msg
+    exit exit_failure_code
+  )
+
+  - warning_error p:INTEGER message msg:STRING <-
+  (
+    error p style "--WARNING--------\n" message msg
+  )
+
+  - error p:INTEGER style s:STRING_ALIAS message msg:STRING <-
+  ( + l,c,pos:INTEGER
+    + char:CHARACTER
+    - msg_error:STRING_BUFFER
+
+    (msg_error = NULL).if {
+      msg_error := STRING_BUFFER.create 256
+    }
+
+    (l,c) := current_position p
+    msg_error.copy s
+    msg_error.append msg
+    msg_error.append "\nLine "
+    l.append_in msg_error
+    msg_error.append " column "
+    c.append_in msg_error
+    msg_error.add_last '\n'
+    // Search begin line :
+    pos := source.lower
+    1.to (l-1) do { line:INTEGER
+      {source.item pos = '\n'}.until_do {
+	pos := pos + 1
+      }
+      pos := pos + 1
+    }
+    // copy line :
+    string_tmp.clear
+    {(pos > source.upper) || {source.item pos='\n'}}.until_do {
+      char := source.item pos
+      msg_error.add_last char
+      (c > 1).if {
+	(char = '\t').if {
+	  string_tmp.add_last '\t'
+	} else {
+	  string_tmp.add_last ' '
+	}
+      }
+      c   := c - 1
+      pos := pos + 1
+    }
+    msg_error.add_last '\n'
+    msg_error.append string_tmp
+    msg_error.append "^\n"
+    //
+    STDERR.put_string msg_error
+  )
+
+  //
+  // String aliaser.
+  //
+
+  - get_alias str:STRING :STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    + tmp:STRING
+    ? {str != NULL}
+
+    tmp := aliaser_string.reference_at str
+    (tmp = NULL).if {
+      result := str.to_string_alias
+      aliaser_string.fast_add result
+    } else {
+      result ?= tmp
+    }
+    ? {result == str}
+    result
+  )
+
+  - keyword_inherit:STRING_ALIAS := "Inherit"
+  - keyword_print:STRING_ALIAS   := "print"
+  - keyword_new:STRING_ALIAS     := "New"
+  - keyword_master:STRING_ALIAS  := "master"
+  - keyword_this:STRING_ALIAS    := "This"
+
+  //
+  // Flags.
+  //
+
+  // -- VFT --
+  - is_vft:BOOLEAN := TRUE
+  // -- VFT --
+
+Private
+
+  //
+  // Aliaser string.
+  //
+
+  - aliaser_string:HSET STRING :=
+  ( + result:HSET STRING
+
+    result := HSET STRING.create
+    result.fast_add keyword_inherit
+    result.fast_add keyword_print
+    result.fast_add keyword_new
+    result.fast_add keyword_master
+    result.fast_add keyword_this
+    result
+  )
+
+  - current_position pos:INTEGER :(INTEGER,INTEGER) <-
+  ( + p,line,col:INTEGER
+
+    p := source.lower
+    {p = pos}.until_do {
+      (source.item p = '\n').if {
+	col  := 0
+	line := line + 1
+      } else {
+	col := col + 1
+      }
+      p := p + 1
+    }
+    line+1,col+1
+  )

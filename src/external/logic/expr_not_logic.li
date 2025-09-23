@@ -1,0 +1,74 @@
+Header
+
+  + name        := EXPR_NOT_LOGIC;
+
+  /*Unary not logical expression.*/
+
+Inherit
+
+  + parent_expr_unary_logic:Expanded EXPR_UNARY_LOGIC
+
+Public
+
+  - symbol:CHARACTER <- '!'
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator:EXPR <-
+  //-- ! (E1 == E2) -> E1 != E2   (see INTEGER)
+  //-- ! (E1 >= E2) -> E1 <  E2   (see INTEGER)
+  //-- ! (E1 >  E2) -> E1 <= E2   (see INTEGER)
+  //-- ! ! E -> E
+  ( + eq:EXPR_EQUAL
+    + sup_eq:EXPR_SUP_EQ
+    + sup:EXPR_SUP
+    + not:EXPR_NOT_LOGIC
+    + result:EXPR
+
+    not ?= right
+    (not != NULL).if {
+      result := not.right
+    }.elseif {
+      eq ?= right
+      eq != NULL
+    } then {
+      result := EXPR_NOT_EQUAL.create position with (eq.left) and (eq.right)
+    }.elseif {
+      sup_eq ?= right
+      sup_eq != NULL
+    } then {
+      result := EXPR_INF.create position with (sup_eq.left) and (sup_eq.right)
+    }.elseif {
+      sup ?= right
+      sup != NULL
+    } then {
+      result := EXPR_INF_EQ.create position with (sup.left) and (sup.right)
+    }
+    result
+  )
+
+  - exec_right right_cst:TYPE :EXPR <-
+  // ! TRUE  -> FALSE
+  // ! FALSE -> TRUE
+  ( + pro:PROTOTYPE_CST
+
+    pro ?= right
+    (right_cst = type_true).if {
+      pro.make (pro.position) type (type_false.default)
+    } else {
+      pro.make (pro.position) type (type_true.default)
+    }
+    right
+  )
+
+
+
+
+
+
+
+
+
+

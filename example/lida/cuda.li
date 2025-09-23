@@ -1,0 +1,696 @@
+Header
+  + name := CUDA;
+  
+  - external := `
+#include <cuda_runtime.h>
+#include <cudnn.h>
+#include <nvtx3/nvToolsExt.h>
+#include <cublas_v2.h>
+
+#define BLOCK_DIM_1D    512
+
+__global__ void init_one_vec(float* d_one_vec, size_t length)
+{ int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= length) return;
+  d_one_vec[i] = 1.f;
+}
+  
+__device__ float clip(float prediction, float epsilon=1e-12)
+{ return fmin(fmax(prediction, epsilon), 1.f - epsilon); }
+
+__global__ void softmax_loss_kernel(float *reduced_loss, float *predict, float *target, float *workspace, int batch_size, int num_outputs)
+{ int batch_idx = blockDim.x * blockIdx.x + threadIdx.x;
+  extern __shared__ float s_data[];
+  float loss = 0.f;
+
+  // each thread calculate entropy for each data and accumulate to shared memory
+  for (int c = 0; c < num_outputs; c++)
+    loss += target[batch_idx * num_outputs + c] * logf(predict[batch_idx * num_outputs + c]);
+  workspace[batch_idx] = -loss;
+
+  // then, we do reduction the result to calculate loss using 1 thread block
+  if (blockIdx.x > 0) return;
+
+  // cumulate workspace data
+  s_data[threadIdx.x] = 0.f;
+  for (int i = 0; i < batch_size; i += blockDim.x) {
+    s_data[threadIdx.x] += workspace[threadIdx.x + i];
+  }
+  __syncthreads();
+
+  // reduction
+  for (unsigned int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x + stride < batch_size) s_data[threadIdx.x] += s_data[threadIdx.x + stride];
+    __syncthreads();
+  }
+
+  if (threadIdx.x == 0) { reduced_loss[blockIdx.x] = s_data[0]; }
+}
+`;
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+Private
+  
+  - check_cudnn_errors err:INTEGER <-                                                             
+  (
+    (err != `CUDNN_STATUS_SUCCESS`:INTEGER).if {                                                                                            
+      "checkCudnnErrors() API error = ".print
+      err.print; " \"".print
+      //`printf(cudnnGetErrorString(@err))`
+      '\n'.print
+      crash
+    }
+  )
+  
+  - check_cublas_errors err:INTEGER <-                                                                        
+  (
+    (err != `CUBLAS_STATUS_SUCCESS`:INTEGER).if {                                                                                             
+      "checkCublasErrors() API error = ".print
+      err.print
+      //_cublasGetErrorEnum(err)
+      '\n'.print
+      crash
+    }
+  )
+  
+  - check_cuda_errors err:INTEGER <-                                                                        
+  (
+    (err != `cudaSuccess`:INTEGER).if {                                                                                           
+      "checkCudaErrors() API error = ".print
+      err.print
+      // cudaGetErrorString(err)
+      '\n'.print
+      crash
+    }
+  )
+  
+  + blas:POINTER
+  + dnn:POINTER
+  
+Public
+  
+  - block_dim_1d:INTEGER <- `BLOCK_DIM_1D`:INTEGER
+  
+  - new:SELF <- clone
+  
+  - init:SELF <-
+  (
+    `{ cublasHandle_t blas; cudnnHandle_t dnn`
+    `cublasCreate(&blas)`
+    check_cuda_errors `cudaGetLastError()`:INTEGER
+    check_cudnn_errors `cudnnCreate(&dnn)`:INTEGER
+    blas := `blas`:POINTER
+    dnn  := `dnn`:POINTER
+    `}`
+    Self
+  )
+  
+  - destroy <-
+  ( + b,d:POINTER
+    (b,d) := (blas,dnn)
+    `cublasDestroy(@b)`
+    check_cudnn_errors `cudnnDestroy(@d)`:INTEGER
+  )
+
+  //
+  // No Self depending
+  //
+  
+  // Tensor
+  
+  - create_tensor_descriptor:POINTER <-
+  ( + r:POINTER
+    `{cudnnTensorDescriptor_t ptr`
+    `cudnnCreateTensorDescriptor(&ptr)`
+    r := `ptr`:POINTER
+    `}`
+    r
+  )
+  
+  - destroy_tensor_descriptor (desc:POINTER) <-
+  ( `cudnnDestroyTensorDescriptor(static_cast<cudnnTensorDescriptor_t>@desc)`; )
+  
+  - set_tensor4d_descriptor (desc:POINTER) param (n, c, h, w:INTEGER) <-
+  (
+    `cudnnSetTensor4dDescriptor(static_cast<cudnnTensorDescriptor_t>@desc,CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT,@n, @c, @h, @w)`
+  )
+  
+  // Filter
+  
+  - create_filter_descriptor:POINTER <-
+  ( + r:POINTER
+    `{cudnnFilterDescriptor_t ptr`
+    `cudnnCreateFilterDescriptor(&ptr)`
+    r := `ptr`:POINTER
+    `}`
+    r    
+  )
+  
+  - destroy_filter_descriptor (desc:POINTER) <-
+  ( `cudnnDestroyFilterDescriptor(static_cast<cudnnFilterDescriptor_t>@desc)`; )
+  
+  - set_filter4d_descriptor (desc:POINTER) nc (n,c:INTEGER) hw (h,w:INTEGER) <-
+  ( check_cudnn_errors `cudnnSetFilter4dDescriptor(static_cast<cudnnFilterDescriptor_t>@desc,CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, @n,@c, @h,@w)`:INTEGER; )
+
+  // Convolution
+  
+  - create_convolution_descriptor:POINTER <-
+  ( + r:POINTER
+    `{cudnnConvolutionDescriptor_t ptr`
+    `cudnnCreateConvolutionDescriptor(&ptr)`
+    r := `ptr`:POINTER
+    `}`
+    r    
+  )
+  
+  - destroy_convolution_descriptor (desc:POINTER) <-
+  ( `cudnnDestroyConvolutionDescriptor(static_cast<cudnnConvolutionDescriptor_t>@desc)`; )
+  
+  - set_convolution2d_descriptor (desc:POINTER) padding p:INTEGER stride s:INTEGER dilation d:INTEGER <-
+  ( check_cudnn_errors `cudnnSetConvolution2dDescriptor(static_cast<cudnnConvolutionDescriptor_t>@desc,@p,@p, @s,@s, @d,@d,CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT)`:INTEGER; )
+  
+  - get_convolution2d_forward_output_dim (conv_desc,in_desc,filter_desc:POINTER) in out:NATIVE_ARRAY INTEGER <-
+  ( `cudnnGetConvolution2dForwardOutputDim(
+    static_cast<cudnnConvolutionDescriptor_t>@conv_desc,
+    static_cast<cudnnTensorDescriptor_t>@in_desc,
+    static_cast<cudnnFilterDescriptor_t>@filter_desc,(int *)&@out[0],(int *)&@out[1],(int *)&@out[2],(int *)&@out[3])`;
+  )
+  
+  // Pooling
+  
+  - create_pooling_descriptor:POINTER <-
+  ( + r:POINTER
+    `{cudnnPoolingDescriptor_t ptr`
+    `cudnnCreatePoolingDescriptor(&ptr)`
+    r := `ptr`:POINTER
+    `}`
+    r    
+  )
+  
+  - destroy_pooling_descriptor (desc:POINTER) <-
+  ( `cudnnDestroyPoolingDescriptor(@desc)`; )
+  
+  - get_pooling2d_forward_output_dim (pool_desc,in_desc:POINTER) in out:NATIVE_ARRAY INTEGER <-
+  ( `cudnnGetPooling2dForwardOutputDim(static_cast<cudnnPoolingDescriptor_t>@pool_desc, static_cast<cudnnTensorDescriptor_t>@in_desc,(int *)&@out[0], (int *)&@out[1], (int *)&@out[2], (int *)&@out[3])`; )
+
+
+  - set_pooling2d_descriptor desc:POINTER mode m:INTEGER kernel k:INTEGER padding p:INTEGER stride s:INTEGER <-
+  ( `cudnnSetPooling2dDescriptor(
+    static_cast<cudnnPoolingDescriptor_t>@desc,
+    static_cast<cudnnPoolingMode_t>@m, CUDNN_PROPAGATE_NAN,@k,@k, @p, @p, @s,@s)`; );
+  
+  // Activation
+  
+  - create_activation_descriptor:POINTER <-
+  ( + r:POINTER
+    `{cudnnActivationDescriptor_t ptr`
+    `cudnnCreateActivationDescriptor(&ptr)`
+    r := `ptr`:POINTER
+    `}`
+    r    
+  )
+  
+  - destroy_activation_descriptor (desc:POINTER) <-
+  (
+    `cudnnDestroyActivationDescriptor(@desc)`
+  )
+  
+  - set_activation_descriptor desc:POINTER mode m:INTEGER coef c:REAL_32 <-
+  (
+    `cudnnSetActivationDescriptor(
+    static_cast<cudnnActivationDescriptor_t>@desc,
+    static_cast<cudnnActivationMode_t>@m, CUDNN_PROPAGATE_NAN, @c)`;
+  )
+  
+  // Nvtx
+  
+  - nvtx_range_push_a str:STRING idx i:INTEGER <-
+  ( + s:STRING_ALIAS
+    + p:NATIVE_ARRAY CHARACTER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy str
+      i.append_in tmp
+      s := str.to_string_alias
+    }
+    p := s.to_external
+    `nvtxRangePushA(@p)`
+  )
+  
+  - nvtx_range_pop <- `nvtxRangePop()`
+  
+  // Memory
+  
+  - malloc s:INTEGER :NATIVE_ARRAY REAL_32 <-
+  ( + r:NATIVE_ARRAY REAL_32
+    `{void* ptr`
+    `cudaMalloc((void**)&ptr,@s)`
+    r := `ptr`:NATIVE_ARRAY REAL_32
+    `}`
+    r    
+  )
+  
+  - free buf:NATIVE_ARRAY REAL_32 <-
+  ( `cudaFree(@buf)`; )
+  
+  - memcpy_dev d:NATIVE_ARRAY REAL_32 to_host h:NATIVE_ARRAY REAL_32 size s:INTEGER <-
+  ( `cudaMemcpy(@h, @d, @s, cudaMemcpyDeviceToHost)`; )
+  
+  - memcpy_host h:NATIVE_ARRAY REAL_32 to_dev d:NATIVE_ARRAY REAL_32 size s:INTEGER <-
+  ( `cudaMemcpy(@d, @h, @s, cudaMemcpyHostToDevice)`; )
+  
+  - device_synchronize <-
+  ( check_cuda_errors `cudaDeviceSynchronize()`:INTEGER; )
+  
+  - memcpy_async (dst,src:NATIVE_ARRAY REAL_32) size s:INTEGER <-
+  ( check_cuda_errors `cudaMemcpyAsync(@dst,@src,@s,cudaMemcpyDeviceToDevice)`:INTEGER; )
+  
+  // Device
+  
+  - device_get_attribute:INTEGER <-
+  ( + r:INTEGER
+    `{ int num`
+    `cudaDeviceGetAttribute(&num, cudaDevAttrMultiProcessorCount, 0)`
+    r := `num`:INTEGER
+    `}`
+    r
+  )
+  
+  - occupancy_max_active_blocks_per_multiprocessor:INTEGER <-
+  ( + r:INTEGER
+    `{ int num`
+    `cudaOccupancyMaxActiveBlocksPerMultiprocessor(&num, softmax_loss_kernel, BLOCK_DIM_1D, BLOCK_DIM_1D * sizeof(float))`
+    r := `num`:INTEGER
+    `}`
+    r
+  )
+  
+  - softmax_loss_kernel num_blc:INTEGER param
+  (r_loss, predi, target, wksp:NATIVE_ARRAY REAL_32, batch_sz, num_out:INTEGER) <-
+  (  
+    `softmax_loss_kernel<<< @num_blc, BLOCK_DIM_1D, BLOCK_DIM_1D * sizeof(float), 0 >>>
+    (@r_loss, @predi, @target, @wksp, @batch_sz, @num_out)`;
+  )
+  
+  //
+  // Self depending
+  //
+  
+  // Tensor
+  
+  - add_tensor_alpha alpha:REAL_32
+  a (desc_a:POINTER,a:NATIVE_ARRAY REAL_32)
+  beta beta:REAL_32
+  c (desc_c:POINTER,c:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnAddTensor(static_cast<cudnnHandle_t>@d,
+    &alpha, static_cast<cudnnTensorDescriptor_t>@desc_a,@a,
+    &beta,  static_cast<cudnnTensorDescriptor_t>@desc_c,@c)`:INTEGER;
+    `}`
+  )
+  
+  // Convolution
+  
+  - get_convolution_forward_algorithm_max_count:INTEGER <-
+  ( + r:INTEGER
+    + d:POINTER
+    d := dnn
+    `{ int nb`
+    check_cudnn_errors
+    `cudnnGetConvolutionForwardAlgorithmMaxCount(static_cast<cudnnHandle_t>@d, &nb)`:INTEGER
+    r := `nb`:INTEGER
+    `}`
+    r    
+  )
+  
+  - get_convolution_backward_filter_algorithm_max_count:INTEGER <-
+  ( + r:INTEGER
+    + d:POINTER
+    d := dnn
+    `{ int nb`
+    check_cudnn_errors
+    `cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(static_cast<cudnnHandle_t>@d, &nb)`:INTEGER
+    r := `nb`:INTEGER
+    `}`
+    r    
+  )
+  
+  - get_convolution_backward_data_algorithm_max_count:INTEGER <-
+  ( + r:INTEGER
+    + d:POINTER
+    d := dnn
+    `{ int nb`
+    check_cudnn_errors
+    `cudnnGetConvolutionBackwardDataAlgorithmMaxCount(static_cast<cudnnHandle_t>@d, &nb)`:INTEGER
+    r := `nb`:INTEGER
+    `}`
+    r    
+  )
+  
+  - convolution_forward_alpha alpha:REAL_32
+  x      (desc_s:POINTER,s:NATIVE_ARRAY REAL_32)
+  filter (desc_f:POINTER,f:NATIVE_ARRAY REAL_32)
+  conv   (desc_c:POINTER)
+  algo   algo:INTEGER
+  worksp (ws:NATIVE_ARRAY REAL_32,ws_sz:INTEGER)
+  beta   beta:REAL_32
+  y      (desc_r:POINTER,r:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnConvolutionForward(static_cast<cudnnHandle_t>@d,
+    &alpha, static_cast<cudnnTensorDescriptor_t>@desc_s, @s,
+    static_cast<cudnnFilterDescriptor_t>@desc_f, @f,
+    static_cast<cudnnConvolutionDescriptor_t>@desc_c,
+    static_cast<cudnnConvolutionFwdAlgo_t>@algo,  @ws,@ws_sz,
+    &beta, static_cast<cudnnTensorDescriptor_t>@desc_r,@r)`:INTEGER;
+    `}`
+  )
+  
+  - convolution_backward_bias_alpha alpha:REAL_32
+  tensor (desc:POINTER,a:NATIVE_ARRAY REAL_32)
+  beta   beta:REAL_32
+  bias   (desc_b:POINTER,b:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnConvolutionBackwardBias(static_cast<cudnnHandle_t>@d,
+    &alpha,
+    static_cast<cudnnTensorDescriptor_t>@desc,@a,
+    &beta,
+    static_cast<cudnnTensorDescriptor_t>@desc_b,@b)`:INTEGER;
+    `}`
+  )
+  
+  - convolution_backward_filter_alpha alpha:REAL_32
+  x  (desc_x:POINTER,x:NATIVE_ARRAY REAL_32)
+  dy (desc_dy:POINTER,dy:NATIVE_ARRAY REAL_32)
+  conv desc_c:POINTER
+  algo algo:INTEGER
+  worksp (ws:NATIVE_ARRAY REAL_32,ws_sz:INTEGER)
+  beta beta:REAL_32
+  dw (desc_f:POINTER,f:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnConvolutionBackwardFilter(static_cast<cudnnHandle_t>@d,
+    &alpha,
+    static_cast<cudnnTensorDescriptor_t>@desc_x,@x,
+    static_cast<cudnnTensorDescriptor_t>@desc_dy,@dy,
+    static_cast<cudnnConvolutionDescriptor_t>@desc_c,
+    static_cast<cudnnConvolutionBwdFilterAlgo_t>@algo, @ws,@ws_sz,
+    &beta,
+    static_cast<cudnnFilterDescriptor_t>@desc_f,@f)`:INTEGER;
+    `}`
+  )
+  
+  - convolution_backward_data_alpha alpha:REAL_32
+  w     (desc_w:POINTER,w:NATIVE_ARRAY REAL_32)
+  dy    (desc_dy:POINTER,dy:NATIVE_ARRAY REAL_32)
+  conv  desc_c:POINTER algo algo:INTEGER
+  worksp (ws:NATIVE_ARRAY REAL_32,ws_sz:INTEGER)
+  beta  beta:REAL_32
+  dx    (desc_dx:POINTER,dx:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnConvolutionBackwardData(static_cast<cudnnHandle_t>@d,
+    &alpha,
+    static_cast<cudnnFilterDescriptor_t>@desc_w,@w,
+    static_cast<cudnnTensorDescriptor_t>@desc_dy,@dy,
+    static_cast<cudnnConvolutionDescriptor_t>@desc_c,
+    static_cast<cudnnConvolutionBwdDataAlgo_t>@algo,
+    @ws,@ws_sz,
+    &beta,
+    static_cast<cudnnTensorDescriptor_t>@desc_dx,@dx)`:INTEGER;
+    `}`
+  )
+  
+  - get_convolution_forward_algorithm_v7 (x_desc,w_desc,c_desc,y_desc:POINTER)
+  count algo_count:INTEGER :INTEGER <-
+  ( + d:POINTER
+    d := dnn
+    `cudnnConvolutionFwdAlgoPerf_t fwd_algo_perf_results[CUDNN_CONVOLUTION_FWD_ALGO_COUNT]`
+    check_cudnn_errors
+    `cudnnGetConvolutionForwardAlgorithm_v7(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnTensorDescriptor_t>@x_desc,
+    static_cast<cudnnFilterDescriptor_t>@w_desc,
+    static_cast<cudnnConvolutionDescriptor_t>@c_desc,
+    static_cast<cudnnTensorDescriptor_t>@y_desc,
+    @algo_count, 0, fwd_algo_perf_results)`:INTEGER;
+    `fwd_algo_perf_results[0].algo`:INTEGER
+  )
+  
+  - get_convolution_backward_filter_algorithm_v7 (x_desc,w_desc,c_desc,y_desc:POINTER)
+  count algo_count:INTEGER :INTEGER <-
+  ( + d:POINTER
+    d := dnn
+    `cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo_perf_results[CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT]`
+    check_cudnn_errors
+    `cudnnGetConvolutionBackwardFilterAlgorithm_v7(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnTensorDescriptor_t>@x_desc,
+    static_cast<cudnnTensorDescriptor_t>@w_desc,
+    static_cast<cudnnConvolutionDescriptor_t>@c_desc,
+    static_cast<cudnnFilterDescriptor_t>@y_desc,
+    @algo_count, 0, bwd_filter_algo_perf_results)`:INTEGER;
+    `bwd_filter_algo_perf_results[0].algo`:INTEGER
+  )
+  
+  - get_convolution_backward_data_algorithm_v7 (x_desc,w_desc,c_desc,y_desc:POINTER)
+  count algo_count:INTEGER :INTEGER <-
+  ( + d:POINTER
+    d := dnn
+    `cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo_perf_results[CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT]`
+    check_cudnn_errors
+    `cudnnGetConvolutionBackwardDataAlgorithm_v7(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnFilterDescriptor_t>@x_desc,
+    static_cast<cudnnTensorDescriptor_t>@w_desc,
+    static_cast<cudnnConvolutionDescriptor_t>@c_desc,
+    static_cast<cudnnTensorDescriptor_t>@y_desc,
+    @algo_count, 0, bwd_data_algo_perf_results)`:INTEGER;
+    `bwd_data_algo_perf_results[0].algo`:INTEGER
+  )
+  
+  - get_convolution_forward_workspace_size (x_desc,w_desc,c_desc,y_desc:POINTER) algo a:INTEGER :INTEGER <-
+  ( + d:POINTER
+    + r:INTEGER
+    d := dnn
+    `{ int r`
+    check_cudnn_errors
+    `cudnnGetConvolutionForwardWorkspaceSize(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnTensorDescriptor_t>@x_desc,
+    static_cast<cudnnFilterDescriptor_t>@w_desc,
+    static_cast<cudnnConvolutionDescriptor_t>@c_desc,
+    static_cast<cudnnTensorDescriptor_t>@y_desc,
+    static_cast<cudnnConvolutionFwdAlgo_t>@a, (size_t*)&r)`:INTEGER;
+    r := `r`:INTEGER
+    `}`
+    r
+  )
+  
+  - get_convolution_backward_filter_workspace_size (x_desc,w_desc,c_desc,y_desc:POINTER) algo a:INTEGER :INTEGER <-
+  ( + d:POINTER
+    + r:INTEGER
+    d := dnn
+    `{ int r`
+    check_cudnn_errors
+    `cudnnGetConvolutionBackwardFilterWorkspaceSize(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnTensorDescriptor_t>@x_desc,
+    static_cast<cudnnTensorDescriptor_t>@w_desc,
+    static_cast<cudnnConvolutionDescriptor_t>@c_desc,
+    static_cast<cudnnFilterDescriptor_t>@y_desc,
+    static_cast<cudnnConvolutionBwdFilterAlgo_t>@a, (size_t*)&r)`:INTEGER;
+    r := `r`:INTEGER
+    `}`
+    r
+  )
+  
+  - get_convolution_backward_data_workspace_size (x_desc,w_desc,c_desc,y_desc:POINTER) algo a:INTEGER :INTEGER <-
+  ( + d:POINTER
+    + r:INTEGER
+    d := dnn
+    `{ int r`
+    check_cudnn_errors
+    `cudnnGetConvolutionBackwardDataWorkspaceSize(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnFilterDescriptor_t>@x_desc,
+    static_cast<cudnnTensorDescriptor_t>@w_desc,
+    static_cast<cudnnConvolutionDescriptor_t>@c_desc,
+    static_cast<cudnnTensorDescriptor_t>@y_desc,
+    static_cast<cudnnConvolutionBwdDataAlgo_t>@a, (size_t*)&r)`:INTEGER;
+    r := `r`:INTEGER
+    `}`
+    r
+  )
+
+  // Activation
+  
+  - activation_forward (act:POINTER)
+  alpha alpha:REAL_32
+  in    (in_desc:POINTER, in:NATIVE_ARRAY REAL_32)
+  beta  beta:REAL_32
+  out   (out_desc:POINTER,out:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnActivationForward(static_cast<cudnnHandle_t>@d,static_cast<cudnnActivationDescriptor_t>@act,
+    &alpha, static_cast<cudnnTensorDescriptor_t>@in_desc, @in,
+    &beta, static_cast<cudnnTensorDescriptor_t>@out_desc,@out)`:INTEGER;
+    `}`
+  )
+  
+  - activation_backward (act:POINTER)
+  alpha alpha:REAL_32
+  y  (desc_y:POINTER, y:NATIVE_ARRAY REAL_32)
+  dy (desc_dy:POINTER,dy:NATIVE_ARRAY REAL_32)
+  x  (desc_x:POINTER, x:NATIVE_ARRAY REAL_32)
+  beta beta:REAL_32
+  dx (desc_dx:POINTER,dx:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnActivationBackward(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnActivationDescriptor_t>@act,
+    &alpha,
+    static_cast<cudnnTensorDescriptor_t>@desc_y,@y,
+    static_cast<cudnnTensorDescriptor_t>@desc_dy,@dy,
+    static_cast<cudnnTensorDescriptor_t>@desc_x,@x,
+    &beta,
+    static_cast<cudnnTensorDescriptor_t>@desc_dx,@dx)`:INTEGER;
+    `}`
+  )
+  
+  // Pooling
+  
+  - pooling_forward pool:POINTER
+  alpha alpha:REAL_32 x (desc_x:POINTER,x:NATIVE_ARRAY REAL_32)
+  beta  beta:REAL_32  y (desc_y:POINTER,y:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnPoolingForward(static_cast<cudnnHandle_t>@d,static_cast<cudnnPoolingDescriptor_t>@pool,
+    &alpha, static_cast<cudnnTensorDescriptor_t>@desc_x,@x,    
+    &beta,  static_cast<cudnnTensorDescriptor_t>@desc_y,@y)`:INTEGER;
+    `}`
+  )
+  
+  - pooling_backward pool:POINTER
+  alpha alpha:REAL_32
+  y  (desc_y:POINTER, y:NATIVE_ARRAY REAL_32)
+  dy (desc_dy:POINTER,dy:NATIVE_ARRAY REAL_32)
+  x  (desc_x:POINTER, x:NATIVE_ARRAY REAL_32)
+  beta beta:REAL_32
+  dx (desc_dx:POINTER,dx:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnPoolingBackward(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnPoolingDescriptor_t>@pool,
+    &alpha,
+    static_cast<cudnnTensorDescriptor_t>@desc_y,@y,
+    static_cast<cudnnTensorDescriptor_t>@desc_dy,@dy,
+    static_cast<cudnnTensorDescriptor_t>@desc_x,@x,
+    &beta,
+    static_cast<cudnnTensorDescriptor_t>@desc_dx,@dx)`:INTEGER;
+    `}`
+  )
+    
+  // Softmax
+  
+  - softmax_accurate:INTEGER     <- `CUDNN_SOFTMAX_ACCURATE`:INTEGER
+  - softmax_mode_channel:INTEGER <- `CUDNN_SOFTMAX_MODE_CHANNEL`:INTEGER
+  
+  - softmax_forward (algo,mode:INTEGER)
+  alpha alpha:REAL_32
+  x (desc_x:POINTER,x:NATIVE_ARRAY REAL_32)
+  beta beta:REAL_32
+  y (desc_y:POINTER,y:NATIVE_ARRAY REAL_32) <-
+  ( + d:POINTER
+    d := dnn
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cudnn_errors
+    `cudnnSoftmaxForward(static_cast<cudnnHandle_t>@d,
+    static_cast<cudnnSoftmaxAlgorithm_t>@algo,
+    static_cast<cudnnSoftmaxMode_t>@mode,
+    &alpha,  static_cast<cudnnTensorDescriptor_t>@desc_x,@x,
+    &beta,  static_cast<cudnnTensorDescriptor_t>@desc_y,@y)`:INTEGER;
+    `}`
+  )
+  
+  // Blas:
+  
+  - saxpy l:INTEGER alpha alpha:REAL_32
+  x (x:NATIVE_ARRAY REAL_32,inc_x:INTEGER)
+  y (y:NATIVE_ARRAY REAL_32,inc_y:INTEGER)
+  <-
+  ( + b:POINTER
+    b := blas
+    `{ float alpha; alpha = @alpha`
+    check_cublas_errors
+    `cublasSaxpy(static_cast<cublasHandle_t>@b, @l,
+    &alpha, @x,@inc_x, @y,@inc_y)`:INTEGER;
+    `}`
+  )
+  
+  - sscal l:INTEGER alpha a:REAL_32 x (x:NATIVE_ARRAY REAL_32,inc_x:INTEGER) <-
+  // vec * a
+  ( + b:POINTER
+    b := blas
+    `{ float alpha; alpha = @a`
+    check_cublas_errors
+    `cublasSscal(static_cast<cublasHandle_t>@b, @l,
+    &alpha, @x,@inc_x)`:INTEGER;
+    `}`
+  )
+  
+  - op_n:INTEGER <- `CUBLAS_OP_N`:INTEGER; // Non Transpose
+  - op_t:INTEGER <- `CUBLAS_OP_T`:INTEGER; // Transpose
+  - op_c:INTEGER <- `CUBLAS_OP_C`:INTEGER; // Conjugate Transpose
+  
+  - sgemm (at,bt:INTEGER) size (m,n,k:INTEGER)
+  alpha alpha:REAL_32
+  a (a:NATIVE_ARRAY REAL_32,lda:INTEGER)
+  b (b:NATIVE_ARRAY REAL_32,ldb:INTEGER)
+  beta beta:REAL_32
+  c (c:NATIVE_ARRAY REAL_32,ldc:INTEGER) <-
+  ( + bl:POINTER
+    bl := blas
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cublas_errors
+    `cublasSgemm(static_cast<cublasHandle_t>@bl,
+    static_cast<cublasOperation_t>@at,static_cast<cublasOperation_t>@bt,
+    @m,@n,@k,
+    &alpha,
+    @a,@lda, @b,@ldb,
+    &beta,
+    @c,@ldc)`:INTEGER;
+    `}`
+  )
+  
+  - sgemv (t:INTEGER) size (m,n:INTEGER)
+  alpha alpha:REAL_32 a (a:NATIVE_ARRAY REAL_32,lda:INTEGER)
+  x (x:NATIVE_ARRAY REAL_32,incx:INTEGER)
+  beta beta:REAL_32 y (y:NATIVE_ARRAY REAL_32,incy:INTEGER) <-
+  ( + bl:POINTER
+    bl := blas
+    `{ float alpha,beta; alpha = @alpha; beta = @beta`
+    check_cublas_errors
+    `cublasSgemv(static_cast<cublasHandle_t>@bl,
+    static_cast<cublasOperation_t>@t,@m,@n,
+    &alpha, @a,@lda,
+    @x, @incx,
+    &beta, @y,@incy)`:INTEGER;
+    `}`
+  )
+  

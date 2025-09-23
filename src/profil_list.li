@@ -1,0 +1,204 @@
+Header
+
+  + name        := PROFIL_LIST;
+
+  /*Profil list manager.*/
+
+Inherit
+
+  + parent_any:Expanded ANY
+
+LISAAC
+
+  - profil_list:ARRAY PROFIL := ARRAY PROFIL .create_with_capacity 65536
+
+  - life_limit:INTEGER
+
+  - life_limit_base:INTEGER
+
+  - current:INTEGER
+
+  - swap i1:INTEGER with i2:INTEGER <-
+  (
+    profil_list.at i2.set_life_index i1
+    profil_list.at i1.set_life_index i2
+    profil_list.swap i1 with i2
+  )
+
+  - clean <-
+  (
+    reduce_profil := profil_list.upper >= life_limit
+    {profil_list.upper >= life_limit}.while_do {
+      profil_list.last.remove
+      profil_list.remove_last
+    }
+  )
+
+Public
+
+  - reduce_profil:BOOLEAN := TRUE
+
+  - add p:PROFIL <-
+  (
+    (p.is_external).if {
+      profil_list.add_first p
+      life_limit_base := life_limit_base + 1
+      p.set_life_index (profil_list.lower)
+      (profil_list.lower+1).to (profil_list.upper) do { i:INTEGER
+        profil_list.at i.set_life_index i
+      }
+    } else {
+      profil_list.add_last p
+      p.set_life_index (profil_list.upper)
+    }
+  )
+
+  - set_life p:PROFIL <-
+  [
+    -? { p.life_index != -1 }
+    -? { profil_list.at (p.life_index) = p }
+  ]
+  ( + idx:INTEGER
+    
+    ((p.life_index > profil_list.upper) || {profil_list.at (p.life_index) != p}).if {
+      warning_error (p.position,"PROFIL_LIST.set_life")
+      p.life_index.print; '\n'.print
+    }
+    
+    idx := p.life_index
+    (idx = life_limit).if {
+      life_limit := life_limit + 1
+    }.elseif {idx > life_limit} then {
+      swap idx with life_limit
+      life_limit := life_limit + 1
+    }
+  )
+  [
+    +? { profil_list.at (p.life_index) = p }
+    +? { p.life_index < life_limit }
+  ]
+
+  - unset_life p:PROFIL <-
+  [
+    -? { p.life_index != -1 }
+  ]
+  ( + idx:INTEGER
+
+    idx := p.life_index
+    (idx < life_limit).if {
+      life_limit := life_limit - 1
+      (idx < life_limit).if {
+	(idx > current).if {
+	  swap idx with life_limit
+	} else {
+	  swap idx with current
+	  swap current with life_limit
+	  current := current - 1
+	}
+      }
+    }
+  )
+
+  - remove p:PROFIL <-
+  [
+    -? { p.life_index != -1 }
+  ]
+  ( + idx:INTEGER
+
+    unset_life p
+    idx := p.life_index
+    (idx != profil_list.upper).if {
+      swap idx with (profil_list.upper)
+    }
+    profil_list.remove_last
+    // Debug.
+    ! {p.set_life_index (-1)}
+  )
+
+  - execute_pass_recursive <-
+  (
+    (profil_list.lower).to (profil_list.upper) do { i:INTEGER
+      profil_list.at i.reset_recursive
+    }
+    VARIABLE.update
+    life_limit := life_limit_base
+    PROFIL.set_mode_recursive TRUE
+    profil_current := profil_slot := NULL
+    list_current   := NULL
+    POSITION.clean_context
+    list_main.execute
+    //
+    current := profil_list.lower
+    {current < life_limit}.while_do {
+      profil_current := profil_list.at current
+      (profil_current.is_external).if {        
+        profil_current.execute inline_level_current
+      }
+      current := current + 1
+    }
+    //
+    PROFIL.set_mode_recursive FALSE
+    //current := 0
+    clean
+    reduce_profil := TRUE
+  )
+
+  - inline_level_current:INTEGER := 3
+
+  - execute_pass <-
+  (
+    VARIABLE.update
+    life_limit := life_limit_base
+    profil_slot := NULL
+    list_current   := NULL
+    list_main.execute
+    current := profil_list.lower
+    {current < life_limit}.while_do {
+      profil_current := profil_list.at current
+      profil_current.execute inline_level_current
+      current := current + 1
+    }
+    current := 0
+    clean
+    ((! reduce_profil) && {inline_level_current < inline_level}).if {
+      inline_level_current := inline_level_current + 3
+      new_execute_pass
+    }
+    (TYPE.is_alias_struct).if {
+      TYPE.detect_alias
+      TYPE_GENERIC.detect_alias
+    }
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere_handler <-
+  (
+    (profil_list.lower).to (profil_list.upper) do { j:INTEGER
+      profil_list.at j.genere_handler
+    }
+  )
+
+  - genere <-
+  (
+    (profil_list.lower).to (profil_list.upper) do { j:INTEGER
+      profil_list.at j.genere
+    }
+  )
+    
+  //
+  // Display.
+  //
+
+  - display <-
+  (
+    string_tmp.clear
+    list_main.display string_tmp
+    string_tmp.append "\n------ FUNCTIONS ------\n"
+    (profil_list.upper).downto (profil_list.lower) do { j:INTEGER
+      profil_list.at j.display_all string_tmp
+    }
+    string_tmp.print
+  )

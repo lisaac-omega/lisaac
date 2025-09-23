@@ -1,0 +1,40 @@
+Header
+  + name  := FLOAT_PROCESSOR;
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - init; // Compatibility IsaacOS.
+
+  - atan    n:REAL    :REAL    <- `atanf(@n)`:REAL
+  - atan_32 n:REAL_32 :REAL_32 <- `atanf(@n)`:REAL_32
+  - atan_64 n:REAL_64 :REAL_64 <- `atan(@n)`:REAL_64
+  - atan_80 n:REAL_80 :REAL_80 <- `atanl(@n)`:REAL_80
+
+  - sqrt    n:REAL    :REAL    <- `sqrtf(@n)`:REAL
+  - sqrt_32 n:REAL_32 :REAL_32 <- `sqrtf(@n)`:REAL_32
+  - sqrt_64 n:REAL_64 :REAL_64 <- `sqrt(@n)`:REAL_64
+  - sqrt_80 n:REAL_80 :REAL_80 <- `sqrtl(@n)`:REAL_80
+
+  - log     n:REAL    :REAL    <- `logf(@n)`:REAL
+  - log_32  n:REAL_32 :REAL_32 <- `logf(@n)`:REAL_32
+  - log_64  n:REAL_64 :REAL_64 <- `log(@n)`:REAL_64
+  - log_80  n:REAL_80 :REAL_80 <- `logl(@n)`:REAL_80
+
+  - sin     n:REAL    :REAL    <- `sinf(@n)`:REAL
+  - sin_32  n:REAL_32 :REAL_32 <- `sinf(@n)`:REAL_32
+  - sin_64  n:REAL_64 :REAL_64 <- `sin(@n)`:REAL_64
+  - sin_80  n:REAL_80 :REAL_80 <- `sinl(@n)`:REAL_80
+
+  - cos     n:REAL    :REAL    <- `cosf(@n)`:REAL
+  - cos_32  n:REAL_32 :REAL_32 <- `cosf(@n)`:REAL_32
+  - cos_64  n:REAL_64 :REAL_64 <- `cos(@n)`:REAL_64
+  - cos_80  n:REAL_80 :REAL_80 <- `cosl(@n)`:REAL_80
+
+  - pow    (n,exp:REAL)    :REAL    <- `powf(@n,@exp)`:REAL
+  - pow_32 (n,exp:REAL_32) :REAL_32 <- `powf(@n,@exp)`:REAL_32
+  - pow_64 (n,exp:REAL_64) :REAL_64 <- `pow(@n,@exp)`:REAL_64
+  - pow_80 (n,exp:REAL_80) :REAL_80 <- `powl(@n,@exp)`:REAL_80
+

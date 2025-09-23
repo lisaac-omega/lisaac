@@ -1,0 +1,91 @@
+Header
+
+  + name := FILE_INPUT_STREAM;
+
+  /*Use files as streams*/
+
+Inherit
+
+  - inherit_input_stream :INPUT_STREAM := INPUT_STREAM
+
+Public
+
+  + file :FILE
+
+  + is_connected:BOOLEAN
+
+  + last_character :CHARACTER
+
+  - end_of_input:BOOLEAN <-
+  ( + result :BOOLEAN
+    result := real_end_of_input
+    push_back_flag.if_true {
+      result := FALSE
+    }
+    result
+  )
+
+Public
+
+  - make std_file:FILE <-
+  (
+    file := std_file
+    tmp  := ARRAY(CHARACTER).create 1
+    is_connected := (file != NULL)
+  )
+
+  - create std_file:FILE :SELF <-
+  ( + result :SELF
+    result := clone
+    result.make std_file
+    result
+  )
+
+Private
+
+  + tmp :ARRAY(CHARACTER)
+
+  + real_end_of_input :BOOLEAN
+
+Public
+
+  - read_character :CHARACTER <-
+  // Return last character from stream
+  ( + result   :INTEGER
+
+    push_back_flag.if {
+      push_back_flag := FALSE
+    } else {
+      tmp.clear
+      result := file.read tmp size 1
+      (result = 0).if {
+        // nothing was read
+        real_end_of_input := TRUE
+      } else {
+        last_character := tmp.first
+      }
+    }
+    last_character
+  )
+
+  - unread_character <-
+  (
+    push_back_flag := TRUE
+  )
+
+  - read_line_in buffer:STRING_BUFFER <-
+  // Return line from stream
+  (
+    read_character
+    ((! end_of_input) && {last_character != '\n'}).if {
+      buffer.add_last last_character
+      read_line_in buffer; // tail recursion
+    }
+  )
+
+Private
+
+  - raw_read_character :CHARACTER <-
+  (
+
+  )

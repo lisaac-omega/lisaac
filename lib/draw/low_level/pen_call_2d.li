@@ -1,0 +1,53 @@
+Header
+  
+  + name := PEN_CALL_2D;
+  
+Inherit
+  
+  + parent_pen_call:Expanded PEN_CALL
+  
+Public
+  
+  + trans_x:REAL_32
+  + trans_y:REAL_32
+  - translate (x,y:REAL_32) <-
+  (
+    (trans_x,trans_y) := (trans_x+x,trans_y+y)
+  )
+  
+  + image:INTEGER
+  
+  // BSBS: Polymorphisme possible entre fill/stroke/triangle
+  + path_offset:INTEGER; // in pen_gl.vertexes
+  + path_count:INTEGER
+
+  + triangle_offset:INTEGER; // in pen_gl.vertexes
+  + triangle_count:INTEGER
+  
+  + uniform_offset:INTEGER
+    
+  - create_image img:INTEGER path (pofs,pcnt:INTEGER) 
+  triangle (tofs,tcnt:INTEGER) uniform uofs:INTEGER :PEN_CALL_2D <-
+  ( 
+    abstract
+    Self
+  )
+  
+  - make_image img:INTEGER path (pofs,pcnt:INTEGER) 
+  triangle (tofs,tcnt:INTEGER) uniform uofs:INTEGER <-
+  (
+    image := img
+    trans_x := trans_y := 0.0
+    (path_offset,path_count) := (pofs,pcnt)
+    (triangle_offset,triangle_count) := (tofs,tcnt)
+    uniform_offset := uofs
+  )
+  
+  - run <-
+  (
+    pen_gl.gl_uniform2f(pen_gl.shader.loc_view_trans,trans_x,trans_y)
+    pen_gl.gl_uniform2f(pen_gl.shader.loc_trans_post,trans_x,trans_y)
+    run_2d
+  )
+  
+  - run_2d <- abstract

@@ -1,0 +1,39 @@
+Header
+  
+  + name      := ITM_PATTERN;
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+  
+  + pattern_in :ITM_LIST
+  
+  + pattern_out:ITM_LIST
+  
+  - set_pattern_in p:ITM_LIST <-
+  (
+    pattern_in := p
+  )
+  
+  - set_pattern_out p:ITM_LIST <-
+  (
+    pattern_out := p
+  )
+  
+  - append_pattern_in buf:STRING_BUFFER <-
+  (
+    (pattern_in != NULL).if {
+      buf.append "In: "
+      pattern_in.append_in buf
+    }
+    (pattern_out != NULL).if {      
+      (pattern_in != NULL).if {
+        buf.append ";\n"
+        buf.append indent
+      }
+      buf.append "Out: "
+      pattern_out.append_in buf
+    }
+  )

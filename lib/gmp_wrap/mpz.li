@@ -1,0 +1,77 @@
+Header  
+  + name := MPZ;
+  
+  /*mpz_t*/
+  
+  - type := `mpz_ptr`;
+  - default := `malloc(sizeof(mpz_t))`:MPZ; 
+  
+  - lip <-
+  (
+    add_lib "-lgmp";
+  );
+  
+  - external := `#include <gmp.h>`;
+
+Insert  
+  - parent_mpz_base:MPZ_BASE := MPZ_BASE
+  
+Public
+  - add (a,b:MPZ) <-
+  (
+    `mpz_add(@Self, @a, @b)`
+  )
+    
+  - sub (a,b:MPZ) <-
+  (
+    `mpz_sub(@Self, @a, @b)`
+  )
+  
+  - mul (a,b:MPZ) <-
+  (
+    `mpz_mul(@Self, @a, @b)`
+  )
+
+  - div (a,b:MPZ) <-
+  (
+    `mpz_tdiv_q(@Self, @a, @b)`
+  )
+  
+  - tdiv_qr (r,n,d:MPZ) <-
+  (
+    `mpz_tdiv_qr(@Self,@r,@n,@d)`
+  )
+
+  - tdiv_qr_ui (r,n:MPZ, d:INTEGER_64) <-
+  (
+    `mpz_tdiv_qr_ui(@Self,@r,@n,@d)`
+  )
+
+  - shift_left (a:MPZ, i:UINTEGER_64) <-
+  (
+    `mpz_mul_2exp(@Self, @a, @i)`
+  )
+
+  - shift_right (a:MPZ, i:UINTEGER_64) <-
+  (
+    `mpz_tdiv_q_2exp(@Self, @a, @i)`
+  )
+
+  - cmp other:MPZ: INTEGER <-
+  (
+    `mpz_cmp(@Self, @other)`:INTEGER
+  )
+  
+  - neg other:MPZ <-
+  [ ? {Self != other}; ]
+  (
+    `mpz_neg(((mpz_ptr)@Self), ((mpz_ptr)@other))`
+  )
+  
+  - com other:MPZ <-
+  // Is actually equivalent to ~
+  [ ? {Self != other}; ]
+  (
+    `mpz_com(((mpz_ptr)@Self), ((mpz_ptr)@other))`
+  )
+  

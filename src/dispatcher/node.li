@@ -1,0 +1,381 @@
+Header
+
+  + name      := NODE;
+
+  /*Parent for all switch node*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+NODE, PROFIL_BLOCK, ITM_OLD_EXPR
+
+  - node_list_base:ARRAY NODE_TYPE := node_list
+
+  - node_list:ARRAY NODE_TYPE := ARRAY NODE_TYPE .create_with_capacity 512
+
+  - set_node_list l:ARRAY NODE_TYPE <-
+  (
+    node_list := l
+  )
+
+PROTOTYPE
+  
+  - extend_pass <-
+  ( + j:INTEGER
+    + is_ok:BOOLEAN
+
+    VARIABLE.update
+    j := node_list.lower
+    {j <= node_list.upper}.while_do {
+      is_ok := node_list.at j.update
+      (is_ok).if {
+	node_list.remove j
+      } else {
+	j := j + 1
+      }
+    }
+    //(modify_count = 0).if { die_with_code 0; }
+  )
+/*
+  - extend_pass <-
+  ( + j,continue:INTEGER
+    + is_ok:BOOLEAN
+    + index:INTEGER
+    
+    index := node_list.lower
+    {
+      VARIABLE.update
+      j := index
+      modify_count := 0
+      {j <= node_list.upper}.while_do {
+        is_ok := node_list.at j.update
+        (is_ok).if {
+          node_list.remove j
+        } else {
+          j := j + 1
+          (modify_count = 0).if {
+            index := index + 1
+            (j != index).if {
+              node_list.swap (j-1) with index
+            }
+          } else {
+            continue := 1
+            modify_count := 0
+          }
+        }
+      }
+    }.do_while {index <= node_list.upper}
+    (continue = 0).if { die_with_code 0; }
+    modify_count := continue
+  )
+*/
+Public
+
+  //
+  // Extern Creation read.
+  //
+
+  - new_read p:POSITION slot s:SLOT receiver rec:EXPR
+  self my_self:EXPR intern is_intern:BOOLEAN :NODE <-
+  ( + result:NODE_TYPE
+    + dta:DTA_RD
+    //
+    dta := DTA_RD.create p call s self my_self intern is_intern
+    result := NODE_TYPE.create rec with dta
+    //
+    node_list.add_last result
+    result
+  )
+
+  - new_read p:POSITION slot s:SLOT receiver rec:EXPR
+  with larg:ARRAY EXPR intern is_intern:BOOLEAN :NODE <-
+  ( + dta:DTA_RD_ARGS
+    + result:NODE_TYPE
+    // Control argument type.
+    + ss:SLOT
+    + rr:EXPR
+    (rr,ss) := commutativity (rec,s) with larg
+    //
+    dta := DTA_RD_ARGS.create p call ss with larg intern is_intern
+    result := NODE_TYPE.create rr with dta
+    //
+    node_list.add_last result
+    result
+  )
+
+  //
+  // Just for ITM_EXPRESSION.
+  //
+
+  - new_read_partial p:POSITION slot s:SLOT :NODE_TYPE <-
+  ( + dta:DTA_RD_ARGS
+
+    dta := DTA_RD_ARGS.create_partial p call s
+    NODE_TYPE.create_partial dta
+  )
+
+  - new_read_finalize (rec:EXPR,s:SLOT) with larg:ARRAY EXPR <-
+  ( + dta:DTA_RD_ARGS
+    + ss:SLOT
+    + rr:EXPR
+    (rr,ss) := commutativity (rec,s) with larg
+    // Control argument type.
+    dta ?= data
+    dta.make (data.position) call ss with larg intern FALSE
+    make rr with data
+    //
+    node_list.add_last Self
+  )
+
+  //
+  // Extern creation writes.
+  //
+
+  - new_write p:POSITION slot s:SLOT receiver rec:EXPR value val:EXPR :NODE <-
+  ( + dta:DTA_WR_VALUE
+    + result:NODE_TYPE
+
+    dta := DTA_WR_VALUE.create p slot s self rec value val
+    result := NODE_TYPE.create rec with dta
+    //
+    node_list.add_last result
+    result
+  )
+
+  - new_write p:POSITION slot s:SLOT receiver rec:EXPR code val:ITM_CODE :NODE <-
+  ( + dta:DTA_WR_CODE
+    + result:NODE_TYPE
+
+    dta := DTA_WR_CODE.create p slot s self rec code val
+    result := NODE_TYPE.create rec with dta
+    //
+    node_list.add_last result
+    result
+  )
+
+  //
+  // Extern creation cast.
+  //
+
+  - new_cast p:POSITION type typ:TYPE_FULL with val:EXPR :NODE <-
+  [ -? {p != 0}; ]
+  ( + dta:DTA_CAST
+    + result:NODE_TYPE
+
+    dta := DTA_CAST.create p type typ
+    result := NODE_TYPE.create val with dta
+    //
+    node_list.add_last result
+    result
+  )
+
+  //
+  // Extern creation value block.
+  //
+
+  - new_block p:POSITION receiver e:EXPR with larg:ARRAY EXPR :NODE <-
+  ( + dta:DTA_BLOCK
+    + result:NODE_TYPE
+    + lst_typ_f:ARRAY TYPE_FULL
+    + new_expr:EXPR
+    + block_model:TYPE_BLOCK
+    + pb:PROFIL_BLOCK
+    + pos:POSITION
+
+    pb ?= e.static_type.raw
+    (pb = NULL).if {
+      block_model ?= e.static_type.raw
+    } else {
+      block_model := pb.to_type_block
+    }
+    // Control argument type.
+    lst_typ_f := block_model.argument_list
+    pos       := block_model.position
+
+    (lst_typ_f.count+1 != larg.count).if {
+      string_tmp.copy "Incorrect size of vector argument for this block. (Value:"
+      larg.count.append_in string_tmp
+      string_tmp.append ", Type:"
+      (lst_typ_f.count+1).append_in string_tmp
+      string_tmp.add_last ')'
+      POSITION.put_error semantic text string_tmp
+      pos.put_position
+      p  .put_position
+      POSITION.send_error
+    }
+    (larg.lower + 1).to (larg.upper) do { j:INTEGER
+      new_expr := larg.at j.check_type (lst_typ_f.at (j-1)) with pos
+      larg.at j put new_expr
+    }
+    //
+    (debug_level_option != 0).if {
+      (profil_current = NULL).if {
+	crash_with_message "NODE"
+      }
+      list_current.add_last (
+	PUSH.create p context (profil_current.context) first FALSE
+      )
+    }
+    //
+    dta    := DTA_BLOCK.create block_model with larg
+    result := NODE_TYPE.create e with dta
+    //
+    node_list.add_last result
+    result
+  )
+
+Public
+
+  - position:POSITION <-
+  (
+    data.position
+  )
+  /*
+  + without_push:BOOLEAN
+  
+  - without_push_on <-
+  (
+    without_push := TRUE
+  )
+*/
+  + data:DTA
+
+  + expr:EXPR
+
+  + first_code:LIST
+  + first_type:TYPE
+  + switch:SWITCH
+
+  - count:INTEGER <-
+  ( + result:INTEGER
+
+    (switch != NULL).if {
+      result := switch.count
+    }.elseif {first_type != NULL} then {
+      result := 1
+    }
+    result
+  )
+
+  - result_expr:EXPR <- abstract
+
+  //
+  // Execute.
+  //
+
+  - remove <-
+  (
+    data.remove
+    (switch = NULL).if {
+      expr.remove
+      (first_code != NULL).if {
+	first_code.remove
+      }
+    } else {
+      switch.remove
+    }
+  )
+
+  - execute:INSTR <-
+  ( + result:INSTR
+
+    data.remove
+    (switch != NULL).if {
+      result := switch.execute
+    } else {
+      expr.remove
+      (first_code != NULL).if { // Warning: Dead Code!
+	result := first_code.execute
+      }
+    }
+    result
+  )
+
+  - genere <-
+  (
+    "Genere NODE!\n".print
+    crash
+  )
+
+
+NODE, DTA
+
+  //
+  // Update.
+  //
+
+  - update_link self_type:TYPE_FULL :BOOLEAN <-
+  (
+    abstract
+  )
+
+Public
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    (switch = NULL).if {
+      (first_code = NULL).if {
+	to_pointer.append_in buffer
+	buffer.append "<NODE VIDE="
+	expr.display buffer
+	buffer.append ", Data: "
+	data.display buffer
+	buffer.append ", Result: "
+	result_expr.display buffer
+	buffer.add_last '>'
+      } else {
+	expr.display buffer
+	first_code.display buffer
+      }
+    } else {
+      switch.display buffer
+    }
+  )
+
+Private
+  
+  - commutativity (rec:EXPR,s:SLOT) with args:ARRAY EXPR :(EXPR,SLOT) <-
+  ( + sl,rs:SLOT
+    + rr:EXPR
+    + t0,t1:TYPE_FULL
+    + exp:BOOLEAN
+    + new_expr:EXPR
+    (rr,rs) := (rec,s)
+    (s.comm).if {
+      t0 := args.at 0.static_type
+      t1 := args.at 1.static_type
+      (
+        (! t0.affect_with t1) && {! t1.is_export_to t0} && {! t0.is_import_to t1} &&
+        {(exp := t0.is_export_to t1) || {t1.is_import_to t0}}
+      ).if {
+        //"\nType Expr : ".print; t1.print; '\n'.print
+        //"Type arg  : ".print; t0.print;  '\n'.print
+        //"Export    : ".print; exp.println
+        sl := t1.get_slot (s.name)
+        //"Slot      : ".print; (s != NULL).println
+        (sl != NULL).if {
+          (! sl.comm).if {
+            warning_error (sl.position, "No commutativity for this slot.")
+          } else {            
+            (exp).if { // Export
+              new_expr := args.at 0.to_export t1 pos (s.position)
+            } else { // Import
+              new_expr := args.at 0.to_import t1 pos (s.position)
+            }
+            //
+            args.at 0 put new_expr
+            rec.remove
+            rs := sl
+            rr := new_expr.my_copy
+          }
+        }
+      }
+    }
+    rr,rs
+  )
+

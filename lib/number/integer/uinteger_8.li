@@ -1,0 +1,34 @@
+Header
+  + name    := Expanded UINTEGER_8;
+
+  /*Unsigned 8 bits integer.*/
+  - type    := `unsigned char`;
+  - default := (0.to_raw_uinteger_8);
+  - export  := UINTEGER_64, UINTEGER_32, UINTEGER_16,
+  INTEGER_64 , INTEGER_32 , INTEGER_16 ,
+  INTEGER;
+  
+Insert
+
+  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 1
+
+  // Range.
+
+  - maximum:UINTEGER_64 := 255.to_raw_uinteger_64
+
+  // Conversion with test.
+
+  - to_uinteger_8:UINTEGER_8 <- Self
+
+  - to_character:CHARACTER <-
+  [ -? {in_range (CHARACTER.minimum) to (CHARACTER.maximum)}; ]
+  (
+    CAST UINTEGER_8 TO CHARACTER.on Self
+  )
+
+
+

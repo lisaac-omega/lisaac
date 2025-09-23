@@ -1,0 +1,98 @@
+Header
+
+  + name    := Strict STRING_ALIAS;
+
+  /*String built in.*/
+
+Inherit
+
+  + inherit_string:Expanded STRING
+  
+Public
+  
+  - create sto:NATIVE_ARRAY CHARACTER :SELF <-
+  ( + up:INTEGER
+    {sto.at up != '\0'}.while_do { up := up + 1; }
+    create sto upper (up-1)
+  )
+  
+  - create sto:NATIVE_ARRAY CHARACTER upper up:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make sto upper up
+    result
+  )
+  
+  - make sto:NATIVE_ARRAY CHARACTER upper up:INTEGER <-
+  (
+    storage := sto
+    upper := up
+    hash_code := hash_code_intern
+    ? {storage.at count = '\0'}
+  )
+  
+  
+  - create_copy other:STRING_BUFFER :SELF <-
+  // See ALIAS__TO.force_register
+  ( + result:SELF
+    result := clone
+    result.make_copy other
+    result
+  )
+
+  - make_copy other:STRING_BUFFER <-
+  ( + c:INTEGER
+
+    c := other.upper
+    if (c > -1) then {
+      storage := NATIVE_ARRAY CHARACTER.create (c+2)
+      storage.copy_from (other.storage) until c
+      storage.put '\0' to (c+1)
+      upper := c
+      hash_code := hash_code_intern
+    }
+  )
+    
+Public
+  
+  + hash_code:INTEGER := ( `init_string_alias()`; 0)
+  
+  - to_string_buffer:STRING_BUFFER <-
+  ( + new:STRING_BUFFER
+    new := STRING_BUFFER.create capacity
+    new.copy Self
+    new
+  )
+  
+  - to_string_alias:STRING_ALIAS <- Self
+  
+  // The Guru section: The Compiler consideration.
+
+  - to_external:NATIVE_ARRAY CHARACTER <- storage
+  // Gives C access to the internal `storage' (may be dangerous).
+  // To be compatible with C, a null character is added at the end
+  // of the internal `storage'. This extra null character is not
+  // part of the Lisaac STRING.
+
+  - println <-
+  [
+    -? {storage.at count = '\0'}
+  ]
+  (    
+    print; '\n'.print
+    //to_external.println; //BSBS: Ca pu avec l'utf8
+  )
+
+  // Debug: Require / Ensure / Check
+
+  - Self:SELF '?'  test:{BOOLEAN} <- test ? Self
+
+  - Self:SELF '-?' test:{BOOLEAN} <- test -? Self
+
+  - Self:SELF '+?' test:{BOOLEAN} <- test +? Self
+  
+  // Lip Access
+  
+  - lip Self:SELF bool :BOOLEAN <- `26`
+  - lip Self:SELF int  :INTEGER  <- `26`
+  - lip Self:SELF str  :STRING_ALIAS <- `26`

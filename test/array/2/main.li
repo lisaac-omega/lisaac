@@ -1,0 +1,13 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_print:PRINT := PRINT
+    
+Public
+  - main <-
+  ( + sb: Expanded STRING_BUFFER
+    //TEST.check_null (sb.storage)
+    TEST.check (sb.capacity = 0)
+    TEST.check (sb.is_empty)
+  )

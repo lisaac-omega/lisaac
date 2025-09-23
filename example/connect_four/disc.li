@@ -1,0 +1,80 @@
+Header
+  
+  + name := DISC;
+  
+Inherit
+  + parent_win:Expanded WIN
+  
+Public
+  
+  - name:STRING_ALIAS := "DISC"
+  
+  - width_min:REAL_32  <- diameter; // + margin_left.to_real_32 + margin_right.to_real_32
+  - height_min:REAL_32 <- diameter; // + margin_top  + margin_bottom
+  
+  + color:INTEGER
+  + diameter:REAL_32
+  + action:{DISC; }
+  
+  - set_color c:INTEGER <- ( color := c; )
+  
+  - init col:INTEGER diameter s:REAL_32 action a:{DISC;} :SELF <-
+  ( 
+    color := col
+    diameter := s
+    action := a
+    Self
+  )
+  
+  - draw <-
+  ( //+ bg:PAINT
+    + x,y,r/*,fdx,fdy*/:REAL_32
+    + col:COLOR
+    + fg:PAINT
+    
+    //draw_debug
+        
+    //(fdx,fdy) := ACCELEROMETER.dxy
+    x := xo + width/2
+    y := yo + height/2
+    r := diameter/2
+    
+    (color = 0).if {
+      fg := PAINT.create_radial (x+r/10.0,y+r/10.0) radius (r/1.6,r)
+      color (COLOR.rgba(255,255,255,80))
+      to (COLOR.rgba(0,0,0,10))
+      begin_path
+      circle (x,y) radius r
+      fill_paint fg
+      fill
+      fg.free
+    } else {      
+      col := (color = 1).ok (COLOR.rgba(65,173,73,255)) else {COLOR.rgba(239,154,154,255)}
+      fg := PAINT.create_radial (x-r/10.0,y-r/10.0) radius (r/1.6,r)
+      color col to (COLOR.rgba(0,0,0,200))
+      begin_path
+      circle (x,y) radius (r-3.0)
+      fill_paint fg
+      fill
+      fg.free
+      
+      col := (color = 1).ok (COLOR.rgba(165,253,173,255)) else {COLOR.rgba(239,204,204,255)}
+      //col := COLOR.rgba(255,255,255,235)
+      fg := PAINT.create_linear (x-diameter,y-diameter) to (x+diameter,y+diameter)
+      color col to (COLOR.rgba(0,0,0,128))
+      stroke_width 2.0
+      begin_path
+      circle (x,y) radius (r-5.0)
+      stroke_paint fg
+      stroke
+      fg.free
+    }
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    (e = HAND.clic).if {
+      action.value Self
+    }
+  )

@@ -1,0 +1,6 @@
+i=0
+while [ $i -lt 5000 ]
+do
+  $1 > out.txt
+  i=$[$i + 1]
+done

@@ -1,0 +1,244 @@
+Header
+
+  + name        := ITM_EXPRESSION;
+
+  /*operator list message*/
+
+Inherit
+
+  - parent_itm_code:ITM_CODE := ITM_CODE
+
+Public
+
+  - position:POSITION <- value_list.first.position
+
+  //
+  // Data
+  //
+
+  + value_list:ARRAY ITM_CODE
+
+  //
+  // Constructor
+  //
+
+  - create v:ARRAY ITM_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make v
+    result
+  )
+
+  - make v:ARRAY ITM_CODE <-
+  (
+    value_list    := v
+  )
+
+  //
+  // Runnable.
+  //
+
+  - to_run_expr:EXPR <-
+  ( + max_pos,max_lev,idx,idx_post,idx_pre,low:INTEGER
+    + continue:BOOLEAN
+    + max_pri  :STRING_ALIAS
+    + left,right:EXPR
+    + instr:INSTR
+    + val_list:ARRAY INSTR
+    + val:EXPR
+    + typ:TYPE
+    + slo:SLOT
+    + nam,op_name:STRING_ALIAS
+    + site:NODE
+    + n_t:NODE_TYPE
+    + extern:EXPR_BINARY_CMP
+    //+ loc:VARIABLE
+    + l_arg:ARRAY EXPR
+    + result:EXPR
+    + itm_op:ITM_OPERATOR
+
+    val_list := ALIAS_ARRAY INSTR.new
+    // Search unary message.
+    idx := -1
+    low := value_list.lower
+    {
+      // Search first message.
+      {
+	idx := idx + 1
+	itm_op ?= value_list.at idx
+      }.do_while {(itm_op != NULL) && {idx != value_list.upper}}
+      (itm_op != NULL).if {
+        semantic_error (itm_op.position,"Operator postfix not found.")
+      }
+      val := value_list.at idx.to_run_expr
+      typ := val.static_type.raw
+      (typ = TYPE_VOID).if {
+        semantic_error (val.position,"Expression type `Void'.");
+      }
+      // Post-fix.
+      idx_post := idx + 1
+      continue := TRUE
+      {(idx_post <= value_list.upper) && {continue}}.while_do {
+        continue := FALSE
+        (idx_post != value_list.upper).if {
+          itm_op ?= value_list.at (idx_post + 1)
+        }
+        ((idx_post = value_list.upper) || {itm_op != NULL}).if {
+          itm_op ?= value_list.at idx_post
+          slo := typ.get_slot (operator "__postfix" name (itm_op.name))
+          (slo != NULL).if {
+            site := NODE.new_read (itm_op.position) slot slo receiver val self val intern FALSE
+            list_current.add_last site
+            val := site.result_expr
+            idx_post := idx_post + 1
+            continue := TRUE
+          }
+        }
+      }
+      // Pre-fix.
+      idx_pre := idx - 1
+      continue := TRUE
+      {(idx_pre >= low) && {continue}}.while_do {
+        continue := FALSE
+        (idx_pre != low).if {
+          itm_op ?= value_list.at (idx_pre - 1)
+        }
+        ((idx_pre = low) || {itm_op != NULL}).if {
+          itm_op ?= value_list.at idx_pre
+          slo := typ.get_slot (operator "__prefix" name (itm_op.name))
+          (slo = NULL).if {
+            error_slot (itm_op.position) name "prefix" operator (itm_op.name) in typ
+          }
+          site := NODE.new_read (itm_op.position) slot slo receiver val self val intern FALSE
+          list_current.add_last site
+          val := site.result_expr
+          idx_pre := idx_pre - 1
+          continue := TRUE
+        }
+      }
+      val_list.add_last val
+      idx := idx_post
+      (idx < value_list.upper).if {
+        // Infix.
+        typ := val.static_type.raw
+        (typ = TYPE_VOID).if {
+          semantic_error (val.position,"Expression type `Void'.");
+        }
+        itm_op ?= value_list.at idx
+        op_name := itm_op.name
+        (op_name = "=").if {
+          instr := EXPR_EQUAL
+        }.elseif {op_name = "!="} then {
+          instr := EXPR_NOT_EQUAL
+        } else {
+          nam := operator "__infix" name op_name
+          slo := typ.get_slot nam
+          (slo = NULL).if {
+            error_slot (itm_op.position) name "infix" operator op_name in typ
+          }
+          instr := NODE.new_read_partial (itm_op.position) slot slo
+        }
+        val_list.add_last instr
+      }
+      low := idx_post + 1
+    }.do_while {idx <= value_list.upper}
+
+    {val_list.count = 1}.until_do {
+      // Search max level.
+      max_lev := -1
+      (val_list.lower+1).to (val_list.upper-1) by 2 do { j:INTEGER
+	site ?= val_list.at j
+	(site = NULL).if {
+	  // '=' or '!='.
+	  (
+	    (50 > max_lev) || {(50 = max_lev) && {max_pri = "Right"}}
+	  ).if {
+	    max_lev := 50
+	    max_pri := "Right"
+	    max_pos := j
+	  }
+	} else {
+	  // Other:
+	  slo := site.data.slot
+	  (
+	    (slo.priority > max_lev) ||
+	    {
+	      (slo.priority = max_lev) &&
+	      {slo.associativity = max_pri} &&
+	      {max_pri = "Right"}
+	    }
+	  ).if {
+	    max_lev := slo.priority
+	    max_pri := slo.associativity
+	    max_pos := j
+	  }
+	}
+      }
+
+      n_t   ?= val_list.at max_pos
+      left  ?= val_list.at (max_pos - 1)
+      right ?= val_list.at (max_pos + 1)
+      (n_t = NULL).if {
+        // '=' or '!='.        
+        extern ?= val_list.at max_pos
+        //extern.set_left left and_right right
+        (left,right) := cmp_verify (left.position) between (left,right)
+        val := product_cmp (left,right) ext extern pos (left.position)
+	//loc  := type_boolean.default.get_temporary (extern.position)
+	//instr:= loc.write (extern.position) value extern
+	//list_current.add_last instr
+	//val := loc.read (instr.position)
+      } else {
+        // SW_READ.
+        l_arg := ARRAY EXPR .create_with_capacity 2
+        l_arg.add_last left
+        l_arg.add_last right
+        slo := left.static_type.raw.get_slot (n_t.data.slot.name)
+        n_t.new_read_finalize (left.my_copy,slo) with l_arg
+        list_current.add_last n_t
+        val := n_t.result_expr
+      }
+
+      // Delete operator.
+      val_list.remove max_pos
+      val_list.remove max_pos
+      //
+      val_list.at (max_pos - 1) put val
+    }
+
+    result ?= val_list.first
+
+    // Free Array Temporary.
+    ALIAS_ARRAY INSTR .free val_list
+
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    (value_list.lower).to (value_list.upper) do { i:INTEGER
+      value_list.at i.append_in buffer
+    }
+  )
+
+Private
+
+  - error_slot p:POSITION name s:STRING_ALIAS operator op:STRING_ALIAS in t:TYPE <-
+  (
+    string_tmp.copy "Slot "
+    string_tmp.append s
+    string_tmp.append " '"
+    string_tmp.append op
+    string_tmp.append "' not found in "
+    string_tmp.append (t.name)
+    string_tmp.add_last '.'
+    semantic_error (p,string_tmp)
+  )
+
+
+
+

@@ -1,0 +1,10 @@
+lisaac reverse_complement -O -i10
+gcc reverse_complement_c.c -o reverse_complement_c -pipe -Wall -O3 -fomit-frame-pointer -march=pentium4
+g++ reverse_complement.c -o reverse_complement -pipe -Wall -O3 -fomit-frame-pointer -march=pentium4
+echo Lisaac: 
+time ./reverse_complement < input2500000.txt > out_li.txt
+#time ./reverse_complement < revcomp-input.txt > out_li.txt
+echo C:
+time ./reverse_complement_c < input2500000.txt > out_c.txt
+#time ./reverse_complement_c < revcomp-input.txt > out_c.txt
+diff out_li.txt out_c.txt

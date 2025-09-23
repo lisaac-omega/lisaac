@@ -1,0 +1,58 @@
+Header
+  
+  + name := FONS_ATLAS_NODE;
+  
+Inherit
+  
+  - parent_fontstash:FONTSTASH := FONTSTASH
+  
+Private
+  
+  - stock:ARRAY FONS_ATLAS_NODE := ARRAY FONS_ATLAS_NODE.create_with_capacity 512
+  
+  - new:FONS_ATLAS_NODE <-
+  ( + result:FONS_ATLAS_NODE
+    (stock.is_empty).if {
+      result := FONS_ATLAS_NODE.clone
+    } else {
+      result := stock.pop
+    }
+    result
+  )
+  
+Public
+  
+  + x:INTEGER_16
+  + y:INTEGER_16
+  + width:INTEGER_16
+  
+  - set_x px:INTEGER_16 <- ( x := px; )
+  - set_width pw:INTEGER_16 <- ( width := pw; )
+  
+  - create (px,py:INTEGER_16) width pw:INTEGER_16 :FONS_ATLAS_NODE <-
+  ( + result:FONS_ATLAS_NODE
+    result := new
+    result.make (px,py,pw)
+    result
+  )
+  
+  - make (px,py,pw:INTEGER_16) <-
+  (
+    (x,y) := (px,py)
+    width := pw
+  )
+  
+  - free <-
+  (
+    stock.add_last Self
+  )
+  
+  - print <-
+  (
+    "[ ".print
+    x.print; ','.print
+    y.print; ','.print
+    (x+width-1).print
+    " ] ".print
+    width.print; 'x'.print; (512-y).print
+  )

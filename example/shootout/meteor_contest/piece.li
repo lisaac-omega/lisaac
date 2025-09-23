@@ -1,0 +1,268 @@
+Header
+  
+  + name         := PIECE;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+    
+Inherit
+  
+  + parent_any:Expanded INSTANCE
+
+Public
+  
+  - base_vecs:ARRAY(UINTEGER_32) := 
+  ( + r:ARRAY(UINTEGER_32)
+    
+    r := ARRAY(UINTEGER_32).create_with_capacity (METEOR_CONTEST.n_piece_type)
+    r.add_last 010Fh; r.add_last 00CBh; r.add_last 01087h; r.add_last 0427h
+    r.add_last 0465h; r.add_last 00C7h; r.add_last 08423h; r.add_last 00a7h
+    r.add_last 0187h; r.add_last 008Fh
+    r
+  )
+     
+  - n_elem:INTEGER := 5
+  - n_orient:INTEGER := 12
+  - all_piece_mask:INTEGER := (1 << n_piece_type) - 1
+  - skip_piece:UINTEGER_32 := 5; // it's magic!
+  
+  - s_base_piece:ARRAY2(PIECE) := 
+  ARRAY2(PIECE).create (METEOR_CONTEST.n_piece_type,n_orient)
+           
+  + m_instance:ARRAY(INSTANCE) := ARRAY(INSTANCE).create_with_capacity (METEOR_CONTEST.n_parity)
+ 
+  - set_coord_list (vec:UINTEGER_32,pts:ARRAY2(INTEGER)) <- // Static ?
+  ( + ipt:INTEGER
+    + mask:UINTEGER_32
+    
+    mask := 1
+    0.to (METEOR_CONTEST.n_row-1) do { y:INTEGER
+      0.to (METEOR_CONTEST.n_col-1) do { x:INTEGER
+	((mask & vec) != 0).if {
+	  pts.at (ipt,x) put x
+	  pts.at (ipt,y) put y
+	  
+	  ipt := ipt + 1
+	}
+	mask := mask << 1
+      }
+    }
+  )
+
+  - to_bit_vector pts:ARRAY2(INTEGER) :UINTEGER_32 <- // Static
+  ( + y, x:INTEGER
+    + result:UINTEGER_32
+    
+    0.to (n_elem-1) do { ipt:INTEGER
+      x := pts.at (ipt,x)
+      y := pts.at (ipt,y)
+      result := result | (1 << BOARD.get_index (x,y))
+    }
+    result
+  )
+
+  - shift_up_lines (pts:ARRAY2(INTEGER), shift:INTEGER) <- // static
+  ( + rx,ry:INTEGER
+    // vertical shifts have a twist
+    0.to (n_elem-1) do { ipt:INTEGER
+      rx := pts.at (ipt,0)
+      ry := pts.at (ipt,1)
+
+      ((ry & shift & 01h) != 0).if {
+	rx := rx + 1
+      }
+      ry := ry - shift
+      pts.at (ipt,0) put rx
+      pts.at(ipt,1) put ry
+    }
+  )
+
+  - shift_to_x0(pts:ARRAY2(INTEGER), instance:INSTANCE, offset_row:INTEGER) :INTEGER <- // static
+  (
+    // .. determine shift
+    + x, y, offset,rx,ry:INTEGER
+    + x_min:INTEGER
+    + x_max:INTEGER
+    
+    x_min := pts.at (0,x)
+    x_max := x_min
+    
+    1.to (n_elem-1) do { ipt:INTEGER
+      x := pts.at (ipt,0)
+      y := pts.at (ipt,1)
+      
+      (x < x_min).if {
+	x_min := x
+      } else {
+	(x > x_max).if {
+	  x_max := x
+	}
+      }
+    }
+    
+    // I'm dying for a 'foreach' here
+    offset := n_elem
+    1.to (n_elem-1) do { ipt:INTEGER
+      rx := pts.at (ipt,0)
+      ry := pts.at (ipt,1)
+      
+      rx := rx - x_min
+      pts.at (ipt,0) put rx
+      // check offset -- leftmost cell on top line
+      ((ry = offset_row) && {rx < offset}).if {
+	offset := rx
+      }
+    }
+    
+    instance.set_m_offset offset
+    instance.set_m_vec (to_bit_vector pts)
+    x_max - x_min
+  )
+
+  - set_ok_pos (is_odd:UINTEGER_32, w,h:INTEGER) <-
+  ( + y,x_pos:INTEGER
+    + piece_vec:UINTEGER_32
+    + pos_mask:UINTEGER_64
+    + p:INSTANCE
+    + allowed:UINTEGER_64
+    
+    p := m_instance.at is_odd
+    p.set_m_allowed 0
+    allowed := 0
+    pos_mask := 1 << (is_odd * n_col)
+   
+    y := is_odd
+    {y < n_row - h}.while_do {      
+      (p.m_offset).if {
+	pos_mask := pos_mask << p.m_offset
+      }
+      x_pos := 0
+      {x_pos < n_col - p.m_offset}.while_do {
+	// check if the new position is on the board
+	(x_pos < n_col - w).if {
+	  // move it to the desired location
+	  piece_vec := p.m_vec << x_pos
+
+	  (! BOARD.has_bad_islands_single (piece_vec, y)).if {            
+	    // position is allowed	    
+	    allowed := allowed | pos_mask
+	  }
+	}
+	x_pos := x_pos + 1
+	pos_mask := pos_mask << 1
+      }
+      y := y + 2
+      pos_mask := pos_mask << n_col
+    }
+  )
+
+  - gen_orientation (vec:UINTEGER_32 , i_orient:UINTEGER_32, target:PIECE) <- // static
+  ( + y,x,rot,x_new,y_new,y_min,y_max,h,w:INTEGER
+    + pts:ARRAY2(INTEGER)
+    + v_even,v_odd:INSTANCE
+    + flip:BOOLEAN
+    // get (x,y) coordinates
+    pts := ARRAY2(INTEGER).create (n_elem,METEOR_CONTEST.n_dim)
+    set_coord_list (vec, pts)
+    
+    rot := i_orient % 6
+    flip := i_orient >= 6
+    (flip).if {
+      0.to (n_elem-1) do { ipt:INTEGER
+	pts.at (ipt,y) put (-pts.at (ipt,y))
+      }
+    }
+
+    // rotate as necessary
+    {rot != 0}.while_do {
+      rot := rot - 1
+      0.to (n_elem - 1) do { ipt:INTEGER
+	x := pts.at (ipt,x)
+	y := pts.at (ipt,y)
+
+	// I just worked this out by hand. Took a while.
+	x_new := METEOR_CONTEST.floor(2 * x - 3 * y + 1, 4)
+        y_new := METEOR_CONTEST.floor(2 * x + y + 1, 2)
+	pts.at (ipt,x) put x_new
+	pts.at (ipt,y) put y_new
+      }
+    }
+
+    // determine vertical shift
+    y_min := pts.at (0,y)
+    y_max := y_min
+    1.to (n_elem - 1) do { ipt:INTEGER
+      y := pts.at (ipt,y)
+      
+      (y < y_min).if {
+	y_min := y
+      } else { 
+	(y > y_max).if {
+	  y_max := y
+	}
+      }
+    }
+    h := y_max - y_min
+    v_even := target.m_instance.at 0
+    v_odd  := target.m_instance.at 1
+
+    shift_up_lines (pts, y_min)
+    w := shift_to_x0 (pts, v_even, 0)
+    target.set_ok_pos (0, w, h)
+    v_even.set_m_vec (v_even.m_vec >> v_even.m_offset)
+
+    // shift down one line
+    shift_up_lines (pts, -1)
+    w := shift_to_x0 (pts, v_odd, 1)
+    // shift the bitmask back one line
+    v_odd.set_m_vec (v_odd.m_vec >> METEOR_CONTEST.n_col)
+    target.set_ok_pos (1, w, h)
+    v_odd.set_m_vec (v_odd.m_vec >> v_odd.m_offset)
+  )
+
+  - gen_all_orientations <- // static
+  ( + ref_piece:UINTEGER_32
+    + p:PIECE
+    + p_i:INSTANCE
+    + allowed:OK_PIECES
+    + n_piece:INTEGER_8
+    
+    0.to (METEOR_CONTEST.n_piece_type - 1) do { i_piece:INTEGER
+      ref_piece := base_vecs.at i_piece
+      0.to (n_orient - 1) do { i_orient:INTEGER
+	p := s_base_piece.at (i_piece,i_orient)
+	gen_orientation (ref_piece, i_orient, p)
+	((i_piece = skip_piece) && {((i_orient / 3) & 1) != 0}).if {
+	  p.m_instance.at 0.set_m_allowed 0
+          p.m_instance.at 1.set_m_allowed 0
+	}
+      }
+    }
+    
+    0.to (METEOR_CONTEST.n_piece_type - 1) do { i_piece:INTEGER
+      0.to (n_orient - 1) do { i_orient:INTEGER
+	+ mask:UINTEGER_64
+	mask := 1
+	0.to (METEOR_CONTEST.n_row - 1) do { i_row:INTEGER
+	  p_i := get_piece (i_piece, i_orient, i_row & 1)
+	  0.to (METEOR_CONTEST.n_col-1) do { i_col:INTEGER
+	    allowed := METEOR_CONTEST.g_ok_pieces.at (i_row,i_col)
+	    ((p.m_allowed & mask) != 0).if {
+	      n_piece := allowed.n_pieces.at i_piece
+	      allowed.piece_vec.at (i_piece,n_piece) put (p_i.m_vec << i_col)
+	      n_piece := n_piece + 1
+	      allowed.n_pieces.at i_piece put n_piece
+	    }
+	    
+	    mask := mask << 1
+	  }
+	}
+      }
+    }
+  )
+  
+  - get_piece (i_piece,i_orient,i_parity:UINTEGER_32) :INSTANCE <- // static
+  (
+    s_base_piece.at (i_piece,i_orient).m_instance.at i_parity
+  )
+

@@ -1,0 +1,46 @@
+Header
+  + name := FOOTNOTE;
+  
+Inherit
+  + parent_win:Expanded WIN
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  - buf_pg:BUF_PG <- PAGE.cast parent.buf_pg
+  
+  - draw <-
+  ( + py,px:REAL_32
+    py := yo + FONT.size_sys * 0.9
+    begin_path
+    fill_color (buf_pg.is_save.ok (COLOR.rgbaf (0,0,0,0.2)) or (COLOR.rgb(160,0,0)))
+    circle (xmax+12, yo+height/2) radius 6
+    fill
+    /*
+    begin_path
+    stroke_color (COLOR.red)
+    stroke_width 1.0
+    line (xo,yo) to (xmax,ymax)
+    stroke
+    */
+    /*begin_path
+    fill_color (COLOR.red)
+    rect (xo,yo) size (width,height)
+    stroke_width 1.0
+    stroke;*/
+    fill_color ((buf_pg.page = PAGE.cur_pg).ok (LOOK.text_ui) or (LOOK.text_bg_ui))
+    save
+    text_align (align_baseline | align_left)
+    px := xo
+    font_face_id (FONT.sys (FONT.roman))
+    px := text (px,py) msg (buf_pg.footnote_right)
+    px := px + 30
+    font_face_id (FONT.sys (FONT.bold))
+    font_size (FONT.size_sys)
+    px := text (px,py) msg (buf_pg.shortname)
+    translate_and_restore (xmax-4-px,0)
+    (buf_pg = PAGE.cur_pg.buf_pg).if {      
+      font_face_id (FONT.sys (FONT.italic))
+      text (xo + 8,py) msg (buf_pg.footnote_left)
+    }
+  )

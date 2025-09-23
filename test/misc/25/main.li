@@ -1,0 +1,23 @@
+Header
+
+  + name := MAIN;
+  
+Inherit
+  
+  + parent_clone:CLONE := CLONE
+
+  + parent_top1:Expanded TOP1
+
+  + parent_top2:Expanded TOP2
+
+Public
+  
+  - main <-
+  ( + top1:TOP1
+    + top2:TOP2
+    
+    top1 := clone
+    top2 := top1.to_top2 top1; ? {top2 != NULL}; // ben non
+  )
+  
+  

@@ -1,0 +1,8 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_big_check:BIG_CHECK := BIG_CHECK
+  
+Public
+  - main <- ( parent_big_check.main; )

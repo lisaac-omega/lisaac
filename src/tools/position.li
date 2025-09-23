@@ -1,0 +1,204 @@
+Header
+
+  + name        := Expanded POSITION;
+
+  /*Coding position :    
+   9 bits  : Index prototype [1..511].  
+   8 bits  : Column          [0..255].  
+   15 bits : Line            [1..32767].*/
+
+  - type        := `uint64_t`;
+  - default     := ( CAST INTEGER TO POSITION.on 0 );
+
+Insert
+
+  - parent_any:ANY := ANY
+
+Public
+
+  - object_size:INTEGER <- POINTER.object_size
+
+  - code:UINTEGER_32 <- CAST POSITION TO UINTEGER_32.on Self
+
+  //
+  // Creation.
+  //
+
+  - create proto:PROTOTYPE line l:INTEGER column c:INTEGER :POSITION <-
+  ( + cod:UINTEGER_32
+    ? {l    .in_range 0 to 131071}
+    ? {c    .in_range 0 to    255}
+    ? {proto.index.in_range 0 to    511}
+    cod := proto.index.to_uinteger_32 | (c << 9) | (l << 17)
+    CAST UINTEGER_32 TO POSITION.on cod
+  )
+
+  //
+  // Localization.
+  //
+
+  - prototype:PROTOTYPE <- PROTOTYPE.prototype_list.at (code.to_integer & 01FFh)
+
+  - line:UINTEGER_32       <- code >> 17
+
+  - column:UINTEGER_32     <- (code >> 9) & 0FFh
+
+  //
+  // Information Generation.
+  //
+
+  - nb_warning:INTEGER
+
+  - send_error <-
+  (
+    append_context
+    STDERR.put_string msg_err
+    is_verbose.if {      
+      msg_err.print
+    }
+    (type_error = warning).if {
+      nb_warning := nb_warning + 1
+    } else {      
+      exit exit_failure_code
+    }
+  )
+
+  - put_error type:INTEGER text txt:STRING <-
+  (
+    type_error := type
+    msg_err.clear
+    type
+    .when syntax   then {
+      msg_err.append "--SYNTAX-----------\n"
+    }.when semantic then {
+      msg_err.append "--SEMANTIC---------\n"
+    }.when warning  then {
+      msg_err.append "--WARNING----------\n"
+    }.when message  then {
+      msg_err.append "--MESSAGE----------\n"
+    }
+    msg_err.append txt
+  )
+
+  - put_position <-
+  ( + pos:INTEGER
+    + c,cols:UINTEGER_32
+    + src:STRING_BUFFER
+    + char:CHARACTER
+    ? {code != 0}
+    
+    (Self = POSITION).if {
+      msg_err.append "\nUnknown position.\n"
+    } else {
+      msg_err.append "\nLine "
+      line.append_in msg_err
+      msg_err.append " column "
+      column.append_in msg_err
+      msg_err.append " in "
+      msg_err.append (prototype.name)
+      msg_err.add_last '('
+      prototype.append_filename msg_err
+      msg_err.append "):\n"
+      // Search begin line :
+      src := prototype.source
+      pos := src.lower
+      1.to (line-1) do { l:INTEGER
+        {(char := src.at pos) != '\n'}.while_do {
+          pos := pos + 1
+        }
+        pos := pos + 1
+      }
+      // copy line :
+      string_tmp.clear
+      cols := column
+      {(pos > src.upper) || {src.at pos='\n'} || {src.at pos='\r'}}.until_do {
+        char := src.at pos
+        msg_err.add_last char
+        (c < cols).if {
+          (char = '\t').if {
+            string_tmp.add_last '\t'
+          } else {
+            string_tmp.add_last ' '
+          }
+        }
+        c   := c + 1
+        pos := pos + 1
+        {((char := src.at pos) & 0C0h) = 80h}.while_do {
+          msg_err.add_last char
+          pos := pos + 1
+        }
+      }
+      msg_err.add_last '\n'
+      msg_err.append string_tmp
+      msg_err.append "^\n"
+    }
+  )
+
+  - extract_line_in buf:STRING_BUFFER <-
+  [ ? {Self != POSITION}; ]
+  ( + pos:INTEGER
+    + src:STRING_BUFFER
+    + char:CHARACTER
+    
+    // Search begin line :
+    src := prototype.source
+    pos := src.lower
+    1.to (line-1) do { l:INTEGER
+      {src.at pos = '\n'}.until_do {
+        pos := pos + 1
+      }
+      pos := pos + 1
+    }
+    // copy line :
+    {(pos > src.upper) || {src.at pos='\n'} || {src.at pos='\r'}}.until_do {
+      char := src.at pos
+      ((char='\\') || {char='\"'}).if { buf.add_last '\\'; }
+      buf.add_last char
+      pos := pos + 1
+    }
+    (buf.last.code = 0Dh).if {
+      buf.remove_last
+    }
+  )
+
+Private
+
+  //
+  // Service manager
+  //
+
+  - type_error:INTEGER
+
+  - msg_err:STRING_BUFFER := STRING_BUFFER.create 256
+  
+Public
+  
+  //
+  // Push context
+  //
+  
+  - push_context i:INSTR <-
+  (    
+    stack_push.add_last i
+  )
+  
+  - pop_context <-
+  (    
+    stack_push.remove_last
+  )
+  
+  - clean_context <- stack_push.clear
+  
+  - append_context <-
+  (
+    (stack_push.is_empty).if_false {
+      msg_err.append "Context:\n  ..."
+      (stack_push.lower.max (stack_push.upper-4)).to (stack_push.upper) do { i:INTEGER
+        stack_push.at i.position.put_position
+      }
+    }
+  )
+  
+Private
+  
+  - stack_push:ARRAY INSTR := ARRAY INSTR .create_with_capacity 4

@@ -1,0 +1,19 @@
+Header
+  + name := FROM_TO1;
+  /**/
+  
+    
+Public
+  
+  - main <-
+  ( + i:INTEGER
+    TEST.check (i = 0)
+    from 1 to 1 do { j:INTEGER
+      i := i + j
+    }
+    TEST.check (i = 1)
+    from 2 to 3 do { j:INTEGER
+      i := i + j
+    }
+    TEST.check (i = 6)
+  )

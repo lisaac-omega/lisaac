@@ -1,0 +1,10 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + bool:BOOLEAN
+    bool.print
+    TEST.check (bool.to_string) string "FALSE"
+    TEST.check (TRUE.to_string) string "TRUE"
+  )

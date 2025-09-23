@@ -1,0 +1,41 @@
+Header
+  
+  + name := PEN_CMD;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Public
+  
+  - transform mtx:TRANSFORM <-
+  (    
+    // Nothing.
+  )
+  
+  - to_path pc:PATH_CACHE <-
+  (
+    abstract
+  )
+  
+  - free <- abstract
+  
+PEN_CMD
+  
+  - get_tranform (sx,sy:REAL_32) with mtx:TRANSFORM :(REAL_32,REAL_32) <-
+  ( + rx,ry:REAL_32
+    rx := sx*mtx.t0 + sy*mtx.t2 + mtx.t4
+    ry := sx*mtx.t1 + sy*mtx.t3 + mtx.t5
+    rx,ry
+  )
+  
+Public
+    
+  - svg_put (px,py:REAL_32) in buf:STRING_BUFFER <-
+  (
+    px.append_in buf
+    buf.add_last ','
+    py.append_in buf
+  )
+  
+  - svg_append_in buf:STRING_BUFFER <- abstract

@@ -1,0 +1,46 @@
+Welcome to the Lisaac Ω world !
+
+Once properly installed, you will have access to the code editor 'elix' as well as
+the command-line compiler 'lisaac'.
+With these two commands, you can do almost everything.
+
+The simplest way to get started is to launch elix from a terminal and explore the example code,
+which will be accessible through the tabs and is mostly located in the lisaac/example directory.
+For instance, you can start with lisaac/example/hello_world.li.
+
+The full source code of the lisaac compiler as well as that of elix is included in this distribution.
+
+The remainder of this file provides installation instructions for Lisaac Omega.
+
+~~~~
+WARNING:
+This file may not be up to date.
+We invite you to check the instructions on the website www.lisaac.org
+
+Install Unix:
+=============
+  sudo apt update
+  sudo apt-get install build-essential mesa-common-dev libgl1-mesa-dev pulseaudio-utils
+  unzip lisaac_0.5.zip
+  cd lisaac
+  ./install.sh
+
+Install MacOS:
+======================
+  brew install glfw pkg-config
+  unzip lisaac_0.5.zip
+  cd lisaac
+  ./install.sh
+
+Install Windows:
+================
+  Installer www.msys2.org (Pour x86-64)
+  Dans le terminal : MSYS2 UCRT64
+  pacman -S unzip mingw-w64-x86_64-gcc mingw-w64-x86_64-glfw
+  Mettre lisaac_0.5.zip dans C:/msys64/home/Utilisateur/
+  Dans le terminal : MSYS2 MINGW64
+  unzip lisaac_0.5.zip
+  cd lisaac
+  ./install.sh
+
+Also take a look at the other README files.

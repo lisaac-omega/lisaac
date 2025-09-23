@@ -1,0 +1,107 @@
+Header
+  
+  + name := TEST_IMG;
+  
+Inherit
+  + parent_window:Expanded WINDOW
+    
+Public  
+  
+  - img_lower:INTEGER := 1
+  - img_upper:INTEGER := 12
+  
+  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 80
+  
+  - jpg:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - png:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - tga:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - bmp:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - psd:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - gif:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - ppm:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  - pgm:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 12
+  
+  - draw (x,y:REAL_32) imgs img:ARRAY INTEGER <-
+  ( + p:PAINT
+    + ix,iy,iw,ih:REAL_32
+    + siz:REAL_32
+    + imgw,imgh,id:INTEGER
+    siz := 60.0
+    0.to (img.upper) do { i:INTEGER
+      + tx,ty:REAL_32
+      (tx, ty) := (x, y+siz*i)
+      (imgw,imgh) := image_size (img.at i)
+      (imgw < imgh).if {
+        (iw, ih) := (siz, siz * imgh / imgw)
+        (ix, iy) := (0, -(ih-siz)/2)
+      } else {
+        (iw, ih) := (siz * imgw / imgh, siz)
+        (ix, iy) := (-(iw-siz)/2, 0)
+      }
+      id := img.at i
+      (id >0).if {
+        p := PAINT.create_pattern (tx+ix, ty+iy) size (iw, ih) img_id id angle 0 alpha 1
+        begin_path
+        rect (tx,ty) size (siz,siz) radius 5.0
+        fill_paint p
+        fill
+        p.free
+      }
+    }
+  )
+  
+  - load_filter ext:STRING_ALIAS imgs img:ARRAY INTEGER <-
+  (
+    img_lower.to img_upper do { i:INTEGER
+      string_tmp.copy "image"
+      i.append_in string_tmp
+      string_tmp.add_last '.'
+      string_tmp.append ext
+      //string_tmp.println
+      img.add_last (create_image string_tmp flags 0)
+      (img.last <= 0).if {
+        "Could not load `".print;
+        string_tmp.print
+        "'.\n".print
+      }
+    }
+  )
+  
+  - free_imgs img:ARRAY INTEGER <-
+  (
+    0.to (img.upper) do { i:INTEGER
+      delete_image (img.item i)
+    }
+  )
+  
+  - draw <-
+  ( /*
+    pen.begin_path
+    pen.rect (0,0) size (1000,800)
+    pen.fill_color (COLOR.rgb(255,0,0))
+    pen.fill;*/
+    
+    draw ( 10,10) imgs jpg
+    draw (110,10) imgs png
+    draw (210,10) imgs tga
+    draw (310,10) imgs bmp
+    draw (410,10) imgs psd
+    draw (510,10) imgs gif
+    draw (610,10) imgs ppm
+    draw (710,10) imgs pgm
+  )
+    
+  - main <-
+  ( 
+    init "Test Img" size (800,800)
+    load_filter "jpg" imgs jpg
+    load_filter "png" imgs png
+    load_filter "tga" imgs tga
+    load_filter "bmp" imgs bmp
+    load_filter "psd" imgs psd
+    load_filter "gif" imgs gif
+    load_filter "ppm" imgs ppm
+    load_filter "pgm" imgs pgm
+    PAPER.run
+  )
+  

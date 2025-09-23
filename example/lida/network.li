@@ -1,0 +1,149 @@
+Header
+  + name := NETWORK;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - training:UINTEGER_8  := 0
+  - inference:UINTEGER_8 := 1
+  
+  + output:BLOB
+  + layers:Expanded ARRAY LAYER
+  + cud:CUDA
+  + phase:UINTEGER_8 := inference
+  
+  - new:SELF <- clone
+  
+  - free <-
+  (
+    // destroy network
+    layers.foreach { l:LAYER; l.free; }
+    // terminate CUDA context
+    (cud != NULL).if { cud.destroy; }
+  )
+
+  - add_layer l:LAYER <-
+  (
+    layers.add_last l
+    // tagging layer to stop gradient if it is the first layer
+    (layers.count = 1).if { layers.first.set_gradient_stop; }
+  )
+
+  - forward (in:BLOB) :BLOB <-
+  (
+    output := in
+
+    CUDA.nvtx_range_push_a "Forward" idx 0
+    layers.foreach { l:LAYER; output := l.forward output; }
+    CUDA.nvtx_range_pop
+    output
+  )
+
+  - backward (target:BLOB) <-
+  ( + gradient:BLOB
+    gradient := target
+
+    (phase != inference).if { 
+      CUDA.nvtx_range_push_a "Backward" idx 0
+      // back propagation.. update weights internally.....
+      layers.foreach_backward { l:LAYER
+        // getting back propagation status with gradient size
+        /*"[[Backward]][[ ".print; l.name.print
+        (7-l.name.count).times { ' '.print; }
+        " ]] (".print
+        gradient.n.print; ", ".print; gradient.c.print; ", ".print
+        gradient.h.print; ", ".print; gradient.w.print; ") ".print; */
+        gradient := l.backward gradient
+        /*"--> (".print
+        gradient.n.print; ", ".print; gradient.c.print; ", ".print
+        gradient.h.print; ", ".print; gradient.w.print; ")".println;*/
+      }
+      CUDA.nvtx_range_pop
+    }
+  )
+
+  - update (learning_rate:REAL_32) <-
+  (
+    (phase != inference).if { 
+      CUDA.nvtx_range_push_a "Update" idx 0
+      layers.foreach { l:LAYER
+        // if no parameters, then pass
+        (
+          (l.weights != NULL) && {l.grad_weights != NULL} &&          {l.biases  != NULL} && {l.grad_biases  != NULL}
+        ).if {          
+          l.update_weights_biases learning_rate
+        }
+      }
+      CUDA.nvtx_range_pop
+    }
+  )
+
+  - write_file:INTEGER <-
+  ( + err:INTEGER
+    ".. store weights to the storage ..".println
+    
+    layers.foreach { l:LAYER
+      err := l.save_parameter
+      (err != 0).if {
+        "-> error code: ".print
+        err.println
+        exit err
+      }
+    }
+    0
+  )
+
+  - load_pretrain:INTEGER <-
+  (
+    layers_.foreach { l:LAYER
+      l.set_load_pretrain
+    }
+    0
+  )
+
+  // 1. initialize cuda resource container
+  // 2. register the resource container to all the layers
+  - cuda <-
+  (    
+    cud := CUDA.new.init
+    ".. model Configuration ..".println
+    layers.foreach { l:LAYER
+      "CUDA: ".print
+      l.name.println
+      l.set_cud cud
+    }
+  )
+
+  - train <-
+  (
+    phase := training
+    // unfreeze all layers
+    layers.foreach { l:LAYER; l.set_freeze FALSE; }
+  )
+
+  - test <-
+  (
+    phase := inference
+    // freeze all layers
+    layers.foreach { l:LAYER; l.set_freeze TRUE; }
+  )
+
+  - loss (target:BLOB) :REAL_32 <- layers.last.get_loss target
+  - get_accuracy (target:BLOB) :INTEGER <- layers.last.get_accuracy target
+  
+  - bug_check <-
+  ( + s0,s1/*,s2,s3,s4,s5,s6,s7*/:REAL_32
+    layers.foreach { l:LAYER
+      s0 := l.input.somme_bug;        s1 := l.output.somme_bug
+      //s2 := l.grad_input.somme_bug;   s3 := l.grad_output.somme_bug
+      //s4 := l.weights.somme_bug;      s5 := l.biases.somme_bug
+      //s6 := l.grad_weights.somme_bug; s7 := l.grad_biases.somme_bug
+      `printf("%6.3f ",@s0)`;  `printf("%6.3f ",@s1)`
+      //`printf("%6.3f ",@s2)`;  `printf("%6.3f ",@s3)`
+      //`printf("%6.3f ",@s4)`;  `printf("%6.3f ",@s5)`
+      //`printf("%6.3f ",@s6)`;  `printf("%6.3f ",@s7)`
+      '\n'.print
+    }
+  )

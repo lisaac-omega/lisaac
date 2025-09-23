@@ -1,0 +1,45 @@
+Header
+  
+  + name         := S_PIECE;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Public
+  
+  + vec:UINTEGER_32
+  + i_piece:INTEGER_16
+  + row:INTEGER_16
+  
+  - create (avec,apiece,arow:UINTEGER_32) :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make (avec,apiece,arow)
+    result
+  )
+  
+  - make (avec,apiece,arow:UINTEGER_32) <-
+  (
+    vec := avec
+    i_piece := apiece.to_integer_16
+    row := arow.to_integer_16
+  )
+  
+  - set_vec v:UINTEGER_32 <-
+  (
+    vec := v
+  )
+  
+  - set_i_piece v:UINTEGER_32 <-
+  (
+    i_piece := v.to_integer_16
+  )
+  
+  - set_row v:UINTEGER_32 <-
+  (
+    row := v.to_integer_16
+  )

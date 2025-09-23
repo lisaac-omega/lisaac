@@ -1,0 +1,46 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Public
+  
+  - load_directory path:STRING_ALIAS <-
+  ( + dirent:DIRENT
+    + dir:DIRECTORY
+    dirent := FILE_SYSTEM.get path
+    (dirent = NULL).if {
+      ("Error: cannot open '" + path + "'").println
+      exit 0
+    }
+    TEST.check_not_null (dirent.path)
+    trace (dirent.path)
+    ((dirent.is_directory) && {dirent.open}).if {
+      dir ?= dirent
+      dir.sort
+      ("count=" + dir.count.to_string).println
+      dir.foreach { d:DIRENT
+        trace (d.path)
+        load_directory (d.path)
+      }
+    }
+  )
+  
+  - main <-
+  (
+    TEST.check (COMMAND_ARGS.count) integer 2
+    load_directory (COMMAND_ARGS.first)
+  )
+  
+  - trace path:STRING <-
+  ( + i:INTEGER
+    ((i := path.first_substring_index "/lisaac/") < 0).if {
+      i := 0
+    }
+    i.to (path.upper) do { k:INTEGER
+      STDOUT.put_character (path.item k)
+    }
+    STDOUT.put_character '\n'
+  )
+  

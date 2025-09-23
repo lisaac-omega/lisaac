@@ -1,0 +1,23 @@
+Header
+  + name := TPOP;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + dx:TEXP
+  + dy:TEXP
+  
+  - init_xy (x,y:TEXP) :TPOP <- ( (dx,dy) := (x,y); Self)
+  
+  - run <- ( restore_to (dx.eval,dy.eval); )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "Pop ("
+    dx.append_in b
+    b | ','
+    dy.append_in b
+    b | ')'
+  )

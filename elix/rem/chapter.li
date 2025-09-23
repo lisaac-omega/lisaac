@@ -1,0 +1,105 @@
+Header
+  + name := CHAPTER;
+  
+Inherit
+  + parent_tok_drw:Expanded TOK_DRW
+  
+Private
+  - stk:Expanded ARRAY (Strict CHAPTER)
+  
+Public
+ 
+  + key:STRING_ALIAS
+    
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+  
+  // PARSER
+  
+  - detect:BOOLEAN <- (prev_line_empty >=1) && {look "  // "}
+  
+  - parse <-
+  ( key := NULL
+    {look "  // "}.while_do {
+      pos_i := pos_i + 5
+      skip_sp
+      ((at pos_i != '\0') && {at pos_i != '\n'}).if {        
+        (key = NULL).if {                  
+          STRING.tmp { tmp:STRING_BUFFER
+            {(at pos_i != '\0') && {at pos_i != '\n'}}.while_do {
+              tmp | at pos_i
+              pos_i := pos_i + 1
+            }
+            key := tmp.to_string_alias
+          }
+        } else { skip_until '\n'; }
+      }
+      (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }
+    }
+  )
+  
+  // DRAW
+  
+  - y_section:REAL_32
+  - begin_draw <-
+  (
+    y_section := tex.y
+
+    tex.push (x_space*2,hline_default)
+    pos_i := pos_i + 4
+    
+    fill_color (LOOK.cols.at (LOOK.rmk))
+  )
+  
+  - sub_draw <-
+  (    
+    ((pos_i.pt != pt_b.pt+di) && {buf.at (pos_i-1) = '\n'}).if {      
+      pos_i := pos_i + 4
+      fill_color (LOOK.cols.at (LOOK.sub_rmk))
+    }
+  )
+  
+  - end_draw <-
+  ( 
+    rmo (tex.x,tex.ymin) to (tex.xmax,tex.y) col (LOOK.cols.at (LOOK.rmk))
+    tex.pop_add_y (-des_c+2)
+  )
+      
+  - post_draw <-
+  ( + sec:SECTION
+    sec := get_prev_tok SECTION
+    (sec != NULL).if { sec.draw_section y_section; }
+    txt_buf.like LIX_BUF.proto.draw_extern_slot key idx 0
+  )
+  
+  - draw_extern_key k:STRING_ALIAS <-
+  (
+    DIV.mute {
+      tex.push (x_space*2,hline_default)
+      fill_color (COLOR.gray)
+      begin_line
+      tmp_c.copy " "
+      tmp_c.append k
+      draw_tmp_c
+      end_line
+      rmo (tex.x,tex.ymin) to (tex.xmax,tex.y) col (COLOR.gray)
+      tex.pop_add_y (-des_c+2)
+    }
+  )
+  
+Private
+  
+  - rmo (x0,y0:REAL_32) to (x1,y1:REAL_32) col c:COLOR <-
+  ( + x,y,r,m:REAL_32
+    r := 24; // Radius
+    m := 24; // Margin.    
+    begin_path
+    stroke_color c
+    stroke_width 3
+    (x,y) := (x0,y1-des_c); move_to (x,y)
+    y := y0-m+r;  line_to (x,y)
+    y := y0-m;    arc_to (x,y) to (x+r,y) radius r
+    x := xmax-50; line_to (x,y)
+    stroke
+  )

@@ -1,0 +1,128 @@
+Header
+  
+  + name := FONS_TEXT_ITER;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Private
+  
+  - stock_fons:ARRAY FONS_TEXT_ITER := ARRAY FONS_TEXT_ITER.create_with_capacity 32
+  
+  - new:FONS_TEXT_ITER <-
+  ( + result:FONS_TEXT_ITER
+    (stock_fons.is_empty).if {
+      result := FONS_TEXT_ITER.clone
+    } else {      
+      result := stock_fons.pop
+    }
+    result
+  )
+  
+Public
+  
+  + x:REAL_32
+  + y:REAL_32
+  + nextx:REAL_32
+  + nexty:REAL_32
+  + scale:REAL_32
+  + spacing:REAL_32
+  
+  + codepoint:UINTEGER_32
+  + isize:INTEGER_16
+  + iblur:INTEGER_16
+  
+  + font:FONS_FONT
+  
+  + prev_glyph_index:INTEGER
+  + str:STRING
+  
+  + start:INTEGER; // BSBS: me
+  + next:INTEGER
+  + end:INTEGER
+  
+  + utf8state:UINTEGER_32
+  
+  - set_start s:INTEGER <- ( start := s; )
+  - set_next s:INTEGER <- ( next := s; )
+  - set_utf8state v:UINTEGER_32 <- ( utf8state := v; )
+  - set_codepoint c:UINTEGER_32 <- ( codepoint := c; )
+  
+  - set_xy (px,py:REAL_32) <- ( (x,y) := (px,py); )
+  - set_next_xy (px,py:REAL_32) <- ( (nextx,nexty) := (px,py); )
+  
+  - set_prev_glyph_index v:INTEGER <- ( prev_glyph_index := v; )
+  
+  - copy other:FONS_TEXT_ITER <-
+  ( 
+    (x,y)           := (other.x,other.y)
+    (nextx,nexty)   := (other.nextx,other.nexty)
+    (scale,spacing) := (other.scale,other.spacing)
+    codepoint       := other.codepoint
+    (isize,iblur)   := (other.isize,other.iblur)
+    font            := other.font
+    prev_glyph_index:= other.prev_glyph_index
+    str             := other.str
+    (start,next,end):= (other.start,other.next,other.end)
+    utf8state       := other.utf8state
+  )
+  
+  - create:FONS_TEXT_ITER <- new
+  
+  - create f:FONS_FONT isize s:INTEGER_16 iblur b:INTEGER_16 
+  scale sc:REAL_32 :FONS_TEXT_ITER <-
+  ( + result:FONS_TEXT_ITER
+    result := new
+    result.font f isize s iblur b scale sc
+    result
+  )
+      
+  - font f:FONS_FONT isize s:INTEGER_16 iblur b:INTEGER_16 scale sc:REAL_32 <-
+  (
+    font := f
+    (isize,iblur) := (s,b)
+    scale := sc
+  )
+  
+  - xy (px,py:REAL_32) spacing sp:REAL_32 str st:STRING
+  from fst:INTEGER to ed:INTEGER codepoint c:UINTEGER_32
+  prev_glyph_index idx:INTEGER <-
+  (
+    (x,y) := (nextx,nexty) := (px,py)
+    spacing := sp
+    str := st
+    start := fst
+    next := fst
+    end := ed
+    codepoint := c
+    prev_glyph_index := idx
+  )
+    
+  - reset <-
+  (
+    x := y := nextx := nexty := scale := spacing := 0.0
+    codepoint := 0
+    isize := iblur := 0
+    font := NULL
+    prev_glyph_index := 0
+    str := NULL
+    start := next := end := 0
+    utf8state := 0
+  )
+  /*
+  - print <-
+  (
+    "codepoint:".print
+    (codepoint != 0).if { codepoint.to_character.print; '='.print; }; codepoint.print
+    "\nstart:".print; start.print
+    "\nnext:".print; next.print
+    "\nend:".print; end.print
+    "\nutf8state:".print; utf8state.print
+    "\n==============\n".print
+  )
+*/
+  - free <-
+  (     
+    stock_fons.add_last Self
+  )

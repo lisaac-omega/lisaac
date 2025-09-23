@@ -1,0 +1,15 @@
+Header
+
+  + name      := INSTR;
+
+  /*
+  The instr prototype
+  */
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  + position:INTEGER

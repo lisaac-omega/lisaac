@@ -1,0 +1,13 @@
+Header
+  + name := MAIN;
+
+Public
+
+  - main <-
+  ( + s1,s2:STRING_BUFFER
+    s1 := STRING_BUFFER.create 1024
+    s1.add_last '2'
+    s2 := s1.twin
+    TEST.check (s1.first = s2.last)
+  )
+

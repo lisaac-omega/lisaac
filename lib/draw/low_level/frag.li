@@ -1,0 +1,209 @@
+Header
+  
+  + name := FRAG;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Private
+  
+  - invxform:TRANSFORM := TRANSFORM.create
+  
+Mapping, Public
+  
+  + scissor_mat00:REAL_32; // 0 
+  + scissor_mat01:REAL_32
+  + scissor_mat02:REAL_32
+  + scissor_mat03:REAL_32
+  
+  + scissor_mat04:REAL_32; // 1 
+  + scissor_mat05:REAL_32
+  + scissor_mat06:REAL_32
+  + scissor_mat07:REAL_32
+  
+  + scissor_mat08:REAL_32; // 2 
+  + scissor_mat09:REAL_32
+  + scissor_mat10:REAL_32
+  + scissor_mat11:REAL_32
+  // 12
+  + paint_mat00:REAL_32;  // 3 
+  + paint_mat01:REAL_32
+  + paint_mat02:REAL_32
+  + paint_mat03:REAL_32
+  
+  + paint_mat04:REAL_32;  // 4
+  + paint_mat05:REAL_32
+  + paint_mat06:REAL_32
+  + paint_mat07:REAL_32
+  
+  + paint_mat08:REAL_32;  // 5
+  + paint_mat09:REAL_32
+  + paint_mat10:REAL_32
+  + paint_mat11:REAL_32
+  // 12
+  + inner_col:COLOR;      // 6
+  + outer_col:COLOR;      // 7
+  + scissor_ext0:REAL_32; // 8
+  + scissor_ext1:REAL_32
+  + scissor_scale0:REAL_32
+  + scissor_scale1:REAL_32
+  
+  + extent0:REAL_32;      // 9
+  + extent1:REAL_32
+  + radius:REAL_32
+  + feather:REAL_32
+  
+  + stroke_mult:REAL_32;  // 10 = x
+  + stroke_thr:REAL_32;   // = y
+  + tex_type:INTEGER_32;     // = z
+  + type:INTEGER_32;         // = w
+      
+Public
+  
+  - set_type t:INTEGER_32 <- ( type := t; )
+  
+  - to_array:NATIVE_ARRAY REAL_32 <- 
+  CAST FRAG TO (NATIVE_ARRAY REAL_32).on Self
+
+  - make typ:INTEGER_32 stroke_thr stro:REAL_32 :SELF <-
+  (
+    type := typ
+    stroke_thr := stro
+    Self
+  )
+
+  - convert_paint (paint:PAINT,scissor:SCISSOR,width,
+  fringe,stro_thr:REAL_32) :SELF <-
+  ( + t0,t2,t1,t3:REAL_32
+    
+    inner_col := paint.inner_color
+    inner_col.premul_color
+    outer_col := paint.outer_color
+    outer_col.premul_color
+    
+    //"Frag84.Color: ".print; inner_col.print; ':'.print; outer_col.print; '\n'.print
+    
+    ((scissor.extent0 < -0.5) || {scissor.extent1 < -0.5}).if {
+      scissor_mat00 := scissor_mat01 := scissor_mat02 := 0
+      scissor_mat03 := scissor_mat04 := scissor_mat05 := 0
+      scissor_mat06 := scissor_mat07 := scissor_mat08 := 0
+      scissor_mat09 := scissor_mat10 := scissor_mat11 := 0
+      scissor_ext0 := scissor_ext1 := 1
+      scissor_scale0 := scissor_scale1 := 1
+    } else {
+      invxform.inverse (scissor.xform)
+      xform_to_mat3x4 invxform in get_scissor_mat
+      (scissor_ext0,scissor_ext1) := (scissor.extent0,scissor.extent1)
+      (t0,t2) := (scissor.xform.t0,scissor.xform.t2)
+      scissor_scale0 := (t0*t0 + t2*t2).sqrt / fringe
+      (t1,t3) := (scissor.xform.t1,scissor.xform.t3)
+      scissor_scale1 := (t1*t1 + t3*t3).sqrt / fringe
+    }
+    (extent0,extent1) := (paint.extent0,paint.extent1)
+    stroke_mult := (width+fringe)*0.5 / fringe
+    stroke_thr := stro_thr
+    
+    (paint.image != 0).if {
+      + tex:TEXTURE
+      tex := pen_gl.find_texture (paint.image)
+      ((tex.flags & image_flipy) != 0).if {
+        + m1,m2:TRANSFORM
+        m1.translate(0.0,extent1 * 0.5)
+        m1.multiply (paint.xform)
+        m2.scale(1.0,-1.0)
+        m2.multiply m1
+        m1.translate (0.0,-extent1 * 0.5)
+        m1.multiply m2
+        invxform.inverse m1
+      } else {
+        invxform.inverse (paint.xform)
+      }
+      type := shader_fillimg
+      ((tex.type = texture_rgba) != 0).if {
+        tex_type := ((tex.flags & image_premultiplied)!=0).ok 0 or 1
+      } else {
+        tex_type := 2
+      }
+    } else {
+      type := shader_fillgrad
+      radius := paint.radius
+      feather := paint.feather
+      invxform.inverse (paint.xform)
+    }
+    xform_to_mat3x4 invxform in get_paint_mat
+    //"FRAG: ".print; object_size.print; '\n'.print
+    //print1
+    Self
+  )
+  
+  - print1 <-
+  (
+    "--------------------------------------------------------\n".print
+    `printf("Adress: %llx\n",((long long)@Self)&0xFFFF)`
+    "Scissor:\n".print
+    scissor_mat00.print; ' '.print; scissor_mat01.print; ' '.print
+    scissor_mat02.print; ' '.print; scissor_mat03.print; '\n'.print
+    scissor_mat04.print; ' '.print; scissor_mat05.print; ' '.print
+    scissor_mat06.print; ' '.print; scissor_mat07.print; '\n'.print
+    scissor_mat08.print; ' '.print; scissor_mat09.print; ' '.print
+    scissor_mat10.print; ' '.print; scissor_mat11.print; '\n'.print
+    "Paint:\n".print
+    paint_mat00.print; ' '.print; paint_mat01.print; ' '.print
+    paint_mat02.print; ' '.print; paint_mat03.print; '\n'.print
+    paint_mat04.print; ' '.print; paint_mat05.print; ' '.print
+    paint_mat06.print; ' '.print; paint_mat07.print; '\n'.print
+    paint_mat08.print; ' '.print; paint_mat09.print; ' '.print
+    paint_mat10.print; ' '.print; paint_mat11.print; '\n'.print
+    "Inner_col:".print; inner_col.print
+    " Outer_col:".print; outer_col.print; '\n'.print
+    "Sci_ext:".print
+    scissor_ext0.print; ' '.print; scissor_ext1.print; '\n'.print
+    "Sci_sca:".print
+    scissor_scale0.print; ' '.print; scissor_scale1.print; '\n'.print
+    "Extent :".print
+    extent0.print; ' '.print; extent1.print; '\n'.print
+    "Radius:".print; radius.print
+    " Feather:".print; feather.print; '\n'.print
+    "Stroke(mult/thr):".print
+    stroke_mult.print; ' '.print; stroke_thr.print; '\n'.print
+    "Tex_type:".print; tex_type.print
+    " Type:".print; type.print; '\n'.print
+  )
+  
+  - print2 <-
+  ( + t:NATIVE_ARRAY REAL_32
+    + r:REAL_32
+    "--------------------------------------------------------\n".print
+    t := to_array
+    0.to 3 do { y:INTEGER
+      0.to 10 do { x:INTEGER
+        r := t.item (y*11+x)
+        (r = 0).if {
+          "0.0000".print
+        } else {
+          r.print
+        }
+        ' '.print
+      }
+      '\n'.print
+    }
+  )
+  
+Private
+  
+  - get_scissor_mat:NATIVE_ARRAY REAL_32 <- 
+  `&((float *)@Self)[0]`:NATIVE_ARRAY REAL_32
+  
+  - get_paint_mat  :NATIVE_ARRAY REAL_32 <- 
+  `&((float *)@Self)[12]`:NATIVE_ARRAY REAL_32
+  
+  - xform_to_mat3x4 xf:TRANSFORM in t:NATIVE_ARRAY REAL_32 <-
+  ( 
+    t.at 0  put (xf.t0); t.at 1  put (xf.t1)
+    t.at 2  put       0; t.at 3  put       0
+    t.at 4  put (xf.t2); t.at 5  put (xf.t3)
+    t.at 6  put       0; t.at 7  put       0
+    t.at 8  put (xf.t4); t.at 9  put (xf.t5)
+    t.at 10 put       1; t.at 11 put       0
+  )

@@ -1,0 +1,99 @@
+Header
+
+  + name        := CASE;
+
+  /* Case for Switch. */
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  + id:TYPE
+
+  + code:LIST
+
+  - set_code new_code:LIST <-
+  (
+    code := new_code
+  )
+
+  //
+  // Creation.
+  //
+
+  - create val:TYPE with c:LIST :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make val with c
+    result
+  )
+
+  - make val:TYPE with c:LIST <-
+  ( + tb:PROFIL_BLOCK
+    id   := val
+    code := c
+    //
+    tb ?= val
+    (tb != NULL).if {
+      tb.inc_id
+    }
+  )
+
+  - my_copy:SELF <-
+  ( + result:SELF
+
+    result := SELF.create id with (code.my_copy)
+    result
+  )
+
+  - remove <-
+  ( + tb:PROFIL_BLOCK
+    code.remove
+    tb ?= id
+    (tb != NULL).if {
+      tb.dec_id
+    }
+  )
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' other:CASE :BOOLEAN <-
+  // BSBS : Naive implantation...
+  ( + result:BOOLEAN
+    + wrt1,wrt2:WRITE_LOCAL
+
+    ((code.count = 1) && {code.count = other.code.count}).if {
+      wrt1 ?= code.first
+      wrt2 ?= other.code.first
+      result := (
+        (wrt1 != NULL) && {wrt2 != NULL} &&
+        {wrt1.variable = wrt2.variable} &&
+        {wrt1.value ~= wrt2.value}
+      )
+    }
+    result
+  )
+
+  //
+  // Execute
+  //
+
+  - execute <-
+  (
+    id.set_late_binding
+    code.execute_case
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <-
+  (
+    code.genere
+  )

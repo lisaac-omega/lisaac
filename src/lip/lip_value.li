@@ -1,0 +1,37 @@
+Header
+
+  + name      := LIP_VALUE;
+
+Inherit
+
+  + parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + value:LIP_CONSTANT
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with v:LIP_CONSTANT :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p with v
+    result
+  )
+
+  - make p:POSITION with v:LIP_CONSTANT <-
+  (
+    position := p
+    value := v
+  )
+
+  //
+  // Run.
+  //
+
+  - run_expr:LIP_CONSTANT <-
+  (
+    value.copy
+  )

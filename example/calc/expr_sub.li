@@ -1,0 +1,17 @@
+Header
+
+  + name        := EXPR_SUB;
+  /*
+  Sub Expression.
+  */
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  - value:INTEGER <-
+  (
+    left.value - right.value
+  )

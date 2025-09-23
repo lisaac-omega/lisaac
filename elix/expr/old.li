@@ -1,0 +1,40 @@
+Header
+  + name := Strict OLD;
+
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Private
+  - stk_old:Expanded ARRAY OLD
+  
+Public
+  + expr:EXPR
+  
+Public
+  - type:TYPE <- expr.type
+    
+  - new:SELF <-
+  ( + r:SELF
+    (stk_old.is_empty).if { r := clone; } else { r := stk_old.pop; }
+    r
+  )
+  - free <-
+  ( (expr != NULL).if { expr.free; expr := NULL; }; stk_old.add_last Self; )
+  
+  - new_parse t:INTEGER <-
+  ( (word "Old").if {
+      col (LOOK.keyword) sub 3
+      expr := rd_expr_op
+      (expr = NULL).if { err syntax msg "Expression is needed."; }
+    }
+  )
+      
+  - run <-
+  (
+    not_yet_implemented
+    // Ici il est trop tard !
+    // Il faut le gerer au parsing sinon c'est trop la merde au niveau du contexte !!
+    // Donc: * remonter `tmp' := EXPR (Att. `tmp' peut etre complexe)
+    //       * Mettre ici que `tmp'
+  )
+  

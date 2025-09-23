@@ -1,0 +1,35 @@
+Header
+  + name := Strict USER_BOX;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ USER_BOX
+  
+Private
+  - stk:Expanded ARRAY USER_BOX
+  
+Public
+  
+  + width_min:REAL_32
+  + height_min:REAL_32
+  
+  + drw:{USER_BOX;}
+  + evt:{(USER_BOX,UINTEGER_8); BOOLEAN}
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init (w,h:REAL_32) draw d:{USER_BOX;} :SELF <-
+  init (w,h) draw d event {(d:USER_BOX,e:UINTEGER_8); FALSE}
+  
+  - init (w,h:REAL_32) draw d:{USER_BOX;} event e:{(USER_BOX,UINTEGER_8);BOOLEAN} :SELF <-
+  (
+    (width_min,height_min) := (width,height) := (w,h)
+    (drw,evt) := (d,e)
+    init_obj
+  )
+    
+  - draw <- drw.value Self
+  
+  - event ev:UINTEGER_8 :BOOLEAN <- evt.value (Self,ev)

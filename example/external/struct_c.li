@@ -1,0 +1,41 @@
+Header
+  
+  + name := STRUCT_C;
+  
+  - external :=
+  `
+  struct ESSAI {
+    int a;
+  };`;
+  
+  - type := `struct ESSAI`;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - set_a a:INTEGER <-
+  (
+    `@Self->a = @a`
+  )
+  
+  - a:INTEGER <- `@Self->a`:INTEGER
+  
+  - main <-
+  ( + a,b:STRUCT_C
+    
+    a := STRUCT_C.clone
+    a.set_a 3
+    b := STRUCT_C.clone
+    b.set_a 4
+    
+    a.a.print
+    '\n'.print
+    
+    b.a.print
+    '\n'.print
+    
+    "Hi\n".print
+  )

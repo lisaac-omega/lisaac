@@ -1,0 +1,150 @@
+Header
+  + name := Strict GRAPH E;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ (GRAPH E)
+  
+Private
+  - stk:Expanded ARRAY (GRAPH E)
+
+Public
+  
+  - width_min:REAL_32 := 50
+  - height_min:REAL_32 := 50
+  
+  - percent:INTEGER := 1 << 15
+  
+  + name:ARRAY STRING_ALIAS
+  + value:ARRAY E
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init n:ARRAY STRING_ALIAS val v:ARRAY E :SELF <-
+  ( (name,value) :=(n,v)
+    init_obj
+  )
+    
+  - draw <-
+  ( + n:ARRAY STRING_ALIAS
+    + v:ARRAY E
+    + sum,max,vv:E
+    + x,y,d,l:REAL_32
+    + wt,x0,y0,x1,y1,wt_mx:REAL_32
+    + tmp:STRING_BUFFER
+    tmp := STRING.new_tmp
+    /*
+    stroke_color (COLOR.red)
+    stroke_width 1
+    begin_path
+    rect (xo,yo) size (width,height)
+    stroke
+    */
+    //
+    n := name
+    v := value
+    fill_color (LOOK.text_ui)
+    font_face_id (FONT.sys (FONT.roman))
+    font_size (FONT.size_sys)
+    text_align (align_center | align_middle)
+    0.to (n.upper) do { i:INTEGER
+      (wt,x0,y0,x1,y1) := text_bounds (xo,yo) msg (n.at i)
+      (wt_mx < wt).if { wt_mx := wt; }
+    }
+    // Draw name Label:
+    l := wt_mx / 2.sqrt
+    d := (width - l) / n.count
+    (x,y) := (xo + l/2, ymax - l/2)
+    0.to (n.upper) do { i:INTEGER
+      save
+      translate (x+d/2,y)
+      rotate (-REAL_32.pi/4)
+      text (0,0) msg (n.at i)
+      restore
+      //
+      x := x + d
+    }
+    // Draw column:
+    stroke_color (LOOK.text_bg_ui); stroke_width 3.0
+    (x,y) := (xo, ymax)
+    0.to (n.upper) do { i:INTEGER
+      (x0,y0) := (x+l, y-l)
+      //
+      begin_path; line (x,y) to (x0,y0); line_to (x+l,yo); stroke
+      x := x + d
+    }
+    (x0,y0) := (x+l, y-l)
+    begin_path; line (x,y) to (x0,y0); line_to (x+l,yo); stroke
+    // Grill:
+    v.foreach { e:E
+      sum := sum + e
+      (e > max).if { max := e; }
+    }
+    (is percent).if { max := 100; }
+    x := xo+l - 10
+    begin_path; stroke_width 1.0
+    0.to 100 by 25 do { i:INTEGER
+      y := yo + (height-l)*i / 100
+      line (x, y) to (xmax, y)
+      tmp.clear
+      (max * (100-i) / 100).to_integer.append_in tmp
+      (is percent).if { tmp.add_last '%'; }
+      (i = 0).if {
+        text_align (align_right | align_top)
+      }.elseif {i = 100} then {
+        text_align (align_right | align_bottom)
+      } else {
+        text_align (align_right | align_middle)
+      }
+      text (x-10,y) msg tmp
+    }
+    stroke
+    // Value:
+    x := xo + l + d/4
+    y0 := ymax - l
+    0.to (v.upper) do { i:INTEGER
+      vv := v.at i
+      tmp.clear
+      y := (height-l)*vv
+      (is percent).if {
+        (sum = 0).if {
+          y := 0
+          tmp.add_last '0'
+        } else {
+          y := y / sum
+          (vv * 100 / sum).to_integer.append_in tmp
+        }
+        tmp.add_last '%'
+      } else {
+        (max = 0).if { y := 0; } else { y := y / max; }
+        vv.append_in tmp
+      }
+      begin_path
+      fill_color (COLOR.rgba (0,192,255,100))
+      rect (x-2+5,y0) size (d/2+4,(-y+5).min 0)
+      fill
+      //
+      begin_path
+      fill_color (COLOR.rgb (0,192,255))
+      rect (x-2,y0) size (d/2+4,-y)
+      fill
+      //
+      (y < FONT.size_sys).if {
+        fill_color (LOOK.text_ui)
+        text_align (align_center | align_bottom)
+      } else {
+        fill_color (COLOR.black)
+        text_align (align_center | align_top)
+      }
+      text (x+d/4, y0-y) msg tmp
+      x := x + d
+    }
+    tmp.free_tmp
+  )
+    
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    TRUE
+  )

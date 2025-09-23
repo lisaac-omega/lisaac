@@ -1,0 +1,2070 @@
+Header
+  + name := ITK;
+  
+Public
+  
+  - map_col:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 4
+  
+  - tmp_cap:INTEGER
+  - tmp:NATIVE_ARRAY UINTEGER_8
+  
+  - gauss_size:INTEGER
+  - gauss_sigma:REAL_64 := 1.5
+  - gauss:NATIVE_ARRAY INTEGER
+  - gauss_sum:INTEGER
+  
+  - update_gaussian sz:INTEGER sigma sig:REAL_64 <-
+  [ ? {sz.is_odd}; ]
+  ( + x,y,hsz,k,sum:INTEGER
+    + v,sig2:REAL_64
+    + scal,vi,none:INTEGER
+    + ker:NATIVE_ARRAY INTEGER
+    scal := 1000
+    hsz := sz / 2
+    sig2 := sig * sig * 2
+    (ker,none) := NATIVE_ARRAY INTEGER.update_size (gauss,gauss_size*gauss_size) new (sz*sz)
+    gauss := ker
+    gauss_size := sz
+    gauss_sigma := sig
+    0.to (sz-1) do { i:INTEGER
+      0.to (sz-1) do { j:INTEGER
+        x := i - hsz
+        y := j - hsz
+        v := (-(x * x + y * y).to_real_64 / sig2).exp / (REAL_64.pi * sig2)
+        vi := (v * scal + 0.5).to_integer
+        ker.at k put vi
+        sum := sum + vi
+        k := k + 1
+      }
+    }
+    gauss_sum := sum
+  )
+  
+  - variance src:NATIVE_ARRAY UINTEGER_8 width w:INTEGER to (p:INTEGER) dim s:INTEGER :(UINTEGER_8,REAL_64) <-
+  ( + var,v:REAL_64
+    + mean:UINTEGER_8
+    + cnt,k,ky,hs,pb,sum:INTEGER
+    cnt := s*s
+    hs := s / 2
+    // Sum:
+    ky := pb := p - hs*w - hs
+    s.times { 
+      k := ky
+      s.times {
+        sum := sum + src.at k
+        k := k + 1
+      }
+      ky := ky + w
+    }
+    mean := sum / cnt
+    // Variance:
+    ky := pb
+    s.times {
+      k := ky
+      s.times {
+        v := src.at k.to_real_64 - mean.to_real_64
+        var := var + v*v
+        k := k + 1
+      }
+      ky := ky + w
+    }
+    var := var / cnt
+    mean,var
+  )
+  
+  - border src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) w b:INTEGER <-
+  ( + o1,o2,oup,obo:INTEGER
+    o2 := w*h-1
+    oup := w*b
+    obo := o2-oup
+    b.times {
+      b.times {
+        src.at o1 put (src.at (oup+b))
+        src.at o2 put (src.at (obo-b))
+        o2 := o2 - 1
+        o1 := o1 + 1
+      }
+      b.to (w-b-1) do { x:INTEGER
+        src.at o1 put (src.at (oup+x))
+        src.at o2 put (src.at (obo-x))
+        o2 := o2 - 1
+        o1 := o1 + 1
+      }
+      b.times {
+        src.at o1 put (src.at (oup+(w-b-1)))
+        src.at o2 put (src.at (obo-(w-b-1)))
+        o2 := o2 - 1
+        o1 := o1 + 1
+      }
+    }
+    (h-b*2).times { 
+      0.to (b-1) do { x:INTEGER
+        src.at (o1+x) put (src.at (o1+b))
+        src.at (o2-x) put (src.at (o2-b))
+      }
+      o1 := o1 + w
+      o2 := o2 - w
+    }
+  )
+    
+  - border4 src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) w b:INTEGER <-
+  ( + o1,o2,oup,obo,xx:INTEGER
+    o2 := w*h-1
+    oup := w*b
+    obo := o2-oup
+    b.times {
+      0.to (w-1) do { x:INTEGER
+        xx := x.max b.min (w-b-1)
+        src.copy ((oup+xx)*4) n 4 to (o1*4)
+        src.copy ((obo-xx)*4) n 4 to (o2*4)
+        o2 := o2 - 1
+        o1 := o1 + 1
+      }
+    }
+    (h-b*2).times { 
+      0.to (b-1) do { x:INTEGER
+        src.copy ((o1+b)*4) n 4 to ((o1+x)*4)
+        src.copy ((o2-b)*4) n 4 to ((o2-x)*4)
+      }
+      o1 := o1 + w
+      o2 := o2 - w
+    }
+  )
+  
+  - circle_full src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) to (xc, yc:INTEGER) ray r:INTEGER col c:UINTEGER_8 <-
+  ( + x,y,d,o:INTEGER
+    y := r
+    d := 3 - 2 * r
+    {x <= y}.while_do {
+      ((yc + y).in_range 0 to (h-1)).if {
+        o := (yc+y) * w
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+      }
+      ((yc - y).in_range 0 to (h-1)).if {
+        o := (yc-y) * w
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+      }
+      ((yc + x).in_range 0 to (h-1)).if {
+        o := (yc+x) * w
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+      }
+      ((yc - x).in_range 0 to (h-1)).if {
+        o := (yc-x) * w
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+      }
+      (d < 0).if {
+        d := d + 4 * x + 6
+      } else {
+        d := d + 4 * (x - y) + 10
+        y := y - 1
+      }
+      x := x + 1
+    }
+  )
+  
+  - circle_msk src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) to (xc, yc:INTEGER) ray r:INTEGER col c:UINTEGER_8 <-
+  ( + x,y,d,o:INTEGER
+    y := r
+    d := 3 - 2 * r
+    {x <= y}.while_do {
+      ((yc + y).in_range 0 to (h-1)).if {
+        o := (yc+y) * w
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER
+          (src.at (o+i) != 0).if { src.at (o+i) put c; }
+        }
+      }
+      ((yc - y).in_range 0 to (h-1)).if {
+        o := (yc-y) * w
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER
+          (src.at (o+i) != 0).if { src.at (o+i) put c; }
+        }
+      }
+      ((yc + x).in_range 0 to (h-1)).if {
+        o := (yc+x) * w
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER
+          (src.at (o+i) != 0).if { src.at (o+i) put c; }
+        }
+      }
+      ((yc - x).in_range 0 to (h-1)).if {
+        o := (yc-x) * w
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER
+          (src.at (o+i) != 0).if { src.at (o+i) put c; }
+        }
+      }
+      (d < 0).if {
+        d := d + 4 * x + 6
+      } else {
+        d := d + 4 * (x - y) + 10
+        y := y - 1
+      }
+      x := x + 1
+    }
+  )
+    
+  - line src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) from (x0,y0:INTEGER) to (x1,y1:INTEGER) width r:INTEGER col c:UINTEGER_8 <-
+  ( + dx,dy,sx,sy,d,x,y:INTEGER
+    + swap:BOOLEAN
+    (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
+    sx := (x1 > x0).ok 1 or (-1)
+    sy := (y1 > y0).ok 1 or (-1)
+    (dy > dx).if {
+      (dx,dy) := (dy,dx)
+      swap := TRUE
+    }
+    d := 2 * dy - dx
+    (x,y) := (x0,y0)
+    0.to dx do { i:INTEGER
+      circle_full src size (w,h) to (x, y) ray r col c
+      (d > 0).if { 
+        (swap).if { x := x + sx; } else { y := y + sy; }
+        d := d - 2 * dx
+      }
+      (swap).if { y := y + sy; } else { x := x + sx; }
+      d := d + 2 * dy
+    }
+  )
+  
+  - line_msk src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) from (x0,y0:INTEGER) to (x1,y1:INTEGER) width r:INTEGER col c:UINTEGER_8 <-
+  ( + dx,dy,sx,sy,d,x,y:INTEGER
+    + swap:BOOLEAN
+    (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
+    sx := (x1 > x0).ok 1 or (-1)
+    sy := (y1 > y0).ok 1 or (-1)
+    (dy > dx).if {
+      (dx,dy) := (dy,dx)
+      swap := TRUE
+    }
+    d := 2 * dy - dx
+    (x,y) := (x0,y0)
+    0.to dx do { i:INTEGER
+      circle_msk src size (w,h) to (x, y) ray r col c
+      (d > 0).if { 
+        (swap).if { x := x + sx; } else { y := y + sy; }
+        d := d - 2 * dx
+      }
+      (swap).if { y := y + sy; } else { x := x + sx; }
+      d := d + 2 * dy
+    }
+  )
+  
+  
+Public
+  - line src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
+  from (x0,y0:INTEGER) to (x1,y1:INTEGER) col3 (r,g,b:UINTEGER_8) <-
+  ( + dx,dy,sx,sy,d,x,y,o:INTEGER
+    + swap:BOOLEAN
+    (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
+    sx := (x1 > x0).ok 1 or (-1)
+    sy := (y1 > y0).ok 1 or (-1)
+    (dy > dx).if {
+      (dx,dy) := (dy,dx)
+      swap := TRUE
+    }
+    d := 2 * dy - dx
+    (x,y) := (x0,y0)
+    0.to dx do { i:INTEGER
+      o := (y*w + x) << 2
+      src.at (o+0) put r; src.at (o+1) put g; src.at (o+2) put b; src.at (o+3) put 255
+      (d > 0).if { 
+        (swap).if { x := x + sx; } else { y := y + sy; }
+        d := d - 2 * dx
+      }
+      (swap).if { y := y + sy; } else { x := x + sx; }
+      d := d + 2 * dy
+    }
+  )
+  
+  - line src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
+  from (x0,y0:INTEGER) to (x1,y1:INTEGER) col c:UINTEGER_8 <-
+  ( + dx,dy,sx,sy,d,x,y,o:INTEGER
+    + swap:BOOLEAN
+    (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
+    sx := (x1 > x0).ok 1 or (-1)
+    sy := (y1 > y0).ok 1 or (-1)
+    (dy > dx).if {
+      (dx,dy) := (dy,dx)
+      swap := TRUE
+    }
+    d := 2 * dy - dx
+    (x,y) := (x0,y0)
+    0.to dx do { i:INTEGER
+      o := y*w + x
+      src.at o put c
+      (d > 0).if { 
+        (swap).if { x := x + sx; } else { y := y + sy; }
+        d := d - 2 * dx
+      }
+      (swap).if { y := y + sy; } else { x := x + sx; }
+      d := d + 2 * dy
+    }
+  )
+  
+  - rect img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) col c:UINTEGER_8 <-
+  ( + o:INTEGER
+    o := y0*w
+    (y1-y0 + 1).times {
+      o := o + x0
+      ? {o%w = x0}
+      (x1-x0 + 1).times {
+        img.at o put c
+        o := o + 1
+      }
+      ? {o%w = x1+1}
+      o := o + (w-x1-1)
+      ? {o%w = 0}
+    }
+    ? {o = (y1+1)*w}
+  )
+  
+  - cadre img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) col3 (r,g,b:UINTEGER_8) <-
+  ( + o0,o1:INTEGER
+    o0 := (y0*w + x0)*4
+    o1 := (y1*w + x1)*4
+    (x1-x0+1).times {
+      img.at (o0+0) put r; img.at (o0+1) put g; img.at (o0+2) put b
+      img.at (o1+0) put r; img.at (o1+1) put g; img.at (o1+2) put b
+      o0 := o0 + 4; o1 := o1 - 4
+    }
+    (y1-y0+1).times {
+      img.at (o0+0) put r; img.at (o0+1) put g; img.at (o0+2) put b
+      img.at (o1+0) put r; img.at (o1+1) put g; img.at (o1+2) put b
+      o0 := o0 + w*4; o1 := o1 - w*4
+    }
+  )
+  
+  - crop img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) <-
+  ( + o:INTEGER
+    + c:UINTEGER_8
+    c := 0
+    (y0*w).times {
+      img.at o put c
+      o := o + 1
+    }
+    ? {o = y0*w}
+    (y1-y0 + 1).times {
+      x0.times {
+        img.at o put c
+        o := o + 1
+      }
+      ? {o%w = x0}
+      o := o + (x1-x0 + 1)
+      ? {o%w = x1+1}
+      (w-x1-1).times {
+        img.at o put c
+        o := o + 1
+      }
+      ? {o%w = 0}
+    }
+    ? {o = (y1+1)*w}
+    ((h-y1-1)*w).times {
+      img.at o put c
+      o := o + 1
+    }
+    ? {o = w*h}
+  )
+  
+  - norm src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) <-
+  // Src = dst ok
+  ( + min,max,oy,ox,c,d:INTEGER
+    min := 255; max := 0
+    oy := y0*w + x0
+    y0.to y1 do { y:INTEGER
+      ox := oy
+      x0.to x1 do { x:INTEGER
+        c := src.at ox
+        (c < min).if { min := c; }
+        (c > max).if { max := c; }
+        ox := ox + 1
+      }
+      oy := oy + w
+    }
+    d := max - min
+    //
+    (d != 0).if {
+      oy := y0*w + x0
+      y0.to y1 do { y:INTEGER
+        ox := oy
+        x0.to x1 do { x:INTEGER
+          c := src.at ox
+          c := clamp ((255*(c-min)) / d)
+          dst.at ox put c
+          ox := ox + 1
+        }
+        oy := oy + w
+      }
+    }
+  )
+  
+  - rot4 src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  ( + os,ody,odx:INTEGER
+    odx := (w-1)*(h*4)
+    h.times {
+      ody := odx
+      w.times {
+        dst.at (ody+0) put (src.at os); os := os + 1
+        dst.at (ody+1) put (src.at os); os := os + 1
+        dst.at (ody+2) put (src.at os); os := os + 1
+        dst.at (ody+3) put (src.at os); os := os + 1
+        ody := ody - h*4
+      }
+      odx := odx + 4
+    }
+  )
+  
+  - var_r32 src:ARRAY REAL_32 :REAL_32 <-
+  ( + sum,mean:REAL_64
+    src.foreach { r:REAL_32; sum := sum + r; ? {r.in_range 0 to 1}; }
+    mean := sum / src.count
+    sum := 0
+    src.foreach { r:REAL_32; sum := sum + (r-mean)*(r-mean); }
+    (sum / src.count).sqrt
+  )
+
+  - clamp c:INTEGER :UINTEGER_8 <-
+  ( + r:UINTEGER_8
+    (c >= 255).if {
+      r := 255
+    } else {
+      (c > 0).if { r := c.to_uinteger_8; }
+    }
+    r
+  )
+  
+  - print_gaussian <-
+  (
+    0.to (gauss_size-1) do { y:INTEGER
+      0.to (gauss_size-1) do { x:INTEGER
+        gauss.at (y*gauss_size+x).print_format 3; ' '.print
+      }
+      '\n'.print
+    }
+  )
+  
+Public
+  
+  - x1_white s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  // s = d : ok
+  ( + r,g,b:INTEGER
+    + c:UINTEGER_8
+    0.to (w*h*4) by 4 do { i:INTEGER
+      (r,g,b) := (s.at i,s.at (i+1),s.at (i+2))
+      ((r,g,b) = (255,255,255)).if { c := 255; } else { c := 0; }
+      d.at (i>>2) put c
+    }
+  )
+  
+  - x1 s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  // s = d : ok
+  ( + r,g,b:INTEGER
+    + c:UINTEGER_8
+    0.to (w*h*4-1) by 4 do { i:INTEGER
+      (r,g,b) := (s.at i,s.at (i+1),s.at (i+2))
+      //c := (r+g+b)/3
+      c := (77 * r + 150 * g + 29 * b) >> 8
+      d.at (i>>2) put c
+    }
+  )
+  
+  - r1 s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY REAL_32 size (w,h:INTEGER) <-
+  ( + c:REAL_32
+    0.to (w*h-1) do { i:INTEGER
+      c := s.at i.to_real_32 / 255.0
+      d.at i put c
+    }
+  )
+  
+  - x4 s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  // s = d Ok
+  ( + j:INTEGER
+    + c:UINTEGER_8
+    j := w*h*4
+    (w*h-1).downto 0 do { i:INTEGER
+      c := s.at i
+      j := j - 1; d.at j put 255
+      j := j - 1; d.at j put c
+      j := j - 1; d.at j put c
+      j := j - 1; d.at j put c
+    }
+  )
+  
+  - rgba (r,g,b,a:UINTEGER_8) src s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  // s = d Ok
+  ( + j:INTEGER
+    + c:UINTEGER_8
+    j := w*h*4
+    (w*h-1).downto 0 do { i:INTEGER
+      c := s.at i
+      (c != 0).if {
+        j := j - 1; d.at j put a
+        j := j - 1; d.at j put b
+        j := j - 1; d.at j put g
+        j := j - 1; d.at j put r
+      } else {
+        j := j - 1; d.at j put 255
+        j := j - 1; d.at j put 0
+        j := j - 1; d.at j put 0
+        j := j - 1; d.at j put 0
+      }
+    }
+  )
+  
+  - resize src:NATIVE_ARRAY UINTEGER_8 size (sw,sh:INTEGER) to dst:NATIVE_ARRAY UINTEGER_8 size (dw,dh:INTEGER) <-
+  // src = dst Ok if (sw,sh) >= (ds,dh)
+  [ ? {(src != dst) || {(sw >= dw) && {sh >= dh}}}; ]
+  ( + dx,dy,px,py,i:INTEGER
+    dx := (sw << 16) / dw
+    dy := (sh << 16) / dh
+    0.to (dh-1) do { y:INTEGER
+      px := ((py >> 16) * sw) << 16
+      0.to (dw-1) do { x:INTEGER
+        dst.at i put (src.at (px >> 16))
+        px := px + dx
+        i := i + 1
+      }
+      py := py + dy
+    }
+  )
+  
+  - resize4 src:NATIVE_ARRAY UINTEGER_8 size (sw,sh:INTEGER)
+  to dst:NATIVE_ARRAY UINTEGER_8 size (dw,dh:INTEGER) <-
+  // src = dst Ok if (sw,sh) >= (ds,dh)
+  [ ? {(src != dst) || {(sw >= dw) && {sh >= dh}}}; ]
+  ( + dx,dy,px,py,i,os:INTEGER
+    dx := (sw << 16) / dw
+    dy := (sh << 16) / dh
+    0.to (dh-1) do { y:INTEGER
+      px := ((py >> 16) * sw) << 16
+      0.to (dw-1) do { x:INTEGER
+        os := (px >> 16) << 2
+        //
+        dst.at i put (src.at (os+0)); i := i + 1
+        dst.at i put (src.at (os+1)); i := i + 1
+        dst.at i put (src.at (os+2)); i := i + 1
+        dst.at i put (src.at (os+3)); i := i + 1
+        //
+        px := px + dx
+      }
+      py := py + dy
+    }
+  )
+  
+  - mask src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) with msk:NATIVE_ARRAY UINTEGER_8 size (mw,mh:INTEGER) <-
+  [ ? {src != msk}; ] 
+  ( + dx,dy,px,py,i:INTEGER
+    + c:UINTEGER_8
+    dx := (mw << 16) / w
+    dy := (mh << 16) / h
+    0.to (h-1) do { y:INTEGER
+      px := ((py >> 16) * mw) << 16
+      0.to (w-1) do { x:INTEGER
+        c := msk.at (px >> 16)
+        (c = 0).if { src.at i put 0; }
+        px := px + dx
+        i := i + 1
+      }
+      py := py + dy
+    }
+  )
+  
+  - redmask src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) with msk:NATIVE_ARRAY UINTEGER_8 size (mw,mh:INTEGER) <-
+  [ ? {src != msk}; ] 
+  ( + dx,dy,px,py,i:INTEGER
+    + c:UINTEGER_8
+    dx := (mw << 16) / w
+    dy := (mh << 16) / h
+    0.to (h-1) do { y:INTEGER
+      px := ((py >> 16) * mw) << 16
+      0.to (w-1) do { x:INTEGER
+        c := msk.at (px >> 16)
+        (c != 0).if {
+          src.at (i<<2) put (clamp (src.at (i<<2).to_integer + 60))
+        }
+        px := px + dx
+        i := i + 1
+      }
+      py := py + dy
+    }
+  )
+  /*
+  - copy src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t:INTEGER <-
+  (
+    
+  );*/
+  
+  - set src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) col c:COLOR <-
+  ( + r,g,b:UINTEGER_8
+    + j:INTEGER
+    (r,g,b) := (c.ri,c.gi,c.bi)
+    0.to (w*h-1) do { i:INTEGER
+      (src.at i = 255).if {
+        dst.at (j+0) put r; dst.at (j+1) put g
+        dst.at (j+2) put b; dst.at (j+3) put 255
+      }
+      j := j + 4
+    }
+  )
+  
+  - clean4 src:NATIVE_ARRAY UINTEGER_8 mask msk:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) color (r,g,b:UINTEGER_8) select c:UINTEGER_8 <-
+  ( + j:INTEGER
+    0.to (w*h-1) do { i:INTEGER
+      (msk.at i = c).if {
+        src.at (j+0) put r
+        src.at (j+1) put g
+        src.at (j+2) put b
+      }
+      j := j + 4
+    }
+  )
+  
+  - sobel src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  // Src != dst
+  [ ? {src != dst}; ]
+  ( + sumx,sumy,i:INTEGER
+    + c0,c1,c2,c3,c5,c6,c7,c8,c:INTEGER
+    0.to (w-1) do { x:INTEGER; dst.at i put 0; i := i + 1; }
+    1.to (h-2) do { y:INTEGER
+      dst.at i put 0; i := i + 1
+      1.to (w-2) do { x:INTEGER
+        c0 := src.at (i-w-1); c1 := src.at (i-w); c2 := src.at (i-w+1)
+        c3 := src.at (i-1);                       c5 := src.at (i+1)
+        c6 := src.at (i+w-1); c7 := src.at (i+w); c8 := src.at (i+w+1)
+        sumx := -c0 + c2 - c3*2 + c5*2 - c6 + c8
+        sumy := -c0 - c1*2 - c2 + c6 + c7*2 + c8
+        c := (sumx * sumx + sumy*sumy).sqrt
+        dst.at i put (clamp c)
+        i := i + 1
+      }
+      dst.at i put 0; i := i + 1
+    }
+    ? {i = (h-1)*w}
+    0.to (w-1) do { x:INTEGER; dst.at i put 0; i := i + 1; }
+    //border dst size (w,h) w 1
+  )
+  
+  - sobel src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
+  from (x0,y0:INTEGER) to (x1,y1:INTEGER) <-
+  // Src != dst
+  [ ? {src != dst}; ]
+  ( + sumx,sumy,i:INTEGER
+    + c0,c1,c2,c3,c5,c6,c7,c8,c:INTEGER
+    (y0+1).to (y1-1) do { y:INTEGER
+      (x0+1).to (x1-1) do { x:INTEGER
+        i := y*w+x
+        c0 := src.at (i-w-1); c1 := src.at (i-w); c2 := src.at (i-w+1)
+        c3 := src.at (i-1);                       c5 := src.at (i+1)
+        c6 := src.at (i+w-1); c7 := src.at (i+w); c8 := src.at (i+w+1)
+        sumx := -c0 + c2 - c3*2 + c5*2 - c6 + c8
+        sumy := -c0 - c1*2 - c2 + c6 + c7*2 + c8
+        c := (sumx * sumx + sumy*sumy).sqrt
+        dst.at i put (clamp c)
+      }
+    }
+  )
+
+  
+  - sobel src:NATIVE_ARRAY REAL_32 size (w,h:INTEGER)
+  at (x,y:INTEGER) size (bw,bh:INTEGER) :(REAL_32,REAL_32) <-
+  ( + i,i0:INTEGER
+    + c0,c1,c2,c3,c5,c6,c7,c8:REAL_32
+    + sumx,sumy,c,c_mx,sumx_mx,sumy_mx,a:REAL_32
+    /*
+    i0 := y*w + x
+    0.to (bh-1) do { y:INTEGER
+      i := i0
+      0.to (bw-1) do { x:INTEGER
+        c := c + src.at i
+        i := i + 1
+      }
+      i0 := i0 + w
+    }
+    m := c / (bh*bw)
+    */
+    i0 := y*w + x
+    1.to (bh-2) do { y:INTEGER
+      i0 := i0 + w
+      i := i0 + 1
+      1.to (bw-2) do { x:INTEGER
+        c0 := src.at (i-w-1); c1 := src.at (i-w); c2 := src.at (i-w+1)
+        c3 := src.at (i-1);                       c5 := src.at (i+1)
+        c6 := src.at (i+w-1); c7 := src.at (i+w); c8 := src.at (i+w+1)
+        /*
+        c0 := (c0 < m).ok 0 or 1; c1 := (c1 < m).ok 0 or 1
+        c2 := (c2 < m).ok 0 or 1; c3 := (c3 < m).ok 0 or 1
+        c5 := (c5 < m).ok 0 or 1; c6 := (c6 < m).ok 0 or 1
+        c7 := (c7 < m).ok 0 or 1; c8 := (c8 < m).ok 0 or 1
+        */
+        sumx := -c0 + c2 - c3*2 + c5*2 - c6 + c8
+        sumy := -c0 - c1*2 - c2 + c6 + c7*2 + c8
+        c := sumx * sumx + sumy*sumy
+        (c > c_mx).if {
+          (c_mx, sumx_mx,sumy_mx) := (c, sumx,sumy)
+        }
+        i := i + 1
+      }
+    }
+    a := sumy_mx.atan2 sumx_mx; // [-pi;+pi]
+    (a < 0).if { a := a + REAL_32.pi; }; // [-pi;+pi] => [0;+pi]
+    a := a + REAL_32.pi/2
+    (a > REAL_32.pi).if { a := a - REAL_32.pi; }
+    c_mx.sqrt, a
+  )
+  
+  - thresholding src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8
+  size (w,h:INTEGER) limit l:INTEGER set (c0,c1:UINTEGER_8) <-
+  // src = dst Ok
+  ( + c:UINTEGER_8
+    0.to (w*h-1) do { i:INTEGER
+      c := src.at i
+      (c < l).if { c := c0; } else { c := c1; }
+      dst.at i put c
+    }
+  )
+  
+  - contour img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) in pt:ARRAY INTEGER
+  rect (x0,y0,x1,y1:INTEGER) :(STRING_ALIAS,INTEGER,INTEGER) <-
+  // min=16 default
+  // Ben Inside
+  ( + n,m,p,p1,dx,dy,lim,cpt,x,ymax,ymin,out_x,out_y:INTEGER
+    + c:UINTEGER_8
+    + out:BOOLEAN
+    + res:STRING_ALIAS
+    
+    // `n' direction :
+    //    111(7) 000(0) 001(1)
+    //       \    |    /
+    // 110(6) ----|----> 010(2)
+    //       /    V    \
+    //    101(5) 100(4) 011(3)    
+    p := pt.first
+    (img.at (p+1) != 0).if   { n := 010b; }.elseif
+    {img.at (p-1) != 0} then { n := 110b; }.elseif
+    {img.at (p+w) != 0} then { n := 100b; }
+    //"Begin: ".print; x.print; ','.print; y.println
+    lim := (w+h)*4; // Limit force stop algo -> Error
+    (ymin,ymax) := (y0*w,y1*w)
+    m := n
+    {
+      n := (n-3) & 111b
+      cpt := 0
+      {
+        n := (n + 1) & 111b
+        // Compute dx,dy
+        (((n+2) & 11b) != 0).if { dx := (((n+2) & 100b) = 0).ok (+1) or (-1); } else { dx := 0; }
+        (( n    & 11b) != 0).if { dy := (( n    & 100b) = 0).ok (+w) or (-w); } else { dy := 0; }
+        p1 := p + dx + dy
+        c := img.at p1
+        cpt := cpt + 1
+      }.do_while {(c != 0) && {cpt<8}}
+      x := p1 % w
+      ((x <= x0) || {x >= x1} || {p1 < ymin} || {p1 >= ymax}).if {
+        out := TRUE
+        (out_x,out_y) := (x,p1/w)
+      }
+      //
+      ((dy != 0) && {n&100b != m&100b}).if {
+        (pt.last = p).if { pt.remove_last; } else { pt.add_last p; }
+      }
+      p := p1
+      (dy != 0).if {
+        pt.add_last p
+        m := n
+      } else {
+        (
+          ((n = 0) && {m&100b  = 0}) || {(n = 4) && {m&100b != 0}}
+        ).if {
+          pt.put_last p
+        }
+      }
+    }.do_while {
+      (pt.count < lim) && {cpt < 8} && {!out} && {(pt.count = 1) || {pt.first != p}}
+    }
+    (pt.first = pt.last).if { pt.remove_last; }
+    //
+    ((pt.count >= lim) || {cpt >= 8} || {pt.count.is_odd} || {out}).if { // Echec      
+      (pt.count >= lim).if {
+        res := "Contour trop long."
+        "Nb pts:".print; pt.count.print; " lim:".print; lim.println
+      }.elseif {cpt >= 8} then {
+        res := "Point suivant non trouvé."
+      }.elseif {out} then {
+        res := "Objet hors image."
+      }.elseif {pt.count.is_odd} then {
+        res := "Bug contour: count points impair!"
+        "Nb pts:".print; pt.count.println
+        0.to 2 do { i:INTEGER; i.print; ':'.print
+        (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
+        "... ".print
+        (pt.upper-2).to (pt.upper) do { i:INTEGER; i.print; ':'.print
+        (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
+        '\n'.print
+      }
+      pt.clear
+    } else { out_x := out_y := -1; }
+    res,out_x,out_y
+  )
+  
+  - fill img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) with pt:ARRAY INTEGER border s:UINTEGER_8 col c:UINTEGER_8 <-
+  // If s = c then no border !
+  ( + b,e:INTEGER
+    pt.quick_sort
+    0.to (pt.upper) by 2 do { i:INTEGER
+      (b,e) := (pt.at i, pt.at (i+1))
+      (s != c).if {
+        { b := b + 1; (img.at b = 0FFh).if { img.at b put s; }}.while_loop
+        { e := e - 1; (img.at e = 0FFh).if { img.at e put s; }}.while_loop
+      }
+      b.to e do { j:INTEGER; img.at j put c; }
+    }
+  )
+    
+  - sum_xy img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) in (sx,sy:ARRAY INTEGER) :(INTEGER,INTEGER) <-
+  // Result: median
+  ( + l,c,i,sum,cx,cy,ix,iy:INTEGER
+    sx.resize w; sy.resize h
+    sx.set_all_with 0
+    0.to (h-1) do { y:INTEGER
+      l := 0
+      0.to (w-1) do { x:INTEGER
+        c := img.at i
+        sum := sum + c
+        sx.at x put (sx.at x + c)
+        l := l + c
+        i := i + 1
+      }
+      sy.at y put l
+    }
+    sum := sum / 2
+    {(ix < w) && {cx < sum}}.while_do { cx := cx + sx.at ix; ix := ix + 1; }
+    {(iy < h) && {cy < sum}}.while_do { cy := cy + sy.at iy; iy := iy + 1; }
+    ix,iy
+  )
+  
+  - clean img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  ( + ofs:INTEGER
+    ofs := w
+    1.to (h-2) do { y:INTEGER
+      ofs := ofs + 1
+      1.to (w-2) do { x:INTEGER
+        (img.at ofs != 0).if {
+          (
+            (img.at (ofs-w-1) != 0).to_integer + (img.at (ofs-w) != 0).to_integer + (img.at (ofs-w+1) != 0).to_integer +
+            (img.at (ofs  -1) != 0).to_integer +                                  + (img.at (ofs  +1) != 0).to_integer +
+            (img.at (ofs+w-1) != 0).to_integer + (img.at (ofs+w) != 0).to_integer + (img.at (ofs+w+1) != 0).to_integer
+          <= 2).if {
+            img.at ofs put 0
+          }
+        }
+        ofs := ofs + 1
+      }
+      ofs := ofs + 1
+    }
+  )
+  
+  - bold src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  // src = dst Ok
+  // t = 1 then [-t .. +t]
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t2.is_odd}; ]
+  ( + i,j,k,t:INTEGER
+    + c:UINTEGER_8
+    t := t2 / 2
+    i := w*t
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        (src.at i = 255).if {
+          j := i-t*w-t
+          (-t).to t do { yy:INTEGER
+            k := j
+            (-t).to t do { xx:INTEGER
+              c := src.at k
+              (c = 0).if { dst.at k put 254; } else { dst.at k put c; }
+              k := k + 1
+            }
+            j := j + w
+          }
+        }
+        i := i + 1
+      }
+      i := i + t
+    }
+  )
+  
+  - put src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) pts pt:ARRAY INTEGER dim t:INTEGER col c:UINTEGER_8 <-
+  ( + x0,y0,x1,y1:INTEGER
+    (x1,y1) := (pt.first,pt.second)
+    2.to (pt.upper) by 2 do { i:INTEGER
+      (x0,y0) := (x1,y1)
+      (x1,y1) := (pt.at i, pt.at (i+1))
+      line src size (w,h) from (x0,y0) to (x1,y1) width t col c
+    }
+    line src size (w,h) from (x1,y1) to (pt.first,pt.second) width t col c
+  )
+  
+  - border src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) width b:INTEGER <-
+  ( + o1,o2:INTEGER
+    o2 := w*h-1
+    (b*w).times {
+      src.at o1 put 0
+      src.at o2 put 0
+      o2 := o2 - 1
+      o1 := o1 + 1
+    }
+    (h-b*2).times {
+      0.to (b-1) do { x:INTEGER
+        src.at (o1+x) put 0
+        src.at (o2-x) put 0
+      }
+      o1 := o1 + w
+      o2 := o2 - w
+    }
+  )
+  
+  - max src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  // src = dst Ok
+  // t = 1 then [-t .. +t]
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t2.is_odd}; ]
+  ( + i,j,k,mx,t:INTEGER
+    t := t2/2
+    i := w*t
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        j := i-t*w-t
+        mx := 0
+        (-t).to t do { yy:INTEGER
+          k := j
+          (-t).to t do { xx:INTEGER
+            (src.at k > mx).if { mx := src.at k; }
+            k := k + 1
+          }
+          j := j + w
+        }
+        dst.at i put mx
+        i := i + 1
+      }
+      i := i + t
+    }
+    border dst size (w,h) w t
+  )
+  
+  - mean src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  // src = dst Ok
+  // t = 1 then [-t .. +t]
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t2.is_odd}; ]
+  ( + i,j,k,sum,q,t:INTEGER
+    t := t2/2
+    i := w*t
+    q := t2*t2
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        j := i-t*w-t
+        sum := 0
+        (-t).to t do { yy:INTEGER
+          k := j
+          (-t).to t do { xx:INTEGER
+            sum := sum + src.at k
+            k := k + 1
+          }
+          j := j + w
+        }
+        dst.at i put (sum/q)
+        i := i + 1
+      }
+      i := i + t
+    }
+    border dst size (w,h) w t
+  )
+  
+  - mean4 src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  // src = dst Ok
+  // t = 3 then [-1 .. +1]
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t2.is_odd}; ]
+  ( + i,j,k,sum_r,sum_g,sum_b,q,t:INTEGER
+    t := t2/2
+    i := w*t
+    q := t2*t2
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        j := i-t*w-t
+        sum_r := sum_g := sum_b := 0
+        (-t).to t do { yy:INTEGER
+          k := j
+          (-t).to t do { xx:INTEGER
+            sum_r := sum_r + src.at (k*4 + 0)
+            sum_g := sum_g + src.at (k*4 + 1)
+            sum_b := sum_b + src.at (k*4 + 2)
+            k := k + 1
+          }
+          j := j + w
+        }
+        dst.at (i*4 + 0) put (sum_r/q)
+        dst.at (i*4 + 1) put (sum_g/q)
+        dst.at (i*4 + 2) put (sum_b/q)
+        dst.at (i*4 + 3) put 255
+        i := i + 1
+      }
+      i := i + t
+    }
+    border4 dst size (w,h) w t
+  )
+  
+  - gauss src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER sigma sig:REAL_64 <-
+  // src = dst Ok
+  // t = 1 then [-t .. +t]
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t2.is_odd}; ]
+  ( + i,j,k,g,sum,s,t:INTEGER
+    t := t2 / 2
+    i := w*t
+    s := t2
+    ((gauss_size != s) || {gauss_sigma != sig}).if { update_gaussian s sigma sig; }
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        j := i-t*w-t
+        sum := g := 0
+        (-t).to t do { yy:INTEGER
+          k := j
+          (-t).to t do { xx:INTEGER
+            sum := sum + gauss.at g * src.at k
+            k := k + 1
+            g := g + 1
+          }
+          j := j + w
+        }
+        dst.at i put (sum/gauss_sum)
+        i := i + 1
+      }
+      i := i + t
+    }
+    border dst size (w,h) w t
+  )
+  
+  - median src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  // src = dst Ok
+  // t = 1 then [-t .. +t]
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t2.is_odd}; ]
+  ( + i,j,k,q,g,t:INTEGER
+    t := t2/2
+    i := w*t
+    q := t2*t2
+    (tmp,tmp_cap) := NATIVE_ARRAY UINTEGER_8.update_size (tmp,tmp_cap) new q
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        j := i-t*w-t
+        g := 0
+        (-t).to t do { yy:INTEGER
+          k := j
+          (-t).to t do { xx:INTEGER
+            tmp.at g put (src.at k)
+            k := k + 1
+            g := g + 1
+          }
+          j := j + w
+        }
+        tmp.quick_sort_upper (q-1)
+        dst.at i put (tmp.at (q/2))
+        i := i + 1
+      }
+      i := i + t
+    }
+    border dst size (w,h) w t
+  )
+  
+  - nagao src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t:INTEGER <-
+  // src != dst
+  // ooo
+  // oXo
+  // ooo
+  [ ? {t.is_odd}; ]
+  ( + i,p,pp,ht:INTEGER
+    + best_m,m:UINTEGER_8
+    + best_v,v:REAL_64
+    i := w*t
+    ht := t/2
+    t.to (h-t-1) do { y:INTEGER
+      i := i + t
+      t.to (w-t-1) do { x:INTEGER
+        best_v := 10_000; // +oo (256 suffit ;) )
+        p := i - ht*w - ht
+        3.times { // 9 zones:
+          pp := p
+          3.times {
+            (m,v) := variance src width w to pp dim t
+            (v < best_v).if { (best_m,best_v) := (m,v); }
+            pp := pp + ht
+          }
+          p := p + ht*w
+        }
+        dst.at i put best_m
+        i := i + 1
+      }
+      i := i + t
+    }
+    border dst size (w,h) w t
+  )
+  
+  - contour src:ARRAY INTEGER to_pt dst:ARRAY INTEGER width w:INTEGER <-
+  // src = dst Ok
+  ( + cnt,v,x,y,j,up:INTEGER
+    cnt := src.count * 2
+    up := src.upper
+    dst.set_capacity cnt
+    dst.set_upper (cnt-1)
+    up.downto 0 do { i:INTEGER
+      v := src.at i
+      (x,y) := (v % w, v / w)
+      j := i<<1
+      dst.at (j    ) put x
+      dst.at (j + 1) put y
+    }
+  )
+  
+  - flip s:ARRAY REAL_32 y y:REAL_32 <-
+  (
+    0.to (s.upper) by 2 do { i:INTEGER
+      s.at (i+1) put (y*2 - s.at (i+1))
+    }
+  )
+  
+  - flip s:ARRAY REAL_32 x x:REAL_32 <-
+  (
+    0.to (s.upper) by 2 do { i:INTEGER
+      s.at i put (x*2 - s.at i)
+    }
+  )
+  
+  //- bug:ARRAY REAL_32 := ARRAY REAL_32.create_with_capacity 100
+  
+  - contour s:ARRAY INTEGER to d:ARRAY REAL_32 inset offset:REAL_32 <-
+  // Ben Inside
+  ( + i,j,a,b,c,e0,e1:INTEGER
+    + x0,y0,x1,y1:REAL_32
+    + dx,dy,l,nx,ny:REAL_32
+    + du,dv:REAL_32
+    + rm,again:BOOLEAN
+    //bug.clear
+    d.clear
+    (x0,y0) := (s.at 0,s.at 1); i := 2
+    {
+      (x1,y1) := (s.at i,s.at (i+1))
+      (dx,dy) := (x1-x0, y1-y0)
+      l := (dx * dx + dy * dy).sqrt
+      (l != 0).if {
+        (nx,ny) := ((-dy/l) * offset, (dx/l) * offset)
+        d.add_last (x0 + nx); d.add_last (y0 + ny)
+        d.add_last (x1 + nx); d.add_last (y1 + ny)
+      }
+      (x0,y0) := (x1,y1)
+      i := (i + 2) % s.count
+    }.do_while {i != 2}
+    (a,b) := (0,4); i := 8
+    {
+      again := FALSE
+      {
+        c := i
+        rm := FALSE
+        (e0,x0,y0, e1,x1,y1) := (inter d pt (a,b) first TRUE, inter d pt (b,c) first FALSE)
+        ((e0 < 0) || {e0 < 0}).if {
+          rm := TRUE
+        }.elseif {(e0 > 0) || {e1 > 0}} then {
+          (dx,dy) := (d.at (b+2)-d.at (b+0), d.at (b+3)-d.at (b+1))
+          (du,dv) := (x1-x0, y1-y0)
+          (dx*du + dy*dv <= 0).if {
+            rm := TRUE
+          } else {
+            d.at (b+0) put x0; d.at (b+1) put y0; d.at (b+2) put x1; d.at (b+3) put y1
+          }
+        }
+        (rm).if {
+          again := TRUE
+          d.remove b to (b+3)
+          (a > b).if { a := a - 4; }
+          (b > d.upper).if { b := 0; i := 4; }
+        } else {
+          (a,b) := (b,c)
+          i := i + 4
+        }
+        i := i % d.count
+      }.do_while {i != 8}
+    }.do_while {again}
+    i := 0
+    {i < d.upper-8}.while_do {
+      a := i
+      j := i + 8
+      {j < d.upper-4}.while_do {
+        b := j
+        (x0,y0) := inter2 d pt (a,b)
+        (x0 >= 0).if {
+          //bug.add_last x0; bug.add_last y0
+          d.at (a+2) put x0; d.at (a+3) put y0
+          d.at (b+0) put x0; d.at (b+1) put y0
+          d.remove (a+4) to (b-1)
+          j := a + 4
+        }
+        j := j + 4
+      }
+      i := i + 4
+    }
+    i := 2
+    {i < d.count/2}.while_do {
+      d.at (i+0) put (d.at (i*2+0))
+      d.at (i+1) put (d.at (i*2+1))
+      i := i + 2
+    }
+    d.set_upper (i-1)
+  )
+  
+Private
+  
+  - inter2 d:ARRAY REAL_32 pt (ab,cd:INTEGER) :(REAL_32,REAL_32) <-
+  ( + det,xa,xb,xc,xd,ya,yb,yc,yd,u,t,x,y:REAL_32
+    x := -1
+    (xa,ya,xb,yb) := (d.at (ab+0),d.at (ab+1),d.at (ab+2),d.at (ab+3))
+    (xc,yc,xd,yd) := (d.at (cd+0),d.at (cd+1),d.at (cd+2),d.at (cd+3))
+    det := (xb - xa) * (yd - yc) - (yb - ya) * (xd - xc)
+    (det.abs >= 0.0001).if {
+      t := ((xc - xa) * (yd - yc) - (yc - ya) * (xd - xc)) / det
+      u := ((xc - xa) * (yb - ya) - (yc - ya) * (xb - xa)) / det
+      ((t.in_range 0 to 1) && {u.in_range 0 to 1}).if {        
+        x := xa + t * (xb - xa)
+        y := ya + t * (yb - ya)
+      }
+    }
+    x,y
+  )
+
+  - inter d:ARRAY REAL_32 pt (ab,cd:INTEGER) first f:BOOLEAN :(INTEGER,REAL_32,REAL_32) <-
+  ( + dx,dy,du,dv,det,x,y,t:REAL_32
+    + xa,xb,xc,xd,ya,yb,yc,yd:REAL_32
+    //+ c1,c2:REAL_32
+    + e:INTEGER
+    (xa,ya,xb,yb) := (d.at (ab+0),d.at (ab+1),d.at (ab+2),d.at (ab+3))
+    (xc,yc,xd,yd) := (d.at (cd+0),d.at (cd+1),d.at (cd+2),d.at (cd+3))
+    (dx,dy) := (xb-xa, yb-ya)
+    (du,dv) := (xd-xc, yd-yc)
+    det := dx*dv - dy*du
+    (det.abs < 0.0001).if { // Parallel segment
+      e := -1
+      /*
+      c1 := ((yc - ya) * (xb - xa) - (xc - xa) * (yb - ya)).abs
+      c2 := ((yd - ya) * (xb - xa) - (xd - xa) * (yb - ya)).abs
+      ((c1 < 0.0001) && {c2 < 0.0001}).if {    
+        e := -1
+      } else {
+        c1 := (dx*dx+dy*dy).sqrt
+        c2 := (du*du+dv*dv).sqrt
+        ((f) && {c2 < c1}).if { e := -1
+          bug.add_last xc; bug.add_last yc
+        }
+        (x,y) := (xc, yc)
+      };*/
+    } else {
+      (((xb-xc).abs < 0.1) && {(yb-yc).abs < 0.1}).if {
+        (x,y) := (xc, yc)
+      } else {
+        e := +1
+        t := ((xc - xa)*dv - (yc - ya)*du)/det
+        (x,y) := (xa + t*dx, ya + t*dy)
+      }
+    }
+    e,x,y
+  )
+  
+Public
+  
+  - rgb_to_tsl src:NATIVE_ARRAY UINTEGER_8 to tsl:ARRAY (NATIVE_ARRAY REAL_32) size (w,h:INTEGER) <-
+  [ ? {tsl.count = 3}; ]
+  ( + r,g,b,t,s,l,max,min,d:REAL_32
+    + ii:INTEGER
+    0.to (w*h*4-1) by 4 do { i:INTEGER
+      (r,g,b) := (src.at (i+0).to_real_32, src.at (i+1).to_real_32, src.at (i+2).to_real_32)
+      (r,g,b) := (r/255,g/255,b/255)
+      (max,min) := (r.max g.max b, r.min g.min b)
+      t := s := l := (max+min)/2
+      (max = min).if {
+        t := s := 0
+      } else {
+        d := max - min
+        (l > 0.5).if {
+          s := d / (2.0 - max - min)
+        } else {
+          s := d / (max + min)
+        }
+        (r = max).if {
+          t := (g-b)/d + (g < b).ok 6 or 0
+        }.elseif {g = max} then {
+          t := 2.0 + (b-r)/d
+        } else { // b = max
+          t := 4.0 + (r-g)/d
+        }
+        t := t / 6
+      }
+      
+      tsl.at 0.at ii put t
+      tsl.at 1.at ii put s
+      tsl.at 2.at ii put l
+      ? {l.in_range 0 to 1}
+      ii := ii + 1
+    }
+  )
+  
+  - rgb_to_l src:NATIVE_ARRAY UINTEGER_8 to imgl:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  ( + r,g,b,l:UINTEGER_8
+    + ii,max,min:INTEGER
+    0.to (w*h*4-1) by 4 do { i:INTEGER
+      (r,g,b) := (src.at (i+0), src.at (i+1), src.at (i+2))
+      (max,min) := (r.max g.max b, r.min g.min b)
+      l := ((max+min)/2).to_uinteger_8
+      imgl.at ii put l
+      ii := ii + 1
+    }
+  )
+  
+Private
+  - hue2rgb (p,q,t:REAL_32) :REAL_32 <-
+  ( + tt,r:REAL_32
+    tt := t
+    (tt < 0).if { tt := tt + 1; }
+    (tt > 1).if { tt := tt - 1; }
+    (tt < 1.0/6).if {
+      r := p + (q - p) * 6 * tt
+    }.elseif {tt < 1.0/2} then {
+      r := q
+    }.elseif {tt < 2.0/3} then {
+      r := p + (q - p) * (2.0/3 - tt) * 6
+    } else {
+      r := p
+    }
+    r
+  )
+
+Public
+  
+  - tsl_to_rgb src:NATIVE_ARRAY REAL_32 to rgb:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  ( + r,g,b,t,s,l,p,q:REAL_32
+    0.to (w*h*4-1) by 4 do { i:INTEGER
+      (t,s,l) := (src.at (i+0), src.at (i+1), src.at (i+2))
+      (s = 0).if {
+        r := g := b := l
+      } else {
+        (l < 0.5).if {
+          q := l * (s + 1)
+        } else {
+          q := l + s - l * s
+        }
+        p := l * 2 - q
+        r := hue2rgb(p,q,t + 1.0/3)
+        g := hue2rgb(p,q,t)
+        b := hue2rgb(p,q,t - 1.0/3)
+      }
+      rgb.at (i+0) put ((r*255).to_uinteger_8)
+      rgb.at (i+1) put ((g*255).to_uinteger_8)
+      rgb.at (i+2) put ((b*255).to_uinteger_8)
+      rgb.at (i+3) put 255
+    }
+  )
+    
+  - rgb_to_hsv src:NATIVE_ARRAY UINTEGER_8 to hsv:NATIVE_ARRAY UINTEGER_8 size (w,hh:INTEGER) <-
+  // rgba = hsv OK
+  ( + up:INTEGER
+    + r,g,b,a,max,min,delta,h,s,v:INTEGER
+    up := w * hh * 4
+    0.to (up-1) by 4 do { i:INTEGER
+      (r,g,b,a) := (src.at (i+0), src.at (i+1), src.at (i+2),src.at (i+3))
+      max := r.max g.max b
+      min := r.min g.min b
+      delta := max - min
+      h := s := 0; v := max
+      (max != 0).if {
+        s := (delta * 255) / max
+      } else {
+        s := 0
+      }
+      (delta > 0).if {
+        (max = r).if {
+          h := (43 * (g - b)) / delta
+        }.elseif {max = g} then {
+          h := (43 * (b - r)) / delta + 85
+        }.elseif {max = b} then {
+          h := (43 * (r - g)) / delta + 171
+        }
+        (h < 0).if {
+          h := h + 255
+        }
+      }
+      hsv.at (i+0) put h
+      hsv.at (i+1) put s
+      hsv.at (i+2) put v
+      hsv.at (i+3) put a
+    }
+  )
+  
+  - hsv_to_rgb src:NATIVE_ARRAY UINTEGER_8 to rgb:NATIVE_ARRAY UINTEGER_8 size (w,hh:INTEGER) <-
+  // rgba = hsv OK
+  ( + up,reg,rem,p,q,t:INTEGER
+    + r,g,b,a,h,s,v:INTEGER
+    up := w * hh * 4
+    0.to (up-1) by 4 do { i:INTEGER
+      (h,s,v,a) := (src.at (i+0), src.at (i+1), src.at (i+2),src.at (i+3))
+      r := g := b := 0
+      (s = 0).if {
+        r := g := b := v
+      } else {      
+        reg := (h * 6) / 255
+        rem := (h * 6) % 255
+        p := (v * (255 - s)) / 255
+        q := (v * (255 - (s * rem) / 255)) / 255
+        t := (v * (255 - (s * (255 - rem)) / 255)) / 255
+        reg
+        .when 0 then { (r,g,b) := (v,t,p); }
+        .when 1 then { (r,g,b) := (q,v,p); }
+        .when 2 then { (r,g,b) := (p,v,t); }
+        .when 3 then { (r,g,b) := (p,q,v); }
+        .when 4 then { (r,g,b) := (t,p,v); }
+        .when 5 then { (r,g,b) := (v,p,q); }
+      }
+      rgb.at (i+0) put r
+      rgb.at (i+1) put g
+      rgb.at (i+2) put b
+      rgb.at (i+3) put a
+    }
+  )
+  
+  - black_detect src:NATIVE_ARRAY UINTEGER_8 to rgb:NATIVE_ARRAY UINTEGER_8 size (w,hh:INTEGER) lim vv:INTEGER <-
+  ( + h,s,v,a:INTEGER
+    0.to (w*hh*4) by 4 do { i:INTEGER
+      (h,s,v,a) := (src.at (i+0), src.at (i+1), src.at (i+2),src.at (i+3))
+      (v < vv).if {
+        rgb.at (i>>2) put 255
+      } else {
+        rgb.at (i>>2) put 0
+      }
+    }
+  )
+  
+  - select src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
+  col c:INTEGER lim l:INTEGER <-
+  // src = dst ok
+  ( + j,c0,c1,c2,cmx:INTEGER
+    0.to (w*h-1) do { i:INTEGER
+      (c0,c1,c2) := (src.at (j+0), src.at (j+1), src.at (j+2))
+      ((c0 > c1+l) && {c0 > c2+l}).if   { cmx := 0; }.elseif
+      {(c1 > c0+l) && {c1 > c2+l}} then { cmx := 1; }.elseif
+      {(c2 > c0+l) && {c2 > c1+l}} then { cmx := 2; } else { cmx := -1; }
+      (cmx = c).if { dst.at i put 0; } else { dst.at i put 255; }
+      j := j + 4
+    }
+  )
+
+  - draw_cross pen:PEN to (x,y:REAL_32) col col:COLOR <-
+  (
+    pen.begin_path
+    pen.stroke_width 3
+    pen.stroke_color col
+    pen.line (x - 8, y - 8) to (x + 8, y + 8)
+    pen.line (x + 8, y - 8) to (x - 8, y + 8)
+    pen.stroke
+  )
+  
+  - draw pen:PEN contour s:ARRAY REAL_32 to (px,py:REAL_32) coef c:REAL_32 col col:COLOR <-
+  (
+    pen.begin_path
+    pen.move_to (px + s.first*c, py + s.second*c)
+    2.to (s.upper) by 2 do { i:INTEGER
+      pen.line_to (px + s.at i*c, py + s.at (i+1)*c)
+    }
+    pen.line_to (px + s.first*c, py + s.second*c)
+    pen.stroke_width 1.0
+    pen.stroke_color col
+    pen.stroke
+  )
+  
+  - draw pen:PEN line s:ARRAY REAL_32 to (px,py:REAL_32) coef c:REAL_32 col col:COLOR <-
+  ( + x0,y0,x1,y1:REAL_32
+    pen.begin_path
+    0.to (s.upper) by 4 do { i:INTEGER
+      (x0,y0) := (px + s.at (i+0)*c, py + s.at (i+1)*c)
+      (x1,y1) := (px + s.at (i+2)*c, py + s.at (i+3)*c)
+      pen.line (x0,y0) to (x1,y1)
+    }
+    pen.stroke_width 2.0
+    pen.stroke_color col
+    pen.stroke
+    
+    pen.begin_path
+    (x0,y0) := (px + s.first*c, py + s.second*c)
+    pen.circle (x0,y0) radius 8
+    pen.stroke_color (COLOR.red)
+    pen.stroke
+    /*
+    pen.begin_path
+    0.to (bug.upper) by 2 do { i:INTEGER
+      (x0,y0) := (px + bug.at (i+0)*c, py + bug.at (i+1)*c)
+      pen.circle (x0,y0) radius 2
+    }
+    pen.stroke_color (COLOR.magenta)
+    pen.stroke
+    */
+  )
+  
+Private
+
+  - edges:ARRAY NPEDGE
+
+  - edges_upper:INTEGER
+  - poly_ymax:INTEGER := INTEGER.minimum.to_integer
+
+  - poly_list_y:ARRAY NPEDGE
+
+  - begin_y:NPEDGE
+  - begin_idx:INTEGER
+
+  - last_y:NPEDGE
+  - last_idx:INTEGER
+
+  - x_origin:INTEGER
+  - y_origin:INTEGER
+
+Private
+    
+  - display_poly <-
+  ( + edge:NPEDGE
+
+    0.to (poly_list_y.upper) do { i:INTEGER
+      edge := poly_list_y.at i
+      {edge != NULL}.while_do {
+	edge.display
+	';'.print
+	edge := edge.next_y
+      }
+      '\n'.print
+    }
+  )
+
+Private
+
+  - connect_first <-
+  (
+    bmp_line_to (x_origin,y_origin)
+    ((begin_y!=NULL) && {begin_y.is_down = last_y.is_down}).if {
+      // Connecting.
+      (begin_y.is_down).if {
+	// Add first list.
+	last_y.set_next_y begin_y
+	poly_list_y.at begin_idx put (poly_list_y.at last_idx)
+      } else {
+	// Add last list.
+	begin_y.set_next_y last_y
+      }
+      poly_list_y.remove last_idx
+    }
+  )
+
+  - sort_list_y <-
+  // Bubble sort :- => BSBS: Optmize with Quick sort...
+  ( + low,up,idx,upper:INTEGER
+    + swap:BOOLEAN
+
+    upper := poly_list_y.upper-1
+
+    low := 0
+    up  := upper
+    {
+      swap:=FALSE
+      low.to up do { i:INTEGER
+	(poly_list_y.at i.y0 > poly_list_y.at (i+1).y0).if {
+	  poly_list_y.swap i with (i+1)
+	  swap := TRUE
+	}
+
+	idx := upper - i
+	(poly_list_y.at idx.y0 > poly_list_y.at (idx+1).y0).if {
+	  poly_list_y.swap idx with (idx+1)
+	  swap := TRUE
+	}
+      }
+      up  := up - 1
+      low := low + 1
+    }.do_while {swap}
+  )
+
+Public
+  
+  - spot_x:INTEGER
+  - spot_y:INTEGER
+  
+  - bmp_move_to (x,y:INTEGER) <-
+  (
+    //x.print; ' '.print; y.print; '\n'.print
+    (edges = NULL).if {
+      poly_list_y := ARRAY(NPEDGE).create_with_capacity 16
+      edges := ARRAY(NPEDGE).create 64
+      0.to 63 do { n:INTEGER; edges.at n put (NPEDGE.create); }
+    }
+    (edges_upper != 0).if { connect_first; }
+    spot_x := x_origin := x
+    spot_y := y_origin := y
+    begin_y  := NULL
+    last_y   := NULL
+
+    poly_ymax := poly_ymax.max y
+  )
+
+  - bmp_line_to (x1,y1:INTEGER) <-
+  ( + edge,edge2:NPEDGE
+    + x0,y0:INTEGER
+    //x1.print; ' '.print; y1.print; '\n'.print
+    x0:=spot_x
+    y0:=spot_y
+
+    ((x0!=x1) || {y0!=y1}).if {      
+      spot_x := x1
+      spot_y := y1
+
+      (edges_upper >= (edges.upper-4)).if { // BSBS: A optimiser avec MAP_ARRAY ...
+        // Append 16 Edges.
+        0.to 15 do { j:INTEGER; edges.add_last (NPEDGE.create); }
+      }
+
+      (y0=y1).if {
+        // Flat.
+        edge  := edges.at edges_upper
+        edges_upper := edges_upper + 1
+        poly_list_y.add_last edge
+        edge2 := edges.at edges_upper
+        edges_upper := edges_upper + 1
+        poly_list_y.add_last edge2
+
+        (x0 < x1).if {
+          edge .make (x0,y0) add 1
+          edge2.make (x1,y1) add (-1)
+        } else {
+          edge .make (x0,y0) add (-1)
+          edge2.make (x1,y1) add 1
+        }
+      } else {
+        // Line.
+        edge  := edges.at edges_upper
+        edges_upper := edges_upper + 1
+        edge.make (x0,y0) to (x1,y1)
+
+        (begin_y=NULL).if {
+          begin_idx := poly_list_y.count
+          begin_y   := edge
+        }
+        ((last_y=NULL) || {last_y.is_down != edge.is_down}).if {
+          // New line_y.
+          poly_list_y.add_last edge
+          last_idx := poly_list_y.upper
+          last_y   := edge
+          poly_ymax := poly_ymax.max y1
+        } else {
+          // Continue line_y.
+          (edge.is_down).if {
+            // Add last.
+            last_y.set_next_y edge
+            poly_ymax := poly_ymax.max y1
+          } else {
+            // Add first.
+            poly_list_y.at last_idx put edge
+            edge.set_next_y last_y
+          }
+          last_y := edge
+        }
+      }
+    }
+  )
+  
+  - bmp_trace bmpline:{(INTEGER,INTEGER,INTEGER); } :(INTEGER,INTEGER) <-
+  ( + edge,next_edge,edgep:NPEDGE
+    + x_edges:NPEDGE
+    + x0,x1,new_x,x_mx,y_mx:INTEGER
+    + idx_y:INTEGER
+    + trace:INTEGER
+    + line:INTEGER
+    + is_y:BOOLEAN
+       
+    (edges_upper != 0).if {      
+      // Connexion with first point.
+      connect_first
+
+      // Optimize clip_y0
+      /*
+      (poly_list_y.upper).downto 0 do { j:INTEGER
+        edge := poly_list_y.at j
+        //{(edge != NULL) && {edge.y1 < clip_y0}}.while_do {
+        //  edge := edge.next_y
+        //}
+        (edge = NULL).if {
+          poly_list_y.remove j
+        } else {
+          poly_list_y.put edge to j
+        }
+      }
+      */
+      
+      // Sort on Y.
+      sort_list_y
+        
+      y_mx := poly_ymax
+      line := 1
+      x_mx := 0
+      //"=============================================\n".print
+      // for each scanline in the polygon.
+      (poly_list_y.first.y0).to poly_ymax do { y:INTEGER
+        ? {y >= 0}
+        is_y := FALSE
+        // Active edges.
+        {(idx_y <= poly_list_y.upper) && {poly_list_y.at idx_y.y0 = y}}.while_do {
+          x_edges := poly_list_y.at idx_y.add x_edges
+          idx_y   := idx_y + 1
+        }
+        //"--------------------\n".print
+        // Draw horizontal line.
+        x1:=INTEGER.minimum.to_integer
+        edge:=x_edges
+        {edge!=NULL}.while_do {
+          next_edge:=edge.next_x
+          // Trace.            
+          (trace = 0).if {
+            // Begin point.
+            new_x := (edge.x+16383)>>16
+            //x0.print; ' '.print; y.print; '/'.print; x1.print; ' '.print; new_x.print; '\n'.print
+            ((new_x != x1) && {new_x != (x1 + 1)}).if {              
+              (x1 >= x0).if {
+                bmpline.value (x0,y,x1)
+                is_y := TRUE
+              }
+              x0 := new_x
+            }
+          }
+            
+          (edge.is_point).if {
+            trace := trace + edge.dx
+          } else {
+            trace := trace + line
+            line  := - line
+          }
+            
+          (trace = 0).if {
+            // End point.
+            x1 := (edge.x+16384)>>16
+          }
+                    
+          // Inc edges.
+          (edge.width!=0).if {
+            edge.new_step
+            
+            // Sort with X :
+            edgep:=edge.prev_x
+            {(edgep!=NULL) && {edge.x<edgep.x}}.while_do {
+              edgep:=edgep.prev_x
+            }
+            (edgep!=edge.prev_x).if {
+              edge.prev_x.set_next_x (edge.next_x)
+              (edge.next_x!=NULL).if {
+                edge.next_x.set_prev_x (edge.prev_x)
+              }
+              edge.set_prev_x edgep
+              (edgep!=NULL).if {
+                edge.set_next_x (edgep.next_x)
+                edgep.set_next_x edge
+              } else {
+                edge.set_next_x x_edges
+                x_edges:=edge
+              }
+              (edge.next_x!=NULL).if {
+                edge.next_x.set_prev_x edge
+              }
+            }
+          } else {
+            // Next line.
+            x_edges:=edge.next_line x_edges
+          }
+          edge := next_edge
+        }
+        x_mx := x_mx.max x1
+        (x1>=x0).if {
+          bmpline.value (x0,y,x1)
+        }.elseif {! is_y} then {
+          bmpline.value (x0,y,x0)
+          //"Patch\n".print
+        }
+      }
+    }
+    // Init structure for next.
+    edges_upper:=0
+    poly_list_y.clear
+    begin_y:=NULL
+    poly_ymax:=INTEGER.minimum.to_integer
+    x_mx,y_mx
+  )
+    
+Public
+  
+  - rays pt:ARRAY INTEGER to (xc,yc:REAL_32) in ray:ARRAY (ARRAY REAL_32) :REAL_32 <-
+  ( + a,dy,dx,l,max,v:REAL_32
+    + n,r,ro,x0,y0,x1,y1,d,ax,i,rf:INTEGER
+    + rl:ARRAY REAL_32
+    ray.foreach { t:ARRAY REAL_32; t.clear; }
+    ro := -1
+    (x1,y1) := (pt.first, pt.second); i := 2
+    {
+      (x0,y0) := (x1,y1)
+      (x1,y1) := (pt.at i, pt.at (i+1))
+      ax := (x0=x1).ok 0 else {(x0 < x1).ok (+1) or (-1)}
+      dy := y0.to_real_32-yc
+      {        
+        dx := x0.to_real_32-xc
+        l := (dx*dx+dy*dy).sqrt
+        (l > max).if { max := l; }
+        a := dy.atan2 dx+REAL_32.pi
+        r := (ray.count.to_real_32/REAL_32.two_pi * a).to_integer & ray.upper
+        rl := ray.at r
+        (r != ro).if {
+          (ro = -1).if {
+            rf := ro := r
+          } else {
+            v := ray.at ro.last/n
+            ray.at ro.put_last v
+            d := ((r-ro)&(ray.count>>1)=0).ok (+1) or (-1)
+            ro := (ro + d) & ray.upper
+            {ro != r}.while_do {
+              ray.at ro.add_last v
+              ro := (ro + d) & ray.upper
+            }
+            // ro := r
+          }
+          n := 1
+          rl.add_last l
+          //((rl.is_empty) || {rl.last-l > 1}).if { rl.add_last l; }
+        } else {
+          n := n + 1
+          rl.put_last (rl.last+l)
+        }
+        x0 := x0+ax
+      }.do_while {x0 != x1}
+      i := (i + 2) % pt.count
+    }.do_while {i != 2}
+    v := ray.at ro.last/n
+    ray.at ro.put_last v
+    ((d := rf - ro) != 0).if {
+      d := (d&(ray.count>>1)=0).ok (+1) or (-1)
+      // "ro:".print; ro.print; " rf:".print; rf.print; " d:".print; d.println
+      ro := (ro + d) & ray.upper
+      {ro != rf}.while_do {
+        ray.at ro.add_last v
+        ro := (ro + d) & ray.upper
+      }
+    }
+    max
+  )
+  
+  - rays img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) to (xc,yc:REAL_32) clip (x0,y0,x1,y1:REAL_32) in ray:ARRAY (ARRAY REAL_32) :REAL_32 <-
+  ( + x,y,dx,dy,a:REAL_32
+    + r,rmax:INTEGER
+    + c,co:UINTEGER_8
+    ray.foreach { t:ARRAY REAL_32; t.clear; }
+    0.to (ray.upper) do { i:INTEGER
+      (x,y) := (xc,yc)
+      co := img.at (y.to_integer*w + x.to_integer)
+      a := (REAL_32.two_pi * i)/ray.count
+      (dx,dy) := (a.cos,a.sin)
+      r := 0
+      {(x.in_range x0 to x1) && {y.in_range y0 to y1}}.while_do {
+        (x,y) := (x+dx,y+dy)
+        r := r + 1
+        c := img.at (y.to_integer*w + x.to_integer)
+        (c != co).if {
+          ray.at i.add_last r
+          (r > rmax).if { rmax := r; }
+          co := c
+        }
+      }
+    }
+    rmax
+  )
+
+  
+  - draw pen:PEN id id:STRING to (x,y:REAL_32) width w:REAL_32
+  rays ray:ARRAY (ARRAY REAL_32) max max:REAL_32 angle a:INTEGER <-
+  ( + px,py,mx,ww,c:REAL_32
+    + r:ARRAY REAL_32
+    ww := w
+    pen.save
+    (id != NULL).if {
+      pen.fill_color (LOOK.text_ui)
+      pen.font_size (FONT.size_app)
+      pen.font_face_id (FONT.app (FONT.bold))
+      pen.text_align (pen.align_center | pen.align_middle)
+      pen.text (x+8,y+50) msg id
+      mx := 20
+      ww := ww - mx
+    }
+    c := ww / ray.count
+    pen.begin_path
+    pen.stroke_width 1.0
+    pen.stroke_color (COLOR.blue)
+    pen.rect (x+mx,y) size (ww,100)
+    pen.stroke
+    0.to (ray.upper) do { i:INTEGER
+      px := x+c*i+mx
+      r := ray.at i
+      0.to (r.upper) do { j:INTEGER
+        py := y+100.0-100.0/max * r.at j
+        pen.begin_path
+        pen.fill_color (COLOR.green)
+        pen.circle (px,py) radius 2
+        pen.fill
+      }
+    }
+    (a != -1).if {
+      pen.begin_path
+      pen.stroke_color (COLOR.red)
+      px := x+c*a+mx
+      pen.line (px,y) to (px,y+100)
+      pen.stroke
+    }
+    pen.restore
+  )
+  
+  - draw pen:PEN to (x,y:REAL_32) n n:INTEGER col c:COLOR <-
+  (
+    pen.fill_color c
+    pen.font_face_id (FONT.sys (FONT.roman))
+    pen.font_size (FONT.size_sys)
+    pen.text_align (pen.align_center | pen.align_middle)
+    STRING.tmp { t:STRING_BUFFER; n.append_in t
+      pen.text (x,y) msg t
+    }
+  )
+  
+  - circle_fill src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
+  to (xc, yc:INTEGER) ray r:INTEGER col3 (rc,gc,bc:UINTEGER_8) <-
+  ( + x,y,d:INTEGER
+    + pix:{(INTEGER,INTEGER); }
+    pix := { (px,py:INTEGER)
+      + o:INTEGER
+      ((px.in_range 0 to (w-1)) && {py.in_range 0 to (h-1)}).if {
+        o := (py*w + px) << 2
+        src.at (o+0) put rc
+        src.at (o+1) put gc
+        src.at (o+2) put bc
+        src.at (o+3) put 255
+      }
+    }
+    y := r
+    d := 3 - 2 * r
+    {x <= y}.while_do {
+      (xc-x).to (xc+x) do { i:INTEGER; pix.value (i,yc+y); }
+      (xc-x).to (xc+x) do { i:INTEGER; pix.value (i,yc-y); }
+      (xc-y).to (xc+y) do { i:INTEGER; pix.value (i,yc+x); }
+      (xc-y).to (xc+y) do { i:INTEGER; pix.value (i,yc-x); }
+      (d < 0).if {
+        d := d + 4 * x + 6
+      } else {
+        d := d + 4 * (x - y) + 10
+        y := y - 1
+      }
+      x := x + 1
+    }
+  )
+  
+  - sum img:NATIVE_ARRAY UINTEGER_8 off o:INTEGER inc d:INTEGER :REAL_32 <-
+  ( + oo,n:INTEGER
+    + s:REAL_32
+    oo := o + d*4
+    n := 1
+    n.times {
+      s := s + (img.at (oo+0) + img.at (oo+1) + img.at (oo+2)).to_real_32
+      oo := oo + d*4
+    }
+    s / (n*3)
+  )
+  
+  - tab:ARRAY REAL_32 := ARRAY REAL_32.create (512/16)
+  
+  - bidulle img:NATIVE_ARRAY UINTEGER_8 to img2:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  ( + o,x,xb:INTEGER
+    + c_mx,cc:UINTEGER_8
+    + d,g,c:REAL_32
+    
+    0.to (h-1) by 16 do { yy:INTEGER
+      tab.at (yy/16) put 0
+      (0).to (w-1) by 16 do { xx:INTEGER
+        o := (yy*w + xx)*4
+        x := 0; c_mx := img.at o
+        1.to 15 do { i:INTEGER
+          cc := img.at (o+i*4)
+          (cc < c_mx).if { x := i; c_mx := cc; }
+        }
+        xb := x := xx + x
+        yy.to (yy+16-1) do { y:INTEGER
+          o := (y*w + x)*4
+          g := sum img off o inc (-1)
+          c := (img.at (o+0) + img.at (o+1) + img.at (o+2)).to_real_32 / 3
+          d := sum img off o inc (+1)
+          img2.at (o+0) put 255; img2.at (o+1) put 0; img2.at (o+2) put 0
+          ((c < g) && {c < d}).if {
+          }.elseif {(g < c) && {g < d}} then {
+            x := x - 1
+          }.elseif {(d < c) && {d < g}} then {
+            x := x + 1
+          }
+        }
+        tab.at (yy/16) put (tab.at (yy/16) + (x-xb))
+      }
+      tab.at (yy/16) put (tab.at (yy/16) / (512/16))
+      (yy/16).print; " : ".print; (tab.at (yy/16)*10).to_integer.print; '\n'.print
+    }
+    '\n'.print
+  )
+  
+  - bidulle_old img:NATIVE_ARRAY UINTEGER_8 to img2:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  ( + o,x:INTEGER
+    + d,g,c,c_mx:REAL_32
+    0.to (h-1) by 16 do { yy:INTEGER
+      (0).to (w-1) by 16 do { xx:INTEGER
+        x := xx
+        yy.to (yy+16-1) do { y:INTEGER
+          o := (y*w + x)*4
+          g := sum img off o inc (-1)
+          c := (img.at (o+0) + img.at (o+1) + img.at (o+2)).to_real_32 / 3
+          d := sum img off o inc (+1)
+          img2.at (o+0) put 255; img2.at (o+1) put 0; img2.at (o+2) put 0
+          ((c < g) && {c < d}).if {
+          }.elseif {(g < c) && {g < d}} then {
+            x := x - 1
+          }.elseif {(d < c) && {d < g}} then {
+            x := x + 1
+          }
+        }
+        tab.at (yy/16) put (tab.at (yy/16) + (x-xx))
+      }
+      tab.at (yy/16) put (tab.at (yy/16) / (512/16))
+      tab.at (yy/16).print; ' '.print
+    }
+    '\n'.print
+  )
+  

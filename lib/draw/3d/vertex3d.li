@@ -1,0 +1,24 @@
+Header
+  
+  + name := Expanded VERTEX3D;
+  
+Insert
+  
+  - parent_clone:CLONE := CLONE
+  
+Mapping  
+  + point:Expanded VEC3
+//  + norm:Expanded VEC3
+  
+Public
+  
+  - make (x,y,z:REAL_32) /*norm (nx,ny,nz:REAL_32)*/ <-
+  (
+    point.make (x,y,z)
+//    norm.make (nx,ny,nz)
+  )
+  
+  - print <-
+  (
+    '{'.print; point.print; /*','.print; norm.print;*/ '}'.print
+  )

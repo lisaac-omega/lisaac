@@ -1,0 +1,17 @@
+Header  
+  + name := CP;
+  /*cp unix-like command*/
+  
+Public
+  - src p1:STRING dest p2:STRING : INTEGER <-
+  ( + result:INTEGER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.append "cp "
+      tmp.append p1
+      tmp.add_last ' '
+      tmp.append p2
+      result := ENVIRONMENT.execute_command tmp
+    }
+    result
+  )
+ 

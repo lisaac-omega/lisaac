@@ -1,0 +1,89 @@
+Header
+  + name := I_NODE;
+  /* OBSOLETE */
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+//  - parent_lutils:LUTILS := LUTILS
+//  + parent_spot:Expanded SPOT
+//  - parent_drw:DRW := DRW
+  
+Public
+    
+  - msg_err:STRING_BUFFER := STRING_BUFFER.create 256
+  
+  + lower:INTEGER
+  + upper:INTEGER
+  
+  - copy:I_NODE <- ( abstract; Self)
+  
+  - type:TYPE <- ( abstract; NULL)
+  - error:INTEGER <- 0
+  
+  - txt_in s:STRING_BUFFER <- ( abstract; )
+  - rtxt_in s:STRING_BUFFER <- ( abstract; )
+  
+  - type_check s:SLOT :UINTEGER_16 <-
+  ( + ts:TYPE
+    + i:INTEGER
+    + result:UINTEGER_16
+    (s != NULL).if {
+      i := IA.arg_i
+      (i > s.arg.upper).if { crash_with_message ("I_STR: Arg#"+i.to_string); }
+      ts := s.type_arg i
+      (! (type <= ts)).if {
+        msg_err += "Arg. #"
+        i.append_in msg_err
+        msg_err | ' '
+        type.txt_in msg_err sty NULL
+        msg_err += " not sub-type of "
+        (ts = NULL).if { msg_err += "BUG"; } else {
+          ts.txt_in msg_err sty NULL
+        }
+        msg_err += ". "
+        result := STY.ul_green
+      }
+    }
+    result
+  )
+  
+  - put_sty u:UINTEGER_16 slot s:SLOT <- ( abstract; )
+  
+  - size:INTEGER <- ( abstract; 0)
+  - to_expr:EXPR <- ( abstract; EXPR)
+  
+  - free <- ( abstract; )
+  
+  /*
+  - drw <-
+  (
+    do {
+      
+      {
+        read {
+          read (IA.src)
+        } exe {
+          TRUE
+        } write {
+          CUR.put_tok
+        } live {
+          /*
+          + ib:IBASE
+          (live,txt,exp) := (TRUE,tx,ex)
+          i := stack.count
+          {
+            (i > 0) && {
+              ib ?= stack.at (i-1)
+              (ib = NULL) || {ib.lev > lev}
+            }
+          }.while_do {
+            i := i - 1
+          }
+          stack.add Self to i
+          */
+        }
+      }.while_loop
+      end_line
+    }
+  )
+*/    

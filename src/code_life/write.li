@@ -1,0 +1,255 @@
+Header
+
+  + name        := WRITE;
+
+  /*Write local, global or slot*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  //
+  // Debug !!!!
+  //
+
+  + is_delete:BOOLEAN
+
+  + is_create:BOOLEAN
+
+  - set_delete <-
+  (
+    is_delete := TRUE
+  )
+
+  - set_create <-
+  (
+    is_create := TRUE
+  )
+
+  //
+  // Fin debug !!!!
+  //
+
+  + quiet_generation:BOOLEAN
+
+  - set_quiet_generation <-
+  (
+    quiet_generation := TRUE
+  )
+
+  - is_invariant:BOOLEAN <- value.is_invariant
+
+  - variable:VARIABLE <-
+  (
+    abstract
+    NULL
+  )
+
+  - static_type:TYPE_FULL <-
+  (
+    variable.type
+  )
+
+  + value:EXPR
+
+  - set_value new:EXPR <-
+  (
+    value := new
+  )
+
+  - ensure_count:INTEGER <- variable.ensure_count
+
+  - get_type t:TYPES_TMP <-
+  (
+    (value != NULL).if {
+      value.get_type t
+    }
+  )
+
+  - my_copy:SELF <-
+  ( + new_val:EXPR
+    + result:SELF
+
+    new_val := value.my_copy
+    result ?= variable.write position value new_val
+    result
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute_access_unlink:INSTR <-
+  (
+    abstract
+    NULL
+  )
+
+  - execute_access_link <- abstract
+
+  - execute:INSTR <-
+  ( + result:INSTR
+    + read:READ
+    + val:INSTR
+    + slot:SLOT_DATA
+    + rd_loc:READ_LOCAL
+
+    ? { variable != NULL }
+    ? { value    != NULL }
+
+    simplify_type variable
+    //debug_display
+
+    slot ?= variable
+    rd_loc ?= value
+    (
+      ( // First case : No link.
+        (ensure_count = 0) && 
+        {(rd_loc = NULL) || {rd_loc.variable.style != 'R'}} && 
+        {(slot = NULL)   || {! slot.id_section.is_mapping}}
+      ) || { // Second case : a := a
+	read ?= value
+	(read != NULL) && {variable = read.variable} &&
+	{(variable.is_local) || {variable.style = '-'}}	// BSBS: Ce cas dans rentrer dans set_write
+      } || {
+        (rd_loc != NULL) && {rd_loc.local.require_count = 0} && {rd_loc.local.ensure_count = 1} && {!variable.type.raw.is_block} && {
+          /*
+            "WRITE :".print
+            variable.intern_name.print; " := ".print
+            variable.type.print
+            (variable.type.raw != NULL).if {
+              variable.type.raw.is_block.print
+            }
+            variable.style.print
+            rd_loc.local.intern_name.println
+          */
+          TRUE
+        }
+      }          
+    ).if {
+      //
+      // Supprime affectation.
+      //     
+      val := execute_access_unlink
+      (val != NULL).if {
+	list_current.insert_before val
+      }
+      variable.unwrite Self
+      result := value.execute_unlink
+      new_execute_pass
+    } else {
+      //
+      // Execution normal.
+      //
+      /*( // BSBS: Bug, mais de toute facon le gain n'est pas la... (entre +5 a +20)
+	(loop_invariant != NULL) && {list_current = loop_invariant.body} &&
+	{is_invariant} && {variable.get_last_index != -1}
+      ).if {
+	//old_loop_invariant := loop_invariant
+	//loop_invariant := NULL
+	//
+	variable.reset_last_write Self
+	loop_list.insert_before Self
+	//
+	//execute_access_link
+	//value := value.execute_link
+	//seq_index := seq_index + 1
+	//
+	//loop_invariant := old_loop_invariant
+	result := NOP
+	count_invariant := count_invariant + 1
+      } else { */
+
+        execute_access_link
+	value := value.execute_link
+	seq_index := seq_index + 1
+	variable.set_write Self
+	result := Self
+      //}
+    }
+    result
+  )
+
+  - remove <-
+  ( + l:LOCAL
+    l ?= variable
+    ((l != NULL) && {l.my_alias != NULL}).if {
+      // It's for generation code, with ALIAS_LOCAL and SWITCH fusion case.
+      l.my_alias.unwrite Self
+    } else {
+      variable.unwrite Self
+    }
+    value.remove
+  )
+
+  //
+  // Genere
+  //
+
+  - genere_value <-
+  (
+    (
+      (static_type.is_expanded_ref) && {! value.static_type.is_expanded_ref}
+    ).if {
+      ? {value.static_type.is_expanded}
+      output.append "&("
+      value.genere
+      output.add_last ')'
+    }.elseif {
+      (static_type.is_expanded) && {! static_type.is_expanded_ref} &&
+      {(! value.static_type.is_expanded) || {value.static_type.is_expanded_ref}} &&
+      {value.static_type.raw != TYPE_NULL} // For Pointer := NULL
+    } then {
+      output.append "*("
+      value.genere
+      output.add_last ')'
+    } else {      
+      ((variable.type.is_strict) && {! value.static_type.is_strict}).if {
+        output.add_last '('
+        variable.type.genere_declaration output
+        output.add_last ' '
+        variable.type.genere_star_declaration output
+        output.add_last ')'
+      }
+      value.genere
+    }
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    //crash
+    buffer.append (variable.intern_name)
+
+    buffer.add_last '['
+    variable.type.append_name_in buffer
+    buffer.add_last ']'
+
+    buffer.append " :="
+    //to_pointer.append_in buffer
+    display_ref buffer
+    buffer.add_last ' '
+
+    (value = NULL).if {
+      buffer.append "<NULL>"
+    } else {
+      value.display buffer
+    }
+  )
+
+  - display_ref buffer:STRING_BUFFER <-
+  (
+    is_verbose.if {
+      buffer.add_last '<'
+      object_id.append_in buffer; // buffer.append (object_id.to_string_buffer)
+      buffer.append "/E"
+      ensure_count.append_in buffer
+      buffer.add_last '>'
+    }
+  )
+

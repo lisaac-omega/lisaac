@@ -1,0 +1,51 @@
+Header
+  + name := SLOT_BODY;
+
+Inherit  
+  + parent_tok_drw:Expanded TOK_DRW
+Insert
+  - parent_lix_buf:LIX_BUF := LIX_BUF
+    
+Private
+  - stk_s:Expanded ARRAY (Strict SLOT_BODY)
+Public
+  - is_major:BOOLEAN := FALSE
+  
+  + expr:EXPR
+  
+  + slot:SLOT
+  - set_slot s:SLOT <- ( slot := s; )
+      
+  - new:SELF <- ( + r:SELF; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
+  
+  - free <-
+  ( (expr != NULL).if { expr.free; expr := NULL; }; stk_s.add_last Self; )
+      
+  - detect:BOOLEAN <-
+  ( + c:CHARACTER
+    (look "  ") && {pos_i + 2 <= upper} && {(c := at (pos_i+2)) != '\n'} && {c != '['}
+  )
+    
+  - parse <-
+  (
+    //"Debut:".print; pos_i.pt.println
+    EXPR.skip_body
+    //"Fin:".print; pos_i.pt.println
+  )
+  
+  - begin_draw <-
+  (    
+    (expr = NULL).if {      
+      ln_limit := pt_b.pt + di
+      expr := EXPR.rd_expr_op
+      (read_c ';').if { col (LOOK.symbol) sub 1; }
+      ln_limit := 0
+      pos_i := Old pos_i
+      nl := Old nl
+    }
+  )
+  
+  - sub_draw <-
+  (
+    ((expr != NULL) && {expr.now pos_i}).if { expr.draw; }
+  )

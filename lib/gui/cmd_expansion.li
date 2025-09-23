@@ -1,0 +1,171 @@
+Header
+  + name := CMD_EXPANSION;
+  
+Inherit
+  - parent_cmd:CMD := CMD
+
+Public
+  
+  - comp_lst:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 16
+  - comp_buf:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 16
+  - comp_pti:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 16
+      
+  - open:BOOLEAN <-
+  ( + p,lpti:INTEGER
+    + result:BOOLEAN
+    comp_lst.clear; comp_buf.clear; comp_pti.clear
+    text.clear
+    p := lpti := cur_txt.pos.pt
+    //text.set_last_pti lpti
+    (p > 0).if {
+      {
+        cur_txt.text.at_back_tmp p
+        UTF8.is_idf (TXT_BUF.tmp_c).if {
+          p := p - TXT_BUF.tmp_c.count
+        } && {p > 0}
+      }.while_loop
+      STRING.tmp { tmp:STRING_BUFFER
+        p.to (lpti-1) do { i:INTEGER; tmp | cur_txt.text.at i; }
+        (! tmp.is_empty).if {
+          text.copy tmp
+          comp_lst.add_last (tmp.to_string_alias)
+          comp_buf.add_last (BUFFER.catalog.fast_first_index_of (cur_txt.buffer))
+          comp_pti.add_last p
+          (comp_pti.last < 0).if { comp_pti.put_last (cur_txt.text.upper); }
+          result := to_next
+        } else { cur_txt.footnote_left.copy "No dynamic expansion."; }
+      }
+    } else { cur_txt.footnote_left.copy "No dynamic expansion."; }
+    (result).if {
+      mesg.copy "Expansion "
+      SUBACT.get "Expansion".load Self
+      no_cursor := TRUE
+      parent_cmd.open
+    }
+  )
+
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    close
+    SCREEN.key s cmd c
+  )
+    
+  - to_prev:BOOLEAN <-
+  (comp_lst.count > 1).if {
+    clean_exp
+    comp_lst.remove_last; comp_buf.remove_last; comp_pti.remove_last
+    make_info (BUFFER.catalog.at (comp_buf.last))
+    (comp_lst.count > 1).if {
+      + n:STRING_ALIAS
+      n := comp_lst.last
+      cur_txt.text.at (cur_txt.pos.pt) add_text n range (comp_lst.first.count,n.upper)
+      cur_txt.set_pos_raw (comp_pti.first + n.count)
+    }
+  }
+  
+  - to_next:BOOLEAN <-
+  ( + p,i,buf_id:INTEGER
+    + n:STRING_ALIAS
+    + found:BOOLEAN
+    + buf:TXT_BUF
+    clean_exp
+    buf_id := comp_buf.last
+    p := comp_pti.last
+    buf ?= BUFFER.catalog.at buf_id
+    ? {buf != NULL}
+    {      
+      //"Search ".print; comp_lst.first.print; ' '.print; p.print; " in ".print; buf.shortname.println
+      (p = 0).if {
+        p := -1
+      } else {
+        p := p - buf.size_back_at p
+        //"Je cherche ".print; comp_lst.first.print; " a partir de ".print; p.print
+        p := buf.search_back (comp_lst.first) at p
+        //" et je trouve ".print; p.print; " dans ".print; buf.name.println
+      }
+      (p != -1).if {        
+        ((p = comp_pti.first) && {buf = cur_txt.buffer}).if {          
+          (buf_id,buf) := next_buf buf_id
+          (buf != NULL).if { p := buf.upper; }
+        } else {
+          i := p
+          //p.println
+          STRING.tmp { tmp:STRING_BUFFER
+            {
+              buf.at_tmp i
+              (UTF8.is_idf (TXT_BUF.tmp_c)).if {
+                tmp += TXT_BUF.tmp_c
+                i := i + TXT_BUF.tmp_c.count
+              } && {i < buf.upper}
+            }.while_loop
+            n := tmp.to_string_alias
+          }
+          (! comp_lst.fast_has n).if {
+            //"Nouveau:".print; n.print; " in ".print; buf.name.println
+            cur_txt.text.at (cur_txt.pos.pt) add_text n range (comp_lst.first.count,n.upper)
+            cur_txt.set_pos_raw (comp_pti.first + n.count)
+            comp_lst.add_last n
+            comp_pti.add_last p
+            comp_buf.add_last buf_id
+            make_info buf
+            found := TRUE
+          }
+        }
+      } else {
+        (buf = cur_txt.buffer).if {
+          p := buf.upper
+        } else {
+          (buf_id,buf) := next_buf buf_id
+          (buf != NULL).if { p := buf.upper; }
+        }
+      }
+    }.do_while {(! found) && {buf != NULL}}
+    (buf = NULL).if {
+      cur_txt.footnote_left.copy "No further dynamic expansion for `";
+      cur_txt.footnote_left.append (comp_lst.first)
+      cur_txt.footnote_left.append "' found."
+      comp_lst.set_upper 0
+      comp_pti.set_upper 0
+      comp_buf.set_upper 0
+      ? {found = FALSE}
+    }
+    found
+  )
+  
+Private
+  
+  - make_info buf:BUFFER <-
+  (
+    (buf = cur_txt.buffer).if {
+      info.copy "found."
+    } else {
+      info.copy "found in `";
+      info.append (buf.shortname)
+      (buf.tag != NULL).if {
+        info.add_last ' '
+        info.append (buf.tag)
+      }
+      info.append "'."
+    }
+  )
+  
+  - clean_exp <-
+  ( + l,u:INTEGER
+    (l,u) := (comp_pti.first + comp_lst.first.count,cur_txt.pos.pt)
+    (l < u).if {
+      (u - l).times { cur_txt.text.rm l; }
+      cur_txt.set_pos_raw (l)
+    }
+  )
+  
+  - next_buf id:INTEGER :(INTEGER,TXT_BUF) <-
+  ( + buf:TXT_BUF
+    + nid:INTEGER
+    nid := id
+    {
+      nid := (nid + 1) % BUFFER.catalog.count
+      buf ?= BUFFER.catalog.at nid
+    }.do_while {buf = NULL}
+    (nid = comp_buf.first).if { buf := NULL; }
+    nid,buf
+  )

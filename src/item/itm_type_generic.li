@@ -1,0 +1,134 @@
+Header
+
+  + name    := ITM_TYPE_GENERIC;
+
+  /*Generic style type*/
+
+Inherit
+
+  + parent_itm_type_style:Expanded ITM_TYPE_STYLE
+
+Private
+
+  - dico_tg:ARRAY ITM_TYPE_GENERIC := ARRAY ITM_TYPE_GENERIC .create_with_capacity 32
+
+  - create n:STRING_ALIAS style s:UINTEGER_8 with lt:ARRAY ITM_TYPE :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make n style s with lt
+    result
+  )
+
+  - make n:STRING_ALIAS style s:UINTEGER_8 with lt:ARRAY ITM_TYPE <-
+  (
+    name      := n
+    style     := s
+    list_type := lt
+  )
+
+Public
+
+  - hash_code:INTEGER <- name.hash_code
+
+  + list_type:ARRAY ITM_TYPE
+
+  - get n:STRING_ALIAS style s:UINTEGER_8 with lt:ARRAY ITM_TYPE :SELF <-
+  ( + result:SELF
+    + idx:INTEGER
+
+    idx := dico_tg.lower
+    {
+      (idx <= dico_tg.upper) && {
+        (dico_tg.at idx.name      != n ) ||
+        {dico_tg.at idx.style     != s } ||
+        {dico_tg.at idx.list_type != lt}
+      }
+    }.while_do {
+      idx := idx + 1
+    }
+    (idx <= dico_tg.upper).if {
+      result ?= dico_tg.at idx
+    } else {
+      result := create n style s with lt
+      dico_tg.add_last result
+    }
+    result
+  )
+
+  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  ( + lst:ARRAY TYPE_FULL
+    + t:TYPE_FULL
+    + j:INTEGER
+    + result:TYPE_FULL
+    + itm_t:ITM_TYPE
+    + itm_tm:ITM_TYPE_MULTI
+
+    lst := ALIAS_ARRAY TYPE_FULL .new
+    j := list_type.lower
+    {
+      itm_t := list_type.at j
+      itm_tm ?= itm_t
+      (itm_tm = NULL).if {
+        t := itm_t.to_run_for p pos path + TYPE_FULL.generic_bit
+        lst.add_last t
+      } else {
+        (itm_tm.lower).to (itm_tm.upper) do { i:INTEGER
+          t := itm_tm.at i.to_run_for p pos path + TYPE_FULL.generic_bit
+          lst.add_last t
+        }
+      }
+      j := j + 1
+    }.do_while {(j <= list_type.upper) && {t != NULL}}
+    (t = NULL).if {
+      ALIAS_ARRAY TYPE_FULL .free lst
+    } else {
+      lst := ALIAS_ARRAY TYPE_FULL .alias lst
+      result := TYPE_GENERIC.get (path,Self) with lst
+    }
+    result
+  )
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    append_style_in buffer
+    buffer.append name
+    buffer.add_last '('
+    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+      list_type.at j.append_in buffer
+      buffer.add_last ','
+    }
+    list_type.last.append_in buffer
+    buffer.add_last ')'
+  )
+  
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    (style != NULL).if {
+      put style to buf like "keyword"
+      buf.add_last ' '
+    }
+    put name to buf like "prototype"
+    buf.add_last '('
+    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+      list_type.at j.shorter_in buf
+      buf.add_last ','
+    }
+    list_type.last.shorter_in buf
+    buf.add_last ')'
+  )
+
+  //
+  // Cast.
+  //
+
+  - append_cast_name_in buf:STRING_BUFFER <-
+  (
+    parent_itm_type_style.append_cast_name_in buf
+    buf.append "_of_"
+    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+      list_type.at j.append_cast_name_in buf
+      buf.append "_and_"
+    }
+    list_type.last.append_cast_name_in buf
+  )

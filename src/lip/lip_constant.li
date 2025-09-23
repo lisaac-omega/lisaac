@@ -1,0 +1,159 @@
+Header
+
+  + name      := LIP_CONSTANT;
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  - name:STRING_ALIAS <- ( abstract; NULL)
+
+  - copy:LIP_CONSTANT <-
+  (
+    abstract
+  )
+
+  - copy_of other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := my_copy s
+    }
+    result
+  )
+
+  - free <- abstract
+
+  - '-' Self:SELF :LIP_CONSTANT <- NULL
+
+  - '!' Self:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '|'  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self |# s
+    }
+    result
+  )
+
+  - Self:SELF '&'  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self &# s
+    }
+    result
+  )
+
+  - Self:SELF '+'  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self +# s
+    }
+    result
+  )
+
+  - Self:SELF '-'  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self -# s
+    }
+    result
+  )
+
+  - Self:SELF '>'  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self ># s
+    }
+    result
+  )
+
+  - Self:SELF '<'  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self <# s
+    }
+    result
+  )
+
+  - Self:SELF '~='  other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self =# s
+    }
+    result
+  )
+
+  - Self:SELF '>=' other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self >=# s
+    }
+    result
+  )
+
+  - Self:SELF '<=' other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self <=# s
+    }
+    result
+  )
+
+  - Self:SELF '!~=' other:LIP_CONSTANT :LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + s:SELF
+    s ?= other
+    (s != NULL).if {
+      result := Self !=# s
+    }
+    result
+  )
+
+  - print <- abstract
+
+LIP_CONSTANT
+
+  - my_copy other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '|#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '&#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '+#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '-#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '>#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '<#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '=#'  other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '>=#' other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '<=#' other:SELF :LIP_CONSTANT <- NULL
+
+  - Self:SELF '!=#' other:SELF :LIP_CONSTANT <- NULL
+

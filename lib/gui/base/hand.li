@@ -1,0 +1,143 @@
+Header
+  + name := HAND;
+  
+Inherit
+  - parent_utils:UTILS := UTILS
+  
+Private
+  - delay:UINTEGER_64 := 200_000; // 0.2 s
+  - delay_clic:UINTEGER_64 := 500_000; // 0.5 s
+  - is_drag:UINTEGER_8
+  - timestamp:UINTEGER_64
+  - last_clic:UINTEGER_64
+  
+  - set_win_cur w:WIN :BOOLEAN <-
+  (w != win_cur).if {
+    (win_cur != NULL).if { win_cur.event out; }
+    win_cur := w
+    (win_cur != NULL).if { win_cur.event  in; }
+  }
+  
+Public
+  - ray:REAL_32 := 8
+    
+  - move:UINTEGER_8  := 0_0000b
+  
+  - in:UINTEGER_8    := 0_0010b
+  - out:UINTEGER_8   := 0_0011b
+  
+  - clic:UINTEGER_8  := 0_0100b; // Standard click
+  - lclic:UINTEGER_8 := 0_0101b; // Long click (right most bit)
+  
+  - drag:UINTEGER_8  := 0_1000b; // Quick drag
+  - ldrag:UINTEGER_8 := 0_1001b; // Long click then drag (right most bit)
+  
+  - clic2:UINTEGER_8 := 1_0000b; // Click right
+//  - dclic:UINTEGER_8 := 1_0001b; // Double clic
+
+  - nb_clic:INTEGER
+
+  + is_begin:BOOLEAN
+  + is_end:BOOLEAN
+  
+  - dx:REAL_32 <- x_cur - x_last
+  - dy:REAL_32 <- y_cur - y_last
+  
+  - ldx:REAL_32 <- x_cur - x_start
+  - ldy:REAL_32 <- y_cur - y_start
+  
+  - window_cur:WINDOW
+  - win_cur:WIN
+  - x_cur:REAL_32
+  - y_cur:REAL_32
+  - press_cur:BOOLEAN
+  
+  - x_begin:REAL_32
+  - y_begin:REAL_32
+  
+  - x_last:REAL_32
+  - y_last:REAL_32
+    
+  - set_ptr (w:WINDOW) xy (x,y:INTEGER) <-  
+  ( + xx,yy:REAL_32
+    (x_cur,y_cur,window_cur) := (x.to_real_32,y.to_real_32,w)
+    (press_cur).if {
+      (is_drag = 0).if {
+        (xx,yy) := (x_cur - x_begin, y_cur - y_begin)
+        ((xx*xx + yy*yy).sqrt > ray).if {
+          is_drag := drag + (TIME.gettimeofday - timestamp > delay).to_integer
+          (x_last,y_last) := (x_begin,y_begin)
+          is_begin := TRUE
+          set_win_cur (depth_send is_drag)
+          is_begin := FALSE
+        }
+      } else {
+        (win_cur != NULL).if { /*depth_*/send is_drag; }; // Send
+      }
+      (x_last,y_last) := (x_cur,y_cur)
+    } else {      
+      ((!set_win_cur (w.get_win (x,y))) && {win_cur != NULL}).if { depth_send move; }
+    }
+  )
+  
+  - set_ptr (w:WINDOW) press (n:INTEGER,p:BOOLEAN) <-
+  ( + t:UINTEGER_64
+    (window_cur != w).if {
+      (x_cur,y_cur) := PAPER.get_cursor_pos (w.win_ptr)
+      x_cur := x_cur.max 0.min (w.xmax)
+      y_cur := y_cur.max 0.min (w.ymax)
+      window_cur := w
+    }
+    n
+    .when 0 then {
+      t := TIME.gettimeofday
+      ((! press_cur) && {p}).if {        
+        set_win_cur (w.get_win (x_cur,y_cur))
+        (x_begin,y_begin,timestamp) := (x_cur,y_cur,t)
+      }.elseif {press_cur && {!p}} then {
+        (is_drag = 0).if {
+          set_win_cur (w.get_win (x_cur,y_cur))
+          (t - last_clic < delay_clic).if { nb_clic := nb_clic + 1; } else { nb_clic := 0; }
+          last_clic := t
+          depth_send (clic + (t - timestamp > delay).to_integer)
+        } else {
+          (win_cur != NULL).if {
+            is_end := TRUE; /*depth_*/send is_drag; is_end := FALSE; // send
+          }
+          is_drag := 0
+        }
+      }
+      press_cur := p
+    }
+    .when 1 then {
+      (!p).if { depth_send clic2; }
+    }
+  )
+  
+  - acts:Expanded ARRAY ACT
+  
+  - add_act a:ACT <- acts.add_last a
+  
+  - run n:STRING_ALIAS <-
+  ( + i:INTEGER
+    {(i <= acts.upper) && {acts.at i.text_r != n}}.while_do { i := i + 1; }
+    ((i > acts.upper) || {! acts.at i.run}).if { ANY.beep; }
+  )
+  
+Private
+  
+  - last_ev:UINTEGER_8
+  
+  - send e:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
+    last_ev := e
+    (win_cur != NULL).if { r := win_cur.event e; }
+    r
+  )
+  
+  - depth_send e:UINTEGER_8 :WIN <-
+  ( + r:WIN
+    last_ev := e
+    (win_cur != NULL).if { r := win_cur.depth_event e; }
+    r
+  )

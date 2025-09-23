@@ -1,0 +1,307 @@
+Header
+
+  + name        := MASTER;
+  /*
+  MASTER may be clonable.
+  Example with -/+ slot declaration.
+  */
+
+Inherit
+
+  //
+  // Parents.
+  //
+
+  + parent_plus :PARENT_PLUS := PARENT_PLUS
+
+  - parent_minus:PARENT_MINUS := PARENT_MINUS
+
+  + parent_plus_expanded:Expanded PARENT_PLUS_EXPANDED
+
+  - parent_minus_expanded:Expanded PARENT_MINUS_EXPANDED
+
+Private
+
+  //
+  // Globals.
+  //
+
+  + global_plus :OBJ
+
+  - global_minus:OBJ
+
+  + global_plus_expanded:Expanded OBJ
+
+  - global_minus_expanded:Expanded OBJ
+
+  //
+  // Methods.
+  //
+
+  - method_minus (x,y:INTEGER) :INTEGER <- (x + y)
+
+  + method_plus (x,y:INTEGER) :INTEGER <- (x + y)
+
+  //
+  // Locals.
+  //
+
+  - local_minus:INTEGER <-
+  ( - local:OBJ
+
+    (local = NULL).if {
+      local := OBJ.create
+      local.set_value 100
+    } else {
+      local.set_value (local.value + 1)
+    }
+
+    local.value
+  )
+
+  - local_plus:INTEGER <-
+  ( + local:OBJ
+
+    (local = NULL).if {
+      local := OBJ.create
+      local.set_value 100
+    } else {
+      local.set_value (local.value + 1)
+    }
+
+    local.value
+  )
+
+  //
+  // Display.
+  //
+
+  - display <-
+  (
+    "+========+==============+======+======+============+============+\n\
+    \|".print
+    name.print
+             "|   Evaluate   |  -   |  +   | - Expanded | + Expanded |\n\
+    \+========+==============+======+======+============+============+\n".print
+
+    // Parent.
+    "| Parent | parent.value | ".print
+    parent_value_minus.to_string_format 4.print
+    " | ".print
+    parent_value_plus.to_string_format 4.print
+    " |       ".print
+    parent_value_minus_expanded.to_string_format 4.print
+    " |       ".print
+    parent_value_plus_expanded.to_string_format 4.print
+    " |\n\
+    \+--------+--------------+------+------+------------+------------+\n".print
+
+    // Global.
+    "| Global | global.value | ".print
+    (global_minus = NULL).if {
+      "NULL".print
+    } else {
+      global_minus.value.to_string_format 4.print
+    }
+    " | ".print
+    (global_plus  = NULL).if {
+      "NULL".print
+    } else {
+      global_plus .value.to_string_format 4.print
+    }
+    " |       ".print
+    (global_minus_expanded = NULL).if {
+      "NULL".print
+    } else {
+      global_minus_expanded.value.to_string_format 4.print
+    }
+    " |       ".print
+    (global_plus_expanded = NULL).if { "NULL".print
+    } else {
+      global_plus_expanded.value.to_string_format 4.print
+    }
+    " |\n\
+    \+--------+--------------+------+------+------------+------------+\n".print
+
+    // Method.
+    "| Method | method (2,3) | ".print
+    method_minus (2, 3).to_string_format 4.print
+    " | ".print
+    method_plus  (2, 3).to_string_format 4.print
+    " |   Nothing  |   Nothing  |\n\
+    \+--------+--------------+------+------+------------+------------+\n".print
+
+    // Local.
+    "| Local  | value        | ".print
+    local_minus.to_string_format 4.print
+    " | ".print
+    local_plus.to_string_format 4.print
+    " |   Nothing  |   Nothing  |\n\
+    \+========+==============+======+======+============+============+\n\n".print
+  )
+
+  //
+  // Service.
+  //
+
+  + name:STRING_ALIAS
+
+  - set_name new:STRING_ALIAS <-
+  (
+    name := new
+  )
+
+  - press_key <-
+  (
+    "Press enter ...\n".print
+    STDIN.read_character
+  )
+
+Public
+
+  - main <-
+  ( + copy:SELF
+
+    "\nExample with (-/+) or (-/+ Expanded) slot declaration:\n\
+    \========================================================\n\n".print
+    "In this example, '#' represent either '-' , '+'\n\n".print
+
+    "Object OBJ (Data/Parent):       \n\
+    \-------------------------       \n\
+    \Section Public                  \n\
+    \  + value:INTEGER;              \n\
+    \                                \n\
+    \  - set_value new:INTEGER <-    \n\
+    \  (                             \n\
+    \    value := new;               \n\
+    \  );                            \n\n".print
+
+
+    "Object EXAMPLE:     \n\
+    \------------------- \n".print
+
+    "Section Inherit     \n\
+    \  # parent:OBJ := OBJ;                // Parent slot declaration \n\
+    \  # parent_expanded:Expanded OBJ;     \n\n".print
+
+    "Section Public      \n\
+    \  # global:OBJ;                       // Global data slot declaration \n\
+    \  # global_expanded:Expanded OBJ;     \n\n".print
+
+    "  # method x,y:INTEGER :INTEGER <-    // Method slot declaration  \n\
+    \  (                                                             \n\
+    \    x + y                                                      \n\
+    \  ); \n\n".print
+
+    "  - value:INTEGER <-                                              \n\
+    \  ( # local:OBJ;                    // Local slot declaration  \n\
+    \    (local = NULL).if {                                        \n\
+    \      local := OBJ.clone;                                      \n\
+    \      local.set_value 100;                                     \n\
+    \    } else {                                                   \n\
+    \      local.set_value (local.value + 1);                       \n\
+    \    };                                                         \n\
+    \                                                                  \n\
+    \    local.value                                                   \n\
+    \  ); \n\n".print
+
+    press_key
+
+    name := "ORIGINAL"
+    copy := clone
+    copy.set_name "  COPY  "
+
+    "************************\n\
+    \***   MAIN PROGRAM   ***\n\
+    \************************\n\n".print
+    "Definition of an EXAMPLE object named 'original' \n\n".print
+    Self.display
+
+    "Definition of an EXAMPLE object named 'copy' \n\
+    \  ---> copy := self.clone; \n\n".print
+    copy.display
+    "!!!!! The `Expanded' declaration slots are never with `NULL' value.\n\n".print
+    press_key
+
+    //
+    // LOCAL.
+    //
+
+    "==============\n\
+    \= LOCAL SLOT =\n\
+    \==============\n\n".print
+
+    " Display ORIGINAL object \n\n".print
+    Self.display
+    "!!!!! The `-' local slot have a persistant value.\n\n".print;
+    press_key
+
+    " Display COPY object \n\n".print
+    copy.display
+    "!!!!! The `-' local slot is shared with ORIGINAL object.\n\n".print;
+    press_key
+
+    //
+    // PARENT.
+    //
+
+    "===============\n\
+    \= PARENT SLOT =\n\
+    \===============\n\n".print
+
+    " ---> ORIGINAL.parent.set_value 1\n\n".print
+    parent_value_minus    := 1
+    parent_value_plus     := 1
+    parent_value_minus_expanded := 1
+    parent_value_plus_expanded := 1
+    Self.display
+    copy.display
+    "!!!!! The `-' or '+' parent object is shared with COPY object, but not '+' Expanded\n".print;
+    press_key
+
+    " ---> ORIGINAL.parent := PARENT.clone \n\
+    \ ---> ORIGINAL.parent.set_value 2\n\n".print
+    parent_minus := PARENT_MINUS.create
+    parent_plus  := PARENT_PLUS.create
+    parent_value_minus    := 2
+    parent_value_plus     := 2
+    parent_value_minus_expanded := 2
+    parent_value_plus_expanded := 2
+    Self.display
+    copy.display
+    "!!!!! The `-' parent slot is always shared with COPY object.\n\n".print;
+    press_key
+
+    //
+    // GLOBAL.
+    //
+
+    "===============\n\
+    \= GLOBAL SLOT =\n\
+    \===============\n\n".print
+
+    " ---> ORIGINAL.global := OBJ.clone\n\n".print
+    global_minus := OBJ.create
+    global_plus  := OBJ.create
+    Self.display
+    copy.display
+    "!!!!! The `-' global data slot is shared with COPY object.\n\n".print;
+    press_key
+
+    //
+    // METHOD.
+    //
+
+   "===============\n\
+   \= GLOBAL SLOT =\n\
+   \===============\n\n".print
+
+    " ---> ORIGINAL.method <- ( x,y:INTEGER; x * y)\n\n".print
+    method_minus <- ( x * y )
+    method_plus  <- ( x * y )
+    Self.display
+    copy.display
+    "!!!!! The `-' method slot is shared with COPY object.\n\n".print;
+    press_key
+
+  )

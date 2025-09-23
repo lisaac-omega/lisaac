@@ -1,0 +1,195 @@
+Header
+
+  + name        := EXPR_BINARY_LOGIC;
+
+  /*Binary logical expression.*/
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- left.is_invariant && {right.is_invariant}
+
+  + left:EXPR
+
+  + right:EXPR
+
+  - symbol:STRING_ALIAS <-
+  (
+    abstract
+    NULL
+  )
+
+  - static_type:TYPE_FULL <- type_boolean.default
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add type_true
+    t.add type_false
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with l:EXPR and r:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p with l and r
+    result
+  )
+
+  - make p:POSITION with l:EXPR and r:EXPR <-
+  (
+    position := p
+    left     := l
+    right    := r
+  )
+
+  - my_copy:SELF <- SELF.create position with (left.my_copy) and (right.my_copy)
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + same:SELF
+
+    same ?= other
+    (same != NULL) && {left ~= same.left} && {right ~= same.right}
+  )
+
+  //
+  // Remove
+  //
+
+  - remove <-
+  (
+    left .remove
+    right.remove
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_unlink:INSTR <-
+  ( + instr:INSTR
+    instr := left.execute_unlink
+    (instr != NULL).if {
+      list_current.insert_before instr
+    }
+    right.execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  ( + result:EXPR
+    + old_seq:UINTEGER_32
+    + left_cst,right_cst:PROTOTYPE_CST
+    + left_t,right_t:TYPE
+
+    old_seq := seq_call_and_loop
+    left  := left .execute_link
+    right := right.execute_link
+    //
+    left_cst  ?= left
+    right_cst ?= right
+
+    (left_cst != NULL).if { // BSBS : Peux faire mieux !!!
+      (left_cst.static_type.raw = type_true).if {
+	left_t := type_true
+      } else {
+	left_t := type_false
+      }
+    }
+    (right_cst != NULL).if {
+      (right_cst.static_type.raw = type_true).if {
+	right_t := type_true
+      } else {
+	right_t := type_false
+      }
+    }
+
+    // Conservator transformation.
+    result := exec_conservator
+    ((result = NULL) && {left_cst != NULL}).if {
+      result := exec_conservator_left left_t
+    }
+    ((result = NULL) && {right_cst != NULL}).if {
+      result := exec_conservator_right right_t
+    }
+    (
+      (result = NULL) && {right_cst != NULL} && {left_cst != NULL}
+    ).if {
+      result := exec left_t and right_t
+    }
+    ((result = NULL) && {old_seq = seq_call_and_loop}).if {
+      // No conservator transformation.
+      result := exec
+      ((result = NULL) && {left_cst != NULL}).if {
+	result := exec_left left_t
+      }
+      ((result = NULL) && {right_cst != NULL}).if {
+	result := exec_right right_t
+      }
+    }
+    //
+    (result = NULL).if {
+      result := Self
+    } else {
+      result.set_position position
+      new_execute_pass
+    }
+
+    result
+  )
+
+  - exec_conservator:EXPR <- NULL
+  - exec_conservator_left  left_cst :TYPE :EXPR <- NULL
+  - exec_conservator_right right_cst:TYPE :EXPR <- NULL
+
+  - exec left_cst:TYPE and right_cst:TYPE :EXPR <- NULL
+
+  - exec:EXPR <- NULL
+  - exec_left  left_cst :TYPE :EXPR <- NULL
+  - exec_right right_cst:TYPE :EXPR <- NULL
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    output.add_last '('
+    left.genere
+    output.add_last ' '
+    output.append symbol
+    output.add_last ' '
+    right.genere
+    output.add_last ')'
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    left.display buffer
+    buffer.append symbol
+    right.display buffer
+    buffer.add_last ')'
+  )
+
+
+
+
+
+
+
+
+

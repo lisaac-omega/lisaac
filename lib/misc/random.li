@@ -1,0 +1,114 @@
+Header
+  + name := RANDOM;
+  /*RANDOM number generation.*/
+  
+Insert  
+  - parent_clone:CLONE := CLONE
+    
+Private
+  + seed:INTEGER_32 := 1
+
+  + iv:NATIVE_ARRAY INTEGER_32
+  
+  + iy:INTEGER_32
+  
+  - minimal_next <-
+  ( + k:INTEGER_32
+    k := seed / 127773
+    seed := 16807 * (seed - k * 127773) - 2836 * k
+    (seed < 0).if {
+      seed := seed + 2147483647
+    }
+    (iv = NULL).if {
+       iv := NATIVE_ARRAY INTEGER_32 .create 32
+    }
+  )
+  
+  - next <-
+  ( + tmp:INTEGER_32
+    tmp := iy % 32
+    minimal_next
+    iy := iv.at tmp
+    iv.at tmp put seed
+  )
+
+Public
+  - new seed_init:INTEGER_32 :RANDOM <-
+  ( + result:SELF
+    result := clone
+    result.init seed_init
+    result
+  )
+  
+  - init seed_init:INTEGER_32 <-
+  [
+    ? {seed_init > 0}
+  ]
+  ( + i:INTEGER_32
+    seed := seed_init
+    iv := NATIVE_ARRAY INTEGER_32 .create 32
+    minimal_next
+    {i <= 6}.while_do {
+      minimal_next
+      i := i + 1
+    }
+    i := 31
+    {i >= 0}.while_do {
+      iv.at i put seed
+      minimal_next
+      i := i - 1
+    }
+    iy := iv.at 0
+    next
+  )
+  
+  - real_64:REAL_64 <-
+  // Random REAL_64.
+  ( + result:REAL_64
+    next
+    result := iy.to_real_64
+    result / 2_147_483_647
+  )
+  
+  - real_32:REAL_32 <- real_64.to_real_32
+  
+  - frange mn:REAL_32 to mx:REAL_32 :REAL_32 <-
+  (real_32 * (mx - mn) + mn)
+  
+  - range mn:INTEGER to mx:INTEGER_32 : INTEGER_32 <-
+  // Random value inside [ min, max ].
+  [
+    ? {mn <= mx}
+  ]
+  ( + result,dx,mini,maxi:INTEGER_32
+    next
+    dx := 1 - mn
+    mini := mn + dx
+    maxi := mx + dx
+    result := (iy % maxi) + 1
+    result - dx
+  )
+  [
+    //? {Result.in_range min to max}; // DCDC code OK, mais sinon, warning dans le C.
+  ]
+  
+  - max v:INTEGER :INTEGER_32 <- range 0 to v
+  
+Public
+  - hexadecimal_digit:CHARACTER <-
+  ( + i,j:INTEGER
+    i := range 0 to 15
+    (i <= 9).if {
+      j := ('0'.code) + i
+    } else {
+      j := ('A'.code) - 10 + i
+    }
+    j.to_character
+  )
+  [
+    ? {Result.is_hexadecimal_digit}.txt{Result.to_string}
+  ]
+  
+  
+
+  

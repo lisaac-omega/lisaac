@@ -1,0 +1,31 @@
+Header
+  
+  + name         := ISLAND_INFO;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Public
+  
+  + has_bad:ARRAY2(UINTEGER_32)
+  
+  + is_known:ARRAY2(UINTEGER_32)
+  
+  + always_bad:ARRAY(UINTEGER_32)
+    
+  - create:SELF <-
+  ( + result:SELF
+    result := clone
+    result.make
+  )
+  
+  - make <-
+  (  
+    has_bad := ARRAY2(UINTEGER_32).create (n_fixed,n_parity)
+    is_known := ARRAY2(UINTEGER_32).create (n_fixed,n_parity)
+    always_bad := ARRAY(UINTEGER_32).create n_parity
+  )

@@ -1,0 +1,122 @@
+Header
+  
+  + name := FANNKUCH;
+
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Private
+
+  - fannkuch(n:INTEGER) :INTEGER <-
+  ( + perm            :ARRAY(INTEGER)
+    + perm1           :ARRAY(INTEGER)
+    + count           :ARRAY(INTEGER)
+    + max_perm        :ARRAY(INTEGER)
+    + exit0, exit1     :BOOLEAN
+    + check           :INTEGER
+    + perm0           :INTEGER
+    + max_flips_count :INTEGER
+    + flips_count     :INTEGER
+    + k, k2           :INTEGER
+    + i1, j           :INTEGER
+    + r, m            :INTEGER
+    m := n - 1
+
+    perm     := ARRAY(INTEGER).create n
+    count    := ARRAY(INTEGER).create n
+    max_perm := ARRAY(INTEGER).create n
+    perm1    := ARRAY(INTEGER).create_with_capacity n
+
+    0.to m do { i:INTEGER
+      perm1.add_last i
+    }
+    r := n
+
+    (n < 1).if {
+      exit0 := TRUE
+    }
+
+    {exit0 = FALSE}.while_do {
+      (check < 30).if {
+        perm1.foreach { elt : INTEGER
+          (elt+1).print
+        }
+        '\n'.print
+        check := check + 1
+      }
+      
+      {r != 1}.while_do {
+        count.at (r-1) put r
+        r := r-1
+      }
+
+      (! ((perm1.at 0 = 0) || {perm1.at m = m})).if {
+        0.to m do { i:INTEGER
+          perm.at i put (perm1.at i)
+        }
+
+        flips_count := 0
+        k := 0
+       
+        {!((k:= perm.at 0) = 0)}.while_do {
+          k2 := (k+1) >> 1
+          j := 0
+          {j < k2}.while_do {
+            perm.swap j with (k-j)
+            j := j+1
+          }
+          flips_count := flips_count + 1
+        }
+
+        (flips_count > max_flips_count).if {
+          max_flips_count := flips_count
+          0.to m do { i:INTEGER
+            max_perm.at i put (perm1.at i)
+          }
+        }
+      }
+
+      exit1 := FALSE
+      {exit1 = FALSE}.while_do {
+        (r = n).if {
+          exit0  := TRUE
+          exit1 := TRUE
+        }
+        perm0 := perm1.at 0
+        i1 := 0
+        {i1 < r}.while_do {
+          j := i1+1
+          perm1.at i1 put (perm1.at j)
+          i1 := j
+        }
+        perm1.at r put perm0
+        count.at r put ((count.at r) -1)
+        (count.at r > 0).if {
+          exit1 := TRUE
+        } else {
+          r := r+1
+        }
+      }
+    }
+    max_flips_count
+  )
+
+Public
+ 
+  - main <-
+  ( + n      :INTEGER
+    + result :INTEGER
+
+    (COMMAND_ARGS.upper = 1).if {
+      n := COMMAND_ARGS.at 1.to_integer
+    } else {
+      n := 0
+    }
+    result := fannkuch(n)
+    "Pfannkuchen(".print
+    n.print
+    ") = ".print
+    result.print
+    '\n'.print
+  )

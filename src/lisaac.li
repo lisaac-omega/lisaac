@@ -1,0 +1,1261 @@
+Header
+
+  + name := LISAAC;
+  /* The lisaac compiler. */
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+Public
+
+  - show_help <-
+  (
+    COMMON.command_line_header "Compiler".print
+    begin_usage.print
+    LIP_CODE.print_usage
+  )
+
+  - show_version <-
+  (
+    COMMON.command_line_header "Compiler".print
+    COMMON.print_info
+  )
+
+Private
+
+  - output_name     :STRING_ALIAS
+  - output_extension:STRING_ALIAS
+
+  - input_name:STRING_ALIAS
+
+  //
+  // Command.
+  //
+
+  - begin_usage: STRING_ALIAS :=
+  "Usage:                                                          \n\
+  \------                                                          \n\
+  \  lisaac [<lip_file.lip>] [<input_file[.li]>] {<Options>}       \n\
+  \                                                                \n\
+  \  Note: without <lip_file> the nearest `make.lip' file is       \n\
+  \        interpreted.                                            \n\
+  \                                                                \n\
+  \Options:                                                        \n\
+  \--------                                                        \n"
+
+
+  - display_usage <-
+  (
+    show_help
+    exit exit_failure_code
+  )
+
+  //
+  // Options.
+  //
+
+  - read_options <-
+  ( + cmd:STRING_ALIAS
+    + j,i,k:INTEGER
+    + f:POINTER
+    + lip_ok:BOOLEAN
+    + s:LIP_SLOT_CODE
+    + t:STRING_ALIAS
+    + arg:LIP_CONSTANT
+    + is_path_list:BOOLEAN
+    + hook_after_load_lip :{}
+        
+    hook_after_load_lip := {}
+
+    // Default value.
+    is_ansi := TRUE
+    // Read argument.
+    j := 1
+    {j > COMMAND_ARGS.upper}.until_do {
+      cmd := COMMAND_ARGS.at j
+      (cmd.at 0 = '-').if {        
+	//
+	// Lecture des options :
+        //
+        ((cmd.count >= 3) && {cmd.at 1 = '-'}).if {
+          (cmd.at 2)
+          .when 'v' then {
+            verbose_level := 1
+          }
+          .when 'p' then {
+            is_path_list := TRUE
+          }
+          .when 'r' then {
+            is_readable := TRUE
+          }
+          .when 'g' then {
+            is_readable := is_graph := TRUE
+          }
+        } else {
+          (lip_ok).if_false {            
+            load_lip "make.lip"
+            hook_after_load_lip.value
+            lip_ok := TRUE
+          }
+          string_tmp.copy cmd
+          string_tmp.remove_first
+          string_tmp.replace_all '-' with '_'
+          s := LIP_CODE.get_method (string_tmp.to_string_alias)
+          ((s = NULL) || {s.section != "Public"}).if {
+            "ERROR: Option `".print;
+            cmd.print
+            "' not found.\n".print
+            display_usage
+          }
+          (s.argument != NULL).if {
+            j := j + 1
+            (j > COMMAND_ARGS.upper).if {
+              "ERROR: For option `".print;
+              cmd.print
+              "', argument needed.\n".print
+              display_usage
+            }
+            cmd := COMMAND_ARGS.at j
+            t := s.argument.value.name
+            arg := NULL
+            (t = "BOOLEAN").if {
+              //cmd.to_upper
+              ((cmd = "TRUE") || {cmd = "true"}).if {
+                arg := LIP_BOOLEAN.get TRUE
+              }.elseif {(cmd = "FALSE") || {cmd = "false"}} then {
+                arg := LIP_BOOLEAN.get FALSE
+              }
+            }.elseif {t = "INTEGER"} then {
+              (cmd.is_integer).if {
+                arg := LIP_INTEGER.get (cmd.to_integer)
+              }
+            } else {
+              arg := LIP_STRING.get (cmd.to_string_alias)
+            }
+            (arg = NULL).if {
+              "ERROR: Incorrect type for `".print;
+              cmd.print
+              "' argument.\n".print
+              display_usage
+            }
+          } else {
+            arg := NULL
+          }
+          (s.run_with arg).if_false {
+            "ERROR: Invalid argument.\n".print
+            display_usage
+          }
+        }
+      } else {
+	//
+	// Input name & Current Directory.
+        //
+        (cmd.has_suffix ".lip").if {          
+          // .lip
+          (lip_ok).if {
+            "ERROR: Put options after `".print;
+            cmd.print
+            "'.".print
+            display_usage
+          }
+          load_lip cmd
+          hook_after_load_lip.value
+          lip_ok := TRUE
+        } else {
+          // .li
+          (input_name != NULL).if {
+            display_usage
+          }
+          // Remove extension and replace '\'
+          string_tmp.copy (COMMAND_ARGS.at j)
+          string_tmp.replace_all '\\' with '/'
+          k := last_index_str (string_tmp,'/')
+          i := last_index_str (string_tmp,'.')
+          ((i > string_tmp.lower) && {i > k}).if {
+            string_tmp.remove_tail (string_tmp.upper-i+1)
+          }
+          input_name := string_tmp.to_string_alias
+          hook_after_load_lip := {
+            LIP_CODE.put_string input_name to "input_file"
+            LIP_CODE.put_string input_name to "output_file"
+          }
+          // get dirname
+          i := last_index_str (string_tmp,'/')
+          (i < string_tmp.lower).if {
+            string_tmp.copy "./"
+          } else {
+            string_tmp.remove_tail (string_tmp.upper-i)
+          }
+          input_path := string_tmp.to_string_alias
+        }
+      }
+      j := j+1
+    }
+    (lip_ok).if_false {
+      load_lip "make.lip" in input_path
+      hook_after_load_lip.value
+    }
+
+    LIP_CODE.call_front_end
+
+    (is_path_list).if {
+      string_tmp.clear
+      (path_file.lower).to (path_file.upper) do { n:INTEGER
+        string_tmp.append (path_file.at n)
+        string_tmp.add_last '\n'
+      }
+      f := FILE_UTILS.open_write "current_path.txt"
+      (f.is_null).if {
+        STDERR.put_string "Error: File `current_path.txt' is not created !\n";
+        exit exit_failure_code
+      }
+      FILE_UTILS.write f with string_tmp size (string_tmp.count)
+      FILE_UTILS.close f
+      exit 0
+    }
+
+    // Loading variable.
+    input_name         := LIP_CODE.get_string  "input_file"
+    output_name        := LIP_CODE.get_string  "output_file"
+    output_extension   := LIP_CODE.get_string  "output_extension"
+    debug_level_option := LIP_CODE.get_integer "debug_level"
+    debug_with_code    := LIP_CODE.get_boolean "debug_with_code"
+    is_all_warning     := LIP_CODE.get_boolean "is_all_warning"
+    is_optimization    := LIP_CODE.get_boolean "is_optimization"
+    inline_level       := LIP_CODE.get_integer "inline_level"
+    is_statistic       := LIP_CODE.get_boolean "is_statistic"
+    is_quiet           := LIP_CODE.get_boolean "is_quiet"
+    is_library         := LIP_CODE.get_boolean "is_library"
+    is_cop             := LIP_CODE.get_boolean "is_cop"
+    is_speed_push      := LIP_CODE.get_boolean "is_speed_push"
+    //
+    ((input_name = NULL) || {input_name.is_empty}).if {
+      "ERROR: `input_file' is empty.\n".print;
+      display_usage
+    }
+    // Separate path (string_tmp) and file (string_tmp2)
+    string_tmp.copy input_name
+    string_tmp2.copy string_tmp
+    i := last_index_str (string_tmp,'/')
+    (i < string_tmp.lower).if {
+      string_tmp.copy "./"
+    } else {
+      string_tmp.remove_tail (string_tmp.upper-i)
+      string_tmp2.remove_head (i+1)
+    }
+    LIP_CALL.load_dir (string_tmp.to_string_alias) img NULL is_rec FALSE
+    //
+    string_tmp.copy (path_file.last)
+    i := last_index_str (string_tmp,'/')
+    string_tmp.remove_tail (string_tmp.upper-i)
+    input_path := string_tmp.to_string_alias
+    input_name := string_tmp2.to_string_alias
+    //
+    ((output_name = NULL) || {output_name.is_empty}).if {
+      (input_path = NULL).if {
+        string_tmp.clear
+      } else {
+        string_tmp.copy input_path
+      }
+      string_tmp.append input_name
+      output_name := string_tmp.to_string_alias
+      LIP_CODE.put_string output_name to "output_file"
+    }
+    ((output_extension = NULL) || {output_extension.is_empty}).if {
+      output_extension := ".c"
+      LIP_CODE.put_string output_extension to "output_extension"
+    }
+    LIP_CODE.init_path_file FALSE
+  )
+
+  - put_trace_code buf:STRING_BUFFER <-
+  ( + proto:PROTOTYPE
+
+    ((debug_level_option != 0) || {CALL_NULL.is_necessary}).if {
+      title "DEBUG MANAGER" in buf
+           
+      buf.append
+      "int print_string(char *str) \n\
+      \{ \n\
+      \  while (*str!=0) {\n\
+      \    print_char(*str); \n\
+      \    str++; \n\
+      \  };\n\
+      \  return(0);\n\
+      \}\n\
+      \\n"
+    }
+
+    (debug_level_option != 0).if {            
+      buf.append "char *trace["
+      PROTOTYPE.prototype_list.count.append_in buf
+      buf.append "]={\n"
+      (PROTOTYPE.prototype_list.lower).to (PROTOTYPE.prototype_list.upper-1) do {
+	j:INTEGER
+	proto := PROTOTYPE.prototype_list.at j
+	buf.append "  \""
+	buf.append (proto.name)
+        buf.append " ("
+        proto.append_filename buf
+	buf.append ")\",\n"
+      }
+      proto := PROTOTYPE.prototype_list.last
+      buf.append "  \""
+      buf.append (proto.name)
+      buf.append " ("
+      proto.append_filename buf
+      buf.append ")\"\n};\n\n"
+
+      //
+      // Source Code.
+      //
+
+      (debug_with_code).if {
+	+ src:ARRAY POSITION
+
+        title "SOURCE LINE REFERENCE" in output_decl
+
+	buf.append
+	"struct __source {\n\
+	\  uint32_t pos;\n\
+	\  char *line;\n\
+        \} __src["
+	src := PUSH.source_line
+	src.count.append_in buf
+	buf.append "]={\n"
+	(src.lower).to (src.upper) do { j:INTEGER
+	  buf.append "  {"
+	  src.at j.code.append_in buf
+	  buf.append ",\""
+	  src.at j.extract_line_in buf
+	  buf.append "\"},\n"
+	}
+	buf.remove (buf.upper - 1)
+	buf.append "};\n\n"
+      }
+
+      //
+      // Signal manager.
+      //
+            
+      if (is_ansi) then {
+	buf.append
+	"/* Unix Signal manager: */\n\
+	\void interrupt_signal(int sig)  \n\
+	\{                               \n\
+	\  lisaac_stack_print(0);     \n\
+	\  print_string(\"User interrupt.\\n\"); \n\
+	\  die_with_code(1);                     \n\
+	\}                                       \n\n"
+      }
+
+      //
+      // Stack manager.
+      //      
+      
+      (is_speed_push).if {
+        buf.append
+        "void _li_swap(long a,long b)                                      \n\
+        \{ long i,tmp;                                                     \n\ 
+        \  for (i=3;i<__li_mountain[1];i+=3) {                             \n\ 
+        \    if (__li_mountain[i+2] == a*3) __li_mountain[i+2] = b*3; else \n\
+        \    if (__li_mountain[i+2] == b*3) __li_mountain[i+2] = a*3;      \n\ 
+        \  }                                                               \n\
+        \  for (i=0;i<3;i++) {                                             \n\ 
+        \    tmp = __li_mountain[a * 3 + i];                               \n\
+        \    __li_mountain[a * 3 + i] = __li_mountain[b * 3 + i];          \n\
+        \    __li_mountain[b * 3 + i] = tmp;                               \n\ 
+        \  };                                                              \n\ 
+        \};                                                                \n\
+        \ \n\
+        \void _li_quicksort(long low,long up)                              \n\
+        \{ long i,j,pivot;                                                 \n\ 
+        \  if (low < up) {                                                 \n\ 
+        \    pivot = __li_mountain[low*3];                                 \n\
+        \    i = low;                                                      \n\ 
+        \    j = up + 1;                                                   \n\
+        \    do {                                                          \n\ 
+        \      do ++i; while ((__li_mountain[i*3] <= pivot) && (i <= up)); \n\
+        \      do --j; while (__li_mountain[j*3] > pivot);                 \n\
+        \      if (i < j) _li_swap(i,j);                                   \n\ 
+        \    } while (i < j);                                              \n\ 
+        \    _li_swap(low,j);                                              \n\
+        \    _li_quicksort(low,j-1);                                       \n\
+        \    _li_quicksort(j+1,up);                                        \n\ 
+        \  };                                                              \n\ 
+        \}                                                                 \n\
+        \ \n\
+        \void __li_fix_order_mountain()                           \n\
+        \{ int j;                                                 \n\ 
+        \  long prev,cur;                                         \n\
+        \  prev = -1;                                             \n\
+        \  for (j=0;j<__li_mountain[1];j+=3) {                    \n\ 
+        \    cur = __li_mountain[j];                              \n\
+        \    if (cur == prev) {                                   \n\ 
+        \      __li_mountain[j] = __li_mountain[j-3]+1;           \n\ 
+        \    } else {                                             \n\ 
+        \      __li_mountain[j] = __li_mountain[j] << 16;         \n\ 
+        \    }                                                    \n\
+        \    prev = cur;                                          \n\ 
+        \  }                                                      \n\ 
+        \}                                                        \n\
+        \ \n\
+        \void __li_display_mountain()                 \n\
+        \{ int i;                                     \n\ 
+        \  for (i=3;i<__li_mountain[1];i+=3) {        \n\ 
+        \    print_integer(i);                        \n\
+        \    print_string(\": \");                    \n\
+        \    print_integer_h(__li_mountain[i]);       \n\
+        \    print_string(\", \");                    \n\
+        \    print_integer_h(__li_mountain[i+1]);     \n\
+        \    print_string(\", \");                    \n\
+        \    print_integer(__li_mountain[i+2]);       \n\
+        \    print_string(\"\\n\");                   \n\
+        \  };                                         \n\
+        \}                                            \n\ 
+        \ \n\
+        \void _li_display_stack(long top)        \n\
+        \{ long j;                               \n\ 
+        \  long *stack = NULL;                   \n\
+        \  print_string(\"Stack:\");             \n\
+        \  print_integer_h(top);                 \n\
+        \  print_string(\"\\n\");                \n\
+        \  for (j=0;j<20;j++) {                  \n\ 
+        \    print_integer_h(stack[(top>>3)+j]); \n\
+        \    print_string(\"\\n\");              \n\ 
+        \  }                                     \n\
+        \  print_string(\"- End -\\n\");         \n\ 
+        \}                                       \n\
+        \ \n\
+        \/*long __li_get_top()                          \n\
+        \{ long result;                               \n\
+        \  asm(\"movq %%rsp,%0\": \"=r\" (result) : );\n\ 
+        \  return result;                             \n\ 
+        \}*/                                            \n\ 
+        \ \n\
+        \long tmp_rsp; \n\
+        \long __li_get_back_index(long idx,long rsp_current)                                    \n\
+        \{ long result,rip,i,/*beg,*/end;                                                       \n\ 
+        \  long *stack = NULL;                                                                  \n\
+        \  result = __li_mountain[idx+2];                                                       \n\ 
+        \  if (result == -1) {                                                                  \n\         
+        \    tmp_rsp = rsp_current;                                                             \n\
+        \    result = 0;                                                                        \n\
+        \    do {                                                                               \n\ 
+        \      rip = stack[tmp_rsp >> 3];                                                       \n\
+        \      if ((rip>(__li_mountain[3]>>16)) && (rip<(__li_mountain[0]>>16))) {              \n\ 
+        \        i = 3;                                                                         \n\ 
+        \        do {                                                                           \n\ 
+        \          /*beg = __li_mountain[i]>>16;*/                                              \n\
+        \          end = __li_mountain[i+1];                                                    \n\        
+        \          do {                                                                         \n\ 
+        \            i += 3;                                                                    \n\ 
+        \          } while ((rip<end) && (rip>(__li_mountain[i]>>16)));                         \n\
+        \          if (rip < end) {                                                             \n\ 
+        \            result = i-3;                                                              \n\ 
+        \          }                                                                            \n\ 
+        \        } while ((result == 0) && (i < __li_mountain[1]));                             \n\ 
+        \      }                                                                                \n\
+        \      tmp_rsp += 8;                                                                    \n\           
+        \    } while (result == 0);                                                             \n\           
+        \  }                                                                                    \n\  
+        \  return result;                                                                       \n\ 
+        \}                                                                                      \n\ 
+        \ \n\
+        \void __li_sub_stack_print(long idx_mount,long up)            \n\
+        \{ long idx_new,up_new,code,j;                                \n\ 
+        \  if (idx_mount > 0) {                                       \n\ 
+        \    idx_new = __li_get_back_index(idx_mount,up);             \n\  
+        \    up_new = tmp_rsp;                                        \n\
+        \    __li_sub_stack_print(idx_new,up_new);                    \n\
+        \    code = __li_mountain[idx_mount+1];                       \n"
+        (debug_with_code).if {
+          buf.append
+          "    print_string(\"Line #\");                             \n\
+          \    print_integer(__src[code].pos >> 17);                 \n\
+          \    print_string(\" Column #\");                          \n\
+          \    print_integer((__src[code].pos >> 9) & 0xFF);         \n\
+          \    print_string(\" in \");                               \n\
+          \    print_string(trace[__src[code].pos & 0x1FF]);         \n\
+          \    print_string(\".\\n\");                               \n\
+          \    print_string(__src[code].line);                       \n\
+          \    print_char('\\n');                                    \n\
+          \    for (j=0;j < ((__src[code].pos >> 9) & 0xFF);j++) {   \n\
+          \      if (__src[code].line[j]=='\\t') print_char('\\t');  \n\
+          \      else print_char(' ');                               \n\
+          \    };                                                    \n\
+          \    print_char('^');                                      \n\
+          \    print_char('\\n');                                    \n"
+        } else {                                                        
+          buf.append
+          "    print_string(\"Line #\");                                \n\               
+          \    print_integer(code >> 17);                               \n\
+          \    print_string(\" Column #\");                             \n\
+          \    print_integer((code >> 9) & 0xFF);                       \n\
+          \    print_string(\" in \");                                  \n\
+          \    print_string(trace[code & 0x1FF]);                       \n\
+          \    print_string(\".\\n\");                                  \n"
+        }
+        buf.append
+        "  };                                                         \n\ 
+        \};                                                           \n\ 
+        \ \n\ 
+        \void lisaac_stack_print(long up)                             \n\  
+        \{ long idx_mount,i;                                          \n\ 
+        \  __li_fix_order_mountain();                                 \n\
+        \  _li_quicksort(1,(__li_mountain[1]/3)-1);                   \n\
+        \  print_string(\"\\n============== BOTTOM ==============\\n\"); \n\
+        \  asm(\"movq %%rsp,%0\": \"=r\" (tmp_rsp) : );               \n\
+        \  idx_mount = __li_get_back_index(0,tmp_rsp);                \n\
+        \  for (i=0;i<up;i++)                                         \n\
+        \    idx_mount = __li_get_back_index(idx_mount,tmp_rsp);      \n\        
+        \  __li_sub_stack_print(idx_mount,tmp_rsp);                   \n\
+        \  print_string(\"================ TOP ===============\\n\"); \n\ 
+        \}                                            \n\ /* { */
+        \ \n"
+      } else {
+        buf.append
+        "void lisaac_push_first(_____CONTEXT *path,uint64_t code)\n\
+        \{ \n"
+        (debug_level_option = 20).if {                                    
+          buf.append
+          "  _____CONTEXT *cur,loop;\n\
+          \  cur = (_____CONTEXT *)top_context; \n\
+          \  while ((cur != (void *)0) && (cur != path)) cur = cur->back; \n\
+          \  if (cur == path) {\n\
+          \    loop.back = (_____CONTEXT *)top_context;\n\                                
+          \    loop.code = code; \n\
+          \    lisaac_stack_print((long)&loop);\n\
+          \    print_string(\"COMPILER: Debug context looping detected !\\n\");\n\
+          \    die_with_code(1);\n\
+          \  };\n"
+        }
+        buf.append
+        "  path->back  = (_____CONTEXT *)top_context;\n\
+        \  path->code  = code;\n\
+        \  top_context = (uintptr_t)path;\n\                                         
+        \} \n\      
+        \  \n\
+        \void lisaac_push(_____CONTEXT *path,uint64_t code)\n\
+        \{ \n\
+        \  path->code  = code;\n\                                         
+        \  top_context = (uintptr_t)path;\n\                                         
+        \} \n\
+        \  \n\
+        \  \n\
+        \void lisaac_stack_print(long step)           \n\
+        \{ _____CONTEXT *back,*next,*up;              \n\
+        \  int j,c;	                              \n\                 
+        \  up = (_____CONTEXT *)top_context;          \n\
+        \  for (j=0;j<step;j++) up = up->back;        \n\
+        \  next = (void *)0;                          \n\
+        \  while (up != (void *)0) {                  \n\
+        \    back = up -> back;                       \n\                 
+        \    up -> back = next;                       \n\
+        \    next = up;                               \n\
+        \    up = back;                               \n\                 
+        \  };                                         \n\            
+        \  print_string(\"\\n============== BOTTOM ==============\\n\"); \n\
+        \  while (next != (void *)0) {                \n"
+        (debug_with_code).if {                                            
+          buf.append
+          "    print_string(\"Line #\");                           \n\
+          \    print_integer(__src[next->code].pos >> 17);         \n\
+          \    print_string(\" Column #\");                        \n\
+          \    print_integer((__src[next->code].pos >> 9) & 0xFF); \n\
+          \    print_string(\" in \");                             \n\
+          \    print_string(trace[__src[next->code].pos & 0x1FF]); \n\
+          \    print_string(\".\\n\");                             \n\
+          \    print_string(__src[next->code].line);               \n\    
+          \    print_char('\\n');                                  \n\
+          \    j=c=0;                                                \n\
+          \    while (c < ((__src[next->code].pos >> 9) & 0xFF)) {\n\
+          \      if (__src[next->code].line[j]=='\\t') print_char('\\t');\n\ 
+          \      else print_char(' ');\n\
+          \      j++; c++; \n\
+          \      while ((__src[next->code].line[j]&0xC0)==0x80) { j++; }; \n\
+          \    };                                                  \n\
+          \    print_char('^');                                    \n\
+          \    print_char('\\n');                                  \n"
+        } else {                                                           
+          buf.append
+          "    print_string(\"Line #\");                \n\
+          \    print_integer(next->code >> 17);         \n\
+          \    print_string(\" Column #\");             \n\
+          \    print_integer((next->code >> 9) & 0xFF); \n\
+          \    print_string(\" in \");                  \n\
+          \    print_string(trace[next->code & 0x1FF]); \n\
+          \    print_string(\".\\n\");                  \n"
+        }
+        buf.append
+        "    next = next -> back;                     \n\               
+        \  };                                         \n\                  
+        \  print_string(\"================ TOP ===============\\n\"); \n\  
+        \  top_context = 0;                   \n\                  
+        \}                                            \n\ 
+        \ \n"
+      }
+      buf.append
+      "void print_integer(int64_t n)           \n\
+      \{ int64_t val;                       \n\ 
+      \  char car;                          \n\
+      \  if (n<0) { print_char('-'); n=-n;};\n\
+      \  car = (n % 10) + '0';              \n\
+      \  val = n / 10;                      \n\
+      \  if (val != 0) print_integer(val);  \n\
+      \  print_char(car);                   \n\
+      \} \n\n\
+      \void print_integer_h_2(uint64_t n,int64_t l) \n\
+      \{ uint64_t val,v,j;            \n\ 
+      \  char car;                           \n\
+      \  v = n & 0xF;                        \n\
+      \  if (v < 10) car = v + '0'; else car = (v-10) + 'A'; \n\
+      \  val = n >> 4;                       \n\
+      \  if (val != 0) print_integer_h_2(val,l-1); else \n\
+      \  for (j=0;j<l;j++) print_string(\"-\"); \n\
+      \  print_char(car);                    \n\ 
+      \} \n\
+      \ \n\
+      \void print_integer_h(uint64_t n)  \n\
+      \{                                      \n\
+      \  print_integer_h_2(n,15);             \n\
+      \} \n\
+      \ \n\n"
+    }
+  )
+
+  - load_main_object <-
+  ( + type_gen:ARRAY ITM_TYPE
+    + itm_type_character:ITM_TYPE
+    + itm_type_n_a_character:ITM_TYPE
+
+    // NULL, VOID, CONTEXT
+    TYPE_NULL.make_null
+    TYPE_VOID.make_void
+    TYPE_CONTEXT.make_context
+    TYPE_ID.make_type_id; // Pas utile !
+    // Other prototype.
+    type_true    := ITM_TYPE_STYLE.get "TRUE"    style 1.to_run.raw
+    type_false   := ITM_TYPE_STYLE.get "FALSE"   style 1.to_run.raw
+    type_boolean := ITM_TYPE_STYLE.get "BOOLEAN" style 1.to_run.raw
+    type_integer := ITM_TYPE_STYLE.get "INTEGER" style 1.to_run.raw
+    type_real_64 := ITM_TYPE_STYLE.get "REAL_64" style 1.to_run.raw
+    type_integer_32:=ITM_TYPE_STYLE.get "INTEGER_32" style 1.to_run.raw
+    type_uinteger_32:=ITM_TYPE_STYLE.get "UINTEGER_32" style 1.to_run.raw
+    type_string_alias:=ITM_TYPE_SIMPLE.get "STRING_ALIAS".to_run.raw
+    itm_type_character:=ITM_TYPE_STYLE.get "CHARACTER" style 1
+    type_character := itm_type_character.to_run.raw
+    type_block     := ITM_TYPE_SIMPLE.get "BLOCK".to_run.raw
+    //
+    type_pointer   := ITM_TYPE_SIMPLE.get "POINTER".to_run.raw
+    type_object    := ITM_TYPE_SIMPLE.get "OBJECT" .to_run.raw
+    // NATIVE_ARRAY CHARACTER
+    type_gen  := ALIAS_ARRAY ITM_TYPE .new
+    type_gen.add_last itm_type_character
+    type_gen  := ALIAS_ARRAY ITM_TYPE .alias type_gen
+    itm_type_n_a_character := ITM_TYPE_GENERIC.get "NATIVE_ARRAY" style 0 with type_gen
+    type_n_a_character := itm_type_n_a_character.to_run.raw
+    // NATIVE_ARRAY (NATIVE_ARRAY CHARACTER)
+    type_gen  := ALIAS_ARRAY ITM_TYPE .new
+    type_gen.add_last itm_type_n_a_character
+    type_gen  := ALIAS_ARRAY ITM_TYPE .alias type_gen
+    type_n_a_n_a_character := ITM_TYPE_GENERIC.get "NATIVE_ARRAY" style 0 with type_gen.to_run.raw
+    // Input.
+    string_tmp.copy input_name
+    string_tmp.to_upper
+    type_input   := ITM_TYPE_SIMPLE.get (string_tmp.to_string_alias).to_run.raw
+    //
+    (debug_level_option != 0).if {
+      // Load for `print_char' and `die_with_code'
+      ITM_TYPE_SIMPLE.get "SYSTEM_IO".to_run
+    }
+    ? {type_input != NULL}
+  )
+
+  - print msg:STRING_ALIAS stat n:INTEGER for t:INTEGER <-
+  ( + pour_mil:INTEGER
+
+    (t != 0).if {
+      STDERR.put_string msg
+      pour_mil := `(int)((1000./ @t * @n))`:INTEGER
+      STDERR.put_integer (pour_mil/10)
+      STDERR.put_character '.'
+      STDERR.put_integer (pour_mil%10)
+      STDERR.put_string "% ("
+      STDERR.put_integer n
+      STDERR.put_character '/'
+      STDERR.put_integer t
+      STDERR.put_string ")\n"
+    }
+  )
+
+Public
+
+  - tab:ARRAY INTEGER := ARRAY INTEGER .create 128
+  - tab_null:ARRAY INTEGER := ARRAY INTEGER .create 128
+
+  //
+  // Creation.
+  //
+
+  - main <-
+  ( + file_output:POINTER
+    + begin_time,end_time:UINTEGER_64
+    + time:INTEGER
+    + txt:STRING_BUFFER
+    + s:LIP_SLOT_CODE
+    + f:POINTER
+    
+    begin_time := TIME.gettimeofday
+    //
+    // Load Environment.
+    //
+    read_options
+    is_verbose.if {
+      string_tmp.copy "\ninput  file: "
+      string_tmp.append input_name
+      string_tmp.append ".li\noutput file: "
+      string_tmp.append output_name
+      string_tmp.append output_extension
+      string_tmp.append "\npath directory :\n"
+      path_file.lower.to (path_file.upper) do { j:INTEGER
+	string_tmp.append "  "
+	string_tmp.append (path_file.at j)
+	string_tmp.add_last '\n'
+      }
+      string_tmp.print
+    }
+
+    //
+    // Header C
+    //
+    output_decl.copy "/* C code generated by Lisaac compiler (www.lisaac.org) */\n\n"
+
+    // Large file headers
+    output_decl.append
+    "#define _LARGE_FILE_API\n\
+    \#define _LARGEFILE_SOURCE\n\
+    \#define _LARGEFILE64_SOURCE\n"
+
+    // ANSI argument command.
+    (debug_level_option != 0).if {
+      output_decl.append "#include <signal.h>\n"
+    }
+    output_decl.append "int print_string(char *str);\n"
+    output_decl.append
+    "int arg_count;\n\
+    \char **arg_vector;\n"
+
+    // External.
+    title "EXTERNAL" in output_decl
+
+    //
+    // Load prototype constant.
+    //
+    load_main_object
+
+    // Compilation.
+    type_input.prototype.depend
+        
+    // Type / Struct.
+    title "TYPE" in output_decl
+        
+    output_decl.append
+    "/* Generic Object */\n\
+    \struct ___OBJ {\n\
+    \  uint32_t __id;\n\
+    \};\n\n"
+    title "GLOBAL" in output_glob
+
+    // Function header.
+    title "FUNCTION HEADER" in output
+    
+    (is_cop).if {
+      output_decl.append
+      "#include <pthread.h>                                    \n\
+      \#include <limits.h>                                     \n\
+      \                                                        \n\
+      \void print_char(char car);                              \n\
+      \void die_with_code(int64_t code);                       \n\
+      \                                                        \n\            
+      \static pthread_key_t current_thread;                    \n\
+      \static pthread_attr_t thread_attr;                      \n\
+      \pthread_t c_thread;                                     \n\            
+      \pthread_mutex_t main_mutex;                             \n\
+      \int thread_counter;                                     \n\
+      \volatile int thread_counter_busy;                       \n\
+      \                                                        \n\
+      \// One `stack' per Thread:                              \n\ 
+      \static char thread_stack[512][PTHREAD_STACK_MIN];       \n\
+      \                                                        \n\
+      \typedef struct lith_object_struct lith_object;          \n\
+      \typedef struct lith_node_struct lith_node;              \n\
+      \struct lith_node_struct {                               \n\
+      \  pthread_mutex_t mutex;                                \n\
+      \  lith_node *next;                                      \n\
+      \  lith_object *object;                                  \n\
+      \};                                                      \n\
+      \struct lith_object_struct {                             \n\
+      \  uint64_t __id; // Just for late binding.         \n\
+      \  lith_node *first;                                     \n\
+      \  lith_node *last;                                      \n\
+      \  lith_object *(*procedure)(lith_object *obj,pthread_mutex_t *mutex);    \n\
+      \  pthread_mutex_t mutex;                                \n\
+      \};                                                      \n\
+      \struct {                                                \n\
+      \  lith_node *first;                                     \n\
+      \  pthread_mutex_t mutex;                                \n\
+      \} pool;                                                 \n\
+      \                                                        \n\
+      \struct generic_protocop {                               \n\
+      \  lith_object thread;                                   \n\
+      \};                                                      \n\
+      \                                                        \n\
+      \void *thread_life(void *ptr)                            \n\
+      \{ lith_node node,*n;                                    \n\
+      \  lith_object *obj,*new_obj;                            \n\
+      \                                                        \n\
+      \  pthread_mutex_init(&node.mutex,NULL);                 \n\
+      \  pthread_mutex_lock(&node.mutex);                      \n\
+      \  node.object = (lith_object *)ptr;                     \n\
+      \  do {                                                  \n\
+      \    // Append fifo object.                              \n\
+      \    obj = node.object;                                  \n\
+      \    node.next = NULL;                                   \n\
+      \    n = obj->last;                                      \n\
+      \    if (n == NULL) {                                    \n\
+      \      obj->first = &node;                               \n\
+      \      pthread_mutex_unlock(&node.mutex);                \n\
+      \    } else {                                            \n\
+      \      n->next = &node;                                  \n\
+      \    };                                                  \n\
+      \    obj->last = &node;                                  \n\
+      \    pthread_setspecific(current_thread,(void *)obj);    \n\
+      \    // Run procedure.                                   \n\
+      \    new_obj = obj->procedure(obj,&node.mutex);          \n\
+      \    // Remove fifo object.                              \n\
+      \    pthread_mutex_lock(&obj->mutex);                    \n\
+      \    n = obj->first->next;                               \n\
+      \    if (n != NULL) {                                    \n\
+      \      pthread_mutex_unlock(&n->mutex);                  \n\
+      \    } else {                                            \n\
+      \      obj->last = NULL;                                 \n\
+      \    };                                                  \n\
+      \    obj->first = n;                                     \n\
+      \    pthread_mutex_unlock(&obj->mutex);                  \n\
+      \    if (new_obj != NULL) {                              \n\
+      \      node.object = new_obj;                            \n\
+      \    } else {                                            \n\
+      \      // Add in pool.                                   \n\
+      \      pthread_mutex_lock(&pool.mutex);                  \n\
+      \      node.next = pool.first;                           \n\
+      \      pool.first = &node;                               \n\
+      \      thread_counter_busy--;                            \n\
+      \      if (thread_counter_busy == 0) {                   \n\
+      \        pthread_mutex_unlock(&main_mutex);              \n\
+      \      };                                                \n\
+      \      pthread_mutex_unlock(&pool.mutex);                \n\
+      \      // Sleep.                                         \n\
+      \      pthread_mutex_lock(&node.mutex);                  \n\
+      \    };                                                  \n\
+      \  } while (1);                                          \n\
+      \  return NULL;                                          \n\
+      \};                                                      \n\
+      \                                                        \n\
+      \void run_procedure(lith_object *obj)                    \n\
+      \{ lith_node *node;                                      \n\
+      \  char *msg=\"COP Error!\\n\";                          \n\
+      \  // Pool manager.                                      \n\
+      \  pthread_mutex_lock(&pool.mutex);                      \n\
+      \  node = pool.first;                                    \n\
+      \  if (node != NULL) {                                   \n\
+      \    pool.first = node->next;                            \n\
+      \  } else {                                              \n\
+      \    thread_counter++;                                   \n\
+      \  };                                                    \n\
+      \  thread_counter_busy++;                                \n\
+      \  /*if (thread_counter_busy == 1) {                       \n\
+      \    pthread_mutex_lock(&main_mutex);                    \n\
+      \  };*/                                                    \n\
+      \  pthread_mutex_unlock(&pool.mutex);                    \n\
+      \  // Run thread.                                        \n\
+      \  if (node == NULL) {                                   \n\
+      \    pthread_attr_setstack(&thread_attr, thread_stack[thread_counter],PTHREAD_STACK_MIN);            \n\
+      \    if ((thread_counter>512) || pthread_create(&c_thread,&thread_attr, thread_life, (void *)obj)) { \n\
+      \      while (*msg != 0) print_char(*(msg++));           \n\
+      \      die_with_code(1);                                 \n\
+      \    };                                                  \n\
+      \  } else {                                              \n\
+      \    node->object = obj;                                 \n\
+      \    pthread_mutex_unlock(&node->mutex);                 \n\
+      \  };                                                    \n\
+      \};                                                      \n\
+      \                                                        \n\
+      \void wait_all()                                         \n\
+      \{                                                       \n\
+      \  pthread_mutex_lock(&main_mutex);                      \n\
+      \}                                                     \n\n"
+    }
+    // Debug source code.
+    (debug_level_option != 0).if {
+      output.append "/* Debug Manager */\n"
+      (is_ansi).if {
+        output.append "void interrupt_signal(int sig);\n"
+      }
+      output.append
+      "void lisaac_stack_print(long);        \n\
+      \void print_integer_h(uint64_t n);\n\
+      \void print_integer(int64_t n);           \n"
+      (is_speed_push).if {
+        output.append
+        "long __li_get_ret(long current);    \n\
+        \long __li_get_back(long current);   \n\        
+        \extern long __li_mountain[];        \n"
+      } else {
+        output.append
+        "void lisaac_push_first(_____CONTEXT *path,uint64_t code); \n\
+        \void lisaac_push(_____CONTEXT *path,uint64_t code);       \n"
+      }
+    }
+
+    // Extern source code.
+    output.append "/* Source code */\n"
+    PROFIL_LIST.genere_handler
+    ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
+      output.append "static void init_string_alias();\n"
+    }
+    
+    // Source code.
+    title "SOURCE CODE" in output
+
+    (is_library).if {
+      output.append "int init(int argc,char **argv)\n"
+    } else {
+      output.append "int main(int argc,char **argv)\n"
+    }
+    output.append "{\n"
+    indent.append "  "
+
+    profil_current := NULL
+    list_main.genere_extern_result NULL
+
+    output.append "  return(0);\n"
+    indent.remove_tail 2
+    output.append indent
+    output.append "}\n\n"
+    
+    (is_cop).if {
+      "Parallel slot's list detected:\n\
+      \------------------------------\n".print
+    }
+    
+    PROFIL_LIST.genere
+
+    TYPE.genere_all_struct
+    output_decl.append "\nvoid *table_type["
+    TYPE.id_counter_without_type.append_in output_decl
+    output_decl.append "];\n"
+    
+    ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
+      output.append "static void init_string_alias() {\n"
+      output.append (STRING_CST.output_init)
+      output.append "};\n"
+    }
+        
+    // Trace code.
+    put_trace_code output
+
+    //
+    // Saving File Output.
+    //
+    string_tmp.copy output_name
+    string_tmp.append output_extension
+    file_output := FILE_UTILS.open_write string_tmp
+    (file_output.is_null).if {
+      STDERR.put_string "Error: File "
+      STDERR.put_string string_tmp
+      STDERR.put_string " is not created !\n"
+      exit exit_failure_code
+    }
+    FILE_UTILS.write file_output with output_decl size (output_decl.count)
+    FILE_UTILS.write file_output with output_glob size (output_glob.count)
+    (STRING_CST.output_count != 0).if {
+      txt := STRING_CST.output_str
+      FILE_UTILS.write file_output with txt size (txt.count)
+    }
+    //
+    FILE_UTILS.write file_output with output size (output.count)
+    FILE_UTILS.close file_output
+    //
+    (is_graph).if {
+      + p:PROFIL
+      (PROFIL_LIST.profil_list.lower).to (PROFIL_LIST.profil_list.upper) do { j:INTEGER
+        p := PROFIL_LIST.profil_list.at j
+        (p.external_present).if {
+          p.set_external_present FALSE
+          p.propagation_external
+        }
+      }
+      //
+      output.copy "digraph G {\n"
+      profil_main.genere_graph output
+      (PROFIL_LIST.profil_list.lower).to (PROFIL_LIST.profil_list.upper) do { j:INTEGER
+        PROFIL_LIST.profil_list.at j.genere_graph output
+      }
+      output.append "}\n"
+      f := FILE_UTILS.open_write "graph.txt"
+      FILE_UTILS.write f with output size (output.count)
+      FILE_UTILS.close f
+    }
+    //
+    (is_all_warning).if {
+      (PROTOTYPE.prototype_dico.lower).to (PROTOTYPE.prototype_dico.upper) do { j:INTEGER
+        PROTOTYPE.prototype_dico.at j.detect_slot_not_used
+      }
+    }
+    
+    //
+    end_time := TIME.gettimeofday
+    (is_quiet).if_false {
+      " => ".print
+      time := ((end_time - begin_time)/1_000_000).to_integer
+      (time >= 120).if {
+	(time/60).print
+	" minutes, ".print
+	time := time % 60
+      }
+      time.print
+      " second(s).\n".print
+      //
+      (POSITION.nb_warning != 0).if {
+	STDERR.put_string " => "
+	STDERR.put_integer (POSITION.nb_warning)
+	STDERR.put_string " warning(s).\n"
+      }
+    }
+    (is_statistic).if {
+      //+ tmp,tmp2:INTEGER
+      STDERR.put_string "  Local counter        : "
+      STDERR.put_integer (LIST.local_counter)
+      STDERR.put_string "\n"
+      STDERR.put_string "  Context counter      : "
+      STDERR.put_integer (LIST.context_counter)
+      STDERR.put_string "\n"
+      print "  Null call score      : " stat null_counter for late_binding_counter
+      print "  Polymorphic call     : " stat polymorphic_counter for late_binding_counter
+      print "  Call on Expanded     : " stat late_binding_expanded_counter for late_binding_counter
+      print "  Call on Self         : " stat late_binding_self_counter     for late_binding_counter
+      //
+      //print "  Recursivity function : "
+      //stat (PROFIL.counter_recursivity_function) for (PROFIL.counter_function)
+      //
+      (is_optimization).if {
+	"  Invariant loop score : ".print; count_invariant.print; '\n'.print
+      }
+      //
+      /*
+      "Type set size vs argument number:\n".print
+      tmp2 := 0
+      (PROFIL.nb_arg_size_type.lower).to (PROFIL.nb_arg_size_type.upper) do { i:INTEGER
+        tmp := PROFIL.nb_arg_size_type.at i
+        (tmp != 0).if {
+          "  For a type set of ".print
+          i.print
+          " types, the number's argument is ".print
+          tmp.print
+          tmp2 := tmp2 + tmp
+          '\n'.print
+        }
+      }
+      "  Total: ".print
+      tmp2.print
+      '\n'.print
+      //
+      "Number's function vs polymorphic argument's number:\n".print
+      (PROFIL.nb_func_arg.lower1).to (PROFIL.nb_func_arg.upper1) do { nb_arg:INTEGER
+        " For a function with ".print
+        nb_arg.print
+        " arguments:\n".print
+        tmp2 := 0
+        (PROFIL.nb_func_arg.lower2).to (PROFIL.nb_func_arg.upper2) do { nb_arg_poly:INTEGER
+          tmp := PROFIL.nb_func_arg.at (nb_arg,nb_arg_poly)
+          (tmp != 0).if {
+            "    ".print
+            tmp.print
+            " functions with ".print
+            nb_arg_poly.print
+            " arguments polymorphics.\n".print
+            tmp2 := tmp2 + tmp
+          }
+        }
+        "    Total: ".print
+        tmp2.print
+        '\n'.print
+      }
+
+      (TYPE_GENERIC.paper_list.lower).to (TYPE_GENERIC.paper_list.upper) do { i:INTEGER
+        + var:VARIABLE
+        + t:TYPES
+        + idx:INTEGER
+        var := TYPE_GENERIC.paper_list.at i.native_array_variable
+        t := var.type_set
+        ((var.is_static) || {t.count = 0}).if {
+          tab.put (tab.at 0+1) to 0
+        } else {
+          idx := t.count
+          tab.put (tab.at idx+1) to idx
+          (t.first = TYPE_NULL).if {
+            tab_null.put (tab_null.at idx+1) to idx
+          }
+        }
+      }
+      "TAB:\n".print
+      (tab.lower).to (tab.upper) do { i:INTEGER
+        (tab.at i != 0).if {
+          i.print; '='.print; tab.at i.print; '\n'.print
+        }
+      }
+      "TAB NULL:\n".print
+      (tab_null.lower).to (tab_null.upper) do { i:INTEGER
+        (tab_null.at i != 0).if {
+          i.print; '='.print; tab_null.at i.print; '\n'.print
+        }
+      }
+      */
+
+      /*
+      // Counter on '==' and '!='
+      "\nCounter on '==' and '!=':".print
+      "\nParser counter       : ".print
+      count_equal_parse.print
+      "\nLive counter         : ".print
+      count_equal_live.print
+      "\nCreate counter       : ".print
+      count_equal_creat.print
+      "\nRemove counter       : ".print
+      count_equal_remov.print
+      "\nGenerate counter     : ".print
+      count_equal_gener.print
+      '\n'.print
+      "\nConstant counter     : ".print
+      count_equal_const.print
+      "\na = a counter        : ".print
+      count_equal_ident.print
+      "\nNULL = NULL counter  : ".print
+      count_equal_null.print
+      "\nIntersection counter : ".print
+      count_equal_inter.print
+      '\n'.print
+      // native_array:
+      "\nNATIVE_ARRAY expanded       : ".print
+      count_na_expanded.print
+      "\nNATIVE_ARRAY with NULL      : ".print
+      count_na_null.print
+      "\nNATIVE_ARRAY without NULL   : ".print
+      count_na_not_null.print
+      "\nNATIVE_ARRAY with monomorph : ".print
+      count_na_mono.print
+      "\nNATIVE_ARRAY allways NULL   : ".print
+      count_na_always_null.print
+      '\n'.print
+      // local:
+      "\nLocal expanded       : ".print
+      count_local_expanded.print
+      "\nLocal with NULL      : ".print
+      count_local_null.print
+      "\nLocal without NULL   : ".print
+      count_local_not_null.print
+      "\nLocal with monomorph : ".print
+      count_local_mono.print
+      "\nLocal allways NULL   : ".print
+      count_local_always_null.print
+      '\n'.print
+      */
+      // switch:
+      "\nswitch          : ".print
+      count_switch.print
+      "\nswitch merging  : ".print
+      count_switch_merging.print
+      '\n'.print
+      
+    }
+
+    // MHMH : Stat taille mémoire
+    /*
+    "\n Taille mémoire : ".print
+    OBJECT.clone_total_size.print
+    " --> ".print
+    (OBJECT.clone_total_size/(1024*1024)).print
+    " Mo\n".print
+    */
+    
+    /*
+    PROFIL.list_cpa.lower.to (PROFIL.list_cpa.upper) do { i:INTEGER
+      PROFIL.list_cpa.at i.print
+      '\n'.print
+    }
+    */
+    /*
+    "LOCAL : type set size\n".print
+    (LIST.stat_local.lower).to (LIST.stat_local.upper) do { i:INTEGER
+      (LIST.stat_local.at i != 0).if {
+        i.print; '='.print
+        LIST.stat_local.at i.print
+        '\n'.print
+      }
+    }
+    "LOCAL : type set size with NULL\n".print
+    (LIST.stat_local_null.lower).to (LIST.stat_local_null.upper) do { i:INTEGER
+      (LIST.stat_local_null.at i != 0).if {
+        i.print; '='.print
+        LIST.stat_local_null.at i.print
+        '\n'.print
+      }
+    }
+    "GLOBAL : type set size\n".print
+    (TYPE.stat_global.lower).to (TYPE.stat_global.upper) do { i:INTEGER
+      (TYPE.stat_global.at i != 0).if {
+        i.print; '='.print
+        TYPE.stat_global.at i.print
+        '\n'.print
+      }
+    }
+    "GLOBAL : type set size with NULL\n".print
+    (TYPE.stat_global_null.lower).to (TYPE.stat_global_null.upper) do { i:INTEGER
+      (TYPE.stat_global_null.at i != 0).if {
+        i.print; '='.print
+        TYPE.stat_global_null.at i.print
+        '\n'.print
+      }
+    }
+    "SLOT : type set size\n".print
+    (TYPE.stat_slot.lower).to (TYPE.stat_slot.upper) do { i:INTEGER
+      (TYPE.stat_slot.at i != 0).if {
+        i.print; '='.print
+        TYPE.stat_slot.at i.print
+        '\n'.print
+      }
+    }
+    "SLOT : type set size with NULL\n".print
+    (TYPE.stat_slot_null.lower).to (TYPE.stat_slot_null.upper) do { i:INTEGER
+      (TYPE.stat_slot_null.at i != 0).if {
+        i.print; '='.print
+        TYPE.stat_slot_null.at i.print
+        '\n'.print
+      }
+    }
+    */
+
+    //
+    // Execute finality command (front end).
+    //
+    // Executing `front_end':        
+    s := LIP_CODE.get_method "back_end"
+    if (s = NULL) then {
+      "Warning: Slot `back_end' not found in *.lip file.\n".print;
+    } else {
+      s.run_with NULL
+    }
+  )
+

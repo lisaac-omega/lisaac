@@ -1,0 +1,152 @@
+Header
+
+  + name        := SECTION_;
+
+  /*Test Section protection*/
+
+Insert
+
+  + parent_itm_pattern:Expanded ITM_PATTERN
+
+Public
+  
+  + position:POSITION
+  
+  + style:STRING_ALIAS; // Header, Inherit, Insert, Mapping, Interrupt, External
+  
+  + access_name:STRING_ALIAS; // := "Public"; // Private, Public, Directory
+
+  + access_list:ARRAY ITM_TYPE_MONO
+  
+  //
+  // Creation.
+  //
+  
+  - create p:POSITION :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p
+    result
+  )
+  
+  - make p:POSITION <-
+  (
+    position := p
+  )
+
+  - set_style n:STRING_ALIAS <-
+  ( 
+    style := n
+  )
+    
+  - set_access_name n:STRING_ALIAS <-
+  (
+    access_name := n
+  )
+  
+  - set_access_list t:ARRAY ITM_TYPE_MONO <-
+  [
+    ? {access_name = NULL}
+  ]
+  (     
+    access_list := t
+  )
+    
+  //
+  // Consultation style
+  //
+
+  - is_header:BOOLEAN    <- style = "Header"
+  
+  - is_inherit:BOOLEAN   <- style = "Inherit"
+
+  - is_insert:BOOLEAN    <- style = "Insert"
+
+  - is_inherit_or_insert:BOOLEAN <- (is_inherit) || {is_insert}
+
+  - is_mapping:BOOLEAN   <- style = "Mapping"
+
+  - is_interrupt:BOOLEAN <- style = "Interrupt"
+
+  - is_external:BOOLEAN  <- style = "External"
+  
+  //
+  // Consultation access
+  //
+  
+  - is_public:BOOLEAN    <- access_name = "Public"
+  
+  - is_private:BOOLEAN   <- access_name = "Private"
+  
+  - is_directory:BOOLEAN <- access_name = "Directory"
+  
+  //
+  // Display.
+  //
+
+  - append_in buf:STRING_BUFFER <-
+  (
+    (style != NULL).if {
+      buf.append style
+      buf.add_last ','
+    }
+    (access_name != NULL).if {
+      buf.append access_name
+      buf.add_last ','
+    }
+    (access_list != NULL).if {  
+      (access_list.lower).to (access_list.upper) do { j:INTEGER
+        access_list.at j.append_in buf
+        buf.add_last ','
+      }
+    }
+    buf.remove_last
+    append_pattern_in buf
+  )
+
+  //
+  // Access test.
+  //
+
+  - access me:TYPE with client:TYPE :BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+    + ts:ITM_TYPE_SIMPLE
+
+    ((me = client) || {is_public}).if {
+      result := TRUE
+    }.elseif {is_directory} then {
+      string_tmp.copy (me.prototype.filename)
+      j := string_tmp.last_index_of '/'
+      string_tmp.keep_head j
+      result := client.prototype.filename.has_prefix string_tmp
+    }.elseif {access_list != NULL} then {
+      j := access_list.lower
+      {(j <= access_list.upper) && {! result}}.while_do {
+	ts ?= access_list.at j
+	result := client.is_sub_type_with_name (ts.name)
+	j := j + 1
+      }
+    }
+    result
+  )
+  
+  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
+  (
+    (style = other.style) && {access_name = other.access_name} && {access_list = other.access_list}
+  )
+      
+  - standard_public:SECTION_ :=
+  ( + result:SECTION_
+    result := create POSITION
+    result.set_access_name "Public"
+    result
+  )
+  
+  - standard_private:SECTION_ :=
+  ( + result:SECTION_
+    result := create POSITION
+    result.set_access_name "Private"
+    result
+  )
+  

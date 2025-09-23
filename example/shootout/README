@@ -1,0 +1,64 @@
+    --------------------------------------------------------------
+           This is the directory for the shootout benchmarks
+    --------------------------------------------------------------
+
+  It can be fun to watch the Benchmarks Game
+  but like other games it's more fun to play!
+
+	What fun! Can you manipulate the multipliers and weights to make your 
+	favourite language the best programming language in the Benchmarks Game?
+
+	Sure we can, Lisaac should be the best programming language never seen ;)
+	So help us to perform better code to bite all other programming languages!!
+
+	Please have a look on:
+	http://shootout.alioth.debian.org/
+
+How to get started?
+===================
+
+  Developers:
+  ----------
+
+     svn co svn+ssh://<membername>@svn.gna.org/svn/isaac/trunk isaac
+
+  Anonymous:
+  ---------
+
+     svn co svn://svn.gna.org/svn/isaac/trunk isaac
+     or
+     svn co http://svn.gna.org/svn/isaac/trunk isaac
+
+Status:
+=======
+
++==================================================================================+
+| Benchmark          |    C    | Lisaac  | Winner  |   Comments      | Uploaded(1) |
++==================================================================================+
+| binary_trees       | 1.940s  | 0.536s  | Lisaac  |                 |  Ready      |
+| fannkuch           | 4.948s  | 4.008s  | Lisaac  |                 |    YES      |
+| fasta              | 9.641s  | 9.177s  | Lisaac  |                 |    YES      | 
+| k-nucleotide       | 0.048s  | 0.032s  | Lisaac  |                 |    YES      |
+| nsieve-bits        | 0.792s  | 0.624s  | Lisaac  |                 |    YES      |
+| spectral-norm      | 21.225s | 21.117s | Lisaac  |                 |    YES      |
+| startup            | 0.100s  | 0.064s  | Lisaac  |                 |    YES      |
+| recursive          | 1.592s  | 1.508s  | Lisaac  |                 |    YES      |
+| n-body             | 10.933s | 11.637s | C       |                 |    YES      | 
+| nsieve             | 3.264s  | 3.308s  | C       |                 |    YES      |
+| partial-sums       | 1.444s  | 1.580s  | C       |                 |    YES      |
+| sum-file           | 0.304   | 0.464s  | C       |                 |    YES      |
+| pidigits           | 0.416s  | 0.404s  | Lisaac  | Library used    |  Ready      |
+| meteor-contest     | NC      | NC      | NC      | No shootout     |  Progress   |
+| reverse-complement | 0.140s  | 0.128s  | Lisaac  |                 |  Ready      |
+| mandelbrot         | 1.080s  | 1.000s  | Lisaac  | Warning option  |  Ready      | 
+| regex-dna          | 3.624s  | 3.988s  | C       | Library used    |  Ready      |
+| chameneos-redux    | NC      | NC      | NC      | Thread used     |             | 
+| thread-ring        | 6.180s  | 7.820s  | C       | Thread used     |  Ready      |
++==================================================================================+
+(1) if the program have been uploaded to the shootout benchmark tracker.
+(2) lot of memory are used, maybe an error of memory management ?
+(3) error.
+
+Best regards,
+    Xavier Oswald <x.oswald@free.fr>
+    The Lisaac team.

@@ -1,0 +1,27 @@
+Header
+
+  + name := MAIN;
+  
+Public
+  
+  - fibonacci n:INTEGER :(INTEGER, INTEGER) <-
+  ( + f1,f2:INTEGER
+    
+    (n <= 1).if {
+      (f1,f2) := (1,1)
+    } else {
+      (f1,f2) := fibonacci (n-1)
+      (f1,f2) := (f2, f1+f2)
+    }
+    f1,f2
+  )
+  
+  - main <-
+  ( + f1,f2:INTEGER
+    
+    (f1,f2) := fibonacci 3
+    ? {f1 = 2}
+    ? {f2 = 3}
+  )
+  
+  

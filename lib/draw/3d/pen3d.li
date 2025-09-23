@@ -1,0 +1,687 @@
+Header
+  
+  + name := PEN3D;
+  
+  - external := `
+  float texCoords[] = {
+  0.0f, 0.0f,
+  1.0f, 0.0f,
+  1.0f, 1.0f,
+  
+  0.0f, 1.0f,
+  0.0f, 0.0f,
+  1.0f, 1.0f
+  };  
+  `;    
+Public
+  
+//  - shader_normal:SHADER_3D
+  - shader_stroke:SHADER_3D
+  - shader_fill:SHADER_3D
+  - shader_map:SHADER_3D
+    
+O3D, PEN_CALL_3D, PEN_CALL_3D_BEGIN
+  
+  - vertex:ARRAY REAL_32
+  - index:ARRAY UINTEGER_32
+  - vao:UINTEGER_32
+  - vbo:UINTEGER_32
+  - ebo:UINTEGER_32
+  
+  - square:O3D_MODEL
+  - cube:O3D_MODEL
+  - cylinder:O3D_MODEL
+  - cone:O3D_MODEL
+  - sphere:O3D_MODEL
+  
+  - tri_prism:O3D_MODEL
+  - tetrahedron:O3D_MODEL
+  
+  - square_pyramid:O3D_MODEL
+    
+Public
+  
+  - init b:{} <-
+  ( 
+    vertex := ARRAY REAL_32.create_with_capacity 3_000_000; /* cube */
+    index := ARRAY UINTEGER_32.create_with_capacity 1_000_000
+    //SYSTEM.name.println
+
+    // SHADER FILL    
+    shader_fill := SHADER_3D.create (PAPER.shader_header) geometry NULL vertex
+    "layout (location = 0) in vec3 aPos;   \n\
+    \layout (location = 1) in vec3 aNormal; \n\
+    \ \n\
+    \uniform mat4 view; \n\
+    \uniform mat4 model; \n\
+    \uniform mat4 projection; \n\
+    \uniform mat4 modelNorm; \n\
+    \ \n\
+    \out vec3 FragPos; \n\   
+    \out vec3 Normal; \n\
+    \  \n\
+    \void main() \n\
+    \{ \n\
+    \  mat4 PVM = projection * view * model; \n\
+    \  Normal = normalize(mat3(modelNorm) * aNormal); \n\ // transpose(inverse(model))
+    \  vec4 Pos = vec4(aPos, 1.0); \n\
+    \  FragPos = vec3(model * Pos); \n\
+    \  gl_Position = PVM * Pos; \n\
+    \}"
+    frag
+    "out vec4 outColor; \n\
+    \  \n\
+    \in vec3 Normal;  \n\
+    \in vec3 FragPos; \n\
+    \  \n\
+    \uniform vec3 lightPos;   \n\
+    \uniform vec3 viewPos;    \n\
+    \uniform vec3 lightColor; \n\
+    \uniform vec4 objectColor;\n\    
+    \  \n\
+    \void main()\n\
+    \{ vec3 specular=vec3(0.0); \n\
+    \  // ambient\n\
+    \  float ambientStrength = 0.1; \n\
+    \  vec3 ambient = ambientStrength * lightColor;\n\
+    \  // diffuse\n\
+    \  vec3 lightDir = normalize(lightPos - FragPos); \n\
+    \  float diff = max(dot(Normal, lightDir), 0.0); \n\
+    \  vec3 diffuse = diff * lightColor; \n\
+    \  // specular \n\
+    \  //if (diff > 0.0) { \n\
+    \    float specularStrength = 0.5; \n\
+    \    vec3 viewDir = normalize(viewPos - FragPos); \n\
+    \    vec3 reflectDir = reflect(-lightDir, Normal); \n\
+    \    float spec = pow(max(dot(viewDir, reflectDir),0.0), 32.0); \n\
+    \    specular = specularStrength * spec * lightColor; \n\
+    \  //}; \n\
+    \  \n\
+    \  vec4 effect = vec4(ambient + diffuse,1.0); \n\
+    \  outColor = effect * objectColor + vec4(specular,0.0); \n\
+    \}\n"
+
+    // SHADER MAPPING
+    shader_map := SHADER_3D.create (PAPER.shader_header) geometry NULL vertex
+    "layout (location = 0) in vec3 aPos;   \n\
+    \layout (location = 1) in vec3 aNormal; \n\
+    \layout (location = 2) in vec2 vertexUV; \n\    
+    \ \n\
+    \uniform mat4 view; \n\
+    \uniform mat4 model; \n\
+    \uniform mat4 projection; \n\
+    \uniform mat4 modelNorm; \n\
+    \ \n\
+    \out vec3 FragPos; \n\   
+    \out vec3 Normal; \n\
+    \out vec2 UV;  \n\
+    \  \n\
+    \void main() \n\
+    \{ \n\
+    \  mat4 PVM = projection * view * model; \n\
+    \  Normal = normalize(mat3(modelNorm) * aNormal); \n\
+    \  vec4 Pos = vec4(aPos, 1.0); \n\
+    \  FragPos = vec3(model * Pos); \n\
+    \  gl_Position = PVM * Pos; \n\
+    \  UV = vertexUV; \n\
+    \}"
+    frag
+    "out vec4 FragColor; \n\
+    \  \n\
+    \in vec3 Normal;  \n\
+    \in vec3 FragPos; \n\
+    \in vec2 UV; \n\
+    \  \n\
+    \uniform vec3 lightPos;   \n\
+    \uniform vec3 viewPos;    \n\
+    \uniform vec3 lightColor; \n\
+    \/*uniform vec4 objectColor;*/\n\
+    \uniform sampler2D myTexture; \n\
+    \  \n\
+    \void main()\n\
+    \{ vec3 specular=vec3(0.0); \n\
+    \  // ambient\n\
+    \  float ambientStrength = 0.1; \n\
+    \  vec3 ambient = ambientStrength * lightColor;\n\
+    \  // diffuse\n\
+    \  vec3 lightDir = normalize(lightPos - FragPos); \n\
+    \  float diff = max(dot(Normal, lightDir), 0.0); \n\
+    \  vec3 diffuse = diff * lightColor; \n\
+    \  // specular \n\
+    \  //if (diff > 0.0) { \n\
+    \    float specularStrength = 0.5; \n\
+    \    vec3 viewDir = normalize(viewPos - FragPos); \n\
+    \    vec3 reflectDir = reflect(-lightDir, Normal); \n\
+    \    float spec = pow(max(dot(viewDir, reflectDir),0.0), 32.0); \n\
+    \    specular = specularStrength * spec * lightColor; \n\
+    \  //}; \n\
+    \  \n\
+    \  vec4 effect = vec4(ambient + diffuse,1.0); \n\
+    \  FragColor = effect * texture(myTexture,UV).rgba + vec4(specular,0.0); \n\
+    \}"
+    
+    square := add_square
+    cube := add_cube
+    cylinder := add_cylinder
+    cone := add_cone
+    sphere := add_sphere
+    tri_prism := add_tri_prism
+        
+    //world := OBJ3D.create.add_torus (64*2,16*2) radius (0.5,0.1)
+    
+    b.value
+    end_path
+  )
+  
+Public
+  
+  - sides:INTEGER := 32; //32; //64
+  
+  - add_vertex (x,y,z:REAL_32) normal (nx,ny,nz:REAL_32) <-
+  ( vertex.add_last x; vertex.add_last y; vertex.add_last z
+    vertex.add_last nx; vertex.add_last ny; vertex.add_last nz
+  )
+  
+  - add_vertex (x,y,z:REAL_32) <- add_vertex (x,y,z) normal (0,0,0)
+  
+  - dup p:INTEGER :INTEGER <- 
+  ( + i,result:INTEGER
+    result := vertex.count / 6
+    i := p * 6
+    add_vertex (vertex.at i, vertex.at (i+1), vertex.at (i+2))
+    result
+  )
+  
+  - add_triangle_raw (p0,p1,p2:UINTEGER_32) <-
+  ( index.add_last p0; index.add_last p1; index.add_last p2; )
+  
+  - add_triangle (p0,p1,p2:UINTEGER_32) <-
+  ( + v0,v1,v2,n:VEC3
+    + b:{INTEGER; }
+    add_triangle_raw (p0,p1,p2)
+    v0 := VEC3.create_xyz (vertex.at (p0*6),vertex.at (p0*6+1),vertex.at (p0*6+2))
+    v1 := VEC3.create_xyz (vertex.at (p1*6),vertex.at (p1*6+1),vertex.at (p1*6+2))
+    v2 := VEC3.create_xyz (vertex.at (p2*6),vertex.at (p2*6+1),vertex.at (p2*6+2))
+    //"v0:".print; v0.print; " v1:".print; v1.print; " v2:".print; v2.print; '\n'.print
+    v1.sub v0; v2.sub v0
+    //" v1 - v0:".print; v1.print; " v2 - v0:".print; v2.print; '\n'.print
+    n := v1 ** v2
+    //" n:".print; n.print; '\n'.print
+    n.normalize
+    //" |n|:".print; n.print; '\n'.print
+    b := {p:INTEGER
+      vertex.at (p*6+3) put (n.x)
+      vertex.at (p*6+4) put (n.y)
+      vertex.at (p*6+5) put (n.z)
+    }
+    b.value p0; b.value p1; b.value p2
+    v0.free; v1.free; v2.free; n.free
+  )
+  
+  - add_quad (p0,p1,p2,p3:UINTEGER_32) <-
+  ( add_triangle (p0,p1,p2); add_triangle (p0,p2,p3); )
+  
+  - add_square:O3D_MODEL <-
+  ( + low,up:INTEGER
+    + beg:UINTEGER_32
+    low := index.count
+    beg := vertex.count / 6
+    add_vertex (-0.5,0,+0.5); add_vertex (+0.5,0,+0.5)
+    add_vertex (+0.5,0,-0.5); add_vertex (-0.5,0,-0.5)
+    add_quad (beg+0,beg+1,beg+2,beg+3)
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_cube:O3D_MODEL <-
+  ( + x,y,z:REAL_32
+    + i0,i1,i2,i3,i4,i5,i6,i7,beg:UINTEGER_32
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count / 6
+    0.to 7 do { n:INTEGER
+      x := (n>>1)    .is_odd.ok (-0.5) or (+0.5)
+      y := (n<4)            .ok (+0.5) or (-0.5)
+      z := ((n+1)>>1).is_odd.ok (-0.5) or (+0.5)
+      add_vertex (x,y,z)
+    }
+    // Sens Trigo (CCW)
+    (i0,i1,i2,i3) := (beg+0,beg+1,beg+2,beg+3)
+    (i4,i5,i6,i7) := (beg+4,beg+5,beg+6,beg+7)
+    add_quad (i0,i1,i2,i3); add_quad (i5,i4,i7,i6)
+    add_quad (dup i1,dup i5,dup i6,dup i2); add_quad (dup i2,dup i6,dup i7,dup i3)
+    add_quad (dup i3,dup i7,dup i4,dup i0); add_quad (dup i4,dup i5,dup i1,dup i0)
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+    
+  - add_cylinder:O3D_MODEL <-
+  ( + sides2,i2:INTEGER
+    + beg,cb,ch,p0,p1,p2,p3:INTEGER
+    + c,s,a,b:REAL_32
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count/6
+    a := REAL_32.pi / 4.0
+    b := REAL_32.two_pi / sides
+    0.to (sides-1) do { i:INTEGER
+      (c, s) := (a.cos, a.sin)
+      add_vertex (c*0.5,s*0.5,-0.5) normal (c,s,0)
+      add_vertex (c*0.5,s*0.5,+0.5) normal (c,s,0)
+      a := a + b
+    }
+
+    cb := vertex.count/6
+    add_vertex (0.0,0.0,-0.5)
+    ch := vertex.count/6
+    add_vertex (0.0,0.0, 0.5)
+
+    sides2 := sides * 2
+    0.to (sides-1) do { i:INTEGER
+      i2 := i * 2
+      p0 := beg+i2
+      p1 := beg+(i2+1)%sides2
+      p2 := beg+(i2+2)%sides2
+      p3 := beg+(i2+3)%sides2
+      add_triangle_raw (p0,p2,p1); // add_quad
+      add_triangle_raw (p3,p1,p2)
+      add_triangle (dup p2,dup p0,cb)
+      add_triangle (dup p1,dup p3,ch)
+    }
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_cone:O3D_MODEL <-
+  ( + beg,cb,p0,p1:INTEGER
+    + a,b,c,s:REAL_32
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count / 6
+    b := REAL_32.two_pi / sides
+    0.to sides do { i:INTEGER
+      (c, s) := (a.cos, a.sin)
+      add_vertex (c*0.5,s*0.5,-0.5)
+      add_vertex (0,0,+0.5)
+      a := a + b
+    }
+
+    cb := vertex.count/6
+    add_vertex (0.0,0.0,-0.5)
+    0.to (sides-1) do { i:INTEGER
+      p0 := beg+i*2
+      p1 := beg+(i*2+2) % (sides*2)
+      add_triangle (p0,p1,beg+i*2+1)
+      add_triangle (dup p1,dup p0,cb)
+    }
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_sphere:O3D_MODEL <-
+  ( + lat_nb,lon_nb:INTEGER
+    + theta,phi, sin_p,cos_p, sin_t,cos_t, x,y,z:REAL_32
+    + low,up,beg, first,second:INTEGER
+    low := index.count
+    beg := vertex.count/6
+    lat_nb := lon_nb := sides
+    0.to lat_nb do { lat:INTEGER
+      theta := REAL_32.pi / lat_nb * lat
+      (sin_t,cos_t) := (theta.sin, theta.cos)
+      0.to lon_nb do { lon:INTEGER
+        phi := REAL_32.pi * 2 / lon_nb * lon
+        (sin_p,cos_p) := (phi.sin, phi.cos)
+        (x,y,z) := (cos_p * sin_t, cos_t, sin_p * sin_t)
+        add_vertex (x*0.5,y*0.5,z*0.5) normal (x,y,z)
+        // u = 1 - (longNumber / lon_nb)
+        // v = 1 - (latNumber / lat_nb)
+      }
+    }
+    0.to (lat_nb-1) do { lat:INTEGER
+      0.to (lon_nb-1) do { lon:INTEGER
+        first := (lat * (lon_nb + 1)) + lon
+        second := first + lon_nb + 1
+        add_triangle_raw (beg + first,  beg + first + 1, beg + second)
+        add_triangle_raw (beg + second, beg + first + 1, beg + second + 1)
+      }
+    }
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_tri_prism:O3D_MODEL <-
+  ( + beg,beg2,i2:INTEGER
+    + a,p,r:REAL_32
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count/6
+    r := (1.0/3.0).sqrt; // 1^2 = r^2 + r^2 - 2 * r * r * cos(120) -> r=0.57
+    0.to 1 do { s:INTEGER
+      p := (s=0).ok (+0.5) or (-0.5)
+      add_vertex (0.0,r,p)
+      a := (90.0+120).deg
+      add_vertex (r*a.cos,r*a.sin,p)
+      a := (90.0-120).deg
+      add_vertex (r*a.cos,r*a.sin,p)
+      add_triangle (beg+3*s,beg+3*s+1+s,beg+3*s+2-s)
+    }
+    beg2 := beg + 3
+    0.to 2 do { i:INTEGER
+      i2 := (i+1)%3
+      add_quad (dup (beg+i),dup (beg2+i),dup (beg2+i2),dup (beg+i2))
+    }
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_tetrahedron:O3D_MODEL <-
+  ( + beg:INTEGER
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count/6
+    abstract
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_square_pyramid:O3D_MODEL <-
+  ( + beg:INTEGER
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count/6
+    abstract
+    up := index.upper
+    O3D_MODEL.create_low low up up
+  )
+  
+  - add_stl n:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :O3D_MODEL <-
+  ( + beg:INTEGER
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count / 6
+    STL.load n size s
+    STL.rotate_x_m90
+    STL.update_info
+    STL.body.foreach { p:PTSTL
+      add_vertex (p.x1.mm,p.y1.mm,p.z1.mm)
+      add_vertex (p.x2.mm,p.y2.mm,p.z2.mm)
+      add_vertex (p.x3.mm,p.y3.mm,p.z3.mm)
+      add_triangle (beg,beg+1,beg+2)
+      beg := beg + 3
+    }
+    up := index.upper
+    O3D_MODEL.create (STL.ox.mm,STL.oy.mm,STL.oz.mm)
+    gravity (STL.gx.mm,STL.gy.mm,STL.gz.mm) low low up up    
+  )
+  
+  - add_stl pth:STRING_ALIAS :O3D_MODEL <-
+  ( + beg:INTEGER
+    + low,up:INTEGER
+    low := index.count
+    beg := vertex.count / 6
+    STL.load pth
+    STL.rotate_x_m90
+    STL.update_info
+    STL.body.foreach { p:PTSTL
+      add_vertex (p.x1.mm,p.y1.mm,p.z1.mm)
+      add_vertex (p.x2.mm,p.y2.mm,p.z2.mm)
+      add_vertex (p.x3.mm,p.y3.mm,p.z3.mm)
+      add_triangle (beg,beg+1,beg+2)
+      beg := beg + 3
+    }
+    up := index.upper
+    O3D_MODEL.create (STL.ox.mm,STL.oy.mm,STL.oz.mm)
+    gravity (STL.gx.mm,STL.gy.mm,STL.gz.mm) low low up up
+  )
+  
+Private
+  
+  - end_path <-
+  ( + tex:UINTEGER_32
+    + gl:PEN_GL
+    gl := PAPER.wins.first.pen.gl
+    vao := gl.gl_gen_vertex_arrays 1; // Vertex
+    vbo := gl.gl_gen_buffers 1; // Vertex
+    ebo := gl.gl_gen_buffers 1; // Index
+    tex := gl.gl_gen_buffers 1; // Texture
+
+    gl.gl_bind_vertex_array vao
+    // Vertex
+    gl.gl_bind_buffer (`GL_ARRAY_BUFFER`:INTEGER, vbo)
+    gl.gl_buffer_data_ptr (
+      `GL_ARRAY_BUFFER`:INTEGER,
+      vertex.count * REAL_32.object_size,
+      vertex.to_external,
+      `GL_STATIC_DRAW`:INTEGER
+    )
+    // Index
+    gl.gl_bind_buffer(`GL_ELEMENT_ARRAY_BUFFER`:INTEGER, ebo)
+    gl.gl_buffer_data_ptr (
+      `GL_ELEMENT_ARRAY_BUFFER`:INTEGER,
+      index.count * UINTEGER_32.object_size,
+      index.to_external,
+      `GL_STATIC_DRAW`:INTEGER
+    )
+    
+    // position attribute    
+    gl.gl_vertex_attrib_pointer(0, 3, `GL_FLOAT`:INTEGER, `GL_FALSE`:BOOLEAN, 6 * REAL_32.object_size, NULL)
+    
+    // Normal vector
+    gl.gl_vertex_attrib_pointer(1, 3, `GL_FLOAT`:INTEGER, `GL_FALSE`:BOOLEAN, 6 * REAL_32.object_size, `(void *)(sizeof(float)*3)`:POINTER)
+    
+    // Texture
+    gl.gl_bind_buffer (`GL_ARRAY_BUFFER`:INTEGER, tex)
+    gl.gl_buffer_data_ptr (
+      `GL_ARRAY_BUFFER`:INTEGER,
+      12 * UINTEGER_32.object_size,
+      `texCoords`:POINTER,
+      `GL_STATIC_DRAW`:INTEGER
+    )
+    gl.gl_vertex_attrib_pointer(2,2,`GL_FLOAT`:INTEGER,`GL_FALSE`:BOOLEAN,0,NULL)
+    
+    gl.gl_enable_vertex_attrib_array 0
+    gl.gl_enable_vertex_attrib_array 1
+    gl.gl_enable_vertex_attrib_array 2
+    gl.gl_bind_vertex_array 0
+  )
+  
+  
+  - add_torus (sides, cs_sides:INTEGER) radius (radius, cs_radius:REAL_32) :SELF <-
+  ( + num_vtx,num_idx:INTEGER
+    + a,cs_a,cur_a,z,j,i:REAL_32
+    + p0,p1,p2,p3,beg:INTEGER
+    not_yet_implemented
+    beg := vertex.count
+    num_vtx := (sides+1) * (cs_sides+1)
+    num_idx := (2*sides+4) * cs_sides
+    
+    a := REAL_32.two_pi / sides
+    cs_a := REAL_32.two_pi /cs_sides
+
+    // iterate cs_sides: inner ring
+    0.to (cs_sides-1) do { jj:INTEGER
+      j := cs_a * jj
+      cur_a := radius + cs_radius * j.cos
+      z := cs_radius * j.sin
+      // iterate sides: outer ring
+      0.to (sides-1) do { ii:INTEGER
+        i := a * ii
+        add_vertex (cur_a * i.cos, cur_a * i.sin, z)
+      }
+    }
+    // inner ring
+    0.to (cs_sides-1) do { i:INTEGER
+      // outer ring
+      0.to (sides-1) do { j:INTEGER
+        p0 := beg + i * sides + j
+        p1 := beg + i * sides + (j+1)%sides
+        p2 := beg + (i+1)%cs_sides * sides + j
+        p3 := beg + (i+1)%cs_sides * sides + (j+1)%sides
+        add_triangle (p0,p1,p2)
+        add_triangle (p1,p3,p2)
+      }
+    }
+    Self
+  )
+
+  /*
+  shader_fill := SHADER_3D.create_geometry
+    "#version 330 core\n\
+    \layout (triangles) in; \n\
+    \layout (triangle_strip, max_vertices = 3) out; \n\
+    \ \n\
+    \varying vec3 Normal; \n\
+    \varying vec3 FragPos; \n\   
+    \ \n\
+    \uniform mat4 view; \n\
+    \uniform mat4 model; \n\
+    \uniform mat4 projection; \n\
+    \ \n\
+    \vec3 GetNormal() \n\
+    \{ \n\
+    \  vec3 a = vec3(gl_in[1].gl_Position) - vec3(gl_in[0].gl_Position); \n\
+    \  vec3 b = vec3(gl_in[2].gl_Position) - vec3(gl_in[0].gl_Position); \n\
+    \  return normalize(cross(a, b)); \n\
+    \} \n\
+    \  \n\
+    \void main() { \n\
+    \  vec3 norm = GetNormal(); \n\
+    \  mat4 PVM = projection * view * model; \n\
+    \  Normal = mat3(transpose(inverse(model))) * norm; \n\
+    \  for (int j=0;j<3;j++) { \n\
+    \    gl_Position = PVM * gl_in[j].gl_Position; \n\
+    \    FragPos = vec3(model * gl_in[j].gl_Position); \n\
+    \    EmitVertex(); \n\
+    \  } \n\
+    \  EndPrimitive(); \n\
+    \}"
+    vertex
+    "#version 330 core \n\
+    \layout (location = 0) in vec3 aPos;   \n\
+    \layout (location = 1) in vec3 aNormal; \n\
+    \  \n\
+    \void main() \n\
+    \{ \n\
+    \  gl_Position = vec4(aPos, 1.0); \n\
+    \}"
+    frag
+    "#version 330 core   \n\
+    \out vec4 FragColor; \n\
+    \  \n\
+    \varying vec3 Normal;  \n\
+    \varying vec3 FragPos; \n\
+    \  \n\
+    \uniform vec3 lightPos;   \n\
+    \uniform vec3 viewPos;    \n\
+    \uniform vec3 lightColor; \n\
+    \uniform vec4 objectColor;\n\
+    \  \n\
+    \void main()\n\
+    \{ vec3 specular=vec3(0.0); \n\
+    \  // ambient\n\
+    \  float ambientStrength = 0.1; \n\
+    \  vec3 ambient = ambientStrength * lightColor;\n\
+    \  // diffuse\n\
+    \  vec3 norm = normalize(Normal); \n\
+    \  vec3 lightDir = normalize(lightPos - FragPos); \n\
+    \  float diff = max(dot(norm, lightDir), 0.0); \n\
+    \  vec3 diffuse = diff * lightColor; \n\
+    \  // specular \n\
+    \  //if (diff > 0.0) { \n\
+    \    float specularStrength = 0.5; \n\
+    \    vec3 viewDir = normalize(viewPos - FragPos); \n\
+    \    vec3 reflectDir = reflect(-lightDir, norm); \n\
+    \    float spec = pow(max(dot(viewDir, reflectDir),0.0), 32); \n\
+    \    specular = specularStrength * spec * lightColor; \n\
+    \  //}; \n\
+    \  \n\
+    \  vec4 effect = vec4(ambient + diffuse,1.0); \n\   
+    \  FragColor = effect * objectColor + vec4(specular,0.0); \n\
+    \}";*/
+    
+/*    
+    // MAPPING TEXTURE
+    shader_map := SHADER_3D.create_geometry
+    "#version 330 core\n\
+    \precision highp float;\n\
+    \layout (triangles) in; \n\    
+    \layout (triangle_strip, max_vertices = 3) out; \n\    
+    \out vec2 UV; \n\
+    \in vec2 UVs[]; \n\
+    \ \n\
+    \varying vec3 Normal; \n\
+    \varying vec3 FragPos; \n\    
+    \ \n\
+    \uniform mat4 view; \n\
+    \uniform mat4 model; \n\
+    \uniform mat4 projection; \n\
+    \ \n\
+    \vec3 GetNormal() \n\
+    \{ \n\
+    \  vec3 a = vec3(gl_in[1].gl_Position) - vec3(gl_in[0].gl_Position); \n\
+    \  vec3 b = vec3(gl_in[2].gl_Position) - vec3(gl_in[0].gl_Position); \n\
+    \  return normalize(cross(a, b)); \n\
+    \} \n\
+    \  \n\
+    \void main() { \n\
+    \  vec3 norm = GetNormal(); \n\
+    \  mat4 PVM = projection * view * model; \n\
+    \  Normal = mat3(transpose(inverse(model))) * norm; \n\
+    \  for (int j=0;j<3;j++) { \n\
+    \    UV = UVs[j]; \n\
+    \    gl_Position = PVM * gl_in[j].gl_Position; \n\
+    \    FragPos = vec3(model * gl_in[j].gl_Position); \n\
+    \    EmitVertex(); \n\
+    \  } \n\
+    \  EndPrimitive(); \n\
+    \}"
+    vertex
+    "#version 330 core \n\
+    \precision highp float;\n\
+    \layout (location = 0) in vec3 aPos;   \n\
+    \layout (location = 1) in vec2 vertexUV; \n\    
+    \out vec2 UVs;  \n\
+    \void main() \n\
+    \{ \n\
+    \  UVs = vertexUV; \n\
+    \  gl_Position = vec4(aPos, 1.0); \n\
+    \}"
+    frag
+    "#version 330 core   \n\
+    \precision highp float;\n\
+    \  \n\
+    \out vec4 FragColor; \n\
+    \  \n\
+    \varying vec3 Normal;  \n\
+    \varying vec3 FragPos; \n\
+    \  \n\
+    \uniform vec3 lightPos;   \n\
+    \uniform vec3 viewPos;    \n\
+    \uniform vec3 lightColor; \n\
+    \uniform sampler2D myTexture; \n\
+    \in vec2 UV; \n\
+    \  \n\
+    \void main()\n\
+    \{ vec3 specular=vec3(0.0); \n\
+    \  // ambient\n\
+    \  float ambientStrength = 0.1; \n\
+    \  vec3 ambient = ambientStrength * lightColor;\n\
+    \  // diffuse\n\
+    \  vec3 norm = normalize(Normal); \n\
+    \  vec3 lightDir = normalize(lightPos - FragPos); \n\
+    \  float diff = max(dot(norm, lightDir), 0.0); \n\
+    \  vec3 diffuse = diff * lightColor; \n\
+    \  // specular \n\
+    \  //if (diff > 0.0) { \n\
+    \    float specularStrength = 0.5; \n\
+    \    vec3 viewDir = normalize(viewPos - FragPos); \n\
+    \    vec3 reflectDir = reflect(-lightDir, norm); \n\
+    \    float spec = pow(max(dot(viewDir, reflectDir),0.0), 32); \n\
+    \    specular = specularStrength * spec * lightColor; \n\
+    \  //}; \n\
+    \  \n\
+    \  vec2 toto=vec2(0.2,0.2); \n\
+    \  vec4 effect = vec4(ambient + diffuse,1.0); \n\
+    \  FragColor = effect * texture(myTexture,UV).rgba + vec4(specular,0.0); \n\
+    \}"
+    */

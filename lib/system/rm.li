@@ -1,0 +1,15 @@
+Header  
+  + name := RM;
+  /*rm unix-like command*/
+  
+Public
+  - args optargs:STRING : INTEGER <-
+  ( + result:INTEGER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.append "/bin/rm "
+      tmp.append optargs
+      result := ENVIRONMENT.execute_command tmp
+    }
+    result
+  )
+ 

@@ -1,0 +1,32 @@
+Header
+  
+  + name := GLYPH_EXAMPLE;
+  /*
+  This example show how to use glyph in your code.
+  Play with this code to understand how to edit the glyphs.
+  */
+Public
+  
+  - Self:SELF tri l:REAL_32 height h:REAL_32 :REAL_32 <-
+  (
+    (l * h).div 2 
+  )
+  
+  - main <-
+  ( + r:REAL_32
+    + b:BOOLEAN
+    + s, n:INTEGER
+    r := 4 .pow 2
+    r := 4 .sqrt
+    r := 1.div 2
+    b := b.gor (b.gxor FALSE)
+    
+    
+    r := Self.tri (400 cm) height (2 cm)
+    
+    n := 1
+    s := 1 .sum (5) of {i:INTEGER; n := n + i;   n}
+    s.println;
+  )
+  
+  

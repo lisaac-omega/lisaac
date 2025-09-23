@@ -1,0 +1,145 @@
+Header
+
+  + name    := CAST;
+
+  /* Cast type. */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  - is_invariant:BOOLEAN <- value.is_invariant
+
+  + static_type:TYPE_FULL
+
+  + value:EXPR
+
+  //
+  // Creation.
+  //
+
+  - create t:TYPE_FULL value v:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make t value v
+    result
+  )
+
+  - make t:TYPE_FULL value v:EXPR <-
+  (
+    position    := v.position
+    static_type := t
+    value       := v
+  )
+
+  - my_copy:SELF <-
+  (
+    create static_type value (value.my_copy)
+  )
+
+  //
+  // Searching.
+  //
+
+  - get_type t:TYPES_TMP <-
+  (
+    t.add (static_type.raw)
+  )
+
+  //
+  // Executing pass.
+  //
+
+  - remove <-
+  (
+    value.remove
+  )
+
+  - execute_unlink:INSTR <-
+  (
+    value.execute_unlink
+  )
+
+  - execute_link:EXPR <-
+  ( + result:EXPR
+    + int:INTEGER_CST
+    + lst_typ:TYPES_TMP
+    + other:CAST
+
+    value  := value.execute_link
+    result := Self
+    //
+    ((static_type.raw = type_integer) && {value.is_constant}).if { // -------> OK
+      result := value
+      new_execute_pass
+    }.elseif {  
+      (is_integer (static_type.raw.name)) && {value.is_constant} &&
+      { int ?= value;  // BSBS: Merde avc les prototype_cst de type type_id : INTEGER
+	int != NULL
+      }
+    } then {
+      int.cast_type static_type
+      result := value
+      new_execute_pass
+    }.elseif { 
+      other ?= value
+      (other != NULL) && {other.static_type = static_type}
+    } then {
+      result := value
+      new_execute_pass
+    } else {
+      lst_typ := TYPES_TMP.new
+      value.get_type lst_typ
+      ((lst_typ.count = 1) && {lst_typ.first = static_type.raw}).if {
+        result := value
+        new_execute_pass
+      }
+      lst_typ.free
+    }
+    //
+    result
+  )
+
+  //
+  // Genere.
+  //
+
+  - genere <-
+  (
+    output.add_last '('
+    output.add_last '('
+    static_type.genere_declaration output
+    output.add_last ' '
+    static_type.genere_star_declaration output
+    output.add_last ')'
+    value.genere
+    output.add_last ')'
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    static_type.append_name_in buffer
+    (static_type.is_expanded).if_false {
+      buffer.add_last '*'
+    }
+    buffer.add_last ')'
+    value.display buffer
+  )
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,9 @@
+Header
+  + name := TEXPR;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - eval:REAL_32 <- REAL_32.abstract

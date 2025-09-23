@@ -1,0 +1,93 @@
+Header
+
+  + name        := ITM_RESULT;
+
+  /*Result value*/
+
+Inherit
+
+  - parent_itm_code:ITM_CODE := ITM_CODE
+
+Public
+
+  - is_affect:POSITION <- value.is_affect
+
+  - position:POSITION <- value.position
+
+  //
+  // Data
+  //
+
+  + value:ITM_CODE
+
+  //
+  // Constructor
+  //
+
+  - create r:ITM_CODE :SELF <-
+  [
+    -? {r != NULL}
+    -? {r.position.code != 0}
+  ]
+  ( + result:SELF
+
+    result := clone
+    result.make r
+    result
+  )
+
+  - make r:ITM_CODE <-
+  (
+    value    := r
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run:INSTR <-
+  ( + mul:EXPR_MULTIPLE
+    + val:EXPR
+    + result:INSTR
+
+    val := value.to_run_expr
+    mul ?= val
+    (mul != NULL).if {
+      (mul.lower).to (mul.upper-1) do { j:INTEGER
+        result := to_run_intern (mul.at j)
+        list_current.add_last result
+      }
+      result := to_run_intern (mul.last)
+    } else {
+      result := to_run_intern val
+    }
+    result
+  )
+
+  - to_run_expr:EXPR <-
+  (
+    crash
+    NULL
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append "return("
+    value.append_in buffer
+    buffer.add_last ')'
+  )
+
+Private
+
+  - to_run_intern val:EXPR :INSTR <-
+  ( + var:LOCAL
+
+    var := val.static_type.get_temporary (val.position)
+    ITM_LIST.stack_result.add_last var
+    var.write (val.position) value val
+  )
+

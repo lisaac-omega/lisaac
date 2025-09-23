@@ -1,0 +1,33 @@
+Header  
+  + name := Expanded UINTEGER_16;
+  
+  /*Unsigned 16 bits integer.*/
+  - type    := `unsigned short`;  
+  - default := (0.to_raw_uinteger_16);
+  - export := UINTEGER_64, UINTEGER_32, INTEGER_64, INTEGER_32, INTEGER;
+  
+Insert
+  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+  
+Public
+  
+  - object_size:INTEGER := 2
+  
+  // Range.
+  
+  - maximum:UINTEGER_64 := 65535.to_raw_uinteger_64
+  
+  // Conversion with test.
+  
+  - to_uinteger_16:UINTEGER_16 <- Self
+  
+  - bit_reverse:SELF <-
+  ( + n:SELF
+    n := Self
+    n := ((n & 0AAAAh) >>  1) | ((n & 05555h) << 1)
+    n := ((n & 0CCCCh) >>  2) | ((n & 03333h) << 2)
+    n := ((n & 0F0F0h) >>  4) | ((n & 00F0Fh) << 4)
+    n := ((n & 0FF00h) >>  8) | ((n & 000FFh) << 8)
+    n
+  )
+  

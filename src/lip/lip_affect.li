@@ -1,0 +1,53 @@
+Header
+
+  + name      := LIP_AFFECT;
+
+Inherit
+
+  + parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + name:STRING_ALIAS
+
+  + value:LIP_CODE
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS value val:LIP_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n value val
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS value val:LIP_CODE <-
+  (
+    position := p
+    name := n
+    value := val
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  ( + slot:LIP_SLOT_DATA
+    + val:LIP_CONSTANT
+
+    slot := get_data name
+    (slot = NULL).if {
+      string_tmp.copy "Slot `";
+      string_tmp.append name
+      string_tmp.append "' not found."
+      semantic_error (position,string_tmp)
+    }
+    val := value.run_expr
+    (slot.set_value val).if_false {
+      semantic_error (position,"Incorrect type.")
+    }
+    val.free
+  )

@@ -1,0 +1,15 @@
+Header
+  + name := TREAL;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + val:REAL_32
+  
+  - init_r v:REAL_32 :TREAL <- ( val := v; Self)
+  
+  - eval:REAL_32 <- val
+  
+  - append_in b:STRING_BUFFER <- val.append_in b

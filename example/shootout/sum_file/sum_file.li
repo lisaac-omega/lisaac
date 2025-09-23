@@ -1,0 +1,22 @@
+Header
+  
+  + name := SUM_FILE;
+  
+Inherit
+  
+  - parent_any:CLONE := CLONE
+
+Public
+
+  - main <-
+  ( + sum:INTEGER
+
+    STDIN.read_line
+    {STDIN.end_of_input}.until_do {
+      sum := sum + STDIN.last_string.to_integer
+      STDIN.read_line
+    }
+
+    sum.print
+    '\n'.print
+  )

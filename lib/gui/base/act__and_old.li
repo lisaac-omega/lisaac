@@ -1,0 +1,19 @@
+Header
+  + name := ACT E AND F;
+  
+Inherit
+  + parent_act:Expanded ACT
+  
+Public
+  
+  + func:{(E,F); BOOLEAN}
+  + val1:E
+  + val2:F
+  
+  - fn f:{(E,F); BOOLEAN} val (v1:E,v2:F) :SELF <- ( (func,val1,val2) := (f,v1,v2); Self)
+  
+  - run:BOOLEAN <-
+  (
+    parent_act.run
+    func.value (val1,val2)
+  )

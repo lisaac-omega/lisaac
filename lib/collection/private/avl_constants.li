@@ -1,0 +1,13 @@
+Header
+  + name := AVL_CONSTANTS;
+
+Insert
+  - parent_clone:CLONE := CLONE
+
+SELF
+
+  - balanced:INTEGER := 0
+
+  - imbalanced_left:INTEGER := -1
+
+  - imbalanced_right:INTEGER := 1

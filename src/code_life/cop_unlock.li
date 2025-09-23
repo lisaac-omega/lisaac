@@ -1,0 +1,87 @@
+Header
+
+  + name    := COP_UNLOCK;
+
+  /* COP in for data or function.*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p
+    result
+  )
+
+  - make p:POSITION <-
+  (
+    position := p
+  )
+
+  - my_copy:SELF <-
+  (
+    create position
+  )
+
+  - remove <-
+  (
+    // Nothing.
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute:INSTR <-
+  (
+    Self
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    output.append "pthread_mutex_lock(&(obj->mutex));\n"
+    output.append indent
+    output.append "n = obj->first->next;\n"
+    output.append indent
+    output.append "if (n != NULL) {\n"
+    output.append indent
+    output.append "  pthread_mutex_unlock(&n->mutex);\n"
+    output.append indent
+    output.append "} else {\n"
+    output.append indent
+    output.append "  obj->last = NULL;\n"
+    output.append indent
+    output.append "};\n"
+    output.append indent
+    output.append "obj->first = n;\n"
+    output.append indent
+    output.append "pthread_mutex_unlock(&obj->mutex);\n"
+    output.append indent
+    output.append "pthread_setspecific(current_thread,thread_save);\n"
+    indent.remove_tail 2
+    output.append indent
+    output.add_last '}'
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "COP_UNLOCK()"
+  )
+

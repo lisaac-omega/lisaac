@@ -1,0 +1,323 @@
+Header
+
+  + name    := ITM_READ;
+
+  /*For local access variable or send message without argument
+
+  // BSBS: Optim: Penser à faire un ITM_READ_ARG3 pour tous les `if then else'
+  */
+  
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  - is_affect:POSITION; // Nothing (it's good with 0).
+
+  //
+  // Data
+  //
+
+  + name:STRING_ALIAS
+  
+  //
+  // Constructor
+  //
+
+  - create p:POSITION name n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS <-
+  (
+    position := p
+    name := n
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + result:EXPR
+    + loc:LOCAL
+
+    loc := lookup name
+    (loc != NULL).if {
+      //
+      // Local Access.
+      //
+      (loc.style = '-').if {
+	loc.set_ensure_count 1
+	name := loc.intern_name
+	result := to_run_with NULL args NULL
+      } else {
+	result := loc.read position
+      }
+    } else {
+      //
+      // Slot Access without argument.
+      //
+      result := to_run_with NULL args NULL
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+    buffer.append "()"
+  )
+
+ITM_READ, SLOT_DATA
+
+  - to_run_with pfirst_itm:ITM_CODE args larg:ARRAY ITM_CODE :EXPR <-
+  ( + rec:EXPR
+    //
+    + itm_list:ITM_LIST
+    + itm_read:ITM_READ
+    + is_resend,implicit_self:BOOLEAN
+    + self:LOCAL
+    + s:SLOT
+    + first_itm:ITM_CODE
+    
+    first_itm := pfirst_itm
+    //
+    // Compute `rec'.
+    //
+
+    (first_itm = NULL).if {
+      // Implicit Self.
+      self := lookup "Self"
+      s := self.type.get_slot name
+      (((s != NULL) && {! s.idf_first}) || {larg = NULL}).if {
+        rec := self.read position
+        implicit_self := TRUE
+      } else { // Idf (Self:SELF) Idf
+        s := NULL
+        first_itm := larg.first
+        larg.remove_first
+      }
+    }
+    (first_itm != NULL).if {
+      rec := first_itm.to_run_expr
+      // Resend detect.
+      itm_list ?= first_itm
+      (itm_list != NULL).if {
+        (itm_list.code.is_empty).if {
+          syntax_error (itm_list.position,"Instruction list is empty.")
+        }
+        itm_read ?= itm_list.code.first
+      } else {
+        itm_read ?= first_itm
+      }
+      is_resend := (
+        (itm_read != NULL) && {position.prototype.search_parent (itm_read.name)}
+      )
+    }
+    
+    to_run s with_self (rec,implicit_self,is_resend) args larg
+  )
+  
+SLOT_DATA
+  
+  - to_run s:SLOT with_self (r:EXPR,implicit_self,is_resend:BOOLEAN)
+  args larg:ARRAY ITM_CODE :EXPR <-
+  ( + args:ARRAY EXPR
+    + rec_type:TYPE
+    + rec:EXPR
+    + em:EXPR_MULTIPLE
+    + pos_null:POSITION
+    //
+    + slot_msg:SLOT
+    + is_block_value:BOOLEAN
+    //
+    + base:NODE
+
+    rec := r
+    //
+    // Detect slot.
+    //
+    args := ALIAS_ARRAY EXPR.new
+    rec_type := rec.static_type.raw
+    (rec_type = TYPE_VOID).if {
+      // BSBS: Ce cas ne doit jamais arriver !
+      // il se déclenche avec parent.msg.truc lorsque msg du parent n'a pas de type de retour
+      // Mais que le profil général en a un...
+      semantic_error (position,"Call on Void")
+    }
+    ((rec_type.is_block) && {name = "value"}).if {
+      // { ... }.value
+      is_block_value := TRUE
+    } else {
+      (s != NULL).if { slot_msg := s; } else {
+        slot_msg := rec_type.get_slot name
+        (slot_msg = NULL).if {          
+          string_tmp.copy "Slot `";
+          string_tmp.append name
+          string_tmp.append "' not found in `";
+          rec_type.append_name_in string_tmp
+          string_tmp.append "'."
+          semantic_error (position,string_tmp)
+        }
+      }
+      
+      // Verification
+      (verify).if {
+        (
+          ((larg  = NULL) && {slot_msg.argument_list.count != 1}) ||
+          {(larg != NULL) && {larg.count != slot_msg.argument_list.count-1}}
+        ).if {
+          POSITION.put_error semantic text "Incorrect number argument."
+	  slot_msg.position.put_position
+	  position.put_position
+	  POSITION.send_error
+	}
+	last_position := slot_msg.position
+        (
+          (profil_slot != NULL) &&
+          {! slot_msg.id_section.access rec_type with (profil_slot.type_self.raw)}
+	).if {
+	  string_tmp.copy "Type "
+	  profil_slot.type_self.append_name_in string_tmp
+	  string_tmp.append " does not have access to this slot."
+	  POSITION.put_error warning text string_tmp
+	  slot_msg.position.put_position
+	  position.put_position
+	  POSITION.send_error
+	}
+	last_position := pos_null
+      }
+    }
+    //
+    // Add arguments
+    //
+    add_arg rec to 0 in args for slot_msg block is_block_value
+    em ?= rec
+    (em != NULL).if {
+      rec := em.expr_list.first
+    }
+    (larg != NULL).if {
+      (larg.lower).to (larg.upper) do { j:INTEGER
+	add_arg (larg.at j.to_run_expr) to (j+1) in args for slot_msg block is_block_value
+      }
+    }
+
+    //
+    // Send message.
+    //
+    (is_block_value).if {
+      // { ... }.value
+      args := ALIAS_ARRAY EXPR.copy args
+      args.at 0 put (args.first.my_copy)
+      //rec := slot_msg.slot_data_intern.read position with rec
+      base := NODE.new_block position receiver rec with args
+    }.elseif {args.count = 1} then {
+      // Classic message without arguments.
+      (is_resend).if {
+	args.at 0 put (lookup "Self".read position)
+	args.first.remove
+      }
+
+      ((verify) && {is_all_warning} && {name == "abstract"}).if {
+	string_tmp.copy "Deferred in `";
+	profil_slot.slot.pretty_name_in string_tmp
+	string_tmp.append "' for "
+	rec.static_type.append_name_in string_tmp
+	warning_error (position,string_tmp)
+      }
+
+      base := NODE.new_read position slot slot_msg
+      receiver rec self (args.first) intern implicit_self
+
+      ALIAS_ARRAY EXPR.free args
+    } else {
+      // Classic message with arguments.
+      (is_resend).if {
+	args.at 0 put (lookup "Self".read position)
+      } else {
+	args.at 0 put (args.first.my_copy)
+      }
+      args := ALIAS_ARRAY EXPR .copy args
+      base := NODE.new_read position slot slot_msg
+      receiver rec with args intern implicit_self
+    }
+    list_current.add_last base
+
+    (larg != NULL).if {
+      ALIAS_ARRAY ITM_CODE .free larg
+    }
+
+    ? {base.result_expr != NULL}
+    base.result_expr
+  )
+
+Private
+
+  - add_arg e:EXPR to idx:INTEGER
+  in args:ARRAY EXPR for slot:SLOT block is_block_value:BOOLEAN <-
+  ( + em:EXPR_MULTIPLE
+    + count:INTEGER
+    + itm_arg:ITM_ARGUMENT
+    + ts:ITM_TYPE_SIMPLE
+    + t:TYPE_FULL
+    + ex:EXPR
+
+    em ?= e
+    (em != NULL).if {
+      count := em.cardinality
+      args.append_collection (em.expr_list)
+    } else {
+      count := 1
+      args.add_last e
+    }
+    (verify).if {
+      (! is_block_value).if {
+        itm_arg := slot.argument_list.at idx
+        (itm_arg.count != count).if {
+          string_tmp.copy "Incorrect vector size for #"
+          idx.append_in string_tmp
+          string_tmp.append " argument of `";
+          string_tmp.append name
+          string_tmp.append "' slot. (slot #"
+          itm_arg.count.append_in string_tmp
+          string_tmp.append ", call #"
+          count.append_in string_tmp
+          string_tmp.add_last ')'
+	  POSITION.put_error semantic text string_tmp
+	  itm_arg.position.put_position
+          e.position.put_position
+	  POSITION.send_error
+        }
+        (args.count > 1).if {
+          (itm_arg.lower).to (itm_arg.upper) do { i:INTEGER
+            ts ?= itm_arg.at i
+            ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
+              ex := args.at (args.upper - itm_arg.upper + i)
+              t := ex.static_type
+              ((! t.is_expanded) && {! t.is_strict}).if {
+                string_tmp.copy "Type expression ("
+                t.append_name_in string_tmp
+                string_tmp.append ") is not Expanded or Strict for SELF argument type."
+                POSITION.put_error semantic text string_tmp
+                itm_arg.position.put_position
+                ex.position.put_position
+                position.put_position
+                POSITION.send_error
+              }
+            }
+          }
+        }
+      }.elseif {(idx = 0) && {count != 1}} then {
+	semantic_error (e.position,"Incorrect vector size for `value' message.");
+      }
+    }
+  )

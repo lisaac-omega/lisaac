@@ -1,0 +1,155 @@
+Header
+  + name := Strict HISTOGRAM E;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ (HISTOGRAM E)
+  
+Private
+  - stk:Expanded ARRAY (HISTOGRAM E)
+  
+  - intern_min_max t:ARRAY E :(E,E) <-
+  ( + min,max,v:E
+    min := max := t.first
+    1.to (t.upper) do { i:INTEGER
+      v := t.at i
+      (v > max).if { max := v; }
+      (v < min).if { min := v; }
+    }
+    min,max
+  )
+  
+Public
+  
+  - width_min:REAL_32 := 16
+  - height_min:REAL_32 := 16
+  
+  - vertical:INTEGER := 1 << 15
+  - median:INTEGER := 1 << 14
+  - flip:INTEGER := 1 << 13
+  
+  - fix_max:INTEGER := 1 << 16
+  - fix_min:INTEGER := 1 << 17
+  
+  + tab:ARRAY E
+  + txt:{(INTEGER,STRING_BUFFER);}
+    
+  + value_max:E
+  - set_max mx:E :SELF <- ( set fix_max; value_max := mx; Self)
+  
+  + value_min:E
+  - set_min mn:E :SELF <- ( set fix_min; value_min := mn; Self)
+  
+  - range mn:E to mx:E :SELF <-
+  ( set (fix_max|fix_min)
+    (value_min,value_max) := (mn,mx)
+    Self
+  )
+    
+  + value_median:E
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init g:ARRAY E txt t:{(INTEGER,STRING_BUFFER);} :SELF <-
+  ( 
+    (tab,txt) := (g,t)
+    init_obj.update { b:HISTOGRAM E
+      + tv:ARRAY E
+      + min,max:E
+      tv := b.tab
+      (!tv.is_empty).if {
+        (min,max) := intern_min_max tv
+        (! is fix_min).if { value_min := min; }
+        (! is fix_max).if { value_max := max; }
+        (is median).if {
+          value_median := tv.median_index
+        }
+      }
+    }
+  )
+    
+  - draw <-
+  ( + y,x,h,d,s,var:REAL_32
+    //+ x0,y0,x1,y1,wt:REAL_32
+    + t:ARRAY E
+        
+    begin_path
+    rect (xo,yo) size (width,height)
+    fill_color (COLOR.rgba (0,128,0,30))
+    fill
+    
+    t := tab
+    (!t.is_empty).if {      
+      var := value_max - value_min
+      (var != 0).if {
+        begin_path
+        fill_color (COLOR.rgb (0,128,0))
+        (is vertical).if {
+          (is flip).if {
+            x := xo
+            s := 0
+          } else {
+            x := xo + width
+            s := -1
+          }
+          y := yo
+          d := height / t.count
+          t.foreach { v:E
+            h := (width*(v-value_min)) / var
+            rect (x+h*s,y) size (h,d)
+            y := y + d
+          }
+        } else {
+          (is flip).if {
+            y := yo
+            s := 0
+          } else {
+            y := yo + height
+            s := -1
+          }
+          (x,y) := (xo,yo+height)
+          d := width / t.count
+          t.foreach { v:E
+            h := (height*(v-value_min)) / var
+            rect (x,y+h*s) size (d,h)
+            x := x + d
+          }
+        }
+        fill
+        (is median).if {
+          begin_path
+          stroke_width 1.0
+          stroke_color (COLOR.rgba (255,0,0,128))
+          h := d*value_median+d/2
+          (is vertical).if {
+            line (xo,yo+h) to (xo+width,yo+h)
+          } else {
+            line (xo+h,yo) to (xo+h,yo+height)
+          }
+          stroke
+        }
+      }
+    }
+  )
+  
+  /*
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    + d:REAL_32
+    + v:E
+    e := ev & ~1
+    ((e = HAND.clic) || {e = HAND.drag}).if {
+      (is_v).if {
+        d := HAND.y_cur - (yo+margin)
+        v := CAST REAL_32 TO E.on (d * (max - min) / (height-margin*2) + min)
+      } else {
+        d := HAND.x_cur - (xo+margin)
+        v := CAST REAL_32 TO E.on (d * (max - min) / (width-margin*2) + min)
+      }
+      v := v.min max.max min
+      set.value v
+    }
+    TRUE
+  );*/

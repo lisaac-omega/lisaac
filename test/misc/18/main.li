@@ -1,0 +1,12 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + i:INTEGER_32
+    + s:STRING_BUFFER
+    
+    s ?= i; // au moins un warning ?? 
+  )

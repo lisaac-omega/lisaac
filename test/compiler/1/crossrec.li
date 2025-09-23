@@ -1,0 +1,21 @@
+Header
+  
+  + name := CROSSREC;
+  /*
+
+  */
+
+Public
+  
+  - bool:BOOLEAN <- TRUE
+  
+  - yop a:E <-
+  ( a.print
+  );
+    
+  - main <-
+  ( 
+    yop bool
+    yop '\n'
+  );
+  

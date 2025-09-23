@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+
+Public
+
+  - main <-
+  ( + b1,b2:ARRAY_BLOCK CHARACTER
+    b1 := ARRAY_BLOCK CHARACTER .new
+    b1.add_last '2'
+    b2 := b1.twin
+    TEST.check (b1.upper = b2.upper)
+    TEST.check (b1.first = b2.last)
+    UTILS.exit 0
+    ("bug " + "init_string_alias").to_string_alias
+  )
+

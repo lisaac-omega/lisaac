@@ -1,0 +1,77 @@
+Header
+  + name := POOLING;
+  
+Inherit
+  + parent_layer:Expanded LAYER
+  
+Private
+  
+  + kernel_size:INTEGER
+  + padding:INTEGER
+  + stride:INTEGER
+  + mode:INTEGER
+  
+  + output_size:NATIVE_ARRAY INTEGER := NATIVE_ARRAY INTEGER.create 4
+  
+  + pool_desc:POINTER; // cudnnPoolingDescriptor_t
+  
+Public
+  
+  - max_t:INTEGER <- `CUDNN_POOLING_MAX`:INTEGER
+  - mean_t:INTEGER <- ( not_yet_implemented; 0)
+  
+  - init (n:STRING_ALIAS,ker, pad, str:INTEGER,mod:INTEGER /*cudnnPoolingMode_t*/) :SELF <-		
+  (
+    (name,kernel_size,padding,stride,mode) := (n,ker,pad,str,mod)
+    
+    pool_desc := CUDA.create_pooling_descriptor
+    CUDA.set_pooling2d_descriptor pool_desc mode mode kernel kernel_size padding padding stride stride
+    Self
+  )
+
+  - free <-
+  (
+    CUDA.destroy_pooling_descriptor pool_desc
+  )
+
+  - forward (in:BLOB) :BLOB <-
+  (
+    ((input = NULL) || {batch_size != in.n}).if {
+      input := in
+      // resource initialize
+      input_desc := input.tensor
+      batch_size := in.n
+      // setting output
+      CUDA.get_pooling2d_forward_output_dim (pool_desc, input_desc) in output_size
+      (output = NULL).if {
+        output := BLOB.new.init output_size
+      } else {
+        output.reset output_size
+      }
+      output_desc := output.tensor
+    }
+
+    cud.pooling_forward pool_desc    alpha 1 x (input_desc,  input.cuda)    beta  0 y (output_desc, output.cuda)
+    
+    output
+  )
+
+  - backward (grad_out:BLOB) :BLOB <-
+  (
+    ((grad_input = NULL) || {batch_size != grad_out.n}).if {
+      grad_output := grad_out
+
+      (grad_input = NULL).if {
+        grad_input := BLOB.new.init (input.shape)
+      } else {
+        grad_input.reset (input.shape)
+      }
+    }
+    
+    cud.pooling_backward pool_desc    alpha 1    y  (output_desc,output.cuda)    dy (output_desc,grad_output.cuda)    x  (input_desc,input.cuda)    beta 0    dx (input_desc,grad_input.cuda)
+    
+    //input.print "pooling.input" param TRUE
+    //output.print "pooling.output" param TRUE
+    
+    grad_input
+  )

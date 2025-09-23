@@ -1,0 +1,59 @@
+Header
+  + name := STDIN;
+  
+  /*STanDard INput.*/
+
+Inherit
+  - inherit_input_stream:INPUT_STREAM := INPUT_STREAM
+
+Private
+  - memory:CHARACTER
+  // Memory of the last available user's value.
+
+Public
+  - read_character :CHARACTER <-
+  // Read character from stdin
+  (
+    push_back_flag.if {
+      push_back_flag := FALSE
+    } else {
+      memory := basic_io_getc
+    }
+    last_character
+  )
+
+  - unread_character <-
+  (
+    push_back_flag := TRUE
+  )
+
+  - last_character:CHARACTER <-
+  // Return last character from stdin
+  (
+    memory
+  )
+
+  - end_of_input:BOOLEAN <-
+  // Return TRUE if end of input
+  (
+    + result:BOOLEAN
+    (! push_back_flag).if {
+      result := (memory = basic_io_eof)
+    }
+    result
+  )
+
+  - read_line_in buffer:STRING_BUFFER <-
+  // Real all character until \n (so read a line)
+  ( + mem:CHARACTER
+    read_character
+    ( (last_character != '\n') && { memory != basic_io_eof } ).if {
+      buffer.extend memory
+      mem := basic_io_getc
+      { (mem = basic_io_eof) || {mem = '\n'} }.until_do {
+	buffer.extend mem
+	mem := basic_io_getc
+      }
+      memory := mem
+    }
+  )

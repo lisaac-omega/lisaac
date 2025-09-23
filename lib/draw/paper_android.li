@@ -1,0 +1,683 @@
+Header
+  
+  + name := PAPER;
+
+  - external := `
+#include <jni.h>
+#include <EGL/egl.h>
+//#include <GLES/gl.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+
+#include <string.h>
+#include <pthread.h>
+#include <stdlib.h>
+
+#include <android/log.h>
+#include <android/asset_manager_jni.h>
+#include <android/sensor.h>
+#include <android_native_app_glue.h>
+
+#define LOG_TAG ("LIA")
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
+#define signal(x,y) 
+
+struct android_app *my_app;
+
+int stop;
+extern JavaVM *JVM;   
+
+void read_file(void *);
+void delete_in(void *);
+void draw_in(void *);
+void term_window(void *);
+void lost_focus(void *);
+void init_gl(void *);
+void init_pen(void *);
+void *run_in(void *);
+void mouse_action(void *,long,long,long,long);
+int main(int,char **);
+
+struct engine {
+  struct android_app* app;
+  void *pen;  
+  int32_t stat;
+
+  EGLDisplay display;
+  EGLSurface surface;
+  EGLContext context;
+};
+
+const EGLint attribs[] = {
+  EGL_BLUE_SIZE,       8,
+  EGL_GREEN_SIZE,      8,
+  EGL_RED_SIZE,        8,
+  EGL_ALPHA_SIZE,      8,
+  EGL_DEPTH_SIZE,     16,
+  EGL_STENCIL_SIZE,    8,
+  EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+  0x3142 /*EGL_RECORDABLE_ANDROID*/, 1, // BSBS: Utile ???
+  EGL_NONE
+};
+const EGLint contextAttribs[] = {
+//  EGL_SURFACE_TYPE, 
+//  EGL_WINDOW_BIT,
+//  EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8,
+  EGL_CONTEXT_CLIENT_VERSION, 3,
+  EGL_NONE
+};
+
+// Begin Accelerometer
+//const int LOOPER_ID_USER = 3;
+#define SENSOR_REFRESH_RATE_HZ 100
+#define SENSOR_REFRESH_PERIOD_US (1000000/SENSOR_REFRESH_RATE_HZ)
+#define SENSOR_FILTER_ALPHA 0.1f
+
+ASensorEventQueue *accelerometerEventQueue;
+float acc_x,acc_y,acc_z;
+
+void update_accelerometer()
+{ ASensorEvent sensorEvent;
+  float a = SENSOR_FILTER_ALPHA;
+  while (ASensorEventQueue_getEvents(accelerometerEventQueue, &sensorEvent, 1) > 0) {
+    acc_x = a * sensorEvent.acceleration.x + (1.0f - a) * acc_x;
+    acc_y = a * sensorEvent.acceleration.y + (1.0f - a) * acc_y;
+    acc_z = a * sensorEvent.acceleration.z + (1.0f - a) * acc_z;
+    //LOGI("%d\n",sensorEvent.
+  }
+};
+// End Accelerometer
+
+void cmd_android(struct android_app* app, int32_t cmd)
+{ struct engine* e = (struct engine *)(app->userData);
+  e->stat = cmd;
+  switch (cmd) {
+    case APP_CMD_START:         LOGI("--> CMD %d : Start \n",cmd);         break;
+    case APP_CMD_RESUME:        LOGI("--> CMD %d : Resume \n",cmd);        break;
+    case APP_CMD_INPUT_CHANGED: LOGI("--> CMD %d : Input changed \n",cmd); break;    
+    case APP_CMD_INIT_WINDOW:   LOGI("--> CMD %d : Init win \n",cmd);    
+      init_gl(e);
+      init_pen(e);
+    break;
+    
+    case APP_CMD_DESTROY:       LOGI("--> CMD %d : Destroy \n",cmd);       break;    
+    case APP_CMD_LOST_FOCUS:    LOGI("--> CMD %d : Lost focus \n",cmd);
+//    lost_focus(e);
+    break;
+    case APP_CMD_WINDOW_RESIZED:LOGI("--> CMD %d : Resize win \n",cmd);    break;
+    
+    case APP_CMD_SAVE_STATE:    LOGI("--> CMD %d : Save state \n",cmd);        
+        app->savedState = (struct engine *)malloc(sizeof(struct engine));
+        memcpy(app->savedState,app->userData,sizeof(struct engine));
+        app->savedStateSize = sizeof(struct engine);
+        break;
+    case APP_CMD_PAUSE:         LOGI("--> CMD %d : Pause \n",cmd);         break;
+    case APP_CMD_STOP:          LOGI("--> CMD %d : Stop \n",cmd);          break;    
+    case APP_CMD_TERM_WINDOW:   LOGI("--> CMD %d : Term win. \n",cmd);
+//    term_window(e);
+    break;
+
+    case APP_CMD_CONFIG_CHANGED:LOGI("--> CMD %d : Config changed \n",cmd);break;
+    case APP_CMD_WINDOW_REDRAW_NEEDED:LOGI("--> CMD %d : Redraw needed \n",cmd); break;
+    case APP_CMD_GAINED_FOCUS:  LOGI("--> CMD %d : Gained focus \n",cmd);
+    
+    break;
+    
+    default:                    LOGI("--> CMD %d : Je ne sais pas ! \n",cmd);
+  }
+}
+
+static int32_t input_android(struct android_app* app,AInputEvent* event)
+{ int32_t key;
+  int idx,x,y,mouse_id;
+  float cx,cy;
+  if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+    
+    //LOGI("%7.2f \n",event->motionMaxX);AINPUT_MOTION_RANGE_X
+    
+    key = AMotionEvent_getAction(event);
+    idx = (key & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> 
+    AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;    
+    if (AConfiguration_getOrientation(app->config) == 1) { // 1=Portrait
+      cx = 320.0/ANativeWindow_getWidth(app->window);
+    } else { //2=Landscape
+      cx = 320.0/ANativeWindow_getHeight(app->window);
+    };
+    //AMotionEvent_getXPrecision(event);
+    cy = cx;    
+    //AMotionEvent_getYPrecision(event);
+    switch (key & AMOTION_EVENT_ACTION_MASK) {
+      case AMOTION_EVENT_ACTION_DOWN: 
+        x = (int)((float)AMotionEvent_getX(event,0) / cx);
+        y = (int)((float)AMotionEvent_getY(event,0) / cy);
+        /*
+        LOGI("x=%7.2f y=%7.2f\n",AMotionEvent_getX(event,0),AMotionEvent_getY(event,0));        
+        LOGI("x=%7.2f y=%7.2f\n",AMotionEvent_getRawX(event,0),AMotionEvent_getRawY(event,0));
+        
+        LOGI("size=%7.2f\n",AMotionEvent_getAxisValue(event,AINPUT_MOTION_RANGE_X,0));
+        LOGI("size=%7.2f\n",AMotionEvent_getAxisValue(event,AINPUT_MOTION_RANGE_Y,0));
+        LOGI("size=%7.2f\n",AMotionEvent_getAxisValue(event,2,0));
+        LOGI("size=%7.2f\n",AMotionEvent_getAxisValue(event,3,0));
+        LOGI("preciX=%7.2f\n",AMotionEvent_getXPrecision(event));
+        LOGI("preciY=%7.2f\n",AMotionEvent_getYPrecision(event));
+        //LOGI("x=%7.2f \n",event.touch.x.max); //AMotionEvent_getXMax(event,0));
+        */
+        /*
+        { float xmin,xmax,ymin,ymax;
+          Activity_GetDeviceMotionRange(deviceId,AINPUT_SOURCE_TOUCHSCREEN,&xmin,&xmax,&ymin,&ymax);
+          AINPUT_MOTION_RANGE_SIZE
+
+        // &(newItem->minY), &(newItem->maxY));
+        LOGI("x=%7.2f,%7.2f y=%7.2f,%7.2f\n",xmin,xmax,ymin,ymax);
+        };*/
+        /*
+        for (int i = 0; i < _motion_range_cache_items; i++) {
+          DeviceMotionRange *item = &_motion_range_cache[i];          
+          if (item->deviceId == deviceId && item->source == source) {
+            *outMinX = item->minX;
+            *outMaxX = item->maxX;
+            *outMinY = item->minY;
+            *outMaxY = item->maxY;
+            return;
+            } 
+        }*/
+        //LOGI("size = %f %f\n",AMotionEvent_getAxisValue(event,0,0),cy);
+        mouse_action (app->userData,0,1,x,y);
+        break;    
+      case AMOTION_EVENT_ACTION_POINTER_DOWN:         
+        x = (int)((float)AMotionEvent_getX(event,idx) / cx);
+        y = (int)((float)AMotionEvent_getY(event,idx) / cy);
+        mouse_id = AMotionEvent_getPointerId(event,idx);
+        //LOGI("id ptr dwn = %d\n",mouse_id);
+        if ((mouse_id>=0) && (mouse_id<10)) { 
+          mouse_action (app->userData,mouse_id,1,x,y);        
+        };
+        break;
+      case AMOTION_EVENT_ACTION_UP: 
+        x = (int)((float)AMotionEvent_getX(event,0) / cx);
+        y = (int)((float)AMotionEvent_getY(event,0) / cy);
+        //LOGI("scr %f %f\n",AMotionEvent_getXPrecision(event),AMotionEvent_getYPrecision(event));
+        mouse_id = AMotionEvent_getPointerId(event,0);
+        //LOGI("id up = %d\n",mouse_id);        
+        if ((mouse_id>=0) && (mouse_id<10)) { 
+          mouse_action (app->userData,mouse_id,0,x,y);
+        };
+        break;    
+      case AMOTION_EVENT_ACTION_POINTER_UP: 
+        x = (int)((float)AMotionEvent_getX(event,idx) / cx);
+        y = (int)((float)AMotionEvent_getY(event,idx) / cy);
+        //LOGI("scr %d %d\n",x,y);
+        mouse_id = AMotionEvent_getPointerId(event,idx);
+        //LOGI("id ptr up = %d\n",mouse_id);        
+        if ((mouse_id>=0) && (mouse_id<10)) { 
+          mouse_action (app->userData,mouse_id,0,x,y);        
+        };
+        break;
+      case AMOTION_EVENT_ACTION_MOVE:        
+        for (idx=0;idx<AMotionEvent_getPointerCount(event);idx++) {
+          mouse_id = AMotionEvent_getPointerId(event,idx);           
+          x = (int)((float)AMotionEvent_getX(event,idx) / cx);
+          y = (int)((float)AMotionEvent_getY(event,idx) / cy);          
+          if ((mouse_id>=0) && (mouse_id<10)) { 
+            mouse_action (app->userData,mouse_id,-1,x,y);                    
+          };
+        };  
+        break;
+      case AMOTION_EVENT_ACTION_OUTSIDE:        
+      case AMOTION_EVENT_ACTION_CANCEL:        
+        break;
+    };
+  }
+  return 0;
+}
+
+// Begin Sensor
+#include <dlfcn.h>
+const char*  kPackageName = "com.android.accelerometergraph";
+ASensorManager* AcquireASensorManagerInstance(void) {
+    typedef ASensorManager *(*PF_GETINSTANCEFORPACKAGE)(const char *name);
+    void* androidHandle = dlopen("libandroid.so", RTLD_NOW);
+    PF_GETINSTANCEFORPACKAGE getInstanceForPackageFunc = (PF_GETINSTANCEFORPACKAGE)
+        dlsym(androidHandle, "ASensorManager_getInstanceForPackage");
+    if (getInstanceForPackageFunc) {
+        return getInstanceForPackageFunc(kPackageName);
+    }
+
+    typedef ASensorManager *(*PF_GETINSTANCE)();
+    PF_GETINSTANCE getInstanceFunc = (PF_GETINSTANCE)
+        dlsym(androidHandle, "ASensorManager_getInstance");
+    // by all means at this point, ASensorManager_getInstance should be available
+    if (getInstanceFunc == NULL) LOGI("getInstanceFunc NULL");
+    return getInstanceFunc();
+}
+// End Sensor
+
+void android_main(struct android_app* state) {
+  struct engine e;
+  pthread_t t;
+  ASensorManager *sensorManager;
+  ALooper *looper;
+  int status;  
+  
+  my_app = state; // Used by AssetManager_Open
+  
+  //if (state->userData != NULL) return;
+  if (state->savedState == NULL) {
+    LOGI("----------- PAPER FIRST RUN -----\n");
+    //e = (struct engine *)malloc(sizeof(struct engine));
+    e.pen = NULL;    
+  } else {
+    LOGI("----------- PAPER RELOAD --------\n");
+    memcpy(&e,(struct engine *)state->savedState,sizeof(struct engine));
+    free(state->savedState);
+    //e = state->savedState;
+    state->savedState = NULL;
+    state->savedStateSize = 0;    
+  };
+  LOGI("Adress UserData %p\n",&e);  
+  state->userData = &e;  
+  state->onAppCmd = cmd_android;
+  state->onInputEvent = input_android;
+  e.app = state;
+  if (e.pen == NULL) {
+    LOGI("****************** MAIN ********************\n");
+    main(0,NULL);      
+  };
+  
+  sensorManager = AcquireASensorManagerInstance();
+  if (sensorManager == NULL) LOGI("SensorManager NULL");
+  // Begin Accelerometer
+  { const ASensor *accelerometer;        
+    accelerometer = ASensorManager_getDefaultSensor(sensorManager, ASENSOR_TYPE_ACCELEROMETER);
+    if (accelerometer == NULL) LOGI("accelerometer NULL");
+    looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+    if (looper == NULL) LOGI("looper NULL");
+    accelerometerEventQueue = ASensorManager_createEventQueue(sensorManager, looper,
+    LOOPER_ID_USER, NULL, NULL);
+    if (accelerometerEventQueue == NULL) LOGI("accelerometerEventQueue NULL");
+    status = ASensorEventQueue_enableSensor(accelerometerEventQueue, accelerometer);
+    if (status < 0) LOGI("1) status < 0");
+    status = ASensorEventQueue_setEventRate(accelerometerEventQueue, accelerometer,
+    SENSOR_REFRESH_PERIOD_US);
+    if (status < 0) LOGI("2) status < 0");
+  };
+  // End Accelerometer
+    
+  LOGI("Create Thread\n");
+  while (1) {
+    int ident, events;
+    struct android_poll_source* source;
+    while ((ident=ALooper_pollAll(0, NULL, &events, (void**)&source)) >= 0) {
+      if (source != NULL) {        
+	source->process(state, source);
+      }
+      if (e.stat == APP_CMD_GAINED_FOCUS) {        
+        draw_in(&e);
+      };
+      //  LOGI("++> %d\n",events);
+      if (state->destroyRequested != 0) { 
+        LOGI("Exit\n");
+	return;
+      }
+    }
+  }
+}
+`;
+  
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Public
+  
+  - wins:ARRAY WINDOW := ARRAY WINDOW.create_with_capacity 1
+  
+  - refresh_all <- wins.foreach { w:WINDOW; w.ask_refresh; }
+  
+  - shader_header:STRING_ALIAS := "#version 300 es\nprecision highp float;\n"
+  
+  - loc_pen:PEN
+  
+  - mybuf:STRING_BUFFER := STRING_BUFFER.create 256
+    
+  - load p:PEN font n:STRING id id:STRING_ALIAS <-
+  ( + dta_font:ARRAY UINTEGER_8
+    mybuf.copy "font/"
+    mybuf.append n
+    dta_font := ARRAY UINTEGER_8.create 0
+    SYSTEM_IO.read_asset mybuf in dta_font
+    (p.create_font_mem id data dta_font free TRUE = -1).if {
+      "Warning in PAPER: Could not add font `".print;
+      id.print; "' id `".print; n.print; "'.".println;      
+    }
+  )
+  
+  - load_font p:PEN <-
+  ( 
+    load p font "Roboto-Regular.ttf" id "sans"
+    load p font "Roboto-Bold.ttf" id "sans-bold"
+    load p font "Roboto-Italic.ttf" id "italic"
+    load p font "Roboto-BoldItalic.ttf" id "bold-italic"
+  )
+  
+  - old_load_font p:PEN <-
+  (
+    //"----------------------------------------------------------------\n".print
+    /*(p.create_font "sans-bold" path "/system/fonts/Roboto-Bold.ttf" = -1).if {
+      "Warning in PAPER: Could not add font bold.\n".print
+    }
+    (p.create_font "sans" path "/system/fonts/Roboto-Regular.ttf" = -1).if {
+      "Warning in PAPER: Could not add font italic.\n".print
+    };*/
+  )
+  
+Public
+  
+  - is_gl:BOOLEAN; // False (GLES3)
+
+  - screen_width:INTEGER
+  - screen_height:INTEGER
+  
+  - animation:INTEGER
+  - set_animation n:INTEGER <- ( animation := n; )
+  - inc_animation <- ( animation := animation + 1; )
+  - dec_animation <- ( animation := animation - 1; )
+  
+  - no_decorated; // Nothing for Android.
+  - set_font_path p:STRING_ALIAS; // Pour voir...
+  - set_window_pos (x,y:INTEGER)
+  - get_window_pos:(INTEGER,INTEGER) <- (0,0)
+  
+  - new_event_empty; // <- `glfwPostEmptyEvent()`
+    
+  - create_window (w,h:INTEGER) title t:STRING_ALIAS for winobj:WINDOW :POINTER <-
+  (
+    wins.add_last winobj
+    //`glfwSetWindowUserPointer(@win, (void *)@winobj)`
+    NULL
+  )
+    
+  - run <- ( /* Nothing */ )
+  
+  - flag_refresh:BOOLEAN
+  - refresh_again <- ( flag_refresh := TRUE; )
+
+  - set_window win:POINTER size (w,h:INTEGER)
+  - get_window_size:(INTEGER,INTEGER) <- (screen_width,screen_height)
+  
+  - get_focus:BOOLEAN <- TRUE
+  
+  - set_cursor p:POINTER; // Nothing.
+  - get_cursor v:INTEGER :POINTER <- NULL; // Nothing
+  
+  - get_cursor_pos:(INTEGER,INTEGER) <- (0,0)
+  
+  - framebuffer_size:(INTEGER,INTEGER) <- ( screen_width, screen_height )
+  
+External
+  
+  - init_gl e:POINTER <-
+  ( + wt,ht:INTEGER
+    + w_scr,h_scr:INTEGER
+    `struct engine* e=@e`
+    `int maxGeoShader`
+    (get_pen e != NULL).if {
+      "Restore gl\n".print
+      `EGLConfig config`
+      `EGLint numConfigs`
+      `eglChooseConfig(e->display, attribs, &config, 1, &numConfigs)`
+      `e->surface = eglCreateWindowSurface(e->display, config, e->app->window, NULL)`
+    } else {  
+      "Init gl\n".print
+      `EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY)`
+      `eglInitialize(display, 0, 0)`
+      `EGLConfig config`
+      `EGLint numConfigs`
+      `eglChooseConfig(display, attribs, &config, 1, &numConfigs)`
+      `EGLint format`
+      `eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format)`
+      `ANativeWindow_setBuffersGeometry(e->app->window, 0, 0, format)`
+      
+      `e->surface = eglCreateWindowSurface(display, config, e->app->window, NULL)`
+      `EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs)`
+      `e->display = display`
+      `e->context = context`
+    }
+    `eglMakeCurrent(e->display, e->surface, e->surface, e->context)`
+    `EGLint w, h`
+    `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
+    `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
+    `glViewport(0, 0, w, h)`
+    `eglSwapInterval(e->display, 0)`
+    wt := `w`:INTEGER
+    ht := `h`:INTEGER
+    //`ANativeWindow nativeWindow = ANativeWindow_fromSurface(env, surface)`
+    w_scr := `ANativeWindow_getWidth(e->app->window)`:INTEGER
+    h_scr := `ANativeWindow_getHeight(e->app->window)`:INTEGER
+    (screen_width,screen_height) := (wt,ht)
+    "Surface: ".print; wt.print;    'x'.print; ht.print;    '\n'.print
+    "Window : ".print; w_scr.print; 'x'.print; h_scr.print; '\n'.print
+    //`glGetIntegerv(GL_MAX_GEOMETRY_SHADER_INVOCATIONS, &maxGeoShader)`
+    //"MaxGeometryShaderInvocations:".print; `maxGeoShader`:INTEGER.println
+  )
+  
+  - init_pen e:POINTER <-
+  ( + pen:PEN
+    `struct engine* e=@e`
+    pen := get_pen e
+    (pen = NULL).if {
+      "------------Init Pen\n".print
+      pen := loc_pen := PEN.new_pen
+      wins.first.set_pen pen
+      //PEN_GL.init (antialias | stencil_strokes | debug)
+      load_font loc_pen
+      `e->pen=@pen`
+    } else {
+      "------------Restore Pen\n".print
+    }
+  )
+  
+  - lost_focus e:POINTER <-
+  ( + pen:PEN
+    `struct engine *e=@e`
+    pen := get_pen e
+    (pen != NULL).if { pen.delete; }
+    `eglDestroyContext(e->display,e->context )`
+    `eglTerminate(e->display)`
+    `e->pen = NULL`
+    `e->context = EGL_NO_CONTEXT`
+    `e->display = EGL_NO_DISPLAY`
+  )
+  
+  - term_window e:POINTER <-
+  ( //`struct engine *e=@e`
+    //(`e->display`:POINTER != `EGL_NO_DISPLAY`:POINTER).if {
+      //`eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
+      //(`e->surface`:POINTER != `EGL_NO_SURFACE`:POINTER).if {
+     // `eglDestroySurface(e->display,e->surface )`
+     // `ANativeWindow_release(e->app->window)`
+      //}
+    //}
+    //`e->surface = EGL_NO_SURFACE`
+  )
+  
+  - draw_in e:POINTER <-
+  ( + wt,ht:INTEGER
+    + pen:PEN
+    + me:WINDOW
+    + rl,gl,bl,al:REAL_32
+    me := wins.first
+    (new_gest).if {
+      "PAPER 511: Not yet implemented.".println
+      // root.gesture_event
+      new_gest := FALSE
+    }
+    `struct engine* e=@e`
+    `int w,h`
+    `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
+    `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
+    wt := `w`:INTEGER
+    ht := `h`:INTEGER
+    pen := `e->pen`:PEN
+    
+    //pen.set_size (wt,ht)
+    // Update and render
+    `glViewport(0, 0, w, h)`
+    (rl,gl,bl,al) := (0,0,0,255)
+    `glClearColor(@rl,@gl,@bl,@al)`
+    `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
+    pen.gl.gl_enable (`GL_BLEND`:INTEGER)
+    pen.gl.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
+    pen.gl.gl_enable (`GL_CULL_FACE`:INTEGER)
+    pen.gl.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+
+    ((me.width.to_integer != wt) || {me.height.to_integer != ht}).if {
+      me.size (wt,ht)
+    }
+    me.draw_all
+    //    `glEnable(GL_DEPTH_TEST)`
+    COLOR.stack.clear
+    `eglSwapBuffers(e->display, e->surface)`
+  )
+    
+Public
+  
+  // Event Mouse
+  - new_gest:BOOLEAN
+  
+  - first_x:REAL_32
+  - first_y:REAL_32
+  - first_t:REAL_32
+  - first_d:REAL_32
+  
+  - last_x:REAL_32
+  - last_y:REAL_32
+  - last_z:BOOLEAN
+  - last_t:REAL_32
+    
+  - mstate:UINTEGER_8
+  // 0: Sleep.
+  // 1: Drag in progress...
+  // 2: Drag end.
+  // 3: Select in progress...
+  // 4: Select end.
+  // 5: Zoom & Rotation in progress...
+  // 6: Zoom & Rotation end.
+  // 7: Short Clic. 
+  // 8: Long Clic.
+  
+  - mouse_ack s:UINTEGER_8 <-
+  (
+    (s = mstate).if {
+      ((mstate = 1) || {mstate = 3} || {mstate = 5}).if {
+        // Nothing.
+      } else {
+        mstate := 0
+      }
+    }
+  )
+  
+  - mouse_base_time:UINTEGER_64  := TIME.gettimeofday
+  - mouse_pause:REAL_32 := 0.2
+  - mouse_dis:REAL_32 := 12; // BSBS: ca depend du nombre de pix/mm (info)
+  - mouse_time:REAL_32 <- ((TIME.gettimeofday-mouse_base_time) / 10_000).to_real_32 / 100
+  
+  - count_finger:INTEGER
+External
+  
+  - mouse_action (e:POINTER,n,s,x,y:INTEGER) <-
+  ( + new_z:BOOLEAN
+    + pen:PEN
+    + lx,ly,lt:REAL_32
+    //"point = ".print; x.print; 'x'.print; y.println
+    pen := get_pen e
+    (pen != NULL).if {      
+      //(lx,ly,lt) := (512.0/pen.win_width*x,860.0/pen.win_height*y,mouse_time)
+      (lx,ly,lt) := (x,y,mouse_time)
+      ((mstate != 2) && {mstate != 4} && {mstate != 6}).if {
+        (n = 1).if {
+          (s = 0).if {
+            count_finger := count_finger - 1
+            //"End finger #2 : ".print; count_finger.println
+            (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+          } else {
+            ((mstate != 5) && {s != -1}).if {
+              + dx,dy:REAL_32
+              ((mstate = 1) || {mstate = 3}).if {
+                mstate := mstate + 1
+                //root.gesture_event
+              }
+              (first_x,first_y,first_t) := (last_x,last_y,last_t)
+              (last_x,last_y,last_t) := (lx,ly,lt)
+              (dx,dy) := (last_x-first_x,last_y-first_y)
+              first_d := (dx*dx + dy*dy).sqrt
+              count_finger := 2
+              mstate := 5
+            } else {
+              (last_x,last_y,last_t) := (lx,ly,lt)
+            }
+          }
+        }.elseif {mstate = 5} then {
+          (s = 0).if {
+            count_finger := count_finger - 1
+            //"End finger #1 : ".print; count_finger.println
+            (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+          } else {
+            (first_x,first_y,first_t) := (lx,ly,lt)
+          }
+        } else {
+          (last_x,last_y,last_t) := (lx,ly,lt)
+          (s != -1).if {
+            new_z := s > 0
+            (!last_z & new_z).if { // Pressed.
+              mstate := 0
+              (first_x,first_y) := (last_x,last_y)
+              last_t := first_t := mouse_time
+            }.elseif {last_z & !new_z} then { // Released
+              ((mstate = 1) || {mstate = 3}).if {
+                mstate := mstate + 1; // Drag end Or Select end
+              } else {
+                last_t := mouse_time
+                mstate := 7 + (last_t - first_t > mouse_pause).to_integer; // Short Or Long Clic
+              }
+            } else {
+              "PAPER.mouse_button BUG !!!\n".print
+            }
+            last_z := new_z
+          } else {
+            (last_z).if {
+              + dx,dy,d:REAL_32
+              (dx,dy) := (last_x - first_x,last_y - first_y)
+              d := (dx*dx + dy*dy).sqrt
+              ((d > mouse_dis) && {mstate = 0}).if { // Moving mode (distance > 8 pix)
+                mstate := mstate | 1
+                mstate := mstate | ((last_t - first_t > mouse_pause).to_integer << 1); // Select
+              }
+            }
+          }
+        }
+      }
+    }
+    new_gest := TRUE
+  )
+
+Private
+  
+  - get_pen e:POINTER :PEN <-
+  ( + pen:PEN
+    + ptr:POINTER
+    `{ struct engine* e=@e`
+    ptr := `e->pen`:POINTER
+    `}`
+    (ptr.is_null).if_false {
+      pen := CAST POINTER TO PEN.on ptr
+    }
+    pen
+  )
+  
+  - update_accelerometer <-
+  (
+    `update_accelerometer()`
+    ACCELEROMETER.set_xyz (`acc_x`:REAL_32,`acc_y`:REAL_32,`acc_z`:REAL_32)
+  )

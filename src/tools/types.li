@@ -1,0 +1,65 @@
+Header
+
+  + name        := TYPES;
+
+  /*Aliser TYPE collection.*/
+
+Inherit
+
+  - parent_any:ANY := ANY
+  
+Public
+  
+  - first_index:INTEGER <- (abstract; -1)
+  
+  - count:INTEGER <- (abstract; 0)
+  
+  - next_index i:INTEGER :INTEGER <- -1
+  
+  - is_empty:BOOLEAN <- count = 0
+    
+  - first:TYPE <- (abstract; NULL)
+
+  - at i:INTEGER :TYPE <-
+  (
+    abstract
+    NULL
+  )
+
+  - intersection_is_empty other:TYPES :BOOLEAN <-
+  ( + i1,i2:INTEGER
+    + result:BOOLEAN
+    
+    (
+      (is_empty) || {other.is_empty} ||
+      {at (count-1).index < other.first.index} || {first.index > other.at (other.count-1).index}
+    ).if {
+      result := TRUE
+    } else {
+      {
+        {(i1 < count) && {at i1.index < other.at i2.index}}.while_do { i1 := i1 + 1; }
+        (i1 < count).if {
+          {(i2 < other.count) && {other.at i2.index < at i1.index}}.while_do { i2 := i2 + 1; }
+        }
+      }.do_while {(i1 < count) && {i2 < other.count} && {at i1 != other.at i2}}
+      result := (i1 >= count) || {i2 >= other.count}
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - types_append_in buf:STRING_BUFFER <-
+  ( 
+    abstract
+  )
+
+  - types_print <-
+  (
+    string_tmp.clear
+    types_append_in string_tmp
+    string_tmp.print
+  )
+

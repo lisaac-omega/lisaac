@@ -1,0 +1,103 @@
+Header
+
+  + name        := EXPR_SUB;
+
+  /*Sub Binary Expression.*/
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  - symbol:STRING_ALIAS := "-"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator:EXPR <-
+  //-- E1 - - E2 -> E1 + E2
+  ( + neg:EXPR_NEG
+    + result:EXPR
+
+    neg ?= right
+    (neg != NULL).if {
+      result := EXPR_ADD.create position with left and (neg.right)
+    }
+    result
+  )
+
+  - exec_conservator_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0  - E   -> - E
+  //-- -1 - E   -> ~ E
+  ( + result:EXPR
+
+    (left_cst.value = 0).if {
+      left_cst.remove
+      result := EXPR_NEG.create position with right
+    }.elseif {left_cst.is_saturated} then {
+      left_cst.remove
+      result := EXPR_NOT.create position with right
+    }
+    result
+  )
+
+  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  //-- E  - 0   -> E
+  //-- -E - 1   -> ~ E
+  //-- E - -C   -> E + C
+  ( + result:EXPR
+    + neg:EXPR_NEG
+
+    (right_cst.value = 0).if {
+      right_cst.remove
+      result := left
+    }.elseif {right_cst.value = 1} then {
+      neg ?= left
+      (neg != NULL).if {
+	right_cst.remove
+	result := EXPR_NOT.create position with (neg.right)
+      }
+    }.elseif {right_cst.value < 0} then {
+      right_cst.set_value (- right_cst.value)
+      result := EXPR_ADD.create position with left and right_cst
+    }
+    result
+  )
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 - C2 -> C3
+  (
+    left_cst.set_value (left_cst.value - right_cst.value)
+    right_cst.remove
+    left_cst
+  )
+
+  - exec:EXPR <-
+  //-- E  -  E  -> 0
+  //-- E1 - ((E1 / E2) * E2) -> E1 % E2
+  ( + result:EXPR
+    + mul:EXPR_MUL
+    + div:EXPR_DIV
+
+    (left ~= right).if {
+      left.remove
+      right.remove
+      result := INTEGER_CST.create position value 0 type static_type
+    } else {
+      mul ?= right
+      (mul != NULL).if {
+	div ?= mul.left
+	(div != NULL).if {
+	  ((left ~= div.left) && {div.right ~= mul.right}).if {
+	    div.remove
+	    result := EXPR_MOD.create position with left and (mul.right)
+	  }
+	}
+      }
+    }
+
+    result
+  )
+

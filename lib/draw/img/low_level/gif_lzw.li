@@ -1,0 +1,24 @@
+Header
+  
+  + name := Expanded GIF_LZW;
+  
+Insert
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + prefix:INTEGER_16
+  + first:UINTEGER_8
+  + suffix:UINTEGER_8
+  
+  - set_prefix p:INTEGER_16 <- ( prefix := p; )
+  - set_first  f:UINTEGER_8 <- ( first := f;  )
+  - set_suffix s:UINTEGER_8 <- ( suffix := s; )
+  
+  - prefix p:INTEGER_16 first f:UINTEGER_8 suffix s:UINTEGER_8 <-
+  (
+    prefix := p
+    first  := f
+    suffix := s
+  )

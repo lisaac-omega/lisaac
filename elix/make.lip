@@ -1,0 +1,12 @@
+Section Inherit
+
+  + parent:STRING; // by default, inherit from main `make.lip'
+
+Section Private
+
+  - front_end <-
+  (
+    general_front_end;
+    path "*";
+    path "../src/*";
+  );

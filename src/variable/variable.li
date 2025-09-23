@@ -1,0 +1,487 @@
+Header
+
+  + name    := VARIABLE;
+
+  /*Parent for all variable*/
+
+Inherit
+
+  + parent_named:Expanded NAMED
+
+Public
+
+  - is_local:BOOLEAN <- FALSE
+  
+  - is_result:BOOLEAN <- FALSE
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS type t:TYPE_FULL :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p name n type t
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS type t:TYPE_FULL <-
+  ( + tmp:TYPES_TMP
+    position := p
+    name := n
+    intern_name := get_intern n type FALSE
+    type := t
+    (is_static).if {
+      tmp := TYPES_TMP.new
+      tmp.add (t.raw)
+      type_set := tmp.to_types
+    } else {
+      type_set := TYPES_TMP.types_empty
+    }
+  )
+
+  //
+  //
+  //
+
+  + intern_name:STRING_ALIAS
+
+  - set_intern_name n:STRING_ALIAS <-
+  (
+    intern_name := n
+  )
+
+  - is_argument:BOOLEAN <- (style = ' ')
+
+  //
+  // Type.
+  //
+
+  + type:TYPE_FULL
+
+  - set_type t:TYPE_FULL <-
+  (
+    ? {t != NULL}
+    type      := t
+  )
+
+  - init <- abstract
+
+  //
+  // Typing Context.
+  //
+
+  - is_static:BOOLEAN <-
+  ((type.is_expanded) && {type.raw != type_boolean}) || {name = "Self"}
+
+  + type_set:TYPES
+
+  + ensure_count:INTEGER
+
+  - set_ensure_count c:INTEGER <-
+  // Necessary for `context' local, `External' argument slot and `BLOCK' manager.
+  (
+    ensure_count := c
+  )
+
+  + require_list:ARRAY WRITE
+  + require_first:WRITE
+  - require_count:INTEGER <-
+  ( + result:INTEGER
+    (require_first != NULL).if {
+      (require_list != NULL).if {
+	result := 1 + require_list.count
+      } else {
+	result := 1
+      }
+    }
+    result
+  )
+
+  - set_require w:WRITE list wl:ARRAY WRITE <-
+  (
+    require_first := w
+    require_list  := wl
+  )
+
+  + level_type:INTEGER
+  - level_pass:INTEGER
+
+  - update <-
+  (
+    level_pass := level_pass + 1
+  )
+
+  - busy_set:HSET(VARIABLE) := HSET(VARIABLE).create
+  - get_type t:TYPES_TMP <-
+  ( + tmp_type:TYPES_TMP
+
+    ((is_optimization_type_set) && {! busy_set.is_empty}).if {
+      (! busy_set.fast_has Self).if {
+        ((level_type < level_pass) && {! is_static}).if {
+          busy_set.fast_add_without_control Self
+          sub_get_type t
+        } else {
+          t.union type_set
+        }
+      }
+    } else {
+      ((level_type < level_pass) && {! is_static}).if {
+        ((is_executing_pass) || {require_first != NULL}).if {
+          level_type := level_pass
+          //busy_set.fast_add Self
+          tmp_type := TYPES_TMP.new
+          sub_get_type tmp_type
+          type_set := tmp_type.update type_set
+          //busy_set.clear
+        }
+      }
+      t.union type_set
+    }
+  )
+
+Private
+
+  - sub_get_type t:TYPES_TMP <-
+  (
+    (require_first != NULL).if {
+      require_first.get_type t
+      (require_list != NULL).if {
+        (require_list.lower).to (require_list.upper) do { j:INTEGER
+          require_list.at j.get_type t
+        }
+      }
+    }
+  )
+
+Public
+
+  //
+  // Sequence optimizer
+  //
+
+  - reset_last_write w:WRITE <-
+  (
+    // Nothing.
+  )
+
+  - set_write w:WRITE <-
+  (
+    abstract
+  )
+
+  - set_read <-
+  (
+    abstract
+  )
+
+  - get_last_index:INTEGER <- abstract
+
+  - get_last_value rec:EXPR :EXPR <-
+  (
+    abstract
+    NULL
+  )
+
+  //
+  // Writing.
+  //
+
+  - add_write wrt:WRITE <-
+  ( + tmp_type:TYPES_TMP
+
+    (require_first = NULL).if {
+      require_first := wrt
+    } else {
+      (require_list = NULL).if {
+	require_list := ARRAY WRITE .create_with_capacity 1
+      }
+      require_list.add_last wrt
+    }
+
+    // Update type list.
+    ((! is_static) && {wrt.value != NULL} && {! is_executing_pass}).if {
+      tmp_type := TYPES_TMP.new
+      (type_set != NULL).if {
+	tmp_type.union type_set
+      }
+      wrt.value.get_type tmp_type
+      type_set := tmp_type.update type_set
+    }
+  )
+
+  - write p:POSITION value val:EXPR :WRITE <-
+  (
+    write p with NULL value val
+  )
+
+  - write p:POSITION with r:EXPR value val:EXPR :WRITE <-
+  (
+    write_direct p with r value val
+  )
+
+  - write_direct p:POSITION with r:EXPR value val:EXPR :WRITE <-
+  ( + e:WRITE
+
+    e := new_write p with r value val
+    add_write e
+    e.set_create
+    e
+  )
+
+VARIABLE
+
+  - new_write p:POSITION with r:EXPR value v:EXPR :WRITE <-
+  (
+    abstract
+    NULL
+  )
+
+Public
+
+  - unwrite e:WRITE <-
+  ( + idx:INTEGER
+
+    (e.is_delete).if {
+      //"C'est grave ? ".println
+      crash
+    }
+
+    e.set_delete
+
+    reset_last_write e
+
+    // Require list.
+    (require_first = e).if {
+      (require_list != NULL).if {
+	require_first := require_list.first;  // BSBS: pourquoi conserver l'ordre?
+	require_list.remove_first;            // C'est plus rapide de faire remove_last
+	(require_list.is_empty).if {
+	  require_list := NULL
+	}
+      } else {
+	require_first := NULL
+      }
+    } else {
+      ? {require_list != NULL}
+      //e.debug_display
+      (require_list = NULL).if {
+        e.debug_display
+        intern_name.print; '\n'.print
+        "require_first =".print
+        (require_first = NULL).if {
+          "NULL\n".print
+        } else {
+          require_first.debug_display
+        }
+	crash_with_message "******** VARIABLE.unwrite : BUG require_list = NULL **********\n"
+      }
+
+      idx := require_list.fast_first_index_of e
+      //? {idx <= require_list.upper}
+
+      (idx > require_list.upper).if {
+        e.debug_display
+	intern_name.print; '\n'.print
+	"\n--------\n".print
+	require_first.debug_display
+	(require_list.lower).to (require_list.upper) do { j:INTEGER
+	  require_list.at j.debug_display
+	}
+
+        //warning_error (position,"ICI")
+        crash_with_message "******** VARIABLE.unwrite : BUG !!! **********\n"
+
+      }
+
+      require_list.remove idx
+      (require_list.is_empty).if {
+	require_list := NULL
+      }
+    }
+
+  )
+
+  //
+  // Reading.
+  //
+
+  - read p:POSITION :READ <-
+  (
+    read p with NULL
+  )
+  //[ ? {ensure_count := Old ensure_count + 1}; ]
+
+  - read p:POSITION with r:EXPR :READ <-
+  (
+    read_direct p with r
+  )
+
+  - read_direct p:POSITION with r:EXPR :READ <-
+  ( + result:READ
+
+    result := new_read position with r
+    ensure_count := ensure_count + 1
+    /*
+    (intern_name == "__tmp__35").if {
+      "Create : ".print
+      result.object_id.print
+      '\n'.print
+    }
+    */
+    result
+  )
+  //[ ? {ensure_count := Old ensure_count + 1}; ]
+
+  - unread e:READ <-
+  (
+    /*
+    (intern_name == "__tmp__35").if {
+      "Delete : ".print
+      e.object_id.print
+      '\n'.print
+    }
+    */
+    ensure_count := ensure_count - 1
+    (ensure_count < 0).if {
+      //warning_error(e.position,"VARIABLE.unread")
+      "C'est : ".print
+      e.debug_display
+      "\n dans :\n".print
+      //list_current.debug_display
+      //'\n'.print
+      crash
+    }
+  /*
+    (intern_name == "Result__ID").if {
+      "VARIABLE delete :".print
+      e.debug_display
+    }
+*/
+
+//    ? {ensure_count >= 0}
+  )
+
+  //
+  // Display.
+  //
+
+  - display_require buffer:STRING_BUFFER <-
+  ( + rd:READ
+
+    (require_first != NULL).if {
+      buffer.append indent
+      require_first.display buffer
+      buffer.add_last '\n'
+      rd ?= require_first.value
+      (rd != NULL).if {
+        indent.append "  "
+        rd.variable.display_require buffer
+        indent.remove_last 2
+      }
+      (require_list != NULL).if {
+        (require_list.lower).to (require_list.upper) do { i:INTEGER
+          buffer.append indent
+          require_list.at i.display buffer
+          buffer.add_last '\n'
+          rd ?= require_list.at i.value
+          (rd != NULL).if {
+            indent.append "  "
+            rd.variable.display_require buffer
+            indent.remove_last 2
+          }
+        }
+      }
+    }
+  )
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append intern_name
+    buffer.add_last ':'
+    type.append_name_in buffer
+    //buffer.append (type.intern_name)
+  )
+
+  - display_type buffer:STRING_BUFFER <-
+  ( + j:INTEGER
+    buffer.add_last '{'
+    (type_set.is_empty).if_false {
+      j := type_set.first_index
+      {j != -1}.while_do {
+	buffer.append (type_set.at j.intern_name)
+        buffer.add_last 'x'
+        j := type_set.next_index j
+      }
+      buffer.remove_last
+    }
+    buffer.add_last '}'
+  )
+
+VARIABLE, PROTOTYPE
+
+  - list_variable_block:ARRAY VARIABLE := ARRAY VARIABLE .create_with_capacity 64
+
+  - check_variable_block <-
+  (
+    {list_variable_block.is_empty}.until_do {
+      list_variable_block.last.check_rec
+      list_variable_block.remove_last
+    }
+  )
+
+  + is_check:BOOLEAN; // BSBS: Warning Memory!
+
+  - check_rec <-
+  ( + val:EXPR
+    + rd_g:READ_GLOBAL
+    + rd_s:READ_SLOT
+    + rd_l:READ_LOCAL
+    + block:PROFIL_BLOCK
+    + check_action:{WRITE; }
+
+    (is_check).if_false {
+
+      is_check := TRUE
+
+      check_action := { wrt:WRITE
+        val := wrt.value
+        (
+          (rd_g ?= val; rd_g = NULL) && {rd_s ?= val; rd_s = NULL}
+        ).if {
+          block ?= val.static_type.raw
+          ((block != NULL) && {block.is_context_sensitive}).if {
+            block.context_extern.type.print
+            warning_error (block.context_extern.position,"ICI")
+            string_tmp.copy "This block is extern context sensitive (with `";
+            string_tmp.append (block.context_extern.name)
+            string_tmp.append "' local variable)."
+            POSITION.put_error warning text string_tmp
+            block.code.position.put_position
+            list_variable_block.last.position.put_position
+            block.context_extern.position.put_position
+            POSITION.send_error
+          } else {
+            rd_l ?= val
+            (rd_l != NULL).if {
+              rd_l.variable.check_rec
+            }
+          }
+        }
+      }
+      (require_first != NULL).if {
+        check_action.value require_first
+        (require_list != NULL).if {
+          (require_list.lower).to (require_list.upper) do { j:INTEGER
+            check_action.value (require_list.at j)
+          }
+        }
+      }
+    }
+  )
+
+
+
+
+

@@ -1,0 +1,34 @@
+Header
+
+  + name     := EXTERNAL_EXAMPLE;
+
+  - external := `#include <stdio.h>`; // Here, add C code (function, include, ...)
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+External
+  // In this section, a Lisaac function give
+  // a C function with identically profil. (Without `Self')
+
+  - function (a,b:INTEGER) :INTEGER <-
+  (
+    "Hello\n".print
+    a + b
+  )
+
+Public
+
+  - main <-
+  ( + a:INTEGER
+
+    a := function (1,2)
+    "Adress function : ".print
+    `function`:POINTER.print_hex
+    "h\n".print
+
+    a := `@a + 2`:INTEGER; // External C with return value.
+    `printf("Display with C function and access local Lisaac variable (%ld)\n",@a)`
+
+  )

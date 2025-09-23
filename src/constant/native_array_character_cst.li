@@ -1,0 +1,76 @@
+Header
+
+  + name        := NATIVE_ARRAY_CHARACTER_CST;
+
+  /*String constant*/
+
+Inherit
+
+  + parent_constant:Expanded CONSTANT
+
+Public
+
+  //
+  // Value.
+  //
+
+  + string:STRING_ALIAS
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION text n:STRING_ALIAS :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make p text n
+    result
+  )
+
+  - make p:POSITION text n:STRING_ALIAS <-
+  (
+    position := p
+    string   := n
+    static_type := type_n_a_character.default
+  )
+
+  - my_copy:SELF <- SELF.create position text string
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + p:NATIVE_ARRAY_CHARACTER_CST
+    p ?= other
+    (p != NULL) && {string = p.string}
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    output.add_last '\"'
+    output.append string
+    output.add_last '\"'
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '\"'
+    buffer.append string
+    buffer.add_last '\"'
+    display_ref buffer
+  )
+
+
+
+
+
+

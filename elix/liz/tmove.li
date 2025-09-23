@@ -1,0 +1,27 @@
+Header
+  + name := TMOVE;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + val_x:TEXP
+  + val_y:TEXP
+  
+  - init_xy (x,y:TEXP) :SELF <- ( (val_x,val_y) := (x,y); Self)
+  
+  - run <-
+  (
+    begin_path
+    move_to (val_x.eval,val_y.eval)
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "Move ("
+    val_x.append_in b
+    b | ','
+    val_y.append_in b
+    b | ')'
+  )

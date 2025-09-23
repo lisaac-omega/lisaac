@@ -1,0 +1,89 @@
+Header
+
+  + name    := LOOP_END;
+
+  /* Loop end (call tail recursive). */
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  + loop:LOOP
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION loop l:LOOP :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p loop l
+    result
+  )
+
+  - make p:POSITION loop l:LOOP <-
+  (
+    position := p
+    loop := l
+    loop.set_link
+  )
+
+  - my_copy:SELF <-
+  (
+    // Warning: See LOOP.my_copy
+    Self
+  )
+
+  //
+  // Generation.
+  //
+
+  - remove <-
+  (
+    loop.unset_link
+  )
+
+  - execute:INSTR <-
+  (
+    (list_current = loop.body).if {
+      POSITION.put_error warning text "Recursivity without end (LOOP_END)."
+      loop.position.put_position
+      position.put_position
+      POSITION.send_error
+    }
+
+    ((is_optimization) && {loop_invariant = NULL} && {loop.link_count = 1}).if {
+      loop_invariant := loop
+    }
+
+    seq_call_local_and_loop := seq_call_local_and_loop - 1
+    seq_call_and_loop       := seq_call_and_loop - 1
+    seq_inline := seq_inline + 1
+    Self
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "goto "
+    buffer.append (loop.name)
+    display_ref buffer
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    output.append "goto "
+    output.append (loop.name)
+
+    current_list_level := current_list_level - 1
+  )
+

@@ -1,0 +1,95 @@
+Header
+
+  + name        := TYPE_NULL;
+
+  /*Special type NULL*/
+
+Inherit
+
+  + parent_type:Expanded TYPE
+
+Public
+
+  - name:STRING_ALIAS <- "NULL"
+
+  - intern_name:STRING_ALIAS <- name
+
+  //
+  // Creation.
+  //
+
+  - make_null <-
+  (
+    //type_list.add_last Self
+    index := index_max
+    index_max := index_max + 1
+    
+    dico_type.fast_put Self to name
+    slot_run := ARRAY SLOT.create_with_capacity 1; // BSBS: Plus utile !
+    default := TYPE_FULL.create Self with 0
+  )
+
+  - get_local_slot n:STRING_ALIAS :SLOT <- NULL
+
+  - get_path_slot n:STRING_ALIAS :SLOT <- NULL
+
+  //
+  // Error.
+  //
+
+  //- bug:INTEGER
+
+  - product_error p:POSITION in lst:LIST with ctext:LOCAL <-
+  (
+    (debug_level_option != 0).if {
+      lst.add_last (
+	PUSH.create p context ctext first FALSE
+      )
+    }
+    lst.add_last CALL_NULL
+  )
+
+Public
+
+  //
+  // Import / Export
+  //
+
+  - is_export_to t:TYPE_FULL :BOOLEAN <- FALSE
+
+  - is_import_to t:TYPE_FULL :BOOLEAN <- FALSE
+
+  //
+  //
+  //
+
+  - is_sub_type other:TYPE :BOOLEAN <- TRUE
+
+  - genere_typedef <-
+  (
+  )
+
+  - genere_struct <-
+  (
+    output_decl.append
+    "/* NULL */\n\
+    \#ifndef NULL\n\
+    \#define NULL ((void *)0)\n\
+    \#endif\n\n"
+  )
+
+  //
+  // Code source generation.
+  //
+
+  - put_id buffer:STRING_BUFFER <-
+  (
+    put_value buffer
+  )
+
+  - put_access_id e:EXPR <- e.genere
+
+  - put_value buffer:STRING_BUFFER <-
+  (
+    buffer.append name
+  )

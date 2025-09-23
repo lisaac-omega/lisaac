@@ -1,0 +1,161 @@
+Header
+  + name := LAYER;
+  
+  - external :=
+  `void init_rand(float min, float max);
+  float get_rand();
+  `;
+
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+
+  + name:STRING_ALIAS
+  
+  // tensor descriptor for the input/output tensors
+  + input_desc:POINTER; // cudnnTensorDescriptor_t
+  + output_desc:POINTER
+  
+  // weight/bias descriptor
+  + filter_desc:POINTER; // cudnnFilterDescriptor_t
+  + bias_desc:POINTER;   // cudnnTensorDescriptor_t
+  
+  // output memory
+  + input:BLOB;       // x  
+  + output:BLOB;      // y  
+  + grad_input:BLOB;  // dx 
+  + grad_output:BLOB; // dy 
+  
+  // master weights & bias
+  + freeze:BOOLEAN;    // control parameter updates 
+  + weights:BLOB;      // w 
+  + biases:BLOB;       // b 
+  + grad_weights:BLOB; // dw 
+  + grad_biases:BLOB;  // db 
+  
+  - set_freeze b:BOOLEAN <- ( freeze := b; )
+  
+  + batch_size:INTEGER; // mini-batch size
+  
+  // cuda handle container
+  + cud:CUDA
+  - set_cud p:CUDA <- ( cud := p; )
+  
+  // pretrain parameters
+  + load_pretrain:BOOLEAN
+  - set_load_pretrain <- ( load_pretrain := TRUE; )
+  
+  // gradient stop tagging
+  + gradient_stop:BOOLEAN
+  - set_gradient_stop <- ( gradient_stop := TRUE; )
+  
+  - new:SELF <- clone
+  
+  - free <-
+  (
+    (output       != NULL).if { output.free; }
+    (grad_input   != NULL).if { grad_input.free; }
+    (weights      != NULL).if { weights.free; }
+    (biases       != NULL).if { biases.free; }
+    (grad_weights != NULL).if { grad_weights.free; }
+    (grad_biases  != NULL).if { grad_biases.free; }
+  )
+
+  - init_weight_bias <-
+  [ ? {weights != NULL}; ? {biases != NULL}; ]
+  ( + range:REAL_32
+    CUDA.device_synchronize
+    // He uniform distribution    
+    range := (6.0 / input.size).sqrt;	// He's initialization
+    MT19937.init 0
+    0.to (weights.len-1) do { i:INTEGER
+      //weights.mem.at i put (RANDOM.frange (-range) to (+range))
+      weights.mem.at i put (MT19937.real_32 (-range) to (+range))
+    }
+    0.to (biases.len-1) do { i:INTEGER
+      biases.mem.at i put 0
+    }
+    // copy initialized value to the device
+    weights.to (BLOB.cuda_t)
+    biases .to (BLOB.cuda_t)
+    
+    ".. initialized ".print; name.print; " layer ..".println
+  )
+
+  - update_weights_biases learning_rate:REAL_32 <-
+  ( + eps:REAL_32
+    eps := -1.0 * learning_rate
+    ((weights != NULL) && {grad_weights != NULL}).if {
+      // w = w + eps * dw
+      cud.saxpy (weights.len) alpha eps
+      x (grad_weights.cuda, 1)
+      y (weights.cuda, 1)
+    }
+
+    ((biases != NULL) && {grad_biases != NULL}).if {
+      // b = b + eps * db
+      cud.saxpy (biases.len) alpha eps
+      x (grad_biases.cuda, 1)
+      y (biases.cuda, 1)
+    }
+  )
+  
+  - forward (in:BLOB) :BLOB <- ( abstract; NULL)
+  - backward (grad_out:BLOB) :BLOB <- ( abstract; NULL)
+
+  - get_loss (target:BLOB) :REAL_32 <- ( abstract; 0)
+  - get_accuracy (target:BLOB) :INTEGER <- ( abstract; 0)
+
+  - load_parameter:INTEGER <-
+  (
+    "LAYER 0".println
+    not_yet_implemented
+    /*
+    std::stringstream filename_weights, filename_biases
+
+    // load weights and biases pretrained parameters
+    filename_weights << name_ << ".bin"
+    (weights_->file_read(filename_weights.str())).if {
+      return -1
+    }
+
+    filename_biases << name_ << ".bias.bin"
+    (biases_->file_read(filename_biases.str())).if {
+      return -2
+    }
+    */
+    ".. loaded ".print; name.print; " pretrain parameter..".println
+    0
+  )
+
+  - save_parameter:INTEGER <-
+  (
+    "LAYER 1".println
+    not_yet_implemented
+    ".. saving ".print; name.print; " parameter ..".print
+    /*
+    std::stringstream filename_weights, filename_biases
+    
+
+    // Write weights file
+    (weights_ != NULL).if {
+      filename_weights << name_ << ".bin"
+      (weights_->file_write(filename_weights.str())).if {
+        return -1
+      }
+    }
+
+    // Write bias file
+    (biases_ != NULL).if {
+      filename_biases << name_ << ".bias.bin"
+      (biases_->file_write(filename_biases.str())).if {
+        return -2
+      }
+    }
+    */  
+    " done ..".println
+    0
+  )
+

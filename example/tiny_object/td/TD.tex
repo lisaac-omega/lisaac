@@ -1,0 +1,300 @@
+\documentclass[a4paper]{article}
+\usepackage{a4}
+\usepackage[francais]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[dvips]{graphics}
+\usepackage[dvips]{graphicx}
+\usepackage{multicol}
+\usepackage{epsfig}
+\usepackage{color}
+\usepackage{alltt}
+\usepackage{verbatim}
+\usepackage{tabularx}
+
+\topmargin -1.8cm
+\textheight 26cm
+\textwidth 16cm
+\oddsidemargin 0.6cm
+%\evensidemargin 0cm
+\flushbottom
+\pagestyle{empty}
+
+
+\parindent = 0pt
+
+\begin{document}
+
+\begin{figure}[h]
+\psfig{figure=logo.ps,height=2cm}
+\end{figure}
+
+%Année 2007-2008
+%\vskip -1cm
+
+
+\hfill {\Large\bf Licence d'Informatique}\\[-10pt]
+
+\hfill {\Large  POO2}\\[-10pt]
+
+
+
+\parskip =5pt
+
+\vskip 0.5cm
+
+\begin{center}
+\Large\bf
+TD 5 à 8\,: {\it{}Tiny Object Emulator}\\
+MODE EXAMEN 18/05/2020
+\end{center}
+
+\vskip 0.5cm
+
+%Durée : 3h.\\
+%Documents non autorisés.
+
+%\vskip 0.5cm
+
+{\bf{}SUJET\,:}
+{\it{}Effectuez la fin de ce TD à partir de la partie 3
+  (Parsing d'un programme) au niveau du parsing des deux dernières règles
+  de la grammaire ({\tt{}code} \& {\tt{}expr}).}  
+
+\section{Présentation}
+%=====================
+Nous allons réaliser un petit émulateur/interpréteur d'un langage
+objet typé simplifié. 
+Les idiomes du langages sont les suivants\,:
+\begin{itemize}
+\item Déclaration de {\it{}class} et de plusieurs héritages;
+\item Déclaration de procédures (sans paramètre);
+\item Déclaration de variables locales;
+\item Instance de {\it{}class} dans une variable locale;
+\item Envoi de message;
+\item Affichage d'un message à l'écran.
+\end{itemize}
+
+Les objectifs de ces TDs sont\,:
+\begin{itemize}
+\item Une méthodologie pour le {\it{}parsing} d'une grammaire ``simple'';
+\item La modélisation en objet d'un interpréteur ou d'un compilateur;
+\item Etudier le contrôle de typage statique;
+\item Bien comprendre la notion de type dynamique et de l'algorithme de {\it{}lookup};
+\item Mettre en place le mécanisme de VFT en héritage simple \& multiple;
+\item Appréhender la programmation en Lisaac.
+\end{itemize}
+
+{\it{}Exemple de code\,:}
+\begin{multicols}{2}
+\begin{alltt}
+PARENT (
+  {\bf{}type} = ( | "PARENT".print; )
+
+  {\bf{}function\_1} =
+  ( |
+    type;
+    "PARENT : Function 1".print;
+  )
+
+  {\bf{}function\_2} =
+  ( |
+    type;
+    "PARENT : Function 2".print;
+  )
+)
+
+CHILD Inherit PARENT (
+  {\bf{}type} = ( | "CHILD".print; )
+
+  {\bf{}function\_1} = 
+  ( a:PARENT |
+    type;
+    "CHILD : Function 1".print;
+    a = {\bf{}New} PARENT;
+    a.function\_1;
+    a.function\_2;
+  )
+
+  {\bf{}main} =
+  ( b:PARENT |
+    b = {\bf{}New} CHILD;
+    "--- b.function\_1 ---".print;
+    b.function\_1;
+    // "--- function\_1 -----".print;
+    // function\_1;
+    "--- b.function\_2 ---".print;
+    b.function\_2;
+    "--- Fin ------------".print;
+  )
+)
+\end{alltt}
+\end{multicols}
+
+\section{Grammaire}
+%==================
+La grammaire de ce petit langage est en EBNF ({\it{}Extended Backus-Naur
+  Form})\,:
+
+\begin{tabularx}{\textwidth}{c l X}
+\hline
+{\bf{}Symbole}    & {\bf{}Fonction} & {\bf{}Description} \cr
+\hline
+\hline
+{( \ldots )}     & {groupe}      & {Groupe syntaxique de construction} \cr
+\hline
+{[ \ldots ]}     & {option}        & {Construction optionnelle} \cr
+\hline
+{\{ \ldots \}}   & {répétition}    & {répétition de 0 à $n$ fois} \cr
+\hline
+{{\tt |}}        & {alternative}   & {Construction alternative} \cr
+\hline
+{:}  & {production}    & {Définition d'une règle syntaxique} \cr
+\hline
+\end{tabularx}
+
+\begin{alltt}
+program    : \{ {\sc{}cap\_identifier} [ inherit ] '(' slot\_list ')' \}
+inherit    : 'Inherit' {\sc{}cap\_identifier} \{ ',' {\sc{}cap\_identifier} \}
+slot\_list  : \{ {\sc{}identifier} '=' body \}
+body       : '(' [ local\_list ] '|' \{ code ';' \} ')'
+local\_list : local \{ ',' local \}
+local      : {\sc{}identifier} ':' {\sc{}cap\_identifier}
+code       : ( {\sc{}identifier} [ expr ] ) | ( {\sc{}string} '.' 'print' )
+expr       : ( '=' 'New' {\sc{}cap\_identifier} ) | ( '.' {\sc{}identifier} )
+\end{alltt}
+
+Définition des terminaux\,:
+\begin{alltt}
+{\sc{}cap\_identifier} : 'A'-'Z' \{ 'A'-'Z' | '0'-'9' | '\_' \}
+{\sc{}identifier}      : 'a'-'z' \{ 'a'-'z' | '0'-'9' | '\_' \}
+{\sc{}string}       \,  : '\"' \{ ascii string \} '\"'
+\end{alltt}
+
+{\bf{}Questions\,:}
+\begin{enumerate}
+\item Donnez le résultat d'affichage de l'exemple précédent.
+\item Donnez l'arbre d'héritage de votre interpréteur.
+\item Donnez les données et méthodes utiles dans chacune des {\it{}class}.
+\end{enumerate}
+
+\section{{\it{}Parsing} d'un programme}
+%======================================
+\begin{itemize}
+\item[$\bullet$] {\tt{}{\bf{}read\_keyword} word:{\sc{}abstract\_string} :{\sc{}boolean}} \\
+Renvoi {\sc{}true} et avance le curseur si le mot {\tt{}'word'} a été
+lu, renvoi {\sc{}false} sinon.
+\item[$\bullet$] {\tt{}{\bf{}read\_character} char:{\sc{}character} :{\sc{}boolean}} \\
+Renvoi {\sc{}true} et avance le curseur si le caractère {\tt{}'char'} a été
+lu, renvoi {\sc{}false} sinon.
+\item[$\bullet$] {\tt{}{\bf{}read\_identifier}:{\sc{}boolean}} \\
+Renvoi {\sc{}true} et avance le curseur si un identifieur a été
+lu, renvoi {\sc{}false} sinon. En cas de succès, l'identifieur lu est
+dans la variable {\tt{}'last\_string'}.
+\item[$\bullet$] {\tt{}{\bf{}read\_cap\_identifier}:{\sc{}boolean}} \\
+Renvoi {\sc{}true} et avance le curseur si un identifieur en majuscule
+a été lu, renvoi {\sc{}false} sinon. En cas de succès, l'identifieur lu est
+dans la variable {\tt{}'last\_string'}.
+\item[$\bullet$] {\tt{}{\bf{}read\_string\_cst}:{\sc{}boolean}} \\
+Renvoi {\sc{}true} et avance le curseur si une chaîne de caractères
+a été lu, renvoi {\sc{}false} sinon. En cas de succès, la chaîne de
+caractères lu est dans la variable {\tt{}'last\_string'}.
+\item[$\bullet$] {\tt{}{\bf{}syntax\_error} msg:{\sc{}abstract\_string}} \\
+Affiche la position du curseur et le message d'erreur {\tt{}'msg'},
+puis quitte le programme.
+\item[$\bullet$] {\tt{}{\bf{}semantic\_error} msg:{\sc{}abstract\_string}} \\
+Affiche la position du curseur et le message d'erreur {\tt{}'msg'},
+puis quitte le programme.
+\item[$\bullet$] {\tt{}{\bf{}warning\_error} msg:{\sc{}abstract\_string}} \\
+Affiche la position du curseur et le message d'erreur {\tt{}'msg'}.
+\end{itemize}
+
+{\bf{}Questions\,:}
+\begin{enumerate}
+\item Donnez les méthodes permettant de {\it{}parser} un programme à
+  l'aide de la grammaire (une méthode par règle).
+\item Ajoutez les constructions sémantiques dans chacune d'elles.
+\end{enumerate}
+
+\section{Exécution d'un programme}
+%=================================
+{\bf{}Questions\,:}
+\begin{enumerate}
+\item Donnez le code de la méthode {\tt{}'is\_sub\_type
+  other:{\sc{}class} :{\sc{}boolean}'} de la {\it{}class}
+  {\sc{}class}.\\
+{\bf{}Rmq.\,:} {\it{}Cette méthode est nécessaire pour le contrôle du
+  typage statique au niveau des affectations, valeur de retour,
+  passage de paramètres dans les langages objet typés.}
+\item Donnez le code de la méthode 
+{\tt{}'get\_slot\_in\_parent msg:{\sc{}string\_constant} :{\sc{}slot}'}
+et de la méthode 
+{\tt{}'get\_slot msg:{\sc{}string\_constant} :{\sc{}slot}'}
+de la {\it{}class} {\sc{}class}.\\
+{\bf{}Rmq.\,:} {\it{}Ces méthodes sont nécessaires pour rechercher la
+ bonne fonction lors d'un envoi de message. C'est ce que nous appelons
+ l'algorithme de {\bf{}'lookup'}}.
+\item Donnez le code de la méthode {\tt{}'run'} pour l'ensemble des
+  sous-{\it{}class} de {\sc{}expr}.
+\end{enumerate}
+
+\section{Utilisation de VFTs à héritage simple}
+%==============================================
+La version actuelle n'est pas efficace, car chaque envoi de message
+nécessite une recherche dynamique de la bonne méthode dans l'arbre
+d'héritages.
+Pour éviter cela, nous allons construire une VFT pour chaque {\it{}class}.
+L'envoi de message devient alors une simple consultation de table avec un
+indice connu avant l'exécution. Puis, un appel indirect sur l'adresse
+présent dans cette table.
+
+Rappel du mécanisme et de la construction des VFTs\,:
+\begin{center}
+\includegraphics[scale=1.0]{vft.eps}
+\end{center}
+
+{\bf{}Questions\,:}
+\begin{enumerate}
+\item Modifier l'application pour calculer les VFTs de chaque {\it{}class}
+  et l'indice correspondant à chaque appel, après le {\it{}parsing} du
+  programme. \\
+{\bf{}Rmq.\,:} {\it{}Dans un premier temps, nous ne considerons que le
+  mono-héritage.} 
+\end{enumerate}
+
+\section{Utilisation de VFTs à héritages multiples}
+%================================================
+Il existe de nombreuses méthodes pour construire et gérer des VFTs
+prenant en compte l'héritage multiple.
+La méthode que nous traitons ici est l'une des dernières techniques trouvée
+dans le domaine de la recherche.
+Elle est aussi la plus performante en terme de vitesse d'exécution et
+d'espace mémoire.
+Nous pouvons néanmoins remarquer sur notre exemple une imperfection,
+certaines VFT possèdent des ``trous'' et constitue un gâchi de
+mémoire. 
+Le second défaut de cette technique est qu'elle nécessite une
+connaissance complète du graphe d'héritage pour construire
+correctement les VFTs. Cette technique est donc applicable que dans le
+domaine d'une compilation globale (comme Lisaac) et non une
+compilation séparée comme Java. 
+
+\begin{center}
+\includegraphics[scale=1.0]{vft_2.eps}
+\end{center}
+
+{\bf{}Questions\,:}
+\begin{enumerate}
+\item Modifiez la méthode {\tt{}'compute\_vft\_base'} de la {\it{}class}
+  {\sc{}class} pour prendre en compte l'héritage multiple.
+\end{enumerate}
+
+{\it{}Le compilateur Lisaac n'utilise pas de VFT, sa technique de
+  résolution des envois de messages est totalement diffèrente et
+  originale.
+Par son caractère unique et donc pédagogiquement ininterressant, nous
+ne détaillerons pas cette technique.
+} 
+
+\end{document}
+
+

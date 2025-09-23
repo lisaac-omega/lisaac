@@ -1,0 +1,90 @@
+Header
+
+  + name    := ITM_TYPE_GENERIC_ELT;
+
+  /*Virtual element for generic style type*/
+
+Inherit
+
+  + parent_itm_type_mono:Expanded ITM_TYPE_MONO
+
+Private
+
+  - list:ARRAY ITM_TYPE_GENERIC_ELT :=
+  // 'A' to 'Z'
+  ( + result:ARRAY ITM_TYPE_GENERIC_ELT
+
+    result := ARRAY ITM_TYPE_GENERIC_ELT .create_with_capacity 26
+    'A'.to 'Z' do { c:CHARACTER
+      result.add_last (create c)
+    }
+    result
+  )
+
+  - create idf:CHARACTER :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make idf
+    result
+  )
+
+  - make idf:CHARACTER <-
+  (
+    index := idf -! 'A'
+  )
+
+Public
+
+  + index:INTEGER
+
+  - hash_code:INTEGER <- index
+
+  - get idf:CHARACTER :ITM_TYPE_GENERIC_ELT <-
+  (
+    list.at (idf -! 'A')
+  )
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "Generic["
+    buffer.add_last ('A' +# index)
+    buffer.add_last ']'
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    string_tmp.clear
+    string_tmp.add_last ('A' +# index)
+    put string_tmp to buf like "keyprototype"
+  )
+
+  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 100
+
+  - to_run:TYPE_FULL <-
+  ( + type_generic:TYPE_GENERIC
+    + result:TYPE_FULL
+    + t:CHARACTER
+
+    t := 'A' +# index
+    type_generic ?= ITM_TYPE_SELF.self_up
+    (type_generic != NULL).if {
+      result := type_generic.generic_to_type t
+    }
+    (result = NULL).if {
+      string_tmp.copy "Type parameter `";
+      string_tmp.add_last t
+      string_tmp.append "' is not define."
+      semantic_error (ITM_TYPE_SELF.to_run.prototype.position,string_tmp)
+    }
+    result
+  )
+
+  //
+  // Cast.
+  //
+
+  - append_cast_name_in buf:STRING_BUFFER <-
+  (
+    buf.add_last ('a' +# index)
+  )

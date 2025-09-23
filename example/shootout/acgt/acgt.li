@@ -1,0 +1,91 @@
+Header
+
+  + name      := ACGT;
+
+  /*
+  */
+  
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - monome_size:INTEGER
+
+  - list:ARRAY(ARRAY(BASE))
+
+  - base:ARRAY(BASE) :=
+  ( + result:ARRAY(BASE)
+    + code:UINTEGER_8
+    result := ARRAY(BASE).create_with_capacity (20*(3+1))
+    0.to 2 do { f:INTEGER
+      f.to 3 do { s:INTEGER
+        (f+1).to 3 do { t:INTEGER
+          result.add_last (BASE.create (result.count+1))
+          //
+          code := ((f << 4) | (s << 2) | t).to_uinteger_8
+          result.add_last (BASE.create code)
+          //
+          code := ((t << 4) | (f << 2) | s).to_uinteger_8
+          result.add_last (BASE.create code)
+          //
+          code := ((s << 4) | (t << 2) | f).to_uinteger_8
+          result.add_last (BASE.create code)
+        }
+      }
+    }
+    result
+  )
+
+  - print_base <-
+  (
+    (base.lower).to (base.upper) by 4 do { i:INTEGER
+      base.at (i+1).print; '-'.print
+      base.at (i+2).print; '-'.print
+      base.at (i+3).print; '\n'.print
+    }
+  )
+
+  - compute_monome <-
+  ( + idx:INTEGER
+    + new_m:ARRAY(BASE)
+    + b:BASE
+    + v:UINTEGER_8
+
+    new_m := ARRAY(BASE).create_with_capacity monome_size
+    0.to (monome_size-1) do { i:INTEGER
+      v := base.at idx.value
+      b := base.at (idx + v)
+      new_m.add_last b
+    }
+
+    list.add_last new_m
+
+  )
+
+  - print_monome <-
+  ( + m:ARRAY(BASE)
+    (list.lower).to (list.upper) do { i:INTEGER
+      i.print; ':'.print
+      m := list.at i
+      (m.lower).to (m.upper-1) do { j:INTEGER
+        m.at j.print
+        '-'.print
+      }
+      m.last.print
+    }
+    '\n'.print
+  )
+
+  - main <-
+  (
+    list := ARRAY(ARRAY(BASE)).create_with_capacity 262144
+
+    monome_size := 700000
+    print_base
+    compute_monome
+    print_monome
+  )
+
+

@@ -1,0 +1,210 @@
+// Lisaac Path Directory System (by Benoit Sonntag).
+
+Section Private
+
+  + lisaac:STRING;
+
+  //
+  // Execute function.
+  //
+
+  - front_end <-
+  (
+    "The little game `Connect four' with lip file.\n".print;
+    "Just for fun!\n".print;
+    display;
+    loop;
+  );
+
+  //----------------------------
+
+  + colp1:INTEGER;
+  + colp2:INTEGER;
+  + colp3:INTEGER;
+  + colp4:INTEGER;
+  + colp5:INTEGER;
+  + colp6:INTEGER;
+  + colp7:INTEGER;
+
+  + col1:INTEGER;
+  + col2:INTEGER;
+  + col3:INTEGER;
+  + col4:INTEGER;
+  + col5:INTEGER;
+  + col6:INTEGER;
+  + col7:INTEGER;
+
+  - display_pion mask:INTEGER <-
+  (
+    (mask = 0).if {
+      "|X".print;
+    } else {
+      "|O".print;
+    };
+  );
+
+  - display_line mask:INTEGER <-
+  (
+    ((colp1 & mask) != 0).if {
+      display_pion (col1 & mask);
+    } else {
+      "| ".print;
+    };
+    ((colp2 & mask) != 0).if {
+      display_pion (col2 & mask);
+    } else {
+      "| ".print;
+    };
+    ((colp3 & mask) != 0).if {
+      display_pion (col3 & mask);
+    } else {
+      "| ".print;
+    };
+    ((colp4 & mask) != 0).if {
+      display_pion (col4 & mask);
+    } else {
+      "| ".print;
+    };
+    ((colp5 & mask) != 0).if {
+      display_pion (col5 & mask);
+    } else {
+      "| ".print;
+    };
+    ((colp6 & mask) != 0).if {
+      display_pion (col6 & mask);
+    } else {
+      "| ".print;
+    };
+    ((colp7 & mask) != 0).if {
+      display_pion (col7 & mask);
+    } else {
+      "| ".print;
+    };
+    "|\n".print;
+  );
+
+  - display <-
+  (
+    " 1 2 3 4 5 6 7\n".print;
+    display_line 000001b;
+    display_line 000010b;
+    display_line 000100b;
+    display_line 001000b;
+    display_line 010000b;
+    display_line 100000b;
+  );
+
+  + max:INTEGER;
+  + failure:BOOLEAN;
+  + game:INTEGER;
+  - get_max p:INTEGER <-
+  (
+    (max != 100000b).if {
+      ((p & (max+max)) = 0).if {
+        max := max + max;
+        game := game + game;
+        get_max p;
+      } else {
+        ((p & max) = 1).if {
+          failure := TRUE;
+        };
+      };
+    };
+  );
+
+  - play n:INTEGER <-
+  (
+    failure := FALSE;
+    max := 1;
+    (n = 1).if {
+      get_max colp1;
+      (! failure).if {
+        colp1 := colp1 | max;
+        col1  := col1  | game;
+      };
+    };
+    (n = 2).if {
+      get_max colp2;
+      (! failure).if {
+        colp2 := colp2 | max;
+        col2  := col2  | game;
+      };
+    };
+    (n = 3).if {
+      get_max colp3;
+      (! failure).if {
+        colp3 := colp3 | max;
+        col3  := col3  | game;
+      };
+    };
+    (n = 4).if {
+      get_max colp4;
+      (! failure).if {
+        colp4 := colp4 | max;
+        col4  := col4  | game;
+      };
+    };
+    (n = 5).if {
+      get_max colp5;
+      (! failure).if {
+        colp5 := colp5 | max;
+        col5  := col5  | game;
+      };
+    };
+    (n = 6).if {
+      get_max colp6;
+      (! failure).if {
+        colp6 := colp6 | max;
+        col6  := col6  | game;
+      };
+    };
+    (n = 7).if {
+      get_max colp7;
+      (! failure).if {
+        colp7 := colp7 | max;
+        col7  := col7  | game;
+      };
+    };
+  );
+
+  + val:INTEGER;
+  - message <-
+  (
+    "Player ".print;
+    (game = 0).if {
+      "X".print;
+    } else {
+      "O".print;
+    };
+    " : ".print;
+    val := get_integer;
+    ((val < 1) | (val > 7)).if {
+      "Error !\n".print;
+      message;
+    } else {
+      play val;
+      (failure).if {
+        message;
+      };
+    };
+  );
+
+  - loop <-
+  (
+    (game = 0).if {
+      game := 1;
+    } else {
+      game := 0;
+    };
+    message;
+    display;
+    loop;
+  );
+
+Section Public
+
+  - go <-
+  // The little game `Connect four' with lip file.
+  (
+    front_end;
+  );

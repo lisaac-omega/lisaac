@@ -1,0 +1,58 @@
+Header  
+  + name := Strict VEC3;
+  
+Insert  
+  - parent_vec:VEC := VEC
+  
+SELF  
+  - dim:INTEGER := 3
+  
+  - free_list:ARRAY VEC3 := ARRAY VEC3.create_with_capacity 4
+  
+Mapping, Public 
+  + xy:Expanded VEC2
+  + z:REAL_32
+  
+Public
+  
+  - create:SELF <-
+  ( + result:SELF
+    (free_list.is_empty).if {
+      result := clone
+    } else {
+      result := free_list.pop
+    }
+    result
+  )
+  
+  - create_xyz (px,py,pz:REAL_32) :SELF <-
+  ( + result:SELF
+    result := create
+    result.make (px,py,pz)
+    result
+  )
+  
+  - free <- free_list.add_last Self
+  
+  - x:REAL_32 <- item 0
+  - y:REAL_32 <- item 1
+    
+  - make (px,py,pz:REAL_32) <- ( xy.make (px,py); z := pz; )
+  
+  - Self:SELF '**' other:SELF :SELF <-
+  // Cross (Scalar product)
+  ( + result:SELF
+    result := create
+    result.put (item 1 * other.item 2 - item 2 * other.item 1) to 0
+    result.put (item 2 * other.item 0 - item 0 * other.item 2) to 1
+    result.put (item 0 * other.item 1 - item 1 * other.item 0) to 2
+    result
+  )
+  
+  - reflect other:SELF <-
+  ( + p:REAL_32
+    p := (Self #* other) * 2.0
+    0.to 2 do { i:INTEGER
+      put (item i - p * other.item i) to i
+    }
+  )

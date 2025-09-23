@@ -1,0 +1,832 @@
+Header
+
+  + name    := PROFIL;
+
+  /*Method with costumization*/
+
+Inherit
+
+  + parent_any:Expanded ANY
+
+  - parent_parameter_to_type:Expanded PARAMETER_TO_TYPE
+
+PROFIL_LIST
+
+  + life_index:INTEGER
+
+  - set_life_index idx:INTEGER <-
+  (
+    life_index := idx
+  )
+
+Public
+  
+  - profil_add_alias:PROFIL
+  - profil_hash_code_alias:PROFIL
+  
+  - arg_type_tmp:ARRAY EXPR
+  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  ( + idx:INTEGER
+    + result:TYPE_FULL
+
+    (p.name = "SELF").if {
+      // For Self.
+      result := type_self
+    } else {
+      // For Genericity.
+      //result := type_self.raw.parameter_to_type p
+      result := slot_code.receiver_type.parameter_to_type p
+      (result = NULL).if {
+        // For Type parametric.
+        idx := slot_code.get_index_argument_type p
+        (idx != - 1).if {
+          result := arg_type_tmp.at idx.static_type + TYPE_FULL.generic_bit
+        }
+      }
+    }
+    result
+  )
+
+  - propagation_external <-
+  (
+    (external_present).if_false {
+      external_present := TRUE
+      (set_back.lower).to (set_back.upper) do { j:INTEGER
+        set_back.at j.propagation_external
+      }
+    }
+  )
+
+Public
+
+  //
+  // Graph info.
+  //
+
+  - hash_code:INTEGER <- name.hash_code
+
+  + external_present:BOOLEAN
+
+  + set_call:HMAP INTEGER KEY PROFIL
+
+  + set_back:HSET(PROFIL)
+
+  - add_call p:PROFIL <-
+  ( + cnt:INTEGER
+    (set_call.fast_has p).if {
+      cnt := set_call.fast_at p
+      cnt := cnt + 1
+    } else {
+      cnt := 1
+    }
+    set_call.fast_put cnt to p
+    p.set_back.fast_add Self
+  )
+
+  - alloc_profil_main <-
+  (
+    set_call := HMAP INTEGER KEY PROFIL.create
+    set_back := HSET PROFIL.create
+    name := "main"
+  )
+
+  - set_external_present b:BOOLEAN <-
+  (
+    external_present := b
+  )
+
+  - genere_graph out:STRING_BUFFER <-
+  ( + key:PROFIL
+    + cnt:INTEGER
+    + is_force:BOOLEAN
+    + j:INTEGER
+
+    (external_present).if {
+      j := set_call.lower
+      {(j <= set_call.upper) && {! is_force}}.while_do {
+        is_force := ! set_call.key j.external_present
+        j := j + 1
+      }
+    } else {
+      is_force := TRUE
+    }
+    (is_force).if {
+      (set_call.lower).to (set_call.upper) do { j:INTEGER
+        key := set_call.key j
+        cnt := set_call.at j
+        output.append name
+        output.append " -> "
+        output.append (key.name)
+        (cnt > 1).if {
+          output.append "[label=\""
+          cnt.append_in output
+          output.append "\"]"
+        }
+        output.append ";\n"
+      }
+      (external_present).if {
+        out.append name
+        out.append " [color=red];\n"
+      }
+    }
+  )
+
+  //
+  //
+  //
+
+  - slot:SLOT <- abstract
+
+  - is_interrupt:BOOLEAN
+
+  - is_external:BOOLEAN
+
+  + type_self:TYPE_FULL
+
+  + argument_list:ARRAY LOCAL
+
+  + result_list:SLIM_ARRAY LOCAL
+
+  + code:LIST
+  + context:LOCAL
+
+  + count_intern_call:INTEGER
+
+  + link_count:INTEGER
+  + cop_link_count:INTEGER
+
+  + name:STRING_ALIAS
+
+  - is_context_sensitive:BOOLEAN <- abstract
+
+  + stat:INTEGER_8 := -1
+  // 00 : No recursive, No inlinable.
+  // 01 : No recursive, Inlinable.
+  // 10 : Recusive,     No tail.
+  // 11 : Recusive,     Tail
+
+  - reset_recursive <-
+  (
+    stat := -1
+    count_intern_call := 0
+  )
+
+  - recursivity_bit:INTEGER_8 := 10b
+  - tail_bit:INTEGER_8        := 01b
+  - inlining_bit:INTEGER_8    := 01b
+
+  - is_tail_recursive:BOOLEAN     <- stat = 11b
+  - is_not_tail_recursive:BOOLEAN <- stat = 10b
+  - is_inlinable:BOOLEAN          <- stat = 01b
+  - is_recursive:BOOLEAN          <- (stat & recursivity_bit) != 0
+
+  //
+
+  - mode_recursive:BOOLEAN
+
+  - set_mode_recursive b:BOOLEAN <-
+  (
+    mode_recursive := b
+  )
+
+  - set_life <-
+  (
+    PROFIL_LIST.set_life Self
+    (mode_recursive).if {
+      execute_recursive
+    }
+  )
+
+  - link call:CALL_SLOT <-
+  (
+    (call.cop_argument != NULL).if {
+      cop_link_count := cop_link_count + 1
+    } else {
+      link_count := link_count + 1
+    }
+  )
+
+  - unlink call:CALL_SLOT <-
+  (
+    (call.cop_argument != NULL).if {
+      cop_link_count := cop_link_count - 1
+      ? {cop_link_count >= 0}
+    } else {
+      link_count := link_count - 1
+      ? {link_count >= 0}
+    }
+  )
+
+  - write_argument args:ARRAY EXPR :ARRAY WRITE <-
+  ( + loc:LOCAL
+    + val:EXPR
+    + wrt:WRITE
+    + result:ARRAY WRITE
+
+    (args.count != argument_list.count).if {
+      string_tmp.copy "Incorrect vector size. (Call #"
+      args.count.append_in string_tmp
+      string_tmp.append " / Def. #"
+      argument_list.count.append_in string_tmp
+      string_tmp.add_last ')'
+      semantic_error (args.last.position,string_tmp)
+    }
+
+    result := ARRAY WRITE .create_with_capacity (argument_list.count)
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      loc := argument_list.at j
+      val := args.at j
+      (loc != NULL).if {
+	wrt := loc.write (val.position) value val
+	result.add_last wrt
+      } else {
+	result.add_last NULL
+	val.remove
+      }
+    }
+    result
+  )
+
+  //
+  // Comparaison.
+  //
+
+  - compatibility_with other:PROFIL <-
+  ( + n1,n2:INTEGER
+    (argument_list.count != other.argument_list.count).if {
+      POSITION.put_error semantic text "Incorrect vector size argument."
+      code.position.put_position
+      other.code.position.put_position
+      POSITION.send_error
+    }
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      (argument_list.at j.type != other.argument_list.at j.type).if {
+	POSITION.put_error semantic text "Incorrect invariant type argument."
+	argument_list.at j.position.put_position
+	other.argument_list.at j.position.put_position
+	POSITION.send_error
+      }
+    }
+    (result_list.count != other.result_list.count).if {
+      POSITION.put_error semantic text "Incorrect vector size result."
+      code.position.put_position
+      other.code.position.put_position
+      POSITION.send_error
+    }
+    (result_list.lower).to (result_list.upper) do { j:INTEGER
+      (result_list.at j.type != other.result_list.at j.type).if {
+        POSITION.put_error semantic text "Incorrect invariant type result."
+        result_list.at j.position.put_position
+        other.result_list.at j.position.put_position
+        POSITION.send_error
+      }
+    }
+  )
+
+  - lookup n:STRING_ALIAS :LOCAL <-
+  ( + j:INTEGER
+    + result:LOCAL
+        
+    j := argument_list.lower
+    {(j > argument_list.upper) || {argument_list.at j.name = n}}.until_do {
+      j := j + 1
+    }
+    (j <= argument_list.upper).if {
+      result := argument_list.at j
+    }.elseif {result_list != NULL} then {
+      j := result_list.lower
+      {(j > result_list.upper) || {result_list.at j.name = n}}.until_do {
+        j := j + 1
+      }
+      (j <= result_list.upper).if {
+        result := result_list.at j
+      }
+    }
+
+    result
+  )
+
+  //
+  // Execute.
+  //
+
+  - remove_inline <-
+  (
+    PROFIL_LIST.remove Self
+  )
+
+  - remove <-
+  (
+    code.remove
+  )
+
+  - search_and_convert_tail_recursive <-
+  ( + switch:SWITCH
+    + msg:CALL_SLOT
+    + lst:LIST
+    + count_recur:INTEGER
+
+    (
+      (! mode_recursive) && {is_not_tail_recursive} &&
+      {! code.is_empty} && {result_list.is_empty}
+    ).if {
+      switch ?= code.last
+      (switch != NULL).if {
+	// Verification cases:
+	(switch.list.lower).to (switch.list.upper) do { j:INTEGER
+	  lst := switch.list.at j.code
+	  (lst.is_empty).if_false {
+	    msg ?= lst.last
+	    ((msg != NULL) && {msg.profil = Self}).if {
+	      count_recur := count_recur + 1
+	    }
+	  }
+	}
+	(count_recur = switch.list.count).if {
+	  semantic_error (slot.position,"Recursivity without end.")
+        }
+        ((count_intern_call - 1) = count_recur).if {
+          ((link_count = count_intern_call) || {! is_context_sensitive}).if {
+            new_execute_pass
+            stat := 0
+            convert_tail_recursive
+          }
+        }
+      }
+    }
+  )
+
+  - i_am_the_last i:INSTR :BOOLEAN <-
+  (
+    code.i_am_the_last i
+  )
+
+  - execute_recursive <-
+  ( + old_list_current:LIST
+    + old_profil_current:PROFIL
+
+    (stat = -1).if {
+      count_intern_call := count_intern_call + 1
+      (count_intern_call = 1).if {
+        old_list_current   := list_current
+        old_profil_current := profil_current
+        //
+        profil_current := Self
+	execute 3
+	//
+        list_current   := old_list_current
+        profil_current := old_profil_current
+	? {code != NULL}
+	(count_intern_call = 1).if {
+          stat := 0
+	} else {
+          stat := recursivity_bit
+        }
+      }
+    }
+  )
+
+  - execute inline_lev:INTEGER <-
+  ( + old_seq_inline:UINTEGER_32
+
+    list_current  := NULL
+    old_seq_inline := seq_inline
+
+    CALL_SLOT.reset_count_context_sensitive
+
+    seq_call_and_loop := seq_call_and_loop + 1
+
+    search_and_convert_tail_recursive
+
+    code ?= code.execute
+    // Nettoyer les result ...
+    (result_list != NULL).if {
+      /*
+      ((code.count > 0) && {code.last = CALL_NULL}).if {
+        (result_list.lower).to (result_list.upper) do { i:INTEGER
+          ((result_list.at i != NULL) && {result_list.at i.ensure_count != 0}).if {            
+            result_list.at i put NULL
+          }
+        }
+      } else {*/
+        (result_list.lower).to (result_list.upper) do { i:INTEGER
+          ((result_list.at i != NULL) && {result_list.at i.ensure_count = 0}).if {
+            result_list.at i put NULL
+          }
+        }
+      //}
+    }
+    LOCAL_SEQ.clear
+
+    seq_call_and_loop := seq_call_and_loop + 1
+
+    (
+      (
+        (
+          (CALL_SLOT.count_context_sensitive = 0) &&
+          {! mode_recursive} && {stat = 0} &&
+          {is_context_sensitive || {(seq_inline - old_seq_inline) < inline_lev}}
+        ) || {link_count = 1}
+      ) && {! is_interrupt} && {! is_external} &&
+      {Self != profil_add_alias} && {Self != profil_hash_code_alias}
+      //{(cop_argument = NULL) || {! result_list.is_empty}}
+    ).if {
+      stat := stat | inlining_bit
+    }
+    (
+      (is_external) && {argument_list.first != NULL} && {argument_list.first.ensure_count = 0}
+    ).if {
+      argument_list.at 0 put NULL
+    }
+  )
+
+  //
+  // Genere.
+  //
+
+  - is_static:BOOLEAN <- abstract
+
+  - genere_handler <-
+  (
+    (link_count != 0).if {
+      genere_handler_intern
+      output.append ";\n"
+    }
+    ((cop_link_count != 0) && {result_list.count = 0}).if {
+      genere_handler_cop
+      output.append ";\n"
+    }
+  )
+
+  - genere_handler_intern <-
+  ( + ts:TYPE_FULL
+    + v:LOCAL
+    + i_result:INTEGER
+
+    (is_static).if {
+      output.append "static "
+    }
+
+    // Result.
+    {(i_result <= result_list.upper) && {result_list.at i_result = NULL}}.while_do {
+      i_result := i_result + 1
+    }
+    (i_result <= result_list.upper).if {
+      ts := result_list.at i_result.type
+      ts.genere_declaration output
+      ts.genere_star_declaration output
+      output.add_last ' '
+      i_result := i_result + 1
+    } else {      
+      output.append "void "
+    }
+
+    // Name.
+    output.append name
+    output.add_last '('
+
+    // Arguments.
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      v := argument_list.at j
+      (v != NULL).if {
+        ? {(v.style = ' ') || {v.style = '!'}}
+        genere v result FALSE in output
+        output.add_last ','
+      }
+    }
+
+    // Results.
+    {i_result <= result_list.upper}.while_do {
+      {(i_result <= result_list.upper) && {result_list.at i_result = NULL}}.while_do {
+        i_result := i_result + 1
+      }
+      (i_result <= result_list.upper).if {
+        v := result_list.at i_result
+        v.set_result TRUE
+        genere v result TRUE in output
+        output.add_last ','
+        i_result := i_result + 1
+      }
+    }
+    //    
+    (output.last = ',').if {
+      output.remove_last
+    }
+    output.add_last ')'
+  )
+
+  - genere_handler_cop <-
+  (
+    output.append "lith_object *COP_"
+    output.append name
+    output.append "(lith_object *obj,pthread_mutex_t *mutex)"
+  )
+
+  - genere <-
+  ( 
+    + ts:TYPE_FULL
+    + v:LOCAL
+    + np:INTEGER
+    + low:INTEGER
+
+    ((stat & recursivity_bit) != 0).if {
+      counter_recursivity_function := counter_recursivity_function + 1
+    }
+    counter_function := counter_function + 1
+    (is_speed_push).if {
+      PUSH_SPEED.start_c_function name
+    }
+    //
+    profil_current := Self
+    ((link_count != 0) || {result_list.count != 0}).if {
+      ((is_cop) && {cop_link_count != 0} && {result_list.count = 0}).if {
+        // COP link.
+        not_yet_implemented
+        output.add_last '\n'
+        genere_handler_cop
+        output.append "\n{ "
+
+        output.append " self;\n\
+        \  self = "
+        output.append "ptr;\n\
+        \  pthread_mutex_lock (&(self->mutex));\n\
+        \  pthread_setspecific(current_thread,self);\n  "
+        output.append name
+        output.append "(self);\n"
+        output.append "  pthread_mutex_unlock (&(self->mutex));\n\
+        \  return(NULL);\n\
+        \};\n"
+      }
+      // Version normal.
+      output.add_last '\n'
+      genere_handler_intern
+      output.add_last '\n'
+      add_comment output
+      //
+      output.append "{\n"
+      indent.append "  "
+      code.genere_extern_result result_list
+      indent.remove_tail 2
+      output.append indent
+      output.append "}\n"
+    } else {
+      (is_cop).if {
+        // COP direct.
+        output.add_last '\n'
+        genere_handler_cop
+        output.add_last '\n'
+        add_comment output
+        //
+        output.append "{\n"
+        indent.append "  "
+        (argument_list.count > 0).if {
+          output.append indent
+          v := argument_list.first
+          ((v != NULL) && {v.name = "Self"}).if {
+            genere v result FALSE in output
+            output.add_last '='
+            put_cast_self output
+            output.append "obj;\n"
+            low := 1
+          }
+        }
+        (argument_list.count-low > 0).if {
+          (low).to (argument_list.upper) do { j:INTEGER
+            v := argument_list.at j
+            (v != NULL).if {
+              output.append indent
+              genere v result FALSE in output
+              output.append "=("
+              ts := v.type
+              ts.genere_declaration output
+              output.add_last ' '
+              ts.genere_star_declaration output
+              output.append ")(("
+              put_cast_self output
+              output.append "obj)->param_"
+              np.append_in output
+              output.append ");\n"
+              np := np + 1
+            }
+          }
+          type_self.raw.set_param np
+        }
+        output.append "  pthread_mutex_unlock(&obj->mutex);\n"
+        output.append "  pthread_mutex_lock(mutex);\n"
+        //        
+        slot.receiver_type.name.print
+        '.'.print
+        slot.name.print; '\n'.print
+        
+        code.genere_extern_result NULL
+        //
+        output.append "  return NULL;\n}\n"
+        indent.remove_tail 2
+      }
+    }
+  )
+    
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append (slot.name)
+    append_type buffer
+  )
+
+  - display_all buffer:STRING_BUFFER <-
+  (
+    display buffer
+    code.display buffer
+    buffer.append "\n---------------------\n"
+  )
+
+  //
+  // Statistic
+  //
+
+  - nb_func_arg:ARRAY2 INTEGER     := ARRAY2 INTEGER .create (8,8)
+  - nb_arg_size_type:ARRAY INTEGER := ARRAY INTEGER .create 64
+
+//  - list_cpa:HSET(STRING) := HSET(STRING).create
+
+Private
+
+  - put_cast_self buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    type_self.genere_declaration buffer
+    buffer.add_last ' '
+    type_self.genere_star_declaration buffer
+    buffer.add_last ')'
+  )
+
+  - add_comment buffer:STRING_BUFFER <-
+  (
+    buffer.append "/* "
+    append_type buffer
+    ((stat & 10b) = 0).if {
+      buffer.append "No recursive, "
+    } else {
+      buffer.append "Recursive, "
+    }
+    ((stat & 01b) = 0).if {
+      buffer.append "No inlinable."
+    } else {
+      buffer.append "Inlinable."
+    }
+    (is_context_sensitive).if {
+      buffer.append " CONTEXT!"
+    } else {
+      buffer.append " NO CONTEXT!"
+    }
+    buffer.append " */\n"
+  )
+
+  /*
+  - recur_cpa buf:STRING_BUFFER arg n:INTEGER <-
+  ( + var:LOCAL
+    + tmp:STRING
+
+    (n > argument_list.upper).if {
+      tmp := list_cpa.reference_at buf
+      (tmp = NULL).if {
+        list_cpa.add (buf.to_string_alias)
+      }
+    } else {
+      var := argument_list.at n
+      (var != NULL).if {
+        var.type_list.lower.to (var.type_list.upper) do { i:INTEGER
+          buf.add_last ' '
+          buf.append (var.type_list.at i.name)
+          recur_cpa buf arg (n+1)
+          buf.keep_head (Old buf.count)
+        }
+      } else {
+        recur_cpa buf arg (n+1)
+      }
+    }
+  )
+  */
+
+  - append_type buffer:STRING_BUFFER <-
+  ( + v:VARIABLE
+    + nb_arg,nb_arg_poly,tmp:INTEGER
+    //+ s:SLOT
+
+    buffer.add_last '('
+    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+      v := argument_list.at j
+      (v != NULL).if {
+        nb_arg := nb_arg + 1; // BSBS à mettre ds le if
+        (is_statistic).if {
+
+          (v.type_set.count > 1).if {
+            nb_arg_poly := nb_arg_poly + 1
+          }
+          tmp := v.type_set.count
+          (tmp > nb_arg_size_type.upper).if {
+            nb_arg_size_type.force 1 to tmp
+          } else {
+            nb_arg_size_type.at tmp put (
+              nb_arg_size_type.at tmp + 1
+            )
+          }
+        }
+        v.type.display buffer
+	v.display_type buffer
+	buffer.add_last ','
+      }
+    }
+    (is_statistic).if {
+      (
+        (nb_arg      > nb_func_arg.upper1) || {nb_arg_poly > nb_func_arg.upper2}
+      ).if {
+        warning_error (position,"Too much arguments for a statistic.")
+      } else {
+        tmp := nb_func_arg.at (nb_arg,nb_arg_poly) + 1
+        nb_func_arg.at (nb_arg,nb_arg_poly) put tmp
+      }
+    }
+    /*
+    string_tmp.clear
+    nb_arg.append_in string_tmp
+    string_tmp.add_last ' '
+    s := slot
+    (s != NULL).if {
+      string_tmp.append (type_self.raw.name)
+      string_tmp.add_last ' '
+      string_tmp.append (s.name)
+    } else {
+      string_tmp.append name
+    }
+    recur_cpa string_tmp arg (argument_list.lower)
+    */
+    (buffer.last = ',').if {
+      buffer.remove_last
+    }
+    buffer.add_last ')'
+    (result_list.is_empty).if {
+      buffer.append " Void "
+    } else {
+      buffer.append " With result "
+    }
+  )
+
+  - genere v:LOCAL result is_res:BOOLEAN in buffer:STRING_BUFFER <-
+  ( + ts:TYPE_FULL
+
+    ts := v.type
+
+    ts.genere_declaration buffer
+    buffer.add_last ' '
+    ts.genere_star_declaration buffer
+    (is_res).if {
+      buffer.add_last '*'
+    }
+    buffer.append (v.intern_name)
+  )
+
+PROFIL, LISAAC
+
+  - counter_function:INTEGER
+  - counter_recursivity_function:INTEGER
+
+Private
+
+  - convert_tail_recursive <-
+  ( + switch:SWITCH
+    + msg_slot:CALL_SLOT
+    + body:LIST
+    + loop:LOOP
+    + push:PUSH
+    + new_code:LIST
+
+    new_code := LIST.create (code.position)
+    (debug_level_option != 0).if {
+      push ?= code.first
+      new_code.add_last (push.my_copy)
+      push.set_first FALSE
+    }
+
+    loop := LOOP.create position name name body code
+    new_code.add_last loop
+
+    // Extract Switch/body:
+    switch ?= code.last
+    (switch.list.lower).to (switch.list.upper) do { k:INTEGER
+      body := switch.list.at k.code
+      (body.is_empty).if_false {
+	msg_slot ?= body.last
+        ((msg_slot != NULL) && {msg_slot.profil = Self}).if {
+          link_count := link_count - 1
+	  msg_slot.argument_to_assignment body index (body.upper) alias FALSE style '!'
+	  body.at (body.upper) put (LOOP_END.create (msg_slot.position) loop loop)
+	}
+      }
+    }
+    count_intern_call := 1
+    code := new_code
+  )

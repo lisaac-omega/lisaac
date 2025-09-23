@@ -1,0 +1,245 @@
+Header
+
+  + name      := CLASS;
+
+  /*The class*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Private
+
+  - sources:HMAP CLASS KEY STRING_ALIAS :=
+  HMAP CLASS KEY STRING_ALIAS.create
+
+Public
+
+  + name:STRING_ALIAS
+
+  + inherit_list:LINKED_LIST(CLASS)
+
+  + slot_list:HMAP SLOT KEY STRING_ALIAS
+
+  // -- VFT --
+  + vft:ARRAY(SLOT)
+  // -- VFT --
+
+  //
+  // Creation.
+  //
+
+  - create p:INTEGER name n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n
+    result
+  )
+
+  - make p:INTEGER name n:STRING_ALIAS <-
+  (
+    position     := p
+    name         := n
+    inherit_list := LINKED_LIST(CLASS).new
+    slot_list    := HMAP SLOT KEY STRING_ALIAS.create
+    // -- VFT --
+    (is_vft).if {
+      vft := ARRAY(SLOT).create_with_capacity 16
+      sources.add Self to name
+    }
+    // -- VFT --
+  )
+
+  //
+  // VFT.
+  //
+
+  - compute_vft <-
+  (
+    (sources.lower).to (sources.upper) do { j:INTEGER
+      sources.at j.compute_vft_base 0
+    }
+  )
+
+  - compute_vft_base base:INTEGER <-
+  ( + new_base:INTEGER
+    + vft_parent:ARRAY(SLOT)
+    + slot,slot_parent:SLOT
+    (vft.is_empty).if {
+      // -- SIMPLE --
+      /*
+      (inherit_list.is_empty).if_false {
+        inherit_list.first.compute_vft_base base
+        vft.copy (inherit_list.first.vft)
+      }
+      */
+      // -- SIMPLE --
+
+      // -- Multi --
+      0.to (base-1) do { j:INTEGER
+        vft.add_last NULL
+      }
+      new_base := base
+      (inherit_list.lower).to (inherit_list.upper) do { j:INTEGER
+        inherit_list.at j.compute_vft_base new_base
+        vft_parent := inherit_list.at j.vft
+        (vft_parent.lower).to (vft_parent.upper) do { i:INTEGER
+          slot := vft_parent.at i
+          (i > vft.upper).if {
+            vft.add_last slot
+          }.elseif {vft.at i = NULL} then {
+            vft.at i put slot
+          }
+        }
+        new_base := vft.count
+      }
+      // -- Multi --
+
+      // Common.
+      (slot_list.lower).to (slot_list.upper) do { j:INTEGER
+        slot := slot_list.at j
+        slot_parent := get_slot_in_parent (slot.name)
+        (slot_parent = NULL).if {
+          // New slot.
+          vft.add_last slot
+          slot.set_index (vft.upper)
+        } else {
+          // Redefinition slot.
+          vft.at (slot_parent.index) put slot
+          slot.set_index (slot_parent.index)
+        }
+      }
+    }
+  )
+
+  //
+  // Added.
+  //
+
+  - add_parent c:CLASS <-
+  (
+    (inherit_list.fast_has c).if {
+      semantic_error position message "Double definition parent."
+    }
+    inherit_list.add_last c
+    // -- VFT --
+    sources.fast_remove (c.name)
+    // -- VFT --
+  )
+
+  - add_slot s:SLOT <-
+  (
+    (slot_list.fast_has (s.name)).if {
+      semantic_error position message "Double definition slot."
+    }
+    slot_list.add s to (s.name)
+  )
+
+  //
+  // Run.
+  //
+
+  - is_sub_type other:CLASS :BOOLEAN <-
+  ( + result:BOOLEAN
+    + i:INTEGER
+
+    result := Self = other
+    (result).if_false {
+      i := inherit_list.lower
+      {(i <= inherit_list.upper) && {! result}}.while_do {
+        result := inherit_list.at i.is_sub_type other
+        i := i + 1
+      }
+    }
+    result
+  )
+
+  - get_slot_in_parent msg:STRING_ALIAS :SLOT <-
+  ( + result:SLOT
+    + i:INTEGER
+
+    i := inherit_list.lower
+    {(i <= inherit_list.upper) && {result = NULL}}.while_do {
+      result := inherit_list.at i.get_slot msg
+      i := i + 1
+    }
+    result
+  )
+
+  - get_slot msg:STRING_ALIAS :SLOT <-
+  ( + result:SLOT
+
+    result := slot_list.fast_reference_at msg
+    (result = NULL).if {
+      result := get_slot_in_parent msg
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    name.print
+    (inherit_list.is_empty).if_false {
+      " Inherit ".print
+      (inherit_list.lower).to (inherit_list.upper-1) do { i:INTEGER
+        inherit_list.at i.name.print
+        ','.print
+      }
+      inherit_list.last.name.print
+    }
+    "\n(\n".print
+    (slot_list.lower).to (slot_list.upper) do { i:INTEGER
+      slot_list.at i.print
+    }
+    ")\n".print
+  )
+
+  // -- VFT --
+  - print_vft <-
+  ( + s,sp:SLOT
+    + j:INTEGER
+    "---".print
+    name.print
+    "---\n".print
+    (vft = NULL).if {
+      "No VFT!\n".print
+    } else {
+      (vft.lower).to (vft.upper) do { i:INTEGER
+        i.print
+        ':'.print
+        s := vft.at i
+        (s = NULL).if {
+          "NULL".print
+        } else {
+          s.name.print
+          j := inherit_list.lower
+          sp := NULL
+          {(j <= inherit_list.upper) && {sp = NULL}}.while_do {
+            (
+              (inherit_list.at j.vft.upper >= i) && {inherit_list.at j.vft.at i != NULL}
+            ).if {
+              sp := inherit_list.at j.vft.at i
+            } else {
+              j := j + 1
+            }
+          }
+          (sp = s).if {
+            " <herit of ".print
+            inherit_list.at j.name.print
+            '>'.print
+          }.elseif {sp != NULL} then {
+            " <redefinition>".print
+          } else {
+            " <New>".print
+          }
+        }
+        '\n'.print
+      }
+    }
+    '\n'.print
+  )
+  // -- VFT --

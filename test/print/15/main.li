@@ -1,0 +1,9 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + integer:INTEGER
+    integer := -5
+    integer.print_hex
+  )

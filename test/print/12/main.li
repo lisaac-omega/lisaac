@@ -1,0 +1,37 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + integer:INTEGER
+    
+    integer := -5
+    integer.println
+    TEST.check (integer.to_string) string "-5"
+    //integer.print_hex; //BSBS DCDC marche pas pour les négatif...
+    '\n'.print
+    
+    integer := 0
+    integer.println
+    TEST.check (integer.to_string) string "0"
+    integer.print_hex
+    '\n'.print
+    
+    integer := +5
+    integer.println
+    TEST.check (integer.to_string) string "5"
+    integer.print_hex
+    '\n'.print
+    
+    integer := 10
+    integer.println
+    TEST.check (integer.to_string) string "10"
+    integer.print_hex
+    '\n'.print
+    
+    integer := 16
+    integer.println
+    TEST.check (integer.to_string) string "16"
+    integer.print_hex
+    '\n'.print
+  )

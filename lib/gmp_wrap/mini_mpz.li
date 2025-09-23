@@ -1,0 +1,82 @@
+Header
+  + name := MINI_MPZ;
+  
+  /*mpz_t*/
+  
+  - type := `mpz_ptr`;
+  - default := `malloc(sizeof(mpz_t))`:MINI_MPZ; 
+  
+  - external := `#include "mini-gmp.c"`;
+
+Insert    
+  - parent_mpz_base:MPZ_BASE := MPZ_BASE
+  
+Public  
+  
+  /*
+  - init_set_ui x:UINTEGER_64 <-
+  (
+    `mpz_init_set_ui(@Self,@x)`
+  )
+  
+  - set str:STRING base b:INTEGER <- 
+  ( + nac:NATIVE_ARRAY CHARACTER
+    nac := str.to_external
+    `mpz_set_str(((mpz_ptr)@Self),@nac,@b)`
+  )
+  
+  - set_ui ui:UINTEGER_64 <-
+  (
+    `mpz_set_ui(@Self, @ui)`
+  )
+
+  - print <- `mpz_out_str(stdout,10,@Self)`
+  
+  - print_hex <-
+  (
+    STRING.tmp { buf:STRING_BUFFER
+      append_in buf base 16
+      buf.print
+    }
+  )
+  */
+  
+  - mul (a,b:MINI_MPZ) <-
+  (
+    `mpz_mul(@Self, @a, @b)`
+  )
+  
+  - div (a,b:MINI_MPZ) <-
+  (
+    `mpz_tdiv_q(@Self, @a, @b)`
+  )
+  
+  - tdiv_qr (r,n,d:MINI_MPZ) <-
+  (
+    `mpz_tdiv_qr(@Self,@r,@n,@d)`
+  )
+
+  - shift_left (a:MINI_MPZ, i:UINTEGER_64) <-
+  (
+    `mpz_mul_2exp(@Self, @a, @i)`
+  )
+
+  - shift_right (a:MINI_MPZ, i:UINTEGER_64) <-
+  (
+    `mpz_fdiv_q_2exp(@Self, @a, @i)`
+  )
+  
+  - add (a,b:MINI_MPZ) <-
+  (
+    `mpz_add(@Self, @a, @b)`
+  )
+    
+  - sub (a,b:MINI_MPZ) <-
+  (
+    `mpz_sub(@Self, @a, @b)`
+  )
+  
+  - cmp (other:MINI_MPZ): INTEGER <-
+  (
+    `mpz_cmp(@Self, @other)`:INTEGER
+  )

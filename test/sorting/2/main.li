@@ -1,0 +1,29 @@
+Header
+  + name := MAIN;
+ 
+Public
+  
+  + a1:ARRAY INTEGER
+  
+  + a2:ARRAY INTEGER
+  
+  - main <-
+  (
+    a1 := ARRAY INTEGER .create_with_capacity 12
+    a1.add_last 5
+    a1.add_last 4
+    a1.add_last 3
+    a1.add_last 2
+    a1.add_last 1
+    a2 := ARRAY INTEGER .create_with_capacity 12
+    a2.add_last 5
+    a2.add_last 1
+    a2.add_last 2
+    a2.add_last 3
+    a2.add_last 4
+    TEST.check (! (a1 == a2))
+    a2.bubble_sort_with { (a,b:INTEGER); a > b }
+    TEST.check (a1 == a2)
+    a2.swap 2 with 3
+    TEST.check_false (a1 == a2)
+  )

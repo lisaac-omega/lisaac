@@ -1,0 +1,168 @@
+Header
+
+  + name    := READ_SLOT;
+
+  /* Read for slot */
+
+Inherit
+
+  + parent_read:Expanded READ
+
+Public
+
+  - is_slot:BOOLEAN <- TRUE
+
+  - is_invariant:BOOLEAN <- slot.is_invariant receiver
+
+  + slot:SLOT_DATA
+
+  + receiver:EXPR
+
+  - variable:VARIABLE <- slot
+
+  - get_last_value:EXPR <- variable.get_last_value receiver
+
+  //
+  // Comparison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + rd:READ_SLOT
+
+    rd ?= other
+    ((rd != NULL) && {slot = rd.slot} && {receiver ~= rd.receiver})
+  )
+
+SLOT
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with (r:EXPR,s:SLOT_DATA) :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p with (r,s)
+    result
+  )
+
+  - make p:POSITION with (r:EXPR,s:SLOT_DATA) <-
+  (
+    position := p
+    receiver := r
+    slot     := s
+  )
+
+Public
+
+  - my_copy:SELF <-
+  ( + result:SELF
+
+    result ?= slot.read position with (receiver.my_copy)
+    result
+  )
+
+  //
+  // Executing pass.
+  //
+
+  - remove <-
+  (
+    receiver.remove
+    parent_read.remove
+  )
+
+  - execute_access_unlink:INSTR <-
+  (
+    slot.execute
+    receiver.execute_unlink
+  )
+
+  - execute_access_link <-
+  (
+    slot.execute
+    receiver := receiver.execute_link
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <-
+  ( + tf,tf2:TYPE_FULL
+    + t:TYPE
+    + add_end:BOOLEAN
+    + ptr,ptr2:BOOLEAN
+
+    (slot.intern_name = "self").if {
+      output.append "(("
+      tf := slot.type
+      tf.genere_declaration output
+      output.add_last ' '
+      tf.genere_star_declaration output
+      output.add_last ')'
+      receiver.genere
+      output.append ".self)"
+    } else {
+      tf := receiver.static_type
+      t  := slot.receiver_type
+      (t.alias_slot != NULL).if {
+        tf2 := slot.type
+        ptr  := (! tf .is_expanded) || {tf .is_expanded_ref} || {tf .is_strict}
+        ptr2 := (! tf2.is_expanded) || {tf2.is_expanded_ref} || {tf2.is_strict}
+        (ptr != ptr2).if {
+          add_end := TRUE
+          (ptr).if {
+            output.append "(*("
+          } else {
+            output.append "(&("
+          }
+        }
+      }
+      (
+        (tf.is_strict) || {tf.is_expanded_ref} || {tf.is_expanded}
+      ).if {        
+        receiver.genere
+      } else {
+        output.append "(("
+        t.put_reference_declaration output
+        output.add_last ' '
+        t.put_reference_star_declaration output
+        output.add_last ')'
+        receiver.genere
+        output.add_last ')'
+      }
+      (t.alias_slot = NULL).if {
+        ((tf.is_expanded) && {! tf.is_expanded_ref} && {! tf.is_strict}).if {
+          output.add_last '.'
+        } else {
+          output.append "->"
+        }
+        output.append (variable.intern_name)
+      }.elseif {add_end} then {
+        output.append "))"
+      }
+    }
+  )
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    receiver.display buffer
+    buffer.append "->"
+    parent_read.display buffer
+  )
+
+
+
+
+
+
+
+
+
+

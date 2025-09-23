@@ -1,0 +1,54 @@
+Header
+
+  + name        := ITM_CHARACTER;
+
+  /*Character constant*/
+
+Inherit
+
+  + parent_itm_constant:Expanded ITM_CONSTANT
+
+Public
+
+  //
+  // Data
+  //
+
+  + character:STRING_ALIAS
+
+  //
+  // Creation
+  //
+
+  - create p:POSITION char n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p char n
+    result
+  )
+
+  - make p:POSITION char n:STRING_ALIAS <-
+  (
+    position:=p
+    character:=n
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  (
+    CHARACTER_CST.create position char character
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '\''
+    buffer.append character
+    buffer.add_last '\''
+  )

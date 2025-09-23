@@ -1,0 +1,87 @@
+Header
+
+  + name        := ITM_ARGUMENT;
+
+  /*Parent argument*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_OBJECT
+
+Public
+
+  - lower:INTEGER <- 0
+
+  - upper:INTEGER <- ( abstract; 0)
+
+  - count:INTEGER <- upper + 1
+  
+  - is_self:BOOLEAN <- ( abstract; TRUE)
+  
+  //
+  // Running.
+  //
+
+  - at idx:INTEGER :ITM_TYPE <-
+  (
+    abstract
+    NULL
+  )
+
+  - to_run_in arg_lst:ARRAY LOCAL for p:PARAMETER_TO_TYPE <-
+  (
+    abstract
+  )
+
+  - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-
+  (
+    abstract
+  )
+
+  - check larg:ARRAY EXPR index idx:INTEGER for p:PARAMETER_TO_TYPE :INTEGER <-
+  (
+    abstract
+    0
+  )
+
+  //
+  // Comparaison.
+  //
+
+  - is_equal other:ITM_ARGUMENT <-
+    ( + o:SELF
+    + err:STRING_ALIAS
+    //MHMH : ?? Sûr ? plante sur gros...
+    ? {other != Self}
+
+    o ?= other
+    (o = NULL).if {
+      err := "Invariance number vector argument invalid."
+    }.elseif {name != o.name} then {
+      err := "Invariance name argument invalid."
+    }.elseif {type != o.type} then {
+      err := "Invariance type argument invalid."
+    }
+    (err != NULL).if {
+      POSITION.put_error semantic text err
+      position.put_position
+      (other.position).put_position
+      POSITION.send_error
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    abstract
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    abstract
+  )
+
+

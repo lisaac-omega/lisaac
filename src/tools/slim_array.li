@@ -1,0 +1,231 @@
+Header
+
+  + name      := SLIM_ARRAY E;
+  
+  /* BSBS: A mettre en Expanded.*/
+
+Insert
+
+  - parent_object:OBJECT := OBJECT
+
+Private
+
+  // Champs internes :
+  // Capacité et compteur d'éléments présents
+  + capacity:INTEGER
+  + counter:INTEGER
+
+  // Utilisé comme first et tableau
+  + array:NATIVE_ARRAY E
+
+  // MHMH :
+  // Une capacité à 0 signifie que l'on utilise array comme stockage.
+
+Public
+
+  //
+  // Informations :
+  //
+
+  // Borne inférieure :
+  // MHMH : Version originale... en fonction ?? - lower:INTEGER <- 0
+  - lower:INTEGER := 0
+
+  // Borne supérieure :
+  - upper:INTEGER <- (counter - 1)
+
+  // Nombre d'éléments :
+  - count:INTEGER <- (counter)
+
+  // Test de vacuité :
+  - is_empty:BOOLEAN <- ( counter = 0 )
+
+
+  //
+  // Création/Initialisation :
+  //
+  
+  - create_with_capacity n:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make_with_capacity n
+    result
+  )
+  
+  - make_with_capacity n:INTEGER <-
+  (
+    // Réinitialisation :
+    capacity := 0
+    counter := 0
+    array := NULL
+
+    // Allocation si nécessaire :
+    (n > 1).if {
+      array := NATIVE_ARRAY E .create n
+      capacity := n
+    }
+  )
+
+  //
+  // Accès en lecture :
+  //
+
+  - first:E <-
+  ( + return:E
+    (capacity = 0).if {
+      return := CAST (NATIVE_ARRAY E) TO E.on array
+    } else {
+      return := array.at 0
+    }
+    return
+  )
+
+  - last:E <-
+  ( + return:E
+
+    (capacity = 0).if {
+      return := CAST (NATIVE_ARRAY E) TO E.on array
+    } else {
+      return := array.at upper
+    }
+
+    return
+  )
+
+  - at i:INTEGER:E <-
+  (
+    + return:E
+
+    (capacity = 0).if {
+      return := CAST (NATIVE_ARRAY E) TO E.on array
+    } else {
+      return := array.at i
+    }
+
+    return
+  )
+
+  //
+  // Accès en lecture :
+  //
+
+  - at i:INTEGER put e:E <-
+  (
+    (capacity = 0).if {
+      array := CAST E TO (NATIVE_ARRAY E).on e
+    } else {
+      array.at i put e
+    }
+  )
+
+  - add_last e:E <-
+  (
+    (capacity = 0).if {
+      (counter = 0).if {
+        array := CAST E TO (NATIVE_ARRAY E).on e
+        counter := counter + 1
+      } else {
+        + tmp:E
+        // Sauvegarde élément courant :
+        tmp := CAST (NATIVE_ARRAY E) TO E.on array
+        // Création tableau :
+        array := NATIVE_ARRAY E .create 4
+        capacity := 4
+        counter := 2
+        // Restauration éléments :
+        at 0 put tmp
+        at 1 put e
+      }
+    } else {
+      // Allocation de place supplémentaire si besoin :
+      (counter = capacity).if {
+        + new_cap:INTEGER
+        new_cap := capacity*2
+        array := array.realloc capacity with new_cap
+        capacity := new_cap
+      }
+      counter := counter+1
+      at upper put e
+    }
+  )
+
+
+
+
+
+
+
+
+  // MHMH : remplacé par utilisation de list
+  // + first:E
+
+  /*
+  - last:E <-
+  ( + result:E
+    (list != NULL).if {
+      result := list.last
+    } else {
+      result := first
+    }
+    result
+  )
+  */
+
+
+  /*
+  - upper:INTEGER <-
+  ( + result:INTEGER
+    (first = NULL).if {
+      result := -1
+    }.elseif {list != NULL} then {
+      result := list.count
+    }
+    result
+  )
+  */
+
+  /*
+  - count:INTEGER <- upper + 1
+  */
+
+  /*
+  - is_empty:BOOLEAN <- first = NULL
+  */
+
+  /*
+  - item i:INTEGER :E <-
+  ( + result:E
+
+    (i = 0).if {
+      result := first
+    } else {
+      result := list.at (i-1)
+    }
+    result
+  )
+  */
+
+  /*
+  - put e:E to i:INTEGER <-
+  (
+    (i = 0).if {
+      first := e
+    } else {
+      list.put e to (i-1)
+    }
+  )
+  */
+
+  /*
+  - add_last e:E <-
+  (
+    (first = NULL).if {
+      first := e
+    } else {
+      (list = NULL).if {
+        list := ARRAY E .create_with_capacity 4
+      }
+      list.add_last e
+    }
+  )
+*/

@@ -1,0 +1,120 @@
+Header
+  + name := ASSIGN;
+
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Private
+  - stack_ass:Expanded ARRAY (Strict ASSIGN)
+  
+Public
+  + writable:EXPR
+  
+  + style:INTEGER
+  
+  + value:EXPR
+  
+  - static_type:TYPE; // ?=
+    
+Public
+  
+  - type:TYPE <-
+  ( + result:TYPE
+    (style = "Ë¿").if {
+      result := writable.type
+    } else {
+      result := TYPE.boolean
+    }
+    result
+  )
+  
+  - init e:EXPR style t:INTEGER value v:EXPR :SELF <-
+  ( 
+    (writable,style,value) := (e,t,v)
+    Self
+  )
+  
+  - new e:EXPR style t:INTEGER value v:EXPR :SELF <-
+  ( + result:Strict ASSIGN
+    (stack_ass.is_empty).if { result := clone; } else { result := stack_ass.pop; }
+    result.init e style t value v
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    writable.append_in b
+    (src.at (style+1) = '¿').if { b += " := "; } else { b += " ?= "; }
+    value.append_in b
+  )
+  
+  - drw <-
+  ( 
+    writable.drw
+    value.drw
+  )
+  
+  - run <- ( (style = asv).if { run_asv; } else { run_asc; }; )
+  
+  - run_asv <-
+  ( + l:LIST
+    + up:INTEGER
+    + sav:LIARRAY OP
+    sav := LIARRAY OP.new
+    up := stack_result.upper
+    value.run
+    sav.append stack_result from (up+1) to (stack_result.upper)
+    l ?= writable
+    (l != NULL).if {
+      l.list.foreach_backward { e:EXPR; subrun e; }
+    } else {
+      subrun writable
+    }
+    ? {stack_result.upper = up}
+    stack_result.append_collection sav
+    sav.free
+  )
+  
+  - subrun e:EXPR <-
+  ( + c:CALL
+    c ?= e
+    c.run_ass
+  )
+  
+  - run_asc <-
+  ( + o:OP
+    + r,v:LIARRAY INTEGER
+    + cl:CALL_LOC
+    + cs:CALL
+    value.run
+    o := pop
+    cl ?= writable
+    (cl != NULL).if {      
+      static_type := cl.local.type
+    } else {
+      cs ?= writable
+      static_type := LS.at (LS.lookup_self).static_type.lookup (cs.name).type
+    }
+    v := LIARRAY INTEGER.new; v.add_last (LS.new (o.static_type))
+    r := LIARRAY INTEGER.new; r.add_last (LS.new (TYPE.boolean))
+    OP + LASS.new (v.first) val o
+    OP + SWITCH.new (SWITCH.typ) on (v.first) slot NULL hmap 0 idx r do {(sw:SWITCH,t:TYPE)
+      OP + LASS.new (sw.idx.first) val
+      ((t <= static_type).ok (TYPE.true) else {TYPE.false})
+    }
+    OP + SWITCH.new (SWITCH.oth) on (r.first) slot NULL hmap 0 idx v do {(sw:SWITCH,t:TYPE)
+      + call:CALL
+      (t = TYPE.true).if {
+        push (LOC.new (sw.idx.first))
+        call ?= writable
+        call.run_ass
+      }
+    }
+    push (LOC.new (r.first))
+  )
+  
+  - free <-
+  (
+    (writable != NULL).if { writable.free; writable := NULL; }
+    (value != NULL).if { value.free; value := NULL; }
+    stack_ass.add_last Self
+  )

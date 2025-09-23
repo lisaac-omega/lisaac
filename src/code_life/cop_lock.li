@@ -1,0 +1,117 @@
+Header
+
+  + name    := COP_LOCK;
+
+  /*COP in for data or function.*/
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  + data:EXPR
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with dta:EXPR :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p with dta
+    result
+  )
+
+  - make p:POSITION with dta:EXPR <-
+  (
+    position := p
+    data := dta
+  )
+
+  - my_copy:SELF <-
+  (
+    create position with (data.my_copy)
+  )
+
+  - remove <-
+  (
+    data.remove
+  )
+
+  //
+  // Execute.
+  //
+
+  - execute:INSTR <-
+  (
+    Self
+  )
+
+  //
+  // Generation.
+  //
+  
+  - genere <-
+  (
+    output.append "// Pre thread.\n"
+    //  output.append "print_char('(');\n"
+    //  output.append "print_char('\\n');\n"
+    output.append indent
+    output.append "{ lith_node node,*n;\n"
+    indent.append "  "
+    output.append indent
+    output.append "lith_object *obj;\n"
+    output.append indent
+    output.append "void *thread_save;\n"
+    output.append indent
+    output.append "struct generic_protocop *proto = (struct generic_protocop *)"
+    data.genere
+    output.append ";\n"
+    output.append indent
+    output.append "obj = &(proto->thread);\n"
+    output.append indent
+    output.append "node.next = NULL;\n"
+    output.append indent
+    output.append "pthread_mutex_init(&node.mutex,NULL);\n"
+    output.append indent
+    output.append "pthread_mutex_lock(&obj->mutex);\n"
+    output.append indent
+    output.append "n = obj->last;\n"
+    output.append indent
+    output.append "if (n == NULL) {\n"
+    output.append indent
+    output.append "  obj->first = &node;\n"
+    output.append indent
+    output.append "} else {\n"
+    output.append indent
+    output.append "  n->next = &node;\n"
+    output.append indent
+    output.append "  pthread_mutex_lock(&node.mutex);\n"
+    output.append indent
+    output.append "};\n"
+    output.append indent
+    output.append "obj->last = &node;\n"
+    output.append indent
+    output.append "pthread_mutex_unlock(&obj->mutex);\n"
+    //
+    output.append indent
+    output.append "pthread_mutex_lock (&node.mutex);\n"
+    output.append indent
+    output.append "thread_save=pthread_getspecific(current_thread);\n"
+    output.append indent
+    output.append "pthread_setspecific(current_thread,proto)"
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "COP_LOCK("
+    data.display buffer
+    buffer.add_last ')'
+  )
+

@@ -1,0 +1,24 @@
+Header
+  + name := DEV;
+  
+  - external := `
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+`;
+
+Public
+
+  - open n:STRING :INTEGER <-
+  ( + buf:NATIVE_ARRAY CHARACTER
+    buf := n.to_external
+    `open((char*)@buf,O_RDWR | O_NONBLOCK)`:(INTEGER)
+  )
+  
+  - ioctl f:INTEGER cmd cmd:INTEGER ptr p:POINTER :INTEGER <- `ioctl(@f,@cmd,@p)`:INTEGER
+  
+  
+  
+  - close f:INTEGER <- `close(@f)`

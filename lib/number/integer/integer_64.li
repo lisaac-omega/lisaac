@@ -1,0 +1,46 @@
+Header
+  + name    := Expanded INTEGER_64;
+  /*Signed 64 bits integer.*/
+  - type    := `int64_t`;  
+  - default := (0.to_raw_integer_64);
+  - export  := INTEGER;
+
+Insert
+  - parent_signed_integer:SIGNED_INTEGER := SIGNED_INTEGER
+
+Public
+
+  - object_size:INTEGER := 8
+
+  - '-' Self:SELF :SELF <- zero - Self
+
+  // Range
+
+  - maximum:UINTEGER_64 <- 7FFF_FFFF_FFFF_FFFFh
+
+  - minimum:INTEGER_64  <- `0x8000000000000000LLU`:INTEGER_64; // 8000_0000_0000_0000h
+  
+  // Conversion with test.
+
+  - to_integer_64:INTEGER_64 <- Self
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+  [ ? {b!=NULL}; ]
+  ( 
+    (Self = minimum).if {
+      b.append "-9223372036854775808"
+    } else {
+      parent_signed_integer.append_in b
+    }
+  )
+  
+  - append_in b:STRING_BUFFER base base:INTEGER :INTEGER <- parent_signed_integer.append_in b base base
+  
+  - Self:SELF '&' Left 90 other:SELF :SELF <- `@Self & @other`:SELF
+  - Self:SELF '|' Left 80 other:SELF :SELF <- `@Self | @other`:SELF
+  - Self:SELF '>>' Left 90 other:INTEGER :SELF <- `@Self >> @other`:SELF
+  - Self:SELF '<<' Left 90 other:INTEGER :SELF <- `@Self << @other`:SELF
+  - '~' Self:SELF :SELF <- `~@Self`:SELF
+

@@ -1,0 +1,25 @@
+Header
+  + name := MAIN; // See first "man regex".
+ 
+Public
+  - main <-
+  ( + regex:REGEX
+    + status:BOOLEAN
+    + data:STRING
+    regex := REGEX.create
+    //
+    status := regex.compile "www\\.[-_[:alnum:]]+\\.[[:lower:]]{2,4}"; // grep -E 
+    TEST.check status; // because the regex is correct
+    //
+    data := "www.lisaac.fr"
+    status := regex.whole_match data
+    TEST.check status; // because the match is ok
+    //
+    data := "XXXwww.lisaac.frXXX"
+    TEST.check ((regex.match data start 0) = 0)
+    TEST.check (regex.offset_start) integer 3; // first index of the match
+    TEST.check (regex.offset_end) integer 16; // index just after the end of the match
+    //
+    regex.regfree
+  )
+  

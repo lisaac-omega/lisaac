@@ -1,0 +1,115 @@
+Header
+  + name := TOK_ITM;
+  
+Insert, Public
+  - parent_t_drw:TOK_DRW := TOK_DRW
+  
+Public
+  
+  - set_parent_tok_drw t:TOK_DRW <- ( parent_t_drw := t; )
+    
+  + db:INTEGER
+  + dd:INTEGER
+  - de:INTEGER <- db + dd
+    
+  - set_dd d:INTEGER <- ( dd := d; )
+  
+  - copy_itm other:TOK_ITM <-
+  (    
+    (db,dd) := (other.db,other.dd)
+  )
+  
+  - now p:INTEGER :BOOLEAN <- p - pt_b.pt = db
+  
+  - finalize t:INTEGER db l:INTEGER de e:INTEGER <-
+  ( db := l-pt_b.pt; dd := e-l; )
+  
+  - new_parse t:INTEGER <- ( abstract; )
+  
+  - force:INTEGER := 10h
+  
+  - parse_sp t:INTEGER :SELF <-
+  ( + r:SELF
+    skip_sp
+    r := parse_cmd t
+    //((r != NULL) && {r.dd = 0}).if { r.finalize t db (Old pos_i) de (Old pos_i); }
+    r
+  )
+  
+  - parse_spln t:INTEGER :SELF <-
+  ( + r:SELF
+    skip_spln_expr
+    r := parse_cmd t
+    //((r != NULL) && {r.dd = 0}).if { r.finalize t db (Old pos_i) de (Old pos_i); }
+    r
+  )
+    
+  - parse_cmd t:INTEGER :SELF <-
+  ( + result:SELF
+    + old_cur:POS
+    old_cur := pos_i
+    result := new
+    result.new_parse t
+    (
+      (old_cur != pos_i) || {
+        (t & force = force)/* &&
+        {          
+          (PAGE.cur_pg.buf_pg.buffer != txt_buf) ||
+          {PAGE.cur_pg.buf_pg.like TXT_PG.pti = cpti}
+        }*/
+      }
+    ).if {
+      result.finalize t db old_cur de pos_i
+    } else {
+      result.free; result := NULL
+    }
+    result
+  )
+    
+  - draw <-
+  ( 
+    (pos_i.pt = pt_b.pt + db).if {      
+      begin_draw
+      ? {pt_b.pt+db+dd <= upper+1}
+      draw_std (pt_b.pt+db+dd)
+      end_draw
+      toks.at tok_cur.sty_run
+    }
+  )
+  
+  - begin_draw
+  - sub_draw
+  - end_draw
+  
+  // Command
+  
+  - search s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
+  ( + r:INTEGER
+    (idx < b + de).if {
+      r := search s range ((b + db).max idx) to (b + de)
+    } else {
+      r := -1
+    }
+    r
+  )
+  
+  - search_back s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
+  ( + r:INTEGER
+    (idx > b + db).if {
+      r := search_back s range ((b + de).min idx) downto (b + db)
+    } else {
+      r := -1
+    }
+    r
+  )
+  
+  // Color / Style
+  /*
+  - sty_run <- toks.at tok_cur.sty_run
+  - col n:INTEGER sub s:INTEGER <- toks.at tok_cur.col n sub s
+  - fnt n:INTEGER sub s:INTEGER <- toks.at tok_cur.fnt n sub s
+  - fsz n:INTEGER sub s:INTEGER <- toks.at tok_cur.fsz n sub s
+  - drw n:INTEGER sub s:INTEGER <- toks.at tok_cur.drw n sub s
+  - itm n:TOK_ITM sub s:INTEGER <- toks.at tok_cur.itm n sub s
+*/
+  

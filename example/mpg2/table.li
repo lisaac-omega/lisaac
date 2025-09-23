@@ -1,0 +1,831 @@
+Header
+  
+  + name         := TABLE;
+  /*
+  Static table access.
+  */
+
+  - external := `
+  //
+  // GETHDR
+  //
+  
+  // default intra quantization matrix 
+  unsigned char default_intra_quantizer_matrix[64] = {
+    8, 16, 19, 22, 26, 27, 29, 34,
+    16, 16, 22, 24, 27, 29, 34, 37,
+    19, 22, 26, 27, 29, 34, 34, 38,
+    22, 22, 26, 27, 29, 34, 37, 40,
+    22, 26, 27, 29, 32, 35, 40, 48,
+    26, 27, 29, 32, 35, 40, 48, 58,
+    26, 27, 29, 34, 38, 46, 56, 69,
+    27, 29, 35, 38, 46, 56, 69, 83 
+  };
+    
+  //
+  // STORE
+  //
+  
+  // color space conversion coefficients
+  // for YCbCr -> RGB mapping
+  //
+  // entries are {crv,cbu,cgu,cgv}
+  //
+  // crv=(255/224)*65536*(1-cr)/0.5
+  // cbu=(255/224)*65536*(1-cb)/0.5
+  // cgu=(255/224)*65536*(cb/cg)*(1-cb)/0.5
+  // cgv=(255/224)*65536*(cr/cg)*(1-cr)/0.5
+  //
+  // where Y=cr*R+cg*G+cb*B (cr+cg+cb=1)
+  //
+  // ISO/IEC 13818-2 section 6.3.6 sequence_display_extension() 
+  int inverse_table_6_9[8][4] = {
+    {117504, 138453, 13954, 34903}, // no sequence_display_extension 
+    {117504, 138453, 13954, 34903}, // ITU-R Rec. 709 (1990) 
+    {104597, 132201, 25675, 53279}, // unspecified 
+    {104597, 132201, 25675, 53279}, // reserved 
+    {104448, 132798, 24759, 53109}, // FCC 
+    {104597, 132201, 25675, 53279}, // ITU-R Rec. 624-4 System B, G 
+    {104597, 132201, 25675, 53279}, // SMPTE 170M 
+    {117579, 136230, 16907, 35559}  // SMPTE 240M (1987) 
+  };
+  
+  //
+  // GETBLK, GETHDR
+  //
+  
+  // zig-zag and alternate scan patterns 
+  unsigned char scan[2][64] = {
+    { // Zig-Zag scan pattern  
+      0,1,8,16,9,2,3,10,17,24,32,25,18,11,4,5,
+      12,19,26,33,40,48,41,34,27,20,13,6,7,14,21,28,
+      35,42,49,56,57,50,43,36,29,22,15,23,30,37,44,51,
+      58,59,52,45,38,31,39,46,53,60,61,54,47,55,62,63
+    },
+    { // Alternate scan pattern 
+      0,8,16,24,1,9,2,10,17,25,32,40,48,56,57,49,
+      41,33,26,18,3,11,4,12,19,27,34,42,50,58,35,43,
+      51,59,20,28,5,13,6,14,21,29,36,44,52,60,37,45,
+      53,61,22,30,7,15,23,31,38,46,54,62,39,47,55,63
+    }
+  };
+  
+  //
+  // GETHDR, GETPIC
+  //
+  
+  // non-linear quantization coefficient table 
+  unsigned char non_linear_quantizer_scale[32] = {
+    0 , 1, 2, 3, 4, 5, 6, 7,
+    8 ,10,12,14,16,18,20,22,
+    24,28,32,36,40,44,48,52,
+    56,64,72,80,88,96,104,112
+  };
+  
+  //
+  // GETVLC
+  //
+  
+  typedef struct {
+    char val, len;
+  } vlctab;
+
+  // Table B-3, macroblock_type in P-pictures, codes 001..1xx 
+  static vlctab pmbtab0[8] = {
+    {(-1),0}, {8,3},   {2,2},   {2,2}, 
+    {8|2,1},  {8|2,1}, {8|2,1}, {8|2,1}
+  };
+
+  // Table B-3, macroblock_type in P-pictures, codes 000001..00011x 
+  static vlctab pmbtab1[8] = {
+    {(-1),0},   {16|1,6},   {16|2,5}, {16|2,5},
+    {16|8|2,5}, {16|8|2,5}, {1,5},    {1,5}
+  };
+
+  // Table B-4, macroblock_type in B-pictures, codes 0010..11xx 
+  static vlctab bmbtab0[16] = {
+    {(-1),0},  {(-1),0},  {8,4},     {8|2,4},
+    {4,3},     {4,3},     {4|2,3},   {4|2,3},
+    {8|4,2},   {8|4,2},   {8|4,2},   {8|4,2},
+    {8|4|2,2}, {8|4|2,2}, {8|4|2,2}, {8|4|2,2}
+  };
+
+  // Table B-4, macroblock_type in B-pictures, codes 000001..00011x 
+  static vlctab bmbtab1[8] = {
+    {(-1),0},     {16|1,6},     {16|4|2,6}, {16|8|2,6},
+    {16|8|4|2,5}, {16|8|4|2,5}, {1,5},      {1,5}
+  };
+
+  // Table B-5, macroblock_type in spat. scal. I-pictures, codes 0001..1xxx 
+  static vlctab spimbtab[16] = {
+    {(-1),0},    {64,4},      {16|1,4},    {1,4},
+    {64|16|2,2}, {64|16|2,2}, {64|16|2,2}, {64|16|2,2},
+    {64|2,1},    {64|2,1},    {64|2,1},    {64|2,1},
+    {64|2,1},    {64|2,1},    {64|2,1},    {64|2,1}
+  };
+
+  // Table B-6, macroblock_type in spat. scal. P-pictures, codes 0010..11xx 
+  static vlctab sppmbtab0[16] = {
+    {(-1),0},      {(-1),0},      {8,4},         {32|8,4},
+    {16|8|2,3},    {16|8|2,3},    {32|8|2,3},    {32|8|2,3},
+    {8|2,2},       {8|2,2},       {8|2,2},       {8|2,2},
+    {32|16|8|2,2}, {32|16|8|2,2}, {32|16|8|2,2}, {32|16|8|2,2}
+  };
+
+  // Table B-6, macroblock_type in spat. scal. P-pictures, codes 0000010..000111x 
+  static vlctab sppmbtab1[16] = {
+    {(-1),0}, {(-1),0}, {64|16|2,7}, {64,7},
+    {2,7},    {64|2,7}, {16|1,7},    {1,7},
+    {16|2,6}, {16|2,6}, {32|16|2,6}, {32|16|2,6},
+    {32,6},   {32,6},   {32|2,6},    {32|2,6}
+  };
+
+  // Table B-7, macroblock_type in spat. scal. B-pictures, codes 0010..11xx 
+  static vlctab spbmbtab0[14] = {
+    {8,4},     {8|2,4},  {4,3},     {4,3},
+    {4|2,3},   {4|2,3},  {8|4,2},   {8|4,2},
+    {8|4,2},   {8|4,2},  {8|4|2,2}, {8|4|2,2},
+    {8|4|2,2}, {8|4|2,2}
+  };
+
+  // Table B-7, macroblock_type in spat. scal. B-pictures, codes 0000100..000111x 
+  /* BEN: Not used ???
+  static vlctab spbmbtab1[12] = {
+    {16|8|2,7}, {16|4|2,7}, {1,7},      {16|8|4|2,7},
+    {32|8,6},   {32|8,6},   {32|8|2,6}, {32|8|2,6},
+    {32|4,6},   {32|4,6},   {32|4|2,6}, {32|4|2,6}
+  };
+  */
+
+  // Table B-7, macroblock_type in spat. scal. B-pictures, codes 00000100x..000001111 
+  static vlctab spbmbtab2[8] = {
+    {16|1,8},      {16|1,8},    {32|16|8|2,8}, {32|16|8|2,8},
+    {32|16|4|2,9}, {64|16|2,9}, {64,9},        {64|2,9}
+  };
+
+  // Table B-8, macroblock_type in spat. scal. B-pictures, codes 001..1xx 
+  static vlctab snrmbtab[8] = {
+    {(-1),0}, {0,3}, {16|2,2}, {16|2,2},
+    {2,1},    {2,1}, {2,1},    {2,1}
+  };
+
+  // Table B-10, motion_code, codes 0001 ... 01xx 
+  static vlctab mvtab0[8] = { 
+    {(-1),0}, {3,3}, {2,2}, {2,2}, 
+    {1,1}, {1,1}, {1,1}, {1,1}
+  };
+
+  // Table B-10, motion_code, codes 0000011 ... 000011x 
+  static vlctab mvtab1[8] = { 
+    {(-1),0}, {(-1),0}, {(-1),0}, {7,6}, 
+    {6,6}, {5,6}, {4,5}, {4,5}
+  };
+
+  // Table B-10, motion_code, codes 0000001100 ... 000001011x 
+  static vlctab mvtab2[12] = { 
+    {16,9}, {15,9}, {14,9}, {13,9},
+    {12,9}, {11,9}, {10,8}, {10,8},
+    {9,8},  {9,8},  {8,8},  {8,8}
+  };
+
+  // Table B-9, coded_block_pattern, codes 01000 ... 111xx 
+  static vlctab cbptab0[32] = { 
+    {(-1),0}, {(-1),0}, {(-1),0}, {(-1),0},
+    {(-1),0}, {(-1),0}, {(-1),0}, {(-1),0},
+    {62,5}, {2,5},  {61,5}, {1,5},  {56,5}, {52,5}, {44,5}, {28,5},
+    {40,5}, {20,5}, {48,5}, {12,5}, {32,4}, {32,4}, {16,4}, {16,4},
+    {8,4},  {8,4},  {4,4},  {4,4},  {60,3}, {60,3}, {60,3}, {60,3}
+  };
+
+  // Table B-9, coded_block_pattern, codes 00000100 ... 001111xx 
+  static vlctab cbptab1[64] = { 
+    {(-1),0}, {(-1),0}, {(-1),0}, {(-1),0},
+    {58,8}, {54,8}, {46,8}, {30,8},
+    {57,8}, {53,8}, {45,8}, {29,8}, {38,8}, {26,8}, {37,8}, {25,8},
+    {43,8}, {23,8}, {51,8}, {15,8}, {42,8}, {22,8}, {50,8}, {14,8},
+    {41,8}, {21,8}, {49,8}, {13,8}, {35,8}, {19,8}, {11,8}, {7,8},
+    {34,7}, {34,7}, {18,7}, {18,7}, {10,7}, {10,7}, {6,7},  {6,7},
+    {33,7}, {33,7}, {17,7}, {17,7}, {9,7},  {9,7},  {5,7},  {5,7},
+    {63,6}, {63,6}, {63,6}, {63,6}, {3,6},  {3,6},  {3,6},  {3,6},
+    {36,6}, {36,6}, {36,6}, {36,6}, {24,6}, {24,6}, {24,6}, {24,6}
+  };
+
+  // Table B-9, coded_block_pattern, codes 000000001 ... 000000111 
+  static vlctab cbptab2[8] = { 
+    {(-1),0}, {0,9},  {39,9}, {27,9}, 
+    {59,9},   {55,9}, {47,9}, {31,9}
+  };
+
+  // Table B-1, macroblock_address_increment, codes 00010 ... 011xx 
+  static vlctab mbatab1[16] = { 
+    {(-1),0}, {(-1),0}, {7,5}, {6,5}, {5,4}, {5,4}, {4,4}, {4,4},
+    {3,3}, {3,3}, {3,3}, {3,3}, {2,3}, {2,3}, {2,3}, {2,3}
+  };
+
+  // Table B-1, macroblock_address_increment, codes 00000011000 ... 0000111xxxx 
+  static vlctab mbatab2[104] = {
+    {33,11}, {32,11}, {31,11}, {30,11}, {29,11}, {28,11}, {27,11}, {26,11},
+    {25,11}, {24,11}, {23,11}, {22,11}, {21,10}, {21,10}, {20,10}, {20,10},
+    {19,10}, {19,10}, {18,10}, {18,10}, {17,10}, {17,10}, {16,10}, {16,10},
+    {15,8},  {15,8},  {15,8},  {15,8},  {15,8},  {15,8},  {15,8},  {15,8},
+    {14,8},  {14,8},  {14,8},  {14,8},  {14,8},  {14,8},  {14,8},  {14,8},
+    {13,8},  {13,8},  {13,8},  {13,8},  {13,8},  {13,8},  {13,8},  {13,8},
+    {12,8},  {12,8},  {12,8},  {12,8},  {12,8},  {12,8},  {12,8},  {12,8},
+    {11,8},  {11,8},  {11,8},  {11,8},  {11,8},  {11,8},  {11,8},  {11,8},
+    {10,8},  {10,8},  {10,8},  {10,8},  {10,8},  {10,8},  {10,8},  {10,8},
+    {9,7},   {9,7},   {9,7},   {9,7},   {9,7},   {9,7},   {9,7},   {9,7},
+    {9,7},   {9,7},   {9,7},   {9,7},   {9,7},   {9,7},   {9,7},   {9,7},
+    {8,7},   {8,7},   {8,7},   {8,7},   {8,7},   {8,7},   {8,7},   {8,7},
+    {8,7},   {8,7},   {8,7},   {8,7},   {8,7},   {8,7},   {8,7},   {8,7}
+  };
+
+  // Table B-12, dct_dc_size_luminance, codes 00xxx ... 11110 
+  static vlctab dclumtab0[32] = { 
+    {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2},
+    {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2},
+    {0, 3}, {0, 3}, {0, 3}, {0, 3}, {3, 3}, {3, 3}, {3, 3}, {3, 3},
+    {4, 3}, {4, 3}, {4, 3}, {4, 3}, {5, 4}, {5, 4}, {6, 5}, {(-1), 0}
+  };
+
+  // Table B-12, dct_dc_size_luminance, codes 111110xxx ... 111111111 
+  static vlctab dclumtab1[16] = { 
+    {7, 6}, {7, 6}, {7, 6}, {7, 6}, {7, 6}, {7, 6}, {7, 6}, {7, 6},
+    {8, 7}, {8, 7}, {8, 7}, {8, 7}, {9, 8}, {9, 8}, {10,9}, {11,9}
+  };
+
+  // Table B-13, dct_dc_size_chrominance, codes 00xxx ... 11110 
+  static vlctab dcchromtab0[32] = { 
+    {0, 2}, {0, 2}, {0, 2}, {0, 2}, {0, 2}, {0, 2}, {0, 2}, {0, 2},
+    {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2},
+    {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2},
+    {3, 3}, {3, 3}, {3, 3}, {3, 3}, {4, 4}, {4, 4}, {5, 5}, {(-1), 0}
+  };
+
+  // Table B-13, dct_dc_size_chrominance, codes 111110xxxx ... 1111111111 
+  static vlctab dcchromtab1[32] = { 
+    {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6},
+    {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6},
+    {7, 7}, {7, 7}, {7, 7}, {7, 7}, {7, 7}, {7, 7}, {7, 7}, {7, 7},
+    {8, 8}, {8, 8}, {8, 8}, {8, 8}, {9, 9}, {9, 9}, {10,10}, {11,10}
+  };
+  
+  //
+  // GETBLK
+  //
+
+  typedef struct {
+    char run, level, len;
+  } dcttab;
+
+  // Table B-14, DCT coefficients table zero,
+  // codes 0100 ... 1xxx (used for first (DC) coefficient)
+  dcttab dcttabfirst[12] = {
+    {0,2,4}, {2,1,4}, {1,1,3}, {1,1,3},
+    {0,1,1}, {0,1,1}, {0,1,1}, {0,1,1},
+    {0,1,1}, {0,1,1}, {0,1,1}, {0,1,1}
+  };
+
+  // Table B-14, DCT coefficients table zero,
+  // codes 0100 ... 1xxx (used for all other coefficients)
+  dcttab dcttabnext[12] = {
+    {0,2,4},  {2,1,4},  {1,1,3},  {1,1,3},
+    {64,0,2}, {64,0,2}, {64,0,2}, {64,0,2}, // EOB 
+    {0,1,2},  {0,1,2},  {0,1,2},  {0,1,2}
+  };
+
+  // Table B-14, DCT coefficients table zero,
+  // codes 000001xx ... 00111xxx
+  dcttab dcttab0[60] = {
+    {65,0,6}, {65,0,6}, {65,0,6}, {65,0,6}, // Escape 
+    {2,2,7}, {2,2,7}, {9,1,7}, {9,1,7},
+    {0,4,7}, {0,4,7}, {8,1,7}, {8,1,7},
+    {7,1,6}, {7,1,6}, {7,1,6}, {7,1,6},
+    {6,1,6}, {6,1,6}, {6,1,6}, {6,1,6},
+    {1,2,6}, {1,2,6}, {1,2,6}, {1,2,6},
+    {5,1,6}, {5,1,6}, {5,1,6}, {5,1,6},
+    {13,1,8}, {0,6,8}, {12,1,8}, {11,1,8},
+    {3,2,8}, {1,3,8}, {0,5,8}, {10,1,8},
+    {0,3,5}, {0,3,5}, {0,3,5}, {0,3,5},
+    {0,3,5}, {0,3,5}, {0,3,5}, {0,3,5},
+    {4,1,5}, {4,1,5}, {4,1,5}, {4,1,5},
+    {4,1,5}, {4,1,5}, {4,1,5}, {4,1,5},
+    {3,1,5}, {3,1,5}, {3,1,5}, {3,1,5},
+    {3,1,5}, {3,1,5}, {3,1,5}, {3,1,5}
+  };
+
+  // Table B-15, DCT coefficients table one,
+  // codes 000001xx ... 11111111
+  dcttab dcttab0a[252] = {
+    {65,0,6}, {65,0,6}, {65,0,6}, {65,0,6}, // Escape 
+    {7,1,7}, {7,1,7}, {8,1,7}, {8,1,7},
+    {6,1,7}, {6,1,7}, {2,2,7}, {2,2,7},
+    {0,7,6}, {0,7,6}, {0,7,6}, {0,7,6},
+    {0,6,6}, {0,6,6}, {0,6,6}, {0,6,6},
+    {4,1,6}, {4,1,6}, {4,1,6}, {4,1,6},
+    {5,1,6}, {5,1,6}, {5,1,6}, {5,1,6},
+    {1,5,8}, {11,1,8}, {0,11,8}, {0,10,8},
+    {13,1,8}, {12,1,8}, {3,2,8}, {1,4,8},
+    {2,1,5}, {2,1,5}, {2,1,5}, {2,1,5},
+    {2,1,5}, {2,1,5}, {2,1,5}, {2,1,5},
+    {1,2,5}, {1,2,5}, {1,2,5}, {1,2,5},
+    {1,2,5}, {1,2,5}, {1,2,5}, {1,2,5},
+    {3,1,5}, {3,1,5}, {3,1,5}, {3,1,5},
+    {3,1,5}, {3,1,5}, {3,1,5}, {3,1,5},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {1,1,3}, {1,1,3}, {1,1,3}, {1,1,3},
+    {64,0,4}, {64,0,4}, {64,0,4}, {64,0,4}, // EOB 
+    {64,0,4}, {64,0,4}, {64,0,4}, {64,0,4},
+    {64,0,4}, {64,0,4}, {64,0,4}, {64,0,4},
+    {64,0,4}, {64,0,4}, {64,0,4}, {64,0,4},
+    {0,3,4}, {0,3,4}, {0,3,4}, {0,3,4},
+    {0,3,4}, {0,3,4}, {0,3,4}, {0,3,4},
+    {0,3,4}, {0,3,4}, {0,3,4}, {0,3,4},
+    {0,3,4}, {0,3,4}, {0,3,4}, {0,3,4},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,1,2}, {0,1,2}, {0,1,2}, {0,1,2},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,2,3}, {0,2,3}, {0,2,3}, {0,2,3},
+    {0,4,5}, {0,4,5}, {0,4,5}, {0,4,5},
+    {0,4,5}, {0,4,5}, {0,4,5}, {0,4,5},
+    {0,5,5}, {0,5,5}, {0,5,5}, {0,5,5},
+    {0,5,5}, {0,5,5}, {0,5,5}, {0,5,5},
+    {9,1,7}, {9,1,7}, {1,3,7}, {1,3,7},
+    {10,1,7}, {10,1,7}, {0,8,7}, {0,8,7},
+    {0,9,7}, {0,9,7}, {0,12,8}, {0,13,8},
+    {2,3,8}, {4,2,8}, {0,14,8}, {0,15,8}
+  };
+
+  // Table B-14, DCT coefficients table zero,
+  // codes 0000001000 ... 0000001111
+  dcttab dcttab1[8] = {
+    {16,1,10}, {5,2,10}, {0,7,10}, {2,3,10},
+    {1,4,10}, {15,1,10}, {14,1,10}, {4,2,10}
+  };
+
+  // Table B-15, DCT coefficients table one,
+  // codes 000000100x ... 000000111x
+  dcttab dcttab1a[8] = {
+    {5,2,9}, {5,2,9}, {14,1,9}, {14,1,9},
+    {2,4,10}, {16,1,10}, {15,1,9}, {15,1,9}
+  };
+
+  // Table B-14/15, DCT coefficients table zero / one,
+  // codes 000000010000 ... 000000011111
+  dcttab dcttab2[16] = {
+    {0,11,12}, {8,2,12}, {4,3,12}, {0,10,12},
+    {2,4,12}, {7,2,12}, {21,1,12}, {20,1,12},
+    {0,9,12}, {19,1,12}, {18,1,12}, {1,5,12},
+    {3,3,12}, {0,8,12}, {6,2,12}, {17,1,12}
+  };
+
+  // Table B-14/15, DCT coefficients table zero / one,
+  // codes 0000000010000 ... 0000000011111
+  dcttab dcttab3[16] = {
+    {10,2,13}, {9,2,13}, {5,3,13}, {3,4,13},
+    {2,5,13}, {1,7,13}, {1,6,13}, {0,15,13},
+    {0,14,13}, {0,13,13}, {0,12,13}, {26,1,13},
+    {25,1,13}, {24,1,13}, {23,1,13}, {22,1,13}
+  };
+
+  // Table B-14/15, DCT coefficients table zero / one,
+  // codes 00000000010000 ... 00000000011111
+  dcttab dcttab4[16] = {
+    {0,31,14}, {0,30,14}, {0,29,14}, {0,28,14},
+    {0,27,14}, {0,26,14}, {0,25,14}, {0,24,14},
+    {0,23,14}, {0,22,14}, {0,21,14}, {0,20,14},
+    {0,19,14}, {0,18,14}, {0,17,14}, {0,16,14}
+  };
+
+  // Table B-14/15, DCT coefficients table zero / one,
+  // codes 000000000010000 ... 000000000011111
+  dcttab dcttab5[16] = {
+    {0,40,15}, {0,39,15}, {0,38,15}, {0,37,15},
+    {0,36,15}, {0,35,15}, {0,34,15}, {0,33,15},
+    {0,32,15}, {1,14,15}, {1,13,15}, {1,12,15},
+    {1,11,15}, {1,10,15}, {1,9,15}, {1,8,15}
+  };
+
+  // Table B-14/15, DCT coefficients table zero / one,
+  // codes 0000000000010000 ... 0000000000011111
+  dcttab dcttab6[16] = {
+    {1,18,16}, {1,17,16}, {1,16,16}, {1,15,16},
+    { 6,3,16}, {16,2,16}, {15,2,16}, {14,2,16},
+    {13,2,16}, {12,2,16}, {11,2,16}, {31,1,16},
+    {30,1,16}, {29,1,16}, {28,1,16}, {27,1,16}
+  };
+
+`;
+
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+GETHDR
+
+  - default_intra_quantizer_matrix idx:INTEGER :UINTEGER_8 <-
+  ( ? {idx.in_range 0 to 63}
+    `default_intra_quantizer_matrix[@idx]`:UINTEGER_8
+  )
+  
+STORE
+  
+  - inverse_table_6_9 (idx1,idx2:INTEGER) :INTEGER <-
+  ( ? {idx1.in_range 0 to 7}
+    ? {idx2.in_range 0 to 3}
+    `inverse_table_6_9[@idx1][@idx2]`:INTEGER
+  )
+  
+GETBLK, GETHDR
+  
+  - scan (idx1,idx2:INTEGER) :UINTEGER_8 <-
+  ( ? {idx1.in_range 0 to 1}
+    ? {idx2.in_range 0 to 63}
+    `scan[@idx1][@idx2]`:UINTEGER_8
+  )
+  
+GETHDR, GETPIC
+  
+  - non_linear_quantizer_scale idx:INTEGER :UINTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `non_linear_quantizer_scale[@idx]`:UINTEGER_8
+  )
+  
+GETVLC
+  
+  - pmbtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(pmbtab0[@idx].val)`:INTEGER_8
+  )
+  - pmbtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(pmbtab0[@idx].len)`:INTEGER_8
+  )
+  
+  - pmbtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(pmbtab1[@idx].val)`:INTEGER_8
+  )
+  - pmbtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(pmbtab1[@idx].len)`:INTEGER_8
+  )
+
+  - bmbtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(bmbtab0[@idx].val)`:INTEGER_8
+  )
+  - bmbtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(bmbtab0[@idx].len)`:INTEGER_8
+  )
+  
+  - bmbtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(bmbtab1[@idx].val)`:INTEGER_8
+  )
+  - bmbtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(bmbtab1[@idx].len)`:INTEGER_8
+  )
+
+  - spimbtab_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(spimbtab[@idx].val)`:INTEGER_8
+  )
+  - spimbtab_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(spimbtab[@idx].len)`:INTEGER_8
+  )
+  
+  - sppmbtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(sppmbtab0[@idx].val)`:INTEGER_8
+  )
+  - sppmbtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(sppmbtab0[@idx].len)`:INTEGER_8
+  )
+  
+  - sppmbtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(sppmbtab1[@idx].val)`:INTEGER_8
+  )
+  - sppmbtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(sppmbtab1[@idx].len)`:INTEGER_8
+  )
+
+  - spbmbtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 13}
+    `(spbmbtab0[@idx].len)`:INTEGER_8
+  )
+  - spbmbtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 13}
+    `(spbmbtab0[@idx].val)`:INTEGER_8
+  )
+  
+  - spbmbtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(spbmbtab1[@idx].len)`:INTEGER_8
+  )
+  - spbmbtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(spbmbtab1[@idx].val)`:INTEGER_8
+  )
+  
+  - spbmbtab2_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(spbmbtab2[@idx].len)`:INTEGER_8
+  )
+  - spbmbtab2_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(spbmbtab2[@idx].val)`:INTEGER_8
+  )
+  
+  - snrmbtab_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(snrmbtab[@idx].val)`:INTEGER_8
+  )
+  - snrmbtab_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(snrmbtab[@idx].len)`:INTEGER_8
+  )
+  
+  - mvtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(mvtab0[@idx].val)`:INTEGER_8
+  )
+  - mvtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(mvtab0[@idx].len)`:INTEGER_8
+  )
+  
+  - mvtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(mvtab1[@idx].val)`:INTEGER_8
+  )
+  - mvtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(mvtab1[@idx].len)`:INTEGER_8
+  )
+
+  - mvtab2_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(mvtab2[@idx].val)`:INTEGER_8
+  )
+  - mvtab2_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(mvtab2[@idx].len)`:INTEGER_8
+  )
+
+  - cbptab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(cbptab0[@idx].val)`:INTEGER_8
+  )
+  - cbptab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(cbptab0[@idx].len)`:INTEGER_8
+  )
+
+  - cbptab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 63}
+    `(cbptab1[@idx].val)`:INTEGER_8
+  )
+  - cbptab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 63}
+    `(cbptab1[@idx].len)`:INTEGER_8
+  )
+
+  - cbptab2_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(cbptab2[@idx].val)`:INTEGER_8
+  )
+  - cbptab2_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(cbptab2[@idx].len)`:INTEGER_8
+  )
+
+  - mbatab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(mbatab1[@idx].val)`:INTEGER_8
+  )
+  - mbatab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(mbatab1[@idx].len)`:INTEGER_8
+  )
+
+  - mbatab2_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 103}
+    `(mbatab2[@idx].val)`:INTEGER_8
+  )
+  - mbatab2_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 103}
+    `(mbatab2[@idx].len)`:INTEGER_8
+  )
+
+  - dclumtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(dclumtab0[@idx].val)`:INTEGER_8
+  )
+  - dclumtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(dclumtab0[@idx].len)`:INTEGER_8
+  )
+
+  - dclumtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dclumtab1[@idx].val)`:INTEGER_8
+  )
+  - dclumtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dclumtab1[@idx].len)`:INTEGER_8
+  )
+
+  - dcchromtab0_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(dcchromtab0[@idx].val)`:INTEGER_8
+  )
+  - dcchromtab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(dcchromtab0[@idx].len)`:INTEGER_8
+  )
+
+  - dcchromtab1_val idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(dcchromtab1[@idx].val)`:INTEGER_8
+  )
+  - dcchromtab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 31}
+    `(dcchromtab1[@idx].len)`:INTEGER_8
+  )
+  
+GETBLK
+  
+  - dcttabfirst_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(dcttabfirst[@idx].run)`:INTEGER_8
+  )
+  - dcttabfirst_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(dcttabfirst[@idx].level)`:INTEGER_8
+  )
+  - dcttabfirst_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(dcttabfirst[@idx].len)`:INTEGER_8
+  )
+
+  - dcttabnext_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(dcttabnext[@idx].run)`:INTEGER_8
+  )
+  - dcttabnext_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(dcttabnext[@idx].level)`:INTEGER_8
+  )
+  - dcttabnext_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 11}
+    `(dcttabnext[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab0_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 59}
+    `(dcttab0[@idx].run)`:INTEGER_8
+  )
+  - dcttab0_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 59}
+    `(dcttab0[@idx].level)`:INTEGER_8
+  )
+  - dcttab0_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 59}
+    `(dcttab0[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab0a_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 251}
+    `(dcttab0a[@idx].run)`:INTEGER_8
+  )
+  - dcttab0a_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 251}
+    `(dcttab0a[@idx].level)`:INTEGER_8
+  )
+  - dcttab0a_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 251}
+    `(dcttab0a[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab1_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(dcttab1[@idx].run)`:INTEGER_8
+  )
+  - dcttab1_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(dcttab1[@idx].level)`:INTEGER_8
+  )
+  - dcttab1_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(dcttab1[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab1a_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(dcttab1a[@idx].run)`:INTEGER_8
+  )
+  - dcttab1a_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(dcttab1a[@idx].level)`:INTEGER_8
+  )
+  - dcttab1a_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 7}
+    `(dcttab1a[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab2_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab2[@idx].run)`:INTEGER_8
+  )
+  - dcttab2_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab2[@idx].level)`:INTEGER_8
+  )
+  - dcttab2_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab2[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab3_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab3[@idx].run)`:INTEGER_8
+  )
+  - dcttab3_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab3[@idx].level)`:INTEGER_8
+  )
+  - dcttab3_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab3[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab4_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab4[@idx].run)`:INTEGER_8
+  )
+  - dcttab4_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab4[@idx].level)`:INTEGER_8
+  )
+  - dcttab4_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab4[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab5_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab5[@idx].run)`:INTEGER_8
+  )
+  - dcttab5_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab5[@idx].level)`:INTEGER_8
+  )
+  - dcttab5_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab5[@idx].len)`:INTEGER_8
+  )
+
+  - dcttab6_run idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab6[@idx].run)`:INTEGER_8
+  )
+  - dcttab6_level idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab6[@idx].level)`:INTEGER_8
+  )
+  - dcttab6_len idx:INTEGER :INTEGER_8 <-
+  ( ? {idx.in_range 0 to 15}
+    `(dcttab6[@idx].len)`:INTEGER_8
+  )

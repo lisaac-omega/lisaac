@@ -1,0 +1,54 @@
+Header
+  + name := Strict TXT;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ TXT
+  
+Private
+  - stk:Expanded ARRAY TXT
+Public
+  
+  - width_min:REAL_32 <-
+  ( + x0,y0,x1,y1,wt:REAL_32
+    font_face_id (FONT.sys (FONT.roman))
+    font_size (FONT.size_sys * zom)
+    (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt
+    wt
+  )
+  
+  - height_min:REAL_32 <- FONT.size_sys * zom
+  
+  - mute:INTEGER := 1 << 15
+  
+  + txt:STRING
+  - set_txt t:STRING <- ( txt := t; )
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - init_str t:STRING :SELF <-
+  ( txt := t
+    init_obj
+  )
+    
+  - draw <-
+  ( + c:COLOR
+    + x:REAL_32
+   
+    (is mute).if {
+      c := LOOK_GUI.text_bg_ui
+    } else {
+      c := (col=COLOR).ok (LOOK_GUI.text_ui) or col
+    }
+    fill_color c
+    font_face_id (FONT.sys (FONT.roman))
+    font_size (FONT.size_sys * zom)
+    text_align ((flag & 111) | align_middle)
+    x := xo
+    (flag & 111)
+    .when align_center then { x := xo + width/2; }
+    .when align_right  then { x := xmax;         }
+    text (x,(yo+ymax)/2) msg txt
+  )

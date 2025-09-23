@@ -1,0 +1,97 @@
+Header
+
+  + name        := EXPR_MUL;
+
+  /*Mul Binary Expression.*/
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  - symbol:STRING_ALIAS := "*"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 1   * E -> E
+  //-- -1  * E -> - E
+  //-- 2^n * E -> E << n
+  ( + v:INTEGER_64
+    + result:EXPR
+
+    (left_cst.value = 1).if {
+      left_cst.remove
+      result := right
+    }.elseif {left_cst.value = -1} then {
+      left_cst.remove
+      result := EXPR_NEG.create position with right
+    }.elseif {(v := left_cst.to_power) != -1} then {
+      left_cst.set_value v
+      result := EXPR_SHIFT_L.create position with right and left_cst
+    }
+    result
+  )
+
+  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  //-- E *   1 -> E
+  //-- E *  -1 -> - E
+  //-- E * 2^n -> E << n
+  ( + result:EXPR
+    + v:INTEGER_64
+
+    (right_cst.value = 1).if {
+      right_cst.remove
+      result := left
+    }.elseif {right_cst.value = -1} then {
+      right_cst.remove
+      result := EXPR_NEG.create position with left
+    }.elseif {(v := right_cst.to_power) != -1} then {
+      right_cst.set_value v
+      result := EXPR_SHIFT_L.create position with left and right_cst
+    }
+    result
+  )
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 * C2 -> C3
+  (
+    left_cst.set_value (left_cst.value * right_cst.value)
+    right_cst.remove
+    left_cst
+  )
+
+  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0   * E -> 0
+  ( + result:EXPR
+
+    (left_cst.value = 0).if {
+      result := left_cst
+      right.remove
+    }
+    result
+  )
+
+  - exec_right right_cst:INTEGER_CST :EXPR <-
+  //-- E *   0 -> 0
+  ( + result:EXPR
+
+    (right_cst.value = 0).if {
+      result := right_cst
+      left.remove
+    }
+    result
+  )
+
+
+
+
+
+
+
+
+
+

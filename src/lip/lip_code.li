@@ -1,0 +1,219 @@
+Header
+
+  + name      := LIP_CODE;
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  - list_parent:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS .create_with_capacity 1
+
+  - list_method:ARRAY LIP_SLOT_CODE := ARRAY LIP_SLOT_CODE .create_with_capacity 32
+
+  - list_data:HMAP LIP_SLOT_DATA KEY STRING_ALIAS :=
+  HMAP LIP_SLOT_DATA KEY STRING_ALIAS.create
+
+  - stack:ARRAY LIP_SLOT_DATA := ARRAY LIP_SLOT_DATA .create_with_capacity 8
+
+  - get_data n:STRING_ALIAS :LIP_SLOT_DATA <-
+  (
+    list_data.fast_reference_at n
+  )
+
+  - get_method n:STRING_ALIAS :LIP_SLOT_CODE <-
+  ( + j:INTEGER
+    + result:LIP_SLOT_CODE
+
+    j := list_method.lower
+    {(j <= list_method.upper) && {list_method.at j.name != n}}.while_do {
+      j := j + 1
+    }
+    (j <= list_method.upper).if {
+      result := list_method.at j
+    }
+    result
+  )
+
+  - print_usage <-
+  ( + slot:LIP_SLOT_CODE
+    + is_ok:BOOLEAN
+
+    (list_method.lower).to (list_method.upper) do { j:INTEGER
+      slot := list_method.at j
+      (slot.section = "Public").if {
+        is_ok := TRUE
+        slot.print
+      }
+    }
+    (is_ok).if_false {
+      "\t Sorry, no option (see `make.lip').\n".print;
+    }
+  )
+
+  - get_integer n:STRING_ALIAS :INTEGER <-
+  ( + d:LIP_SLOT_DATA
+    + int:LIP_INTEGER
+    + result:INTEGER
+
+    d := get_data n
+    (d = NULL).if {
+      "Warning: Slot `".print;
+      n.print
+      "' not found.\n".print
+    } else {
+      int ?= d.value
+      (int = NULL).if {
+        semantic_error (d.position,"INTEGER type is needed.")
+      }
+      result := int.value
+    }
+    result
+  )
+
+  - get_boolean n:STRING_ALIAS :BOOLEAN <-
+  ( + d:LIP_SLOT_DATA
+    + bool:LIP_BOOLEAN
+    + result:BOOLEAN
+
+    d := get_data n
+    (d = NULL).if {
+      "Warning: Slot `".print;
+      n.print
+      "' not found.\n".print
+    } else {
+      bool ?= d.value
+      (bool = NULL).if {
+        semantic_error (d.position,"BOOLEAN type is needed.")
+      }
+      result := bool.value
+    }
+    result
+  )
+
+  - get_string n:STRING_ALIAS :STRING_ALIAS <-
+  ( + d:LIP_SLOT_DATA
+    + str:LIP_STRING
+    + result:STRING_ALIAS
+
+    d := get_data n
+    (d = NULL).if {
+      "Warning: Lip slot `".print;
+      n.print
+      "' not found.\n".print
+    } else {
+      str ?= d.value
+      (str = NULL).if {
+        semantic_error (d.position,"STRING type is needed.")
+      }
+      result := str.value
+    }
+    result
+  )
+
+  - put_string v:STRING_ALIAS to n:STRING_ALIAS <-
+  ( + d:LIP_SLOT_DATA
+    + str:LIP_STRING
+
+    d := get_data n
+    (d = NULL).if {
+      "Warning: Slot `".print;
+      n.print
+      "' not found.\n".print
+    } else {
+      str ?= d.value
+      (str = NULL).if {
+        semantic_error (d.position,"STRING type is needed.")
+      }
+      str.set_value v
+    }
+  )
+
+  - put_boolean v:BOOLEAN to n:STRING_ALIAS <-
+  ( + d:LIP_SLOT_DATA
+
+    d := get_data n
+    (d = NULL).if {
+      "Warning: Slot `".print;
+      n.print
+      "' not found.\n".print
+    } else {
+      (d.set_value (LIP_BOOLEAN.get v)).if_false {
+        semantic_error (d.position,"BOOLEAN type is needed.")
+      }
+    }
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  (
+    warning_error (position,"Unreachable code.")
+  )
+
+  - run_expr:LIP_CONSTANT <-
+  (
+    semantic_error (position,"No expression result.")
+    NULL
+  )
+
+  - call_front_end <-
+  ( + s:LIP_SLOT_CODE
+    // Executing `front_end':
+    s := LIP_CODE.get_method "front_end"
+    (s = NULL).if {
+      "Slot `front_end' not found in *.lip file.\n".print;
+      exit exit_failure_code
+    }
+    s.run_with NULL
+  )
+
+  - init_path_file order:BOOLEAN <-
+  ( + k,i:INTEGER
+    + p1,p2:STRING_ALIAS
+
+    (order).if {
+      path_file.bubble_sort_with { (a,b:STRING_ALIAS)
+        + ii,ai,bi,up:INTEGER
+        + ac,bc:CHARACTER
+        + result:BOOLEAN
+        ii := a.lower
+        up := a.upper.min (b.upper)
+        {(ii <= up) && {a.at ii = b.at ii}}.while_do { ii := ii + 1; }
+        ai := bi := ii
+        {(ai <= a.upper) && {(ac := a.at ai) != '/'}}.while_do { ai := ai + 1; }
+        {(bi <= b.upper) && {(bc := b.at bi) != '/'}}.while_do { bi := bi + 1; }
+        ((ac = '/') ^ (bc = '/')).if {          
+          result := ac = '/'
+        } else {
+          result := a.at ii > b.at ii
+        }
+        result
+      }
+    } else {
+      path_file.bubble_sort_with { (a,b:STRING_ALIAS)
+        b !< a
+      }
+    }
+    k := path_file.upper
+    path_begin := path_file.first.upper
+    {k <= path_file.lower}.until_do {
+      p1 := path_file.at k
+      p2 := path_file.at (k-1)
+      (p1 = p2).if {
+        path_file.remove k
+      } else {
+        path_begin := path_begin.min (p1.upper)
+        i := p1.lower
+        {(i < path_begin) && {p1.at i = p2.at i}}.while_do {
+          i := i + 1
+        }
+        path_begin := i
+      }
+      k := k - 1
+    }
+    path_begin := (path_begin - 1).max 0
+  )

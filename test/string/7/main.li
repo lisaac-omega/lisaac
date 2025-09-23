@@ -1,0 +1,17 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + euro:USTRING
+    + char:CHAR
+    euro := USTRING_BUFFER.from_alias "x€x"
+    char := euro.at (STRIDX.lower )
+    TEST.check (char.to_uinteger_8) integer ('x'.to_integer_8)
+    TEST.check (char.is_ascii)
+    TEST.check (char.ascii = 'x')
+    TEST.check (char.byte_count) integer 1
+    char := euro.at (STRIDX.lower + 1)
+    TEST.check (! char.is_ascii)
+    TEST.check (char.byte_count) integer 3
+  )

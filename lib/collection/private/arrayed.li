@@ -1,0 +1,33 @@
+Header
+  + name    := ARRAYED;
+  /*Generic collection*/
+
+Insert
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - count:INTEGER <- abstract
+
+  - element_sizeof:INTEGER <-
+  // The size in number of bytes for type `E'.
+  (
+    abstract
+    0
+  )
+
+  - set_capacity new_capacity:INTEGER <-
+  (
+    abstract
+  )
+
+  - set_count new_count:INTEGER <-
+  (
+    abstract
+  )
+
+  - to_native_array_uinteger_8:NATIVE_ARRAY(UINTEGER_8) <-
+  (
+    abstract
+    NULL
+  )

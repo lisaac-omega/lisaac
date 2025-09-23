@@ -1,0 +1,11 @@
+Depending pass:  \--WARNING----------
+`MAIN' ?= `NULL': always NULL assignment.
+Line 16 column 24 in MAIN(.../test/misc/32/main.li):
+    b := TRUE && {(m ?= NULL) && {m.flag}}
+                        ^
+--SEMANTIC---------
+Slot `__infix_and_and' not found in `MAIN'.
+Line 16 column 32 in MAIN(.../test/misc/32/main.li):
+    b := TRUE && {(m ?= NULL) && {m.flag}}
+                                ^
+Load lip file: /home/colnet/lisaac/test/misc/32/../../../make.lip

@@ -1,0 +1,16 @@
+Header
+  + name := VOLATILE;
+  
+Public
+  
+  - eval x:X <- ( `asm volatile ("/* VOLATILE.eval */" : : "r"(@x))`; )
+  // Useful for performinl speed tests. It brings 'x' to life. (Use `to_pointer')
+  
+  - return x:X :X <-
+  ( + r:X
+    `{void *r`
+    `asm volatile ("mov %1, %0\n": "=r" (r) : "r" (@x))`
+    r := `r`:X
+    `}`
+    r
+  )

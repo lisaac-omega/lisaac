@@ -1,0 +1,136 @@
+Header
+  + name := Expanded POS;
+  
+  - type    := `unsigned long long `;
+  - default := (CAST INTEGER TO POS.on 0);
+  
+  - export := INTEGER;
+  - import := INTEGER;
+  
+Private
+  
+  - from_integer i:INTEGER :SELF <- to_pos i
+  - to_integer:INTEGER <- pt
+  
+  - to_raw:INTEGER_64 <- CAST POS TO INTEGER_64.on Self
+  - to_pos p:INTEGER_64 :SELF <- CAST INTEGER_64 TO POS.on p
+  
+  - siz_pt_li:INTEGER_64 := 22
+  - siz_pt:INTEGER_64 <- siz_pt_li + is_big.ok siz_tok or 0; // 4 MB 
+  - lim_pt:INTEGER_64 <- (1.to_integer_64 << siz_pt) - 1
+  - shl_pt:INTEGER_64 := 0
+  - msk_pt:INTEGER_64 <- lim_pt << shl_pt
+
+  - siz_tok:INTEGER_64 := 16; // 65 536
+  - lim_tok:INTEGER_64 := (1.to_integer_64 << siz_tok) - 1
+  - shl_tok:INTEGER_64 := shl_pt + siz_pt_li
+  - msk_tok:INTEGER_64 := lim_tok << shl_tok
+            
+  - siz_x:INTEGER_64 := 14; // [0..16384]
+  - lim_x:INTEGER_64 := (1.to_integer_64 << siz_x) - 1
+  - shl_x:INTEGER_64 := shl_tok + siz_tok
+  - msk_x:INTEGER_64 := lim_x << shl_x
+  
+  - siz_y:INTEGER_64 := 10; // [0..1023] * font_size
+  - lim_y:INTEGER_64 := (1.to_integer_64 << siz_y) - 1
+  - shl_y:INTEGER_64 := shl_x + siz_x
+  - msk_y:INTEGER_64 := lim_y << shl_y
+    
+  - siz_ico:INTEGER_64 := 1
+  - lim_ico:INTEGER_64 := (1.to_integer_64 << siz_ico) - 1
+  - shl_ico:INTEGER_64 := 62
+  - msk_ico:INTEGER_64 := lim_ico << shl_ico
+    
+  - siz_xy:INTEGER_64 := 1
+  - lim_xy:INTEGER_64 := (1.to_integer_64 << siz_xy) - 1
+  - shl_xy:INTEGER_64 := 63
+  - msk_xy:INTEGER_64 := lim_xy << shl_xy
+  
+  - msk_cmp:INTEGER_64 := ~ (msk_x | msk_y)
+  - msk_tok_ico:INTEGER_64 := msk_tok | msk_ico
+  - msk_cmp2:INTEGER_64 := msk_ico | msk_tok | msk_pt
+  
+Public
+  
+  - undefine:POS <- to_pos (-1)
+  - is_undefine:BOOLEAN <- to_raw = -1
+  
+  - undefine_xy:POS <- to_pos (to_raw & ~(msk_x | msk_y))
+  - is_undefine_xy:BOOLEAN <- (to_raw & (msk_x | msk_y)) = 0
+  
+  - is_define_all:BOOLEAN <- (!is_xy) && {!is_undefine_xy}
+  
+  - is_big:BOOLEAN <- TOK_ITM.txt_buf.upper >= 1 << siz_pt_li
+    
+  - is_ico:BOOLEAN <- (!is_big) && {(to_raw & msk_ico) != 0}
+  - is_xy:BOOLEAN  <- (to_raw & msk_xy ) != 0
+  
+  - x:REAL_32 <- ((to_raw << (64-shl_x-siz_x)) >> (64-siz_x)).to_real_32
+  - y:REAL_32 <- ((to_raw >> shl_y) & lim_y).to_real_32 * FONT.size_app + FONT.size_app*0.5
+  
+  - tok:INTEGER <-
+  [ ? {! is_big}; ]
+  (to_raw >> shl_tok) & lim_tok
+  
+  - pt:INTEGER <- to_raw & lim_pt
+  
+  - set_pt i:INTEGER :SELF <-
+  to_pos ((to_raw & ~(msk_pt|msk_xy|msk_x|msk_y)) | (i << shl_pt))
+  
+  - div d:DIV xy (px,py:REAL_32) :SELF <-
+  to_pos (d.pos.to_raw | msk_xy).set_xy (px,py)
+  
+  - new_ico n:INTEGER :SELF <-
+  [ ? {! is_big}; ]
+  to_pos (n | (TXT_BUF.tok_cur << shl_tok) | msk_ico)
+    
+  - set_xy (px,py:REAL_32) :SELF <-
+  [ ? {py >= 0}; ]
+  ( + xi,yi:INTEGER_64
+    xi := px.to_integer_64;                   ? {xi < (lim_x>>1)}
+    yi := (py / FONT.size_app).to_integer_64; ? {yi < lim_y}
+    ((xi = 0) && {yi = 0}).if { yi := 1; }; // Else undefine
+    to_pos ((to_raw & ~(msk_x|msk_y)) | ((xi << shl_x) & msk_x) | (yi << shl_y))
+  )
+      
+  - Self:SELF '-' Left 80 d:INTEGER :SELF <- set_pt (pt - d)
+  - Self:SELF '+' Left 80 d:INTEGER :SELF <- set_pt (pt + d)
+  
+  - Self:SELF '>=' Right 60 d:INTEGER :BOOLEAN <- pt >= d
+  - Self:SELF '<=' Right 60 d:INTEGER :BOOLEAN <- pt <= d
+  - Self:SELF '>'  Right 60 d:INTEGER :BOOLEAN <- pt > d
+  - Self:SELF '<'  Right 60 d:INTEGER :BOOLEAN <- pt < d
+  
+  - Self:SELF '=='  Right 60 o:POS :BOOLEAN <- (to_raw & msk_cmp) = (o.to_raw & msk_cmp)
+  - Self:SELF '!==' Right 60 o:POS :BOOLEAN <- ! (Self == o)
+  
+  - Self:SELF '==='  Right 60 o:POS :BOOLEAN <- (to_raw & msk_cmp2) = (o.to_raw & msk_cmp2)
+  
+  - in_range b:INTEGER to e:INTEGER :BOOLEAN <- pt.in_range b to e
+    
+  - Self:SELF '~=' o:POS :BOOLEAN <-
+  (( is_undefine_xy) && {o.pt >= pt}) || {(!is_undefine_xy) && {o.pt  = pt}}
+  
+  - Self:SELF '=|' o:POS :BOOLEAN <-
+  (
+    //pt.print; '='.print; o.pt.print; " ".print; x.print; "<=".print; o.x.println
+    (pt = o.pt) && {(x <= o.x) || {(x > o.x) && {TXT_PG.last_div.width >= 0}}}
+  )
+    
+  - inside d:DIV :BOOLEAN <-
+  (
+    //"\nDIV:".print; d.pos.print
+    ((to_raw & msk_tok_ico) = (d.pos.to_raw & msk_tok_ico)) && {pt.in_range (d.pos) to (d.pte)}
+  )
+  
+  - print <-
+  (    
+    (is_xy).if {
+      "XY ".print
+    } else {
+      "PT ".print
+    }
+    (is_ico).if { "Tok:".print; tok.print; " #".print; }
+    pt.print
+    " (".print; x.print; ",".print; y.print; ")".println
+  )

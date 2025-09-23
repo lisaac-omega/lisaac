@@ -1,0 +1,9 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + i_am_unused:INTEGER
+  )

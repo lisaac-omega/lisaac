@@ -1,0 +1,96 @@
+Header
+
+  + name         := TOWER;
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+Private
+
+  + t:ARRAY INTEGER
+
+  + top:INTEGER
+
+Public
+
+  - full n:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.full_make n
+    result
+  )
+
+  - full_make n:INTEGER <-
+  ( ? {n >= 1}
+    t := ARRAY(INTEGER).create n
+    (n-1).downto 0 do { i:INTEGER
+      t.at i put (n-i)
+    }
+    top := n-1
+
+    ? {nb+1 = n}
+    ? {top = nb}
+    ? {t.at top = 1}
+  )
+
+  - empty n:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.empty_make n
+    result
+  )
+
+  - empty_make n:INTEGER <-
+  ( ? {n >= 1}
+    t := ARRAY(INTEGER).create n
+    top := 0
+    ? {nb+1 = n}
+    ? {top = 0}
+  )
+
+HANOI
+
+  - nb:INTEGER <- t.upper
+
+  - show_a_discus d:INTEGER <-
+  ( + nb_of_free_slots, nb_of_used_slots:INTEGER
+    ? {d.in_range d to nb}
+    nb_of_used_slots := t.at d
+    nb_of_free_slots := nb+1 - nb_of_used_slots
+    nb_of_free_slots.downto 1 do { i:INTEGER
+      ' '.print
+    }
+    nb_of_used_slots.downto 1 do { i:INTEGER
+      '='.print
+    }
+    '|'.print
+    nb_of_used_slots.downto 1 do { i:INTEGER
+      '='.print
+    }
+    nb_of_free_slots.downto 1 do { i:INTEGER
+      ' '.print
+    }
+  )
+
+  - remove_discus:INTEGER <-
+  ( + result:INTEGER
+    result := t.at top
+    t.at top put 0
+    (top > 0).if {
+      top := top - 1
+    }
+    ? { top >= 0}
+    result
+  )
+
+  - add_discus d:INTEGER <-
+  (
+    (t.at top > d).if {
+      top := top + 1
+      t.at top put d
+    }
+    (t.at top = 0).if {
+      t.at top put d
+    }
+    ? { top <= nb }
+  )

@@ -1,0 +1,171 @@
+Header
+  + name := SLOT_CONTRACT;
+
+Inherit  
+  + parent_tok_drw:Expanded TOK_DRW
+Insert
+//  - parent_lix_buf:LIX_BUF := LIX_BUF
+    
+Private
+  - stk_s:Expanded ARRAY (Strict SLOT_CONTRACT)
+  
+Public   
+  - is_major:BOOLEAN := FALSE
+
+  + list:LIST
+  + require:BOOLEAN
+  - set_require <- ( require := TRUE; )
+  
+  + slot:SLOT
+  - set_slot s:SLOT <- ( slot := s; )
+      
+  - new:SELF <- ( + r:SELF; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
+  
+  - free <-
+  (
+    require := FALSE
+    (list != NULL).if { list.free; list := NULL; }; stk_s.add_last Self
+  )
+      
+  - detect:BOOLEAN <- look "  ["
+  
+  - parse <-
+  [ ? {detect}; ]
+  ( + par,acc,cro,ln:INTEGER
+    + c,in_str:CHARACTER
+    + stop:BOOLEAN
+    pos_i := pos_i + 3
+    cro := 1
+    {(!stop) && {cro != 0} && {skip_sp; at pos_i != '\0'}}.while_do {
+      c := buf.at pos_i
+      (c = '\n').if {
+        toks.at tok_cur.inc_nl
+        ln := ln + 1
+        stop := (
+          ( // 2 lines empty
+            (ln = 2) && {in_str = '\0'} && {acc = 0} && {par = 0}
+          ) ||
+          { // Begin other slot or code...
+            (pos_i+3 < upper) && {look "\n  "} &&
+            {((c := at (pos_i+3)) = '+') || {c = '-'} || {c = '('} || {c = '{'}}
+          } ||
+          { // Begin new Section
+            (pos_i+1 < upper) && {at (pos_i+1) = 'S'}
+          }
+        )
+      } else {
+        ln := 0
+        (in_str != '\0').if { // Skip strings.
+          ((c = in_str) && {buf.at (pos_i-1) != '\\'}).if {
+            in_str := '\0'
+          }
+        } else {
+          (c = '{').if   { acc := acc + 1; }.elseif
+          {c = '}'} then { acc := acc - 1; }.elseif
+          {c = '('} then { par := par + 1; }.elseif
+          {c = ')'} then { par := par - 1; }.elseif
+          {c = '['} then {
+            err warning msg "'[' impossible."
+            cro := cro + 1
+          }.elseif {c = ']'} then { cro := cro - 1; }.elseif
+          {rd_rem_c}  then { pos_i := pos_i - 1; }.elseif
+          {look "//"} then { skip_until '\n'; pos_i := pos_i - 1; }.elseif
+          {(c = '"') || {c = '\''} || {c = '`'}} then { in_str := c; };
+        }
+      }
+      pos_i := pos_i + 1
+    }
+    (cro = 0).if {
+      skip_until '\n'
+      (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+    }
+    sty.clear
+  )
+  
+  - begin_draw <-
+  (
+    (list = NULL).if {      
+      ln_limit := pt_b.pt + di
+      list := LIST.parse_spln 1
+      (read_c ';').if { col (LOOK.symbol) sub 1; }
+      ln_limit := 0
+      pos_i := Old pos_i
+      nl := Old nl
+    }
+  )
+  
+  - draw <-
+  (    
+    req { parent_tok_drw.draw; } dir require
+  )
+  
+  - sub_draw <-
+  (
+    ((list != NULL) && {list.now pos_i}).if { list.draw; }
+  )
+  
+Private
+  
+  - req dr:{} dir d:BOOLEAN <-
+  ( + start,end:INTEGER
+    + x0,y0,x1,y1:REAL_32
+    (x0,y0) := (tex.x,tex.y - tex.asc)
+    tex.push_line
+    start := trace_pointer
+    dr.value
+    (x1,y1) := (tex.xmax,tex.y - tex.des)
+    tex.pop_add_y 0
+    end := trace_pointer
+    req_bg (x0 + x_space*2,y0) to (x1,y1) dir d
+    foreground start to end
+  )
+  
+  - req_bg (x0,y0:REAL_32) to (x1,y1:REAL_32) dir d:BOOLEAN <-
+  ( + x,h,w,stp,hx:REAL_32
+    + a,da,k:REAL_32
+    + col:COLOR
+    w := 16
+    h := y1-y0
+    lisave
+    /*
+    begin_path
+    stroke_width 1
+    stroke_color (COLOR.red)
+    rect (x0,window.yo) size (window.width,window.height)
+    stroke;*/
+    intersect_scissor (x0,window.yo) size (window.width,window.height)
+    a := LOOK.contract.af
+    col := LOOK.contract
+    fill_color col
+    stp := (w*w*2).sqrt
+    (d).if {
+      k := ((pos_y+y1 - x0) / (stp*2)).to_integer
+      x := pos_y+y0 - k * (stp*2) - stp
+    } else {
+      k := ((pos_y+y0 + x0) / (stp*2)).to_integer
+      x := - (pos_y+y0 - k * (stp*2) - stp)
+    }
+    //x := x0 + d.ok (-h) or 0
+    hx := d.ok h or (-h)
+    {x <= x1+stp}.while_do {
+      begin_path
+      move_to (x,y0)
+      line_to (x+stp,y0)
+      line_to (x+stp+hx,y1)
+      line_to (x+hx,y1)
+      fill
+      x := x + stp*2
+    }
+    da := a / 5
+    4.times {
+      col := col.set_af a
+      fill_color col
+      begin_path
+      move_to (x,y0); line_to (x+stp,y0); line_to (x+stp+hx,y1); line_to (x+hx,y1)
+      fill
+      a := a - da
+      x := x + stp*2
+    }
+    reset_scissor
+    lirestore (0,0)
+  )

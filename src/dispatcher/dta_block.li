@@ -1,0 +1,130 @@
+Header
+
+  + name        := DTA_BLOCK;
+
+  /*Lisaac IS A Advanced Compiler*/
+
+Inherit
+
+  + parent_dta_rd_args:Expanded DTA_RD_ARGS
+
+Public
+
+  + result_expr:EXPR
+
+  // Add.
+
+  + model:TYPE_BLOCK
+
+  //
+  // Creation.
+  //
+
+  - create mod:TYPE_BLOCK with larg:ARRAY EXPR :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make mod with larg
+    result
+  )
+
+  - make mod:TYPE_BLOCK with larg:ARRAY EXPR <-
+  [ -? {mod.position != 0}; ]
+  (
+    (profil_current = NULL).if {
+      context := context_main
+    } else {
+      context := profil_current.context
+    }
+    model         := mod
+    position      := mod.position
+    argument_list := larg
+    result_expr   := mod.get_expr_for (mod.position)
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA_BLOCK"
+  )
+
+NODE_STYLE, SELF
+
+  - get_argument:ARRAY EXPR <-
+  ( + result:ARRAY EXPR
+    + rd:READ_SLOT
+    (copy_argument).if {
+      result := ARRAY EXPR .create_with_capacity (argument_list.count)
+      rd ?= argument_list.first
+      result.add_last (rd.receiver.my_copy)
+      (argument_list.lower+1).to (argument_list.upper) do { j:INTEGER
+	result.add_last (argument_list.at j.my_copy)
+      }
+    } else {
+      result := argument_list
+      copy_argument := TRUE
+    }
+    result
+  )
+
+NODE_TYPE, DTA
+
+  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
+  ( + result:LIST
+    + t_block:PROFIL_BLOCK
+    + wrt:WRITE
+    + wrt_larg:ARRAY WRITE
+    + call:CALL_SLOT
+    + em:EXPR_MULTIPLE
+    + rd:READ
+    + result_var:VARIABLE
+
+    result := LIST.create (e.position)
+    (t = TYPE_NULL).if {
+      TYPE_NULL.product_error (e.position) in result with context
+    } else {
+      t_block ?= t
+
+
+      (t_block = NULL).if { // BSBS: debug
+        "<<<".print
+        t.print
+        ">>>".print; '\n'.print
+        list_current.debug_display
+        syntax_error (argument_list.first.position,"Block not found")
+      }
+
+      wrt_larg := t_block.write_argument get_argument
+      call := CALL_SLOT.create (e.position) profil t_block with wrt_larg cop NULL
+      (result_expr.static_type.raw != TYPE_VOID).if {
+	em ?= result_expr
+	(em != NULL).if {
+	  (em.lower).to (em.upper) do { j:INTEGER
+	    rd ?= em.at j
+	    ? {rd != NULL}
+	    result_var := rd.variable
+	    rd  := call.profil.result_list.at j.read (e.position)
+	    wrt := result_var.write (e.position) value rd
+	    call.result_list.add_last (RESULT.create wrt)
+	  }
+	} else {
+          rd ?= result_expr
+          result_var := rd.variable
+          rd  := call.profil.result_list.first.read (e.position)
+          wrt := result_var.write (e.position) value rd
+          call.result_list.add_last (RESULT.create wrt)
+	}
+      }
+      result.add_last call
+    }
+    result
+  )
+
+  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  (
+    TRUE
+  )
+
+

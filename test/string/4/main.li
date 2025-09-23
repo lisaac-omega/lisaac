@@ -1,0 +1,23 @@
+Header
+  + name := MAIN;
+ 
+Public
+  
+  - main <-
+  ( + str:USTRING_BUFFER
+    + c:INTEGER
+    
+    str := "vélo"
+    str.foreach {char:CHAR
+      c := c + 1
+    }
+    TEST.check c integer 4
+    c := 0
+    str.foreach_utf8 {uint8:UINTEGER_8
+      c := c + 1
+    }
+    TEST.check c integer 5
+    
+  )
+  
+  

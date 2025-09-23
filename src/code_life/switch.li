@@ -1,0 +1,706 @@
+Header
+
+  + name        := SWITCH;
+
+  /* Switch for late binding resolution 
+
+   BSBS: Optim. : Détecter les switch identique l'un après l'autre
+   pour les fusionner...
+  */
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+  
+//  + count_my_switch_merge:INTEGER
+  
+  - is_invariant:BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+
+    (expr.is_invariant).if {
+      result := TRUE
+      j := list.lower
+      {(j <= list.upper) && {result}}.while_do {
+	result := list.at j.code.is_invariant
+	j := j + 1
+      }
+    }
+    result
+  )
+
+  + expr:EXPR
+
+  + list:ARRAY CASE
+
+  - count:INTEGER <- list.count
+
+  //
+  // Creation.
+  //
+
+  - create n:NODE with e:EXPR size s:INTEGER :SELF <-
+  [ -? {n.position != 0}; ]
+  ( + result:SELF
+
+    result := clone
+    result.make n with e size s
+    result
+  )
+
+
+  - make n:NODE with e:EXPR size s:INTEGER <-
+  ( + first:CASE
+
+    position := n.position
+    expr     := e
+    list     := ARRAY CASE .create_with_capacity s
+    (n.first_code != NULL).if {
+      first := CASE.create (n.first_type) with (n.first_code)
+      list.add_last first
+    }
+  )
+
+  //
+  // Copy.
+  //
+
+  - set_expr e:EXPR list l:ARRAY CASE <-
+  (
+    expr := e
+    list := l
+  )
+
+  - my_copy:SELF <-
+  ( + result:SELF
+    + new_list:ARRAY CASE
+
+    new_list := ARRAY CASE .create_with_capacity (list.count)
+    (list.lower).to (list.upper) do { j:INTEGER
+      new_list.add_last (list.at j.my_copy)
+    }
+
+    result := clone
+    result.set_expr (expr.my_copy) list new_list
+    result
+  )
+
+  //
+  // Remove.
+  //
+
+  - remove <-
+  (
+    (expr != NULL).if {
+      expr.remove
+    }
+    (list.lower).to (list.upper) do { j:INTEGER
+      list.at j.remove
+    }
+  )
+
+  //
+  // Execute
+  //
+
+  - i_am_the_last i:INSTR :BOOLEAN <-
+  ( + result:BOOLEAN
+    + j:INTEGER
+
+    j := list.lower
+    {(j <= list.upper) && {!result}}.while_do {
+      result := list.at j.code.i_am_the_last i
+      j := j + 1
+    }
+    result
+  )
+
+  - execute:INSTR <-
+  ( + lst_typ:TYPES_TMP
+    + result:INSTR
+    + typ:TYPE
+    + wrt:WRITE
+    + lst:LIST
+    + tb:PROFIL_BLOCK
+    + is_end:BOOLEAN
+    + count_empty,idx,idx2:INTEGER
+
+    //switch_fusion; // BSBS: A revoir assure toi que le receiver ne bouge pas!!!
+                      // Rappel toi du step=0 ds cortex
+
+    // Update.
+    lst_typ := TYPES_TMP.new
+    // BSBS: optim a voir si necessaire ...
+    /*
+    (expr.static_type.is_strict).if {
+      lst_typ.add (expr.static_type.raw)
+    } else {
+      */
+      expr.get_type lst_typ
+    //}
+    ? {lst_typ.count <= list.count}
+    (lst_typ.count > list.count).if {
+      "New type: ".print
+      lst_typ.print_all
+      "\nOld type: ".print
+      string_tmp.clear
+      list.lower.to (list.upper) do { j:INTEGER
+	list.at j.id.append_name_in string_tmp
+	string_tmp.add_last ','
+      }
+      string_tmp.print
+      '\n'.print
+      /*
+      string_tmp.clear
+      profil_current.display string_tmp
+      string_tmp.print
+
+
+      ( + wrt2:WRITE
+        + rd:READ
+        + var:VARIABLE
+
+        rd ?= expr
+        var := rd.variable
+        wrt2 := var.require_first
+        rd ?= wrt2.value
+        var := rd.variable
+
+        wrt2 := var.require_first
+        wrt2.debug_display
+        "==============\n".print
+        (var.require_list.lower).to (var.require_list.upper) do { i:INTEGER
+          "==============\n".print
+          i.print; '\n'.print
+          wrt2 := var.require_list.at i
+          wrt2.debug_display
+          (i = 2).if {
+            warning_error (wrt2.position,"ICI")
+          }
+        }
+      );*/
+      syntax_error (expr.position,"*****SWITCH BUG********")
+    }
+
+    //
+    // BSBS: Ajoute un pattern pour les elseif ...
+    //
+    idx := lst_typ.first_index
+    idx2 := 0
+    {idx != -1}.while_do {
+      typ := lst_typ.at idx
+      {typ = list.at idx2.id}.until_do {
+	list.at idx2.remove
+        list.remove idx2
+      }
+      (list.at idx2.code.is_empty).if {
+        count_empty := count_empty + 1
+      }
+      idx := lst_typ.next_index idx
+      idx2 := idx2 + 1
+    }
+    {lst_typ.count = list.count}.until_do {
+      list.last.remove
+      list.remove_last
+    }
+    lst_typ.free
+
+    // Execute.
+    (
+      (list.count = 1) || {
+	(list.count = 2) && {debug_level_option = 0} &&
+        {list.first.id = TYPE_NULL} && {! list.first.code.is_empty} &&
+        {
+	  wrt ?= list.first.code.first; // For ?= with NULL type.
+	  wrt = NULL
+	}
+      }
+    ).if {
+      result := expr.execute_unlink
+      (result != NULL).if {
+	list_current.insert_before result
+      }
+      tb ?= list.last.id
+      (tb != NULL).if {
+	tb.dec_id
+      }
+      result := list.last.code.execute
+      //expr.debug_display; " (0)".println
+      is_end := TRUE
+    }.elseif {count_empty = list.count} then {
+      //expr.debug_display; " (1)".println
+      result := expr.execute_unlink
+      (list.lower).to (list.upper) do { j:INTEGER
+        list.at j.remove
+      }
+      is_end := TRUE
+    }
+    //
+    (! is_end).if {
+      // Normal execution.
+      (
+	(expr.static_type.raw = type_boolean) &&
+	{list.count = 2} && {list.first.code.is_empty}
+      ).if {
+	? {! list.second.code.is_empty}
+	expr := EXPR_NOT_LOGIC.create (expr.position) with expr
+	lst := list.first.code
+	list.first .set_code (list.second.code)
+	list.second.set_code lst
+      }
+      /*
+      seq_or_and := seq_or_and + 1
+      seq_inline := seq_inline + 1
+      */
+      expr := expr.execute_link
+
+      CALL_SLOT.reset_count_no_recursive
+      ((list.first.id = TYPE_NULL) && {list.count = 2}).if {
+	list.first .code.execute_case
+        list.second.code.execute_case
+        ((list.second.id.is_block) && {debug_level_option != 0}).if {
+          list.second.id.set_late_binding
+        }
+      } else {
+	(list.lower).to (list.upper) do { j:INTEGER
+          list.at j.execute
+	}
+      }
+      result := detect_logic_expr
+      (result = NULL).if {
+	result := Self
+      }
+    }
+
+    result
+  )
+
+  //
+  // Genere.
+  //
+
+  - count_bug:INTEGER
+
+  - genere <-
+  ( + lst:LIST
+    + first_case:INTEGER
+    + typ_first:TYPE
+    + typ_id:TYPE_ID
+    + wrt:WRITE
+    + is_genered:BOOLEAN
+    + c1,c2:CASE
+    + lst_case:ARRAY CASE
+    + cases:ARRAY (ARRAY CASE)
+
+    TYPE.add_switch_global Self
+    (list.lower).to (list.upper) do { j:INTEGER
+      list.at j.id.add_switch_list Self
+    }
+
+    count_switch := count_switch + 1
+    (
+      (list.first.id = TYPE_NULL)  &&
+      {debug_level_option = 0}     &&
+      {! list.first.code.is_empty} && {
+	wrt ?= list.first.code.first; // For ?= with NULL type.
+	wrt = NULL
+      }
+    ).if {
+      list.remove_first
+    }
+    typ_first := list.first.id
+    typ_id ?= typ_first
+    ((list.count <= 2) || {typ_first = TYPE_NULL}).if {
+      output.append "if "
+      par {
+        //
+        ((expr.static_type.raw.is_block) && {typ_first = TYPE_NULL}).if {
+          expr.genere
+          is_genered := TRUE
+          output.append ".__id==0"
+        } else {
+          typ_first.put_access_id expr
+          is_genered := TRUE
+          (expr.static_type.raw != type_boolean).if {
+            output.append "=="
+            typ_first.put_id output
+          } else {
+            ? {typ_first.name = "TRUE"}
+          }
+        }
+      }
+      output.append " "; // ") "
+      //
+      list.first.genere
+      first_case := 1
+      //
+      (list.count = 2).if {
+        lst := list.second.code
+        (! list.second.code.is_empty).if {
+          output.append " else "
+          output.append "/* "
+          output.append (list.second.id.name)
+          output.append " */ "
+          list.second.genere
+        }
+        first_case := 2
+      }.elseif {list.count > 2} then {
+        output.append " else {\n"
+        indent.append "  "
+        output.append indent
+      }
+    }
+    (first_case <= list.upper).if {
+      (is_genered).if {
+        expr := expr.my_copy
+      }
+      cases := case_fusion first_case
+      (cases.count = 2).if {
+        (cases.first.count = 1).if {
+          c1 := cases.first.first
+          c2 := cases.second.first
+        }.elseif {cases.second.count = 1} then {
+          c1 := cases.second.first
+          c2 := cases.first.first
+        }
+      }
+      (c1 != NULL).if {
+        output.append "if "
+        par {
+          c1.id.put_access_id expr
+          output.append "=="
+          c1.id.put_id output
+        }
+        output.append " "
+        c1.genere
+        output.append " else /* Other types */ "
+        c2.genere
+      } else {
+        polymorphic_counter := polymorphic_counter + 1
+        output.append "switch "
+        par {
+          list.at first_case.id.put_access_id expr
+        }
+        output.append " {\n"
+        (cases.lower).to (cases.upper) do { j:INTEGER
+          lst_case := cases.at j
+          (! lst_case.first.code.is_empty).if {
+            (j = cases.upper).if {
+              output.append indent
+              output.append "default: "
+            } else {
+              (lst_case.lower).to (lst_case.upper) do { i:INTEGER
+                output.append indent
+                output.append "case "
+                lst_case.at i.id.put_id output
+                output.append ": \n"
+              }
+              output.remove_last
+            }
+            lst_case.first.genere
+            output.append " break;\n"
+          } else { // Debug...
+            (lst_case.lower).to (lst_case.upper) do { i:INTEGER
+              output.append indent
+              output.append "case "
+              lst_case.at i.id.put_id output
+              output.append ": \n"
+            }
+            output.remove_last
+            output.append " break;\n"
+          }
+        }
+        // Debug...
+        //(debug_level_option != 0).if {
+        //  output.append indent
+        //  output.append "default:\n"
+        //  output.append indent
+        //  output.append "lisaac_stack_print(0); \
+        //  \print_string(\"Call on twilight zone!!!\\n\"); \
+        //  \die_with_code(1);\n"
+        //}
+
+        output.append indent
+        output.add_last '}'
+      }
+      free_list_cases cases
+      (first_case != 0).if {
+        output.add_last '\n'
+        indent.remove_tail 2
+        output.append indent
+        output.add_last '}'
+      }
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  ( + line:{INTEGER; }
+
+    line :=
+    { j:INTEGER
+      + i:LIST
+      buffer.append indent
+      buffer.at (buffer.upper-1) put '+'
+      buffer.at (buffer.upper)   put '-'
+      buffer.append (list.at j.id.intern_name)
+      buffer.append ":\n"
+      buffer.append indent
+      i := list.at j.code
+      (i = NULL).if {
+	buffer.append "<Empty>"
+      } else {
+	i.display buffer
+      }
+    }
+
+    buffer.append "Switch "
+    expr.display buffer
+    buffer.add_last '\n'
+    (list.count > 0).if {
+      indent.append "| "
+      0.to (list.upper - 1) do { j:INTEGER
+	line.value j
+	buffer.add_last '\n'
+      }
+      indent.at (indent.upper-1) put ' '
+      line.value (list.upper)
+      indent.remove_tail 2
+    }
+  )
+
+  - switch_new_pass:BOOLEAN
+  - reset_switch_new_pass <-
+  (
+    switch_new_pass := FALSE
+  )
+
+Private
+
+  - detect_logic_expr:INSTR <-
+  // Detection !, |, &, ||, && :
+  ( + result:INSTR
+    + wr_true,wr_false:WRITE
+    + rd:READ
+    + val_true,val_false:EXPR
+    + a,b,c,d:BOOLEAN
+
+    (
+      (expr.static_type.raw = type_boolean) && {list.count = 2} &&
+      {list.first.code.count  = 1} && {list.second.code.count = 1}
+    ).if {
+      ((list.first.id != type_true) || {list.second.id != type_false}).if {
+        list.first.id.intern_name.print;  ' '.print;
+        list.second.id.intern_name.print; '\n'.print;
+	syntax_error (position,"PB dans SWITCH.")
+      }
+      ? {list.first.id  = type_true }
+      ? {list.second.id = type_false}
+
+      wr_true  ?= list.first .code.first
+      wr_false ?= list.second.code.first
+      (
+	(wr_true  != NULL) && {wr_false != NULL} &&
+	{wr_true.static_type.raw = type_boolean} &&
+	{wr_true.variable = wr_false.variable}
+      ).if {
+	val_true  := wr_true .value
+	val_false := wr_false.value
+	// BSBS: val_true.static_type = type_true ???
+	(
+	  (a := val_true.is_constant) && {b := (val_true.static_type.raw = type_true)}
+	).if {
+	  // | or ||
+	  rd ?= val_false
+	  (rd != NULL).if {
+	    // |
+	    wr_true.remove
+	    val_false := EXPR_OR_LOGIC.create position with expr and val_false
+	    wr_false.set_value val_false
+	    result := wr_false
+	    new_execute_pass
+	  }.elseif {(CALL_SLOT.count_no_recursive = 0) || {modify_count = 0}} then {
+	    // ||
+	    wr_true.remove
+	    val_false := EXPR_OR_OR_LOGIC.create position with expr and val_false
+	    wr_false.set_value val_false
+	    result := wr_false
+	    switch_new_pass := TRUE
+	  }
+	}.elseif {
+	  (c := val_false.is_constant) && {d := (val_false.static_type.raw = type_false)}
+	} then {
+	  // & or &&
+	  rd ?= val_true
+	  (rd != NULL).if {
+	    // &
+	    wr_false.remove
+	    val_true := EXPR_AND_LOGIC.create position with expr and val_true
+	    wr_true.set_value val_true
+	    result := wr_true
+	    new_execute_pass
+	  }.elseif {(CALL_SLOT.count_no_recursive = 0) || {modify_count = 0}} then {
+	    // &&
+	    wr_false.remove
+	    val_true := EXPR_AND_AND_LOGIC.create position with expr and val_true
+	    wr_true.set_value val_true
+	    result := wr_true
+	    switch_new_pass := TRUE
+	  }
+	}.elseif {
+	  (a) && {!b} && {c} && {!d}
+	} then {
+	  // !
+	  wr_false.remove
+	  wr_true.set_value (EXPR_NOT_LOGIC.create position with expr)
+	  result := wr_true
+	  new_execute_pass
+	}
+      }
+    }
+    result
+  )
+
+  - switch_fusion <-
+  ( + other:SWITCH
+    + index:INTEGER
+    + wrt:WRITE
+    + rd,rd2:READ
+
+    index := list_current.index + 1
+    (index <= list_current.upper).if {
+      other ?= list_current.at index
+      ((other != NULL) && {other.expr ~= expr} && {other.list.count = list.count}).if {
+        concat_switch other
+        list_current.at index put NOP
+        //warning_error (position,"ICI")
+      }
+      
+      (index < list_current.upper).if {
+        // BSBS: Dans ce cas la, tu devrai en avoir 250 !!!!
+        // Regarde pourquoi tu n'as que 14 cas !
+        wrt ?= list_current.at index
+        rd  ?= expr
+        ((wrt != NULL) && {rd != NULL} && {wrt.variable != rd.variable}).if {
+          rd2   ?= wrt.value
+          other ?= list_current.at (index + 1)
+          ((rd2 != NULL) && {other != NULL} &&
+          {other.expr ~= expr} && {other.list.count = list.count}).if {
+            count_switch_merging := count_switch_merging + 1
+            count_my_switch_merge := count_my_switch_merge + 1
+            (list.lower).to (list.upper-1) do { j:INTEGER
+              list.at j.code.add_last (wrt.my_copy)
+            }
+            list.last.code.add_last wrt
+            list_current.at index put NOP
+            concat_switch other
+            list_current.at (index + 1) put NOP
+          }
+        }
+      }
+      
+    }
+  )
+
+  - concat_switch other:SWITCH <-
+  ( + other_list:ARRAY CASE
+    + code:LIST
+
+    other.expr.remove
+    other_list := other.list
+    (list.lower).to (list.upper) do { j:INTEGER
+      code := list.at j.code
+      code.add_last (other_list.at j.code)
+    }
+    new_execute_pass
+  )
+
+  //
+  // Case fusion manager.
+  //
+
+  - store_list_cases:ARRAY (ARRAY (ARRAY CASE)) :=
+  ARRAY (ARRAY (ARRAY CASE)).create_with_capacity 32
+
+  - store_cases:ARRAY (ARRAY CASE) :=
+  ARRAY (ARRAY CASE).create_with_capacity 32
+
+  - new_cases:ARRAY CASE <-
+  ( + result:ARRAY CASE
+    (store_cases.is_empty).if {
+      result := ARRAY CASE .create_with_capacity 32
+    } else {
+      result := store_cases.last
+      store_cases.remove_last
+    }
+    result
+  )
+
+  - new_list_cases:ARRAY(ARRAY CASE) <-
+  ( + result:ARRAY(ARRAY CASE)
+    (store_list_cases.is_empty).if {
+      result := ARRAY(ARRAY CASE).create_with_capacity 32
+    } else {
+      result := store_list_cases.last
+      store_list_cases.remove_last
+    }
+    result
+  )
+
+  - free_list_cases l:ARRAY(ARRAY CASE) <-
+  ( + lst:ARRAY CASE
+    (l.lower).to (l.upper) do { i:INTEGER
+      lst := l.at i
+      lst.clear
+      store_cases.add_last lst
+    }
+    l.clear
+    store_list_cases.add_last l
+  )
+
+  - case_fusion low:INTEGER :ARRAY(ARRAY CASE) <-
+  ( + c1,c2:CASE
+    + lst:ARRAY CASE
+    + j:INTEGER
+    + result:ARRAY (ARRAY CASE)
+
+    result := new_list_cases
+    (low).to (list.upper) do { i:INTEGER
+      c1 := list.at i
+      lst := NULL
+      j := result.lower
+      {(j <= result.upper) && {lst = NULL}}.while_do {
+        c2 := result.at j.first
+        (c1 ~= c2).if {
+          lst := result.at j
+          c1.code.remove
+        }
+        j := j + 1
+      }
+      (lst = NULL).if {
+        lst := new_cases
+        result.add_last lst
+      }
+      lst.add_last c1
+    }
+    result
+  )
+  
+  // Parenthese manager
+  
+  - par b:{} <-
+  ( + pos:INTEGER
+    output.add_last '('
+    pos := output.upper
+    b.value
+    ((output.at (pos+1) = '(') && {output.last = ')'}).if {
+      output.remove pos
+    } else {
+      output.add_last ')'
+    }
+  )

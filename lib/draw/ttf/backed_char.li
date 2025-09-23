@@ -1,0 +1,26 @@
+Header  
+  + name := BACKED_CHAR;
+  /*Proto utile ??*/
+  
+Mapping
+  
+  + x0:UINTEGER_16;
+  + y0:UINTEGER_16;
+  + x1:UINTEGER_16;
+  + y1:UINTEGER_16;
+  + xoff:REAL_32;
+  + yoff:REAL_32;
+  + xoff2:REAL_32;
+  + yoff2:REAL_32;
+  + xadvance:REAL_32;
+  
+  - make (px0,py0:UINTEGER_16) to (px1,py1:UINTEGER_16) 
+  offset (pxoff,pyoff:REAL_32) to (pxoff2,pyoff2:REAL_32)
+  xadvance pxadvance:REAL_32 <-
+  (
+    (x0,y0) := (px0,py0);
+    (x1,y1) := (px1,py1);
+    (xoff,yoff) := (pxoff,pyoff);
+    (xoff2,yoff2) := (pxoff2,pyoff2);
+    xadvance := pxadvance;
+  );

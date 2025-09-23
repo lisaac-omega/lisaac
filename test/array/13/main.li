@@ -1,0 +1,34 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + bidon:ARRAY INTEGER
+    
+  - main <-
+  ( + sto1,sto2:NATIVE_ARRAY INTEGER
+    + other:MAIN
+    + v:INTEGER
+    bidon := ARRAY INTEGER .create_with_capacity 2
+    bidon.add_last 1
+    other := clone
+    ? {other.bidon.upper = 0}.txt {other.bidon.upper.to_string}
+    v := other.bidon.first
+    ? {v = 1}.txt {v.to_string}
+    sto1 := sto2 := bidon.storage
+    {sto1 = sto2}.while_do {
+      bidon.add_last 1
+      sto2 := bidon.storage
+    }
+    ? {other.bidon.upper = 2}.txt {other.bidon.upper.to_string}
+    other.bidon.at 0 put 5
+    v := bidon.first
+    ? {v = 5}.txt {v.to_string}
+    exit 0
+    ("Hello" + " Dom").to_string_alias; // Bug compilo ASCII    
+  )
+    
+    

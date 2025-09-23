@@ -1,0 +1,172 @@
+Header
+
+  + name    := PROFIL_SLOT;
+
+  /*Method with costumization*/
+
+Inherit
+
+  + parent_profil:Expanded PROFIL
+
+Public
+
+  - position:POSITION <- slot.position
+
+  - slot:SLOT <- slot_code
+
+  - is_interrupt:BOOLEAN <- slot_code.id_section.is_interrupt
+  - is_external:BOOLEAN  <- slot_code.id_section.is_external
+
+  + slot_code:SLOT_CODE
+
+  + is_context_sensitive:BOOLEAN
+  // BSBS: Le bloc passé en argument peux ne pas etre context sensitive
+  // Et puis, cet stat peu changer dans le temps...
+
+  - set_context_sensitive <-
+  (
+    is_context_sensitive := TRUE
+  )
+
+  //
+  // Creation.
+  //
+  
+  - my_clone:SELF <- clone
+  
+  - make s:SLOT_CODE
+  with (typ_self:TYPE_FULL,call_lst:ARRAY EXPR)
+  verify is_first:BOOLEAN :ARRAY WRITE <-
+  [
+    -? {typ_self != NULL}
+  ]
+  ( + loc:LOCAL
+    + typ:TYPE_FULL
+    + item_lst:ARRAY ITM_ARGUMENT
+    + result:ARRAY WRITE
+    + tm:ITM_TYPE_MULTI
+    + ts:ITM_TYPE_MONO
+    + typ_gen:TYPE_GENERIC
+    + typ_sim:TYPE
+    /*
+    (s.name = "yop").if {
+      "PROFIL_SLOT : --- Yop ---".println;
+      call_lst.at 1.static_type.print;
+      '\n'.print;      
+    };
+    */
+    (is_graph).if {
+      set_call := HMAP INTEGER KEY PROFIL.create
+      set_back := HSET PROFIL.create
+    }
+    (s.id_section.is_external).if {
+      name := s.name
+    } else {
+      name := get_intern (s.name) type FALSE
+    }
+    
+    slot_code := s
+    type_self := typ_self
+    PROFIL_LIST.add Self
+    
+    typ_gen ?= type_self.raw
+    (
+      (profil_add_alias = NULL) && {typ_gen != NULL} && 
+      {typ_gen.itm_type.name = "ALIAS__TO"} && {s.name = "add"} &&
+      {typ_gen.generic_list.first.raw.name = "STRING_BUFFER"} && 
+      {typ_gen.generic_list.second.raw.name = "STRING_ALIAS"} 
+    ).if {      
+      profil_add_alias := Self
+    }
+    typ_sim := type_self.raw
+    (
+      (profil_hash_code_alias = NULL) && {typ_sim.itm_type != NULL} && 
+      {typ_sim.itm_type.name = "STRING_ALIAS"} && 
+      {s.name = "hash_code_intern"}
+    ).if {
+      profil_hash_code_alias := Self
+    }
+    //
+    list_current := LIST.create (s.position)
+    profil_current := profil_slot := Self
+    //
+    (debug_level_option != 0).if {
+      // Debug mode : Add context local.
+      context := TYPE_CONTEXT.default.new_local (s.position) name "__pos" style '+'
+      context.set_ensure_count 1
+      list_current.add_last (PUSH.create (slot_code.position) context context first TRUE)
+    }
+    //
+    code := list_current
+    //
+    // Arguments.
+    arg_type_tmp := call_lst
+    item_lst := s.argument_list
+    argument_list := ARRAY LOCAL .create_with_capacity (s.argument_count)
+    (item_lst.lower).to (item_lst.upper) do { j:INTEGER
+      item_lst.at j.to_run_in argument_list for Self
+    }
+    ((s.id_section.is_external) && {argument_list.count > 1}).if {
+      (argument_list.lower+1).to (argument_list.upper) do { j:INTEGER
+	loc := argument_list.at j
+	loc.set_ensure_count 1
+	loc.write (loc.position) value (
+	  EXTERNAL_C.create (loc.position) text "/* External slot */"
+	  access NULL persistant FALSE type (loc.type)
+	)
+      }
+    }
+
+    // Results
+    tm ?= s.result_type
+    (tm != NULL).if {
+      result_list := SLIM_ARRAY LOCAL .create_with_capacity (tm.count)
+      (tm.lower).to (tm.upper) do { k:INTEGER
+        typ := tm.at k.to_run_for Self pos (position.prototype.filename)
+        loc := typ.get (s.position) result (k+1)
+        result_list.add_last loc
+      }
+    } else {
+      ts ?= s.result_type
+      (ts != ITM_TYPE_SIMPLE.type_void).if {
+        result_list := SLIM_ARRAY LOCAL .create_with_capacity 1
+        typ := ts.to_run_for Self pos (position.prototype.filename)
+        result_list.add_last (typ.get (s.position) result 0)
+        (is_external).if {
+          result_list.last.set_ensure_count 1
+        }
+      } else {
+        result_list := SLIM_ARRAY LOCAL .create_with_capacity 0
+      }
+    }
+    //
+    (call_lst != NULL).if {
+      result := write_argument call_lst
+    }
+    //
+    slot_code.create_code is_first
+    //
+    result
+  )
+
+  //
+  // Execute.
+  //
+
+  - remove_inline <-
+  (
+    parent_profil.remove_inline
+    slot_code.remove_profil Self
+  )
+
+  - remove <-
+  (
+    parent_profil.remove
+    slot_code.remove_profil Self
+  )
+
+  //
+  // Genere.
+  //
+
+  - is_static:BOOLEAN <- (! slot.id_section.is_interrupt) && {! slot.id_section.is_external}

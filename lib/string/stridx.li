@@ -1,0 +1,58 @@
+Header
+  + name := Expanded STRIDX;
+  /*STRing InDeX to used with STRING, STRING_BUFFER and STRING_ALIAS.*/
+  - type    := `signed long long `;
+  - default := (CAST INTEGER TO STRIDX.on 0);
+
+Insert
+  - parent_print:PRINT := PRINT
+  
+Private
+  - to_integer_64:INTEGER_64 <- CAST SELF TO INTEGER_64.on Self
+  
+USTRING
+  - to_self i:INTEGER_64 :SELF <- CAST INTEGER_64 TO SELF.on i
+  
+  - base:INTEGER_64 <- (to_integer_64 & 0000_FFFF_FFFF_FFFFh)
+  
+  - offset:INTEGER_16 <- (to_integer_64 >> 48).to_raw_integer_16
+  
+  - not_valid:STRIDX <- to_self ((-1) << 48)
+  
+Public
+  
+  - Self:SELF '+' step:INTEGER_16 :SELF <- to_self (to_integer_64 + (step.to_integer_64 << 48))
+  
+  - Self:SELF '-' step:INTEGER_16 :SELF <- to_self (to_integer_64 - (step.to_integer_64 << 48))
+  
+  - append_in b:STRING_BUFFER <-
+  ( + o:INTEGER_16
+    base.append_in b
+    o := offset
+    (o >= 0).if {
+      b.add_last '+'
+    }
+    o.append_in b
+  )
+  
+  - lower:SELF <- to_self 0
+  
+  - to limit_up:SELF do blc:{SELF;} <-
+  // Classical loop from `Self' to `limit_up'
+  (
+    (Self <= limit_up).if {
+      blc.value Self
+      (Self + 1).to limit_up do blc
+    }
+  )
+
+  - downto limit_down:SELF do blc:{SELF;} <-
+  // Classical backward loop from `Self' to `limit_down'
+  (
+    (Self >= limit_down).if {
+      blc.value Self
+      (Self-1).downto limit_down do blc
+    }
+  )
+  
+

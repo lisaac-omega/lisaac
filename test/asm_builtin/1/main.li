@@ -1,0 +1,22 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( // BSBS to DCDC august 16th 20025:
+    // Tu n'as svn add ASM BUILTIN, mais regarde le code de UINTEGER_64,
+    // je pense que l'on ne fera pas mieux ;)
+    // Quand tu vas comprendre l'astuce, tu vas te marrer,
+    // parce qu'il y a un bit à 1 qui permet de pondre a la fois 2 et 3 ;)
+    // C'est coup de bol !!! ;)
+    TEST.check (ASM_BUILTIN.base_power_of_two 2) integer 1
+    TEST.check (ASM_BUILTIN.base_power_of_two 3) integer 0
+    TEST.check (ASM_BUILTIN.base_power_of_two 4) integer 2
+    TEST.check (ASM_BUILTIN.base_power_of_two 5) integer 0
+    TEST.check (ASM_BUILTIN.base_power_of_two 6) integer 0
+    TEST.check (ASM_BUILTIN.base_power_of_two 7) integer 0
+    TEST.check (ASM_BUILTIN.base_power_of_two 8) integer 3
+    TEST.check (ASM_BUILTIN.base_power_of_two 16) integer 4
+    TEST.check (ASM_BUILTIN.base_power_of_two 32) integer 5
+    TEST.check (ASM_BUILTIN.base_power_of_two 64) integer 6
+  )

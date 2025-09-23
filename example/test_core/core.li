@@ -1,0 +1,89 @@
+Header
+
+  - name := CORE;
+  /*
+  Mandelbrot generation for test core capacities. (COP project)
+  */
+  
+    
+Inherit
+  
+  - parent_clone : CLONE := CLONE
+  
+Public
+  
+  + identifier:INTEGER
+  
+  - create idx:INTEGER :SELF <-
+  ( + result:SELF
+    
+    result := clone
+    result.make idx
+    result
+  )
+  
+  - make idx:INTEGER <-
+  (    
+    identifier := idx
+  )
+  
+  - mandelbrot <-
+  ( 
+    + size, i, iter,sum: INTEGER
+    + zr, zi, cr, ci, pr, pi, limit: REAL_64
+    + stop, gone: BOOLEAN
+    + bit, bit_accu: UINTEGER_8
+    
+    size := 300
+    // compute mandelbrot's bitmap
+    limit := 4.0
+    iter  := 200_000
+    bit   := 080h
+    0.to (size-1) do { y:INTEGER
+      ci := (y * 2).to_real_64 / size - 1.0
+
+      0.to (size-1) do { x:INTEGER
+        cr := (x * 2).to_real_64 / size - 1.5
+
+        zr:=zi:=pr:=pi:=0
+        i := 0
+        stop := FALSE
+        {stop}.until_do {
+          zi := zr * zi * 2 + ci
+          zr := pr - pi + cr
+          pi := zi * zi
+          pr := zr * zr
+          (pi+pr > limit).if {
+            stop := TRUE
+            gone := TRUE
+          } else {
+            i := i+1
+            stop := (i = iter)
+          }
+        }
+
+        (gone).if {
+          gone := FALSE
+        } else {
+          bit_accu := bit_accu | bit
+        }
+
+        (bit = 1).if {
+          sum := sum + bit_accu
+          bit_accu := 0
+          bit := 80h
+        } else {
+          bit := bit >> 1
+        }
+      }
+      
+      (bit != 80h).if {
+        sum := sum + bit_accu
+        bit_accu := 0
+        bit := 80h
+      }
+    }
+    ((sum&0F000_0000h) != 0).if { "Yop\n".print; }; // Just for to force Lisaac to perform the task...    
+  )
+  
+  

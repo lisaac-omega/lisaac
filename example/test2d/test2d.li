@@ -1,0 +1,345 @@
+Header
+  
+  + name := TEST2D;
+  
+Inherit 
+  + parent_window:Expanded WINDOW
+  
+Public 
+
+  - draw_lines (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  ( + pad,s,fx, fy:REAL_32
+    - pts:ARRAY REAL_32
+    - joins,caps:ARRAY INTEGER
+    
+    (pts = NULL).if {
+      pts := ARRAY REAL_32.create (4*2)
+      joins := ARRAY INTEGER.create_with_capacity 3
+      caps  := ARRAY INTEGER.create_with_capacity 3
+      joins.add_last (miter)
+      joins.add_last (round)
+      joins.add_last (bevel)
+      caps.add_last (butt)
+      caps.add_last (round)
+      caps.add_last (square)
+    }
+
+    pad := 5.0
+    s := w/9.0 - pad*2
+    
+    save
+    pts.at 0 put (-s*0.25 + (t*0.3).cos * s*0.5)
+    pts.at 1 put           ((t*0.3).sin * s*0.5)
+    pts.at 2 put                       (-s*0.25)
+    pts.at 3 put                               0
+    pts.at 4 put                        (s*0.25)
+    pts.at 5 put                               0
+    pts.at 6 put (s*0.25 + (-t*0.3).cos * s*0.5)
+    pts.at 7 put          ((-t*0.3).sin * s*0.5)
+
+    0.to 2 do { i:INTEGER
+      0.to 2 do { j:INTEGER
+        fx := x + s*0.5 + (j).to_real_32/3.0*w + pad
+        fy := y - s*0.5 + (i).to_real_32/3.0*h + pad
+        
+        line_cap  (caps .at i)
+        line_join (joins.at j)
+        
+        stroke_width (s*0.3)
+        stroke_color (COLOR.rgba(255,0,0,100))
+        begin_path
+        move_to (fx+pts.at 0, fy+pts.at 1)
+        line_to (fx+pts.at 2, fy+pts.at 3)
+        line_to (fx+pts.at 4, fy+pts.at 5)
+        line_to (fx+pts.at 6, fy+pts.at 7)
+        stroke
+        
+        line_cap   (butt)
+        line_join (bevel)
+        
+        stroke_width 1.0
+        stroke_color (COLOR.rgba(0,192,255,255))
+        begin_path
+        move_to (fx+pts.at 0, fy+pts.at 1)
+        line_to (fx+pts.at 2, fy+pts.at 3)
+        line_to (fx+pts.at 4, fy+pts.at 5)
+        line_to (fx+pts.at 6, fy+pts.at 7)
+        stroke
+      }
+    }
+    restore
+  )
+
+  - draw_graph (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  ( + dx:REAL_32
+    + bg:PAINT
+    - samples,sx,sy:ARRAY REAL_32
+    
+    (samples = NULL).if {
+      samples := ARRAY REAL_32.create 6
+      sx := ARRAY REAL_32.create 6
+      sy := ARRAY REAL_32.create 6
+    }
+    dx := w/5.0
+    
+    samples.at 0 put ((1.0+(t*1.2345 +(t*0.33457).cos*0.44).sin)*0.5)
+    samples.at 1 put ((1.0+(t*0.68363+(t*    1.3).cos*1.55).sin)*0.5)
+    samples.at 2 put ((1.0+(t*1.1642 +(t*0.33457).cos*1.24).sin)*0.5)
+    samples.at 3 put ((1.0+(t*0.56345+(t*   1.63).cos*0.14).sin)*0.5)
+    samples.at 4 put ((1.0+(t*1.6245 +(t*  0.254).cos* 0.3).sin)*0.5)
+    samples.at 5 put ((1.0+(t*0.345  +(t*   0.03).cos* 0.6).sin)*0.5)
+
+    0.to 5 do { i:INTEGER
+      sx.at i put               (x+dx*i)
+      sy.at i put (y+h*samples.at i*0.8)
+    }
+    
+    // Graph background
+    bg := PAINT.create_linear (x,y) to (x,y+h) 
+    color (COLOR.rgba(0,160,192,0)) to (COLOR.rgba(0,160,192,64))
+    begin_path
+    move_to (sx.first,sy.first)
+    1.to 5 do { i:INTEGER
+      bezier_w1 (sx.at (i-1)+dx*0.5,sy.at (i-1))
+      w2 (sx.at i-dx*0.5,sy.at i)
+      to (sx.at i,sy.at i)
+    }
+    line_to (x+w, y+h)
+    line_to (  x, y+h)
+    fill_paint bg
+    fill
+    bg.free
+    
+    // Graph line
+    begin_path
+    move_to (sx.first, sy.first+2)
+    1.to 5 do { i:INTEGER
+      bezier_w1 (sx.at (i-1)+dx*0.5,sy.at (i-1)+2)
+      w2 (sx.at i-dx*0.5,sy.at i+2) 
+      to (sx.at i,sy.at i+2)
+    }
+    stroke_color (COLOR.rgba(0,0,0,32))
+    stroke_width 3.0
+    stroke
+
+    begin_path
+    move_to (sx.first,sy.first)
+    1.to 5 do { i:INTEGER
+      bezier_w1 (sx.at (i-1)+dx*0.5,sy.at (i-1))
+      w2 (sx.at i-dx*0.5,sy.at i)
+      to (sx.at i,sy.at i)
+    }
+    stroke_color (COLOR.rgba(0,160,192,255))
+    stroke_width 3.0
+    stroke
+
+    // Graph sample pos
+    0.to 5 do { i:INTEGER
+      bg := PAINT.create_radial (sx.at i,sy.at i+2) radius (3.0,8.0)
+      color (COLOR.rgba(0,0,0,32)) to (COLOR.rgba(0,0,0,0))
+      begin_path
+      rect(sx.at i-10,sy.at i-10+2) size (20,20)
+      fill_paint bg
+      fill
+      bg.free
+    }
+    
+    begin_path
+    0.to 5 do { i:INTEGER
+      circle (sx.at i,sy.at i) radius 4.0
+    }
+    fill_color (COLOR.rgba(0,160,192,255))
+    fill
+        
+    begin_path
+    0.to 5 do { i:INTEGER
+      circle (sx.at i,sy.at i) radius 2.0
+    }
+    fill_color (COLOR.rgba(220,220,220,255))
+    fill
+    
+    stroke_width 1.0
+  )
+  
+  - draw_eye (x,y:REAL_32) size (w,h:REAL_32) 
+  pos (mx,my:REAL_32) time t:REAL_32 <-
+  ( + bg,gloss:PAINT
+    + ex,ey,lx,ly:REAL_32
+    + rx,ry,dx,dy,d,br,blink:REAL_32
+   
+    (ex,ey) := (w*0.23,h*0.5)
+    (lx,ly) := (x+ex,y+ey)
+    
+    rx := x + w - ex
+    ry := y + ey
+    br := ((ex < ey).ok ex or ey) * 0.5
+    blink := 1.0 - ((t*0.5).sin ** 200.0)*0.8
+    
+    bg := PAINT.create_linear (x,y+h*0.25) to (x+w*0.1,y+h)
+    color (COLOR.rgba(220,220,220,255)) to (COLOR.rgba (128,128,128,255))
+    begin_path
+    ellipse (lx,ly) radius (ex,ey)
+    fill_paint bg
+    fill
+    bg.free
+    
+    dx := (mx - rx) / (ex * 10)
+    dy := (my - ry) / (ey * 10)
+    d := (dx*dx+dy*dy).sqrt
+    (d > 1.0).if { 
+      dx := dx/d; dy := dy/d
+    }
+    dx := dx*ex*0.4
+    dy := dy*ey*0.5
+    
+    begin_path
+    ellipse (lx+dx,ly+dy+ey*0.25*(1.0-blink)) radius (br,br*blink)
+    fill_color (COLOR.rgba(32,32,32,255))
+    fill
+    
+    gloss := PAINT.create_radial (lx-ex*0.25,ly-ey*0.5) radius (ex*0.1,ex*0.75)
+    color (COLOR.rgba(255,255,255,128)) 
+    to (COLOR.rgba(255,255,255,0))
+    begin_path
+    ellipse (lx,ly) radius (ex,ey)
+    fill_paint gloss
+    fill
+    gloss.free
+  )
+  
+  - draw_color_wheel (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  ( + r0,r1:REAL_32
+    + ax,ay, bx,by, cx,cy:REAL_32
+    + aeps,r:REAL_32
+    + hue:REAL_32
+    + paint:PAINT
+    hue := (t * 0.12).sin
+    save
+  
+    cx := x + w*0.5
+    cy := y + h*0.5
+    r1 := ((w < h).ok w or h) * 0.5 - 5.0
+    r0 := r1 - 20.0
+    aeps := 0.5 / r1;	// half a pixel arc length in radians (2pi cancels out).
+  
+    0.to 5 do { i:INTEGER
+      + a0,a1:REAL_32
+      a0 := i.to_real_32 / 6.0 * REAL_32.pi * 2.0 - aeps
+      a1 := (i.to_real_32+1.0) / 6.0 * REAL_32.pi * 2.0 + aeps
+      begin_path
+      arc (cx,cy) radius r0 angle (a0,a1) direction (cst_cw )
+      arc (cx,cy) radius r1 angle (a1,a0) direction (cst_ccw)
+      close_path
+      ax := cx + a0.cos * (r0+r1)*0.5
+      ay := cy + a0.sin * (r0+r1)*0.5
+      bx := cx + a1.cos * (r0+r1)*0.5
+      by := cy + a1.sin * (r0+r1)*0.5
+      paint := PAINT.create_linear (ax,ay) to (bx,by)
+      color (COLOR.hsla(a0/(REAL_32.pi*2),1.0,0.55) alpha 255)
+      to    (COLOR.hsla(a1/(REAL_32.pi*2),1.0,0.55) alpha 255)
+      fill_paint paint
+      fill
+      paint.free
+    }
+    
+    begin_path
+    circle (cx,cy) radius (r0-0.5)
+    circle (cx,cy) radius (r1+0.5)
+    stroke_color (COLOR.rgba(0,0,0,64))
+    stroke_width 1.0
+    stroke
+  
+    // Selector
+    save
+    
+    translate (cx,cy)
+    rotate (hue*REAL_32.pi*2)
+  
+    // Marker on
+    
+    stroke_width 2.0
+    begin_path
+    rect (r0-1,-3) size (r1-r0+2,6)
+    stroke_color (COLOR.rgba(255,255,255,192))
+    stroke
+    
+    paint := PAINT.create_box (r0-3,-5) size (r1-r0+6,10) radius 2 feather 4
+    color (COLOR.rgba(0,0,0,128)) to (COLOR.rgba(0,0,0,0))
+    begin_path
+    rect (r0-2-10,-4-10) size (r1-r0+4+20,8+20)
+    rect (r0-2,-4) size (r1-r0+4,8)
+    path_winding cst_cw; // Holes
+    fill_paint paint
+    fill
+    paint.free
+    
+    // Center triangle
+    r := r0 - 6
+    ax := ( 120.0/180.0*REAL_32.pi).cos * r
+    ay := ( 120.0/180.0*REAL_32.pi).sin * r
+    bx := (-120.0/180.0*REAL_32.pi).cos * r
+    by := (-120.0/180.0*REAL_32.pi).sin * r
+    
+    begin_path
+    move_to (r,0)
+    line_to (ax,ay)
+    line_to (bx,by)
+    close_path
+    paint := PAINT.create_linear (r,0) to (ax,ay) 
+    color (COLOR.hsla (hue,1.0,0.5) alpha 255) to (COLOR.rgba(255,255,255,255))
+    fill_paint paint
+    fill
+    paint.free
+
+    paint := PAINT.create_linear ((r+ax)*0.5,ay*0.5) to (bx,by)
+    color (COLOR.rgba(0,0,0,0)) to (COLOR.rgba(0,0,0,255))
+    fill_paint paint
+    fill
+    paint.free
+    stroke_color (COLOR.rgba(0,0,0,64))
+    stroke
+
+    restore
+    restore
+  )
+  
+  /*
+  - draw_mouse <-
+  ( + t:TOUCH
+    begin_path
+    (touch.lower).to (touch.upper) do { i:INTEGER
+      t := touch.at i
+      (t.is_pressed).if {
+        circle (t.x,t.y) radius 100
+        stroke_color (COLOR.rgb (255,255,255))
+        stroke
+      }
+    }
+  );*/
+
+Public
+   
+  - draw <-
+  ( + t:REAL_32
+    
+    t := CLOCK.seconds
+    
+    draw_graph (0,150) size (512,860) time t
+      
+    draw_lines (50,860/4) size (512-20,860/2) time t
+    
+    draw_eye (512-200,150) size (300,200) pos (
+      ((t*  1).cos*512).to_integer.abs,
+      ((t*0.5).sin*860).to_integer
+    ) time t
+
+    draw_color_wheel (512-250,860-250) size (250.0,250.0) time t
+    //
+    PAPER.refresh_again
+  )
+  
+  - main <-
+  ( 
+    init "Test LI2D" size (512,860)
+    PAPER.run
+  )

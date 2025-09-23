@@ -1,0 +1,213 @@
+Header
+  + name := FILE_KEY_GUI;
+  
+Inherit
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+    
+Public
+  
+  - function c0:STRING_ALIAS :(BOOLEAN,{BOOLEAN}) <-
+  ( + b:{BOOLEAN}
+    c0
+    .case "freeze_memory" then { b := {CLONE.set_detect_memory_leak TRUE; TRUE}; }
+    .case "flip_header"   then { b := {flip_header};      }
+    .case "nyi"           then { b := {"FILE_KEY: Not yet implemented.".println; TRUE}; }
+    .case "open"          then { b := {open_file};        }
+    .case "save"          then { b := {save_file};        }
+    .case "save_as"       then { b := {save_as};          }
+    .case "split_hori"    then { b := {split_hori};       }
+    .case "split_vert"    then { b := {split_vert};       }
+    .case "close_pg"      then { b := {close_pg};         }
+    .case "change_pg"     then { b := {change_pg};        }
+    .case "split_win"     then { b := {split_win};        }
+    .case "close_win"     then { b := {close_win};        }
+    
+    .case "middle_pg"     then { b := {middle_pg};        }
+    .case "indent"        then { b := {indent_cmd};       }
+    .case "go_line"       then { b := {go_line};          }
+    .case "new_line"      then { b := {new_line};         }
+    .case "next_line"     then { b := {next_line};        }
+    .case "go_next_line"  then { b := {go_next_line FALSE}; }
+    .case "go_prev_line"  then { b := {go_prev_line FALSE}; }
+    .case "about"         then { b := {about_cmd};         }
+    .case "font_app_up"   then { b := {FONT.inc_size_app (+1)}; }
+    .case "font_app_down" then { b := {FONT.inc_size_app (-1)}; }
+    .case "font_sys_up"   then { b := {FONT.inc_size_sys (+1)}; }
+    .case "font_sys_down" then { b := {FONT.inc_size_sys (-1)}; }
+    .case "sound_switch"  then { b := {set_sound (!sound)}; }
+    .case "extend_code_sw"  then { b := {set_extend_code (!extend_code)}; } // Lisaac only
+    .case "auto_indent_sw"  then { b := {set_auto_indent (!auto_indent)}; } // Lisaac only
+    .case "vkeyb_switch"  then { b := {set_vkeyb (!vkeyb)}; }
+    .case "help_switch"   then { b := {set_help (!help)};   }
+    .case "exit"            then { b := {exit_cmd};         }
+    .case "exit_fail"       then { b := {exit_fail_cmd};    }
+    .case "stop_cmd"        then { b := {stop_cmd};         }
+    //.case "kill_buffer"     then { b := {kill_buffer};      }
+    .case "open_buffer"     then { b := {open_buffer};      }
+    //.case "kill_all_buffer" then { b := {kill_all_buffer};  }
+    .case "undo"          then { b := {undo_cmd};           }
+    .case "redo"          then { b := {redo_cmd};           }
+    .case "cut"           then { b := {cut_cmd};            }
+    .case "cut_end_line"  then { b := {cut_end_line};       }
+    .case "copy"          then { b := {copy_cmd};           }
+    .case "paste"         then { b := {paste_cmd};          }
+    .case "cut_right"     then { b := {cut_right_cmd};      }
+    .case "select_on"     then { b := {select_on};          }
+    .case "search_forward"  then { b := {search_forward};   }
+    .case "search_backward" then { b := {search_backward};  }
+    .case "replace"       then { b := {replace};            }
+    .case "completion"    then { b := {completion};         }
+    .case "to_upper"      then { b := {to_upper};           }
+    .case "to_lower"      then { b := {to_lower};           }
+    .case "to_snake"      then { b := {to_snake};           }
+    .case "go_point"      then { b := {go_point};           }
+    .case "go_top"        then { b := {go_top};             }
+    .case "go_eof"        then { b := {go_eof};             }
+    .case "go_next_word"  then { b := {go_next_word FALSE}; }
+    .case "go_prev_word"  then { b := {go_prev_word FALSE}; }
+    .case "go_up_pg"      then { b := {go_up_pg};           }
+    .case "go_down_pg"    then { b := {go_down_pg};         }
+    .case "go_beg_line"   then { b := {go_beg_line FALSE};  }
+    .case "go_end_line"   then { b := {go_end_line FALSE};  }
+    .case "go_next_char"  then { b := {go_next_char};  }
+    .case "go_prev_char"  then { b := {go_prev_char};  }
+    .case "suppr_char"    then { b := {suppr_cmd};     }
+    //.case "del_char"      then { b := {del_char};      }
+    /*.case "start_macro"   then { b := {start_macro};   }
+    .case "end_macro"     then { b := {end_macro};     }
+    .case "call_macro"    then { b := {call_macro};    }
+    .case "repeater"      then { b := {repeater};      }*/    
+    .case "cmd_listfile"  then { b := {CMD_FILE.listfile};  }
+    .case "cmd_cut"       then { b := {CMD_FILE.cut};       }
+    .case "cmd_exp_word"  then { b := {cmd_cur.exp_word};   }
+    .case "cmd_paste"     then { b := {cmd_cur.paste};      }
+    .case "cmd_to_next"   then { b := {CMD_SEARCH.to_next}; }
+    .case "cmd_switch"    then { b := {CMD_SEARCH.switch};  }
+    .case "cmd_to_prev"   then { b := {CMD_SEARCH.to_prev}; }
+    .case "cmd_stop"      then { b := {CMD_SEARCH.action};  }
+    .case "cmd_cancel"    then { b := {cmd_cur.cancel};     }
+    .case "cmd_rep_one"   then { b := {CMD_REPLACE.rep_one};}
+    .case "cmd_rep_skip"  then { b := {CMD_REPLACE.to_next};}
+    .case "cmd_rep_all"   then { b := {CMD_REPLACE.rep_all};}
+    .case "cmd_exp_next"  then { b := {CMD_EXPANSION.to_next};}
+    .case "cmd_exp_prev"  then { b := {CMD_EXPANSION.to_prev};}
+    = STRING_ALIAS, b
+  )
+  
+  - function c0:STRING_ALIAS with_str :(BOOLEAN,{STRING_ALIAS; BOOLEAN}) <-
+  ( + b:{STRING_ALIAS; BOOLEAN}
+    c0
+    .case "insert" then {
+      b := { s:STRING_ALIAS; insert s}
+    }
+    = STRING_ALIAS, b
+  )
+  
+  - function c0:STRING_ALIAS with_int :(BOOLEAN,{INTEGER; BOOLEAN}) <-
+  ( + b:{INTEGER; BOOLEAN}
+    c0
+    .case "del_char" then {
+      b := { n:INTEGER; del_char n}
+    }
+    = STRING_ALIAS, b
+  )
+  
+  - function c0:STRING_ALIAS check :(BOOLEAN,{ACT; BOOLEAN}) <-
+  ( + b:{ACT; BOOLEAN}
+    c0
+    .case "sound_check" then { b := {a:ACT; sound}; }
+    .case "extend_code_check" then { b := {a:ACT; extend_code}; } // Lisaac Only
+    .case "auto_indent_check" then { b := {a:ACT; auto_indent}; } // Lisaac Only
+    .case "vkeyb_check" then { b := {a:ACT; vkeyb}; }
+    .case "help_check"  then { b := {a:ACT; help};  }
+    = STRING_ALIAS, b
+  )
+  
+  - read:BOOLEAN <-
+  ( + pth:STRING_ALIAS
+    + result:BOOLEAN
+    SUBACT.dico.clear
+    MENU.list.clear
+    SHORTCUT.set_list shortcuts
+    shortcuts.clear
+    buftxt.clear
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy shortcut_file
+      tmp.append ".key"
+      pth := tmp.to_string_alias
+    }
+    ACT.set_read_func { + r:ACT
+      + b0:{BOOLEAN}
+      + b1:{STRING_ALIAS; BOOLEAN}
+      + bn:{INTEGER; BOOLEAN}
+      + ok:BOOLEAN
+      + c0,c1:STRING_ALIAS
+      + cn:INTEGER;
+    
+      (read_str '\"').if {
+        c0 := last_str
+        (ok,b0) := function c0
+        (ok).if {
+          r := ACT0.new.fn b0
+        } else {
+          (read_str '\"').if {
+            c1 := last_str
+            (ok,b1) := function c0 with_str
+            (ok).if {
+              r := ACT1 STRING_ALIAS.new.fn b1 val c1
+            } else {
+              STRING.tmp { err:STRING_BUFFER
+                err # "Instruction `" # c0 # " \"" # c1 # "\"' invalid."
+                err semantic msg err
+              }
+            }
+          }.elseif {read_num} then {
+            cn := last_int
+            (ok,bn) := function c0 with_int
+            (ok).if {
+              r := ACT1 INTEGER.new.fn bn val cn
+            } else {
+              STRING.tmp { err:STRING_BUFFER
+                err # "Instruction `" # c0 # " \"" # cn # "\"' invalid."
+                err semantic msg err
+              }
+            }
+          } else {
+            STRING.tmp { err:STRING_BUFFER
+              err # "Instruction `" # c0 # "' invalid."
+              err semantic msg err
+            }
+          }
+        }
+      }
+      r
+    } read_check { a:ACT
+      + b0:{ACT; BOOLEAN}
+      + ok:BOOLEAN
+      (read_str '\"').if {
+        (ok,b0) := function last_str check
+        (ok).if {
+          a.set_case b0
+        } else {
+          err semantic msg ("Instruction check `"+last_str+"' invalid.");
+        }
+      } else { err semantic msg "Instruction check not found."; }
+    }
+    SYSTEM_IO.read_asset pth in_txt buftxt
+    result := read pth src buftxt
+    SHORTCUT.sort
+    ICON.update
+    result
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "KEYMAP"   then { VKEYB.read;      }    
+    .case "MENU"     then { MENU.new.read;   }
+    .case "ACT"      then { ACT.new_read;    }
+    .case "SUBACT"   then { SUBACT.new.read; }
+    = STRING_ALIAS
+  )
+    

@@ -1,0 +1,75 @@
+Header
+
+  + name        := CHARACTER_CST;
+
+  /*Character constant*/
+
+Inherit
+
+  + parent_constant:Expanded CONSTANT
+
+Public
+
+  //
+  // Value.
+  //
+
+  + text:STRING_ALIAS
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION char car:STRING_ALIAS :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make p char car
+    result
+  )
+
+  - make p:POSITION char car:STRING_ALIAS <-
+  (
+    position := p
+    text := car
+    static_type := type_character.default
+  )
+
+  - my_copy:SELF <- SELF.create position char text
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + s:SELF
+    s ?= other
+    (s != NULL) && {text = s.text}
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    output.add_last '\''
+    output.append text
+    output.add_last '\''
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '\''
+    buffer.append text
+    buffer.add_last '\''
+    display_ref buffer
+  )
+
+
+
+
+

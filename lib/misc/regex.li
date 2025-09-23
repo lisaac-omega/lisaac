@@ -1,0 +1,166 @@
+Header
+  + name := REGEX;
+  /*
+   Regular Expression from the <regex.h> C library.
+   See examples in test/regex directory.
+   See also the Unix grep manual (man regex).
+  */
+  - external := `
+#include <regex.h>
+`;
+  
+Insert
+  - parent_clone:CLONE := CLONE
+  
+Public
+  + regex:STRING; // original source
+  
+  + regfree_done:BOOLEAN; // FALSE also indicate a correct compilation status.
+  
+  + nmatch:INTEGER; // size of pmatch
+  
+Private
+  + regex_t:POINTER; // preg : the compiled regex
+  
+  + pmatch:POINTER; // regmatch_t array 
+  
+  + status:INTEGER; // last result of regcomp / regexec
+  
+  - error_buffer: Expanded STRING_BUFFER
+  
+Private
+  - make n:INTEGER <-
+  (
+    nmatch := n
+    regex_t := (NATIVE_ARRAY CHARACTER .create (`sizeof(regex_t)`:(INTEGER))).to_pointer
+    pmatch := (NATIVE_ARRAY CHARACTER .create (`@n*sizeof(regmatch_t)`:(INTEGER))).to_pointer
+    regfree_done := TRUE
+  )
+  
+Public
+  
+  - extended:INTEGER <- (`REG_EXTENDED`:INTEGER)
+  - icase:INTEGER <- (`REG_ICASE`:INTEGER)
+  - nosub:INTEGER <- (`REG_NOSUB`:INTEGER)
+  - newline:INTEGER <- (`REG_NEWLINE`:INTEGER)
+  
+  - notbol:INTEGER <- (`REG_NOTBOL`:INTEGER)
+  - noteol:INTEGER <- (`REG_NOTEOL`:INTEGER)
+  - startend:INTEGER <- (`REG_STARTEND`:INTEGER)
+  
+  - create: SELF <- create_nmatch 1
+  
+  - create_nmatch n:INTEGER : SELF <-
+  ( + result:SELF
+    result := clone
+    result.make n
+    result
+  )
+  
+  - compile regular_expression:STRING :BOOLEAN <-
+  // FALSE in case of compilation error.
+  [
+    ? {! regular_expression.is_empty}
+  ]
+  (
+    regcomp regular_expression cflag extended
+    status = 0
+  )
+  
+  - regcomp regular_expression:STRING cflag f:INTEGER :INTEGER <-
+  // See `regcomp` in "man regex".
+  [
+    ? {! regular_expression.is_empty}
+  ]
+  ( + ca:NATIVE_ARRAY CHARACTER
+    + rt:POINTER
+    regex := regular_expression
+    rt := regex_t
+    ? {rt.is_not_null}
+    ca := regular_expression.to_external
+    status := `regcomp (((regex_t*)(@rt)),((char*)(@ca)),@f)`:INTEGER
+    (status = 0).if {
+      regfree_done := FALSE
+    }
+    status
+  )
+  
+  - last_error_in b:STRING_BUFFER <-
+  // See `regerror` in "man regex".
+  [
+    ? {status != 0}
+  ]
+  ( + ss,cy,sz:INTEGER
+    + rt,er:POINTER
+    ss := status
+    rt := regex_t
+    error_buffer.make 1024
+    er := error_buffer.to_external.to_pointer
+    cy := error_buffer.capacity
+    sz := `regerror (@ss,((regex_t*)(@rt)),((char*)@er),@cy)`:(INTEGER)
+    error_buffer.set_upper sz
+    0.to (sz - 2) do { k:INTEGER
+      ? {error_buffer.item k != '\0'}
+      b.add_last (error_buffer.item k)
+    }
+  )
+  
+  - whole_match data:STRING :BOOLEAN <-
+  // Is the `data` completely swallowed by Self ?
+  (
+    ((match data start 0) = 0) &&
+    {offset_start = 0} &&
+    {offset_end = (data.upper + 1)}
+  )
+  
+  - match data:STRING start idx:INTEGER :INTEGER <- regexec data start idx cflag 0
+  
+  - regexec data:STRING start idx:INTEGER cflag f:INTEGER :INTEGER <-
+  // See `regexec` in "man regex".
+  [
+    ? {data != NULL}
+  ]
+  ( + ca:NATIVE_ARRAY CHARACTER
+    + rt,pm:POINTER
+    + nm:INTEGER
+    ? {regex_t.is_not_null}
+    rt := regex_t
+    ? {rt.is_not_null}
+    ca := data.to_external
+    ? {ca != NULL}
+    nm := nmatch
+    pm := pmatch
+    status := `regexec(((regex_t*)(@rt)),(@ca)+(@idx),@nm,@pm,@f)`:(INTEGER)
+    status
+  )
+  
+  - offset_start:INTEGER <- offset_start_index 0
+  
+  - offset_start_index idx:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    + pm:POINTER
+    pm := pmatch
+    result := `(((regmatch_t*)(@pm))[@idx]).rm_so`:INTEGER
+    result
+  )
+  
+  - offset_end:INTEGER <- offset_end_index 0
+
+  - offset_end_index idx:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    + pm:POINTER
+    pm := pmatch
+    result := `(((regmatch_t*)(@pm))[@idx]).rm_eo`:INTEGER
+    result
+  )
+
+  - regfree <-
+  (
+    + rt:POINTER
+    rt := regex_t
+    regfree_done.if_false {
+      `regfree(@rt)`
+      regfree_done := TRUE
+    }
+  )
+ 

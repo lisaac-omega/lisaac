@@ -1,0 +1,92 @@
+Header
+  + name := BUTTON;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ BUTTON
+  
+Private
+  
+  - stk:Expanded ARRAY (Strict BUTTON)
+  
+Public
+    
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+  
+  - margin:INTEGER := 8
+  
+  - mute:INTEGER  := 1 << 15
+  - barre:INTEGER := 1 << 16
+  - dark:INTEGER  := 1 << 17
+    
+  + txt:STRING_ALIAS
+  + act:{BUTTON;BOOLEAN}
+  
+  - set_txt t:STRING_ALIAS <- ( txt := t; )
+  
+  - width_min:REAL_32 <-
+  ( + x0,y0,x1,y1,wt:REAL_32
+    font_face_id (FONT.sys (FONT.bold))
+    font_size (FONT.size_sys*zom)
+    (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt
+    wt + margin*2
+  )
+    
+  - height_min:REAL_32 <- (FONT.size_sys + margin*2)
+   
+  - init t:STRING_ALIAS do d:{BUTTON;BOOLEAN} :SELF <-
+  (
+    (act,txt) := (d,t)
+    init_obj
+  )
+  
+  - draw <-
+  ( + y,x,w:REAL_32
+    + c:COLOR
+    //draw_debug
+    
+    (x,y) := (xo + width/2, yo + height/2)
+    (is inside).if {
+      fill_color (LOOK_GUI.border_on)
+    } else {
+      fill_color (LOOK_GUI.border_off); //COLOR.rgba (0,0,0,10))
+    }
+    begin_path
+    rect (xo,yo) size (width, height) radius 8
+    fill
+    //
+    ((is mute) || {is dark}).if {
+      c := (col=COLOR).ok (LOOK_GUI.text_bg_ui) else {col.set_af 0.3}
+    } else {
+      c := (col=COLOR).ok (LOOK_GUI.text_ui) or col
+    }
+    fill_color c
+    font_face_id (FONT.sys (is inside.ok (FONT.bold) or (FONT.roman)))
+    font_size (FONT.size_sys*zom)
+    text_align (align_center | align_middle)
+    text (x,y) msg txt
+    (is barre).if {
+      w := width_min - margin*2
+      begin_path
+      stroke_width (zom*3)
+      stroke_color (COLOR.rgba (0,0,0,128))
+      line (x-w/2,y) to (x+w/2,y)
+      stroke
+    }
+    
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    (is mute).if {
+      // Nothing.
+    }.elseif {e = HAND.in} then {
+      set inside with (ev = HAND.in)
+    }.elseif {e = HAND.clic} then {
+      //"Act:".print; act.text_l.println
+      //MENU.close_all_except act
+      act.value Self.if_false { beep; }
+    }
+  )

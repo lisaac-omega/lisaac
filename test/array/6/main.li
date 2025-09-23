@@ -1,0 +1,22 @@
+Header
+  + name := MAIN;
+  
+Public
+  - max:INTEGER <- 100000
+  
+  - main <-
+  ( + a:ARRAY_BLOCK INTEGER
+    a := ARRAY_BLOCK INTEGER .new
+    1.to max do { k:INTEGER
+      a.add_last k
+    }
+    TEST.check (a.first) integer 1
+    TEST.check (a.last) integer max
+    1.to max do { k:INTEGER
+      TEST.check (a.at (k - 1)) integer k
+    }
+    1.to max do { k:INTEGER
+      a.remove_last
+    }
+    TEST.check (a.is_empty)
+  )

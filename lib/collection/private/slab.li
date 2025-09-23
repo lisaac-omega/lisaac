@@ -1,0 +1,397 @@
+Header
+  + name := SLAB V;
+  
+Insert
+  - parent_clone: CLONE := CLONE
+  
+  - parent_slab_utils: SLAB_UTILS := SLAB_UTILS
+  
+Mapping, ARRAY_BLOCK
+  + storage: NATIVE_ARRAY V
+  
+  + count:INTEGER_16
+  
+  + low:INTEGER_16
+  
+Private
+  - slab_msk:INTEGER <- slab_cap - 1
+  
+  - init_clear <-
+  (
+    ? {count = 0}; ? {low = 0}
+    ? {storage = NULL}
+    storage := NATIVE_ARRAY V.create slab_cap
+  )
+  
+  - init b:NATIVE_ARRAY V <-
+  (
+    ? {count = 0}; ? {low = 0}
+    ? {storage = NULL}
+    storage := b
+  )
+  
+ARRAY_BLOCK
+  - up:INTEGER_16 <- (low + count - 1) & slab_msk
+  
+  - new:SELF <-
+  ( + result:SELF
+    result := clone
+    result.init_clear
+    result
+  )
+  
+  - new3:(SELF,SELF,SELF) <-
+  ( + r1,r2,r3:SELF
+    + buf:NATIVE_ARRAY V
+    (r1,r2,r3) := (clone,clone,clone)
+    buf := NATIVE_ARRAY V.create (slab_cap*3)
+    r1.init buf
+    r2.init (buf + slab_cap)
+    r3.init (buf + (slab_cap*2))
+    r1,r2,r3
+  )
+  
+  - clear <-
+  (
+    count := low := 0
+    ? {storage != NULL}
+  )
+  [
+    ? {is_empty}
+    ? {count = 0}
+  ]
+  
+  - read_file f:POINTER :INTEGER <-
+  ( count := FILE_UTILS.read_native_char f in storage size slab_cap )
+  [ ? {count != 0}; ]
+  
+  - save_file f:POINTER <-
+  ( + end:INTEGER
+    end := (low + count - 1) & slab_msk
+    (end >= low).if {      
+      FILE_UTILS.write f native_char (storage+low) size (end-low+1)
+    } else {
+      FILE_UTILS.write f native_char (storage+low) size (slab_cap-low)
+      FILE_UTILS.write f native_char storage size (end+1)
+    }
+  )
+  
+  - first:V <-
+  [
+    ? {! is_empty}
+  ]
+  (
+    storage.at low
+  )
+  
+  - last:V <-
+  [
+    ? {! is_empty}
+  ]
+  ( 
+    storage.at up
+  )
+  
+  - at user_idx:INTEGER cache cache_low:INTEGER :V <-
+  [
+    ? {! is_empty}
+  ]
+  (
+    storage.at ((low + user_idx - cache_low) & slab_msk)
+  )
+  
+  - at user_idx:INTEGER put v:V cache cache_low:INTEGER <-
+  [
+    ? {! is_empty}
+  ]
+  (
+    storage.at ((low + user_idx - cache_low) & slab_msk) put v
+  )
+
+  - is_full:BOOLEAN <-
+  [
+    ? {storage != NULL}
+  ]
+  (
+    count = slab_cap
+  )
+  
+  - is_empty:BOOLEAN <- count = 0
+  
+  - contains idx:INTEGER cache cache_low:INTEGER :BOOLEAN <-
+  [
+    ? {storage != NULL}
+  ]
+  ( + i:INTEGER
+    i := idx - cache_low
+    (i >= 0) && {i < count}
+  )
+    
+  - Self:SELF '>>' (b,e:INTEGER) :V <-
+  // [b .. e-1] -> [b+1 .. e] Result = Old [e]
+  // Assume idx is a valid logical index into the used area.
+  // The result is the right falling V.
+  ( + result,tmp:V
+    result := storage.at e
+    (b < e).if { // Basic
+      e.downto (b+1) do { i:INTEGER
+        storage.at i put (storage.at (i-1))
+      }
+    } else {
+      tmp := storage.at (slab_cap-1)
+      (slab_cap-1).downto (b+1) do { i:INTEGER
+        storage.at i put (storage.at (i-1))
+      }
+      e.downto 1 do { i:INTEGER
+        storage.at i put (storage.at (i-1))
+      }
+      storage.at 0 put tmp
+    }
+    result
+  )
+  
+  - Self:SELF '<<' (b,e:INTEGER) :V <-
+  // [b .. e-1] <- [b+1 .. e], Result = Old [b]
+  // Assume idx is a valid logical index into the used area.
+  // The result is the left falling V.
+  ( + result,tmp:V
+    result := storage.at b
+    (b < e).if { // Basic
+      b.to (e-1) do { i:INTEGER
+        storage.at i put (storage.at (i+1))
+      }
+    } else {
+      tmp := storage.at 0
+      0.to (e-1) do { i:INTEGER
+        storage.at i put (storage.at (i+1))
+      }
+      b.to (slab_cap-2) do { i:INTEGER
+        storage.at i put (storage.at (i+1))
+      }
+      storage.at (slab_cap-1) put tmp
+    }
+    result
+  )
+  
+  - remove_first:BOOLEAN <-
+  // TRUE indicates is_empty after removal.
+  [
+    ? {! is_empty}
+  ]
+  (
+    low := (low + 1) & slab_msk
+    count := count - 1
+    count = 0
+  )
+  
+  - remove_last :BOOLEAN <-
+  // TRUE indicates is_empty after removal.
+  [
+    ? {! is_empty}
+  ]
+  (
+    count := count - 1
+    count = 0
+  )
+  
+  - remove user_idx:INTEGER cache cache_low:INTEGER :BOOLEAN <-
+  ( + result:BOOLEAN
+    (user_idx = cache_low).if {
+      result := remove_first
+    }.elseif {user_idx = (cache_low + count - 1)} then {
+      result := remove_last
+    } else {
+      result := raw_remove user_idx cache cache_low
+    }
+    result
+  )
+  
+  - raw_remove user_idx:INTEGER cache cache_low:INTEGER :BOOLEAN <-
+  // TRUE when empty after removal.
+  [
+    ? {count > 2}
+    ? {user_idx > cache_low}
+    ? {user_idx < (cache_low + count - 1)}
+    ? {contains user_idx cache cache_low} 
+  ]
+  ( + tlow,tup,e:INTEGER
+    count := count - 1
+    tlow := user_idx - cache_low
+    tup := cache_low + count - user_idx
+    e := (low + tlow) & slab_msk
+    (tlow < tup). if {
+      Self >> (low,e)
+      low := (low + 1) & slab_msk
+    } else {      
+      Self << (e,(low + count) & slab_msk)
+    }
+    count = 0
+  )
+  
+Public
+  - to_string:STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    + i:INTEGER
+    //+ v:V
+    STRING.tmp { sb:STRING_BUFFER
+      (to_string_style = "compact").if {
+        (count = 0).if {
+          sb.append "empty"
+        } else {
+          count.append_in sb
+        }
+        i := count / 10
+        i.times {
+          sb.add_last '.'
+        }
+      } else {
+        sb.append "count="
+        count.append_in sb
+        sb.append " low="
+        low.append_in sb
+        sb.add_last ' '
+        ? {storage != NULL}
+        /*
+        sb.add_last '['
+        0.to (slab_cap - 1) do { i:INTEGER
+          ? {storage != NULL}
+          ? {sb != NULL}
+          v := storage.at i
+          (v = NULL).if {
+            sb.append "NULL"
+          } else {
+            v.append_in sb
+          }
+          sb.add_last ' '
+        }
+        sb.remove_last
+        sb.add_last ']'
+        */
+        sb.add_last ' '
+        sb.add_last '('
+        i := low
+        count.times {
+          storage.at i .append_in sb
+          sb.add_last ' '
+          i := (i + 1) & slab_msk
+        }
+        (count > 0).if {
+          sb.remove_last
+        }
+        sb.add_last ')'
+      }
+      sb.add_last '\n'
+      result := sb.to_string_alias
+    }
+    result
+  )
+  
+  - space_left:INTEGER <- slab_cap - count
+  
+  - set_low l:INTEGER <- ( low := l; )
+  
+  - set_count c:INTEGER <- ( count := c; )
+  
+  - Self:SELF '<+' right: SLAB V <-
+  [
+    ? {right.count >= slab_cap - 1}
+    ? {is_empty}
+  ]
+  ( 
+    low := 0
+    count := 1
+    storage.at 0 put (right.storage.at (right.low))
+    right.set_count (right.count - 1)
+    right.set_low ((right.low + 1) & slab_msk)
+  )
+  /*
+  - Self:SELF '<+' right: SLAB V <-
+  [
+    ? {right.count >= slab_cap - 1}
+    ? {is_empty}
+  ]
+  ( + r:INTEGER
+    low := 0
+    count := (slab_cap >> 1)
+    r := right.low
+    0.to ((slab_cap >> 1) - 1) do { l:INTEGER
+      storage.at l put (right.storage.at r)
+      r := (r + 1) & slab_msk
+    }
+    right.set_count (right.count - (slab_cap >> 1))
+    right.set_low ((right.low + (slab_cap >> 1)) & slab_msk)
+  )
+  [
+    ? {count = (slab_cap >> 1)}
+    ? {right.count = (Old right.count) - (slab_cap >> 1)}
+  ]
+  */
+  
+  - Self:SELF '+>' right: SLAB V <-
+  [
+    ? {count >= slab_cap - 1}
+    ? {right.is_empty}
+  ]
+  ( 
+    right.set_low 0
+    right.set_count 1
+    right.storage.at 0 put (storage.at up)
+    count := count - 1
+  )
+  /*
+  - Self:SELF '+>' right: SLAB V <-
+  [
+    ? {count >= slab_cap - 1}
+    ? {right.is_empty}
+  ]
+  ( + l:INTEGER
+    right.set_low 0
+    right.set_count (slab_cap >> 1)
+    l := (up - (slab_cap >> 1) + 1) & slab_msk
+    0.to ((slab_cap >> 1) - 1) do { r:INTEGER
+      right.storage.at r put (storage.at l)
+      l := (l + 1) & slab_msk
+    }
+    count := count - (slab_cap >> 1)
+  )
+  [
+    ? {count = (Old count) - (slab_cap >> 1)}
+    ? {right.count = (slab_cap >> 1)}
+  ]
+  */  
+  - add_first v:V <-
+  [
+    ? {! is_full}
+  ]
+  (
+    low := (low - 1) & slab_msk
+    storage.at low put v
+    count := count + 1
+  )
+  
+  - add_last v:V <-
+  [
+    ? {! is_full}
+  ]
+  (
+    storage.at ((low + count) & slab_msk) put v
+    count := count + 1
+  )
+  
+  - add v:V to user_idx:INTEGER cache cache_low:INTEGER <-
+  ( + tlow,tup,e,p:INTEGER
+    tlow := user_idx - cache_low
+    tup := cache_low + count - user_idx
+    e := (low + tlow) & slab_msk
+    (tlow < tup).if {      
+      low := (low - 1) & slab_msk
+      p := (e - 1) & slab_msk
+      Self << (low,e)
+    } else {
+      p := e
+      Self >> (e,(low + count) & slab_msk)
+    }
+    storage.at p put v
+    count := count + 1
+  )
+  

@@ -1,0 +1,121 @@
+Header
+  + name := WIN_WAIT;
+  
+Inherit
+  + parent_win:Expanded WIN
+  
+Public
+  
+  - img:IMG
+  - title:STRING_ALIAS
+  - subtitle:STRING_ALIAS
+  - subsubtitle:STRING_ALIAS
+  - set_subsub t:STRING_ALIAS <- ( subsubtitle := t; )
+  
+  - todo:{}
+  - done:BOOLEAN
+  - until:{BOOLEAN}
+  - after:{}
+  
+  - begin_time:UINTEGER_64
+  
+  - refresh <-
+  ( + w:WINDOW
+    w := window
+    size (w.width,w.height)
+  )
+  
+  - put t:STRING_ALIAS sub tt:STRING_ALIAS <-
+  put t sub tt do {} until {FALSE} after {}
+  
+  - put t:STRING_ALIAS sub tt:STRING_ALIAS do d:{} until u:{BOOLEAN} after a:{} <-
+  ( + w:WINDOW
+    begin_time := TIME.gettimeofday
+    (title,subtitle) := (t,tt)
+    (todo,until,after) := (d,u,a)
+    done := FALSE
+    w := PAGE.cur_pg.window
+    init_parent w
+    (width,height) := (w.width,w.height)
+    old_focus := focus
+    focus := Self
+    refresh
+    img := IMG.load "img/wait.gif" asset TRUE
+  )
+  
+  - remove <-
+  (
+    window.child_rm Self
+    focus := old_focus
+  )
+  
+  - draw <-
+  ( + x,y:REAL_32
+    begin_path
+    fill_color (COLOR.rgbaf (0,0,0,0.9))
+    rect (0,0) size (width,height)
+    fill
+    //
+    (x,y) := ((width - img.width)/2, (height - img.height)/2)
+    img.draw Self to (x,y) alpha 1 bar FALSE
+    //
+    (x,y) := (width/2, (height+img.height)/2 + 30)
+    fill_color (COLOR.white)
+    font_face_id (FONT.roman)
+    text_align (align_center | align_middle)
+    (title != NULL).if {
+      font_size 50
+      text (x,y) msg title
+    }
+    //
+    y := y + 50
+    (subtitle != NULL).if {
+      font_size 30
+      text (x,y) msg subtitle
+    }
+    (subsubtitle != NULL).if {
+      font_size 25
+      y := y + 40
+      text (x,y) msg subsubtitle
+    }
+    y := height - 30
+    font_size 25
+    fill_color (COLOR.gray)
+    STRING.tmp { tmp:STRING_BUFFER
+      + d:REAL_32
+      + m:INTEGER
+      d := (TIME.gettimeofday - begin_time).to_real_32 / 1000_000
+      (d > 60).if {
+        m := d.to_integer / 60
+        m.append_in tmp
+        tmp += "min "
+        d := d - m * 60
+      }
+      d.to_integer.append_in tmp
+      tmp += "s"
+      text (x,y) msg tmp
+    }
+    (! done).if {
+      done := TRUE
+      todo.value
+    }
+    until.value.if {      
+      remove
+      after.value
+    }
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  (    
+    TRUE
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 <-
+  ( 
+  )
+  
+Private
+    
+  - old_focus:WIN
+
+ 

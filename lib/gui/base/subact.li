@@ -1,0 +1,71 @@
+Header
+  + name := SUBACT;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  - parent_json:JSON := JSON
+  
+FILE_KEY
+  - dico:HMAP SUBACT KEY STRING_ALIAS := HMAP SUBACT KEY STRING_ALIAS.create
+  
+  - old_list:ARRAY SHORTCUT
+  
+  - list_empty:ARRAY SHORTCUT := ARRAY SHORTCUT.create_with_capacity 0
+Public
+    
+  + key:STRING_ALIAS
+  
+  + list:ARRAY SHORTCUT
+  + list_order:ARRAY SHORTCUT
+  
+  - new:SELF <- clone
+  
+  - read:SELF <-
+  (
+    list_order := ARRAY SHORTCUT.create_with_capacity 16
+    SHORTCUT.set_list list_order
+    read_object
+    list := ARRAY SHORTCUT.create_with_capacity (list_order.count)
+    list.copy_collection list_order
+    SHORTCUT.sort
+    dico.add Self to key
+    SHORTCUT.set_list (Old SHORTCUT.list)
+    Self
+  )
+  
+  - get k:STRING_ALIAS :SUBACT <- dico.fast_reference_at k
+  
+  - empty p:WIN <-
+  ( p.child.foreach { w:WIN; w.free; }; p.child.clear
+    old_list := SHORTCUT.list
+    ? {list_empty.is_empty}
+    SHORTCUT.set_list list_empty
+  )
+  
+  - load p:WIN <-  
+  ( + i:INTEGER
+    p.child.foreach { w:WIN; w.free; }; p.child.clear
+    old_list := SHORTCUT.list
+    SHORTCUT.set_list list_order
+    {i < list.upper}.while_do {
+      (list.at i.act != list.at (i+1).act).if {
+        ACT_ITM.new.init p act (list.at i); //.color (LOOK.text_ui)
+      }
+      i := i + 1
+    }
+    ACT_ITM.new.init p act (list.at i); //.color (LOOK.text_ui)
+  )
+  
+  - restore <- SHORTCUT.set_list old_list
+  
+  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "name" then { (get v != NULL).if { err semantic msg "Double name."; }; key := v; }
+    = STRING_ALIAS
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "ACT" then { ACT.new_read; }
+    = STRING_ALIAS
+  )

@@ -1,0 +1,44 @@
+Header
+  
+  + name      := GLYPH_POSITION;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Private  
+  
+  - stock:ARRAY GLYPH_POSITION := ARRAY GLYPH_POSITION.create_with_capacity 32
+  
+  - new:GLYPH_POSITION <-
+  ( + result:GLYPH_POSITION
+    (stock.is_empty).if {
+      result := GLYPH_POSITION.clone
+    } else {
+      result := stock.pop
+    }
+    result
+  )
+
+Public
+  
+  + cur:INTEGER;        // Position of the glyph in the input string.
+  + x:REAL_32;                // The x-coordinate of the logical glyph position.
+  + minx:REAL_32;        // The bounds of the glyph shape.
+  + maxx:REAL_32
+  
+  - create c:INTEGER to px:REAL_32 range (mi,ma:REAL_32) :GLYPH_POSITION <-
+  ( + result:GLYPH_POSITION
+    result := new
+    result.make c to px range (mi,ma)
+    result    
+  )
+  
+  - make c:INTEGER to px:REAL_32 range (mi,ma:REAL_32) <-
+  (
+    cur := c
+    x := px
+    (minx,maxx) := (mi,ma)
+  )
+  
+  - free <- stock.add_last Self

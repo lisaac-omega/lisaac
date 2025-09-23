@@ -1,0 +1,56 @@
+Header
+  
+  + name := Expanded TT_VERTEX;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Private  
+  /*
+  - stock:ARRAY TT_VERTEX := ARRAY TT_VERTEX.create_with_capacity 32
+  
+  - new:TT_VERTEX <-
+  ( + result:TT_VERTEX
+    (stock.is_empty).if {
+      result := TT_VERTEX.clone
+    } else {
+      result := stock.pop
+    }
+    result
+  )
+*/
+Public
+  
+ // - create:TT_VERTEX <- new
+  
+  + x:INTEGER_16
+  - xf:REAL_32 <- x.to_real_32
+  
+  + y:INTEGER_16
+  - yf:REAL_32 <- y.to_real_32
+  
+  + cx:INTEGER_16
+  - cxf:REAL_32 <- cx.to_real_32
+  
+  + cy:INTEGER_16
+  - cyf:REAL_32 <- cy.to_real_32
+  
+  + type:UINTEGER_8
+  + padding:UINTEGER_8
+  
+  - set_type t:UINTEGER_8 <- ( type := t; )
+  
+  - make typ:UINTEGER_8 pos (px,py,pcx,pcy:INTEGER_32) <-
+  (
+    type    := typ
+    (x,y)   := (px .to_integer_16,py .to_integer_16)
+    (cx,cy) := (pcx.to_integer_16,pcy.to_integer_16)
+  )
+  
+  - set_x  p:INTEGER_16 <- ( x  := p; )
+  - set_y  p:INTEGER_16 <- ( y  := p; )
+  - set_cx p:INTEGER_16 <- ( cx := p; )
+  - set_cy p:INTEGER_16 <- ( cy := p; )
+  
+//  - free <- stock.add_last Self

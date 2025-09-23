@@ -1,0 +1,116 @@
+Header
+  + name := RLOC;
+
+Inherit
+  + parent_expr:Expanded EXPR
+  
+Public
+  - stk_clo:Expanded ARRAY (Strict RLOC)
+  
+Public  
+  
+  - type:TYPE <- local.type
+    
+  + local:LOCAL
+  
+  - set_local l:LOCAL :SELF <- ( local := l; Self)
+  
+  - new:SELF <- ( + r:SELF; (stk_clo.is_empty).if { r := clone; } else { r := stk_clo.pop; }; r)
+  - free <- ( stk_clo.add_last Self; )
+  
+  - new_parse t:INTEGER <-
+  ( 
+    (t = 0).if {
+      read_idf.if {
+        local := get_local last_str
+        (local != NULL).if {          
+          col (LOOK.local) sub (last_str.count)
+          (local.style_is (DECL.f_ro)).if {
+            fnt (FONT.italic) sub (last_str.count)
+            fnt (FONT.roman) sub 0
+          }
+        } else {
+          pos_i := Old pos_i
+        }
+      }
+    } else { ? {t = 1}
+      (
+        (word "Self") ||
+        {word "Result"}   || {word "Result_1"} ||
+        {word "Result_2"} || {word "Result_3"}
+      ).if {
+        col (LOOK.keyword) sub (last_str.count)
+        local := get_local last_str
+        (local != NULL).if {
+          err semantic msg "BUG: local NULL"
+        }
+      }
+    }
+  )
+  
+/*  - begin_draw <-
+  (
+    ((local != NULL) && {local.is (LOCAL.f_ro)}).if {
+      FONT.app (FONT.italic) in Self
+    } else {
+      FONT.app (FONT.roman)  in Self
+    }
+  )
+  
+  - end_draw <- FONT.app (FONT.roman)  in Self
+*/    
+  - run <-
+  ( + v:INTEGER
+    + loo,upp:INTEGER
+    + o:OP
+    v := LS.lookup local
+    (loo,upp) := (v, v + LS.at v.static_type.upper)
+    (local.is (LOCAL.block)).if {
+      + up,lo,old_up:INTEGER
+      + idx:LIARRAY INTEGER
+      idx := LIARRAY INTEGER.new
+      old_up := stack_result.upper
+      param.foreach { e:EXPR
+        idx.add_last (stack_result.upper + 1)
+        e.run
+      }
+      idx.add_last (stack_result.upper + 1)
+      lo := idx.first
+      idx.put (LS.upper + 1) to 0
+      1.to (idx.upper) do { i:INTEGER
+        up := idx.at i
+        lo.to (up-1) do { j:INTEGER
+          o := stack_result.at j
+          OP + LASS.new (LS.new (o.static_type)) val o
+        }
+        lo := up
+        idx.put (LS.upper + 1) to i
+      }
+      idx.add_last (loo+1)
+      idx.add_last upp
+      stack_result.set_upper old_up
+      OP + SWITCH.new (SWITCH.blk) on loo slot NULL hmap loo idx idx do {(sw:SWITCH,tt:TYPE)
+        + tb:LIST_BLOCK
+        tb ?= tt
+        (tb != NULL).if {
+          crash
+          //tb.run tb arg (sw.idx)
+        }
+      }
+      loo := loo + 1
+    }
+    loo.to upp do { i:INTEGER
+      push (LOC.new i)
+    }
+  )
+  
+  - run_ass <-
+  ( + l:INTEGER
+    + lo,up:INTEGER
+    l := LS.lookup name
+    (lo,up) := (l, l+LS.at l.static_type.upper)
+    lo.to up do { i:INTEGER
+      OP + LASS.new i val pop; // BSBS: if pop is LIST_BLOCK...
+    }
+  )
+  

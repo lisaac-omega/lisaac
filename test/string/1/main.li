@@ -1,0 +1,9 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + ca:NATIVE_ARRAY CHARACTER
+    ca := "data".to_external
+    TEST.check_not_null ca
+  )

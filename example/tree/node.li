@@ -1,0 +1,45 @@
+Header
+
+  + name := NODE;
+  /*
+  The first program.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  + label:STRING
+
+  //
+  // Creation.
+  //
+
+  - create lab:STRING :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make lab
+    result
+  )
+
+  - make lab:STRING <-
+  (
+    label := lab
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    indent.print
+    label.print
+    '\n'.print
+  )
+
+Private
+
+  - indent:STRING_BUFFER := STRING_BUFFER.create 250

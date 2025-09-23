@@ -1,0 +1,177 @@
+Header
+  + name := Expanded  DATE;
+  /*
+  Wrap C <time.h>.
+  See 'man mktime'. 
+  */
+  
+  - type := `time_t`;
+  
+  - default := `0`:DATE;
+  
+  - external := `
+#include <time.h>
+struct tm*tm_info;
+struct tm tm_glob;
+`;
+  
+Insert
+  - parent_clone:CLONE := CLONE
+
+Private
+  - to_raw:INTEGER_64 <-
+  (
+    CAST SELF TO INTEGER_64.on Self
+  )
+
+  - from_raw i:INTEGER_64 :SELF <-
+  (
+    CAST INTEGER_64 TO SELF.on i
+  )
+
+Public
+  - Self:SELF '>' Right 60 other:SELF :BOOLEAN <- to_raw > other.to_raw
+
+  - Self:SELF '<' Right 60 other:SELF :BOOLEAN <- to_raw < other.to_raw
+
+  - Self:SELF '>=' Right 60 other:SELF :BOOLEAN <- to_raw >= other.to_raw
+
+  - Self:SELF '<=' Right 60 other:SELF :BOOLEAN <- to_raw <= other.to_raw
+
+  - year:UINTEGER_16 <-
+  (
+    `tm_info = localtime(&@Self);`
+    `tm_info->tm_year + 1900`:UINTEGER_16
+  )
+
+  - month:UINTEGER_8 <-
+  (
+    `tm_info = localtime(&@Self);`
+    `tm_info->tm_mon`:UINTEGER_8
+  )
+
+  - day:UINTEGER_8 <-
+  (
+    `tm_info = localtime(&@Self);`
+    `tm_info->tm_mday`:UINTEGER_8
+  )
+
+  - week_day:UINTEGER_8 <-
+  (
+    `tm_info = localtime(&@Self);`
+    `tm_info->tm_wday`:UINTEGER_8
+  )
+
+Public
+  - create_now :DATE <- (`time(NULL)`:DATE)
+  
+  - sec sec:INTEGER min min:INTEGER hour hour:INTEGER mday mday:INTEGER mon mon:INTEGER year year:INTEGER wday wday:INTEGER yday yday:INTEGER isdt isdt:INTEGER :DATE <-
+  // All fields of the ctime.h tm struct (see man ctime).
+  // Note: year must be Year - 1900.
+  [
+    ? { sec >= 0 }
+    ? { min.in_range 0 to 59}
+    ? { hour.in_range 0 to 23}
+    ? { mday.in_range 1 to 31}
+    ? { mon.in_range 0 to 11}
+    ? { year >= 0 }
+    ? { wday.in_range 0 to 6}
+    ? { yday.in_range 0 to 365 }
+  ]
+  (
+    `tm_glob.tm_sec=@sec;`
+    `tm_glob.tm_min=@min;`
+    `tm_glob.tm_hour=@hour;`
+    `tm_glob.tm_mday=@mday;`
+    `tm_glob.tm_mon=@mon;`
+    `tm_glob.tm_year=@year;`
+    `tm_glob.tm_wday=@wday;`
+    `tm_glob.tm_yday=@yday;`
+    `tm_glob.tm_isdst=@isdt;`
+    `mktime(&tm_glob)`:DATE
+  )
+  
+  - create (y:UINTEGER_16,m,d,wd:UINTEGER_8) :DATE <-
+  // As in "man mktime".
+  [
+    ? { m.in_range 0 to 11}
+    ? { d.in_range 1 to 31}
+    ? { wd.in_range 0 to 6}
+  ]
+  (
+    sec 0 min 0 hour 0 mday d mon m year (y - 1900) wday wd yday d isdt 0
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    //week_day.append_in b
+    week_day
+    .when 0 then {
+      b.append "Sun"
+    }
+    .when 1 then {
+      b.append "Mon"
+    }
+    .when 2 then {
+      b.append "Tue"
+    }
+    .when 3 then {
+      b.append "Wed"
+    }
+    .when 4 then {
+      b.append "Thu"
+    }
+    .when 5 then {
+      b.append "Fri"
+    }
+    .else {
+      ? {week_day = 6}
+      b.append "Sat"
+    }
+    b.add_last ' '
+    day.append_in b format 2 with '0'
+    b.add_last '/'
+    (month + 1).append_in b format 2 with '0'
+    b.add_last '/'
+    year.append_in b format 4
+  )
+
+  - append_ddmmyy_in b:STRING_BUFFER <-
+  (
+    day.append_in b format 2 with '0'
+    b.add_last '/'
+    (month + 1).append_in b format 2 with '0'
+    b.add_last '/'
+    (year % 100).append_in b format 2 with '0'
+  )
+  
+  - append_yymmdd_in b:STRING_BUFFER <-
+  (
+    (year % 100).append_in b format 2 with '0'
+    b.add_last '-'
+    (month + 1).append_in b format 2 with '0'
+    b.add_last '-'
+    day.append_in b format 2 with '0'
+  )
+  
+  - append_yyyymmdd_in b:STRING_BUFFER <-
+  (
+    year.append_in b format 4 with '0'
+    b.add_last '-'
+    (month + 1).append_in b format 2 with '0'
+    b.add_last '-'
+    day.append_in b format 2 with '0'
+  )
+
+  - append_ddmmyyyy_in b:STRING_BUFFER <-
+  (
+    day.append_in b format 2 with '0'
+    b.add_last '/'
+    (month + 1).append_in b format 2 with '0'
+    b.add_last '/'
+    year.append_in b format 4 with '0'
+  )
+
+  - encode:INTEGER_64 <- to_raw
+
+  - decode i:INTEGER_64 :SELF <- from_raw i

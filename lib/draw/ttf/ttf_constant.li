@@ -1,0 +1,130 @@
+Header
+  
+  + name := TTF_CONSTANT;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+   
+  - macstyle_dontcare:INTEGER   := 0
+  - macstyle_bold:INTEGER       := 1
+  - macstyle_italic:INTEGER     := 2
+  - macstyle_underscore:INTEGER := 4
+  - macstyle_none:INTEGER       := 8
+  
+  - vmove:INTEGER := 1
+  - vline:INTEGER := 2
+  - vcurve:INTEGER:= 3
+    
+  - platform_id_unicode  :INTEGER := 0
+  - platform_id_mac      :INTEGER := 1
+  - platform_id_iso      :INTEGER := 2
+  - platform_id_microsoft:INTEGER := 3
+
+  - unicode_eid_unicode_1_0   :INTEGER  := 0
+  - unicode_eid_unicode_1_1   :INTEGER  := 1
+  - unicode_eid_iso_10646     :INTEGER  := 2
+  - unicode_eid_unicode_2_0_bmp:INTEGER := 3
+  - unicode_eid_unicode_2_0_full:INTEGER:= 4
+
+  - ms_eid_symbol       :INTEGER := 0
+  - ms_eid_unicode_bmp  :INTEGER := 1
+  - ms_eid_shiftjis     :INTEGER := 2
+  - ms_eid_unicode_full :INTEGER :=10
+
+  - mac_eid_roman       :INTEGER := 0
+  - mac_eid_arabic      :INTEGER := 4
+  - mac_eid_japanese    :INTEGER := 1
+  - mac_eid_hebrew      :INTEGER := 5
+  - mac_eid_chinese_trad:INTEGER := 2
+  - mac_eid_greek       :INTEGER := 6
+  - mac_eid_korean      :INTEGER := 3
+  - mac_eid_russian     :INTEGER := 7
+
+  - ms_lang_english :INTEGER := 409h
+  - ms_lang_italian :INTEGER := 410h
+  - ms_lang_chinese :INTEGER := 804h
+  - ms_lang_japanese:INTEGER := 411h
+  - ms_lang_dutch   :INTEGER := 413h
+  - ms_lang_korean  :INTEGER := 412h
+  - ms_lang_french  :INTEGER := 40ch
+  - ms_lang_russian :INTEGER := 419h
+  - ms_lang_german  :INTEGER := 407h
+  - ms_lang_spanish :INTEGER := 409h
+  - ms_lang_hebrew  :INTEGER := 40dh
+  - ms_lang_swedish :INTEGER := 41Dh
+
+  - mac_lang_english     :INTEGER := 0
+  - mac_lang_japanese    :INTEGER :=11
+  - mac_lang_arabic      :INTEGER :=12
+  - mac_lang_korean      :INTEGER :=23
+  - mac_lang_dutch       :INTEGER := 4
+  - mac_lang_russian     :INTEGER :=32
+  - mac_lang_french      :INTEGER := 1
+  - mac_lang_spanish     :INTEGER := 6
+  - mac_lang_german      :INTEGER := 2
+  - mac_lang_swedish     :INTEGER := 5
+  - mac_lang_hebrew      :INTEGER :=10
+  - mac_lang_chinese_simplified:INTEGER :=33
+  - mac_lang_italian     :INTEGER := 3
+  - mac_lang_chinese_trad:INTEGER :=19
+  
+  // accessors to parse data from file
+
+  - ttbyte p:NATIVE_ARRAY UINTEGER_8 :UINTEGER_8 <- 
+  p.at 0.to_raw_uinteger_8
+  
+  - ttchar p:NATIVE_ARRAY UINTEGER_8 :INTEGER_8  <- 
+  p.at 0.to_raw_integer_8
+
+  - ttfixed p:NATIVE_ARRAY UINTEGER_8 :INTEGER_32 <- 
+  ttlong p
+  
+  - ttushort p:NATIVE_ARRAY UINTEGER_8 :UINTEGER_16 <- 
+  (p.at 0.to_raw_uinteger_16<<8)|(p.at 1.to_raw_uinteger_8)
+  
+  - ttshort p:NATIVE_ARRAY UINTEGER_8 :INTEGER_16  <- 
+  (p.at 0.to_raw_integer_16<<8)|(p.at 1.to_raw_uinteger_8)
+  
+  - ttulong p:NATIVE_ARRAY UINTEGER_8 :UINTEGER_32 <- 
+  (p.at 0.to_raw_uinteger_32<<24)|
+  (p.at 1.to_raw_uinteger_8.to_raw_uinteger_32<<16)|
+  (p.at 2.to_raw_uinteger_8.to_raw_uinteger_32<< 8)|
+  (p.at 3.to_raw_uinteger_8)
+  
+  - ttlong p:NATIVE_ARRAY UINTEGER_8 :INTEGER_32 <- 
+  (p.at 0.to_raw_integer_32<<24)|
+  (p.at 1.to_raw_uinteger_8.to_raw_integer_32<<16)|
+  (p.at 2.to_raw_uinteger_8.to_raw_integer_32<< 8)|
+  (p.at 3.to_raw_uinteger_8)
+  
+  - tag4 p:NATIVE_ARRAY UINTEGER_8 
+  with (c0,c1,c2,c3:UINTEGER_8) :BOOLEAN <- (
+    (p.at 0 = c0) && {p.at 1 = c1} && 
+    {p.at 2 = c2} && {p.at 3 = c3}
+  )
+  
+  - tag p:NATIVE_ARRAY UINTEGER_8 with str:STRING_ALIAS :BOOLEAN <-
+  tag4 p with (str.item 0,str.item 1,str.item 2,str.item 3)
+
+  // @OPTIMIZE: binary search
+  - find_table (dta:NATIVE_ARRAY UINTEGER_8,start:INTEGER) 
+  name tg:STRING_ALIAS :UINTEGER_32 <-
+  ( + result:UINTEGER_32
+    + loc,i,num_tables,tabledir:INTEGER
+    
+    num_tables := ttushort (dta+start+4)
+    tabledir := start + 12
+    {(i < num_tables) && {result = 0}}.while_do {
+      loc := tabledir + 16*i
+      (tag (dta+loc+0) with tg).if {
+        result := ttulong (dta+loc+8)
+      }
+      i := i + 1
+    }
+    result
+  )
+  
+  

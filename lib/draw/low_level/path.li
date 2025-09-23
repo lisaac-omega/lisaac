@@ -1,0 +1,239 @@
+Header
+  
+  + name := PATH;
+
+Inherit
+  
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Private
+  
+  - stack:ARRAY PATH := ARRAY PATH.create_with_capacity 16
+  
+  - make t:INTEGER <-
+  (
+    winding:= t
+    points := ARRAY POINT.create_with_capacity 256
+    fill   := ARRAY VERTEX.create_with_capacity 64
+    stroke := ARRAY VERTEX.create_with_capacity 64
+  )
+    
+Public
+  
+  + points:ARRAY POINT
+  + closed:BOOLEAN
+  + nbevel:INTEGER
+  + fill:ARRAY VERTEX
+  + stroke:ARRAY VERTEX
+  + winding:INTEGER
+  + convex:BOOLEAN
+  
+  - create t:INTEGER :PATH <-
+  ( + result:PATH
+    (stack.is_empty).if {
+      result := clone
+      result.make t
+    } else {
+      result := stack.last
+      stack.remove_last
+      result.set_winding t
+    }
+    result
+  )
+  
+  - free <-
+  ( 
+    closed := convex  := FALSE
+    nbevel := winding := 0
+    0.to (points.upper) do { i:INTEGER
+      points.at i.free
+    }
+    points.clear
+    fill.clear
+    stroke.clear
+    stack.add_last Self
+  )
+  
+  - set_fill f:ARRAY VERTEX <-
+  (
+    fill := f
+  )
+  
+  - set_stroke f:ARRAY VERTEX <-
+  (
+    stroke := f
+  )
+  
+  - set_convex b:BOOLEAN <-
+  (
+    convex := b
+  )
+
+  - set_nbevel f:INTEGER <-
+  (
+    nbevel := f
+  )
+  
+  - inc_nbevel <-
+  (
+    nbevel := nbevel + 1
+  )
+    
+  - triarea2 (a,b,c:POINT) :REAL_32 <-
+  ( + abx,aby,acx,acy:REAL_32
+    (abx,aby) := (b.x-a.x,b.y-a.y)
+    (acx,acy) := (c.x-a.x,c.y-a.y)
+    acx*aby - abx*acy
+  )
+
+  - area:REAL_32 <-
+  ( + ar:REAL_32
+    + a,b,c:POINT
+    a := points.first
+    2.to (points.upper) do { i:INTEGER
+      b := points.at (i-1)
+      c := points.at i
+      ar := ar + triarea2 (a,b,c)
+    }
+    ar * 0.5
+  )
+
+  - reverse <-
+  ( + i,j:INTEGER
+    j := points.upper
+    {i < j}.while_do {
+      points.swap i with j
+      i := i+1
+      j := j-1
+    }
+  )
+  
+  - add_point (x,y:REAL_32) flags f:INTEGER <-
+  ( + pt:POINT
+    (
+      (points.count > 0) && {pt := points.last; eq (pt.x,pt.y) and (x,y)}
+    ).if {
+      pt.set_flags (pt.flags | f)
+    } else {
+      points.add_last (POINT.create (x,y) flags f)
+    }
+  )
+
+  - close <- ( closed := TRUE; )
+  - set_winding w:INTEGER <- ( winding := w; )
+  
+  - flatten:(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( + xmin,ymin,xmax,ymax:REAL_32
+    + p0,p1:POINT
+    + ar:REAL_32
+    
+    xmin := ymin :=  1000_000
+    xmax := ymax := -1000_000
+    // If the first and last points are the same, 
+    // remove the last, mark as closed path.
+    p0 := points.last
+    p1 := points.first
+    (p0 = p1).if {
+      closed := TRUE
+    }.elseif {eq (p0.x,p0.y) and (p1.x,p1.y)} then {
+      points.last.free
+      points.remove_last
+      p0 := points.last
+      closed := TRUE
+    }
+    // Enforce winding.
+    (points.count > 2).if {
+      ar := area
+      (
+        ((winding = cst_ccw) && {ar < 0.0}) || {(winding = cst_cw ) && {ar > 0.0}} 
+      ).if {
+        reverse
+        p0 := points.last
+      }
+    }
+
+    0.to (points.upper) do { i:INTEGER
+      p1 := points.at i
+      // Calculate segment direction and length
+      p0.normalize_and_distance p1
+      // Update bounds
+      xmin := p0.x .min xmin
+      ymin := p0.y .min ymin
+      xmax := p0.x .max xmax
+      ymax := p0.y .max ymax
+      // Advance
+      p0 := p1
+    }
+    xmin,ymin,xmax,ymax
+  )
+  
+/*                                     
+                         .''.' .    '.
+                    . '' ".'.:I:.'..  '.
+                  .'.:.:..,,:II:'.'.'.. '.
+                .':.'.:.:I:.:II:'.'.'.'.. '.
+              .'.'.'.'::.:.:.:I:'.'.'.'. .  '
+             ..'.'.'.:.:I::.:II:.'..'.'..    .
+            ..'.'':.:.::.:.::II::.'.'.'.'..   .
+           ..'.'.'.:.::. .:::II:..'.'.'.'.'.   .
+          .':.''.':'.'.'.:.:I:'.'.'.'.'.. '..  ..
+          ':. '.':'. ..:.::.::.:.'..'  ':.'.'.. ..
+         .:.:.':'.   '.:':I:.:.. .'.'.  ': .'.. . ..
+         '..:.:'.   .:.II:.:..   . .:.'. '.. '. .  ..
+        .. :.:.'.  .:.:I:.:. .  . ..:..:. :..':. .  '.
+       .:. :.:.   .:.:I:.:. .    . ..:I::. :: ::  .. ..
+       .. :'.'.:. .:.:I:'.        ..:.:I:. :: ::.   . '.
+       '..:. .:.. .:II:'         ,,;IIIH.  ::. ':.      .
+      .:.::'.:::..:.AII;,      .::",,  :I .::. ':.       .
+      :..:'.:II:.:I:  ,,;'   ' .;:FBT"X:: ..:.. ':.    . .
+     .. :':III:. :.:A"PBF;.  . .P,IP;;":: :I:..'::. .    ..
+     . .:.:II: A.'.';,PP:" .  . ..'..' .: :.::. ':...  . ..
+     . .: .:IIIH:.   ' '.' .  ... .    .:. :.:.. :...    .'
+     . .I.::I:IIA.        ..   ...    ..::.'.'.'.: ..  . .
+      .:II.'.':IA:.      ..    ..:.  . .:.: .''.'  ..  . .
+     ..::I:,'.'::A:.  . .:'-, .-.:..  .:.::AA.. ..:.' .. .
+      ':II:I:.  ':A:. ..:'   ''.. . : ..:::AHI: ..:..'.'.
+     .':III.::.   'II:.:.,,;;;:::::". .:::AHV:: .::'' ..
+     ..":IIHI::. .  "I:..":;,,,,;;". . .:AII:: :.:'  . .
+     . . IIHHI:..'.'.'V::. ":;;;"   ...:AIIV:'.:.'  .. .
+      . . :IIHI:. .:.:.V:.   ' ' . ...:HI:' .:: :. .  ..
+      . .  ':IHII:: ::.IA..      .. .A .,,:::' .:.    .
+      :.  ...'I:I:.: .,AHHA, . .'..AHIV::' . .  :     ..
+      :. '.::::II:.I:.HIHHIHHHHHIHHIHV:'..:. .I.':. ..  '.
+   . . .. '':::I:'.::IHHHHHHHHMHMHIHI. '.'.:IHI..  '  '  '.
+    ':... .  ''" .::'.HMHI:HHHHMHHIHI. :IIHHII:. . . .    .
+     :.:.. . ..::.' .IV".:I:IIIHIHHIH. .:IHI::'.': '..  .  .
+   . .:.:: .. ::'.'.'..':.::I:I:IHHHIA.'.II.:...:' .' ... . '..
+  '..::::' ...::'.IIHII:: .:.:..:..:III:.'::' .'    .    ..  . .
+  '::.:' .''     .. :IIHI:.:.. ..: . .:I:"' ...:.:.  ..    .. ..
+     .:..::I:.  . . . .IHII:.:'   .. ..".::.:II:.:. .  ...   . ..
+  .. . .::.:.,,...-::II:.:'    . ...... . .. .:II:.::  ...  .. ..
+   ..:.::.I .    . . .. .:. .... ...:.. . . ..:.::.   :..   . ..
+    .'.::I:.      . .. ..:.... . ..... .. . ..::. .. .I:. ..' .
+  .'':.: I.       . .. ..:.. .  . .. ..... .:. .:.. .:I.'.''..
+  . .:::I:.       . . .. .:. .    .. ..  . ... .:.'.'I'  .  ...
+  . ::.:I:..     . . . ....:. . .   .... ..   .:...:.:.:. ''.''
+  '.'::'I:.       . .. ....:. .     .. . ..  ..'  .'.:..:..    '
+        :. .     . .. .. .:.... .  .  .... ...   .  .:.:.:..    '.
+        :.      .  . . .. .:.... . . ........       .:.:.::. .    .
+        :. .     . . . . .. .::..:  . ..:.. .        ::.:.:.. .    .
+        :.. .    . . .  . .. ..:.:  .. .. .:. ..     ':::.::.:. .   .
+        ':.. .  . . . .. .. ...::' .. ..  . .:. .     V:I:::::.. .   :.
+         ::. .  . .. .. ... .:.::  .. .  . .. .. .     VI:I:::::..   ''B
+          :.. .   . .. ..:.. ..I:... . .  . .. ... .    VII:I:I:::. .'::
+          ':.. . . . .. ..:..:.:I:.:. .  . .. . .:. .    VHIII:I::.:..':
+           ::..   . . .. ..:..:.HI:. .      . . .... .   :HHIHIII:I::..:
+           ':. .  . .. .. ..:.:.:HI:.    . . .. ..... .   HHHHIHII:I::.'
+            :.. .  . . .. .:.:.:.HI:.      . . .. ... .   IHHHHIHHIHI:'
+             :..  .  . . .. ..:..IH:.     . . .. .. ,,, . 'HHHHHHHHI:'
+             ':..   . . .. ..:.:.:HI..   .  . .. . :::::.  MIH:"""'
+              :. . .  . .. ..::.:.VI:.     . . .. .:::'::. HIH
+               :..  .  . .. .:.:.:.V:.    . . . ...::I"A:. HHV
+                :. .  .  . .. ..:.:.V:.     . . ....::I::'.HV:
+                 :. .  . . . .. .:..II:.  . . . ....':::' AV.'
+                  :.. . . .. ... .:..VI:. . . .. .:. ..:.AV'.
+                  ':.. . .  .. ..:.:.:HAI:.:...:.:.:.:.AII:.
+                   I:. .  .. ... .:.:.VHHII:..:.:..:A:'.:..
+                   IA..  . . .. ..:.:.:VHHHHIHIHHIHI:'.::.
+                   'HA:.  . . .. ..:.:.:HHHIHIHHHIHI:..:.  
+*/                   

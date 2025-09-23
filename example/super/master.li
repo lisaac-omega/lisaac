@@ -1,0 +1,36 @@
+Header
+
+  + name        := MASTER;
+  /*
+  Example the `super' call.
+  */
+
+Inherit
+
+  - parent_obj:OBJ := OBJ
+
+Public
+
+  + name:STRING_ALIAS := "MASTER"
+
+  + method <-
+  (
+    "\tThis method is in MASTER.\n".print
+    "\tMy context is ".print
+    name.print
+    '\n'.print
+  )
+
+  - main <-
+  ( + obj:OBJ
+
+    "\nCall method:\n".print
+    method
+
+    "\nCall `super' method:\n".print;
+    parent_obj.method
+
+    "\nCall the parent method:\n".print
+    obj := parent_obj
+    obj.method
+  )

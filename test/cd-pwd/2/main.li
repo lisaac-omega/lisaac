@@ -1,0 +1,18 @@
+Header
+  
+  + name := MAIN;
+ 
+Public
+  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 256
+  
+  - main <-
+  (
+    mybuffer.clear
+    ENVIRONMENT.read_variable "TOTO" in mybuffer
+    TEST.check  (mybuffer.count = 0)
+    ENVIRONMENT.write_variable "TOTO" value "TITI"
+    mybuffer.clear
+    ENVIRONMENT.read_variable "TOTO" in mybuffer
+    TEST.check mybuffer string "TITI"
+    TEST.check (ENVIRONMENT.read_variable "TOTO" = "TITI")
+  )

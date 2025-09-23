@@ -1,0 +1,173 @@
+Header
+  + name := FILE;
+
+  /*Abstract File Management*/
+
+Inherit
+  + parent_dirent:Expanded DIRENT
+
+Private
+
+  + stream:POINTER; // Unix file pointer (FILE *).
+  
+Public
+  
+  - is_file:BOOLEAN <- TRUE
+  
+  - is_open:BOOLEAN <- stream != NULL
+
+  - size:UINTEGER_32 <-
+  ( + pe:NATIVE_ARRAY(CHARACTER)
+    + result:UINTEGER_32
+    pe := path.to_external
+    `{ struct stat t; stat(@pe,&t)`
+      result := `t.st_size`:UINTEGER_32
+    `}`
+    result
+  )
+
+  - cursor:UINTEGER_32 <-
+  ( + str:POINTER
+    str := stream
+    `ftell((FILE *)@str)`:UINTEGER_32
+  )
+
+  - set_cursor n:UINTEGER_32 <-
+  [
+    /* BSBS Old; */
+    -? {stream != NULL}
+    -? {n <= size}
+  ]
+  ( + str:POINTER
+    str := stream
+    `fseek((FILE*)(@str),@n,SEEK_SET)`
+  )
+
+  - open:BOOLEAN <-
+  [
+    -? {stream = NULL}
+  ]
+  ( + pa:NATIVE_ARRAY(CHARACTER)
+    pa := path.to_external
+    stream := `fopen((char*)@pa,"r+b")`:(POINTER)
+    stream != NULL
+  )
+
+  - open_read_only:BOOLEAN <-
+  ( + pa:NATIVE_ARRAY(CHARACTER)
+    pa := path.to_external
+    stream := `fopen((char*)@pa,"rb")`:(POINTER)
+    stream != NULL
+  )
+
+  - close <-
+  [
+    -? {stream != NULL}
+  ]
+  ( + str:POINTER
+
+    str := stream
+    `fclose((FILE*)(@str))`
+    stream := NULL
+  )
+
+
+  - is_empty:BOOLEAN <- size = 0
+  
+  - read_uinteger_8:UINTEGER_8 <-
+  (
+    physical_read tmp_uinteger_8 size 1
+    tmp_uinteger_8.item 0
+  )
+  
+  - read_integer_16:INTEGER_16 <-
+  (
+    physical_read tmp_uinteger_8 size 2
+    (tmp_uinteger_8.item 1.to_integer_16 << 8) | tmp_uinteger_8.item 0
+  )
+  
+  - read_uinteger_16:UINTEGER_16 <-
+  (
+    physical_read tmp_uinteger_8 size 2
+    (tmp_uinteger_8.item 1.to_uinteger_16 << 8) | tmp_uinteger_8.item 0
+  )
+  
+  - read dest:CLONE :INTEGER <-
+  // WARNING: It's good for Mapping objects, else serializable is necessary.
+  [
+    -? {is_open}
+  ]
+  ( + buf:NATIVE_ARRAY(UINTEGER_8)
+    buf := CAST CLONE TO (NATIVE_ARRAY UINTEGER_8).on dest
+    physical_read buf size (dest.object_size)
+  )
+
+  - read dest:ARRAYED size nb_elt:INTEGER :INTEGER <-
+  [
+    -? {is_open}
+  ]
+  ( + buf:NATIVE_ARRAY(UINTEGER_8)
+    + index,s:INTEGER
+    + result:INTEGER
+    + new_count:INTEGER
+
+    new_count := dest.count + nb_elt
+    dest.set_capacity new_count
+    buf := dest.to_native_array_uinteger_8
+    index := dest.count * dest.element_sizeof
+    s := nb_elt * dest.element_sizeof
+    result := physical_read (buf+index) size s
+    dest.set_count new_count
+    ? {result % dest.element_sizeof = 0}
+    result / dest.element_sizeof
+  )
+
+  // Write.
+  
+  - write src:CLONE :INTEGER <-
+  ( + buf:NATIVE_ARRAY(UINTEGER_8)
+    buf := CAST CLONE TO (NATIVE_ARRAY UINTEGER_8).on src
+    physical_write buf size (src.object_size)
+  )
+
+  - write src:ARRAYED from start:INTEGER size nb_elt:INTEGER :INTEGER <-
+  [
+    -? {is_open}
+  ]
+  ( + buf:NATIVE_ARRAY(UINTEGER_8)
+    + index,s:INTEGER
+    + result:INTEGER
+
+    buf := src.to_native_array_uinteger_8
+    index := (start-src.lower) * src.element_sizeof
+    s := nb_elt * src.element_sizeof
+    result := physical_write (buf+index) size s
+    ? {result % src.element_sizeof = 0}
+    result / src.element_sizeof
+  )
+
+  - write src:ARRAYED size nb_elt:INTEGER :INTEGER <-
+  (
+    write src from (src.lower) size nb_elt
+  )
+
+Private
+  
+  - tmp_uinteger_8:NATIVE_ARRAY(UINTEGER_8) := NATIVE_ARRAY(UINTEGER_8).create 8
+
+  - physical_read buf:NATIVE_ARRAY(UINTEGER_8) size s:INTEGER :INTEGER <-
+  // return size read or 0 if end of input (-1 on error => exception ?)
+  ( + str:POINTER
+    str := stream
+    `fread((void *)(@buf),(size_t)(1), (size_t)(@s),(FILE*)(@str))`:(INTEGER)
+  )
+
+  - physical_write buf:NATIVE_ARRAY(UINTEGER_8) size s:INTEGER :INTEGER <-
+  // return size read or 0 if end of input (-1 on error => exception ?)
+  ( + str:POINTER
+    str := stream
+    `fwrite((void *)(@buf),(size_t)(1), (size_t)(@s),(FILE*)(@str))`:(INTEGER)
+  )
+
+  
+  

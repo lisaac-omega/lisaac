@@ -1,0 +1,73 @@
+Header
+
+  + name        := ITM_READ_ARGS;
+
+  /*Message with a lot of arguments*/
+
+Inherit
+
+  + parent_itm_read:Expanded ITM_READ
+
+Public
+
+  - is_affect:POSITION <-
+  ( + result,default:POSITION
+    + j:INTEGER
+
+    (args.first != NULL).if {
+      result := args.first.position
+    } else {
+      j := args.lower + 1
+      {(j <= args.upper) && {result = default}}.while_do {
+	result := args.at j.is_affect
+	j := j + 1
+      }
+    }
+    result
+  )
+
+  //
+  // Data
+  //
+
+  + args:ARRAY ITM_CODE
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION name n:STRING_ALIAS args arg:ARRAY ITM_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n args arg
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS args arg:ARRAY ITM_CODE <-
+  (
+    position := p
+    name := n
+    args     := arg
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + l_arg:ARRAY ITM_CODE
+
+    l_arg := ALIAS_ARRAY ITM_CODE .new
+    (args.lower+1).to (args.upper) do { j:INTEGER
+      l_arg.add_last (args.at j)
+    }
+    to_run_with (args.first) args l_arg
+  )
+
+
+
+
+
+
+
+

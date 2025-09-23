@@ -1,0 +1,425 @@
+Header
+  + name := ANY_GUI;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+
+Public
+  - version:STRING_ALIAS := "0.5"
+  
+  - extend_code:BOOLEAN := TRUE; // Lisaac only
+  - set_extend_code v:BOOLEAN :BOOLEAN <- ( extend_code := v; TRUE)
+  - auto_indent:BOOLEAN := TRUE; // Lisaac only
+  - set_auto_indent v:BOOLEAN :BOOLEAN <- ( auto_indent := v; TRUE)
+    
+  - home_directory:STRING_ALIAS :=
+  ( + r:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      ENVIRONMENT.read_variable "HOME" in tmp
+      tmp.add_last '/'
+      r := tmp.to_string_alias
+    }
+    r
+  )
+  
+  - base_directory:STRING_ALIAS :=
+  ( + r:STRING_ALIAS
+    STRING.tmp { p:STRING_BUFFER
+      p.copy (COMMAND_ARGS.executable_directory)
+      p.append "../"
+      DIRENT.reduce_path p
+      r := p.to_string_alias
+    }
+    r
+  )
+        
+  - abs_path p:STRING_ALIAS :STRING_ALIAS <-
+  ( + r:STRING_ALIAS
+    ((p.first = '/') || {p.at 1 = ':'}).if {
+      r := p
+    } else {
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp.append base_directory
+        tmp.append p
+        r := tmp.to_string_alias
+      }
+    }
+    r
+  )
+  
+  - rel_path p:STRING :STRING_ALIAS <-
+  ( + r:STRING_ALIAS
+    (p.has_prefix base_directory).if {
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp.copy p
+        tmp.remove_prefix base_directory
+        r := tmp.to_string_alias
+      }
+    } else { r := p.to_string_alias; }
+    r
+  )
+  
+  - filename_cfg:STRING_ALIAS :=
+  ( + i:INTEGER
+    + result:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy (COMMAND_ARGS.at 0)
+      i := tmp.last_index_of '/'
+      (i = -1).if { i := tmp.last_index_of '\\'; }
+      (i != -1).if { tmp.remove_head (i+1); }
+      (tmp.has_suffix ".exe").if { tmp.remove_suffix ".exe"; }
+      tmp.append ".cfg"
+      result := tmp.to_string_alias
+    }
+    result
+  )
+        
+  - bufraw:ARRAY UINTEGER_8 := ARRAY UINTEGER_8.create_with_capacity 32768
+  - buftxt:STRING_BUFFER := STRING_BUFFER.create 32768
+  - clipboard:STRING_BUFFER := STRING_BUFFER.create 4096
+  
+  - run_gui <-
+  (
+    BUFFER.init_key
+    init_cursor_mouse
+    PAPER.run
+  )
+    
+  - beep <-
+  (     
+    sound.if {
+      MUSIC.play_wav sound_file
+    }
+  )
+  
+  // Standard config.
+    
+  - shortcut_file:STRING_ALIAS
+  - look_file:STRING_ALIAS
+  - sound_file:STRING_ALIAS
+  - sound:BOOLEAN
+  - help:BOOLEAN
+  - vkeyb:BOOLEAN
+  - vkeyb_dyn:BOOLEAN
+  - header_lock:BOOLEAN
+  - tex:TEX := TEX
+  - cmd_cur:CMD := CMD
+  - delay_popup:INTEGER := 1_600_000
+  
+  - acts_wait:ARRAY ACT := ARRAY ACT.create_with_capacity 32
+  
+  // Shortcut
+  
+  - shortcuts:ARRAY SHORTCUT := ARRAY SHORTCUT.create_with_capacity 128
+
+  // Fonctions
+  
+  //--- File
+  - open_file:BOOLEAN <- CMD_FILE.open_file
+  - save_file:BOOLEAN <- PAGE.cur_pg.save_buffer
+  - save_as:BOOLEAN   <- CMD_FILE.save_file
+  
+  - flip_header:BOOLEAN <-
+  ( PAGE.cur_pg.window.child.first.like HEADER.flip
+    TRUE
+  )
+  
+  - split_win:BOOLEAN <-
+  ( + ps:PAGE_SPLIT
+    + win1,win2:WIN
+    + me:WINDOW
+    + scr:SCREEN
+    + x1,y1,w1,h1,x2,y2,w2,h2:REAL_32
+    me := PAGE.cur_pg.window
+    ps ?= me.child.second
+    (ps != NULL).if {
+      (x2,y2) := (x1,y1) := me.get_pos
+      (w2,h2) := (w1,h1) := (me.width,me.height)
+      (win1,win2) := (ps.child.at 0, ps.child.at 1)
+      (ps.is (ps.line)).if {
+        (x1,w1,x2,w2) := (x1+win1.xo, win1.width, x2+win2.xo, win2.width)
+      } else {
+        (y2,h1,h2) := (y2 + win2.yo, win1.ymax, win2.height)
+      }
+      win1.set_parent me
+      me.child.at 1 put win1
+      PAPER.set_window (me.win_ptr) size (w1.to_integer,h1.to_integer)
+      me.set_pos (x1,y1)
+      scr := SCREEN.new.init_pos (x2,y2) size (w2,h2)
+      me.child.at 0.dup scr
+      win2.set_parent scr
+      scr.child.add_last win2
+      ps.free
+      PAPER.refresh_all
+    }
+  )
+  
+  - close_win:BOOLEAN <- 
+  (PAPER.wins.count > 1).if {    
+    + w:WINDOW
+    + s:SCREEN
+    w := PAGE.cur_pg.window
+    {w = PAGE.cur_pg.window}.while_do { change_pg; }
+    s ?= w
+    s.free
+  }
+  
+  - split_hori:BOOLEAN <- PAGE.cur_pg.split FALSE
+  - split_vert:BOOLEAN <- PAGE.cur_pg.split TRUE
+  - close_pg:BOOLEAN   <- PAGE.cur_pg.close
+  - change_pg:BOOLEAN  <- PAGE.cur_pg.change
+  - middle_pg:BOOLEAN  <- cmd_txt {t:TXT_PG; t.cmd_middle_pg}
+  - exit_cmd:BOOLEAN <- CMD_EXIT.open_with 0
+  - exit_fail_cmd:BOOLEAN <- CMD_EXIT.open_with 1
+    
+  //--- Edit
+  - go_line:BOOLEAN <- CMD_GO.open_line
+  - go_point:BOOLEAN <- CMD_GO.open_point
+      
+  - set_sound b:BOOLEAN :BOOLEAN <- ( sound := b; TRUE)
+  - set_help b:BOOLEAN :BOOLEAN  <- ( help := b; TRUE)
+  - set_vkeyb b:BOOLEAN :BOOLEAN <-
+  ( vkeyb := b
+    b.if {
+      + w:WIN
+      w := PAGE.cur_pg.window
+      VKEYB.set_open w at (2 + (CMD.parent = w).to_integer)
+    } else {
+      VKEYB.close
+    }
+    TRUE
+  )
+  
+  - close_popup <-
+  (
+    (cmd_cur != CMD).if { cmd_cur.close; }
+    MENU.close_all
+    BOX.close
+  )
+  
+  - stop_cmd:BOOLEAN <-
+  ( + pg:TXT_PG
+    pg ?= PAGE.cur_pg.buf_pg
+    (pg != NULL).if { pg.set_sel (POS.undefine); }
+    close_popup
+    TRUE
+  )
+  
+  - cmd_txt b:{TXT_PG; BOOLEAN} :BOOLEAN <-
+  ( + t:TXT_PG
+    t ?= PAGE.cur_pg.buf_pg; (t != NULL) && {b.value t}
+  )
+  
+  - open_buffer:BOOLEAN <- CMD_FILE.open_buffer
+  
+  - undo_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.text.cmd_undo}
+  - redo_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.text.cmd_redo}
+    
+  - indent_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_indent_line}
+  - copy_cmd:BOOLEAN  <- cmd_txt {t:TXT_PG; t.cmd_copy TRUE}
+  - cut_cmd:BOOLEAN   <- cmd_txt {t:TXT_PG; t.cmd_copy FALSE && {suppr_cmd}}
+  - paste_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_paste}
+  - select_on:BOOLEAN <- cmd_txt {t:TXT_PG; t.set_sel (t.pos); TRUE}
+  - cut_right_cmd:BOOLEAN <- CMD_CUT_RIGHT.open
+  
+  - cut_end_line:BOOLEAN <-
+  cmd_txt {t:TXT_PG
+    + pe:INTEGER
+    pe := t.child.at (t.pt_div).like DIV.pte
+    t.set_sel (t.pos)
+    (pe = t.pos.pt).if {
+      (pe < t.text.upper).if { t.set_pos_raw (pe+1); }
+    } else {
+      t.set_pos_raw pe
+    }
+    t.cmd_copy FALSE
+    t.cmd_suppr
+  }
+
+  - select_on_off <- 
+  ( - me:BOOLEAN
+    + t:TXT_PG
+    t ?= PAGE.cur_pg.buf_pg
+    ((KEYBOARD.cmd & 10h) != 0).if {
+      (!me).if {
+        t.set_sel (t.pos)
+        me := TRUE
+      }
+    } else {
+      (me).if { t.set_sel (POS.undefine); }
+      me := FALSE
+    }
+  )
+  
+  - search_forward:BOOLEAN <- CMD_SEARCH.open_forward
+  - search_backward:BOOLEAN <- CMD_SEARCH.open_backward
+  - replace:BOOLEAN     <- CMD_REPLACE.open
+  
+  - completion:BOOLEAN  <- CMD_EXPANSION.open
+  - to_upper:BOOLEAN    <- cmd_txt {t:TXT_PG; t.cmd_to_upper}
+  - to_lower:BOOLEAN    <- cmd_txt {t:TXT_PG; t.cmd_to_lower}
+  - to_snake:BOOLEAN    <- cmd_txt {t:TXT_PG; t.cmd_to_snake}
+  
+  - go_top:BOOLEAN <- cmd_txt {t:TXT_PG; t.set_pos_raw (0); TRUE}
+  - go_eof:BOOLEAN <- cmd_txt {t:TXT_PG; t.set_pos_raw (t.text.upper); TRUE}
+  
+  - new_line:BOOLEAN                <- cmd_txt {t:TXT_PG; t.cmd_new_line}
+  - next_line:BOOLEAN               <- cmd_txt {t:TXT_PG; t.cmd_new_line2}
+  - go_next_char:BOOLEAN            <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_next_char}
+  - go_prev_char:BOOLEAN            <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_prev_char}
+  - go_next_word b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_next_word}
+  - go_prev_word b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_prev_word}
+  - go_beg_line  b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_beg_line; TRUE}
+  - go_end_line  b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_end_line; TRUE}
+  - go_next_line b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_next_line}
+  - go_prev_line b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_prev_line}
+  - go_up_pg:BOOLEAN                <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_up_pg}
+  - go_down_pg:BOOLEAN              <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_down_pg}
+  
+  - suppr_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_suppr}
+  - del_char n:INTEGER :BOOLEAN  <-
+  ( + r:BOOLEAN;
+    r := TRUE;
+    n.times {
+      r := r && {cmd_txt {t:TXT_PG; (t.cmd_prev_char) && {t.cmd_suppr}}}
+    }
+    r
+  );
+  
+  /*
+  - start_macro:BOOLEAN
+  - end_macro:BOOLEAN
+  - call_macro:BOOLEAN
+  - repeater:BOOLEAN
+  */
+    
+  - insert s:STRING_ALIAS :BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_insert s}
+
+  // Cursor Mouse
+  
+  - cursor_std:POINTER
+  - cursor_h:POINTER
+  - cursor_v:POINTER
+  - cursor_sz:POINTER
+  - cursor_mv:POINTER
+  
+  - init_cursor_mouse <-
+  ( cursor_std := PAPER.get_cursor `GLFW_ARROW_CURSOR`:INTEGER
+    cursor_h   := PAPER.get_cursor `GLFW_HRESIZE_CURSOR`:INTEGER
+    cursor_v   := PAPER.get_cursor `GLFW_VRESIZE_CURSOR`:INTEGER
+    cursor_sz  := PAPER.create_cursor cursor_size_map size (24,24) hot (11,11)
+    cursor_mv  := PAPER.create_cursor cursor_move_map size (24,24) hot (11,11)
+  )
+  
+  - cursor_size_map:NATIVE_ARRAY UINTEGER_32 :=
+  ( + result:NATIVE_ARRAY UINTEGER_32
+    result := NATIVE_ARRAY UINTEGER_32.create (24*24)
+    0.to (24*24-1) do { i:INTEGER
+      "XXXXXXXXX               \
+      \X_______X               \
+      \X______X                \
+      \X_____X                 \
+      \X______X                \
+      \X_______X               \
+      \X__X_____X              \
+      \X_X X_____X       XX    \
+      \XX   X_____X     X_X    \
+      \      X_____X   X__X    \
+      \       X_____X X___X XXX\
+      \        X_____X____X X_X\
+      \         X_________X X_X\
+      \          X________X X_X\
+      \           X_______X X_X\
+      \          X________X X_X\
+      \         X_________X X_X\
+      \        X__________X X_X\
+      \       X___________X X_X\
+      \      XXXXXXXXXXXXXX X_X\
+      \                     X_X\
+      \         XXXXXXXXXXXXX_X\
+      \         X_____________X\
+      \         XXXXXXXXXXXXXXX".item i
+      .when 'X' then { result.at i put 0_FF_00_00_00h; }
+      .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
+    }
+    result
+  )
+  
+  - cursor_move_map:NATIVE_ARRAY UINTEGER_32 :=
+  ( + result:NATIVE_ARRAY UINTEGER_32
+    result := NATIVE_ARRAY UINTEGER_32.create (24*24)
+    0.to (24*24-1) do { i:INTEGER
+      "           X            \
+      \          X_X           \
+      \         X___X          \
+      \        X_____X         \
+      \       X_______X        \
+      \       XXX___XXX        \
+      \         X___X          \
+      \    XX   X___X   XX     \
+      \   X_X   X___X   X_X    \
+      \  X__XXXXX___XXXXX__X   \
+      \ X_________X_________X  \
+      \X_________X X_________X \
+      \ X_________X_________X  \
+      \  X__XXXXX___XXXXX__X   \
+      \   X_X   X___X   X_X    \
+      \    XX   X___X   XX     \
+      \         X___X          \
+      \       XXX___XXX        \
+      \       X_______X        \
+      \        X_____X         \
+      \         X___X          \
+      \          X_X           \
+      \           X            \
+      \                        ".item i
+      .when 'X' then { result.at i put 0_FF_00_00_00h; }
+      .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
+    }
+    result
+  )
+
+  - rect_shadow (x,y:REAL_32) size (w,h:REAL_32) radius (ah,al:REAL_32) <-
+  ( + p:PAINT
+    begin_path
+    p := PAINT.create_box (x+8,y+8) size (w-8,h-8) radius 8 feather 16 color (COLOR.black) to (COLOR.none)
+    rect_varying (x,y) size (w+8,h+8) radius (ah,ah,al,al)
+    fill_paint p
+    fill
+    p.free
+    begin_path
+    p := PAINT.create_box (x+4,y+4) size (w-8,h-8) radius 8 feather 8 color (LOOK.border_off) to (LOOK.border_on)
+    rect_varying (x,y) size (w,h) radius (ah,ah,al,al)
+    fill_paint p
+    fill
+    p.free
+    begin_path
+    stroke_color (COLOR.black)
+    stroke_width 1
+    rect_varying (x,y) size (w,h) radius (ah,ah,al,al)
+    stroke
+  )
+  
+  - about_cmd:BOOLEAN <- 
+  (
+    BOX.open
+    //ABOUT.open (PAGE.cur_pg.window.child.second)
+    /*buftxt.copy
+    "---------------------------------------\n\
+    \- eLIt: Editor for Lisaac source code -\n\
+    \---------------------------------------\n"
+    buftxt += "Version: "
+    buftxt += version
+    buftxt += "\n - Config. : " += filename_cfg
+    buftxt += "\n - Font system : "; font_size_sys.append_in buftxt
+    buftxt += "\n   "
+    0.to 2 do { i:INTEGER; buftxt += FONT.n_sys.at i += ", "; }
+    buftxt += FONT.n_sys.at 3 += ".\n"
+    buftxt += "\n - Font user   : "; font_size_app.append_in buftxt
+    buftxt += "\n   "
+    0.to 2 do { i:INTEGER; buftxt += FONT.n_app.at i += ", "; }
+    buftxt += FONT.n_app.at 3 += ".\n"
+    buftxt += "\n - Color    : " += look
+    buftxt += "\n - Shortcut : " += shortcut;*/
+    TRUE
+  )

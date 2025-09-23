@@ -1,0 +1,44 @@
+Header
+  
+  - name := CONSUMES;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  + storage:STORAGE
+  
+  + text:MUTEX
+  
+  //
+  // Creation.
+  //
+
+  - create s:STORAGE print m:MUTEX :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make s print m
+    result
+  )
+
+  - make s:STORAGE print m:MUTEX <-
+  ( 
+    storage := s
+    text := m
+  )
+  
+  - run <- 
+  ( + result:INTEGER
+    "Consumes ready!\n".print
+    1.to 10 do { j:INTEGER
+      result := storage.get
+      
+      text.lock
+      "Consumes #".print
+      result.print
+      '\n'.print
+      text.unlock
+    }
+  )

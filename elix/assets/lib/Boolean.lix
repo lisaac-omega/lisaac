@@ -1,0 +1,120 @@
+Section Header
+  + name := Expanded BOOLEAN;
+
+  - comment := "Boolean library (Self mapping on char C).";
+
+  - type    := `char`;
+  - default := FALSE;
+
+Section Insert
+  - parent_print:PRINT := PRINT;
+  - parent_utils:UTILS := UTILS;
+
+Section Public  
+      
+  //
+  // Conditional :
+  //
+
+  - if true_block:{} else false_block:{} <- abstract;
+    
+  - if true_block:{} :BOOLEAN <- abstract;
+
+  - elseif cond:{BOOLEAN} then block:{} :BOOLEAN <- abstract;
+
+  - elseif cond:{BOOLEAN} then block:{} else block_else:{} <- abstract;
+  
+  - ok value_ok:E else block_or:{E} :E <- ( abstract; E);
+  
+  - ok true_value:E or false_value:E :E <- ( abstract; E);
+  
+  - ok tb1:{} do bdy:{} ok tb2:{} <- abstract; 
+  
+  - if_true block:{} :BOOLEAN <- abstract;
+
+  - if_false block:{} :BOOLEAN <- abstract;
+  
+  //
+  // Binary operator :
+  //
+
+  - Self:SELF '=='  Right 60 other:SELF :BOOLEAN <- Self = other;
+
+  - Self:SELF '!==' Right 60 other:SELF :BOOLEAN <- Self != other;
+
+  - Self:SELF '||' Left 10  other:{BOOLEAN}   :BOOLEAN <- abstract;
+  
+  - Self:SELF '&&' Left 20  other:{BOOLEAN}   :BOOLEAN <- abstract;
+  
+  - Self:SELF '|'  Left 10  other:BOOLEAN :BOOLEAN <- abstract;
+
+  - Self:SELF '&'  Left 20  other:BOOLEAN :BOOLEAN <- abstract;
+
+  - Self:SELF '^' Left 10  other:BOOLEAN :BOOLEAN  <- abstract;
+
+  - Self:SELF '->' Right 25 other:BOOLEAN :BOOLEAN <- abstract;
+
+  - Self:SELF '->>' Right 25 other:{BOOLEAN}  :BOOLEAN <- abstract;
+
+  - Self:SELF '=>' s:STRING :STRING <- abstract;
+  
+  - Self:SELF '??' true_value:{E} :(SELF,{E}) <- 
+  (
+    Self,true_value
+  );
+
+  - (Self:SELF,true_value:{E}) '!!' false_value:{E} :E <- 
+  (
+    abstract;
+    E
+  );
+
+  - (Self:SELF,true_value:E) '!>' false_value:E :E <- 
+  (
+    abstract;
+    E
+  );
+  
+  //
+  // Prefix operator
+  //
+
+  - '!' Self:SELF :BOOLEAN <- abstract;
+
+  //
+  // Convertion
+  //
+
+  - to_string_b:STRING_BUFFER <-
+  ( + result:STRING_BUFFER;
+
+    abstract;
+    result
+  );
+
+  - to_string:STRING_ALIAS <- "BOOLEAN";
+
+  - to_integer:INTEGER <-
+  (
+    abstract;
+    INTEGER
+  );
+
+  - to_character:CHARACTER <-
+  (
+    abstract;
+    CHARACTER
+  );
+
+  - append_in b:STRING_BUFFER <- b.append to_string;
+  
+  - abstract:SELF <- unpredictable;
+  
+  - unpredictable:BOOLEAN <- (`(1)`:INTEGER = 1);
+  
+  - gand other:BOOLEAN :BOOLEAN <- Self & other;
+  
+  - gor other:BOOLEAN :BOOLEAN <- Self | other;
+  
+  - gxor other:BOOLEAN :BOOLEAN <- Self ^ other;
+  

@@ -1,0 +1,62 @@
+Header
+  + name := Strict BAR;
+  
+Inherit
+  + parent_popup:Expanded POPUP
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stk:Expanded ARRAY BAR
+  
+Public
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <-
+  ( child.foreach {c:WIN; c.free; }
+    child.clear
+    stk.add_last Self
+  )
+  
+  - height:REAL_32 <- ICON.dim
+  
+  - width_min:REAL_32 := 1; // != 0
+  - width_max:REAL_32 <-
+  ( + bl:WIN
+    bl := parent.parent
+    bl.width - ICON.dim * bl.child.count + ICON.dim/2
+  )
+  
+  - refresh <-
+  ( + x:REAL_32
+    refresh_popup.if {
+      (width > 1).if {
+        x := xo + width - width_max + ICON.dim/2
+        child.foreach { win:WIN
+          win.xy (x,yo).size (win.width_min,ICON.dim)
+          x := x + win.width
+        }
+      }
+    }
+  )
+  
+  - copy o:SELF <-
+  ( o.child.foreach { w:WIN; w.dup Self; }; )
+  
+  - draw_all <-
+  ( + p:PAINT
+    (width > 1).if {
+      begin_path
+      p := PAINT.create_linear (xo,yo+height-8) to (xo,yo+height)
+      color (LOOK.border_off) to (LOOK.border_on)
+      rect_varying (xo,yo+4) size (width,height-8) radius (0,8,8,0)
+      fill_paint p
+      fill
+      p.free
+      intersect_scissor (xo,yo) size (width - 8,height)
+      draw_child
+      reset_scissor
+    }
+  )
+  

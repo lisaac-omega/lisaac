@@ -1,0 +1,78 @@
+Header
+
+  + name    := ITM_BLOCK;
+
+  /*Instruction block
+
+  // BSBS: Memory : Faire la version sans argument (très courant)
+  */
+  
+Inherit
+
+  - parent_itm_code:ITM_CODE := ITM_CODE
+
+Public
+
+  - position:POSITION <- list.position
+
+  + list:ITM_LIST
+
+  + argument:ITM_ARGUMENT
+
+  //
+  // Creation.
+  //
+
+  - create lst:ITM_LIST argument arg:ITM_ARGUMENT :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make lst argument arg
+    result
+  )
+
+  - make lst:ITM_LIST argument arg:ITM_ARGUMENT <-
+  (
+    list     := lst
+    argument := arg
+  )
+
+  //
+  // Runnable.
+  //
+
+  - to_run_expr:EXPR <-
+  ( + tb:PROFIL_BLOCK
+    + t:TYPE_FULL
+    + loc,my_self:LOCAL
+    + val,rec:EXPR
+    + wrt:WRITE
+
+    tb := PROFIL_BLOCK.create Self
+    t := tb.default
+    //
+    loc := t.get_temporary position
+    // tmp.id := id_block
+    rec := loc.read position
+    val := PROTOTYPE_CST.create position type t
+    wrt := tb.slot_value.write position with rec value val
+    list_current.add_last wrt
+    // tmp.self := Self
+    rec := loc.read position
+    my_self := lookup "Self"
+    val := my_self.read position
+    wrt := tb.slot_self.write position with rec value val
+    list_current.add_last wrt
+    // tmp
+    loc.read position
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    "{BLOCK}".print
+  )
+

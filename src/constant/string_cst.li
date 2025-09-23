@@ -1,0 +1,204 @@
+Header
+
+  + name    := STRING_CST;
+
+  /*String constant*/
+
+Inherit
+
+  + parent_constant:Expanded CONSTANT
+
+Public
+
+  - output_str:STRING_BUFFER :=
+  ( + result:STRING_BUFFER
+
+    result := STRING_BUFFER.create 256
+    title "STRING ALIAS" in result
+    result
+  )
+  
+  - output_init:STRING_BUFFER := STRING_BUFFER.create 256
+
+  - output_count:INTEGER
+
+  //
+  // Value.
+  //
+
+  + string:STRING_ALIAS
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION text n:STRING_ALIAS length len:INTEGER :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make p text n length len
+    result
+  )
+
+  - make p:POSITION text n:STRING_ALIAS length len:INTEGER <-
+  (
+    position := p
+    string   := n
+    dico_string.put len to n
+    static_type := type_string_alias.default
+  )
+
+  - my_copy:SELF <- clone
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + p:STRING_CST
+    p ?= other
+    (p != NULL) && {string = p.string}
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  ( + idx,count,cur:INTEGER
+    - is_init:BOOLEAN
+    - is_storage:BOOLEAN
+    - is_upper:BOOLEAN
+    - is_hashcode:BOOLEAN
+
+    (is_init).if_false {
+      is_storage := type_string_alias.get_slot "storage"
+      .slot_data_intern.ensure_count != 0
+      is_upper   := type_string_alias.get_slot "upper"
+      .slot_data_intern.ensure_count != 0
+      is_hashcode := (SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}
+      is_init := TRUE
+    }
+
+    count := dico_string.fast_at string
+    (count >= 0).if {
+      output_count := output_count + 1
+      idx := output_count
+
+      cur := output_str.count - 1
+      output_str.append "__"
+      output_str.append (type_string_alias.intern_name)
+      output_str.append " __string_"
+      idx.append_in output_str
+      output_str.add_last '='
+      ((static_type.is_late_binding) || {is_hashcode}).if {
+        output_str.add_last '{'
+        (static_type.is_late_binding).if {
+          output_str.append "__"
+          output_str.append (static_type.raw.intern_name)
+          output_str.append "__,"
+        }
+      }
+      ((is_upper) || {is_storage}).if {
+        output_str.add_last '{'
+        (is_upper).if {
+          (count-1).append_in output_str
+          output_str.add_last ','
+        }
+        (is_storage).if {
+          output_str.add_last '\"'
+          output_str.append string
+          {(output_str.count - cur) > 78}.while_do {          
+            (output_str.at (cur+77) = '\\').if {
+              cur := cur+1
+            }
+            output_str.insert_string "\\\n" to (cur+78)
+            cur := cur + 78
+          }
+          output_str.add_last '\"'
+        }
+        output_str.add_last '}'
+      }
+      ((static_type.is_late_binding) || {is_hashcode}).if {
+        (is_hashcode).if {
+          (output_str.last != ',').if { output_str.add_last ','; }
+          string_tmp.copy string
+          string_tmp.to_without_escape
+          string_tmp.hash_code.append_in output_str
+        }
+        output_str.add_last '}'
+      }
+      output_str.append ";\n"
+      //
+      dico_string.fast_put (-idx) to string
+      //
+      (PROFIL_SLOT.profil_add_alias != NULL).if {
+        (PROFIL_SLOT.profil_hash_code_alias = NULL).if {
+          semantic_error (position,"Method slot `STRING_ALIAS.hash_code_intern' not found.");
+        }
+        (SLOT_DATA.data_hash_code_alias = NULL).if {
+          semantic_error (position,"Data slot `STRING_ALIAS.hash_code' not found.");
+        }
+        // Test Static HashCode and Dynamic hashcode:
+        output_init.append "  if ("
+        output_init.append "__string_"
+        idx.append_in output_init
+        output_init.add_last '.'
+        output_init.append (SLOT_DATA.data_hash_code_alias.intern_name)
+        output_init.append "!="
+        output_init.append (PROFIL_SLOT.profil_hash_code_alias.name)
+        output_init.append "(&__string_"
+        idx.append_in output_init
+        output_init.append ")) { print_string(\"ERROR["
+        output_init.append string
+        output_init.append "]\\n\"); };\n"
+        
+        // Refresh Dynamic hashcode:
+        output_init.append "  __string_"
+        idx.append_in output_init
+        output_init.add_last '.'
+        output_init.append (SLOT_DATA.data_hash_code_alias.intern_name)
+        output_init.append " = "
+        output_init.append (PROFIL_SLOT.profil_hash_code_alias.name)
+        output_init.append "(&__string_"
+        idx.append_in output_init
+        output_init.append ");\n  "
+        
+        // Append in Aliaser:
+        output_init.append (PROFIL_SLOT.profil_add_alias.name)
+        output_init.append "(&__string_"
+        idx.append_in output_init
+        output_init.append ");\n"
+      }
+    } else {
+      idx := -count
+    }
+    //
+    output.append "(&__string_"
+    idx.append_in output
+    output.add_last ')'
+  )
+  
+  //
+  //
+  //
+  
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '\"'
+    buffer.append string
+    buffer.add_last '\"'
+    display_ref buffer
+  )
+
+Private
+
+  - dico_string:HMAP INTEGER KEY STRING_ALIAS :=
+  HMAP INTEGER KEY STRING_ALIAS.create
+
+
+
+

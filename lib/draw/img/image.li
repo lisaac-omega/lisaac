@@ -1,0 +1,406 @@
+Header
+
+  + name := IMAGE;
+  
+  - external := `
+  //#include <emmintrin.h>
+  //#include <intrin.h> // __cpuid
+  
+  //#include <arm_neon.h> // ARM
+  `;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+
+  - default:INTEGER := 0; // only used for req_comp
+
+  - grey:INTEGER       := 1
+  - grey_alpha:INTEGER := 2
+  - rgb:INTEGER        := 3
+  - rgb_alpha:INTEGER  := 4
+    
+Public
+  
+  - coder:IMAGE; // Encoder / Decoder
+  
+  - img_x:INTEGER
+  - img_y:INTEGER
+  - img_n:INTEGER
+  - img_out_n:INTEGER
+  - vertical_flip:BOOLEAN
+  
+  - set_size (w,h:INTEGER) <- ( (img_x,img_y) := (w,h); )
+  
+  - buflen:INTEGER
+  - buffer_start:NATIVE_ARRAY UINTEGER_8
+
+  - img_buffer:NATIVE_ARRAY UINTEGER_8
+  - img_buffer_end:NATIVE_ARRAY UINTEGER_8
+  - img_buffer_original:NATIVE_ARRAY UINTEGER_8
+  - img_buffer_original_end:NATIVE_ARRAY UINTEGER_8
+  
+  - error:STRING_ALIAS
+  
+  - return_error e:STRING_ALIAS <-
+  (
+    e.println
+    crash
+    exit 0
+  )
+  
+  - set buf:NATIVE_ARRAY UINTEGER_8 size len:INTEGER coder c:IMAGE <-
+  (
+    img_buffer := img_buffer_original := buf
+    img_buffer_end := img_buffer_original_end := buf+len
+    coder := c
+  )
+  
+  // initialize a memory-decode context
+  - init buffer:NATIVE_ARRAY UINTEGER_8 size len:INTEGER :BOOLEAN <-
+  ( + result:BOOLEAN
+    img_buffer := img_buffer_original := buffer
+    img_buffer_end := img_buffer_original_end := buffer+len
+    result := TRUE
+    //coder := IMG_GIF
+    (IMG_JPG.test).if   { coder := IMG_JPG; }.elseif
+    {IMG_GIF.test} then { coder := IMG_GIF; }.elseif
+    {IMG_PNG.test} then { coder := IMG_PNG; }.elseif
+    {IMG_TGA.test} then { coder := IMG_TGA; }.elseif
+    {IMG_BMP.test} then { coder := IMG_BMP; }.elseif
+    {IMG_PSD.test} then { coder := IMG_PSD; }.elseif
+    {IMG_PNM.test} then { coder := IMG_PNM; } else
+    { error := "Image not of any known type, or corrupt"
+      coder := NULL
+      result := FALSE
+    }
+    result
+  )
+  
+  - init filename:STRING :BOOLEAN <-
+  ( + f:POINTER
+    + sz:INTEGER
+    + buf:NATIVE_ARRAY UINTEGER_8
+    f := FILE_UTILS.open_read filename
+    sz := FILE_UTILS.size f
+    buf := img_buffer_original
+    buf := `realloc(@buf,@sz)`:NATIVE_ARRAY UINTEGER_8
+    FILE_UTILS.read_raw f in buf size sz
+    FILE_UTILS.close f
+    //0.to 63 do { i:INTEGER; i.print; ':'.print; buf.item i.print; ' '.print
+    //  ((i%0Fh) = 0).if { '\n'.print; }
+    //}; '\n'.print
+    img_buffer_original := buf
+    init buf size sz    
+  )
+  
+  - rewind <-
+  (
+    img_buffer := img_buffer_original
+    img_buffer_end := img_buffer_original_end
+  )
+
+  - vertical_flip in:NATIVE_ARRAY UINTEGER_8 type req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <- 
+  ( + w,h,depth:INTEGER
+    + tmp1,tmp2:UINTEGER_8
+    depth := (req_comp != 0).ok req_comp or img_n
+    (w, h) := (img_x, img_y)
+    // @BSBS: (OPTIMIZE) use a bigger temp buffer and memcpy multiple pixels at once
+    0.to ((h>>1)-1) do { row:INTEGER
+      0.to (w-1) do { col:INTEGER
+        0.to (depth-1) do { z:INTEGER
+          tmp1 := in.item ((row * w + col) * depth + z)
+          tmp2 := in.item (((h - row - 1) * w + col) * depth + z)
+          in.at ((row * w + col) * depth + z) put tmp2
+          in.at (((h - row - 1) * w + col) * depth + z) put tmp1
+        }
+      }
+    }
+    in
+  )
+  
+  - info:BOOLEAN <- coder.info
+  
+  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <- coder.load req_comp
+  
+  - load req_comp:INTEGER in ds:NATIVE_ARRAY UINTEGER_8 :NATIVE_ARRAY UINTEGER_8 <- coder.load req_comp in ds
+          
+  - convert_format data:NATIVE_ARRAY UINTEGER_8 
+  from imgn:INTEGER to req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
+  ( + n,x,y:INTEGER
+    + c:UINTEGER_32
+    + rout:NATIVE_ARRAY UINTEGER_8
+    (req_comp = imgn).if { 
+      rout := data
+    } else {
+      ? {req_comp.in_range 1 to 4}
+      (x,y) := (img_x,img_y)
+      n := y * x
+      src := data
+      //"Src : ".print; img_n.println
+      //"Dst : ".print; req_comp.println
+      rout := dst := NATIVE_ARRAY UINTEGER_8.create (req_comp * n)
+      (((img_n-1)<<2)|(req_comp-1))
+      /*    00_00b Nothing. */ 
+      .when 00_01b then { n.times {           
+          put16 (item8 | 0FF00h)
+      }; }
+      .when 00_10b then { n.times { 
+          put24 (((c:=item8)<< 8)|c) and c
+      }; }
+      .when 00_11b then { n.times { 
+          put32 (0FF000000h|((c:=item8)<<16)|(c<<8)|c)
+      }; }
+      .when 01_00b then { n.times {
+          put8 (item16 & 0FFh)
+      }; }
+      /*    01_01b Nothing. */
+      .when 01_10b then { n.times { 
+          put24 (((c:=item16 & 0FFh)<<8)|c) and c
+      }; }
+      .when 01_11b then { n.times { 
+          put32 (((c:=item8)<<16)|(c<<8)|c|(item8<<24))
+      }; }      
+      .when 10_00b then { n.times { 
+          put8 (compute_y item24)
+      }; }
+      .when 10_01b then { n.times { 
+          put16 (0FF00h|compute_y item24)
+      }; }
+      /*    10_10b Nothing. */
+      .when 10_11b then { n.times {           
+          put32 (0FF000000h|item24)
+      };}      
+      .when 11_00b then { n.times { 
+          put8 (compute_y (item32 & 0FFFFFFh))
+      }; }
+      .when 11_01b then { n.times { 
+          put16 (compute_y ((c:=item32) & 0FFFFFFh)|((c>>16) & 0FF00h))
+      }; }
+      .when 11_10b then { n.times { 
+          put24 item16 and (item16 & 0FFh)
+      }; }
+      /*    11_11b Nothing. */      
+      // STBI_FREE(data)
+    }
+    rout
+  )
+  
+Private
+  
+  - memcpy(dst,src:NATIVE_ARRAY UINTEGER_8,sz:INTEGER) <- `memcpy(@dst,@src,@sz)`
+  
+  - src:NATIVE_ARRAY UINTEGER_8
+  - dst:NATIVE_ARRAY UINTEGER_8
+  - item8 :UINTEGER_32 <- ( + r:UINTEGER_32
+    r := src.at 0
+    src := src + 1; r
+  )
+  - item16:UINTEGER_32 <- ( + r:UINTEGER_32
+    r := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_16).on src.at 0
+    src := src + 2; r
+  )
+  - item24:UINTEGER_32 <- ( + r:UINTEGER_32
+    r := src.at 0; src := src + 1
+    r | (item16<<8)
+  )
+  - item32:UINTEGER_32 <- ( + r:UINTEGER_32
+    r := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on src.at 0
+    src := src + 4; r
+  )
+  - put8 r:UINTEGER_32 <- ( 
+    dst.at 0 put (r.to_uinteger_8)
+    dst := dst + 1
+  )
+  - put16 r:UINTEGER_32 <- (
+    CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_16).on dst.at 0 put (r.to_uinteger_16)
+    dst := dst + 2
+  )
+  - put24 r:UINTEGER_32 and r2:UINTEGER_32 <- (
+    put16 r; put8 r2
+  )
+  - put32 r:UINTEGER_32 <- (
+    CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on dst.at 0 put r
+    dst := dst + 4
+  )
+    
+IMAGE
+  
+  - scan_load:INTEGER   := 0
+  - scan_type:INTEGER   := 1
+  - scan_header:INTEGER := 2
+  
+  - refill_buffer <-
+  ( + n:INTEGER
+    not_yet_implemented
+    //n := ???
+    (n = 0).if {
+      //read_from_callbacks := 0
+      img_buffer := buffer_start
+      img_buffer_end := buffer_start + 1
+      img_buffer.at 0 put 0
+    } else {
+      img_buffer := buffer_start
+      img_buffer_end := buffer_start + n
+    }
+  )
+  
+  - last_get8:UINTEGER_8
+  
+  - get8:UINTEGER_8 <-
+  ( //? {img_buffer < img_buffer_end}
+    last_get8 := img_buffer.first
+    //last_get8.println
+    img_buffer := img_buffer + 1
+    last_get8
+  )
+
+  - at_eof:BOOLEAN <- ( img_buffer.to_pointer >= img_buffer_end.to_pointer )
+
+  - skip n:INTEGER <-
+  [ ? {n >= 0}; ]
+  ( 
+    ((img_buffer_end.to_pointer - img_buffer.to_pointer) < n).if {
+      img_buffer := img_buffer_end
+      //"-------------------------> FIN SKIP BUF!\n".print
+    } else {      
+      img_buffer := img_buffer + n
+    }
+  )
+
+  - getn buffer:NATIVE_ARRAY UINTEGER_8 size n:INTEGER :BOOLEAN <-
+  (     
+    ((img_buffer+n).to_pointer <= img_buffer_end.to_pointer).if {
+      buffer.copy_from img_buffer until (n-1)
+      img_buffer := img_buffer + n
+    }
+  )
+
+  - get16be:UINTEGER_16 <-
+  ( + result:UINTEGER_16
+    result := get8
+    (result << 8) + get8
+  )
+
+  - get32be:UINTEGER_32 <-
+  ( + result:UINTEGER_32
+    result := get16be
+    (result << 16) + get16be
+  )
+
+  - get16le:UINTEGER_16 <-
+  ( + result:UINTEGER_16
+    result := get8
+    result + (get8.to_uinteger_16 << 8)
+  )
+  
+  - get32le:UINTEGER_32 <-
+  ( + result:UINTEGER_32
+    result := get16le
+    result + (get16le.to_uinteger_32 << 16)
+  )
+
+  - bytecast x:INTEGER :UINTEGER_8 <- (x & 0FFh).to_uinteger_8;  // truncate int to byte without warnings
+  
+  - compute_y c:UINTEGER_32 :UINTEGER_32 <- 
+  ((((c&0FFh)*77) + (((c>>8)&0FFh)*150) +  (29*(c>>16))) >> 8)
+  
+  // Que JPEG ???
+  
+  - lrot (x,y:UINTEGER_32) :UINTEGER_32 <-
+  ( + result:UINTEGER_32
+    //result := `_lrotl(x,y)`:UINTEGER_32
+    result := (x << y) | (x >> (32 - y))
+    result
+  )
+  
+  - cpuid3:INTEGER <-
+  ( + result:INTEGER
+    `{ int info[4]; __cpuid(info,1)`
+    result := `info[3]`:INTEGER
+    `}`
+    result
+  )
+  
+  /*
+  - simd_align (type:?, name:?) <- `__declspec(align(16)) @type @name`
+  //                               `@type @name __attribute__((aligned(16)))`
+
+  - sse2_available:BOOLEAN <- ((cpuid3 >> 26) & 1) != 0
+  //                          `__builtin_cpu_supports("sse2")`:BOOLEAN
+  */
+  
+  - buf32:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 4
+  
+  - put8  e:UINTEGER_8  to f:POINTER <-
+  (
+    buf32.at 0 put e
+    FILE_UTILS.write f buffer buf32 size 1
+  )
+  
+  - put16 e:UINTEGER_16 to f:POINTER <-
+  (
+    CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_16).on buf32.at 0 put e
+    FILE_UTILS.write f buffer buf32 size 2
+  )
+  
+  - put24 e:UINTEGER_32 to f:POINTER <-
+  (
+    buf32.at 0 put (e.to_raw_uinteger_8)
+    buf32.at 1 put ((e >>  8).to_raw_uinteger_8)
+    buf32.at 2 put ((e >> 16).to_raw_uinteger_8)
+    FILE_UTILS.write f buffer buf32 size 3
+  )
+  
+  - put32 e:UINTEGER_32 to f:POINTER <-
+  (
+    CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on buf32.at 0 put e
+    FILE_UTILS.write f buffer buf32 size 4
+  )
+  
+  - write data:NATIVE_ARRAY UINTEGER_8 rgb_dir rgb_dir:INTEGER v_dir vdir:INTEGER size (x,y:INTEGER)
+  type comp:INTEGER with_alpha write_alpha:INTEGER pad scanline_pad:INTEGER in f:POINTER <-
+  ( + i,j,k, j_end:INTEGER
+    + zero,c,bg,px:UINTEGER_32
+    + d:NATIVE_ARRAY UINTEGER_8
+    bg := 0FF00FFh
+    (vdir < 0).if {
+      j_end := -1
+      j := y-1
+    } else {
+      j_end := y
+      j := 0
+    }
+    {j != j_end}.while_do {
+      0.to (x-1) do { i:INTEGER
+        d := data + (j*x+i)*comp
+        (write_alpha < 0).if {
+          put8 (d.item (comp-1)) to f
+        }
+        (comp)
+        .when 1 or 2 then {
+          c := d.first; c := (c << 16) | (c << 8) | c
+          put24 c to f
+        }
+        .when 3 or 4 then {
+          (write_alpha = 0).if {
+            // composite against pink background
+            //0.to 2 do { k:INTEGER
+            //  buf32.put (bg.item k + ((d.item k - bg.item k) * d.item 3)/255) to k
+            //}
+            c := 0; //(buf32.item (1+rgb_dir)<<16) | (buf32.item 1<<8) | buf32.item (1-rgb_dir)
+          } else {
+            c := (d.item (1+rgb_dir)<<16)  | (d.item 1<<8)  | d.item (1-rgb_dir)
+          }
+          put24 c to f
+        }
+        (write_alpha > 0).if { put8 (d.item (comp-1)) to f; }
+      }
+      0.to 3 do { i:INTEGER; buf32.at i put 0; }
+      FILE_UTILS.write f buffer buf32 size scanline_pad
+      j := j + vdir
+    }
+  )
+

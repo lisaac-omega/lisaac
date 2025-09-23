@@ -1,0 +1,63 @@
+Header
+  + name := N_IDF;
+  
+Inherit
+  + parent_node:Expanded NODE
+  
+Public
+  
+  + idf:STRING_ALIAS
+  - set_idf i:STRING_ALIAS :SELF <- ( idf := i; Self)
+  
+  - new i:STRING_ALIAS :SELF <- clone.set_idf i
+  
+  /*
+  - i_node_idf i:INTEGER to up:INTEGER <-
+  ( + di,ds:INTEGER
+    + s:STRING_BUFFER
+    (i > up).if {
+      s := STRING.new_tmp
+      (str.count > 1).if { s.copy idf; }
+      add_sol i add s; // Wait identifier.
+    } else {
+      (di,ds) := diff idf src src from i to up
+      (di > idf.upper).if {
+        str.add_last (I_IDF.new (i,ds-1) is Self err 0)
+        i_next ds to up
+        str.pop.free
+      } else {
+        (ds > up).if {
+          str.add_last (I_IDF.new (i,ds-1) is Self err 0)
+          s := STRING.new_tmp; s.copy idf from di to (idf.upper)
+          add_sol ds add s
+          str.pop.free
+        }
+      }
+    }
+  );*/
+  
+  - post ib:INTEGER :BOOLEAN <-
+  ( + i,ri:INTEGER
+    ri := ib
+    {(i <= idf.upper) && {ri <= src.upper} && {idf.at i = src.at ri}}.while_do {
+      ri := ri + 1
+      i := i + 1
+    }
+    (i > idf.upper) && {(ri > src.upper) || {src.at ri != '\0'}}
+  )
+  
+  - pre ib:INTEGER :BOOLEAN <-
+  ( + i,ri:INTEGER
+    ri := ib; i := idf.upper
+    {(i >= 0) && {ri >= 0} && {idf.at i = src.at ri}}.while_do {
+      ri := ri - 1
+      i := i - 1
+    }
+    (i < 0) && {(ri < 0) || {src.at ri != '\0'}}
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += idf
+  )
+  

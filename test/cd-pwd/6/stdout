@@ -1,0 +1,20 @@
+a/
+/lisaac/test/cd-pwd/6/a/
+cpt.ici=1
+j=0 cpt.la=2
+/lisaac/test/cd-pwd/6/a/b/
+/lisaac/test/cd-pwd/6/a/b/
+cpt.ici=3
+j=1 cpt.la=4
+/lisaac/test/cd-pwd/6/a/c/
+/lisaac/test/cd-pwd/6/a/c/
+cpt.ici=5
+j=0 cpt.la=6
+/lisaac/test/cd-pwd/6/a/c/d/
+/lisaac/test/cd-pwd/6/a/c/d/
+cpt.ici=7
+j=2 cpt.la=8
+/lisaac/test/cd-pwd/6/a/e
+/lisaac/test/cd-pwd/6/a/e
+cpt.ici=9
+cpt.main=10

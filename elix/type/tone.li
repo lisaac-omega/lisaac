@@ -1,0 +1,9 @@
+Header
+  + name := TONE;
+  
+Inherit
+  + parent_type:Expanded TYPE
+    
+Public
+  //- at i:INTEGER :TONE <- Self
+  //- foreach b:{TONE; } <- b.value Self

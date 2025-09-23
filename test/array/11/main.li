@@ -1,0 +1,35 @@
+Header
+  + name := MAIN;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  + bidon:Expanded ARRAY INTEGER
+    
+  - main <-
+  ( + sto1,sto2:NATIVE_ARRAY INTEGER
+    + other:MAIN
+    + v:INTEGER
+    bidon.add_last 1
+    other := clone
+    ? {other.bidon.upper = 0}.txt {other.bidon.upper.to_string}
+    v := other.bidon.first
+    ? {v = 1}.txt {v.to_string}
+    sto1 := sto2 := bidon.storage
+    {sto1 = sto2}.while_do {
+      bidon.add_last 1
+      sto2 := bidon.storage
+    }
+    ? {other.bidon.upper = 0}.txt {other.bidon.upper.to_string}
+    v := other.bidon.first
+    other.bidon.put 5 to 0; // Encore plus grave: j'ecris potentiellement sur
+    // un autre objet mis a la place de l'ancien storage...
+    ? {v = 1}.txt {v.to_string}; // ouille
+    // DCDC Finalement on fait quoi.... c'est quand m^eme cool d'avoir des Expanded Array....
+    // ... finalement, c'est un problème de conception de MAIN qui devrait pas se laisser
+    // cloner sans twinner son expanded bidon... 
+  )
+    
+    

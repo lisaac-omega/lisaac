@@ -1,0 +1,80 @@
+Header
+  + name      := LIP_SLOT_DATA;
+
+Inherit
+
+  + parent_lip_slot:Expanded LIP_CODE
+
+Public
+
+  + name:STRING_ALIAS
+
+  + value:LIP_CONSTANT
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS value v:LIP_CONSTANT
+  argument is_arg:BOOLEAN :SELF <-
+  [
+    -? {v != NULL}
+  ]
+  ( + result:SELF
+    + s:LIP_SLOT_DATA
+    ((!is_arg) && {s := get_data n; s != NULL}).if {
+      result ?= s
+      ? {result != NULL}
+      (s.value.name !== v.name).if {
+        POSITION.put_error semantic text "Redefinition with incorrect type."
+        s.position.put_position
+        p.put_position
+        POSITION.send_error
+      }
+    } else {
+      result := clone
+      result.make p name n value v argument is_arg
+    }
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS value v:LIP_CONSTANT
+  argument is_arg:BOOLEAN <-
+  (
+    position := p
+    name     := n
+    value    := v
+    (is_arg).if_false {
+      list_data.add Self to n
+    }
+  )
+
+  //
+  // Value.
+  //
+
+  - set_value v:LIP_CONSTANT :BOOLEAN <-
+  ( + new_val:LIP_CONSTANT
+
+    new_val := value.copy_of v
+    (new_val != NULL).if {
+      value := new_val
+    }
+  )
+
+  - get_value:LIP_CONSTANT <-
+  (
+    value.copy
+  )
+
+  //
+  // Print.
+  //
+
+  - print <-
+  (
+    name.print
+    ':'.print
+    value.name.print
+  )
+

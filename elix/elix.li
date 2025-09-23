@@ -1,0 +1,60 @@
+Header
+  + name := ELIX;
+  /*TODO:
+  - Open Buffer (ctrl x,b)
+  - Reprise de fonction apres un CMD_***
+  ------------------- Plus tard --------
+  - Search dans les extern (eye)
+  - Update qd tu change le nom du proto + name := ???
+  - Update qd ajout Section (les slots s'attache a l'ancien)
+  - Update child_inherit lors du changement Section Parent (Insert<>Inherit)
+  - Changement du repertoire projet  
+  --------------------------------------
+  - Arbre inherit dynamique
+  - Color C/C++, Python, Java
+  */
+
+Inherit
+  - parent_any:ANY := ANY
+
+Public
+  
+  - init <-
+  (
+    FILE_CFG.load_all
+    FILE_CFG.read
+    LOOK.read
+    FILE_KEY.read
+    LIZ.load_all
+  )
+  
+  - main <-
+  ( + b:BUFFER
+   
+    SIGNAL.infinite_recursion
+    PAPER.unset (PAPER.decorated)
+    PAPER.set (PAPER.transparent)
+    init
+    (COMMAND_ARGS.count > 1).if {
+      STRING.tmp { pth:STRING_BUFFER
+        ENVIRONMENT.pwd_in pth
+        pth.append (COMMAND_ARGS.at 1)
+        DIRENT.reduce_path pth
+        (FILE_UTILS.file_exists pth).if {
+          OUT # "Open file `" # pth # "'.\n";          
+        } else {          
+          OUT # "File `" # pth # "' not found. New file...\n";
+        }
+        b := BUFFER.get (pth.to_string_alias)
+        PAGE.cur_pg.set_buffer b
+      }
+    }
+    /*
+    STRING.tmp { tmp:STRING_BUFFER
+      NODE.rslot.print_rec tmp
+      tmp.clear
+      NODE.rprefix.print_rec tmp
+      //tmp.println
+    };*/    
+    run_gui
+  )

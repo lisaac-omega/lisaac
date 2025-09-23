@@ -1,0 +1,12 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + min:INTEGER_64
+    
+    min := 8000_0000_0000_0000h
+    ? {(-9223372036854775807 - 1) = min}
+  )

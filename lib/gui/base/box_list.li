@@ -1,0 +1,97 @@
+Header
+  + name := BOX_LIST E;
+  
+Inherit
+  + parent_popup:Expanded POPUP
+  + parent_elevator:Expanded ELEVATOR
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  + width_itm:REAL_32
+  
+  - height_upper:REAL_32 <- child.last.ymax - child.first.yo
+  
+  - margin:REAL_32 <- CMD.height_line
+  
+  - height_max:REAL_32 <- (CMD.yo - margin*2).min (height_upper + margin + 16)
+  
+  - refresh <-
+  ( + ww,w,x,y:REAL_32
+    + n,i:INTEGER
+    refresh_popup.if {
+      (xo,yo,width) := (CMD.xo+margin, CMD.yo - height, CMD.width-margin*2)
+      (x,y) := (xo+8-pos_x, yo+8-pos_y)
+      ww := width - 16
+      n := (ww / width_itm).to_integer
+      w := ww / n
+      child.foreach { win:WIN
+        win.xy (x,y).size (w,win.height_min)
+        x := x + w
+        i := i + 1
+        (i = n).if { (x,y,i) := (xo+8-pos_x, y+win.height_min,0); }
+      }
+    }
+  )
+  
+  - col_val:{STRING_ALIAS; COLOR}
+  - color c:{STRING_ALIAS; COLOR} <- ( col_val := c; )
+  
+  - draw_all <-
+  (
+    intersect_scissor (xo,yo) size (width+8,height)
+    rect_shadow (xo,yo) size (width,height) radius (8,0)
+    save
+    intersect_scissor (xo+7,yo+7) size (width-14,height-14)
+    draw_child
+    reset_scissor
+    restore
+    reset_scissor
+    height := height - 16
+    yo := yo + 8
+    draw_elevator
+    (height,yo) := (Old height, Old yo)
+  )
+  
+  - update lst:ARRAY E label lab:{E; STRING_ALIAS} action a:{E; BOOLEAN} <-
+  ( + mx:REAL_32
+    + itm:ACT_ITM
+    + l:STRING_ALIAS
+    pos_y := 0
+    child.foreach { w:WIN; w.free; }; child.clear
+    lst.foreach { v:E
+      l := lab.value v
+      itm := ACT_ITM.new
+      .init Self act (ACT1 E.new.txt_l l.fn a val v)
+      .color (col_val.value l)
+      mx := mx.max (itm.width_min)
+    }
+    width_itm := mx
+    set_open (CMD.parent)
+  )
+  
+  - cmd_down_pg:BOOLEAN <-
+  (pos_y + height < height_upper).if {
+    + dy,h:REAL_32
+    h := child.first.height_min
+    dy := h * (height / h).to_integer
+    pos_y := pos_y + dy
+    move_pos_y dy
+    ask_refresh
+  }
+  
+  - cmd_top_pg:BOOLEAN <-
+  (pos_y != 0).if {
+    move_pos_y (- pos_y)
+    pos_y := 0
+    ask_refresh
+  }
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    (event_elevator ev) || {
+      FALSE
+    }
+  )
+    
+  

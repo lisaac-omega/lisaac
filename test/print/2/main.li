@@ -1,0 +1,19 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + date:DATE
+    TEST.check (date.year) integer 1970
+    TEST.check (date.month) integer 0
+    TEST.check (date.day) integer 1
+    TEST.check (date.to_string) string "Thu 01/01/1970"
+    "uno:".print; date.println
+    date := DATE.create (1960,8,18,0)
+    "dos:".print; date.println
+    TEST.check (date.year) integer 1960
+    TEST.check (date.month) integer 8
+    TEST.check (date.day) integer 18
+    TEST.check (date.to_string) string "Sun 18/09/1960"
+    SYSTEM.exit 0
+  )

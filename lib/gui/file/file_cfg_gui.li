@@ -1,0 +1,134 @@
+Header
+  + name := FILE_CFG_GUI;
+  
+Inherit
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+    
+Public
+    
+  - read_buffer n:STRING_ALIAS :BUFFER <-
+  ( + r:BUFFER
+    (n.has_suffix ".txt").if { r := TXT_BUF.new.init_path n.load_file.parse_all; }
+    (r = NULL).if {
+      r := TXT_BUF.new.init_path n.load_file.parse_all;
+    }
+    r
+  )
+  
+  - read <-
+  ( + sz:INTEGER
+    + f:POINTER
+    + pth:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp += home_directory
+      tmp += "."
+      tmp += filename_cfg
+      pth := tmp.to_string_alias
+      f := FILE_UTILS.open_read tmp
+      (f.is_null).if {
+        "Warning: Create `".print; pth.print; "' by default.\n".print;
+        buftxt.clear
+        SYSTEM_IO.read_asset filename_cfg in_txt buftxt
+        f := FILE_UTILS.open_write pth
+        (f.is_null).if { "Error: No create `".print; pth.print; "'.".println; exit 1; };
+        FILE_UTILS.write f string buftxt
+      } else {
+        sz := FILE_UTILS.size f
+        buftxt.set_capacity sz
+        FILE_UTILS.read f in buftxt size sz
+      }
+      FILE_UTILS.close f
+    }
+    read pth src buftxt
+  )
+  
+  - update <-
+  ( + pth:STRING_ALIAS
+    + sz:INTEGER
+    + f:POINTER
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp += home_directory
+      tmp += "/."
+      tmp += filename_cfg
+      pth := tmp.to_string_alias
+    }
+    f := FILE_UTILS.open_read pth
+    sz := FILE_UTILS.size f
+    ? {buftxt.capacity >= sz}
+    FILE_UTILS.read f in buftxt size sz
+    FILE_UTILS.close f
+    update pth src buftxt
+    f := FILE_UTILS.open_write pth; //"essai.txt"
+    FILE_UTILS.write f string buftxt
+    FILE_UTILS.close f
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "UTF8"   then { UTF8.read;       }
+    .case "FONT"   then { FONT.read;       }
+    .case "BUFFER" then { BUF_ITM.read;    }
+    .case "SCREEN" then { SCREEN.new.read; }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "sound_file" then { sound_file := abs_path v; }
+    .case "shortcut"   then { shortcut_file := v; }
+    .case "look"       then { look_file := v;     }
+    = STRING_ALIAS
+  )
+    
+  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN <-
+  (
+    id
+    .case "sound"       then { sound := v; }
+    .case "keyboard"    then { vkeyb := v; }
+    .case "keyb_dyn"    then { vkeyb_dyn := v; }
+    .case "header_lock" then { header_lock := v; }
+    .case "help"        then { help  := v; }
+    = STRING_ALIAS
+  )
+  
+  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  (
+    id
+    .case "popup"     then { delay_popup := v; }
+    = STRING_ALIAS    
+  )
+    
+  - new_value id:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "shortcut" then { put_str shortcut_file; }
+    .case "look"     then { put_str look_file;     }
+    .case "sound"    then { put_bool sound;   }
+    .case "keyboard" then { put_bool vkeyb;   }
+    .case "keyb_dyn" then { put_bool vkeyb_dyn;   }
+    .case "help"     then { put_bool help;    }
+    .case "popup"    then { put_int delay_popup; }
+    //.case "BUFFER"   then {      
+    //}
+    .case "BUFFER" then {
+      PAGE.save_all_last_pos
+      put_array { i:INTEGER
+        BUF_ITM.list.at i.write_object
+        (i = BUF_ITM.list.upper) || {i = 11}
+      }
+    }
+    .case "SCREEN" then {
+      put_array { i:INTEGER
+        + scr:SCREEN
+        scr ?= PAPER.wins.at i
+        (scr != NULL).if { scr.write_object; }
+        i = PAPER.wins.upper
+      }
+    }
+    = STRING_ALIAS
+  )
+  
+  
+  

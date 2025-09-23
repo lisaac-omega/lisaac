@@ -1,0 +1,117 @@
+Header
+  + name := TRAVERSABLE V;
+  /*
+  The TRAVERSABLE prototype defines the interface for data structures that can be iterated over element by element.
+  It provides a standard way to traverse the contents.
+  For instance, `COLLECTION's and `STRING's are `TRAVERSABLE'.
+  A good performance should always be obtained by sequentially acessing a `TRAVERSABLE' with increasing indexes (from `lower' to `upper'), as demonstrated in the following code snippet :
+     
+      i := a_traversable.lower;
+      {i > a_traversable.upper}.until_do { 
+        do_something_with (a_traversable.at i); 
+        i := i + 1; 
+      }; 
+      
+  Other accessing methods (including random access and sequential access from `upper' to `lower') may or may not lead to acceptable performance, depending on the particular implementation of `TRAVERSABLE'.
+  */
+
+Public
+
+  // Indexing:
+
+  - lower:INTEGER <-
+  // Minimum index.
+  // See also `upper', `valid_index', `at'.
+  (
+    abstract
+    0
+  )
+
+  - upper:INTEGER <-
+  // Maximum index.
+  // See also `lower', `valid_index', `at'.
+  (
+    abstract
+    0
+  )
+  
+  - at i:INTEGER :V <-
+  // Item at the corresponding index `i'.
+  // See also `lower', `upper', `valid_index'.
+  [
+    valid_index i
+  ]
+  (
+    abstract
+    V
+  )
+  
+  - valid_index i:INTEGER :BOOLEAN <-
+  // True when `i' is valid (i.e., inside actual bounds).
+  // See also `lower', `upper', `at'.
+  (
+    (lower <= i) && {i <= upper}
+  )
+  [
+    Result = ((lower <= i) & (i <= upper))
+  ]
+
+  // Counting:
+
+  - count:INTEGER <-
+  // Number of available indices.
+  // See also `is_empty', `lower', `upper'.
+  (
+    upper - lower + 1
+  )
+  [
+    Result = upper - lower + 1
+  ]
+
+  - is_empty:BOOLEAN <-
+  // Is collection empty ?
+  // See also `count'.
+  (
+    count = 0
+  )
+  [
+    Result = (count = 0)
+  ]
+
+  // Accessing:
+
+  - first:V <-
+  // The very `first' item.
+  // See also `last', `at'.
+  [
+    ! is_empty
+  ]
+  (
+    at lower
+  )
+  [
+    Result = at lower
+  ]
+
+  - last:V <-
+  // The `last' item.
+  // See also `first', `at'.
+  [
+    ! is_empty
+  ]
+  (
+    at upper
+  )
+  [
+    Result = at upper
+  ]
+
+  // foreach family:
+  /*
+  - foreach b:{V;} <-
+  (
+    lower.to upper do { i:INTEGER
+      b.value (list.at i)
+    }
+  )
+  */

@@ -1,0 +1,399 @@
+Header
+  + name := COLLECTION2 V;
+  /*
+Abstract definition of a 2 dimensional collection of elements of type E.
+The Lisaac Ω library provides two implementations of COLLECTION2:
+ARRAY2 and ARRAY2.
+All implementations have exactly the same behavior. Switching from one implementation to
+another only change the memory used and the execution time.
+  */
+
+Inherit
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  // Indexing:
+
+  - lower1:INTEGER <-
+  // First Lower index bounds.
+  (
+    abstract
+    0
+  )
+
+  - lower2 :INTEGER <-
+  // Second Lower index bounds.
+  (
+    abstract
+    0
+  )
+
+  - line_minimum:INTEGER <- lower1
+  // Equivalent of `lower1'.
+
+  - column_minimum:INTEGER <- lower2
+  // Equivalent of `lower2'.
+
+  - upper1:INTEGER <-
+  // First Upper index bounds.
+  (
+    abstract
+    0
+  )
+
+  - upper2 :INTEGER <-
+  // Second Upper index bounds.
+  (
+    abstract
+    0
+  )
+
+  - line_maximum:INTEGER <- upper1
+  // Equivalent of `upper1'.
+
+  - column_maximum:INTEGER <- upper2
+  // Equivalent of `upper2'.
+
+  // Reading:
+
+  - at (line, column:INTEGER) :V <-
+  [ -? { valid_index (line,column) }; ]
+  ( + result:V
+    abstract
+    result
+  )
+
+  // Writing:
+
+  - at (line, column:INTEGER) put element:V<-
+  [ -? { valid_index (line,column) }; ]
+  (
+    abstract
+  )
+  [ +? { at (line,column) = element}; ]
+
+  - force element:V to (line, column:INTEGER) <-
+  // Put `element' at position (`line',`column'). Collection is
+  // resized first when (`line',`column') is not inside current
+  // bounds. New bounds are initialized with default values.
+  [
+    -? { line >= 0   }
+    -? { column >= 0 }
+  ]
+  (
+    abstract
+  )
+  [
+    +? { at (line,column) = element }
+    +? { count >= Old count }
+  ]
+
+  // Index validity:
+
+  - valid_line line:INTEGER :BOOLEAN <-
+  (
+    (lower1 <= line) && { line <= upper1}
+  )
+  [
+    +? { Result = ((lower1 <= line) && { line <= upper1 }) }
+  ]
+
+  - valid_index1 line:INTEGER :BOOLEAN <-
+  (
+    valid_line line
+  )
+
+  - valid_column column:INTEGER :BOOLEAN <-
+  (
+    (lower2 <= column) && {column <= upper2}
+  )
+  [
+    +? { Result = ((lower2 <= column) && {column <= upper2}) }
+  ]
+
+  - valid_index2 column:INTEGER :BOOLEAN <-
+  (
+    valid_column column
+  )
+
+  - valid_index (line, column:INTEGER) :BOOLEAN <-
+  (
+    (lower1 <= line  ) && {line <= upper1  } &&
+    {lower2 <= column} && {column <= upper2}
+  )
+  [
+    +? { Result = ((valid_line line) && {valid_column column}) }
+  ]
+
+  // Counting:
+
+  - count1:INTEGER <-
+  // Size of the first dimension.
+  (
+    abstract
+    0
+  )
+  [
+    +? { Result = upper1 - lower1 + 1 }
+  ]
+
+  - line_count:INTEGER <- count1
+  // Equivalent of `count1'.
+
+  - count2 :INTEGER <-
+  // Size of the second dimension.
+  (
+    abstract
+    0
+  )
+  [
+    +? { Result = upper2 - lower2 + 1 }
+  ]
+
+  - column_count :INTEGER <- count2
+  // Equivalent of `count2'.
+
+  - count:INTEGER <-
+  // Total number of elements.
+  (
+    abstract
+    0
+  )
+  [
+    +? { Result = line_count * column_count }
+  ]
+
+  - swap (line1, column1:INTEGER) with (line2, column2:INTEGER) <-
+  // Swap the element at index (`line1',`column1') with the
+  // the element at index (`line2',`column2').
+  [
+    -? { valid_index (line1,column1) }
+    -? { valid_index (line2,column2) }
+  ]
+  (
+    abstract
+  )
+  [
+    +? { at (line1,column1) = Old at (line2,column2) }
+    +? { at (line2,column2) = Old at (line1,column1) }
+    +? { count = Old count }
+  ]
+
+  - set_all_with v:V <-
+  // Set all item with value `v'.
+  (
+    abstract
+  )
+  [
+    +? { count = Old count }
+  ]
+
+  - clear_all <-
+  // Set all items to default values.
+  ( + value:V
+
+    set_all_with value
+  )
+  [
+    +? { count = Old count }
+    +? { all_default }
+  ]
+
+  // Creating or initializing:
+
+  - from_collection2 model:COLLECTION2(V) <-
+  //  Uses `model' to initialize Current.
+  [ -? { model != NULL }; ]
+  (
+    abstract
+  )
+  [
+    +? { count1 = model.count1 }
+    +? { count2 = model.count2 }
+  ]
+
+  - from_model model:COLLECTION(COLLECTION(V)) <-
+  // The `model' is used to fill line by line Current.
+  // Assume all sub-collections of `model' have the same
+  // number of lines.
+  [
+    -? { model.count >= 1 }
+    -? { model.first.count >= 1 }
+  ]
+  (
+    abstract
+  )
+  [
+    +? { count1 = model.count }
+    +? { count2 = model.first.count }
+  ]
+
+  - copy_collection other:COLLECTION2(V) <-
+  // Copy `other' to Current.
+  // * See: `copy'.
+  [
+    -? { other != NULL }
+  ]
+  ( + same:SELF
+
+    same ?= other
+    (same != NULL).if {
+      copy same
+    } else {
+      not_yet_implemented
+    }
+  )
+
+  // Looking and comparison:
+
+  - all_default:BOOLEAN <-
+  // Do all items have their type's default value?
+  (
+    abstract
+    FALSE
+  )
+
+  - Self:SELF '==' other:E :BOOLEAN <-
+  // Do both collections have the same `lower1', `lower2', `upper1' and `upper2', and items?
+  // The basic `=' is used for comparison of items.
+  // See also `is_equal_map'.
+  ( + line, column:INTEGER
+    + result:BOOLEAN
+
+    (
+      (lower1 = other.lower1) &&
+      {upper1 = other.upper1} &&
+      {lower2 = other.lower2} &&
+      {upper2 = other.upper2}
+    ).if {
+      result := TRUE
+      line := upper1
+      {(! result) || {line < lower1}}.until_do {
+        column := upper2
+        {(! result) || {column < lower2}}.until_do {
+          result := at (line, column) = other.at (line, column)
+          column := column - 1
+        }
+        line := line - 1
+      }
+    }
+    result
+  )
+
+  - is_equal_map (other:COLLECTION2(V)) :BOOLEAN <-
+  // Do both collections have the same `lower1', `lower2', `upper1' and `upper2', and items?
+  // Feature `is_equal' is used for comparison of items.
+  // See also `is_equal'.
+  ( + line, column:INTEGER
+    + result:BOOLEAN
+    (
+      (lower1 = other.lower1) &&
+      {upper1 = other.upper1} &&
+      {lower2 = other.lower2} &&
+      {upper2 = other.upper2}
+    ).if {
+      result := TRUE
+      line := upper1
+      {(! result) || {line < lower1}}.until_do {
+        column := upper2
+        {(! result) || {column < lower2}}.until_do {
+          result := safe_equal (at (line,column)) with (other.at (line, column))
+          column := column - 1
+        }
+        line := line - 1
+      }
+    }
+    result
+  )
+
+  // Miscellaneous features:
+
+  - occurrences elt:V :INTEGER <-
+  // Number of occurrences using `equal'.
+  // See also `fast_occurrences' to chose the apropriate one.
+  (
+    abstract
+    0
+  )
+  [ +? { Result >= 0 }; ]
+
+  - fast_occurrences elt:V :INTEGER <-
+  // Number of occurrences using `='.
+  // See also `occurrences' to chose the apropriate one.
+  (
+    abstract
+    0
+  )
+  [ +? { Result >= 0 }; ]
+
+  - has x:V :BOOLEAN <-
+  // Search if a element x is in the array using `equal'.
+  // See also `fast_has' to chose the apropriate one.
+  (
+    abstract
+    FALSE
+  )
+
+  - fast_has x:V :BOOLEAN <-
+  //  Search if a element x is in the array using `='.
+  (
+    abstract
+    FALSE
+  )
+
+  - replace_all old_value:V with new_value:V <-
+  // Replace all occurences of the element `old_value' by `new_value'
+  // using `equal' for comparison.
+  // See also `fast_replace_all' to choose the apropriate one.
+  (
+    abstract
+  )
+  [
+    +? { count = Old count }
+    +? { occurrences old_value = 0 }
+  ]
+
+  - fast_replace_all old_value:V with new_value:V <-
+  // Replace all occurences of the element `old_value' by `new_value'
+  // using operator `=' for comparison.
+  // See also `replace_all' to choose the apropriate one.
+  (
+    abstract
+  )
+  [
+    +? { count = Old count }
+    +? { fast_occurrences old_value = 0 }
+  ]
+
+  - sub_collection2 (line_min,column_min:INTEGER) to (line_max,column_max:INTEGER) :SELF <-
+  // Create a new object using selected area of `Current'.
+  [
+    -? { valid_index (line_min,column_min) }
+    -? { valid_index (line_max,column_max) }
+  ]
+  (
+    abstract
+    NULL
+  )
+  [
+    +? { Result != NULL }
+  ]
+
+  - set_area (line_min,column_min:INTEGER) to (line_max,column_max:INTEGER) with element:V <-
+  // Set all the elements of the selected area rectangle with `element'.
+  [
+    -? { valid_index (line_min,column_min) }
+    -? { valid_index (line_max,column_max) }
+  ]
+  (
+    line_min.to line_max do { line:INTEGER
+      column_min.to column_max do { column:INTEGER
+        put element to (line,column)
+      }
+    }
+  )
+  [
+    +? { count = Old count }
+  ]
+

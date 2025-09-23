@@ -1,0 +1,19 @@
+Header
+  + name := UNTIL1;
+  /**/
+  
+    
+Public
+  
+  - main <-
+  ( + i:INTEGER
+    TEST.check (i = 0)
+    until {i = 0} do {
+      i := i + 1
+    }
+    TEST.check (i = 0)
+    until {i >= 1} do {
+      i := i + 1
+    }
+    TEST.check (i = 1)
+  )

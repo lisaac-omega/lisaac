@@ -1,0 +1,10 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + a,b:ℤ
+    b := 1
+    a := a * b
+    TEST.check (a = 0)
+  )

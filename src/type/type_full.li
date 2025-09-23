@@ -1,0 +1,386 @@
+Header
+
+  + name    := TYPE_FULL;
+
+  /*Type with attribute flags.*/
+
+Inherit
+
+  - parent_any:ANY := ANY
+
+TYPE, TYPE_FULL // Private after fuck bug
+
+  + the_parent_type:TYPE; // BSBS: Passer en héritage + Insert mode.
+
+TYPE, TYPE_FULL,NODE_TYPE
+
+  - get_with flg:UINTEGER_8 :TYPE_FULL <- the_parent_type.get_with flg
+
+Public
+
+  - get_slot n:STRING_ALIAS :SLOT <- the_parent_type.get_slot n
+
+  - get_itm_slot n:STRING_ALIAS :ITM_SLOT <- the_parent_type.get_itm_slot n
+
+  - hash_code:INTEGER <- raw.name.hash_code
+
+  - size:INTEGER <- the_parent_type.size
+
+  - prototype:PROTOTYPE <- the_parent_type.prototype
+
+  - is_sub_type other:TYPE_FULL :BOOLEAN <- the_parent_type.is_sub_type (other.raw)
+
+  - slot_run:ARRAY SLOT <- the_parent_type.slot_run
+
+  - is_late_binding:BOOLEAN <- the_parent_type.is_late_binding
+
+TYPE,NODE_TYPE
+
+  + flag:UINTEGER_8
+  // 7 6 5 4 3 2 1 0
+  // |   | | | | | +- 0:Reference / 1:Expanded
+  // |   | | | | +--- 0:Reference / 1:Expanded (by default)
+  // |   | | | +----- 0:Normal    / 1:Strict
+  // |   | | +------- 0:Normal    / 1:Strict (by default)
+  // |   | +--------- 0:Normal    / 1:Temporary
+  // |   +----------- 0:Normal    / 1:Old generic
+  // +--------------- 0:Normal    / 1:Escape
+  
+  //
+  // Creation.
+  //
+
+  - create typ:TYPE with code:UINTEGER_8 :SELF <-
+  [
+    -? {typ != NULL}
+  ]
+  ( + result:SELF
+
+    result := clone
+    result.make typ with code
+    result
+  )
+
+  - make typ:TYPE with code:UINTEGER_8 <-
+  (
+    the_parent_type := typ
+    flag := code
+    ? {is_expanded -> (! is_strict)}
+  )
+
+Public
+
+  - is_parameter_type:BOOLEAN <- FALSE
+  
+  - is_scalar:BOOLEAN <-
+  (
+    is_expanded && {raw.type_c != NULL}
+  )
+  
+  - raw:TYPE <- the_parent_type
+
+  //
+  // Set.
+  //
+
+  - expanded_bit        :UINTEGER_8 := 0000_0001b
+  - default_expanded_bit:UINTEGER_8 := 0000_0010b
+  - strict_bit          :UINTEGER_8 := 0000_0100b
+  - default_strict_bit  :UINTEGER_8 := 0000_1000b
+  - expanded_ref_bit    :UINTEGER_8 := 0001_0000b
+  - generic_bit         :UINTEGER_8 := 0010_0000b
+  - escape_bit          :UINTEGER_8 := 1000_0000b
+
+  //
+  // Access.
+  //
+
+  - is_expanded          :BOOLEAN <- (flag & expanded_bit        ) != 0
+  - is_default_expanded  :BOOLEAN <- (flag & default_expanded_bit) != 0
+  - is_strict            :BOOLEAN <- (flag & strict_bit          ) != 0
+  - is_default_strict    :BOOLEAN <- (flag & default_strict_bit  ) != 0
+  - is_expanded_ref      :BOOLEAN <- (flag & expanded_ref_bit    ) != 0
+  - is_generic           :BOOLEAN <- (flag & generic_bit         ) != 0
+  - is_escape            :BOOLEAN <- (flag & escape_bit          ) != 0
+
+  - is_expanded_c:BOOLEAN <- (is_expanded) && {raw.type_c != NULL}
+
+  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
+  ( + same:TYPE_FULL
+    same ?= other
+    (same != NULL) && {
+      (Self = same) || {(raw == same.raw) && {(raw.is_block) || {(flag & 01111b) = (same.flag & 01111b)}}}
+    }
+  )
+
+  - append_name_in buffer:STRING_BUFFER <-
+  (
+    (is_strict).if {
+      buffer.append "Strict "
+    }
+    (is_expanded).if {
+      buffer.append "Expanded "
+    }
+    (is_escape).if {
+      buffer.add_last '\\'
+    }
+    raw.append_name_in buffer
+  //  buffer.append (raw.name)
+  )
+  
+  - append_contract_name_in buffer:STRING_BUFFER <- 
+  (
+    raw.append_contract_name_in buffer
+  )
+
+  //
+  // Operation.
+  //
+
+  - Self:SELF '+' other:UINTEGER_8 :TYPE_FULL <- get_with (flag | other)
+
+  - Self:SELF '-' other:UINTEGER_8 :TYPE_FULL <- get_with (flag & ~other)
+
+  - to_strict:TYPE_FULL <-
+  ( + result:TYPE_FULL
+
+    (is_expanded).if {
+      result := Self
+    } else {
+      result := get_with (flag | strict_bit)
+    }
+    result
+  )
+
+  - to_no_strict:TYPE_FULL <-
+  ( + result:TYPE_FULL
+
+    (is_expanded).if {
+      result := Self
+    } else {
+      result := get_with (flag & ~strict_bit)
+    }
+    result
+  )
+
+  //
+  // Variable product.
+  //
+
+  - new_local p:POSITION
+      name    n:STRING_ALIAS
+      style   s:CHARACTER
+      result  r:BOOLEAN         :LOCAL <-
+  (
+    LOCAL.create p name n style s type Self result r
+  )
+
+  - new_local p:POSITION name n:STRING_ALIAS style s:CHARACTER :LOCAL <-
+  (
+    LOCAL.create p name n style s type Self
+  )
+
+  - get_temporary_expr p:POSITION :EXPR <-
+  ( + result:EXPR
+
+    (raw = TYPE_VOID).if {
+      result := PROTOTYPE_CST.create p type (TYPE_VOID.default); //BSBS: Alias.
+    } else {
+      result := get_temporary p.read p
+    }
+    result
+  )
+
+  - get_temporary p:POSITION :LOCAL <-
+  (
+    new_local p name "__tmp" style '+'
+  )
+
+  - get p:POSITION result n:INTEGER :LOCAL <-
+  ( + intern:STRING_ALIAS
+    string_tmp.copy "Result"
+    (n != 0).if {
+      string_tmp.add_last '_'
+      n.append_in string_tmp
+    }
+    intern := string_tmp.to_string_alias
+    new_local p name intern style 'R'
+  )
+
+  //
+  // Type Control.
+  //
+
+  //+----------+----------+----------+----------+
+  //| A := B-->| Reference| Expanded | Strict   |
+  //| V        | TYPE     | TYPE     | TYPE     |
+  //+----------+----------+----------+----------+
+  //| Reference| B.sub A  | FALSE    | B.sub A  |
+  //| TYPE     |          |          |          |
+  //+----------+----------+----------+----------+
+  //| Expanded | FALSE    | A = B    | A = B    |
+  //| TYPE     |          |          |          |
+  //+----------+----------+----------+----------+
+  //| Strict   | FALSE    | FALSE    | A = B    |
+  //| TYPE     |Sauf NULL |          |          |
+  //+----------+----------+----------+----------+
+  - affect_with other:TYPE_FULL :BOOLEAN <-
+  ( + result:BOOLEAN
+
+    (other == Self).if {
+      result := TRUE
+    } else {
+      (is_strict).if {
+        // A: Strict.
+        result := other.raw = TYPE_NULL
+      }.elseif {is_expanded} then {
+        // A: Expanded.
+        result :=
+        ((other.is_strict)    && {raw ~= other.raw      }) ||
+        {(raw = type_boolean) && {other.is_sub_type Self}} ||
+        {(raw = type_pointer) && {other.raw = TYPE_NULL }}
+      } else {
+        // A: Reference.
+        result :=
+        (
+          (! other.is_expanded) ||
+          { + tb:TYPE_BLOCK
+            tb ?= raw
+            (tb != NULL)
+          }
+        ) && {other.is_sub_type Self}
+      }
+    }
+    result
+  )
+
+  //
+  // Import / Export manager.
+  //
+
+  - is_export_to t:TYPE_FULL :BOOLEAN <- raw.is_export_to t
+
+  - is_import_to t:TYPE_FULL :BOOLEAN <- raw.is_import_to t
+
+  //
+  // Default value.
+  //
+  + recursivity_test:BOOLEAN
+  - default_value p:POSITION :EXPR <-
+  ( + result:EXPR
+
+    ((prototype != NULL) && {prototype.default_value != NULL}).if {
+      // Prototype User definition.
+      (recursivity_test).if {
+        crash
+        POSITION.put_error semantic text "Recursivity without end (default used default, ...)."
+        list_current.position.put_position
+        prototype.default_value.position.put_position
+        POSITION.send_error
+      } else {
+        recursivity_test := TRUE
+        result := prototype.default_value.to_run_expr
+        recursivity_test := FALSE
+      }
+    } else {
+      (is_expanded).if {
+	// Copy of model prototype.
+	result := PROTOTYPE_CST.create p type Self
+      } else {
+	result := PROTOTYPE_CST.create p type (TYPE_NULL.default)
+      }
+    }
+
+    result
+  )
+
+  //
+  // Declaration generation.
+  //
+
+  - genere_declaration buffer:STRING_BUFFER <-
+  (
+    (is_expanded).if {
+      raw.put_expanded_declaration buffer
+    }.elseif {is_strict} then {
+      raw.put_reference_declaration buffer
+    } else {
+      raw.put_generic_declaration buffer
+    }
+  )
+
+  - genere_star_declaration buffer:STRING_BUFFER <-
+  (
+    ((! is_expanded) || {is_expanded_ref}).if {
+      raw.put_reference_star_declaration buffer
+    }
+  )
+
+  //
+  // Generation code.
+  //
+
+  - genere_value buffer:STRING_BUFFER <-
+  ( + tb:PROFIL_BLOCK
+    (
+      (is_expanded) && {! is_expanded_ref} &&
+      {raw != type_true} && {raw != type_false} &&
+      {tb ?= raw; tb = NULL}
+    ).if {
+      buffer.append "(*"
+      raw.put_value buffer
+      buffer.add_last ')'
+    } else {
+      raw.put_value buffer
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buf:STRING_BUFFER <-
+  (
+    (is_generic).if {
+      buf.append "Generic "
+    }
+    append_name_in buf
+  )
+
+  - print <-
+  (
+    string_tmp.clear
+    display string_tmp
+    string_tmp.print
+  )
+  
+  - display_full buffer:STRING_BUFFER <-
+  ( 
+    display buffer
+    buffer.add_last ' '
+    buffer.add_last '['
+    (is_expanded).if {
+      buffer.add_last 'e'
+    }
+    (is_default_expanded).if {
+      buffer.add_last 'E'
+    }
+    (is_strict).if {
+      buffer.add_last 's'
+    }
+    (is_default_strict).if {
+      buffer.add_last 'S'
+    }
+    (is_generic).if {
+      buffer.add_last 'G'
+    }
+    buffer.add_last ']'
+  )
+  
+  - print_full <-
+  (
+    string_tmp.clear
+    display_full string_tmp
+    string_tmp.print
+  )
+

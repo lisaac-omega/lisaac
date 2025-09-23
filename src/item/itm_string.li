@@ -1,0 +1,96 @@
+Header
+
+  + name    := ITM_STRING;
+
+  /*String constant*/
+
+Inherit
+
+  + parent_itm_constant:Expanded ITM_CONSTANT
+
+Public
+
+  + string:STRING_ALIAS
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION text n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p text n
+    result
+  )
+
+  - make p:POSITION text n:STRING_ALIAS <-
+  (
+    position := p
+    string   := n
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + result:EXPR
+    + slt:SLOT_DATA
+    + wrt:WRITE
+    + len:INTEGER
+
+    len := length
+    result := STRING_CST.create position text string length len
+    // upper
+    slt := type_string_alias.get_slot "upper".slot_data_intern
+    wrt := slt.write position with (result.my_copy) value (
+      INTEGER_CST.create position value (len-1) type (slt.type)
+    )
+    wrt.set_quiet_generation
+    list_current.add_last wrt
+    // storage
+    slt := type_string_alias.get_slot "storage".slot_data_intern
+    wrt := slt.write position with (result.my_copy) value (
+      NATIVE_ARRAY_CHARACTER_CST.create position text string
+    )
+    wrt.set_quiet_generation
+    list_current.add_last wrt
+    //
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '\"'
+    buffer.append string
+    buffer.add_last '\"'
+  )
+
+Private
+
+  - length:INTEGER <-
+  ( + i,result:INTEGER
+    i := string.lower
+    {i <= string.upper}.while_do {
+      (string.at i = '\\').if {
+        i := i + 1
+        (string.at i.is_digit).if {
+          i := i + 1
+          ((i < string.upper-1) && {string.at i.is_digit}).if {
+            i := i + 2
+          }
+        }
+      }
+      result := result + 1
+      i := i + 1
+    }
+    result
+  )
+
+
+
+

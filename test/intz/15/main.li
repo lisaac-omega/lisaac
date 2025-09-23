@@ -1,0 +1,21 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + a1,b1,c1:ℤ
+    + a2,b2,c2:MPZ
+    a1 := 1
+    b1 := 3
+    c1 := a1 - b1
+    
+    a2.init
+    a2.set "1" base 16
+    b2.init
+    b2.set "3" base 16
+    c2.init
+    c2.sub (a2,b2)
+    //c1.println
+    //c2.println
+    TEST.check (c2.equal_intz3 c1)
+  )

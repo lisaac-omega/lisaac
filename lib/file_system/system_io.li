@@ -1,0 +1,103 @@
+Header
+
+  + name := SYSTEM_IO;
+
+  - external := `
+#if defined(ARDUINO)
+
+#elif(__ANDROID__)
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <android/asset_manager.h>
+//#include <androidfw/Asset.h>
+//#include <androidfw/AssetDir.h>
+//#include <androidfw/AssetManager.h>
+//const char* AAssetDir_getFileName(AAssetDir* assetDir, int index);
+/*struct AAssetDir {
+    AssetDir* mAssetDir;
+    size_t mCurFileIndex;
+    String8 mCachedFileName;
+    AAssetDir(AssetDir* dir) : mAssetDir(dir), mCurFileIndex(0) { }
+    ~AAssetDir() { delete mAssetDir; }
+};*/
+
+/* Hardware 'print_char' */
+void print_char(char);
+
+char output[256];
+int output_idx;
+
+/* Hardware 'exit' */
+void die_with_code(long);
+
+#else // Windows, Unix, MacOS
+  
+#include <stdio.h>
+#include <stdlib.h>
+
+/* Hardware 'print_char' */
+void print_char(char);
+
+/* Hardware 'exit' */
+void die_with_code(int64_t);
+
+#endif
+`;
+
+Insert  
+  - parent_system_io_default:SYSTEM_IO_DEFAULT := SYSTEM_IO_DEFAULT
+  
+Public
+  
+  - print_error_char byte:CHARACTER <-
+  // Low level buffered error output.
+  (
+    (lip "target" str = "arduino").if {
+      (byte = '\n').if { `Serial.print("\r\n")`; } else { `Serial.print(@byte)`; }
+    }.elseif {lip "target" str = "android"} then {
+      `output[output_idx++]=@byte`
+      ((byte = '\n') || {`output_idx`:INTEGER=256}).if {
+        `LOGE("%s",output)`
+        `output_idx = 0`
+      }
+    } else {  
+      `fputc((int)@byte,stderr)`
+    }
+  )
+
+  - get_char :CHARACTER <- `fgetc(stdin)`:(CHARACTER)
+
+  - eof:CHARACTER <- `EOF`:CHARACTER
+  
+  - exit code:INTEGER <- die_with_code code
+  
+External, Public  
+  
+  - bug_compilo_042 <-
+  ( + a:CLONE
+    (! UTILS.is_debug_mode).if {
+      a.print
+    }
+  )
+
+  - print_char byte:CHARACTER <-
+  // Low level buffered output.
+  (
+    ((lip "target" str = "arduino") || {lip "target" str = "android"}).if {
+      print_error_char byte
+    } else {
+      `fputc((int)@byte,stdout)`
+    }
+  )
+  
+  - die_with_code code:INTEGER <-
+  (
+    (lip "target" str = "web").if {
+      `emscripten_force_exit(@code)`
+    } else {
+      `exit(@code)`
+    }
+  )
+  

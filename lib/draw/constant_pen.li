@@ -1,0 +1,128 @@
+Header
+  
+  + name := CONSTANT_PEN;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  - pen_gl:PEN_GL
+  
+  - tess_tol:REAL_32
+  - dist_tol:REAL_32
+  
+  - eq (x1,y1:REAL_32) and (x2,y2:REAL_32) :BOOLEAN <-
+  ( + dx,dy:REAL_32
+    (dx,dy) := (x2 - x1,y2 - y1)
+    // BSBS: Save in tmp := dist_tol * dist_tol
+    dx*dx + dy*dy < dist_tol * dist_tol 
+  )
+
+  // PEN
+  
+  - pt_corner:INTEGER     := 01h
+  - pt_left:INTEGER       := 02h
+  - pt_bevel:INTEGER      := 04h
+  - pr_innerbevel:INTEGER := 08h
+        
+  - cst_ccw:INTEGER := 1; // Winding for solid shapes
+  - cst_cw :INTEGER := 2; // Winding for holes
+  - cst_hole:INTEGER := 2
+  
+  - butt:INTEGER   := 0; // rectangle limit (cap)  [-
+  - round:INTEGER  := 1; // circle (join+cap)      O- or -O-
+  - square:INTEGER := 2; // rectangle center (cap) [-
+  - bevel:INTEGER  := 3; // K (join)
+  - miter:INTEGER  := 4; // < (join)
+  
+  // Length proportional to radius of a cubic bezier 
+  // handle for 90deg arcs.
+  - cst_kappa90:REAL_32 := 0.5522847493
+  
+  // Horizontal align
+  - align_left:INTEGER  := 1<<0; // Default, align text horizontally to left.
+  - align_center:INTEGER:= 1<<1; // Align text horizontally to center.
+  - align_right:INTEGER := 1<<2; // Align text horizontally to right.
+  // Vertical align
+  - align_top:INTEGER      := 1<<3; // Align text vertically to top.
+  - align_middle:INTEGER   := 1<<4; // Align text vertically to middle.
+  - align_bottom:INTEGER   := 1<<5; // Align text vertically to bottom.
+  - align_baseline:INTEGER := 1<<6; // Default, align text vertically to baseline.
+  
+  // COMPOSITE_OPERATION_STATE
+  
+  - source_over:INTEGER := 0
+  - source_in:INTEGER   := 1
+  - source_out:INTEGER  := 2
+  - atop:INTEGER        := 3
+  - destination_over:INTEGER := 4
+  - destination_in:INTEGER   := 5
+  - destination_out:INTEGER  := 6
+  - destination_atop:INTEGER := 7
+  - lighter:INTEGER          := 8
+  - cst_copy:INTEGER         := 9
+  - xor:INTEGER              := 10
+  
+  - cst_zero:INTEGER               := 000_0000_0001b
+  - cst_one:INTEGER                := 000_0000_0010b
+  - cst_src_color:INTEGER          := 000_0000_0100b
+  - cst_one_minus_src_color:INTEGER:= 000_0000_1000b
+  - cst_dst_color:INTEGER          := 000_0001_0000b
+  - cst_one_minus_dst_color:INTEGER:= 000_0010_0000b
+  - cst_src_alpha:INTEGER          := 000_0100_0000b
+  - cst_one_minus_src_alpha:INTEGER:= 000_1000_0000b
+  - cst_dst_alpha:INTEGER          := 001_0000_0000b
+  - cst_one_minus_dst_alpha:INTEGER:= 010_0000_0000b
+  - cst_src_alpha_saturate:INTEGER := 100_0000_0000b
+  
+  // PEN_GL
+      
+  - antialias:INTEGER       := 001b
+  - stencil_strokes:INTEGER := 010b
+  - debug:INTEGER           := 100b
+
+  - image_nodelete:INTEGER := 1<<16
+
+  - loc_viewsize:INTEGER := 0
+  - loc_tex:INTEGER      := 1
+  - loc_frag:INTEGER     := 2
+  - max_locs:INTEGER     := 3
+
+  - shader_fillgrad:INTEGER := 0
+  - shader_fillimg:INTEGER  := 1
+  - shader_simple:INTEGER   := 2
+  - shader_img:INTEGER      := 3
+
+  - frag_binding:INTEGER    := 0
+  
+  // PEN_CALL
+  
+  - cst_none:INTEGER      := 0
+  - cst_fill:INTEGER      := 1
+  - cst_convexfill:INTEGER:= 2
+  - cst_stroke:INTEGER    := 3
+  - cst_triangles:INTEGER := 4
+  
+  // Image
+  
+  // Generate mipmaps during creation of the image.
+  - image_generate_mipmaps:INTEGER := 1<<0
+  
+  // Repeat image in X or Y direction.
+  - image_repeatx:INTEGER := 1<<1
+  - image_repeaty:INTEGER := 1<<2
+  
+  - image_flipy:INTEGER   := 1<<3; // Flips (inverses) image in Y direction when rendered.
+  - image_premultiplied:INTEGER := 1<<4; // Image data has premultiplied alpha.
+        
+  // TEXTURE
+  
+  - texture_alpha:INTEGER := 01h
+  - texture_rgba:INTEGER  := 02h
+  
+  - max_fontimages:INTEGER := 4
+  - max_fontimage_size:INTEGER := 2048
+  
+  

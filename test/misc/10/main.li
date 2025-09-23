@@ -1,0 +1,10 @@
+Header
+
+  + name := MAIN;
+
+Public
+  
+  - main <-
+  ( + foo:INTEGER
+    + foo:INTEGER
+  )

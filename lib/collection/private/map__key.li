@@ -1,0 +1,628 @@
+Header  
+  + name := MAP V KEY K;
+  /*
+   Associative memory. Values of type `V' are stored using Keys of type `K'.
+   To make a comparison with the well knowned ARRAY class, with a MAP,
+   index used are not only INTEGER, you can use for example a STRING_BUFFER to access
+   to your information.
+    
+   Well knowned implementations, see HASHED_MAP and AVL_MAP.
+    
+   See also BIJECTIVE_MAP class.
+  */
+
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+  + parent_traversable:Expanded TRAVERSABLE V
+
+Public
+
+  // Counting:
+
+  - count:INTEGER <-
+  // Actual `count' of stored elements.
+  (
+    abstract
+    0
+  )
+
+  - is_empty:BOOLEAN <- count = 0
+  // Is it empty?
+
+  // Basic access:
+
+  - has k:K :BOOLEAN <-
+  // Is there a value currently associated with key `k'?
+  // See also `fast_has', `at'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+  ]
+  (
+    abstract
+    FALSE
+  )
+
+  - value_at k:K :V <-
+  // Return the value associated to key `k'.
+  // See also `fast_at', `reference_at', `has'.
+  [ /* BSBS Old; */
+    -? {has k}
+  ]
+  ( + result:V
+
+    abstract
+    result
+  )
+
+  - reference_at k:K :V <-
+  // Return NULL or the value associated with key `k'. Actually, this
+  // feature is useful when the type of values (the type V) is a
+  // reference type, to avoid using `has' just followed by `at' to get
+  // the corresponding value.
+  // See also `fast_reference_at', `at', `has'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+    // "Values are expanded." -? {(Result != NULL) -> (! Result.is_expanded_type)}
+  ]
+  ( + result:V
+    abstract
+    result
+  )
+  [ /* BSBS Old; */
+    +? {(has k) ->> {Result = value_at k}}
+  ]
+
+  - fast_has k:K :BOOLEAN <-
+  // Is there a value currently associated with key `k'?
+  // Using basic `=' for comparison.
+  // See also `has', `at', `fast_at'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+  ]
+  (
+    abstract
+    FALSE
+  )
+
+  - fast_at k:K :V <-
+  // Return the value associated to key `k' using basic `=' for comparison.
+  // See also `at', `reference_at', `fast_reference_at'.
+  [ /* BSBS Old; */
+    -? {fast_has k}
+  ]
+  ( + result:V
+
+    abstract
+    result
+  )
+
+  - fast_reference_at k:K :V <-
+  // Same work as `reference_at', but basic `=' is used for comparison.
+  // See also `reference_at', `at', `has'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+    // BSBS: Il faut que tu init Result, sinon ca ne marche pas !!!
+    //"Values are expanded." -? {(Result != NULL) ->> {! Result.is_expanded_type}}
+  ]
+  ( + result:V
+
+    abstract
+    result
+  )
+  [ /* BSBS Old; */
+    +? {fast_has k ->> {Result = fast_at k}}
+  ]
+
+  // Modification.
+
+  - put v:V to k:K <-
+  // Change some existing entry or `add' the new one. If there is as yet
+  // no key `k' in the dictionary, enter it with item `v'. Otherwise
+  // overwrite the item associated with key `k'.
+  // As the `put' procedure actually uses `is_equal', you may consider
+  // to use `fast_put' for expanded objects as well while trying to get
+  // the very best performances.
+  // See also `fast_put', `add'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    +? {v = value_at k}
+  ]
+
+  - fast_put v:V to k:K <-
+  // Same job as `put', but uses basic `=' for comparison.
+  // See also `put', `add'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    +? {v = fast_at k}
+  ]
+
+  - add v:V to k:K <-
+  // To add a new entry `k' with its associated value `v'.
+  // Actually, this is equivalent to call `put', but it may run a little bit faster.
+  // See also `put', `fast_put'.
+  [ /* BSBS Old; */
+    -? {! has k}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    +? {count = 1 + Old count}
+    +? {v = value_at k}
+  ]
+
+  // Looking and searching some value:
+  
+  - occurrences v:V :INTEGER <-
+  // Number of occurrences using `is_equal' for comparison.
+  // See also `fast_occurrences', `fast_has', `has'.
+  ( + i,result:INTEGER
+    i := 1
+    {i > count}.until_do {
+      (safe_equal (v, at i)).if {
+        result := result + 1
+      }
+      i := i + 1
+    }
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result >= 0}
+  ]
+  
+  - fast_occurrences v:V :INTEGER <-
+  // Number of occurrences using basic `=' for comparison.
+  // See also `occurrences', `fast_has', `has'.
+  ( + result,i:INTEGER
+
+    i := 1
+    {i > count}.until_do {
+      (v = at i).if {
+        result := result + 1
+      }
+      i := i + 1
+    }
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result >= 0}
+  ]
+  
+  - key_at v:V :K <-
+  // Retrieve the key used for value `v' using `is_equal' for comparison.
+  // See also `fast_key_at', `at'.
+  [ /* BSBS Old; */
+    -? {occurrences v = 1}
+  ]
+  ( + i:INTEGER
+    i := 1
+    {safe_equal (v, at i)}.until_do {
+      i := i + 1
+    }
+    key i
+  )
+  [ /* BSBS Old; */
+    +? {safe_equal (value_at Result, v)}
+  ]
+  
+  - fast_key_at v:V :K <-
+  // Retrieve the key used for value `v' using `=' for comparison.
+  // See also `key_at', `at'.
+  [ /* BSBS Old; */
+    -? {fast_occurrences v = 1}
+  ]
+  ( + i:INTEGER
+
+    i := 1
+    {v = at i}.until_do {
+      i := i + 1
+    }
+    key i
+  )
+  [ /* BSBS Old; */
+    +? {value_at Result = v}
+  ]
+
+  // Removing:
+
+  - remove k:K <-
+  // Remove entry `k' (which may exist or not before this call).
+  // As the `remove' procedure actually uses `is_equal', you may
+  // consider to use `fast_remove' for expanded objects as well
+  // while trying to get the very best performances.
+  // See also `fast_remove', `clear_count'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    +? {! has k}
+  ]
+
+  - fast_remove k:K <-
+  // Same job as `remove', but uses basic `=' for comparison.
+  // See also `remove', `clear_count'.
+  [ /* BSBS Old; */
+    -? {k != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    -? {! has k}
+  ]
+
+  - clear_count <-
+  // Discard all items (`is_empty' is True after that call).
+  // The internal `capacity' is not changed by this call.
+  // See also `clear_count_and_capacity', `remove'.
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Is empty." +? {count = 0}
+    +? {capacity = Old capacity}
+  ]
+
+  - clear_count_and_capacity <-
+  // Discard all items (`is_empty' is True after that call).
+  // The internal `capacity' may also be reduced after this call.
+  // See also `clear_count', `remove'.
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Is empty." +? {count = 0}
+    +? {capacity <= Old capacity}
+  ]
+
+  - capacity:INTEGER <-
+  // Approximation of the actual internal storage `capacity'.
+  // The `capacity' will grow automatically when needed
+  // (i.e. `capacity' is not a limit for the number of values stored).
+  // Also note that the `capacity' value may not be always accurate
+  // depending of the implementation (anyway, this `capacity' value
+  // is at least equals to `count').
+  (
+    abstract
+    0
+  )
+
+  // To provide iterating facilities:
+
+  - lower:INTEGER := 1
+
+  - upper:INTEGER <-
+  (
+    count
+  )
+  [ /* BSBS Old; */
+    +? {Result = count}
+  ]
+
+  - at i:INTEGER :V <-
+  ( + result:V
+
+    abstract
+    result
+  )
+  [ /* BSBS Old; */
+    //+? {Result = value_at (key i)}; // PBPB: Recurssive call with `key', `key' use `item' ...
+  ]
+
+  - first:V <- at lower
+
+  - last:V  <- at upper
+
+  - key index:INTEGER :K <-
+  [ /* BSBS Old; */
+    -? {valid_index index}
+  ]
+  ( + result:K
+
+    abstract
+    result
+  )
+  [ /* BSBS Old; */
+    +? {(fast_at Result) = at index}
+  ]
+
+  - key_map_in buffer:COLLECTION(K) <-
+  // Append in `buffer', all available keys (this may be useful to
+  // speed up the traversal).
+  // See also `item_map_in'.
+  [ /* BSBS Old; */
+    -? {buffer != NULL}
+  ]
+  ( + i:INTEGER
+
+    i := count
+    {i < lower}.until_do {
+      buffer.add_last (key i)
+      i := i - 1
+    }
+  )
+  [ /* BSBS Old; */
+    +? {buffer.count = count + Old buffer.count}
+  ]
+
+  - item_map_in buffer:COLLECTION(V) <-
+  // Append in `buffer', all available items (this may be useful to
+  // speed up the traversal).
+  // See also `key_map_in'.
+  [
+    -? {buffer != NULL}
+  ]
+  ( + i:INTEGER
+
+    i := count
+    {i < lower}.until_do {
+      buffer.add_last (at i)
+      i := i - 1
+    }
+  )
+  [
+    +? {buffer.count = count + Old buffer.count}
+  ]
+
+  // Comparaison.
+
+  - Self:SELF '==' other:SELF :BOOLEAN <-
+  // Do both dictionaries have the same set of associations?
+  // Keys are compared with `is_equal' and values are comnpared
+  // with the basic = operator.
+  // See also `is_equal_map'.
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    (Self = other).if {
+      result := TRUE
+    }.elseif {count = other.count} then {
+      result := TRUE
+      i := 1
+      {(! result) || {i > count}}.until_do {
+        (other.has (key i)).if {
+          (other.value_at (key i) != at i).if {
+            result := FALSE
+          } else {
+            i := i + 1
+          }
+        } else {
+          result := FALSE
+        }
+      }
+    }
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result -> (count = other.count)}
+  ]
+  
+  - is_equal_map other:SELF :BOOLEAN <-
+  // Do both dictionaries have the same set of associations?
+  // Both keys and values are compared with `is_equal'.
+  // See also `is_equal'.
+  ( + i:INTEGER
+    + k:K
+    + result:BOOLEAN
+
+    (Self = other).if {
+      result := TRUE
+    }.elseif {count = other.count} then {
+      result := TRUE
+      i := 1
+      {(! result) || {i > count}}.until_do {
+        k := key i
+        (other.has k).if {
+          (! safe_equal (other.value_at k, at i)).if {
+            result := FALSE
+          } else {
+            i := i + 1
+          }
+        } else {
+          result := FALSE
+        }
+      }
+    }
+    result
+  )
+  
+  - copy other:SELF <-
+  // Reinitialize by copying all associations of `other'.
+  ( + i:INTEGER
+
+    clear_count
+    i := 1
+    {i > other.count}.until_do {
+      put (other.at i) to (other.key i)
+      i := i + 1
+    }
+  )
+
+  // Agents based features:
+
+
+  - do_all action:{(V,K);} <-
+  // Apply `action' to every (V, K) associations of `Current'.
+  // See also `for_all', `exist'.
+  ( + i:INTEGER
+    + v:V
+    + k:K
+
+    i := lower
+    {i > upper}.until_do {
+      v := at i
+      k := key i
+      action.value (v, k)
+      i := i + 1
+    }
+  )
+
+  - foreach_pair action:{(K,V);} <-
+  (
+    lower.to upper do { j:INTEGER
+      action.value (key j,at j)
+    }
+  )
+
+  - foreach_key action:{K; } <-
+  (
+    lower.to upper do { i:INTEGER
+      action.value (key i)
+    }
+  )
+
+  - foreach_key action:{K; } until test:{K; BOOLEAN} <-
+  ( + i:INTEGER
+    + k:K
+    i := lower
+    {(i > upper) || {test.value (k := key i)}}.until_do {
+      action.value k
+      i := i + 1
+    }
+  )
+
+  - foreach_key action:{K; } while test:{K; BOOLEAN} <-
+  ( + i:INTEGER
+    + k:K
+    i := lower
+    {(i <= upper) && {test.value (k := key i)}}.while_do {
+      action.value k
+      i := i + 1
+    }
+  )
+
+  - foreach_value action:{V; } <-
+  (
+    lower.to upper do { i:INTEGER
+      action.value (at i)
+    }
+  )
+
+  - foreach_value action:{V; } until test:{V; BOOLEAN} <-
+  ( + i:INTEGER
+    + v:V
+    i := lower
+    {(i > upper) || {test.value (v := at i)}}.until_do {
+      action.value v
+      i := i + 1
+    }
+  )
+
+  - foreach_value action:{V; } while test:{V; BOOLEAN} <-
+  ( + i:INTEGER
+    + v:V
+    i := lower
+    {(i <= upper) && {test.value (v := at i)}}.while_do {
+      action.value v
+      i := i + 1
+    }
+  )
+
+  - for_all test:{(V,K); } :BOOLEAN <-
+  // Do all (V, K) associations satisfy `test'?
+  // See also `do_all', `exist'.
+  ( + i:INTEGER
+    + v:V
+    + k:K
+    + result:BOOLEAN
+
+    result := TRUE
+    i := lower
+    {(! result) || {i > upper}}.until_do {
+      v := at i
+      k := key i
+      result := test.value (v, k)
+      i := i + 1
+    }
+    result
+  )
+
+  - exists test:{(V,K); } :BOOLEAN <-
+  // Does at least one (V, K) association satisfy `test'?
+  // See also `for_all', `do_all'.
+  ( + i:INTEGER
+    + v:V
+    + k:K
+    + result:BOOLEAN
+
+    i := lower
+    {result || {i > upper}}.until_do {
+      v := at i
+      k := key i
+      result := test.value (v, k)
+      i := i + 1
+    }
+    result
+  )
+
+  // Other features:
+
+  - internal_key k:K :K <-
+  // Retrieve the internal key object which correspond to the existing
+  // entry `k' (the one memorized into the `Current' dictionary).
+  // See also `has', `fast_has'.
+  [ /* BSBS Old; */
+    -? {has k}
+  ]
+  ( + result:K
+
+    abstract
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result == k}
+  ]
+
+  // Creation.
+
+  - create:SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make
+    result
+  )
+
+  - make <-
+  // Creates an empty dictionary.
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    +? {is_empty}
+  ]
+
+
+  - key_safe_equal k1:K with k2:K :BOOLEAN <-
+  // Because keys are never NULL, we do not rely on the SAFE_EQUAL class.
+  [ /* BSBS Old; */
+    -? {k1 != NULL}
+    -? {k2 != NULL}
+  ]
+  ( + result:BOOLEAN
+
+    (k1 = k2).if {
+      result := TRUE
+    }.elseif {k1.dynamic_type = k2.dynamic_type} then {
+      result := k1 == k2
+    }
+    result
+  )
+
+  // invariant
+
+//  [ -? {capacity >= count}; ]

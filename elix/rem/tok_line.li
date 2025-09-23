@@ -1,0 +1,29 @@
+Header
+  + name := TOK_LINE;
+  
+Inherit
+  + parent_tok_txt:Expanded TOK_TXT
+  
+Private
+  - stkl:Expanded ARRAY (Strict TOK_LINE)
+  
+Public
+     
+  - new:SELF <-
+  ( + r:SELF; (stkl.is_empty).if { r := clone; } else { r := stkl.pop; }; r)
+  
+  - free <- stkl.add_last Self
+  
+  - y_section:REAL_32
+  - begin_draw <-
+  (    
+    y_section := tex.y
+    fill_color (LOOK.none)
+  )
+  
+  - post_draw <-
+  ( + sec:SECTION
+    sec := get_prev_tok SECTION
+    (sec != NULL).if { sec.draw_section y_section; }
+  )
+    

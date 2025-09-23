@@ -1,0 +1,150 @@
+Header
+  + name := BUFFER;
+  
+Inherit
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Public
+  
+  - init_key <-
+  ( STRING.tmp { k:STRING_BUFFER
+      k | KEYBOARD.key_cmd.to_character | 'a'
+      0.to 11 do { j:INTEGER
+        k.at 1 put ('a' +# j)
+        SHORTCUT.new.key (k.to_string_alias) act (ACT1 INTEGER.new
+          .txt_l "Select current buffer." 
+          .fn {i:INTEGER
+            (i <= catalog.upper).if {
+              PAGE.cur_pg.set_buffer (catalog.at i)
+            }
+          } val j
+        )
+      }
+    }
+  )
+
+  - catalog:ARRAY BUFFER := ARRAY BUFFER.create_with_capacity 16
+  - get n:STRING_ALIAS :BUFFER <-
+  ( + result:BUFFER
+    + nn:STRING_ALIAS
+    nn := abs_path n
+    result := catalog.search_until { b:BUFFER; b.name = nn}
+    (result = NULL).if { result := FILE_CFG.read_buffer nn; }
+    result
+  )
+  
+  - put_first <-
+  ( + i:INTEGER
+    i := BUFFER.catalog.fast_index_of Self
+    i.downto 1 do { j:INTEGER; catalog.at j put (catalog.at (j - 1)); }
+    catalog.at 0 put Self
+    PAPER.refresh_all
+  )
+  
+  - put n:STRING_ALIAS to idx:INTEGER :BOOLEAN <-
+  ( + i:INTEGER
+    + nn:STRING_ALIAS
+    nn := abs_path n
+    {(i <= catalog.upper) && {catalog.at i.name != nn}}.while_do { i := i + 1; }
+    (i > catalog.upper).if { get nn; }
+    (idx <= catalog.upper).if { catalog.swap i with idx; }
+  )
+  
+  + name:STRING_ALIAS
+  + shortname:STRING_ALIAS
+  + tag:STRING_ALIAS
+  + is_save:BOOLEAN := TRUE
+  - set_save s:BOOLEAN <- ( is_save := s )
+  
+  + date_create:DATE
+  + date_update:DATE
+  
+  + last_pos:POS
+  + last_pos_y:REAL_32
+  + last_pos_x:REAL_32
+  - set_last_pos p:POS <-
+  (    
+    last_pos := p.undefine_xy;
+    /*(shortname = "print.li").if {
+      OUT # "name = " # last_pos.pt # '\n'
+      (last_pos.pt = 0).if { p.pt.println; exit 1; }
+    }*/
+  )
+  - set_last_pos_xy (x,y:REAL_32) <- ( (last_pos_x,last_pos_y) := (x,y); )
+  - set_last_pos_x (x:REAL_32) <- ( last_pos_x := x; )
+  - set_last_pos_y (y:REAL_32) <- ( last_pos_y := y; )
+  
+  - buf_pg:BUF_PG <- abstract
+  - set_parent_buffer p:BUF_PG <- abstract
+    
+  - draw_all <-
+  (
+    begin_path
+    rect (xo,yo) size (width,height)
+    fill_color (LOOK.background_color)
+    fill
+    draw
+    draw_child
+    draw_forward
+  )
+  
+  - draw
+  - draw_forward
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  (
+    ev < 16
+  )
+  
+  - new:SELF <- clone
+  
+  - init_buf n:STRING_ALIAS :SELF <-
+  ( name := n
+    catalog.add_last Self
+    build_shortname
+    Self
+  )
+  
+  - new_gui:WIN
+  - refresh <-
+  ( + x,y:REAL_32
+    (x,y) := (xo+32,yo+32)
+    child.at 0.xy (x,y)
+    child.foreach { w:WIN; w.refresh; }
+    ((focus != NULL) && {focus.ymax > ymax}).if {
+      y := y-(focus.ymax - ymax + 10)
+      child.at 0.xy (x,y)
+      child.foreach { w:WIN; w.refresh; }
+    }
+  )
+  
+  - save_buffer:BOOLEAN <- BOOLEAN.abstract
+  - copy_buffer o:BUFFER :BOOLEAN <- BOOLEAN.abstract
+    
+BUFFER
+  
+  - build_shortname <-
+  ( + i0,i1:INTEGER
+    STRING.tmp { tmp:STRING_BUFFER
+      name.substring (name.last_index_of '/' + 1) to (name.upper) in tmp
+      shortname := tmp.to_string_alias
+      catalog.foreach { b:BUFFER
+        ((b != Self) && {shortname = b.shortname}).if {
+          (i0,i1) := name.reverse_first_difference_index (b.name)
+          build_tag i0; b.build_tag i1
+        }
+      }
+    }
+  )
+
+  - build_tag i:INTEGER <-
+  ( + b,e:INTEGER
+    (i = -1).if { tag := "</>"; } else {
+      b := name.last_index_of '/' since i + 1
+      e := name.index_of '/' since i - 1
+      STRING.tmp { tmp:STRING_BUFFER
+        tmp | '<'; name.substring b to e in tmp; tmp | '>'
+        tag := tmp.to_string_alias
+      }
+    }
+  )

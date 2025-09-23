@@ -1,0 +1,17 @@
+Header
+  + name := ACTS;
+  
+Inherit
+  + parent_act:Expanded ACT
+  
+Public
+  
+  + list:ARRAY ACT
+  
+  - lst l:ARRAY ACT :SELF <- ( list := l.twin; Self)
+  
+  - run:BOOLEAN <-
+  (list.first.run).if {
+    ANY_GUI.acts_wait.append_collection list
+    ANY_GUI.acts_wait.remove_first
+  }

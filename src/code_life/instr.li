@@ -1,0 +1,133 @@
+Header
+
+  + name        := INSTR;
+
+  /*Parent for all Instruction.*/
+
+Inherit
+
+  + parent_itm_object:Expanded ITM_OBJECT
+
+Public
+
+  - is_invariant:BOOLEAN <- FALSE
+  // TODO: Documentation
+  // For expressions, it seems they are invariant if they are constant, like
+  // sizeof or binary operators on two invariant expressions.
+  // For instructions, it is redefined in LIST, SWITCH and WRITE
+
+  //
+  //
+  //
+
+  - hash_code:INTEGER <- CAST POSITION TO INTEGER.on position
+  // Hash code of instruction for storage
+
+  - my_copy:SELF <-
+  // TODO: Documentation
+  // Would be to copy the instruction and make sure memory is allocated
+  // correctly. Not really sure though.
+  // Deferred
+  (
+    debug_display
+    abstract
+    NULL
+  )
+
+  //
+  // Executing pass.
+  //
+
+  - cmp other:INSTR :BOOLEAN := FALSE
+  // TODO: Documentation
+  // Not redefined, Not used as far as I can grep. Seems unused.
+
+  - i_am_the_last i:INSTR :BOOLEAN <- (i = Self)
+  // TODO: Documentation
+  // It seems to have something to do with the last expression of a list that
+  // is also a return value. Perhaps it checks whether the instruction i is the
+  // returned instruction of an instruction.
+  // Redefined in LIST, SWITCH and PROFIL
+  // Used in LIST, CALL_SLOT, SWITCH and PROFIL
+
+  - execute:INSTR <-
+  // TODO: Documentation
+  // Deferred
+  (
+    debug_display
+    abstract
+    NULL
+  )
+
+  - remove <-
+  // TODO: Documentation
+  // Deferred
+  (
+    debug_display
+    abstract
+  )
+
+  - genere <-
+  // Generate the C code in `buffer'
+  // Deferred
+  (
+    // BUG.
+    display output
+    output.append " /* INSTR.genere :: Not genere ! */"
+    // FIN BUG.
+    //abstract
+  )
+  
+  //
+  // Display.
+  //
+
+  - display_ref buffer:STRING_BUFFER <-
+  // Display reference for debug purposes
+  (
+    is_verbose.if {
+      buffer.append "<"
+      object_id.append_in buffer
+      buffer.append ">"
+    }
+  )
+
+  - display buffer:STRING_BUFFER <-
+  // Display instruction for debug purposes
+  // Deferred
+  (
+    "INSTR.display\n".print
+    abstract
+  )
+
+  - debug_display <-
+  // Print the result of the `display' slot
+  ( + voir:STRING_BUFFER
+
+    voir := STRING_BUFFER.create 250
+    display voir
+    voir.print
+    '\n'.print
+  )
+
+  - simplify_type v:VARIABLE <-
+  // TODO: Documentation
+  // Not redefined anywhere, used in LIST, READ and WRITE
+  ( + tmp_type:TYPES_TMP
+    
+
+    ((! v.is_static) && {! v.type.is_strict}).if {     
+      /*
+      ((v.type_set.count = 2) && {v.type_set.first = TYPE_NULL}).if {
+        v.set_type (v.type_set.at 1.default.to_strict)
+      */
+      tmp_type := TYPES_TMP.new
+      v.get_type tmp_type
+      ((tmp_type.count = 2) && {tmp_type.first = TYPE_NULL}).if {        
+        v.set_type (tmp_type.at 1.default.to_strict)
+      }
+      tmp_type.free
+      
+    }
+  )
+  

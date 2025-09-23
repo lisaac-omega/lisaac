@@ -1,0 +1,62 @@
+Header
+
+  + name    := LINKED_XOR_NODE V;
+
+  /*To implement LINKED_XOR_LIST(V).*/
+
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+ // - parent_any_two_way_linked_list_node:ANY_TWO_WAY_LINKED_LIST_NODE := ANY_TWO_WAY_LINKED_LIST_NODE
+
+Public
+
+  + item:V
+
+  + link:POINTER
+
+LINKED_XOR_LIST
+
+  - create i:V previous p:SELF next n:SELF :SELF<-
+  ( + result:SELF
+
+    result := clone
+    result.make i previous p next n
+    result
+  )
+
+  - make i:V previous p:SELF next n:SELF <-
+  (
+    item := i
+    link := p.to_pointer ^ n.to_pointer; // BSBS: il faut admettre NULL.to_pointer (perf!)
+  )
+  [
+    +? {item = i}
+  ]
+
+LINKED_XOR_LIST,LINKED_XOR_NODE
+
+  - set_item i:V <-
+  (
+    item := i
+  )
+  [
+    +? {item = i}
+  ]
+
+  - next prev:LINKED_XOR_NODE :LINKED_XOR_NODE <-
+  (
+    CAST POINTER TO LINKED_XOR_NODE.on (link ^ prev.to_pointer)
+  )
+
+  - previous nex:LINKED_XOR_NODE :LINKED_XOR_NODE <-
+  (
+    CAST POINTER TO LINKED_XOR_NODE.on (link ^ nex.to_pointer)
+  )
+
+  - set_link p:SELF and n:SELF <-
+  (
+    link := p.to_pointer ^ n.to_pointer
+  )
+

@@ -1,0 +1,11 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_print:PRINT := PRINT
+    
+Public
+  - main <-
+  (
+    TEST.check (('.').to_string) string "."
+  )

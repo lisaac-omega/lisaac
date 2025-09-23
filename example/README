@@ -1,0 +1,19 @@
+In this directory, you will find examples to learn programming in Lisaac Ω.
+There are essentially two indispensable tools: 'elix' and 'lisaac'.
+'elix' is the code editor / viewer
+'lisaac' is the compiler for the Lisaac Ω language
+
+Let us take for example the hello_world.li program.
+To view the code in this directory, simply open a terminal, move to this directory, and run the command "elix hello_world.li".
+
+To compile and run this program, again using a terminal, move to this directory and type the command "lisaac hello_world.li". This will produce an executable machine code file that you can run by typing "./hello_world" (or "hello_world.exe" if you are on Windows).
+
+Note that the lisaac compiler generates C as a portable intermediate language.
+It is then your C compiler, often gcc or clang, that translates it into directly executable machine code.
+
+To get started with Lisaac Ω, we suggest trying the different examples provided in this lisaac/example directory.
+
+Note: A very useful option of the lisaac command is the -boost option.
+This option must be added at the end of the command line and allows you to get an executable with top performance. Very small and very fast.
+Of course, during the development phase, to inspect the stack in case of a problem, it is better to avoid the -boost option.
+To know all the options of the lisaac command, use the -help option ("lisaac -help").

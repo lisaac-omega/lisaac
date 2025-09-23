@@ -1,0 +1,297 @@
+Header
+
+  + name := CONNECT_FOUR;
+
+  /*
+  Connect_four game
+  */
+
+Inherit
+  + parent_window:Expanded WINDOW
+
+Public
+  
+  - draw_forward <-
+  ( + p:PAINT
+    if (stat != 0) then {
+      save
+      //
+      p := PAINT.create_box (50,400) size (width-100,height-550) radius 200
+      feather 100 color (COLOR.rgba(255,255,255,150)) to (COLOR.rgba(0,0,0,0))
+      begin_path
+      rect (0,350) size (width,height-450)
+      fill_paint p
+      fill
+      p.free
+      //
+      if (stat = 1) then {
+        string_tmp.copy "Winner is\n"
+        string_tmp.append ((player=1).ok "GREEN" or "RED")
+      } else {
+        string_tmp.copy "Drawn Match"
+      }
+      font_size 50.0
+      font_face_id (FONT.sys (FONT.bold))
+      text_align (align_center|align_middle)
+      fill_color (COLOR.rgba(50,50,50,255))
+      text_box (0,height/2+100) width (width) msg string_tmp
+      //
+      restore
+    }
+    //
+    PAPER.refresh_again
+  )
+  
+Private
+
+  // Data.
+
+  - table:ARRAY2 UINTEGER_8
+
+  // Consultation.
+  
+  - table_line cols:INTEGER :INTEGER <-
+  // Get line with column.
+  ( + line:INTEGER
+    ? {table.at (cols,0) = 0}
+
+    {(line<7) && {table.at (cols,line) = 0}}.while_do {
+      line:=line+1
+    }
+    line-1
+  )
+
+  - match_null:BOOLEAN <-
+  // True, if match null.
+  ( + cols:INTEGER
+    while {(cols<7) && {table.at (cols,0) != 0}} do {
+      cols:=cols+1
+    }
+    cols=7
+  )
+
+  - is_success (x,y:INTEGER) :BOOLEAN <-
+  // True, if win.
+  (
+    (count_origin (x,y) step   (1 ,  0) > 3) ||  // Line.
+    {count_origin (x,y) step   (0 ,  1) > 3} ||  // Column.
+    {count_origin (x,y) step ((-1),(-1))> 3} ||  // Diagonal 1.
+    {count_origin (x,y) step ((-1),  1) > 3}     // Diagonal 2.
+  )
+
+  - count_origin (x,y:INTEGER) step (a,b:INTEGER) :INTEGER <-
+  // Count alignment.
+  ( + cpt,xx,yy:INTEGER
+    + ref:UINTEGER_8
+
+    // Reference.
+    ref:=table.at (x,y)
+
+    // Before.
+    xx:=x
+    yy:=y
+    {
+      cpt:=cpt+1
+      xx:=xx-a
+      yy:=yy-b
+    }.do_while {
+      (xx.in_range 0 to 6) && {yy.in_range 0 to 6} && {table.at (xx,yy) = ref}
+    }
+
+    // After.
+    xx:=x+a
+    yy:=y+b
+    while { (xx.in_range 0 to 6) && {yy.in_range 0 to 6} && {table.at (xx,yy) = ref}} do {
+      cpt:=cpt+1
+      xx:=xx+a
+      yy:=yy+b
+    }
+    
+    cpt
+  )
+
+  // Play.
+
+  - play_computer:INTEGER <-
+  // Get column.
+  (
+    max_level level min 65536
+    column_choice
+  )
+
+  // Alpha-Beta algorithm (Min-Max).
+
+  - level:INTEGER <- 2
+
+  - column_choice:INTEGER
+
+  - max_level lev:INTEGER min val_min:INTEGER :INTEGER <-
+  ( + cols,line,max,val:INTEGER
+    + val_line,val_cols,val_dia1,val_dia2:INTEGER
+
+    while {(cols<7) && {max<=val_min}} do {
+      if (table.at (cols,0) = 0) then {
+        line:=table_line cols
+        table.at (cols,line) put 2
+        // Evaluation.
+        val_line := count_origin (cols,line) step ( 1, 0)
+        val_cols := count_origin (cols,line) step ( 0, 1)
+        val_dia1 := count_origin (cols,line) step (-1,-1)
+        val_dia2 := count_origin (cols,line) step (-1, 1)
+        val:=(val_line>3).to_integer+(val_cols>3).to_integer+
+             (val_dia1>3).to_integer+(val_dia2>3).to_integer
+        if ((val!=0) || {lev=0}) then {
+          // Evaluation.
+          val:=(val<<5) + val_line+val_cols+val_dia1+val_dia2 + (lev << 8)
+        } else {
+          // Min evaluation.
+          val := min_level lev max max
+        }
+          table.at (cols,line) put 0
+          if (val>=max) then {
+          max:=val
+          if (lev=level) then {
+            column_choice := cols
+          }
+        }
+      }
+      cols:=cols+1
+    }
+    max
+  )
+
+  - min_level lev:INTEGER max val_max:INTEGER :INTEGER <-
+  ( + cols,line,min,val:INTEGER
+
+    min := 65536
+    while {(cols<7) && {min>=val_max}} do {
+      if (table.at (cols,0) = 0) then {
+        line:=table_line cols
+        table.at (cols,line) put 1
+        if (is_success (cols,line)) then {
+          val:=level - lev
+        } else {
+          val:=max_level (lev-1) min min
+        }
+        table.at (cols,line) put 0
+        if (val<min) then {
+          min:=val
+        }
+      }
+      cols:=cols+1
+    }
+    if (min=65536) then {
+      min:=0
+    }
+    min
+  )
+
+Private
+  
+  - string_tmp:STRING_BUFFER
+  - stat:UINTEGER_8
+  - tabled:ARRAY2 DISC
+  - player:INTEGER := 1
+  - playerd:DISC
+  - ia_ok:BOOLEAN
+
+Public
+  
+  - play_extern xx:INTEGER <-
+  ( + yy:INTEGER
+    yy := table_line xx
+    table.at (xx,yy) put player
+    tabled.at (xx,yy).set_color player
+    if (is_success (xx,yy)) then {
+      stat := 1
+    }.elseif {match_null} then {
+      stat := 2
+    } else {
+      player := (player = 1).ok 2 or 1
+      playerd.set_color player
+      if ((player = 2) && {ia_ok}) then {
+        play_extern play_computer
+      }
+    }
+  )
+  
+  - play c:DISC <-
+  ( + x,y,xx:INTEGER
+    if (stat = 0) then {
+      while {y < 7} do {
+        x := 0
+        while {x < 7} do {
+          if (tabled.at (x,y) = c) then {
+            xx := x
+            x := y := 7
+          }
+          x := x + 1
+        }
+        y := y + 1
+      }
+      if (table.at (xx,0) = 0) then {
+        play_extern xx
+      }
+    }
+  )
+  
+  - reset:BOOLEAN <-
+  (
+    from 0 to 6 do { y:INTEGER
+      from 0 to 6 do { x:INTEGER
+        table.at (x,y) put 0
+        tabled.at (x,y).set_color 0
+      }
+    }
+    stat := 0
+    player := (player = 1).ok 2 or 1
+    playerd.set_color player
+    TRUE
+  )
+  
+  - main <-
+  ( + line,game:WIN
+    + d:DISC
+
+    // Initialisation.
+    
+    table := ARRAY2 UINTEGER_8.create (7,7)
+    string_tmp := STRING_BUFFER.create 80
+    tabled := ARRAY2 DISC.create (7,7)
+
+    init "Connect Four" size (512,860)
+    //PAPER.set_animation 1
+
+    from 0 to 6 do { y:INTEGER
+      line := NULL
+      from 0 to 6 do { x:INTEGER
+        d := DISC.new.init 0 diameter 60 action { c:DISC; play c; }
+        tabled.at (x,6-y) put d
+        if (line = NULL) then { line := d; } else { line := line | d; }
+      }
+      if (game = NULL) then { game := line; } else { game := line / game; }
+    }
+            
+    (      
+      TXT.new.init_str "Connect Four".zoom 3.set align_center.color (COLOR.red) /
+      BUTTON.new.init "Reset" do { b:BUTTON; reset} /
+      (
+        CHECK.new.init "Articial Intelligence " pos {ia_ok} do { c:CHECK; ia_ok := !ia_ok; TRUE}.color (COLOR.white)
+        | (
+          TXT.new.init_str "Current player ".set align_center.color (COLOR.white) | 
+          (playerd := DISC.new.init 1 diameter 48 action {c:DISC;})
+        )
+      ) /
+      game.setr height_locked /
+      (
+        (
+          TXT.new.init_str "Connect Four".color (COLOR.gray) /
+          TXT.new.init_str "Android example".color (COLOR.gray) /
+          TXT.new.init_str "Lisaac Ω".zoom 2 .color (COLOR.gray) /
+          TXT.new.init_str "http://www.lisaac.org".color (COLOR.gray).set align_center
+        ).setr (height_locked|align_center) | LOGO.put_size (200,100)
+      )
+    ).init_parent Self.size (width,height).setr stretch
+  
+    PAPER.run
+  )

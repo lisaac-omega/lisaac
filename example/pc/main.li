@@ -1,0 +1,29 @@
+Header
+  
+  + name      := MAIN;
+  /*
+  Compile with the -cop option.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  - main <-
+  ( + storage:STORAGE
+    + text:MUTEX
+    
+    text    := MUTEX.create
+    storage := STORAGE.create
+    
+    PRODUCT .make storage print text
+    CONSUMES.make storage print text
+    
+    PRODUCT .run
+    CONSUMES.run
+    
+    wait_all
+  )
+

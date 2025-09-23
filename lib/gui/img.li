@@ -1,0 +1,132 @@
+Header
+  + name := IMG;
+  
+Inherit
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_clone:CLONE := CLONE
+  
+IMG
+  - dico:ARRAY IMG := // Warning: first=NULL for font texture.
+  ( + r:ARRAY IMG; r := ARRAY IMG.create_with_capacity 16; r.add_last NULL; r.add_last NULL; r)
+  
+  - init pth:STRING_ALIAS anim t:ARRAY (NATIVE_ARRAY UINTEGER_8) size (w,h:INTEGER) delay d:REAL_32 :IMG <-
+  (
+    (path,idf,anim,width,height,delay) := (pth,dico.count,t,w,h,d)
+    dico.add_last Self
+    Self
+  )
+    
+Public
+  + idf:INTEGER
+  
+  + anim:ARRAY (NATIVE_ARRAY UINTEGER_8)
+  + width:INTEGER
+  + height:INTEGER
+  + delay:REAL_32
+  + time:REAL_32
+  + idx:INTEGER
+  + path:STRING_ALIAS
+  
+  - set_idx i:INTEGER  <- ( idx  := i; )
+  - set_time t:REAL_32 <- ( time := t; )
+  
+  - load k:STRING asset is_ass:BOOLEAN :IMG <-
+  ( + img:IMG
+    + i:INTEGER
+    + d:REAL_32
+    + map:ARRAY (NATIVE_ARRAY UINTEGER_8)
+    + map1:NATIVE_ARRAY UINTEGER_8
+    + is_gif:BOOLEAN
+    //k.print; " : ".print
+    i := 2
+    {(i <= dico.upper) && {dico.at i.path !== k}}.while_do { i := i + 1; }
+    (i <= dico.upper).if {
+      img := dico.at i
+    } else {
+      is_gif := k.has_suffix ".gif"
+      map := ARRAY (NATIVE_ARRAY UINTEGER_8).create_with_capacity (is_gif.ok 16 or 1)
+      bufraw.clear
+      (is_ass).if { SYSTEM_IO.read_asset k in bufraw; } else {
+        + e:FILE
+        e ?= FILE_SYSTEM.get k
+        ((e != NULL) && {e.open_read_only}).if {
+          e.read bufraw size (e.size)
+          e.close
+        } else {
+          //"Warning IMG: `".print; k.print; "' not open.".println;
+          //" in `".print; TOK_ITM.name.print; "' point ".print; TOK_ITM.pos_i.pt.println;
+          //bufraw.add_last ' '
+        }
+      }
+      (! bufraw.is_empty).if {
+        IMAGE.init (bufraw.to_native_array) size (bufraw.count)
+        map1 := IMAGE.load (IMAGE.rgb_alpha)
+        map.add_last map1
+        (is_gif).if {
+          d := IMG_GIF.delay.to_real_32 / 100.0
+          {
+            map1 := IMG_GIF.load_next 0 begin FALSE
+            (map1 != NULL).if { map.add_last map1; }
+          }.do_while {map1 != NULL}
+        }
+        img := clone.init (k.to_string_alias) anim map size (IMAGE.img_x,IMAGE.img_y) delay d
+        //"ok".println
+      }
+    }
+    img
+  )
+  
+  - update pen:PEN <-
+  ( + id,c:INTEGER
+    + img:IMG
+    c := pen.pen_gl.texture_id + 1
+    c.to (dico.upper) do { i:INTEGER
+      img := dico.at i
+      id := pen.create_image_rgba (img.anim.first) size (img.width,img.height) flags 6
+      ? {id = img.idf}
+    }
+  )
+  
+  - draw pen:PEN to (x,y:REAL_32) alpha pa:REAL_32 bar b:BOOLEAN <-
+  ( + p:PAINT
+    + t,a:REAL_32
+    pen.save
+    p := PAINT.create_pattern (x,y) size (width,height) img_id idf angle 0 alpha pa
+    pen.begin_path
+    pen.rect (x,y) size (width,height)
+    pen.fill_paint p
+    pen.fill
+    p.free
+    (anim.count > 1).if {
+      (b).if {
+        a := idx.to_real_32/anim.upper
+        pen.begin_path
+        pen.rect (x,y+height-5) size (a*width,5)
+        pen.fill_color (COLOR.rgbaf (1.0,0.0,0.0,0.2))
+        pen.fill
+      }
+      //pen.fill_color (LOOK.rmk.set_af 0); // BUG dans update_image
+      t := CLOCK.seconds
+      (t - time > delay).if {
+        idx := (idx + 1) % anim.count
+        pen.update_image (anim.at idx) id idf
+        time := t
+      }
+      PAPER.refresh_again
+    }
+    pen.restore
+  )
+  
+  - draw pen:PEN to (x,y:REAL_32) height h:REAL_32 alpha a:REAL_32 :REAL_32 <-
+  ( + w:REAL_32
+    + p:PAINT
+    w := (h * width) / height
+    p := PAINT.create_pattern (x,y) size (w,h) img_id idf angle 0 alpha a
+    pen.begin_path
+    pen.rect (x,y) size (w,h)
+    pen.fill_paint p
+    pen.fill
+    p.free
+    w
+  )
+  

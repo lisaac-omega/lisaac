@@ -1,0 +1,32 @@
+Header
+
+  + name      := EXPR;
+  /*
+  The expr abstract
+  */
+
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  //
+  // Run.
+  //
+
+  - run <-
+  (
+    abstract
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    abstract
+  )
+
+

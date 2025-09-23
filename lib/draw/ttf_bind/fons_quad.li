@@ -1,0 +1,50 @@
+Header
+  
+  + name := FONS_QUAD;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Private
+  
+  - stock_fons_quad:ARRAY FONS_QUAD := ARRAY FONS_QUAD.create_with_capacity 32
+    
+  - new:FONS_QUAD <-
+  ( + result:FONS_QUAD
+    (stock_fons_quad.is_empty).if {
+      result := FONS_QUAD.clone
+    } else {
+      result := stock_fons_quad.pop
+    }
+    result
+  )
+  
+Public
+
+  + x0:REAL_32
+  + y0:REAL_32
+  + s0:REAL_32
+  + t0:REAL_32
+  
+  + x1:REAL_32
+  + y1:REAL_32
+  + s1:REAL_32
+  + t1:REAL_32
+  
+  - create:FONS_QUAD <- new
+  
+  - free <- ( stock_fons_quad.add_last Self; )
+  
+  - xy0 (px0,py0:REAL_32) xy1 (px1,py1:REAL_32) <-
+  (
+    (x0,y0) := (px0,py0)
+    (x1,y1) := (px1,py1)
+  )
+  
+  - st0 (ps0,pt0:REAL_32) st1 (ps1,pt1:REAL_32) <-
+  (
+    (s0,t0) := (ps0,pt0)
+    (s1,t1) := (ps1,pt1)
+  )
+  

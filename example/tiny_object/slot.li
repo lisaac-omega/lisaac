@@ -1,0 +1,106 @@
+Header
+
+  + name      := SLOT;
+
+  /*The slot*/
+
+Inherit
+
+  - parent_instr:Expanded INSTR
+
+Public
+
+  + name:STRING_ALIAS
+
+  + local_list:HMAP LOCAL KEY STRING_ALIAS
+
+  + expr_list:LINKED_LIST EXPR
+
+  // -- VFT --
+  + index:INTEGER
+
+  - set_index idx:INTEGER <-
+  (
+    index := idx
+  )
+  // -- VFT --
+
+  //
+  // Creation.
+  //
+
+  - create p:INTEGER name n:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p name n
+    result
+  )
+
+  - make p:INTEGER name n:STRING_ALIAS <-
+  (
+    position  := p
+    name      := n
+    expr_list := LINKED_LIST (EXPR) .new
+  )
+
+  //
+  // Added.
+  //
+
+  - set_local_list d:HMAP LOCAL KEY STRING_ALIAS <-
+  (
+    local_list := d
+  )
+
+  - add_expr e:EXPR <-
+  (
+    expr_list.add_last e
+  )
+
+  //
+  // Access.
+  //
+
+  - get_local n:STRING_ALIAS :LOCAL <-
+  (
+    local_list.fast_reference_at n
+  )
+
+  //
+  // Run.
+  //
+
+  - run t:CLASS <-
+  ( + this:LOCAL
+    // Fix dynamic type for This.
+    this := get_local keyword_this
+    this.set_the_dynamic_type t
+    // Execute instr.
+    (expr_list.lower).to (expr_list.upper) do { i:INTEGER
+      expr_list.at i.run
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    "  ".print
+    name.print
+    " = \n".print
+    "  ( ".print
+    (local_list.lower).to (local_list.upper-1) do { i:INTEGER
+      local_list.at i.print
+      ','.print
+    }
+    local_list.last.print
+    " |\n".print
+    (expr_list.lower).to (expr_list.upper) do { i:INTEGER
+      "    ".print
+      expr_list.at i.print
+      ";\n".print
+    }
+    "  )\n".print
+  )

@@ -1,0 +1,20 @@
+Header
+
+  + name := MAIN;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  - do action:{INTEGER} <-
+  ( + i_am_unused:INTEGER; // warning normal ici
+
+    action.value
+  )
+  
+  - main <-
+  ( 
+    do {3}
+  )

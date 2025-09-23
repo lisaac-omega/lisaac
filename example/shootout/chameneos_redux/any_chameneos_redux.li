@@ -1,0 +1,14 @@
+Header
+  
+  + name := ANY_CHAMENEOS_REDUX;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Public 
+
+  - blue:    INTEGER := 0
+  - red:     INTEGER := 1
+  - yellow:  INTEGER := 2
+  - invalid: INTEGER := 3

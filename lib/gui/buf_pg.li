@@ -1,0 +1,99 @@
+Header
+  + name := BUF_PG;
+  
+Inherit
+  + parent_win:Expanded WIN
+  + parent_elevator:Expanded ELEVATOR
+  
+Private
+  - stk_bpg:Expanded ARRAY (Strict BUF_PG)
+  
+Public
+  + buffer:BUFFER
+  - fix_buffer <- ( buffer.set_parent_buffer Self; )
+  
+  - page:PAGE <- PAGE.cast parent
+  - name:STRING_ALIAS <- buffer.name
+  - shortname:STRING_ALIAS <- buffer.shortname
+  - is_save:BOOLEAN <- buffer.is_save
+  
+  - footnote_left:STRING_BUFFER := STRING_BUFFER.create 80
+  - footnote_right:STRING_BUFFER := STRING_BUFFER.create 80
+  
+  - new:SELF <-
+  ( + result:SELF
+    (stk_bpg.is_empty).if { result := clone; } else { result := stk_bpg.pop; }
+    result
+  )
+  
+  - free <-
+  ( child.foreach { c:WIN; c.free; }; child.clear
+    stk_bpg.add_last Self
+  )
+  
+  - save_last_pos <-
+  ( (buffer != NULL).if { buffer.set_last_pos_xy (pos_x,pos_y); }; )
+  
+  - init p:WIN buf b:BUFFER :SELF <-
+  ( + r:SELF
+    + w:WIN
+    //save_last_pos => FAIT ds PAGE.set_buffer
+    buffer := b
+    set_pos_xy (b.last_pos_x,b.last_pos_y)
+    w := b.new_gui
+    (w != NULL).if { w.init_parent Self; }
+    r := init p
+    r
+  )
+  
+  - copy o:SELF <-
+  (
+    buffer := o.buffer
+    o.child.foreach { c:WIN; c.dup Self; }
+  )
+  
+  - refresh <-
+  (        
+    fix_buffer
+    buffer.refresh
+  )
+  
+  - draw_all <-
+  ( + check_upper:INTEGER
+    check_upper := states.upper
+    //
+    footnote_right.clear
+    fix_buffer
+    intersect_scissor (xo,yo) size (width,height)
+    buffer.draw_all
+    reset_scissor
+    draw_elevator
+    //
+    (check_upper != states.upper).if {
+      "Old:".print; check_upper.println
+      "Now:".print; states.upper.println
+    }
+    ? {check_upper = states.upper}
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( 
+    (ev = HAND.ldrag).if {      
+      (HAND.is_begin).if {
+        //stop_cmd
+        PAGE.set_cur_pg page
+      } else {
+        
+      }
+    }.elseif {ev = HAND.clic} then {      
+      (HAND.nb_clic % 3)
+      .when 0 then {
+        //stop_cmd
+        PAGE.set_cur_pg page
+        
+      }
+      .when 1 then { HAND.run "2Clic"; }
+      .when 2 then { HAND.run "3Clic"; }
+    } || {event_elevator ev}
+  )
+    

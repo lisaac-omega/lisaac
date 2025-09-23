@@ -1,0 +1,60 @@
+Header
+  
+  + name := FONS_PARAMS;
+  
+Inherit
+  
+  - parent_fontstash:FONTSTASH := FONTSTASH
+  
+Public
+  
+  + width:INTEGER
+  + height:INTEGER
+  
+  + flags:UINTEGER_8
+  
+  - set_width w:INTEGER <- ( width := w; )
+  - set_height h:INTEGER <- ( height := h; )
+  
+  - create (w,h:INTEGER) :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make (w,h)
+    result
+  )
+  
+  - make (w,h:INTEGER) <-
+  (
+    (width,height) := (w,h)
+    flags := fons_zero_topleft
+  )
+  
+  //void* userPtr
+  - render_create (width,height:INTEGER) :INTEGER <- 
+  ( 
+    "`render_create' not implemented.\n.".print;
+    0
+  )
+  
+  - render_resize (width,height:INTEGER) :INTEGER <-
+  (
+    "`render_resize' not implemented.\n.".print;
+    0
+  )
+  
+  - render_update (rect:RECT,data:ARRAY UINTEGER_8) <-
+  (
+    "`render_update' not implemented.\n.".print;
+  )
+  
+  - render_draw verts:ARRAY REAL_32 coord tcoords:ARRAY REAL_32
+  color colors:ARRAY INTEGER_32 <-
+  (
+    "`render_draw' not implemented.\n.".print;
+  )
+  
+  - render_delete <-
+  (
+    "`render_delete' not implemented.\n.".print;
+  )
+

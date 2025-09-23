@@ -1,0 +1,28 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + r:RANDOM
+    + x,cm1,c0,c1:INTEGER
+    r := RANDOM.new(3)
+    TEST.check (r.range 3 to 3 = 3)
+    TEST.check (r.range 0 to 0 = 0)
+    TEST.check (r.range (-1) to (-1) = -1)
+    1000.times {
+      x := r.range (-1) to 1
+      (x = -1).if {
+        cm1 := cm1 + 1
+      }.elseif {x = 0} then {
+        c0 := c0 + 1
+      } else {
+        TEST.check x integer 1
+        c1 := c1 + 1
+      }
+    }
+    TEST.check (cm1 > 310)
+    TEST.check (c0 > 310)
+    TEST.check (c1 > 310)
+    //(cm1.to_string + " " + c0.to_string + " " + c1.to_string).println
+  )
+  

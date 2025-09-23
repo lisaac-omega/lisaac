@@ -1,0 +1,126 @@
+Header
+  + name      := LIP_SLOT_CODE;
+
+Inherit
+
+  - parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + section:STRING_ALIAS
+
+  + name:STRING_ALIAS
+
+  + argument:LIP_SLOT_DATA
+
+  + code:LIP_CODE
+
+  + comment:STRING_ALIAS
+
+  + comment_chapter:STRING_ALIAS
+
+  - set_comment c:STRING_ALIAS <-
+  (
+    comment := c
+  )
+
+  - set_comment_chapter cmt:STRING_ALIAS <-
+  (
+    comment_chapter := cmt
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION section sec:STRING_ALIAS
+  name n:STRING_ALIAS
+  argument arg:LIP_SLOT_DATA
+  code c:LIP_CODE :LIP_SLOT_CODE <-
+  ( + result:LIP_SLOT_CODE
+
+    result := get_method n
+    (result != NULL).if {
+      ((arg = NULL) ^ (result.argument = NULL)).if {
+        semantic_error (result.position,"Incorrect redefinition.")
+      }
+    } else {
+      result := clone
+      result.make p section sec name n argument arg code c
+    }
+    result
+  )
+
+  - make p:POSITION section sec:STRING_ALIAS
+  name n:STRING_ALIAS
+  argument arg:LIP_SLOT_DATA
+  code c:LIP_CODE <-
+  (
+    position := p
+    section := sec
+    name := n
+    argument := arg
+    code := c
+    list_method.add_last Self
+  )
+
+  //
+  // Operation.
+  //
+
+  - run_with val:LIP_CONSTANT :BOOLEAN <-
+  ( + result:BOOLEAN
+
+    result := ! ((val = NULL) ^ (argument = NULL))
+    (result).if {
+      (argument != NULL).if {
+        ? { val != NULL }
+        result := argument.set_value val
+        stack.add_last argument
+      } else {
+        stack.add_last NULL
+      }
+      (result).if {
+        code.run
+      }
+      stack.remove_last
+    }
+    result
+  )
+
+  //
+  // Print.
+  //
+  
+  - last_chapter:STRING_ALIAS
+  
+  - print <-
+  (
+    ((comment_chapter != NULL) && {last_chapter != comment_chapter}).if {            
+      '\n'.print
+      comment_chapter.print
+      '\n'.print
+    }
+    last_chapter := comment_chapter
+    
+    "  -".print
+    name.print
+    (argument != NULL).if {
+      " <".print
+      argument.print
+      ">".print
+    }
+    ":\n".print
+    (comment != NULL).if {
+      '\t'.print
+      (comment.lower).to (comment.upper) do { i:INTEGER
+        comment.at i.print
+        ((comment.at i = '\n') && {i < comment.upper}).if {
+          '\t'.print
+        }
+      }
+    } else {
+      "\t Sorry, no comment (see `make.lip').\n".print;
+    }
+  )
+

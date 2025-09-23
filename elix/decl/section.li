@@ -1,0 +1,359 @@
+Header
+  + name := SECTION;
+
+Inherit
+  + parent_tok_drw:Expanded TOK_DRW
+  
+Private
+  - stk:Expanded ARRAY (Strict SECTION)
+
+Public  
+  + style:UINTEGER_8
+  + proto:PROTO
+  
+  - a_private:UINTEGER_8   := 00b
+  - a_list:UINTEGER_8      := 01b
+  - a_directory:UINTEGER_8 := 10b
+  - a_public:UINTEGER_8    := 11b
+  
+  - p_insert:UINTEGER_8    := 001_00b
+  - p_inherit:UINTEGER_8   := 010_00b
+  
+  - t_mapping:UINTEGER_8   := 011_00b
+  - t_external:UINTEGER_8  := 100_00b
+  - t_interrupt:UINTEGER_8 := 101_00b
+      
+  - is_insert:BOOLEAN   <- style & 111_00b = p_insert
+  - is_inherit:BOOLEAN  <- style & 111_00b = p_inherit
+  - is_external:BOOLEAN <- style & 111_00b = t_external
+  
+  - is_parent:BOOLEAN <- is_inherit || {is_insert}
+  
+//  - m_main:UINTEGER_8      := 1000_0000b
+  
+  + exports:TTOK := TTOK
+  
+  - Self:SELF '<>' other:SECTION :BOOLEAN <- (style != other.style) || {exports.type != other.exports.type}
+  
+Public
+  
+  - access p:PROTO :BOOLEAN <-
+  ( + f:UINTEGER_8
+    f := style & 11b
+    ( f = a_public) ||
+    {(f = a_private) && {proto = p}} ||
+    {(f = a_directory) && {p.src.name.has_prefix (proto.src.name)}} ||
+    {(f = a_list) && {exports != NULL} && {
+        exports.type.foreach_until { t:TONE
+          + tp:TPRO
+          tp ?= t
+          ((t = TP.self) && {p.type <= proto.type}) ||
+          {(tp != NULL) && {p.type <= tp}}
+        }
+    }}
+  )
+  
+  /*  
+  - style f:UINTEGER_8 export t:TYPE :SELF <-
+  ( style := f
+    exports := t
+    Self
+  );*/
+  
+  + err:INTEGER
+  
+  - new:SELF <- ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <- stk.add_last Self
+  
+  - detect:BOOLEAN <- (pos_i <= upper) && {at pos_i.is_upper}
+  
+  - parse <-
+  (
+    proto := txt_buf.like LIX_BUF.proto
+    style := 0
+    word "Section"
+    (
+      (word "Inherit")   || {word "Insert"}   ||
+      {word "Interrupt"} || {word "External"} || {word "Mapping"}
+    ).if {
+      last_str
+      .when "Inherit"   then { style := p_inherit;   }
+      .when "Insert"    then { style := p_insert;    }
+      .when "Interrupt" then { style := t_interrupt; }
+      .when "External"  then { style := t_external;  }
+      .when "Mapping"   then { style := t_mapping;   }
+      (read_c ',').if { read_access; }
+    } else {
+      read_access
+    }
+    err := pos_i.pt - pt_b.pt
+    skip_until '\n'
+    (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }
+  )
+  
+  - read_access <-
+  //++ ACCESS       -> 'Directory' | 'Public' | 'Private' | PROTOTYPE { ',' PROTOTYPE }
+  ( ((word "Public") || {word "Private"} || {word "Directory"}).if {
+      last_str
+      .when "Public"    then { style := style | a_public;    }
+      .when "Private"   then { style := style | a_private;   }
+      .when "Directory" then { style := style | a_directory; }
+      ((is_inherit) && {txt_buf.like LIX_BUF.proto.type.is (TYPE.expanded)}).if {
+        err warning msg "`Section Inherit' is not possible with Expanded object (Use `Section Insert')."
+      }
+    } else {
+      style := style | a_list
+      exports := TTOK.parse_sp (TTOK.tvec)
+    }
+  )
+  
+  - begin_draw <-
+  (
+    fill_color (LOOK.cols.at (LOOK.keyword))
+  )
+  
+  - sub_draw <- 
+  (
+    (pos_i.pt = pt_b.pt+err).if { fill_color (COLOR.red); }
+  )
+  
+  - end_draw <-
+  ( + pt:PAINT
+    + c:COLOR
+    + x:REAL_32
+    c := LOOK.section.at (style & 11b)
+    begin_path
+    fill_color c
+    x := tex.xmin + x_space*7
+    rect (tex.xmin-4,tex.y-3) to (x,tex.y)
+    fill
+    //
+    begin_path
+    pt := PAINT.create_linear (x+1,tex.y-3) to (x+100,tex.y) color c to (c.set_af 0)
+    fill_paint pt
+    rect (x+1,tex.y-3) to (x+100,tex.y)
+    fill
+    pt.free
+  )
+  
+  - draw_section y:REAL_32 <-
+  ( //+ pt:PAINT
+    begin_path
+    //pt := PAINT.create_linear (xo+4,y) to (xo+16,y) color
+    //(LOOK.section.at (style & 11b)) to (LOOK.section.at (style & 11b).set_af 0)
+    //fill_paint pt
+    fill_color (LOOK.section.at (style & 11b))
+    rect (tex.xmin-4,y) to (tex.xmin-1,tex.y-1)
+    fill
+    //pt.free
+  )
+  
+  - post_draw <-
+  // Append extern slot without Chapter for first Section.
+  ( + sec:SECTION
+    (! is_parent).if {
+      sec := get_prev_tok SECTION
+      ((sec = NULL) || {sec.is_parent}).if {
+        proto.draw_extern_slot_other
+      }
+    }
+  )
+  
+  // OLD
+  /*
+  - ply:REAL_32 := 8
+  - old_div:DIV
+  - old_sec:SECTION
+  - reset_last_sec <-
+  (
+    //(old_sec != NULL).if { old_sec.draw_finish; }
+    old_sec := NULL
+  )
+ 
+  - draw <-
+  ( + x,y,r,p2,t,h,a:REAL_32
+    + col1,col0:COLOR
+    + f:UINTEGER_8
+    + p:PAINT
+    + c:CHARACTER
+    pt_ci := pt_ci + 2
+    c := buf.at pt_ci
+    pt_ci := pt_ci + ((c = 'M') || {c = 'E'}).ok 2 or 1
+    ((old_sec = NULL) || {Self <> old_sec}).if {
+      (old_sec != NULL).if { old_sec.draw_finish; }
+      //
+      (r,t) := (80,20)
+      f := style & 03h
+      p2 := REAL_32.pi/2
+      col0 := COLOR.white
+      col1 := LOOK.section.at f
+      //
+      DIV.new.zone (tex.x,tex.y) size (r+t+x_space,60.0-x_space) i (TOK.pt_b) style 2 act {d:DIV
+        "Change section zero".println
+      }
+      //
+      (x,y) := (tex.x + x_space + r + t,tex.y + FONT.size_app/2)
+      f
+      .when a_private then {
+        FONT.app (FONT.italic) in Self
+        a := 0.2/(1.0-(col1.rf+col1.gf+col1.bf)/3)
+        fill_color (col1.set_af a)
+        text (x+ply+8,tex.y + asc_c) msg "Private"
+        //font_face_id (FONT.app (FONT.roman))
+      }
+      .when a_public then {
+        FONT.app (FONT.italic) in Self
+        a := 0.2/(1.0-(col1.rf+col1.gf+col1.bf)/3)
+        fill_color (col1.set_af a)
+        text (x+ply+8,tex.y + asc_c) msg "Public"
+        //font_face_id (FONT.app (FONT.roman))
+      }
+      .when a_list then {
+        tex.push (x_space + r + t + ply + 8,0)
+        begin_line
+        tex.ascdes (asc_c,des_c)
+        exports.draw
+        end_line
+        tex.pop
+      }
+      .when a_directory then {
+        + i:INTEGER
+        STRING.tmp { tmp:STRING_BUFFER
+          tmp += name; tmp.keep_head (tmp.last_index_of '/')
+          i := tmp.first_substring_index "lisaac"
+          (i != -1).if { tmp.remove_head (i+7); }
+          fill_color (COLOR.gray)
+          text (x+ply+8,tex.y + asc_c) msg tmp
+        }
+      }
+      begin_path
+      arc (x,y) radius ply angle (-p2,+p2) direction 2
+      p := PAINT.create_radial (x,y+ply) radius (0,ply)
+      color col0 to col1
+      fill_paint p
+      fill; //stroke
+      p.free
+      //
+      begin_path
+      x := x - t
+      rect (x,y-ply) to (x+t-1,y+ply-1)
+      p := PAINT.create_linear (x,y+ply) to (x,y)
+      color col0 to col1
+      fill_paint p
+      fill; //stroke
+      p.free
+      //
+      begin_path
+      y := y+r
+      arc (x,y) radius (r-ply) angle (-p2,REAL_32.pi) direction 1
+      arc (x,y) radius (r+ply) angle (REAL_32.pi,-p2) direction 2
+      p := PAINT.create_radial (x,y) radius (r-ply,r)
+      color col0 to col1
+      fill_paint p
+      fill; //stroke
+      p.free
+      //      
+      tex.add_y 60
+      h := y-tex.y
+    }
+    old_div := DIV.new.zone (tex.x,tex.y) size (x_space*2,h) i (TOK.pt_b) style 2 act {d:DIV
+      "Change section".println
+    }
+    tex.push (x_space*3,0)
+    old_sec := Self
+    ? {buf.at pt_ci = '\n'}
+    pt_ci := pt_ci+1
+    //pt_ci := pt_ci + dd
+    ? {pt_ci - dd = Old pt_ci}
+  )
+  
+  - draw_end <-
+  ( + x,y:REAL_32
+    + p:PAINT
+    tex.pop_add_y 0
+    (x,y) := (tex.x+x_space,old_div.ymax)
+    (y < tex.y).if {
+      p := PAINT.create_linear (x+ply,0) to (x,0)
+      color (COLOR.white) to (LOOK.section.at (style&03h))
+      fill_paint p
+      //
+      begin_path
+      rect (x-ply,y+1) to (x+ply-1,tex.y-1)
+      fill; //stroke
+      p.free
+    } else { tex.set_y y; }
+    //
+    old_div.size (old_div.width,tex.y - old_div.yo)
+  )
+  
+  - draw y0:REAL_32 to y1:REAL_32 <-
+  ( + p:PAINT
+    + x:REAL_32
+    (old_sec != NULL).if {
+      x := tex.xmin+x_space
+      p := PAINT.create_linear (x+ply,0) to (x,0)
+      color (COLOR.white) to (LOOK.section.at (old_sec.style&03h))
+      fill_paint p
+      //
+      begin_path
+      rect (x-ply,y0) to (x+ply-1,y1-1)
+      fill; //stroke
+      p.free
+    }
+  )
+  
+  - draw_finish <-
+  ( + x,y:REAL_32
+    + p:PAINT
+    (x,y) := (tex.x+x_space,tex.y)
+    begin_path
+    arc (x,y) radius ply angle (0,REAL_32.pi) direction 2
+    p := PAINT.create_radial (x+ply,y) radius (0,ply)
+    color (COLOR.white) to (LOOK.section.at (style&03h))
+    fill_paint p
+    fill; //stroke
+    p.free
+    old_div := NULL
+    tex.add_y hline_default
+  )
+    
+  - change_sec slo:SLOT all a:INTEGER <-
+  ( + f:UINTEGER_8
+    + t:TYPE
+    + pr:PROTO
+    + p:STRING_ALIAS
+    + sec,sec2:SECTION
+    + s,s2:SLOT
+    + i:INTEGER
+    + t0,t1:STRING
+    (a = 0).if {
+      f := (style + 1) & 11b
+      (f)
+      .when a_list then { t := TP.new 26; }
+      .when a_directory then { p := slo.proto.path; }
+      sec := SECTION.new f path p export t
+      SPOT.set_pos (SPOT.pos_o & ~0FFFF_FFFF_FFFFh)
+      slo.set_section sec
+    } else {      
+      i := TO_SCREEN.index_slot slo
+      (sec,pr) := (slo.section,slo.proto)
+      i := i + a
+      (i.in_range 0 to (TO_SCREEN.slot.upper)).if {
+        s := TO_SCREEN.slot.at i
+        sec2 := s.section
+        {
+          (i.in_range 0 to (TO_SCREEN.slot.upper)) &&
+          {(s2 := TO_SCREEN.slot.at i).section = sec2} &&
+          {
+            (t0,t1) := (s.rmo,s2.rmo)
+            (t0 = t1) || {(t0 != NULL) && {t0 == t1}}
+          }
+        }.while_do {
+          (s2.proto = pr).if { s2.set_section sec; }
+          i := i + a
+        }
+      }
+    }
+  )
+*/  

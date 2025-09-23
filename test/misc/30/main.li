@@ -1,0 +1,24 @@
+Header
+  + name      := MAIN;
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+    
+  - proc <-
+  [ ^,
+    3+3 = 6, 
+    (3! = 6) => "Eval direct", 
+    {3! = 6},
+    {(3! = 6) => "Eval retardé"}
+  ]
+  (
+    "Hi\n".print
+  )
+  
+  - main <-  
+  (        
+    proc
+  )

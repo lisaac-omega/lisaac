@@ -1,0 +1,13 @@
+Header
+
+  + name := TOP1;
+  
+Public
+  
+  - to_top2 not_self:TOP1 :TOP2 <-
+  ( + result:TOP2
+    
+    result ?= not_self; // DCDC is it really a problem ??
+    result
+  )
+  

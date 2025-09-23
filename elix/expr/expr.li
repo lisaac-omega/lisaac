@@ -1,0 +1,171 @@
+Header
+  + name := EXPR;
+  /* root of all EXPRs*/
+
+Inherit
+  + parent_tok_itm:Expanded TOK_ITM
+  - parent_any:ANY := ANY
+  
+Insert
+//  - parent_lix_buf:LIX_BUF := LIX_BUF
+  
+Private
+  - stk_e:Expanded ARRAY (Strict EXPR)
+  
+Public
+  - local_list:Expanded ARRAY LOCAL
+  - get_local n:STRING_ALIAS :LOCAL <- local_list.search {l:LOCAL; l.name_id = n}
+  
+  - print_local <-
+  (
+    (local_list.is_empty).if { "Pas de local.".println; } else {
+      "\n---DEB---\n".print;
+      local_list.foreach { l:LOCAL;
+        OUT # l.name_id # ' ' # l.style # '\n';
+      };
+      "---FIN---\n".print;
+    };
+  );    
+  
+  - type:TYPE <- ( abstract; TYPE)
+    
+  - new:SELF <- ( + r:SELF; (stk_e.is_empty).if { r := clone; } else { r := stk_e.pop; }; r)
+  
+  - free <- ( stk_e.add_last Self; )
+  
+  - new_parse t:INTEGER <-
+  (
+    //(((t & force) = 0) || {(pos_i > 0) && {at (pos_i-1) != '\n'}}).if {
+      (t & 0Fh)
+      .when 0 then { skip_body; }
+      .when 1 then { skip_body_field; }
+    //}
+  )
+  
+  - skip_body <-
+  ( + par,acc,cro,ln:INTEGER
+    + c,in_str:CHARACTER
+    + stop:BOOLEAN
+    {(!stop) && {skip_sp_only; pos_i < buf.upper}}.while_do {      
+      c := buf.at pos_i
+      (c = '\n').if {
+        toks.at tok_cur.inc_nl
+        ln := ln + 1
+        stop := (
+          ( // 2 lines empty
+            (ln = 2) && {in_str = '\0'} &&
+            {cro = 0} && {acc = 0} && {par = 0}
+          ) ||
+          { // Begin other slot or contract.
+            (pos_i+3 < upper) && {look "\n  "} &&
+            {((c := at (pos_i+3)) = '+') || {c = '-'} || {c = '['}}
+          } ||
+          { // Begin new Section
+            (pos_i+1 < upper) && {at (pos_i+1) = 'S'}
+          } ||
+          { // Begin Chapter
+            look "\n  // "
+          }
+        )
+      } else {
+        ln := 0
+        (in_str != '\0').if {
+          ((c = in_str) && {buf.at (pos_i-1) != '\\'}).if {
+            in_str := '\0'
+          }
+        } else {
+          (c = '{').if   { acc := acc + 1; }.elseif
+          {c = '}'} then { acc := acc - 1; }.elseif
+          {c = '('} then { par := par + 1; }.elseif
+          {c = ')'} then { par := par - 1; }.elseif
+          {c = '['} then { cro := cro + 1; }.elseif
+          {c = ']'} then { cro := cro - 1; }.elseif
+          {rd_rem_c}  then { pos_i := pos_i - 1; }.elseif
+          {look "//"} then { skip_until '\n'; pos_i := pos_i - 1; }.elseif
+          {(c = '"') || {c = '\''} || {c = '`'}} then { in_str := c; };
+        }
+      }
+      pos_i := pos_i + 1
+    }
+    // BSBS; Peu faire mieux !!
+    {((c := buf.at (pos_i-1)) = ' ') || {c = '\n'}}.while_do {
+      pos_i := pos_i - 1
+      (c = '\n').if { toks.at tok_cur.dec_nl; }
+    }
+    
+    {(pos_i < buf.upper) && {buf.at pos_i != '\n'}}.while_do {
+      pos_i := pos_i + 1
+    }
+    (pos_i < buf.upper).if { toks.at tok_cur.inc_nl; pos_i := pos_i + 1; }
+   
+    toks.at tok_cur.sty.set_upper (Old toks.at tok_cur.sty.upper)
+  )
+  
+  - skip_body_field <-
+  // For PROTO: lip and default
+  ( + c:CHARACTER
+    EXPR.skip_body
+    {((c := at (pos_i-1)) = ' ') || {c = '\n'}}.while_do { pos_i := pos_i - 1; }
+    (c = ';').if { pos_i := pos_i - 1; }
+  )
+  
+  - skip_body_parent <-
+  ( + c:CHARACTER
+    {((c := at pos_i) != '\0') && {c != '\n'} && {c != ';'}}.while_do { pos_i := pos_i + 1; }
+  )
+  
+  - set_parse b:BOOLEAN; // TODO !!!
+  
+  //
+  // Original Parser
+  //
+  
+  - rd_expr_op:EXPR <-
+  //++ EXPR_OPERATOR-> { operator } EXPR_MESSAGE { operator {operator} EXPR_MESSAGE } {operator}
+  ( + result:EXPR
+    + cpx:CPX
+    cpx := CPX.parse_spln 0
+    (cpx != NULL).if { result := cpx.simplify; }
+    result
+  )
+
+  - rd_expr_msg:EXPR <-
+  //++ EXPR_MSG -> EXPR_BASE { '.' SEND_MSG }
+  //++ EXPR_BASE    -> "Old" EXPR
+  //++               | '...'
+  //++               | EXPR_PRIMARY
+  //++               | SEND_MSG
+  ( + result:EXPR
+    + cas:RSLO
+    
+    (word "...").if { err semantic msg "not_yet_implemented"; }
+    ((result := OLD.parse_sp 0)  != NULL) || {(result := rd_expr_prim)    != NULL} ||
+    {(result := RSLO.parse_sp 0) != NULL} || {(result := RLOC.parse_sp 0) != NULL}
+    (result != NULL).if {
+      {skip_spln_expr; read_c '.'}.while_do {
+        col (LOOK.symbol) sub 1
+        cas := RSLO.parse_sp 1
+        (cas = NULL).if { err syntax msg "Incorrect message."; } else {
+          cas.add_first result; result := cas
+        }
+      }
+    }
+    result
+  )
+
+  - rd_expr_prim:EXPR <-
+  //++ EXPR_PRIMARY -> "Self" | Result [_(1-9)]
+  //++               | PROTOTYPE
+  //++               | NUM | TXT | EXT
+  //++               | '(' GROUP ')' | '{' [ ARG ';' ] GROUP '}'
+  ( + result:EXPR
+    ((result := RLOC.parse_sp 1) != NULL).if {
+    }.elseif {(result := TTOK.parse_sp (TTOK.tpro)) != NULL} then {
+    }.elseif {(result := NUM.parse_sp 0) != NULL} then {
+    }.elseif {(result := STR.parse_sp 0) != NULL} then {
+    }.elseif {(result := EXT.parse_sp 0) != NULL} then {
+    }.elseif {(result := LIST.parse_sp 0) != NULL} then {
+    }
+    result
+  )
+

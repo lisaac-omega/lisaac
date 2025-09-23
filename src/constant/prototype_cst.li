@@ -1,0 +1,81 @@
+Header
+
+  + name        := PROTOTYPE_CST;
+
+  /*Prototype constant*/
+
+Inherit
+
+  + parent_constant:Expanded CONSTANT
+
+Public
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION type t:TYPE_FULL :SELF<-
+  ( + result:SELF
+    ? {p.code != 0}
+    ? {t != NULL}
+
+    result := clone
+    result.make p type t
+    result
+  )
+
+  - make p:POSITION type t:TYPE_FULL <-
+  (
+    position    := p
+    static_type := t; //.to_strict
+  )
+
+  - my_copy:SELF <-
+  (
+    SELF.create position type static_type
+  )
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + p:PROTOTYPE_CST
+    p ?= other
+    (p != NULL) && {static_type = p.static_type}
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_link:EXPR <-
+  (
+    Self
+  )
+  
+  - to_run_contract msg:STRING_ALIAS <-
+  (
+    // Nothing.
+  )
+  
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    static_type.genere_value output
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    static_type.display buffer
+    display_ref buffer
+  )
+
+

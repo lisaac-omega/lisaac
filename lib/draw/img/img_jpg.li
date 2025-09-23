@@ -1,0 +1,1320 @@
+Header
+  
+  + name := IMG_JPG;
+  
+  - external := `
+  // (1 << n) - 1 // BSBS: J'ai des doutes sur l'utilité d'un tel tableau !!!
+  static unsigned int bmask[17]={0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535};
+  
+  // bias[n] = (-1<<n) + 1 // BSBS: Idem...
+  static int const jbias[16] = {0,-1,-3,-7,-15,-31,-63,-127,-255,-511,-1023,-2047,-4095,-8191,-16383,-32767};
+  
+  // given a value that's at position X in the zigzag stream,
+  // where does it appear in the 8x8 matrix coded as row-major?
+  static unsigned char jpeg_dezigzag[64+15] =
+  {
+  0,  1,  8, 16,  9,  2,  3, 10,
+  17, 24, 32, 25, 18, 11,  4,  5,
+  12, 19, 26, 33, 40, 48, 41, 34,
+  27, 20, 13,  6,  7, 14, 21, 28,
+  35, 42, 49, 56, 57, 50, 43, 36,
+  29, 22, 15, 23, 30, 37, 44, 51,
+  58, 59, 52, 45, 38, 31, 39, 46,
+  53, 60, 61, 54, 47, 55, 62, 63,
+  // let corrupt input sample past end
+  63, 63, 63, 63, 63, 63, 63, 63,
+  63, 63, 63, 63, 63, 63, 63
+  };
+
+  `;
+  
+Inherit
+  
+  + parent_image:Expanded IMAGE
+  
+Public
+   
+  + huff_dc:NATIVE_ARRAY HUFFMAN_JPG :=
+  ( + r:NATIVE_ARRAY HUFFMAN_JPG
+    r := NATIVE_ARRAY HUFFMAN_JPG.create 4
+    0.to 3 do { i:INTEGER; r.at i put (HUFFMAN_JPG.new); }
+    r
+  )
+  
+  + huff_ac:NATIVE_ARRAY HUFFMAN_JPG :=
+  ( + r:NATIVE_ARRAY HUFFMAN_JPG
+    r := NATIVE_ARRAY HUFFMAN_JPG.create 4
+    0.to 3 do { i:INTEGER; r.at i put (HUFFMAN_JPG.new); }
+    r
+  )
+    
+  + dequant:ARRAY (NATIVE_ARRAY UINTEGER_8) :=
+  ( + r:ARRAY (NATIVE_ARRAY UINTEGER_8)
+    r := ARRAY (NATIVE_ARRAY UINTEGER_8).create_with_capacity 4
+    4.times { r.add_last (NATIVE_ARRAY UINTEGER_8.create 64); }
+    r
+  )
+  
+  + fast_ac:NATIVE_ARRAY (NATIVE_ARRAY INTEGER_16) :=
+  ( + r:NATIVE_ARRAY (NATIVE_ARRAY INTEGER_16)
+    r := NATIVE_ARRAY (NATIVE_ARRAY INTEGER_16).create 4
+    0.to 3 do { i:INTEGER
+      r.at i put (NATIVE_ARRAY INTEGER_16.create (1 << HUFFMAN_JPG.fast_bits))
+    }
+    r
+  )
+
+  // sizes for components, interleaved MCUs
+  + img_h_max:INTEGER
+  + img_v_max:INTEGER
+  + img_mcu_x:INTEGER
+  + img_mcu_y:INTEGER
+  + img_mcu_w:INTEGER
+  + img_mcu_h:INTEGER
+
+  // definition of jpeg image component
+  + img_comp:ARRAY JPEG_COMP := ARRAY JPEG_COMP.create 4
+
+  + code_buffer:UINTEGER_32; // jpeg entropy-coded buffer
+  + code_bits:INTEGER;       // number of valid bits
+  + marker:UINTEGER_8;       // marker seen while filling entropy buffer
+  + nomore:INTEGER;          // flag if we saw a marker so must stop
+
+  + progressive:BOOLEAN
+  + spec_start:INTEGER
+  + spec_end:INTEGER
+  + succ_high:INTEGER
+  + succ_low:INTEGER
+  + eob_run:INTEGER
+
+  + scan_n:INTEGER
+  + order:NATIVE_ARRAY INTEGER := NATIVE_ARRAY INTEGER.create 4; //[4]
+  + restart_interval:INTEGER
+  + todo:INTEGER
+
+  - grow_buffer_unsafe <-
+  ( + b,c:INTEGER
+    + stop:BOOLEAN
+    //"BEG=".print; code_buffer.println
+    //"img_buf=".print; (img_buffer #- img_buffer_original).println
+    {
+      (nomore != 0).if {
+        b := 0
+      } else {
+        b := get8
+      }
+      //"b==".print; b.println
+      (b = 0FFh).if {
+        c := get8
+        (c != 0).if {
+          marker := c.to_raw_uinteger_8
+          nomore := 1
+          stop := TRUE
+        }
+      }
+      (! stop).if {
+        code_buffer := code_buffer | (b << (24 - code_bits))
+        //">>=".print; code_buffer.println
+        code_bits := code_bits + 8
+      }
+    }.do_while {(code_bits <= 24) && {!stop}}
+    //"END=".print; code_buffer.println
+  )
+  
+  - f2f x:REAL_32 :INTEGER <- (x * 4096 + 0.5).to_integer
+
+  // (1 << n) - 1 // BSBS: J'ai des doutes sur l'utilité d'un tel tableau !!!
+  - bmask i:INTEGER :UINTEGER_32 <- `bmask[@i]`:UINTEGER_32
+
+  // decode a jpeg huffman value from the bitstream
+  - huff_decode h:HUFFMAN_JPG :INTEGER <-
+  ( + temp:UINTEGER_32
+    + c,k,result:INTEGER
+
+    (code_bits < 16).if { grow_buffer_unsafe; }
+    //"code_buffer=>".print; code_buffer.println
+    // look at the top FAST_BITS and determine what symbol ID it is,
+    // if the code is <= FAST_BITS
+    c := (code_buffer >> (32 - HUFFMAN_JPG.fast_bits)) & ((1 << HUFFMAN_JPG.fast_bits)-1)
+    //">0\n".print
+    k := h.fast.at c
+    //"H k:".print; k.println
+    (k < 255).if {
+      + s:INTEGER
+      //">1\n".print
+      s := h.size.at k
+      //">2\n".print
+      (s > code_bits).if {
+        result := -1
+      } else {
+        code_buffer := code_buffer << s
+        code_bits := code_bits - s
+        //">3\n".print
+        result := h.values.at k
+        //">4\n".print
+      }
+      //"#code_bits=".print; code_bits.println
+    } else {
+      //"1\n".print
+      // naive test is to shift the code_buffer down so k bits are
+      // valid, then test against maxcode. To speed this up, we've
+      // preshifted maxcode left so that it has (16-k) 0s at the
+      // end; in other words, regardless of the number of bits, it
+      // wants to be compared against something shifted to have 16
+      // that way we don't need to shift inside the loop.
+      temp := code_buffer >> 16
+      k := HUFFMAN_JPG.fast_bits+1
+      //"#k=".print; k.println
+      {temp >= h.maxcode.at k}.while_do { k := k + 1; }
+      //"#k=end\n".print
+      (k = 17).if {
+        // error! code not found
+        code_bits := code_bits - 16
+        result := -1
+      } else {
+        //"2\n".print
+        (k > code_bits).if { result := -1; } else {
+          // convert the huffman code to the symbol id
+          //"code_buffer=".print; code_buffer.print; " k=".print; k.println
+          c := ((code_buffer >> (32 - k)) & bmask k) + h.delt.at k
+          //"c=".print; c.println
+          ? {((code_buffer >> (32 - h.size.at c)) & bmask (h.size.at c)) = h.code.at c}
+          
+          // convert the id to a symbol
+          code_bits := code_bits - k
+          code_buffer := code_buffer << k
+          result := h.values.at c
+          //"3\n".print
+        }
+      }
+    }
+    result
+  )
+
+  // bias[n] = (-1<<n) + 1
+  - jbias i:INTEGER :INTEGER <- `jbias[@i]`:INTEGER
+
+  // combined JPEG 'receive' and JPEG 'extend', since baseline
+  // always extends everything it receives.
+  - extend_receive n:INTEGER :INTEGER <-
+  ( + k:UINTEGER_32
+    + sgn,result:INTEGER
+    (code_bits < n).if { grow_buffer_unsafe; }
+
+    sgn := code_buffer.to_raw_integer_32 >> 31; // sign bit is always in MSB
+    k := lrot(code_buffer, n)
+    //"1) C=".print; code_buffer.print; " k=".print; k.println
+    ? {(n >= 0) && {n < 17}}
+    code_buffer := k & ~bmask n
+    k := k & bmask n
+    code_bits := code_bits - n
+    //"2) C=".print; code_buffer.print; " k=".print; k.print; " sgn=".print; sgn.println
+    result := k.to_integer + (jbias n.to_integer & ~sgn)
+    //"r=".print; jbias n.println
+    result
+  )
+
+  // get some unsigned bits
+  - get_bits n:INTEGER :INTEGER <-
+  ( + k:UINTEGER_32
+    (code_bits < n).if { grow_buffer_unsafe; }
+    k := lrot(code_buffer, n)
+    code_buffer := k & ~bmask n
+    k := k & bmask n
+    code_bits := code_bits - n
+    k
+  )
+
+  - get_bit:INTEGER <-
+  ( + k:UINTEGER_32
+    (code_bits < 1).if { grow_buffer_unsafe; }
+    k := code_buffer
+    code_buffer := k << 1
+    code_bits := code_bits - 1
+    k & 08000_0000h
+  )
+
+  - dezigzag i:INTEGER :UINTEGER_8 <- `jpeg_dezigzag[@i]`:UINTEGER_8
+  // where does it appear in the 8x8 matrix coded as row-major?
+  // given a value that's at position X in the zigzag stream,
+
+  - decode_block(data:NATIVE_ARRAY INTEGER_16 ,
+  hdc,hac:HUFFMAN_JPG, fac:NATIVE_ARRAY INTEGER_16, b:INTEGER, dequan:NATIVE_ARRAY UINTEGER_8) <-
+  // decode one 64-entry block-- data[64]
+  ( + diff,dc,k:INTEGER
+    + t:INTEGER
+    + break:BOOLEAN
+    //"code_bits=".print; code_bits.println
+    (code_bits < 16).if { grow_buffer_unsafe; }
+    //"av.\n".print
+    t := huff_decode hdc
+    (t < 0).if { return_error "bad huffman code"; }
+    //"A\n".print
+    // 0 all the ac values now so we can do it 32-bits at a time
+    data.clear_all 63
+    diff := (t!=0).ok (extend_receive t) or 0
+    //"diff=".print; img_comp.at b.dc_pred.print; '/'.print; t.print; '/'.print; diff.println
+    dc := img_comp.at b.dc_pred + diff
+    img_comp.at b.set_dc_pred dc
+    //"dc=".print; dc.print; ' '.print; dequan.first.println
+    data.at 0 put ((dc * dequan.first).to_integer_16)
+    //"=1=>data[0]=".print; data.item 0.println
+    
+    // decode AC components, see JPEG spec
+    k := 1
+    {
+      + zig:UINTEGER_32
+      + c,r,s:INTEGER
+      (code_bits < 16).if { grow_buffer_unsafe; }
+      c := (code_buffer >> (32 - HUFFMAN_JPG.fast_bits)) & ((1 << HUFFMAN_JPG.fast_bits)-1)
+      r := fac.at c
+      (r != 0).if { // fast-AC path
+        k := k + ((r >> 4) & 15); // run
+        s := r & 15; // combined length
+        code_buffer := code_buffer << s
+        code_bits := code_bits - s
+        // decode into unzigzag'd location
+        zig := dezigzag k
+        k := k + 1
+        data.at zig put (((r >> 8) * dequan.at zig).to_integer_16)
+        //"=2=>data[".print; zig.print; "]=".print; data.item zig.println
+      } else {
+        + rs:INTEGER
+        rs := huff_decode hac
+        //"B\n".print
+        //rs.println
+        (rs < 0).if { return_error "bad huffman code"; }
+        s := rs & 15
+        r := rs >> 4
+        (s = 0).if {
+          (rs != 0F0h).if { break := TRUE; }; // end block
+          k := k + 16
+          //"k=".print; k.println
+        } else {
+          k := k + r
+          // decode into unzigzag'd location
+          //"k=".print; k.println
+          zig := dezigzag k
+          k := k + 1
+          //"b\n".print
+          data.at zig put (extend_receive s * dequan.at zig)
+          //"=3=>data[".print; zig.print; "]=".print; data.item zig.println
+          //"c\n".print
+        }
+      }
+    }.do_while {(k < 64) && {!break}}
+    //"out\n".print
+  )
+
+  - decode_block_prog_dc(data:NATIVE_ARRAY INTEGER_16, hdc:HUFFMAN_JPG, b:INTEGER) <-
+  // data[64]
+  ( + diff,dc:INTEGER
+    + t:INTEGER
+    (spec_end != 0).if { return_error "can't merge dc and ac"; }
+    (code_bits < 16).if { grow_buffer_unsafe; }
+
+    (succ_high = 0).if {
+      // first scan for DC coefficient, must be first
+      data.clear_all 63; // 0 all the ac values now
+      t := huff_decode hdc
+      //"C\n".print
+      diff := (t != 0).ok (extend_receive t) or 0
+      dc := img_comp.at b.dc_pred + diff
+      img_comp.at b.set_dc_pred dc
+      data.at 0 put ((dc << succ_low).to_integer_16)
+    } else {
+      // refinement scan for DC coefficient
+      (get_bit != 0).if {
+        data.at 0 put (data.first + (1 << succ_low).to_integer_16)
+      }
+    }
+  )
+  
+  - clamp x:INTEGER :UINTEGER_8 <-
+  ( + result:UINTEGER_8
+    (x.to_raw_uinteger > 255).if {
+      (x > 255).if { result := 255; }
+    } else { result := x.to_uinteger_8; }
+    result
+  )
+  
+  // derived from jidctint -- DCT_ISLOW
+  - idct_1d (s0,s1,s2,s3,s4,s5,s6,s7:INTEGER)
+  :(INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER) <-
+  ( + t0,t1,t2,t3,p1,p2,p3,p4,p5,x0,x1,x2,x3:INTEGER
+    p2 := s2
+    p3 := s6
+    p1 := (p2+p3)*f2f(0.5411961)
+    t2 := p1 + p3*f2f(-1.847759065)
+    t3 := p1 + p2*f2f( 0.765366865)
+    p2 := s0
+    p3 := s4
+    t0 := (p2+p3) << 12
+    t1 := (p2-p3) << 12
+    x0 := t0+t3
+    x3 := t0-t3
+    x1 := t1+t2
+    x2 := t1-t2
+    t0 := s7
+    t1 := s5
+    t2 := s3
+    t3 := s1
+    p3 := t0+t2
+    p4 := t1+t3
+    p1 := t0+t3
+    p2 := t1+t2
+    p5 := (p3+p4)*f2f( 1.175875602)
+    t0 := t0*f2f( 0.298631336)
+    t1 := t1*f2f( 2.053119869)
+    t2 := t2*f2f( 3.072711026)
+    t3 := t3*f2f( 1.501321110)
+    p1 := p5 + p1*f2f(-0.899976223)
+    p2 := p5 + p2*f2f(-2.562915447)
+    p3 := p3*f2f(-1.961570560)
+    p4 := p4*f2f(-0.390180644)
+    t3 := t3 + p1+p4
+    t2 := t2 + p2+p3
+    t1 := t1 + p2+p4
+    t0 := t0 + p1+p3
+    x0,x1,x2,x3, t0,t1,t2,t3
+  )
+  
+  - val_block:NATIVE_ARRAY INTEGER := NATIVE_ARRAY INTEGER.create 64
+  - idct_block(out:NATIVE_ARRAY UINTEGER_8, out_stride:INTEGER,data:NATIVE_ARRAY INTEGER_16) <-
+  // data[64]
+  ( + val,v:NATIVE_ARRAY INTEGER
+    + o:NATIVE_ARRAY UINTEGER_8
+    + d:NATIVE_ARRAY INTEGER_16
+    //"IDCT beg\n".print
+    d := data
+    v := val := val_block
+    // columns
+    0.to 7 do { i:INTEGER
+      // if all zeroes, shortcut -- this avoids dequantizing 0s and IDCTing
+      ((d.at 8 = 0) && {d.at 16 = 0} && {d.at 24 = 0} && {d.at 32 = 0} &&
+      {d.at 40 = 0} && {d.at 48 = 0} && {d.at 56 = 0}).if {
+        + dcterm:INTEGER
+        //    no shortcut                 0     seconds
+        //    (1|2|3|4|5|6|7)==0          0     seconds
+        //    all separate               -0.047 seconds
+        //    1 && 2|3 && 4|5 && 6|7:    -0.047 seconds
+        dcterm := d.at 0.to_integer << 2
+        v.at 0  put dcterm;  v.at 8  put dcterm;  v.at 16 put dcterm;  v.at 24 put dcterm
+        v.at 32 put dcterm;  v.at 40 put dcterm;  v.at 48 put dcterm;  v.at 56 put dcterm
+      } else {
+        + x0,x1,x2,x3,t0,t1,t2,t3:INTEGER
+        /*
+        "data:\n".print
+        d.at 0.print; ' '.print
+        d.at 8.print; ' '.print
+        d.at 16.print; ' '.print
+        d.at 24.print; ' '.print
+        d.at 32.print; ' '.print
+        d.at 40.print; ' '.print
+        d.at 48.print; ' '.print
+        d.at 56.print; ' '.print
+        '\n'.print
+        */
+        (x0,x1,x2,x3,t0,t1,t2,t3) := 
+        idct_1d(d.at 0,d.at 8,d.at 16,d.at 24,d.at 32,d.at 40,d.at 48,d.at 56)
+        // constants scaled things up by 1<<12; let's bring them back
+        // down, but keep 2 extra bits of precision
+        x0 := x0 + 512;  x1 := x1 + 512;  x2 := x2 + 512;  x3 := x3 + 512
+        //"Val:\n".print
+        v.at 0  put ((x0+t3) >> 10); //v.item  0.print; ' '.print
+        v.at 56 put ((x0-t3) >> 10); //v.item 56.print; ' '.print
+        v.at 8  put ((x1+t2) >> 10); //v.item  8.print; ' '.print
+        v.at 48 put ((x1-t2) >> 10); //v.item 48.print; ' '.print
+        v.at 16 put ((x2+t1) >> 10); //v.item 16.print; ' '.print
+        v.at 40 put ((x2-t1) >> 10); //v.item 40.print; ' '.print
+        v.at 24 put ((x3+t0) >> 10); //v.item 24.print; ' '.print
+        v.at 32 put ((x3-t0) >> 10); //v.item 32.print; ' '.print
+        //'\n'.print
+      }
+      d := d + 1;  v := v + 1
+    }
+    //"IDCT 1.5\n".print
+    o := out
+    v := val
+    0.to 7 do { i:INTEGER
+      + x0,x1,x2,x3,t0,t1,t2,t3:INTEGER
+      // no fast case since the first 1D IDCT spread components out
+      (x0,x1,x2,x3,t0,t1,t2,t3) := 
+      idct_1d(v.at 0,v.at 1,v.at 2,v.at 3,v.at 4,v.at 5,v.at 6,v.at 7)
+      // constants scaled things up by 1<<12, plus we had 1<<2 from first
+      // loop, plus horizontal and vertical each scale by sqrt(8) so together
+      // we've got an extra 1<<3, so 1<<17 total we need to remove.
+      // so we want to round that, which means adding 0.5 * 1<<17,
+      // aka 65536. Also, we'll end up with -128 to 127 that we want
+      // to encode as 0..255 by adding 128, so we'll add that before the shift
+      x0 := x0 + 65536 + (128<<17)
+      x1 := x1 + 65536 + (128<<17)
+      x2 := x2 + 65536 + (128<<17)
+      x3 := x3 + 65536 + (128<<17)
+      // tried computing the shifts into temps, or'ing the temps to see
+      // if any were out of range, but that was slower
+      //i.println
+      //"out:\n".print
+      o.at 0 put (clamp((x0+t3) >> 17)); //o.item 0.print; ' '.print
+      o.at 7 put (clamp((x0-t3) >> 17)); //o.item 7.print; ' '.print
+      o.at 1 put (clamp((x1+t2) >> 17)); //o.item 1.print; ' '.print
+      o.at 6 put (clamp((x1-t2) >> 17)); //o.item 6.print; ' '.print
+      o.at 2 put (clamp((x2+t1) >> 17)); //o.item 2.print; ' '.print
+      o.at 5 put (clamp((x2-t1) >> 17)); //o.item 5.print; ' '.print
+      o.at 3 put (clamp((x3+t0) >> 17)); //o.item 3.print; ' '.print
+      o.at 4 put (clamp((x3-t0) >> 17)); //o.item 4.print; ' '.print
+      //'\n'.print
+      v := v + 8;  o := o + out_stride
+    }
+    //"IDCT end\n".print
+  )
+  
+  - decode_block_prog_ac(data:NATIVE_ARRAY INTEGER_16, hac:HUFFMAN_JPG, fac:NATIVE_ARRAY INTEGER_16) <-
+  // data[64] @OPTIMIZE: store non-zigzagged during the decode passes,
+  // and only de-zigzag when dequantizing
+  ( + k:INTEGER
+    + break:BOOLEAN
+    
+    (spec_start = 0).if { return_error "can't merge dc and ac"; }
+    (succ_high = 0).if {
+      + shift:INTEGER
+      //"A".print; eob_run.println
+      shift := succ_low
+      (eob_run != 0).if {
+        eob_run := eob_run - 1
+      } else {
+        k := spec_start
+        {
+          + zig:UINTEGER_8
+          + c,r,s:INTEGER
+          (code_bits < 16).if { grow_buffer_unsafe; }
+          c := (code_buffer >> (32 - HUFFMAN_JPG.fast_bits)) & ((1 << HUFFMAN_JPG.fast_bits)-1)
+          r := fac.at c
+          (r != 0).if { // fast-AC path
+            k := k + (r >> 4) & 15; // run
+            s := r & 15; // combined length
+            code_buffer := code_buffer << s
+            code_bits := code_bits - s
+            zig := dezigzag k
+            k := k + 1
+            data.at zig put ((r >> 8) << shift)
+          } else {
+            + rs:INTEGER
+            rs := huff_decode hac
+            //"D\n".print
+            (rs < 0).if { return_error "bad huffman code"; }
+            s := rs & 15
+            r := rs >> 4
+            (s = 0).if {
+              (r < 15).if {
+                eob_run := 1 << r
+                (r != 0).if {
+                  eob_run := eob_run + get_bits r
+                }
+                eob_run := eob_run - 1
+                break := TRUE
+              }
+              k := k + 16
+            } else {
+              k := k + r
+              zig := dezigzag k
+              k := k + 1
+              data.at zig put (extend_receive s << shift)
+            }
+          }
+        }.do_while {(k <= spec_end) && {! break}}
+      }
+    } else {
+      + bit:INTEGER_16
+      //"B".print; eob_run.println
+      // refinement scan for these AC coefficients      
+      bit := 1 << succ_low
+      (eob_run != 0).if {
+        eob_run := eob_run - 1
+        spec_start.to spec_end do { k:INTEGER
+          + p:NATIVE_ARRAY INTEGER_16
+          p := data + dezigzag k
+          (p.first != 0).if {
+            (get_bit != 0).if {
+              ((p.first & bit) = 0).if {
+                (p.first > 0).if {
+                  p.at 0 put (p.first + bit)
+                } else {
+                  p.at 0 put (p.first - bit)
+                }
+              }
+            }
+          }
+        }
+      } else {
+        //"C".print; eob_run.println
+        k := spec_start
+        {
+          + r,s,rs:INTEGER
+          rs := huff_decode hac; // @OPTIMIZE see if we can use the fast path here, advance-by-r is so slow, eh
+          //"E\n".print
+          (rs < 0).if { return_error "bad huffman code"; }
+          //"rs:".print; rs.println
+          s := rs & 15
+          r := rs >> 4
+          (s = 0).if {
+            (r < 15).if {
+              eob_run := (1 << r) - 1
+              (r != 0).if {
+                eob_run := eob_run + get_bits r
+                //"eob:".print; eob_run.println
+              }
+              r := 64; // force end of block
+            } else {
+              // r=15 s=0 should write 16 0s, so we just do
+              // a run of 15 0s and then write s (which is 0),
+              // so we don't have to do anything special here
+            }
+          } else {
+            (s != 1).if { return_error "bad huffman code"; }
+            // sign bit
+            (get_bit != 0).if {
+              s := bit
+            } else {
+              s := - bit
+            }
+          }
+          // advance by r
+          break := FALSE
+          {(k <= spec_end) && {!break}}.while_do {
+            + p:NATIVE_ARRAY INTEGER_16
+            p := data + dezigzag k
+            k := k + 1
+            (p.first != 0).if {
+              (get_bit != 0).if {
+                ((p.first & bit) = 0).if {
+                  (p.first > 0).if {
+                    p.at 0 put (p.first + bit)
+                  } else {
+                    p.at 0 put (p.first - bit)
+                  }
+                }
+              }
+            } else {
+              (r = 0).if {
+                p.at 0 put s
+                break := TRUE
+              }
+              r := r - 1
+            }
+          }
+        }.do_while {k <= spec_end}
+      }
+    }
+  )
+
+  - marker_none:INTEGER := 0FFh
+  // if there's a pending marker from the entropy stream, return that
+  // otherwise, fetch from the stream and get a marker. if there's no
+  // marker, return 0xff, which is never a valid marker value
+  - get_marker:UINTEGER_8 <-
+  ( + x:UINTEGER_8
+    (marker != marker_none).if {
+      x := marker
+      marker := marker_none
+    } else {
+      x := get8
+      (x != 0FFh).if {
+        x := marker_none
+      } else {
+        {x = 0FFh}.while_do {
+          x := get8
+        }
+      }
+    }
+    //x.print_hexa; '\n'.print
+    x
+  )
+
+  // in each scan, we'll have scan_n components, and the order
+  // of the components is specified by order[]
+  - restart x:INTEGER :BOOLEAN <- ((x >= 0D0h) && {x <= 0D7h})
+
+  // after a restart interval, jpeg_reset the entropy decoder and the dc prediction
+  - reset <-
+  (
+    code_bits := code_buffer := nomore := 0
+    img_comp.at 0.set_dc_pred 0
+    img_comp.at 1.set_dc_pred 0
+    img_comp.at 2.set_dc_pred 0
+    marker := marker_none
+    todo := (restart_interval != 0).ok restart_interval or 07FFFFFFFh
+    eob_run := 0
+    // no more than 1<<31 MCUs if no restart_interal? that's plenty safe,
+    // since we don't even allow 1<<30 pixels
+  )
+  
+  - data_parse:NATIVE_ARRAY INTEGER_16  := NATIVE_ARRAY INTEGER_16.create 64
+  - parse_entropy_coded_data <-
+  (
+    reset
+    (!progressive).if {
+      //"1)scan_n=".print; scan_n.println
+      (scan_n = 1).if {
+        + n,w,h:INTEGER
+        + data:NATIVE_ARRAY INTEGER_16
+        data := data_parse
+        //SIMD_ALIGN(short, data[64])
+        n := order.first
+        // non-interleaved data, we just need to process one block at a time,
+        // in trivial scanline order
+        // number of blocks to do just depends on how many actual "pixels" this
+        // component has, independent of interleaved MCU blocking and such
+        w := (img_comp.at n.x+7) >> 3
+        h := (img_comp.at n.y+7) >> 3
+        0.to (h-1) do { j:INTEGER
+          0.to (w-1) do { i:INTEGER
+            + ha:INTEGER
+            ha := img_comp.at n.ha
+            decode_block(data, huff_dc.at (img_comp.at n.hd), huff_ac.at ha, fast_ac.at ha, n, dequant.at (img_comp.at n.tq))
+            //"IDCT0\n".print
+            idct_block(img_comp.at n.data+img_comp.at n.w2*j*8+i*8, img_comp.at n.w2, data)
+            // every data block is an MCU, so countdown the restart interval
+            todo := todo - 1
+            (todo <= 0).if {
+              (code_bits < 24).if { grow_buffer_unsafe; }
+              // if it's NOT a restart, then just bail, so we get corrupt data
+              // rather than no data
+              (restart marker).if { reset; }
+            }
+          }
+        }
+      } else { // interleaved
+        + data:NATIVE_ARRAY INTEGER_16
+        data := data_parse
+        //STBI_SIMD_ALIGN(short, data[64])
+        0.to (img_mcu_y-1) do { j:INTEGER
+          0.to (img_mcu_x-1) do { i:INTEGER
+            // scan an interleaved mcu... process scan_n components in order
+            0.to (scan_n-1) do { k:INTEGER
+              + n:INTEGER
+              n := order.at k
+              // scan out an mcu's worth of this component; that's just determined
+              // by the basic H and V specified for the component
+              0.to (img_comp.at n.v-1) do { y:INTEGER
+                0.to (img_comp.at n.h-1) do { x:INTEGER
+                  + x2,y2,ha:INTEGER
+                  x2 := (i*img_comp.at n.h + x)*8
+                  y2 := (j*img_comp.at n.v + y)*8
+                  ha := img_comp.at n.ha
+                  //"huff_dc.at=".print; img_comp.at n.hd.println
+                  //"huff_ac.at=".print; ha.println
+                  decode_block(data, huff_dc.at (img_comp.at n.hd), huff_ac.at ha, fast_ac.at ha, n, dequant.at (img_comp.at n.tq))
+                  //"IDCT1\n".print
+                  //"w2=".print; img_comp.at n.w2.print; " y2=".print; y2.print; " x2=".print; x2.println
+                  idct_block(img_comp.at n.data+img_comp.at n.w2*y2+x2, img_comp.at n.w2, data)
+                  //"IDCT end\n".print
+                }
+              }
+            }
+            // after all interleaved components, that's an interleaved MCU,
+            // so now count down the restart interval
+            todo := todo - 1
+            (todo <= 0).if {
+              (code_bits < 24).if { grow_buffer_unsafe; }
+              (restart marker).if { reset; }
+            }
+          }
+        }
+      }
+    } else {
+      //"2)scan_n=".print; scan_n.println
+      (scan_n = 1).if {
+        + n,w,h:INTEGER
+        n := order.first
+        // non-interleaved data, we just need to process one block at a time,
+        // in trivial scanline order
+        // number of blocks to do just depends on how many actual "pixels" this
+        // component has, independent of interleaved MCU blocking and such
+        w := (img_comp.at n.x+7) >> 3
+        h := (img_comp.at n.y+7) >> 3
+        //"av. mark:".print; marker.println
+        0.to (h-1) do { j:INTEGER
+          0.to (w-1) do { i:INTEGER
+            + data:NATIVE_ARRAY INTEGER_16
+            data := img_comp.at n.coeff + 64 * (i + j * img_comp.at n.coeff_w)
+            (spec_start = 0).if {
+              //"dc\n".print
+              decode_block_prog_dc(data, huff_dc.at (img_comp.at n.hd), n)
+            } else {
+              + ha:INTEGER
+              ha := img_comp.at n.ha
+              //"ac ".print; ha.println
+              decode_block_prog_ac(data, huff_ac.at ha, fast_ac.at ha)
+            }
+            // every data block is an MCU, so countdown the restart interval
+            todo := todo - 1
+            (todo <= 0).if {
+              //"---toto".print; todo.println
+              (code_bits < 24).if { grow_buffer_unsafe; }
+              (restart marker).if { reset; }
+            }
+          }
+        }
+        //"mark:".print; marker.println
+      } else { // interleaved        
+        0.to (img_mcu_y-1) do { j:INTEGER
+          0.to (img_mcu_x-1) do { i:INTEGER
+            // scan an interleaved mcu... process scan_n components in order
+            0.to (scan_n-1) do { k:INTEGER
+              + n:INTEGER
+              n := order.at k
+              // scan out an mcu's worth of this component; that's just determined
+              // by the basic H and V specified for the component
+              0.to (img_comp.at n.v-1) do { y:INTEGER
+                0.to (img_comp.at n.h-1) do { x:INTEGER
+                  + x2,y2:INTEGER
+                  + data:NATIVE_ARRAY INTEGER_16
+                  x2 := (i*img_comp.at n.h + x)
+                  y2 := (j*img_comp.at n.v + y)
+                  data := img_comp.at n.coeff + 64 * (x2 + y2 * img_comp.at n.coeff_w)
+                  decode_block_prog_dc(data, huff_dc.at (img_comp.at n.hd), n)
+                }
+              }
+            }
+            // after all interleaved components, that's an interleaved MCU,
+            // so now count down the restart interval
+            todo := todo - 1
+            (todo <= 0).if {
+              (code_bits < 24).if { grow_buffer_unsafe; }
+              (restart marker).if { reset; }
+            }
+          }
+        }
+      }
+    }
+  )
+
+  - dequantize data:NATIVE_ARRAY INTEGER_16 with dequan:NATIVE_ARRAY UINTEGER_8 <-
+  ( 
+    0.to 63 do { i:INTEGER
+      data.at i put (data.at i * dequan.at i)
+    }
+  )
+
+  - finish <-
+  (
+    (progressive).if { // dequantize and idct the data
+      + w,h:INTEGER
+      0.to (img_n-1) do { n:INTEGER
+        w := (img_comp.at n.x+7) >> 3
+        h := (img_comp.at n.y+7) >> 3
+        0.to (h-1) do { j:INTEGER
+          0.to (w-1) do { i:INTEGER
+            + data:NATIVE_ARRAY INTEGER_16
+            data := img_comp.at n.coeff + 64 * (i + j * img_comp.at n.coeff_w)
+            dequantize data with (dequant.at (img_comp.at n.tq))
+            idct_block(img_comp.at n.data+img_comp.at n.w2*j*8+i*8, img_comp.at n.w2, data)
+          }
+        }
+      }
+    }
+  )
+  
+  - sizes_mark:NATIVE_ARRAY INTEGER := NATIVE_ARRAY INTEGER.create 16
+  - process_marker m:INTEGER :BOOLEAN <-
+  ( + ll:INTEGER
+    + result:BOOLEAN
+    //"====>".print; m.println
+    //"Z.0) img_buf=".print; ((img_buffer #- img_buffer_original)&7Fh).println
+    (m)
+    .when marker_none then { // no marker found
+      return_error "expected marker"
+    }
+    .when 0DDh then { // DRI - specify restart interval
+      (get16be != 4).if { return_error "bad DRI len"; }
+      restart_interval := get16be
+      result := TRUE
+    }
+    .when 0DBh then { // DQT - define quantization table      
+      ll := get16be - 2
+      //"ll=".print; ll.println
+      {ll > 0}.while_do {
+        + q,p,t:INTEGER
+        q := get8
+        p := q >> 4
+        t := q & 15
+        (p != 0).if { return_error "bad DQT type"; }
+        (t > 3).if { return_error "bad DQT table"; }
+        0.to 63 do { i:INTEGER
+          dequant.at t.at (dezigzag i) put get8
+        }
+        ll := ll - 65
+      }
+      result := ll=0
+    }
+    .when 0C4h then { // DHT - define huffman table
+      + sizes:NATIVE_ARRAY INTEGER
+      sizes := sizes_mark
+      ll := get16be - 2
+      {ll > 0}.while_do {
+        + v:NATIVE_ARRAY UINTEGER_8
+        + n,q,tc,th:INTEGER
+        n := 0
+        q := get8
+        tc := q >> 4
+        th := q & 15
+        ((tc > 1) || {th > 3}).if { return_error "bad DHT header"; }
+        0.to 15 do { i:INTEGER
+          sizes.at i put get8
+          n := n + sizes.at i
+        }
+        //"n=".print; n.println
+        ll := ll - 17
+        (tc = 0).if {
+          //"-DC---------------------------------------->".print; th.println
+          huff_dc.at th.make sizes
+          v := huff_dc.at th.values
+        } else {
+          //"-AC---------------------------------------->".print; th.println
+          huff_ac.at th.make sizes
+          v := huff_ac.at th.values
+        }
+        //"Huff\n".print
+        ? {v != NULL}
+        0.to (n-1) do { i:INTEGER
+          v.at i put get8
+        }
+        //"man\n".print
+        (tc != 0).if {
+          huff_ac.at th.build_fast_ac (fast_ac.at th)
+        }
+        ll := ll - n
+      }
+      result := ll=0
+    }
+    // check for comment block or APP blocks
+    (((m >= 0E0h) && {m <= 0EFh}) || {m = 0FEh}).if {
+      + step:INTEGER
+      step := get16be-2
+      //"skip=".print; step.println
+      skip step
+      result := TRUE
+    }
+    result
+  )
+
+  // after we see SOS
+  - process_scan_header <-
+  ( + ls:INTEGER
+    + aa:INTEGER
+    ls := get16be
+    //"ls=".print; ls.println
+    scan_n := get8
+    ((scan_n < 1) || {scan_n > 4} || {scan_n > img_n}).if { return_error "bad SOS component count"; }
+    (ls != 6+2*scan_n).if { return_error "bad SOS len"; }
+    //"a\n".print
+    0.to (scan_n-1) do { i:INTEGER
+      + id,which,q:INTEGER
+      id := get8
+      q := get8
+      which := 0
+      {(which < img_n) && {img_comp.at which.id != id}}.while_do {
+        //"b\n".print
+        which := which + 1
+      }
+      (which = img_n).if { return_error "return 0"; }; // no match
+      img_comp.at which.set_hd (q >> 4);   (img_comp.at which.hd > 3).if { return_error "bad DC huff"; }
+      img_comp.at which.set_ha (q & 15);   (img_comp.at which.ha > 3).if { return_error "bad AC huff"; }
+      order.at i put which
+    }
+    spec_start := get8
+    spec_end   := get8; // should be 63, but might be 0
+    aa := get8
+    //"aa=".print; aa.println
+    succ_high := (aa >> 4)
+    succ_low  := (aa & 15)
+    //"c\n".print
+    (progressive).if {
+      ((spec_start > 63) || {spec_end > 63}  || {spec_start > spec_end} || {succ_high > 13} || {succ_low > 13}).if {
+        return_error "bad SOS"
+      }
+    } else {
+      (spec_start != 0).if { return_error "bad SOS"; }
+      ((succ_high != 0) || {succ_low != 0}).if { return_error "bad SOS"; }
+      spec_end := 63
+    }
+  )
+
+  - process_frame_header scan:INTEGER :BOOLEAN <-
+  ( + lf,p,q, h_max,v_max,c,w2,h2:INTEGER
+    h_max := v_max := 1
+    lf := get16be;         (lf < 11).if { return_error "bad SOF len"; }; // JPEG
+    p  := get8;            (p != 8).if { return_error "only 8-bit"; }; // JPEG baseline
+    img_y := get16be;    (img_y = 0).if { return_error "no header height"; }; // Legal, but we don't handle it--but neither does IJG
+    img_x := get16be;    (img_x = 0).if { return_error "0 width"; }; // JPEG requires
+    c := get8
+    ((c != 3) && {c != 1}).if { return_error "bad component count"; };    // JFIF requires
+    img_n := c
+    0.to (c-1) do { i:INTEGER
+      img_comp.at i.set_data NULL
+      img_comp.at i.set_linebuf NULL
+    }
+    (lf != 8+3*img_n).if { return_error "bad SOF len"; }
+    0.to (img_n-1) do { i:INTEGER
+      img_comp.at i.set_id get8
+      (img_comp.at i.id != i+1).if {   // JFIF requires
+        (img_comp.at i.id != i).if {  // some version of jpegtran outputs non-JFIF-compliant files!
+          return_error "bad component ID"
+        }
+      }
+      q := get8
+      img_comp.at i.h (q >> 4) v (q & 15) tq get8
+      //if (!z->img_comp[i].h || z->img_comp[i].h > 4) return err("bad H","Corrupt JPEG")
+      //if (!z->img_comp[i].v || z->img_comp[i].v > 4) return err("bad V","Corrupt JPEG")
+      //if (z->img_comp[i].tq > 3) return err("bad TQ","Corrupt JPEG")
+    }
+
+    (scan = scan_load).if { 
+      ((1 << 30) / img_x / img_n < img_y).if { return_error "too large"; }
+
+      0.to (img_n-1) do { i:INTEGER
+        (img_comp.at i.h > h_max).if { h_max := img_comp.at i.h; }
+        (img_comp.at i.v > v_max).if { v_max := img_comp.at i.v; }
+      }
+      // compute interleaved mcu info
+      img_h_max := h_max
+      img_v_max := v_max
+      img_mcu_w := h_max * 8
+      img_mcu_h := v_max * 8
+      img_mcu_x := (img_x + img_mcu_w-1) / img_mcu_w
+      img_mcu_y := (img_y + img_mcu_h-1) / img_mcu_h
+      
+      0.to (img_n-1) do { i:INTEGER
+        // number of effective pixels (e.g. for non-interleaved MCU)
+        img_comp.at i
+        .x ((img_x * img_comp.at i.h + h_max-1) / h_max)
+        y  ((img_y * img_comp.at i.v + v_max-1) / v_max)
+        // to simplify generation, we'll allocate enough memory to decode
+        // the bogus oversized data from using interleaved MCUs and their
+        // big blocks (e.g. a 16x16 iMCU on an image of width 33); we won't
+        // discard the extra data until colorspace conversion
+        img_comp.at i
+        .w2 (w2 := img_mcu_x * img_comp.at i.h * 8)
+        h2  (h2 := img_mcu_y * img_comp.at i.v * 8)
+        raw_data ( + sz:INTEGER
+          sz := w2 * h2 + 15
+          //"Alloc raw_data:".print; sz.println
+          get_na_uint8 sz
+        )
+        
+        (img_comp.at i.raw_data = NULL).if {
+          + ii:INTEGER
+          ii := i - 1
+          {ii >= 0}.while_do {
+            //STBI_FREE(z->img_comp[ii].raw_data)
+            img_comp.at ii.set_raw_data NULL
+            ii := ii - 1
+          }
+          return_error "outofmem"
+        }
+        // align blocks for idct using mmx/sse
+        img_comp.at i.set_data ((img_comp.at i.raw_data + 15) & ~15)
+        img_comp.at i.set_linebuf NULL
+        (progressive).if {
+          + cw,ch:INTEGER
+          + rc:NATIVE_ARRAY INTEGER_16
+          img_comp.at i
+          .coeff_w (cw := (img_comp.at i.w2 + 7) >> 3)
+          coeff_h  (ch := (img_comp.at i.h2 + 7) >> 3)
+          raw_coeff (
+            rc := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY INTEGER_16).on (
+              get_na_uint8 (cw * ch * 64 * 2 + 15)
+            )
+          ) coeff ((rc + 15) & ~15)
+        } else {
+          img_comp.at i.coeff NULL raw_coeff NULL
+        }
+      }
+    }
+    TRUE
+  )
+
+  // use comparisons since in some cases we handle more than one case (e.g. SOF)
+  - dnl x:INTEGER :BOOLEAN <- (x = 0DCh)
+  - soi x:INTEGER :BOOLEAN <- (x = 0D8h)
+  - eoi x:INTEGER :BOOLEAN <- (x = 0D9h)
+  - sof x:INTEGER :BOOLEAN <- (x = 0C0h) || {x = 0C1h} || {x = 0C2h}
+  - sos x:INTEGER :BOOLEAN <- (x = 0DAh)
+
+  - sof_progressive x:INTEGER :BOOLEAN <- (x = 0C2h)
+  
+  //- decode_header scan:INTEGER :BOOLEAN <- `(25)`:INTEGER = 22
+  
+  - decode_header scan:INTEGER :BOOLEAN <-
+  ( + m:INTEGER
+    + result:BOOLEAN
+    marker := marker_none; // initialize cached marker to empty
+    m := get_marker
+    (soi m).if { 
+      (scan = scan_type).if {
+        result := TRUE
+      } else {
+        m := get_marker
+        {(!sof m) && {process_marker m}}.while_do {
+          m := get_marker
+          {m = marker_none}.while_do {
+            // some files have extra padding after their blocks, so ok, we'll scan
+            (at_eof).if { return_error "no SOF"; }
+            m := get_marker
+          }
+        }
+        (sof m).if {
+          //"A.0) img_buf=".print; (img_buffer #- img_buffer_original).println
+          progressive := sof_progressive m
+          //"A.1) img_buf=".print; (img_buffer #- img_buffer_original).println
+          result := process_frame_header scan
+          //"A.2) img_buf=".print; (img_buffer #- img_buffer_original).println
+        }
+      }
+    }
+    result
+  )
+
+  // decode image to YCbCr format
+  - decode_jpeg_image:BOOLEAN <-
+  ( + m:INTEGER
+    + result:BOOLEAN
+    //"1) img_buf=".print; (img_buffer #- img_buffer_original).println
+    0.to 3 do { m:INTEGER
+      img_comp.at m.raw_data NULL raw_coeff NULL
+    }
+    restart_interval := 0
+    (decode_header scan_load).if {
+      //"1.1) img_buf=".print; (img_buffer #- img_buffer_original).println
+      m := get_marker
+      result := TRUE
+      {(!eoi m) && {result}}.while_do {
+        //"0\n".print
+        //"1.2) img_buf=".print; (img_buffer #- img_buffer_original).println
+        (sos m).if {
+          process_scan_header
+          //"C\n".print
+          parse_entropy_coded_data
+          //"1.3) img_buf=".print; (img_buffer #- img_buffer_original).println
+          //"D\n".print
+          //"Marker:".print; marker.println
+          (marker = marker_none ).if {
+            + x:INTEGER
+            + stop:BOOLEAN
+            // handle 0s at the end of image data from IP Kamera 9060
+            {(!at_eof) && {! stop}}.while_do {
+              x := get8
+              //"x:".print; x.println
+              (x = 255).if {
+                marker := get8
+                stop := TRUE
+              }.elseif {x != 0} then {
+                return_error "junk before marker"
+              }
+            }
+            // if we reach eof without hitting a marker, get_marker() below will fail and we'll eventually return 0
+          }
+        } else {
+          //"1\n".print
+          (!process_marker m).if { result := FALSE; }
+        }
+        //"A) img_buf=".print; (img_buffer #- img_buffer_original).println
+        (result).if { m := get_marker; }
+      }
+      (progressive).if { finish; }
+    }
+    result
+  )
+
+  // this is a reduced-precision calculation of YCbCr-to-RGB introduced
+  // to make sure the code produces the same results in both SIMD and scalar
+  - float2fixed x:REAL_32 :INTEGER_32 <-  (((x * 4096.0 + 0.5).to_integer_32) << 8)
+  
+  - y_cb_cr_to_rgb_row (pout,y,pcb,pcr:NATIVE_ARRAY UINTEGER_8, count,step:INTEGER) <-
+  ( + y_fixed,r,g,b,cr,cb:INTEGER_32
+    + out:NATIVE_ARRAY UINTEGER_8
+    out := pout
+    0.to (count-1) do { i:INTEGER
+      y_fixed := (y.at i.to_integer << 20) + (1<<19); // rounding
+      cr := pcr.at i.to_integer - 128
+      cb := pcb.at i.to_integer - 128
+      //y.item i.print; '/'.print; cr.print; '/'.print; cb.print; '\n'.print
+      r := y_fixed +  cr*  float2fixed 1.40200
+      g := y_fixed + (cr* -float2fixed 0.71414) + ((cb* -float2fixed 0.34414) & `0xFFFF0000`:INTEGER_32)
+      b := y_fixed                              +   cb*  float2fixed 1.77200
+      r := r >> 20
+      g := g >> 20
+      b := b >> 20
+      (r.to_raw_uinteger_32 > 255).if { r := (r < 0).ok 0 or 255; }
+      (g.to_raw_uinteger_32 > 255).if { g := (g < 0).ok 0 or 255; }
+      (b.to_raw_uinteger_32 > 255).if { b := (b < 0).ok 0 or 255; }
+      //"r=".print; r.print; " g=".print; g.print; " b=".print; b.println
+      out.at 0 put (r.to_uinteger_8)
+      out.at 1 put (g.to_uinteger_8)
+      out.at 2 put (b.to_uinteger_8)
+      out.at 3 put 255
+      out := out + step
+    }
+  )
+
+  // clean up the temporary component buffers
+  - cleanup <-
+  (
+    0.to (img_n-1) do { i:INTEGER
+      (img_comp.at i.raw_data != NULL).if {
+        //STBI_FREE(j->img_comp[i].raw_data)
+        img_comp.at i.data NULL raw_data NULL
+      }
+      (img_comp.at i.raw_coeff != NULL).if {
+        //STBI_FREE(j->img_comp[i].raw_coeff)
+        img_comp.at i.coeff NULL raw_coeff NULL
+      }
+      (img_comp.at i.linebuf != NULL).if {
+        //STBI_FREE(j->img_comp[i].linebuf)
+        img_comp.at i.set_linebuf NULL
+      }
+    }
+  )
+  
+  - stk_uint8:Expanded ARRAY (ARRAY UINTEGER_8)
+  - stk_uint8_up:INTEGER := -1
+  - get_na_uint8 s:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
+  ( + r:ARRAY UINTEGER_8
+    stk_uint8_up := stk_uint8_up + 1
+    (stk_uint8_up > stk_uint8.upper).if {
+      stk_uint8.add_last (ARRAY UINTEGER_8.create s)
+    }
+    r := stk_uint8.at stk_uint8_up
+    r.set_capacity s
+    r.storage
+  )
+  
+  - coutput_load:NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8) := NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8).create 4
+  - res_comp_load:NATIVE_ARRAY RESAMPLE := NATIVE_ARRAY RESAMPLE.create 4
+  
+  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <- load req_comp in NULL
+  
+  - load req_comp:INTEGER in ds:NATIVE_ARRAY UINTEGER_8 :NATIVE_ARRAY UINTEGER_8 <-
+  ( + n, decode_n:INTEGER
+    + output:NATIVE_ARRAY UINTEGER_8
+    + coutput:NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8)
+    + res_comp:NATIVE_ARRAY RESAMPLE
+    stk_uint8_up := -1
+    //img_buffer := buffer_start
+    rewind
+    //"0) img_buf=".print; (img_buffer #- img_buffer_original).println
+    img_n := 0; // make cleanup_jpeg safe
+    // validate req_comp
+    ((req_comp < 0) || {req_comp > 4}).if {
+      return_error "bad req_comp"
+    }
+    // load a jpeg image from whichever source, but leave in YCbCr format
+    (!decode_jpeg_image).if { cleanup; } else {
+      //"dec...\n".print
+      // determine actual number of components to generate
+      n := (req_comp!=0).ok req_comp or img_n
+      ((img_n = 3) && {n < 3}).if {
+        decode_n := 1
+      } else {
+        decode_n := img_n
+      }
+      //"Decode ok\n".print
+      // resample and color-convert
+      coutput := coutput_load
+      res_comp := res_comp_load
+      /*
+      "Extract:\n".print
+      0.to 31 do { i:INTEGER
+        img_comp.at 0.data.item i.print; ' '.print
+      }; '\n'.print
+      0.to 31 do { i:INTEGER
+        img_comp.at 1.data.item i.print; ' '.print
+      }; '\n'.print
+      0.to 31 do { i:INTEGER
+        img_comp.at 2.data.item i.print; ' '.print
+      }; '\n'.print
+      */
+      0.to (decode_n-1) do { k:INTEGER
+        + r:RESAMPLE
+        + hs,vs:INTEGER
+        + line:NATIVE_ARRAY UINTEGER_8
+        r := res_comp.at k
+        // allocate line buffer big enough for upsampling off the edges
+        // with upsample factor of 4
+        img_comp.at k.set_linebuf (get_na_uint8 (img_x + 3))
+        
+        r.hs   (hs := img_h_max / img_comp.at k.h)
+        vs     (vs := img_v_max / img_comp.at k.v)
+        ystep  (vs >> 1)
+        w_lores((img_x + hs-1) / hs)
+        ypos   0
+        line0  (line := img_comp.at k.data)
+        line1  line
+      }
+      // can't error after this so, this is safe
+      //"Alloc output\n".print
+      (ds = NULL).if {
+        output := get_na_uint8 (n * img_x * img_y + 1)
+      } else {
+        output := ds
+      }
+      // now go ahead and resample
+      0.to (img_y-1) do { j:INTEGER
+        + out,y:NATIVE_ARRAY UINTEGER_8
+        out := output + n * img_x * j
+        0.to (decode_n-1) do { k:INTEGER
+          + r:RESAMPLE
+          r := res_comp.at k
+          coutput.at k put (r.resample(img_comp.at k.linebuf))
+          r.set_ystep (r.ystep + 1)
+          (r.ystep >= r.vs).if {
+            r.set_ystep 0
+            r.set_line0 (r.line1)
+            r.set_ypos (r.ypos + 1)
+            (r.ypos < img_comp.at k.y).if {
+              r.set_line1 (r.line1 + img_comp.at k.w2)
+            }
+          }
+        }
+        y := coutput.at 0
+        (n >= 3).if {
+          (img_n = 3).if {
+            y_cb_cr_to_rgb_row (out, y, coutput.at 1, coutput.at 2, img_x, n)
+          } else {
+            0.to (img_x-1) do { i:INTEGER
+              + c:UINTEGER_8
+              c := y.at i
+              out.at 0 put c; out.at 1 put c; out.at 2 put c
+              out.at 3 put 255; // not used if n==3
+              out := out + n
+            }
+          }
+        } else {          
+          (n = 1).if {
+            0.to (img_x-1) do { i:INTEGER; out.at i put (y.at i); }
+          } else {
+            0.to (img_x-1) do { i:INTEGER; out.at (i*2) put (y.at i); out.at ((i*2)|1) put 255; }
+          }
+        }
+      }
+      cleanup
+    }
+    //"Image ok\n".print
+    output
+  )
+
+  - test:BOOLEAN <-
+  ( 
+    rewind
+    decode_header scan_type
+  )
+
+  - info_raw:BOOLEAN <-
+  (
+    rewind
+    !decode_header scan_header
+  )
+
+  - info:BOOLEAN <- info_raw
+  

@@ -1,0 +1,30 @@
+Header  
+  + name := Strict VEC2;
+  
+Insert  
+  - parent_vec:VEC := VEC
+  
+SELF  
+  - dim:INTEGER := 2
+  
+  - free_list:ARRAY VEC2 := ARRAY VEC2.create_with_capacity 4
+  
+Mapping, Public 
+  + x:REAL_32
+  + y:REAL_32
+  
+Public
+  
+  - create:SELF <-
+  ( + result:SELF
+    (free_list.is_empty).if {
+      result := clone
+    } else {
+      result := free_list.pop
+    }
+    result
+  )
+  
+  - free <- free_list.add_last Self
+     
+  - make (px,py:REAL_32) <- ( (x, y) := (px,py); )

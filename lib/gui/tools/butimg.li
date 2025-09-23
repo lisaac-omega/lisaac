@@ -1,0 +1,75 @@
+Header
+  + name := BUTIMG;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ BUTIMG
+  
+Private
+  
+  - stk:Expanded ARRAY (Strict BUTIMG)
+  
+Public
+    
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+  
+  - margin:INTEGER := 8
+  
+  - mute:INTEGER  := 1 << 15
+  - barre:INTEGER := 1 << 16
+  - dark:INTEGER  := 1 << 17
+    
+  + img:IMG
+  + act:{BUTIMG;BOOLEAN}
+  
+  - set_txt t:STRING_ALIAS <- ( txt := t; )
+  
+  - width_min:REAL_32 <- 16; //( img.width + margin*2 )
+    
+  - height_min:REAL_32 <- 16; //( img.height + margin*2)
+   
+  - init t:STRING_ALIAS asset is_ass:BOOLEAN do d:{BUTIMG;BOOLEAN} :SELF <-
+  (
+    act := d
+    img := IMG.load t asset is_ass
+    init_obj
+  )
+  
+  - draw <-
+  ( + y,x,w,h,z:REAL_32
+    + p:PAINT
+    //draw_debug
+    
+    (is inside).if {
+      begin_path
+      fill_color (LOOK_GUI.border_on)
+      rect (xo,yo) size (width,height) radius 8
+      fill
+    }
+    
+    z := (width/img.width).min (height/img.height)
+    (w,h) := (img.width*z, img.height*z)
+    (x,y) := (xo + (width-w)/2, yo + (height-h)/2)
+    begin_path
+    p := PAINT.create_pattern (x,y) size (w,h) img_id (img.idf) angle 0 alpha 1.0
+    fill_paint p
+    rect (x,y) size (w, h)
+    fill
+    p.free
+    //    
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    (is mute).if {
+      // Nothing.
+    }.elseif {e = HAND.in} then {
+      set inside with (ev = HAND.in)
+    }.elseif {e = HAND.clic} then {
+      //"Act:".print; act.text_l.println
+      //MENU.close_all_except act
+      act.value Self.if_false { beep; }
+    }
+  )

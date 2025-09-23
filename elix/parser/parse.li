@@ -1,0 +1,131 @@
+Header
+  + name := PARSE;
+  
+Inherit 
+  - parse_txt_buf:TXT_BUF := TXT_BUF
+  - parent_any:ANY := ANY
+      
+Public
+  
+  - proto:PROTO
+  - set_proto p:PROTO <- ( proto := p; )
+  
+  - last_chap:RMK
+  
+  /*
+  - rmq:STRING_ALIAS := "ˮ"
+  - str:STRING_ALIAS := "˝"
+  - ext:STRING_ALIAS := "ˊ"
+  */
+  
+  //- term s:STRING_ALIAS :INTEGER <-
+  //( + l:INTEGER; (read_cc s).if { l := cur-2; skip_until_cc s; }; l)
+          
+  //
+  // LOCAL
+  //
+  /*
+  - local ls:ARRAY LOCAL <-
+  //++ LOCAL    -> { "˖" SUB_LOC '\n' }
+  ( {read_cc "˖"}.while_do { sub_loc ls flag 0; skip_c '\n'; }; )
+  
+  - sub_loc0 ls:ARRAY LOCAL fg f:UINTEGER_8 :BOOLEAN <- (sarg_blc ls) || {sub_loc1 ls fg f}
+  */
+  
+  //
+  // Expr
+  //
+  /*  
+  //++ EXPR_OPERATOR-> { operator } EXPR_MESSAGE { operator {operator} EXPR_MESSAGE } {operator}
+  - read_expr_operator:ITM_CODE <-
+  ( + result:ITM_CODE
+    + expr :ITM_CODE
+    + l_expr:ARRAY ITM_CODE
+    + itm_op:ITM_OPERATOR
+    + last_msg,first_msg:INTEGER
+
+    l_expr := ALIAS_ARRAY ITM_CODE.new
+    {read_operator}.while_do {
+      expr := ITM_OPERATOR.create current_position name last_string
+      l_expr.add_last expr
+    }
+    expr := read_expr_message
+    (expr = NULL).if {
+      // Error.
+      (! l_expr.is_empty).if {
+	syntax_error (current_position,"Incorrect expression.")
+      }
+      ALIAS_ARRAY ITM_CODE.free l_expr
+    } else {
+      // { operator {operator} EXPR_MESSAGE } {operator}
+      first_msg := l_expr.count
+      {
+	last_msg := l_expr.count
+	l_expr.add_last expr
+	(read_operator).if {
+	  {
+	    expr := ITM_OPERATOR.create current_position name last_string
+	    l_expr.add_last expr
+	  }.do_while {read_operator}
+	  expr := read_expr_message
+	} else {
+	  expr := NULL
+	}
+      }.do_while {expr != NULL}
+
+      // Last Post-fix operator.
+      {last_msg < l_expr.upper}.while_do {
+        itm_op ?= l_expr.at (last_msg + 1)
+	expr := ITM_READ_ARG1.create (itm_op.position)
+	name (operator "_suf" op (itm_op.name))
+	arg (l_expr.at last_msg)
+	l_expr.put expr to last_msg
+	l_expr.remove (last_msg + 1)
+      }
+      ((last_msg - first_msg) < 3).if {
+	// First Pre-fix operator.
+	{first_msg != 0}.while_do {
+          itm_op ?= l_expr.at (first_msg - 1)
+	  expr := ITM_READ_ARG1.create (itm_op.position)
+	  name (operator "_pre" op (itm_op.name))
+	  arg (l_expr.at first_msg)
+	  l_expr.put expr to first_msg
+	  first_msg := first_msg - 1
+	  l_expr.remove first_msg
+	}
+      }
+      (l_expr.count = 1).if {
+	result := l_expr.first
+	ALIAS_ARRAY ITM_CODE.free l_expr
+      }.elseif {l_expr.count = 3} then {
+	// Simple binary message.
+        itm_op ?= l_expr.second
+	result := ITM_READ_ARG2.create (itm_op.position)
+	name (operator "_inf" op (itm_op.name))
+	args (l_expr.first,l_expr.at 2)
+	//
+	ALIAS_ARRAY ITM_CODE.free l_expr
+      } else {
+	// Complex expression.
+	l_expr := ALIAS_ARRAY ITM_CODE.copy l_expr
+	result := ITM_EXPRESSION.create l_expr
+      }
+    }
+    result
+  );  // read_expr_operator
+
+      ((read_cc "˿") || {read_cc "˷"}).if {
+    
+  - idf:DECL <-
+  ( + n:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      {read_idf_in tmp}.while_loop
+      n := tmp.to_string_alias
+    }
+    n
+  );*/
+  
+  //
+  // TYPE
+  //
+  

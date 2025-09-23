@@ -1,0 +1,85 @@
+Header
+  + name := TVEC;
+
+Inherit
+  + parent_type:Expanded TYPE
+  
+Public
+  - dicotv:HMAP TVEC KEY STRING_ALIAS := HMAP TVEC KEY STRING_ALIAS.create
+  
+  - is_complex:BOOLEAN <- TRUE
+
+  - is_vector:BOOLEAN := TRUE
+  - foreach_until b:{TONE; BOOLEAN} :BOOLEAN <- types.until_do b
+
+  - is_self:BOOLEAN <- types.first.is_self
+  
+  + types:Expanded ARRAY TONE
+  
+  - lookup n:NODE :SLOT <- types.first.lookup n
+  
+//  - upper:INTEGER <- types.upper
+//  - at i:INTEGER :TONE <- types.at i
+//  - foreach b:{TONE; } <- types.foreach b
+  
+  - run_default <- foreach { t:TONE; t.run_default; }
+  
+  - Self:SELF '<=' o:TYPE :BOOLEAN <-
+  ( + result:BOOLEAN
+    + i:INTEGER
+    + oo:TVEC
+    oo ?= o
+    ((oo != NULL) && {types.upper = oo.types.upper}).if {
+      {(i <= types.upper) && {types.at i <= oo.types.at i}}.while_do { i := i + 1; }
+      result := i > types.upper
+    }
+    result
+  )
+  
+  - new ts:ARRAY TONE :TYPE <-
+  [ ? {ts.count > 1}; ]
+  ( + result:TYPE
+    + n:TVEC
+    + k:STRING_ALIAS
+    + i:INTEGER
+    + err:BOOLEAN
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp.copy (ts.first.key)
+      err := tmp.is_empty
+      i := 1
+      {(!err) && {i <= ts.upper}}.while_do {      
+        tmp.add_last ','
+        k := ts.at i.key
+        err := k.is_empty
+        tmp.append k
+        i := i + 1
+      }
+      k := tmp.to_string_alias
+    }
+    (err).if {
+      result := TERR
+    } else {
+      result := dicotv.fast_reference_at k
+      (result = NULL).if {
+        types.new_copy ts
+        key := k
+        n := clone
+        dicotv.add n to k
+        result := n
+      }
+    }
+    result
+  )
+  
+  - txt_in s:STRING_BUFFER sty st:STY <-
+  (
+    types.foreach { t:TONE; t.txt_in s sty st; s | ','; }
+    s.remove_last
+  )
+  
+  - node tn:ARRAY NODE map s:STRING_BUFFER predict tp:ARRAY NODE :INTEGER <-
+  (
+    types.foreach { t:TONE; t.node tn map s predict tp; s | ','; }
+    s.remove_last
+    s.count
+  )

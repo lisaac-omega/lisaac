@@ -1,0 +1,109 @@
+Header
+  
+  + name := CREATURE;
+
+  - external :=
+`
+pthread_t ht;
+pthread_attr_t stack_att;
+`;
+  
+Inherit
+  
+  - parent_any: ANY_CHAMENEOS_REDUX := ANY_CHAMENEOS_REDUX
+
+Private
+
+  + count:      INTEGER
+  + same_count: INTEGER
+  + id:         INTEGER
+  + colour:     INTEGER
+  
+  + place:  MEETING_PLACE
+
+   /*static int creatureID
+   static const int STACK_SIZE   = 32*1024;*/
+
+  + stack_size:  INTEGER := 32*1024
+
+Public 
+  
+  - creature_id: INTEGER
+  
+  - create (p:MEETING_PLACE, c:INTEGER) :SELF <-
+  ( + result :SELF
+
+    result := clone
+    result.make (p,c)
+    result
+  )
+
+  - make (p:MEETING_PLACE, c:INTEGER) <-
+  (
+    creature_id := creature_id + 1
+
+    place      := p
+    colour     := c
+    id         := creature_id
+    count      := 0
+    same_count := 0
+
+    // WARNING STACK_SIZE
+    `pthread_attr_init( &stack_att )`
+    `pthread_attr_setstacksize( &stack_att, STACK_SIZE )`
+    `pthread_create( &ht, &stack_att, &Creature::ThreadRun, (void*)this )`
+  )
+
+  - thread_run /* void* param */ <-
+  ( + cr: CREATURE
+    
+    //Creature* cr = (Creature*)param
+    cr.create // param
+    cr.run
+    // return 0:
+  )
+
+  - run <-
+  ( + pr: PAIR
+    + out: BOOLEAN
+    
+    pr.create
+    out := TRUE
+
+    {out}.while_do{
+      (place.meet(id, colour, pr)).if{
+        {pr.two_met = FALSE}.while_do{
+          `sched_yield()`
+        }
+        colour := pr.colour
+        (pr.same_id).if{
+          same_count := same_count + 1
+        }
+        count := count + 1
+      } else {
+        out := FALSE
+      }
+    }
+    pr.destroy
+  )
+
+  - get_count :INTEGER <-
+  (
+    count
+  )
+
+  - get_result str:STRING_BUFFER :STRING_BUFFER <-
+  ( + numstr: STRING_BUFFER
+    numstr := STRING_BUFFER.create 512
+
+    get_number(same_count, numstr)
+
+    //sprintf( str, "%u%s", count, numstr )
+    
+    str
+  )
+
+  - wait <-
+  (
+    `pthread_join( ht, 0 )`
+  )

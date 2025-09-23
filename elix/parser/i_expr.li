@@ -1,0 +1,68 @@
+Header
+  + name := I_EXPR;
+  
+Inherit
+  + parent_inode:Expanded I_NODE
+  
+Public
+  
+  - stck:Expanded ARRAY I_EXPR
+  
+  - new:I_EXPR <-
+  ( + result:I_EXPR
+    (stck.is_empty).if { result := I_EXPR.clone; } else { result := stck.pop; }
+    result
+  )
+  
+Public
+    
+  - error:INTEGER <- ((ref = NULL) && {type = NULL}).to_integer
+  
+  + ref:EXPR
+  + type:TYPE
+    
+  - new i:INTEGER expr e:EXPR :I_EXPR <- new.init i expr e type NULL
+  - new i:INTEGER type t:TYPE :I_EXPR <- new.init i expr NULL type t
+  
+  - copy:I_NODE <- new.init lower expr ref type type
+  
+  - init i:INTEGER expr e:EXPR type t:TYPE :I_EXPR <-
+  (
+    (lower,ref) := (i,e)
+    upper := (e != NULL).ok i else {i-1}
+    (e != NULL).if { type := e.type; } else { type := t; }
+    Self
+  )
+  
+  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  ( + m:UINTEGER_16
+    (lower <= upper).if {
+      (error != 0).if {
+        m := STY.ul_red
+      } else {
+        m := u | type_check s
+      }
+      "EXPR:".print; ref.type_name.println
+      STY.put m to lower in (IA.sty)
+      STY.put m to (upper+1) in (IA.sty)
+    }
+    IA.inc_arg_i
+  )
+  
+  - txt_in s:STRING_BUFFER <-
+  ( 
+    s.add_last '('
+    s.add_last ')'
+  )
+  
+  - rtxt_in s:STRING_BUFFER <- 
+  ( 
+    s.append "(˂"
+    (type != NULL).if { type.txt_in s sty NULL; }
+    s.append "˃)"
+  )
+  
+  - size:INTEGER <- (ref.dynamic_type = LIST).ok (-1) or 1
+  - to_expr:EXPR <- ref
+  
+  - free <- stck.add_last Self

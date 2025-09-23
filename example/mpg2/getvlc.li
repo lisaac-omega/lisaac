@@ -1,0 +1,398 @@
+Header
+  
+  + name         := GETVLC;
+  /*
+  variable length decoding.
+  */
+    
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Public
+
+  - get_macroblock_type:INTEGER <-
+  ( + macroblock_type:INTEGER
+    + is_read:BOOLEAN
+
+    (ld.scalable_mode = sc_snr).if {
+      macroblock_type := get_snr_macroblock_type
+    } else {
+      (picture_coding_type)
+      .when i_type then {
+	is_read := TRUE
+	(ld.pict_scal).if {
+	  macroblock_type := get_i_spatial_macroblock_type
+	} else {
+	  macroblock_type := get_i_macroblock_type
+	}
+      }
+      .when p_type then {
+	is_read := TRUE
+	(ld.pict_scal).if {
+	  macroblock_type := get_p_spatial_macroblock_type
+	} else {
+	  macroblock_type := get_p_macroblock_type
+	}
+      }
+      .when b_type then {
+	is_read := TRUE
+	(ld.pict_scal).if {
+	  macroblock_type := get_b_spatial_macroblock_type
+	} else {
+	  macroblock_type := get_b_macroblock_type
+	}
+      }
+      .when d_type then {
+	is_read := TRUE
+	macroblock_type := get_d_macroblock_type
+      }
+      (is_read).if_false {
+	"Get_macroblock_type(): unrecognized picture coding type\n".print
+      }
+    }
+    
+    macroblock_type
+  )
+
+Private
+
+  - get_i_macroblock_type:INTEGER <-
+  ( + result:INTEGER
+    
+    (ld.get_boolean).if {
+      result := 1
+    } else {    
+      (! ld.get_boolean).if {
+	fault_flag := TRUE
+      }
+      result := 17
+    }
+    result
+  )
+      
+  - get_p_macroblock_type:INTEGER <-
+  ( + code:INTEGER
+    + result:INTEGER
+      
+    code := ld.show_bits 6
+    (code >= 8).if {
+      code := code >> 3
+      ld.flush_buffer (TABLE.pmbtab0_len code)
+      result := TABLE.pmbtab0_val code
+    } else {    
+      (code = 0).if {	
+	fault_flag := TRUE
+	result := 0
+      } else {      
+	ld.flush_buffer (TABLE.pmbtab1_len code)
+	result := TABLE.pmbtab1_val code
+      }
+    }
+    result
+  )
+
+  - get_b_macroblock_type:INTEGER <-
+  ( + code:INTEGER
+    + result:INTEGER
+        
+    code := ld.show_bits 6
+    (code >= 8).if {
+      code := code >> 2
+      ld.flush_buffer (TABLE.bmbtab0_len code)
+      result := TABLE.bmbtab0_val code
+    } else {    
+      (code = 0).if {	
+	fault_flag := TRUE
+	result := 0
+      } else {      
+	ld.flush_buffer (TABLE.bmbtab1_len code)
+	result := TABLE.bmbtab1_val code
+      }
+    }
+    result
+  )
+
+  - get_d_macroblock_type:INTEGER <-
+  (
+    (! ld.get_boolean).if {      
+      fault_flag := TRUE
+    }
+    1
+  )
+
+  - get_i_spatial_macroblock_type:INTEGER <-
+  // macroblock_type for pictures with spatial scalability 
+  ( + code:INTEGER
+    + result:INTEGER
+        
+    code := ld.show_bits 4
+    (code = 0).if {
+      fault_flag := TRUE
+      result := 0
+    } else {
+      ld.flush_buffer (TABLE.spimbtab_len code)
+      result := TABLE.spimbtab_val code
+    }
+    result
+  )
+
+  - get_p_spatial_macroblock_type:INTEGER <-
+  ( + code:INTEGER
+    + result:INTEGER
+        
+    code := ld.show_bits 7
+    
+    (code < 2).if {
+      fault_flag := TRUE
+      result := 0
+    } else {    
+      (code >= 16).if {
+	code := code >> 3
+	ld.flush_buffer (TABLE.sppmbtab0_len code)
+	result := TABLE.sppmbtab0_val code
+      } else {      
+	ld.flush_buffer (TABLE.sppmbtab1_len code)
+	result := TABLE.sppmbtab1_val code
+      }
+    }
+    result
+  )
+
+  - get_b_spatial_macroblock_type:INTEGER <-
+  ( + code,idx:INTEGER
+    + result:INTEGER
+        
+    code := ld.show_bits 9
+    
+    (code >= 64).if {
+      idx := (code >> 5) - 2
+      ld.flush_buffer (TABLE.spbmbtab0_len idx)
+      result := TABLE.spbmbtab0_val idx
+    } else {
+      (code >= 16).if {
+	idx := (code >> 2) - 4
+	ld.flush_buffer (TABLE.bmbtab1_len idx)
+	result := TABLE.bmbtab1_val idx
+      } else {
+	(code >= 8).if {
+	  idx := code - 8
+	  ld.flush_buffer (TABLE.spbmbtab2_len idx)
+	  result := TABLE.spbmbtab2_val idx
+	} else {    
+	  fault_flag := TRUE
+	}
+      }
+    }
+    result
+  )
+
+  - get_snr_macroblock_type:INTEGER <-
+  ( + code:INTEGER
+    + result:INTEGER
+        
+    code := ld.show_bits 3
+    (code = 0).if {
+      fault_flag := TRUE
+    } else {    
+      ld.flush_buffer (TABLE.snrmbtab_len code)
+      result := TABLE.snrmbtab_val code
+    }
+    result
+  )
+
+Public
+
+  - get_motion_code:INTEGER <-
+  ( + code:INTEGER
+    + result:INTEGER
+        
+    (! ld.get_boolean).if {
+      code := ld.show_bits 9
+      (code >= 64).if {
+	code := code >> 6
+	ld.flush_buffer (TABLE.mvtab0_len code)
+		
+	(ld.get_boolean).if {
+	  result := -TABLE.mvtab0_val code
+	} else {
+	  result := TABLE.mvtab0_val code
+	}
+      } else {
+	(code >= 24).if {
+	  code := code >> 3
+	  ld.flush_buffer (TABLE.mvtab1_len code)
+	  
+	  (ld.get_boolean).if {
+	    result := -TABLE.mvtab1_val code
+	  } else {
+	    result := TABLE.mvtab1_val code
+	  }
+	} else {
+	  
+	  code := code - 12
+	  (code < 0).if {
+	    fault_flag := TRUE
+	    result := 0
+	  } else {
+	    
+	    ld.flush_buffer (TABLE.mvtab2_len code)
+	    (ld.get_boolean).if {
+	      result := -TABLE.mvtab2_val code
+	    } else {
+	      result := TABLE.mvtab2_val code
+	    }
+	  }
+	}
+      }
+    }
+    result
+  )
+
+  - get_dmvector:INTEGER <-
+  // get differential motion vector (for dual prime prediction) 
+  ( + result:INTEGER
+    
+    (ld.get_boolean).if {          
+      (ld.get_boolean).if {
+	result := -1
+      } else {
+	result := 1
+      }
+    }
+    result
+  )
+
+  - get_coded_block_pattern:INTEGER <-
+  ( + code:INTEGER
+    + result:INTEGER
+        
+    code := ld.show_bits 9
+    (code >= 128).if {
+      code := code >> 4
+      ld.flush_buffer (TABLE.cbptab0_len code)
+      result := TABLE.cbptab0_val code
+    } else {
+      (code >= 8).if {
+	code := code >> 1
+	ld.flush_buffer (TABLE.cbptab1_len code)
+	result := TABLE.cbptab1_val code
+      } else { 
+	(code < 1).if {	
+	  fault_flag := TRUE
+	} else {
+	  ld.flush_buffer (TABLE.cbptab2_len code)
+	  result := TABLE.cbptab2_val code
+	}
+      }
+    }
+    result
+  )
+
+  - get_macroblock_address_increment:INTEGER <-
+  ( + code, val:INTEGER
+    + result:INTEGER
+        
+    {((code := ld.show_bits 11) < 24) && {result = 0}}.while_do {
+      (code != 15).if { // if not macroblock_stuffing 
+	(code = 8).if { // if macroblock_escape 
+	  val := val + 33
+	} else {	  	  
+	  fault_flag := TRUE
+	  result := 1
+	}
+      } else { 
+	// macroblock suffing
+      }
+      
+      (result = 0).if {
+	ld.flush_buffer 11
+      }
+    }
+    
+    (result = 0).if {
+    
+      // macroblock_address_increment == 1 
+      // ('1' is in the MSB position of the lookahead) 
+      (code >= 1024).if {
+	ld.flush_buffer 1
+	result := val + 1
+      } else {
+	(code >= 128).if { // codes 00010 ... 011xx 
+	  // remove leading zeros 
+	  code := code >> 6
+	  ld.flush_buffer (TABLE.mbatab1_len code)
+	  result := val + TABLE.mbatab1_val code
+	} else {      
+	  // codes 00000011000 ... 0000111xxxx 
+	  code := code - 24; // remove common base 
+	  ld.flush_buffer (TABLE.mbatab2_len code)
+	  result := val + TABLE.mbatab2_val code
+	}
+      }
+    }
+    result
+  )
+
+  - get_luma_dc_dct_diff:INTEGER <-
+  // combined MPEG-1 and MPEG-2 stage. parse VLC and 
+  // perform dct_diff arithmetic.
+  //
+  // MPEG-1:  ISO/IEC 11172-2 section
+  // MPEG-2:  ISO/IEC 13818-2 section 7.2.1 
+  // 
+  // Note: the arithmetic here is presented more elegantly than
+  // the spec, yet the results, dct_diff, are the same.
+  ( + code, size, dct_diff:INTEGER
+    
+    // decode length 
+    code := ld.show_bits 5
+    
+    (code < 31).if {
+      size := TABLE.dclumtab0_val code
+      ld.flush_buffer (TABLE.dclumtab0_len code)
+    } else {
+      code := ld.show_bits 9 - 01F0h
+      size := TABLE.dclumtab1_val code
+      ld.flush_buffer (TABLE.dclumtab1_len code)
+    }
+    
+    (size = 0).if {
+      dct_diff := 0
+    } else {
+      dct_diff := ld.get_bits size
+      ((dct_diff & (1 << (size - 1))) = 0).if {
+	dct_diff := dct_diff - ((1 << size) - 1)
+      }
+    }
+    
+    dct_diff
+  )
+
+  - get_chroma_dc_dct_diff:INTEGER <-
+  ( + code, size, dct_diff:INTEGER
+    
+    // decode length 
+    code := ld.show_bits 5
+    
+    (code < 31).if {
+      size := TABLE.dcchromtab0_val code
+      ld.flush_buffer (TABLE.dcchromtab0_len code)
+      
+    } else {
+      code := ld.show_bits 10 - 03E0h
+      size := TABLE.dcchromtab1_val code
+      ld.flush_buffer (TABLE.dcchromtab1_len code)
+    }
+    
+    (size = 0).if {
+      dct_diff := 0
+    } else {
+      dct_diff := ld.get_bits size
+      ((dct_diff & (1 << (size - 1))) = 0).if {
+	dct_diff := dct_diff - ((1 << size) - 1)
+      }
+    }
+    
+    dct_diff
+  )

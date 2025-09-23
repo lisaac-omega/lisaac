@@ -1,0 +1,15 @@
+Header
+  + name := TESTOUT;
+  /*
+  Function with multiple results example. The gain is not only syntactical!
+  Example below shows an efficient, still recursive, solution for the
+  Fibonacci example. Thanks to the usage of two results, the exponential
+  runtime complexity is avoided.
+  */
+  
+Public
+  
+  - main <-
+  (
+     (COMMAND_ARGS.at 0) # "??"
+  )

@@ -1,0 +1,109 @@
+Header
+  + name := CHECK;
+  
+Inherit
+  + parent_gobj:Expanded GOBJ CHECK
+  
+Private
+  
+  - stk:Expanded ARRAY (Strict CHECK)
+  
+Public
+    
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last Self
+  
+  - margin:INTEGER := 8
+  
+  - mute:INTEGER  := 1 << 15
+  - barre:INTEGER := 1 << 16
+  - dark:INTEGER  := 1 << 17
+  - radio:INTEGER := 1 << 18
+    
+  + txt:STRING_ALIAS
+  + act:{CHECK;BOOLEAN}
+  + chk:{BOOLEAN}
+  
+  - set_txt t:STRING_ALIAS <- ( txt := t; )
+  
+  - width_min:REAL_32 <-
+  ( + x0,y0,x1,y1,wt:REAL_32
+    font_face_id (FONT.sys (FONT.bold))
+    font_size (FONT.size_sys*zom)
+    (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt
+    wt + FONT.size_sys*zom*2 + margin*2
+  )
+    
+  - height_min:REAL_32 <- (FONT.size_sys + margin*2)
+   
+  - init t:STRING_ALIAS pos c:{BOOLEAN} do d:{CHECK;BOOLEAN} :SELF <-
+  (
+    (chk,act,txt) := (c,d,t)
+    init_obj
+  )
+  
+  - draw <-
+  ( + y,x,s:REAL_32
+    + c:COLOR
+    //draw_debug
+    //
+    ((is mute) || {is dark}).if {
+      c := (col=COLOR).ok (LOOK_GUI.text_bg_ui) else {col.set_af 0.3}
+    } else {
+      c := (col=COLOR).ok (LOOK_GUI.text_ui) or col
+    }
+    fill_color c
+    stroke_color c
+    (x,y) := (xo+margin,yo+height/2)
+    // Draw Check
+    begin_path
+    stroke_width 2.0
+    s := FONT.size_sys*zom / 2 - 5
+    (is radio).if {
+      circle (x+s,y) radius s
+      stroke
+      (chk.value).if {
+        begin_path
+        circle (x+s,y) radius (s-4)
+        fill
+      }
+    } else {
+      rect (x, y - s) size (s * 2, s * 2)
+      (chk.value).if {
+        line (x, y - s) to (x + s * 2, y + s)
+        line (x + s * 2, y - s) to (x, y + s)
+      }
+      stroke
+    }
+    x := x + FONT.size_sys*zom
+    // Text
+    fill_color c
+    font_face_id (FONT.sys (is inside.ok (FONT.bold) or (FONT.roman)))
+    font_size (FONT.size_sys*zom)
+    text_align (align_left | align_middle)
+    text (x,y) msg txt
+    /*
+    (is barre).if {
+      w := width_min - margin*2
+      begin_path
+      stroke_width (zom*3)
+      stroke_color (COLOR.rgba (0,0,0,128))
+      line (x-w/2,y) to (x+w/2,y)
+      stroke
+    };*/    
+  )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + e:UINTEGER_8
+    e := ev & ~1
+    (is mute).if {
+      // Nothing.
+    }.elseif {e = HAND.in} then {
+      set inside with (ev = HAND.in)
+    }.elseif {e = HAND.clic} then {
+      //"Act:".print; act.text_l.println
+      //MENU.close_all_except act
+      act.value Self.if_false { beep; }
+    }
+  )

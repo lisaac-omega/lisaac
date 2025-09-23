@@ -1,0 +1,14 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + d:REAL_64
+    + r1,r2:RANDOM
+    r1 := RANDOM.new(25)
+    r2 := RANDOM.new(25)
+    RANDOM.init(25)
+    TEST.check (r1.real_64 = (d := r2.real_64))
+    TEST.check (d = RANDOM.real_64)
+  )
+  

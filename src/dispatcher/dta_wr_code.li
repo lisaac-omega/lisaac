@@ -1,0 +1,74 @@
+Header
+
+  + name        := DTA_WR_CODE;
+
+  /*Write site with code*/
+
+Inherit
+
+  + parent_dta:Expanded DTA
+
+Public
+
+  // Add.
+
+  + code:ITM_CODE
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION slot sl:SLOT self arg:EXPR code v:ITM_CODE :SELF <-
+  [ -? {p != 0}; ]
+  ( + result:SELF
+
+    result := clone
+    result.make p slot sl self arg code v
+    result
+  )
+
+  - make p:POSITION slot sl:SLOT self arg:EXPR code v:ITM_CODE <-
+  (
+    position    := p
+    slot        := sl
+    self_arg    := arg
+    result_expr := PROTOTYPE_CST.create (v.position) type (TYPE_VOID.default)
+    code        := v
+    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
+      (profil_current = NULL).if {
+        context := context_main
+      } else {
+        context := profil_current.context
+      }
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA_WR_CODE:"
+    buffer.append (slot.name)
+  )
+
+  //
+  // Service
+  //
+
+DTA
+
+  - finalise typ:TYPE with (expr:EXPR,s:SLOT) in lst:LIST <-
+  ( + id:PROTOTYPE_CST
+    + pos:POSITION
+
+    pos := expr.position
+    id := PROTOTYPE_CST.create pos type (TYPE_ID.get_index (s.add_style code).default)
+    (s.style = '+').if {
+      lst.add_last (s.slot_id.write pos with (expr.my_copy) value id)
+    } else {
+      lst.add_last (s.slot_id.write pos value id)
+    }
+  )
+

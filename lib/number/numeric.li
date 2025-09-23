@@ -1,0 +1,670 @@
+Header
+
+  + name := NUMERIC;
+  /**/
+  
+  - export := INTN;
+  
+Insert
+  
+  - parent_print:PRINT := PRINT
+  - parent_utils:UTILS := UTILS
+
+Public
+    
+  - Self:SELF pow e:SELF :SELF <-
+  ( + result:SELF
+    (e = 0).if {
+      result := 1
+    } else {
+      ((e & 1) = 0).if {
+        result := (Self * Self).pow (e / 2)
+      } else {
+        result := Self * (Self.pow (e - 1))
+      }
+    }
+    result
+  )
+  
+  - Self:SELF div d:SELF :SELF <- (Self/d)
+
+  - Self:SELF sqrt:SELF <- `sqrt(@Self)`:SELF
+  
+  - Self:SELF sum (up:SELF) of a:{SELF; SELF} :SELF <-
+  ( + sum:SELF
+    Self.to up do { i:SELF
+      sum := sum + a.value i
+    }
+    sum
+  )
+  
+  - Self:SELF mtx (v0,v1:SELF)
+  
+  
+  // Features
+    
+  - one:SELF  <- 1; // Neutral element for `*' and `/'.
+  
+  
+  - zero:SELF <- 0; // Neutral element for `+' and `-'.
+
+  // Degres / Radian
+  
+  - normalize:REAL <- 
+  // [-pi, +pi]
+  ( + result:REAL
+    result := Self
+    {result < -REAL.pi}.while_do { result := result + REAL.pi*2; }
+    {result > +REAL.pi}.while_do { result := result - REAL.pi*2; }
+    result
+  )
+  [ ? {Result.in_range (-REAL.pi) to (+REAL.pi)}; ]
+  
+  - angle_in_range b:REAL_32 to e:REAL_32 :BOOLEAN <-
+  ( + result:BOOLEAN
+    + sn,bn,en:REAL_32
+    //b.to_degres.to_real_32.print; '-'.print; e.to_degres.to_real_32.print
+    sn := normalize
+    (bn, en) := (b.normalize, e.normalize)
+    (b < e).if { // Trigo
+      (bn < en).if { result :=   sn.in_range bn to en; }
+      else         { result := ! sn.in_range en to bn; }
+    } else { // Inv. Trigo
+      //"\nnorm:".print; sn.to_degres.to_real_32.print; "   ".print
+      //bn.to_degres.to_real_32.print; '-'.print; en.to_degres.to_real_32.print
+      (bn < en).if { result := ! sn.in_range bn to en; }
+      else         { result :=   sn.in_range en to bn; }
+    }
+    //' '.print
+    //result.to_string.print
+    //'\n'.print
+    result
+  )
+  
+  - to_radian:SELF <- (to_real_64 / 180 * REAL_64.pi).to_real
+  - to_degres:SELF <- (to_real_64 / REAL_64.pi * 180).to_real
+  
+  - rad:SELF <- Self
+  - deg:REAL <- to_radian
+  
+  // Physical translate
+  - origin_x_cm:REAL
+  - origin_y_cm:REAL
+  - direction:UINTEGER_8
+  - one_meter:REAL := 3.0
+  
+  - define_one_meter x:REAL <- define x per_meter_to (0,0) cm_dir 0
+  - define s:REAL per_meter_to (x,y:REAL) cm_dir d:UINTEGER_8 <-
+  ( (one_meter,origin_x_cm,origin_y_cm,direction) := (s,x,y,d); )
+  
+  - meter:REAL <- (one_meter * Self).to_real
+  - dm:REAL    <- (one_meter / 10.0 * Self).to_real
+  - cm:REAL    <- (one_meter / 100.0 * Self).to_real
+  - mm:REAL    <- (one_meter / 1000.0 * Self).to_real
+  
+  - cm_x:SELF <-
+  ( + r:REAL
+    (direction&01b = 0).if {
+      r := (one_meter / 100.0 * (Self - origin_x_cm))
+    } else {
+      r := (one_meter / 100.0 * (origin_x_cm - Self))
+    }
+    r
+  )
+  - cm_y:SELF <-
+  ( + r:REAL
+    (direction&10b = 0).if {
+      r := (one_meter / 100.0 * (Self - origin_y_cm)).to_real
+    } else {
+      r := (one_meter / 100.0 * (origin_y_cm - Self)).to_real
+    }
+    r
+  )
+  
+  - to_m:REAL_32  <- Self / one_meter
+  - to_dm:REAL_32 <- to_m * 10.0
+  - to_cm:REAL_32 <- to_m * 100.0
+  - to_mm:REAL_32 <- to_m * 1000.0
+  
+  - to_cm_x:REAL_32 <-
+  ( + r:REAL_32
+    (direction&01b = 0).if {
+      r := to_cm + origin_x_cm
+    } else {
+      r := origin_x_cm - to_cm
+    }
+    r
+  )
+  - to_cm_y:REAL_32 <-
+  ( + r:REAL_32
+    (direction&10b = 0).if {
+      r := to_cm + origin_y_cm
+    } else {
+      r := origin_y_cm - to_cm
+    }
+    r
+  )
+  
+  // Coord polar (Latex inspiration)
+  
+  - radius d:SELF :(SELF,SELF) <-
+  // Polar coord => Cartesian Coord 
+  (d*cos,d*sin)
+  
+  // Functions
+
+  - in_range low:SELF to up:SELF :BOOLEAN <- (low <= Self) && {up >= Self}
+  
+  - in_range_out low:SELF to up:SELF :BOOLEAN <- (low < Self) && {up > Self}
+  
+  - in x0:SELF to x1:SELF :BOOLEAN <-
+  ( + r:BOOLEAN
+    (x0 < x1).if {
+      r := in_range x0 to x1
+    } else {
+      r := in_range x1 to x0
+    }
+    r
+  )
+
+  - sign:INTEGER <-
+  // Sign of Curret (0 -1 or 1).
+  ( + result:INTEGER
+
+    (Self > 0).if {
+      result := 1
+    }.elseif {Self < 0} then {
+      result := -1
+    }
+    result
+  )
+  [
+    +? {-1 <= Result}
+    +? {Result <= 1}
+  ]
+
+  // binary operator :
+
+  - Self:SELF '-'  Left 80  other:SELF :SELF <- `3`
+
+  - Self:SELF '*'  Left 90 <> other:SELF :SELF <- `4`
+  
+Private
+  - Self:SELF '#/#'  Left 90 other:SELF :SELF <- `5`; // ? {other/=0}
+  
+Public
+  
+  - Self:SELF '/'  Left 90 other:SELF :SELF <-
+  //[ /*? {other!=0};*/ ]
+  Self #/# other
+
+  - Self:SELF '+'  Left 80 <> other:SELF :SELF <- Self - -other
+  
+  - Self:SELF '~' Left 90 other:SELF :SELF <-
+  // Average
+  ( (Self + other) / 2 )
+  [ ? {(Result.in_range Self to other) || {Result.in_range other to Self}}; ]
+  
+  // Unary operator
+
+  - '+' Self:SELF :SELF <- Self
+
+  - '-' Self:SELF :SELF <- SELF.zero - Self
+
+  // Compatibility Binary operator
+
+  - Self:SELF '-#'  Left 80  other:INTEGER :SELF    <- Self - other
+
+  - Self:SELF '*#'  Left 90 other:INTEGER :SELF    <- Self * other
+
+  - Self:SELF '/#'  Left 90 other:INTEGER :SELF    <- Self / other
+
+  - Self:SELF '+#'  Left 80  other:INTEGER :SELF    <- Self + other
+
+  - Self:SELF '>#'  Right 60 other:INTEGER :BOOLEAN <- Self > other
+
+  - Self:SELF '<#'  Right 60 other:INTEGER :BOOLEAN <- ! (Self >=# other)
+
+  - Self:SELF '<=#' Right 60 other:INTEGER :BOOLEAN <- ! (Self ># other)
+
+  - Self:SELF '>=#' Right 60 other:INTEGER :BOOLEAN <- (Self ># other) | (Self ==# other)
+
+  - Self:SELF '==#' Right 60 other:INTEGER :BOOLEAN <- (Self = other)
+
+  // Test binary operator :
+
+  - Self:SELF '>'   Right 60 other:SELF :BOOLEAN <- `2`
+
+  - Self:SELF '<'   Right 60 other:SELF :BOOLEAN <- ! (Self >= other)
+
+  - Self:SELF '<='  Right 60 other:SELF :BOOLEAN <- ! (Self > other)
+
+  - Self:SELF '>='  Right 60 other:SELF :BOOLEAN <- (Self > other) | (Self = other)
+
+  - Self:SELF '=='  Right 60 other:E :BOOLEAN <-
+  ( + my_other:SELF
+
+    my_other := other
+    Self = my_other
+  )
+  
+  - clamp mn:SELF to mx:SELF :SELF <-
+  ( + result:SELF
+    (Self < mn).if   { result := mn; }.elseif 
+    {Self > mx} then { result := mx; } else { 
+      result := Self
+    }
+    result
+  )
+  
+  - Self:SELF '!' :SELF <-
+  // Factorial. Use it like "45!" or "bar!.print;"
+  factorial
+  
+  - factorial:SELF <-
+  // Factorial
+  // * Require: Self >= 0
+  [
+    -? {Self >= 0}
+  ]
+  ( + result,value:SELF
+    
+    result := 1
+    value  := Self
+    {value <= 1}.until_do {
+      result := result * value
+      value  := value - 1
+    }
+    result
+  )
+  
+  // Switch case :
+
+  - when value:SELF then block:{} :SELF <-
+  // when `value' equals `Self', execute `block'
+  // You can chain "when ... then ..." between them like : <br/>
+  // bar.when 1 then { // code }.when 2 then { // code 2 }
+  (
+    (Self = value).if block
+    Self
+  )
+
+  - when value1:SELF or value2:SELF then block:{} :SELF <-
+  // when `value1' or `value2' equal `Self', execute `block'
+  (
+    ((Self = value1) || {Self = value2}).if block
+    Self
+  )
+
+  - when first_value:SELF to last_value:SELF then block:{} :SELF <-
+  // Execute `block' when  `Self' is in range of `first_value' to `last_value'
+  (
+    ? {first_value <= last_value}
+    ((Self >= first_value) && {Self <= last_value}).if block
+    Self
+  )
+
+  - else   block:{} <- // BSBS: c'est utile ce truc ???
+  (
+    block
+  )
+
+  - from Self:SELF to limit_up:SELF do blc:{SELF;} <-
+  (
+    if (Self <= limit_up) then {
+      blc.value Self
+      from (Self + 1) to limit_up do blc
+    }
+  )
+  
+  - to limit_up:SELF do blc:{SELF;} <- 
+  (
+    from Self to limit_up do blc
+  )
+  
+  - from Self:SELF down_to limit_down:SELF do blc:{SELF;} <-
+  (
+    if (Self >= limit_down) then {
+      blc.value Self
+      from (Self-1) down_to limit_down do blc
+    }
+  )
+  
+  - downto limit_down:SELF do blc:{SELF;} <-
+  (
+    from Self down_to limit_down do blc
+  )
+
+  - to limit_up:SELF by step:SELF do blc:{SELF;} <-
+  // Classical loop from `Self' to `limit_up' stepping `step'
+  (
+    (Self <= limit_up).if {
+      blc.value Self
+      (Self + step).to limit_up by step do blc
+    }
+  )
+
+  - downto limit_down:SELF by step:SELF do blc:{SELF;} <-
+  // Classical backward loop from `Self' to `limit_up' stepping `step'
+  (
+    (Self >= limit_down).if {
+      blc.value Self
+      (Self - step).downto limit_down by step do blc
+    }
+  )
+
+  - to limit_up:SELF until test:{BOOLEAN} do blc:{SELF;} <-
+  // Classical loop from `Self' to `limit_up' until `test' is TRUE
+  (
+    ((Self <= limit_up) && {!test.value}).if {
+      blc.value Self
+      (Self + 1).to limit_up until test do blc
+    }
+  )
+
+
+
+
+  // Function :
+
+  - abs:SELF <-
+  // Absolute value of `Self'.
+  ( + result:SELF
+
+    (Self < 0).if {
+      result := - Self
+    } else {
+      result := Self
+    }
+    result
+  )
+
+  - min other:SELF :SELF <-
+  // Minimum between value of `Self' and `other'
+  ( + result:SELF
+
+    (Self > other).if {
+      result := other
+    } else {
+      result := Self
+    }
+    result
+  )
+
+  - max other:SELF :SELF <-
+  // Maximum between value of `Self' and `other'
+  ( + result:SELF
+
+    (Self > other).if {
+      result := Self
+    } else {
+      result := other
+    }
+    result
+  )
+
+  // Conversion for other type.
+
+  - to_boolean:BOOLEAN <-
+  // TRUE if `Self' not zero
+  Self != 0
+
+  - append_in b:STRING_BUFFER <- abstract
+  // Also used by `to_string'.
+
+  - append_in b:STRING_BUFFER format s:INTEGER <-
+  // When the number is too small, add some spaces to reach s characters.
+  (
+    append_in b format s with ' '
+  )
+
+  - append_in b:STRING_BUFFER format s:INTEGER with char:CHARACTER <-
+  ( + old_count,i:INTEGER
+    old_count := b.count
+    append_in b
+    i := s - (b.count - old_count)
+    (i > 0).if { b.insert char to old_count on i; }
+  )
+  [
+    +? {b.count = (Old b.count + s)}
+  ]
+  
+  - to_string_format s:INTEGER : STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    STRING.tmp { buffer:STRING_BUFFER
+      append_in buffer format s
+      result := buffer.to_string_alias
+    }
+    result
+  )
+  
+  - to_string_alias:STRING_ALIAS <-
+  ( + r:STRING_ALIAS
+    STRING.tmp {tmp:STRING_BUFFER
+      append_in tmp
+      r := tmp.to_string_alias
+    }
+    r
+  )
+  
+  // Print
+
+  - print_format s:SELF <-
+  // Print with format size `s'
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp format s
+      tmp.print
+    }
+  )
+
+  - print_format s:SELF with c:CHARACTER <-
+  // Print with format size `s' replacing blank character by `c'
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp format s with c
+      tmp.print
+    }
+  )
+
+  // Conversions with tests
+
+  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  (
+    abstract
+    FALSE
+  )
+
+  // - To unsigned integers
+
+  - to_uinteger_8:UINTEGER_8     <-
+  // [ -? {bound_test (UINTEGER_8.minimum) to (UINTEGER_8.maximum)}; ]
+  (
+    to_raw_uinteger_8
+  )
+
+  - to_uinteger_16:UINTEGER_16   <-
+  [ -? {bound_test (UINTEGER_16.minimum) to (UINTEGER_16.maximum)}; ]
+  (
+    to_raw_uinteger_16
+  )
+
+  - to_uinteger_32:UINTEGER_32   <-
+  [ -? {bound_test (UINTEGER_32.minimum) to (UINTEGER_32.maximum)}; ]
+  (
+    to_raw_uinteger_32
+  )
+
+  - to_uinteger_64:UINTEGER_64   <-
+  //[ -? {bound_test (UINTEGER_64.minimum) to (UINTEGER_64.maximum)}; ]
+  (
+    to_raw_uinteger_64
+  )
+
+  - to_uinteger_big:UINTEGER_BIG <-
+  (
+    UINTEGER_BIG.create Self
+  )
+
+  - to_uinteger:UINTEGER <-
+  [ -? {Self >= 0}; ]
+  (
+    to_raw_uinteger
+  )
+
+  - to_uinteger_cpu:UINTEGER_CPU <-
+  //[ -? {Self >= 0}; ]
+  (
+    to_raw_uinteger_cpu
+  )
+
+  // - To signed integers
+
+  - to_integer:INTEGER <- to_raw_integer
+
+  - to_integer_8:INTEGER_8   <-
+  [ -? {bound_test (INTEGER_8.minimum) to (INTEGER_8.maximum)}; ]
+  (
+    to_raw_integer_8
+  )
+
+  - to_integer_16:INTEGER_16 <-
+  [ -? {bound_test (INTEGER_16.minimum) to (INTEGER_16.maximum)}; ]
+  (
+    to_raw_integer_16
+  )
+
+  - to_integer_32:INTEGER_32 <-
+  [ -? {bound_test (INTEGER_32.minimum) to (INTEGER_32.maximum)}; ]
+  (
+    to_raw_integer_32
+  )
+
+  - to_integer_64:INTEGER_64 <-
+  //[ -? {bound_test (INTEGER_64.minimum) to (INTEGER_64.maximum)}; ]
+  (
+    to_raw_integer_64
+  )
+
+  - to_integer_big:UINTEGER_BIG <-
+  (
+    abstract
+    NULL
+  )
+
+  // - To unsigned fixed reals
+
+  - to_ureal_16_16:UREAL_16_16 <-
+  [ -? {bound_test (UREAL_16_16.minimum) to (UREAL_16_16.maximum)}; ]
+  (
+    (Self *# 1_0000h).to_raw_ureal_16_16
+  )
+
+  - to_ureal_24_8:UREAL_24_8   <-
+  [ -? {bound_test (UREAL_24_8.minimum) to (UREAL_24_8.maximum)}; ]
+  (
+    (Self *# 1_00h).to_raw_ureal_24_8
+  )
+
+  - to_ureal_26_6:UREAL_26_6   <-
+  [ -? {bound_test (UREAL_26_6.minimum) to (UREAL_26_6.maximum)}; ]
+  (
+    (Self *# 100_0000b).to_raw_ureal_26_6
+  )
+
+  // - To signed fixed reals
+
+  - to_real_16_16:REAL_16_16 <-
+  [ -? {bound_test (REAL_16_16.minimum) to (REAL_16_16.maximum)}; ]
+  (
+    (Self *# 1_0000h).to_raw_real_16_16
+  )
+  
+  - to_real_32_32:REAL_32_32 <-
+  [ -? {bound_test (REAL_32_32.minimum) to (REAL_32_32.maximum)}; ]
+  (
+    (Self *# 1_0000_0000h).to_raw_real_32_32
+  )
+
+  - to_real_24_8:REAL_24_8   <-
+  [ -? {bound_test (REAL_24_8.minimum) to (REAL_24_8.maximum)}; ]
+  (
+    (Self *# 1_00h).to_raw_real_24_8
+  )
+
+  - to_real_26_6:REAL_26_6 <-
+  [ -? {bound_test (REAL_26_6.minimum) to (REAL_26_6.maximum)}; ]
+  (
+    (Self *# 100_0000b).to_raw_real_26_6
+  )
+
+  // - To float reals
+
+  - to_real:REAL <- to_raw_real
+
+  - to_real_32:REAL_32 <-
+  (
+    to_raw_real_32
+  )
+
+  - to_real_64:REAL_64 <-
+  (
+    to_raw_real_64
+  )
+
+  - to_real_80:REAL_80 <-
+  (
+    to_raw_real_80
+  )
+
+Public
+
+  // Convertion format without test.
+
+  - to_raw_integer:INTEGER          <- CAST SELF TO INTEGER     .on Self
+
+  - to_raw_uinteger:UINTEGER        <- CAST SELF TO UINTEGER    .on Self
+
+  - to_raw_uinteger_8:UINTEGER_8    <- CAST SELF TO UINTEGER_8  .on Self
+
+  - to_raw_uinteger_16:UINTEGER_16  <- CAST SELF TO UINTEGER_16 .on Self
+
+  - to_raw_uinteger_32:UINTEGER_32  <- CAST SELF TO UINTEGER_32 .on Self
+
+  - to_raw_uinteger_64:UINTEGER_64  <- CAST SELF TO UINTEGER_64 .on Self
+
+  - to_raw_uinteger_cpu:UINTEGER_CPU<- CAST SELF TO UINTEGER_CPU.on Self
+
+  - to_raw_integer_8:INTEGER_8      <- CAST SELF TO INTEGER_8   .on Self
+
+  - to_raw_integer_16:INTEGER_16    <- CAST SELF TO INTEGER_16  .on Self
+
+  - to_raw_integer_32:INTEGER_32    <- CAST SELF TO INTEGER_32  .on Self
+
+  - to_raw_integer_64:INTEGER_64    <- CAST SELF TO INTEGER_64  .on Self
+
+  - to_raw_real:REAL                <- CAST SELF TO REAL        .on Self
+
+  - to_raw_ureal_16_16:UREAL_16_16  <- CAST SELF TO UREAL_16_16 .on Self
+
+  - to_raw_ureal_24_8:UREAL_24_8    <- CAST SELF TO UREAL_24_8  .on Self
+
+  - to_raw_ureal_26_6:UREAL_26_6    <- CAST SELF TO UREAL_26_6  .on Self
+
+  - to_raw_real_16_16:REAL_16_16    <- CAST SELF TO REAL_16_16  .on Self
+
+  - to_raw_real_32_32:REAL_32_32    <- CAST SELF TO REAL_32_32  .on Self
+
+  - to_raw_real_24_8:REAL_24_8      <- CAST SELF TO REAL_24_8.on Self
+
+  - to_raw_real_26_6:REAL_26_6      <- CAST SELF TO REAL_26_6.on Self
+
+  - to_raw_real_32:REAL_32          <- CAST SELF TO REAL_32.on Self
+
+  - to_raw_real_64:REAL_64          <- CAST SELF TO REAL_64.on Self
+
+  - to_raw_real_80:REAL_80          <- CAST SELF TO REAL_80.on Self
+  
+  // For test ℤ
+  
+  - to_z:ℤ <- ℤ.init_si to_integer_64

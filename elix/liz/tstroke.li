@@ -1,0 +1,25 @@
+Header
+  + name := TSTROKE;
+  
+Inherit
+  - parent_texp:TEXP := TEXP
+  
+Public
+  
+  + line_width:REAL_32
+  
+  - init_w w:REAL_32 :TSTROKE <- ( line_width := w; Self)
+  
+  - run <-
+  (
+    stroke_color (LOOK.cols.at (LOOK.slot))
+    stroke_width line_width
+    stroke
+    stroke_color (TOK_DRW.last_color)
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "Stroke "
+    line_width.append_in b
+  )

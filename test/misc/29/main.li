@@ -1,0 +1,45 @@
+Header
+  
+  + name := MAIN;
+  
+Inherit
+  
+  + parent_main:Expanded PARENT_MAIN
+  
+Public
+  
+  + a:INTEGER
+  
+  - slot1 <-
+  [ 
+    ^
+    "+ Require main slot 1\n".print
+  ]
+  (     
+    a := 3 !
+    "    | Body main Slot 1\n".print
+    (Old a = 0).if {
+      "    | Good ".print; a.print; '\n'.print
+    }
+  )
+  [ 
+    "+ Ensure main slot 1\n".print
+    ^
+  ]
+
+  - slot2 <-
+  (
+    "    | Body main Slot 2\n".print
+  )
+  
+Public
+  
+  - main <-
+  ( 
+    slot1
+    "\n----------------------\n\n".print
+    slot2
+  )
+  
+
+  

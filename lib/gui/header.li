@@ -1,0 +1,112 @@
+Header
+  + name := Strict HEADER;
+  
+Inherit
+  + parent_popup:Expanded POPUP
+  - parent_json:JSON := JSON
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+  - stk:Expanded ARRAY HEADER
+  
+Public
+  
+  - new:SELF <-
+  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  
+  - free <-
+  ( child.foreach {c:WIN; c.free; }
+    child.clear
+    stk.add_last Self
+  )
+  
+  + is_move:BOOLEAN
+      
+  - height_min:REAL_32 := 8
+  - height_max:REAL_32 <- height_min + ICON.dim * child.count
+  
+  - refresh <-
+  ( + y:REAL_32
+    refresh_popup
+    width := parent.width
+    y := height_min
+    child.foreach { w:WIN
+      w.xy (0,y); w.refresh
+      y := y + ICON.dim
+    }
+  )
+    
+  - draw <-
+  ( + x,y:REAL_32
+    + c:COLOR
+    (x,y) := window.get_cursor_pos
+    begin_path
+    rect (0.5,0.5) size (width-1,height_min-2) radius ((height_min-1)/2)
+    (is_move || {(y.in_range 0 to height_min) && {x.in_range 0 to width}}).if {
+      c := LOOK.border_on
+    } else {
+      c := LOOK.border_off
+    }
+    fill_color c
+    stroke_color (COLOR.black)
+    stroke_width 1
+    stroke
+    fill
+  )
+  
+  - copy o:SELF <-
+  ( set on with (o.is on)
+    o.child.foreach { w:WIN; w.dup Self; }
+  )
+    
+  - init p:WIN :SELF <- ( read_object; init_parent p)
+  
+  - flip <- ( set_open ((!is on).ok parent or NULL); )
+  
+  - event ev:UINTEGER_8 :BOOLEAN <-
+  ( + px,py,x,y,mx,my:REAL_32
+    + e:UINTEGER_8
+    + w:WINDOW
+    e := ev & ~1
+    (e = HAND.in).if {
+      PAPER.set_cursor (window.win_ptr) img ((ev&1 = 0).ok cursor_mv or cursor_std)
+    }.elseif {e = HAND.clic} then {
+      (! header_lock).if { flip; }
+    }.elseif {e = HAND.drag} then {
+      //(HAND.is_begin).if { "Op HDR".println; }
+      //(HAND.is_end).if { "Clo HDR".println; }
+      w ?= parent
+      (px,py) := w.get_pos
+      (mx,my) := w.get_cursor_pos
+      (x,y) := (px+mx-HAND.x_begin, py+my-HAND.y_begin)
+      ((x != px) || {y != py}).if { w.set_pos (x,y); }
+      is_move := ! HAND.is_end
+    }
+  )
+
+  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN <-
+  (
+    id
+    .case "open" then { set on with v; }
+    = STRING_ALIAS
+  )
+  
+  - object id:STRING_ALIAS :BOOLEAN <-
+  (
+    id
+    .case "ICON_LINE" then { ICON_LINE.new.init Self; }
+    = STRING_ALIAS
+  )
+  
+  - write_object <-
+  (
+    put_object {
+      put "open" value { put_bool (is on); }
+      put "ICON_LINE" value {
+        put_array {i:INTEGER
+          child.at i.like ICON_LINE.write_object
+          i = child.upper
+        }
+      }
+    }
+  )

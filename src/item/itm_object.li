@@ -1,0 +1,196 @@
+Header
+
+  + name    := ITM_OBJECT;
+
+  /*Parent item object*/
+
+Inherit
+
+  + parent_any:Expanded ANY
+
+  //- parent_hashable:HASHABLE := HASHABLE
+
+Public
+
+  - context_extern:LOCAL
+
+  - bottom_index:INTEGER
+
+  - push_context:(INTEGER,INTEGER,LOCAL) <-
+  (
+    bottom_index := stack_local.upper + 1
+    context_extern := NULL
+    bottom_index,Old bottom_index,Old context_extern
+  )
+
+  - pop_context (stack_top:INTEGER,old_bottom_index:INTEGER,old_context:LOCAL) <-
+  (
+    stack_local.set_upper (stack_top-1); //remove_since stack_top
+    (bottom_index >= old_bottom_index).if {
+      bottom_index   := old_bottom_index
+      context_extern := old_context
+    }
+  )
+
+  - lookup n:STRING_ALIAS :LOCAL <-
+  ( + result:LOCAL
+    + j:INTEGER
+
+    j := stack_local.upper
+    {(j >= stack_local.lower) && {j >= bottom_index} && {stack_local.at j.name != n}}.while_do {
+      j := j - 1
+    }
+    ((j >= stack_local.lower) && {j >= bottom_index}).if {
+      result := stack_local.at j
+    }.elseif {profil_slot != NULL} then {
+      result := profil_slot.lookup n
+      ((result != NULL) && {result.name != "Self"}).if {
+        bottom_index := -1
+        context_extern := result
+      }
+    }
+    (result = NULL).if {
+      {(j >= stack_local.lower) && {stack_local.at j.name != n}}.while_do {
+        j := j - 1
+      }
+      (j >= stack_local.lower).if {
+        result := stack_local.at j
+        ((result.style != '-') && {result.name != "Self"}).if {
+          bottom_index := j
+          context_extern := result
+        }
+      }
+    }
+    result
+  )
+
+  //
+  // Source position.
+  //
+
+  + position:POSITION
+
+  - set_position new_pos:POSITION <-
+  (
+    position := new_pos
+  )
+
+  //
+  //
+  //
+
+  - verify:BOOLEAN
+
+  - set_verify v:BOOLEAN <-
+  (
+    verify := v
+  )
+
+  - pop_stack_until stack_top:INTEGER <-
+  ( + var,var2:LOCAL
+    + n:STRING_ALIAS
+
+    (verify).if {
+      // Verify local.
+      {stack_local.upper >= stack_top}.while_do {
+	var := stack_local.pop	
+	n := var.name
+	((n != "Self") && {n != "__tmp"}).if {
+	  ((var.ensure_count = 0) && {var.style != ' '}).if {
+	    string_tmp.copy "Local slot `";
+	    string_tmp.append n
+	    string_tmp.append "' not used."
+	    warning_error ((var.position),string_tmp)
+	  }
+	  var2 := lookup n
+	  (var2 != NULL).if {
+	    string_tmp.copy "Double declaration for `";
+	    string_tmp.append n
+	    string_tmp.append "' slot."
+	    POSITION.put_error warning text string_tmp
+	    var2.position.put_position
+	    var.position.put_position
+	    POSITION.send_error
+          }
+          check_local_with_slot (var.position) name n
+	}
+      }
+    } else {
+      stack_local.set_upper (stack_top-1); //remove_since stack_top
+    }
+  )
+  
+  - check_local_with_slot p:POSITION name n:STRING_ALIAS <-
+  [ ? {verify}; ]  
+  ( + slot:ITM_SLOT
+    
+    (profil_slot != NULL).if {
+      slot := profil_slot.type_self.get_itm_slot n
+      (slot != NULL).if {
+        string_tmp.copy "Conflict `";
+        string_tmp.append n
+        string_tmp.append "' name between slot and local."
+        POSITION.put_error warning text string_tmp
+        slot.position.put_position
+        p.put_position
+        POSITION.send_error
+      }
+    }
+  )
+  
+  - cmp_verify p:POSITION between (e1,e2:EXPR) :(EXPR,EXPR) <-
+  ( + r1,r2:EXPR
+    + t1,t2:TYPE_FULL
+    (r1,r2) := (e1,e2)
+    (verify).if {
+      (t1,t2) := (e1.static_type, e2.static_type)
+      (
+        ((t1.is_expanded ^ t2.is_expanded) && {t1 != type_pointer.default} && {t2!= type_pointer.default}) || 
+        {(! (t1.is_expanded | t2.is_expanded)) && {! t1.affect_with t2} && {! t2.affect_with t1}}
+      ).if {
+        (
+          ((! t1.is_expanded) || {! t1.is_generic} || {t2 != TYPE_NULL.default}) && 
+          {(! t2.is_expanded) || {! t2.is_generic} || {t1 != TYPE_NULL.default}}
+        ).if {
+          (t2.is_export_to t1).if {
+            r2 := r2.to_export t1 pos p
+          }.elseif {t1.is_import_to t2} then {
+            r2 := r2.to_import t1 pos p
+          }.elseif {t1.is_export_to t2} then {
+            r1 := r1.to_export t2 pos p
+          }.elseif {t2.is_import_to t1} then {
+            r1 := r1.to_import t2 pos p
+          } else {
+            string_tmp.copy "Stupid comparison between `";
+            t1.append_name_in string_tmp
+            string_tmp.append "' and `";
+            t2.append_name_in string_tmp
+            string_tmp.append "'."
+            warning_error (p,string_tmp)
+          }
+        }
+      }
+    }
+    r1,r2
+  )
+  
+  - product_cmp (v1,v2:EXPR) ext ext:EXPR_BINARY_CMP pos p:POSITION :EXPR <-
+  ( + result:EXPR
+    + s:SLOT
+    + a:ARRAY EXPR
+    + n:NODE
+    s := v1.static_type.get_slot "__infix_equal"
+    (s != NULL).if {
+      a := ARRAY EXPR.create_with_capacity 2
+      a.add_last v1; a.add_last v2
+      n := NODE.new_read p slot s receiver (v1.my_copy) with a intern FALSE
+      list_current.add_last n
+      result := n.result_expr
+      (ext.symbol = "!=").if {
+        result := EXPR_NOT_LOGIC.create p with result
+      }
+    } else {
+      result := ext.create p with v1 and v2
+    }
+    result
+  )

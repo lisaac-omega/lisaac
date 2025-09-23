@@ -1,0 +1,109 @@
+Header
+
+  + name      := CALL;
+  /*
+  The call
+  */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Private
+
+  - call_list:LINKED_LIST(CALL) := LINKED_LIST(CALL).new
+
+Public
+
+  + receiver:LOCAL
+
+  + message:STRING_ALIAS; // -- Not used with VFT
+
+  // -- VFT --
+  + index:INTEGER
+  // -- VFT --
+
+  //
+  // Creation.
+  //
+
+  - create p:INTEGER receiver r:LOCAL message m:STRING_ALIAS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p receiver r message m
+    result
+  )
+
+  - make p:INTEGER receiver r:LOCAL message m:STRING_ALIAS <-
+  (
+    position := p
+    receiver := r
+    message  := m
+    // -- VFT --
+    call_list.add_last Self
+    // -- VFT --
+  )
+
+  //
+  // VFT
+  //
+
+  - compute_index <-
+  (
+    (call_list.lower).to (call_list.upper) do { i:INTEGER
+      call_list.at i.search_index
+    }
+  )
+
+  - search_index <-
+  ( + slot:SLOT
+    slot := receiver.type.get_slot message
+    (slot = NULL).if {
+      string_tmp.copy "Message '"
+      string_tmp.append message
+      string_tmp.append "' not found in "
+      string_tmp.append (receiver.type.name)
+      semantic_error position message string_tmp
+    }
+    index := slot.index
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  ( + slot:SLOT
+
+    (receiver.the_dynamic_type = NULL).if {
+      semantic_error position message "Call on NULL."
+    }
+
+    (is_vft).if {
+      // -- VFT --
+      slot := receiver.the_dynamic_type.vft.at index
+      // -- VFT --
+    } else {
+      slot := receiver.the_dynamic_type.get_slot message
+      (slot = NULL).if {
+        string_tmp.copy "Message '"
+        string_tmp.append message
+        string_tmp.append "' not found in "
+        string_tmp.append (receiver.type.name)
+        semantic_error position message string_tmp
+      }
+    }
+    slot.run (receiver.the_dynamic_type)
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    receiver.name.print
+    '.'.print
+    message.print
+  )
+

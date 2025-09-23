@@ -1,0 +1,45 @@
+Header
+  
+  + name := BIEN_PARENT;
+  /*
+The classical factorial example in Lisaac Ω.
+  
+In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
+  */
+
+Private
+  - bien_parenthésée str:STRING idx i:INTEGER counter c:INTEGER :BOOLEAN <-
+  ( + result:BOOLEAN
+    if (i > str.upper) then {
+      result := c = 0
+    }.elseif {str.at i = '('} then {
+      result := bien_parenthésée str idx (i + 1) counter (c + 1)
+    }.elseif {str.at i = ')'} then {
+      if (c > 0) then {
+        result := bien_parenthésée str idx (i + 1) counter (c - 1)
+      } else {
+        result := FALSE
+      }
+    } else {
+      result := bien_parenthésée str idx (i + 1) counter c
+    }
+    result
+  )
+  
+Public
+  
+  - bien_parenthésée str:STRING :BOOLEAN <-
+  ( 
+    bien_parenthésée str idx 0 counter 0
+  )
+  
+  - main <-
+  ( + s:STRING;
+    if (COMMAND_ARGS upper != 1) then {
+      "usage: ./bien_parent <str>" println
+      SYSTEM exit 1
+    }
+    s := COMMAND_ARGS at 1
+    OUT # "bien_parent(\"" # s # "\")=" # (bien_parenthésée (s)) # '\n'
+  );
+ 

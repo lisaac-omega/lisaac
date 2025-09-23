@@ -1,0 +1,437 @@
+Header
+  + name := SINGLE_LIST V;
+  /*
+   One way linked list with internal automatic memorization of the last access.
+   One way linked list implementation with internal automatic cached memorization
+   of the last access. Because of the last access memory cache, the traversal of a
+   SINGLE_LIST from the `lower' index to the `upper' index using `item' is quite
+   efficient. As one can expect, adding element using `add_first' or
+   `add_last' is really efficient too, actually, the total number of elements
+   (i.e. `count') as well as a reference to the last cell is also cached automatically.
+   Keep in mind that SINGLE_LIST uses a one way linked storage from `lower' to `upper',
+   so traversing a SINGLE_LIST from `upper' to `lower' will be extremely time consumming
+   (also consider LINKED_LIST).
+  */
+
+Inherit
+  + parent_linked_collection:Expanded LINKED_COLLECTION V
+
+SINGLE_LIST
+  + first_link:SINGLE_LIST_NODE V
+  // NULL when empty or gives access to the first element.
+
+  + last_link:SINGLE_LIST_NODE V
+  // NULL when empty or gives access to the last element.
+
+  + mem_idx:INTEGER
+  + mem_lnk:SINGLE_LIST_NODE V
+  // To speed up accessing, `mem_idx' and `mem_lnk' is the memory cache of
+  // the last access done. For example, after item(1), `mem_idx' is 1 and
+  // `mem_lnk' is `first_link'.
+  // When list is empty, `first_link' is NULL as well as `mem_lnk' and `mem_idx' is -1;
+
+Public
+  - is_empty:BOOLEAN <- first_link = NULL
+
+  - add_first element:V <-
+  (
+    (first_link = NULL).if {
+      first_link := SINGLE_LIST_NODE(V).create element next NULL
+      upper := 0
+      last_link := first_link
+      mem_idx := 0
+      mem_lnk := first_link
+    } else {
+      first_link := SINGLE_LIST_NODE(V).create element next first_link
+      upper := upper + 1
+      mem_idx := mem_idx + 1
+    }
+  )
+
+  - add_last element:V <-
+  ( + lnk:SINGLE_LIST_NODE(V)
+    (first_link = NULL).if {
+      first_link := SINGLE_LIST_NODE(V).create element next NULL
+      upper := 0
+      last_link := first_link
+      mem_idx := 0
+      mem_lnk := first_link
+    } else {
+      lnk := SINGLE_LIST_NODE(V).create element next NULL
+      last_link.set_next lnk
+      upper := upper + 1
+      last_link := lnk
+    }
+  )
+
+  - at i:INTEGER add v:V <-
+  ( + link:SINGLE_LIST_NODE(V)
+    (i = 0).if {
+      add_first v
+    }.elseif { i = upper + 1 } then {
+      add_last v
+    } else {
+      go_item (i - 1)
+      link := SINGLE_LIST_NODE(V).create v next (mem_lnk.next)
+      mem_lnk.set_next link
+      upper := upper + 1
+    }
+  )
+
+  - remove_first <-
+  (
+    (upper = 0).if {
+      first_link := NULL
+      last_link := NULL
+      mem_lnk := NULL
+      mem_idx := -1
+      upper := -1
+    } else {
+      first_link := first_link.next
+      (mem_idx = 0).if {
+        mem_lnk := first_link
+      } else {
+        mem_idx := mem_idx - 1
+      }
+      upper := upper - 1
+    }
+  )
+
+  - remove index:INTEGER <-
+  ( + link:SINGLE_LIST_NODE(V)
+
+    (index = 0).if {
+      remove_first
+    }.elseif {index = upper} then {
+      remove_last
+    } else {
+      go_item (index - 1)
+      link := mem_lnk.next
+      mem_lnk.set_next (link.next)
+      upper := upper - 1
+    }
+  )
+
+  - first:V <- first_link.item
+
+  - last:V <- last_link.item
+
+  - at i:INTEGER :V <-
+  (
+    (i != mem_idx).if {
+      go_item i
+    }
+    mem_lnk.item
+  )
+
+  - at i:INTEGER put v:V <-
+  (
+    go_item i
+    mem_lnk.set_item v
+  )
+
+  - set_all_with v:V <-
+  (
+    (first_link != NULL).if {
+      first_link.set_all_with v
+    }
+  )
+
+  - copy other:SELF <-
+  (
+    from_collection other
+  )
+
+  - Self:SELF '=='  Right 60 other:SELF :BOOLEAN <-
+  ( + result:BOOLEAN
+    + lnk1, lnk2:SINGLE_LIST_NODE(V)
+
+    (Self = other).if {
+      result := TRUE
+    }.elseif {upper = other.upper} then {
+      result := TRUE
+      lnk1 := first_link
+      lnk2 := other.first_link
+      {(lnk1 = NULL) || {! result}}.until_do {
+        result := lnk1.item = lnk2.item
+        lnk1 := lnk1.next
+        lnk2 := lnk2.next
+      }
+    }
+    result
+  )
+
+  - is_equal_map other:SELF :BOOLEAN <-
+  ( + result:BOOLEAN
+    + lnk1, lnk2:SINGLE_LIST_NODE(V)
+    ( Self = other).if {
+      result := TRUE
+    }.elseif {upper = other.upper} then {
+      result := TRUE
+      lnk1 := first_link
+      lnk2 := other.first_link
+      {(lnk1 = NULL) || {! result}}.until_do {
+        result := safe_equal (lnk1.item,lnk2.item)
+        lnk1 := lnk1.next
+        lnk2 := lnk2.next
+      }
+    }
+    result
+  )
+
+  - index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    result := start_index
+    {(result > upper) || {element == item result}}.until_do {
+      result := result + 1
+    }
+    result
+  )
+
+  - reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + temporary_idx, new_mem_idx:INTEGER
+    + temporary_lnk, new_mem_lnk:SINGLE_LIST_NODE(V)
+    + result:INTEGER
+
+    temporary_idx := lower
+    temporary_lnk := first_link
+    {temporary_idx > start_index}.until_do {
+      (safe_equal (element,temporary_lnk.item)).if {
+        new_mem_idx := temporary_idx
+        new_mem_lnk := temporary_lnk
+      }
+      temporary_idx := temporary_idx + 1
+      temporary_lnk := temporary_lnk.next
+    }
+    (new_mem_lnk = NULL).if {
+      result := lower - 1
+    } else {
+      result := new_mem_idx
+      mem_lnk := new_mem_lnk
+      mem_idx := new_mem_idx
+    }
+    result
+  )
+
+  - fast_index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + u:INTEGER
+    + result:INTEGER
+
+    result := start_index
+    u := upper
+    {(result > u) || {element = item result}}.until_do {
+      result := result + 1
+    }
+    result
+  )
+
+  - fast_reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  ( + temporary_idx, new_mem_idx:INTEGER
+    + temporary_lnk, new_mem_lnk:SINGLE_LIST_NODE(V)
+    + result:INTEGER
+
+    temporary_idx := lower
+    temporary_lnk := first_link
+    {temporary_idx > start_index}.until_do {
+      (element = temporary_lnk.item).if {
+        new_mem_idx := temporary_idx
+        new_mem_lnk := temporary_lnk
+      }
+      temporary_idx := temporary_idx + 1
+      temporary_lnk := temporary_lnk.next
+    }
+    (new_mem_lnk = NULL).if {
+      result := lower - 1
+    } else {
+      result := new_mem_idx
+      mem_lnk := new_mem_lnk
+      mem_idx := new_mem_idx
+    }
+    result
+  )
+
+  - clear <-
+  (
+    (first_link != NULL).if {
+      first_link := NULL
+      mem_idx := -1
+      mem_lnk := NULL
+      upper := -1
+      last_link := NULL
+    }
+  )
+  [ /* BSBS Old; */
+    +? {upper = 0}
+  ]
+
+  - from_collection model:COLLECTION(V) <-
+  ( + lnk:SINGLE_LIST_NODE(V)
+
+    (first_link = NULL).if {
+      (model.lower).to (model.upper) do { i:INTEGER
+        add_last (model.item i)
+      }
+    } else {
+      lnk := first_link
+      (model.lower).to (model.upper) do { i:INTEGER
+        (lnk = NULL).if {
+          add_last (model.item i)
+        } else {
+          lnk.set_item (model.item i)
+          lnk := lnk.next
+        }
+      }
+      (lnk = first_link).if {
+        ? { model.count = 0 }
+        clear
+      }.elseif { lnk != NULL } then {
+        + i:INTEGER
+        i := model.count
+        go_item i
+        ? { lnk = mem_lnk.next }
+        mem_lnk.set_next NULL
+        upper := i
+        last_link := mem_lnk
+      }
+    }
+  )
+
+  - slice low:INTEGER to up:INTEGER :SELF <-
+  ( + result:SELF
+    + lnk:SINGLE_LIST_NODE(V)
+
+    result := SELF.create
+    go_item low
+    lnk := mem_lnk
+    (up - low + 1).downto 1 do { i:INTEGER
+      result.add_last (lnk.item)
+      lnk := lnk.next
+    }
+
+    result
+  )
+
+  - occurrences element:V :INTEGER <-
+  ( + lnk:SINGLE_LIST_NODE(V)
+    + result:INTEGER
+    lnk := first_link
+    {lnk = NULL}.until_do {
+      (safe_equal (element,lnk.item)).if {
+        result := result + 1
+      }
+      lnk := lnk.next
+    }
+    result
+  )
+
+  - fast_occurrences element:V :INTEGER <-
+  ( + lnk:SINGLE_LIST_NODE(V)
+    + result:INTEGER
+
+    lnk := first_link
+    {lnk = NULL}.until_do {
+      (element = lnk.item).if {
+        result := result + 1
+      }
+      lnk := lnk.next
+    }
+    result
+  )
+
+  - all_default:BOOLEAN <-
+  ( + result:BOOLEAN
+    + l:SINGLE_LIST_NODE(V)
+    + d:V
+
+    result := TRUE
+    l := first_link
+    {(! result) || {l = NULL}}.until_do {
+      result := l.item = d
+      l := l.next
+    }
+
+    result
+  )
+
+  - remove_last <-
+  (
+    (upper = 0).if {
+      first_link := NULL
+      last_link := NULL
+      mem_lnk := NULL
+      mem_idx := -1
+      upper := -1
+    } else {
+      go_item (upper - 1)
+      upper := upper - 1
+      last_link := mem_lnk
+      last_link.set_next NULL
+    }
+  )
+
+  - replace_all old_value:V with new_value:V <-
+  (
+    lower.to upper do { i:INTEGER
+      (safe_equal (item i, old_value)).if {
+        put new_value to i
+      }
+    }
+  )
+
+  - fast_replace_all old_value:V with new_value:V <-
+  (
+    lower.to upper do { i:INTEGER
+      (item i = old_value).if {
+        put new_value to i
+      }
+    }
+  )
+
+  - reverse <-
+  ( + prev, lnk, next:SINGLE_LIST_NODE(V)
+
+    lnk := first_link
+    {lnk = NULL}.until_do {
+      next := lnk.next
+      lnk.set_next prev
+      prev := lnk
+      lnk := next
+    }
+    last_link := first_link
+    first_link := prev
+    mem_idx := -1
+    mem_lnk := NULL
+  )
+
+Private
+  - go_item i:INTEGER <-
+  [
+    ? {valid_index i}
+    ? {mem_idx >= 0}
+    ? {mem_lnk != NULL}
+  ]
+  (
+    (mem_idx > i).if {
+      mem_idx := 0
+      mem_lnk := first_link
+    }
+    {i = mem_idx}.until_do {
+      mem_lnk := mem_lnk.next
+      mem_idx := mem_idx + 1
+    }
+  )
+  [
+    +? {mem_idx = i}
+    +? {mem_lnk != NULL}
+  ]
+
+  // Invariant
+
+//  [ /* BSBS Old; */
+//    "Empty status." -? {(first_link = NULL) ->>
+//    {(last_link = NULL) & (upper = 0) & (mem_idx = 0) & (mem_lnk = NULL)}}
+
+//    "Not empty status." -? {(first_link != NULL) ->>
+//    {(last_link != NULL) & (upper > 0) & (mem_idx > 0) & (mem_lnk != NULL)}}
+//  ]
+

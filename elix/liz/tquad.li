@@ -1,0 +1,31 @@
+Header
+  + name := TQUAD;
+  
+Inherit
+  + parent_tmove:Expanded TMOVE
+  
+Public
+  
+  + w_x:TEXP
+  + w_y:TEXP
+      
+  - init_w (wx,wy:TEXP) to (x,y:TEXP) :SELF <-
+  (
+    (w_x,w_y) := (wx,wy)
+    (val_x,val_y) := (x,y)
+    Self
+  )
+  
+  - run <-
+  (
+    quad_w (w_x.eval,w_y.eval) to (val_x.eval,val_y.eval)
+  )
+  
+  - append_in b:STRING_BUFFER <-
+  (
+    b += "Quad ("
+    w_x.append_in b;  b | ',';  w_y.append_in b
+    b += ") to ("
+    val_x.append_in b; b | ',';  val_y.append_in b
+    b | ')'
+  )

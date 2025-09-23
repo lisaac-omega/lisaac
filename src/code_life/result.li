@@ -1,0 +1,90 @@
+Header
+
+  + name      := RESULT;
+
+Inherit
+
+  - parent_expr:EXPR := EXPR
+
+Public
+
+  - position:POSITION <- write.position
+
+  + write:WRITE
+  
+  - ensure_count:INTEGER <- write.ensure_count
+
+  - set_write v:WRITE <-
+  (
+    write := v
+  )
+
+  //
+  // Creation.
+  //
+
+  - create v:WRITE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make v
+    result
+  )
+
+  - make v:WRITE <-
+  (
+    write := v
+  )
+
+  - my_copy:SELF <-
+  ( + wrt:WRITE
+    + rd:READ
+    + result:SELF
+        
+    rd  ?= write.value
+    (rd = NULL).if {
+      wrt := write.variable.write (write.position) with NULL value (write.value.my_copy)
+    } else {
+      rd  := rd.variable.read_direct (rd.position) with NULL
+      wrt := write.variable.write (write.position) with NULL value rd
+    }
+    result := create wrt
+    //result.debug_display
+    result
+  )
+
+  - execute:INSTR <-
+  ( + new_wrt:WRITE
+    + result:INSTR
+    new_wrt ?= write.execute
+    (new_wrt != NULL).if {      
+      write := new_wrt
+      result := Self
+    }
+    result
+  )
+
+  //
+  // Remove
+  //
+
+  - remove <-
+  (
+    write.remove
+  )
+
+  //
+  // Expr definition.
+  //
+
+  - static_type:TYPE_FULL <- write.value.static_type
+
+  - get_type t:TYPES_TMP  <- write.value.get_type t
+
+  - execute_link:EXPR     <- write.execute_link
+
+  - execute_unlink:INSTR  <- write.execute_unlink
+
+  - display buffer:STRING_BUFFER <- 
+  (
+    write.display buffer
+  )

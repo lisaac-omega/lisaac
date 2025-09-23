@@ -1,0 +1,491 @@
+//
+// file LIP : LIsaac Path directory and make LIsaac Project system.
+//
+Section Private
+  // French, Spanish, Italian, German, Russian
+  + upper:STRING := "Ê,Ë,Î,Ï,Ö,Ô,É,È,Ù,À,Ç,Ñ,Ä,Ü,ẞ,А-Я";
+  + lower:STRING := "ê,ë,î,ï,ö,ô,é,è,ù,à,ç,ñ,ä,ü,ß,а-я";
+  + upper_star:STRING := "ℕ,ℤ,ℝ";
+  + lower_star:STRING := "π,α";
+  + symbol:STRING := "≠,≤,≥,¡,¿";
+  
+  //
+  // Compiler variables.
+  //
+  
+  // File information (auto-loading variables).
+  + lisaac          :STRING; // is environment variable value (auto-loading).
+  + input_file      :STRING; // is input file name value without extension.
+  + output_file     :STRING; // is output file name value without extension.
+  + output_extension:STRING; // is extension of `output_file'
+  + is_speed_push:BOOLEAN := TRUE; // See `old_push' function.
+  
+  // Debug information.
+  + debug_level:INTEGER := 16;
+  + debug_with_code:BOOLEAN := TRUE; 
+  + is_all_warning:BOOLEAN;
+    
+  // Optimization.
+  + is_optimization:BOOLEAN;
+  + inline_level:INTEGER := 5;
+  
+  // Generate code.
+  + is_cop:BOOLEAN := FALSE; 
+  + is_library:BOOLEAN; // For build a lisaac library C 
+  + execute_back_end:BOOLEAN := TRUE;
+  + execute_status_code:INTEGER := 0;
+
+  // Other.
+  + is_statistic:BOOLEAN;
+  + is_quiet:BOOLEAN;
+  
+  + is_o3:BOOLEAN;
+  + is_tcc:BOOLEAN;
+  
+  + flag_draw_debug:BOOLEAN;
+  + bug_stack:BOOLEAN;
+  
+  + arduino_port:STRING := "/dev/ttyACM0";
+  
+  + cuda_ok:BOOLEAN;
+  
+  //
+  // Other variables.
+  //
+  
+  + cc_opts:STRING;  
+  + lib_gcc:STRING;
+  + execute_file:STRING;
+  
+  + target:STRING := "windows";
+      
+  + cc:STRING := "gcc";
+
+  + opt_android:STRING := "";
+  
+  //
+  // Service
+  //
+  
+  + exit_success_code:INTEGER := 0;
+  
+  + exit_failure_code:INTEGER := 1;
+  
+  + message:STRING := "";
+  
+  - message_install msg:STRING <-
+  (
+    message := msg;
+  );
+  
+  - add_lib lib:STRING <-
+  (
+    (target = "windows").if {
+      run "echo int main(){ return(1); } > __tmp__.c";    
+      (run (cc + " __tmp__.c -o __tmp__ " + lib + " > NUL") = 0).if {
+        lib_gcc := lib_gcc + " " + lib;
+        run "del __tmp__.c __tmp__.exe";
+      } else {
+        "\nERROR: `" + lib + "' library for `"+cc+"' not found.\n".print;
+        run "del __tmp__.c";
+        message.print;
+        die_with_code exit_failure_code;
+      };
+    } else {
+      run "echo \"int main(){ return(1); }\" > __tmp__.c";
+      (run (cc + " __tmp__.c -o __tmp__ " + lib + " 2> /dev/null") = 0).if {
+        lib_gcc := lib_gcc + " " + lib;
+        run "rm __tmp__.c __tmp__";
+      } else {
+        ("\nERROR: `" + lib + "' library for `"+cc+"' not found.\n").print;
+        run "rm __tmp__.c";
+        message.print;
+        die_with_code exit_failure_code;
+      };          
+    };
+  );
+  
+  - execute cmd:STRING <-
+  (
+    (! is_quiet).if {
+      "run `".print;
+      cmd.print;
+      "'\n".print;
+    };
+    execute_status_code := run cmd;
+    (execute_status_code != 0).if {
+      (is_quiet).if {
+        "FAILURE run `".print;
+        cmd.print;
+        "' (".print;
+      } else {
+        "FAILURE (".print;
+      };
+      execute_status_code.print;
+      ")\n".print;
+    };
+  );
+
+  - execute_fail cmd:STRING <-
+  (
+    execute cmd;
+    (execute_status_code > 255).if {
+      die_with_code exit_failure_code;
+    };
+    (execute_status_code != 0).if {
+      die_with_code execute_status_code;
+    };
+  );
+
+  //
+  // Execute function.
+  //
+    
+  - general_front_end <-
+  (
+    (flag_draw_debug).if {      
+      debug_level := debug_level + 1;
+    };
+    path "lib/*";
+    //path "example/*"; // BSBS->DOM : Tu ne peux pas mettre �a.
+    //path "tuto/*";    //             �a fait des conflits de nom partout.
+    //path "elit/*";
+    //path "srx/lang/*";
+    old_push; // BSBS: Pour l'instant...
+  );
+    
+  - general_back_end <-
+  (
+    (target = "arduino").if {
+      "ls /dev/ttyACM* 2> /dev/null".run_in arduino_port;
+      (arduino_port = "").if {
+        "ls /dev/ttyUSB* 2> /dev/null".run_in arduino_port;
+      };
+      (arduino_port = "").if {
+        "ERROR: Arduino not connected.\n".print;
+        die_with_code 1;
+      };
+      execute_fail ("mv " + output_file + ".c $(basename $(pwd)).ino");
+      execute_fail "sed -i 's/int main/int main_old/g' $(basename $(pwd)).ino";
+      execute_fail "arduino-cli compile --fqbn arduino:avr:mega $(basename $(pwd)).ino --output-dir .";
+      execute_fail ("avrdude -v -patmega2560 -cwiring -P"+arduino_port+" -b115200 -D -Uflash:w:./$(basename $(pwd)).ino.hex:i");
+      execute_fail ("~/lisaac/arduino/com/ardcom "+arduino_port);
+//      execute_fail "screen /dev/ttyUSB0 9600";
+      //"Ctrl A K Y".println;
+      //execute_fail ("avr-g++ -I. -Wno-overflow -Os -Wl,--gc-sections -ffunction-sections  -fdata-sections -DF_CPU=16000000UL -Wno-write-strings -mmcu=atmega2560 -o "+output_file+" "+output_file+".c"); // -mmcu=atmega328p  -lSoftwareSerial -larduino      
+      //execute_fail ("avr-objcopy -O ihex -R .eeprom "+output_file+" "+output_file+".hex");
+      //execute_fail ("avrdude -F -V -c arduino -p ATMEGA328P -P /dev/ttyACM0 -b 115200 -U flash:w:"+output_file+".hex");
+    } else {
+      ((execute_back_end) & (target != "android")).if {
+        (is_cop).if {
+          lib_gcc := lib_gcc + " -lpthread";
+        };
+        (target = "windows").if {
+          execute_file := output_file + ".exe";
+        } else {
+          execute_file := output_file;
+        };
+        (cc_opts != " -g").if {
+          (is_o3).if {
+            cc_opts := cc_opts + " -O3";
+          } else {
+            cc_opts := cc_opts + " -O2";
+          };
+        };
+        (! cuda_ok).if {
+          (target = "apple").if {
+            cc_opts := cc_opts + " -w";
+          } else {
+            cc_opts := cc_opts + " -flarge-source-files";
+          };
+          cc_opts := cc_opts + " -Wno-unused-variable -D_GNU_SOURCE -Wno-address-of-packed-member -U_FORTIFY_SOURCE -Wno-strict-aliasing -Wstrict-overflow=0 "; //  -fomit-frame-pointer
+        } else {
+          execute_fail ("mv " + output_file + ".c " + output_file + ".cu");
+          execute_fail ("sed -i 's/ = (void \\*)0;/ = (_____CONTEXT \\*)0;/g' " + output_file + ".cu");
+          execute_fail ("sed -i 's/#define _LARGEFILE_SOURCE/ /g' " + output_file + ".cu");
+          execute_fail ("sed -i 's/#define _LARGEFILE64_SOURCE/ /g' " + output_file + ".cu");
+          output_extension := ".cu";
+          //cc_opts := cc_opts + " -Xcompiler -Wunused-result";
+        };
+        
+        (is_tcc).if {
+          cc := "tcc ";
+          /*
+          (is_library).if {
+            execute_fail ("tcc " + output_file + output_extension + " -c ");
+          } else {
+            execute_fail ("tcc " + output_file + output_extension + " -o " + output_file + lib_gcc);
+          };*/
+        }; // else {        
+        (target = "web").if {
+          execute_fail (lisaac+"webli/new_assets.sh");
+          cc := "emcc";    
+          cc_opts := " -D_GNU_SOURCE -O2 -Wno-unused-value -Wno-invalid-source-encoding -Wno-sometimes-uninitialized";
+          lib_gcc := " -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s USE_WEBGL2=1 -s USE_GLFW=3 --preload-file web";
+	  // -s ASSERTIONS=1    --preload-file assets/
+          execute_file := "index.js";
+        };
+          (is_library).if {
+            execute_fail (cc+" " + output_file + output_extension + " -c " + cc_opts);
+          } else {
+            ((is_speed_push) & (debug_level > 0)).if {
+              execute_fail (cc+" " + output_file + output_extension + " -S " + cc_opts + lib_gcc);
+              build_label (output_file + ".s");
+              execute_fail (cc+" " + input_file + "_label.s -o "+ output_file + cc_opts + lib_gcc);
+            } else {
+              (bug_stack).if {
+                execute ("sed -i 's/void lisaac_stack_print(long step)/void old_lisaac_stack_print(long step)/g' "+output_file+output_extension);
+                execute_fail (cc+" " + output_file + output_extension + " bug_stack.c -o " + execute_file + cc_opts + lib_gcc);
+              } else {
+                execute_fail (cc+" " + output_file + output_extension + " -o " + execute_file + cc_opts + lib_gcc);
+              };
+            };
+          };
+        //};
+      } else {
+        ("Written: " + output_file + output_extension + "\n").print;
+        (target = "android").if {
+          execute_fail (lisaac+"lia/run.sh " + output_file + opt_android);
+        };
+      };
+      (target = "web").if {
+        execute_fail ("cp "+lisaac+"webli/index.html .");
+        execute_fail ("cp "+lisaac+"webli/run.sh .");
+        "Type: ./run.sh\n".print;
+      };        
+    };
+  );
+  
+  - front_end <-
+  // Executed by compiler, before compilation step.
+  (
+    general_front_end;
+  );
+  
+  - back_end <-
+  // Executed by compiler, after compilation step.
+  (
+    general_back_end;
+  );
+  
+Section Public
+  
+  //
+  // Debug information:
+  // 
+    
+  - no_debug <-  
+  // No debug information.
+  (
+    debug_level := 0;
+    debug_with_code := FALSE;
+  );
+  
+  - debug level:INTEGER <-
+  // Fix debug level (default: 16)
+  (
+    ((level < 1) | (level > 20)).if {
+      "Incorrect debug level.\n".print;
+      die_with_code exit_failure_code;
+    };
+    debug_level := level;
+  );
+  
+  - without_source <-
+  // Debug mode with no source code.
+  (
+    debug_with_code := FALSE;
+  );
+  
+  - all_warning <-
+  // All warning (deferred detect, ...).
+  (
+    is_all_warning := TRUE;
+  );
+  
+  - old_push <-
+  // Use old stack saving for debug mode.
+  (
+    is_speed_push := FALSE;
+  );
+  
+  - dd <-
+  // Debug draw library (see: gui/div)
+  (
+    flag_draw_debug := TRUE;    
+  );
+  
+  //
+  // Optimization:
+  //
+
+  - boost <-
+  // Full optimization (lisaac and gcc).
+  (
+    no_debug;
+    is_optimization := TRUE;
+  );
+  
+  - hyper_boost <-
+  // Same as -boost, with `-O3' option for GCC
+  (    
+    boost;
+    inline_level := 20;
+    is_o3 := TRUE;
+  );
+  
+  - i level:INTEGER <-
+  // Inlining level [1..5000] (default: 15)
+  (
+    ((level < 1) | (level > 5000)).if {
+      "Incorrect inlining level.\n".print;
+      exit;
+    };
+    inline_level := level;
+  );
+    
+  //
+  // Generate code:
+  //
+  
+  - target idf:STRING <-
+  // Target for backend (unix,android,arduino,windows)
+  (
+    target := idf;
+  );
+  
+  - compiler cmd:STRING <-
+  // Where `cmd' is the C compiler to be used.
+  (
+    cc := cmd;
+  );
+  
+  - clang <-
+  // Short for -compiler clang
+  (
+    compiler "clang";
+  );
+  
+  - tcc <-
+  // To use the TCC (Tiny C Compiler).
+  (
+    (run "command -v tcc > /dev/null 2> /dev/null" != 0).if {
+      "Error: Tiny C Compiler not found.\n\
+      \(Debian: sudo apt-get install tcc)\n".print;
+      die_with_code exit_failure_code;
+    };
+    is_speed_push := FALSE;
+    is_tcc := TRUE;
+  );
+    
+  - cop <-
+  // Active Concurrence Object Prototype.
+  (
+    is_cop := TRUE;
+  );
+  
+  - o outputfile:STRING <-  
+  // Change output file (default: `input_file').
+  (
+    output_file := outputfile;
+  );
+  
+  - cc_option option:STRING <-
+  // Add an extra option to be passed to the C compiler.
+  (
+    cc_opts := cc_opts + " " + option;
+  );
+
+  - partial <-
+  // Only generate C code and don't compile it the C compiler.
+  (
+    execute_back_end := FALSE;
+  );
+  
+  - bugstack <-
+  // For BUG debug mode stack loop bug.
+  (
+    without_source;
+    bug_stack := TRUE;
+  );
+  
+  //
+  // Other:
+  //
+
+  - add_path str:STRING <-
+  // Add the `str' path in the current list of path.
+  (
+    path str;
+  );
+  
+  - q <-
+  // Quiet operation.
+  (
+    is_quiet := TRUE;
+  );
+  
+  - build_library <-
+  // For to build library (`main' => `init') 
+  (
+    is_library := TRUE;
+  );
+  
+  - port pth:STRING <-
+  // Set Arduino port (Example: /dev/tty/USB0)
+  (
+    arduino_port := pth;
+  );
+  
+  //
+  // Information:
+  //
+  
+  - s <-
+  // Statistic information.
+  (
+    is_statistic := TRUE;
+  );
+  
+  - help <-
+  // Help
+  (
+    help_command;
+    die_with_code exit_success_code;
+  );
+  
+  - version <-
+  // Version
+  (
+    compiler_version;
+    die_with_code exit_success_code;
+  );
+
+  - li <-
+  // For LI (logo LI for Android)
+  (
+    opt_android := " -li";
+  );
+  
+  - go <-
+  // Search the `main' prototype in current directory
+  (
+    "List:\n\
+    \=====\n".print;
+    run "grep -l \"\\- main\" *.li";
+    die_with_code exit_success_code;
+  );
+  
+  - cuda <-
+  // Compile with `nvcc' compiler
+  (
+    cc := "/home/ben/ssd/anaconda3/bin/nvcc -Xcudafe \"--diag_suppress=2464\" -ccbin g++ \
+    \-I/home/ben/ssd/anaconda3/samples/common/inc -I/home/ben/ssd/anaconda3/include \
+    \-m64 -g -std=c++11 -G --resource-usage -Xcompiler -rdynamic -Xcompiler -fopenmp -rdc=true -lnvToolsExt \
+    \-I/home/ben/ssd/anaconda3/samples/common/inc -I/home/ben/ssd/anaconda3/include -L/home/ben/ssd/anaconda3/lib \
+    \-lcublas -lcudnn -lgomp -lcurand \
+    \-gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 \
+    \-gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_80,code=sm_80 ";
+    cuda_ok := TRUE;
+  );
+  

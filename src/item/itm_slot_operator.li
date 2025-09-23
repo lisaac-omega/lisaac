@@ -1,0 +1,101 @@
+Header
+
+  + name    := ITM_SLOT_OPERATOR;
+
+  /*Slot item*/
+
+Inherit
+
+  + parent_itm_slot:Expanded ITM_SLOT
+
+Public
+  
+  + pretty_name:STRING_ALIAS
+  - set_pretty_name n:STRING_ALIAS <- ( pretty_name := n; )
+  
+  //
+  // Access associativity & priority level.
+  //
+
+  + priority_and_level:INTEGER
+  + comm:BOOLEAN
+  
+  - associativity:STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    (priority_and_level >= 0).if {
+      result := "Left"
+    } else {
+      result := "Right"
+    }
+    result
+  )
+
+  - priority:INTEGER <-
+  (
+    priority_and_level.abs
+  )
+
+  - set_associativity p:STRING_ALIAS priority l:INTEGER comm c:BOOLEAN <-
+  (
+    (p = "Left").if {
+      priority_and_level := l
+    } else {
+      priority_and_level := -l
+    }
+    comm := c
+  )
+    
+  //
+  // Display.
+  //
+
+  - pretty_name_in buffer:STRING_BUFFER <-
+  (
+    (name.has_prefix "__postfix").if {
+      buffer.append "Postfix '"
+    }.elseif {name.has_prefix "__infix"} then {
+      buffer.append "Infix '"
+    } else {
+      buffer.append "Prefix '"
+    }
+    buffer.append pretty_name
+    buffer.add_last '\''
+  )
+
+ITM_SLOT
+
+/*  - shorter_profile_intern_in buf:STRING_BUFFER <-
+  (
+    (name.has_prefix "__postfix").if {
+      argument_list.first.shorter_in buf
+      buf.add_last ' '
+      buf.add_last '\''
+      put pretty_name to buf like "slot"
+      buf.add_last '\''
+      buf.add_last ' '
+    }.elseif {name.has_prefix "__infix"} then {
+      argument_list.first.shorter_in buf
+      buf.add_last ' '
+      buf.add_last '\''
+      put pretty_name to buf like "slot"
+      buf.add_last '\''
+      (priority_and_level != 0).if {
+        buf.add_last ' '
+        put associativity to buf like "keyword"
+        buf.add_last ' '
+        string_tmp.clear
+        priority.append_in string_tmp
+        put string_tmp to buf like "keyword"
+      }
+      buf.add_last ' '
+      argument_list.second.shorter_in buf
+      buf.add_last ' '
+    } else {
+      buf.add_last '\''
+      put pretty_name to buf like "slot"
+      buf.add_last '\''
+      buf.add_last ' '
+      argument_list.first.shorter_in buf
+      buf.add_last ' '
+    }
+  );*/

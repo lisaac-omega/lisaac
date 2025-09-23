@@ -1,0 +1,288 @@
+Header
+
+  + name    := SHELL;
+  /*
+  Small Shell, example File System manager.
+  */
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Private
+
+  - command:STRING_BUFFER
+
+  - cmds:ARRAY(STRING_BUFFER)
+
+  - dir:DIRECTORY
+
+  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 255
+
+  - execute <-
+  ( + cmd:STRING_BUFFER
+
+    cmd := cmds.first
+    //
+    // Entry command.
+    //
+    (cmd == "help").if {
+      help
+    }.elseif {cmd == "ls"} then {
+      ls
+    }.elseif {cmd == "version"} then {
+      "Small Lisaac shell Version 0.3\n".print
+    }.elseif {cmd == "rm"} then {
+      rm
+    }.elseif {cmd == "mv"} then {
+      mv
+    //
+    // Directory Manager.
+    //
+    }.elseif {cmd == "cd"} then {
+      cd
+    }.elseif {cmd == "mkdir"} then {
+      mkdir
+    //
+    // File Manager.
+    //
+    }.elseif {cmd == "cat"} then {
+      cat
+    }.elseif {cmd == "mkfile"} then {
+      mkfile
+    }.elseif {(cmd == "exit") || {cmd == "bye"}} then {
+      exit_shell
+    } else {
+      '`'.print;
+      cmd.print
+      "\': Command not found.\n".print
+    }
+  )
+
+  - help <-
+  (    
+    "Shell manager:\n\
+    \  help                : Display this help.\n\
+    \  exit / bye          : Exit Lisaac Shell.\n\
+    \  version             : Print version.\n\
+    \Entry manager:\n\
+    \  ls                  : List information about the files.\n\
+    \  rm <src>            : Remove file or directory <src>.\n\
+    \  mv <src> <name>     : Move file or directory <src> with new <name>.\n\
+    \Directory manager:\n\
+    \  cd <dst>            : Change current directory.\n\
+    \  mkdir <dir>         : Create the directory.\n\
+    \File manager:\n\
+    \  cat <src>           : Open and display file <src>.\n\
+    \  mkfile <src> <text> : Creat <src> file with <text>.\n".print
+  )
+
+  //
+  // Entry manager.
+  //
+
+  - ls <-
+  ( + e:DIRENT
+    + f:FILE
+    (! dir.open).if {
+      "`ls\': Permission denied.\n".print;
+    } else {
+      "----Access----  ----Update----  ---Size--   ----Name----\n".print
+      dir.lower.to (dir.upper) do { i:INTEGER
+        e := dir.at i
+        string_tmp.clear
+        // Access.
+        e.access_date.append_in string_tmp
+        string_tmp.add_last ' '
+        // Name.
+        (e.is_directory).if {
+          string_tmp.append "          d "
+        } else {
+          // Size.
+          f ?= e
+          f.size.append_in string_tmp format 9
+          string_tmp.append " - "
+        }
+        string_tmp.append (e.name)
+        string_tmp.add_last '\n'
+        string_tmp.print
+      }
+    }
+  )
+
+  - mv <-
+  ( + src,dst:STRING_BUFFER
+    (cmds.count < 3).if {
+      "`mv\': Too few arguments.\n".print;
+    }.elseif {cmds.count != 3} then {
+      "`mv\': Too many arguments.\n".print;
+    } else {
+      src := cmds.at 1
+      dst := cmds.at 2
+      (dir.move src to dst).if_false {
+        "`mv\': cannot rename file `".print
+        dst.print
+        "\': Permission denied.\n".print
+      }
+    }
+  )
+
+  - rm <-
+  ( + param:STRING_BUFFER
+    (cmds.count = 1).if {
+      "`rm\': Too few arguments.\n".print;
+    }.elseif {cmds.count != 2} then {
+      "`rm\': Too many arguments.\n".print;
+    } else {
+      param := cmds.at 1
+      (dir.remove param).if_false {
+        "`rm\': cannot remove `".print
+        param.print
+        "\': Permission denied.\n".print
+      }
+    }
+  )
+
+  //
+  // Directory manager
+  //
+
+  - cd <-
+  ( + e:DIRENT
+    + param:STRING_BUFFER
+
+    (cmds.count > 2).if {
+      "`cd\': Too many arguments.\n".print;
+    }.elseif {cmds.count = 1} then {
+      dir := FILE_SYSTEM
+    } else {
+      param := cmds.at 1
+      e := dir.get param
+      (e != NULL).if {
+        (e.is_directory).if {
+          dir ?= e
+        } else {
+          '`'.print;
+          param.print
+          "\': Not a directory.\n".print
+        }
+      } else {
+        '`'.print;
+        param.print
+        "\': No such file or directory.\n".print
+      }
+    }
+  )
+
+  - mkdir <-
+  ( + e:DIRENT
+    + param:STRING_BUFFER
+
+    (cmds.count = 1).if {
+      "`mkdir\': Too few arguments.\n".print;
+    }.elseif {cmds.count != 2} then {
+      "`mkdir\': Too many arguments.\n".print;
+    } else {
+      param := cmds.at 1
+      e := dir.make_directory param
+      (e = NULL).if {
+        '`'.print;
+        param.print
+        "\': File exists, cannot create directory.\n".print
+      }
+    }
+  )
+
+  //
+  // File manager.
+  //
+
+  - cat <-
+  ( + e:DIRENT
+    + param:STRING_BUFFER
+    + file:FILE
+    (cmds.count = 1).if {
+      "`cat\': Too few arguments.\n".print;
+    }.elseif {cmds.count != 2} then {
+      "`cat\': Too many arguments.\n".print;
+    } else {
+      param := cmds.at 1
+      e := dir.get param
+      ((e = NULL) || {! e.is_file}).if {
+        '`'.print;
+        param.print
+        "\': No such file.\n".print
+      } else {
+        file ?= e
+        (! file.open).if {
+          '`'.print;
+          param.print
+          "\': Not open.\n".print
+        } else {
+          string_tmp.clear
+          string_tmp.set_capacity (file.size.to_integer)
+          file.read string_tmp size (file.size)
+          file.close
+          string_tmp.print
+          '\n'.print
+        }
+      }
+    }
+  )
+
+  - mkfile <-
+  ( + f:FILE
+    + param:STRING_BUFFER
+    (cmds.count = 1).if {
+      "`mkfile\': Too few arguments.\n".print;
+    } else {
+      param := cmds.at 1
+      f := dir.make_file param
+      (f = NULL).if {
+        '`'.print;
+        param.print
+        "\': File exists, cannot create file.\n".print
+      }.elseif {cmds.count > 2} then {
+        f.open
+        2.to (cmds.upper) do { j:INTEGER
+          string_tmp.copy (cmds.at j)
+          string_tmp.add_last ' '
+          f.write string_tmp from 1 size (string_tmp.count)
+        }
+        f.close
+      }
+    }
+  )
+
+  - exit_shell <-
+  (
+    "Good bye.\n".print
+    exit 0
+  )
+
+Public
+
+  //
+  // Text mode.
+  //
+
+  - main <-
+  ( + cmd:STRING_BUFFER
+
+    cmds := ARRAY(STRING_BUFFER).create_with_capacity 10
+    cmd := STRING_BUFFER.create 100
+    dir := FILE_SYSTEM
+
+    {
+      dir.path.print
+      " > ".print
+      cmd.clear
+      STDIN.read_line_in cmd
+
+      (cmd.is_empty).if_false {
+        cmds.clear
+        cmd.split_in cmds
+        execute
+      }
+    }.endless_loop
+  )

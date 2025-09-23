@@ -1,0 +1,19 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + u32:UINTEGER_32
+    + u64:UINTEGER_64
+    TEST.check (u32.clz) integer 32
+    TEST.check (u64.clz) integer 64
+    u32 := 1
+    u64 := 1
+    TEST.check (u32.clz) integer 31
+    TEST.check (u64.clz) integer 63
+    TEST.check (u32.ctz) integer 0
+    u32 := 2
+    TEST.check (u32.ctz) integer 1
+    u32 := 4
+    TEST.check (u32.ctz) integer 2
+  )

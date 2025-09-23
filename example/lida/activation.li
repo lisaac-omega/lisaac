@@ -1,0 +1,65 @@
+Header
+  + name := ACTIVATION;
+  
+Inherit
+  + parent_layer:Expanded LAYER
+  
+Private
+  
+  + act_desc:POINTER; // cudnnActivationDescriptor_t
+  + mode:INTEGER;     // cudnnActivationMode_t
+  + coef:REAL_32
+    
+Public
+  
+  - relu_t:INTEGER <- `CUDNN_ACTIVATION_RELU`:INTEGER
+  
+  - init (n:STRING_ALIAS, mod:INTEGER) :SELF <- init (n,mod) coef 0
+  
+  - init (n:STRING_ALIAS, mod:INTEGER) coef (cof:REAL_32) :SELF <-
+  (
+    (name,mode,coef) := (n,mod,cof)
+    act_desc := CUDA.create_activation_descriptor
+    CUDA.set_activation_descriptor act_desc mode mode coef coef
+    Self
+  )
+  
+  - free <-
+  (
+    CUDA.destroy_activation_descriptor act_desc
+  )
+
+  - forward (in:BLOB) :BLOB <-
+  (
+    ((input = NULL) || {batch_size != in.n}).if {
+      input := in
+      input_desc := input.tensor
+      batch_size := input.n
+
+      (output = NULL).if {
+        output := BLOB.new.init (input.shape)
+      } else {
+        output.reset (input.shape)
+      }
+      output_desc := output.tensor
+    }
+    cud.activation_forward act_desc    alpha 1 in (input_desc,input.cuda)    beta  0 out (output_desc,output.cuda)
+    
+    output
+  )
+
+  - backward (grad_out:BLOB) :BLOB <-
+  (
+    ((grad_input = NULL) || {batch_size != grad_out.n}).if {
+      grad_output := grad_out
+
+      (grad_input = NULL).if {
+        grad_input := BLOB.new.init (input.shape)
+      } else {
+        grad_input.reset (input.shape)
+      }
+    }
+    cud.activation_backward act_desc    alpha 1    y  (output_desc,output.cuda)    dy (output_desc,grad_output.cuda)    x  (input_desc ,input.cuda)    beta 0    dx (input_desc, grad_input.cuda)
+
+    grad_input
+  )

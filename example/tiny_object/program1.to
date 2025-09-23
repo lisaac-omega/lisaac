@@ -1,0 +1,65 @@
+PARENT (
+
+  type =
+  ( |
+    "PARENT".print;
+  )
+
+  function_1 =
+  ( |
+    type;
+    "PARENT : Function 1".print;
+  )
+
+  function_2 =
+  ( |
+    type;
+    "PARENT : Function 2".print;
+  )
+)
+
+CHILD_A Inherit PARENT (
+
+  type =
+  ( |
+    "CHILD_A".print;
+  )
+
+  function_1 = 
+  ( a:PARENT |
+    type;
+    "CHILD_A : Function 1".print;
+    a = New PARENT;
+    a.function_1;
+    a.function_2;
+  )
+
+  master =
+  ( b:PARENT |
+    b = New CHILD_A;
+    "--- b.function_1 ---".print;
+    b.function_1;
+    "--- function_1 -----".print;
+    function_1;
+    "--- b.function_2 ---".print;
+    b.function_2;
+    "--- Fin ------------".print;
+  )
+)
+/*
+CHILD_A
+CHILD_A : Function 1
+PARENT
+PARENT : Function 1
+PARENT
+PARENT : Function 2
+CHILD_A
+CHILD_A : Function 1
+PARENT
+PARENT : Function 1
+PARENT
+PARENT : Function 2
+---------
+CHILD_A
+PARENT : Function 2
+*/

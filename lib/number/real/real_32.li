@@ -1,0 +1,13 @@
+Header
+  + name     := Expanded REAL_32;
+  /*Float (C `float' mapping).*/
+  - type     := `float`;
+  - default  := (0.to_raw_real_32);
+  - export   := REAL, REAL_64, REAL_80, REAL_16_16;
+
+Insert
+  - parent_float_map32:FLOAT_MAP32 := FLOAT_MAP32
+  - parent_float_real:FLOAT_REAL := FLOAT_REAL
+
+Public
+  

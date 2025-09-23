@@ -1,0 +1,14 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + i1:ℤ
+    + m1:MPZ
+    i1 := ℤ.init "C7A1" base 16
+    m1.init
+    m1.set "C7A1" base 16
+    TEST.check (m1.to_hexadecimal) string "C7A1"
+    TEST.check (i1.to_hexadecimal) string "C7A1"
+  )
+ 

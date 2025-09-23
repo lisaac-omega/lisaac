@@ -1,0 +1,26 @@
+Header
+  + name := MAIN;
+  
+Public
+  - max:INTEGER <- 100001
+  
+  - main <-
+  ( + a:COLLECTION INTEGER
+    //a := ARRAY INTEGER .create_with_capacity (max + 1)
+    a := ARRAY_BLOCK INTEGER .new
+    0.to max do { k:INTEGER
+      a.force k to k
+    }
+    0.to max do { k:INTEGER
+      TEST.check (a.at k) integer k
+    }
+    0.to max do { k:INTEGER
+      a.at k put (k + 1)
+      TEST.check (a.at k) integer (k + 1)
+    }
+    {a.is_empty}.until_do {
+      + idx:INTEGER
+      idx := a.upper % 2
+      a.remove idx
+    }
+  )

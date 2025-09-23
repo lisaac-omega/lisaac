@@ -1,0 +1,77 @@
+Header
+
+  + name := CALCULATOR;
+
+Inherit
+  + parent_window:Expanded WINDOW
+
+Private
+    
+  - input:INPUTBOX
+  - error:TXT
+  
+  - text:STRING_BUFFER := STRING_BUFFER.create 80
+    
+  - add c:CHARACTER :BOOLEAN <- ( text.add_last c; TRUE)
+  
+  - eval:BOOLEAN <-
+  ( + result:REAL_32
+    + ok:BOOLEAN
+    (text.count > 1).if {
+      result := PARSE_EXPR.parse text
+      error.set_txt (PARSE_EXPR.error_message)
+      (PARSE_EXPR.error_message.is_empty).if {
+        text.clear
+        result.append_in text
+        ok := TRUE
+      }
+    }
+    ok
+  )
+
+Public
+    
+  - main <-
+  ( 
+    // Init window.
+    init "LiCalc" size (412,560)
+    
+    (
+      (
+        input := INPUTBOX.new.init {t:STRING_BUFFER; t.copy text; }
+        set {t:STRING_BUFFER; text.copy t; }
+        width (FONT.size_sys*9).zoom 3.set (align_right | height_locked)
+      ) / (
+        (
+          BUTTON.new.init "DEL" do { b:BUTTON
+            (! text.is_empty).if { text.remove_last; }
+          } /
+          BUTTON.new.init " 7 " do { b:BUTTON; add '7'} /
+          BUTTON.new.init " 4 " do { b:BUTTON; add '4'} /
+          BUTTON.new.init " 1 " do { b:BUTTON; add '1'} /
+          BUTTON.new.init " 0 " do { b:BUTTON; add '0'}
+        ) | (
+          BUTTON.new.init "CLR" do { b:BUTTON; text.clear; TRUE} /
+          BUTTON.new.init " 8 " do { b:BUTTON; add '8'} /
+          BUTTON.new.init " 5 " do { b:BUTTON; add '5'} /
+          BUTTON.new.init " 2 " do { b:BUTTON; add '2'} /
+          BUTTON.new.init " . " do { b:BUTTON; add '.'}
+        ) | (
+          BUTTON.new.init " ( " do { b:BUTTON; add '('} /
+          BUTTON.new.init " 9 " do { b:BUTTON; add '9'} /
+          BUTTON.new.init " 6 " do { b:BUTTON; add '6'} /
+          BUTTON.new.init " 3 " do { b:BUTTON; add '3'} /
+          BUTTON.new.init " = " do { b:BUTTON; eval}
+        ) | (
+          BUTTON.new.init " ) " do { b:BUTTON; add ')'} /
+          BUTTON.new.init " / " do { b:BUTTON; add '/'} /
+          BUTTON.new.init " x " do { b:BUTTON; add 'x'} /
+          BUTTON.new.init " - " do { b:BUTTON; add '-'} /
+          BUTTON.new.init " + " do { b:BUTTON; add '+'}
+        )
+      ) /
+      (error := TXT.new.init_str "").set height_locked.color (COLOR.red)
+    ).init_parent Self.size (width,height).setr stretch
+        
+    PAPER.run
+  )

@@ -1,0 +1,60 @@
+Header
+
+  + name := ASSIGN;
+  /*
+  The print
+  */
+
+Inherit
+
+  + parent_expr:Expanded EXPR
+
+Public
+
+  + local:LOCAL
+
+  + type:CLASS
+
+  //
+  // Creation.
+  //
+
+  - create p:INTEGER local l:LOCAL type t:CLASS :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p local l type t
+    result
+  )
+
+  - make p:INTEGER local l:LOCAL type t:CLASS <-
+  (
+    position := p
+    local    := l
+    type     := t
+  )
+
+  //
+  // Run.
+  //
+
+  - run <-
+  (
+    // Type control:
+    (type.is_sub_type (local.type)).if_false {
+      semantic_error position message "Type mismatch."
+    }
+    // Execute.
+    local.set_the_dynamic_type type
+  )
+
+  //
+  // Display.
+  //
+
+  - print <-
+  (
+    local.name.print
+    " = New ".print
+    type.name.print
+  )
+

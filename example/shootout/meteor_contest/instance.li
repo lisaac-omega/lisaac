@@ -1,0 +1,31 @@
+Header
+  
+  + name         := INSTANCE;
+  /*
+  Language shootout - Meteor contest (based on the C++ version)
+  */
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+
+Public
+  
+  + m_allowed:UINTEGER_64
+  + m_vec:UINTEGER_32
+  + m_offset:INTEGER
+  
+  - set_m_allowed n:UINTEGER_64 <- 
+  (
+    m_allowed := n
+  )
+  
+  - set_m_vec n:UINTEGER_32 <- 
+  (
+    m_vec := n
+  )
+  
+  - set_m_offset n:INTEGER <- 
+  (
+    m_offset := n
+  )

@@ -1,0 +1,20 @@
+Header
+  
+  + name := AFFECTATIONS;
+  /*Des exemples d'affectations...
+*/
+
+Public
+  
+  - main <-
+  ( + i: ℤ
+    "Affectations :=" println
+    i.println
+    "et maintenant " println
+    i := 2
+    "et aussi " println
+    i := i + 2
+    OUT # "i=" # i # '\n'
+    
+    // Essaye et modifie 
+  )

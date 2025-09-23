@@ -1,0 +1,76 @@
+Header
+  
+  + name := MEETING_PLACE;
+  
+  - external := `pthread_mutex_t mutex;`
+  
+Inherit
+  
+  - parent_any:ANY_CHAMENEOS_REDUX := ANY_CHAMENEOS_REDUX
+
+Private
+
+  + meetings_left: INTEGER
+  + first_colour:  INTEGER
+  + first_id:      INTEGER
+
+  + current:PAIR
+
+Public 
+
+  - create meetings:INTEGER :SELF <-
+  ( + result :SELF
+
+    result := clone
+    result.make meetings
+    result
+  )
+
+  - make meetings:INTEGER <-
+  (
+    `pthread_mutex_init( &mutex, 0 )`
+    meetings_left := meetings
+    first_colour := invalid
+    first_id := 0
+  )
+
+  - destroy <-
+  (
+    `pthread_mutex_destroy( &mutex )`
+  )
+
+  - meet (id:INTEGER, c:INTEGER, rp:PAIR) :BOLLEAN <-
+  ( + result: BOOLEAN
+    + new_colout: INTEGER
+
+    `pthread_mutex_lock( &mutex )`
+    result := TRUE
+
+    (meetings_left > 0).if {
+      (first_colour = invalid).if {
+      
+        first_colour := c
+        first_id := id
+        rp.two_met := FALSE
+        current := rp
+      } else {
+        new_colour := do_compliment( c, first_colour )
+        
+        (id = first_id).if {
+          rp.meet(TRUE, new_colour)
+         } else {
+          rp.meet(FALSE, new_colour)
+         }
+
+         current.copy rp
+         first_colour := invalid
+         meetings_left := meetings_left - 1
+      }
+    } else {
+      result := FALSE
+    }
+ 
+    `pthread_mutex_unlock( &mutex )`
+    result
+  )
+

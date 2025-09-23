@@ -1,0 +1,458 @@
+Header
+  + name := Expanded CHARACTER;
+  - type    := `char`;
+  - default := '\0';
+  - export  := INTEGER_8, UINTEGER_8;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  - parent_print:PRINT := PRINT
+  
+Public
+  
+  // BSBS: Pb de priority, a revoir dans la new version.
+  - Self:SELF '+=' Right 60 other:STRING :STRING_BUFFER <- STRING_BUFFER.crash
+
+
+  - in_range lower:SELF to upper:SELF :BOOLEAN <- ((Self >= lower) && {Self<= upper})
+
+  // General :
+
+  - object_size:INTEGER := 1
+
+  - maximum:INTEGER := 255
+
+  - minimum:INTEGER := 0
+
+  - to_integer:INTEGER <-
+  // Sign-extended conversion.
+  ( + result:INTEGER
+    result := code.to_integer
+    ? {result.in_range (INTEGER_8.minimum) to (INTEGER_8.maximum)}
+    result
+  )
+  
+  - to_string_buffer:STRING_BUFFER <-
+  ( + result:STRING_BUFFER
+    result := STRING.new_tmp
+    result | Self
+  )
+  
+  - to_string_alias:STRING_ALIAS <-
+  ( + result:STRING_ALIAS
+    STRING.tmp { tmp:STRING_BUFFER
+      tmp | Self
+      result := tmp.to_string_alias
+    }
+    result
+  )
+
+  - code:INTEGER_8 <-
+  // ASCII code of Current.
+  // No Sign-extended conversion.
+  ( + result:INTEGER_8
+    result := to_integer_8
+    //? {result.in_range minimum to maximum}
+    result
+  )
+
+  - to_integer_8:INTEGER_8 <- CAST CHARACTER TO INTEGER_8.on Self
+  // Auto-cast.
+
+  - to_uinteger_8:UINTEGER_8 <- CAST CHARACTER TO UINTEGER_8.on Self
+
+  // Print.
+  
+  - append_in b:STRING_BUFFER <- b.add_last Self
+  
+  - print <- STDOUT.put_character Self
+
+  // Switch case :
+
+  - when value:CHARACTER then block:{} :CHARACTER <-
+  (
+    (Self = value).if block
+    Self
+  )
+
+  - when value1:CHARACTER or value2:CHARACTER then block:{} :CHARACTER <-
+  (
+    ((Self = value1) || {Self = value2}).if block
+    Self
+  )
+  
+  - when v1:CHARACTER or v2:CHARACTER or v3:CHARACTER then block:{} :CHARACTER <-
+  (
+    ((Self = v1) || {Self = v2} || {Self = v3}).if block
+    Self
+  )
+
+  - when first_value:CHARACTER to last_value:CHARACTER then block:{} :CHARACTER <-
+  ( ? {first_value<=last_value}
+
+    ((Self>=first_value) && {Self<=last_value}).if block
+    Self
+  )
+  
+  - (Self:SELF,r:E) if v:CHARACTER do b:{E} :(SELF,E) <-
+  (Self,((r != E) || {Self != v}).ok r else b)
+    
+  - (Self:SELF,r:E) if v:CHARACTER or v2:CHARACTER do b:{E} :(SELF,E) <-
+  (Self,((r != E) || {(Self != v) && {Self != v2}}).ok r else b)
+  
+  - (Self:SELF,r:E) if v:CHARACTER to v2:CHARACTER do b:{E} :(SELF,E) <-
+  (Self,((r != E) || {Self < v} || {Self > v2}).ok r else b)
+  
+  - (Self:SELF,r:E) if v:CHARACTER do b:{E} else e:{E} :(SELF,E) <-
+  ( + res:E
+    (r != E).if {
+      res := r
+    } else {
+      (Self = v).if { res := b.value; } else { res := e.value; }
+    }
+    Self,res
+  )
+    
+  // Looping.
+
+  - to limit_up:SELF do blc:{CHARACTER;} <-
+  (
+    (Self<=limit_up).if {
+      blc.value Self
+      (Self+1.to_character).to limit_up do blc
+    }
+  )
+
+  - downto limit_down:SELF do blc:{CHARACTER;} <-
+  (
+    (Self>=limit_down).if {
+      blc.value Self
+      (Self-1.to_character).downto limit_down do blc
+    }
+  )
+
+  - to limit_up:SELF by step:SELF do blc:{CHARACTER;} <-
+  (
+    (Self<=limit_up).if {
+      blc.value Self
+      (Self+step.to_character).to limit_up by step do blc
+    }
+  )
+
+  - downto limit_down:SELF by step:SELF do blc:{CHARACTER;} <-
+  (
+    (Self>=limit_down).if {
+      blc.value Self
+      (Self-step.to_character).downto limit_down by step do blc
+    }
+  )
+
+  // Binary operator :
+  
+  - Self:SELF '&' msk:UINTEGER_8 :UINTEGER_8 <- to_uinteger_8 & msk
+  
+  - Self:SELF '^' msk:UINTEGER_8 :CHARACTER <- (to_uinteger_8 ^ msk).to_character
+
+  - Self:SELF '+' other:CHARACTER :CHARACTER <- (code+other.code).to_character
+
+  - Self:SELF '-' other:CHARACTER :CHARACTER <- (code-other.code).to_character
+
+  - Self:SELF '-!' other:CHARACTER :INTEGER   <- code - other.code
+
+  - Self:SELF '+#' other:INTEGER :CHARACTER <- (code + other).to_character
+  
+  - Self:SELF '|' other:INTEGER :CHARACTER <- (code | other).to_character
+
+  - Self:SELF '-#' other:INTEGER :CHARACTER <- (code - other).to_character
+
+  - Self:SELF '<>' other:SELF :BOOLEAN <- ( code != other.code )
+  // An other difference syntax (Pascal like)
+
+  - Self:SELF '<' other:SELF :BOOLEAN <- ( to_uinteger_8 < other.to_uinteger_8 )
+  // Comparison using `code'.
+
+  - Self:SELF '<=' other:SELF :BOOLEAN <- ( to_uinteger_8 <= other.to_uinteger_8 )
+  // Comparison using `code'.
+
+  - Self:SELF '>' other:SELF :BOOLEAN <- ( to_uinteger_8 > other.to_uinteger_8 )
+  // Comparison using `code'.
+
+  - Self:SELF '>=' other:SELF :BOOLEAN <- ( to_uinteger_8 >= other.to_uinteger_8 )
+  // Comparison using `code'.
+  
+  - to_digit:INTEGER <- decimal_value
+  
+  - decimal_value:INTEGER <-
+  // Gives the value of a decimal digit.
+  ( + result:INTEGER
+    ? {is_digit}
+    result := to_integer - 48
+    ? {result.in_range 0 to 9}
+    result
+  )
+
+  - binary_value:INTEGER <-
+  // Gives the value of a binary digit.
+  ( + result:INTEGER
+    ? {is_binary_digit}
+    result := code - 48
+    ? {result.in_range 0 to 1}
+    result
+  )
+
+  - octal_value:INTEGER <-
+  // Gives the value of an octal digit.
+  ( + result:INTEGER
+    ? {is_octal_digit}
+    result := code - 48
+    ? {result.in_range 0 to 7}
+    result
+  )
+
+  - hexadecimal_value:INTEGER <-
+  // Gives the value of an hexadecimal digit.
+  ( + result:INTEGER
+    ? {is_hexadecimal_digit}
+    (code < 'A'.code).if {
+      result := code - 48
+    }.elseif {code<'a'.code} then {
+      result := code - 55
+    } else {
+      result := code - 87
+    }
+    ? {result.in_range 0 to 15}
+    result
+  )
+
+  - same_as other:CHARACTER :BOOLEAN <-
+  // Case insensitive comparison.
+  // No difference between upper/lower case letters.
+  ( + result:BOOLEAN
+    (Self = other).if {
+      result:=TRUE
+    } else {
+      code
+      .when 65 to 90 then {
+        result:=(code = (other.code - 32))
+      }
+      .when 97 to 122 then {
+        result:=(code = (other.code + 32))
+      }
+      ? {result ->> {(to_lower = other) | (to_upper = other)}}
+    }
+    result
+  )
+
+  - to_upper:SELF <-
+  // Conversion to the corresponding upper case.
+  ( + result:SELF
+    ((code < 97) || {code > 122}).if {
+      result := Self
+    } else {
+      result := (code - 32).to_character
+    }
+    result
+  )
+
+  - to_lower:SELF <-
+  // Conversion to the corresponding lower case.
+  ( + result:SELF
+    ((code < 65) || {code > 90}).if {
+      result := Self
+    } else {
+      result := (code + 32).to_character
+    }
+    result
+  )
+
+  - is_letter:BOOLEAN <-
+  // Is it a letter ('a' .. 'z' or 'A' .. 'Z') ?
+  ( + result:BOOLEAN
+    (Self >= 'a').if {
+      result := (Self <= 'z')
+    }.elseif {Self >= 'A'} then {
+      result := (Self <= 'Z')
+    }
+    ? {result = (in_range 'A' to 'Z' | in_range 'a' to 'z')}
+    result
+  )
+
+  - is_digit:BOOLEAN <-
+  // Belongs to '0'..'9'.
+  ( + result:BOOLEAN
+    (Self >= '0').if {
+      result := (Self <= '9')
+    }
+    ? {result = in_range '0' to '9'}
+    result
+  )
+
+  - is_binary_digit:BOOLEAN <-
+  // Belongs to '0'..'1'.
+  ( + result:BOOLEAN
+    result:= (Self = '0') || {Self = '1'}
+    ? {result = in_range '0' to '1'}
+    result
+  )
+
+  - is_octal_digit:BOOLEAN <-
+  // Belongs to '0'..'7'.
+  ( + result:BOOLEAN
+    (Self >= '0').if {
+      result := (Self <= '7')
+    }
+    ? {result = in_range '0' to '7'}
+    result
+  )
+
+  - is_hexadecimal_digit:BOOLEAN <-
+  // Is it one character of "0123456789abcdefABCDEF" ?
+  ( + result:BOOLEAN
+    (is_digit).if {
+      result := TRUE
+    }.elseif {Self >= 'a'} then {
+      result := (Self <= 'f')
+    }.elseif {Self >= 'A'} then {
+      result := (Self <= 'F')
+    }
+    ? {result = ("0123456789abcdefABCDEF".has Self)}
+    result
+  )
+  
+  - is_upper_hexadecimal_digit:BOOLEAN <-
+  // Is it one character of "0123456789ABCDEF" ?
+  ( 
+    (is_digit) || {(Self >= 'A') && {Self <= 'F'}}
+  )
+
+  - is_lower:BOOLEAN <-
+  // Is it some lowercase letter ('a'..'z')?
+  ( + result:BOOLEAN
+    (Self >= 'a').if {
+      result:=(Self <= 'z')
+    }
+    result
+  )
+
+  - is_upper:BOOLEAN <-
+  // Is it some uppercase letter ('A'..'Z')?
+  ( + result:BOOLEAN
+    (Self >= 'A').if {
+      result:=(Self <= 'Z')
+    }
+    result
+  )
+
+  - is_separator:BOOLEAN <-
+  // True when character is a separator (' ', '\t', '\n', '\r', '\0', '\f', '\v')?
+  " \t\n\r\0\f\v".has Self
+
+  - is_letter_or_digit:BOOLEAN <-
+  // Is it a letter (see `is_letter') or a digit (see `is_digit') ?
+  ( + result:BOOLEAN
+    result := (is_letter || {is_digit})
+    ? {result = (is_letter | is_digit)}
+    result
+  )
+
+  - is_identifier:BOOLEAN <-
+  // Is it a letter or a digit or '_' ?
+  (is_letter_or_digit) || {Self = '_'}
+  
+  - is_lower_identifier:BOOLEAN <-
+  // Is it a letter or a digit or '_' ?
+  (is_lower) || {is_digit} || {Self = '_'}
+  
+  - is_upper_identifier:BOOLEAN <-
+  // Is it a letter or a digit or '_' ?
+  (is_upper) || {is_digit} || {Self = '_'}
+
+  - is_ascii:BOOLEAN <- (Self & 80h) = 0
+  // Is character a 8-bit ASCII character?
+
+  - is_bit:BOOLEAN <- ((Self='0') || {Self='1'})
+  // True for `0' and `1'.
+
+  - next:CHARACTER <-
+  // Give the next character (the following `code');
+  [
+    ? {code <= 127}
+  ]
+  (
+    (code + 1).to_character
+  )
+  
+  - hexadecimal_next:CHARACTER <-
+  [
+    ? {"0123456789abcdefABCDEF".has Self}
+  ]
+  ( + result:CHARACTER
+    (Self = '9').if {
+      result := 'A'
+    }.elseif {(Self = 'F') || {Self = 'f'}} then {
+      result := '0'
+    } else {
+      result := next
+    }
+    result
+  )
+  
+  - previous:CHARACTER <-
+  // Give the previous character (the `code' before);
+  ( ? {code > 0}
+    (code - 1).to_character
+  )
+
+  // Conversions:
+
+  - to_hexadecimal:STRING_BUFFER <-
+  // Create a new STRING_BUFFER giving the `code' in hexadecimal.
+  // For example :
+  //    (255).to_character.to_hexadecimal gives "FF".
+  // Note: see `to_hexadecimal_in' to save memory.
+  ( + result:STRING_BUFFER
+    result := STRING_BUFFER.make 2
+    to_hexadecimal_in result
+    ? {result.count = 2}
+    result
+  )
+
+  - to_hexadecimal_in str:STRING_BUFFER <-
+  // Append the equivalent of `to_hexadecimal' at the end of
+  // `str'. Thus you can save memory because no other
+  // STRING_BUFFER is allocate for the job.
+  ( + c, old_count:INTEGER
+
+    old_count:=str.count
+    c := code >> 4
+    (c<10).if {
+      str.extend (('0'.code + c).to_character)
+    } else {
+      str.extend (('A'.code - 10 + c).to_character)
+    }
+    c := code & 00001111b
+    (c<10).if {
+      str.extend (('0'.code + c).to_character)
+    } else {
+      str.extend (('A'.code - 10 + c).to_character)
+    }
+    ? {str.count = (2 + old_count)}
+  )
+
+  // Miscellaneous:
+
+  - is_alpha:BOOLEAN <-
+  // See `is_letter' (yes this is just a call to `is_letter').
+  // Isn't `is_letter' better English ;-)
+  ( + result:BOOLEAN
+    result := is_letter
+    ? {result = is_letter}
+    result
+  )
+
+  // Hashing :
+
+  - hash_code: INTEGER <- code
+
+
+

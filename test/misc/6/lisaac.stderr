@@ -1,0 +1,8 @@
+Depending pass:  \--WARNING----------
+Local slot `i_am_unused' not used.
+Line 8 column 17 in MAIN(.../test/6/main.li):
+  ( + i_am_unused:INTEGER;
+                 ^
+|3
+Executing pass: *...*.. (7)
+ => 1 warning(s).

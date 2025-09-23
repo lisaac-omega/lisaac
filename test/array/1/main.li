@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+  
+  -external:= `void init_string_alias(){};`;
+  
+Insert
+  - parent_print:PRINT := PRINT
+    
+Public
+  + array: Expanded ARRAY INTEGER
+  
+  - main <-
+  (
+    TEST.check_null (array.storage)
+    TEST.check (array.is_empty)
+  )

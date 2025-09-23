@@ -1,0 +1,847 @@
+Header
+  + name := IMG_WRITE;
+  
+  - external := `
+unsigned short lengthc[] = { 3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258, 259 };
+unsigned char  lengtheb[]= { 0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0 };
+unsigned short distc[]   = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577, 32768 };
+unsigned char  disteb[]  = { 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13 };
+
+typedef unsigned int stbiw_uint32;
+#define sbraw(a) ((int *) (a) - 2)
+#define sbm(a)   sbraw(a)[0]
+#define sbn(a)   sbraw(a)[1]
+
+#define sbneedgrow(a,n)  ((a)==0 || sbn(a)+n >= sbm(a))
+#define sbmaybegrow(a,n) (sbneedgrow(a,(n)) ? sbgrow(a,n) : 0)
+#define sbgrow(a,n)  sbgrowf((void **) &(a), (n), sizeof(*(a)))
+
+#define sbpush(a, v)      (sbmaybegrow(a,1), (a)[sbn(a)++] = (v))
+#define sbcount(a)        ((a) ? sbn(a) : 0)
+#define sbfree(a)         ((a) ? free(sbraw(a)),0 : 0)
+
+static void *sbgrowf(void **arr, int increment, int itemsize)
+{
+   int m = *arr ? 2*sbm(*arr)+increment : increment+1;
+   void *p = realloc(*arr ? sbraw(*arr) : 0, itemsize * m + sizeof(int)*2);   
+   if (p) {
+      if (!*arr) ((int *) p)[1] = 0;
+      *arr = (void *) ((int *) p + 2);
+      sbm(*arr) = m;
+   }
+   return *arr;
+}
+
+static unsigned char *zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount)
+{
+   while (*bitcount >= 8) {
+      sbpush(data, (unsigned char) *bitbuffer);
+      *bitbuffer >>= 8;
+      *bitcount -= 8;
+   }
+   return data;
+}
+
+static int zlib_bitrev(int code, int codebits)
+{
+   int res=0;
+   while (codebits--) {
+      res = (res << 1) | (code & 1);
+      code >>= 1;
+   }
+   return res;
+}
+
+static unsigned int zlib_countm(unsigned char *a, unsigned char *b, int limit)
+{
+   int i;
+   for (i=0; i < limit && i < 258; ++i)
+      if (a[i] != b[i]) break;
+   return i;
+}
+
+static unsigned int zhash(unsigned char *data)
+{
+   stbiw_uint32 hash = data[0] + (data[1] << 8) + (data[2] << 16);
+   hash ^= hash << 3;
+   hash += hash >> 5;
+   hash ^= hash << 4;
+   hash += hash >> 17;
+   hash ^= hash << 25;
+   hash += hash >> 6;
+   return hash;
+}
+
+#define zlib_flush() (out = zlib_flushf(out, &bitbuf, &bitcount))
+#define zlib_add(code,codebits) \
+      (bitbuf |= (code) << bitcount, bitcount += (codebits), zlib_flush())
+#define zlib_huffa(b,c)  zlib_add(zlib_bitrev(b,c),c)
+// default huffman tables
+#define zlib_huff1(n)  zlib_huffa(0x30 + (n), 8)
+#define zlib_huff2(n)  zlib_huffa(0x190 + (n)-144, 9)
+#define zlib_huff3(n)  zlib_huffa(0 + (n)-256,7)
+#define zlib_huff4(n)  zlib_huffa(0xc0 + (n)-280,8)
+#define zlib_huff(n)  ((n) <= 143 ? zlib_huff1(n) : (n) <= 255 ? zlib_huff2(n) : (n) <= 279 ? zlib_huff3(n) : zlib_huff4(n))
+#define zlib_huffb(n) ((n) <= 143 ? zlib_huff1(n) : zlib_huff2(n))
+
+#define ZHASH   16384
+
+unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
+{
+   unsigned int bitbuf=0;
+   int i,j, bitcount=0;
+   unsigned char *out = NULL;
+   unsigned char **hash_table[ZHASH]; // 64KB on the stack!
+   if (quality < 5) quality = 5;
+
+   sbpush(out, 0x78);   // DEFLATE 32K window
+   sbpush(out, 0x5e);   // FLEVEL = 1
+   zlib_add(1,1);  // BFINAL = 1
+   zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
+
+   for (i=0; i < ZHASH; ++i)
+      hash_table[i] = NULL;
+
+   i=0;
+   while (i < data_len-3) {
+      // hash next 3 bytes of data to be compressed 
+      int h = zhash(data+i)&(ZHASH-1), best=3;
+      unsigned char *bestloc = 0;
+      unsigned char **hlist = hash_table[h];
+      int n = sbcount(hlist);
+      for (j=0; j < n; ++j) {
+         if (hlist[j]-data > i-32768) { // if entry lies within window
+            int d = zlib_countm(hlist[j], data+i, data_len-i);
+            if (d >= best) best=d,bestloc=hlist[j];
+         }
+      }
+      // when hash table entry is too long, delete half the entries
+      if (hash_table[h] && sbn(hash_table[h]) == 2*quality) {
+         memcpy(hash_table[h], hash_table[h]+quality, sizeof(hash_table[h][0])*quality);
+         sbn(hash_table[h]) = quality;
+      }
+      sbpush(hash_table[h],data+i);
+
+      if (bestloc) {
+         // "lazy matching" - check match at *next* byte, and if it's better, do cur byte as literal
+         h = zhash(data+i+1)&(ZHASH-1);
+         hlist = hash_table[h];
+         n = sbcount(hlist);
+         for (j=0; j < n; ++j) {
+            if (hlist[j]-data > i-32767) {
+               int e = zlib_countm(hlist[j], data+i+1, data_len-i-1);
+               if (e > best) { // if next match is better, bail on current match
+                  bestloc = NULL;
+                  break;
+               }
+            }
+         }
+      }
+
+      if (bestloc) {
+         int d = data+i - bestloc; // distance back         
+         for (j=0; best > lengthc[j+1]-1; ++j);
+         zlib_huff(j+257);
+         if (lengtheb[j]) zlib_add(best - lengthc[j], lengtheb[j]);
+         for (j=0; d > distc[j+1]-1; ++j);
+         zlib_add(zlib_bitrev(j,5),5);
+         if (disteb[j]) zlib_add(d - distc[j], disteb[j]);
+         i += best;
+      } else {
+         zlib_huffb(data[i]);
+         ++i;
+      }
+   }
+   // write out final bytes
+   for (;i < data_len; ++i)
+      zlib_huffb(data[i]);
+   zlib_huff(256); // end of block
+   // pad with 0 bits to byte boundary
+   while (bitcount)
+      zlib_add(0,1);
+
+   for (i=0; i < ZHASH; ++i)
+      (void) sbfree(hash_table[i]);
+
+   {
+      // compute adler32 on input
+      unsigned int i=0, s1=1, s2=0, blocklen = data_len % 5552;
+      int j=0;
+      while (j < data_len) {
+         for (i=0; i < blocklen; ++i) s1 += data[j+i], s2 += s1;
+         s1 %= 65521, s2 %= 65521;
+         j += blocklen;
+         blocklen = 5552;
+      }
+      sbpush(out, (unsigned char) (s2 >> 8));
+      sbpush(out, (unsigned char) s2);
+      sbpush(out, (unsigned char) (s1 >> 8));
+      sbpush(out, (unsigned char) s1);
+   }
+   *out_len = sbn(out);
+   // make returned pointer freeable
+   memmove(sbraw(out), out, *out_len);
+   return (unsigned char *) sbraw(out);
+}
+
+unsigned int crc32(unsigned char *buffer, int len)
+{
+   static unsigned int crc_table[256];
+   unsigned int crc = ~0u;
+   int i,j;
+   if (crc_table[1] == 0)
+      for(i=0; i < 256; i++)
+         for (crc_table[i]=i, j=0; j < 8; ++j)
+            crc_table[i] = (crc_table[i] >> 1) ^ (crc_table[i] & 1 ? 0xedb88320 : 0);
+   for (i=0; i < len; ++i)
+      crc = (crc >> 8) ^ crc_table[buffer[i] ^ (crc & 0xff)];
+   return ~crc;
+}
+
+#define wpng4(o,a,b,c,d) ((o)[0]=(unsigned char)(a),(o)[1]=(unsigned char)(b),(o)[2]=(unsigned char)(c),(o)[3]=(unsigned char)(d),(o)+=4)
+#define wp32(data,v) wpng4(data, (v)>>24,(v)>>16,(v)>>8,(v));
+#define wptag(data,s) wpng4(data, s[0],s[1],s[2],s[3])
+
+static void wpcrc(unsigned char **data, int len)
+{
+   unsigned int crc = crc32(*data - len - 4, len+4);
+   wp32(*data, crc);
+}
+
+static unsigned char paeth(int a, int b, int c)
+{
+   int p = a + b - c, pa = abs(p-a), pb = abs(p-b), pc = abs(p-c);
+   if (pa <= pb && pa <= pc) return (unsigned char) a;
+   if (pb <= pc) return (unsigned char) b;
+   return (unsigned char) c;
+}
+
+unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
+{
+   int ctype[5] = { -1, 0, 4, 2, 6 };
+   unsigned char sig[8] = { 137,80,78,71,13,10,26,10 };
+   unsigned char *out,*o, *filt, *zlib;
+   signed char *line_buffer;
+   int i,j,k,p,zlen;
+
+   if (stride_bytes == 0)
+      stride_bytes = x * n;
+
+   filt = (unsigned char *) malloc((x*n+1) * y); if (!filt) return 0;
+   line_buffer = (signed char *) malloc(x * n); if (!line_buffer) { free(filt); return 0; }
+   for (j=0; j < y; ++j) {
+      static int mapping[] = { 0,1,2,3,4 };
+      static int firstmap[] = { 0,1,0,5,6 };
+      int *mymap = j ? mapping : firstmap;
+      int best = 0, bestval = 0x7fffffff;
+      for (p=0; p < 2; ++p) {
+         for (k= p?best:0; k < 5; ++k) {
+            int type = mymap[k],est=0;
+            unsigned char *z = pixels + stride_bytes*j;
+            for (i=0; i < n; ++i)
+               switch (type) {
+                  case 0: line_buffer[i] = z[i]; break;
+                  case 1: line_buffer[i] = z[i]; break;
+                  case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
+                  case 3: line_buffer[i] = z[i] - (z[i-stride_bytes]>>1); break;
+                  case 4: line_buffer[i] = (signed char) (z[i] - paeth(0,z[i-stride_bytes],0)); break;
+                  case 5: line_buffer[i] = z[i]; break;
+                  case 6: line_buffer[i] = z[i]; break;
+               }
+            for (i=n; i < x*n; ++i) {
+               switch (type) {
+                  case 0: line_buffer[i] = z[i]; break;
+                  case 1: line_buffer[i] = z[i] - z[i-n]; break;
+                  case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
+                  case 3: line_buffer[i] = z[i] - ((z[i-n] + z[i-stride_bytes])>>1); break;
+                  case 4: line_buffer[i] = z[i] - paeth(z[i-n], z[i-stride_bytes], z[i-stride_bytes-n]); break;
+                  case 5: line_buffer[i] = z[i] - (z[i-n]>>1); break;
+                  case 6: line_buffer[i] = z[i] - paeth(z[i-n], 0,0); break;
+               }
+            }
+            if (p) break;
+            for (i=0; i < x*n; ++i)
+               est += abs((signed char) line_buffer[i]);
+            if (est < bestval) { bestval = est; best = k; }
+         }
+      }
+      // when we get here, best contains the filter type, and line_buffer contains the data
+      filt[j*(x*n+1)] = (unsigned char) best;
+      memcpy(filt+j*(x*n+1)+1, line_buffer, x*n);
+   }
+   free(line_buffer);
+   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, 8); // increase 8 to get smaller but use more memory
+   free(filt);
+   if (!zlib) return 0;
+
+   // each tag requires 12 bytes of overhead
+   out = (unsigned char *) malloc(8 + 12+13 + 12+zlen + 12); 
+   if (!out) return 0;
+   *out_len = 8 + 12+13 + 12+zlen + 12;
+
+   o=out;
+   memcpy(o,sig,8); o+= 8;
+   wp32(o, 13); // header length
+   wptag(o, "IHDR");
+   wp32(o, x);
+   wp32(o, y);
+   *o++ = 8;
+   *o++ = (unsigned char) ctype[n];
+   *o++ = 0;
+   *o++ = 0;
+   *o++ = 0;
+   wpcrc(&o,13);
+
+   wp32(o, zlen);
+   wptag(o, "IDAT");
+   memcpy(o, zlib, zlen); o += zlen; free(zlib);
+   wpcrc(&o, zlen);
+
+   wp32(o,0);
+   wptag(o, "IEND");
+   wpcrc(&o,0);
+
+   return out;
+}
+
+int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+{
+   FILE *f;
+   int len;
+   unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
+   if (!png) return 0;
+   f = fopen(filename, "wb");
+   if (!f) { free(png); return 0; }
+   fwrite(png, 1, len, f);
+   fclose(f);
+   free(png);
+   return 1;
+}
+
+`;
+
+Public
+
+  - write_bmp filename:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
+  ( + pad:INTEGER
+    pad := (-x*3) & 3
+    outfile (filename,-1,-1,x,y,comp,data,0,pad) hdr {      
+      hdr1 'B'; hdr1 'M'; hdr4 (14+40+(x*3+pad)*y); hdr2 0; hdr2 0; hdr4 (14+40); // 14
+      hdr4 40; hdr4 x; hdr4 y; hdr2 1; hdr2 24
+      hdr4 0; hdr4 0; hdr4 0; hdr4 0; hdr4 0; hdr4 0
+    }
+  )
+  
+  - write_tga filename:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
+  ( + has_alpha:INTEGER
+    has_alpha := ((comp & 1) = 0).to_integer
+    outfile (filename, -1,-1, x, y, comp, data, has_alpha, 0) hdr
+    {            
+      hdr1 0; hdr1 0; hdr1 2
+      hdr2 0; hdr2 0; hdr1 0
+      hdr2 0; hdr2 0; hdr2 x; hdr2 y
+      hdr1 (24+8*has_alpha); hdr1 (8*has_alpha)
+    }
+  )
+  
+  - write_png filename:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
+  ( + fn:NATIVE_ARRAY CHARACTER
+    fn := filename.to_external
+    `stbi_write_png(@fn, @x,@y,@comp, @data, 0)`
+    TRUE
+  )
+  
+  /*
+  - write_png fn:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
+  ( + f:POINTER
+    + len:INTEGER
+    + png:NATIVE_ARRAY UINTEGER_8
+    (png,len) := write_png_to_mem data stride 0 size (x,y,comp)
+    ((png != NULL) && {(f := FILE_UTILS.open_write fn).is_not_null}).if {
+      FILE_UTILS.write f width png size len
+      FILE_UTILS.close f
+      // free png.
+    }
+  )
+  */
+  
+Private
+  - lengthc:NATIVE_ARRAY UINTEGER_16 <- `lengthc`:NATIVE_ARRAY UINTEGER_16
+  - lengtheb:NATIVE_ARRAY UINTEGER_8 <- `lengtheb`:NATIVE_ARRAY UINTEGER_8
+  - distc:NATIVE_ARRAY UINTEGER_16 <- `distc`:NATIVE_ARRAY UINTEGER_16
+  - disteb:NATIVE_ARRAY UINTEGER_8 <- `disteb`:NATIVE_ARRAY UINTEGER_8
+    
+  - write3 f:POINTER v (a,b,c:UINTEGER_8) <-
+  (
+    arr.at 0 put a; arr.at 1 put b; arr.at 2 put c
+    FILE_UTILS.write f buffer arr size 3
+  )
+  
+  - write1 f:POINTER v a:UINTEGER_8 <-
+  (
+    arr.at 0 put a
+    FILE_UTILS.write f buffer arr size 1
+  )
+  
+  - write f:POINTER zero n:INTEGER <-
+  [ ? {n < 4}; ]
+  (
+    0.to (n-1) do { i:INTEGER; arr.at i put 0; }
+    FILE_UTILS.write f buffer arr size n
+  )
+
+  - write_pixels f:POINTER dir (rgb_dir,vdir:INTEGER) size (x,y,comp:INTEGER)
+  data data:NATIVE_ARRAY UINTEGER_8
+  alpha write_alpha:INTEGER pad scanline_pad:INTEGER <-
+  [ ? {y > 0}; ]
+  ( + j,j_end:INTEGER
+    + d:NATIVE_ARRAY UINTEGER_8
+
+    (vdir < 0).if {
+      j_end := -1;  j := y-1
+    } else {
+      j_end :=  y;  j := 0
+    }
+    {j != j_end}.while_do {
+      0.to (x-1) do { i:INTEGER
+        d := data + (j*x+i)*comp
+        (write_alpha < 0).if { write1 f v (d.at (comp-1)); }
+        (comp)
+        .when 1 or 2 then { write3 f v (d.at 0,d.at 0,d.at 0); }
+        .when 3 then { write3 f v (d.at (1-rgb_dir),d.at 1,d.at (1+rgb_dir)); }
+        .when 4 then {
+          (write_alpha = 0).if {
+            // composite against pink background:
+            0.to 2 do { k:INTEGER
+              px.at k put (bg.at k + ((d.at k - bg.at k) * d.at 3)/255)
+            }
+            write3 f v (px.at (1-rgb_dir),px.at 1,px.at (1+rgb_dir))
+          } else {
+            write3 f v (d.at (1-rgb_dir),d.at 1,d.at (1+rgb_dir))
+          }
+        }
+        (write_alpha > 0).if { write1 f v (d.at (comp-1)); }
+      }
+      write f zero scanline_pad
+      j := j + vdir
+    }
+  )
+
+  - outfile (filename:STRING, rgb_dir, vdir, x,y,comp:INTEGER, data:NATIVE_ARRAY UINTEGER_8, alpha, pad:INTEGER) hdr hdr:{} :BOOLEAN <-
+  [ ? {y > 0}; ? {x > 0}; ]
+  ( + f:POINTER
+    f := FILE_UTILS.open_write filename
+    (f.is_not_null).if {      
+      hdr_len := 0
+      hdr.value
+      FILE_UTILS.write f buffer hdr_buf size hdr_len
+      //
+      write_pixels f dir (rgb_dir,vdir) size (x,y,comp) data data alpha alpha pad pad
+      FILE_UTILS.close f
+    }
+  )
+  
+
+  /*
+  - sbraw (a) ((int *) (a) - 2)
+  - sbm (a) :? <- sbraw a .at 0
+  - sbn (a) :? <- sbraw a .at 1
+  //
+  - sbneedgrow (a,n) <- ((a)=0) || {sbn a + n >= sbm a}
+  - sbmaybegrow(a,n) <- (sbneedgrow (a,n) != 0).ok (sbgrow (a,n)) or 0
+  - sbgrow(a,n)      <- sbgrowf((void **) &(a), (n), sizeof(*(a)))
+  //
+  - sbpush(a, v)     <- (sbmaybegrow(a,1); a.at (sbn(a)++) := v)
+  - sbcount a        <- (a != NULL).ok (sbn a) or 0
+  - sbfree a         <- ( (a != NULL).if { free (sbraw a); }; )
+
+  - sbgrowf (void **arr, increment,itemsize:INTEGER) :NATIVE_ARRAY ? <-
+  ( + m:INTEGER
+    int m = *arr ? 2*stbi__sbm(*arr)+increment : increment+1
+    void *p = realloc(*arr ? stbi__sbraw(*arr) : 0, itemsize * m + sizeof(int)*2)
+    ? {p != NULL}
+    if (!*arr) ((int *) p)[1] = 0
+    *arr = (void *) ((int *) p + 2)
+    sbm(*arr) = m
+    *arr
+  )
+
+  - zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount) :NATIVE_ARRAY UINTEGER_8 <-
+  (
+    {*bitcount >= 8}.while_do {
+      sbpush(data, (unsigned char) *bitbuffer)
+      *bitbuffer >>= 8
+      *bitcount -= 8
+    }
+    data
+  )
+
+  - zlib_bitrev(code, codebits:INTEGER) :INTEGER <-
+  ( + res,i:INTEGER
+    i := codebits
+    {i != 0}.while_do {
+      res := (res << 1) | (code & 1)
+      code := code >> 1
+      i := i - 1
+    }
+    res
+  )
+
+  - zlib_countm (a,b:NATIVE_ARRAY UINTEGER_8, limit:INTEGER) :UINTEGER <-
+  ( + i:UINTEGER
+    {(i < limit) && {i < 258} && {a.at i = b.at i}}.while_do {
+      i := i + 1
+    }
+    i
+  )
+
+  - zhash data:NATIVE_ARRAY UINTEGER_8 :UINTEGER <-
+  ( + hash:UINTEGER
+    hash := data.at 0.to_integer + (data.at 1.to_integer << 8) + (data.at 2.to_integer << 16)
+    hash := hash ^ (hash << 3)
+    hash := hash + (hash >> 5)
+    hash := hash ^ (hash << 4)
+    hash := hash + (hash >> 17)
+    hash := hash ^ (hash << 25)
+    hash := hash + (hash >> 6)
+    hash
+  )
+
+  - zlib_flush <-
+  (
+    out := zlib_flushf(out, &bitbuf, &bitcount)
+  )
+  - zlib_add(code,codebits) <-
+  (
+    bitbuf := bitbuf | (code << bitcount)
+    bitcount := bitcount + codebits
+    zlib_flush
+  )
+  - zlib_huffa (b,c) <- zlib_add(zlib_bitrev(b,c),c)
+  // default huffman tables
+  - zlib_huff1 (n) : <- zlib_huffa (030h  + (n), 8)
+  - zlib_huff2 (n) : <- zlib_huffa (0190h + (n)-144, 9)
+  - zlib_huff3 (n) : <- zlib_huffa (0 + (n)-256,7)
+  - zlib_huff4 (n) : <- zlib_huffa (0C0h + (n)-280,8)
+  - zlib_huff  (n) : <- (((((n <= 143).ok (zlib_huff1 n) or n) <= 255).ok (zlib_huff2 n) or n) <= 279).ok (zlib_huff3 n) or zlib_huff4 n
+  
+  - zlib_huffb (n) : <- (n <= 143).ok (zlib_huff1 n) or (zlib_huff2 n)
+
+  - zhash:INTEGER := 16384
+  - hash_table:NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8) := NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8).create zhash
+
+  - zlib_compress(unsigned char *data, int data_len, int *out_len, int quality) :NATIVE_ARRAY UINTEGER_8 <-
+  [ ? {quality >= 5}; ]
+  ( + bitbuf:UINTEGER
+    + i,j, bitcount:INTEGER
+    + out:NATIVE_ARRAY UINTEGER_8
+    
+    sbpush(out, 078h);   // DEFLATE 32K window
+    sbpush(out, 05Eh);   // FLEVEL = 1
+    zlib_add(1,1);  // BFINAL = 1
+    zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
+    
+    0.to (zhash-1) do { i:INTEGER; hash_table.at i put NULL; }
+
+    i := 0
+    {i < data_len-3}.while_do {
+      // hash next 3 bytes of data to be compressed
+      + h,best,n:INTEGER:
+      + bestloc,hlist:NATIVE_ARRAY UINTEGER_8
+      h := zhash.at (data+i) & (zhash-1); best := 3
+      unsigned char *bestloc = 0
+      hlist := hash_table.at h
+      
+      n := sbcount hlist
+      0.to (n-1) do { j:INTEGER
+        (hlist.at j - data > i-32768).if { // if entry lies within window
+          + d:INTEGER
+          d := zlib_countm (hlist.at j, data+i, data_len-i)
+          (d >= best).if { best := d; bestloc := hlist.at j; }
+        }
+      }
+      // when hash table entry is too long, delete half the entries
+      ((hash_table.at h) && {sbn(hash_table.at h) = 2*quality}).if {
+        memcpy(hash_table.at h, hash_table.at h+quality, sizeof(hash_table[h][0])*quality)
+        sbn(hash_table.at h) := quality
+      }
+      sbpush (hash_table.at h, data+i)
+      //
+      (bestloc).if {
+        // "lazy matching" - check match at *next* byte, and if it's better, do cur byte as literal
+        h := zhash(data+i+1) & (ZHASH-1)
+        hlist := hash_table.at h
+        n := sbcount(hlist)
+        0.to (n-1) do { j:INTEGER
+          (hlist.at j-data > i-32767).if {
+            + e:INTEGER
+            e := zlib_countm(hlist.at j, data+i+1, data_len-i-1)
+            (e > best).if { // if next match is better, bail on current match
+              bestloc := NULL
+              break
+            }
+          }
+        }
+      }
+      //
+      (bestloc).if {
+        + d:INTEGER
+        d := data+i - bestloc; // distance back
+        ? {(d <= 32767) && {best <= 258}}
+        j := 0
+        {best > lengthc.at (j+1)-1}.while_do { j := j + 1; }
+        zlib_huff (j+257)
+        (lengtheb.at j != 0).if { zlib_add(best - lengthc.at j, lengtheb.at j); }
+        j := 0
+        {d > distc.at (j+1)-1}.while_do { j := j + 1; }
+        zlib_add (zlib_bitrev(j,5),5)
+        (disteb.at j).if { zlib_add(d - distc.at j, disteb.at j); }
+        i := i + best
+      } else {
+        zlib_huffb(data.at i)
+        i := i + 1
+      }
+    }
+    // write out final bytes
+    {i < data_len}.while_do {
+      zlib_huffb (data.at i)
+      i := i + 1
+    }
+    zlib_huff 256; // end of block
+    // pad with 0 bits to byte boundary
+    {bitcount != 0}.while_do {
+      zlib_add (0,1)
+    }
+    0.to (zhash-1) do { 
+      sbfree(hash_table.at i)
+      i := i + 1
+    }
+
+    (
+      + i,s1,s2,blocklen:UINTEGER
+      + j:INTEGER
+      // compute adler32 on input
+      i := 0; s1 := 1; s2 := 0; blocklen := data_len % 5552
+      j := 0
+      {j < data_len}.while_do {
+        0.to (blocklen-1) do { i:INTEGER
+          s1 := s1 + data.at (j+i)
+          s2 := s2 + s1
+        }
+        s1 := s1 % 65521;  s2 := s2 % 65521
+        j := j + blocklen
+        blocklen := 5552
+      }
+      sbpush (out, (unsigned char) (s2 >> 8))
+      sbpush(out, (unsigned char) s2)
+      sbpush(out, (unsigned char) (s1 >> 8))
+      sbpush(out, (unsigned char) s1)
+    )
+    *out_len := sbn(out)
+    // make returned pointer freeable
+    memmove(sbraw(out), out, *out_len)
+    sbraw out
+  )
+
+  - crc32 buffer:NATIVE_ARRAY UINTEGER_8 len len:INTEGER :UINTEGER <-
+  ( + crc:UINTEGER
+    + i,j:INTEGER
+    crc := ~0
+    (crc_table.at 1 = 0).if {
+      0.to 255 do { i:INTEGER
+        crc_table.at i put i
+        0.to 7 do { j:INTEGER
+          crc_table.at i put (
+            (crc_table.at i >> 1) ^ (crc_table.at i & 1 ? 0EDB88320h : 0)
+          )
+        }
+      }
+    }
+    0.to (len-1) do { i:INTEGER
+      crc := (crc >> 8) ^ crc_table.at (buffer.at i ^ (crc & 0FFh))
+    }
+    ~crc
+  )
+
+  - wpng4 (o:NATIVE_ARRAY UINTEGER_8,a,b,c,d:UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  (
+    o.at 0 put a; o.at 1 put b; o.at 2 put c; o.at 3 put d
+    o + 4
+  )
+  
+  - wp32 (data:NATIVE_ARRAY UINTEGER_8,v:INTEGER) :NATIVE_ARRAY UINTEGER_8 <-
+  ( wpng4 (data, v>>24 , v>>16, v>>8 , v) )
+  
+  - wptag (data:NATIVE_ARRAY UINTEGER_8,s:STRING_ALIAS) :NATIVE_ARRAY UINTEGER_8 <-
+  ( wpng4 (data, s.at 0, s.at 1, s.at 2, s.at 3) )
+
+  - wpcrc(unsigned char **data, int len) :NATIVE_ARRAY UINTEGER_8 <-
+  ( + crc:UINTEGER
+    crc := crc32 (data - len - 4) len (len+4)
+    wp32 (data, crc)
+  )
+
+  - paeth (a,b,c:INTEGER) :UINTEGER_8 <-
+  ( + p,pa,pb,pc,r:INTEGER
+    p := a + b - c
+    pa := (p-a).abs
+    pb := (p-b).abs
+    pc := (p-c).abs
+    ((pa <= pb) && {pa <= pc}).if { r := a; }.elseif
+    {pb <= pc} then { r := b; } else { r := c; }
+    r.to_integer_8
+  )
+
+  - write_png_to_mem pixels:NATIVE_ARRAY UINTEGER_8 stride pstride:INTEGER size (x,y,n:INTEGER) :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
+  ( + out_len:INTEGER
+    + out,o, filt, zlib:NATIVE_ARRAY UINTEGER_8
+    + line_buffer:NATIVE_ARRAY INTEGER_8
+    + i,j,k,p,zlen,stride_bytes:INTEGER
+    + mymap:NATIVE_ARRAY INTEGER
+    + best,bestval:INTEGER
+
+    (pstride = 0).if {
+      stride_bytes := x * n
+    } else {
+      stride_bytes := pstride
+    }
+    filt := NATIVE_ARRAY UINTEGER_8.create ((x*n+1) * y)
+    line_buffer := NATIVE_ARRAY INTEGER_8.create (x * n)
+    0.to (y-1) do { j:INTEGER
+      mymap := (j!=0).ok mapping or firstmap
+      best := 0; bestval := 07FFFFFFFh
+      0.to 1 do { p:INTEGER
+        ((p!=0).ok best or 0).to 4 do { k:INTEGER
+          + type,est:INTEGER
+          + z:NATIVE_ARRAY UINTEGER_8
+          type := mymap.at k; est := 0
+          z := pixels + stride_bytes*j
+          0.to (n-1) do { i:INTEGER
+            (type)
+            .when 0 or 1 then { line_buffer.at i put (z.at i); }
+            .when 2 then { line_buffer.at i put (z.at i - z.at (i-stride_bytes)); }
+            .when 3 then { line_buffer.at i put (z.at i - (z.at (i-stride_bytes)>>1)); }
+            .when 4 then { line_buffer.at i put ((signed char) (z.at i - stbi__paeth(0,z.at (i-stride_bytes),0))); }
+            .when 5 or 6 then { line_buffer.at i put (z.at i); }
+          }
+          n.to (x*n-1) do { i:INTEGER
+            (type)
+            .when 0 then { line_buffer.at i put (z.at i); }
+            .when 1 then { line_buffer.at i put (z.at i - z.at (i-n)); }
+            .when 2 then { line_buffer.at i put (z.at i - z.at (i-stride_bytes)); }
+            .when 3 then { line_buffer.at i put (z.at i - ((z.at (i-n) + z.at (i-stride_bytes))>>1)); }
+            .when 4 then { line_buffer.at i put (z.at i - stbi__paeth(z.at (i-n), z.at (i-stride_bytes), z.at (i-stride_bytes-n))); }
+            .when 5 then { line_buffer.at i put (z.at i - (z.at (i-n)>>1)); }
+            .when 6 then { line_buffer.at i put (z.at i - stbi__paeth(z.at (i-n), 0,0); }
+          }
+          if (p) break
+          0.to (x*n-1) do { i:INTEGER
+            est := est + (line_buffer.at i.to_integer_8).abs
+          }
+          (est < bestval).if { bestval := est; best := k; }
+        }
+      }
+      // when we get here, best contains the filter type, and line_buffer contains the data
+      filt.at (j*(x*n+1)) put (best.to_uinteger_8)
+      memcpy(filt+j*(x*n+1)+1, line_buffer, x*n)
+   }
+   free(line_buffer)
+   zlib := stbi_zlib_compress(filt, y*( x*n+1), &zlen, 8); // increase 8 to get smaller but use more memory
+   free(filt)
+   if (!zlib) return 0
+
+   // each tag requires 12 bytes of overhead
+   out = (unsigned char *) malloc(8 + 12+13 + 12+zlen + 12)
+   if (!out) return 0
+   out_len := 8 + 12+13 + 12+zlen + 12
+
+    o := out
+    memcpy(o,sig,8); o := o + 8
+    o := wp32(o, 13); // header length
+    o := wptag(o, "IHDR")
+    o := wp32(o, x)
+    o := wp32(o, y)
+    o.at 0 put 8
+    o.at 1 put (ctype.at n.to_uinteger8)
+    o.at 2 put 0
+    o.at 3 put 0
+    o.at 4 put 0
+    o := o + 5
+    o := wpcrc(&o,13)
+    //
+    o := wp32(o, zlen)
+    o := wptag(o, "IDAT")
+    memcpy(o, zlib, zlen); o := o + zlen; free(zlib)
+    o := wpcrc(&o, zlen)
+    //
+    o := wp32(o,0)
+    o := wptag(o, "IEND")
+    o := wpcrc(&o,0)
+    //
+    ? {o = out + out_len}
+    out, out_len
+  )
+  */
+  
+Private
+  
+  - bg:NATIVE_ARRAY UINTEGER_8 :=
+  ( + r:NATIVE_ARRAY UINTEGER_8
+    r := NATIVE_ARRAY UINTEGER_8.create 3
+    r.at 0 put 255; r.at 0 put 0; r.at 0 put 255
+    r
+  )
+  - px:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 3
+  
+  - crc_table:NATIVE_ARRAY UINTEGER := NATIVE_ARRAY UINTEGER.create 256
+  
+  - arr:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 3
+  
+  - mapping:NATIVE_ARRAY INTEGER :=
+  ( + r:NATIVE_ARRAY INTEGER
+    r := NATIVE_ARRAY INTEGER.create 5
+    r.at 0 put 0; r.at 1 put 1; r.at 2 put 2
+    r.at 3 put 3; r.at 4 put 4
+    r
+  )
+  
+  - firstmap:NATIVE_ARRAY INTEGER :=
+  ( + r:NATIVE_ARRAY INTEGER
+    r := NATIVE_ARRAY INTEGER.create 5
+    r.at 0 put 0; r.at 1 put 1; r.at 2 put 0
+    r.at 3 put 5; r.at 4 put 6
+    r
+  )
+  
+  - ctype:NATIVE_ARRAY INTEGER :=
+  ( + r:NATIVE_ARRAY INTEGER
+    r := NATIVE_ARRAY INTEGER.create 5
+    r.at 0 put (-1); r.at 1 put 0
+    r.at 2 put 4;    r.at 3 put 2
+    r.at 4 put 6
+    r
+  )
+  
+  - sig:NATIVE_ARRAY UINTEGER_8 :=
+  ( + r:NATIVE_ARRAY UINTEGER_8
+    r := NATIVE_ARRAY UINTEGER_8.create 8
+    r.at 0 put 137;  r.at 1 put 80
+    r.at 2 put 78;   r.at 3 put 71
+    r.at 4 put 13;   r.at 5 put 10
+    r.at 6 put 26;   r.at 7 put 10
+    r
+  )
+
+  - hdr_len:INTEGER
+  - hdr_buf:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 40
+  - hdr1 v:UINTEGER_8 <- ( hdr_buf.at hdr_len put v; hdr_len := hdr_len + 1; )
+  - hdr2 v:INTEGER <-
+  ( hdr_buf.at hdr_len put (( v      &0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >> 8)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+  )
+  - hdr4 v:INTEGER <-
+  ( hdr_buf.at hdr_len put (( v       &0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >>  8)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >> 16)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >> 24)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+  )

@@ -1,0 +1,91 @@
+Header
+
+  + name := MANDELBROT;
+
+Inherit
+  
+  - parent_clone : CLONE := CLONE
+  
+Public
+
+  - cmd:     STRING_ALIAS
+  - size:    INTEGER
+  - shift:   INTEGER
+  - fac:     REAL_64
+
+  - compute <-
+  (
+    "P4\n".print
+    cmd.print
+    ' '.print
+    cmd.print
+    "\n".print
+    
+    0.to (size - 1) do{ y:INTEGER
+      compute_row y
+    }
+  )
+
+  - compute_row y:INTEGER <-
+  ( + bits: INTEGER_8
+    + ci: REAL_64
+    + zr:REAL_64
+    + zi:REAL_64
+    + cr:REAL_64
+    + i:INTEGER
+    + sh:INTEGER_8
+    + zrn:REAL_64
+    + zin:REAL_64
+
+    ci := (y.to_real_64 * fac - 1.0)
+  
+    0.to (size - 1) do{ x:INTEGER
+      zr := zi := zrn := zin := 0.0
+      zi := 0.0
+      cr := x.to_real_64 * fac - 1.5
+      i := 50
+      zrn := 0.0
+      zin := 0.0
+
+      { zi := 2.0 * zr * zi + ci
+        zr := zrn - zin + cr
+        zin := zi * zi
+        zrn := zr * zr
+        i := i - 1
+      }.do_while{ ((zin + zrn) <= 4.0) && {i > 0}}
+
+      bits := `@bits << 1`:INTEGER_8
+
+      (i = 0).if{
+        bits := bits + 1
+      }
+
+      (x % 8 = 7).if{
+        bits.to_character.print
+        bits := 0
+      }
+    }
+
+
+    (shift != 0).if{
+      sh := shift.to_integer_8
+      bits := `@bits << @sh`:INTEGER_8
+      bits.to_character.print
+    }
+
+  )
+
+  - main <-
+  ( 
+    cmd := COMMAND_ARGS.at 1
+    size := cmd.to_integer
+    fac := 2.0 / size
+
+    (size % 8 = 0).if{
+      shift := 0
+    }else{
+      shift := 8 - size % 8
+    }
+  
+    compute
+  )

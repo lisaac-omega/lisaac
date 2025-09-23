@@ -1,0 +1,82 @@
+Header
+  
+  + name := MAIN;
+  
+Private
+  
+  - add (a,b,c,d,e,f,g,h:UINTEGER_8) in t:ARRAY UINTEGER_8 <-
+  (
+    t.add_last a; t.add_last b; t.add_last c; t.add_last d
+    t.add_last e; t.add_last f; t.add_last g; t.add_last h
+  )
+    
+  - text1:STRING_ALIAS := "abc"
+  
+  - hash1:ARRAY UINTEGER_8 :=
+  ( + r:ARRAY UINTEGER_8
+    r := ARRAY UINTEGER_8.create_with_capacity (SHA256.digest_size)
+    add (0BAh,078h,016h,0BFh,08Fh,001h,0CFh,0EAh) in r
+    add (041h,041h,040h,0DEh,05Dh,0AEh,022h,023h) in r
+    add (0B0h,003h,061h,0A3h,096h,017h,07Ah,09Ch) in r
+    add (0B4h,010h,0FFh,061h,0F2h,000h,015h,0ADh) in r
+    r
+  )
+  
+  - text2:STRING_ALIAS := "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+  
+  - hash2:ARRAY UINTEGER_8 :=
+  ( + r:ARRAY UINTEGER_8
+    r := ARRAY UINTEGER_8.create_with_capacity (SHA256.digest_size)
+    add (024h,08Dh,06Ah,061h,0D2h,006h,038h,0B8h) in r
+    add (0E5h,0C0h,026h,093h,00Ch,03Eh,060h,039h) in r
+    add (0A3h,03Ch,0E4h,059h,064h,0FFh,021h,067h) in r
+    add (0F6h,0ECh,0EDh,0D4h,019h,0DBh,006h,0C1h) in r
+    r
+  )
+  
+  - text3:STRING_ALIAS := "aaaaaaaaaa"
+  
+  - hash3:ARRAY UINTEGER_8 :=
+  ( + r:ARRAY UINTEGER_8
+    r := ARRAY UINTEGER_8.create_with_capacity (SHA256.digest_size)
+    add (0bfh,02ch,0b5h,08ah,068h,0f6h,084h,0d9h) in r
+    add (05ah,03bh,078h,0efh,08fh,066h,01ch,09ah) in r
+    add (04eh,05bh,009h,0e8h,02ch,0c8h,0f9h,0cch) in r
+    add (088h,0cch,0e9h,005h,028h,0cah,0ebh,027h) in r
+    r
+  )
+  
+  - buf:ARRAY UINTEGER_8 := ARRAY UINTEGER_8.create (SHA256.digest_size)
+  
+  - verify h:ARRAY UINTEGER_8 :BOOLEAN <-
+  ( + i:INTEGER
+    {(i < SHA256.digest_size) && {buf.at i = h.at i}}.while_do {
+      i := i + 1
+    }
+    i = SHA256.digest_size
+  )
+  
+  - test ctx:SHA256 text t:STRING hash h:ARRAY UINTEGER_8 <-
+  (
+    ctx.reset
+    ctx.update_str t
+    ctx.sum_in buf
+    TEST.check (verify h)
+  )
+  
+  - do_tests_with ctx:SHA256 <-
+  ( + old_counter:INTEGER
+    old_counter := TEST.counter
+    test ctx text text1 hash hash1
+    test ctx text text2 hash hash2
+    test ctx text text3 hash hash3
+    TEST.check (TEST.counter - 3 = old_counter)
+  )
+  
+Public
+  
+  - main <-
+  (
+    do_tests_with SHA256
+    do_tests_with (SHA256.create)
+  )

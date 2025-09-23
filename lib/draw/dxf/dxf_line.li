@@ -1,0 +1,117 @@
+Header
+  + name := DXF_LINE;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+//  - parent_tools:TOOLS := TOOLS
+  
+Private
+  - stackl:ARRAY DXF_LINE := ARRAY DXF_LINE.create_with_capacity 256
+  
+Public
+  
+  + xb:REAL_32
+  + yb:REAL_32
+  
+  + xe:REAL_32
+  + ye:REAL_32
+  
+  + is_inverse:BOOLEAN
+  
+  - create (x0,y0:REAL_32) to (x1,y1:REAL_32) :DXF_LINE <-
+  ( + result:DXF_LINE
+    (stackl.is_empty).if {
+      result := DXF_LINE.clone
+    } else {
+      result := stackl.pop
+    }
+    result.make (x0,y0) to (x1,y1)
+    result
+  )
+  
+  - make (x0,y0:REAL_32) to (x1,y1:REAL_32) <-
+  (
+    (xb,yb) := (x0,y0)
+    (xe,ye) := (x1,y1)
+  )
+  
+  - free <- stackl.add_last Self
+  
+  - compute_bound:(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( 
+    xb.min xe,yb.min ye, xb.max xe, yb.max ye
+  )
+  
+  - Self:SELF '=>' other:DXF_LINE :BOOLEAN <-
+  (
+    (xe = other.xb) && {ye = other.yb}
+  )
+  
+  - inverse <-
+  ( + tmp:REAL_32
+    is_inverse:=TRUE
+    tmp:=xb; xb:=xe; xe:=tmp
+    tmp:=yb; yb:=ye; ye:=tmp
+  )
+  
+  - Self:SELF '<=>' other:DXF_LINE :BOOLEAN <-
+  (
+    ((xe = other.xb) && {ye = other.yb}) ||
+    {(xb = other.xe) && {yb = other.ye}}
+  )
+  
+  - get (x,y:REAL_32) with mtx:ARRAY REAL_32 :(REAL_32,REAL_32) <-
+  ( + rx,ry,dx,dy:REAL_32
+    (mtx.is_empty).if {
+      (rx,ry) := (x,y)
+    } else {
+      (dx,dy) := (x-mtx.at 0, y-mtx.at 1)
+      rx := dx*mtx.at 2 - dy*mtx.at 3 + mtx.at 4
+      ry := dx*mtx.at 3 + dy*mtx.at 2 + mtx.at 5
+    }
+    rx,ry
+  )
+  
+  - draw_first pen:PEN to (x,y:REAL_32) with (c:REAL_32,mtx:ARRAY REAL_32) <-
+  ( + px,py:REAL_32
+    (mtx.is_empty).if {
+      pen.stroke_color (COLOR.rgba (255,0,0, 64))
+      pen.fill_color   (COLOR.rgba (0,255,0, 64))
+    } else {
+      pen.stroke_color (COLOR.red)
+      pen.fill_color   (COLOR.green)
+    }
+    (px,py) := get (xb,yb) with mtx
+    (px,py) := (x+px*c, y-py*c)
+    //"P:".print; px.print; ' '.print; py.println
+    pen.move_to (px,py)
+  )
+  
+  - draw pen:PEN to (x,y:REAL_32) with (c:REAL_32,mtx:ARRAY REAL_32) <-
+  ( + px,py:REAL_32
+    (px,py) := get (xe,ye) with mtx
+    (px,py) := (x+px*c, y-py*c)
+    pen.line_to (px,py)
+  )
+  
+  - bmp_move_to (dx,dy:REAL_32) zoom c:REAL_32 <-
+  ( + px,py:REAL_32
+    (px,py) := ((xb-dx)*c, (dy-yb)*c)
+    bmp_move_to (px.to_integer+1,py.to_integer+1)
+  )
+  
+  - bmp_line_to (dx,dy:REAL_32) zoom c:REAL_32 <-
+  ( + px,py:REAL_32
+    (px,py) := ((xe-dx)*c, (dy-ye)*c)
+    bmp_line_to (px.to_integer+1,py.to_integer+1)
+  )
+  
+  - print <-
+  ( + s:DXF_SPLINE
+    s ?= Self
+    xb.print; ' '.print; yb.print; '-'.print
+    xe.print; ' '.print; ye.print
+    (s = NULL).if { 'L'.print; } else { 'S'.print; }
+    (is_inverse).if { 'I'.print; } else { ' '.print; }
+  )
+  

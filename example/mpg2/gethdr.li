@@ -1,0 +1,530 @@
+Header
+  
+  + name         := GETHDR;
+  /*
+  http://IsaacOS.com
+  header decoding.
+  */
+  
+Inherit
+  
+  - parent_any_mpg2:ANY_MPG2 := ANY_MPG2
+  
+Private
+
+  - temporal_reference_base     :INTEGER
+  - true_framenum_max           :INTEGER := -1
+  - temporal_reference_gop_reset:BOOLEAN
+  
+Public
+    
+  - get_hdr:BOOLEAN <-
+  // decode headers from one input stream
+  // until an End of Sequence or picture start code
+  // is found
+  ( + code:INTEGER
+    + is_read:BOOLEAN
+    + result:INTEGER
+    
+    result := -1
+    {
+      // look for next_start_code 
+      ld.next_start_code
+      code := ld.get_bits32
+      
+      is_read := FALSE
+      (code)
+      .when sequence_header_code then {
+	is_read := TRUE
+	sequence_header
+      }
+      .when group_start_code then {
+	is_read := TRUE
+	group_of_pictures_header
+      }
+      .when picture_start_code then {
+	is_read := TRUE
+	picture_header
+	result := 1
+      }
+      .when sequence_end_code then {
+	is_read := TRUE
+	result := 0
+      }
+      (! is_read).if {
+	(trace).if {
+	  STDERR.put_string "Unexpected next_start_code "
+	  STDERR.put_integer code
+	  STDERR.put_string " (ignored)\n"
+	}
+      }
+    }.do_until {result != -1}
+    result = 1
+  )
+  
+  - slice_header:INTEGER <-
+  // decode slice header 
+  // ISO/IEC 13818-2 section 6.2.4 
+  ( + slice_vertical_position_extension:INTEGER
+    + quantizer_scale_code:INTEGER
+        
+    (ld.mpeg2_flag && {vertical_size > 2800}).if {
+      slice_vertical_position_extension := ld.get_bits 3
+    }
+    
+    (ld.scalable_mode = sc_dp).if {
+      ld.set_priority_breakpoint (ld.get_bits 7)
+    }
+    
+    quantizer_scale_code := ld.get_bits 5
+    (ld.mpeg2_flag).if {
+      (ld.q_scale_type).if {      
+	ld.set_quantizer_scale (TABLE.non_linear_quantizer_scale quantizer_scale_code)
+      } else {
+	ld.set_quantizer_scale (quantizer_scale_code << 1)
+      }
+    } else {
+      ld.set_quantizer_scale quantizer_scale_code
+    }
+    
+    // slice_id introduced in March 1995 as part of the video corridendum
+    // (after the IS was drafted in November 1994) 
+    (ld.get_boolean).if {      
+      ld.get_bits 8; // Intra slice(1) + slice_picture_id_enable(1) + slice_picture_id(6).      
+      extra_bit_information; // extra_information_slice
+    }
+    slice_vertical_position_extension
+  )
+
+Private
+
+  - marker_bit <-
+  // ISO/IEC 13818-2 section 5.3 
+  // Purpose: this function is mainly designed to aid in bitstream conformance
+  // testing.  A simple Flush_Buffer(1) would do 
+  ( + marker:BOOLEAN
+
+    marker := ld.get_boolean
+    ? {marker}
+  )
+
+  - sequence_header <-
+  // decode sequence header 
+  ( + b1,b2:BOOLEAN
+        
+    horizontal_size := ld.get_bits 12
+    vertical_size   := ld.get_bits 12
+    ld.get_bits 26; // aspect_ratio_information(4) + frame_rate_code(4) + bit_rate_value(18)    
+    marker_bit
+    ld.get_bits 11; // vbv_buffer_size(10) + constrained_parameters_flag(1)    
+    
+    b1 := ld.get_boolean
+    (b1).if {
+      0.to 63 do { i:INTEGER
+        ld.intra_quantizer_matrix.at (TABLE.scan (zig_zag,i)) put (ld.get_bits 8)
+      }
+    } else {
+      0.to 63 do { i:INTEGER
+        ld.intra_quantizer_matrix.at i put (TABLE.default_intra_quantizer_matrix i)
+      }
+    }
+    
+    b2 := ld.get_boolean
+    (b2).if {
+      0.to 63 do { i:INTEGER
+        ld.non_intra_quantizer_matrix.at (TABLE.scan (zig_zag,i)) put (ld.get_bits 8)
+      }
+    } else {
+      ld.non_intra_quantizer_matrix.set_all_with 16 until 63
+    }
+    
+    // copy luminance to chrominance matrices 
+    ld.chroma_intra_quantizer_matrix    .copy_from (ld.intra_quantizer_matrix) until 63
+    ld.chroma_non_intra_quantizer_matrix.copy_from (ld.non_intra_quantizer_matrix) until 63
+    
+    extension_and_user_data
+  )
+
+  - group_of_pictures_header <-
+  // decode group of pictures header 
+  // ISO/IEC 13818-2 section 6.2.2.6 
+  ( 
+    temporal_reference_base      := true_framenum_max + 1; 	// *CH* 
+    temporal_reference_gop_reset := TRUE
+        
+    ld.get_bits 12; // drop_flag(1) + hour(5) + minute(6)
+    marker_bit
+    ld.get_bits 14; // second(6) + frame(6) + closed_gop(1) + broken_link(1)
+    
+    extension_and_user_data
+  )
+
+  - picture_header <-
+  // decode picture header 
+  // ISO/IEC 13818-2 section 6.2.3 
+  (     
+    // unless later overwritten by picture_spatial_scalable_extension() 
+    ld.set_pict_scal FALSE
+    
+    temporal_reference  := ld.get_bits 10
+    picture_coding_type := ld.get_bits 3
+    ld.get_bits 16; // vbv_delay
+    
+    ((picture_coding_type = p_type) || {picture_coding_type = b_type}).if {
+      full_pel_forward_vector := ld.get_boolean
+      forward_f_code := ld.get_bits 3
+    }
+    (picture_coding_type = b_type).if {
+      full_pel_backward_vector := ld.get_boolean
+      backward_f_code          := ld.get_bits 3
+    }
+    
+    extra_bit_information; // extra_information_byte_count    
+    extension_and_user_data
+    
+    // update tracking information used to assist spatial scalability 
+    update_temporal_reference_tacking_data
+  )
+
+  - extension_and_user_data <-
+  // decode extension and user data 
+  // ISO/IEC 13818-2 section 6.2.2.2 
+  ( + code,ext_id:INTEGER
+    + is_read:BOOLEAN
+    
+    ld.next_start_code
+    {
+      code := ld.show_bits 32
+      (code = extension_start_code) || {code = user_data_start_code}
+    }.while_do {
+      (code = extension_start_code).if {
+	ld.flush_buffer32
+	ext_id := ld.get_bits 4
+	is_read := FALSE
+	(ext_id)
+	.when sequence_extension_id then {
+	  is_read := TRUE
+	  sequence_extension
+	}
+	.when sequence_display_extension_id then {
+	  is_read := TRUE
+	  sequence_display_extension
+	}
+	.when quant_matrix_extension_id then {
+	  is_read := TRUE
+	  quant_matrix_extension
+	}
+	.when sequence_scalable_extension_id then {
+	  is_read := TRUE
+	  sequence_scalable_extension
+	}
+	.when picture_display_extension_id then {
+	  is_read := TRUE
+	  picture_display_extension
+	}
+	.when picture_coding_extension_id then {
+	  is_read := TRUE
+	  picture_coding_extension
+	}
+	.when picture_spatial_scalable_extension_id then {
+	  is_read := TRUE
+	  picture_spatial_scalable_extension
+	}
+	.when picture_temporal_scalable_extension_id then {
+	  is_read := TRUE
+	  picture_temporal_scalable_extension
+	}
+	.when copyright_extension_id then {
+	  is_read := TRUE
+	  copyright_extension
+	}
+	(is_read).if_false {
+	  STDERR.put_string "reserved extension start code ID "
+	  STDERR.put_integer ext_id
+	  STDERR.put_character '\n'
+	}
+	ld.next_start_code
+      } else {	
+	ld.flush_buffer32
+	// User data : skip ahead to the next start code 
+	ld.next_start_code
+      }
+    }
+  )
+
+  - sequence_extension <-
+  // decode sequence extension 
+  // ISO/IEC 13818-2 section 6.2.2.3 
+  ( + horizontal_size_extension:INTEGER
+    + vertical_size_extension:INTEGER
+                
+    ld.set_mpeg2_flag TRUE
+    
+    ld.set_scalable_mode sc_none; // unless overwritten by sequence_scalable_extension() 
+    
+    profile_and_level_indication := ld.get_bits 8
+    progressive_sequence         := ld.get_boolean
+    chroma_format                := ld.get_bits 2
+    horizontal_size_extension    := ld.get_bits 2
+    vertical_size_extension      := ld.get_bits 2
+    ld.get_bits 12; // bit_rate_extension
+    marker_bit
+    ld.get_bits 16; // vbv_buffer_size_extension(8) + low_delay(1) + 
+    //                 frame_rate_extension_n(2) + frame_rate_extension_d(5)
+            
+    // special case for 422 profile & level must be made 
+    ((profile_and_level_indication & 80h) != 0).if {
+      // escape bit of profile_and_level_indication set 
+      
+      // 4:2:2 Profile @ Main Level 
+      ((profile_and_level_indication & 0Fh) = 5).if {
+	profile := profile_422
+	level   := main_level
+      }
+    } else {
+      profile := profile_and_level_indication >> 4;  // Profile is upper nibble 
+      level   := profile_and_level_indication & 0Fh; // Level is lower nibble 
+    }
+        
+    horizontal_size := (horizontal_size_extension << 12) | horizontal_size
+    vertical_size   := (vertical_size_extension   << 12) | vertical_size
+  )
+
+  - sequence_display_extension <-
+  // decode sequence display extension 
+  ( 
+    ld.get_bits 3; // video_format    
+    (ld.get_boolean).if { // color_description
+      ld.get_bits 16; // color_primaries(8) + transfer_characteristics(8)      
+      matrix_coefficients := ld.get_bits 8
+    }
+
+    ld.get_bits 14; // display_horizontal_size
+    marker_bit
+    ld.get_bits 14; // display_vertical_size
+  )
+
+  - quant_matrix_extension <-
+  // decode quant matrix entension 
+  // ISO/IEC 13818-2 section 6.2.3.2 
+  ( + val,idx:INTEGER
+    
+    (ld.get_boolean).if {
+      0.to 63 do { i:INTEGER
+	val := ld.get_bits 8
+	idx := TABLE.scan (zig_zag,i)
+	ld.chroma_intra_quantizer_matrix.at idx put val
+	ld.intra_quantizer_matrix.at idx put val
+      }
+    }
+    
+    (ld.get_boolean).if {
+      0.to 63 do { i:INTEGER
+	val := ld.get_bits 8
+	idx := TABLE.scan (zig_zag,i)
+	ld.chroma_non_intra_quantizer_matrix.at idx put val
+	ld.non_intra_quantizer_matrix.at idx put val
+      }
+    }
+    
+    (ld.get_boolean).if {
+      0.to 63 do { i:INTEGER
+	val := ld.get_bits 8
+	idx := TABLE.scan (zig_zag,i)
+	ld.chroma_intra_quantizer_matrix.at idx put val
+      }
+    }
+    
+    (ld.get_boolean).if {
+      0.to 63 do { i:INTEGER
+	val := ld.get_bits 8
+	idx := TABLE.scan (zig_zag,i)
+	ld.chroma_non_intra_quantizer_matrix.at idx put val
+      }
+    }
+  )
+
+  - sequence_scalable_extension <-
+  // decode sequence scalable extension 
+  // ISO/IEC 13818-2   section 6.2.2.5 
+  (     
+    // values (without the +1 offset) of scalable_mode are defined in 
+    // Table 6-10 of ISO/IEC 13818-2 
+    ld.set_scalable_mode (ld.get_bits 2 + 1); // add 1 to make SC_DP != SC_NONE 
+        
+    ld.get_bits 4; // layer_id
+    
+    (ld.scalable_mode = sc_spat).if {
+      lower_layer_prediction_horizontal_size := ld.get_bits 14
+      marker_bit
+      lower_layer_prediction_vertical_size   := ld.get_bits 14
+      horizontal_subsampling_factor_m        := ld.get_bits 5
+      horizontal_subsampling_factor_n        := ld.get_bits 5
+      vertical_subsampling_factor_m          := ld.get_bits 5
+      vertical_subsampling_factor_n          := ld.get_bits 5
+    }
+    
+    (ld.scalable_mode = sc_temp).if {
+      error "temporal scalability not implemented\n"
+    }
+  )
+
+  - picture_display_extension <-
+  // decode picture display extension 
+  // ISO/IEC 13818-2 section 6.2.3.3. 
+  ( + number_of_frame_center_offsets:INTEGER
+        
+    // based on ISO/IEC 13818-2 section 6.3.12 
+    // (November 1994) Picture display extensions 
+    
+    // derive number_of_frame_center_offsets 
+    (progressive_sequence).if {
+      (repeat_first_field).if {
+	(top_field_first).if {
+	  number_of_frame_center_offsets := 3
+	} else {
+	  number_of_frame_center_offsets := 2
+	}
+      } else {
+	number_of_frame_center_offsets := 1
+      }
+    } else {
+      (picture_structure != frame_picture).if {
+	number_of_frame_center_offsets := 1
+      } else {
+	(repeat_first_field).if {
+	  number_of_frame_center_offsets := 3
+	} else {
+	  number_of_frame_center_offsets := 2
+	}
+      }
+    }
+    
+    // now parse 
+    0.to (number_of_frame_center_offsets-1) do { i:INTEGER
+      ld.get_bits 16; // frame_center_horizontal_offset
+      marker_bit
+      ld.get_bits 16; // frame_center_vertical_offset
+      marker_bit
+    }
+  )
+
+  - picture_coding_extension <-
+  // decode picture coding extension 
+  (     
+    f_code.at (0,0) put (ld.get_bits 4)
+    f_code.at (0,1) put (ld.get_bits 4)
+    f_code.at (1,0) put (ld.get_bits 4)
+    f_code.at (1,1) put (ld.get_bits 4)
+    
+    intra_dc_precision         := ld.get_bits 2
+    picture_structure          := ld.get_bits 2
+    top_field_first            := ld.get_boolean
+    frame_pred_frame_dct       := ld.get_boolean
+    concealment_motion_vectors := ld.get_boolean
+    ld.set_q_scale_type        (ld.get_boolean)
+    intra_vlc_format           := ld.get_boolean
+    ld.set_alternate_scan      (ld.get_bits 1)
+    repeat_first_field         := ld.get_boolean
+    chroma_420_type            := ld.get_bits 1
+    progressive_frame          := ld.get_boolean
+    
+    (ld.get_boolean).if { // composite_display_flag
+      ld.get_bits 20; // v_axis(1) + field_sequence(3) + sub_carrier(1) + 
+      //                 burst_amplitude(7) + sub_carrier_phase(8)
+    }
+  )
+
+  - picture_spatial_scalable_extension <-
+  // decode picture spatial scalable extension 
+  // ISO/IEC 13818-2 section 6.2.3.5. 
+  ( 
+    ld.set_pict_scal TRUE; // use spatial scalability in this picture 
+
+    lower_layer_temporal_reference := ld.get_bits 10
+    marker_bit
+    lower_layer_horizontal_offset  := ld.get_bits 15
+    (lower_layer_horizontal_offset >= 16384).if {
+      lower_layer_horizontal_offset := lower_layer_horizontal_offset - 32768
+    }
+    marker_bit
+    lower_layer_vertical_offset := ld.get_bits 15
+    (lower_layer_vertical_offset >= 16384).if {
+      lower_layer_vertical_offset := lower_layer_vertical_offset - 32768
+    }
+    spatial_temporal_weight_code_table_index := ld.get_bits 2
+    lower_layer_progressive_frame            := ld.get_boolean
+    lower_layer_deinterlaced_field_select    := ld.get_boolean
+  )
+
+  - picture_temporal_scalable_extension <-
+  // decode picture temporal scalable extension
+  //
+  // not implemented
+  //
+  // ISO/IEC 13818-2 section 6.2.3.4. 
+  (
+    error "temporal scalability not supported\n"
+  )
+
+  - extra_bit_information <-
+  // decode extra bit information 
+  // ISO/IEC 13818-2 section 6.2.3.4. 
+  ( 
+    {ld.get_boolean}.while_do {
+      ld.flush_buffer 8
+    }
+  )
+
+  - copyright_extension <-
+  // Copyright extension 
+  // ISO/IEC 13818-2 section 6.2.3.6. 
+  // (header added in November, 1994 to the IS document) 
+  ( 
+    ld.get_bits 17; // copyright_flag(1) + copyright_identifier(8) + original_or_copy(1) + reserved(7)
+    marker_bit
+    ld.get_bits 20; // copyright_number_1
+    marker_bit
+    ld.get_bits 22; // copyright_number_2
+    marker_bit
+    ld.get_bits 22; // copyright_number_3
+  )
+  
+  - temporal_reference_wrap:BOOLEAN
+  - temporal_reference_old:INTEGER
+  - update_temporal_reference_tacking_data <-
+  // introduced in September 1995 to assist Spatial Scalability 
+  ( 
+    ((picture_coding_type != b_type) && {temporal_reference != temporal_reference_old}).if { 	
+      // check first field of    						
+      // non-B-frame 
+      (temporal_reference_wrap).if { 		
+	// wrap occured at previous I- or P-frame 
+	// now all intervening B-frames which could 
+	// still have high temporal_reference values are done  
+	temporal_reference_base := temporal_reference_base + 1024
+	temporal_reference_wrap := FALSE
+      }
+      
+      // distinguish from a reset 
+      ((temporal_reference < temporal_reference_old) && {! temporal_reference_gop_reset}).if {	
+	temporal_reference_wrap := TRUE;  // we must have just passed a GOP-Header! 
+      }
+      
+      temporal_reference_old := temporal_reference
+      temporal_reference_gop_reset := FALSE
+    }
+    
+    true_framenum := temporal_reference_base + temporal_reference
+    
+    // temporary wrap of TR at 1024 for M frames 
+    (temporal_reference_wrap && {temporal_reference <= temporal_reference_old}).if {	
+      true_framenum := true_framenum + 1024
+    }
+    
+    (true_framenum > true_framenum_max).if {
+      true_framenum_max := true_framenum
+    } else {
+      true_framenum_max := true_framenum_max
+    }
+  )

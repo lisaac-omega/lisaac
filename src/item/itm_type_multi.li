@@ -1,0 +1,148 @@
+Header
+
+  + name        := ITM_TYPE_MULTI;
+
+  /*List of type*/
+
+Inherit
+
+  + parent_itm_type:Expanded ITM_TYPE
+
+Private
+
+  - dico:ARRAY ITM_TYPE_MULTI := ARRAY ITM_TYPE_MULTI .create_with_capacity 32
+
+  - create lt:ARRAY ITM_TYPE :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make lt
+    result
+  )
+
+  - make lt:ARRAY ITM_TYPE <-
+  (
+    list_type := lt
+    (list_type.lower).to (list_type.upper) do { i:INTEGER
+      hash_code := hash_code + list_type.at i.hash_code
+    }
+  )
+
+Public
+  
+  + hash_code:INTEGER
+  
+  + list_type:ARRAY ITM_TYPE
+
+  - count:INTEGER <- list_type.count
+
+  - lower:INTEGER <- list_type.lower
+
+  - upper:INTEGER <- list_type.upper
+
+  - at i:INTEGER :ITM_TYPE <-
+  (
+    list_type.at i
+  )
+
+  - last:ITM_TYPE <-
+  (
+    list_type.last
+  )
+
+  - first:ITM_TYPE <-
+  (
+    list_type.first
+  )
+
+  - get lt:ARRAY ITM_TYPE :SELF <-
+  ( + result:SELF
+    + idx:INTEGER
+
+    idx := dico.lower
+    {(idx <= dico.upper) && {dico.at idx.list_type != lt}}.while_do {
+      idx := idx + 1
+    }
+    (idx <= dico.upper).if {
+      result ?= dico.at idx
+    } else {
+      result := create lt
+      dico.add_last result
+    }
+    result
+  )
+
+  //
+  // Runnable.
+  //
+
+  - get_expr_for p:PARAMETER_TO_TYPE :EXPR <-
+  ( + lst:ARRAY EXPR
+    + t:TYPE_FULL
+
+    lst := ARRAY EXPR .create_with_capacity count
+    lower.to upper do { i:INTEGER
+      t := at i.to_run_for p pos (p.position.prototype.filename)
+      lst.add_last (t.get_temporary_expr (p.position))
+    }
+    EXPR_MULTIPLE.create lst
+  )
+
+  - to_run_in lst:ARRAY TYPE_FULL for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS <-
+  ( + t:TYPE_FULL
+
+    lower.to upper do { i:INTEGER
+      t := at i.to_run_for p pos path
+      lst.add_last t
+    }
+  )
+  
+  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  (
+    crash_with_message "ITM_TYPE_MULTI.to_run_for"
+    NULL
+  )
+  
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    display_raw buffer
+    buffer.add_last ')'
+  )
+
+  - shorter_in buf:STRING_BUFFER <-
+  (
+    buf.add_last '('
+    shorter_raw_in buf
+    buf.add_last ')'
+  )
+
+  - display_raw buffer:STRING_BUFFER <-
+  (
+    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+      list_type.at j.append_in buffer
+      buffer.add_last ','
+    }
+    (list_type.last = NULL).if {
+      buffer.append "..."
+    } else {
+      list_type.last.append_in buffer
+    }
+  )
+
+  - shorter_raw_in buf:STRING_BUFFER <-
+  (
+    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+      list_type.at j.shorter_in buf
+      buf.add_last ','
+    }
+    (list_type.last = NULL).if {
+      buf.append "..."
+    } else {
+      list_type.last.shorter_in buf
+    }
+  )

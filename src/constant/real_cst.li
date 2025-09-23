@@ -1,0 +1,88 @@
+Header
+
+  + name        := REAL_CST;
+
+  /*Real float constant*/
+
+Inherit
+
+  + parent_constant:Expanded CONSTANT
+
+Public
+
+  //
+  // Value.
+  //
+
+  + value:STRING_ALIAS
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION value v:STRING_ALIAS type t:TYPE_FULL :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make p value v type t
+    result
+  )
+
+  - make p:POSITION value v:STRING_ALIAS type t:TYPE_FULL <-
+  (
+    position := p
+    value    := v
+    static_type := t
+  )
+
+  - my_copy:SELF <- SELF.create position value value type static_type
+
+  //
+  // Comparaison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + p:REAL_CST
+    p ?= other
+    (p != NULL) && {value = p.value} && {static_type = p.static_type}
+  )
+
+  //
+  // Depend.
+  //
+
+  - cast_type p:TYPE_FULL <-
+  (
+    static_type := p
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    output.append value
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '('
+    static_type.append_name_in buffer
+    buffer.add_last ')'
+    buffer.append value
+    display_ref buffer
+  )
+
+
+
+
+
+
+
+
+
+

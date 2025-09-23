@@ -1,0 +1,7 @@
+pushd ~/lisaac
+svn up
+svn ci -m 'b'
+cd ~/libot
+svn up
+svn ci -m 'b'
+popd

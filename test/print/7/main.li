@@ -1,0 +1,10 @@
+Header
+  + name := MAIN;
+  
+Public
+  - main <-
+  ( + r:UREAL_26_6
+    r := (0.5).to_ureal_26_6
+    r.print
+    TEST.check (r.to_string) string "0.500000"
+  )

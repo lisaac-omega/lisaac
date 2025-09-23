@@ -1,0 +1,246 @@
+Header  
+  + name := SHORTCUT;
+  
+Inherit  
+  - parent_act:ACT := ACT
+  
+Private
+    
+  - str:STRING_BUFFER := STRING_BUFFER.create 16
+          
+  + ptr:INTEGER
+  - ptr_raz <- ( ptr := 0; )
+  //+ del:INTEGER
+  + key_list:STRING_ALIAS
+      
+  - run s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + i,j:INTEGER
+    + r,cmd_ok:BOOLEAN
+    + cmd:UINTEGER_8
+    cmd := key_list.at ptr
+    cmd_ok := (cmd = c & (cmd > 0Fh).ok 1Fh or 0Fh); // Pb. Shift
+    (cmd_ok && {key_list.at (ptr+1) = s.first}).if {
+      (i,j) := (1,ptr+2)
+      {(i <= s.upper) && {j <= key_list.upper} && {s.at i = key_list.at j}}.while_do { (i,j) := (i+1,j+1); }
+      (i > s.upper).if { ptr := j; } else { ptr_raz; }
+      (ptr > key_list.upper).if {
+        r := TRUE
+        list.foreach { k:SHORTCUT; k.ptr_raz; }
+        //del.times { ANY_GUI.del_char; }
+        run.if_false { ANY_GUI.beep; }
+      }
+    } else { ptr_raz; }
+    r
+  )
+    
+Public
+  
+  - list:ARRAY SHORTCUT
+  - set_list l:ARRAY SHORTCUT <- ( list := l; )
+  - sort <- list.bubble_sort_with {(v1,v2:SHORTCUT)
+    (v1.key_list.upper > v2.key_list.upper) ||
+    // For Shift Pb :
+    {(v1.key_list.upper = v2.key_list.upper) && {v1.key_list.first > v2.key_list.first}}
+  }
+  // Used BubbleSort and no QuickSort for Stable algorithm ! (see: v1=v2 order)
+  
+  + act:ACT
+  - run:BOOLEAN <- ( MENU.close_all; act.run)
+  - text_r:STRING_ALIAS <- act.text_r
+  - text_l:STRING_ALIAS <- act.text_l
+    
+  - read a:ACT :SELF <- key read_shortcut act a
+      
+  - key k:STRING_ALIAS act a:ACT :SELF <- 
+  ( //+ i:INTEGER
+    //+ c:UINTEGER_8
+    (key_list,act) := (k,a)
+    list.add_last Self
+    //del := 0
+    ptr := 0
+    /*
+    {i <= key_list.upper}.while_do {
+      c := key_list.at i; i := i + 1
+      ((c & KEYBOARD.msk_cmd) = 0).if { del := del + 1; }
+      c := key_list.at i; i := i + 1
+      ((c & 1000_0000b) != 0).if { i := i + 1
+        ((c & 1110_0000b) = 1110_0000b).if { i := i + 1
+          ((c & 1111_0000b) = 1111_0000b).if { i := i + 1; }
+        }
+      }
+    };*/
+    Self
+  )
+  
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  (
+    //s.print; ' '.print; c.println
+    ! list.until_do { elt:SHORTCUT; elt.run s cmd c}
+  )
+  
+  - stack:STRING_BUFFER := STRING_BUFFER.create 8
+  
+  - append_stack_raw s:STRING <-
+  ( + i:INTEGER
+    + c:UINTEGER_8
+    //"Append stack raw:".print; s.println
+    {i <= s.upper}.while_do {
+      stack.add_last '\0'
+      c := s.at i; stack.add_last (c.to_character); i := i + 1
+      ((c & 1000_0000b) != 0).if { // utf8 sequence:
+        stack.add_last (s.at i); i := i + 1
+        ((c & 1110_0000b) = 1110_0000b).if {
+          stack.add_last (s.at i); i := i + 1
+          ((c & 1111_0000b) = 1111_0000b).if {
+            stack.add_last (s.at i); i := i + 1
+          }
+        }
+      }
+    }
+  )
+  
+  - clean <-
+  ( + cm,c:UINTEGER_8
+    (stack.is_empty).if_false {
+      (cm,c) := (stack.first,stack.second)
+      str.clear; str | c.to_character
+      ((c & 1000_0000b) != 0).if { // utf8 sequence:
+        str.add_last (stack.at 2)
+        ((c & 1110_0000b) = 1110_0000b).if {
+          str.add_last (stack.at 3)
+          ((c & 1111_0000b) = 1111_0000b).if {
+            str.add_last (stack.at 4)
+          }
+        }
+      }
+      stack.remove_head (str.count + 1)
+      keyb str cmd cm
+      PAPER.refresh_again
+    }
+  )
+  
+  // Display
+  
+  - print_stat title:STRING_ALIAS <-
+  (
+    title.println
+    list.foreach { s:SHORTCUT; (s.ptr != 0).if { s.print; }; }
+  )
+  - is_exist k:STRING_ALIAS :BOOLEAN <- ! list.while_do { e:SHORTCUT; e.key_list != k}
+  - print_all <-
+  ( list.foreach { s:SHORTCUT; s.print; }; )
+  
+  - append_in b:STRING_BUFFER <- key key_list in b
+  
+  - print <- 
+  (
+    STRING.tmp { tmp:STRING_BUFFER
+      append_in tmp
+      {tmp.upper < 32}.while_do { tmp | ' '; }
+      tmp += (act = NULL).ok "Null" else {text_l}
+      tmp | '\n'
+      tmp.print
+    }
+  )
+    
+  - key s:STRING in b:STRING_BUFFER <-
+  ( + i:INTEGER
+    + c,cm:UINTEGER_8
+    + ch:CHARACTER
+    (s = NULL).if {
+      b.append "Null"
+    } else {
+      {i <= s.upper}.while_do {
+        cm := s.at i; i := i + 1
+        str.clear; c := ch := s.at i; str.add_last ch; i := i + 1
+        ((c & 1000_0000b) != 0).if { // utf8 sequence:
+          str.add_last (s.at i); i := i + 1
+          ((c & 1110_0000b) = 1110_0000b).if {
+            str.add_last (s.at i); i := i + 1
+            ((c & 1111_0000b) = 1111_0000b).if {
+              str.add_last (s.at i); i := i + 1
+            }
+          }
+        }
+        b.append (KEYBOARD.key_to_string str cmd cm)
+        (i <= s.upper).if { b.append ", "; }
+      }
+    }
+  )
+    
+  // Parsing.
+      
+  //++ SHORTCUT   -> TOUCH { TOUCH }
+  - read_shortcut:STRING_ALIAS <-
+  ( + i:INTEGER
+    + k:STRING_ALIAS
+    STRING.tmp { s:STRING_BUFFER
+      {
+        code := 0
+        s.add_last '\0'; i := s.upper
+        (! read_touch s).if { err syntax msg "Key needed."; }
+        {read_touch s}.while_do { }
+        (s.upper != i).if {
+          s.put (code.to_character) to i
+          (s.upper - i != 1).if { err semantic msg "Key invalid."; }
+        } else {
+          s.remove_last
+        }
+      }.do_while {read_char ','}
+      k := s.to_string_alias
+      (is_exist k).if { err semantic msg "Double shortcut declaration."; }
+    }
+    k
+  )
+  
+  //++ TOUCH      -> [a-z or all single character]
+  //++             | 'Alt'   | 'Ctrl' | 'Esc'   | 'Shift'  | 'Tab' | 'Space'
+  //++             | 'Beg'   | 'End'  | 'PgUp'  | 'PgDown' 
+  //++             | 'Right' | 'Left' | 'Up'    | 'Down'
+  //++             | 'Suppr' | 'Insr' | 'Enter' | 'Del'
+  //++             | 'F'[1-12] | 'On' | 'Off'
+  - code:UINTEGER_8
+  - read_touch s:STRING_BUFFER :BOOLEAN <-
+  ( + c:CHARACTER
+    (read_word "Alt"    ).if   { code := code | KEYBOARD.alt;  }.elseif
+    {read_word "Ctrl"   } then { code := code | KEYBOARD.ctrl; }.elseif 
+    {read_word "Shift"  } then { code := code | KEYBOARD.shift;}.elseif 
+    {read_word "Esc"    } then { code := code | KEYBOARD.key_cmd; s | '\27\'; }.elseif
+    {read_word "Tab"    } then { code := code | KEYBOARD.key_cmd; s | '\09\'; }.elseif
+    {read_word "Space"  } then { s | ' '; }.elseif
+    {read_word "Beg"    } then { code := code | KEYBOARD.key_cmd; s | 'B'; }.elseif
+    {read_word "End"    } then { code := code | KEYBOARD.key_cmd; s | 'E'; }.elseif
+    {read_word "PgUp"   } then { code := code | KEYBOARD.key_cmd; s | 'P'; }.elseif
+    {read_word "PgDown" } then { code := code | KEYBOARD.key_cmd; s | 'N'; }.elseif
+    {read_word "Right"  } then { code := code | KEYBOARD.key_cmd; s | 'R'; }.elseif
+    {read_word "Left"   } then { code := code | KEYBOARD.key_cmd; s | 'L'; }.elseif
+    {read_word "Up"     } then { code := code | KEYBOARD.key_cmd; s | 'U'; }.elseif
+    {read_word "Down"   } then { code := code | KEYBOARD.key_cmd; s | 'D'; }.elseif
+    {read_word "Suppr"  } then { code := code | KEYBOARD.key_cmd; s | 'S'; }.elseif
+    {read_word "Inser"  } then { code := code | KEYBOARD.key_cmd; s | 'I'; }.elseif
+    {read_word "Enter"  } then { code := code | KEYBOARD.key_cmd; s | '\10\'; }.elseif
+    {read_word "Del"    } then { code := code | KEYBOARD.key_cmd; s | '\08\'; }.elseif
+    {read_word "F1"     } then { code := code | KEYBOARD.key_cmd; s | 'a'; }.elseif
+    {read_word "F2"     } then { code := code | KEYBOARD.key_cmd; s | 'b'; }.elseif
+    {read_word "F3"     } then { code := code | KEYBOARD.key_cmd; s | 'c'; }.elseif
+    {read_word "F4"     } then { code := code | KEYBOARD.key_cmd; s | 'd'; }.elseif
+    {read_word "F5"     } then { code := code | KEYBOARD.key_cmd; s | 'e'; }.elseif
+    {read_word "F6"     } then { code := code | KEYBOARD.key_cmd; s | 'f'; }.elseif
+    {read_word "F7"     } then { code := code | KEYBOARD.key_cmd; s | 'g'; }.elseif
+    {read_word "F8"     } then { code := code | KEYBOARD.key_cmd; s | 'h'; }.elseif
+    {read_word "F9"     } then { code := code | KEYBOARD.key_cmd; s | 'i'; }.elseif
+    {read_word "F10"    } then { code := code | KEYBOARD.key_cmd; s | 'j'; }.elseif
+    {read_word "F11"    } then { code := code | KEYBOARD.key_cmd; s | 'k'; }.elseif
+    {read_word "F12"    } then { code := code | KEYBOARD.key_cmd; s | 'l'; } else
+    {
+      (
+        ((c := src.at cur).in_range '0' to '9') ||
+        {c.in_range 'a' to 'z'} || {c.in_range 'A' to 'Z'} ||
+        {"<>&(-_)=#{|^@}+%*/.?;:!".has c} // "'[]`°$£§\
+      ).if { 
+        s | c
+        cur := cur + 1
+      }
+    }
+    (code != Old code) || {s.count != Old s.count}
+  )

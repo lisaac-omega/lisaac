@@ -1,0 +1,7 @@
+../../../../src/lisaac startup -boost 
+gcc startup.c -o startup -O3
+gcc startup_c.c -o startup_c -O3 -fomit-frame-pointer -lm
+echo Lisaac: 
+time ./loop ./startup
+echo C:
+time ./loop ./startup_c

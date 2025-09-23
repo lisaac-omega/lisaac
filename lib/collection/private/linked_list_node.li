@@ -1,0 +1,73 @@
+Header
+  + name := LINKED_LIST_NODE V;
+  /*
+  To implement LINKED_LIST(V).
+  */
+
+Insert
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  + item:V
+
+  + previous:LINKED_LIST_NODE V
+
+  + next:LINKED_LIST_NODE V
+
+LINKED_LIST
+
+  - create i:V previous p:LINKED_LIST_NODE V next n:LINKED_LIST_NODE V :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make i previous p next n
+    result
+  )
+
+  - make i:V previous p:LINKED_LIST_NODE V next n:LINKED_LIST_NODE V <-
+  (
+    item := i
+    previous := p
+    next := n
+  )
+  [
+    +? {item = i}
+    +? {previous = p}
+    +? {next = n}
+  ]
+
+LINKED_LIST,LINKED_LIST_NODE
+
+  - set_item i:V <-
+  (
+    item := i
+  )
+  [
+    +? {item = i}
+  ]
+
+  - set_next n:LINKED_LIST_NODE V <-
+  (
+    next := n
+  )
+  [
+    +? {next = n}
+  ]
+
+  - set_all_with v:V <-
+  ( + lnk:SELF
+
+    lnk := Self
+    {lnk = NULL}.until_do {
+      lnk.set_item v
+      lnk := lnk.next
+    }
+  )
+
+  - set_previous p:LINKED_LIST_NODE V <-
+  (
+    previous := p
+  )
+  [
+    +? {previous = p}
+  ]

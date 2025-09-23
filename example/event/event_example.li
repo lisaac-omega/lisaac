@@ -1,0 +1,203 @@
+Header  
+  + name := EVENT_EXAMPLE;
+  
+Inherit  
+  + parent_window:Expanded WINDOW
+  
+Public
+  
+  - zoom:REAL_32 := 1.0
+  - angle:REAL_32 := 0.0
+  - clic:Expanded ARRAY INTEGER
+  - drag:Expanded ARRAY REAL_32
+  
+  - sw:REAL_32 := 0
+  - sx0:REAL_32
+  - sy0:REAL_32
+  - sx1:REAL_32
+  - sy1:REAL_32
+  
+  - ns:BOOLEAN
+  - nz:REAL_32
+  - na:REAL_32
+  
+  - mx:REAL_32
+  - my:REAL_32
+  
+  - graph pen:PEN to (xr,yr:REAL_32) <-
+  ( + a:REAL_32
+    + d,t,dx,dy:REAL_32
+    pen.save
+    pen.rotate (REAL.pi / 2)
+    pen.text (yr-100,-xr+18) msg "time (0.01 s/px)"
+    pen.restore
+    pen.text (xr,yr+18) msg "distance (x3 px)"
+    pen.stroke {
+      pen.line (xr,yr) to (xr,yr-100)
+      pen.line (xr,yr) to (xr+100,yr)
+      0.to 10 do { i:INTEGER
+        a := xr + i * 10
+        pen.line (a,yr) to (a,yr+4)
+        a := yr - i * 10
+        pen.line (xr,a) to (xr-4,a)
+      }
+    } width 1.0 color (COLOR.white)
+    //
+    (dx,dy) := (mx-PAPER.first_x,my-PAPER.first_y)
+    d := (dx*dx + dy*dy).sqrt
+    t := PAPER.last_t - PAPER.first_t
+    pen.fill { pen.circle (xr+d*3,yr-t*100) radius 5; } color (COLOR.white)
+  )
+  
+  - draw <-
+  ( + x,y,z,an:REAL_32
+    // Drag
+    (! drag.is_empty).if {
+      + x0,y0,x1,y1,t0,t1,d,xx,yy,w:REAL_32
+      (drag.count = 2).if {
+        pen.fill { pen.circle (drag.first,drag.second) radius 15; } color (COLOR.blue)
+        drag.clear
+      } else {
+        (x0,y0,t0) := (drag.at 0,drag.at 1,drag.at 2)
+        pen.line_cap (pen.round)
+        3.to (drag.upper) by 3 do { i:INTEGER
+          (x1,y1,t1) := (drag.at i,drag.at (i+1),drag.at (i+2))
+          (xx,yy) := (x1-x0,y1-y0)
+          d := (xx*xx + yy*yy).sqrt
+          (d > 4).if {
+            w := (w + ((t1-t0) > 0.02).to_integer*4 - 2).max 0.min 20
+            pen.stroke { pen.line (x0,y0) to (x1,y1); } width (w + 2.0) color (COLOR.blue)
+            (x0,y0,t0) := (x1,y1,t1)
+          }
+        }
+      }
+    }
+    // Select
+    (sw != 0).if {
+      pen.stroke { pen.rect (sx0,sy0) to (sx1,sy1); } width sw color (COLOR.green)
+      (sw = 6).if { sw := 0; }
+    }
+    // Rotozoom
+    z := zoom
+    an := angle
+    (ns).if {
+      + x0,y0,x1,y1,dx,dy,d,cx,cy:REAL_32
+      z := zoom * nz
+      an := angle + na
+      (x0,y0) := (PAPER.first_x,PAPER.first_y)
+      (x1,y1) := (PAPER.last_x,PAPER.last_y)
+      (cx,cy) := ((x0+x1)/2,(y0+y1)/2)
+      STRING.tmp { tmp:STRING_BUFFER
+        ((nz-1)*100).to_integer.append_in tmp
+        tmp += "%"
+        pen.text (cx,cy-20) msg tmp
+      }
+      d := PAPER.first_d / 2
+      (dx,dy) := (d*na.cos,d*na.sin)
+      pen.stroke { pen.line (cx-dx,cy-dy) to (cx+dx,cy+dy); } width 6.0 color (COLOR.white)
+      pen.stroke { pen.line (x0,y0) to (x1,y1); } width 2.0 color (COLOR.blue)
+      STRING.tmp { tmp:STRING_BUFFER
+        (na.to_degres).to_integer.append_in tmp
+        tmp += " deg."
+        pen.text (cx,cy+30) msg tmp
+      }
+    }
+    //
+    pen.stroke {
+      pen.line (256,0+20) to (256,860-20)
+      pen.line (20,430) to (512-20,430)
+    } width 0.5 color (COLOR.white)
+    //
+    pen.save
+    pen.translate (256.0,430.0)
+    pen.rotate an
+    pen.scale (z,z)
+    //
+    (x,y) := (-100,-100)
+    pen.stroke {
+      //pen.rect (x,y) to (x+200,y+200)
+      pen.line (x+100,y+20) to (x+100,y+200-20)
+      pen.line (x+20,y+100) to (x+200-20,y+100)
+    } width 0.5 color (COLOR.white)
+    y := y + 20
+    pen.fill { pen.circle (x+10,y-5) radius 5; } color (COLOR.blue)
+    pen.text (x+20,y) msg "Drag. (touch and move)"
+    y := y + 20
+    pen.fill { pen.circle (x+10,y-5) radius 5; } color (COLOR.green)
+    pen.text (x+20,y) msg "Select. (touch, small pause, and move)"
+    y := y + 20
+    pen.fill { pen.circle (x+10,y-5) radius 5; } color (COLOR.red)
+    pen.text (x+20,y) msg "Clic. (pressed and released)"
+    y := y + 20
+    pen.fill { pen.circle (x+10,y-5) radius 5; } color (COLOR.black)
+    pen.text (x+20,y) msg "Long Clic. (pressed, small pause, and released)"
+    //
+    pen.text (x+60,y+30) msg "ZOOM: [Ctrl] + Wheel"
+    pen.text (x+60,y+50) msg "ROTO: [Ctrl + Shift] + Wheel"
+    y := y + 120
+    graph pen to (x+30,y)
+    pen.restore
+    // Clic / Long Clic
+    0.to (clic.upper) by 3 do { i:INTEGER
+      pen.fill {
+        pen.circle (clic.at i,clic.at (i+1)) radius 5
+      } color ((clic.at (i+2) = 0).ok (COLOR.red) or (COLOR.black))
+    }
+    
+  )
+  
+  - a_move (x,y:REAL_32) <- ( (mx,my) := (x,y); )
+  
+  - a_drag (dx,dy:REAL_32) end is_end:BOOLEAN <-
+  ( + x0,y0,x1,y1,t0,t1:REAL_32
+    (is_end).if {
+      drag.clear
+      drag.add_last (PAPER.last_x)
+      drag.add_last (PAPER.last_y)
+    } else {
+      (x0,y0,t0) := (PAPER.first_x,PAPER.first_y,PAPER.first_t)
+      (drag.is_empty).if { drag.add_last x0; drag.add_last y0; drag.add_last t0; }
+      (x1,y1,t1) := (x0+dx,y0+dy,PAPER.last_t)
+      drag.add_last x1; drag.add_last y1; drag.add_last t1
+    }
+  )
+  
+  - a_select (x0,y0,x1,y1:REAL_32) end is_end:BOOLEAN <-
+  (
+    (sx0,sy0,sx1,sy1) := (x0,y0,x1,y1)
+    sw := (is_end).ok 6 or 2
+  )
+  
+  - a_clic (x,y:REAL_32) <-
+  (
+    clic.add_last (x.to_integer)
+    clic.add_last (y.to_integer)
+    clic.add_last 0
+  )
+  
+  - a_long_clic (x,y:REAL_32) <-
+  (
+    clic.add_last (x.to_integer)
+    clic.add_last (y.to_integer)
+    clic.add_last 1
+  )
+  
+  - a_rotozoom (c,a:REAL_32) end is_end:BOOLEAN <-
+  (
+    (is_end).if {
+      zoom := zoom * c
+      angle := angle + a
+      ns := FALSE
+    } else {
+      (nz,na) := (c,a)
+      ns := TRUE
+    }
+  )
+  
+  - main <-
+  (
+    init "Event example" size (600,800)
+    PAPER.run    
+  )
+
+ 

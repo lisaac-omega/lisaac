@@ -1,0 +1,12 @@
+In this directory, you will find tests to verify the quality of the Lisaac Ω library.
+The program auto_test.li automatically runs all the tests and recompiles all the examples
+from the distribution.
+To compile and run all the tests in this directory, you can, for example, use:
+
+   lisaac auto_test
+   ./auto_test .
+
+
+If you find a bug in lisaac/lib, please send us a test program that reproduces the bug you encountered,
+using the templates provided here.
+

@@ -1,0 +1,47 @@
+Header
+
+  + name    := TYPE_CREATION E;
+
+  /*Type without style*/
+
+Inherit
+  
+  + parent_type_creation:E := E
+  
+Private
+  
+  - id_creation_counter:INTEGER
+  
+Public
+  
+  + id_creation:INTEGER
+  
+  //
+  // Creation.
+  //
+  
+  - create_type_creation t:E :SELF <-
+  ( + result:SELF
+    
+    result := clone
+    result.make_type_creation t
+    result
+  )
+  
+  - make_type_creation t:E <-
+  (
+    parent_type_creation := t
+    id_creation := id_creation_counter
+    id_creation_counter := id_creation_counter + 1
+  )
+  
+  //
+  // Display.
+  //
+
+  - append_name_in buf:STRING_BUFFER <-
+  (    
+    buf.append name
+    buf.add_last '#'
+    id_creation.append_in buf
+  )

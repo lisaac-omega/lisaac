@@ -1,0 +1,46 @@
+Header
+  + name := STR;
+  /* STRing Constant */
+
+Inherit
+  //+ parent_tok_itm:Expanded TOK_ITM
+  + parent_expr:Expanded EXPR
+  //- parent_type_string_alias:TPRO := TPRO
+  
+Private
+  - stack_txt:Expanded ARRAY (Strict STR)
+    
+Public
+  //- set_parent_tpro t:TPRO <- ( ? {t != NULL}; parent_type_string_alias := t; )
+  
+  + type:TYPE
+    
+  - new:SELF <-
+  ( + r:SELF; (stack_txt.is_empty).if { r := clone; } else { r := stack_txt.pop; }; r)
+  
+  - free <- stack_txt.add_last Self
+  
+  //
+  // PARSER / DRAW
+  //
+  
+  - new_parse t:INTEGER <-
+  ( + d:INTEGER
+    (rd_str).if     { type := TYPE.string_alias; }.elseif
+    {rd_chars} then { type := TYPE.character;    }
+    d := pos_i.pt - Old pos_i.pt
+    (d != 0).if { col (LOOK.string) sub d; }
+  )
+  
+  //
+  // RUN
+  //
+  
+  - run <- push Self
+  
+  - out_c <-
+  (
+    outbuf | 's'
+    0.append_in outbuf base 16
+  )
+  

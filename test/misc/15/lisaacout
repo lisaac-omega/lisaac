@@ -1,0 +1,6 @@
+Depending pass:  \--SEMANTIC---------
+Slot `crash' not found in `MAIN'.
+Line 9 column 9 in MAIN(.../test/misc/15/main.li):
+    crash; // ok normal, vu que pas de Section Inherit
+         ^
+Load lip file: /home/colnet/lisaac/test/misc/15/../../../make.lip

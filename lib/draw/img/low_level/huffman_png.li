@@ -1,0 +1,109 @@
+Header
+  
+  + name := HUFFMAN_PNG;
+  
+Inherit
+  
+  - parent_clone:CLONE := CLONE
+  
+Public
+  
+  // zlib-style huffman encoding
+  // (jpegs packs from left, zlib from right, so can't share code)
+  + fast:NATIVE_ARRAY UINTEGER_16
+  + firstcode:NATIVE_ARRAY UINTEGER_16
+  + maxcode:NATIVE_ARRAY INTEGER
+  + firstsymbol:NATIVE_ARRAY UINTEGER_16
+  + size:NATIVE_ARRAY UINTEGER_8
+  + value:NATIVE_ARRAY UINTEGER_16
+  
+  // huffman decoding acceleration
+  - fast_bits:INTEGER := 9; // larger handles more cases; smaller stomps less cache
+    
+  - zbuild_huffman sizelist:NATIVE_ARRAY UINTEGER_8 size num:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.zmake_huffman sizelist size num
+    result
+  )
+  
+  - zmake_huffman sizelist:NATIVE_ARRAY UINTEGER_8 size num:INTEGER <-
+  ( + k,lcode,idx:INTEGER
+    + next_code, sizes:NATIVE_ARRAY INTEGER
+    
+    fast := NATIVE_ARRAY UINTEGER_16.create (1 << IMG_ZLIB.zfast_bits)
+    firstcode := NATIVE_ARRAY UINTEGER_16.create 16
+    maxcode := NATIVE_ARRAY INTEGER.create 17
+    firstsymbol := NATIVE_ARRAY UINTEGER_16.create 16
+    size := NATIVE_ARRAY UINTEGER_8.create 288
+    value := NATIVE_ARRAY UINTEGER_16.create 288
+    
+    next_code := NATIVE_ARRAY INTEGER.create 16
+    sizes := NATIVE_ARRAY INTEGER.create 17
+    // DEFLATE spec for generating codes
+    sizes.clear_all 16
+    fast.clear_all ((1 << IMG_ZLIB.zfast_bits)-1)
+    0.to (num-1) do { i:INTEGER
+      idx := sizelist.at i
+      sizes.at idx put (sizes.at idx + 1)
+      //"sizes:".print; sizes.at idx.print; '\n'.print
+    }
+    //'\n'.print
+    sizes.at 0 put 0
+    1.to 15 do { i:INTEGER
+      (sizes.at i > (1 << i)).if {
+        "HUFFMAN 176: bad sizes\n".println
+        exit 0
+      }
+    }
+    lcode := 0
+    1.to 15 do { i:INTEGER
+      next_code.at i put lcode
+      firstcode.at i put lcode
+      firstsymbol.at i put k
+      lcode := lcode + sizes.at i
+      (sizes.at i != 0).if {
+        (lcode-1 >= (1 << i)).if {
+          "bad codelengths\n".print
+          exit 0
+        }
+      }
+      maxcode.at i put (lcode << (16-i)); // preshift for inner loop
+      lcode := lcode << 1
+      k := k + sizes.at i
+    }
+    //"*** k:".print; k.println
+    maxcode.at 16 put 1_0000h; // sentinel
+    0.to (num-1) do { i:INTEGER
+      + s:INTEGER
+      s := sizelist.at i
+      (s != 0).if {
+        + c:INTEGER
+        + fastv:UINTEGER_16
+        c := next_code.at s - firstcode.at s + firstsymbol.at s
+        //"c:".print; c.print; " ".print
+        fastv := (s << 9) | i
+        //"fastv:".print; fastv.println
+        size.at c put s
+        value.at c put i
+        (s <= IMG_ZLIB.zfast_bits).if {
+          + j:INTEGER
+          j := next_code.at s.to_uinteger_16.bit_reverse >> (16-s)
+          //"j:".print; j.print; " next_code:".print; next_code.at s.println
+          {j < (1 << IMG_ZLIB.zfast_bits)}.while_do {
+            fast.at j put fastv
+            j := j + (1 << s)
+          }
+        }
+        next_code.at s put (next_code.at s + 1)
+      }
+    }
+    //'\n'.print
+    //"Fin Create:".print
+    //0.to ((1<<IMG_ZLIB.zfast_bits)-1) do { i:INTEGER
+    //  fast.at i.print; ' '.print
+    //}
+    //"\n----\n".print
+    // FREE next_code
+    // FREE sizes
+  )

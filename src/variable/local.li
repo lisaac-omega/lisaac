@@ -1,0 +1,337 @@
+Header
+
+  + name    := LOCAL;
+
+  /*Local slot*/
+
+Inherit
+
+  + parent_variable:Expanded VARIABLE
+
+Public
+
+  // BSBS: Doit pas etre utile.
+
+  + is_result :BOOLEAN := FALSE
+
+  - set_result r:BOOLEAN <-
+  (
+    is_result := r
+  )
+
+  //
+  // Copy alias manager.
+  //
+
+  - is_alias:BOOLEAN
+
+  - alias_on <-
+  (
+    is_alias := TRUE
+  )
+
+  - alias_off <-
+  (
+    (list_alias.lower).to (list_alias.upper) do { j:INTEGER
+      list_alias.at j.set_my_alias NULL
+    }
+    list_alias.clear
+    is_alias := FALSE
+  )
+
+  - list_alias:ARRAY LOCAL := ARRAY LOCAL .create_with_capacity 64
+
+  - get_alias:LOCAL <-
+  (
+    (my_alias = NULL).if {
+      my_alias := my_copy
+      my_alias.set_type_set type_set
+      list_alias.add_last Self
+    }
+    my_alias
+  )
+
+  + my_alias:LOCAL
+
+  - set_my_alias new_loc:LOCAL <-
+  (
+    my_alias := new_loc
+  )
+
+  + list_level:INTEGER
+
+  - set_list_level lev:INTEGER <-
+  (
+    list_level := lev
+  )
+
+  - write p:POSITION with r:EXPR value val:EXPR :WRITE <-
+  ( + result:WRITE
+
+    (my_alias != NULL).if {
+      result := my_alias.write_direct p with NULL value val
+    }.elseif {is_alias} then {
+      result := get_alias.write_direct p with NULL value val
+    } else {
+      result := write_direct p with NULL value val
+    }
+    result
+  )
+
+  - read p:POSITION with r:EXPR :READ <-
+  ( + result:READ
+
+    (my_alias != NULL).if {
+      result := my_alias.read_direct p with NULL
+    }.elseif {is_alias} then {
+      // Case : Argument function (see CALL_SLOT)
+      result := get_alias.read_direct p with NULL
+    } else {
+      //? {! is_alias}
+      result := read_direct p with NULL
+    }
+    result
+  )
+
+  //
+  // Sequence optimizer
+  //
+
+  + last_seq:LOCAL_SEQ
+
+  - reset_last_write w:WRITE <-
+  (
+    ((last_seq != NULL) && {last_seq.last_write = w}).if {
+      last_seq.set_last_write NULL
+    }
+  )
+
+  - set_last_seq s:LOCAL_SEQ <-
+  (
+    last_seq := s
+  )
+
+  - set_write w:WRITE <-
+  (
+    (last_seq = NULL).if {
+      LOCAL_SEQ.new Self
+      //"LOCAL:".print
+      //intern_name.print; '\n'.print
+    }
+    (
+      (! PROFIL.mode_recursive) &&
+      {loop_invariant = NULL} &&
+      {last_seq.last_write != NULL} &&
+      {last_seq.last_index != -1} &&
+      {last_seq.last_list_current = list_current} &&
+      {last_seq.last_index < list_current.index}  &&
+      {last_seq.last_seq_call_local_and_loop = seq_call_local_and_loop} &&
+      {list_current.at (last_seq.last_index) = last_seq.last_write} // BSBS: Voir pourquoi pas tjrs le cas
+    ).if {
+      list_current.at (last_seq.last_index) put (last_seq.last_write.value)
+      unwrite (last_seq.last_write)
+      new_execute_pass
+    }
+    // Save context
+    last_seq.set_seq w
+  )
+
+  - set_read <-
+  (
+    (last_seq != NULL).if {
+      last_seq.set_last_index (-1)
+    }
+  )
+
+  - get_last_index:INTEGER <- last_seq.last_index
+
+  - is_invariant:BOOLEAN <-
+  (
+    (loop_seq_call_local_and_loop = seq_call_local_and_loop) &&
+    {
+      (
+	(last_seq != NULL) && {last_seq.last_write != NULL} &&
+	{last_seq.last_seq_index <= loop_seq_index}
+      ) || {style = ' '}
+    }
+  )
+
+  - get_last_value rec:EXPR :EXPR <-
+  [
+    ? {rec = NULL}
+  ]
+  ( + result:EXPR
+    + val:EXPR
+    + rd:READ
+    + l:LOCAL
+    + g:SLOT_DATA
+    (
+      (! PROFIL.mode_recursive) && {loop_invariant = NULL} &&
+      {last_seq != NULL} && {last_seq.last_write != NULL}
+    ).if {
+      (
+	(is_seq_list (last_seq.last_list_current)) &&
+	{
+	  (last_seq.last_seq_call_local_and_loop = seq_call_local_and_loop) || {require_count = 1}
+	}
+      ).if {
+        val := last_seq.last_write.value
+        rd  ?= val
+        (rd != NULL).if {
+          l ?= rd.variable
+          g ?= rd.variable
+        }
+        (
+          ( // Constant propagation.
+            val.is_constant
+          ) || { // Local propagation.
+            (l != NULL) && {
+              (
+                (l.last_seq != NULL) && {l.last_seq.last_write != NULL} &&
+                {l.last_seq.last_seq_index < last_seq.last_seq_index} &&
+                {last_seq.last_seq_call_local_and_loop = seq_call_local_and_loop}
+              ) || {(l.require_count <= 1) && {l.style != 'R'}} || {l.style = ' '}
+	    }
+	  } || { // Global propagation.
+	    (g != NULL) && {g.style = '-'} && {
+	      (
+		(g.last_write != NULL) && {g.last_seq_index < last_seq.last_seq_index} &&
+		{last_seq.last_seq_call_and_loop = seq_call_and_loop} &&
+		{is_seq_list (g.last_list_current)}
+	      ) || {g.require_count = 1}
+	    }
+	  }
+	).if {
+	  result := val.my_copy
+	}.elseif {
+	  // Propagation step by step.
+	  (last_seq.last_seq_or_and = seq_or_and) &&
+	  {ensure_count = 1} && {list_current.index > list_current.lower} &&
+	  {list_current.at (list_current.index - 1) = last_seq.last_write}
+	} then {
+	  unwrite (last_seq.last_write)
+	  last_seq.set_last_write NULL
+	  list_current.at (list_current.index - 1) put NOP
+	  result := val
+	}
+      }
+    }
+    result
+  )
+
+  - set_type_set t:TYPES <-
+  (
+    type_set := t
+  )
+
+  //
+  //
+  //
+
+  - is_local:BOOLEAN <- TRUE
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION name n:STRING_ALIAS
+  style c:CHARACTER type t:TYPE_FULL result r:BOOLEAN :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make p name n style c type t result r
+    result
+  )
+
+  - create p:POSITION name n:STRING_ALIAS
+  style c:CHARACTER type t:TYPE_FULL :SELF<-
+  ( + result:SELF
+    result := clone
+    result.make p name n style c type t result FALSE
+    result
+  )
+
+  - make p:POSITION name n:STRING_ALIAS
+  style c:CHARACTER type t:TYPE_FULL result r:BOOLEAN <-
+  ( + tmp:TYPES_TMP
+    ? {p.code != 0}
+    ? {t != NULL}
+
+    position    := p
+    name        := n
+    is_result   := r
+    intern_name := get_intern n type FALSE
+
+    ((t.is_expanded) && {! t.is_expanded_c}).if {
+      type := t + TYPE_FULL.expanded_ref_bit
+    } else {
+      type := t
+    }
+    style := c
+
+    (is_static).if {
+      tmp := TYPES_TMP.new
+      tmp.add (t.raw)
+      type_set := tmp.to_types
+    } else {
+      type_set := TYPES_TMP.types_empty
+    }
+  )
+
+  - my_copy:LOCAL <-
+  ( + result:LOCAL
+
+    result := LOCAL.create position name name style style type type
+    result
+  )
+
+  //
+  // Value.
+  //
+
+  - init <-
+  ( + val:EXPR
+    + i:INSTR
+    + int:INTEGER_CST
+
+    val := type.default_value position
+    (is_integer (type.raw.name)).if {
+      int ?= val
+      (int != NULL).if {
+	int.cast_type type
+      }
+    } else {
+      val := val.check_type type with position
+    }
+    i := write position value val
+    list_current.add_last i
+  )
+
+  - set_intern_name n:STRING_ALIAS <-
+  (
+    intern_name := n
+  )
+
+VARIABLE
+
+  - new_read p:POSITION with r:EXPR :READ <-
+  [ -? {r = NULL}; ]
+  (
+    READ_LOCAL.create p with Self
+  )
+
+  - new_write p:POSITION with r:EXPR value v:EXPR :WRITE <-
+  [ -? {r = NULL}; ]
+  ( + result:WRITE
+    result := WRITE_LOCAL.create p with v in Self
+    result
+  )
+
+  /*
+  - new_access r:EXPR :ACCESS <-
+  (
+    ACCESS_LOCAL.create Self
+  )
+  */
+
+
+

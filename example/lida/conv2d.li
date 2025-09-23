@@ -1,0 +1,170 @@
+Header
+  + name := CONV2D;
+  
+Inherit
+  + parent_layer:Expanded LAYER
+  
+Private
+  
+  + out_channels:INTEGER
+  + kernel_size:INTEGER
+  + stride:INTEGER
+  + padding:INTEGER
+  + dilation:INTEGER
+  
+  + output_size:NATIVE_ARRAY INTEGER := NATIVE_ARRAY INTEGER.create 4
+  
+  // convolution
+  + conv_desc:POINTER; // cudnnConvolutionDescriptor_t
+    
+  + conv_fwd_algo:INTEGER;        // cudnnConvolutionFwdAlgo_t
+  + conv_bwd_data_algo:INTEGER;   // cudnnConvolutionBwdDataAlgo_t
+  + conv_bwd_filter_algo:INTEGER; // cudnnConvolutionBwdFilterAlgo_t
+
+  + workspace_size:INTEGER
+  + d_workspace:NATIVE_ARRAY REAL_32
+    
+Public
+  
+  - init (n:STRING_ALIAS,out_cha,ker_sz:INTEGER) :SELF <-
+  init (n, out_cha,ker_sz) param (1,0,1)
+  
+  - init (n:STRING_ALIAS,out_cha,ker_sz:INTEGER) param (str,pad,dil:INTEGER) :SELF <-
+  (
+    (name,out_channels,kernel_size,stride,padding,dilation) := (n,out_cha,ker_sz,str,pad,dil)
+    
+    // create cudnn container handles
+    filter_desc := CUDA.create_filter_descriptor
+    conv_desc := CUDA.create_convolution_descriptor
+    CUDA.set_convolution2d_descriptor conv_desc padding padding stride stride dilation dilation
+
+    d_workspace := NULL
+    Self
+  )
+
+  - free <-
+  (
+    // distroy cudnn container resources
+    CUDA.destroy_filter_descriptor filter_desc
+    CUDA.destroy_convolution_descriptor conv_desc
+
+    // terminate internal created blobs
+    (d_workspace != NULL).if { CUDA.free d_workspace; }
+  )
+
+  - set_workspace <-
+  ( + temp_size,algo_max_count:INTEGER
+    
+    // forward    
+    algo_max_count := cud.get_convolution_forward_algorithm_max_count
+    name.print; ": Available Algorithm Count [FWD]: ".print; algo_max_count.println
+    
+    conv_fwd_algo := cud.get_convolution_forward_algorithm_v7    (input_desc, filter_desc, conv_desc, output_desc) count algo_max_count
+    
+    temp_size := cud.get_convolution_forward_workspace_size    (input_desc, filter_desc, conv_desc, output_desc) algo conv_fwd_algo
+    workspace_size := workspace_size.max temp_size
+
+    // bwd - filter
+    algo_max_count := cud.get_convolution_backward_filter_algorithm_max_count
+    name.print; ": Available Algorithm Count [BWD-filter]: ".print; algo_max_count.println
+    
+    conv_bwd_filter_algo := cud.get_convolution_backward_filter_algorithm_v7    (input_desc, output_desc, conv_desc, filter_desc) count algo_max_count
+    
+    temp_size := cud.get_convolution_backward_filter_workspace_size    (input_desc, output_desc, conv_desc, filter_desc) algo conv_bwd_filter_algo
+    workspace_size := workspace_size.max temp_size
+
+    // bwd - data
+    algo_max_count := cud.get_convolution_backward_data_algorithm_max_count
+    name.print; ": Available Algorithm Count [BWD-data]: ".print; algo_max_count.println
+    
+    conv_bwd_data_algo := cud.get_convolution_backward_data_algorithm_v7    (filter_desc, output_desc, conv_desc, input_desc) count algo_max_count
+
+    temp_size := cud.get_convolution_backward_data_workspace_size    (filter_desc, output_desc, conv_desc, input_desc) algo conv_bwd_data_algo
+    workspace_size := workspace_size.max temp_size
+    
+    (workspace_size > 0).if {
+      (d_workspace != NULL).if { CUDA.free d_workspace; }
+      d_workspace := CUDA.malloc workspace_size
+    }
+  )
+
+  - forward (in:BLOB) :BLOB <-
+  (
+    // initialize weights and bias
+    (weights = NULL).if {
+      // initialize containers handles
+      CUDA.set_filter4d_descriptor filter_desc      nc (out_channels, in.c) hw (kernel_size, kernel_size)
+
+      weights := BLOB.new.init4 (out_channels, in.c, kernel_size, kernel_size)
+      biases  := BLOB.new.init4 (1, out_channels, 1, 1); // bias size
+      bias_desc := biases.tensor
+    }
+ 
+    // initilaize input and output
+    ((input = NULL) || {batch_size != in.n}).if {
+      // initialize input
+      input := in
+      input_desc := input.tensor
+      batch_size := input.n
+
+      // initilaize output
+      CUDA.get_convolution2d_forward_output_dim(conv_desc, input_desc, filter_desc) in output_size
+
+      (output = NULL).if {
+        output := BLOB.new.init output_size
+      } else {
+        output.reset output_size
+      }
+
+      output_desc := output.tensor
+
+      // initialize workspace for cudnn      
+      set_workspace
+
+      // initialize weights
+      (load_pretrain && {!freeze}).if {
+        (load_parameter != 0).if {
+          "error occurred..".println
+          exit (-1)
+        }
+      }.elseif {!freeze} then {
+        init_weight_bias
+      } else {
+        // do nothing
+      }
+    }
+
+    cud.convolution_forward_alpha 1    x      (input_desc,input.cuda)    filter (filter_desc,weights.cuda)    conv   (conv_desc) algo conv_fwd_algo    worksp (d_workspace,workspace_size)    beta 0    y      (output_desc,output.cuda)
+
+    cud.add_tensor_alpha 1    a (bias_desc,  biases.cuda) beta 1    c (output_desc,output.cuda)
+
+    output
+  )
+
+  - backward (grad_out:BLOB) :BLOB <-
+  (
+    // initialize grad_output back-propagation space
+    ((grad_input = NULL) || {batch_size != grad_out.n}).if {
+      grad_output  := grad_out
+      grad_weights := BLOB.new.init (weights.shape)
+      grad_biases  := BLOB.new.init4 (1, biases.c, 1,1)
+
+      (grad_input = NULL).if {
+        grad_input := BLOB.new.init (input.shape)
+      } else {
+        grad_input.reset (input.shape)
+      }
+    }
+
+    // gradients of biases
+    cud.convolution_backward_bias_alpha 1    tensor (output_desc,grad_output.cuda) beta 0    bias   (bias_desc,  grad_biases.cuda)
+        
+    // gradients of weights
+    cud.convolution_backward_filter_alpha 1    x (input_desc,input.cuda) dy (output_desc,grad_output.cuda)    conv conv_desc algo conv_bwd_filter_algo worksp (d_workspace,workspace_size)    beta 0 dw (filter_desc,grad_weights.cuda)
+
+    // gradients of input data
+    (!gradient_stop).if {
+      cud.convolution_backward_data_alpha 1      w  (filter_desc,weights.cuda)      dy (output_desc,grad_output.cuda)      conv conv_desc algo conv_bwd_data_algo      worksp (d_workspace,workspace_size)      beta 0 dx (input_desc,grad_input.cuda)
+    }
+    grad_input
+  )

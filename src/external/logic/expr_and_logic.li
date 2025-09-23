@@ -1,0 +1,105 @@
+Header
+
+  + name        := EXPR_AND_LOGIC;
+
+  /*And binary logical expression.*/
+
+Inherit
+
+  + parent_expr_binary_logic:Expanded EXPR_BINARY_LOGIC
+
+Public
+
+  + symbol:STRING_ALIAS := "&"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_left  left_cst :TYPE :EXPR <-
+  //-- TRUE & E -> E
+  ( + result:EXPR
+
+    (left_cst = type_true).if {
+      result := right
+      left.remove
+    }
+    result
+  )
+
+  - exec_conservator_right right_cst:TYPE :EXPR <-
+  //-- E & TRUE -> E
+  ( + result:EXPR
+
+    (right_cst = type_true).if {
+      result := left
+      right.remove
+    }
+    result
+  )
+
+  - exec left_cst:TYPE and right_cst:TYPE :EXPR <-
+  //-- C1 & C2 -> C3
+  ( + result:EXPR
+
+    (left_cst = type_true).if {
+      result := right
+      left.remove
+    } else {
+      result := left
+      right.remove
+    }
+    result
+  )
+
+  - exec:EXPR <-
+  //-- E & E -> E
+  ( + result:EXPR
+
+    (left ~= right).if {
+      result := left
+      right.remove
+    }
+    result
+  )
+
+  - exec_left  left_cst :TYPE :EXPR <-
+  //-- FALSE & E -> FALSE
+  ( + result:EXPR
+
+    (left_cst = type_false).if {
+      result := left
+      right.remove
+    }
+    result
+  )
+
+  - exec_right right_cst:TYPE :EXPR <-
+  //-- E & FALSE -> FALSE
+  ( + result:EXPR
+
+    (right_cst = type_false).if {
+      result := right
+      left.remove
+    }
+    result
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

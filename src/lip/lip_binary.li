@@ -1,0 +1,64 @@
+Header
+
+  + name      := LIP_BINARY;
+
+Inherit
+
+  + parent_lip_code:Expanded LIP_CODE
+
+Public
+
+  + left:LIP_CODE
+
+  + right:LIP_CODE
+
+  + operator:CHARACTER
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with l:LIP_CODE operator op:CHARACTER and r:LIP_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p with l operator op and r
+    result
+  )
+
+  - make p:POSITION  with l:LIP_CODE operator op:CHARACTER and r:LIP_CODE<-
+  (
+    position := p
+    left := l
+    right := r
+    operator := op
+  )
+
+  //
+  // Run.
+  //
+
+  - run_expr:LIP_CONSTANT <-
+  ( + result:LIP_CONSTANT
+    + lv,rv:LIP_CONSTANT
+
+    lv := left.run_expr
+    rv := right.run_expr
+    (operator)
+    .when '|' then { result := lv |   rv; }
+    .when '&' then { result := lv &   rv; }
+    .when '=' then { result := lv ~=  rv; }
+    .when 'E' then { result := lv !~= rv; }
+    .when '>' then { result := lv >   rv; }
+    .when '<' then { result := lv <   rv; }
+    .when 'S' then { result := lv >=  rv; }
+    .when 'I' then { result := lv <=  rv; }
+    .when '+' then { result := lv +   rv; }
+    .when '-' then { result := lv -   rv; }
+    (result = NULL).if {
+      operator.print; '\n'.print
+      lv.print; '\n'.print
+      rv.print; '\n'.print
+      semantic_error (position,"Incorrect type operator.")
+    }
+    result
+  )

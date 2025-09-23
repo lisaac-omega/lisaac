@@ -1,0 +1,93 @@
+Header
+  + name := ACT;
+  
+Inherit
+  - parent_clone:CLONE := CLONE
+  - parent_json:JSON := JSON
+  
+Public
+    
+  + text_l:STRING_ALIAS
+  + text_r:STRING_ALIAS
+  
+  - txt_l t:STRING_ALIAS :SELF <- ( text_l := t; Self)
+  - txt_r t:STRING_ALIAS :SELF <- ( text_r := t; Self)
+  
+  - new:SELF <- clone
+  
+  - run:BOOLEAN <- FALSE
+  
+  + flag:INTEGER
+  - set f:INTEGER <- ( flag := flag|f; )
+  - is f:INTEGER :BOOLEAN <- flag&f != 0
+  - mute:INTEGER  := 1<<13
+  - radio:INTEGER := 1<<14
+  - check:INTEGER := 1<<15
+  - case:INTEGER  := radio | check
+  + get_case:{ACT; BOOLEAN}
+  - set_case c:{ACT; BOOLEAN} :SELF <- ( get_case := c; Self)
+
+  // Parsing.
+  
+  - read_func:{ACT}
+  - read_check:{ACT;}
+  - set_read_func f:{ACT} read_check c:{ACT;} <-
+  ( read_func := f
+    read_check := c
+  )
+  
+  - lst_act:ARRAY ACT := ARRAY ACT.create_with_capacity 16
+  - last_act:ACT
+  
+  - new_read:ACT <- ( last_act := NULL; read_object; last_act)
+  
+  - object_in id:STRING_ALIAS :BOOLEAN <-
+  ( + k:SHORTCUT
+    id
+    .case "cmd" then { last_act := read_cmd; }
+    .case "chk" then { err_order; read_check.value last_act; last_act.set check; }    
+    .case "rdo" then { err_order; read_check.value last_act; last_act.set radio; }    
+    .case "key" then { err_order
+      k := SHORTCUT.new.read last_act
+      STRING.tmp { tmp:STRING_BUFFER
+        (last_act.text_r != NULL).if { tmp.copy (last_act.text_r); tmp += " · "; }
+        k.append_in tmp
+        last_act.txt_r (tmp.to_string_alias)
+      }
+    }
+    = STRING_ALIAS
+  )
+    
+  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN <-
+  ( id
+    .case "txt"   then { err_order; last_act.txt_l last_str; }
+    .case "mouse" then { err_order; last_act.txt_r last_str; HAND.add_act last_act; }
+    = STRING_ALIAS
+  )
+
+  - read_cmd:ACT <-
+  ( + r:ACT
+    r := read_func.value
+    (read_char ',').if {
+      lst_act.clear; lst_act.add_last r
+      { r := read_func.value
+        (r = NULL).if { err syntax msg "Function needed."; }
+        lst_act.add_last r
+      }.do_while {read_char ','}
+      r := ACTS.new.lst lst_act
+    }
+    r
+  )
+  
+  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN <-
+  ( id
+    .case "mute" then { err_order; v.if { last_act.set mute; }; }
+    = STRING_ALIAS
+  )
+  
+Private
+  
+  - err_order <-
+  (
+    (last_act = NULL).if { err semantic msg "Order invalid. (cmd first)"; }
+  )

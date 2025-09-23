@@ -1,0 +1,55 @@
+Header
+
+  + name    := HMAP_NODE V KEY K;
+
+  /*Auxilliary class to implement DICTIONARY(V,K).*/
+
+Inherit
+
+  - parent_clone:CLONE := CLONE
+
+Public
+
+  + item:V
+
+  + key:K
+
+  + next:HMAP_NODE V KEY K
+  // The `next' one when some clash occurs.
+
+  - set_item i:V <-
+  (
+    item := i
+  )
+  [
+    +? {item = i}
+  ]
+
+  - set_next n:HMAP_NODE V KEY K <-
+  (
+    next := n
+  )
+  [
+    +? {next = n}
+  ]
+
+  - create i:V to k:K next n:HMAP_NODE V KEY K :SELF<-
+  ( + result:SELF
+
+    result := clone
+    result.make i to k next n
+    result
+  )
+
+  - make i:V to k:K next n:HMAP_NODE V KEY K <-
+  (
+    item := i
+    key  := k
+    next := n
+  )
+  [
+    +? {item = i}
+    +? {key  = k}
+    +? {next = n}
+  ]
+

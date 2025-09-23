@@ -1,0 +1,2087 @@
+Header
+  + name := PEN;
+    
+Inherit
+  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  
+Private
+  
+  - rows_tmp:ARRAY TEXT_ROW := ARRAY TEXT_ROW.create_with_capacity 2
+  
+  - stock_array_vertex:ARRAY (ARRAY VERTEX) := ARRAY (ARRAY VERTEX).create_with_capacity 32
+  
+  - new_array_vertex n:INTEGER :ARRAY VERTEX <-
+  ( + result:ARRAY VERTEX
+    (stock_array_vertex.is_empty).if {
+      result := ARRAY VERTEX.create_with_capacity n
+    } else {
+      result := stock_array_vertex.pop
+      result.with_capacity n
+      ? {result.is_empty}
+    }
+    result
+  )
+  
+  - free_array_vertex t:ARRAY VERTEX <-
+  (
+    stock_array_vertex.add_last t
+  )
+  
+Public // Private
+  
+  + gl:PEN_GL
+  - load_gl <- ( pen_gl := gl; )
+  
+  + commands:ARRAY PEN_CMD
+  + command_x:REAL_32
+  + command_y:REAL_32
+  + states:ARRAY STATE
+  + cache:PATH_CACHE
+  + fringe_width:REAL_32
+  + device_px_ratio:REAL_32
+  
+  + params:FONS_PARAMS
+  + fs:FONS_CONTEXT
+  + font_images:ARRAY INTEGER
+  + font_image_idx:INTEGER
+    
+  - cross (dx0,dy0:REAL_32) with (dx1,dy1:REAL_32) :REAL_32 <-
+  ( dx1*dy0 - dx0*dy1 )
+  
+  - normalize_and_distance (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <-
+  ( + d,rx,ry,nd:REAL_32
+    d := (x*x + y*y).sqrt
+    (d > 0.000001).if { 
+      nd := 1.0 / d
+      (rx,ry) := (x*nd,y*nd)
+    } else {
+      (rx,ry) := (x,y)
+    }
+    rx,ry,d
+  )
+  
+  - normalize (x,y:REAL_32) :(REAL_32,REAL_32) <-
+  ( + rx,ry,d:REAL_32
+    (rx,ry,d) := normalize_and_distance (x,y)
+    rx,ry
+  )
+
+  - set_device_pixel_ratio ratio:REAL_32 <-
+  (
+    tess_tol := 0.25 / ratio
+    dist_tol := 0.01 / ratio
+    fringe_width := 1.0 / ratio
+    device_px_ratio := ratio
+  )
+
+  - get_state:STATE <- states.last
+  
+  - new_pen:SELF <- clone.init_pen
+  
+  - init_font <-
+  (   
+    font_images := ARRAY INTEGER.create max_fontimages
+    params := FONS_PARAMS.create (512,512)
+    fs := FONS_CONTEXT.create_internal params
+    // Create font texture
+    //params.width.print; 'x'.print; params.height.print; '\n'.print
+    font_images.at 0 put (
+      pen_gl.render_create_texture texture_alpha size (params.width,params.height) flags 0 data NULL
+    )
+  )
+  
+  - init_pen:SELF <-
+  (
+    pen_gl := gl := PEN_GL.new
+    pen_gl.init (antialias | stencil_strokes | debug)
+    commands := ARRAY PEN_CMD.create_with_capacity 256
+    states := ARRAY STATE.create_with_capacity 32
+    cache := PATH_CACHE.create
+    //save
+    states.add_last (STATE.create)
+    states.last.reset
+    set_device_pixel_ratio 1.0
+    pen_gl.render_create
+    init_font
+    Self
+  )
+    
+  - delete <-
+  ( 
+    (commands.lower).to (commands.upper) do { i:INTEGER
+      commands.at i.free
+    }
+    commands.clear
+    cache.delete
+    /*
+    fs.delete
+    */
+    0.to (font_images.upper) do { i:INTEGER
+      (font_images.at i != 0).if {
+        delete_image (font_images.at i)
+        font_images.at i put 0
+      }
+    }
+    /*
+    (params.render_delete != NULL).if {
+      params.render_delete (params.user_ptr)
+    }
+    */
+  )
+  
+  - begin_frame (window_width,window_height:INTEGER) 
+  ratio device_pixel_ratio:REAL_32 <-
+  (
+    1.to (states.upper) do { i:INTEGER
+      states.at i.free
+    }
+    states.set_upper 0
+    set_device_pixel_ratio device_pixel_ratio
+    pen_gl.render_viewport (window_width, window_height)
+  )
+
+  - cancel_frame <- pen_gl.render_cancel
+
+  - end_frame <-
+  (    
+    //"PEN: render_flush BEGIN\n".print
+    //pen_gl.check_error "av end_frame"
+    pen_gl.render_flush (states.last.composite_operation)
+    //"PEN: render_flush END\n".print
+    (font_image_idx != 0).if {
+      + font_image:INTEGER
+      + i,j,iw,ih:INTEGER
+      font_image := font_images.at (font_image_idx)
+      // delete images that smaller than current one
+      (iw,ih) := image_size font_image
+      {i < font_image_idx}.while_do {        
+        + nw,nh:INTEGER
+        (nw,nh) := image_size (font_images.at i)
+        ((nw < iw) || {nh < ih}).if {
+          delete_image (font_images.at i)
+        } else {
+          font_images.at j put (font_images.at i)
+          j := j + 1
+        }
+        i := i + 1
+      }
+      // make current font image to first
+      font_images.at j put (font_images.at 0)
+      j := j + 1
+      font_images.at 0 put font_image
+      font_image_idx := 0
+      // clear all images after j
+      i := j
+      {i < max_fontimages}.while_do {
+        font_images.at i put 0
+        i := i + 1
+      }
+    }
+  )
+  
+  - do blc:{} <-
+  (
+    save
+    blc.value
+    restore
+  )
+  
+  // State handling
+  - save <-
+  ( + nw:STATE
+    (states.count > 0).if {
+      nw := STATE.create
+      nw.copy (states.last)
+      states.add_last nw
+    }
+  )
+  
+  - translate_calls (x,y:REAL_32) <-
+  ( + c:PEN_CALL_2D
+    (states.last.call_count).to (pen_gl.calls.upper) do { i:INTEGER
+      c ?= pen_gl.calls.at i
+      c.translate (x,y)
+    }
+  )
+  
+  - translate_and_restore (x,y:REAL_32) <-
+  (
+    translate_calls (x,y)
+    //states.last.xform.add_translate (x,y)
+    restore
+  )
+  
+  - translate_and_copy (x,y:REAL_32) <-
+  (
+    translate_calls (x,y)
+    //states.last.xform.add_translate (x,y)
+    (states.count > 1).if {
+      states.second_last.copy_not_call_count (states.last)
+      states.last.free
+      states.remove_last
+    }
+  )
+  
+  - restore_and_translate (x,y:REAL_32) <-
+  (
+    //states.last.xform.add_translate (x,y)
+    restore
+    translate_calls (x,y)
+  )
+  
+  - restore <- 
+  (
+    (states.count > 1).if {
+      states.last.free
+      states.remove_last
+    }
+    ? {states.count >= 1}
+  )
+
+  // State setting
+  - stroke_width w:REAL_32 <- states.last.set_stroke_width w
+  - miter_limit  l:REAL_32 <- states.last.set_miter_limit l
+  - line_cap c:INTEGER     <- states.last.set_line_cap c
+  - line_join j:INTEGER    <- states.last.set_line_join j
+  - global_alpha a:REAL_32 <- states.last.set_alpha a
+
+  - transform (a,b,c,d,e,f:REAL_32) <-
+  ( 
+    TRANSFORM.set_all (a,b) and (c,d) and (e,f)
+    states.last.xform.premultiply TRANSFORM
+  )
+
+  - reset_transform <- states.last.xform.identity
+
+  - translate (x,y:REAL_32) <-
+  ( 
+    TRANSFORM.translate (x,y)
+    states.last.xform.premultiply TRANSFORM
+  )
+
+  - rotate angle:REAL_32 <-
+  ( 
+    TRANSFORM.rotate angle
+    states.last.xform.premultiply TRANSFORM
+  )
+
+  - skew_x angle:REAL_32 <-
+  ( 
+    TRANSFORM.skew_x angle
+    states.last.xform.premultiply TRANSFORM
+  )
+
+  - skew_y angle:REAL_32 <-
+  ( 
+    TRANSFORM.skew_y angle
+    states.last.xform.premultiply TRANSFORM
+  )
+
+  - scale (x,y:REAL_32) <-
+  (
+    TRANSFORM.scale (x,y)
+    states.last.xform.premultiply TRANSFORM
+  )
+
+  - current_transform xform:TRANSFORM <- xform.copy (states.last.xform)
+
+  - stroke_color c:COLOR <- 
+  (
+    states.last.stroke.set_color c
+  )
+
+  - stroke_paint paint:PAINT <-
+  (
+    states.last.stroke.copy paint
+    states.last.stroke.xform.multiply (states.last.xform)
+  )
+
+  - fill_color c:COLOR <-
+  (    
+    states.last.fill.set_color c
+  )
+
+  - fill_paint paint:PAINT <-
+  (
+    states.last.fill.copy paint
+    states.last.fill.xform.multiply (states.last.xform)
+  )
+  
+  // Images
+  
+  - create_image filename:STRING flags image_flags:INTEGER :INTEGER <-
+  ( + image:INTEGER
+    + img:NATIVE_ARRAY UINTEGER_8
+    //IMAGE.set_unpremultiply_on_load 1
+    //IMAGE.convert_iphone_png_to_rgb 1
+    image := -1
+    (IMAGE.init filename).if {      
+      img := IMAGE.load (IMAGE.rgb_alpha)
+      (img != NULL).if  {
+        image := create_image_rgba img size (IMAGE.img_x,IMAGE.img_y) flags image_flags
+      }
+    }
+    image
+  )
+
+  - create_image data:NATIVE_ARRAY UINTEGER_8 size (ndata:INTEGER) flags image_flags:INTEGER :INTEGER <- //JUJU :INTEGER manquait je crois
+  ( + image:INTEGER
+    + img:NATIVE_ARRAY UINTEGER_8
+    image := -1
+    (IMAGE.init data size ndata).if {
+      img := IMAGE.load (IMAGE.rgb_alpha)
+      (img != NULL).if {
+        image := create_image_rgba img size (IMAGE.img_x,IMAGE.img_y) flags image_flags
+      }
+    }
+    image
+  )
+
+  - create_image_rgba dta:NATIVE_ARRAY UINTEGER_8 
+  size (w,h:INTEGER) flags image_flags:INTEGER :INTEGER <-
+  (
+    pen_gl.render_create_texture texture_rgba size (w, h) flags image_flags data dta
+  )
+  
+  - create_image_rgb dta:NATIVE_ARRAY UINTEGER_8 
+  size (w,h:INTEGER) flags image_flags:INTEGER :INTEGER <-
+  (
+    pen_gl.render_create_texture 0 size (w, h) flags image_flags data dta
+  )
+  
+  - create_image_bgra dta:NATIVE_ARRAY UINTEGER_8 
+  size (w,h:INTEGER) flags image_flags:INTEGER :INTEGER <-
+  (
+    pen_gl.render_create_texture_bgra texture_rgba size (w, h) flags image_flags data dta
+  )
+
+  - update_image dta:NATIVE_ARRAY UINTEGER_8 id image:INTEGER <-
+  ( + w,h:INTEGER
+    (w,h) := pen_gl.render_get_texture_size image
+    pen_gl.render_update_texture image to (0,0) size (w,h) data dta
+  )
+  
+  - update_image_bgra dta:NATIVE_ARRAY UINTEGER_8 id image:INTEGER <-
+  ( + w,h:INTEGER
+    (w,h) := pen_gl.render_get_texture_size image
+    pen_gl.render_update_texture_bgra image to (0,0) size (w,h) data dta
+  )
+  
+  - new_img dta:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) flags f:INTEGER id pid:INTEGER :INTEGER <-
+  // if id = -1 then create else update
+  ( + id,ww,hh:INTEGER
+    
+    (pid = -1).if {
+      id := create_image_rgba dta size (w,h) flags f
+    } else {
+      (ww,hh) := image_size pid
+      ((ww != w) || {hh != h}).if {
+        delete_image pid
+        id := create_image_rgba dta size (w,h) flags f
+      } else {        
+        id := pid
+        update_image dta id id
+      }
+    }
+    id      
+  )
+
+  - image_size image:INTEGER :(INTEGER,INTEGER) <-
+  pen_gl.render_get_texture_size image
+
+  - delete_image image:INTEGER <-
+  pen_gl.render_delete_texture image
+  
+  - hard_scissor (x,y:REAL_32) size (w,h:REAL_32) <-
+  (    
+    pen_gl.calls.add_last (CALL_CLIP.create (x,pen_gl.view1 - (y+h)) size (w,h))
+  )
+  
+  - reset_hard_scissor <-
+  pen_gl.calls.add_last (CALL_CLIP.create (0,0) size (pen_gl.view0,pen_gl.view1))
+  
+  - intersect_scissor (x,y:REAL_32) size (w,h:REAL_32) <-
+  states.last.scissor.intersect (x,y) size (w,h) with (states.last.xform)
+  
+  - get_scissor:(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( + x,y,w,h:REAL_32
+    (w,h) := (states.last.scissor.extend0,states.last.scissor.extend1)
+    (x,y) := (states.last.scissor.xform.t4,states.last.scissor.xform.t5)
+    (x,y) := (x-w,y-h)
+    x,y,w*2,h*2
+  )
+  
+  - reset_scissor <- states.last.scissor.reset
+  
+  - trace_pointer:INTEGER <- pen_gl.calls.upper
+  - foreground low:INTEGER to up:INTEGER <- pen_gl.calls.move_to_last (low+1) to up
+  
+  // Global composite operation.
+  - global_composite_operation op:INTEGER <-
+  (
+    states.last.set_composite_operation op
+  )
+
+  - global_composite_blend_func (sfactor,dfactor:INTEGER) <-
+  (
+    global_composite_blend_func_separate (sfactor, dfactor, sfactor, dfactor)
+  )
+
+  - global_composite_blend_func_separate (src_rgb,dst_rgb,src_alpha,dst_alpha:INTEGER) <-
+  ( + op:COMPOSITE_OPERATION_STATE
+    op := COMPOSITE_OPERATION_STATE.create (src_rgb,dst_rgb) 
+    alpha (src_alpha,dst_alpha)
+    states.last.set_composite_operation op
+  )
+
+  - dist_seg (x,y:REAL_32) with (px,py:REAL_32) and (qx,qy:REAL_32) :REAL_32 <-
+  ( + pqx, pqy, dx, dy, d, t:REAL_32
+    pqx := qx - px
+    pqy := qy - py
+    dx := x - px
+    dy := y - py
+    d := pqx*pqx + pqy*pqy
+    t := pqx*dx  + pqy*dy
+    (d > 0).if { t := t/d; }
+    (t < 0).if   { t := 0; }.elseif 
+    {t > 1} then { t := 1; }
+    dx := px + t*pqx - x
+    dy := py + t*pqy - y
+    dx*dx + dy*dy
+  )
+
+  - add_cmd cmd:PEN_CMD <-
+  ( + move:PEN_MOVE
+                
+    (move ?= cmd; move != NULL).if {
+      command_x := move.x
+      command_y := move.y
+    }
+    // transform commands
+    cmd.transform (states.last.xform)
+    commands.add_last cmd    
+  )
+  
+PEN
+  
+  
+  - clear_path_cache <-
+  (
+    //cache.points.clear
+    0.to (cache.paths.upper) do { i:INTEGER
+      cache.paths.at i.free
+    }
+    cache.paths.clear
+  )
+
+  - last_path:PATH <- cache.paths.last
+
+  - last_point:POINT <- cache.points.last
+
+  - curve_divs (r,arc,tol:REAL_32) :INTEGER <-
+  ( + da:REAL_32
+    da := (r / (r + tol)).acos * 2.0
+    (arc / da).ceil.to_integer.max 2
+  )
+
+  - choose_bevel (pbevel:BOOLEAN, p0,p1:POINT) with w:REAL_32 
+  :(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( + x0,y0,x1,y1:REAL_32
+    (pbevel).if {
+      x0 := p1.x + p0.dy * w
+      y0 := p1.y - p0.dx * w
+      x1 := p1.x + p1.dy * w
+      y1 := p1.y - p1.dx * w
+    } else {
+      x0 := p1.x + p1.dmx * w
+      y0 := p1.y + p1.dmy * w
+      x1 := p1.x + p1.dmx * w
+      y1 := p1.y + p1.dmy * w
+    }
+    x0,y0, x1,y1
+  )
+
+  - vset vtx:ARRAY VERTEX with (x,y,u,v:REAL_32) <-
+  ( //- bug:INTEGER
+    //"X: ".print; x.print; " Y:".print; y.print; ' '.print
+    //"U: ".print; u.print; " V:".print; v.print; '\n'.print
+    //(bug = 10000).if { crash; }
+    // bug := bug + 1
+    vtx.add_last (VERTEX.make (x,y) axes (u,v))
+  )
+
+  - round_join vtx:ARRAY VERTEX points (p0,p1:POINT) 
+  with (lw,rw,lu,ru:REAL_32, ncap:INTEGER, fringe:REAL_32) <-
+  ( + n:INTEGER
+    + dlx0,dly0,dlx1,dly1:REAL_32
+    dlx0 :=  p0.dy
+    dly0 := -p0.dx
+    dlx1 :=  p1.dy
+    dly1 := -p1.dx
+    //"round_join\n".print
+    ((p1.flags & pt_left) != 0).if {
+      + lx0,ly0,lx1,ly1,a0,a1:REAL_32
+      (lx0,ly0,lx1,ly1) := choose_bevel ((p1.flags & pr_innerbevel)!=0, p0, p1) with lw
+      a0 := (-dly0).atan2 (-dlx0)
+      a1 := (-dly1).atan2 (-dlx1)
+      (a1 > a0).if { a1 := a1 - REAL.two_pi; }
+      vset vtx with (lx0, ly0, lu,1)
+      vset vtx with (p1.x - dlx0*rw, p1.y - dly0*rw, ru,1)
+      n := (((a0 - a1) / REAL.pi) * ncap).ceiling.clamp 2 to ncap - 1
+      0.to n do { i:INTEGER
+        + u,a,rx,ry:REAL_32
+        u := i.to_real_32/n
+        a := a0 + u*(a1-a0)
+        rx := p1.x + a.cos * rw
+        ry := p1.y + a.sin * rw
+        vset vtx with (p1.x, p1.y, 0.5,1)
+        vset vtx with (rx, ry, ru,1)
+      }
+      vset vtx with (lx1, ly1, lu,1)
+      vset vtx with (p1.x - dlx1*rw, p1.y - dly1*rw, ru,1)
+    } else {
+      + rx0,ry0,rx1,ry1,a0,a1:REAL_32
+      (rx0,ry0,rx1,ry1) := choose_bevel ((p1.flags & pr_innerbevel)!=0, p0, p1) with (-rw)
+      a0 := dly0.atan2 dlx0
+      a1 := dly1.atan2 dlx1
+      (a1 < a0).if { a1 := a1 + REAL.two_pi; }
+      vset vtx with (p1.x + dlx0*rw, p1.y + dly0*rw, lu,1)
+      vset vtx with (rx0, ry0, ru,1)
+      n := (((a1 - a0) / REAL_32.pi) * ncap).ceiling.clamp 2 to ncap - 1
+      0.to n do { i:INTEGER
+        + u,a,lx,ly:REAL_32
+        u := i.to_real_32/n
+        a := a0 + u*(a1-a0)
+        lx := p1.x + a.cos * lw
+        ly := p1.y + a.sin * lw
+        vset vtx with (lx, ly, lu,1)
+        vset vtx with (p1.x, p1.y, 0.5,1)
+      }
+      vset vtx with (p1.x + dlx1*rw, p1.y + dly1*rw, lu,1)
+      vset vtx with (rx1, ry1, ru,1)
+    }
+  )
+
+  - bevel_join vtx:ARRAY VERTEX points (p0,p1:POINT) 
+  with (lw,rw,lu,ru,fringe:REAL_32) <-
+  ( + rx0,ry0,rx1,ry1:REAL_32
+    + lx0,ly0,lx1,ly1:REAL_32
+    + dlx0,dly0,dlx1,dly1:REAL_32
+    //"bevel_join\n".print
+    dlx0 :=  p0.dy
+    dly0 := -p0.dx
+    dlx1 :=  p1.dy
+    dly1 := -p1.dx
+    ((p1.flags & pt_left) != 0).if {
+      (lx0,ly0,lx1,ly1) := choose_bevel ((p1.flags & pr_innerbevel) != 0, p0, p1) with lw
+      vset vtx with (lx0, ly0, lu,1)
+      vset vtx with (p1.x - dlx0*rw, p1.y - dly0*rw, ru,1)
+      ((p1.flags & pt_bevel) != 0).if {
+        vset vtx with (lx0, ly0, lu,1)
+        vset vtx with (p1.x - dlx0*rw, p1.y - dly0*rw, ru,1)
+        vset vtx with (lx1, ly1, lu,1)
+        vset vtx with (p1.x - dlx1*rw, p1.y - dly1*rw, ru,1)
+      } else {
+        rx0 := p1.x - p1.dmx * rw
+        ry0 := p1.y - p1.dmy * rw
+        vset vtx with (p1.x, p1.y, 0.5,1)
+        vset vtx with (p1.x - dlx0*rw, p1.y - dly0*rw, ru,1)
+        vset vtx with (rx0, ry0, ru,1)
+        vset vtx with (rx0, ry0, ru,1)
+        vset vtx with (p1.x, p1.y, 0.5,1)
+        vset vtx with (p1.x - dlx1*rw, p1.y - dly1*rw, ru,1)
+      }
+      vset vtx with (lx1, ly1, lu,1)
+      vset vtx with (p1.x - dlx1*rw, p1.y - dly1*rw, ru,1)
+    } else {
+      (rx0,ry0,rx1,ry1) := choose_bevel((p1.flags & pr_innerbevel) != 0, p0, p1) with (-rw)
+      vset vtx with (p1.x + dlx0*lw, p1.y + dly0*lw, lu,1)
+      vset vtx with (rx0, ry0, ru,1)
+      ((p1.flags & pt_bevel) != 0).if {
+        vset vtx with (p1.x + dlx0*lw, p1.y + dly0*lw, lu,1)
+        vset vtx with (rx0, ry0, ru,1)
+        vset vtx with (p1.x + dlx1*lw, p1.y + dly1*lw, lu,1)
+        vset vtx with (rx1, ry1, ru,1)
+      } else {
+        lx0 := p1.x + p1.dmx * lw
+        ly0 := p1.y + p1.dmy * lw
+        vset vtx with (p1.x + dlx0*lw, p1.y + dly0*lw, lu,1)
+        vset vtx with (p1.x, p1.y, 0.5,1)
+        vset vtx with (lx0, ly0, lu,1)
+        vset vtx with (lx0, ly0, lu,1)
+        vset vtx with (p1.x + dlx1*lw, p1.y + dly1*lw, lu,1)
+        vset vtx with (p1.x, p1.y, 0.5,1)
+      }
+      vset vtx with (p1.x + dlx1*lw, p1.y + dly1*lw, lu,1)
+      vset vtx with (rx1, ry1, ru,1)
+    }
+  )
+
+  - butt_cap_start vtx:ARRAY VERTEX point p:POINT 
+  with (dx,dy,w,d,aa:REAL_32) <-
+  ( + px,py,dlx,dly:REAL_32
+    //"butt_cap_start\n".print
+    (px,py)   := (p.x - dx*d,p.y - dy*d)
+    (dlx,dly) := (dy,-dx)
+    vset vtx with (px + dlx*w - dx*aa, py + dly*w - dy*aa, 0,0)
+    vset vtx with (px - dlx*w - dx*aa, py - dly*w - dy*aa, 1,0)
+    vset vtx with (px + dlx*w, py + dly*w, 0,1)
+    vset vtx with (px - dlx*w, py - dly*w, 1,1)
+  )
+
+  - butt_cap_end vtx:ARRAY VERTEX point p:POINT 
+  with (dx,dy,w,d,aa:REAL_32) <-
+  ( + px,py,dlx,dly:REAL_32
+    //"butt_cap_end\n".print
+    (px,py)   := (p.x + dx*d,p.y + dy*d)
+    (dlx,dly) := (dy,-dx)
+    vset vtx with (px + dlx*w, py + dly*w, 0,1)
+    vset vtx with (px - dlx*w, py - dly*w, 1,1)
+    vset vtx with (px + dlx*w + dx*aa, py + dly*w + dy*aa, 0,0)
+    vset vtx with (px - dlx*w + dx*aa, py - dly*w + dy*aa, 1,0)
+  )
+
+  - round_cap_start vtx:ARRAY VERTEX point p:POINT 
+  with (dx,dy,w:REAL_32,ncap:INTEGER,aa:REAL_32) <-
+  ( + px,py,dlx,dly:REAL_32
+    + n:INTEGER
+    //"round_cap_start\n".print
+    (px,py)   := (p.x,p.y)
+    (dlx,dly) := (dy,-dx)
+    n := ncap-1
+    0.to n do { i:INTEGER
+      + a,ax,ay:REAL_32
+      a := i.to_real_32/n*REAL.pi
+      (ax,ay) := (a.cos * w, a.sin * w)
+      vset vtx with (px - dlx*ax - dx*ay, py - dly*ax - dy*ay, 0,1)
+      vset vtx with (px, py, 0.5,1)
+    }
+    vset vtx with (px + dlx*w, py + dly*w, 0,1)
+    vset vtx with (px - dlx*w, py - dly*w, 1,1)
+  )
+
+  - round_cap_end vtx:ARRAY VERTEX point p:POINT 
+  with (dx,dy,w:REAL_32,ncap:INTEGER,aa:REAL_32) <-
+  ( + n:INTEGER
+    + px,py,dlx,dly:REAL_32
+    //"round_cap_end\n".print
+    (px,py)   := (p.x,p.y)
+    (dlx,dly) := (dy,-dx)
+    vset vtx with (px + dlx*w, py + dly*w, 0,1)
+    vset vtx with (px - dlx*w, py - dly*w, 1,1)
+    n := ncap - 1
+    0.to n do { i:INTEGER
+      + a,ax,ay:REAL_32
+      a := i.to_real_32/n*REAL.pi
+      (ax,ay) := (a.cos * w, a.sin * w)
+      vset vtx with (px, py, 0.5,1)
+      vset vtx with (px - dlx*ax + dx*ay, py - dly*ax + dy*ay, 0,1)
+    }
+  )
+
+  - calculate_joins (w:REAL_32, lin_join:INTEGER, miter_limi:REAL_32) <-
+  ( + iw:REAL_32
+    //"calculate_joins\n".print
+    (w > 0).if { iw := 1.0 / w; }
+    // Calculate which joins needs extra vertices to append, 
+    // and gather vertex count.
+    0.to (cache.paths.upper) do { i:INTEGER
+      + path:PATH
+      + p0,p1:POINT
+      + pts:ARRAY POINT
+      + nleft:INTEGER
+      
+      path := cache.paths.at i
+      pts := path.points
+      path.set_nbevel 0
+      p0 := pts.last
+      0.to (path.points.upper) do { j:INTEGER
+        + dlx0, dly0, dlx1, dly1, dmr2, cross, limit:REAL_32
+        p1 := pts.at j
+        (dlx0,dly0) := (p0.dy,-p0.dx)
+        (dlx1,dly1) := (p1.dy,-p1.dx)
+        // Calculate extrusions
+        p1.set_dmxy ((dlx0 + dlx1) * 0.5,(dly0 + dly1) * 0.5)
+        dmr2 := p1.dmx*p1.dmx + p1.dmy*p1.dmy
+        (dmr2 > 0.000001).if {
+          + scal:REAL_32
+          scal := 1.0 / dmr2
+          (scal > 600.0).if {
+            scal := 600.0
+          }
+          p1.set_dmxy (p1.dmx * scal, p1.dmy * scal)
+        }
+        // Clear flags, but keep the corner.
+        ((p1.flags & pt_corner) != 0).if {
+          p1.set_flags pt_corner
+        } else {
+          p1.set_flags 0
+        }
+        // Keep track of left turns.
+        cross := p1.dx * p0.dy - p0.dx * p1.dy
+        /*
+        "cross:".print; cross.print
+        " p0:".print; p0.dx.print; ','.print; p0.dy.print
+        " p1:".print; p1.dx.print; ','.print; p1.dy.print
+        " - ".print; p1.x.print; ','.print; p1.y.print
+        '\n'.print
+        */
+        //"cross:".print; cross.print; '\n'.print
+        (cross > 0.0).if {
+          nleft := nleft + 1
+          p1.set_flags (p1.flags | pt_left)
+        }
+        // Calculate if we should use bevel or miter for inner join.
+        limit := (p0.len.min (p1.len) * iw).max 1.01
+        ((dmr2 * limit*limit) < 1.0).if { 
+          p1.set_flags (p1.flags | pr_innerbevel)
+        }
+        // Check to see if the corner needs to be beveled.
+        ((p1.flags & pt_corner) != 0).if {
+          (
+            ((dmr2 * miter_limi*miter_limi) < 1.0) || 
+            {lin_join = bevel} || {lin_join = round}
+          ).if {
+            p1.set_flags (p1.flags | pt_bevel)
+          }
+        }
+        ((p1.flags & (pt_bevel | pr_innerbevel)) != 0).if {
+          path.inc_nbevel
+        }
+        p0 := p1
+      }
+      //"--FO--\n".print
+      path.set_convex (nleft = path.points.count)
+    }
+  )
+
+  - expand_stroke (w:REAL_32,lin_cap,lin_join:INTEGER,miter_limi:REAL_32) <-
+  ( + dst:ARRAY VERTEX
+    + ncap:INTEGER
+    + aa:REAL_32
+    //"expand_stroke\n".print
+    aa := fringe_width
+    // Calculate divisions per half circle.
+    ncap := curve_divs(w, REAL.pi, tess_tol)
+    calculate_joins(w, lin_join, miter_limi)
+        
+    0.to (cache.paths.upper) do { i:INTEGER
+      + path:PATH
+      + pts:ARRAY POINT
+      + p0,p1:POINT
+      + loop:BOOLEAN
+      + s, e:INTEGER
+      + dx, dy:REAL_32
+      path := cache.paths.at i
+      pts := path.points
+      path.fill.clear
+      dst := path.stroke
+
+      // Calculate fringe or stroke
+      loop := path.closed
+      (loop).if {
+        // Looping        
+        p1 := pts.last
+        s  := 0
+        e  := pts.upper
+      } else {
+        // Add cap        
+        p0 := pts.first
+        p1 := pts.second
+        (dx,dy) := normalize(p1.x - p0.x, p1.y - p0.y)
+        (lin_cap = butt).if {
+          butt_cap_start dst point p0 with (dx, dy, w, -aa*0.5, aa)
+        }.elseif {lin_cap = square} then {
+          butt_cap_start dst point p0 with (dx, dy, w, w-aa, aa)
+        }.elseif {lin_cap = round} then {
+          round_cap_start dst point p0 with (dx, dy, w, ncap, aa)
+        }
+        p1 := pts.first
+        s  := 1
+        e  := pts.upper-1
+      }
+      s.to e do { j:INTEGER
+        p0 := p1
+        p1 := pts.at j
+        ((p1.flags & (pt_bevel | pr_innerbevel)) != 0).if {
+          (lin_join = round).if {
+            round_join dst points (p0,p1) with (w,w,0,1,ncap,aa)
+          } else {
+            bevel_join dst points (p0,p1) with (w,w,0,1,aa)
+          }
+        } else {
+          vset dst with (p1.x + (p1.dmx * w), p1.y + (p1.dmy * w), 0,1)
+          vset dst with (p1.x - (p1.dmx * w), p1.y - (p1.dmy * w), 1,1)
+        }
+      }
+
+      (loop).if {
+        // Loop it
+        + v:VERTEX
+        v := dst.first
+        vset dst with (v.x,v.y, 0,1)
+        v := dst.second
+        vset dst with (v.x,v.y, 1,1)
+      } else {
+        // Add cap
+        p0 := p1
+        p1 := pts.at (e+1)
+        (dx,dy) := normalize (p1.x - p0.x, p1.y - p0.y)
+        (lin_cap = butt).if {
+          butt_cap_end dst point p1 with (dx,dy,w,-aa*0.5,aa)
+        }.elseif {(lin_cap = butt) || {lin_cap = square}} then {
+          butt_cap_end dst point p1 with (dx,dy,w,w-aa,aa)
+        }.elseif {lin_cap = round} then {
+          round_cap_end dst point p1 with (dx,dy,w,ncap,aa)
+        }
+      }
+    }
+  )
+
+  - expand_fill (w:REAL_32,lin_join:INTEGER,miter_lim:REAL_32) <-
+  ( + dst:ARRAY VERTEX
+    + aa:REAL_32
+    + fringe,convex:BOOLEAN
+//    "expand_fill\n".print
+    aa := fringe_width
+    fringe := w > 0.0
+    calculate_joins (w, lin_join, miter_lim)
+//    "calculate_joins FIN\n".print
+//    cache.paths.count.print; ' '.print; cache.paths.first.convex.print; '\n'.print
+    convex := (cache.paths.count = 1) && {cache.paths.first.convex}
+    0.to (cache.paths.upper) do { i:INTEGER
+      + path:PATH
+      + pts:ARRAY POINT
+      + p0,p1:POINT
+      + rw,lw,woff,ru,lu:REAL_32
+      path := cache.paths.at i
+      pts := path.points
+      
+      path.fill.clear
+      path.stroke.clear
+      
+      // Calculate shape vertices.
+      woff := aa*0.5
+      dst := path.fill
+      
+      (fringe).if {
+        // Looping
+        p0 := pts.last
+        
+        0.to (path.points.upper) do { j:INTEGER
+          p1 := pts.at j
+          ((p1.flags & pt_bevel) != 0).if {            
+            + dlx0,dly0,dlx1,dly1:REAL_32
+            (dlx0,dly0) := (p0.dy,-p0.dx)
+            (dlx1,dly1) := (p1.dy,-p1.dx)
+            ((p1.flags & pt_left) != 0).if {
+              + lx,ly:REAL_32
+              (lx,ly) := (p1.x+p1.dmx*woff, p1.y+p1.dmy*woff)
+              //p1.dmx.print; ','.print; p1.dmy.print; '\n'.print; // DEBUG
+              vset dst with (lx,ly,0.5,1)
+            } else {
+              + lx0,ly0,lx1,ly1:REAL_32
+              (lx0,ly0) := (p1.x + dlx0 * woff, p1.y + dly0 * woff)
+              (lx1,ly1) := (p1.x + dlx1 * woff, p1.y + dly1 * woff)
+              vset dst with (lx0, ly0, 0.5,1)
+              vset dst with (lx1, ly1, 0.5,1)
+            }
+          } else {
+            vset dst with (p1.x+(p1.dmx*woff), p1.y+(p1.dmy*woff), 0.5,1)
+          }
+          p0 := p1
+        }
+      } else {
+        0.to (path.points.upper) do { j:INTEGER
+          vset dst with (pts.at j.x,pts.at j.y,0.5,1)
+        }
+      }
+      // Calculate fringe
+      
+      (fringe).if {
+        lw := w + woff
+        rw := w - woff
+        lu := 0
+        ru := 1
+        dst := path.stroke
+        // Create only half a fringe for convex shapes so that
+        // the shape can be rendered without stenciling.
+        (convex).if {
+          //"CONVEX\n".print
+          lw := woff;	// This should generate the same vertex as fill inset above.
+          lu := 0.5;	// Set outline fade at middle.
+        } else { 
+          // "NON CONVEX\n".print
+        }
+        // Looping
+        p0 := pts.at (path.points.upper)
+        
+        0.to (path.points.upper) do { j:INTEGER
+          p1 := pts.at j
+          ((p1.flags & (pt_bevel | pr_innerbevel)) != 0).if {
+            bevel_join dst points (p0,p1) with (lw,rw,lu,ru,fringe_width)
+            //"bevel_join FIN\n".print
+          } else {
+            vset dst with (p1.x+(p1.dmx*lw), p1.y+(p1.dmy*lw), lu,1)
+            vset dst with (p1.x-(p1.dmx*rw), p1.y-(p1.dmy*rw), ru,1)
+          }
+          p0 := p1
+        }
+        // Loop it
+        vset dst with (dst.at 0.x, dst.at 0.y, lu,1)
+        vset dst with (dst.at 1.x, dst.at 1.y, ru,1)
+      }
+      
+    }
+  )
+
+Public
+  
+  // Draw
+  - begin_path <-
+  ( 
+    (commands.lower).to (commands.upper) do { i:INTEGER
+      commands.at i.free
+    }
+    commands.clear
+    clear_path_cache
+  )
+  
+  - stroke p:{} width w:REAL_32 color c:COLOR <-
+  (
+    save
+    begin_path
+    stroke_color c
+    stroke_width w
+    p.value
+    stroke
+    restore
+  )
+  
+  - fill p:{} color c:COLOR <-
+  (
+    save
+    begin_path
+    fill_color c
+    p.value
+    fill
+    restore
+  )
+
+  - move_to (x,y:REAL_32) <- 
+  ( add_cmd (PEN_MOVE.create (x,y)); )
+
+  - line_to (x,y:REAL_32) <- 
+  ( add_cmd (PEN_LINE.create (x,y)); )
+  
+  - line (x0,y0:REAL_32) to (x1,y1:REAL_32) <- 
+  (
+    move_to (x0,y0)
+    line_to (x1,y1)
+  )
+  
+  - line (x0,y0:REAL_32) to (x1,y1:REAL_32) color col:COLOR <-
+  (
+    stroke_color col
+    line (x0,y0) to (x1,y1)
+  )
+  
+  - bezier (xb,yb:REAL_32) w1 (c1x,c1y:REAL_32) w2 (c2x,c2y:REAL_32) to (xe,ye:REAL_32) <-
+  (
+    move_to (xb,yb)
+    bezier_w1 (c1x,c1y) w2 (c2x,c2y) to (xe,ye)
+  )
+  
+  - bezier_w1 (c1x,c1y:REAL_32) w2 (c2x,c2y:REAL_32) to (x,y:REAL_32) <-
+  ( add_cmd (PEN_BEZIER.create_w1 (c1x,c1y) w2 (c2x,c2y) to (x,y)); )
+  
+  - quad (xb,yb:REAL_32) w (cx,cy:REAL_32) to (x,y:REAL_32) <-
+  (
+    move_to (xb,yb)
+    quad_w (cx,cy) to (x,y)
+  )
+  
+  - quad_w (cx,cy:REAL_32) to (x,y:REAL_32) <-
+  ( + x0,y0:REAL_32
+    x0 := command_x
+    y0 := command_y
+    add_cmd (
+      PEN_BEZIER.create_w1 
+      (x0+ 2.0/3.0*(cx - x0), y0 + 2.0/3.0*(cy - y0)) w2 
+      (x + 2.0/3.0*(cx -  x), y  + 2.0/3.0*(cy -  y)) to 
+      (x,y)
+    )
+  )
+
+  - arc_to (x1,y1:REAL_32) to (x2,y2:REAL_32) radius rad:REAL_32 <-
+  //  o------(x1,y1)
+  //            |
+  //  <--rad--> |
+  //            |
+  //         (x2,y2)
+  ( + x0,y0:REAL_32
+    + dx0,dy0, dx1,dy1, a, d, cx,cy, a0,a1:REAL_32
+    + dir:INTEGER
+    x0 := command_x
+    y0 := command_y
+    (commands.count != 0).if { 
+      // Handle degenerate cases.
+      (
+        (eq (x0,y0) and (x1,y1)) || {eq (x1,y1) and (x2,y2)} ||
+        {dist_seg (x1,y1) with (x0,y0) and (x2,y2) < dist_tol*dist_tol} ||
+        {rad < dist_tol}
+      ).if {
+        line_to (x1,y1)
+      } else {
+        // Calculate tangential circle to 
+        // lines (x0,y0)-(x1,y1) and (x1,y1)-(x2,y2).
+        dx0 := x0-x1
+        dy0 := y0-y1
+        dx1 := x2-x1
+        dy1 := y2-y1
+        (dx0,dy0) := normalize (dx0,dy0)
+        (dx1,dy1) := normalize (dx1,dy1)
+        a := (dx0*dx1 + dy0*dy1).acos
+        d := rad / (a/2.0).tan
+        (d > 10000.0).if {
+          line_to (x1,y1)
+        } else {          
+          (cross (dx0,dy0) with (dx1,dy1) > 0.0).if {
+            cx := x1 + dx0*d + dy0*rad
+            cy := y1 + dy0*d + -dx0*rad
+            a0 := dx0.atan2 (-dy0)
+            a1 := (-dx1).atan2 dy1
+            dir := cst_cw
+          } else {
+            cx := x1 + dx0*d + -dy0*rad
+            cy := y1 + dy0*d + dx0*rad
+            a0 := (-dx0).atan2 dy0
+            a1 := dx1.atan2 (-dy1)
+            dir := cst_ccw
+          }
+          arc (cx, cy) radius rad angle (a0,a1) direction dir
+        }
+      }
+    }
+  )
+
+  - close_path <-
+  ( add_cmd PEN_CLOSE; )
+
+  - path_winding dir:INTEGER <-
+  ( add_cmd (PEN_WINDING.create dir); )
+
+  - arc (cx,cy:REAL_32) radius r:REAL_32 
+  angle (a0,a1:REAL_32) direction d:INTEGER <-
+  //   -pi/2
+  // pi -+- 0  dir 1:Trigo.  2:Clock
+  //    pi/2
+  ( + a,da,hda,kappa:REAL_32
+    + dx,dy,x,y,tanx,tany:REAL_32
+    + px,py,ptanx,ptany:REAL_32
+    + ndivs,nvals:INTEGER
+    + move:PEN_MOVE
+
+    (commands.count > 0).if {
+      move := PEN_LINE
+    } else { 
+      move := PEN_MOVE
+    }
+
+    // Clamp angles
+    da := a1 - a0
+    (d = cst_cw).if {
+      (da.abs >= REAL_32.two_pi).if {
+        da := REAL_32.two_pi
+      } else {
+        {da < 0.0}.while_do {
+          da := da + REAL_32.two_pi
+        }
+      }
+    } else {
+      (da.abs >= REAL_32.two_pi).if {
+        da := -REAL_32.two_pi
+      } else {
+        {da > 0.0}.while_do {
+          da := da - REAL_32.two_pi
+        }
+      }
+    }
+    // Split arc into max 90 degree segments.
+    ndivs := ((da.abs / (REAL_32.pi*0.5) + 0.5).to_integer.min 5).max 1
+    hda   := (da / ndivs) / 2.0
+    kappa := (4.0 / 3.0 * (1.0 - hda.cos) / hda.sin).abs
+
+    (d = cst_ccw).if {
+      kappa := -kappa
+    }
+    nvals := 0
+    0.to ndivs do { i:INTEGER
+      a  := a0 + da * (i.to_real_32/ndivs)
+      dx := a.cos
+      dy := a.sin
+      x  := cx + dx*r
+      y  := cy + dy*r
+      tanx := -dy*r*kappa
+      tany := dx*r*kappa
+
+      (i = 0).if {
+        add_cmd (move.create (x,y))
+      } else {
+        add_cmd (PEN_BEZIER.create_w1 (px+ptanx,py+ptany)
+          w2 (x-tanx,y-tany) to (x,y)
+        )
+      }
+      px := x
+      py := y
+      ptanx := tanx
+      ptany := tany
+    }
+  )
+  
+  - rect (x,y:REAL_32) to (x2,y2:REAL_32) <-
+  ( + x0,y0,w,h:REAL_32
+    (x < x2).if { x0 := x;  w := x2 - x + 1; }
+    else        { x0 := x2; w := x - x2 + 1; }
+    (y < y2).if { y0 := y;  h := y2 - y + 1; }
+    else        { y0 := y2; h := y - y2 + 1; }
+    rect (x0,y0) size (w,h)
+  )
+  
+  - rect (x,y:REAL_32) size (w,h:REAL_32) <-
+  (
+    add_cmd (PEN_MOVE.create (x  ,y  ))
+    add_cmd (PEN_LINE.create (x  ,y+h))
+    add_cmd (PEN_LINE.create (x+w,y+h))
+    add_cmd (PEN_LINE.create (x+w,y  ))
+    add_cmd PEN_CLOSE
+  )
+  
+  - rect (x,y:REAL_32) to (x2,y2:REAL_32) radius r:REAL_32 <-
+  ( + x0,y0,w,h:REAL_32
+    (x0,y0) := (x.min x2,y.min y2)
+    (w,h) := ((x2-x).abs, (y2-y).abs)
+    rect_varying (x0,y0) size (w,h) radius (r,r,r,r)
+  )
+  
+  - rect (x,y:REAL_32) size (w,h:REAL_32) radius r:REAL_32 <-
+  ( rect_varying (x,y) size (w,h) radius (r,r,r,r); )
+
+  - rect_varying (x,y:REAL_32) size (w,h:REAL_32) 
+  radius (top_left,top_right,bottom_right,bottom_left:REAL_32) <-
+  (
+    ((top_left < 0.1) && {top_right < 0.1} && {bottom_right < 0.1} && {bottom_left < 0.1}).if {
+      rect (x,y) size (w,h)
+    } else {
+      + halfw,halfh:REAL_32
+      + rx_bl,ry_bl:REAL_32
+      + rx_br,ry_br:REAL_32
+      + rx_tr,ry_tr:REAL_32
+      + rx_tl,ry_tl:REAL_32
+      + sh,sw:REAL_32
+      
+      (w >= 0.0).if { sw := 1.0; } else { sw := -1.0; }; // BSBS A OPTIMISER !!! abs, ...
+      (h >= 0.0).if { sh := 1.0; } else { sh := -1.0; }
+      (halfw,halfh) := (w.abs*0.5,h.abs*0.5)
+      (rx_bl,ry_bl) := (bottom_left .min halfw * sw, bottom_left .min halfh * sh)
+      (rx_br,ry_br) := (bottom_right.min halfw * sw, bottom_right.min halfh * sh)
+      (rx_tr,ry_tr) := (top_right.min halfw * sw, top_right.min halfh * sh)
+      (rx_tl,ry_tl) := (top_left .min halfw * sw, top_left .min halfh * sh)
+      add_cmd (PEN_MOVE.create (x, y + ry_tl))
+      add_cmd (PEN_LINE.create (x, y + h - ry_bl))
+      add_cmd (PEN_BEZIER.create_w1
+        (x, y + h - ry_bl*(1.0 - cst_kappa90)) w2
+        (x + rx_bl*(1.0 - cst_kappa90), y + h) to
+        (x + rx_bl, y + h)
+      )
+      add_cmd (PEN_LINE.create (x + w - rx_br, y + h))
+      add_cmd (PEN_BEZIER.create_w1
+        (x + w - rx_br*(1.0 - cst_kappa90), y + h) w2
+        (x + w, y + h - ry_br*(1.0 - cst_kappa90)) to
+        (x + w, y + h - ry_br)
+      )
+      add_cmd (PEN_LINE.create (x + w, y + ry_tr))
+      add_cmd (PEN_BEZIER.create_w1
+        (x + w, y + ry_tr*(1.0 - cst_kappa90)) w2
+        (x + w - rx_tr*(1.0 - cst_kappa90), y) to
+        (x + w - rx_tr, y)
+      )
+      add_cmd (PEN_LINE.create (x + rx_tl, y))
+      add_cmd (PEN_BEZIER.create_w1
+        (x + rx_tl*(1.0 - cst_kappa90), y) w2
+        (x, y + ry_tl*(1.0 - cst_kappa90)) to
+        (x, y + ry_tl)
+      )
+      add_cmd PEN_CLOSE
+    }
+  )
+
+  - ellipse (cx,cy:REAL_32) radius (rx,ry:REAL_32) <-
+  (
+    add_cmd (PEN_MOVE.create (cx-rx,cy))
+    add_cmd (PEN_BEZIER.create_w1
+      (cx-rx, cy+ry*cst_kappa90) w2
+      (cx-rx*cst_kappa90, cy+ry) to
+      (cx, cy+ry)
+    )
+    add_cmd (PEN_BEZIER.create_w1
+      (cx+rx*cst_kappa90, cy+ry) w2
+      (cx+rx, cy+ry*cst_kappa90) to
+      (cx+rx, cy)
+    )
+    add_cmd (PEN_BEZIER.create_w1
+      (cx+rx, cy-ry*cst_kappa90) w2
+      (cx+rx*cst_kappa90, cy-ry) to
+      (cx, cy-ry)
+    )
+    add_cmd (PEN_BEZIER.create_w1
+      (cx-rx*cst_kappa90, cy-ry) w2
+      (cx-rx, cy-ry*cst_kappa90) to
+      (cx-rx, cy)
+    )
+    add_cmd PEN_CLOSE
+  )
+
+  - circle (cx,cy:REAL_32) radius r:REAL_32 <-
+  ( ellipse (cx,cy) radius (r,r); )
+    
+  - fill <-
+  ( + paint:PAINT
+    
+    paint := PAINT.create
+    paint.copy (states.last.fill)
+    cache.flatten_paths commands
+    ((pen_gl.flags & pen_gl.antialias) != 0).if {
+      expand_fill (fringe_width, miter, 2.4)
+    } else {
+      expand_fill (0.0, miter, 2.4)
+    }
+    // Apply global alpha
+    paint.inner_color.mul_a (states.last.alpha)
+    paint.outer_color.mul_a (states.last.alpha)
+
+    render_fill paint
+    paint.free
+  )
+  
+  - render_fill paint:PAINT <-
+  ( + call_type:PEN_CALL_2D
+    + path:PATH
+    + call:PEN_CALL_2D
+    + c:PATH_CACHE
+    + fofs,fcnt,sofs,scnt,tofs,tcnt,pofs,pcnt:INTEGER
+    //"Render_fill\n".print
+    c := cache
+    //"PEN: ---> ".print; c.paths.count.print; ' '.print; c.paths.first.convex.print; '\n'.print
+    ((c.paths.count = 1) && {c.paths.first.convex}).if {
+      call_type := CALL_CONVEXFILL
+    } else {
+      call_type := CALL_FILL
+    }
+    pofs := pen_gl.paths.count
+    0.to (c.paths.upper) do { i:INTEGER
+      path := c.paths.at i
+      (path.fill.count > 0).if {
+        fofs := pen_gl.verts.count
+        pen_gl.verts.append_collection (path.fill)
+        fcnt := pen_gl.verts.count - fofs
+      }
+      (path.stroke.count > 0).if {
+        sofs := pen_gl.verts.count
+        pen_gl.verts.append_collection (path.stroke)
+        scnt := pen_gl.verts.count - sofs
+      }
+      pen_gl.paths.add_last (
+        PATH_LOW.make /*create*/ (fofs,fcnt) stroke (sofs,scnt)
+      )
+    }
+    pcnt := pen_gl.paths.count - pofs
+        
+    //"Render_fill suite\n".print
+    tofs := pen_gl.verts.count
+    pen_gl.verts.add_last (VERTEX.make (c.x_min,c.y_max) axes (0.5,1.0))
+    pen_gl.verts.add_last (VERTEX.make (c.x_max,c.y_max) axes (0.5,1.0))
+    pen_gl.verts.add_last (VERTEX.make (c.x_max,c.y_min) axes (0.5,1.0))
+    pen_gl.verts.add_last (VERTEX.make (c.x_min,c.y_max) axes (0.5,1.0))
+    pen_gl.verts.add_last (VERTEX.make (c.x_max,c.y_min) axes (0.5,1.0))
+    pen_gl.verts.add_last (VERTEX.make (c.x_min,c.y_min) axes (0.5,1.0))
+    tcnt := pen_gl.verts.count - tofs
+    
+    call := call_type.create_image (paint.image)
+    path (pofs,pcnt) triangle (tofs,tcnt)
+    uniform (pen_gl.uniforms.count*pen_gl.frag_size)
+    pen_gl.calls.add_last call
+    
+    (call_type = CALL_FILL).if {    
+      pen_gl.uniforms.add_last (FRAG.make shader_simple stroke_thr (-1))
+    }
+    pen_gl.uniforms.add_last (
+      FRAG.convert_paint(paint,states.last.scissor, 
+      fringe_width, fringe_width, -1.0)
+    )
+  )
+  
+  - stroke <-
+  ( + scal,strok_width,alpha:REAL_32
+    + strok_paint:PAINT
+    + state:STATE
+    
+    state := states.last
+    scal := state.xform.average_scale
+    strok_width := (state.stroke_width * scal).clamp 0 to 200
+    strok_paint := state.stroke
+
+    (strok_width < fringe_width).if {
+      // If the stroke width is less than pixel size, 
+      // use alpha to emulate coverage.
+      // Since coverage is area, scale by alpha*alpha.
+      alpha := (strok_width / fringe_width).clamp 0 to 1
+      strok_paint.inner_color.mul_a (alpha*alpha)
+      strok_paint.outer_color.mul_a (alpha*alpha)
+      strok_width := fringe_width
+    }
+    // Apply global alpha
+    strok_paint.inner_color.mul_a (state.alpha)
+    strok_paint.outer_color.mul_a (state.alpha)
+
+    cache.flatten_paths commands
+
+    ((pen_gl.flags & pen_gl.antialias) != 0).if {      
+      expand_stroke(strok_width*0.5 + fringe_width*0.5, 
+      state.line_cap, state.line_join, state.miter_limit)
+    } else {
+      expand_stroke(strok_width*0.5, 
+      state.line_cap, state.line_join, state.miter_limit)
+    }
+
+    render_stroke (strok_paint,state.scissor, 
+      fringe_width, strok_width, cache.paths
+    )
+  )
+  
+  - render_stroke (paint:PAINT,scissor:SCISSOR,fringe,stroke_width:REAL_32,paths:ARRAY PATH) <-
+  // BSBS: A mettre dans pen_gl, non ???
+  ( + call:PEN_CALL_2D
+    + path:PATH
+    + pofs,pcnt,sofs,scnt:INTEGER
+    
+    pofs := pen_gl.paths.count
+    0.to (paths.upper) do { i:INTEGER
+      path := paths.at i
+      (path.stroke.count > 0).if {        
+        sofs := pen_gl.verts.count
+        pen_gl.verts.append_collection (path.stroke)
+        scnt := pen_gl.verts.count - sofs
+        pen_gl.paths.add_last (
+          PATH_LOW.make /*create*/ (0,0) stroke (sofs,scnt)
+        )
+      }
+    }
+    pcnt := pen_gl.paths.count - pofs
+        
+    call := CALL_STROKE.create_image (paint.image) path (pofs,pcnt) triangle (0,0)
+    uniform (pen_gl.uniforms.count*pen_gl.frag_size)
+    pen_gl.calls.add_last call
+    
+    ((pen_gl.flags & stencil_strokes) != 0).if {      
+      pen_gl.uniforms.add_last (
+        FRAG.convert_paint(paint, scissor, stroke_width, 
+        fringe, -1.0)
+      )
+      pen_gl.uniforms.add_last (
+        FRAG.convert_paint(paint, scissor, stroke_width, 
+        fringe, 1.0 - 0.5/255.0)
+      )
+    } else {      
+      pen_gl.uniforms.add_last (
+        FRAG.convert_paint(paint, scissor, stroke_width, 
+        fringe, -1.0)
+      )
+    }
+  )
+  
+  - render_triangles (paint:PAINT,scissor:SCISSOR,verts:ARRAY VERTEX) <-
+  ( + call:PEN_CALL_2D
+    + frag:FRAG
+    + tofs,tcnt:INTEGER
+        
+    // Allocate vertices for all the paths.
+    tofs := pen_gl.verts.count
+    pen_gl.verts.append_collection verts
+    tcnt := pen_gl.verts.count - tofs
+    
+    // Fill shader
+    call := CALL_TRIANGLES.create_image (paint.image)
+    path (0,0) triangle (tofs,tcnt) uniform (pen_gl.uniforms.count*pen_gl.frag_size)
+    pen_gl.calls.add_last call
+    //(verts.lower).to (verts.upper) do { i:INTEGER; verts.item i.print; }
+    frag := FRAG.convert_paint(paint, scissor, 1.0, 1.0, -1.0)
+    frag.set_type shader_img
+    pen_gl.uniforms.add_last frag
+    //pen_gl.uniforms.last.print2
+  )
+    
+  // Fonts
+  
+  - create_font name_id:STRING_ALIAS path pth:STRING :INTEGER <-
+  // Return: -1: Font invalid, else index font.
+  (
+    fs.add_font name_id path pth
+  )
+
+  - create_font_mem name_id:STRING_ALIAS data dta:ARRAY UINTEGER_8 
+  free free_data:BOOLEAN :INTEGER <-
+  // Return: -1: Font invalid, else index font.
+  (
+    fs.add_font_mem name_id data dta free free_data
+  )
+
+  - find_font name_id:STRING_ALIAS :INTEGER <-
+  [ ? {name_id != NULL}; ]
+  (
+    fs.get_font_by_name name_id
+  )
+
+  - add_fallback_font_id (base_font:INTEGER,fallback_font:INTEGER) :INTEGER <-
+  [ ? {base_font != -1}; ? {fallback_font != -1}; ]
+  (
+    fs.add_fallback_font (base_font, fallback_font)
+  )
+
+  - add_fallback_font (base_font,fallback_font:STRING_ALIAS) :INTEGER <-
+  (
+    add_fallback_font_id (find_font base_font, find_font fallback_font)
+  )
+
+  // State setting
+  - font_size sz:REAL_32 <-
+  ( + state:STATE
+    state := get_state
+    state.set_font_size sz
+  )
+  
+  - font_blur blur:REAL_32 <-
+  ( + state:STATE
+    state := get_state
+    state.set_font_blur blur
+  )
+
+  - text_letter_spacing spacing:REAL_32 <-
+  ( + state:STATE
+    state := get_state
+    state.set_letter_spacing spacing
+  )
+
+  - text_line_height line_height:REAL_32 <-
+  ( + state:STATE
+    state := get_state
+    state.set_line_height line_height
+  )
+
+  - text_align align:INTEGER <-
+  ( + state:STATE
+    state := get_state
+    state.set_text_align align
+  )
+
+  - font_face_id font:INTEGER <-
+  ( + state:STATE
+    state := get_state
+    state.set_font_id font
+  )
+    
+  - font_face font:STRING_ALIAS <-
+  ( + state:STATE
+    state := get_state
+    state.set_font_id (fs.get_font_by_name font)
+  )
+  
+  - flush_text_texture <-
+  ( + x0,y0,x1,y1:INTEGER
+    + font_image:INTEGER
+    + tst:BOOLEAN
+    
+    (tst,x0,y0,x1,y1) := fs.validate_texture
+    (tst).if {
+      //font_image_idx.print; '\n'.print
+      font_image := font_images.at font_image_idx
+      // Update texture
+      (font_image != 0).if {
+        + iw,ih,x,y,w,h:INTEGER
+        + dta:NATIVE_ARRAY UINTEGER_8
+        (dta,iw,ih) := fs.get_texture_data
+        (x,y) := (x0,y0)
+        (w,h) := (x1-x0,y1-y0)
+        pen_gl.render_update_texture font_image to (x,y) size (w,h) data dta
+      }
+    }
+  )
+
+  - alloc_text_atlas:BOOLEAN <-
+  ( + iw,ih:INTEGER
+    //- cpt_call_bug:INTEGER
+    flush_text_texture
+    
+    //(cpt_call_bug = 5).if { crash; }
+    //cpt_call_bug.print
+    //") Alloc text atlas\n".print
+    //cpt_call_bug := cpt_call_bug + 1
+    
+    (font_image_idx < max_fontimages-1).if {
+      // if next fontImage already have a texture
+      (font_images.at (font_image_idx+1) != 0).if {
+        (iw,ih) := image_size (font_images.at (font_image_idx+1))
+      } else { // calculate the new font image size and create it.
+        (iw,ih) := image_size (font_images.at font_image_idx)
+        (iw > ih).if {
+          ih := ih * 2
+        } else {
+          iw := iw * 2
+        }
+        ((iw > max_fontimage_size) || {ih > max_fontimage_size}).if {
+          iw := ih := max_fontimage_size
+        }
+        font_images.at(font_image_idx+1) put (
+          pen_gl.render_create_texture texture_alpha size (iw, ih) flags 0 data NULL)
+      }
+      font_image_idx := font_image_idx + 1
+      fs.reset_atlas (iw, ih)
+    } 
+  )
+
+  - render_text verts:ARRAY VERTEX <-
+  ( + state:STATE
+    + paint:PAINT
+    state := get_state
+    paint := state.fill
+
+    // Render triangles.
+    paint.set_image (font_images.at font_image_idx)
+    //"image:".print; paint.image.print; '\n'.print
+    // Apply global alpha
+    paint.inner_color.mul_a (state.alpha)
+    paint.outer_color.mul_a (state.alpha)
+    render_triangles (paint, state.scissor, verts)
+  )
+  
+  - text (x,y:REAL_32) msg string:STRING :REAL_32 <-
+  text (x,y) msg string from 0 to (string.upper)
+  
+  - text (x,y:REAL_32) msg string:STRING 
+  from pstart:INTEGER to pend:INTEGER :REAL_32 <-
+  ( + cverts,nverts,lend:INTEGER
+    + state:STATE
+    + iter,prev_iter:FONS_TEXT_ITER
+    + q:FONS_QUAD
+    + verts:ARRAY VERTEX
+    + scal,invscale,new_x:REAL_32
+
+    q := FONS_QUAD.create
+    state := get_state
+    scal := state.get_font_scale * device_px_ratio
+    invscale := 1.0 / scal
+
+    (pend = -1).if { 
+      lend := string.count
+    } else {
+      lend := pend + 1
+    }
+    
+    ? {state.font_id != FONTSTASH.fons_invalid}
+    fs.size (state.font_size*scal) spacing (state.letter_spacing*scal)
+    blur (state.font_blur*scal) align (state.text_align) font (state.font_id)
+    cverts := (lend - pstart+1).max 2 * 6; // conservative estimate.
+    verts := new_array_vertex cverts
+    (verts = NULL).if { 
+      new_x := x
+    } else {
+      + break:BOOLEAN
+      iter := fs.text_iter_init (x*scal, y*scal) msg string from pstart to lend
+      //"--------------------------------------------------\n".print
+      //iter.print
+      //"init:".print; (x*scal).print; ','.print; (y*scal).print; '\n'.print
+      prev_iter := iter.create
+      break := FALSE
+      {(fs.text_iter_next(iter,q)) && {!break}}.while_do {
+        + c0,c1,c2,c3,c4,c5,c6,c7:REAL_32
+        //iter.print
+        //"----- ".print; iter.str.item (iter.start).print; '\n'.print
+        (iter.prev_glyph_index = -1).if { // can not retrieve glyph?          
+          (! alloc_text_atlas).if {
+            //"CALL A\n".print
+            break := TRUE
+          } else {
+            (nverts != 0).if {
+              //"verts.count:".print; verts.count.print; '\n'.print
+              render_text verts
+              verts.clear
+              nverts := 0
+            }
+            iter.copy prev_iter
+            fs.text_iter_next (iter,q); // try again
+            break := iter.prev_glyph_index = -1; // still can not find glyph?
+          }
+        }
+        (!break).if {
+          prev_iter.copy iter
+          // Transform corners.
+          //"q.x0:".print; q.x0.print; ' '.print
+          //"t0:".print; state.xform.t0.print; ' '.print
+          //"t2:".print; state.xform.t2.print; ' '.print
+          //"t4:".print; state.xform.t4.print; '\n'.print
+          (c0,c1) := state.xform.transform_point (q.x0*invscale, q.y0*invscale)
+          (c2,c3) := state.xform.transform_point (q.x1*invscale, q.y0*invscale)
+          (c4,c5) := state.xform.transform_point (q.x1*invscale, q.y1*invscale)
+          (c6,c7) := state.xform.transform_point (q.x0*invscale, q.y1*invscale)
+          // Create triangles
+          (nverts+6 <= cverts).if {
+            vset verts with (c0, c1, q.s0, q.t0)
+            vset verts with (c4, c5, q.s1, q.t1)
+            vset verts with (c2, c3, q.s1, q.t0)
+            vset verts with (c0, c1, q.s0, q.t0)
+            vset verts with (c6, c7, q.s0, q.t1)
+            vset verts with (c4, c5, q.s1, q.t1)
+            nverts := nverts + 6
+          }
+        }
+      }
+      // TODO: add back-end bit to do this just once per frame.
+      flush_text_texture
+      //"verts.count:".print; verts.count.print; '\n'.print
+      //0.to (verts.upper) do { i:INTEGER; verts.item i.print; }
+      render_text verts
+      new_x := iter.nextx
+      iter.free
+      prev_iter.free
+    }
+    q.free
+    free_array_vertex verts
+    new_x 
+  )
+  
+  - text_box (x,py:REAL_32) width break_row_width:REAL_32 msg string:STRING :REAL_32 <-
+  text_box (x,py) width break_row_width msg string from 0 to (-1)
+
+  - text_box (x,py:REAL_32) width break_row_width:REAL_32 
+  msg string:STRING from start:INTEGER to end:INTEGER :REAL_32 <-
+  ( + state:STATE
+    + old_align,halign,valign,star:INTEGER
+    + asc,des,lineh,y:REAL_32
+    + rows:ARRAY TEXT_ROW
+    y := py
+    rows := rows_tmp
+    state := get_state
+    old_align := state.text_align
+    halign := state.text_align & (align_left|align_center|align_right)
+    valign := state.text_align & (align_top|align_middle|align_bottom|align_baseline)
+
+    ? {state.font_id != FONS_CONTEXT.fons_invalid}
+    
+    (asc,des,lineh) := text_metrics
+    state.set_text_align (align_left | valign)
+    
+    star := start
+    {
+      text_break_lines string from star to end width break_row_width row rows
+      rows.count != 0
+    }.while_do {
+      0.to (rows.upper) do { i:INTEGER
+        + row:TEXT_ROW
+        row := rows.at i
+        ((halign & align_left) != 0).if {
+          text (x,y) msg string from (row.start) to (row.end-1)
+        }.elseif {(halign & align_center) != 0} then {
+          text (x + break_row_width*0.5 - row.width*0.5, y) msg string from (row.start) to (row.end-1)
+        }.elseif {(halign & align_right) != 0} then {
+          text (x + break_row_width - row.width, y) msg string from (row.start) to (row.end-1)
+        }
+        y := y + lineh * state.line_height
+      }
+      star := rows.last.next
+      {rows.is_empty}.until_do { rows.pop.free; }
+    }
+    state.set_text_align old_align
+    y - lineh * state.line_height
+  )
+
+  - text_glyph_positions (x,y:REAL_32) msg string:STRING
+  from start:INTEGER to pend:INTEGER glyph positions:ARRAY GLYPH_POSITION <-
+  ( + state:STATE
+    + scal,invscale:REAL_32
+    + iter,prev_iter:FONS_TEXT_ITER
+    + q:FONS_QUAD
+    + end:INTEGER
+    (end = -1).if { 
+      end := string.count
+    } else {
+      end := pend
+    }
+    state := get_state
+    scal := state.get_font_scale * device_px_ratio
+    invscale := 1.0 / scal
+
+    ? {state.font_id != FONS_CONTEXT.fons_invalid}
+
+    (start <= end).if {
+      q := FONS_QUAD.create
+
+      fs.size (state.font_size*scal)
+      spacing (state.letter_spacing*scal)
+      blur (state.font_blur*scal)
+      align (state.text_align)
+      font (state.font_id)
+
+      iter := fs.text_iter_init (x*scal, y*scal) msg string from start to end
+      prev_iter := iter.create
+      {fs.text_iter_next(iter, q)}.while_do {
+        ((iter.prev_glyph_index < 0) && {alloc_text_atlas}).if { // can not retrieve glyph?
+          iter.copy prev_iter
+          fs.text_iter_next (iter,q); // try again
+        }
+        prev_iter.copy iter
+        positions.add_last (
+          GLYPH_POSITION.create (iter.start) to (iter.x * invscale)
+          range (iter.x.min (q.x0) * invscale,iter.nextx.max (q.x1) * invscale)
+        )
+      }
+      q.free
+      prev_iter.free
+      iter.free
+    }
+  )
+
+  - cst_space:INTEGER := 0
+  - cst_newline:INTEGER := 1
+  - cst_char:INTEGER := 2
+
+  - text_break_lines string:STRING from start:INTEGER to pend:INTEGER 
+  width brk_width:REAL_32 row rows:ARRAY TEXT_ROW <-
+  ( + state:STATE
+    + scal,invscale,break_row_width:REAL_32
+    + iter,prev_iter:FONS_TEXT_ITER
+    + q:FONS_QUAD
+    + row_start_x,row_width,row_min_x,row_max_x,next_width:REAL_32
+    + word_start_x,word_min_x:REAL_32
+    + break_width,break_max_x:REAL_32
+    + type,ptype,end:INTEGER
+    + pcodepoint,c:UINTEGER_32
+    + row_start,row_end,word_start,break_end:INTEGER
+    + exit_flag:BOOLEAN
+    
+    //- cpt_bug:INTEGER
+    + max_raws:INTEGER
+    max_raws := 3; // BSBS: A revoir (avec les returns `exit_flag' ps utile...)
+    
+    row_start := row_end := word_start := break_end := -1
+    q := FONS_QUAD.create
+    //prev_iter := FONS_TEXT_ITER.create
+    state := get_state
+    scal := state.get_font_scale * device_px_ratio
+    invscale := 1.0 / scal
+    break_row_width := brk_width
+    
+    ? {state.font_id != FONS_CONTEXT.fons_invalid}
+    
+    end := (pend = -1).ok (string.count) or (pend)
+    (start <= end).if {
+      fs.size (state.font_size*scal)
+      spacing (state.letter_spacing*scal)
+      blur (state.font_blur*scal)
+      align (state.text_align)
+      font (state.font_id)
+
+      break_row_width := break_row_width * scal
+      
+      iter := fs.text_iter_init (0,0) msg string from start to end
+      prev_iter := iter.create
+      //cpt_bug := cpt_bug + 1
+      //"-----------------------------------\n".print
+      //(cpt_bug = 2).if { exit 0; }
+      {(!exit_flag) && {fs.text_iter_next (iter,q)}}.while_do {
+        //"Call C\n".print
+        //(iter.prev_glyph_index < 0).if {          
+        //  "Alloc ".print
+        //}
+        //iter.codepoint.to_character.println
+        
+        ((iter.prev_glyph_index < 0) && {alloc_text_atlas}).if { // can not retrieve glyph?
+          iter.copy prev_iter
+          fs.text_iter_next(iter,q); // try again
+        }
+        prev_iter.copy iter
+        c := iter.codepoint
+        (
+          (c =  9) || // \t
+          {c = 11} || // \v
+          {c = 12} || // \f
+          {c = 32} || // space
+          {c = 0A0h}  // NBSP
+        ).if {
+          type := cst_space
+        }.elseif {c = 10} then {  // \n
+          type := (pcodepoint = 13).ok cst_space or cst_newline
+        }.elseif {c = 13} then {  // \r
+          type := (pcodepoint = 10).ok cst_space or cst_newline
+        }.elseif {c = 85h} then { // NEL
+          type := cst_newline
+        } else {
+          type := cst_char
+        }
+        (type = cst_newline).if {
+          // Always handle new lines.
+          rows.add_last (
+            TEXT_ROW.create ((row_start != -1).ok row_start or (iter.start))
+            to ((row_end != -1).ok row_end or (iter.start))
+           width (row_width*invscale)
+            range (row_min_x*invscale,row_max_x*invscale)
+           next  (iter.next)
+          )
+          //"0)End:".print; rows.last.end.print; ' '.print; row_end.print; '\n'.print
+          (rows.count >= max_raws).if {
+            exit_flag := TRUE
+          } else {
+            // Set null break point
+            break_end := row_start
+            break_width := break_max_x := 0.0
+            // Indicate to skip the white space at the beginning of the row.
+            row_start := row_end := -1
+            row_width := row_min_x := row_max_x := 0
+          }
+        } else {
+          (row_start = -1).if {
+            // Skip white space until the beginning of the line
+            (type = cst_char).if {
+              // The current char is the row so far
+              row_start_x := iter.x
+              row_start := iter.start
+              row_end := iter.next
+              row_width := iter.nextx - row_start_x; // q.x1 - rowStartX
+              row_min_x := q.x0 - row_start_x
+              row_max_x := q.x1 - row_start_x
+              word_start := iter.start
+              word_start_x := iter.x
+              word_min_x := q.x0 - row_start_x
+              // Set null break point
+              break_end := row_start
+              break_width := break_max_x := 0.0
+            }
+          } else {
+            next_width := iter.nextx - row_start_x
+
+            // track last non-white space character
+            (type = cst_char).if {
+              row_end := iter.next
+              row_width := iter.nextx - row_start_x
+              row_max_x := q.x1 - row_start_x
+            }
+            // track last end of a word
+            ((ptype = cst_char) && {type = cst_space}).if {
+              break_end := iter.start
+              break_width := row_width
+              break_max_x := row_max_x
+            }
+            // track last beginning of a word
+            ((ptype = cst_space) && {type = cst_char}).if {
+              word_start := iter.start
+              word_start_x := iter.x
+              word_min_x := q.x0 - row_start_x
+            }
+            // Break to new line when a character is beyond break width.
+            ((type = cst_char) && {next_width > break_row_width}).if {
+              // The run length is too long, need to break to new line.
+              (break_end = row_start).if {
+                // The current word is longer than the row length, 
+                // just break it from here.
+                rows.add_last (
+                  TEXT_ROW.create row_start to (iter.start) width (row_width*invscale)
+                  range (row_min_x*invscale,row_max_x * invscale) next (iter.start)
+                )
+                //"1)End:".print; rows.last.end.print; '\n'.print
+                (rows.count >= max_raws).if {
+                  exit_flag := TRUE
+                } else {
+                  row_start_x := iter.x
+                  row_start := iter.start
+                  row_end := iter.next
+                  row_width := iter.nextx - row_start_x
+                  row_min_x := q.x0 - row_start_x
+                  row_max_x := q.x1 - row_start_x
+                  word_start := iter.start
+                  word_start_x := iter.x
+                  word_min_x := q.x0 - row_start_x
+                }
+              } else {
+                // Break the line from the end of the last word, 
+                // and start new line from the beginning of the new.
+                rows.add_last (
+                  TEXT_ROW.create row_start to break_end
+                  width (break_width*invscale) range (row_min_x*invscale,break_max_x*invscale) next (word_start)
+                )
+                //"2)End:".print; rows.last.end.print; '\n'.print
+                (rows.count >= max_raws).if {
+                  exit_flag := TRUE
+                } else {
+                  row_start_x := word_start_x
+                  row_start := word_start
+                  row_end := iter.next
+                  row_width := iter.nextx - row_start_x
+                  row_min_x := word_min_x
+                  row_max_x := q.x1 - row_start_x
+                  // No change to the word start
+                }
+              }
+              // Set null break point
+              break_end := row_start
+              break_width := break_max_x := 0.0
+            }
+          }
+        }
+        pcodepoint := iter.codepoint
+        ptype := type
+      }
+      prev_iter.free
+      iter.free
+
+      // Break the line from the end of the last word, 
+      // and start new line from the beginning of the new.
+      ((row_start != -1) && {!exit_flag}).if {
+        rows.add_last (
+          TEXT_ROW.create row_start to row_end
+          width (row_width*invscale)
+          range (row_min_x*invscale,row_max_x*invscale)
+          next  end
+        )
+        //"3)End:".print; rows.last.end.print; '\n'.print
+      }
+    }
+    q.free
+  )
+  
+  - text_bounds (x,y:REAL_32) msg string:STRING :(REAL_32, REAL_32,REAL_32,REAL_32,REAL_32) <-
+  (
+    text_bounds (x,y) msg string from 0 to (string.upper)
+  )
+  
+  - text_bounds (x,y:REAL_32) msg string:STRING
+  from start:INTEGER to end:INTEGER :(REAL_32, REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( + scal,invscale,wdth:REAL_32
+    + x0,y0,x1,y1:REAL_32
+    + state:STATE
+    state := get_state
+    scal := state.get_font_scale * device_px_ratio
+    invscale := 1.0 / scal
+
+    ? {state.font_id != FONTSTASH.fons_invalid}
+
+    fs.size (state.font_size*scal) 
+    spacing (state.letter_spacing*scal)
+    blur (state.font_blur*scal)
+    align (state.text_align)
+    font (state.font_id)
+
+    (wdth,x0,y0,x1,y1) := 
+    fs.text_bounds (x*scal,y*scal) msg string from start to end
+    // Use line bounds for height.
+    (y0,y1) := fs.line_bounds (y*scal)
+    wdth * invscale, 
+    x0 * invscale, 
+    y0 * invscale, 
+    x1 * invscale, 
+    y1 * invscale    
+  )
+
+  - text_box_bounds (x,py:REAL_32) width break_row_width:REAL_32 msg string:STRING
+  from start:INTEGER to end:INTEGER :(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( + old_align,halign,valign,star:INTEGER
+    + lineh,rminy,rmaxy,minx,miny,maxx,maxy,y:REAL_32
+    + scal,invscale:REAL_32
+    + state:STATE
+    + rows:ARRAY TEXT_ROW
+    + asc,des:REAL_32
+    y := py
+    rows := rows_tmp
+    state := get_state
+    scal := state.get_font_scale * device_px_ratio
+    invscale := 1.0 / scal
+    old_align := state.text_align
+    halign := state.text_align & (
+      align_left | align_center | align_right
+    )
+    valign := state.text_align & (
+      align_top  | align_middle | align_bottom | align_baseline
+    )
+
+    ? {state.font_id != FONTSTASH.fons_invalid}
+
+    (asc,des,lineh) := text_metrics
+
+    state.set_text_align (align_left | valign)
+
+    minx := maxx := x
+    miny := maxy := y
+
+    fs.size (state.font_size*scal)
+    spacing (state.letter_spacing*scal)
+    blur (state.font_blur*scal)
+    align (state.text_align)
+    font (state.font_id)
+    (rminy,rmaxy) := fs.line_bounds 0
+    rminy := rminy * invscale
+    rmaxy := rmaxy * invscale
+    
+    star := start
+    {
+      text_break_lines string from star to end width break_row_width row rows
+      rows.count != 0
+    }.while_do {
+      0.to (rows.upper) do { i:INTEGER
+        + row:TEXT_ROW
+        + rminx,rmaxx,dx:REAL_32
+        row := rows.at i
+        // Horizontal bounds
+        ((halign & align_left) != 0).if {
+          dx := 0
+        }.elseif {(halign & align_center) != 0} then {
+          dx := break_row_width*0.5 - row.width*0.5
+        }.elseif {(halign & align_right) != 0} then {
+          dx := break_row_width - row.width
+        }
+        rminx := x + row.minx + dx
+        rmaxx := x + row.maxx + dx
+        minx := minx.min rminx
+        maxx := maxx.max rmaxx
+        // Vertical bounds.
+        miny := miny.min (y + rminy)
+        maxy := maxy.max (y + rmaxy)
+        
+        y := y + lineh * state.line_height
+      }
+      star := rows.last.next
+      {rows.is_empty}.until_do { rows.pop.free; }
+    }
+    state.set_text_align old_align
+    {rows.is_empty}.until_do { rows.pop.free; }
+    minx,miny,maxx,maxy
+  )
+
+  - text_metrics:(REAL_32,REAL_32,REAL_32) <-
+  ( + ascender,descender,lineh:REAL_32
+    + scal,invscale:REAL_32
+    + state:STATE
+    state := get_state
+    scal := state.get_font_scale * device_px_ratio
+    invscale := 1.0 / scal
+
+    ? {state.font_id != FONTSTASH.fons_invalid}
+
+    fs.size (state.font_size*scal) 
+    spacing (state.letter_spacing*scal)
+    blur (state.font_blur*scal) 
+    align (state.text_align) 
+    font (state.font_id)
+
+    (ascender,descender,lineh) := fs.vert_metrics
+    ascender * invscale,
+    descender * invscale,
+    lineh * invscale
+  )

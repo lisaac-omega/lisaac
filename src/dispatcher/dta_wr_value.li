@@ -1,0 +1,157 @@
+Header
+
+  + name        := DTA_WR_VALUE;
+
+  /*Write site with value*/
+
+Inherit
+
+  + parent_dta:Expanded DTA
+
+Public
+
+  // Add.
+
+  + value:EXPR
+
+  + copy_value:BOOLEAN
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION slot sl:SLOT self arg:EXPR value v:EXPR :SELF <-
+  [ -? {p != 0}; ]
+  ( + result:SELF
+
+    result := clone
+    result.make p slot sl self arg value v
+    result
+  )
+
+  - make p:POSITION slot sl:SLOT self arg:EXPR value v:EXPR <-
+  (
+    position    := p
+    slot        := sl
+    self_arg    := arg
+    result_expr := v.my_copy
+    value       := v
+    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
+      (profil_current = NULL).if {
+        context := context_main
+      } else {
+        context := profil_current.context
+      }
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "DTA_WR_VALUE:"
+    buffer.append (slot.name)
+  )
+
+  //
+  // Service
+  //
+
+  - remove <-
+  (
+    (! copy_value).if {
+      value.remove
+      copy_value := TRUE
+    }
+  )
+
+NODE_TYPE, DTA
+
+  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
+  ( + result:LIST
+
+    result := LIST.create (e.position)
+    (t = TYPE_NULL).if {
+      TYPE_NULL.product_error position in result with context
+    } else {
+      lookup t with e in result
+    }
+    result
+  )
+
+  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  ( + result:BOOLEAN
+    + wrt_slot:WRITE_SLOT
+    + wrt_glob:WRITE_GLOBAL
+
+    result := parent_dta.update_branch l self type_self
+    (l.count < 3).if {
+      wrt_slot ?= l.first
+      wrt_glob ?= l.first
+      (wrt_slot != NULL).if {
+	(wrt_slot.slot.slot_id != NULL).if {
+	  add_write_id (wrt_slot.receiver,wrt_slot.slot) in l
+	} else {
+	  result := FALSE
+	}
+      }.elseif {wrt_glob != NULL} then {
+	(wrt_glob.global.slot_id != NULL).if {
+	  add_write_id (NULL,wrt_glob.global) in l
+	} else {
+	  result := FALSE
+	}
+      }
+    }
+    result
+  )
+
+DTA
+
+  - finalise typ:TYPE with (expr:EXPR,s:SLOT) in lst:LIST <-
+  ( + new_value:EXPR
+    + sd:SLOT_DATA
+    + em:EXPR_MULTIPLE
+
+    (copy_value).if {
+      new_value := value.my_copy
+    } else {
+      new_value  := value
+      copy_value := TRUE
+    }
+    sd := s.slot_data
+    em ?= new_value
+    (em != NULL).if {
+      (em.lower).to (em.upper - 1) do { j:INTEGER
+	lst.add_last (new_write (s.slot_data_list.at j) rec expr value (em.at j))
+      }
+      new_value := em.last
+    }
+    lst.add_last (new_write sd rec expr value new_value)
+    (s.slot_id != NULL).if {
+      add_write_id (expr,s) in lst
+    }
+  )
+
+Private
+
+  - add_write_id (e:EXPR,s:SLOT) in lst:LIST <-
+  ( + new_value:EXPR
+    + sd:SLOT_DATA
+
+    new_value := PROTOTYPE_CST.create (lst.position) type (TYPE_ID.get_index 0.default)
+    sd := s.slot_id
+    lst.add (new_write sd rec e value new_value) to 1
+  )
+
+  - new_write sd:SLOT_DATA rec e:EXPR value val:EXPR :WRITE <-
+  ( + result:WRITE
+
+    (sd.style = '+').if {
+      result := sd.write (e.position) with (e.my_copy) value val
+    } else {
+      result := sd.write (e.position) value val
+    }
+    result
+  )

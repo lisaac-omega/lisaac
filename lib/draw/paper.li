@@ -1,0 +1,855 @@
+Header  
+  + name := PAPER;
+  /*
+    sudo apt-get install libglu1-mesa-dev
+    sudo apt-get install libglew-dev
+  */
+  - lip <- 
+  (
+    (target = "apple").if {      
+      add_lib "-I/opt/homebrew/include -L/opt/homebrew/lib -lglfw -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL";
+      execute_fail (lisaac+"misc/new_assets.sh "+lisaac);
+    };
+    (target = "windows").if {
+      cc_option (lisaac+"deps_lib/windows/glad.c");
+      cc_option ("-I"+lisaac+"deps_lib/windows");
+      add_lib "-lopengl32";
+      add_lib "-lglfw3";
+      add_lib "-lgdi32";
+      execute_fail ("bash "+lisaac+"misc/new_assets.sh "+lisaac);
+    };
+    (target = "unix").if {
+      lib_gcc := lib_gcc + " " + (lisaac+"deps_lib/linux/libglfw3.a -I"+lisaac+"deps_lib/linux");
+      add_lib "-lGL";
+      add_lib "-lpthread";
+      add_lib "-lX11";
+      add_lib "-ldl";
+      execute_fail (lisaac+"misc/new_assets.sh "+lisaac);
+    };
+  );
+  - external := `
+//#if defined(__ANDROID__)
+//#include <android/paper.h>
+//#else
+
+#include <stdio.h>
+#include <string.h>
+
+#if defined(_WIN32)
+
+#define lisaac_gl 1
+#include <glad/glad.h>
+#include <GL/gl.h>
+
+#elif defined(__APPLE__)
+
+#define lisaac_gl 1
+#define GL_GLEXT_PROTOTYPES
+#define GLFW_INCLUDE_GLCOREARB
+
+#elif defined(__EMSCRIPTEN__)
+
+#define lisaac_gl 0
+#include <emscripten/emscripten.h>
+
+#elif defined(__linux__)
+
+#define lisaac_gl 0
+#define GLFW_INCLUDE_ES3
+#include <GL/gl.h>
+
+#endif
+
+#include <GLFW/glfw3.h>
+
+void errorcb(int error, const char* desc)
+{ printf("GLFW error %d: %s\n", error, desc); }
+
+void new_key(int64_t,int64_t,int64_t,int64_t);
+//int refresh_callback(void *);
+//void scroll_callback(void *,float,float);
+
+static void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+  //printf("C: Key:%d %c, Scancode:%d, Action:%d, Mods:%d %d\n",key,key,scancode,action,mods,
+  //glfwGetKey(window,key));
+  
+  new_key(key,scancode,action,mods);
+  
+//  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+//    glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+unsigned long col_icon[]={0x00000000,
+0xFF171312, 0xFF1D1A19, 0xFF241F1E, 0xFF2E2827,
+0xFF37362F, 0xFF4C4B43, 0xFF4F6D3C, 0xFF75706F,
+0xFF878481, 0xFF639748, 0xFF77B856, 0xFF84B961,
+0xFFAEAAA8, 0xFFCECBC7, 0xFFE9E7E4, 0xFFFDFFFC};
+//#endif
+`;
+  
+Inherit  
+  - parent_utils:UTILS := UTILS
+  
+Public
+  
+  - wins:ARRAY WINDOW := ARRAY WINDOW.create_with_capacity 2
+  
+  - get_win w:POINTER :WINDOW <-
+  wins.search_until { win:WINDOW; win.win_ptr = w}
+  //`glfwGetWindowUserPointer(@w)`:WINDOW; // BSBS: BUG COMPILO ASCII
+  
+  - init <-
+  (
+    (`glfwInit()`:INTEGER = 0).if { 
+      "Failed to init GLFW.\n".print
+      exit exit_failure_code
+    }
+    `glfwSetErrorCallback(errorcb)`
+    (is_gl).if {
+      "GL actif.".println
+      `glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3)`
+      `glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3)`
+      `glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE)`
+      `glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)`
+    } else {
+      //`glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API)`
+      `glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3)`
+      `glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3)`
+      `glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)`
+    }
+    ((flag & decorated) = 0).if {
+      `glfwWindowHint(GLFW_DECORATED, GLFW_FALSE)`
+    }
+    ((flag & transparent) != 0).if {
+      `glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE)`
+    }
+  )
+  
+  - window_should_close:BOOLEAN <-
+  ( + i:INTEGER
+    + w:POINTER
+    {
+      (i <= wins.upper) && {w := wins.at i.win_ptr; `glfwWindowShouldClose(@w)`:INTEGER = 0}
+    }.while_do {
+      i := i + 1
+    }
+    i <= wins.upper
+  )
+  
+Public
+  
+  - flag:UINTEGER_8 := decorated
+  - decorated:UINTEGER_8   := 0000_0001b
+  - transparent:UINTEGER_8 := 0000_0010b
+  - set f:UINTEGER_8   <- ( flag := flag | f; )
+  - unset f:UINTEGER_8 <- ( flag := flag & ~f; )
+  
+  - shader_header:STRING_ALIAS :=
+  ( + res:STRING_ALIAS
+    (lip "target" str = "android").if {
+      res := "#version 300 es\nprecision highp float;\n"
+    } else {
+      res := "#version 330 core\nprecision highp float;\n"
+    }
+    res
+  )
+    
+  - put_window_icon w:POINTER <-
+  ( + img:NATIVE_ARRAY UINTEGER_32
+    + c:UINTEGER_32
+    + l:INTEGER
+    img := NATIVE_ARRAY UINTEGER_32.create (48*48)
+    `{ GLFWimage img`
+    0.to (48*48-1) do { i:INTEGER
+      l := (
+        "AJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJG\
+        \NQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQN\
+        \NQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQO\
+        \NQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQO\
+        \NQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQN\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQPNGD\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQPONIEBBBB\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQNIFDBBBBBBB\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQPMKBBBBBBBBBBB\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQOIGLLKDBBBBBBBBBB\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQQQPJECBHLLLFBBBBBBBBBC\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQQOIBBBBBHLLLHBBBBBBBCCC\
+        \JQQQQQQQQQQQQQQQQQQQQQQQNGBBBBBBBKLLLHBBBBCCCCCC\
+        \JQQQQQQQQQQQQQQQQQQQQQNEBBBBBBBBFLLLLKCBCCCCCCCC\
+        \JQQQQQQQQQQQQQQQQQQQNGBBBBBBBBBBHLLLLLFBCCCCCCCC\
+        \JQQQQQQQQQQQQQQQQQOGBBBBBBBBBBBCKLLLLLHBCCCCCCCC\
+        \JQQQQQQQQQQQQQQQPIBBBBBBBBBBBBBDKLLLLLKCCCCCCCDD\
+        \JQQQQQQQQQQQQQQNEBBBBBBBBBBBBBBFLLLLLLKDCCCCDDDD\
+        \JQQQQQQQQQQQQPGBBBBBBBBBBBBCCCCHLLLLLLLFCDDDDDDD\
+        \JQQQQQQQQQQQNBBBBBBBBBBBBCCCCCCHLLLLLLLGDDDDDDDD\
+        \JQQQQQQQQQPIBBBBBBBBBBCCCCCCCCDHLLLLLLLHDDDDDDDD\
+        \IQQQQQQQQOFBBBBBBBBCCCCCCCCCCCDKLLLLLLLHDDDDDDDD\
+        \IQQQQQQQOEBBBBBBBCCCCCCCCCCCCCDKLLLLLLLHDDDDDDDD\
+        \IQQQQQQNDBBBBBCCCCCCCCCCCCCCDDDKLLLLLLLHDDDDDDDD\
+        \IQQQQQJCBBBBCCCCCCCCCCCCCCDDDDDKLLLLLLLHDDDDDDDD\
+        \IQQQQJBBBBCCCCCCCCCCCCCCDDDDDDDKLLLLLLLHDDDDDDDD\
+        \IQQQJCBCCCCCCCCCCCCCCDDDDDDDDDDKLLLLLLLHDDDDDDDD\
+        \IQQNDCCCCCCCCCCCCCCDDDDDDDDDDDDKLLLLLLLHDDDDDDED\
+        \IQOECBBBCCCCCCCCCDDDDDDDDDDDDDDKLLLLLLLHDDDDDEEE\
+        \IQPOOONIFBBCCDDDDDDDDDDDDDDDDDDHLLLLLMMHDDDEEEEE\
+        \IQQQQQQQQPJFDDDDDDDDDDDDDDDDDDDHLLLLMMMHDEEEEEEE\
+        \IQQQQQQQQQQQNIDCDDDDDDDDDDDDDDDHLMMMLMMHDEEEEEEE\
+        \IQQQQQQQQQQQQQOGCDDDDDDDDDDDDDDHLMMMMMMGEEEEEEEE\
+        \IQQQQQQQQQQQQQQQNFDDDDDDDDDDDDDGMMMMMMMGEEEEEEEE\
+        \IQQQQQQQQQQQQQQQQPJDDDDDDDDDDDEGMMMMMMMFEEEEEEEE\
+        \IQQQQQQQQQQQQQQQQQQOFDDDDDDDEEEFMMMMMMKEEEEEEEEE\
+        \IQQQQQQQQQQQQQQQQQQQPIDDDDEEEEEEKMMMMMHEEEEEEEEE\
+        \IQQQQQQQQQQQQQQQQQQQQQNEDEEEEEEEHMMMMMHEEEEEEEEE\
+        \JQQQQQQQQQQQQQQQQQQQQQQOGEEEEEEEGMMMMMGEEEEEEEEE\
+        \JQQQQQQQQQQQQQQQQQQQQQQQQJEEEEEEEKMMMKEEEEEEEEEE\
+        \AONOOPQQQQQQQQQQQQQQQQQQQQOGDEEEEHMMMHEEEEEEEEEE\
+        \AAAAAAAANOPQQQQQQQQQQQQQQQQQJFEEEFKMMGEEEEEEEEEE\
+        \AAAAAAAAAAAAAOOOPQQQQQQQQQQQQOJFEEHMHEEEEEEEEEEE\
+        \AAAAAAAAAAAAAAAAANNPQQQQQQQQQQQPJEEGFEEEEEEEEEEE\
+        \AAAAAAAAAAAAAAAAAAAAANOPPQQQQQQQQQNIGEEEEEEEEEEE\
+        \AAAAAAAAAAAAAAAAAAAAAAAAAAOOOPQQQQQQPONJIGGGGGGG\
+        \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNPQQQQQQQQQQQQQP\
+        \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNNNNNNJJG".item i - 'A'
+      ).to_integer
+      c := `col_icon[@l]`:UINTEGER_32
+      img.at i put c
+    }
+    `img.width = 48; img.height = 48; img.pixels = (unsigned char *)@img`
+    `glfwSetWindowIcon(@w,1,&img)`
+    `}`
+  )
+  
+Public
+  
+  - refresh_all <- wins.foreach { w:WINDOW; w.ask_refresh; }
+  
+  - is_gl:BOOLEAN <- `lisaac_gl`:INTEGER = 1
+  
+  - flag_refresh:BOOLEAN
+  - refresh_again <- ( flag_refresh := TRUE; )
+  //- new_event_empty <- ( flag_refresh := TRUE; ); //`glfwPostEmptyEvent()`
+  
+  - create_window (w,h:INTEGER) title t:STRING_ALIAS for winobj:WINDOW :POINTER <-
+  ( + win,mon:POINTER
+    + tc:NATIVE_ARRAY CHARACTER
+    + ww,hh:INTEGER
+    (wins.is_empty).if { init; }
+    tc := t.to_external
+    (winobj.fullscreen).if {      
+      mon := `glfwGetPrimaryMonitor()`:POINTER
+      `const GLFWvidmode* mode = glfwGetVideoMode(@mon)`
+      ww := `mode->width`:INTEGER
+      hh := `mode->height`:INTEGER
+      winobj.size (ww,hh)
+    } else { (ww,hh) := (w,h); }
+    win := `glfwCreateWindow((int)@ww,(int)@hh,@tc, @mon, NULL)`:POINTER
+    (win.is_null).if {
+      "Paper: Window not open.".println
+      `glfwTerminate()`
+      exit exit_failure_code
+    }
+    //"Create window ".print; w.print; "x".print; h.println
+    (lip "target" str = "apple").if_false { put_window_icon win; }
+    `glfwSetKeyCallback(@win, intern_key)`
+    `glfwSetCursorPosCallback(@win,(GLFWcursorposfun)mouse_move)`
+    `glfwSetMouseButtonCallback(@win,(GLFWmousebuttonfun)mouse_button)`
+    `glfwSetScrollCallback(@win,(GLFWscrollfun)mouse_scroll)`
+    `glfwMakeContextCurrent(@win)`
+    `glfwSetWindowRefreshCallback(@win,(GLFWwindowrefreshfun) refresh_callback)`
+    (lip "target" str = "windows").if {
+      if (`gladLoadGL()`:INTEGER = 0) then { // WinMerde
+        "Failed to initialize GLAD\n".print
+        exit 1
+      }
+    }
+    //`glfwSwapInterval(1)`
+    wins.add_last winobj
+    `glfwSetWindowUserPointer(@win, (void *)@winobj)`
+    win
+  )
+  
+  - destroy_window w:WINDOW <-
+  ( + ptr:POINTER
+    + i:INTEGER
+    i := wins.upper
+    {wins.at i != w}.while_do { i := i - 1; }
+    wins.remove i
+    ptr := w.win_ptr
+    `glfwDestroyWindow(@ptr)`
+  )
+  
+  - destroy_all_window <-
+  (
+    wins.foreach_backward { w:WINDOW; destroy_window w; }
+    `glfwPollEvents()`
+    `glfwTerminate()`
+  )
+  
+  - run <-
+  (
+    (lip "target" str != "android").if {
+      (lip "target" str = "web").if {
+        `emscripten_set_main_loop(generate_frame, 0, 0/*false*/)`
+      } else {
+        {! window_should_close}.while_do {
+          `glfwPollEvents()`
+          (flag_refresh).if {
+            flag_refresh := FALSE
+            //"wins.count:".print; wins.count.println
+            0.to (wins.upper) do { i:INTEGER
+              generate_frame (wins.at i.win_ptr)
+            }
+          }
+        }
+        //PEN.delete
+        {! wins.is_empty}.while_do { destroy_window (wins.last); }
+        `glfwTerminate()`
+      }
+    }
+  )
+      
+  // Position/Resize window
+  
+  - get_screen_size:(INTEGER,INTEGER) <-
+  ( + xm,ym,n,wt,ht:INTEGER
+    `int n; GLFWmonitor** monitors = glfwGetMonitors(&n)`
+    n := `n`:INTEGER
+    0.to (n-1) do { i:INTEGER
+      `const GLFWvidmode* mode = glfwGetVideoMode(monitors[@i])`
+      `int x, y, w, h; glfwGetMonitorWorkarea(monitors[i], &x, &y, &w, &h)`
+      (xm,ym) := (`x+w`:INTEGER,`y+h`:INTEGER)
+      (xm > wt).if { wt := xm; }
+      (ym > ht).if { ht := ym; }
+    }
+    wt,ht
+  )
+  
+  - set_window win:POINTER pos (x,y:INTEGER) <-
+  (
+    (lip "target" str != "android").if {
+      `glfwSetWindowPos(@win,@x,@y)`
+    }
+  )
+  
+  - get_window_pos win:POINTER :(INTEGER,INTEGER) <-
+  ( + x,y:INTEGER
+    (lip "target" str != "android").if {
+      `{ int x,y; glfwGetWindowPos(@win,&x,&y)`
+      x := `x`:INTEGER; y := `y`:INTEGER
+      `}`
+    }
+    x,y
+  )
+  
+  - set_window win:POINTER size (w,h:INTEGER) <-
+  (
+    (lip "target" str != "android").if {
+      `glfwSetWindowSize(@win,@w,@h)`
+    }
+  )
+  
+  - get_window_size w:POINTER :(INTEGER,INTEGER) <-
+  ( + ww,hh:INTEGER
+    (lip "target" str = "android").if {
+      (ww,hh) := (screen_width,screen_height)
+    } else {
+      `{ int ww,wh; glfwGetWindowSize(@w, &ww, &wh)`
+      (ww,hh) := (`ww`:INTEGER, `wh`:INTEGER)
+      `}`
+    }
+    ww,hh
+  )
+  
+  - get_focus win:POINTER :BOOLEAN <-
+  ( + res:BOOLEAN
+    (lip "target" str = "android").if {
+      res := TRUE
+    } else {
+      res := `glfwGetWindowAttrib(@win,GLFW_FOCUSED)`:INTEGER != 0
+    }
+    res
+  )
+  
+  // Set cursor
+  
+  - create_cursor img:NATIVE_ARRAY UINTEGER_32 size (w,h:INTEGER) hot (x,y:INTEGER) :POINTER <-
+  ( + result:POINTER
+    (lip "target" str != "android").if {
+      `{GLFWimage cursor`
+      `cursor.width = @w; cursor.height = @h; cursor.pixels = (unsigned char *)@img`
+      result := `glfwCreateCursor(&cursor,@x,@y)`:(POINTER)
+      `}`
+    }
+    result
+  )
+  
+  - get_cursor v:INTEGER :POINTER <-
+  ( + res:POINTER
+    (lip "target" str != "android").if {
+      res := `glfwCreateStandardCursor(@v)`:POINTER
+    }
+    res
+  )
+  
+  - set_cursor w:POINTER img p:POINTER <-
+  (
+    (lip "target" str != "android").if {
+      `glfwSetCursor(@w,@p)`
+    }
+  )
+  
+  - set_cursor w:POINTER pos (x,y:INTEGER) <-
+  (
+    (lip "target" str != "android").if {
+      `glfwSetCursorPos(@w,@x,@y)`
+    }
+  )
+  
+  - get_cursor_pos w:POINTER :(INTEGER,INTEGER) <-
+  ( + x,y:INTEGER
+    (lip "target" str != "android").if {
+      `{ double x,y; glfwGetCursorPos(@w,&x,&y)`
+      (x,y) := (`x`:INTEGER, `y`:INTEGER)
+      `}`
+    }
+    x,y
+  )
+  
+  // Clipboard Support
+  
+  - get_clipboard_in buf:STRING_BUFFER :BOOLEAN <-
+  ( + tab:NATIVE_ARRAY CHARACTER
+    + win:POINTER
+    win := wins.first.win_ptr
+    tab := `glfwGetClipboardString(@win)`:NATIVE_ARRAY CHARACTER
+    (tab.is_not_null).if {      
+      buf.from_external_copy tab
+    }
+  )
+  
+  - set_clipboard buf:STRING <-
+  ( + tab:NATIVE_ARRAY CHARACTER
+    + win:POINTER
+    win := wins.first.win_ptr
+    tab := buf.to_external
+    `glfwSetClipboardString(@win,@tab)`
+  )
+  
+Public
+          
+  - framebuffer_size w:POINTER :(INTEGER,INTEGER) <-
+  ( `int fbw,fbh; glfwGetFramebufferSize(@w, &fbw, &fbh)`
+    `fbw`:INTEGER,`fbh`:INTEGER
+  )
+  
+  - li_refresh_callback w:POINTER :INTEGER <-
+  ( + win_width,win_height:INTEGER
+    + fb_width,fb_height:INTEGER
+    + px_ratio:REAL_64
+    + me:WINDOW
+    + rl,gl,bl,al:UINTEGER_8
+    
+    me := get_win w
+    //"Call back:".print; me.id_name.println
+    `glfwMakeContextCurrent(@w)`
+    
+    (win_width,win_height) := get_window_size w
+    (fb_width,fb_height) := framebuffer_size w
+    px_ratio := fb_width.to_real_64 / win_width.to_real_64
+    //px_ratio.println
+    // Update and render
+    
+    `glViewport(0, 0, @fb_width, @fb_height)`
+    ((flag & transparent) = 0).if {
+      (rl,gl,bl,al) := (0,0,0,255)
+      `glClearColor(@rl,@gl,@bl,@al)`
+    }
+    `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
+    PEN_GL.gl_enable (`GL_BLEND`:INTEGER)
+    PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
+    //PEN_GL.gl_enable (`GL_CULL_FACE`:INTEGER)
+    PEN_GL.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+    ((me.width.to_integer != win_width) || {me.height.to_integer != win_height}).if {
+      me.size (win_width,win_height)
+    }
+    //win_width.print; ' '.print; win_height.println
+    me.draw_all
+    /*DIV_OUT.draw_stack.foreach { d:DIV
+      d.draw pen
+    };*/
+    
+    COLOR.stack.clear
+    `glfwSwapBuffers(@w)`
+    //`glfwPollEvents()`
+    //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
+    0
+  )
+    
+External
+  
+  - generate_frame w:POINTER <-
+  ( 
+    li_refresh_callback w
+    //}
+    //`glfwWaitEvents()`
+  )
+    
+  - refresh_callback w:POINTER :INTEGER <- ( li_refresh_callback w)
+  /*
+  ( + win_width,win_height:INTEGER
+    + fb_width,fb_height:INTEGER
+    + px_ratio:REAL_64
+    + me:WINDOW
+    + rl,gl,bl,al:UINTEGER_8
+
+    me := get_win w
+    //"Call back:".print; me.id_name.println
+    `glfwMakeContextCurrent(@w)`
+    (win_width,win_height) := get_window_size w
+    (fb_width,fb_height) := framebuffer_size w
+    px_ratio := fb_width.to_real_64 / win_width.to_real_64
+    //px_ratio.println
+    // Update and render
+    `glViewport(0, 0, @fb_width, @fb_height)`
+    ((flag & transparent) = 0).if {
+      (rl,gl,bl,al) := (0,0,0,255)
+      `glClearColor(@rl,@gl,@bl,@al)`
+    }
+    `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
+    PEN_GL.gl_enable (`GL_BLEND`:INTEGER)
+    PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
+    //PEN_GL.gl_enable (`GL_CULL_FACE`:INTEGER)
+    PEN_GL.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+    ((me.width.to_integer != win_width) || {me.height.to_integer != win_height}).if {
+      me.size (win_width,win_height)
+    }
+    //win_width.print; ' '.print; win_height.println
+    me.draw_all
+    /*DIV_OUT.draw_stack.foreach { d:DIV
+      d.draw pen
+    };*/
+    
+    COLOR.stack.clear
+    `glfwSwapBuffers(@w)`
+    //`glfwPollEvents()`
+    //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
+    0
+  );*/
+    
+  - new_key (key:INTEGER,scancode:INTEGER,action:INTEGER,mods:INTEGER) <-
+  (
+    //`{ _____CONTEXT *old = top_context; top_context = NULL`
+    // Action: 0:Unpress, 1:Press, 2:Repeat.
+    refresh_again
+    KEYBOARD.key key code (scancode.to_uinteger_8) press (action != 0) mods mods
+    //`top_context = old; }`
+  )
+  
+Public
+  
+  //
+  // Event Mouse (NON ANDROID)
+  //
+  
+External
+  
+  - mouse_move(win:POINTER,xpos,ypos:REAL_64) <-
+  (
+    refresh_again
+    HAND.set_ptr (get_win win) xy (xpos.to_integer,ypos.to_integer)
+  )
+  
+  - mouse_button(win:POINTER,but,act,mod:INTEGER) <-
+  (
+    refresh_again
+    HAND.set_ptr (get_win win) press (but,act != 0)
+  )
+
+  - mouse_scroll(win:POINTER,wx,wy:REAL_64) <-
+  (
+    refresh_again
+    get_win win.mouse_scroll (wx,wy)
+  )
+  
+Public
+  
+  //
+  // ANDROID ONLY
+  //
+  
+  - loc_pen:PEN
+  - screen_width:INTEGER
+  - screen_height:INTEGER
+    
+  // Event Mouse
+  - new_gest:BOOLEAN
+  
+  - first_x:REAL_32
+  - first_y:REAL_32
+  - first_t:REAL_32
+  - first_d:REAL_32
+  
+  - last_x:REAL_32
+  - last_y:REAL_32
+  - last_z:BOOLEAN
+  - last_t:REAL_32
+    
+  - mstate:UINTEGER_8
+  // 0: Sleep.
+  // 1: Drag in progress...
+  // 2: Drag end.
+  // 3: Select in progress...
+  // 4: Select end.
+  // 5: Zoom & Rotation in progress...
+  // 6: Zoom & Rotation end.
+  // 7: Short Clic. 
+  // 8: Long Clic.
+  
+  - mouse_ack s:UINTEGER_8 <-
+  (
+    (s = mstate).if {
+      ((mstate = 1) || {mstate = 3} || {mstate = 5}).if {
+        // Nothing.
+      } else {
+        mstate := 0
+      }
+    }
+  )
+  
+  - mouse_base_time:UINTEGER_64  := TIME.gettimeofday
+  - mouse_pause:REAL_32 := 0.2
+  - mouse_dis:REAL_32 := 12; // BSBS: ca depend du nombre de pix/mm (info)
+  - mouse_time:REAL_32 <- ((TIME.gettimeofday-mouse_base_time) / 10_000).to_real_32 / 100
+  
+  - count_finger:INTEGER
+External
+  
+  - mouse_action (e:POINTER,n,s,x,y:INTEGER) <-
+  (
+    (lip "target" str = "android").if {    
+      + new_z:BOOLEAN
+      + pen:PEN
+      + lx,ly,lt:REAL_32
+      //"point = ".print; x.print; 'x'.print; y.println
+      pen := get_pen e
+      (pen != NULL).if {
+        //(lx,ly,lt) := (512.0/pen.win_width*x,860.0/pen.win_height*y,mouse_time)
+        (lx,ly,lt) := (x,y,mouse_time)
+        ((mstate != 2) && {mstate != 4} && {mstate != 6}).if {
+          `/* BUG */`
+          (n = 1).if {
+            (s = 0).if {
+              count_finger := count_finger - 1
+              //"End finger #2 : ".print; count_finger.println
+              (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+            } else {
+              ((mstate != 5) && {s != -1}).if {
+                + dx,dy:REAL_32
+                ((mstate = 1) || {mstate = 3}).if {
+                  mstate := mstate + 1
+                  //root.gesture_event
+                }
+                (first_x,first_y,first_t) := (last_x,last_y,last_t)
+                (last_x,last_y,last_t) := (lx,ly,lt)
+                (dx,dy) := (last_x-first_x,last_y-first_y)
+                first_d := (dx*dx + dy*dy).sqrt
+                count_finger := 2
+                mstate := 5
+              } else {
+                (last_x,last_y,last_t) := (lx,ly,lt)
+              }
+            }
+          }.elseif {mstate = 5} then {
+            (s = 0).if {
+              count_finger := count_finger - 1
+              //"End finger #1 : ".print; count_finger.println
+              (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+            } else {
+              (first_x,first_y,first_t) := (lx,ly,lt)
+            }
+          } else {
+            (last_x,last_y,last_t) := (lx,ly,lt)
+            (s != -1).if {
+              new_z := s > 0
+              (!last_z & new_z).if { // Pressed.
+                mstate := 0
+                (first_x,first_y) := (last_x,last_y)
+                last_t := first_t := mouse_time
+              }.elseif {last_z & !new_z} then { // Released
+                ((mstate = 1) || {mstate = 3}).if {
+                  mstate := mstate + 1; // Drag end Or Select end
+                } else {
+                  last_t := mouse_time
+                  mstate := 7 + (last_t - first_t > mouse_pause).to_integer; // Short Or Long Clic
+                }
+              } else {
+                "PAPER.mouse_button BUG !!!\n".print
+              }
+              last_z := new_z
+            } else {
+              (last_z).if {
+                + dx,dy,d:REAL_32
+                (dx,dy) := (last_x - first_x,last_y - first_y)
+                d := (dx*dx + dy*dy).sqrt
+                ((d > mouse_dis) && {mstate = 0}).if { // Moving mode (distance > 8 pix)
+                  mstate := mstate | 1
+                  mstate := mstate | ((last_t - first_t > mouse_pause).to_integer << 1); // Select
+                }
+              }
+            }
+          }
+        }
+      }
+      new_gest := TRUE
+    }
+  )
+
+Private
+  
+  - get_pen e:POINTER :PEN <-
+  ( + pen:PEN
+    + ptr:POINTER
+    `{ struct engine* e=@e`
+    ptr := `e->pen`:POINTER
+    `}`
+    (ptr.is_null).if_false {
+      pen := CAST POINTER TO PEN.on ptr
+    }
+    pen
+  )
+  
+  - update_accelerometer <-
+  (
+    `update_accelerometer()`
+    ACCELEROMETER.set_xyz (`acc_x`:REAL_32,`acc_y`:REAL_32,`acc_z`:REAL_32)
+  )
+  
+External
+  
+  - init_gl e:POINTER :BOOLEAN <-
+  (lip "target" str = "android").if { + wt,ht:INTEGER
+    + w_scr,h_scr:INTEGER
+    `struct engine* e=@e`
+    `int maxGeoShader`
+    (get_pen e != NULL).if {
+      "Restore gl\n".print
+      `EGLConfig config`
+      `EGLint numConfigs`
+      `eglChooseConfig(e->display, attribs, &config, 1, &numConfigs)`
+      `e->surface = eglCreateWindowSurface(e->display, config, e->app->window, NULL)`
+    } else {  
+      "Init gl\n".print
+      `EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY)`
+      `eglInitialize(display, 0, 0)`
+      `EGLConfig config`
+      `EGLint numConfigs`
+      `eglChooseConfig(display, attribs, &config, 1, &numConfigs)`
+      `EGLint format`
+      `eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format)`
+      `ANativeWindow_setBuffersGeometry(e->app->window, 0, 0, format)`
+      
+      `e->surface = eglCreateWindowSurface(display, config, e->app->window, NULL)`
+      `EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs)`
+      `e->display = display`
+      `e->context = context`
+    }
+    `eglMakeCurrent(e->display, e->surface, e->surface, e->context)`
+    `EGLint w, h`
+    `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
+    `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
+    `glViewport(0, 0, w, h)`
+    `eglSwapInterval(e->display, 0)`
+    wt := `w`:INTEGER
+    ht := `h`:INTEGER
+    //`ANativeWindow nativeWindow = ANativeWindow_fromSurface(env, surface)`
+    w_scr := `ANativeWindow_getWidth(e->app->window)`:INTEGER
+    h_scr := `ANativeWindow_getHeight(e->app->window)`:INTEGER
+    (screen_width,screen_height) := (wt,ht)
+    "Surface: ".print; wt.print;    'x'.print; ht.print;    '\n'.print
+    "Window : ".print; w_scr.print; 'x'.print; h_scr.print; '\n'.print
+    //`glGetIntegerv(GL_MAX_GEOMETRY_SHADER_INVOCATIONS, &maxGeoShader)`
+    //"MaxGeometryShaderInvocations:".print; `maxGeoShader`:INTEGER.println
+  }
+  
+  - init_pen e:POINTER :BOOLEAN <-
+  (lip "target" str = "android").if { + pen:PEN
+    `struct engine* e=@e`
+    pen := get_pen e
+    (pen = NULL).if {
+      "------------Init Pen\n".print
+      pen := loc_pen := PEN.new_pen
+      wins.first.set_pen pen
+      //PEN_GL.init (antialias | stencil_strokes | debug)
+      //load_font loc_pen
+      `e->pen=@pen`
+    } else {
+      "------------Restore Pen\n".print
+    }
+  }
+  
+  - lost_focus e:POINTER :BOOLEAN <-
+  (lip "target" str = "android").if {
+    + pen:PEN
+    `struct engine *e=@e`
+    pen := get_pen e
+    (pen != NULL).if { pen.delete; }
+    `eglDestroyContext(e->display,e->context )`
+    `eglTerminate(e->display)`
+    `e->pen = NULL`
+    `e->context = EGL_NO_CONTEXT`
+    `e->display = EGL_NO_DISPLAY`
+  }
+  
+  - term_window e:POINTER :BOOLEAN <-
+  (lip "target" str = "android").if {
+   //`struct engine *e=@e`
+    //(`e->display`:POINTER != `EGL_NO_DISPLAY`:POINTER).if {
+      //`eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
+      //(`e->surface`:POINTER != `EGL_NO_SURFACE`:POINTER).if {
+     // `eglDestroySurface(e->display,e->surface )`
+     // `ANativeWindow_release(e->app->window)`
+      //}
+    //}
+    //`e->surface = EGL_NO_SURFACE`
+  }
+  
+  - draw_in e:POINTER :BOOLEAN <-
+  (lip "target" str = "android").if {
+    + wt,ht:INTEGER
+    + pen:PEN
+    + me:WINDOW
+    + rl,gl,bl,al:REAL_32
+    me := wins.first
+    (new_gest).if {
+      "PAPER 511: Not yet implemented.".println
+      // root.gesture_event
+      new_gest := FALSE
+    }
+    `struct engine* e=@e`
+    `int w,h`
+    `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
+    `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
+    wt := `w`:INTEGER
+    ht := `h`:INTEGER
+    pen := `e->pen`:PEN
+    
+    //pen.set_size (wt,ht)
+    // Update and render
+    `glViewport(0, 0, w, h)`
+    (rl,gl,bl,al) := (0,0,0,255)
+    `glClearColor(@rl,@gl,@bl,@al)`
+    `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
+    pen.gl.gl_enable (`GL_BLEND`:INTEGER)
+    pen.gl.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
+    pen.gl.gl_enable (`GL_CULL_FACE`:INTEGER)
+    pen.gl.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+
+    ((me.width.to_integer != wt) || {me.height.to_integer != ht}).if {
+      me.size (wt,ht)
+    }
+    me.draw_all
+    //    `glEnable(GL_DEPTH_TEST)`
+    COLOR.stack.clear
+    `eglSwapBuffers(e->display, e->surface)`
+  }

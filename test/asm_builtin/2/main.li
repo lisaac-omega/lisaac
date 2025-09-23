@@ -1,0 +1,125 @@
+Header
+  + name := MAIN;
+ 
+Public
+  - main <-
+  ( + i:INTEGER
+    TEST.check (ASM_BUILTIN.size_in_base_2 1) integer 1
+    TEST.check (ASM_BUILTIN.size_in_base_2 2) integer 2
+    TEST.check (ASM_BUILTIN.size_in_base_2 3) integer 2
+    TEST.check (ASM_BUILTIN.size_in_base_2 4) integer 3
+    TEST.check (ASM_BUILTIN.size_in_base_2 5) integer 3
+    TEST.check (ASM_BUILTIN.size_in_base_2 6) integer 3
+    TEST.check (ASM_BUILTIN.size_in_base_2 7) integer 3
+    TEST.check (ASM_BUILTIN.size_in_base_2 8) integer 4
+    i := 9
+    {i < 16}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 4
+      i := i + 1
+    }
+    TEST.check i integer 16
+    {i < 32}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 5
+      i := i + 1
+    }
+    TEST.check i integer 32
+    {i < 64}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 6
+      i := i + 1
+    }
+    TEST.check i integer 64
+    {i < 128}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 7
+      i := i + 1
+    }
+    TEST.check i integer 128
+    {i < 256}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 8
+      i := i + 1
+    }
+    TEST.check i integer 256
+    {i < 512}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 9
+      i := i + 1
+    }
+    TEST.check i integer 512
+    {i < 1024}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 10
+      i := i + 1
+    }
+    TEST.check i integer 1024
+    {i < 2048}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 11
+      i := i + 1
+    }
+    TEST.check i integer 2048
+    {i < 4096}.while_do {
+      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 12
+      i := i + 1
+    }
+    TEST.check i integer 4096
+    check 4096 bits 13
+    check 8192 bits 14
+    check 16384 bits 15
+    check 32768 bits 16
+    check 65536 bits 17
+    check 131072 bits 18
+    check 1000000000000000000b bits 19
+    check 10000000000000000000b bits 20
+    check 100000000000000000000b bits 21
+    check 1000000000000000000000b bits 22
+    check 10000000000000000000000b bits 23
+    check 100000000000000000000000b bits 24
+    check 1000000000000000000000000b bits 25
+    check 10000000000000000000000000b bits 26
+    check 100000000000000000000000000b bits 27
+    check 1000000000000000000000000000b bits 28
+    check 10000000000000000000000000000b bits 29
+    check 100000000000000000000000000000b bits 30
+    check 1000000000000000000000000000000b bits 31
+    check 10000000000000000000000000000000b bits 32
+    check 100000000000000000000000000000000b bits 33
+    check 200000000h bits 34
+    check 400000000h bits 35
+    check 800000000h bits 36
+    check 1000000000h bits 37
+    check 2000000000h bits 38
+    check 4000000000h bits 39
+    check 8000000000h bits 40
+    check 10000000000h bits 41
+    check 20000000000h bits 42
+    check 40000000000h bits 43
+    check 80000000000h bits 44
+    check 100000000000h bits 45
+    check 200000000000h bits 46
+    check 400000000000h bits 47
+    check 800000000000h bits 48
+    check 1000000000000h bits 49
+    check 2000000000000h bits 50
+    check 4000000000000h bits 51
+    check 8000000000000h bits 52
+    check 10000000000000h bits 53
+    check 20000000000000h bits 54
+    check 40000000000000h bits 55
+    check 80000000000000h bits 56
+    check 100_0000_0000_0000h bits 57
+    check 200_0000_0000_0000h bits 58
+    check 400_0000_0000_0000h bits 59
+    check 800_0000_0000_0000h bits 60
+    check 1000_0000_0000_0000h bits 61
+    check 2000_0000_0000_0000h bits 62
+    check 4000_0000_0000_0000h bits 63
+    check 8000_0000_0000_0000h bits 64
+    // DCDC august 16th 2025, isn't that funny code :-)
+  )
+  
+  - check value:UINTEGER_64 bits bits:INTEGER <-
+  (
+    TEST.check (ASM_BUILTIN.size_in_base_2 value) integer bits
+    TEST.check (ASM_BUILTIN.size_in_base_2 (value + 1)) integer bits
+    TEST.check (ASM_BUILTIN.size_in_base_2 (value + 2)) integer bits
+    TEST.check (ASM_BUILTIN.size_in_base_2 (value + 3)) integer bits
+    TEST.check (ASM_BUILTIN.size_in_base_2 (value - 1)) integer (bits - 1)
+    TEST.check (ASM_BUILTIN.size_in_base_2 (value - 2)) integer (bits - 1)
+    TEST.check (ASM_BUILTIN.size_in_base_2 (value - 3)) integer (bits - 1)
+  )

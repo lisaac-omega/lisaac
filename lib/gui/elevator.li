@@ -1,0 +1,126 @@
+Header
+  + name := ELEVATOR;
+  
+Inherit
+  - parent_win:WIN := WIN
+  
+Private
+  - get_y_h hu:REAL_32 :(REAL_32,REAL_32) <-
+  ( + y,h:REAL_32
+    h := (height * height / hu).max 16
+    y := (height * pos_y / hu).min (height - h).max 0
+    y,h
+  )
+  
+  - get_x_w wu:REAL_32 :(REAL_32,REAL_32) <-
+  ( + x,w:REAL_32
+    w := (width * width / wu).max 16
+    x := (width * pos_x / wu).min (width - w).max 0
+    x,w
+  )
+      
+Public
+  
+  + pos_x:REAL_32
+  + pos_y:REAL_32
+  
+  - set_pos_x x:REAL_32 <- ( pos_x := x; )
+  - set_pos_y y:REAL_32 <- ( pos_y := y; )
+  - set_pos_xy (x,y:REAL_32) <- ( (pos_x,pos_y) := (x,y); )
+  
+  - width_upper:REAL_32
+  - height_upper:REAL_32
+  
+  - draw_elevator <-
+  ( + h,hu,w,wu,x,y,s,d:REAL_32
+    (HAND.window_cur = window).if {
+      ((hu := height_upper) > height).if {
+        (HAND.y_cur.in_range yo to ymax).if {
+          s := (32.0 - (HAND.x_cur.to_real_32 - (xo+width-8)).abs.min 32).min 16.max 8
+        } else { s := 8; }
+        (y,h) := get_y_h hu
+        begin_path
+        fill_color (LOOK_GUI.elevator_ui)
+        rect (xo+width-s-4,yo+y+2) size (s-2,h-4) radius (s/2)
+        fill
+        (! HAND.press_cur).if {        
+          (pos_y < 0).if {
+            pos_y := (pos_y < 2).ok (REAL_32.zero) else {pos_y / 2}
+            move_pos_y (pos_y - Old pos_y)
+            PAPER.refresh_again
+          }
+          ((d := hu - height - pos_y) < 0).if {            
+            pos_y := pos_y + (d > -2).ok d else {d / 2}
+            move_pos_y (pos_y - Old pos_y)
+            PAPER.refresh_again
+          }
+        }
+      }
+      ((wu := width_upper) > width).if {
+        (HAND.x_cur.in_range xo to xmax).if {
+          s := (32.0 - (HAND.y_cur.to_real_32 - (yo+height-8)).abs.min 32).min 16.max 8
+        } else { s := 8; }
+        (x,w) := get_x_w wu
+        begin_path
+        fill_color (LOOK_GUI.elevator_ui)
+        rect (xo+x+2,yo+height-s-4) size (w-4,s-2) radius (s/2)
+        fill
+        (! HAND.press_cur).if {          
+          (pos_x < 0).if {
+            pos_x := (pos_x > -2).ok (REAL_32.zero) else {pos_x / 2}
+            move_pos_x (pos_x - Old pos_x)
+            PAPER.refresh_again
+          }
+          ((d := wu - width - pos_x) < 0).if {
+            pos_x := pos_x + (d > -2).ok d else {d / 2}
+            move_pos_x (pos_x - Old pos_x)
+            PAPER.refresh_again
+          }
+        }
+      }
+    }
+    /*
+    begin_path
+    stroke_width 1.0
+    line (xmax-20, yo) to (xmax-20,ymax)
+    stroke_color (COLOR.red)
+    stroke
+    */
+  )
+  
+  - move_pos_y dy:REAL_32
+  - move_pos_x dx:REAL_32
+    
+  - event_elevator ev:UINTEGER_8 :BOOLEAN <-
+  ( - is_h,is_w:BOOLEAN
+    + w,h,x,y,wu,hu,dx,dy:REAL_32
+    (ev & ~1 = HAND.drag).if {
+      //ask_refresh
+      ((wu := width_upper) > width).if {
+        (HAND.is_begin).if {
+          (x,w) := get_x_w wu; x := x + xo
+          is_w := (HAND.y_begin > ymax - 20) && {HAND.x_begin.in_range x to (x+w)}
+        }
+        is_w.if {
+          dx := HAND.dx * wu / width
+          (pos_x + dx < -width).if      { dx := -width - pos_x; }
+          (pos_x + dx > width_upper).if { dx := width_upper - pos_x; }
+        } else { dx := - HAND.dx; }
+        pos_x := pos_x + dx
+        move_pos_x dx
+      }
+      ((hu := height_upper) > height).if {
+        (HAND.is_begin).if {
+          (y,h) := get_y_h hu; y := y + yo
+          is_h := (HAND.x_begin > xmax - 20) && {HAND.y_begin.in_range y to (y+h)}
+        }
+        is_h.if {
+          dy := HAND.dy * hu / height
+          (pos_y + dy < -height).if      { dy := -height - pos_y; }
+          (pos_y + dy > height_upper).if { dy := height_upper - pos_y; }
+        } else { dy := - HAND.dy; }
+        pos_y := pos_y + dy
+        move_pos_y dy
+      }
+    }
+  )

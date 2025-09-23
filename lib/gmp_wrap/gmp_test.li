@@ -1,0 +1,20 @@
+Header  
+  + name := GMP_TEST;
+
+Public
+  - init buffer: STRING_BUFFER hex_digits hd: INTEGER first f:CHARACTER <-
+  ( + i:INTEGER
+    + hex:CHARACTER
+    buffer.clear
+    i := hd
+    hex := f
+    {i <= 0}.until_do {
+      buffer.add_last hex
+      hex := hex.hexadecimal_next
+      i := i - 1
+    }
+    /*
+    " bytes ".print
+    buffer.println
+    */
+  )

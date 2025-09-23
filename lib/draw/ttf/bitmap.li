@@ -1,0 +1,501 @@
+Header
+  
+  + name := BITMAP;
+  
+Inherit
+  
+  - parent_ttf_constant:TTF_CONSTANT := TTF_CONSTANT
+  
+Public
+  
+  + w:INTEGER
+  + h:INTEGER
+  + stride:INTEGER
+  + pixels:NATIVE_ARRAY UINTEGER_8
+  
+  //- bug:INTEGER
+  
+  - create (pw,ph:INTEGER) :SELF <-
+  ( + result:SELF
+    result := clone
+    //(bug > 50).if { crash; }; bug := bug + 1
+    result.make (NATIVE_ARRAY UINTEGER_8.create (pw*ph)) 
+    size (pw,ph) stride pw
+    result
+  )
+  
+  - create pix:NATIVE_ARRAY UINTEGER_8 size (pw,ph:INTEGER) 
+  stride s:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    //(bug > 650).if { crash; }; bug := bug + 1
+    result.make pix size (pw,ph) stride s
+    result
+  )
+
+  - make pix:NATIVE_ARRAY UINTEGER_8 size (pw,ph:INTEGER) 
+  stride s:INTEGER <-
+  (
+    (w,h) := (pw,ph)
+    stride := s
+    pixels := pix
+  )
+  
+  - at (x,y:INTEGER) :UINTEGER_8 <- pixels.at (y*stride+x)
+      
+  //  Rasterizer
+  
+  - scanline_data:ARRAY REAL_32 := ARRAY REAL_32.create 129
+  // directly AA rasterize edges w/o supersampling
+  - rasterize_sorted_edges e:ARRAY EDGE sub vsubsample:INTEGER 
+  offset (off_x,off_y:INTEGER) <-
+  ( + sum:REAL_32
+    + y,j,ie:INTEGER
+    + active,prev:ACTIVE_EDGE
+    + scanline,scanline2:NATIVE_ARRAY REAL_32
+    
+    scanline_data.resize (w*2+1)
+    scanline  := scanline_data.storage
+    scanline2 := scanline + w
+
+    y := off_y
+    //"AFF:".print
+    //0.to (e.upper) do { i:INTEGER; e.at i.y1.print; ' '.print; }; '\n'.print
+    e.add_last (EDGE.create FALSE x0 0 y0 ((off_y + h) + 1) x1 0 y1 0)
+
+    {j < h}.while_do {
+      + scan_y_top,scan_y_bottom:REAL_32
+      + step:ACTIVE_EDGE
+      // find center of pixel for this scanline
+      scan_y_top    := 0.0 + y
+      scan_y_bottom := 1.0 + y
+      step := active
+      prev := NULL
+//"scan_y_top:".print; scan_y_top.print; '\n'.print
+      scanline .clear_all (w-1)
+      scanline2.clear_all w
+
+      // update all active edges
+      // remove all active edges that terminate before the top of this scanline
+      {step != NULL}.while_do {
+        + z:ACTIVE_EDGE
+        z := step
+//        "ey:".print; z.ey.print; '\n'.print
+        (z.ey <= scan_y_top).if {
+          step := z.next; // delete from list
+          (active = z).if {
+            active := step
+          } else {
+            prev.set_next step
+          }
+          ? {z.direction != 0}
+          z.set_direction 0; // BSBS: pas utile.
+          //z.free
+        } else {
+          prev := step
+          step := step.next; // advance through list
+        }
+      }
+      //"scan_y_bottom:".print; scan_y_bottom.print; '\n'.print
+      //"e.at ie.y0 :".print; e.at ie.y0.print; '\n'.print
+      // insert all edges that start before the bottom of this scanline
+      {e.at ie.y0 <= scan_y_bottom}.while_do {
+        //"y0:".print; e.at ie.y0.print; ' '.print
+        //"y1:".print; e.at ie.y1.print; '\n'.print
+        (e.at ie.y0 != e.at ie.y1).if {
+          + z:ACTIVE_EDGE
+          z := ACTIVE_EDGE.create (e.at ie) offset off_x start scan_y_top
+          //          "create ".print; z.ey.print; '\n'.print
+          //(z != NULL).if {
+          //(z.ey < scan_y_top).if {
+          //  "EEEEEERRRROOOORRRRR\n".print
+          //  e.at ie.y1.print; ' '.print; z.ey.print; ' '.print
+          // scan_y_top.print; '\n'.print
+          // crash
+          //}
+            ? {z.ey >= scan_y_top}
+            // insert at front
+            z.set_next active
+            active := z
+          //}
+        }
+        ie := ie + 1
+      }
+
+      // now process all active edges
+      (active != NULL).if {
+        //"Line\n".print
+        ACTIVE_EDGE.fill_active_edges_new scanline and (scanline2+1) 
+        length w with active top_y scan_y_top
+      }
+      
+      sum := 0
+      0.to (w-1) do { i:INTEGER
+        + k:REAL_32
+        + m:INTEGER
+        sum := sum + scanline2.at i
+        //`printf("%6.4f ",@sum)`
+        //(sum = 0).if { "0.0000 ".print; }
+        //else { sum.print; ' '.print; }
+        k := scanline.at i + sum
+        //`printf("%6.4f ",@k)`
+        k := k.abs*255 + 0.5
+        m := k.to_integer
+        (m > 255).if { m := 255; }
+        pixels.at (j*stride + i) put (m.to_uinteger_8)
+        //"#*+-".item (m.to_uinteger_8>>6).print; //m.print
+      }
+      //'\n'.print
+      // advance all the edges
+      step := active
+      {step != NULL}.while_do {
+        + z:ACTIVE_EDGE
+        z := step
+        z.set_fx (z.fx + z.fdx); // advance to position for current scanline
+        step := step.next; // advance through list
+      }
+      y := y + 1
+      j := j + 1
+    }
+    ACTIVE_EDGE.free_all
+  )
+
+  - compare (a,b:EDGE) :BOOLEAN <- (a.y0 < b.y0)
+
+  - sort_edges_ins_sort p:ARRAY EDGE low l:INTEGER up n:INTEGER <-
+  ( + j:INTEGER
+    + t,b,a:EDGE
+    + break:BOOLEAN
+    
+    1.to (n-1) do { i:INTEGER
+      t := p.at i
+      a := t
+      j := i
+      break := FALSE
+      {(j > 0) && {!break}}.while_do {
+        b := p.at (j-1)
+        (compare(a,b)).if { 
+          p.at j put b
+          j := j - 1
+        } else {
+          break := TRUE
+        }
+      }
+      (i != j).if { p.at j put t; }
+    }
+  )
+
+  - sort_edges_quicksort p:ARRAY EDGE low pl:INTEGER up pn:INTEGER <-
+  ( + t:EDGE
+    + m,i,j,z,l,n:INTEGER
+    + c01,c12,c:BOOLEAN
+    // threshhold for transitioning to insertion sort 
+    (l,n) := (pl,pn)
+    {n-l > 12}.while_do {
+      // compute median of three 
+      m := (l+n) >> 1
+      c01 := compare (p.at l,p.at m)
+      c12 := compare (p.at m,p.at (n-1))
+      // if 0 >= mid >= end, or 0 < mid < end, then use mid 
+      (c01 != c12).if {
+        // otherwise, we'll need to swap something else to middle 
+        c := compare(p.at l,p.at (n-1))
+        // 0>mid && mid<n:  0>n => n; 0<n => 0 
+        // 0<mid && mid>n:  0>n => 0; 0<n => n 
+        z := (c = c12).ok l or (n-1)
+        t := p.at z
+        p.at z put (p.at m)
+        p.at m put t
+      }
+      // now p[m] is the median-of-three 
+      // swap it to the beginning so it won't move around 
+      p.swap l with m
+
+      // partition loop 
+      i := l+1
+      j := n-1
+      {
+        // handling of equality is crucial here 
+        // for sentinels & efficiency with duplicates 
+        {compare(p.at i,p.at l)}.while_do { i := i + 1; }
+        {compare(p.at l,p.at j)}.while_do { j := j - 1; }
+        // make sure we haven't crossed 
+        (c := i < j).if {
+          p.swap i with j
+          i := i + 1
+          j := j - 1
+        }
+      }.do_while {c}
+      // recurse on smaller side, iterate on larger 
+      (j < (n-i)).if {
+        sort_edges_quicksort p low l up j
+        l := l+i
+        n := n-i
+      } else {
+        sort_edges_quicksort p low i up (n-i)
+        n := j
+      }
+    }
+  )
+
+  - sort_edges p:ARRAY EDGE low l:INTEGER up n:INTEGER <-
+  (
+    sort_edges_quicksort p low l up n
+    sort_edges_ins_sort p low l up n
+  )
+
+  - rasterize pts:ARRAY TT_POINT len wcount:ARRAY INTEGER 
+  scale (scale_x,scale_y:REAL_32) shift (shift_x,shift_y:REAL_32)
+  offset (off_x,off_y:INTEGER) inv invert:INTEGER <-
+  ( + y_scale_inv:REAL_32
+    + e:ARRAY EDGE
+    + n,j,m:INTEGER
+    + vsubsample:INTEGER
+    + inv:BOOLEAN
+    
+    //"POINTS:".print
+    //(pts.lower).to (pts.upper) do { i:INTEGER; i.print; pts.at i.print; }; '\n'.print
+    
+    vsubsample := 1
+    (invert != 0).if {
+      y_scale_inv := -scale_y
+    } else {
+      y_scale_inv := scale_y
+    }
+    // vsubsample should divide 255 evenly; otherwise we won't reach full opacity
+//"wcount.upper:".print; wcount.count.print; '\n'.print
+    // now we have to blow out the windings into explicit edge lists
+    n := 0
+    0.to (wcount.upper) do { i:INTEGER
+      n := n + wcount.at i
+      //wcount.at i.print; ' '.print
+    }
+    //"n>:".print; n.print; '\n'.print; exit(0)
+    e := alloc_edges (n+1); // add an extra one as a sentinel
+    n := 0
+
+    m := 0
+    //"win:".print; wcount.upper.print; '\n'.print
+    0.to (wcount.upper) do { i:INTEGER
+      + p:INTEGER
+      p := m
+      m := m + wcount.at i
+      j := wcount.at i -1
+      0.to (wcount.at i-1) do { k:INTEGER
+        + a,b:INTEGER
+        a := k
+        b := j
+        // skip the edge if horizontal
+        (pts.at (p+j).y != pts.at (p+k).y).if {
+          // add edge from j to k to the list
+          //n.print; '\n'.print
+          inv := FALSE
+          (
+            ((invert=1) && {pts.at (p+j).y > pts.at (p+k).y}) ||
+            {(invert=0) && {pts.at (p+j).y < pts.at (p+k).y}}
+          ).if {
+            inv := TRUE
+            a := j; b := k
+          }
+          e.add_last (EDGE.create inv
+            x0 ( pts.at (p+a).x * scale_x     + shift_x)
+            y0 ((pts.at (p+a).y * y_scale_inv + shift_y) * vsubsample)
+            x1 ( pts.at (p+b).x * scale_x     + shift_x)
+            y1 ((pts.at (p+b).y * y_scale_inv + shift_y) * vsubsample)
+          )
+          n := n + 1
+        }
+        j := k
+      }
+    }
+
+    // now sort the edges by their highest point (should snap to integer, and then by x)
+    //STBTT_sort(e, n, sizeof(e[0]), stbtt__edge_compare)
+    //0.to (e.upper) do { i:INTEGER; e.at i.y0.print; ' '.print; }; '\n'.print
+    sort_edges e low 0 up (e.count)
+    //"\nAfter sort:".print; 0.to (e.upper) do { i:INTEGER; e.at i.y1.print; ' '.print; }; '\n'.print
+    //"n:".print; n.print; '/'.print; e.count.print; '\n'.print
+    //? {n = e.count}
+    // now, traverse the scanlines and find the intersections 
+    // on each scanline, use xor winding rule
+    rasterize_sorted_edges e sub vsubsample offset (off_x,off_y)
+    
+    free_edges e
+  )
+
+  // tesselate until threshhold p is happy...
+  - tesselate_curve points:ARRAY TT_POINT from (x0,y0:REAL_32) 
+  w (x1,y1:REAL_32) to (x2,y2:REAL_32) 
+  space space_sqr:REAL_32 level n:INTEGER <-
+  ( + mx,my,dx,dy:REAL_32
+    // midpoint
+    //`printf("%2.2f,%2.2f  %2.2f,%2.2f  %2.2f,%2.2f\n",@x0,@y0,@x1,@y1,@x2,@y2)`
+    (mx,my) := ((x0 + x1*2 + x2)/4, (y0 + y1*2 + y2)/4)
+    // versus directly drawn line
+    (dx,dy) := ((x0+x2)/2 - mx, (y0+y2)/2 - my)
+    (n <= 16).if { // 65536 segments on one curve better be enough!
+      (dx*dx+dy*dy > space_sqr).if { 
+        // half-pixel error allowed... need to be smaller if AA
+        tesselate_curve points from (x0,y0) w ((x0+x1)/2.0,(y0+y1)/2.0) 
+        to (mx,my) space space_sqr level (n+1)
+        tesselate_curve points from (mx,my) w ((x1+x2)/2.0,(y1+y2)/2.0) 
+        to (x2,y2) space space_sqr level (n+1)
+      } else {
+        points.add_last (TT_POINT.make (x2,y2))
+      }
+    }
+  )
+
+  // returns number of contours
+  - flatten_curves vertices:ARRAY TT_VERTEX pix objspace_flatness:REAL_32
+  :(ARRAY TT_POINT,ARRAY INTEGER) <-
+  ( + points:ARRAY TT_POINT
+    + x,y:REAL_32
+    + objspace_flatness_squared:REAL_32
+    + n,start:INTEGER
+    + contour_lengths:ARRAY INTEGER
+    
+    objspace_flatness_squared := objspace_flatness * objspace_flatness
+    // count how many "moves" there are to get the contour count
+    (vertices != NULL).if {
+      0.to (vertices.upper) do { i:INTEGER
+        (vertices.at i.type = vmove).if {
+          n := n + 1
+        }
+      }
+      //"vertices.upper:".print; vertices.upper.print; '\n'.print
+    }
+    
+    (n != 0).if {
+      contour_lengths := alloc_winding_len n
+      //"===>n:".print; n.print; '\n'.print
+      points := alloc_windings 256
+      // make two passes through the points so we don't need to realloc          
+      
+      x := y := 0
+      //num_points := 0
+      n := -1
+      0.to (vertices.upper) do { i:INTEGER
+        (vertices.at i.type)
+        .when vmove then {
+          // start the next contour
+          (n >= 0).if {
+            //"len:".print; points.count.print; ' '.print; start.print; '\n'.print
+            contour_lengths.at n put (points.count - start)
+          }
+          n := n + 1
+          start := points.count
+          (x,y) := (vertices.at i.xf,vertices.at i.yf)
+          points.add_last (TT_POINT.make (x,y))
+        }.when vline then {
+          (x,y) := (vertices.at i.xf, vertices.at i.yf)
+          points.add_last (TT_POINT.make (x,y))
+        }.when vcurve then {
+          //"cnt curv0:".print; points.count.print; '\n'.print
+          tesselate_curve points from (x,y) 
+          w  (vertices.at i.cxf,vertices.at i.cyf) 
+          to (vertices.at i. xf,vertices.at i. yf)
+          space objspace_flatness_squared level 0
+          (x,y) := (vertices.at i.xf, vertices.at i.yf)
+          //"cnt curv1:".print; points.count.print; '\n'.print
+        }
+      }
+      //"pts.count:".print; points.count.print; ' '.print
+      //" start:".print; start.print; '\n'.print
+      contour_lengths.at n put (points.count - start)
+    }
+    points,contour_lengths
+  )
+
+  - rasterize flatness_in_pixels:REAL_32 
+  vertex vertices:ARRAY TT_VERTEX scale (scale_x,scale_y:REAL_32) 
+  shift (shift_x,shift_y:REAL_32) offset (x_off,y_off:INTEGER) 
+  int invert:INTEGER <-
+  ( + scal:REAL_32
+    + winding_lengths:ARRAY INTEGER
+    + windings:ARRAY TT_POINT
+    scal := (scale_x > scale_y).ok scale_y or scale_x
+    (windings,winding_lengths) := 
+    flatten_curves vertices pix (flatness_in_pixels / scal)
+    //"BMP L385\n".print
+    (windings != NULL).if {      
+      rasterize windings len winding_lengths 
+      scale (scale_x, scale_y) shift (shift_x, shift_y)
+      offset (x_off, y_off) inv invert
+      free_winding_len winding_lengths
+      free_windings windings
+    }
+  )
+
+  - free_bitmap bitmap:BITMAP <-
+  (
+    not_yet_implemented
+    //STBTT_free(bitmap, userdata)
+  )
+  
+Private
+  
+  // ARRAY EDGE
+  
+  - stock_array_edge:ARRAY (ARRAY EDGE) := ARRAY (ARRAY EDGE).create_with_capacity 16
+  
+  - alloc_edges n:INTEGER :ARRAY EDGE <-
+  ( + result:ARRAY EDGE
+    (stock_array_edge.is_empty).if {
+      result := ARRAY EDGE.create_with_capacity n
+    } else {
+      result := stock_array_edge.pop
+      result.with_capacity n
+    }
+    //n.times { result.add_last (EDGE.create); }
+    result
+  )
+  
+  - free_edges t:ARRAY EDGE <-
+  (
+    {t.is_empty}.until_do { t.pop.free; }
+    stock_array_edge.add_last t
+  )
+  
+  // ARRAY TT_POINT
+  
+  - stock_array_tt_point:ARRAY (ARRAY TT_POINT) := ARRAY (ARRAY TT_POINT).create_with_capacity 16
+  
+  - alloc_windings n:INTEGER :ARRAY TT_POINT <-
+  ( + result:ARRAY TT_POINT
+    (stock_array_tt_point.is_empty).if {
+      result := ARRAY TT_POINT.create_with_capacity n
+    } else {
+      result := stock_array_tt_point.pop
+      result.with_capacity n
+    }
+    result
+  )
+  
+  - free_windings t:ARRAY TT_POINT <-
+  (
+    t.clear
+    stock_array_tt_point.add_last t
+  )
+  
+  // ARRAY INTEGER
+  
+  - stock_array_integer:ARRAY (ARRAY INTEGER) := ARRAY (ARRAY INTEGER).create_with_capacity 16
+  
+  - alloc_winding_len n:INTEGER :ARRAY INTEGER <-
+  ( + result:ARRAY INTEGER
+    (stock_array_integer.is_empty).if {
+      result := ARRAY INTEGER.create n
+    } else {
+      result := stock_array_integer.pop
+      result.make n
+    }
+    result
+  )
+  
+  - free_winding_len t:ARRAY INTEGER <-
+  (
+    t.clear
+    stock_array_integer.add_last t
+  )
+  

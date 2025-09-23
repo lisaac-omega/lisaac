@@ -1,0 +1,350 @@
+Header
+
+  + name    := ARRAY3 V;
+
+  /*
+    Unlike ARRAY3, the `lower1', `lower2' and `lower3' bounds 
+    are frozen to 0. Thus, one can expect better performances. .
+  */
+
+Inherit
+  + parent_collection3:Expanded COLLECTION3 V
+
+Public
+
+  + upper1:INTEGER
+  + count1:INTEGER
+
+  + upper2:INTEGER
+  + count2:INTEGER
+
+  + upper3:INTEGER
+  + count3:INTEGER
+
+  + count:INTEGER
+
+Private
+
+  + count2x3:INTEGER
+  // To speed up access, this value is always equal to
+  // `count2' * `count3'
+
+ARRAY3
+
+  + storage:NATIVE_ARRAY V
+
+  + capacity:INTEGER; // of `storage'.
+
+Public
+
+  - lower1:INTEGER := 0
+
+  - lower2:INTEGER := 0
+
+  - lower3:INTEGER := 0
+
+  - create (new_count1, new_count2, new_count3:INTEGER) :SELF<-
+  // Create or reset `Current' with new dimensions.
+  // All elements are set to the default value of type E.
+  ( + result:SELF
+
+    result := clone
+    result.make (new_count1, new_count2, new_count3)
+    result
+  )
+
+  - make (new_count1, new_count2, new_count3 :INTEGER) <-
+  // Create or reset `self' with new dimensions.
+  // All elements are set to the default value of type E.
+  [ // Old
+    -? { new_count1 > 0 }
+    -? { new_count2 > 0 }
+    -? { new_count3 > 0 }
+  ]
+  (
+    count1 := new_count1
+    upper1 := new_count1 - 1
+    count2 := new_count2
+    upper2 := new_count2 - 1
+    count3 := new_count3
+    count2x3 := count2 * count3
+    upper3 := new_count3 - 1
+    count := count1 * count2x3
+    (capacity < count).if {
+      capacity := count
+      storage := NATIVE_ARRAY(V).create capacity
+    } else {
+      storage.clear_all (capacity - 1)
+    }
+  )
+  [ // Old
+    +? { count1 = new_count1 }
+    +? { count2 = new_count2 }
+    +? { count3 = new_count3 }
+    +? { all_default }
+  ]
+
+  - from_collection3 model:COLLECTION3(V) <-
+  // Uses the `model' to update self.
+  (
+    make (model.upper1 + 1, model.upper2 + 1, model.upper3 + 1)
+    lower1.to upper1 do { i:INTEGER
+      lower2.to upper2 do { j:INTEGER
+        lower3.to upper3 do { k:INTEGER
+          put (model.item (i,j,k)) to (i,j,k)
+        }
+      }
+    }
+  )
+
+  - from_collection contents:COLLECTION(V) size (new_count1, new_count2, new_count3:INTEGER) <-
+  //  Reset all bounds using `new_count#i'.
+  //  Copy all elements of `contents', line by line into self.
+  [ // Old
+    -? { new_count1 >= 0 }
+    -? { new_count2 >= 0 }
+    -? { new_count3 >= 0 }
+    -? { contents.count = new_count1 * new_count2 * new_count3 }
+  ]
+  (
+    make (new_count1, new_count2, new_count3)
+    lower1.to (count - 1) do { i:INTEGER
+      storage.put (contents.item (contents.lower + i)) to i
+    }
+  )
+  [ // Old
+    +? { line_maximum   = new_count1 - 1 }
+    +? { column_maximum = new_count2 - 1 }
+    +? { depth_maximum  = new_count3 - 1 }
+    +? { count = contents.count }
+  ]
+
+
+  - from_model model:COLLECTION(COLLECTION(COLLECTION(V))) <-
+  // The `model' is used to fill line by line the COLLECTION3.
+  // Assume all sub-collections of have the same indexing.
+  ( + n:INTEGER
+
+    make (
+      model.upper - model.lower + 1,
+      model.first.upper - model.first.lower + 1,
+      model.first.first.upper - model.first.first.lower + 1
+    )
+
+    (model.lower).to (model.upper) do { line:INTEGER
+      (model.first.lower).to (model.first.upper) do { column:INTEGER
+        (model.first.first.lower).to (model.first.first.upper) do { depth:INTEGER
+          storage.put (model.item line.item column.item depth) to n
+          n := n + 1
+        }
+      }
+    }
+  )
+  [ // Old
+    +? { line_maximum   = model.upper - model.lower }
+    +? { column_maximum = model.first.upper - model.first.lower }
+    +? { depth_maximum  = model.first.first.upper - model.first.first.lower }
+  ]
+
+  // Implementation of others feature from COLLECTION3:
+  
+  - at (line, column, depth:INTEGER) :V <- item (line, column, depth)
+  
+  - item (line, column, depth:INTEGER) :V <-
+  (
+    storage.at (line * count2x3 + column * count3 + depth)
+  )
+
+  - put element:V to (line, column, depth:INTEGER) <-
+  (
+    storage.put element to (line * count2x3 + column * count3 + depth)
+  )
+
+
+  - force element:V to (line, column, depth :INTEGER) <-
+  (
+    (! valid_index (line, column, depth)).if {
+      resize (line.max upper1 + 1, column.max upper2 + 1, depth.max upper3 + 1)
+    }
+    put element to (line,column,depth)
+  )
+
+  - copy other:SELF <-
+  (
+    count1 := other.count1
+    upper1 := count1 - 1
+    count2 := other.count2
+    upper2 := count2 - 1
+    count3 := other.count3
+    count2x3 := count2 * count3
+    upper3 := count3 - 1
+    count := count1 * count2x3
+    (capacity < count).if {
+      capacity := count
+      storage := storage.calloc_intern capacity
+    }
+    storage.copy_from (other.storage) until (count - 1)
+  )
+
+  - sub_collection3 (line_min,column_min,depth_min:INTEGER)
+  to (line_max,column_max,depth_max:INTEGER) :SELF <-
+  ( + n:INTEGER
+    + result:SELF
+
+    result := SELF.create (
+      line_max - line_min + 1,
+      column_max - column_min + 1,
+      depth_max - depth_min + 1
+    )
+
+    line_min.to line_max do { i:INTEGER
+      column_min.to column_max do { j:INTEGER
+        depth_min.to depth_max do { k:INTEGER
+          result.storage.put (item (i,j,k)) to n
+          n := n + 1
+        }
+      }
+    }
+    result
+  )
+  [ // Old
+    +? { Result.upper1 = line_max - line_min     }
+    +? { Result.upper2 = column_max - column_min }
+    +? { Result.upper3 = depth_max - depth_min   }
+  ]
+
+  // Writing:
+
+  - set_all_with x:V <-
+  //  All element are set with the value x.
+  (
+    storage.set_all_with x until (count - 1)
+  )
+
+  - all_default:BOOLEAN <-
+  (
+    storage.all_default (count - 1)
+  )
+
+  - slice (l1,up1:INTEGER) to (l2,up2:INTEGER) to (l3,up3:INTEGER) :SELF <-
+  // Create a new collection initialized with elements of
+  // range `low'..`up'. result has the same dynamic type
+  // as self collection.
+  ( + result:SELF
+
+    result := SELF.create (up1 - l1 + 1, up2 - l2 + 1, up3 - l3 + 1)
+    l1.to up1 do { line:INTEGER
+      l2.to up2 do { column:INTEGER
+        l3.to up3 do { depth:INTEGER
+          result.put (item (line,column,depth)) to (line - l1,column - l2,depth - l3)
+        }
+      }
+    }
+  )
+
+  - set_slice (l1,up1:INTEGER) to (l2,up2:INTEGER) to (l3,up3:INTEGER) with element:V <-
+  // Set all the elements in the
+  // range [(l1,up1),(l2,up2),(l3,up3)] of
+  // self with the element 'element'.
+  (
+    (l1 * count2x3).to (up1 * count2x3) by count2x3 do { i:INTEGER
+      (l2 * count3).to (up2 * count3) by count3 do { j:INTEGER
+        l3.to up3 do { k:INTEGER
+          storage.put element to (i + j + k)
+        }
+      }
+    }
+  )
+
+  - swap (line1, column1, depth1:INTEGER) with (line2, column2, depth2:INTEGER) <-
+  ( + tmp:V
+    + c3, c2x3, index1, index2:INTEGER
+    c3   := count3
+    c2x3 := count2x3
+    index1 := line1 * c2x3 + column1 * c3 + depth1
+    index2 := line2 * c2x3 + column2 * c3 + depth2
+    tmp := storage.at index1 
+    storage.put (storage.at index2) to index1
+    storage.put tmp to index2
+  )
+
+  // Looking and comparison:
+
+  - occurrences elt:V :INTEGER <-
+  (
+    storage.occurrences elt until (count - 1)
+  )
+
+  - fast_occurrences elt:V :INTEGER <-
+  (
+    storage.fast_occurrences elt until (count - 1)
+  )
+
+  // Resizing:
+
+  - resize (new_count1,new_count2,new_count3:INTEGER) <-
+  [ // Old
+    -? { new_count1 > 0}
+    -? { new_count2 > 0}
+    -? { new_count3 > 0}
+  ]
+  ( + tmp:SELF
+
+    tmp := SELF.create (new_count1, new_count2, new_count3)
+    // BSBS: It may be possible to avoid this creation when :
+    // BSBS:   new `capacity' <= old `capacity'
+
+    line_maximum.downto 0 do { l:INTEGER
+      column_maximum.downto 0 do { c:INTEGER
+        depth_maximum.downto 0 do { d:INTEGER
+          (tmp.valid_index (l,c,d)).if {
+            tmp.put (item (l,c,d)) to (l,c,d)
+          }
+        }
+      }
+    }
+    copy tmp
+  )
+  [ // Old
+    +? { upper1 = new_count1 - 1}
+    +? { count1 = new_count1    }
+    +? { upper2 = new_count2 - 1}
+    +? { count2 = new_count2    }
+    +? { upper3 = new_count3 - 1}
+    +? { count3 = new_count3    }
+    +? { count = new_count1 * new_count2 * new_count3 }
+  ]
+
+  // Looking and Searching:
+
+  - has x:V :BOOLEAN <-
+  // Look for `x' using `equal' for comparison.
+  ( + result:BOOLEAN
+
+    (count > 0).if {
+      result := storage.index_of x until (count-1) <= (count-1)
+    }
+    result
+  )
+
+  - fast_has x:V :BOOLEAN <-
+  // Same as `has' but use `=' for comparison
+  ( + result:BOOLEAN
+
+    (count > 0).if {
+      result := storage.fast_index_of x until (count - 1) <= (count - 1)
+    }
+    result
+  )
+
+  // Other features:
+
+  - replace_all old_value:V with new_value:V <-
+  (
+    storage.replace_all old_value with new_value until (count - 1)
+  )
+
+  - fast_replace_all old_value:V with new_value:V <-
+  (
+    storage.fast_replace_all old_value with new_value until (count - 1)
+  )

@@ -1,0 +1,112 @@
+Header
+
+  + name        := EXPR_DIV;
+
+  /*Div Binary Expression.*/
+
+Inherit
+
+  + parent_expr_binary:Expanded EXPR_BINARY
+
+Public
+
+  - symbol:STRING_ALIAS := "/"
+
+  //
+  // Execute.
+  //
+
+  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  //-- E /   0 -> Error.
+  //-- E /   1 -> E
+  //-- E /  -1 -> - E
+  //-- E / 2^n -> E >> n
+  ( + result:EXPR
+    + v:INTEGER_64
+
+    (right_cst.value = 0).if {
+      POSITION.put_error warning text "Division by zero."
+      (list_current != NULL).if {
+        list_current.position.put_position
+      }
+      position.put_position
+      POSITION.send_error
+    }.elseif {right_cst.value = 1} then {
+      result := left
+      right_cst.remove
+    }.elseif {right_cst.value = -1} then {
+      result := EXPR_NEG.create position with left
+      right_cst.remove
+    }.elseif {(v := right_cst.to_power) != -1} then {
+      right_cst.set_value v
+      result := EXPR_SHIFT_R.create position with left and right_cst
+    }
+    result
+  )
+
+  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  //-- C1 / C2 -> C3
+  ( + result:EXPR
+
+    (right_cst.value != 0).if {
+      left_cst.set_value (left_cst.value / right_cst.value)
+      right_cst.remove
+      result := left_cst
+    }
+    result
+  )
+
+  - exec:EXPR <-
+  //--  E /  E ->  1
+  //-- -E /  E -> -1
+  //--  E / -E -> -1
+  ( + result:EXPR
+    + neg:EXPR_NEG
+
+    (right ~= left).if {
+      result := INTEGER_CST.create position value 1 type static_type
+      right.remove
+      left .remove
+    } else {
+      neg ?= left
+      ((neg != NULL) && {neg.right ~= right}).if {
+	result := INTEGER_CST.create position value (-1) type static_type
+	left.remove
+	right.remove
+      } else {
+	neg ?= right
+	((neg != NULL) && {neg.right ~= left}).if {
+	  result := INTEGER_CST.create position value (-1) type static_type
+	  left.remove
+	  right.remove
+	}
+      }
+    }
+    result
+  )
+
+  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  //-- 0 / E -> 0
+  ( + result:EXPR
+
+    (left_cst.value = 0).if {
+      result := left_cst
+      right.remove
+    }
+    result
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

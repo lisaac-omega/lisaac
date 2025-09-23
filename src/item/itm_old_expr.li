@@ -1,0 +1,103 @@
+Header
+
+  + name        := ITM_OLD_EXPR;
+
+  /*Old primitive for contract*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  + value:ITM_CODE
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION value val:ITM_CODE :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p value val
+    result
+  )
+
+  - make p:POSITION value val:ITM_CODE <-
+  (
+    position := p
+    value    := val
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run_expr:EXPR <-
+  ( + expr_old:EXPR
+    + instr:INSTR
+    + result_old:LOCAL
+    + lst:LIST
+    + old_upper,diff:INTEGER
+    + node:NODE_TYPE
+    + old_stack_local:ARRAY LOCAL
+    + old_profil:PROFIL
+
+    old_stack_local := stack_local
+    old_profil      := profil_current
+    stack_local     := stack_local_empty
+    profil_current  := profil_slot
+    ? {stack_local.is_empty}
+    //
+    old_upper  := list_current.upper
+    expr_old   := value.to_run_expr
+    result_old := expr_old.static_type.get_temporary position
+    list_current.add_last (result_old.write position value expr_old)
+    diff := list_current.upper - old_upper
+    // Move instr to up.
+    lst := profil_slot.code
+    {diff != 0}.while_do {
+      instr := list_current.last
+      //
+      (NODE.node_list != NODE.node_list_base).if {
+        `/* Bug1 */`
+        node ?= instr
+        `/* Bug-end */`
+        (node != NULL).if {
+	  NODE.node_list.remove (NODE.node_list.fast_first_index_of node)
+	  NODE.node_list_base.add_last node
+	}
+      }
+
+      list_current.remove_last
+      (debug_level_option != 0).if {
+	? { + push:PUSH
+	  push ?= lst.first
+	  (push != NULL) && {push.is_first}
+	}
+	lst.add instr to (lst.lower + 1)
+      } else {
+	lst.add_first instr
+      }
+      diff := diff - 1
+    }
+    //
+    profil_current := old_profil
+    stack_local := old_stack_local
+    //
+    result_old.read position
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.append "Old "
+    value.append_in buffer
+  )
+
+Private
+
+  - stack_local_empty:ARRAY LOCAL := ARRAY LOCAL .create 0

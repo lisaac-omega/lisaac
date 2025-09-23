@@ -1,0 +1,62 @@
+Header
+
+  + name        := ITM_SUPER;
+
+  /*Super*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+  
+  //
+  // Constructor
+  //
+
+  - create p:POSITION :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p
+    result
+  )
+
+  - make p:POSITION <-
+  (
+    position := p
+  )
+
+  //
+  // Runnable
+  //
+
+  - to_run:INSTR <-
+  ( crash_with_message "ITM_SUPER.to_run"
+    /*
+    + contract:ITM_LIST
+    + res:EXPR
+    + slot_code:SLOT_CODE
+    
+    slot_code ?= profil_slot.slot
+    contract := slot_code.previous_contract
+    (contract != NULL).if {
+      res := contract.to_run_expr
+      res.to_run_contract "Section exit violated"
+    };*/
+    NOP
+  )
+  
+  - to_run_expr:EXPR <-
+  ( 
+    crash_with_message "ITM_SUPER.to_run_expr"
+    NULL
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    buffer.add_last '.'
+  )

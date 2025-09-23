@@ -1,0 +1,143 @@
+Header  
+  + name := DXF;
+  
+Inherit  
+  - parent_any_gui:ANY_GUI := ANY_GUI
+  
+Private
+      
+  - path:STRING_ALIAS
+  - file:POINTER
+  - src:STRING_BUFFER := STRING_BUFFER.create 80
+  - line:INTEGER
+  - stroke:ARRAY REAL_32
+  
+  - x_min:REAL_32
+  - y_min:REAL_32
+  - x_max:REAL_32
+  - y_max:REAL_32
+  
+  - add (x,y:REAL_32) <-
+  (
+    (stroke.is_empty).if {
+      x_min := x_max := x
+      y_min := y_max := y
+    } else {
+      x_min := x_min.min x
+      y_min := y_min.min y
+      x_max := x_max.max x
+      y_max := y_max.max y
+    }
+    stroke.add_last x; stroke.add_last y
+  )
+  
+  - error txt:STRING <-
+  (
+    "Line ".print; line.println
+    txt.println
+    exit exit_failure_code
+  )
+    
+  - read_line:BOOLEAN <-
+  ( line := line + 1;  ! FILE_UTILS.read_line file in src)
+  
+  - code c:STRING_ALIAS :REAL_32 <-
+  ( + eof:BOOLEAN
+    //"Line ".print; line.println
+    {
+      eof := read_line
+      {src.first = ' '}.while_do { src.remove_first; }
+      src.remove_last
+    }.do_while {(!eof) && {src !== c}}
+    ((eof) || {src.is_empty}).if {
+      STRING.tmp { tmp:STRING_BUFFER
+        line := Old line
+        tmp.copy "Code `";
+        tmp.append c
+        tmp.append "' not found."
+        error tmp
+      }
+    }
+    read_line
+    src.to_real_64.to_real_32
+  )
+  
+  - spline (xb,yb:REAL_32) w1 (x1,y1:REAL_32) w2 (x2,y2:REAL_32) to (xe,ye:REAL_32) <-
+  ( + t,ti,t2,t3,ti2,ti3,step,x,y:REAL_32
+    t := step := 0.2
+    { // Naive implemented            
+      ti := 1.0 - t
+      t2 := t * t
+      t3 := t2 * t
+      ti2 := ti * ti
+      ti3 := ti2 * ti
+      x := ti3*xb + 3.0*ti2*t*x1 + 3.0*ti*t2*x2 + t3*xe
+      y := ti3*yb + 3.0*ti2*t*y1 + 3.0*ti*t2*y2 + t3*ye
+      add (x,y)
+      t := t + step
+    }.do_while {t <= 1.0}
+  )
+  
+Public
+      
+  - open fn:STRING_ALIAS :BOOLEAN <-
+  ( path := fn
+    line := 0
+    file := FILE_UTILS.open_read fn
+    file.is_not_null
+  )
+  
+  - close <- FILE_UTILS.close file
+  
+  - read_in pth:ARRAY REAL_32 :(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  ( + xb,yb,x1,y1,x2,y2,xe,ye:REAL_32
+    + n:INTEGER
+    + eof,eobj:BOOLEAN
+    stroke := pth
+    stroke.clear
+    {
+      eof := read_line
+      ((!eof) && {! src.is_empty} && {src.first.is_upper}).if {        
+        (src == "BLOCK\n").if {
+          //"New Block!\n".print
+        }.elseif {src == "POLYLINE"} then {
+          //"New PolyLine\n".print
+        }.elseif {src.has_prefix "VERTEX"} then {
+          error "VERTEX: Sorry, Not Yet Implemented. (Call Ben)"
+          xb := code "10";  yb := code "20"
+          add (xb,yb)
+        }.elseif {src.has_prefix "SPLINE"} then {                              
+          //"Spline".println
+          n := code "70".to_integer
+          (n != 8).if { error "Sorry, the SPLINE not `Planar' not yet implemented."; };
+          n := code "71".to_integer
+          (n != 3).if { error "Sorry, the SPLINE (Degree!=3) not yet implemented.";  }
+          xb := code "10";  yb := code "20"
+          x1 := code "10";  y1 := code "20"
+          x2 := code "10";  y2 := code "20"
+          xe := code "10";  ye := code "20"
+          spline (xb,yb) w1 (x1,y1) w2 (x2,y2) to (xe,ye)
+        }.elseif {src.has_prefix "LWPOLYLINE"} then {            
+          n := code "90".to_integer
+          //"LWPOLY:".print; n.print; '\n'.print
+          n.times {
+            xb := code "10";  yb := code "20"
+            add (xb,yb)
+          }
+        }.elseif {src.has_prefix "LINE"} then {
+          //"Line".println
+          xb := code "10";  yb := code "20"
+          xe := code "11";  ye := code "21"
+          ((xb,yb) != (xe,ye)).if {
+            (pth.is_empty).if { add (xb,yb); }
+            add (xe,ye)
+            ((pth.count>=2) && {(pth.first,pth.second) = (pth.second_last,pth.last)}).if {
+              //"---------------------Cut 0".println
+              eobj := TRUE
+            }
+          }
+        }
+      }
+    }.do_while {(!eof) && {!eobj}}
+    x_min,y_min, x_max,y_max
+  )

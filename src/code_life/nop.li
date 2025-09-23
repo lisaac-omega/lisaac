@@ -1,0 +1,42 @@
+Header
+
+  + name        := NOP;
+
+  /* The nop instruction 
+
+  // BSBS: il faurai voir si c'est encore utile... (attention à la phase recursive)
+  */
+  
+Inherit
+
+  + parent_instr:Expanded INSTR
+
+Public
+
+  - my_copy:SELF <- Self
+
+  //
+  // Execute.
+  //
+
+  - remove <-
+  (
+    // Nothing.
+  )
+
+  - execute:INSTR <- NULL
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer.append "nop"
+  )
+
+
+
+
+
+

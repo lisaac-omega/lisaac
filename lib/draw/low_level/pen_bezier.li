@@ -1,0 +1,111 @@
+Header
+  
+  + name := PEN_BEZIER;
+  
+Inherit
+  
+  + parent_pen_move:Expanded PEN_MOVE
+
+Private
+  
+  - stack:ARRAY PEN_BEZIER := ARRAY PEN_BEZIER.create_with_capacity 16
+  
+Public
+  
+  + w1x:REAL_32
+  + w1y:REAL_32
+  
+  + w2x:REAL_32
+  + w2y:REAL_32
+  
+  - create_w1 (w1xx,w1yy:REAL_32) w2 (w2xx,w2yy:REAL_32) 
+  to (xx,yy:REAL_32) :PEN_BEZIER <-
+  ( + result:PEN_BEZIER
+    (stack.is_empty).if {
+      result := clone
+    } else {
+      result := stack.last
+      stack.remove_last
+    }
+    result.make_w1 (w1xx,w1yy) w2 (w2xx,w2yy) to (xx,yy)
+    result
+  )
+  
+  - make_w1 (w1xx,w1yy:REAL_32) w2 (w2xx,w2yy:REAL_32) to (xx,yy:REAL_32)  <-
+  (
+    (w1x,w1y) := (w1xx,w1yy)
+    (w2x,w2y) := (w2xx,w2yy)
+    (x,y)     := (xx,yy)
+  )
+
+  - free <-
+  ( 
+    stack.add_last Self
+  )
+
+  - to_path pc:PATH_CACHE <-
+  ( + path:PATH
+    + pt:POINT
+    path := pc.paths.last
+    pt := path.points.last
+    tesselate_bezier path with (pt.x,pt.y) w1 (w1x,w1y) w2 (w2x,w2y) to (x,y) level 0 type pt_corner
+    path.add_point (x,y) flags pt_corner
+  )
+  
+  - transform mtx:TRANSFORM <-
+  ( 
+    (w1x,w1y) := get_tranform (w1x,w1y) with mtx
+    (w2x,w2y) := get_tranform (w2x,w2y) with mtx
+    (x,y)     := get_tranform (x,y)     with mtx
+  )
+    
+Private
+  
+  - tesselate_bezier pth:PATH with (x1,y1:REAL_32) w1 (x2,y2:REAL_32) 
+  w2 (x3,y3:REAL_32) to (x4,y4:REAL_32) level lev:INTEGER type typ:INTEGER <-
+  // BSBS: Bizarre, implantation recursive (ce n'est pas mieux en iteratif ?)
+  ( + x12,y12,x23,y23,x34,y34,x123,y123,x234,y234,x1234,y1234:REAL_32
+    + dx,dy,d2,d3:REAL_32
+    
+    (lev <= 10).if {
+      x12  := (x1 + x2)*0.5
+      y12  := (y1 + y2)*0.5
+      x23  := (x2 + x3)*0.5
+      y23  := (y2 + y3)*0.5
+      x34  := (x3 + x4)*0.5
+      y34  := (y3 + y4)*0.5
+      x123 := (x12+x23)*0.5
+      y123 := (y12+y23)*0.5
+
+      dx := x4 - x1
+      dy := y4 - y1
+      d2 := (((x2 - x4) * dy - (y2 - y4) * dx)).abs
+      d3 := (((x3 - x4) * dy - (y3 - y4) * dx)).abs
+      
+      ((d2 + d3)*(d2 + d3) < tess_tol * (dx*dx + dy*dy)).if {
+        pth.add_point (x4, y4) flags typ
+      } else {
+        x234  := (x23 + x34)*0.5
+        y234  := (y23 + y34)*0.5
+        x1234 := (x123+x234)*0.5
+        y1234 := (y123+y234)*0.5
+
+        tesselate_bezier pth with (x1,y1) w1 (x12,y12) 
+        w2 (x123,y123) to (x1234,y1234) level (lev+1) type 0
+        tesselate_bezier pth with (x1234,y1234) w1 (x234,y234) 
+        w2 (x34,y34)   to (x4,y4) level (lev+1) type typ
+      }
+    }
+  )
+  
+Public
+  
+  - svg_append_in buf:STRING_BUFFER <-
+  (
+    buf.add_last 'C'
+    svg_put (w1x,w1y) in buf
+    buf.add_last ' '
+    svg_put (w2x,w2y) in buf
+    buf.add_last ' '
+    svg_put (x,y) in buf
+  )

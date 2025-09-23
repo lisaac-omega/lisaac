@@ -1,0 +1,83 @@
+Header
+
+  + name    := READ_GLOBAL;
+
+  /*Read for global*/
+
+Inherit
+
+  + parent_read:Expanded READ
+
+Public
+
+  - is_invariant:BOOLEAN <- global.is_invariant NULL
+
+  + global:SLOT_DATA
+
+  - variable:VARIABLE <- global
+
+  //
+  // Comparison.
+  //
+
+  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
+  ( + rd:READ_GLOBAL
+
+    rd ?= other
+    ((rd != NULL) && {global = rd.global})
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:POSITION with g:SLOT_DATA :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make p with g
+    result
+  )
+
+  - make p:POSITION with g:SLOT_DATA <-
+  (
+    position := p
+    global   := g
+  )
+
+  //
+  // Execute
+  //
+
+  - execute_access_unlink:INSTR <-
+  (
+    global.execute
+    NULL
+  )
+
+  - execute_access_link <-
+  (
+    global.execute
+  )
+
+  //
+  // Genere
+  //
+
+  - genere <-
+  (
+    output.append (variable.intern_name)
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+

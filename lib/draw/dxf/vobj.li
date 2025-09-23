@@ -1,0 +1,237 @@
+Header  
+  + name := VOBJ;
+  
+Inherit  
+  - parent_any_gui:ANY_GUI := ANY_GUI
+//  - parent_tools:TOOLS := TOOLS
+  
+Private
+  - stack:ARRAY VOBJ := ARRAY VOBJ.create_with_capacity 4
+  
+Public
+  
+  + one_meter:REAL_32
+  
+  + id:INTEGER
+  + id_pair:INTEGER
+  - set_id_pair i:INTEGER <- ( id_pair := i; )
+  
+  + angle:INTEGER
+  - set_angle a:INTEGER <- ( angle := a; )
+
+  + masse:REAL_32
+  - masse_cm2:REAL_32 <-
+  ( + un_cm:REAL_32
+    NUMERIC.define_one_meter one_meter
+    un_cm := 1.cm
+    masse / (un_cm*un_cm)
+  )
+  
+  + list:ARRAY DXF_LINE
+  
+  + x_min:REAL_64
+  + y_min:REAL_64
+  + x_max:REAL_64
+  + y_max:REAL_64
+  
+  - width:REAL_64  <- (x_max-x_min)
+  - height:REAL_64 <- (y_max-y_min)
+  
+  + xo:REAL_32
+  + yo:REAL_32
+  
+  + ray_max:REAL_32
+  + rays:ARRAY (ARRAY REAL_32)
+  
+  + bmp:NATIVE_ARRAY UINTEGER_8
+  + bmp_width:INTEGER
+  + bmp_height:INTEGER
+  + bmp_xo:REAL_32
+  + bmp_yo:REAL_32
+  + bmp_id:INTEGER := -1
+  
+  + matrix:ARRAY REAL_32
+  
+  - create lst:ARRAY DXF_LINE id i:INTEGER meter m:REAL_32 :VOBJ <-
+  ( + result:VOBJ
+    (stack.is_empty).if {      
+      result := clone
+    } else {
+      result := stack.pop
+    }
+    result.make lst id i meter m
+    result
+  )
+  
+  - make lst:ARRAY DXF_LINE id i:INTEGER meter m:REAL_32 <-
+  ( + x0,y0,x1,y1,c:REAL_32
+    + ofs:INTEGER
+    + p:C_PT
+    one_meter := m
+    id := i
+    angle := -1
+    (rays = NULL).if {
+      matrix := ARRAY REAL_32.create_with_capacity 6
+      rays := ARRAY (ARRAY REAL_32).create_with_capacity ray_size
+      ray_size.times {
+        rays.add_last (ARRAY REAL_32.create_with_capacity 8)
+      }
+    }
+    (list = NULL).if {
+      list := ARRAY DXF_LINE.create_with_capacity (lst.count)
+    }
+    0.to (lst.upper) do { i:INTEGER; list.add_last (lst.at i); }
+    //"---------------\n".print
+    //sort
+    /*
+    0.to (list.upper) do { i:INTEGER
+      i.print; ") ".print
+      list.at i.print
+      '\n'.print
+    }
+    */  
+    (x_min,y_min,x_max,y_max) := list.first.compute_bound
+    1.to (list.upper) do { i:INTEGER
+      (x0,y0,x1,y1) := list.at i.compute_bound
+      x_min := x_min.min x0; x_max := x_max.max x1
+      y_min := y_min.min y0; y_max := y_max.max y1
+    }
+    c := one_meter/1_000
+    bmp_width  := (width*c).ceiling+2
+    bmp_height := (height*c).ceiling+2
+    bmp := NATIVE_ARRAY UINTEGER_8.create (bmp_width*bmp_height*4)
+    get_bmp
+    create_image_tmp bmp size (bmp_width,bmp_height) binary TRUE
+    get_contour (bmp_xo.to_integer,bmp_yo.to_integer,FALSE)
+    0.to (pts.upper) do { i:INTEGER
+      p := pts.at i
+      ofs := (p.y*bmp_width+p.x)*4
+      bmp.put 0FFh to ofs
+      bmp.put 0FFh to (ofs+3)
+    }
+    compute_rays (bmp_xo,bmp_yo)
+  )
+  
+  - free <-
+  (
+    {list.is_empty}.until_do { list.last.free; list.remove_last; }
+    stack.add_last Self
+  )
+  
+  - sort <-
+  ( + b:DXF_LINE
+    + j:INTEGER
+    0.to (list.upper-1) do { i:INTEGER
+      b := list.at i
+      j := i + 1
+      {(j <= list.upper) && {!(b=>list.at j)}}.while_do { j := j + 1; }
+      (j<=list.upper).if {
+        //(i+1).print; "<>".print; j.print; ','.print
+        list.swap (i+1) with j
+      }
+    }
+    //'\n'.print
+  )
+  
+  - update <-
+  ( + a,wxo,wyo:REAL_32
+    matrix.clear
+    (id_pair != -1).if {
+      (wxo,wyo) := BUFFER_WEBCAM.wrap.wraps.at id_pair.xyo_mm; //K_PATTERN.wraps.at id_pair.xyo_mm
+      
+      //NUMERIC.define_one_meter one_meter
+      //"VOBJ dy:".print; wyo.println
+      
+      matrix.add_last xo
+      matrix.add_last yo
+      a := REAL_32.two_pi / rays.count * angle
+      (a > REAL_32.pi).if { a := a - REAL_32.two_pi; }
+      
+      BUFFER_WEBCAM.set_logo (wxo,wyo) angle a
+      
+      matrix.add_last (a.cos); matrix.add_last (a.sin)
+      matrix.add_last wxo;     matrix.add_last wyo
+      //matrix.add_last 0;     matrix.add_last 0
+    }
+  )
+        
+  - draw pen:PEN to (x,y:REAL_32) zoom cof:REAL_32 <-
+  ( + px,py:REAL_32
+    
+    //py := y
+    //? {list.count = 1}
+    pen.begin_path
+    pen.stroke_width 2.0
+    list.first.draw_first pen to (x,y) with (cof,matrix)
+    0.to (list.upper) do { i:INTEGER
+      list.at i.draw pen to (x,y) with (cof,matrix)
+    }
+    pen.fill
+    pen.stroke
+    //
+    (px,py) := DXF_LINE.get (xo,yo) with matrix
+    draw pen id id base '0' to (x+px*cof,y-py*cof) color (COLOR.black) circle TRUE
+  )
+  
+  - draw_rays pen:PEN to (x,y:REAL_32) zoom cof:REAL_32 <-
+  draw_rays pen id id base '0' to (x,y+(id&1Fh)*160) zoom cof
+    
+  - draw_img pen:PEN to (x,y:REAL_32) <-
+  ( + p:PAINT
+    pen.begin_path
+    pen.stroke_color (COLOR.blue)
+    pen.rect (x,y) size (bmp_width+2,bmp_height+2)
+    pen.stroke
+    (bmp_id = -1).if {
+      bmp_id := pen.create_image_rgba bmp size (bmp_width,bmp_height) flags 0
+    } else {
+      pen.update_image bmp id bmp_id
+    }
+    pen.begin_path
+    p := PAINT.create_pattern (x+1,y+1) size (bmp_width*2,bmp_height*2) img_id bmp_id angle 0 alpha 1
+    pen.fill_paint p
+    pen.rect (x+1,y+1) size (bmp_width*2,bmp_height*2)
+    pen.fill
+    p.free
+  )
+  
+  //
+  // Bitmap
+  //
+  
+  - bmp_line:PIECE_BMP
+  
+  - get_bmp <-
+  ( + c:REAL_32
+    + sum_x,sum_y:INTEGER
+    c := one_meter/1_000
+    list.first.bmp_move_to (x_min,y_max) zoom c
+    0.to (list.upper) do { i:INTEGER
+      list.at i.bmp_line_to (x_min,y_max) zoom c
+    }
+    masse := sum_x := sum_y := 0
+    bmp_trace {(x0,y,x1:INTEGER)
+      + ofs,dx:INTEGER
+      ofs := (y*bmp_width+x0)*4
+      dx := x1-x0+1
+      sum_y := sum_y + y*dx
+      masse := masse + dx
+      x0.to x1 do { x:INTEGER
+        sum_x := sum_x + x
+        bmp.put 000h to (ofs+0)
+        bmp.put 0FFh to (ofs+1)
+        bmp.put 000h to (ofs+2)
+        bmp.put 0FFh to (ofs+3)
+        ofs := ofs + 4
+      }
+    }
+    bmp_xo := sum_x.to_real_32/masse
+    bmp_yo := sum_y.to_real_32/masse
+    //bmp_xo.print; ','.print; bmp_yo.print; ' '.print; bmp_width.print; 'x'.print; bmp_height.print
+    //'\n'.print
+    //bmp.put 000h to ((bmp_yo.to_integer*bmp_width+bmp_xo.to_integer)*4+1)
+    xo := x_min + bmp_xo/c
+    yo := y_min + (bmp_height.to_real_32-bmp_yo)/c
+    //"VOBJ y:".print; yo.cm.to_real_32.println
+  )
+  

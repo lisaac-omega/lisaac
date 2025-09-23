@@ -1,0 +1,10 @@
+Header
+  + name := TERR;
+  
+Inherit
+  - parent_tpro:TPRO := TPRO
+  
+Public
+  
+  - key:STRING_ALIAS := ""
+  

@@ -1,0 +1,925 @@
+Header  
+  + name := ARRAY_BLOCK V;
+  /*
+    If you can live using only `add_last', just stick to ARRAY, but if you need
+    constant time performances for all kinds of insertions (i.e. `add_first',  `add_last',
+    and `add'), you should give a try to ARRAY_BLOCK.
+  */
+  
+Insert
+  - parent_slab_utils: SLAB_UTILS := SLAB_UTILS
+  
+Inherit
+  - parent_collection:COLLECTION V := COLLECTION V
+  
+Private
+  + prim:NATIVE_ARRAY (SLAB V)
+  
+  // See set_prim_capacity (default is just an example):
+  + prim_capower2:INTEGER := 10
+  + prim_capacity:INTEGER := 1024
+  + prim_msk:INTEGER := 1023
+  
+  + prim_lower:INTEGER; // Begining of the used area [prim_lower,prim_upper].
+  + prim_upper:INTEGER; // End of the used area.
+  + prim_count:INTEGER; // Size of the [prim_lower,prim_upper] area which is never empty.
+  
+  + cache_prim:INTEGER; // Always drive to some non empty SLAB in range [prim_lower,prim_upper].
+  + cache_lower:INTEGER; // Lower index in cache_prim SLAB.
+  
+  + free_list:Expanded ARRAY (SLAB V)
+  /*
+  Keep in mind that all prim_lower and prim_upper must be rotated using prim_msk.
+  Also keep in mind that SLABs in the use area [prim_lower,prim_upper] are always non NULL but
+  can be empty (even if we do prefer non empty SLABs).
+  */
+  + service_flag:BOOLEAN; // TRUE when we need to clean the room. 
+  + service_count:INTEGER
+  + perfect_service_count:INTEGER
+  
+Private
+  - set_prim_capacity shift_count:INTEGER <-
+  // To be sure that prim_capacity is a power of 2.
+  (
+    prim_capower2 := shift_count
+    prim_capacity := (1 << prim_capower2)
+    prim_msk := prim_capacity - 1
+  )
+  
+Public
+  + upper:INTEGER := -1
+  
+  - is_empty:BOOLEAN <- upper < 0
+  
+Public
+  - init:SELF <-
+  (
+    ? {prim_capacity >= 8}
+    ? {prim = NULL}
+    prim := NATIVE_ARRAY (SLAB V) .create prim_capacity
+    upper := -1
+    slab_init_clear (prim_lower := prim_upper := 0)
+    prim_count := 1
+    harmless_cache_break
+    Self
+  )
+  
+Private
+  - new_with shifts:INTEGER :SELF <-
+  ( + result:SELF
+    result ?= (ARRAY_BLOCK V).clone
+    result.set_prim_capacity shifts
+    result.init
+    result
+  )
+  
+Public
+  
+  - new:SELF <- new_with 10
+  
+  - new_tiny:SELF <- new_with 3
+  
+  - lower:INTEGER <- 0
+  
+  - count:INTEGER <- (upper + 1)
+  
+Public
+    
+  - read_file f:POINTER <-
+  [ ? {is_empty}; ]
+  ( + slab:SLAB V
+    + sz:INTEGER
+    sz := FILE_UTILS.size f
+    upper := sz - 1
+    (sz != 0).if {
+      sz := sz - prim.at prim_lower.read_file f
+      {sz != 0}.while_do {
+        ensure_prim_capacity (prim_count + 1)
+        prim_upper := (prim_upper + 1) & prim_msk
+        prim_count := prim_count + 1
+        prim.at prim_upper put (slab := new_slab)
+        sz := sz - slab.read_file f
+      }
+    }
+  )
+  
+  - save_file f:POINTER <-  
+  ( + i:INTEGER
+    i := prim_lower
+    prim_count.times {
+      prim.at (i & prim_msk).save_file f
+      i := i + 1
+    }
+  )
+  
+  - copy other:SELF <-
+  ( // BSBS A revoir pour faire plus efficace !!!
+    clear
+    0.to (other.upper) do { i:INTEGER
+      add_last (other.at i)
+    }
+  )
+  
+  - at i:INTEGER :V <-
+  ( + slab:SLAB V
+    ? {invariant}
+    ? {valid cache_prim with cache_lower }
+    slab := cache_update i
+    slab.at i cache cache_lower
+  )
+  
+  - at i:INTEGER put v:V <-
+  (
+    cache_update i
+    prim.at cache_prim .at i put v cache cache_lower
+  )
+    
+  - remove_first <-
+  ( + slab:SLAB V
+    ? {invariant}
+    slab := prim.at prim_lower
+    ? {! slab.is_empty}
+    (slab.remove_first).if {
+      ? {slab.is_empty}
+      remove_empty_slabs_lower
+    }
+    upper := upper - 1
+    (cache_lower != 0).if {
+      cache_lower := cache_lower - 1
+    }
+    ? {invariant}
+    ? {valid cache_prim with cache_lower }
+  )
+  
+  - remove_last <-
+  ( + slab:SLAB V
+    ? {invariant}
+    slab := prim.at prim_upper
+    ? {! slab.is_empty}
+    (slab.remove_last).if {
+      ? {slab.is_empty}
+      remove_empty_slabs_upper
+    }
+    upper := upper - 1
+    ? {invariant}
+    ? {valid cache_prim with cache_lower }
+  )
+  
+  - remove index:INTEGER <-
+  ( + slab:SLAB V
+    ? {invariant}
+    ensure_no_service_flag
+    slab := cache_update index
+    //("Before REMOVE index=" + index.to_string + " " + to_string).println
+    (slab.remove index cache cache_lower).if {
+      ? {slab.is_empty}
+      (cache_prim = prim_lower).if {
+        remove_empty_slabs_lower
+        harmless_cache_break
+        //"A".println
+      }.elseif {cache_prim = prim_upper} then {
+        remove_empty_slabs_upper
+        harmless_cache_break
+        //"B".println
+      } else {
+        {slab.is_empty}.while_do {
+          cache_prim := (cache_prim + 1) & prim_msk
+          slab := prim.at cache_prim
+        }
+        //"C".println
+      }
+    }
+    upper := upper - 1
+    ? {valid cache_prim with cache_lower }.txt {to_string}
+    ? {invariant}
+    //("After REMOVE " + to_string).println
+  )
+  
+  - clear <-
+  ( + i,j:INTEGER
+    + s:SLAB V
+    i := prim_lower
+    prim_count.times {
+      j := i & prim_msk
+      s := prim.at j
+      s.clear
+      free_list.add_last s
+      prim.at j put NULL
+      i := i + 1
+    }
+    upper := -1
+    slab_init_clear (prim_lower := prim_upper := 0)
+    prim_count := 1
+    service_flag := FALSE
+    harmless_cache_break
+  )
+  
+  - first:V <-
+  ( + i:INTEGER
+    + slab:SLAB V
+    slab := prim.at (i := prim_lower)
+    {slab.count > 0}.until_do {
+      slab := prim.at (i := (i + 1) & prim_msk)
+    }
+    slab.first
+  )
+  
+  - last:V <-
+  ( + i:INTEGER
+    + slab:SLAB V
+    slab := prim.at (i := prim_upper)
+    {slab.count > 0}.until_do {
+      slab := prim.at (i := (i - 1) & prim_msk)
+    }
+    slab.last
+  )
+  
+  - add_first element:V <-
+  ( + slab:SLAB V
+    ? {invariant}
+    //("ARRAY_BLOC Before add_first " + element.to_string + "\n" + to_string).println
+    ((slab := prim.at prim_lower).count > sperfect).if {
+      ensure_prim_capacity (prim_count + 1)
+      prim_lower := (prim_lower - 1) & prim_msk
+      prim_count := prim_count + 1
+      prim.at prim_lower put (slab := new_slab)
+    }
+    ? {slab = prim.at prim_lower}
+    slab.add_first element
+    (cache_prim != prim_lower).if {
+      cache_lower := cache_lower + 1
+    } else {
+      ? {cache_lower = 0}
+    }
+    upper := upper + 1
+    ? {invariant}
+    ? {valid cache_prim with cache_lower}.txt {to_string}
+    //("ARRAY_BLOC After add_first " + element.to_string + "\n" + to_string).println
+  )
+
+  - add_last element:V <-
+  ( + slab:SLAB V
+    ? {invariant}
+    //("ARRAY_BLOC Before add_last " + element.to_string + " " + to_string).println
+    ((slab := prim.at prim_upper).count > sperfect).if {
+      ensure_prim_capacity (prim_count + 1)
+      prim_upper := (prim_upper + 1) & prim_msk
+      prim_count := prim_count + 1
+      prim.at prim_upper put (slab := new_slab)
+    }
+    slab.add_last element
+    upper := upper + 1
+    ? {invariant}
+    ? {valid cache_prim with cache_lower }
+    //("ARRAY_BLOC after add_last " + element.to_string + " " + to_string).println
+  )
+  
+  - at i:INTEGER add v:V <-  
+  ( + slab,before,after,s1,s2,s3:SLAB V
+    + i_before,i_after,left:INTEGER
+    ? {invariant}
+    ? {valid cache_prim with cache_lower }
+    ensure_no_service_flag
+    ? {invariant}
+    ? {valid cache_prim with cache_lower }
+    //("before add v=" + v.to_string + " to i=" + i.to_string + " " + to_string).println
+    (i > upper).if {
+      add_last v
+      ? {valid cache_prim with cache_lower}
+    } else {
+      slab := cache_update i
+      ? {slab = prim.at cache_prim}
+      slab.is_full.if {        
+        (cache_prim = prim_lower).if {
+          ensure_prim_capacity (prim_count + 1)
+          cache_prim := prim_lower
+          cache_lower := 1
+          prim_lower := (prim_lower - 1) & prim_msk
+          prim_count := prim_count + 1
+          prim.at prim_lower put (before := new_slab)
+          before <+ slab
+          ? {valid cache_prim with cache_lower}.txt {to_string}
+        }.elseif {cache_prim = prim_upper} then {
+          ensure_prim_capacity (prim_count + 1)
+          ? {cache_prim = prim_upper}
+          ? {valid cache_prim with cache_lower}.txt {to_string}
+          prim_upper := (prim_upper + 1) & prim_msk
+          prim_count := prim_count + 1
+          prim.at prim_upper put (after := new_slab)
+          slab +> after
+          ? {valid cache_prim with cache_lower}.txt {to_string}
+        } else {
+          i_before := (cache_prim - 1) & prim_msk
+          before := prim.at i_before
+          ? {slab = prim.at cache_prim}
+          i_after := (cache_prim + 1) & prim_msk
+          after := prim.at i_after
+          ((before.space_left > 1) || {after.space_left > 1}).if {
+            (before.space_left > 1).if {
+              before.add_last (slab.first)
+              slab.remove_first
+              cache_lower := cache_lower + 1
+            } else {
+              after.add_first (slab.last)
+              slab.remove_last
+            }
+            ? {valid cache_prim with cache_lower}.txt {to_string}
+          } else {
+            left := (cache_prim + prim_capacity - prim_lower) & prim_msk
+            ensure_prim_capacity (prim_count + 3)
+            (s1,s2,s3) := new_slab3
+            (left < prim_count >> 1).if {
+              ? {valid cache_prim with cache_lower}.txt {to_string}
+              Self << ((cache_prim - 1) & prim_msk)
+              ? {prim.at prim_lower != NULL}
+              prim.at ((cache_prim - 3) & prim_msk) put s1
+              before +> s1
+              prim.at ((cache_prim - 2) & prim_msk) put s2
+              prim.at ((cache_prim - 1) & prim_msk) put slab
+              s2 <+ slab
+              prim.at cache_prim put s3
+              s3 <+ after
+              cache_prim := (cache_prim - 2) & prim_msk
+              ? {valid cache_prim with cache_lower}.txt {to_string}
+            } else {
+              Self >> ((cache_prim + 1) & prim_msk)
+              prim.at ((cache_prim + 3) & prim_msk) put s1
+              s1 <+ after
+              prim.at ((cache_prim + 2) & prim_msk) put s2
+              prim.at ((cache_prim + 1) & prim_msk) put slab
+              slab +> s2
+              prim.at cache_prim put s3
+              before +> s3
+              cache_prim := (cache_prim + 1) & prim_msk
+              ? {valid cache_prim with cache_lower}.txt {to_string}
+            }
+          }
+        }
+        slab := cache_update i
+        ? {slab = prim.at cache_prim}
+      }
+      ? {! slab.is_full}
+      slab.add v to i cache cache_lower
+      upper := upper + 1
+      ? {valid cache_prim with cache_lower}.txt {to_string}
+    }
+    ? {valid cache_prim with cache_lower}
+    ? {invariant}
+    ? {at i = v}.txt {i.to_string + " " + v.to_string + " " + to_string}
+    //("after add v=" + v.to_string + " to i=" + i.to_string + " " + to_string).println
+  )
+    
+Private
+  /*
+  - Self:SELF '>>' i:INTEGER <-
+  // [b .. e-3] -> [b+3 .. e] 
+  // Assume idx is a valid logical index into the used area.
+  // The result is the right falling V.
+  [ ? {! prim.at i.is_empty}; ]
+  ( + e,b,n:INTEGER
+    + s:SLAB V
+    n := 3
+    b := e := i
+    {(n != 0) && {e != prim_upper}}.while_do {
+      e := (e+1) & prim_msk
+      s := prim.at e
+      (s.is_empty).if {
+        n := n - 1; prim.at e put NULL; free_list.add_last s
+      } else { b := e; }
+    }
+    (n != 0).if {
+      prim_upper := e := (e + n) & prim_msk
+      prim_count := prim_count + n
+    }
+    {b != i}.while_do {
+      ? {prim.at b != NULL}
+      ? {prim.at e = NULL}
+      prim.at e put (prim.at b)
+      prim.at b put NULL
+      { b := (b - 1) & prim_msk; }.do_while {prim.at b = NULL}
+      { e := (e - 1) & prim_msk; }.do_while {prim.at e != NULL}
+    }
+    prim.at e put (prim.at b)
+  )
+  */
+  - Self:SELF '>>' i:INTEGER <-
+  // [b .. e-3] -> [b+3 .. e] 
+  // Assume idx is a valid logical index into the used area.
+  // The result is the right falling V.
+  [ ? {! prim.at i.is_empty}; ]
+  ( + e,b:INTEGER
+    + t0,t1,t2:SLAB V
+    b := prim_upper
+    prim_upper := e := (b + 3) & prim_msk
+    prim_count := prim_count + 3
+    (i < e).if {
+      e.downto (i+3) do { j:INTEGER
+        prim.at j put (prim.at (j-3))
+      }
+    } else {
+      /*
+      {b != i}.while_do {
+        prim.at e put (prim.at b)
+        b := (b - 1) & prim_msk
+        e := (e - 1) & prim_msk
+      }
+      prim.at e put (prim.at b)
+      */
+      
+      t0 := prim.at (prim_capacity-1)
+      t1 := prim.at (prim_capacity-2)
+      t2 := prim.at (prim_capacity-3)
+      (prim_capacity-1).downto (i+3) do { j:INTEGER
+        prim.at j put (prim.at (j-3))
+      }
+      (e >= 2).if {
+        e.downto 3 do { j:INTEGER
+          prim.at j put (prim.at (j-3))
+        }
+        prim.at 0 put t2
+        prim.at 1 put t1
+        prim.at 2 put t0
+      } else {
+        prim.at 0 put t2
+        (e = 1).if { prim.at 1 put t1; }
+      }
+    }
+  )
+  
+  - Self:SELF '<<' i:INTEGER <-
+  [ ? {! prim.at i.is_empty}; ]
+  ( + e,b:INTEGER
+    + t0,t1,t2:SLAB V
+    b := prim_lower
+    prim_lower := e := (b - 3) & prim_msk
+    prim_count := prim_count + 3
+    (e < i).if {
+      e.to (i-3) do { j:INTEGER
+        prim.at j put (prim.at (j+3))
+      }
+    } else {
+      /*
+      {b != i}.while_do {
+        prim.at e put (prim.at b)
+        b := (b + 1) & prim_msk
+        e := (e + 1) & prim_msk
+      }
+      prim.at e put (prim.at b)
+      */
+      t0 := prim.at 0
+      t1 := prim.at 1
+      t2 := prim.at 2
+      0.to (i-3) do { j:INTEGER
+        prim.at j put (prim.at (j+3))
+      }
+      (e <= prim_capacity-1-2).if {
+        e.to (prim_capacity-1-3) do { j:INTEGER
+          prim.at j put (prim.at (j+3))
+        }
+        prim.at (prim_capacity-3) put t0
+        prim.at (prim_capacity-2) put t1
+        prim.at (prim_capacity-1) put t2
+      } else {
+        prim.at (prim_capacity-1) put t2
+        (e = prim_capacity-1-1).if { prim.at (prim_capacity-2) put t1; }
+      }
+    }
+  )
+  
+  /*- Self:SELF '<<' i:INTEGER <-
+  [ ? {! prim.at i.is_empty}; ]
+  ( + e,b,n:INTEGER
+    + s:SLAB V
+    n := 3
+    b := e := i
+    {(n != 0) && {e != prim_lower}}.while_do {
+      e := (e-1) & prim_msk
+      s := prim.at e
+      (s.is_empty).if {
+        n := n - 1; prim.at e put NULL; free_list.add_last s
+      } else { b := e; }
+    }
+    (n != 0).if {
+      prim_lower := e := (e - n) & prim_msk
+      prim_count := prim_count + n
+    }
+    {b != i}.while_do {
+      ? {prim.at b != NULL}
+      ? {prim.at e = NULL}
+      prim.at e put (prim.at b)
+      prim.at b put NULL
+      { b := (b + 1) & prim_msk; }.do_while {prim.at b = NULL}
+      { e := (e + 1) & prim_msk; }.do_while {prim.at e != NULL}
+    }
+    prim.at e put (prim.at b)
+  );*/
+    
+  //- invariant_vide:BOOLEAN <- TRUE
+  - invariant:BOOLEAN <-
+  ( + u,i,c:INTEGER
+    + flag:BOOLEAN
+    + slab:SLAB V
+    u := -1
+    (count > 0).if {
+      slab := prim.at prim_lower
+      ? {slab != NULL}
+      ? {! slab.is_empty}.txt {to_string}
+      slab := prim.at prim_upper
+      ? {slab != NULL}; //.txt {to_string}
+      ? {! slab.is_empty}.txt {to_string}
+    }
+    ? {prim_count.in_range 1 to prim_capacity}.txt {to_string}
+    i := prim_lower
+    prim_count.times {
+      slab := prim.at i
+      ? {slab != NULL}
+      (i = cache_prim).if {
+        flag := TRUE
+        ? {cache_lower = c}
+      }
+      c := c + slab.count
+      i := (i + 1) & prim_msk
+    }
+    ? {c = count}.txt {c.to_string + " " + to_string}
+    ? {c - 1 = upper}
+    ? {flag}.txt {to_string}
+    {i = prim_lower}.until_do {
+      slab := prim.at i
+      ? {slab = NULL}
+      i := (i + 1) & prim_msk
+    }
+    TRUE
+  )
+  
+Public
+  - to_string:STRING_ALIAS <-
+  ( + i,lidx,low:INTEGER
+    + result:STRING_ALIAS
+    + s:SLAB V
+    STRING.tmp { ts:STRING_BUFFER
+      service_flag.if {
+        ts.append "--- SERVICE_FLAG ---\n"
+      } else {
+        ts.append "-------------------\n"
+      }
+      ts.append "count="; count.append_in ts; ts.add_last '\n'
+      ts.append "upper="; upper.append_in ts; ts.add_last '\n'
+      ts.append "prim_capower2="; prim_capower2.append_in ts; ts.add_last '\n'
+      ts.append "prim_capacity="; prim_capacity.append_in ts; ts.add_last '\n'
+      ts.append "prim_msk="; prim_msk.append_in ts; ts.add_last '\n'
+      ts.append "free_list.count="; free_list.count.append_in ts; ts.add_last '\n'
+      ts.append "prim_lower="; prim_lower.append_in ts; ts.add_last '\n'
+      ts.append "prim_upper="; prim_upper.append_in ts; ts.add_last '\n'
+      ts.append "prim_count="; prim_count.append_in ts; ts.add_last '\n'
+      ts.append "cache_prim="; cache_prim.append_in ts; ts.add_last '\n'
+      ts.append "cache_lower="; cache_lower.append_in ts; ts.add_last '\n'
+      ts.append "service_count="; service_count.append_in ts; ts.add_last '\n'
+      ts.append "perfect_service_count="; perfect_service_count.append_in ts; ts.add_last '\n'
+      (to_string_style = "compact").if { 
+        i := prim_lower
+        {i = (prim_upper + 1) & prim_msk}.until_do {
+          lidx := ts.upper
+          i.append_in ts
+          {ts.upper - lidx < 6}.while_do {
+            ts.add_last ' '
+          }
+          ts.append " / "
+          low.append_in ts
+          {ts.upper - lidx < 21}.while_do {
+            ts.add_last ' '
+          }
+          ((s := prim.at i) != NULL).if {
+            ts.append (s.to_string)
+            low := low + s.count
+            (ts.last = '\n').if {
+              ts.remove_last
+            }
+          } else {
+            ts.append "NULL"
+          }
+          (ts.last != '\n').if {
+            ts.add_last '\n'
+          }
+          i := (i + 1) & prim_msk
+        }
+      } else {
+        {i < prim_capacity}.while_do {
+          lidx := ts.upper
+          (i = prim_lower).if {
+            ts.append "prim_lower"
+          }.elseif {i = prim_upper} then {
+            ts.append "prim_upper"
+          }
+          {ts.upper - lidx <= 12}.while_do { ts.add_last '.'; }
+          (i = cache_prim).if {
+            ts.append "cache_lower="
+            cache_lower.append_in ts
+          }
+          {ts.upper - lidx <= 29}.while_do { ts.add_last '.'; }
+          i.append_in ts; ts.add_last ' '
+          ((s := prim.at i) != NULL).if {
+            ts.append "===="
+            ts.add_last ' '
+            ts.append (s.to_string)
+            (ts.last = '\n').if {
+              ts.remove_last
+            }
+          } else {
+            ts.append "NULL"
+          }
+          (ts.last != '\n').if {
+            ts.add_last '\n'
+          }
+          i := i + 1
+        }
+      }
+      result := ts.to_string_alias
+    }
+    result
+  )
+  
+Private  
+  - slab_init_clear i:INTEGER :SLAB V <-
+  ( + s:SLAB V
+    ((s := prim.at i) = NULL).if {
+      s := SLAB V .new
+      prim.at i put s
+    } else {
+      s.clear
+    }
+    s
+  )
+  
+  - new_slab:SLAB V <-
+  ( + result:SLAB V
+    free_list.is_empty.if {
+      result := SLAB V .new
+    } else {
+      result := free_list.pop
+    }
+    ? {result.is_empty}
+    result
+  )
+  
+  - new_slab3:(SLAB V,SLAB V,SLAB V) <-
+  ( + r1,r2,r3:SLAB V
+    (free_list.count < 3).if {
+      (r1,r2,r3) := SLAB V .new3
+    } else {
+      (r1,r2,r3) := (free_list.pop,free_list.pop,free_list.pop)
+    }
+    ? {r1.is_empty}; ? {r2.is_empty}; ? {r3.is_empty}
+    r1,r2,r3
+  )
+    
+Private
+  
+  - remove_empty_slabs_lower <-
+  ( + slab:SLAB V
+    + need_cache_break:BOOLEAN
+    {(prim_count > 1) && {(slab := prim.at prim_lower).is_empty}}.while_do {
+      (prim_lower = cache_prim).if {
+        need_cache_break := TRUE
+      }
+      free_list.add_last slab
+      prim.at prim_lower put NULL
+      prim_lower := (prim_lower + 1) & prim_msk
+      prim_count := prim_count - 1
+    }
+    need_cache_break.if {
+      harmless_cache_break
+    }
+  )
+  
+  - remove_empty_slabs_upper <-
+  ( + slab:SLAB V
+    + need_cache_break:BOOLEAN
+    {(prim_count > 1) && {(slab := prim.at prim_upper).is_empty}}.while_do {
+      (cache_prim = prim_upper).if {
+        need_cache_break := TRUE
+      }
+      free_list.add_last slab
+      prim.at prim_upper put NULL
+      prim_upper := (prim_upper - 1) & prim_msk
+      prim_count := prim_count - 1
+    }
+    need_cache_break.if {
+      harmless_cache_break
+    }
+  )
+
+Private   
+  - valid cp:INTEGER with cl:INTEGER :BOOLEAN <-
+  ( + result:BOOLEAN
+    + cp2,cl2,d2:INTEGER
+    + slab:SLAB V
+    is_empty.if {
+      ? {cp = prim_lower}.txt {to_string}
+      ? {cl = 0}
+      result := (cp = prim_lower) && {cl = 0}
+    } else {
+      slab := prim.at (cp2 := prim_lower)
+      ? {slab != NULL}
+      {slab.contains cl cache cl2}.until_do {
+        cl2 := cl2 + slab.count
+        slab := prim.at (cp2 := (cp2 + 1) & prim_msk)
+        ? {slab != NULL}
+        d2 := d2 + 1
+      }
+      ? {! slab.is_empty}
+      ? {cp2 = cp}.txt {"cp2=" + cp2.to_string + " " + to_string}
+      ? {cl2 = cl}
+      result := (cp2 = cp) && {cl2 = cl}
+    }
+    result
+  )
+    
+  - ensure_prim_capacity c:INTEGER <-
+  ( + old_capacity,new_area,old_area:INTEGER
+    (c >= prim_capacity).if {
+      //("Before realloc \n" + to_string).println
+      old_capacity := prim_capacity
+      {c >= prim_capacity}.while_do {
+        set_prim_capacity (prim_capower2 + 1)
+      }
+      prim := prim.realloc old_capacity with prim_capacity
+      (prim_lower < prim_upper).if {
+        // nothing to displace.
+      }.elseif {prim_upper > (old_capacity - prim_lower)} then {
+        //("Right is smaller:" + prim_upper.to_string + " " + (old_capacity - prim_lower).to_string).println
+        new_area := prim_capacity - 1
+        old_area := old_capacity - 1
+        {old_area >= prim_lower}.while_do {
+          prim.swap new_area with old_area
+          (cache_prim = old_area).if {
+            cache_prim := new_area
+          }
+          new_area := new_area - 1
+          old_area := old_area - 1
+        }
+        prim_lower := new_area + 1
+      } else {
+        //("Left is smaller:" + prim_upper.to_string + " " + (old_capacity - prim_lower).to_string).println
+        new_area := old_capacity
+        ? {old_area = 0}
+        {old_area <= prim_upper}.while_do {
+          prim.swap new_area with old_area
+          (cache_prim = old_area).if {
+            cache_prim := new_area
+          }
+          new_area := new_area + 1
+          old_area := old_area + 1
+        }
+        prim_upper := new_area - 1
+      }
+      //("After realloc " + to_string).println
+    }
+  )
+  
+  - ensure_no_service_flag <-
+  (
+    ? {invariant}
+    service_flag.if {
+      //("Before SERVICE " + service_count.to_string + "\n" + to_string).println
+      perfect_service
+      cache_break
+      service_count := service_count + 1
+      service_flag := FALSE
+      //("After SERVICE " + service_count.to_string + "\n" + to_string).println
+      ? {invariant}
+    }
+  )
+  
+  - perfect_service <-
+  ( + newx,oldx,stop:INTEGER
+    + slab1,slab2:SLAB V
+    //("Before PERFECT SERVICE " + service_count.to_string + "\n" + to_string).println
+    ensure_prim_capacity (prim_count * 3)
+    newx := (prim_upper + 1) & prim_msk
+    slab1 := prim.at (oldx := prim_lower)
+    prim_lower := stop := (prim_upper + 1) & prim_msk
+    (slab1.count <= sperfect).if {
+      prim.at newx put (slab2 := slab1)
+      prim.at oldx  put NULL
+      oldx := (oldx + 1) & prim_msk
+    } else {
+      prim.at newx put (slab2 := new_slab)
+      {(slab2.count < sperfect) && {! slab1.is_empty}}.while_do {
+        slab2.add_last (slab1.first)
+        slab1.remove_first
+      }
+      (slab1.is_empty).if {
+        free_list.add_last slab1
+        prim.at oldx  put NULL
+        oldx := (oldx + 1) & prim_msk
+      }
+    }
+    prim_count := 1
+    {oldx = stop}.until_do {
+      slab1 := prim.at oldx
+      prim.at oldx put NULL
+      {slab1.is_empty}.until_do {
+        (slab2.count >= sperfect).if {
+          prim.at (newx := (newx + 1) & prim_msk) put (slab2 := new_slab)
+          prim_count := prim_count + 1
+        }
+        slab2.add_last (slab1.first)
+        slab1.remove_first
+      }
+      free_list.add_last slab1
+      oldx := (oldx + 1) & prim_msk
+    }
+    prim_upper := newx
+    perfect_service_count := perfect_service_count + 1
+  )
+        
+  - cache_update i:INTEGER :SLAB V <-
+  ( + slab:SLAB V
+    + c_new:INTEGER
+    //("Before cache_update i=" + i.to_string + " " + to_string).println
+    ? {valid cache_prim with cache_lower}
+    slab := prim.at cache_prim
+    ? {! slab.is_empty}
+    (! slab.contains i cache cache_lower).if {
+      (i < cache_lower).if { // left side (right when the cache is broken)
+        (i < cache_lower - i).if {
+          // "Lower start".println
+          slab := prim.at (cache_prim := prim_lower)
+          ? {! slab.is_empty}
+          cache_lower := 0
+          {cache_lower + slab.count <= i}.while_do {
+            cache_lower := cache_lower + slab.count
+            c_new := (cache_prim + 1) & prim_msk
+            slab := prim.at c_new
+            slab.is_empty.if { prim.swap cache_prim with c_new; }
+            cache_prim := c_new
+          }
+        } else {
+          // "Cache start backward".println
+          {i < cache_lower}.while_do {
+            c_new := (cache_prim - 1) & prim_msk
+            slab := prim.at c_new
+            slab.is_empty.if {
+              prim.swap cache_prim with c_new
+            } else {
+              cache_lower := cache_lower - slab.count
+            }
+            cache_prim := c_new
+          }
+        }
+      }.elseif {i - cache_lower < upper - i} then {
+        // "Cache start forward".println
+        {(cache_lower + slab.count) <= i}.while_do {
+          cache_lower := cache_lower + slab.count
+          c_new := (cache_prim + 1) & prim_msk
+          slab := prim.at c_new
+          slab.is_empty.if { prim.swap cache_prim with c_new; }
+          cache_prim := c_new
+        }
+      } else {
+        // "Upper start".println
+        slab := prim.at (cache_prim := prim_upper)
+        ? {! slab.is_empty}
+        cache_lower := upper - slab.count + 1
+        {i < cache_lower}.while_do {
+          c_new := (cache_prim - 1) & prim_msk
+          slab := prim.at c_new
+          slab.is_empty.if { prim.swap cache_prim with c_new; }
+          cache_prim := c_new
+          cache_lower := cache_lower - slab.count
+        }
+      }
+      remove_empty_slabs_lower
+      remove_empty_slabs_upper
+    }
+    ? {valid cache_prim with cache_lower}
+    ? {slab = prim.at cache_prim}
+    ? {slab.contains i cache cache_lower}
+    //("After cache_update" + to_string).println
+    slab
+  )
+  
+  - harmless_cache_break <-
+  (
+    cache_prim := prim_lower; cache_lower := 0
+  )
+  
+  - cache_break <-
+  // To be called after the modification.
+  (
+    /*
+    crash_with_message "cache_break"
+    "cache_break".println
+    */
+    harmless_cache_break
+  )
+  
+Public
+  
+  - twin:SELF <-
+  ( + result:SELF
+    result := new
+    result.copy Self
+    result
+  )
+  

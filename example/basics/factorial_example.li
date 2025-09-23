@@ -1,0 +1,68 @@
+Header
+  
+  + name := FACTORIAL_EXAMPLE;
+  /*
+The classical factorial example in Lisaac Ω.
+  
+In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
+  */
+
+Public
+  
+  - main <-
+  ( + x:INTEGER
+    if ((COMMAND_ARGS upper != 1) || {! COMMAND_ARGS at 1.is_integer}) then {
+      "usage: ./factorial_example <n>" println
+      SYSTEM exit 1
+    }
+    x := COMMAND_ARGS first .to_integer
+    
+    if ( x <= 19 ) then {
+      OUT # "factorial " # x # " non_terminal = " # (factorial x non_terminal) # '\n'
+    }.elseif { x <= 20} then {
+      OUT # "factorial " # x # " terminal = " # factorial x terminal # '\n'
+    }.elseif { x <= 1000} then {
+      OUT # "factorial " # x # " = " # (factorial x) # '\n'
+    } else {
+      // The factorial code do exist in Lisaac Ω library:
+      OUT # x # "! = " # (x.to_z !) # '\n'
+    }
+  )
+  
+  - factorial n:INTEGER non_terminal :INTEGER <-
+  ( + result:INTEGER
+    if (n <= 1) then {
+      result := 1
+    } else {
+      result := n * factorial (n - 1) non_terminal
+    }
+    result
+  )
+  
+Private
+  
+  - factorial n:INTEGER acc acc:INTEGER :INTEGER <-
+  ( + result:INTEGER
+    if (n <= 1) then {
+      result := acc
+    } else {
+      result := factorial (n - 1) acc (acc * n)
+    }
+    result
+  )
+  
+Public
+  
+  - factorial n:INTEGER terminal :INTEGER <- factorial n acc 1
+  
+  
+  - factorial n:ℤ :ℤ <-
+  ( + result:ℤ
+    if (n <= 1) then {
+      result := 1
+    } else {
+      result := n * factorial (n - 1)
+    }
+    result
+  )
+  

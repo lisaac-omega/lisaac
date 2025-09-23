@@ -1,0 +1,179 @@
+Header
+
+  + name        := ITM_LIST;
+
+  /*Instruction list*/
+
+Inherit
+
+  + parent_itm_code:Expanded ITM_CODE
+
+Public
+
+  // BSBS: OPTIM : Dans 95% des cas, les list sont sans local (il faudrait spécialiser)
+  // Mais pb avec le parser...
+
+  //
+  // Data
+  //
+
+  + local_list:ARRAY ITM_LOCAL;  // `+'
+
+  + static_list:ARRAY ITM_LOCAL; // `-'
+
+  + code:ARRAY ITM_CODE
+
+  + is_check_name:BOOLEAN
+
+  - is_check_local:INTEGER
+
+  //
+  // Constructor
+  //
+
+  - create p:POSITION :SELF <-
+  ( + result:SELF
+    result := clone
+    result.make p
+    result
+  )
+
+  - make p:POSITION <-
+  (
+    position := p
+  )
+
+  //
+  // Added
+  //
+
+  - set_local_list l:ARRAY ITM_LOCAL <-
+  (
+    ? {! l.is_empty}
+    local_list := l
+  )
+
+  - set_static_list l:ARRAY ITM_LOCAL <-
+  (
+    ? {! l.is_empty}
+    static_list := l
+  )
+
+  - set_code c:ARRAY ITM_CODE <-
+  (
+    code := c
+  )
+
+Public
+
+  - is_affect:POSITION <-
+  ( + result,default:POSITION
+    + j:INTEGER
+    + itm_r:ITM_RESULT
+
+    j := code.lower
+    {(j < code.upper) && {result = default}}.while_do {
+      itm_r ?= code.at j
+      (itm_r != NULL).if {
+	result := itm_r.is_affect
+      } else {
+	result := code.at j.position
+      }
+      j := j + 1
+    }
+    (result = default).if {
+      result := code.last.is_affect
+    }
+    result
+  )
+
+  //
+  // Runnable.
+  //
+
+  - to_run_expr:EXPR <-
+  // List intern.
+  ( + i:INSTR
+    + var:LOCAL
+    + stack_top:INTEGER
+    + result_top:INTEGER
+    + result:EXPR
+    + nb_result:INTEGER
+    + lr:ARRAY EXPR
+
+    stack_top  := stack_local .upper + 1
+    result_top := stack_result.upper + 1
+
+    // Push Local.
+    (local_list != NULL).if {
+      (local_list.lower).to (local_list.upper) do { j:INTEGER
+	var := local_list.at j.to_run
+	stack_local.add_last var
+	var.init
+      }
+    }
+    (static_list != NULL).if {
+      (static_list.lower).to (static_list.upper) do { j:INTEGER
+	var := static_list.at j.to_run_static
+	stack_local.add_last var
+      }
+    }
+    // Append code.
+    (code.lower).to (code.upper) do { j:INTEGER
+      i := code.at j.to_run
+      list_current.add_last i
+    }
+    // Compute result expr.
+    nb_result := stack_result.upper - result_top + 1
+
+    (nb_result = 0).if {
+      result := PROTOTYPE_CST.create position type (TYPE_VOID.default); // BSBS: Alias.
+    } else {
+      (nb_result > 1).if {
+	// Creation Vector.
+	lr := ARRAY EXPR .create_with_capacity nb_result
+	(result_top).to (stack_result.upper) do { j:INTEGER
+	  lr.add_last (stack_result.at j.read position)
+	}
+	result := EXPR_MULTIPLE.create lr
+      } else {
+        result := stack_result.last.read position
+      }
+    }
+    // Pop local / Result.
+    pop_stack_until stack_top
+    stack_result.set_upper (result_top-1); // remove_since result_top
+    ? {stack_result.upper = Old stack_result.upper}
+    //
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in buffer:STRING_BUFFER <-
+  (
+    (code.count = 1).if {
+      buffer.add_last '('
+      code.first.append_in buffer
+      buffer.add_last ')'
+    } else {
+      buffer.append "(\n"
+      (code.lower).to (code.upper) do { i:INTEGER
+        indent.append "  "
+        code.at i.append_in buffer
+        buffer.append ";\n"
+      }
+      indent.remove_tail 2
+      buffer.append ")"
+    }
+  )
+
+ITM_LIST, ITM_RESULT
+
+  - stack_result:ARRAY LOCAL := ARRAY LOCAL .create_with_capacity 16
+
+
+
+

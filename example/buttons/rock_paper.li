@@ -1,0 +1,25 @@
+Header
+  + name := ROCK_PAPER;
+  
+Inherit 
+  + parent_window:Expanded WINDOW
+  
+Public
+  
+  - main <-
+  ( + rock,sci,pap:BUTTON
+        
+    init "Rock-Paper-Scissors" size (512,256)
+    
+    rock := BUTTON.new.init "Rock"     do { b:BUTTON; "Rock\n".print;     TRUE}
+    sci  := BUTTON.new.init "Scissors" do { b:BUTTON; "Scissors\n".print; TRUE}
+    pap  := BUTTON.new.init " Paper "  do { b:BUTTON; "Paper\n".print;    TRUE}
+    
+    (
+      rock /
+      (sci | pap)
+    ).init_parent Self.size (width,height).setr stretch
+    
+    PAPER.run
+  )
+  

@@ -1,0 +1,53 @@
+Header
+  + name    := Expanded UREAL_26_6;
+  /*unsigned 26.6 fixed float.*/
+  - type    := `unsigned long`;
+  - default := (0.to_raw_ureal_26_6);
+  - export  := REAL_32, REAL_64;
+
+Insert
+  - parent_unsigned_fixed_real:UNSIGNED_FIXED_REAL := UNSIGNED_FIXED_REAL
+
+SELF
+
+  - shift_bits:INTEGER <- 6
+
+Public
+
+  // Range.
+
+  - maximum:UINTEGER_64 <- 3FF_FFFFh.to_raw_uinteger_64
+
+  // Convertion format with test.
+
+  - to_ureal_26_6:UREAL_26_6 <- Self
+
+  // Convertion
+
+  - append_in b:STRING_BUFFER <-
+  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  // creation during the process.
+  ( + val:UINTEGER_32
+    + old_count,new_count:INTEGER
+    ? {b!=NULL}
+    val := to_raw_uinteger_32
+    (val >> 6).append_in b
+    b.extend '.'
+    old_count:=b.count
+    //     1/64 = 0.015625 => 6 digit.
+    (((val & 63) * 1000000)>>6).append_in b
+    new_count := old_count+6
+    {b.count != new_count}.while_do {
+      b.insert '0' to old_count
+    }
+  )
+
+
+
+
+
+
+
+
+
+

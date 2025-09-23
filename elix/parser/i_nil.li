@@ -1,0 +1,78 @@
+Header
+  + name := I_NIL;
+  
+Inherit
+  + parent_inode:Expanded I_NODE
+  
+Public
+  
+  - stck:Expanded ARRAY I_NIL
+
+  - new:I_NIL <-
+  ( + result:I_NIL
+    (stck.is_empty).if { result := I_NIL.clone; } else { result := stck.pop; }
+    result
+  )
+  
+Public
+  
+  - type:TYPE <- NULL
+  
+  - error:INTEGER <- upper - lower + 1
+    
+  - new l:INTEGER to u:INTEGER :I_NIL <- new.init (l,u)
+  
+  - copy:I_NODE <- new.init (lower,upper)
+  
+  - init (l,u:INTEGER) :I_NIL <-
+  (
+    (lower,upper) := (l,u)
+    {IA.src.at upper = ' '}.while_do { upper := upper - 1; }
+    Self
+  )
+  
+  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  ( + m:UINTEGER_16
+    (IA.src.at lower.is_upper).if { m := STY.typ; } else { m := STY.non; }
+    m := m | u
+    (s = NULL).if {
+      m := m | STY.ul_red
+      msg_err += "Arg. #"
+      IA.arg_i.append_in msg_err
+      msg_err += ": \'"
+      msg_err.append (IA.src) from lower to upper
+      msg_err += "\' not found. "
+    } else {
+      m := m | STY.ul_orange
+      msg_err += "New local `";
+      msg_err.append (IA.src) from lower to upper
+      msg_err += "' of type "
+      s.type_arg (IA.arg_i).append_in msg_err
+      msg_err += ". "
+    }
+    STY.put m to lower in (IA.sty)
+    STY.put m to (upper+1) in (IA.sty)
+    IA.inc_arg_i
+  )
+  
+  - txt_in s:STRING_BUFFER <-
+  (
+    s.add_last '\''
+    s.append (IA.src) from lower to upper
+    s.add_last '\''
+  )
+  
+  - rtxt_in s:STRING_BUFFER <-
+  (    
+    txt_in s; s+="(I_NIL)"
+  )
+  
+  - size:INTEGER <- upper - lower + 1
+  - to_expr:EXPR <-
+  ( + result:ERR
+    result := ERR.new (STRING_BUFFER,ARRAY UINTEGER_16) exp (ARRAY EXPR) tmp FALSE
+    result.txt.append (IA.src) from lower to upper
+    result    
+  )
+  
+  - free <- stck.add_last Self

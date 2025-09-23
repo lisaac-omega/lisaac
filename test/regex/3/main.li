@@ -1,0 +1,28 @@
+Header
+  + name := MAIN;
+  
+Insert
+  - parent_utils:UTILS := UTILS
+  
+Public
+  - main <-
+  ( + data:STRING
+    + regex:REGEX
+    + status:INTEGER
+    regex := REGEX.create
+    status := regex.regcomp "hello" cflag (REGEX.icase | REGEX.extended)
+    TEST.check status integer 0
+    data := "    hello my world HELLO  "
+    status := regex.regexec data start 0 cflag 0
+    TEST.check status integer 0
+    // the first hello:
+    TEST.check (regex.offset_start) integer 4
+    TEST.check (regex.offset_end) integer 9
+    // the second HELLO:
+    status := regex.regexec data start 9 cflag 0
+    TEST.check (regex.offset_start) integer 10
+    TEST.check (regex.offset_end) integer 15
+    //
+    regex.regfree
+  )
+  
