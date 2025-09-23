@@ -1,0 +1,72 @@
+########################################
+# OS
+########################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+########################################
+# Logs & temporaires
+########################################
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.old
+
+########################################
+# IDE / Editors
+########################################
+
+# VS Code
+.vscode/
+.history/
+
+# JetBrains (IntelliJ, PhpStorm, PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+out/
+
+# Eclipse
+.project
+.classpath
+.cproject
+.settings/
+
+# NetBeans
+nbproject/private/
+build/
+
+# Emacs / Vim
+*~
+\#*\#
+.\#*
+*.elc
+
+########################################
+# Build / Dépendances (générique)
+########################################
+dist/
+build/
+target/
+tmp/
+.cache/
+coverage/
+node_modules/
+
+########################################
+# Autres
+########################################
+*.lock
+*.pid
