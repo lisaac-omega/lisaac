@@ -13,10 +13,79 @@ Header
   - Arbre inherit dynamique
   - Color C/C++, Python, Java
   */
+  
+  - external := `unsigned long col_elit[] = {
+  0x10502266,0x104B2565,0x10482A63,0x10432F63,0x104A3667,0x10453D68,0x104B466D,0x40574374,
+  0x20624E7F,0x205A527B,0x20675D88,0x20715B8D,0x207D639F,0x20736A93,0x208167B4,0x20797788,
+  0xFF73846C,0xFF847B9F,0xFF80A96F,0xFFA09AB4,0xFF78B956,0xFF86BB63,0xFFC2BACC,0xFFB9D8A7,
+  0xFFD6D3DC,0xFFFDFFFC};`;
 
 Inherit
   - parent_any:ANY := ANY
-
+  
+Private
+  
+  - put_icon <-
+  ( + img:NATIVE_ARRAY UINTEGER_32
+    + c:UINTEGER_32
+    + l:INTEGER    
+    img := PAPER.icon    
+    0.to (48*48-1) do { i:INTEGER
+      l := (
+        "gggggggggggggjjjjjkkntwzzzzzzzzzzzzzzztfffffffff\
+        \ggggggggggggjjjjkkknrrrsuuuuppyzzzzzzzzjffffffff\
+        \gggggggggggjjjkkkknnnnnvuuuupnkkyzzzzzzygfffffff\
+        \ggggggggggjjjkkkknnnnnnvuuuupnnnyzzzzzzyhhfffffe\
+        \gggggggggjjjkkknnnnnnnruuuuuvtzzzzzzzzzyihffffee\
+        \gggggggggjjjjjjknrrrtwyxxxzzzzzzzzzzzzzyihhffeee\
+        \ggggggggjjrtwzzzzzzzzzzzzzzzzzzzzzzzzzztiihhfeee\
+        \gggggggjjzzzzzzzzzzzzzzzzzzzzzzzzzzzzztiiihhfeee\
+        \gggggggjzzzzzzzzzzzzzzzzzzzzzzzzzzzzwrlkiiihffee\
+        \gggggggpzzzzzzzzzzzzzzzzxxxxuprnnmmlnlllkiihheee\
+        \gggggggpzzzzzzzzzzzzytuuuuuuupmmmmmmlnllkiihhhee\
+        \ggggggjjyzzzzzzzzzwnmouuuuuuupooommmlnllkiiihhee\
+        \ggggggjjkzzzzzzzzymooouuuuuuuroooommmlllliiihhee\
+        \ggggggjjjtzzzzzzzymmoouuuuuuurooooommllllkiihhee\
+        \ggggggjjkktzzzzzzzyooouuuuuuupooooommmllliiihhee\
+        \ggffggjjkkkrzzzzzzzyrouuuuuuuqooooommmlllkiihhee\
+        \gfffggjjkkknnyzzzzzzzyuuuuuuurooooommmllliiihhee\
+        \ffffggjjkkknnntyzzzzzzzzsuuuvrooooommmllliiihhee\
+        \fffgggjjjkknnnnmtzzzzzzzzyxuurooooommmllliiihhed\
+        \ffgfggjjjkknnnnmmmtzzzzzzzzzvrooooommmllliihhhed\
+        \gffffggjjkkknnnmmmooryzzzzzzzzwoooommmllliihheed\
+        \fffffggjjkkknnnnmmmmmouxzzzzzzzztmommmlliiihheed\
+        \fffffggjjjklknntwzzzzzzzzzzzzzzzzztmmmlliihhhedd\
+        \ffffffggjiiryyzzzzzzzzzzzzzzzzzzzzwrmlliiihheedd\
+        \fffffffhjtzzzzzzzzzzzzzzzzzzzywrmmmmllliihhheddd\
+        \ffffffftzzzzzzzzzzzzzzzzzzxvuommmmmmlliiihheeddd\
+        \ffffftyzzzzzzzzzzzzzzzyxvuvvvommmmllliiihhhedddd\
+        \fffftzzzzzzzzzzzzzzywnmvvvvvvmmmmllliiihhheedddd\
+        \ffftzzzzzzzzzzzzzzpllllsvvvvqmmlllliiiihheedddcc\
+        \fftzzzzzzzzzzzzzwklllllsvvvuplllliiiiihheeddcccc\
+        \ffzzzzzzzzzzzzztiikklllqvvvvnlliiiiihhheeeddcccc\
+        \fpzzzzzzzzzzzzthiiiiiilqvvvviiiiiiihhheeedcccccc\
+        \ftzzzzzzzzzzzzhhhiiiiiiiuvvsiiiiihhhheedcccccccc\
+        \fpzzzzzzzzzzzpehhhhhiiihsvvsiihhhhheeedccccccccc\
+        \ffzzzzzzzzzzzpeehhhhhhhhpvvhhhhhheeeedcccccccccc\
+        \ffwzzzzzzzzzzzndeeehhhhhgvschhheeeedcccccccccccc\
+        \ffdyzzzzzzzzzzzynedeeeeeeqjeeeeedddccccccccccccc\
+        \feeepzzzzzzzzzzzzzypgeeeeeeeddddddcccccccccccccb\
+        \eeeeekwzzzzzzzzzzzzzzzyyyyywwwwwwwwtrjgecbcccbbb\
+        \eeeeeedjyzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzwrebbbb\
+        \eeeeeeeeefpzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzlbbb\
+        \eeeeeeeeeedejryzzzzzzzzzzzzzzzzzzzzzzzzzzzzznbbb\
+        \eeeeeeeeeeddddddgwyyyyyyyyyywwwwwyzzzzzzzzzwbbbb\
+        \eeeeeeeeedddddddddddddddddccccccetzzzzzzzzhbbbba\
+        \eeeeeeedddddddddddddddddcccbbfwyzzzzzzzwlbbbbaaa\
+        \eeeeeedddddddddddddddddcdertzzzzzzzyyrcbbbbbaaaa\
+        \eeeeedddddddddddddddddjwzzzzzzzzzjcbbbbbbbbaaaaa\
+        \eeeddddddddddddddgtyyzzzzzztrnhcbbbbbbbbbaaaaaaa".item i - 'a'
+      ).to_integer
+      c := `col_elit[@l]`:UINTEGER_32
+      img.put c to i
+    }    
+  )
+  
 Public
   
   - init <-
@@ -34,6 +103,7 @@ Public
     SIGNAL.infinite_recursion
     PAPER.unset (PAPER.decorated)
     PAPER.set (PAPER.transparent)
+    put_icon
     init
     (COMMAND_ARGS.count > 1).if {
       STRING.tmp { pth:STRING_BUFFER

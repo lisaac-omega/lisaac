@@ -43,6 +43,9 @@ Public
       //OUT # "ptr=" # ptr # " ptr_save=" # ptr_save # '\n'
       (ptr = ptr_save).if { t.set_save TRUE }
       //print "After UNDO"
+      t.footnote_left.clear
+    } else {
+      t.footnote_left.copy "No further undo information."
     }
   )
   
@@ -58,7 +61,10 @@ Public
     {(ptr < count) && {at ptr = NULL}}.while_do { ptr := ptr + 1; }
     (ptr = ptr_save).if { t.set_save TRUE }
     busy := FALSE
+    t.footnote_left.clear
     //print "After REDO"
+  } else {
+    t.footnote_left.copy "No further redo information."
   }
   
   - print t:STRING <-

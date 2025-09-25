@@ -45,7 +45,7 @@ Public
   // Make `v' the value `at' index `i'.
   // * See also: `at' ,`lower', `upper', `valid_index', `swap', `force'...
   [
-    valid_index i
+    {valid_index i}
   ]
   (
     abstract
@@ -59,8 +59,8 @@ Public
   // Swap at at index `i1' with item at index `i2'.
   // * See: `at', `at put'.
   [
-    valid_index i1,
-    valid_index i2
+    {valid_index i1},
+    {valid_index i2}
   ]
   ( + tmp:V
 
@@ -89,8 +89,8 @@ Public
   // * See: `set_all_with'.
   [
     lower_index <= upper_index,
-    valid_index lower_index,
-    valid_index upper_index
+    {valid_index lower_index},
+    {valid_index upper_index}
   ]
   (
     lower_index.to upper_index do { i:INTEGER
@@ -150,7 +150,7 @@ Public
   // by one position.
   // * See: `add_first', `add_last', `append_collection'.
   [
-    i.in_range lower to (upper + 1)
+    {i.in_range lower to (upper + 1)}
   ]
   (
     abstract
@@ -275,7 +275,7 @@ Public
   // Remove the item at position `index'. Followings items are shifted left by one position.
   // * See: `remove_first', `remove_head', `remove_tail', `remove_last'.
   [
-    valid_index index
+    {valid_index index}
   ]
   (
     abstract
@@ -362,7 +362,7 @@ Public
     0
   )
   [
-    Result.in_range start_index to (upper + 1),
+    {Result.in_range start_index to (upper + 1)},
     valid_index Result ->> {element == at Result}
   ]
 
@@ -373,14 +373,14 @@ Public
   // Answer `lower -1' when the search fail.
   // * See: `fast_reverse_index_of', `last_index_of', `index_of'.
   [
-    valid_index start_index
+    {valid_index start_index}
   ]
   (
     abstract
     0
   )
   [
-    Result.in_range (lower - 1) to start_index,
+    {Result.in_range (lower - 1) to start_index},
     valid_index Result -> (at Result == element)
   ]
 
@@ -419,7 +419,7 @@ Public
     0
   )
   [
-    Result.in_range start_index to (upper + 1),
+    {Result.in_range start_index to (upper + 1)},
     valid_index Result ->> {element = at Result}
   ]
 
@@ -437,7 +437,7 @@ Public
     0
   )
   [
-    Result.in_range (lower - 1) to start_index,
+    {Result.in_range (lower - 1) to start_index},
     valid_index Result ->> {at Result = element}
   ]
 
@@ -757,10 +757,10 @@ Public
   // * See: `slice', `replace_all'.
   [
     lower_index <= upper_index,
-    valid_index lower_index,
-    valid_index (lower_index + distance),
-    valid_index upper_index,
-    valid_index (upper_index + distance)
+    {valid_index lower_index},
+    {valid_index (lower_index + distance)},
+    {valid_index upper_index},
+    {valid_index (upper_index + distance)}
   ]
   ( + default_value:V
     (distance != 0).if {

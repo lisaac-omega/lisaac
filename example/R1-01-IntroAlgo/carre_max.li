@@ -1,0 +1,30 @@
+Header
+  
+  + name := CARRE_MAX;
+  /*
+  Exercice 1 page 3 des exercices
+  */
+  
+Public
+  
+  - maximum (r1, r2:REAL_64): REAL_64 <-
+  ( + res:REAL_64
+    if (r1 > r2) then {
+      res := r1
+    } else {
+      res := r2
+    }
+    res
+  )
+  
+  - main <-
+  ( + n, max:REAL_64
+    max := 0
+    COMMAND_ARGS.foreach { arg:STRING_ALIAS
+      n := arg.to_real_64
+      n := n.pow 2 
+      max := maximum(max,n) 
+    }
+    ("carré max: " + max.to_string).println
+  )
+  

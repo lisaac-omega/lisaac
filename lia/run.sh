@@ -18,7 +18,7 @@ LI="${LI%/bin/lisaac}"
 LIA="$LI/lia"
 MISC="$LI/misc"
 TOOL="$LIA/tool"
-OPS=" -Wno-invalid-source-encoding -D_GNU_SOURCE -Wno-address-of-packed-member -U_FORTIFY_SOURCE -Wno-strict-aliasing -Wno-parentheses-equality -Wstrict-overflow=0"
+OPS=" -I$LI/deps_lib -Wno-invalid-source-encoding -D_GNU_SOURCE -Wno-address-of-packed-member -U_FORTIFY_SOURCE -Wno-strict-aliasing -Wno-parentheses-equality -Wstrict-overflow=0"
 ZIPA="$LIA/android-sdk/build-tools/debian/zipalign"
 if $VERBOSE; then
     echo "Create android interface."

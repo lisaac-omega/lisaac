@@ -1,4 +1,4 @@
-#!C:\msys64\usr\bin\bash.exe
+#!/bin/bash
 VERBOSE=false
 MISC=$1/misc
 if [ ! -d assets ]; then

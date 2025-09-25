@@ -57,7 +57,7 @@ Section Private
   + lib_gcc:STRING;
   + execute_file:STRING;
   
-  + target:STRING := "windows";
+  + target:STRING := "unix";
       
   + cc:STRING := "gcc";
 

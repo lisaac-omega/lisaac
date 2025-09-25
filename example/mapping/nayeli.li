@@ -2,7 +2,7 @@ Header
   + name := NAYELI;
   /*How to do image mapping in Lisaac Ω. 
   
-As usual, to this example in a terminal window, cd in the good directory:
+As usual, to run this example in a terminal window, cd in the good directory:
 
 
   lisaac nayeli

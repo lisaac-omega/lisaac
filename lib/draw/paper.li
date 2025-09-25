@@ -28,9 +28,9 @@ Header
     };
   );
   - external := `
-//#if defined(__ANDROID__)
-//#include <android/paper.h>
-//#else
+#if defined(__ANDROID__)
+#include <android/paper.h>
+#else
 
 #include <stdio.h>
 #include <string.h>
@@ -85,7 +85,7 @@ unsigned long col_icon[]={0x00000000,
 0xFF37362F, 0xFF4C4B43, 0xFF4F6D3C, 0xFF75706F,
 0xFF878481, 0xFF639748, 0xFF77B856, 0xFF84B961,
 0xFFAEAAA8, 0xFFCECBC7, 0xFFE9E7E4, 0xFFFDFFFC};
-//#endif
+#endif
 `;
   
 Inherit  
@@ -154,13 +154,12 @@ Public
     }
     res
   )
-    
-  - put_window_icon w:POINTER <-
-  ( + img:NATIVE_ARRAY UINTEGER_32
-    + c:UINTEGER_32
+  
+  - icon:NATIVE_ARRAY UINTEGER_32 :=
+  ( + c:UINTEGER_32
     + l:INTEGER
-    img := NATIVE_ARRAY UINTEGER_32.create (48*48)
-    `{ GLFWimage img`
+    + r:NATIVE_ARRAY UINTEGER_32
+    r := NATIVE_ARRAY UINTEGER_32.create (48*48)
     0.to (48*48-1) do { i:INTEGER
       l := (
         "AJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJG\
@@ -210,11 +209,18 @@ Public
         \AAAAAAAAAAAAAAAAAAAAANOPPQQQQQQQQQNIGEEEEEEEEEEE\
         \AAAAAAAAAAAAAAAAAAAAAAAAAAOOOPQQQQQQPONJIGGGGGGG\
         \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNPQQQQQQQQQQQQQP\
-        \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNNNNNNJJG".item i - 'A'
+        \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNNNNNNJJG".at i - 'A'
       ).to_integer
       c := `col_icon[@l]`:UINTEGER_32
-      img.at i put c
+      r.at i put c
     }
+    r
+  )
+  
+  - put_window_icon w:POINTER <-
+  ( + img:NATIVE_ARRAY UINTEGER_32
+    img := icon
+    `{ GLFWimage img`    
     `img.width = 48; img.height = 48; img.pixels = (unsigned char *)@img`
     `glfwSetWindowIcon(@w,1,&img)`
     `}`
@@ -231,42 +237,46 @@ Public
   //- new_event_empty <- ( flag_refresh := TRUE; ); //`glfwPostEmptyEvent()`
   
   - create_window (w,h:INTEGER) title t:STRING_ALIAS for winobj:WINDOW :POINTER <-
-  ( + win,mon:POINTER
-    + tc:NATIVE_ARRAY CHARACTER
-    + ww,hh:INTEGER
-    (wins.is_empty).if { init; }
-    tc := t.to_external
-    (winobj.fullscreen).if {      
-      mon := `glfwGetPrimaryMonitor()`:POINTER
-      `const GLFWvidmode* mode = glfwGetVideoMode(@mon)`
-      ww := `mode->width`:INTEGER
-      hh := `mode->height`:INTEGER
-      winobj.size (ww,hh)
-    } else { (ww,hh) := (w,h); }
-    win := `glfwCreateWindow((int)@ww,(int)@hh,@tc, @mon, NULL)`:POINTER
-    (win.is_null).if {
-      "Paper: Window not open.".println
-      `glfwTerminate()`
-      exit exit_failure_code
-    }
-    //"Create window ".print; w.print; "x".print; h.println
-    (lip "target" str = "apple").if_false { put_window_icon win; }
-    `glfwSetKeyCallback(@win, intern_key)`
-    `glfwSetCursorPosCallback(@win,(GLFWcursorposfun)mouse_move)`
-    `glfwSetMouseButtonCallback(@win,(GLFWmousebuttonfun)mouse_button)`
-    `glfwSetScrollCallback(@win,(GLFWscrollfun)mouse_scroll)`
-    `glfwMakeContextCurrent(@win)`
-    `glfwSetWindowRefreshCallback(@win,(GLFWwindowrefreshfun) refresh_callback)`
-    (lip "target" str = "windows").if {
-      if (`gladLoadGL()`:INTEGER = 0) then { // WinMerde
-        "Failed to initialize GLAD\n".print
-        exit 1
+  ( + result:POINTER
+    (lip "target" str != "android").if {
+      + win,mon:POINTER
+      + tc:NATIVE_ARRAY CHARACTER
+      + ww,hh:INTEGER
+      (wins.is_empty).if { init; }
+      tc := t.to_external
+      (winobj.fullscreen).if {      
+        mon := `glfwGetPrimaryMonitor()`:POINTER
+        `const GLFWvidmode* mode = glfwGetVideoMode(@mon)`
+        ww := `mode->width`:INTEGER
+        hh := `mode->height`:INTEGER
+        winobj.size (ww,hh)
+      } else { (ww,hh) := (w,h); }
+      win := `glfwCreateWindow((int)@ww,(int)@hh,@tc, @mon, NULL)`:POINTER
+      (win.is_null).if {
+        "Paper: Window not open.".println
+        `glfwTerminate()`
+        exit exit_failure_code
       }
+      //"Create window ".print; w.print; "x".print; h.println
+      (lip "target" str = "apple").if_false { put_window_icon win; }
+      `glfwSetKeyCallback(@win, intern_key)`
+      `glfwSetCursorPosCallback(@win,(GLFWcursorposfun)mouse_move)`
+      `glfwSetMouseButtonCallback(@win,(GLFWmousebuttonfun)mouse_button)`
+      `glfwSetScrollCallback(@win,(GLFWscrollfun)mouse_scroll)`
+      `glfwMakeContextCurrent(@win)`
+      `glfwSetWindowRefreshCallback(@win,(GLFWwindowrefreshfun) refresh_callback)`
+      (lip "target" str = "windows").if {
+        if (`gladLoadGL()`:INTEGER = 0) then { // WinMerde
+          "Failed to initialize GLAD\n".print
+          exit 1
+        }
+      }
+      //`glfwSwapInterval(1)`
+      `glfwSetWindowUserPointer(@win, (void *)@winobj)`
+      result := win
     }
-    //`glfwSwapInterval(1)`
-    wins.add_last winobj
-    `glfwSetWindowUserPointer(@win, (void *)@winobj)`
-    win
+    wins.add_last winobj    
+    result
   )
   
   - destroy_window w:WINDOW <-
@@ -444,45 +454,48 @@ Public
   )
   
   - li_refresh_callback w:POINTER :INTEGER <-
-  ( + win_width,win_height:INTEGER
-    + fb_width,fb_height:INTEGER
-    + px_ratio:REAL_64
-    + me:WINDOW
-    + rl,gl,bl,al:UINTEGER_8
-    
-    me := get_win w
-    //"Call back:".print; me.id_name.println
-    `glfwMakeContextCurrent(@w)`
-    
-    (win_width,win_height) := get_window_size w
-    (fb_width,fb_height) := framebuffer_size w
-    px_ratio := fb_width.to_real_64 / win_width.to_real_64
-    //px_ratio.println
-    // Update and render
-    
-    `glViewport(0, 0, @fb_width, @fb_height)`
-    ((flag & transparent) = 0).if {
-      (rl,gl,bl,al) := (0,0,0,255)
-      `glClearColor(@rl,@gl,@bl,@al)`
+  ( 
+    (lip "target" str != "android").if {  
+      + win_width,win_height:INTEGER
+      + fb_width,fb_height:INTEGER
+      + px_ratio:REAL_64
+      + me:WINDOW
+      + rl,gl,bl,al:UINTEGER_8
+      
+      me := get_win w
+      //"Call back:".print; me.id_name.println
+      `glfwMakeContextCurrent(@w)`
+      
+      (win_width,win_height) := get_window_size w
+      (fb_width,fb_height) := framebuffer_size w
+      px_ratio := fb_width.to_real_64 / win_width.to_real_64
+      //px_ratio.println
+      // Update and render
+      
+      `glViewport(0, 0, @fb_width, @fb_height)`
+      ((flag & transparent) = 0).if {
+        (rl,gl,bl,al) := (0,0,0,255)
+        `glClearColor(@rl,@gl,@bl,@al)`
+      }
+      `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
+      PEN_GL.gl_enable (`GL_BLEND`:INTEGER)
+      PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
+      //PEN_GL.gl_enable (`GL_CULL_FACE`:INTEGER)
+      PEN_GL.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+      ((me.width.to_integer != win_width) || {me.height.to_integer != win_height}).if {
+        me.size (win_width,win_height)
+      }
+      //win_width.print; ' '.print; win_height.println
+      me.draw_all
+      /*DIV_OUT.draw_stack.foreach { d:DIV
+        d.draw pen
+      };*/
+      
+      COLOR.stack.clear
+      `glfwSwapBuffers(@w)`
+      //`glfwPollEvents()`
+      //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
     }
-    `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
-    PEN_GL.gl_enable (`GL_BLEND`:INTEGER)
-    PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
-    //PEN_GL.gl_enable (`GL_CULL_FACE`:INTEGER)
-    PEN_GL.gl_disable (`GL_DEPTH_TEST`:INTEGER)
-    ((me.width.to_integer != win_width) || {me.height.to_integer != win_height}).if {
-      me.size (win_width,win_height)
-    }
-    //win_width.print; ' '.print; win_height.println
-    me.draw_all
-    /*DIV_OUT.draw_stack.foreach { d:DIV
-      d.draw pen
-    };*/
-    
-    COLOR.stack.clear
-    `glfwSwapBuffers(@w)`
-    //`glfwPollEvents()`
-    //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
     0
   )
     
@@ -539,19 +552,19 @@ External
     
   - new_key (key:INTEGER,scancode:INTEGER,action:INTEGER,mods:INTEGER) <-
   (
-    //`{ _____CONTEXT *old = top_context; top_context = NULL`
-    // Action: 0:Unpress, 1:Press, 2:Repeat.
-    refresh_again
-    KEYBOARD.key key code (scancode.to_uinteger_8) press (action != 0) mods mods
-    //`top_context = old; }`
+    (lip "target" str != "android").if {  
+      //`{ _____CONTEXT *old = top_context; top_context = NULL`
+      // Action: 0:Unpress, 1:Press, 2:Repeat.
+      refresh_again
+      KEYBOARD.key key code (scancode.to_uinteger_8) press (action != 0) mods mods
+      //`top_context = old; }`
+    }
   )
   
 Public
   
-  //
   // Event Mouse (NON ANDROID)
-  //
-  
+    
 External
   
   - mouse_move(win:POINTER,xpos,ypos:REAL_64) <-
@@ -574,9 +587,7 @@ External
   
 Public
   
-  //
   // ANDROID ONLY
-  //
   
   - loc_pen:PEN
   - screen_width:INTEGER

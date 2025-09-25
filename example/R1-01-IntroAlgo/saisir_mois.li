@@ -9,7 +9,7 @@ Section Private
   
   - read_integer: INTEGER <-
   ( + result:INTEGER
-    STDIN.read_line;
+    STDIN.read_line
     if (STDIN.last_string.is_integer) then {
       result := STDIN.last_string.to_integer
     }
@@ -18,7 +18,7 @@ Section Private
  
 Section Public
    
-  - saisir_mois : INTEGER <-
+  - saisir_mois: INTEGER <-
   ( + result:INTEGER
     "Entrez le numéro du mois: " print
     result := read_integer
@@ -32,6 +32,6 @@ Section Public
   - main <-
   ( + m:INTEGER 
     m := saisir_mois
-    "Numéro de mois = ".print
+    "Numéro de mois = " print
     m.println
   )

@@ -39,7 +39,7 @@ Public
   // Item at the corresponding index `i'.
   // See also `lower', `upper', `valid_index'.
   [
-    valid_index i
+    {valid_index i}
   ]
   (
     abstract

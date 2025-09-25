@@ -27,11 +27,11 @@ extern JavaVM *JVM;
 
 void read_file(void *);
 void delete_in(void *);
-int draw_in(void *);
-int term_window(void *);
-int lost_focus(void *);
-int init_gl(void *);
-int init_pen(void *);
+char draw_in(void *);
+char term_window(void *);
+char lost_focus(void *);
+char init_gl(void *);
+char init_pen(void *);
 void *run_in(void *);
 void mouse_action(void *,long,long,long,long);
 int main(int,char **);

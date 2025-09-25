@@ -5,20 +5,6 @@ Section Header
   Poly exercice 5 page 2.
   */
   
-Section Private
-  
-  - lire_skieur: (STRING,INTEGER) <-
-  ( + nom:STRING
-    + poids:INTEGER
-    "Nom: ".print
-    STDIN.read_line;
-    nom := STDIN.last_string.to_string_alias
-    "Poids: ".print
-    STDIN.read_line
-    poids := STDIN.last_string.to_integer
-    (nom,poids)
-  )
- 
 Section Public
    
   - main <-
@@ -34,3 +20,19 @@ Section Public
     "Dernier entré: ".print
     dernier.println
   )
+  
+Section Private
+  
+  - lire_skieur: (STRING,INTEGER) <-
+  ( + nom:STRING
+    + poids:INTEGER
+    "Nom: ".print
+    STDIN.read_line;
+    nom := STDIN.last_string.to_string_alias
+    "Poids: ".print
+    STDIN.read_line
+    poids := STDIN.last_string.to_integer
+    (nom,poids)
+  )
+ 
+  

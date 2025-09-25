@@ -86,10 +86,17 @@ Public
     result
   )
   
-  - create_with_capacity new_count:INTEGER :SELF <-
-  // Create an empty array with at least `needed_capacity'.
+  - new Self:SELF capacity c:INTEGER :SELF <-
+  // New empty array with a given capacity.
   ( + result:SELF
-    
+    result := clone
+    result.with_capacity c
+    result
+  );
+  
+  - create_with_capacity new_count:INTEGER :SELF <-
+  // Create an empty array with at least `needed_capacity'. <- DCDC VIRER / OBSOLETE
+  ( + result:SELF  
     result := clone
     result.with_capacity new_count
     result
@@ -592,7 +599,7 @@ Public
   - move_to_last low:INTEGER to up:INTEGER <-
   // A-BCD-EF move_to_last 1 to 3 => A-EF-BCD  
   [ 
-    low.in_range 0 to up,
+    {low.in_range 0 to up},
     up <= upper
   ]
   ( + d:INTEGER
@@ -789,8 +796,8 @@ Public
   
   - remove beg:INTEGER to end:INTEGER <-
   [
-    valid_index beg,
-    valid_index end,
+    {valid_index beg},
+    {valid_index end},
     beg <= end
   ]
   ( + s:INTEGER
@@ -931,7 +938,7 @@ Public
   
   - set_upper new_upper:INTEGER <-
   [
-    new_upper.in_range (-1) to (capacity - 1)
+    {new_upper.in_range (-1) to (capacity - 1)}
   ]
   (
     upper := new_upper

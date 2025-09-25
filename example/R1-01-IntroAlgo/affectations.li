@@ -10,6 +10,7 @@ Public
   ( + i: ℤ
     "Affectations :=" println
     i.println
+    ("valeur de i '" + i.to_string + "'\n").print;
     "et maintenant " println
     i := 2
     "et aussi " println

@@ -49,7 +49,7 @@ Private
       line := 1
       val := val_column_1
       result := TRUE
-      {stop}.until_do {
+      until {stop} do {
         line := line + 1
         if (line > col) then {
           stop := TRUE

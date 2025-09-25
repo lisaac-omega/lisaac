@@ -15,13 +15,13 @@ Public
   
   - is_debug_mode:BOOLEAN <- debug_level != 0
   
-  - debug_level:INTEGER               <- lip "debug_level" int
-  - compiler_inlining_level:INTEGER   <- lip "inline_level" int
-  - compiler_optimization:BOOLEAN     <- lip "is_optimization" bool
+  - debug_level:INTEGER              <- lip "debug_level" int
+  - compiler_inlining_level:INTEGER  <- lip "inline_level" int
+  - compiler_optimization:BOOLEAN    <- lip "is_optimization" bool
   - compiler_built_on:STRING_ALIAS    <- `20`
-  - compiler_debug_with_code:BOOLEAN  <- lip "debug_with_code" bool
-  - compile_time:TIME                 <- TIME.create_csecond `22`
-  - compile_date:DATE                 <- DATE.decode `23`
+  - compiler_debug_with_code:BOOLEAN <- lip "debug_with_code" bool
+  - compile_time:TIME               <- TIME.create_csecond `22`
+  - compile_date:DATE               <- DATE.decode `23`
     
   - is_ansi:BOOLEAN := SYSTEM.is_ansi
   
@@ -168,8 +168,7 @@ Public
   
   - foreach_data action:{ (STRING_ALIAS,INTEGER,INTEGER); } <-
   (
-    foreach_intern_data {
-      (sec:STRING_ALIAS,nam:STRING_ALIAS,typ:INTEGER,val:INTEGER)
+    foreach_intern_data { (sec:STRING_ALIAS,nam:STRING_ALIAS,typ:INTEGER,val:INTEGER)
       (sec == "Mapping").if {
         action.value (nam,typ,val)
       }

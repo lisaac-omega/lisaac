@@ -1,0 +1,30 @@
+Section Header
+  
+  + name := TELEGRAMME;
+  /*
+  Poly cours, bas de la page 21.
+  */
+  
+Section Public
+ 
+  - main <-
+  ( + nb_unités:INTEGER
+    + mot:STRING
+    nb_unités := -1
+    mot := ""
+    while {mot != "stop"} do {
+      nb_unités := nb_unités + (mot.count / 10) + 1
+      mot := lire_mot
+   }
+    OUT # "Nombre d'unités: " # nb_unités # '\n'
+  )
+  
+Section Private
+  
+  - lire_mot: STRING <-
+  (
+    "Mot: " print
+    STDIN read_line
+    (STDIN.last_string) to_string_alias
+  )
+ 

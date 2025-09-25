@@ -62,6 +62,8 @@ Public
     result
   )
   
+  - foreach blk:{STRING_ALIAS;} <- from 1 to upper do { i:INTEGER; blk.value (at i)};
+  
   - first:STRING_ALIAS <- at 1; // just after the executable.
   
   - executable_directory:STRING_ALIAS :=
