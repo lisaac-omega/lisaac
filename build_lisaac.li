@@ -180,8 +180,8 @@ Public
     system_detection
     
     lisaac_dir := working_directory.to_string_alias
-    if (! lisaac_dir.has_suffix "lisaac/") then {
-      die "buid_lisaac must be run from lisaac directory." exit 1
+    if ((! lisaac_dir.has_suffix "lisaac/") && {! lisaac_dir.has_suffix "lisaac-omega/"}) then {
+      die "build_lisaac must be run from lisaac directory." exit 1
     }
     if verbose then {
       ("lisaac_dir=\"" + lisaac_dir + "\".").println

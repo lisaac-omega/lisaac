@@ -65,6 +65,19 @@ tmp/
 coverage/
 node_modules/
 
+bin/lisaac
+elix/elix
+elix/elix.c
+
+# ignore compiled files
+example/**/*
+# keep everything else
+!example/**/*.*
+# ignore .c files that are made by lisaac
+example/**/*.c
+
+build_lisaac
+
 ########################################
 # Autres
 ########################################
