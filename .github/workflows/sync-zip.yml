@@ -25,7 +25,7 @@ jobs:
 
       - name: Sync files
         run: |
-          rsync -av external_src/ ./
+          rsync -av lisaac/ ./
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git checkout -b sync-zip || git checkout sync-zip
