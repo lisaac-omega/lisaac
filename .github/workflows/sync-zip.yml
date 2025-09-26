@@ -2,7 +2,7 @@ name: Sync from external ZIP
 
 on:
   schedule:
-    - cron: "0 3 * * *"   # tous les jours à 3h UTC
+    - cron: "0 6 * * *"   # tous les jours à 6h UTC
   workflow_dispatch:
 
 jobs:
@@ -25,7 +25,6 @@ jobs:
 
       - name: Sync files
         run: |
-          rsync -av lisaac/ ./
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git checkout -b sync-zip || git checkout sync-zip
