@@ -175,7 +175,7 @@ Public
       }
       pad := (-width)&3
       0.to (img_y-1) do { j:INTEGER
-        0.to (img_x-1) by 2 do { i:INTEGER
+        from 0 to (img_x-1) step 2 do { i:INTEGER
           v := get8
           (bpp = 4).if {
             v2 := v & 15

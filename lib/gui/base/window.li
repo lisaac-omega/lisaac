@@ -66,16 +66,18 @@ Public
     // BSBS: Bug Old compilo:
     child.add_last WIN
     child.remove_last
-    (SYSTEM.name != "Android").if {
-      // BSBS: Bug dans PEN...
+    (lip "target" str != "android").if {
+      // BSBS: Bug dans PEN...      
       detect_memory_leak := FALSE
-      pen := PEN.new_pen
+      pen := PEN.new_pen_with_font (FONT.n_sys.at 0 = NULL)
       detect_memory_leak := Old detect_memory_leak
-    }
-    (FONT.n_sys.at 0 = NULL).if {
+    };
+    /*
+    ((pen != NULL) && {FONT.n_sys.at 0 = NULL}).if {      
       FONT.load_default
       FONT.load pen
     }
+    */  
     Self
   )
   

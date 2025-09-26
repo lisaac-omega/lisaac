@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- BEGIN_INCLUDE(manifest) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.example.!MY_PROJECT!"
-          android:versionCode="1"
-          android:versionName="1.0">
+          package="com.example.!MY_PROJECT!">
+  <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="35" />
   <uses-feature android:glEsVersion="0x00020000" android:required="true"/>
   <!-- BSBS: Access contacts in phone -->
   <uses-permission android:name="android.permission.READ_CONTACTS" />

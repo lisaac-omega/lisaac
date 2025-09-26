@@ -1,24 +1,13 @@
 Header
   
   + name := NANO_TEST;
+  /*If you see a red dot blinking in the middle of the window, 
+it means this test was a complete success.
+Who should we thank?
+Thank you, Lisaac Ω!*/
   
 Inherit  
   + parent_window:Expanded WINDOW
-  
-Private
-  /*
-  - draw_mouse p:PEN <-
-  ( + t:TOUCH
-    (p.touch.lower).to (p.touch.upper) do { i:INTEGER
-      t := p.touch.item i
-      (t.z != 0).if {        
-        p.begin_path
-        p.circle (t.x,t.y) radius 100
-        p.stroke_color (COLOR.rgb (255,255,255))
-        p.stroke
-      }
-    }
-  )*/
   
 Public  
   

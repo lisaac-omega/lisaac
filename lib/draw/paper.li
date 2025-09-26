@@ -4,6 +4,7 @@ Header
     sudo apt-get install libglu1-mesa-dev
     sudo apt-get install libglew-dev
   */
+    
   - lip <- 
   (
     (target = "apple").if {      
@@ -79,13 +80,13 @@ static void intern_key(GLFWwindow* window, int key, int scancode, int action, in
 //  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 //    glfwSetWindowShouldClose(window, GL_TRUE);
 }
+#endif
 
 unsigned long col_icon[]={0x00000000,
 0xFF171312, 0xFF1D1A19, 0xFF241F1E, 0xFF2E2827,
 0xFF37362F, 0xFF4C4B43, 0xFF4F6D3C, 0xFF75706F,
 0xFF878481, 0xFF639748, 0xFF77B856, 0xFF84B961,
 0xFFAEAAA8, 0xFFCECBC7, 0xFFE9E7E4, 0xFFFDFFFC};
-#endif
 `;
   
 Inherit  
@@ -634,6 +635,7 @@ Public
   - mouse_time:REAL_32 <- ((TIME.gettimeofday-mouse_base_time) / 10_000).to_real_32 / 100
   
   - count_finger:INTEGER
+  
 External
   
   - mouse_action (e:POINTER,n,s,x,y:INTEGER) <-
@@ -789,10 +791,10 @@ External
     pen := get_pen e
     (pen = NULL).if {
       "------------Init Pen\n".print
-      pen := loc_pen := PEN.new_pen
+      
+      pen := loc_pen := PEN.new_pen_with_font (FONT.n_sys.at 0 = NULL)
       wins.first.set_pen pen
-      //PEN_GL.init (antialias | stencil_strokes | debug)
-      //load_font loc_pen
+            
       `e->pen=@pen`
     } else {
       "------------Restore Pen\n".print
