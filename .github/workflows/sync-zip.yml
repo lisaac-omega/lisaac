@@ -1,0 +1,46 @@
+name: Sync from external ZIP
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # tous les jours à 3h UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download external ZIP
+        run: curl -L -o lisaac_0.5.zip https://lisaac.org/downloads/lisaac_0.5.zip
+
+      - name: Unzip only lisaac content
+        run: |
+          unzip -o lisaac_0.5.zip
+          rsync -av lisaac/ ./
+          rm -rf lisaac lisaac_0.5.zip
+
+      - name: Sync files
+        run: |
+          rsync -av external_src/ ./
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout -b sync-zip || git checkout sync-zip
+          git add -A
+          git diff --quiet && echo "Aucun changement" || git commit -m "Synchronisation avec le ZIP officiel"
+
+      - name: Push branch
+        run: git push origin sync-zip --force
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: sync-zip
+          title: "Synchronisation avec le ZIP officiel"
+          body: "Mise à jour automatique depuis le dépôt externe (ZIP) de lisaac.org."
+          commit-message: "Synchronisation avec le ZIP officiel"
+          base: main
