@@ -46,10 +46,8 @@ out/
 
 # NetBeans
 nbproject/private/
-build/
 
 # Emacs / Vim
-*~
 \#*\#
 .\#*
 *.elc
@@ -77,6 +75,7 @@ example/**/*
 example/**/*.c
 
 build_lisaac
+android/bin/*
 
 ########################################
 # Autres

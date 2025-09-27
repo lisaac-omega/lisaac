@@ -2,7 +2,7 @@ name: Sync from external ZIP
 
 on:
   schedule:
-    - cron: "0 6 * * *"   # tous les jours à 6h UTC
+    - cron: "0 6 * * 1-5"   # tous les jours à 6h UTC du lundi au vendredi
   workflow_dispatch:
 
 jobs:
