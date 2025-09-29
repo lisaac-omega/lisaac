@@ -248,7 +248,7 @@ Public
             OUT # "Color " # n # " x=" # tex.x # " pt_b=" # pt_b.pt # "\n";
             OUT # "c=" # at pos_i # '\n';
             //(at pos_i = ':').if { exit 1; };
-            (styi).to (sty.upper.min (styi+8)) by 2 do { i:INTEGER;
+            from (styi) to (sty.upper.min (styi+8)) step 2 do { i:INTEGER;
               sty.at i.print; ' '.print;
             };
             '\n'.print;
@@ -342,7 +342,7 @@ Public
   ( + f,n:INTEGER_32
     
     "-------------".println
-    0.to (sty.upper) by 2 do { i:INTEGER
+    from 0 to (sty.upper) step 2 do { i:INTEGER
       i.print; ": ".print
       (b + sty.at i).print; ' '.print
       f := sty.at (i+1)

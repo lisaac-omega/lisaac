@@ -613,7 +613,7 @@ Public
     idx := -1
     (low <= up).if {
       max := -1000_000
-      0.to (result_list.upper) by 7 do { i:INTEGER
+      from 0 to (result_list.upper) step 7 do { i:INTEGER
         (result_list.at (i+6).in_range low to up).if {
           tmp := score i
           (tmp > max).if {
@@ -869,7 +869,7 @@ Public
   - print_result <-
   ( + tmp:INTEGER
     "|N \t||Link\t|Ymax\t|Hole\t|Abys\t|Line\t||Rot.\t|X   \t||Value\n".print
-    (result_list.lower).to (result_list.upper) by 7 do { i:INTEGER
+    from (result_list.lower) to (result_list.upper) step 7 do { i:INTEGER
       '|'.print
       (i/7).print; "\t||".print
       0.to 4 do { j:INTEGER
@@ -887,7 +887,7 @@ Public
       tmp.print
       '\n'.print
     }
-    (abyss_list.lower).to (abyss_list.upper) by 2 do { i:INTEGER
+    from (abyss_list.lower) to (abyss_list.upper) step 2 do { i:INTEGER
       "Abyss : x=".print
       abyss_list.at i.print
       " depth=".print

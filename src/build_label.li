@@ -195,7 +195,7 @@ Public
     line.append ",\t-1\n\
     \# Table mountain: <@current,code position,backlink index>\n"
     //
-    (mountain.lower).to (mountain.upper) by 3 do { i:INTEGER
+    from (mountain.lower) to (mountain.upper) step 3 do { i:INTEGER
       ((mountain.at (i+2).first = '-') && {mountain.at (i+2).last = '3'}).if {
         line.add_last '\n'
       }

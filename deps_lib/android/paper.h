@@ -13,6 +13,9 @@
 #include <android/sensor.h>
 #include <android_native_app_glue.h>
 
+#include <android/choreographer.h>
+#include <stdatomic.h>
+
 #define LOG_TAG ("LIA")
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
@@ -40,11 +43,15 @@ struct engine {
   struct android_app* app;
   void *pen;  
   int32_t stat;
-
+  atomic_bool animating;
   EGLDisplay display;
   EGLSurface surface;
   EGLContext context;
 };
+
+static void start_vsync(struct engine* e);
+static void stop_vsync(struct engine* e);
+
 
 const EGLint attribs[] = {
   EGL_BLUE_SIZE,       8,
@@ -96,10 +103,12 @@ void cmd_android(struct android_app* app, int32_t cmd)
     case APP_CMD_INIT_WINDOW:   LOGI("--> CMD %d : Init win \n",cmd);    
       init_gl(e);
       init_pen(e);
+      start_vsync(e);
     break;
     
     case APP_CMD_DESTROY:       LOGI("--> CMD %d : Destroy \n",cmd);       break;    
     case APP_CMD_LOST_FOCUS:    LOGI("--> CMD %d : Lost focus \n",cmd);
+      stop_vsync(e);
 //    lost_focus(e);
     break;
     case APP_CMD_WINDOW_RESIZED:LOGI("--> CMD %d : Resize win \n",cmd);    break;
@@ -118,7 +127,7 @@ void cmd_android(struct android_app* app, int32_t cmd)
     case APP_CMD_CONFIG_CHANGED:LOGI("--> CMD %d : Config changed \n",cmd);break;
     case APP_CMD_WINDOW_REDRAW_NEEDED:LOGI("--> CMD %d : Redraw needed \n",cmd); break;
     case APP_CMD_GAINED_FOCUS:  LOGI("--> CMD %d : Gained focus \n",cmd);
-    
+       start_vsync(e);
     break;
     
     default:                    LOGI("--> CMD %d : Je ne sais pas ! \n",cmd);
@@ -310,7 +319,7 @@ void android_main(struct android_app* state) {
 	source->process(state, source);
       }
       if (e.stat == APP_CMD_GAINED_FOCUS) {        
-        draw_in(&e);
+      //  draw_in(&e);
       };
       //  LOGI("++> %d\n",events);
       if (state->destroyRequested != 0) { 
@@ -319,4 +328,23 @@ void android_main(struct android_app* state) {
       }
     }
   }
+}
+
+static void onFrameCallback(long frameTimeNanos, void* data) {
+  struct engine* e = (struct engine *)data;  
+  if (!atomic_load(&(e->animating))) return;
+//|| G.dpy==EGL_NO_DISPLAY || G.surf==EGL_NO_SURFACE)
+//LOGI("Display\n");
+draw_in(data);
+    //eglSwapBuffers(display, surface);
+    AChoreographer_postFrameCallback(AChoreographer_getInstance(), onFrameCallback, data);
+}
+static void start_vsync(struct engine* e) {
+  if (!atomic_exchange(&(e->animating), true)) {
+    //LOGI("START DRAW\n");
+    AChoreographer_postFrameCallback(AChoreographer_getInstance(), onFrameCallback, e);
+  }
+}
+static void stop_vsync(struct engine* e) {
+    atomic_store(&(e->animating), false);
 }

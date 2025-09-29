@@ -228,3 +228,9 @@ Public
       value
     }
   )
+  
+
+  // French corner
+    
+  - tant_que Self:{BOOLEAN} faire blk:{} <- ( while Self do blk )
+  

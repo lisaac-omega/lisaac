@@ -80,7 +80,7 @@ Public
   - draw_space (px,py:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
   ( + p:PAINT
     + x,y,r,c,rr:REAL_32
-    (star = NULL).if {
+    if (star = NULL) then {
       star := ARRAY REAL_32.create_with_capacity (100*4)
       0.to 99 do { i:INTEGER
         star.add_last (w.to_integer.random_upper)
@@ -104,13 +104,13 @@ Public
     
     restore
     
-    0.to (star.upper) by 4 do { i:INTEGER
+    from 0 to (star.upper) step 4 do { i:INTEGER
       x := star.at (i+0)
       y := star.at (i+1)
       r := star.at (i+2)
       c := star.at (i+3)
       rr := (r+(t*c).cos*5).max 1.0
-      (rr = 1.0).if {
+      if (rr = 1.0) then {
         star.at (i+0) put (w.to_integer.random_upper)
         star.at (i+1) put (h.to_integer.random_upper)
         star.at (i+2) put (16.random_upper.max 2)
@@ -424,6 +424,7 @@ Public
 Public  
   - main <-
   (
+    "Main lisaac".println;
     init "StarTrek" size (600,800)
     PAPER.run
   )

@@ -44,3 +44,24 @@ Public
     '\n'.print
   )
   
+  // French corner
+  
+  - imprimer Self:SELF <- ( Self.print )
+  
+  - lire_entier (Self:SELF) :INTEGER <- 
+  (
+    STDIN.read_line
+    while {! STDIN.last_string.is_integer} do {
+      "Il faut taper un entier. Recommence.".print;
+      STDIN.read_line
+    }
+    STDIN.last_string.to_integer
+  )
+  
+  - lire_chaine (Self:SELF) :STRING <- 
+  (
+    STDIN.read_line
+    STDIN.last_string.twin
+  )
+  
+  
