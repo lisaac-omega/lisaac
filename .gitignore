@@ -82,3 +82,8 @@ android/bin/*
 ########################################
 *.lock
 *.pid
+
+*.c
+
+!bin/lisaac.c
+!build_lisaac.c
