@@ -2,7 +2,7 @@ name: Sync from external ZIP
 
 on:
   schedule:
-    - cron: "0 6 * * 1-5"   # tous les jours à 6h UTC du lundi au vendredi
+    - cron: "0 6 * * *"   # tous les jours à 6h UTC
   workflow_dispatch:
 
 jobs:
@@ -12,34 +12,30 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT }}
 
       - name: Download external ZIP
         run: curl -L -o lisaac_0.5.zip https://lisaac.org/downloads/lisaac_0.5.zip
 
-      - name: Unzip only lisaac content
+      - name: Unzip lisaac content
         run: |
           unzip -o lisaac_0.5.zip
           rsync -av lisaac/ ./
           rm -rf lisaac lisaac_0.5.zip
 
-      - name: Sync files
+      - name: Sync files (commit)
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git checkout -b sync-zip || git checkout sync-zip
+          git config user.name "Lisaac Bot"
+          git config user.email "github-bot@lisaac.org"
+          git checkout main
           git add -A
-          git diff --quiet && echo "Aucun changement" || git commit -m "Synchronisation avec le ZIP officiel"
+          if git diff --cached --quiet; then
+            echo "Aucun changement"
+          else
+            git commit -m "Synchronisation avec le ZIP officiel
+            Co-authored-by: Dominique Colnet <dominique.colnet@loria.fr>
+            Co-authored-by: Benoit Sonntag <benoit.sonntag@lisaac.org>"
+          fi
 
-      - name: Push branch
-        run: git push origin sync-zip --force
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: sync-zip
-          title: "Synchronisation avec le ZIP officiel"
-          body: "Mise à jour automatique depuis le dépôt externe (ZIP) de lisaac.org."
-          commit-message: "Synchronisation avec le ZIP officiel"
-          base: main
+      - name: Push
+        run: git push https://x-access-token:${{ secrets.PAT }}@github.com/lisaac-omega/lisaac.git main
