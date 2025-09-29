@@ -99,7 +99,7 @@ Private
   ( + id:INTEGER
     bufraw.clear
     STRING.tmp { pth:STRING_BUFFER
-      pth += "font/" += n
+      pth += "font/" += n      
       SYSTEM_IO.read_asset pth in bufraw
       ((id := pen.create_font_mem n data (bufraw.twin) free TRUE) = -1).if {
         "Warning in FONT: `".print; pth.print; "' not open.".println;

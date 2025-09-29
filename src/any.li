@@ -448,7 +448,9 @@ Public
         LIP_CALL.load_dir lip_dir img NULL is_rec FALSE
         string_tmp.remove_tail (file_lip.count)
       } else {
-        "Load lip file: ".print; path_lip.println
+        (is_verbose).if {
+          "Load lip file: ".print; path_lip.println
+        };
       }
     }
 
@@ -466,7 +468,9 @@ Public
       } else {
         // Display which lip file to use if we had to look parent directories
         (count > 0).if {
-          "Load lip file: ".print; path_lip.println
+          (is_verbose).if {
+            "Load lip file: ".print; path_lip.println
+          }
         }
       }
     }

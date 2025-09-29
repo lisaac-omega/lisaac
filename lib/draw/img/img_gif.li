@@ -251,7 +251,7 @@ Public
       (old_out != NULL).if {
         + tsrc,tdst:NATIVE_ARRAY UINTEGER_8
         sz := max_x - start_x
-        start_y.to (max_y-1) by (4 * w) do { i:INTEGER
+        from start_y to (max_y-1) step (4 * w) do { i:INTEGER
           tdst :=     out + (i+start_x)
           tsrc := old_out + (i+start_x)
           `memcpy(@tdst, @tsrc, @sz)`
@@ -378,8 +378,8 @@ Private
   - fill_gif_background (x0,y0:INTEGER) to (x1,y1:INTEGER) <-
   ( + c,p:NATIVE_ARRAY UINTEGER_8
     c := pal + (bgindex*4)
-    y0.to (y1-1) by (4 * w) do { y:INTEGER
-      x0.to (x1-1) by 4 do { x:INTEGER
+    from y0 to (y1-1) step (4 * w) do { y:INTEGER
+      from x0 to (x1-1) step 4 do { x:INTEGER
         p := out + (y + x)
         p.at 0 put (c.at 2)
         p.at 1 put (c.at 1)

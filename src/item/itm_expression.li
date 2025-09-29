@@ -146,7 +146,7 @@ Public
     {val_list.count = 1}.until_do {
       // Search max level.
       max_lev := -1
-      (val_list.lower+1).to (val_list.upper-1) by 2 do { j:INTEGER
+      from (val_list.lower+1) to (val_list.upper-1) step 2 do { j:INTEGER
 	site ?= val_list.at j
 	(site = NULL).if {
 	  // '=' or '!='.

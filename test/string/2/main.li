@@ -12,13 +12,16 @@ Public
     ustring := ustring_buffer
     char_32 := CHAR.from_alias "o"
     stridx := ustring.index_of char_32
+    OUT # "1 - stridx=" # stridx # '\n'
     {ustring.valid_index stridx}.while_do {
-      OUT # "stridx=" # stridx # '\n'
+      OUT # "2 - stridx=" # stridx # '\n'
       counter := counter + 1
       stridx := stridx + 1
+      OUT # "3 - stridx=" # stridx # '\n'
       stridx := ustring.index_of char_32 start stridx
       TEST.check (counter <= 3)
     }
+    OUT # "4 - stridx=" # stridx # '\n'
     TEST.check counter integer 3
   )
   

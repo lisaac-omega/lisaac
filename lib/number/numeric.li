@@ -335,6 +335,14 @@ Public
     from Self down_to limit_down do blc
   )
 
+  - from Self:SELF to limit_up:SELF step s:SELF do blk:{SELF;} <-
+  (
+    if (Self <= limit_up) then {
+      blk.value Self
+      from (Self + s) to limit_up step s do blk
+    }
+  )
+  /* DCDC: UTILISER CELLE JUSTE AVANT
   - to limit_up:SELF by step:SELF do blc:{SELF;} <-
   // Classical loop from `Self' to `limit_up' stepping `step'
   (
@@ -343,6 +351,7 @@ Public
       (Self + step).to limit_up by step do blc
     }
   )
+  */
 
   - downto limit_down:SELF by step:SELF do blc:{SELF;} <-
   // Classical backward loop from `Self' to `limit_up' stepping `step'
@@ -665,6 +674,12 @@ Public
 
   - to_raw_real_80:REAL_80          <- CAST SELF TO REAL_80.on Self
   
-  // For test ℤ
+  // To test type ℤ
   
   - to_z:ℤ <- ℤ.init_si to_integer_64
+  
+
+  // French corner
+  - de Self:SELF à limit_up:SELF faire blc:{SELF;} <- ( from Self to limit_up do blc)
+  
+  

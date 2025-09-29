@@ -16,7 +16,7 @@ Private
   )
   
 Private  
-  - lisaac_options:STRING := " --r"; // " --r -tcc"
+  - lisaac_options:STRING := "--r -q"
   
   + test_counter:INTEGER
   
@@ -124,7 +124,7 @@ Private
   
   - auto_test main_file:FILE <-
   ( + args:STRING_BUFFER
-    + continue,no_run,run_boost_only,bugboost,lisaacout,autotest_script:BOOLEAN
+    + continue,no_run,run_boost_only,skip_boost,lisaacout,autotest_script:BOOLEAN
     + dirpath, fname:STRING_ALIAS
     (main_file.path).print
     ':'.print
@@ -207,7 +207,7 @@ Private
       if (run_boost_only := file_exists "run-boost-only" in dirpath) then {
         ".run-boost-only.".print
       }
-      if (bugboost := file_exists "bug-boost-only" in dirpath) then {
+      if (skip_boost := file_exists "bug-boost-only" in dirpath) then {
         error_counter := error_counter + 1
         ".ERROR.bug-boost-only.".print
       }
@@ -234,11 +234,11 @@ Private
     continue.if {
       remove_list_proceed dirpath
     }
-    if (continue && {! bugboost}) then {
+    if (continue && {! skip_boost}) then {
       '.'.print; test_counter := test_counter + 1
       continue := compile_boost TRUE dirpath dirpath main fname lisaacout lisaacout
     }
-    if (continue && {! no_run} && {! bugboost}) then {
+    if (continue && {! no_run} && {! skip_boost}) then {
       '.'.print; test_counter := test_counter + 1
       continue := execute_main dirpath fname fname args args
     }

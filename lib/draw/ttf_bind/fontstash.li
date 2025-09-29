@@ -180,7 +180,7 @@ static FONSglyph* fons__allocGlyph(FONSfont* font)
     dst := pdst
     0.to (w-1) do { x:INTEGER
       z := 0; // force zero border
-      dst_stride.to ((h-2)*dst_stride) by dst_stride do { y:INTEGER
+      from dst_stride to ((h-2)*dst_stride) step dst_stride do { y:INTEGER
         z := z + (alfa * ((dst.at y.to_integer << cst_zprec) - z)) >> cst_aprec
         dst.at y put ((z >> cst_zprec).to_uinteger_8)
       }

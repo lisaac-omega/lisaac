@@ -115,3 +115,10 @@ Public
   
   - Self:SELF gxor other:BOOLEAN :BOOLEAN <- Self ^ other
   
+  
+  // French corner
+  
+  - si Self:SELF alors tblk:{} sinon fblk:{} <- ( if Self then tblk else fblk )
+  
+  - si Self:SELF alors tblk:{} <- ( if Self then tblk )
+  

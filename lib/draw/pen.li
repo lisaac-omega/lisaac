@@ -76,7 +76,7 @@ Public // Private
 
   - get_state:STATE <- states.last
   
-  - new_pen:SELF <- clone.init_pen
+  - new_pen_with_font f:BOOLEAN :SELF <- clone.init_pen f
   
   - init_font <-
   (   
@@ -90,7 +90,7 @@ Public // Private
     )
   )
   
-  - init_pen:SELF <-
+  - init_pen f:BOOLEAN :SELF <-
   (
     pen_gl := gl := PEN_GL.new
     pen_gl.init (antialias | stencil_strokes | debug)
@@ -103,6 +103,10 @@ Public // Private
     set_device_pixel_ratio 1.0
     pen_gl.render_create
     init_font
+    (f).if {
+      FONT.load_default
+      FONT.load Self
+    }
     Self
   )
     

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+MINI_DIR="$(cd "$(dirname "$0")" && pwd)"
+export LD_LIBRARY_PATH="$MINI_DIR/lib64:$MINI_DIR/lib:${LD_LIBRARY_PATH:-}"
+exec "$MINI_DIR/bin/clang"      --target=aarch64-linux-android24      --sysroot "$MINI_DIR/sysroot"      "$@"
