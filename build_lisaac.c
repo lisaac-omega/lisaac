@@ -307,8 +307,7 @@ __li__FC *li__C3;
 /* STRING ALIAS             */
 /*==========================*/
 
-__li__FB __string_1={__li__FB__,{44,"Installing Lisaac - Omega Compiler and T\
-ools."},1117486501};
+__li__FB __string_1={__li__FB__,{39,"Installing Lisaac Ω Compiler and Tools."},1039603244};
 __li__FB __string_2={__li__FB__,{8,"--verbose"},4310945};
 __li__FB __string_3={__li__FB__,{14,"Unknow option \""},395385922};
 __li__FB __string_4={__li__FB__,{1,"\"."},182};
@@ -2201,7 +2200,7 @@ static void li__WLK(__li__K li__XLK)
   print_char(li__DMK);
 }
 static void init_string_alias() {
-  if (__string_1.li__OPE!=li__GPH(&__string_1)) { print_string("ERROR[Installing Lisaac - Omega Compiler and Tools.]\n"); };
+  if (__string_1.li__OPE!=li__GPH(&__string_1)) { print_string("ERROR[Installing Lisaac Ω Compiler and Tools.]\n"); };
   __string_1.li__OPE = li__GPH(&__string_1);
   li__OSF(&__string_1);
   if (__string_2.li__OPE!=li__GPH(&__string_2)) { print_string("ERROR[--verbose]\n"); };

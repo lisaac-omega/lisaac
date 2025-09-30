@@ -1,4 +1,4 @@
-Depending pass:  \--SEMANTIC---------
+--SEMANTIC---------
 Type `STRING_BUFFER' is invalid with `Expanded INTEGER_32'.
 Line 11 column 9 in MAIN(.../test/misc/19/main.li):
     s := i; // ici lisaac doit causer...
@@ -7,4 +7,4 @@ Line 11 column 9 in MAIN(.../test/misc/19/main.li):
 Line 8 column 7 in MAIN(.../test/misc/19/main.li):
   ( + i:INTEGER_32
        ^
-Load lip file: /home/colnet/lisaac/test/misc/19/../../../make.lip
+Load lip file: ../../../make.lip

@@ -4,7 +4,7 @@ Header
 Public
   - main <-
   ( + r:RANDOM
-    r := RANDOM.new(1)
+    r := new RANDOM.init 1
     TEST.check (r.real_64 != RANDOM.real_64)
     5.times {
       (RANDOM.range 1 to 5).println

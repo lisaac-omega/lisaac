@@ -124,7 +124,7 @@ Private
   
   - auto_test main_file:FILE <-
   ( + args:STRING_BUFFER
-    + continue,no_run,run_boost_only,skip_boost,lisaacout,autotest_script:BOOLEAN
+    + continue,no_run,boost_only,skip_boost,lisaacout,autotest_script:BOOLEAN
     + dirpath, fname:STRING_ALIAS
     (main_file.path).print
     ':'.print
@@ -204,12 +204,12 @@ Private
       }
     }
     continue.if {
-      if (run_boost_only := file_exists "run-boost-only" in dirpath) then {
-        ".run-boost-only.".print
+      if (boost_only := file_exists "boost-only" in dirpath) then {
+        ".boost-only.".print
       }
-      if (skip_boost := file_exists "bug-boost-only" in dirpath) then {
+      if (skip_boost := file_exists "skip-boost" in dirpath) then {
         error_counter := error_counter + 1
-        ".ERROR.bug-boost-only.".print
+        ".ERROR.skip-boost.".print
       }
       lisaacout := file_exists "lisaacout" in dirpath
       STRING.tmp { args_path:STRING_BUFFER
@@ -227,7 +227,7 @@ Private
       '.'.print; test_counter := test_counter + 1
       continue := compile_boost FALSE dirpath dirpath main fname lisaacout lisaacout
     }
-    if (continue && {! no_run} && {! run_boost_only}) then {
+    if (continue && {! no_run} && {! boost_only}) then {
       '.'.print; test_counter := test_counter + 1
       execute_main dirpath fname fname args args
     }
@@ -325,7 +325,7 @@ Private
     lisaacout.if {
       (exit_status != 0).if {
         '.'.print
-      }.elseif {file_exists "main" in dirpath} then {
+      }.elseif {file_exists main_exec in dirpath} then {
         '.'.print
       } else {
         ".lisaacout.".print
@@ -470,4 +470,3 @@ Private
     msg.println
     SYSTEM.exit 1
   )
-  

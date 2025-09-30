@@ -87,6 +87,7 @@ Public
   (
     id
     .case "sound"       then { sound := v; }
+    .case "decorated"   then { set_decorated v; }
     .case "keyboard"    then { vkeyb := v; }
     .case "keyb_dyn"    then { vkeyb_dyn := v; }
     .case "header_lock" then { header_lock := v; }
@@ -106,6 +107,7 @@ Public
     .case "shortcut" then { put_str shortcut_file; }
     .case "look"     then { put_str look_file;     }
     .case "sound"    then { put_bool sound;   }
+    .case "decorated" then { put_bool decorated;   }
     .case "keyboard" then { put_bool vkeyb;   }
     .case "keyb_dyn" then { put_bool vkeyb_dyn;   }
     .case "help"     then { put_bool help;    }

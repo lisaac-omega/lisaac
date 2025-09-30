@@ -1,0 +1,64 @@
+Header
+  + name := RANDOM;
+  /*
+   RANDOM number generation.
+  */
+  
+Inherit  
+  - parent_rgn_common:RGN_COMMON := RGN_COMMON
+    
+Private
+  + seedmem:INTEGER_32 := 1
+
+  + iv:NATIVE_ARRAY INTEGER_32
+  
+  + iy:INTEGER_32
+  
+  - minimal_next <-
+  ( + k:INTEGER_32
+    k := seedmem / 127773
+    seedmem := 16807 * (seedmem - k * 127773) - 2836 * k
+    (seedmem < 0).if {
+      seedmem := seedmem + 2147483647
+    }
+    (iv = NULL).if {
+       iv := NATIVE_ARRAY INTEGER_32 .create 32
+    }
+  )
+  
+  - next <-
+  ( + tmp:INTEGER_32
+    tmp := iy % 32
+    minimal_next
+    iy := iv.at tmp
+    iv.at tmp put seedmem
+  )
+
+Public
+  
+  - init seed:UINTEGER_32 : SELF <-
+  ( + i:INTEGER_32
+    seedmem := seed.to_raw_integer_32
+    iv := NATIVE_ARRAY INTEGER_32 .create 32
+    minimal_next
+    {i <= 6}.while_do {
+      minimal_next
+      i := i + 1
+    }
+    i := 31
+    {i >= 0}.while_do {
+      iv.at i put seedmem
+      minimal_next
+      i := i - 1
+    }
+    iy := iv.at 0
+    next
+    Self
+  )
+  
+  - uint32:UINTEGER_32 <-
+  (
+    next
+    iy.to_raw_uinteger_32
+  )
+  

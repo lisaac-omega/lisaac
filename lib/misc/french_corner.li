@@ -1,0 +1,28 @@
+Header
+  + name := FRENCH_CORNER;
+  
+  /*
+  To insert to add a small touch of French for beginners in programming.
+
+
+  */
+  
+Private
+  
+  - lire_entier:INTEGER <-
+  (
+    STDIN.read_line
+    while {! STDIN.last_string.is_integer} do {
+      "Il faut taper un entier. Recommence.".print;
+      STDIN.read_line
+    }
+    STDIN.last_string.to_integer
+  )
+  
+  - lire_chaine:STRING_ALIAS <- 
+  (
+    STDIN.read_line
+    STDIN.last_string.to_string_alias
+  )
+  
+ 

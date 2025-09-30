@@ -9,7 +9,7 @@ Header
   (
     (target = "apple").if {      
       add_lib "-I/opt/homebrew/include -L/opt/homebrew/lib -lglfw -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL";
-      execute_fail (lisaac+"misc/new_assets.sh "+lisaac);
+      execute_fail (lisaac+"misc/new_assets.sh "+lisaac+" "+input_file);
     };
     (target = "windows").if {
       cc_option (lisaac+"deps_lib/windows/glad.c");
@@ -17,7 +17,7 @@ Header
       add_lib "-lopengl32";
       add_lib "-lglfw3";
       add_lib "-lgdi32";
-      execute_fail ("bash "+lisaac+"misc/new_assets.sh "+lisaac);
+      execute_fail ("bash "+lisaac+"misc/new_assets.sh "+lisaac+" "+input_file);
     };
     (target = "unix").if {
       lib_gcc := lib_gcc + " " + (lisaac+"deps_lib/linux/libglfw3.a -I"+lisaac+"deps_lib/linux");
@@ -25,7 +25,7 @@ Header
       add_lib "-lpthread";
       add_lib "-lX11";
       add_lib "-ldl";
-      execute_fail (lisaac+"misc/new_assets.sh "+lisaac);
+      execute_fail (lisaac+"misc/new_assets.sh "+lisaac+" "+input_file);
     };
   );
   - external := `

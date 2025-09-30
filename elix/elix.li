@@ -101,10 +101,8 @@ Public
   ( + b:BUFFER
    
     SIGNAL.infinite_recursion
-    PAPER.unset (PAPER.decorated)
-    PAPER.set (PAPER.transparent)
     put_icon
-    init
+    init    
     (COMMAND_ARGS.count > 1).if {
       STRING.tmp { pth:STRING_BUFFER
         ENVIRONMENT.pwd_in pth

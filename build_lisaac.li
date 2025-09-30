@@ -1,6 +1,6 @@
 Header
   + name := BUILD_LISAAC;
-  /*Install and configure Lisaac. */
+  /*Install and configure Lisaac Ω. */
 
   - external := `#include <unistd.h>`;
 
@@ -165,7 +165,7 @@ Private
 Public
   - main <-
   (
-    "Installing Lisaac - Omega Compiler and Tools.".println
+    "Installing Lisaac Ω Compiler and Tools.".println
     FILE_UTILS.working_directory_in working_directory
     ? {working_directory.last = '/'}
     verbose := COMMAND_ARGS.option_shift "--verbose"

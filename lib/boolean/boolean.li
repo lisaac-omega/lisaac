@@ -122,3 +122,7 @@ Public
   
   - si Self:SELF alors tblk:{} <- ( if Self then tblk )
   
+  - Self:SELF ou other:BOOLEAN   :BOOLEAN <- (Self || {other})
+  
+  - Self:SELF et other:BOOLEAN   :BOOLEAN <- (Self && {other})
+  

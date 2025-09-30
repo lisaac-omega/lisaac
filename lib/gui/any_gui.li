@@ -106,6 +106,16 @@ Public
   - cmd_cur:CMD := CMD
   - delay_popup:INTEGER := 1_600_000
   
+  - decorated:BOOLEAN
+  - set_decorated b:BOOLEAN :BOOLEAN <-
+  ( decorated := b;
+    (! decorated).if {      
+      PAPER.unset (PAPER.decorated)
+      PAPER.set (PAPER.transparent)
+    }
+    TRUE
+  )
+    
   - acts_wait:ARRAY ACT := ARRAY ACT.create_with_capacity 32
   
   // Shortcut

@@ -36,6 +36,7 @@ Public
     .case "font_sys_up"   then { b := {FONT.inc_size_sys (+1)}; }
     .case "font_sys_down" then { b := {FONT.inc_size_sys (-1)}; }
     .case "sound_switch"  then { b := {set_sound (!sound)}; }
+    .case "decorated_switch" then { b := {set_decorated (!decorated)}; }
     .case "extend_code_sw"  then { b := {set_extend_code (!extend_code)}; } // Lisaac only
     .case "auto_indent_sw"  then { b := {set_auto_indent (!auto_indent)}; } // Lisaac only
     .case "vkeyb_switch"  then { b := {set_vkeyb (!vkeyb)}; }
@@ -117,6 +118,7 @@ Public
   ( + b:{ACT; BOOLEAN}
     c0
     .case "sound_check" then { b := {a:ACT; sound}; }
+    .case "decorated_check" then { b := {a:ACT; decorated}; }
     .case "extend_code_check" then { b := {a:ACT; extend_code}; } // Lisaac Only
     .case "auto_indent_check" then { b := {a:ACT; auto_indent}; } // Lisaac Only
     .case "vkeyb_check" then { b := {a:ACT; vkeyb}; }

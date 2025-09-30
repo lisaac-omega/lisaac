@@ -5,7 +5,7 @@ Public
   - main <-
   ( + r:RANDOM
     + x,cm1,c0,c1:INTEGER
-    r := RANDOM.new(3)
+    r := new RANDOM.init 3
     TEST.check (r.range 3 to 3 = 3)
     TEST.check (r.range 0 to 0 = 0)
     TEST.check (r.range (-1) to (-1) = -1)

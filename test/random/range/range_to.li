@@ -1,0 +1,36 @@
+Header
+  + name := RANGE_TO;
+ 
+Public
+  - main <-
+  ( + random: RANDOM
+    + mt19937: MT19937
+    + v1:INTEGER
+    random := new RANDOM.init 3
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 10
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 3
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 3
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 7
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 2
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 7
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 7
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 2
+    v1 := random.range 1 to 10
+    TEST.check v1 integer 8
+    
+    mt19937 := new MT19937.init 3
+    v1 := mt19937.range 1 to 10
+    TEST.check v1 integer 1
+    v1 := mt19937.range 1 to 10
+    TEST.check v1 integer 9
+    v1 := mt19937.range 1 to 10
+    TEST.check v1 integer (-8)
+  )

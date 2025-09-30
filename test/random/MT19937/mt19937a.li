@@ -1,0 +1,18 @@
+Header
+  + name := MT19937A;
+ 
+Public
+  - main <-
+  ( + v1:INTEGER
+    + v2:INTEGER
+    + rand1, rand2:MT19937
+    rand1 := new MT19937 .init 3
+    v1 := rand1.uint32
+    TEST.check v1 integer 2365658986
+    
+    rand2 := MT19937.new .init 4
+    v2 := rand2.uint32
+    TEST.check v2 integer 4153361530
+    
+  )
+  

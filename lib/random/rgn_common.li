@@ -1,0 +1,68 @@
+Header
+  + name := RGN_COMMON
+  /*
+   RNG: Random Number Generator.
+   A common interface that allows you to quickly switch from one generator to another.
+  */
+
+Insert  
+  - parent_clone:CLONE := CLONE
+    
+Public
+  
+  - new Self:SELF :SELF <- clone
+  
+  - init seed:UINTEGER_32 :SELF <-
+  [
+    ? {seed > 0}
+  ]
+  (
+   abstract
+   )	
+  
+  - uint32:UINTEGER_32 <- abstract
+
+  - real_64:REAL_64 <- uint32.to_real_64 / 0FFFF_FFFFh
+  
+  - real_32:REAL_32 <- uint32.to_real_32 / 0FFFF_FFFFh
+  
+  - real_32 min:REAL_32 to max:REAL_32 :REAL_32 <- real_32 * (max-min) + min
+  
+  - real_64 min:REAL_64 to max:REAL_64 :REAL_64 <- real_64 * (max-min) + min
+  
+  - hexadecimal_digit:CHARACTER <-
+  ( + i,j:INTEGER
+    i := range 0 to 15
+    (i <= 9).if {
+      j := ('0'.code) + i
+    } else {
+      j := ('A'.code) - 10 + i
+    }
+    j.to_character
+  )
+  [
+    ? {Result.is_hexadecimal_digit}.txt{Result.to_string}
+  ]
+  
+  - max v:INTEGER :INTEGER_32 <- range 0 to v
+  
+  - frange mn:REAL_32 to mx:REAL_32 :REAL_32 <-
+  (real_32 * (mx - mn) + mn)
+  
+  - range mn:INTEGER to mx:INTEGER_32 : INTEGER_32 <-
+  // Random value inside range [ mn, mx ].
+  [
+    ? {mn <= mx}
+  ]
+  ( + result,dx,mini,maxi:INTEGER_32
+    dx := 1 - mn
+    mini := mn + dx
+    maxi := mx + dx
+    result := (uint32 .to_raw_integer_32 % maxi) + 1
+    result - dx
+  )
+  [
+    ? {Result.in_range mn to mx};
+  ]
+  
+  
