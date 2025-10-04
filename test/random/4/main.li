@@ -6,11 +6,11 @@ Public
   ( + r:RANDOM
     + x,cm1,c0,c1:INTEGER
     r := new RANDOM.init 3
-    TEST.check (r.range 3 to 3 = 3)
-    TEST.check (r.range 0 to 0 = 0)
-    TEST.check (r.range (-1) to (-1) = -1)
+    TEST.check (r.min 3 max 4) integer 4
+    TEST.check (r.min 0 max 1 = 0)
+    TEST.check (r.min (-1) max (0) = -1)
     1000.times {
-      x := r.range (-1) to 1
+      x := r.min (-1) max 1
       (x = -1).if {
         cm1 := cm1 + 1
       }.elseif {x = 0} then {
@@ -20,9 +20,9 @@ Public
         c1 := c1 + 1
       }
     }
-    TEST.check (cm1 > 310)
-    TEST.check (c0 > 310)
-    TEST.check (c1 > 310)
-    //(cm1.to_string + " " + c0.to_string + " " + c1.to_string).println
+    TEST.check cm1 integer 315
+    TEST.check c0 integer 329
+    TEST.check c1 integer 356
+    // Not so bad !
   )
   

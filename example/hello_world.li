@@ -1,22 +1,23 @@
 Header
   
   + name := HELLO_WORLD;
-  /*The basic and traditional "Hello World" program in Lisaac Ω. 
+  /*
+  The basic and traditional "Hello World" program in Lisaac Ω. 
   
-To run this example in a terminal window:
+  To run this example in a terminal window:
 
-Step 1:
-  cd lisaac/example
+  Step 1:
+       cd lisaac/example
 
-Step 2:
-  lisaac hello_world.li
+  Step 2:
+       lisaac hello_world.li
 
-Step 3:
-  ./hello_world*/
+  Step 3:
+       ./hello_world*/
 
 Public
   
   - main <-
   (   
-    "Hello world!\n".print
+    print ("Hello world!\n")
   )

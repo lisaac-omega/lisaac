@@ -9,7 +9,7 @@ Header
   */
   
 Inherit
-  - parent_rgn_common:RGN_COMMON := RGN_COMMON
+  - parent_rgn_common: /*EYE*/ RGN_COMMON := RGN_COMMON
   
 Private
   - cst_n:INTEGER := 624

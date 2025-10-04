@@ -1,0 +1,41 @@
+Header
+  + name := RAND_MAX;
+ 
+Public
+  - main <-
+  ( + random: RANDOM
+    + mt19937: MT19937
+    + v1,c:INTEGER
+    
+    c := TEST.counter
+    random := new RANDOM.init 5
+    while {v1 != 1} do {
+      v1 := random.max 1
+      TEST.check TRUE
+    }
+    TEST.check (TEST.counter - c) integer 1 // Good
+    
+    c := TEST.counter
+    random := new RANDOM.init 5
+    while {v1 != 0} do {
+      v1 := random.max 1
+      TEST.check TRUE
+    }
+    TEST.check (TEST.counter - c) integer 4 // Mouais...
+    
+    c := TEST.counter    
+    mt19937 := new MT19937.init 5
+    while {v1 != 1} do {
+      v1 := mt19937.max 1
+      TEST.check TRUE
+    }
+    TEST.check (TEST.counter - c) integer 1 // Good
+    
+    c := TEST.counter    
+    mt19937 := new MT19937.init 5
+    while {v1 != 0} do {
+      v1 := mt19937.max 1
+      TEST.check TRUE
+    }
+    TEST.check (TEST.counter - c) integer 2 // Good
+  )

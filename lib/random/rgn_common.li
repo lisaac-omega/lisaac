@@ -43,26 +43,30 @@ Public
   [
     ? {Result.is_hexadecimal_digit}.txt{Result.to_string}
   ]
+    
+  - between mn:REAL_32 and mx:REAL_32 :REAL_32 <- (real_32 * (mx - mn) + mn)
   
-  - max v:INTEGER :INTEGER_32 <- range 0 to v
-  
-  - frange mn:REAL_32 to mx:REAL_32 :REAL_32 <-
-  (real_32 * (mx - mn) + mn)
-  
-  - range mn:INTEGER to mx:INTEGER_32 : INTEGER_32 <-
-  // Random value inside range [ mn, mx ].
+  - range mn:INTEGER_32 to mx:INTEGER_32 : INTEGER_32 <-
   [
-    ? {mn <= mx}
+    ? {deprecated FALSE msg "RGN_COMMON: use min__max instead"};
   ]
-  ( + result,dx,mini,maxi:INTEGER_32
-    dx := 1 - mn
-    mini := mn + dx
-    maxi := mx + dx
-    result := (uint32 .to_raw_integer_32 % maxi) + 1
-    result - dx
+  (
+    min mn max mx
+  )
+  
+  - min mn:INTEGER_32 max mx:INTEGER_32 : INTEGER_32 <-
+  // Random value inside [ mn, mx ].
+  [
+    ? {mn < mx}
+  ]
+  ( + range, result:INTEGER_32
+    range := mx - mn + 1
+    result := mn + (uint32 .to_raw_integer % range)
+    result
   )
   [
     ? {Result.in_range mn to mx};
   ]
   
+  - max v:INTEGER_32 :INTEGER_32 <- min 0 max v
   

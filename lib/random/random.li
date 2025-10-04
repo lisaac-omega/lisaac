@@ -5,7 +5,7 @@ Header
   */
   
 Inherit  
-  - parent_rgn_common:RGN_COMMON := RGN_COMMON
+  - parent_rgn_common: /*EYE*/ RGN_COMMON := RGN_COMMON
     
 Private
   + seedmem:INTEGER_32 := 1

@@ -25,4 +25,9 @@ Private
     STDIN.last_string.to_string_alias
   )
   
- 
+  - vrai:BOOLEAN <- TRUE
+  
+  - faux:BOOLEAN <- FALSE
+  
+  - non (b:BOOLEAN):BOOLEAN <- !b
+  
