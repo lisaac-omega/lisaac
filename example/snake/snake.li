@@ -1,0 +1,393 @@
+// Made by Scheffer Benjamin and Ray Marcelin
+
+Section Header
+  + name := SNAKE;
+  
+Section Inherit 
+  + parent_window:Expanded WINDOW;
+  
+Section Private
+
+  // Taille de la grille
+  - grid_width:INTEGER := 20;
+  - grid_height:INTEGER := 15;
+  - cell_size:INTEGER := 25;
+  - score_height:INTEGER := 40; // Hauteur réservée pour le score
+  - x_head_position:INTEGER := 5;
+  - y_head_position:INTEGER := 7;
+  - x_apple_position:INTEGER := RANDOM.range 0 to grid_width;
+  - y_apple_position:INTEGER := RANDOM.range 0 to grid_height;
+
+  // Direction de mouvement du serpent
+  - dir_x:INTEGER := 1;
+  - dir_y:INTEGER := 0;
+
+  // Score et longueur du serpent
+  - score:INTEGER := 1;
+  - snake_length:INTEGER := 3;
+  
+  // Corps du serpent - stockage des positions x et y
+  - snake_body_x:ARRAY(INTEGER);
+  - snake_body_y:ARRAY(INTEGER);
+  
+  // État du jeu : 0 = menu, 1 = en jeu
+  - game_state:INTEGER := 0;
+  
+  // Boutons du menu
+  - play_button:BUTTON;
+  - quit_button:BUTTON;
+
+Section Public
+
+  - init_snake <-
+  ( + i:INTEGER;
+    // Créer les arrays pour le corps du serpent
+    snake_body_x := ARRAY(INTEGER).create snake_length;
+    snake_body_y := ARRAY(INTEGER).create snake_length;
+    
+    // Initialiser le serpent avec 3 segments alignés horizontalement
+    i := 0;
+    {i < snake_length}.while_do {
+      snake_body_x.at i put (x_head_position - i - 1);
+      snake_body_y.at i put y_head_position;
+      i := i + 1;
+    };
+  );
+
+  - draw_cell (x,y:INTEGER) color col:COLOR <-
+  ( + x0,y0:INTEGER;
+    x0 := x * cell_size;
+    y0 := (y * cell_size) + score_height; // Décaler vers le bas pour laisser place au score
+    begin_path;
+    rect (x0,y0) size (cell_size-1,cell_size-1);
+    fill_color col;
+    fill;
+  );
+
+  - start_game <-
+  (
+    // Supprimer les boutons du menu
+    child.clear;
+    
+    game_state := 1;
+    score := 1;
+    snake_length := 3;
+    x_head_position := 5;
+    y_head_position := 7;
+    dir_x := 1;
+    dir_y := 0;
+    x_apple_position := RANDOM.range 0 to grid_width-1;
+    y_apple_position := RANDOM.range 0 to grid_height-1;
+    init_snake;
+  );
+
+  - show_menu <-
+  (
+    // Nettoyer les enfants existants
+    child.clear;
+    
+    // Recréer les boutons du menu
+    play_button := BUTTON.new.init "JOUER" do { b:BUTTON; start_game; TRUE};
+    quit_button := BUTTON.new.init "QUITTER" do { b:BUTTON; exit 0; TRUE};
+    
+    // Disposition des boutons (verticale) et centrage
+    (
+      play_button / quit_button
+    ).init_parent Self.size (width, height).setr (align_center | align_middle);
+  );
+
+  - draw_menu <-
+  (
+    // Fond noir (déjà le fond par défaut)
+    
+    // Titre du jeu - centré correctement
+    font_size 48;
+    font_face_id (FONT sys (FONT bold));
+    fill_color (COLOR.rgb(255,255,255));
+    text ((width/2), height/3) msg "SNAKE GAME";
+    
+    // Les boutons sont gérés automatiquement par le système GOBJ
+  );
+
+  - draw_score <-
+  ( + score_text:STRING;
+    score_text := "Score: " + score.to_string;
+    
+    // Configuration de la police
+    font_size 24;
+    font_face_id (FONT sys (FONT bold));
+    
+    // Couleur du texte (blanc)
+    fill_color (COLOR.rgb(255,255,255));
+    
+    // Afficher le score en haut de l'écran (position mieux centrée)
+    text ((width/2), 30) msg score_text;
+  );
+
+  - move_snake <-
+  ( + i:INTEGER;
+    + old_x, old_y:INTEGER;
+    
+    // Sauvegarder l'ancienne position de la tête
+    old_x := x_head_position;
+    old_y := y_head_position;
+    
+    // Déplacer la tête selon la direction
+    x_head_position := x_head_position + dir_x;
+    y_head_position := y_head_position + dir_y;
+
+    // Gestion des bords (passage de l'autre côté)
+    (x_head_position >= grid_width).if { 
+      (dir_x = 1).if {x_head_position := 0}
+    };
+    (x_head_position <= -1).if { 
+      (dir_x = -1).if {x_head_position := grid_width-1}
+    };
+    (y_head_position >= grid_height).if { 
+      (dir_y = 1).if {y_head_position := 0}
+    };
+    (y_head_position <= -1).if { 
+      (dir_y = -1).if {y_head_position := grid_height - 1}
+    };
+
+    // Déplacer le corps : chaque segment prend la position du précédent
+    i := snake_length - 1;
+    {i > 0}.while_do {
+      snake_body_x.at i put (snake_body_x.at (i-1));
+      snake_body_y.at i put (snake_body_y.at (i-1));
+      i := i - 1;
+    };
+    
+    // Le premier segment du corps prend l'ancienne position de la tête
+    snake_body_x.at 0 put old_x;
+    snake_body_y.at 0 put old_y;
+  );
+
+  - check_self_collision:BOOLEAN <-
+  ( + i:INTEGER;
+    + collision:BOOLEAN;
+    
+    collision := FALSE;
+    i := 0;
+    {(i < snake_length).if {!collision} else {FALSE}}.while_do {
+      (snake_body_x.at i = x_head_position).if {
+        (snake_body_y.at i = y_head_position).if {
+          collision := TRUE;
+        };
+      };
+      i := i + 1;
+    };
+    collision
+  );
+
+  - grow_snake <-
+  ( + new_snake_x, new_snake_y:ARRAY(INTEGER);
+    + i:INTEGER;
+    + tail_x, tail_y:INTEGER;
+    
+    // Sauvegarder la position de la queue actuelle
+    tail_x := snake_body_x.at (snake_length - 1);
+    tail_y := snake_body_y.at (snake_length - 1);
+    
+    // Créer de nouveaux arrays plus grands
+    snake_length := snake_length + 1;
+    new_snake_x := ARRAY(INTEGER).create snake_length;
+    new_snake_y := ARRAY(INTEGER).create snake_length;
+    
+    // Copier l'ancien corps
+    i := 0;
+    {i < (snake_length - 1)}.while_do {
+      new_snake_x.at i put (snake_body_x.at i);
+      new_snake_y.at i put (snake_body_y.at i);
+      i := i + 1;
+    };
+    
+    // Ajouter le nouveau segment à la queue
+    new_snake_x.at (snake_length - 1) put tail_x;
+    new_snake_y.at (snake_length - 1) put tail_y;
+    
+    // Remplacer les anciens arrays
+    snake_body_x := new_snake_x;
+    snake_body_y := new_snake_y;
+  );
+
+  - draw <-
+  ( + t:REAL_32;
+    + i:INTEGER;
+    
+    // Si on est dans le menu, dessiner le menu
+    (game_state = 0).if {
+      draw_menu;
+      PAPER.refresh_again;
+    } else {
+      // Sinon, dessiner le jeu
+      CLOCK.usleep 200000;
+      
+      t := CLOCK.seconds;
+      
+      // Dessiner la grille
+      0.to (grid_height-1) do { y:INTEGER;
+        0.to (grid_width-1) do { x:INTEGER;
+          (((x+y) % 2) = 0).if {
+            draw_cell (x,y) color (COLOR.rgb(240,240,240)); // Gris clair
+          } else {
+            draw_cell (x,y) color (COLOR.rgb(200,200,200)); // Gris foncé
+          };
+        };
+      };
+      
+      // Déplacer le serpent
+      move_snake;
+      
+      // Vérifier collision avec soi-même
+      (check_self_collision).if {
+        "Game Over! Score: ".print;
+        score.print;
+        "\n".print;
+        // Retour au menu
+        game_state := 0;
+        draw_menu;
+        PAPER.refresh_again; // Les boutons seront recréés
+      };
+      
+      // Dessiner le corps du serpent
+      i := 0;
+      {i < snake_length}.while_do {
+        draw_cell (snake_body_x.at i, snake_body_y.at i) color (COLOR.rgb(0,100,0));
+        i := i + 1;
+      };
+      
+      // Dessiner la tête du serpent (plus claire que le corps)
+      draw_cell (x_head_position,y_head_position) color (COLOR.rgb(0,200,0));
+      
+      draw_apple;
+      
+      // Dessiner le score en haut centré
+      draw_score;
+
+      PAPER.refresh_again;
+    };
+  );
+  
+  - draw_apple <-
+  ( + is_apple_on_snake:BOOLEAN;
+    + is_apple_in_window:BOOLEAN;
+    + boucle:BOOLEAN;
+    draw_cell (x_apple_position,y_apple_position) color (COLOR.rgb(255,0,0));
+    
+    // Vérifier si le serpent mange la pomme
+    if (y_head_position = y_apple_position) then {
+      (x_apple_position = x_head_position).if {
+        score := score + 1;
+        grow_snake;
+        // Générer une nouvelle pomme
+        x_apple_position := RANDOM.range 0 to grid_width-1;
+        y_apple_position := RANDOM.range 0 to grid_height-1;
+        is_apple_on_snake := apple_on_snake;
+        is_apple_in_window := apple_in_window;
+        (is_apple_in_window).if{
+          (!is_apple_on_snake).if{
+              boucle := FALSE;
+          }else{
+            boucle := TRUE;
+          };
+        }else{
+          boucle := TRUE;
+        };
+        {boucle}.while_do {
+          x_apple_position := RANDOM.range 0 to grid_width-1;
+          y_apple_position := RANDOM.range 0 to grid_height-1;
+          is_apple_on_snake := apple_on_snake;
+          is_apple_in_window := apple_in_window;
+          (is_apple_in_window).if{
+          (!is_apple_on_snake).if{
+              boucle := FALSE;
+              }else{
+                boucle := TRUE;
+              };
+          }else{
+            boucle := TRUE;
+          };
+        }
+      };
+    };
+  );
+
+  - apple_on_snake:BOOLEAN <-
+  ( + is_apple_on_snake:BOOLEAN;
+    + i:INTEGER;
+    is_apple_on_snake := FALSE;
+    i := 0;
+    {(i < snake_length).if {!is_apple_on_snake} else {FALSE}}.while_do {
+      (snake_body_x.at i = x_apple_position).if {
+        (snake_body_y.at i = y_apple_position).if {
+          is_apple_on_snake := TRUE;
+        };
+      };
+      i := i + 1;
+    };
+    is_apple_on_snake
+  );
+
+  - apple_in_window:BOOLEAN <-
+  ( + is_apple_in_window:BOOLEAN;
+    + is_x_ok:BOOLEAN;
+    + is_y_ok:BOOLEAN;
+    
+    (x_apple_position > -1).if{
+      (x_apple_position < grid_width).if{
+         is_x_ok := TRUE; 
+      }else{
+        is_x_ok :=FALSE;
+      };
+    }else{
+      is_x_ok :=FALSE;
+    };
+
+    (y_apple_position > -1).if{
+      (y_apple_position < grid_height).if{
+         is_y_ok := TRUE; 
+      }else{
+        is_y_ok :=FALSE;
+      };
+    }else{
+      is_y_ok :=FALSE;
+    };
+
+    (is_x_ok).if{
+      (is_y_ok).if{
+        is_apple_in_window :=TRUE;
+      }else{
+        is_apple_in_window :=FALSE;
+      };
+    }else{
+      is_apple_in_window :=FALSE;
+    };
+    is_apple_in_window
+  );
+  - main <-
+  ( 
+    RANDOM.init(CLOCK.clock.to_integer_32);
+    init "Snake Game" size (grid_width * cell_size, (grid_height * cell_size) + score_height);
+    
+    // Afficher le menu initial
+    show_menu;
+    
+    PAPER.run;
+  );
+
+  - key s:STRING cmd c:UINTEGER_8 <-
+  ( + ch:CHARACTER;
+    // Les contrôles ne fonctionnent que pendant le jeu
+    (game_state = 1).if {
+      ch := s.first; // prend le premier caractère
+      (ch = 'z').if { dir_x := 0; dir_y := -1; }  // Haut
+      (ch = 's').if { dir_x := 0; dir_y := 1;  }  // Bas
+      (ch = 'q').if { dir_x := -1; dir_y := 0; }  // Gauche
+      (ch = 'd').if { dir_x := 1; dir_y := 0;  }  // Droite
+      (ch = 'U').if { dir_x := 0; dir_y := -1; }  // Haut
+      (ch = 'D').if { dir_x := 0; dir_y := 1;  }  // Bas
+      (ch = 'L').if { dir_x := -1; dir_y := 0; }  // Gauche
+      (ch = 'R').if { dir_x := 1; dir_y := 0;  }  // Droite
+    };
+  );
