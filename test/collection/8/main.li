@@ -110,11 +110,11 @@ Private
     x := 13
     nsize.times {
       x := x + 1
-      idx := RANDOM.range 0 to (array.count)
+      idx := RANDOM.min 0 max (array.count)
       add x to idx
     }
     {array.is_empty}.until_do {
-      idx := RANDOM.range 0 to (array.upper)
+      idx := RANDOM.min 0 max (array.upper)
       remove idx
     }
   )
@@ -128,7 +128,7 @@ Private
     }
     new
     {list.is_empty}.until_do {
-      i := (RANDOM.range 0 to (list.upper))
+      i := (RANDOM.min 0 max (list.upper))
       ? {list.valid_index i}
       x := list.at i
       list.remove i
@@ -152,7 +152,7 @@ Private
       add_last v
     }
     {array.is_empty}.until_do {
-      i := RANDOM.range 0 to (array.upper)
+      i := RANDOM.min 0 max (array.upper)
       ? {array.valid_index i}
       remove i
     }
@@ -309,7 +309,7 @@ Private
     nsize.times {
       + v:INTEGER
       + idx:INTEGER
-      v := (RANDOM.range 1 to nsize)
+      v := (RANDOM.min 1 max nsize)
       idx := array.lower
       {(idx <= array.upper) && {(array.at idx) < v}}.while_do {
         idx := idx + 1
@@ -319,7 +319,7 @@ Private
     TEST.check (array.count) integer nsize
     nsize.times {
       + ridx:INTEGER
-      ridx := RANDOM.range 0 to (array.upper)
+      ridx := RANDOM.min 0 max (array.upper)
       remove ridx
     }
     TEST.check (array.is_empty)

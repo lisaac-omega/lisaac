@@ -37,7 +37,7 @@ Public
       (cltn_aaa.count = 1).if {
         idx := 0
       } else {
-        idx := RANDOM.range 0 to (cltn_aaa.upper)
+        idx := RANDOM.min 0 max (cltn_aaa.upper)
       }
       TEST.check (cltn_aaa.valid_index idx)
       TEST.check (cltn_bbb.valid_index idx)

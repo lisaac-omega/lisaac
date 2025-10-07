@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ ! -f ./install.sh ]; then
+if [ ! -f "./install.sh" ]; then
     echo 'Run this script from the lisaac directory.'
     echo 'Change to the lisaac directory and try again.'
     exit 1

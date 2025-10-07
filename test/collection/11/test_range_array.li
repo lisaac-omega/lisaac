@@ -137,7 +137,7 @@ Public
     idem
     long.times {
       + idx:INTEGER
-      idx := RANDOM.range 0 to (nrmal_array.count)
+      idx := RANDOM.min 0 max (nrmal_array.count)
       //("nrmal_array.count=" + nrmal_array.count.to_string + " idx=" + idx.to_string).println
       nrmal_array.at idx add x
       range_array.at (idx + range_array.lower) add x
@@ -147,7 +147,7 @@ Public
     {nrmal_array.is_empty}.until_do {
       + idx:INTEGER
       (nrmal_array.upper > 0).if {
-        idx := RANDOM.range 0 to (nrmal_array.upper)
+        idx := RANDOM.min 0 max (nrmal_array.upper)
       } else {
         idx := 0
       }

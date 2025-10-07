@@ -12,6 +12,12 @@ Public
   
   - new Self:SELF :SELF <- clone
   
+  - init_clock :SELF <-
+  ( + seed: UINTEGER_32
+    seed := CLOCK.clock.to_raw_uinteger_32
+    init seed
+  )
+  
   - init seed:UINTEGER_32 :SELF <-
   [
     ? {seed > 0}
@@ -48,7 +54,7 @@ Public
   
   - range mn:INTEGER_32 to mx:INTEGER_32 : INTEGER_32 <-
   [
-    ? {deprecated FALSE msg "RGN_COMMON: use min__max instead"};
+    ? {deprecated TRUE msg "RGN_COMMON: use min__max instead"};
   ]
   (
     min mn max mx
@@ -57,7 +63,7 @@ Public
   - min mn:INTEGER_32 max mx:INTEGER_32 : INTEGER_32 <-
   // Random value inside [ mn, mx ].
   [
-    ? {mn < mx}
+    ? {mn <= mx}
   ]
   ( + range, result:INTEGER_32
     range := mx - mn + 1

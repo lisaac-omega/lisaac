@@ -134,7 +134,7 @@ Public
     idem
     long.times {
       + idx:INTEGER
-      idx := RANDOM.range 0 to (cltn_bbb.count)
+      idx := RANDOM.min 0 max (cltn_bbb.count)
       //("cltn_bbb.count=" + cltn_bbb.count.to_string + " idx=" + idx.to_string).println
       cltn_bbb.at idx add x
       cltn_aaa.at idx add x
@@ -144,7 +144,7 @@ Public
     {cltn_bbb.is_empty}.until_do {
       + idx:INTEGER
       (cltn_bbb.upper > 0).if {
-        idx := RANDOM.range 0 to (cltn_bbb.upper)
+        idx := RANDOM.min 0 max (cltn_bbb.upper)
       } else {
         idx := 0
       }

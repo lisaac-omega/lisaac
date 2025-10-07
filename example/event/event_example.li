@@ -60,7 +60,7 @@ Public
       } else {
         (x0,y0,t0) := (drag.at 0,drag.at 1,drag.at 2)
         pen.line_cap (pen.round)
-        3.to (drag.upper) by 3 do { i:INTEGER
+        from 3 to (drag.upper) step 3 do { i:INTEGER
           (x1,y1,t1) := (drag.at i,drag.at (i+1),drag.at (i+2))
           (xx,yy) := (x1-x0,y1-y0)
           d := (xx*xx + yy*yy).sqrt
@@ -138,7 +138,7 @@ Public
     graph pen to (x+30,y)
     pen.restore
     // Clic / Long Clic
-    0.to (clic.upper) by 3 do { i:INTEGER
+    from 0 to (clic.upper) step 3 do { i:INTEGER
       pen.fill {
         pen.circle (clic.at i,clic.at (i+1)) radius 5
       } color ((clic.at (i+2) = 0).ok (COLOR.red) or (COLOR.black))

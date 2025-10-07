@@ -1,64 +1,29 @@
-    --------------------------------------------------------------
-           This is the directory for the shootout benchmarks
-    --------------------------------------------------------------
+# The Computer Language Benchmarks Game – Archived Examples
 
-  It can be fun to watch the Benchmarks Game
-  but like other games it's more fun to play!
+This repository contains old code examples from the well-known project "The Computer Language Benchmarks Game"
+(formerly "The Shootout").
 
-	What fun! Can you manipulate the multipliers and weights to make your 
-	favourite language the best programming language in the Benchmarks Game?
+The Benchmarks Game compares programming languages by running equivalent implementations of the same algorithms
+and measuring execution time, memory usage, and code size.
 
-	Sure we can, Lisaac should be the best programming language never seen ;)
-	So help us to perform better code to bite all other programming languages!!
+These examples are preserved here mainly for historical and educational purposes.
+They are outdated and no longer reflect the current state of compilers, libraries, or the benchmark framework itself.
+Before any new submission, all code should be reviewed, updated, or rewritten.
 
-	Please have a look on:
-	http://shootout.alioth.debian.org/
+A future objective is to bring Lisaac Ω back into this competition.
+Lisaac Ω is a modern evolution of the Lisaac language, designed for performance and expressiveness.
+With proper implementations of the benchmark tasks, Lisaac Ω could realistically achieve top-level results in
+several categories.
 
-How to get started?
-===================
+To reach this goal, this repository requires active maintenance.
+We are looking for a volunteer to manage it and to coordinate the effort of updating and extending the benchmark
+implementations. The tasks include:
+- Reviewing the existing code and identifying what can be reused.
+- Updating or rewriting implementations according to current best practices.
+- Porting benchmark tasks to Lisaac Ω and ensuring they run reliably.
+- Testing and profiling performance against current languages.
+- Submitting new results to the Benchmarks Game project.
 
-  Developers:
-  ----------
-
-     svn co svn+ssh://<membername>@svn.gna.org/svn/isaac/trunk isaac
-
-  Anonymous:
-  ---------
-
-     svn co svn://svn.gna.org/svn/isaac/trunk isaac
-     or
-     svn co http://svn.gna.org/svn/isaac/trunk isaac
-
-Status:
-=======
-
-+==================================================================================+
-| Benchmark          |    C    | Lisaac  | Winner  |   Comments      | Uploaded(1) |
-+==================================================================================+
-| binary_trees       | 1.940s  | 0.536s  | Lisaac  |                 |  Ready      |
-| fannkuch           | 4.948s  | 4.008s  | Lisaac  |                 |    YES      |
-| fasta              | 9.641s  | 9.177s  | Lisaac  |                 |    YES      | 
-| k-nucleotide       | 0.048s  | 0.032s  | Lisaac  |                 |    YES      |
-| nsieve-bits        | 0.792s  | 0.624s  | Lisaac  |                 |    YES      |
-| spectral-norm      | 21.225s | 21.117s | Lisaac  |                 |    YES      |
-| startup            | 0.100s  | 0.064s  | Lisaac  |                 |    YES      |
-| recursive          | 1.592s  | 1.508s  | Lisaac  |                 |    YES      |
-| n-body             | 10.933s | 11.637s | C       |                 |    YES      | 
-| nsieve             | 3.264s  | 3.308s  | C       |                 |    YES      |
-| partial-sums       | 1.444s  | 1.580s  | C       |                 |    YES      |
-| sum-file           | 0.304   | 0.464s  | C       |                 |    YES      |
-| pidigits           | 0.416s  | 0.404s  | Lisaac  | Library used    |  Ready      |
-| meteor-contest     | NC      | NC      | NC      | No shootout     |  Progress   |
-| reverse-complement | 0.140s  | 0.128s  | Lisaac  |                 |  Ready      |
-| mandelbrot         | 1.080s  | 1.000s  | Lisaac  | Warning option  |  Ready      | 
-| regex-dna          | 3.624s  | 3.988s  | C       | Library used    |  Ready      |
-| chameneos-redux    | NC      | NC      | NC      | Thread used     |             | 
-| thread-ring        | 6.180s  | 7.820s  | C       | Thread used     |  Ready      |
-+==================================================================================+
-(1) if the program have been uploaded to the shootout benchmark tracker.
-(2) lot of memory are used, maybe an error of memory management ?
-(3) error.
-
-Best regards,
-    Xavier Oswald <x.oswald@free.fr>
-    The Lisaac team.
+This repository is not an official mirror of the Benchmarks Game but an archive of old code examples.
+All original rights belong to their respective authors.
+Contact Dominique.Colnet@loria.fr if you are interrested.

@@ -36,7 +36,6 @@ Public
   // Create with new dimensions.
   // All elements are set to the default value of type E.
   ( + result:SELF
-
     result := clone
     result.make (new_count1,new_count2)
     result

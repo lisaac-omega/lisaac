@@ -1,6 +1,6 @@
 Header
   + name := BUILD_LISAAC;
-  /*Install and configure Lisaac Ω. */
+  /*    Install and configure Lisaac Ω. */
 
   - external := `#include <unistd.h>`;
 
@@ -180,6 +180,10 @@ Public
     system_detection
     
     lisaac_dir := working_directory.to_string_alias
+    if (lisaac_dir.has ' ') then {
+      OUT # "Warning: Warning: Avoid spaces in the Lisaac Ω path.\n"
+      OUT # "lisaac_dir=\"" # lisaac_dir # "\".\n"
+    }
     if (! lisaac_dir.has_suffix "lisaac/") then {
       die "buid_lisaac must be run from lisaac directory." exit 1
     }

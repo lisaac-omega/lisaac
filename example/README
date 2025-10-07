@@ -1,19 +1,67 @@
-In this directory, you will find examples to learn programming in Lisaac Ω.
-There are essentially two indispensable tools: 'elix' and 'lisaac'.
-'elix' is the code editor / viewer
-'lisaac' is the compiler for the Lisaac Ω language
+# Lisaac Ω – Examples
+This directory contains example programs written in Lisaac Ω. Source files are always named with the `.li` suffix.
+Although these files can be opened with any text editor, it is strongly recommended to view them with the editor named `elix`.
+Even though `.li` files look like plain source code, they are not formatted for readability in standard editors,
+especially regarding graphical operators.
 
-Let us take for example the hello_world.li program.
-To view the code in this directory, simply open a terminal, move to this directory, and run the command "elix hello_world.li".
+Moreover, `elix` provides syntax highlighting for type names and method selectors, which quickly becomes essential for
+understanding and progressing in Lisaac Ω.
 
-To compile and run this program, again using a terminal, move to this directory and type the command "lisaac hello_world.li". This will produce an executable machine code file that you can run by typing "./hello_world" (or "hello_world.exe" if you are on Windows).
+There are essentially two indispensable tools: `elix` and `lisaac`.
 
-Note that the lisaac compiler generates C as a portable intermediate language.
-It is then your C compiler, often gcc or clang, that translates it into directly executable machine code.
+The `elix` command is the source code editor and viewer. The `lisaac` command is the compiler for the Lisaac Ω language.
+To view the code of a program, open a terminal, move to this directory and run, for example:
 
-To get started with Lisaac Ω, we suggest trying the different examples provided in this lisaac/example directory.
+elix hello_world.li
 
-Note: A very useful option of the lisaac command is the -boost option.
-This option must be added at the end of the command line and allows you to get an executable with top performance. Very small and very fast.
-Of course, during the development phase, to inspect the stack in case of a problem, it is better to avoid the -boost option.
-To know all the options of the lisaac command, use the -help option ("lisaac -help").
+Unlike the compiler, the `elix` command requires the full filename, including the `.li` suffix.
+The naming convention in Lisaac Ω is that object files on disk use lowercase names, while their corresponding type names in
+the source code are written in uppercase. For example, the file `hello_world.li` contains the definition of the type `HELLO_WORLD`.
+
+To compile and run a program, still from this directory, type:
+
+lisaac hello_world.li
+
+or equivalently:
+
+lisaac hello_world
+
+The program file must contain a public method named `main` without any argument. This method indicates the starting point of the program.
+Once `main` is found, the compiler automatically searches and compiles all the code required for execution.
+The `lisaac` compiler generates C as a portable intermediate language. Your C compiler (often `gcc` or `clang`) then translates it into
+directly executable machine code.
+
+The final executable generated from `hello_world.li` will be named `hello_world` on most systems, or `hello_world.exe` on Windows.
+
+By default, and without any special options, the produced executable contains all possible debugging information. This is convenient,
+even essential, during debugging phases. However, it may significantly increase compilation time, especially for large programs.
+
+A very useful compilation option is `-boost`. Adding this option at the end of the command line produces a much smaller and faster executable:
+
+lisaac hello_world -q -boost
+
+During development, to inspect the stack in case of a problem, it is better to avoid the `-boost` option. To list all available compiler options, use:
+
+lisaac -help
+
+After compilation, you can run the program with:
+
+./hello_world
+or, on Windows:
+./hello_world.exe
+
+Each example file contains a comment block at the top, which should be read before running or modifying the program. This header usually describes the
+purpose of the example and how it works.
+
+To explore the language step by step, we suggest starting with:
+- lisaac/example/hello_world.li
+- lisaac/example/print_args.li
+- lisaac/example/fibonacci.li
+- other examples in lisaac/example/*.li
+
+After these first simple examples, we suggest continuing with larger programs that are each located in their own directory:
+- lisaac/example/welcome/welcome.li
+- lisaac/example/startrek/startrek.li
+- lisaac/example/connect_four/connect_four.li
+- lisaac/example/tetris/tetris.li
+
