@@ -28,7 +28,17 @@ DIV_INV, NUMBER, UINTEGER_64
     `}`
     pos
   )
-  
+
+  - umul_128 (u, v:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
+  ( + rh,rl:UINTEGER_64
+    `{__uint128_t w = ( (__uint128_t)@u ) * ( (__uint128_t)@v )`;
+    rl := `(uint64_t)w`:UINTEGER_64;
+    rh := `(uint64_t)(w >> 64)`:UINTEGER_64;
+    `}`
+    rh,rl
+  )
+
+/*
   - umul_128 (u, v:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
   ( + rh,rl:UINTEGER_64
     `{ unsigned long rh=0,rl=0;
@@ -42,7 +52,8 @@ DIV_INV, NUMBER, UINTEGER_64
     `}`
     rh,rl
   )
-    
+*/
+
 DIV_INV
   // Memory manager
   
