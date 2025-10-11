@@ -116,25 +116,29 @@ Private
     }
   )
   
-  /*
   - update_elix_cfg <-
   ( + index:INTEGER
+    + shortcut:STRING_ALIAS
     "Update lisaac/elix/assets/elix.cfg.".println
     chdir elix_dir or_exit
     chdir "assets" or_exit
+    shortcut := "standard"
+    if (system = "Apple") then {
+      shortcut := "mac_os"
+    }
     STRING.tmp { (elix_cfg:STRING_BUFFER)
       (open_read "elix.cfg" in elix_cfg).if_false {
         die "Cannot read lisaac/elix/assets/elix.cfg." exit 1
       }
       //
-      index := idx_after "target : \"" in elix_cfg from "elix.cfg"
+      index := idx_after "shortcut   : \"" in elix_cfg from "elix.cfg"
       {elix_cfg.at index = '\"'}.until_do {
         elix_cfg.remove index
       }
-      elix_cfg.insert_string system to index
+      elix_cfg.insert_string shortcut to index
       write "elix.cfg" content elix_cfg
     }
-  );*/
+  )
   
   - idx_after tag:STRING in txt:STRING from file_name:STRING_ALIAS :INTEGER <-
   ( + index:INTEGER
@@ -201,7 +205,7 @@ Public
     cc_compile_bin_lisaac
     check_update_export_path
     update_make_lip
-    //update_elix_cfg
+    update_elix_cfg
     update_misc_new_assets_sh
     compile_elix
     welcome_omega

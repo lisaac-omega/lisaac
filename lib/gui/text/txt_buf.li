@@ -187,12 +187,18 @@ Public
     ofs := p - bas; ? {ofs >= 0}
     {(i <= toks.upper) && {res = -1}}.while_do {
       t := toks.at i
-      TOK_ITM.set_parent_tok_drw t
-      res := t.search s base bas at ofs
-      (res = -1).if {
+      (t.di = 0).if {
+        ? {i = toks.upper}
         i := i + 1
-        bas := bas + t.di
-        ofs := 0
+      } else {
+        TOK_ITM.set_parent_tok_drw t
+        //OUT # "di=" # t.di # " ofs=" # ofs # " i=" # i # "/" # toks.upper # '\n'
+        res := t.search s base bas at ofs
+        (res = -1).if {
+          i := i + 1
+          bas := bas + t.di
+          ofs := 0
+        }
       }
     }
     TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)

@@ -103,11 +103,11 @@ Public
         moving := FALSE
       }
     }
-    0.to (png.upper) do { i:INTEGER
+    from 0 to (png.upper) do { i:INTEGER
       draw_idx i to (width*(i + pos_i)+pos_dx,0) size (width,height)
     }
     (points.is_empty).if_false {
-      0.to (points.upper) by 4 do { i:INTEGER
+      from 0 to (points.upper) step 4 do { i:INTEGER
         draw_point (points.at i,points.at (i+1)) style (points.at (i+2),points.at (i+3))
       }
       PAPER.refresh_again
@@ -204,7 +204,7 @@ Public
       } else {
         (x0,y0,t0) := (drag.at 0,drag.at 1,drag.at 2)
         line_cap (round)
-        3.to (drag.upper) by 3 do { i:INTEGER
+        from 3 to (drag.upper) step 3 do { i:INTEGER
           (x1,y1,t1) := (drag.at i,drag.at (i+1),drag.at (i+2))
           (xx,yy) := (x1-x0,y1-y0)
           d := (xx*xx + yy*yy).sqrt

@@ -7,4 +7,3 @@ Line 7 column 7 in MAIN(.../test/misc/7/main.li):
 Line 9 column 18 in MAIN(.../test/misc/7/main.li):
   - foo x:INTEGER <- ( )
                   ^
-Load lip file: ../../../make.lip
