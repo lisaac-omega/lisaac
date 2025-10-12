@@ -118,24 +118,35 @@ Private
   
   - update_elix_cfg <-
   ( + index:INTEGER
-    + shortcut:STRING_ALIAS
+    + value:STRING_ALIAS
     "Update lisaac/elix/assets/elix.cfg.".println
     chdir elix_dir or_exit
     chdir "assets" or_exit
-    shortcut := "standard"
-    if (system = "Apple") then {
-      shortcut := "mac_os"
-    }
     STRING.tmp { (elix_cfg:STRING_BUFFER)
       (open_read "elix.cfg" in elix_cfg).if_false {
         die "Cannot read lisaac/elix/assets/elix.cfg." exit 1
       }
       //
       index := idx_after "shortcut   : \"" in elix_cfg from "elix.cfg"
-      {elix_cfg.at index = '\"'}.until_do {
+      value := "standard"
+      if (system = "apple") then {
+        value := "mac_os"
+      }
+      until {elix_cfg.at index = '\"'} do {
         elix_cfg.remove index
       }
-      elix_cfg.insert_string shortcut to index
+      elix_cfg.insert_string value to index
+      //
+      index := idx_after "decorated  : " in elix_cfg from "elix.cfg"
+      value := "false"
+      if (system = "apple") then {
+        value := "true"
+      }
+      until {elix_cfg.at index = ','} do {
+        elix_cfg.remove index
+      }
+      elix_cfg.insert_string value to index
+      //
       write "elix.cfg" content elix_cfg
     }
   )
@@ -159,8 +170,11 @@ Private
   )
     
   - system_detection <-
-  (
-    system := SYSTEM.name
+  ( + s:STRING_ALIAS
+    system := s := SYSTEM.name
+    if ((s != "windows") && {s != "android"} && {s != "apple"} && {s != "unix"}) then {
+      OUT # "Warning: strange system name \"" # s # "\".\n"  
+    }
     if verbose then {
       ("system=\"" + system + "\".").println
     }
