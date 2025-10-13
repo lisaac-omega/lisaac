@@ -36,16 +36,24 @@ Private
   - cut:BOOLEAN <-
   ( + p0,p:INTEGER
     + c:CHARACTER
+    + pg:TXT_PG
+    + d:DIV
     
-    p := p0 := cur_txt.pos.pt
-    {((c := cur_txt.text.at p) != '\n') && {c != '\r'} && {c != '\0'}}.while_do {
-      clipboard.add_last c
+    pg := cur_txt
+    d ?= pg.child.at (pg.pt_div)
+    
+    //OUT # pg.pos.pt # "->" # d.pte.pt # '\n'
+    
+    p := p0 := pg.pos.pt
+    {p != d.pte.pt}.while_do {
+      clipboard.add_last (cur_txt.text.at p)
       p := p + 1
-    }
-    ((p = p0) && {c != '\0'}).if {
-      (c = '\r').if { clipboard.add_last '\r'; p := p + 1; }
-      clipboard.add_last '\n'; p := p + 1
+    }  
+    (p = p0).if {
+      c := pg.text.at p
+      (c = '\r').if { clipboard.add_last '\r'; p := p + 1; c := pg.text.at p }
+      (c = '\n').if { clipboard.add_last '\n'; p := p + 1 }
     }
     p := p - p0
-    (p != 0).if { cur_txt.text.rm p0 times p; }
+    (p != 0).if { pg.text.rm p0 times p; }
   )

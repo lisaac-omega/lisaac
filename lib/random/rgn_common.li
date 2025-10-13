@@ -38,7 +38,7 @@ Public
   
   - hexadecimal_digit:CHARACTER <-
   ( + i,j:INTEGER
-    i := range 0 to 15
+    i := min 0 max 15
     (i <= 9).if {
       j := ('0'.code) + i
     } else {

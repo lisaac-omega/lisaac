@@ -35,8 +35,7 @@ Public
   - main <-
   ( + loop:INTEGER
     time := TIME.now
-    //RANDOM.init(51579904)
-    RANDOM.init(time.to_raw.to_integer_32)
+    RANDOM.init_clock
     mpz1.init
     mpz2.init
     mpz3.init
@@ -45,7 +44,7 @@ Public
     {loop > 1_000_000}.until_do {
       check_vars "loop start"
       verbose.if { print_vars TRUE; }
-      (RANDOM.range 1 to 16)
+      (RANDOM.min 1 max 16)
       .when 1 then { check_add; }
       .when 2 then { check_sub; }
       .when 3 then { check_mul; }
@@ -113,7 +112,7 @@ Public
   (
     verbose.if { "check_div".println; }
     (mpz2.sgn = 0).if {
-      mpz2.random_hex (RANDOM.range 4 to 10)
+      mpz2.random_hex (RANDOM.min 4 max 10)
       big2 := ℤ.init(mpz2.to_hexadecimal) base 16
     } else {
       mpz3.tdiv_qr(rem_mpz,mpz1,mpz2)
@@ -187,7 +186,7 @@ Public
     }
   )
   
-  - random_hexdigits:INTEGER <-  (RANDOM.range 1 to 32)
+  - random_hexdigits:INTEGER <-  (RANDOM.min 1 max 32)
   
   - randomize <-
   (
@@ -228,7 +227,7 @@ Public
     (m2, b2) := (m, b)
     (m2.sgn = 0).if {
       //m2.print; " -> ".print
-      m2.random_hex (RANDOM.range 4 to 5)
+      m2.random_hex (RANDOM.min 4 max 5)
       b2.free; b2 := ℤ.init(m2.to_hexadecimal) base 16
       check m2 init b2
       //m2.println

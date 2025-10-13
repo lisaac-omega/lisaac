@@ -63,11 +63,13 @@ Private
     + pp:PROTO
     + new_y:BOOLEAN
     {(i <= slot.upper) && {(s := slot.at i).section.is_parent}}.while_do {
-      pp := s.type.like TPRO.proto
-      (pp != NULL).if {
-        new_y := y & s.eye_open
-        pp.collect_local_chapter lst eye new_y access p
-        pp.collect_chapter lst eye new_y access p
+      (s.ttok != NULL).if {
+        pp := s.type.like TPRO.proto
+        (pp != NULL).if {
+          new_y := y & s.eye_open
+          pp.collect_local_chapter lst eye new_y access p
+          pp.collect_chapter lst eye new_y access p
+        }
       }
       i := i + 1
     }
@@ -88,11 +90,13 @@ Private
     + pp:PROTO
     cnt := set_op.count
     {(i <= slot.upper) && {cnt = set_op.count} && {(p := slot.at i).section.is_parent}}.while_do {
-      pp := p.type.like TPRO.proto
-      (pp != NULL).if {        
-        r := pp.lookup (s.name_id) filter 01
-        (r != NULL).if { set_op.add_last r; }
-        pp.collect_rec_parent s
+      (p.ttok != NULL).if {
+        pp := p.type.like TPRO.proto
+        (pp != NULL).if {
+          r := pp.lookup (s.name_id) filter 01
+          (r != NULL).if { set_op.add_last r; }
+          pp.collect_rec_parent s
+        }
       }
       i := i + 1
     }

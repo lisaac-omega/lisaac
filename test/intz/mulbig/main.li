@@ -5,8 +5,6 @@ Header
 Private
   - verbose:BOOLEAN <- !TRUE
   
-  + time:TIME
-  
   + mpz1:MPZ
   + mpz2:MPZ
   + mpz3:MPZ
@@ -21,10 +19,10 @@ Private
   - randomize <-
   (
     verbose.if { "randomize".println; }
-    mpz1.random_hex (RANDOM.range (word_to_hex 1900) to (word_to_hex 2100)); // DCDC -> BSBS Good ?
+    mpz1.random_hex (RANDOM.min (word_to_hex 1900) max (word_to_hex 2100)); // DCDC -> BSBS Good ?
     big1.free; big1 := mpz1.new_intz3
     //
-    mpz2.random_hex (RANDOM.range (word_to_hex 3) to (word_to_hex 5)); // DCDC -> BSBS Good ?
+    mpz2.random_hex (RANDOM.min (word_to_hex 3) max (word_to_hex 5)); // DCDC -> BSBS Good ?
     big2.free; big2 := mpz2.new_intz3
     //
     mpz3.init_set_ui 0
@@ -34,8 +32,7 @@ Private
 Public
   - main <-
   ( + loop:INTEGER
-    time := TIME.now
-    RANDOM.init(time.to_raw.to_integer_32)
+    RANDOM.init_clock
     loop := 1000
     /*
     ("loop=" + loop.to_string).println

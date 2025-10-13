@@ -430,7 +430,7 @@ Public
   // index . Answer `lower -1' when the search fail.
   // * See: `reverse_index_of', `fast_index_of', `fast_last_index_of'.
   [
-    valid_index start_index || {start_index = -1}
+    {valid_index start_index || {start_index = -1}}
   ]
   (
     abstract

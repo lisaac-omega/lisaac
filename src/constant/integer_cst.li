@@ -126,7 +126,9 @@ Public
       output.append " 0x"
       value.to_raw_uinteger_64.to_hexadecimal_in output
     }
-    ((value > UINTEGER_32.maximum.to_integer_64) || {static_type.raw.name = "UINTEGER_64"}).if {
+    (static_type.raw.name = "INTEGER_64").if {
+      output.append "LL"
+    }.elseif {(value > UINTEGER_32.maximum.to_integer_64) || {static_type.raw.name = "UINTEGER_64"}} then {
       output.append "LLU"
     }.elseif {(value > INTEGER.maximum.to_integer_64) || {static_type.raw.name = "UINTEGER_32"}} then {
       output.append "LU"
