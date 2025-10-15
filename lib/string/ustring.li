@@ -435,13 +435,12 @@ Public
     + c2:CHAR
     + result:STRIDX
     bidx := normalize index
-    {
-      (((bidx2,c2) := previous bidx); (c2 = c)) ||
-      {bidx2 <= 0}
-    }.until_do {
+    until {
+      (((bidx2,c2) := previous bidx); (c2 = c)) || {bidx2 <= 0}
+    } do {
       bidx := bidx2
     }
-    (c2 = c).if {
+    if (c2 = c) then {
       result := STRIDX.to_self bidx
     } else {
       result := STRIDX.not_valid

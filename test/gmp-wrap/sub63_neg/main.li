@@ -25,7 +25,7 @@ Public
     TEST.check (a.equal_intz3 c)
     //"avant: ".print; a.to_hexadecimal.print; " ".print; a.println
     //"avant: ".print; c.to_hexadecimal.print; " ".print; c.println
-    {loop > 0}.while_do {
+    while {loop > 0} do {
       decr := (CLOCK.clock & 111111b)
       //decr.println
       a.sub_ui decr

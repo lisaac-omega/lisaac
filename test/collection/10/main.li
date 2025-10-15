@@ -18,8 +18,10 @@ Public
     ".".print
     nsize := 50_000_000
     nsize_test
+    /*
     exit 0
     ("Hello" + " Dom").to_string_alias; // Bug compilo ASCII
+    */
   )
   
 Private

@@ -35,6 +35,14 @@ Public
     }
   )
   
+  - check i1:ℤ intz i2:ℤ <-
+  (
+    counter := counter + 1
+    (i1 == i2).if_false {
+      crash_with_message ("TEST.check failed: " + i1.to_string + " != " + i2.to_string)
+    }
+  )
+  
   - check assert:BOOLEAN txt txt:{STRING} <-
   (
     counter := counter + 1

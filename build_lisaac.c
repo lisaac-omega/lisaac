@@ -1788,13 +1788,13 @@ static void li__C5B(__li__FB *li__E5B,__li__FC *li__F5B)
     if (li__QZF == ((__li__L2C )(0x8000000000000000LLU))) {
       li__Q4D(((__li__FC *)li__GMX),(&__string_89));
     } else /* FALSE */ {
-      li__EBJ=0LL;
+      li__EBJ=0;
       li__HBJ=0;
       li__IBJ=0;
       if (0 == li__QZF) {
         li__HEE(((__li__FC *)li__GMX),'0');
       } else /* FALSE */ {
-        if (li__QZF > 0LL) {
+        if (li__QZF > 0) {
           li__EBJ=li__QZF;
         } else /* FALSE */ {
           li__EBJ=(__li__L2C)(- li__QZF);
@@ -1802,11 +1802,11 @@ static void li__C5B(__li__FB *li__E5B,__li__FC *li__F5B)
         };
         li__HBJ=(__li__K)(li__GMX->li__GC.li__BC + 1);
         while ((li__EBJ != 0)) {
-          li__SCJ=(__li__L2C)(li__EBJ % 10LL);
+          li__SCJ=(__li__L2C)(li__EBJ % 10);
           li__IAN=((__li__H2C )li__SCJ);
           li__JAN=((__li__H2C )'0');
           li__HEE(((__li__FC *)li__GMX),((__li__MB )(((__li__H2C)(li__IAN + li__JAN)))));
-          li__EBJ=(__li__L2C)(li__EBJ / 10LL);
+          li__EBJ=(__li__L2C)(li__EBJ / 10);
         };
         li__IBJ=li__GMX->li__GC.li__BC;
         while ((li__HBJ < li__IBJ)) {
