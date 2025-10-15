@@ -32,9 +32,13 @@ jobs:
           if git diff --cached --quiet; then
             echo "Aucun changement"
           else
-            git commit -m "Synchronisation avec le ZIP officiel
-            Co-authored-by: Dominique Colnet <dominique.colnet@loria.fr>
-            Co-authored-by: Benoit Sonntag <benoit.sonntag@lisaac.org>"
+          git commit -m "$(cat <<'EOF'
+          Synchronisation avec le ZIP officiel
+          
+          Co-authored-by: DominiqueColnet <Dominique.Colnet@loria.fr>
+          Co-authored-by: BenoitSonntag <benoit.sonntag@lisaac.org>
+          EOF
+          )"
           fi
 
       - name: Push
