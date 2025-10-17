@@ -11,19 +11,19 @@ Inherit
 Private
   - grid_width:INTEGER := 20
   - grid_height:INTEGER := 15
-  - cell_size:INTEGER := 25
-  - score_height:INTEGER := 40 
+  - cell_size:INTEGER := 28
   
-  + head_x:INTEGER := 5
-  + head_y:INTEGER := 7
+  + head_x:INTEGER := 4
+  + head_y:INTEGER := 8
   
-  + apple_x:INTEGER := RANDOM.max (grid_width - 1)
-  + apple_y:INTEGER := RANDOM.max (grid_height - 1)
+  + apple_x:INTEGER := 12
+  + apple_y:INTEGER := 8
 
   + dir_x:INTEGER := 1
   + dir_y:INTEGER := 0
   
-  // BUG elix, Mettre le curseur ici, ensuite Ctrl-a  Ctrl-p Ctrl-a Ctrl-k Ctrl-k
+  + delay:REAL_32
+
   + snake_x:ARRAY INTEGER
   + snake_y:ARRAY INTEGER
 
@@ -32,7 +32,7 @@ Public
   - main <-
   ( + i:INTEGER 
     RANDOM.init_clock
-    init "Snake Game" size (grid_width * cell_size, (grid_height * cell_size) + score_height)
+    init "Snake Game" size (grid_width * cell_size, (grid_height + 1) * cell_size)
     
     snake_x := new ARRAY INTEGER capacity 16
     snake_y := new ARRAY INTEGER capacity 16
@@ -45,11 +45,9 @@ Public
   )
   
   - draw_cell (x,y:INTEGER) color col:COLOR <-
-  ( + x0, y0:INTEGER
-    x0 := x * cell_size
-    y0 := (y * cell_size) + score_height
+  (
     begin_path
-    rect (x0,y0) size (cell_size-1,cell_size-1)
+    rect (x * cell_size,y * cell_size) size (cell_size-1,cell_size-1)
     fill_color col
     fill
   )
@@ -59,10 +57,11 @@ Public
     STRING.tmp { score_text:STRING_BUFFER
       score_text.append "Score: "
       score.append_in score_text
+      score_text.append " Ω"
       font_size 24
       font_face_id (FONT sys (FONT bold))
       fill_color (COLOR.white) 
-      text (20, 30) msg score_text
+      text (cell_size - 20, (grid_height + 1) * cell_size - 10) msg score_text
     }
   )
 
@@ -111,16 +110,9 @@ Public
     }
     result
   )
-  
-  
+   
   - draw <-
   ( + t:REAL_32
-
-    // Sleep to limit the frame rate
-    CLOCK.usleep 200000
-    
-    t := CLOCK.seconds
-    
     // Draw the grid
     from 0 to (grid_height-1) do { y:INTEGER
       from 0 to (grid_width-1) do { x:INTEGER
@@ -131,40 +123,41 @@ Public
         }
       }
     }
-    move_snake
-    if (self_collision) then {
-      OUT # "Game Over!\nScore: " # score # "\n"
-      SYSTEM.exit 0
-    }
-    
-    // Draw the body of the snake:
+    t := CLOCK.seconds
+    //OUT # (((t - delay) * 100.0).to_uinteger_32) # '\n'
+    if (((t - delay) * 100.0).to_uinteger_32 > 25) then {
+      delay := t
+      move_snake
+      if (self_collision) then {
+        OUT # "Game Over!\nScore: " # score # "\n"
+        SYSTEM.exit 0
+      }
+      // Check if the snake eats the apple
+      if ((head_x = apple_x) && {head_y = apple_y}) then {
+        grow_snake
+        do {
+          apple_x := RANDOM.max (grid_width-1)
+          apple_y := RANDOM.max (grid_height-1)
+        } while { apple_on_snake }
+      }
+    }     
     from 0 to (snake_y.upper) do { i:INTEGER
       draw_cell (snake_x.at i, snake_y.at i) color (COLOR.rgb(0,100,0))
     }
-    
-    // Draw the head of the snake (lighter than the body):
-    draw_cell (head_x,head_y) color (COLOR.rgb(0,200,0))
-    
-    draw_apple
+    draw_snake_head
+    draw_cell (apple_x,apple_y) color (COLOR.rgb(255,0,0)) 
     draw_score
-
     PAPER.refresh_again
   )
   
-  - draw_apple <-
-  (
-    draw_cell (apple_x,apple_y) color (COLOR.rgb(255,0,0))
-   
-    // Check if the snake eats the apple
-    if ((head_x = apple_x) && {head_y = apple_y}) then {
-      grow_snake
-      do {
-        apple_x := RANDOM.max (grid_width-1)
-        apple_y := RANDOM.max (grid_height-1)
-      } while { apple_on_snake }
-    }
+  - draw_snake_head <-
+  ( + omgx, omgy:INTEGER
+    draw_cell (head_x,head_y) color (COLOR.rgb(0,200,0))
+    omgx := cell_size * head_x + 6
+    omgy := cell_size * head_y + 21
+    fill_color (COLOR.black) ; text (omgx, omgy) msg "Ω" 
   )
-
+  
   - apple_on_snake:BOOLEAN <-
   ( + result:BOOLEAN
     + i:INTEGER

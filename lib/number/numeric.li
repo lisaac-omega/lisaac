@@ -322,6 +322,14 @@ Public
     from Self to limit_up do blc
   )
   
+  - to limit_up:SELF by s:SELF do blk:{SELF;} <-
+  (
+    if (Self <= limit_up) then {
+      blk.value Self
+      (Self + s) to limit_up by s do blk
+    }
+  )
+  
   - from Self:SELF down_to limit_down:SELF do blc:{SELF;} <-
   (
     if (Self >= limit_down) then {

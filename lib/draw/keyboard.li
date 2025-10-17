@@ -6,10 +6,8 @@ Header
   
 Private
   
-  - debug:BOOLEAN <- FALSE
+  - debug:BOOLEAN <- TRUE
   
-  - keyname:STRING_BUFFER := STRING_BUFFER.create 8
-
 Public
  
   - cmd:UINTEGER_8 := 40h; // 0:CTRL 1:AltGr 2:Alt 3:Cmd 4:Shift 5:Cap 6:NumLock 7:Scrolllock
@@ -19,28 +17,42 @@ Public
   - num_str:STRING_BUFFER := // "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" Bug compilo
   ( + r:STRING_BUFFER
     r := STRING_BUFFER.create 6
-    r.add_last '\0A7h\';  r.add_last '\0A8h\'
-    r.add_last '\0A9h\';  r.add_last '\0A0h\'
+    r.add_last '\0A7h\'
+    r.add_last '\0A8h\'
+    r.add_last '\0A9h\'
+    r.add_last '\0A0h\'
     r.add_last '\0B9h\'
     r
   )
   
 PAPER
   
-  - key k:INTEGER code key:INTEGER press p:BOOLEAN mods mods:UINTEGER_8 <-
-  ( + cu:UINTEGER_8
+  - key k:INTEGER code key:INTEGER press press:BOOLEAN mods mods:UINTEGER_8 <-
+  ( + cu, cm:UINTEGER_8
     + name:NATIVE_ARRAY CHARACTER
     + idx,i,knidx:INTEGER
-    + cm:UINTEGER_8
     + cc:CHARACTER   
+    str.clear
     debug.if {
-      OUT # "----\nkeyboard.li k:" # k # " key:" # key # ' ' # p # ' ' # mods # '\n'
+      "---- keyboard.li".print
+      press.if {
+        " press".print
+      } 
+      OUT # " k:" # k # " key:" # key # " mods:" # mods
     }
     cm := cmd
     name := `glfwGetKeyName(@k,@key)`:NATIVE_ARRAY CHARACTER
-    str.clear
+    if (debug && {! name.is_null}) then {
+      STRING.tmp { kn:STRING_BUFFER
+        while {(name.at knidx) != '\0'} do {
+          kn.add_last (name.at knidx)
+          knidx := knidx + 1
+        }
+        OUT # " glfwGetKeyName:" # kn
+      }
+    }
     if (name.is_null) then {
-      p.if {        
+      press.if {        
         (k)
         .when `GLFW_KEY_SPACE`:INTEGER then { cc := ' '; }
         .when `GLFW_KEY_ESCAPE`:INTEGER then { (cm,cc) := (cm | key_cmd, '\27\'); }
@@ -63,7 +75,7 @@ PAPER
         .when `GLFW_KEY_RIGHT_ALT`:INTEGER then { cmd := cmd | alt_gr; }
         //.when `GLFW_KEY_MENU`:INTEGER      then { /*put ((cmd.to_uinteger_16 << 8) | key_cmd | 'M'.to_uinteger_8);*/ }
         (cc != '\0').if { str.add_last cc; }
-      } else {
+      }  else {
         (k)
         .when `GLFW_KEY_LEFT_SHIFT`:INTEGER or `GLFW_KEY_RIGHT_SHIFT`:INTEGER     then { cmd := cmd & (~shift); }
         .when `GLFW_KEY_LEFT_CONTROL`:INTEGER or `GLFW_KEY_RIGHT_CONTROL`:INTEGER then { cmd := cmd & (~ctrl); }
@@ -72,15 +84,7 @@ PAPER
         .when `GLFW_KEY_RIGHT_ALT`:INTEGER then { cmd := cmd & (~alt_gr); }
       }
     } else {
-      keyname.clear
-      while {(name.at knidx) != '\0'} do {
-        keyname.add_last (name.at knidx)
-        knidx := knidx + 1
-      }
-      debug.if {
-        OUT # "glfwGetKeyName:\"" # keyname # "\"\n"
-      }
-      p.if {        
+      press.if {        
         ((cmd & num_lock = 0) && {k.in_range `GLFW_KEY_KP_0`:INTEGER to `GLFW_KEY_KP_DECIMAL`:INTEGER}).if {
           (cm,cc) := (cm | key_cmd, "IEDNL5RBUPS".item (k - `GLFW_KEY_KP_0`:INTEGER))
           str.add_last cc
@@ -128,14 +132,10 @@ PAPER
       }
     }
     (! str.is_empty).if {
-      debug.if {
-        OUT # "keyboard.li str:\"" # str # "\"\n"
-      }
       put str cmd cm
     }
     debug.if {
-      //OUT # "keyboard.li: " # (key_to_string (cmd.to_uinteger_16 <<8)) # '\n'
-      OUT # "keyboard.li cmd: " # (cmd.to_uinteger_16 <<8) # '\n'
+      OUT # " str:" # str # "----\n"
     }
   )
 

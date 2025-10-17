@@ -365,6 +365,16 @@ Public
   
   // Looping.
   
+  - repeat Self:SELF times action:{} <-
+  [
+    ? {Self >= 0}
+  ]
+  (
+    from 1 to Self do { i:INTEGER
+      action.value
+    }
+  )
+  
   - times action:{} <-
   (
     1.to Self do { i:INTEGER
