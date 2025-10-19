@@ -1,0 +1,83 @@
+Header
+  + name := KEYBOARD_CHECK;
+  /*
+
+
+  */
+  
+Inherit 
+  + parent_window:Expanded WINDOW  
+Private
+    
+  + key_mem: STRING_BUFFER := new STRING_BUFFER capacity 16
+  
+  + cmd_mem: UINTEGER_8
+  
+Public
+
+  - main <-
+  (
+    KEYBOARD.set_debug TRUE
+    init "Keyboard Check" size (360*2, 240*2)
+    PAPER.run
+  )
+  
+  - draw <-
+  ( + x, y, lx, dy:INTEGER
+    begin_path
+    rect (0,0) size (width.to_integer,height.to_integer)
+    fill_color (COLOR.white)
+    fill   
+    
+    lx := 100
+    dy := 80
+    font_size 34
+    
+    label (x :=  lx, y := y + dy) txt "Keyboard Control - Lisaac Ω"    
+    
+    label (x := lx, y := y + dy) txt "WINDOW.key"
+    value (x := x + 190, y) txt key_mem
+    label (x := x + 30, y) txt "cmd"
+    value (x := x + 80, y) int cmd_mem
+    
+    label (x :=  lx, y := y + dy) txt "KEYBOARD.key_to_string"
+    if (! key_mem.is_empty) then {
+      value (x := x + 370, y) txt (KEYBOARD.key_to_string key_mem cmd cmd_mem)
+    }
+    
+    label (x :=  lx, y := y + dy) txt "Keyboard Control - Lisaac Ω"    
+    PAPER.refresh_again
+  )
+   
+  - key s:STRING cmd c:UINTEGER_8 <-
+  (
+    OUT # "== key " # s # " cmd " # c # " ==\n"
+    key_mem.copy s
+    cmd_mem := c
+    wait_events
+  )
+  
+Private
+  
+  - label (x,y:INTEGER) txt txt:STRING <-
+  (
+    font_face_id (FONT sys (FONT roman))
+    fill_color (COLOR.gray)
+    text (x, y) msg txt
+  )
+  
+  - value (x,y:INTEGER) txt txt:STRING <-
+  (
+    font_face_id (FONT sys (FONT roman))
+    fill_color (COLOR.black)
+    text (x, y) msg txt
+  )
+  
+  - value (x,y:INTEGER) int i:INTEGER <-
+  (
+    STRING.tmp { buf: STRING_BUFFER
+      i.append_in buf
+      value (x,y) txt buf
+    }
+  )
+  

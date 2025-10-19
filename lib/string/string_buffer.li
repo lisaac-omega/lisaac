@@ -21,12 +21,17 @@ Public
 
   // Creation / Modification :
 
-  - create needed_capacity:INTEGER :SELF <-
+  - new Self:SELF capacity c:INTEGER :SELF <-
   ( + result:SELF
     result := SELF.clone
-    result.make needed_capacity
+    result.make c
     result
   )
+  [
+    Result.is_empty
+  ]
+  
+  - create needed_capacity:INTEGER :SELF <- new SELF capacity needed_capacity
 
   - create_from_string str:STRING :SELF <-
   ( + result:SELF

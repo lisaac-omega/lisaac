@@ -6,7 +6,7 @@ Header
   
 Private
   
-  - debug:BOOLEAN <- TRUE
+  - debug:BOOLEAN <- ! TRUE
   
 Public
  
@@ -54,14 +54,14 @@ PAPER
     if (name.is_null) then {
       press.if {        
         (k)
-        .when `GLFW_KEY_SPACE`:INTEGER then { cc := ' '; }
-        .when `GLFW_KEY_ESCAPE`:INTEGER then { (cm,cc) := (cm | key_cmd, '\27\'); }
-        .when `GLFW_KEY_ENTER`:INTEGER or `GLFW_KEY_KP_ENTER`:INTEGER then { (cm,cc) := (cm | key_cmd, '\0Ah\'); }
+        .when `GLFW_KEY_SPACE`:INTEGER then { cc := ' ' }
+        .when `GLFW_KEY_ESCAPE`:INTEGER then { (cm,cc) := (cm | key_cmd, '\27\') }
+        .when `GLFW_KEY_ENTER`:INTEGER or `GLFW_KEY_KP_ENTER`:INTEGER then { (cm,cc) := (cm | key_cmd, '\0Ah\') }
         .when `GLFW_KEY_TAB`:INTEGER to `GLFW_KEY_END`:INTEGER then {
-          (cm,cc) := (cm | key_cmd, "\t\bISRLDUPNBE".item (k-`GLFW_KEY_TAB`:INTEGER))
-        }        
-        .when `GLFW_KEY_CAPS_LOCK`:INTEGER   then { cmd := cmd ^ cap; }
-        .when `GLFW_KEY_NUM_LOCK`:INTEGER    then { cmd := cmd ^ num_lock; }
+          (cm,cc) := (cm | key_cmd, "\t\bISRLDUPNBE".item (k - `GLFW_KEY_TAB`:INTEGER))
+        }
+        .when `GLFW_KEY_CAPS_LOCK`:INTEGER   then { cmd := cmd ^ cap }
+        .when `GLFW_KEY_NUM_LOCK`:INTEGER    then { cmd := cmd ^ num_lock }
         .when `GLFW_KEY_SCROLL_LOCK`:INTEGER then { cmd := cmd ^ scroll_lock; }
         //.when `GLFW_KEY_PRINT_SCREEN`:INTEGER then { }
         //.when `GLFW_KEY_PAUSE`:INTEGER then { }
@@ -112,7 +112,13 @@ PAPER
                 (cc = '^').if {
                   str.remove_last; str.append "¨"
                 }.elseif {cc = '$'} then {
-                  str.remove_last; str.append "£"
+                  str.remove_last
+                  if (key = 35) then { 
+                    str.append "£"
+                  } else {
+                    ? {key = 30}
+                    str.append "*"                    
+                  }
                 }.elseif {cc = '*'} then {
                   str.remove_last; str.append "µ"
                 }.elseif {(idx :=  "&\"'(-_=,;:<^".last_index_of cc) != -1} then {
@@ -141,6 +147,11 @@ PAPER
 
 Public  
   
+  - set_debug b:BOOLEAN <-
+  (
+    debug := b
+  )
+  
   - record:BOOLEAN
   
   //- macro_buffer:ARRAY UINTEGER_16 := ARRAY UINTEGER_16.create_with_capacity 32
@@ -163,7 +174,7 @@ Public
     }
   );*/
   
-  - listen w:WINDOW <- ( win := w; )
+  - listen w:WINDOW <- ( win := w )
   - win:WINDOW
   
   - put s:STRING cmd c:UINTEGER_8 <-
@@ -172,45 +183,45 @@ Public
       //macro_buffer.add_last k
     }
     //"Key to String:".print; key_to_string s cmd c.println
-    (win != NULL).if { win.key s cmd c; } else { PAPER.wins.first.key s cmd c; }
+    (win != NULL).if { win.key s cmd c } else { PAPER.wins.first.key s cmd c }
   )
       
   // Key code generate.
 
   // 0:CTRL 1:AltGr 2:Alt 3:Cmd 4:Shift 5:Cap 6:NumLock 7:ScrollLock
-  - ctrl  :UINTEGER_8  := 01h
-  - alt_gr:UINTEGER_8  := 02h
-  - alt   :UINTEGER_8  := 04h
-  - key_cmd:UINTEGER_8 := 08h
-  - shift :UINTEGER_8  := 10h
-  - cap   :UINTEGER_8  := 20h
-  - num_lock:UINTEGER_8:= 40h
-  - scroll_lock:UINTEGER_8 := 80h
+  - ctrl:        UINTEGER_8 := 01h
+  - alt_gr:      UINTEGER_8 := 02h
+  - alt:         UINTEGER_8 := 04h
+  - key_cmd:     UINTEGER_8 := 08h
+  - shift:       UINTEGER_8 := 10h
+  - cap:         UINTEGER_8 := 20h
+  - num_lock:    UINTEGER_8 := 40h
+  - scroll_lock: UINTEGER_8 := 80h
   - key_of c:CHARACTER :UINTEGER_8 <- c.to_uinteger_8
   - msk_cmd:UINTEGER_8 <- ctrl | alt | key_cmd
   
   - key_to_string s:STRING cmd cm:UINTEGER_8 :STRING_ALIAS <-
   ( + result:STRING_ALIAS
     STRING.tmp { tmp:STRING_BUFFER
-      ((cm &    ctrl) != 0).if { tmp.append "Ctrl ";  }
-      ((cm &  alt_gr) != 0).if { tmp.append "AltGr "; }
-      ((cm &     alt) != 0).if { tmp.append "Alt ";   }
-      ((cm &   shift) != 0).if { tmp.append "Shift "; }
+      ((cm &    ctrl) != 0).if { tmp.append "Ctrl "  }
+      ((cm &  alt_gr) != 0).if { tmp.append "AltGr " }
+      ((cm &     alt) != 0).if { tmp.append "Alt "   }
+      ((cm &   shift) != 0).if { tmp.append "Shift " }
       ((cm & key_cmd) != 0).if {
         (s.first)
-        .when 'a' to 'l' then { tmp.add_last 'F'; ((s.first - 'a').to_integer_8+1).append_in tmp; }
-        .when 'U' then { tmp.append "Up";   }.when 'D' then { tmp.append "Down"; }
-        .when 'L' then { tmp.append "Left"; }.when 'R' then { tmp.append "Right"; }
-        .when 'P' then { tmp.append "PgUp"; }.when 'N' then { tmp.append "PgDown"; }
-        .when 'M' then { tmp.append "Menu"; }.when 'S' then { tmp.append "Suppr"; }
-        .when 'B' then { tmp.append "Beg";  }.when 'E' then { tmp.append "End"; }
-        .when 'I' then { tmp.append "Inser"; }
-        .when '\09\'  then { tmp.append "Tab"; }
-        .when '\08\'  then { tmp.append "Del"; }
-        .when '\0Ah\' then { tmp.append "Enter"; }
-        .when '\27\'  then { tmp.append "Esc"; }
+        .when 'a' to 'l' then { tmp.add_last 'F'; ((s.first - 'a').to_integer_8+1).append_in tmp }
+        .when 'U' then { tmp.append "Up"   }.when 'D' then { tmp.append "Down" }
+        .when 'L' then { tmp.append "Left" }.when 'R' then { tmp.append "Right" }
+        .when 'P' then { tmp.append "PgUp" }.when 'N' then { tmp.append "PgDown" }
+        .when 'M' then { tmp.append "Menu" }.when 'S' then { tmp.append "Suppr" }
+        .when 'B' then { tmp.append "Beg"  }.when 'E' then { tmp.append "End" }
+        .when 'I' then { tmp.append "Inser" }
+        .when '\09\'  then { tmp.append "Tab" }
+        .when '\08\'  then { tmp.append "Del" }
+        .when '\0Ah\' then { tmp.append "Enter" }
+        .when '\27\'  then { tmp.append "Esc" }
       } else {
-        (s.first = ' ').if { tmp.append "Space"; } else { tmp.append s; }
+        (s.first = ' ').if { tmp.append "Space" } else { tmp.append s }
       }
       result := tmp.to_string_alias
     }

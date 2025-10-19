@@ -89,3 +89,16 @@ Public
     
   - mouse_scroll (dx,dy:REAL_64) <- ( abstract; )
   
+Private
+  
+  - wait_events <- ( `glfwWaitEvents()` )
+  
+  - wait x: REAL_64 seconds action:{} <-
+  ( + t:REAL_64
+    t := `glfwGetTime()`:REAL_64
+    action.value
+    until {`glfwGetTime()`:REAL_64 - t >= x} do {
+      `glfwPollEvents()`
+    }
+   )
+  

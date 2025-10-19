@@ -19,25 +19,25 @@ Private
   + apple_x:INTEGER := 12
   + apple_y:INTEGER := 8
 
-  + dir_x:INTEGER := 1
+  + dir_x:INTEGER := -1
   + dir_y:INTEGER := 0
   
-  + delay:REAL_32
-
   + snake_x:ARRAY INTEGER
   + snake_y:ARRAY INTEGER
-
+  
+  + timer:REAL_64
+  
 Public
 
   - main <-
-  ( + i:INTEGER 
+  ( 
     RANDOM.init_clock
     init "Snake Game" size (grid_width * cell_size, (grid_height + 1) * cell_size)
     
     snake_x := new ARRAY INTEGER capacity 16
     snake_y := new ARRAY INTEGER capacity 16
-    until {snake_y.count = 3} do {
-      snake_x.add_last (head_x - i - 1)
+    from 1 to 3 do { i: INTEGER
+      snake_x.add_last (head_x + i)
       snake_y.add_last head_y
     }
         
@@ -67,27 +67,6 @@ Public
 
   - move_snake <-
   ( + i:INTEGER
-    + old_x, old_y:INTEGER
-    
-    // Save the old head position
-    old_x := head_x
-    old_y := head_y
-    
-    // Move the head according to the direction
-    head_x := head_x + dir_x
-    head_y := head_y + dir_y
-
-    // Edge management (crossing over)
-    if ((head_x >= grid_width)&& {dir_x = 1}) then { 
-      head_x := 0
-    }.elseif {(head_x <= -1) && {dir_x = -1}} then { 
-      head_x := grid_width-1
-    }.elseif {(head_y >= grid_height) && {dir_y = 1}} then { 
-      head_y := 0
-    }.elseif {(head_y <= -1) && {dir_y = -1}} then { 
-      head_y := grid_height - 1
-    }
-
     // Move the body (each segment takes the position of the previous one):
     i := snake_x.upper
     while {i > 0} do {
@@ -95,10 +74,21 @@ Public
       snake_y.at i put (snake_y.at (i-1))
       i := i - 1
     }
-    
     // The first body segment takes the old head position
-    snake_x.at 0 put old_x
-    snake_y.at 0 put old_y
+    snake_x.at 0 put head_x
+    snake_y.at 0 put head_y
+    
+    (head_x, head_y) := (head_x + dir_x, head_y + dir_y)
+    // Edge management (crossing over)
+    if (head_x >= grid_width) then {
+      head_x := 0
+    }.elseif {head_x < 0} then {
+      head_x := grid_width - 1
+    }.elseif {head_y >= grid_height} then { 
+      head_y := 0
+    }.elseif {head_y < 0} then { 
+      head_y := grid_height - 1
+    }
   )
 
   - self_collision:BOOLEAN <-
@@ -112,21 +102,18 @@ Public
   )
    
   - draw <-
-  ( + t:REAL_32
-    // Draw the grid
-    from 0 to (grid_height-1) do { y:INTEGER
-      from 0 to (grid_width-1) do { x:INTEGER
-        if (((x+y) % 2) = 0) then {
-          draw_cell (x,y) color (COLOR.rgb(240,240,240)) // Light Grey
-        } else {
-          draw_cell (x,y) color (COLOR.rgb(200,200,200)) // Dark Grey
+  (
+     wait (timer) seconds {
+      // Draw the grid
+      from 0 to (grid_height-1) do { y:INTEGER
+        from 0 to (grid_width-1) do { x:INTEGER
+          if (((x+y) % 2) = 0) then {
+            draw_cell (x,y) color (COLOR.rgb(240,240,240)) // Light Grey
+          } else {
+            draw_cell (x,y) color (COLOR.rgb(200,200,200)) // Dark Grey
+          }
         }
       }
-    }
-    t := CLOCK.seconds
-    //OUT # (((t - delay) * 100.0).to_uinteger_32) # '\n'
-    if (((t - delay) * 100.0).to_uinteger_32 > 25) then {
-      delay := t
       move_snake
       if (self_collision) then {
         OUT # "Game Over!\nScore: " # score # "\n"
@@ -140,14 +127,15 @@ Public
           apple_y := RANDOM.max (grid_height-1)
         } while { apple_on_snake }
       }
-    }     
-    from 0 to (snake_y.upper) do { i:INTEGER
-      draw_cell (snake_x.at i, snake_y.at i) color (COLOR.rgb(0,100,0))
+      from 0 to (snake_y.upper) do { i:INTEGER
+        draw_cell (snake_x.at i, snake_y.at i) color (COLOR.rgb(0,100,0))
+      }
+      draw_snake_head
+      draw_cell (apple_x,apple_y) color (COLOR.rgb(255,0,0)) 
+      draw_score
+      PAPER.refresh_again
+      timer := (2.0 / score).max 0.07
     }
-    draw_snake_head
-    draw_cell (apple_x,apple_y) color (COLOR.rgb(255,0,0)) 
-    draw_score
-    PAPER.refresh_again
   )
   
   - draw_snake_head <-
