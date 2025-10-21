@@ -4,17 +4,16 @@ Header
 
   /*GLFW - Keyboard Driver*/
   
-Private
-  
-  - debug:BOOLEAN <- ! TRUE
-  
 Public
  
   - cmd:UINTEGER_8 := 40h; // 0:CTRL 1:AltGr 2:Alt 3:Cmd 4:Shift 5:Cap 6:NumLock 7:Scrolllock
   
   - str:STRING_BUFFER := STRING_BUFFER.create 8
   
-  - num_str:STRING_BUFFER := // "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" Bug compilo
+Private 
+  
+  - new_num_str:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" // Bug compilo
+  - num_str:STRING_BUFFER :=
   ( + r:STRING_BUFFER
     r := STRING_BUFFER.create 6
     r.add_last '\0A7h\'
@@ -28,12 +27,16 @@ Public
 PAPER
   
   - key k:INTEGER code key:INTEGER press press:BOOLEAN mods mods:UINTEGER_8 <-
-  ( + cu, cm:UINTEGER_8
+  ( + cm:UINTEGER_8
     + name:NATIVE_ARRAY CHARACTER
-    + idx,i,knidx:INTEGER
+    + idx,knidx:INTEGER
     + cc:CHARACTER   
     str.clear
     debug.if {
+      k_mem := k
+      key_mem := key
+      press_mem := press
+      mods_mem := mods
       "---- keyboard.li".print
       press.if {
         " press".print
@@ -92,20 +95,36 @@ PAPER
           (k.in_range 50 to 57).if { str.add_last ("~#{[|`\\^".item (k-50)); }
           .elseif {k = 48} then { str.add_last '@'; }.elseif {k = 45} then { str.add_last ']'; }
           .elseif {k = 61} then { str.add_last '}'; }.elseif {k = 69} then { str.append "€"; }
-        } else {          
-          str.add_last (name.first); cu := name.first; i := i + 1
-          ((cu & 1000_0000b) != 0).if { // utf8 sequence:
-            str.add_last (name.at i); i := i + 1
-            ((cu & 1110_0000b) = 1110_0000b).if {
-              str.add_last (name.at i); i := i + 1
-              ((cu & 1111_0000b) = 1111_0000b).if {
-                str.add_last (name.at i); i := i + 1
-              }
-            }
-          }
+        }.elseif {(mods = 1) && {k = 92} && {key = 42}} then {          
+          str.clear; str.append "£" // Shift ` Apple 
+        }.elseif {(mods = 4) && {k = 93} && {key = 30}} then {          
+          str.clear; str.append "€" // Option $ Apple 
+        }.elseif {(mods = 4) && {k = 53} && {key = 23}} then {          
+          str.clear; str.append "{" // Option ( Apple 
+        }.elseif {(mods = 4) && {k = 45} && {key = 27}} then {          
+          str.clear; str.append "}" // Option ) Apple 
+        }.elseif {(mods = 4) && {k = 78} && {key = 45}} then {          
+          str.clear; str.append "~" // Option n Apple 
+        }.elseif {(mods = 5) && {k = 53} && {key = 23}} then {          
+          str.clear; str.append "[" // Shift Option ( Apple 
+        }.elseif {(mods = 5) && {k = 45} && {key = 27}} then {          
+          str.clear; str.append "]" // Shift Option ) Apple 
+        }.elseif {(mods = 5) && {k = 76} && {key = 37}} then {          
+          str.clear; str.append "|" // Shift Option l Apple 
+          //OUT # "\nIIII " # str # " XXXX\n"
+        } else {
+          str.append_utf8 name native
           (cmd & (shift|cap) != 0).if {
             (str.first.is_lower).if {
-              str.at 0 put (str.at 0.to_upper)
+              str.at 0 put (str.at 0 .to_upper)
+            }.elseif {(k = 54) && {key = 22}} then {
+              str.clear; str.add_last '6' // Shift § Apple
+            }.elseif {(k = 56) && {key = 28}} then {
+              str.clear; str.add_last '8' // Shift ! Apple 
+            }.elseif {(k = 161) && {key = 10}} then {
+              str.clear; str.add_last '#' // Shift @ Apple 
+            }.elseif {(k = 61) && {key = 24}} then {
+              str.clear; str.add_last '_' // Shift - Apple 
             } else {
               (str.count = 1).if {
                 cc := str.first
@@ -116,12 +135,15 @@ PAPER
                   if (key = 35) then { 
                     str.append "£"
                   } else {
-                    ? {key = 30}
-                    str.append "*"                    
+                    ? {key = 30} ;/*mac*/ str.append "*"                    
                   }
+                }.elseif {cc = ')'} then {
+                  str.remove_last; str.append "°"
+                }.elseif {cc = '!'} then {
+                  str.remove_last; str.append "§"
                 }.elseif {cc = '*'} then {
                   str.remove_last; str.append "µ"
-                }.elseif {(idx :=  "&\"'(-_=,;:<^".last_index_of cc) != -1} then {
+                }.elseif {(idx := "&\"'(-_=,;:<^".last_index_of cc) != -1} then {
                   str.at 0 put ("134568+?./>".at idx)
                 }
               } else {
@@ -137,20 +159,29 @@ PAPER
         }
       }
     }
-    (! str.is_empty).if {
+    if (! str.is_empty) then {
       put str cmd cm
     }
     debug.if {
       OUT # " str:" # str # "----\n"
     }
   )
-
-Public  
+  
+KEYBOARD_CHECK  
+  
+  - debug:BOOLEAN <- FALSE
   
   - set_debug b:BOOLEAN <-
   (
     debug := b
   )
+  
+  - k_mem:INTEGER
+  - key_mem:INTEGER
+  - press_mem:BOOLEAN
+  - mods_mem:UINTEGER_8
+   
+Public  
   
   - record:BOOLEAN
   
@@ -179,11 +210,15 @@ Public
   
   - put s:STRING cmd c:UINTEGER_8 <-
   (
-    (record).if {
+    if (record) then {
       //macro_buffer.add_last k
     }
     //"Key to String:".print; key_to_string s cmd c.println
-    (win != NULL).if { win.key s cmd c } else { PAPER.wins.first.key s cmd c }
+    if (win != NULL) then { 
+      win.key s cmd c 
+    } else { 
+      PAPER.wins.first.key s cmd c 
+    }
   )
       
   // Key code generate.

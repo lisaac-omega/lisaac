@@ -27,6 +27,21 @@ Public
     }
   )
   
+  - check c1:CHARACTER character c2:CHARACTER <-
+  (
+    counter := counter + 1
+    (c1 = c2).if_false {
+      STRING.tmp { msg:STRING_BUFFER
+        msg.append "TEST.check failed: '"
+        msg.add_last c1
+        msg.append "' != '"
+        msg.add_last c2
+        msg.append "'"
+        crash_with_message msg
+      }
+    }
+  )
+  
   - check i1:INTEGER integer i2:INTEGER <-
   (
     counter := counter + 1

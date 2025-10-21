@@ -1053,7 +1053,8 @@ Public
     }
     buf.count
   )
-    
+  
+  
   // Loop.
   
   - do_all do:{CHARACTER;} <-

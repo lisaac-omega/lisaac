@@ -1,8 +1,20 @@
 Header
   + name := SNAKE;
   /*
-   Made by Benjamin Scheffer and Marcelin Ray 
-   October 2025
+  The classic Snake game in Lisaac Ω.
+  The snake grows each time it eats and also moves faster.  
+
+  
+  To compile, as usual in a terminal:  
+  $ lisaac snake -q -boost  
+  $ ./snake  
+  
+
+  It can also be compiled and executed via elix menus.  
+  
+
+  Originally written in October 2025 by Benjamin Scheffer and Marcelin Ray 
+
   */
   
 Inherit 
@@ -186,3 +198,4 @@ Public
     .when 'L' then { go_left } 
     .when 'R' then { go_right }
   )
+  

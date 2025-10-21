@@ -1,0 +1,21 @@
+Header
+  + name := BUG_COPILO;
+  /**/
+  
+Public
+  - str1:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\"
+  
+  - str2:STRING_BUFFER
+  
+  - main <-
+  ( 
+    str2 := STRING_BUFFER.create 6
+    str2.add_last '\0A7h\'
+    str2.add_last '\0A8h\'
+    str2.add_last '\0A9h\'
+    str2.add_last '\0A0h\'
+    str2.add_last '\0B9h\'
+    from 0 to 4 do { i:INTEGER
+      TEST.check (str1.at i) character (str2.at i)
+    }
+  )

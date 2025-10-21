@@ -1,7 +1,7 @@
 Header
 
   + name := Expanded BOOLEAN;
-  /*Boolean library (Self mapping on char C).*/
+  /*     Boolean library (Self mapping on char C).*/
 
   - type    := `char`;
   - default := FALSE;

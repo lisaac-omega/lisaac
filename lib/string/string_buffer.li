@@ -541,6 +541,27 @@ Public
 
   - extend c:CHARACTER <- add_last c
 
+  -  append_utf8 utf8: STRING <- append_utf8 (utf8.storage) native
+  
+  -  append_utf8 utf8: NATIVE_ARRAY CHARACTER native <-
+  ( + i:INTEGER
+    + cu:UINTEGER_8
+    cu := utf8.first
+    add_last (utf8.first)
+    i := 1 
+    if ((cu & 1000_0000b) != 0) then {
+      add_last (utf8.at i)
+      i := i + 1
+      if ((cu & 1110_0000b) = 1110_0000b) then {
+        add_last (utf8.at i)
+        i := i + 1
+        if ((cu & 1111_0000b) = 1111_0000b) then {
+          add_last (utf8.at i)
+        }
+      }
+    }
+  )
+
   - to_lower <-
   // Convert all characters to lower case.
   (

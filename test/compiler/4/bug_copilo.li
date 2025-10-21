@@ -1,0 +1,9 @@
+Header
+  + name := BUG_COPILO;
+  /**/
+  
+Public
+  - main <-
+  ( + str:STRING_BUFFER
+    str := new STRING_BUFFER capacity 4
+  )
