@@ -66,23 +66,23 @@ PAPER
         .when `GLFW_KEY_CAPS_LOCK`:INTEGER   then { cmd := cmd ^ cap }
         .when `GLFW_KEY_NUM_LOCK`:INTEGER    then { cmd := cmd ^ num_lock }
         .when `GLFW_KEY_SCROLL_LOCK`:INTEGER then { cmd := cmd ^ scroll_lock; }
-        //.when `GLFW_KEY_PRINT_SCREEN`:INTEGER then { }
-        //.when `GLFW_KEY_PAUSE`:INTEGER then { }
+      //.when `GLFW_KEY_PRINT_SCREEN`:INTEGER then { }
+      //.when `GLFW_KEY_PAUSE`:INTEGER then { }
         .when `GLFW_KEY_F1`:INTEGER to `GLFW_KEY_F12`:INTEGER then {
           (cm,cc) := (cm | key_cmd, 'a'+#(k.to_integer-`GLFW_KEY_F1`:INTEGER))
-        }             
+        }
         .when `GLFW_KEY_LEFT_SHIFT`:INTEGER or `GLFW_KEY_RIGHT_SHIFT`:INTEGER     then { cmd := cmd | shift; }
         .when `GLFW_KEY_LEFT_CONTROL`:INTEGER or `GLFW_KEY_RIGHT_CONTROL`:INTEGER then { cmd := cmd | ctrl; }
-        //.when `GLFW_KEY_LEFT_SUPER`:INTEGER or `GLFW_KEY_RIGHT_SUPER`:INTEGER then { cmd := cmd ^ shift; }
+      //.when `GLFW_KEY_LEFT_SUPER`:INTEGER or `GLFW_KEY_RIGHT_SUPER`:INTEGER then { cmd := cmd ^ shift; }
         .when `GLFW_KEY_LEFT_ALT`:INTEGER  then { cmd := cmd | alt; }
         .when `GLFW_KEY_RIGHT_ALT`:INTEGER then { cmd := cmd | alt_gr; }
-        //.when `GLFW_KEY_MENU`:INTEGER      then { /*put ((cmd.to_uinteger_16 << 8) | key_cmd | 'M'.to_uinteger_8);*/ }
+      //.when `GLFW_KEY_MENU`:INTEGER then { /*put ((cmd.to_uinteger_16 << 8) | key_cmd | 'M'.to_uinteger_8);*/ }
         (cc != '\0').if { str.add_last cc; }
-      }  else {
+      } else {
         (k)
         .when `GLFW_KEY_LEFT_SHIFT`:INTEGER or `GLFW_KEY_RIGHT_SHIFT`:INTEGER     then { cmd := cmd & (~shift); }
         .when `GLFW_KEY_LEFT_CONTROL`:INTEGER or `GLFW_KEY_RIGHT_CONTROL`:INTEGER then { cmd := cmd & (~ctrl); }
-        //.when `GLFW_KEY_LEFT_SUPER`:INTEGER or `GLFW_KEY_RIGHT_SUPER`:INTEGER then { cmd := cmd ^ shift; }
+      //.when `GLFW_KEY_LEFT_SUPER`:INTEGER or `GLFW_KEY_RIGHT_SUPER`:INTEGER then { cmd := cmd ^ shift; }
         .when `GLFW_KEY_LEFT_ALT`:INTEGER  then { cmd := cmd & (~alt); }
         .when `GLFW_KEY_RIGHT_ALT`:INTEGER then { cmd := cmd & (~alt_gr); }
       }
@@ -96,21 +96,21 @@ PAPER
           .elseif {k = 48} then { str.add_last '@'; }.elseif {k = 45} then { str.add_last ']'; }
           .elseif {k = 61} then { str.add_last '}'; }.elseif {k = 69} then { str.append "€"; }
         }.elseif {(mods = 1) && {k = 92} && {key = 42}} then {          
-          str.clear; str.append "£" // Shift ` Apple 
+          cm := 0; str.clear; str.append "£" // Shift ` Apple 
         }.elseif {(mods = 4) && {k = 93} && {key = 30}} then {          
-          str.clear; str.append "€" // Option $ Apple 
+          cm := 0; str.clear; str.append "€" // Option $ Apple 
         }.elseif {(mods = 4) && {k = 53} && {key = 23}} then {          
-          str.clear; str.append "{" // Option ( Apple 
+          cm := 0; str.clear; str.append "{" // Option ( Apple 
         }.elseif {(mods = 4) && {k = 45} && {key = 27}} then {          
-          str.clear; str.append "}" // Option ) Apple 
+          cm := 0; str.clear; str.append "}" // Option ) Apple 
         }.elseif {(mods = 4) && {k = 78} && {key = 45}} then {          
-          str.clear; str.append "~" // Option n Apple 
+          cm := 0; str.clear; str.append "~" // Option n Apple 
         }.elseif {(mods = 5) && {k = 53} && {key = 23}} then {          
-          str.clear; str.append "[" // Shift Option ( Apple 
+          cm := 0; str.clear; str.append "[" // Shift Option ( Apple 
         }.elseif {(mods = 5) && {k = 45} && {key = 27}} then {          
-          str.clear; str.append "]" // Shift Option ) Apple 
+          cm := 0; str.clear; str.append "]" // Shift Option ) Apple 
         }.elseif {(mods = 5) && {k = 76} && {key = 37}} then {          
-          str.clear; str.append "|" // Shift Option l Apple 
+          cm := 0; str.clear; str.append "|" // Shift Option l Apple 
           //OUT # "\nIIII " # str # " XXXX\n"
         } else {
           str.append_utf8 name native
@@ -135,7 +135,7 @@ PAPER
                   if (key = 35) then { 
                     str.append "£"
                   } else {
-                    ? {key = 30} ;/*mac*/ str.append "*"                    
+                    ? {key = 30} ;/*mac*/ str.add_last '*'                    
                   }
                 }.elseif {cc = ')'} then {
                   str.remove_last; str.append "°"
@@ -160,10 +160,13 @@ PAPER
       }
     }
     if (! str.is_empty) then {
+      debug.if { 
+        OUT # " str:" # str
+      }
       put str cmd cm
     }
     debug.if {
-      OUT # " str:" # str # "----\n"
+      OUT # "----\n"
     }
   )
   

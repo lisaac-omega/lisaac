@@ -76,7 +76,6 @@ Public
   (
     key_mem.copy s
     cmd_mem := c
-    wait_events
   )
   
 Private
