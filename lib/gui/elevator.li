@@ -47,12 +47,14 @@ Public
           (pos_y < 0).if {
             pos_y := (pos_y < 2).ok (REAL_32.zero) else {pos_y / 2}
             move_pos_y (pos_y - Old pos_y)
-            PAPER.refresh_again
+            ask_refresh
+            //PAPER.refresh_again
           }
           ((d := hu - height - pos_y) < 0).if {            
             pos_y := pos_y + (d > -2).ok d else {d / 2}
             move_pos_y (pos_y - Old pos_y)
-            PAPER.refresh_again
+            ask_refresh
+            //PAPER.refresh_again
           }
         }
       }
@@ -69,12 +71,14 @@ Public
           (pos_x < 0).if {
             pos_x := (pos_x > -2).ok (REAL_32.zero) else {pos_x / 2}
             move_pos_x (pos_x - Old pos_x)
-            PAPER.refresh_again
+            //PAPER.refresh_again
+            ask_refresh
           }
           ((d := wu - width - pos_x) < 0).if {
             pos_x := pos_x + (d > -2).ok d else {d / 2}
             move_pos_x (pos_x - Old pos_x)
-            PAPER.refresh_again
+            //PAPER.refresh_again
+            ask_refresh
           }
         }
       }
@@ -108,6 +112,8 @@ Public
         } else { dx := - HAND.dx; }
         pos_x := pos_x + dx
         move_pos_x dx
+        //PAPER.refresh_again
+        ask_refresh
       }
       ((hu := height_upper) > height).if {
         (HAND.is_begin).if {
@@ -121,6 +127,7 @@ Public
         } else { dy := - HAND.dy; }
         pos_y := pos_y + dy
         move_pos_y dy
+        ask_refresh
       }
     }
   )

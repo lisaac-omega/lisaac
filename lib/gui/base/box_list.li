@@ -22,18 +22,21 @@ Public
     refresh_popup.if {
       (xo,yo,width) := (CMD.xo+margin, CMD.yo - height, CMD.width-margin*2)
       (x,y) := (xo+8-pos_x, yo+8-pos_y)
+      //OUT # "y base = " # y # '\n'
       ww := width - 16
       n := (ww / width_itm).to_integer
       w := ww / n
       child.foreach { win:WIN
+        //OUT # "y = " # y
         win.xy (x,y).size (w,win.height_min)
         x := x + w
         i := i + 1
         (i = n).if { (x,y,i) := (xo+8-pos_x, y+win.height_min,0); }
-      }
+      }      
     }
+    //'\n'.print
   )
-  
+      
   - col_val:{STRING_ALIAS; COLOR}
   - color c:{STRING_ALIAS; COLOR} <- ( col_val := c; )
   

@@ -5,7 +5,9 @@ Inherit
   - parent_act:ACT := ACT
   
 Private
-    
+
+  - current_key:STRING_BUFFER := STRING_BUFFER.create 32
+
   - str:STRING_BUFFER := STRING_BUFFER.create 16
           
   + ptr:INTEGER
@@ -73,9 +75,15 @@ Public
   )
   
   - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  (
+  ( 
     //s.print; ' '.print; c.println
-    ! list.until_do { elt:SHORTCUT; elt.run s cmd c}
+    (! current_key.is_empty).if { current_key # ", " }
+    KEYBOARD.key_to_string s cmd c in current_key    
+    (! list.until_do { elt:SHORTCUT; elt.run s cmd c}).if {
+      current_key.clear
+    } else {
+      PAGE.cur_pg.buf_pg.footnote_left.copy current_key
+    }
   )
   
   - stack:STRING_BUFFER := STRING_BUFFER.create 8
@@ -162,7 +170,7 @@ Public
             }
           }
         }
-        b.append (KEYBOARD.key_to_string str cmd cm)
+        KEYBOARD.key_to_string str cmd cm in b
         (i <= s.upper).if { b.append ", "; }
       }
     }

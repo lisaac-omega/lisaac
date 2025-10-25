@@ -56,12 +56,10 @@ Public
   ( info.clear
     (open_cmd != cmd_open_buffer).if {
       DIRENT.reduce_path text
-    }
-    ((old_text == text) && {! text.is_empty}).if {
-      (BOX_LIST STRING_ALIAS.is on).if {
-        BOX_LIST STRING_ALIAS.cmd_down_pg.if_false {
-          BOX_LIST STRING_ALIAS.cmd_top_pg
-        }
+    }    
+    ((old_text == text) && {BOX_LIST STRING_ALIAS.is on}).if {      
+      BOX_LIST STRING_ALIAS.cmd_down_pg.if_false {
+        BOX_LIST STRING_ALIAS.cmd_top_pg
       }
     } else {
       old_text.copy text     

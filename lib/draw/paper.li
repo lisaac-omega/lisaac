@@ -52,6 +52,7 @@ Header
 
 #define lisaac_gl 0
 #include <emscripten/emscripten.h>
+#include <GLES3/gl3.h>
 
 #elif defined(__linux__)
 
@@ -298,10 +299,11 @@ Public
   )
   
   - run <-
-  (
+  ( + ptr:POINTER
     (lip "target" str != "android").if {
       (lip "target" str = "web").if {
-        `emscripten_set_main_loop(generate_frame, 0, 0/*false*/)`
+        ptr := wins.first.win_ptr        
+        `emscripten_set_main_loop_arg(generate_frame,@ptr, 0, 0/*false*/)`
       } else {
         {! window_should_close}.while_do {
           `glfwPollEvents()`
@@ -503,8 +505,8 @@ Public
 External
   
   - generate_frame w:POINTER <-
-  ( 
-    li_refresh_callback w
+  (    
+    li_refresh_callback w //(wins.first.win_ptr)
     //}
     //`glfwWaitEvents()`
   )

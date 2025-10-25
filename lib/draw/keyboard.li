@@ -161,7 +161,7 @@ PAPER
     }
     if (! str.is_empty) then {
       debug.if { 
-        OUT # " str:" # str
+        OUT # " put:" # str # " cmd " # cm
       }
       put str cmd cm
     }
@@ -238,30 +238,26 @@ Public
   - key_of c:CHARACTER :UINTEGER_8 <- c.to_uinteger_8
   - msk_cmd:UINTEGER_8 <- ctrl | alt | key_cmd
   
-  - key_to_string s:STRING cmd cm:UINTEGER_8 :STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
-      ((cm &    ctrl) != 0).if { tmp.append "Ctrl "  }
-      ((cm &  alt_gr) != 0).if { tmp.append "AltGr " }
-      ((cm &     alt) != 0).if { tmp.append "Alt "   }
-      ((cm &   shift) != 0).if { tmp.append "Shift " }
-      ((cm & key_cmd) != 0).if {
-        (s.first)
-        .when 'a' to 'l' then { tmp.add_last 'F'; ((s.first - 'a').to_integer_8+1).append_in tmp }
-        .when 'U' then { tmp.append "Up"   }.when 'D' then { tmp.append "Down" }
-        .when 'L' then { tmp.append "Left" }.when 'R' then { tmp.append "Right" }
-        .when 'P' then { tmp.append "PgUp" }.when 'N' then { tmp.append "PgDown" }
-        .when 'M' then { tmp.append "Menu" }.when 'S' then { tmp.append "Suppr" }
-        .when 'B' then { tmp.append "Beg"  }.when 'E' then { tmp.append "End" }
-        .when 'I' then { tmp.append "Inser" }
-        .when '\09\'  then { tmp.append "Tab" }
-        .when '\08\'  then { tmp.append "Del" }
-        .when '\0Ah\' then { tmp.append "Enter" }
-        .when '\27\'  then { tmp.append "Esc" }
-      } else {
-        (s.first = ' ').if { tmp.append "Space" } else { tmp.append s }
-      }
-      result := tmp.to_string_alias
-    }
-    result
+  - key_to_string s:STRING cmd cm:UINTEGER_8 in tmp:STRING_BUFFER <-
+  ( 
+    ((cm &    ctrl) != 0).if { tmp.append "Ctrl "  }
+    ((cm &  alt_gr) != 0).if { tmp.append "AltGr " }
+    ((cm &     alt) != 0).if { tmp.append "Alt "   }
+    ((cm &   shift) != 0).if { tmp.append "Shift " }
+    ((cm & key_cmd) != 0).if {
+      (s.first)
+      .when 'a' to 'l' then { tmp.add_last 'F'; ((s.first - 'a').to_integer_8+1).append_in tmp }
+      .when 'U' then { tmp.append "Up"   }.when 'D' then { tmp.append "Down" }
+      .when 'L' then { tmp.append "Left" }.when 'R' then { tmp.append "Right" }
+      .when 'P' then { tmp.append "PgUp" }.when 'N' then { tmp.append "PgDown" }
+      .when 'M' then { tmp.append "Menu" }.when 'S' then { tmp.append "Suppr" }
+      .when 'B' then { tmp.append "Beg"  }.when 'E' then { tmp.append "End" }
+      .when 'I' then { tmp.append "Inser" }
+      .when '\09\'  then { tmp.append "Tab" }
+      .when '\08\'  then { tmp.append "Del" }
+      .when '\0Ah\' then { tmp.append "Enter" }
+      .when '\27\'  then { tmp.append "Esc" }
+    } else {
+      (s.first = ' ').if { tmp.append "Space" } else { tmp.append s }
+    }    
   )

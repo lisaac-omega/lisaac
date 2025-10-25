@@ -129,7 +129,7 @@ Public
       set inside with (ev = HAND.in)
     }.elseif {e = HAND.clic} then {
       //"Act:".print; act.text_l.println
-      MENU.close_all_except act
+      MENU.close_all_except act      
       act.run.if_false { beep; }
     }
   )

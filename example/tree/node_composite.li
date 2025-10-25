@@ -24,7 +24,7 @@ Public
   - make lab:STRING <-
   (
     parent_node.make lab
-    children := LINKED_LIST NODE.create
+    children := new LINKED_LIST NODE
   )
 
   //
@@ -37,7 +37,7 @@ Public
     (children.is_empty).if_false {
       indent.append "  "
       (children.lower).to (children.upper) do { j:INTEGER
-        children.item j.print
+        children.at j.print
       }
       indent.remove_tail 2
     }
