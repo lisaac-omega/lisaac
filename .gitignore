@@ -76,6 +76,7 @@ example/**/*.c
 
 build_lisaac
 android/bin/*
+android/lib/*
 
 ########################################
 # Autres
