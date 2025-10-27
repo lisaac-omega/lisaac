@@ -81,7 +81,7 @@ Private
 
   - point (x,y:REAL_32) color c:COLOR alpha α:REAL_32 <-
   // Alpha : between 0 and 255
-  [ α.in_range 0 to 255 ]
+  [ {α.in_range 0 to 255} ]
   ( + x0,y0:REAL_32
     (x0,y0) := (width.div 2, height.div 2)
     begin_path

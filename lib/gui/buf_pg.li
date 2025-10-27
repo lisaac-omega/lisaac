@@ -54,7 +54,7 @@ Public
   
   - refresh <-
   (        
-    fix_buffer
+    fix_buffer    
     buffer.refresh
   )
   

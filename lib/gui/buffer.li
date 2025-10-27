@@ -107,11 +107,12 @@ Public
   
   - new_gui:WIN
   - refresh <-
-  ( + x,y:REAL_32
+  ( + x,y:REAL_32    
     (x,y) := (xo+32,yo+32)
     child.at 0.xy (x,y)
     child.foreach { w:WIN; w.refresh; }
-    ((focus != NULL) && {focus.ymax > ymax}).if {
+    
+    ((focus != NULL) && {focus.ymax > ymax} && {focus.dynamic_type = INPUTBOX}).if {
       y := y-(focus.ymax - ymax + 10)
       child.at 0.xy (x,y)
       child.foreach { w:WIN; w.refresh; }

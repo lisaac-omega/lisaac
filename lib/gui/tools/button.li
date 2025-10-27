@@ -19,6 +19,7 @@ Public
   - mute:INTEGER  := 1 << 15
   - barre:INTEGER := 1 << 16
   - dark:INTEGER  := 1 << 17
+  - light:INTEGER := 1 << 18
     
   + txt:STRING_ALIAS
   + act:{BUTTON;BOOLEAN}
@@ -50,7 +51,11 @@ Public
     (is inside).if {
       fill_color (LOOK_GUI.border_on)
     } else {
-      fill_color (LOOK_GUI.border_off); //COLOR.rgba (0,0,0,10))
+      (is light).if {
+        fill_color (LOOK_GUI.border_on) //(COLOR.rgb(200,200,200))
+      } else {
+        fill_color (LOOK_GUI.border_off); //COLOR.rgba (0,0,0,10))
+      }
     }
     begin_path
     rect (xo,yo) size (width, height) radius 8
@@ -73,8 +78,7 @@ Public
       stroke_color (COLOR.rgba (0,0,0,128))
       line (x-w/2,y) to (x+w/2,y)
       stroke
-    }
-    
+    }    
   )
   
   - event ev:UINTEGER_8 :BOOLEAN <-

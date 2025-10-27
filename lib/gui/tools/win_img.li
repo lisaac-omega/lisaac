@@ -28,12 +28,16 @@ Public
     (img_x,img_y,zom) := (x,y,z)
   )
   
+  //+ is_event_extern:BOOLEAN
+  + event_extern:{WIN_IMG;}
+  - set_event_extern e:{WIN_IMG;} <- ( event_extern := e );
+  
   - thumbnail_xyz:(REAL_32,REAL_32,REAL_32) <-
   ( + x,y,z,w,hi,wi:REAL_32
-    w := width/2
-    z := (w/img_w).min (height/img_h)
+    w := height
+    z := (height/img_w).min (height/img_h)
     (wi,hi) := (z*img_w, z*img_h)
-    (x,y) := (xo + w + (w - wi)/2, yo + (height - hi)/2)
+    (x,y) := (xo + width-w + (w - wi)/2, yo + (height - hi)/2)
     x,y,z
   )
       
@@ -46,7 +50,7 @@ Public
   
   - update_zoom <-
   ( + w:REAL_32
-    w := width/2
+    w := width - height
     (w > zom * img_w).if {
       zom := ((w+w-1) / img_w).to_integer
     }
@@ -80,7 +84,7 @@ Public
       img_time := t
       img_id := new_img img size (img_w,img_h) flags 0 id img_id
     }
-    (w,h) := (width / 2,height)
+    (w,h) := (width - height,height)
     (x,y) := (xo,yo)
     (img_id != -1).if {
       //p := PAINT.create_pattern (x,y) size (img_w*zom, img_h*zom) img_id img_id angle 0 alpha 1.0
@@ -93,7 +97,7 @@ Public
       x := x + w
       begin_path
       fill_color (COLOR.rgb (40,0,40))
-      rect (x,y) size (w,h)
+      rect (x,y) to (xmax,ymax)
       fill
       (x,y,c) := thumbnail_xyz
       (wi,hi) := (c*img_w, c*img_h)
@@ -122,6 +126,8 @@ Public
       tmp.add_last 'x'
       zom.to_integer.append_in tmp
       text (x+w/2,y+(FONT.size_app+8)/2) msg tmp
+      text (x+w/4,y+(FONT.size_app+8)/2) msg "-"
+      text (x+(3*w)/4,y+(FONT.size_app+8)/2) msg "+"
     }
   )
   
@@ -130,25 +136,33 @@ Public
     + cx,cy,w,h:REAL_32
     e := ev & ~1
     (e = HAND.drag).if {
-      (HAND.x_begin-xo < width / 2).if {
-        img_x := (img_x + HAND.dx/zom).min 0.max ((width/2).to_real_32/zom - img_w)
+      (HAND.x_begin-xo < width - height).if {
+        img_x := (img_x + HAND.dx/zom).min 0.max ((width-height).to_real_32/zom - img_w)
         img_y := (img_y + HAND.dy/zom).min 0.max (height.to_real_32/zom - img_h)
       } else {
         move_tag
       }
     }.elseif {e = HAND.clic} then {
-      (HAND.x_cur-xo < width/2).if {
-        (w,h) := (width/2,height)
+      (HAND.x_cur-xo < width-height).if {
+        (w,h) := (width-height,height)
         (HAND.y_cur - yo > height - FONT.size_app - 8).if {
           (cx,cy) := (img_x - w/2/zom, img_y - h/2/zom)
-          zom := (zom.to_integer & 7) + 1
+          (HAND.x_cur - xo < (width-height)/2).if {
+            zom := (zom - 1).max 1
+          } else {
+            zom := (zom + 1).min 7
+          }
           update_zoom
           img_x := (cx + w/2/zom).min 0.max (w/zom-img_w)
           img_y := (cy + h/2/zom).min 0.max (h/zom-img_h)
         } else {
-          (cx,cy) := (HAND.x_cur-(xo+w/2),HAND.y_cur-(yo+h/2))
-          img_x := (img_x - cx/zom).min 0.max (w/zom-img_w)
-          img_y := (img_y - cy/zom).min 0.max (h/zom-img_h)
+          (event_extern != NULL).if {
+            event_extern.value Self
+          } else {
+            (cx,cy) := (HAND.x_cur-(xo+w/2),HAND.y_cur-(yo+h/2))
+            img_x := (img_x - cx/zom).min 0.max (w/zom-img_w)
+            img_y := (img_y - cy/zom).min 0.max (h/zom-img_h)
+          }
         }
       } else {
         move_tag
@@ -161,7 +175,7 @@ Private
   
   - move_tag <-
   ( + c,x,y,w,h,wi,hi,wv,hv:REAL_32
-    (x,y,w,h) := (xo+width/2,yo,width/2,height)
+    (x,y,w,h) := (xo+width-height,yo,height,height)
     c := (w/img_w).min (h/img_h)
     (wi,hi) := (c * img_w,c*img_h)
     (x,y) := (x+(w - wi)/2, y+(h - hi)/2)

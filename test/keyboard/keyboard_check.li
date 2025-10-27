@@ -41,13 +41,15 @@ Public
     label (x := x + 30, y) txt "cmd"
     value (x := x + 80, y) int cmd_mem
     
-    label (x :=  lx, y := y + dy) txt "KEYBOARD.key_to_string"
-    if (key_mem.is_empty) then {
-      txt := "<none>"
-    } else {
-      txt := KEYBOARD.key_to_string key_mem cmd cmd_mem
+    STRING.tmp { txt_buff:STRING_BUFFER
+      label (x :=  lx, y := y + dy) txt "KEYBOARD.key_to_string"
+      if (key_mem.is_empty) then {
+        txt_buff.append "<none>"
+      } else {
+        KEYBOARD.key_to_string key_mem cmd cmd_mem in txt_buff
+      }
+      value (x := x + 350, y) txt txt_buff
     }
-    value (x := x + 350, y) txt txt
     
     label (x := lx, y := y + dy) txt "KEYBOARD.k_mem"
     value (x := x + 275, y) int (KEYBOARD.k_mem)

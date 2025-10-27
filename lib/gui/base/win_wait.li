@@ -36,6 +36,7 @@ Public
     done := FALSE
     w := PAGE.cur_pg.window
     init_parent w
+    //yo := yo + 50
     (width,height) := (w.width,w.height)
     old_focus := focus
     focus := Self

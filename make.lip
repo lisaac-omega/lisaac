@@ -219,7 +219,7 @@ Section Private
         }; // else {        
         (target = "web").if {
           execute_fail (lisaac+"webli/new_assets.sh");
-          execute_fail ("sed -i -e 's/^int main(int argc,char \\*\\*argv)$/int main()/' -e '/^ arg_count  = argc;$/d' -e '/^  arg_vector = argv;$/d' "+output_file+".c");
+          execute_fail ("sed -i -e 's/^int main(int argc,char \\*\\*argv)$/int main()/' -e '/^[[:space:]]\\+arg_count  = argc;$/d' -e '/^  arg_vector = argv;$/d' "+output_file+".c");
 
           cc := "emcc";    
           cc_opts := " -D_GNU_SOURCE -O2 -Wno-unused-value -Wno-invalid-source-encoding -Wno-sometimes-uninitialized";
