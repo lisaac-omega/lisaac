@@ -1,0 +1,53 @@
+Header
+  + name := MAIN;
+  
+Public
+  
+/*  
+  - last_bit x:INTEGER_64 :INTEGER_64 <-
+  [ ? {x != 0}; ]
+  ( + pos:INTEGER
+    `{ unsigned long pos,x=@x`
+    `  __asm__ ("bsrq %1, %0" : "=r" (pos) : "r" (x))`
+    pos := `pos`:INTEGER
+    `}`
+    pos
+  )
+  
+  */
+  
+  - last_bit x:INTEGER_64 :INTEGER_64 <-
+  [ ? {x != 0}; ]
+  ( + pos:INTEGER
+    pos := 63 - `__builtin_clzl(@x)`:INTEGER_64
+    pos
+  )
+
+
+  - main <-
+  ( 
+    TEST.check (last_bit 1) integer 0
+    TEST.check (last_bit 2) integer 1
+    TEST.check (last_bit 3) integer 1
+    TEST.check (last_bit 4) integer 2
+    TEST.check (last_bit 5) integer 2
+    TEST.check (last_bit 6) integer 2
+    TEST.check (last_bit 7) integer 2
+    TEST.check (last_bit 8) integer 3
+    TEST.check (last_bit 9) integer 3
+    TEST.check (last_bit 10) integer 3
+    TEST.check (last_bit 11) integer 3
+    TEST.check (last_bit 12) integer 3
+    TEST.check (last_bit 13) integer 3
+    TEST.check (last_bit 14) integer 3
+    TEST.check (last_bit 15) integer 3
+    TEST.check (last_bit 16) integer 4
+    TEST.check (last_bit 32) integer 5
+    TEST.check (last_bit 64) integer 6
+    TEST.check (last_bit 1024) integer 10
+    TEST.check (last_bit 4096) integer 12
+    TEST.check (last_bit 4097) integer 12
+    TEST.check (last_bit 4098) integer 12
+    
+  )
+  

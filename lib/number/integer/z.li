@@ -17,8 +17,16 @@ DIV_INV, NUMBER, UINTEGER_64
   - digits:STRING_ALIAS := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
   - base64:STRING_ALIAS := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
   
-  // Assembler
+  // Assembler or C builtin
   
+  - last_bit x:INTEGER :INTEGER <-
+  [ ? {x != 0}; ]
+  ( + pos:INTEGER
+    pos := 63 - `__builtin_clzl(@x)`:INTEGER_64
+    pos
+  )
+    
+  /* // DCDC Marche pas sous Mac
   - last_bit x:INTEGER :INTEGER <-
   [ ? {x != 0}; ]
   ( + pos:INTEGER
@@ -28,7 +36,8 @@ DIV_INV, NUMBER, UINTEGER_64
     `}`
     pos
   )
-
+  */
+  
   - umul_128 (u, v:UINTEGER_64) :(UINTEGER_64,UINTEGER_64) <-
   ( + rh,rl:UINTEGER_64
     `{__uint128_t w = ( (__uint128_t)@u ) * ( (__uint128_t)@v )`;
