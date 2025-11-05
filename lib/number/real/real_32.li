@@ -10,4 +10,8 @@ Insert
   - parent_float_real:FLOAT_REAL := FLOAT_REAL
 
 Public
+
+  - hypot y:SELF :SELF <- `hypotf(@Self,@y)`:SELF
   
+  - atan2 dx:SELF :SELF <- `atan2f(@Self,@dx)`:SELF
+

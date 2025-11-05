@@ -15,10 +15,13 @@ Mapping,Private
 REAL, REAL_32, REAL_64, REAL_80
 
   - get_map f:SELF <-
-  ( + tab:NATIVE_ARRAY(SELF)
+  ( `{ double f; uint64_t i=0; f = @f; memcpy(&i,&f,sizeof(double))`;
+    map_64 := `i`:UINTEGER_64
+    `}`    
+    /*+ tab:NATIVE_ARRAY(SELF)
     tab := CAST FLOAT_MAP64 TO (NATIVE_ARRAY SELF).on FLOAT_MAP64
     `/* Bug GCC */`
-    tab.at 0 put f
+    tab.at 0 put f*/
   )
 
 Public

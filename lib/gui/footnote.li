@@ -39,7 +39,9 @@ Public
     font_size (FONT.size_sys)
     px := text (px,py) msg (buf_pg.shortname)
     translate_and_restore (xmax-4-px,0)
-    (buf_pg = PAGE.cur_pg.buf_pg).if {      
+    //
+    (buf_pg = PAGE.cur_pg.buf_pg).if {
+      text_align (align_baseline | align_left)
       font_face_id (FONT.sys (FONT.italic))
       text (xo + 8,py) msg (buf_pg.footnote_left)
     }

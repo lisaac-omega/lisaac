@@ -19,7 +19,7 @@ Private
   }
   
 Public
-  - ray:REAL_32 := 8
+  - ray:REAL_32 := 16
     
   - move:UINTEGER_8  := 0_0000b
   

@@ -421,20 +421,10 @@ Public
     PAPER.refresh_again
   )
   
-  /*
-  - draw <-
-  (
-    begin_path
-    rect (0,0) size (100,100)
-    fill_color (COLOR.red)
-    fill
-  )*/
-  
 Public
   
   - main <-
   (
-    "Main lisaac".println;    
     init "StarTrek" size (600,800)
     PAPER.run
   )

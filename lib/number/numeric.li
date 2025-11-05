@@ -387,7 +387,6 @@ Public
   - min other:SELF :SELF <-
   // Minimum between value of `Self' and `other'
   ( + result:SELF
-
     (Self > other).if {
       result := other
     } else {
@@ -399,7 +398,6 @@ Public
   - max other:SELF :SELF <-
   // Maximum between value of `Self' and `other'
   ( + result:SELF
-
     (Self > other).if {
       result := Self
     } else {
@@ -408,6 +406,12 @@ Public
     result
   )
 
+  - clamp (mn:SELF, mx:SELF) :SELF <-
+  // Clamp Self value to the [mn, mx] range.
+  (
+    (Self.min mx).max mn
+  )
+  
   // Conversion for other type.
 
   - to_boolean:BOOLEAN <-

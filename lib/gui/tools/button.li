@@ -20,18 +20,27 @@ Public
   - barre:INTEGER := 1 << 16
   - dark:INTEGER  := 1 << 17
   - light:INTEGER := 1 << 18
+  - nobackground:INTEGER := 1 << 19
+  
+  - check:INTEGER := 1 << 20
+  - radio:INTEGER := 1 << 21
     
   + txt:STRING_ALIAS
   + act:{BUTTON;BOOLEAN}
+  + get_case:{BUTTON;BOOLEAN}
+  
+  - set_check b:{BUTTON;BOOLEAN} :SELF <- ( get_case := b; set check)
+  - set_radio b:{BUTTON;BOOLEAN} :SELF <- ( get_case := b; set radio)
   
   - set_txt t:STRING_ALIAS <- ( txt := t; )
   
   - width_min:REAL_32 <-
-  ( + x0,y0,x1,y1,wt:REAL_32
+  ( + x0,y0,x1,y1,wt,s:REAL_32
     font_face_id (FONT.sys (FONT.bold))
-    font_size (FONT.size_sys*zom)
+    s := FONT.size_sys*zom
+    font_size s
     (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt
-    wt + margin*2
+    wt + margin*2 + ((is radio) || {is check}).ok s or 0
   )
     
   - height_min:REAL_32 <- (FONT.size_sys + margin*2)
@@ -39,44 +48,79 @@ Public
   - init t:STRING_ALIAS do d:{BUTTON;BOOLEAN} :SELF <-
   (
     (act,txt) := (d,t)
+    set align_center
     init_obj
   )
   
   - draw <-
-  ( + y,x,w:REAL_32
+  ( + y,x,w,s,r:REAL_32
     + c:COLOR
-    //draw_debug
-    
-    (x,y) := (xo + width/2, yo + height/2)
+    //draw_debug    
     (is inside).if {
       fill_color (LOOK_GUI.border_on)
-    } else {
+    } else {      
       (is light).if {
         fill_color (LOOK_GUI.border_on) //(COLOR.rgb(200,200,200))
       } else {
         fill_color (LOOK_GUI.border_off); //COLOR.rgba (0,0,0,10))
       }
     }
-    begin_path
-    rect (xo,yo) size (width, height) radius 8
-    fill
+    (! is nobackground).if {
+      begin_path
+      rect (xo,yo) size (width, height) radius 8
+      fill
+    }
     //
     ((is mute) || {is dark}).if {
       c := (col=COLOR).ok (LOOK_GUI.text_bg_ui) else {col.set_af 0.3}
     } else {
       c := (col=COLOR).ok (LOOK_GUI.text_ui) or col
     }
+    y := yo + height/2
+    (is align_left).if {
+      x := xo
+    }.elseif {is align_right} then {
+      x := xmax - width_min
+    } else {
+      x := xo + (width - width_min)/2
+    }
+    x := x + margin
+    s := FONT.size_sys*zom
     fill_color c
+    ((is radio) || {is check}).if {
+      begin_path
+      stroke_color c
+      stroke_width 2.0
+      r := s / 2 - 5
+      //
+      (is radio).if {
+        circle (x+r,y) radius r
+        stroke
+        (get_case.value Self).if {
+          begin_path
+          circle (x+r,y) radius (r-4)
+          fill
+        }
+      } else {
+        rect (x, y - r) size (r * 2, r * 2)
+        (get_case.value Self).if {
+          line (x, y - r) to (x + r * 2, y + r)
+          line (x + r * 2, y - r) to (x, y + r)
+        }
+        stroke
+      }
+      x := x + s
+    }
     font_face_id (FONT.sys (is inside.ok (FONT.bold) or (FONT.roman)))
-    font_size (FONT.size_sys*zom)
-    text_align (align_center | align_middle)
-    text (x,y) msg txt
-    (is barre).if {
-      w := width_min - margin*2
+    font_size s
+    text_align (align_left | align_middle)
+    w := text (x,y) msg txt - x
+    //
+    (is barre).if {      
       begin_path
       stroke_width (zom*3)
       stroke_color (COLOR.rgba (0,0,0,128))
-      line (x-w/2,y) to (x+w/2,y)
+      line (x,y) to (x+w,y)
       stroke
     }    
   )

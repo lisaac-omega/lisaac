@@ -18,7 +18,7 @@ Public
   - run:BOOLEAN <- FALSE
   
   + flag:INTEGER
-  - set f:INTEGER <- ( flag := flag|f; )
+  - set f:INTEGER :SELF <- ( flag := flag|f; Self)
   - is f:INTEGER :BOOLEAN <- flag&f != 0
   - mute:INTEGER  := 1<<13
   - radio:INTEGER := 1<<14

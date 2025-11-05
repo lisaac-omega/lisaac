@@ -606,3 +606,8 @@ Public
 INTEGER
   
   - to_raw_pointer:POINTER <- CAST UINTEGER_CPU TO POINTER.on to_uinteger_cpu
+
+Public
+  //  French corner
+  - répéter Self:SELF fois action:{} <- (repeat Self times action)
+  

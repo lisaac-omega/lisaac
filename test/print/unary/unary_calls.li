@@ -1,0 +1,12 @@
+Header
+  + name := UNARY_CALLS;
+  
+Public
+  - main <-
+  (
+    println("cool")
+    println "excellent"
+    "perfect" println
+    "whaou".println
+    ("tip top").println
+  )

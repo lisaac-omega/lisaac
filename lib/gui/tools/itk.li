@@ -487,6 +487,15 @@ Public
     }
   )
   
+  - neg s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  // s = d : ok
+  ( + c:UINTEGER_8
+    0.to (w*h-1) do { i:INTEGER
+      c := s.at i
+      d.at i put (255-c)
+    }
+  )
+  
   - rgba (r,g,b,a:UINTEGER_8) src s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
   // s = d Ok
   ( + j:INTEGER
@@ -642,7 +651,7 @@ Public
   )
   
   - sobel src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
-  from (x0,y0:INTEGER) to (x1,y1:INTEGER) <-
+  rect (x0,y0,x1,y1:INTEGER) <-
   // Src != dst
   [ ? {src != dst}; ]
   ( + sumx,sumy,i:INTEGER
@@ -720,11 +729,14 @@ Public
     }
   )
   
+  //- err:Expanded ARRAY INTEGER
+  
   - contour img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) in pt:ARRAY INTEGER
-  rect (x0,y0,x1,y1:INTEGER) :(STRING_ALIAS,INTEGER,INTEGER) <-
+  rect (x0,y0,x1,y1:INTEGER) :(STRING_ALIAS,INTEGER,INTEGER /*,INTEGER,INTEGER,INTEGER,INTEGER*/) <-
   // min=16 default
   // Ben Inside
-  ( + n,m,p,p1,dx,dy,lim,cpt,x,ymax,ymin,out_x,out_y:INTEGER
+  ( + n,m,p,p1,dx,dy,lim,cpt,x,ymax,ymin,out_x,out_y,pbeg,bug:INTEGER
+    //+ xx0,yy0,xx1,yy1:INTEGER
     + c:UINTEGER_8
     + out:BOOLEAN
     + res:STRING_ALIAS
@@ -735,7 +747,7 @@ Public
     // 110(6) ----|----> 010(2)
     //       /    V    \
     //    101(5) 100(4) 011(3)    
-    p := pt.first
+    pbeg := p := pt.first
     (img.at (p+1) != 0).if   { n := 010b; }.elseif
     {img.at (p-1) != 0} then { n := 110b; }.elseif
     {img.at (p+w) != 0} then { n := 100b; }
@@ -762,22 +774,34 @@ Public
       }
       //
       ((dy != 0) && {n&100b != m&100b}).if {
-        (pt.last = p).if { pt.remove_last; } else { pt.add_last p; }
+        (pt.last = p).if { pt.remove_last; /*"S0 ".print*/  } else { pt.add_last p; /*"+0 ".print*/ }
       }
       p := p1
       (dy != 0).if {
         pt.add_last p
+        //"+1 ".print
         m := n
       } else {
         (
           ((n = 0) && {m&100b  = 0}) || {(n = 4) && {m&100b != 0}}
         ).if {
           pt.put_last p
+          //"U1 ".print
         }
       }
+      (p = pbeg).if { bug := bug + 1; }
+      //  XXXX
+      //  X
+      //p.print; " / ".print; pt.first.print; " / ".print; pt.count.println
     }.do_while {
-      (pt.count < lim) && {cpt < 8} && {!out} && {(pt.count = 1) || {pt.first != p}}
+      (pt.count < lim) && {cpt < 8} && {!out} && {
+        (pt.count = 1) || {pt.first != p}        
+      } && {bug < 5}
     }
+    //"BUG=".print; bug.println;
+    /*(bug>2).if { "--------------------------BUG----------------".print;
+      bug.println
+    }*/
     (pt.first = pt.last).if { pt.remove_last; }
     //
     ((pt.count >= lim) || {cpt >= 8} || {pt.count.is_odd} || {out}).if { // Echec      
@@ -789,14 +813,20 @@ Public
       }.elseif {out} then {
         res := "Objet hors image."
       }.elseif {pt.count.is_odd} then {
-        res := "Bug contour: count points impair!"
-        "Nb pts:".print; pt.count.println
-        0.to 2 do { i:INTEGER; i.print; ':'.print
+        res := "Bug contour: count points impair! (Err:Contour intern, not extern)"
+        /*
+        //"Nb pts:".print; pt.count.println        
+        0.to (2.min (pt.upper)) do { i:INTEGER; i.print; ':'.print
         (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
-        "... ".print
-        (pt.upper-2).to (pt.upper) do { i:INTEGER; i.print; ':'.print
-        (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
+        (pt.count >= 4).if {
+          "... ".print
+          (pt.upper-2).to (pt.upper) do { i:INTEGER; i.print; ':'.print
+          (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
+        }
         '\n'.print
+        */
+        //err.clear
+        //err.copy_collection pt;
       }
       pt.clear
     } else { out_x := out_y := -1; }
@@ -2068,3 +2098,256 @@ Public
     '\n'.print
   )
   
+  //
+  // Sobel -> NMS -> Double seuillage -> hysterisis
+  //
+  
+Private  
+
+  - bins:INTEGER := 2048;
+  - hist:NATIVE_ARRAY UINTEGER_32 := NATIVE_ARRAY UINTEGER_32.create bins
+
+  // Propagation vers les faibles connectés (8-voisinage)
+  - nx:NATIVE_ARRAY INTEGER :=
+  ( + r:NATIVE_ARRAY INTEGER
+    r := NATIVE_ARRAY INTEGER.create 8
+    r.at 0 put (-1); r.at 1 put   0 ; r.at 2 put 1; r.at 3 put (-1)
+    r.at 4 put   1 ; r.at 5 put (-1); r.at 6 put 0; r.at 7 put   1
+    r
+  )
+  - ny:NATIVE_ARRAY INTEGER :=
+  ( + r:NATIVE_ARRAY INTEGER
+    r := NATIVE_ARRAY INTEGER.create 8
+    r.at 0 put (-1); r.at 1 put (-1); r.at 2 put (-1); r.at 3 put 0;
+    r.at 4 put   0 ; r.at 5 put   1 ; r.at 6 put   1 ; r.at 7 put 1;
+    r
+  )
+  
+  - to_ofs (x,y,w:INTEGER) :INTEGER <- y*w + x
+
+  // Quantifie un angle (radians) en 4 directions : 0°,45°,90°,135° -> {0,1,2,3}
+  - quantize_dir angle_rad:REAL_32 :UINTEGER_8 <-
+  ( + a:REAL_32
+    + r:UINTEGER_8
+    // map to [0,180)
+    a := angle_rad * 180.0 / REAL_32.pi;
+    while {a < 0}      do { a := a + 180.0; }
+    while {a >= 180.0} do { a := a - 180.0; }
+
+    // centres: 0, 45, 90, 135 ; plages +/-22.5°
+    if ((a >= 157.5) || {a < 22.5}) then { } // 0°
+    .elseif {a < 67.5}  then { r := 1; } // 45°
+    .elseif {a < 112.5} then { r := 2; } // 90°
+    else { r := 3; } // 135°
+    r
+  )
+  
+  - mag:NATIVE_ARRAY REAL_32
+  - mag_cap:INTEGER
+  - dirq:NATIVE_ARRAY UINTEGER_8
+  - dirq_cap:INTEGER
+  - nms:NATIVE_ARRAY REAL_32
+  - nms_cap:INTEGER
+  - cls:NATIVE_ARRAY UINTEGER_8
+  - cls_cap:INTEGER
+  - stack:NATIVE_ARRAY INTEGER
+  - stack_cap:INTEGER
+  
+Public
+  
+  // Détection d'arêtes façon Canny (Sobel -> NMS -> double seuil + hystérésis)
+  // img : pointeur sur image 8-bit (imgh lignes, imgw colonnes)
+  // ROI : (x0,y0) haut-gauche, (x1,y1) bas-droit (inclusif). Sera recadré dans l'image.
+  // Retour : nouvel array alloué de taille imgw*imgh (0/255). A libérer par l'appelant.
+  - detect_edges_sobel_nms_hyst img:NATIVE_ARRAY UINTEGER_8
+  to out:NATIVE_ARRAY UINTEGER_8 size (imgw,imgh:INTEGER)
+  rect (x0,y0, x1,y1:INTEGER) :BOOLEAN <-
+  ( + roiw,roih,roisize:INTEGER;
+    + y,x,gx,gy,i:INTEGER
+    + p00,p10,p20,p01,p21,p02,p12,p22:INTEGER
+    + m:REAL_32
+    + sp,px,py:INTEGER;
+    + maxmag,high,low:REAL_32
+    + countpos:INTEGER
+    + result:BOOLEAN
+        
+    roiw := x1 - x0 + 1;
+    roih := y1 - y0 + 1;
+    roisize := roiw * roih;
+
+    // Buffers ROI
+    (mag,mag_cap)   := NATIVE_ARRAY REAL_32   .update_size (mag,mag_cap)   new roisize; // magnitude du gradient
+    (dirq,dirq_cap) := NATIVE_ARRAY UINTEGER_8.update_size (dirq,dirq_cap) new roisize; // direction quantifiée
+    (nms,nms_cap)   := NATIVE_ARRAY REAL_32   .update_size (nms,nms_cap)   new roisize; // après suppression non-max
+    (cls,cls_cap)   := NATIVE_ARRAY UINTEGER_8.update_size (cls,cls_cap)   new roisize; // 0=non, 1=faible, 2=fort
+
+    // 1) Sobel Gx, Gy -> magnitude + direction (quantifiée)
+    // Kernels:
+    // Gx = [-1 0 1; -2 0 2; -1 0 1]
+    // Gy = [ 1 2 1;  0 0 0; -1 -2 -1]
+    1.to (roih - 2) do { ry:INTEGER;
+      y := y0 + ry;
+      1.to (roiw - 2) do { rx:INTEGER;
+        x := x0 + rx;
+        // Raccourcis des voisins
+        p00 := img.at (to_ofs (x-1, y-1, imgw));
+        p10 := img.at (to_ofs (x,   y-1, imgw));
+        p20 := img.at (to_ofs (x+1, y-1, imgw));
+        p01 := img.at (to_ofs (x-1, y,   imgw));
+        p21 := img.at (to_ofs (x+1, y,   imgw));
+        p02 := img.at (to_ofs (x-1, y+1, imgw));
+        p12 := img.at (to_ofs (x,   y+1, imgw));
+        p22 := img.at (to_ofs (x+1, y+1, imgw));
+
+        gx := -p00 + p20 - 2*p01 + 2*p21 - p02 + p22;
+        gy :=  p00 + 2*p10 + p20 - p02 - 2*p12 - p22;
+
+        m := (gx.to_real_32).hypot (gy.to_real_32);
+        i := ry * roiw + rx;
+        mag.at i put m;
+        dirq.at i put (quantize_dir((gy.to_real_32).atan2 (gx.to_real_32)));
+      }
+    }
+    // Bords du ROI (0..roiW-1, 0..roiH-1) restent à 0 via calloc.
+
+    // 2) Suppression des non-maximum (NMS)
+    1.to (roih - 2) do { ry:INTEGER
+      1.to (roiw - 2) do { rx:INTEGER
+        + m1,m2:REAL_32
+        i := ry * roiw + rx;
+        m := mag.at i;
+        if (m = 0.0) then {
+          nms.at i put 0.0;
+        } else {
+          m1 := 0.0; m2 := 0.0;
+          (dirq.at i)
+          .when 0 then { // 0° : (x-1,y), (x+1,y)
+            m1 := mag.at (i - 1);
+            m2 := mag.at (i + 1);
+          }
+          .when 1 then { // 45° : (x-1,y+1), (x+1,y-1)
+            m1 := mag.at (i - 1 + roiw);
+            m2 := mag.at (i + 1 - roiw);
+          }
+          .when 2 then { // 90° : (x,y-1), (x,y+1)
+            m1 := mag.at (i - roiw);
+            m2 := mag.at (i + roiw);
+          }
+          .when 3 then { // 135° : (x-1,y-1), (x+1,y+1)
+            m1 := mag.at (i - 1 - roiw);
+            m2 := mag.at (i + 1 + roiw);
+          }
+          nms.at i put (((m >= m1) && {m >= m2}).ok m or 0.0);
+        }
+      }
+    }
+
+    // 3) Seuils automatiques sur NMS : high = P90, low = high/2.5
+    // Histogramme simple sur 2048 bins, normalisé par max    
+    0.to (roisize-1) do { i:INTEGER
+      if (nms.at i > 0.0) then {
+        if (nms.at i > maxmag) then { maxmag := nms.at i; }
+        countpos := countpos + 1;
+      }
+    }
+    
+    if ((countpos = 0) || {maxmag = 0}) then {
+      // Rien à détecter -> image vide
+      result := FALSE
+    } else {
+      + cum,target:UINTEGER_64
+      + bin90:INTEGER
+      + v:REAL_32
+      + b:INTEGER
+
+      result := TRUE
+      0.to (bins-1) do { i:INTEGER; hist.at i put 0; }
+      0.to (roisize-1) do { i:INTEGER
+        v := nms.at i;
+        if (v <= 0.0) then {
+          // continue;
+        } else {
+          b := (v / maxmag * (bins - 1)).to_integer;
+          b := b.max 0.min (bins-1)
+          hist.at b put (hist.at b + 1);
+        }
+      }
+      // Cumul pour percentile 90%
+      target := (0.90 * countpos.to_real_64).ceil.to_uinteger_64;
+      bin90 := bins - 1;
+      b := 0
+      {b < bins}.while_do { 
+        cum := cum + hist.at b;
+        if (cum >= target) then { bin90 := b; b := bins /* break */ }
+        b := b + 1;
+      }
+      high := bin90.to_real_32 / (bins - 1).to_real_32 * maxmag;
+      low  := high / 2.5;      
+    }
+
+    // 4) Classification fort/faible
+    0.to (roisize-1) do { i:INTEGER
+      + v:REAL_32
+      v := nms.at i;
+      if      (v >= high) then { cls.at i put 2; } // fort
+      .elseif {v >= low}  then { cls.at i put 1; } // faible
+      else                     { cls.at i put 0; } // non
+    }
+
+    // 5) Hystérésis (DFS avec pile)
+    // Pile maximum = tous les pixels du ROI    
+    (stack,stack_cap) := NATIVE_ARRAY INTEGER.update_size (stack,stack_cap) new (roisize*2); 
+    
+    // Empile tous les forts
+    1.to (roih - 2) do { ry:INTEGER
+      1.to (roiw - 2) do { rx:INTEGER
+        i := ry * roiw + rx;
+        if (cls.at i = 2) then {
+          stack.at sp put rx; sp := sp + 1; stack.at sp put ry; sp := sp + 1;
+          // Marque déjà comme "final" dans out pour éviter doublons
+          out.at (to_ofs (x0 + rx, y0 + ry, imgw)) put 255;
+        }
+      }
+    }
+
+    while {sp > 0} do {
+      sp := sp - 1; px := stack.at sp; sp := sp - 1; stack.at sp;      
+      0.to 7 do { k:INTEGER;
+        + rx,ry:INTEGER
+        rx := px + nx.at k;
+        ry := py + ny.at k;
+        if ((rx <= 0) || {rx >= roiw-1} || {ry <= 0} || {ry >= roih-1}) then {
+          // Continue
+        } else {
+          i := ry * roiw + rx;
+          if (cls.at i = 1) then { // faible -> promouvoir
+            cls.at i put 2;
+            stack.at sp put rx; sp := sp + 1; stack.at sp put ry; sp := sp + 1;
+            out.at (to_ofs (x0 + rx, y0 + ry, imgw)) put 255;
+          }
+        }
+      }
+    }
+    result
+  )
+
+/*
+int main() {
+    // Supposez imgw, imgh, img[] remplis...
+    // Ici: créez une image factice pour la démo
+    int imgw = 320, imgh = 240;
+    unsigned char *img = (unsigned char*)calloc((size_t)imgw*imgh, 1);
+    // ... (remplir img)
+    int x0=20, y0=20, x1=imgw-21, y1=imgh-21;
+
+    unsigned char* edges = detect_edges_sobel_nms_hyst(img, imgw, imgh, x0, y0, x1, y1);
+    if (!edges) { fprintf(stderr, "Erreur\n"); return 1; }
+
+    // edges contient 0/255 ; à sauvegarder/visualiser selon vos besoins
+    // ...
+
+    free(edges);
+    free(img);
+    return 0;
+}
+*/

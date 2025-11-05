@@ -139,7 +139,17 @@ Public
 
   - append_in b:STRING_BUFFER decimal n:INTEGER <-
   // String of the number in base 10 with 4 decimal
-  ( + val:SELF
+  ( /*+ nc_buf:NATIVE_ARRAY(CHARACTER)
+    + old_count,cap:INTEGER
+
+    old_count := b.count
+    cap       := b.capacity - old_count
+    nc_buf    := b.to_external + old_count    
+    `snprintf(@nc_buf,@cap,"%.*f",@n,(double)@Self)`
+    b.restore_after_external
+    */
+    //Bug avec Valgrind (nov. 2025)
+    + val:SELF
     + val_10:INTEGER
     + char:CHARACTER
     + i:INTEGER
