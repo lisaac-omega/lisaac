@@ -42,6 +42,11 @@ Public
   - orange:COLOR := rgb (0FFh,080h,   0)
   - dark_orange:COLOR := rgb (0FFh,08Ch,   0)
   
+  - brown:COLOR := rgb (096h,04Bh,0)
+  - saddle_brown:COLOR := rgb (08Bh,045h,013h)
+  - chocolate:COLOR := rgb (0D2h,069h,01Eh)
+  - peru:COLOR := rgb (0CDh,085h,03Fh)
+  
   - is_black:BOOLEAN <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
   
   - rgb (pr,pg,pb:UINTEGER_8) :SELF <- rgba (pr,pg,pb,255)
