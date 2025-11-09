@@ -1,0 +1,13 @@
+Header
+  + name := BUG_HEXA;
+  /**/
+  
+Public
+  
+  - main <-
+  ( + a,b:INTEGER
+    a := 0C7h
+    OUT # a # '\n'
+    b := 0C7
+    OUT # b # '\n'
+  )

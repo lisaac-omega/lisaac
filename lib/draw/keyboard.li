@@ -24,6 +24,8 @@ Private
     r
   )
   
+  - hat:CHARACTER  // \0: Nothing, ^ or ¨
+  
 PAPER
   
   - key k:INTEGER code key:INTEGER press press:BOOLEAN mods mods:UINTEGER_8 <-
@@ -114,6 +116,7 @@ PAPER
           //OUT # "\nIIII " # str # " XXXX\n"
         } else {
           str.append_utf8 name native
+          
           (cmd & (shift|cap) != 0).if {
             (str.first.is_lower).if {
               str.at 0 put (str.at 0 .to_upper)
@@ -155,6 +158,26 @@ PAPER
                 }
               }
             }
+          }
+          (hat = '\0').if {
+            ((str.first = '^') || {str == "¨"}).if {             
+              hat := str.first 
+              str.clear
+            }
+          } else {
+            ((idx := "eioua".last_index_of (str.first)) != -1).if {
+              idx := (idx << 1) + 1
+              str.clear
+              str.add_last '\0C3h\'              
+              str.add_last ((hat = '^').ok "êîôûâ" or "ëïöüä".at idx)
+            } else {
+              (hat = '^').if {                
+                (str.first != '^').if { str.add_first hat }
+              } else {
+                (str !== "¨").if { str.prepend "¨" }
+              }
+            }
+            hat := '\0'
           }
         }
       }
