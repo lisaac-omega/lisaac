@@ -337,6 +337,19 @@ Public
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last (n.to_pointer.to_integer | 8000_0000h)
   )
+  
+  - get_col p:INTEGER :INTEGER <-
+  ( + i,c,v:INTEGER    
+    {(i <= sty.upper) && {sty.at i <= p}}.while_do {
+      v := sty.at (i+1)
+      ((v >> 8) = 0).if {
+        c := v
+        //OUT # "  p=" # sty.at i # " col=" # c # '\n'
+      }
+      i := i + 2
+    }
+    c
+  )
     
   - print_sty b:INTEGER <-
   ( + f,n:INTEGER_32

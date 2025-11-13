@@ -1,0 +1,12 @@
+Depending pass:  \--WARNING----------
+Conflict `foo' name between slot and local.
+Line 7 column 7 in MAIN(.../test/23/main.li):
+  + foo:INTEGER;
+       ^
+
+Line 9 column 11 in MAIN(.../test/23/main.li):
+  - bar foo:INTEGER <-
+           ^
+|3
+Executing pass: *...*.. (7)
+ => 1 warning(s).

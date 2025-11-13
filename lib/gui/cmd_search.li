@@ -37,18 +37,21 @@ Public
     TRUE
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
-  ( parent_cmd.key s cmd c
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
+    r := parent_cmd.key s cmd c
     ((c & KEYBOARD.msk_cmd) = 0).if {
       search start
+      r := TRUE
     } else {
       //s.first.println
       ((c & 111b) = 0).if {
         (s.first)
-        .when 'R' or 'U' then { action; }
-        .when 'L' or 'D' then { action; }
+        .when 'R' or 'U' then { r := TRUE; action; }
+        .when 'L' or 'D' then { r := TRUE; action; }
       }
     }
+    r
   )
   
   - switch:BOOLEAN <-

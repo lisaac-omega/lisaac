@@ -1,6 +1,7 @@
 Header
 
   + name := CALCULATOR;
+  /**/
 
 Inherit
   + parent_window:Expanded WINDOW
@@ -33,9 +34,7 @@ Public
     
   - main <-
   ( 
-    // Init window.
-    init "LiCalc" size (412,560)
-    
+    init "LiCalc" size (412,560)    
     (
       (
         input := INPUTBOX.new.init {t:STRING_BUFFER; t.copy text; }

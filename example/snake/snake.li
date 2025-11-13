@@ -186,7 +186,7 @@ Private
   
 Public
   
-  - key s:STRING cmd c:UINTEGER_8 <-
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
   (
     (s.first)
     .when 'z' then { go_up }
@@ -197,5 +197,6 @@ Public
     .when 'D' then { go_down }
     .when 'L' then { go_left } 
     .when 'R' then { go_right }
+    TRUE
   )
   

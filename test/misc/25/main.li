@@ -17,7 +17,9 @@ Public
     + top2:TOP2
     
     top1 := clone
-    top2 := top1.to_top2 top1; ? {top2 != NULL}; // ben non
+    top2 := top1.to_top2 top1   
+    ? {top2 != NULL}
+    TEST.check (top2 != NULL)
   )
   
   

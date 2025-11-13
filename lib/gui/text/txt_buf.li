@@ -18,7 +18,7 @@ Public
   + buf:Expanded ARRAY_BLOCK CHARACTER
       
   - init_path p:STRING_ALIAS :SELF <-
-  ( buf.init; init_buf p)
+  ( buf.init; undo := UNDO.new; init_buf p)
   
   - load_file:SELF <-
   ( + f:POINTER
@@ -478,7 +478,7 @@ Public
   - skip_line:BOOLEAN <-
   ( + l:CHARACTER
     {(l := at pos_i) = ' '}.while_do { pos_i := pos_i + 1; }
-    (l = '\n').if { pos_i := pos_i + 1; }
+    (l = '\n').if { toks.at tok_cur.inc_nl; pos_i := pos_i + 1; }
   )
   
   - ln_limit:INTEGER
@@ -663,14 +663,14 @@ Public
         (c = '\\').if {
           pos_i := pos_i + 1
           rd_escape_char
-          count := count + 1
         } else {
           pos_i := pos_i + 1
-          count := count + 1
         }
+        count := count + 1
       }
-      ((c = '\'') && {count = 1}).if {
+      (c = '\'').if {
         pos_i := pos_i + 1
+        (count != 1).if { err syntax msg "Character constant too long." }
       } else {
         err syntax msg "Character constant too long."
       }

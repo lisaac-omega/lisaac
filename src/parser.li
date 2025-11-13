@@ -95,6 +95,7 @@ Public
   - last_real    : STRING_ALIAS
   - is_real      : BOOLEAN
   - last_string  : STRING_ALIAS
+  - last_len     : INTEGER
   - is_parameter_type:BOOLEAN
   - last_utf8:STRING_ALIAS
 
@@ -394,6 +395,7 @@ Public
             //last_real := tmp.to_integer_64.to_real_32 * 10.0.pow e1
             is_real := TRUE
           } else {
+            (! tmp.is_integer_64).if { syntax_error (current_position,"Incorrect decimal number."); }
             last_integer := tmp.to_integer_64
           }
         }
@@ -402,13 +404,13 @@ Public
     }
   )
 
-  - read_escape_character <-
+  - read_escape_character:INTEGER <-
   //-- escape         -> '\\' separator {separator} '\\'
   //--                 | '\\' escape_seq
   //--                 | '\\' integer '\\'
   //-- escape_seq     -> 'a' | 'b'  | 'f' | 'n'  | 'r'  | 't'
   //--                 | 'v' | '\\' | '?' | '\'' | '\"' | '0'
-  ( + val:INTEGER
+  ( + val,r:INTEGER
     cur_char.is_separator.if {
       read_space_nl
       (cur_char != '\\').if {
@@ -416,24 +418,28 @@ Public
       }
       string_tmp.remove_last
       position := position+1
-    }.elseif {
-      ("abfnrtv\\?'\"".has cur_char) ||
-      {(cur_char = '0') && {! source.at (position+1).is_hexadecimal_digit}}
-    } then {
-      string_tmp.add_last cur_char
-      position := position+1
-    }.elseif {cur_char.is_digit} then {      
-      read_num
-      ((last_integer > 255) || {is_real}).if { syntax_error (current_position,"Invalid range character number [0,255]."); }
-      val := last_integer.to_integer
-      string_tmp.add_last ((val >> 6).decimal_digit)
-      string_tmp.add_last (((val >> 3) & 7).decimal_digit)
-      string_tmp.add_last ((val & 7).decimal_digit)
-      (cur_char != '\\').if { syntax_error (current_position,"Character '\' is needed."); }
-      position := position + 1
-    } else {
-      syntax_error (current_position,"Unknown escape sequence.")
+    } else {      
+      (
+        ("abfnrtv\\?'\"".has cur_char) ||
+        {(cur_char = '0') && {! source.at (position+1).is_hexadecimal_digit}}
+      ).if {
+        string_tmp.add_last cur_char
+        position := position+1
+      }.elseif {cur_char.is_digit} then {      
+        read_num
+        ((last_integer > 255) || {is_real}).if { syntax_error (current_position,"Invalid range character number [0,255]."); }
+        val := last_integer.to_integer
+        string_tmp.add_last ((val >> 6).decimal_digit)
+        string_tmp.add_last (((val >> 3) & 7).decimal_digit)
+        string_tmp.add_last ((val & 7).decimal_digit)
+        (cur_char != '\\').if { syntax_error (current_position,"Character '\' is needed."); }
+        position := position + 1
+      } else {
+        syntax_error (current_position,"Unknown escape sequence.")
+      }
+      r := 1
     }
+    r
   )
 
   - read_characters:BOOLEAN <-
@@ -468,16 +474,17 @@ Public
   //-- string         -> '\"' string_char '\"'
   ( + c:CHARACTER
     read_space
-    (cur_char = '\"').if {      
+    (cur_char = '\"').if {
       position := position+1
+      last_len := 0
       string_tmp.clear
       {((c := cur_char) != '\0') && {c != '\n'} && {c != '\"'}}.while_do {
         string_tmp.add_last c
-        (c = '\\').if {
-          position := position+1
-          read_escape_character
+        position := position+1
+        (c = '\\').if { 
+          last_len := last_len + read_escape_character 
         } else {
-          position := position+1
+          last_len := last_len + 1
         }
       }
       (cur_char != '\"').if {
@@ -1532,7 +1539,7 @@ Public
     }.elseif {read_characters} then {
       result := ITM_CHARACTER.create current_position char last_string
     }.elseif {read_string} then {
-      result := ITM_STRING.create current_position text last_string
+      result := ITM_STRING.create current_position text last_string len last_len
     }
     result
   )

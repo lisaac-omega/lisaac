@@ -1,0 +1,5 @@
+--WARNING----------
+`TOP2' ?= `TOP1': always NULL assignment.
+Line 9 column 14 in TOP1(.../test/misc/25/top1.li):
+    result ?= x
+              ^

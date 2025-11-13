@@ -61,7 +61,7 @@ Public
             {((c := at (pos_i+3)) = '+') || {c = '-'} || {c = '['}}
           } ||
           { // Begin new Section
-            (pos_i+1 < upper) && {at (pos_i+1) = 'S'}
+            (pos_i+1 < upper) && {at (pos_i+1).is_upper}
           } ||
           { // Begin Chapter
             look "\n  // "

@@ -11,22 +11,24 @@ Inherit
 Public
 
   + string:STRING_ALIAS
+  + len:INTEGER
 
   //
   // Constructor
   //
 
-  - create p:POSITION text n:STRING_ALIAS :SELF <-
+  - create p:POSITION text n:STRING_ALIAS len l:INTEGER :SELF <-
   ( + result:SELF
     result := clone
-    result.make p text n
+    result.make p text n len l
     result
   )
 
-  - make p:POSITION text n:STRING_ALIAS <-
+  - make p:POSITION text n:STRING_ALIAS len l:INTEGER <-
   (
     position := p
     string   := n
+    len := l
   )
 
   //
@@ -37,9 +39,9 @@ Public
   ( + result:EXPR
     + slt:SLOT_DATA
     + wrt:WRITE
-    + len:INTEGER
+    //+ len:INTEGER
 
-    len := length
+    //len := length
     result := STRING_CST.create position text string length len
     // upper
     slt := type_string_alias.get_slot "upper".slot_data_intern
@@ -71,7 +73,8 @@ Public
   )
 
 Private
-
+  
+  /*
   - length:INTEGER <-
   ( + i,result:INTEGER
     i := string.lower
@@ -90,6 +93,7 @@ Private
     }
     result
   )
+  */
 
 
 

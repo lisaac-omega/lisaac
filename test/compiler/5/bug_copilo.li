@@ -10,11 +10,14 @@ Public
   - main <-
   ( 
     str2 := STRING_BUFFER.create 6
+    //OUT # str2.count # '\n'
     str2.add_last '\0A7h\'
+    //OUT # str2.count # '\n'
     str2.add_last '\0A8h\'
     str2.add_last '\0A9h\'
     str2.add_last '\0A0h\'
     str2.add_last '\0B9h\'
+    //OUT # str1.count # "  " # str2.count # "\n"
     from 0 to (str1.upper) do { i:INTEGER
       TEST.check (str1.at i) character (str2.at i)
     }

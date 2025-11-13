@@ -4,10 +4,9 @@ Header
   
 Public
   
-  - to_top2 not_self:TOP1 :TOP2 <-
-  ( + result:TOP2
-    
-    result ?= not_self; // DCDC is it really a problem ??
+  - to_top2 x:TOP1 :TOP2 <-
+  ( + result:TOP2  
+    result ?= x
     result
   )
   

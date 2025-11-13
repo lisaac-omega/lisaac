@@ -71,6 +71,10 @@ void new_key(int64_t,int64_t,int64_t,int64_t);
 //int refresh_callback(void *);
 //void scroll_callback(void *,float,float);
 
+void on_window_focus(void*, char);
+static void on_window_focus_c(GLFWwindow* w, int focused)
+{ on_window_focus(w,focused == GLFW_TRUE); }
+
 static void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
   //printf("C: Key:%d %c, Scancode:%d, Action:%d, Mods:%d %d\n",key,key,scancode,action,mods,
@@ -259,6 +263,7 @@ Public
         `glfwTerminate()`
         exit exit_failure_code
       }
+      `glfwSetWindowFocusCallback(@win, on_window_focus_c)`;
       //"Create window ".print; w.print; "x".print; h.println
       (lip "target" str = "apple").if_false { put_window_icon win; }
       `glfwSetKeyCallback(@win, intern_key)`
@@ -504,6 +509,18 @@ Public
     
 External
   
+  - on_window_focus (w:POINTER,f:CHARACTER) <-
+  ( - count:INTEGER
+    
+    (f != '\0').if {
+      count := count + 1;
+      //(count = 1).if { "Focus ON".println }
+    } else {
+      count := count - 1;
+      //(count = 0).if { "Focus OFF".println }
+    }
+  )
+
   - generate_frame w:POINTER <-
   (    
     li_refresh_callback w //(wins.first.win_ptr)

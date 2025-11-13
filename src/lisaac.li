@@ -291,14 +291,13 @@ Private
       buf.append "char *trace["
       PROTOTYPE.prototype_list.count.append_in buf
       buf.append "]={\n"
-      (PROTOTYPE.prototype_list.lower).to (PROTOTYPE.prototype_list.upper-1) do {
-	j:INTEGER
-	proto := PROTOTYPE.prototype_list.at j
-	buf.append "  \""
-	buf.append (proto.name)
+      (PROTOTYPE.prototype_list.lower).to (PROTOTYPE.prototype_list.upper-1) do { j:INTEGER
+        proto := PROTOTYPE.prototype_list.at j
+        buf.append "  \""
+        buf.append (proto.name)
         buf.append " ("
         proto.append_filename buf
-	buf.append ")\",\n"
+        buf.append ")\",\n"
       }
       proto := PROTOTYPE.prototype_list.last
       buf.append "  \""
@@ -312,27 +311,27 @@ Private
       //
 
       (debug_with_code).if {
-	+ src:ARRAY POSITION
+        + src:ARRAY POSITION
 
         title "SOURCE LINE REFERENCE" in output_decl
 
-	buf.append
-	"struct __source {\n\
-	\  uint32_t pos;\n\
-	\  char *line;\n\
+        buf.append
+        "struct __source {\n\
+          \  uint32_t pos;\n\
+          \  char *line;\n\
         \} __src["
-	src := PUSH.source_line
-	src.count.append_in buf
-	buf.append "]={\n"
-	(src.lower).to (src.upper) do { j:INTEGER
-	  buf.append "  {"
-	  src.at j.code.append_in buf
-	  buf.append ",\""
-	  src.at j.extract_line_in buf
-	  buf.append "\"},\n"
-	}
-	buf.remove (buf.upper - 1)
-	buf.append "};\n\n"
+          src := PUSH.source_line
+          src.count.append_in buf
+        buf.append "]={\n"
+          (src.lower).to (src.upper) do { j:INTEGER
+            buf.append "  {"
+              src.at j.code.append_in buf
+              buf.append ",\""
+              src.at j.extract_line_in buf
+            buf.append "\"},\n"
+          }
+          buf.remove (buf.upper - 1)
+        buf.append "};\n\n"
       }
 
       //
@@ -340,14 +339,14 @@ Private
       //
             
       if (is_ansi) then {
-	buf.append
-	"/* Unix Signal manager: */\n\
-	\void interrupt_signal(int sig)  \n\
-	\{                               \n\
-	\  lisaac_stack_print(0);     \n\
-	\  print_string(\"User interrupt.\\n\"); \n\
-	\  die_with_code(1);                     \n\
-	\}                                       \n\n"
+        buf.append
+        "/* Unix Signal manager: */\n\
+        \void interrupt_signal(int sig)  \n\
+        \{                               \n\
+          \  lisaac_stack_print(0);     \n\
+          \  print_string(\"User interrupt.\\n\"); \n\
+          \  die_with_code(1);                     \n\
+        \}                                       \n\n"
       }
 
       //
@@ -720,9 +719,9 @@ Public
       string_tmp.append output_extension
       string_tmp.append "\npath directory :\n"
       path_file.lower.to (path_file.upper) do { j:INTEGER
-	string_tmp.append "  "
-	string_tmp.append (path_file.at j)
-	string_tmp.add_last '\n'
+        string_tmp.append "  "
+        string_tmp.append (path_file.at j)
+        string_tmp.add_last '\n'
       }
       string_tmp.print
     }

@@ -1,8 +1,8 @@
 Header
-  + name := Expanded UNDO;
+  + name := UNDO;
   
 Inherit
-  - parent_utils:UTILS := UTILS
+  - parent_clone:CLONE := CLONE
   
 Public
   - stack_size:INTEGER := 32_768; // Power 2 !!
@@ -19,6 +19,8 @@ Public
   - set_auto b:BOOLEAN <- ( auto := b; )
   
   - is_empty:BOOLEAN <- count = 0
+  
+  - new:SELF <- clone
   
   - rm i:INTEGER  char c:UINTEGER_32 <- gen i char c type t_rm
   - add i:INTEGER char c:UINTEGER_32 <- gen i char c type t_add

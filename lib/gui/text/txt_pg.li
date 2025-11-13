@@ -169,7 +169,7 @@ Public
     } || {event_elevator ev}
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
   (
     ((c & KEYBOARD.msk_cmd) = 0).if {
       cmd_add s
@@ -806,14 +806,23 @@ Public
 Private
   
   - count_block ii:INTEGER dir d:INTEGER :INTEGER <-
-  ( + n,i:INTEGER
+  ( + n,i,col,dd:INTEGER
+    + tb,ti:INTEGER
     + c:CHARACTER
     i := ii
-    {(i < text.upper) && {(c := text.at i) != '\n'}}.while_do {      
+    {(i < text.upper) && {(c := text.at i) != '\n'}}.while_do {
       ((c = '(') || {c = '['} || {c = '{'}).if {
-        n := (n + d*2).max 0
+        dd := d * 2        
       }.elseif {(c = ')') || {c = ']'} || {c = '}'}} then {
-        n := (n - d*2).max 0
+        dd := - d * 2
+      } else { dd := 0 }
+      (dd != 0).if {
+        (tb,ti) := text.pos_to_tok i
+        col := text.toks.at ti.get_col (i-tb)
+        //OUT # "tok#" # ti # " tb=" # tb # " Col" # i # " = " # col # "\n"
+        ((col = 0) || {col = LOOK.symbol}).if {
+          n := (n + dd).max 0
+        }
       }
       i := i + d
     }

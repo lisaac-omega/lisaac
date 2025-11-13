@@ -172,9 +172,10 @@ Public
   )
   - release_focus <- ( focus := NULL; )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
-  (
-    (focus != NULL).if { focus.key s cmd c; }
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
+    (focus != NULL).if { r := focus.key s cmd c; }
+    r
   )
   
   - depth_event ev:UINTEGER_8 :WIN <- send { w:WIN; w.event ev}

@@ -22,15 +22,11 @@ Public
 
   - output_count:INTEGER
 
-  //
   // Value.
-  //
 
   + string:STRING_ALIAS
 
-  //
-  // Creation.
-  //
+  // Creation.  
 
   - create p:POSITION text n:STRING_ALIAS length len:INTEGER :SELF<-
   ( + result:SELF

@@ -227,6 +227,9 @@ Private
       '.'.print; test_counter := test_counter + 1
       continue := compile_boost FALSE dirpath dirpath main fname lisaacout lisaacout
     }
+    if (continue && {file_exists "error_msg" in dirpath}) then {
+      continue := FALSE
+    }
     if (continue && {! no_run} && {! boost_only}) then {
       '.'.print; test_counter := test_counter + 1
       execute_main dirpath fname fname args args
@@ -314,7 +317,7 @@ Private
       add_redirect ">" dirpath dirpath new "lisaacout.new"
       mybuffer.append " 2>&1"
     }.elseif {! verbose} then {
-      mybuffer.append " 1>/dev/null 2>/dev/null"
+      mybuffer.append " 1>/dev/null"
     }
     cmd := mybuffer.to_string_alias
     '.'.print

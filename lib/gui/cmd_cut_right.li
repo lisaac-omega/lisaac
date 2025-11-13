@@ -17,7 +17,7 @@ Public
     cut
   )
 
-  - key s:STRING cmd c:UINTEGER_8 <-
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
   (
     close
     SCREEN.key s cmd c

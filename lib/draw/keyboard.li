@@ -12,7 +12,8 @@ Public
   
 Private 
   
-  - new_num_str:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" // Bug compilo
+  //- num_str:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" // Bug alias_string
+  
   - num_str:STRING_BUFFER :=
   ( + r:STRING_BUFFER
     r := STRING_BUFFER.create 6

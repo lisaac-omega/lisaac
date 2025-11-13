@@ -100,21 +100,29 @@ Public
     PAGE.cur_pg.buf_pg.move_pos_y d
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
-  ( 
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
     BUF_PG.footnote_left.clear
     (focus != NULL).if {      
-      focus.key s cmd c
-    } else {
-      (SHORTCUT.key s cmd c).if_false {
+      r := focus.key s cmd c
+    } else {      
+      r := SHORTCUT.key s cmd c
+      (! r).if {
         (cmd_cur.is (cmd_cur.on)).if {
-          cmd_cur.key s cmd c
-        } else {
-          PAGE.cur_pg.buf_pg.key s cmd c
+          r := cmd_cur.key s cmd c
+        } else {          
+          r := PAGE.cur_pg.buf_pg.key s cmd c
         }
       }
     }
     //"key:".print; c.print; ' '.print; s.println
+    (r).if {
+      current_key.clear
+    } else {
+      (! current_key.is_empty).if { current_key # ", " }
+      KEYBOARD.key_to_string s cmd c in current_key    
+      PAGE.cur_pg.buf_pg.footnote_left.copy current_key
+    }
   )
   
   - init_pos (x,y:REAL_32) size (w,h:REAL_32) :SELF <-
@@ -174,6 +182,8 @@ Public
   
 Private
   
+  - current_key:STRING_BUFFER := STRING_BUFFER.create 32
+    
   - init_common:SELF <-
   ( init NULL
     FONT.load pen

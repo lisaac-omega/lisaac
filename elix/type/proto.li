@@ -292,13 +292,14 @@ Public
   - add_field:INTEGER
   
   - look_hdr c:STRING :BOOLEAN <-
-  ( + i:INTEGER
+  ( + i,oldp:INTEGER
     + l:CHARACTER
     { i := i + 1; }.do_while {(i < 4) && {skip_line}}
+    oldp := pos_i
     i := 0
     {((l := at (pos_i+i)) != '\0') && {i <= c.upper} && {l = c.at i}}.while_do { i := i + 1; }
     ! (i <= c.upper).if {
-      pos_i := Old pos_i
+      pos_i := oldp
     }
   )
   
@@ -335,6 +336,7 @@ Public
     }    
     (look ";").if { pos_i := pos_i + 1; }
     skip_line
+    
     //"PROTO:".print; pos_i.pt.print; ' '.print; name.println
     // COMMENT & OPTIONS:
     fuck := FALSE
@@ -368,6 +370,7 @@ Public
     }
     ? {(pos_i = upper) || {at pos_i.is_upper}}
     */
+    //(name.has_suffix "cmd_exit.li").if { "Line=".print; toks.at tok_cur.nl.println; }
   )
   
   - field id:INTEGER name n:STRING_ALIAS ass ass:STRING_ALIAS value v:STRING_ALIAS parse p:{TOK_ITM} :TOK_ITM <-

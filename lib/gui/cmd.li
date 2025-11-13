@@ -132,25 +132,27 @@ Public
     reset_scissor
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
-  (
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
     //s.first.to_integer.print; '='.print; '\n'.to_integer.println
     info.clear
     ((c & KEYBOARD.msk_cmd) = 0).if {
       text.insert_string s to cur
       cur := cur + s.count
+      r := TRUE
     } else {      
       //s.first.println
       (s.first)
-      .when '\n'   then { action; }
-      .when 'B'    then { (cur = 0).if { beep; } else { cur := 0; }; }
-      .when 'E'    then { (cur = text.count).if { beep; } else { cur := text.count; }; }
-      .when 'R'    then { inc_cur.if_false { beep; }; }
-      .when 'L'    then { dec_cur.if_false { beep; }; }
-      .when 'S'    then { suppr.if_false { beep; }; }
-      .when '\8d\' then { ((dec_cur) && {suppr}).if_false { beep; }; }
-      .when '\27d\' then { close; }
+      .when '\n'   then { r := TRUE; action; }
+      .when 'B'    then { r := TRUE; (cur = 0).if { beep; } else { cur := 0; }; }
+      .when 'E'    then { r := TRUE; (cur = text.count).if { beep; } else { cur := text.count; }; }
+      .when 'R'    then { r := TRUE; inc_cur.if_false { beep; }; }
+      .when 'L'    then { r := TRUE; dec_cur.if_false { beep; }; }
+      .when 'S'    then { r := TRUE; suppr.if_false { beep; }; }
+      .when '\8d\' then { r := TRUE; ((dec_cur) && {suppr}).if_false { beep; }; }
+      .when '\27d\' then { r := TRUE; close; }
     }
+    r
   )
   
   - open:BOOLEAN <-

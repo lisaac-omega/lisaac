@@ -25,24 +25,25 @@ Public
     }
     TRUE
   )
-  
-  - key s:STRING cmd c:UINTEGER_8 <-
-  (
+    
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
     ((c & KEYBOARD.msk_cmd) = 0).if {
       (s.first)
-      .when 'y' or ' ' then { save_buf; (!next_buf).if { exil; }; }
-      .when 'n'        then { (!next_buf).if { exil; }; }
-      .when 'a' or '!' then { { save_buf; }.do_while {next_buf}; exil; }
-      .when 'e'        then { cur_txt.page.set_buffer (BUFFER.catalog.at idx); close; }
+      .when 'y' or ' ' then { r := TRUE; save_buf; (!next_buf).if { exil; }; }
+      .when 'n'        then { r := TRUE; (!next_buf).if { exil; }; }
+      .when 'a' or '!' then { r := TRUE; { save_buf; }.do_while {next_buf}; exil; }
+      .when 'e'        then { r := TRUE; cur_txt.page.set_buffer (BUFFER.catalog.at idx); close; }
     } else {      
       //s.first.println
       (s.first)      
-      .when '\27d\' then { close; }
+      .when '\27d\' then { r := TRUE; close; }
     }
+    r
   )
 
 Private
-  
+
   - exil <-
   ( 
     FILE_CFG.update

@@ -49,29 +49,30 @@ Public
     TRUE
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
-  (
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  ( + r:BOOLEAN
     (state >= 2).if {
       ((c & KEYBOARD.msk_cmd) = 0).if {        
-        (s.first = '?').if { help := TRUE; ask_refresh; }
+        (s.first = '?').if { r := TRUE; help := TRUE; ask_refresh; }
       } else {
-        (state = 10).if { close; }
+        (state = 10).if { r := TRUE; close; }
         (s.first)
-        .when '\27d\' then { cancel; }
+        .when '\27d\' then { r := TRUE; cancel; }
       }
     } else {
-      parent_cmd.key s cmd c
+      r := parent_cmd.key s cmd c
       ((c & KEYBOARD.msk_cmd) = 0).if {
         //search start
       } else {
         //s.first.println
         ((c & 111b) = 0).if {
           (s.first)
-          .when 'U' then { close; }
-          .when 'D' then { close; }
+          .when 'U' then { r := TRUE; close; }
+          .when 'D' then { r := TRUE; close; }
         }
       }
     }
+    r
   )
     
   - to_next:BOOLEAN <-

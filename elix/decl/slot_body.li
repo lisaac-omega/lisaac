@@ -28,18 +28,20 @@ Public
     
   - parse <-
   (
-    //"Debut:".print; pos_i.pt.println
-    EXPR.skip_body
-    //"Fin:".print; pos_i.pt.println
+    EXPR.skip_body    
+    (PAGE.cur_pg = page).if {
+      + p,n:INTEGER;
+      (p,n) := (pos_i,nl)
+      pos_i := Old pos_i
+      parse_real
+      (pos_i,nl) := (p,n)      
+    }   
   )
   
   - begin_draw <-
   (    
     (expr = NULL).if {      
-      ln_limit := pt_b.pt + di
-      expr := EXPR.rd_expr_op
-      (read_c ';').if { col (LOOK.symbol) sub 1; }
-      ln_limit := 0
+      parse_real
       pos_i := Old pos_i
       nl := Old nl
     }
@@ -48,4 +50,14 @@ Public
   - sub_draw <-
   (
     ((expr != NULL) && {expr.now pos_i}).if { expr.draw; }
+  )
+  
+Private
+  
+  - parse_real <-
+  (
+    ln_limit := pt_b.pt + di
+    expr := EXPR.rd_expr_op
+    (read_c ';').if { col (LOOK.symbol) sub 1; }
+    ln_limit := 0    
   )
