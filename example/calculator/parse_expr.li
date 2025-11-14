@@ -5,15 +5,11 @@ Header
   Parse arithmetic expression.
   */
 
-Inherit
-
-  - parent_clone:CLONE := CLONE
 
 Private
 
-  //
   // Service and terminal parsing.
-  //
+
 
   - index:INTEGER
   - source:STRING
@@ -22,8 +18,7 @@ Private
 
   - read_character car:CHARACTER :BOOLEAN <-
   ( + result:BOOLEAN
-
-    ((index <= source.upper) && {car = source.item index}).if {
+    if ((index <= source.upper) && {car = source.at index}) then {
       last_character := car
       index  := index + 1
       result := TRUE
@@ -36,19 +31,17 @@ Private
   - read_constant:BOOLEAN <-
   ( + result:BOOLEAN
     + div:REAL_32
-
-    ((index <= source.upper) && {source.item index.in_range '0' to '9'}).if {
+    if ((index <= source.upper) && {source.at index .is_digit}) then {
       result := TRUE
       last_constant := 0
-      {
-        last_constant := last_constant * 10 + source.item index.decimal_value
+      do {
+        last_constant := last_constant * 10 + source.at index.decimal_value
         index := index + 1
-      }.do_while {(index <= source.upper) && {source.item index.in_range '0' to '9'}}
-      ((index < source.upper) && {source.item index = '.'}).if {
-        index := index + 1
+      } while {(index <= source.upper) && {source.at index.in_range '0' to '9'}}
+      if (read_character '.') then {
         div := 1
-        {(index <= source.upper) && {source.item index.in_range '0' to '9'}}.while_do {
-          last_constant := last_constant * 10 + source.item index.decimal_value
+        while {(index <= source.upper) && {source.at index.in_range '0' to '9'}} do {
+          last_constant := last_constant * 10 + source.at index.decimal_value
           index := index + 1
           div := div * 10
         }
@@ -60,28 +53,26 @@ Private
 
   - error <-
   (
-    (error_message.is_empty).if {
-      0.to index do { j:INTEGER
-        error_message.add_last (source.item j)
+    if (error_message.is_empty) then {
+      from 0 to (index.min (source.upper)) do { j:INTEGER
+        error_message.add_last (source.at j)
       }
       error_message.append "<- Error!"
     }
   )
 
-  //
   // Grammar parsing.
-  //
+
 
   - read_expr:REAL_32 <-
   // EXPR <- EXPR_MUL { ( '+' | '-') EXPR_MUL }
   ( + result,right:REAL_32
     + oper:CHARACTER
-
     result := read_expr_mul
-    {(read_character '+') || {read_character '-'}}.while_do {
+    while {(read_character '+') || {read_character '-'}} do {
       oper  := last_character
       right := read_expr_mul
-      (oper = '+').if {
+      if (oper = '+') then {
         result := result + right
       } else {
         result := result - right
@@ -94,12 +85,11 @@ Private
   // EXPR_MUL <- EXPR_UNARY { ( 'x' | '*' | '/') EXPR_UNARY }
   ( + result,right:REAL_32
     + oper:CHARACTER
-
     result := read_expr_unary
-    {(read_character 'x') || {read_character '/'} || {read_character '*'}}.while_do {
+    while {(read_character 'x') || {read_character '/'} || {read_character '*'}} do {
       oper  := last_character
       right := read_expr_unary
-      (oper = '/').if {
+      if (oper = '/') then {
         result := result / right
       } else {
         result := result * right
@@ -113,8 +103,7 @@ Private
   //             |  EXPR_CST
   ( + result:REAL_32
     + oper:CHARACTER
-
-    ((read_character '+') || {read_character '-'}).if {
+    if ((read_character '+') || {read_character '-'}) then {
       oper   := last_character
       result := read_expr_unary
       (oper = '-').if {
@@ -130,8 +119,7 @@ Private
   // EXPR_CST <- '(' EXPR ')'
   //           |  constant
   ( + result:REAL_32
-
-    (read_character '(').if {
+    if (read_character '(') then {
       result := read_expr
       (read_character ')').if_false {
         error
@@ -153,6 +141,6 @@ Public
     index  := source.lower
     error_message.clear
     result := read_expr
-    (index <= source.upper).if { error; }
+    if (index <= source.upper) then { error; }
     result
   )

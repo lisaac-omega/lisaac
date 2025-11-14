@@ -74,10 +74,11 @@ Public
     PAPER.refresh_again
   )
    
-  - key s:STRING cmd c:UINTEGER_8 <-
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
   (
     key_mem.copy s
     cmd_mem := c
+    TRUE
   )
   
 Private

@@ -1,0 +1,5 @@
+--WARNING----------
+`STRING_BUFFER' ?= `Expanded INTEGER_32': always NULL assignment.
+Line 11 column 9 in MAIN(.../test/misc/18/main.li):
+    s ?= i; // au moins un warning ?? 
+         ^

@@ -86,7 +86,7 @@ Public
     TRUE
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
   ( 
     ((c & KEYBOARD.msk_cmd) = 0).if {
       (
@@ -107,6 +107,7 @@ Public
       .when '\8d\' then { ((dec_cur) && {suppr}).if_false { ANY_GUI.beep; }; }
       .when '\27d\' then { exit_focus; }
     }
+    TRUE
   )
   
 Private

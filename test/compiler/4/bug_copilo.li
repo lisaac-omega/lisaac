@@ -5,5 +5,5 @@ Header
 Public
   - main <-
   ( + str:STRING_BUFFER
-    str := new STRING_BUFFER capacity 4
+    str := new STRING_BUFFER capacity 4    
   )

@@ -10,18 +10,21 @@ Insert
 
 Private
 
-  //
   // Service and terminal parsing.
-  //
 
-  - index:INTEGER
-  - source:STRING
-
-  - last_character:CHARACTER
-
+  + index:INTEGER
+  + source:STRING
+  + last_character:CHARACTER
+  
+  - skip_spaces <-
+  (
+    while {(index <= source.upper) && {" \t".has (source.at index)} } do {
+      index := index + 1
+    }
+  )
+  
   - read_character car:CHARACTER :BOOLEAN <-
   ( + result:BOOLEAN
-
     ((index <= source.upper) && {car = source.item index}).if {
       last_character := car
       index  := index + 1
@@ -29,12 +32,11 @@ Private
     }
     result
   )
-
+  
   - last_constant:INTEGER
 
   - read_constant:BOOLEAN <-
   ( + result:BOOLEAN
-
     ((index <= source.upper) && {source.item index.in_range '0' to '9'}).if {
       result := TRUE
       last_constant := 0
@@ -58,15 +60,12 @@ Private
     SYSTEM.exit exit_failure_code
   )
 
-  //
-  // Grammar parsing.
-  //
+  // Grammar parsing.  
 
   - read_expr:EXPR <-
   // EXPR <- EXPR_MUL { ( '+' | '-') EXPR_MUL }
   ( + result,right:EXPR
     + oper:CHARACTER
-
     result := read_expr_mul
     (result != NULL).if {
       {(read_character '+') || {read_character '-'}}.while_do {
@@ -89,7 +88,6 @@ Private
   // EXPR_MUL <- EXPR_UNARY { ( '*' | '/') EXPR_UNARY }
   ( + result,right:EXPR
     + oper:CHARACTER
-
     result := read_expr_unary
     (result != NULL).if {
       {(read_character '*') || {read_character '/'}}.while_do {
@@ -113,7 +111,6 @@ Private
   //             |  EXPR_CST
   ( + result:EXPR
     + oper:CHARACTER
-
     ((read_character '+') || {read_character '-'}).if {
       oper   := last_character
       result := read_expr_unary
@@ -133,7 +130,6 @@ Private
   // EXPR_CST <- '(' EXPR ')'
   //           |  constant
   ( + result:EXPR
-
     (read_character '(').if {
       result := read_expr
       (result = NULL).if {
@@ -152,7 +148,6 @@ Public
 
   - parse src:STRING :EXPR <-
   ( + result:EXPR
-
     source := src
     index  := source.lower
     result := read_expr

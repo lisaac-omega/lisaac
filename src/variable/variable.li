@@ -244,8 +244,10 @@ Public
   ( + idx:INTEGER
 
     (e.is_delete).if {
-      //"C'est grave ? ".println
-      crash
+      POSITION.put_error semantic text "Recurssivity error..."
+      e.position.put_position
+      position.put_position      
+      POSITION.send_error
     }
 
     e.set_delete

@@ -1,0 +1,19 @@
+--WARNING----------
+`STRING_BUFFER' ?= `FILE': always NULL assignment.
+Line 11 column 9 in MAIN(.../test/misc/22/main.li):
+    s ?= i; // au moins un warning ?? 
+         ^
+--WARNING----------
+Stupid comparison between `STRING_BUFFER' and `FILE'.
+Line 13 column 8 in MAIN(.../test/misc/22/main.li):
+    (s = i).if {
+        ^
+--WARNING----------
+Stupid comparison between `STRING_BUFFER' and `Expanded INTEGER'.
+Line 17 column 8 in MAIN(.../test/misc/22/main.li):
+    (s = 1).if {
+        ^
+/home/colnet/lisaac/test/misc/22/main.c: In function ‘main’:
+/home/colnet/lisaac/test/misc/22/main.c:183:9: warning: comparison between pointer and integer
+  183 |   if (1 == (void *)NULL) {
+      |         ^~

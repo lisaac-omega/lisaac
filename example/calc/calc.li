@@ -5,9 +5,6 @@ Header
   Calc application.
   */
 
-Inherit
-
-  - parent_clone:CLONE := CLONE
 
 Public
 

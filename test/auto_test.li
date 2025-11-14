@@ -227,8 +227,9 @@ Private
       '.'.print; test_counter := test_counter + 1
       continue := compile_boost FALSE dirpath dirpath main fname lisaacout lisaacout
     }
-    if (continue && {file_exists "error_msg" in dirpath}) then {
+    if (continue && {file_exists "error-msg" in dirpath}) then {
       continue := FALSE
+      remove_list_proceed dirpath      
     }
     if (continue && {! no_run} && {! boost_only}) then {
       '.'.print; test_counter := test_counter + 1

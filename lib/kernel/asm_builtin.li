@@ -1,0 +1,66 @@
+Header
+  + name := ASM_BUILTIN;
+  
+Public
+  - base_power_of_two (b:INTEGER) :INTEGER <-
+  // Usually, b is supposed to be: 2 or 4 or 8 or 16 or 32 or 64
+  // b=2 gives 1,
+  // b=4 gives 2,
+  // b=8 gives 3,
+  // ...
+  // b=64 gives 6 else result = 0
+  [ ? {b.in_range 2 to 64}; ]
+  ( + r:INTEGER
+    //     6  xxx   5     4  3&2 1
+    r := (110_000_00101_0100_110_1b >> (b >> 2)) & (b-1)
+    /*
+    // ASM is actually slower than plain lisaac code :-)
+    `{ uint64_t r;
+    asm("bsfq %1,%0   \n":"=r" (r):"rm" ((uint64_t)@b):"cc")`;    
+    r := `r`:INTEGER
+    `}`
+    */
+    (b = 1 << r).ok r or 0
+  )
+  
+  - size_in_base_2 (u:UINTEGER_64) :INTEGER <-
+  [ ? {u != 0}; ]
+  ( 
+    64 - clz u
+  )
+  
+  - clz (x:UINTEGER_64) :INTEGER <-
+  // Count Leading Zeros
+  ( + result:INTEGER
+    if (x = 0) then {
+      result := 64
+    } else {
+      result := `__builtin_clzll(@x)`:INTEGER
+    }
+    result
+  )
+  - old_pasbonmac_clz (x:UINTEGER_64) :INTEGER <-
+  // Count Leading Zeros
+  ( + result:INTEGER
+    /*+ clz_x:UINTEGER_64
+    + clz_c:UINTEGER
+    clz_x := x
+    {(clz_x & (0FFh.to_uinteger_64 << (64 - 8))) = 0}.while_do {
+      clz_x := clz_x << 8
+      clz_c := clz_c + 8
+    }
+    {(clz_x & highbit) = 0}.while_do {
+      clz_x := clz_x << 1
+      clz_c := clz_c + 1
+    }
+    clz_c*/
+    //result := `__builtin_clzll(@x)`:INTEGER
+    `{ uint64_t r=0;
+    asm(
+    "bsrq %1,%0   \n"
+    "xorq $63,%0  \n":"=r" (r):"rm" (@x):"cc")`; // Info: r:Reg, m:Mem, i:Immed. and rmi=g
+    result := `r`:UINTEGER_64
+    `}`
+    result
+  )
+  

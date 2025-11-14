@@ -46,7 +46,7 @@ Public
   ( ? {needed_capacity >= 0}
     (needed_capacity > 0).if {
       (capacity < needed_capacity).if {
-        storage := NATIVE_ARRAY(CHARACTER).create needed_capacity
+        storage := NATIVE_ARRAY CHARACTER.create needed_capacity
         capacity := needed_capacity
       }
     }

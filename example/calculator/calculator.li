@@ -18,10 +18,10 @@ Private
   - eval:BOOLEAN <-
   ( + result:REAL_32
     + ok:BOOLEAN
-    (text.count > 1).if {
+    if (text.count > 0) then {
       result := PARSE_EXPR.parse text
       error.set_txt (PARSE_EXPR.error_message)
-      (PARSE_EXPR.error_message.is_empty).if {
+      if (PARSE_EXPR.error_message.is_empty) then {
         text.clear
         result.append_in text
         ok := TRUE

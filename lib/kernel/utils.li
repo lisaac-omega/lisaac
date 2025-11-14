@@ -53,12 +53,19 @@ Public
     ! d
   )
   
+  - crash_with b:{} after stp:INTEGER <-
+  (
+    print_runtime_stack_after stp
+    b.value
+    exit exit_failure_code
+  )
+  
   - crash_with_message m:STRING after stp:INTEGER :FALSE <-
   (
     print_runtime_stack_after stp
-    m.print
-    '\n'.print
+    m.println
     exit exit_failure_code
+    //crash_with { m.println } after stp    // Bug compilo Nov. 2025
     FALSE
   )
   
@@ -97,28 +104,28 @@ Public
   - contract typ:STRING boolean tst:BOOLEAN <-
   (
     ((debug_level >= 10) && {! tst}).if {
-      crash_with_message (typ+".") after 7
+      crash_with { OUT # typ # ".\n" } after 7
     }
   )
   
   - contract typ:STRING block_boolean tst:{BOOLEAN} <-
   (
     ((debug_level >= 10) && {! tst.value}).if {
-      crash_with_message (typ+".") after 7
+      crash_with { OUT # typ # ".\n" } after 7
     }
   )
   
   - contract typ:STRING abstract_string msg:STRING <-
   (
     ((debug_level >= 10) && {msg != NULL}).if {
-      crash_with_message (typ+": "+msg) after 7
+      crash_with { OUT # typ # ": " # msg # '\n' } after 7
     }
   )
   
   - contract typ:STRING block_abstract_string tst:{STRING} <-
   ( + msg:STRING
     ((debug_level >= 10) && {msg := tst.value; msg != NULL}).if {
-      crash_with_message (typ+": "+msg) after 7
+      crash_with { OUT # typ # ": " # msg # '\n' } after 7
     }
   )
   

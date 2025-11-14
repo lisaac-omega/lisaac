@@ -1,0 +1,19 @@
+--WARNING----------
+Local slot `foo' not used.
+Line 9 column 9 in MAIN(.../test/misc/10/main.li):
+    + foo:INTEGER
+         ^
+--WARNING----------
+Double declaration for `foo' slot.
+Line 8 column 9 in MAIN(.../test/misc/10/main.li):
+  ( + foo:INTEGER
+         ^
+
+Line 9 column 9 in MAIN(.../test/misc/10/main.li):
+    + foo:INTEGER
+         ^
+--WARNING----------
+Local slot `foo' not used.
+Line 8 column 9 in MAIN(.../test/misc/10/main.li):
+  ( + foo:INTEGER
+         ^
