@@ -1,0 +1,8 @@
+Header
+  + name := ARRAY_OF;
+  
+Public
+  - main <-
+  ( + a:ARRAY INTEGER
+    a := new ARRAY INTEGER of (4,3,2,1)
+  )

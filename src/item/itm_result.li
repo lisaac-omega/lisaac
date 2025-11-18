@@ -85,8 +85,10 @@ Private
 
   - to_run_intern val:EXPR :INSTR <-
   ( + var:LOCAL
-
+    + rd:READ_LOCAL
     var := val.static_type.get_temporary (val.position)
+    rd ?= val
+    (rd != NULL).if { var.set_pow (rd.local.pow) loc (rd.local.lpow) }
     ITM_LIST.stack_result.add_last var
     var.write (val.position) value val
   )

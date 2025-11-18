@@ -280,10 +280,11 @@ Public
       string_tmp.print
       '\n'.print
       "===========================\n".print
+      crash_with_message "BUG LISAAC ! (list l.262)"
       syntax_error (position,"BUG LISAAC ! (list l.262)")
     }
     ? {index = -1}
-
+    
     //"LIST BEG : ".print; print; '\n'.print
 
     index := lower

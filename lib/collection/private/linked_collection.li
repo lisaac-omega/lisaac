@@ -1,12 +1,24 @@
 Header
   + name    := LINKED_COLLECTION V;
   /*
-  Common root of LINKED_LIST and TWO_WAY_LINKED_LIST.
+  Common root of LINKED_LIST and SINGLE_LIST.
   */
 
 Inherit
   - parent_collection:COLLECTION V := COLLECTION V
 
+Public
+  // Creation:
+  
+  - new Self:SELF of v: V^n :SELF <-
+  ( + result:SELF
+    result := clone
+    { vi:V
+      result.add_last vi
+    }.value v    
+    result
+  )
+  
 Public
   - lower:INTEGER := 0
   // Lower index bound is frozen.

@@ -58,8 +58,15 @@ Public
 
   - my_copy:SELF <-
   ( + result:SELF
-
+    
     result ?= slot.read position with (receiver.my_copy)
+    /*(slot.intern_name = "self").if {
+      "---------------------------".println
+      debug_display
+      //receiver.type_name.println
+      "-------".println
+      result.debug_display
+    };*/
     result
   )
 

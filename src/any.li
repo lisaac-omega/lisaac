@@ -126,6 +126,8 @@ Public
   - pass_count:INTEGER
 
   - modify_count:INTEGER
+  - count_context_sensitive:INTEGER
+  - count_block_sensitive:INTEGER
 
   - new_depend_pass <-
   (

@@ -9,9 +9,11 @@ Public
   - bar foo:INTEGER <-
   ( 
     // conflict for foo
+    foo := foo
   )
   
   - main <-
-  ( 
+  (
+    foo := 3
     bar 2
   )

@@ -292,6 +292,26 @@ Public
             }
           }
         }
+        .when 5 then { // Exposant / Indice
+          n
+          // Exposant
+          .when 0 then {
+            font_size (FONT.size_app)
+            tex.add_y (+ FONT.size_app * 0.2)
+          }
+          .when 1 then {
+            font_size (FONT.size_app * 0.8)            
+            tex.add_y (- FONT.size_app * 0.2)
+          }
+          // Indice
+          .when 2 then { not_yet_implemented }
+          .when 3 then { not_yet_implemented }
+        }
+        .when 6 then {
+          (! pos.pt.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
+            pos_i := pos_i + n
+          }
+        }
       }
       styi := styi + 2
     }
@@ -329,6 +349,18 @@ Public
   [ ? {sty.is_empty || {b - pt_b.pt >= sty.second_last}}; ]
   ( sty.add_last (b - pt_b.pt)
     sty.add_last ((e-b) | 400h)
+  )
+  
+  - exp b:BOOLEAN sub s:INTEGER <-
+  [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
+  ( sty.add_last (pos_i.pt - pt_b.pt - s)
+    sty.add_last (b.to_integer | 500h)
+  )
+  
+  - jmp n:INTEGER sub s:INTEGER <-
+  [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
+  ( sty.add_last (pos_i.pt - pt_b.pt - s)
+    sty.add_last (n | 600h)
   )
   
   - itm_cur:INTEGER; //OK_ITM

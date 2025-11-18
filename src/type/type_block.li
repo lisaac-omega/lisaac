@@ -18,14 +18,14 @@ TYPE_BLOCK //,PROFIL_BLOCK
   // Creation.
   //
 
-  - create a_list:ARRAY TYPE_FULL and_result r_list:ARRAY TYPE_FULL :SELF <-
+  - create a_list:ARRAY TYPE_FULL result r_list:ARRAY TYPE_FULL :SELF <-
   ( + result:SELF
     result := clone
-    result.make a_list and_result r_list
+    result.make a_list result r_list
     result
   )
 
-  - make a_list:ARRAY TYPE_FULL and_result r_list:ARRAY TYPE_FULL <-
+  - make a_list:ARRAY TYPE_FULL result r_list:ARRAY TYPE_FULL <-
   (
     argument_list := a_list
     result_list   := r_list
@@ -42,7 +42,8 @@ Public
   - intern_name:STRING_ALIAS <- type_block.intern_name
 
   - is_block:BOOLEAN := TRUE
-
+  
+  + itm_block:ITM_BLOCK
   + argument_list:ARRAY TYPE_FULL
   + result_list:ARRAY TYPE_FULL
 
@@ -81,10 +82,10 @@ Public
     }
     r_list := ALIAS_ARRAY TYPE_FULL.alias r_list
     //
-    get_direct a_list and_result r_list.default
+    get_direct a_list result r_list.default
   )
 
-  - get_direct a_list:ARRAY TYPE_FULL and_result r_list:ARRAY TYPE_FULL :TYPE_BLOCK <-
+  - get_direct a_list:ARRAY TYPE_FULL result r_list:ARRAY TYPE_FULL :TYPE_BLOCK <-
   ( + idx:INTEGER
     + result:TYPE_BLOCK
 
@@ -100,7 +101,7 @@ Public
     (idx <= dico.upper).if {
       result := dico.at idx
     } else {
-      result := create a_list and_result r_list
+      result := create a_list result r_list
       dico.add_last result
     }
     result

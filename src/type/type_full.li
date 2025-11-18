@@ -17,7 +17,7 @@ TYPE, TYPE_FULL,NODE_TYPE
   - get_with flg:UINTEGER_8 :TYPE_FULL <- the_parent_type.get_with flg
 
 Public
-
+  
   - get_slot n:STRING_ALIAS :SLOT <- the_parent_type.get_slot n
 
   - get_itm_slot n:STRING_ALIAS :ITM_SLOT <- the_parent_type.get_itm_slot n

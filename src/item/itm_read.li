@@ -45,6 +45,7 @@ Public
   - to_run_expr:EXPR <-
   ( + result:EXPR
     + loc:LOCAL
+    + n:INTEGER
 
     loc := lookup name
     (loc != NULL).if {
@@ -52,11 +53,25 @@ Public
       // Local Access.
       //
       (loc.style = '-').if {
-	loc.set_ensure_count 1
-	name := loc.intern_name
-	result := to_run_with NULL args NULL
+        loc.set_ensure_count 1
+        name := loc.intern_name
+        result := to_run_with NULL args NULL
       } else {
-	result := loc.read position
+        ((n := loc.pow) > 1).if {          
+          + l:ARRAY EXPR          
+          l := ARRAY EXPR.create_with_capacity n
+          l.add_last (loc.read position)
+          STRING.tmp { tmp:STRING_BUFFER
+            1.to (n-1) do { i:INTEGER
+              tmp.copy name
+              tmp # "__" # i              
+              l.add_last (lookup (tmp.to_string_alias).read position)
+            }
+          }
+          result := EXPR_MULTIPLE.create l          
+        } else {
+          result := loc.read position
+        }        
       }
     } else {
       //
@@ -265,59 +280,89 @@ Private
   - add_arg e:EXPR to idx:INTEGER
   in args:ARRAY EXPR for slot:SLOT block is_block_value:BOOLEAN <-
   ( + em:EXPR_MULTIPLE
-    + count:INTEGER
+    + upper,nv:INTEGER
     + itm_arg:ITM_ARGUMENT
     + ts:ITM_TYPE_SIMPLE
-    + t:TYPE_FULL
     + ex:EXPR
+    + av:ITM_ARGV
 
     em ?= e
     (em != NULL).if {
-      count := em.cardinality
+      upper := em.cardinality - 1
       args.append_collection (em.expr_list)
     } else {
-      count := 1
+      upper := 0
       args.add_last e
     }
+    (! is_block_value).if {
+      itm_arg := slot.argument_list.at idx
+      (itm_arg.upper = -1).if {
+        av := itm_arg.like ITM_ARGV
+        (av.first = NULL).if { // ^ n
+          nv := upper + 1 
+          itm_arg.like ITM_ARGV.set_pow nv
+          //OUT # "ITM_READ=" # nv # '\n'
+          args.at (Old args.count) add (INTEGER_CST.create (e.position) value nv type (type_integer.default))
+        } else {
+          nv := av.first.pow
+        }
+      } else {
+        nv := itm_arg.upper + 1
+      }
+    }
     (verify).if {
-      (! is_block_value).if {
-        itm_arg := slot.argument_list.at idx
-        (itm_arg.count != count).if {
+      (! is_block_value).if {        
+        (nv != upper + 1).if {
           string_tmp.copy "Incorrect vector size for #"
           idx.append_in string_tmp
           string_tmp.append " argument of `";
           string_tmp.append name
           string_tmp.append "' slot. (slot #"
-          itm_arg.count.append_in string_tmp
+          nv.append_in string_tmp
           string_tmp.append ", call #"
-          count.append_in string_tmp
+          (upper+1).append_in string_tmp
           string_tmp.add_last ')'
-	  POSITION.put_error semantic text string_tmp
-	  itm_arg.position.put_position
+          POSITION.put_error semantic text string_tmp
+          itm_arg.position.put_position
           e.position.put_position
-	  POSITION.send_error
+          POSITION.send_error
         }
         (args.count > 1).if {
-          (itm_arg.lower).to (itm_arg.upper) do { i:INTEGER
-            ts ?= itm_arg.at i
+          (itm_arg.upper = -1).if { // ^n
+            ts ?= itm_arg.at 0
             ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
-              ex := args.at (args.upper - itm_arg.upper + i)
-              t := ex.static_type
-              ((! t.is_expanded) && {! t.is_strict}).if {
-                string_tmp.copy "Type expression ("
-                t.append_name_in string_tmp
-                string_tmp.append ") is not Expanded or Strict for SELF argument type."
-                POSITION.put_error semantic text string_tmp
-                itm_arg.position.put_position
-                ex.position.put_position
-                position.put_position
-                POSITION.send_error
+              0.to upper do { i:INTEGER
+                ex := args.at (args.upper - upper + i)
+                check ex and itm_arg
+              }
+            }
+          } else { // Standard
+            (itm_arg.lower).to (itm_arg.upper) do { i:INTEGER
+              ts ?= itm_arg.at i
+              ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
+                ex := args.at (args.upper - itm_arg.upper + i)
+                check ex and itm_arg
               }
             }
           }
         }
-      }.elseif {(idx = 0) && {count != 1}} then {
-	semantic_error (e.position,"Incorrect vector size for `value' message.");
+      }.elseif {(idx = 0) && {upper != 0}} then {
+        semantic_error (e.position,"Incorrect vector size for `value' message.");
       }
     }
   )
+
+  - check ex:EXPR and itm_arg:ITM_ARGUMENT <-
+  ( + t:TYPE_FULL
+    t := ex.static_type
+    ((! t.is_expanded) && {! t.is_strict}).if {
+      string_tmp.copy "Type expression ("
+      t.append_name_in string_tmp
+      string_tmp.append ") is not Expanded or Strict for SELF argument type."
+      POSITION.put_error semantic text string_tmp
+      itm_arg.position.put_position
+      ex.position.put_position
+      position.put_position
+      POSITION.send_error
+    }
+  )              

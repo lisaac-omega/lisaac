@@ -136,7 +136,7 @@ Public
 	result := cst.my_copy
 	new_execute_pass
       }.elseif {
-	(val := get_last_value) != NULL
+	((val := get_last_value) != NULL)// && {FALSE}
       } then {
 	//
 	// VALUE_EXPR propagation, step by step.
@@ -145,31 +145,38 @@ Public
 	variable.unread Self
 	new_execute_pass
       }
-    }
+    }/*.elseif {} then {
+      
+    }*/
 
     (result = NULL).if {
       //
       // Normal.
       //
       ((is_slot) && {loop_invariant != NULL} && {is_invariant}).if {
-	//old_loop_invariant := loop_invariant
-	//loop_invariant := NULL
-	//
-	l := static_type.get_temporary position
-	wrt := l.write position value Self
-	loop_list.insert_before wrt
-	result := l.read position
-	//
-	//wrt.execute
-	//result := result.execute_link
-	//
-	//loop_invariant := old_loop_invariant
-	count_invariant := count_invariant + 1
+        //old_loop_invariant := loop_invariant
+        //loop_invariant := NULL
+        //
+        l := static_type.get_temporary position
+        wrt := l.write position value Self
+        loop_list.insert_before wrt
+        result := l.read position
+        //
+        //wrt.execute
+        //result := result.execute_link
+        //
+        //loop_invariant := old_loop_invariant
+        count_invariant := count_invariant + 1
       } else {
+        
 	variable.set_read
 	execute_access_link
 	result := Self
       }
+    }
+    l ?= variable
+    ((l != NULL) && {l.type.raw.dynamic_type = PROFIL_BLOCK}).if {
+      count_block_sensitive := count_block_sensitive + 1
     }
     result
   )

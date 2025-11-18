@@ -22,6 +22,26 @@ Inherit
   - parent_collection:COLLECTION V := COLLECTION V
   
 Public
+
+  // Creation:
+  
+  - new Self:SELF of (v:V^n) :SELF <-
+  ( + result:SELF
+    result := clone    
+    result.add_last2 v
+    result
+  )
+  
+  - add_last2 element:V^n <-
+  ( 
+    set_capacity (count+n)
+    { e:V
+      upper := upper + 1
+      storage.at upper put e
+    }.value element
+  )
+  
+Public
   
   - at i:INTEGER :V <-
   // Direct access in memory block.

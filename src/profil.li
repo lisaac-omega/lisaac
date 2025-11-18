@@ -179,6 +179,7 @@ Public
   - is_not_tail_recursive:BOOLEAN <- stat = 10b
   - is_inlinable:BOOLEAN          <- stat = 01b
   - is_recursive:BOOLEAN          <- (stat & recursivity_bit) != 0
+  - is_no_inlinable:BOOLEAN       <- (is_interrupt) || {is_external} || {Self = profil_add_alias} || {Self = profil_hash_code_alias}
 
   //
 
@@ -426,11 +427,12 @@ Public
           (CALL_SLOT.count_context_sensitive = 0) &&
           {! mode_recursive} && {stat = 0} &&
           {is_context_sensitive || {(seq_inline - old_seq_inline) < inline_lev}}
-        ) || {link_count = 1}
-      ) && {! is_interrupt} && {! is_external} &&
-      {Self != profil_add_alias} && {Self != profil_hash_code_alias}
-      //{(cop_argument = NULL) || {! result_list.is_empty}}
+        ) //|| {link_count = 1}
+      ) /*&& {! is_interrupt} && {! is_external} &&
+      {Self != profil_add_alias} && {Self != profil_hash_code_alias}*/
+      
     ).if {
+      //(name == "while_do__EKIC").if { "PROFIL:".print; link_count.println }
       stat := stat | inlining_bit
     }
     (

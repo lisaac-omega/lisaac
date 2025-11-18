@@ -1,0 +1,17 @@
+Header
+  + name := LINKED_LIST_OF;
+  
+Public
+  - main <-
+  ( + a:LINKED_LIST STRING
+    + b:ARRAY STRING
+    a := new LINKED_LIST STRING of ("foo","bar","zoo")
+    TEST.check (a.count) integer 3
+    TEST.check ((a.at 0) = "foo")
+    TEST.check ((a.at 1) = "bar")
+    TEST.check ((a.at 2) = "zoo")
+    
+    b := new ARRAY STRING of (a.at 1)
+    TEST.check (b.count) integer 1
+    TEST.check ((a.at 0) = "bar")
+  )

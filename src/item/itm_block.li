@@ -52,6 +52,7 @@ Public
     t := tb.default
     //
     loc := t.get_temporary position
+    //"ITM_BLOCK : ".print; loc.intern_name.println
     // tmp.id := id_block
     rec := loc.read position
     val := PROTOTYPE_CST.create position type t

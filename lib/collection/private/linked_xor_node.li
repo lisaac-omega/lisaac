@@ -4,12 +4,10 @@ Header
 
   /*To implement LINKED_XOR_LIST(V).*/
 
-Inherit
+Insert
   
   - parent_clone:CLONE := CLONE
   
- // - parent_any_two_way_linked_list_node:ANY_TWO_WAY_LINKED_LIST_NODE := ANY_TWO_WAY_LINKED_LIST_NODE
-
 Public
 
   + item:V

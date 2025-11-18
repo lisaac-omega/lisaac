@@ -15,21 +15,23 @@ Public
   // Add.
 
   + model:TYPE_BLOCK
-
+  
+  + pow:INTEGER
+  
   //
   // Creation.
   //
 
-  - create mod:TYPE_BLOCK with larg:ARRAY EXPR :SELF <-
+  - create mod:TYPE_BLOCK with larg:ARRAY EXPR pow p:INTEGER :SELF <-
   ( + result:SELF
     result := clone
-    result.make mod with larg
+    result.make mod with larg pow p
     result
   )
 
-  - make mod:TYPE_BLOCK with larg:ARRAY EXPR <-
+  - make mod:TYPE_BLOCK with larg:ARRAY EXPR pow p:INTEGER <-
   [ -? {mod.position != 0}; ]
-  (
+  ( 
     (profil_current = NULL).if {
       context := context_main
     } else {
@@ -39,6 +41,7 @@ Public
     position      := mod.position
     argument_list := larg
     result_expr   := mod.get_expr_for (mod.position)
+    pow := p        
   )
 
   //
@@ -57,7 +60,7 @@ NODE_STYLE, SELF
     + rd:READ_SLOT
     (copy_argument).if {
       result := ARRAY EXPR .create_with_capacity (argument_list.count)
-      rd ?= argument_list.first
+      rd ?= argument_list.first // See PROFIL_BLOCK.write_atgument      
       result.add_last (rd.receiver.my_copy)
       (argument_list.lower+1).to (argument_list.upper) do { j:INTEGER
 	result.add_last (argument_list.at j.my_copy)
@@ -68,6 +71,38 @@ NODE_STYLE, SELF
     }
     result
   )
+  
+  
+  - get_argument_at i:INTEGER :ARRAY EXPR <-
+  ( + result:ARRAY EXPR
+    + n:INTEGER
+    n := (argument_list.count-1)/pow
+    result := ARRAY EXPR .create_with_capacity (n+1)
+    (copy_argument).if {
+      //"Copy All".println
+      result.add_last (argument_list.first.my_copy)
+      0.to (n-1) do { j:INTEGER
+        result.add_last (argument_list.at (1+j*pow+i).my_copy)
+      }      
+    } else {
+      (i = 0).if {
+        result.add_last (argument_list.first)
+        //"First rec".println
+      } else {
+        result.add_last (argument_list.first.my_copy)
+        //"Copy rec".println
+      }
+      0.to (n-1) do { j:INTEGER
+        //"First Arg".println
+        result.add_last (argument_list.at (1+j*pow+i))
+      }
+      (i = pow-1).if {
+        copy_argument := TRUE
+      }
+    }
+    result
+  )
+  
 
 NODE_TYPE, DTA
 
@@ -95,29 +130,48 @@ NODE_TYPE, DTA
         list_current.debug_display
         syntax_error (argument_list.first.position,"Block not found")
       }
-
-      wrt_larg := t_block.write_argument get_argument
-      call := CALL_SLOT.create (e.position) profil t_block with wrt_larg cop NULL
-      (result_expr.static_type.raw != TYPE_VOID).if {
-	em ?= result_expr
-	(em != NULL).if {
-	  (em.lower).to (em.upper) do { j:INTEGER
-	    rd ?= em.at j
-	    ? {rd != NULL}
-	    result_var := rd.variable
-	    rd  := call.profil.result_list.at j.read (e.position)
-	    wrt := result_var.write (e.position) value rd
-	    call.result_list.add_last (RESULT.create wrt)
-	  }
-	} else {
-          rd ?= result_expr
-          result_var := rd.variable
-          rd  := call.profil.result_list.first.read (e.position)
-          wrt := result_var.write (e.position) value rd
-          call.result_list.add_last (RESULT.create wrt)
-	}
+      
+      (pow != 0).if {
+        + lself:LOCAL        
+        + p:POSITION
+        p := argument_list.first.position
+        lself := t_block.slot_self.type.get_temporary p
+        rd := t_block.slot_self.read p with (argument_list.first)
+        list_current.add_last (lself.write p value rd)
+        argument_list.at 0 put (lself.read p)
+        //
+        0.to (pow-1) do { i:INTEGER
+          wrt_larg := t_block.parent_write_argument (get_argument_at i)
+          call := CALL_SLOT.create (e.position) profil t_block with wrt_larg cop NULL
+          result.add_last call
+        }
+        (result_expr.static_type.raw != TYPE_VOID).if {
+          semantic_error (position,"Sorry, result with dispatch vector pow is not yet implemented.")
+        };
+      } else {
+        wrt_larg := t_block.write_argument get_argument
+        call := CALL_SLOT.create (e.position) profil t_block with wrt_larg cop NULL
+        (result_expr.static_type.raw != TYPE_VOID).if {
+          em ?= result_expr
+          (em != NULL).if {
+            (em.lower).to (em.upper) do { j:INTEGER
+              rd ?= em.at j
+              ? {rd != NULL}
+              result_var := rd.variable
+              rd  := call.profil.result_list.at j.read (e.position)
+              wrt := result_var.write (e.position) value rd
+              call.result_list.add_last (RESULT.create wrt)
+            }
+          } else {
+            rd ?= result_expr
+            result_var := rd.variable
+            rd  := call.profil.result_list.first.read (e.position)
+            wrt := result_var.write (e.position) value rd
+            call.result_list.add_last (RESULT.create wrt)
+          }
+        }
+        result.add_last call
       }
-      result.add_last call
     }
     result
   )

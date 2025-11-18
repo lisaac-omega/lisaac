@@ -28,7 +28,9 @@ Private
   
   + main_exec:STRING_ALIAS
   
-  - dirlist:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS .create_with_capacity 8
+  + partial:BOOLEAN
+  
+  + dirlist:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS .create_with_capacity 8
     
 Public
   - main <-
@@ -148,6 +150,9 @@ Private
       }
       remove_list.clear
     }
+    if (dirpath.has_substring "/libot/") then {
+      partial := TRUE
+    }
     if continue then {
       STRING.tmp { mesg:STRING_BUFFER
         (open_read "mesg.txt" in mesg).if {
@@ -226,6 +231,11 @@ Private
     if continue then {
       '.'.print; test_counter := test_counter + 1
       continue := compile_boost FALSE dirpath dirpath main fname lisaacout lisaacout
+    }
+    if partial then {
+      continue := FALSE
+      
+      remove_list_proceed dirpath      
     }
     if (continue && {file_exists "error-msg" in dirpath}) then {
       continue := FALSE
@@ -309,8 +319,11 @@ Private
     mybuffer.append dirpath
     mybuffer.append fname
     mybuffer.add_last ' '
-    boost_mode.if {
+    if boost_mode then {
       mybuffer.append "-boost "
+    }
+    if partial then {
+      mybuffer.append "-partial "
     }
     mybuffer.append lisaac_options
     lisaacout.if {

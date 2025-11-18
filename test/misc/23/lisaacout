@@ -1,12 +1,9 @@
-Depending pass:  \--WARNING----------
-Conflict `foo' name between slot and local.
-Line 7 column 7 in MAIN(.../test/23/main.li):
-  + foo:INTEGER;
-       ^
-
-Line 9 column 11 in MAIN(.../test/23/main.li):
+--SEMANTIC---------
+Argument assignment is not possible.
+Line 9 column 11 in MAIN(.../test/misc/23/main.li):
   - bar foo:INTEGER <-
            ^
-|3
-Executing pass: *...*.. (7)
- => 1 warning(s).
+
+Line 12 column 11 in MAIN(.../test/misc/23/main.li):
+    foo := foo
+           ^

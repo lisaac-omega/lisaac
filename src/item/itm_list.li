@@ -100,7 +100,8 @@ Public
     + result:EXPR
     + nb_result:INTEGER
     + lr:ARRAY EXPR
-
+    
+    //current_list_level := current_list_level + 1;
     stack_top  := stack_local .upper + 1
     result_top := stack_result.upper + 1
 
@@ -145,6 +146,7 @@ Public
     stack_result.set_upper (result_top-1); // remove_since result_top
     ? {stack_result.upper = Old stack_result.upper}
     //
+    //current_list_level := current_list_level - 1;
     result
   )
 

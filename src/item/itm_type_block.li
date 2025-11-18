@@ -83,26 +83,7 @@ Public
     }
     buffer.add_last '}'
   )
-
-  - shorter_in buf:STRING_BUFFER <-
-  ( + typ_mul:ITM_TYPE_MULTI
-    put "{" to buf like "block"
-    (type_argument != NULL).if {
-      type_argument.shorter_in buf
-      buf.add_last ';'
-      buf.add_last ' '
-    }
-    (type_result != NULL).if {
-      typ_mul ?= type_result
-      (typ_mul = NULL).if {
-	type_result.shorter_in buf
-      } else {
-	typ_mul.shorter_raw_in buf
-      }
-    }
-    put "}" to buf like "block"
-  )
-
+    
   //
   // Cast.
   //

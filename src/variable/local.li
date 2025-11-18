@@ -13,7 +13,11 @@ Public
   // BSBS: Doit pas etre utile.
 
   + is_result :BOOLEAN := FALSE
-
+  
+  + lpow:LOCAL
+  + pow:INTEGER := 1
+  - set_pow n:INTEGER loc p:LOCAL <- ( (pow,lpow) := (n,p) )
+  
   - set_result r:BOOLEAN <-
   (
     is_result := r
@@ -58,7 +62,7 @@ Public
     my_alias := new_loc
   )
 
-  + list_level:INTEGER
+  + list_level:INTEGER // Use generate with ALIASER_LOCAL
 
   - set_list_level lev:INTEGER <-
   (
@@ -70,7 +74,7 @@ Public
 
     (my_alias != NULL).if {
       result := my_alias.write_direct p with NULL value val
-    }.elseif {is_alias} then {
+    }.elseif {is_alias /*&& {list_level >= current_list_level}*/} then {
       result := get_alias.write_direct p with NULL value val
     } else {
       result := write_direct p with NULL value val
@@ -83,7 +87,8 @@ Public
 
     (my_alias != NULL).if {
       result := my_alias.read_direct p with NULL
-    }.elseif {is_alias} then {
+    }.elseif {is_alias /*&& {list_level >= current_list_level}*/} then {
+      //intern_name.print; "list_level=".print; list_level.print; '/'.print; current_list_level.println
       // Case : Argument function (see CALL_SLOT)
       result := get_alias.read_direct p with NULL
     } else {
@@ -255,11 +260,14 @@ Public
   ( + tmp:TYPES_TMP
     ? {p.code != 0}
     ? {t != NULL}
-
+    
+    //list_level := current_list_level
+    
     position    := p
     name        := n
     is_result   := r
     intern_name := get_intern n type FALSE
+    //(name = "block").if { "LOCAL:".print; intern_name.println }
 
     ((t.is_expanded) && {! t.is_expanded_c}).if {
       type := t + TYPE_FULL.expanded_ref_bit

@@ -102,7 +102,8 @@ Public
     // Arguments.
     arg_type_tmp := call_lst
     item_lst := s.argument_list
-    argument_list := ARRAY LOCAL .create_with_capacity (s.argument_count)
+    argument_list := ARRAY LOCAL .create_with_capacity (call_lst.count) //s.argument_count)
+    ITM_ARGUMENT.reset_arg_count_tmp
     (item_lst.lower).to (item_lst.upper) do { j:INTEGER
       item_lst.at j.to_run_in argument_list for Self
     }

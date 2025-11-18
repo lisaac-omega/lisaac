@@ -1,0 +1,30 @@
+Header
+  + name := MAIN;
+  - external := `#include <stdlib.h>`
+Public
+
+  + upper:INTEGER
+    
+  - main <-
+  ( + result:SELF
+    + a:INTEGER
+    + toto:{} 
+    result := `NULL`:Strict MAIN
+    
+    toto := { result.add_last2; }
+    toto.value
+    toto.value
+    
+    a := result.upper
+    `@a`;
+  )
+  
+  - add_last2 <-
+  (
+    `/* BEGIN */`
+    FALSE.elseif {TRUE} then {
+      upper := `0`:INTEGER
+    }
+    `/* END */`
+  )
+

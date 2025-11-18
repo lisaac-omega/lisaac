@@ -110,7 +110,10 @@ Public
         j := profil.lower
         {(j <= profil.upper) && {result = NULL}}.while_do {
           pro := profil.at j
-          ((pro.type_self = NULL) || {pro.type_self == type_self}).if {
+          (
+            ((pro.type_self = NULL) || {pro.type_self == type_self}) && 
+            {pro.argument_list.count = args.count}
+          ).if {            
             result := pro
             i := args.lower + 1
             {(i <= args.upper) && {result != NULL}}.while_do {
@@ -235,7 +238,7 @@ Public
     
     ? {profil_slot.result_list != NULL}
     nb_profil := profil_slot.result_list.count
-    // Body.
+    // Body.   
     result := value.to_run_expr
     // BSBS nb_profil = 0 NO ERROR BLOCK
     ((result.static_type.raw = TYPE_VOID) || {nb_profil = 0}).if {

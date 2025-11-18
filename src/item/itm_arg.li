@@ -62,6 +62,7 @@ Public
     (verify).if {
       check_local_with_slot position name name
     }
+    arg_count_tmp := arg_count_tmp + 1
   )
 
   - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-

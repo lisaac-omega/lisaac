@@ -9,6 +9,16 @@ In this example, the traditional recursive implementation of the factorial funct
 
 Public
   
+  - factorial (n:ℤ) :ℤ <-
+  ( + result:ℤ
+    if (n <= 1) then {
+      result := 1
+    } else {
+      result := n * factorial (n - 1)
+    }
+    result
+  )
+
   - main <-
   ( + x:INTEGER
     if ((COMMAND_ARGS upper != 1) || {! COMMAND_ARGS at 1.is_integer}) then {
@@ -54,15 +64,4 @@ Private
 Public
   
   - factorial n:INTEGER terminal :INTEGER <- factorial n acc 1
-  
-  
-  - factorial n:ℤ :ℤ <-
-  ( + result:ℤ
-    if (n <= 1) then {
-      result := 1
-    } else {
-      result := n * factorial (n - 1)
-    }
-    result
-  )
   

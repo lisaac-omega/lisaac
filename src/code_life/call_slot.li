@@ -176,11 +176,17 @@ Private
       position.put_position
       POSITION.send_error
     }
-    (profil.is_inlinable).if {
-      (profil.link_count = 1).if {
+    (! profil.is_no_inlinable).if {
+    //(profil.is_inlinable).if {
+      ((profil.link_count = 1) && {!profil.is_recursive}).if {
         //
         // Inlining simple.
         //
+        /*
+        (profil.name == "while_do__EKIC").if {          
+          "INLINE SIMPLE:".print; profil.name.print; ' '.print; profil.stat.println
+        };*/
+          
         (list_current.old_seq_or_and = seq_or_and).if {
           argument_to_assignment source index 0 alias FALSE style '+'
           
@@ -201,14 +207,18 @@ Private
           new_execute_pass
           is_good := TRUE
           
-          //"INLINE SIMPLE:".print
           //result.debug_display
         }
-      } else {
+      //} else {  
+      }.elseif {profil.is_inlinable} then {
 	//
 	// Inline by copy:
         //
-        //"INLINE COPY CALL_SLOT : ".print
+        /*
+        (profil.name == "while_do__EKIC").if {
+          "INLINE COPY CALL_SLOT : ".print; profil.name.println
+        }
+        */  
         //debug_display
 
         
@@ -265,6 +275,7 @@ Private
 	  new_execute_pass
         }
       }
+//    }  
     }
     is_good,
     result

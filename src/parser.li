@@ -670,6 +670,7 @@ Public
 
     style  := read_style
     (style != '\0').if {
+      ITM_ARGV.reset_list_idf
       //
       // Classic slot.
       //
@@ -924,10 +925,14 @@ Public
             (object.name != "BLOCK") || {tb ?= t; tb = NULL}
           }
         ).if {
-         syntax_error (current_position,"Type `SELF' is needed.");
-       }
-       result := ITM_ARG.create pos name n type t
-       
+          syntax_error (current_position,"Type `SELF' is needed.");
+        }
+        (read_char '^').if {
+          (! read_idf).if { syntax_error (current_position,"Identifier is needed.") }
+          result := ITM_ARGV.new.make pos name n type t n last_string
+        } else {
+          result := ITM_ARG.create pos name n type t
+        }
       } else {
         (!mute).if {
           warning_error (current_position,"Added ':' is needed.")
@@ -974,7 +979,8 @@ Public
             (read_char ',').if {
               read_space_nl
               (! read_idf).if {
-                (! read_word "...").if {
+                syntax_error (current_position,"Identifier is needed.")
+                /*(! read_word "...").if {
                   syntax_error (current_position,"Incorrect argument.")
                 }
                 (n_lst.count > 1).if {
@@ -982,6 +988,7 @@ Public
                 }
                 t.set_list
                 is_stop := TRUE
+                */
               }
             }
           }
@@ -998,7 +1005,12 @@ Public
         }
       } else {
         (n_lst.count = 1).if {
-          result := ITM_ARG.create (current_position) name (n_lst.first) type (t_lst.first)
+          (read_char '^').if {
+            (! read_idf).if { syntax_error (current_position,"Identifier is needed.") }
+            result := ITM_ARGV.new.make current_position name (n_lst.first) type (t_lst.first) n last_string
+          } else {
+            result := ITM_ARG.create current_position name (n_lst.first) type (t_lst.first)
+          }
           ALIAS_ARRAY STRING_ALIAS.free n_lst
           ALIAS_ARRAY ITM_TYPE.free t_lst
         } else {

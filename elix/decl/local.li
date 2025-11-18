@@ -63,6 +63,7 @@ Public
   - new_parse t:INTEGER <-
   ( //+ tb:TBLC
     + c:INTEGER
+    last_argv := NULL
     c := LOOK.keyword
     (
       ((t & 1 = 1) && {word "Self"}) || 
@@ -76,7 +77,7 @@ Public
       }
       name_id := last_str
       length_max := length_max.max (last_str.count)
-      rd_type.if {
+      rd_type t.if {
         
       } else {
         ((t & 10b) = 10b).if {
@@ -87,15 +88,28 @@ Public
     }
   )
   
-  - rd_type:BOOLEAN <-
+  - rd_type t:INTEGER :BOOLEAN <-
   ((read_c ':') && {(pos_i > upper) || {at pos_i != '='}}).if {
     col (LOOK.symbol) sub 1
     ttok := TTOK.parse_sp (TTOK.tres); //read_type_result
     (ttok = NULL).if { err syntax msg "Type expected."; }
+    (((t & 100b) != 0) && {read_c '^'}).if {
+      + p:INTEGER
+      p := pos_i.pt - 1
+      col (LOOK.symbol) sub 1
+      (read_idf).if {
+        jmp 1 sub (pos_i - last_str.count - p + 1)
+        col (LOOK.local) sub (last_str.count)
+        exp TRUE sub (last_str.count)
+        exp FALSE sub 0
+        last_argv := LOCAL.new.set_name last_str.set_style f_ro;
+      }
+    }
   }
       
   - sub_draw <-
   (
     ((ttok != NULL) && {ttok.now pos_i}).if { ttok.draw; }
   )
-
+  
+  - last_argv:LOCAL

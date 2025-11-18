@@ -18,6 +18,9 @@ Public
   
   - is_self:BOOLEAN <- ( abstract; TRUE)
   
+  - arg_count_tmp:INTEGER
+  - reset_arg_count_tmp <- ( arg_count_tmp := 0 )
+  
   //
   // Running.
   //

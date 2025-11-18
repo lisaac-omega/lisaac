@@ -38,22 +38,13 @@ Public
   - if true_block:{} :BOOLEAN /* deprecated/obsolete */ <- FALSE
 
   - elseif cond:{BOOLEAN} then block:{} :BOOLEAN <-
-  ( + result:BOOLEAN
-
-    result := cond.value
-    result.if {
-      block.value
-    }
-    result
+  ( 
+    cond.value.if block
   )
 
   - elseif cond:{BOOLEAN} then block:{} else block_else:{} <-
-  (
-    (cond.value).if {
-      block.value
-    } else {
-      block_else.value
-    }
+  ( 
+    (cond.value).if block else block_else    
   )
   
   - ok value_ok:E else block_or:{E} :E <- (block_or.value)

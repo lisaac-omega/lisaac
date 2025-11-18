@@ -11,7 +11,7 @@ Public
   - stack:ARRAY COLOR := ARRAY COLOR.create_with_capacity 16; // BUG (ne sert a rien !!)
   
 Mapping, Public
-  
+
   + rf:REAL_32
   + gf:REAL_32
   + bf:REAL_32
@@ -26,26 +26,28 @@ Public
   
   - none:COLOR   := rgbaf (0,0,0,0)
   
-  - black:COLOR  := rgb (   0,   0,   0)
-  - gray:COLOR   := rgb ( 80h, 80h, 80h)
-  - light_gray:COLOR := rgb (0D3h,0D3h,0D3h)
-  - white:COLOR  := rgb (0FFh,0FFh,0FFh)
+  // Color list:
+  - black:COLOR := rgb (0,0,0)
+  - blue:COLOR := rgb(0,0,0FFh)
+  - brown:COLOR := rgb(096h,04Bh,0)
+  - cyan:COLOR := rgb(0,0FFh,0FFh)
+  - chocolate:COLOR := rgb(0D2h,069h,01Eh)
+  - dark_orange:COLOR := rgb(0FFh,08Ch,0)
+  - emerald_green:COLOR := rgb(050h,0C8h,078h)
+  - gray:COLOR := rgb (80h,80h,80h)
+  - green:COLOR := rgb(0,0FFh,0)
+  - light_gray:COLOR := rgb(0D3h,0D3h,0D3h)
+  - leaf_green:COLOR := rgb(022h,08Bh,022h)
+  - magenta:COLOR:= rgb(0FFh,0,0FFh)
+  - orange:COLOR := rgb(0FFh,080h,0)
+  - peru:COLOR := rgb(0CDh,085h,03Fh)
+  - pink:COLOR := rgb(0FFh,0C0h,0CBh)
+  - red:COLOR := rgb(0FFh,0,0)
+  - saddle_brown:COLOR := rgb(08Bh,045h,013h)
+  - white:COLOR := rgb(0FFh,0FFh,0FFh)
+  - yellow:COLOR := rgb(0FFh,0FFh,0)
   
-  - red:COLOR    := rgb (0FFh,   0,   0)
-  - green:COLOR  := rgb (   0,0FFh,   0)
-  - blue:COLOR   := rgb (   0,   0,0FFh)
-  
-  - cyan:COLOR   := rgb (   0,0FFh,0FFh)
-  - magenta:COLOR:= rgb (0FFh,   0,0FFh)
-  - yellow:COLOR := rgb (0FFh,0FFh,   0)
-  
-  - orange:COLOR := rgb (0FFh,080h,   0)
-  - dark_orange:COLOR := rgb (0FFh,08Ch,   0)
-  
-  - brown:COLOR := rgb (096h,04Bh,0)
-  - saddle_brown:COLOR := rgb (08Bh,045h,013h)
-  - chocolate:COLOR := rgb (0D2h,069h,01Eh)
-  - peru:COLOR := rgb (0CDh,085h,03Fh)
+  //  Other:
   
   - is_black:BOOLEAN <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
   

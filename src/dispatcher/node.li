@@ -182,6 +182,12 @@ Public
     + block_model:TYPE_BLOCK
     + pb:PROFIL_BLOCK
     + pos:POSITION
+    + pow:INTEGER
+    + lpow:LOCAL
+    + r:READ_LOCAL
+    + i:INTEGER
+    //+ narg:ARRAY EXPR
+    //+ ne:EXPR
 
     pb ?= e.static_type.raw
     (pb = NULL).if {
@@ -192,33 +198,90 @@ Public
     // Control argument type.
     lst_typ_f := block_model.argument_list
     pos       := block_model.position
-
-    (lst_typ_f.count+1 != larg.count).if {
-      string_tmp.copy "Incorrect size of vector argument for this block. (Value:"
-      larg.count.append_in string_tmp
-      string_tmp.append ", Type:"
-      (lst_typ_f.count+1).append_in string_tmp
-      string_tmp.add_last ')'
-      POSITION.put_error semantic text string_tmp
-      pos.put_position
-      p  .put_position
-      POSITION.send_error
+    /*
+    (larg.count > 1).if {
+      warning_error (larg.at 1.position,"pow?")
+      r ?= larg.at 1
+      (r = NULL).if { "MERDE".println } else { r.local.name.print; r.local.pow.println }
     }
-    (larg.lower + 1).to (larg.upper) do { j:INTEGER
-      new_expr := larg.at j.check_type (lst_typ_f.at (j-1)) with pos
-      larg.at j put new_expr
-    }
+    */
     //
     (debug_level_option != 0).if {
-      (profil_current = NULL).if {
-	crash_with_message "NODE"
-      }
+      (profil_current = NULL).if { crash_with_message "NODE" }
       list_current.add_last (
 	PUSH.create p context (profil_current.context) first FALSE
       )
     }
     //
-    dta    := DTA_BLOCK.create block_model with larg
+    ((larg.count > 1) && {(r ?= larg.at 1) != NULL} && {r.local.pow > 1}).if { // ^n
+      (pow,lpow) := (r.local.pow,r.local.lpow)
+      //"pow = ".print; pow.println
+      i := 1 + pow
+      {i <= larg.upper}.while_do {
+        r ?= larg.at i
+        ((r = NULL) || {r.local.lpow != lpow}).if {
+          semantic_error (larg.at i.position,"Not compatible with dispatch vector pow.")
+        }
+        i := i + pow;
+      } 
+      (lst_typ_f.count * pow != larg.count - 1).if {
+        string_tmp.copy "Incorrect size of vector argument for this block dispatch pow vector. (Value:"
+        larg.count.append_in string_tmp
+        string_tmp.append ", Type:"
+        (lst_typ_f.count+1).append_in string_tmp
+        string_tmp.add_last ')'
+        POSITION.put_error semantic text string_tmp
+        pos.put_position
+        p  .put_position
+        POSITION.send_error
+      }      
+      (larg.lower + 1).to (larg.upper) do { j:INTEGER
+        new_expr := larg.at j.check_type (lst_typ_f.at ((j-1)/pow)) with pos
+        larg.at j put new_expr
+      }
+      //(pb != NULL).if { "YES!!!!".println } else { "NO!!!".println }
+      /*
+      0.to (pow-1) do { j:INTEGER
+        narg := ALIAS_ARRAY EXPR.new
+        (j = pow-1).if {
+          narg.add_last (larg.first)
+          ne := e
+        } else {
+          narg.add_last (larg.first.my_copy)
+          ne := e.my_copy
+        }
+        //
+        0.to (((larg.count-1) / pow)-1) do { k:INTEGER
+          narg.add_last (larg.at (1 + k*pow + j))
+        }
+        //
+        dta    := DTA_BLOCK.create block_model with narg
+        result := NODE_TYPE.create ne with dta
+        node_list.add_last result
+        list_current.add_last result
+      }
+      list_current.remove_last
+      ALIAS_ARRAY EXPR.free larg
+      */
+    } else { // Standard
+      (lst_typ_f.count+1 != larg.count).if {
+        string_tmp.copy "Incorrect size of vector argument for this block. (Value:"
+        larg.count.append_in string_tmp
+        string_tmp.append ", Type:"
+        (lst_typ_f.count+1).append_in string_tmp
+        string_tmp.add_last ')'
+        POSITION.put_error semantic text string_tmp
+        pos.put_position
+        p  .put_position
+        POSITION.send_error
+      }
+      (larg.lower + 1).to (larg.upper) do { j:INTEGER
+        new_expr := larg.at j.check_type (lst_typ_f.at (j-1)) with pos
+        larg.at j put new_expr
+      }      
+    }
+    //
+    dta    := DTA_BLOCK.create block_model with larg pow pow
     result := NODE_TYPE.create e with dta
     //
     node_list.add_last result

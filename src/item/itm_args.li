@@ -59,6 +59,7 @@ Public
         check_local_with_slot position name (name.at j)
       }
     }
+    arg_count_tmp := arg_count_tmp + name.count
   )
 
   - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-

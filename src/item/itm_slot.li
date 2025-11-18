@@ -268,7 +268,7 @@ Public
   - check_argument_type larg:ARRAY EXPR for p:PARAMETER_TO_TYPE <-
   ( + idx:INTEGER
     + a:ITM_ARGUMENT
-
+        
     (argument_list.lower).to (argument_list.upper) do { i:INTEGER
       a := argument_list.at i
       idx := a.check larg index idx for p

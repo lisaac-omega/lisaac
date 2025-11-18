@@ -164,6 +164,7 @@ Public
         result := to_import t pos p
       } else {        
         // Type Error
+        //crash;
 	string_tmp.copy "Type `";
 	t.append_name_in string_tmp
 	string_tmp.append "' is invalid with `";

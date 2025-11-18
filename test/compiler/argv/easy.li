@@ -1,0 +1,20 @@
+Header
+  + name := EASY
+  /**/
+
+
+Public
+  
+  - run names:STRING_ALIAS^n <-
+  (
+    { ni:STRING;
+      ni.println
+    }.value names
+  )
+  
+  - main <-
+  (
+    run ("dessin_carre", "dessin_triangle", "dessin_triangle_bis", "dessin_maison",
+      "dessin_hexagone", "dessin_feuille", "dessin_etoile", "flocon_koch", "arbre_fractale",
+    )
+  )

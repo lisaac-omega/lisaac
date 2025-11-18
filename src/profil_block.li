@@ -180,7 +180,7 @@ Public
     r_list := ALIAS_ARRAY TYPE_FULL .alias r_list
     //
     context_extern := ITM_OBJECT.context_extern
-    to_type_block  := TYPE_BLOCK.get_direct a_list and_result r_list
+    to_type_block  := TYPE_BLOCK.get_direct a_list result r_list
     ITM_OBJECT.pop_context (old_stack_top,old_bottom_index,old_context)
     //
     NODE.set_node_list old_node_list
@@ -218,6 +218,11 @@ Public
     rec := args.first
     rd := slot_self.read (rec.position) with rec
     args.at 0 put rd
+    parent_profil.write_argument args
+  )
+  
+  - parent_write_argument args:ARRAY EXPR :ARRAY WRITE <-
+  ( 
     parent_profil.write_argument args
   )
 
