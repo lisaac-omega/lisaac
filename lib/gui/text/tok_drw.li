@@ -269,14 +269,16 @@ Public
           font_size sz
         }
         .when 3 then { // Escape character
-          (last_div = NULL).if {
-            (tex.x = tex.xmin).if { begin_line; }
-            last_div := DIV.new.text
+          (! pos.pt.in_range (pos_i.pt-1) to (pos_i.pt+2)).if {
+            (last_div = NULL).if {
+              (tex.x = tex.xmin).if { begin_line; }
+              last_div := DIV.new.text
+            }
+            tex.set_x (LOOK.drw n)
+            tex.ascdes (asc_c,des_c)
+            detect_cur
+            pos_i := pos_i + 1
           }
-          tex.set_x (LOOK.drw n)
-          tex.ascdes (asc_c,des_c)
-          detect_cur
-          pos_i := pos_i + 1
         }
         .when 4 then { // Img
           (! pos.pt.in_range (pos_i.pt) to (pos_i.pt+n)).if {

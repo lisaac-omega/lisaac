@@ -344,6 +344,12 @@ Public
   - update i:INTEGER pg (d_i:INTEGER) <-
   ( + di, pi,tcur, sav_pt,sav_cur, end:INTEGER
     + bug:BOOLEAN
+    /*
+    0.to (toks.upper) do { i:INTEGER;
+      OUT # '(' # i # ')' # toks.at i.di # '/' # toks.at i.sty.count # ' ';
+    }
+    '\n'.print;
+    */
     bug := ! TRUE
     current := Self
     is_save := FALSE
@@ -423,9 +429,14 @@ Public
           toks.remove_last
         }
       }
-    }
-    
+    }    
     (bug).if { "--------------".println; }
+    /*
+    0.to (toks.upper) do { i:INTEGER;
+      OUT # '(' # i # ')' # toks.at i.di # '/' # toks.at i.sty.count # ' ';
+    }
+    '\n'.print;
+    */
     //(bug).if { `getchar()`; }
   )
       
@@ -563,7 +574,8 @@ Public
       }
     }
     (lev != 0).if {	
-      err syntax msg "End of comment mono-line not found !"
+      //crash
+      err warning msg "End of comment mono-line not found !"
     }
   }
   

@@ -28,8 +28,9 @@ Public
     
   - parse <-
   (
-    EXPR.skip_body    
-    (PAGE.cur_pg = page).if {
+    EXPR.skip_body
+    end pos_i
+    ((PAGE.cur_pg != NULL) && {PAGE.cur_pg = page}).if {
       + p,n:INTEGER;
       (p,n) := (pos_i,nl)
       pos_i := Old pos_i
@@ -59,5 +60,6 @@ Private
     ln_limit := pt_b.pt + di
     expr := EXPR.rd_expr_op
     (read_c ';').if { col (LOOK.symbol) sub 1; }
+    //"\nSLOT_BODY:".print; pos_i.pt.print; '/'.print; di.println
     ln_limit := 0    
   )

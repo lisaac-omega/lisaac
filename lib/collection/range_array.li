@@ -295,8 +295,8 @@ Public
   (
     upper := lower - 1
   )
-  [ // Old
-    +? {capacity = Old capacity}
+  [
+    capacity = Old capacity
   ]
 
   - add_first element:V <-

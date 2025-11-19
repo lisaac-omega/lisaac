@@ -637,7 +637,7 @@ Private
               (e <= upper).if {
                 tmp_str.clear; from pos_i to (e-1) in tmp_str
                 (w,x,y,x,y) := text_bounds (tex.x,tex.y) msg tmp_str
-                (tex.x + w > width-x_space*3).if { c := '\n'; }
+                (tex.x + w > xo+width-x_space*3).if { c := '\n'; }
               }
             }
             (c = '\n').if {

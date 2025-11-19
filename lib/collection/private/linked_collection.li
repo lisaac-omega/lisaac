@@ -8,11 +8,13 @@ Inherit
   - parent_collection:COLLECTION V := COLLECTION V
 
 Public
+  
   // Creation:
   
   - new Self:SELF of v: V^n :SELF <-
   ( + result:SELF
     result := clone
+    
     { vi:V
       result.add_last vi
     }.value v    
@@ -23,7 +25,7 @@ Public
   - lower:INTEGER := 0
   // Lower index bound is frozen.
 
-  + upper:INTEGER
+  + upper:INTEGER := -1
   // Memorized upper index bound.
   
   - count:INTEGER <- (upper + 1)

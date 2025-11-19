@@ -260,9 +260,6 @@ Public
       last_link := NULL
     }
   )
-  [ /* BSBS Old; */
-    +? {upper = 0}
-  ]
 
   - from_collection model:COLLECTION(V) <-
   ( + lnk:SINGLE_LIST_NODE(V)

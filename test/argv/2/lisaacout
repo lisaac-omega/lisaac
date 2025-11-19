@@ -1,0 +1,9 @@
+--SEMANTIC---------
+Incorrect vector size for #4 argument of `toto lst msg lst other' slot. (slot #2, call #3)
+Line 9 column 7 in HELLO_ARGV(.../test/argv/2/hello_argv.li):
+  lst c:CHARACTER^n
+       ^
+
+Line 34 column 48 in HELLO_ARGV(.../test/argv/2/hello_argv.li):
+    toto 0 lst (1,2) msg "fin!" lst ('a','b','c') other ("Moi")
+                                                ^

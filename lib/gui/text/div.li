@@ -128,7 +128,7 @@ Public
   - pointer:INTEGER := 2
   - codeout:INTEGER := 3
   
-  - debug_div:BOOLEAN :=  FALSE
+  - debug_div:BOOLEAN := FALSE
   
   - draw <-
   (

@@ -1,0 +1,36 @@
+Header
+  - name := HELLO_ARGV
+  
+Public
+
+  - toto d:INTEGER
+  lst a:INTEGER^n
+  msg f:STRING_ALIAS
+  lst c:CHARACTER^n
+  other s:STRING_ALIAS^p <-
+  (
+    OUT # "Count:" # n # ',' # p # '\n'
+    { (ai:INTEGER,ci:CHARACTER)
+      OUT # ai # ' ' # ci # '\n';      
+    }.value (a,c)
+    
+    
+    { si:STRING_ALIAS
+      si.println
+    }.value s
+    
+    
+    f.println
+    
+    (d > 1).if {
+      toto (d-1) lst a msg f lst c other s
+    }
+    
+  )
+  
+
+  - main <-
+  (
+    toto 0 lst (1,2) msg "fin!" lst ('a','b','c') other ("Moi")
+  )
+  

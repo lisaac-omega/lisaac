@@ -172,40 +172,7 @@ Public
     }
     result
   )
-  
-  /*
-  - index_of x:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
-    + safe_equal:SAFE_EQUAL V
-
-    result := start_index
-    {(result > upper) || {safe_equal.test x with (item result)}}.until_do {
-      result := result + 1
-    }
-    result
-  )
-
-  - reverse_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + safe_equal:SAFE_EQUAL V
-    + temporary_idx:INTEGER
-    + temporary_lnk:LINKED_LIST_NODE V
-    + result:INTEGER
-    go_item start_index
-    temporary_idx := mem_idx
-    temporary_lnk := mem_lnk
-    {(temporary_idx < lower) || {safe_equal.test element with (temporary_lnk.item)}}.until_do {
-      temporary_idx := temporary_idx - 1
-      temporary_lnk := temporary_lnk.previous
-    }
-    result := temporary_idx
-    (temporary_idx >= lower).if {
-      mem_idx := temporary_idx
-      mem_lnk := temporary_lnk
-    }
-    result
-  )
-  */
-  
+    
   - fast_index_of element:V start start_index:INTEGER :INTEGER <-
   ( + result:INTEGER
     + u:INTEGER
@@ -245,9 +212,6 @@ Public
       last_link := NULL
     }
   )
-  [ 
-    +? {upper = 0}
-  ]
 
   - from_collection model:COLLECTION V <-
   ( + lnk:LINKED_LIST_NODE V

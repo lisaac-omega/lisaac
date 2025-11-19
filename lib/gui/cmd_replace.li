@@ -142,7 +142,7 @@ Private
   - one_replace <-
   (
     cnt_replace := cnt_replace + 1
-    {end > start}.while_do { end := end - cur_txt.text.rm start; }
+    cur_txt.text.rm start times (end - start)    
     cur_txt.text.at start add_text new_text
     start := start + new_text.count
     cur_txt.set_pos_raw start; //(start + new_text.count)

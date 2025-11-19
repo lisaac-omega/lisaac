@@ -7,11 +7,13 @@ Such a collection is traversable using a simple INTEGER index from
 `add_last' / `remove_last', `add_first' / `remove_first' as well as 
 `add' / `remove'.
 
-This abstraction provides feature to view a COLLECTION as a stack (as an example by using `add_last', `last', and `remove_last').
+This abstraction provides feature to view a COLLECTION as a stack 
+(as an example by using `add_last', `last', and `remove_last').
 One can also use a COLLECTION as a queue (as an example, by using
 `add_last', `first' and `remove_first').
 
-The Lisaac Ω library provides five implementations of COLLECTION: ARRAY, ARRAY_RING, ARRAY_BLOCK LINKED_LIST and SINGLE_LIST.
+The Lisaac Ω library provides five implementations of COLLECTION: ARRAY, 
+ARRAY_RING, ARRAY_BLOCK LINKED_LIST and SINGLE_LIST.
 Except for creations all implementations have exactly the same behavior.
 Switching from one implementation to another only change the memory used 
 and the execution time.
@@ -325,7 +327,7 @@ Public
 
   - clear <-
   // Discard all items in order to make it `is_empty'.
-  // * See: `clear_all'.
+  
   (
     abstract
   )
