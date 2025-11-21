@@ -1,7 +1,7 @@
 Header  
   + name := AUTO_TEST;
   /*
-  Performs test automatically for the Lisaac Ω project.
+  Performs tests automatically for the Lisaac Ω project.
   */
   
 Insert

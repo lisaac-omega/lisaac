@@ -28,7 +28,7 @@ Public
       FILE_UTILS.close f
       e := FILE_SYSTEM.get name
       buf.add_last '\0'
-      (date_create,date_update) := (e.create_date,e.update_date)
+      (date_create,date_update,time_update) := (e.create_date,e.update_date,e.update_time)
       is_save := TRUE
       undo.last_save;
     } else {
@@ -40,6 +40,24 @@ Public
     }
     Self
   )
+  
+  - reload <-
+  ( + e:DIRENT
+    e := FILE_SYSTEM.get name    
+    ((e != NULL) && {(e.update_date != date_update) || {e.update_time != time_update}}).if {
+      (footnote_left.has_prefix "Reload ").if {
+        footnote_left # ", "
+      } else {
+        footnote_left |# "Reload "
+      }
+      footnote_left # '`' # rel_path name # '\''      
+      undo.clear
+      buf.clear
+      toks.foreach { t:TOK_DRW; t.free; }; toks.clear
+      load_file
+      parse_all
+    }
+  );
   
   - pre_create
   
@@ -76,8 +94,7 @@ Public
       date_update := e.update_date
       is_save := TRUE
       undo.last_save;
-      footnote_left.copy "Wrote `";
-      footnote_left += rel_path name += "'"
+      footnote_left |# "Wrote `" # rel_path name # '\''
     }
   )
   

@@ -1039,6 +1039,7 @@ Private
   ( + yb,xm,xe,hc,xc,yc,xb,de,a,d:REAL_32
     + t:TYPE
     + to:TPRO
+    + tb:TBLC
     + nf:BOOLEAN
     
     hc := asc_c-des_c
@@ -1050,6 +1051,7 @@ Private
           //xb := x+5+16; //DCHAR.clone TRUE exp (s.expanded) to (x+5,yb+5+asc_c)
           xb := LOOK.clone TRUE exp FALSE to (x+5,yb+5+asc_c)
           to ?= s.type
+          tb ?= s.type
           xe := xb; //+x_space*0.5
           fill_color (LOOK.cols.at (LOOK.slot))
           STRING.tmp { tmp:STRING_BUFFER
@@ -1057,11 +1059,11 @@ Private
             tmp.replace_all '\0' with ' '; // BSBS: Utile maintenant ??
             xe := text (xe+x_space,yb+5+asc_c) msg tmp
           }
-          ((to != NULL) && {(to.is (TYPE.expanded)) || {to.proto.type_c != NULL}}).if {
+          (((to != NULL) && {(to.is (TYPE.expanded)) || {to.proto.type_c != NULL}}) || {tb != NULL}).if {
             fill_color (LOOK.none)
             xe := text (xe,yb+5+asc_c) msg ":"
             //save
-            (xe,a,d) := s.draw_type_extern_to (xe,yb+5+asc_c)
+            (xe,a,d) := s.draw_type_extern_to (xe,yb+5+asc_c)            
             //restore
           }
         } else {
@@ -1077,40 +1079,38 @@ Private
         t := s.type
         t.foreach_until { tt:TONE
           to ?= tt
-          (to != NULL).if {
-            ((to.is (TYPE.expanded)) && {to.proto.type_c = NULL}).if {
-              (xb,yb) := header_box (to.proto) to (x + 10,yb+hc+10) xmax (xmx-10)
-              xm := xm.max xb.max xe
-            } else {
-              de := 24
-              (xmx > 0).if {
-                (xc,yc) := (xmx - 22 + 8,yb+5+asc_c-7)
-                ((to.proto = NULL) || {to.proto.type_c != NULL}).if {
-                  begin_path
-                  stroke_color (LOOK.none)
-                  stroke_width 3.0
-                  rect (xc-7,yc-7) size (14,14)
-                  stroke
-                } else {
-                  begin_path
-                  fill_color (LOOK.none)
-                  stroke_color (LOOK.none)
-                  circle (xc,yc) radius 8
-                  fill
-                  begin_path
-                  stroke_width 3.0
-                  line (xc,yc) to (xxmax+20,yc)
-                  xc := xxmax + 20
-                  line (xc,yc) to (xc-5,yc-5)
-                  line (xc,yc) to (xc-5,yc+5)
-                  stroke
-                  s.draw_type_extern_to (xxmax+27,yc-14+asc_c)
-                }
+          tb ?= tt
+          ((to != NULL) && {to.is (TYPE.expanded)} && {to.proto.type_c = NULL}).if {
+            (xb,yb) := header_box (to.proto) to (x + 10,yb+hc+10) xmax (xmx-10)
+            xm := xm.max xb.max xe
+          } else {
+            de := 24
+            (xmx > 0).if {
+              (xc,yc) := (xmx - 22 + 8,yb+5+asc_c-7)
+              (((to != NULL) && {(to.proto = NULL) || {to.proto.type_c != NULL}}) || {tb != NULL}).if {
+                begin_path
+                stroke_color (LOOK.none)
+                stroke_width 3.0
+                rect (xc-7,yc-7) size (14,14)
+                stroke
+              } else {
+                begin_path
+                fill_color (LOOK.none)
+                stroke_color (LOOK.none)
+                circle (xc,yc) radius 8
+                fill
+                begin_path
+                stroke_width 3.0
+                line (xc,yc) to (xxmax+20,yc)
+                xc := xxmax + 20
+                line (xc,yc) to (xc-5,yc-5)
+                line (xc,yc) to (xc-5,yc+5)
+                stroke
+                s.draw_type_extern_to (xxmax+27,yc-14+asc_c)
               }
-              yb := yb + hc + 10
             }
-            //yb := yb + hc + 10
-          }
+            yb := yb + hc + 10
+          }                    
           xm := xm.max (xe+de)
           FALSE
         }

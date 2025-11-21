@@ -58,6 +58,7 @@ Public
   
   + date_create:DATE
   + date_update:DATE
+  + time_update:TIME
   
   + last_pos:POS
   + last_pos_y:REAL_32
@@ -119,6 +120,7 @@ Public
     }
   )
   
+  - reload;
   - save_buffer:BOOLEAN <- BOOLEAN.abstract
   - copy_buffer o:BUFFER :BOOLEAN <- BOOLEAN.abstract
     

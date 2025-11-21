@@ -1561,6 +1561,7 @@ Public
   ( + e:ITM_CODE
     + result:ARRAY ITM_CODE
     + c:CHARACTER
+    + pos:POSITION
     
     read_space_nl
     
@@ -1572,6 +1573,7 @@ Public
       (e != NULL).if {
         c := cur_char
         (c = ',').if {
+          pos := current_position
           result.add_last (ITM_RESULT.create e)
           position := position + 1
         } else {
@@ -1584,7 +1586,11 @@ Public
       }
     }.do_while {(e != NULL) && {c != '.'}}
     ((! result.is_empty) && {c != ';'} && {c != '.'}).if {
-      result.put_last (ITM_RESULT.create (result.last))
+      (c = ',').if {
+        warning_error (pos,"Extra comma.")
+      } else {
+        result.put_last (ITM_RESULT.create (result.last))
+      }
     }
     ALIAS_ARRAY ITM_CODE.copy result
   )

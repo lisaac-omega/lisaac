@@ -111,6 +111,7 @@ Public
           (pos_x + dx > width_upper).if { dx := width_upper - pos_x; }
         } else { dx := - HAND.dx; }
         pos_x := pos_x + dx
+        //dx.println
         move_pos_x dx
         //PAPER.refresh_again
         ask_refresh

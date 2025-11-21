@@ -2,7 +2,7 @@ Header
   + name := DIV;
   
 Inherit
-  + parent_win:Expanded WIN
+  + parent_win: /*EYE*/ Expanded WIN
   - parent_any_gui:ANY_GUI := ANY_GUI
   
 Private
@@ -28,8 +28,13 @@ Public
   + act_clic:{DIV; }
   - clic a:{DIV; } :SELF <- ( (Self != SELF).if { act_clic := a; }; Self)
   
-  - abs_x:REAL_32 <- [ ? {txt_pg.pos.inside Self}; ](xo + txt_pg.pos.x)
-  - abs_y:REAL_32 <- [ ? {txt_pg.pos.inside Self}; ](yo + txt_pg.pos.y)
+  - abs_x:REAL_32 <- 
+  [ ? {txt_pg.pos.inside Self}; ]
+  (xo + txt_pg.pos.x)
+  
+  - abs_y:REAL_32 <- 
+  [ ? {txt_pg.pos.inside Self}; ]
+  (yo + txt_pg.pos.y)
       
   - mute b:{} <- ( begin_mute; b.value; end_mute; )
   
@@ -128,7 +133,7 @@ Public
   - pointer:INTEGER := 2
   - codeout:INTEGER := 3
   
-  - debug_div:BOOLEAN := FALSE
+  - debug_div:BOOLEAN :=  FALSE
   
   - draw <-
   (

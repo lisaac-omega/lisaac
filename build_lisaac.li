@@ -8,9 +8,10 @@ Insert
   - parent_mini_bash:MINI_BASH := MINI_BASH
 
 Private
+  
   + lisaac_dir:STRING_ALIAS
   + system:STRING_ALIAS
-  + user_homedir:STRING_ALIAS; // "" for windows
+  + user_homedir:STRING_ALIAS // "" for windows
   + shell:STRING_ALIAS; // $SHELL or ""
   + lisaac_bin_dir:STRING_ALIAS
   + elix_dir:STRING_ALIAS

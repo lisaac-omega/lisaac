@@ -283,6 +283,7 @@ Public
   )
   
   - Self:SELF '#' e:E :SELF <- ( e.append_in Self; Self)
+  - Self:SELF '|#' e:E :SELF <- ( clear; e.append_in Self; Self)
   
   - prepend other:STRING from b:INTEGER to e:INTEGER<-
   // Append `other' to Current.

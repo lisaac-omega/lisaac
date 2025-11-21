@@ -511,13 +511,13 @@ External
   
   - on_window_focus (w:POINTER,f:CHARACTER) <-
   ( - count:INTEGER
-    
+        
     (f != '\0').if {
       count := count + 1;
-      //(count = 1).if { "Focus ON".println }
+      (count = 1).if { wins.first.set_have_the_focus TRUE }
     } else {
       count := count - 1;
-      //(count = 0).if { "Focus OFF".println }
+      (count = 0).if { wins.first.set_have_the_focus FALSE }
     }
   )
 

@@ -20,6 +20,9 @@ Public
   + refresh_ok:BOOLEAN
   - ask_refresh <- ( refresh_ok := FALSE; )
   
+  - have_the_focus:BOOLEAN
+  - set_have_the_focus b:BOOLEAN <- ( have_the_focus := b; PAPER.refresh_again )
+
   - get_pos:(REAL_32,REAL_32) <-
   ( + x,y:INTEGER
     (x,y) := PAPER.get_window_pos win_ptr

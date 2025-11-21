@@ -163,6 +163,7 @@ Public
     + result:TPRO
     + attr:UINTEGER_8
     + n:NODE
+    + p:INTEGER
     (word "Expanded").if { col (LOOK.keyword) sub 8; attr := attr | TYPE.expanded; }
     (word "Strict").if   { col (LOOK.keyword) sub 6; attr := attr | TYPE.strict;   }
     (((attr & TYPE.expanded) != 0) && {attr != TYPE.expanded}).if {
@@ -171,6 +172,7 @@ Public
     }
     (read_cap_idf).if {
       col (LOOK.type) sub (last_str.count)
+      p := pos_i
       (last_str.count = 1).if {        
         result := TP.letter (last_str.first - 'A')
       }.elseif {last_str = "SELF"} then {
@@ -183,8 +185,8 @@ Public
         fsz 0 sub 0
         gen := push_type
         n := NODE.rtype.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
-        {((t := rd_type_arg) != NULL) && {read_cap_idf}}.while_do {
-          
+        {((t := rd_type_arg) != NULL) && {p := pos_i; read_cap_idf}}.while_do {
+          p := pos_i
           ((n != NULL) && {!n.carg.is_empty}).if { n := n.carg.first; } else { n := NULL; }
           (n != NULL).if {
             n := n.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
@@ -206,6 +208,7 @@ Public
         }
         pop_type
       }
+      pos_i := p
     } else {
       (attr != 0).if { err warning msg "Style (Expanded or Strict) ignored."; }
     }

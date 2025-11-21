@@ -1,0 +1,32 @@
+Header
+  + name := ARGV2
+  /**/
+  
+
+ 
+Public
+  
+  - main <-
+  (  
+    show (
+      "", "hello_world", 
+      "snake", "snake",
+    )
+  )
+  
+  - show list:STRING_ALIAS^n <-
+  (
+    /*
+    dir := new ARRAY STRING capacity n
+    name := new ARRAY STRING capacity n    
+    { ex:STRING
+      if (dir.count = name.count) then {
+        dir.add_last ex
+      } else {
+        name.add_last ex
+      }
+      
+    }.value list
+    */
+  )
+  

@@ -269,10 +269,11 @@ Private
 
   - to_time t:POINTER :TIME <-
   (
-    TIME.create
-    ((`((struct tm *)@t)->tm_hour`:UINTEGER_8),
-    (`((struct tm *)@t)->tm_min` :UINTEGER_8),
-    (`((struct tm *)@t)->tm_sec` :UINTEGER_8),
-    0)
+    TIME.create (
+      (`((struct tm *)@t)->tm_hour`:UINTEGER_8),
+      (`((struct tm *)@t)->tm_min` :UINTEGER_8),
+      (`((struct tm *)@t)->tm_sec` :UINTEGER_8),
+      0
+    )
   )
 

@@ -9,7 +9,7 @@ Public
   ( + result:SELF
     + a:INTEGER
     + toto:{} 
-    result := `NULL`:Strict MAIN
+    result := Self
     
     toto := { result.add_last2; }
     toto.value

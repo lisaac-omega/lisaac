@@ -22,6 +22,12 @@ Public
   
   - new:SELF <- clone
   
+  - clear <-
+  ( stack.foreach { e:UNDO_ELT; e.free }
+    stack.clear
+    lower := count := ptr := ptr_save := 0
+  )
+  
   - rm i:INTEGER  char c:UINTEGER_32 <- gen i char c type t_rm
   - add i:INTEGER char c:UINTEGER_32 <- gen i char c type t_add
   - add_stop                         <- ((!is_empty) && {at upper != NULL}).if { add NULL; }

@@ -61,6 +61,24 @@ Public
     }
   )
   
+  - set_have_the_focus b:BOOLEAN <-
+  (
+    (b && {! have_the_focus}).if {
+      BUFFER.catalog.foreach { e:BUFFER; e.reload }
+    }
+    parent_window.set_have_the_focus b
+  )
+  
+  - draw_forward <-
+  (
+    (! have_the_focus).if {
+      begin_path
+      fill_color (LOOK.focus_off)
+      rect (0,0) size (width,height)
+      fill
+    }
+  )
+    
   - refresh <-
   ( + head:WIN
     + l:INTEGER

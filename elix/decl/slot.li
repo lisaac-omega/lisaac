@@ -212,6 +212,8 @@ Public
   - parse <-
   ( + a:ARG
     + idf_beg:BOOLEAN
+    + c:CHARACTER
+    //+ old_pos_i:POS
   
     LOCAL.reset_index
     // SECTION    
@@ -226,6 +228,14 @@ Public
     col (LOOK.style) sub 0
     drw 0 sub 0
     pos_i := pos_i + 1
+    //
+    /*
+    old_pos_i := pos_i
+    EXPR.skip_body
+    ln_limit := pos_i.pt
+    end_code := pos_i.pt - pt_b.pt
+    pos_i := old_pos_i
+    */
     //
     STRING.tmp2 { (n,nz:STRING_BUFFER)
       (read_idf).if {
@@ -272,6 +282,8 @@ Public
     }
     end_name := pos_i.pt - pt_b.pt
     //
+    
+    //
     (read_affect).if {
       affect := last_str.first
       col (LOOK.symbol) sub (last_str.count)
@@ -291,20 +303,32 @@ Public
       ((section != NULL) && {section.is_parent}).if {
         err semantic msg "Type result is needed for inheritance slot."
       }
-    }
-    skip_sp; // Pas utile
-    end_mark := pos_i.pt - pt_b.pt
-    //
+    }    
+    //skip_sp; // Pas utile
+    
     (affect = ' ').if {
       (read_c ';').if { col (LOOK.symbol) sub 1; }
-      skip_sp
+      skip_sp; rd_rem_cpp
+    }
+    (((c := at pos_i).is_upper) || {c = '+'} || {c = '-'}).if {        
+      {(c := at (pos_i-1)) != '\n'}.while_do { pos_i := pos_i - 1 }
+    }
+    end_mark := pos_i.pt - pt_b.pt
+    
+    //
+    (affect = ' ').if {
+      /*
+      (read_c ';').if { col (LOOK.symbol) sub 1; }
+      skip_sp            */      
+      //end_code := pos_i.pt - pt_b.pt
+      /*
       rd_rem_cpp.if {
-        end_code := pos_i.pt - pt_b.pt
+        end_code := pos_i.pt - pt_b.pt        
       } else {
         end_code := pos_i.pt - pt_b.pt
         skip_until '\n'
         (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
-      }
+      }*/
       parse_level := 2
     } else {
       (read_c '\n').if {
@@ -316,9 +340,19 @@ Public
         parse_level := 2
       }
     }
+    (at (pos_i - 1) != '\n').if {
+      skip_until '\n'
+      (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+    }
     add_slot_in_proto
+    /*
+    (name.has_suffix "build_lisaac.li" && {name_id = "user_homedir"}).if {
+      name_id.print; ' '.print; pos_i.pt.println;
+    }
+    */  
     //end_code := cpti - pt_b
     //cpti := pt_b + di
+    //ln_limit := 0
   )
   
   - next_parse <-
@@ -362,6 +396,11 @@ Public
         rmk.product
       }
     }
+    /*
+    (name.has_suffix "build_lisaac.li" && {name_id = "user_homedir"}).if {
+      "Next:".print; name_id.print; ' '.print; pos_i.pt.println;
+    }
+    */  
   )
     
   - rd_operator <-
@@ -493,6 +532,12 @@ Public
       pos_i := Old pos_i
       pos_i := pos_i + 2
     }
+    /*
+    (name.has_suffix "build_lisaac.li" && {name_id = "user_homedir"}).if {
+      "beg:".print; name_id.print; ' '.print; (pt_b.pt+di).println;
+      (pt_b.pt+di = 280).if { exit 1 }
+    }
+    */
   )
     
   - sub_draw <-
@@ -549,7 +594,11 @@ Public
         ln_limit := 0
         //
         end_code := pos_i.pt - pt_b.pt
-        //OUT # "end_code=" # end_code # '\n';
+        /*
+        (name.has_suffix "build_lisaac.li").if {
+          OUT # "end_code=" # pos_i.pt # '\n';
+        }
+        */  
         ? {end_code <= di}
         pos_i := Old pos_i
         nl := Old nl
@@ -560,6 +609,12 @@ Public
         fill_color (COLOR.red)
       }
     }
+    /*
+    (name.has_suffix "build_lisaac.li" && {name_id = "user_homedir"}).if {
+      "sub:".print; name_id.print; ' '.print; (pt_b.pt+di).print; ' '.print;  pos_i.pt.println
+      (pos_i.pt = 280).if { exit 1 }
+    }
+    */
   )
   
   - inside_glyph:BOOLEAN <-
@@ -730,7 +785,9 @@ Public
     // Load environnement    
     tok_cur := 0
     begin my_pos
-    styi := 2
+    styi := 0
+    {(styi <= sty.upper-2) && {sty.at (styi+2) < ttok.db}}.while_do { styi := styi + 2 }
+    //styi := 3
     // Draw
     DIV.new.drw {
       DIV.mute {

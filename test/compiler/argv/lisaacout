@@ -1,0 +1,5 @@
+--WARNING----------
+Extra comma.
+Line 18 column 91 in EASY(.../test/compiler/argv/easy.li):
+      "dessin_hexagone", "dessin_feuille", "dessin_etoile", "flocon_koch", "arbre_fractale",
+                                                                                           ^
