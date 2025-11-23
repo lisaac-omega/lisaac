@@ -3,11 +3,7 @@ Header
   
 Public
 
-  - toto d:INTEGER
-  lst a:INTEGER^n
-  msg f:STRING_ALIAS
-  lst c:CHARACTER^n
-  other s:STRING_ALIAS^p <-
+  - toto d:INTEGER lst a:INTEGER^n msg f:STRING_ALIAS lst c:CHARACTER^n other s:STRING_ALIAS^p <-
   (
     OUT # "Count:" # n # ',' # p # '\n'
     /*

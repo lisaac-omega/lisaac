@@ -44,7 +44,7 @@ Public
   - reload <-
   ( + e:DIRENT
     e := FILE_SYSTEM.get name    
-    ((e != NULL) && {(e.update_date != date_update) || {e.update_time != time_update}}).if {
+    ((e != NULL) && {is_save} && {(e.update_date != date_update) || {e.update_time != time_update}}).if {
       (footnote_left.has_prefix "Reload ").if {
         footnote_left # ", "
       } else {

@@ -53,8 +53,10 @@ Section Private
   // Other variables.
   //
   
-  + cc_opts:STRING;  
-  + lib_gcc:STRING;
+  + cc_opts:STRING;
+  + lib_i:STRING := ""; // -I include directory
+  + lib_a:STRING := ""; // -L or archive for the linjer
+  + lib_lxx:STRING := ""; // -lXXX
   + execute_file:STRING;
   
   + target:STRING := "unix";
@@ -77,32 +79,44 @@ Section Private
   (
     message := msg;
   );
-  
-  - add_lib lib:STRING <-
+
+  - path_exist_check path:STRING <-
   (
     (target = "windows").if {
-      run "echo int main(){ return(1); } > __tmp__.c";    
-      (run (cc + " __tmp__.c -o __tmp__ " + lib + " > NUL") = 0).if {
-        lib_gcc := lib_gcc + " " + lib;
-        run "del __tmp__.c __tmp__.exe";
-      } else {
-        "\nERROR: `" + lib + "' library for `"+cc+"' not found.\n".print;
-        run "del __tmp__.c";
-        message.print;
-        die_with_code exit_failure_code;
-      };
+       "\ncontrole make.lip\n".print;
+       (run (ls + " " + path + " 2> /dev/null") = 0).if {
+          ("\nERROR file: `" + path + "' not found.\n").print;
+          die_with_code exit_failure_code;
+       };
     } else {
-      run "echo \"int main(){ return(1); }\" > __tmp__.c";
-      (run (cc + " __tmp__.c -o __tmp__ " + lib + " 2> /dev/null") = 0).if {
-        lib_gcc := lib_gcc + " " + lib;
-        run "rm __tmp__.c __tmp__";
-      } else {
-        ("\nERROR: `" + lib + "' library for `"+cc+"' not found.\n").print;
-        run "rm __tmp__.c";
-        message.print;
-        die_with_code exit_failure_code;
-      };          
+       (run (ls + " " + path + " 2> /dev/null") = 0).if {
+          ("\nERROR file: `" + path + "' not found.\n").print;
+          die_with_code exit_failure_code;
+       };
     };
+  );  
+
+  - add_lib_i dir:STRING <-
+  (
+    path_exist_check(dir);
+    lib_i := lib_i + " -I" + dir;
+  );
+  
+  - add_lib_l dir:STRING <-
+  (
+    path_exist_check(dir);
+    lib_a := lib_a + " -L" + dir;
+  );
+
+  - add_lib_a archive:STRING <-
+  (
+    path_exist_check(archive);
+    lib_a := lib_a + " " + archive;
+  );
+
+  - add_lib lib:STRING <-
+  (
+     lib_lxx := lib_lxx + " " + lib;
   );
   
   - execute cmd:STRING <-
@@ -172,13 +186,13 @@ Section Private
       execute_fail ("~/lisaac/arduino/com/ardcom "+arduino_port);
 //      execute_fail "screen /dev/ttyUSB0 9600";
       //"Ctrl A K Y".println;
-      //execute_fail ("avr-g++ -I. -Wno-overflow -Os -Wl,--gc-sections -ffunction-sections  -fdata-sections -DF_CPU=16000000UL -Wno-write-strings -mmcu=atmega2560 -o "+output_file+" "+output_file+".c"); // -mmcu=atmega328p  -lSoftwareSerial -larduino      
-      //execute_fail ("avr-objcopy -O ihex -R .eeprom "+output_file+" "+output_file+".hex");
-      //execute_fail ("avrdude -F -V -c arduino -p ATMEGA328P -P /dev/ttyACM0 -b 115200 -U flash:w:"+output_file+".hex");
+      //execute_fail ("avr-g++ -I. -Wno-overflow -Os -Wl,--gc-sections -ffunction-sections  -fdata-sections -DF_CPU=16000000UL -Wno-write-strings -mmcu=atmega2560 -o " + output_file + " " + output_file + ".c"); // -mmcu=atmega328p  -lSoftwareSerial -larduino      
+      //execute_fail ("avr-objcopy -O ihex -R .eeprom " + output_file + " " + output_file + ".hex");
+      //execute_fail ("avrdude -F -V -c arduino -p ATMEGA328P -P /dev/ttyACM0 -b 115200 -U flash:w:" + output_file + ".hex");
     } else {
       ((execute_back_end) & (target != "android")).if {
         (is_cop).if {
-          lib_gcc := lib_gcc + " -lpthread";
+          lib_lxx := lib_lxx + " -lpthread";
         };
         (target = "windows").if {
           execute_file := output_file + ".exe";
@@ -212,9 +226,9 @@ Section Private
           cc := "tcc ";
           /*
           (is_library).if {
-            execute_fail ("tcc " + output_file + output_extension + " -c ");
+            execute_fail ("tcc" + lib_i + " " + output_file + output_extension + " -c ");
           } else {
-            execute_fail ("tcc " + output_file + output_extension + " -o " + output_file + lib_gcc);
+            execute_fail ("tcc" + lib_i + " " + output_file + output_extension + lib_a + lib_lxx + " -o " + output_file);
           };*/
         }; // else {        
         (target = "web").if {
@@ -223,24 +237,24 @@ Section Private
 
           cc := "emcc";    
           cc_opts := " -D_GNU_SOURCE -O2 -Wno-unused-value -Wno-invalid-source-encoding -Wno-sometimes-uninitialized";
-          lib_gcc := " -s ASSERTIONS=1 -s GL_DEBUG=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s USE_WEBGL2=1 -s USE_GLFW=3 --preload-file web";
+          lib_i := " -s ASSERTIONS=1 -s GL_DEBUG=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s USE_WEBGL2=1 -s USE_GLFW=3 --preload-file web";
           	  // -s ASSERTIONS=1    --preload-file assets/
           //-s MODULARIZE=1 -s EXPORT_ES6=1 
           execute_file := "index.js";
         };
           (is_library).if {
-            execute_fail (cc+" " + output_file + output_extension + " -c " + cc_opts);
+            execute_fail (cc + lib_i + " " + output_file + output_extension + " -c " + cc_opts);
           } else {
             ((is_speed_push) & (debug_level > 0)).if {
-              execute_fail (cc+" " + output_file + output_extension + " -S " + cc_opts + lib_gcc);
+              execute_fail (cc + lib_i + " " + output_file + output_extension + " -S " + cc_opts + lib_a + lib_lxx);
               build_label (output_file + ".s");
-              execute_fail (cc+" " + input_file + "_label.s -o "+ output_file + cc_opts + lib_gcc);
+              execute_fail (cc+" " + lib_i + input_file + "_label.s " + cc_opts + lib_a + lib_lxx + " -o " + output_file);
             } else {
               (bug_stack).if {
-                execute ("sed -i 's/void lisaac_stack_print(long step)/void old_lisaac_stack_print(long step)/g' "+output_file+output_extension);
-                execute_fail (cc+" " + output_file + output_extension + " bug_stack.c -o " + execute_file + cc_opts + lib_gcc);
+                execute ("sed -i 's/void lisaac_stack_print(long step)/void old_lisaac_stack_print(long step)/g' " + output_file + output_extension);
+                execute_fail (cc + lib_i + " " + output_file + output_extension + " bug_stack.c " + cc_opts + lib_a + lib_lxx + " -o " + execute_file);
               } else {
-                execute_fail (cc+" " + output_file + output_extension + " -o " + execute_file + cc_opts + lib_gcc);
+                execute_fail (cc + lib_i + " " + output_file + output_extension + cc_opts + lib_a + lib_lxx + " -o " + execute_file);
               };
             };
           };
@@ -254,7 +268,7 @@ Section Private
       (target = "web").if {
         execute_fail ("cp "+lisaac+"webli/index.html .");
         execute_fail ("cp "+lisaac+"webli/favicon-32x32.png .");
-        execute_fail ("cp "+lisaac+"webli/run.sh "+output_file);
+        execute_fail ("cp "+lisaac+"webli/run.sh "+ output_file);
       };        
     };
   );

@@ -1,0 +1,63 @@
+Header
+  + name := CODE_SHOW
+
+Insert
+  - parent_mini_bash:MINI_BASH := MINI_BASH
+    
+Private
+  
+  + example_dir:STRING_ALIAS  
+  
+  
+  - show mode:STRING_ALIAS directory d:STRING_ALIAS main m:STRING_ALIAS <-
+  ( + lisaac, elix:STRING
+    if (example_dir = NULL) then {
+      FILE_UTILS.working_directory_in working_directory
+      example_dir := working_directory.to_string_alias  
+    }
+    //OUT # "show " # directory # " name " # n # '\n'
+    STRING.tmp { b:STRING_BUFFER
+      b.copy example_dir
+      b.extend_unless '/'
+      b.append d
+      b.extend_unless '/'
+      //OUT # b # n # ".li\n"
+      if (ENVIRONMENT.chdir b = 0) then {
+        OUT # "cd " # b #'\n'
+        working_directory.clear
+        FILE_UTILS.working_directory_in working_directory
+      } else {
+        crash_with_message ("Cannot chdir into \"" + b + "\"")
+      }
+      lisaac := "lisaac " + m + " -boost -q"
+      elix := "elix " + b + m + ".li 2> /dev/null"   
+      if (mode = "gui") then {
+        run elix background
+        run lisaac
+        run ("./" + m)
+      } else {
+        run lisaac background
+        run elix
+      }
+    }
+  )
+  
+  - run cmd:STRING  <-
+  (
+    cmd.println
+    ENVIRONMENT.run cmd
+  )
+  
+  - run cmd:STRING background  <-
+  (
+    cmd.println
+    ENVIRONMENT.run cmd background
+  )
+  
+  - show list:STRING_ALIAS^n <-
+  (
+    { ex:STRING_ALIAS
+      show "gui" directory "" main ex
+    }.value list
+  )
+  

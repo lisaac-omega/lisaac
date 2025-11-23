@@ -98,7 +98,7 @@ Public
   ( + result:BOOLEAN
     + i:INTEGER
     i := 1
-    {i > upper}.until_do {
+    until {i > upper} do {
       (args.at i = name).if {
         result := TRUE
         args.remove i
@@ -109,3 +109,17 @@ Public
     result
   )
   
+  - search name:STRING_ALIAS :BOOLEAN <-
+  // Search for name.
+  ( + result:BOOLEAN
+    + i:INTEGER
+    i := 1
+    until {i > upper} do {
+      (args.at i = name).if {
+        result := TRUE
+        i := upper
+      }
+      i := i + 1
+    }
+    result
+  )

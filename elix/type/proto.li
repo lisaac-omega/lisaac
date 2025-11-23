@@ -305,6 +305,7 @@ Public
   
   - parse <-
   ( + fuck:BOOLEAN
+    + p:INTEGER
     //+ v:BOOLEAN
     //+ i,p:INTEGER
     //+ s:SLOT
@@ -358,7 +359,21 @@ Public
     lip      ?= field 6 name "- lip"      ass "<-" value ""   parse {EXPR.parse_sp (1 | EXPR.force)}
     extern_c ?= field 7 name "- external" ass ":=" value "``" parse {EXT.parse_sp 1}
     //
-    skip_line
+    p := pos_i
+    {
+      {at (p-1) = ' '}.while_do { p := p - 1 }        
+      (at (p-1) = '\n').if {
+        pos_i := p
+        toks.at tok_cur.dec_nl;
+        p := p - 1
+      }
+    }.while_loop
+    toks.at tok_cur.inc_nl;
+    /*
+    (name.has_suffix "test/misc/1/main.li").if {
+      "FIN : ".print; pos_i.pt.println
+    }*/
+    
     /*
     ((pos_i = upper) || {at pos_i.is_upper}).if_false {
       0.to 600 do { i:INTEGER; at i.print; }

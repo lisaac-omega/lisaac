@@ -12,7 +12,6 @@ prototype-based programming models.
 
 lisaac.png
 Created and maintained by Benoît Sonntag and Dominique Colnet.*/
-
 Inherit 
   + parent_window:Expanded WINDOW
   
