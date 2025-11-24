@@ -1,13 +1,11 @@
 Header
   + name := CODE_SHOW
-
 Insert
   - parent_mini_bash:MINI_BASH := MINI_BASH
     
 Private
   
   + example_dir:STRING_ALIAS  
-  
   
   - show mode:STRING_ALIAS directory d:STRING_ALIAS main m:STRING_ALIAS <-
   ( + lisaac, elix:STRING

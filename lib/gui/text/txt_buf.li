@@ -45,17 +45,31 @@ Public
   ( + e:DIRENT
     e := FILE_SYSTEM.get name    
     ((e != NULL) && {is_save} && {(e.update_date != date_update) || {e.update_time != time_update}}).if {
-      (footnote_left.has_prefix "Reload ").if {
-        footnote_left # ", "
+      (footnote_left.is_empty).if {
+        footnote_left # "Reload "
       } else {
-        footnote_left |# "Reload "
+        footnote_left # ", "
       }
-      footnote_left # '`' # rel_path name # '\''      
+      footnote_left # '`' # rel_path name # '\''
+      /*
+      // TEST FUITE MEMORY 
       undo.clear
-      buf.clear
       toks.foreach { t:TOK_DRW; t.free; }; toks.clear
+      buf.clear      
       load_file
       parse_all
+      // FIN TEST
+      */
+      //      
+      //detect_memory_leak := TRUE
+      //"CLEAR...".println;
+      undo.clear
+      toks.foreach { t:TOK_DRW; t.free; }; toks.clear
+      buf.clear
+      //"RELOAD..." println
+      load_file
+      parse_all
+      //detect_memory_leak := FALSE
     }
   );
   
@@ -92,6 +106,7 @@ Public
       FILE_UTILS.close f
       e := FILE_SYSTEM.get name
       date_update := e.update_date
+      time_update := e.update_time
       is_save := TRUE
       undo.last_save;
       footnote_left |# "Wrote `" # rel_path name # '\''
@@ -1198,23 +1213,27 @@ Public
       //"y=".print; y.println
       (y < margin_cursor_y).if { // Top
         pos_y := (pos_y + y - margin_cursor_y).max 0
+        PAPER.refresh_again
       }
       y := y + d.height
       (y > height-margin_cursor_y).if { // Bottom
         pos_y := pos_y + y + margin_cursor_y - height
+        PAPER.refresh_again
       }
-    } else { drag_pos_y := FALSE; }
+    } else { drag_pos_y := FALSE; PAPER.refresh_again }
     
     (! drag_pos_x).if {
       d ?= child.at pt_div
       x := d.abs_x - xo
       (x < margin_cursor_x).if { // Left
         pos_x := (pos_x + x - margin_cursor_x).max 0
+        PAPER.refresh_again
       }
       (x > width-margin_cursor_x).if { // Right
         pos_x := pos_x + x + margin_cursor_x - width
+        PAPER.refresh_again
       }
-    } else { drag_pos_x := FALSE; }
+    } else { drag_pos_x := FALSE; PAPER.refresh_again }
     
     //lirestore (0,0)
     restore; stackd.remove_last

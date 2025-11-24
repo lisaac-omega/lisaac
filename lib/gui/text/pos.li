@@ -106,7 +106,7 @@ Public
   
   - Self:SELF '==='  Right 60 o:POS :BOOLEAN <- (to_raw & msk_cmp2) = (o.to_raw & msk_cmp2)
   
-  - in_range b:INTEGER to e:INTEGER :BOOLEAN <- pt.in_range b to e
+  - in_range b:INTEGER to e:INTEGER :BOOLEAN <- (!is_xy) && {pt.in_range b to e}
     
   - Self:SELF '~=' o:POS :BOOLEAN <-
   (( is_undefine_xy) && {o.pt >= pt}) || {(!is_undefine_xy) && {o.pt  = pt}}

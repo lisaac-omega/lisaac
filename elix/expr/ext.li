@@ -20,7 +20,12 @@ Public
   
   - new:SELF <-
   ( + r:SELF; (stack_ext.is_empty).if { r := clone; } else { r := stack_ext.pop; }; r)
-  - free <- stack_ext.add_last Self
+  - free <-
+  ( (ttok  != NULL).if { ttok.free;  ttok  := NULL }
+    (lttok != NULL).if { lttok.free; lttok := NULL }
+    persistant := FALSE
+    stack_ext.add_last Self
+  )
   
   //
   // PARSER / DRAW
@@ -40,7 +45,7 @@ Public
           (! read_c '}').if { err warning msg "Added '}'. (3)"; }
         }
         ((persistant) && {! read_c ')'}).if { err warning msg "Added ')'. (6)"; }
-      } else { ttok := NULL; }
+      }
     }
   )
   

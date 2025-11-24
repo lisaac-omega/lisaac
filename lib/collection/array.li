@@ -61,7 +61,7 @@ Public
   ( + new_capacity,new_count:INTEGER
     new_count := count + n
     (capacity = 0).if {
-      storage := NATIVE_ARRAY(V).create new_count
+      storage := NATIVE_ARRAY V.create new_count
       capacity := new_count
     }.elseif {new_count > capacity} then {
       new_capacity := capacity * 2
@@ -122,7 +122,7 @@ Public
     result
   )
   
-  - create_with_native_array_byte na:NATIVE_ARRAY(UINTEGER_8) size s:INTEGER :SELF <-
+  - create_with_native_array_byte na:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :SELF <-
   ( + result:SELF
     result := clone
     result.make_with_native_array_byte na size s
@@ -157,7 +157,7 @@ Public
     (c = 0).if {
       storage := NULL
     } else {
-      storage := NATIVE_ARRAY(V).create c
+      storage := NATIVE_ARRAY V.create c
     }
     capacity := c
     upper := -1
@@ -172,7 +172,7 @@ Public
       ? {capacity = 0}
     } else {
       capacity := u + 1
-      storage := NATIVE_ARRAY(V).create capacity
+      storage := NATIVE_ARRAY V.create capacity
       storage.copy_from (o.storage) until u
     }
   )
@@ -214,7 +214,7 @@ Public
   (
     ( new_count.to_integer > capacity).if {
       // The new one is bigger:
-      storage := NATIVE_ARRAY(V).create new_count
+      storage := NATIVE_ARRAY V.create new_count
       capacity := new_count
     }.elseif { (capacity > 0) && { upper >= 0}} then {
       // The new one is smaller and just need to be cleared:
@@ -319,13 +319,13 @@ Public
     upper := new_count + lower - 1
   )
 
-  - to_native_array_uinteger_8:NATIVE_ARRAY(UINTEGER_8) <-
+  - to_native_array_uinteger_8:NATIVE_ARRAY UINTEGER_8 <-
   (
     CAST (NATIVE_ARRAY V) TO (NATIVE_ARRAY UINTEGER_8).on storage
   )
 
-  - add_last_buffer buf:ARRAY(UINTEGER_8) from beg:INTEGER to end:INTEGER <-
-  ( + tab:NATIVE_ARRAY(UINTEGER_8)
+  - add_last_buffer buf:ARRAY UINTEGER_8 from beg:INTEGER to end:INTEGER <-
+  ( + tab:NATIVE_ARRAY UINTEGER_8
     + pos_beg,size,new_capacity:INTEGER
 
     pos_beg := count * element_sizeof; // + ofs_buf
@@ -347,10 +347,10 @@ Public
     upper   := (pos_beg + size - 1) / element_sizeof
   )
 
-  - get_buffer_from_byte i:INTEGER size_bytes s:INTEGER :ARRAY(UINTEGER_8) <-
-  ( + tab:NATIVE_ARRAY(UINTEGER_8)
+  - get_buffer_from_byte i:INTEGER size_bytes s:INTEGER :ARRAY UINTEGER_8 <-
+  ( + tab:NATIVE_ARRAY UINTEGER_8
     tab := CAST (NATIVE_ARRAY V) TO (NATIVE_ARRAY UINTEGER_8).on storage
-    ARRAY(UINTEGER_8).create_with_native_array_byte (tab + i) size s
+    ARRAY UINTEGER_8.create_with_native_array_byte (tab + i) size s
   )
   
   // Interfacing with C:
@@ -370,7 +370,7 @@ Public
     Result.is_not_null
   ]
 
-  - to_native_array:NATIVE_ARRAY(V) <-
+  - to_native_array:NATIVE_ARRAY V <-
   // Gives C access into the internal `storage' of the ARRAY.
   // Result is pointing the element at index `lower'.
   // NOTE: do not free/realloc the Result. Resizing of the array
@@ -407,7 +407,7 @@ Public
   ]
   (
     (capacity < needed_capacity).if {
-      storage := NATIVE_ARRAY(V).create needed_capacity
+      storage := NATIVE_ARRAY V.create needed_capacity
       capacity := needed_capacity
       //}.elseif { capacity > needed_capacity } then {
       //  storage.clear 0 to upper; // BSBS: Ca serre a quoi de le vider !
@@ -432,7 +432,7 @@ Public
   
   - twin:SELF <-
   ( + result:SELF
-    result ?= (ARRAY V).create_copy Self
+    result ?= ARRAY V.create_copy Self
     result
   )
   
@@ -440,7 +440,7 @@ Public
   (
     capacity := other.count
     (capacity = 0).if { storage := NULL; } else {
-      storage := NATIVE_ARRAY(V).create capacity
+      storage := NATIVE_ARRAY V.create capacity
     }
     upper := capacity - 1
     0.to upper do { i:INTEGER
@@ -473,7 +473,7 @@ Public
   (
     (new_capacity > capacity).if {
       (capacity = 0).if {
-        storage := NATIVE_ARRAY(V).create new_capacity
+        storage := NATIVE_ARRAY V.create new_capacity
       } else {
         storage := storage.realloc capacity with new_capacity
       }
@@ -517,7 +517,7 @@ Public
     
     ( new_count > count).if {
       (capacity = 0).if {
-        storage := NATIVE_ARRAY(V).create new_count
+        storage := NATIVE_ARRAY V.create new_count
         capacity := new_count
       }.elseif { capacity < new_count } then {
         new_capacity := capacity * 2
@@ -562,7 +562,7 @@ Public
     (upper + 1 < capacity).if {
       upper := upper + 1
     }.elseif {capacity = 0} then {
-      storage := NATIVE_ARRAY(V).create 2
+      storage := NATIVE_ARRAY V.create 2
       capacity := 2
       upper := 0
     } else {
@@ -592,7 +592,7 @@ Public
     (other_upper >= 0).if {
       new_capacity := other_upper + 1
       (capacity < new_capacity).if {
-        storage := NATIVE_ARRAY(V).create new_capacity // BSBS Mettre colloc_intern !
+        storage := NATIVE_ARRAY V.create new_capacity // BSBS Mettre colloc_intern !
         capacity := new_capacity
       }
       storage.copy_from (other.storage) until other_upper
@@ -640,9 +640,9 @@ Public
     + i:INTEGER
     i := lower
     
-    { (i<=upper) && { ! cmp.value(e, (at i)) } }.while_do { i := i + 1; }
+    { (i <= upper) && { ! cmp.value(e, (at i)) } }.while_do { i := i + 1; }
     
-    (i<=upper).if { return := at i; }
+    (i <= upper).if { return := at i; }
     
     return
   )
@@ -650,7 +650,7 @@ Public
   
   // Other.
   
-  - from_collection model:COLLECTION(V) <-
+  - from_collection model:COLLECTION V <-
   ( + i1:INTEGER
     
     with_capacity model.count
@@ -763,7 +763,8 @@ Public
     storage.fast_reverse_index_of element from start_index
   )
   
-  - subarray min:INTEGER to max:INTEGER :SELF <-  // slice
+  - subarray min:INTEGER to max:INTEGER :SELF <-  
+  // slice
   ( + result:SELF
     
     result := SELF.create (max - min + 1)
@@ -785,7 +786,7 @@ Public
   )
   
   - remove_first <-
-  ( + void_storage:NATIVE_ARRAY(V)
+  ( + void_storage:NATIVE_ARRAY V
     
     ( upper = 0).if {
       storage := void_storage

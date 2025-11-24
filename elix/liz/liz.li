@@ -359,15 +359,52 @@ Public
       (dir.lower).to (dir.upper) do { j:INTEGER
         npth := dir.at j.path
         (npth.has_suffix ".liz").if {
-          liz := clone
-          liz.read_tikz npth
-          dico.add liz to (liz.name)
+          (npth.has_suffix "operator.liz").if {
+            read_operator npth
+          } else {
+            liz := clone
+            liz.read_tikz npth
+            dico.add liz to (liz.name)
+          }
         }
       }
     }
-    "Glyph ok\n".print
+    //"Glyph ok\n".print
   )
-
+  
+  //
+  // Operator conversion
+  //
+  
+  - ope_key:HMAP INTEGER KEY STRING_ALIAS := HMAP INTEGER KEY STRING_ALIAS.create
+  - ope_val:Expanded ARRAY STRING_ALIAS
+  
+  - read_operator n:STRING <-
+  ( + f:POINTER
+    + sz:INTEGER
+    + key,val:STRING_ALIAS
+    ((f := FILE_UTILS.open_read n).is_null).if {
+      "Attempt to open-read file path \"".print; n.print; "\" failed.\n".print
+      exit 1
+    }.elseif {(sz := FILE_UTILS.size f) > 0} then {
+      cur := 0
+      src.resize sz
+      FILE_UTILS.read f in src size sz
+      FILE_UTILS.close f
+      cur := 0
+      {read_str '"'}.while_do {
+        key := last_str
+        (! read_char ':').if { err syntax msg "`:' needed." }
+        (! read_str '"').if { err syntax msg "String value necessary." }
+        val := last_str
+        ope_val.add_last val
+        ope_key.add (ope_val.count) to key
+      }
+    }    
+  )
+  
+  
+  
 Private
   
   - tabr:Expanded ARRAY (ARRAY REAL_32)

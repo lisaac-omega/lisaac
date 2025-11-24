@@ -23,9 +23,9 @@ Public
   - size_app:REAL_32 := 25
   
   - inc_size_sys a:REAL_32 :BOOLEAN <-
-  ((size_sys + a).in_range 20 to 80).if { size_sys := size_sys + a; PAPER.refresh_all; }
+  ((size_sys + a).in_range 18 to 80).if { size_sys := size_sys + a; PAPER.refresh_all; }
   - inc_size_app a:REAL_32 :BOOLEAN <-
-  ((size_app + a).in_range 20 to 80).if { size_app := size_app + a; PAPER.refresh_all; }
+  ((size_app + a).in_range 18 to 80).if { size_app := size_app + a; PAPER.refresh_all; }
   
   - size c:REAL_32 do do:{} <-
   (

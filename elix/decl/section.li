@@ -64,7 +64,11 @@ Public
   
   - new:SELF <- ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <-
+  (
+    (exports != NULL).if { exports.free; exports := NULL }
+    stk.add_last Self
+  )
   
   - detect:BOOLEAN <- (pos_i <= upper) && {at pos_i.is_upper}
   

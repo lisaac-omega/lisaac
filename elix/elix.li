@@ -90,11 +90,11 @@ Public
   
   - init <-
   (
+    LIZ.load_all
     FILE_CFG.load_all
     FILE_CFG.read
     LOOK.read
     FILE_KEY.read
-    LIZ.load_all
   )
   
   - main <-

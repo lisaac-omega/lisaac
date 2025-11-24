@@ -26,7 +26,7 @@ Public
     abstract
   )
 
-  - to_native_array_uinteger_8:NATIVE_ARRAY(UINTEGER_8) <-
+  - to_native_array_uinteger_8:NATIVE_ARRAY UINTEGER_8 <-
   (
     abstract
     NULL

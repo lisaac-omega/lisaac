@@ -33,8 +33,10 @@ Public
     
   - new:SELF <- ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   - free <-
-  ( style := 0
+  ( 
+    style := 0    
     (ttok != NULL).if { ttok.free; ttok := NULL; }
+    name_id := "Free"
     //stk.foreach { l:Strict LOCAL; (l = Self).if { crash; }; };
     stk.add_last Self
   )

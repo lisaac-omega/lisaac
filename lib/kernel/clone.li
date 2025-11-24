@@ -30,7 +30,10 @@ SELF
     + ptr:POINTER
     + sz:UINTEGER_CPU
     + typ_id:INTEGER
-    (detect_memory_leak).if { crash_with_message "Memory leak !"; }
+    (detect_memory_leak).if {            
+      type_name.println
+      //crash_with_message "Memory leak !";
+    }
     /*
     cnt_clone := cnt_clone + 1
     (cnt_clone > 50).if {

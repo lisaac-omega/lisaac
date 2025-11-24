@@ -26,14 +26,15 @@ Inherit
   - parent_traversable:TRAVERSABLE V := TRAVERSABLE V
 
 Public
+  
   // Creation:
-  /*
+  
   - new Self:SELF of v: V^n :SELF <-
   (
     abstract
     Self
   )
-  */
+ 
 Public
   
   - has x:V :BOOLEAN <-

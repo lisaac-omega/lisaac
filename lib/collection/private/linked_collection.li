@@ -13,8 +13,7 @@ Public
   
   - new Self:SELF of v: V^n :SELF <-
   ( + result:SELF
-    result := clone
-    
+    result := clone  
     { vi:V
       result.add_last vi
     }.value v    

@@ -38,7 +38,15 @@ Public
     sum
   )
   
-  - Self:SELF mtx (v0,v1:SELF)
+  - Self:SELF mtx v:SELF^n <-
+  (
+    OUT # "Matrix " # Self # 'x' # n/Self # ":\n"
+    { vi:SELF
+      vi.print
+      ' ' print
+    }.value v
+  )
+      
   
   
   // Features

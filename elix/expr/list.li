@@ -67,6 +67,7 @@ Public
   
   - new:SELF <-
   ( + r:SELF; (stack_lst.is_empty).if { r := clone; } else { r := stack_lst.pop; }; r)
+  
   - free <-
   ( 
     (arg != NULL).if { arg.free; arg := NULL; }
@@ -400,59 +401,67 @@ Private
     //lirestore (0,0)
     save
     (is_block).if {
-      //text (x0-x_space*0,LINE.y) msg "{"
-      begin_path
-      stroke_color c
-      stroke_width 2.0
-      line_cap butt
-      //line_join (bevel)
-      x0 := x0 + x_space*0.7
-      move_to (x0,y0)
-      arc_to (x0-5,y0) to (x0-5,y0+5) radius 5.0
-      line_to (x0-5,ym-5)
-      arc_to (x0-5,ym) to (x0-10,ym) radius 5.0
-      arc_to (x0-5,ym) to (x0-5,ym+5) radius 5.0
-      line_to (x0-5,y1-5)
-      arc_to (x0-5,y1) to (x0,y1) radius 5.0
-      //
-      //x1 := x1 + x_space
-      x0 := x1 + x_space*0.3
-      move_to (x0,y0)
-      arc_to (x0+5,y0) to (x0+5,y0+5) radius 5.0
-      line_to (x0+5,ym-5)
-      arc_to (x0+5,ym) to (x0+10,ym) radius 5.0
-      arc_to (x0+5,ym) to (x0+5,ym+5) radius 5.0
-      line_to (x0+5,y1-5)
-      arc_to (x0+5,y1) to (x0,y1) radius 5.0
-      stroke
-      //text (x1+x_space*0,LINE.y) msg "}"
+      (a = asc_c).if {
+        fill_color c
+        text (x0,tex.y) msg "{"
+        text (x1,tex.y) msg "}"
+      } else {
+        begin_path
+        stroke_color c
+        stroke_width 2.0
+        line_cap butt
+        //line_join (bevel)
+        x0 := x0 + x_space*0.7
+        move_to (x0,y0)
+        arc_to (x0-5,y0) to (x0-5,y0+5) radius 5.0
+        line_to (x0-5,ym-5)
+        arc_to (x0-5,ym) to (x0-10,ym) radius 5.0
+        arc_to (x0-5,ym) to (x0-5,ym+5) radius 5.0
+        line_to (x0-5,y1-5)
+        arc_to (x0-5,y1) to (x0,y1) radius 5.0
+        //
+        //x1 := x1 + x_space
+        x0 := x1 + x_space*0.3
+        move_to (x0,y0)
+        arc_to (x0+5,y0) to (x0+5,y0+5) radius 5.0
+        line_to (x0+5,ym-5)
+        arc_to (x0+5,ym) to (x0+10,ym) radius 5.0
+        arc_to (x0+5,ym) to (x0+5,ym+5) radius 5.0
+        line_to (x0+5,y1-5)
+        arc_to (x0+5,y1) to (x0,y1) radius 5.0
+        stroke
+      }      
     } else {
-      //text (x0-x_space*1,LINE.y) msg "("
-      begin_path
-      fill_color c
-      w := 2; c0 := 0.66; c1 := 0.35
-      move_to (x0+x_space*c0-w,y0)
-      line_to (x0+x_space*c0,y0)
-      quad_w (x0+x_space*c1+1,(ym+y0)/2) to (x0+x_space*c1+1,ym)
-      quad_w (x0+x_space*c1+1,(ym+y1)/2) to (x0+x_space*c0,y1)
-      line_to (x0+x_space*c0-w,y1)
-      quad_w (x0+x_space*c1-w,(ym+y1)/2) to (x0+x_space*c1-w,ym)
-      quad_w (x0+x_space*c1-w,(ym+y0)/2) to (x0+x_space*c0-w,y0)
-      close_path
-      fill
-      //
-      //x1 := x1 + x_space
-      begin_path
-      move_to (x1+x_space*c1-w,y0)
-      line_to (x1+x_space*c1,y0)
-      quad_w (x1+x_space*c0,(ym+y0)/2) to (x1+x_space*c0,ym)
-      quad_w (x1+x_space*c0,(ym+y1)/2) to (x1+x_space*c1,y1)
-      line_to (x1+x_space*c1-w,y1)
-      quad_w (x1+x_space*c0-w-1,(ym+y1)/2) to (x1+x_space*c0-w-1,ym)
-      quad_w (x1+x_space*c0-w-1,(ym+y0)/2) to (x1+x_space*c1-w,y0)
-      close_path
-      fill
-      //text (x1+x_space*1,LINE.y) msg ")"
+      (a = asc_c).if {
+        fill_color c
+        text (x0,tex.y) msg "("
+        text (x1,tex.y) msg ")"
+      } else {
+        begin_path
+        fill_color c
+        w := 2; c0 := 0.66; c1 := 0.35
+        move_to (x0+x_space*c0-w,y0)
+        line_to (x0+x_space*c0,y0)
+        quad_w (x0+x_space*c1+1,(ym+y0)/2) to (x0+x_space*c1+1,ym)
+        quad_w (x0+x_space*c1+1,(ym+y1)/2) to (x0+x_space*c0,y1)
+        line_to (x0+x_space*c0-w,y1)
+        quad_w (x0+x_space*c1-w,(ym+y1)/2) to (x0+x_space*c1-w,ym)
+        quad_w (x0+x_space*c1-w,(ym+y0)/2) to (x0+x_space*c0-w,y0)
+        close_path
+        fill
+        //
+        //x1 := x1 + x_space
+        begin_path
+        move_to (x1+x_space*c1-w,y0)
+        line_to (x1+x_space*c1,y0)
+        quad_w (x1+x_space*c0,(ym+y0)/2) to (x1+x_space*c0,ym)
+        quad_w (x1+x_space*c0,(ym+y1)/2) to (x1+x_space*c1,y1)
+        line_to (x1+x_space*c1-w,y1)
+        quad_w (x1+x_space*c0-w-1,(ym+y1)/2) to (x1+x_space*c0-w-1,ym)
+        quad_w (x1+x_space*c0-w-1,(ym+y0)/2) to (x1+x_space*c1-w,y0)
+        close_path
+        fill
+      }
     }
     restore
     tex.ascdes (a,d)

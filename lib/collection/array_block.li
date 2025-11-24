@@ -27,7 +27,7 @@ Private
   + cache_prim:INTEGER; // Always drive to some non empty SLAB in range [prim_lower,prim_upper].
   + cache_lower:INTEGER; // Lower index in cache_prim SLAB.
   
-  + free_list:Expanded ARRAY (SLAB V)
+  - free_list:Expanded ARRAY (SLAB V)
   /*
   Keep in mind that all prim_lower and prim_upper must be rotated using prim_msk.
   Also keep in mind that SLABs in the use area [prim_lower,prim_upper] are always non NULL but
@@ -638,11 +638,12 @@ Public
     result
   )
   
-Private  
+Private
+  
   - slab_init_clear i:INTEGER :SLAB V <-
   ( + s:SLAB V
     ((s := prim.at i) = NULL).if {
-      s := SLAB V .new
+      s := new_slab 
       prim.at i put s
     } else {
       s.clear

@@ -176,7 +176,7 @@ Public
     //pt_ri := 0
     begin_draw
     e := pt_b.pt + di
-    (pos.in_range (pos_i.pt) to (e-1)).if {
+    (pos.pt.in_range (pos_i.pt) to (e-1)).if {
       i := 2
       {(i <= sty.upper) && {sty.at i + pt_b.pt < pos.pt}}.while_do { i := i + 2; }
       (i < sty.upper).if {
@@ -227,21 +227,25 @@ Public
   
   // Style / Color
   
+  - esc_char_style:INTEGER_32 := 30100h
+  - esc_char_arrow:INTEGER_32 := 30201h
+  - esc_char_commu:INTEGER_32 := 30202h
+    
   + sty:Expanded ARRAY INTEGER_32
   - styi:INTEGER
   - underline:BOOLEAN
   - last_color:COLOR; // Used LIZ
     
   - sty_run <-
-  ( + f,n:INTEGER_32
+  ( + f,n,j:INTEGER_32
     + sz:REAL_32
     {(styi <= sty.upper) && {pos_i >= pt_b.pt + sty.at styi}}.while_do {
       f := sty.at (styi+1)
       (f = itm_cur).if {
         underline := !underline
       } else {
-        n := f & 0FFh
-        (f >> 8)
+        n := f & 0FF_FFh
+        (f >> 16)
         .when 0 then { // Color
           /*
           (n = 12).if {
@@ -269,19 +273,21 @@ Public
           font_size sz
         }
         .when 3 then { // Escape character
-          (! pos.pt.in_range (pos_i.pt-1) to (pos_i.pt+2)).if {
+          j := n >> 8; n := n & 0FFh
+          (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {            
             (last_div = NULL).if {
               (tex.x = tex.xmin).if { begin_line; }
               last_div := DIV.new.text
             }
             tex.set_x (LOOK.drw n)
+            //
             tex.ascdes (asc_c,des_c)
             detect_cur
-            pos_i := pos_i + 1
+            pos_i := pos_i + j
           }
         }
         .when 4 then { // Img
-          (! pos.pt.in_range (pos_i.pt) to (pos_i.pt+n)).if {
+          (! pos.in_range (pos_i.pt) to (pos_i.pt+n)).if {
             STRING.tmp { tmp:STRING_BUFFER
               tmp.copy name
               tmp.remove_suffix shortname
@@ -309,9 +315,17 @@ Public
           .when 2 then { not_yet_implemented }
           .when 3 then { not_yet_implemented }
         }
-        .when 6 then {
-          (! pos.pt.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
+        .when 6 then { // Jump
+          (! pos.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
             pos_i := pos_i + n
+          }
+        }        
+        .when 7 then { // UTF8 conversion
+          j := n >> 8; n := n & 0FFh
+          (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
+            tmp_c.copy (LIZ.ope_val.at n)
+            draw_tmp_c
+            pos_i := pos_i + j
           }
         }
       }
@@ -332,37 +346,43 @@ Public
   - fnt n:INTEGER sub s:INTEGER <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 100h)
+    sty.add_last (n | 10000h)
   )
   
   - fsz n:INTEGER sub s:INTEGER <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 200h)
+    sty.add_last (n | 20000h)
   )
   
   - drw n:INTEGER sub s:INTEGER <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 300h)
+    sty.add_last (n | 30000h)
   )
   
   - img b:INTEGER to e:INTEGER <-
   [ ? {sty.is_empty || {b - pt_b.pt >= sty.second_last}}; ]
   ( sty.add_last (b - pt_b.pt)
-    sty.add_last ((e-b) | 400h)
+    sty.add_last ((e-b) | 40000h)
   )
   
   - exp b:BOOLEAN sub s:INTEGER <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (b.to_integer | 500h)
+    sty.add_last (b.to_integer | 50000h)
   )
   
   - jmp n:INTEGER sub s:INTEGER <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 600h)
+    sty.add_last (n | 60000h)
+  )
+  
+  - utf n:INTEGER sub s:INTEGER <-
+  [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
+  ( sty.add_last (pos_i.pt - pt_b.pt - s)
+    sty.add_last (n | 70000h)
   )
   
   - itm_cur:INTEGER; //OK_ITM
@@ -376,7 +396,7 @@ Public
   ( + i,c,v:INTEGER    
     {(i <= sty.upper) && {sty.at i <= p}}.while_do {
       v := sty.at (i+1)
-      ((v >> 8) = 0).if {
+      ((v >> 16) = 0).if {
         c := v
         //OUT # "  p=" # sty.at i # " col=" # c # '\n'
       }
@@ -393,8 +413,8 @@ Public
       i.print; ": ".print
       (b + sty.at i).print; ' '.print
       f := sty.at (i+1)
-      n := f & 0Fh
-      (f >> 8)
+      n := f & 0FFFFh
+      (f >> 16)
       .when 0 then { // Color
         "Color: ".print; n.print; ' '.print
         n
@@ -430,7 +450,7 @@ Public
         n
         .when 0 then { "Clone".print; }
       }
-      ((f >> 8) > 3).if { (f>>8).print; }
+      ((f >> 16) > 3).if { (f>>16).print; }
       '\n'.print
     }
   )

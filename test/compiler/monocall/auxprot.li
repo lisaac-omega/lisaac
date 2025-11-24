@@ -1,0 +1,21 @@
+Header
+  + name := AUXPROT
+Insert 
+  - parent_clone:CLONE := CLONE
+  
+Public
+  + counter:INTEGER
+  
+  - new:SELF <- (clone)
+  
+  - monoproc <-
+  (
+    counter := counter + 1
+  )
+
+  - monofonc:INTEGER <-
+  (
+    counter := counter + 1
+    counter
+  )
+

@@ -190,12 +190,15 @@ Public
   - drw c:INTEGER :REAL_32 <-
   ( + x:REAL_32
     c
-    .when 0 then { x := clone (at pos_i = '+') exp FALSE to (tex.x,tex.y); }
+    .when 0 then { x := clone (at pos_i = '+') exp FALSE to (tex.x,tex.y) }
+    .when 1 then { x := arrow_to (tex.x,tex.y) }
+    .when 2 then { x := commutativity_to (tex.x,tex.y) }
     x
   )
   
   - x_space:REAL_32 <- TXT_BUF.x_space
   
+  /*
   - type_self <-
   ( + radius:REAL_32
     save
@@ -333,7 +336,7 @@ Public
     restore
     tex.add_x (x_space*3)
     tex.ascdes (asc_c,des_c)
-  )
+  )*/
       
   - clone c:BOOLEAN exp e:BOOLEAN to (x,y:REAL_32) :REAL_32 <-
   ( + radius,xx,x0:REAL_32
@@ -378,5 +381,47 @@ Public
     */
     restore
     x+xx+(radius * 2 + 4)    
+  )
+  
+  - arrow_to (x,y:REAL_32) :REAL_32 <-
+  ( + px,py,w,h,l:REAL_32
+    h := asc_c * 0.3
+    w := FONT.size_app * 0.1
+    l := x_space*1.8
+    begin_path
+    stroke_color (cols.at symbol)
+    stroke_width w
+    (px,py) := (x + w, y - h)
+    line (px+w,py) to (px+l,py)
+    stroke
+    //
+    begin_path
+    line (px+x_space,py - h) to (px,py)
+    line_to (px+x_space,py + h)    
+    quad_w (px+x_space*0.3,py) to (px+x_space,py - h)
+    fill_color (cols.at symbol)
+    fill
+    x + l + w*2
+  )
+  
+  - commutativity_to (x,y:REAL_32) :REAL_32 <-
+  ( + px,py,w,h,l,r:REAL_32
+    h := asc_c * 0.3
+    w := FONT.size_app * 0.1
+    l := x_space*1.8
+    r := FONT.size_app * 0.15
+    (px,py) := (x + w, y - h)
+    begin_path
+    stroke_color (cols.at symbol)
+    fill_color (cols.at symbol)    
+    circle (px + r,py-h/2) radius r
+    fill
+    
+    px := text (x + w + r*2,y) msg "⇄"
+    
+    circle (px + r - 1,y-r) radius r
+    stroke
+    //x + x_space*2 + w*2
+    px + r*2 + w
   )
   

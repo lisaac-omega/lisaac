@@ -226,7 +226,7 @@ Public
     clonable := buf.at pos_i = '+'
     ? {(buf.at pos_i = '+') || {buf.at pos_i = '-'}}
     col (LOOK.style) sub 0
-    drw 0 sub 0
+    drw esc_char_style sub 0
     pos_i := pos_i + 1
     //
     /*
@@ -282,77 +282,83 @@ Public
     }
     end_name := pos_i.pt - pt_b.pt
     //
-    
-    //
-    (read_affect).if {
-      affect := last_str.first
-      col (LOOK.symbol) sub (last_str.count)
-    } else { affect := ' '; }
-    ((affect = ' ') && {read_c ':'}).if {
-      col (LOOK.symbol) sub 1
-      eye := pos_i.pt - pt_b
-      ttok := TTOK.parse_sp (TTOK.tres)
-      ((ttok = NULL) || {ttok.type = NULL}).if {
-        err syntax msg "Type result not found."
-      }
+    (name_id.is_empty).if {
+      skip_until '\n'
+      (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }      
+    } else {
+      //
       (read_affect).if {
         affect := last_str.first
         col (LOOK.symbol) sub (last_str.count)
+        (affect = '<').if { drw esc_char_arrow sub (last_str.count) }
       } else { affect := ' '; }
-    } else {
-      ((section != NULL) && {section.is_parent}).if {
-        err semantic msg "Type result is needed for inheritance slot."
-      }
-    }    
-    //skip_sp; // Pas utile
-    
-    (affect = ' ').if {
-      (read_c ';').if { col (LOOK.symbol) sub 1; }
-      skip_sp; rd_rem_cpp
-    }
-    (((c := at pos_i).is_upper) || {c = '+'} || {c = '-'}).if {        
-      {(c := at (pos_i-1)) != '\n'}.while_do { pos_i := pos_i - 1 }
-    }
-    end_mark := pos_i.pt - pt_b.pt
-    
-    //
-    (affect = ' ').if {
-      /*
-      (read_c ';').if { col (LOOK.symbol) sub 1; }
-      skip_sp            */      
-      //end_code := pos_i.pt - pt_b.pt
-      /*
-      rd_rem_cpp.if {
-        end_code := pos_i.pt - pt_b.pt        
+      ((affect = ' ') && {read_c ':'}).if {
+        col (LOOK.symbol) sub 1
+        eye := pos_i.pt - pt_b
+        ttok := TTOK.parse_sp (TTOK.tres)
+        ((ttok = NULL) || {ttok.type = NULL}).if {
+          err syntax msg "Type result not found."
+        }
+        (read_affect).if {
+          affect := last_str.first
+          col (LOOK.symbol) sub (last_str.count)
+          (affect = '<').if { drw esc_char_arrow sub (last_str.count) }
+        } else { affect := ' '; }
       } else {
+        ((section != NULL) && {section.is_parent}).if {
+          err semantic msg "Type result is needed for inheritance slot."
+        }
+      }
+      //skip_sp; // Pas utile
+      
+      (affect = ' ').if {
+        (read_c ';').if { col (LOOK.symbol) sub 1; }
+        skip_sp; rd_rem_cpp
+      }
+      (((c := at pos_i).is_upper) || {c = '+'} || {c = '-'}).if {
+        {(c := at (pos_i-1)) != '\n'}.while_do { pos_i := pos_i - 1 }
+      }
+      end_mark := pos_i.pt - pt_b.pt
+      
+      //
+      (affect = ' ').if {
+        /*
+        (read_c ';').if { col (LOOK.symbol) sub 1; }
+        skip_sp            */
+        //end_code := pos_i.pt - pt_b.pt
+        /*
+        rd_rem_cpp.if {
+        end_code := pos_i.pt - pt_b.pt
+        } else {
         end_code := pos_i.pt - pt_b.pt
         skip_until '\n'
         (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
-      }*/
-      parse_level := 2
-    } else {
-      (read_c '\n').if {
-        toks.at tok_cur.inc_nl
-        parse_level := 1
+        }*/
+        parse_level := 2
       } else {
+        (read_c '\n').if {
+          toks.at tok_cur.inc_nl
+          parse_level := 1
+        } else {
+          skip_until '\n'
+          (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+          parse_level := 2
+        }
+      }
+      (at (pos_i - 1) != '\n').if {
         skip_until '\n'
         (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
-        parse_level := 2
       }
-    }
-    (at (pos_i - 1) != '\n').if {
-      skip_until '\n'
-      (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
-    }
-    add_slot_in_proto
-    /*
-    (name.has_suffix "build_lisaac.li" && {name_id = "user_homedir"}).if {
+      add_slot_in_proto
+      /*
+      (name.has_suffix "build_lisaac.li" && {name_id = "user_homedir"}).if {
       name_id.print; ' '.print; pos_i.pt.println;
+      }
+      */
+      //end_code := cpti - pt_b
+      //cpti := pt_b + di
+      //ln_limit := 0
     }
-    */  
-    //end_code := cpti - pt_b
-    //cpti := pt_b + di
-    //ln_limit := 0
   )
   
   - next_parse <-
@@ -405,20 +411,30 @@ Public
     
   - rd_operator <-
   ( + a:ARG
+    + v,l:INTEGER
     style := 'O'
     (! read_symbol).if { err syntax msg "Operator is needed."; }
     (last_str = "!=").if { err syntax msg "Incorrect operator."; }
     name_id := last_str
-    (! read_c '\'').if { err warning msg "Added `''."; };
-    col (LOOK.operator) sub (last_str.count+2)
-    swap := word "<>"
+    l := last_str.count
+    col (LOOK.operator) sub (l+1)
+    v := LIZ.ope_key.fast_reference_at last_str
+    (v != 0).if { utf ((v-1) | (l<<8)) sub l }
+    (! read_c '\'').if { err warning msg "Added `''." }
+    (swap := word "<>").if {
+      col (LOOK.symbol) sub 2
+      drw esc_char_commu sub 2
+    }
     ((word "Left") || {word "Right"}).if {
       col (LOOK.keyword) sub (last_str.count)
       right := (last_str = "Right")
       ((! read_num FALSE) || {is_real}).if { err syntax msg "Priority level is needed or invalid."; }
       prio := last_int
       (! prio.in_range 1 to 99).if { err warning msg "Priority level is invalid [1..99]."; }
-      (! swap).if { swap := word "<>"; }
+      ((! swap) && {swap := word "<>"}).if {
+        col (LOOK.symbol) sub 2
+        drw esc_char_commu sub 2
+      }
     }
     (arg.is_empty).if { // Prefix operator.
       a := ARG.parse_sp 01b; /*read_arg FALSE self TRUE;*/

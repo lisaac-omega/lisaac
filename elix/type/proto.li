@@ -151,6 +151,8 @@ Public
 Public
   
   - new:SELF <- clone
+  - free <-
+  ( tname.free )
   
   - init pth:STRING_ALIAS web wp:STRING_ALIAS :SELF <-
   ( web_path := wp

@@ -1,0 +1,22 @@
+Header
+  + name := MONOC
+  /**/
+Public
+  - main <-
+  ( + ap:AUXPROT
+    ap := AUXPROT.new
+    TEST.check (ap.counter) integer 0
+    ap.monoproc
+    TEST.check (ap.counter) integer 1
+    (ap)monoproc
+    TEST.check (ap.counter) integer 2
+    monoproc(ap)
+    TEST.check (ap.counter) integer 3
+    (monoproc ap)
+    TEST.check (ap.counter) integer 4
+    
+    TEST.check (ap.monofonc) integer 5
+    TEST.check ((ap)monofonc) integer 6
+    TEST.check (monofonc(ap)) integer 7
+    TEST.check (monofonc ap) integer 8
+  )

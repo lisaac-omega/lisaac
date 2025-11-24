@@ -1130,7 +1130,12 @@ Public
         (t = NULL).if { syntax_error (current_position,"Type not found."); }
         lt.add_last t
       }
-      result := ITM_TYPE_MULTI.get (ALIAS_ARRAY ITM_TYPE.alias lt)
+      (lt.count = 1).if {
+        result := lt.first
+        ALIAS_ARRAY ITM_TYPE.free lt
+      } else {  
+        result := ITM_TYPE_MULTI.get (ALIAS_ARRAY ITM_TYPE.alias lt)
+      }
       (read_char ')').if_false { warning_error (current_position,"Added ')'."); }
     }
     result
