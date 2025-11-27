@@ -1190,7 +1190,7 @@ Public
   // Ben Inside
   ( + i,j,a,b,c,e0,e1:INTEGER
     + x0,y0,x1,y1:REAL_32
-    + dx,dy,l,nx,ny:REAL_32
+    + dx,dy,l,ndx,ndy:REAL_32
     + du,dv:REAL_32
     + rm,again:BOOLEAN
     //bug.clear
@@ -1201,9 +1201,9 @@ Public
       (dx,dy) := (x1-x0, y1-y0)
       l := (dx * dx + dy * dy).sqrt
       (l != 0).if {
-        (nx,ny) := ((-dy/l) * offset, (dx/l) * offset)
-        d.add_last (x0 + nx); d.add_last (y0 + ny)
-        d.add_last (x1 + nx); d.add_last (y1 + ny)
+        (ndx,ndy) := ((-dy/l) * offset, (dx/l) * offset)
+        d.add_last (x0 + ndx); d.add_last (y0 + ndy)
+        d.add_last (x1 + ndx); d.add_last (y1 + ndy)
       }
       (x0,y0) := (x1,y1)
       i := (i + 2) % s.count

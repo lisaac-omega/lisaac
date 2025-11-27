@@ -1,0 +1,52 @@
+Objet : Re: Candidature PIQ – Lisaac Ω
+
+Bonjour Yves,
+Bonjour Monsieur Hehn,
+
+Merci beaucoup pour votre retour et pour les points soulevés.
+Ils sont très pertinents, et j’ai déjà commencé à en tenir compte dans une nouvelle version du dossier.
+
+Les liens du PDF ont été corrigés, en particulier celui menant à l’article principal décrivant le langage.
+Cet article, ainsi que les autres publications du projet, sont également accessibles directement via: https://lisaac.org
+
+Concernant le budget vidéo, j’ai pu affiner l’estimation et le dossier mis à jour reflète désormais un chiffrage réaliste.
+
+Vous avez raison, l’enjeu principal réside dans la diffusion. La force du projet découle moins du caractère révolutionnaire
+de Lisaac Ω — même s’il introduit de réelles innovations — que d’un constat simple :
+il n’existe aujourd’hui aucun langage gratuit, réellement multiplateforme (y compris smartphones),
+conçu pour l’enseignement et offrant une expérience homogène.
+
+Pour parler clairement, le choix d’un langage comme Python, sans typage sérieux ni uniformité, va à l’encontre des principes
+fondamentaux du génie logiciel et de la programmation rigoureuse.
+Beaucoup d’enseignants en informatique partagent ce constat, mais malheureusement, l’absence d’alternative crédible permet à
+Python de rester central.
+Lisaac Ω, pour sa part, propose une approche sérieuse de la programmation, avec typage fort, tout en offrant un aspect ludique
+indéniable grâce à l’intégration native et simple d’éléments graphiques modernes.
+À titre d’exemple, nous avons ajouté récemment en Lisaac Ω une version revisitée de la tortue Logo.
+
+Plusieurs actions de diffusion sont déjà engagées ou programmées :
+
+– En plus des 50 étudiants de L3 formés cette année (et de nouveau en 2026), 150 étudiants de L1 à l’IUT Nancy-Charlemagne
+utiliseront Lisaac Ω dès la rentrée prochaine pour l’initiation à l’algorithmique.
+– Télécom Nancy prévoit de l’utiliser dans le cadre d’activités autour du concours Advent of Code.
+– J’animerai un atelier de présentation de Lisaac Ω pour les enseignants de NSI de l’académie le mercredi 1er avril 2026.
+– Une première série de vidéos est en cours de réalisation par les étudiants du département MMI de l’IUT Nancy-Charlemagne,
+dans le cadre d’un projet tutoré, afin de disposer d’une maquette exploitable par des professionnels.
+– Je suis également en discussion avec une équipe du cursus Médecine pour l’utiliser avec un groupe d’environ une centaine
+d’étudiants dans la nouvelle formule de la PACES.
+
+Je peux bien entendu venir vous présenter le langage si vous le souhaitez, afin que vous puissiez apprécier l’état actuel d’avancement.
+Nous ne sommes plus dans une simple "proof of concept": le logiciel est entièrement opérationnel, tient dans une vingtaine de mégaoctets
+et peut être téléchargé et utilisé immédiatement par chaque étudiant.
+
+Concernant la validation par d’autres enseignants-chercheurs, je pense effectivement que l’INRIA ne manque pas de spécialistes en génie
+logiciel et en langages de programmation pouvant évaluer la pertinence de notre approche. Je peux naturellement vous transmettre les
+références que j’ai déjà contactées. Par ailleurs, nous pensons également pouvoir compter sur un soutien de l’Université de Lorraine
+et de l’Université de Strasbourg. Comme rappelé dans le dossier, l’INRIA ayant déjà contribué à GNU Eiffel et à Lisaac serait la
+bienvenue — et même naturellement légitime — dans cette nouvelle (et très grande) aventure.
+
+Je reste bien entendu à votre disposition pour toute précision complémentaire, et serais ravi de venir vous présenter Lisaac Ω plus en détail.
+Étant donné le potentiel de ce projet, je suis convaincu que l’effort en vaut réellement la peine.
+
+Bien cordialement,
+Dominique Colnet

@@ -887,11 +887,18 @@ Public
     }
     result
   )
+  
+  - mean:V <-
+  // WARNING: mean invalid if V:UINTEGER_8
+  ( + sum:V    
+    foreach { v:V; sum := sum + v }
+    sum / count
+  )
     
   - min_max_mean:(V,V,V) <-
   // WARNING: mean invalid if V:UINTEGER_8
   ( + min,max,mean,sum,v:V
-    min := max := first
+    min := max := sum := first
     1.to upper do { i:INTEGER
       v := at i
       sum := sum + v
@@ -903,14 +910,38 @@ Public
   )
   
   - median_index:INTEGER <-
-  ( + sum,cum:V
+  ( + sum,cum:V    
     + j:INTEGER
-    0.to upper do { i:INTEGER; sum := sum + at i; }
+    0.to upper do { i:INTEGER;
+      sum := sum + at i;
+    }
     sum := sum / 2
     {(j < upper) && {cum < sum}}.while_do { cum := cum + at j; j := j + 1; }
     j
   )
-  
+    
+  - median_index_normalized:INTEGER <-
+  ( + min,v:V
+    + sum,cum:V
+    + j:INTEGER
+    min := first
+    1.to upper do { i:INTEGER
+      v := at i      
+      (v < min).if { min := v; }
+    }    
+    0.to upper do { i:INTEGER; sum := sum + at i - min }
+    (sum = 0).if {
+      j := count / 2
+    } else {
+      sum := sum / 2
+      {(j < upper) && {cum < sum}}.while_do {
+        cum := cum + at j - min;
+        j := j + 1;
+      }
+    }
+    j
+  )
+    
 Private
   
   - partition l:INTEGER to r:INTEGER pivot piv:INTEGER :INTEGER <-

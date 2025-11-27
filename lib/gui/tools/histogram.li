@@ -64,7 +64,7 @@ Public
         (! is fix_min).if { value_min := min; }
         (! is fix_max).if { value_max := max; }
         (is median).if {
-          value_median := tv.median_index
+          value_median := tv.median_index_normalized
         }
       }
     }

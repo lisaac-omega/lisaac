@@ -67,7 +67,7 @@ Public
     TRUE
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
   ( + ch:CHARACTER
     ch := s.first
     ((ch = ' ') || {ch = '\n'}).if {

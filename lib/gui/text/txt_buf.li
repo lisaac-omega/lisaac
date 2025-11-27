@@ -46,7 +46,7 @@ Public
     e := FILE_SYSTEM.get name    
     ((e != NULL) && {is_save} && {(e.update_date != date_update) || {e.update_time != time_update}}).if {
       (footnote_left.is_empty).if {
-        footnote_left # "Reload "
+        footnote_left # "Reloaded "
       } else {
         footnote_left # ", "
       }

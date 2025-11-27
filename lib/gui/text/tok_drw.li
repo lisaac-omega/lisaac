@@ -235,7 +235,9 @@ Public
   - styi:INTEGER
   - underline:BOOLEAN
   - last_color:COLOR; // Used LIZ
-    
+  
+  - ope_val:Expanded ARRAY STRING_ALIAS // See LIZ
+  
   - sty_run <-
   ( + f,n,j:INTEGER_32
     + sz:REAL_32
@@ -323,7 +325,7 @@ Public
         .when 7 then { // UTF8 conversion
           j := n >> 8; n := n & 0FFh
           (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
-            tmp_c.copy (LIZ.ope_val.at n)
+            tmp_c.copy (ope_val.at n)
             draw_tmp_c
             pos_i := pos_i + j
           }

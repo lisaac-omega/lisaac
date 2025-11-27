@@ -28,5 +28,4 @@ Public
     s := 1 .sum (5) of {i:INTEGER; n := n + i;   n}
     s.println;
   )
-  
-  
+ 

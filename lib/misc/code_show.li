@@ -7,8 +7,8 @@ Private
   
   + example_dir:STRING_ALIAS  
   
-  - show mode:STRING_ALIAS directory d:STRING_ALIAS main m:STRING_ALIAS <-
-  ( + lisaac, elix:STRING
+  - directory dir:STRING_ALIAS main m:STRING_ALIAS run r:BOOLEAN elix e:BOOLEAN <-
+  ( + cmd_lisaac, cmd_elix, cmd_run:STRING
     if (example_dir = NULL) then {
       FILE_UTILS.working_directory_in working_directory
       example_dir := working_directory.to_string_alias  
@@ -17,7 +17,7 @@ Private
     STRING.tmp { b:STRING_BUFFER
       b.copy example_dir
       b.extend_unless '/'
-      b.append d
+      b.append dir
       b.extend_unless '/'
       //OUT # b # n # ".li\n"
       if (ENVIRONMENT.chdir b = 0) then {
@@ -27,15 +27,19 @@ Private
       } else {
         crash_with_message ("Cannot chdir into \"" + b + "\"")
       }
-      lisaac := "lisaac " + m + " -boost -q"
-      elix := "elix " + b + m + ".li 2> /dev/null"   
-      if (mode = "gui") then {
-        run elix background
-        run lisaac
-        run ("./" + m)
+      cmd_lisaac := "lisaac " + m + " -boost -q"
+      cmd_elix := "elix " + b + m + ".li 2> /dev/null"
+      cmd_run := "./" + m
+      if (e && {r}) then {
+        run cmd_elix background
+        run cmd_lisaac
+        run cmd_run
+      }.elseif {e && {! r}} then {
+        run cmd_lisaac
+        run cmd_elix
       } else {
-        run lisaac background
-        run elix
+        run cmd_lisaac
+        run cmd_run
       }
     }
   )
@@ -55,7 +59,7 @@ Private
   - show list:STRING_ALIAS^n <-
   (
     { ex:STRING_ALIAS
-      show "gui" directory "" main ex
+      directory "" main ex run TRUE elix TRUE
     }.value list
   )
-  
+ 

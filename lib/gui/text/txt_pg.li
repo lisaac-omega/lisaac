@@ -820,7 +820,7 @@ Private
         (tb,ti) := text.pos_to_tok i
         col := text.toks.at ti.get_col (i-tb)
         //OUT # "tok#" # ti # " tb=" # tb # " Col" # i # " = " # col # "\n"
-        ((col = 0) || {col = LOOK.symbol}).if {
+        ((col = 0) || {col = 1 /*LOOK.symbol*/}).if {
           n := (n + dd).max 0
         }
       }

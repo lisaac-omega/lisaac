@@ -97,9 +97,9 @@ Public
   )
    
   - read_object <-
-  (
+  (   
     (read_pair).if {
-      {read_char ','}.while_do {
+      {read_char ','}.while_do {        
         (! read_pair).if { err warning msg "Pair needed."; }
       }
     }

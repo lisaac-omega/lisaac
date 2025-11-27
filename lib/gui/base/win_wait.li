@@ -111,8 +111,9 @@ Public
     TRUE
   )
   
-  - key s:STRING cmd c:UINTEGER_8 <-
-  ( 
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  (
+    TRUE
   )
   
 Private

@@ -9,13 +9,15 @@ Public
   
   - main <-
   (  
-    show "cmd" directory "" main "hello_world" 
-    show "gui" directory "welcome" main "welcome" 
-    show "gui" directory "startrek" main "startrek"
-    show "gui" directory "connect_four" main"connect_four"
-    show "gui" directory "snake" main "snake" 
-    show "cmd" directory "misc" main "glyph_example" 
-    show "cmd" directory "basics" main "factorial_example" 
-    show "cmd" directory "" main "fibonacci" 
+    directory "" main "hello_world" run FALSE elix TRUE
+    directory "welcome" main "welcome" run TRUE elix TRUE
+    directory "startrek" main "startrek" run TRUE elix FALSE
+    directory "connect_four" main "connect_four" run TRUE elix FALSE
+    directory "tetris" main "tetris" run TRUE elix FALSE
+    directory "mapping" main "nayeli" run TRUE elix FALSE
+    directory "snake" main "snake" run TRUE elix TRUE 
+    directory "misc" main "glyph_example" run FALSE elix TRUE 
+    directory "basics" main "factorial_example" run FALSE elix TRUE 
+    directory "" main "fibonacci" run FALSE elix TRUE 
   )
   
