@@ -136,6 +136,7 @@ Private
         elix_cfg.remove index
       }
       elix_cfg.insert_string value to index
+      /*
       //
       index := idx_after "decorated  : " in elix_cfg from "elix.cfg"
       value := "false"
@@ -146,6 +147,7 @@ Private
         elix_cfg.remove index
       }
       elix_cfg.insert_string value to index
+      */
       //
       write "elix.cfg" content elix_cfg
     }

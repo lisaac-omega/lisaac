@@ -37,11 +37,23 @@ Private
       }.elseif {e && {! r}} then {
         run cmd_lisaac
         run cmd_elix
-      } else {
+      }.elseif {(!e) && {r}} then {
         run cmd_lisaac
         run cmd_run
+      }.elseif {(!e) && {!r}} then {
+        run cmd_lisaac        
+      } else {
+        ? {FALSE}
       }
     }
+  )
+  
+  - directory dir:STRING_ALIAS main m:STRING_ALIAS background <-
+  ( + cmd_run:STRING
+    OUT # "directory " # dir # " main " # m # '\n'
+    directory dir main m run FALSE elix FALSE
+    cmd_run := "./" + m
+    run cmd_run background
   )
   
   - run cmd:STRING  <-
