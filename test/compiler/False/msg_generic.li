@@ -1,0 +1,40 @@
+Header
+  + name := MSG_GENERIC;
+  /*
+  Function with multiple results example. The gain is not only syntactical!
+  Example below shows an efficient, still recursive, solution for the
+  Fibonacci example. Thanks to the usage of two results, the exponential
+  runtime complexity is avoided.
+  Just compare:
+  ./fibonacci v1 40
+  and
+  ./fibonacci v2 40
+
+  */
+Insert
+  
+  - french: FRENCH_CORNER := FRENCH_CORNER
+  
+Public
+  - est_premier (n:ℤ) : BOOLEAN <-
+  ( + result:BOOLEAN
+    + i:ℤ
+    if (n < 2) then {
+      result := False
+    } else {
+      i := 2 
+      //tant_que ((i <= n.sqrt) && {!result}) faire {
+      tant_que {TRUE} faire {
+        //si ((n / d) = 0) alors {
+        si (n = 0) alors {
+          result := TRUE
+        }
+      }
+    }
+    result
+  )
+
+  - main <-
+  ( 
+    ? {(est_premier 0) = faux}
+  )

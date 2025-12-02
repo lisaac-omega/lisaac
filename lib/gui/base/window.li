@@ -90,7 +90,7 @@ Public
     init NULL
   )
     
-  - mouse_scroll (dx,dy:REAL_64) <- ( abstract; )
+  - mouse_scroll (dx,dy:REAL_64)
   
 Private
   

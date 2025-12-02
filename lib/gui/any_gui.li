@@ -6,6 +6,8 @@ Insert
 
 Public
   - version:STRING_ALIAS := "0.5"
+  - window_title:STRING_ALIAS := "ELIX - Lisaac Ω Editor"
+
   
   - extend_code:BOOLEAN := TRUE; // Lisaac only
   - set_extend_code v:BOOLEAN :BOOLEAN <- ( extend_code := v; TRUE)

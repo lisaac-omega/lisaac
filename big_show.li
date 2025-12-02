@@ -1,0 +1,55 @@
+Header  
+  + name := BIG_SHOW
+  /*cd lisaac ; lisaac big_show && ./big_show
+
+  
+  
+Welcome to Lisaac Ω
+A programming language designed to become the reference for teaching programming.
+Lisaac Ω aims to provide a clear, consistent, and modern environment to help
+students grasp the core principles of programming with ease and efficiency.
+
+Developed at the University of Lorraine and the University of Strasbourg,
+Lisaac Ω is the result of research and innovation in object-oriented and 
+prototype-based programming models.
+
+
+
+Created and maintained by Benoît Sonntag and Dominique Colnet.*/
+Insert
+  - code_show:CODE_SHOW := CODE_SHOW 
+Public
+  
+  - main <-
+  (
+    directory "example/startrek" main "startrek" background
+    directory "example/connect_four" main "connect_four" background
+    directory "example/snake" main "snake" run TRUE elix FALSE
+    //
+    OUT # "run=example/hello_world ; lisaac $run --r -q -boost && ./${run%.li}\n"
+    directory "example" main "hello_world" run FALSE elix TRUE;
+    //
+    directory "example/CodEx/Tortue" main "dessin_maison" run TRUE elix TRUE
+    //
+    directory "example/welcome" main "welcome" background
+    directory "example/welcome" main "welcome" run FALSE elix TRUE;
+    //
+    directory "example/CodEx/Tortue" main "arbre_fractale" background
+    directory "example/CodEx/Tortue" main "arbre_fractale" run FALSE elix TRUE
+    //
+    directory "example/CodEx/Tortue" main "dessin_feuille" background
+    directory "example/CodEx/Tortue" main "hilbert" background
+    directory "example/CodEx/Tortue" main "flocon_koch" run TRUE elix FALSE
+    //
+    directory "example/CodEx/Tortue" main "dessin_etoile" background
+    directory "example/CodEx/Tortue" main "dessin_etoile" run FALSE elix TRUE
+    //
+    OUT # "./example/basics/factorial_example 10\n"
+    directory "example/basics" main "factorial_example" run FALSE elix TRUE;
+    //
+    OUT # "./example/CodEx/Fibonacci/fibonacci v1 43\n"
+    directory "example/CodEx/Fibonacci" main "fibonacci" run FALSE elix TRUE;
+    //
+    cd run_dir
+    run "elix ./lib/collection/collection.li" background
+  )

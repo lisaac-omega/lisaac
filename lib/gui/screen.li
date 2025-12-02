@@ -204,7 +204,9 @@ Private
   - current_key:STRING_BUFFER := STRING_BUFFER.create 32
     
   - init_common:SELF <-
-  ( init NULL
+  (
+    id_name := window_title
+    init NULL
     FONT.load pen
     set_pos (xo,yo)
     KEYBOARD.listen Self

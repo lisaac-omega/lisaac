@@ -455,7 +455,8 @@ Public
   //
   // Shorter.
   //
-
+  
+  /*
   + comment_slot:STRING_ALIAS
   + comment_header:STRING_ALIAS
 
@@ -526,33 +527,27 @@ Public
       list_tmp.at j.set_stat_shorter 0
     }
   )
-
+  */
+  
 PROTOTYPE
 
   - get_slot_main:SLOT <-
   ( + result:SLOT
-    + s:ITM_SLOT
-
-    s := first_slot
-    {
-      ((s.id_section.is_public) && {s.name = "main"}).if {
-	(s.result_type != ITM_TYPE_SIMPLE.type_void).if {
-	  semantic_error (s.position,"Unix mode: Not value return.")
-	}
-	(s.argument_count != 1).if {
-	  semantic_error (s.position,"Unix mode: Not argument list.")
-	}
-	result := type_input.get_slot (s.name)
-      }
-      s := s.next
-    }.do_while {(s != NULL) && {result = NULL}}
-
+        
+    result := type_input.get_slot "main"
     (result = NULL).if {
       semantic_error (position,"Entry point not found (slot `main' in `Section Public').")
     }
+    (result.result_type != ITM_TYPE_SIMPLE.type_void).if {
+      semantic_error (result.position,"Unix mode: Not value return.")
+    }
+    (result.argument_count != 1).if {
+      semantic_error (result.position,"Unix mode: Not argument list.")
+    }
     result
   )
-
+  
+  /*
   - shorter_get_all_slot_in lst:ARRAY ITM_SLOT <-
   ( + s:ITM_SLOT
     + ps:ITM_TYPE_SIMPLE
@@ -689,7 +684,7 @@ PROTOTYPE
         shorter_comment string_tmp in buf light FALSE
       }
     }
-  )
+  )*/
 
   - get_all_comment_slot n:STRING_ALIAS in buf:STRING_BUFFER <-
   ( + s:ITM_SLOT
@@ -721,7 +716,8 @@ PROTOTYPE
       s := s.next
     }
   )
-
+  
+  /*
   - list_tmp:ARRAY ITM_SLOT := ARRAY ITM_SLOT.create_with_capacity 256
 
   - str_tmp:STRING_BUFFER  := STRING_BUFFER.create 512
@@ -840,7 +836,7 @@ PROTOTYPE
         put str_tmp to buf like code_balise
       }
     }
-  )
+  )*/
 
 Private
   

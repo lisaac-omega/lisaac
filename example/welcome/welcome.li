@@ -55,7 +55,7 @@ Public
   // Main & Event mouse functions
   
   - main <-
-  // Auto-execution, like in C code.
+  // Entry point, like in C code.
   (
     PAPER unset (PAPER decorated)
     PAPER set (PAPER transparent)
@@ -64,6 +64,8 @@ Public
   )
   
   - event ev:UINTEGER_8 :BOOLEAN <- if (ev = HAND clic) then { exit 0 }
+  
+  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <- ( exit 0; TRUE)
   
 Private  
   
@@ -89,3 +91,4 @@ Private
     circle (x0 + x * (width-40).div 2, y0 + y * (height-40).div 2) radius 20
     fill
   )
+  

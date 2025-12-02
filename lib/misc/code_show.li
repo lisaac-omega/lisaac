@@ -1,34 +1,40 @@
 Header
   + name := CODE_SHOW
+  /**/
 Insert
   - parent_mini_bash:MINI_BASH := MINI_BASH
     
 Private
   
-  + example_dir:STRING_ALIAS  
+  + run_dir:STRING_ALIAS  
+  
+  - cd dir:STRING <-
+  (
+    if (ENVIRONMENT.chdir dir = 0) then {
+      OUT # "cd " # dir #'\n'
+      working_directory.clear
+      FILE_UTILS.working_directory_in working_directory
+      //OUT # "cwd: " # working_directory # '\n'
+    } else {
+      crash_with_message ("Cannot chdir into \"" + dir + "\"")
+    }
+  )
   
   - directory dir:STRING_ALIAS main m:STRING_ALIAS run r:BOOLEAN elix e:BOOLEAN <-
   ( + cmd_lisaac, cmd_elix, cmd_run:STRING
-    if (example_dir = NULL) then {
+    if (run_dir = NULL) then {
       FILE_UTILS.working_directory_in working_directory
-      example_dir := working_directory.to_string_alias  
+      run_dir := working_directory.to_string_alias  
     }
-    //OUT # "show " # directory # " name " # n # '\n'
     STRING.tmp { b:STRING_BUFFER
-      b.copy example_dir
+      b.copy run_dir
       b.extend_unless '/'
       b.append dir
       b.extend_unless '/'
-      //OUT # b # n # ".li\n"
-      if (ENVIRONMENT.chdir b = 0) then {
-        OUT # "cd " # b #'\n'
-        working_directory.clear
-        FILE_UTILS.working_directory_in working_directory
-      } else {
-        crash_with_message ("Cannot chdir into \"" + b + "\"")
-      }
+      cd b
       cmd_lisaac := "lisaac " + m + " -boost -q"
-      cmd_elix := "elix " + b + m + ".li 2> /dev/null"
+    //cmd_elix := "elix " + b + m + ".li 1> /dev/null 2> /dev/null"
+      cmd_elix := "elix " + b + m + ".li"
       cmd_run := "./" + m
       if (e && {r}) then {
         run cmd_elix background
@@ -50,7 +56,7 @@ Private
   
   - directory dir:STRING_ALIAS main m:STRING_ALIAS background <-
   ( + cmd_run:STRING
-    OUT # "directory " # dir # " main " # m # '\n'
+    // OUT # "directory " # dir # " main " # m # '\n'
     directory dir main m run FALSE elix FALSE
     cmd_run := "./" + m
     run cmd_run background
@@ -64,7 +70,7 @@ Private
   
   - run cmd:STRING background  <-
   (
-    cmd.println
+    OUT # cmd # " &\n"
     ENVIRONMENT.run cmd background
   )
   
