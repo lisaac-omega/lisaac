@@ -77,13 +77,35 @@ Public
     // -- VFT --
 
     "Display VFT :\n".print
+    /* DCDC old HMPAP style
     (program.lower).to (program.upper) do { i:INTEGER
       program.at i.print_vft
     }
-    "Execute...\n".print
-    (class_master = NULL).if {
-      semantic_error (program.first.position) message "Slot master is needed."
+    */
+    program.foreach_value { c:CLASS
+      c.print_vft
     }
+
+
+    "Execute...\n".print
+    
+    (class_master = NULL).if {
+      /*
+      // DCDC plus de TRAVERSABLE
+      semantic_error (program.first.position) message "Slot master is needed."
+      */
+      + f:BOOLEAN
+      + c:CLASS
+      (f,c) := program.search_key {k:STRING_ALIAS ; TRUE}
+      semantic_error (c.position) message "Slot master is needed."
+      
+      
+      
+      
+    }
+    
+    
+    
     slot_master := class_master.get_slot keyword_master
     slot_master.run (class_master)
   )

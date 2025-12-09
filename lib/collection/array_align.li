@@ -2,7 +2,7 @@ Header
 
   + name     := ARRAY_ALIGN V;
   
-  - external := `#include <string.h>`;
+  - include := `#include <string.h>`;
   
 Insert
 

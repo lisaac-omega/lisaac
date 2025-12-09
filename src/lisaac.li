@@ -229,6 +229,7 @@ Private
     is_library         := LIP_CODE.get_boolean "is_library"
     is_cop             := LIP_CODE.get_boolean "is_cop"
     is_speed_push      := LIP_CODE.get_boolean "is_speed_push"
+    (LIP_CODE.get_boolean "multicore").if { core_count := LIP_CODE.get_integer "core_count" }
     //
     ((input_name = NULL) || {input_name.is_empty}).if {
       "ERROR: `input_file' is empty.\n".print;
@@ -313,7 +314,7 @@ Private
       (debug_with_code).if {
         + src:ARRAY POSITION
 
-        title "SOURCE LINE REFERENCE" in output_decl
+        title "SOURCE LINE REFERENCE" in buf
 
         buf.append
         "struct __source {\n\
@@ -514,6 +515,7 @@ Private
         \}                                            \n\ /* { */
         \ \n"
       } else {
+        /*
         buf.append
         "void lisaac_push_first(_____CONTEXT *path,uint64_t code)\n\
         \{ \n"
@@ -542,8 +544,9 @@ Private
         \  top_context = (uintptr_t)path;\n\                                         
         \} \n\
         \  \n\
-        \  \n\
-        \void lisaac_stack_print(long step)           \n\
+        \  \n"*/
+        buf.append
+        "void lisaac_stack_print(long step)           \n\
         \{ _____CONTEXT *back,*next,*up;              \n\
         \  int j,c;	                              \n\                 
         \  up = (_____CONTEXT *)top_context;          \n\
@@ -700,11 +703,8 @@ Public
 
   - main <-
   ( + file_output:POINTER
-    + begin_time,end_time:UINTEGER_64
-    + time:INTEGER
-    + txt:STRING_BUFFER
+    + begin_time:UINTEGER_64
     + s:LIP_SLOT_CODE
-    + f:POINTER
     
     begin_time := TIME.gettimeofday
     //
@@ -742,13 +742,28 @@ Public
       output_decl.append "#include <signal.h>\n"
     }
     output_decl.append "int print_string(char *str);\n"
-    output_decl.append
-    "int arg_count;\n\
-    \char **arg_vector;\n"
+    (core_count > 1).if {
+      output_decl.append
+      "extern int arg_count;\n\
+      \extern char **arg_vector;\n"
+    }
+    
+    (core_count > 1).if {
+      //"** Multicore **".println
+      core_count.times {
+        output_list.add_last (STRING_BUFFER.create 4_000_000)
+        output_list.last # "#include \"" # output_name # ".h\"\n"
+      }
+      output_glob # "#include \"" # output_name # ".h\"\n"
+    } else {
+      output_list.add_last (STRING_BUFFER.create 4_000_000)
+    }
+    output := output_list.first
 
     // External.
-    title "EXTERNAL" in output_decl
-
+    title "INCLUDE" in output_decl    
+    title "EXTERNAL" in output_glob
+    
     //
     // Load prototype constant.
     //
@@ -765,13 +780,17 @@ Public
     \struct ___OBJ {\n\
     \  uint32_t __id;\n\
     \};\n\n"
+                            
     title "GLOBAL" in output_glob
-
-    // Function header.
-    title "FUNCTION HEADER" in output
+    output_glob.append
+    "int arg_count;\n\
+    \char **arg_vector;\n"
+    
+    ///////////////// SOURCE CODE /////////////////
+    title "CODE" in output
     
     (is_cop).if {
-      output_decl.append
+      output_glob.append
       "#include <pthread.h>                                    \n\
       \#include <limits.h>                                     \n\
       \                                                        \n\
@@ -896,44 +915,16 @@ Public
       \  pthread_mutex_lock(&main_mutex);                      \n\
       \}                                                     \n\n"
     }
-    // Debug source code.
-    (debug_level_option != 0).if {
-      output.append "/* Debug Manager */\n"
-      (is_ansi).if {
-        output.append "void interrupt_signal(int sig);\n"
-      }
-      output.append
-      "void lisaac_stack_print(long);        \n\
-      \void print_integer_h(uint64_t n);\n\
-      \void print_integer(int64_t n);           \n"
-      (is_speed_push).if {
-        output.append
-        "long __li_get_ret(long current);    \n\
-        \long __li_get_back(long current);   \n\        
-        \extern long __li_mountain[];        \n"
-      } else {
-        output.append
-        "void lisaac_push_first(_____CONTEXT *path,uint64_t code); \n\
-        \void lisaac_push(_____CONTEXT *path,uint64_t code);       \n"
-      }
-    }
-
-    // Extern source code.
-    output.append "/* Source code */\n"
-    PROFIL_LIST.genere_handler
-    ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
-      output.append "static void init_string_alias();\n"
-    }
-    
+        
     // Source code.
-    title "SOURCE CODE" in output
+    //title "SOURCE CODE" in output
 
     (is_library).if {
       output.append "int init(int argc,char **argv)\n"
     } else {
       output.append "int main(int argc,char **argv)\n"
     }
-    output.append "{\n"
+    output.append "{\n"    
     indent.append "  "
 
     profil_current := NULL
@@ -952,86 +943,121 @@ Public
     PROFIL_LIST.genere
 
     TYPE.genere_all_struct
-    output_decl.append "\nvoid *table_type["
-    TYPE.id_counter_without_type.append_in output_decl
-    output_decl.append "];\n"
+    
+    // Debug source code.
+    (debug_level_option != 0).if {
+      title "DEBUG MANAGER" in output_decl
+      (is_ansi).if {
+        output_decl.append "void interrupt_signal(int sig);\n"
+      }
+      output_decl.append
+      "void lisaac_stack_print(long);        \n\
+      \void print_integer_h(uint64_t n);\n\
+      \void print_integer(int64_t n);           \n"
+      (is_speed_push).if {
+        output_decl.append
+        "long __li_get_ret(long current);    \n\
+        \long __li_get_back(long current);   \n\        
+        \extern long __li_mountain[];        \n"
+      } else {
+        /*
+        output_decl.append
+        "void lisaac_push_first(_____CONTEXT *path,uint64_t code); \n\
+        \void lisaac_push(_____CONTEXT *path,uint64_t code);       \n"
+        */        
+        output_decl.append
+        "#define lisaac_push_first(path, c) \\\n\
+        \do { \\\n\
+        \(path)->back = (_____CONTEXT *)top_context; \\\n\
+        \(path)->code = (c); \\\n\
+        \top_context = (uintptr_t)(path); \\\n\
+        \} while (0)\n\n"
+        output_decl.append
+        "#define lisaac_push(path, c) \\\n\
+        \do { \\\n\
+        \(path)->code = (c); \\\n\
+        \top_context = (uintptr_t)(path); \\\n\
+        \} while (0)\n\n"
+      }
+    }
+        
+    // Just used in MEMORY.li (BSBS: A verifier si memory.li est vivant!!!)
+    output_glob # "\nvoid *table_type[" # TYPE.id_counter_without_type # "];\n"
     
     ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
-      output.append "static void init_string_alias() {\n"
+      output.append "void init_string_alias() {\n"
       output.append (STRING_CST.output_init)
       output.append "};\n"
     }
         
     // Trace code.
-    put_trace_code output
-
+    put_trace_code output_glob
+    
+    (STRING_CST.output_count != 0).if {
+      output_decl.append (STRING_CST.output_ext)
+      output_glob.append (STRING_CST.output_str)      
+    }
+    
+    // Function header.
+    title "FUNCTION HEADER" in output_decl
+    output := output_decl
+    PROFIL_LIST.genere_handler
+    ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
+      output_decl # "void init_string_alias();\n#define INIT_STRING_ALIAS init_string_alias()\n"
+    } else {
+      output_decl # "#define INIT_STRING_ALIAS\n"
+    }
+    
     //
     // Saving File Output.
     //
-    string_tmp.copy output_name
-    string_tmp.append output_extension
-    file_output := FILE_UTILS.open_write string_tmp
-    (file_output.is_null).if {
-      STDERR.put_string "Error: File "
-      STDERR.put_string string_tmp
-      STDERR.put_string " is not created !\n"
-      exit exit_failure_code
-    }
-    FILE_UTILS.write file_output with output_decl size (output_decl.count)
-    FILE_UTILS.write file_output with output_glob size (output_glob.count)
-    (STRING_CST.output_count != 0).if {
-      txt := STRING_CST.output_str
-      FILE_UTILS.write file_output with txt size (txt.count)
+    (output_list.count = 1).if {
+      string_tmp |# output_name # output_extension
+      file_output := FILE_UTILS.open_write string_tmp
+      (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      FILE_UTILS.write file_output with output_decl size (output_decl.count)
+      FILE_UTILS.write file_output with output_glob size (output_glob.count)
+      FILE_UTILS.write file_output with (output_list.first) size (output_list.first.count)
+      FILE_UTILS.close file_output
+    } else {
+      // Decl
+      string_tmp |# output_name # ".h"
+      file_output := FILE_UTILS.open_write string_tmp
+      (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      FILE_UTILS.write file_output with output_decl size (output_decl.count)
+      FILE_UTILS.close file_output
+      // Glob
+      string_tmp |# output_name # "_data" # output_extension
+      file_output := FILE_UTILS.open_write string_tmp
+      (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      FILE_UTILS.write file_output with output_glob size (output_glob.count)
+      FILE_UTILS.close file_output
+      // Code
+      0.to (output_list.upper) do { i:INTEGER
+        string_tmp |# output_name # "_code" # i # output_extension
+        file_output := FILE_UTILS.open_write string_tmp
+        (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+        FILE_UTILS.write file_output with (output_list.at i) size (output_list.at i.count)
+        FILE_UTILS.close file_output
+      }      
     }
     //
-    FILE_UTILS.write file_output with output size (output.count)
-    FILE_UTILS.close file_output
-    //
-    (is_graph).if {
-      + p:PROFIL
-      (PROFIL_LIST.profil_list.lower).to (PROFIL_LIST.profil_list.upper) do { j:INTEGER
-        p := PROFIL_LIST.profil_list.at j
-        (p.external_present).if {
-          p.set_external_present FALSE
-          p.propagation_external
-        }
-      }
-      //
-      output.copy "digraph G {\n"
-      profil_main.genere_graph output
-      (PROFIL_LIST.profil_list.lower).to (PROFIL_LIST.profil_list.upper) do { j:INTEGER
-        PROFIL_LIST.profil_list.at j.genere_graph output
-      }
-      output.append "}\n"
-      f := FILE_UTILS.open_write "graph.txt"
-      FILE_UTILS.write f with output size (output.count)
-      FILE_UTILS.close f
-    }
     //
     (is_all_warning).if {
+      /* // DCDC no more TRAVERSABLE
       (PROTOTYPE.prototype_dico.lower).to (PROTOTYPE.prototype_dico.upper) do { j:INTEGER
         PROTOTYPE.prototype_dico.at j.detect_slot_not_used
+      }
+      */
+      PROTOTYPE.prototype_dico.foreach_value { p:PROTOTYPE
+          p.detect_slot_not_used
       }
     }
     
     //
-    end_time := TIME.gettimeofday
-    (is_quiet).if_false {
-      " => ".print
-      time := ((end_time - begin_time)/1_000_000).to_integer
-      (time >= 120).if {
-	(time/60).print
-	" minutes, ".print
-	time := time % 60
-      }
-      time.print
-      " second(s).\n".print
-      //
-      (POSITION.nb_warning != 0).if {
-	STDERR.put_string " => "
-	STDERR.put_integer (POSITION.nb_warning)
-	STDERR.put_string " warning(s).\n"
-      }
+    begin_time := print_time begin_time
+    ((! is_quiet) && {POSITION.nb_warning != 0}).if {
+      OUT # " => " # POSITION.nb_warning # " warning(s).\n"
     }
     (is_statistic).if {
       //+ tmp,tmp2:INTEGER
@@ -1052,200 +1078,14 @@ Public
       (is_optimization).if {
 	"  Invariant loop score : ".print; count_invariant.print; '\n'.print
       }
-      //
-      /*
-      "Type set size vs argument number:\n".print
-      tmp2 := 0
-      (PROFIL.nb_arg_size_type.lower).to (PROFIL.nb_arg_size_type.upper) do { i:INTEGER
-        tmp := PROFIL.nb_arg_size_type.at i
-        (tmp != 0).if {
-          "  For a type set of ".print
-          i.print
-          " types, the number's argument is ".print
-          tmp.print
-          tmp2 := tmp2 + tmp
-          '\n'.print
-        }
-      }
-      "  Total: ".print
-      tmp2.print
-      '\n'.print
-      //
-      "Number's function vs polymorphic argument's number:\n".print
-      (PROFIL.nb_func_arg.lower1).to (PROFIL.nb_func_arg.upper1) do { nb_arg:INTEGER
-        " For a function with ".print
-        nb_arg.print
-        " arguments:\n".print
-        tmp2 := 0
-        (PROFIL.nb_func_arg.lower2).to (PROFIL.nb_func_arg.upper2) do { nb_arg_poly:INTEGER
-          tmp := PROFIL.nb_func_arg.at (nb_arg,nb_arg_poly)
-          (tmp != 0).if {
-            "    ".print
-            tmp.print
-            " functions with ".print
-            nb_arg_poly.print
-            " arguments polymorphics.\n".print
-            tmp2 := tmp2 + tmp
-          }
-        }
-        "    Total: ".print
-        tmp2.print
-        '\n'.print
-      }
-
-      (TYPE_GENERIC.paper_list.lower).to (TYPE_GENERIC.paper_list.upper) do { i:INTEGER
-        + var:VARIABLE
-        + t:TYPES
-        + idx:INTEGER
-        var := TYPE_GENERIC.paper_list.at i.native_array_variable
-        t := var.type_set
-        ((var.is_static) || {t.count = 0}).if {
-          tab.put (tab.at 0+1) to 0
-        } else {
-          idx := t.count
-          tab.put (tab.at idx+1) to idx
-          (t.first = TYPE_NULL).if {
-            tab_null.put (tab_null.at idx+1) to idx
-          }
-        }
-      }
-      "TAB:\n".print
-      (tab.lower).to (tab.upper) do { i:INTEGER
-        (tab.at i != 0).if {
-          i.print; '='.print; tab.at i.print; '\n'.print
-        }
-      }
-      "TAB NULL:\n".print
-      (tab_null.lower).to (tab_null.upper) do { i:INTEGER
-        (tab_null.at i != 0).if {
-          i.print; '='.print; tab_null.at i.print; '\n'.print
-        }
-      }
-      */
-
-      /*
-      // Counter on '==' and '!='
-      "\nCounter on '==' and '!=':".print
-      "\nParser counter       : ".print
-      count_equal_parse.print
-      "\nLive counter         : ".print
-      count_equal_live.print
-      "\nCreate counter       : ".print
-      count_equal_creat.print
-      "\nRemove counter       : ".print
-      count_equal_remov.print
-      "\nGenerate counter     : ".print
-      count_equal_gener.print
-      '\n'.print
-      "\nConstant counter     : ".print
-      count_equal_const.print
-      "\na = a counter        : ".print
-      count_equal_ident.print
-      "\nNULL = NULL counter  : ".print
-      count_equal_null.print
-      "\nIntersection counter : ".print
-      count_equal_inter.print
-      '\n'.print
-      // native_array:
-      "\nNATIVE_ARRAY expanded       : ".print
-      count_na_expanded.print
-      "\nNATIVE_ARRAY with NULL      : ".print
-      count_na_null.print
-      "\nNATIVE_ARRAY without NULL   : ".print
-      count_na_not_null.print
-      "\nNATIVE_ARRAY with monomorph : ".print
-      count_na_mono.print
-      "\nNATIVE_ARRAY allways NULL   : ".print
-      count_na_always_null.print
-      '\n'.print
-      // local:
-      "\nLocal expanded       : ".print
-      count_local_expanded.print
-      "\nLocal with NULL      : ".print
-      count_local_null.print
-      "\nLocal without NULL   : ".print
-      count_local_not_null.print
-      "\nLocal with monomorph : ".print
-      count_local_mono.print
-      "\nLocal allways NULL   : ".print
-      count_local_always_null.print
-      '\n'.print
-      */
       // switch:
       "\nswitch          : ".print
       count_switch.print
       "\nswitch merging  : ".print
       count_switch_merging.print
-      '\n'.print
-      
+      '\n'.print      
     }
-
-    // MHMH : Stat taille mémoire
-    /*
-    "\n Taille mémoire : ".print
-    OBJECT.clone_total_size.print
-    " --> ".print
-    (OBJECT.clone_total_size/(1024*1024)).print
-    " Mo\n".print
-    */
     
-    /*
-    PROFIL.list_cpa.lower.to (PROFIL.list_cpa.upper) do { i:INTEGER
-      PROFIL.list_cpa.at i.print
-      '\n'.print
-    }
-    */
-    /*
-    "LOCAL : type set size\n".print
-    (LIST.stat_local.lower).to (LIST.stat_local.upper) do { i:INTEGER
-      (LIST.stat_local.at i != 0).if {
-        i.print; '='.print
-        LIST.stat_local.at i.print
-        '\n'.print
-      }
-    }
-    "LOCAL : type set size with NULL\n".print
-    (LIST.stat_local_null.lower).to (LIST.stat_local_null.upper) do { i:INTEGER
-      (LIST.stat_local_null.at i != 0).if {
-        i.print; '='.print
-        LIST.stat_local_null.at i.print
-        '\n'.print
-      }
-    }
-    "GLOBAL : type set size\n".print
-    (TYPE.stat_global.lower).to (TYPE.stat_global.upper) do { i:INTEGER
-      (TYPE.stat_global.at i != 0).if {
-        i.print; '='.print
-        TYPE.stat_global.at i.print
-        '\n'.print
-      }
-    }
-    "GLOBAL : type set size with NULL\n".print
-    (TYPE.stat_global_null.lower).to (TYPE.stat_global_null.upper) do { i:INTEGER
-      (TYPE.stat_global_null.at i != 0).if {
-        i.print; '='.print
-        TYPE.stat_global_null.at i.print
-        '\n'.print
-      }
-    }
-    "SLOT : type set size\n".print
-    (TYPE.stat_slot.lower).to (TYPE.stat_slot.upper) do { i:INTEGER
-      (TYPE.stat_slot.at i != 0).if {
-        i.print; '='.print
-        TYPE.stat_slot.at i.print
-        '\n'.print
-      }
-    }
-    "SLOT : type set size with NULL\n".print
-    (TYPE.stat_slot_null.lower).to (TYPE.stat_slot_null.upper) do { i:INTEGER
-      (TYPE.stat_slot_null.at i != 0).if {
-        i.print; '='.print
-        TYPE.stat_slot_null.at i.print
-        '\n'.print
-      }
-    }
-    */
-
     //
     // Execute finality command (front end).
     //
@@ -1256,5 +1096,22 @@ Public
     } else {
       s.run_with NULL
     }
+    print_time begin_time
+  )
+  
+  - print_time b:UINTEGER_64 :UINTEGER_64 <-
+  ( + e:UINTEGER_64
+    + t:INTEGER
+    (is_quiet).if_false {
+      e := TIME.gettimeofday
+      OUT # " => "
+      t := ((e - b)/1_000_000).to_integer
+      (t >= 120).if {
+        OUT # (t/60) # " minutes, "
+        t := t % 60
+      }
+      OUT # t # " second(s).\n"
+    }
+    e
   )
 

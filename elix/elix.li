@@ -14,6 +14,8 @@ Header
   - Color C/C++, Python, Java
   */
   
+  - include  := `extern unsigned long col_elit[];`;
+  
   - external := `unsigned long col_elit[] = {
   0x10502266,0x104B2565,0x10482A63,0x10432F63,0x104A3667,0x10453D68,0x104B466D,0x40574374,
   0x20624E7F,0x205A527B,0x20675D88,0x20715B8D,0x207D639F,0x20736A93,0x208167B4,0x20797788,
@@ -89,12 +91,28 @@ Private
 Public
   
   - init <-
-  (
+  ( + b:UINTEGER_64
+    b := TIME.gettimeofday
     LIZ.load_all
     FILE_CFG.load_all
     FILE_CFG.read
     LOOK.read
     FILE_KEY.read
+    print_time b
+  )
+  
+  - print_time b:UINTEGER_64 :UINTEGER_64 <-
+  ( + e:UINTEGER_64
+    + t:INTEGER
+    e := TIME.gettimeofday
+    OUT # " => "
+    t := ((e - b)/1_000_000).to_integer
+    (t >= 120).if {
+      OUT # (t/60) # " minutes, "
+      t := t % 60
+    }
+    OUT # t # " second(s).\n"
+    e
   )
   
   - main <-

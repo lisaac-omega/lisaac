@@ -56,14 +56,22 @@ Public
 
   - compute_vft <-
   (
+    /*
+    // DCDC no more TRAVERSABLE
     (sources.lower).to (sources.upper) do { j:INTEGER
       sources.at j.compute_vft_base 0
     }
+    */
+    sources.foreach_value {c:CLASS; c.compute_vft_base 0}
+    
+    
+    
+    
   )
 
   - compute_vft_base base:INTEGER <-
   ( + new_base:INTEGER
-    + vft_parent:ARRAY(SLOT)
+    + vft_parent:ARRAY SLOT
     + slot,slot_parent:SLOT
     (vft.is_empty).if {
       // -- SIMPLE --
@@ -96,6 +104,9 @@ Public
       // -- Multi --
 
       // Common.
+      
+      /*
+      // DCDC no more TRAVERSABLE
       (slot_list.lower).to (slot_list.upper) do { j:INTEGER
         slot := slot_list.at j
         slot_parent := get_slot_in_parent (slot.name)
@@ -109,6 +120,27 @@ Public
           slot.set_index (slot_parent.index)
         }
       }
+      */
+      
+      slot_list.foreach_value { s: SLOT
+        slot := s
+        slot_parent := get_slot_in_parent (slot.name)
+        (slot_parent = NULL).if {
+          // New slot.
+          vft.add_last slot
+          slot.set_index (vft.upper)
+        } else {
+          // Redefinition slot.
+          vft.at (slot_parent.index) put slot
+          slot.set_index (slot_parent.index)
+        }
+      }
+      
+      
+      
+      
+      
+      
     }
   )
 

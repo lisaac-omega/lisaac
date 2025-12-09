@@ -27,6 +27,7 @@ Public
   + export:TTOK
   + import:TTOK
   + lip:EXPR
+  + include_c:EXT
   + extern_c:EXT
       
   + child_insert:Expanded ARRAY SLOT
@@ -359,7 +360,8 @@ Public
     export   ?= field 4 name "- export"   ass ":=" value ""   parse {TTOK.parse_sp (TTOK.tvec | TTOK.force)}
     import   ?= field 5 name "- import"   ass ":=" value ""   parse {TTOK.parse_sp (TTOK.tvec | TTOK.force)}
     lip      ?= field 6 name "- lip"      ass "<-" value ""   parse {EXPR.parse_sp (1 | EXPR.force)}
-    extern_c ?= field 7 name "- external" ass ":=" value "``" parse {EXT.parse_sp 1}
+    include_c?= field 7 name "- include"  ass ":=" value "``" parse {EXT.parse_sp 1}
+    extern_c ?= field 8 name "- external" ass ":=" value "``" parse {EXT.parse_sp 1}
     //
     p := pos_i
     {
@@ -416,7 +418,7 @@ Public
       pg ?= PAGE.cur_pg.buf_pg
       pg.set_pos (cur.pt + v.count/2)
       result := p.value
-      read_c ';'
+      //read_c ';'
       skip_line
     }
     result
@@ -702,13 +704,14 @@ Private
         }
         //
         cpt :=
-        draw_field type_c   img (LOOK.type_c)  +
-        draw_field default  img (LOOK.default) +
-        draw_field export   img (LOOK.export)  +
-        draw_field import   img (LOOK.import)  +
-        draw_field lip      img (LOOK.lip)     +
-        draw_field extern_c img (LOOK.extern_c)
-        (cpt != 6).if {
+        draw_field type_c    img (LOOK.type_c)    +
+        draw_field default   img (LOOK.default)   +
+        draw_field export    img (LOOK.export)    +
+        draw_field import    img (LOOK.import)    +
+        draw_field lip       img (LOOK.lip)       +
+        draw_field include_c img (LOOK.include_c) +
+        draw_field extern_c  img (LOOK.extern_c)
+        (cpt != 7).if {
           pos_i := POS.new_ico 3; // Comment+Card+Inherit
           begin_line
           ((!menu) || {PAGE.cur_pg.buf_pg.buffer != src}).if {            
@@ -733,8 +736,11 @@ Private
             (lip = NULL).if { DIV.new.ico (LOOK.lip) alpha 0.3 act
               { b:DIV; add_field := 6; menu := FALSE; parse_local; }
             }
-            (extern_c = NULL).if { DIV.new.ico (LOOK.extern_c) alpha 0.3 act
+            (include_c = NULL).if { DIV.new.ico (LOOK.include_c) alpha 0.3 act
               { b:DIV; add_field := 7; menu := FALSE; parse_local; }
+            }
+            (extern_c = NULL).if { DIV.new.ico (LOOK.extern_c) alpha 0.3 act
+              { b:DIV; add_field := 8; menu := FALSE; parse_local; }
             }
           }
           end_line

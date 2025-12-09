@@ -2,7 +2,7 @@ Header
   + name := ENVIRONMENT;
   /*To get/set environment variables. Hence include cd, pwd builtins.*/
 
-  - external := `
+  - include := `
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -17,9 +17,11 @@ Header
     #include <process.h>   // pour _spawnl
     #include <windows.h>
 #endif
+int run_background(const char *cmd);
+`;
 
+  - external := `
 /******************* Run background *************************/
-
 int run_background(const char *cmd) {
 #ifdef _WIN32
     // Version Windows : _spawnl passe par cmd.exe /C "cmd"

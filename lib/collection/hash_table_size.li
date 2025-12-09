@@ -1,5 +1,5 @@
 Header
-  + name    := HASH_TABLE_SIZE;
+  + name := HASH_TABLE_SIZE;
   /*
    Prime INTEGER list.
    Some useful features to deal with prime INTEGER values in order to select
@@ -7,23 +7,13 @@ Header
    class as well as by the SET class).
   */
 
-Inherit
-  - parent_clone:CLONE := CLONE
-
 Public
 
   - prime_number_ceiling integer:INTEGER :INTEGER <-
   // A good prime number, large enough, and no smaller than `integer'.
   ( + result:INTEGER
-
-    (integer <= 11).if {
+    if (integer <= 97) then {
       // This seems to be a good minimum value to start hashing with.
-      result := 11
-    }.elseif { integer <= 23 } then {
-      result := 23
-    }.elseif { integer <= 53 } then {
-      result := 53
-    }.elseif { integer <= 97 } then {
       result := 97
     }.elseif { integer <= 193 } then {
       result := 193
@@ -75,8 +65,6 @@ Public
       result := 1610612741
       // This should be enough !
     }
-
     ? {result >= integer}
-
     result
   )

@@ -4,14 +4,14 @@ Header
    Aliaser with table + linked list.
    ALIAS V TO A; Example: ALIAS STRING_BUFFER TO STRING_ALIAS
   */
+  
+  - include := `extern unsigned int hash_table[];`;
+  
   - external := `
-#ifndef H_TABLE
 unsigned int hash_table[]={
 193,389,769,1543,3079,6151,12289,24593,49157,98317,196613,393241,
 786433,1572869,3145739,6291469,12582917,25165843,50331653,100663319,
 201326611,402653189,805306457,1610612741};
-#define H_TABLE
-#endif
 `;
   
 Private

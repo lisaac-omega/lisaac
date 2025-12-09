@@ -1,16 +1,14 @@
 Header
   + name := HMAP V KEY K;
   /*
-    Associative memory. Values of type `V' are stored using Keys of type `K'.
-    BSBS: A revoir HMAP_NODE V KEY K -> HMAP_NODE V !!!!
-    Efficient implementation of MAP using `hash_code' on keys.
+  Associative memory. Values of type `V` are stored using keys of type `K`.
+  Assumes that keys of type `K` provide an efficient `hash_code` method.
+  Also assumes that keys are aliased, allowing all comparisons to be performed
+  using the efficient `=` comparison operator.
   */
-
-Inherit
-  - parent_map:Expanded MAP V KEY K
-
-Public
-// HMAP
+Insert
+  - parent_clone:CLONE := CLONE
+Private
 
   + buckets:NATIVE_ARRAY(HMAP_NODE V KEY K)
   // The `buckets' storage area is the primary hash table of `capacity'
@@ -21,46 +19,67 @@ Public
 
 Public
 
-  - default_size:INTEGER := 193
-  // Default size for the storage area in number of items.
-
-  // Counting:
-
   + capacity:INTEGER
   // Of the `buckets' storage area.
 
   + count:INTEGER
   // Actual `count' of stored elements.
+  
 
+  // Creation:
+  - new Self:SELF :SELF <- new Self capacity minimum_capacity
+  
+  - new Self:SELF capacity c:INTEGER :SELF <-
+  ( + result:SELF
+    result := clone
+    result.with_capacity c
+    result
+  )
+  
+Private
+  
+  - minimum_capacity:INTEGER := 193
+  // Default size for the 'buckets' storage area in number of items (prime number).
+
+  - with_capacity medium_size:INTEGER <-
+  // May be used to save some execution time if one is sure that
+  // storage size will rapidly become really bigger than `Default_size'.
+  // When first `remove' occurs, storage size may naturally become
+  // smaller than `medium_size'. Afterall, tuning of storage size is
+  // done automatically according to usage.
+  [
+    -? { medium_size > 0 }
+  ]
+  ( + new_capacity:INTEGER
+    new_capacity := HASH_TABLE_SIZE.prime_number_ceiling medium_size
+    buckets := NATIVE_ARRAY(HMAP_NODE V KEY K).create new_capacity
+    capacity := new_capacity
+    count := 0
+  )
+  [
+    ? { is_empty }
+    ? { capacity >= medium_size }
+  ]
+  
+Public
+  
   // Basic access:
-
+  
+  - is_empty:BOOLEAN <- count = 0
+  // Is it empty?
+  
   - has k:K :BOOLEAN <-
-  // Is there a value currently associated with key `k'?
+  // REMPLACE fast_has. Is there a value currently associated with key `k'?
   ( + idx:INTEGER
     + node:HMAP_NODE V KEY K
-
     idx := k.hash_code % capacity
     node := buckets.at idx
-    {(node = NULL) || {node.key == k}}.until_do {
+    until {(node = NULL) || {node.key = k}} do {
       node := node.next
     }
     node != NULL
   )
-
-  - value_at k:K :V <-
-  // Return the value associated to key `k'.
-  // (See also `reference_at' if V is a reference type.)
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-    {node.key == k}.until_do {
-      node := node.next
-    }
-    node.item
-  )
-
+  
   - reference_at k:K :V <-
   // Return NULL or the value associated with key `k'. Actually, this
   // feature is useful when the type of values (the type E) is a
@@ -76,41 +95,9 @@ Public
       node := node.next
     }
     (node != NULL).if {
-      result := node.item
+      result := node.value
     }
     result
-  )
-
-  - reference_at k:K with cmp:{(K,K); BOOLEAN} :V <-
-  // Return NULL or the value associated with key `k'. Actually, this
-  // feature is useful when the type of values (the type E) is a
-  // reference type, to avoid using `has' just followed by `at' to get
-  // the corresponding value.
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-    + result:V
-
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-    {(node = NULL) ||{cmp.value (node.key,k)}}.until_do {
-      node := node.next
-    }
-    (node != NULL).if {
-      result := node.item
-    }
-    result
-  )
-
-  - fast_has k:K :BOOLEAN <-
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-    {(node = NULL) || {node.key = k}}.until_do {
-      node := node.next
-    }
-    node != NULL
   )
 
   - fast_at k:K :V <-
@@ -122,10 +109,13 @@ Public
     {node.key = k}.until_do {
       node := node.next
     }
-    node.item
+    node.value
   )
 
   - fast_reference_at k:K :V <-
+  // 
+  // DCDC remplacer avec search
+  //  
   // Return NULL or the value associated with key `k'. Actually, this
   // feature is useful when the type of values (the type V) is a
   // reference type, to avoid using `has' just followed by `at' to get
@@ -140,106 +130,141 @@ Public
       node := node.next
     }
     ( node != NULL ).if {
-      result := node.item
+      result := node.value
     }
     result
   )
 
 Public
-  - put v:V to k:K  <-
-  // Change some existing entry or `add' the new one. If there is
-  // as yet no key `k' in the dictionary, enter it with item `v'.
-  // Otherwise overwrite the item associated with key `k'.
+  
+  // Modification:
+  
+  
+  - at k:K put v:V  <-
+  // REMPLACE fast_put
+  // Change some existing entry or `add' the new one. If there is as yet no key `k' in the map, enter
+  // it with item `v'. Otherwise overwrite the item associated with key `k'.
   ( + h, idx:INTEGER
     + node:HMAP_NODE V KEY K
     h := k.hash_code
     idx := h % capacity
     node := buckets.at idx
-    {(node = NULL) || {node.key == k}}.until_do {
+    until {(node = NULL) || {node.key = k}} do {
       node := node.next
     }
     (node = NULL).if {
       (capacity = count).if {
-	increase_capacity
-	idx := h % capacity
+        increase_capacity
+        idx := h % capacity
       }
       node := new_node v to k next (buckets.at idx)
       buckets.put node to idx
       count := count + 1
-      cache_user := -1
     } else {
-      node.set_item v
-    }
-  )
-
-  - put v:V to k:K with cmp:{(K,K); BOOLEAN} <-
-  // Change some existing entry or `add' the new one. If there is
-  // as yet no key `k' in the dictionary, enter it with item `v'.
-  // Otherwise overwrite the item associated with key `k'.
-  ( + h, idx:INTEGER
-    + node:HMAP_NODE V KEY K
-
-    h := k.hash_code
-    idx := h % capacity
-    node := buckets.at idx
-
-    {(node = NULL) || {cmp.value (node.key,k)}}.until_do {
-      node := node.next
-    }
-    (node = NULL).if {
-      (capacity = count).if {
-	increase_capacity
-	idx := h % capacity
-      }
-      node := new_node v to k next (buckets.at idx)
-      buckets.put node to idx
-      count := count + 1
-      cache_user := -1
-    } else {
-      node.set_item v
-    }
-  )
-
-  - fast_put v:V to k:K  <-
-  // Change some existing entry or `add' the new one. If there is
-  // as yet no key `k' in the dictionary, enter it with item `v'.
-  // Otherwise overwrite the item associated with key `k'.
-  ( + h, idx:INTEGER
-    + node:HMAP_NODE V KEY K
-
-    h := k.hash_code
-    idx := h % capacity
-    node := buckets.at idx
-
-    {(node = NULL) || {node.key = k}}.until_do {
-      node := node.next
-    }
-    (node = NULL).if {
-      (capacity = count).if {
-	increase_capacity
-	idx := h % capacity
-      }
-      node := new_node v to k next (buckets.at idx)
-      buckets.put node to idx
-      count := count + 1
-      cache_user := -1
-    } else {
-      node.set_item v
+      node.set_value v
     }
   )
   
-  - add v:V to k:K <-
-  [ ]
-  // To add a new entry `k' with its associated value `v'. Actually, this
-  // is equivalent to call `put', but may run a little bit faster.
+  - search k:K : (BOOLEAN,V) <-
+  ( + found:BOOLEAN 
+    + v:V
+    + idx:INTEGER
+    + node:HMAP_NODE V KEY K
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    until {(node = NULL) || {node.key = k}} do {
+      node := node.next
+    }
+    if (found := node != NULL) then {
+      v := node.value
+    }
+    (found, v)
+  )
+  
+  - search_key blk: {K; BOOLEAN} : (BOOLEAN,V) <-
+  ( + found:BOOLEAN 
+    + v:V
+    + idx, c:INTEGER
+    + node:HMAP_NODE V KEY K
+    until {found || {c >= count}} do {
+      if ((node := buckets.at idx) != NULL) then {
+        c := c + 1
+        if (found := (blk.value(node.key))) then {
+          v := node.value
+        } else {
+          until {found || {node.next = NULL}} do {
+            c := c + 1
+            if (found := blk.value(node.key)) then {
+              v := node.value
+            }
+          }
+        }
+      }
+      idx := idx + 1;
+    }
+    (found, v)
+  )
+  
+  - search_value blk: {V; BOOLEAN} : (BOOLEAN,K) <-
+  ( + found:BOOLEAN 
+    + k:K
+    + idx, c:INTEGER
+    + node:HMAP_NODE V KEY K
+    until {found || {c >= count}} do {
+      if ((node := buckets.at idx) != NULL) then {
+        c := c + 1
+        if (found := (blk.value(node.value))) then {
+          k := node.key
+        } else {
+          until {found || {node.next = NULL}} do {
+            c := c + 1
+            if (found := blk.value(node.value)) then {
+              k := node.key
+            }
+          }
+        }
+      }
+      idx := idx + 1;
+    }
+    (found, k)
+  )
+  
+  - search_key bk: {K; BOOLEAN} value bv: {V; BOOLEAN}  : (BOOLEAN,K,V) <-
+  ( + found:BOOLEAN 
+    + k:K
+    + v:V
+    + idx, c:INTEGER
+    + node:HMAP_NODE V KEY K
+    until {found || {c >= count}} do {
+      if ((node := buckets.at idx) != NULL) then {
+        c := c + 1
+        if (found := ((bk.value(node.key)) && {bv.value(node.value)})) then {
+          k := node.key ; v := node.value
+        } else {
+          until {found || {node.next = NULL}} do {
+            c := c + 1
+            if (found := ((bk.value(node.key)) && {bv.value(node.value)})) then {
+              k := node.key ; v := node.value
+            }
+          }
+        }
+      }
+      idx := idx + 1;
+    }
+    (found, k, v)
+  )
+  
+  - at k:K add v:V <-
+  // REMPLACE add__to. Assumes `k' is a new entry. Actually, this is equivalent to 
+  // call `at__put', but may run a little bit faster.
+  [ ? {! has k} ]
   ( + idx:INTEGER
     + node:HMAP_NODE V KEY K
-    cache_user := -1
-    (capacity = count ).if {
+    if (capacity = count ) then {
       increase_capacity
     }
     idx := k.hash_code % capacity
-    node:= new_node v to k next (buckets.at idx)
+    node := new_node v to k next (buckets.at idx)
     buckets.at idx put node
     count := count + 1
   )
@@ -250,55 +275,25 @@ Public
   // Remove entry `k' (which may exist or not before this call).
   ( + h, idx:INTEGER
     + node, previous_node:HMAP_NODE V KEY K
-
-    cache_user := -1
     h := k.hash_code
     idx := h % capacity
     node := buckets.at idx
     (node != NULL ).if {
       (node.key == k ).if {
-	count := count - 1
-	node := node.next
-	buckets.at idx put node
+        count := count - 1
+        node := node.next
+        buckets.at idx put node
       } else {
-	previous_node := node
-	node := node.next
-	{(node = NULL) || {node.key == k}}.until_do {
-	  previous_node := node
-	  node := node.next
-	}
-	(node != NULL ).if {
-	  count := count - 1
-	  previous_node.set_next (node.next)
-	}
-      }
-    }
-  )
-
-  - fast_remove k:K <-
-  ( + h, idx:INTEGER
-    + node, previous_node:HMAP_NODE V KEY K
-
-    cache_user := -1
-    h := k.hash_code
-    idx := h % capacity
-    node := buckets.at idx
-    (node != NULL).if {
-      (node.key = k).if {
-	count := count - 1
-	node := dispose_node node
-	buckets.at idx put node
-      } else {
-	previous_node := node
-	node := node.next
-	{(node = NULL) || {node.key = k}}.until_do {
-	  previous_node := node
-	  node := node.next
-	}
-	(node != NULL).if {
-	  count := count - 1
-	  previous_node.set_next (dispose_node node)
-	}
+        previous_node := node
+        node := node.next
+        {(node = NULL) || {node.key == k}}.until_do {
+          previous_node := node
+          node := node.next
+          }
+          (node != NULL ).if {
+            count := count - 1
+            previous_node.set_next (node.next)
+          }
       }
     }
   )
@@ -306,7 +301,6 @@ Public
   - clear <-
   // Discard all items.
   (
-    cache_user := -1
     count := 0
     buckets.set_all_with NULL until (capacity - 1)
   )
@@ -316,54 +310,68 @@ Public
 
   // To provide iterating facilities:
   
-  - foreach a:{V;} <- lower.to upper do { i:INTEGER; a.value (at i); }; // BSBS:=> Transversable
+  - foreach blk:{(K,V);} <-
+  ( + idx, c:INTEGER
+    + node:HMAP_NODE V KEY K
+    while { c < count } do {
+      node := buckets.at idx
+      if (node != NULL) then {
+        blk.value (node.key,node.value) ; c := c + 1
+        while {(node := node.next) != NULL} do {
+          blk.value (node.key,node.value) ; c := c + 1
+        }
+      }
+      idx := idx + 1
+    }
+  )
   
-  - at i:INTEGER :V <-
-  (
-    set_cache_user i
-    cache_node.item
-  )
-
-  - key index:INTEGER :K <-
-  (
-    set_cache_user index
-    cache_node.key
-  )
-
-  - key_map_in buffer:COLLECTION(K) <-
-  // Append in `buffer', all available keys (this may be useful to
-  // speed up the traversal).
-  ( + node:HMAP_NODE V KEY K
-    + idx:INTEGER
-
-    node := buckets.at idx
-    count.downto 1 do { i:INTEGER
-      {node != NULL}.until_do {
-	idx := idx + 1
-	? {idx < capacity}
-	node := buckets.at idx
+  - foreach_key blk:{K;} <-
+  ( + idx, c:INTEGER
+    + node:HMAP_NODE V KEY K
+    while { c < count } do {
+      node := buckets.at idx
+      if (node != NULL) then {
+        blk.value (node.key) ; c := c + 1
+        while {(node := node.next) != NULL} do {
+          blk.value (node.key) ; c := c + 1
+        }
       }
-      buffer.add_last (node.key)
-      node := node.next
+      idx := idx + 1
     }
   )
-
-  - item_map_in buffer:COLLECTION V  <-
-  // Append in `buffer', all available items (this may be useful to
-  // speed up the traversal).
-  ( + node:HMAP_NODE V KEY K
-    + idx:INTEGER
-
-    node := buckets.at idx
-    count.downto 1 do { i:INTEGER
-      {node != NULL}.until_do {
-	idx := idx + 1
-	? {idx < capacity}
-	node := buckets.at idx
+  // DCDC BUG LIZ ??
+  - new_foreach_key blk:{K;} <- foreach {(k:K,v:V); blk.value k }  
+  
+  
+  - foreach_value blk:{V;} <-
+  ( + idx, c:INTEGER
+    + node:HMAP_NODE V KEY K
+    while { c < count } do {
+      node := buckets.at idx
+      if (node != NULL) then {
+        blk.value (node.value) ; c := c + 1
+        while {(node := node.next) != NULL} do {
+          blk.value (node.value) ; c := c + 1
+        }
       }
-      buffer.add_last (node.item)
+      idx := idx + 1
+    }
+  )
+  
+  // DCDC BUG LIZ ??
+  - new_foreach_value blk:{V;} <- foreach {(k:K,v:V); blk.value v }
+  
+  - at k:K :V <-
+  // REMPLACE fast_at 
+  [ ? {has k} ]
+  ( + idx:INTEGER
+    + node:HMAP_NODE V KEY K
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    until {node.key = k} do {
       node := node.next
     }
+    node.value
   )
 
   - copy other:SELF <-
@@ -375,36 +383,16 @@ Public
     }.elseif {capacity = 0} then {
       make
     }
-
     1.to (other.count) do { i:INTEGER
-      at (other.key i) put (other.item i)
+      at (other.key i) add (other.item i)
     }
-  )
-
-  // Other features:
-
-  - internal_key k:K :K <-
-  // Retrieve the internal key object which correspond to the existing
-  // entry `k' (the one memorized into the `self' dictionary).
-  ( + node:HMAP_NODE V KEY K
-    + result:K
-
-    node := buckets.at (k.hash_code % capacity)
-    result := node.key
-    {result == k}.until_do {
-      node := node.next
-      result := node.key
-    }
-    result
   )
 
 Private
 
   - increase_capacity <-
   // There is no more free slots:the dictionary must grow.
-  [
-    -? {capacity = count}
-  ]
+  [ capacity = count ]
   ( + idx, new_capacity,i:INTEGER
     + old_buckets:NATIVE_ARRAY(HMAP_NODE V KEY K)
     + node1, node2:HMAP_NODE V KEY K
@@ -415,71 +403,22 @@ Private
     buckets := NATIVE_ARRAY(HMAP_NODE V KEY K).create new_capacity
     i := capacity -1
     capacity := new_capacity
-    {i < 0}.until_do {
+    until {i < 0} do {
       node1 := old_buckets.at i
       {node1 = NULL}.until_do {
-	node2 := node1.next
-	idx := node1.key.hash_code % capacity
-	node1.set_next (buckets.at idx)
-	buckets.at idx put node1
-	node1 := node2
+        node2 := node1.next
+        idx := node1.key.hash_code % capacity
+        node1.set_next (buckets.at idx)
+        buckets.at idx put node1
+        node1 := node2
       }
       i := i - 1
     }
-    cache_user := -1
   )
   [
-    +? { count = Old count }
-    +? { capacity > Old capacity }
+    ? { count = Old count }
+    ? { capacity > Old capacity }
   ]
-
-  - set_cache_user index:INTEGER <-
-  // Set the internal memory cache (`cache_user', `cache_node' and
-  // `cache_buckets') to the appropriate valid value.
-  [
-    -? { valid_index index }
-  ]
-  (
-    (index = cache_user + 1).if {
-      cache_user := index
-      cache_node := cache_node.next
-      {cache_node != NULL}.until_do {
-        cache_buckets := cache_buckets + 1
-        cache_node := buckets.at cache_buckets
-      }
-    }.elseif {index = cache_user} then {
-    }.elseif {index = 1} then {
-      cache_user := 1
-      cache_buckets := 0
-      cache_node := buckets.at cache_buckets
-      {cache_node = NULL}.while_do {
-        cache_buckets := cache_buckets + 1
-        cache_node := buckets.at cache_buckets
-      }
-    } else {
-      set_cache_user 1
-      {cache_user = index}.until_do { set_cache_user (cache_user + 1); }
-    }
-  )
-  [
-    /* BSBS Old; */
-    +? {cache_user = index}
-    +? {cache_buckets.in_range 0 to (capacity - 1)}
-    +? {cache_node != NULL}
-  ]
-
-  + cache_user:INTEGER
-  // The last user's external index in range [1 .. `count'] (see `item'
-  // and `valid_index' for example) may be saved in `cache_user' otherwise
-  // -1 to indicate that the cache is not active. When the cache is
-  // active, the corresponding index in `buckets' is save in
-  // `cache_buckets' and the corresponding node in `cache_node'.
-
-  + cache_node:HMAP_NODE V KEY K
-  // Meaningful only when `cache_user' is not -1.
-
-  + cache_buckets:INTEGER
-  // Meaningful only when `cache_user' is not -1.
 
   - dispose_node node:HMAP_NODE V KEY K 
   :HMAP_NODE V KEY K <-
@@ -490,289 +429,31 @@ Private
   ( + result:HMAP_NODE V KEY K
     result := node.next
     //node.set_next (free_nodes.item)
-    //free_nodes.set_item(node)
+    //free_nodes.set_value(node)
     result
   )
   [
     +? {Result = Old node.next}
   ]
 
-  - new_node v:V to k:K next nxt:HMAP_NODE V KEY K 
-  :HMAP_NODE V KEY K <-
-  // Create a new one.
+  - new_node v:V to k:K next nxt:HMAP_NODE V KEY K :HMAP_NODE V KEY K <-
   (
-    HMAP_NODE V KEY K.create v to k next nxt
+    //HMAP_NODE V KEY K.create v to k next nxt
+    new HMAP_NODE V KEY K value v key k next nxt
   )
 
 Public
 
-  - create:SELF <-
-  ( + result:SELF
-    result := clone
-    result.make
-    result
-  )
+  // RESTE A VIRER
 
-  - make <-
-  // Create an empty dictionary. Internal storage `capacity' of the
-  // dictionary is initialized using the `Default_size' value. Then,
-  // tuning of needed storage `capacity' is performed automatically
-  // according to usage. if you are really sure that your dictionary
-  // is always really bigger than `Default_size', you may consider to use
-  // `with_capacity' to save some execution time.
-  (
-    with_capacity default_size
-  )
-  [
-    +? {capacity = default_size}
-  ]
-
-  - with_capacity medium_size:INTEGER <-
-  // May be used to save some execution time if one is sure that
-  // storage size will rapidly become really bigger than `Default_size'.
-  // When first `remove' occurs, storage size may naturally become
-  // smaller than `medium_size'. Afterall, tuning of storage size is
-  // done automatically according to usage.
-  [
-    -? { medium_size > 0 }
-  ]
-  ( + new_capacity:INTEGER
-
-    new_capacity := HASH_TABLE_SIZE.prime_number_ceiling medium_size
-    buckets := NATIVE_ARRAY(HMAP_NODE V KEY K).create new_capacity
-    capacity := new_capacity
-    cache_user := -1
-    count := 0
-  )
-  [
-    +? { is_empty }
-    +? { capacity >= medium_size }
-  ]
-
-  // Invariant
-
-//  [
-//    -? {capacity > 0}
-//    -? {capacity >= count}
-//    -? {cache_user.in_range (-1) to count}
-//    -? {(cache_user > 0) ->> {cache_node != NULL}}
-//    -? {(cache_user > 0) ->> {cache_buckets.in_range 0 to (capacity - 1)}}
-//  ]
-
-
- //------------------- OLD --------------------
-
-  /*
-
-  + cache_user :INTEGER
-  // The last user's external index in range [1 .. `count'] (see `item'
-  // and `valid_index' for example) may be saved in `cache_user' otherwise
-  // -1 to indicate that the cache is not active. When the cache is
-  // active, the corresponding index in `buckets' is save in
-  // `cache_buckets' and the corresponding node in `cache_node'.
-
-  + cache_node:HMAP_NODE V KEY K
-  // Meaningful only when `cache_user' is not -1.
-
-  + cache_buckets:INTEGER
-  // Meaningful only when `cache_user' is not -1.
-
-
-
-  - is_empty:BOOLEAN <- count = 0
-  // Is it empty ?
-
-  - fast_has k:K :BOOLEAN <-
-  // Is there a value currently associated with key `k'?
-  (
-    + idx:INTEGER
-    + node:MAP_NODE[V,K]
-
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-
-    { (node = NULL) || { node.key = k}}.until_do {
-      node := node.next
-    }
-    node != NULL
-  )
-
-  - fast_at k:K :V <-
-  // Return the value associated to key `k'.
-  // (See also `reference_at' if V is a reference type.)
-  (
-    + idx:INTEGER
-    + node:MAP_NODE[V,K]
-
-    ? { fast_has k }
-
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-
-    { node.key = k}.until_do {
-      node := node.next
-    }
-    node.item
-  )
-
-
-  - '@' Left 1 k:K :V <-
-  (
-    //at k
-    value_at k
-  )
-
-
-  // Looking and searching some value:
-
-
-  - occurrences v:V :INTEGER <-
-  // Number of occurrences using `equal'.
-  // See also `fast_occurrences' to chose the apropriate one.
-  (
-    1.to count do { i:INTEGER
-      (safe_equal (v,(item i)) ).if {
-	result := result + 1
-      }; // end if
-    }; // end fo
-
-    ? { result >= 0 }
-
-    result
-  )
-
-
-  - fast_occurrences v:V :INTEGER <-
-  // Number of occurrences using `='.
-  // See also `occurrences' to chose the apropriate one.
-  (
-    + result:INTEGER
-
-    1.to count do { i:INTEGER
-      (v = item i ).if {
-	result := result + 1
-      }; // end if
-    }; // end do
-
-    ? { result >= 0 }
-
-    result
-  )
-
-
-  - key_at v:V :K <-
-  // Retrieve the key used for value `v' using `equal' for comparison.
-  (
-    + i:INTEGER
-    + result:K
-
-    ? { occurrences v = 1}
-    i := 1
-    {safe_equal (v,(item i))}.until_do {
-      i := i + 1
-    }
-    result := cache_node.key
-
-    ? { equal ((value_at result) ,v) }
-
-    result
-  )
-
-
-  - fast_key_at v:V :K <-
-  // Retrieve the key used for value `v' using `=' for comparison.
-  (
-    + i:INTEGER
-    + result:K
-
-    ? { fast_occurrences v = 1 }
-    i := 1
-    {v = item(i)}.until_do {
-      i := i + 1
-    }
-    result := cache_node.key
-
-    ? { value_at result = v }
-
-    result
-  )
-
-  - upper :INTEGER <-
-  (
-    count
-  )
-
-
-  - valid_index index:INTEGER :BOOLEAN <-
-  (
-    + result:BOOLEAN
-
-    result := (1 <= index) && {index <= count}
-
-    ? { result =  index.in_range lower to upper }
-
-    result
-  )
-
-
-  - '=='  Right 60 other:SELF :BOOLEAN <-
-  // do both dictionaries have the same set of associations?
-  // Keys are compared with `==' and values are comnpared
-  // with the basic = operator. See also `is_equal_map'.
-  (
-    + i:INTEGER
-    + result:BOOLEAN
-
-    (Self = other ).if {
-      result := TRUE
-    }.elseif { count = other.count } then {
-      result := TRUE
-      i := 1
-      {!result || {i > count}}.until_do {
-	(other.has (key i) ).if {
-	  (other.value_at (key i) != at i ).if {
-	    result := FALSE
-	  } else {
-	    i := i + 1
-	  }; // end if
-	} else {
-	  result := FALSE
-	}; // end if
-      }; // end until_do
-    }; // end if
-
-    ? { result ->> {count = other.count} }
-
-    result
-  )
-
-
-  - is_equal_map other:SELF :BOOLEAN <-
-  // Do both dictionaries have the same set of associations?
-  // Both keys and values are compared with `=='. See also `=='.
-  (
-    + i:INTEGER
-    + k:K
-    + result:BOOLEAN
-    (Self = other ).if {
-      result := TRUE
-    }.elseif { count = other.count } then {
-      result := TRUE
-      i := 1
-      {! result || {i > count}}.until_do {
-	k := key i
-	(other.has k ).if {
-	  (! safe_equal (other.value_at k,at i) ).if {
-	    result := FALSE
-	  } else {
-	    i := i + 1
-	  }; // end if
-	} else {
-	  result := FALSE
-	}; // end if
-      }; // end until_do
-    }; // end if
-
-    result
-  )
-*/
+  - add v:V to k:K <- at k put v
+  
+  - create :SELF <- new SELF
+  
+  - fast_has k:K :BOOLEAN <- has k
+  
+  - fast_put v:V to k:K <- at k put v
+  
+  - put v:V to k:K <- at k put v
+  
+  

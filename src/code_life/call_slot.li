@@ -169,7 +169,7 @@ Private
     + old_val:EXPR
     + loc:LOCAL
     + prof_block:PROFIL_BLOCK
-
+    //crash BSBS: 2025 Bug 
     (source = list_current).if {
       POSITION.put_error semantic text "Recursivity without end (call_slot)."
       source.position.put_position

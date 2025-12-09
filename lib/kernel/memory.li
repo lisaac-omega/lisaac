@@ -3,10 +3,13 @@ Header
   + name     := Strict MEMORY;
 
   /*Memory manager 32/64 bits.*/
+  
+  - include := `#define MINIMUM_SIZE 384
+  extern void *table_size[];
+  extern void *last_block[64];
+  `;
 
   - external := `
-//#define MINIMUM_SIZE 256
-#define MINIMUM_SIZE 384
 void *table_size[MINIMUM_SIZE/sizeof(void *)];
 void *last_block[64];
 `;

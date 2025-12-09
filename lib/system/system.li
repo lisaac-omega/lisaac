@@ -2,6 +2,8 @@ Header
 
   + name := SYSTEM;
   
+  - include := `char *system_name();`;
+  
   - external := `
 char *system_name()
 { char *n; 

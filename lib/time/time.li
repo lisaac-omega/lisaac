@@ -5,7 +5,7 @@ Header
 
   - default := `0`:TIME;
 
-  - external := `#include <time.h>
+  - include := `#include <time.h>
   #include <sys/time.h>`;
   
 Insert

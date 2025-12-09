@@ -1,0 +1,36 @@
+Header
+  + name := AVL_SET_NODE V;
+  /*
+   Auxiliary class to implement AVL_SET.
+   This a classic implementation of an AVL tree (balanced tree first
+   designed by Adelson-Velskii and Landis, 1960)
+  */
+
+Inherit
+  + parent_avl_tree_node:Expanded AVL_TREE_NODE V
+
+AVL_SET
+
+  // Creation:
+
+  - create i:V :SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make i
+    result
+  )
+
+  - make i:V <-
+  (
+    set_balance balanced
+    left  := NULL
+    right := NULL
+    set_item i
+  )
+  [
+    +? {item = i}
+  ]
+
+
+

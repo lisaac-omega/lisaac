@@ -55,7 +55,7 @@ Public
     
 Public
   
-  + hash_code:INTEGER := ( `init_string_alias()`; 0)
+  + hash_code:INTEGER 
   
   - to_string_buffer:STRING_BUFFER <-
   ( + new:STRING_BUFFER

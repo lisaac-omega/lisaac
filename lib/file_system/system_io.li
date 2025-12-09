@@ -1,8 +1,8 @@
 Header
 
   + name := SYSTEM_IO;
-
-  - external := `
+  
+  - include := `
 #if defined(ARDUINO)
 
 #elif(__ANDROID__)
@@ -26,8 +26,8 @@ Header
 /* Hardware 'print_char' */
 void print_char(char);
 
-char output[256];
-int output_idx;
+extern char output[256];
+extern int output_idx;
 
 /* Hardware 'exit' */
 void die_with_code(long);
@@ -43,6 +43,13 @@ void print_char(char);
 /* Hardware 'exit' */
 void die_with_code(int64_t);
 
+#endif  
+`;  
+  
+  - external := `
+#if defined(__ANDROID__)
+char output[256];
+int output_idx;
 #endif
 `;
 

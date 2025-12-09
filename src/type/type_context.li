@@ -41,5 +41,6 @@ Public
     \  uint64_t code; \n\
     \  _____CONTEXT *back; \n\
     \};\n\
-    \uintptr_t top_context; \n\n"
+    \extern uintptr_t top_context; \n\n"
+    output_glob.append "uintptr_t top_context; \n"
   )

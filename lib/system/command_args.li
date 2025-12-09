@@ -5,7 +5,7 @@ Header
     Unix-like spirit: arg 0 is the command, other arguments can be shifted.
   */
   
-  - external := `
+  - include := `
 #include <unistd.h>
 
 #if defined(_WIN32)
@@ -15,7 +15,10 @@ Header
 #elif defined(__linux__)
   #include <unistd.h>
 #endif
-
+void get_executable_path(char *buf, int64_t size);  
+  `;
+  
+  - external := `
 void get_executable_path(char *buf, int64_t size) {
 #if defined(_WIN32)
     int len = GetModuleFileNameA(NULL, (char*)buf, size - 1);

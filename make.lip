@@ -34,7 +34,10 @@ Section Private
   + is_library:BOOLEAN; // For build a lisaac library C 
   + execute_back_end:BOOLEAN := TRUE;
   + execute_status_code:INTEGER := 0;
-
+  
+  + core_count:INTEGER := 20;
+  + multicore:BOOLEAN := FALSE;
+  
   // Other.
   + is_statistic:BOOLEAN;
   + is_quiet:BOOLEAN;
@@ -184,9 +187,9 @@ Section Private
       execute_fail "arduino-cli compile --fqbn arduino:avr:mega $(basename $(pwd)).ino --output-dir .";
       execute_fail ("avrdude -v -patmega2560 -cwiring -P"+arduino_port+" -b115200 -D -Uflash:w:./$(basename $(pwd)).ino.hex:i");
       execute_fail ("~/lisaac/arduino/com/ardcom "+arduino_port);
-//      execute_fail "screen /dev/ttyUSB0 9600";
+      //      execute_fail "screen /dev/ttyUSB0 9600";
       //"Ctrl A K Y".println;
-      //execute_fail ("avr-g++ -I. -Wno-overflow -Os -Wl,--gc-sections -ffunction-sections  -fdata-sections -DF_CPU=16000000UL -Wno-write-strings -mmcu=atmega2560 -o " + output_file + " " + output_file + ".c"); // -mmcu=atmega328p  -lSoftwareSerial -larduino      
+      //execute_fail ("avr-g++ -I. -Wno-overflow -Os -Wl,--gc-sections -ffunction-sections  -fdata-sections -DF_CPU=16000000UL -Wno-write-strings -mmcu=atmega2560 -o " + output_file + " " + output_file + ".c"); // -mmcu=atmega328p  -lSoftwareSerial -larduino
       //execute_fail ("avr-objcopy -O ihex -R .eeprom " + output_file + " " + output_file + ".hex");
       //execute_fail ("avrdude -F -V -c arduino -p ATMEGA328P -P /dev/ttyACM0 -b 115200 -U flash:w:" + output_file + ".hex");
     } else {
@@ -226,39 +229,47 @@ Section Private
           cc := "tcc ";
           /*
           (is_library).if {
-            execute_fail ("tcc" + lib_i + " " + output_file + output_extension + " -c ");
+          execute_fail ("tcc" + lib_i + " " + output_file + output_extension + " -c ");
           } else {
-            execute_fail ("tcc" + lib_i + " " + output_file + output_extension + lib_a + lib_lxx + " -o " + output_file);
+          execute_fail ("tcc" + lib_i + " " + output_file + output_extension + lib_a + lib_lxx + " -o " + output_file);
           };*/
-        }; // else {        
+        }; // else {
         (target = "web").if {
           execute_fail (lisaac+"webli/new_assets.sh");
           execute_fail ("sed -i -e 's/^int main(int argc,char \\*\\*argv)$/int main()/' -e '/^[[:space:]]\\+arg_count  = argc;$/d' -e '/^  arg_vector = argv;$/d' "+output_file+".c");
-
-          cc := "emcc";    
+          
+          cc := "emcc";
           cc_opts := " -D_GNU_SOURCE -O2 -Wno-unused-value -Wno-invalid-source-encoding -Wno-sometimes-uninitialized";
           lib_i := " -s ASSERTIONS=1 -s GL_DEBUG=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s USE_WEBGL2=1 -s USE_GLFW=3 --preload-file web";
           	  // -s ASSERTIONS=1    --preload-file assets/
-          //-s MODULARIZE=1 -s EXPORT_ES6=1 
+          //-s MODULARIZE=1 -s EXPORT_ES6=1
           execute_file := "index.js";
         };
-          (is_library).if {
-            execute_fail (cc + lib_i + " " + output_file + output_extension + " -c " + cc_opts);
+        (is_library).if {
+          execute_fail (cc + lib_i + " " + output_file + output_extension + " -c " + cc_opts);
+        } else {
+          ((is_speed_push) & (debug_level > 0)).if {
+            execute_fail (cc + lib_i + " " + output_file + output_extension + " -S " + cc_opts + lib_a + lib_lxx);
+            build_label (output_file + ".s");
+            execute_fail (cc+" " + lib_i + input_file + "_label.s " + cc_opts + lib_a + lib_lxx + " -o " + output_file);
           } else {
-            ((is_speed_push) & (debug_level > 0)).if {
-              execute_fail (cc + lib_i + " " + output_file + output_extension + " -S " + cc_opts + lib_a + lib_lxx);
-              build_label (output_file + ".s");
-              execute_fail (cc+" " + lib_i + input_file + "_label.s " + cc_opts + lib_a + lib_lxx + " -o " + output_file);
+            (bug_stack).if {
+              execute ("sed -i 's/void lisaac_stack_print(long step)/void old_lisaac_stack_print(long step)/g' " + output_file + output_extension);
+              execute_fail (cc + lib_i + " " + output_file + output_extension + " bug_stack.c " + cc_opts + lib_a + lib_lxx + " -o " + execute_file);
             } else {
-              (bug_stack).if {
-                execute ("sed -i 's/void lisaac_stack_print(long step)/void old_lisaac_stack_print(long step)/g' " + output_file + output_extension);
-                execute_fail (cc + lib_i + " " + output_file + output_extension + " bug_stack.c " + cc_opts + lib_a + lib_lxx + " -o " + execute_file);
+              (multicore).if {
+                execute_fail (
+                  "for src in " + output_file + "_*.c; do\n  " +
+                  cc + lib_i + " \"$src\"" + cc_opts + " -c &\ndone\nwait\n" +
+                  cc + " " + output_file + "_*.o " + cc_opts + lib_a + lib_lxx + " -o " + execute_file
+                );                
               } else {
                 execute_fail (cc + lib_i + " " + output_file + output_extension + cc_opts + lib_a + lib_lxx + " -o " + execute_file);
               };
             };
           };
-        //};
+        };
+        
       } else {
         ("Written: " + output_file + output_extension + "\n").print;
         (target = "android").if {
@@ -269,7 +280,7 @@ Section Private
         execute_fail ("cp "+lisaac+"webli/index.html .");
         execute_fail ("cp "+lisaac+"webli/favicon-32x32.png .");
         execute_fail ("cp "+lisaac+"webli/run.sh "+ output_file);
-      };        
+      };
     };
   );
   
@@ -417,6 +428,13 @@ Section Public
   // Only generate C code and don't compile it the C compiler.
   (
     execute_back_end := FALSE;
+  );
+  
+  - split <-
+  // Split .c and parallelize C compiler.
+  (
+    execute ("rm -rf " + output_file + "_*.c " + output_file + "_*.o");
+    multicore := TRUE;
   );
   
   - bugstack <-

@@ -1,7 +1,7 @@
 Header
   + name := DEV;
   
-  - external := `
+  - include := `
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

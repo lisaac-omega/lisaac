@@ -96,21 +96,39 @@ Public
   )
 
   - genere_graph out:STRING_BUFFER <-
-  ( + key:PROFIL
-    + cnt:INTEGER
+  ( //+ key:PROFIL
+    //+ cnt:INTEGER
     + is_force:BOOLEAN
-    + j:INTEGER
+    //+ j:INTEGER
 
-    (external_present).if {
+    if (external_present) then {
+      
+      
+      
+      /* // DCDC plus de TRAVERSABLE
       j := set_call.lower
       {(j <= set_call.upper) && {! is_force}}.while_do {
         is_force := ! set_call.key j.external_present
         j := j + 1
       }
+      */
+      + dummy:INTEGER
+      (is_force, dummy) := set_call.search_key {k:PROFIL
+        k.external_present
+      }
+      
+      
+      
+      
     } else {
       is_force := TRUE
     }
-    (is_force).if {
+    if is_force then {
+      
+      
+      
+      
+      /* // DCDC plus de TRAVERSABLE
       (set_call.lower).to (set_call.upper) do { j:INTEGER
         key := set_call.key j
         cnt := set_call.at j
@@ -124,6 +142,28 @@ Public
         }
         output.append ";\n"
       }
+      */
+      
+      
+      set_call.foreach { (key:PROFIL, cnt:INTEGER)
+        output.append name
+        output.append " -> "
+        output.append (key.name)
+        if (cnt > 1) then {
+          output.append "[label=\""
+          cnt.append_in output
+          output.append "\"]"
+        }
+        output.append ";\n"
+      }
+      
+      
+      
+      
+      
+      
+      
+      
       (external_present).if {
         out.append name
         out.append " [color=red];\n"
@@ -420,13 +460,17 @@ Public
     LOCAL_SEQ.clear
 
     seq_call_and_loop := seq_call_and_loop + 1
-
+    /*
+    (name == "__infix_greater_equal__TEJ").if {
+      OUT # (seq_inline - old_seq_inline) # '/' # inline_lev # '\n'
+    }
+    */
     (
       (
         (
           (CALL_SLOT.count_context_sensitive = 0) &&
           {! mode_recursive} && {stat = 0} &&
-          {is_context_sensitive || {(seq_inline - old_seq_inline) < inline_lev}}
+          {is_context_sensitive || {(seq_inline - old_seq_inline) <= inline_lev}}
         ) //|| {link_count = 1}
       ) /*&& {! is_interrupt} && {! is_external} &&
       {Self != profil_add_alias} && {Self != profil_hash_code_alias}*/
@@ -465,7 +509,7 @@ Public
     + v:LOCAL
     + i_result:INTEGER
 
-    (is_static).if {
+    ((output_list.count = 1) && {is_static}).if {
       output.append "static "
     }
 

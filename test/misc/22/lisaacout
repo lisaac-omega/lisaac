@@ -14,6 +14,6 @@ Line 17 column 8 in MAIN(.../test/misc/22/main.li):
     (s = 1).if {
         ^
 /home/colnet/lisaac/test/misc/22/main.c: In function ‘main’:
-/home/colnet/lisaac/test/misc/22/main.c:183:9: warning: comparison between pointer and integer
-  183 |   if (1 == (void *)NULL) {
+/home/colnet/lisaac/test/misc/22/main.c:425:9: warning: comparison between pointer and integer
+  425 |   if (1 == (void *)NULL) {
       |         ^~

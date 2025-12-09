@@ -313,6 +313,7 @@ Public
       string_tmp.append
       "arg_count  = argc;\n\
       \  arg_vector = argv;\n"
+      string_tmp # "  INIT_STRING_ALIAS;\n"
       (is_cop).if {
         string_tmp.append "#ifdef _PTHREAD_H\n\
         \  pthread_key_create(&current_thread, NULL);\n\
@@ -966,11 +967,27 @@ Public
     idx := type_input.prototype.longname.fast_last_index_of '.'
     dif := type_input.prototype.longname.first_diff longname
     (dif >= idx).if {
+      
+      
+      /*
+      // DCDC finitos TRAVERSABLE
       (slot_list.lower).to (slot_list.upper) do { j:INTEGER
         s := slot_list.at j
         (s.is_used).if_false {
           warning_error (s.position,"Slot not used.")
         }
       }
+      */
+      slot_list.foreach_value { itms:ITM_SLOT
+        (itms.is_used).if_false {
+          warning_error (s.position,"Slot not used.")
+        }
+      }
+      
+      
+      
+      
+      
+      
     }
   )

@@ -19,6 +19,5 @@ Public
     TEST.check (b1.upper = b2.upper)
     TEST.check (b1.first = b2.last)
     UTILS.exit 0
-    ("bug " + "init_string_alias").to_string_alias
   )
 

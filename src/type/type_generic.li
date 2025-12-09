@@ -43,9 +43,21 @@ Public
 
   - detect_alias <-
   (
+    
+    /*
+    // DCDC PLUS de TRAVERSABLE
     (dicog_type.lower).to (dicog_type.upper) do { j:INTEGER
       dicog_type.at j.detect_alias_struct
     }
+    */
+    
+    dicog_type.foreach_value { tg:TYPE_GENERIC
+      tg.detect_alias_struct
+    }
+    
+    
+    
+    
   )
 
 

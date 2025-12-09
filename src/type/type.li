@@ -17,12 +17,10 @@ Inherit
 PROFIL_LIST
 
   - is_alias_struct:BOOLEAN := TRUE
-
-  // MHMH : Mise en public <- accès depuis tools/types.li
+ 
 Private
 
-  - dico_type:HMAP TYPE KEY STRING_ALIAS :=
-  HMAP TYPE KEY STRING_ALIAS.create
+  - dico_type:HMAP TYPE KEY STRING_ALIAS := new HMAP TYPE KEY STRING_ALIAS
   
 TYPES  
   
@@ -458,7 +456,7 @@ Public
   )
     
   - genere_all_struct <-
-  (
+  ( + sd:SLOT_DATA
     TYPE_NULL.genere_typedef
     genere_id
     (genere_list.lower).to (genere_list.upper) do { j:INTEGER
@@ -474,7 +472,7 @@ Public
     }
     (genere_list_global.lower).to (genere_list_global.upper) do { j:INTEGER
       // In global.
-/*
+      /*
       + s:SLOT_DATA
       + idx:INTEGER
       s := genere_list_global.at j
@@ -491,8 +489,13 @@ Public
           stat_global_null.put (stat_global_null.at idx + 1) to idx
         }
       }
-*/
-      genere_list_global.at j.genere output_glob
+      */
+      sd := genere_list_global.at j
+      (output_list.count > 1).if {
+        output_decl # "extern "
+        sd.genere output_decl
+      }
+      sd.genere output_glob
     }
   )
 
@@ -521,9 +524,22 @@ Public
 
   - detect_alias <-
   (
+    
+    /*
+    // DCDC PLUS de TRAVERSABLE
     (dico_type.lower).to (dico_type.upper) do { j:INTEGER
       dico_type.at j.detect_alias_struct
     }
+    */
+    
+    dico_type.foreach_value { t:TYPE
+      t.detect_alias_struct
+    }
+
+    
+    
+    
+    
   )
 
   - detect_alias_struct <-
@@ -752,24 +768,16 @@ Public
             }
 	  }
           // Prototype declaration.
-          
-          output_glob.append "__"
-          output_glob.append intern_name
-          output_glob.add_last ' '
-          output_glob.append intern_name
-          output_glob.add_last '_'
-          (is_late_binding).if {
-            output_glob.append "={__"
-            output_glob.append intern_name
-            output_glob.append "__}"
+          (output_list.count > 1).if {
+            output_decl # "extern __" # intern_name # ' ' # intern_name # "_;\n"
           }
-          output_glob.append ";\n"
-          output_glob.append "#define "
-          output_glob.append intern_name
-          output_glob.append "__ (&"
-          output_glob.append intern_name
-          output_glob.append "_)\n\n"
-          
+          output_decl # "#define " # intern_name # "__ (&" # intern_name # "_)\n"
+          //
+          output_glob # "__" # intern_name # ' ' # intern_name # '_'
+          (is_late_binding).if {
+            output_glob # "={__" # intern_name # "__}"
+          }
+          output_glob # ";\n"
 	}
       }
 
@@ -797,12 +805,14 @@ Public
         {!parse_type_c "long"} && {!parse_type_c "float"} && {!parse_type_c "double"} &&
         {!parse_type_c "void"}
       ).if {
-        output_decl.append "__"
-        output_decl.append intern_name
-        output_decl.add_last ' '
-        output_decl.append intern_name
-        output_decl.add_last '_'
-        output_decl.append ";\n"
+        //
+        output_glob.append "__"
+        output_glob.append intern_name
+        output_glob.add_last ' '
+        output_glob.append intern_name
+        output_glob.add_last '_'
+        output_glob.append ";\n"
+        //
         output_decl.append "#define "
         output_decl.append intern_name
         output_decl.append "__ (&"

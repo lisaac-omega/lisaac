@@ -2,7 +2,7 @@ Header
   + name := STRING;
   /*Generic prototype for STRING_BUFFER and STRING_ALIAS*/
   - export  := STRING_BUFFER;
-  - external := `
+  - include := `
 #include <errno.h>
 #include <string.h>  
   `;

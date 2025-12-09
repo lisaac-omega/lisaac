@@ -1,0 +1,560 @@
+Header
+  + name := SET V;
+  /*
+   Definition of a mathematical set of objects.
+   All common operations on mathematical sets are available.
+   Well knowned implementations are HASHED_SET and AVL_SET.
+  */
+
+Inherit
+  - parent_clone:CLONE := CLONE
+  
+  + parent_traversable:TRAVERSABLE V := TRAVERSABLE V
+
+Public
+  // Counting:
+
+  - count:INTEGER <-
+  // Cardinality of the set (i.e. actual `count' of stored elements).
+  (
+    abstract
+    0
+  )
+
+  - is_empty:BOOLEAN <- count = 0
+  // Is the set empty?
+
+  // Adding and removing:
+
+  - add e:V <-
+  // Add new item `e' to the set. The mathematical definition of adding
+  // in a set is followed, i.e. the element `e' is added only and only
+  // if it is not yet present in the set.
+  // As this `add' feature is actually using `is_equal', you may consider
+  // to use `fast_add' for expanded objects as well while trying to get
+  // the very best performances.
+  [ /* BSBS Old; */
+    -? {e != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Added." +? {has e}
+    "Not in then added." +? {(! Old has e) -> (count = Old count + 1)}
+    "In then not added." +? {(Old has e) -> (count = Old count)}
+  ]
+
+  - fast_add e:V <-
+  // Same job as `add', but uses basic `=' for comparison.
+  [ /* BSBS Old; */
+    -? {e != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Added." +? {fast_has e}
+    "Not in then added." +? {(! Old fast_has e) -> (count = Old count + 1)}
+    "In then not added." +? {(Old fast_has e) -> (count = Old count)}
+  ]
+
+  - remove e:V <-
+  // Remove item `e' from the set: the mathematical definition of
+  // removing from a set is followed.
+  [ /* BSBS Old; */
+    -? {e != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Removed." +? {! has e}
+    "Not in not removed." +? {(! Old has e) -> (count = Old count)}
+    "In then removed." +? {(Old has e) -> (count = Old count - 1)}
+  ]
+
+  - fast_remove e:V <-
+  // Same job as `remove', but uses basic `=' for comparison.
+  [ /* BSBS Old; */
+    -? {e != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Removed." +? {! fast_has e}
+    "Not in not removed." +? {(! Old fast_has e) -> (count = Old count)}
+    "In then removed." +? {(Old fast_has e) -> (count = Old count - 1)}
+  ]
+
+  - clear <- clear_count
+
+  - clear_count <-
+  // Empty the current set (`is_empty' is True after that call).
+  // If possible, the actual implementation is supposed to keep
+  // its internal storage area in order to refill `Current' in
+  // an efficient way.
+  // See also `clear_count_and_capacity' to select the most appropriate.
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Is empty." +? {count = 0}
+  ]
+
+  - clear_count_and_capacity <-
+  // Empty the current set (`is_empty' is True after that call).
+  // If possible, the actual implementation is supposed to release
+  // its internal storage area for this memory to be used by other objects.
+  // See also `clear_count' to select the most appropriate.
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    "Is empty." +? {count = 0}
+  ]
+
+  // Looking and searching:
+
+  - has e:V :BOOLEAN <-
+  // Is element `e' in the set?
+  // As this query is actually using `is_equal', you may consider to use
+  // `fast_has' for expanded objects as well while trying to get the very
+  // best performances.
+  [ /* BSBS Old; */
+    -? {e != NULL}
+  ]
+  (
+    abstract
+    FALSE
+  )
+  [ /* BSBS Old; */
+    +? {Result -> ! is_empty}
+  ]
+
+  - fast_has e:V :BOOLEAN <-
+  // Is element `e' actually stored in the set?
+  // Warning: this query is using basic `=' for comparison.
+  // See also `has' when dealing with reference types.
+  [ /* BSBS Old; */
+    -? {e != NULL}
+  ]
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    //+? {Result ->> {e = reference_at e}}; // BSBS: Pb with '=='
+  ]
+
+  - reference_at e:V :V <-
+  // Non Void when `e' is in the set. In such a situation, `Result' is the
+  // object which is actually stored in the `Current' set (see ensure assertion).
+  [ /* BSBS Old; */
+    -? {e != NULL}
+    -? {! e.is_expanded_type}
+  ]
+  (
+    abstract
+    NULL
+  )
+  [ /* BSBS Old; */
+    +? {has e ->> {Result == e}}
+  ]
+
+  // To provide iterating facilities:
+
+  - lower:INTEGER := 1
+
+  - upper:INTEGER <-
+  ( count )
+  [ /* BSBS Old; */
+    +? {Result = count}
+  ]
+
+  - item i:INTEGER :V <-
+  // Item at the corresponding index `i'.
+  // See also `lower', `upper', `valid_index'.
+  // SETs are intrinsically unordered, so there is no guarantee that
+  // `item'(i) after performing an `add' or `remove' operation is related
+  // in any way to `item'(i) before that operation.
+  ( + result:V
+
+    abstract
+    result
+  )
+  [ /* BSBS Old; */
+    //+? {fast_has Result}
+  ]
+
+  - first:V <- item lower
+  // The very `first' item.
+  // See also `last', `item'.
+  // SETs are intrinsically unordered, so there is no guarantee that
+  // `first' after performing an `add' or `remove' operation is related
+  // in any way to `first' before that operation.
+
+  - last:V <- item upper
+  // The `last' item.
+  // See also `first', `item'.
+  // SETs are intrinsically unordered, so there is no guarantee that
+  // `last' after performing an `add' or `remove' operation is related
+  // in any way to `last' before that operation.
+
+  // Mathematical operations:
+
+  - union other:SELF <-
+  // Make the union of the `Current' set with `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + e:V
+
+    i := 1
+    {i > other.count}.until_do {
+      e := other.item i
+      (! has e).if {
+        add e
+      }
+      i := i + 1
+    }
+  )
+  [ /* BSBS Old; */
+    +? {count <= Old count + other.count}
+  ]
+
+  - fast_union other:SET V <-
+  // Make the union of the `Current' set with `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + e:V
+
+    i := 1
+    {i > other.count}.until_do {
+      e := other.item i
+      (! fast_has e).if {
+        fast_add e
+      }
+      i := i + 1
+    }
+  )
+  [ /* BSBS Old; */
+    +? {count <= Old count + other.count}
+  ]
+
+  - Self:SELF '+' other:SELF :SELF <-
+  // Return the union of the `Current' set with `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + result:SELF
+
+    result := twin
+    result.union other
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result.count <= count + other.count}
+    +? {(Self.is_subset_of Result) && {other.is_subset_of Result}}
+  ]
+
+  - intersection other:SELF <-
+  // Make the intersection of the `Current' set with `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + e:V
+
+    i := upper
+    {i < lower}.until_do {
+      e := item i
+      (! other.has e).if {
+        remove e
+      }
+      i := i - 1
+    }
+  )
+  [ /* BSBS Old; */
+    +? {count <= other.count.min (Old count)}
+  ]
+
+  - fast_intersection other:SELF <-
+  // Make the intersection of the `Current' set with `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + e:V
+
+    i := upper
+    {i < lower}.until_do {
+      e := item i
+      (! other.fast_has e).if {
+        fast_remove e
+      }
+      i := i - 1
+    }
+  )
+  [ /* BSBS Old; */
+    +? {count <= other.count.min (Old count)}
+  ]
+
+  - Self:SELF '^' other:SELF :SELF <-
+  // Return the intersection of the `Current' set with `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + result:SELF
+
+    result := twin
+    result.intersection other
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result.count <= other.count.min count}
+    +? {(Result.is_subset_of Self) && {Result.is_subset_of other}}
+  ]
+
+  - minus other:SELF <-
+  // Make the set `Current' - `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+
+    (other = Self).if {
+      clear_count
+    } else {
+      i := 1
+      {i > other.count}.until_do {
+        remove (other.item i)
+        i := i + 1
+      }
+    }
+  )
+  [ /* BSBS Old; */
+    +? {count <= Old count}
+  ]
+
+  - Self:SELF '-' other:SELF :SELF <-
+  // Return  the set `Current' - `other'.
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + result:SELF
+
+    result := twin
+    result.minus other
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result.count <= count}
+    +? {Result.is_subset_of Self}
+  ]
+
+  // Comparison:
+
+  - is_subset_of other:SELF :BOOLEAN <-
+  // Is the `Current' set a subset of `other'?
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    (Self = other).if {
+      result := TRUE
+    }.elseif {count <= other.count} then {
+      result := TRUE
+      i := 1
+      {(! result) || {i > count}}.until_do {
+        result := other.has (item i)
+        i := i + 1
+      }
+    }
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result -> (count <= other.count)}
+  ]
+
+  - is_disjoint_from other:SELF :BOOLEAN <-
+  // Is the `Current' set disjoint from `other' ?
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    (Self != other).if {
+      result := TRUE
+      i := 1
+      (count <= other.count).if {
+        {(! result) || {i > count}}.until_do {
+          result := ! other.has (item i)
+          i := i + 1
+        }
+      } else {
+        {(! result) || {i > other.count}}.until_do {
+          result := ! has (other.item i)
+          i := i + 1
+        }
+      }
+    }
+    result
+  )
+  [ /* BSBS Old; */
+    +? {Result = (Self ^ other).is_empty}
+  ]
+
+  - fast_is_disjoint_from other:SELF :BOOLEAN <-
+  // Is the `Current' set disjoint from `other' ?
+  [ /* BSBS Old; */
+    -? {other != NULL}
+  ]
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    (Self != other).if {
+      result := TRUE
+      i := 1
+      (count <= other.count).if {
+        {(! result) || {i > count}}.until_do {
+          result := ! other.fast_has (item i)
+          i := i + 1
+        }
+      } else {
+        {(! result) || {i > other.count}}.until_do {
+          result := ! fast_has (other.item i)
+          i := i + 1
+        }
+      }
+    }
+    result
+  )
+  [ /* BSBS Old; */
+   // +? {Result = (Self ^ other).is_empty}
+  ]
+
+  - Self:SELF '==' other:SELF :BOOLEAN <-
+  // Is the `Current' set equal to `other'?
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    (Self = other).if {
+      result := TRUE
+    }.elseif {count = other.count} then {
+      result := TRUE
+      i := 1
+      {(! result) || {i > count}}.until_do {
+        result := other.has (item i)
+        i := i + 1
+      }
+    }
+    result
+  )
+  [ /* BSBS Old; */
+    "Double inclusion." +? {Result = (is_subset_of other) & (other.is_subset_of Self)}
+  ]
+
+  // Duplication.
+
+  - copy other:SELF <-
+  // Copy 'other' into the current set
+  ( + i:INTEGER
+
+    // Note: this naive implementation is OK because node
+    // recycling is implemented.
+    // BSBS: A revoir.
+    make
+    i := 1
+    {i > other.count}.until_do {
+      add (other.item i)
+      i := i + 1
+    }
+  )
+
+  - from_collection model:COLLECTION V <-
+  // Add all items of `model'.
+  [ /* BSBS Old; */
+    -? {model != NULL}
+  ]
+  ( + i, up:INTEGER
+
+    make
+    up := model.upper
+    i  := model.lower
+    {i > up}.until_do {
+      add (model.item i)
+      i := i + 1
+    }
+  )
+
+  // Agents based features:
+
+  - foreach action:{V;} <- do_all action
+
+  - do_all action:{V;} <-
+  // Apply `action' to every item of `Self'.
+  // See also `for_all', `exists'.
+  ( + i:INTEGER
+
+    i := lower
+    {i > upper}.until_do {
+      action.value (item i)
+      i := i + 1
+    }
+  )
+
+  - for_all predicate:BLOCK :BOOLEAN <-
+  // Do all items satisfy `predicate'?
+  // See also `do_all', `exists'.
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    result := TRUE
+    i := lower
+    {(! result) || {i > upper}}.until_do {
+      result := predicate.value (item i)
+      i := i + 1
+    }
+    result
+  )
+
+  - exists predicate:BLOCK :BOOLEAN <-
+  // Does at least one item satisfy `predicate'?
+  // See also `do_all', `for_all'.
+  ( + i:INTEGER
+    + result:BOOLEAN
+
+    i := lower
+    {result || {i > upper}}.until_do {
+      result := predicate.value (item i)
+      i := i + 1
+    }
+    result
+  )
+
+  // Creation.
+
+  - create:SELF <-
+  ( + result:SELF
+
+    result := clone
+    result.make
+    result
+  )
+
+  - make <-
+  // Creation of an empty SET.
+  (
+    abstract
+  )
+  [ /* BSBS Old; */
+    +? {is_empty}
+  ]
+

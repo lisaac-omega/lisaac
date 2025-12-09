@@ -1,0 +1,9 @@
+Header
+  + name := SIMPLE_MAP V KEY K;
+  /*
+    Basic dictionaries (assymmetry value / key)
+    (class akin to DOUBLE_DICTIONARY)
+  */
+
+Inherit
+  + parent_dictionary:Expanded MAP V KEY K

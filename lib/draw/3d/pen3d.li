@@ -2,6 +2,8 @@ Header
   
   + name := PEN3D;
   
+  - include := `extern float texCoords[];`;
+  
   - external := `
   float texCoords[] = {
   0.0f, 0.0f,
@@ -12,7 +14,8 @@ Header
   0.0f, 0.0f,
   1.0f, 1.0f
   };  
-  `;    
+  `;
+  
 Public
   
 //  - shader_normal:SHADER_3D

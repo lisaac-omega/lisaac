@@ -1,14 +1,6 @@
 Header
-
   + name := IMAGE;
-  
-  - external := `
-  //#include <emmintrin.h>
-  //#include <intrin.h> // __cpuid
-  
-  //#include <arm_neon.h> // ARM
-  `;
-  
+    
 Inherit
   
   - parent_clone:CLONE := CLONE

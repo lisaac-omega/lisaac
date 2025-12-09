@@ -19,6 +19,7 @@ Public
   - export:IMG
   - import:IMG
   - type_c:IMG
+  - include_c:IMG
   - extern_c:IMG
   - lip:IMG
   - default:IMG
@@ -91,6 +92,7 @@ Public
     .case "import"    then { import    := IMG.load v asset TRUE; }
     .case "type_c"    then { type_c    := IMG.load v asset TRUE; }
     .case "lip"       then { lip       := IMG.load v asset TRUE; }
+    .case "include_c" then { include_c := IMG.load v asset TRUE; }
     .case "extern_c"  then { extern_c  := IMG.load v asset TRUE; }
     .case "default"   then { default   := IMG.load v asset TRUE; }
     .case "inherit"   then { inherit   := IMG.load v asset TRUE; }

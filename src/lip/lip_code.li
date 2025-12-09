@@ -12,14 +12,17 @@ Public
 
   - list_method:ARRAY LIP_SLOT_CODE := ARRAY LIP_SLOT_CODE .create_with_capacity 32
 
-  - list_data:HMAP LIP_SLOT_DATA KEY STRING_ALIAS :=
-  HMAP LIP_SLOT_DATA KEY STRING_ALIAS.create
+  - list_data:HMAP LIP_SLOT_DATA KEY STRING_ALIAS := new HMAP LIP_SLOT_DATA KEY STRING_ALIAS
 
-  - stack:ARRAY LIP_SLOT_DATA := ARRAY LIP_SLOT_DATA .create_with_capacity 8
+  - stack:ARRAY LIP_SLOT_DATA := ARRAY LIP_SLOT_DATA .create_with_capacity 8  
 
   - get_data n:STRING_ALIAS :LIP_SLOT_DATA <-
-  (
-    list_data.fast_reference_at n
+  ( //+ found:BOOLEAN 
+    + result:LIP_SLOT_DATA
+    // DCDC LIZ ??
+    //(found, result) := list_data.search n
+    result := list_data.fast_reference_at n
+    result
   )
 
   - get_method n:STRING_ALIAS :LIP_SLOT_CODE <-

@@ -1,0 +1,44 @@
+Header
+  + name := MAIN;
+  /**/
+Public 
+  - main <-
+  ( + map: HMAP INTEGER KEY CHARACTER
+    + found:BOOLEAN; + key: CHARACTER
+    map := new HMAP INTEGER KEY CHARACTER
+    
+    (found,key) := map.search_value { v:INTEGER
+      v = 0
+    }
+    TEST.check (! found)
+    TEST.check (key = '\0')
+    map.at '1' put 1
+    (found,key) := map.search_value { v:INTEGER
+      v = 1
+    }
+    TEST.check (found)
+    TEST.check (key = '1')
+
+    map.at '2' add 2
+
+    map.at '3' add 3
+
+    map.at '5' add 5
+
+    (found,key) := map.search_value { v:INTEGER
+      v = 3
+    }
+    TEST.check (key = '3')
+    TEST.check (found)
+    (found,key) := map.search_value { v:INTEGER
+      v = 4 
+    }
+    TEST.check (!found)
+    TEST.check (key = '\0')
+    (found,key) := map.search_value { v:INTEGER
+      v = 5 
+    }
+    TEST.check (found)
+    TEST.check (key = '5')
+  )
+  

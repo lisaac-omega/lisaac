@@ -1,0 +1,26 @@
+Header
+  + name := MAIN;
+  /**/
+
+Public 
+  - main <-
+  ( + map: HMAP INTEGER KEY CHARACTER
+    + v: INTEGER
+    + b:BOOLEAN
+    map := new HMAP INTEGER KEY CHARACTER
+    TEST.check (! map.has '1')
+    map.at '1' put 1
+    TEST.check (map.has '1')
+    TEST.check ((map.at '1') = 1)
+    
+    TEST.check (! map.has '2')    
+    map.at '2' add 2
+    TEST.check ((map.at '2') = 2)
+    
+    (b,v) := map.search '1'
+    TEST.check b
+    TEST.check (v = 1)
+    (b,v) := map.search '3'
+    TEST.check (!b)
+    TEST.check (v = 0)
+  )

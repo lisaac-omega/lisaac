@@ -5,9 +5,7 @@ Header
    See examples in test/regex directory.
    See also the Unix grep manual (man regex).
   */
-  - external := `
-#include <regex.h>
-`;
+  - include := `#include <regex.h>`;
   
 Insert
   - parent_clone:CLONE := CLONE

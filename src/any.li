@@ -205,10 +205,12 @@ Public
   //
   // Output Buffer and service.
   //
-
+  
+  - core_count:INTEGER := 1
   - output_decl:STRING_BUFFER := STRING_BUFFER.create 60_000
   - output_glob:STRING_BUFFER := STRING_BUFFER.create 10_000
-  - output:STRING_BUFFER := STRING_BUFFER.create 4_000_000
+  - output:STRING_BUFFER
+  - output_list:Expanded ARRAY STRING_BUFFER
 
   - title txt:STRING_ALIAS in buf:STRING_BUFFER <-
   (

@@ -4,7 +4,7 @@ Header
   
   /*Basic low-level FILE_SYSTEM calls.*/
 
-  - external := `
+  - include := `
 #undef  __wur
 #define __wur
 #include <unistd.h>

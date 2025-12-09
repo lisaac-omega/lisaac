@@ -1786,6 +1786,25 @@ Public
         } else {
           object.set_import_list mycast
         }
+      }.elseif {read_word "include"} then {
+        //
+        // Read `include' slot.
+        //
+        
+        // - "include" ':=' `<code_c>`
+        
+        (read_word ":=").if_false {
+          warning_error (current_position,"Added ':='.")
+        }
+        read_space_nl
+        (read_external).if_false {
+          syntax_error (current_position,"Incorrect external.")
+        }
+        output_decl.append "/* "
+        output_decl.append (object.name)
+        output_decl.append " */\n"
+        output_decl.append last_string
+        output_decl.add_last '\n'
       }.elseif {read_word "external"} then {
         //
         // Read `external' slot.
@@ -1800,11 +1819,11 @@ Public
         (read_external).if_false {
           syntax_error (current_position,"Incorrect external.")
         }
-        output_decl.append "/* "
-        output_decl.append (object.name)
-        output_decl.append " */\n"
-        output_decl.append last_string
-        output_decl.add_last '\n'
+        output_glob.append "/* "
+        output_glob.append (object.name)
+        output_glob.append " */\n"
+        output_glob.append last_string
+        output_glob.add_last '\n'
       }.elseif {read_word "default"} then {
         //
         // Read `default' slot.

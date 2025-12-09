@@ -440,7 +440,7 @@ Public
   //
 
   - genere buf:STRING_BUFFER <-
-  (
+  (    
     type.genere_declaration buf
     buf.add_last ' '
     type.genere_star_declaration buf

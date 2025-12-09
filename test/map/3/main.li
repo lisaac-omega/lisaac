@@ -1,0 +1,21 @@
+Header
+  + name := MAIN;
+  /**/
+
+Public 
+  - main <-
+  ( + map: HMAP INTEGER KEY CHARACTER
+    map := new HMAP INTEGER KEY CHARACTER
+    map.at '1' put 1
+    map.at '2' add 2
+    map.foreach_key { k:CHARACTER
+      OUT # "key:" # k # '\n' 
+    }
+    map.foreach_value { v:INTEGER
+      OUT # "value:" # v # '\n' 
+    }
+    map.foreach { (k:CHARACTER, v:INTEGER)
+      OUT # "key:" # k # " value:" # v # '\n' 
+    }
+  )
+  

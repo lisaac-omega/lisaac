@@ -182,8 +182,9 @@ Public
   )
 
   - genere <-
-  (
-    (profil_list.lower).to (profil_list.upper) do { j:INTEGER
+  ( 
+    (profil_list.lower).to (profil_list.upper) do { j:INTEGER      
+      output_list.foreach { s:STRING_BUFFER; (s.upper < output.upper).if { output := s } }        
       profil_list.at j.genere
     }
   )

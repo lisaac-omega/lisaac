@@ -1,7 +1,7 @@
 Header
   + name := MAIN;
   
-  -external:= `void init_string_alias(){};`;
+  //-external:= `void init_string_alias(){};`;
   
 Insert
   - parent_print:PRINT := PRINT

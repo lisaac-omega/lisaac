@@ -1,10 +1,10 @@
 Header
   + name := WEBCAM;
   
-  - external := `
-#include <linux/videodev2.h>
-struct v4l2_buffer bf;
-`;
+  - include := `#include <linux/videodev2.h>
+extern struct v4l2_buffer bf;`;
+  
+  - external := `struct v4l2_buffer bf;`;
   
 Inherit
   - parent_clone:CLONE := CLONE

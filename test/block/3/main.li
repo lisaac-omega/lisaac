@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+  /**/
+Public
+  
+  - meth b:{STRING;} <-
+  (
+    "1\n" print
+    b.value("2\n")
+    "3\n" print
+  )
+  
+  - main <-
+  (
+    meth {(s:STRING); s.print }   
+  )

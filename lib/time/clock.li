@@ -2,7 +2,7 @@ Header
 
   + name    := CLOCK;
 
-  - external := `#include <time.h>
+  - include := `#include <time.h>
   #include <unistd.h>`;
 
 Insert

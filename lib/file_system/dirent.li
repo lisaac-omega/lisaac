@@ -3,13 +3,14 @@ Header
 
   /*Abstract Entry.*/
   
-  - external := `#include <time.h>`;
+  - include := `#include <time.h>`;
   
 Insert
   - parent_clone:CLONE := CLONE
   
 DIRENT
-  - dico:HMAP DIRENT KEY STRING_ALIAS := HMAP DIRENT KEY STRING_ALIAS.create
+  
+  - dico:HMAP DIRENT KEY STRING_ALIAS := HMAP DIRENT KEY STRING_ALIAS.new
   
   + key:STRING_ALIAS
   

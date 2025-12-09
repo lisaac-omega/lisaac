@@ -18,6 +18,7 @@ Public
     result
   )
   
+  - output_ext:STRING_BUFFER := STRING_BUFFER.create 256
   - output_init:STRING_BUFFER := STRING_BUFFER.create 256
 
   - output_count:INTEGER
@@ -81,10 +82,10 @@ Public
       idx := output_count
 
       cur := output_str.count - 1
-      output_str.append "__"
-      output_str.append (type_string_alias.intern_name)
-      output_str.append " __string_"
-      idx.append_in output_str
+      output_str # "__" # type_string_alias.intern_name # " __string_" # idx
+      (output_list.count > 1).if {
+        output_ext # "extern __" # type_string_alias.intern_name # " __string_" # idx # ";\n"
+      }
       output_str.add_last '='
       ((static_type.is_late_binding) || {is_hashcode}).if {
         output_str.add_last '{'

@@ -1,0 +1,5 @@
+--SEMANTIC---------
+Cannot resolve type for type parameter Generic:F
+Line 19 column 22 in MSG_GENERIC(.../test/compiler/False/msg_generic.li):
+  - est_premier (n:ℤ) : BOOLEAN <-
+                      ^

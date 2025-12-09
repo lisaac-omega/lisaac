@@ -315,8 +315,11 @@ Public
         (read_c ';').if { col (LOOK.symbol) sub 1; }
         skip_sp; rd_rem_cpp
       }
-      (((c := at pos_i).is_upper) || {c = '+'} || {c = '-'}).if {
-        {(c := at (pos_i-1)) != '\n'}.while_do { pos_i := pos_i - 1 }
+      (
+        (((c := at pos_i).is_upper) && {at (pos_i-1) = '\n'}) || 
+        {((c = '+') || {c = '-'})   && {at (pos_i-3) = '\n'}}
+      ).if {
+        {(c := at (pos_i-1)) != '\n'}.while_do { pos_i := pos_i - 1 }        
       }
       end_mark := pos_i.pt - pt_b.pt
       
@@ -482,9 +485,10 @@ Private
         i := i + 1
       }
       /*
-      ((name.has_suffix "tst_child.li") && {section.is_parent}).if {
-        "Slot ".print; name_id.print; " ".print; i.println
-      };*/
+      (name.has_suffix "lip_code.li").if {
+        "Slot ".print; name_id.println;
+      };
+      */  
       proto.slot.at i add Self
     }
   )

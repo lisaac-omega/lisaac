@@ -2,7 +2,7 @@ Header
   + name := BUILD_LISAAC;
   /*    Install and configure Lisaac Ω. */
 
-  - external := `#include <unistd.h>`;
+  - include := `#include <unistd.h>`;
 Insert
   - parent_mini_bash:MINI_BASH := MINI_BASH
 

@@ -1,0 +1,75 @@
+Header
+  + name := MAIN;
+  /**/
+
+Public 
+  - main <-
+  ( + map: HMAP INTEGER KEY CHARACTER
+    + found:BOOLEAN
+    + key: CHARACTER
+    + value: INTEGER
+    map := new HMAP INTEGER KEY CHARACTER
+    
+    (found,key,value) := map.search_key { k:CHARACTER
+      k = '0'
+    } value { v:INTEGER
+      v = 0
+    }
+    TEST.check (! found)
+    TEST.check (key = '\0')
+    TEST.check (value = 0)
+
+    map.at '1' put 1
+    
+    (found,key,value) := map.search_key { k:CHARACTER
+      k = '1'
+    } value { v:INTEGER
+      v = 1
+    }
+    TEST.check (found)
+    TEST.check (key = '1')
+    TEST.check (value = 1)
+    
+    (found,key,value) := map.search_key { k:CHARACTER
+      k = '2'
+    } value { v:INTEGER
+      v = 1
+    }
+    TEST.check (! found)
+    TEST.check (key = '\0')
+    TEST.check (value = 0)
+    
+    map.at '2' add 2
+    
+    (found,key,value) := map.search_key { k:CHARACTER
+      k = '2'
+    } value { v:INTEGER
+      v = 1
+    }
+    TEST.check (! found)
+    TEST.check (key = '\0')
+    TEST.check (value = 0)
+    
+    (found,key,value) := map.search_key { k:CHARACTER
+      k = '2'
+    } value { v:INTEGER
+      v = 2
+    }
+    TEST.check found
+    TEST.check (key = '2')
+    TEST.check (value = 2)
+    
+    map.at '3' add 3
+
+    map.at '5' add 5
+
+    (found,key,value) := map.search_key { k:CHARACTER
+      k = '5'
+    } value { v:INTEGER
+      v = 5
+    }
+    TEST.check found
+    TEST.check (key = '5')
+    TEST.check (value = 5)  
+  )
+  

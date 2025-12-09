@@ -11,7 +11,7 @@ Header
     };
   );
   
-  - external := `  
+  - include := `  
   /****************** Play wav *********************/
 #ifdef _WIN32
     #include <windows.h>
@@ -24,7 +24,10 @@ Header
     #include <unistd.h>
     #include <stdio.h>
 #endif
+void play_wav(const char *filename);
+`;
 
+  - external := `
 void play_wav(const char *filename) {
 #ifdef _WIN32
     // Windows : WAV uniquement

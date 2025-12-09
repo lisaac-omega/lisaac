@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+  /**/
+Public
+  
+  - meth b:{} <-
+  (
+    "1\n" print
+    b.value
+    "3\n" print
+  )
+  
+  - main <-
+  (
+    meth { "2\n" print }  
+  )

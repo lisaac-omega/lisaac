@@ -9,8 +9,13 @@ Header
   
   - default := `0`:DATE;
   
-  - external := `
+  - include := `
 #include <time.h>
+extern struct tm*tm_info;
+extern struct tm tm_glob;  
+`;  
+  
+  - external := `
 struct tm*tm_info;
 struct tm tm_glob;
 `;

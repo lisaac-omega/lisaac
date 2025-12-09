@@ -6,7 +6,7 @@ Header
   - type    := `uint64_t`;
   - default := (0.to_raw_uinteger_64);
   - export  := INTEGER;
-  - external := `#include <stdint.h>`;
+  - include := `#include <stdint.h>`;
 
 Insert
 

@@ -2,16 +2,22 @@ Header
   
   + name := IMG_JPG;
   
+  - include := `
+  extern unsigned int bmask[];
+  extern int const jbias[];
+  extern unsigned char jpeg_dezigzag[];
+  `
+  
   - external := `
   // (1 << n) - 1 // BSBS: J'ai des doutes sur l'utilité d'un tel tableau !!!
-  static unsigned int bmask[17]={0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535};
+  unsigned int bmask[17]={0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535};
   
   // bias[n] = (-1<<n) + 1 // BSBS: Idem...
-  static int const jbias[16] = {0,-1,-3,-7,-15,-31,-63,-127,-255,-511,-1023,-2047,-4095,-8191,-16383,-32767};
+  int const jbias[16] = {0,-1,-3,-7,-15,-31,-63,-127,-255,-511,-1023,-2047,-4095,-8191,-16383,-32767};
   
   // given a value that's at position X in the zigzag stream,
   // where does it appear in the 8x8 matrix coded as row-major?
-  static unsigned char jpeg_dezigzag[64+15] =
+  unsigned char jpeg_dezigzag[64+15] =
   {
   0,  1,  8, 16,  9,  2,  3, 10,
   17, 24, 32, 25, 18, 11,  4,  5,

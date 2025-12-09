@@ -1,0 +1,9 @@
+Header
+  + name := MAIN;
+  /**/
+
+Public 
+  - main <-
+  (
+    TEST.check (' ' = 32)
+  )

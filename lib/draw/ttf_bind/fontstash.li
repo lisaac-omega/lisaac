@@ -2,9 +2,9 @@ Header
   
   + name := FONTSTASH;
   
+  - include := `extern unsigned char utf8d[];`;
+  
   - external := `
-//void exit(long c) { exit(c); };
-
 unsigned char utf8d[] = {
   // The first part of the table maps bytes to character classes that
   // to reduce the size of the transition table and create bitmasks.

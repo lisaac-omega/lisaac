@@ -35,7 +35,8 @@ Header
       execute_fail (lisaac+"misc/new_assets.sh "+lisaac+" "+input_file);
     };
   );
-  - external := `
+  
+  - include := `
 #if defined(__ANDROID__)
 #include <android/paper.h>
 #else
@@ -71,18 +72,31 @@ Header
 
 #include <GLFW/glfw3.h>
 
-void errorcb(int error, const char* desc)
-{ printf("GLFW error %d: %s\n", error, desc); }
+void errorcb(int error, const char* desc);
 
 void new_key(int64_t,int64_t,int64_t,int64_t);
 //int refresh_callback(void *);
 //void scroll_callback(void *,float,float);
 
 void on_window_focus(void*, char);
-static void on_window_focus_c(GLFWwindow* w, int focused)
+void on_window_focus_c(GLFWwindow* w, int focused);
+void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods);
+#endif
+
+extern unsigned long col_icon[];  
+  `;
+  
+  - external := `
+#if defined(__ANDROID__)
+#else  
+  
+void errorcb(int error, const char* desc)
+{ printf("GLFW error %d: %s\n", error, desc); }
+
+void on_window_focus_c(GLFWwindow* w, int focused)
 { on_window_focus(w,focused == GLFW_TRUE); }
 
-static void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods)
+void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
   //printf("C: Key:%d %c, Scancode:%d, Action:%d, Mods:%d %d\n",key,key,scancode,action,mods,
   //glfwGetKey(window,key));
