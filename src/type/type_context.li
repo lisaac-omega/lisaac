@@ -22,7 +22,7 @@ Public
 
   - make_context <-
   (
-    dico_type.fast_put Self to name
+    dico_type.at name put Self
     //slot_run := ARRAY SLOT .create_with_capacity 1; // BSBS: Plus utile !
     default := TYPE_FULL.create Self with (TYPE_FULL.expanded_bit)
   )

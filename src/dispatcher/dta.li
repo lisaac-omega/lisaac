@@ -16,7 +16,7 @@ Public
 
   + self_arg:EXPR
 
-  + context:LOCAL
+  //+ context:LOCAL
   
   //
   // Service
@@ -43,9 +43,8 @@ NODE_TYPE, DTA
   ( + result:LIST
 
     result := LIST.create (e.position)
-    (t = TYPE_NULL).if {
-      TYPE_NULL.product_error position in result with context
-      ? {result.count != 0}
+    (t = TYPE_NULL).if {      
+      result.add_last CALL_NULL      
     } else {
       lookup t with e in result
     }

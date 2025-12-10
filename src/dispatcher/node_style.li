@@ -204,13 +204,6 @@ Private
       type := new_larg.first.static_type
       ? {type != NULL}
       //
-      (data.context != NULL).if {
-        // BSBS: Poser le PUSH avant le NODE
-	result.add_last (
-	  PUSH.create position context (data.context) first FALSE
-        )
-      }
-      //
       rd ?= new_larg.first
       ((rd != NULL) && {rd.variable.name = "Self"}).if {
         // Fix Self type for resend call (else it's fixed by NODE_TYPE)

@@ -40,15 +40,13 @@ Public
   (
     position := p
     string   := n
-    dico_string.put len to n
+    dico_string.at n put len
     static_type := type_string_alias.default
   )
 
   - my_copy:SELF <- clone
-
-  //
+  
   // Comparaison.
-  //
 
   - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
   ( + p:STRING_CST
@@ -118,8 +116,8 @@ Public
       ((static_type.is_late_binding) || {is_hashcode}).if {
         (is_hashcode).if {
           (output_str.last != ',').if { output_str.add_last ','; }
-          string_tmp.copy string
-          string_tmp.to_without_escape
+          string_tmp.copy string          
+          string_tmp.unescape_c
           string_tmp.hash_code.append_in output_str
         }
         output_str.add_last '}'
@@ -129,6 +127,7 @@ Public
       dico_string.fast_put (-idx) to string
       //
       (PROFIL_SLOT.profil_add_alias != NULL).if {
+        /*
         (PROFIL_SLOT.profil_hash_code_alias = NULL).if {
           semantic_error (position,"Method slot `STRING_ALIAS.hash_code_intern' not found.");
         }
@@ -159,20 +158,15 @@ Public
         output_init.append "(&__string_"
         idx.append_in output_init
         output_init.append ");\n  "
-        
+        */
         // Append in Aliaser:
-        output_init.append (PROFIL_SLOT.profil_add_alias.name)
-        output_init.append "(&__string_"
-        idx.append_in output_init
-        output_init.append ");\n"
+        output_init # "  " # PROFIL_SLOT.profil_add_alias.name # "(&__string_" # idx # ");\n"
       }
     } else {
       idx := -count
     }
     //
-    output.append "(&__string_"
-    idx.append_in output
-    output.add_last ')'
+    output # "(&__string_" # idx # ')'
   )
   
   //

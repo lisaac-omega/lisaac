@@ -24,7 +24,7 @@ Public
     index := index_max
     index_max := index_max + 1
     
-    dico_type.fast_put Self to name
+    dico_type.at name put Self
     slot_run := ARRAY SLOT.create_with_capacity 1; // BSBS: Plus utile !
     default := TYPE_FULL.create Self with 0
   )
@@ -38,16 +38,6 @@ Public
   //
 
   //- bug:INTEGER
-
-  - product_error p:POSITION in lst:LIST with ctext:LOCAL <-
-  (
-    (debug_level_option != 0).if {
-      lst.add_last (
-	PUSH.create p context ctext first FALSE
-      )
-    }
-    lst.add_last CALL_NULL
-  )
 
 Public
 

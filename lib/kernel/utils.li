@@ -25,14 +25,19 @@ Public
     
   - is_ansi:BOOLEAN := SYSTEM.is_ansi
   
+  - print_runtime_stack_after stp:INTEGER <- `11`
+  
+  /*
   - print_runtime_stack_after stp:INTEGER <-
-  (
+  ( + stop:STRING_BUFFER
     (debug_level != 0).if {
       `lisaac_stack_print(@stp)`
+      stop.add_last 'b' // En attendant un external !
     }
   )
+  */
   
-  - print_runtime_stack <- print_runtime_stack_after 3
+  - print_runtime_stack <- print_runtime_stack_after 2
   
   - wait_all_the_time <-
   (
@@ -71,7 +76,7 @@ Public
   
   - crash_with_message msg:STRING :FALSE <-
   (
-    crash_with_message msg after 5
+    crash_with_message msg after 3
   )
   
   - exit c:INTEGER <- SYSTEM.exit c
@@ -83,19 +88,19 @@ Public
   
   - abstract:SELF <-
   (
-    crash_with_message ("Call of abstract in " + type_name + ".")
+    crash_with_message ("Call of abstract in " + type_name + ".") after 3
     SELF
   )
   
   - crash:SELF <-
   (
-    crash_with_message "Crash system."
+    crash_with_message "Crash system." after 3
     SELF
   )
   
   - not_yet_implemented:SELF <-
   (
-    crash_with_message "Sorry, Some Feature is Not Yet Implemented." after 5
+    crash_with_message "Sorry, Some Feature is Not Yet Implemented." after 3
     SELF
   )
   
@@ -104,28 +109,28 @@ Public
   - contract typ:STRING boolean tst:BOOLEAN <-
   (
     ((debug_level >= 10) && {! tst}).if {
-      crash_with { OUT # typ # ".\n" } after 7
+      crash_with { OUT # typ # ".\n" } after 5
     }
   )
   
   - contract typ:STRING block_boolean tst:{BOOLEAN} <-
   (
     ((debug_level >= 10) && {! tst.value}).if {
-      crash_with { OUT # typ # ".\n" } after 7
+      crash_with { OUT # typ # ".\n" } after 5
     }
   )
   
   - contract typ:STRING abstract_string msg:STRING <-
   (
     ((debug_level >= 10) && {msg != NULL}).if {
-      crash_with { OUT # typ # ": " # msg # '\n' } after 7
+      crash_with { OUT # typ # ": " # msg # '\n' } after 5
     }
   )
   
   - contract typ:STRING block_abstract_string tst:{STRING} <-
   ( + msg:STRING
     ((debug_level >= 10) && {msg := tst.value; msg != NULL}).if {
-      crash_with { OUT # typ # ": " # msg # '\n' } after 7
+      crash_with { OUT # typ # ": " # msg # '\n' } after 5
     }
   )
   

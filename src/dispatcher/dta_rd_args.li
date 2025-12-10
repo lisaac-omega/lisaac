@@ -47,7 +47,7 @@ Public
   )
 
   - make p:POSITION call sl:SLOT with args:ARRAY EXPR intern flag:BOOLEAN <-
-  (         
+  ( + ctxt:LOCAL
     slot := sl
     position      := p
     argument_list := args
@@ -55,10 +55,11 @@ Public
     is_intern     := flag
     ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
       (profil_current = NULL).if {
-        context := context_main
+        ctxt := context_main
       } else {
-        context := profil_current.context
-      }
+        ctxt := profil_current.context
+      }      
+      list_current.add_last (PUSH.create position context ctxt first FALSE)
     }
     slot.check_argument_type args for Self
   )

@@ -73,7 +73,8 @@ Public
 
   - add_call p:PROFIL <-
   ( + cnt:INTEGER
-    (set_call.fast_has p).if {
+  //(set_call.fast_has p).if {
+    if (set_call.has p) then {
       cnt := set_call.fast_at p
       cnt := cnt + 1
     } else {
@@ -233,7 +234,7 @@ Public
   - set_life <-
   (
     PROFIL_LIST.set_life Self
-    (mode_recursive).if {
+    (mode_recursive).if {      
       execute_recursive
     }
   )
@@ -409,6 +410,7 @@ Public
     (stat = -1).if {
       count_intern_call := count_intern_call + 1
       (count_intern_call = 1).if {
+        //"PROFIL:".print; name.println
         old_list_current   := list_current
         old_profil_current := profil_current
         //
@@ -484,6 +486,7 @@ Public
     ).if {
       argument_list.at 0 put NULL
     }
+    PUSH.end_function
   )
 
   //
@@ -852,7 +855,7 @@ Private
 
     new_code := LIST.create (code.position)
     (debug_level_option != 0).if {
-      push ?= code.first
+      push ?= code.first      
       new_code.add_last (push.my_copy)
       push.set_first FALSE
     }

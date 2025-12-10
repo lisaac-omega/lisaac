@@ -207,7 +207,7 @@ Public
     */
     //
     (debug_level_option != 0).if {
-      (profil_current = NULL).if { crash_with_message "NODE" }
+      //(profil_current = NULL).if { crash_with_message "NODE" }
       list_current.add_last (
 	PUSH.create p context (profil_current.context) first FALSE
       )

@@ -1,0 +1,16 @@
+Header
+  + name := MAIN;
+  /**/
+Public
+ 
+  - meth b:{INTEGER; INTEGER} <-
+  ( + n:INTEGER
+    n := b.value 1
+    n := b.value n
+    n := b.value n
+  )
+  
+  - main <-
+  (
+    meth {(v:INTEGER); v.println ; v + 1 }
+  )

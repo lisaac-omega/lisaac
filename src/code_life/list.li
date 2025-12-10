@@ -76,7 +76,23 @@ Public
   )
 
   - current_item:INSTR <- at index
-
+  
+  - next_item:INSTR <- // Used only PUSH BSBS: A virer !
+  ( + result:INSTR
+    + w:WRITE
+    + i:INTEGER
+    i := index + 1
+    {(i <= upper) && {result = NULL}} .while_do {
+      w ?= at i
+      ((w != NULL) && {w.quiet_generation}).if {
+        i := i + 1
+      } else {
+        result := at i
+      }
+    }
+    result
+  )
+  
   - last:INSTR <- at upper
 
   - add_first i:INSTR <-
@@ -227,10 +243,15 @@ Public
     POSITION.push_context Self
         
     execute_case
-    //                         
+    //
+    /*
+    (Self = SLOT_DATA.init_list).if {
+      OUT # '(' # pass_count # ")\n"
+    }
+    */
     (
       (list_current != NULL) && 
-      {Self != SLOT_DATA.init_list} /*Pas utile */ && 
+      {(Self != SLOT_DATA.init_list) || {pass_count > 1}} && 
       {Self != PROTOTYPE.external_list}
     ).if {
       // Merge the child list in the parent list
@@ -257,7 +278,7 @@ Public
   - execute_case <-
   ( + new_expr:INSTR
     + old_list_current:LIST
-
+    
     //
     seq_list.add_last Self
     seq_inline := seq_inline + 1

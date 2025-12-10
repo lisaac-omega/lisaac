@@ -25,7 +25,7 @@ ITM_TYPE_SIMPLE
   - make n:STRING_ALIAS <-
   (
     name := n
-    dico.fast_put Self to n
+    dico.at n put Self
   )
 
 Public

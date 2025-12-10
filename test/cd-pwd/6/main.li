@@ -1,8 +1,5 @@
 Header
   + name := MAIN;
-  
-  //- external := `void die_with_code(long c){exit(c);};`;
-  
 Inherit
   - parent_utils:UTILS := UTILS
   

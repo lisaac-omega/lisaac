@@ -98,8 +98,9 @@ Public
 	exp2 := profil_slot.argument_list.at 1.read position
 	result := ITEM.create position base exp1 index exp2
       }
-      .when 11 then { // OLD debug_level -> INTEGER.
-	not_yet_implemented
+      .when 11 then { // lisaac_stack_print(step:INTEGER)        
+        exp1 := profil_slot.argument_list.at 1.read position
+        result := PRINT_STACK.new.make exp1
       }
       .when 12 then { // object_size -> INTEGER.
         result := SIZE_OF.create position receiver (profil_slot.argument_list.first.type)

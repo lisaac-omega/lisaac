@@ -283,6 +283,7 @@ Public
   )
   
   - Self:SELF '#' e:E :SELF <- ( e.append_in Self; Self)
+  
   - Self:SELF '|#' e:E :SELF <- ( clear; e.append_in Self; Self)
   
   - prepend other:STRING from b:INTEGER to e:INTEGER<-
@@ -824,34 +825,45 @@ Public
     upper := new_upper
   )
   
-  - to_without_escape <-
-  ( + i1,i2,new_upper:INTEGER
+  - unescape_c <-
+  ( + p,q,i,val,up:INTEGER
     + c:CHARACTER
-    new_upper := upper
-    {i2 <= upper}.while_do { 
-      c := item i2
-      (c = '\\').if {
-        i2 := i2 + 1
-        (item i2)
-        .when 'a'  then { c := '\a'; }
-        .when 'b'  then { c := '\b'; }
-        .when 'f'  then { c := '\f'; }
-        .when 'n'  then { c := '\n'; }
-        .when 'r'  then { c := '\r'; }
-        .when 't'  then { c := '\t'; }
-        .when 'v'  then { c := '\v'; }
-        .when '\\' then { c := '\\'; }
-        .when '?'  then { c := '\?'; }
-        .when '\'' then { c := '\''; }
-        .when '\"' then { c := '\"'; }
-        .when '0'  then { c := '\0'; }
-        new_upper := new_upper - 1
+    
+    {p <= upper}.while_do {
+      ((c := at p) = '\\').if {
+        p := p + 1;
+        c := at p
+        i := "ntrabfv\\\'\"?".last_index_of c
+        (i != -1).if {
+          at q put ("\n\t\r\a\b\f\v\\\'\"\?".at i)
+          p := p + 1
+        }.elseif {c.in_range '0' to '7'} then {
+          // Seq. octal : \ooo (3 digits)
+          val := 0; up := (p+2).min upper
+          {
+            val := (val << 3) | (c -! '0')
+            p := p + 1
+          }.do_while {(p <= up) && {(c := at p).in_range '0' to '7'}}
+          at q put (val.to_character)          
+        }.elseif {c = 'x'} then {
+          // Seq. hexa : \xhh (2 hexdigits)
+          p := p + 1; val := 0; up := (p+1).min upper
+          {(p <= up) && {(c := at p).is_hexadecimal_digit}}.while_do {
+            val := (val << 4) | c.hexadecimal_value
+            p := p + 1
+          }
+          at q put (val.to_character)        
+        } else { // Other (copy)
+          at q put c
+          p := p + 1;
+        }        
+      } else {
+        at q put c
+        p := p + 1;        
       }
-      at i1 put c
-      i1 := i1 + 1
-      i2 := i2 + 1
+      q := q + 1;
     }
-    upper := new_upper
+    upper := q - 1    
   )
   
   // Interfacing with C string :

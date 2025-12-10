@@ -71,6 +71,7 @@ Public
     + v1,v2:EXPR
     + em1,em2:EXPR_MULTIPLE
     + ext:EXPR_BINARY_CMP
+    
     (name = "__infix_equal").if {
       ext := EXPR_EQUAL
     }.elseif {name = "__infix_not_equal"} then {

@@ -33,14 +33,7 @@ Public
     slot        := sl
     self_arg    := arg
     result_expr := PROTOTYPE_CST.create (v.position) type (TYPE_VOID.default)
-    code        := v
-    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
-      (profil_current = NULL).if {
-        context := context_main
-      } else {
-        context := profil_current.context
-      }
-    }
+    code        := v    
   )
 
   //

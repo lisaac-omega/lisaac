@@ -44,7 +44,7 @@ Public
     position.line.append_in output
     output.add_last ' '
     output.append (position.prototype.name)
-    output.append "*/"
+    output # ' ' # (!is_rm) # " */"
   )
   
 

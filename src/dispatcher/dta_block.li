@@ -31,12 +31,7 @@ Public
 
   - make mod:TYPE_BLOCK with larg:ARRAY EXPR pow p:INTEGER <-
   [ -? {mod.position != 0}; ]
-  ( 
-    (profil_current = NULL).if {
-      context := context_main
-    } else {
-      context := profil_current.context
-    }
+  (    
     model         := mod
     position      := mod.position
     argument_list := larg
@@ -118,7 +113,7 @@ NODE_TYPE, DTA
 
     result := LIST.create (e.position)
     (t = TYPE_NULL).if {
-      TYPE_NULL.product_error (e.position) in result with context
+      result.add_last CALL_NULL      
     } else {
       t_block ?= t
 

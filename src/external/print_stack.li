@@ -1,0 +1,82 @@
+Header
+
+  + name        := PRINT_STACK;
+
+  /*Call `lisaac_stack_print(step)' */
+
+Inherit
+
+  + parent_expr:Expanded EXPR // Note: It's an INSTR, but pb with ITM_EXTERNAL
+
+Public
+
+  - static_type:TYPE_FULL <- TYPE_VOID.default
+
+  + step:EXPR
+  
+  - new:SELF <- clone
+  
+  - make e:EXPR :SELF <-
+  (
+    step := e
+    Self
+  )
+  
+  - my_copy:SELF <- SELF.new.make (step.my_copy)
+  
+  //
+  // Remove
+  //
+
+  - remove <- step.remove
+
+  //
+  // Execute
+  //
+   
+  - execute:INSTR <- execute_unlink
+
+  - execute_unlink:INSTR <-
+  ( + result:INSTR
+    (debug_level_option = 0).if {
+      result := step.execute_unlink
+    } else {
+      step := step.execute_link
+      PUSH.break
+      result := Self
+    }
+    result
+  )
+  
+  - execute_link:EXPR <- ( crash_with_message "PRINT_STACK.execute_link"; NULL)
+  
+  //
+  // Genere.
+  //
+
+  - genere <-
+  ( 
+    output # "lisaac_stack_print("
+    step.genere
+    output # ")"    
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:STRING_BUFFER <-
+  (
+    buffer # "Call `print_stack("
+    step.display buffer
+    buffer # ")'"
+  )
+
+
+
+
+
+
+
+
+

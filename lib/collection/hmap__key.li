@@ -69,7 +69,7 @@ Public
   // Is it empty?
   
   - has k:K :BOOLEAN <-
-  // REMPLACE fast_has. Is there a value currently associated with key `k'?
+  // Is there a value currently associated with key `k'?
   ( + idx:INTEGER
     + node:HMAP_NODE V KEY K
     idx := k.hash_code % capacity
@@ -103,7 +103,6 @@ Public
   - fast_at k:K :V <-
   ( + idx:INTEGER
     + node:HMAP_NODE V KEY K
-
     idx := k.hash_code % capacity
     node := buckets.at idx
     {node.key = k}.until_do {
@@ -140,8 +139,7 @@ Public
   // Modification:
   
   
-  - at k:K put v:V  <-
-  // REMPLACE fast_put
+  - at k:K put v:V  <- 
   // Change some existing entry or `add' the new one. If there is as yet no key `k' in the map, enter
   // it with item `v'. Otherwise overwrite the item associated with key `k'.
   ( + h, idx:INTEGER
@@ -157,13 +155,14 @@ Public
         increase_capacity
         idx := h % capacity
       }
-      node := new_node v to k next (buckets.at idx)
+      node := new_node v key k next (buckets.at idx)
       buckets.put node to idx
       count := count + 1
     } else {
       node.set_value v
     }
   )
+
   
   - search k:K : (BOOLEAN,V) <-
   ( + found:BOOLEAN 
@@ -182,6 +181,7 @@ Public
   )
   
   - search_key blk: {K; BOOLEAN} : (BOOLEAN,V) <-
+  // Sequential searching. May be slow.
   ( + found:BOOLEAN 
     + v:V
     + idx, c:INTEGER
@@ -206,6 +206,7 @@ Public
   )
   
   - search_value blk: {V; BOOLEAN} : (BOOLEAN,K) <-
+  // Sequential searching. May be slow.
   ( + found:BOOLEAN 
     + k:K
     + idx, c:INTEGER
@@ -230,6 +231,7 @@ Public
   )
   
   - search_key bk: {K; BOOLEAN} value bv: {V; BOOLEAN}  : (BOOLEAN,K,V) <-
+  // Sequential searching. May be slow.
   ( + found:BOOLEAN 
     + k:K
     + v:V
@@ -255,7 +257,7 @@ Public
   )
   
   - at k:K add v:V <-
-  // REMPLACE add__to. Assumes `k' is a new entry. Actually, this is equivalent to 
+  // Assumes `k' is a new entry. Actually, this is equivalent to 
   // call `at__put', but may run a little bit faster.
   [ ? {! has k} ]
   ( + idx:INTEGER
@@ -264,7 +266,7 @@ Public
       increase_capacity
     }
     idx := k.hash_code % capacity
-    node := new_node v to k next (buckets.at idx)
+    node := new_node v key k next (buckets.at idx)
     buckets.at idx put node
     count := count + 1
   )
@@ -305,64 +307,30 @@ Public
     buckets.set_all_with NULL until (capacity - 1)
   )
   [
-    +? {capacity = Old capacity}
+    ? {capacity = Old capacity}
   ]
 
   // To provide iterating facilities:
   
   - foreach blk:{(K,V);} <-
-  ( + idx, c:INTEGER
+  ( + idx:INTEGER
     + node:HMAP_NODE V KEY K
-    while { c < count } do {
+    while {idx < capacity} do {
       node := buckets.at idx
-      if (node != NULL) then {
-        blk.value (node.key,node.value) ; c := c + 1
-        while {(node := node.next) != NULL} do {
-          blk.value (node.key,node.value) ; c := c + 1
-        }
+      while {node != NULL} do {
+        blk.value (node.key,node.value)
+        node := node.next        
       }
       idx := idx + 1
     }
   )
   
-  - foreach_key blk:{K;} <-
-  ( + idx, c:INTEGER
-    + node:HMAP_NODE V KEY K
-    while { c < count } do {
-      node := buckets.at idx
-      if (node != NULL) then {
-        blk.value (node.key) ; c := c + 1
-        while {(node := node.next) != NULL} do {
-          blk.value (node.key) ; c := c + 1
-        }
-      }
-      idx := idx + 1
-    }
-  )
-  // DCDC BUG LIZ ??
-  - new_foreach_key blk:{K;} <- foreach {(k:K,v:V); blk.value k }  
+  - foreach_key blk:{K;} <- foreach {(k:K,v:V); blk.value k }  
   
-  
-  - foreach_value blk:{V;} <-
-  ( + idx, c:INTEGER
-    + node:HMAP_NODE V KEY K
-    while { c < count } do {
-      node := buckets.at idx
-      if (node != NULL) then {
-        blk.value (node.value) ; c := c + 1
-        while {(node := node.next) != NULL} do {
-          blk.value (node.value) ; c := c + 1
-        }
-      }
-      idx := idx + 1
-    }
-  )
-  
-  // DCDC BUG LIZ ??
-  - new_foreach_value blk:{V;} <- foreach {(k:K,v:V); blk.value v }
+  - foreach_value blk:{V;} <- foreach {(k:K,v:V); blk.value v }
   
   - at k:K :V <-
-  // REMPLACE fast_at 
+  // Very fast in -boost mode.
   [ ? {has k} ]
   ( + idx:INTEGER
     + node:HMAP_NODE V KEY K
@@ -420,8 +388,7 @@ Private
     ? { capacity > Old capacity }
   ]
 
-  - dispose_node node:HMAP_NODE V KEY K 
-  :HMAP_NODE V KEY K <-
+  - dispose_node node:HMAP_NODE V KEY K :HMAP_NODE V KEY K <-
   // Add `node' in the `free_nodes' list.
   [
     -? {node != NULL}
@@ -436,9 +403,8 @@ Private
     +? {Result = Old node.next}
   ]
 
-  - new_node v:V to k:K next nxt:HMAP_NODE V KEY K :HMAP_NODE V KEY K <-
+  - new_node v:V key k:K next nxt:HMAP_NODE V KEY K :HMAP_NODE V KEY K <- 
   (
-    //HMAP_NODE V KEY K.create v to k next nxt
     new HMAP_NODE V KEY K value v key k next nxt
   )
 
@@ -450,10 +416,9 @@ Public
   
   - create :SELF <- new SELF
   
-  - fast_has k:K :BOOLEAN <- has k
+  - virer_fast_has k:K :BOOLEAN <- has k
   
   - fast_put v:V to k:K <- at k put v
   
-  - put v:V to k:K <- at k put v
-  
+
   

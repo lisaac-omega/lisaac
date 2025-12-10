@@ -32,7 +32,10 @@ Public
   // Creation.
   //
   
-  - my_clone:SELF <- clone
+  - my_clone:SELF <-
+  (    
+    clone
+  )
   
   - make s:SLOT_CODE
   with (typ_self:TYPE_FULL,call_lst:ARRAY EXPR)

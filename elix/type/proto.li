@@ -79,7 +79,7 @@ Private
   - collect_local_chapter lst:ARRAY SLOT eye y:BOOLEAN access p:PROTO <-
   (
     slot.foreach { s:SLOT
-      ({s.section.access p} && {! set_op.fast_has s} && {! set_cl.fast_has (s.name_id)}).if {
+      if ({s.section.access p} && {! set_op.fast_has s} && {! set_cl.has (s.name_id)}) then {
         (y).if { lst.add_last s; } else { set_cl.add s to (s.name_id); }
       }
     }

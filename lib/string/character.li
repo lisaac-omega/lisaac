@@ -211,8 +211,8 @@ Public
 
   - hexadecimal_value:INTEGER <-
   // Gives the value of an hexadecimal digit.
+  [ ? {is_hexadecimal_digit} ]
   ( + result:INTEGER
-    ? {is_hexadecimal_digit}
     (code < 'A'.code).if {
       result := code - 48
     }.elseif {code<'a'.code} then {

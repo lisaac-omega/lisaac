@@ -126,7 +126,9 @@ Public
     profil_current := profil_slot := NULL
     list_current   := NULL
     POSITION.clean_context
+    
     list_main.execute
+    
     //
     current := profil_list.lower
     {current < life_limit}.while_do {

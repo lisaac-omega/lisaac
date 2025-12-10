@@ -14,19 +14,17 @@ Public
 
   - intern_name:STRING_ALIAS <- name
 
-  //
   // Creation.
-  //
+  
 
   - make_void <-
   (
-    dico_type.fast_put Self to name
+    dico_type.at name put Self
     default := TYPE_FULL.create Self with 0
   )
 
-  //
   // Import / Export
-  //
+  
 
   - is_export_to t:TYPE_FULL :BOOLEAN <- FALSE
 

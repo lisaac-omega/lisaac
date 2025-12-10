@@ -21,10 +21,12 @@ Public
 
   - main <-
   ( + x:INTEGER
+    
     if ((COMMAND_ARGS upper != 1) || {! COMMAND_ARGS at 1.is_integer}) then {
       "usage: ./factorial_example <n>" println
       SYSTEM exit 1
     }
+      
     x := COMMAND_ARGS first .to_integer
     
     if ( x <= 19 ) then {
@@ -36,9 +38,9 @@ Public
     } else {
       // The factorial code do exist in Lisaac Ω library:
       OUT # x # "! = " # (x.to_z !) # '\n'
-    }
+    }      
   )
-  
+    
   - factorial n:INTEGER non_terminal :INTEGER <-
   ( + result:INTEGER
     if (n <= 1) then {

@@ -229,7 +229,7 @@ Public
 
   - make f:STRING_ALIAS name n:STRING_ALIAS generic_count c:INTEGER <-
   [
-    -? {! prototype_dico.fast_has f}
+    -? {! prototype_dico.has f}
     -? {n != NULL}
   ]
   ( + file:POINTER
@@ -284,8 +284,7 @@ Public
   - depend <-
   ( + slot_main:SLOT
     + self_main:EXPR
-    + base:NODE
-    + pass_count_depend:INTEGER
+    + base:NODE    
     + pass_recur:BOOLEAN
     + i:INSTR
     + cmd:STRING_ALIAS
@@ -384,7 +383,8 @@ Public
     (is_quiet).if_false {
       STDERR.put_string "Executing pass: "
     }
-    pass_count_depend := pass_count
+    //pass_count_depend := pass_count
+    pass_count := 0
     exec := {
       {
         modify_count := 0
@@ -413,7 +413,9 @@ Public
         STDERR.put_string "*"
       }
       pass_count := pass_count + 1
+      
       PROFIL_LIST.execute_pass_recursive
+      
       (is_verbose).if {
         "==========================================================================\n\
         \=                                NEW PASS                                =\n\
@@ -432,7 +434,7 @@ Public
     }.do_while {pass_recur}
     (is_quiet).if_false {
       STDERR.put_string " ("
-      STDERR.put_integer (pass_count - pass_count_depend)
+      STDERR.put_integer pass_count 
       STDERR.put_string ")\n"
     }
     //

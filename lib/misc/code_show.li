@@ -21,7 +21,7 @@ Private
   )
   
   - directory dir:STRING_ALIAS main m:STRING_ALIAS run r:BOOLEAN elix e:BOOLEAN <-
-  ( + cmd_lisaac, cmd_elix, cmd_run:STRING
+  ( + cmd_lisaac, cmd_elix, cmd_run, cmd_rm:STRING
     if (run_dir = NULL) then {
       FILE_UTILS.working_directory_in working_directory
       run_dir := working_directory.to_string_alias  
@@ -33,19 +33,17 @@ Private
       b.extend_unless '/'
       cd b
       cmd_lisaac := "lisaac " + m + " -boost -q"
-    //cmd_elix := "elix " + b + m + ".li 1> /dev/null 2> /dev/null"
       cmd_elix := "elix " + b + m + ".li"
       cmd_run := "./" + m
+      cmd_rm := "rm -f " + m + " " + m + "*.c " + m + "*.h " + m + "*.o"
       if (e && {r}) then {
         run cmd_elix background
-        run cmd_lisaac
-        run cmd_run
+        run cmd_lisaac ; run cmd_run ; run cmd_rm
       }.elseif {e && {! r}} then {
         run cmd_lisaac
         run cmd_elix
       }.elseif {(!e) && {r}} then {
-        run cmd_lisaac
-        run cmd_run
+        run cmd_lisaac ; run cmd_run ; run cmd_rm
       }.elseif {(!e) && {!r}} then {
         run cmd_lisaac        
       } else {

@@ -36,13 +36,6 @@ Public
     self_arg    := arg
     result_expr := v.my_copy
     value       := v
-    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
-      (profil_current = NULL).if {
-        context := context_main
-      } else {
-        context := profil_current.context
-      }
-    }
   )
 
   //
@@ -69,17 +62,19 @@ Public
 
 NODE_TYPE, DTA
 
+  /*
   - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
   ( + result:LIST
 
     result := LIST.create (e.position)
     (t = TYPE_NULL).if {
-      TYPE_NULL.product_error position in result with context
+      crash      
     } else {
       lookup t with e in result
     }
     result
   )
+  */  
 
   - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
   ( + result:BOOLEAN

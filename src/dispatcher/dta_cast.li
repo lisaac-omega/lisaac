@@ -30,14 +30,7 @@ Public
   - make p:POSITION type t:TYPE_FULL <-
   (
     position := p
-    result_expr := t.get_temporary_expr p
-    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
-      (profil_current = NULL).if {
-        context := context_main
-      } else {
-        context := profil_current.context
-      }
-    }
+    result_expr := t.get_temporary_expr p    
   )
 
   //

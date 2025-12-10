@@ -20,6 +20,9 @@ Public
   + context:LOCAL
 
   + is_first:BOOLEAN
+  
+  + is_rm:BOOLEAN
+  - set_rm <- ( is_rm := TRUE )
 
   - set_first f:BOOLEAN <-
   (
@@ -76,28 +79,69 @@ Public
   (
     // Nothing.
   )
-
+  
+  - stair:Expanded ARRAY PUSH
+  
+  - break <-
+  (
+    stair.clear
+  )
+  
+  - end_function <-
+  (
+    {! stair.is_empty}.while_do { stair.pop.set_rm }
+  )
+  
+  
   - execute:INSTR <-
   ( + result:INSTR
-    + other:SELF
-
-    result := Self
-    (list_current.index < list_current.upper).if {
-      other ?= list_current.at (list_current.index + 1)
-      (other != NULL).if {
-	(other.context = context).if {
-	  result := NULL
-	  (is_first).if {
-	    other.set_first TRUE
-	  }
-	}.elseif {(is_first) && {! other.is_first}} then {
-	  result := NULL
-	}
+    + p:PUSH
+    + i:INTEGER
+    (pass_count <= 1).if {
+      result := Self
+    } else {
+      (! is_rm).if {
+        (! is_first).if {
+          {(i <= stair.upper) && {stair.at i.context != context}}.while_do { i := i + 1 }
+          ((i <= stair.upper) && {(p := stair.at i).is_first}).if {
+            {stair.upper != i}.while_do { stair.pop.set_rm }
+          }
+        } else {
+          p ?= list_current.next_item
+          ((p != NULL) && {p.context = context}).if {
+            position := p.position
+            p.set_rm
+          }
+        }
+        stair.add_last Self
+        result := Self
       }
     }
     result
   )
+  
+  
+  /*
+  - execute:INSTR <-
+  ( + result:INSTR
+    + other:PUSH
 
+    result := Self
+    other ?= list_current.next_item
+    (other != NULL).if {
+      (other.context = context).if {
+        result := NULL
+        (is_first).if {
+          other.set_first TRUE
+        }
+      }.elseif {(is_first) && {! other.is_first}} then {
+        result := NULL
+      }
+    }
+    result
+  )
+  */
+  
   //
   // Genere
   //

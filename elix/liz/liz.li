@@ -96,7 +96,7 @@ Private
     }.elseif {read_word "Pop"} then {
       result := TPOP.new.init_xy read_coord
     }.elseif {read_str '\"'} then {
-      (vars.fast_has last_str).if {
+      if (vars.has last_str) then {
         a := vars.fast_at last_str
       } else {
         a := vars.count
@@ -230,13 +230,13 @@ Private
         }
         tmp += last_str
         last_str := tmp.to_string_alias
-        (! vars.fast_has last_str).if {
+        (! vars.has last_str).if {
           err syntax msg ("Variable \'"+last_str+"' not found.")
         }
         result := TRD.new.init_v (vars.fast_at last_str)
       }
     }.elseif {read_str '\"'} then {
-      (! vars.fast_has last_str).if {
+      (! vars.has last_str).if {
         err syntax msg ("Variable \'"+last_str+"' not found.")
       }
       result := TRD.new.init_v (vars.fast_at last_str)

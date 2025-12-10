@@ -12,18 +12,7 @@ Public
   
 Private 
   
-  //- num_str:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" // Bug alias_string
-  
-  - num_str:STRING_BUFFER :=
-  ( + r:STRING_BUFFER
-    r := STRING_BUFFER.create 6
-    r.add_last '\0A7h\'
-    r.add_last '\0A8h\'
-    r.add_last '\0A9h\'
-    r.add_last '\0A0h\'
-    r.add_last '\0B9h\'
-    r
-  )
+  - num_str:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\" 
   
   - hat:CHARACTER  // \0: Nothing, ^ or ¨
   

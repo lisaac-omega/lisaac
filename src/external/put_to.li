@@ -8,7 +8,7 @@ Inherit
 
   + parent_write:Expanded WRITE
 
-  + parent_expr:Expanded EXPR; // Note: C'est une INSTR, mais pb dans ITM_EXTERNAL
+  + parent_expr:Expanded EXPR; // Note: It's an INSTR, but pb with ITM_EXTERNAL
 
 Public
 

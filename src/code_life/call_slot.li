@@ -365,7 +365,7 @@ Public
   - execute:INSTR <-
   ( + result:INSTR
     + is_good:BOOLEAN
-
+    PUSH.break
     (is_good,result) := execute_inline
     (! is_good).if {
       execute_normal
