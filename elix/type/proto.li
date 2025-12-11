@@ -55,7 +55,7 @@ Private
    
   - set_op:ARRAY SLOT := ARRAY SLOT.create_with_capacity 32
   - set_op2:ARRAY SLOT := ARRAY SLOT.create_with_capacity 32
-  - set_cl:HMAP SLOT KEY STRING_ALIAS := HMAP SLOT KEY STRING_ALIAS.create
+  - set_cl:HMAP SLOT KEY STRING_ALIAS := HMAP SLOT KEY STRING_ALIAS.new
   - set_proto:HSET PROTO := HSET PROTO.create
   
   - collect_chapter lst:ARRAY SLOT eye y:BOOLEAN access p:PROTO <-

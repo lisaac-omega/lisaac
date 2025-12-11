@@ -3,21 +3,14 @@ Header
   + name    := TYPE;
 
   /*Type without style*/
-
 Inherit
-
-//  - parent_hashable:HASHABLE := HASHABLE
-
   + parent_any:Expanded ANY
 
   - parent_parameter_to_type:Expanded PARAMETER_TO_TYPE
   
   - parent_types:TYPES := TYPES
-  
 PROFIL_LIST
-
   - is_alias_struct:BOOLEAN := TRUE
- 
 Private
 
   - dico_type:HMAP TYPE KEY STRING_ALIAS := new HMAP TYPE KEY STRING_ALIAS
@@ -152,7 +145,10 @@ Public
     base := dico_type.fast_reference_at (proto.filename)
     (base = NULL).if {
       base := TYPE.clone
-      dico_type.fast_put base to (proto.filename)
+      
+      //dico_type.fast_put base to (proto.filename)
+      dico_type.at (proto.filename) put base 
+      
       base.make itm_typ with proto
     }
     //
@@ -1235,8 +1231,7 @@ TYPE
     }
   )
 
-  - dico_name_to_prototype:HMAP PROTOTYPE KEY STRING_ALIAS :=
-  HMAP PROTOTYPE KEY STRING_ALIAS.create
+  - dico_name_to_prototype:HMAP PROTOTYPE KEY STRING_ALIAS := new HMAP PROTOTYPE KEY STRING_ALIAS
 
 TYPE, TYPE_FULL
 

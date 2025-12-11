@@ -3,7 +3,6 @@ Header
   + name    := ITM_SLOT;
 
   /*Slot item*/
-
 Inherit
 
   + parent_named:Expanded NAMED
@@ -369,7 +368,12 @@ Private
     s.set_value v type t
     s.set_argument_list larg
     s.set_result_type result_type
-    t.slot_list.fast_put s to (s.name)
+    
+    
+    //t.slot_list.fast_put s to (s.name)
+    t.slot_list.at(s.name) put s 
+    
+    
     (t.generic_count = 0).if {
       a := ITM_PROTOTYPE.create (v.position) type (ITM_TYPE_SIMPLE.get (t.name))
     }

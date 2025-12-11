@@ -19,7 +19,7 @@ Public
   
   + key:STRING_ALIAS; // 0: NULL
   
-  - dico:HMAP TYPE KEY STRING_ALIAS := HMAP TYPE KEY STRING_ALIAS.create
+  - dico:HMAP TYPE KEY STRING_ALIAS := HMAP TYPE KEY STRING_ALIAS.new
   
   - attr:UINTEGER_8 := 0
   - expanded:UINTEGER_8 := 001b

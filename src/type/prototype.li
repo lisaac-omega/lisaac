@@ -15,12 +15,10 @@ Public
   - prototype_list:ARRAY PROTOTYPE := ARRAY PROTOTYPE.create_with_capacity 512
   // BSBS: Voir si il faut le conserver !
 
-  - prototype_dico:HMAP PROTOTYPE KEY STRING_ALIAS :=
-  HMAP PROTOTYPE KEY STRING_ALIAS.create
+  - prototype_dico:HMAP PROTOTYPE KEY STRING_ALIAS := new HMAP PROTOTYPE KEY STRING_ALIAS
   // Index by filename
 
-  - prototype_canonical_name:HMAP PROTOTYPE KEY STRING_ALIAS :=
-  HMAP PROTOTYPE KEY STRING_ALIAS.create
+  - prototype_canonical_name:HMAP PROTOTYPE KEY STRING_ALIAS := new HMAP PROTOTYPE KEY STRING_ALIAS
 
 Public
 
@@ -44,7 +42,9 @@ Public
 
   - add_slot s:ITM_SLOT <-
   (
-    slot_list.fast_put s to (s.name)
+    // slot_list.fast_put s to (s.name)
+    slot_list.at (s.name) put s
+    
     (first_slot = NULL).if {
       first_slot := s
     } else {
@@ -256,7 +256,9 @@ Public
     // Collection.
     index := prototype_list.count
     prototype_list.add_last Self
-    prototype_dico.fast_put Self to f
+    
+    //prototype_dico.fast_put Self to f
+    prototype_dico.at f put Self
 
     // Read file.
     //entry := FILE_SYSTEM.get f
@@ -272,7 +274,9 @@ Public
     FILE_UTILS.close file
 
     // Init.
-    slot_list := HMAP ITM_SLOT KEY STRING_ALIAS.create
+    //slot_list := HMAP ITM_SLOT KEY STRING_ALIAS.create
+    slot_list := new HMAP ITM_SLOT KEY STRING_ALIAS
+    
     position  := POSITION.create Self line 1 column 0
     //
   )
@@ -939,7 +943,8 @@ Private
         "       is: ".print; longname.println
       }
 
-      prototype_canonical_name.fast_put Self to name
+      //prototype_canonical_name.fast_put Self to name
+      prototype_canonical_name.at name put Self
 
     } else {
 
@@ -953,7 +958,11 @@ Private
       }
 
       // Add PROTOTYPE marker and add more members to `name' of both prototypes
-      prototype_canonical_name.fast_put PROTOTYPE to name
+      
+      //prototype_canonical_name.fast_put PROTOTYPE to name
+      prototype_canonical_name.at name put PROTOTYPE
+      
+      
       // Insert both prototypes again with another member to the name
       i := i + 1
       proto.insert_prototype_start i

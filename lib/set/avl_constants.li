@@ -1,9 +1,7 @@
 Header
   + name := AVL_CONSTANTS;
-
 Insert
   - parent_clone:CLONE := CLONE
-
 SELF
 
   - balanced:INTEGER := 0

@@ -72,21 +72,35 @@ Public
   + set_back:HSET(PROFIL)
 
   - add_call p:PROFIL <-
-  ( + cnt:INTEGER
-  //(set_call.fast_has p).if {
+  ( + found:BOOLEAN ; + cnt:INTEGER
+    
+    /*
     if (set_call.has p) then {
-      cnt := set_call.fast_at p
+      cnt := set_call.at p
       cnt := cnt + 1
     } else {
       cnt := 1
     }
-    set_call.fast_put cnt to p
+    */
+    // DCDC petite optim:
+    (found, cnt) := set_call.search p
+    if found then {
+      cnt := cnt + 1
+    } else {
+      cnt := 1
+    }
+    
+    
+    //set_call.fast_put cnt to p
+    set_call.at p put cnt
+    
+    
     p.set_back.fast_add Self
   )
 
   - alloc_profil_main <-
   (
-    set_call := HMAP INTEGER KEY PROFIL.create
+    set_call := new HMAP INTEGER KEY PROFIL
     set_back := HSET PROFIL.create
     name := "main"
   )

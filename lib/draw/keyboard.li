@@ -127,8 +127,12 @@ PAPER
                   str.remove_last
                   if (key = 35) then { 
                     str.append "£"
+                  }.elseif {key = 30} then {
+                    /*mac*/ str.add_last '*'
+                  }.elseif {key = 27} then {
+                    /*hp*/ str.append "£"
                   } else {
-                    ? {key = 30} ;/*mac*/ str.add_last '*'                    
+                    OUT # "keyboard.li key = " # key # '\n' 
                   }
                 }.elseif {cc = ')'} then {
                   str.remove_last; str.append "°"

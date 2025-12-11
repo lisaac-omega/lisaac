@@ -3,7 +3,6 @@ Header
   + name        := TYPE_GENERIC;
 
   /*Type generic*/
-
 Inherit
 
   + parent_type:Expanded TYPE
@@ -13,8 +12,7 @@ Private
   // BSBS: Vu que les ITM_TYPE sont aliaser, il n'est pas necessary d'aliaser les TYPE !
   // Mais attention au pb des TYPE_GENERIC et de leur alias de slot_run...
 
-  - dicog_type:HMAP TYPE_GENERIC KEY STRING_ALIAS :=
-  HMAP TYPE_GENERIC KEY STRING_ALIAS.create
+  - dicog_type:HMAP TYPE_GENERIC KEY STRING_ALIAS := new HMAP TYPE_GENERIC KEY STRING_ALIAS
 
 Public
 
@@ -130,7 +128,10 @@ Public
     base := dicog_type.fast_reference_at k
     (base = NULL).if {
       base := TYPE_GENERIC.clone
-      dicog_type.fast_put base to k
+      
+      // dicog_type.fast_put base to k
+      dicog_type.at k put base
+      
       base.make itm_typ with proto generic gen key k
     }
     //

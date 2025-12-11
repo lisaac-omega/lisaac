@@ -149,7 +149,7 @@ Public
   // User assertion with message.
   (
     ((debug_level >=10) && {! value}).if {
-      crash_with_message msg after 7
+      crash_with_message msg after 5
     }
   )
   
@@ -157,7 +157,7 @@ Public
   // User assertion with message.
   ( + result:{BOOLEAN}
     ((debug_level >= 10) && {! value}).if {
-      result := {crash_with_message (m.value) after 8}
+      result := {crash_with_message (m.value) after 6}
     } else {
       result := {TRUE}
     }
@@ -168,7 +168,7 @@ Public
   // User assertion without message.
   (     
     ((debug_level >=10) && {! value}).if {
-      crash_with_message "User assertion violated." after 7
+      crash_with_message "User assertion violated." after 5
     }
   )
 
@@ -176,7 +176,7 @@ Public
   // Require assertion with message.
   ( 
     ((debug_level >= 5) && {! value}).if {
-      crash_with_message msg after 7
+      crash_with_message msg after 5
     }
   )
 
@@ -184,7 +184,7 @@ Public
   // Require assertion without message.
   ( 
     ((debug_level >= 5) && {! value}).if {
-      crash_with_message "Require assertion violated." after 7
+      crash_with_message "Require assertion violated." after 5
     }
   )
 
@@ -192,7 +192,7 @@ Public
   // Ensure assertion with message.
   ( 
     ((debug_level >= 15) && {! value}).if {
-      crash_with_message msg after 7
+      crash_with_message msg after 5
     }
   )
 
@@ -200,7 +200,7 @@ Public
   // Require assertion without message.
   (
     ((debug_level >= 15) && {! value}).if {
-      crash_with_message "Ensure assertion violated." after 7
+      crash_with_message "Ensure assertion violated." after 5
     }
   )
 
@@ -208,7 +208,7 @@ Public
   // Other assertion without message.
   (
     ((debug_level >= val) && {! value}).if {
-      crash_with_message "Assertion violated." after 7
+      crash_with_message "Assertion violated." after 5
     }
   )
 

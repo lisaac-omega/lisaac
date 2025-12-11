@@ -14,10 +14,7 @@ Header
 
   Step 3:
        ./hello_world*/
-
 Public
   
-  - main <-
-  (   
-    print("Hello world!\n")
-  )
+  - main <- print("Hello world!\n")
+  

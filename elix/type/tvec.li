@@ -5,7 +5,7 @@ Inherit
   + parent_type:Expanded TYPE
   
 Public
-  - dicotv:HMAP TVEC KEY STRING_ALIAS := HMAP TVEC KEY STRING_ALIAS.create
+  - dicotv:HMAP TVEC KEY STRING_ALIAS := HMAP TVEC KEY STRING_ALIAS.new
   
   - is_complex:BOOLEAN <- TRUE
 

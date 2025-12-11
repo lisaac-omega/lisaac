@@ -17,11 +17,9 @@ Public
   - stack:ARRAY LIP_SLOT_DATA := ARRAY LIP_SLOT_DATA .create_with_capacity 8  
 
   - get_data n:STRING_ALIAS :LIP_SLOT_DATA <-
-  ( //+ found:BOOLEAN 
-    + result:LIP_SLOT_DATA
-    // DCDC LIZ ??
-    //(found, result) := list_data.search n
-    result := list_data.fast_reference_at n
+  ( + found:BOOLEAN 
+    + result:LIP_SLOT_DATA    
+    (found, result) := list_data.search n       
     result
   )
 

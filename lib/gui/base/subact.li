@@ -6,8 +6,8 @@ Inherit
   - parent_json:JSON := JSON
   
 FILE_KEY
-  - dico:HMAP SUBACT KEY STRING_ALIAS := HMAP SUBACT KEY STRING_ALIAS.create
-  
+  - dico:HMAP SUBACT KEY STRING_ALIAS := HMAP SUBACT KEY STRING_ALIAS.new
+  //  
   - old_list:ARRAY SHORTCUT
   
   - list_empty:ARRAY SHORTCUT := ARRAY SHORTCUT.create_with_capacity 0

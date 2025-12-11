@@ -6,7 +6,6 @@ The classical factorial example in Lisaac Ω.
   
 In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
   */
-
 Public
   
   - factorial (n:ℤ) :ℤ <-

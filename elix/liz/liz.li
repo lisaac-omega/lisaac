@@ -8,7 +8,7 @@ Inherit
 
 Private
     
-  - vars:HMAP INTEGER KEY STRING_ALIAS := HMAP INTEGER KEY STRING_ALIAS.create
+  - vars:HMAP INTEGER KEY STRING_ALIAS := HMAP INTEGER KEY STRING_ALIAS new
   - push_count:INTEGER
   
   + texps:Expanded ARRAY TEXP
@@ -246,7 +246,7 @@ Private
     result
   )
     
-  - dico:HMAP LIZ KEY STRING_ALIAS := HMAP LIZ KEY STRING_ALIAS.create
+  - dico:HMAP LIZ KEY STRING_ALIAS := HMAP LIZ KEY STRING_ALIAS new
   
   - mtx:STRING_ALIAS := // Bug ASCII compilo
   ( + r:STRING_ALIAS
@@ -376,7 +376,7 @@ Public
   // Operator conversion
   //
   
-  - ope_key:HMAP INTEGER KEY STRING_ALIAS := HMAP INTEGER KEY STRING_ALIAS.create
+  - ope_key:HMAP INTEGER KEY STRING_ALIAS := HMAP INTEGER KEY STRING_ALIAS new
   
   - read_operator n:STRING <-
   ( + f:POINTER

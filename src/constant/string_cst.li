@@ -3,7 +3,6 @@ Header
   + name    := STRING_CST;
 
   /*String constant*/
-
 Inherit
 
   + parent_constant:Expanded CONSTANT
@@ -74,7 +73,7 @@ Public
       is_init := TRUE
     }
 
-    count := dico_string.fast_at string
+    count := dico_string.at string
     (count >= 0).if {
       output_count := output_count + 1
       idx := output_count
@@ -124,7 +123,8 @@ Public
       }
       output_str.append ";\n"
       //
-      dico_string.fast_put (-idx) to string
+      //dico_string.fast_put (-idx) to string
+      dico_string.at string put (-idx)
       //
       (PROFIL_SLOT.profil_add_alias != NULL).if {
         /*
@@ -187,9 +187,4 @@ Public
 
 Private
 
-  - dico_string:HMAP INTEGER KEY STRING_ALIAS :=
-  HMAP INTEGER KEY STRING_ALIAS.create
-
-
-
-
+  - dico_string:HMAP INTEGER KEY STRING_ALIAS := new HMAP INTEGER KEY STRING_ALIAS

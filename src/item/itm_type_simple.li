@@ -3,7 +3,6 @@ Header
   + name    := ITM_TYPE_SIMPLE;
 
   /*Simple type*/
-
 Inherit
 
   + parent_itm_type_mono:Expanded ITM_TYPE_MONO
@@ -51,10 +50,10 @@ Public
   [
     -? {n != NULL}
   ]
-  ( + result:ITM_TYPE_SIMPLE
-
-    result := dico.fast_reference_at n
-    (result = NULL).if {
+  ( + found:BOOLEAN ; + result:ITM_TYPE_SIMPLE
+    // result := fast_reference_at n
+    (found, result) := dico.search n
+    found.if_false {
       result := create n
     }
     result

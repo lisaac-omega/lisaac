@@ -80,7 +80,7 @@ Public
     name := get_intern "value" type FALSE
 
     (is_graph).if {
-      set_call := HMAP INTEGER KEY PROFIL.create
+      set_call := new HMAP INTEGER KEY PROFIL
       set_back := HSET(PROFIL).create
     }
 

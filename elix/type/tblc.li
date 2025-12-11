@@ -5,7 +5,7 @@ Inherit
   + parent_tone:Expanded TONE
   
 Public
-  - dicotb:HMAP TBLC KEY STRING_ALIAS := HMAP TBLC KEY STRING_ALIAS.create
+  - dicotb:HMAP TBLC KEY STRING_ALIAS := HMAP TBLC KEY STRING_ALIAS.new
   
   - Self:SELF '<=' o:TYPE :BOOLEAN <-
   ( + ob:TBLC

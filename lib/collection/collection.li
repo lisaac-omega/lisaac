@@ -18,7 +18,6 @@ Except for creations all implementations have exactly the same behavior.
 Switching from one implementation to another only change the memory used 
 and the execution time.
 */
-
 Insert
   - parent_clone:CLONE := CLONE
   

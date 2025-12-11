@@ -9,7 +9,6 @@ Header
 Insert
   - parent_clone:CLONE := CLONE
 Private
-
   + buckets:NATIVE_ARRAY(HMAP_NODE V KEY K)
   // The `buckets' storage area is the primary hash table of `capacity'
   // elements. To search some key, the first access is done in `buckets'
@@ -18,18 +17,18 @@ Private
   // prime number (selected using HASH_TABLE_SIZE).
 
 Public
-
   + capacity:INTEGER
   // Of the `buckets' storage area.
 
   + count:INTEGER
   // Actual `count' of stored elements.
   
-
   // Creation:
   - new Self:SELF :SELF <- new Self capacity minimum_capacity
   
   - new Self:SELF capacity c:INTEGER :SELF <-
+  // If you can roughly predict the required capacity, it is important for performance.
+  // Note that this capacity will be automatically adjusted to the next prime number
   ( + result:SELF
     result := clone
     result.with_capacity c
@@ -37,9 +36,8 @@ Public
   )
   
 Private
-  
   - minimum_capacity:INTEGER := 193
-  // Default size for the 'buckets' storage area in number of items (prime number).
+  // Minimum size for the 'buckets' storage area (prime number).
 
   - with_capacity medium_size:INTEGER <-
   // May be used to save some execution time if one is sure that
@@ -47,9 +45,7 @@ Private
   // When first `remove' occurs, storage size may naturally become
   // smaller than `medium_size'. Afterall, tuning of storage size is
   // done automatically according to usage.
-  [
-    -? { medium_size > 0 }
-  ]
+  [medium_size >= 97]
   ( + new_capacity:INTEGER
     new_capacity := HASH_TABLE_SIZE.prime_number_ceiling medium_size
     buckets := NATIVE_ARRAY(HMAP_NODE V KEY K).create new_capacity
@@ -63,7 +59,7 @@ Private
   
 Public
   
-  // Basic access:
+  // Query:
   
   - is_empty:BOOLEAN <- count = 0
   // Is it empty?
@@ -80,68 +76,67 @@ Public
     node != NULL
   )
   
-  - reference_at k:K :V <-
-  // Return NULL or the value associated with key `k'. Actually, this
-  // feature is useful when the type of values (the type E) is a
-  // reference type, to avoid using `has' just followed by `at' to get
-  // the corresponding value.
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-    + result:V
-
+  - at k:K :V <-
+  // Very fast in -boost mode.
+  [ ? {has k} ]
+  ( + idx:INTEGER ; + node:HMAP_NODE V KEY K
     idx := k.hash_code % capacity
     node := buckets.at idx
-    {(node = NULL) ||{node.key == k}}.until_do {
-      node := node.next
-    }
-    (node != NULL).if {
-      result := node.value
-    }
-    result
-  )
-
-  - fast_at k:K :V <-
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-    {node.key = k}.until_do {
+    until {node.key = k} do {
       node := node.next
     }
     node.value
   )
-
-  - fast_reference_at k:K :V <-
-  // 
-  // DCDC remplacer avec search
-  //  
-  // Return NULL or the value associated with key `k'. Actually, this
-  // feature is useful when the type of values (the type V) is a
-  // reference type, to avoid using `has' just followed by `at' to get
-  // the corresponding value.
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-    + result:V
-
+  
+  - search k:K : (BOOLEAN,V) <-
+  ( + found:BOOLEAN ; + v:V ; + idx:INTEGER ; + node:HMAP_NODE V KEY K
     idx := k.hash_code % capacity
     node := buckets.at idx
-    {(node = NULL) || {node.key = k}}.until_do {
+    until {(node = NULL) || {node.key = k}} do {
       node := node.next
     }
-    ( node != NULL ).if {
-      result := node.value
+    if (node != NULL) then {
+      found := TRUE
+      v := node.value
     }
-    result
+    (found, v)
   )
-
-Public
+   
+  - search_key blk: {K; BOOLEAN} : (BOOLEAN,V) <-
+  // Sequential searching. May be slow.
+  ( + b:BOOLEAN ; + k:K ; + v:V
+    (b,k,v) := search_key blk value {foo:V; TRUE}
+    (b,v)
+  )
+    
+  - search_value blk: {V; BOOLEAN} : (BOOLEAN,K) <-
+  // Sequential searching. May be slow.
+  ( + b:BOOLEAN ; + k:K ; + v:V
+    (b,k,v) := search_key {foo:K; TRUE} value blk
+    (b,k)
+  )
   
-  // Modification:
-  
+  - search_key bk: {K; BOOLEAN} value bv: {V; BOOLEAN}  : (BOOLEAN,K,V) <-
+  // Sequential searching. May be slow.
+  ( + found:BOOLEAN ; + k:K ; + v:V ; + idx:INTEGER ; + node:HMAP_NODE V KEY K
+    until {found || {idx >= capacity}} do {
+      node := buckets.at idx
+      while {node != NULL} do {
+        if (found := (bk.value(node.key)) && {bv.value(node.value)}) then {
+          k := node.key
+          v := node.value
+        }
+        node := node.next
+      }
+      idx := idx + 1;
+    }
+    (found, k, v)
+  )
+    
+  // Adding or changing:
   
   - at k:K put v:V  <- 
-  // Change some existing entry or `add' the new one. If there is as yet no key `k' in the map, enter
-  // it with item `v'. Otherwise overwrite the item associated with key `k'.
+  // Change some existing entry or add the new one.
   ( + h, idx:INTEGER
     + node:HMAP_NODE V KEY K
     h := k.hash_code
@@ -163,101 +158,9 @@ Public
     }
   )
 
-  
-  - search k:K : (BOOLEAN,V) <-
-  ( + found:BOOLEAN 
-    + v:V
-    + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-    until {(node = NULL) || {node.key = k}} do {
-      node := node.next
-    }
-    if (found := node != NULL) then {
-      v := node.value
-    }
-    (found, v)
-  )
-  
-  - search_key blk: {K; BOOLEAN} : (BOOLEAN,V) <-
-  // Sequential searching. May be slow.
-  ( + found:BOOLEAN 
-    + v:V
-    + idx, c:INTEGER
-    + node:HMAP_NODE V KEY K
-    until {found || {c >= count}} do {
-      if ((node := buckets.at idx) != NULL) then {
-        c := c + 1
-        if (found := (blk.value(node.key))) then {
-          v := node.value
-        } else {
-          until {found || {node.next = NULL}} do {
-            c := c + 1
-            if (found := blk.value(node.key)) then {
-              v := node.value
-            }
-          }
-        }
-      }
-      idx := idx + 1;
-    }
-    (found, v)
-  )
-  
-  - search_value blk: {V; BOOLEAN} : (BOOLEAN,K) <-
-  // Sequential searching. May be slow.
-  ( + found:BOOLEAN 
-    + k:K
-    + idx, c:INTEGER
-    + node:HMAP_NODE V KEY K
-    until {found || {c >= count}} do {
-      if ((node := buckets.at idx) != NULL) then {
-        c := c + 1
-        if (found := (blk.value(node.value))) then {
-          k := node.key
-        } else {
-          until {found || {node.next = NULL}} do {
-            c := c + 1
-            if (found := blk.value(node.value)) then {
-              k := node.key
-            }
-          }
-        }
-      }
-      idx := idx + 1;
-    }
-    (found, k)
-  )
-  
-  - search_key bk: {K; BOOLEAN} value bv: {V; BOOLEAN}  : (BOOLEAN,K,V) <-
-  // Sequential searching. May be slow.
-  ( + found:BOOLEAN 
-    + k:K
-    + v:V
-    + idx, c:INTEGER
-    + node:HMAP_NODE V KEY K
-    until {found || {c >= count}} do {
-      if ((node := buckets.at idx) != NULL) then {
-        c := c + 1
-        if (found := ((bk.value(node.key)) && {bv.value(node.value)})) then {
-          k := node.key ; v := node.value
-        } else {
-          until {found || {node.next = NULL}} do {
-            c := c + 1
-            if (found := ((bk.value(node.key)) && {bv.value(node.value)})) then {
-              k := node.key ; v := node.value
-            }
-          }
-        }
-      }
-      idx := idx + 1;
-    }
-    (found, k, v)
-  )
-  
+
   - at k:K add v:V <-
-  // Assumes `k' is a new entry. Actually, this is equivalent to 
+  // Assumes k is a new entry. Actually, this is equivalent to 
   // call `at__put', but may run a little bit faster.
   [ ? {! has k} ]
   ( + idx:INTEGER
@@ -304,13 +207,15 @@ Public
   // Discard all items.
   (
     count := 0
+    // DCDC free list comme dans ARRAY_BLOCK
     buckets.set_all_with NULL until (capacity - 1)
   )
   [
+    ? {count = 0}
     ? {capacity = Old capacity}
   ]
 
-  // To provide iterating facilities:
+  // Traversal:
   
   - foreach blk:{(K,V);} <-
   ( + idx:INTEGER
@@ -329,18 +234,7 @@ Public
   
   - foreach_value blk:{V;} <- foreach {(k:K,v:V); blk.value v }
   
-  - at k:K :V <-
-  // Very fast in -boost mode.
-  [ ? {has k} ]
-  ( + idx:INTEGER
-    + node:HMAP_NODE V KEY K
-    idx := k.hash_code % capacity
-    node := buckets.at idx
-    until {node.key = k} do {
-      node := node.next
-    }
-    node.value
-  )
+  //  Others:
 
   - copy other:SELF <-
   // Reinitialize by copying all associations of `other'.
@@ -410,15 +304,60 @@ Private
 
 Public
 
-  // RESTE A VIRER
+  // DCDC RESTE A VIRER
 
   - add v:V to k:K <- at k put v
   
-  - create :SELF <- new SELF
+  - virer_create :SELF <- new SELF
   
-  - virer_fast_has k:K :BOOLEAN <- has k
-  
-  - fast_put v:V to k:K <- at k put v
-  
+  - virer_fast_put v:V to k:K <- at k put v
+      
+  - reference_at k:K :V <-
+  // Return NULL or the value associated with key `k'. Actually, this
+  // feature is useful when the type of values (the type E) is a
+  // reference type, to avoid using `has' just followed by `at' to get
+  // the corresponding value.
+  ( + idx:INTEGER
+    + node:HMAP_NODE V KEY K
+    + result:V
 
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    {(node = NULL) ||{node.key == k}}.until_do {
+      node := node.next
+    }
+    (node != NULL).if {
+      result := node.value
+    }
+    result
+  )
+
+  - fast_at k:K :V <-
+  // VIRER juste le fast :-)
+  ( + idx:INTEGER
+    + node:HMAP_NODE V KEY K
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    {node.key = k}.until_do {
+      node := node.next
+    }
+    node.value
+  )
+  
+  - fast_reference_at k:K :V <-
+  //  DCDC: virer et remplacer avec search k
+  ( + idx:INTEGER
+    + node:HMAP_NODE V KEY K
+    + result:V
+
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    {(node = NULL) || {node.key = k}}.until_do {
+      node := node.next
+    }
+    ( node != NULL ).if {
+      result := node.value
+    }
+    result
+  )
   

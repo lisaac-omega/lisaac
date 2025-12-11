@@ -397,7 +397,7 @@ Public
     
   - utf8_dico:HMAP STRING_ALIAS KEY STRING_ALIAS :=
   ( + r:HMAP STRING_ALIAS KEY STRING_ALIAS
-    r := HMAP STRING_ALIAS KEY STRING_ALIAS.create
+    r := new HMAP STRING_ALIAS KEY STRING_ALIAS
     r.add "z" to "ℤ"
     r
   )

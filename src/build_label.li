@@ -38,10 +38,11 @@ Public
     result
   )
   
-  - convert_dico:HMAP STRING_ALIAS KEY STRING_ALIAS := 
-  HMAP STRING_ALIAS KEY STRING_ALIAS.create; // One dictionary for One redondance
+  - convert_dico:HMAP STRING_ALIAS KEY STRING_ALIAS := new HMAP STRING_ALIAS KEY STRING_ALIAS
+  // One dictionary for One redondance
   
-  - first_copy:STRING_ALIAS; // Key for a end redondance or NULL. (= label_back from first redondance)
+  - first_copy:STRING_ALIAS
+  // Key for a end redondance or NULL. (= label_back from first redondance)
   
   - mountain:ARRAY STRING := ARRAY STRING .create_with_capacity 16384
   

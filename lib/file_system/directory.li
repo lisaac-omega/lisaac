@@ -6,7 +6,6 @@ Header
 #include <sys/stat.h>
 #include <sys/types.h>
 `;
-
 Inherit
   + parent_dirent: /*EYE*/ Expanded DIRENT
 
@@ -75,23 +74,17 @@ Public
   )
 
   - get p:STRING :DIRENT <-
-  ( + result:DIRENT
-    + pth:STRING_ALIAS
-    //+ found:BOOLEAN
+  ( + result:DIRENT ; + pth:STRING_ALIAS ; + found:BOOLEAN
     STRING.tmp { tmp:STRING_BUFFER
       tmp += path += p
       reduce_path tmp
       pth := tmp.to_string_alias
     }
-    // DCDC BUG LIZ
-    //(found, result) := dico.search pth
-    result := dico.fast_reference_at pth
-    (result = NULL).if {
-      //? {! found}
+    (found, result) := dico.search pth
+    //result := dico.fast_reference_at pth
+    found.if_false {
       result := physical_get pth
       dico.add result to pth
-    } else {
-      //? {found}
     }
     result
   )
