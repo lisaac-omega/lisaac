@@ -15,13 +15,13 @@ jobs:
           token: ${{ secrets.PAT }}
 
       - name: Download external ZIP
-        run: curl -L -o lisaac_0.5.zip https://lisaac.org/downloads/lisaac_0.5.zip
+        run: curl -L -o lisaac_0.6.zip https://lisaac.org/downloads/lisaac_0.6.zip
 
       - name: Unzip lisaac content
         run: |
-          unzip -o lisaac_0.5.zip
+          unzip -o lisaac_0.6.zip
           rsync -av lisaac/ ./
-          rm -rf lisaac lisaac_0.5.zip
+          rm -rf lisaac lisaac_0.6.zip
 
       - name: Sync files (commit)
         run: |
