@@ -1,32 +1,30 @@
 Header
-  
-  + name := TEXTURE;
-  
+  + name := Texture
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
 
-  + id:INTEGER
-  + tex:UINTEGER_32
-  + width:INTEGER
-  + height:INTEGER
-  + type:INTEGER
-  + flags:INTEGER
+  + id:Int
+  + tex:Uint32
+  + width:Int
+  + height:Int
+  + type:Int
+  + flags:Int
   
-  - set_tex t:UINTEGER_32 <- ( tex := t; )
+  - set_tex t:Uint32 <- ( tex := t; )
   
-  - create pid:INTEGER size (w,h:INTEGER) 
-  type typ:INTEGER flags f:INTEGER :SELF <-
-  ( + result:SELF
+  - create pid:Int size (w,h:Int) 
+  type typ:Int flags f:Int :Self <-
+  ( + result:Self
     result := clone
     result.make pid size (w,h) type typ flags f
     result    
   )
   
-  - make pid:INTEGER size (w,h:INTEGER) 
-  type typ:INTEGER flags f:INTEGER <-
+  - make pid:Int size (w,h:Int) 
+  type typ:Int flags f:Int <-
   ( 
     id := pid
     (width,height) := (w,h)
@@ -35,7 +33,7 @@ Public
   )
   
   /*
-  - create_image_from_handle_gles3 (GLuint textureId, int w, int h, int imageFlags) :INTEGER <-
+  - create_image_from_handle_gles3 (GLuint textureId, int w, int h, int imageFlags) :Int <-
   (
     GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr
     GLNVGtexture* tex = glnvg__allocTexture(gl)

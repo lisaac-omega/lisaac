@@ -1,13 +1,13 @@
 Header
-  + name := Expanded  DATE;
-  /*
+  + name := Flat  Date
+/*
   Wrap C <time.h>.
   See 'man mktime'. 
   */
   
   - type := `time_t`;
   
-  - default := `0`:DATE;
+  - default := `0`:Date;
   
   - include := `
 #include <time.h>
@@ -19,58 +19,57 @@ extern struct tm tm_glob;
 struct tm*tm_info;
 struct tm tm_glob;
 `;
-  
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
-  - to_raw:INTEGER_64 <-
+  - to_raw:Int64 <-
   (
-    CAST SELF TO INTEGER_64.on Self
+    Cast Self To Int64.on self
   )
 
-  - from_raw i:INTEGER_64 :SELF <-
+  - from_raw i:Int64 :Self <-
   (
-    CAST INTEGER_64 TO SELF.on i
-  )
-
-Public
-  - Self:SELF '>' Right 60 other:SELF :BOOLEAN <- to_raw > other.to_raw
-
-  - Self:SELF '<' Right 60 other:SELF :BOOLEAN <- to_raw < other.to_raw
-
-  - Self:SELF '>=' Right 60 other:SELF :BOOLEAN <- to_raw >= other.to_raw
-
-  - Self:SELF '<=' Right 60 other:SELF :BOOLEAN <- to_raw <= other.to_raw
-
-  - year:UINTEGER_16 <-
-  (
-    `tm_info = localtime(&@Self);`
-    `tm_info->tm_year + 1900`:UINTEGER_16
-  )
-
-  - month:UINTEGER_8 <-
-  (
-    `tm_info = localtime(&@Self);`
-    `tm_info->tm_mon`:UINTEGER_8
-  )
-
-  - day:UINTEGER_8 <-
-  (
-    `tm_info = localtime(&@Self);`
-    `tm_info->tm_mday`:UINTEGER_8
-  )
-
-  - week_day:UINTEGER_8 <-
-  (
-    `tm_info = localtime(&@Self);`
-    `tm_info->tm_wday`:UINTEGER_8
+    Cast Int64 To Self.on i
   )
 
 Public
-  - create_now :DATE <- (`time(NULL)`:DATE)
+  - self:Self '>' Right 60 other:Self :Boolean <- to_raw > other.to_raw
+
+  - self:Self '<' Right 60 other:Self :Boolean <- to_raw < other.to_raw
+
+  - self:Self '>=' Right 60 other:Self :Boolean <- to_raw >= other.to_raw
+
+  - self:Self '<=' Right 60 other:Self :Boolean <- to_raw <= other.to_raw
+
+  - year:Uint16 <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_year + 1900`:Uint16
+  )
+
+  - month:Uint8 <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_mon`:Uint8
+  )
+
+  - day:Uint8 <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_mday`:Uint8
+  )
+
+  - week_day:Uint8 <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_wday`:Uint8
+  )
+
+Public
+  - create_now :Date <- (`time(NULL)`:Date)
   
-  - sec sec:INTEGER min min:INTEGER hour hour:INTEGER mday mday:INTEGER mon mon:INTEGER year year:INTEGER wday wday:INTEGER yday yday:INTEGER isdt isdt:INTEGER :DATE <-
+  - sec sec:Int min min:Int hour hour:Int mday mday:Int mon mon:Int year year:Int wday wday:Int yday yday:Int isdt isdt:Int :Date <-
   // All fields of the ctime.h tm struct (see man ctime).
   // Note: year must be Year - 1900.
   [
@@ -93,10 +92,10 @@ Public
     `tm_glob.tm_wday=@wday;`
     `tm_glob.tm_yday=@yday;`
     `tm_glob.tm_isdst=@isdt;`
-    `mktime(&tm_glob)`:DATE
+    `mktime(&tm_glob)`:Date
   )
   
-  - create (y:UINTEGER_16,m,d,wd:UINTEGER_8) :DATE <-
+  - create (y:Uint16,m,d,wd:Uint8) :Date <-
   // As in "man mktime".
   [
     ? { m.in_range 0 to 11}
@@ -107,7 +106,7 @@ Public
     sec 0 min 0 hour 0 mday d mon m year (y - 1900) wday wd yday d isdt 0
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     //week_day.append_in b
     week_day
@@ -141,7 +140,7 @@ Public
     year.append_in b format 4
   )
 
-  - append_ddmmyy_in b:STRING_BUFFER <-
+  - append_ddmmyy_in b:String_buffer <-
   (
     day.append_in b format 2 with '0'
     b.add_last '/'
@@ -150,7 +149,7 @@ Public
     (year % 100).append_in b format 2 with '0'
   )
   
-  - append_yymmdd_in b:STRING_BUFFER <-
+  - append_yymmdd_in b:String_buffer <-
   (
     (year % 100).append_in b format 2 with '0'
     b.add_last '-'
@@ -159,7 +158,7 @@ Public
     day.append_in b format 2 with '0'
   )
   
-  - append_yyyymmdd_in b:STRING_BUFFER <-
+  - append_yyyymmdd_in b:String_buffer <-
   (
     year.append_in b format 4 with '0'
     b.add_last '-'
@@ -168,7 +167,7 @@ Public
     day.append_in b format 2 with '0'
   )
 
-  - append_ddmmyyyy_in b:STRING_BUFFER <-
+  - append_ddmmyyyy_in b:String_buffer <-
   (
     day.append_in b format 2 with '0'
     b.add_last '/'
@@ -177,6 +176,6 @@ Public
     year.append_in b format 4 with '0'
   )
 
-  - encode:INTEGER_64 <- to_raw
+  - encode:Int64 <- to_raw
 
-  - decode i:INTEGER_64 :SELF <- from_raw i
+  - decode i:Int64 :Self <- from_raw i

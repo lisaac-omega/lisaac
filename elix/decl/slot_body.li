@@ -1,37 +1,36 @@
 Header
-  + name := SLOT_BODY;
-
+  + name := Slot_body
 Inherit  
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
 Insert
-  - parent_lix_buf:LIX_BUF := LIX_BUF
+  - parent_lix_buf:Lix_buf := Lix_buf
     
 Private
-  - stk_s:Expanded ARRAY (Strict SLOT_BODY)
+  - stk_s:Flat Array (Exact Slot_body)
 Public
-  - is_major:BOOLEAN := FALSE
+  - is_major:Boolean := False
   
-  + expr:EXPR
+  + expr:Expr
   
-  + slot:SLOT
-  - set_slot s:SLOT <- ( slot := s; )
+  + slot:Slot
+  - set_slot s:Slot <- ( slot := s; )
       
-  - new:SELF <- ( + r:SELF; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
+  - new:Self <- ( + r:Self; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
   
   - free <-
-  ( (expr != NULL).if { expr.free; expr := NULL; }; stk_s.add_last Self; )
+  ( (expr != NULL).if { expr.free; expr := NULL; }; stk_s.add_last self; )
       
-  - detect:BOOLEAN <-
-  ( + c:CHARACTER
-    (look "  ") && {pos_i + 2 <= upper} && {(c := at (pos_i+2)) != '\n'} && {c != '['}
+  - detect:Boolean <-
+  ( + c:Char
+    (look "  ") && {(c := at (pos_i+2)) != '\n'} && {c != '['} && {c != '\0'}
   )
     
   - parse <-
   (
-    EXPR.skip_body
+    Expr.skip_body
     end pos_i
-    ((PAGE.cur_pg != NULL) && {PAGE.cur_pg = page}).if {
-      + p,n:INTEGER;
+    ((Page.cur_pg != NULL) && {Page.cur_pg = page}).if {
+      + p,n:Int;      
       (p,n) := (pos_i,nl)
       pos_i := Old pos_i
       parse_real
@@ -57,9 +56,10 @@ Private
   
   - parse_real <-
   (
+    slot.load_arg
     ln_limit := pt_b.pt + di
-    expr := EXPR.rd_expr_op
-    (read_c ';').if { col (LOOK.symbol) sub 1; }
+    expr := Expr.rd_expr_op
+    (read_c ';').if { col (Look.symbol) sub 1; }
     //"\nSLOT_BODY:".print; pos_i.pt.print; '/'.print; di.println
     ln_limit := 0    
   )

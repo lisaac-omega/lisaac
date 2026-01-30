@@ -1,32 +1,31 @@
 Header
-  + name := NEW_LINE;
-  
+  + name := New_line
 Inherit
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
   
 Private
-  - stk:Expanded ARRAY (Strict NEW_LINE)
+  - stk:Flat Array (Exact New_line)
   
 Public
   
-  + expr:EXPR
-  - set_expr e:EXPR <- ( expr := e; )
+  + expr:Expr
+  - set_expr e:Expr <- ( expr := e; )
   
-  - is_require:BOOLEAN <- look_cc "˯" at pt_b
-  - is_ensure:BOOLEAN  <- look_cc "˰" at pt_b
+  - is_require:Boolean <- look_cc "˯" at pt_b
+  - is_ensure:Boolean  <- look_cc "˰" at pt_b
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
-  - free <- stk.add_last Self
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last self
       
-  - parse:TOK_DRW <-
-  ( + result:NEW_LINE
-    + e:EXPR
+  - parse:Tok_drw <-
+  ( + result:New_line
+    + e:Expr
     (cur <= upper).if {      
       begin cur
       result := new_or_not
       (read_cc "˯") || {read_cc "˰"}
-      e := EXPR.rd_expr
+      e := Expr.rd_expr
       result.set_expr e
       skip_line
       result.end cur
@@ -34,7 +33,7 @@ Public
     result
   )
   
-  - ptr_bg:INTEGER
+  - ptr_bg:Int
   
   - begin_draw <-
   (
@@ -45,7 +44,7 @@ Public
     } else {
       tex.push (x_space*3,0)
     }
-    fill_color (COLOR.gray)
+    fill_color (Color.gray)
   )
   
   - sub_draw <-
@@ -56,8 +55,8 @@ Public
   )
    
   - end_draw <-
-  ( + y0,y1:REAL_32
-    + ptr_bg2:INTEGER
+  ( + y0,y1:Real32
+    + ptr_bg2:Int
     (y0,y1) := (tex.ymin,tex.y)
     (is_require || {is_ensure}).if {
       ptr_bg2 := trace_pointer
@@ -65,20 +64,20 @@ Public
       foreground ptr_bg to ptr_bg2
     }
     tex.pop_add_y 0
-    SECTION.draw y0 to y1
+    Section.draw y0 to y1
   )
   
-  - contract (x0,y0:REAL_32) to (x1,y1:REAL_32) req d:BOOLEAN <-
-  ( + e,y,xb,xm,dx,r,l:REAL_32
-    + x,h,w,stp,hx:REAL_32
-    + a:REAL_32
-    + col:COLOR
+  - contract (x0,y0:Real32) to (x1,y1:Real32) req d:Boolean <-
+  ( + e,y,xb,xm,dx,r,l:Real32
+    + x,h,w,stp,hx:Real32
+    + a:Real32
+    + col:Color
     e := 3
     y := (y0+y1)/2
     (l,r) := (x0-x_space+e, x0-e)
     d.if { (xb,xm) := (l,r); dx := -e*2; } else { (xb,xm) := (r,l); dx := e*2; }
     begin_path
-    stroke_color (LOOK.require)
+    stroke_color (Look.require)
     stroke_width (e*2)
     move_to (xb,y0+e)
     line_to (xm,y)
@@ -91,7 +90,7 @@ Public
     a := 0.4; // 50
     h := y1-y0
     intersect_scissor (x0,xo) size (width,height)
-    col := LOOK.require.set_af a
+    col := Look.require.set_af a
     fill_color col
     stp := (w*w*2).sqrt
     x := x0+d.ok (-h) or 0

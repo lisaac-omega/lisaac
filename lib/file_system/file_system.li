@@ -1,15 +1,14 @@
 Header
-  + name := FILE_SYSTEM;
-
+  + name := File_system
 Inherit  
-  - parent_directory:DIRECTORY := DIRECTORY
+  - parent_directory:Directory := Directory
   
 Public
   
-  - path:STRING_ALIAS <-
-  ( + p:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
-      ENVIRONMENT.pwd_in tmp
+  - path:String_alias <-
+  ( + p:String_alias
+    String.tmp { tmp:String_buffer
+      Environment.pwd_in tmp
       p := tmp.to_string_alias
     }
     p

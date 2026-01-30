@@ -1,12 +1,9 @@
 Header
-
-  + name        := ITM_EXTERNAL;
-
-  /*External C without type result*/
-
+  + name := Itm_external
+/*External C without type result*/
 Inherit
 
-  + parent_itm_extern:Expanded ITM_EXTERN
+  + parent_itm_extern:Flat Itm_extern
 
 Public
 
@@ -14,172 +11,163 @@ Public
   // Constructor
   //
 
-  - create p:POSITION text n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Position text n:String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p text n
     result
   )
 
-  - make p:POSITION text n:STRING_ALIAS <-
+  - make p:Position text n:String_alias <-
   (
     position := p
-    extern   := n
+    text   := n
   )
 
   //
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + result:EXPR
-    + lst_acc:ARRAY EXPR
-    + num:INTEGER
-    + exp1,exp2,exp3:EXPR
-    + left,right:EXPR
-    + type:TYPE_FULL
+  - to_run_expr:Expr <-
+  ( + result:Expr
+    + lst_acc:Array Expr
+    + num:Int
+    + exp1,exp2,exp3:Expr
+    + left,right:Expr
+    + type:Type_full
     
-    extern.is_integer.if {
-      num := extern.to_integer
+    text.is_integer.if {
+      num := text.to_int
       (num > 31).if {
-	syntax_error (position,"Unknown external lisaac code (0..31).")
+        syntax_error (position,"Unknown external lisaac code (0..31).")
       }
       num
-      .when 0 then { // is_expanded_type:BOOLEAN
-	exp1 := profil_slot.argument_list.first.read position
-	result := IS_EXPANDED.create position receiver exp1
+      .when 0 then { // is_flat_type:Boolean
+        exp1 := profil_slot.argument_list.first.read position
+        result := Is_expanded.create position receiver exp1
       }
-      .when 1 then { // type_id_intern:INTEGER
-        result := GET_TYPE_ID.create position receiver (profil_slot.argument_list.first.type)
+      .when 1 then { // type_id_intern:Int
+        result := Get_type_id.create position receiver (profil_slot.argument_list.first.type)
       }
-      .when 2 then { // INTEGER > INTEGER -> BOOLEAN.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_SUP.create position with left and right
+      .when 2 then { // Int > Int -> Boolean.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_sup.create position with left and right
       }
-      .when 3 then { // INTEGER - INTEGER -> INTEGER.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_SUB.create position with left and right
+      .when 3 then { // Int - Int -> Int.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_sub.create position with left and right
       }
-      .when 4 then { // INTEGER * INTEGER -> INTEGER.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_MUL.create position with left and right
+      .when 4 then { // Int * Int -> Int.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_mul.create position with left and right
       }
-      .when 5 then { // INTEGER / INTEGER -> INTEGER.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_DIV.create position with left and right
+      .when 5 then { // Int / Int -> Int.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_div.create position with left and right
       }
-      .when 6 then { // INTEGER & INTEGER -> INTEGER.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_AND.create position with left and right
+      .when 6 then { // Int & Int -> Int.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_and.create position with left and right
       }
-      .when 7 then { // INTEGER >> INTEGER -> INTEGER.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_SHIFT_R.create position with left and right
+      .when 7 then { // Int >> Int -> Int.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_shift_r.create position with left and right
       }
-      .when 8 then { // INTEGER << INTEGER -> INTEGER.
-	left   := profil_slot.argument_list.first .read position
-	right  := profil_slot.argument_list.at 1.read position
-	result := EXPR_SHIFT_L.create position with left and right
+      .when 8 then { // Int << Int -> Int.
+        left   := profil_slot.argument_list.first .read position
+        right  := profil_slot.argument_list.at 1.read position
+        result := Expr_shift_l.create position with left and right
       }
-      .when 9 then { // put OBJECT to INTEGER.
-	exp1 := profil_slot.argument_list.first .read position
-	exp2 := profil_slot.argument_list.at 1.read position
-	exp3 := profil_slot.argument_list.at 2.read position
-	result := PUT_TO.create position base exp1 index exp3 value exp2
+      .when 9 then { // put OBJECT to Int.
+        exp1 := profil_slot.argument_list.at 0.read position        
+        exp2 := profil_slot.argument_list.at 1.read position // Index
+        exp3 := profil_slot.argument_list.at 2.read position // Value
+        result := Put_to.create position base exp1 index exp2 value exp3
       }
-      .when 10 then { // item INTEGER -> OBJECT.
-	exp1 := profil_slot.argument_list.first .read position
-	exp2 := profil_slot.argument_list.at 1.read position
-	result := ITEM.create position base exp1 index exp2
+      .when 10 then { // item Int -> OBJECT.
+        exp1 := profil_slot.argument_list.first .read position
+        exp2 := profil_slot.argument_list.at 1.read position
+        result := Item.create position base exp1 index exp2
       }
-      .when 11 then { // lisaac_stack_print(step:INTEGER)        
+      .when 11 then { // lisaac_stack_print(step:Int)        
         exp1 := profil_slot.argument_list.at 1.read position
-        result := PRINT_STACK.new.make exp1
+        result := Print_stack.new.make exp1
       }
-      .when 12 then { // object_size -> INTEGER.
-        result := SIZE_OF.create position receiver (profil_slot.argument_list.first.type)
+      .when 12 then { // object_size -> Int.
+        result := Size_of.create position receiver (profil_slot.argument_list.first.type)
       }
       .when 13 then { // CAST SRC TO DST.on src:SRC :DST.
         type := profil_slot.result_list.first.type
         exp2 := profil_slot.argument_list.second.read position
-        result := CAST.create type value exp2
-        
-        //(type.is_scalar).if {        
-        /*
-        (type.raw.name == "STRING").if_false {
-          result := CAST.create type value exp2
-        } else {
-          warning_error (position,"cast creation.")
-          result := CAST_CREATION.create type value exp2
-        }
-        */
+        result := Cast.create type value exp2
       }
       .when 14 then { // OLD `is_cop_actif' for COP
         not_yet_implemented
       }
-      .when 15 then { // is_cop_type:BOOLEAN
+      .when 15 then { // is_cop_type:Boolean
         type := profil_slot.argument_list.first.type
         ((is_cop) && {type.prototype.style = '-'}).if {
-          result := PROTOTYPE_CST.create position type (type_true.default)
+          result := Prototype_cst.create position type (type_true.default)
         } else {
-          result := PROTOTYPE_CST.create position type (type_false.default)
+          result := Prototype_cst.create position type (type_false.default)
         }
       }
-      .when 16 then { // LIST.upper:INTEGER
+      .when 16 then { // LIST.upper:Int
         not_yet_implemented
       }
-      .when 17 then { // LIST.at index:INTEGER :E
+      .when 17 then { // LIST.at index:Int :E
         not_yet_implemented
       }
-      .when 18 then { // OLD compiler_inlining_level -> INTEGER.
-	not_yet_implemented
-      }
-      .when 19 then { // OLD compiler_optimization -> BOOLEAN.
+      .when 18 then { // OLD compiler_inlining_level -> Int.
         not_yet_implemented
       }
-      .when 20 then { // compiler_built_on -> STRING_ALIAS.
+      .when 19 then { // OLD compiler_optimization -> Boolean.
+        not_yet_implemented
+      }
+      .when 20 then { // compiler_built_on -> String_alias.
         string_tmp.clear
-        DATE.create_now.append_in string_tmp
+        Date.create_now.append_in string_tmp
         string_tmp.add_last ' '
-        TIME.now.append_in string_tmp
-        result := STRING_CST.create position text (string_tmp.to_string_alias) length (string_tmp.count)
+        Time.now.append_in string_tmp
+        result := String_cst.create position text (string_tmp.to_string_alias) length (string_tmp.count)
       }
-      .when 21 then { // OLD debug_with_code -> BOOLEAN.
+      .when 21 then { // OLD debug_with_code -> Boolean.
         not_yet_implemented
       }
-      .when 22 then { // compile_time -> INTEGER.
-        result := INTEGER_CST.create position value (TIME.now.to_csecond) type (type_integer.default)
+      .when 22 then { // compile_time -> Int.
+        result := Int_cst.create position value (Time.now.to_csecond) type (type_integer.default)
       }
-      .when 23 then { // compile_date -> UINTEGER_32.
-        result := INTEGER_CST.create position value (DATE.create_now.encode) type (type_uinteger_32.default)
+      .when 23 then { // compile_date -> Uint32.
+        result := Int_cst.create position value (Date.create_now.encode) type (type_uinteger_32.default)
       }
-      .when 24 then { // OBJECT.type_name -> STRING_ALIAS
+      .when 24 then { // OBJECT.type_name -> String_alias
         type := profil_slot.argument_list.first.type
         string_tmp.clear
         type.raw.append_name_in string_tmp
-        result := STRING_CST.create position text (string_tmp.to_string_alias) length (string_tmp.count)
+        result := String_cst.create position text (string_tmp.to_string_alias) length (string_tmp.count)
       }
-      .when 25 then { // OBJECT.foreach_intern_data action:{ (STRING_ALIAS,STRING_ALIAS,T,E); }
+      .when 25 then { // OBJECT.foreach_intern_data action:{ (String_alias,String_alias,T,E); }
         forall_data_product
-        result := PROTOTYPE_CST.create position type (TYPE_VOID.default)
+        result := Prototype_cst.create position type (Type_void.default)
       }
-      .when 26 then {        type := profil_slot.result_list.first.type
+      .when 26 then { // Read LIP variable
+        type := profil_slot.result_list.first.type
         exp1 := profil_slot.argument_list.first.read position
-        result := READ_LIP.create exp1 type type
+        result := Read_lip.create exp1 type type
       }
       .when 27 to 31 then { // FREE
         syntax_error (position,"Free external lisaac code.")
       }
     } else {
       lst_acc := get_access
-      result  := EXTERNAL_C.create position text last_code
-      access lst_acc persistant TRUE type (TYPE_VOID.default)
+      result  := External_c.create position text last_code
+      access lst_acc persistant True type (Type_void.default)
     }
     result
   )
@@ -191,20 +179,20 @@ Private
   //
 
   - forall_data_product <-
-  ( + type:TYPE_FULL
-    + slot:SLOT
-    + sl_dta:SLOT_DATA
+  ( + type:Type_full
+    + slot:Slot
+    + sl_dta:Slot_data
     type := profil_slot.argument_list.first.type
     (type.raw.prototype.is_mapping).if_false {
       semantic_error (position,"Sorry, not yet implemented.")
     }
-    (type.slot_run.lower).to (type.slot_run.upper) do { i:INTEGER
+    (type.slot_run.lower).to (type.slot_run.upper) do { i:Int
       slot := type.slot_run.at i
       sl_dta := slot.slot_data_intern
       (sl_dta != NULL).if {
         product_access sl_dta
         (slot.slot_data_list != NULL).if {
-          (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { j:INTEGER
+          (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { j:Int
             product_access (slot.slot_data_list.at j)
           }
         }
@@ -212,31 +200,31 @@ Private
     }
   )
 
-  - product_access slot:SLOT_DATA <-
-  ( + arg_sec,arg_nam,arg_typ,arg_val,rec:EXPR
-    + args:ARRAY EXPR
+  - product_access slot:Slot_data <-
+  ( + arg_sec,arg_nam,arg_typ,arg_val,rec:Expr
+    + args:Array Expr
 
     (slot.style = '+').if {
       // Section name.
       string_tmp.clear
       slot.id_section.append_in string_tmp
-      arg_sec := STRING_CST.create position text (string_tmp.to_string_alias) length (string_tmp.count)
+      arg_sec := String_cst.create position text (string_tmp.to_string_alias) length (string_tmp.count)
       // Name slot.
-      arg_nam := STRING_CST.create position text (slot.name) length (slot.name.count)
+      arg_nam := String_cst.create position text (slot.name) length (slot.name.count)
       // Type.
-      arg_typ := PROTOTYPE_CST.create position type (slot.type)
+      arg_typ := Prototype_cst.create position type (slot.type)
       // Value.
       arg_val := slot.read position with (profil_slot.argument_list.first.read position)
       // {}.value.
       rec := (profil_slot.argument_list.second.read position)
-      args := ARRAY EXPR .create_with_capacity 5
+      args := Array Expr .create_with_capacity 5
       args.add_last (rec.my_copy)
       args.add_last arg_sec
       args.add_last arg_nam
       args.add_last arg_typ
       args.add_last arg_val
       list_current.add_last (
-        NODE.new_block position receiver rec with args
+        Node.new_block position receiver rec with args
       )
     }
   )

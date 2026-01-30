@@ -1,11 +1,10 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Insert
-  - parent_print:PRINT := PRINT
+  - parent_print:Print := Print
     
 Public
   - main <-
   (
-    TEST.check (('.').to_string) string "."
+    Test.check (('.').to_string) string "."
   )

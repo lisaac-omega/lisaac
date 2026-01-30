@@ -1,12 +1,9 @@
 Header
-
-  + name        := PROTOTYPE_CST;
-
-  /*Prototype constant*/
-
+  + name := Prototype_cst
+/*Prototype constant*/
 Inherit
 
-  + parent_constant:Expanded CONSTANT
+  + parent_constant:Flat Constant
 
 Public
 
@@ -14,8 +11,8 @@ Public
   // Creation.
   //
 
-  - create p:POSITION type t:TYPE_FULL :SELF<-
-  ( + result:SELF
+  - create p:Position type t:Type_full :Self<-
+  ( + result:Self
     ? {p.code != 0}
     ? {t != NULL}
 
@@ -24,23 +21,23 @@ Public
     result
   )
 
-  - make p:POSITION type t:TYPE_FULL <-
+  - make p:Position type t:Type_full <-
   (
     position    := p
-    static_type := t; //.to_strict
+    static_type := t; //.to_exact
   )
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
-    SELF.create position type static_type
+    Self.create position type static_type
   )
 
   //
   // Comparaison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + p:PROTOTYPE_CST
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + p:Prototype_cst
     p ?= other
     (p != NULL) && {static_type = p.static_type}
   )
@@ -49,12 +46,12 @@ Public
   // Execute
   //
 
-  - execute_link:EXPR <-
+  - execute_link:Expr <-
   (
-    Self
+    self
   )
   
-  - to_run_contract msg:STRING_ALIAS <-
+  - to_run_contract msg:String_alias <-
   (
     // Nothing.
   )
@@ -72,7 +69,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     static_type.display buffer
     display_ref buffer

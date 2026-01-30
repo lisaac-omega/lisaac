@@ -1,15 +1,14 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Private
-  + n:INTN
+  + n:Intn
   
-  - next_pow3 s:STRING_ALIAS <-
+  - next_pow3 s:String_alias <-
   (
     n := n * 3
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       n.append_in tmp
-      TEST.check tmp string s
+      Test.check tmp string s
     }
   )
   

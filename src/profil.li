@@ -1,36 +1,33 @@
 Header
-
-  + name    := PROFIL;
-
-  /*Method with costumization*/
-
+  + name := Profil
+/*Method with costumization*/
 Inherit
 
-  + parent_any:Expanded ANY
+  + parent_any:Flat Any
 
-  - parent_parameter_to_type:Expanded PARAMETER_TO_TYPE
+  - parent_parameter_to_type:Flat Parameter_to_type
 
-PROFIL_LIST
+Profil_list
 
-  + life_index:INTEGER
+  + life_index:Int
 
-  - set_life_index idx:INTEGER <-
+  - set_life_index idx:Int <-
   (
     life_index := idx
   )
 
 Public
   
-  - profil_add_alias:PROFIL
-  - profil_hash_code_alias:PROFIL
+  - profil_add_alias:Profil
+  - profil_hash_code_alias:Profil
   
-  - arg_type_tmp:ARRAY EXPR
-  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
-  ( + idx:INTEGER
-    + result:TYPE_FULL
+  - arg_type_tmp:Array Expr
+  - parameter_to_type p:Itm_type_parameter :Type_full <-
+  ( + idx:Int
+    + result:Type_full
 
-    (p.name = "SELF").if {
-      // For Self.
+    (p.name = str_self).if {
+      // For self.
       result := type_self
     } else {
       // For Genericity.
@@ -40,7 +37,7 @@ Public
         // For Type parametric.
         idx := slot_code.get_index_argument_type p
         (idx != - 1).if {
-          result := arg_type_tmp.at idx.static_type + TYPE_FULL.generic_bit
+          result := arg_type_tmp.at idx.static_type + Type_full.generic_bit
         }
       }
     }
@@ -50,8 +47,8 @@ Public
   - propagation_external <-
   (
     (external_present).if_false {
-      external_present := TRUE
-      (set_back.lower).to (set_back.upper) do { j:INTEGER
+      external_present := True
+      (set_back.lower).to (set_back.upper) do { j:Int
         set_back.at j.propagation_external
       }
     }
@@ -63,17 +60,16 @@ Public
   // Graph info.
   //
 
-  - hash_code:INTEGER <- name.hash_code
+  - hash_code:Int <- name.hash_code
 
-  + external_present:BOOLEAN
+  + external_present:Boolean
 
-  + set_call:HMAP INTEGER KEY PROFIL
+  + set_call:Hmap Int Key Profil
 
-  + set_back:HSET(PROFIL)
+  + set_back:Hset(Profil)
 
-  - add_call p:PROFIL <-
-  ( + found:BOOLEAN ; + cnt:INTEGER
-    
+  - add_call p:Profil <-
+  ( + found:Boolean ; + cnt:Int
     /*
     if (set_call.has p) then {
       cnt := set_call.at p
@@ -95,26 +91,26 @@ Public
     set_call.at p put cnt
     
     
-    p.set_back.fast_add Self
+    p.set_back.fast_add self
   )
 
   - alloc_profil_main <-
   (
-    set_call := new HMAP INTEGER KEY PROFIL
-    set_back := HSET PROFIL.create
+    set_call := new Hmap Int Key Profil
+    set_back := Hset Profil.create
     name := "main"
   )
 
-  - set_external_present b:BOOLEAN <-
+  - set_external_present b:Boolean <-
   (
     external_present := b
   )
 
-  - genere_graph out:STRING_BUFFER <-
+  - genere_graph out:String_buffer <-
   ( //+ key:PROFIL
-    //+ cnt:INTEGER
-    + is_force:BOOLEAN
-    //+ j:INTEGER
+    //+ cnt:Int
+    + is_force:Boolean
+    //+ j:Int
 
     if (external_present) then {
       
@@ -127,8 +123,8 @@ Public
         j := j + 1
       }
       */
-      + dummy:INTEGER
-      (is_force, dummy) := set_call.search_key {k:PROFIL
+      + dummy:Int
+      (is_force, dummy) := set_call.search_key {k:Profil
         k.external_present
       }
       
@@ -136,7 +132,7 @@ Public
       
       
     } else {
-      is_force := TRUE
+      is_force := True
     }
     if is_force then {
       
@@ -144,7 +140,7 @@ Public
       
       
       /* // DCDC plus de TRAVERSABLE
-      (set_call.lower).to (set_call.upper) do { j:INTEGER
+      (set_call.lower).to (set_call.upper) do { j:Int
         key := set_call.key j
         cnt := set_call.at j
         output.append name
@@ -160,7 +156,7 @@ Public
       */
       
       
-      set_call.foreach { (key:PROFIL, cnt:INTEGER)
+      set_call.foreach { (key:Profil, cnt:Int)
         output.append name
         output.append " -> "
         output.append (key.name)
@@ -190,31 +186,31 @@ Public
   //
   //
 
-  - slot:SLOT <- abstract
+  - slot:Slot <- abstract
 
-  - is_interrupt:BOOLEAN
+  - is_interrupt:Boolean
 
-  - is_external:BOOLEAN
+  - is_external:Boolean
 
-  + type_self:TYPE_FULL
+  + type_self:Type_full
 
-  + argument_list:ARRAY LOCAL
+  + argument_list:Array Local
 
-  + result_list:SLIM_ARRAY LOCAL
+  + result_list:Slim_array Local
 
-  + code:LIST
-  + context:LOCAL
+  + code:List
+  + context:Local
 
-  + count_intern_call:INTEGER
+  + count_intern_call:Int
 
-  + link_count:INTEGER
-  + cop_link_count:INTEGER
+  + link_count:Int
+  + cop_link_count:Int
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  - is_context_sensitive:BOOLEAN <- abstract
+  - is_context_sensitive:Boolean <- abstract
 
-  + stat:INTEGER_8 := -1
+  + stat:Int8 := -1
   // 00 : No recursive, No inlinable.
   // 01 : No recursive, Inlinable.
   // 10 : Recusive,     No tail.
@@ -226,34 +222,34 @@ Public
     count_intern_call := 0
   )
 
-  - recursivity_bit:INTEGER_8 := 10b
-  - tail_bit:INTEGER_8        := 01b
-  - inlining_bit:INTEGER_8    := 01b
+  - recursivity_bit:Int8 := 10b
+  - tail_bit:Int8        := 01b
+  - inlining_bit:Int8    := 01b
 
-  - is_tail_recursive:BOOLEAN     <- stat = 11b
-  - is_not_tail_recursive:BOOLEAN <- stat = 10b
-  - is_inlinable:BOOLEAN          <- stat = 01b
-  - is_recursive:BOOLEAN          <- (stat & recursivity_bit) != 0
-  - is_no_inlinable:BOOLEAN       <- (is_interrupt) || {is_external} || {Self = profil_add_alias} || {Self = profil_hash_code_alias}
+  - is_tail_recursive:Boolean     <- stat = 11b
+  - is_not_tail_recursive:Boolean <- stat = 10b
+  - is_inlinable:Boolean          <- stat = 01b
+  - is_recursive:Boolean          <- (stat & recursivity_bit) != 0
+  - is_no_inlinable:Boolean       <- (is_interrupt) || {is_external} || {self = profil_add_alias} || {self = profil_hash_code_alias}
 
   //
 
-  - mode_recursive:BOOLEAN
+  - mode_recursive:Boolean
 
-  - set_mode_recursive b:BOOLEAN <-
+  - set_mode_recursive b:Boolean <-
   (
     mode_recursive := b
   )
 
   - set_life <-
   (
-    PROFIL_LIST.set_life Self
+    Profil_list.set_life self
     (mode_recursive).if {      
       execute_recursive
     }
   )
 
-  - link call:CALL_SLOT <-
+  - link call:Call_slot <-
   (
     (call.cop_argument != NULL).if {
       cop_link_count := cop_link_count + 1
@@ -262,7 +258,7 @@ Public
     }
   )
 
-  - unlink call:CALL_SLOT <-
+  - unlink call:Call_slot <-
   (
     (call.cop_argument != NULL).if {
       cop_link_count := cop_link_count - 1
@@ -273,11 +269,11 @@ Public
     }
   )
 
-  - write_argument args:ARRAY EXPR :ARRAY WRITE <-
-  ( + loc:LOCAL
-    + val:EXPR
-    + wrt:WRITE
-    + result:ARRAY WRITE
+  - write_argument args:Array Expr :Array Write <-
+  ( + loc:Local
+    + val:Expr
+    + wrt:Write
+    + result:Array Write
 
     (args.count != argument_list.count).if {
       string_tmp.copy "Incorrect vector size. (Call #"
@@ -288,16 +284,16 @@ Public
       semantic_error (args.last.position,string_tmp)
     }
 
-    result := ARRAY WRITE .create_with_capacity (argument_list.count)
-    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+    result := Array Write .create_with_capacity (argument_list.count)
+    (argument_list.lower).to (argument_list.upper) do { j:Int
       loc := argument_list.at j
       val := args.at j
       (loc != NULL).if {
-	wrt := loc.write (val.position) value val
-	result.add_last wrt
+        wrt := loc.write (val.position) value val
+        result.add_last wrt
       } else {
-	result.add_last NULL
-	val.remove
+        result.add_last NULL
+        val.remove
       }
     }
     result
@@ -307,41 +303,41 @@ Public
   // Comparaison.
   //
 
-  - compatibility_with other:PROFIL <-
-  ( + n1,n2:INTEGER
+  - compatibility_with other:Profil <-
+  ( + n1,n2:Int
     (argument_list.count != other.argument_list.count).if {
-      POSITION.put_error semantic text "Incorrect vector size argument."
+      Position.put_error semantic text "Incorrect vector size argument."
       code.position.put_position
       other.code.position.put_position
-      POSITION.send_error
+      Position.send_error
     }
-    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+    (argument_list.lower).to (argument_list.upper) do { j:Int
       (argument_list.at j.type != other.argument_list.at j.type).if {
-	POSITION.put_error semantic text "Incorrect invariant type argument."
-	argument_list.at j.position.put_position
-	other.argument_list.at j.position.put_position
-	POSITION.send_error
+        Position.put_error semantic text "Incorrect invariant type argument."
+        argument_list.at j.position.put_position
+        other.argument_list.at j.position.put_position
+        Position.send_error
       }
     }
     (result_list.count != other.result_list.count).if {
-      POSITION.put_error semantic text "Incorrect vector size result."
+      Position.put_error semantic text "Incorrect vector size result."
       code.position.put_position
       other.code.position.put_position
-      POSITION.send_error
+      Position.send_error
     }
-    (result_list.lower).to (result_list.upper) do { j:INTEGER
+    (result_list.lower).to (result_list.upper) do { j:Int
       (result_list.at j.type != other.result_list.at j.type).if {
-        POSITION.put_error semantic text "Incorrect invariant type result."
+        Position.put_error semantic text "Incorrect invariant type result."
         result_list.at j.position.put_position
         other.result_list.at j.position.put_position
-        POSITION.send_error
+        Position.send_error
       }
     }
   )
 
-  - lookup n:STRING_ALIAS :LOCAL <-
-  ( + j:INTEGER
-    + result:LOCAL
+  - lookup n:String_alias :Local <-
+  ( + j:Int
+    + result:Local
         
     j := argument_list.lower
     {(j > argument_list.upper) || {argument_list.at j.name = n}}.until_do {
@@ -368,7 +364,7 @@ Public
 
   - remove_inline <-
   (
-    PROFIL_LIST.remove Self
+    Profil_list.remove self
   )
 
   - remove <-
@@ -377,10 +373,10 @@ Public
   )
 
   - search_and_convert_tail_recursive <-
-  ( + switch:SWITCH
-    + msg:CALL_SLOT
-    + lst:LIST
-    + count_recur:INTEGER
+  ( + switch:Switch
+    + msg:Call_slot
+    + lst:List
+    + count_recur:Int
 
     (
       (! mode_recursive) && {is_not_tail_recursive} &&
@@ -388,18 +384,18 @@ Public
     ).if {
       switch ?= code.last
       (switch != NULL).if {
-	// Verification cases:
-	(switch.list.lower).to (switch.list.upper) do { j:INTEGER
-	  lst := switch.list.at j.code
-	  (lst.is_empty).if_false {
-	    msg ?= lst.last
-	    ((msg != NULL) && {msg.profil = Self}).if {
-	      count_recur := count_recur + 1
-	    }
-	  }
-	}
-	(count_recur = switch.list.count).if {
-	  semantic_error (slot.position,"Recursivity without end.")
+        // Verification cases:
+        (switch.list.lower).to (switch.list.upper) do { j:Int
+          lst := switch.list.at j.code
+          (lst.is_empty).if_false {
+            msg ?= lst.last
+            ((msg != NULL) && {msg.profil = self}).if {
+              count_recur := count_recur + 1
+            }
+          }
+        }
+        (count_recur = switch.list.count).if {
+          semantic_error (slot.position,"Recursivity without end.")
         }
         ((count_intern_call - 1) = count_recur).if {
           ((link_count = count_intern_call) || {! is_context_sensitive}).if {
@@ -412,14 +408,14 @@ Public
     }
   )
 
-  - i_am_the_last i:INSTR :BOOLEAN <-
+  - i_am_the_last i:Instr :Boolean <-
   (
     code.i_am_the_last i
   )
 
   - execute_recursive <-
-  ( + old_list_current:LIST
-    + old_profil_current:PROFIL
+  ( + old_list_current:List
+    + old_profil_current:Profil
 
     (stat = -1).if {
       count_intern_call := count_intern_call + 1
@@ -428,28 +424,28 @@ Public
         old_list_current   := list_current
         old_profil_current := profil_current
         //
-        profil_current := Self
-	execute 3
-	//
+        profil_current := self
+        execute 3
+        //
         list_current   := old_list_current
         profil_current := old_profil_current
-	? {code != NULL}
-	(count_intern_call = 1).if {
+        ? {code != NULL}
+        (count_intern_call = 1).if {
           stat := 0
-	} else {
+        } else {
           stat := recursivity_bit
         }
       }
     }
   )
 
-  - execute inline_lev:INTEGER <-
-  ( + old_seq_inline:UINTEGER_32
+  - execute inline_lev:Int <-
+  ( + old_seq_inline:Uint32
 
     list_current  := NULL
     old_seq_inline := seq_inline
 
-    CALL_SLOT.reset_count_context_sensitive
+    Call_slot.reset_count_context_sensitive
 
     seq_call_and_loop := seq_call_and_loop + 1
 
@@ -460,20 +456,20 @@ Public
     (result_list != NULL).if {
       /*
       ((code.count > 0) && {code.last = CALL_NULL}).if {
-        (result_list.lower).to (result_list.upper) do { i:INTEGER
+        (result_list.lower).to (result_list.upper) do { i:Int
           ((result_list.at i != NULL) && {result_list.at i.ensure_count != 0}).if {            
             result_list.at i put NULL
           }
         }
       } else {*/
-        (result_list.lower).to (result_list.upper) do { i:INTEGER
+        (result_list.lower).to (result_list.upper) do { i:Int
           ((result_list.at i != NULL) && {result_list.at i.ensure_count = 0}).if {
             result_list.at i put NULL
           }
         }
       //}
     }
-    LOCAL_SEQ.clear
+    Local_seq.clear
 
     seq_call_and_loop := seq_call_and_loop + 1
     /*
@@ -484,12 +480,12 @@ Public
     (
       (
         (
-          (CALL_SLOT.count_context_sensitive = 0) &&
+          (Call_slot.count_context_sensitive = 0) &&
           {! mode_recursive} && {stat = 0} &&
           {is_context_sensitive || {(seq_inline - old_seq_inline) <= inline_lev}}
         ) //|| {link_count = 1}
       ) /*&& {! is_interrupt} && {! is_external} &&
-      {Self != profil_add_alias} && {Self != profil_hash_code_alias}*/
+      {self != profil_add_alias} && {self != profil_hash_code_alias}*/
       
     ).if {
       //(name == "while_do__EKIC").if { "PROFIL:".print; link_count.println }
@@ -500,14 +496,14 @@ Public
     ).if {
       argument_list.at 0 put NULL
     }
-    PUSH.end_function
+    Push.end_function
   )
 
   //
   // Genere.
   //
 
-  - is_static:BOOLEAN <- abstract
+  - is_static:Boolean <- abstract
 
   - genere_handler <-
   (
@@ -522,9 +518,9 @@ Public
   )
 
   - genere_handler_intern <-
-  ( + ts:TYPE_FULL
-    + v:LOCAL
-    + i_result:INTEGER
+  ( + ts:Type_full
+    + v:Local
+    + i_result:Int
 
     ((output_list.count = 1) && {is_static}).if {
       output.append "static "
@@ -549,11 +545,11 @@ Public
     output.add_last '('
 
     // Arguments.
-    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+    (argument_list.lower).to (argument_list.upper) do { j:Int
       v := argument_list.at j
       (v != NULL).if {
         ? {(v.style = ' ') || {v.style = '!'}}
-        genere v result FALSE in output
+        genere v result False in output
         output.add_last ','
       }
     }
@@ -565,8 +561,8 @@ Public
       }
       (i_result <= result_list.upper).if {
         v := result_list.at i_result
-        v.set_result TRUE
-        genere v result TRUE in output
+        v.set_result True
+        genere v result True in output
         output.add_last ','
         i_result := i_result + 1
       }
@@ -587,20 +583,20 @@ Public
 
   - genere <-
   ( 
-    + ts:TYPE_FULL
-    + v:LOCAL
-    + np:INTEGER
-    + low:INTEGER
+    + ts:Type_full
+    + v:Local
+    + np:Int
+    + low:Int
 
     ((stat & recursivity_bit) != 0).if {
       counter_recursivity_function := counter_recursivity_function + 1
     }
     counter_function := counter_function + 1
     (is_speed_push).if {
-      PUSH_SPEED.start_c_function name
+      Push_speed.start_c_function name
     }
     //
-    profil_current := Self
+    profil_current := self
     ((link_count != 0) || {result_list.count != 0}).if {
       ((is_cop) && {cop_link_count != 0} && {result_list.count = 0}).if {
         // COP link.
@@ -645,8 +641,8 @@ Public
         (argument_list.count > 0).if {
           output.append indent
           v := argument_list.first
-          ((v != NULL) && {v.name = "Self"}).if {
-            genere v result FALSE in output
+          ((v != NULL) && {v.name = "self"}).if { 
+            genere v result False in output
             output.add_last '='
             put_cast_self output
             output.append "obj;\n"
@@ -654,11 +650,11 @@ Public
           }
         }
         (argument_list.count-low > 0).if {
-          (low).to (argument_list.upper) do { j:INTEGER
+          (low).to (argument_list.upper) do { j:Int
             v := argument_list.at j
             (v != NULL).if {
               output.append indent
-              genere v result FALSE in output
+              genere v result False in output
               output.append "=("
               ts := v.type
               ts.genere_declaration output
@@ -693,13 +689,13 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append (slot.name)
     append_type buffer
   )
 
-  - display_all buffer:STRING_BUFFER <-
+  - display_all buffer:String_buffer <-
   (
     display buffer
     code.display buffer
@@ -710,14 +706,14 @@ Public
   // Statistic
   //
 
-  - nb_func_arg:ARRAY2 INTEGER     := ARRAY2 INTEGER .create (8,8)
-  - nb_arg_size_type:ARRAY INTEGER := ARRAY INTEGER .create 64
+  - nb_func_arg:Array2 Int     := Array2 Int .create (8,8)
+  - nb_arg_size_type:Array Int := Array Int .create 64
 
 //  - list_cpa:HSET(STRING) := HSET(STRING).create
 
 Private
 
-  - put_cast_self buffer:STRING_BUFFER <-
+  - put_cast_self buffer:String_buffer <-
   (
     buffer.add_last '('
     type_self.genere_declaration buffer
@@ -726,7 +722,7 @@ Private
     buffer.add_last ')'
   )
 
-  - add_comment buffer:STRING_BUFFER <-
+  - add_comment buffer:String_buffer <-
   (
     buffer.append "/* "
     append_type buffer
@@ -749,7 +745,7 @@ Private
   )
 
   /*
-  - recur_cpa buf:STRING_BUFFER arg n:INTEGER <-
+  - recur_cpa buf:String_buffer arg n:Int <-
   ( + var:LOCAL
     + tmp:STRING
 
@@ -761,7 +757,7 @@ Private
     } else {
       var := argument_list.at n
       (var != NULL).if {
-        var.type_list.lower.to (var.type_list.upper) do { i:INTEGER
+        var.type_list.lower.to (var.type_list.upper) do { i:Int
           buf.add_last ' '
           buf.append (var.type_list.at i.name)
           recur_cpa buf arg (n+1)
@@ -774,13 +770,13 @@ Private
   )
   */
 
-  - append_type buffer:STRING_BUFFER <-
-  ( + v:VARIABLE
-    + nb_arg,nb_arg_poly,tmp:INTEGER
+  - append_type buffer:String_buffer <-
+  ( + v:Variable
+    + nb_arg,nb_arg_poly,tmp:Int
     //+ s:SLOT
 
     buffer.add_last '('
-    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+    (argument_list.lower).to (argument_list.upper) do { j:Int
       v := argument_list.at j
       (v != NULL).if {
         nb_arg := nb_arg + 1; // BSBS à mettre ds le if
@@ -799,8 +795,8 @@ Private
           }
         }
         v.type.display buffer
-	v.display_type buffer
-	buffer.add_last ','
+        v.display_type buffer
+        buffer.add_last ','
       }
     }
     (is_statistic).if {
@@ -838,8 +834,8 @@ Private
     }
   )
 
-  - genere v:LOCAL result is_res:BOOLEAN in buffer:STRING_BUFFER <-
-  ( + ts:TYPE_FULL
+  - genere v:Local result is_res:Boolean in buffer:String_buffer <-
+  ( + ts:Type_full
 
     ts := v.type
 
@@ -852,42 +848,42 @@ Private
     buffer.append (v.intern_name)
   )
 
-PROFIL, LISAAC
+Profil, Lisaac
 
-  - counter_function:INTEGER
-  - counter_recursivity_function:INTEGER
+  - counter_function:Int
+  - counter_recursivity_function:Int
 
 Private
 
   - convert_tail_recursive <-
-  ( + switch:SWITCH
-    + msg_slot:CALL_SLOT
-    + body:LIST
-    + loop:LOOP
-    + push:PUSH
-    + new_code:LIST
+  ( + switch:Switch
+    + msg_slot:Call_slot
+    + body:List
+    + loop:Loop
+    + push:Push
+    + new_code:List
 
-    new_code := LIST.create (code.position)
+    new_code := List.create (code.position)
     (debug_level_option != 0).if {
       push ?= code.first      
       new_code.add_last (push.my_copy)
-      push.set_first FALSE
+      push.set_first False
     }
 
-    loop := LOOP.create position name name body code
+    loop := Loop.create position name name body code
     new_code.add_last loop
 
     // Extract Switch/body:
     switch ?= code.last
-    (switch.list.lower).to (switch.list.upper) do { k:INTEGER
+    (switch.list.lower).to (switch.list.upper) do { k:Int
       body := switch.list.at k.code
       (body.is_empty).if_false {
-	msg_slot ?= body.last
-        ((msg_slot != NULL) && {msg_slot.profil = Self}).if {
+        msg_slot ?= body.last
+        ((msg_slot != NULL) && {msg_slot.profil = self}).if {
           link_count := link_count - 1
-	  msg_slot.argument_to_assignment body index (body.upper) alias FALSE style '!'
-	  body.at (body.upper) put (LOOP_END.create (msg_slot.position) loop loop)
-	}
+          msg_slot.argument_to_assignment body index (body.upper) alias False style '!'
+          body.at (body.upper) put (Loop_end.create (msg_slot.position) loop loop)
+        }
       }
     }
     count_intern_call := 1

@@ -1,18 +1,15 @@
 Header
-
-  + name        := LOCAL_SEQ;
-
-  /*Local slot*/
-
+  + name := Local_seq
+/*Local slot*/
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Private
 
-  - list_busy:ARRAY LOCAL := ARRAY LOCAL .create_with_capacity 512
+  - list_busy:Array Local := Array Local .create_with_capacity 512
 
-  - list_free:ARRAY LOCAL_SEQ := ARRAY LOCAL_SEQ .create_with_capacity 512
+  - list_free:Array Local_seq := Array Local_seq .create_with_capacity 512
 
   - clean <-
   (
@@ -21,27 +18,27 @@ Private
 
 Public
 
-  + last_write:WRITE
-  + last_seq_index:UINTEGER_32
-  + last_seq_or_and:UINTEGER_32
-  + last_seq_call_and_loop:UINTEGER_32
-  + last_seq_call_local_and_loop:UINTEGER_32
+  + last_write:Write
+  + last_seq_index:Uint32
+  + last_seq_or_and:Uint32
+  + last_seq_call_and_loop:Uint32
+  + last_seq_call_local_and_loop:Uint32
 
-  + last_list_current:LIST
-  + last_index:INTEGER
+  + last_list_current:List
+  + last_index:Int
 
-  - set_last_write w:WRITE <-
+  - set_last_write w:Write <-
   (
     last_write := w
   )
 
-  - set_last_index i:INTEGER <-
+  - set_last_index i:Int <-
   (
     last_index := i
   )
 
-  - new l:LOCAL <-
-  ( + result:LOCAL_SEQ
+  - new l:Local <-
+  ( + result:Local_seq
 
     (list_free.is_empty).if {
       result := clone
@@ -54,7 +51,7 @@ Public
     l.set_last_seq result
   )
 
-  - set_seq w:WRITE <-
+  - set_seq w:Write <-
   (
     // Save context
     last_write                  := w
@@ -68,9 +65,9 @@ Public
   )
 
   - clear <-
-  ( + l:LOCAL
+  ( + l:Local
 
-    (list_busy.upper).downto (list_busy.lower) do { j:INTEGER
+    (list_busy.upper).downto (list_busy.lower) do { j:Int
       l := list_busy.at j
       list_free.add_last (l.last_seq)
       l.set_last_seq NULL

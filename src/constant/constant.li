@@ -1,12 +1,9 @@
 Header
-
-  + name    := CONSTANT;
-
-  /*Parent for all constants*/
-
+  + name := Constant
+/*Parent for all constants*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
@@ -14,17 +11,17 @@ Public
   // Comparison.
   //
 
-  - is_constant:BOOLEAN <- TRUE
+  - is_constant:Boolean <- True
 
-  - is_invariant:BOOLEAN <- TRUE
+  - is_invariant:Boolean <- True
 
   //
   // Typing.
   //
 
-  + static_type:TYPE_FULL
+  + static_type:Type_full
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     t.add (static_type.raw)
   )
@@ -38,13 +35,13 @@ Public
     // Nothing.
   )
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     new_execute_pass
     NULL
   )
 
-  - execute_link:EXPR <- Self
+  - execute_link:Expr <- self
 
   //
   // Generation.

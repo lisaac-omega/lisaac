@@ -1,20 +1,18 @@
 Header
-
-  + name      := LIP_STRING;
-
+  + name := Lip_string
 Inherit
 
-  + parent_lip_constant:Expanded LIP_CONSTANT
+  + parent_lip_constant:Flat Lip_constant
 
 Private
 
-  - storage:ARRAY LIP_STRING := ARRAY LIP_STRING .create_with_capacity 10
+  - storage:Array Lip_string := Array Lip_string .create_with_capacity 10
 
 Public
 
-  + value:STRING_ALIAS
+  + value:String_alias
 
-  - set_value v:STRING_ALIAS <-
+  - set_value v:String_alias <-
   (
     value := v
   )
@@ -23,8 +21,8 @@ Public
   // Creation.
   //
 
-  - get str:STRING_ALIAS :LIP_STRING <-
-  ( + result:LIP_STRING
+  - get str:String_alias :Lip_string <-
+  ( + result:Lip_string
     (storage.is_empty).if {
       result := clone
     } else {
@@ -37,16 +35,16 @@ Public
 
   - free <-
   (
-    storage.add_last Self
+    storage.add_last self
   )
 
   //
   // Operation.
   //
 
-  - name:STRING_ALIAS <- "STRING"
+  - name:String_alias <- lip_string
 
-  - copy:LIP_CONSTANT <-
+  - copy:Lip_constant <-
   (
     get value
   )
@@ -58,9 +56,9 @@ Public
     string_tmp.print
   )
 
-  - append_in str:STRING_BUFFER <-
-  ( + i:INTEGER
-    + car:CHARACTER
+  - append_in b:String_buffer <-
+  ( + i:Int
+    + car:Char
 
     i := value.lower
     {i <= value.upper}.while_do {
@@ -70,54 +68,54 @@ Public
         (i <= value.upper).if {
           car := value.at i
           (car)
-          .when 'a'  then { str.add_last '\a'; }
-          .when 'b'  then { str.add_last '\b'; }
-          .when 'f'  then { str.add_last '\f'; }
-          .when 'n'  then { str.add_last '\n'; }
-          .when 'r'  then { str.add_last '\r'; }
-          .when 't'  then { str.add_last '\t'; }
-          .when 'v'  then { str.add_last '\v'; }
-          .when '\\' then { str.add_last '\\'; }
-          .when '?'  then { str.add_last '\?'; }
-          .when '\'' then { str.add_last '\''; }
-          .when '\"' then { str.add_last '\"'; }
+          .when 'a'  then { b.add_last '\a'; }
+          .when 'b'  then { b.add_last '\b'; }
+          .when 'f'  then { b.add_last '\f'; }
+          .when 'n'  then { b.add_last '\n'; }
+          .when 'r'  then { b.add_last '\r'; }
+          .when 't'  then { b.add_last '\t'; }
+          .when 'v'  then { b.add_last '\v'; }
+          .when '\\' then { b.add_last '\\'; }
+          .when '?'  then { b.add_last '\?'; }
+          .when '\'' then { b.add_last '\''; }
+          .when '\"' then { b.add_last '\"'; }
         } else {
-          str.add_last car
+          b.add_last car
         }
       } else {
-        str.add_last car
+        b.add_last car
       }
       i := i + 1
     }
   )
 
-LIP_CONSTANT
+Lip_constant
 
-  - my_copy other:SELF :LIP_CONSTANT <-
+  - my_copy other:Self :Lip_constant <-
   (
     value := other.value
-    Self
+    self
   )
 
-  - Self:SELF '=#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '=#'  other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value = other.value)
+    Lip_boolean.get (value = other.value)
   )
 
-  - Self:SELF '!=#' other:SELF :LIP_CONSTANT <-
+  - self:Self '!=#' other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value != other.value)
+    Lip_boolean.get (value != other.value)
   )
 
-  - Self:SELF '+#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '+#'  other:Self :Lip_constant <-
   (
     string_tmp.copy value
     string_tmp.append (other.value)
     value := string_tmp.to_string_alias
     other.free
-    Self
+    self
   )

@@ -1,16 +1,15 @@
 Header
-  + name := LIP_ELIX;
-  /* Used by Elix.*/
-  
+  + name := Lip_elix
+/* Used by Elix.*/
 Inherit
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
   
 Public
   
-  - load in:STRING_ALIAS do do:{(STRING_ALIAS,STRING_ALIAS);} <-
+  - load in:String_alias do do:{(String_alias,String_alias);} <-
   (
-    LIP_CALL.set_add_path do img TRUE
+    Lip_call.set_add_path do img True
     load_lip "make.lip"
-    LIP_CALL.load_dir in img NULL is_rec FALSE
-    LIP_CODE.call_front_end
+    Lip_call.load_dir in img NULL is_rec False
+    Lip_code.call_front_end
   )

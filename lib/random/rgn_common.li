@@ -1,43 +1,43 @@
 Header
-  + name := RGN_COMMON
-  /*
+  + name := Rgn_common
+  
+/*
    RNG: Random Number Generator.
    A common interface that allows you to quickly switch from one generator to another.
   */
-
 Insert  
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
     
 Public
   
-  - new Self:SELF :SELF <- clone
+  - new self:Self :Self <- clone
   
-  - init_clock :SELF <-
-  ( + seed: UINTEGER_32
-    seed := CLOCK.clock.to_raw_uinteger_32
+  - init_clock :Self <-
+  ( + seed: Uint32
+    seed := Clock.clock.to_raw_uint32
     init seed
   )
   
-  - init seed:UINTEGER_32 :SELF <-
+  - init seed:Uint32 :Self <-
   [
     ? {seed > 0}
   ]
   (
    abstract
-   )	
+   )        
   
-  - uint32:UINTEGER_32 <- abstract
+  - uint32:Uint32 <- abstract
 
-  - real_64:REAL_64 <- uint32.to_real_64 / 0FFFF_FFFFh
+  - real_64:Real64 <- uint32.to_real64 / 0FFFF_FFFFh
   
-  - real_32:REAL_32 <- uint32.to_real_32 / 0FFFF_FFFFh
+  - real_32:Real32 <- uint32.to_real32 / 0FFFF_FFFFh
   
-  - real_32 min:REAL_32 to max:REAL_32 :REAL_32 <- real_32 * (max-min) + min
+  - real_32 min:Real32 to max:Real32 :Real32 <- real_32 * (max-min) + min
   
-  - real_64 min:REAL_64 to max:REAL_64 :REAL_64 <- real_64 * (max-min) + min
+  - real_64 min:Real64 to max:Real64 :Real64 <- real_64 * (max-min) + min
   
-  - hexadecimal_digit:CHARACTER <-
-  ( + i,j:INTEGER
+  - hexadecimal_digit:Char <-
+  ( + i,j:Int
     i := min 0 max 15
     (i <= 9).if {
       j := ('0'.code) + i
@@ -50,29 +50,29 @@ Public
     ? {Result.is_hexadecimal_digit}.txt{Result.to_string}
   ]
     
-  - between mn:REAL_32 and mx:REAL_32 :REAL_32 <- (real_32 * (mx - mn) + mn)
+  - between mn:Real32 and mx:Real32 :Real32 <- (real_32 * (mx - mn) + mn)
   
-  - range mn:INTEGER_32 to mx:INTEGER_32 : INTEGER_32 <-
+  - range mn:Int32 to mx:Int32 : Int32 <-
   [
-    ? {deprecated TRUE msg "RGN_COMMON: use min__max instead"};
+    ? {deprecated True msg "RGN_COMMON: use min__max instead"};
   ]
   (
     min mn max mx
   )
   
-  - min mn:INTEGER_32 max mx:INTEGER_32 : INTEGER_32 <-
+  - min mn:Int32 max mx:Int32 : Int32 <-
   // Random value inside [ mn, mx ].
   [
     ? {mn <= mx}
   ]
-  ( + range, result:INTEGER_32
+  ( + range, result:Int32
     range := mx - mn + 1
-    result := mn + (uint32 .to_raw_integer % range)
+    result := mn + (uint32 .to_raw_int % range)
     result
   )
   [
     ? {Result.in_range mn to mx};
   ]
   
-  - max v:INTEGER_32 :INTEGER_32 <- min 0 max v
+  - max v:Int32 :Int32 <- min 0 max v
   

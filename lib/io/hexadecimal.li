@@ -1,10 +1,9 @@
 Header
-  + name := HEXADECIMAL;
-  
+  + name := Hexadecimal
 Public
-  - to_hexadecimal:STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
+  - to_hexadecimal:String_alias <-
+  ( + result:String_alias
+    String.tmp { tmp:String_buffer
       append_in tmp base 16
       result := tmp.to_string_alias
     }

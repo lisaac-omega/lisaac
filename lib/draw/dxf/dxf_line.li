@@ -1,27 +1,26 @@
 Header
-  + name := DXF_LINE;
-  
+  + name := Dxf_line
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 //  - parent_tools:TOOLS := TOOLS
   
 Private
-  - stackl:ARRAY DXF_LINE := ARRAY DXF_LINE.create_with_capacity 256
+  - stackl:Array Dxf_line := Array Dxf_line.create_with_capacity 256
   
 Public
   
-  + xb:REAL_32
-  + yb:REAL_32
+  + xb:Real32
+  + yb:Real32
   
-  + xe:REAL_32
-  + ye:REAL_32
+  + xe:Real32
+  + ye:Real32
   
-  + is_inverse:BOOLEAN
+  + is_inverse:Boolean
   
-  - create (x0,y0:REAL_32) to (x1,y1:REAL_32) :DXF_LINE <-
-  ( + result:DXF_LINE
+  - create (x0,y0:Real32) to (x1,y1:Real32) :Dxf_line <-
+  ( + result:Dxf_line
     (stackl.is_empty).if {
-      result := DXF_LINE.clone
+      result := Dxf_line.clone
     } else {
       result := stackl.pop
     }
@@ -29,39 +28,39 @@ Public
     result
   )
   
-  - make (x0,y0:REAL_32) to (x1,y1:REAL_32) <-
+  - make (x0,y0:Real32) to (x1,y1:Real32) <-
   (
     (xb,yb) := (x0,y0)
     (xe,ye) := (x1,y1)
   )
   
-  - free <- stackl.add_last Self
+  - free <- stackl.add_last self
   
-  - compute_bound:(REAL_32,REAL_32,REAL_32,REAL_32) <-
+  - compute_bound:(Real32,Real32,Real32,Real32) <-
   ( 
     xb.min xe,yb.min ye, xb.max xe, yb.max ye
   )
   
-  - Self:SELF '=>' other:DXF_LINE :BOOLEAN <-
+  - self:Self '=>' other:Dxf_line :Boolean <-
   (
     (xe = other.xb) && {ye = other.yb}
   )
   
   - inverse <-
-  ( + tmp:REAL_32
-    is_inverse:=TRUE
+  ( + tmp:Real32
+    is_inverse:=True
     tmp:=xb; xb:=xe; xe:=tmp
     tmp:=yb; yb:=ye; ye:=tmp
   )
   
-  - Self:SELF '<=>' other:DXF_LINE :BOOLEAN <-
+  - self:Self '<=>' other:Dxf_line :Boolean <-
   (
     ((xe = other.xb) && {ye = other.yb}) ||
     {(xb = other.xe) && {yb = other.ye}}
   )
   
-  - get (x,y:REAL_32) with mtx:ARRAY REAL_32 :(REAL_32,REAL_32) <-
-  ( + rx,ry,dx,dy:REAL_32
+  - get (x,y:Real32) with mtx:Array Real32 :(Real32,Real32) <-
+  ( + rx,ry,dx,dy:Real32
     (mtx.is_empty).if {
       (rx,ry) := (x,y)
     } else {
@@ -72,14 +71,14 @@ Public
     rx,ry
   )
   
-  - draw_first pen:PEN to (x,y:REAL_32) with (c:REAL_32,mtx:ARRAY REAL_32) <-
-  ( + px,py:REAL_32
+  - draw_first pen:Pen to (x,y:Real32) with (c:Real32,mtx:Array Real32) <-
+  ( + px,py:Real32
     (mtx.is_empty).if {
-      pen.stroke_color (COLOR.rgba (255,0,0, 64))
-      pen.fill_color   (COLOR.rgba (0,255,0, 64))
+      pen.stroke_color (Color.rgba (255,0,0, 64))
+      pen.fill_color   (Color.rgba (0,255,0, 64))
     } else {
-      pen.stroke_color (COLOR.red)
-      pen.fill_color   (COLOR.green)
+      pen.stroke_color (Color.red)
+      pen.fill_color   (Color.green)
     }
     (px,py) := get (xb,yb) with mtx
     (px,py) := (x+px*c, y-py*c)
@@ -87,28 +86,28 @@ Public
     pen.move_to (px,py)
   )
   
-  - draw pen:PEN to (x,y:REAL_32) with (c:REAL_32,mtx:ARRAY REAL_32) <-
-  ( + px,py:REAL_32
+  - draw pen:Pen to (x,y:Real32) with (c:Real32,mtx:Array Real32) <-
+  ( + px,py:Real32
     (px,py) := get (xe,ye) with mtx
     (px,py) := (x+px*c, y-py*c)
     pen.line_to (px,py)
   )
   
-  - bmp_move_to (dx,dy:REAL_32) zoom c:REAL_32 <-
-  ( + px,py:REAL_32
+  - bmp_move_to (dx,dy:Real32) zoom c:Real32 <-
+  ( + px,py:Real32
     (px,py) := ((xb-dx)*c, (dy-yb)*c)
-    bmp_move_to (px.to_integer+1,py.to_integer+1)
+    bmp_move_to (px.to_int+1,py.to_int+1)
   )
   
-  - bmp_line_to (dx,dy:REAL_32) zoom c:REAL_32 <-
-  ( + px,py:REAL_32
+  - bmp_line_to (dx,dy:Real32) zoom c:Real32 <-
+  ( + px,py:Real32
     (px,py) := ((xe-dx)*c, (dy-ye)*c)
-    bmp_line_to (px.to_integer+1,py.to_integer+1)
+    bmp_line_to (px.to_int+1,py.to_int+1)
   )
   
   - print <-
-  ( + s:DXF_SPLINE
-    s ?= Self
+  ( + s:Dxf_spline
+    s ?= self
     xb.print; ' '.print; yb.print; '-'.print
     xe.print; ' '.print; ye.print
     (s = NULL).if { 'L'.print; } else { 'S'.print; }

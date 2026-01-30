@@ -1,0 +1,23 @@
+Header
+  + name := Hmap_node V Key K
+/**/
+Insert
+  - parent_clone:Clone := Clone
+Public
+  + key:K
+  + value:V
+  + next:Hmap_node V Key K // Used when an hash_code clash occurs.
+
+  - set_value v:V <-  value := v 
+
+  - set_next n:Hmap_node V Key K <- next := n 
+  
+  - new:Self <- clone
+  
+  - value v:V key k:K next n:Hmap_node V Key K :Self <-
+  (
+    key := k
+    value := v
+    next := n
+    self
+  )

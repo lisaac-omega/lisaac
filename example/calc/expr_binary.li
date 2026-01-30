@@ -1,33 +1,31 @@
 Header
-
-  + name        := EXPR_BINARY;
-  /*
+  + name := Expr_binary
+/*
   Binary Expression.
   */
-
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  + left:EXPR
+  + left:Expr
 
-  + right:EXPR
+  + right:Expr
 
   //
   // Constructor
   //
 
-  - create l:EXPR and r:EXPR :SELF <-
-  ( + result:SELF
+  - create l:Expr and r:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make l and r
     result
   )
 
-  - make l:EXPR and r:EXPR <-
+  - make l:Expr and r:Expr <-
   (
     left  := l
     right := r

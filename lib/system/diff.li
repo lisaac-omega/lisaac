@@ -1,16 +1,16 @@
-Header  
-  + name := DIFF;
-  /*diff unix-like command*/
+Header
+  + name := Diff
+/*diff unix-like command*/
   
 Public
-  - path p1:STRING path p2:STRING : INTEGER <-
-  ( + result:INTEGER
-    STRING.tmp { tmp:STRING_BUFFER
+  - path p1:String path p2:String : Int <-
+  ( + result:Int
+    String.tmp { tmp:String_buffer
       tmp.append "diff "
       tmp.append p1
       tmp.add_last ' '
       tmp.append p2
-      result := ENVIRONMENT.run tmp
+      result := Environment.run tmp
     }
     result
   )

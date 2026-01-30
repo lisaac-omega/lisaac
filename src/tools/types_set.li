@@ -1,31 +1,28 @@
 Header
-
-  + name        := TYPES_SET;
-
-  /*Aliser TYPE collection.*/
-
+  + name := Types_set
+/*Aliser TYPE collection.*/
 Inherit
 
-  - parent_types:TYPES := TYPES
+  - parent_types:Types := Types
 
-TYPES_SET
+Types_set
 
-  + storage:NATIVE_ARRAY TYPE
+  + storage:C_array Type
   
 Public
   
-  - first_index:INTEGER <-
-  ( + result:INTEGER
+  - first_index:Int <-
+  ( + result:Int
     (count = 0).if {
       result := -1
     }
     result
   )
   
-  + count:INTEGER
+  + count:Int
   
-  - next_index i:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - next_index i:Int :Int <-
+  ( + result:Int
     
     (i < count-1).if {
       result := i + 1
@@ -35,12 +32,12 @@ Public
     result
   )
   
-  - first:TYPE <-
+  - first:Type <-
   (
     at 0
   )
   
-  - at i:INTEGER :TYPE <-
+  - at i:Int :Type <-
   (    
     storage.at i
   )
@@ -49,14 +46,14 @@ Public
   // Display.
   //
 
-  - types_append_in buf:STRING_BUFFER <-
+  - types_append_in buf:String_buffer <-
   ( 
     (! is_empty).if {
-      0.to (count - 2) do { j:INTEGER
-	at j.append_name_in buf
-	buf.add_last '('
-	at j.index.append_in buf
-	buf.append ") x "
+      0.to (count - 2) do { j:Int
+        at j.append_name_in buf
+        buf.add_last '('
+        at j.index.append_in buf
+        buf.append ") x "
       }
       at (count-1).append_name_in buf
       buf.add_last '('
@@ -67,19 +64,19 @@ Public
     }
   )
 
-TYPES_TMP
+Types_tmp
 
-  - create tab:TYPES_TMP :Strict TYPES_SET <-
-  ( + result:SELF
+  - create tab:Types_tmp :Exact Types_set <-
+  ( + result:Self
 
     result := clone
     result.make tab
     result
   )
 
-  - make tab:TYPES_TMP <-
+  - make tab:Types_tmp <-
   ( 
     count := tab.count
-    storage := NATIVE_ARRAY TYPE .calloc_intern count
+    storage := C_array Type .calloc_intern count
     storage.copy_from (tab.storage) until (count-1)
   )

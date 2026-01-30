@@ -1,6 +1,6 @@
-Header  
-  + name := STARTREK;
-  /*
+Header
+  + name := Startrek
+/*
   Try the 3 following recipes below.
   
   # (recipe #1) To compile as a standalone executable in a terminal window:
@@ -21,24 +21,23 @@ Header
   # then run:
   ./run.sh
   */
-    
 Inherit 
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
   
 Public 
   
-  - star (x,y:REAL_32) radius r:REAL_32 <-
-  ( + l:INTEGER
-    + p,p2:PAINT
+  - star (x,y:Real32) radius r:Real32 <-
+  ( + l:Int
+    + p,p2:Paint
     save
-    l := (r * 8).to_integer.min 255 
+    l := (r * 8).to_int.min 255 
     save
     begin_path
     circle (x,y) radius r
-    p := PAINT.create_radial (x,y) 
+    p := Paint.create_radial (x,y) 
               radius (1,r) 
-              color (COLOR.rgba(255,255,255,l/2))
-              to (COLOR.rgba(255,255,255,0))
+              color (Color.rgba(255,255,255,l/2))
+              to (Color.rgba(255,255,255,0))
     fill_paint p
     fill
     p.free
@@ -58,8 +57,8 @@ Public
     line_to (x+r/20.0,y)
     line_to (x       ,y-2.0*r)
         
-    p2 := PAINT.create_radial (x,y) 
-    radius (1,2.0*r) color (COLOR.rgba(255,255,255,l)) to (COLOR.rgba(255,255,255,0))
+    p2 := Paint.create_radial (x,y) 
+    radius (1,2.0*r) color (Color.rgba(255,255,255,l)) to (Color.rgba(255,255,255,0))
     fill_paint p2
     fill
     p2.free
@@ -67,7 +66,7 @@ Public
     
     save
     begin_path
-    stroke_color (COLOR.rgba(255,128,128,l/4))
+    stroke_color (Color.rgba(255,128,128,l/4))
     circle (x,y) radius (1.2*r)
     stroke_width 1.0
     stroke
@@ -76,23 +75,23 @@ Public
     restore
   )
   
-  - star:ARRAY REAL_32
-  - draw_space (px,py:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
-  ( + p:PAINT
-    + x,y,r,c,rr:REAL_32
+  - star:Array Real32
+  - draw_space (px,py:Real32) size (w,h:Real32) time t:Real32 <-
+  ( + p:Paint
+    + x,y,r,c,rr:Real32
     if (star = NULL) then {
-      star := ARRAY REAL_32.create_with_capacity (100*4)
-      0.to 99 do { i:INTEGER
-        star.add_last (w.to_integer.random_upper)
-        star.add_last (h.to_integer.random_upper)
+      star := Array Real32.create_with_capacity (100*4)
+      0.to 99 do { i:Int
+        star.add_last (w.to_int.random_upper)
+        star.add_last (h.to_int.random_upper)
         star.add_last (16.random_upper.max 2)
         star.add_last (100.0/(1000.random_upper.max 50))
       }
     }
         
     save
-    p := PAINT.create_box (px+50,py+50) size (w-100,h-100) radius 200
-    feather 100 color (COLOR.rgba(14,23,56,255)) to (COLOR.rgba(0,0,0,0))
+    p := Paint.create_box (px+50,py+50) size (w-100,h-100) radius 200
+    feather 100 color (Color.rgba(14,23,56,255)) to (Color.rgba(0,0,0,0))
     //COLOR.rgb(14,23,56)
     begin_path
     rect (px,py) size (w,h)
@@ -104,15 +103,15 @@ Public
     
     restore
     
-    from 0 to (star.upper) step 4 do { i:INTEGER
+    from 0 to (star.upper) step 4 do { i:Int
       x := star.at (i+0)
       y := star.at (i+1)
       r := star.at (i+2)
       c := star.at (i+3)
       rr := (r+(t*c).cos*5).max 1.0
       if (rr = 1.0) then {
-        star.at (i+0) put (w.to_integer.random_upper)
-        star.at (i+1) put (h.to_integer.random_upper)
+        star.at (i+0) put (w.to_int.random_upper)
+        star.at (i+1) put (h.to_int.random_upper)
         star.at (i+2) put (16.random_upper.max 2)
         star.at (i+3) put (100.0/(1000.random_upper.max 50))
       } else {
@@ -122,9 +121,9 @@ Public
     }
   )
 
-  - draw_title (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
+  - draw_title (x,y:Real32) size (w,h:Real32) time t:Real32 <-
   ( //+ c:COLOR
-    + p:PAINT
+    + p:Paint
     save
     transform(
       w*0.00625,0.0,
@@ -132,8 +131,8 @@ Public
       -w*1.25,-w*2.87
     )
     
-    p := PAINT.create_radial (310.0+t.cos*60,476.0+t.sin*35) 
-    radius (5,40) color (COLOR.rgb(255,255,255)) to (COLOR.rgb(78h,21h,21h))
+    p := Paint.create_radial (310.0+t.cos*60,476.0+t.sin*35) 
+    radius (5,40) color (Color.rgb(255,255,255)) to (Color.rgb(78h,21h,21h))
 /*    
     begin_path
     fill_paint p
@@ -287,9 +286,9 @@ Public
     restore
   )
 
-  - draw_logo (x,y:REAL_32) size (w,h:REAL_32) time t:REAL_32 <-
-  ( + p,pf:PAINT
-    + s,cs,sn:REAL_32
+  - draw_logo (x,y:Real32) size (w,h:Real32) time t:Real32 <-
+  ( + p,pf:Paint
+    + s,cs,sn:Real32
     /*
     + w,h,xx,yy:INTEGER
     + corner:REAL_32
@@ -309,7 +308,7 @@ Public
     )
     
     save
-    s := width.to_real_64/270.0
+    s := width.to_real64/270.0
     transform(
       1.333333*s,0.0,
       0.0     ,-1.333333*s,
@@ -318,7 +317,7 @@ Public
 
     begin_path
     
-    stroke_color (COLOR.rgb(35, 31, 32))
+    stroke_color (Color.rgb(35, 31, 32))
     line_cap  (butt)
     line_join (round)
 
@@ -332,16 +331,16 @@ Public
     bezier_w1(75.8008, 89.341)w2(52.5004,58.2691)to(29.3172, 25.9234)
     bezier_w1(34.7055,104.713)w2(49.2313,192.909)to(98.6883, 254.277)
 
-    p := PAINT.create_linear (29,25) to (168,254) 
-    color (COLOR.rgbf(0.3*2,0.3*2,0.32*2)) to (COLOR.rgbf(0.15,0.15,0.16))
+    p := Paint.create_linear (29,25) to (168,254) 
+    color (Color.rgbf(0.3*2,0.3*2,0.32*2)) to (Color.rgbf(0.15,0.15,0.16))
     stroke_paint p
     stroke
     p.free
     
     //pf := PAINT.create_linear (29,25) to (168,254) 
     //color (COLOR.rgb(35*2,31*2,32*2)) to (COLOR.rgb(15,15,16))
-    pf := PAINT.create_radial (29.0+10.0+t.cos*20,175.0+(t*0.47).sin*50) 
-    radius (10,100) color (COLOR.rgb(35*2,31*2,32*2)) to (COLOR.rgb(15,15,16))
+    pf := Paint.create_radial (29.0+10.0+t.cos*20,175.0+(t*0.47).sin*50) 
+    radius (10,100) color (Color.rgb(35*2,31*2,32*2)) to (Color.rgb(15,15,16))
     fill_paint pf
     fill
     pf.free
@@ -350,8 +349,8 @@ Public
     begin_path
     stroke_width 5.0
     
-    pf := PAINT.create_radial (29.0+10.0+t.cos*20,175.0+(t*0.47).sin*50) 
-    radius (10,100) color (COLOR.rgbf(0.3+0.1,0.3,0.32)) to (COLOR.rgbf(0.0,0.0,0.0))
+    pf := Paint.create_radial (29.0+10.0+t.cos*20,175.0+(t*0.47).sin*50) 
+    radius (10,100) color (Color.rgbf(0.3+0.1,0.3,0.32)) to (Color.rgbf(0.0,0.0,0.0))
     fill_paint pf
     //fill_color (COLOR.rgbaf(0.3,0.3,0.32,0.9))
     move_to(98.3379, 233.091)
@@ -366,8 +365,8 @@ Public
     line_to( 89.275, 163.488)
     line_to(98.3379, 233.091)
     
-    p := PAINT.create_linear (66,133) to (130,234) 
-    color (COLOR.rgbf(0.15,0.15,0.16)) to (COLOR.rgbf(0.3*2,0.3*2,0.32*2))
+    p := Paint.create_linear (66,133) to (130,234) 
+    color (Color.rgbf(0.15,0.15,0.16)) to (Color.rgbf(0.3*2,0.3*2,0.32*2))
     stroke_paint p
     stroke
     fill
@@ -400,9 +399,9 @@ Public
   )
       
   - draw <-
-  ( + t:REAL_32
+  ( + t:Real32
         
-    t := CLOCK.seconds
+    t := Clock.seconds
         
     draw_space (0,0) size (width,height) time t
     draw_logo  (0,0) size (width,height) time t
@@ -418,7 +417,7 @@ Public
     */    
     draw_title (0,0) size (width,height) time t
     draw_mouse
-    PAPER.refresh_again
+    Paper.refresh_again
   )
   
 Public
@@ -426,5 +425,5 @@ Public
   - main <-
   (
     init "StarTrek" size (600,800)
-    PAPER.run
+    Paper.run
   )

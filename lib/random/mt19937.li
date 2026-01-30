@@ -1,55 +1,53 @@
 Header
-  + name := MT19937;
-  
-  /*
+  + name := Mt19937
+/*
    The Mersenne Twister is a general-purpose pseudorandom number generator (PRNG)
    developed in 1997 by Makoto Matsumoto and Takuji Nishimura. 
    Its name derives from the choice of a Mersenne prime as its period length.
    The standard implementation of that, MT19937, uses a 32-bit word length.
   */
-  
 Inherit
-  - parent_rgn_common: /*EYE*/ RGN_COMMON := RGN_COMMON
+  - parent_rgn_common: /*EYE*/ Rgn_common := Rgn_common
   
 Private
-  - cst_n:INTEGER := 624
-  - cst_m:INTEGER := 397
-  - cst_w:INTEGER := 32
-  - cst_r:INTEGER := 31
-  - umask:INTEGER := 8000_0000h; //(0FFFF_FFFFh << cst_r)
-  - lmask:INTEGER := (0FFFF_FFFFh >> (cst_w-cst_r))
-  - cst_a:INTEGER := 09908B0DFh
-  - cst_u:INTEGER := 11
-  - cst_s:INTEGER := 7
-  - cst_t:INTEGER := 15
-  - cst_l:INTEGER := 18
-  - cst_b:INTEGER := 09D2C5680h
-  - cst_c:INTEGER := 0EFC60000h
-  - cst_f:INTEGER := 1812433253
+  - cst_n:Int := 624
+  - cst_m:Int := 397
+  - cst_w:Int := 32
+  - cst_r:Int := 31
+  - umask:Int := 8000_0000h; //(0FFFF_FFFFh << cst_r)
+  - lmask:Int := (0FFFF_FFFFh >> (cst_w-cst_r))
+  - cst_a:Int := 09908B0DFh
+  - cst_u:Int := 11
+  - cst_s:Int := 7
+  - cst_t:Int := 15
+  - cst_l:Int := 18
+  - cst_b:Int := 09D2C5680h
+  - cst_c:Int := 0EFC60000h
+  - cst_f:Int := 1812433253
   
-  + state_array:NATIVE_ARRAY UINTEGER_32
-  + state_index:INTEGER
+  + state_array:C_array Uint32
+  + state_index:Int
   
 Public
    
-  - init seed:UINTEGER_32 :SELF <-
-  ( + s:UINTEGER_32
+  - init seed:Uint32 :Self <-
+  ( + s:Uint32
     (state_array = NULL).if {
-      state_array := NATIVE_ARRAY UINTEGER_32.create cst_n
+      state_array := C_array Uint32.create cst_n
     }
     (seed = 0).if { s := 19650218; } else { s := seed; }
     state_array.at 0 put s
-    1.to (cst_n-1) do { i:INTEGER
+    1.to (cst_n-1) do { i:Int
       s := cst_f * (s ^ (s >> (cst_w-2))) + i
       state_array.at i put s
     }
     state_index := 0
-    Self
+    self
   )
 
-  - uint32:UINTEGER_32 <-
-  ( + k,j:INTEGER
-    + x,xa,y,z:UINTEGER_32
+  - uint32:Uint32 <-
+  ( + k,j:Int
+    + x,xa,y,z:Uint32
     
     k := state_index
     j := k - (cst_n-1)

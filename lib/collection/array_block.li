@@ -1,73 +1,78 @@
-Header  
-  + name := ARRAY_BLOCK V;
-  /*
+Header
+  + name := Array_block V
+/*
     If you can live using only `add_last', just stick to ARRAY, but if you need
     constant time performances for all kinds of insertions (i.e. `add_first',  `add_last',
     and `add'), you should give a try to ARRAY_BLOCK.
   */
-  
 Insert
-  - parent_slab_utils: SLAB_UTILS := SLAB_UTILS
-  
+  - parent_slab_utils: Slab_utils := Slab_utils
 Inherit
-  - parent_collection:COLLECTION V := COLLECTION V
-  
+  + parent_collection:Flat Collection V
 Private
-  + prim:NATIVE_ARRAY (SLAB V)
+  + prim:C_array (Slab V)
   
   // See set_prim_capacity (default is just an example):
-  + prim_capower2:INTEGER := 10
-  + prim_capacity:INTEGER := 1024
-  + prim_msk:INTEGER := 1023
+  + prim_capower2:Int := 10
+  + prim_capacity:Int := 1024
+  + prim_msk:Int := 1023
   
-  + prim_lower:INTEGER; // Begining of the used area [prim_lower,prim_upper].
-  + prim_upper:INTEGER; // End of the used area.
-  + prim_count:INTEGER; // Size of the [prim_lower,prim_upper] area which is never empty.
+  + prim_lower:Int; // Begining of the used area [prim_lower,prim_upper].
+  + prim_upper:Int; // End of the used area.
+  + prim_count:Int; // Size of the [prim_lower,prim_upper] area which is never empty.
   
-  + cache_prim:INTEGER; // Always drive to some non empty SLAB in range [prim_lower,prim_upper].
-  + cache_lower:INTEGER; // Lower index in cache_prim SLAB.
+  + cache_prim:Int; // Always drive to some non empty SLAB in range [prim_lower,prim_upper].
+  + cache_lower:Int; // Lower index in cache_prim SLAB.
   
-  - free_list:Expanded ARRAY (SLAB V)
+  - free_list:Flat Array (Slab V)
   /*
   Keep in mind that all prim_lower and prim_upper must be rotated using prim_msk.
   Also keep in mind that SLABs in the use area [prim_lower,prim_upper] are always non NULL but
   can be empty (even if we do prefer non empty SLABs).
   */
-  + service_flag:BOOLEAN; // TRUE when we need to clean the room. 
-  + service_count:INTEGER
-  + perfect_service_count:INTEGER
+  + service_flag:Boolean; // True when we need to clean the room. 
+  + service_count:Int
+  + perfect_service_count:Int
   
 Private
-  - set_prim_capacity shift_count:INTEGER <-
+  - set_prim_capacity shift_count:Int <-
   // To be sure that prim_capacity is a power of 2.
   (
     prim_capower2 := shift_count
     prim_capacity := (1 << prim_capower2)
     prim_msk := prim_capacity - 1
   )
+Public
+  
+  // Creation:
+  
+  - new self:Self of v: V^n :Self <-
+  //  
+  ( + result:Self
+    result := Self.new
+    result.add_last v    
+    result
+  )
+  
+  - is_empty:Boolean <- upper < 0
   
 Public
-  + upper:INTEGER := -1
-  
-  - is_empty:BOOLEAN <- upper < 0
-  
-Public
-  - init:SELF <-
+  - init:Self <-
   (
     ? {prim_capacity >= 8}
     ? {prim = NULL}
-    prim := NATIVE_ARRAY (SLAB V) .create prim_capacity
+    prim := C_array (Slab V) .create prim_capacity
     upper := -1
     slab_init_clear (prim_lower := prim_upper := 0)
     prim_count := 1
     harmless_cache_break
-    Self
+    self
   )
   
 Private
-  - new_with shifts:INTEGER :SELF <-
-  ( + result:SELF
-    result ?= (ARRAY_BLOCK V).clone
+  - new_with shifts:Int :Self <-
+  ( + result:Self
+    result ?= (Array_block V).clone
     result.set_prim_capacity shifts
     result.init
     result
@@ -75,21 +80,17 @@ Private
   
 Public
   
-  - new:SELF <- new_with 10
+  - new:Self <- new_with 10
   
-  - new_tiny:SELF <- new_with 3
-  
-  - lower:INTEGER <- 0
-  
-  - count:INTEGER <- (upper + 1)
+  - new_tiny:Self <- new_with 3
   
 Public
     
-  - read_file f:POINTER <-
+  - read_file f:Pointer <-
   [ ? {is_empty}; ]
-  ( + slab:SLAB V
-    + sz:INTEGER
-    sz := FILE_UTILS.size f
+  ( + slab:Slab V
+    + sz:Int
+    sz := File_utils.size f
     upper := sz - 1
     (sz != 0).if {
       sz := sz - prim.at prim_lower.read_file f
@@ -103,8 +104,8 @@ Public
     }
   )
   
-  - save_file f:POINTER <-  
-  ( + i:INTEGER
+  - save_file f:Pointer <-  
+  ( + i:Int
     i := prim_lower
     prim_count.times {
       prim.at (i & prim_msk).save_file f
@@ -112,30 +113,30 @@ Public
     }
   )
   
-  - copy other:SELF <-
+  - copy other:Self <-
   ( // BSBS A revoir pour faire plus efficace !!!
     clear
-    0.to (other.upper) do { i:INTEGER
+    0.to (other.upper) do { i:Int
       add_last (other.at i)
     }
   )
   
-  - at i:INTEGER :V <-
-  ( + slab:SLAB V
+  - at i:Int :V <-
+  ( + slab:Slab V
     ? {invariant}
     ? {valid cache_prim with cache_lower }
     slab := cache_update i
     slab.at i cache cache_lower
   )
   
-  - at i:INTEGER put v:V <-
+  - at i:Int put v:V <-
   (
     cache_update i
     prim.at cache_prim .at i put v cache cache_lower
   )
     
   - remove_first <-
-  ( + slab:SLAB V
+  ( + slab:Slab V
     ? {invariant}
     slab := prim.at prim_lower
     ? {! slab.is_empty}
@@ -152,7 +153,7 @@ Public
   )
   
   - remove_last <-
-  ( + slab:SLAB V
+  ( + slab:Slab V
     ? {invariant}
     slab := prim.at prim_upper
     ? {! slab.is_empty}
@@ -165,8 +166,8 @@ Public
     ? {valid cache_prim with cache_lower }
   )
   
-  - remove index:INTEGER <-
-  ( + slab:SLAB V
+  - remove index:Int <-
+  ( + slab:Slab V
     ? {invariant}
     ensure_no_service_flag
     slab := cache_update index
@@ -196,8 +197,8 @@ Public
   )
   
   - clear <-
-  ( + i,j:INTEGER
-    + s:SLAB V
+  ( + i,j:Int
+    + s:Slab V
     i := prim_lower
     prim_count.times {
       j := i & prim_msk
@@ -210,13 +211,13 @@ Public
     upper := -1
     slab_init_clear (prim_lower := prim_upper := 0)
     prim_count := 1
-    service_flag := FALSE
+    service_flag := False
     harmless_cache_break
   )
   
   - first:V <-
-  ( + i:INTEGER
-    + slab:SLAB V
+  ( + i:Int
+    + slab:Slab V
     slab := prim.at (i := prim_lower)
     {slab.count > 0}.until_do {
       slab := prim.at (i := (i + 1) & prim_msk)
@@ -225,8 +226,8 @@ Public
   )
   
   - last:V <-
-  ( + i:INTEGER
-    + slab:SLAB V
+  ( + i:Int
+    + slab:Slab V
     slab := prim.at (i := prim_upper)
     {slab.count > 0}.until_do {
       slab := prim.at (i := (i - 1) & prim_msk)
@@ -234,49 +235,59 @@ Public
     slab.last
   )
   
-  - add_first element:V <-
-  ( + slab:SLAB V
+Public
+  
+  - add_first element:V^n <-
+  ( + slab:Slab V
     ? {invariant}
-    //("ARRAY_BLOC Before add_first " + element.to_string + "\n" + to_string).println
-    ((slab := prim.at prim_lower).count > sperfect).if {
-      ensure_prim_capacity (prim_count + 1)
-      prim_lower := (prim_lower - 1) & prim_msk
-      prim_count := prim_count + 1
-      prim.at prim_lower put (slab := new_slab)
+    { e:V
+      ((slab := prim.at prim_lower).count > sperfect).if {
+        ensure_prim_capacity (prim_count + 1)
+        prim_lower := (prim_lower - 1) & prim_msk
+        prim_count := prim_count + 1
+        prim.at prim_lower put (slab := new_slab)
+      }
+      ? {slab = prim.at prim_lower}
+      slab.add_first e
+      (cache_prim != prim_lower).if {
+        cache_lower := cache_lower + 1
+      } else {
+        ? {cache_lower = 0}
+      }
+      upper := upper + 1 ;
+    }.value element
+    if (n > 1) then {
+      + i1, i2:Int
+      i1 := 0 ; i2 := n - 1
+      while {i1 < i2} do {
+        swap i1 with i2
+        i1 := i1 + 1
+        i2 := i2 - 1
+      }
     }
-    ? {slab = prim.at prim_lower}
-    slab.add_first element
-    (cache_prim != prim_lower).if {
-      cache_lower := cache_lower + 1
-    } else {
-      ? {cache_lower = 0}
-    }
-    upper := upper + 1
     ? {invariant}
-    ? {valid cache_prim with cache_lower}.txt {to_string}
-    //("ARRAY_BLOC After add_first " + element.to_string + "\n" + to_string).println
   )
-
-  - add_last element:V <-
-  ( + slab:SLAB V
+  
+  - add_last element:V^n <-
+  ( + slab:Slab V
     ? {invariant}
-    //("ARRAY_BLOC Before add_last " + element.to_string + " " + to_string).println
     ((slab := prim.at prim_upper).count > sperfect).if {
       ensure_prim_capacity (prim_count + 1)
       prim_upper := (prim_upper + 1) & prim_msk
       prim_count := prim_count + 1
       prim.at prim_upper put (slab := new_slab)
     }
-    slab.add_last element
-    upper := upper + 1
+    { e:V
+      slab.add_last e
+      upper := upper + 1 ; // DCDC -> BEN souci ici si tu enlèves le ;
+    }.value element
     ? {invariant}
     ? {valid cache_prim with cache_lower }
-    //("ARRAY_BLOC after add_last " + element.to_string + " " + to_string).println
   )
   
-  - at i:INTEGER add v:V <-  
-  ( + slab,before,after,s1,s2,s3:SLAB V
-    + i_before,i_after,left:INTEGER
+  - at i:Int add v:V <-  
+  ( + slab,before,after,s1,s2,s3:Slab V
+    + i_before,i_after,left:Int
     ? {invariant}
     ? {valid cache_prim with cache_lower }
     ensure_no_service_flag
@@ -330,7 +341,7 @@ Public
             (s1,s2,s3) := new_slab3
             (left < prim_count >> 1).if {
               ? {valid cache_prim with cache_lower}.txt {to_string}
-              Self << ((cache_prim - 1) & prim_msk)
+              self << ((cache_prim - 1) & prim_msk)
               ? {prim.at prim_lower != NULL}
               prim.at ((cache_prim - 3) & prim_msk) put s1
               before +> s1
@@ -342,7 +353,7 @@ Public
               cache_prim := (cache_prim - 2) & prim_msk
               ? {valid cache_prim with cache_lower}.txt {to_string}
             } else {
-              Self >> ((cache_prim + 1) & prim_msk)
+              self >> ((cache_prim + 1) & prim_msk)
               prim.at ((cache_prim + 3) & prim_msk) put s1
               s1 <+ after
               prim.at ((cache_prim + 2) & prim_msk) put s2
@@ -371,12 +382,12 @@ Public
     
 Private
   /*
-  - Self:SELF '>>' i:INTEGER <-
+  - self:Self '>>' i:Int <-
   // [b .. e-3] -> [b+3 .. e] 
   // Assume idx is a valid logical index into the used area.
   // The result is the right falling V.
   [ ? {! prim.at i.is_empty}; ]
-  ( + e,b,n:INTEGER
+  ( + e,b,n:Int
     + s:SLAB V
     n := 3
     b := e := i
@@ -402,18 +413,18 @@ Private
     prim.at e put (prim.at b)
   )
   */
-  - Self:SELF '>>' i:INTEGER <-
+  - self:Self '>>' i:Int <-
   // [b .. e-3] -> [b+3 .. e] 
   // Assume idx is a valid logical index into the used area.
   // The result is the right falling V.
   [ ? {! prim.at i.is_empty}; ]
-  ( + e,b:INTEGER
-    + t0,t1,t2:SLAB V
+  ( + e,b:Int
+    + t0,t1,t2:Slab V
     b := prim_upper
     prim_upper := e := (b + 3) & prim_msk
     prim_count := prim_count + 3
     (i < e).if {
-      e.downto (i+3) do { j:INTEGER
+      e.downto (i+3) do { j:Int
         prim.at j put (prim.at (j-3))
       }
     } else {
@@ -429,11 +440,11 @@ Private
       t0 := prim.at (prim_capacity-1)
       t1 := prim.at (prim_capacity-2)
       t2 := prim.at (prim_capacity-3)
-      (prim_capacity-1).downto (i+3) do { j:INTEGER
+      (prim_capacity-1).downto (i+3) do { j:Int
         prim.at j put (prim.at (j-3))
       }
       (e >= 2).if {
-        e.downto 3 do { j:INTEGER
+        e.downto 3 do { j:Int
           prim.at j put (prim.at (j-3))
         }
         prim.at 0 put t2
@@ -446,15 +457,15 @@ Private
     }
   )
   
-  - Self:SELF '<<' i:INTEGER <-
+  - self:Self '<<' i:Int <-
   [ ? {! prim.at i.is_empty}; ]
-  ( + e,b:INTEGER
-    + t0,t1,t2:SLAB V
+  ( + e,b:Int
+    + t0,t1,t2:Slab V
     b := prim_lower
     prim_lower := e := (b - 3) & prim_msk
     prim_count := prim_count + 3
     (e < i).if {
-      e.to (i-3) do { j:INTEGER
+      e.to (i-3) do { j:Int
         prim.at j put (prim.at (j+3))
       }
     } else {
@@ -469,11 +480,11 @@ Private
       t0 := prim.at 0
       t1 := prim.at 1
       t2 := prim.at 2
-      0.to (i-3) do { j:INTEGER
+      0.to (i-3) do { j:Int
         prim.at j put (prim.at (j+3))
       }
       (e <= prim_capacity-1-2).if {
-        e.to (prim_capacity-1-3) do { j:INTEGER
+        e.to (prim_capacity-1-3) do { j:Int
           prim.at j put (prim.at (j+3))
         }
         prim.at (prim_capacity-3) put t0
@@ -486,9 +497,9 @@ Private
     }
   )
   
-  /*- Self:SELF '<<' i:INTEGER <-
+  /*- self:Self '<<' i:Int <-
   [ ? {! prim.at i.is_empty}; ]
-  ( + e,b,n:INTEGER
+  ( + e,b,n:Int
     + s:SLAB V
     n := 3
     b := e := i
@@ -514,11 +525,11 @@ Private
     prim.at e put (prim.at b)
   );*/
     
-  //- invariant_vide:BOOLEAN <- TRUE
-  - invariant:BOOLEAN <-
-  ( + u,i,c:INTEGER
-    + flag:BOOLEAN
-    + slab:SLAB V
+  //- invariant_vide:Boolean <- True
+  - invariant:Boolean <-
+  ( + u,i,c:Int
+    + flag:Boolean
+    + slab:Slab V
     u := -1
     (count > 0).if {
       slab := prim.at prim_lower
@@ -534,7 +545,7 @@ Private
       slab := prim.at i
       ? {slab != NULL}
       (i = cache_prim).if {
-        flag := TRUE
+        flag := True
         ? {cache_lower = c}
       }
       c := c + slab.count
@@ -548,15 +559,15 @@ Private
       ? {slab = NULL}
       i := (i + 1) & prim_msk
     }
-    TRUE
+    True
   )
   
 Public
-  - to_string:STRING_ALIAS <-
-  ( + i,lidx,low:INTEGER
-    + result:STRING_ALIAS
-    + s:SLAB V
-    STRING.tmp { ts:STRING_BUFFER
+  - to_string:String_alias <-
+  ( + i,lidx,low:Int
+    + result:String_alias
+    + s:Slab V
+    String.tmp { ts:String_buffer
       service_flag.if {
         ts.append "--- SERVICE_FLAG ---\n"
       } else {
@@ -640,8 +651,8 @@ Public
   
 Private
   
-  - slab_init_clear i:INTEGER :SLAB V <-
-  ( + s:SLAB V
+  - slab_init_clear i:Int :Slab V <-
+  ( + s:Slab V
     ((s := prim.at i) = NULL).if {
       s := new_slab 
       prim.at i put s
@@ -651,10 +662,10 @@ Private
     s
   )
   
-  - new_slab:SLAB V <-
-  ( + result:SLAB V
+  - new_slab:Slab V <-
+  ( + result:Slab V
     free_list.is_empty.if {
-      result := SLAB V .new
+      result := Slab V .new
     } else {
       result := free_list.pop
     }
@@ -662,10 +673,10 @@ Private
     result
   )
   
-  - new_slab3:(SLAB V,SLAB V,SLAB V) <-
-  ( + r1,r2,r3:SLAB V
+  - new_slab3:(Slab V,Slab V,Slab V) <-
+  ( + r1,r2,r3:Slab V
     (free_list.count < 3).if {
-      (r1,r2,r3) := SLAB V .new3
+      (r1,r2,r3) := Slab V .new3
     } else {
       (r1,r2,r3) := (free_list.pop,free_list.pop,free_list.pop)
     }
@@ -676,11 +687,11 @@ Private
 Private
   
   - remove_empty_slabs_lower <-
-  ( + slab:SLAB V
-    + need_cache_break:BOOLEAN
+  ( + slab:Slab V
+    + need_cache_break:Boolean
     {(prim_count > 1) && {(slab := prim.at prim_lower).is_empty}}.while_do {
       (prim_lower = cache_prim).if {
-        need_cache_break := TRUE
+        need_cache_break := True
       }
       free_list.add_last slab
       prim.at prim_lower put NULL
@@ -693,11 +704,11 @@ Private
   )
   
   - remove_empty_slabs_upper <-
-  ( + slab:SLAB V
-    + need_cache_break:BOOLEAN
+  ( + slab:Slab V
+    + need_cache_break:Boolean
     {(prim_count > 1) && {(slab := prim.at prim_upper).is_empty}}.while_do {
       (cache_prim = prim_upper).if {
-        need_cache_break := TRUE
+        need_cache_break := True
       }
       free_list.add_last slab
       prim.at prim_upper put NULL
@@ -710,10 +721,10 @@ Private
   )
 
 Private   
-  - valid cp:INTEGER with cl:INTEGER :BOOLEAN <-
-  ( + result:BOOLEAN
-    + cp2,cl2,d2:INTEGER
-    + slab:SLAB V
+  - valid cp:Int with cl:Int :Boolean <-
+  ( + result:Boolean
+    + cp2,cl2,d2:Int
+    + slab:Slab V
     is_empty.if {
       ? {cp = prim_lower}.txt {to_string}
       ? {cl = 0}
@@ -735,8 +746,8 @@ Private
     result
   )
     
-  - ensure_prim_capacity c:INTEGER <-
-  ( + old_capacity,new_area,old_area:INTEGER
+  - ensure_prim_capacity c:Int <-
+  ( + old_capacity,new_area,old_area:Int
     (c >= prim_capacity).if {
       //("Before realloc \n" + to_string).println
       old_capacity := prim_capacity
@@ -785,15 +796,15 @@ Private
       perfect_service
       cache_break
       service_count := service_count + 1
-      service_flag := FALSE
+      service_flag := False
       //("After SERVICE " + service_count.to_string + "\n" + to_string).println
       ? {invariant}
     }
   )
   
   - perfect_service <-
-  ( + newx,oldx,stop:INTEGER
-    + slab1,slab2:SLAB V
+  ( + newx,oldx,stop:Int
+    + slab1,slab2:Slab V
     //("Before PERFECT SERVICE " + service_count.to_string + "\n" + to_string).println
     ensure_prim_capacity (prim_count * 3)
     newx := (prim_upper + 1) & prim_msk
@@ -834,9 +845,9 @@ Private
     perfect_service_count := perfect_service_count + 1
   )
         
-  - cache_update i:INTEGER :SLAB V <-
-  ( + slab:SLAB V
-    + c_new:INTEGER
+  - cache_update i:Int :Slab V <-
+  ( + slab:Slab V
+    + c_new:Int
     //("Before cache_update i=" + i.to_string + " " + to_string).println
     ? {valid cache_prim with cache_lower}
     slab := prim.at cache_prim
@@ -917,10 +928,10 @@ Private
   
 Public
   
-  - twin:SELF <-
-  ( + result:SELF
+  - twin:Self <-
+  ( + result:Self
     result := new
-    result.copy Self
+    result.copy self
     result
   )
   

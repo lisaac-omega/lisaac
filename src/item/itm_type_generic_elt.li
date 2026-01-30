@@ -1,73 +1,70 @@
 Header
-
-  + name    := ITM_TYPE_GENERIC_ELT;
-
-  /*Virtual element for generic style type*/
-
+  + name := Itm_type_generic_elt
+/*Virtual element for generic style type*/
 Inherit
 
-  + parent_itm_type_mono:Expanded ITM_TYPE_MONO
+  + parent_itm_type_mono:Flat Itm_type_mono
 
 Private
 
-  - list:ARRAY ITM_TYPE_GENERIC_ELT :=
+  - list:Array Itm_type_generic_elt :=
   // 'A' to 'Z'
-  ( + result:ARRAY ITM_TYPE_GENERIC_ELT
+  ( + result:Array Itm_type_generic_elt
 
-    result := ARRAY ITM_TYPE_GENERIC_ELT .create_with_capacity 26
-    'A'.to 'Z' do { c:CHARACTER
+    result := Array Itm_type_generic_elt .create_with_capacity 26
+    'A'.to 'Z' do { c:Char
       result.add_last (create c)
     }
     result
   )
 
-  - create idf:CHARACTER :SELF <-
-  ( + result:SELF
+  - create idf:Char :Self <-
+  ( + result:Self
 
     result := clone
     result.make idf
     result
   )
 
-  - make idf:CHARACTER <-
+  - make idf:Char <-
   (
     index := idf -! 'A'
   )
 
 Public
 
-  + index:INTEGER
+  + index:Int
 
-  - hash_code:INTEGER <- index
+  - hash_code:Int <- index
 
-  - get idf:CHARACTER :ITM_TYPE_GENERIC_ELT <-
+  - get idf:Char :Itm_type_generic_elt <-
   (
     list.at (idf -! 'A')
   )
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "Generic["
     buffer.add_last ('A' +# index)
     buffer.add_last ']'
   )
 
-  - shorter_in buf:STRING_BUFFER <-
+  - shorter_in buf:String_buffer <-
   (
     string_tmp.clear
     string_tmp.add_last ('A' +# index)
     put string_tmp to buf like "keyprototype"
   )
 
-  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 100
+  - string_tmp:String_buffer := String_buffer.create 100
 
-  - to_run:TYPE_FULL <-
-  ( + type_generic:TYPE_GENERIC
-    + result:TYPE_FULL
-    + t:CHARACTER
+  - to_run:Type_full <-
+  ( + type_generic:Type_generic
+    + result:Type_full
+    + t:Char
 
     t := 'A' +# index
-    type_generic ?= ITM_TYPE_SELF.self_up
+    type_generic ?= Itm_type_self.self_up
     (type_generic != NULL).if {
       result := type_generic.generic_to_type t
     }
@@ -75,7 +72,7 @@ Public
       string_tmp.copy "Type parameter `";
       string_tmp.add_last t
       string_tmp.append "' is not define."
-      semantic_error (ITM_TYPE_SELF.to_run.prototype.position,string_tmp)
+      semantic_error (Itm_type_self.to_run.prototype.position,string_tmp)
     }
     result
   )
@@ -84,7 +81,7 @@ Public
   // Cast.
   //
 
-  - append_cast_name_in buf:STRING_BUFFER <-
+  - append_cast_name_in buf:String_buffer <-
   (
     buf.add_last ('a' +# index)
   )

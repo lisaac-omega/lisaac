@@ -1,16 +1,15 @@
 Header
-  + name := MAIN;
-  
-  //-external:= `void init_string_alias(){};`;
+  + name := Main
+//-external:= `void init_string_alias(){};`;
   
 Insert
-  - parent_print:PRINT := PRINT
+  - parent_print:Print := Print
     
 Public
-  + array: Expanded ARRAY INTEGER
+  + array: Flat Array Int
   
   - main <-
   (
-    TEST.check_null (array.storage)
-    TEST.check (array.is_empty)
+    Test.check_null (array.storage)
+    Test.check (array.is_empty)
   )

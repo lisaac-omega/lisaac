@@ -1,68 +1,67 @@
 Header
-  + name := VKEYB;
-  
+  + name := Vkeyb
 Inherit
-  + parent_popup:Expanded POPUP
-  - parent_json:JSON := JSON
+  + parent_popup:Flat Popup
+  - parent_json:Json := Json
   
 Private
         
-  - map:NATIVE_ARRAY (ARRAY STRING_ALIAS) :=
-  ( + lap:NATIVE_ARRAY (ARRAY STRING_ALIAS)
-    lap := NATIVE_ARRAY (ARRAY STRING_ALIAS).create 4
-    0.to 3 do { i:INTEGER; lap.at i put (ARRAY STRING_ALIAS.create_with_capacity 35); }
-    35.times { ACT_KEY.new.init Self act (ACT1 STRING_ALIAS.new); }
+  - map:C_array (Array String_alias) :=
+  ( + lap:C_array (Array String_alias)
+    lap := C_array (Array String_alias).create 4
+    0.to 3 do { i:Int; lap.at i put (Array String_alias.create_with_capacity 35); }
+    35.times { Act_key.new.init self act (Act1 String_alias.new); }
     lap
   )
   
 Public
   
-  - load n:INTEGER <-
+  - load n:Int <-
   [ ? {n.in_range 0 to 3}; ]
-  ( + r:ARRAY STRING_ALIAS
-    + t:STRING_ALIAS
-    + a:ACT1 STRING_ALIAS
+  ( + r:Array String_alias
+    + t:String_alias
+    + a:Act1 String_alias
     //+ ak:ACT_KEY
     r := map.at n
     ? {child.count = r.count}
-    0.to (r.upper) do { i:INTEGER
+    0.to (r.upper) do { i:Int
       t := r.at i
       //ak ?= 
-      a ?= child.at i.like ACT_KEY.act
+      a ?= child.at i.like Act_key.act
       a.txt_l t
       (t = "⬆").if    {
-        a.fn {tt:STRING_ALIAS; load 1; BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; load 1; Boolean.unpredictable} val t
       }.elseif {(t = "⇧") || {t = "ABC"}} then {
-        a.fn {tt:STRING_ALIAS; load 0; BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; load 0; Boolean.unpredictable} val t
       }.elseif {t = "=/<"}  then {
-        a.fn {tt:STRING_ALIAS; load 3; BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; load 3; Boolean.unpredictable} val t
       }.elseif {t = "🔢"} then {
-        a.fn {tt:STRING_ALIAS; load 2; BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; load 2; Boolean.unpredictable} val t
       }.elseif {t = "⏎"} then {
-        a.fn {tt:STRING_ALIAS; KEYBOARD.put "\n" cmd (KEYBOARD.key_cmd); BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; Keyboard.put "\n" cmd (Keyboard.key_cmd); Boolean.unpredictable} val t
       }.elseif {t = "⌫"} then {
-        a.fn {tt:STRING_ALIAS; KEYBOARD.put "\b" cmd (KEYBOARD.key_cmd); BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; Keyboard.put "\b" cmd (Keyboard.key_cmd); Boolean.unpredictable} val t
       } else {
-        a.fn {tt:STRING_ALIAS; KEYBOARD.put tt cmd 0; BOOLEAN.unpredictable} val t
+        a.fn {tt:String_alias; Keyboard.put tt cmd 0; Boolean.unpredictable} val t
       }
     }
   )
   
   - refresh <-
-  ( + x,y,w,h:REAL_32
+  ( + x,y,w,h:Real32
     refresh_popup.if {
       yo := parent.height - height
       width := parent.width
       (w,h) := (width/10,height_max/4)
       // Line 1 and 2:
       (x,y) := (xo,yo)
-      00.to 09 do { i:INTEGER; child.at i.xy (x,y).size (w,h); x := x + w; }
+      00.to 09 do { i:Int; child.at i.xy (x,y).size (w,h); x := x + w; }
       (x,y) := (xo,y + h)
-      10.to 19 do { i:INTEGER; child.at i.xy (x,y).size (w,h); x := x + w; }
+      10.to 19 do { i:Int; child.at i.xy (x,y).size (w,h); x := x + w; }
       // Line 3:
       (x,y) := (xo,y + h)
       child.at 20.xy (x,y).size (w*1.5,h); x := x + w*1.5
-      21.to 27 do { i:INTEGER; child.at i.xy (x,y).size (w,h); x := x + w; }
+      21.to 27 do { i:Int; child.at i.xy (x,y).size (w,h); x := x + w; }
       child.at 28.xy (x,y).size (w*1.5,h)
       // Line 4:
       (x,y) := (xo,y + h)
@@ -74,15 +73,15 @@ Public
     }
   )
     
-  - height_max:REAL_32 <- (parent.height / 3).max 200
+  - height_max:Real32 <- (parent.height / 3).max 200
   
   - draw <-
   (    
     begin_path
     //xo.print; ','.print; yo.print; '/'.print; parent.height.println
     rect (xo,yo) size (width,height) radius 8
-    fill_color (COLOR.rgbaf (1,1,1,0.85))
-    stroke_color (COLOR.black)
+    fill_color (Color.rgbaf (1,1,1,0.85))
+    stroke_color (Color.black)
     stroke_width 2.0
     fill
     stroke
@@ -90,20 +89,20 @@ Public
   
   // Parser
   
-  - read:SELF <-
+  - read:Self <-
   (
-    0.to 3 do { i:INTEGER; map.at i.clear; }
+    0.to 3 do { i:Int; map.at i.clear; }
     read_object
     load 0
-    Self
+    self
   )
   
-  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str v:String_alias :Boolean <-
   (
     id
     .case "map0" then { map.at 0.add_last v; }
     .case "map1" then { map.at 1.add_last v; }
     .case "map2" then { map.at 2.add_last v; }
     .case "map3" then { map.at 3.add_last v; }
-    = STRING_ALIAS
+    = String_alias
   )

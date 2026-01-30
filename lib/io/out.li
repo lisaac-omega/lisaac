@@ -1,11 +1,10 @@
 Header
-  + name := Strict OUT;
-  
+  + name := Exact Out
 Public
   
-  - Self:SELF '#' e:E :SELF <-
+  - self:Self '#' e:E :Self <-
   (
     e.print
-    Self
+    self
   )
   

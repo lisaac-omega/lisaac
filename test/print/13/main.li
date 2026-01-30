@@ -1,22 +1,21 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Insert
-  - parent_print:PRINT := PRINT
+  - parent_print:Print := Print
   
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
   
 Public
   
-  + buffer:STRING
+  + buffer:String
   
   - main <-
-  ( + hexa:STRING_ALIAS
+  ( + hexa:String_alias
     hexa := to_string
     //hexa.println
-    hexa.foreach { c:CHARACTER
-      TEST.check ("0123456789ABCDEF" .has c)
+    hexa.foreach { c:Char
+      Test.check ("0123456789ABCDEF" .has c)
     }
     '.'.println
   )

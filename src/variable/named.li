@@ -1,12 +1,9 @@
 Header
-
-  + name        := NAMED;
-
-  /*Parent for all slot*/
-
+  + name := Named
+/*Parent for all slot*/
 Inherit
 
-  + parent_itm_object:Expanded ITM_OBJECT
+  + parent_itm_object:Flat Itm_object
 
 Public
 
@@ -14,16 +11,16 @@ Public
   // Data.
   //
 
-  + style:CHARACTER;  // '+': Clonable,
+  + style:Char;  // '+': Clonable,
                       // '-': Shared.
                       // ' ': Argument
                       // 'R': Result
-		      // 'T': Temporary
-		      // 'C': Cast
+                      // 'T': Temporary
+                      // 'C': Cast
 
-  + name:STRING_ALIAS
+  + name:String_alias
     
-  - set_style s:CHARACTER <-
+  - set_style s:Char <-
   (
     style := s
   )
@@ -32,7 +29,7 @@ Public
   // Hashable.
   //
 
-  - hash_code: INTEGER <- name.hash_code
+  - hash_code: Int <- name.hash_code
 
 
 

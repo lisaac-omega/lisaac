@@ -1,22 +1,19 @@
 Header
-
-  + name    := ALIAS_ARRAY E;
-
-  /*Aliser collection.*/
-
+  + name := Alias_array E
+/*Aliser collection.*/
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Private
 
-  - bucket:HSET(ARRAY E) :=
-  HSET(ARRAY E).create
+  - bucket:Hset(Array E) :=
+  Hset(Array E).create
 
-  - free_list:ARRAY(ARRAY E) :=
-  ARRAY(ARRAY E).create_with_capacity 5
+  - free_list:Array(Array E) :=
+  Array(Array E).create_with_capacity 5
 
-  - empty_list:ARRAY E := ARRAY E .create_with_capacity 0
+  - empty_list:Array E := Array E .create_with_capacity 0
 
 Public
 
@@ -24,11 +21,11 @@ Public
   // Temporary manager.
   //
 
-  - new:ARRAY E <-
-  ( + result:ARRAY E
+  - new:Array E <-
+  ( + result:Array E
 
     (free_list.is_empty).if {
-      result := ARRAY E .create_with_capacity 16
+      result := Array E .create_with_capacity 16
     } else {
       result := free_list.last
       free_list.remove_last
@@ -37,15 +34,15 @@ Public
     result
   )
 
-  - alias tmp:ARRAY E :ARRAY E <-
-  ( + result:ARRAY E
+  - alias tmp:Array E :Array E <-
+  ( + result:Array E
 
     (tmp.is_empty).if {
       result := empty_list
     } else {
       result := bucket.reference_at tmp
       (result = NULL).if {
-        result := ARRAY E .create_with_capacity (tmp.count)
+        result := Array E .create_with_capacity (tmp.count)
         result.copy_collection tmp
         bucket.fast_add result
       }
@@ -54,16 +51,16 @@ Public
     result
   )
 
-  - copy tmp:ARRAY E :ARRAY E <-
-  ( + result:ARRAY E
+  - copy tmp:Array E :Array E <-
+  ( + result:Array E
 
-    result := ARRAY E .create_with_capacity (tmp.count)
+    result := Array E .create_with_capacity (tmp.count)
     result.copy_collection tmp
     free tmp
     result
   )
 
-  - free tmp:ARRAY E <-
+  - free tmp:Array E <-
   (
     tmp.clear
     free_list.add_last tmp

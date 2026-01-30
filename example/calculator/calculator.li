@@ -1,30 +1,28 @@
 Header
-
-  + name := CALCULATOR;
-  /**/
-
+  + name := Calculator
+/**/
 Inherit
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
 
 Private
     
-  - input:INPUTBOX
-  - error:TXT
+  - input:Inputbox
+  - error:Txt
   
-  - text:STRING_BUFFER := STRING_BUFFER.create 80
+  - text:String_buffer := String_buffer.create 80
     
-  - add c:CHARACTER :BOOLEAN <- ( text.add_last c; TRUE)
+  - add c:Char :Boolean <- ( text.add_last c; True)
   
-  - eval:BOOLEAN <-
-  ( + result:REAL_32
-    + ok:BOOLEAN
+  - eval:Boolean <-
+  ( + result:Real32
+    + ok:Boolean
     if (text.count > 0) then {
-      result := PARSE_EXPR.parse text
-      error.set_txt (PARSE_EXPR.error_message)
-      if (PARSE_EXPR.error_message.is_empty) then {
+      result := Parse_expr.parse text
+      error.set_txt (Parse_expr.error_message)
+      if (Parse_expr.error_message.is_empty) then {
         text.clear
         result.append_in text
-        ok := TRUE
+        ok := True
       }
     }
     ok
@@ -37,40 +35,40 @@ Public
     init "LiCalc" size (412,560)    
     (
       (
-        input := INPUTBOX.new.init {t:STRING_BUFFER; t.copy text; }
-        set {t:STRING_BUFFER; text.copy t; }
-        width (FONT.size_sys*9).zoom 3.set (align_right | height_locked)
+        input := Inputbox.new.init {t:String_buffer; t.copy text; }
+        set {t:String_buffer; text.copy t; }
+        width (Font.size_sys*9).zoom 3.set (align_right | height_locked)
       ) / (
         (
-          BUTTON.new.init "DEL" do { b:BUTTON
+          Button.new.init "DEL" do { b:Button
             (! text.is_empty).if { text.remove_last; }
           } /
-          BUTTON.new.init " 7 " do { b:BUTTON; add '7'} /
-          BUTTON.new.init " 4 " do { b:BUTTON; add '4'} /
-          BUTTON.new.init " 1 " do { b:BUTTON; add '1'} /
-          BUTTON.new.init " 0 " do { b:BUTTON; add '0'}
+          Button.new.init " 7 " do { b:Button; add '7'} /
+          Button.new.init " 4 " do { b:Button; add '4'} /
+          Button.new.init " 1 " do { b:Button; add '1'} /
+          Button.new.init " 0 " do { b:Button; add '0'}
         ) | (
-          BUTTON.new.init "CLR" do { b:BUTTON; text.clear; TRUE} /
-          BUTTON.new.init " 8 " do { b:BUTTON; add '8'} /
-          BUTTON.new.init " 5 " do { b:BUTTON; add '5'} /
-          BUTTON.new.init " 2 " do { b:BUTTON; add '2'} /
-          BUTTON.new.init " . " do { b:BUTTON; add '.'}
+          Button.new.init "CLR" do { b:Button; text.clear; True} /
+          Button.new.init " 8 " do { b:Button; add '8'} /
+          Button.new.init " 5 " do { b:Button; add '5'} /
+          Button.new.init " 2 " do { b:Button; add '2'} /
+          Button.new.init " . " do { b:Button; add '.'}
         ) | (
-          BUTTON.new.init " ( " do { b:BUTTON; add '('} /
-          BUTTON.new.init " 9 " do { b:BUTTON; add '9'} /
-          BUTTON.new.init " 6 " do { b:BUTTON; add '6'} /
-          BUTTON.new.init " 3 " do { b:BUTTON; add '3'} /
-          BUTTON.new.init " = " do { b:BUTTON; eval}
+          Button.new.init " ( " do { b:Button; add '('} /
+          Button.new.init " 9 " do { b:Button; add '9'} /
+          Button.new.init " 6 " do { b:Button; add '6'} /
+          Button.new.init " 3 " do { b:Button; add '3'} /
+          Button.new.init " = " do { b:Button; eval}
         ) | (
-          BUTTON.new.init " ) " do { b:BUTTON; add ')'} /
-          BUTTON.new.init " / " do { b:BUTTON; add '/'} /
-          BUTTON.new.init " x " do { b:BUTTON; add 'x'} /
-          BUTTON.new.init " - " do { b:BUTTON; add '-'} /
-          BUTTON.new.init " + " do { b:BUTTON; add '+'}
+          Button.new.init " ) " do { b:Button; add ')'} /
+          Button.new.init " / " do { b:Button; add '/'} /
+          Button.new.init " x " do { b:Button; add 'x'} /
+          Button.new.init " - " do { b:Button; add '-'} /
+          Button.new.init " + " do { b:Button; add '+'}
         )
       ) /
-      (error := TXT.new.init_str "").set height_locked.color (COLOR.red)
-    ).init_parent Self.size (width,height).setr stretch
+      (error := Txt.new.init_str "").set height_locked.color (Color.red)
+    ).init_parent self.size (width,height).setr stretch
         
-    PAPER.run
+    Paper.run
   )

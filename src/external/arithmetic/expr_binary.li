@@ -1,30 +1,27 @@
 Header
-
-  + name        := EXPR_BINARY;
-
-  /*Binary Expression.*/
-
+  + name := Expr_binary
+/*Binary Expression.*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- left.is_invariant && {right.is_invariant}
+  - is_invariant:Boolean <- left.is_invariant && {right.is_invariant}
 
-  + left:EXPR
+  + left:Expr
 
-  + right:EXPR
+  + right:Expr
 
-  - symbol:STRING_ALIAS <-
+  - symbol:String_alias <-
   (
     abstract
     NULL
   )
 
-  - static_type:TYPE_FULL <- left.static_type
+  - static_type:Type_full <- left.static_type
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     left .get_type t
     //right.get_type t
@@ -34,29 +31,29 @@ Public
   // Creation.
   //
 
-  - create p:POSITION with l:EXPR and r:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position with l:Expr and r:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p with l and r
     result
   )
 
-  - make p:POSITION with l:EXPR and r:EXPR <-
+  - make p:Position with l:Expr and r:Expr <-
   (
     position := p
     left     := l
     right    := r
   )
 
-  - my_copy:SELF <- SELF.create position with (left.my_copy) and (right.my_copy)
+  - my_copy:Self <- Self.create position with (left.my_copy) and (right.my_copy)
 
   //
   // Comparaison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + same:SELF
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + same:Self
 
     same ?= other
     (same != NULL) && {left ~= same.left} && {right ~= same.right}
@@ -76,8 +73,8 @@ Public
   // Execute
   //
 
-  - execute_unlink:INSTR <-
-  ( + instr:INSTR
+  - execute_unlink:Instr <-
+  ( + instr:Instr
     instr  := left.execute_unlink
     (instr != NULL).if {
       list_current.insert_before instr
@@ -85,10 +82,10 @@ Public
     right.execute_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + result:EXPR
-    + old_seq:UINTEGER_32
-    + left_cst,right_cst:INTEGER_CST
+  - execute_link:Expr <-
+  ( + result:Expr
+    + old_seq:Uint32
+    + left_cst,right_cst:Int_cst
 
     old_seq := seq_call_and_loop
     left  := left.execute_link
@@ -113,14 +110,14 @@ Public
       // No conservator transformation.
       result := exec
       ((result = NULL) && {left_cst != NULL}).if {
-	result := exec_left left_cst
+        result := exec_left left_cst
       }
       ((result = NULL) && {right_cst != NULL}).if {
-	result := exec_right right_cst
+        result := exec_right right_cst
       }
     }
     (result = NULL).if {
-      result := Self
+      result := self
     } else {
       result.set_position position
       new_execute_pass
@@ -129,15 +126,15 @@ Public
     result
   )
 
-  - exec_conservator:EXPR <- NULL
-  - exec_conservator_left  left_cst :INTEGER_CST :EXPR <- NULL
-  - exec_conservator_right right_cst:INTEGER_CST :EXPR <- NULL
+  - exec_conservator:Expr <- NULL
+  - exec_conservator_left  left_cst :Int_cst :Expr <- NULL
+  - exec_conservator_right right_cst:Int_cst :Expr <- NULL
 
-  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <- NULL
+  - exec left_cst:Int_cst and right_cst:Int_cst :Expr <- NULL
 
-  - exec:EXPR <- NULL
-  - exec_left  left_cst :INTEGER_CST :EXPR <- NULL
-  - exec_right right_cst:INTEGER_CST :EXPR <- NULL
+  - exec:Expr <- NULL
+  - exec_left  left_cst :Int_cst :Expr <- NULL
+  - exec_right right_cst:Int_cst :Expr <- NULL
 
   //
   // Genere.
@@ -155,7 +152,7 @@ Public
     output.add_last '('
     (static_type.raw = type_pointer).if {
       output.append "(uintptr_t)"
-    }.elseif {! left.static_type.is_expanded} then {
+    }.elseif {! left.static_type.is_flat} then {
       output.append "(void *)"; // BSBS: A virer quand tu auras optim '=='
     }
     left.genere
@@ -164,7 +161,7 @@ Public
     output.add_last ' '
     (static_type.raw = type_pointer).if {
       output.append "(uintptr_t)"
-    }.elseif {! right.static_type.is_expanded} then {
+    }.elseif {! right.static_type.is_flat} then {
       output.append "(void *)"; // BSBS: A virer quand tu auras optim '=='
     }
     right.genere
@@ -175,7 +172,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '('
     left.display buffer

@@ -1,33 +1,30 @@
 Header
-
-  + name      := LOCAL;
-
-  /*
+  + name := Local
+/*
   The local
   */
-
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + type:CLASS
+  + type:Class
 
   //
   // Creation.
   //
 
-  - create p:INTEGER name n:STRING_ALIAS type t:CLASS :SELF <-
-  ( + result:SELF
+  - create p:Int name n:String_alias type t:Class :Self <-
+  ( + result:Self
     result := clone
     result.make p name n type t
     result
   )
 
-  - make p:INTEGER name n:STRING_ALIAS type t:CLASS <-
+  - make p:Int name n:String_alias type t:Class <-
   (
     position := p
     name     := n
@@ -38,9 +35,9 @@ Public
   // Run.
   //
 
-  + the_dynamic_type:CLASS
+  + the_dynamic_type:Class
 
-  - set_the_dynamic_type c:CLASS <-
+  - set_the_dynamic_type c:Class <-
   [
     ? {c.is_sub_type type}
   ]

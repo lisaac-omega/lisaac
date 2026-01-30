@@ -1,81 +1,79 @@
 Header
-  
-  + name := FONS_FONT;
-
+  + name := Fons_font
 Inherit
   
-  - parent_fontstash:FONTSTASH := FONTSTASH
+  - parent_fontstash:Fontstash := Fontstash
 
 Public
   
-  + font:FONTINFO
+  + font:Fontinfo
   
-  + name:STRING_ALIAS
+  + name:String_alias
   
-  + data:ARRAY UINTEGER_8
+  + data:Array Uint8
   
-  + free_data:BOOLEAN
+  + free_data:Boolean
   
-  + ascender:REAL_32
-  + descender:REAL_32
-  + lineh:REAL_32
+  + ascender:Real32
+  + descender:Real32
+  + lineh:Real32
   
-  + glyphs:ARRAY FONS_GLYPH
+  + glyphs:Array Fons_glyph
     
-  + lut:ARRAY INTEGER
-  + fallbacks:ARRAY INTEGER
-  + nfallbacks:INTEGER
+  + lut:Array Int
+  + fallbacks:Array Int
+  + nfallbacks:Int
   
-  - create n:STRING_ALIAS data dta:ARRAY UINTEGER_8 
-  free f_dta:BOOLEAN :SELF <-
-  ( + result:SELF
+  - create n:String_alias data dta:Array Uint8 
+  free f_dta:Boolean :Self <-
+  ( + result:Self
     result := clone
     result.make n data dta free f_dta
     result
   )
   
-  - make n:STRING_ALIAS data dta:ARRAY UINTEGER_8 free f_dta:BOOLEAN <-
-  ( + fh:INTEGER
-    + ascent,descent,line_gap:INTEGER
-    glyphs := ARRAY FONS_GLYPH.create_with_capacity fons_init_glyphs
-    lut := ARRAY INTEGER.create fons_hash_lut_size
-    fallbacks := ARRAY INTEGER.create_with_capacity fons_max_fallbacks
+  - make n:String_alias data dta:Array Uint8 free f_dta:Boolean <-
+  ( + fh:Int
+    + ascent,descent,line_gap:Int
+    glyphs := Array Fons_glyph.create_with_capacity fons_init_glyphs
+    lut := Array Int.create fons_hash_lut_size
+    fallbacks := Array Int.create_with_capacity fons_max_fallbacks
     
     name := n
     // Init hash lookup.
-    0.to (fons_hash_lut_size-1) do { i:INTEGER
+    0.to (fons_hash_lut_size-1) do { i:Int
       lut.at i put (-1)
     }
     // Read in the font data.
     data := dta
     free_data := f_dta
     // Init font    
-    font := FONTINFO.create_font (dta.storage) start 0
+    font := Fontinfo.create_font (dta.storage) start 0
     // Store normalized line height. The real line height is got
     // by multiplying the lineh by font size.
     (ascent,descent,line_gap) := font.get_font_v_metrics
     fh := ascent - descent
-    ascender := ascent.to_real_32 / fh
-    descender := descent.to_real_32 / fh
-    lineh := (fh + line_gap).to_real_32 / fh
+    ascender := ascent.to_real32 / fh
+    descender := descent.to_real32 / fh
+    lineh := (fh + line_gap).to_real32 / fh
   )
   
-  - scale_for_pixel_height height:REAL_32 :REAL_32 <-
+  - scale_for_pixel_height height:Real32 :Real32 <-
   (
     font.scale_for_pixel_height height
   )
   
-  - get_vert_align alig:INTEGER size isize:INTEGER_16 :REAL_32 <-
-  ( + result:REAL_32
+  - get_vert_align alig:Int size isize:Int16 :Real32 <-
+  ( + result:Real32
     
     ((alig & fons_align_top) != 0).if {
-      result := ascender * isize.to_real_32/10.0
+      result := ascender * isize.to_real32/10.0
     }.elseif {(alig & fons_align_middle) != 0} then {
-      result := (ascender+descender)/2.0 * isize.to_real_32/10.0
+      result := (ascender+descender)/2.0 * isize.to_real32/10.0
     }.elseif {(alig & fons_align_baseline) != 0} then {
       // result := 0.0
     }.elseif {(alig & fons_align_bottom) != 0} then {
-      result := descender * isize.to_real_32/10.0
+      result := descender * isize.to_real32/10.0
     }
     result
   )

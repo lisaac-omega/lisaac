@@ -1,37 +1,36 @@
 Header
-  + name := ITK;
-  
+  + name := Itk
 Public
   
-  - map_col:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 4
+  - map_col:C_array Uint8 := C_array Uint8.create 4
   
-  - tmp_cap:INTEGER
-  - tmp:NATIVE_ARRAY UINTEGER_8
+  - tmp_cap:Int
+  - tmp:C_array Uint8
   
-  - gauss_size:INTEGER
-  - gauss_sigma:REAL_64 := 1.5
-  - gauss:NATIVE_ARRAY INTEGER
-  - gauss_sum:INTEGER
+  - gauss_size:Int
+  - gauss_sigma:Real64 := 1.5
+  - gauss:C_array Int
+  - gauss_sum:Int
   
-  - update_gaussian sz:INTEGER sigma sig:REAL_64 <-
+  - update_gaussian sz:Int sigma sig:Real64 <-
   [ ? {sz.is_odd}; ]
-  ( + x,y,hsz,k,sum:INTEGER
-    + v,sig2:REAL_64
-    + scal,vi,none:INTEGER
-    + ker:NATIVE_ARRAY INTEGER
+  ( + x,y,hsz,k,sum:Int
+    + v,sig2:Real64
+    + scal,vi,none:Int
+    + ker:C_array Int
     scal := 1000
     hsz := sz / 2
     sig2 := sig * sig * 2
-    (ker,none) := NATIVE_ARRAY INTEGER.update_size (gauss,gauss_size*gauss_size) new (sz*sz)
+    (ker,none) := C_array Int.update_size (gauss,gauss_size*gauss_size) new (sz*sz)
     gauss := ker
     gauss_size := sz
     gauss_sigma := sig
-    0.to (sz-1) do { i:INTEGER
-      0.to (sz-1) do { j:INTEGER
+    0.to (sz-1) do { i:Int
+      0.to (sz-1) do { j:Int
         x := i - hsz
         y := j - hsz
-        v := (-(x * x + y * y).to_real_64 / sig2).exp / (REAL_64.pi * sig2)
-        vi := (v * scal + 0.5).to_integer
+        v := (-(x * x + y * y).to_real64 / sig2).exp / (Real64.pi * sig2)
+        vi := (v * scal + 0.5).to_int
         ker.at k put vi
         sum := sum + vi
         k := k + 1
@@ -40,10 +39,10 @@ Public
     gauss_sum := sum
   )
   
-  - variance src:NATIVE_ARRAY UINTEGER_8 width w:INTEGER to (p:INTEGER) dim s:INTEGER :(UINTEGER_8,REAL_64) <-
-  ( + var,v:REAL_64
-    + mean:UINTEGER_8
-    + cnt,k,ky,hs,pb,sum:INTEGER
+  - variance src:C_array Uint8 width w:Int to (p:Int) dim s:Int :(Uint8,Real64) <-
+  ( + var,v:Real64
+    + mean:Uint8
+    + cnt,k,ky,hs,pb,sum:Int
     cnt := s*s
     hs := s / 2
     // Sum:
@@ -62,7 +61,7 @@ Public
     s.times {
       k := ky
       s.times {
-        v := src.at k.to_real_64 - mean.to_real_64
+        v := src.at k.to_real64 - mean.to_real64
         var := var + v*v
         k := k + 1
       }
@@ -72,8 +71,8 @@ Public
     mean,var
   )
   
-  - border src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) w b:INTEGER <-
-  ( + o1,o2,oup,obo:INTEGER
+  - border src:C_array Uint8 size (w,h:Int) w b:Int <-
+  ( + o1,o2,oup,obo:Int
     o2 := w*h-1
     oup := w*b
     obo := o2-oup
@@ -84,7 +83,7 @@ Public
         o2 := o2 - 1
         o1 := o1 + 1
       }
-      b.to (w-b-1) do { x:INTEGER
+      b.to (w-b-1) do { x:Int
         src.at o1 put (src.at (oup+x))
         src.at o2 put (src.at (obo-x))
         o2 := o2 - 1
@@ -98,7 +97,7 @@ Public
       }
     }
     (h-b*2).times { 
-      0.to (b-1) do { x:INTEGER
+      0.to (b-1) do { x:Int
         src.at (o1+x) put (src.at (o1+b))
         src.at (o2-x) put (src.at (o2-b))
       }
@@ -107,13 +106,13 @@ Public
     }
   )
     
-  - border4 src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) w b:INTEGER <-
-  ( + o1,o2,oup,obo,xx:INTEGER
+  - border4 src:C_array Uint8 size (w,h:Int) w b:Int <-
+  ( + o1,o2,oup,obo,xx:Int
     o2 := w*h-1
     oup := w*b
     obo := o2-oup
     b.times {
-      0.to (w-1) do { x:INTEGER
+      0.to (w-1) do { x:Int
         xx := x.max b.min (w-b-1)
         src.copy ((oup+xx)*4) n 4 to (o1*4)
         src.copy ((obo-xx)*4) n 4 to (o2*4)
@@ -122,7 +121,7 @@ Public
       }
     }
     (h-b*2).times { 
-      0.to (b-1) do { x:INTEGER
+      0.to (b-1) do { x:Int
         src.copy ((o1+b)*4) n 4 to ((o1+x)*4)
         src.copy ((o2-b)*4) n 4 to ((o2-x)*4)
       }
@@ -131,26 +130,26 @@ Public
     }
   )
   
-  - circle_full src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) to (xc, yc:INTEGER) ray r:INTEGER col c:UINTEGER_8 <-
-  ( + x,y,d,o:INTEGER
+  - circle_full src:C_array Uint8 size (w,h:Int) to (xc, yc:Int) ray r:Int col c:Uint8 <-
+  ( + x,y,d,o:Int
     y := r
     d := 3 - 2 * r
     {x <= y}.while_do {
       ((yc + y).in_range 0 to (h-1)).if {
         o := (yc+y) * w
-        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:Int; src.at (o+i) put c; }
       }
       ((yc - y).in_range 0 to (h-1)).if {
         o := (yc-y) * w
-        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:Int; src.at (o+i) put c; }
       }
       ((yc + x).in_range 0 to (h-1)).if {
         o := (yc+x) * w
-        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:Int; src.at (o+i) put c; }
       }
       ((yc - x).in_range 0 to (h-1)).if {
         o := (yc-x) * w
-        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER; src.at (o+i) put c; }
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:Int; src.at (o+i) put c; }
       }
       (d < 0).if {
         d := d + 4 * x + 6
@@ -162,32 +161,32 @@ Public
     }
   )
   
-  - circle_msk src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) to (xc, yc:INTEGER) ray r:INTEGER col c:UINTEGER_8 <-
-  ( + x,y,d,o:INTEGER
+  - circle_msk src:C_array Uint8 size (w,h:Int) to (xc, yc:Int) ray r:Int col c:Uint8 <-
+  ( + x,y,d,o:Int
     y := r
     d := 3 - 2 * r
     {x <= y}.while_do {
       ((yc + y).in_range 0 to (h-1)).if {
         o := (yc+y) * w
-        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:Int
           (src.at (o+i) != 0).if { src.at (o+i) put c; }
         }
       }
       ((yc - y).in_range 0 to (h-1)).if {
         o := (yc-y) * w
-        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:INTEGER
+        ((xc-x).max 0).to ((xc+x).min (w-1)) do { i:Int
           (src.at (o+i) != 0).if { src.at (o+i) put c; }
         }
       }
       ((yc + x).in_range 0 to (h-1)).if {
         o := (yc+x) * w
-        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:Int
           (src.at (o+i) != 0).if { src.at (o+i) put c; }
         }
       }
       ((yc - x).in_range 0 to (h-1)).if {
         o := (yc-x) * w
-        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:INTEGER
+        ((xc-y).max 0).to ((xc+y).min (w-1)) do { i:Int
           (src.at (o+i) != 0).if { src.at (o+i) put c; }
         }
       }
@@ -201,19 +200,19 @@ Public
     }
   )
     
-  - line src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) from (x0,y0:INTEGER) to (x1,y1:INTEGER) width r:INTEGER col c:UINTEGER_8 <-
-  ( + dx,dy,sx,sy,d,x,y:INTEGER
-    + swap:BOOLEAN
+  - line src:C_array Uint8 size (w,h:Int) from (x0,y0:Int) to (x1,y1:Int) width r:Int col c:Uint8 <-
+  ( + dx,dy,sx,sy,d,x,y:Int
+    + swap:Boolean
     (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
     sx := (x1 > x0).ok 1 or (-1)
     sy := (y1 > y0).ok 1 or (-1)
     (dy > dx).if {
       (dx,dy) := (dy,dx)
-      swap := TRUE
+      swap := True
     }
     d := 2 * dy - dx
     (x,y) := (x0,y0)
-    0.to dx do { i:INTEGER
+    0.to dx do { i:Int
       circle_full src size (w,h) to (x, y) ray r col c
       (d > 0).if { 
         (swap).if { x := x + sx; } else { y := y + sy; }
@@ -224,19 +223,19 @@ Public
     }
   )
   
-  - line_msk src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) from (x0,y0:INTEGER) to (x1,y1:INTEGER) width r:INTEGER col c:UINTEGER_8 <-
-  ( + dx,dy,sx,sy,d,x,y:INTEGER
-    + swap:BOOLEAN
+  - line_msk src:C_array Uint8 size (w,h:Int) from (x0,y0:Int) to (x1,y1:Int) width r:Int col c:Uint8 <-
+  ( + dx,dy,sx,sy,d,x,y:Int
+    + swap:Boolean
     (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
     sx := (x1 > x0).ok 1 or (-1)
     sy := (y1 > y0).ok 1 or (-1)
     (dy > dx).if {
       (dx,dy) := (dy,dx)
-      swap := TRUE
+      swap := True
     }
     d := 2 * dy - dx
     (x,y) := (x0,y0)
-    0.to dx do { i:INTEGER
+    0.to dx do { i:Int
       circle_msk src size (w,h) to (x, y) ray r col c
       (d > 0).if { 
         (swap).if { x := x + sx; } else { y := y + sy; }
@@ -249,20 +248,20 @@ Public
   
   
 Public
-  - line src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
-  from (x0,y0:INTEGER) to (x1,y1:INTEGER) col3 (r,g,b:UINTEGER_8) <-
-  ( + dx,dy,sx,sy,d,x,y,o:INTEGER
-    + swap:BOOLEAN
+  - line src:C_array Uint8 size (w,h:Int)
+  from (x0,y0:Int) to (x1,y1:Int) col3 (r,g,b:Uint8) <-
+  ( + dx,dy,sx,sy,d,x,y,o:Int
+    + swap:Boolean
     (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
     sx := (x1 > x0).ok 1 or (-1)
     sy := (y1 > y0).ok 1 or (-1)
     (dy > dx).if {
       (dx,dy) := (dy,dx)
-      swap := TRUE
+      swap := True
     }
     d := 2 * dy - dx
     (x,y) := (x0,y0)
-    0.to dx do { i:INTEGER
+    0.to dx do { i:Int
       o := (y*w + x) << 2
       src.at (o+0) put r; src.at (o+1) put g; src.at (o+2) put b; src.at (o+3) put 255
       (d > 0).if { 
@@ -274,20 +273,20 @@ Public
     }
   )
   
-  - line src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
-  from (x0,y0:INTEGER) to (x1,y1:INTEGER) col c:UINTEGER_8 <-
-  ( + dx,dy,sx,sy,d,x,y,o:INTEGER
-    + swap:BOOLEAN
+  - line src:C_array Uint8 size (w,h:Int)
+  from (x0,y0:Int) to (x1,y1:Int) col c:Uint8 <-
+  ( + dx,dy,sx,sy,d,x,y,o:Int
+    + swap:Boolean
     (dx,dy) := ((x1 - x0).abs, (y1 - y0).abs)
     sx := (x1 > x0).ok 1 or (-1)
     sy := (y1 > y0).ok 1 or (-1)
     (dy > dx).if {
       (dx,dy) := (dy,dx)
-      swap := TRUE
+      swap := True
     }
     d := 2 * dy - dx
     (x,y) := (x0,y0)
-    0.to dx do { i:INTEGER
+    0.to dx do { i:Int
       o := y*w + x
       src.at o put c
       (d > 0).if { 
@@ -299,8 +298,8 @@ Public
     }
   )
   
-  - rect img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) col c:UINTEGER_8 <-
-  ( + o:INTEGER
+  - rect img:C_array Uint8 size (w,h:Int) rect (x0,y0,x1,y1:Int) col c:Uint8 <-
+  ( + o:Int
     o := y0*w
     (y1-y0 + 1).times {
       o := o + x0
@@ -316,8 +315,8 @@ Public
     ? {o = (y1+1)*w}
   )
   
-  - cadre img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) col3 (r,g,b:UINTEGER_8) <-
-  ( + o0,o1:INTEGER
+  - cadre img:C_array Uint8 size (w,h:Int) rect (x0,y0,x1,y1:Int) col3 (r,g,b:Uint8) <-
+  ( + o0,o1:Int
     o0 := (y0*w + x0)*4
     o1 := (y1*w + x1)*4
     (x1-x0+1).times {
@@ -332,9 +331,9 @@ Public
     }
   )
   
-  - crop img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) <-
-  ( + o:INTEGER
-    + c:UINTEGER_8
+  - crop img:C_array Uint8 size (w,h:Int) rect (x0,y0,x1,y1:Int) <-
+  ( + o:Int
+    + c:Uint8
     c := 0
     (y0*w).times {
       img.at o put c
@@ -363,14 +362,14 @@ Public
     ? {o = w*h}
   )
   
-  - norm src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) rect (x0,y0,x1,y1:INTEGER) <-
+  - norm src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) rect (x0,y0,x1,y1:Int) <-
   // Src = dst ok
-  ( + min,max,oy,ox,c,d:INTEGER
+  ( + min,max,oy,ox,c,d:Int
     min := 255; max := 0
     oy := y0*w + x0
-    y0.to y1 do { y:INTEGER
+    y0.to y1 do { y:Int
       ox := oy
-      x0.to x1 do { x:INTEGER
+      x0.to x1 do { x:Int
         c := src.at ox
         (c < min).if { min := c; }
         (c > max).if { max := c; }
@@ -382,9 +381,9 @@ Public
     //
     (d != 0).if {
       oy := y0*w + x0
-      y0.to y1 do { y:INTEGER
+      y0.to y1 do { y:Int
         ox := oy
-        x0.to x1 do { x:INTEGER
+        x0.to x1 do { x:Int
           c := src.at ox
           c := clamp ((255*(c-min)) / d)
           dst.at ox put c
@@ -395,8 +394,8 @@ Public
     }
   )
   
-  - rot4 src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
-  ( + os,ody,odx:INTEGER
+  - rot4 src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) <-
+  ( + os,ody,odx:Int
     odx := (w-1)*(h*4)
     h.times {
       ody := odx
@@ -411,29 +410,29 @@ Public
     }
   )
   
-  - var_r32 src:ARRAY REAL_32 :REAL_32 <-
-  ( + sum,mean:REAL_64
-    src.foreach { r:REAL_32; sum := sum + r; ? {r.in_range 0 to 1}; }
+  - var_r32 src:Array Real32 :Real32 <-
+  ( + sum,mean:Real64
+    src.foreach { r:Real32; sum := sum + r; ? {r.in_range 0 to 1}; }
     mean := sum / src.count
     sum := 0
-    src.foreach { r:REAL_32; sum := sum + (r-mean)*(r-mean); }
+    src.foreach { r:Real32; sum := sum + (r-mean)*(r-mean); }
     (sum / src.count).sqrt
   )
 
-  - clamp c:INTEGER :UINTEGER_8 <-
-  ( + r:UINTEGER_8
+  - clamp c:Int :Uint8 <-
+  ( + r:Uint8
     (c >= 255).if {
       r := 255
     } else {
-      (c > 0).if { r := c.to_uinteger_8; }
+      (c > 0).if { r := c.to_uint8; }
     }
     r
   )
   
   - print_gaussian <-
   (
-    0.to (gauss_size-1) do { y:INTEGER
-      0.to (gauss_size-1) do { x:INTEGER
+    0.to (gauss_size-1) do { y:Int
+      0.to (gauss_size-1) do { x:Int
         gauss.at (y*gauss_size+x).print_format 3; ' '.print
       }
       '\n'.print
@@ -442,22 +441,22 @@ Public
   
 Public
   
-  - x1_white s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  - x1_white s:C_array Uint8 to d:C_array Uint8 size (w,h:Int) <-
   // s = d : ok
-  ( + r,g,b:INTEGER
-    + c:UINTEGER_8
-    0.to (w*h*4) by 4 do { i:INTEGER
+  ( + r,g,b:Int
+    + c:Uint8
+    0.to (w*h*4) by 4 do { i:Int
       (r,g,b) := (s.at i,s.at (i+1),s.at (i+2))
       ((r,g,b) = (255,255,255)).if { c := 255; } else { c := 0; }
       d.at (i>>2) put c
     }
   )
   
-  - x1 s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  - x1 s:C_array Uint8 to d:C_array Uint8 size (w,h:Int) <-
   // s = d : ok
-  ( + r,g,b:INTEGER
-    + c:UINTEGER_8
-    0.to (w*h*4-1) by 4 do { i:INTEGER
+  ( + r,g,b:Int
+    + c:Uint8
+    0.to (w*h*4-1) by 4 do { i:Int
       (r,g,b) := (s.at i,s.at (i+1),s.at (i+2))
       //c := (r+g+b)/3
       c := (77 * r + 150 * g + 29 * b) >> 8
@@ -465,20 +464,20 @@ Public
     }
   )
   
-  - r1 s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY REAL_32 size (w,h:INTEGER) <-
-  ( + c:REAL_32
-    0.to (w*h-1) do { i:INTEGER
-      c := s.at i.to_real_32 / 255.0
+  - r1 s:C_array Uint8 to d:C_array Real32 size (w,h:Int) <-
+  ( + c:Real32
+    0.to (w*h-1) do { i:Int
+      c := s.at i.to_real32 / 255.0
       d.at i put c
     }
   )
   
-  - x4 s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  - x4 s:C_array Uint8 to d:C_array Uint8 size (w,h:Int) <-
   // s = d Ok
-  ( + j:INTEGER
-    + c:UINTEGER_8
+  ( + j:Int
+    + c:Uint8
     j := w*h*4
-    (w*h-1).downto 0 do { i:INTEGER
+    (w*h-1).downto 0 do { i:Int
       c := s.at i
       j := j - 1; d.at j put 255
       j := j - 1; d.at j put c
@@ -487,21 +486,21 @@ Public
     }
   )
   
-  - neg s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  - neg s:C_array Uint8 to d:C_array Uint8 size (w,h:Int) <-
   // s = d : ok
-  ( + c:UINTEGER_8
-    0.to (w*h-1) do { i:INTEGER
+  ( + c:Uint8
+    0.to (w*h-1) do { i:Int
       c := s.at i
       d.at i put (255-c)
     }
   )
   
-  - rgba (r,g,b,a:UINTEGER_8) src s:NATIVE_ARRAY UINTEGER_8 to d:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  - rgba (r,g,b,a:Uint8) src s:C_array Uint8 to d:C_array Uint8 size (w,h:Int) <-
   // s = d Ok
-  ( + j:INTEGER
-    + c:UINTEGER_8
+  ( + j:Int
+    + c:Uint8
     j := w*h*4
-    (w*h-1).downto 0 do { i:INTEGER
+    (w*h-1).downto 0 do { i:Int
       c := s.at i
       (c != 0).if {
         j := j - 1; d.at j put a
@@ -517,15 +516,15 @@ Public
     }
   )
   
-  - resize src:NATIVE_ARRAY UINTEGER_8 size (sw,sh:INTEGER) to dst:NATIVE_ARRAY UINTEGER_8 size (dw,dh:INTEGER) <-
+  - resize src:C_array Uint8 size (sw,sh:Int) to dst:C_array Uint8 size (dw,dh:Int) <-
   // src = dst Ok if (sw,sh) >= (ds,dh)
   [ ? {(src != dst) || {(sw >= dw) && {sh >= dh}}}; ]
-  ( + dx,dy,px,py,i:INTEGER
+  ( + dx,dy,px,py,i:Int
     dx := (sw << 16) / dw
     dy := (sh << 16) / dh
-    0.to (dh-1) do { y:INTEGER
+    0.to (dh-1) do { y:Int
       px := ((py >> 16) * sw) << 16
-      0.to (dw-1) do { x:INTEGER
+      0.to (dw-1) do { x:Int
         dst.at i put (src.at (px >> 16))
         px := px + dx
         i := i + 1
@@ -534,16 +533,16 @@ Public
     }
   )
   
-  - resize4 src:NATIVE_ARRAY UINTEGER_8 size (sw,sh:INTEGER)
-  to dst:NATIVE_ARRAY UINTEGER_8 size (dw,dh:INTEGER) <-
+  - resize4 src:C_array Uint8 size (sw,sh:Int)
+  to dst:C_array Uint8 size (dw,dh:Int) <-
   // src = dst Ok if (sw,sh) >= (ds,dh)
   [ ? {(src != dst) || {(sw >= dw) && {sh >= dh}}}; ]
-  ( + dx,dy,px,py,i,os:INTEGER
+  ( + dx,dy,px,py,i,os:Int
     dx := (sw << 16) / dw
     dy := (sh << 16) / dh
-    0.to (dh-1) do { y:INTEGER
+    0.to (dh-1) do { y:Int
       px := ((py >> 16) * sw) << 16
-      0.to (dw-1) do { x:INTEGER
+      0.to (dw-1) do { x:Int
         os := (px >> 16) << 2
         //
         dst.at i put (src.at (os+0)); i := i + 1
@@ -557,15 +556,15 @@ Public
     }
   )
   
-  - mask src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) with msk:NATIVE_ARRAY UINTEGER_8 size (mw,mh:INTEGER) <-
+  - mask src:C_array Uint8 size (w,h:Int) with msk:C_array Uint8 size (mw,mh:Int) <-
   [ ? {src != msk}; ] 
-  ( + dx,dy,px,py,i:INTEGER
-    + c:UINTEGER_8
+  ( + dx,dy,px,py,i:Int
+    + c:Uint8
     dx := (mw << 16) / w
     dy := (mh << 16) / h
-    0.to (h-1) do { y:INTEGER
+    0.to (h-1) do { y:Int
       px := ((py >> 16) * mw) << 16
-      0.to (w-1) do { x:INTEGER
+      0.to (w-1) do { x:Int
         c := msk.at (px >> 16)
         (c = 0).if { src.at i put 0; }
         px := px + dx
@@ -575,18 +574,18 @@ Public
     }
   )
   
-  - redmask src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) with msk:NATIVE_ARRAY UINTEGER_8 size (mw,mh:INTEGER) <-
+  - redmask src:C_array Uint8 size (w,h:Int) with msk:C_array Uint8 size (mw,mh:Int) <-
   [ ? {src != msk}; ] 
-  ( + dx,dy,px,py,i:INTEGER
-    + c:UINTEGER_8
+  ( + dx,dy,px,py,i:Int
+    + c:Uint8
     dx := (mw << 16) / w
     dy := (mh << 16) / h
-    0.to (h-1) do { y:INTEGER
+    0.to (h-1) do { y:Int
       px := ((py >> 16) * mw) << 16
-      0.to (w-1) do { x:INTEGER
+      0.to (w-1) do { x:Int
         c := msk.at (px >> 16)
         (c != 0).if {
-          src.at (i<<2) put (clamp (src.at (i<<2).to_integer + 60))
+          src.at (i<<2) put (clamp (src.at (i<<2).to_int + 60))
         }
         px := px + dx
         i := i + 1
@@ -595,16 +594,16 @@ Public
     }
   )
   /*
-  - copy src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t:INTEGER <-
+  - copy src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t:Int <-
   (
     
   );*/
   
-  - set src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) col c:COLOR <-
-  ( + r,g,b:UINTEGER_8
-    + j:INTEGER
+  - set src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) col c:Color <-
+  ( + r,g,b:Uint8
+    + j:Int
     (r,g,b) := (c.ri,c.gi,c.bi)
-    0.to (w*h-1) do { i:INTEGER
+    0.to (w*h-1) do { i:Int
       (src.at i = 255).if {
         dst.at (j+0) put r; dst.at (j+1) put g
         dst.at (j+2) put b; dst.at (j+3) put 255
@@ -613,9 +612,9 @@ Public
     }
   )
   
-  - clean4 src:NATIVE_ARRAY UINTEGER_8 mask msk:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) color (r,g,b:UINTEGER_8) select c:UINTEGER_8 <-
-  ( + j:INTEGER
-    0.to (w*h-1) do { i:INTEGER
+  - clean4 src:C_array Uint8 mask msk:C_array Uint8 size (w,h:Int) color (r,g,b:Uint8) select c:Uint8 <-
+  ( + j:Int
+    0.to (w*h-1) do { i:Int
       (msk.at i = c).if {
         src.at (j+0) put r
         src.at (j+1) put g
@@ -625,15 +624,15 @@ Public
     }
   )
   
-  - sobel src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
+  - sobel src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) <-
   // Src != dst
   [ ? {src != dst}; ]
-  ( + sumx,sumy,i:INTEGER
-    + c0,c1,c2,c3,c5,c6,c7,c8,c:INTEGER
-    0.to (w-1) do { x:INTEGER; dst.at i put 0; i := i + 1; }
-    1.to (h-2) do { y:INTEGER
+  ( + sumx,sumy,i:Int
+    + c0,c1,c2,c3,c5,c6,c7,c8,c:Int
+    0.to (w-1) do { x:Int; dst.at i put 0; i := i + 1; }
+    1.to (h-2) do { y:Int
       dst.at i put 0; i := i + 1
-      1.to (w-2) do { x:INTEGER
+      1.to (w-2) do { x:Int
         c0 := src.at (i-w-1); c1 := src.at (i-w); c2 := src.at (i-w+1)
         c3 := src.at (i-1);                       c5 := src.at (i+1)
         c6 := src.at (i+w-1); c7 := src.at (i+w); c8 := src.at (i+w+1)
@@ -646,18 +645,18 @@ Public
       dst.at i put 0; i := i + 1
     }
     ? {i = (h-1)*w}
-    0.to (w-1) do { x:INTEGER; dst.at i put 0; i := i + 1; }
+    0.to (w-1) do { x:Int; dst.at i put 0; i := i + 1; }
     //border dst size (w,h) w 1
   )
   
-  - sobel src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
-  rect (x0,y0,x1,y1:INTEGER) <-
+  - sobel src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int)
+  rect (x0,y0,x1,y1:Int) <-
   // Src != dst
   [ ? {src != dst}; ]
-  ( + sumx,sumy,i:INTEGER
-    + c0,c1,c2,c3,c5,c6,c7,c8,c:INTEGER
-    (y0+1).to (y1-1) do { y:INTEGER
-      (x0+1).to (x1-1) do { x:INTEGER
+  ( + sumx,sumy,i:Int
+    + c0,c1,c2,c3,c5,c6,c7,c8,c:Int
+    (y0+1).to (y1-1) do { y:Int
+      (x0+1).to (x1-1) do { x:Int
         i := y*w+x
         c0 := src.at (i-w-1); c1 := src.at (i-w); c2 := src.at (i-w+1)
         c3 := src.at (i-1);                       c5 := src.at (i+1)
@@ -671,16 +670,16 @@ Public
   )
 
   
-  - sobel src:NATIVE_ARRAY REAL_32 size (w,h:INTEGER)
-  at (x,y:INTEGER) size (bw,bh:INTEGER) :(REAL_32,REAL_32) <-
-  ( + i,i0:INTEGER
-    + c0,c1,c2,c3,c5,c6,c7,c8:REAL_32
-    + sumx,sumy,c,c_mx,sumx_mx,sumy_mx,a:REAL_32
+  - sobel src:C_array Real32 size (w,h:Int)
+  at (x,y:Int) size (bw,bh:Int) :(Real32,Real32) <-
+  ( + i,i0:Int
+    + c0,c1,c2,c3,c5,c6,c7,c8:Real32
+    + sumx,sumy,c,c_mx,sumx_mx,sumy_mx,a:Real32
     /*
     i0 := y*w + x
-    0.to (bh-1) do { y:INTEGER
+    0.to (bh-1) do { y:Int
       i := i0
-      0.to (bw-1) do { x:INTEGER
+      0.to (bw-1) do { x:Int
         c := c + src.at i
         i := i + 1
       }
@@ -689,10 +688,10 @@ Public
     m := c / (bh*bw)
     */
     i0 := y*w + x
-    1.to (bh-2) do { y:INTEGER
+    1.to (bh-2) do { y:Int
       i0 := i0 + w
       i := i0 + 1
-      1.to (bw-2) do { x:INTEGER
+      1.to (bw-2) do { x:Int
         c0 := src.at (i-w-1); c1 := src.at (i-w); c2 := src.at (i-w+1)
         c3 := src.at (i-1);                       c5 := src.at (i+1)
         c6 := src.at (i+w-1); c7 := src.at (i+w); c8 := src.at (i+w+1)
@@ -712,34 +711,34 @@ Public
       }
     }
     a := sumy_mx.atan2 sumx_mx; // [-pi;+pi]
-    (a < 0).if { a := a + REAL_32.pi; }; // [-pi;+pi] => [0;+pi]
-    a := a + REAL_32.pi/2
-    (a > REAL_32.pi).if { a := a - REAL_32.pi; }
+    (a < 0).if { a := a + Real32.pi; }; // [-pi;+pi] => [0;+pi]
+    a := a + Real32.pi/2
+    (a > Real32.pi).if { a := a - Real32.pi; }
     c_mx.sqrt, a
   )
   
-  - thresholding src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8
-  size (w,h:INTEGER) limit l:INTEGER set (c0,c1:UINTEGER_8) <-
+  - thresholding src:C_array Uint8 to dst:C_array Uint8
+  size (w,h:Int) limit l:Int set (c0,c1:Uint8) <-
   // src = dst Ok
-  ( + c:UINTEGER_8
-    0.to (w*h-1) do { i:INTEGER
+  ( + c:Uint8
+    0.to (w*h-1) do { i:Int
       c := src.at i
       (c < l).if { c := c0; } else { c := c1; }
       dst.at i put c
     }
   )
   
-  //- err:Expanded ARRAY INTEGER
+  //- err:Flat ARRAY Int
   
-  - contour img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) in pt:ARRAY INTEGER
-  rect (x0,y0,x1,y1:INTEGER) :(STRING_ALIAS,INTEGER,INTEGER /*,INTEGER,INTEGER,INTEGER,INTEGER*/) <-
+  - contour img:C_array Uint8 size (w,h:Int) in pt:Array Int
+  rect (x0,y0,x1,y1:Int) :(String_alias,Int,Int /*,Int,Int,Int,Int*/) <-
   // min=16 default
   // Ben Inside
-  ( + n,m,p,p1,dx,dy,lim,cpt,x,ymax,ymin,out_x,out_y,pbeg,bug:INTEGER
-    //+ xx0,yy0,xx1,yy1:INTEGER
-    + c:UINTEGER_8
-    + out:BOOLEAN
-    + res:STRING_ALIAS
+  ( + n,m,p,p1,dx,dy,lim,cpt,x,ymax,ymin,out_x,out_y,pbeg,bug:Int
+    //+ xx0,yy0,xx1,yy1:Int
+    + c:Uint8
+    + out:Boolean
+    + res:String_alias
     
     // `n' direction :
     //    111(7) 000(0) 001(1)
@@ -769,7 +768,7 @@ Public
       }.do_while {(c != 0) && {cpt<8}}
       x := p1 % w
       ((x <= x0) || {x >= x1} || {p1 < ymin} || {p1 >= ymax}).if {
-        out := TRUE
+        out := True
         (out_x,out_y) := (x,p1/w)
       }
       //
@@ -816,11 +815,11 @@ Public
         res := "Bug contour: count points impair! (Err:Contour intern, not extern)"
         /*
         //"Nb pts:".print; pt.count.println        
-        0.to (2.min (pt.upper)) do { i:INTEGER; i.print; ':'.print
+        0.to (2.min (pt.upper)) do { i:Int; i.print; ':'.print
         (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
         (pt.count >= 4).if {
           "... ".print
-          (pt.upper-2).to (pt.upper) do { i:INTEGER; i.print; ':'.print
+          (pt.upper-2).to (pt.upper) do { i:Int; i.print; ':'.print
           (pt.at i % w).print; ','.print; (pt.at i / w).print; ' '.print; }
         }
         '\n'.print
@@ -833,28 +832,28 @@ Public
     res,out_x,out_y
   )
   
-  - fill img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) with pt:ARRAY INTEGER border s:UINTEGER_8 col c:UINTEGER_8 <-
+  - fill img:C_array Uint8 size (w,h:Int) with pt:Array Int border s:Uint8 col c:Uint8 <-
   // If s = c then no border !
-  ( + b,e:INTEGER
+  ( + b,e:Int
     pt.quick_sort
-    0.to (pt.upper) by 2 do { i:INTEGER
+    0.to (pt.upper) by 2 do { i:Int
       (b,e) := (pt.at i, pt.at (i+1))
       (s != c).if {
         { b := b + 1; (img.at b = 0FFh).if { img.at b put s; }}.while_loop
         { e := e - 1; (img.at e = 0FFh).if { img.at e put s; }}.while_loop
       }
-      b.to e do { j:INTEGER; img.at j put c; }
+      b.to e do { j:Int; img.at j put c; }
     }
   )
     
-  - sum_xy img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) in (sx,sy:ARRAY INTEGER) :(INTEGER,INTEGER) <-
+  - sum_xy img:C_array Uint8 size (w,h:Int) in (sx,sy:Array Int) :(Int,Int) <-
   // Result: median
-  ( + l,c,i,sum,cx,cy,ix,iy:INTEGER
+  ( + l,c,i,sum,cx,cy,ix,iy:Int
     sx.resize w; sy.resize h
     sx.set_all_with 0
-    0.to (h-1) do { y:INTEGER
+    0.to (h-1) do { y:Int
       l := 0
-      0.to (w-1) do { x:INTEGER
+      0.to (w-1) do { x:Int
         c := img.at i
         sum := sum + c
         sx.at x put (sx.at x + c)
@@ -869,17 +868,17 @@ Public
     ix,iy
   )
   
-  - clean img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
-  ( + ofs:INTEGER
+  - clean img:C_array Uint8 size (w,h:Int) <-
+  ( + ofs:Int
     ofs := w
-    1.to (h-2) do { y:INTEGER
+    1.to (h-2) do { y:Int
       ofs := ofs + 1
-      1.to (w-2) do { x:INTEGER
+      1.to (w-2) do { x:Int
         (img.at ofs != 0).if {
           (
-            (img.at (ofs-w-1) != 0).to_integer + (img.at (ofs-w) != 0).to_integer + (img.at (ofs-w+1) != 0).to_integer +
-            (img.at (ofs  -1) != 0).to_integer +                                  + (img.at (ofs  +1) != 0).to_integer +
-            (img.at (ofs+w-1) != 0).to_integer + (img.at (ofs+w) != 0).to_integer + (img.at (ofs+w+1) != 0).to_integer
+            (img.at (ofs-w-1) != 0).to_int + (img.at (ofs-w) != 0).to_int + (img.at (ofs-w+1) != 0).to_int +
+            (img.at (ofs  -1) != 0).to_int +                                  + (img.at (ofs  +1) != 0).to_int +
+            (img.at (ofs+w-1) != 0).to_int + (img.at (ofs+w) != 0).to_int + (img.at (ofs+w+1) != 0).to_int
           <= 2).if {
             img.at ofs put 0
           }
@@ -890,25 +889,25 @@ Public
     }
   )
   
-  - bold src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  - bold src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t2:Int <-
   // src = dst Ok
   // t = 1 then [-t .. +t]
   // ooo
   // oXo
   // ooo
   [ ? {t2.is_odd}; ]
-  ( + i,j,k,t:INTEGER
-    + c:UINTEGER_8
+  ( + i,j,k,t:Int
+    + c:Uint8
     t := t2 / 2
     i := w*t
-    t.to (h-t-1) do { y:INTEGER
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         (src.at i = 255).if {
           j := i-t*w-t
-          (-t).to t do { yy:INTEGER
+          (-t).to t do { yy:Int
             k := j
-            (-t).to t do { xx:INTEGER
+            (-t).to t do { xx:Int
               c := src.at k
               (c = 0).if { dst.at k put 254; } else { dst.at k put c; }
               k := k + 1
@@ -922,10 +921,10 @@ Public
     }
   )
   
-  - put src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) pts pt:ARRAY INTEGER dim t:INTEGER col c:UINTEGER_8 <-
-  ( + x0,y0,x1,y1:INTEGER
+  - put src:C_array Uint8 size (w,h:Int) pts pt:Array Int dim t:Int col c:Uint8 <-
+  ( + x0,y0,x1,y1:Int
     (x1,y1) := (pt.first,pt.second)
-    2.to (pt.upper) by 2 do { i:INTEGER
+    2.to (pt.upper) by 2 do { i:Int
       (x0,y0) := (x1,y1)
       (x1,y1) := (pt.at i, pt.at (i+1))
       line src size (w,h) from (x0,y0) to (x1,y1) width t col c
@@ -933,8 +932,8 @@ Public
     line src size (w,h) from (x1,y1) to (pt.first,pt.second) width t col c
   )
   
-  - border src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) width b:INTEGER <-
-  ( + o1,o2:INTEGER
+  - border src:C_array Uint8 size (w,h:Int) width b:Int <-
+  ( + o1,o2:Int
     o2 := w*h-1
     (b*w).times {
       src.at o1 put 0
@@ -943,7 +942,7 @@ Public
       o1 := o1 + 1
     }
     (h-b*2).times {
-      0.to (b-1) do { x:INTEGER
+      0.to (b-1) do { x:Int
         src.at (o1+x) put 0
         src.at (o2-x) put 0
       }
@@ -952,24 +951,24 @@ Public
     }
   )
   
-  - max src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  - max src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t2:Int <-
   // src = dst Ok
   // t = 1 then [-t .. +t]
   // ooo
   // oXo
   // ooo
   [ ? {t2.is_odd}; ]
-  ( + i,j,k,mx,t:INTEGER
+  ( + i,j,k,mx,t:Int
     t := t2/2
     i := w*t
-    t.to (h-t-1) do { y:INTEGER
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         j := i-t*w-t
         mx := 0
-        (-t).to t do { yy:INTEGER
+        (-t).to t do { yy:Int
           k := j
-          (-t).to t do { xx:INTEGER
+          (-t).to t do { xx:Int
             (src.at k > mx).if { mx := src.at k; }
             k := k + 1
           }
@@ -983,25 +982,25 @@ Public
     border dst size (w,h) w t
   )
   
-  - mean src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  - mean src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t2:Int <-
   // src = dst Ok
   // t = 1 then [-t .. +t]
   // ooo
   // oXo
   // ooo
   [ ? {t2.is_odd}; ]
-  ( + i,j,k,sum,q,t:INTEGER
+  ( + i,j,k,sum,q,t:Int
     t := t2/2
     i := w*t
     q := t2*t2
-    t.to (h-t-1) do { y:INTEGER
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         j := i-t*w-t
         sum := 0
-        (-t).to t do { yy:INTEGER
+        (-t).to t do { yy:Int
           k := j
-          (-t).to t do { xx:INTEGER
+          (-t).to t do { xx:Int
             sum := sum + src.at k
             k := k + 1
           }
@@ -1015,25 +1014,25 @@ Public
     border dst size (w,h) w t
   )
   
-  - mean4 src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  - mean4 src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t2:Int <-
   // src = dst Ok
   // t = 3 then [-1 .. +1]
   // ooo
   // oXo
   // ooo
   [ ? {t2.is_odd}; ]
-  ( + i,j,k,sum_r,sum_g,sum_b,q,t:INTEGER
+  ( + i,j,k,sum_r,sum_g,sum_b,q,t:Int
     t := t2/2
     i := w*t
     q := t2*t2
-    t.to (h-t-1) do { y:INTEGER
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         j := i-t*w-t
         sum_r := sum_g := sum_b := 0
-        (-t).to t do { yy:INTEGER
+        (-t).to t do { yy:Int
           k := j
-          (-t).to t do { xx:INTEGER
+          (-t).to t do { xx:Int
             sum_r := sum_r + src.at (k*4 + 0)
             sum_g := sum_g + src.at (k*4 + 1)
             sum_b := sum_b + src.at (k*4 + 2)
@@ -1052,26 +1051,26 @@ Public
     border4 dst size (w,h) w t
   )
   
-  - gauss src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER sigma sig:REAL_64 <-
+  - gauss src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t2:Int sigma sig:Real64 <-
   // src = dst Ok
   // t = 1 then [-t .. +t]
   // ooo
   // oXo
   // ooo
   [ ? {t2.is_odd}; ]
-  ( + i,j,k,g,sum,s,t:INTEGER
+  ( + i,j,k,g,sum,s,t:Int
     t := t2 / 2
     i := w*t
     s := t2
     ((gauss_size != s) || {gauss_sigma != sig}).if { update_gaussian s sigma sig; }
-    t.to (h-t-1) do { y:INTEGER
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         j := i-t*w-t
         sum := g := 0
-        (-t).to t do { yy:INTEGER
+        (-t).to t do { yy:Int
           k := j
-          (-t).to t do { xx:INTEGER
+          (-t).to t do { xx:Int
             sum := sum + gauss.at g * src.at k
             k := k + 1
             g := g + 1
@@ -1086,26 +1085,26 @@ Public
     border dst size (w,h) w t
   )
   
-  - median src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t2:INTEGER <-
+  - median src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t2:Int <-
   // src = dst Ok
   // t = 1 then [-t .. +t]
   // ooo
   // oXo
   // ooo
   [ ? {t2.is_odd}; ]
-  ( + i,j,k,q,g,t:INTEGER
+  ( + i,j,k,q,g,t:Int
     t := t2/2
     i := w*t
     q := t2*t2
-    (tmp,tmp_cap) := NATIVE_ARRAY UINTEGER_8.update_size (tmp,tmp_cap) new q
-    t.to (h-t-1) do { y:INTEGER
+    (tmp,tmp_cap) := C_array Uint8.update_size (tmp,tmp_cap) new q
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         j := i-t*w-t
         g := 0
-        (-t).to t do { yy:INTEGER
+        (-t).to t do { yy:Int
           k := j
-          (-t).to t do { xx:INTEGER
+          (-t).to t do { xx:Int
             tmp.at g put (src.at k)
             k := k + 1
             g := g + 1
@@ -1121,20 +1120,20 @@ Public
     border dst size (w,h) w t
   )
   
-  - nagao src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) dim t:INTEGER <-
+  - nagao src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int) dim t:Int <-
   // src != dst
   // ooo
   // oXo
   // ooo
   [ ? {t.is_odd}; ]
-  ( + i,p,pp,ht:INTEGER
-    + best_m,m:UINTEGER_8
-    + best_v,v:REAL_64
+  ( + i,p,pp,ht:Int
+    + best_m,m:Uint8
+    + best_v,v:Real64
     i := w*t
     ht := t/2
-    t.to (h-t-1) do { y:INTEGER
+    t.to (h-t-1) do { y:Int
       i := i + t
-      t.to (w-t-1) do { x:INTEGER
+      t.to (w-t-1) do { x:Int
         best_v := 10_000; // +oo (256 suffit ;) )
         p := i - ht*w - ht
         3.times { // 9 zones:
@@ -1154,14 +1153,14 @@ Public
     border dst size (w,h) w t
   )
   
-  - contour src:ARRAY INTEGER to_pt dst:ARRAY INTEGER width w:INTEGER <-
+  - contour src:Array Int to_pt dst:Array Int width w:Int <-
   // src = dst Ok
-  ( + cnt,v,x,y,j,up:INTEGER
+  ( + cnt,v,x,y,j,up:Int
     cnt := src.count * 2
     up := src.upper
     dst.set_capacity cnt
     dst.set_upper (cnt-1)
-    up.downto 0 do { i:INTEGER
+    up.downto 0 do { i:Int
       v := src.at i
       (x,y) := (v % w, v / w)
       j := i<<1
@@ -1170,29 +1169,29 @@ Public
     }
   )
   
-  - flip s:ARRAY REAL_32 y y:REAL_32 <-
+  - flip s:Array Real32 y y:Real32 <-
   (
-    0.to (s.upper) by 2 do { i:INTEGER
+    0.to (s.upper) by 2 do { i:Int
       s.at (i+1) put (y*2 - s.at (i+1))
     }
   )
   
-  - flip s:ARRAY REAL_32 x x:REAL_32 <-
+  - flip s:Array Real32 x x:Real32 <-
   (
-    0.to (s.upper) by 2 do { i:INTEGER
+    0.to (s.upper) by 2 do { i:Int
       s.at i put (x*2 - s.at i)
     }
   )
   
   //- bug:ARRAY REAL_32 := ARRAY REAL_32.create_with_capacity 100
   
-  - contour s:ARRAY INTEGER to d:ARRAY REAL_32 inset offset:REAL_32 <-
+  - contour s:Array Int to d:Array Real32 inset offset:Real32 <-
   // Ben Inside
-  ( + i,j,a,b,c,e0,e1:INTEGER
-    + x0,y0,x1,y1:REAL_32
-    + dx,dy,l,ndx,ndy:REAL_32
-    + du,dv:REAL_32
-    + rm,again:BOOLEAN
+  ( + i,j,a,b,c,e0,e1:Int
+    + x0,y0,x1,y1:Real32
+    + dx,dy,l,ndx,ndy:Real32
+    + du,dv:Real32
+    + rm,again:Boolean
     //bug.clear
     d.clear
     (x0,y0) := (s.at 0,s.at 1); i := 2
@@ -1210,24 +1209,24 @@ Public
     }.do_while {i != 2}
     (a,b) := (0,4); i := 8
     {
-      again := FALSE
+      again := False
       {
         c := i
-        rm := FALSE
-        (e0,x0,y0, e1,x1,y1) := (inter d pt (a,b) first TRUE, inter d pt (b,c) first FALSE)
+        rm := False
+        (e0,x0,y0, e1,x1,y1) := (inter d pt (a,b) first True, inter d pt (b,c) first False)
         ((e0 < 0) || {e0 < 0}).if {
-          rm := TRUE
+          rm := True
         }.elseif {(e0 > 0) || {e1 > 0}} then {
           (dx,dy) := (d.at (b+2)-d.at (b+0), d.at (b+3)-d.at (b+1))
           (du,dv) := (x1-x0, y1-y0)
           (dx*du + dy*dv <= 0).if {
-            rm := TRUE
+            rm := True
           } else {
             d.at (b+0) put x0; d.at (b+1) put y0; d.at (b+2) put x1; d.at (b+3) put y1
           }
         }
         (rm).if {
-          again := TRUE
+          again := True
           d.remove b to (b+3)
           (a > b).if { a := a - 4; }
           (b > d.upper).if { b := 0; i := 4; }
@@ -1267,8 +1266,8 @@ Public
   
 Private
   
-  - inter2 d:ARRAY REAL_32 pt (ab,cd:INTEGER) :(REAL_32,REAL_32) <-
-  ( + det,xa,xb,xc,xd,ya,yb,yc,yd,u,t,x,y:REAL_32
+  - inter2 d:Array Real32 pt (ab,cd:Int) :(Real32,Real32) <-
+  ( + det,xa,xb,xc,xd,ya,yb,yc,yd,u,t,x,y:Real32
     x := -1
     (xa,ya,xb,yb) := (d.at (ab+0),d.at (ab+1),d.at (ab+2),d.at (ab+3))
     (xc,yc,xd,yd) := (d.at (cd+0),d.at (cd+1),d.at (cd+2),d.at (cd+3))
@@ -1284,11 +1283,11 @@ Private
     x,y
   )
 
-  - inter d:ARRAY REAL_32 pt (ab,cd:INTEGER) first f:BOOLEAN :(INTEGER,REAL_32,REAL_32) <-
-  ( + dx,dy,du,dv,det,x,y,t:REAL_32
-    + xa,xb,xc,xd,ya,yb,yc,yd:REAL_32
+  - inter d:Array Real32 pt (ab,cd:Int) first f:Boolean :(Int,Real32,Real32) <-
+  ( + dx,dy,du,dv,det,x,y,t:Real32
+    + xa,xb,xc,xd,ya,yb,yc,yd:Real32
     //+ c1,c2:REAL_32
-    + e:INTEGER
+    + e:Int
     (xa,ya,xb,yb) := (d.at (ab+0),d.at (ab+1),d.at (ab+2),d.at (ab+3))
     (xc,yc,xd,yd) := (d.at (cd+0),d.at (cd+1),d.at (cd+2),d.at (cd+3))
     (dx,dy) := (xb-xa, yb-ya)
@@ -1323,12 +1322,12 @@ Private
   
 Public
   
-  - rgb_to_tsl src:NATIVE_ARRAY UINTEGER_8 to tsl:ARRAY (NATIVE_ARRAY REAL_32) size (w,h:INTEGER) <-
+  - rgb_to_tsl src:C_array Uint8 to tsl:Array (C_array Real32) size (w,h:Int) <-
   [ ? {tsl.count = 3}; ]
-  ( + r,g,b,t,s,l,max,min,d:REAL_32
-    + ii:INTEGER
-    0.to (w*h*4-1) by 4 do { i:INTEGER
-      (r,g,b) := (src.at (i+0).to_real_32, src.at (i+1).to_real_32, src.at (i+2).to_real_32)
+  ( + r,g,b,t,s,l,max,min,d:Real32
+    + ii:Int
+    0.to (w*h*4-1) by 4 do { i:Int
+      (r,g,b) := (src.at (i+0).to_real32, src.at (i+1).to_real32, src.at (i+2).to_real32)
       (r,g,b) := (r/255,g/255,b/255)
       (max,min) := (r.max g.max b, r.min g.min b)
       t := s := l := (max+min)/2
@@ -1359,21 +1358,21 @@ Public
     }
   )
   
-  - rgb_to_l src:NATIVE_ARRAY UINTEGER_8 to imgl:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
-  ( + r,g,b,l:UINTEGER_8
-    + ii,max,min:INTEGER
-    0.to (w*h*4-1) by 4 do { i:INTEGER
+  - rgb_to_l src:C_array Uint8 to imgl:C_array Uint8 size (w,h:Int) <-
+  ( + r,g,b,l:Uint8
+    + ii,max,min:Int
+    0.to (w*h*4-1) by 4 do { i:Int
       (r,g,b) := (src.at (i+0), src.at (i+1), src.at (i+2))
       (max,min) := (r.max g.max b, r.min g.min b)
-      l := ((max+min)/2).to_uinteger_8
+      l := ((max+min)/2).to_uint8
       imgl.at ii put l
       ii := ii + 1
     }
   )
   
 Private
-  - hue2rgb (p,q,t:REAL_32) :REAL_32 <-
-  ( + tt,r:REAL_32
+  - hue2rgb (p,q,t:Real32) :Real32 <-
+  ( + tt,r:Real32
     tt := t
     (tt < 0).if { tt := tt + 1; }
     (tt > 1).if { tt := tt - 1; }
@@ -1391,9 +1390,9 @@ Private
 
 Public
   
-  - tsl_to_rgb src:NATIVE_ARRAY REAL_32 to rgb:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
-  ( + r,g,b,t,s,l,p,q:REAL_32
-    0.to (w*h*4-1) by 4 do { i:INTEGER
+  - tsl_to_rgb src:C_array Real32 to rgb:C_array Uint8 size (w,h:Int) <-
+  ( + r,g,b,t,s,l,p,q:Real32
+    0.to (w*h*4-1) by 4 do { i:Int
       (t,s,l) := (src.at (i+0), src.at (i+1), src.at (i+2))
       (s = 0).if {
         r := g := b := l
@@ -1408,19 +1407,19 @@ Public
         g := hue2rgb(p,q,t)
         b := hue2rgb(p,q,t - 1.0/3)
       }
-      rgb.at (i+0) put ((r*255).to_uinteger_8)
-      rgb.at (i+1) put ((g*255).to_uinteger_8)
-      rgb.at (i+2) put ((b*255).to_uinteger_8)
+      rgb.at (i+0) put ((r*255).to_uint8)
+      rgb.at (i+1) put ((g*255).to_uint8)
+      rgb.at (i+2) put ((b*255).to_uint8)
       rgb.at (i+3) put 255
     }
   )
     
-  - rgb_to_hsv src:NATIVE_ARRAY UINTEGER_8 to hsv:NATIVE_ARRAY UINTEGER_8 size (w,hh:INTEGER) <-
+  - rgb_to_hsv src:C_array Uint8 to hsv:C_array Uint8 size (w,hh:Int) <-
   // rgba = hsv OK
-  ( + up:INTEGER
-    + r,g,b,a,max,min,delta,h,s,v:INTEGER
+  ( + up:Int
+    + r,g,b,a,max,min,delta,h,s,v:Int
     up := w * hh * 4
-    0.to (up-1) by 4 do { i:INTEGER
+    0.to (up-1) by 4 do { i:Int
       (r,g,b,a) := (src.at (i+0), src.at (i+1), src.at (i+2),src.at (i+3))
       max := r.max g.max b
       min := r.min g.min b
@@ -1450,12 +1449,12 @@ Public
     }
   )
   
-  - hsv_to_rgb src:NATIVE_ARRAY UINTEGER_8 to rgb:NATIVE_ARRAY UINTEGER_8 size (w,hh:INTEGER) <-
+  - hsv_to_rgb src:C_array Uint8 to rgb:C_array Uint8 size (w,hh:Int) <-
   // rgba = hsv OK
-  ( + up,reg,rem,p,q,t:INTEGER
-    + r,g,b,a,h,s,v:INTEGER
+  ( + up,reg,rem,p,q,t:Int
+    + r,g,b,a,h,s,v:Int
     up := w * hh * 4
-    0.to (up-1) by 4 do { i:INTEGER
+    0.to (up-1) by 4 do { i:Int
       (h,s,v,a) := (src.at (i+0), src.at (i+1), src.at (i+2),src.at (i+3))
       r := g := b := 0
       (s = 0).if {
@@ -1481,9 +1480,9 @@ Public
     }
   )
   
-  - black_detect src:NATIVE_ARRAY UINTEGER_8 to rgb:NATIVE_ARRAY UINTEGER_8 size (w,hh:INTEGER) lim vv:INTEGER <-
-  ( + h,s,v,a:INTEGER
-    0.to (w*hh*4) by 4 do { i:INTEGER
+  - black_detect src:C_array Uint8 to rgb:C_array Uint8 size (w,hh:Int) lim vv:Int <-
+  ( + h,s,v,a:Int
+    0.to (w*hh*4) by 4 do { i:Int
       (h,s,v,a) := (src.at (i+0), src.at (i+1), src.at (i+2),src.at (i+3))
       (v < vv).if {
         rgb.at (i>>2) put 255
@@ -1493,11 +1492,11 @@ Public
     }
   )
   
-  - select src:NATIVE_ARRAY UINTEGER_8 to dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
-  col c:INTEGER lim l:INTEGER <-
+  - select src:C_array Uint8 to dst:C_array Uint8 size (w,h:Int)
+  col c:Int lim l:Int <-
   // src = dst ok
-  ( + j,c0,c1,c2,cmx:INTEGER
-    0.to (w*h-1) do { i:INTEGER
+  ( + j,c0,c1,c2,cmx:Int
+    0.to (w*h-1) do { i:Int
       (c0,c1,c2) := (src.at (j+0), src.at (j+1), src.at (j+2))
       ((c0 > c1+l) && {c0 > c2+l}).if   { cmx := 0; }.elseif
       {(c1 > c0+l) && {c1 > c2+l}} then { cmx := 1; }.elseif
@@ -1507,7 +1506,7 @@ Public
     }
   )
 
-  - draw_cross pen:PEN to (x,y:REAL_32) col col:COLOR <-
+  - draw_cross pen:Pen to (x,y:Real32) col col:Color <-
   (
     pen.begin_path
     pen.stroke_width 3
@@ -1517,11 +1516,11 @@ Public
     pen.stroke
   )
   
-  - draw pen:PEN contour s:ARRAY REAL_32 to (px,py:REAL_32) coef c:REAL_32 col col:COLOR <-
+  - draw pen:Pen contour s:Array Real32 to (px,py:Real32) coef c:Real32 col col:Color <-
   (
     pen.begin_path
     pen.move_to (px + s.first*c, py + s.second*c)
-    2.to (s.upper) by 2 do { i:INTEGER
+    2.to (s.upper) by 2 do { i:Int
       pen.line_to (px + s.at i*c, py + s.at (i+1)*c)
     }
     pen.line_to (px + s.first*c, py + s.second*c)
@@ -1530,10 +1529,10 @@ Public
     pen.stroke
   )
   
-  - draw pen:PEN line s:ARRAY REAL_32 to (px,py:REAL_32) coef c:REAL_32 col col:COLOR <-
-  ( + x0,y0,x1,y1:REAL_32
+  - draw pen:Pen line s:Array Real32 to (px,py:Real32) coef c:Real32 col col:Color <-
+  ( + x0,y0,x1,y1:Real32
     pen.begin_path
-    0.to (s.upper) by 4 do { i:INTEGER
+    0.to (s.upper) by 4 do { i:Int
       (x0,y0) := (px + s.at (i+0)*c, py + s.at (i+1)*c)
       (x1,y1) := (px + s.at (i+2)*c, py + s.at (i+3)*c)
       pen.line (x0,y0) to (x1,y1)
@@ -1545,11 +1544,11 @@ Public
     pen.begin_path
     (x0,y0) := (px + s.first*c, py + s.second*c)
     pen.circle (x0,y0) radius 8
-    pen.stroke_color (COLOR.red)
+    pen.stroke_color (Color.red)
     pen.stroke
     /*
     pen.begin_path
-    0.to (bug.upper) by 2 do { i:INTEGER
+    0.to (bug.upper) by 2 do { i:Int
       (x0,y0) := (px + bug.at (i+0)*c, py + bug.at (i+1)*c)
       pen.circle (x0,y0) radius 2
     }
@@ -1560,33 +1559,33 @@ Public
   
 Private
 
-  - edges:ARRAY NPEDGE
+  - edges:Array Npedge
 
-  - edges_upper:INTEGER
-  - poly_ymax:INTEGER := INTEGER.minimum.to_integer
+  - edges_upper:Int
+  - poly_ymax:Int := Int.minimum.to_int
 
-  - poly_list_y:ARRAY NPEDGE
+  - poly_list_y:Array Npedge
 
-  - begin_y:NPEDGE
-  - begin_idx:INTEGER
+  - begin_y:Npedge
+  - begin_idx:Int
 
-  - last_y:NPEDGE
-  - last_idx:INTEGER
+  - last_y:Npedge
+  - last_idx:Int
 
-  - x_origin:INTEGER
-  - y_origin:INTEGER
+  - x_origin:Int
+  - y_origin:Int
 
 Private
     
   - display_poly <-
-  ( + edge:NPEDGE
+  ( + edge:Npedge
 
-    0.to (poly_list_y.upper) do { i:INTEGER
+    0.to (poly_list_y.upper) do { i:Int
       edge := poly_list_y.at i
       {edge != NULL}.while_do {
-	edge.display
-	';'.print
-	edge := edge.next_y
+        edge.display
+        ';'.print
+        edge := edge.next_y
       }
       '\n'.print
     }
@@ -1600,12 +1599,12 @@ Private
     ((begin_y!=NULL) && {begin_y.is_down = last_y.is_down}).if {
       // Connecting.
       (begin_y.is_down).if {
-	// Add first list.
-	last_y.set_next_y begin_y
-	poly_list_y.at begin_idx put (poly_list_y.at last_idx)
+        // Add first list.
+        last_y.set_next_y begin_y
+        poly_list_y.at begin_idx put (poly_list_y.at last_idx)
       } else {
-	// Add last list.
-	begin_y.set_next_y last_y
+        // Add last list.
+        begin_y.set_next_y last_y
       }
       poly_list_y.remove last_idx
     }
@@ -1613,26 +1612,26 @@ Private
 
   - sort_list_y <-
   // Bubble sort :- => BSBS: Optmize with Quick sort...
-  ( + low,up,idx,upper:INTEGER
-    + swap:BOOLEAN
+  ( + low,up,idx,upper:Int
+    + swap:Boolean
 
     upper := poly_list_y.upper-1
 
     low := 0
     up  := upper
     {
-      swap:=FALSE
-      low.to up do { i:INTEGER
-	(poly_list_y.at i.y0 > poly_list_y.at (i+1).y0).if {
-	  poly_list_y.swap i with (i+1)
-	  swap := TRUE
-	}
+      swap:=False
+      low.to up do { i:Int
+        (poly_list_y.at i.y0 > poly_list_y.at (i+1).y0).if {
+          poly_list_y.swap i with (i+1)
+          swap := True
+        }
 
-	idx := upper - i
-	(poly_list_y.at idx.y0 > poly_list_y.at (idx+1).y0).if {
-	  poly_list_y.swap idx with (idx+1)
-	  swap := TRUE
-	}
+        idx := upper - i
+        (poly_list_y.at idx.y0 > poly_list_y.at (idx+1).y0).if {
+          poly_list_y.swap idx with (idx+1)
+          swap := True
+        }
       }
       up  := up - 1
       low := low + 1
@@ -1641,16 +1640,16 @@ Private
 
 Public
   
-  - spot_x:INTEGER
-  - spot_y:INTEGER
+  - spot_x:Int
+  - spot_y:Int
   
-  - bmp_move_to (x,y:INTEGER) <-
+  - bmp_move_to (x,y:Int) <-
   (
     //x.print; ' '.print; y.print; '\n'.print
     (edges = NULL).if {
-      poly_list_y := ARRAY(NPEDGE).create_with_capacity 16
-      edges := ARRAY(NPEDGE).create 64
-      0.to 63 do { n:INTEGER; edges.at n put (NPEDGE.create); }
+      poly_list_y := Array(Npedge).create_with_capacity 16
+      edges := Array(Npedge).create 64
+      0.to 63 do { n:Int; edges.at n put (Npedge.create); }
     }
     (edges_upper != 0).if { connect_first; }
     spot_x := x_origin := x
@@ -1661,9 +1660,9 @@ Public
     poly_ymax := poly_ymax.max y
   )
 
-  - bmp_line_to (x1,y1:INTEGER) <-
-  ( + edge,edge2:NPEDGE
-    + x0,y0:INTEGER
+  - bmp_line_to (x1,y1:Int) <-
+  ( + edge,edge2:Npedge
+    + x0,y0:Int
     //x1.print; ' '.print; y1.print; '\n'.print
     x0:=spot_x
     y0:=spot_y
@@ -1674,7 +1673,7 @@ Public
 
       (edges_upper >= (edges.upper-4)).if { // BSBS: A optimiser avec MAP_ARRAY ...
         // Append 16 Edges.
-        0.to 15 do { j:INTEGER; edges.add_last (NPEDGE.create); }
+        0.to 15 do { j:Int; edges.add_last (Npedge.create); }
       }
 
       (y0=y1).if {
@@ -1726,14 +1725,14 @@ Public
     }
   )
   
-  - bmp_trace bmpline:{(INTEGER,INTEGER,INTEGER); } :(INTEGER,INTEGER) <-
-  ( + edge,next_edge,edgep:NPEDGE
-    + x_edges:NPEDGE
-    + x0,x1,new_x,x_mx,y_mx:INTEGER
-    + idx_y:INTEGER
-    + trace:INTEGER
-    + line:INTEGER
-    + is_y:BOOLEAN
+  - bmp_trace bmpline:{(Int,Int,Int); } :(Int,Int) <-
+  ( + edge,next_edge,edgep:Npedge
+    + x_edges:Npedge
+    + x0,x1,new_x,x_mx,y_mx:Int
+    + idx_y:Int
+    + trace:Int
+    + line:Int
+    + is_y:Boolean
        
     (edges_upper != 0).if {      
       // Connexion with first point.
@@ -1741,7 +1740,7 @@ Public
 
       // Optimize clip_y0
       /*
-      (poly_list_y.upper).downto 0 do { j:INTEGER
+      (poly_list_y.upper).downto 0 do { j:Int
         edge := poly_list_y.at j
         //{(edge != NULL) && {edge.y1 < clip_y0}}.while_do {
         //  edge := edge.next_y
@@ -1762,9 +1761,9 @@ Public
       x_mx := 0
       //"=============================================\n".print
       // for each scanline in the polygon.
-      (poly_list_y.first.y0).to poly_ymax do { y:INTEGER
+      (poly_list_y.first.y0).to poly_ymax do { y:Int
         ? {y >= 0}
-        is_y := FALSE
+        is_y := False
         // Active edges.
         {(idx_y <= poly_list_y.upper) && {poly_list_y.at idx_y.y0 = y}}.while_do {
           x_edges := poly_list_y.at idx_y.add x_edges
@@ -1772,7 +1771,7 @@ Public
         }
         //"--------------------\n".print
         // Draw horizontal line.
-        x1:=INTEGER.minimum.to_integer
+        x1:=Int.minimum.to_int
         edge:=x_edges
         {edge!=NULL}.while_do {
           next_edge:=edge.next_x
@@ -1784,7 +1783,7 @@ Public
             ((new_x != x1) && {new_x != (x1 + 1)}).if {              
               (x1 >= x0).if {
                 bmpline.value (x0,y,x1)
-                is_y := TRUE
+                is_y := True
               }
               x0 := new_x
             }
@@ -1847,30 +1846,30 @@ Public
     edges_upper:=0
     poly_list_y.clear
     begin_y:=NULL
-    poly_ymax:=INTEGER.minimum.to_integer
+    poly_ymax:=Int.minimum.to_int
     x_mx,y_mx
   )
     
 Public
   
-  - rays pt:ARRAY INTEGER to (xc,yc:REAL_32) in ray:ARRAY (ARRAY REAL_32) :REAL_32 <-
-  ( + a,dy,dx,l,max,v:REAL_32
-    + n,r,ro,x0,y0,x1,y1,d,ax,i,rf:INTEGER
-    + rl:ARRAY REAL_32
-    ray.foreach { t:ARRAY REAL_32; t.clear; }
+  - rays pt:Array Int to (xc,yc:Real32) in ray:Array (Array Real32) :Real32 <-
+  ( + a,dy,dx,l,max,v:Real32
+    + n,r,ro,x0,y0,x1,y1,d,ax,i,rf:Int
+    + rl:Array Real32
+    ray.foreach { t:Array Real32; t.clear; }
     ro := -1
     (x1,y1) := (pt.first, pt.second); i := 2
     {
       (x0,y0) := (x1,y1)
       (x1,y1) := (pt.at i, pt.at (i+1))
       ax := (x0=x1).ok 0 else {(x0 < x1).ok (+1) or (-1)}
-      dy := y0.to_real_32-yc
+      dy := y0.to_real32-yc
       {        
-        dx := x0.to_real_32-xc
+        dx := x0.to_real32-xc
         l := (dx*dx+dy*dy).sqrt
         (l > max).if { max := l; }
-        a := dy.atan2 dx+REAL_32.pi
-        r := (ray.count.to_real_32/REAL_32.two_pi * a).to_integer & ray.upper
+        a := dy.atan2 dx+Real32.pi
+        r := (ray.count.to_real32/Real32.two_pi * a).to_int & ray.upper
         rl := ray.at r
         (r != ro).if {
           (ro = -1).if {
@@ -1911,21 +1910,21 @@ Public
     max
   )
   
-  - rays img:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) to (xc,yc:REAL_32) clip (x0,y0,x1,y1:REAL_32) in ray:ARRAY (ARRAY REAL_32) :REAL_32 <-
-  ( + x,y,dx,dy,a:REAL_32
-    + r,rmax:INTEGER
-    + c,co:UINTEGER_8
-    ray.foreach { t:ARRAY REAL_32; t.clear; }
-    0.to (ray.upper) do { i:INTEGER
+  - rays img:C_array Uint8 size (w,h:Int) to (xc,yc:Real32) clip (x0,y0,x1,y1:Real32) in ray:Array (Array Real32) :Real32 <-
+  ( + x,y,dx,dy,a:Real32
+    + r,rmax:Int
+    + c,co:Uint8
+    ray.foreach { t:Array Real32; t.clear; }
+    0.to (ray.upper) do { i:Int
       (x,y) := (xc,yc)
-      co := img.at (y.to_integer*w + x.to_integer)
-      a := (REAL_32.two_pi * i)/ray.count
+      co := img.at (y.to_int*w + x.to_int)
+      a := (Real32.two_pi * i)/ray.count
       (dx,dy) := (a.cos,a.sin)
       r := 0
       {(x.in_range x0 to x1) && {y.in_range y0 to y1}}.while_do {
         (x,y) := (x+dx,y+dy)
         r := r + 1
-        c := img.at (y.to_integer*w + x.to_integer)
+        c := img.at (y.to_int*w + x.to_int)
         (c != co).if {
           ray.at i.add_last r
           (r > rmax).if { rmax := r; }
@@ -1937,16 +1936,16 @@ Public
   )
 
   
-  - draw pen:PEN id id:STRING to (x,y:REAL_32) width w:REAL_32
-  rays ray:ARRAY (ARRAY REAL_32) max max:REAL_32 angle a:INTEGER <-
-  ( + px,py,mx,ww,c:REAL_32
-    + r:ARRAY REAL_32
+  - draw pen:Pen id id:String to (x,y:Real32) width w:Real32
+  rays ray:Array (Array Real32) max max:Real32 angle a:Int <-
+  ( + px,py,mx,ww,c:Real32
+    + r:Array Real32
     ww := w
     pen.save
     (id != NULL).if {
-      pen.fill_color (LOOK.text_ui)
-      pen.font_size (FONT.size_app)
-      pen.font_face_id (FONT.app (FONT.bold))
+      pen.fill_color (Look.text_ui)
+      pen.font_size (Font.size_app)
+      pen.font_face_id (Font.app (Font.bold))
       pen.text_align (pen.align_center | pen.align_middle)
       pen.text (x+8,y+50) msg id
       mx := 20
@@ -1955,23 +1954,23 @@ Public
     c := ww / ray.count
     pen.begin_path
     pen.stroke_width 1.0
-    pen.stroke_color (COLOR.blue)
+    pen.stroke_color (Color.blue)
     pen.rect (x+mx,y) size (ww,100)
     pen.stroke
-    0.to (ray.upper) do { i:INTEGER
+    0.to (ray.upper) do { i:Int
       px := x+c*i+mx
       r := ray.at i
-      0.to (r.upper) do { j:INTEGER
+      0.to (r.upper) do { j:Int
         py := y+100.0-100.0/max * r.at j
         pen.begin_path
-        pen.fill_color (COLOR.green)
+        pen.fill_color (Color.green)
         pen.circle (px,py) radius 2
         pen.fill
       }
     }
     (a != -1).if {
       pen.begin_path
-      pen.stroke_color (COLOR.red)
+      pen.stroke_color (Color.red)
       px := x+c*a+mx
       pen.line (px,y) to (px,y+100)
       pen.stroke
@@ -1979,23 +1978,23 @@ Public
     pen.restore
   )
   
-  - draw pen:PEN to (x,y:REAL_32) n n:INTEGER col c:COLOR <-
+  - draw pen:Pen to (x,y:Real32) n n:Int col c:Color <-
   (
     pen.fill_color c
-    pen.font_face_id (FONT.sys (FONT.roman))
-    pen.font_size (FONT.size_sys)
+    pen.font_face_id (Font.sys (Font.roman))
+    pen.font_size (Font.size_sys)
     pen.text_align (pen.align_center | pen.align_middle)
-    STRING.tmp { t:STRING_BUFFER; n.append_in t
+    String.tmp { t:String_buffer; n.append_in t
       pen.text (x,y) msg t
     }
   )
   
-  - circle_fill src:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER)
-  to (xc, yc:INTEGER) ray r:INTEGER col3 (rc,gc,bc:UINTEGER_8) <-
-  ( + x,y,d:INTEGER
-    + pix:{(INTEGER,INTEGER); }
-    pix := { (px,py:INTEGER)
-      + o:INTEGER
+  - circle_fill src:C_array Uint8 size (w,h:Int)
+  to (xc, yc:Int) ray r:Int col3 (rc,gc,bc:Uint8) <-
+  ( + x,y,d:Int
+    + pix:{(Int,Int); }
+    pix := { (px,py:Int)
+      + o:Int
       ((px.in_range 0 to (w-1)) && {py.in_range 0 to (h-1)}).if {
         o := (py*w + px) << 2
         src.at (o+0) put rc
@@ -2007,10 +2006,10 @@ Public
     y := r
     d := 3 - 2 * r
     {x <= y}.while_do {
-      (xc-x).to (xc+x) do { i:INTEGER; pix.value (i,yc+y); }
-      (xc-x).to (xc+x) do { i:INTEGER; pix.value (i,yc-y); }
-      (xc-y).to (xc+y) do { i:INTEGER; pix.value (i,yc+x); }
-      (xc-y).to (xc+y) do { i:INTEGER; pix.value (i,yc-x); }
+      (xc-x).to (xc+x) do { i:Int; pix.value (i,yc+y); }
+      (xc-x).to (xc+x) do { i:Int; pix.value (i,yc-y); }
+      (xc-y).to (xc+y) do { i:Int; pix.value (i,yc+x); }
+      (xc-y).to (xc+y) do { i:Int; pix.value (i,yc-x); }
       (d < 0).if {
         d := d + 4 * x + 6
       } else {
@@ -2021,39 +2020,39 @@ Public
     }
   )
   
-  - sum img:NATIVE_ARRAY UINTEGER_8 off o:INTEGER inc d:INTEGER :REAL_32 <-
-  ( + oo,n:INTEGER
-    + s:REAL_32
+  - sum img:C_array Uint8 off o:Int inc d:Int :Real32 <-
+  ( + oo,n:Int
+    + s:Real32
     oo := o + d*4
     n := 1
     n.times {
-      s := s + (img.at (oo+0) + img.at (oo+1) + img.at (oo+2)).to_real_32
+      s := s + (img.at (oo+0) + img.at (oo+1) + img.at (oo+2)).to_real32
       oo := oo + d*4
     }
     s / (n*3)
   )
   
-  - tab:ARRAY REAL_32 := ARRAY REAL_32.create (512/16)
+  - tab:Array Real32 := Array Real32.create (512/16)
   
-  - bidulle img:NATIVE_ARRAY UINTEGER_8 to img2:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
-  ( + o,x,xb:INTEGER
-    + c_mx,cc:UINTEGER_8
-    + d,g,c:REAL_32
+  - bidulle img:C_array Uint8 to img2:C_array Uint8 size (w,h:Int) <-
+  ( + o,x,xb:Int
+    + c_mx,cc:Uint8
+    + d,g,c:Real32
     
-    0.to (h-1) by 16 do { yy:INTEGER
+    0.to (h-1) by 16 do { yy:Int
       tab.at (yy/16) put 0
-      (0).to (w-1) by 16 do { xx:INTEGER
+      (0).to (w-1) by 16 do { xx:Int
         o := (yy*w + xx)*4
         x := 0; c_mx := img.at o
-        1.to 15 do { i:INTEGER
+        1.to 15 do { i:Int
           cc := img.at (o+i*4)
           (cc < c_mx).if { x := i; c_mx := cc; }
         }
         xb := x := xx + x
-        yy.to (yy+16-1) do { y:INTEGER
+        yy.to (yy+16-1) do { y:Int
           o := (y*w + x)*4
           g := sum img off o inc (-1)
-          c := (img.at (o+0) + img.at (o+1) + img.at (o+2)).to_real_32 / 3
+          c := (img.at (o+0) + img.at (o+1) + img.at (o+2)).to_real32 / 3
           d := sum img off o inc (+1)
           img2.at (o+0) put 255; img2.at (o+1) put 0; img2.at (o+2) put 0
           ((c < g) && {c < d}).if {
@@ -2066,21 +2065,21 @@ Public
         tab.at (yy/16) put (tab.at (yy/16) + (x-xb))
       }
       tab.at (yy/16) put (tab.at (yy/16) / (512/16))
-      (yy/16).print; " : ".print; (tab.at (yy/16)*10).to_integer.print; '\n'.print
+      (yy/16).print; " : ".print; (tab.at (yy/16)*10).to_int.print; '\n'.print
     }
     '\n'.print
   )
   
-  - bidulle_old img:NATIVE_ARRAY UINTEGER_8 to img2:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) <-
-  ( + o,x:INTEGER
-    + d,g,c,c_mx:REAL_32
-    0.to (h-1) by 16 do { yy:INTEGER
-      (0).to (w-1) by 16 do { xx:INTEGER
+  - bidulle_old img:C_array Uint8 to img2:C_array Uint8 size (w,h:Int) <-
+  ( + o,x:Int
+    + d,g,c,c_mx:Real32
+    0.to (h-1) by 16 do { yy:Int
+      (0).to (w-1) by 16 do { xx:Int
         x := xx
-        yy.to (yy+16-1) do { y:INTEGER
+        yy.to (yy+16-1) do { y:Int
           o := (y*w + x)*4
           g := sum img off o inc (-1)
-          c := (img.at (o+0) + img.at (o+1) + img.at (o+2)).to_real_32 / 3
+          c := (img.at (o+0) + img.at (o+1) + img.at (o+2)).to_real32 / 3
           d := sum img off o inc (+1)
           img2.at (o+0) put 255; img2.at (o+1) put 0; img2.at (o+2) put 0
           ((c < g) && {c < d}).if {
@@ -2104,33 +2103,33 @@ Public
   
 Private  
 
-  - bins:INTEGER := 2048;
-  - hist:NATIVE_ARRAY UINTEGER_32 := NATIVE_ARRAY UINTEGER_32.create bins
+  - bins:Int := 2048;
+  - hist:C_array Uint32 := C_array Uint32.create bins
 
   // Propagation vers les faibles connectés (8-voisinage)
-  - nx:NATIVE_ARRAY INTEGER :=
-  ( + r:NATIVE_ARRAY INTEGER
-    r := NATIVE_ARRAY INTEGER.create 8
+  - nx:C_array Int :=
+  ( + r:C_array Int
+    r := C_array Int.create 8
     r.at 0 put (-1); r.at 1 put   0 ; r.at 2 put 1; r.at 3 put (-1)
     r.at 4 put   1 ; r.at 5 put (-1); r.at 6 put 0; r.at 7 put   1
     r
   )
-  - ny:NATIVE_ARRAY INTEGER :=
-  ( + r:NATIVE_ARRAY INTEGER
-    r := NATIVE_ARRAY INTEGER.create 8
+  - ny:C_array Int :=
+  ( + r:C_array Int
+    r := C_array Int.create 8
     r.at 0 put (-1); r.at 1 put (-1); r.at 2 put (-1); r.at 3 put 0;
     r.at 4 put   0 ; r.at 5 put   1 ; r.at 6 put   1 ; r.at 7 put 1;
     r
   )
   
-  - to_ofs (x,y,w:INTEGER) :INTEGER <- y*w + x
+  - to_ofs (x,y,w:Int) :Int <- y*w + x
 
   // Quantifie un angle (radians) en 4 directions : 0°,45°,90°,135° -> {0,1,2,3}
-  - quantize_dir angle_rad:REAL_32 :UINTEGER_8 <-
-  ( + a:REAL_32
-    + r:UINTEGER_8
+  - quantize_dir angle_rad:Real32 :Uint8 <-
+  ( + a:Real32
+    + r:Uint8
     // map to [0,180)
-    a := angle_rad * 180.0 / REAL_32.pi;
+    a := angle_rad * 180.0 / Real32.pi;
     while {a < 0}      do { a := a + 180.0; }
     while {a >= 180.0} do { a := a - 180.0; }
 
@@ -2142,16 +2141,16 @@ Private
     r
   )
   
-  - mag:NATIVE_ARRAY REAL_32
-  - mag_cap:INTEGER
-  - dirq:NATIVE_ARRAY UINTEGER_8
-  - dirq_cap:INTEGER
-  - nms:NATIVE_ARRAY REAL_32
-  - nms_cap:INTEGER
-  - cls:NATIVE_ARRAY UINTEGER_8
-  - cls_cap:INTEGER
-  - stack:NATIVE_ARRAY INTEGER
-  - stack_cap:INTEGER
+  - mag:C_array Real32
+  - mag_cap:Int
+  - dirq:C_array Uint8
+  - dirq_cap:Int
+  - nms:C_array Real32
+  - nms_cap:Int
+  - cls:C_array Uint8
+  - cls_cap:Int
+  - stack:C_array Int
+  - stack_cap:Int
   
 Public
   
@@ -2159,35 +2158,35 @@ Public
   // img : pointeur sur image 8-bit (imgh lignes, imgw colonnes)
   // ROI : (x0,y0) haut-gauche, (x1,y1) bas-droit (inclusif). Sera recadré dans l'image.
   // Retour : nouvel array alloué de taille imgw*imgh (0/255). A libérer par l'appelant.
-  - detect_edges_sobel_nms_hyst img:NATIVE_ARRAY UINTEGER_8
-  to out:NATIVE_ARRAY UINTEGER_8 size (imgw,imgh:INTEGER)
-  rect (x0,y0, x1,y1:INTEGER) :BOOLEAN <-
-  ( + roiw,roih,roisize:INTEGER;
-    + y,x,gx,gy,i:INTEGER
-    + p00,p10,p20,p01,p21,p02,p12,p22:INTEGER
-    + m:REAL_32
-    + sp,px,py:INTEGER;
-    + maxmag,high,low:REAL_32
-    + countpos:INTEGER
-    + result:BOOLEAN
+  - detect_edges_sobel_nms_hyst img:C_array Uint8
+  to out:C_array Uint8 size (imgw,imgh:Int)
+  rect (x0,y0, x1,y1:Int) :Boolean <-
+  ( + roiw,roih,roisize:Int;
+    + y,x,gx,gy,i:Int
+    + p00,p10,p20,p01,p21,p02,p12,p22:Int
+    + m:Real32
+    + sp,px,py:Int;
+    + maxmag,high,low:Real32
+    + countpos:Int
+    + result:Boolean
         
     roiw := x1 - x0 + 1;
     roih := y1 - y0 + 1;
     roisize := roiw * roih;
 
     // Buffers ROI
-    (mag,mag_cap)   := NATIVE_ARRAY REAL_32   .update_size (mag,mag_cap)   new roisize; // magnitude du gradient
-    (dirq,dirq_cap) := NATIVE_ARRAY UINTEGER_8.update_size (dirq,dirq_cap) new roisize; // direction quantifiée
-    (nms,nms_cap)   := NATIVE_ARRAY REAL_32   .update_size (nms,nms_cap)   new roisize; // après suppression non-max
-    (cls,cls_cap)   := NATIVE_ARRAY UINTEGER_8.update_size (cls,cls_cap)   new roisize; // 0=non, 1=faible, 2=fort
+    (mag,mag_cap)   := C_array Real32   .update_size (mag,mag_cap)   new roisize; // magnitude du gradient
+    (dirq,dirq_cap) := C_array Uint8.update_size (dirq,dirq_cap) new roisize; // direction quantifiée
+    (nms,nms_cap)   := C_array Real32   .update_size (nms,nms_cap)   new roisize; // après suppression non-max
+    (cls,cls_cap)   := C_array Uint8.update_size (cls,cls_cap)   new roisize; // 0=non, 1=faible, 2=fort
 
     // 1) Sobel Gx, Gy -> magnitude + direction (quantifiée)
     // Kernels:
     // Gx = [-1 0 1; -2 0 2; -1 0 1]
     // Gy = [ 1 2 1;  0 0 0; -1 -2 -1]
-    1.to (roih - 2) do { ry:INTEGER;
+    1.to (roih - 2) do { ry:Int;
       y := y0 + ry;
-      1.to (roiw - 2) do { rx:INTEGER;
+      1.to (roiw - 2) do { rx:Int;
         x := x0 + rx;
         // Raccourcis des voisins
         p00 := img.at (to_ofs (x-1, y-1, imgw));
@@ -2202,18 +2201,18 @@ Public
         gx := -p00 + p20 - 2*p01 + 2*p21 - p02 + p22;
         gy :=  p00 + 2*p10 + p20 - p02 - 2*p12 - p22;
 
-        m := (gx.to_real_32).hypot (gy.to_real_32);
+        m := (gx.to_real32).hypot (gy.to_real32);
         i := ry * roiw + rx;
         mag.at i put m;
-        dirq.at i put (quantize_dir((gy.to_real_32).atan2 (gx.to_real_32)));
+        dirq.at i put (quantize_dir((gy.to_real32).atan2 (gx.to_real32)));
       }
     }
     // Bords du ROI (0..roiW-1, 0..roiH-1) restent à 0 via calloc.
 
     // 2) Suppression des non-maximum (NMS)
-    1.to (roih - 2) do { ry:INTEGER
-      1.to (roiw - 2) do { rx:INTEGER
-        + m1,m2:REAL_32
+    1.to (roih - 2) do { ry:Int
+      1.to (roiw - 2) do { rx:Int
+        + m1,m2:Real32
         i := ry * roiw + rx;
         m := mag.at i;
         if (m = 0.0) then {
@@ -2244,7 +2243,7 @@ Public
 
     // 3) Seuils automatiques sur NMS : high = P90, low = high/2.5
     // Histogramme simple sur 2048 bins, normalisé par max    
-    0.to (roisize-1) do { i:INTEGER
+    0.to (roisize-1) do { i:Int
       if (nms.at i > 0.0) then {
         if (nms.at i > maxmag) then { maxmag := nms.at i; }
         countpos := countpos + 1;
@@ -2253,27 +2252,27 @@ Public
     
     if ((countpos = 0) || {maxmag = 0}) then {
       // Rien à détecter -> image vide
-      result := FALSE
+      result := False
     } else {
-      + cum,target:UINTEGER_64
-      + bin90:INTEGER
-      + v:REAL_32
-      + b:INTEGER
+      + cum,target:Uint64
+      + bin90:Int
+      + v:Real32
+      + b:Int
 
-      result := TRUE
-      0.to (bins-1) do { i:INTEGER; hist.at i put 0; }
-      0.to (roisize-1) do { i:INTEGER
+      result := True
+      0.to (bins-1) do { i:Int; hist.at i put 0; }
+      0.to (roisize-1) do { i:Int
         v := nms.at i;
         if (v <= 0.0) then {
           // continue;
         } else {
-          b := (v / maxmag * (bins - 1)).to_integer;
+          b := (v / maxmag * (bins - 1)).to_int;
           b := b.max 0.min (bins-1)
           hist.at b put (hist.at b + 1);
         }
       }
       // Cumul pour percentile 90%
-      target := (0.90 * countpos.to_real_64).ceil.to_uinteger_64;
+      target := (0.90 * countpos.to_real64).ceil.to_uint64;
       bin90 := bins - 1;
       b := 0
       {b < bins}.while_do { 
@@ -2281,13 +2280,13 @@ Public
         if (cum >= target) then { bin90 := b; b := bins /* break */ }
         b := b + 1;
       }
-      high := bin90.to_real_32 / (bins - 1).to_real_32 * maxmag;
+      high := bin90.to_real32 / (bins - 1).to_real32 * maxmag;
       low  := high / 2.5;      
     }
 
     // 4) Classification fort/faible
-    0.to (roisize-1) do { i:INTEGER
-      + v:REAL_32
+    0.to (roisize-1) do { i:Int
+      + v:Real32
       v := nms.at i;
       if      (v >= high) then { cls.at i put 2; } // fort
       .elseif {v >= low}  then { cls.at i put 1; } // faible
@@ -2296,11 +2295,11 @@ Public
 
     // 5) Hystérésis (DFS avec pile)
     // Pile maximum = tous les pixels du ROI    
-    (stack,stack_cap) := NATIVE_ARRAY INTEGER.update_size (stack,stack_cap) new (roisize*2); 
+    (stack,stack_cap) := C_array Int.update_size (stack,stack_cap) new (roisize*2); 
     
     // Empile tous les forts
-    1.to (roih - 2) do { ry:INTEGER
-      1.to (roiw - 2) do { rx:INTEGER
+    1.to (roih - 2) do { ry:Int
+      1.to (roiw - 2) do { rx:Int
         i := ry * roiw + rx;
         if (cls.at i = 2) then {
           stack.at sp put rx; sp := sp + 1; stack.at sp put ry; sp := sp + 1;
@@ -2312,8 +2311,8 @@ Public
 
     while {sp > 0} do {
       sp := sp - 1; px := stack.at sp; sp := sp - 1; stack.at sp;      
-      0.to 7 do { k:INTEGER;
-        + rx,ry:INTEGER
+      0.to 7 do { k:Int;
+        + rx,ry:Int
         rx := px + nx.at k;
         ry := py + ny.at k;
         if ((rx <= 0) || {rx >= roiw-1} || {ry <= 0} || {ry >= roih-1}) then {

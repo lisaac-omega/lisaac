@@ -1,40 +1,41 @@
 Header
-  + name := UTF8;
-  
+  + name := Utf8
 Inherit
-  - parent_json:JSON := JSON
+  - parent_json:Json := Json
 
 Public
   
-  - lower:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 32
-  - upper:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 32
-  - low:HSET STRING_ALIAS := HSET STRING_ALIAS.create
-  - up:HSET STRING_ALIAS := HSET STRING_ALIAS.create
-  - symbol:HSET STRING_ALIAS := HSET STRING_ALIAS.create
-  - other:HSET STRING_ALIAS := HSET STRING_ALIAS.create
+  - lower:Array String_alias := Array String_alias.create_with_capacity 32
+  - upper:Array String_alias := Array String_alias.create_with_capacity 32
+  - low:Hset String_alias := Hset String_alias.create
+  - up:Hset String_alias := Hset String_alias.create
+  - symbol:Hset String_alias := Hset String_alias.create
+  - other:Hset String_alias := Hset String_alias.create
   
-  - is_idf s:STRING :BOOLEAN   <-
-  ( + ss:STRING_ALIAS
+  - is_idf s:String :Boolean   <-
+  ( + ss:String_alias
     ss := s.to_string_alias
     (s.first.is_identifier) || {low.fast_has ss} || {up.fast_has ss} || {other.fast_has ss}
   )
   
-  - is_lower s:STRING :BOOLEAN <- (s.first.is_lower) || {low.fast_has (s.to_string_alias)}
+  - is_lower s:String :Boolean <- (s.first.is_lower) || {low.fast_has (s.to_string_alias)}
   
-  - is_upper s:STRING :BOOLEAN <- (s.first.is_upper) || {up.fast_has (s.to_string_alias)}
+  - is_upper s:String :Boolean <- (s.first.is_upper) || {up.fast_has (s.to_string_alias)}
   
-  - is_symbol s:STRING :BOOLEAN <- "!@#$%^&<|*-+=~/?\\>".has (s.first) || {symbol.fast_has (s.to_string_alias)}
+  - is_symbol s:String :Boolean <- "!@#$%^&<|*-+=~/?\\>".has (s.first) || {symbol.fast_has (s.to_string_alias)}
   
-  - to_upper s:STRING_ALIAS :STRING_ALIAS <-
+  - is_letter s:String :Boolean <- (s.first.is_letter) || {low.fast_has (s.to_string_alias)} || {up.fast_has (s.to_string_alias)}
+  
+  - to_upper s:String_alias :String_alias <-
   [ ! s.first.is_ascii ]
-  ( + i:INTEGER      
+  ( + i:Int      
     i := lower.first_index_of s
     (i > lower.upper).ok s else {upper.at i}
   )
     
-  - to_lower s:STRING_ALIAS :STRING_ALIAS <-
+  - to_lower s:String_alias :String_alias <-
   [ ! s.first.is_ascii ]
-  ( + i:INTEGER
+  ( + i:Int
     i := upper.first_index_of s
     (i > upper.upper).ok s else {lower.at i}
   )
@@ -47,20 +48,20 @@ Public
     (lower.count != upper.count).if { err semantic msg "Set upper != set lower."; }
   )
   
-  - object_in id:STRING_ALIAS :BOOLEAN <-
+  - object_in id:String_alias :Boolean <-
   ( id
-    .case "lower" then { read_set {s:STRING_ALIAS; lower.add_last s; low.add s; }; }
-    .case "upper" then { read_set {s:STRING_ALIAS; upper.add_last s; up.add s; }; }
-    .case "lower_star" then { read_set {s:STRING_ALIAS; low.add s; }; }
-    .case "upper_star" then { read_set {s:STRING_ALIAS; up.add s; }; }
-    .case "symbol" then { read_set {s:STRING_ALIAS; symbol.add s; }; }
-    .case "other"  then { read_set {s:STRING_ALIAS; other.add s; }; }
-    = STRING_ALIAS
+    .case "lower" then { read_set {s:String_alias; lower.add_last s; low.add s; }; }
+    .case "upper" then { read_set {s:String_alias; upper.add_last s; up.add s; }; }
+    .case "lower_star" then { read_set {s:String_alias; low.add s; }; }
+    .case "upper_star" then { read_set {s:String_alias; up.add s; }; }
+    .case "symbol" then { read_set {s:String_alias; symbol.add s; }; }
+    .case "other"  then { read_set {s:String_alias; other.add s; }; }
+    = String_alias
   )
   
-  - read_set ad:{STRING_ALIAS; } <-
-  ( + l,u,cur,err:STRING_ALIAS
-    + i:INTEGER
+  - read_set ad:{String_alias; } <-
+  ( + l,u,cur,err:String_alias
+    + i:Int
     {
       (read_utf8).if_false { err syntax msg "UTF8 character needed."; }
       l := last_str
@@ -74,28 +75,28 @@ Public
     }.do_while {read_char ','}
   )
   
-  - load id:STRING_ALIAS value s:STRING_ALIAS :STRING_ALIAS <-
-  ( + err:STRING_ALIAS
+  - load id:String_alias value s:String_alias :String_alias <-
+  ( + err:String_alias
     (
       id
-      .case "lower" then { err := load s with {s:STRING_ALIAS; lower.add_last s; low.add s; }; }
-      .case "upper" then { err := load s with {s:STRING_ALIAS; upper.add_last s; up.add s; }; }
-      .case "lower_star" then { err := load s with {s:STRING_ALIAS; low.add s; }; }
-      .case "upper_star" then { err := load s with {s:STRING_ALIAS; up.add s; }; }
-      .case "symbol" then { err := load s with {s:STRING_ALIAS; symbol.add s; }; }
-      .case "other"  then { err := load s with {s:STRING_ALIAS; other.add s; }; }
-    != STRING_ALIAS
+      .case "lower" then { err := load s with {s:String_alias; lower.add_last s; low.add s; }; }
+      .case "upper" then { err := load s with {s:String_alias; upper.add_last s; up.add s; }; }
+      .case "lower_star" then { err := load s with {s:String_alias; low.add s; }; }
+      .case "upper_star" then { err := load s with {s:String_alias; up.add s; }; }
+      .case "symbol" then { err := load s with {s:String_alias; symbol.add s; }; }
+      .case "other"  then { err := load s with {s:String_alias; other.add s; }; }
+    != String_alias
     ).if {
       err := "Incorrect id"
     }
     err
   )
   
-  - load s:STRING_ALIAS with ad:{STRING_ALIAS; } :STRING_ALIAS <-
-  ( + tmp:STRING_BUFFER
-    + i:INTEGER
-    + l,u,err:STRING_ALIAS
-    tmp := STRING.new_tmp
+  - load s:String_alias with ad:{String_alias; } :String_alias <-
+  ( + tmp:String_buffer
+    + i:Int
+    + l,u,err:String_alias
+    tmp := String.new_tmp
     {
       i := i + s.at i utf8_in tmp
       (tmp.first != ',').if {
@@ -115,18 +116,18 @@ Public
     err
   )
   
-  - from l:STRING_ALIAS to u:STRING_ALIAS with ad:{STRING_ALIAS; } :STRING_ALIAS <-
-  ( + err,cur:STRING_ALIAS
-    + tmp:STRING_BUFFER
-    + i:INTEGER
+  - from l:String_alias to u:String_alias with ad:{String_alias; } :String_alias <-
+  ( + err,cur:String_alias
+    + tmp:String_buffer
+    + i:Int
     (l > u).if { err := "Range incorrect."; } else {
       (l.count != u.count).if { err := "Diff. size not yet implemented."; } else {
         (l.count = 1).if {
-          (l.first +# 1).to (u.first) do { c:CHARACTER
+          (l.first +# 1).to (u.first) do { c:Char
             ad.value (c.to_string_alias)
           }
         } else {          
-          tmp := STRING.new_tmp
+          tmp := String.new_tmp
           tmp.copy l
           {
             i := l.upper
@@ -147,27 +148,27 @@ Public
   )
   
   - print <-
-  ( + v:STRING_ALIAS
+  ( + v:String_alias
     (! lower.is_empty).if {
       "\nlower: ".print
-      0.to (lower.upper) do { i:INTEGER; lower.at i.print; ' '.print; }
+      0.to (lower.upper) do { i:Int; lower.at i.print; ' '.print; }
       "\nupper: ".print
-      0.to (upper.upper) do { i:INTEGER; upper.at i.print; ' '.print; }
+      0.to (upper.upper) do { i:Int; upper.at i.print; ' '.print; }
       "\nlower star: ".print
-      (low.lower).to (low.upper) do { i:INTEGER
+      (low.lower).to (low.upper) do { i:Int
         v := low.at i
         (to_upper v = v).if { v.print; ' '.print; }
       }
       "\nupper star: ".print
-      (up.lower).to (up.upper) do { i:INTEGER
+      (up.lower).to (up.upper) do { i:Int
         v := up.at i
         (to_lower v = v).if { v.print; ' '.print; }
       }
       "\nsymbol: ".print
-      (symbol.lower).to (symbol.upper) do { i:INTEGER; symbol.at i.print; ' '.print; }
+      (symbol.lower).to (symbol.upper) do { i:Int; symbol.at i.print; ' '.print; }
       (! other.is_empty).if {
         "\nother: ".print
-        (other.lower).to (other.upper) do { i:INTEGER; other.at i.print; ' '.print; }
+        (other.lower).to (other.upper) do { i:Int; other.at i.print; ' '.print; }
       }
     }
   )

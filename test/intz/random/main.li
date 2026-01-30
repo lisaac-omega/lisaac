@@ -1,25 +1,24 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Private
-  - verbose:BOOLEAN <-  !TRUE
+  - verbose:Boolean <-  !True
   
-  + time:TIME
+  + time:Time
   
-  + mpz1:MPZ
-  + mpz2:MPZ
-  + mpz3:MPZ
-  + rem_mpz:MPZ
+  + mpz1:Mpz
+  + mpz2:Mpz
+  + mpz3:Mpz
+  + rem_mpz:Mpz
   
   + big1:ℤ
   + big2:ℤ
   + big3:ℤ
   + rem_big:ℤ
   
-  + shift_mem:INTEGER
+  + shift_mem:Int
   
   - shift <-
-  ( + mtmp:MPZ
+  ( + mtmp:Mpz
     + btmp:ℤ
     mtmp := mpz1
     mpz1 := mpz2
@@ -33,9 +32,9 @@ Private
   
 Public
   - main <-
-  ( + loop:INTEGER
-    time := TIME.now
-    RANDOM.init_clock
+  ( + loop:Int
+    time := Time.now
+    Random.init_clock
     mpz1.init
     mpz2.init
     mpz3.init
@@ -43,8 +42,8 @@ Public
     randomize
     {loop > 1_000_000}.until_do {
       check_vars "loop start"
-      verbose.if { print_vars TRUE; }
-      (RANDOM.min 1 max 16)
+      verbose.if { print_vars True; }
+      (Random.min 1 max 16)
       .when 1 then { check_add; }
       .when 2 then { check_sub; }
       .when 3 then { check_mul; }
@@ -70,16 +69,16 @@ Public
     }
   )
   
-  - check mpz:MPZ init big:ℤ <-
+  - check mpz:Mpz init big:ℤ <-
   (
-    STRING.tmp2 {(mpz_hex,big_hex:STRING_BUFFER)
+    String.tmp2 {(mpz_hex,big_hex:String_buffer)
       mpz.append_in mpz_hex base 16
       big.append_in big_hex base 16
       (mpz_hex !== big_hex).if {
         "mpz_hex=".print; mpz_hex.println
         "big_hex=".print; big_hex.println
-        print_vars TRUE
-        UTILS.crash_with_message "Error check_init."
+        print_vars True
+        Utils.crash_with_message "Error check_init."
       }
     }
   )
@@ -112,7 +111,7 @@ Public
   (
     verbose.if { "check_div".println; }
     (mpz2.sgn = 0).if {
-      mpz2.random_hex (RANDOM.min 4 max 10)
+      mpz2.random_hex (Random.min 4 max 10)
       big2 := ℤ.init(mpz2.to_hexadecimal) base 16
     } else {
       mpz3.tdiv_qr(rem_mpz,mpz1,mpz2)
@@ -121,7 +120,7 @@ Public
     check_vars "check_div"
   )
   
-  - vars_in code:STRING_BUFFER mode full:BOOLEAN <-
+  - vars_in code:String_buffer mode full:Boolean <-
   (
     code.append "--------------\n"
     code.append "mpz1="
@@ -164,15 +163,15 @@ Public
     code.append "--------------\n"
   )
   
-  - print_vars full:BOOLEAN <-
+  - print_vars full:Boolean <-
   (
-    STRING.tmp { code:STRING_BUFFER
+    String.tmp { code:String_buffer
       vars_in code mode full
       code.print
     }
   )
   
-  - check_vars after:STRING_ALIAS <-
+  - check_vars after:String_alias <-
   (
     verbose.if { "check_vars".println; }
     (
@@ -181,12 +180,12 @@ Public
       {! mpz3.equal_intz3 big3} ||
       {! rem_mpz.equal_intz3 rem_big}
     ).if {
-      print_vars TRUE
-      UTILS.crash_with_message ("check_vars error after " + after)
+      print_vars True
+      Utils.crash_with_message ("check_vars error after " + after)
     }
   )
   
-  - random_hexdigits:INTEGER <-  (RANDOM.min 1 max 32)
+  - random_hexdigits:Int <-  (Random.min 1 max 32)
   
   - randomize <-
   (
@@ -221,13 +220,13 @@ Public
     (rem_mpz, rem_big) := zero_random (rem_mpz, rem_big)
   )
   
-  - zero_random (m:MPZ, b:ℤ): (MPZ, ℤ) <-
-  ( + m2: MPZ
+  - zero_random (m:Mpz, b:ℤ): (Mpz, ℤ) <-
+  ( + m2: Mpz
     + b2: ℤ
     (m2, b2) := (m, b)
     (m2.sgn = 0).if {
       //m2.print; " -> ".print
-      m2.random_hex (RANDOM.min 4 max 5)
+      m2.random_hex (Random.min 4 max 5)
       b2.free; b2 := ℤ.init(m2.to_hexadecimal) base 16
       check m2 init b2
       //m2.println
@@ -244,10 +243,10 @@ Public
     (rem_mpz, rem_big) := toobig (rem_mpz, rem_big)
   )
   
-  - toobig (m:MPZ, b:ℤ): (MPZ, ℤ) <-
-  ( + m2: MPZ
+  - toobig (m:Mpz, b:ℤ): (Mpz, ℤ) <-
+  ( + m2: Mpz
     + b2: ℤ
-    + s1, s2:INTEGER
+    + s1, s2:Int
     (m2, b2) := (m, b)
     ((s1 := m2.sizeinbase 16) > 1024).if {
       m2.random_hex random_hexdigits
@@ -266,21 +265,21 @@ Public
   )
   
   - check_append_in_base_10 <-
-  ( + ok:BOOLEAN
+  ( + ok:Boolean
     verbose .if { "append_in_base_10".println; }
-    STRING.tmp2 { (buf1,buf2:STRING_BUFFER)
+    String.tmp2 { (buf1,buf2:String_buffer)
       mpz3.append_in buf1 base 10
       big3.append_in buf2 base 10
       ok := buf1 == buf2
       ok.if_false {
         "buf1=".print; buf1.println
         "buf2=".print; buf2.println
-        UTILS.crash_with_message "append_in_base_10"
+        Utils.crash_with_message "append_in_base_10"
       }
     }
   )
   
-  - check_shift_right (i:INTEGER) <-
+  - check_shift_right (i:Int) <-
   [
     ? {i >= 0}
   ]
@@ -296,7 +295,7 @@ Public
     }
   )
   
-  - check_shift_left (i:INTEGER) <-
+  - check_shift_left (i:Int) <-
   [
     ? {i >= 0}
   ]
@@ -314,30 +313,30 @@ Public
     verbose .if { "check_comparison".println; }
     (big2 < big3).if {
       ((mpz2.cmp mpz3) >= 0).if {
-        print_vars TRUE
-        UTILS.crash_with_message ("ERROR INF")
+        print_vars True
+        Utils.crash_with_message ("ERROR INF")
       }
     }.elseif {big2 > big3} then {
       ((mpz2.cmp mpz3) <= 0).if {
-        print_vars TRUE
-        UTILS.crash_with_message ("ERROR SUP")
+        print_vars True
+        Utils.crash_with_message ("ERROR SUP")
       }
     } else  {
       ((mpz2.cmp mpz3) != 0).if {
-        UTILS.crash_with_message ("ERROR EQ STRICT")
+        Utils.crash_with_message ("ERROR EQ STRICT")
       }
     }
     (big2 <= big3).if {
       ((mpz2.cmp mpz3) > 0).if {
-        UTILS.crash_with_message ("ERROR INF OR EQ")
+        Utils.crash_with_message ("ERROR INF OR EQ")
       }
     }.elseif {big2 >= big3} then {
       ((mpz2.cmp mpz3) < 0).if {
-        UTILS.crash_with_message ("ERROR SUP OR EQ")
+        Utils.crash_with_message ("ERROR SUP OR EQ")
       }
     } else  {
       ((mpz2.cmp mpz3) = 0).if {
-        UTILS.crash_with_message ("ERROR EQ")
+        Utils.crash_with_message ("ERROR EQ")
       }
     }
     check_vars "check_comparison"

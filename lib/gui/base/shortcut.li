@@ -1,22 +1,21 @@
-Header  
-  + name := SHORTCUT;
-  
+Header
+  + name := Shortcut
 Inherit  
-  - parent_act:ACT := ACT
+  - parent_act:Act := Act
   
 Private
 
-  - str:STRING_BUFFER := STRING_BUFFER.create 16
+  - str:String_buffer := String_buffer.create 16
           
-  + ptr:INTEGER
+  + ptr:Int
   - ptr_raz <- ( ptr := 0; )
-  //+ del:INTEGER
-  + key_list:STRING_ALIAS
+  //+ del:Int
+  + key_list:String_alias
       
-  - run s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  ( + i,j:INTEGER
-    + r,cmd_ok:BOOLEAN
-    + cmd:UINTEGER_8
+  - run s:String cmd c:Uint8 :Boolean <-
+  ( + i,j:Int
+    + r,cmd_ok:Boolean
+    + cmd:Uint8
     cmd := key_list.at ptr
     cmd_ok := (cmd = c & (cmd > 0Fh).ok 1Fh or 0Fh); // Pb. Shift
     (cmd_ok && {key_list.at (ptr+1) = s.first}).if {
@@ -24,10 +23,10 @@ Private
       {(i <= s.upper) && {j <= key_list.upper} && {s.at i = key_list.at j}}.while_do { (i,j) := (i+1,j+1); }
       (i > s.upper).if { ptr := j; } else { ptr_raz; }
       (ptr > key_list.upper).if {
-        r := TRUE
-        list.foreach { k:SHORTCUT; k.ptr_raz; }
+        r := True
+        list.foreach { k:Shortcut; k.ptr_raz; }
         //del.times { ANY_GUI.del_char; }
-        run.if_false { ANY_GUI.beep; }
+        run.if_false { Any_gui.beep; }
       }
     } else { ptr_raz; }
     r
@@ -35,27 +34,27 @@ Private
     
 Public
   
-  - list:ARRAY SHORTCUT
-  - set_list l:ARRAY SHORTCUT <- ( list := l; )
-  - sort <- list.bubble_sort_with {(v1,v2:SHORTCUT)
+  - list:Array Shortcut
+  - set_list l:Array Shortcut <- ( list := l; )
+  - sort <- list.bubble_sort_with {(v1,v2:Shortcut)
     (v1.key_list.upper > v2.key_list.upper) ||
     // For Shift Pb :
     {(v1.key_list.upper = v2.key_list.upper) && {v1.key_list.first > v2.key_list.first}}
   }
   // Used BubbleSort and no QuickSort for Stable algorithm ! (see: v1=v2 order)
   
-  + act:ACT
-  - run:BOOLEAN <- ( MENU.close_all; act.run)
-  - text_r:STRING_ALIAS <- act.text_r
-  - text_l:STRING_ALIAS <- act.text_l
+  + act:Act
+  - run:Boolean <- ( Menu.close_all; act.run)
+  - text_r:String_alias <- act.text_r
+  - text_l:String_alias <- act.text_l
     
-  - read a:ACT :SELF <- key read_shortcut act a
+  - read a:Act :Self <- key read_shortcut act a
       
-  - key k:STRING_ALIAS act a:ACT :SELF <- 
-  ( //+ i:INTEGER
-    //+ c:UINTEGER_8
+  - key k:String_alias act a:Act :Self <- 
+  ( //+ i:Int
+    //+ c:Uint8
     (key_list,act) := (k,a)
-    list.add_last Self
+    list.add_last self
     //del := 0
     ptr := 0
     /*
@@ -69,24 +68,24 @@ Public
         }
       }
     };*/
-    Self
+    self
   )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  - key s:String cmd c:Uint8 :Boolean <-
   ( 
     //s.print; ' '.print; c.println    
-    (! list.until_do { elt:SHORTCUT; elt.run s cmd c}).if {
+    (! list.until_do { elt:Shortcut; elt.run s cmd c}).if {
       
     } else {
       
     }
   )
   
-  - stack:STRING_BUFFER := STRING_BUFFER.create 8
+  - stack:String_buffer := String_buffer.create 8
   
-  - append_stack_raw s:STRING <-
-  ( + i:INTEGER
-    + c:UINTEGER_8
+  - append_stack_raw s:String <-
+  ( + i:Int
+    + c:Uint8
     //"Append stack raw:".print; s.println
     {i <= s.upper}.while_do {
       stack.add_last '\0'
@@ -104,7 +103,7 @@ Public
   )
   
   - clean <-
-  ( + cm,c:UINTEGER_8
+  ( + cm,c:Uint8
     (stack.is_empty).if_false {
       (cm,c) := (stack.first,stack.second)
       str.clear; str | c.to_character
@@ -119,40 +118,40 @@ Public
       }
       stack.remove_head (str.count + 1)
       keyb str cmd cm
-      PAPER.refresh_again
+      Paper.refresh_again
     }
   )
   
   // Display
   
-  - print_stat title:STRING_ALIAS <-
+  - print_stat title:String_alias <-
   (
     title.println
-    list.foreach { s:SHORTCUT; (s.ptr != 0).if { s.print; }; }
+    list.foreach { s:Shortcut; (s.ptr != 0).if { s.print; }; }
   )
-  - is_exist k:STRING_ALIAS :BOOLEAN <- ! list.while_do { e:SHORTCUT; e.key_list != k}
+  - is_exist k:String_alias :Boolean <- ! list.while_do { e:Shortcut; e.key_list != k}
   - print_all <-
-  ( list.foreach { s:SHORTCUT; s.print; }; )
+  ( list.foreach { s:Shortcut; s.print; }; )
   
-  - append_in b:STRING_BUFFER <- key key_list in b
+  - append_in b:String_buffer <- key key_list in b
   
   - print <- 
   (
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       append_in tmp
       {tmp.upper < 32}.while_do { tmp | ' '; }
-      tmp += (act = NULL).ok "Null" else {text_l}
+      tmp += (act = NULL).ok "NULL" else {text_l}
       tmp | '\n'
       tmp.print
     }
   )
     
-  - key s:STRING in b:STRING_BUFFER <-
-  ( + i:INTEGER
-    + c,cm:UINTEGER_8
-    + ch:CHARACTER
+  - key s:String in b:String_buffer <-
+  ( + i:Int
+    + c,cm:Uint8
+    + ch:Char
     (s = NULL).if {
-      b.append "Null"
+      b.append "NULL"
     } else {
       {i <= s.upper}.while_do {
         cm := s.at i; i := i + 1
@@ -166,7 +165,7 @@ Public
             }
           }
         }
-        KEYBOARD.key_to_string str cmd cm in b
+        Keyboard.key_to_string str cmd cm in b
         (i <= s.upper).if { b.append ", "; }
       }
     }
@@ -175,10 +174,10 @@ Public
   // Parsing.
       
   //++ SHORTCUT   -> TOUCH { TOUCH }
-  - read_shortcut:STRING_ALIAS <-
-  ( + i:INTEGER
-    + k:STRING_ALIAS
-    STRING.tmp { s:STRING_BUFFER
+  - read_shortcut:String_alias <-
+  ( + i:Int
+    + k:String_alias
+    String.tmp { s:String_buffer
       {
         code := 0
         s.add_last '\0'; i := s.upper
@@ -203,39 +202,39 @@ Public
   //++             | 'Right' | 'Left' | 'Up'    | 'Down'
   //++             | 'Suppr' | 'Insr' | 'Enter' | 'Del'
   //++             | 'F'[1-12] | 'On' | 'Off'
-  - code:UINTEGER_8
-  - read_touch s:STRING_BUFFER :BOOLEAN <-
-  ( + c:CHARACTER
-    (read_word "Alt"    ).if   { code := code | KEYBOARD.alt;  }.elseif
-    {read_word "Ctrl"   } then { code := code | KEYBOARD.ctrl; }.elseif 
-    {read_word "Shift"  } then { code := code | KEYBOARD.shift;}.elseif 
-    {read_word "Esc"    } then { code := code | KEYBOARD.key_cmd; s | '\27\'; }.elseif
-    {read_word "Tab"    } then { code := code | KEYBOARD.key_cmd; s | '\09\'; }.elseif
+  - code:Uint8
+  - read_touch s:String_buffer :Boolean <-
+  ( + c:Char
+    (read_word "Alt"    ).if   { code := code | Keyboard.alt;  }.elseif
+    {read_word "Ctrl"   } then { code := code | Keyboard.ctrl; }.elseif 
+    {read_word "Shift"  } then { code := code | Keyboard.shift;}.elseif 
+    {read_word "Esc"    } then { code := code | Keyboard.key_cmd; s | '\27\'; }.elseif
+    {read_word "Tab"    } then { code := code | Keyboard.key_cmd; s | '\09\'; }.elseif
     {read_word "Space"  } then { s | ' '; }.elseif
-    {read_word "Beg"    } then { code := code | KEYBOARD.key_cmd; s | 'B'; }.elseif
-    {read_word "End"    } then { code := code | KEYBOARD.key_cmd; s | 'E'; }.elseif
-    {read_word "PgUp"   } then { code := code | KEYBOARD.key_cmd; s | 'P'; }.elseif
-    {read_word "PgDown" } then { code := code | KEYBOARD.key_cmd; s | 'N'; }.elseif
-    {read_word "Right"  } then { code := code | KEYBOARD.key_cmd; s | 'R'; }.elseif
-    {read_word "Left"   } then { code := code | KEYBOARD.key_cmd; s | 'L'; }.elseif
-    {read_word "Up"     } then { code := code | KEYBOARD.key_cmd; s | 'U'; }.elseif
-    {read_word "Down"   } then { code := code | KEYBOARD.key_cmd; s | 'D'; }.elseif
-    {read_word "Suppr"  } then { code := code | KEYBOARD.key_cmd; s | 'S'; }.elseif
-    {read_word "Inser"  } then { code := code | KEYBOARD.key_cmd; s | 'I'; }.elseif
-    {read_word "Enter"  } then { code := code | KEYBOARD.key_cmd; s | '\10\'; }.elseif
-    {read_word "Del"    } then { code := code | KEYBOARD.key_cmd; s | '\08\'; }.elseif
-    {read_word "F1"     } then { code := code | KEYBOARD.key_cmd; s | 'a'; }.elseif
-    {read_word "F2"     } then { code := code | KEYBOARD.key_cmd; s | 'b'; }.elseif
-    {read_word "F3"     } then { code := code | KEYBOARD.key_cmd; s | 'c'; }.elseif
-    {read_word "F4"     } then { code := code | KEYBOARD.key_cmd; s | 'd'; }.elseif
-    {read_word "F5"     } then { code := code | KEYBOARD.key_cmd; s | 'e'; }.elseif
-    {read_word "F6"     } then { code := code | KEYBOARD.key_cmd; s | 'f'; }.elseif
-    {read_word "F7"     } then { code := code | KEYBOARD.key_cmd; s | 'g'; }.elseif
-    {read_word "F8"     } then { code := code | KEYBOARD.key_cmd; s | 'h'; }.elseif
-    {read_word "F9"     } then { code := code | KEYBOARD.key_cmd; s | 'i'; }.elseif
-    {read_word "F10"    } then { code := code | KEYBOARD.key_cmd; s | 'j'; }.elseif
-    {read_word "F11"    } then { code := code | KEYBOARD.key_cmd; s | 'k'; }.elseif
-    {read_word "F12"    } then { code := code | KEYBOARD.key_cmd; s | 'l'; } else
+    {read_word "Beg"    } then { code := code | Keyboard.key_cmd; s | 'B'; }.elseif
+    {read_word "End"    } then { code := code | Keyboard.key_cmd; s | 'E'; }.elseif
+    {read_word "PgUp"   } then { code := code | Keyboard.key_cmd; s | 'P'; }.elseif
+    {read_word "PgDown" } then { code := code | Keyboard.key_cmd; s | 'N'; }.elseif
+    {read_word "Right"  } then { code := code | Keyboard.key_cmd; s | 'R'; }.elseif
+    {read_word "Left"   } then { code := code | Keyboard.key_cmd; s | 'L'; }.elseif
+    {read_word "Up"     } then { code := code | Keyboard.key_cmd; s | 'U'; }.elseif
+    {read_word "Down"   } then { code := code | Keyboard.key_cmd; s | 'D'; }.elseif
+    {read_word "Suppr"  } then { code := code | Keyboard.key_cmd; s | 'S'; }.elseif
+    {read_word "Inser"  } then { code := code | Keyboard.key_cmd; s | 'I'; }.elseif
+    {read_word "Enter"  } then { code := code | Keyboard.key_cmd; s | '\10\'; }.elseif
+    {read_word "Del"    } then { code := code | Keyboard.key_cmd; s | '\08\'; }.elseif
+    {read_word "F1"     } then { code := code | Keyboard.key_cmd; s | 'a'; }.elseif
+    {read_word "F2"     } then { code := code | Keyboard.key_cmd; s | 'b'; }.elseif
+    {read_word "F3"     } then { code := code | Keyboard.key_cmd; s | 'c'; }.elseif
+    {read_word "F4"     } then { code := code | Keyboard.key_cmd; s | 'd'; }.elseif
+    {read_word "F5"     } then { code := code | Keyboard.key_cmd; s | 'e'; }.elseif
+    {read_word "F6"     } then { code := code | Keyboard.key_cmd; s | 'f'; }.elseif
+    {read_word "F7"     } then { code := code | Keyboard.key_cmd; s | 'g'; }.elseif
+    {read_word "F8"     } then { code := code | Keyboard.key_cmd; s | 'h'; }.elseif
+    {read_word "F9"     } then { code := code | Keyboard.key_cmd; s | 'i'; }.elseif
+    {read_word "F10"    } then { code := code | Keyboard.key_cmd; s | 'j'; }.elseif
+    {read_word "F11"    } then { code := code | Keyboard.key_cmd; s | 'k'; }.elseif
+    {read_word "F12"    } then { code := code | Keyboard.key_cmd; s | 'l'; } else
     {
       (
         ((c := src.at cur).in_range '0' to '9') ||

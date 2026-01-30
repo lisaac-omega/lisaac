@@ -1,41 +1,40 @@
-Header  
-  + name := MINI_BASH;
-  /*
+Header
+  + name := Mini_bash
+/*
    mini /bin/bash :-)
    To know how to use it, search for RunMe.li files
   */
-
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Private
   
-  + verbose:BOOLEAN := FALSE
+  + verbose:Boolean := False
   
-  + working_directory:STRING_BUFFER := STRING_BUFFER.create 2048
+  + working_directory:String_buffer := String_buffer.create 2048
   
-  + first_error_exit:BOOLEAN := TRUE
+  + first_error_exit:Boolean := True
   
-  + error_counter:INTEGER
+  + error_counter:Int
   
-  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 128
+  - mybuffer:String_buffer := String_buffer.create 128
   
-  - mybuffer2:STRING_BUFFER := STRING_BUFFER.create 128
+  - mybuffer2:String_buffer := String_buffer.create 128
   
   - mini_bash_init <-
   // Not mandatory, just an example.
   ( 
-    FILE_UTILS.working_directory_in working_directory
+    File_utils.working_directory_in working_directory
     ? {working_directory.last = '/'}
-    verbose := COMMAND_ARGS.option_shift "--verbose"
-    first_error_exit := COMMAND_ARGS.option_shift "--first-error-exit"
+    verbose := Command_args.option_shift "--verbose"
+    first_error_exit := Command_args.option_shift "--first-error-exit"
   )
   
-  - working_directory_map action:{DIRENT;} <-
-  ( + dirent:DIRENT
-    dirent := FILE_SYSTEM.get working_directory
+  - working_directory_map action:{Dirent;} <-
+  ( + dirent:Dirent
+    dirent := File_system.get working_directory
     ((dirent != NULL) && {dirent.is_directory} && {dirent.open}).if {
-      + directory:DIRECTORY
+      + directory:Directory
       directory ?= dirent
       ? {directory != NULL}
       verbose.if {
@@ -45,11 +44,11 @@ Private
         directory.count.print
         " entries).".println
       }
-      directory.sort_with { (d1,d2:DIRENT)
-        + r:INTEGER
-        + p1,p2:STRING
-        + i1,i2:INTEGER
-        + c1,c2:CHARACTER
+      directory.sort_with { (d1,d2:Dirent)
+        + r:Int
+        + p1,p2:String
+        + i1,i2:Int
+        + c1,c2:Char
         p1 := d1.path
         p2 := d2.path
         {(r != 0) || {i1 > p1.upper} || {i2 > p2.upper}}.until_do {
@@ -80,7 +79,7 @@ Private
         }
         (r = 1)
       }
-      directory.foreach { dirent:DIRENT
+      directory.foreach { dirent:Dirent
         action.value dirent
       }
     } else {
@@ -88,39 +87,39 @@ Private
     }
   )
   
-  - working_directory_mapfile action:{FILE;} <-
-  ( + file:FILE
-    working_directory_map { dirent:DIRENT
+  - working_directory_mapfile action:{File;} <-
+  ( + file:File
+    working_directory_map { dirent:Dirent
       ((file ?= dirent) != NULL).if {
         action.value file
       }
     }
   )
   
-  - working_directory_mapdir action:{DIRECTORY;} <-
-  ( + directory:DIRECTORY
-    working_directory_map { dirent:DIRENT
+  - working_directory_mapdir action:{Directory;} <-
+  ( + directory:Directory
+    working_directory_map { dirent:Dirent
       ((directory ?= dirent) != NULL).if {
         action.value directory
       }
     }
   )
   
-  - verbose force:BOOLEAN do action:{} <-
-  ( + oldverb:BOOLEAN
+  - verbose force:Boolean do action:{} <-
+  ( + oldverb:Boolean
     oldverb := verbose
     verbose := force
     action.value
     verbose := oldverb
   )
   
-  - execute_command cmd:STRING background bg:BOOLEAN :INTEGER <-
-  ( + exit_status:INTEGER
+  - execute_command cmd:String background bg:Boolean :Int <-
+  ( + exit_status:Int
     verbose.if {
       cmd.println
     }
     `fflush(stdout)`
-    exit_status := ENVIRONMENT.run cmd back bg
+    exit_status := Environment.run cmd back bg
     (verbose && {exit_status != 0}).if {
       "exit status:".print
       exit_status.println
@@ -131,43 +130,43 @@ Private
     exit_status
   )
   
-  - execute_command cmd:STRING :INTEGER <-
+  - execute_command cmd:String :Int <-
   (
-    execute_command cmd background FALSE
+    execute_command cmd background False
   )
     
-  - first_error_exit force:BOOLEAN do action:{} <-
-  ( + oldverb:BOOLEAN
+  - first_error_exit force:Boolean do action:{} <-
+  ( + oldverb:Boolean
     oldverb := first_error_exit
     first_error_exit := force
     action.value
     first_error_exit := oldverb
   )
   
-  - file_exists name:STRING in dirpath:STRING :BOOLEAN <-
+  - file_exists name:String in dirpath:String :Boolean <-
   (
     mybuffer2.copy dirpath
     mybuffer2.append name
     //FILE_SYSTEM.file_exists mybuffer2
-    FILE_UTILS.file_exists mybuffer2
+    File_utils.file_exists mybuffer2
   )
   
-  - file_remove path:STRING :INTEGER <-
-  ( + exit_status:INTEGER
+  - file_remove path:String :Int <-
+  ( + exit_status:Int
     verbose.if {
       "rm ".print
       path.println
     }
-    exit_status := FILE_UTILS.remove path
+    exit_status := File_utils.remove path
     (verbose && {exit_status != 0}).if {
       "rm failed".println
     }
     exit_status
   )
   
-  - diff dirpath:STRING n1 n1:STRING_ALIAS n2 n2:STRING_ALIAS :INTEGER <-
-  ( + exit_status:INTEGER
-    + p1,p2:STRING_BUFFER
+  - diff dirpath:String n1 n1:String_alias n2 n2:String_alias :Int <-
+  ( + exit_status:Int
+    + p1,p2:String_buffer
     p1 := mybuffer
     p2 := mybuffer2
     p1.copy dirpath
@@ -180,7 +179,7 @@ Private
       ' '.print
       p2.println
     }
-    exit_status := DIFF.path p1 path p2
+    exit_status := Diff.path p1 path p2
     (exit_status != 0).if {
       error_counter := error_counter + 1
       "diff ".print
@@ -195,8 +194,8 @@ Private
     exit_status
   )
   
-  - execute_exit cmd:STRING <-
-  ( + exit_status:INTEGER
+  - execute_exit cmd:String <-
+  ( + exit_status:Int
     exit_status := execute_command cmd
     (exit_status != 0).if {
       "Command \"".print
@@ -204,24 +203,24 @@ Private
       "\" failed (exitstatus=".print
       exit_status.print
       ").".println
-      SYSTEM.exit exit_status
+      System.exit exit_status
     }
   )
   
-  - open_read tag:STRING in content: STRING_BUFFER :BOOLEAN <-
-  ( + result:BOOLEAN
-    + file_input:POINTER
-    + sz:INTEGER
-    file_input := FILE_UTILS.open_read tag
+  - open_read tag:String in content: String_buffer :Boolean <-
+  ( + result:Boolean
+    + file_input:Pointer
+    + sz:Int
+    file_input := File_utils.open_read tag
     (file_input != NULL).if {
-      result := TRUE
+      result := True
       //sz := FILE_UTILS.file_size file_input
-      sz := FILE_UTILS.size file_input
+      sz := File_utils.size file_input
       content.make sz
       //FILE_SYSTEM.read file_input in content size sz
-      FILE_UTILS.read file_input in content size sz
+      File_utils.read file_input in content size sz
       //FILE_SYSTEM.close file_input
-      FILE_UTILS.close file_input
+      File_utils.close file_input
     }
     result
   )

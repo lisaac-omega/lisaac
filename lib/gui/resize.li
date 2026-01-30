@@ -1,25 +1,24 @@
 Header
-  + name := RESIZE;
-  
+  + name := Resize
 Inherit
-  + parent_win:Expanded WIN
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_win:Flat Win
+  - parent_any_gui:Any_gui := Any_gui
     
 Public
     
-  - event ev:UINTEGER_8 :BOOLEAN <-
+  - event ev:Uint8 :Boolean <-
   ( 
-    (ev = HAND.in).if {
-      PAPER.set_cursor (window.win_ptr) img cursor_sz
-    }.elseif {ev = HAND.out} then {
-      PAPER.set_cursor (window.win_ptr) img cursor_std
-    }.elseif {(ev & ~1) = HAND.drag} then {
-      - psh,psv:PAGE_SPLIT
-      (HAND.is_begin).if {
-        psh := PAGE.cast parent.get_split TRUE
-        psv := PAGE.cast parent.get_split FALSE
+    (ev = Hand.in).if {
+      Paper.set_cursor (window.win_ptr) img cursor_sz
+    }.elseif {ev = Hand.out} then {
+      Paper.set_cursor (window.win_ptr) img cursor_std
+    }.elseif {(ev & ~1) = Hand.drag} then {
+      - psh,psv:Page_split
+      (Hand.is_begin).if {
+        psh := Page.cast parent.get_split True
+        psv := Page.cast parent.get_split False
       }
-      PAGE_SPLIT.move psh and psv win Self
+      Page_split.move psh and psv win self
     }
   )
   

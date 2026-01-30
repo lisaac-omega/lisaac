@@ -1,22 +1,19 @@
 Header
-
-  + name        := IS_EXPANDED;
-
-  /*True, if `Self' is Expanded type.*/
-
+  + name := Is_expanded
+/*True, if self is Flat type.*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- TRUE
+  - is_invariant:Boolean <- True
 
-  + receiver:EXPR
+  + receiver:Expr
 
-  - static_type:TYPE_FULL <- type_boolean.default
+  - static_type:Type_full <- type_boolean.default
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     t.add type_true
     t.add type_false
@@ -26,21 +23,21 @@ Public
   // Creation.
   //
 
-  - create p:POSITION receiver e:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position receiver e:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p receiver e
     result
   )
 
-  - make p:POSITION receiver e:EXPR <-
+  - make p:Position receiver e:Expr <-
   (
     position := p
     receiver := e
   )
 
-  - my_copy:SELF <- SELF.create position receiver (receiver.my_copy)
+  - my_copy:Self <- Self.create position receiver (receiver.my_copy)
 
   //
   // Remove
@@ -55,19 +52,19 @@ Public
   // Execute
   //
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     receiver.execute_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + result:EXPR
-    + instr:INSTR
+  - execute_link:Expr <-
+  ( + result:Expr
+    + instr:Instr
 
-    (receiver.static_type.is_expanded).if {
-      result := PROTOTYPE_CST.create position type (type_true.default)
+    (receiver.static_type.is_flat).if {
+      result := Prototype_cst.create position type (type_true.default)
     } else {
-      result := PROTOTYPE_CST.create position type (type_false.default)
+      result := Prototype_cst.create position type (type_false.default)
     }
     instr := receiver.execute_unlink
     (instr != NULL).if {
@@ -90,9 +87,9 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
-    buffer.append "is_expanded("
+    buffer.append "is_flat("
     receiver.display buffer
     buffer.add_last ')'
   )

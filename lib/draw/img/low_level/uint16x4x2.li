@@ -1,6 +1,4 @@
 Header
-  
-  + name := UINT16X4X2;
-  
+  + name := Uint16x4x2
 Public
   

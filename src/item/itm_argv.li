@@ -1,60 +1,60 @@
 Header
-  + name := ITM_ARGV
-  
+  + name := Itm_argv
+
 Inherit
 
-  + parent_itm_arg:Expanded ITM_ARG
+  + parent_itm_arg:Flat Itm_arg
   
 Private
-  - list_idf:Expanded ARRAY ITM_ARGV
+  - list_idf:Flat Array Itm_argv
 
 Public
   
   - reset_list_idf <- list_idf.clear
   
-  - upper:INTEGER := -1
+  - upper:Int := -1
 
-  + n_idf:STRING_ALIAS
-  + first:ITM_ARGV
-  + pow:INTEGER
-  - set_pow p:INTEGER <- pow := p
+  + n_idf:String_alias
+  + first:Itm_argv
+  + pow:Int
+  - set_pow p:Int <- pow := p
   
-  - new:SELF <- clone
+  - new:Self <- clone
   
-  - make p:POSITION name n:STRING_ALIAS type t:ITM_TYPE n nn:STRING_ALIAS :SELF <-
-  ( + i:INTEGER
+  - make p:Position name n:String_alias type t:Itm_type n nn:String_alias :Self <-
+  ( + i:Int
     make p name n type t
     {(i <= list_idf.upper) && {list_idf.at i.n_idf != nn}}.while_do { i := i + 1; }
     (i > list_idf.upper).if {
       //n.print; " new".println
-      list_idf.add_last Self     
+      list_idf.add_last self     
     } else {
       //n.print; " resuse".println
       first := list_idf.at i
     }
     n_idf := nn;
-    Self
+    self
   )
   
-  - to_run_in arg_lst:ARRAY LOCAL for p:PARAMETER_TO_TYPE <-
-  ( + t:ITM_TYPE
-    + tf:TYPE_FULL
-    + ps:PROFIL_SLOT
-    + n:INTEGER_CST
-    + nv:INTEGER
-    + l,lpow:LOCAL
-    + i:INTEGER
+  - to_run_in arg_lst:Array Local for p:Parameter_to_type <-
+  ( + t:Itm_type
+    + tf:Type_full
+    + ps:Profil_slot
+    + n:Int_cst
+    + nv:Int
+    + l,lpow:Local
+    + i:Int
     
     ps ?= p; ? {ps != NULL}
-    (name = "Self").if {
-      t := ITM_TYPE_SIMPLE.type_self
+    (name = "self").if { 
+      t := Itm_type_simple.type_self
     } else {
       t := type
     }
     
     (first = NULL).if {    
       //"Creation de ".print; n_idf.println
-      lpow := LOCAL.create position name n_idf style ' ' type (type_integer.default)      
+      lpow := Local.create position name n_idf style ' ' type (type_integer.default)      
       arg_lst.add_last lpow
       (verify).if {
         check_local_with_slot position name n_idf
@@ -70,17 +70,17 @@ Public
     };
     tf := t.to_run_for p pos (position.prototype.filename)
     //
-    l := LOCAL.create position name name style ' ' type tf
+    l := Local.create position name name style ' ' type tf
     l.set_pow nv loc lpow
     arg_lst.add_last l
     //
-    STRING.tmp { tmp:STRING_BUFFER      
-      1.to (nv-1) do { i:INTEGER
+    String.tmp { tmp:String_buffer      
+      1.to (nv-1) do { i:Int
         tmp.copy name
         tmp # "__" # i
         //OUT # "Create " # tmp # '\n'
         arg_lst.add_last (
-          LOCAL.create position name (tmp.to_string_alias) style ' ' type tf
+          Local.create position name (tmp.to_string_alias) style ' ' type tf
         )
       }
     }
@@ -91,10 +91,10 @@ Public
     // BSBS: Virer arg_count_tmp et faire check juste en dessous
   )
   
-  - check larg:ARRAY EXPR index idx:INTEGER for p:PARAMETER_TO_TYPE :INTEGER <-
-  ( + new_expr:EXPR
-    + tf:TYPE_FULL
-    + nv,ridx:INTEGER
+  - check larg:Array Expr index idx:Int for p:Parameter_to_type :Int <-
+  ( + new_expr:Expr
+    + tf:Type_full
+    + nv,ridx:Int
     //+ n:INTEGER_CST
     tf := type.to_run_for p pos (position.prototype.filename)
     (first = NULL).if {
@@ -106,7 +106,7 @@ Public
       ridx := idx      
     }
     //OUT # "nv=" # nv # upper # '\n'
-    0.to (nv-1) do { i:INTEGER
+    0.to (nv-1) do { i:Int
       new_expr := larg.at (ridx+i).check_type tf with position
       larg.at (ridx+i) put new_expr
     }

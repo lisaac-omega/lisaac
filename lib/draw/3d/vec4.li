@@ -1,26 +1,25 @@
-Header  
-  + name := Strict VEC4;
-  
+Header
+  + name := Exact Vec4
 Insert  
-  - parent_vec:VEC := VEC
+  - parent_vec:Vec := Vec
   
-SELF  
-  - dim:INTEGER := 4
+Self  
+  - dim:Int := 4
   
-  - free_list:ARRAY VEC4 := ARRAY VEC4.create_with_capacity 4
+  - free_list:Array Vec4 := Array Vec4.create_with_capacity 4
   
 Mapping, Public
-  + xyz:Expanded VEC3
-  + w:REAL_32
+  + xyz:Flat Vec3
+  + w:Real32
   
 Public
   
-  - x:REAL_32 <- `((float *)@Self)[0]`:REAL_32
-  - y:REAL_32 <- `((float *)@Self)[1]`:REAL_32
-  - z:REAL_32 <- `((float *)@Self)[2]`:REAL_32
+  - x:Real32 <- `((float *)@self)[0]`:Real32
+  - y:Real32 <- `((float *)@self)[1]`:Real32
+  - z:Real32 <- `((float *)@self)[2]`:Real32
   
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     (free_list.is_empty).if {
       result := clone
     } else {
@@ -29,36 +28,36 @@ Public
     result
   )
   
-  - free <- free_list.add_last Self
+  - free <- free_list.add_last self
 
-  - make (px,py,pz,pw:REAL_32) <- ( xyz.make (px,py,pz); w := pw; )
+  - make (px,py,pz,pw:Real32) <- ( xyz.make (px,py,pz); w := pw; )
   
-  - put_xyz v:VEC3 <- ( xyz := v; )
-  - put_w v:REAL_32 <- ( w := v; )
+  - put_xyz v:Vec3 <- ( xyz := v; )
+  - put_w v:Real32 <- ( w := v; )
   
-  - Self:SELF '**' other:SELF :SELF <-
-  ( + result:SELF
+  - self:Self '**' other:Self :Self <-
+  ( + result:Self
     result := create
     result.put_xyz (xyz ** other)
     result.put_w 1.0
     result
   )
   
-  - reflect other:SELF <-
-  ( + p:REAL_32
-    p := (Self #* other) * 2.0
-    0.to 3 do { i:INTEGER
+  - reflect other:Self <-
+  ( + p:Real32
+    p := (self #* other) * 2.0
+    0.to 3 do { i:Int
       put (item i - p * other.item i) to i
     }
   )
   
-  - Self:SELF '*##' other:MAT4X4 :VEC4 <-
-  ( + t:REAL_32
-    + result:VEC4
+  - self:Self '*##' other:Mat4x4 :Vec4 <-
+  ( + t:Real32
+    + result:Vec4
     result := create
-    0.to 3 do { j:INTEGER
+    0.to 3 do { j:Int
       t := 0.0
-      0.to 3 do { i:INTEGER
+      0.to 3 do { i:Int
         t := t + other.x i y j * item i
       }
       result.put t to j
@@ -71,9 +70,9 @@ Public
     make (0.0, 0.0, 0.0, 1.0)
   )
   
-  - Self:SELF '*' q:SELF :SELF <- 
-  ( + tmp:VEC3
-    + r:SELF
+  - self:Self '*' q:Self :Self <- 
+  ( + tmp:Vec3
+    + r:Self
     r := create
     tmp := xyz ** q.xyz
     r.put_xyz tmp
@@ -84,19 +83,19 @@ Public
     tmp := q.xyz *# w
     r.xyz.add tmp
     tmp.free
-    r.put_w (w * q.w - Self #* q )
+    r.put_w (w * q.w - self #* q )
     r
   )
 
   - conj <-
   ( 
-    0.to 2 do { i:INTEGER
+    0.to 2 do { i:Int
       put (-item i) to i
     }
   )
 
-  - rotate (angle:REAL_32, axis:VEC3) <-
-  ( + s,c:REAL_32
+  - rotate (angle:Real32, axis:Vec3) <-
+  ( + s,c:Real32
     put_xyz axis
     xyz.normalize
     (s, c) := ((angle / 2).sin, (angle / 2).cos)
@@ -104,8 +103,8 @@ Public
     put_w c
   )
   
-  - mul_vec3 v:VEC3 :VEC3 <-
-  ( + t,u:VEC3
+  - mul_vec3 v:Vec3 :Vec3 <-
+  ( + t,u:Vec3
     // Method by Fabian 'ryg' Giessen (of Farbrausch)
     // t = 2 * cross(q.xyz, v)
     // v' = v + q.w * t + cross(q.xyz, t)    
@@ -121,10 +120,10 @@ Public
     t
   )
   
-  - to_mat4x4:MAT4X4 <- 
-  ( + m:MAT4X4
-    + a,b,c,d:REAL_32
-    + a2,b2,c2,d2:REAL_32
+  - to_mat4x4:Mat4x4 <- 
+  ( + m:Mat4x4
+    + a,b,c,d:Real32
+    + a2,b2,c2,d2:Real32
     (a,b,c,d) := (w,x,y,z)
     (a2,b2,c2,d2) := (a*a,b*b,c*c,d*d)
     m := create

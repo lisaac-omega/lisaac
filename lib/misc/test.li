@@ -1,15 +1,13 @@
 Header
-  
-  + name := TEST;
-  
+  + name := Test
 Insert
-  - parent_utils:UTILS := UTILS
-  - parent_print:PRINT := PRINT
+  - parent_utils:Utils := Utils
+  - parent_print:Print := Print
   
 Public  
-  + counter:INTEGER
+  + counter:Int
   
-  - check assert:BOOLEAN <-
+  - check assert:Boolean <-
   (
     counter := counter + 1
     assert.if_false {
@@ -17,9 +15,9 @@ Public
     }
   )
   
-  - check_false assert:BOOLEAN <- check (! assert)
+  - check_false assert:Boolean <- check (! assert)
 
-  - check str1:STRING string str2:STRING <-
+  - check str1:String string str2:String <-
   (
     counter := counter + 1
     (str1 == str2).if_false {
@@ -27,11 +25,11 @@ Public
     }
   )
   
-  - check c1:CHARACTER character c2:CHARACTER <-
+  - check c1:Char character c2:Char <-
   (
     counter := counter + 1
     (c1 = c2).if_false {
-      STRING.tmp { msg:STRING_BUFFER
+      String.tmp { msg:String_buffer
         msg.append "TEST.check failed: '"
         msg.add_last c1
         msg.append "' != '"
@@ -42,7 +40,7 @@ Public
     }
   )
   
-  - check i1:INTEGER integer i2:INTEGER <-
+  - check i1:Int integer i2:Int <-
   (
     counter := counter + 1
     (i1 = i2).if_false {
@@ -58,7 +56,7 @@ Public
     }
   )
   
-  - check assert:BOOLEAN txt txt:{STRING} <-
+  - check assert:Boolean txt txt:{String} <-
   (
     counter := counter + 1
     assert.if_false {
@@ -77,7 +75,7 @@ Public
     }
   )
   
-  - check c1:CHARACTER char c2:CHARACTER <-
+  - check c1:Char char c2:Char <-
   (
     counter := counter + 1
     (c1 = c2).if_false {

@@ -1,12 +1,9 @@
 Header
-
-  + name        := ITM_READ_ARG1;
-
-  /*For send message with one argument (receiver) or unary message*/
-
+  + name := Itm_read_arg1
+/*For send message with one argument (receiver) or unary message*/
 Inherit
 
-  + parent_itm_read:Expanded ITM_READ
+  + parent_itm_read:Flat Itm_read
 
 Public
 
@@ -14,20 +11,20 @@ Public
   // Data
   //
 
-  + arg:ITM_CODE
+  + arg:Itm_code
 
   //
   // Constructor
   //
 
-  - create p:POSITION name n:STRING_ALIAS arg a:ITM_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias arg a:Itm_code :Self <-
+  ( + result:Self
     result := clone
     result.make p name n arg a
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS arg a:ITM_CODE <-
+  - make p:Position name n:String_alias arg a:Itm_code <-
   (
     position := p
     name := n
@@ -38,7 +35,7 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
+  - to_run_expr:Expr <-
   (
     to_run_with arg args NULL
   )

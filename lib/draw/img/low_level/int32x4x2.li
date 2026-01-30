@@ -1,4 +1,3 @@
-Header  
-  + name := INT32X4X2;
-  
+Header
+  + name := Int32x4x2
 Public

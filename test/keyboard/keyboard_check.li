@@ -1,33 +1,29 @@
 Header
-  + name := KEYBOARD_CHECK;
-  /*
+  + name := Keyboard_check
+/*
 
 
   */
-  
 Inherit 
-  + parent_window:Expanded WINDOW  
+  + parent_window:Flat Window  
 Private
-    
-  + key_mem: STRING_BUFFER := new STRING_BUFFER capacity 16
+  + key_mem: String_buffer := new String_buffer capacity 16
   
-  + cmd_mem: UINTEGER_8
-  
+  + cmd_mem: Uint8
 Public
-
   - main <-
   (
-    KEYBOARD.set_debug TRUE
+    Keyboard.set_debug True
     init "Keyboard Check" size (360*2, 240*2)
-    PAPER.run
+    Paper.run
   )
   
   - draw <-
-  ( + x, y, lx, dy:INTEGER
-    + txt: STRING
+  ( + x, y, lx, dy:Int
+    + txt: String
     begin_path
-    rect (0,0) size (width.to_integer,height.to_integer)
-    fill_color (COLOR.white)
+    rect (0,0) size (width.to_int,height.to_int)
+    fill_color (Color.white)
     fill   
     
     lx := 100
@@ -41,24 +37,24 @@ Public
     label (x := x + 30, y) txt "cmd"
     value (x := x + 80, y) int cmd_mem
     
-    STRING.tmp { txt_buff:STRING_BUFFER
+    String.tmp { txt_buff:String_buffer
       label (x :=  lx, y := y + dy) txt "KEYBOARD.key_to_string"
       if (key_mem.is_empty) then {
         txt_buff.append "<none>"
       } else {
-        KEYBOARD.key_to_string key_mem cmd cmd_mem in txt_buff
+        Keyboard.key_to_string key_mem cmd cmd_mem in txt_buff
       }
       value (x := x + 350, y) txt txt_buff
     }
     
     label (x := lx, y := y + dy) txt "KEYBOARD.k_mem"
-    value (x := x + 275, y) int (KEYBOARD.k_mem)
+    value (x := x + 275, y) int (Keyboard.k_mem)
     
     label (x := lx, y := y + dy) txt "KEYBOARD.key_mem"
-    value (x := x + 290, y) int (KEYBOARD.key_mem)
+    value (x := x + 290, y) int (Keyboard.key_mem)
     
     label (x := lx, y := y + dy) txt "KEYBOARD.press_mem"
-    if (KEYBOARD.press_mem) then {
+    if (Keyboard.press_mem) then {
       txt := "<yes>"
     } else {
       txt := "<no>"
@@ -66,40 +62,39 @@ Public
     value (x := x + 320, y) txt txt    
     
     label (x := lx, y := y + dy) txt "KEYBOARD.mods_mem"
-    value (x := x + 320, y) int (KEYBOARD.mods_mem)    
+    value (x := x + 320, y) int (Keyboard.mods_mem)    
     
     label (x := lx, y := y + dy) txt "KEYBOARD.cmd"
-    value (x := x + 245, y) int (KEYBOARD.cmd)    
+    value (x := x + 245, y) int (Keyboard.cmd)    
         
-    PAPER.refresh_again
+    Paper.refresh_again
   )
    
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  - key s:String cmd c:Uint8 :Boolean <-
   (
     key_mem.copy s
     cmd_mem := c
-    TRUE
+    True
   )
-  
 Private
   
-  - label (x,y:INTEGER) txt txt:STRING <-
+  - label (x,y:Int) txt txt:String <-
   (
-    font_face_id (FONT sys (FONT roman))
-    fill_color (COLOR.gray)
+    font_face_id (Font sys (Font roman))
+    fill_color (Color.gray)
     text (x, y) msg txt
   )
   
-  - value (x,y:INTEGER) txt txt:STRING <-
+  - value (x,y:Int) txt txt:String <-
   (
-    font_face_id (FONT sys (FONT roman))
-    fill_color (COLOR.black)
+    font_face_id (Font sys (Font roman))
+    fill_color (Color.black)
     text (x, y) msg txt
   )
   
-  - value (x,y:INTEGER) int i:INTEGER <-
+  - value (x,y:Int) int i:Int <-
   (
-    STRING.tmp { buf: STRING_BUFFER
+    String.tmp { buf: String_buffer
       i.append_in buf
       value (x,y) txt buf
     }

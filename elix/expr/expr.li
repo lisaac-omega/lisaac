@@ -1,39 +1,39 @@
 Header
-  + name := EXPR;
-  /* root of all EXPRs*/
+  + name := Expr
+/* root of all EXPRs*/
 
 Inherit
-  + parent_tok_itm:Expanded TOK_ITM
-  - parent_any:ANY := ANY
+  + parent_tok_itm:Flat Tok_itm
+  - parent_any:Any := Any
   
 Insert
 //  - parent_lix_buf:LIX_BUF := LIX_BUF
   
 Private
-  - stk_e:Expanded ARRAY (Strict EXPR)
+  - stk_e:Flat Array (Exact Expr)
   
 Public
-  - local_list:Expanded ARRAY LOCAL
-  - get_local n:STRING_ALIAS :LOCAL <- local_list.search {l:LOCAL; l.name_id = n}
+  - local_list:Flat Array Local
+  - get_local n:String_alias :Local <- local_list.search {l:Local; l.name_id = n}
   
   - print_local <-
   (
     (local_list.is_empty).if { "Pas de local.".println; } else {
       "\n---DEB---\n".print;
-      local_list.foreach { l:LOCAL;
-        OUT # l.name_id # ' ' # l.style # '\n';
+      local_list.foreach { l:Local;
+        Out # l.name_id # ' ' # l.style # '\n';
       };
       "---FIN---\n".print;
     };
   );    
   
-  - type:TYPE <- ( abstract; TYPE)
+  - type:Type <- ( abstract; Type)
     
-  - new:SELF <- ( + r:SELF; (stk_e.is_empty).if { r := clone; } else { r := stk_e.pop; }; r)
+  - new:Self <- ( + r:Self; (stk_e.is_empty).if { r := clone; } else { r := stk_e.pop; }; r)
   
-  - free <- ( stk_e.add_last Self; )
+  - free <- ( stk_e.add_last self; )
   
-  - new_parse t:INTEGER <-
+  - new_parse t:Int <-
   (
     //(((t & force) = 0) || {(pos_i > 0) && {at (pos_i-1) != '\n'}}).if {
       (t & 0Fh)
@@ -43,9 +43,9 @@ Public
   )
   
   - skip_body <-
-  ( + par,acc,cro,ln:INTEGER
-    + c,in_str:CHARACTER
-    + stop:BOOLEAN
+  ( + par,acc,cro,ln:Int
+    + c,in_str:Char
+    + stop:Boolean
     {(!stop) && {skip_sp_only; pos_i < buf.upper}}.while_do {      
       c := buf.at pos_i
       (c = '\n').if {
@@ -103,48 +103,48 @@ Public
   
   - skip_body_field <-
   // For PROTO: lip and default
-  ( + c:CHARACTER
-    EXPR.skip_body
+  ( + c:Char
+    Expr.skip_body
     {((c := at (pos_i-1)) = ' ') || {c = '\n'}}.while_do { pos_i := pos_i - 1; }
     (c = ';').if { pos_i := pos_i - 1; }
   )
   
   - skip_body_parent <-
-  ( + c:CHARACTER
+  ( + c:Char
     {((c := at pos_i) != '\0') && {c != '\n'} && {c != ';'}}.while_do { pos_i := pos_i + 1; }
   )
   
-  - set_parse b:BOOLEAN; // TODO !!!
+  - set_parse b:Boolean; // TODO !!!
   
   //
   // Original Parser
   //
   
-  - rd_expr_op:EXPR <-
+  - rd_expr_op:Expr <-
   //++ EXPR_OPERATOR-> { operator } EXPR_MESSAGE { operator {operator} EXPR_MESSAGE } {operator}
-  ( + result:EXPR
-    + cpx:CPX
-    cpx := CPX.parse_spln 0
+  ( + result:Expr
+    + cpx:Cpx
+    cpx := Cpx.parse_spln 0
     (cpx != NULL).if { result := cpx.simplify; }
     result
   )
 
-  - rd_expr_msg:EXPR <-
+  - rd_expr_msg:Expr <-
   //++ EXPR_MSG -> EXPR_BASE { '.' SEND_MSG }
   //++ EXPR_BASE    -> "Old" EXPR
   //++               | '...'
   //++               | EXPR_PRIMARY
   //++               | SEND_MSG
-  ( + result:EXPR
-    + cas:RSLO
+  ( + result:Expr
+    + cas:Rslo
     
     (word "...").if { err semantic msg "not_yet_implemented"; }
-    ((result := OLD.parse_sp 0)  != NULL) || {(result := rd_expr_prim)    != NULL} ||
-    {(result := RSLO.parse_sp 0) != NULL} || {(result := RLOC.parse_sp 0) != NULL}
+    ((result := Old_e.parse_sp 0)!= NULL) || {(result := rd_expr_prim)    != NULL} ||
+    {(result := Rslo.parse_sp 0) != NULL} || {(result := Rloc.parse_sp 0) != NULL}
     (result != NULL).if {
       {skip_spln_expr; read_c '.'}.while_do {
-        col (LOOK.symbol) sub 1
-        cas := RSLO.parse_sp 1
+        col (Look.symbol) sub 1
+        cas := Rslo.parse_sp 1
         (cas = NULL).if { err syntax msg "Incorrect message."; } else {
           cas.add_first result; result := cas
         }
@@ -153,18 +153,18 @@ Public
     result
   )
 
-  - rd_expr_prim:EXPR <-
-  //++ EXPR_PRIMARY -> "Self" | Result [_(1-9)]
+  - rd_expr_prim:Expr <-
+  //++ EXPR_PRIMARY -> Result [_(1-9)]
   //++               | PROTOTYPE
   //++               | NUM | TXT | EXT
   //++               | '(' GROUP ')' | '{' [ ARG ';' ] GROUP '}'
-  ( + result:EXPR
-    ((result := RLOC.parse_sp 1) != NULL).if {
-    }.elseif {(result := TTOK.parse_sp (TTOK.tpro)) != NULL} then {
-    }.elseif {(result := NUM.parse_sp 0) != NULL} then {
-    }.elseif {(result := STR.parse_sp 0) != NULL} then {
-    }.elseif {(result := EXT.parse_sp 0) != NULL} then {
-    }.elseif {(result := LIST.parse_sp 0) != NULL} then {
+  ( + result:Expr
+    ((result := Rloc.parse_sp 1) != NULL).if {
+    }.elseif {(result := Ttok.parse_sp (Ttok.tpro)) != NULL} then {
+    }.elseif {(result := Num.parse_sp 0) != NULL} then {
+    }.elseif {(result := Str.parse_sp 0) != NULL} then {
+    }.elseif {(result := Ext.parse_sp 0) != NULL} then {
+    }.elseif {(result := List.parse_sp 0) != NULL} then {
     }
     result
   )

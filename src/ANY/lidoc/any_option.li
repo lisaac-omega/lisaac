@@ -1,28 +1,26 @@
 Header
-
-  + name        := ANY_OPTION;
-
+  + name := Any_option
 Inherit
 
-  - parent_object:OBJECT := OBJECT
+  - parent_object:Clone := Clone
 
 Public
 
-  - is_shorter2:BOOLEAN
+  - is_shorter2:Boolean
 
-  - is_shorter :BOOLEAN
+  - is_shorter :Boolean
 
-  - is_short_code:BOOLEAN
-  - is_short_private:BOOLEAN
-  - is_short_recursive:BOOLEAN
+  - is_short_code:Boolean
+  - is_short_private:Boolean
+  - is_short_recursive:Boolean
 
-  - put tok:STRING to buf:STRING_BUFFER like key:STRING_ALIAS <-
-  ( + lst:LINKED_LIST(STRING_ALIAS)
+  - put tok:String to buf:String_buffer like key:String_alias <-
+  ( + lst:Linked_list(String_alias)
 
     (key != NULL).if {
-      lst := PARSER.short_dico.fast_reference_at key
+      lst := Parser.short_dico.fast_reference_at key
       (lst != NULL).if {
-        (lst.lower).to (lst.upper) do { j:INTEGER
+        (lst.lower).to (lst.upper) do { j:Int
           (lst.item j = NULL).if {
             buf.append tok
           } else {

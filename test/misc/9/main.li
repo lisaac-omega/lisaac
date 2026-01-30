@@ -1,11 +1,9 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
-  - foo foo:INTEGER <-
-  ( + foo:INTEGER
+  - foo foo:Int <-
+  ( + foo:Int
     
     foo := foo
   )

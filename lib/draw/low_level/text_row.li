@@ -1,19 +1,17 @@
 Header
-  
-  + name := TEXT_ROW;
-  
+  + name := Text_row
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private  
   
-  - stock_text_row:ARRAY TEXT_ROW := ARRAY TEXT_ROW.create_with_capacity 32
+  - stock_text_row:Array Text_row := Array Text_row.create_with_capacity 32
     
-  - new:TEXT_ROW <-
-  ( + result:TEXT_ROW
+  - new:Text_row <-
+  ( + result:Text_row
     (stock_text_row.is_empty).if {
-      result := TEXT_ROW.clone
+      result := Text_row.clone
     } else {
       result := stock_text_row.pop
     }
@@ -22,21 +20,21 @@ Private
 
 Public
   
-  + start:INTEGER;        // Pointer to the input text where the row starts.
-  + end:INTEGER;        // Pointer to the input text where the row ends (one past the last character).
-  + next:INTEGER;        // Pointer to the beginning of the next row.
-  + width:REAL_32;        // Logical width of the row.
-  + minx:REAL_32;       // Actual bounds of the row. Logical with and 
-  + maxx:REAL_32;        // bounds can differ because of kerning and some parts over extending.
+  + start:Int;        // Pointer to the input text where the row starts.
+  + end:Int;        // Pointer to the input text where the row ends (one past the last character).
+  + next:Int;        // Pointer to the beginning of the next row.
+  + width:Real32;        // Logical width of the row.
+  + minx:Real32;       // Actual bounds of the row. Logical with and 
+  + maxx:Real32;        // bounds can differ because of kerning and some parts over extending.
   
-  - create st:INTEGER to ed:INTEGER width w:REAL_32 range (xmi,xma:REAL_32) next nxt:INTEGER :TEXT_ROW <-
-  ( + result:TEXT_ROW
+  - create st:Int to ed:Int width w:Real32 range (xmi,xma:Real32) next nxt:Int :Text_row <-
+  ( + result:Text_row
     result := new
     result.make st to ed width w range (xmi,xma) next nxt
     result
   )
   
-  - make st:INTEGER to ed:INTEGER width w:REAL_32 range (xmi,xma:REAL_32) next nxt:INTEGER <-
+  - make st:Int to ed:Int width w:Real32 range (xmi,xma:Real32) next nxt:Int <-
   (
     (start,end) := (st,ed)
     (minx,maxx) := (xmi,xma)
@@ -46,7 +44,7 @@ Public
   
   - free <-
   (
-    stock_text_row.add_last Self
+    stock_text_row.add_last self
   )
   
   - print <-

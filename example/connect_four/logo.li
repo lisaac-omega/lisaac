@@ -1,37 +1,36 @@
-Header  
-  + name := LOGO;
-  
+Header
+  + name := Logo
 Inherit  
-  + parent_win:Expanded WIN
+  + parent_win:Flat Win
   
 Public
   
-  + logo_width:REAL_32
-  + logo_height:REAL_32
+  + logo_width:Real32
+  + logo_height:Real32
   
-  - width_min:REAL_32  <- logo_width; //  + margin_left.to_real_32 + margin_right.to_real_32
-  - height_min:REAL_32 <- logo_height; // + margin_top  + margin_bottom
+  - width_min:Real32  <- logo_width; //  + margin_left.to_real32 + margin_right.to_real32
+  - height_min:Real32 <- logo_height; // + margin_top  + margin_bottom
   
   - draw <-
-  ( + w:REAL_32
+  ( + w:Real32
     //draw_debug pen
     //begin_path
     w := width; //-margin_right-margin_left
     //stroke_color (COLOR.rgb (255,255,0))
     //stroke
-    draw (xo/*+margin_left*/,yo+height+10) size (w/165.0) time (CLOCK.seconds)
+    draw (xo/*+margin_left*/,yo+height+10) size (w/165.0) time (Clock.seconds)
   )
     
-  - put_size (w,h:REAL_32) :SELF <-
+  - put_size (w,h:Real32) :Self <-
   (    
     (logo_width,logo_height) := (w,h)
-    Self
+    self
   )
   
 Private
   
-  - draw (x,y:REAL_32) size (s:REAL_32) time t:REAL_32 <-
-  ( + p:PAINT
+  - draw (x,y:Real32) size (s:Real32) time t:Real32 <-
+  ( + p:Paint
     save
     transform(s, 0.000000, 0.000000, -s,x,y)
     
@@ -47,19 +46,19 @@ Private
     bezier_w1(52.8480, 42.439500) w2 (53.3879, 56.503500) to (53.0922, 64.895700)
     bezier_w1(52.7469, 74.709800) w2 (51.3281, 79.205900) to (49.7195, 88.737100)
     bezier_w1(49.1320, 92.218400) w2 (48.6895, 96.692600) to (47.8184, 96.819100)
-    fill_color (COLOR.rgb(72, 116, 80))
+    fill_color (Color.rgb(72, 116, 80))
     fill
         
-    p := PAINT.create_radial (47.8,60) radius (1,(t*2).sin*5)
-    color (COLOR.rgba(255,255,255,100)) 
-    to (COLOR.rgba(72, 116, 80,0))
+    p := Paint.create_radial (47.8,60) radius (1,(t*2).sin*5)
+    color (Color.rgba(255,255,255,100)) 
+    to (Color.rgba(72, 116, 80,0))
     fill_paint p
     fill
     p.free
     
-    p := PAINT.create_linear (0,0) to (0,100)
-    color (COLOR.rgba(128,128,128,255)) 
-    to (COLOR.rgba(72, 70, 70,255))
+    p := Paint.create_linear (0,0) to (0,100)
+    color (Color.rgba(128,128,128,255)) 
+    to (Color.rgba(72, 70, 70,255))
     
     begin_path
     move_to(134.7340, 66.3313)

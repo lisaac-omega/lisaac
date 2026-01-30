@@ -1,15 +1,14 @@
 Header
-  + name := TBLC;
-  
+  + name := Tblc
 Inherit  
-  + parent_tone:Expanded TONE
+  + parent_tone:Flat Tone
   
 Public
-  - dicotb:HMAP TBLC KEY STRING_ALIAS := HMAP TBLC KEY STRING_ALIAS.new
+  - dicotb:Hmap Tblc Key String_alias := Hmap Tblc Key String_alias.new
   
-  - Self:SELF '<=' o:TYPE :BOOLEAN <-
-  ( + ob:TBLC
-    + result:BOOLEAN
+  - self:Self '<=' o:Type :Boolean <-
+  ( + ob:Tblc
+    + result:Boolean
     ob ?= o
     (ob != NULL).if {
       result := 
@@ -22,21 +21,21 @@ Public
     result    
   )
   
-  + arg:TYPE
-  + res:TYPE
+  + arg:Type
+  + res:Type
   
-  - init k:STRING_ALIAS arg art:TYPE type rt:TYPE :TBLC <-
+  - init k:String_alias arg art:Type type rt:Type :Tblc <-
   (
     (key,arg,res) := (k,art,rt)
-    dicotb.add Self to k
-    Self
+    dicotb.at k add self
+    self
   )
   
-  - new art:TYPE type rt:TYPE :TONE <-
-  ( + k:STRING_ALIAS
-    + result:TONE
-    + err:BOOLEAN
-    STRING.tmp { tmp:STRING_BUFFER
+  - new art:Type type rt:Type :Tone <-
+  ( + k:String_alias
+    + result:Tone
+    + err, found:Boolean
+    String.tmp { tmp:String_buffer
       tmp | '{'
       (art != NULL).if {
         k := art.key
@@ -53,9 +52,11 @@ Public
       k := tmp.to_string_alias
     }
     (err).if {
-      result := TERR
+      result := Terr
     } else {
-      result := dicotb.fast_reference_at k
+      // DCDC
+      //result := dicotb.fast_reference_at k
+      (found, result) := dicotb.search k
       (result = NULL).if {
         result := clone.init k arg art type rt
       }
@@ -63,13 +64,13 @@ Public
     result
   )
   
-  - txt_in s:STRING_BUFFER sty st:STY <-
+  - txt_in s:String_buffer sty st:Sty <-
   (
     (arg != NULL).if {
       (st!=NULL)
-      .ok { st.put (STY.arg_on) to (s.count); }
+      .ok { st.put (Sty.arg_on) to (s.count); }
        do { arg.txt_in s sty st; }
-       ok { st.put (STY.arg_off) to (s.count); }
+       ok { st.put (Sty.arg_off) to (s.count); }
     }
     s | '{'
     (res != NULL).if { res.txt_in s sty st; }

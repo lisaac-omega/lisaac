@@ -1,56 +1,47 @@
 Header
-
-  + name := ANY;
-
+  + name := Any
 Inherit
-
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
+  - input_name:String_alias
 
-  - input_name:STRING_ALIAS
+  - source:String_buffer
 
-  - source:STRING_BUFFER
+  - string_tmp:String_buffer := String_buffer.create 250
 
-  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 250
-
-  //
   // Program
-  //
 
-  - program:HMAP CLASS KEY STRING_ALIAS :=
-  HMAP CLASS KEY STRING_ALIAS.create
+  - program:Hmap Class Key String_alias := new Hmap Class Key String_alias
 
-  - class_master:CLASS
+  - class_master:Class
 
-  //
   // Error manager.
-  //
 
-  - syntax_error p:INTEGER message msg:STRING <-
+  - syntax_error p:Int message msg:String <-
   (
     error p style "--SYNTAX---------\n" message msg
     exit exit_failure_code
   )
 
-  - semantic_error p:INTEGER message msg:STRING <-
+  - semantic_error p:Int message msg:String <-
   (
     error p style "--SEMANTIC-------\n" message msg
     exit exit_failure_code
   )
 
-  - warning_error p:INTEGER message msg:STRING <-
+  - warning_error p:Int message msg:String <-
   (
     error p style "--WARNING--------\n" message msg
   )
 
-  - error p:INTEGER style s:STRING_ALIAS message msg:STRING <-
-  ( + l,c,pos:INTEGER
-    + char:CHARACTER
-    - msg_error:STRING_BUFFER
+  - error p:Int style s:String_alias message msg:String <-
+  ( + l,c,pos:Int
+    + char:Char
+    - msg_error:String_buffer
 
     (msg_error = NULL).if {
-      msg_error := STRING_BUFFER.create 256
+      msg_error := String_buffer.create 256
     }
 
     (l,c) := current_position p
@@ -63,9 +54,9 @@ Public
     msg_error.add_last '\n'
     // Search begin line :
     pos := source.lower
-    1.to (l-1) do { line:INTEGER
+    1.to (l-1) do { line:Int
       {source.item pos = '\n'}.until_do {
-	pos := pos + 1
+        pos := pos + 1
       }
       pos := pos + 1
     }
@@ -75,11 +66,11 @@ Public
       char := source.item pos
       msg_error.add_last char
       (c > 1).if {
-	(char = '\t').if {
-	  string_tmp.add_last '\t'
-	} else {
-	  string_tmp.add_last ' '
-	}
+        (char = '\t').if {
+          string_tmp.add_last '\t'
+        } else {
+          string_tmp.add_last ' '
+        }
       }
       c   := c - 1
       pos := pos + 1
@@ -88,16 +79,16 @@ Public
     msg_error.append string_tmp
     msg_error.append "^\n"
     //
-    STDERR.put_string msg_error
+    Stderr.put_string msg_error
   )
 
   //
   // String aliaser.
   //
 
-  - get_alias str:STRING :STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    + tmp:STRING
+  - get_alias str:String :String_alias <-
+  ( + result:String_alias
+    + tmp:String
     ? {str != NULL}
 
     tmp := aliaser_string.reference_at str
@@ -111,18 +102,18 @@ Public
     result
   )
 
-  - keyword_inherit:STRING_ALIAS := "Inherit"
-  - keyword_print:STRING_ALIAS   := "print"
-  - keyword_new:STRING_ALIAS     := "New"
-  - keyword_master:STRING_ALIAS  := "master"
-  - keyword_this:STRING_ALIAS    := "This"
+  - keyword_inherit:String_alias := "Inherit"
+  - keyword_print:String_alias   := "print"
+  - keyword_new:String_alias     := "New"
+  - keyword_master:String_alias  := "master"
+  - keyword_this:String_alias    := "This"
 
   //
   // Flags.
   //
 
   // -- VFT --
-  - is_vft:BOOLEAN := TRUE
+  - is_vft:Boolean := True
   // -- VFT --
 
 Private
@@ -131,10 +122,10 @@ Private
   // Aliaser string.
   //
 
-  - aliaser_string:HSET STRING :=
-  ( + result:HSET STRING
+  - aliaser_string:Hset String :=
+  ( + result:Hset String
 
-    result := HSET STRING.create
+    result := Hset String.create
     result.fast_add keyword_inherit
     result.fast_add keyword_print
     result.fast_add keyword_new
@@ -143,16 +134,16 @@ Private
     result
   )
 
-  - current_position pos:INTEGER :(INTEGER,INTEGER) <-
-  ( + p,line,col:INTEGER
+  - current_position pos:Int :(Int,Int) <-
+  ( + p,line,col:Int
 
     p := source.lower
     {p = pos}.until_do {
       (source.item p = '\n').if {
-	col  := 0
-	line := line + 1
+        col  := 0
+        line := line + 1
       } else {
-	col := col + 1
+        col := col + 1
       }
       p := p + 1
     }

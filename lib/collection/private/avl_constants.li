@@ -1,13 +1,11 @@
 Header
-  + name := AVL_CONSTANTS;
-
+  + name := Avl_constants
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
+Self
 
-SELF
+  - balanced:Int := 0
 
-  - balanced:INTEGER := 0
+  - imbalanced_left:Int := -1
 
-  - imbalanced_left:INTEGER := -1
-
-  - imbalanced_right:INTEGER := 1
+  - imbalanced_right:Int := 1

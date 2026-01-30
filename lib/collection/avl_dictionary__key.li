@@ -1,38 +1,37 @@
 Header
-  + name := AVL_DICTIONARY V KEY K;
-  /*
+  + name := Avl_dictionary V Key K
+/*
    Associative memory. Values of type `V' are stored using Keys of type `K'.
    Efficient implementation of DICTIONARY using an AVL balanced tree.
    AVL stands for the names of G. M. Adel'son-Velskii and E. M. Landis,
    two Russian mathematicians who first came up with this method of keeping
    the tree balanced.
   */
-
 Insert
-  + parent_avl_tree:Expanded AVL_TREE K
+  + parent_avl_tree:Flat Avl_tree K
 
 Private
   - key_memory:K <- item_memory
 
 Public
 
-  - capacity:INTEGER <- count
+  - capacity:Int <- count
 
   - at k:K :V <-
-  ( + dic:AVL_DICTIONARY_NODE V KEY K
+  ( + dic:Avl_dictionary_node V Key K
     dic ?= root.at k
     dic.value
   )
 
   - fast_at k:K :V <-
-  ( + dic:AVL_DICTIONARY_NODE V KEY K
+  ( + dic:Avl_dictionary_node V Key K
     dic ?= root.fast_at k
     dic.value
   )
 
   - reference_at k:K :V <-
   ( + result:V
-    + n:AVL_DICTIONARY_NODE V KEY K
+    + n:Avl_dictionary_node V Key K
 
     (root != NULL).if {
       n := root.at k
@@ -45,7 +44,7 @@ Public
 
   - fast_reference_at k:K :V <-
   ( + result:V
-    + n:AVL_DICTIONARY_NODE V KEY K
+    + n:Avl_dictionary_node V Key K
 
     (root != NULL).if {
       n := root.fast_at k
@@ -72,8 +71,8 @@ Public
     root := fast_do_insert root
   )
 
-  - occurrences v:V :INTEGER <-
-  ( + result:INTEGER
+  - occurrences v:V :Int <-
+  ( + result:Int
 
     (root != NULL).if {
       result := root.occurrences v
@@ -81,8 +80,8 @@ Public
     result
   )
 
-  - fast_occurrences v:V :INTEGER <-
-  ( + result:INTEGER
+  - fast_occurrences v:V :Int <-
+  ( + result:Int
 
     (root != NULL).if {
       result := root.fast_occurrences v
@@ -102,12 +101,12 @@ Public
       clear_nodes root
       root := NULL
       count := 0
-      map_dirty := TRUE
+      map_dirty := True
     }
   )
 
-  - item i:INTEGER :V <-
-  ( + dic:AVL_DICTIONARY_NODE V KEY K
+  - item i:Int :V <-
+  ( + dic:Avl_dictionary_node V Key K
     (map_dirty).if {
       build_map
     }
@@ -115,7 +114,7 @@ Public
     dic.value
   )
 
-  - key index:INTEGER :K <-
+  - key index:Int :K <-
   (
     (map_dirty).if {
       build_map
@@ -127,7 +126,7 @@ Public
 
   - make <-
   (
-    map := ARRAY(AVL_TREE_NODE K).create 0
+    map := Array(Avl_tree_node K).create 0
     // lost_nodes ::= common_lost_nodes.reference_at(generating_type)
     // if lost_nodes = NULL then
     //        create lost_nodes.set_item(NULL)
@@ -139,39 +138,39 @@ Private
 
   + value_memory:V
 
-  - set_value_and_key n:AVL_TREE_NODE(K) <-
-  ( + dic:AVL_DICTIONARY_NODE V KEY K
+  - set_value_and_key n:Avl_tree_node(K) <-
+  ( + dic:Avl_dictionary_node V Key K
 
     dic ?= n
     dic.make (value_memory, key_memory)
   )
 
-  - set_value n:AVL_TREE_NODE(K) <-
-  ( + dic:AVL_DICTIONARY_NODE V KEY K
+  - set_value n:Avl_tree_node(K) <-
+  ( + dic:Avl_dictionary_node V Key K
 
     dic ?= n
     dic.set_value value_memory
   )
 
-  - exchange_and_discard (n1, n2:AVL_TREE_NODE(K)) <-
+  - exchange_and_discard (n1, n2:Avl_tree_node(K)) <-
   (
     n1.set_key (n2.key)
     n1.set_value (n2.value)
-    rebalance := TRUE
+    rebalance := True
     count := count - 1
     discard_node n2
   )
 
-  - discard_node n:AVL_DICTIONARY_NODE V KEY K <-
+  - discard_node n:Avl_dictionary_node V Key K <-
   ( + v:V
     + k:K
 
     n.make (v, k)
   )
 
-  - a_new_node:AVL_DICTIONARY_NODE V KEY K <-
+  - a_new_node:Avl_dictionary_node V Key K <-
   (
-    AVL_DICTIONARY_NODE V KEY K.clone
+    Avl_dictionary_node V Key K.clone
   )
 
 

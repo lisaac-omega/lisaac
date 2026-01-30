@@ -1,17 +1,15 @@
 Header
-
-  + name        := MASTER;
-  /*
-  Example the `super' call.
+  + name := Master
+/*
+  Example the super call.
   */
-
 Inherit
 
-  - parent_obj:OBJ := OBJ
+  - parent_obj:Obj := Obj
 
 Public
 
-  + name:STRING_ALIAS := "MASTER"
+  + name:String_alias := "MASTER"
 
   + method <-
   (
@@ -22,7 +20,7 @@ Public
   )
 
   - main <-
-  ( + obj:OBJ
+  ( + obj:Obj
 
     "\nCall method:\n".print
     method

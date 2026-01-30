@@ -1,0 +1,17 @@
+Header
+  + name := Plus_un
+  
+/**/
+Public
+  
+  - main <-
+  (  
+    bug (1, 2)
+  )
+  
+  - bug list:Int^n <-
+  ( + j:Int
+    { i:Int
+      j := j + 1 // DC -> BS (et si on met un ; c'est bon :-)
+    }.value list
+  )

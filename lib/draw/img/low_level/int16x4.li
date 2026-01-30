@@ -1,5 +1,4 @@
-Header  
-  + name := INT16X4;
-  
+Header
+  + name := Int16x4
 Public
   

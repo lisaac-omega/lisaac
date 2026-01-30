@@ -1,10 +1,9 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
   ( + a,b:ℤ
     b := 1
     a := a * b
-    TEST.check (a = 0)
+    Test.check (a = 0)
   )

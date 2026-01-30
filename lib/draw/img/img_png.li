@@ -1,6 +1,6 @@
-Header  
-  + name := IMG_PNG;
-  /*
+Header
+  + name := Img_png
+/*
     public domain 'baseline' PNG decoder  
       simple implementation
        - only 8-bit samples
@@ -25,42 +25,41 @@ Header
   int xspc[]  = { 8,8,4,4,2,2,1 };
   int yspc[]  = { 8,8,8,4,4,2,2 };
   `;
-  
 Inherit  
-  - parent_image:IMAGE := IMAGE
+  - parent_image:Image := Image
   
 Public
   
-  - xorig i:INTEGER :INTEGER <- `xorig[@i]`:INTEGER
-  - yorig i:INTEGER :INTEGER <- `yorig[@i]`:INTEGER
-  - xspc  i:INTEGER :INTEGER <- `xspc[@i]`:INTEGER
-  - yspc  i:INTEGER :INTEGER <- `yspc[@i]`:INTEGER
+  - xorig i:Int :Int <- `xorig[@i]`:Int
+  - yorig i:Int :Int <- `yorig[@i]`:Int
+  - xspc  i:Int :Int <- `xspc[@i]`:Int
+  - yspc  i:Int :Int <- `yspc[@i]`:Int
       
-  - f_none:UINTEGER_8 := 0
-  - f_sub:UINTEGER_8  := 1
-  - f_up:UINTEGER_8   := 2
-  - f_avg:UINTEGER_8  := 3
-  - f_paeth:UINTEGER_8:= 4
+  - f_none:Uint8 := 0
+  - f_sub:Uint8  := 1
+  - f_up:Uint8   := 2
+  - f_avg:Uint8  := 3
+  - f_paeth:Uint8:= 4
   // synthetic filters used for first scanline to avoid needing a dummy row of 0s
-  - f_avg_first:UINTEGER_8   := 5
-  - f_paeth_first:UINTEGER_8 := 6
+  - f_avg_first:Uint8   := 5
+  - f_paeth_first:Uint8 := 6
   
-  + idata:NATIVE_ARRAY UINTEGER_8
-  + expanded:NATIVE_ARRAY UINTEGER_8
-  + out:NATIVE_ARRAY UINTEGER_8
+  + idata:C_array Uint8
+  + expanded:C_array Uint8
+  + out:C_array Uint8
   
-  - get_chunk_header:PNGCHUNK <- PNGCHUNK.create_length get32be type get32be
+  - get_chunk_header:Pngchunk <- Pngchunk.create_length get32be type get32be
 
-  - check_png_header:BOOLEAN <-
+  - check_png_header:Boolean <-
   (
     rewind
     (get8=89h) && {get8=50h} && {get8=4Eh} && {get8=47h} && 
     {get8=0Dh} && {get8=0Ah} && {get8=1Ah} && {get8=0Ah}
   )
 
-  - first_row_filter:NATIVE_ARRAY UINTEGER_8 := 
-  ( + r:NATIVE_ARRAY UINTEGER_8
-    r := NATIVE_ARRAY UINTEGER_8.create 5
+  - first_row_filter:C_array Uint8 := 
+  ( + r:C_array Uint8
+    r := C_array Uint8.create 5
     r.at 0 put f_none
     r.at 1 put f_sub
     r.at 2 put f_none
@@ -69,8 +68,8 @@ Public
     r
   )
 
-  - paeth (a,b,c:INTEGER) :INTEGER <-
-  ( + p,pa,pb,pc,res:INTEGER
+  - paeth (a,b,c:Int) :Int <-
+  ( + p,pa,pb,pc,res:Int
     //"abc:".print; a.print; ','.print; b.print; ','.print; c.println
     p  := a + b - c
     pa := (p-a).abs
@@ -86,25 +85,25 @@ Public
     res
   )
 
-  - depth_scale_table:NATIVE_ARRAY UINTEGER_8 := 
-  ( + res:NATIVE_ARRAY UINTEGER_8
-    res := NATIVE_ARRAY UINTEGER_8.create 9
+  - depth_scale_table:C_array Uint8 := 
+  ( + res:C_array Uint8
+    res := C_array Uint8.create 9
     res.at 1 put 0FFh; res.at 2 put 055h
     res.at 4 put 011h; res.at 8 put 001h
     res
   )
 
   // create the png data from post-deflated data
-  - create_png_image_raw (praw:NATIVE_ARRAY UINTEGER_8, raw_len:UINTEGER_32 , out_n:INTEGER)
-  to (x,y:UINTEGER_32) depth depth:INTEGER color color:INTEGER <-
-  ( + stride:UINTEGER_32
-    + img_len, img_width_bytes:UINTEGER_32
-    + k,limg_n:INTEGER
-    + raw,bug:NATIVE_ARRAY UINTEGER_8
+  - create_png_image_raw (praw:C_array Uint8, raw_len:Uint32 , out_n:Int)
+  to (x,y:Uint32) depth depth:Int color color:Int <-
+  ( + stride:Uint32
+    + img_len, img_width_bytes:Uint32
+    + k,limg_n:Int
+    + raw,bug:C_array Uint8
     limg_n := img_n; // copy it into a local for later
     stride := x * out_n
     raw := praw
-    out := NATIVE_ARRAY UINTEGER_8.create (x * y * out_n); // extra bytes to write off the end into
+    out := C_array Uint8.create (x * y * out_n); // extra bytes to write off the end into
     
     img_width_bytes := (((img_n * x * depth) + 7) >> 3)
     img_len := (img_width_bytes + 1) * y
@@ -114,9 +113,9 @@ Public
       (raw_len < img_len).if { return_error "not enough pixels"; }
     }
     bug := raw
-    0.to (y-1) do { j:INTEGER
-      + cur,prior:NATIVE_ARRAY UINTEGER_8
-      + filter,filter_bytes,width:INTEGER
+    0.to (y-1) do { j:Int
+      + cur,prior:C_array Uint8
+      + filter,filter_bytes,width:Int
       cur := out + stride*j
       //"---- ".print; (raw #- bug).println
       prior := cur - stride
@@ -138,12 +137,12 @@ Public
       // if first row, use special filter that doesn't sample previous row
       (j = 0).if { filter := first_row_filter.at filter; }
       // handle first byte explicitly
-      0.to (filter_bytes-1) do { k:INTEGER
+      0.to (filter_bytes-1) do { k:Int
         (filter)
         .when f_none        then { cur.at k put (raw.at k); }
         .when f_sub         then { cur.at k put (raw.at k); }
         .when f_up          then { cur.at k put (bytecast(raw.at k + prior.at k)); }
-        .when f_avg         then { cur.at k put (bytecast(raw.at k.to_integer + prior.at k >>1)); }
+        .when f_avg         then { cur.at k put (bytecast(raw.at k.to_int + prior.at k >>1)); }
         .when f_paeth       then { cur.at k put (bytecast(raw.at k + paeth(0,prior.at k,0))); }
         .when f_avg_first   then { cur.at k put (raw.at k); }
         .when f_paeth_first then { cur.at k put (raw.at k); }
@@ -163,38 +162,38 @@ Public
       //"--B-- ".print; (raw #- bug).println
       // this is a little gross, so that we don't switch per-pixel or per-component
       ((depth < 8) || {img_n = out_n}).if {
-        + nk:INTEGER
-        + c:{(INTEGER,INTEGER,{INTEGER;}); }
+        + nk:Int
+        + c:{(Int,Int,{Int;}); }
         nk := (width - 1)*img_n
-        c := {(f,v:INTEGER,b:{INTEGER;}); (f=v).if { 0.to (nk-1) do b; }; }
+        c := {(f,v:Int,b:{Int;}); (f=v).if { 0.to (nk-1) do b; }; }
         (filter = f_none).if { memcpy(cur, raw, nk); }
-        c.value (filter,f_sub,{k:INTEGER
+        c.value (filter,f_sub,{k:Int
             cur.at k put (bytecast(raw.at k + cur.at (k-filter_bytes)))
         })
-        c.value (filter,f_up ,{k:INTEGER
+        c.value (filter,f_up ,{k:Int
             cur.at k put (bytecast(raw.at k + prior.at k))
         })
-        c.value (filter,f_avg,{k:INTEGER
-            cur.at k put (bytecast(raw.at k + ((prior.at k.to_integer + cur.at (k-filter_bytes))>>1)))
+        c.value (filter,f_avg,{k:Int
+            cur.at k put (bytecast(raw.at k + ((prior.at k.to_int + cur.at (k-filter_bytes))>>1)))
         })
-        c.value (filter,f_paeth,{k:INTEGER
+        c.value (filter,f_paeth,{k:Int
             cur.at k put (bytecast(raw.at k + paeth(cur.at (k-filter_bytes),prior.at k,prior.at (k-filter_bytes))))
         })
-        c.value (filter,f_avg_first,{k:INTEGER
+        c.value (filter,f_avg_first,{k:Int
             cur.at k put (bytecast(raw.at k + (cur.at (k-filter_bytes) >> 1)))
         })
-        c.value (filter,f_paeth_first,{k:INTEGER
+        c.value (filter,f_paeth_first,{k:Int
             cur.at k put (bytecast(raw.at k + paeth(cur.at (k-filter_bytes),0,0)))
         })
         raw := raw + nk
         //"--B1-- ".print; (raw #- bug).println
       } else {
-        + c:{(INTEGER,INTEGER,{INTEGER;}); }
+        + c:{(Int,Int,{Int;}); }
         //"--B2-- ".print; (raw #- bug).println
         ? {img_n+1 = out_n}
-        c := {(f,v:INTEGER,b:{INTEGER;}); (f=v).if {
+        c := {(f,v:Int,b:{Int;}); (f=v).if {
             //"x-1:".print; (x-1).println
-            (x-1).to_integer.downto 1 do { i:INTEGER
+            (x-1).to_int.downto 1 do { i:Int
               0.to (img_n-1) do b
               //"i:".print; i.println
               cur.at img_n put 255
@@ -204,34 +203,34 @@ Public
             }
         }; }
         //"filter:".print; filter.print; " f_sub:".print; f_sub.print; " out_n:".print; out_n.println
-        c.value (filter,f_none,{k:INTEGER
+        c.value (filter,f_none,{k:Int
             cur.at k put (raw.at k)
         })
-        c.value (filter,f_sub,{k:INTEGER
-            //+ col:UINTEGER_8
+        c.value (filter,f_sub,{k:Int
+            //+ col:Uint8
             //    (k-out_n).println
             cur.at k put (bytecast(raw.at k + cur.at (k-out_n)))
             //"f_sub:".print; cur.at k.println
         })
-        c.value (filter,f_up,{k:INTEGER
+        c.value (filter,f_up,{k:Int
             cur.at k put (bytecast(raw.at k + prior.at k))
             //"f_up:".print; cur.at k.println
         })
-        c.value (filter,f_avg,{k:INTEGER
-            cur.at k put (bytecast(raw.at k + ((prior.at k.to_integer + cur.at (k-out_n))>>1)))
+        c.value (filter,f_avg,{k:Int
+            cur.at k put (bytecast(raw.at k + ((prior.at k.to_int + cur.at (k-out_n))>>1)))
             //"f_avg:".print; cur.at k.println
         })
-        c.value (filter,f_paeth,{k:INTEGER
-            + cc:UINTEGER_8
+        c.value (filter,f_paeth,{k:Int
+            + cc:Uint8
             cc := (bytecast(raw.at k + paeth(cur.at (k-out_n),prior.at k,prior.at (k-out_n))))
             //cc.println
             cur.at k put cc
         })
-        c.value (filter,f_avg_first,{k:INTEGER
+        c.value (filter,f_avg_first,{k:Int
             cur.at k put (bytecast(raw.at k + (cur.at (k-out_n) >> 1)))
             //"f_avg_first:".print; cur.at k.println
         })
-        c.value (filter,f_paeth_first,{k:INTEGER
+        c.value (filter,f_paeth_first,{k:Int
             cur.at k put (bytecast(raw.at k + paeth(cur.at (k-out_n),0,0)))
             //"f_peath_first:".print; cur.at k.println
         })
@@ -239,7 +238,7 @@ Public
     }
     //"--C-- ".print; (raw #- bug).println
     //"step 1\n".print
-    //0.to (x * y * out_n-1) do { i:INTEGER
+    //0.to (x * y * out_n-1) do { i:Int
     //  out.at i.println
     //}
     
@@ -247,9 +246,9 @@ Public
     // this could run two scanlines behind the above code, so it won't
     // intefere with filtering but will still be in the cache.
     (depth < 8).if {
-      0.to (y-1) do { j:INTEGER
-        + cur,in:NATIVE_ARRAY UINTEGER_8
-        + scale:UINTEGER_8
+      0.to (y-1) do { j:Int
+        + cur,in:C_array Uint8
+        + scale:Uint8
         cur := out + stride*j
         in  := out + stride*j + x*out_n - img_width_bytes
         // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
@@ -263,7 +262,7 @@ Public
         // so we need to explicitly clamp the final ones
 
         (depth = 4).if {
-          (x*img_n).downto 2 by 2 do { k:UINTEGER_32
+          (x*img_n).downto 2 by 2 do { k:Uint32
             cur.at 0 put (scale * (in.first >>  4))
             cur.at 1 put (scale * (in.first & 0Fh))
             cur := cur + 2
@@ -274,7 +273,7 @@ Public
             cur := cur + 1
           }
         }.elseif {depth = 2} then {          
-          (x*img_n).downto 4 by 4 do { k:UINTEGER_32
+          (x*img_n).downto 4 by 4 do { k:Uint32
             cur.at 0 put (scale *  (in.first >> 6))
             cur.at 1 put (scale * ((in.first >> 4)&03h))
             cur.at 2 put (scale * ((in.first >> 2)&03h))
@@ -292,7 +291,7 @@ Public
             cur.at 0 put (scale * ((in.first >> 2)&03h)); cur := cur + 1
           }
         }.elseif {depth = 1} then {
-          (x*img_n).downto 8 by 8 do { k:UINTEGER_32
+          (x*img_n).downto 8 by 8 do { k:Uint32
             cur.at 0 put (scale * ((in.first >> 7)      ))
             cur.at 1 put (scale * ((in.first >> 6) & 01h))
             cur.at 2 put (scale * ((in.first >> 5) & 01h))
@@ -330,13 +329,13 @@ Public
           // insert alpha = 255
           cur := out + stride*j
           (img_n = 1).if {
-            (x-1).downto 0 do { q:UINTEGER_32
+            (x-1).downto 0 do { q:Uint32
               cur.at (q*2+1) put 255
               cur.at (q*2+0) put (cur.at q)
             }
           } else {
             ? {img_n = 3}
-            (x-1).downto 0 do { q:UINTEGER_32
+            (x-1).downto 0 do { q:Uint32
               cur.at (q*4+3) put 255
               cur.at (q*4+2) put (cur.at (q*3+2))
               cur.at (q*4+1) put (cur.at (q*3+1))
@@ -347,16 +346,16 @@ Public
       }
     }
     //"step 2\n".print
-    //0.to (x*y*img_n-1) do { i:INTEGER
+    //0.to (x*y*img_n-1) do { i:Int
     //  out.at i.println
     //}
     
   )
 
-  - create_png_image (pimage_data:NATIVE_ARRAY UINTEGER_8, pimage_data_len:UINTEGER_32,out_n,depth,color:INTEGER,interlaced:BOOLEAN) <-
-  ( + final,image_data:NATIVE_ARRAY UINTEGER_8
-    + out_x,out_y:INTEGER
-    + image_data_len:UINTEGER_32
+  - create_png_image (pimage_data:C_array Uint8, pimage_data_len:Uint32,out_n,depth,color:Int,interlaced:Boolean) <-
+  ( + final,image_data:C_array Uint8
+    + out_x,out_y:Int
+    + image_data_len:Uint32
     image_data := pimage_data
     image_data_len := pimage_data_len
     (!interlaced).if {
@@ -365,19 +364,19 @@ Public
     } else {
       // de-interlacing
       //"interlaced!\n".print
-      final := NATIVE_ARRAY UINTEGER_8.create (img_x * img_y * out_n)
-      0.to 6 do { p:INTEGER
-        + x,y:INTEGER
+      final := C_array Uint8.create (img_x * img_y * out_n)
+      0.to 6 do { p:Int
+        + x,y:Int
         // pass1_x[4] = 0, pass1_x[5] = 1, pass1_x[12] = 1
         x := (img_x - xorig p + xspc p -1) / xspc p
         y := (img_y - yorig p + yspc p -1) / yspc p
         //x.print; ','.print; y.println
         ((x != 0) && {y != 0}).if {
-          + img_len:UINTEGER_32
+          + img_len:Uint32
           img_len := ((((img_n * x * depth) + 7) >> 3) + 1) * y
           create_png_image_raw (image_data, image_data_len, out_n) to (x, y) depth depth color color
-          0.to (y-1) do { j:INTEGER
-            0.to (x-1) do { i:INTEGER
+          0.to (y-1) do { j:Int
+            0.to (x-1) do { i:Int
               out_y := j * yspc p + yorig p
               out_x := i * xspc p + xorig p
               memcpy(final + out_y*img_x*out_n + out_x*out_n,out + (j*x+i)*out_n, out_n)
@@ -392,9 +391,9 @@ Public
     }
   )
 
-  - compute_transparency (tc:NATIVE_ARRAY UINTEGER_8, out_n:INTEGER) <-
-  ( + pixel_count:UINTEGER_32
-    + p:NATIVE_ARRAY UINTEGER_8
+  - compute_transparency (tc:C_array Uint8, out_n:Int) <-
+  ( + pixel_count:Uint32
+    + p:C_array Uint8
     pixel_count := img_x * img_y
     p := out
 
@@ -403,12 +402,12 @@ Public
     ? {(out_n = 2) || {out_n = 4}}
 
     (out_n = 2).if {
-      0.to (pixel_count-1) do { i:INTEGER
+      0.to (pixel_count-1) do { i:Int
         p.at 1 put ((p.at 0 = tc.at 0).ok 0 or 255)
         p := p + 2
       }
     } else {
-      0.to (pixel_count-1) do { i:INTEGER
+      0.to (pixel_count-1) do { i:Int
         ((p.at 0 = tc.at 0) && {p.at 1 = tc.at 1} && {p.at 2 = tc.at 2}).if {
           p.at 3 put 0
         }
@@ -417,19 +416,19 @@ Public
     }
   )
 
-  - expand_png_palette (palette:NATIVE_ARRAY UINTEGER_8, pal_img_n:INTEGER) <-
-  ( + pixel_count:UINTEGER_32
-    + p, temp_out, orig:NATIVE_ARRAY UINTEGER_8
-    + n:UINTEGER_8
+  - expand_png_palette (palette:C_array Uint8, pal_img_n:Int) <-
+  ( + pixel_count:Uint32
+    + p, temp_out, orig:C_array Uint8
+    + n:Uint8
     
     pixel_count := img_x * img_y
     orig := out
-    p := NATIVE_ARRAY UINTEGER_8.create (pixel_count * pal_img_n)
+    p := C_array Uint8.create (pixel_count * pal_img_n)
     // between here and free(out) below, exitting would leak
     temp_out := p
 
     (pal_img_n = 3).if {
-      0.to (pixel_count-1) do { i:INTEGER
+      0.to (pixel_count-1) do { i:Int
         n := orig.at i*4
         p.at 0 put (palette.at  n   )
         p.at 1 put (palette.at (n+1))
@@ -437,7 +436,7 @@ Public
         p := p + 3
       }
     } else {
-      0.to (pixel_count-1) do { i:INTEGER
+      0.to (pixel_count-1) do { i:Int
         n := orig.at i*4
         p.at 0 put (palette.at  n   )
         p.at 1 put (palette.at (n+1))
@@ -450,24 +449,24 @@ Public
     out := temp_out
   )
 
-  - unpremultiply_on_load:BOOLEAN
-  - de_iphone_flag:BOOLEAN
+  - unpremultiply_on_load:Boolean
+  - de_iphone_flag:Boolean
 
-  - set_unpremultiply_on_load flag:BOOLEAN <-
+  - set_unpremultiply_on_load flag:Boolean <-
   ( unpremultiply_on_load := flag; )
 
-  - convert_iphone_png_to_rgb flag:BOOLEAN <-
+  - convert_iphone_png_to_rgb flag:Boolean <-
   ( de_iphone_flag := flag; )
   
   - de_iphone <-
-  ( + i, pixel_count:UINTEGER_32
-    + p:NATIVE_ARRAY UINTEGER_8
-    + t,a:UINTEGER_8
+  ( + i, pixel_count:Uint32
+    + p:C_array Uint8
+    + t,a:Uint8
     p := out
     pixel_count := img_x * img_y
     
     (img_out_n = 3).if {  // convert bgr to rgb
-      0.to (pixel_count-1) do { i:INTEGER
+      0.to (pixel_count-1) do { i:Int
         t := p.at 0
         p.at 0 put (p.at 2)
         p.at 2 put t
@@ -477,7 +476,7 @@ Public
       ? {img_out_n = 4}
       (unpremultiply_on_load).if {
         // convert bgr to rgb and unpremultiply
-        0.to (pixel_count-1) do { i:INTEGER
+        0.to (pixel_count-1) do { i:Int
           a := p.at 3
           t := p.at 0
           (a != 0).if {
@@ -492,7 +491,7 @@ Public
         }
       } else {
         // convert bgr to rgb
-        0.to (pixel_count-1) do { i:INTEGER
+        0.to (pixel_count-1) do { i:Int
           t := p.at 0
           p.at 0 put (p.at 2)
           p.at 2 put t
@@ -502,26 +501,26 @@ Public
     }
   )
 
-  - id (a,b,c,d:CHARACTER):UINTEGER_32 <- 
+  - id (a,b,c,d:Char):Uint32 <- 
   (
-    (a.to_integer.to_uinteger_32 << 24) + (b.to_integer.to_uinteger_32 << 16) + 
-    (c.to_integer.to_uinteger_32 <<  8) +  d.to_integer.to_uinteger_32
+    (a.to_int.to_uint32 << 24) + (b.to_int.to_uint32 << 16) + 
+    (c.to_int.to_uint32 <<  8) +  d.to_int.to_uint32
   )
 
-  - parse_png_file (pscan,req_comp:INTEGER) <-
-  ( + palette,tc:NATIVE_ARRAY UINTEGER_8
-    + pal_img_n:UINTEGER_8
-    + has_trans:BOOLEAN
-    + ioff, idata_limit, pal_len:UINTEGER_32
-    + color, depth,scan:INTEGER
-    + interlace, first,stop, is_iphone:BOOLEAN
+  - parse_png_file (pscan,req_comp:Int) <-
+  ( + palette,tc:C_array Uint8
+    + pal_img_n:Uint8
+    + has_trans:Boolean
+    + ioff, idata_limit, pal_len:Uint32
+    + color, depth,scan:Int
+    + interlace, first,stop, is_iphone:Boolean
     
-    palette := NATIVE_ARRAY UINTEGER_8.create 1024; // BSBS: Merdic !!!
-    tc := NATIVE_ARRAY UINTEGER_8.create 3; // BSBS: GIGA Merdic !!!!!!
+    palette := C_array Uint8.create 1024; // BSBS: Merdic !!!
+    tc := C_array Uint8.create 3; // BSBS: GIGA Merdic !!!!!!
     
-    scan := `@pscan`:INTEGER; // BSBS: Bug Compilo 2019
+    scan := `@pscan`:Int; // BSBS: Bug Compilo 2019
     
-    first := TRUE
+    first := True
     expanded := NULL
     idata := NULL
     out := NULL
@@ -530,17 +529,17 @@ Public
 
     (scan != scan_type).if { 
       {! stop}.while_do {
-        + c:PNGCHUNK
+        + c:Pngchunk
         c := get_chunk_header
         (c.type = id('C','g','B','I')).if {
           //"CgBI\n".print
-          is_iphone := TRUE
+          is_iphone := True
           skip (c.length)
         }.elseif {c.type = id('I','H','D','R')} then {
-          + comp,filter:INTEGER
+          + comp,filter:Int
           //"IHDR\n".print
           (! first).if { return_error "multiple IHDR"; }
-          first := FALSE
+          first := False
           (c.length != 13).if { return_error "bad IHDR len"; }
           img_x := get32be; (img_x > (1 << 24)).if { return_error "too large"; }
           img_y := get32be; (img_y > (1 << 24)).if { return_error "too large"; }
@@ -554,7 +553,7 @@ Public
           (pal_img_n = 0).if {
             img_n := (((color & 2) != 0).ok 3 or 1) + (((color & 4) != 0).ok 1 or 0)
             ((1 << 30) / img_x / img_n < img_y).if { return_error "too large"; }
-            (scan = scan_header).if { stop := TRUE; }
+            (scan = scan_header).if { stop := True; }
           } else {
             // if paletted, then pal_n is our final components, and
             // img_n is # components to decompress/filter.
@@ -568,7 +567,7 @@ Public
           (c.length > 256*3).if { return_error "invalid PLTE"; }
           pal_len := c.length / 3
           (pal_len * 3 != c.length).if { return_error "invalid PLTE"; }
-          0.to (pal_len-1) do { i:INTEGER
+          0.to (pal_len-1) do { i:Int
             palette.at (i*4+0) put get8
             palette.at (i*4+1) put get8
             palette.at (i*4+2) put get8
@@ -579,38 +578,38 @@ Public
           (first).if { return_error "first not IHDR"; }
           (idata != NULL).if { return_error "tRNS after IDAT"; }
           (pal_img_n != 0).if {            
-            (scan = scan_header).if { img_n := 4; stop := TRUE; } else {
+            (scan = scan_header).if { img_n := 4; stop := True; } else {
               (pal_len = 0).if { return_error "tRNS before PLTE"; }
               (c.length > pal_len).if { return_error "bad tRNS len"; }
               pal_img_n := 4
-              0.to (c.length-1) do { i:INTEGER
+              0.to (c.length-1) do { i:Int
                 palette.at (i*4+3) put get8
               }
             }
           } else {
             ((img_n & 1) = 0).if { return_error "tRNS with alpha"; }
             (c.length != img_n*2).if { return_error "bad tRNS len"; }
-            has_trans := TRUE
-            0.to (img_n-1) do { k:INTEGER
-              tc.at k put (((get16be & 255) * depth_scale_table.at depth).to_uinteger_8); // non 8-bit images will be larger
+            has_trans := True
+            0.to (img_n-1) do { k:Int
+              tc.at k put (((get16be & 255) * depth_scale_table.at depth).to_uint8); // non 8-bit images will be larger
             }
           }
         }.elseif {c.type = id('I','D','A','T')} then {
           //"IDAT\n".print
           (first).if { return_error "first not IHDR"; }
           ((pal_img_n != 0) && {pal_len = 0}).if { return_error "no PLTE"; }
-          (scan = scan_header).if { img_n := pal_img_n; stop := TRUE; } else {
+          (scan = scan_header).if { img_n := pal_img_n; stop := True; } else {
             ((ioff + c.length) < ioff).if { return_error "Chepa"; }
             (ioff + c.length > idata_limit).if {
-              + idata_limit_old:UINTEGER_32
-              + p:NATIVE_ARRAY UINTEGER_8
+              + idata_limit_old:Uint32
+              + p:C_array Uint8
               idata_limit_old := idata_limit
               (idata_limit = 0).if { idata_limit := (c.length > 4096).ok (c.length) or 4096; }
               {ioff + c.length > idata_limit}.while_do {
                 idata_limit := idata_limit * 2
               }
               (idata_limit_old = 0).if {
-                p := NATIVE_ARRAY UINTEGER_8.create idata_limit
+                p := C_array Uint8.create idata_limit
               } else {
                 p := idata.realloc idata_limit_old with idata_limit
               }
@@ -620,7 +619,7 @@ Public
             ioff := ioff + c.length
           }
         }.elseif {c.type = id('I','E','N','D')} then {
-          + raw_len, bpl:UINTEGER_32
+          + raw_len, bpl:Uint32
           //"IEND\n".print
           (first).if { return_error "first not IHDR"; }
           (scan = scan_load).if { 
@@ -629,8 +628,8 @@ Public
             bpl := (img_x * depth + 7) / 8; // bytes per line, per component
             raw_len := bpl * img_y * img_n /* pixels */ + img_y /* filter mode per row */
             //crash; // *****************************
-            //stop := TRUE; // ********** BIDON loop without end.
-            (expanded, raw_len) := IMG_ZLIB.decode_malloc_guesssize_headerflag (idata, ioff, raw_len) header (!is_iphone)
+            //stop := True; // ********** BIDON loop without end.
+            (expanded, raw_len) := Img_zlib.decode_malloc_guesssize_headerflag (idata, ioff, raw_len) header (!is_iphone)
             //STBI_FREE(z->idata)
             idata := NULL
             (((req_comp = img_n+1) && {req_comp != 3} && {pal_img_n = 0}) || {has_trans}).if {
@@ -657,7 +656,7 @@ Public
             //STBI_FREE(z->expanded)
             expanded := NULL
           }
-          stop := TRUE
+          stop := True
         } else {
           // if critical, fail
           (first).if { return_error "first not IHDR"; }
@@ -677,8 +676,8 @@ Public
     }
   )
 
-  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
-  ( + result:NATIVE_ARRAY UINTEGER_8
+  - load req_comp:Int :C_array Uint8 <-
+  ( + result:C_array Uint8
     
     parse_png_file (scan_load, req_comp)
     result := out
@@ -694,17 +693,17 @@ Public
     result
   )
 
-  - test:BOOLEAN <-
+  - test:Boolean <-
   (
     rewind
     check_png_header    
   )
 
-  - info:BOOLEAN <-
+  - info:Boolean <-
   (
     rewind
     parse_png_file (scan_header, 0)
-    TRUE
+    True
   )
   
   

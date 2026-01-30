@@ -1,46 +1,45 @@
 Header
-  + name := ASSIGN;
-
+  + name := Assign
 Inherit
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
   
 Private
-  - stack_ass:Expanded ARRAY (Strict ASSIGN)
+  - stack_ass:Flat Array (Exact Assign)
   
 Public
-  + writable:EXPR
+  + writable:Expr
   
-  + style:INTEGER
+  + style:Int
   
-  + value:EXPR
+  + value:Expr
   
-  - static_type:TYPE; // ?=
+  - static_type:Type; // ?=
     
 Public
   
-  - type:TYPE <-
-  ( + result:TYPE
+  - type:Type <-
+  ( + result:Type
     (style = "Ë¿").if {
       result := writable.type
     } else {
-      result := TYPE.boolean
+      result := Type.boolean
     }
     result
   )
   
-  - init e:EXPR style t:INTEGER value v:EXPR :SELF <-
+  - init e:Expr style t:Int value v:Expr :Self <-
   ( 
     (writable,style,value) := (e,t,v)
-    Self
+    self
   )
   
-  - new e:EXPR style t:INTEGER value v:EXPR :SELF <-
-  ( + result:Strict ASSIGN
+  - new e:Expr style t:Int value v:Expr :Self <-
+  ( + result:Exact Assign
     (stack_ass.is_empty).if { result := clone; } else { result := stack_ass.pop; }
     result.init e style t value v
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     writable.append_in b
     (src.at (style+1) = '¿').if { b += " := "; } else { b += " ?= "; }
@@ -56,16 +55,16 @@ Public
   - run <- ( (style = asv).if { run_asv; } else { run_asc; }; )
   
   - run_asv <-
-  ( + l:LIST
-    + up:INTEGER
-    + sav:LIARRAY OP
-    sav := LIARRAY OP.new
+  ( + l:List
+    + up:Int
+    + sav:Liarray Op
+    sav := Liarray Op.new
     up := stack_result.upper
     value.run
     sav.append stack_result from (up+1) to (stack_result.upper)
     l ?= writable
     (l != NULL).if {
-      l.list.foreach_backward { e:EXPR; subrun e; }
+      l.list.foreach_backward { e:Expr; subrun e; }
     } else {
       subrun writable
     }
@@ -74,17 +73,17 @@ Public
     sav.free
   )
   
-  - subrun e:EXPR <-
-  ( + c:CALL
+  - subrun e:Expr <-
+  ( + c:Call
     c ?= e
     c.run_ass
   )
   
   - run_asc <-
-  ( + o:OP
-    + r,v:LIARRAY INTEGER
-    + cl:CALL_LOC
-    + cs:CALL
+  ( + o:Op
+    + r,v:Liarray Int
+    + cl:Call_loc
+    + cs:Call
     value.run
     o := pop
     cl ?= writable
@@ -92,29 +91,29 @@ Public
       static_type := cl.local.type
     } else {
       cs ?= writable
-      static_type := LS.at (LS.lookup_self).static_type.lookup (cs.name).type
+      static_type := Ls.at (Ls.lookup_self).static_type.lookup (cs.name).type
     }
-    v := LIARRAY INTEGER.new; v.add_last (LS.new (o.static_type))
-    r := LIARRAY INTEGER.new; r.add_last (LS.new (TYPE.boolean))
-    OP + LASS.new (v.first) val o
-    OP + SWITCH.new (SWITCH.typ) on (v.first) slot NULL hmap 0 idx r do {(sw:SWITCH,t:TYPE)
-      OP + LASS.new (sw.idx.first) val
-      ((t <= static_type).ok (TYPE.true) else {TYPE.false})
+    v := Liarray Int.new; v.add_last (Ls.new (o.static_type))
+    r := Liarray Int.new; r.add_last (Ls.new (Type.boolean))
+    Op + Lass.new (v.first) val o
+    Op + Switch.new (Switch.typ) on (v.first) slot NULL hmap 0 idx r do {(sw:Switch,t:Type)
+      Op + Lass.new (sw.idx.first) val
+      ((t <= static_type).ok (Type.true) else {Type.false})
     }
-    OP + SWITCH.new (SWITCH.oth) on (r.first) slot NULL hmap 0 idx v do {(sw:SWITCH,t:TYPE)
-      + call:CALL
-      (t = TYPE.true).if {
-        push (LOC.new (sw.idx.first))
+    Op + Switch.new (Switch.oth) on (r.first) slot NULL hmap 0 idx v do {(sw:Switch,t:Type)
+      + call:Call
+      (t = Type.true).if {
+        push (Loc.new (sw.idx.first))
         call ?= writable
         call.run_ass
       }
     }
-    push (LOC.new (r.first))
+    push (Loc.new (r.first))
   )
   
   - free <-
   (
     (writable != NULL).if { writable.free; writable := NULL; }
     (value != NULL).if { value.free; value := NULL; }
-    stack_ass.add_last Self
+    stack_ass.add_last self
   )

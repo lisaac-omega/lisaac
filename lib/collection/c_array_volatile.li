@@ -1,0 +1,700 @@
+Header
+  + name := Exact C_array_volatile V
+/*
+   Native array of collection library.
+   This class gives access to the lowest level for arrays. As any low level array, you can
+   get high performances with NATIVE_ARRAYs, but you loose most valid bounds checks (as
+   you can do in plain C code for example).
+  */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  // Basic features:
+
+  - object_size:Int := 0; // For detect error.
+
+  - element_sizeof:Int <-
+  // The size in number of bytes for type `E'.
+  ( + result:Int
+    (V.is_expanded_type).if {
+      result := V.object_size
+    } else {
+      result := Pointer.object_size
+    }
+    result
+  )
+
+  - calloc_intern nb_elements:Int :C_array_volatile V <-
+  // Allocate a new array of 'nb_elements' of type `E'.
+  // The new array is initialized with default values.
+  [ ...
+    -? {nb_elements > 0}
+  ]
+  ( + capacity:Int
+    + p:Pointer
+    + result  :C_array_volatile V
+
+    capacity := nb_elements * element_sizeof
+    //p := `malloc(@capacity)`:Pointer
+    p := Memory.alloc_dynamic (capacity.to_uint_cpu)
+    result := Cast Pointer To (C_array_volatile V).on p
+    result
+  )
+  [ ...
+    +? {Result != NULL}
+  ]
+
+  - create nb_elements:Int :C_array_volatile V <-
+  // Allocate a new array of `nb_elements' of type `E'.
+  // The new array is initialized with default values.
+  [ ...
+    -? {nb_elements > 0}
+  ]
+  ( + result:C_array_volatile V
+
+    result:=calloc_intern nb_elements
+    result.clear_all (nb_elements-1)
+    result
+  )
+  [ ...
+    +? {Result.all_default (nb_elements-1)}
+  ]
+
+  - realloc old_nb_elts:Int with new_nb_elts:Int :C_array_volatile V <-
+  // Assume Current is a valid C_array_volatile in range
+  // [0 .. `old_nb_elts'-1]. Allocate a bigger new array in
+  // range [0 .. `new_nb_elts'-1].
+  // Old range is copied in the new allocated array.
+  // New items are initialized with default values.
+  [ ...
+    -? {self != NULL}
+    -? {old_nb_elts > 0}
+    -? {old_nb_elts < new_nb_elts}
+  ]
+  ( + new:C_array_volatile V
+    + old_ptr,new_ptr:Pointer
+    + new_cap:Int
+
+    old_ptr := Cast (C_array_volatile V) To Pointer.on self
+    new_cap := new_nb_elts * element_sizeof
+    //new_ptr := `realloc(@old_ptr,@new_cap)`:Pointer
+    new_ptr := Memory.realloc_dynamic old_ptr
+    old_size ((old_nb_elts * element_sizeof).to_uint32)
+    new_size (new_cap.to_uint32)
+    new := Cast Pointer To (C_array_volatile V).on new_ptr
+    new.clear old_nb_elts to (new_nb_elts - 1)
+    new
+  )
+  [ ...
+    +? {Result != NULL}
+  ]
+
+  - first:V <- item 0
+
+  - item index:Int :V <-
+  // To read an `item'.
+  // Assume that `calloc' is already done and that `index' is
+  // the range [0 .. `nb_elements'-1].
+  [ ...
+    -? {index >= 0}
+  ]
+  (
+    `10`
+  )
+
+  - put element:V to index:Int <-
+  // To write an item.
+  // Assume that `calloc' is already done and that `index'
+  // is the range [0 .. `nb_elements'-1].
+  [ ...
+    -? {index >= 0}
+  ]
+  (
+    force_put element to index
+  )
+  [ ...
+    +? {element = item index}
+  ]
+
+  // Displacement
+
+  - self:Self '+' Left 80 other:Int :C_array_volatile V <-
+  // other is in element index
+  ( + ptr:Pointer
+
+    ptr := to_pointer
+    ptr := ptr + other * element_sizeof
+    Cast Pointer To (C_array_volatile V).on ptr
+  )
+
+  // Comparison:
+
+  - memcmp other:C_array_volatile V until up:Int :Boolean <-
+  // True if all elements in range [0..up] are
+  // identical using `equal'. Assume Current and `other'
+  // are big enough.
+  // See also `fast_memcmp'.
+  ( + i:Int
+
+    i := up
+    {(i >= 0) && {safe_equal (item i,other.item i)}}.while_do {
+      i := i - 1
+    }
+    i < 0
+  )
+
+  - slice_memcmp (at:Int,other:C_array_volatile V,other_lower,other_upper:Int) :Boolean <-
+  // True if all elements in range [0 .. `other_upper' - `other_lower'] are identical
+  // to the elements in range [`other_lower' .. `other_upper'] of `other' using
+  // `is_equal'. Assume `Current' and `other' are big enough.
+  // See also `slice_fast_memcmp'.
+  [ ...
+    -? {at >= 0}
+    -? {other_lower >= 0}
+    -? {other_upper >= other_lower - 1}
+    -? {(other_upper >= other_lower) ->> {other.is_not_null}}
+  ]
+  ( + i:Int
+
+    i := other_upper - other_lower
+    {(i >= 0) && {safe_equal (item (at + i),other.item (other_lower + i))}}.while_do {
+      i := i - 1
+    }
+    i < 0
+  )
+
+  - fast_memcmp other:C_array_volatile V until up:Int :Boolean <-
+  // Same jobs as `memcmp' but uses infix `=' instead `equal'.
+  [ ...
+    -? {(capacity > 0) ->> {other.is_not_null}}
+  ]
+  ( + i:Int
+
+    i := up
+    {(i >=0 ) && {item i = other.item i}}.while_do {
+      i := i - 1
+    }
+    i < 0
+  )
+
+  - slice_fast_memcmp (at:Int, other:C_array_volatile V, other_lower,other_upper:Int) :Boolean <-
+  // Same jobs as `slice_memcmp' but uses infix "=" instead of `is_equal'.
+  [ ...
+    -? {at >= 0}
+    -? {other_lower >= 0}
+    -? {other_upper >= other_lower - 1}
+    -? {(other_upper >= other_lower) ->> {other.is_not_null}}
+  ]
+  ( + i:Int
+
+    i := other_upper - other_lower
+    {(i < 0) || {item (at + i) != other.item (other_lower + i)}}.until_do {
+      i := i - 1
+    }
+    i < 0
+  )
+
+  // Searching:
+
+  - first_index_of element:V until upper:Int :Int <-
+  // Give the index of the first occurrence of `element' using
+  // `==' for comparison.
+  // Answer `upper + 1' when `element' is not inside.
+  // See also `fast_index_of', `reverse_index_of'.
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + idx:Int
+
+    {(idx > upper) || {safe_equal (element,item idx)}}.until_do        {
+      idx := idx + 1
+    }
+    idx
+  )
+
+  - index_of (element:V,start_index:Int) until upper:Int :Int <-
+  // Using `is_equal' for comparison, gives the index of the first occurrence of `element'
+  // at or after `start_index'. Answer `upper + 1' when the search fail.
+  // See also `fast_index_of', `reverse_index_of'.
+  [ ...
+    -? {start_index >= 0}
+    -? {start_index <= upper}
+  ]
+  ( + result:Int
+
+    result := start_index
+    {(result > upper) || {safe_equal (element,item result)}}.until_do {
+      result := result + 1
+    }
+    result
+  )
+  [ ...
+    +? {Result.in_range start_index to (upper + 1)}
+    +? {(Result <= upper) ->> {safe_equal (element,item Result)}}
+  ]
+
+  - reverse_index_of element:V from upper:Int :Int <-
+  // Give the index of the first occurrence of `element' using
+  // `==' for comparison, from upper to lower.
+  // Answer -1 when `element' is not inside.
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + idx:Int
+
+    idx := upper
+    {(idx < 0) || {safe_equal (element,item idx)}}.until_do        {
+      idx := idx - 1
+    }
+    idx
+  )
+  [ ...
+    +? {Result.in_range (-1) to upper}
+    +? {(Result > 0) ->> {safe_equal (element, item Result)}}
+  ]
+
+  - fast_index_of (element:V,start_index:Int) until upper:Int :Int <-
+  // Using basic `=' for comparison, gives the index of the first occurrence of
+  // `element' at or after `start_index'. Answer `upper + 1' when the search fail.
+  // See also `index_of', `reverse_index_of'.
+  [ ...
+    -? {start_index >= 0}
+    -? {start_index <= upper}
+  ]
+  ( + result:Int
+
+    result := start_index
+    {(result > upper) || {element = item result}}.until_do {
+      result := result + 1
+    }
+    result
+  )
+  [ ...
+    +? {Result.in_range start_index to (upper + 1)}
+    +? {(Result <= upper) ->> {element = item Result}}
+  ]
+
+  - fast_reverse_index_of element:V from upper:Int :Int <-
+  // Same as `reverse_index_of' but use basic `=' for comparison.
+  // Search is done in reverse direction, which means from `upper' down to the
+  // `0'. Answer `-1' when the search fail.
+  // See also `reverse_index_of', `index_of'.
+  [
+    -? {upper >= -1}
+  ]
+  ( + idx:Int
+
+    idx := upper
+    {(idx < 0) || {element = item idx}}.until_do {
+      idx := idx - 1
+    }
+    idx
+  )
+  [ ...
+    +? {Result.in_range (-1) to upper}
+    +? {(Result > 0) ->> {element = item Result}}
+  ]
+
+  - fast_first_index_of element:V until upper:Int :Int <-
+  // Same as `index_of' but use basic `=' for comparison.
+  // `0'. Answer `upper + 1' when the search fail.
+  // See also `fast_index_of', `reverse_index_of'.
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + idx:Int
+
+    {(idx > upper) || {element = item idx}}.until_do {
+      idx := idx + 1
+    }
+    idx
+  )
+  [ ...
+    +? {Result.in_range 0 to (upper + 1)}
+    +? {(Result <= upper) ->> {element = item Result}}
+  ]
+
+  - has element:V until upper:Int :Boolean <-
+  // Look for `element' using `==' for comparison.
+  // Also consider `has' to choose the most appropriate.
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + result:Boolean
+    + i:Int
+
+    i := upper
+    {(result) || {i < 0}}.until_do {
+      result := safe_equal (element,item i)
+      i := i - 1
+    }
+    result
+  )
+
+  - fast_has element:V until upper:Int :Boolean <-
+  // Look for `element' using basic `=' for comparison.
+  // Also consider `has' to choose the most appropriate.
+  [
+    -? {upper >= -1}
+  ]
+  ( + i:Int
+
+    i := upper
+    {(i < 0) || {element = item i}}.until_do {
+      i := i - 1
+    }
+    i >= 0
+  )
+
+  // Removing:
+
+  - remove_first upper:Int <-
+  // Assume `upper' is a valid index.
+  // Move range [1 .. `upper'] by 1 position left.
+  [ ...
+    -? {upper >= 0}
+  ]
+  ( + i:Int
+
+    {i = upper}.until_do {
+      put (item (i + 1)) to i
+      i := i + 1
+    }
+  )
+
+  - remove index:Int until upper:Int <-
+  // Assume `upper' is a valid index.
+  // Move range [`index' + 1 .. `upper'] by 1 position left.
+  [ ...
+    -? {index >= 0}
+    -? {index <= upper}
+  ]
+  ( + i:Int
+
+    i := index
+    {i = upper}.until_do {
+      put (item (i + 1)) to i
+      i := i + 1
+    }
+  )
+
+  // Replacing:
+
+  - replace_all old_value:V with new_value:V until upper:Int <-
+  // Replace all occurences of the element `old_value' by `new_value'
+  // using `==' for comparison.
+  // See also `fast_replace_all' to choose the apropriate one.
+  [ ...
+    -? {upper >= -1}
+  ]
+  (
+    upper.downto 0 do { i:Int
+      (safe_equal (old_value,(item i))).if {
+        put new_value to i
+      }
+    }
+  )
+
+  - fast_replace_all old_value:V with new_value:V until upper:Int <-
+  // Replace all occurences of the element `old_value' by `new_value'
+  // using basic `=' for comparison.
+  // See also `replace_all' to choose the apropriate one.
+  [ ...
+    -? {upper >= -1}
+  ]
+  (
+    upper.downto 0 do { i:Int
+      (old_value = item i).if {
+        put new_value to i
+      }
+    }
+  )
+
+  // Adding:
+
+  - copy src:C_array_volatile V to dest:Int until src_capacity:Int <-
+  // Copy range [0 .. `src_capacity - 1'] of `src' to range
+  // [`dest' .. `dest + src_capacity - 1'] of `self'.
+  // No subscript checking.
+  [ ...
+    -? {dest >= 0}
+    -? {src_capacity >= 0}
+  ]
+  ( + i1, i2:Int
+
+    i1 := dest
+    {i2 = src_capacity}.until_do {
+      put (src.item i2) to i1
+      i2 := i2 + 1
+      i1 := i1 + 1
+    }
+  )
+
+  - slice_copy src:C_array_volatile V to dest:Int from src_min:Int to src_max:Int <-
+  // Copy range [`src_min' .. `src_max'] of `src' to range
+  // [`at' .. `at + src_max - src_min - 1'] of `Current'.
+  // No subscript checking.
+  [ ...
+    -? {dest >= 0}
+    -? {src_min <= src_max + 1}
+    -? {(src != self) | (dest != src_min)}
+  ]
+  ( + i1, i2:Int
+
+    i1 := dest
+    i2 := src_min
+    {i2 > src_max}.until_do {
+      put (src.item i2) to i1
+      i2 := i2 + 1
+      i1 := i1 + 1
+    }
+  )
+
+  // Other:
+
+  - set_all_with v:V until upper:Int <-
+  // Set all elements in range [0 .. upper] with
+  // value `v'.
+  [ ...
+    -? {upper >= -1}
+  ]
+  (
+    upper.downto 0 do { i:Int
+      put v to i
+    }
+  )
+
+  - set_slice_with v:V from lower:Int until upper:Int <-
+  // Set all elements in range [`lower' .. `upper'] with value `v'.
+  [ ...
+    -? {lower >= 0}
+    -? {upper >= lower - 1}
+  ]
+  ( + i:Int
+
+    i := lower
+    {i > upper}.until_do {
+      put v to i
+      i := i + 1
+    }
+  )
+
+  - clear_all upper:Int <-
+  // Set all elements in range [0 .. `upper'] with
+  // the default value.
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + v:V
+
+    upper.downto 0 do { i:Int
+      put v to i
+    }
+  )
+
+  - clear lower:Int to upper:Int <-
+  // Set all elements in range [`lower' .. `upper'] with
+  // the default value
+  [ ...
+    -? {lower >= 0}
+    -? {upper >= lower}
+  ]
+  ( + v:V
+
+    lower.to upper do { i:Int
+      put v to i
+    }
+  )
+
+  - copy_from model:C_array_volatile V until upper:Int <-
+  // Assume `upper' is a valid index both in Current and `model'.
+  [ ...
+    -? {upper >= -1}
+  ]
+  (
+    upper.downto 0 do { i:Int
+      put (model.item i) to i
+    }
+  )
+
+  - deep_twin_from capacity:Int :C_array_volatile V <-
+  // To implement `deep_twin'. Allocate a new array of
+  // `capacity' initialized with `deep_twin'.
+  // Assume `capacity' is valid both in Current and `model'.
+  [ ...
+    -? {capacity >= 0}
+  ]
+  ( + result:C_array_volatile V
+    not_yet_implemented
+    /*
+    + element:V
+
+    (capacity > 0).if {
+      result := calloc_intern capacity
+      (capacity - 1).downto 0 do { i:Int
+        element := item i
+        (element != NULL).if {
+          element := element.deep_twin
+        }
+        result.put element to i
+      }
+    };*/
+    result
+  )
+
+  - move lower:Int to upper:Int by offset:Int <-
+  // Move range [`lower' .. `upper'] by `offset' positions.
+  // Freed positions are not initialized to default values.
+  [ ...
+    -? {lower >= 0}
+    -? {upper >= lower}
+    -? {lower + offset >= 0}
+  ]
+  (
+    (offset != 0).if {
+      (offset < 0).if {
+        lower.to upper do { i:Int
+          put (item i) to (i + offset)
+        }
+      } else {
+        upper.downto lower do { i:Int
+          put (item i) to (i + offset)
+        }
+      }
+    }
+  )
+
+  - occurrences element:V until upper:Int :Int <-
+  // Number of occurrences of `element' in range [0..upper]
+  // using `equal' for comparison.
+  // See also `fast_occurrences' to chose the apropriate one.
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + count:Int
+
+    upper.downto 0 do { i:Int
+      (safe_equal (element,item i)).if {
+        count := count + 1
+      }
+    }
+    count
+  )
+
+  - slice_occurrences element:V from lower:Int until upper:Int :Int <-
+  // Number of occurrences of `element' in range [`lower' .. `upper'] using
+  // `is_equal' for comparison.
+  // See also `slice_fast_occurrences' to chose the apropriate one.
+  [ ...
+    -? {lower >= 0}
+    -? {upper >= lower - 1}
+  ]
+  ( + i,result:Int
+
+    i := lower
+    {i > upper}.until_do {
+      (safe_equal (element,item i)).if {
+        result := result + 1
+      }
+      i := i + 1
+    }
+    result
+  )
+
+  - fast_occurrences element:V until upper:Int :Int <-
+  // Number of occurrences of `element' in range [0..upper]
+  // using basic "=" for comparison.
+  // See also `fast_occurrences' to chose the apropriate one.
+  [
+    -? {upper >= -1}
+  ]
+  ( + count:Int
+
+    upper.downto 0 do { i:Int
+      (element = item i).if {
+        count := count + 1
+      }
+    }
+    count
+  )
+
+  - slice_fast_occurrences element:V from lower:Int until upper:Int :Int <-
+  // Number of occurrences of `element' in range [`lower' .. `upper']
+  // using basic "=" for comparison.
+  // See also `slice_occurrences' to chose the apropriate one.
+  [ ...
+    -? {lower >= 0}
+    -? {upper >= lower - 1}
+  ]
+  ( + i,result:Int
+
+    i := lower
+    {i > upper}.until_do {
+      (element = item i).if {
+        result := result + 1
+      }
+      i := i + 1
+    }
+    result
+  )
+
+  - all_default upper:Int :Boolean <-
+  // Do all items in range [0 .. `upper'] have their type's
+  // default value?
+  [ ...
+    -? {upper >= -1}
+  ]
+  ( + result:Boolean
+    + model:V
+    ? {upper >= -1}
+    result := True
+    upper.downto 0 do { i:Int
+      (model != item i).if {
+        result := False
+      }
+    }
+    result
+  )
+
+  - slice_default lower:Int to upper:Int :Boolean <-
+  // Do all items in range [`lower' .. `upper'] have their type's default value?
+  // Note: for non Void items, the test is performed with the `is_default' predicate.
+  [ ...
+    -? {lower >= 0}
+    -? {upper >= lower - 1}
+  ]
+  ( + i:Int
+    + v:V
+    + result:Boolean
+
+    result := True
+    i := lower
+    {(i > upper) || {! result}}.until_do {
+      result := item i = v
+      i := i + 1
+    }
+    result
+  )
+
+  // Interfacing with C:
+
+  - to_external:Pointer <- to_pointer
+  // Gives access to the C pointer on the area of storage.
+
+  - is_null:Boolean <- to_pointer.is_null
+
+  - is_not_null:Boolean <- to_pointer.is_not_null
+
+  // Guru Section
+
+  - force_put element:V to index:Int <-
+  // Used in Memory count: not to use directly without caution !
+  [ ...
+    -? {index>=0}
+  ]
+  (
+    `9`
+  )
+

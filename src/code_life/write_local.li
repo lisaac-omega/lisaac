@@ -1,35 +1,32 @@
 Header
-
-  + name    := WRITE_LOCAL;
-
-  /*Write local*/
-
+  + name := Write_local
+/*Write local*/
 Inherit
 
-  + parent_write:Expanded WRITE
+  + parent_write:Flat Write
 
 Public
 
-  + local:LOCAL
+  + local:Local
 
-  - variable:VARIABLE <- local
+  - variable:Variable <- local
 
   //
   // Creation.
   //
 
-  - create p:POSITION with val:EXPR in l:LOCAL :SELF <-
-  ( + result:SELF
+  - create p:Position with val:Expr in l:Local :Self <-
+  ( + result:Self
     ? {p.code != 0}
     result := clone
     result.make p with val in l
     result
   )
 
-  - make p:POSITION with val:EXPR in l:LOCAL <-
+  - make p:Position with val:Expr in l:Local <-
   (
     position := p
-    local    := l
+    local    := l    
     value    := val
   )
 
@@ -37,15 +34,15 @@ Public
   // Execute.
   //
 
-  - execute_access_unlink:INSTR <- NULL
+  - execute_access_unlink:Instr <- NULL
 
   - execute_access_link
 
-  - execute_argument:BOOLEAN <-
+  - execute_argument:Boolean <-
   // BSBS: Cette methode foireuse ne doit plus etre necessaire (utilise execute normal)
-  ( + new_val:INSTR
-    + read:READ
-    + result:BOOLEAN
+  ( + new_val:Instr
+    + read:Read
+    + result:Boolean
 
     ? { variable != NULL }
     ? { value    != NULL }
@@ -54,15 +51,15 @@ Public
     (ensure_count = 0).if {
       //
       // Supprime affectation.
-      //
+      //      
       new_val := value.execute_unlink
       (new_val = NULL).if {
-	result := TRUE
+        result := True
       }.elseif {list_current.old_seq_or_and = seq_or_and} then {
-	list_current.insert_before new_val
-	result := TRUE
+        list_current.insert_before new_val
+        result := True
       } else {
-	value ?= new_val
+        value ?= new_val
       }
     } else {
       //
@@ -79,9 +76,9 @@ Public
   //
 
   - genere <-
-  ( + idf:STRING_ALIAS
-
-    idf := ALIASER_LOCAL.write Self
+  ( + idf:String_alias
+        
+    idf := Aliaser_local.write self
 
     (quiet_generation).if_false {
       (local.is_result).if {
@@ -91,7 +88,7 @@ Public
         output.append idf
       }
       //
-      ((value.static_type.raw = TYPE_NULL) && {variable.type.raw.is_block}).if {
+      ((value.static_type.raw = Type_null) && {variable.type.raw.is_block}).if {
         output.append ".__id=0"
       } else {
         output.add_last '='
@@ -101,9 +98,9 @@ Public
   )
   
   - genere_first_result <-
-  ( + idf:STRING_ALIAS
+  ( + idf:String_alias
 
-    idf := ALIASER_LOCAL.write Self
+    idf := Aliaser_local.write self
     (local.is_result).if {
       output.add_last '*'
     }
@@ -113,9 +110,9 @@ Public
   )
   
   - genere_argument_result <-
-  ( + idf:STRING_ALIAS
+  ( + idf:String_alias
 
-    idf := ALIASER_LOCAL.write Self
+    idf := Aliaser_local.write self
     output.add_last '&'
     output.append idf
   )

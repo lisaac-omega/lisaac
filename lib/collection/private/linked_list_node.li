@@ -1,30 +1,29 @@
 Header
-  + name := LINKED_LIST_NODE V;
-  /*
+  + name := Linked_list_node V
+/*
   To implement LINKED_LIST(V).
   */
-
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
   + item:V
 
-  + previous:LINKED_LIST_NODE V
+  + previous:Linked_list_node V
 
-  + next:LINKED_LIST_NODE V
+  + next:Linked_list_node V
 
-LINKED_LIST
+Linked_list
 
-  - create i:V previous p:LINKED_LIST_NODE V next n:LINKED_LIST_NODE V :SELF<-
-  ( + result:SELF
+  - create i:V previous p:Linked_list_node V next n:Linked_list_node V :Self<-
+  ( + result:Self
     result := clone
     result.make i previous p next n
     result
   )
 
-  - make i:V previous p:LINKED_LIST_NODE V next n:LINKED_LIST_NODE V <-
+  - make i:V previous p:Linked_list_node V next n:Linked_list_node V <-
   (
     item := i
     previous := p
@@ -36,7 +35,7 @@ LINKED_LIST
     +? {next = n}
   ]
 
-LINKED_LIST,LINKED_LIST_NODE
+Linked_list,Linked_list_node
 
   - set_item i:V <-
   (
@@ -46,7 +45,7 @@ LINKED_LIST,LINKED_LIST_NODE
     +? {item = i}
   ]
 
-  - set_next n:LINKED_LIST_NODE V <-
+  - set_next n:Linked_list_node V <-
   (
     next := n
   )
@@ -55,16 +54,16 @@ LINKED_LIST,LINKED_LIST_NODE
   ]
 
   - set_all_with v:V <-
-  ( + lnk:SELF
+  ( + lnk:Self
 
-    lnk := Self
+    lnk := self
     {lnk = NULL}.until_do {
       lnk.set_item v
       lnk := lnk.next
     }
   )
 
-  - set_previous p:LINKED_LIST_NODE V <-
+  - set_previous p:Linked_list_node V <-
   (
     previous := p
   )

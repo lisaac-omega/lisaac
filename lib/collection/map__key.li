@@ -1,27 +1,27 @@
-Header  
-  + name := MAP V KEY K;
-  /*
+Header
+  + name := Map V Key K
+/*
    Associative memory. Stores key–value pairs, using K as keys and V as mapped values. */
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
 
   // Counting:
 
-  - count:INTEGER <-
+  - count:Int <-
   // Actual `count' of key-values pairs.
   (
     abstract
     0
   )
 
-  - is_empty:BOOLEAN <- count = 0
+  - is_empty:Boolean <- count = 0
   // Is it empty?
 
   // Basic access:
 
-  - has k:K :BOOLEAN <-
+  - has k:K :Boolean <-
   // Is there a value currently associated with key `k'?
   // See also `fast_has', `at'.
   [ /* BSBS Old; */
@@ -29,7 +29,7 @@ Public
   ]
   (
     abstract
-    FALSE
+    False
   )
 
   - value_at k:K :V <-
@@ -62,7 +62,7 @@ Public
     +? {(has k) ->> {Result = value_at k}}
   ]
 
-  - fast_has k:K :BOOLEAN <-
+  - fast_has k:K :Boolean <-
   // Is there a value currently associated with key `k'?
   // Using basic `=' for comparison.
   // See also `has', `at', `fast_at'.
@@ -71,7 +71,7 @@ Public
   ]
   (
     abstract
-    FALSE
+    False
   )
 
   - fast_at k:K :V <-
@@ -136,10 +136,10 @@ Public
 
   // Looking and searching some value:
   
-  - occurrences v:V :INTEGER <-
+  - occurrences v:V :Int <-
   // Number of occurrences using `is_equal' for comparison.
   // See also `fast_occurrences', `fast_has', `has'.
-  ( + i,result:INTEGER
+  ( + i,result:Int
     i := 1
     {i > count}.until_do {
       (safe_equal (v, at i)).if {
@@ -153,10 +153,10 @@ Public
     +? {Result >= 0}
   ]
   
-  - fast_occurrences v:V :INTEGER <-
+  - fast_occurrences v:V :Int <-
   // Number of occurrences using basic `=' for comparison.
   // See also `occurrences', `fast_has', `has'.
-  ( + result,i:INTEGER
+  ( + result,i:Int
 
     i := 1
     {i > count}.until_do {
@@ -177,7 +177,7 @@ Public
   [ /* BSBS Old; */
     -? {occurrences v = 1}
   ]
-  ( + i:INTEGER
+  ( + i:Int
     i := 1
     {safe_equal (v, at i)}.until_do {
       i := i + 1
@@ -194,7 +194,7 @@ Public
   [ /* BSBS Old; */
     -? {fast_occurrences v = 1}
   ]
-  ( + i:INTEGER
+  ( + i:Int
 
     i := 1
     {v = at i}.until_do {
@@ -261,7 +261,7 @@ Public
     +? {capacity <= Old capacity}
   ]
 
-  - capacity:INTEGER <-
+  - capacity:Int <-
   // Approximation of the actual internal storage `capacity'.
   // The `capacity' will grow automatically when needed
   // (i.e. `capacity' is not a limit for the number of values stored).
@@ -281,7 +281,7 @@ Public
     result
   )
 
-  - key_map_in buffer:COLLECTION(K) <-
+  - key_map_in buffer:Collection(K) <-
   // Append in `buffer', all available keys (this may be useful to
   // speed up the traversal).
   // See also `item_map_in'.
@@ -291,7 +291,7 @@ Public
   )
   [ ? {buffer.count = count + Old buffer.count} ]
 
-  - item_map_in buffer:COLLECTION(V) <-
+  - item_map_in buffer:Collection(V) <-
   // Append in `buffer', all available items (this may be useful to
   // speed up the traversal).
   // See also `key_map_in'.
@@ -303,7 +303,7 @@ Public
 
   // Comparaison.  
   
-  - copy other:SELF <-
+  - copy other:Self <-
   // Reinitialize by copying all associations of `other'.
   (
     not_yet_implemented //ici !!!
@@ -322,8 +322,8 @@ Public
     abstract
   )
 
-  - foreach_key action:{K; } until test:{K; BOOLEAN} <-
-  ( + i:INTEGER
+  - foreach_key action:{K; } until test:{K; Boolean} <-
+  ( + i:Int
     + k:K
     i := lower
     {(i > upper) || {test.value (k := key i)}}.until_do {
@@ -332,8 +332,8 @@ Public
     }
   )
 
-  - foreach_key action:{K; } while test:{K; BOOLEAN} <-
-  ( + i:INTEGER
+  - foreach_key action:{K; } while test:{K; Boolean} <-
+  ( + i:Int
     + k:K
     i := lower
     {(i <= upper) && {test.value (k := key i)}}.while_do {
@@ -344,13 +344,13 @@ Public
 
   - foreach_value action:{V; } <-
   (
-    lower.to upper do { i:INTEGER
+    lower.to upper do { i:Int
       action.value (at i)
     }
   )
 
-  - foreach_value action:{V; } until test:{V; BOOLEAN} <-
-  ( + i:INTEGER
+  - foreach_value action:{V; } until test:{V; Boolean} <-
+  ( + i:Int
     + v:V
     i := lower
     {(i > upper) || {test.value (v := at i)}}.until_do {
@@ -359,8 +359,8 @@ Public
     }
   )
 
-  - foreach_value action:{V; } while test:{V; BOOLEAN} <-
-  ( + i:INTEGER
+  - foreach_value action:{V; } while test:{V; Boolean} <-
+  ( + i:Int
     + v:V
     i := lower
     {(i <= upper) && {test.value (v := at i)}}.while_do {
@@ -369,15 +369,15 @@ Public
     }
   )
 
-  - for_all test:{(V,K); } :BOOLEAN <-
+  - for_all test:{(V,K); } :Boolean <-
   // Do all (V, K) associations satisfy `test'?
   // See also `do_all', `exist'.
-  ( + i:INTEGER
+  ( + i:Int
     + v:V
     + k:K
-    + result:BOOLEAN
+    + result:Boolean
 
-    result := TRUE
+    result := True
     i := lower
     {(! result) || {i > upper}}.until_do {
       v := at i
@@ -388,13 +388,13 @@ Public
     result
   )
 
-  - exists test:{(V,K); } :BOOLEAN <-
+  - exists test:{(V,K); } :Boolean <-
   // Does at least one (V, K) association satisfy `test'?
   // See also `for_all', `do_all'.
-  ( + i:INTEGER
+  ( + i:Int
     + v:V
     + k:K
-    + result:BOOLEAN
+    + result:Boolean
 
     i := lower
     {result || {i > upper}}.until_do {
@@ -426,8 +426,8 @@ Public
 
   // Creation.
 
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
 
     result := clone
     result.make
@@ -444,16 +444,16 @@ Public
   ]
 
 
-  - key_safe_equal k1:K with k2:K :BOOLEAN <-
+  - key_safe_equal k1:K with k2:K :Boolean <-
   // Because keys are never NULL, we do not rely on the SAFE_EQUAL class.
   [ /* BSBS Old; */
     -? {k1 != NULL}
     -? {k2 != NULL}
   ]
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     (k1 = k2).if {
-      result := TRUE
+      result := True
     }.elseif {k1.dynamic_type = k2.dynamic_type} then {
       result := k1 == k2
     }

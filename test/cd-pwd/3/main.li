@@ -1,29 +1,27 @@
 Header
-  
-  + name := MAIN;
- 
+  + name := Main
 Public
   - main <-
-  ( + p1,p2:STRING_ALIAS
-    p1 := ENVIRONMENT.pwd
-    TEST.check (ENVIRONMENT.chdir "..") integer 0
-    p2 := ENVIRONMENT.pwd
+  ( + p1,p2:String_alias
+    p1 := Environment.pwd
+    Test.check (Environment.chdir "..") integer 0
+    p2 := Environment.pwd
     (p2.has_suffix "test/").if {
-      TEST.check (ENVIRONMENT.chdir "cd-pwd") integer 0
-      TEST.check (ENVIRONMENT.chdir "3") integer 0
-      p1 := ENVIRONMENT.pwd
+      Test.check (Environment.chdir "cd-pwd") integer 0
+      Test.check (Environment.chdir "3") integer 0
+      p1 := Environment.pwd
     }.elseif {p2.has_suffix "cd-pwd/"} then {
-      TEST.check (ENVIRONMENT.chdir "3") integer 0
+      Test.check (Environment.chdir "3") integer 0
     }.elseif {p2.has_suffix "lisaac/"} then {
-      TEST.check (ENVIRONMENT.chdir "test") integer 0
-      TEST.check (ENVIRONMENT.chdir "cd-pwd") integer 0
-      TEST.check (ENVIRONMENT.chdir "3") integer 0
-      p1 := ENVIRONMENT.pwd
+      Test.check (Environment.chdir "test") integer 0
+      Test.check (Environment.chdir "cd-pwd") integer 0
+      Test.check (Environment.chdir "3") integer 0
+      p1 := Environment.pwd
     } else {
-      UTILS.crash_with_message (p1 + " " + p2)
+      Utils.crash_with_message (p1 + " " + p2)
     }
-    TEST.check p1 string (ENVIRONMENT.pwd)
-    TEST.check (ENVIRONMENT.chdir "..") integer 0
-    TEST.check (ENVIRONMENT.chdir "..") integer 0
-    TEST.check (ENVIRONMENT.pwd.has_suffix "test/")
+    Test.check p1 string (Environment.pwd)
+    Test.check (Environment.chdir "..") integer 0
+    Test.check (Environment.chdir "..") integer 0
+    Test.check (Environment.pwd.has_suffix "test/")
   )

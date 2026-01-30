@@ -1,5 +1,5 @@
 --WARNING----------
 Extra comma.
-Line 13 column 22 in ARGV2(.../test/compiler/argv2/argv2.li):
+Line 14 column 22 in Argv2(.../test/compiler/argv2/argv2.li):
       "snake", "snake",
                       ^

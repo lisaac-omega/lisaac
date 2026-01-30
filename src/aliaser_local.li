@@ -1,34 +1,32 @@
 Header
-
-  + name      := ALIASER_LOCAL;
-
+  + name := Aliaser_local
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
-ALIASER_LOCAL,LIST
+Aliaser_local,List
 
-  - free_context:ARRAY LOCAL := ARRAY LOCAL.create_with_capacity 64
+  - free_context:Array Local := Array Local.create_with_capacity 64
 
-  - top_context:INTEGER
+  - top_context:Int
 
-  - var_size:ARRAY (ARRAY LOCAL) :=
-  ( + result:ARRAY (ARRAY LOCAL)
+  - var_size:Array (Array Local) :=
+  ( + result:Array (Array Local)
 
-    result := ARRAY (ARRAY LOCAL).create_with_capacity 4
-    0.to 3 do { j:INTEGER
-      result.add_last (ARRAY LOCAL.create_with_capacity 32)
+    result := Array (Array Local).create_with_capacity 4
+    0.to 3 do { j:Int
+      result.add_last (Array Local.create_with_capacity 32)
     }
     result
   )
 
 Public
 
-  - is_on:BOOLEAN := TRUE
+  - is_on:Boolean := True
 
   - reset <-
   (
-    (var_size.lower).to (var_size.upper) do { i:INTEGER
+    (var_size.lower).to (var_size.upper) do { i:Int
       var_size.at i.clear
     }
     free_context.clear
@@ -36,9 +34,9 @@ Public
     current_list_level := 0
   )
 
-  - write wr:WRITE_LOCAL :STRING_ALIAS <-
-  ( + loc,loc2:LOCAL
-    + result:STRING_ALIAS
+  - write wr:Write_local :String_alias <-
+  ( + loc,loc2:Local
+    + result:String_alias
 
     loc  := wr.local
     ((is_on) && {loc.style = '+'}).if {
@@ -66,9 +64,9 @@ Public
     result
   )
 
-  - read rd:READ_LOCAL :STRING_ALIAS <-
-  ( + loc,loc2:LOCAL
-    + result:STRING_ALIAS
+  - read rd:Read_local :String_alias <-
+  ( + loc,loc2:Local
+    + result:String_alias
 
     loc := rd.local
     loc2 := loc.my_alias
@@ -82,9 +80,9 @@ Public
     result
   )
 
-  - push p:PUSH :STRING_ALIAS <-
-  ( + loc,loc2:LOCAL
-    + result:STRING_ALIAS
+  - push p:Push :String_alias <-
+  ( + loc,loc2:Local
+    + result:String_alias
 
     loc  := p.context
     (is_on).if {
@@ -120,10 +118,10 @@ Public
     result
   )
 
-  - add_var_size v:LOCAL <-
-  ( + tab:ARRAY LOCAL
-    + j:INTEGER
-    + t:TYPE_FULL
+  - add_var_size v:Local <-
+  ( + tab:Array Local
+    + j:Int
+    + t:Type_full
 
     //? {(v.style = '+') || {v.style = 'R'}}
 
@@ -143,36 +141,36 @@ Public
       tab.add_last v
     } else {
       {(j <= tab.upper) && {tab.at j != v} && {tab.at j.type = t}}.while_do {
-	j := j + 1
+        j := j + 1
       }
       ((j > tab.upper) || {tab.at j != v}).if {
-	tab.at j add v
+        tab.at j add v
       }
     }
   )
 
 Private
 
-  - search_alias v:LOCAL :LOCAL <-
-  ( + tab:ARRAY LOCAL
-    + j:INTEGER
-    + t:TYPE_FULL
-    + result:LOCAL
-    + is_void:BOOLEAN
+  - search_alias v:Local :Local <-
+  ( + tab:Array Local
+    + j:Int
+    + t:Type_full
+    + result:Local
+    + is_void:Boolean
 
     (v.name.first = 'R').if {
       result := v
     } else {
       t := v.type
-      is_void := (! t.is_expanded) && {! t.is_strict} && {! t.raw.is_block}
+      is_void := (! t.is_flat) && {! t.is_exact} && {! t.raw.is_block}
       tab := var_size.at (v.type.size)
       j := tab.lower
       {
         (j <= tab.upper) && {
           (
             (tab.at j.type != t) && {
-              (! is_void) || {tab.at j.type.is_expanded} ||
-              {tab.at j.type.is_strict} || {tab.at j.type.raw.is_block}
+              (! is_void) || {tab.at j.type.is_flat} ||
+              {tab.at j.type.is_exact} || {tab.at j.type.raw.is_block}
             }
           ) ||
           {tab.at j.ensure_count != 0} ||

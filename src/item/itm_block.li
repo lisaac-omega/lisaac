@@ -1,37 +1,34 @@
 Header
-
-  + name    := ITM_BLOCK;
-
-  /*Instruction block
+  + name := Itm_block
+/*Instruction block
 
   // BSBS: Memory : Faire la version sans argument (très courant)
   */
-  
 Inherit
 
-  - parent_itm_code:ITM_CODE := ITM_CODE
+  - parent_itm_code:Itm_code := Itm_code
 
 Public
 
-  - position:POSITION <- list.position
+  - position:Position <- list.position
 
-  + list:ITM_LIST
+  + list:Itm_list
 
-  + argument:ITM_ARGUMENT
+  + argument:Itm_argument
 
   //
   // Creation.
   //
 
-  - create lst:ITM_LIST argument arg:ITM_ARGUMENT :SELF <-
-  ( + result:SELF
+  - create lst:Itm_list argument arg:Itm_argument :Self <-
+  ( + result:Self
 
     result := clone
     result.make lst argument arg
     result
   )
 
-  - make lst:ITM_LIST argument arg:ITM_ARGUMENT <-
+  - make lst:Itm_list argument arg:Itm_argument <-
   (
     list     := lst
     argument := arg
@@ -41,26 +38,26 @@ Public
   // Runnable.
   //
 
-  - to_run_expr:EXPR <-
-  ( + tb:PROFIL_BLOCK
-    + t:TYPE_FULL
-    + loc,my_self:LOCAL
-    + val,rec:EXPR
-    + wrt:WRITE
+  - to_run_expr:Expr <-
+  ( + tb:Profil_block
+    + t:Type_full
+    + loc,my_self:Local
+    + val,rec:Expr
+    + wrt:Write
 
-    tb := PROFIL_BLOCK.create Self
+    tb := Profil_block.create self
     t := tb.default
     //
     loc := t.get_temporary position
     //"ITM_BLOCK : ".print; loc.intern_name.println
     // tmp.id := id_block
     rec := loc.read position
-    val := PROTOTYPE_CST.create position type t
+    val := Prototype_cst.create position type t
     wrt := tb.slot_value.write position with rec value val
     list_current.add_last wrt
-    // tmp.self := Self
+    // tmp.self := self
     rec := loc.read position
-    my_self := lookup "Self"
+    my_self := lookup "self"    
     val := my_self.read position
     wrt := tb.slot_self.write position with rec value val
     list_current.add_last wrt
@@ -74,6 +71,6 @@ Public
 
   - print <-
   (
-    "{BLOCK}".print
+    "{Block}".print
   )
 

@@ -1,35 +1,34 @@
 Header
-  + name := Expanded UREAL_24_8;
-  /*signed 24.8 fixed float.*/
+  + name := Flat Ureal_24_8
+/*signed 24.8 fixed float.*/
   - type    := `signed long`;
   - default := (0.to_raw_ureal_24_8);
-  - export  := REAL_32, REAL_64;
-
+  - export  := Real32, Real64;
 Insert
-  - parent_unsigned_fixed_real:UNSIGNED_FIXED_REAL := UNSIGNED_FIXED_REAL
+  - parent_unsigned_fixed_real:Unsigned_fixed_real := Unsigned_fixed_real
 
-SELF
-  - shift_bits:INTEGER <- 8
+Self
+  - shift_bits:Int <- 8
 
 Public
 
   // Range.
 
-  - maximum:UINTEGER_64 <- 0FF_FFFFh.to_raw_uinteger_64
+  - maximum:Uint64 <- 0FF_FFFFh.to_raw_uint64
 
   // Convertion format with test.
 
-  - to_real_24_8:REAL_24_8 <- Self
+  - to_real_24_8:Real_24_8 <- self
 
   // Convertion
 
-  - append_in b:STRING_BUFFER <-
-  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  - append_in b:String_buffer <-
+  // Append in the `b' the equivalent of `to_string'. No new String_buffer
   // creation during the process.
-  ( + val:INTEGER
-    + old_count,new_count:INTEGER
+  ( + val:Int
+    + old_count,new_count:Int
     ? {b!=NULL}
-    val := to_raw_integer
+    val := to_raw_int
     (val < 0).if {
       val := - val
       b.extend '-'
@@ -38,7 +37,7 @@ Public
     b.extend '.'
     old_count:=b.count
     //     1/256 = 0.00390625 => 8 digit.
-    (((val & 255).to_uinteger_64 * 100000000)>>8).to_integer.append_in b
+    (((val & 255).to_uint64 * 100000000)>>8).to_int.append_in b
     new_count:=old_count+8
     {b.count!=new_count}.while_do {
       b.insert '0' to old_count

@@ -1,62 +1,61 @@
 Header
-  + name    := Expanded POINTER;
-  /*References to objects (POINTER is mapped as C type 'void *')*/
+  + name := Flat Pointer
+/*References to objects (Pointer is mapped as C type 'void *')*/
   - type    := `void *`;
-  - default := `NULL`:POINTER;
-  - export  := UINTEGER_CPU;
-
+  - default := `NULL`:Pointer;
+  - export  := Uint_cpu;
 Insert
-  - parent_unsigned_integer:UNSIGNED_INTEGER := UNSIGNED_INTEGER
+  - parent_unsigned_integer:Unsigned_integer := Unsigned_integer
 
 Public
 
-  - in_range low:SELF to up:SELF :BOOLEAN <- TRUE; // BSBS: A revoir.
+  - in_range low:Self to up:Self :Boolean <- True; // BSBS: A revoir.
 
-  - object_size:INTEGER <- `sizeof(void *)`:INTEGER
+  - object_size:Int <- `sizeof(void *)`:Int
 
-  - is_null:BOOLEAN <- (Self = NULL)
-  // Is the external POINTER a NULL pointer ?
+  - is_null:Boolean <- (self = NULL)
+  // Is the external Pointer a NULL pointer ?
 
-  - is_not_null:BOOLEAN <- ! is_null
-  // Is the external POINTER a non-NULL pointer ?
+  - is_not_null:Boolean <- ! is_null
+  // Is the external Pointer a non-NULL pointer ?
 
 
-  - to_native_array:NATIVE_ARRAY(UINTEGER_8) <- CAST SELF TO (NATIVE_ARRAY UINTEGER_8).on Self
+  - to_c_array:C_array(Uint8) <- Cast Self To (C_array Uint8).on self
   // Convert `pointer' into 'native_array' type.
 
-//  - to_uinteger_32:UINTEGER_32 <- `(unsigned int)@Self`:UINTEGER_32
+//  - to_uint32:Uint32 <- `(unsigned int)@self`:Uint32
   // convert `pointer' into uinteger type (adress of the pointer)
 
-//  - from_uinteger p:UINTEGER_32 :POINTER <- CAST UINTEGER_32 TO POINTER.on p
-  // create POINTER from an adress
+//  - from_uinteger p:Uint32 :Pointer <- CAST Uint32 TO Pointer.on p
+  // create Pointer from an adress
 
-//  - to_integer:INTEGER <- to_raw_integer
+//  - to_int:Int <- to_raw_int
 
   // Convertion format without test.
 
-  - to_raw_uinteger_cpu:UINTEGER_CPU <- CAST SELF TO UINTEGER_CPU.on Self
+  - to_raw_uinteger_cpu:Uint_cpu <- Cast Self To Uint_cpu.on self
 
-  - to_raw_integer:INTEGER           <- CAST UINTEGER_CPU TO INTEGER.on to_raw_uinteger_cpu
+  - to_raw_int:Int           <- Cast Uint_cpu To Int.on to_raw_uinteger_cpu
 
-  - to_raw_uinteger:UINTEGER         <- CAST UINTEGER_CPU TO UINTEGER.on to_raw_uinteger_cpu
+  - to_raw_uinteger:Uint         <- Cast Uint_cpu To Uint.on to_raw_uinteger_cpu
 
-  - to_raw_uinteger_8:UINTEGER_8     <- CAST UINTEGER_CPU TO UINTEGER_8.on to_raw_uinteger_cpu
+  - to_raw_uint8:Uint8     <- Cast Uint_cpu To Uint8.on to_raw_uinteger_cpu
 
-  - to_raw_uinteger_16:UINTEGER_16   <- CAST UINTEGER_CPU TO UINTEGER_16.on to_raw_uinteger_cpu
+  - to_raw_uint16:Uint16   <- Cast Uint_cpu To Uint16.on to_raw_uinteger_cpu
 
-  - to_raw_uinteger_32:UINTEGER_32   <- CAST UINTEGER_CPU TO UINTEGER_32.on to_raw_uinteger_cpu
+  - to_raw_uint32:Uint32   <- Cast Uint_cpu To Uint32.on to_raw_uinteger_cpu
 
-  - to_raw_uinteger_64:UINTEGER_64   <- CAST UINTEGER_CPU TO UINTEGER_64.on to_raw_uinteger_cpu
+  - to_raw_uint64:Uint64   <- Cast Uint_cpu To Uint64.on to_raw_uinteger_cpu
 
-  - to_raw_integer_8:INTEGER_8       <- CAST UINTEGER_CPU TO INTEGER_8 .on to_raw_uinteger_cpu
+  - to_raw_int8:Int8       <- Cast Uint_cpu To Int8 .on to_raw_uinteger_cpu
 
-  - to_raw_integer_16:INTEGER_16     <- CAST UINTEGER_CPU TO INTEGER_16.on to_raw_uinteger_cpu
+  - to_raw_int16:Int16     <- Cast Uint_cpu To Int16.on to_raw_uinteger_cpu
 
-  - to_raw_integer_32:INTEGER_32     <- CAST UINTEGER_CPU TO INTEGER_32.on to_raw_uinteger_cpu
+  - to_raw_int32:Int32     <- Cast Uint_cpu To Int32.on to_raw_uinteger_cpu
 
-  - to_raw_integer_64:INTEGER_64     <- CAST UINTEGER_CPU TO INTEGER_64.on to_raw_uinteger_cpu
+  - to_raw_int64:Int64     <- Cast Uint_cpu To Int64.on to_raw_uinteger_cpu
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     append_in b base 16
   )

@@ -1,23 +1,22 @@
-Header  
-  + name := P3D;
-  
+Header
+  + name := P3d
 Inherit  
-  + parent_o3d:Expanded O3D
+  + parent_o3d:Flat O3d
   
 Private
   
-  - free_list:ARRAY P3D := ARRAY P3D.create_with_capacity 16
+  - free_list:Array P3d := Array P3d.create_with_capacity 16
   
 Public
   
-  - pen_gl:PEN_GL <- PAPER.wins.first.pen.gl
+  - pen_gl:Pen_gl <- Paper.wins.first.pen.gl
   
-  + obj:O3D_MODEL
-  + col:COLOR
-  + img_id:INTEGER
+  + obj:O3d_model
+  + col:Color
+  + img_id:Int
         
-  - new (m:O3D_MODEL) :P3D <-
-  ( + result:P3D
+  - new (m:O3d_model) :P3d <-
+  ( + result:P3d
     (free_list.is_empty).if {
       result := clone
       result.make m
@@ -28,62 +27,62 @@ Public
     result
   )
   
-  - make m:O3D_MODEL <-
-  ( model := MAT4X4.create
-    col := COLOR.rgb (255,0,0)
+  - make m:O3d_model <-
+  ( model := Mat4x4.create
+    col := Color.rgb (255,0,0)
     img_id := -1
     reset m
   )
   
-  - reset m:O3D_MODEL <-
+  - reset m:O3d_model <-
   (    
     model.identity
     img_id := -1
     obj := m
   )
   
-  - free <- free_list.add_last Self
+  - free <- free_list.add_last self
   
 Public
   
-  - align_down:SELF     <- up 0.5
-  - align_up:SELF       <- down 0.5
-  - align_right:SELF    <- left 0.5
-  - align_left:SELF     <- right 0.5
-  - align_forward:SELF  <- backward 0.5
-  - align_backward:SELF <- forward 0.5
+  - align_down:Self     <- up 0.5
+  - align_up:Self       <- down 0.5
+  - align_right:Self    <- left 0.5
+  - align_left:Self     <- right 0.5
+  - align_forward:Self  <- backward 0.5
+  - align_backward:Self <- forward 0.5
   
-  - Self:SELF '+' other:O3D :O3D <-
-  ( + result:L3D
-    + r3d:L3D
+  - self:Self '+' other:O3d :O3d <-
+  ( + result:L3d
+    + r3d:L3d
     r3d ?= other
     (r3d != NULL).if {
       r3d.apply_model
-      r3d.list.add_last Self
+      r3d.list.add_last self
       result := r3d
     } else {
-      result := L3D.create Self and other
+      result := L3d.create self and other
     }
     result
   )
         
-  - Self:SELF '<>' other:O3D :O3D <-
+  - self:Self '<>' other:O3d :O3d <-
   (
     other.translate (model.extract_translate)
-    Self + other
+    self + other
   )
  
   // Draw
   
-  - color c:COLOR :SELF <- ( col := c; Self)
+  - color c:Color :Self <- ( col := c; self)
   
-  - img id:INTEGER :SELF <- ( img_id := id; Self)
+  - img id:Int :Self <- ( img_id := id; self)
   
-O3D
+O3d
   
   - draw_intern <-
-  ( + call:PEN_CALL
-    call := PEN_CALL_3D.create (col,img_id) start (obj.lower) count ((obj.upper-obj.lower+1)/3) model model
+  ( + call:Pen_call
+    call := Pen_call_3d.create (col,img_id) start (obj.lower) count ((obj.upper-obj.lower+1)/3) model model
     pen_gl.calls.add_last call
     free
   )
@@ -92,70 +91,70 @@ Public
    
   // Primitives
   
-  - square:P3D   <- new (PEN3D.square)
-  - cube:P3D     <- new (PEN3D.cube)
-  - cylinder:P3D <- new (PEN3D.cylinder)
-  - cone:P3D     <- new (PEN3D.cone)
-  - sphere:P3D   <- new (PEN3D.sphere)
-  - tri_prism:P3D <- new (PEN3D.tri_prism)
+  - square:P3d   <- new (Pen3d.square)
+  - cube:P3d     <- new (Pen3d.cube)
+  - cylinder:P3d <- new (Pen3d.cylinder)
+  - cone:P3d     <- new (Pen3d.cone)
+  - sphere:P3d   <- new (Pen3d.sphere)
+  - tri_prism:P3d <- new (Pen3d.tri_prism)
   
-  //- stl_at i:INTEGER :P3D <- create (PEN3D.stl_lower.at i,PEN3D.stl_upper.at i)
+  //- stl_at i:Int :P3D <- create (PEN3D.stl_lower.at i,PEN3D.stl_upper.at i)
   //- tetrahedron    (pyramid avec base triangle)
   //- square_pyramid (base carre)
   
   // Other
     
-  - torus radius:REAL_32 :P3D <-
+  - torus radius:Real32 :P3d <-
   [ ? {radius.in_range 0.0 to 1.0}; ]
-  ( + result:SELF
-    + low:INTEGER
+  ( + result:Self
+    + low:Int
     result := clone
-    low := PEN3D.index.count
-    PEN3D.add_torus radius
-    result.make (low,PEN3D.index.upper); // count := sides * cs_sides * 2
+    low := Pen3d.index.count
+    Pen3d.add_torus radius
+    result.make (low,Pen3d.index.upper); // count := sides * cs_sides * 2
     result
   )
     
   // Free create
   
-  - begin:P3D <- create (PEN3D.index.count,PEN3D.vertex.count)
-  - end:P3D   <- ( upper := PEN3D.index.upper; Self)
+  - begin:P3d <- create (Pen3d.index.count,Pen3d.vertex.count)
+  - end:P3d   <- ( upper := Pen3d.index.upper; self)
   
-  - vertex (x,y,z:REAL_32) :P3D <-
-  ( PEN3D.add_vertex (x,y,z)
-    Self
+  - vertex (x,y,z:Real32) :P3d <-
+  ( Pen3d.add_vertex (x,y,z)
+    self
   )
   
-  - triangle (p0,p1,p2:UINTEGER_32) :P3D <-
-  ( PEN3D.add_triangle (p0+upper,p1+upper,p2+upper)
-    Self
+  - triangle (p0,p1,p2:Uint32) :P3d <-
+  ( Pen3d.add_triangle (p0+upper,p1+upper,p2+upper)
+    self
   )
   
-  - quad (p0,p1,p2,p3:UINTEGER_32) :P3D <-
-  ( PEN3D.add_quad (p0,p1,p2,p3)
-    Self
+  - quad (p0,p1,p2,p3:Uint32) :P3d <-
+  ( Pen3d.add_quad (p0,p1,p2,p3)
+    self
   )
 
-  - rotate_gx a:REAL_32 :SELF <-
+  - rotate_gx a:Real32 :Self <-
   (
     model.translate_direct (0,-obj.g.y,-obj.g.z)
     model.rotate_x a
     model.translate_direct (0,+obj.g.y,+obj.g.z)
-    Self
+    self
   )
   
-  - rotate_gy a:REAL_32 :SELF <-
+  - rotate_gy a:Real32 :Self <-
   (
     model.translate_direct (-obj.g.x,0,-obj.g.z)
     model.rotate_y a
     model.translate_direct (+obj.g.x,0,+obj.g.z)
-    Self
+    self
   )
   
-  - rotate_z a:REAL_32 :SELF <-
+  - rotate_z a:Real32 :Self <-
   (
     model.translate_direct (-obj.g.x,-obj.g.y,0)
     model.rotate_z a
     model.translate_direct (+obj.g.x,+obj.g.y,0)
-    Self
+    self
   )

@@ -1,15 +1,14 @@
-Header  
-  + name := MAIN;
-  
+Header
+  + name := Main
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Private  
   
-  + nsize:INTEGER
+  + nsize:Int
   
-  + linked_list:LINKED_LIST INTEGER
-  + array_block:ARRAY_BLOCK INTEGER
+  + linked_list:Linked_list Int
+  + array_block:Array_block Int
   
 Public
   - main <-
@@ -29,36 +28,36 @@ Private
 Private
   - new <-
   (
-    array_block := ARRAY_BLOCK INTEGER .new_tiny
-    linked_list := LINKED_LIST INTEGER .new
+    array_block := Array_block Int .new_tiny
+    linked_list := Linked_list Int .new
     idem
   )
   
 Private 
   - idem <-
-  ( + i:INTEGER
-    TEST.check (linked_list.lower) integer (array_block.lower)
-    TEST.check (linked_list.upper) integer (array_block.upper)
-    TEST.check (linked_list.count) integer (array_block.count)
+  ( + i:Int
+    Test.check (linked_list.lower) integer (array_block.lower)
+    Test.check (linked_list.upper) integer (array_block.upper)
+    Test.check (linked_list.count) integer (array_block.count)
     //
     linked_list.is_empty.if {
-      TEST.check (array_block.is_empty)
+      Test.check (array_block.is_empty)
     } else {
-      TEST.check (! array_block.is_empty)
+      Test.check (! array_block.is_empty)
     }
     //
     linked_list.is_empty.if_false {
-      TEST.check (linked_list.last) integer (array_block.last)
-      TEST.check (linked_list.first) integer (array_block.first)
+      Test.check (linked_list.last) integer (array_block.last)
+      Test.check (linked_list.first) integer (array_block.first)
     }
     i := 0
     {i <= linked_list.upper}.while_do {
-      TEST.check (linked_list.at i) integer (array_block.at i)
+      Test.check (linked_list.at i) integer (array_block.at i)
       i := i + 1
     }
   )
   
-  - add_last v:INTEGER <-
+  - add_last v:Int <-
   (
     array_block.add_last v
     linked_list.add_last v
@@ -72,7 +71,7 @@ Private
     idem
   )
   
-  - add_first v:INTEGER <-
+  - add_first v:Int <-
   (
     array_block.add_first v
     linked_list.add_first v
@@ -86,14 +85,14 @@ Private
     idem
   )
   
-  - remove idx:INTEGER <-
+  - remove idx:Int <-
   (
     array_block.remove idx
     linked_list.remove idx
     idem
   )
   
-  - add v:INTEGER to idx:INTEGER <-
+  - add v:Int to idx:Int <-
   (
     array_block.at idx add v
     linked_list.at idx add v
@@ -101,7 +100,7 @@ Private
   )
   
   - check_fair_bench <-
-  ( + n,tier,idx:INTEGER
+  ( + n,tier,idx:Int
     new
     tier := (nsize.max 3) / 3
     tier.times {

@@ -1,10 +1,8 @@
 Header
-  
-  + name := Expanded COLOR;
-  
+  + name := Flat Color
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 //Section Private
   
@@ -12,69 +10,69 @@ Inherit
   
 Mapping, Public
   
-  + rf:REAL_32
-  + gf:REAL_32
-  + bf:REAL_32
-  + af:REAL_32
+  + rf:Real32
+  + gf:Real32
+  + bf:Real32
+  + af:Real32
   
-  - ri:INTEGER <- (rf*255.0).to_integer
-  - gi:INTEGER <- (gf*255.0).to_integer
-  - bi:INTEGER <- (bf*255.0).to_integer
-  - ai:INTEGER <- (af*255.0).to_integer
+  - ri:Int <- (rf*255.0).to_int
+  - gi:Int <- (gf*255.0).to_int
+  - bi:Int <- (bf*255.0).to_int
+  - ai:Int <- (af*255.0).to_int
   
 Public
 
-  - black:COLOR  := rgb (   0,   0,   0)
-  - gray:COLOR   := rgb ( 80h, 80h, 80h)
-  - light_gray:COLOR := rgb (0D3h,0D3h,0D3h)
-  - white:COLOR  := rgb (0FFh,0FFh,0FFh)
+  - black:Color  := rgb (   0,   0,   0)
+  - gray:Color   := rgb ( 80h, 80h, 80h)
+  - light_gray:Color := rgb (0D3h,0D3h,0D3h)
+  - white:Color  := rgb (0FFh,0FFh,0FFh)
   
-  - red:COLOR    := rgb (0FFh,   0,   0)
-  - green:COLOR  := rgb (   0,0FFh,   0)
-  - blue:COLOR   := rgb (   0,   0,0FFh)
+  - red:Color    := rgb (0FFh,   0,   0)
+  - green:Color  := rgb (   0,0FFh,   0)
+  - blue:Color   := rgb (   0,   0,0FFh)
   
-  - cyan:COLOR   := rgb (   0,0FFh,0FFh)
-  - magenta:COLOR:= rgb (0FFh,   0,0FFh)
-  - yellow:COLOR := rgb (0FFh,0FFh,   0)
+  - cyan:Color   := rgb (   0,0FFh,0FFh)
+  - magenta:Color:= rgb (0FFh,   0,0FFh)
+  - yellow:Color := rgb (0FFh,0FFh,   0)
     
-  - is_black:BOOLEAN <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
+  - is_black:Boolean <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
   
-  - rgb (pr,pg,pb:UINTEGER_8) :SELF <- rgba (pr,pg,pb,255)
+  - rgb (pr,pg,pb:Uint8) :Self <- rgba (pr,pg,pb,255)
 
-  - rgbf (pr,pg,pb:REAL_32) :SELF <- rgbaf (pr,pg,pb,1.0)
+  - rgbf (pr,pg,pb:Real32) :Self <- rgbaf (pr,pg,pb,1.0)
   
-  - rgba (pr,pg,pb,pa:UINTEGER_8) :COLOR <-
+  - rgba (pr,pg,pb,pa:Uint8) :Color <-
   (
     rgbaf (
-      pr.to_real_32/255,pg.to_real_32/255,
-      pb.to_real_32/255,pa.to_real_32/255
+      pr.to_real32/255,pg.to_real32/255,
+      pb.to_real32/255,pa.to_real32/255
     )
   )
 
-  - rgbaf (pr,pg,pb,pa:REAL_32) :COLOR <-
-  ( + result:COLOR
-    stack.add_last COLOR
+  - rgbaf (pr,pg,pb,pa:Real32) :Color <-
+  ( + result:Color
+    stack.add_last Color
     result := stack.last
     result.make (pr,pg,pb,pa)
     result
   )
 
-  - make (pr,pg,pb,pa:REAL_32) <-
+  - make (pr,pg,pb,pa:Real32) <-
   (
     (rf,gf,bf,af) := (pr,pg,pb,pa)
   )
   
-  - set_a pa:UINTEGER_8 <- ( af := pa.to_real_32/255; )
+  - set_a pa:Uint8 <- ( af := pa.to_real32/255; )
 
-  - set_af pa:REAL_32 <- ( af := pa; )
+  - set_af pa:Real32 <- ( af := pa; )
   
   - premul_color <-
   ( 
     (rf,gf,bf) := (rf*af,gf*af,bf*af)
   )
 
-  - lerp_rgba c:SELF coef u:REAL_32 <-
-  ( + uu,uui:REAL_32
+  - lerp_rgba c:Self coef u:Real32 <-
+  ( + uu,uui:Real32
     
     uu  := u.clamp 0 and 1
     uui := 1.0 - uu
@@ -84,10 +82,10 @@ Public
     af := uui*af + uu*c.af
   )
 
-  - hsl (h,s,l:REAL_32) :COLOR <- hsla (h,s,l) alpha 255
+  - hsl (h,s,l:Real32) :Color <- hsla (h,s,l) alpha 255
   
-  - hsla (h,s,l:REAL_32) alpha pa:UINTEGER_8 :COLOR <- // BSBS: Calcul en entier
-  ( + m1,m2,ss,ll,hh,aa,rr,gg,bb:REAL_32
+  - hsla (h,s,l:Real32) alpha pa:Uint8 :Color <- // BSBS: Calcul en entier
+  ( + m1,m2,ss,ll,hh,aa,rr,gg,bb:Real32
     
     hh := h % 1
     (hh < 0).if { hh := hh + 1; }
@@ -102,11 +100,11 @@ Public
     rr := hue (hh + 1.0/3) with (m1,m2).clamp 0 to 1
     gg := hue  hh          with (m1,m2).clamp 0 to 1
     bb := hue (hh - 1.0/3) with (m1,m2).clamp 0 to 1
-    aa := pa.to_real_32 / 255
+    aa := pa.to_real32 / 255
     rgbaf (rr,gg,bb,aa)
   )
   
-  - mul_a c:REAL_32 <-
+  - mul_a c:Real32 <-
   (
     af := c * af
   )
@@ -121,8 +119,8 @@ Public
   
 Private
   
-  - hue hh:REAL_32 with (m1,m2:REAL_32) :REAL_32 <-
-  ( + h,result:REAL_32
+  - hue hh:Real32 with (m1,m2:Real32) :Real32 <-
+  ( + h,result:Real32
     (hh < 0).if   { h := hh + 1; }.elseif
     {hh > 1} then { h := hh - 1; } else {
       h := hh
@@ -141,7 +139,7 @@ Private
   
 Public
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b.append "rgb("
     ri.append_in b

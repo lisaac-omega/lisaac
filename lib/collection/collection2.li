@@ -1,63 +1,62 @@
 Header
-  + name := COLLECTION2 V;
-  /*
+  + name := Collection2 V
+/*
 Abstract definition of a 2 dimensional collection of elements of type E.
 The Lisaac Ω library provides two implementations of COLLECTION2:
 ARRAY2 and ARRAY2.
 All implementations have exactly the same behavior. Switching from one implementation to
 another only change the memory used and the execution time.
   */
-
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
   // Indexing:
 
-  - lower1:INTEGER <-
+  - lower1:Int <-
   // First Lower index bounds.
   (
     abstract
     0
   )
 
-  - lower2 :INTEGER <-
+  - lower2 :Int <-
   // Second Lower index bounds.
   (
     abstract
     0
   )
 
-  - line_minimum:INTEGER <- lower1
+  - line_minimum:Int <- lower1
   // Equivalent of `lower1'.
 
-  - column_minimum:INTEGER <- lower2
+  - column_minimum:Int <- lower2
   // Equivalent of `lower2'.
 
-  - upper1:INTEGER <-
+  - upper1:Int <-
   // First Upper index bounds.
   (
     abstract
     0
   )
 
-  - upper2 :INTEGER <-
+  - upper2 :Int <-
   // Second Upper index bounds.
   (
     abstract
     0
   )
 
-  - line_maximum:INTEGER <- upper1
+  - line_maximum:Int <- upper1
   // Equivalent of `upper1'.
 
-  - column_maximum:INTEGER <- upper2
+  - column_maximum:Int <- upper2
   // Equivalent of `upper2'.
 
   // Reading:
 
-  - at (line, column:INTEGER) :V <-
+  - at (line, column:Int) :V <-
   [ -? { valid_index (line,column) }; ]
   ( + result:V
     abstract
@@ -66,14 +65,14 @@ Public
 
   // Writing:
 
-  - at (line, column:INTEGER) put element:V<-
+  - at (line, column:Int) put element:V<-
   [ -? { valid_index (line,column) }; ]
   (
     abstract
   )
   [ +? { at (line,column) = element}; ]
 
-  - force element:V to (line, column:INTEGER) <-
+  - force element:V to (line, column:Int) <-
   // Put `element' at position (`line',`column'). Collection is
   // resized first when (`line',`column') is not inside current
   // bounds. New bounds are initialized with default values.
@@ -91,7 +90,7 @@ Public
 
   // Index validity:
 
-  - valid_line line:INTEGER :BOOLEAN <-
+  - valid_line line:Int :Boolean <-
   (
     (lower1 <= line) && { line <= upper1}
   )
@@ -99,12 +98,12 @@ Public
     +? { Result = ((lower1 <= line) && { line <= upper1 }) }
   ]
 
-  - valid_index1 line:INTEGER :BOOLEAN <-
+  - valid_index1 line:Int :Boolean <-
   (
     valid_line line
   )
 
-  - valid_column column:INTEGER :BOOLEAN <-
+  - valid_column column:Int :Boolean <-
   (
     (lower2 <= column) && {column <= upper2}
   )
@@ -112,12 +111,12 @@ Public
     +? { Result = ((lower2 <= column) && {column <= upper2}) }
   ]
 
-  - valid_index2 column:INTEGER :BOOLEAN <-
+  - valid_index2 column:Int :Boolean <-
   (
     valid_column column
   )
 
-  - valid_index (line, column:INTEGER) :BOOLEAN <-
+  - valid_index (line, column:Int) :Boolean <-
   (
     (lower1 <= line  ) && {line <= upper1  } &&
     {lower2 <= column} && {column <= upper2}
@@ -128,7 +127,7 @@ Public
 
   // Counting:
 
-  - count1:INTEGER <-
+  - count1:Int <-
   // Size of the first dimension.
   (
     abstract
@@ -138,10 +137,10 @@ Public
     +? { Result = upper1 - lower1 + 1 }
   ]
 
-  - line_count:INTEGER <- count1
+  - line_count:Int <- count1
   // Equivalent of `count1'.
 
-  - count2 :INTEGER <-
+  - count2 :Int <-
   // Size of the second dimension.
   (
     abstract
@@ -151,10 +150,10 @@ Public
     +? { Result = upper2 - lower2 + 1 }
   ]
 
-  - column_count :INTEGER <- count2
+  - column_count :Int <- count2
   // Equivalent of `count2'.
 
-  - count:INTEGER <-
+  - count:Int <-
   // Total number of elements.
   (
     abstract
@@ -164,7 +163,7 @@ Public
     +? { Result = line_count * column_count }
   ]
 
-  - swap (line1, column1:INTEGER) with (line2, column2:INTEGER) <-
+  - swap (line1, column1:Int) with (line2, column2:Int) <-
   // Swap the element at index (`line1',`column1') with the
   // the element at index (`line2',`column2').
   [
@@ -202,7 +201,7 @@ Public
 
   // Creating or initializing:
 
-  - from_collection2 model:COLLECTION2(V) <-
+  - from_collection2 model:Collection2(V) <-
   //  Uses `model' to initialize Current.
   [ -? { model != NULL }; ]
   (
@@ -213,7 +212,7 @@ Public
     +? { count2 = model.count2 }
   ]
 
-  - from_model model:COLLECTION(COLLECTION(V)) <-
+  - from_model model:Collection(Collection(V)) <-
   // The `model' is used to fill line by line Current.
   // Assume all sub-collections of `model' have the same
   // number of lines.
@@ -229,13 +228,13 @@ Public
     +? { count2 = model.first.count }
   ]
 
-  - copy_collection other:COLLECTION2(V) <-
+  - copy_collection other:Collection2(V) <-
   // Copy `other' to Current.
   // * See: `copy'.
   [
     -? { other != NULL }
   ]
-  ( + same:SELF
+  ( + same:Self
 
     same ?= other
     (same != NULL).if {
@@ -247,19 +246,19 @@ Public
 
   // Looking and comparison:
 
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   // Do all items have their type's default value?
   (
     abstract
-    FALSE
+    False
   )
 
-  - Self:SELF '==' other:E :BOOLEAN <-
+  - self:Self '==' other:E :Boolean <-
   // Do both collections have the same `lower1', `lower2', `upper1' and `upper2', and items?
   // The basic `=' is used for comparison of items.
   // See also `is_equal_map'.
-  ( + line, column:INTEGER
-    + result:BOOLEAN
+  ( + line, column:Int
+    + result:Boolean
 
     (
       (lower1 = other.lower1) &&
@@ -267,7 +266,7 @@ Public
       {lower2 = other.lower2} &&
       {upper2 = other.upper2}
     ).if {
-      result := TRUE
+      result := True
       line := upper1
       {(! result) || {line < lower1}}.until_do {
         column := upper2
@@ -281,19 +280,19 @@ Public
     result
   )
 
-  - is_equal_map (other:COLLECTION2(V)) :BOOLEAN <-
+  - is_equal_map (other:Collection2(V)) :Boolean <-
   // Do both collections have the same `lower1', `lower2', `upper1' and `upper2', and items?
   // Feature `is_equal' is used for comparison of items.
   // See also `is_equal'.
-  ( + line, column:INTEGER
-    + result:BOOLEAN
+  ( + line, column:Int
+    + result:Boolean
     (
       (lower1 = other.lower1) &&
       {upper1 = other.upper1} &&
       {lower2 = other.lower2} &&
       {upper2 = other.upper2}
     ).if {
-      result := TRUE
+      result := True
       line := upper1
       {(! result) || {line < lower1}}.until_do {
         column := upper2
@@ -309,7 +308,7 @@ Public
 
   // Miscellaneous features:
 
-  - occurrences elt:V :INTEGER <-
+  - occurrences elt:V :Int <-
   // Number of occurrences using `equal'.
   // See also `fast_occurrences' to chose the apropriate one.
   (
@@ -318,7 +317,7 @@ Public
   )
   [ +? { Result >= 0 }; ]
 
-  - fast_occurrences elt:V :INTEGER <-
+  - fast_occurrences elt:V :Int <-
   // Number of occurrences using `='.
   // See also `occurrences' to chose the apropriate one.
   (
@@ -327,19 +326,19 @@ Public
   )
   [ +? { Result >= 0 }; ]
 
-  - has x:V :BOOLEAN <-
+  - has x:V :Boolean <-
   // Search if a element x is in the array using `equal'.
   // See also `fast_has' to chose the apropriate one.
   (
     abstract
-    FALSE
+    False
   )
 
-  - fast_has x:V :BOOLEAN <-
+  - fast_has x:V :Boolean <-
   //  Search if a element x is in the array using `='.
   (
     abstract
-    FALSE
+    False
   )
 
   - replace_all old_value:V with new_value:V <-
@@ -366,7 +365,7 @@ Public
     +? { fast_occurrences old_value = 0 }
   ]
 
-  - sub_collection2 (line_min,column_min:INTEGER) to (line_max,column_max:INTEGER) :SELF <-
+  - sub_collection2 (line_min,column_min:Int) to (line_max,column_max:Int) :Self <-
   // Create a new object using selected area of `Current'.
   [
     -? { valid_index (line_min,column_min) }
@@ -380,15 +379,15 @@ Public
     +? { Result != NULL }
   ]
 
-  - set_area (line_min,column_min:INTEGER) to (line_max,column_max:INTEGER) with element:V <-
+  - set_area (line_min,column_min:Int) to (line_max,column_max:Int) with element:V <-
   // Set all the elements of the selected area rectangle with `element'.
   [
     -? { valid_index (line_min,column_min) }
     -? { valid_index (line_max,column_max) }
   ]
   (
-    line_min.to line_max do { line:INTEGER
-      column_min.to column_max do { column:INTEGER
+    line_min.to line_max do { line:Int
+      column_min.to column_max do { column:Int
         put element to (line,column)
       }
     }

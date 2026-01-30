@@ -1,50 +1,47 @@
 Header
-
-  + name    := Expanded TRUE;
-
-  /*TRUE object*/
+  + name := Flat True
+/*True object*/
 
   - type    := `char`;
-  - default := TRUE;
-
+  - default := True;
 Inherit
 
-  - inherit_boolean:BOOLEAN := BOOLEAN
+  - inherit_boolean:Boolean := Boolean
 
 Public
     
   // Conditional :
 
-  - if Self:SELF then tblk:{} else fblk:{} :BOOLEAN <-
+  - if self:Self then tblk:{} else fblk:{} :Boolean <-
   ( tblk.value
-    TRUE
+    True
   )
       
-  - if_true block:{} :BOOLEAN <- if block
+  - if_true block:{} :Boolean <- if block
  
-  - if_false block:{} :BOOLEAN <- TRUE
+  - if_false block:{} :Boolean <- True
 
-  - if true_block:{} else false_block:{} :BOOLEAN /* deprecated/obsolete */ <-
+  - if true_block:{} else false_block:{} :Boolean /* deprecated/obsolete */ <-
   (
     true_block.value
-    TRUE
+    True
   )
 
-  - if Self:SELF then tblk:{} :BOOLEAN <-
+  - if self:Self then tblk:{} :Boolean <-
   (
     tblk.value
-    TRUE
+    True
   )
 
-  - if true_block:{} :BOOLEAN /* deprecated/obsolete */ <-
+  - if true_block:{} :Boolean /* deprecated/obsolete */ <-
   (
     true_block.value
-    TRUE
+    True
   )
 
-  - elseif cond:{BOOLEAN} then block:{} :BOOLEAN <- TRUE
+  - elseif cond:{Boolean} then block:{} :Boolean <- True
 
-  - elseif cond:{BOOLEAN} then block:{} else block_else:{}
+  - elseif cond:{Boolean} then block:{} else block_else:{}
   
   - ok value_ok:E else block_or:{E} :E <- (value_ok)
  
@@ -54,31 +51,31 @@ Public
   
   // Binary operator :
 
-  - Self:SELF '||'  Left 10  other:{BOOLEAN}   :BOOLEAN <- TRUE;   // or else
+  - self:Self '||'  Left 10  other:{Boolean}   :Boolean <- True;   // or else
 
-  - Self:SELF '&&'  Left 20  other:{BOOLEAN}   :BOOLEAN <- other.value;  // and then
+  - self:Self '&&'  Left 20  other:{Boolean}   :Boolean <- other.value;  // and then
     
-  - Self:SELF '|'   Left 10  other:BOOLEAN :BOOLEAN <- TRUE;  // or
+  - self:Self '|'   Left 10  other:Boolean :Boolean <- True;  // or
 
-  - Self:SELF '&'   Left 20  other:BOOLEAN :BOOLEAN <- other; // and
+  - self:Self '&'   Left 20  other:Boolean :Boolean <- other; // and
 
-  - Self:SELF '^'  Left 10  other:BOOLEAN :BOOLEAN <- ! other
+  - self:Self '^'  Left 10  other:Boolean :Boolean <- ! other
 
-  - Self:SELF '->'  Right 25 other:BOOLEAN :BOOLEAN <- other
+  - self:Self '->'  Right 25 other:Boolean :Boolean <- other
 
-  - Self:SELF '->>' Right 25 other:{BOOLEAN}  :BOOLEAN <- other.value
+  - self:Self '->>' Right 25 other:{Boolean}  :Boolean <- other.value
 
-  - Self:SELF '=>' s:STRING :STRING
+  - self:Self '=>' s:String :String
   
-  //- (Self:SELF,true_value:{E}) '!!' false_value:{E} :E <- true_value.value
+  //- (self:Self,true_value:{E}) '!!' false_value:{E} :E <- true_value.value
 
-  //- (Self:SELF,true_value:E) '!>' false_value:E :E <- true_value
+  //- (self:Self,true_value:E) '!>' false_value:E :E <- true_value
   
-  - '!' Self:SELF :BOOLEAN <- FALSE
+  - '!' self:Self :Boolean <- False
 
-  - to_string:STRING_ALIAS <- "TRUE"
+  - to_string:String_alias <- "True"
 
-  - to_integer:INTEGER <- 1
+  - to_int:Int <- 1
 
-  - to_character:CHARACTER <- '1'
+  - to_character:Char <- '1'
 

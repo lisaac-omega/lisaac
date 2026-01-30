@@ -1,78 +1,77 @@
 Header
-  + name := I_NIL;
-  
+  + name := I_nil
 Inherit
-  + parent_inode:Expanded I_NODE
+  + parent_inode:Flat I_node
   
 Public
   
-  - stck:Expanded ARRAY I_NIL
+  - stck:Flat Array I_nil
 
-  - new:I_NIL <-
-  ( + result:I_NIL
-    (stck.is_empty).if { result := I_NIL.clone; } else { result := stck.pop; }
+  - new:I_nil <-
+  ( + result:I_nil
+    (stck.is_empty).if { result := I_nil.clone; } else { result := stck.pop; }
     result
   )
   
 Public
   
-  - type:TYPE <- NULL
+  - type:Type <- NULL
   
-  - error:INTEGER <- upper - lower + 1
+  - error:Int <- upper - lower + 1
     
-  - new l:INTEGER to u:INTEGER :I_NIL <- new.init (l,u)
+  - new l:Int to u:Int :I_nil <- new.init (l,u)
   
-  - copy:I_NODE <- new.init (lower,upper)
+  - copy:I_node <- new.init (lower,upper)
   
-  - init (l,u:INTEGER) :I_NIL <-
+  - init (l,u:Int) :I_nil <-
   (
     (lower,upper) := (l,u)
-    {IA.src.at upper = ' '}.while_do { upper := upper - 1; }
-    Self
+    {Ia.src.at upper = ' '}.while_do { upper := upper - 1; }
+    self
   )
   
-  - put_sty u:UINTEGER_16 slot s:SLOT <-
-  ( + m:UINTEGER_16
-    (IA.src.at lower.is_upper).if { m := STY.typ; } else { m := STY.non; }
+  - put_sty u:Uint16 slot s:Slot <-
+  ( + m:Uint16
+    (Ia.src.at lower.is_upper).if { m := Sty.typ; } else { m := Sty.non; }
     m := m | u
     (s = NULL).if {
-      m := m | STY.ul_red
+      m := m | Sty.ul_red
       msg_err += "Arg. #"
-      IA.arg_i.append_in msg_err
+      Ia.arg_i.append_in msg_err
       msg_err += ": \'"
-      msg_err.append (IA.src) from lower to upper
+      msg_err.append (Ia.src) from lower to upper
       msg_err += "\' not found. "
     } else {
-      m := m | STY.ul_orange
+      m := m | Sty.ul_orange
       msg_err += "New local `";
-      msg_err.append (IA.src) from lower to upper
+      msg_err.append (Ia.src) from lower to upper
       msg_err += "' of type "
-      s.type_arg (IA.arg_i).append_in msg_err
+      s.type_arg (Ia.arg_i).append_in msg_err
       msg_err += ". "
     }
-    STY.put m to lower in (IA.sty)
-    STY.put m to (upper+1) in (IA.sty)
-    IA.inc_arg_i
+    Sty.put m to lower in (Ia.sty)
+    Sty.put m to (upper+1) in (Ia.sty)
+    Ia.inc_arg_i
   )
   
-  - txt_in s:STRING_BUFFER <-
+  - txt_in s:String_buffer <-
   (
     s.add_last '\''
-    s.append (IA.src) from lower to upper
+    s.append (Ia.src) from lower to upper
     s.add_last '\''
   )
   
-  - rtxt_in s:STRING_BUFFER <-
+  - rtxt_in s:String_buffer <-
   (    
     txt_in s; s+="(I_NIL)"
   )
   
-  - size:INTEGER <- upper - lower + 1
-  - to_expr:EXPR <-
-  ( + result:ERR
-    result := ERR.new (STRING_BUFFER,ARRAY UINTEGER_16) exp (ARRAY EXPR) tmp FALSE
-    result.txt.append (IA.src) from lower to upper
+  - size:Int <- upper - lower + 1
+  - to_expr:Expr <-
+  ( + result:Err
+    result := Err.new (String_buffer,Array Uint16) exp (Array Expr) tmp False
+    result.txt.append (Ia.src) from lower to upper
     result    
   )
   
-  - free <- stck.add_last Self
+  - free <- stck.add_last self

@@ -1,41 +1,40 @@
 Header
 
-  + name    := FLOAT_MAP64;
+  + name    := Float_map64
 
-  /*Mapping for REAL_64.*/
-
+  /*Mapping for Real64.*/
 Inherit
 
-  - parent_float_map:FLOAT_MAP := FLOAT_MAP
+  - parent_float_map:Float_map := Float_map
 
 Mapping,Private
 
-  + map_64:UINTEGER_64
+  + map_64:Uint64
 
-REAL, REAL_32, REAL_64, REAL_80
+Real, Real32, Real64, Real80
 
-  - get_map f:SELF <-
+  - get_map f:Self <-
   ( `{ double f; uint64_t i=0; f = @f; memcpy(&i,&f,sizeof(double))`;
-    map_64 := `i`:UINTEGER_64
+    map_64 := `i`:Uint64
     `}`    
-    /*+ tab:NATIVE_ARRAY(SELF)
-    tab := CAST FLOAT_MAP64 TO (NATIVE_ARRAY SELF).on FLOAT_MAP64
+    /*+ tab:C_array(Self)
+    tab := CAST FLOAT_MAP64 TO (C_array Self).on FLOAT_MAP64
     `/* Bug GCC */`
     tab.at 0 put f*/
   )
 
 Public
   
-  - sign:BOOLEAN         <- (map_64 >> 63) = 0; // TRUE if positif, FALSE else.
+  - sign:Boolean         <- (map_64 >> 63) = 0; // True if positif, False else.
 
-  - exponent:UINTEGER_32 <- ((map_64 >> mantissa_bits) & 07_FFh).to_uinteger_32
+  - exponent:Uint32 <- ((map_64 >> mantissa_bits) & 07_FFh).to_uint32
 
-  - mantissa:UINTEGER_64 <- map_64 & ((1 << mantissa_bits)-1)
+  - mantissa:Uint64 <- map_64 & ((1 << mantissa_bits)-1)
 
 
   // Format.
 
-  - mantissa_bits:INTEGER_8 := 52
+  - mantissa_bits:Int8 := 52
 
-  - exponent_bits:INTEGER_8 := 11
+  - exponent_bits:Int8 := 11
 

@@ -1,0 +1,22 @@
+Header
+  + name := Flat Int16
+/*Signed 16 bits integer.*/
+  - type    := `signed short`;
+  - default := (0.to_raw_int16);
+  - export  := Int, Int64, Int32;
+Insert
+  - parent_signed_integer:Signed_integer := Signed_integer
+
+Public
+
+  - object_size:Int := 2
+
+  // Range
+
+  - maximum:Uint64 <- 32767.to_raw_uint64
+
+  - minimum:Int64 <- - 32768.to_raw_int64
+
+  // Conversion with test.
+
+  - to_int16:Int16 <- self

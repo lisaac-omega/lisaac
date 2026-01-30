@@ -1,44 +1,41 @@
 Header
-
-  + name    := NODE_TYPE;
-
-  /*Switch node for type*/
-
+  + name := Node_type
+/*Switch node for type*/
 Inherit
 
-  + parent_node:Expanded NODE
+  + parent_node:Flat Node
 
 Public
 
-  - result_expr:EXPR <- data.result_expr
+  - result_expr:Expr <- data.result_expr
 
-  + is_self:BOOLEAN
+  + is_self:Boolean
 
   //
   // Creation.
   //
 
-  - create e:EXPR with d:DTA :SELF <-
+  - create e:Expr with d:Dta :Self <-
   // Create with back-link.
   [ -? {d.position != 0}; ]
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make e with d
     result
   )
 
-  - make e:EXPR with d:DTA <-
+  - make e:Expr with d:Dta <-
   (
     expr := e
     data := d
     late_binding_counter := late_binding_counter + 1
-    ((e.static_type.is_expanded) || {e.static_type.raw = type_boolean}).if {
-      late_binding_expanded_counter := late_binding_expanded_counter + 1
+    ((e.static_type.is_flat) || {e.static_type.raw = type_boolean}).if {
+      late_binding_flat_counter := late_binding_flat_counter + 1
     } else {
-      + self:READ_LOCAL
-      self ?= e
-      ((self != NULL) && {self.variable.name = "Self"}).if {
+      + myself:Read_local
+      myself ?= e
+      ((myself != NULL) && {myself.variable.name = "self"}).if { 
         late_binding_self_counter := late_binding_self_counter + 1
       }
     }
@@ -48,25 +45,25 @@ Public
   // Just for ITM_EXPRESSION
   //
 
-  - create_partial d:DTA :SELF <-
-  ( + result:SELF
+  - create_partial d:Dta :Self <-
+  ( + result:Self
 
     result := clone
     result.make_partial d
     result
   )
 
-  - make_partial d:DTA <-
+  - make_partial d:Dta <-
   (
     data := d
   )
 
 Public
 
-  - my_copy:SELF <-
-  ( + result:SELF
+  - my_copy:Self <-
+  ( + result:Self
 
-    result := SELF.create (expr.my_copy) with data
+    result := Self.create (expr.my_copy) with data
     node_list.add_last result
     result
   )
@@ -75,28 +72,28 @@ Public
   // Update.
   //
 
-  - update:BOOLEAN <-
+  - update:Boolean <-
   (
     update_case NULL & update_depth NULL
   )
 
-NODE, DTA
+Node, Dta
 
-  - update_link self_type:TYPE_FULL :BOOLEAN <-
+  - update_link self_type:Type_full :Boolean <-
   (
     update_case self_type & update_depth self_type
   )
 
 Private
 
-  - update_case type_self:TYPE_FULL :BOOLEAN <-
-  ( + typ_f:TYPE_FULL
-    + typ:TYPE
-    + lst_typ:TYPES_TMP
-    + list:ARRAY CASE
-    + case:CASE
-    + result:BOOLEAN
-    + idx,idx2:INTEGER
+  - update_case type_self:Type_full :Boolean <-
+  ( + typ_f:Type_full
+    + typ:Type
+    + lst_typ:Types_tmp
+    + list:Array Case
+    + case:Case
+    + result:Boolean
+    + idx,idx2:Int
 
     typ_f := expr.static_type
     /*
@@ -108,17 +105,17 @@ Private
     }
     */
     
-    ((typ_f.is_expanded || {typ_f.is_strict}) && {typ_f.raw != type_boolean}).if {
+    ((typ_f.is_flat || {typ_f.is_exact}) && {typ_f.raw != type_boolean}).if {
       (first_code = NULL).if {
-	first_type := typ_f.raw
-	first_code := data.product first_type with expr self type_self
+        first_type := typ_f.raw
+        first_code := data.product first_type with expr self type_self
       }
-      result := TRUE
+      result := True
     }.elseif {(typ_f.raw = type_boolean) && {count = 2}} then {
-      result := TRUE
+      result := True
     } else {
       ((typ_f.raw.is_block) || {typ_f.raw.subtype_list.count != count}).if {
-	lst_typ := TYPES_TMP.new
+        lst_typ := Types_tmp.new
         expr.get_type lst_typ
 
         /*
@@ -135,91 +132,80 @@ Private
           */
         }
         */
-	(! lst_typ.is_empty).if {
-	  (lst_typ.count = 1).if {
+        (! lst_typ.is_empty).if {
+          (lst_typ.count = 1).if {
             (first_code = NULL).if {
               idx := lst_typ.first_index
-	      first_type := lst_typ.at idx
-	      first_code := data.product first_type with expr self type_self
-	    }
-	  } else {
-	    (switch = NULL).if {
-	      switch := SWITCH.create Self with expr size (lst_typ.count)
-	    }
-            list := switch.list
-            
-            
-            // MHMH:
-            /*
-            (expr.static_type.raw.name == "STRING").if {
-              
-              lst_typ.print_types
-              warning_error (position,"LA")
-              "----------------------\n".print
-            };*/
-            
+              first_type := lst_typ.at idx
+              first_code := data.product first_type with expr self type_self
+            }
+          } else {
+            (switch = NULL).if {
+              switch := Switch.create self with expr size (lst_typ.count)
+            }
+            list := switch.list            
             (list.count != lst_typ.count).if {
               idx  := lst_typ.first_index
               idx2 := 0
-	      {idx != -1}.while_do {
+              {idx != -1}.while_do {
                 typ := lst_typ.at idx
                 ((idx2 > list.upper) || {typ != list.at idx2.id}).if { 
-		  add_stack_type typ
-		  //
-		  case := CASE.create typ with (data.product typ with expr self type_self)
-		  list.at idx2 add case
-		  //
-		  stack_type.remove_last
+                  add_stack_type typ
+                  //
+                  case := Case.create typ with (data.product typ with expr self type_self)
+                  list.at idx2 add case
+                  //
+                  stack_type.remove_last
                 }
                 idx := lst_typ.next_index idx
                 idx2 := idx2 + 1
-	      }
-	    }
-	  }
-	}
-	lst_typ.free
+              }
+            }
+          }
+        }
+        lst_typ.free
       } else {
-	//count_flat := count_flat + 1
-	//"Yes\n".print
+        //count_flat := count_flat + 1
+        //"Yes\n".print
       }
     }
     result
   )
 
-  - update_depth self_type:TYPE_FULL :BOOLEAN <-
-  ( + result:BOOLEAN
-    + list:ARRAY CASE
-    + new_type_self:TYPE_FULL
+  - update_depth self_type:Type_full :Boolean <-
+  ( + result:Boolean
+    + list:Array Case
+    + new_type_self:Type_full
 
     (switch = NULL).if {
       (first_code != NULL).if {
         (self_type = NULL).if {
           new_type_self := expr.static_type
-          ((! new_type_self.is_expanded) || {new_type_self.raw = type_boolean}).if {
-            new_type_self := first_type.default.to_strict
+          ((! new_type_self.is_flat) || {new_type_self.raw = type_boolean}).if {
+            new_type_self := first_type.default.to_exact
             //new_type_self := new_type_self.get_with (new_type_self.flag | TYPE_FULL.generic_bit)
-	  }
-	} else {
-	  new_type_self := self_type
+          }
+        } else {
+          new_type_self := self_type
         }
 
-	add_stack_type first_type
-	result := data.update_branch first_code self new_type_self
-	stack_type.remove_last
+        add_stack_type first_type
+        result := data.update_branch first_code self new_type_self
+        stack_type.remove_last
       }
     } else {
       list := switch.list
-      //result := TRUE; BSBS: Pas d'impact
-      (list.lower).to (list.upper) do { j:INTEGER
+      //result := True; BSBS: Pas d'impact
+      (list.lower).to (list.upper) do { j:Int
         (self_type = NULL).if {
-          new_type_self := list.at j.id.default.to_strict
+          new_type_self := list.at j.id.default.to_exact
           //new_type_self := new_type_self.get_with (new_type_self.flag | TYPE_FULL.generic_bit)
-	} else {
-	  new_type_self := self_type
-	}
-	add_stack_type (list.at j.id)
-	/*result := result &*/ data.update_branch (list.at j.code) self new_type_self
-	stack_type.remove_last
+        } else {
+          new_type_self := self_type
+        }
+        add_stack_type (list.at j.id)
+        /*result := result &*/ data.update_branch (list.at j.code) self new_type_self
+        stack_type.remove_last
       }
     }
     result
@@ -227,16 +213,16 @@ Private
 
 Private
 
-  - stack_type:ARRAY TYPE := ARRAY TYPE .create_with_capacity 16
+  - stack_type:Array Type := Array Type .create_with_capacity 16
 
-  - add_stack_type t:TYPE <-
+  - add_stack_type t:Type <-
   (
     stack_type.add_last t
     ((stack_type.count > 1) && {stack_type.first = t}).if {
       string_tmp.copy "Cyclic inheritance : "
-      (stack_type.lower).to (stack_type.upper) do { j:INTEGER
-	stack_type.at j.append_name_in string_tmp
-	string_tmp.append ", "
+      (stack_type.lower).to (stack_type.upper) do { j:Int
+        stack_type.at j.append_name_in string_tmp
+        string_tmp.append ", "
       }
       string_tmp.append "..."
       semantic_error (data.position, string_tmp)

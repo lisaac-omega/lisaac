@@ -1,6 +1,6 @@
-Header  
-  + name := IMG_PNM;
-  /*
+Header
+  + name := Img_pnm
+/*
     Portable Gray Map and Portable Pixel Map loader
      
     Known limitations:
@@ -8,18 +8,17 @@ Header
       Does not support ASCII image data (formats P2 and P3)
       Does not support 16-bit-per-channel
   */
-  
 Inherit
-  - parent_image:IMAGE := IMAGE
+  - parent_image:Image := Image
   
 Public
   
-  - name:STRING_ALIAS := "PnM: PPM - Portable PixMap / PGM - Portable GrayMap"
+  - name:String_alias := "PnM: PPM - Portable PixMap / PGM - Portable GrayMap"
   
-  - is_binary:BOOLEAN
+  - is_binary:Boolean
   
-  - test:BOOLEAN <-
-  ( + p, t:CHARACTER
+  - test:Boolean <-
+  ( + p, t:Char
     rewind
     p := get8.to_character
     t := get8.to_character
@@ -30,8 +29,8 @@ Public
     }
   )
   
-  - info:BOOLEAN <-
-  ( + result:BOOLEAN
+  - info:Boolean <-
+  ( + result:Boolean
     (test).if {      
       skip_space
       img_x := get_integer; // read width
@@ -43,12 +42,12 @@ Public
     result
   )
   
-  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
-  ( + out:NATIVE_ARRAY UINTEGER_8
-    + siz:INTEGER
+  - load req_comp:Int :C_array Uint8 <-
+  ( + out:C_array Uint8
+    + siz:Int
     (info).if {
       siz := img_n * img_x * img_y
-      out := NATIVE_ARRAY UINTEGER_8.create siz
+      out := C_array Uint8.create siz
       (((is_binary) && {getn out size siz}) || {get_ascii out size siz}).if {        
         ((req_comp != 0) && {req_comp != img_n}).if {
           out := convert_format out from img_n to req_comp
@@ -63,13 +62,13 @@ Public
 
 Private
   
-  - get_ascii out:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :BOOLEAN <-
-  ( + i,v:INTEGER
+  - get_ascii out:C_array Uint8 size s:Int :Boolean <-
+  ( + i,v:Int
     {(! at_eof) && {i < s} && {v != -1}}.while_do {
       skip_space
       v := get_integer
       (v >= 0).if { 
-        out.at i put (v.to_integer)
+        out.at i put (v.to_int)
         i := i + 1
       }
     }
@@ -88,11 +87,11 @@ Private
     }
   )
 
-  - get_integer:INTEGER <-
-  ( + value:INTEGER
+  - get_integer:Int <-
+  ( + value:Int
     ((! at_eof) && {last_get8.to_character.is_digit}).if {      
       {(! at_eof) && {last_get8.to_character.is_digit}}.while_do {
-        value := value * 10 + (last_get8 - '0'.to_integer)
+        value := value * 10 + (last_get8 - '0'.to_int)
         get8
       }
     } else {

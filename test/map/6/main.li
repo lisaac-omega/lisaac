@@ -1,75 +1,75 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 
 Public 
   - main <-
-  ( + map: HMAP INTEGER KEY CHARACTER
-    + found:BOOLEAN
-    + key: CHARACTER
-    + value: INTEGER
-    map := new HMAP INTEGER KEY CHARACTER
+  ( + map: Hmap Int Key Char
+    + found:Boolean
+    + key: Char
+    + value: Int
+    map := new Hmap Int Key Char
     
-    (found,key,value) := map.search_key { k:CHARACTER
+    (found,key,value) := map.search_key { k:Char
       k = '0'
-    } value { v:INTEGER
+    } value { v:Int
       v = 0
     }
-    TEST.check (! found)
-    TEST.check (key = '\0')
-    TEST.check (value = 0)
+    Test.check (! found)
+    Test.check (key = '\0')
+    Test.check (value = 0)
 
     map.at '1' put 1
     
-    (found,key,value) := map.search_key { k:CHARACTER
+    (found,key,value) := map.search_key { k:Char
       k = '1'
-    } value { v:INTEGER
+    } value { v:Int
       v = 1
     }
-    TEST.check (found)
-    TEST.check (key = '1')
-    TEST.check (value = 1)
+    Test.check (found)
+    Test.check (key = '1')
+    Test.check (value = 1)
     
-    (found,key,value) := map.search_key { k:CHARACTER
+    (found,key,value) := map.search_key { k:Char
       k = '2'
-    } value { v:INTEGER
+    } value { v:Int
       v = 1
     }
-    TEST.check (! found)
-    TEST.check (key = '\0')
-    TEST.check (value = 0)
+    Test.check (! found)
+    Test.check (key = '\0')
+    Test.check (value = 0)
     
     map.at '2' add 2
     
-    (found,key,value) := map.search_key { k:CHARACTER
+    (found,key,value) := map.search_key { k:Char
       k = '2'
-    } value { v:INTEGER
+    } value { v:Int
       v = 1
     }
-    TEST.check (! found)
-    TEST.check (key = '\0')
-    TEST.check (value = 0)
+    Test.check (! found)
+    Test.check (key = '\0')
+    Test.check (value = 0)
     
-    (found,key,value) := map.search_key { k:CHARACTER
+    (found,key,value) := map.search_key { k:Char
       k = '2'
-    } value { v:INTEGER
+    } value { v:Int
       v = 2
     }
-    TEST.check found
-    TEST.check (key = '2')
-    TEST.check (value = 2)
+    Test.check found
+    Test.check (key = '2')
+    Test.check (value = 2)
     
     map.at '3' add 3
 
     map.at '5' add 5
 
-    (found,key,value) := map.search_key { k:CHARACTER
+    (found,key,value) := map.search_key { k:Char
       k = '5'
-    } value { v:INTEGER
+    } value { v:Int
       v = 5
     }
-    TEST.check found
-    TEST.check (key = '5')
-    TEST.check (value = 5)  
+    Test.check found
+    Test.check (key = '5')
+    Test.check (value = 5)  
   )
   

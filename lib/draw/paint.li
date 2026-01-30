@@ -1,38 +1,36 @@
 Header
-  
-  + name := PAINT;
-  
+  + name := Paint
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Private
   
-  - stack:ARRAY PAINT := ARRAY PAINT.create_with_capacity 16
+  - stack:Array Paint := Array Paint.create_with_capacity 16
 
   - make <-
   (
-    xform := TRANSFORM.create
+    xform := Transform.create
   )
   
 Public
     
-  + xform:TRANSFORM
+  + xform:Transform
   
-  + extent0:REAL_32
-  + extent1:REAL_32
+  + extent0:Real32
+  + extent1:Real32
   
-  + radius:REAL_32
-  + feather:REAL_32
+  + radius:Real32
+  + feather:Real32
   
-  + inner_color:COLOR
-  + outer_color:COLOR
-  + image:INTEGER
+  + inner_color:Color
+  + outer_color:Color
+  + image:Int
   
-  - set_image img:INTEGER <- ( image := img; )
+  - set_image img:Int <- ( image := img; )
   
-  - create:PAINT <-
-  ( + result:PAINT
+  - create:Paint <-
+  ( + result:Paint
     (stack.is_empty).if {
       result := clone
     } else {
@@ -46,10 +44,10 @@ Public
   - free <-
   ( 
     xform.free
-    stack.add_last Self
+    stack.add_last self
   )
 
-  - copy other:PAINT <-
+  - copy other:Paint <-
   (    
     xform.copy (other.xform)
     (extent0,extent1) := (other.extent0,other.extent1)
@@ -61,17 +59,17 @@ Public
   
   // Linear gradient
   
-  - create_linear (sx,sy:REAL_32) to (ex,ey:REAL_32) 
-  color icol:COLOR to ocol:COLOR :PAINT <-
-  ( + result:PAINT
+  - create_linear (sx,sy:Real32) to (ex,ey:Real32) 
+  color icol:Color to ocol:Color :Paint <-
+  ( + result:Paint
     result := create
     result.make_linear (sx,sy) to (ex,ey) color icol to ocol
     result
   )
   
-  - make_linear (sx,sy:REAL_32) to (ex,ey:REAL_32) 
-  color icol:COLOR to ocol:COLOR <-
-  ( + dx, dy, d:REAL_32
+  - make_linear (sx,sy:Real32) to (ex,ey:Real32) 
+  color icol:Color to ocol:Color <-
+  ( + dx, dy, d:Real32
     dx := ex - sx
     dy := ey - sy
     d  := (dx*dx + dy*dy).sqrt
@@ -90,16 +88,16 @@ Public
   
   // Radial gradient
   
-  - create_radial (cx,cy:REAL_32) radius (inr,outr:REAL_32) 
-  color icol:COLOR to ocol:COLOR :PAINT <-
-  ( + result:PAINT
+  - create_radial (cx,cy:Real32) radius (inr,outr:Real32) 
+  color icol:Color to ocol:Color :Paint <-
+  ( + result:Paint
     result := create
     result.make_radial (cx,cy) radius (inr,outr) color icol to ocol
     result
   )
   
-  - make_radial (cx,cy:REAL_32) radius (inr,outr:REAL_32) 
-  color icol:COLOR to ocol:COLOR <-
+  - make_radial (cx,cy:Real32) radius (inr,outr:Real32) 
+  color icol:Color to ocol:Color <-
   (
     radius  := extent0 := extent1 := (inr+outr)*0.5
     feather :=  (outr-inr).max 1
@@ -111,17 +109,17 @@ Public
   
   // Box gradient 
   
-  - create_box (x,y:REAL_32) size (w,h:REAL_32) 
-  radius r:REAL_32 feather f:REAL_32
-  color icol:COLOR to ocol:COLOR :PAINT <-
-  ( + result:PAINT
+  - create_box (x,y:Real32) size (w,h:Real32) 
+  radius r:Real32 feather f:Real32
+  color icol:Color to ocol:Color :Paint <-
+  ( + result:Paint
     result := create
     result.make_box (x,y) size (w,h) radius r feather f color icol to ocol
     result
   )
   
-  - make_box (x,y:REAL_32) size (w,h:REAL_32) radius r:REAL_32 feather f:REAL_32
-  color icol:COLOR to ocol:COLOR <-
+  - make_box (x,y:Real32) size (w,h:Real32) radius r:Real32 feather f:Real32
+  color icol:Color to ocol:Color <-
   (
     feather := f.max 1
     radius  := r
@@ -134,36 +132,36 @@ Public
     
   // Pattern
   
-  - create_pattern (cx,cy:REAL_32) size (w,h:REAL_32) img_id img:INTEGER
-  angle ang:REAL_32 alpha a:REAL_32 :PAINT <-
-  ( + result:PAINT
+  - create_pattern (cx,cy:Real32) size (w,h:Real32) img_id img:Int
+  angle ang:Real32 alpha a:Real32 :Paint <-
+  ( + result:Paint
     result := create
     result.make_pattern (cx,cy) size (w,h) img_id img angle ang alpha a
     result
   )
   
-  - make_pattern (cx,cy:REAL_32) size (w,h:REAL_32) img_id img:INTEGER
-  angle ang:REAL_32 alpha a:REAL_32 <-
-  ( + cs,sn:REAL_32
+  - make_pattern (cx,cy:Real32) size (w,h:Real32) img_id img:Int
+  angle ang:Real32 alpha a:Real32 <-
+  ( + cs,sn:Real32
     (cs,sn) := (ang.cos,ang.sin)
     //xform := TRANSFORM.create
     xform.set_all (cs,sn) and (-sn,cs) and (cx,cy)
     (extent0,extent1) := (w,h)
-    inner_color := outer_color := COLOR.rgbaf (1,1,1,a)
+    inner_color := outer_color := Color.rgbaf (1,1,1,a)
     feather := radius := 0
     image := img
   )
   
   // Simple color
   
-  - create_color col:COLOR :PAINT <-
-  ( + result:PAINT
+  - create_color col:Color :Paint <-
+  ( + result:Paint
     result := create
     result.set_color col
     result
   )
   
-  - set_color col:COLOR <-
+  - set_color col:Color <-
   (
     xform.identity
     extent0 := extent1 := radius := 0

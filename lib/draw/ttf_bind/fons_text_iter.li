@@ -1,19 +1,17 @@
 Header
-  
-  + name := FONS_TEXT_ITER;
-  
+  + name := Fons_text_iter
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Private
   
-  - stock_fons:ARRAY FONS_TEXT_ITER := ARRAY FONS_TEXT_ITER.create_with_capacity 32
+  - stock_fons:Array Fons_text_iter := Array Fons_text_iter.create_with_capacity 32
   
-  - new:FONS_TEXT_ITER <-
-  ( + result:FONS_TEXT_ITER
+  - new:Fons_text_iter <-
+  ( + result:Fons_text_iter
     (stock_fons.is_empty).if {
-      result := FONS_TEXT_ITER.clone
+      result := Fons_text_iter.clone
     } else {      
       result := stock_fons.pop
     }
@@ -22,39 +20,39 @@ Private
   
 Public
   
-  + x:REAL_32
-  + y:REAL_32
-  + nextx:REAL_32
-  + nexty:REAL_32
-  + scale:REAL_32
-  + spacing:REAL_32
+  + x:Real32
+  + y:Real32
+  + nextx:Real32
+  + nexty:Real32
+  + scale:Real32
+  + spacing:Real32
   
-  + codepoint:UINTEGER_32
-  + isize:INTEGER_16
-  + iblur:INTEGER_16
+  + codepoint:Uint32
+  + isize:Int16
+  + iblur:Int16
   
-  + font:FONS_FONT
+  + font:Fons_font
   
-  + prev_glyph_index:INTEGER
-  + str:STRING
+  + prev_glyph_index:Int
+  + str:String
   
-  + start:INTEGER; // BSBS: me
-  + next:INTEGER
-  + end:INTEGER
+  + start:Int; // BSBS: me
+  + next:Int
+  + end:Int
   
-  + utf8state:UINTEGER_32
+  + utf8state:Uint32
   
-  - set_start s:INTEGER <- ( start := s; )
-  - set_next s:INTEGER <- ( next := s; )
-  - set_utf8state v:UINTEGER_32 <- ( utf8state := v; )
-  - set_codepoint c:UINTEGER_32 <- ( codepoint := c; )
+  - set_start s:Int <- ( start := s; )
+  - set_next s:Int <- ( next := s; )
+  - set_utf8state v:Uint32 <- ( utf8state := v; )
+  - set_codepoint c:Uint32 <- ( codepoint := c; )
   
-  - set_xy (px,py:REAL_32) <- ( (x,y) := (px,py); )
-  - set_next_xy (px,py:REAL_32) <- ( (nextx,nexty) := (px,py); )
+  - set_xy (px,py:Real32) <- ( (x,y) := (px,py); )
+  - set_next_xy (px,py:Real32) <- ( (nextx,nexty) := (px,py); )
   
-  - set_prev_glyph_index v:INTEGER <- ( prev_glyph_index := v; )
+  - set_prev_glyph_index v:Int <- ( prev_glyph_index := v; )
   
-  - copy other:FONS_TEXT_ITER <-
+  - copy other:Fons_text_iter <-
   ( 
     (x,y)           := (other.x,other.y)
     (nextx,nexty)   := (other.nextx,other.nexty)
@@ -68,26 +66,26 @@ Public
     utf8state       := other.utf8state
   )
   
-  - create:FONS_TEXT_ITER <- new
+  - create:Fons_text_iter <- new
   
-  - create f:FONS_FONT isize s:INTEGER_16 iblur b:INTEGER_16 
-  scale sc:REAL_32 :FONS_TEXT_ITER <-
-  ( + result:FONS_TEXT_ITER
+  - create f:Fons_font isize s:Int16 iblur b:Int16 
+  scale sc:Real32 :Fons_text_iter <-
+  ( + result:Fons_text_iter
     result := new
     result.font f isize s iblur b scale sc
     result
   )
       
-  - font f:FONS_FONT isize s:INTEGER_16 iblur b:INTEGER_16 scale sc:REAL_32 <-
+  - font f:Fons_font isize s:Int16 iblur b:Int16 scale sc:Real32 <-
   (
     font := f
     (isize,iblur) := (s,b)
     scale := sc
   )
   
-  - xy (px,py:REAL_32) spacing sp:REAL_32 str st:STRING
-  from fst:INTEGER to ed:INTEGER codepoint c:UINTEGER_32
-  prev_glyph_index idx:INTEGER <-
+  - xy (px,py:Real32) spacing sp:Real32 str st:String
+  from fst:Int to ed:Int codepoint c:Uint32
+  prev_glyph_index idx:Int <-
   (
     (x,y) := (nextx,nexty) := (px,py)
     spacing := sp
@@ -124,5 +122,5 @@ Public
 */
   - free <-
   (     
-    stock_fons.add_last Self
+    stock_fons.add_last self
   )

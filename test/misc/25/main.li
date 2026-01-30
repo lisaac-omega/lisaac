@@ -1,25 +1,23 @@
 Header
-
-  + name := MAIN;
-  
+  + name := Main
 Inherit
   
-  + parent_clone:CLONE := CLONE
+  + parent_clone:Clone := Clone
 
-  + parent_top1:Expanded TOP1
+  + parent_top1:Flat Top1
 
-  + parent_top2:Expanded TOP2
+  + parent_top2:Flat Top2
 
 Public
   
   - main <-
-  ( + top1:TOP1
-    + top2:TOP2
+  ( + top1:Top1
+    + top2:Top2
     
     top1 := clone
     top2 := top1.to_top2 top1   
     ? {top2 != NULL}
-    TEST.check (top2 != NULL)
+    Test.check (top2 != NULL)
   )
   
   

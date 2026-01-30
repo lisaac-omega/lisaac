@@ -1,8 +1,7 @@
 Header
-  + name := CAMERA;
-  
+  + name := Camera
 Inherit  
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
   /*
@@ -41,53 +40,53 @@ Public
     u_rotated = [0, 0, 1]
   */  
   
-  - sin_45:REAL_32 := 2.0.sqrt / 2
+  - sin_45:Real32 := 2.0.sqrt / 2
   
-  + alpha:REAL_32; // angle 
-  + ray:REAL_32
-  + zoom:REAL_32
+  + alpha:Real32; // angle 
+  + ray:Real32
+  + zoom:Real32
   
-  + center:VEC3
-  + position:VEC3
-  + dir:VEC3
-  + right:VEC3
-  + up:VEC3
+  + center:Vec3
+  + position:Vec3
+  + dir:Vec3
+  + right:Vec3
+  + up:Vec3
   
-  - up_ref:VEC3    := VEC3.create_xyz (0.0, 1.0, 0.0)
-  - right_ref:VEC3 := VEC3.create_xyz (0.0, 0.0, 1.0)
+  - up_ref:Vec3    := Vec3.create_xyz (0.0, 1.0, 0.0)
+  - right_ref:Vec3 := Vec3.create_xyz (0.0, 0.0, 1.0)
   
-  + view:MAT4X4
-  + projection:MAT4X4
+  + view:Mat4x4
+  + projection:Mat4x4
   
-  + light:VEC3
-  + xo:INTEGER
-  + yo:INTEGER
-  + width:INTEGER
-  + height:INTEGER
+  + light:Vec3
+  + xo:Int
+  + yo:Int
+  + width:Int
+  + height:Int
 
-  - create r:REAL_32 zoom zo:REAL_32 :SELF <-
-  ( + result:SELF
+  - create r:Real32 zoom zo:Real32 :Self <-
+  ( + result:Self
     result := clone
     result.make r zoom zo
     result
   )
   
-  - make r:REAL_32 zoom zo:REAL_32 <-
+  - make r:Real32 zoom zo:Real32 <-
   (
-    center   := VEC3.create_xyz (0.0, 0.0, 0.0)
-    position := VEC3.create_xyz (0.0, 0.0, r)
-    dir      := VEC3.create_xyz (0.0, 0.0, 1.0)
-    up       := VEC3.create_xyz (0.0, 1.0, 0.0)
-    right    := VEC3.create_xyz (1.0, 0.0, 0.0)
-    light    := VEC3.create_xyz (0.0, 0.0, r)
-    projection := MAT4X4.create
-    view := MAT4X4.create
+    center   := Vec3.create_xyz (0.0, 0.0, 0.0)
+    position := Vec3.create_xyz (0.0, 0.0, r)
+    dir      := Vec3.create_xyz (0.0, 0.0, 1.0)
+    up       := Vec3.create_xyz (0.0, 1.0, 0.0)
+    right    := Vec3.create_xyz (1.0, 0.0, 0.0)
+    light    := Vec3.create_xyz (0.0, 0.0, r)
+    projection := Mat4x4.create
+    view := Mat4x4.create
     ray := r
     set_zoom zo
   )
   
-  - set_position (dx,dy:REAL_32) alpha a:REAL_32 ray r:REAL_32 <-
-  ( + d_ri,d_up:VEC3
+  - set_position (dx,dy:Real32) alpha a:Real32 ray r:Real32 <-
+  ( + d_ri,d_up:Vec3
     (alpha,ray) := (alpha + a, r)
     d_ri := right *# (-dx/100)
     d_up := up *# (dy/100)
@@ -102,14 +101,14 @@ Public
     };*/
   )
   
-  - set_zoom zo:REAL_32 <- ( zoom := zo; )
+  - set_zoom zo:Real32 <- ( zoom := zo; )
   
-  - update (wx,wy:INTEGER) size (w,h:INTEGER) <-
-  ( + aspect,rl:REAL_32
+  - update (wx,wy:Int) size (w,h:Int) <-
+  ( + aspect,rl:Real32
         
     (xo,yo) := (wx,wy)
     (width,height) := (w,h)
-    aspect := w.to_real_32 / h
+    aspect := w.to_real32 / h
 /*    
     glm::vec3 center; // Centre de la sphère Arcball
 float radius; // Rayon de la sphère Arcball
@@ -165,7 +164,7 @@ view_matrix = rotation_matrix * view_matrix
     light.make (position.x, position.y, position.z)
   )
   
-  - on shader:SHADER_3D <-
+  - on shader:Shader_3d <-
   (     
     shader.set "viewPos" xyz (position.x,position.y,position.z)
     shader.set "projection" mat4 projection

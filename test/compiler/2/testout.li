@@ -1,6 +1,6 @@
 Header
-  + name := TESTOUT;
-  /*
+  + name := Testout
+/*
   Function with multiple results example. The gain is not only syntactical!
   Example below shows an efficient, still recursive, solution for the
   Fibonacci example. Thanks to the usage of two results, the exponential
@@ -11,5 +11,5 @@ Public
   
   - main <-
   (
-     (COMMAND_ARGS.at 0) # "??"
+     Out # "Pourquoi " # "??"
   )

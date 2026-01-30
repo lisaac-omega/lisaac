@@ -1,46 +1,45 @@
 Header
-  + name := ANY_GUI;
-  
+  + name := Any_gui
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
 
 Public
-  - version:STRING_ALIAS := "0.5"
-  - window_title:STRING_ALIAS := "ELIX - Lisaac Ω Editor"
+  - version:String_alias := "0.5"
+  - window_title:String_alias := "ELIX - Lisaac Ω Editor"
 
   
-  - extend_code:BOOLEAN := TRUE; // Lisaac only
-  - set_extend_code v:BOOLEAN :BOOLEAN <- ( extend_code := v; TRUE)
-  - auto_indent:BOOLEAN := TRUE; // Lisaac only
-  - set_auto_indent v:BOOLEAN :BOOLEAN <- ( auto_indent := v; TRUE)
+  - extend_code:Boolean := True; // Lisaac only
+  - set_extend_code v:Boolean :Boolean <- ( extend_code := v; True)
+  - auto_indent:Boolean := True; // Lisaac only
+  - set_auto_indent v:Boolean :Boolean <- ( auto_indent := v; True)
     
-  - home_directory:STRING_ALIAS :=
-  ( + r:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
-      ENVIRONMENT.read_variable "HOME" in tmp
+  - home_directory:String_alias :=
+  ( + r:String_alias
+    String.tmp { tmp:String_buffer
+      Environment.read_variable "HOME" in tmp
       tmp.add_last '/'
       r := tmp.to_string_alias
     }
     r
   )
   
-  - base_directory:STRING_ALIAS :=
-  ( + r:STRING_ALIAS
-    STRING.tmp { p:STRING_BUFFER
-      p.copy (COMMAND_ARGS.executable_directory)
+  - base_directory:String_alias :=
+  ( + r:String_alias
+    String.tmp { p:String_buffer
+      p.copy (Command_args.executable_directory)
       p.append "../"
-      DIRENT.reduce_path p
+      Dirent.reduce_path p
       r := p.to_string_alias
     }
     r
   )
         
-  - abs_path p:STRING_ALIAS :STRING_ALIAS <-
-  ( + r:STRING_ALIAS
+  - abs_path p:String_alias :String_alias <-
+  ( + r:String_alias
     ((p.first = '/') || {p.at 1 = ':'}).if {
       r := p
     } else {
-      STRING.tmp { tmp:STRING_BUFFER
+      String.tmp { tmp:String_buffer
         tmp.append base_directory
         tmp.append p
         r := tmp.to_string_alias
@@ -49,10 +48,10 @@ Public
     r
   )
   
-  - rel_path p:STRING :STRING_ALIAS <-
-  ( + r:STRING_ALIAS
+  - rel_path p:String :String_alias <-
+  ( + r:String_alias
     (p.has_prefix base_directory).if {
-      STRING.tmp { tmp:STRING_BUFFER
+      String.tmp { tmp:String_buffer
         tmp.copy p
         tmp.remove_prefix base_directory
         r := tmp.to_string_alias
@@ -61,11 +60,11 @@ Public
     r
   )
   
-  - filename_cfg:STRING_ALIAS :=
-  ( + i:INTEGER
-    + result:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
-      tmp.copy (COMMAND_ARGS.at 0)
+  - filename_cfg:String_alias :=
+  ( + i:Int
+    + result:String_alias
+    String.tmp { tmp:String_buffer
+      tmp.copy (Command_args.at 0)
       i := tmp.last_index_of '/'
       (i = -1).if { i := tmp.last_index_of '\\'; }
       (i != -1).if { tmp.remove_head (i+1); }
@@ -76,73 +75,73 @@ Public
     result
   )
         
-  - bufraw:ARRAY UINTEGER_8 := ARRAY UINTEGER_8.create_with_capacity 32768
-  - buftxt:STRING_BUFFER := STRING_BUFFER.create 32768
-  - clipboard:STRING_BUFFER := STRING_BUFFER.create 4096
+  - bufraw:Array Uint8 := Array Uint8.create_with_capacity 32768
+  - buftxt:String_buffer := String_buffer.create 32768
+  - clipboard:String_buffer := String_buffer.create 4096
   
   - run_gui <-
   (
-    BUFFER.init_key
+    Buffer.init_key
     init_cursor_mouse
-    PAPER.run
+    Paper.run
   )
     
   - beep <-
   (     
     sound.if {
-      MUSIC.play_wav sound_file
+      Music.play_wav sound_file
     }
   )
   
   // Standard config.
     
-  - shortcut_file:STRING_ALIAS
-  - look_file:STRING_ALIAS
-  - sound_file:STRING_ALIAS
-  - sound:BOOLEAN
-  - help:BOOLEAN
-  - vkeyb:BOOLEAN
-  - vkeyb_dyn:BOOLEAN
-  - header_lock:BOOLEAN
-  - tex:TEX := TEX
-  - cmd_cur:CMD := CMD
-  - delay_popup:INTEGER := 1_600_000
+  - shortcut_file:String_alias
+  - look_file:String_alias
+  - sound_file:String_alias
+  - sound:Boolean
+  - help:Boolean
+  - vkeyb:Boolean
+  - vkeyb_dyn:Boolean
+  - header_lock:Boolean
+  - tex:Tex := Tex
+  - cmd_cur:Cmd := Cmd
+  - delay_popup:Int := 1_600_000
   
-  - decorated:BOOLEAN
-  - set_decorated b:BOOLEAN :BOOLEAN <-
+  - decorated:Boolean
+  - set_decorated b:Boolean :Boolean <-
   ( decorated := b;
     (! decorated).if {      
-      PAPER.unset (PAPER.decorated)
-      PAPER.set (PAPER.transparent)
+      Paper.unset (Paper.decorated)
+      Paper.set (Paper.transparent)
     }
-    TRUE
+    True
   )
     
-  - acts_wait:ARRAY ACT := ARRAY ACT.create_with_capacity 32
+  - acts_wait:Array Act := Array Act.create_with_capacity 32
   
   // Shortcut
   
-  - shortcuts:ARRAY SHORTCUT := ARRAY SHORTCUT.create_with_capacity 128
+  - shortcuts:Array Shortcut := Array Shortcut.create_with_capacity 128
 
   // Fonctions
   
   //--- File
-  - open_file:BOOLEAN <- CMD_FILE.open_file
-  - save_file:BOOLEAN <- PAGE.cur_pg.save_buffer
-  - save_as:BOOLEAN   <- CMD_FILE.save_file
+  - open_file:Boolean <- Cmd_file.open_file
+  - save_file:Boolean <- Page.cur_pg.save_buffer
+  - save_as:Boolean   <- Cmd_file.save_file
   
-  - flip_header:BOOLEAN <-
-  ( PAGE.cur_pg.window.child.first.like HEADER.flip
-    TRUE
+  - flip_header:Boolean <-
+  ( Page.cur_pg.window.child.first.like Header.flip
+    True
   )
   
-  - split_win:BOOLEAN <-
-  ( + ps:PAGE_SPLIT
-    + win1,win2:WIN
-    + me:WINDOW
-    + scr:SCREEN
-    + x1,y1,w1,h1,x2,y2,w2,h2:REAL_32
-    me := PAGE.cur_pg.window
+  - split_win:Boolean <-
+  ( + ps:Page_split
+    + win1,win2:Win
+    + me:Window
+    + scr:Screen
+    + x1,y1,w1,h1,x2,y2,w2,h2:Real32
+    me := Page.cur_pg.window
     ps ?= me.child.second
     (ps != NULL).if {
       (x2,y2) := (x1,y1) := me.get_pos
@@ -155,178 +154,178 @@ Public
       }
       win1.set_parent me
       me.child.at 1 put win1
-      PAPER.set_window (me.win_ptr) size (w1.to_integer,h1.to_integer)
+      Paper.set_window (me.win_ptr) size (w1.to_int,h1.to_int)
       me.set_pos (x1,y1)
-      scr := SCREEN.new.init_pos (x2,y2) size (w2,h2)
+      scr := Screen.new.init_pos (x2,y2) size (w2,h2)
       me.child.at 0.dup scr
       win2.set_parent scr
       scr.child.add_last win2
       ps.free
-      PAPER.refresh_all
+      Paper.refresh_all
     }
   )
   
-  - close_win:BOOLEAN <- 
-  (PAPER.wins.count > 1).if {    
-    + w:WINDOW
-    + s:SCREEN
-    w := PAGE.cur_pg.window
-    {w = PAGE.cur_pg.window}.while_do { change_pg; }
+  - close_win:Boolean <- 
+  (Paper.wins.count > 1).if {    
+    + w:Window
+    + s:Screen
+    w := Page.cur_pg.window
+    {w = Page.cur_pg.window}.while_do { change_pg; }
     s ?= w
     s.free
   }
   
-  - split_hori:BOOLEAN <- PAGE.cur_pg.split FALSE
-  - split_vert:BOOLEAN <- PAGE.cur_pg.split TRUE
-  - close_pg:BOOLEAN   <- PAGE.cur_pg.close
-  - change_pg:BOOLEAN  <- PAGE.cur_pg.change
-  - middle_pg:BOOLEAN  <- cmd_txt {t:TXT_PG; t.cmd_middle_pg}
-  - exit_cmd:BOOLEAN <- CMD_EXIT.open_with 0
-  - exit_fail_cmd:BOOLEAN <- CMD_EXIT.open_with 1
+  - split_hori:Boolean <- Page.cur_pg.split False
+  - split_vert:Boolean <- Page.cur_pg.split True
+  - close_pg:Boolean   <- Page.cur_pg.close
+  - change_pg:Boolean  <- Page.cur_pg.change
+  - middle_pg:Boolean  <- cmd_txt {t:Txt_pg; t.cmd_middle_pg}
+  - exit_cmd:Boolean <- Cmd_exit.open_with 0
+  - exit_fail_cmd:Boolean <- Cmd_exit.open_with 1
     
   //--- Edit
-  - go_line:BOOLEAN <- CMD_GO.open_line
-  - go_point:BOOLEAN <- CMD_GO.open_point
+  - go_line:Boolean <- Cmd_go.open_line
+  - go_point:Boolean <- Cmd_go.open_point
       
-  - set_sound b:BOOLEAN :BOOLEAN <- ( sound := b; TRUE)
-  - set_help b:BOOLEAN :BOOLEAN  <- ( help := b; TRUE)
-  - set_vkeyb b:BOOLEAN :BOOLEAN <-
+  - set_sound b:Boolean :Boolean <- ( sound := b; True)
+  - set_help b:Boolean :Boolean  <- ( help := b; True)
+  - set_vkeyb b:Boolean :Boolean <-
   ( vkeyb := b
     b.if {
-      + w:WIN
-      w := PAGE.cur_pg.window
-      VKEYB.set_open w at (2 + (CMD.parent = w).to_integer)
+      + w:Win
+      w := Page.cur_pg.window
+      Vkeyb.set_open w at (2 + (Cmd.parent = w).to_int)
     } else {
-      VKEYB.close
+      Vkeyb.close
     }
-    TRUE
+    True
   )
   
   - close_popup <-
   (
-    (cmd_cur != CMD).if { cmd_cur.close; }
-    MENU.close_all
-    BOX.close
+    (cmd_cur != Cmd).if { cmd_cur.close; }
+    Menu.close_all
+    Box.close
   )
   
-  - stop_cmd:BOOLEAN <-
-  ( + pg:TXT_PG
-    pg ?= PAGE.cur_pg.buf_pg
-    (pg != NULL).if { pg.set_sel (POS.undefine); }
+  - stop_cmd:Boolean <-
+  ( + pg:Txt_pg
+    pg ?= Page.cur_pg.buf_pg
+    (pg != NULL).if { pg.set_sel (Pos.undefine); }
     close_popup
-    TRUE
+    True
   )
   
-  - cmd_txt b:{TXT_PG; BOOLEAN} :BOOLEAN <-
-  ( + t:TXT_PG
-    t ?= PAGE.cur_pg.buf_pg; (t != NULL) && {b.value t}
+  - cmd_txt b:{Txt_pg; Boolean} :Boolean <-
+  ( + t:Txt_pg
+    t ?= Page.cur_pg.buf_pg; (t != NULL) && {b.value t}
   )
   
-  - open_buffer:BOOLEAN <- CMD_FILE.open_buffer
+  - open_buffer:Boolean <- Cmd_file.open_buffer
   
-  - undo_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.text.cmd_undo}
-  - redo_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.text.cmd_redo}
+  - undo_cmd:Boolean <- cmd_txt {t:Txt_pg; t.text.cmd_undo}
+  - redo_cmd:Boolean <- cmd_txt {t:Txt_pg; t.text.cmd_redo}
     
-  - indent_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_indent_line}
-  - copy_cmd:BOOLEAN  <- cmd_txt {t:TXT_PG; t.cmd_copy TRUE}
-  - cut_cmd:BOOLEAN   <- cmd_txt {t:TXT_PG; t.cmd_copy FALSE && {suppr_cmd}}
-  - paste_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_paste}
-  - select_on:BOOLEAN <- cmd_txt {t:TXT_PG; t.set_sel (t.pos); TRUE}
-  - cut_right_cmd:BOOLEAN <- CMD_CUT_RIGHT.open
+  - indent_cmd:Boolean <- cmd_txt {t:Txt_pg; t.cmd_indent_line}
+  - copy_cmd:Boolean  <- cmd_txt {t:Txt_pg; t.cmd_copy True}
+  - cut_cmd:Boolean   <- cmd_txt {t:Txt_pg; t.cmd_copy False && {suppr_cmd}}
+  - paste_cmd:Boolean <- cmd_txt {t:Txt_pg; t.cmd_paste}
+  - select_on:Boolean <- cmd_txt {t:Txt_pg; t.set_sel (t.pos); True}
+  - cut_right_cmd:Boolean <- Cmd_cut_right.open
   
-  - cut_end_line:BOOLEAN <-
-  cmd_txt {t:TXT_PG
-    + pe:INTEGER
-    pe := t.child.at (t.pt_div).like DIV.pte
+  - cut_end_line:Boolean <-
+  cmd_txt {t:Txt_pg
+    + pe:Int
+    pe := t.child.at (t.pt_div).like Div.pte
     t.set_sel (t.pos)
     (pe = t.pos.pt).if {
       (pe < t.text.upper).if { t.set_pos_raw (pe+1); }
     } else {
       t.set_pos_raw pe
     }
-    t.cmd_copy FALSE
+    t.cmd_copy False
     t.cmd_suppr
   }
 
   - select_on_off <- 
-  ( - me:BOOLEAN
-    + t:TXT_PG
-    t ?= PAGE.cur_pg.buf_pg
-    ((KEYBOARD.cmd & 10h) != 0).if {
+  ( - me:Boolean
+    + t:Txt_pg
+    t ?= Page.cur_pg.buf_pg
+    ((Keyboard.cmd & 10h) != 0).if {
       (!me).if {
         t.set_sel (t.pos)
-        me := TRUE
+        me := True
       }
     } else {
-      (me).if { t.set_sel (POS.undefine); }
-      me := FALSE
+      (me).if { t.set_sel (Pos.undefine); }
+      me := False
     }
   )
   
-  - search_forward:BOOLEAN <- CMD_SEARCH.open_forward
-  - search_backward:BOOLEAN <- CMD_SEARCH.open_backward
-  - replace:BOOLEAN     <- CMD_REPLACE.open
+  - search_forward:Boolean <- Cmd_search.open_forward
+  - search_backward:Boolean <- Cmd_search.open_backward
+  - replace:Boolean     <- Cmd_replace.open
   
-  - completion:BOOLEAN  <- CMD_EXPANSION.open
-  - to_upper:BOOLEAN    <- cmd_txt {t:TXT_PG; t.cmd_to_upper}
-  - to_lower:BOOLEAN    <- cmd_txt {t:TXT_PG; t.cmd_to_lower}
-  - to_snake:BOOLEAN    <- cmd_txt {t:TXT_PG; t.cmd_to_snake}
+  - completion:Boolean  <- Cmd_expansion.open
+  - to_upper:Boolean    <- cmd_txt {t:Txt_pg; t.cmd_to_upper}
+  - to_lower:Boolean    <- cmd_txt {t:Txt_pg; t.cmd_to_lower}
+  - to_snake:Boolean    <- cmd_txt {t:Txt_pg; t.cmd_to_snake}
   
-  - go_top:BOOLEAN <- cmd_txt {t:TXT_PG; t.set_pos_raw (0); TRUE}
-  - go_eof:BOOLEAN <- cmd_txt {t:TXT_PG; t.set_pos_raw (t.text.upper); TRUE}
+  - go_top:Boolean <- cmd_txt {t:Txt_pg; t.set_pos_raw (0); True}
+  - go_eof:Boolean <- cmd_txt {t:Txt_pg; t.set_pos_raw (t.text.upper); True}
   
-  - new_line:BOOLEAN                <- cmd_txt {t:TXT_PG; t.cmd_new_line}
-  - next_line:BOOLEAN               <- cmd_txt {t:TXT_PG; t.cmd_new_line2}
-  - go_next_char:BOOLEAN            <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_next_char}
-  - go_prev_char:BOOLEAN            <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_prev_char}
-  - go_next_word b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_next_word}
-  - go_prev_word b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_prev_word}
-  - go_beg_line  b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_beg_line; TRUE}
-  - go_end_line  b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_end_line; TRUE}
-  - go_next_line b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_next_line}
-  - go_prev_line b:BOOLEAN :BOOLEAN <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_prev_line}
-  - go_up_pg:BOOLEAN                <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_up_pg}
-  - go_down_pg:BOOLEAN              <- cmd_txt {t:TXT_PG; select_on_off; t.cmd_down_pg}
+  - new_line:Boolean                <- cmd_txt {t:Txt_pg; t.cmd_new_line}
+  - next_line:Boolean               <- cmd_txt {t:Txt_pg; t.cmd_new_line2}
+  - go_next_char:Boolean            <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_next_char}
+  - go_prev_char:Boolean            <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_prev_char}
+  - go_next_word b:Boolean :Boolean <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_next_word}
+  - go_prev_word b:Boolean :Boolean <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_prev_word}
+  - go_beg_line  b:Boolean :Boolean <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_beg_line; True}
+  - go_end_line  b:Boolean :Boolean <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_end_line; True}
+  - go_next_line b:Boolean :Boolean <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_next_line}
+  - go_prev_line b:Boolean :Boolean <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_prev_line}
+  - go_up_pg:Boolean                <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_up_pg}
+  - go_down_pg:Boolean              <- cmd_txt {t:Txt_pg; select_on_off; t.cmd_down_pg}
   
-  - suppr_cmd:BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_suppr}
-  - del_char n:INTEGER :BOOLEAN  <-
-  ( + r:BOOLEAN;
-    r := TRUE;
+  - suppr_cmd:Boolean <- cmd_txt {t:Txt_pg; t.cmd_suppr}
+  - del_char n:Int :Boolean  <-
+  ( + r:Boolean;
+    r := True;
     n.times {
-      r := r && {cmd_txt {t:TXT_PG; (t.cmd_prev_char) && {t.cmd_suppr}}}
+      r := r && {cmd_txt {t:Txt_pg; (t.cmd_prev_char) && {t.cmd_suppr}}}
     }
     r
   );
   
   /*
-  - start_macro:BOOLEAN
-  - end_macro:BOOLEAN
-  - call_macro:BOOLEAN
-  - repeater:BOOLEAN
+  - start_macro:Boolean
+  - end_macro:Boolean
+  - call_macro:Boolean
+  - repeater:Boolean
   */
     
-  - insert s:STRING_ALIAS :BOOLEAN <- cmd_txt {t:TXT_PG; t.cmd_insert s}
+  - insert s:String_alias :Boolean <- cmd_txt {t:Txt_pg; t.cmd_insert s}
 
   // Cursor Mouse
   
-  - cursor_std:POINTER
-  - cursor_h:POINTER
-  - cursor_v:POINTER
-  - cursor_sz:POINTER
-  - cursor_mv:POINTER
+  - cursor_std:Pointer
+  - cursor_h:Pointer
+  - cursor_v:Pointer
+  - cursor_sz:Pointer
+  - cursor_mv:Pointer
   
   - init_cursor_mouse <-
-  ( cursor_std := PAPER.get_cursor `GLFW_ARROW_CURSOR`:INTEGER
-    cursor_h   := PAPER.get_cursor `GLFW_HRESIZE_CURSOR`:INTEGER
-    cursor_v   := PAPER.get_cursor `GLFW_VRESIZE_CURSOR`:INTEGER
-    cursor_sz  := PAPER.create_cursor cursor_size_map size (24,24) hot (11,11)
-    cursor_mv  := PAPER.create_cursor cursor_move_map size (24,24) hot (11,11)
+  ( cursor_std := Paper.get_cursor `GLFW_ARROW_CURSOR`:Int
+    cursor_h   := Paper.get_cursor `GLFW_HRESIZE_CURSOR`:Int
+    cursor_v   := Paper.get_cursor `GLFW_VRESIZE_CURSOR`:Int
+    cursor_sz  := Paper.create_cursor cursor_size_map size (24,24) hot (11,11)
+    cursor_mv  := Paper.create_cursor cursor_move_map size (24,24) hot (11,11)
   )
   
-  - cursor_size_map:NATIVE_ARRAY UINTEGER_32 :=
-  ( + result:NATIVE_ARRAY UINTEGER_32
-    result := NATIVE_ARRAY UINTEGER_32.create (24*24)
-    0.to (24*24-1) do { i:INTEGER
+  - cursor_size_map:C_array Uint32 :=
+  ( + result:C_array Uint32
+    result := C_array Uint32.create (24*24)
+    0.to (24*24-1) do { i:Int
       "XXXXXXXXX               \
       \X_______X               \
       \X______X                \
@@ -357,10 +356,10 @@ Public
     result
   )
   
-  - cursor_move_map:NATIVE_ARRAY UINTEGER_32 :=
-  ( + result:NATIVE_ARRAY UINTEGER_32
-    result := NATIVE_ARRAY UINTEGER_32.create (24*24)
-    0.to (24*24-1) do { i:INTEGER
+  - cursor_move_map:C_array Uint32 :=
+  ( + result:C_array Uint32
+    result := C_array Uint32.create (24*24)
+    0.to (24*24-1) do { i:Int
       "           X            \
       \          X_X           \
       \         X___X          \
@@ -391,30 +390,30 @@ Public
     result
   )
 
-  - rect_shadow (x,y:REAL_32) size (w,h:REAL_32) radius (ah,al:REAL_32) <-
-  ( + p:PAINT
+  - rect_shadow (x,y:Real32) size (w,h:Real32) radius (ah,al:Real32) <-
+  ( + p:Paint
     begin_path
-    p := PAINT.create_box (x+8,y+8) size (w-8,h-8) radius 8 feather 16 color (COLOR.black) to (COLOR.none)
+    p := Paint.create_box (x+8,y+8) size (w-8,h-8) radius 8 feather 16 color (Color.black) to (Color.none)
     rect_varying (x,y) size (w+8,h+8) radius (ah,ah,al,al)
     fill_paint p
     fill
     p.free
     begin_path
-    p := PAINT.create_box (x+4,y+4) size (w-8,h-8) radius 8 feather 8 color (LOOK.border_off) to (LOOK.border_on)
+    p := Paint.create_box (x+4,y+4) size (w-8,h-8) radius 8 feather 8 color (Look.border_off) to (Look.border_on)
     rect_varying (x,y) size (w,h) radius (ah,ah,al,al)
     fill_paint p
     fill
     p.free
     begin_path
-    stroke_color (COLOR.black)
+    stroke_color (Color.black)
     stroke_width 1
     rect_varying (x,y) size (w,h) radius (ah,ah,al,al)
     stroke
   )
   
-  - about_cmd:BOOLEAN <- 
+  - about_cmd:Boolean <- 
   (
-    BOX.open
+    Box.open
     //ABOUT.open (PAGE.cur_pg.window.child.second)
     /*buftxt.copy
     "---------------------------------------\n\
@@ -425,13 +424,13 @@ Public
     buftxt += "\n - Config. : " += filename_cfg
     buftxt += "\n - Font system : "; font_size_sys.append_in buftxt
     buftxt += "\n   "
-    0.to 2 do { i:INTEGER; buftxt += FONT.n_sys.at i += ", "; }
+    0.to 2 do { i:Int; buftxt += FONT.n_sys.at i += ", "; }
     buftxt += FONT.n_sys.at 3 += ".\n"
     buftxt += "\n - Font user   : "; font_size_app.append_in buftxt
     buftxt += "\n   "
-    0.to 2 do { i:INTEGER; buftxt += FONT.n_app.at i += ", "; }
+    0.to 2 do { i:Int; buftxt += FONT.n_app.at i += ", "; }
     buftxt += FONT.n_app.at 3 += ".\n"
     buftxt += "\n - Color    : " += look
     buftxt += "\n - Shortcut : " += shortcut;*/
-    TRUE
+    True
   )

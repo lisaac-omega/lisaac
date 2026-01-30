@@ -1,16 +1,15 @@
 Header
-  + name := CMD_REPLACE;
-  
+  + name := Cmd_replace
 Inherit
-  - parent_cmd:CMD := CMD
+  - parent_cmd:Cmd := Cmd
 
 Public
-  - old_text:STRING_BUFFER   := STRING_BUFFER.create 32
-  - new_text:STRING_BUFFER   := STRING_BUFFER.create 32
+  - old_text:String_buffer   := String_buffer.create 32
+  - new_text:String_buffer   := String_buffer.create 32
 
-  - state:INTEGER
+  - state:Int
     
-  - open:BOOLEAN <-
+  - open:Boolean <-
   (
     (old_text.is_empty).if {
       mesg.copy "Query replace:"
@@ -24,11 +23,11 @@ Public
     start := end := cur_txt.pos
     state := 0
     text.clear
-    SUBACT.get "Replace0".load Self
+    Subact.get "Replace0".load self
     parent_cmd.open
   )
       
-  - action:BOOLEAN <-
+  - action:Boolean <-
   ( ? {state < 2}
     (state = 0).if {
       (text.is_empty).if {        
@@ -46,37 +45,37 @@ Public
       new_text.copy text
       go_state2
     }
-    TRUE
+    True
   )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  ( + r:BOOLEAN
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + r:Boolean
     (state >= 2).if {
-      ((c & KEYBOARD.msk_cmd) = 0).if {        
-        (s.first = '?').if { r := TRUE; help := TRUE; ask_refresh; }
+      ((c & Keyboard.msk_cmd) = 0).if {        
+        (s.first = '?').if { r := True; help := True; ask_refresh; }
       } else {
-        (state = 10).if { r := TRUE; close; }
+        (state = 10).if { r := True; close; }
         (s.first)
-        .when '\27d\' then { r := TRUE; cancel; }
+        .when '\27d\' then { r := True; cancel; }
       }
     } else {
       r := parent_cmd.key s cmd c
-      ((c & KEYBOARD.msk_cmd) = 0).if {
+      ((c & Keyboard.msk_cmd) = 0).if {
         //search start
       } else {
         //s.first.println
         ((c & 111b) = 0).if {
           (s.first)
-          .when 'U' then { r := TRUE; close; }
-          .when 'D' then { r := TRUE; close; }
+          .when 'U' then { r := True; close; }
+          .when 'D' then { r := True; close; }
         }
       }
     }
     r
   )
     
-  - to_next:BOOLEAN <-
-  ( + p:INTEGER
+  - to_next:Boolean <-
+  ( + p:Int
     (start > cur_txt.text.upper).if {
       p := start
     } else {
@@ -85,27 +84,27 @@ Public
     search p
   )
   
-  - rep_one:BOOLEAN <-
+  - rep_one:Boolean <-
   ( one_replace
     search start.if_false { close; }
-    TRUE
+    True
   )
   
-  - rep_all:BOOLEAN <-
+  - rep_all:Boolean <-
   ( { one_replace; }.do_while {search start}
     close
-    TRUE
+    True
   )
   
-  - cancel:BOOLEAN <-
+  - cancel:Boolean <-
   ( close
-    TRUE
+    True
   )
      
 Private
   
-  - search b:INTEGER :BOOLEAN <-
-  ( + p:INTEGER
+  - search b:Int :Boolean <-
+  ( + p:Int
     p := cur_txt.text.search text at b
     (p != -1).if {
       cnt_found := cnt_found + 1
@@ -131,13 +130,13 @@ Private
     mesg.append new_text
     mesg.append "':"
     (! help).if { mesg.append " (? for help)"; }
-    SUBACT.get "Replace".load Self
+    Subact.get "Replace".load self
     search start
     parent_cmd.open
   )
   
-  - cnt_found:INTEGER
-  - cnt_replace:INTEGER
+  - cnt_found:Int
+  - cnt_replace:Int
   
   - one_replace <-
   (
@@ -149,7 +148,7 @@ Private
   )
   
   - update_info <-
-  ( + s:STRING_BUFFER
+  ( + s:String_buffer
     s := cur_txt.footnote_left
     s.copy "Replaced "
     cnt_replace.append_in s

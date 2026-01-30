@@ -1,20 +1,19 @@
 Header
-  + name := TFN1;
-  
+  + name := Tfn1
 Inherit
-  - parent_texp:TEXP := TEXP
+  - parent_texp:Texp := Texp
   
 Public
   
-  + val:TEXP
-  + exec:{REAL_32; REAL_32}
+  + val:Texp
+  + exec:{Real32; Real32}
   
-  - init x:TEXP with b:{REAL_32; REAL_32} :TFN1 <-
-  ( val := x; exec := b; Self)
+  - init x:Texp with b:{Real32; Real32} :Tfn1 <-
+  ( val := x; exec := b; self)
   
-  - eval:REAL_32 <- exec.value (val.eval)
+  - eval:Real32 <- exec.value (val.eval)
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b += "FN1("
     val.append_in b

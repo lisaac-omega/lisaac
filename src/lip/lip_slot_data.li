@@ -1,35 +1,34 @@
 Header
-  + name      := LIP_SLOT_DATA;
-
+  + name := Lip_slot_data
 Inherit
 
-  + parent_lip_slot:Expanded LIP_CODE
+  + parent_lip_slot:Flat Lip_code
 
 Public
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + value:LIP_CONSTANT
+  + value:Lip_constant
 
   //
   // Creation.
   //
 
-  - create p:POSITION name n:STRING_ALIAS value v:LIP_CONSTANT
-  argument is_arg:BOOLEAN :SELF <-
+  - create p:Position name n:String_alias value v:Lip_constant
+  argument is_arg:Boolean :Self <-
   [
     -? {v != NULL}
   ]
-  ( + result:SELF
-    + s:LIP_SLOT_DATA
+  ( + result:Self
+    + s:Lip_slot_data
     ((!is_arg) && {s := get_data n; s != NULL}).if {
       result ?= s
       ? {result != NULL}
       (s.value.name !== v.name).if {
-        POSITION.put_error semantic text "Redefinition with incorrect type."
+        Position.put_error semantic text "Redefinition with incorrect type."
         s.position.put_position
         p.put_position
-        POSITION.send_error
+        Position.send_error
       }
     } else {
       result := clone
@@ -38,14 +37,14 @@ Public
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS value v:LIP_CONSTANT
-  argument is_arg:BOOLEAN <-
+  - make p:Position name n:String_alias value v:Lip_constant
+  argument is_arg:Boolean <-
   (
     position := p
     name     := n
     value    := v
     (is_arg).if_false {
-      list_data.add Self to n
+      list_data.at n add self
     }
   )
 
@@ -53,8 +52,8 @@ Public
   // Value.
   //
 
-  - set_value v:LIP_CONSTANT :BOOLEAN <-
-  ( + new_val:LIP_CONSTANT
+  - set_value v:Lip_constant :Boolean <-
+  ( + new_val:Lip_constant
 
     new_val := value.copy_of v
     (new_val != NULL).if {
@@ -62,7 +61,7 @@ Public
     }
   )
 
-  - get_value:LIP_CONSTANT <-
+  - get_value:Lip_constant <-
   (
     value.copy
   )

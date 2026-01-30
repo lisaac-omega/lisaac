@@ -1,34 +1,33 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + i:STRIDX
-    + str:USTRING_BUFFER
+  ( + i:Stridx
+    + str:Ustring_buffer
     str := "Toto fait du vélo!"
-    i := str.backward (str.upper) search {c2:CHAR; c2 = CHAR.from_alias "!"}
-    TEST.check (i.to_string) string "18+0"
-    i := str.backward (str.upper) search {c2:CHAR; c2 = CHAR.from_alias "o"}
-    TEST.check (i.to_string) string "17+0"
-    i := str.backward i search {c2:CHAR; c2 = CHAR.from_alias "o"}
-    TEST.check (i.to_string) string "17+0"
-    i := str.backward (i-1) search {c2:CHAR; c2 = CHAR.from_alias "o"}
-    TEST.check (i.to_string) string "3+0"
-    i := str.backward (i-1) search {c2:CHAR; c2 = CHAR.from_alias "T"}
-    TEST.check (i.to_string) string "0+0"
-    i := str.backward i search {c2:CHAR; c2 = CHAR.from_alias "o"}
-    TEST.check (i.to_string) string "0-1"
+    i := str.backward (str.upper) search {c2:Char; c2 = Char.from_alias "!"}
+    Test.check (i.to_string) string "18+0"
+    i := str.backward (str.upper) search {c2:Char; c2 = Char.from_alias "o"}
+    Test.check (i.to_string) string "17+0"
+    i := str.backward i search {c2:Char; c2 = Char.from_alias "o"}
+    Test.check (i.to_string) string "17+0"
+    i := str.backward (i-1) search {c2:Char; c2 = Char.from_alias "o"}
+    Test.check (i.to_string) string "3+0"
+    i := str.backward (i-1) search {c2:Char; c2 = Char.from_alias "T"}
+    Test.check (i.to_string) string "0+0"
+    i := str.backward i search {c2:Char; c2 = Char.from_alias "o"}
+    Test.check (i.to_string) string "0-1"
     //
-    i := str.forward (str.lower) search {c2:CHAR; c2 = CHAR.from_alias "T"}
-    TEST.check (i.to_string) string "0+0"
-    i := str.forward i search {c2:CHAR; c2 = CHAR.from_alias "v"}
-    TEST.check (i.to_string) string "13+0"
-    i := str.forward i search {c2:CHAR; c2 = CHAR.from_alias "o"}
-    TEST.check (i.to_string) string "17+0"
-    i := str.forward i search {c2:CHAR; c2 = CHAR.from_alias "!"}
-    TEST.check (i.to_string) string "18+0"
-    i := str.forward i search {c2:CHAR; c2 = CHAR.from_alias "o"}
-    TEST.check (i.to_string) string "0-1"
+    i := str.forward (str.lower) search {c2:Char; c2 = Char.from_alias "T"}
+    Test.check (i.to_string) string "0+0"
+    i := str.forward i search {c2:Char; c2 = Char.from_alias "v"}
+    Test.check (i.to_string) string "13+0"
+    i := str.forward i search {c2:Char; c2 = Char.from_alias "o"}
+    Test.check (i.to_string) string "17+0"
+    i := str.forward i search {c2:Char; c2 = Char.from_alias "!"}
+    Test.check (i.to_string) string "18+0"
+    i := str.forward i search {c2:Char; c2 = Char.from_alias "o"}
+    Test.check (i.to_string) string "0-1"
   )
   
   

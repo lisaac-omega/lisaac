@@ -1,8 +1,6 @@
 Header
-  
-  + name      := PARSER;
-
-  /* Parser for Lisaac language. 
+  + name := Parser
+/* Parser for Lisaac language. 
 
    You can to get with
    `grep "//++" parser.li' : Current grammar.
@@ -10,7 +8,7 @@ Header
    `grep "////" parser.li' : lip grammar.
   */
 Inherit
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
   
@@ -18,27 +16,27 @@ Public
   // Source information.
   //
 
-  - object   : PROTOTYPE
-  - source   : NATIVE_ARRAY CHARACTER
-  - position : INTEGER
+  - object   : Prototype
+  - source   : C_array Char
+  - position : Int
   
-  - pos_cur  : INTEGER
-  - pos_line : INTEGER
-  - pos_col  : INTEGER
+  - pos_cur  : Int
+  - pos_line : Int
+  - pos_col  : Int
 
-  - begin_position:INTEGER; // begin item position
+  - begin_position:Int; // begin item position
   
-  - current_position:POSITION <-
-  ( + result:POSITION
-    + c:CHARACTER
+  - current_position:Position <-
+  ( + result:Position
+    + c:Char
     ? {pos_cur <= position}
 
     {pos_cur = position}.until_do {
       c := source.at pos_cur
       pos_cur := pos_cur + 1
       (c = '\n').if {
-	pos_col := 0
-	pos_line := pos_line + 1
+        pos_col := 0
+        pos_line := pos_line + 1
       } else {
         pos_col := pos_col + 1
         {(source.at pos_cur & 0C0h) = 80h}.while_do {
@@ -47,24 +45,24 @@ Public
       }
     }
     (pos_line > 32767).if {
-      result := POSITION.create object line 32767 column pos_col
+      result := Position.create object line 32767 column pos_col
       syntax_error (result,"Line counter overflow.")
     }
     (pos_col > 255).if {
-      result := POSITION.create object line pos_line column 255
+      result := Position.create object line pos_line column 255
       syntax_error (result,"Column counter overflow (line too long).")
     }
-    POSITION.create object line pos_line column pos_col
+    Position.create object line pos_line column pos_col
   )
 
   //
   // AMBIGU Manager.
   //
 
-  - old_position:INTEGER
-  - old_pos_cur :INTEGER
-  - old_pos_line:INTEGER
-  - old_pos_col :INTEGER
+  - old_position:Int
+  - old_pos_cur :Int
+  - old_pos_line:Int
+  - old_pos_col :Int
 
   - save_context <-
   (    
@@ -86,28 +84,31 @@ Public
   // Syntax parser.
   //
   
-  - butf8:STRING_BUFFER := STRING_BUFFER.create 8
+  - butf8:String_buffer := String_buffer.create 8
   
-  - cur_char:CHARACTER <- source.at position
+  - cur_char:Char <- source.at position
   
-  - last_char    : CHARACTER
-  - last_integer : INTEGER_64
-  - last_real    : STRING_ALIAS
-  - is_real      : BOOLEAN
-  - last_string  : STRING_ALIAS
-  - last_len     : INTEGER
-  - is_parameter_type:BOOLEAN
-  - last_utf8:STRING_ALIAS
+  - last_char    : Char
+  - last_integer : Int64
+  - last_real    : String_alias
+  - is_real      : Boolean
+  - last_string  : String_alias
+  - last_len     : Int
+  - is_parameter_type:Boolean
+  - last_utf8:String_alias
 
-  - last_comment_extern:STRING_ALIAS
-  - last_comment_slot  :STRING_ALIAS
-  - skip_comment:BOOLEAN
-
-  - put_new_line_comment str:STRING_BUFFER with cmt:STRING_ALIAS <-
-  ( + lst:LINKED_LIST(STRING_ALIAS)
-    + idx,idx_beg:INTEGER
-    lst := PARSER.short_dico.fast_reference_at cmt
-    (lst != NULL).if {
+  - last_comment_extern:String_alias
+  - last_comment_slot  :String_alias
+  - skip_comment:Boolean
+  
+  /*
+  - put_new_line_comment str:String_buffer with cmt:String_alias <-
+  ( + lst:LINKED_LIST(String_alias) ; + idx,idx_beg:Int 
+    
+    // DCDC 
+    //lst := PARSER.short_dico.fast_reference_at cmt
+    lst := PARSER.dico.reference_at cmt
+    (lst != NULL).if {    
       {(idx := str.index_of '\n' since (idx+1)) < str.upper}.while_do {
         idx_beg := idx
         idx := idx + 1
@@ -125,9 +126,10 @@ Public
       }
     }
   )
+  */
   
-  - read_space_nl:BOOLEAN <-
-  ( + pos,p:INTEGER
+  - read_space_nl:Boolean <-
+  ( + pos,p:Int
     (is_shorter2).if {
       string_tmp3.clear
       string_tmp4.clear
@@ -155,11 +157,11 @@ Public
     ((position != p) | (cur_char != 0.to_character))
   )
     
-  - read_space:BOOLEAN <-
-  ( + posold,pos,pos2:INTEGER
-    + level_comment:INTEGER
-    + stat:INTEGER
-    + c:CHARACTER
+  - read_space:Boolean <-
+  ( + posold,pos,pos2:Int
+    + level_comment:Int
+    + stat:Int
+    + c:Char
 
     pos := position
     posold := -1
@@ -235,13 +237,13 @@ Public
         }
       }
     }
-    // FALSE : Last character.
+    // False : Last character.
     begin_position := position
     ((position != pos) | (cur_char != 0.to_character))
   )
 
-  - read_word st:STRING_ALIAS :BOOLEAN <-
-  ( + posold,j:INTEGER
+  - read_symbol st:String_alias :Boolean <-
+  ( + posold,j:Int
     read_space
     //
     posold := position
@@ -255,8 +257,24 @@ Public
       position := posold
     }
   )
+  
+  - read_word st:String_alias :Boolean <-
+  ( + posold,j:Int
+    read_space
+    //
+    posold := position
+    {(j <= st.upper) && {cur_char = st.at j}}.while_do {      
+      j := j + 1
+      position := position + 1
+    }
+    ((j > st.upper) && {! cur_char.is_identifier}).if {
+      last_string := st
+    } else {
+      position := posold
+    }
+  )
 
-  - read_char ch:CHARACTER :BOOLEAN <-
+  - read_char ch:Char :Boolean <-
   ( read_space
     (cur_char = ch).if {
       last_char := ch
@@ -264,15 +282,15 @@ Public
     }
   )
 
-  - read_affect:BOOLEAN <-
+  - read_affect:Boolean <-
   //-- affect         -> ":=" | "<-" | "?="
-  ((read_word ":=") || {read_word "?="} || {read_word "<-"}).if {
+  ((read_symbol ":=") || {read_symbol "?="} || {read_symbol "<-"}).if {
     read_space_nl
   }
 
-  - read_style:CHARACTER <-
+  - read_style:Char <-
   //-- style          -> '-' | '+'
-  ( + result:CHARACTER
+  ( + result:Char
     read_space_nl
     ((read_char '-') || {read_char '+'}).if {
       result := last_char
@@ -280,8 +298,8 @@ Public
     result
   )
   
-  - read_utf8:BOOLEAN <-
-  ( + n:UINTEGER_8
+  - read_utf8:Boolean <-
+  ( + n:Uint8
     n := cur_char
     ((n & 80h) != 0).if {
       butf8.clear
@@ -295,9 +313,9 @@ Public
     }
   )
   
-  - char first:BOOLEAN ascii ascii:{CHARACTER;BOOLEAN} utf8 utf8:{BOOLEAN} :BOOLEAN <-
-  ( + c:CHARACTER
-    + s:STRING_ALIAS
+  - char first:Boolean ascii ascii:{Char;Boolean} utf8 utf8:{Boolean} :Boolean <-
+  ( + c:Char
+    + s:String_alias
     (ascii.value (c := cur_char) || {(!first) && {c.is_digit || {c = '_'}}}).if {
       first.if {
         string_tmp.clear
@@ -307,77 +325,95 @@ Public
       string_tmp.add_last c; position := position + 1
     }.elseif {read_utf8 && utf8} then {
       first.if { string_tmp.clear; }
-      s := utf8_dico.fast_reference_at last_utf8
+      s := utf8_dico.reference_at last_utf8
       (s = NULL).if { string_tmp.append last_utf8 } else { string_tmp.append s }
       position := position + last_utf8.count
     }
   )
      
-  - read_idf:BOOLEAN <-
+  - read_idf:Boolean <-
   //-- identifier     -> 'a'-'z' {'a'-'z' | '0'-'9' | '_'}
   (
     read_space
-    (char TRUE ascii {c:CHARACTER; c.is_lower} utf8 {UTF8.is_lower last_utf8}).if {
-      {char FALSE ascii {c:CHARACTER; c.is_lower} utf8 {UTF8.is_lower last_utf8}}.while_loop
+    (char True ascii {c:Char; c.is_lower} utf8 {Utf8.is_lower last_utf8}).if {
+      {char False ascii {c:Char; c.is_lower} utf8 {Utf8.is_lower last_utf8}}.while_loop
       last_string := string_tmp.to_string_alias
     }
   )
-
-  - read_cap_idf:BOOLEAN <-
-  //-- cap_identifier -> 'A'-'Z' {'A'-'Z' | '0'-'9' | '_'}
-  ( 
+    
+  - read_cap_idf:Boolean <-
+  //-- cap_identifier -> 'A'-'Z' {'A'-'Z' | 'a'-'z' | '0'-'9' | '_'}
+  ( + result:Boolean
+    + p,i:Int
     read_space
-    (char TRUE ascii {c:CHARACTER; c.is_upper} utf8 {UTF8.is_upper last_utf8}).if {
-      {char FALSE ascii {c:CHARACTER; c.is_upper} utf8 {UTF8.is_upper last_utf8}}.while_loop
-      last_string := string_tmp.to_string_alias
-      is_parameter_type := (last_string.count = 1) && {last_string.first.is_upper}
+    p := position
+    (char True ascii {c:Char; c.is_upper} utf8 {Utf8.is_upper last_utf8}).if {
+      {char False ascii {c:Char; c.is_letter} utf8 {Utf8.is_letter last_utf8}}.while_loop      
+      last_string := string_tmp.to_string_alias     
+      (
+        (last_string = "Old")  || {last_string = "Exact"}  || 
+        {last_string = "Flat"} || {last_string = "Result"} || 
+        {
+          (last_string.has_prefix "Result_") && {
+            i := "Result_".count
+            {(i <= last_string.upper) && {last_string.at i.is_digit}}.while_do { i := i + 1 }
+            i > last_string.upper
+          }
+        }
+      ).if {
+        position := p // BSBS: ca n'arrive jamais ! ;)
+      } else {
+        result := True
+        is_parameter_type := (last_string.count = 1) && {last_string.first.is_upper}
+      }
     }
+    result
   )
 
-  - read_num:BOOLEAN <-
-  //-- number         -> Integer or Float
-  ( + c:CHARACTER
-    + e0,e1:INTEGER
-    + f,stop:BOOLEAN
-    + tmp:STRING_BUFFER
+  - read_num:Boolean <-
+  //-- number         -> Int or Float
+  ( + c:Char
+    + e0,e1:Int
+    + f,stop:Boolean
+    + tmp:String_buffer
     read_space
     (cur_char.is_digit).if {      
-      is_real := FALSE
-      tmp := STRING.new_tmp
+      is_real := False
+      tmp := String.new_tmp
       {!stop}.while_do {
         c := cur_char
         position := position + 1
         (c.is_hexadecimal_digit).if {
-          tmp | c; e0 := e0 + f.to_integer
+          tmp | c; e0 := e0 + f.to_int
         }.elseif {(c = '_') || {c = '\''}} then {
           // Nothing.
         }.elseif {(c = '.') && {cur_char.is_digit}} then {
           f.if { syntax_error (current_position,"Float invalid."); }
-          f := TRUE
+          f := True
           tmp | '.'; // A VIRER
         } else {
-          stop := TRUE
+          stop := True
           position := position - 1
         }
       }
       (c = 'h').if {
         f.if { syntax_error (current_position,"Float invalid."); }
-        last_integer := tmp.to_hexadecimal.to_raw_integer_64; position := position + 1
+        last_integer := tmp.to_hexadecimal.to_raw_int64; position := position + 1
       } else {
         (tmp.last > '9').if { tmp.remove_last; position := position - 1; }
         ((c := cur_char) = 'o').if {
           (f || {! tmp.is_octal}).if { syntax_error (current_position,"Incorrect octal number."); }
-          last_integer := tmp.to_octal.to_raw_integer_64; position := position + 1
+          last_integer := tmp.to_octal.to_raw_int64; position := position + 1
         }.elseif {c = 'b'} then {
           (f || {! tmp.is_bit}).if { syntax_error (current_position,"Incorrect binary number."); }
-          last_integer := tmp.to_binary.to_raw_integer_64; position := position + 1
+          last_integer := tmp.to_binary.to_raw_int64; position := position + 1
         }.elseif {c = 'd'} then {
           (f || {! tmp.is_integer_64}).if { syntax_error (current_position,"Incorrect decimal number."); }
-          last_integer := tmp.to_integer_64; position := position + 1
+          last_integer := tmp.to_int64; position := position + 1
         } else {
           (c.to_upper = 'E').if {
             tmp | 'E'; // A VIRER
-            f := TRUE; position := position + 1
+            f := True; position := position + 1
             ((read_char '-') || {read_char '+'}).if {
               tmp | last_char;  // A VIRER
             }
@@ -392,11 +428,11 @@ Public
             last_real := tmp.to_string_alias
             //e1 := e1 - e0
             //(! tmp.is_integer_64).if { syntax_error (current_position,"Not number."); }
-            //last_real := tmp.to_integer_64.to_real_32 * 10.0.pow e1
-            is_real := TRUE
+            //last_real := tmp.to_int64.to_real32 * 10.0.pow e1
+            is_real := True
           } else {
             (! tmp.is_integer_64).if { syntax_error (current_position,"Incorrect decimal number."); }
-            last_integer := tmp.to_integer_64
+            last_integer := tmp.to_int64
           }
         }
       }
@@ -404,13 +440,13 @@ Public
     }
   )
 
-  - read_escape_character:INTEGER <-
+  - read_escape_character:Int <-
   //-- escape         -> '\\' separator {separator} '\\'
   //--                 | '\\' escape_seq
   //--                 | '\\' integer '\\'
   //-- escape_seq     -> 'a' | 'b'  | 'f' | 'n'  | 'r'  | 't'
   //--                 | 'v' | '\\' | '?' | '\'' | '\"' | '0'
-  ( + val,r:INTEGER
+  ( + val,r:Int
     cur_char.is_separator.if {
       read_space_nl
       (cur_char != '\\').if {
@@ -428,11 +464,11 @@ Public
       }.elseif {cur_char.is_digit} then {      
         read_num
         ((last_integer > 255) || {is_real}).if { syntax_error (current_position,"Invalid range character number [0,255]."); }
-        val := last_integer.to_integer
+        val := last_integer.to_int
         string_tmp.add_last ((val >> 6).decimal_digit)
         string_tmp.add_last (((val >> 3) & 7).decimal_digit)
         string_tmp.add_last ((val & 7).decimal_digit)
-        (cur_char != '\\').if { syntax_error (current_position,"Character '\' is needed."); }
+        (cur_char != '\\').if { syntax_error (current_position,"CHARACTERacter '\' is needed."); }
         position := position + 1
       } else {
         syntax_error (current_position,"Unknown escape sequence.")
@@ -442,10 +478,10 @@ Public
     r
   )
 
-  - read_characters:BOOLEAN <-
+  - read_characters:Boolean <-
   //-- character      -> '\'' ascii '\''
-  ( + count:INTEGER
-    + c:CHARACTER
+  ( + count:Int
+    + c:Char
     read_space
     (cur_char = '\'').if {      
       position := position+1
@@ -463,16 +499,16 @@ Public
       }
       ((c != '\'') || {count != 1}).if {
         string_tmp.println
-        syntax_error (current_position,"Character constant too long.")
+        syntax_error (current_position,"CHARACTERacter constant too long.")
       }
       position := position+1
       last_string := string_tmp.to_string_alias
     }
   )
 
-  - read_string:BOOLEAN <-
+  - read_string:Boolean <-
   //-- string         -> '\"' string_char '\"'
-  ( + c:CHARACTER
+  ( + c:Char
     read_space
     (cur_char = '\"').if {
       position := position+1
@@ -495,9 +531,9 @@ Public
     }
   )
 
-  - read_external:BOOLEAN <-
+  - read_external:Boolean <-
   //-- external       -> '`' ascii_c_code '`'
-  ( + c:CHARACTER
+  ( + c:Char
     read_space
     (cur_char = '`').if {
       position := position+1
@@ -521,16 +557,16 @@ Public
     }
   )
   
-  - char_operator:BOOLEAN <-
-  ( + c:CHARACTER
+  - char_operator:Boolean <-
+  ( + c:Char
     ("!@#$%^&<|*-+=~/?\\>".has (c := cur_char)).if {
       string_tmp.add_last c; position := position + 1
-    }.elseif {read_utf8 && {UTF8.is_symbol last_utf8}} then {      
+    }.elseif {read_utf8 && {Utf8.is_symbol last_utf8}} then {      
       string_tmp.append last_utf8; position := position + last_utf8.count
     }
   )
   
-  - read_operator:BOOLEAN <-
+  - read_operator:Boolean <-
   //-- operator       -> '!' | '@' | '#' | '$' | '%' | '^' | '&' | '<' | '|'
   //--                 | '*' | '-' | '+' | '=' | '~' | '/' | '?' | '\' | '>'
   ( 
@@ -549,11 +585,11 @@ Public
   // Variable & function Global.
   //
 
-  - last_slot:ITM_SLOT
+  - last_slot:Itm_slot
 
-  - last_group:ITM_LIST
+  - last_group:Itm_list
 
-  - last_section:SECTION_
+  - last_section:Section_
 
   //
   // PARSER
@@ -563,29 +599,29 @@ Public
   //++ SECTION      -> ('Header' | 'Inherit' | 'Insert' | 'Interrupt' | 'External' | 'Mapping') [ ',' ACCESS ] 
   //++               | ACCESS  
   - read_program <-
-  ( + pos_sec:INTEGER
-
-    pos_sec := position
+  ( //+ pos_sec:Int
+    + p:Int
+    
+    //pos_sec := position
     
     read_space_nl
 
-    pos_sec := position
+    //pos_sec := position
     
     last_comment_extern := NULL
     //
     // Read Section Header.
-    //
-    read_word "Section"; // Optionnel
+    //    
     (read_word "Header").if_false { syntax_error (current_position,"Section `Header' is needed."); };
-    last_section := SECTION_.create current_position
+    last_section := Section_.create current_position
     last_section.set_style "Header"
     
     read_space_nl
     object.set_pattern_in read_contract
     read_char ';'
         
-    (read_slot_header TRUE).if_false { syntax_error (current_position,"Slot `name' not found."); };
-    {read_slot_header FALSE}.while_loop
+    (read_slot_header True).if_false { syntax_error (current_position,"Slot `name' not found."); };
+    {read_slot_header False}.while_loop
     
     object.set_pattern_out read_contract
     read_char ';'
@@ -595,10 +631,13 @@ Public
     //
     {
       last_comment_extern := NULL
-      read_word "Section"; // Optionnel
-      ((read_word "Inherit") || {read_word "Insert"} || {read_word "Interrupt"} ||
-        {read_word "External"} || {read_word "Mapping"}).if {
-        last_section := SECTION_.create current_position
+      read_space
+      p := position
+      (
+        (read_word "Inherit") || {read_word "Insert"} || {read_word "Interrupt"} ||
+        {read_word "External"} || {read_word "Mapping"}
+      ).if {               
+        last_section := Section_.create current_position
         last_section.set_style last_string
         (last_section.is_mapping).if {
           object.set_mapping
@@ -606,10 +645,13 @@ Public
           object.set_external
         }
         (read_char ',').if {
-          read_access FALSE
+          read_access False
         }
-      } || {read_access TRUE}
+      } || {read_access True}
     }.while_do {
+      (source.at (p - 1) != '\n').if {
+        warning_error (current_position,"The sections must be at the beginning of the line.")
+      }
       
       last_section.set_pattern_in read_contract
       read_char ';'
@@ -626,12 +668,13 @@ Public
     (cur_char != '\0').if { syntax_error (current_position,"Incorrect symbol."); }
   );  // read_program
   
-  - read_access new:BOOLEAN :BOOLEAN <-
+  - read_access new:Boolean :Boolean <-
   //++ ACCESS       -> 'Directory' | 'Public' | 'Private' | PROTOTYPE { ',' PROTOTYPE }
-  ( + ts:ARRAY ITM_TYPE_MONO
-    + t:ITM_TYPE_MONO
+  ( + ts:Array Itm_type_mono
+    + t:Itm_type_mono
+    
     ((read_word "Public") || {read_word "Private"} || {read_word "Directory"}).if {
-      (new).if { last_section := SECTION_.create current_position; }
+      (new).if { last_section := Section_.create current_position; }
       last_section.set_access_name last_string
       (
         (last_section.is_inherit_or_insert) &&
@@ -639,42 +682,42 @@ Public
         {! object.last_slot.id_section.is_inherit_or_insert}
       ).if {
         syntax_error (current_position,"`Inherit/Insert' must to be first section.");
-      }.elseif {
-        (last_section.is_inherit) && {object.type_style = "Expanded"} &&
-        {object.name != "TRUE" }  && {object.name != "FALSE"}
+      }.elseif { 
+        (last_section.is_inherit) && {object.type_style = "Flat"} &&
+        {object.name != str_true}  && {object.name != str_false}
       } then {
         warning_error (current_position,
-        "`Inherit' is not possible with Expanded object (Use `Section Insert').")
-      }
+        "`Inherit' is not possible with Flat object (Use `Section Insert').")
+      }      
     }.elseif {(t := read_prototype) != NULL} then {
-      (new).if { last_section := SECTION_.create current_position; }
-      ts := ALIAS_ARRAY ITM_TYPE_MONO.new
+      (new).if { last_section := Section_.create current_position; }
+      ts := Alias_array Itm_type_mono.new
       ts.add_last t
       {read_char ','}.while_do {
         t := read_prototype
         (t = NULL).if { syntax_error (current_position,"Incorrect access Section."); }
         ts.add_last t
-      }
-      last_section.set_access_list (ALIAS_ARRAY ITM_TYPE_MONO.alias ts)
+      }      
+      last_section.set_access_list (Alias_array Itm_type_mono.alias ts)
     }
   )
   
-  - read_slot:BOOLEAN <-
+  - read_slot:Boolean <-
   //++ SLOT         -> style TYPE_SLOT [':' TYPE_RESULT][ affect DEF_SLOT ] [ ';' ]
-  ( + result:BOOLEAN
-    + t:ITM_TYPE
-    + style:CHARACTER
-    + affect:CHARACTER
-    + old_pos:INTEGER
-    + s:ITM_SLOT
+  ( + result:Boolean
+    + t:Itm_type
+    + style:Char
+    + affect:Char
+    + old_pos:Int
+    + s:Itm_slot
 
     style  := read_style
     (style != '\0').if {
-      ITM_ARGV.reset_list_idf
+      Itm_argv.reset_list_idf
       //
       // Classic slot.
       //
-      result := TRUE
+      result := True
       //
       last_slot := read_type_slot
       (last_slot = NULL).if { syntax_error (current_position,"Incorrect slot declaration."); }
@@ -695,7 +738,7 @@ Public
           affect := last_string.first
         }
       } else {
-        t := ITM_TYPE_SIMPLE.type_void
+        t := Itm_type_simple.type_void
       }
       last_slot.set_result_type t
       last_slot.set_affect affect
@@ -711,33 +754,43 @@ Public
       read_char ';'; // Optionnel
  
       // Added slot in prototype :
-      s := object.slot_list.fast_reference_at (last_slot.name)
+      s := object.slot_list.reference_at (last_slot.name)
       (s != NULL).if {
-        POSITION.put_error semantic text "Double slot declaration."
+        Position.put_error semantic text "Double slot declaration."
         s.position.put_position
         last_slot.position.put_position
-        POSITION.send_error
+        Position.send_error
       }
       object.add_slot last_slot
     }
     result
   );  // read_slot
   
-  - read_type_slot:ITM_SLOT <-
+  - read_type_slot:Itm_slot <-
   //++ TYPE_SLOT    -> { LOC_ARG | identifier }
   //++               | [ LOC_ARG ] '\'' operator '\'' [("Left"|"Right") [integer]] ["<>"] [LOC_ARG]
-  ( + arg:ITM_ARGUMENT
-    + result:ITM_SLOT
-    + list_arg:ARRAY ITM_ARGUMENT
-    + idf_beg:BOOLEAN
+  ( + arg:Itm_argument
+    + result:Itm_slot
+    + list_arg:Array Itm_argument
+    + idf_beg:Boolean
+    + p:Int
     //     
-    list_arg := ALIAS_ARRAY ITM_ARGUMENT.new
-    STRING.tmp { n:STRING_BUFFER
-      read_idf.if { n.copy last_string; idf_beg := TRUE; }
-      arg := read_loc_arg FALSE self 11b
+    list_arg := Alias_array Itm_argument.new
+    String.tmp { n:String_buffer
+      read_space
+      p := position
+      (read_idf).if {
+        (last_string = "self").if {
+          position := p
+        } else {
+          n.copy last_string; idf_beg := True;
+        }
+      }
+      arg := read_loc_arg False
+      /*
       ((arg != NULL) && {arg.is_self} && {read_char '.'}).if {                
         warning_error (current_position,"Compatibility Old Lisaac.")
-      }
+      }*/
       
       (read_char '\'').if {
         (idf_beg).if { syntax_error (current_position,"Incorrect slot identifier."); }
@@ -748,8 +801,8 @@ Public
         result := read_slot_operator list_arg
       } else {        
         ((arg = NULL) || {! arg.is_self}).if {
-          list_arg.add_last (ITM_ARG.create current_position name "Self" type (ITM_TYPE_SIMPLE.type_self))
-          idf_beg := FALSE
+          list_arg.add_last (Itm_arg.create current_position name "self" type (Itm_type_simple.type_self)) 
+          idf_beg := False
         }
         (arg != NULL).if {
           list_arg.add_last arg
@@ -757,28 +810,31 @@ Public
           {read_idf}.while_do {
             (! n.is_empty).if { n.add_last ' '; }
             n.append last_string
-            arg := read_loc_arg FALSE self 01b
-            (arg != NULL).if { list_arg.add_last arg; }
+            arg := read_loc_arg False
+            (arg != NULL).if {
+              (arg.is_self).if { semantic_error (arg.position,"`self' is incorrect.") }
+              list_arg.add_last arg;
+            }
             read_space_nl
           }
         }
-        result := ITM_SLOT.create current_position name (n.to_string_alias) idf_first idf_beg feature last_section
+        result := Itm_slot.create current_position name (n.to_string_alias) idf_first idf_beg feature last_section
       }
     }
     (result != NULL).if {
-      list_arg := ALIAS_ARRAY ITM_ARGUMENT.copy list_arg
+      list_arg := Alias_array Itm_argument.copy list_arg
       result.set_argument_list list_arg
     }
     result
   )
   
-  - read_slot_operator list_arg:ARRAY ITM_ARGUMENT :ITM_SLOT <-
-  ( + name,pretty_name:STRING_ALIAS
-    + associativity:STRING_ALIAS
-    + priority:INTEGER
-    + arg:ITM_ARGUMENT
-    + result:ITM_SLOT_OPERATOR
-    + comm:BOOLEAN
+  - read_slot_operator list_arg:Array Itm_argument :Itm_slot <-
+  ( + name,pretty_name:String_alias
+    + associativity:String_alias
+    + priority:Int
+    + arg:Itm_argument
+    + result:Itm_slot_operator
+    + comm:Boolean
 
     (! read_operator).if { syntax_error (current_position,"Operator is needed."); }
     pretty_name := name := last_string
@@ -787,28 +843,29 @@ Public
       syntax_error (current_position,"Incorrect operator.\n\
       \Note: `!=' operator is always define builtin like, Not `='.")
     }
-    comm := read_word "<>"
+    comm := read_symbol "<>"
     (
       (read_word "Left") || {read_word "Right"}
     ).if {
       associativity := last_string
       (read_num).if {
         ((is_real) || {last_integer>100}).if { syntax_error (current_position,"Invalid priority."); }
-        priority := last_integer.to_integer
+        priority := last_integer.to_int
       }
     }
-    (! comm).if { comm := read_word "<>"; }
+    (! comm).if { comm := read_symbol "<>"; }
     //
     (list_arg.is_empty).if {
       // Prefix operator.
-      arg := read_loc_arg FALSE self 10b
+      arg := read_loc_arg False
       (arg = NULL).if { syntax_error (current_position,"Operator declaration invalid."); }
       list_arg.add_last arg
       name := operator "__prefix" name name
     } else {
-      arg := read_loc_arg FALSE self 01b
+      arg := read_loc_arg False
       (arg != NULL).if {
         // Infix operator.
+        (arg.is_self).if { semantic_error (arg.position,"`self' is incorrect.") }
         list_arg.add_last arg
         name := operator "__infix" name name
         (associativity = NULL).if {
@@ -816,7 +873,7 @@ Public
         }
         (
           (comm) && {
-            (arg.count != 1) || {list_arg.first.count != 1} || {arg.at 0 != ITM_TYPE_SIMPLE.type_self}
+            (arg.count != 1) || {list_arg.first.count != 1} || {arg.at 0 != Itm_type_simple.type_self}
           }
         ).if {
           semantic_error (current_position,"Argument(s) invalid with commutativity.")
@@ -832,13 +889,13 @@ Public
       }
       ((associativity != "Right") || {priority != 50} || {! comm}).if {
         warning_error (current_position,"`=' is always Right 50 <>.");
-        (associativity,priority,comm) := ("Right",50,TRUE)
+        (associativity,priority,comm) := ("Right",50,True)
       }
     }
     ((list_arg.count = 1) && {(associativity != NULL) || {comm}}).if {
       syntax_error (current_position,"Not associativity or commutativity for unary operator.")
     }
-    result := ITM_SLOT_OPERATOR.create current_position name name idf_first FALSE feature last_section
+    result := Itm_slot_operator.create current_position name name idf_first False feature last_section
     result.set_pretty_name pretty_name
     result.set_associativity associativity priority priority comm comm
     result
@@ -846,7 +903,7 @@ Public
 
   - read_def_slot <-
   //++ DEF_SLOT     -> [CONTRACT] EXPR [CONTRACT]
-  ( + expr:ITM_CODE
+  ( + expr:Itm_code
 
     last_slot.set_pattern_in read_contract
     read_space_nl
@@ -857,10 +914,10 @@ Public
     last_slot.set_pattern_out read_contract
   )
   
-  - read_type_result:ITM_TYPE <-
+  - read_type_result:Itm_type <-
   //++ TYPE_RESULT  -> TYPE
   //++               | '(' TYPE_LIST ')'
-  ( + result:ITM_TYPE
+  ( + result:Itm_type
     result := read_type
     ((result = NULL) && {read_char '('}).if {
       result := read_type_list
@@ -870,18 +927,16 @@ Public
     result
   )
   
-  - read_type_list:ITM_TYPE <-
-  //++ TYPE_LIST    -> TYPE [ ',' ( TYPE { ',' TYPE } } | '...' ) ]  
-  ( + lst:ARRAY ITM_TYPE
-    + t:ITM_TYPE
-    + result:ITM_TYPE
+  - read_type_list:Itm_type <-
+  //++ TYPE_LIST    -> TYPE [ ',' TYPE { ',' TYPE } }  ]  
+  ( + lst:Array Itm_type
+    + t:Itm_type
+    + result:Itm_type
 
     result := read_type
     ((result != NULL) && {read_char ','}).if {
-      (read_word "...").if {
-        result.set_list
-      }.elseif {(t := read_type) != NULL} then {        
-        lst := ALIAS_ARRAY ITM_TYPE.new
+      ((t := read_type) != NULL).if {        
+        lst := Alias_array Itm_type.new
         lst.add_last result
         lst.add_last t
         {read_char ','}.while_do {
@@ -890,8 +945,8 @@ Public
           (t = NULL).if { syntax_error (current_position,"Incorrect type list."); }
           lst.add_last t
         }
-        lst := ALIAS_ARRAY ITM_TYPE.alias lst
-        result := ITM_TYPE_MULTI.get lst
+        lst := Alias_array Itm_type.alias lst
+        result := Itm_type_multi.get lst
       } else {
         syntax_error (current_position,"Incorrect type list.")
       }
@@ -899,19 +954,16 @@ Public
     result
   )
 
-  //++ LOC_ARG      -> identifier ':' TYPE
+  //++ LOC_ARG      -> identifier ':' TYPE [ '^' identifier ]
   //++               | '(' ARG ')'
-  - read_loc_arg mute:BOOLEAN self msk:UINTEGER_8 :ITM_ARGUMENT <-
-  ( + result:ITM_ARGUMENT
-    + t:ITM_TYPE
-    + pos:POSITION
-    + n:STRING_ALIAS
-    + tb:ITM_TYPE_BLOCK
+  - read_loc_arg mute:Boolean :Itm_argument <-
+  ( + result:Itm_argument
+    + t:Itm_type
+    + pos:Position
+    + n:String_alias
+    + tb:Itm_type_block
     read_space_nl
-    (
-      ((msk & 10b = 10b) && {read_word "Self"}) ||
-      {(msk & 01b = 01b) && {read_idf}}
-    ).if {
+    (read_idf).if {
       pos := current_position
       n := last_string
       ((read_char ':') && {cur_char != '='}).if {
@@ -920,18 +972,18 @@ Public
           syntax_error (current_position,"Incorrect type.")
         }
         (
-          (msk = 10b) && {t != ITM_TYPE_SIMPLE.type_self} &&
+          (n = "self") && {t != Itm_type_simple.type_self} &&
           {
-            (object.name != "BLOCK") || {tb ?= t; tb = NULL}
+            (object.name != str_block) || {tb ?= t; tb = NULL}
           }
         ).if {
-          syntax_error (current_position,"Type `SELF' is needed.");
+          syntax_error (current_position,"Type `Self' is needed.");
         }
         (read_char '^').if {
           (! read_idf).if { syntax_error (current_position,"Identifier is needed.") }
-          result := ITM_ARGV.new.make pos name n type t n last_string
+          result := Itm_argv.new.make pos name n type t n last_string
         } else {
-          result := ITM_ARG.create pos name n type t
+          result := Itm_arg.create pos name n type t
         }
       } else {
         (!mute).if {
@@ -939,7 +991,7 @@ Public
         }
       }
     }.elseif {read_char '('} then {
-      result := read_arg mute self msk
+      result := read_arg mute 
       ((result = NULL) && {!mute}).if {       
         syntax_error (current_position,"Incorrect argument definition.")
       }
@@ -950,26 +1002,26 @@ Public
     result
   )
   
-  //++ ARG          -> identifier { [':' TYPE] ',' identifier } ':' TYPE [ ',' '...' ]
-  - read_arg mute:BOOLEAN self msk:UINTEGER_8 :ITM_ARGUMENT <-
-  ( + result:ITM_ARGUMENT
-    + t:ITM_TYPE
-    + n_lst:ARRAY STRING_ALIAS
-    + t_lst:ARRAY ITM_TYPE
-    + is_type,is_stop:BOOLEAN
-    n_lst := ALIAS_ARRAY STRING_ALIAS.new
-    t_lst := ALIAS_ARRAY ITM_TYPE.new
-    (
-      ((msk & 10b = 10b) && {read_word "Self"}) || 
-      {(msk & 01b = 01b) && {read_idf        }}
-    ).if {      
+  //++ ARG          -> identifier { [':' TYPE [ '^' idf ] ] ',' identifier } ':' TYPE 
+  - read_arg mute:Boolean :Itm_argument <-
+  ( + result:Itm_argument
+    + t:Itm_type
+    + n_lst:Array String_alias
+    + t_lst:Array Itm_type
+    + is_type,is_stop:Boolean
+    n_lst := Alias_array String_alias.new
+    t_lst := Alias_array Itm_type.new
+    (read_idf).if {
       {(! is_stop) && {(is_type := read_char ':' && {cur_char != '='}) || {read_char ','}}}.while_do {
+        ((!n_lst.is_empty) && {last_string = "self"}).if {
+          semantic_error (current_position,"`self' is incorrect.") 
+        }
         n_lst.add_last last_string
         (is_type).if {
           t := read_type
           (t = NULL).if {
             (mute).if {
-              is_stop := TRUE
+              is_stop := True
             } else {
               syntax_error (current_position,"Incorrect type.")
             }
@@ -979,17 +1031,8 @@ Public
             (read_char ',').if {
               read_space_nl
               (! read_idf).if {
-                syntax_error (current_position,"Identifier is needed.")
-                /*(! read_word "...").if {
-                  syntax_error (current_position,"Incorrect argument.")
-                }
-                (n_lst.count > 1).if {
-                  semantic_error (current_position,"List argument must to be on one argument.")
-                }
-                t.set_list
-                is_stop := TRUE
-                */
-              }
+                syntax_error (current_position,"Identifier is needed.")                
+              }              
             }
           }
         } else {
@@ -1007,59 +1050,56 @@ Public
         (n_lst.count = 1).if {
           (read_char '^').if {
             (! read_idf).if { syntax_error (current_position,"Identifier is needed.") }
-            result := ITM_ARGV.new.make current_position name (n_lst.first) type (t_lst.first) n last_string
+            result := Itm_argv.new.make current_position name (n_lst.first) type (t_lst.first) n last_string
           } else {
-            result := ITM_ARG.create current_position name (n_lst.first) type (t_lst.first)
+            result := Itm_arg.create current_position name (n_lst.first) type (t_lst.first)
           }
-          ALIAS_ARRAY STRING_ALIAS.free n_lst
-          ALIAS_ARRAY ITM_TYPE.free t_lst
+          Alias_array String_alias.free n_lst
+          Alias_array Itm_type.free t_lst
         } else {
-          result := ITM_ARGS.create (current_position) name (ALIAS_ARRAY STRING_ALIAS.alias n_lst) 
-          type (ITM_TYPE_MULTI.get (ALIAS_ARRAY ITM_TYPE.alias t_lst))
+          result := Itm_args.create (current_position) name (Alias_array String_alias.alias n_lst) 
+          type (Itm_type_multi.get (Alias_array Itm_type.alias t_lst))
         }
       }
     }
     result
   )
   
-  //++ LOCAL        -> identifier { ',' identifier } ':' TYPE [ ',' '...' ] 
-  - read_local :ARRAY ITM_LOCAL <-
-  ( + t:ITM_TYPE
-    + result,lst:ARRAY ITM_LOCAL
+  //++ LOCAL        -> identifier { ',' identifier } ':' TYPE 
+  - read_local :Array Itm_local <-
+  ( + t:Itm_type
+    + result,lst:Array Itm_local
+    + l:Itm_local
 
     (read_idf).if {
-      lst := ALIAS_ARRAY ITM_LOCAL.new
-      lst.add_last (ITM_LOCAL.create current_position name last_string)
+      lst := Alias_array Itm_local.new
+      lst.add_last (Itm_local.create current_position name last_string)
       {(read_char ',') && {read_idf}}.while_do {
-        lst.add_last (ITM_LOCAL.create current_position name last_string)
+        lst.add_last (Itm_local.create current_position name last_string)
       }
       ((read_char ':') && {cur_char != '='}).if {
         t := read_type
         (t = NULL).if {
           syntax_error (current_position,"Incorrect local type.")
+        }        
+        0.to (lst.upper) do { j:Int
+          l := lst.at j
+          (l.name = "self").if { semantic_error (l.position,"`self' local is incorrect.") }
+          l.set_type t
         }
-        (read_char ',').if {
-          (read_word "...").if_false {
-            syntax_error (current_position,"'...' needed.")
-          }
-          t.set_list
-        }
-        0.to (lst.upper) do { j:INTEGER
-          lst.at j.set_type t
-        }
-        result := ALIAS_ARRAY ITM_LOCAL.copy lst
+        result := Alias_array Itm_local.copy lst
       } else {
-        ALIAS_ARRAY ITM_LOCAL.free lst
+        Alias_array Itm_local.free lst
       }
     }
 
     result
   )
   
-  - read_type:ITM_TYPE <-
+  - read_type:Itm_type <-
   //++ TYPE         -> PROTOTYPE
   //++               | TYPE_VECTOR
-  ( + result:ITM_TYPE
+  ( + result:Itm_type
     result := read_prototype
     (result = NULL).if {
       result := read_type_vector
@@ -1069,17 +1109,17 @@ Public
   
   //++ TYPE_SHORT   -> TYPE_BEGIN
   //++               | TYPE_VECTOR
-  - read_type_short:ITM_TYPE <-
-  ( + result:ITM_TYPE
-    + styl:UINTEGER_8
-    + nam:STRING_ALIAS
+  - read_type_short:Itm_type <-
+  ( + result:Itm_type
+    + styl:Uint8
+    + nam:String_alias
     (result, styl, nam) := read_type_begin
     (result = NULL).if {
       (nam != NULL).if {
         (styl = 0).if {
-          result := ITM_TYPE_SIMPLE.get nam
+          result := Itm_type_simple.get nam
         } else {            
-          result := ITM_TYPE_STYLE.get nam style styl
+          result := Itm_type_style.get nam style styl
         }
       } else {
         result := read_type_vector
@@ -1088,12 +1128,12 @@ Public
     result
   )
   
-  - read_type_vector:ITM_TYPE <-
+  - read_type_vector:Itm_type <-
   //++ TYPE_VECTOR  -> '(' TYPE { ',' TYPE } ')'
   //++               | '{' [ TYPE_RESULT ';' ] [ TYPE_LIST ] '}'
-  ( + result,t,typ_arg,typ_res:ITM_TYPE
-    + lt:ARRAY ITM_TYPE
-    + lst:ARRAY ITM_TYPE
+  ( + result,t,typ_arg,typ_res:Itm_type
+    + lt:Array Itm_type
+    + lst:Array Itm_type
     (read_char '{').if {
       // '{' [ TYPE_RESULT ';' ] [ TYPE_LIST ] '}'
       t := read_type_result
@@ -1102,7 +1142,7 @@ Public
           typ_arg := t
           typ_res := read_type_list
         } else {
-          lst := ALIAS_ARRAY ITM_TYPE.new
+          lst := Alias_array Itm_type.new
           lst.add_last t
           {read_char ','}.while_do {
             t := read_type
@@ -1110,19 +1150,19 @@ Public
             lst.add_last t
           }
           (lst.count > 1).if { 
-            lst := ALIAS_ARRAY ITM_TYPE.alias lst
-            typ_res := ITM_TYPE_MULTI.get lst
+            lst := Alias_array Itm_type.alias lst
+            typ_res := Itm_type_multi.get lst
           } else {
             typ_res := lst.first
-            ALIAS_ARRAY ITM_TYPE.free lst
+            Alias_array Itm_type.free lst
           }
         }
       }
       (! read_char '}').if { warning_error (current_position,"Added '}'."); }
-      result := ITM_TYPE_BLOCK.get typ_arg and typ_res
+      result := Itm_type_block.get typ_arg and typ_res
     }.elseif {read_char '('} then {
       result := read_type
-      lt := ALIAS_ARRAY ITM_TYPE.new
+      lt := Alias_array Itm_type.new
       lt.add_last result
       (result = NULL).if { syntax_error (current_position,"Type not found."); }
       {read_char ','}.while_do {
@@ -1132,40 +1172,38 @@ Public
       }
       (lt.count = 1).if {
         result := lt.first
-        ALIAS_ARRAY ITM_TYPE.free lt
+        Alias_array Itm_type.free lt
       } else {  
-        result := ITM_TYPE_MULTI.get (ALIAS_ARRAY ITM_TYPE.alias lt)
+        result := Itm_type_multi.get (Alias_array Itm_type.alias lt)
       }
       (read_char ')').if_false { warning_error (current_position,"Added ')'."); }
     }
     result
   )
     
-  - read_type_begin:(ITM_TYPE_MONO, UINTEGER_8, STRING_ALIAS) <-
-  //++ TYPE_BEGIN   -> ("Strict" | "Expanded") cap_identifier{('.'|'...')cap_identifier}  
-  ( + style:UINTEGER_8
-    + result:ITM_TYPE_MONO
-    + nam:STRING_ALIAS
-    + old_pos,pos_before:INTEGER
-    + continue:BOOLEAN
+  - read_type_begin:(Itm_type_mono, Uint8, String_alias) <-
+  //++ TYPE_BEGIN   -> ("Exact" | "Flat") cap_identifier{('.'|'...')cap_identifier}  
+  ( + style:Uint8
+    + result:Itm_type_mono
+    + nam:String_alias
+    + old_pos,pos_before:Int
+    + continue:Boolean
     
-    (      
-      (read_word "Expanded") || {read_word "Strict"}
-    ).if {
-      (last_string = "Expanded").if {
-        style := TYPE_FULL.expanded_bit
+    ((read_word "Flat") || {read_word "Exact"}).if {
+      (last_string = "Flat").if {
+        style := Type_full.flat_bit
       } else {
-        style := TYPE_FULL.strict_bit
+        style := Type_full.exact_bit
       }
     }
     // PROTOTYPE
-    //style := style | (read_char '\\'.to_integer << 7); // See TYPE_FULL for bit number.
+    //style := style | (read_char '\\'.to_int << 7); // See TYPE_FULL for bit number.
     (read_cap_idf).if {
       old_pos    := position
       
       string_tmp2.copy last_string
       {
-        continue := read_word "..."
+        continue := read_symbol "..."
         (continue).if {
           (read_cap_idf).if_false {
             syntax_error (current_position,"Prototype name needed.")
@@ -1175,7 +1213,7 @@ Public
         } else {
           pos_before := position
           ((read_char '.') && {read_cap_idf}).if {
-            continue := TRUE
+            continue := True
             string_tmp2.add_last '.'
             string_tmp2.append last_string
           } else {
@@ -1186,29 +1224,29 @@ Public
       //
       nam := string_tmp2.to_string_alias
       (is_parameter_type).if {
-        (style != 0).if { warning_error (current_position,"Style Expanded, Strict or \'\\\' is ignored."); }
-        result := ITM_TYPE_PARAMETER.get nam
-      }.elseif {nam = "SELF"} then {
-        ((style & ~TYPE_FULL.escape_bit) != 0).if { warning_error (current_position,"Style Expanded or Strict ignored."); }
-        ((style & TYPE_FULL.escape_bit) != 0).if {            
-          result := ITM_TYPE_SIMPLE.type_self_with_escape
+        (style != 0).if { warning_error (current_position,"Style Flat, Exact or \'\\\' is ignored."); }
+        result := Itm_type_parameter.get nam
+      }.elseif {nam = str_self} then {
+        ((style & ~Type_full.escape_bit) != 0).if { warning_error (current_position,"Style Flat or Exact ignored."); }
+        ((style & Type_full.escape_bit) != 0).if {            
+          result := Itm_type_simple.type_self_with_escape
         } else {
-          result := ITM_TYPE_SIMPLE.type_self
+          result := Itm_type_simple.type_self
         }
       }
     } else {
-      (style != 0).if { warning_error (current_position,"Style (Expanded or Strict) ignored."); }
+      (style != 0).if { warning_error (current_position,"Style (Flat or Exact) ignored."); }
     }
     result, style, nam
   )
     
-  - read_prototype:ITM_TYPE_MONO <-
+  - read_prototype:Itm_type_mono <-
   //++ PROTOTYPE    -> TYPE_BEGIN [ TYPE_SHORT { cap_identifier TYPE_SHORT } ]
-  ( + nam:STRING_ALIAS
-    + genericity:ARRAY ITM_TYPE
-    + t:ITM_TYPE
-    + result:ITM_TYPE_MONO
-    + styl:UINTEGER_8
+  ( + nam:String_alias
+    + genericity:Array Itm_type
+    + t:Itm_type
+    + result:Itm_type_mono
+    + styl:Uint8
     
     (result, styl, nam) := read_type_begin
     (result = NULL).if {      
@@ -1216,12 +1254,12 @@ Public
         t := read_type_short
         (t != NULL).if {
           // Multiple Genericity.
-          genericity := ALIAS_ARRAY ITM_TYPE.new
+          genericity := Alias_array Itm_type.new
           genericity.add_last t
           //warning_error (current_position,"LA")
           {read_cap_idf}.while_do {
             string_tmp2.copy nam
-            string_tmp2.append "__"
+            string_tmp2.add_last ' '
             string_tmp2.append last_string
             nam := string_tmp2.to_string_alias
             t := read_type_short
@@ -1231,13 +1269,13 @@ Public
             genericity.add_last t
           }
           //nam.print; '\n'.print
-          genericity := ALIAS_ARRAY ITM_TYPE.alias genericity
-          result     := ITM_TYPE_GENERIC.get nam style styl with genericity
+          genericity := Alias_array Itm_type.alias genericity
+          result     := Itm_type_generic.get nam style styl with genericity
         } else { 
           (styl = 0).if {
-            result := ITM_TYPE_SIMPLE.get nam
+            result := Itm_type_simple.get nam
           } else {            
-            result := ITM_TYPE_STYLE.get nam style styl
+            result := Itm_type_style.get nam style styl
           }
         }
       }
@@ -1245,26 +1283,26 @@ Public
     result
   )
 
-  - read_expr:ITM_CODE <-
+  - read_expr:Itm_code <-
   //++ EXPR         -> { ASSIGN !!AMBIGU!! affect } EXPR_OPERATOR
   //++ ASSIGN       -> '(' IDF_ASSIGN { ',' IDF_ASSIGN } ')'
   //++               | IDF_ASSIGN
   //++ IDF_ASSIGN   -> identifier { identifier }
-  ( + result,value:ITM_CODE
-    + affect:CHARACTER
-    + again:BOOLEAN
-    + l_ass:ARRAY STRING_ALIAS
-    + p:INTEGER
-    + name:STRING_ALIAS
+  ( + result,value:Itm_code
+    + affect:Char
+    + again:Boolean
+    + l_ass:Array String_alias
+    + p:Int
+    + name:String_alias
 
     // !! AMBIGU resolution !!
     save_context
     (read_char '(').if {
-      l_ass := ALIAS_ARRAY STRING_ALIAS.new
+      l_ass := Alias_array String_alias.new
       {
-        again := FALSE
+        again := False
         (read_idf).if {
-          STRING.tmp { n:STRING_BUFFER
+          String.tmp { n:String_buffer
             p := position - last_string.count
             n.copy last_string
             {read_idf}.while_do {
@@ -1274,13 +1312,13 @@ Public
             l_ass.add_last (n.to_string_alias)
           }
           (read_char ',').if {
-            again := TRUE
+            again := True
           }
         }
       }.do_while {again}
       ((! l_ass.is_empty) && {read_char ')'} && {read_affect}).if {
-        l_ass := ALIAS_ARRAY STRING_ALIAS.copy l_ass
-        result := ITM_LIST_IDF.create current_position with l_ass
+        l_ass := Alias_array String_alias.copy l_ass
+        result := Itm_list_idf.create current_position with l_ass
         affect := last_string.first
         value  := read_expr
         (value = NULL).if {
@@ -1288,21 +1326,21 @@ Public
         }
         (affect)
         .when ':' then {
-          result := ITM_WRITE_VALUE.create (result.position) assign result with value
+          result := Itm_write_value.create (result.position) assign result with value
         }
         .when '<' then {
           syntax_error (current_position,"Impossible '<-' style assignment with vector.")
         }
         .when '?' then {
           syntax_error (current_position,"Sorry, Not yet implemented !")
-          result := ITM_WRITE_CAST.create (result.position) assign result with value
+          result := Itm_write_cast.create (result.position) assign result with value
         }
       } else {
-        ALIAS_ARRAY STRING_ALIAS.free l_ass
+        Alias_array String_alias.free l_ass
       }
     }.elseif {read_idf} then {
       p := position - last_string.count
-      STRING.tmp { n:STRING_BUFFER
+      String.tmp { n:String_buffer
         n.copy last_string
         {read_idf}.while_do {
           n.add_last ' '
@@ -1311,7 +1349,7 @@ Public
         name := n.to_string_alias
       }
       (read_affect).if {
-        result := ITM_READ.create current_position name name
+        result := Itm_read.create current_position name name
         affect := last_string.first
         value  := read_expr
         (value = NULL).if {
@@ -1319,13 +1357,13 @@ Public
         }
         (affect)
         .when ':' then {
-          result := ITM_WRITE_VALUE.create (result.position) assign result with value
+          result := Itm_write_value.create (result.position) assign result with value
         }
         .when '<' then {
-          result := ITM_WRITE_CODE.create (result.position) assign result with value
+          result := Itm_write_code.create (result.position) assign result with value
         }
         .when '?' then {
-          result := ITM_WRITE_CAST.create (result.position) assign result with value
+          result := Itm_write_cast.create (result.position) assign result with value
         }
       }
     }
@@ -1336,17 +1374,17 @@ Public
     result
   )
   
-  - read_expr_operator:ITM_CODE <-
+  - read_expr_operator:Itm_code <-
   //++ EXPR_OPERATOR-> { operator } EXPR_MESSAGE { {operator} EXPR_MESSAGE } {operator}
-  ( + result:ITM_CODE
-    + expr :ITM_CODE
-    + l_expr:ARRAY ITM_CODE
-    + itm_op:ITM_OPERATOR
-    + last_msg,first_msg:INTEGER
+  ( + result:Itm_code
+    + expr :Itm_code
+    + l_expr:Array Itm_code
+    + itm_op:Itm_operator
+    + last_msg,first_msg:Int
     
-    l_expr := ALIAS_ARRAY ITM_CODE.new
+    l_expr := Alias_array Itm_code.new
     {read_operator}.while_do {
-      expr := ITM_OPERATOR.create current_position name last_string
+      expr := Itm_operator.create current_position name last_string
       l_expr.add_last expr
     }
     expr := read_expr_message
@@ -1355,7 +1393,7 @@ Public
       (! l_expr.is_empty).if {
        syntax_error (current_position,"Incorrect expression.")
       }
-      ALIAS_ARRAY ITM_CODE.free l_expr
+      Alias_array Itm_code.free l_expr
     } else {      
       // { operator {operator} EXPR_MESSAGE } {operator}
       first_msg := l_expr.count
@@ -1364,7 +1402,7 @@ Public
         l_expr.add_last expr
         (read_operator).if {          
           {
-            expr := ITM_OPERATOR.create current_position name last_string
+            expr := Itm_operator.create current_position name last_string
             l_expr.add_last expr
           }.do_while {read_operator}
           expr := read_expr_message
@@ -1376,7 +1414,7 @@ Public
       // Last Post-fix operator.
       {last_msg < l_expr.upper}.while_do {
         itm_op ?= l_expr.at (last_msg + 1)
-        expr := ITM_READ_ARG1.create (itm_op.position)
+        expr := Itm_read_arg1.create (itm_op.position)
         name (operator "__postfix" name (itm_op.name)) arg (l_expr.at last_msg)
         l_expr.at last_msg put expr
         l_expr.remove (last_msg + 1)
@@ -1385,7 +1423,7 @@ Public
         // First Pre-fix operator.
         {first_msg != 0}.while_do {
           itm_op ?= l_expr.at (first_msg - 1)
-          expr := ITM_READ_ARG1.create (itm_op.position)
+          expr := Itm_read_arg1.create (itm_op.position)
           name (operator "__prefix" name (itm_op.name)) arg (l_expr.at first_msg)
           l_expr.at first_msg put expr
           first_msg := first_msg - 1
@@ -1394,28 +1432,28 @@ Public
       }
       (l_expr.count = 1).if {
        result := l_expr.first
-       ALIAS_ARRAY ITM_CODE.free l_expr
+       Alias_array Itm_code.free l_expr
       }.elseif {l_expr.count = 3} then {
        // Simple binary message.
        itm_op ?= l_expr.second
-       result := ITM_READ_ARG2.create (itm_op.position)
+       result := Itm_read_arg2.create (itm_op.position)
        name (operator "__infix" name (itm_op.name)) args (l_expr.first,l_expr.at 2)
        //
-       ALIAS_ARRAY ITM_CODE.free l_expr
+       Alias_array Itm_code.free l_expr
       } else {
        // Complex expression.
-       l_expr := ALIAS_ARRAY ITM_CODE.copy l_expr
-       result := ITM_EXPRESSION.create l_expr
+       l_expr := Alias_array Itm_code.copy l_expr
+       result := Itm_expression.create l_expr
       }
     }
     result
   )
   
-  - read_expr_message:ITM_CODE <-
+  - read_expr_message:Itm_code <-
   //++ EXPR_MESSAGE -> [ "Old" ] EXPR_BASE { '.' SEND_MSG }
-  ( + result,e:ITM_CODE
-    + is_old:BOOLEAN
-    + pos_old:POSITION
+  ( + result,e:Itm_code
+    + is_old:Boolean
+    + pos_old:Position
     
     (is_old := read_word "Old").if { pos_old := current_position; }
     
@@ -1430,39 +1468,36 @@ Public
     }
     (is_old).if {
       (result = NULL).if { syntax_error (pos_old,"Expression is needed."); }
-      result := ITM_OLD_EXPR.create pos_old value result
+      result := Itm_old_expr.create pos_old value result
     }
     result
   )
   
-  - read_expr_base:ITM_CODE <-
+  - read_expr_base:Itm_code <-
   //++ EXPR_BASE    -> [ EXPR_PRIMARY ] SEND_MSG
-  ( + base,res:ITM_CODE
+  ( + base,res:Itm_code
     base := read_expr_primary
     res := read_send_msg base
     (res = NULL).if { res := base; }
     res
   )
   
-  - read_expr_primary:ITM_CODE <-
-  //++ EXPR_PRIMARY -> "Self"
-  //++               | result
+  - read_expr_primary:Itm_code <-
+  //++ EXPR_PRIMARY -> Result
   //++               | PROTOTYPE
   //++               | CONSTANT
   //++               | '(' GROUP ')'
   //++               | '{' [ LOC_ARG ';' !! AMBIGU!! ] GROUP '}'
   //++               | external [ ':' ['('] TYPE ['{' TYPE_LIST '}'] [')'] ]
-  ( + result:ITM_CODE
-    + type :ITM_TYPE
-    + ltype:ITM_TYPE
-    + ext  :ITM_EXTERNAL_TYPE
-    + group_sav:ITM_LIST
-    + arg:ITM_ARGUMENT
-    + result_id:STRING_ALIAS
+  ( + result:Itm_code
+    + type :Itm_type
+    + ltype:Itm_type
+    + ext  :Itm_external_type
+    + group_sav:Itm_list
+    + arg:Itm_argument
+    + result_id:String_alias
 
-    (read_word "Self").if {
-      result := ITM_READ.create current_position name last_string
-    }.elseif {read_word "Result"} then {
+    (read_symbol "Result").if {
       (cur_char = '_').if {
        position := position + 1
        string_tmp.copy "Result"
@@ -1478,16 +1513,16 @@ Public
       } else {
        result_id := "Result"
       }
-      result := ITM_READ.create current_position name result_id
+      result := Itm_read.create current_position name result_id
     }.elseif {      
       type := read_prototype
       type != NULL
     } then {
-      result := ITM_PROTOTYPE.create current_position type type
+      result := Itm_prototype.create current_position type type
     }.elseif {(result := read_constant) != NULL} then {
     }.elseif {read_char '(' } then {
       group_sav := last_group
-      last_group := ITM_LIST.create current_position
+      last_group := Itm_list.create current_position
       result := last_group
       last_group.set_code read_group
       (read_char ')').if_false {
@@ -1497,30 +1532,31 @@ Public
     }.elseif {read_char '{' } then {
       //               | '{' [ LOC_ARG ';' !! AMBIGU!! ] GROUP '}'
       group_sav := last_group
-      last_group := ITM_LIST.create current_position
+      last_group := Itm_list.create current_position
 
       save_context; // !! SAVE CONTEXT !!
 
       //
-      arg := read_loc_arg TRUE self 01b
+      arg := read_loc_arg True
       //
       (arg != NULL).if {
+        (arg.is_self).if { semantic_error (arg.position,"`self' is incorrect.") }
         read_char ';'; // Optionnel
       } else {
 
        restore_context; // !! RESTORE CONTEXT !!
 
       }
-      result := ITM_BLOCK.create last_group argument arg
+      result := Itm_block.create last_group argument arg
 
       last_group.set_code read_group
       (! read_char '}').if { warning_error (current_position,"Added '}'."); }
       last_group := group_sav
     }.elseif {read_external} then {
       (! read_char ':').if {
-        result := ITM_EXTERNAL.create current_position text last_string
+        result := Itm_external.create current_position text last_string
       } else {
-        ext := ITM_EXTERNAL_TYPE.create current_position text
+        ext := Itm_external_type.create current_position text
         last_string persistant (read_char '(')
         type := read_type
         (type = NULL).if { syntax_error (current_position,"Incorrect type."); }
@@ -1544,42 +1580,42 @@ Public
   //++               | real
   //++               | characters
   //++               | string
-  - read_constant:ITM_CONSTANT <-
-  ( + result:ITM_CONSTANT
+  - read_constant:Itm_constant <-
+  ( + result:Itm_constant
 
     (read_num).if {
       (is_real).if {
-        result := ITM_REAL.create current_position value last_real
+        result := Itm_real.create current_position value last_real
       } else {
-        result := ITM_NUMBER.create current_position value last_integer
+        result := Itm_number.create current_position value last_integer
       }
     }.elseif {read_characters} then {
-      result := ITM_CHARACTER.create current_position char last_string
+      result := Itm_character.create current_position char last_string
     }.elseif {read_string} then {
-      result := ITM_STRING.create current_position text last_string len last_len
+      result := Itm_string.create current_position text last_string len last_len
     }
     result
   )
 
-  - read_group:ARRAY ITM_CODE <-
+  - read_group:Array Itm_code <-
   //++ GROUP        -> DEF_LOCAL { EXPR [';' | ',' | '\n' | '.' ] }
-  ( + e:ITM_CODE
-    + result:ARRAY ITM_CODE
-    + c:CHARACTER
-    + pos:POSITION
+  ( + e:Itm_code
+    + result:Array Itm_code
+    + c:Char
+    + pos:Position
     
     read_space_nl
     
     read_def_local
 
-    result := ALIAS_ARRAY ITM_CODE.new
+    result := Alias_array Itm_code.new
     {
       e := read_expr
       (e != NULL).if {
         c := cur_char
         (c = ',').if {
           pos := current_position
-          result.add_last (ITM_RESULT.create e)
+          result.add_last (Itm_result.create e)
           position := position + 1
         } else {
           result.add_last e
@@ -1594,17 +1630,17 @@ Public
       (c = ',').if {
         warning_error (pos,"Extra comma.")
       } else {
-        result.put_last (ITM_RESULT.create (result.last))
+        result.put_last (Itm_result.create (result.last))
       }
     }
-    ALIAS_ARRAY ITM_CODE.copy result
+    Alias_array Itm_code.copy result
   )
 
-  - read_contract:ITM_LIST <-
+  - read_contract:Itm_list <-
   //++ CONTRACT     -> '[' GROUP ']'
-  ( + result:ITM_LIST
+  ( + result:Itm_list
     (read_char '[').if {
-      result := last_group := ITM_LIST.create current_position
+      result := last_group := Itm_list.create current_position
       last_group.set_code read_group
       (! read_char ']').if {
        warning_error (current_position,"Added ']'.")
@@ -1615,15 +1651,15 @@ Public
 
   - read_def_local <-
   //++ DEF_LOCAL    -> { style LOCAL ';' } !! AMBIGU !!
-  ( + loc_lst:ARRAY ITM_LOCAL
-    + local_list,static_list:ARRAY ITM_LOCAL
-    + styl:CHARACTER
+  ( + loc_lst:Array Itm_local
+    + local_list,static_list:Array Itm_local
+    + styl:Char
 
     save_context; // !! SAVE CONTEXT !!
 
     styl    := read_style
-    local_list  := ALIAS_ARRAY ITM_LOCAL.new
-    static_list := ALIAS_ARRAY ITM_LOCAL.new
+    local_list  := Alias_array Itm_local.new
+    static_list := Alias_array Itm_local.new
     {styl != '\0'}.while_do {
       loc_lst := read_local
       (loc_lst != NULL).if {
@@ -1645,29 +1681,29 @@ Public
       }
     }
     (local_list.is_empty).if {
-      ALIAS_ARRAY ITM_LOCAL.free local_list
+      Alias_array Itm_local.free local_list
     } else {
-      last_group.set_local_list  (ALIAS_ARRAY ITM_LOCAL.copy local_list)
+      last_group.set_local_list  (Alias_array Itm_local.copy local_list)
     }
     (static_list.is_empty).if {
-      ALIAS_ARRAY ITM_LOCAL.free static_list
+      Alias_array Itm_local.free static_list
     } else {
-      last_group.set_static_list (ALIAS_ARRAY ITM_LOCAL.copy static_list)
+      last_group.set_static_list (Alias_array Itm_local.copy static_list)
     }
   )
 
-  - read_send_msg first_arg:ITM_CODE :ITM_CODE <-
+  - read_send_msg first_arg:Itm_code :Itm_code <-
   //++ SEND_MSG     -> identifier { ARGUMENT | identifier }
-  ( + result:ITM_CODE
-    + name:STRING_ALIAS
-    + l_arg:ARRAY ITM_CODE
-    + arg:ITM_CODE
+  ( + result:Itm_code
+    + name:String_alias
+    + l_arg:Array Itm_code
+    + arg:Itm_code
   
     read_idf.if {  
       // Classic Message.
-      l_arg := ALIAS_ARRAY ITM_CODE.new
+      l_arg := Alias_array Itm_code.new
       
-      STRING.tmp { n:STRING_BUFFER
+      String.tmp { n:String_buffer
         {
           (! n.is_empty).if { n.add_last ' '; }
           n.append last_string
@@ -1680,47 +1716,47 @@ Public
       l_arg.is_empty.if {
        (first_arg = NULL).if {
          // Local ou Implicite Slot without argument.
-         result := ITM_READ.create current_position name name
+         result := Itm_read.create current_position name name
        } else {
-         result := ITM_READ_ARG1.create current_position name name arg first_arg
+         result := Itm_read_arg1.create current_position name name arg first_arg
        }
-       ALIAS_ARRAY ITM_CODE.free l_arg
+       Alias_array Itm_code.free l_arg
       }.elseif {l_arg.count = 1} then {
-        result := ITM_READ_ARG2.create current_position name name args (first_arg,(l_arg.first))
-        ALIAS_ARRAY ITM_CODE.free l_arg
+        result := Itm_read_arg2.create current_position name name args (first_arg,(l_arg.first))
+        Alias_array Itm_code.free l_arg
       } else {
         l_arg.add_first first_arg
-        l_arg := ALIAS_ARRAY ITM_CODE.copy l_arg
-        result := ITM_READ_ARGS.create current_position name name args l_arg
+        l_arg := Alias_array Itm_code.copy l_arg
+        result := Itm_read_args.create current_position name name args l_arg
       }
     }; // if
     result
   )
 
-  - read_argument:ITM_CODE <-
+  - read_argument:Itm_code <-
   //++ ARGUMENT     -> EXPR_PRIMARY
   //++               | identifier
-  ( + result:ITM_CODE
+  ( + result:Itm_code
     result := read_expr_primary
     ((result = NULL) && {read_idf}).if {
-      result := ITM_READ.create current_position name last_string
+      result := Itm_read.create current_position name last_string
     }
     result
   )
 
-  - read_slot_header first:BOOLEAN :BOOLEAN <-
+  - read_slot_header first:Boolean :Boolean <-
   // name, export, import, type, default, external, lip
-  ( + result:BOOLEAN
-    + v:ITM_CODE
-    + mycast:ITM_TYPE
-    + style:CHARACTER
-    + is_export:BOOLEAN
-    + instr:LIP_CODE
-    + name:STRING_ALIAS
+  ( + result:Boolean
+    + v:Itm_code
+    + mycast:Itm_type
+    + style:Char
+    + is_export:Boolean
+    + instr:Lip_code
+    + name:String_alias
         
     style := read_style
     (style != '\0').if {
-      result := TRUE
+      result := True
       ((! first) && {style = '+'}).if {
         warning_error (current_position,"Incorrect style slot ('-').")
       }
@@ -1736,13 +1772,11 @@ Public
           
           object.set_position current_position
           object.set_style style
-          (read_word ":=").if_false {
+          (read_symbol ":=").if_false {
             warning_error (current_position,"Added ':='.")
           }
           
-          (
-            (read_word "Expanded") || {read_word "Strict"}
-          ).if {
+          ((read_word "Flat") || {read_word "Exact"}).if {
             object.set_type_style last_string
           }
           
@@ -1754,7 +1788,7 @@ Public
           (read_name_param).if {
             {read_cap_idf}.while_do {
               string_tmp.copy name
-              string_tmp.append "__"
+              string_tmp.add_last ' '
               string_tmp.append last_string
               name := string_tmp.to_string_alias
               (! read_name_param).if {
@@ -1773,7 +1807,7 @@ Public
       } then {
         // - ("export"|"import") ':=' TYPE_LIST
                 
-        (read_word ":=").if_false {
+        (read_symbol ":=").if_false {
           warning_error (current_position,"Added ':='.")
         }
         read_space_nl
@@ -1793,7 +1827,7 @@ Public
         
         // - "include" ':=' `<code_c>`
         
-        (read_word ":=").if_false {
+        (read_symbol ":=").if_false {
           warning_error (current_position,"Added ':='.")
         }
         read_space_nl
@@ -1812,7 +1846,7 @@ Public
         
         // - "external" ':=' `<code_c>`
         
-        (read_word ":=").if_false {
+        (read_symbol ":=").if_false {
           warning_error (current_position,"Added ':='.")
         }
         read_space_nl
@@ -1831,7 +1865,7 @@ Public
         
         // '-' "default" ':=' EXPR_PRIMARY
         
-        (read_word ":=").if_false {
+        (read_symbol ":=").if_false {
           warning_error (current_position,"Added ':='.")
         }
         read_space_nl
@@ -1850,7 +1884,7 @@ Public
         
         // '-' "type" ':=' `<type C>`
         
-        (read_word ":=").if_false {
+        (read_symbol ":=").if_false {
           warning_error (current_position,"Added ':='.")
         }
         read_space_nl
@@ -1867,7 +1901,7 @@ Public
         //
         
         // '-' lip <- ( { LIP_EXPR ';' } )
-        (read_word "<-").if_false {
+        (read_symbol "<-").if_false {
           warning_error (current_position,"Added '<-' is needed.")
         }
         read_space_nl
@@ -1894,30 +1928,30 @@ Public
   )
   
   // PARAM -> cap_identifier | '(' cap_identifier { ',' cap_identifier } ')'
-  - read_name_param:BOOLEAN <-
-  ( + result:BOOLEAN
-    + typ:ITM_TYPE_PARAMETER
+  - read_name_param:Boolean <-
+  ( + result:Boolean
+    + typ:Itm_type_parameter
     (read_char '(').if {
       ((! read_cap_idf) || {! is_parameter_type}).if {
         syntax_error (current_position,"Generic type needed.")
       }
-      typ ?= ITM_TYPE_PARAMETER.get last_string
+      typ ?= Itm_type_parameter.get last_string
       object.idf_generic_list.add_last typ
       {read_char ','}.while_do {        
         ((! read_cap_idf) || {! is_parameter_type}).if {
           syntax_error (current_position,"Generic type needed.")
         }
-        typ ?= ITM_TYPE_PARAMETER.get last_string
+        typ ?= Itm_type_parameter.get last_string
         object.idf_generic_list.add_last typ
       }
       (! read_char ')').if {
         warning_error (current_position,"',' added.")
       }
-      result := TRUE
+      result := True
     }.elseif {(read_cap_idf) && {is_parameter_type}} then {
-      typ ?= ITM_TYPE_PARAMETER.get last_string
+      typ ?= Itm_type_parameter.get last_string
       object.idf_generic_list.add_last typ
-      result := TRUE
+      result := True
     }
     result
   )
@@ -1928,13 +1962,14 @@ Public
 
   - readlip_program <-
   //// PROGRAM      -> { 'Section' ('Inherit' | 'Public' | 'Private') { SLOT ';' } }
-  ( + idx:INTEGER
-    + section:STRING_ALIAS
+  ( + idx:Int
+    + section:String_alias
     
     read_space_nl
-    idx := LIP_CODE.list_parent.lower
-    {read_word "Section"}.while_do {
-      (read_word "Inherit").if {
+    idx := Lip_code.list_parent.lower
+    
+    {(read_word "Inherit") || {read_word "Public"} || {read_word "Private"}}.while_do {
+      (last_string = "Inherit").if {
         // { '+' string ':' STRING [ ':=' string ] ';' }
         read_space_nl
         {read_char '+'}.while_do {
@@ -1944,10 +1979,10 @@ Public
           (read_char ':').if_false {
             warning_error (current_position,"Added ':' is needed.")
           }
-          (read_word "STRING").if_false {
-            warning_error (current_position,"`STRING' type needed.");
+          (read_word lip_string).if_false {
+            warning_error (current_position,"`String' type needed.");
           }
-          (read_word ":=").if {
+          (read_symbol ":=").if {
             read_space_nl
             (read_string).if_false {
               syntax_error (current_position,"String needed.")
@@ -1964,23 +1999,17 @@ Public
           } else {
             string_tmp.clear
           }
-          LIP_CODE.list_parent.at idx add (string_tmp.to_string_alias)
+          Lip_code.list_parent.at idx add (string_tmp.to_string_alias)
           idx := idx + 1
-          (read_char ';').if_false {
-            warning_error (current_position,"Added ';' is needed.")
-          }
-        }
-      }.elseif {(read_word "Public") || {read_word "Private"}} then {
-        section := last_string
-        {readlip_slot section}.while_do {
-          (read_char ';').if_false {
-            warning_error (current_position,"Added ';' is needed.")
-          }
+          read_char ';'
         }
       } else {
-        syntax_error (current_position,"`Public' or `Private' or `Inherit' needed.");
+        section := last_string
+        {readlip_slot section}.while_do {
+          read_char ';'
+        }
       }
-      read_space_nl
+      read_space_nl      
     }
     read_space_nl
     (cur_char != '\0').if {
@@ -1988,22 +2017,22 @@ Public
     }
   )
 
-  - readlip_slot sec:STRING_ALIAS :BOOLEAN <-
+  - readlip_slot sec:String_alias :Boolean <-
   //// SLOT         -> '+' identifier ':' TYPE [ ':=' EXPR_CONSTANT ]
   ////               | '-' identifier [ identifier ':' TYPE ] '<-' EXPR
-  ( + result:BOOLEAN
-    + t:LIP_CONSTANT
-    + n,na:STRING_ALIAS
-    + data:LIP_SLOT_DATA
-    + slot_code:LIP_SLOT_CODE
-    + exp:LIP_CODE
-    + pos:POSITION
-    + cst:LIP_CONSTANT
+  ( + result:Boolean
+    + t:Lip_constant
+    + n,na:String_alias
+    + data:Lip_slot_data
+    + slot_code:Lip_slot_code
+    + exp:Lip_code
+    + pos:Position
+    + cst:Lip_constant
     
     (sec = "Public").if {
-      is_shorter2 := TRUE
+      is_shorter2 := True
       read_space
-      is_shorter2 := FALSE
+      is_shorter2 := False
       (last_comment_extern != NULL).if {      
         string_tmp.copy last_comment_extern
         {(!string_tmp.is_empty) && {(string_tmp.first = ' ') || {string_tmp.first = '\n'}}}.while_do { string_tmp.remove_first; }
@@ -2020,7 +2049,7 @@ Public
     read_space_nl
     (read_char '+').if {
       // Data.
-      result := TRUE
+      result := True
       (sec = "Public").if {
         syntax_error (current_position,"No data in Public section.")
       }
@@ -2035,8 +2064,8 @@ Public
       (t = NULL).if {
         syntax_error (current_position,"type is incorrect.")
       }
-      (! read_word ":=").if {
-        data := LIP_SLOT_DATA.create current_position name n value t argument FALSE
+      (! read_symbol ":=").if {
+        data := Lip_slot_data.create current_position name n value t argument False
       } else {
         cst := readlip_expr_constant
         (cst = NULL).if {
@@ -2045,21 +2074,21 @@ Public
         (cst.name !== t.name).if {
           syntax_error (current_position,"Incorrect expression type.")
         }
-        data := LIP_SLOT_DATA.create current_position name n value cst argument FALSE
+        data := Lip_slot_data.create current_position name n value cst argument False
         //data.set_value cst
         //cst.free
         ((n = "upper") || {n = "lower"} || {n = "upper_star"} || {n = "lower_star"} || {n = "symbol"}).if {
-          + v:LIP_STRING
-          + err:STRING_ALIAS
+          + v:Lip_string
+          + err:String_alias
           v ?= cst
           (v = NULL).if { semantic_error (data.position,"String needed.") }
-          err := UTF8.load n value (v.value)          
+          err := Utf8.load n value (v.value)          
           (err != NULL).if { semantic_error (data.position,err) }
         };
       }
     }.elseif {read_char '-'} then {
       // Function.
-      result := TRUE
+      result := True
       (read_idf).if_false {
         syntax_error (current_position,"Identifier is incorrect.")
       }
@@ -2073,22 +2102,22 @@ Public
         }
         t := readlip_type
         (t = NULL).if {
-          syntax_error (current_position,"Incorrect type.")
+          syntax_error (current_position,"Incorrect type. (0)")
         }
-        data := LIP_SLOT_DATA.create current_position name na value t argument TRUE
+        data := Lip_slot_data.create current_position name na value t argument True
       }
       //
-      (read_word "<-").if_false {
+      (read_symbol "<-").if_false {
         warning_error (current_position,"Added '<-' is needed.")
       }
-      is_shorter2 := TRUE
+      is_shorter2 := True
       read_space_nl
-      is_shorter2 := FALSE
+      is_shorter2 := False
       exp := readlip_expr
       (exp = NULL).if {
         syntax_error (current_position,"Expression needed.")
       }
-      slot_code := LIP_SLOT_CODE.create pos section sec
+      slot_code := Lip_slot_code.create pos section sec
       name n argument data code exp
       (sec = "Public").if {
         (last_comment_slot = NULL).if {
@@ -2105,48 +2134,42 @@ Public
     result
   )
 
-  - readlip_type:LIP_CONSTANT <-
-  //// TYPE         -> 'BOOLEAN' | 'STRING' | 'INTEGER' | 'LIP'
-  ( + result:LIP_CONSTANT
+  - readlip_type:Lip_constant <-
+  //// TYPE         -> 'Boolean' | 'String' | 'Int' | 'LIP'
+  ( + result:Lip_constant
 
     (read_cap_idf).if {
-      (last_string = "INTEGER").if {
-        result := LIP_INTEGER.get 0
-      }.elseif {last_string = "STRING"} then {
-        result := LIP_STRING.get ""
-      }.elseif {last_string = "BOOLEAN"} then {
-        result := LIP_BOOLEAN.get FALSE
-      }.elseif {last_string = "LIP"} then {
-        not_yet_implemented
+      (last_string = lip_int).if {
+        result := Lip_integer.get 0
+      }.elseif {last_string = lip_string} then {
+        result := Lip_string.get ""
+      }.elseif {last_string = lip_boolean} then {
+        result := Lip_boolean.get False
       } else {
-        last_string.to_pointer.print; ' '.print
-        "STRING".to_pointer.print; ' '.print
-        
-        
         string_tmp.copy "`"; 
         string_tmp.append last_string
-        string_tmp.append "': Incorrect type."
+        string_tmp.append "': Incorrect type. (1)"
         syntax_error (current_position,string_tmp)
       }
     }
     result
   )
 
-  - readlip_expr_affect:LIP_CODE <-
+  - readlip_expr_affect:Lip_code <-
   //// EXPR_AFFECT  -> [ identifier !!AMBIGU!! ':=' ] EXPR
-  ( + result,val:LIP_CODE
-    + nam:STRING_ALIAS
+  ( + result,val:Lip_code
+    + nam:String_alias
 
     save_context; // !! SAVE CONTEXT !!
 
     (read_idf).if {
       nam := last_string
-      (read_word ":=").if {
+      (read_symbol ":=").if {
         val := readlip_expr
         (val = NULL).if {
           syntax_error (current_position,"Incorrect expression.")
         }
-        result := LIP_AFFECT.create current_position name nam value val
+        result := Lip_affect.create current_position name nam value val
       } else {
         restore_context; // !! RESTORE CONTEXT !!
       }
@@ -2157,10 +2180,10 @@ Public
     result
   )
 
-  - readlip_expr:LIP_CODE <-
+  - readlip_expr:Lip_code <-
   //// EXPR         -> EXPR_CMP { ('|' | '&') EXPR_CMP }
-  ( + result,right:LIP_CODE
-    + is_or:BOOLEAN
+  ( + result,right:Lip_code
+    + is_or:Boolean
 
     result := readlip_expr_cmp
     (result != NULL).if {
@@ -2170,26 +2193,26 @@ Public
           syntax_error (current_position,"Incorrect expression.")
         }
         (is_or).if {
-          result := LIP_BINARY.create current_position with result operator '|' and right
+          result := Lip_binary.create current_position with result operator '|' and right
         } else {
-          result := LIP_BINARY.create current_position with result operator '&' and right
+          result := Lip_binary.create current_position with result operator '&' and right
         }
       }
     }
     result
   )
 
-  - readlip_expr_cmp:LIP_CODE <-
+  - readlip_expr_cmp:Lip_code <-
   //// EXPR_CMP     -> EXPR_BINARY { ('='|'!='|'>'|'<'|'>='|'<=') EXPR_BINARY }
-  ( + result,right:LIP_CODE
-    + op:STRING_ALIAS
-    + type:CHARACTER
+  ( + result,right:Lip_code
+    + op:String_alias
+    + type:Char
 
     result := readlip_expr_binary
     (result != NULL).if {
       {
-        (read_word ">=") || {read_word "<="} || {read_word "!="} ||
-        {read_word "=" } || {read_word ">" } || {read_word "<" }
+        (read_symbol ">=") || {read_symbol "<="} || {read_symbol "!="} ||
+        {read_symbol "=" } || {read_symbol ">" } || {read_symbol "<" }
       }.while_do {
         op := last_string
         right := readlip_expr_binary
@@ -2203,16 +2226,16 @@ Public
         .when "="  then { type := '='; }
         .when ">"  then { type := '>'; }
         .when "<"  then { type := '<'; }
-        result := LIP_BINARY.create current_position with result operator type and right
+        result := Lip_binary.create current_position with result operator type and right
       }
     }
     result
   )
 
-  - readlip_expr_binary:LIP_CODE <-
+  - readlip_expr_binary:Lip_code <-
   //// EXPR_BINARY  -> EXPR_UNARY { ('-'|'+') EXPR_UNARY }
-  ( + result,right:LIP_CODE
-    + is_sub:BOOLEAN
+  ( + result,right:Lip_code
+    + is_sub:Boolean
 
     result := readlip_expr_unary
     (result != NULL).if {
@@ -2222,21 +2245,21 @@ Public
           syntax_error (current_position,"Incorrect expression.")
         }
         (is_sub).if {
-          result := LIP_BINARY.create current_position with result operator '-' and right
+          result := Lip_binary.create current_position with result operator '-' and right
         } else {
-          result := LIP_BINARY.create current_position with result operator '+' and right
+          result := Lip_binary.create current_position with result operator '+' and right
         }
       }
     }
     result
   )
 
-  - readlip_expr_unary:LIP_CODE <-
+  - readlip_expr_unary:Lip_code <-
   //// EXPR_UNARY   -> ( '-' | '!' ) EXPR_UNARY
   ////               | EXPR_BASE
-  ( + result:LIP_CODE
-    + is_neg:BOOLEAN
-    + type:CHARACTER
+  ( + result:Lip_code
+    + is_neg:Boolean
+    + type:Char
 
     ((is_neg := read_char '-') || {read_char '!'}).if {
       result := readlip_expr_unary
@@ -2248,29 +2271,28 @@ Public
       } else {
         type := '!'
       }
-      result := LIP_UNARY.create current_position operator type with result
+      result := Lip_unary.create current_position operator type with result
     } else {
       result := readlip_expr_base
     }
     result
   )
 
-  - readlip_expr_list cod:ARRAY LIP_CODE <-
+  - readlip_expr_list cod:Array Lip_code <-
   //// EXPR_LIST    -> { EXPR_AFFECT ';' } [ EXPR_AFFECT ]
-  ( + instr:LIP_CODE
+  ( + instr:Lip_code
     read_space_nl
-    {
-      ((instr := readlip_expr_affect) != NULL) && {read_char ';'}
-    }.while_do {
+    {(instr := readlip_expr_affect) != NULL}.while_do {
+      read_char ';'
       cod.add_last instr
       read_space_nl
     }
-    cod.add_last instr
+    //cod.add_last instr
   )
 
-  - readlip_expr_base:LIP_CODE <-
+  - readlip_expr_base:Lip_code <-
   //// EXPR_BASE    -> EXPR_RECEIVER { '.' EXPR_MESSAGE }
-  ( + result:LIP_CODE
+  ( + result:Lip_code
 
     result := readlip_expr_receiver
     {read_char '.'}.while_do {
@@ -2282,10 +2304,10 @@ Public
     result
   )
 
-  - readlip_expr_receiver:LIP_CODE <-
+  - readlip_expr_receiver:Lip_code <-
   //// EXPR_RECEIVER-> EXPR_PRIMARY
   ////               | EXPR_MESSAGE
-  ( + result:LIP_CODE
+  ( + result:Lip_code
     result := readlip_expr_primary
     (result = NULL).if {
       result := readlip_expr_message NULL
@@ -2293,15 +2315,15 @@ Public
     result
   )
 
-  - readlip_expr_message rec:LIP_CODE :LIP_CODE <-
+  - readlip_expr_message rec:Lip_code :Lip_code <-
   //// EXPR_MESSAGE -> identifier [ EXPR_ARGUMENT ]
   ////               | 'if' '{' EXPR_LIST '}' [ 'else' '{' EXPR_LIST '}' ]
-  ( + result,arg:LIP_CODE
-    + nam:STRING_ALIAS
-    + the,els:ARRAY LIP_CODE
+  ( + result,arg:Lip_code
+    + nam:String_alias
+    + the,els:Array Lip_code
 
     (read_word "if").if {
-      the := ALIAS_ARRAY LIP_CODE.new
+      the := Alias_array Lip_code.new
       (read_char '{').if_false {
         warning_error (current_position,"Added '(' is needed.")
       }
@@ -2309,9 +2331,9 @@ Public
       (read_char '}').if_false {
         warning_error (current_position,"Added '(' is needed.")
       }
-      the := ALIAS_ARRAY LIP_CODE.copy the
+      the := Alias_array Lip_code.copy the
       (read_word "else").if {
-        els := ALIAS_ARRAY LIP_CODE.new
+        els := Alias_array Lip_code.new
         (read_char '{').if_false {
           warning_error (current_position,"Added '(' is needed.")
         }
@@ -2319,69 +2341,69 @@ Public
         (read_char '}').if_false {
           warning_error (current_position,"Added '(' is needed.")
         }
-        els := ALIAS_ARRAY LIP_CODE.copy els
+        els := Alias_array Lip_code.copy els
       }
-      result := LIP_IF.create current_position if rec then the else els
+      result := Lip_if.create current_position if rec then the else els
     }.elseif {read_idf} then {
       nam := last_string
       arg := readlip_expr_argument
-      result := LIP_CALL.create current_position receiver rec name nam with arg
+      result := Lip_call.create current_position receiver rec name nam with arg
     }
     result
   )
 
-  - readlip_expr_argument:LIP_CODE <-
+  - readlip_expr_argument:Lip_code <-
   //// EXPR_ARGUMENT-> identifier
   ////               | EXPR_PRIMARY
-  ( + result:LIP_CODE
+  ( + result:Lip_code
 
     (read_idf).if {
-      result := LIP_CALL.create current_position receiver NULL name last_string with NULL
+      result := Lip_call.create current_position receiver NULL name last_string with NULL
     } else {
       result := readlip_expr_primary
     }
     result
   )
 
-  - readlip_expr_primary:LIP_CODE <-
+  - readlip_expr_primary:Lip_code <-
   //// EXPR_PRIMARY -> EXPR_CONSTANT
   ////               | '(' EXPR_LIST ')'
-  ( + result:LIP_CODE
-    + val:LIP_CONSTANT
-    + lst:ARRAY LIP_CODE
+  ( + result:Lip_code
+    + val:Lip_constant
+    + lst:Array Lip_code
 
     val := readlip_expr_constant
     (val != NULL).if {
-      result := LIP_VALUE.create current_position with val
+      result := Lip_value.create current_position with val
     }.elseif {read_char '('} then {
-      lst := ALIAS_ARRAY LIP_CODE.new
+      lst := Alias_array Lip_code.new
       readlip_expr_list lst
       (read_char ')').if_false {
         warning_error (current_position,"Added ')'.")
       }
-      lst := ALIAS_ARRAY LIP_CODE.copy lst
-      result := LIP_LIST.create current_position with lst
+      lst := Alias_array Lip_code.copy lst
+      result := Lip_list.create current_position with lst
     }
     result
   )
 
-  - readlip_expr_constant:LIP_CONSTANT <-
-  //// EXPR_CONSTANT-> integer
+  - readlip_expr_constant:Lip_constant <-
+  //// EXPR_CONSTANT-> int
   ////               | string
-  ////               | TRUE
-  ////               | FALSE
-  ( + result:LIP_CONSTANT
+  ////               | True
+  ////               | False
+  ( + result:Lip_constant
 
     (read_num).if {
       (is_real).if { syntax_error (current_position,"Float not yet implemented."); }
-      result := LIP_INTEGER.get last_integer
+      result := Lip_integer.get last_integer
     }.elseif {read_string} then {
-      result := LIP_STRING.get last_string
+      result := Lip_string.get last_string
     }.elseif {read_cap_idf} then {
-      (last_string = "TRUE").if {
-        result := LIP_BOOLEAN.get TRUE
-      }.elseif {last_string = "FALSE"} then {
-        result := LIP_BOOLEAN.get FALSE
+      (last_string = "True").if {
+        result := Lip_boolean.get True
+      }.elseif {last_string = "False"} then {
+        result := Lip_boolean.get False
       } else {
         syntax_error (current_position,"Type incorrect.")
       }
@@ -2397,7 +2419,7 @@ Public
   //
 
 
-  - go_on obj:PROTOTYPE <-
+  - go_on obj:Prototype <-
   (
     ? { object=NULL}
     // Source information.
@@ -2413,13 +2435,13 @@ Public
     object := NULL; // Parser is Free (see require test...)
   )
 
-  - read_lip path_lip:STRING_ALIAS :BOOLEAN <-
-  ( + entry:POINTER
+  - read_lip path_lip:String_alias :Boolean <-
+  ( + entry:Pointer
     //OUT # "Open " # path_lip # '\n'
-    entry := FILE_UTILS.open_read path_lip
+    entry := File_utils.open_read path_lip
     (entry.is_not_null).if {      
-      FILE_UTILS.close entry
-      object := PROTOTYPE.create path_lip name path_lip generic_count 0
+      File_utils.close entry
+      object := Prototype.create path_lip name path_lip generic_count 0
 
       source  := object.source.to_external
       position := 0
@@ -2431,7 +2453,7 @@ Public
       readlip_program
       //      
       (is_verbose).if {
-        UTF8.print
+        Utf8.print
       }
       //            
       object := NULL; // Parser is Free (see require test...)

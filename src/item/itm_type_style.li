@@ -1,26 +1,23 @@
 Header
-
-  + name        := ITM_TYPE_STYLE;
-
-  /*Type with style*/
-
+  + name := Itm_type_style
+/*Type with style*/
 Inherit
 
-  + parent_itm_type_simple:Expanded ITM_TYPE_SIMPLE
+  + parent_itm_type_simple:Flat Itm_type_simple
 
 Private
 
-  - dico_ts:ARRAY ITM_TYPE_STYLE := ARRAY ITM_TYPE_STYLE .create_with_capacity 32
+  - dico_ts:Array Itm_type_style := Array Itm_type_style .create_with_capacity 32
 
-  - create n:STRING_ALIAS style s:UINTEGER_8 :SELF <-
-  ( + result:SELF
+  - create n:String_alias style s:Uint8 :Self <-
+  ( + result:Self
 
     result := clone
     result.make n style s
     result
   )
 
-  - make n:STRING_ALIAS style s:UINTEGER_8 <-
+  - make n:String_alias style s:Uint8 <-
   (
     name  := n
     style := s
@@ -28,16 +25,16 @@ Private
 
 Public
     
-  + style:UINTEGER_8
+  + style:Uint8
   
-  - get n:STRING_ALIAS style s:UINTEGER_8 :SELF <-
-  ( + result:SELF
-    + idx:INTEGER
+  - get n:String_alias style s:Uint8 :Self <-
+  ( + result:Self
+    + idx:Int
 
     idx := dico_ts.lower
     {
       (idx <= dico_ts.upper) && {
-	(dico_ts.at idx.name  != n) ||
+        (dico_ts.at idx.name  != n) ||
  {dico_ts.at idx.style != s} 
       }
     }.while_do {

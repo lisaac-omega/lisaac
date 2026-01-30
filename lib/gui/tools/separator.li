@@ -1,39 +1,38 @@
 Header
-  + name := Strict SEPARATOR;
-  
+  + name := Exact Separator
 Inherit
-  + parent_gobj:Expanded GOBJ SEPARATOR
+  + parent_gobj:Flat Gobj Separator
   
 Private
-  - stk:Expanded ARRAY SEPARATOR
+  - stk:Flat Array Separator
 Public
   
-  - width_min:REAL_32  <- is vertical.ok 16 or 0
-  - height_min:REAL_32 <- is vertical.ok 0 or 16
+  - width_min:Real32  <- is vertical.ok 16 or 0
+  - height_min:Real32 <- is vertical.ok 0 or 16
   
-  - vertical:INTEGER := 1 << 15
+  - vertical:Int := 1 << 15
   
-  + col:COLOR
-  - color c:COLOR  :SELF <- (col := c; Self)
+  + col:Color
+  - color c:Color  :Self <- (col := c; self)
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - init_h:SELF <- init_obj
+  - init_h:Self <- init_obj
   
-  - init_v:SELF <-
+  - init_v:Self <-
   (
     init_obj
     set vertical
-    Self
+    self
   )
     
   - draw <-
-  ( + c:COLOR
-    + v:REAL_32
-    c := (col=COLOR).ok (LOOK.text_ui) or col
+  ( + c:Color
+    + v:Real32
+    c := (col=Color).ok (Look.text_ui) or col
     begin_path
     stroke_color c
     stroke_width 1

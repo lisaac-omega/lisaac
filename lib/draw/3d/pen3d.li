@@ -1,8 +1,6 @@
 Header
-  
-  + name := PEN3D;
-  
-  - include := `extern float texCoords[];`;
+  + name := Pen3d
+- include := `extern float texCoords[];`;
   
   - external := `
   float texCoords[] = {
@@ -19,39 +17,39 @@ Header
 Public
   
 //  - shader_normal:SHADER_3D
-  - shader_stroke:SHADER_3D
-  - shader_fill:SHADER_3D
-  - shader_map:SHADER_3D
+  - shader_stroke:Shader_3d
+  - shader_fill:Shader_3d
+  - shader_map:Shader_3d
     
-O3D, PEN_CALL_3D, PEN_CALL_3D_BEGIN
+O3d, Pen_call_3d, Pen_call_3d_begin
   
-  - vertex:ARRAY REAL_32
-  - index:ARRAY UINTEGER_32
-  - vao:UINTEGER_32
-  - vbo:UINTEGER_32
-  - ebo:UINTEGER_32
+  - vertex:Array Real32
+  - index:Array Uint32
+  - vao:Uint32
+  - vbo:Uint32
+  - ebo:Uint32
   
-  - square:O3D_MODEL
-  - cube:O3D_MODEL
-  - cylinder:O3D_MODEL
-  - cone:O3D_MODEL
-  - sphere:O3D_MODEL
+  - square:O3d_model
+  - cube:O3d_model
+  - cylinder:O3d_model
+  - cone:O3d_model
+  - sphere:O3d_model
   
-  - tri_prism:O3D_MODEL
-  - tetrahedron:O3D_MODEL
+  - tri_prism:O3d_model
+  - tetrahedron:O3d_model
   
-  - square_pyramid:O3D_MODEL
+  - square_pyramid:O3d_model
     
 Public
   
   - init b:{} <-
   ( 
-    vertex := ARRAY REAL_32.create_with_capacity 3_000_000; /* cube */
-    index := ARRAY UINTEGER_32.create_with_capacity 1_000_000
+    vertex := Array Real32.create_with_capacity 3_000_000; /* cube */
+    index := Array Uint32.create_with_capacity 1_000_000
     //SYSTEM.name.println
 
     // SHADER FILL    
-    shader_fill := SHADER_3D.create (PAPER.shader_header) geometry NULL vertex
+    shader_fill := Shader_3d.create (Paper.shader_header) geometry NULL vertex
     "layout (location = 0) in vec3 aPos;   \n\
     \layout (location = 1) in vec3 aNormal; \n\
     \ \n\
@@ -105,7 +103,7 @@ Public
     \}\n"
 
     // SHADER MAPPING
-    shader_map := SHADER_3D.create (PAPER.shader_header) geometry NULL vertex
+    shader_map := Shader_3d.create (Paper.shader_header) geometry NULL vertex
     "layout (location = 0) in vec3 aPos;   \n\
     \layout (location = 1) in vec3 aNormal; \n\
     \layout (location = 2) in vec2 vertexUV; \n\    
@@ -178,33 +176,33 @@ Public
   
 Public
   
-  - sides:INTEGER := 32; //32; //64
+  - sides:Int := 32; //32; //64
   
-  - add_vertex (x,y,z:REAL_32) normal (nx,ny,nz:REAL_32) <-
+  - add_vertex (x,y,z:Real32) normal (nx,ny,nz:Real32) <-
   ( vertex.add_last x; vertex.add_last y; vertex.add_last z
     vertex.add_last nx; vertex.add_last ny; vertex.add_last nz
   )
   
-  - add_vertex (x,y,z:REAL_32) <- add_vertex (x,y,z) normal (0,0,0)
+  - add_vertex (x,y,z:Real32) <- add_vertex (x,y,z) normal (0,0,0)
   
-  - dup p:INTEGER :INTEGER <- 
-  ( + i,result:INTEGER
+  - dup p:Int :Int <- 
+  ( + i,result:Int
     result := vertex.count / 6
     i := p * 6
     add_vertex (vertex.at i, vertex.at (i+1), vertex.at (i+2))
     result
   )
   
-  - add_triangle_raw (p0,p1,p2:UINTEGER_32) <-
+  - add_triangle_raw (p0,p1,p2:Uint32) <-
   ( index.add_last p0; index.add_last p1; index.add_last p2; )
   
-  - add_triangle (p0,p1,p2:UINTEGER_32) <-
-  ( + v0,v1,v2,n:VEC3
-    + b:{INTEGER; }
+  - add_triangle (p0,p1,p2:Uint32) <-
+  ( + v0,v1,v2,n:Vec3
+    + b:{Int; }
     add_triangle_raw (p0,p1,p2)
-    v0 := VEC3.create_xyz (vertex.at (p0*6),vertex.at (p0*6+1),vertex.at (p0*6+2))
-    v1 := VEC3.create_xyz (vertex.at (p1*6),vertex.at (p1*6+1),vertex.at (p1*6+2))
-    v2 := VEC3.create_xyz (vertex.at (p2*6),vertex.at (p2*6+1),vertex.at (p2*6+2))
+    v0 := Vec3.create_xyz (vertex.at (p0*6),vertex.at (p0*6+1),vertex.at (p0*6+2))
+    v1 := Vec3.create_xyz (vertex.at (p1*6),vertex.at (p1*6+1),vertex.at (p1*6+2))
+    v2 := Vec3.create_xyz (vertex.at (p2*6),vertex.at (p2*6+1),vertex.at (p2*6+2))
     //"v0:".print; v0.print; " v1:".print; v1.print; " v2:".print; v2.print; '\n'.print
     v1.sub v0; v2.sub v0
     //" v1 - v0:".print; v1.print; " v2 - v0:".print; v2.print; '\n'.print
@@ -212,7 +210,7 @@ Public
     //" n:".print; n.print; '\n'.print
     n.normalize
     //" |n|:".print; n.print; '\n'.print
-    b := {p:INTEGER
+    b := {p:Int
       vertex.at (p*6+3) put (n.x)
       vertex.at (p*6+4) put (n.y)
       vertex.at (p*6+5) put (n.z)
@@ -221,28 +219,28 @@ Public
     v0.free; v1.free; v2.free; n.free
   )
   
-  - add_quad (p0,p1,p2,p3:UINTEGER_32) <-
+  - add_quad (p0,p1,p2,p3:Uint32) <-
   ( add_triangle (p0,p1,p2); add_triangle (p0,p2,p3); )
   
-  - add_square:O3D_MODEL <-
-  ( + low,up:INTEGER
-    + beg:UINTEGER_32
+  - add_square:O3d_model <-
+  ( + low,up:Int
+    + beg:Uint32
     low := index.count
     beg := vertex.count / 6
     add_vertex (-0.5,0,+0.5); add_vertex (+0.5,0,+0.5)
     add_vertex (+0.5,0,-0.5); add_vertex (-0.5,0,-0.5)
     add_quad (beg+0,beg+1,beg+2,beg+3)
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_cube:O3D_MODEL <-
-  ( + x,y,z:REAL_32
-    + i0,i1,i2,i3,i4,i5,i6,i7,beg:UINTEGER_32
-    + low,up:INTEGER
+  - add_cube:O3d_model <-
+  ( + x,y,z:Real32
+    + i0,i1,i2,i3,i4,i5,i6,i7,beg:Uint32
+    + low,up:Int
     low := index.count
     beg := vertex.count / 6
-    0.to 7 do { n:INTEGER
+    0.to 7 do { n:Int
       x := (n>>1)    .is_odd.ok (-0.5) or (+0.5)
       y := (n<4)            .ok (+0.5) or (-0.5)
       z := ((n+1)>>1).is_odd.ok (-0.5) or (+0.5)
@@ -255,19 +253,19 @@ Public
     add_quad (dup i1,dup i5,dup i6,dup i2); add_quad (dup i2,dup i6,dup i7,dup i3)
     add_quad (dup i3,dup i7,dup i4,dup i0); add_quad (dup i4,dup i5,dup i1,dup i0)
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
     
-  - add_cylinder:O3D_MODEL <-
-  ( + sides2,i2:INTEGER
-    + beg,cb,ch,p0,p1,p2,p3:INTEGER
-    + c,s,a,b:REAL_32
-    + low,up:INTEGER
+  - add_cylinder:O3d_model <-
+  ( + sides2,i2:Int
+    + beg,cb,ch,p0,p1,p2,p3:Int
+    + c,s,a,b:Real32
+    + low,up:Int
     low := index.count
     beg := vertex.count/6
-    a := REAL_32.pi / 4.0
-    b := REAL_32.two_pi / sides
-    0.to (sides-1) do { i:INTEGER
+    a := Real32.pi / 4.0
+    b := Real32.two_pi / sides
+    0.to (sides-1) do { i:Int
       (c, s) := (a.cos, a.sin)
       add_vertex (c*0.5,s*0.5,-0.5) normal (c,s,0)
       add_vertex (c*0.5,s*0.5,+0.5) normal (c,s,0)
@@ -280,7 +278,7 @@ Public
     add_vertex (0.0,0.0, 0.5)
 
     sides2 := sides * 2
-    0.to (sides-1) do { i:INTEGER
+    0.to (sides-1) do { i:Int
       i2 := i * 2
       p0 := beg+i2
       p1 := beg+(i2+1)%sides2
@@ -292,17 +290,17 @@ Public
       add_triangle (dup p1,dup p3,ch)
     }
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_cone:O3D_MODEL <-
-  ( + beg,cb,p0,p1:INTEGER
-    + a,b,c,s:REAL_32
-    + low,up:INTEGER
+  - add_cone:O3d_model <-
+  ( + beg,cb,p0,p1:Int
+    + a,b,c,s:Real32
+    + low,up:Int
     low := index.count
     beg := vertex.count / 6
-    b := REAL_32.two_pi / sides
-    0.to sides do { i:INTEGER
+    b := Real32.two_pi / sides
+    0.to sides do { i:Int
       (c, s) := (a.cos, a.sin)
       add_vertex (c*0.5,s*0.5,-0.5)
       add_vertex (0,0,+0.5)
@@ -311,28 +309,28 @@ Public
 
     cb := vertex.count/6
     add_vertex (0.0,0.0,-0.5)
-    0.to (sides-1) do { i:INTEGER
+    0.to (sides-1) do { i:Int
       p0 := beg+i*2
       p1 := beg+(i*2+2) % (sides*2)
       add_triangle (p0,p1,beg+i*2+1)
       add_triangle (dup p1,dup p0,cb)
     }
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_sphere:O3D_MODEL <-
-  ( + lat_nb,lon_nb:INTEGER
-    + theta,phi, sin_p,cos_p, sin_t,cos_t, x,y,z:REAL_32
-    + low,up,beg, first,second:INTEGER
+  - add_sphere:O3d_model <-
+  ( + lat_nb,lon_nb:Int
+    + theta,phi, sin_p,cos_p, sin_t,cos_t, x,y,z:Real32
+    + low,up,beg, first,second:Int
     low := index.count
     beg := vertex.count/6
     lat_nb := lon_nb := sides
-    0.to lat_nb do { lat:INTEGER
-      theta := REAL_32.pi / lat_nb * lat
+    0.to lat_nb do { lat:Int
+      theta := Real32.pi / lat_nb * lat
       (sin_t,cos_t) := (theta.sin, theta.cos)
-      0.to lon_nb do { lon:INTEGER
-        phi := REAL_32.pi * 2 / lon_nb * lon
+      0.to lon_nb do { lon:Int
+        phi := Real32.pi * 2 / lon_nb * lon
         (sin_p,cos_p) := (phi.sin, phi.cos)
         (x,y,z) := (cos_p * sin_t, cos_t, sin_p * sin_t)
         add_vertex (x*0.5,y*0.5,z*0.5) normal (x,y,z)
@@ -340,8 +338,8 @@ Public
         // v = 1 - (latNumber / lat_nb)
       }
     }
-    0.to (lat_nb-1) do { lat:INTEGER
-      0.to (lon_nb-1) do { lon:INTEGER
+    0.to (lat_nb-1) do { lat:Int
+      0.to (lon_nb-1) do { lon:Int
         first := (lat * (lon_nb + 1)) + lon
         second := first + lon_nb + 1
         add_triangle_raw (beg + first,  beg + first + 1, beg + second)
@@ -349,17 +347,17 @@ Public
       }
     }
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_tri_prism:O3D_MODEL <-
-  ( + beg,beg2,i2:INTEGER
-    + a,p,r:REAL_32
-    + low,up:INTEGER
+  - add_tri_prism:O3d_model <-
+  ( + beg,beg2,i2:Int
+    + a,p,r:Real32
+    + low,up:Int
     low := index.count
     beg := vertex.count/6
     r := (1.0/3.0).sqrt; // 1^2 = r^2 + r^2 - 2 * r * r * cos(120) -> r=0.57
-    0.to 1 do { s:INTEGER
+    0.to 1 do { s:Int
       p := (s=0).ok (+0.5) or (-0.5)
       add_vertex (0.0,r,p)
       a := (90.0+120).deg
@@ -369,43 +367,43 @@ Public
       add_triangle (beg+3*s,beg+3*s+1+s,beg+3*s+2-s)
     }
     beg2 := beg + 3
-    0.to 2 do { i:INTEGER
+    0.to 2 do { i:Int
       i2 := (i+1)%3
       add_quad (dup (beg+i),dup (beg2+i),dup (beg2+i2),dup (beg+i2))
     }
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_tetrahedron:O3D_MODEL <-
-  ( + beg:INTEGER
-    + low,up:INTEGER
+  - add_tetrahedron:O3d_model <-
+  ( + beg:Int
+    + low,up:Int
     low := index.count
     beg := vertex.count/6
     abstract
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_square_pyramid:O3D_MODEL <-
-  ( + beg:INTEGER
-    + low,up:INTEGER
+  - add_square_pyramid:O3d_model <-
+  ( + beg:Int
+    + low,up:Int
     low := index.count
     beg := vertex.count/6
     abstract
     up := index.upper
-    O3D_MODEL.create_low low up up
+    O3d_model.create_low low up up
   )
   
-  - add_stl n:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :O3D_MODEL <-
-  ( + beg:INTEGER
-    + low,up:INTEGER
+  - add_stl n:C_array Uint8 size s:Int :O3d_model <-
+  ( + beg:Int
+    + low,up:Int
     low := index.count
     beg := vertex.count / 6
-    STL.load n size s
-    STL.rotate_x_m90
-    STL.update_info
-    STL.body.foreach { p:PTSTL
+    Stl.load n size s
+    Stl.rotate_x_m90
+    Stl.update_info
+    Stl.body.foreach { p:Ptstl
       add_vertex (p.x1.mm,p.y1.mm,p.z1.mm)
       add_vertex (p.x2.mm,p.y2.mm,p.z2.mm)
       add_vertex (p.x3.mm,p.y3.mm,p.z3.mm)
@@ -413,19 +411,19 @@ Public
       beg := beg + 3
     }
     up := index.upper
-    O3D_MODEL.create (STL.ox.mm,STL.oy.mm,STL.oz.mm)
-    gravity (STL.gx.mm,STL.gy.mm,STL.gz.mm) low low up up    
+    O3d_model.create (Stl.ox.mm,Stl.oy.mm,Stl.oz.mm)
+    gravity (Stl.gx.mm,Stl.gy.mm,Stl.gz.mm) low low up up    
   )
   
-  - add_stl pth:STRING_ALIAS :O3D_MODEL <-
-  ( + beg:INTEGER
-    + low,up:INTEGER
+  - add_stl pth:String_alias :O3d_model <-
+  ( + beg:Int
+    + low,up:Int
     low := index.count
     beg := vertex.count / 6
-    STL.load pth
-    STL.rotate_x_m90
-    STL.update_info
-    STL.body.foreach { p:PTSTL
+    Stl.load pth
+    Stl.rotate_x_m90
+    Stl.update_info
+    Stl.body.foreach { p:Ptstl
       add_vertex (p.x1.mm,p.y1.mm,p.z1.mm)
       add_vertex (p.x2.mm,p.y2.mm,p.z2.mm)
       add_vertex (p.x3.mm,p.y3.mm,p.z3.mm)
@@ -433,16 +431,16 @@ Public
       beg := beg + 3
     }
     up := index.upper
-    O3D_MODEL.create (STL.ox.mm,STL.oy.mm,STL.oz.mm)
-    gravity (STL.gx.mm,STL.gy.mm,STL.gz.mm) low low up up
+    O3d_model.create (Stl.ox.mm,Stl.oy.mm,Stl.oz.mm)
+    gravity (Stl.gx.mm,Stl.gy.mm,Stl.gz.mm) low low up up
   )
   
 Private
   
   - end_path <-
-  ( + tex:UINTEGER_32
-    + gl:PEN_GL
-    gl := PAPER.wins.first.pen.gl
+  ( + tex:Uint32
+    + gl:Pen_gl
+    gl := Paper.wins.first.pen.gl
     vao := gl.gl_gen_vertex_arrays 1; // Vertex
     vbo := gl.gl_gen_buffers 1; // Vertex
     ebo := gl.gl_gen_buffers 1; // Index
@@ -450,37 +448,37 @@ Private
 
     gl.gl_bind_vertex_array vao
     // Vertex
-    gl.gl_bind_buffer (`GL_ARRAY_BUFFER`:INTEGER, vbo)
+    gl.gl_bind_buffer (`GL_ARRAY_BUFFER`:Int, vbo)
     gl.gl_buffer_data_ptr (
-      `GL_ARRAY_BUFFER`:INTEGER,
-      vertex.count * REAL_32.object_size,
+      `GL_ARRAY_BUFFER`:Int,
+      vertex.count * Real32.object_size,
       vertex.to_external,
-      `GL_STATIC_DRAW`:INTEGER
+      `GL_STATIC_DRAW`:Int
     )
     // Index
-    gl.gl_bind_buffer(`GL_ELEMENT_ARRAY_BUFFER`:INTEGER, ebo)
+    gl.gl_bind_buffer(`GL_ELEMENT_ARRAY_BUFFER`:Int, ebo)
     gl.gl_buffer_data_ptr (
-      `GL_ELEMENT_ARRAY_BUFFER`:INTEGER,
-      index.count * UINTEGER_32.object_size,
+      `GL_ELEMENT_ARRAY_BUFFER`:Int,
+      index.count * Uint32.object_size,
       index.to_external,
-      `GL_STATIC_DRAW`:INTEGER
+      `GL_STATIC_DRAW`:Int
     )
     
     // position attribute    
-    gl.gl_vertex_attrib_pointer(0, 3, `GL_FLOAT`:INTEGER, `GL_FALSE`:BOOLEAN, 6 * REAL_32.object_size, NULL)
+    gl.gl_vertex_attrib_pointer(0, 3, `GL_FLOAT`:Int, `GL_FALSE`:Boolean, 6 * Real32.object_size, NULL)
     
     // Normal vector
-    gl.gl_vertex_attrib_pointer(1, 3, `GL_FLOAT`:INTEGER, `GL_FALSE`:BOOLEAN, 6 * REAL_32.object_size, `(void *)(sizeof(float)*3)`:POINTER)
+    gl.gl_vertex_attrib_pointer(1, 3, `GL_FLOAT`:Int, `GL_FALSE`:Boolean, 6 * Real32.object_size, `(void *)(sizeof(float)*3)`:Pointer)
     
     // Texture
-    gl.gl_bind_buffer (`GL_ARRAY_BUFFER`:INTEGER, tex)
+    gl.gl_bind_buffer (`GL_ARRAY_BUFFER`:Int, tex)
     gl.gl_buffer_data_ptr (
-      `GL_ARRAY_BUFFER`:INTEGER,
-      12 * UINTEGER_32.object_size,
-      `texCoords`:POINTER,
-      `GL_STATIC_DRAW`:INTEGER
+      `GL_ARRAY_BUFFER`:Int,
+      12 * Uint32.object_size,
+      `texCoords`:Pointer,
+      `GL_STATIC_DRAW`:Int
     )
-    gl.gl_vertex_attrib_pointer(2,2,`GL_FLOAT`:INTEGER,`GL_FALSE`:BOOLEAN,0,NULL)
+    gl.gl_vertex_attrib_pointer(2,2,`GL_FLOAT`:Int,`GL_FALSE`:Boolean,0,NULL)
     
     gl.gl_enable_vertex_attrib_array 0
     gl.gl_enable_vertex_attrib_array 1
@@ -489,33 +487,33 @@ Private
   )
   
   
-  - add_torus (sides, cs_sides:INTEGER) radius (radius, cs_radius:REAL_32) :SELF <-
-  ( + num_vtx,num_idx:INTEGER
-    + a,cs_a,cur_a,z,j,i:REAL_32
-    + p0,p1,p2,p3,beg:INTEGER
+  - add_torus (sides, cs_sides:Int) radius (radius, cs_radius:Real32) :Self <-
+  ( + num_vtx,num_idx:Int
+    + a,cs_a,cur_a,z,j,i:Real32
+    + p0,p1,p2,p3,beg:Int
     not_yet_implemented
     beg := vertex.count
     num_vtx := (sides+1) * (cs_sides+1)
     num_idx := (2*sides+4) * cs_sides
     
-    a := REAL_32.two_pi / sides
-    cs_a := REAL_32.two_pi /cs_sides
+    a := Real32.two_pi / sides
+    cs_a := Real32.two_pi /cs_sides
 
     // iterate cs_sides: inner ring
-    0.to (cs_sides-1) do { jj:INTEGER
+    0.to (cs_sides-1) do { jj:Int
       j := cs_a * jj
       cur_a := radius + cs_radius * j.cos
       z := cs_radius * j.sin
       // iterate sides: outer ring
-      0.to (sides-1) do { ii:INTEGER
+      0.to (sides-1) do { ii:Int
         i := a * ii
         add_vertex (cur_a * i.cos, cur_a * i.sin, z)
       }
     }
     // inner ring
-    0.to (cs_sides-1) do { i:INTEGER
+    0.to (cs_sides-1) do { i:Int
       // outer ring
-      0.to (sides-1) do { j:INTEGER
+      0.to (sides-1) do { j:Int
         p0 := beg + i * sides + j
         p1 := beg + i * sides + (j+1)%sides
         p2 := beg + (i+1)%cs_sides * sides + j
@@ -524,7 +522,7 @@ Private
         add_triangle (p1,p3,p2)
       }
     }
-    Self
+    self
   )
 
   /*

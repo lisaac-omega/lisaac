@@ -1,51 +1,51 @@
-Header  
-  + name := AUTO_TEST;
-  /*
+Header
+  + name := Auto_test
+/*
   Performs tests automatically for the Lisaac Ω project.
   */
   
 Insert
-  - parent_mini_bash:MINI_BASH := MINI_BASH
+  - parent_mini_bash:Mini_bash := Mini_bash
   
 Private  
   - print_usage_exit <-
   (
-    (COMMAND_ARGS.at 0).println
+    (Command_args.at 0).println
     "Usage:auto_test [--verbose] [--first-error-exit] <directory...>".println
     exit 1
   )
   
 Private  
-  - lisaac_options:STRING := "--r -q"
+  - lisaac_options:String := "--r -q"
   
-  + test_counter:INTEGER
+  + test_counter:Int
   
-  + skip_counter:INTEGER
+  + skip_counter:Int
   
-  + mesg_counter:INTEGER
+  + mesg_counter:Int
     
-  + script_counter:INTEGER
+  + script_counter:Int // auto_test.sh
   
-  + main_exec:STRING_ALIAS
+  + main_exec:String_alias
   
-  + partial:BOOLEAN
+  + partial:Boolean
   
-  + dirlist:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS .create_with_capacity 8
+  + dirlist:Array String_alias := Array String_alias .create_with_capacity 8
     
 Public
   - main <-
-  ( + arg:STRING_ALIAS
-    FILE_UTILS.working_directory_in working_directory
+  ( + arg:String_alias
+    File_utils.working_directory_in working_directory
     ? {working_directory.last = '/'}
-    verbose := COMMAND_ARGS.option_shift "--verbose"
-    first_error_exit := COMMAND_ARGS.option_shift "--first-error-exit"
-    (COMMAND_ARGS.count = 1).if {
+    verbose := Command_args.option_shift "--verbose"
+    first_error_exit := Command_args.option_shift "--first-error-exit"
+    (Command_args.count = 1).if {
       print_usage_exit
     }
-    {COMMAND_ARGS.count > 1}.while_do {
-      arg := COMMAND_ARGS.at 1
-      COMMAND_ARGS.shift
-      (ENVIRONMENT.chdir arg = 0).if {
+    {Command_args.count > 1}.while_do {
+      arg := Command_args.at 1
+      Command_args.shift
+      (Environment.chdir arg = 0).if {
         dirlist.add_last arg
       } else {
         ("autotest: directory \"" + arg + "\" does not exists.").println
@@ -53,17 +53,17 @@ Public
       }
     }
     verbose.if {
-      ("System.name = \"" + SYSTEM.name + "\"").println
+      ("System.name = \"" + System.name + "\"").println
       ("working_directory = \"" + working_directory + "\"").println
     }
-    dirlist.foreach { dir:STRING_ALIAS
+    dirlist.foreach { dir:String_alias
       scan_directory dir
     }
     "Done ".print
     test_counter.print
     " tests".print
     ((error_counter + skip_counter + mesg_counter + script_counter) > 0).if {
-      STRING.tmp {buf:STRING_BUFFER
+      String.tmp {buf:String_buffer
         buf.append " ("
         buf buf counter error_counter name "error"
         buf buf counter skip_counter name "skip"
@@ -86,11 +86,11 @@ Public
   )
   
 Private  
-  - scan_directory (root:STRING_ALIAS) <-
+  - scan_directory (root:String_alias) <-
   (
-    (ENVIRONMENT.chdir root = 0).if {
+    (Environment.chdir root = 0).if {
       working_directory.clear
-      FILE_UTILS.working_directory_in working_directory
+      File_utils.working_directory_in working_directory
     } else {
       crash_with_message ("Cannot chdir into \"" + root + "\"")
     }
@@ -99,47 +99,74 @@ Private
       working_directory.print
       "\" searching main slots...".println
     }
-    working_directory_map { dirent:DIRENT
-      + file:FILE
+    String.tmp { skip:String_buffer
+      if (open_read "skip.txt" in skip) then {
+        working_directory.print
+        skip_counter := skip_counter + 1
+        ".(skip.txt:".print
+        skip.print
+        ").\n".print
+      } else {
+        working_directory_map { dirent:Dirent
+          + file:File
+          if ((file ?= dirent) != NULL) then {
+            if ((file.name.has_suffix ".li") && {is_main file}) then {
+              auto_test file
+            }
+          } else {
+            scan_directory (dirent.path)
+          }
+        }
+      }
+    }    
+    
+    
+    /*
+    working_directory_map { dirent:Dirent
+      + file:File
       (((file ?= dirent) != NULL) && {file.name.has_suffix ".li"} && {is_main file}).if {
         auto_test file
       }
     }
-    working_directory_map { dirent:DIRENT
-      + file:FILE
+    working_directory_map { dirent:Dirent
+      + file:File
       ((file ?= dirent) = NULL).if {
         scan_directory (dirent.path)
       }
     }
+    */
+    
+    
   )
   
-  - is_main file:FILE :BOOLEAN <-
-  ( + result:BOOLEAN
-    STRING.tmp { cmd:STRING_BUFFER
-      cmd.append "grep -q -E '^ +\\- main *<-' "
+  - is_main file:File :Boolean <-
+  ( + result:Boolean
+    String.tmp { cmd:String_buffer
+      cmd.append "grep -q -E '^ +\\- main *<-' '"
       cmd.append (file.path)
+      cmd.append "'"
       verbose.if { cmd.println; }
-      result := ENVIRONMENT.run cmd = 0
+      result := Environment.run cmd = 0
     }
     result
   )
   
-  - auto_test main_file:FILE <-
-  ( + args:STRING_BUFFER
-    + continue,no_run,boost_only,skip_boost,lisaacout,autotest_script:BOOLEAN
-    + dirpath, fname:STRING_ALIAS
+  - auto_test main_file:File <-
+  ( + args:String_buffer
+    + continue,no_run,boost_only,skip_boost,lisaacout,autotest_script:Boolean
+    + dirpath, fname:String_alias
     (main_file.path).print
     ':'.print
     fname := main_file.name
     test_counter := test_counter + 1
-    STRING.tmp { dp:STRING_BUFFER
+    String.tmp { dp:String_buffer
       dp.append (main_file.path)
       dp.remove_suffix fname
       dirpath := dp.to_string_alias
     }
     if (chdir dirpath) then {
       '.'.print
-      continue := TRUE
+      continue := True
     } else {
       error ("chdir \"" + dirpath + "\" failed.")
     }
@@ -151,10 +178,10 @@ Private
       remove_list.clear
     }
     if (dirpath.has_substring "/libot/") then {
-      partial := TRUE
+      partial := True
     }
     if continue then {
-      STRING.tmp { mesg:STRING_BUFFER
+      String.tmp { mesg:String_buffer
         (open_read "mesg.txt" in mesg).if {
           mesg_counter := mesg_counter + 1
           ".(mesg.txt:".print
@@ -164,41 +191,34 @@ Private
       }
     }
     if continue then { 
-      STRING.tmp { skip:STRING_BUFFER
-        (open_read "skip.txt" in skip).if {
-          skip_counter := skip_counter + 1
-          ".(skip.txt:".print
-          skip.print
-          ").".print
-          continue := FALSE
-        }.elseif {(fname = "elix.li") || {fname = "lisaac.li"}} then {
-          continue := FALSE
-        }
+      if ((fname = "elix.li") || {fname = "lisaac.li"}) then {
+        continue := False
+        OUT # ".(skip:" # fname # ")"
       }
     }
     if continue then {
       if (no_run := file_exists "no-run" in dirpath) then {
         ".no-run.".print
       }.elseif {! dirpath.has_substring "/test/"} then {
-        no_run := TRUE
+        no_run := True
       }
     }
     if continue then {
-      + exit_status:INTEGER
+      + exit_status:Int
       (autotest_script := file_exists "auto_test.sh" in dirpath).if {
         ".auto_test.sh.".print; test_counter := test_counter + 1
         script_counter := script_counter + 1
-        STRING.tmp { cmd:STRING_BUFFER
+        String.tmp { cmd:String_buffer
           cmd.copy "./auto_test.sh "
           cmd.append fname
-          first_error_exit FALSE do {
+          first_error_exit False do {
             exit_status := execute_command cmd
           }
         }
         (exit_status = 0).if {
           ".ok.0.".print
         } else {
-          continue := FALSE
+          continue := False
           (exit_status = 1).if {
             ".ok.1.".print
           } else {
@@ -206,6 +226,7 @@ Private
             ".ERROR.".print
           }
         }
+        continue := False
       }
     }
     continue.if {
@@ -217,10 +238,10 @@ Private
         ".ERROR.skip-boost.".print
       }
       lisaacout := file_exists "lisaacout" in dirpath
-      STRING.tmp { args_path:STRING_BUFFER
+      String.tmp { args_path:String_buffer
         args_path.copy dirpath
         args_path.append "args"
-        STRING.tmp { content:STRING_BUFFER
+        String.tmp { content:String_buffer
           (open_read args_path in content).if {
             '.'.print
             args := content.twin
@@ -230,15 +251,15 @@ Private
     }
     if continue then {
       '.'.print; test_counter := test_counter + 1
-      continue := compile_boost FALSE dirpath dirpath main fname lisaacout lisaacout
+      continue := compile_boost False dirpath dirpath main fname lisaacout lisaacout
     }
     if partial then {
-      continue := FALSE
+      continue := False
       
       remove_list_proceed dirpath      
     }
     if (continue && {file_exists "error-msg" in dirpath}) then {
-      continue := FALSE
+      continue := False
       remove_list_proceed dirpath      
     }
     if (continue && {! no_run} && {! boost_only}) then {
@@ -250,7 +271,7 @@ Private
     }
     if (continue && {! skip_boost}) then {
       '.'.print; test_counter := test_counter + 1
-      continue := compile_boost TRUE dirpath dirpath main fname lisaacout lisaacout
+      continue := compile_boost True dirpath dirpath main fname lisaacout lisaacout
     }
     if (continue && {! no_run} && {! skip_boost}) then {
       '.'.print; test_counter := test_counter + 1
@@ -265,9 +286,9 @@ Private
 Private
   
   
-  - remove_list:STRING_BUFFER := STRING_BUFFER.create 256
+  - remove_list:String_buffer := String_buffer.create 256
   
-  - remove_list_add n:STRING_ALIAS <-
+  - remove_list_add n:String_alias <-
   (
     remove_list.is_empty.if_false {
       remove_list.add_last ' '
@@ -275,7 +296,7 @@ Private
     remove_list.append n
   )
   
-  - add_redirect r:STRING_ALIAS dirpath dirpath:STRING new stdnew:STRING_ALIAS <-
+  - add_redirect r:String_alias dirpath dirpath:String new stdnew:String_alias <-
   (
     mybuffer.add_last ' '
     mybuffer.append r
@@ -283,15 +304,15 @@ Private
     mybuffer.append stdnew
   )
   
-  - diff_dot dirpath:STRING name n:STRING_ALIAS :BOOLEAN <-
-  ( + continue:BOOLEAN
-    + n_new:STRING_ALIAS
+  - diff_dot dirpath:String name n:String_alias :Boolean <-
+  ( + continue:Boolean
+    + n_new:String_alias
     n_new := (n + ".new").to_string_alias
     ? {! remove_list.has_substring n_new}
-    continue := TRUE
+    continue := True
     '.'.print
     (diff dirpath n1 n n2 n_new != 0).if {
-      continue := FALSE
+      continue := False
     } else {
       remove_list_add n_new
       '.'.print
@@ -300,17 +321,17 @@ Private
   )
   
 Private
-  - compile_boost boost_mode:BOOLEAN dirpath dirpath:STRING_ALIAS main fname:STRING_ALIAS lisaacout lisaacout:BOOLEAN :BOOLEAN <-
-  ( + cmd:STRING_ALIAS
-    + exit_status:INTEGER
-    + continue:BOOLEAN
-    continue := TRUE
+  - compile_boost boost_mode:Boolean dirpath dirpath:String_alias main fname:String_alias lisaacout lisaacout:Boolean :Boolean <-
+  ( + cmd:String_alias
+    + exit_status:Int
+    + continue:Boolean
+    continue := True
     ? {fname != "auto_test.li"}
     ? {fname != "elix.li"}
     ? {fname != "lisaac.li"}
     test_counter := test_counter + 1
     '.'.print
-    STRING.tmp { me:STRING_BUFFER
+    String.tmp { me:String_buffer
       me.copy fname
       me.remove_suffix ".li"
       main_exec := me.to_string_alias
@@ -335,7 +356,7 @@ Private
     }
     cmd := mybuffer.to_string_alias
     '.'.print
-    first_error_exit FALSE do {
+    first_error_exit False do {
       exit_status := execute_command cmd
     }
     //("yyyyy" + exit_status.to_string).println
@@ -372,7 +393,7 @@ Private
         first_error_exit.if {
           exit 1
         } else {
-          continue := FALSE
+          continue := False
         }
       }
     }
@@ -380,19 +401,19 @@ Private
     continue
   )
   
-  - execute_main dirpath:STRING_ALIAS fname fname:STRING_ALIAS args args:STRING :BOOLEAN <-
+  - execute_main dirpath:String_alias fname fname:String_alias args args:String :Boolean <-
   [
     ? {fname != "auto_test.li"}
     ? {fname != "lisaac.li"}
     ? {fname != "elix.li"}
     ? {fname != "build_lisaac.li"}
   ]
-  ( + continue,stdin,stdout,stderr:BOOLEAN
-    + cmd:STRING_ALIAS
-    + exit_status:INTEGER
-    continue := TRUE
-    (ENVIRONMENT.chdir dirpath != 0).if {
-      ? {FALSE}
+  ( + continue,stdin,stdout,stderr:Boolean
+    + cmd:String_alias
+    + exit_status:Int
+    continue := True
+    (Environment.chdir dirpath != 0).if {
+      ? {False}
     }
     '.'.print
     mybuffer.copy dirpath
@@ -403,17 +424,17 @@ Private
       mybuffer.append args
     }
     (file_exists "stdin" in dirpath).if {
-      stdin := TRUE
+      stdin := True
       mybuffer.append " <"
       mybuffer.append dirpath
       mybuffer.append "stdin"
     }
     (file_exists "stdout" in dirpath).if {
-      stdout := TRUE
+      stdout := True
       add_redirect "1>" dirpath dirpath new "stdout.new"
     }
     (file_exists "stderr" in dirpath).if {
-      stderr := TRUE
+      stderr := True
       add_redirect "2>" dirpath dirpath new "stderr.new"
     }
     cmd := mybuffer.to_string_alias
@@ -435,10 +456,10 @@ Private
     continue
   )
   
-  - remove_list_proceed dirpath:STRING <-
+  - remove_list_proceed dirpath:String <-
   (
     '.'.print
-    STRING.tmp { fpath:STRING_BUFFER
+    String.tmp { fpath:String_buffer
       {remove_list.is_empty}.until_do {
         fpath.copy dirpath
         {remove_list.is_empty || {remove_list.first = ' '}}.until_do {
@@ -459,7 +480,7 @@ Private
   )
   
 Private
-  - buf buf:STRING_BUFFER counter counter:INTEGER name name:STRING_ALIAS <-
+  - buf buf:String_buffer counter counter:Int name name:String_alias <-
   (
     (counter > 0).if {
       (buf.last != '(').if { buf.add_last ' '; }
@@ -470,20 +491,20 @@ Private
   )
   
 Private
-  - chdir arg:STRING_ALIAS :BOOLEAN <-
-  ( + result:BOOLEAN
+  - chdir arg:String_alias :Boolean <-
+  ( + result:Boolean
     if verbose then {
       ("cd \"" + arg + "\"").println
     }
-    if (ENVIRONMENT.chdir arg = 0) then {
-      result := TRUE
-      FILE_UTILS.working_directory_in working_directory
+    if (Environment.chdir arg = 0) then {
+      result := True
+      File_utils.working_directory_in working_directory
     }
     result
   )
   
-  - error msg:STRING <-
+  - error msg:String <-
   (
     msg.println
-    SYSTEM.exit 1
+    System.exit 1
   )

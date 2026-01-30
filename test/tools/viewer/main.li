@@ -1,8 +1,7 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Inherit 
-  - parent_viewer:VIEWER := VIEWER
+  - parent_viewer:Viewer := Viewer
   
 Public
   - main <- ( parent_viewer.main; )

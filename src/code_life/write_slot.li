@@ -1,36 +1,33 @@
 Header
-
-  + name    := WRITE_SLOT;
-
-  /*Write slot*/
-
+  + name := Write_slot
+/*Write slot*/
 Inherit
 
-  + parent_write:Expanded WRITE
+  + parent_write:Flat Write
 
 Public
 
-  - is_invariant:BOOLEAN <- receiver.is_invariant && {value.is_invariant}
+  - is_invariant:Boolean <- receiver.is_invariant && {value.is_invariant}
 
-  + slot:SLOT_DATA
+  + slot:Slot_data
 
-  - variable:VARIABLE <- slot
+  - variable:Variable <- slot
 
-  + receiver:EXPR
+  + receiver:Expr
 
   //
   // Creation.
   //
 
-  - create p:POSITION with val:EXPR in (r:EXPR,s:SLOT_DATA) :SELF <-
-  ( + result:SELF
+  - create p:Position with val:Expr in (r:Expr,s:Slot_data) :Self <-
+  ( + result:Self
     ? {p.code != 0}
     result := clone
     result.make p with val in (r,s)
     result
   )
 
-  - make p:POSITION with val:EXPR in (r:EXPR,s:SLOT_DATA) <-
+  - make p:Position with val:Expr in (r:Expr,s:Slot_data) <-
   (
     position := p
     value    := val
@@ -38,9 +35,9 @@ Public
     slot     := s
   )
 
-  - my_copy:SELF <-
-  ( + new_val:EXPR
-    + result:SELF
+  - my_copy:Self <-
+  ( + new_val:Expr
+    + result:Self
 
     new_val := value.my_copy
     result ?= variable.write position with (receiver.my_copy) value new_val
@@ -54,7 +51,7 @@ Public
   // Execute.
   //
 
-  - execute_access_unlink:INSTR <-
+  - execute_access_unlink:Instr <-
   (
     slot.execute
     receiver.execute_unlink
@@ -77,19 +74,19 @@ Public
   //
 
   - genere <-
-  ( + tf:TYPE_FULL
-    + t:TYPE
+  ( + tf:Type_full
+    + t:Type
 
     t := slot.receiver_type
     t.add_genere_list
     (! quiet_generation).if {
       (t.alias_slot = variable).if {
         tf := receiver.static_type
-        ((tf.is_strict) || {tf.is_expanded_ref}).if {
+        ((tf.is_exact) || {tf.is_flat_ref}).if {
           output.append "(*"
           receiver.genere
           output.add_last ')'
-        }.elseif {tf.is_expanded} then {
+        }.elseif {tf.is_flat} then {
           receiver.genere
         } else {
           output.append "*(("
@@ -104,10 +101,10 @@ Public
       } else {
         // Receiver.        
         tf := receiver.static_type
-        ((tf.is_strict) || {tf.is_expanded_ref}).if {
+        ((tf.is_exact) || {tf.is_flat_ref}).if {
           receiver.genere
           output.append "->"
-        }.elseif {tf.is_expanded} then {
+        }.elseif {tf.is_flat} then {
           receiver.genere
           output.add_last '.'
         } else {
@@ -124,7 +121,7 @@ Public
         output.append (variable.intern_name)
       }
       //
-      ((value.static_type.raw = TYPE_NULL) && {variable.type.raw.is_block}).if {
+      ((value.static_type.raw = Type_null) && {variable.type.raw.is_block}).if {
         output.append ".__id=0"
       } else {
         output.add_last '='
@@ -137,7 +134,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     receiver.display buffer
     buffer.append "->"

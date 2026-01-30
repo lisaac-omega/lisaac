@@ -1,46 +1,45 @@
 Header
-  + name := I_FN;
-  
+  + name := I_fn
 Inherit
-  + parent_inode:Expanded I_NODE
-  - parent_expr:EXPR := EXPR
+  + parent_inode:Flat I_node
+  - parent_expr:Expr := Expr
   
 Public
   
-  - stck:Expanded ARRAY I_FN
+  - stck:Flat Array I_fn
   
-  - new:I_FN <-
-  ( + result:I_FN
-    (stck.is_empty).if { result := I_FN.clone; } else { result := stck.pop; }
+  - new:I_fn <-
+  ( + result:I_fn
+    (stck.is_empty).if { result := I_fn.clone; } else { result := stck.pop; }
     result
   )
   
 Public
     
-  - error:INTEGER <- 0
+  - error:Int <- 0
   
-  + arg1:EXPR
-  + arg2:EXPR
-  + slot:SLOT
-  + type:TYPE
+  + arg1:Expr
+  + arg2:Expr
+  + slot:Slot
+  + type:Type
     
-  - new (e1,e2:EXPR) slot s:SLOT at (l,u:INTEGER) :I_FN <- new.init (e1,e2) slot s at (l,u)
+  - new (e1,e2:Expr) slot s:Slot at (l,u:Int) :I_fn <- new.init (e1,e2) slot s at (l,u)
   
-  - copy:I_NODE <- new.init (arg1,arg2) slot slot at (lower,upper)
+  - copy:I_node <- new.init (arg1,arg2) slot slot at (lower,upper)
   
-  - init (e1,e2:EXPR) slot s:SLOT at (l,u:INTEGER) :I_FN <-
+  - init (e1,e2:Expr) slot s:Slot at (l,u:Int) :I_fn <-
   (
     (arg1,arg2,slot,lower,upper) := (e1,e2,s,l,u)
     (slot != NULL).if {      
       type := slot.type
       (type.is_self).if { type := slot.proto.type; }
     } else { type := e1.type; }
-    Self
+    self
   )
   
-  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  - put_sty u:Uint16 slot s:Slot <-
   (
-    /*+ m:UINTEGER_16
+    /*+ m:Uint16
     (lower <= upper).if {
       (error != 0).if {
         m := STY.ul_red
@@ -54,15 +53,15 @@ Public
     IA.inc_arg_i;*/
   )
   
-  - txt_in s:STRING_BUFFER <-
+  - txt_in s:String_buffer <-
   ( 
     s.add_last '('
     type.append_in s
     s.add_last ')'
   )
   
-  - rtxt_in s:STRING_BUFFER <- 
-  ( + i1,i2:I_FN
+  - rtxt_in s:String_buffer <- 
+  ( + i1,i2:I_fn
     (slot = NULL).if {
       s.append "(˂"
       (type != NULL).if { type.txt_in s sty NULL; }
@@ -79,18 +78,18 @@ Public
     }
   )
   
-  - to_expr:EXPR <-
-  ( + result:EXPR
-    + a:ARRAY EXPR
+  - to_expr:Expr <-
+  ( + result:Expr
+    + a:Array Expr
     (slot = NULL).if {
       result := arg1
     } else {
       a := push_expr; a.add_last arg1
       (arg2 != NULL).if { a.add_last arg2; }
-      result := CAS.new (slot.name) arg a self (slot.self) fn TRUE
+      result := Cas.new (slot.name) arg a self (slot.iself) fn True
       pop_expr
     }
     result      
   )
   
-  - free <- stck.add_last Self
+  - free <- stck.add_last self

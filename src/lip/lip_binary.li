@@ -1,31 +1,29 @@
 Header
-
-  + name      := LIP_BINARY;
-
+  + name := Lip_binary
 Inherit
 
-  + parent_lip_code:Expanded LIP_CODE
+  + parent_lip_code:Flat Lip_code
 
 Public
 
-  + left:LIP_CODE
+  + left:Lip_code
 
-  + right:LIP_CODE
+  + right:Lip_code
 
-  + operator:CHARACTER
+  + operator:Char
 
   //
   // Creation.
   //
 
-  - create p:POSITION with l:LIP_CODE operator op:CHARACTER and r:LIP_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position with l:Lip_code operator op:Char and r:Lip_code :Self <-
+  ( + result:Self
     result := clone
     result.make p with l operator op and r
     result
   )
 
-  - make p:POSITION  with l:LIP_CODE operator op:CHARACTER and r:LIP_CODE<-
+  - make p:Position  with l:Lip_code operator op:Char and r:Lip_code<-
   (
     position := p
     left := l
@@ -37,9 +35,9 @@ Public
   // Run.
   //
 
-  - run_expr:LIP_CONSTANT <-
-  ( + result:LIP_CONSTANT
-    + lv,rv:LIP_CONSTANT
+  - run_expr:Lip_constant <-
+  ( + result:Lip_constant
+    + lv,rv:Lip_constant
 
     lv := left.run_expr
     rv := right.run_expr

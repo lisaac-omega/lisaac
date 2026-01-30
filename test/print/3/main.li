@@ -1,10 +1,9 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + time:TIME
-    time := TIME.create (23,59,59,99)
+  ( + time:Time
+    time := Time.create (23,59,59,99)
     time.print
-    TEST.check (time.to_string) string "23:59:59.99"
+    Test.check (time.to_string) string "23:59:59.99"
   )

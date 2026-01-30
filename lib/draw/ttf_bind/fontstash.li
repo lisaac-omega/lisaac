@@ -1,8 +1,6 @@
 Header
-  
-  + name := FONTSTASH;
-  
-  - include := `extern unsigned char utf8d[];`;
+  + name := Fontstash
+- include := `extern unsigned char utf8d[];`;
   
   - external := `
 unsigned char utf8d[] = {
@@ -25,58 +23,57 @@ unsigned char utf8d[] = {
   12,36,12,12,12,12,12,12,12,12,12,12,
 };
 `;
-
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
   
-  - utf8d:NATIVE_ARRAY UINTEGER_8 <- `utf8d`:NATIVE_ARRAY UINTEGER_8
+  - utf8d:C_array Uint8 <- `utf8d`:C_array Uint8
 
 Public
 
-  - fons_invalid:INTEGER := -1
+  - fons_invalid:Int := -1
 
   // FONSflags: 
-  - fons_zero_topleft:INTEGER := 1
-  - fons_zero_bottomleft:INTEGER := 2
+  - fons_zero_topleft:Int := 1
+  - fons_zero_bottomleft:Int := 2
 
   // FONSalign:
   // Horizontal align
-  - fons_align_left:INTEGER   := 1<<0; // Default
-  - fons_align_center:INTEGER := 1<<1
-  - fons_align_right:INTEGER  := 1<<2
+  - fons_align_left:Int   := 1<<0; // Default
+  - fons_align_center:Int := 1<<1
+  - fons_align_right:Int  := 1<<2
   // Vertical align
-  - fons_align_top:INTEGER      := 1<<3
-  - fons_align_middle:INTEGER   := 1<<4
-  - fons_align_bottom:INTEGER   := 1<<5
-  - fons_align_baseline:INTEGER := 1<<6; // Default
+  - fons_align_top:Int      := 1<<3
+  - fons_align_middle:Int   := 1<<4
+  - fons_align_bottom:Int   := 1<<5
+  - fons_align_baseline:Int := 1<<6; // Default
 
   //FONSerrorCode:
   // Font atlas is full.
-  - fons_atlas_full:INTEGER   := 1
+  - fons_atlas_full:Int   := 1
   // Scratch memory used to render glyphs is full, requested 
   // size reported in 'val', 
   // you may need to bump up FONS_SCRATCH_BUF_SIZE.
-  - fons_scratch_full:INTEGER := 2
+  - fons_scratch_full:Int := 2
   // Calls to fonsPushState has created too large stack, 
   // if you need deep state stack bump up FONS_MAX_STATES.
-  - fons_states_overflow:INTEGER  := 3
+  - fons_states_overflow:Int  := 3
   // Trying to pop too many states fonsPopState().
-  - fons_states_underflow:INTEGER := 4
+  - fons_states_underflow:Int := 4
 
-  - fons_scratch_buf_size:INTEGER := 64000
-  - fons_hash_lut_size:UINTEGER_32 := 256
-  - fons_init_fonts:INTEGER := 4
-  - fons_init_glyphs:INTEGER := 256
-  - fons_init_atlas_nodes:INTEGER := 256
-  - fons_vertex_count:INTEGER := 1024
-  - fons_max_states:INTEGER := 20
-  - fons_max_fallbacks:INTEGER := 20
+  - fons_scratch_buf_size:Int := 64000
+  - fons_hash_lut_size:Uint32 := 256
+  - fons_init_fonts:Int := 4
+  - fons_init_glyphs:Int := 256
+  - fons_init_atlas_nodes:Int := 256
+  - fons_vertex_count:Int := 1024
+  - fons_max_states:Int := 20
+  - fons_max_fallbacks:Int := 20
   
-  - hashint a:UINTEGER_32 :UINTEGER_32 <-
-  ( + r:UINTEGER_32
+  - hashint a:Uint32 :Uint32 <-
+  ( + r:Uint32
     r := a + ~(a<<15)
     r := r ^  (r>>10)
     r := r +  (r<< 3)
@@ -116,17 +113,17 @@ static void fons__tmpfree(void* ptr, void* up)
 // Copyright (c) 2008-2010 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 
-  + fons_utf8_accept:INTEGER := 0
-  + fons_utf8_reject:INTEGER := 12
+  + fons_utf8_accept:Int := 0
+  + fons_utf8_reject:Int := 12
 
-  - decutf8 (state:UINTEGER_32,codep:UINTEGER_32, byte:UINTEGER_8) 
-  :(UINTEGER_32,UINTEGER_32) <-
-  ( + new_state,new_codep,type:UINTEGER_32
+  - decutf8 (state:Uint32,codep:Uint32, byte:Uint8) 
+  :(Uint32,Uint32) <-
+  ( + new_state,new_codep,type:Uint32
     
     type := utf8d.at byte
     new_codep := (state != fons_utf8_accept).ok
-    ((byte & 03Fh).to_uinteger_32 | (codep << 6)) or 
-    ((0FFh >> type).to_uinteger_32 & byte)
+    ((byte & 03Fh).to_uint32 | (codep << 6)) or 
+    ((0FFh >> type).to_uint32 & byte)
     new_state := utf8d.at (256 + state + type)
     new_state,new_codep
   )
@@ -148,62 +145,62 @@ static FONSglyph* fons__allocGlyph(FONSfont* font)
 
   // Based on Exponential blur, Jani Huhtanen, 2006
 
-  - cst_aprec:INTEGER := 16
-  - cst_zprec:INTEGER :=  7
+  - cst_aprec:Int := 16
+  - cst_zprec:Int :=  7
 
-  - blur_cols pdst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) 
-  stride dst_stride:INTEGER alpha alfa:INTEGER <-
-  ( + z:INTEGER
-    + dst:NATIVE_ARRAY UINTEGER_8
+  - blur_cols pdst:C_array Uint8 size (w,h:Int) 
+  stride dst_stride:Int alpha alfa:Int <-
+  ( + z:Int
+    + dst:C_array Uint8
     dst := pdst
-    0.to (h-1) do { y:INTEGER
+    0.to (h-1) do { y:Int
       z := 0; // force zero border
-      1.to (w-2) do { x:INTEGER
-        z := z + (alfa * ((dst.at x.to_integer << cst_zprec) - z)) >> cst_aprec
-        dst.at x put ((z >> cst_zprec).to_uinteger_8)
+      1.to (w-2) do { x:Int
+        z := z + (alfa * ((dst.at x.to_int << cst_zprec) - z)) >> cst_aprec
+        dst.at x put ((z >> cst_zprec).to_uint8)
       }
       dst.at (w-1) put 0; // force zero border
       z := 0
-      (w-2).downto 1 do { x:INTEGER
-        z := z + (alfa * ((dst.at x.to_integer << cst_zprec) - z)) >> cst_aprec
-        dst.at x put ((z >> cst_zprec).to_uinteger_8)
+      (w-2).downto 1 do { x:Int
+        z := z + (alfa * ((dst.at x.to_int << cst_zprec) - z)) >> cst_aprec
+        dst.at x put ((z >> cst_zprec).to_uint8)
       }
       dst.at 0 put 0; // force zero border
       dst := dst + dst_stride
     }
   )
 
-  - blur_rows pdst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) 
-  stride dst_stride:INTEGER alpha alfa:INTEGER <-
-  ( + z:INTEGER
-    + dst:NATIVE_ARRAY UINTEGER_8
+  - blur_rows pdst:C_array Uint8 size (w,h:Int) 
+  stride dst_stride:Int alpha alfa:Int <-
+  ( + z:Int
+    + dst:C_array Uint8
     dst := pdst
-    0.to (w-1) do { x:INTEGER
+    0.to (w-1) do { x:Int
       z := 0; // force zero border
-      from dst_stride to ((h-2)*dst_stride) step dst_stride do { y:INTEGER
-        z := z + (alfa * ((dst.at y.to_integer << cst_zprec) - z)) >> cst_aprec
-        dst.at y put ((z >> cst_zprec).to_uinteger_8)
+      from dst_stride to ((h-2)*dst_stride) step dst_stride do { y:Int
+        z := z + (alfa * ((dst.at y.to_int << cst_zprec) - z)) >> cst_aprec
+        dst.at y put ((z >> cst_zprec).to_uint8)
       }
       dst.at ((h-1)*dst_stride) put 0; // force zero border
       z := 0
-      ((h-2)*dst_stride).downto dst_stride by dst_stride do { y:INTEGER
-        z := z + (alfa * ((dst.at y.to_integer << cst_zprec) - z)) >> cst_aprec
-        dst.at y put ((z >> cst_zprec).to_uinteger_8)
+      ((h-2)*dst_stride).downto dst_stride by dst_stride do { y:Int
+        z := z + (alfa * ((dst.at y.to_int << cst_zprec) - z)) >> cst_aprec
+        dst.at y put ((z >> cst_zprec).to_uint8)
       }
       dst.at 0 put 0; // force zero border
       dst := dst + 1
     }
   )
 
-  - blur dst:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) 
-  stride dst_stride:INTEGER blur blr:INTEGER <-
-  ( + alfa:INTEGER
-    + sigma:REAL_32
-    (blr >= 1).if {	
+  - blur dst:C_array Uint8 size (w,h:Int) 
+  stride dst_stride:Int blur blr:Int <-
+  ( + alfa:Int
+    + sigma:Real32
+    (blr >= 1).if {        
       // Calculate the alpha such that 90% of the kernel is within the radius. 
       // (Kernel extends to infinity)
-      sigma := blr.to_real_32 * 0.57735; // 1 / sqrt(3)
-      alfa := ((1.0 - (-2.3 / (sigma+1.0)).exp) * (1<<cst_aprec)).to_integer
+      sigma := blr.to_real32 * 0.57735; // 1 / sqrt(3)
+      alfa := ((1.0 - (-2.3 / (sigma+1.0)).exp) * (1<<cst_aprec)).to_int
       blur_rows dst size (w,h) stride dst_stride alpha alfa
       blur_cols dst size (w,h) stride dst_stride alpha alfa
       blur_rows dst size (w,h) stride dst_stride alpha alfa

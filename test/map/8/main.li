@@ -1,0 +1,19 @@
+Header
+  + name := Main
+/**/
+Public 
+  + map: Hmap Int Key String_alias
+  
+  - main <-
+  (
+    map := new Hmap Int Key String_alias capacity 200
+    . at ("janvier", "février", "mars", "avril", "mai", "juin") 
+    add ( 1,         2,         3,      4,       5,     6)
+    . at ("juillet", "août", "septembre", "octobre", "novembre", "décembre")
+    add ( 7,         8,      9,           10,        11,         12)
+        
+    Test.check (map.at "janvier") integer 1
+    Test.check (map.at "décembre") integer 12
+    
+  )
+  

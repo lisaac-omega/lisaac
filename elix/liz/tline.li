@@ -1,8 +1,7 @@
 Header
-  + name := TLINE;
-  
+  + name := Tline
 Inherit
-  + parent_tmove:Expanded TMOVE
+  + parent_tmove:Flat Tmove
   
 Public
     
@@ -11,7 +10,7 @@ Public
     line_to (val_x.eval,val_y.eval)
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b += "Line ("
     val_x.append_in b

@@ -1,31 +1,30 @@
 Header
-  + name := GOBJ E;
-  
+  + name := Gobj E
 Inherit
-  + parent_win:Expanded WIN
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_win:Flat Win
+  - parent_any_gui:Any_gui := Any_gui
   
 Public
   
-  + col:COLOR
-  + zom:REAL_32 := 1
-  - zoom z:REAL_32 :SELF <- ( zom := z; Self)
-  - color c:COLOR :SELF <- ( col := c; Self)
+  + col:Color
+  + zom:Real32 := 1
+  - zoom z:Real32 :Self <- ( zom := z; self)
+  - color c:Color :Self <- ( col := c; self)
     
   + updat:{E;}
-  - update a:{E;} :SELF <- ( updat := a; Self)
+  - update a:{E;} :Self <- ( updat := a; self)
   
-  - init_obj:SELF <-
+  - init_obj:Self <-
   ( parent := NULL
     ? {child.is_empty}
-    (width,height,flag,col,zom) := (0,0,0,COLOR,1)
+    (width,height,flag,col,zom) := (0,0,0,Color,1)
     updat := NULL
-    Self
+    self
   )
   
   - draw_all <-
   (
-    (updat != NULL).if { updat.value Self; ask_refresh; }
+    (updat != NULL).if { updat.value self; ask_refresh; }
     draw
     draw_child
     //draw_debug

@@ -1,35 +1,32 @@
 Header
-
-  + name        := DTA_BLOCK;
-
-  /*Lisaac IS A Advanced Compiler*/
-
+  + name := Dta_block
+/*Lisaac IS A Advanced Compiler*/
 Inherit
 
-  + parent_dta_rd_args:Expanded DTA_RD_ARGS
+  + parent_dta_rd_args:Flat Dta_rd_args
 
 Public
 
-  + result_expr:EXPR
+  + result_expr:Expr
 
   // Add.
 
-  + model:TYPE_BLOCK
+  + model:Type_block
   
-  + pow:INTEGER
+  + pow:Int
   
   //
   // Creation.
   //
 
-  - create mod:TYPE_BLOCK with larg:ARRAY EXPR pow p:INTEGER :SELF <-
-  ( + result:SELF
+  - create mod:Type_block with larg:Array Expr pow p:Int :Self <-
+  ( + result:Self
     result := clone
     result.make mod with larg pow p
     result
   )
 
-  - make mod:TYPE_BLOCK with larg:ARRAY EXPR pow p:INTEGER <-
+  - make mod:Type_block with larg:Array Expr pow p:Int <-
   [ -? {mod.position != 0}; ]
   (    
     model         := mod
@@ -43,40 +40,40 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "DTA_BLOCK"
   )
 
-NODE_STYLE, SELF
+Node_style, Self
 
-  - get_argument:ARRAY EXPR <-
-  ( + result:ARRAY EXPR
-    + rd:READ_SLOT
+  - get_argument:Array Expr <-
+  ( + result:Array Expr
+    + rd:Read_slot
     (copy_argument).if {
-      result := ARRAY EXPR .create_with_capacity (argument_list.count)
+      result := Array Expr .create_with_capacity (argument_list.count)
       rd ?= argument_list.first // See PROFIL_BLOCK.write_atgument      
       result.add_last (rd.receiver.my_copy)
-      (argument_list.lower+1).to (argument_list.upper) do { j:INTEGER
-	result.add_last (argument_list.at j.my_copy)
+      (argument_list.lower+1).to (argument_list.upper) do { j:Int
+        result.add_last (argument_list.at j.my_copy)
       }
     } else {
       result := argument_list
-      copy_argument := TRUE
+      copy_argument := True
     }
     result
   )
   
   
-  - get_argument_at i:INTEGER :ARRAY EXPR <-
-  ( + result:ARRAY EXPR
-    + n:INTEGER
+  - get_argument_at i:Int :Array Expr <-
+  ( + result:Array Expr
+    + n:Int
     n := (argument_list.count-1)/pow
-    result := ARRAY EXPR .create_with_capacity (n+1)
+    result := Array Expr .create_with_capacity (n+1)
     (copy_argument).if {
       //"Copy All".println
       result.add_last (argument_list.first.my_copy)
-      0.to (n-1) do { j:INTEGER
+      0.to (n-1) do { j:Int
         result.add_last (argument_list.at (1+j*pow+i).my_copy)
       }      
     } else {
@@ -86,34 +83,35 @@ NODE_STYLE, SELF
       } else {
         result.add_last (argument_list.first.my_copy)
         //"Copy rec".println
+        //result.last.debug_display
       }
-      0.to (n-1) do { j:INTEGER
+      0.to (n-1) do { j:Int
         //"First Arg".println
         result.add_last (argument_list.at (1+j*pow+i))
       }
       (i = pow-1).if {
-        copy_argument := TRUE
+        copy_argument := True
       }
     }
     result
   )
   
 
-NODE_TYPE, DTA
+Node_type, Dta
 
-  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
-  ( + result:LIST
-    + t_block:PROFIL_BLOCK
-    + wrt:WRITE
-    + wrt_larg:ARRAY WRITE
-    + call:CALL_SLOT
-    + em:EXPR_MULTIPLE
-    + rd:READ
-    + result_var:VARIABLE
+  - product t:Type with e:Expr self type_self:Type_full :List <-
+  ( + result:List
+    + t_block:Profil_block
+    + wrt:Write
+    + wrt_larg:Array Write
+    + call:Call_slot
+    + em:Expr_multiple
+    + rd:Read
+    + result_var:Variable
 
-    result := LIST.create (e.position)
-    (t = TYPE_NULL).if {
-      result.add_last CALL_NULL      
+    result := List.create (e.position)
+    (t = Type_null).if {
+      result.add_last Call_null      
     } else {
       t_block ?= t
 
@@ -127,42 +125,42 @@ NODE_TYPE, DTA
       }
       
       (pow != 0).if {
-        + lself:LOCAL        
-        + p:POSITION
+        + lself:Local        
+        + p:Position
         p := argument_list.first.position
         lself := t_block.slot_self.type.get_temporary p
         rd := t_block.slot_self.read p with (argument_list.first)
-        list_current.add_last (lself.write p value rd)
+        result.add_last (lself.write p value rd)
         argument_list.at 0 put (lself.read p)
         //
-        0.to (pow-1) do { i:INTEGER
+        0.to (pow-1) do { i:Int
           wrt_larg := t_block.parent_write_argument (get_argument_at i)
-          call := CALL_SLOT.create (e.position) profil t_block with wrt_larg cop NULL
+          call := Call_slot.create (e.position) profil t_block with wrt_larg cop NULL
           result.add_last call
         }
-        (result_expr.static_type.raw != TYPE_VOID).if {
-          semantic_error (position,"Sorry, result with dispatch vector pow is not yet implemented.")
-        };
+        //(result_expr.static_type.raw != Type_void).if {
+        //  semantic_error (position,"Sorry, result with dispatch vector pow is not yet implemented.")
+        //};
       } else {
         wrt_larg := t_block.write_argument get_argument
-        call := CALL_SLOT.create (e.position) profil t_block with wrt_larg cop NULL
-        (result_expr.static_type.raw != TYPE_VOID).if {
+        call := Call_slot.create (e.position) profil t_block with wrt_larg cop NULL
+        (result_expr.static_type.raw != Type_void).if {
           em ?= result_expr
           (em != NULL).if {
-            (em.lower).to (em.upper) do { j:INTEGER
+            (em.lower).to (em.upper) do { j:Int
               rd ?= em.at j
               ? {rd != NULL}
               result_var := rd.variable
               rd  := call.profil.result_list.at j.read (e.position)
               wrt := result_var.write (e.position) value rd
-              call.result_list.add_last (RESULT.create wrt)
+              call.result_list.add_last (Res.create wrt)
             }
           } else {
             rd ?= result_expr
             result_var := rd.variable
             rd  := call.profil.result_list.first.read (e.position)
             wrt := result_var.write (e.position) value rd
-            call.result_list.add_last (RESULT.create wrt)
+            call.result_list.add_last (Res.create wrt)
           }
         }
         result.add_last call
@@ -171,9 +169,9 @@ NODE_TYPE, DTA
     result
   )
 
-  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  - update_branch l:List self type_self:Type_full :Boolean <-
   (
-    TRUE
+    True
   )
 
 

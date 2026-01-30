@@ -1,29 +1,28 @@
 Header
-  + name := Strict WLOC;
-
+  + name := Exact Wloc
 Inherit
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
   
 Private
-  - stk:Expanded ARRAY WLOC
+  - stk:Flat Array Wloc
   
 Public
-  + loc:LOCAL
-  + expr:EXPR
+  + loc:Local
+  + expr:Expr
   
 Public
-  - type:TYPE <- expr.type
+  - type:Type <- expr.type
   
-  - res e:EXPR :SELF <-
+  - res e:Expr :Self <-
   ( expr := e
     copy_itm e
-    Self
+    self
   )
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   - free <-
-  ( (expr != NULL).if { expr.free; expr := NULL; }; stk.add_last Self; )
+  ( (expr != NULL).if { expr.free; expr := NULL; }; stk.add_last self; )
     
   - sub_draw <-
   (

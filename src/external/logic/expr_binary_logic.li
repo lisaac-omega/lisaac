@@ -1,30 +1,27 @@
 Header
-
-  + name        := EXPR_BINARY_LOGIC;
-
-  /*Binary logical expression.*/
-
+  + name := Expr_binary_logic
+/*Binary logical expression.*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- left.is_invariant && {right.is_invariant}
+  - is_invariant:Boolean <- left.is_invariant && {right.is_invariant}
 
-  + left:EXPR
+  + left:Expr
 
-  + right:EXPR
+  + right:Expr
 
-  - symbol:STRING_ALIAS <-
+  - symbol:String_alias <-
   (
     abstract
     NULL
   )
 
-  - static_type:TYPE_FULL <- type_boolean.default
+  - static_type:Type_full <- type_boolean.default
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     t.add type_true
     t.add type_false
@@ -34,29 +31,29 @@ Public
   // Creation.
   //
 
-  - create p:POSITION with l:EXPR and r:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position with l:Expr and r:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p with l and r
     result
   )
 
-  - make p:POSITION with l:EXPR and r:EXPR <-
+  - make p:Position with l:Expr and r:Expr <-
   (
     position := p
     left     := l
     right    := r
   )
 
-  - my_copy:SELF <- SELF.create position with (left.my_copy) and (right.my_copy)
+  - my_copy:Self <- Self.create position with (left.my_copy) and (right.my_copy)
 
   //
   // Comparaison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + same:SELF
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + same:Self
 
     same ?= other
     (same != NULL) && {left ~= same.left} && {right ~= same.right}
@@ -76,8 +73,8 @@ Public
   // Execute
   //
 
-  - execute_unlink:INSTR <-
-  ( + instr:INSTR
+  - execute_unlink:Instr <-
+  ( + instr:Instr
     instr := left.execute_unlink
     (instr != NULL).if {
       list_current.insert_before instr
@@ -85,11 +82,11 @@ Public
     right.execute_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + result:EXPR
-    + old_seq:UINTEGER_32
-    + left_cst,right_cst:PROTOTYPE_CST
-    + left_t,right_t:TYPE
+  - execute_link:Expr <-
+  ( + result:Expr
+    + old_seq:Uint32
+    + left_cst,right_cst:Prototype_cst
+    + left_t,right_t:Type
 
     old_seq := seq_call_and_loop
     left  := left .execute_link
@@ -100,16 +97,16 @@ Public
 
     (left_cst != NULL).if { // BSBS : Peux faire mieux !!!
       (left_cst.static_type.raw = type_true).if {
-	left_t := type_true
+        left_t := type_true
       } else {
-	left_t := type_false
+        left_t := type_false
       }
     }
     (right_cst != NULL).if {
       (right_cst.static_type.raw = type_true).if {
-	right_t := type_true
+        right_t := type_true
       } else {
-	right_t := type_false
+        right_t := type_false
       }
     }
 
@@ -130,15 +127,15 @@ Public
       // No conservator transformation.
       result := exec
       ((result = NULL) && {left_cst != NULL}).if {
-	result := exec_left left_t
+        result := exec_left left_t
       }
       ((result = NULL) && {right_cst != NULL}).if {
-	result := exec_right right_t
+        result := exec_right right_t
       }
     }
     //
     (result = NULL).if {
-      result := Self
+      result := self
     } else {
       result.set_position position
       new_execute_pass
@@ -147,15 +144,15 @@ Public
     result
   )
 
-  - exec_conservator:EXPR <- NULL
-  - exec_conservator_left  left_cst :TYPE :EXPR <- NULL
-  - exec_conservator_right right_cst:TYPE :EXPR <- NULL
+  - exec_conservator:Expr <- NULL
+  - exec_conservator_left  left_cst :Type :Expr <- NULL
+  - exec_conservator_right right_cst:Type :Expr <- NULL
 
-  - exec left_cst:TYPE and right_cst:TYPE :EXPR <- NULL
+  - exec left_cst:Type and right_cst:Type :Expr <- NULL
 
-  - exec:EXPR <- NULL
-  - exec_left  left_cst :TYPE :EXPR <- NULL
-  - exec_right right_cst:TYPE :EXPR <- NULL
+  - exec:Expr <- NULL
+  - exec_left  left_cst :Type :Expr <- NULL
+  - exec_right right_cst:Type :Expr <- NULL
 
   //
   // Genere.
@@ -176,7 +173,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '('
     left.display buffer

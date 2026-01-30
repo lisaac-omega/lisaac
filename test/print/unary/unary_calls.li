@@ -1,6 +1,5 @@
 Header
-  + name := UNARY_CALLS;
-  
+  + name := Unary_calls
 Public
   - main <-
   (

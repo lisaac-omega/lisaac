@@ -1,58 +1,55 @@
 Header
-
-  + name        := NPEDGE;
-
-  /*Sub prototype for BITMAP.polygone*/
-
+  + name := Npedge
+/*Sub prototype for BITMAP.polygone*/
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
   // Make.
 
-  + y:INTEGER
-  + x:INTEGER
+  + y:Int
+  + x:Int
 
-  + width:INTEGER
-  + dx:INTEGER;  // REAL_16_16
+  + width:Int
+  + dx:Int;  // REAL_16_16
 
-  + is_down:BOOLEAN
-  + is_point:BOOLEAN
+  + is_down:Boolean
+  + is_point:Boolean
 
-  - x0:INTEGER <- x
-  - y0:INTEGER <- y
-  - x1:INTEGER <- dx
-  - y1:INTEGER <- width
+  - x0:Int <- x
+  - y0:Int <- y
+  - x1:Int <- dx
+  - y1:Int <- width
 
-  + next_y:NPEDGE
+  + next_y:Npedge
 
-  + prev_x:NPEDGE;  // doubly linked list
-  + next_x:NPEDGE
+  + prev_x:Npedge;  // doubly linked list
+  + next_x:Npedge
 
   //
   // Function.
   //
   
-  - create:SELF <- clone
+  - create:Self <- clone
   
-  - make (xx,yy:INTEGER) add inc:INTEGER <-
+  - make (xx,yy:Int) add inc:Int <-
   // Flat.
   (
     next_y   := NULL
-    is_point := TRUE
+    is_point := True
     dx       := inc
     width    := 0
     x := xx
     y := yy
   )
 
-  - make (xx,yy:INTEGER) to (xx1,yy1:INTEGER) <-
+  - make (xx,yy:Int) to (xx1,yy1:Int) <-
   // Line.
   (
     next_y   := NULL
-    is_point := FALSE
+    is_point := False
     (is_down := yy < yy1).if {
       // Down.
       y  := yy
@@ -68,25 +65,25 @@ Public
     }
   )
 
-  - set_next_x new:NPEDGE <-
+  - set_next_x new:Npedge <-
   (
     next_x:=new
   )
 
-  - set_prev_x new:NPEDGE <-
+  - set_prev_x new:Npedge <-
   (
     prev_x:=new
   )
 
-  - set_next_y new:NPEDGE <-
+  - set_next_y new:Npedge <-
   (
     next_y := new
   )
 
-  - add old_root:NPEDGE :NPEDGE <-
+  - add old_root:Npedge :Npedge <-
   // Double link and sort with X.
-  ( + pos,prv:NPEDGE
-    + new_root:NPEDGE
+  ( + pos,prv:Npedge
+    + new_root:Npedge
 
     to_run
     pos:=old_root
@@ -97,32 +94,32 @@ Public
     next_x := pos
     prev_x := prv
     (next_x != NULL).if {
-      next_x.set_prev_x Self
+      next_x.set_prev_x self
     }
     (prev_x!=NULL).if {
-      prev_x.set_next_x Self
+      prev_x.set_next_x self
       new_root:=old_root
     } else {
-      new_root:=Self
+      new_root:=self
     }
 
     new_root
   )
 
-  - next_line old_root:NPEDGE :NPEDGE <-
+  - next_line old_root:Npedge :Npedge <-
   // Remove double link.
-  ( + new_root:NPEDGE
+  ( + new_root:Npedge
 
     (next_y = NULL).if {
       // Remove
       (next_x!=NULL).if {
-	next_x.set_prev_x prev_x
+        next_x.set_prev_x prev_x
       }
       (prev_x!=NULL).if {
-	prev_x.set_next_x next_x
-	new_root:=old_root
+        prev_x.set_next_x next_x
+        new_root:=old_root
       } else {
-	new_root:=next_x
+        new_root:=next_x
       }
     } else {
       // Replace next_y
@@ -130,13 +127,13 @@ Public
       next_y.set_next_x next_x
       next_y.set_prev_x prev_x
       (next_x!=NULL).if {
-	next_x.set_prev_x next_y
+        next_x.set_prev_x next_y
       }
       (prev_x!=NULL).if {
-	prev_x.set_next_x next_y
-	new_root:=old_root
+        prev_x.set_next_x next_y
+        new_root:=old_root
       } else {
-	new_root:=next_y
+        new_root:=next_y
       }
     }
     new_root
@@ -151,7 +148,7 @@ Public
 Private
 
   - to_run <-
-  ( + dy:INTEGER
+  ( + dy:Int
 
     (is_point).if {
       // Point (Flat)
@@ -163,9 +160,9 @@ Private
       x  := x0 << 16
 
       (next_y = NULL).if {
-	width := dy
+        width := dy
       } else {
-	width := dy - 1
+        width := dy - 1
       }
     }
   )
@@ -200,7 +197,7 @@ Private
       "=>".print
     }
     '@'.print
-    INTEGER.force_conversion Self .print
+    Int.force_conversion self .print
     '}'.print
   )
 

@@ -1,9 +1,9 @@
 --SEMANTIC---------
 Double slot declaration.
-Line 7 column 7 in MAIN(.../test/misc/7/main.li):
-  - foo:INTEGER
+Line 5 column 7 in Main(.../test/misc/7/main.li):
+  - foo:Int
        ^
 
-Line 9 column 18 in MAIN(.../test/misc/7/main.li):
-  - foo x:INTEGER <- ( )
-                  ^
+Line 7 column 14 in Main(.../test/misc/7/main.li):
+  - foo x:Int <- ( )
+              ^

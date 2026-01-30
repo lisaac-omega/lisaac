@@ -1,20 +1,17 @@
 Header
-
-  + name        := CASE;
-
-  /* Case for Switch. */
-
+  + name := Case
+/* Case for Switch. */
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
-  + id:TYPE
+  + id:Type
 
-  + code:LIST
+  + code:List
 
-  - set_code new_code:LIST <-
+  - set_code new_code:List <-
   (
     code := new_code
   )
@@ -23,16 +20,16 @@ Public
   // Creation.
   //
 
-  - create val:TYPE with c:LIST :SELF <-
-  ( + result:SELF
+  - create val:Type with c:List :Self <-
+  ( + result:Self
 
     result := clone
     result.make val with c
     result
   )
 
-  - make val:TYPE with c:LIST <-
-  ( + tb:PROFIL_BLOCK
+  - make val:Type with c:List <-
+  ( + tb:Profil_block
     id   := val
     code := c
     //
@@ -42,15 +39,15 @@ Public
     }
   )
 
-  - my_copy:SELF <-
-  ( + result:SELF
+  - my_copy:Self <-
+  ( + result:Self
 
-    result := SELF.create id with (code.my_copy)
+    result := Self.create id with (code.my_copy)
     result
   )
 
   - remove <-
-  ( + tb:PROFIL_BLOCK
+  ( + tb:Profil_block
     code.remove
     tb ?= id
     (tb != NULL).if {
@@ -62,10 +59,10 @@ Public
   // Comparaison.
   //
 
-  - Self:SELF '~=' other:CASE :BOOLEAN <-
+  - self:Self '~=' other:Case :Boolean <-
   // BSBS : Naive implantation...
-  ( + result:BOOLEAN
-    + wrt1,wrt2:WRITE_LOCAL
+  ( + result:Boolean
+    + wrt1,wrt2:Write_local
 
     ((code.count = 1) && {code.count = other.code.count}).if {
       wrt1 ?= code.first

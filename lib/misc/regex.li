@@ -1,62 +1,61 @@
 Header
-  + name := REGEX;
-  /*
+  + name := Regex
+/*
    Regular Expression from the <regex.h> C library.
    See examples in test/regex directory.
    See also the Unix grep manual (man regex).
   */
   - include := `#include <regex.h>`;
-  
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
-  + regex:STRING; // original source
+  + regex:String; // original source
   
-  + regfree_done:BOOLEAN; // FALSE also indicate a correct compilation status.
+  + regfree_done:Boolean; // False also indicate a correct compilation status.
   
-  + nmatch:INTEGER; // size of pmatch
-  
-Private
-  + regex_t:POINTER; // preg : the compiled regex
-  
-  + pmatch:POINTER; // regmatch_t array 
-  
-  + status:INTEGER; // last result of regcomp / regexec
-  
-  - error_buffer: Expanded STRING_BUFFER
+  + nmatch:Int; // size of pmatch
   
 Private
-  - make n:INTEGER <-
+  + regex_t:Pointer; // preg : the compiled regex
+  
+  + pmatch:Pointer; // regmatch_t array 
+  
+  + status:Int; // last result of regcomp / regexec
+  
+  - error_buffer: Flat String_buffer
+  
+Private
+  - make n:Int <-
   (
     nmatch := n
-    regex_t := (NATIVE_ARRAY CHARACTER .create (`sizeof(regex_t)`:(INTEGER))).to_pointer
-    pmatch := (NATIVE_ARRAY CHARACTER .create (`@n*sizeof(regmatch_t)`:(INTEGER))).to_pointer
-    regfree_done := TRUE
+    regex_t := (C_array Char .create (`sizeof(regex_t)`:(Int))).to_pointer
+    pmatch := (C_array Char .create (`@n*sizeof(regmatch_t)`:(Int))).to_pointer
+    regfree_done := True
   )
   
 Public
   
-  - extended:INTEGER <- (`REG_EXTENDED`:INTEGER)
-  - icase:INTEGER <- (`REG_ICASE`:INTEGER)
-  - nosub:INTEGER <- (`REG_NOSUB`:INTEGER)
-  - newline:INTEGER <- (`REG_NEWLINE`:INTEGER)
+  - extended:Int <- (`REG_EXTENDED`:Int)
+  - icase:Int <- (`REG_ICASE`:Int)
+  - nosub:Int <- (`REG_NOSUB`:Int)
+  - newline:Int <- (`REG_NEWLINE`:Int)
   
-  - notbol:INTEGER <- (`REG_NOTBOL`:INTEGER)
-  - noteol:INTEGER <- (`REG_NOTEOL`:INTEGER)
-  - startend:INTEGER <- (`REG_STARTEND`:INTEGER)
+  - notbol:Int <- (`REG_NOTBOL`:Int)
+  - noteol:Int <- (`REG_NOTEOL`:Int)
+  - startend:Int <- (`REG_STARTEND`:Int)
   
-  - create: SELF <- create_nmatch 1
+  - create: Self <- create_nmatch 1
   
-  - create_nmatch n:INTEGER : SELF <-
-  ( + result:SELF
+  - create_nmatch n:Int : Self <-
+  ( + result:Self
     result := clone
     result.make n
     result
   )
   
-  - compile regular_expression:STRING :BOOLEAN <-
-  // FALSE in case of compilation error.
+  - compile regular_expression:String :Boolean <-
+  // False in case of compilation error.
   [
     ? {! regular_expression.is_empty}
   ]
@@ -65,62 +64,62 @@ Public
     status = 0
   )
   
-  - regcomp regular_expression:STRING cflag f:INTEGER :INTEGER <-
+  - regcomp regular_expression:String cflag f:Int :Int <-
   // See `regcomp` in "man regex".
   [
     ? {! regular_expression.is_empty}
   ]
-  ( + ca:NATIVE_ARRAY CHARACTER
-    + rt:POINTER
+  ( + ca:C_array Char
+    + rt:Pointer
     regex := regular_expression
     rt := regex_t
     ? {rt.is_not_null}
     ca := regular_expression.to_external
-    status := `regcomp (((regex_t*)(@rt)),((char*)(@ca)),@f)`:INTEGER
+    status := `regcomp (((regex_t*)(@rt)),((char*)(@ca)),@f)`:Int
     (status = 0).if {
-      regfree_done := FALSE
+      regfree_done := False
     }
     status
   )
   
-  - last_error_in b:STRING_BUFFER <-
+  - last_error_in b:String_buffer <-
   // See `regerror` in "man regex".
   [
     ? {status != 0}
   ]
-  ( + ss,cy,sz:INTEGER
-    + rt,er:POINTER
+  ( + ss,cy,sz:Int
+    + rt,er:Pointer
     ss := status
     rt := regex_t
     error_buffer.make 1024
     er := error_buffer.to_external.to_pointer
     cy := error_buffer.capacity
-    sz := `regerror (@ss,((regex_t*)(@rt)),((char*)@er),@cy)`:(INTEGER)
+    sz := `regerror (@ss,((regex_t*)(@rt)),((char*)@er),@cy)`:(Int)
     error_buffer.set_upper sz
-    0.to (sz - 2) do { k:INTEGER
+    0.to (sz - 2) do { k:Int
       ? {error_buffer.item k != '\0'}
       b.add_last (error_buffer.item k)
     }
   )
   
-  - whole_match data:STRING :BOOLEAN <-
-  // Is the `data` completely swallowed by Self ?
+  - whole_match data:String :Boolean <-
+  // Is the `data` completely swallowed by self ?
   (
     ((match data start 0) = 0) &&
     {offset_start = 0} &&
     {offset_end = (data.upper + 1)}
   )
   
-  - match data:STRING start idx:INTEGER :INTEGER <- regexec data start idx cflag 0
+  - match data:String start idx:Int :Int <- regexec data start idx cflag 0
   
-  - regexec data:STRING start idx:INTEGER cflag f:INTEGER :INTEGER <-
+  - regexec data:String start idx:Int cflag f:Int :Int <-
   // See `regexec` in "man regex".
   [
     ? {data != NULL}
   ]
-  ( + ca:NATIVE_ARRAY CHARACTER
-    + rt,pm:POINTER
-    + nm:INTEGER
+  ( + ca:C_array Char
+    + rt,pm:Pointer
+    + nm:Int
     ? {regex_t.is_not_null}
     rt := regex_t
     ? {rt.is_not_null}
@@ -128,37 +127,37 @@ Public
     ? {ca != NULL}
     nm := nmatch
     pm := pmatch
-    status := `regexec(((regex_t*)(@rt)),(@ca)+(@idx),@nm,@pm,@f)`:(INTEGER)
+    status := `regexec(((regex_t*)(@rt)),(@ca)+(@idx),@nm,@pm,@f)`:(Int)
     status
   )
   
-  - offset_start:INTEGER <- offset_start_index 0
+  - offset_start:Int <- offset_start_index 0
   
-  - offset_start_index idx:INTEGER :INTEGER <-
-  ( + result:INTEGER
-    + pm:POINTER
+  - offset_start_index idx:Int :Int <-
+  ( + result:Int
+    + pm:Pointer
     pm := pmatch
-    result := `(((regmatch_t*)(@pm))[@idx]).rm_so`:INTEGER
+    result := `(((regmatch_t*)(@pm))[@idx]).rm_so`:Int
     result
   )
   
-  - offset_end:INTEGER <- offset_end_index 0
+  - offset_end:Int <- offset_end_index 0
 
-  - offset_end_index idx:INTEGER :INTEGER <-
-  ( + result:INTEGER
-    + pm:POINTER
+  - offset_end_index idx:Int :Int <-
+  ( + result:Int
+    + pm:Pointer
     pm := pmatch
-    result := `(((regmatch_t*)(@pm))[@idx]).rm_eo`:INTEGER
+    result := `(((regmatch_t*)(@pm))[@idx]).rm_eo`:Int
     result
   )
 
   - regfree <-
   (
-    + rt:POINTER
+    + rt:Pointer
     rt := regex_t
     regfree_done.if_false {
       `regfree(@rt)`
-      regfree_done := TRUE
+      regfree_done := True
     }
   )
  

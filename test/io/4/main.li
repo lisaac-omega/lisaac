@@ -1,12 +1,10 @@
 Header
-  
-  + name := MAIN;
-  
+  + name := Main
 Public
   
   - main <-
   (
-    STDOUT.put_string "out\n"
+    Stdout.put_string "out\n"
     //STDERR.put_string "err\n"
-    STDOUT.flush
+    Stdout.flush
   )

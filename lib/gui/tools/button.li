@@ -1,51 +1,50 @@
 Header
-  + name := BUTTON;
-  
+  + name := Button
 Inherit
-  + parent_gobj:Expanded GOBJ BUTTON
+  + parent_gobj:Flat Gobj Button
   
 Private
   
-  - stk:Expanded ARRAY (Strict BUTTON)
+  - stk:Flat Array (Exact Button)
   
 Public
     
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
-  - free <- stk.add_last Self
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last self
   
-  - margin:INTEGER := 8
+  - margin:Int := 8
   
-  - mute:INTEGER  := 1 << 15
-  - barre:INTEGER := 1 << 16
-  - dark:INTEGER  := 1 << 17
-  - light:INTEGER := 1 << 18
-  - nobackground:INTEGER := 1 << 19
+  - mute:Int  := 1 << 15
+  - barre:Int := 1 << 16
+  - dark:Int  := 1 << 17
+  - light:Int := 1 << 18
+  - nobackground:Int := 1 << 19
   
-  - check:INTEGER := 1 << 20
-  - radio:INTEGER := 1 << 21
+  - check:Int := 1 << 20
+  - radio:Int := 1 << 21
     
-  + txt:STRING_ALIAS
-  + act:{BUTTON;BOOLEAN}
-  + get_case:{BUTTON;BOOLEAN}
+  + txt:String_alias
+  + act:{Button;Boolean}
+  + get_case:{Button;Boolean}
   
-  - set_check b:{BUTTON;BOOLEAN} :SELF <- ( get_case := b; set check)
-  - set_radio b:{BUTTON;BOOLEAN} :SELF <- ( get_case := b; set radio)
+  - set_check b:{Button;Boolean} :Self <- ( get_case := b; set check)
+  - set_radio b:{Button;Boolean} :Self <- ( get_case := b; set radio)
   
-  - set_txt t:STRING_ALIAS <- ( txt := t; )
+  - set_txt t:String_alias <- ( txt := t; )
   
-  - width_min:REAL_32 <-
-  ( + x0,y0,x1,y1,wt,s:REAL_32
-    font_face_id (FONT.sys (FONT.bold))
-    s := FONT.size_sys*zom
+  - width_min:Real32 <-
+  ( + x0,y0,x1,y1,wt,s:Real32
+    font_face_id (Font.sys (Font.bold))
+    s := Font.size_sys*zom
     font_size s
     (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt
     wt + margin*2 + ((is radio) || {is check}).ok s or 0
   )
     
-  - height_min:REAL_32 <- (FONT.size_sys + margin*2)
+  - height_min:Real32 <- (Font.size_sys + margin*2)
    
-  - init t:STRING_ALIAS do d:{BUTTON;BOOLEAN} :SELF <-
+  - init t:String_alias do d:{Button;Boolean} :Self <-
   (
     (act,txt) := (d,t)
     set align_center
@@ -53,16 +52,16 @@ Public
   )
   
   - draw <-
-  ( + y,x,w,s,r:REAL_32
-    + c:COLOR
+  ( + y,x,w,s,r:Real32
+    + c:Color
     //draw_debug    
     (is inside).if {
-      fill_color (LOOK_GUI.border_on)
+      fill_color (Look_gui.border_on)
     } else {      
       (is light).if {
-        fill_color (LOOK_GUI.border_on) //(COLOR.rgb(200,200,200))
+        fill_color (Look_gui.border_on) //(COLOR.rgb(200,200,200))
       } else {
-        fill_color (LOOK_GUI.border_off); //COLOR.rgba (0,0,0,10))
+        fill_color (Look_gui.border_off); //COLOR.rgba (0,0,0,10))
       }
     }
     (! is nobackground).if {
@@ -72,9 +71,9 @@ Public
     }
     //
     ((is mute) || {is dark}).if {
-      c := (col=COLOR).ok (LOOK_GUI.text_bg_ui) else {col.set_af 0.3}
+      c := (col=Color).ok (Look_gui.text_bg_ui) else {col.set_af 0.3}
     } else {
-      c := (col=COLOR).ok (LOOK_GUI.text_ui) or col
+      c := (col=Color).ok (Look_gui.text_ui) or col
     }
     y := yo + height/2
     (is align_left).if {
@@ -85,7 +84,7 @@ Public
       x := xo + (width - width_min)/2
     }
     x := x + margin
-    s := FONT.size_sys*zom
+    s := Font.size_sys*zom
     fill_color c
     ((is radio) || {is check}).if {
       begin_path
@@ -96,14 +95,14 @@ Public
       (is radio).if {
         circle (x+r,y) radius r
         stroke
-        (get_case.value Self).if {
+        (get_case.value self).if {
           begin_path
           circle (x+r,y) radius (r-4)
           fill
         }
       } else {
         rect (x, y - r) size (r * 2, r * 2)
-        (get_case.value Self).if {
+        (get_case.value self).if {
           line (x, y - r) to (x + r * 2, y + r)
           line (x + r * 2, y - r) to (x, y + r)
         }
@@ -111,7 +110,7 @@ Public
       }
       x := x + s
     }
-    font_face_id (FONT.sys (is inside.ok (FONT.bold) or (FONT.roman)))
+    font_face_id (Font.sys (is inside.ok (Font.bold) or (Font.roman)))
     font_size s
     text_align (align_left | align_middle)
     w := text (x,y) msg txt - x
@@ -119,22 +118,22 @@ Public
     (is barre).if {      
       begin_path
       stroke_width (zom*3)
-      stroke_color (COLOR.rgba (0,0,0,128))
+      stroke_color (Color.rgba (0,0,0,128))
       line (x,y) to (x+w,y)
       stroke
     }    
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
-  ( + e:UINTEGER_8
+  - event ev:Uint8 :Boolean <-
+  ( + e:Uint8
     e := ev & ~1
     (is mute).if {
       // Nothing.
-    }.elseif {e = HAND.in} then {
-      set inside with (ev = HAND.in)
-    }.elseif {e = HAND.clic} then {
+    }.elseif {e = Hand.in} then {
+      set inside with (ev = Hand.in)
+    }.elseif {e = Hand.clic} then {
       //"Act:".print; act.text_l.println
       //MENU.close_all_except act
-      act.value Self.if_false { beep; }
+      act.value self.if_false { beep; }
     }
   )

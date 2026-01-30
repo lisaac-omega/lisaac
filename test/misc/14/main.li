@@ -1,16 +1,14 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + min,max:INTEGER_64
+  ( + min,max:Int64
     
-    max := `0x7FFFFFFFFFFFFFFF`:INTEGER_64
+    max := `0x7FFFFFFFFFFFFFFF`:Int64
     ? {max.to_string == "9223372036854775807"}
-    min := `0x8000000000000000`:INTEGER_64
+    min := `0x8000000000000000`:Int64
     ? {min.to_string == "-9223372036854775808"}
-    UTILS.exit 0
+    Utils.exit 0
     ("Hello" + " Dom").to_string_alias; // Bug compilo ASCII    
   )

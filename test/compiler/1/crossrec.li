@@ -1,13 +1,12 @@
 Header
-  
-  + name := CROSSREC;
-  /*
+  + name := Crossrec
+/*
 
   */
 
 Public
   
-  - bool:BOOLEAN <- TRUE
+  - bool:Boolean <- True
   
   - yop a:E <-
   ( a.print

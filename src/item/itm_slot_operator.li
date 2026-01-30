@@ -1,27 +1,24 @@
 Header
-
-  + name    := ITM_SLOT_OPERATOR;
-
-  /*Slot item*/
-
+  + name := Itm_slot_operator
+/*Slot item*/
 Inherit
 
-  + parent_itm_slot:Expanded ITM_SLOT
+  + parent_itm_slot:Flat Itm_slot
 
 Public
   
-  + pretty_name:STRING_ALIAS
-  - set_pretty_name n:STRING_ALIAS <- ( pretty_name := n; )
+  + pretty_name:String_alias
+  - set_pretty_name n:String_alias <- ( pretty_name := n; )
   
   //
   // Access associativity & priority level.
   //
 
-  + priority_and_level:INTEGER
-  + comm:BOOLEAN
+  + priority_and_level:Int
+  + comm:Boolean
   
-  - associativity:STRING_ALIAS <-
-  ( + result:STRING_ALIAS
+  - associativity:String_alias <-
+  ( + result:String_alias
     (priority_and_level >= 0).if {
       result := "Left"
     } else {
@@ -30,12 +27,12 @@ Public
     result
   )
 
-  - priority:INTEGER <-
+  - priority:Int <-
   (
     priority_and_level.abs
   )
 
-  - set_associativity p:STRING_ALIAS priority l:INTEGER comm c:BOOLEAN <-
+  - set_associativity p:String_alias priority l:Int comm c:Boolean <-
   (
     (p = "Left").if {
       priority_and_level := l
@@ -49,7 +46,7 @@ Public
   // Display.
   //
 
-  - pretty_name_in buffer:STRING_BUFFER <-
+  - pretty_name_in buffer:String_buffer <-
   (
     (name.has_prefix "__postfix").if {
       buffer.append "Postfix '"
@@ -62,9 +59,9 @@ Public
     buffer.add_last '\''
   )
 
-ITM_SLOT
+Itm_slot
 
-/*  - shorter_profile_intern_in buf:STRING_BUFFER <-
+/*  - shorter_profile_intern_in buf:String_buffer <-
   (
     (name.has_prefix "__postfix").if {
       argument_list.first.shorter_in buf

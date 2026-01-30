@@ -1,15 +1,15 @@
 Header
-  + name := MAIN;
-  - external := `#include <stdlib.h>`
+  + name := Main
+- external := `#include <stdlib.h>`
 Public
 
-  + upper:INTEGER
+  + upper:Int
   
   - main <-
-  ( + result:SELF
-    + a:INTEGER
+  ( + result:Self
+    + a:Int
     + toto:{} 
-    result := `NULL`:Strict MAIN
+    result := `NULL`:Exact Main
     
     toto := { result.add_last2; }
     toto.value
@@ -22,8 +22,8 @@ Public
   - add_last2 <-
   (
     `/* BEGIN */`
-    (BOOLEAN.unpredictable).if_false {
-      upper := `0`:INTEGER
+    (Boolean.unpredictable).if_false {
+      upper := `0`:Int
     }
     `/* END */`
   )

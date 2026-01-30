@@ -1,11 +1,12 @@
 Header
-  - name := HELLO_ARGV
+  - name := Hello_argv
   
+
 Public
 
-  - toto d:INTEGER lst a:INTEGER^n msg f:STRING_ALIAS lst c:CHARACTER^n other s:STRING_ALIAS^p <-
+  - toto d:Int lst a:Int^n msg f:String_alias lst c:Char^n other s:String_alias^p <-
   (
-    OUT # "Count:" # n # ',' # p # '\n'
+    Out # "Count:" # n # ',' # p # '\n'
     /*
     { ai:INTEGER
       ai.println
@@ -16,12 +17,12 @@ Public
       ci.println
     }.value c
     */
-    { (ai:INTEGER,ci:CHARACTER)
-      OUT # ai # ' ' # ci # '\n';      
+    { (ai:Int,ci:Char)
+      Out # ai # ' ' # ci # '\n';      
     }.value (a,c)
     
     
-    { si:STRING_ALIAS
+    { si:String_alias
       si.println
     }.value s
     

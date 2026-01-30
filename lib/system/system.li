@@ -1,8 +1,6 @@
 Header
-
-  + name := SYSTEM;
-  
-  - include := `char *system_name();`;
+  + name := System
+- include := `char *system_name();`;
   
   - external := `
 char *system_name()
@@ -21,20 +19,20 @@ return n;
 
 Private
   
-  + name_memory:STRING_ALIAS
+  + name_memory:String_alias
     
 Public
   
-  - name:STRING_ALIAS <- // "Linux" "Android" "Apple" "Windows"
-  ( + n:NATIVE_ARRAY CHARACTER
-    + r:STRING_ALIAS
-    n := `system_name()`:NATIVE_ARRAY CHARACTER
-    STRING.tmp { tmp:STRING_BUFFER
+  - name:String_alias <- // "Linux" "Android" "Apple" "Windows"
+  ( + n:C_array Char
+    + r:String_alias
+    n := `system_name()`:C_array Char
+    String.tmp { tmp:String_buffer
       tmp.from_external_copy n
       r := tmp.to_string_alias
     }
     r
   )
   
-  - exit code:INTEGER <- `exit(@code)`
+  - exit code:Int <- `exit(@code)`
   

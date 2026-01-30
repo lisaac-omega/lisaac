@@ -1,24 +1,22 @@
 Header
-  
-  + name := PNGCHUNK;
-  
+  + name := Pngchunk
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
 
-  + length:UINTEGER_32
-  + type:UINTEGER_32
+  + length:Uint32
+  + type:Uint32
   
-  - create_length l:UINTEGER_32 type t:UINTEGER_32 :SELF <-
-  ( + result:SELF
+  - create_length l:Uint32 type t:Uint32 :Self <-
+  ( + result:Self
     result := clone
     result.make_length l type t
     result
   )
   
-  - make_length l:UINTEGER_32 type t:UINTEGER_32 <-
+  - make_length l:Uint32 type t:Uint32 <-
   (
     length := l
     type := t

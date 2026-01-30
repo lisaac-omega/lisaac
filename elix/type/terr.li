@@ -1,10 +1,9 @@
 Header
-  + name := TERR;
-  
+  + name := Terr
 Inherit
-  - parent_tpro:TPRO := TPRO
+  - parent_tpro:Tpro := Tpro
   
 Public
   
-  - key:STRING_ALIAS := ""
+  - key:String_alias := ""
   

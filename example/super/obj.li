@@ -1,17 +1,15 @@
 Header
-
-  + name        := OBJ;
-  /*
-  Example the `super' call.
+  + name := Obj
+/*
+  Example the super call.
   */
-
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
-  + name:STRING_ALIAS := "OBJ"
+  + name:String_alias := "OBJ"
 
   + method <-
   (

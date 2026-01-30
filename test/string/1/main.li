@@ -1,9 +1,8 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + ca:NATIVE_ARRAY CHARACTER
+  ( + ca:C_array Char
     ca := "data".to_external
-    TEST.check_not_null ca
+    Test.check_not_null ca
   )

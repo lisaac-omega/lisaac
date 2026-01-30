@@ -1,13 +1,10 @@
 Header
-
-  + name        := ITM_CONSTANT;
-
-  /*Parent for all constant*/
-
+  + name := Itm_constant
+/*Parent for all constant*/
 Inherit
 
-  + parent_itm_code:Expanded ITM_CODE
+  + parent_itm_code:Flat Itm_code
 
 Public
 
-  - is_constant:BOOLEAN := TRUE
+  - is_constant:Boolean := True

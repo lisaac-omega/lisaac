@@ -1,26 +1,25 @@
 Header
-  + name := Expanded MEVENT;
-  
-  - include := `#include <time.h>`;
+  + name := Flat Mevent
+- include := `#include <time.h>`;
   
 Mapping, Public
   
-  + x:REAL_32
-  + y:REAL_32
-  + time:REAL_32
+  + x:Real32
+  + y:Real32
+  + time:Real32
   
 Public
   
-  - d:REAL_32 <- (x*x + y*y).sqrt
+  - d:Real32 <- (x*x + y*y).sqrt
   
-  - make (px,py:REAL_32) <-
+  - make (px,py:Real32) <-
   (
     (x,y) := (px,py)
     time := `(float)clock()/CLOCKS_PER_SEC`
   )
   
-  - delta (px,py:REAL_32) <-
+  - delta (px,py:Real32) <-
   (
-    (x,y) := (px - MEVENT.x,py - MEVENT.y)
-    time := `(float)clock()/CLOCKS_PER_SEC` - MEVENT.t
+    (x,y) := (px - Mevent.x,py - Mevent.y)
+    time := `(float)clock()/CLOCKS_PER_SEC` - Mevent.t
   )

@@ -1,32 +1,41 @@
 Header
-  + name    := ARRAYED;
-  /*Generic collection*/
-
-Insert
-  - parent_clone:CLONE := CLONE
-
+  + name    := Arrayed;
+  /* To share some stuff... should be removed... DCDC*/
 Public
 
-  - count:INTEGER <- abstract
+  - count:Int <- abstract
 
-  - element_sizeof:INTEGER <-
+  - element_sizeof:Int <-
   // The size in number of bytes for type `E'.
   (
     abstract
     0
   )
 
-  - set_capacity new_capacity:INTEGER <-
+  - set_capacity new_capacity:Int <-
+  // Resize capacity the array, but not count.
+  [
+    new_capacity > 0
+  ]
+  ( + new_cap:Int
+    if (new_capacity > capacity) then {
+      new_cap := 1 << Asm_builtin.size_in_base_2 new_capacity
+      ? {(capacity = 0) ->> {storage = NULL}}      
+      storage := storage.realloc_intern new_cap
+      capacity := new_cap
+    }
+  )
+  [
+    capacity >= Old capacity
+  ]
+
+
+  - set_count new_count:Int <-
   (
     abstract
   )
 
-  - set_count new_count:INTEGER <-
-  (
-    abstract
-  )
-
-  - to_native_array_uinteger_8:NATIVE_ARRAY UINTEGER_8 <-
+  - to_c_array_uint8:C_array Uint8 <-
   (
     abstract
     NULL

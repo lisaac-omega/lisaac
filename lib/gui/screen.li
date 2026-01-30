@@ -1,71 +1,72 @@
 Header
-  + name := Strict SCREEN;
-  
+  + name := Exact Screen
 Inherit
-  + parent_window:Expanded WINDOW
-  - parent_json:JSON := JSON
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_window:Flat Window
+  - parent_json:Json := Json
+  - parent_any_gui:Any_gui := Any_gui
   
 Private
-  - stk:Expanded ARRAY SCREEN
+  - stk:Flat Array Screen
   
 Public
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
   - free <-
-  ( child.foreach {c:WIN; c.free; }
+  ( child.foreach {c:Win; c.free; }
     child.clear
-    stk.add_last Self
-    PAPER.destroy_window Self
+    stk.add_last self
+    Paper.destroy_window self
   )
   
-  - width_min:REAL_32 <- child.first.width_min.max (child.second.width_min)
-  - height_min:REAL_32 <- child.first.height_min + child.second.height_min
+  - width_min:Real32 <- child.first.width_min.max (child.second.width_min)
+  - height_min:Real32 <- child.first.height_min + child.second.height_min
   
-  - is_split:BOOLEAN
+  - is_split:Boolean
   
+  - on_close <- exit_cmd
+    
   - draw <-
   ( 
-    IMG.update pen
+    Img.update pen
   )
   
   - draw_child <-
-  ( + ps:PAGE_SPLIT
-    + x1,x2,y1,y2:REAL_32
-    + w:WIN
+  ( + ps:Page_split
+    + x1,x2,y1,y2:Real32
+    + w:Win
     parent_window.draw_child
-    PAGE.cur_pg.buf_pg.fix_buffer
-    ((HAND.window_cur = Self) && {(ps ?= child.second) != NULL}).if {
+    Page.cur_pg.buf_pg.fix_buffer
+    ((Hand.window_cur = self) && {(ps ?= child.second) != NULL}).if {
       w := ps.child.first
       (ps.is (ps.line) != 0).if {
         (x1,y1,y2) := (w.xmax-2, 0, ymax)
         x2 := x1 + 2
-        is_split := HAND.x_cur.in_range x1 to x2
+        is_split := Hand.x_cur.in_range x1 to x2
       } else {
         (y1,x1,x2) := (w.ymax-2, 0, xmax)
         y2 := y1 + 2
-        is_split := HAND.y_cur.in_range y1 to y2
+        is_split := Hand.y_cur.in_range y1 to y2
       }
       (is_split).if {
         begin_path
         rect (x1,y1) to (x2,y2)
-        fill_color (COLOR.red)
+        fill_color (Color.red)
         fill
       }
     }
     (! acts_wait.is_empty).if {
-      PAPER.refresh_again
+      Paper.refresh_again
       (! acts_wait.pop_first.run).if { beep; acts_wait.clear; }
     }
   )
   
-  - set_have_the_focus b:BOOLEAN <-
+  - set_have_the_focus b:Boolean <-
   (
     (b && {! have_the_focus}).if {
-      BUF_PG.footnote_left.clear
-      BUFFER.catalog.foreach { e:BUFFER; e.reload }
+      Buf_pg.footnote_left.clear
+      Buffer.catalog.foreach { e:Buffer; e.reload }
     }
     parent_window.set_have_the_focus b
   )
@@ -74,63 +75,63 @@ Public
   (
     (! have_the_focus).if {
       begin_path
-      fill_color (LOOK.focus_off)
+      fill_color (Look.focus_off)
       rect (0,0) size (width,height)
       fill
     }
   )
     
   - refresh <-
-  ( + head:WIN
-    + l:INTEGER
+  ( + head:Win
+    + l:Int
     head := child.first; head.refresh
     l := 2
-    (VKEYB.parent = Self).if {
-      VKEYB.refresh
-      (VKEYB.parent = Self).if {
-        height:= height - VKEYB.height
+    (Vkeyb.parent = self).if {
+      Vkeyb.refresh
+      (Vkeyb.parent = self).if {
+        height:= height - Vkeyb.height
         l := l + 1
       }
     }
-    (CMD.parent = Self).if {
+    (Cmd.parent = self).if {
       child.at 2.refresh; // Current CMD
-      (CMD.parent = Self).if {
-        height:= height - CMD.height
+      (Cmd.parent = self).if {
+        height:= height - Cmd.height
         l := l + 1
       }
     }
-    child.upper.downto l do { i:INTEGER; child.at i.refresh; }
+    child.upper.downto l do { i:Int; child.at i.refresh; }
     height := height - head.height
     child.at 1.xy (0,head.height).size (width,height).refresh
     height := Old height
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
+  - event ev:Uint8 :Boolean <-
   ( 
-    (is_split && {ev & ~1 = HAND.clic}).if {
+    (is_split && {ev & ~1 = Hand.clic}).if {
       split_win
     }
   )
   
-  - mouse_scroll (dx,dy:REAL_64) <-
-  ( + d:REAL_64
-    d := dy * PAGE.cur_pg.height * -0.20
-    PAGE.cur_pg.buf_pg.set_pos_y (PAGE.cur_pg.buf_pg.pos_y + d)
-    PAGE.cur_pg.buf_pg.move_pos_y d
+  - mouse_scroll (dx,dy:Real64) <-
+  ( + d:Real64
+    d := dy * Page.cur_pg.height * -0.20
+    Page.cur_pg.buf_pg.set_pos_y (Page.cur_pg.buf_pg.pos_y + d)
+    Page.cur_pg.buf_pg.move_pos_y d
   )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  ( + r:BOOLEAN
-    BUF_PG.footnote_left.clear
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + r:Boolean
+    Buf_pg.footnote_left.clear
     (focus != NULL).if {      
       r := focus.key s cmd c
     } else {      
-      r := SHORTCUT.key s cmd c
+      r := Shortcut.key s cmd c
       (! r).if {
         (cmd_cur.is (cmd_cur.on)).if {
           r := cmd_cur.key s cmd c
         } else {          
-          r := PAGE.cur_pg.buf_pg.key s cmd c
+          r := Page.cur_pg.buf_pg.key s cmd c
         }
       }
     }
@@ -139,77 +140,77 @@ Public
       current_key.clear
     } else {
       (! current_key.is_empty).if { current_key # ", " }
-      KEYBOARD.key_to_string s cmd c in current_key    
-      PAGE.cur_pg.buf_pg.footnote_left.copy current_key
+      Keyboard.key_to_string s cmd c in current_key    
+      Page.cur_pg.buf_pg.footnote_left.copy current_key
     }
   )
   
-  - init_pos (x,y:REAL_32) size (w,h:REAL_32) :SELF <-
+  - init_pos (x,y:Real32) size (w,h:Real32) :Self <-
   ( (xo,yo,width,height) := (x,y,w,h); init_common)
     
-  - read:SELF <-
+  - read:Self <-
   ( read_object
-    ((vkeyb) && {VKEYB.parent = NULL}).if { VKEYB.set_open Self; }
+    ((vkeyb) && {Vkeyb.parent = NULL}).if { Vkeyb.set_open self; }
     init_common
   )
     
-  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  - item id:String_alias int v:Int :Boolean <-
   (
     id
     .case "x"      then { xo := v;     }
     .case "y"      then { yo := v;     }
     .case "width"  then { width := v;  }
     .case "height" then { height := v; }
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN <-
+  - item id:String_alias bool v:Boolean :Boolean <-
   (
     id
     .case "fullscreen" then { (! home_directory.has_suffix "/ben/").if { fullscreen := v; }; }
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - object id:STRING_ALIAS :BOOLEAN <-
+  - object id:String_alias :Boolean <-
   (
     id
-    .case "HEADER"     then { HEADER.new.init Self;     }
-    .case "PAGE_SPLIT" then { PAGE_SPLIT.new.init Self; }
-    .case "PAGE"       then { PAGE.new.init Self;       }
-    = STRING_ALIAS
+    .case "HEADER"     then { Header.new.init self;     }
+    .case "PAGE_SPLIT" then { Page_split.new.init self; }
+    .case "PAGE"       then { Page.new.init self;       }
+    = String_alias
   )
   
   - write_object <-
-  ( + x,y:REAL_32
-    + w:WIN
+  ( + x,y:Real32
+    + w:Win
     put_object {      
       put "fullscreen" value { put_bool fullscreen; }
       (x,y) := get_pos
-      put "x" value { put_int (x.to_integer); }
-      put "y" value { put_int (y.to_integer); }
-      put "width"  value { put_int (width.to_integer); }
-      put "height" value { put_int (height.to_integer); }
-      put "HEADER" value { child.first.like HEADER.write_object; }
+      put "x" value { put_int (x.to_int); }
+      put "y" value { put_int (y.to_int); }
+      put "width"  value { put_int (width.to_int); }
+      put "height" value { put_int (height.to_int); }
+      put "HEADER" value { child.first.like Header.write_object; }
       w := child.second
-      (w.dynamic_type = PAGE).if {
-        put "PAGE" value { w.like PAGE.write_object; }
+      (w.dynamic_type = Page).if {
+        put "PAGE" value { w.like Page.write_object; }
       } else {
-        put "PAGE_SPLIT" value { w.like PAGE_SPLIT.write_object; }
+        put "PAGE_SPLIT" value { w.like Page_split.write_object; }
       }
     }
   )
   
 Private
   
-  - current_key:STRING_BUFFER := STRING_BUFFER.create 32
+  - current_key:String_buffer := String_buffer.create 32
     
-  - init_common:SELF <-
+  - init_common:Self <-
   (
     id_name := window_title
     init NULL
-    FONT.load pen
+    Font.load pen
     set_pos (xo,yo)
-    KEYBOARD.listen Self
+    Keyboard.listen self
     (xo, yo) := (0, 0)
-    Self
+    self
   )

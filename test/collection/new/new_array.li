@@ -1,0 +1,15 @@
+Header
+  + name := New_array
+Public
+  - main <-
+  ( + a:Array Int
+    a := new Array Int of (4,3,2,1)
+    Test.check (a.at 0 = 4)
+    Test.check (a.at 1 = 3)
+    Test.check (a.at 2 = 2)
+    Test.check (a.at 3 = 1)
+    
+    a := new Array Int of 5
+    Test.check (a.at 0 = 5)
+    
+  )

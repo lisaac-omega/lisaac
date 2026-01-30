@@ -1,54 +1,51 @@
 Header
-
-  + name    := BLOCK;
-
-  /*Block instruction library { ... } .*/
-
+  + name := Block
+/*Block instruction library { ... } .*/
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
   
   
-  - do Self:{} while test:{BOOLEAN} <-
+  - do self:{} while test:{Boolean} <-
   ( 
     value
     if (test.value) then {
-      do Self while test
+      do self while test
     } else { }
   )
   
-  - while Self:{BOOLEAN} do blk:{} <-
+  - while self:{Boolean} do blk:{} <-
   (
     if (value) then {
       blk.value
-      while Self do blk
+      while self do blk
     } else { }
   )
   
-  - until Self:{BOOLEAN} do body:{} <-
+  - until self:{Boolean} do body:{} <-
   (
     if (value) then {
     } else { 
       body.value
-      until Self do body      
+      until self do body      
     }
   )
     
-  - Self:{BOOLEAN} if true_blc:{} <-
+  - self:{Boolean} if true_blc:{} <-
   (
-    (Self.value).if true_blc
+    (self.value).if true_blc
   )
   
   // Conditional :
 
-  - Self:{BOOLEAN} '||' Left 10 other:{BOOLEAN} :BOOLEAN <-
+  - self:{Boolean} '||' Left 10 other:{Boolean} :Boolean <-
   (
     value || other
   )
 
-  - Self:{BOOLEAN} '&&' Left 20 other:{BOOLEAN} :BOOLEAN <-
+  - self:{Boolean} '&&' Left 20 other:{Boolean} :Boolean <-
   (
     value && other
   )
@@ -56,20 +53,20 @@ Public
   
   // Loop :
 
-  - Self:{} endless_loop <-
+  - self:{} endless_loop <-
   (
-    BOOLEAN.unpredictable.if {
+    Boolean.unpredictable.if {
       value
       endless_loop
     }
   )
   
-  - Self:{BOOLEAN} while_loop <-
+  - self:{Boolean} while_loop <-
   (
     (value).if { while_loop; }
   )
     
-  - Self:{BOOLEAN} while_do body:{} <-
+  - self:{Boolean} while_do body:{} <-
   ( //? {body!=NULL}
     (value).if {
       body.value
@@ -77,33 +74,33 @@ Public
     }
   )
   
-  - Self:{BOOLEAN} while_do body:{} stop_if tst2:{BOOLEAN} <-
+  - self:{Boolean} while_do body:{} stop_if tst2:{Boolean} <-
   (
-    while_do body stop_if tst2 first TRUE
+    while_do body stop_if tst2 first True
   )
   
 Private
   
-  - Self:{BOOLEAN} while_do body:{} stop_if tst2:{BOOLEAN} first b:BOOLEAN <-
+  - self:{Boolean} while_do body:{} stop_if tst2:{Boolean} first b:Boolean <-
   (
     ((b || {!tst2.value}) && {value}).if {
       body.value
-      while_do body stop_if tst2 first FALSE
+      while_do body stop_if tst2 first False
     }
   )
   
 Public
   
-  - Self:{} do_while test:{BOOLEAN} <-
+  - self:{} do_while test:{Boolean} <-
   ( //? {test!=NULL}
 
     value
-    ((test.value) && {BOOLEAN.unpredictable}).if {
+    ((test.value) && {Boolean.unpredictable}).if {
       do_while test
     }
   )
 
-  - Self:{BOOLEAN} until_do body:{} <-
+  - self:{Boolean} until_do body:{} <-
   ( // ? {body!=NULL}
     (! value).if {
       body.value
@@ -111,7 +108,7 @@ Public
     }
   )
  
-  - Self:{} do_until test:{BOOLEAN} <-
+  - self:{} do_until test:{Boolean} <-
   ( //? {test!=NULL}
 
     value
@@ -120,7 +117,7 @@ Public
     }
   )
 
-  - Self:{BOOLEAN} while_do body:{} ensure test:{BOOLEAN} <-
+  - self:{Boolean} while_do body:{} ensure test:{Boolean} <-
   // Mix loop version beetween `while_do' and `do_while'
   (
     value.if {
@@ -132,7 +129,7 @@ Public
   )
 
   /*
-  - until_do body:BLOCK or_until test:BLOCK <-
+  - until_do body:Block or_until test:Block <-
   (
     (! value).if {
       body.value
@@ -145,7 +142,7 @@ Public
 
   // Debug: Require / Ensure / Check
     
-  - Self:{BOOLEAN} '?' msg:STRING <-
+  - self:{Boolean} '?' msg:String <-
   // User assertion with message.
   (
     ((debug_level >=10) && {! value}).if {
@@ -153,18 +150,18 @@ Public
     }
   )
   
-  - Self:{BOOLEAN} txt m:{STRING} :{BOOLEAN} <-
+  - self:{Boolean} txt m:{String} :{Boolean} <-
   // User assertion with message.
-  ( + result:{BOOLEAN}
+  ( + result:{Boolean}
     ((debug_level >= 10) && {! value}).if {
       result := {crash_with_message (m.value) after 6}
     } else {
-      result := {TRUE}
+      result := {True}
     }
     result
   )
   
-  - '?' Self:{BOOLEAN} <-
+  - '?' self:{Boolean} <-
   // User assertion without message.
   (     
     ((debug_level >=10) && {! value}).if {
@@ -172,7 +169,7 @@ Public
     }
   )
 
-  - Self:{BOOLEAN} '-?' msg:STRING_ALIAS <-
+  - self:{Boolean} '-?' msg:String_alias <-
   // Require assertion with message.
   ( 
     ((debug_level >= 5) && {! value}).if {
@@ -180,7 +177,7 @@ Public
     }
   )
 
-  - '-?' Self:{BOOLEAN} <-
+  - '-?' self:{Boolean} <-
   // Require assertion without message.
   ( 
     ((debug_level >= 5) && {! value}).if {
@@ -188,7 +185,7 @@ Public
     }
   )
 
-  - Self:{BOOLEAN} '+?' msg:STRING_ALIAS <-
+  - self:{Boolean} '+?' msg:String_alias <-
   // Ensure assertion with message.
   ( 
     ((debug_level >= 15) && {! value}).if {
@@ -196,7 +193,7 @@ Public
     }
   )
 
-  - '+?' Self:{BOOLEAN} <-
+  - '+?' self:{Boolean} <-
   // Require assertion without message.
   (
     ((debug_level >= 15) && {! value}).if {
@@ -204,7 +201,7 @@ Public
     }
   )
 
-  - Self:{BOOLEAN} '?#' val:INTEGER <-
+  - self:{Boolean} '?#' val:Int <-
   // Other assertion without message.
   (
     ((debug_level >= val) && {! value}).if {
@@ -214,7 +211,7 @@ Public
 
   // Code debug.
 
-  - '!' Self:{BOOLEAN} <-
+  - '!' self:{Boolean} <-
   (
     (debug_level >=10).if {
       value
@@ -224,5 +221,5 @@ Public
 
   // French corner
     
-  - tant_que Self:{BOOLEAN} faire blk:{} <- ( while Self do blk )
+  - tant_que self:{Boolean} faire blk:{} <- ( while self do blk )
   

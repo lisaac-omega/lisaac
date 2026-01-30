@@ -1,12 +1,9 @@
 Header
-
-  + name        := CHARACTER_CST;
-
-  /*Character constant*/
-
+  + name := Character_cst
+/*CHARACTERacter constant*/
 Inherit
 
-  + parent_constant:Expanded CONSTANT
+  + parent_constant:Flat Constant
 
 Public
 
@@ -14,34 +11,34 @@ Public
   // Value.
   //
 
-  + text:STRING_ALIAS
+  + text:String_alias
 
   //
   // Creation.
   //
 
-  - create p:POSITION char car:STRING_ALIAS :SELF<-
-  ( + result:SELF
+  - create p:Position char car:String_alias :Self<-
+  ( + result:Self
     result := clone
     result.make p char car
     result
   )
 
-  - make p:POSITION char car:STRING_ALIAS <-
+  - make p:Position char car:String_alias <-
   (
     position := p
     text := car
-    static_type := type_character.default
+    static_type := type_char.default
   )
 
-  - my_copy:SELF <- SELF.create position char text
+  - my_copy:Self <- Self.create position char text
 
   //
   // Comparaison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + s:SELF
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + s:Self
     s ?= other
     (s != NULL) && {text = s.text}
   )
@@ -61,7 +58,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '\''
     buffer.append text

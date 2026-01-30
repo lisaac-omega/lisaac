@@ -1,7 +1,6 @@
 Header
-  
-  + name := EXP_RAPIDE;
-  /*
+  + name := Exp_rapide
+/*
 The classical factorial example in Lisaac Ω.
   
 In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
@@ -9,8 +8,8 @@ In this example, the traditional recursive implementation of the factorial funct
 
 Public
 
-  - exp_rapide (x:REAL_64, n:INTEGER) :REAL_64 <-
-  ( + result:REAL_64
+  - exp_rapide (x:Real64, n:Int) :Real64 <-
+  ( + result:Real64
     if (n = 0) then {
       result := 1
     }.elseif {(n % 2) = 0} then {
@@ -22,14 +21,14 @@ Public
   )
   
   - main <-
-  ( + x:REAL_64;
-    + n:INTEGER;  
-    if ((COMMAND_ARGS upper != 2) || {! COMMAND_ARGS at 2 .is_integer}) then {
+  ( + x:Real64;
+    + n:Int;  
+    if ((Command_args upper != 2) || {! Command_args at 2 .is_integer}) then {
       "usage: ./exp_rapide <x> <n>" println
-      SYSTEM exit 1
+      System exit 1
     }
-    x := COMMAND_ARGS at 1 .to_real_64
-    n := COMMAND_ARGS at 2 .to_integer
-    OUT # "exp_rapide(" # x # ',' # n # ")=" # (exp_rapide (x,n)) # '\n'
+    x := Command_args at 1 .to_real64
+    n := Command_args at 2 .to_int
+    Out # "exp_rapide(" # x # ',' # n # ")=" # (exp_rapide (x,n)) # '\n'
   );
  

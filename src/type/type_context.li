@@ -1,20 +1,17 @@
 Header
-
-  + name        := TYPE_CONTEXT;
-
-  /*Type Context for debug mode*/
-
+  + name := Type_context
+/*Type Context for debug mode*/
 Inherit
 
-  + parent_type:Expanded TYPE
+  + parent_type:Flat Type
 
 Public
 
-  - name:STRING_ALIAS <- "___CONTEXT"
+  - name:String_alias <- "___CONTEXT"
 
-  - intern_name:STRING_ALIAS <- name
+  - intern_name:String_alias <- name
 
-  - type_c:STRING_ALIAS <- "_____CONTEXT"
+  - type_c:String_alias <- "_____CONTEXT"
 
   //
   // Creation.
@@ -22,9 +19,9 @@ Public
 
   - make_context <-
   (
-    dico_type.at name put Self
+    dico_type.at name put self
     //slot_run := ARRAY SLOT .create_with_capacity 1; // BSBS: Plus utile !
-    default := TYPE_FULL.create Self with (TYPE_FULL.expanded_bit)
+    default := Type_full.create self with (Type_full.flat_bit)
   )
 
   - genere_typedef <-

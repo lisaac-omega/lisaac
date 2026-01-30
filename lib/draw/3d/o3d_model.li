@@ -1,29 +1,28 @@
 Header
-  + name := O3D_MODEL;
-  
+  + name := O3d_model
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
   
-  + lower:INTEGER
-  + upper:INTEGER
+  + lower:Int
+  + upper:Int
   
-  + o:VEC4
+  + o:Vec4
   
-  + g:VEC4
+  + g:Vec4
   
-  - set (x,y,z:REAL_32) gravity (gx,gy,gz:REAL_32) low l:INTEGER up u:INTEGER :O3D_MODEL <-
+  - set (x,y,z:Real32) gravity (gx,gy,gz:Real32) low l:Int up u:Int :O3d_model <-
   (
-    (o,g) := (VEC4.create,VEC4.create)
+    (o,g) := (Vec4.create,Vec4.create)
     o.make (x,y,z,1)
     g.make (gx,gy,gz,1)
     (lower,upper) := (l,u)
-    Self
+    self
   )
   
-  - create_low l:INTEGER up u:INTEGER :O3D_MODEL <-
+  - create_low l:Int up u:Int :O3d_model <-
   clone.set (0,0,0) gravity (0,0,0) low l up u
   
-  - create (x,y,z:REAL_32) gravity (gx,gy,gz:REAL_32) low l:INTEGER up u:INTEGER :O3D_MODEL <-
+  - create (x,y,z:Real32) gravity (gx,gy,gz:Real32) low l:Int up u:Int :O3d_model <-
   clone.set (x,y,z) gravity (gx,gy,gz) low l up u

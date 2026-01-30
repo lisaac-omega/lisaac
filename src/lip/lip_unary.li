@@ -1,29 +1,27 @@
 Header
-
-  + name      := LIP_UNARY;
-
+  + name := Lip_unary
 Inherit
 
-  + parent_lip_code:Expanded LIP_CODE
+  + parent_lip_code:Flat Lip_code
 
 Public
 
-  + value:LIP_CODE
+  + value:Lip_code
 
-  + operator:CHARACTER
+  + operator:Char
 
   //
   // Creation.
   //
 
-  - create p:POSITION operator op:CHARACTER with v:LIP_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position operator op:Char with v:Lip_code :Self <-
+  ( + result:Self
     result := clone
     result.make p operator op with v
     result
   )
 
-  - make p:POSITION operator op:CHARACTER with v:LIP_CODE <-
+  - make p:Position operator op:Char with v:Lip_code <-
   (
     position := p
     operator := op
@@ -34,8 +32,8 @@ Public
   // Run.
   //
 
-  - run_expr:LIP_CONSTANT <-
-  ( + result:LIP_CONSTANT
+  - run_expr:Lip_constant <-
+  ( + result:Lip_constant
 
     result := value.run_expr
     (operator)

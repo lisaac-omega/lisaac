@@ -1,51 +1,50 @@
 Header
-  + name := I_IDF;
-  
+  + name := I_idf
 Inherit
-  + parent_inode:Expanded I_NODE
+  + parent_inode:Flat I_node
   
 Public
   
-  - stck:Expanded ARRAY I_IDF
+  - stck:Flat Array I_idf
 
-  - new:I_IDF <-
-  ( + result:I_IDF
-    (stck.is_empty).if { result := I_IDF.clone; } else { result := stck.pop; }
+  - new:I_idf <-
+  ( + result:I_idf
+    (stck.is_empty).if { result := I_idf.clone; } else { result := stck.pop; }
     //result := clone
     result
   )
   
 Public
   
-  + ref:N_IDF
-  + error:INTEGER
+  + ref:N_idf
+  + error:Int
   
-  - new (l,u:INTEGER) is r:N_IDF err d:INTEGER :I_IDF <- new.init (l,u) is r err d
+  - new (l,u:Int) is r:N_idf err d:Int :I_idf <- new.init (l,u) is r err d
   
-  - copy:I_NODE <- new.init (lower,upper) is ref err error
+  - copy:I_node <- new.init (lower,upper) is ref err error
   
-  - init (l,u:INTEGER) is r:N_IDF err d:INTEGER :I_IDF <-
-  [ ? {l <= u}; ? {u <= IA.src.upper};  ]
+  - init (l,u:Int) is r:N_idf err d:Int :I_idf <-
+  [ ? {l <= u}; ? {u <= Ia.src.upper};  ]
   (
     (lower,upper,ref,error) := (l,u,r,d)
-    {IA.src.at upper = ' '}.while_do { upper := upper - 1; }
-    Self
+    {Ia.src.at upper = ' '}.while_do { upper := upper - 1; }
+    self
   )
   
-  - put_sty u:UINTEGER_16 slot s:SLOT <-
+  - put_sty u:Uint16 slot s:Slot <-
   (
-    STY.put u to lower in (IA.sty)
-    STY.put u to (upper+1) in (IA.sty)
+    Sty.put u to lower in (Ia.sty)
+    Sty.put u to (upper+1) in (Ia.sty)
   )
   
-  - txt_in s:STRING_BUFFER <-
+  - txt_in s:String_buffer <-
   (
     s.add_last '\"'
-    s.append (IA.src) from lower to upper
+    s.append (Ia.src) from lower to upper
     s.add_last '\"'
   )
   
-  - rtxt_in s:STRING_BUFFER <-
+  - rtxt_in s:String_buffer <-
   (    
     s.add_last '\"'
     (ref != NULL).if {
@@ -54,4 +53,4 @@ Public
     s.add_last '\"'
   )
   
-  - free <- stck.add_last Self
+  - free <- stck.add_last self

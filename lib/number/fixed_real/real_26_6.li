@@ -1,37 +1,37 @@
 Header
-  + name    := Expanded REAL_26_6;
-  /*signed 26.6 fixed float.*/
+  + name := Flat Real_26_6
+/*signed 26.6 fixed float.*/
   - type    := `unsigned long`;
   - default := (0.to_raw_real_26_6);
-  - export  := REAL_32, REAL_64;
+  - export  := Real32, Real64;
 Insert
-  - parent_signed_fixed_real:SIGNED_FIXED_REAL := SIGNED_FIXED_REAL
+  - parent_signed_fixed_real:Signed_fixed_real := Signed_fixed_real
 
-SELF
+Self
 
-  - shift_bits:INTEGER <- 6
+  - shift_bits:Int <- 6
 
 Public
 
   // Range.
 
-  - minimum:INTEGER_64  <- - 1FF_FFFFh.to_raw_integer_64
+  - minimum:Int64  <- - 1FF_FFFFh.to_raw_int64
 
-  - maximum:UINTEGER_64 <- 1FF_FFFFh.to_raw_uinteger_64
+  - maximum:Uint64 <- 1FF_FFFFh.to_raw_uint64
 
   // Convertion format with test.
 
-  - to_real_26_6:REAL_26_6 <- Self
+  - to_real_26_6:Real_26_6 <- self
 
   // Convertion
 
-  - append_in b:STRING_BUFFER <-
-  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  - append_in b:String_buffer <-
+  // Append in the `b' the equivalent of `to_string'. No new String_buffer
   // creation during the process.
-  ( + val:INTEGER_32
-    + old_count,new_count:INTEGER
+  ( + val:Int32
+    + old_count,new_count:Int
     ? {b!=NULL}
-    val := to_raw_integer
+    val := to_raw_int
     (val < 0).if {
       val := - val
       b.extend '-'

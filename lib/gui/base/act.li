@@ -1,72 +1,71 @@
 Header
-  + name := ACT;
-  
+  + name := Act
 Inherit
-  - parent_clone:CLONE := CLONE
-  - parent_json:JSON := JSON
+  - parent_clone:Clone := Clone
+  - parent_json:Json := Json
   
 Public
     
-  + text_l:STRING_ALIAS
-  + text_r:STRING_ALIAS
+  + text_l:String_alias
+  + text_r:String_alias
   
-  - txt_l t:STRING_ALIAS :SELF <- ( text_l := t; Self)
-  - txt_r t:STRING_ALIAS :SELF <- ( text_r := t; Self)
+  - txt_l t:String_alias :Self <- ( text_l := t; self)
+  - txt_r t:String_alias :Self <- ( text_r := t; self)
   
-  - new:SELF <- clone
+  - new:Self <- clone
   
-  - run:BOOLEAN <- FALSE
+  - run:Boolean <- False
   
-  + flag:INTEGER
-  - set f:INTEGER :SELF <- ( flag := flag|f; Self)
-  - is f:INTEGER :BOOLEAN <- flag&f != 0
-  - mute:INTEGER  := 1<<13
-  - radio:INTEGER := 1<<14
-  - check:INTEGER := 1<<15
-  - case:INTEGER  := radio | check
-  + get_case:{ACT; BOOLEAN}
-  - set_case c:{ACT; BOOLEAN} :SELF <- ( get_case := c; Self)
+  + flag:Int
+  - set f:Int :Self <- ( flag := flag|f; self)
+  - is f:Int :Boolean <- flag&f != 0
+  - mute:Int  := 1<<13
+  - radio:Int := 1<<14
+  - check:Int := 1<<15
+  - case:Int  := radio | check
+  + get_case:{Act; Boolean}
+  - set_case c:{Act; Boolean} :Self <- ( get_case := c; self)
 
   // Parsing.
   
-  - read_func:{ACT}
-  - read_check:{ACT;}
-  - set_read_func f:{ACT} read_check c:{ACT;} <-
+  - read_func:{Act}
+  - read_check:{Act;}
+  - set_read_func f:{Act} read_check c:{Act;} <-
   ( read_func := f
     read_check := c
   )
   
-  - lst_act:ARRAY ACT := ARRAY ACT.create_with_capacity 16
-  - last_act:ACT
+  - lst_act:Array Act := Array Act.create_with_capacity 16
+  - last_act:Act
   
-  - new_read:ACT <- ( last_act := NULL; read_object; last_act)
+  - new_read:Act <- ( last_act := NULL; read_object; last_act)
   
-  - object_in id:STRING_ALIAS :BOOLEAN <-
-  ( + k:SHORTCUT
+  - object_in id:String_alias :Boolean <-
+  ( + k:Shortcut
     id
     .case "cmd" then { last_act := read_cmd; }
     .case "chk" then { err_order; read_check.value last_act; last_act.set check; }    
     .case "rdo" then { err_order; read_check.value last_act; last_act.set radio; }    
     .case "key" then { err_order
-      k := SHORTCUT.new.read last_act
-      STRING.tmp { tmp:STRING_BUFFER
+      k := Shortcut.new.read last_act
+      String.tmp { tmp:String_buffer
         (last_act.text_r != NULL).if { tmp.copy (last_act.text_r); tmp += " · "; }
         k.append_in tmp
         last_act.txt_r (tmp.to_string_alias)
       }
     }
-    = STRING_ALIAS
+    = String_alias
   )
     
-  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str  v:String_alias :Boolean <-
   ( id
     .case "txt"   then { err_order; last_act.txt_l last_str; }
-    .case "mouse" then { err_order; last_act.txt_r last_str; HAND.add_act last_act; }
-    = STRING_ALIAS
+    .case "mouse" then { err_order; last_act.txt_r last_str; Hand.add_act last_act; }
+    = String_alias
   )
 
-  - read_cmd:ACT <-
-  ( + r:ACT
+  - read_cmd:Act <-
+  ( + r:Act
     r := read_func.value
     (read_char ',').if {
       lst_act.clear; lst_act.add_last r
@@ -74,15 +73,15 @@ Public
         (r = NULL).if { err syntax msg "Function needed."; }
         lst_act.add_last r
       }.do_while {read_char ','}
-      r := ACTS.new.lst lst_act
+      r := Acts.new.lst lst_act
     }
     r
   )
   
-  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN <-
+  - item id:String_alias bool v:Boolean :Boolean <-
   ( id
     .case "mute" then { err_order; v.if { last_act.set mute; }; }
-    = STRING_ALIAS
+    = String_alias
   )
   
 Private

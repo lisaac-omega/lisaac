@@ -1,24 +1,22 @@
 Header
-  
-  + name := TEST_IMG;
-  /*If you run this program, you should see the images displayed in various formats, 
+  + name := Test_img
+/*If you run this program, you should see the images displayed in various formats, 
 all supported by Lisaac Ω.*/
-  
 Inherit
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
     
 Private  
-  - img_lower:INTEGER := 1
-  - img_upper:INTEGER := 12
+  - img_lower:Int := 1
+  - img_upper:Int := 12
   
-  - jpg:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - png:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - tga:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - bmp:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - psd:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - gif:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - ppm:ARRAY INTEGER := new ARRAY INTEGER capacity 12
-  - pgm:ARRAY INTEGER := new ARRAY INTEGER capacity 12
+  - jpg:Array Int := new Array Int capacity 12
+  - png:Array Int := new Array Int capacity 12
+  - tga:Array Int := new Array Int capacity 12
+  - bmp:Array Int := new Array Int capacity 12
+  - psd:Array Int := new Array Int capacity 12
+  - gif:Array Int := new Array Int capacity 12
+  - ppm:Array Int := new Array Int capacity 12
+  - pgm:Array Int := new Array Int capacity 12
     
 Public  
     
@@ -33,17 +31,17 @@ Public
     load_filter "gif" imgs gif
     load_filter "ppm" imgs ppm
     load_filter "pgm" imgs pgm
-    PAPER.run
+    Paper.run
   )
   
-  - draw (x,y:REAL_32) imgs img:ARRAY INTEGER <-
-  ( + p:PAINT
-    + ix,iy,iw,ih:REAL_32
-    + siz:REAL_32
-    + imgw,imgh,id:INTEGER
+  - draw (x,y:Real32) imgs img:Array Int <-
+  ( + p:Paint
+    + ix,iy,iw,ih:Real32
+    + siz:Real32
+    + imgw,imgh,id:Int
     siz := 60.0
-    from 0 to (img.upper) do { i:INTEGER
-      + tx,ty:REAL_32
+    from 0 to (img.upper) do { i:Int
+      + tx,ty:Real32
       (tx, ty) := (x, y+siz*i)
       (imgw,imgh) := image_size (img.at i)
       if (imgw < imgh) then {
@@ -55,7 +53,7 @@ Public
       }
       id := img.at i
       if (id >0) then {
-        p := PAINT.create_pattern (tx+ix, ty+iy) size (iw, ih) img_id id angle 0 alpha 1
+        p := Paint.create_pattern (tx+ix, ty+iy) size (iw, ih) img_id id angle 0 alpha 1
         begin_path
         rect (tx,ty) size (siz,siz) radius 5.0
         fill_paint p
@@ -65,11 +63,11 @@ Public
     }
   )
   
-  - load_filter ext:STRING_ALIAS imgs img:ARRAY INTEGER <-
+  - load_filter ext:String_alias imgs img:Array Int <-
   (
-    STRING.tmp { string_tmp:STRING_BUFFER
-      from img_lower to img_upper do { i:INTEGER
-        string_tmp.copy (COMMAND_ARGS executable_directory)
+    String.tmp { string_tmp:String_buffer
+      from img_lower to img_upper do { i:Int
+        string_tmp.copy (Command_args executable_directory)
         string_tmp.append "image"
         i.append_in string_tmp
         string_tmp.add_last '.'

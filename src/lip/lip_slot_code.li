@@ -1,30 +1,29 @@
 Header
-  + name      := LIP_SLOT_CODE;
-
+  + name := Lip_slot_code
 Inherit
 
-  - parent_lip_code:Expanded LIP_CODE
+  - parent_lip_code:Flat Lip_code
 
 Public
 
-  + section:STRING_ALIAS
+  + section:String_alias
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + argument:LIP_SLOT_DATA
+  + argument:Lip_slot_data
 
-  + code:LIP_CODE
+  + code:Lip_code
 
-  + comment:STRING_ALIAS
+  + comment:String_alias
 
-  + comment_chapter:STRING_ALIAS
+  + comment_chapter:String_alias
 
-  - set_comment c:STRING_ALIAS <-
+  - set_comment c:String_alias <-
   (
     comment := c
   )
 
-  - set_comment_chapter cmt:STRING_ALIAS <-
+  - set_comment_chapter cmt:String_alias <-
   (
     comment_chapter := cmt
   )
@@ -33,11 +32,11 @@ Public
   // Creation.
   //
 
-  - create p:POSITION section sec:STRING_ALIAS
-  name n:STRING_ALIAS
-  argument arg:LIP_SLOT_DATA
-  code c:LIP_CODE :LIP_SLOT_CODE <-
-  ( + result:LIP_SLOT_CODE
+  - create p:Position section sec:String_alias
+  name n:String_alias
+  argument arg:Lip_slot_data
+  code c:Lip_code :Lip_slot_code <-
+  ( + result:Lip_slot_code
 
     result := get_method n
     (result != NULL).if {
@@ -51,25 +50,25 @@ Public
     result
   )
 
-  - make p:POSITION section sec:STRING_ALIAS
-  name n:STRING_ALIAS
-  argument arg:LIP_SLOT_DATA
-  code c:LIP_CODE <-
+  - make p:Position section sec:String_alias
+  name n:String_alias
+  argument arg:Lip_slot_data
+  code c:Lip_code <-
   (
     position := p
     section := sec
     name := n
     argument := arg
     code := c
-    list_method.add_last Self
+    list_method.add_last self
   )
 
   //
   // Operation.
   //
 
-  - run_with val:LIP_CONSTANT :BOOLEAN <-
-  ( + result:BOOLEAN
+  - run_with val:Lip_constant :Boolean <-
+  ( + result:Boolean
 
     result := ! ((val = NULL) ^ (argument = NULL))
     (result).if {
@@ -92,7 +91,7 @@ Public
   // Print.
   //
   
-  - last_chapter:STRING_ALIAS
+  - last_chapter:String_alias
   
   - print <-
   (
@@ -113,7 +112,7 @@ Public
     ":\n".print
     (comment != NULL).if {
       '\t'.print
-      (comment.lower).to (comment.upper) do { i:INTEGER
+      (comment.lower).to (comment.upper) do { i:Int
         comment.at i.print
         ((comment.at i = '\n') && {i < comment.upper}).if {
           '\t'.print

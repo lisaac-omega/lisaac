@@ -1,98 +1,122 @@
 Header
-  + name := PROTO;
-  
+  + name := Proto
 Inherit
-  + parent_tok_drw:Expanded TOK_DRW
-  - parent_any:ANY := ANY
+  + parent_tok_drw:Flat Tok_drw
+  - parent_any:Any := Any
  // - parent_lix_buf:LIX_BUF := LIX_BUF
-FILE_CFG
-  - list:Expanded ARRAY PROTO
+File_cfg
+  - list:Flat Array Proto
   
 Public
-  - get_proto n:STRING_ALIAS :PROTO <- list.search_until { b:PROTO; b.src.name = n}
-  
-  + web_path:STRING_ALIAS
+  - get_proto n:String_alias :Proto <- list.search_until { b:Proto; b.src.name = n}
     
-  + key:STRING_ALIAS; // Name (\0 generic) Used for key in TPRO.
-  //- name:STRING_ALIAS <- (crash; key)
+  + web_path:String_alias
+    
+  + key:String_alias := "NULL"; // Name (\0 generic) Used for key in TPRO.
+  //- name:String_alias <- (crash; key)
   
-  - hash_code:INTEGER <- src.name.hash_code
+  - hash_code:Int <- src.name.hash_code
   
-  + type:TPRO; // Used for display tree inherit
+  + type:Tpro; // Used for display tree inherit
       
-  + src:LIX_BUF
+  + src:Lix_buf
   
-  + type_c:EXT
-  + default:EXPR
-  + export:TTOK
-  + import:TTOK
-  + lip:EXPR
-  + include_c:EXT
-  + extern_c:EXT
+  + type_c:Ext
+  + default:Expr
+  + export:Ttok
+  + import:Ttok
+  + lip:Expr
+  + include_c:Ext
+  + extern_c:Ext
       
-  + child_insert:Expanded ARRAY SLOT
-  + child_inherit:Expanded ARRAY SLOT
+  + child_insert:Flat Array Slot
+  + child_inherit:Flat Array Slot
     
-  + slot:Expanded ARRAY SLOT; // Inherit Or Insert, ...
-  //+ slot:HMAP SLOT KEY STRING_ALIAS
+  + slot:Flat Array Slot; // Inherit Or Insert, ...
+  //+ slot:HMAP SLOT KEY String_alias
     
-  - collect_parent s:SLOT :ARRAY SLOT <-
+  - collect_parent s:Slot :Array Slot <-
   (
     set_op.clear; set_cl.clear
-    set_cl.add s to (s.name_id)
+    set_cl.at (s.name_id) add s
     collect_rec_parent s
     set_op
   )
   
-  - collect_child s:SLOT :(ARRAY SLOT,ARRAY SLOT) <-
+  - collect_child s:Slot :(Array Slot,Array Slot) <-
   (
     set_op.clear; set_op2.clear; set_proto.clear
     collect_rec_child s
     set_op,set_op2
   )
   
+  - verify_cyclic_inheritance p:Proto :Boolean <-
+  ( + res:Boolean
+    (p = self).if {
+      res := True
+    } else {
+      + i:Int
+      + s:Slot
+      + pp:Proto
+      {(i <= slot.upper) && {(s := slot.at i).section.is_parent} && {!res}}.while_do {
+        ((s.ttok != NULL) && {s.type != NULL}).if {
+          pp := s.type.like Tpro.proto          
+          (pp != NULL).if {
+            res := pp.verify_cyclic_inheritance p
+          }
+        }
+        i := i + 1
+      }
+    }
+    res
+  )
+  
 Private
    
-  - set_op:ARRAY SLOT := ARRAY SLOT.create_with_capacity 32
-  - set_op2:ARRAY SLOT := ARRAY SLOT.create_with_capacity 32
-  - set_cl:HMAP SLOT KEY STRING_ALIAS := HMAP SLOT KEY STRING_ALIAS.new
-  - set_proto:HSET PROTO := HSET PROTO.create
+  - set_op:Array Slot := Array Slot.create_with_capacity 32
+  - set_op2:Array Slot := Array Slot.create_with_capacity 32
+  - set_cl:Hmap Slot Key String_alias := Hmap Slot Key String_alias.new
+  - set_proto:Hset Proto := Hset Proto.create
   
-  - collect_chapter lst:ARRAY SLOT eye y:BOOLEAN access p:PROTO <-
-  ( + i:INTEGER
-    + s:SLOT
-    + pp:PROTO
-    + new_y:BOOLEAN
-    {(i <= slot.upper) && {(s := slot.at i).section.is_parent}}.while_do {
-      (s.ttok != NULL).if {
-        pp := s.type.like TPRO.proto
-        (pp != NULL).if {
-          new_y := y & s.eye_open
-          pp.collect_local_chapter lst eye new_y access p
-          pp.collect_chapter lst eye new_y access p
+  - collect_chapter lst:Array Slot eye y:Boolean access p:Proto <-
+  ( + i:Int
+    + s:Slot
+    + pp:Proto
+    + new_y:Boolean
+    //"PROTO L66:".print; name.println
+    (! set_proto.fast_has self).if {
+      set_proto.fast_add_without_control self
+      {(i <= slot.upper) && {(s := slot.at i).section.is_parent}}.while_do {
+        ((s.ttok != NULL) && {s.type != NULL}).if {
+          pp := s.type.like Tpro.proto          
+          (pp != NULL).if {
+            new_y := y & s.eye_open
+            pp.collect_local_chapter lst eye new_y access p
+            pp.collect_chapter lst eye new_y access p
+          }
         }
+        i := i + 1
       }
-      i := i + 1
     }
   )
   
-  - collect_local_chapter lst:ARRAY SLOT eye y:BOOLEAN access p:PROTO <-
+  - collect_local_chapter lst:Array Slot eye y:Boolean access p:Proto <-
   (
-    slot.foreach { s:SLOT
+    slot.foreach { s:Slot
       if ({s.section.access p} && {! set_op.fast_has s} && {! set_cl.has (s.name_id)}) then {
-        (y).if { lst.add_last s; } else { set_cl.add s to (s.name_id); }
+        (y).if { lst.add_last s; } else { set_cl.at (s.name_id) add s; }
       }
     }
   )
   
-  - collect_rec_parent s:SLOT <-
-  ( + i,cnt:INTEGER
-    + p,r:SLOT
-    + pp:PROTO
+  - collect_rec_parent s:Slot <-
+  ( + i,cnt:Int
+    + p,r:Slot
+    + pp:Proto
     cnt := set_op.count
     {(i <= slot.upper) && {cnt = set_op.count} && {(p := slot.at i).section.is_parent}}.while_do {
-      (p.ttok != NULL).if {
-        pp := p.type.like TPRO.proto
+      ((p.ttok != NULL) && {p.type != NULL}).if {
+        pp := p.type.like Tpro.proto
         (pp != NULL).if {
           r := pp.lookup (s.name_id) filter 01
           (r != NULL).if { set_op.add_last r; }
@@ -103,18 +127,18 @@ Private
     }
   )
   
-  - collect_rec_child s:SLOT <-
+  - collect_rec_child s:Slot <-
   ( 
-    child_inherit.foreach { sl:SLOT; sl.proto.add_child_slot s in set_op }
-    child_insert .foreach { sl:SLOT; sl.proto.add_child_slot s in set_op2}
+    child_inherit.foreach { sl:Slot; sl.proto.add_child_slot s in set_op }
+    child_insert .foreach { sl:Slot; sl.proto.add_child_slot s in set_op2}
   )
   
 Private
 
-  - add_child_slot s:SLOT in o:ARRAY SLOT <-
-  ( + r:SLOT
-    (! set_proto.fast_has Self).if {
-      set_proto.fast_add_without_control Self
+  - add_child_slot s:Slot in o:Array Slot <-
+  ( + r:Slot
+    (! set_proto.fast_has self).if {
+      set_proto.fast_add_without_control self
       r := lookup (s.name_id) filter 01
       (r != NULL).if { o.add_last r; }
     }
@@ -123,8 +147,8 @@ Private
   
 Public
   
-  /*- parent b:{SLOT; BOOLEAN} :INTEGER <-
-  ( + i:INTEGER
+  /*- parent b:{SLOT; Boolean} :Int <-
+  ( + i:Int
     {
       (i <= slot_order.upper) &&
       {(slot_order.at i.section.flag & SECTION.p_insert) != 0} &&
@@ -135,15 +159,15 @@ Public
     i
   );*/
   
-  + ss:Expanded ARRAY BUNDLE
-  - ss_new t:TYPE :INTEGER <-
-  ( + result:INTEGER
+  + ss:Flat Array Bundle
+  - ss_new t:Type :Int <-
+  ( + result:Int
     result := ss.count
     (t = NULL).if {
-      ss.add_last (BUNDLE.new (TYPE.void))
+      ss.add_last (Bundle.new (Type.void))
     } else {
-      t.foreach { tt:TONE
-        ss.add_last (BUNDLE.new tt)
+      t.foreach { tt:Tone
+        ss.add_last (Bundle.new tt)
       }
     }
     result
@@ -151,32 +175,32 @@ Public
 
 Public
   
-  - new:SELF <- clone
+  - new:Self <- clone
   - free <-
   ( tname.free )
   
-  - init pth:STRING_ALIAS web wp:STRING_ALIAS :SELF <-
+  - init pth:String_alias web wp:String_alias :Self <-
   ( web_path := wp
-    list.add_last Self
-    src := LIX_BUF.new.init pth proto Self    
+    list.add_last self
+    src := Lix_buf.new.init pth proto self    
     src.load_file
     //pth.println
-    //0.to (src.upper) do { i:INTEGER; src.at i.print; }; '\n'.print
+    //0.to (src.upper) do { i:Int; src.at i.print; }; '\n'.print
     parse_name
-    Self
+    self
   )
   
   - parse_name <-
-  ( + n:STRING_BUFFER
-    + nod:NODE
-    + ts:ARRAY TYPE
-    + t:TPRO
-    n := STRING.new_tmp
+  ( + n:String_buffer
+    + nod:Node
+    + ts:Array Type
+    + t:Tpro
+    n := String.new_tmp
     parent_txt_buf := src
     pos_i := 0
     //(name.has_suffix "truc.li").if { upper.println; }
-    (upper = 0).if { src.like LIX_BUF.pre_create; }
-    word "Section"
+    (upper = 0).if { src.like Lix_buf.pre_create; }
+    //word "Section"
     (! word "Header").if {
       err syntax msg "`Header' is needed.";
     }
@@ -187,8 +211,8 @@ Public
     }
     (! word ":=").if { err syntax msg ":="; }; skip_sp
     //
-    (word "Expanded") || {word "Strict"}
-    nod := NODE.rtype
+    (word "Flat") || {word "Exact"}
+    nod := Node.rtype
     ts := push_type
     /*
     (name.has_suffix "/z.li").if {
@@ -200,10 +224,10 @@ Public
     {read_cap_idf}.while_do {      
       (last_str.count = 1).if {
         n.add_last '\0'
-        ts.add_last (TP.letter (last_str.first - 'A'))
-        nod := nod.n_arg NULL rec FALSE
+        ts.add_last (Tp.letter (last_str.first - 'A'))
+        nod := nod.n_arg NULL rec False
       } else {
-        STRING.tmp { tmp:STRING_BUFFER; // BSBS: bof
+        String.tmp { tmp:String_buffer; // BSBS: bof
           tmp.copy last_str
           //(nod = NULL).if { OUT # "Bug read: " # src.name # '\n'; }
           nod := nod.n_idf tmp
@@ -213,26 +237,26 @@ Public
     }
     (n.is_empty).if { err syntax msg "name is needed."; }
     //
-    nod.set_proto Self
+    nod.set_proto self
     key := n.to_string_alias
-    t := TPRO.new Self gen ts attr 0
+    t := Tpro.new self gen ts attr 0
     type := t
     pop_type
     n.free_tmp
     //
-    TYPE.init_base key with t
+    Type.init_base key with t
   )
   
   //- load:BUFFER <- src.load
         
-  - lookup n:STRING_ALIAS filter m:UINTEGER_8 :SLOT <-
+  - lookup n:String_alias filter m:Uint8 :Slot <-
   // 01:Local
   // 10:Parent
   // 100: Debug
   [ ? {m.in_range 1 to 7}; ]
-  ( + result:SLOT
-    + i:INTEGER
-    + to:TPRO
+  ( + result:Slot
+    + i:Int
+    + to:Tpro
     ((m & 01b) = 01b).if {
       {(i <= slot.upper) && {result = NULL}}.while_do {
         (slot.at i.name_id = n).if { result := slot.at i; }
@@ -249,7 +273,7 @@ Public
       i := 0
       {
         (i <= slot.upper) &&
-        {(slot.at i.section.flag & SECTION.p_insert) != 0} &&
+        {(slot.at i.section.flag & Section.p_insert) != 0} &&
         {result = NULL}
       }.while_do {
         to ?= slot.at i.type
@@ -265,11 +289,11 @@ Public
     result
   )
   
-  - lookup n:NODE :SLOT <-
-  ( + result:SLOT
-    result := n.search_slot_in Self
+  - lookup n:Node :Slot <-
+  ( + result:Slot
+    result := n.search_slot_in self
     (result = NULL).if {
-      parent { s:SLOT; (result := s.type.lookup n ) = NULL }
+      parent { s:Slot; (result := s.type.lookup n ) = NULL }
     }
     result
   )
@@ -278,13 +302,13 @@ Public
   // PARSER / DRAW
   //
   
-  + tname:TTOK
-  + rmk_b:INTEGER
-  + rmk_e:INTEGER
+  + tname:Ttok
+  + rmk_b:Int
+  + rmk_e:Int
   
 Private
-  - order:INTEGER
-  - test_order n:INTEGER <-
+  - order:Int
+  - test_order n:Int <-
   (
     (order > n).if {err warning msg "Order: Comment, type, default, export, import, lip, external !";}
     order := n
@@ -292,11 +316,11 @@ Private
   
 Public
   
-  - add_field:INTEGER
+  - add_field:Int
   
-  - look_hdr c:STRING :BOOLEAN <-
-  ( + i,oldp:INTEGER
-    + l:CHARACTER
+  - look_hdr c:String :Boolean <-
+  ( + i,oldp:Int
+    + l:Char
     { i := i + 1; }.do_while {(i < 4) && {skip_line}}
     oldp := pos_i
     i := 0
@@ -307,10 +331,10 @@ Public
   )
   
   - parse <-
-  ( + fuck:BOOLEAN
-    + p:INTEGER
-    //+ v:BOOLEAN
-    //+ i,p:INTEGER
+  ( + fuck:Boolean
+    + p:Int
+    //+ v:Boolean
+    //+ i,p:Int
     //+ s:SLOT
     //+ t:TPRO
     order := 0
@@ -326,10 +350,10 @@ Public
       err syntax msg "name needed."
     }
     (! word ":=").if { err syntax msg ":="; }; skip_sp
-    tname := TTOK.parse_sp (TTOK.tpro | TTOK.force)
+    tname := Ttok.parse_sp (Ttok.tpro | Ttok.force)
     ? {tname.db > 0}
     (tname.type = NULL).if {
-      //+ c:CHARACTER;
+      //+ c:Char;
       err warning msg "Type not found.";
       /*
       col (LOOK.erro) sub 0
@@ -343,26 +367,27 @@ Public
     
     //"PROTO:".print; pos_i.pt.print; ' '.print; name.println
     // COMMENT & OPTIONS:
-    fuck := FALSE
+    fuck := False
     // Read Comment
     (look_hdr "/*").if {
-      + col:INTEGER
+      + col:Int
       rmk_b := pos_i + 2
       col := sty.count+1
       rd_rem_c
-      sty.at col put (LOOK.rmk)
+      sty.at col put (Look.rmk)
       rmk_e := pos_i-2
       skip_line
     }
     // Options
-    type_c   ?= field 2 name "- type"     ass ":=" value "``" parse {EXT.parse_sp 1}
-    default  ?= field 3 name "- default"  ass ":=" value ""   parse {EXPR.parse_sp (1 | EXPR.force)}
-    export   ?= field 4 name "- export"   ass ":=" value ""   parse {TTOK.parse_sp (TTOK.tvec | TTOK.force)}
-    import   ?= field 5 name "- import"   ass ":=" value ""   parse {TTOK.parse_sp (TTOK.tvec | TTOK.force)}
-    lip      ?= field 6 name "- lip"      ass "<-" value ""   parse {EXPR.parse_sp (1 | EXPR.force)}
-    include_c?= field 7 name "- include"  ass ":=" value "``" parse {EXT.parse_sp 1}
-    extern_c ?= field 8 name "- external" ass ":=" value "``" parse {EXT.parse_sp 1}
+    type_c   ?= field 2 name "- type"     ass ":=" value "``" parse {Ext.parse_sp 1}
+    default  ?= field 3 name "- default"  ass ":=" value ""   parse {Expr.parse_sp (1 | Expr.force)}
+    export   ?= field 4 name "- export"   ass ":=" value ""   parse {Ttok.parse_sp (Ttok.tvec | Ttok.force)}
+    import   ?= field 5 name "- import"   ass ":=" value ""   parse {Ttok.parse_sp (Ttok.tvec | Ttok.force)}
+    lip      ?= field 6 name "- lip"      ass "<-" value ""   parse {Expr.parse_sp (1 | Expr.force)}
+    include_c?= field 7 name "- include"  ass ":=" value "``" parse {Ext.parse_sp 1}
+    extern_c ?= field 8 name "- external" ass ":=" value "``" parse {Ext.parse_sp 1}
     //
+    
     p := pos_i
     {
       {at (p-1) = ' '}.while_do { p := p - 1 }        
@@ -373,6 +398,7 @@ Public
       }
     }.while_loop
     toks.at tok_cur.inc_nl;
+    
     /*
     (name.has_suffix "test/misc/1/main.li").if {
       "FIN : ".print; pos_i.pt.println
@@ -380,7 +406,7 @@ Public
     
     /*
     ((pos_i = upper) || {at pos_i.is_upper}).if_false {
-      0.to 600 do { i:INTEGER; at i.print; }
+      0.to 600 do { i:Int; at i.print; }
       '\n'.print
       src.name.println
       "\nIncorrect format!".println
@@ -392,19 +418,34 @@ Public
     //(name.has_suffix "cmd_exit.li").if { "Line=".print; toks.at tok_cur.nl.println; }
   )
   
-  - field id:INTEGER name n:STRING_ALIAS ass ass:STRING_ALIAS value v:STRING_ALIAS parse p:{TOK_ITM} :TOK_ITM <-
-  ( + cur:POS
-    + pg:TXT_PG
-    + result:TOK_ITM
+  - field id:Int name n:String_alias ass ass:String_alias value v:String_alias parse p:{Tok_itm} :Tok_itm <-
+  ( + cur:Pos
+    + pg:Txt_pg
+    + result:Tok_itm
+    + ps:Int
     (look_hdr n).if { pos_i := pos_i + n.count; test_order id
       (! word ass).if { err syntax msg ass; }
       result := p.value
       read_c ';'
       skip_line
-    }.elseif {(add_field = id) && {PAGE.cur_pg.buf_pg.buffer = src}} then {
+    }.elseif {(add_field = id) && {Page.cur_pg.buf_pg.buffer = src}} then {
       add_field := 0
+      
       (at pos_i = '\n').if { pos_i := pos_i + 1; } else {
         {at (pos_i-1) = ' '}.while_do { pos_i := pos_i - 1; }
+      }
+      (pos_i > di).if {
+        // Identic end parse
+        ps := pos_i
+        {
+          {at (ps-1) = ' '}.while_do { ps := ps - 1 }
+          (at (ps-1) = '\n').if {
+            pos_i := ps
+            //toks.at tok_cur.dec_nl;
+            ps := ps - 1
+          }
+        }.while_loop
+        //toks.at tok_cur.inc_nl;
       }
       src.intern_at pos_i add "  "; pos_i := pos_i + 2
       src.intern_at pos_i add n;    pos_i := pos_i + n.count
@@ -413,13 +454,13 @@ Public
       src.intern_at pos_i add " ";  pos_i := pos_i + 1
       cur := pos_i
       src.intern_at pos_i add v;    pos_i := pos_i + v.count
-      src.intern_at pos_i add "\n"
+      src.intern_at pos_i add "\n";       
       pos_i := cur
-      pg ?= PAGE.cur_pg.buf_pg
+      pg ?= Page.cur_pg.buf_pg
       pg.set_pos (cur.pt + v.count/2)
       result := p.value
-      //read_c ';'
-      skip_line
+      read_c ';'
+      skip_line      
     }
     result
   )
@@ -435,7 +476,7 @@ Public
     end pos_i
   )
   
-  + open_win:CHARACTER := '0'
+  + open_win:Char := '0'
   
   - draw <-
   (    
@@ -445,13 +486,13 @@ Public
     //print_sty 0
     tex.add_x (100)
     begin_line; tex.ascdes (asc_c,des_c)
-    pos_i := POS.new_ico 0
-    DIV.new.ico (LOOK.comment) alpha 1 act
-    {b:DIV; open_win := (open_win = '1').ok '0' or '1'; }
-    DIV.new.ico (LOOK.card)    alpha 1 act
-    {b:DIV; open_win := (open_win = '2').ok '0' or '2'; }
-    DIV.new.ico (LOOK.inherit) alpha 1 act
-    {b:DIV; open_win := (open_win = '3').ok '0' or '3'; }
+    pos_i := Pos.new_ico 0
+    Div.new.ico (Look.comment) alpha 1 act
+    {b:Div; open_win := (open_win = '1').ok '0' or '1'; }
+    Div.new.ico (Look.card)    alpha 1 act
+    {b:Div; open_win := (open_win = '2').ok '0' or '2'; }
+    Div.new.ico (Look.inherit) alpha 1 act
+    {b:Div; open_win := (open_win = '3').ok '0' or '3'; }
     tex.add_x 30
     draw_itm tname
     //
@@ -459,31 +500,34 @@ Public
     draw_comment
     draw_card
     draw_inherit
+    //OUT # "Av.Draw = " # pos_i.pt # '\n'
     pos_i := di
-    //OUT # "Draw = " # di # '\n'
+    //OUT # "Ap.Draw = " # di # '\n'
     dh := tex.y - Old tex.y
   )
   
-  + collect_slot:ARRAY SLOT
+  + collect_slot:Array Slot
   - collect_slot_parent <-
   (
-    (collect_slot = NULL).if { collect_slot := ARRAY SLOT.create_with_capacity 128; } else { collect_slot.clear; }
+    (collect_slot = NULL).if { collect_slot := Array Slot.create_with_capacity 128; } else { collect_slot.clear; }
     set_cl.clear
-    collect_local_chapter collect_slot eye FALSE access Self
-    collect_chapter collect_slot eye TRUE access Self
-    
+    collect_local_chapter collect_slot eye False access self
+    set_proto.clear
+    //"DEB".println    
+    collect_chapter collect_slot eye True access self
+    //"Fin".println
   )
    
-  - draw_extern_slot k:STRING_ALIAS idx i:INTEGER :INTEGER <-  
+  - draw_extern_slot k:String_alias idx i:Int :Int <-  
   // Used by Chapter 
-  ( + p:INTEGER
+  ( + p:Int
     p := i
-    collect_slot.foreach { s:SLOT
+    collect_slot.foreach { s:Slot
       (((s.chapter = NULL) && {k = NULL}) || {(s.chapter != NULL) && {s.chapter.key = k}}).if {        
-        pos_i := POS.new_ico p
+        pos_i := Pos.new_ico p
         p := p + 1
         begin_line
-        DIV.new.draw_out s
+        Div.new.draw_out s
         end_line
       }
     }
@@ -492,48 +536,48 @@ Public
   )
   
   - draw_extern_slot_other <-
-  ( - keyset:HSET STRING_ALIAS
-    + chap:CHAPTER
-    + k:STRING_ALIAS
-    + p:INTEGER
-    (keyset = NULL).if { keyset := HSET STRING_ALIAS.create; } else { keyset.clear; }
-    collect_slot.foreach { s:SLOT
+  ( - keyset:Hset String_alias
+    + chap:Chapter
+    + k:String_alias
+    + p:Int
+    (keyset = NULL).if { keyset := Hset String_alias.create; } else { keyset.clear; }
+    collect_slot.foreach { s:Slot
       ((s.chapter != NULL) && {s.chapter.key != NULL}).if {
         keyset.fast_add (s.chapter.key)
       }
     }
-    0.to (src.toks.upper) do { i:INTEGER
+    0.to (src.toks.upper) do { i:Int
       chap ?= src.toks.at i
       ((chap != NULL) && {chap.key != NULL}).if {
         keyset.fast_remove (chap.key)
       }
     }
     p := draw_extern_slot NULL idx p
-    (keyset.lower).to (keyset.upper) do { i:INTEGER
+    (keyset.lower).to (keyset.upper) do { i:Int
       k := keyset.at i
-      CHAPTER.draw_extern_key k
+      Chapter.draw_extern_key k
       p := draw_extern_slot k idx p
     }
   )
   
 Private
   
-  - tmp_str:STRING_BUFFER := STRING_BUFFER.create 64
+  - tmp_str:String_buffer := String_buffer.create 64
   
   - draw_nothing <-
-  ( + e0,e1,x,y,p2:REAL_32
-    + p:PAINT
-    + col1,col0:COLOR
+  ( + e0,e1,x,y,p2:Real32
+    + p:Paint
+    + col1,col0:Color
     (e0,e1) := (1,8)
     
-    p2 := REAL_32.pi/2
-    col1 := LOOK.header
-    col0 := COLOR.white; //rgba (col0.ri,col0.gi,col0.bi,0)
+    p2 := Real32.pi/2
+    col1 := Look.header
+    col0 := Color.white; //rgba (col0.ri,col0.gi,col0.bi,0)
     (open_win = '0').if {
       (x,y) := (tex.x+x_space,tex.y + e1 + e1)
       begin_path
       arc (x,y) radius e1 angle (p2,-p2) direction 2
-      p := PAINT.create_radial (x,y+e1) radius (0,e1) color col0 to col1
+      p := Paint.create_radial (x,y+e1) radius (0,e1) color col0 to col1
       fill_paint p
       fill
       p.free
@@ -543,7 +587,7 @@ Private
       //line_to (tex.xmax,y-e1)
       arc (tex.xmax,y-e0) radius e0 angle (-p2,p2) direction 2
       line_to (x,y+e1)
-      p := PAINT.create_linear (x,y+e1) to (x,y) color col0 to col1
+      p := Paint.create_linear (x,y+e1) to (x,y) color col0 to col1
       fill_paint p
       fill
       p.free
@@ -558,21 +602,21 @@ Private
     }
   )
   
-  - border id:INTEGER do blc:{} <-
-  ( + xb,x0,y0,ye,x,y,r0,r1,e0,e1,p2:REAL_32
-    + d:WIN
-    + col1,col0:COLOR
-    + p:PAINT
+  - border id:Int do blc:{} <-
+  ( + xb,x0,y0,ye,x,y,r0,r1,e0,e1,p2:Real32
+    + d:Win
+    + col1,col0:Color
+    + p:Paint
     (r0,r1) := (20,80)
     (e0,e1) := (4,8)
-    col1 := LOOK.header
-    col0 := COLOR.white; //rgba (col0.ri,col0.gi,col0.bi,0)
+    col1 := Look.header
+    col0 := Color.white; //rgba (col0.ri,col0.gi,col0.bi,0)
     
     //stroke_width 1
     //stroke_color (COLOR.black)
     
     d := child.at id
-    p2 := REAL_32.pi/2
+    p2 := Real32.pi/2
     (x0,y0) := (d.xo + d.width/2, d.ymax + e0 + 2)
     (x,y) := (x0+e0,y0)
     xb := tex.x + x_space
@@ -582,14 +626,14 @@ Private
     x := xb + e1
     y := y + r0
     ye := y+r1
-    arc (x+r1, ye) radius (r1-1) angle (-p2,REAL_32.pi) direction 1
-    p := PAINT.create_radial (xb+r1,y+r1) radius (r1-e1,r1) color col0 to col1
+    arc (x+r1, ye) radius (r1-1) angle (-p2,Real32.pi) direction 1
+    p := Paint.create_radial (xb+r1,y+r1) radius (r1-e1,r1) color col0 to col1
     //
     x := xb - e1
-    arc (x+r1+2, ye) radius (r1+2) angle (REAL_32.pi,-p2) direction 2
+    arc (x+r1+2, ye) radius (r1+2) angle (Real32.pi,-p2) direction 2
     (x,y) := (x0-e0,y0)
     arc (x-r0+2,y) radius (r0-2) angle (p2,0) direction 1
-    arc (x0,y0) radius e0 angle (REAL_32.pi,0) direction 2
+    arc (x0,y0) radius e0 angle (Real32.pi,0) direction 2
     fill_paint p
     fill
     p.free
@@ -600,7 +644,7 @@ Private
     (ye < tex.y).if {
       begin_path
       (x,y) := (xb,ye)
-      p := PAINT.create_linear (x+e1,ye) to (x,y) color col0 to col1
+      p := Paint.create_linear (x+e1,ye) to (x,y) color col0 to col1
       rect (x-e1,ye) to (x+e1,tex.y-1)
       fill_paint p
       fill
@@ -610,8 +654,8 @@ Private
     //
     begin_path
     (x,y) := (xb,ye)
-    arc (x,y) radius e1 angle (0,REAL_32.pi) direction 2
-    p := PAINT.create_radial (x+e1,y) radius (0,e1) color col0 to col1
+    arc (x,y) radius e1 angle (0,Real32.pi) direction 2
+    p := Paint.create_radial (x+e1,y) radius (0,e1) color col0 to col1
     fill_paint p
     fill
     p.free
@@ -624,10 +668,10 @@ Private
   //
   
   - draw_comment <-
-  ( + e:INTEGER
-    + old_pt:POS
-    + x,y,w:REAL_32
-    + c:CHARACTER
+  ( + e:Int
+    + old_pt:Pos
+    + x,y,w:Real32
+    + c:Char
     (open_win != '1').if {
       // Nothing.
     } else {
@@ -643,7 +687,7 @@ Private
         pos_i := rmk_b
         begin_line
         //fill_color (LOOK.cols.at (LOOK.rmk))
-        last_div := DIV.new.text
+        last_div := Div.new.text
         tex.ascdes (asc_c,des_c)
         {pos_i.pt < rmk_e}.while_do {
           old_pt := pos_i
@@ -656,15 +700,10 @@ Private
               (e <= upper).if {
                 tmp_str.clear; from pos_i to (e-1) in tmp_str
                 (w,x,y,x,y) := text_bounds (tex.x,tex.y) msg tmp_str
-                (tex.x + w > xo+width-x_space*3).if { c := '\n'; }
+                (tex.x + w > xo+width-x_space*3).if { tmp_c.copy "\n" }
               }
-            }
-            (c = '\n').if {
-              end_line
-              begin_line
-            } else {
-              draw_tmp_c
-            }
+            }            
+            draw_tmp_c
             pos_i := pos_i + tmp_c.count
           }
         }
@@ -679,68 +718,68 @@ Private
   //
   
   - draw_card <-
-  ( + cpt:INTEGER
-    - menu:BOOLEAN
+  ( + cpt:Int
+    - menu:Boolean
     (open_win != '2').if {
       // Nothing.
-      menu := FALSE
+      menu := False
     } else {
       border (open_win -! '1') do {        
         begin_line
-        DIV.ico (LOOK.path) alpha 1 act NULL
-        fill_color (LOOK.directive)
+        Div.ico (Look.path) alpha 1 act NULL
+        fill_color (Look.directive)
         text (tex.x,tex.y) msg (src.name)
         end_line
         //
-        STRING.tmp { tmp:STRING_BUFFER
+        String.tmp { tmp:String_buffer
           date_create.append_ddmmyy_in tmp
           tmp += " ↦ "; // tmp += " ➔ "
           date_update.append_ddmmyy_in tmp
           begin_line
-          DIV.ico (LOOK.calendar) alpha 1 act NULL
-          fill_color (LOOK.directive)
+          Div.ico (Look.calendar) alpha 1 act NULL
+          fill_color (Look.directive)
           text (tex.x,tex.y) msg tmp
           end_line
         }
         //
         cpt :=
-        draw_field type_c    img (LOOK.type_c)    +
-        draw_field default   img (LOOK.default)   +
-        draw_field export    img (LOOK.export)    +
-        draw_field import    img (LOOK.import)    +
-        draw_field lip       img (LOOK.lip)       +
-        draw_field include_c img (LOOK.include_c) +
-        draw_field extern_c  img (LOOK.extern_c)
+        draw_field type_c    img (Look.type_c)    +
+        draw_field default   img (Look.default)   +
+        draw_field export    img (Look.export)    +
+        draw_field import    img (Look.import)    +
+        draw_field lip       img (Look.lip)       +
+        draw_field include_c img (Look.include_c) +
+        draw_field extern_c  img (Look.extern_c)
         (cpt != 7).if {
-          pos_i := POS.new_ico 3; // Comment+Card+Inherit
+          pos_i := Pos.new_ico 3; // Comment+Card+Inherit
           begin_line
-          ((!menu) || {PAGE.cur_pg.buf_pg.buffer != src}).if {            
-            DIV.new.drw {
-              fill_color (COLOR.gray)
+          ((!menu) || {Page.cur_pg.buf_pg.buffer != src}).if {            
+            Div.new.drw {
+              fill_color (Color.gray)
               tex.ascdes (asc_c,des_c)
               tex.set_x (text (tex.x,tex.y) msg " + ")
-            } act { b:DIV; menu := TRUE; }
+            } act { b:Div; menu := True; }
           } else {
-            (type_c = NULL).if { DIV.new.ico (LOOK.type_c) alpha 0.3 act
-              { b:DIV; add_field := 2; menu := FALSE; parse_local; }
+            (type_c = NULL).if { Div.new.ico (Look.type_c) alpha 0.3 act
+              { b:Div; add_field := 2; menu := False; parse_local; }
             }
-            (default = NULL).if { DIV.new.ico (LOOK.default) alpha 0.3 act
-              { b:DIV; add_field := 3; menu := FALSE; parse_local; }
+            (default = NULL).if { Div.new.ico (Look.default) alpha 0.3 act
+              { b:Div; add_field := 3; menu := False; parse_local; }
             }
-            (export = NULL).if { DIV.new.ico (LOOK.export) alpha 0.3 act
-              { b:DIV; add_field := 4; menu := FALSE; parse_local; }
+            (export = NULL).if { Div.new.ico (Look.export) alpha 0.3 act
+              { b:Div; add_field := 4; menu := False; parse_local; }
             }
-            (import = NULL).if { DIV.new.ico (LOOK.import) alpha 0.3 act
-              { b:DIV; add_field := 5; menu := FALSE; parse_local; }
+            (import = NULL).if { Div.new.ico (Look.import) alpha 0.3 act
+              { b:Div; add_field := 5; menu := False; parse_local; }
             }
-            (lip = NULL).if { DIV.new.ico (LOOK.lip) alpha 0.3 act
-              { b:DIV; add_field := 6; menu := FALSE; parse_local; }
+            (lip = NULL).if { Div.new.ico (Look.lip) alpha 0.3 act
+              { b:Div; add_field := 6; menu := False; parse_local; }
             }
-            (include_c = NULL).if { DIV.new.ico (LOOK.include_c) alpha 0.3 act
-              { b:DIV; add_field := 7; menu := FALSE; parse_local; }
+            (include_c = NULL).if { Div.new.ico (Look.include_c) alpha 0.3 act
+              { b:Div; add_field := 7; menu := False; parse_local; }
             }
-            (extern_c = NULL).if { DIV.new.ico (LOOK.extern_c) alpha 0.3 act
-              { b:DIV; add_field := 8; menu := FALSE; parse_local; }
+            (extern_c = NULL).if { Div.new.ico (Look.extern_c) alpha 0.3 act
+              { b:Div; add_field := 8; menu := False; parse_local; }
             }
           }
           end_line
@@ -750,30 +789,33 @@ Private
     }
   )
   
-  - icon img:IMG <-
+  - icon img:Img <-
   (
     begin_line
-    DIV.ico img alpha 1 act NULL
+    Div.ico img alpha 1 act NULL
   )
   
-  - draw_itm t:TOK_ITM <-
-  (    
+  - draw_itm t:Tok_itm <-
+  ( + i:Int   
     pos_i := t.db
-    last_div := DIV.new.text
+    last_div := Div.new.text
     tex.ascdes (asc_c,des_c)
     t.draw
+    i := pos_i
+    {at i = ' '}.while_do { i := i + 1 }
+    draw_std i
     end_text
   )
   
-  - draw_field t:TOK_ITM img img:IMG :INTEGER <-
-  ( + result,i:INTEGER
-    + c:CHARACTER
-    + after:BOOLEAN
+  - draw_field t:Tok_itm img img:Img :Int <-
+  ( + result,i:Int
+    + c:Char
+    + after:Boolean
     (t != NULL).if {      
       (
-        (t.dd = 0) &&
-        {PAGE.cur_pg.buf_pg.buffer = src} &&
-        {PAGE.cur_pg.buf_pg.like TXT_PG.pos.pt != t.db} // pti
+        (t.dd <= 0) &&
+        {Page.cur_pg.buf_pg.buffer = src} && 
+        {Page.cur_pg.buf_pg.like Txt_pg.pos.pt != t.db} // pti
       ).if {
         //"Suppr".println
         after := (pos > pos_i); // pti ptoi
@@ -808,18 +850,18 @@ Private
   // Inherit 
   //
   
-  - hset_proto:HSET PROTO KEY STRING_ALIAS := HSET PROTO KEY STRING_ALIAS.create
-  - margin_h:REAL_32 := 16
-  - hbox:REAL_32 := 40
-  - eye_width:REAL_32 := 40
+  - hset_proto:Hset Proto Key String_alias := Hset Proto Key String_alias.create
+  - margin_h:Real32 := 16
+  - hbox:Real32 := 40
+  - eye_width:Real32 := 40
   
-  - col_typ0:COLOR := COLOR.rgba (255,255,255,10)
-  - col_typ1:COLOR := COLOR.rgba (255,255,255,30)
+  - col_typ0:Color := Color.rgba (255,255,255,10)
+  - col_typ1:Color := Color.rgba (255,255,255,30)
   
   - draw_inherit <-
-  ( + x1,y1,x2,y2,xm,a,d,y3:REAL_32
-    + beg_div,v:INTEGER
-    + div:DIV
+  ( + x1,y1,x2,y2,xm,a,d,y3:Real32
+    + beg_div,v:Int
+    + div:Div
     (open_win != '3').if {
       // Nothing.
     } else {
@@ -829,10 +871,10 @@ Private
         lisave
         hset_proto.clear
         //
-        (x1,y1) := draw_parent Self to (tex.x,0)
-        child_inherit.quick_sort_with {(s0,s1:SLOT); s0.proto.key < s1.proto.key}
-        child_insert .quick_sort_with {(s0,s1:SLOT); s0.proto.key < s1.proto.key}
-        (x2,y2) := draw_child  Self to (tex.x,0)
+        (x1,y1) := draw_parent self to (tex.x,0)
+        child_inherit.quick_sort_with {(s0,s1:Slot); s0.proto.key < s1.proto.key}
+        child_insert .quick_sort_with {(s0,s1:Slot); s0.proto.key < s1.proto.key}
+        (x2,y2) := draw_child  self to (tex.x,0)
         //
         xm := x1.max x2
         //
@@ -842,21 +884,21 @@ Private
         restore_to ((tex.x + xm - x1)/2,a + (hbox - a + d)/2)
         //
         begin_path; line (tex.x,0) to (xm,0); line (tex.x,hbox) to (xm,hbox)
-        stroke_color (LOOK.header); stroke_width 3.0; stroke
+        stroke_color (Look.header); stroke_width 3.0; stroke
         // Sort DIV        
-        child.quick_sort {(a,b:WIN)
-          + r:BOOLEAN
-          ((a.ymax - b.ymax).abs > FONT.size_app).if {
+        child.quick_sort {(a,b:Win)
+          + r:Boolean
+          ((a.ymax - b.ymax).abs > Font.size_app).if {
             r := a.ymax < b.ymax
           } else {
             r := a.xo < b.xo
           }
           r
         } from beg_div to (child.upper)
-        (beg_div).to (child.upper) do { i:INTEGER
+        (beg_div).to (child.upper) do { i:Int
           div ?= child.at i
           //div.ptov.print; "->".print
-          div.set_pos (POS.new_ico v) pte (POS.new_ico v)
+          div.set_pos (Pos.new_ico v) pte (Pos.new_ico v)
           //v.println
           v := v + 1
         }
@@ -870,11 +912,11 @@ Private
     }
   )
   
-  - draw_parent p:PROTO to (x,y:REAL_32) :(REAL_32,REAL_32) <-
-  ( + px,py,tx,ty:REAL_32
-    + tt:TPRO
-    + j:INTEGER
-    + s:SLOT
+  - draw_parent p:Proto to (x,y:Real32) :(Real32,Real32) <-
+  ( + px,py,tx,ty:Real32
+    + tt:Tpro
+    + j:Int
+    + s:Slot
     (px,py) := (x,y)
     hset_proto.very_fast_add p
     {(j <= p.slot.upper) && {(s := p.slot.at j).section.is_parent}}.while_do {      
@@ -891,40 +933,40 @@ Private
     px,py
   )
   
-  - draw_child p:PROTO to (x,y:REAL_32) :(REAL_32,REAL_32) <-
-  ( + px,py,tx,ty,px_max, py_max,ox,oy:REAL_32
+  - draw_child p:Proto to (x,y:Real32) :(Real32,Real32) <-
+  ( + px,py,tx,ty,px_max, py_max,ox,oy:Real32
     px_max := x
     px := x + 100
     py := y + hbox + 20
-    p.child_inherit.foreach { s:SLOT
+    p.child_inherit.foreach { s:Slot
       oy := py+hbox/2
       arrow_h s from (px,oy) to (x+20)
       (tx,ty) := draw_child (s.proto) to (px,py)
       px_max := px_max.max (drw_proto s to (px,py,tx))
       py := ty
     }
-    (! p.child_inherit.is_empty).if { arrow_v (x+20,oy) to (y+hbox+2) dotted FALSE; }
+    (! p.child_inherit.is_empty).if { arrow_v (x+20,oy) to (y+hbox+2) dotted False; }
     py_max := py
     //
     ox := px_max + 20; // Margin Inherit <-> Insert
     px := ox + 100
     oy := py := y + hbox + 20
-    p.child_insert.foreach { s:SLOT
+    p.child_insert.foreach { s:Slot
       oy := py+hbox/2
       arrow_h s from (px,oy) to (ox+20)
       (tx,ty) := draw_child (s.proto) to (px,py)
       px_max := px_max.max (drw_proto s to (px,py,tx))
       py := ty
     }
-    (! p.child_insert.is_empty).if { arrow_v (ox+20,oy) to (y+hbox+2) dotted TRUE; }
+    (! p.child_insert.is_empty).if { arrow_v (ox+20,oy) to (y+hbox+2) dotted True; }
     py_max := py_max.max py
     px_max,py_max
   )
   
-  - drw_type s:SLOT to (x,y,xm:REAL_32) :REAL_32 <-
-  ( + px,a,d:REAL_32
-    + be,en:INTEGER
-    + tpro:TPRO
+  - drw_type s:Slot to (x,y,xm:Real32) :Real32 <-
+  ( + px,a,d:Real32
+    + be,en:Int
+    + tpro:Tpro
     be := trace_pointer
     lisave
     tpro ?= s.ttok.type
@@ -935,7 +977,7 @@ Private
     px := px + margin_h
     px := px + eye_width
     px := px.max xm
-    border (x,y) to (px,y+hbox) col ((s.proto = Self).ok col_typ1 or col_typ0)
+    border (x,y) to (px,y+hbox) col ((s.proto = self).ok col_typ1 or col_typ0)
     //    
     s.draw_eye (px-eye_width,y+asc_c+4)
     //
@@ -943,9 +985,9 @@ Private
     px
   )
   
-  - drw_proto s:SLOT to (x,y,xm:REAL_32) :REAL_32 <-
-  ( + px,a,d:REAL_32
-    + be,en:INTEGER
+  - drw_proto s:Slot to (x,y,xm:Real32) :Real32 <-
+  ( + px,a,d:Real32
+    + be,en:Int
     be := trace_pointer; lisave
     //(px,a,d) := s.draw_type_extern_to (x+margin_h,y)
     (px,a,d) := s.proto.draw_to (x+margin_h,y)
@@ -956,16 +998,16 @@ Private
     px
   )
     
-  - border (x0,y0:REAL_32) to (x1,y1:REAL_32) col c:COLOR <-
+  - border (x0,y0:Real32) to (x1,y1:Real32) col c:Color <-
   ( begin_path; rect (x0,y0) to (x1,y1) radius 8
     fill_color c; fill
-    stroke_width 3.0; stroke_color (LOOK.header); stroke
+    stroke_width 3.0; stroke_color (Look.header); stroke
   )
        
-  - arrow_up s:SLOT from (x,y0:REAL_32) to (y1:REAL_32) <-
-  ( + py:REAL_32
-    LOOK.clone (s.clonable) exp FALSE to (x-12,y0-2)
-    //DCHAR.clone (s.clonable) exp (s.expanded) to (x-10,y0-2)
+  - arrow_up s:Slot from (x,y0:Real32) to (y1:Real32) <-
+  ( + py:Real32
+    Look.clone (s.clonable) exp False to (x-12,y0-2)
+    //DCHAR.clone (s.clonable) exp (s.flat) to (x-10,y0-2)
     begin_path
     line_cap butt; //square
     py := y0 - 20
@@ -977,15 +1019,15 @@ Private
     }
     move_to (x-8,y1+8); line_to (x,y1); line_to (x+8,y1+8)
     stroke_width 3
-    stroke_color (LOOK.none)
+    stroke_color (Look.none)
     stroke
   )
   
-  - arrow_h s:SLOT from (x0,y:REAL_32) to (x1:REAL_32) <-
-  ( + px:REAL_32
+  - arrow_h s:Slot from (x0,y:Real32) to (x1:Real32) <-
+  ( + px:Real32
     px := x0 - 20 - s.clonable.ok 7 or 0
-    LOOK.clone (s.clonable) exp FALSE to (px-1,y + 8)
-    //DCHAR.clone (s.clonable) exp (s.expanded) to (px,y + 8)
+    Look.clone (s.clonable) exp False to (px-1,y + 8)
+    //DCHAR.clone (s.clonable) exp (s.flat) to (px,y + 8)
     begin_path
     line_cap butt
     (s.section.is_insert).if {
@@ -995,12 +1037,12 @@ Private
       line (px,y) to (x1,y)
     }
     stroke_width 3
-    stroke_color (LOOK.none)
+    stroke_color (Look.none)
     stroke
   )
   
-  - arrow_v (x,y0:REAL_32) to (y1:REAL_32) dotted t:BOOLEAN <-
-  ( + py:REAL_32
+  - arrow_v (x,y0:Real32) to (y1:Real32) dotted t:Boolean <-
+  ( + py:Real32
     begin_path
     line_cap butt
     py := y0
@@ -1012,7 +1054,7 @@ Private
     }
     move_to (x-8,y1+8); line_to (x,y1); line_to (x+8,y1+8)
     stroke_width 3
-    stroke_color (LOOK.none)
+    stroke_color (Look.none)
     stroke
   )
   
@@ -1020,13 +1062,13 @@ Private
   // MAP
   //
   
-  - draw_map div_id:INTEGER :REAL_32 <-
-  ( + x,y,py,px:REAL_32
+  - draw_map div_id:Int :Real32 <-
+  ( + x,y,py,px:Real32
     
-    pos_i := POS.new_ico div_id
+    pos_i := Pos.new_ico div_id
     
     begin_path
-    stroke_color (LOOK.none)
+    stroke_color (Look.none)
     line (tex.x,tex.y) to (width-tex.x,tex.y)
     stroke_width 1
     stroke
@@ -1041,49 +1083,49 @@ Private
     x := px
     (type_c != NULL).if {
       begin_path
-      stroke_color (LOOK.none)
+      stroke_color (Look.none)
       stroke_width 3.0
       rect (x,py+asc_c-16) size (14,14)
       stroke
       y := py + asc_c - des_c
     } else {
       py := py - des_c + 5
-      (x,y) := header_box Self to (tex.x,py) xmax 0
+      (x,y) := header_box self to (tex.x,py) xmax 0
       xxmax := x
-      (x,y) := header_box Self to (tex.x,py) xmax x
+      (x,y) := header_box self to (tex.x,py) xmax x
     }
     //
     
     y-tex.y        
   )
   
-  - xxmax:REAL_32
-  - header_box p:PROTO to (x,y:REAL_32) xmax xmx:REAL_32 :(REAL_32,REAL_32) <-
-  ( + yb,xm,xe,hc,xc,yc,xb,de,a,d:REAL_32
-    + t:TYPE
-    + to:TPRO
-    + tb:TBLC
-    + nf:BOOLEAN
+  - xxmax:Real32
+  - header_box p:Proto to (x,y:Real32) xmax xmx:Real32 :(Real32,Real32) <-
+  ( + yb,xm,xe,hc,xc,yc,xb,de,a,d:Real32
+    + t:Type
+    + to:Tpro
+    + tb:Tblc
+    + nf:Boolean
     
     hc := asc_c-des_c
     yb := y
-    p.slot.foreach { s:SLOT
+    p.slot.foreach { s:Slot
       ((s.clonable) && {s.ttok != NULL} && {s.type != NULL}).if {        
         de := 0
         (xmx <= 0).if {          
-          //xb := x+5+16; //DCHAR.clone TRUE exp (s.expanded) to (x+5,yb+5+asc_c)
-          xb := LOOK.clone TRUE exp FALSE to (x+5,yb+5+asc_c)
+          //xb := x+5+16; //DCHAR.clone TRUE exp (s.flat) to (x+5,yb+5+asc_c)
+          xb := Look.clone True exp False to (x+5,yb+5+asc_c)
           to ?= s.type
           tb ?= s.type
           xe := xb; //+x_space*0.5
-          fill_color (LOOK.cols.at (LOOK.slot))
-          STRING.tmp { tmp:STRING_BUFFER
+          fill_color (Look.cols.at (Look.slot))
+          String.tmp { tmp:String_buffer
             tmp.copy (s.name_id)
             tmp.replace_all '\0' with ' '; // BSBS: Utile maintenant ??
             xe := text (xe+x_space,yb+5+asc_c) msg tmp
           }
-          (((to != NULL) && {(to.is (TYPE.expanded)) || {to.proto.type_c != NULL}}) || {tb != NULL}).if {
-            fill_color (LOOK.none)
+          (((to != NULL) && {(to.is (Type.flat)) || {to.proto.type_c != NULL}}) || {tb != NULL}).if {
+            fill_color (Look.none)
             xe := text (xe,yb+5+asc_c) msg ":"
             //save
             (xe,a,d) := s.draw_type_extern_to (xe,yb+5+asc_c)            
@@ -1093,17 +1135,17 @@ Private
           (nf).if {
             begin_path
             stroke_width 1.0
-            stroke_color (LOOK.header)
+            stroke_color (Look.header)
             line (x,yb) to (xmx,yb)
             stroke
           }
         }
-        nf := TRUE
+        nf := True
         t := s.type
-        t.foreach_until { tt:TONE
+        t.foreach_until { tt:Tone
           to ?= tt
           tb ?= tt
-          ((to != NULL) && {to.is (TYPE.expanded)} && {to.proto.type_c = NULL}).if {
+          ((to != NULL) && {to.is (Type.flat)} && {to.proto.type_c = NULL}).if {
             (xb,yb) := header_box (to.proto) to (x + 10,yb+hc+10) xmax (xmx-10)
             xm := xm.max xb.max xe
           } else {
@@ -1112,14 +1154,14 @@ Private
               (xc,yc) := (xmx - 22 + 8,yb+5+asc_c-7)
               (((to != NULL) && {(to.proto = NULL) || {to.proto.type_c != NULL}}) || {tb != NULL}).if {
                 begin_path
-                stroke_color (LOOK.none)
+                stroke_color (Look.none)
                 stroke_width 3.0
                 rect (xc-7,yc-7) size (14,14)
                 stroke
               } else {
                 begin_path
-                fill_color (LOOK.none)
-                stroke_color (LOOK.none)
+                fill_color (Look.none)
+                stroke_color (Look.none)
                 circle (xc,yc) radius 8
                 fill
                 begin_path
@@ -1135,13 +1177,13 @@ Private
             yb := yb + hc + 10
           }                    
           xm := xm.max (xe+de)
-          FALSE
+          False
         }
       }
     }
     (xmx > 10).if {
       begin_path
-      stroke_color (LOOK.header)
+      stroke_color (Look.header)
       stroke_width 3.0
       rect (x,y) to (xmx,yb) radius 4
       stroke
@@ -1151,10 +1193,10 @@ Private
   
 Public
   
-  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <-
-  ( + rx,ra,rd:REAL_32
-    + mute:BOOLEAN
-    mute := TOK_ITM.txt_buf = src
+  - draw_to (x,y:Real32) :(Real32,Real32,Real32) <-
+  ( + rx,ra,rd:Real32
+    + mute:Boolean
+    mute := Tok_itm.txt_buf = src
     tex.push (0,0)
     tex.set_xy (x,y-asc_c)
     // Load environnement    
@@ -1165,19 +1207,19 @@ Public
     // Draw
     
     (mute).if {
-      DIV.mute { tname.draw; }
+      Div.mute { tname.draw; }
     } else {
-      DIV.new.drw {
-        DIV.mute { tname.draw; }
-      } act {d:DIV
-        PAGE.cur_pg.set_buffer src
+      Div.new.drw {
+        Div.mute { tname.draw; }
+      } act {d:Div
+        Page.cur_pg.set_buffer src
       }
     }
     (rx,ra,rd) := (tex.x,tex.asc,tex.des)
     end_line
     // Restore Old environnement
     begin (Old pt_b)
-    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    Tok_itm.set_parent_tok_drw (Old Tok_itm.parent_t_drw)
     styi := Old styi
     tok_cur := Old tok_cur
     pos_i := Old pos_i
@@ -1194,10 +1236,10 @@ Public
     begin 0
     styi := 0
     pos_i := tname.db
-    DIV.mute { tname.draw; }
+    Div.mute { tname.draw; }
     // Restore Old environnement
     begin (Old pt_b)
-    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    Tok_itm.set_parent_tok_drw (Old Tok_itm.parent_t_drw)
     styi := Old styi
     tok_cur := Old tok_cur
     pos_i := Old pos_i
@@ -1209,9 +1251,9 @@ Public
   // Commands
   //
   
-  - search s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
+  - search s:String base b:Int at idx:Int :Int <-
   [ ? {idx.in_range b to (b+di)}; ]
-  ( + r:INTEGER
+  ( + r:Int
     r := -1
     r := tname.search s base b at idx
     ((r = -1) && {rmk_b < rmk_e} && {idx < rmk_e}).if {
@@ -1230,9 +1272,9 @@ Public
     r
   )
   
-  - search_back s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
+  - search_back s:String base b:Int at idx:Int :Int <-
   [ ? {idx.in_range b to (b+di)}; ]
-  ( + r:INTEGER
+  ( + r:Int
     r := -1
     (extern_c != NULL).if              { r := extern_c.search_back s base b at idx;}
     ((r = -1) && {lip     != NULL}).if { r := lip.search_back s base b at idx;     }

@@ -1,22 +1,21 @@
-Header  
-  + name := TTF;
-  /*PACK_CONTEXT*/
-  
+Header
+  + name := Ttf
+/*PACK_CONTEXT*/
 Inherit
-  - parent_ttf_constant:TTF_CONSTANT := TTF_CONSTANT
+  - parent_ttf_constant:Ttf_constant := Ttf_constant
   
 Public
   
-  + user_allocator_context:NATIVE_ARRAY UINTEGER_8
-  + pack_info:CONTEXT
-  + width:INTEGER_32
-  + height:INTEGER_32
-  + stride_in_bytes:INTEGER_32
-  + padding:INTEGER_32
-  + h_oversample:UINTEGER_32
-  + v_oversample:UINTEGER_32
-  + pixels:ARRAY UINTEGER_8
-  + nodes:ARRAY UINTEGER_8; // NODE (x:INTEGER_8)
+  + user_allocator_context:C_array Uint8
+  + pack_info:Context
+  + width:Int32
+  + height:Int32
+  + stride_in_bytes:Int32
+  + padding:Int32
+  + h_oversample:Uint32
+  + v_oversample:Uint32
+  + pixels:Array Uint8
+  + nodes:Array Uint8; // NODE (x:Int8)
 
 /*
 unsigned char ttf_buffer[1<<20]
@@ -58,7 +57,7 @@ void my_stbtt_print(float x, float y, char *text)
 }
 */
 
-  - isfont font:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
+  - isfont font:C_array Uint8 :Boolean <-
   (
     // check the version number
     (tag4 font with ('1',0,0,0)) || // TrueType 1
@@ -67,10 +66,10 @@ void my_stbtt_print(float x, float y, char *text)
     {tag4 font with (0,1,0,0)}    // OpenType 1.0
   )
 
-  - get_font_offset font_collection:NATIVE_ARRAY UINTEGER_8 
-  for_index index:INTEGER :INTEGER <- 
-  ( + n:INTEGER_32
-    + result:INTEGER
+  - get_font_offset font_collection:C_array Uint8 
+  for_index index:Int :Int <- 
+  ( + n:Int32
+    + result:Int
     // if it's just a font, there's only one valid index
     (isfont font_collection).if {
       result := (index = 0).ok 0 or (-1)
@@ -79,8 +78,7 @@ void my_stbtt_print(float x, float y, char *text)
       result := -1
       (tag font_collection with "ttcf").if {
         // version 1?
-        ((ttulong(font_collection+4) = 00010000h) || 
-        {ttulong(font_collection+4) = 00020000h}).if {
+        ((ttulong(font_collection+4) = 00010000h) || {ttulong(font_collection+4) = 00020000h}).if {
           n := ttlong(font_collection+8)
           (index < n).if {
             result := ttulong(font_collection+12+index*4)
@@ -91,16 +89,16 @@ void my_stbtt_print(float x, float y, char *text)
     result
   )
 
-  - get_glyph_bitmap info:FONTINFO scale (scale_x,scale_y:REAL_32) 
-  glyph glyf:INTEGER :(BITMAP,INTEGER,INTEGER) <-
+  - get_glyph_bitmap info:Fontinfo scale (scale_x,scale_y:Real32) 
+  glyph glyf:Int :(Bitmap,Int,Int) <-
   (
     get_glyph_bitmap_subpixel info scale (scale_x, scale_y)
     shift (0.0,0.0) glyph glyf
   )
 
-  - make_codepoint_bitmap info:FONTINFO output output:ARRAY UINTEGER_8
-  size (out_w,out_h:INTEGER) stride out_stride:INTEGER  
-  scale (scale_x,scale_y:REAL_32) glyph codepoint:INTEGER <-
+  - make_codepoint_bitmap info:Fontinfo output output:Array Uint8
+  size (out_w,out_h:Int) stride out_stride:Int  
+  scale (scale_x,scale_y:Real32) glyph codepoint:Int <-
   (
     make_codepoint_bitmap_subpixel info output output size (out_w,out_h) 
     stride out_stride scale (scale_x, scale_y) shift (0.0,0.0) glyph codepoint
@@ -108,24 +106,24 @@ void my_stbtt_print(float x, float y, char *text)
 
   // bitmap baking
 
-  - bake_font_bitmap(data:ARRAY UINTEGER_8,offset:INTEGER)  
-  height pixel_height:REAL_32 img pixels:ARRAY UINTEGER_8 
-  size (pw,ph:INTEGER) first (first_char,num_chars:INTEGER)
-  to chardata:ARRAY BACKED_CHAR :INTEGER <-
-  ( + scale:REAL_32
-    + x,y,bottom_y, i:INTEGER
-    + f:Expanded FONTINFO
+  - bake_font_bitmap(data:Array Uint8,offset:Int)  
+  height pixel_height:Real32 img pixels:Array Uint8 
+  size (pw,ph:Int) first (first_char,num_chars:Int)
+  to chardata:Array Backed_char :Int <-
+  ( + scale:Real32
+    + x,y,bottom_y, i:Int
+    + f:Flat Fontinfo
     
     f.init_font data start offset
     
-    0.to (pw*ph) do { i:INTEGER; pixels.put 0 to i; }; // background of 0 around pixels
+    0.to (pw*ph) do { i:Int; pixels.put 0 to i; }; // background of 0 around pixels
     x := y := 1
     bottom_y := 1
 
     scale := f.scale_for_pixel_height pixel_height
 
-    0.to (num_chars-1) do { i:INTEGER
-      + advance, lsb, x0,y0,x1,y1,gw,gh,g:INTEGER
+    0.to (num_chars-1) do { i:Int
+      + advance, lsb, x0,y0,x1,y1,gw,gh,g:Int
       
       g := f.find_glyph_index (first_char + i)
       (advance,lsb) := f.get_glyph_h_metrics g
@@ -144,9 +142,9 @@ void my_stbtt_print(float x, float y, char *text)
       make_glyph_bitmap f output (pixels+x+y*pw) size (gw,gh) 
       stride pw scale (scale,scale) glyph g
       
-      chardata.item i.make (x.to_integer_16,y.to_integer_16)
-      to ((x + gw).to_integer_16,(y + gh).to_integer_16)
-      offset (x0.to_real_32,y0.to_real_32) 
+      chardata.item i.make (x.to_int16,y.to_int16)
+      to ((x + gw).to_int16,(y + gh).to_int16)
+      offset (x0.to_real32,y0.to_real32) 
       to (0.0,0.0) // ??? Pas sur !
       xadvance (scale * advance)
       
@@ -160,9 +158,9 @@ void my_stbtt_print(float x, float y, char *text)
 
   // bitmap baking
 
-  - pack_begin pixel:ARRAY UINTEGER_8
-  size (pw,ph,stride,pad:INTEGER) 
-  alloc alloc_ctxt:NATIVE_ARRAY UINTEGER_8 :INTEGER <-
+  - pack_begin pixel:Array Uint8
+  size (pw,ph,stride,pad:Int) 
+  alloc alloc_ctxt:C_array Uint8 :Int <-
   ( not_yet_implemented
     /*
     + node:ARRAY NODE
@@ -209,85 +207,85 @@ void my_stbtt_print(float x, float y, char *text)
 */
 Private
   /*
-  - buffer:ARRAY UINTEGER_8 := 
-  ARRAY UINTEGER_8.create_with_capacity max_oversample
+  - buffer:ARRAY Uint8 := 
+  ARRAY Uint8.create_with_capacity max_oversample
   */
 Public
   /*
-  - h_prefilter (pixels:ARRAY UINTEGER_8) 
-  size (w,h,stride_in_bytes:INTEGER) 
+  - h_prefilter (pixels:ARRAY Uint8) 
+  size (w,h,stride_in_bytes:Int) 
   width kernel_width:UINTEGER <-
-  ( + safe_w:INTEGER
+  ( + safe_w:Int
     + total,ofs,ofs2:UINTEGER
     safe_w := w - kernel_width
-    0.to (h-1) do { j:INTEGER
+    0.to (h-1) do { j:Int
       buffer.make kernel_width
       total := 0
       ofs2 := ofs
-      0.to safe_w do { i:INTEGER
+      0.to safe_w do { i:Int
         total := total + pixels.item ofs2 - buffer.item (i & over_mask)
         buffer.put (pixels.item ofs2) to (buffer.item ((i+kernel_width)&over_mask))
-        pixels.put ((total / kernel_width).to_uinteger_8) to ofs2
+        pixels.put ((total / kernel_width).to_uint8) to ofs2
         ofs2 := ofs2 + 1
       }
-      (safe_w+1).to (w-1) do { i:INTEGER
+      (safe_w+1).to (w-1) do { i:Int
         ? {pixels.item ofs2 = 0}
         total := total - buffer.item (i & over_mask)
-        pixels.put ((total / kernel_width).to_uinteger_8) to ofs2
+        pixels.put ((total / kernel_width).to_uint8) to ofs2
         ofs2 := ofs2 + 1
       }
       ofs := ofs + stride_in_bytes
     }
   )
 
-  - v_prefilter (pixels:ARRAY UINTEGER_8) 
-  size (w,h,stride_in_bytes:INTEGER)
+  - v_prefilter (pixels:ARRAY Uint8) 
+  size (w,h,stride_in_bytes:Int)
   width kernel_width:UINTEGER <-
-  ( + safe_h,ofs:INTEGER
+  ( + safe_h,ofs:Int
     + total:UINTEGER
     
     safe_h := h - kernel_width
-    0.to (w-1) do { j:INTEGER
+    0.to (w-1) do { j:Int
       buffer.make kernel_width
       total := 0
       ofs := j
-      0.to safe_h do { i:INTEGER
+      0.to safe_h do { i:Int
         total := total+pixels.item ofs-buffer.item (i & over_mask)
         buffer.put (pixels.item ofs) to ((i+kernel_width) & over_mask)
-        pixels.put ((total / kernel_width).to_uinteger_8) to ofs
+        pixels.put ((total / kernel_width).to_uint8) to ofs
         ofs := ofs + stride_in_bytes
       }
-      (safe_h+1).to (h-1) do { i:INTEGER
+      (safe_h+1).to (h-1) do { i:Int
         ? {pixels.item ofs = 0}
         total := total - buffer.item (i & over_mask)
-        pixels.put ((total / kernel_width).to_uinteger_8) to ofs
+        pixels.put ((total / kernel_width).to_uint8) to ofs
         ofs := ofs + stride_in_bytes
       }
     }
   );*/
 
-  - oversample_shift oversample:INTEGER :REAL_32 <-
-  ( + result:REAL_32
+  - oversample_shift oversample:Int :Real32 <-
+  ( + result:Real32
     (oversample != 0).if {
-      result := -(oversample - 1).to_real_32 / (oversample*2)
+      result := -(oversample - 1).to_real32 / (oversample*2)
     }
     result
   )
 
   // rects array must be big enough to accommodate 
   // all characters in the given ranges
-  - pack_font_ranges_gather_rects (info:FONTINFO,ranges:ARRAY PACK_RANGE, rects:ARRAY RECT) :INTEGER <-
-  ( + i,j,k:INTEGER
+  - pack_font_ranges_gather_rects (info:Fontinfo,ranges:Array Pack_range, rects:Array Rect) :Int <-
+  ( + i,j,k:Int
     not_yet_implemented
     /*
-    0.to (ranges.upper) do { i:INTEGER
+    0.to (ranges.upper) do { i:Int
       + fh,scal:REAL_32
       fh := ranges.item i.font_size
       scal := (fh > 0).ok (info.scale_for_pixel_height fh) 
       or (info.scale_for_mapping_em_to_pixels (-fh))
       ranges.item i.hv_oversample (h_oversample,v_oversample)
-      0.to (ranges.item i.num_chars-1) do { j:INTEGER
-        + x0,y0,x1,y1,codepoint,glyph:INTEGER
+      0.to (ranges.item i.num_chars-1) do { j:Int
+        + x0,y0,x1,y1,codepoint,glyph:Int
         codepoint := (ranges.item i.array_of_unicode_codepoints = NULL)
         .ok (ranges.item i.first_unicode_codepoint_in_range + j)
         or  (ranges.item i.array_of_unicode_codepoints.item j)
@@ -308,20 +306,20 @@ Public
 
   // rects array must be big enough to accommodate 
   // all characters in the given ranges
-  - pack_font info:FONTINFO 
-  ranges_render ranges:ARRAY PACK_RANGE 
-  into_rects rects:ARRAY RECT <-
-  ( + i,j,k,return_value:INTEGER
-    + old_h_over,old_v_over:INTEGER
-    + fh,scale,recip_h,recip_v,sub_x,sub_y:REAL_32
-    + r:RECT
+  - pack_font info:Fontinfo 
+  ranges_render ranges:Array Pack_range 
+  into_rects rects:Array Rect <-
+  ( + i,j,k,return_value:Int
+    + old_h_over,old_v_over:Int
+    + fh,scale,recip_h,recip_v,sub_x,sub_y:Real32
+    + r:Rect
     not_yet_implemented
     /*
     // save current values
     old_h_over := h_oversample
     old_v_over := v_oversample
     return_value := 1
-    0.to (num_ranges-1) do { i:INTEGER
+    0.to (num_ranges-1) do { i:Int
       fh := ranges.item i.font_size
       scale := (fh > 0).ok (scale_for_pixel_height(info, fh))
       or (scale_for_mapping_em_to_pixels(info, -fh))
@@ -331,14 +329,14 @@ Public
       recip_v := 1.0 / v_oversample
       sub_x := oversample_shift h_oversample
       sub_y := oversample_shift v_oversample
-      0.to (ranges.item i.num_chars-1) do { j:INTEGER
+      0.to (ranges.item i.num_chars-1) do { j:Int
         r := rects.item k
         (r.was_packed).if {
           not_yet_implemented
           /*
           + bc:PACKED_CHAR
-          + advance, lsb, x0,y0,x1,y1:INTEGER
-          + codepoint,glyph:INTEGER
+          + advance, lsb, x0,y0,x1,y1:Int
+          + codepoint,glyph:Int
           + pad:COORD
           bc := ranges.item i.chardata_for_range.item j
           codepoint := (ranges.item i.array_of_unicode_codepoints = NULL).ok 
@@ -388,25 +386,25 @@ Public
     return_value
   )
 
-  - pack_font_ranges_pack_rects prects:ARRAY RECT <-
+  - pack_font_ranges_pack_rects prects:Array Rect <-
   (
     pack_info.pack_rects prects
   )
   
-  - rects:ARRAY RECT := ARRAY RECT.create_with_capacity 32
-  - pack_font_ranges fontdata:ARRAY UINTEGER_8
-  index font_index:INTEGER ranges ranges:ARRAY PACK_RANGE <-
-  ( + info:FONTINFO
-    + i,j,n,return_value:INTEGER
+  - rects:Array Rect := Array Rect.create_with_capacity 32
+  - pack_font_ranges fontdata:Array Uint8
+  index font_index:Int ranges ranges:Array Pack_range <-
+  ( + info:Fontinfo
+    + i,j,n,return_value:Int
     not_yet_implemented
     /*
     // flag all characters as NOT packed
-    0.to (num_ranges-1) do { i:INTEGER
-      0.to (ranges.item i.num_chars-1) do { j:INTEGER
+    0.to (num_ranges-1) do { i:Int
+      0.to (ranges.item i.num_chars-1) do { j:Int
         ranges.item i.chardata_for_range.item j.reset_box
       }
     }
-    0.to (num_ranges-1) do { i:INTEGER
+    0.to (num_ranges-1) do { i:Int
       n := n + ranges.item i.num_chars
     }
          
@@ -425,11 +423,11 @@ Public
 
   // check if a utf8 string contains a prefix which 
   // is the utf16 string; if so return length of matching utf8 string
-  - compare_utf8 s1:ARRAY UINTEGER_8 to_utf16 s2:ARRAY UINTEGER_8 :INTEGER_32 <-
-  ( + i,i2,result:INTEGER_32
-    + ch,ch2:UINTEGER_16
-    + c:UINTEGER_32
-    + len1:INTEGER
+  - compare_utf8 s1:Array Uint8 to_utf16 s2:Array Uint8 :Int32 <-
+  ( + i,i2,result:Int32
+    + ch,ch2:Uint16
+    + c:Uint32
+    + len1:Int
     
     len1 := s1.count
     {(i2 < s2.count) && {result != -1}}.while_do {
@@ -475,13 +473,13 @@ Public
     result
   )
 
-  - get_font_name_string font:FONTINFO
-  platform platform_id:INTEGER encoding encoding_id:INTEGER
-  language language_id:INTEGER name name_id:INTEGER 
-  :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
-  ( + i,count,string_offset,length:INTEGER
-    + offset,nm:UINTEGER_32
-    + fc,result:NATIVE_ARRAY UINTEGER_8
+  - get_font_name_string font:Fontinfo
+  platform platform_id:Int encoding encoding_id:Int
+  language language_id:Int name name_id:Int 
+  :(C_array Uint8,Int) <-
+  ( + i,count,string_offset,length:Int
+    + offset,nm:Uint32
+    + fc,result:C_array Uint8
     fc := font.data
     offset := font.fontstart
     nm := find_table(fc, offset) name "name"
@@ -489,7 +487,7 @@ Public
       count := ttushort(fc+nm+2)
       string_offset := nm + ttushort(fc+nm+4)
       {(i < count) && {result = 0}}.while_do {
-        + loc:UINTEGER_32
+        + loc:Uint32
         loc := nm + 6 + 12 * i
         (
           (platform_id = ttushort(fc+loc+0)) &&
@@ -506,12 +504,12 @@ Public
     result, length
   )
 
-  - matchpair(fc:ARRAY UINTEGER_8,nm:UINTEGER_32) name nam:STRING_ALIAS 
-  target tgt_id:INTEGER_32 next nxt_id:INTEGER_32 :INTEGER <-
-  ( + i,id,count,string_offset,platform,encoding,language:INTEGER_32
-    + matchlen,slen,off:INTEGER_32
-    + loc:UINTEGER_32
-    + result:INTEGER
+  - matchpair(fc:Array Uint8,nm:Uint32) name nam:String_alias 
+  target tgt_id:Int32 next nxt_id:Int32 :Int <-
+  ( + i,id,count,string_offset,platform,encoding,language:Int32
+    + matchlen,slen,off:Int32
+    + loc:Uint32
+    + result:Int
     count := ttushort(fc+nm+2)
     string_offset := nm + ttushort(fc+nm+4)
     {(i < count) && {result = 0}}.while_do {
@@ -568,10 +566,10 @@ Public
     result
   )
 
-  - matches (fc:STRING_ALIAS,offset:UINTEGER_32) 
-  name nam:STRING_ALIAS flags flag:UINTEGER_32 :INTEGER <-
-  ( + nm,hd:UINTEGER_32
-    + result:INTEGER
+  - matches (fc:String_alias,offset:Uint32) 
+  name nam:String_alias flags flag:Uint32 :Int <-
+  ( + nm,hd:Uint32
+    + result:Int
     
     (isfont(fc+offset)).if {
       // check italics/bold/underline flags in macStyle...
@@ -607,10 +605,10 @@ Public
     result
   )
 
-  - find_matching_font font_collection:STRING_ALIAS 
-  name name_utf8:STRING_ALIAS flags flag:UINTEGER_32 :INTEGER <-
-  ( + i,off:INTEGER_32
-    + result:INTEGER
+  - find_matching_font font_collection:String_alias 
+  name name_utf8:String_alias flags flag:Uint32 :Int <-
+  ( + i,off:Int32
+    + result:Int
     {result = 0}.while_do {
       off := get_font_offset font_collection for_index i
       ((off < 0) ||

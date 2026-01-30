@@ -1,17 +1,17 @@
 Header
-  + name := HASH_TABLE_SIZE;
-  /*
-   Prime INTEGER list.
-   Some useful features to deal with prime INTEGER values in order to select
+  + name := Hash_table_size
+/*
+   Prime Int list.
+   Some useful features to deal with prime Int values in order to select
    an appropriate size for some hash table (used for example by the DICTIONARY
    class as well as by the SET class).
   */
 
 Public
 
-  - prime_number_ceiling integer:INTEGER :INTEGER <-
+  - prime_number_ceiling integer:Int :Int <-
   // A good prime number, large enough, and no smaller than `integer'.
-  ( + result:INTEGER
+  ( + result:Int
     if (integer <= 97) then {
       // This seems to be a good minimum value to start hashing with.
       result := 97

@@ -1,25 +1,23 @@
 Header
-  
-  + name := SCISSOR;
-  
+  + name := Scissor
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Private
   
-  - stack:ARRAY SCISSOR := ARRAY SCISSOR.create_with_capacity 16
+  - stack:Array Scissor := Array Scissor.create_with_capacity 16
   
 Public
   
-  + xform:TRANSFORM
-  + extent0:REAL_32
-  + extent1:REAL_32
+  + xform:Transform
+  + extent0:Real32
+  + extent1:Real32
   
-  - set_xform x:TRANSFORM <- ( xform := x; )
+  - set_xform x:Transform <- ( xform := x; )
   
-  - create:SCISSOR <-
-  ( + result:SCISSOR
+  - create:Scissor <-
+  ( + result:Scissor
     (stack.is_empty).if {
       result := clone
     } else {
@@ -29,16 +27,16 @@ Public
     result
   )
   
-  - free <- stack.add_last Self
+  - free <- stack.add_last self
   
   - make <-
   (
-    (xform = NULL).if { xform := TRANSFORM.create; }
+    (xform = NULL).if { xform := Transform.create; }
     extent0 := extent1 := -1.0
   )
     
-  - make (x,y:REAL_32) size (w,h:REAL_32) transform t:TRANSFORM <-
-  ( + ww,hh:REAL_32
+  - make (x,y:Real32) size (w,h:Real32) transform t:Transform <-
+  ( + ww,hh:Real32
     ww := w.max 0
     hh := h.max 0
     //(xform = NULL).if { xform := TRANSFORM.create; }
@@ -47,24 +45,24 @@ Public
     (extent0,extent1) := (ww*0.5,hh*0.5)
   )
   
-  - copy o:SCISSOR <-
+  - copy o:Scissor <-
   (
     (extent0,extent1) := (o.extent0,o.extent1)
     xform.copy (o.xform)
   )
   
-  - intersect (x,y:REAL_32) size (w,h:REAL_32) with state_xform:TRANSFORM <-
-  ( + pxform,invxorm:TRANSFORM
-    + ex, ey, tex, tey:REAL_32
-    + ax,ay,aw,ah,minx,miny,maxx,maxy:REAL_32
+  - intersect (x,y:Real32) size (w,h:Real32) with state_xform:Transform <-
+  ( + pxform,invxorm:Transform
+    + ex, ey, tex, tey:Real32
+    + ax,ay,aw,ah,minx,miny,maxx,maxy:Real32
     
     // If no previous scissor has been set, set the scissor as current scissor.
     (extent0 < 0).if {      
       make (x,y) size (w,h) transform state_xform
     } else {
-      //rect    := NATIVE_ARRAY REAL_32.create 4
-      pxform  := TRANSFORM.create
-      invxorm := TRANSFORM.create
+      //rect    := C_array REAL_32.create 4
+      pxform  := Transform.create
+      invxorm := Transform.create
       // Transform the current scissor rect into current transform space.
       // If there is difference in rotation, this will be approximation.
       pxform.copy xform

@@ -1,9 +1,8 @@
 Header
-  + name := TONE;
-  
+  + name := Tone
 Inherit
-  + parent_type:Expanded TYPE
+  + parent_type:Flat Type
     
 Public
-  //- at i:INTEGER :TONE <- Self
-  //- foreach b:{TONE; } <- b.value Self
+  //- at i:Int :TONE <- self
+  //- foreach b:{TONE; } <- b.value self

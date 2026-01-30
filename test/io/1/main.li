@@ -1,10 +1,8 @@
 Header
-  
-  + name := MAIN;
-  
+  + name := Main
 Public
   
   - main <-
   (
-    TEST.check (COMMAND_ARGS.count) integer 1
+    Test.check (Command_args.count) integer 1
   )

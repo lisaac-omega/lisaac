@@ -1,9 +1,8 @@
 Header
-  + name := Expanded POINT;
-  
+  + name := Flat Point
 Public
-  + x:REAL_32
-  + y:REAL_32
+  + x:Real32
+  + y:Real32
   
-  - set (px,py:REAL_32) <- ( (x,y) := (px,py); )
+  - set (px,py:Real32) <- ( (x,y) := (px,py); )
   

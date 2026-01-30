@@ -1,17 +1,16 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + euro:USTRING
-    + char:CHAR
-    euro := USTRING_BUFFER.from_alias "x€x"
-    char := euro.at (STRIDX.lower )
-    TEST.check (char.to_uinteger_8) integer ('x'.to_integer_8)
-    TEST.check (char.is_ascii)
-    TEST.check (char.ascii = 'x')
-    TEST.check (char.byte_count) integer 1
-    char := euro.at (STRIDX.lower + 1)
-    TEST.check (! char.is_ascii)
-    TEST.check (char.byte_count) integer 3
+  ( + euro:Ustring
+    + char:Char
+    euro := Ustring_buffer.from_alias "x€x"
+    char := euro.at (Stridx.lower )
+    Test.check (char.to_uint8) integer ('x'.to_int8)
+    Test.check (char.is_ascii)
+    Test.check (char.ascii = 'x')
+    Test.check (char.byte_count) integer 1
+    char := euro.at (Stridx.lower + 1)
+    Test.check (! char.is_ascii)
+    Test.check (char.byte_count) integer 3
   )

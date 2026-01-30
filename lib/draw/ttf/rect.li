@@ -1,28 +1,26 @@
 Header
-
-  + name := Expanded RECT;
-
+  + name := Flat Rect
 Public
 
-  + x:INTEGER
-  + y:INTEGER
-  + id:INTEGER
-  + w:INTEGER
-  + h:INTEGER
-  + was_packed:INTEGER
+  + x:Int
+  + y:Int
+  + id:Int
+  + w:Int
+  + h:Int
+  + was_packed:Int
   
-  - move_pad pad:INTEGER <-
+  - move_pad pad:Int <-
   (
     (x,y) := (x + pad,y + pad)
     (w,h) := (w - pad,h - pad)
   )
   
-  - set_xy (px,py:INTEGER) <- 
+  - set_xy (px,py:Int) <- 
   (
     (x,y) := (px,py)
   )
   
-  - set_was_packed i:INTEGER <-
+  - set_was_packed i:Int <-
   (
     was_packed := i
   )

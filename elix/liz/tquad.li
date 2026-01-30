@@ -1,19 +1,18 @@
 Header
-  + name := TQUAD;
-  
+  + name := Tquad
 Inherit
-  + parent_tmove:Expanded TMOVE
+  + parent_tmove:Flat Tmove
   
 Public
   
-  + w_x:TEXP
-  + w_y:TEXP
+  + w_x:Texp
+  + w_y:Texp
       
-  - init_w (wx,wy:TEXP) to (x,y:TEXP) :SELF <-
+  - init_w (wx,wy:Texp) to (x,y:Texp) :Self <-
   (
     (w_x,w_y) := (wx,wy)
     (val_x,val_y) := (x,y)
-    Self
+    self
   )
   
   - run <-
@@ -21,7 +20,7 @@ Public
     quad_w (w_x.eval,w_y.eval) to (val_x.eval,val_y.eval)
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b += "Quad ("
     w_x.append_in b;  b | ',';  w_y.append_in b

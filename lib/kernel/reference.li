@@ -1,11 +1,10 @@
 Header
-  + name      := REFERENCE E;
-  /*Reference on object (Expanded)*/
-  - export    := E,POINTER;
+  + name := Reference E
+/*Reference on object (Flat)*/
+  - export    := E,Pointer;
   - import    := E;
-
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
@@ -13,8 +12,8 @@ Public
 
   // Creation.
 
-  - create v:E :SELF <-
-  ( + result:SELF
+  - create v:E :Self <-
+  ( + result:Self
     result := clone
     result.make v
     result
@@ -29,4 +28,4 @@ Public
 
   - to_e:E <- value
 
-  - from_e v:E :SELF <- create v
+  - from_e v:E :Self <- create v

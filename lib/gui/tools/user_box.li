@@ -1,35 +1,34 @@
 Header
-  + name := Strict USER_BOX;
-  
+  + name := Exact User_box
 Inherit
-  + parent_gobj:Expanded GOBJ USER_BOX
+  + parent_gobj:Flat Gobj User_box
   
 Private
-  - stk:Expanded ARRAY USER_BOX
+  - stk:Flat Array User_box
   
 Public
   
-  + width_min:REAL_32
-  + height_min:REAL_32
+  + width_min:Real32
+  + height_min:Real32
   
-  + drw:{USER_BOX;}
-  + evt:{(USER_BOX,UINTEGER_8); BOOLEAN}
+  + drw:{User_box;}
+  + evt:{(User_box,Uint8); Boolean}
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - init (w,h:REAL_32) draw d:{USER_BOX;} :SELF <-
-  init (w,h) draw d event {(d:USER_BOX,e:UINTEGER_8); FALSE}
+  - init (w,h:Real32) draw d:{User_box;} :Self <-
+  init (w,h) draw d event {(d:User_box,e:Uint8); False}
   
-  - init (w,h:REAL_32) draw d:{USER_BOX;} event e:{(USER_BOX,UINTEGER_8);BOOLEAN} :SELF <-
+  - init (w,h:Real32) draw d:{User_box;} event e:{(User_box,Uint8);Boolean} :Self <-
   (
     (width_min,height_min) := (width,height) := (w,h)
     (drw,evt) := (d,e)
     init_obj
   )
     
-  - draw <- drw.value Self
+  - draw <- drw.value self
   
-  - event ev:UINTEGER_8 :BOOLEAN <- evt.value (Self,ev)
+  - event ev:Uint8 :Boolean <- evt.value (self,ev)

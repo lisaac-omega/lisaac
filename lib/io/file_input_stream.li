@@ -1,41 +1,38 @@
 Header
-
-  + name := FILE_INPUT_STREAM;
-
-  /*Use files as streams*/
-
+  + name := File_input_stream
+/*Use files as streams*/
 Inherit
 
-  - inherit_input_stream :INPUT_STREAM := INPUT_STREAM
+  - inherit_input_stream :Input_stream := Input_stream
 
 Public
 
-  + file :FILE
+  + file :File
 
-  + is_connected:BOOLEAN
+  + is_connected:Boolean
 
-  + last_character :CHARACTER
+  + last_character :Char
 
-  - end_of_input:BOOLEAN <-
-  ( + result :BOOLEAN
+  - end_of_input:Boolean <-
+  ( + result :Boolean
     result := real_end_of_input
     push_back_flag.if_true {
-      result := FALSE
+      result := False
     }
     result
   )
 
 Public
 
-  - make std_file:FILE <-
+  - make std_file:File <-
   (
     file := std_file
-    tmp  := ARRAY(CHARACTER).create 1
+    tmp  := Array(Char).create 1
     is_connected := (file != NULL)
   )
 
-  - create std_file:FILE :SELF <-
-  ( + result :SELF
+  - create std_file:File :Self <-
+  ( + result :Self
     result := clone
     result.make std_file
     result
@@ -43,24 +40,24 @@ Public
 
 Private
 
-  + tmp :ARRAY(CHARACTER)
+  + tmp :Array(Char)
 
-  + real_end_of_input :BOOLEAN
+  + real_end_of_input :Boolean
 
 Public
 
-  - read_character :CHARACTER <-
+  - read_character :Char <-
   // Return last character from stream
-  ( + result   :INTEGER
+  ( + result   :Int
 
     push_back_flag.if {
-      push_back_flag := FALSE
+      push_back_flag := False
     } else {
       tmp.clear
       result := file.read tmp size 1
       (result = 0).if {
         // nothing was read
-        real_end_of_input := TRUE
+        real_end_of_input := True
       } else {
         last_character := tmp.first
       }
@@ -70,10 +67,10 @@ Public
 
   - unread_character <-
   (
-    push_back_flag := TRUE
+    push_back_flag := True
   )
 
-  - read_line_in buffer:STRING_BUFFER <-
+  - read_line_in buffer:String_buffer <-
   // Return line from stream
   (
     read_character
@@ -85,7 +82,7 @@ Public
 
 Private
 
-  - raw_read_character :CHARACTER <-
+  - raw_read_character :Char <-
   (
 
   )

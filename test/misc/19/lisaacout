@@ -1,9 +1,9 @@
 --SEMANTIC---------
-Type `STRING_BUFFER' is invalid with `Expanded INTEGER_32'.
-Line 11 column 9 in MAIN(.../test/misc/19/main.li):
+Type `String_buffer' is invalid with `Flat Int32'.
+Line 9 column 9 in Main(.../test/misc/19/main.li):
     s := i; // ici lisaac doit causer...
          ^
 
-Line 8 column 7 in MAIN(.../test/misc/19/main.li):
-  ( + i:INTEGER_32
+Line 6 column 7 in Main(.../test/misc/19/main.li):
+  ( + i:Int32
        ^

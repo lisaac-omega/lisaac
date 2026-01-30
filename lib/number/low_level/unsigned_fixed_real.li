@@ -1,111 +1,108 @@
 Header
-
-  + name    := UNSIGNED_FIXED_REAL;
-
-  /*Unsigned real number of fixed decimal part.*/
-
+  + name := Unsigned_fixed_real
+/*Unsigned real number of fixed decimal part.*/
 Inherit
 
-  - parent_fixed_real:FIXED_REAL := FIXED_REAL
+  - parent_fixed_real:Fixed_real := Fixed_real
 
 Public
 
   // Bound test
 
-  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  - bound_test low:Int64 to up:Uint64 :Boolean <-
   (
-    (up > to_raw_uinteger_64)
+    (up > to_raw_uint64)
   )
 
   // Around
 
-  - object_size:INTEGER := 4
+  - object_size:Int := 4
 
-  - minimum:INTEGER_64 <- 0
+  - minimum:Int64 <- 0
 
-  - floor:INTEGER <-
+  - floor:Int <-
   // Greatest integral value no greater than Current.
   (
-    to_raw_uinteger_32 >> shift_bits
+    to_raw_uint32 >> shift_bits
   )
   [
-    +? {Self <= Result}
-    +? {(Self - Result) < 1}
+    +? {self <= Result}
+    +? {(self - Result) < 1}
   ]
 
-  - ceiling:INTEGER <-
+  - ceiling:Int <-
   // Smallest integral value no smaller than Current.
   (
-    (to_raw_uinteger_32 + ((1 << shift_bits) - 1)) >> shift_bits
+    (to_raw_uint32 + ((1 << shift_bits) - 1)) >> shift_bits
   )
   [
-    +? {Self >= Result}
-    +? {(Self - Result) < 1}
+    +? {self >= Result}
+    +? {(self - Result) < 1}
   ]
 
-  - rounded:INTEGER <-
+  - rounded:Int <-
   // Rounded integral value.
   (
-    (to_raw_uinteger_32 + ((1 << shift_bits) / 2)) >> shift_bits
+    (to_raw_uint32 + ((1 << shift_bits) / 2)) >> shift_bits
   )
 
-  - truncated_to_integer:INTEGER <- floor
-  // Integer part (largest absolute value no greater than Current).
+  - truncated_to_int:Int <- floor
+  // Int part (largest absolute value no greater than Current).
 
   // binary operator :
 
-  - Self:SELF '-'  Left 80  other:SELF :SELF <-
+  - self:Self '-'  Left 80  other:Self :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 - other.to_raw_uinteger_32)
+    Cast Uint32 To Self.on (to_raw_uint32 - other.to_raw_uint32)
   )
 
-  - Self:SELF '*#' Left 90 other:INTEGER :SELF <-
+  - self:Self '*#' Left 90 other:Int :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 * other)
+    Cast Uint32 To Self.on (to_raw_uint32 * other)
   )
 
-  - Self:SELF '*'  Left 90 other:SELF :SELF <-
+  - self:Self '*'  Left 90 other:Self :Self <-
   (
-    CAST UINTEGER_64 TO SELF.on ((to_raw_uinteger_64 * other.to_raw_uinteger_64) >> shift_bits)
+    Cast Uint64 To Self.on ((to_raw_uint64 * other.to_raw_uint64) >> shift_bits)
   )
 
-  - Self:SELF '/#' Left 90 other:INTEGER :SELF <-
+  - self:Self '/#' Left 90 other:Int :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 / other)
+    Cast Uint32 To Self.on (to_raw_uint32 / other)
   )
 
-  - Self:SELF '/'  Left 90 other:SELF :SELF <-
+  - self:Self '/'  Left 90 other:Self :Self <-
   (
-    CAST UINTEGER_64 TO SELF.on ((to_raw_uinteger_64 << shift_bits) / other.to_raw_uinteger_64)
+    Cast Uint64 To Self.on ((to_raw_uint64 << shift_bits) / other.to_raw_uint64)
   )
 
-  - Self:SELF '&'  Left 90 other:SELF :SELF <-
+  - self:Self '&'  Left 90 other:Self :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 & other.to_raw_uinteger_32)
+    Cast Uint32 To Self.on (to_raw_uint32 & other.to_raw_uint32)
   )
 
-  - Self:SELF '>>' Left 90 other:INTEGER :SELF <-
+  - self:Self '>>' Left 90 other:Int :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 >> other)
+    Cast Uint32 To Self.on (to_raw_uint32 >> other)
   )
 
-  - Self:SELF '<<' Left 90 other:INTEGER :SELF <-
+  - self:Self '<<' Left 90 other:Int :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (to_raw_uinteger_32 << other)
+    Cast Uint32 To Self.on (to_raw_uint32 << other)
   )
 
   // Test binary operator :
 
-  - Self:SELF '>'   Right 60 other:SELF :BOOLEAN <-
+  - self:Self '>'   Right 60 other:Self :Boolean <-
   (
-    to_raw_uinteger_32 > other.to_raw_uinteger_32
+    to_raw_uint32 > other.to_raw_uint32
   )
 
   // prefix : Unary operator
 
-  - '~' Self:SELF :SELF <-
+  - '~' self:Self :Self <-
   (
-    CAST UINTEGER_32 TO SELF.on (~ to_raw_uinteger_32)
+    Cast Uint32 To Self.on (~ to_raw_uint32)
   )
 
 

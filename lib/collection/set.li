@@ -1,27 +1,23 @@
 Header
-  + name := SET V;
-  /*
+  + name := Set V
+/*
    Definition of a mathematical set of objects.
    All common operations on mathematical sets are available.
    Well knowned implementations are HASHED_SET and AVL_SET.
   */
-
-Inherit
-  - parent_clone:CLONE := CLONE
-  
-  + parent_traversable:TRAVERSABLE V := TRAVERSABLE V
-
+Insert
+  - parent_clone:Clone := Clone
 Public
   // Counting:
 
-  - count:INTEGER <-
+  - count:Int <-
   // Cardinality of the set (i.e. actual `count' of stored elements).
   (
     abstract
     0
   )
 
-  - is_empty:BOOLEAN <- count = 0
+  - is_empty:Boolean <- count = 0
   // Is the set empty?
 
   // Adding and removing:
@@ -117,7 +113,7 @@ Public
 
   // Looking and searching:
 
-  - has e:V :BOOLEAN <-
+  - has e:V :Boolean <-
   // Is element `e' in the set?
   // As this query is actually using `is_equal', you may consider to use
   // `fast_has' for expanded objects as well while trying to get the very
@@ -127,13 +123,13 @@ Public
   ]
   (
     abstract
-    FALSE
+    False
   )
   [ /* BSBS Old; */
     +? {Result -> ! is_empty}
   ]
 
-  - fast_has e:V :BOOLEAN <-
+  - fast_has e:V :Boolean <-
   // Is element `e' actually stored in the set?
   // Warning: this query is using basic `=' for comparison.
   // See also `has' when dealing with reference types.
@@ -164,15 +160,15 @@ Public
 
   // To provide iterating facilities:
 
-  - lower:INTEGER := 1
+  - lower:Int := 1
 
-  - upper:INTEGER <-
+  - upper:Int <-
   ( count )
   [ /* BSBS Old; */
     +? {Result = count}
   ]
 
-  - item i:INTEGER :V <-
+  - item i:Int :V <-
   // Item at the corresponding index `i'.
   // See also `lower', `upper', `valid_index'.
   // SETs are intrinsically unordered, so there is no guarantee that
@@ -203,12 +199,12 @@ Public
 
   // Mathematical operations:
 
-  - union other:SELF <-
+  - union other:Self <-
   // Make the union of the `Current' set with `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
+  ( + i:Int
     + e:V
 
     i := 1
@@ -224,12 +220,12 @@ Public
     +? {count <= Old count + other.count}
   ]
 
-  - fast_union other:SET V <-
+  - fast_union other:Set V <-
   // Make the union of the `Current' set with `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
+  ( + i:Int
     + e:V
 
     i := 1
@@ -245,12 +241,12 @@ Public
     +? {count <= Old count + other.count}
   ]
 
-  - Self:SELF '+' other:SELF :SELF <-
+  - self:Self '+' other:Self :Self <-
   // Return the union of the `Current' set with `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + result:SELF
+  ( + result:Self
 
     result := twin
     result.union other
@@ -258,15 +254,15 @@ Public
   )
   [ /* BSBS Old; */
     +? {Result.count <= count + other.count}
-    +? {(Self.is_subset_of Result) && {other.is_subset_of Result}}
+    +? {(self.is_subset_of Result) && {other.is_subset_of Result}}
   ]
 
-  - intersection other:SELF <-
+  - intersection other:Self <-
   // Make the intersection of the `Current' set with `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
+  ( + i:Int
     + e:V
 
     i := upper
@@ -282,12 +278,12 @@ Public
     +? {count <= other.count.min (Old count)}
   ]
 
-  - fast_intersection other:SELF <-
+  - fast_intersection other:Self <-
   // Make the intersection of the `Current' set with `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
+  ( + i:Int
     + e:V
 
     i := upper
@@ -303,12 +299,12 @@ Public
     +? {count <= other.count.min (Old count)}
   ]
 
-  - Self:SELF '^' other:SELF :SELF <-
+  - self:Self '^' other:Self :Self <-
   // Return the intersection of the `Current' set with `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + result:SELF
+  ( + result:Self
 
     result := twin
     result.intersection other
@@ -316,17 +312,17 @@ Public
   )
   [ /* BSBS Old; */
     +? {Result.count <= other.count.min count}
-    +? {(Result.is_subset_of Self) && {Result.is_subset_of other}}
+    +? {(Result.is_subset_of self) && {Result.is_subset_of other}}
   ]
 
-  - minus other:SELF <-
+  - minus other:Self <-
   // Make the set `Current' - `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
+  ( + i:Int
 
-    (other = Self).if {
+    (other = self).if {
       clear_count
     } else {
       i := 1
@@ -340,12 +336,12 @@ Public
     +? {count <= Old count}
   ]
 
-  - Self:SELF '-' other:SELF :SELF <-
+  - self:Self '-' other:Self :Self <-
   // Return  the set `Current' - `other'.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + result:SELF
+  ( + result:Self
 
     result := twin
     result.minus other
@@ -353,23 +349,23 @@ Public
   )
   [ /* BSBS Old; */
     +? {Result.count <= count}
-    +? {Result.is_subset_of Self}
+    +? {Result.is_subset_of self}
   ]
 
   // Comparison:
 
-  - is_subset_of other:SELF :BOOLEAN <-
+  - is_subset_of other:Self :Boolean <-
   // Is the `Current' set a subset of `other'?
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
 
-    (Self = other).if {
-      result := TRUE
+    (self = other).if {
+      result := True
     }.elseif {count <= other.count} then {
-      result := TRUE
+      result := True
       i := 1
       {(! result) || {i > count}}.until_do {
         result := other.has (item i)
@@ -382,16 +378,16 @@ Public
     +? {Result -> (count <= other.count)}
   ]
 
-  - is_disjoint_from other:SELF :BOOLEAN <-
+  - is_disjoint_from other:Self :Boolean <-
   // Is the `Current' set disjoint from `other' ?
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
 
-    (Self != other).if {
-      result := TRUE
+    (self != other).if {
+      result := True
       i := 1
       (count <= other.count).if {
         {(! result) || {i > count}}.until_do {
@@ -408,19 +404,19 @@ Public
     result
   )
   [ /* BSBS Old; */
-    +? {Result = (Self ^ other).is_empty}
+    +? {Result = (self ^ other).is_empty}
   ]
 
-  - fast_is_disjoint_from other:SELF :BOOLEAN <-
+  - fast_is_disjoint_from other:Self :Boolean <-
   // Is the `Current' set disjoint from `other' ?
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
 
-    (Self != other).if {
-      result := TRUE
+    (self != other).if {
+      result := True
       i := 1
       (count <= other.count).if {
         {(! result) || {i > count}}.until_do {
@@ -437,18 +433,18 @@ Public
     result
   )
   [ /* BSBS Old; */
-   // +? {Result = (Self ^ other).is_empty}
+   // +? {Result = (self ^ other).is_empty}
   ]
 
-  - Self:SELF '==' other:SELF :BOOLEAN <-
+  - self:Self '==' other:Self :Boolean <-
   // Is the `Current' set equal to `other'?
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
 
-    (Self = other).if {
-      result := TRUE
+    (self = other).if {
+      result := True
     }.elseif {count = other.count} then {
-      result := TRUE
+      result := True
       i := 1
       {(! result) || {i > count}}.until_do {
         result := other.has (item i)
@@ -458,14 +454,14 @@ Public
     result
   )
   [ /* BSBS Old; */
-    "Double inclusion." +? {Result = (is_subset_of other) & (other.is_subset_of Self)}
+    "Double inclusion." +? {Result = (is_subset_of other) & (other.is_subset_of self)}
   ]
 
   // Duplication.
 
-  - copy other:SELF <-
+  - copy other:Self <-
   // Copy 'other' into the current set
-  ( + i:INTEGER
+  ( + i:Int
 
     // Note: this naive implementation is OK because node
     // recycling is implemented.
@@ -478,12 +474,12 @@ Public
     }
   )
 
-  - from_collection model:COLLECTION V <-
+  - from_collection model:Collection V <-
   // Add all items of `model'.
   [ /* BSBS Old; */
     -? {model != NULL}
   ]
-  ( + i, up:INTEGER
+  ( + i, up:Int
 
     make
     up := model.upper
@@ -499,9 +495,9 @@ Public
   - foreach action:{V;} <- do_all action
 
   - do_all action:{V;} <-
-  // Apply `action' to every item of `Self'.
+  // Apply `action' to every item of `self'.
   // See also `for_all', `exists'.
-  ( + i:INTEGER
+  ( + i:Int
 
     i := lower
     {i > upper}.until_do {
@@ -510,13 +506,13 @@ Public
     }
   )
 
-  - for_all predicate:BLOCK :BOOLEAN <-
+  - for_all predicate:Block :Boolean <-
   // Do all items satisfy `predicate'?
   // See also `do_all', `exists'.
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
 
-    result := TRUE
+    result := True
     i := lower
     {(! result) || {i > upper}}.until_do {
       result := predicate.value (item i)
@@ -525,11 +521,11 @@ Public
     result
   )
 
-  - exists predicate:BLOCK :BOOLEAN <-
+  - exists predicate:Block :Boolean <-
   // Does at least one item satisfy `predicate'?
   // See also `do_all', `for_all'.
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
 
     i := lower
     {result || {i > upper}}.until_do {
@@ -541,8 +537,8 @@ Public
 
   // Creation.
 
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
 
     result := clone
     result.make

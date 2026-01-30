@@ -1,14 +1,12 @@
 Header
-  
-  + name := MAIN;
-  
+  + name := Main
 Inherit
   
-  + parent_main:Expanded PARENT_MAIN
+  + parent_main:Flat Parent_main
   
 Public
   
-  + a:INTEGER
+  + a:Int
   
   - slot1 <-
   [ 

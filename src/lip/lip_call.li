@@ -1,25 +1,23 @@
 Header
-
-  + name      := LIP_CALL;
-
+  + name := Lip_call
 Inherit
 
-  + parent_lip_code:Expanded LIP_CODE
+  + parent_lip_code:Flat Lip_code
 
 Public
 
-  + receiver:LIP_CODE
+  + receiver:Lip_code
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + argument:LIP_CODE
+  + argument:Lip_code
     
-  - add_path:{(STRING_ALIAS,STRING_ALIAS); } := {(pth,img:STRING_ALIAS)
+  - add_path:{(String_alias,String_alias); } := {(pth,img:String_alias)
     path_file.add_last pth
   }
-  - img_ok:BOOLEAN
+  - img_ok:Boolean
   
-  - set_add_path a:{(STRING_ALIAS,STRING_ALIAS); } img b:BOOLEAN <-
+  - set_add_path a:{(String_alias,String_alias); } img b:Boolean <-
   ( add_path := a
     img_ok := b
   )
@@ -28,14 +26,14 @@ Public
   // Creation.
   //
 
-  - create p:POSITION receiver rec:LIP_CODE name n:STRING_ALIAS with arg:LIP_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position receiver rec:Lip_code name n:String_alias with arg:Lip_code :Self <-
+  ( + result:Self
     result := clone
     result.make p receiver rec name n with arg
     result
   )
 
-  - make p:POSITION receiver rec:LIP_CODE name n:STRING_ALIAS with arg:LIP_CODE <-
+  - make p:Position receiver rec:Lip_code name n:String_alias with arg:Lip_code <-
   [
     -? {p.code != 0}
   ]
@@ -51,15 +49,15 @@ Public
   //
 
   - run <-
-  ( + slot:LIP_SLOT_CODE
-    + dta:LIP_SLOT_DATA
-    + cal:LIP_CALL
-    + val,rec:LIP_CONSTANT
-    + str:LIP_STRING
-    + int:LIP_INTEGER
-    + path:STRING_ALIAS
-    + is_rec:BOOLEAN
-    + idx:INTEGER
+  ( + slot:Lip_slot_code
+    + dta:Lip_slot_data
+    + cal:Lip_call
+    + val,rec:Lip_constant
+    + str:Lip_string
+    + int:Lip_integer
+    + path:String_alias
+    + is_rec:Boolean
+    + idx:Int
 
 
     (receiver != NULL).if {
@@ -80,23 +78,23 @@ Public
       ((val = NULL) || {(str ?= val) = NULL}).if {
         semantic_error (position,"String argument needed.")
       }
-      BUILD_LABEL.on (str.value)
+      Build_label.on (str.value)
     }.elseif {name = "die_with_code"} then {
       int ?= val
       (int = NULL).if {
-        semantic_error (position,"Integer argument needed.")
+        semantic_error (position,"Int argument needed.")
       }
       exit (int.value)
     }.elseif {name = "help_command"} then {
       (val != NULL).if {
         warning_error (position,"No argument for `help_command' method.");
       }
-      LISAAC.show_help
+      Lisaac.show_help
     }.elseif {name = "compiler_version"} then {
       (val != NULL).if {
         warning_error (position,"No argument for `compiler_version' method.");
       }
-      LISAAC.show_version
+      Lisaac.show_version
     }.elseif {name = "path"} then {
       str ?= val
       (str = NULL).if {
@@ -107,7 +105,7 @@ Public
         string_tmp.copy path
         string_tmp.remove_last
         path := string_tmp.to_string_alias
-        is_rec := TRUE
+        is_rec := True
       }
       ((path.is_empty) || {path.first != '/'}).if {
         string_tmp.copy (position.prototype.filename)
@@ -130,7 +128,7 @@ Public
       }
       string_tmp.clear
       str.append_in string_tmp
-      ENVIRONMENT.run string_tmp
+      Environment.run string_tmp
     }.elseif {name = "run_in"} then {
       str ?= rec
       (str = NULL).if {
@@ -139,7 +137,7 @@ Public
       string_tmp.clear
       str.append_in string_tmp
       string_tmp2.clear
-      ENVIRONMENT.execute string_tmp in string_tmp2
+      Environment.execute string_tmp in string_tmp2
       ((!string_tmp2.is_empty) && {string_tmp2.last = '\n'}).if { string_tmp2.remove_last; }
       cal ?= argument
       (str = NULL).if {
@@ -178,12 +176,12 @@ Public
     }
   )
 
-  - run_expr:LIP_CONSTANT <-
-  ( + slot:LIP_SLOT_DATA
-    + str:LIP_STRING
-    + val:LIP_CONSTANT
-    + result:LIP_CONSTANT
-    + res:INTEGER
+  - run_expr:Lip_constant <-
+  ( + slot:Lip_slot_data
+    + str:Lip_string
+    + val:Lip_constant
+    + result:Lip_constant
+    + res:Int
 
     (argument != NULL).if {
       val := argument.run_expr
@@ -195,19 +193,19 @@ Public
       }
       string_tmp.clear
       str.append_in string_tmp
-      res := ENVIRONMENT.run string_tmp
-      result := LIP_INTEGER.get res
+      res := Environment.run string_tmp
+      result := Lip_integer.get res
     }.elseif {name = "get_integer"} then {
       {
-        STDIN.read_line
-        (STDIN.last_string.is_integer).if_false {
-          "Error INTEGER needed.\n".print
+        Stdin.read_line
+        (Stdin.last_string.is_integer).if_false {
+          "Error Int needed.\n".print
         }
-      }.do_until {STDIN.last_string.is_integer}
-      result := LIP_INTEGER.get (STDIN.last_string.to_integer)
+      }.do_until {Stdin.last_string.is_integer}
+      result := Lip_integer.get (Stdin.last_string.to_int)
     }.elseif {name = "get_string"} then {
-      STDIN.read_line
-      result := LIP_STRING.get (STDIN.last_string.to_string_alias)
+      Stdin.read_line
+      result := Lip_string.get (Stdin.last_string.to_string_alias)
     } else {
       slot := get_data name
       (slot = NULL).if {
@@ -227,13 +225,13 @@ Public
     result
   )
 
-  - load_dir path:STRING img img:STRING_ALIAS is_rec is_rec:BOOLEAN <-
-  ( + entry:DIRENT
-    + dir:DIRECTORY
-    + wimg:STRING_ALIAS
-    + i:INTEGER
+  - load_dir path:String img img:String_alias is_rec is_rec:Boolean <-
+  ( + entry:Dirent
+    + dir:Directory
+    + wimg:String_alias
+    + i:Int
     
-    entry := FILE_SYSTEM.get path
+    entry := File_system.get path
     ((entry != NULL) && {entry.is_directory} && {entry.open}).if {
       dir ?= entry
       // Search picture
@@ -247,12 +245,12 @@ Public
         (wimg = NULL).if { wimg := img; }
       }
       //dir.print
-      (dir.lower).to (dir.upper) do { j:INTEGER
+      (dir.lower).to (dir.upper) do { j:Int
         entry := dir.at j
         (entry.name.has_suffix ".li").if {
           add_path.value (entry.path, wimg)
         }.elseif {(is_rec) && {entry.is_directory}} then {
-          load_dir (entry.path) img wimg is_rec TRUE
+          load_dir (entry.path) img wimg is_rec True
         }
       }
     } else {

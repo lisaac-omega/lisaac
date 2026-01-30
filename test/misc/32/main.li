@@ -1,18 +1,16 @@
 Header
-  
-  + name := MAIN;
-
+  + name := Main
 Inherit
 
   //- parent_clone:CLONE := CLONE
 
 Public
   
-  + flag:BOOLEAN
+  + flag:Boolean
   
   - main <-  
-  ( + m:MAIN
-    + b:BOOLEAN
-    b := TRUE && {(m ?= NULL) && {m.flag}}
+  ( + m:Main
+    + b:Boolean
+    b := True && {(m ?= NULL) && {m.flag}}
     ? {b}
   )

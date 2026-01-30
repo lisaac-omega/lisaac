@@ -1,33 +1,32 @@
 Header
-  + name := TP;
-
+  + name := Tp
 Inherit
-  + parent_tpro:Expanded TPRO
+  + parent_tpro:Flat Tpro
   
 Public
     
-  + local:LOCAL
+  + local:Local
   
-  + attr:UINTEGER_8
+  + attr:Uint8
   
-  + index:UINTEGER_8; // iiii.gggg : Index vector, Genericity index - 1
-  // Ex.: local:(SELF,A,HMAP V KEY K)
+  + index:Uint8; // iiii.gggg : Index vector, Genericity index - 1
+  // Ex.: local:(Self,A,HMAP V KEY K)
   // - for A : index = 20h
-  // - for SELF : index = 00h
+  // - for Self : index = 00h
   // - for K : index = 32h
   
-  - set_local l:LOCAL      <- [ ? {l!=NULL}; ]( local := l; )
-  - set_index i:UINTEGER_8 <- ( index := i; )
+  - set_local l:Local      <- [ ? {l!=NULL}; ]( local := l; )
+  - set_index i:Uint8 <- ( index := i; )
   
-  - is_self:BOOLEAN <- key.first = 'Ë'
+  - is_self:Boolean <- key.first = 'Ë'
   
-  - list:Expanded ARRAY TP
-  - set_key k:STRING_ALIAS :SELF <- ( key := k; Self)
+  - list:Flat Array Tp
+  - set_key k:String_alias :Self <- ( key := k; self)
   
 Public
-  - type:TYPE <-
-  ( + t:TYPE
-    + tg:TPRO
+  - type:Type <-
+  ( + t:Type
+    + tg:Tpro
     t := local.type.at (index >> 4)
     ((index & 0Fh) != 0).if {
       tg ?= t
@@ -36,14 +35,14 @@ Public
     t
   )
   
-  - self:TP <- letter 26
+  - tself:Tp <- letter 26
   
-  - new:SELF <- ( crash; Self)
+  - new:Self <- ( crash; self)
   
-  - letter let:UINTEGER_8 :TP <-
+  - letter let:Uint8 :Tp <-
   (
     (list.is_empty).if {
-      0.to 25 do { i:INTEGER
+      0.to 25 do { i:Int
         list.add_last (clone.set_key (('A' +# i).to_string_alias))
       }
       list.add_last (clone.set_key "Ëš")
@@ -51,14 +50,14 @@ Public
     list.at let
   )
     
-  - txt_in s:STRING_BUFFER sty st:STY <-
+  - txt_in s:String_buffer sty st:Sty <-
   (
-    (st != NULL).if { st.put (STY.tp) to (s.count); }
+    (st != NULL).if { st.put (Sty.tp) to (s.count); }
     s += key
-    (st != NULL).if { st.put (STY.typ) to (s.count); }
+    (st != NULL).if { st.put (Sty.typ) to (s.count); }
   )
       
-  - dup:TP <- new letter flag attr
+  - dup:Tp <- new letter flag attr
   
   - out_c <- ( crash; )
   

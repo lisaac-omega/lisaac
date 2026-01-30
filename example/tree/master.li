@@ -1,47 +1,45 @@
 Header
-
-  + name        := MASTER;
-  /*
+  + name := Master
+/*
   Tree program.
   */
-
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
 
-  + root:NODE_COMPOSITE
+  + root:Node_composite
 
 Public
 
   - main <-
-  ( + file:NODE
-    + dir,dir2:NODE_COMPOSITE
+  ( + file:Node
+    + dir,dir2:Node_composite
 
-    root := NODE_COMPOSITE.create "Root"
+    root := Node_composite.create "Root"
 
-    dir := NODE_COMPOSITE.create "Directory"
+    dir := Node_composite.create "Directory"
     root.add dir
 
-    file := NODE.create "SubFile1"
+    file := Node.create "SubFile1"
     dir.add file
-    file := NODE.create "SubFile2"
+    file := Node.create "SubFile2"
     dir.add file
-    file := NODE.create "SubFile3"
+    file := Node.create "SubFile3"
     dir.add file
 
-    dir2 := NODE_COMPOSITE.create "SubDirectory"
+    dir2 := Node_composite.create "SubDirectory"
     dir.add dir2
 
-    file := NODE.create "SubSubFile1"
+    file := Node.create "SubSubFile1"
     dir2.add file
-    file := NODE.create "SubSubFile2"
+    file := Node.create "SubSubFile2"
     dir2.add file
 
-    file := NODE.create "File1"
+    file := Node.create "File1"
     root.add file
-    file := NODE.create "File2"
+    file := Node.create "File2"
     root.add file
 
     root.print

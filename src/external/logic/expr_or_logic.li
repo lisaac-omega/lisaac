@@ -1,24 +1,21 @@
 Header
-
-  + name        := EXPR_OR_LOGIC;
-
-  /*Or binary logical expression.*/
-
+  + name := Expr_or_logic
+/*Or binary logical expression.*/
 Inherit
 
-  + parent_expr_binary_logic:Expanded EXPR_BINARY_LOGIC
+  + parent_expr_binary_logic:Flat Expr_binary_logic
 
 Public
 
-  + symbol:STRING_ALIAS := "|"
+  + symbol:String_alias := "|"
 
   //
   // Execute.
   //
 
-  - exec_conservator_left  left_cst :TYPE :EXPR <-
-  //-- FALSE | E -> E
-  ( + result:EXPR
+  - exec_conservator_left  left_cst :Type :Expr <-
+  //-- False | E -> E
+  ( + result:Expr
 
     (left_cst = type_false).if {
       result := right
@@ -27,9 +24,9 @@ Public
     result
   )
 
-  - exec_conservator_right right_cst:TYPE :EXPR <-
-  //-- E | FALSE -> E
-  ( + result:EXPR
+  - exec_conservator_right right_cst:Type :Expr <-
+  //-- E | False -> E
+  ( + result:Expr
 
     (right_cst = type_false).if {
       result := left
@@ -38,9 +35,9 @@ Public
     result
   )
 
-  - exec left_cst:TYPE and right_cst:TYPE :EXPR <-
+  - exec left_cst:Type and right_cst:Type :Expr <-
   //-- C1 | C2 -> C3
-  ( + result:EXPR
+  ( + result:Expr
 
     (left_cst = type_true).if {
       result := left
@@ -52,12 +49,12 @@ Public
     result
   )
 
-  - exec:EXPR <-
-  //-- (E1 > E2) | (E1 = E2) -> E1 >= E2 (a lot of possibilities, but see INTEGER)
+  - exec:Expr <-
+  //-- (E1 > E2) | (E1 = E2) -> E1 >= E2 (a lot of possibilities, but see Int)
   //-- E | E -> E
-  ( + result:EXPR
-    + sup:EXPR_SUP
-    + eq:EXPR_EQUAL
+  ( + result:Expr
+    + sup:Expr_sup
+    + eq:Expr_equal
 
     (left ~= right).if {
       result := left
@@ -66,18 +63,18 @@ Public
       sup ?= left
       eq  ?= right
       ((sup != NULL) && {eq != NULL}).if {
-	((sup.left ~= eq.left) && {sup.right ~= eq.right}).if {
-	  result := EXPR_SUP_EQ.create position with (sup.left) and (sup.right)
-	  right.remove
-	}
+        ((sup.left ~= eq.left) && {sup.right ~= eq.right}).if {
+          result := Expr_sup_eq.create position with (sup.left) and (sup.right)
+          right.remove
+        }
       }
     }
     result
   )
 
-  - exec_left  left_cst :TYPE :EXPR <-
-  //-- TRUE | E -> TRUE
-  ( + result:EXPR
+  - exec_left  left_cst :Type :Expr <-
+  //-- True | E -> True
+  ( + result:Expr
 
     (left_cst = type_true).if {
       result := left
@@ -86,9 +83,9 @@ Public
     result
   )
 
-  - exec_right right_cst:TYPE :EXPR <-
-  //-- E | TRUE -> TRUE
-  ( + result:EXPR
+  - exec_right right_cst:Type :Expr <-
+  //-- E | True -> True
+  ( + result:Expr
 
     (right_cst = type_true).if {
       result := right

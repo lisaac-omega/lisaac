@@ -1,22 +1,21 @@
 Header
-  + name := MAIN;
- 
+  + name := Main
 Public
   
   - main <-
-  ( + str:USTRING_BUFFER
-    + c:INTEGER
+  ( + str:Ustring_buffer
+    + c:Int
     
     str := "vélo"
-    str.foreach {char:CHAR
+    str.foreach {char:Char
       c := c + 1
     }
-    TEST.check c integer 4
+    Test.check c integer 4
     c := 0
-    str.foreach_utf8 {uint8:UINTEGER_8
+    str.foreach_utf8 {uint8:Uint8
       c := c + 1
     }
-    TEST.check c integer 5
+    Test.check c integer 5
     
   )
   

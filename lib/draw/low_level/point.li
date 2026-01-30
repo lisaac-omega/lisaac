@@ -1,33 +1,31 @@
 Header
-  
-  + name := POINT;
-  
+  + name := Point
 Inherit
   
-  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_constant_pen:Constant_pen := Constant_pen
 
 Private
   
-  - stack:ARRAY POINT := ARRAY POINT.create_with_capacity 16
+  - stack:Array Point := Array Point.create_with_capacity 16
     
 Public
   // Flags values
-  - pt_corner:INTEGER     := 01h
-  - pt_left:INTEGER       := 02h
-  - pt_bevel:INTEGER      := 04h
-  - pr_innerbevel:INTEGER := 08h
+  - pt_corner:Int     := 01h
+  - pt_left:Int       := 02h
+  - pt_bevel:Int      := 04h
+  - pr_innerbevel:Int := 08h
   
-  + x:REAL_32
-  + y:REAL_32
-  + dx:REAL_32
-  + dy:REAL_32
-  + len:REAL_32
-  + dmx:REAL_32
-  + dmy:REAL_32
-  + flags:UINTEGER_8
+  + x:Real32
+  + y:Real32
+  + dx:Real32
+  + dy:Real32
+  + len:Real32
+  + dmx:Real32
+  + dmy:Real32
+  + flags:Uint8
   
-  - create (px,py:REAL_32) flags f:INTEGER :POINT <-
-  ( + result:POINT
+  - create (px,py:Real32) flags f:Int :Point <-
+  ( + result:Point
     (stack.is_empty).if {
       result := clone
     } else {
@@ -40,18 +38,18 @@ Public
 
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - make (px,py:REAL_32) flags f:INTEGER <-
+  - make (px,py:Real32) flags f:Int <-
   (
     (x,y) := (px,py)
     dx := dy := len := dmx := dmy := 0; // BSBS: Utile ??
     flags := f
   )
   
-  - normalize_and_distance p:POINT <-
-  ( + id,ddx,ddy:REAL_32
+  - normalize_and_distance p:Point <-
+  ( + id,ddx,ddy:Real32
     (ddx,ddy) := (p.x - x, p.y - y)
     len := (ddx*ddx + ddy*ddy).sqrt
     (len > 0.000001).if { 
@@ -62,12 +60,12 @@ Public
     }
   )
   
-  - set_dmxy (px,py:REAL_32) <-
+  - set_dmxy (px,py:Real32) <-
   (
     (dmx,dmy) := (px,py)
   )
   
-  - set_flags f:INTEGER <-
+  - set_flags f:Int <-
   (
     flags := f
   )

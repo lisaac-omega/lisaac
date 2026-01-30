@@ -1,14 +1,12 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
   
   - main <-
   (
-    ? {type_name == "MAIN"}
+    ? {type_name == "Main"}
   )

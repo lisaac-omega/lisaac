@@ -1,35 +1,33 @@
 Header
-  
-  + name := PATH;
-
+  + name := Path
 Inherit
   
-  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_constant_pen:Constant_pen := Constant_pen
   
 Private
   
-  - stack:ARRAY PATH := ARRAY PATH.create_with_capacity 16
+  - stack:Array Path := Array Path.create_with_capacity 16
   
-  - make t:INTEGER <-
+  - make t:Int <-
   (
     winding:= t
-    points := ARRAY POINT.create_with_capacity 256
-    fill   := ARRAY VERTEX.create_with_capacity 64
-    stroke := ARRAY VERTEX.create_with_capacity 64
+    points := Array Point.create_with_capacity 256
+    fill   := Array Vertex.create_with_capacity 64
+    stroke := Array Vertex.create_with_capacity 64
   )
     
 Public
   
-  + points:ARRAY POINT
-  + closed:BOOLEAN
-  + nbevel:INTEGER
-  + fill:ARRAY VERTEX
-  + stroke:ARRAY VERTEX
-  + winding:INTEGER
-  + convex:BOOLEAN
+  + points:Array Point
+  + closed:Boolean
+  + nbevel:Int
+  + fill:Array Vertex
+  + stroke:Array Vertex
+  + winding:Int
+  + convex:Boolean
   
-  - create t:INTEGER :PATH <-
-  ( + result:PATH
+  - create t:Int :Path <-
+  ( + result:Path
     (stack.is_empty).if {
       result := clone
       result.make t
@@ -43,33 +41,33 @@ Public
   
   - free <-
   ( 
-    closed := convex  := FALSE
+    closed := convex  := False
     nbevel := winding := 0
-    0.to (points.upper) do { i:INTEGER
+    0.to (points.upper) do { i:Int
       points.at i.free
     }
     points.clear
     fill.clear
     stroke.clear
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - set_fill f:ARRAY VERTEX <-
+  - set_fill f:Array Vertex <-
   (
     fill := f
   )
   
-  - set_stroke f:ARRAY VERTEX <-
+  - set_stroke f:Array Vertex <-
   (
     stroke := f
   )
   
-  - set_convex b:BOOLEAN <-
+  - set_convex b:Boolean <-
   (
     convex := b
   )
 
-  - set_nbevel f:INTEGER <-
+  - set_nbevel f:Int <-
   (
     nbevel := f
   )
@@ -79,18 +77,18 @@ Public
     nbevel := nbevel + 1
   )
     
-  - triarea2 (a,b,c:POINT) :REAL_32 <-
-  ( + abx,aby,acx,acy:REAL_32
+  - triarea2 (a,b,c:Point) :Real32 <-
+  ( + abx,aby,acx,acy:Real32
     (abx,aby) := (b.x-a.x,b.y-a.y)
     (acx,acy) := (c.x-a.x,c.y-a.y)
     acx*aby - abx*acy
   )
 
-  - area:REAL_32 <-
-  ( + ar:REAL_32
-    + a,b,c:POINT
+  - area:Real32 <-
+  ( + ar:Real32
+    + a,b,c:Point
     a := points.first
-    2.to (points.upper) do { i:INTEGER
+    2.to (points.upper) do { i:Int
       b := points.at (i-1)
       c := points.at i
       ar := ar + triarea2 (a,b,c)
@@ -99,7 +97,7 @@ Public
   )
 
   - reverse <-
-  ( + i,j:INTEGER
+  ( + i,j:Int
     j := points.upper
     {i < j}.while_do {
       points.swap i with j
@@ -108,24 +106,24 @@ Public
     }
   )
   
-  - add_point (x,y:REAL_32) flags f:INTEGER <-
-  ( + pt:POINT
+  - add_point (x,y:Real32) flags f:Int <-
+  ( + pt:Point
     (
       (points.count > 0) && {pt := points.last; eq (pt.x,pt.y) and (x,y)}
     ).if {
       pt.set_flags (pt.flags | f)
     } else {
-      points.add_last (POINT.create (x,y) flags f)
+      points.add_last (Point.create (x,y) flags f)
     }
   )
 
-  - close <- ( closed := TRUE; )
-  - set_winding w:INTEGER <- ( winding := w; )
+  - close <- ( closed := True; )
+  - set_winding w:Int <- ( winding := w; )
   
-  - flatten:(REAL_32,REAL_32,REAL_32,REAL_32) <-
-  ( + xmin,ymin,xmax,ymax:REAL_32
-    + p0,p1:POINT
-    + ar:REAL_32
+  - flatten:(Real32,Real32,Real32,Real32) <-
+  ( + xmin,ymin,xmax,ymax:Real32
+    + p0,p1:Point
+    + ar:Real32
     
     xmin := ymin :=  1000_000
     xmax := ymax := -1000_000
@@ -134,12 +132,12 @@ Public
     p0 := points.last
     p1 := points.first
     (p0 = p1).if {
-      closed := TRUE
+      closed := True
     }.elseif {eq (p0.x,p0.y) and (p1.x,p1.y)} then {
       points.last.free
       points.remove_last
       p0 := points.last
-      closed := TRUE
+      closed := True
     }
     // Enforce winding.
     (points.count > 2).if {
@@ -152,7 +150,7 @@ Public
       }
     }
 
-    0.to (points.upper) do { i:INTEGER
+    0.to (points.upper) do { i:Int
       p1 := points.at i
       // Calculate segment direction and length
       p0.normalize_and_distance p1

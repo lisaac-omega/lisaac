@@ -1,11 +1,9 @@
 Header
-
-  + name := MAIN;
-  
+  + name := Main
 Public
   
-  - fibonacci n:INTEGER :(INTEGER, INTEGER) <-
-  ( + f1,f2:INTEGER
+  - fibonacci n:Int :(Int, Int) <-
+  ( + f1,f2:Int
     
     (n <= 1).if {
       (f1,f2) := (1,1)
@@ -17,7 +15,7 @@ Public
   )
   
   - main <-
-  ( + f1,f2:INTEGER
+  ( + f1,f2:Int
     
     (f1,f2) := fibonacci 3
     ? {f1 = 2}

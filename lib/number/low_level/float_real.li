@@ -1,13 +1,10 @@
 Header
-
-  + name    := FLOAT_REAL;
-
-  /*Real number of variable decimal part.*/
+  + name := Float_real
+/*Real number of variable decimal part.*/
 
   - include := `#include <math.h>`;
-
 Insert
 
-  - parent_float_map:FLOAT_MAP := FLOAT_MAP
+  - parent_float_map:Float_map := Float_map
 
-  - parent_real:REAL := REAL
+  - parent_real:Real := Real

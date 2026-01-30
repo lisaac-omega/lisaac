@@ -1,19 +1,19 @@
 Header
-  + name := FROM_TO1;
-  /**/
+  + name := From_to1
+/**/
   
     
 Public
   
   - main <-
-  ( + i:INTEGER
-    TEST.check (i = 0)
-    from 1 to 1 do { j:INTEGER
+  ( + i:Int
+    Test.check (i = 0)
+    from 1 to 1 do { j:Int
       i := i + j
     }
-    TEST.check (i = 1)
-    from 2 to 3 do { j:INTEGER
+    Test.check (i = 1)
+    from 2 to 3 do { j:Int
       i := i + j
     }
-    TEST.check (i = 6)
+    Test.check (i = 6)
   )

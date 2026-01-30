@@ -1,18 +1,15 @@
 Header
-
-  + name    := ITM_READ_ARG2;
-
-  /*For send message with two argument (receiver + argument)
+  + name := Itm_read_arg2
+/*For send message with two argument (receiver + argument)
    or simple binary message*/
-
 Inherit
 
-  + parent_itm_read:Expanded ITM_READ
+  + parent_itm_read:Flat Itm_read
 
 Public
 
-  - is_affect:POSITION <-
-  ( + result:POSITION
+  - is_affect:Position <-
+  ( + result:Position
 
     (arg_first != NULL).if {
       result := arg_first.position
@@ -26,22 +23,22 @@ Public
   // Data
   //
 
-  + arg_first:ITM_CODE
+  + arg_first:Itm_code
 
-  + arg_second:ITM_CODE
+  + arg_second:Itm_code
 
   //
   // Constructor
   //
 
-  - create p:POSITION name n:STRING_ALIAS args (a1,a2:ITM_CODE) :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias args (a1,a2:Itm_code) :Self <-
+  ( + result:Self
     result := clone
     result.make p name n args (a1,a2)
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS args (a1,a2:ITM_CODE) <-
+  - make p:Position name n:String_alias args (a1,a2:Itm_code) <-
   (
     ? { a2 != NULL }
     position   := p
@@ -54,9 +51,9 @@ Public
   // Runnable
   //
   
-  - to_run:INSTR <-
-  ( + rd0:Strict ITM_READ
-    + rd1:Strict ITM_READ_ARG1
+  - to_run:Instr <-
+  ( + rd0:Exact Itm_read
+    + rd1:Exact Itm_read_arg1
     rd0 ?= arg_first
     rd1 ?= arg_first
     ((name = "__infix_equal") && {(rd0 != NULL) || {rd1 != NULL}}).if {      
@@ -65,17 +62,17 @@ Public
     to_run_expr
   )
   
-  - to_run_expr:EXPR <-
-  ( + result:EXPR
-    + l_arg:ARRAY ITM_CODE
-    + v1,v2:EXPR
-    + em1,em2:EXPR_MULTIPLE
-    + ext:EXPR_BINARY_CMP
+  - to_run_expr:Expr <-
+  ( + result:Expr
+    + l_arg:Array Itm_code
+    + v1,v2:Expr
+    + em1,em2:Expr_multiple
+    + ext:Expr_binary_cmp
     
     (name = "__infix_equal").if {
-      ext := EXPR_EQUAL
+      ext := Expr_equal
     }.elseif {name = "__infix_not_equal"} then {
-      ext := EXPR_NOT_EQUAL
+      ext := Expr_not_equal
     }
     (ext != NULL).if {      
       v1 := arg_first .to_run_expr
@@ -85,19 +82,19 @@ Public
       (em1 != NULL).if {
         em2 ?= v2
         result := product_cmp (em1.first, em2.first) ext ext pos position
-        (em1.lower+1).to (em1.upper) do { j:INTEGER
+        (em1.lower+1).to (em1.upper) do { j:Int
           v2 := product_cmp (em1.at j, em2.at j) ext ext pos position
           (name = "__infix_equal").if {
-            result := EXPR_AND_AND_LOGIC.create position with result and v2
+            result := Expr_and_and_logic.create position with result and v2
           } else {
-            result := EXPR_OR_OR_LOGIC.create position with result and v2
+            result := Expr_or_or_logic.create position with result and v2
           }
         }
       } else {
         result := product_cmp (v1,v2) ext ext pos position
       }
     } else {
-      l_arg := ALIAS_ARRAY ITM_CODE .new
+      l_arg := Alias_array Itm_code .new
       l_arg.add_last arg_second
       result := to_run_with arg_first args l_arg
     }

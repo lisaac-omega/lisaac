@@ -1,15 +1,14 @@
 Header
-  + name := TREAL;
-  
+  + name := Treal
 Inherit
-  - parent_texp:TEXP := TEXP
+  - parent_texp:Texp := Texp
   
 Public
   
-  + val:REAL_32
+  + val:Real32
   
-  - init_r v:REAL_32 :TREAL <- ( val := v; Self)
+  - init_r v:Real32 :Treal <- ( val := v; self)
   
-  - eval:REAL_32 <- val
+  - eval:Real32 <- val
   
-  - append_in b:STRING_BUFFER <- val.append_in b
+  - append_in b:String_buffer <- val.append_in b

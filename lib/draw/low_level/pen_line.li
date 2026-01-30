@@ -1,15 +1,13 @@
 Header
-  
-  + name := PEN_LINE;
-  
+  + name := Pen_line
 Inherit
   
-  + parent_pen_move:Expanded PEN_MOVE
+  + parent_pen_move:Flat Pen_move
   
 Public
   
-  - create (xx,yy:REAL_32) :PEN_MOVE <-
-  ( + result:PEN_MOVE
+  - create (xx,yy:Real32) :Pen_move <-
+  ( + result:Pen_move
     (stack_line.is_empty).if {
       result := clone
     } else {
@@ -20,17 +18,17 @@ Public
     result
   )
 
-  - to_path pc:PATH_CACHE <-
+  - to_path pc:Path_cache <-
   (
     pc.paths.last.add_point (x,y) flags pt_corner
   )
   
   - free <-
   ( 
-    stack_line.add_last Self
+    stack_line.add_last self
   )
   
-  - svg_append_in buf:STRING_BUFFER <-
+  - svg_append_in buf:String_buffer <-
   (
     buf.add_last 'L'
     svg_put (x,y) in buf

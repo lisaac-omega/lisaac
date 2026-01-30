@@ -1,42 +1,39 @@
 Header
-
-  + name        := TYPE_ID;
-
-  /*Virtual type style slot segregation*/
-
+  + name := Type_id
+/*Virtual type style slot segregation*/
 Inherit
 
-  + parent_type:Expanded TYPE
+  + parent_type:Flat Type
 
 Private
 
-  - list_id:ARRAY TYPE_ID
+  - list_id:Array Type_id
 
-  - create i:INTEGER :SELF <-
-  ( + result:SELF
+  - create i:Int :Self <-
+  ( + result:Self
 
     result := clone
     result.make i
     result
   )
 
-  - make i:INTEGER <-
+  - make i:Int <-
   (
     index := i
-    default := TYPE_FULL.create Self with 0
+    default := Type_full.create self with 0
   )
 
 Public
 
-  - name:STRING_ALIAS <- "___TYPE_ID"
+  - name:String_alias <- "___TYPE_ID"
 
-  - intern_name:STRING_ALIAS <- name
+  - intern_name:String_alias <- name
 
-  - get_index idx:INTEGER :TYPE_ID <-
-  ( + result:TYPE_ID
+  - get_index idx:Int :Type_id <-
+  ( + result:Type_id
 
     (idx > list_id.upper).if {
-      result := TYPE_ID.create idx
+      result := Type_id.create idx
       list_id.add_last result
       ? {list_id.upper = idx}
     } else {
@@ -47,7 +44,7 @@ Public
 
   - make_type_id <-
   (
-    list_id := ARRAY TYPE_ID .create_with_capacity 3
+    list_id := Array Type_id .create_with_capacity 3
     list_id.add_last (create 0)
     list_id.add_last (create 1)
   )
@@ -56,7 +53,7 @@ Public
 
   - genere_struct; // Nothing.
 
-  - is_sub_type other:TYPE :BOOLEAN <-
+  - is_sub_type other:Type :Boolean <-
   (
     other.name = name
   )
@@ -65,16 +62,16 @@ Public
   // Declaration generation.
   //
 
-  - put_generic_declaration buffer:STRING_BUFFER <- buffer.append "int"
+  - put_generic_declaration buffer:String_buffer <- buffer.append "int"
 
-  - put_reference_star_declaration buffer:STRING_BUFFER; // Nothing.
+  - put_reference_star_declaration buffer:String_buffer; // Nothing.
 
   //
   // Code source generation.
   //
 
-  - put_id buffer:STRING_BUFFER <- index.append_in buffer
+  - put_id buffer:String_buffer <- index.append_in buffer
 
-  - put_access_id e:EXPR <- e.genere
+  - put_access_id e:Expr <- e.genere
 
-  - put_value buffer:STRING_BUFFER <- index.append_in buffer
+  - put_value buffer:String_buffer <- index.append_in buffer

@@ -1,12 +1,9 @@
 Header
-
-  + name        := WRITE;
-
-  /*Write local, global or slot*/
-
+  + name := Write
+/*Write local, global or slot*/
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
@@ -14,63 +11,63 @@ Public
   // Debug !!!!
   //
 
-  + is_delete:BOOLEAN
+  + is_delete:Boolean
 
-  + is_create:BOOLEAN
+  + is_create:Boolean
 
   - set_delete <-
   (
-    is_delete := TRUE
+    is_delete := True
   )
 
   - set_create <-
   (
-    is_create := TRUE
+    is_create := True
   )
 
   //
   // Fin debug !!!!
   //
 
-  + quiet_generation:BOOLEAN
+  + quiet_generation:Boolean
 
   - set_quiet_generation <-
   (
-    quiet_generation := TRUE
+    quiet_generation := True
   )
 
-  - is_invariant:BOOLEAN <- value.is_invariant
+  - is_invariant:Boolean <- value.is_invariant
 
-  - variable:VARIABLE <-
+  - variable:Variable <-
   (
     abstract
     NULL
   )
 
-  - static_type:TYPE_FULL <-
+  - static_type:Type_full <-
   (
     variable.type
   )
 
-  + value:EXPR
+  + value:Expr
 
-  - set_value new:EXPR <-
+  - set_value new:Expr <-
   (
     value := new
   )
 
-  - ensure_count:INTEGER <- variable.ensure_count
+  - ensure_count:Int <- variable.ensure_count
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     (value != NULL).if {
       value.get_type t
     }
   )
 
-  - my_copy:SELF <-
-  ( + new_val:EXPR
-    + result:SELF
+  - my_copy:Self <-
+  ( + new_val:Expr
+    + result:Self
 
     new_val := value.my_copy
     result ?= variable.write position value new_val
@@ -81,7 +78,7 @@ Public
   // Execute.
   //
 
-  - execute_access_unlink:INSTR <-
+  - execute_access_unlink:Instr <-
   (
     abstract
     NULL
@@ -89,19 +86,19 @@ Public
 
   - execute_access_link <- abstract
 
-  - execute:INSTR <-
-  ( + result:INSTR
-    + read:READ
-    + val:INSTR
-    + slot:SLOT_DATA
-    + rd_loc:READ_LOCAL
+  - execute:Instr <-
+  ( + result:Instr
+    + read:Read
+    + val:Instr
+    + slot:Slot_data
+    + rd_loc:Read_local
 
     ? { variable != NULL }
     ? { value    != NULL }
 
     simplify_type variable
     //debug_display
-
+    
     slot ?= variable
     rd_loc ?= value
     (
@@ -110,9 +107,9 @@ Public
         {(rd_loc = NULL) || {rd_loc.variable.style != 'R'}} && 
         {(slot = NULL)   || {! slot.id_section.is_mapping}}
       ) || { // Second case : a := a
-	read ?= value
-	(read != NULL) && {variable = read.variable} &&
-	{(variable.is_local) || {variable.style = '-'}}	// BSBS: Ce cas dans rentrer dans set_write
+        read ?= value
+        (read != NULL) && {variable = read.variable} &&
+        {(variable.is_local) || {variable.style = '-'}}        // BSBS: Ce cas dans rentrer dans set_write
       } || {
         (rd_loc != NULL) && {rd_loc.local.require_count = 0} && {rd_loc.local.ensure_count = 1} && {!variable.type.raw.is_block} && {
           /*
@@ -125,18 +122,18 @@ Public
             variable.style.print
             rd_loc.local.intern_name.println
           */
-          TRUE
+          True
         }
       }          
     ).if {
       //
       // Supprime affectation.
-      //     
+      //      
       val := execute_access_unlink
       (val != NULL).if {
-	list_current.insert_before val
+        list_current.insert_before val
       }
-      variable.unwrite Self
+      variable.unwrite self
       result := value.execute_unlink
       new_execute_pass
     } else {
@@ -150,8 +147,8 @@ Public
 	//old_loop_invariant := loop_invariant
 	//loop_invariant := NULL
 	//
-	variable.reset_last_write Self
-	loop_list.insert_before Self
+	variable.reset_last_write self
+	loop_list.insert_before self
 	//
 	//execute_access_link
 	//value := value.execute_link
@@ -163,23 +160,23 @@ Public
       } else { */
 
         execute_access_link
-	value := value.execute_link
-	seq_index := seq_index + 1
-	variable.set_write Self
-	result := Self
+        value := value.execute_link
+        seq_index := seq_index + 1
+        variable.set_write self
+        result := self
       //}
     }
     result
   )
 
   - remove <-
-  ( + l:LOCAL
+  ( + l:Local
     l ?= variable
     ((l != NULL) && {l.my_alias != NULL}).if {
       // It's for generation code, with ALIAS_LOCAL and SWITCH fusion case.
-      l.my_alias.unwrite Self
+      l.my_alias.unwrite self
     } else {
-      variable.unwrite Self
+      variable.unwrite self
     }
     value.remove
   )
@@ -191,22 +188,22 @@ Public
   - genere_value <-
   (
     (
-      (static_type.is_expanded_ref) && {! value.static_type.is_expanded_ref}
+      (static_type.is_flat_ref) && {! value.static_type.is_flat_ref}
     ).if {
-      ? {value.static_type.is_expanded}
+      ? {value.static_type.is_flat}
       output.append "&("
       value.genere
       output.add_last ')'
     }.elseif {
-      (static_type.is_expanded) && {! static_type.is_expanded_ref} &&
-      {(! value.static_type.is_expanded) || {value.static_type.is_expanded_ref}} &&
-      {value.static_type.raw != TYPE_NULL} // For Pointer := NULL
+      (static_type.is_flat) && {! static_type.is_flat_ref} &&
+      {(! value.static_type.is_flat) || {value.static_type.is_flat_ref}} &&
+      {value.static_type.raw != Type_null} // For Pointer := NULL
     } then {
       output.append "*("
       value.genere
       output.add_last ')'
     } else {      
-      ((variable.type.is_strict) && {! value.static_type.is_strict}).if {
+      ((variable.type.is_exact) && {! value.static_type.is_exact}).if {
         output.add_last '('
         variable.type.genere_declaration output
         output.add_last ' '
@@ -221,7 +218,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     //crash
     buffer.append (variable.intern_name)
@@ -242,7 +239,7 @@ Public
     }
   )
 
-  - display_ref buffer:STRING_BUFFER <-
+  - display_ref buffer:String_buffer <-
   (
     is_verbose.if {
       buffer.add_last '<'

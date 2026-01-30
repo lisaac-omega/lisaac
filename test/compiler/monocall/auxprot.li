@@ -1,19 +1,20 @@
 Header
-  + name := AUXPROT
+  + name := Auxprot
+
 Insert 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
-  + counter:INTEGER
+  + counter:Int
   
-  - new:SELF <- (clone)
+  - new:Self <- (clone)
   
   - monoproc <-
   (
     counter := counter + 1
   )
 
-  - monofonc:INTEGER <-
+  - monofonc:Int <-
   (
     counter := counter + 1
     counter

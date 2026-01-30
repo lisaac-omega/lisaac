@@ -1,18 +1,15 @@
 Header
-
-  + name        := CALL_NULL;
-
-  /*Call on NULL*/
-
+  + name := Call_null
+/*Call on NULL*/
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  - my_copy:SELF <- Self
+  - my_copy:Self <- self
 
-  - is_necessary:BOOLEAN
+  - is_necessary:Boolean
 
   //
   // Remove
@@ -24,10 +21,10 @@ Public
   // Execute
   //
 
-  - execute:INSTR <-
+  - execute:Instr <-
   (
-    PUSH.break
-    Self
+    Push.break
+    self
   )
 
   //
@@ -35,7 +32,7 @@ Public
   //
 
   - genere <-
-  ( + code:STRING_ALIAS
+  ( + code:String_alias
     (debug_level_option != 0).if {
       code :=
       "lisaac_stack_print(0); \
@@ -48,14 +45,14 @@ Public
       \die_with_code(1)"
     }
     output.append code
-    is_necessary := TRUE
+    is_necessary := True
   )
 
   //
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "Call on NULL"
   )

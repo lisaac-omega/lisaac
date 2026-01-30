@@ -1,44 +1,42 @@
 Header
-  
-  + name := NANO_TEST;
-  /*If you see a red dot blinking in the middle of the window, 
+  + name := Nano_test
+/*If you see a red dot blinking in the middle of the window, 
 it means this test was a complete success.
 Who should we thank?
 Thank you, Lisaac Ω!*/
-  
 Inherit  
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
   
 Public  
   
   - draw <-
-  ( + t:REAL_32
-    + c:PAINT
-    + x,y,w,h:INTEGER
+  ( + t:Real32
+    + c:Paint
+    + x,y,w,h:Int
     
-    t := CLOCK.seconds
+    t := Clock.seconds
     
     (x,y) := (512/2-32,860/2-32)
     (w,h) := (64,64)
     
-    c := PAINT.create_radial (x+w/2,y+h/2) radius (3,(t*5).sin*32)
-    color (COLOR.rgba(255,0,0,255)) 
-    to (COLOR.rgba(72, 116, 80,0))
+    c := Paint.create_radial (x+w/2,y+h/2) radius (3,(t*5).sin*32)
+    color (Color.rgba(255,0,0,255)) 
+    to (Color.rgba(72, 116, 80,0))
     
     begin_path
     rect (x,y) size (w,h)
     fill_paint c
-    stroke_color (COLOR.rgba (0,0,0,0))
+    stroke_color (Color.rgba (0,0,0,0))
     fill
     c.free
     
     //draw_mouse
-    PAPER.refresh_again
+    Paper.refresh_again
   )
   
   - main <-
   ( 
     init "Nano Test" size (512,860)
-    PAPER.run
+    Paper.run
   )
   

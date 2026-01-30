@@ -1,12 +1,10 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + i:FILE
-    + s:STRING_BUFFER
+  ( + i:File
+    + s:String_buffer
     
     s ?= i; // au moins un warning ?? 
 

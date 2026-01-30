@@ -1,27 +1,24 @@
 Header
-
-  + name    := TYPE_CREATION E;
-
-  /*Type without style*/
-
+  + name := Type_creation E
+/*Type without style*/
 Inherit
   
   + parent_type_creation:E := E
   
 Private
   
-  - id_creation_counter:INTEGER
+  - id_creation_counter:Int
   
 Public
   
-  + id_creation:INTEGER
+  + id_creation:Int
   
   //
   // Creation.
   //
   
-  - create_type_creation t:E :SELF <-
-  ( + result:SELF
+  - create_type_creation t:E :Self <-
+  ( + result:Self
     
     result := clone
     result.make_type_creation t
@@ -39,7 +36,7 @@ Public
   // Display.
   //
 
-  - append_name_in buf:STRING_BUFFER <-
+  - append_name_in buf:String_buffer <-
   (    
     buf.append name
     buf.add_last '#'

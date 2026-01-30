@@ -1,17 +1,16 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + str:USTRING_BUFFER
+  ( + str:Ustring_buffer
     str := "vélo"
-    TEST.check (str.count) integer 4
+    Test.check (str.count) integer 4
     str := "é"
-    TEST.check (str.count) integer 1
+    Test.check (str.count) integer 1
     str := "e"
-    TEST.check (str.count) integer 1
+    Test.check (str.count) integer 1
     str := ""
-    TEST.check (str.count) integer 0
+    Test.check (str.count) integer 0
   )
   
   

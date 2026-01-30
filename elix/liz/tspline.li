@@ -1,23 +1,22 @@
 Header
-  + name := TSPLINE;
-  
+  + name := Tspline
 Inherit
-  + parent_tmove:Expanded TMOVE
+  + parent_tmove:Flat Tmove
   
 Public
   
-  + w1_x:TEXP
-  + w1_y:TEXP
+  + w1_x:Texp
+  + w1_y:Texp
   
-  + w2_x:TEXP
-  + w2_y:TEXP
+  + w2_x:Texp
+  + w2_y:Texp
     
-  - init_w1 (w1x,w1y:TEXP) w2 (w2x,w2y:TEXP) to (x,y:TEXP) :SELF <-
+  - init_w1 (w1x,w1y:Texp) w2 (w2x,w2y:Texp) to (x,y:Texp) :Self <-
   (
     (w1_x,w1_y) := (w1x,w1y)
     (w2_x,w2_y) := (w2x,w2y)
     (val_x,val_y) := (x,y)
-    Self
+    self
   )
   
   - run <-
@@ -25,7 +24,7 @@ Public
     bezier_w1 (w1_x.eval,w1_y.eval) w2 (w2_x.eval,w2_y.eval) to (val_x.eval,val_y.eval)
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b += "Spline w1 ("
     w1_x.append_in b;  b | ',';  w1_y.append_in b

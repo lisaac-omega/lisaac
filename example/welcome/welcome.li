@@ -1,6 +1,7 @@
-Header  
-  + name := WELCOME
-  /*Welcome to Lisaac Ω
+Header
+  + name := Welcome
+  
+/*Welcome to Lisaac Ω
 A programming language designed to become the reference for teaching programming.
 Lisaac Ω aims to provide a clear, consistent, and modern environment to help
 students grasp the core principles of programming with ease and efficiency.
@@ -13,43 +14,43 @@ prototype-based programming models.
 lisaac.png
 Created and maintained by Benoît Sonntag and Dominique Colnet.*/
 Inherit 
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
   
 Public
     
   - draw <-
-  ( + t,t2,x,y:REAL_32
+  ( + t,t2,x,y:Real32
     time_base := time_base + π.div 1000
-    from 0 to 255 do { i:INTEGER
+    from 0 to 255 do { i:Int
       (t,t2) := (time_base + i * π.div 1000, t * 2.2)
             
       // Lemniscate of Bernouilli (Blue)
       x := cos(t2).div (1 + (sin(t2)).pow 2)
       y := (cos(t2) * sin(t2)).div (1 + (sin(t2)).pow 2)
-      point (x,y) color (COLOR blue) alpha i
+      point (x,y) color (Color blue) alpha i
       
       // Flower (White)
       x := (cos(3 * t)).abs.sqrt * cos(t)
       y := (cos(3 * t)).abs.sqrt * sin(t)
-      point (x,y) color (COLOR white) alpha i
+      point (x,y) color (Color white) alpha i
       
       // Lisaajous (Red)
       x := sin(3 * t + π.div 4)
       y := cos(2 * t)
-      point (x,y) color (COLOR red) alpha i
+      point (x,y) color (Color red) alpha i
     }
     //
     font_size size_font
-    font_face_id (FONT sys (FONT bold))
+    font_face_id (Font sys (Font bold))
     (xt,yt) := (xt + ax, yt + ay)
     if ((yt < size_font) || {yt > height-shadow}) then { ay := -ay }
     //
-    fill_color (COLOR rgba (0,0,0,80))
+    fill_color (Color rgba (0,0,0,80))
     text (xt+shadow, yt+shadow) msg txt
-    fill_color (COLOR rgba (0,155,0,255))
+    fill_color (Color rgba (0,155,0,255))
     if ((text (xt, yt) msg txt >= width-shadow) || {xt < 1}) then { ax := -ax }
     //
-    PAPER refresh_again
+    Paper refresh_again
   )
   
   // Main & Event mouse functions
@@ -57,34 +58,34 @@ Public
   - main <-
   // Entry point, like in C code.
   (
-    PAPER unset (PAPER decorated)
-    PAPER set (PAPER transparent)
+    Paper unset (Paper decorated)
+    Paper set (Paper transparent)
     init "Welcome" size (1200,1200)
-    PAPER run
+    Paper run
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <- if (ev = HAND clic) then { exit 0 }
+  - event ev:Uint8 :Boolean <- if (ev = Hand clic) then { exit 0 }
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <- ( exit 0; TRUE)
+  - key s:String cmd c:Uint8 :Boolean <- ( exit 0; True)
   
 Private  
   
   // Constants & draw point
   
-  - π:REAL_32 := REAL_32 pi
-  - shadow:REAL_32 := 10
-  - txt:STRING_ALIAS := "Welcome Lisaac Ω"
-  - size_font:REAL_32 := 100
-  - time_base:REAL_32
-  - yt:REAL_32 := size_font
-  - xt:REAL_32 := 1
-  - ay:REAL_32 := 1
-  - ax:REAL_32 := 1
+  - π:Real32 := Real32 pi
+  - shadow:Real32 := 10
+  - txt:String_alias := "Welcome Lisaac Ω"
+  - size_font:Real32 := 100
+  - time_base:Real32
+  - yt:Real32 := size_font
+  - xt:Real32 := 1
+  - ay:Real32 := 1
+  - ax:Real32 := 1
 
-  - point (x,y:REAL_32) color c:COLOR alpha α:REAL_32 <-
+  - point (x,y:Real32) color c:Color alpha α:Real32 <-
   // Alpha : between 0 and 255
   [ {α.in_range 0 to 255} ]
-  ( + x0,y0:REAL_32
+  ( + x0,y0:Real32
     (x0,y0) := (width.div 2, height.div 2)
     begin_path
     fill_color (c.set_af (α.div (255 * 10)))

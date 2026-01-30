@@ -1,24 +1,22 @@
 Header
-  
-  + name := Expanded VERTEX;
-  
+  + name := Flat Vertex
 Inherit 
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Mapping, Public
   
-  + x:REAL_32
-  + y:REAL_32
-  + u:REAL_32
-  + v:REAL_32
+  + x:Real32
+  + y:Real32
+  + u:Real32
+  + v:Real32
   
 Public
   
-  - make (px,py:REAL_32) axes (pu,pv:REAL_32) :SELF <-
+  - make (px,py:Real32) axes (pu,pv:Real32) :Self <-
   ( (x,y) := (px,py)
     (u,v) := (pu,pv)
-    Self
+    self
   )
   
   - print <-

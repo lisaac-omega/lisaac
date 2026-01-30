@@ -1,5 +1,6 @@
 Header
-  + name := MAIN
+  + name := Main
+
 
 Public
   

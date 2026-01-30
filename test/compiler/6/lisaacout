@@ -1,5 +1,5 @@
 --SYNTAX-----------
 Incorrect decimal number.
-Line 11 column 12 in BUG_HEXA(.../test/compiler/6/bug_hexa.li):
+Line 11 column 12 in Bug_hexa(.../test/compiler/6/bug_hexa.li):
     b := 0C7
             ^

@@ -1,29 +1,26 @@
 Header
-
-  + name        := ITM_PROTOTYPE;
-
-  /*Prototype constant*/
-
+  + name := Itm_prototype
+/*Prototype constant*/
 Inherit
 
-  + parent_itm_constant:Expanded ITM_CONSTANT
+  + parent_itm_constant:Flat Itm_constant
 
 Public
 
-  + type:ITM_TYPE
+  + type:Itm_type
 
   //
   // Constructor
   //
 
-  - create p:POSITION type n:ITM_TYPE :SELF <-
-  ( + result:SELF
+  - create p:Position type n:Itm_type :Self <-
+  ( + result:Self
     result := clone
     result.make p type n
     result
   )
 
-  - make p:POSITION type n:ITM_TYPE <-
+  - make p:Position type n:Itm_type <-
   (
     position := p
     type := n
@@ -33,9 +30,9 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + t:TYPE_FULL
-    + result:EXPR
+  - to_run_expr:Expr <-
+  ( + t:Type_full
+    + result:Expr
 
     t := type.to_run_for profil_slot pos (position.prototype.filename)
     (t = NULL).if {
@@ -46,13 +43,13 @@ Public
     }
     // TYPE Classic.
     (
-      (t.is_expanded_c) && {t.raw != type_boolean} &&
+      (t.is_flat_c) && {t.raw != type_boolean} &&
       {t.raw != type_true} && {t.raw != type_false}
     ).if {
       result := t.default_value position
       result := result.check_type t with position
     } else {
-      result := PROTOTYPE_CST.create position type t
+      result := Prototype_cst.create position type t
     }
     result
   )
@@ -61,9 +58,9 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    type.append_in buffer
+    type.append_in b
   )
 
 

@@ -1,56 +1,53 @@
 Header
-
-  + name    := PROFIL_SLOT;
-
-  /*Method with costumization*/
-
+  + name := Profil_slot
+/*Method with costumization*/
 Inherit
 
-  + parent_profil:Expanded PROFIL
+  + parent_profil:Flat Profil
 
 Public
 
-  - position:POSITION <- slot.position
+  - position:Position <- slot.position
 
-  - slot:SLOT <- slot_code
+  - slot:Slot <- slot_code
 
-  - is_interrupt:BOOLEAN <- slot_code.id_section.is_interrupt
-  - is_external:BOOLEAN  <- slot_code.id_section.is_external
+  - is_interrupt:Boolean <- slot_code.id_section.is_interrupt
+  - is_external:Boolean  <- slot_code.id_section.is_external
 
-  + slot_code:SLOT_CODE
+  + slot_code:Slot_code
 
-  + is_context_sensitive:BOOLEAN
+  + is_context_sensitive:Boolean
   // BSBS: Le bloc passé en argument peux ne pas etre context sensitive
   // Et puis, cet stat peu changer dans le temps...
 
   - set_context_sensitive <-
   (
-    is_context_sensitive := TRUE
+    is_context_sensitive := True
   )
 
   //
   // Creation.
   //
   
-  - my_clone:SELF <-
+  - my_clone:Self <-
   (    
     clone
   )
   
-  - make s:SLOT_CODE
-  with (typ_self:TYPE_FULL,call_lst:ARRAY EXPR)
-  verify is_first:BOOLEAN :ARRAY WRITE <-
+  - make s:Slot_code
+  with (typ_self:Type_full,call_lst:Array Expr)
+  verify is_first:Boolean :Array Write <-
   [
     -? {typ_self != NULL}
   ]
-  ( + loc:LOCAL
-    + typ:TYPE_FULL
-    + item_lst:ARRAY ITM_ARGUMENT
-    + result:ARRAY WRITE
-    + tm:ITM_TYPE_MULTI
-    + ts:ITM_TYPE_MONO
-    + typ_gen:TYPE_GENERIC
-    + typ_sim:TYPE
+  ( + loc:Local
+    + typ:Type_full
+    + item_lst:Array Itm_argument
+    + result:Array Write
+    + tm:Itm_type_multi
+    + ts:Itm_type_mono
+    + typ_gen:Type_generic
+    + typ_sim:Type
     /*
     (s.name = "yop").if {
       "PROFIL_SLOT : --- Yop ---".println;
@@ -59,45 +56,45 @@ Public
     };
     */
     (is_graph).if {
-      set_call := new HMAP INTEGER KEY PROFIL
-      set_back := HSET PROFIL.create
+      set_call := new Hmap Int Key Profil
+      set_back := Hset Profil.create
     }
     (s.id_section.is_external).if {
       name := s.name
     } else {
-      name := get_intern (s.name) type FALSE
+      name := get_intern (s.name) type False
     }
     
     slot_code := s
     type_self := typ_self
-    PROFIL_LIST.add Self
+    Profil_list.add self
     
     typ_gen ?= type_self.raw
     (
       (profil_add_alias = NULL) && {typ_gen != NULL} && 
-      {typ_gen.itm_type.name = "ALIAS__TO"} && {s.name = "add"} &&
-      {typ_gen.generic_list.first.raw.name = "STRING_BUFFER"} && 
-      {typ_gen.generic_list.second.raw.name = "STRING_ALIAS"} 
+      {typ_gen.itm_type.name = "Alias To"} && {s.name = "add"} &&
+      {typ_gen.generic_list.first .raw.name = str_string_buffer} && 
+      {typ_gen.generic_list.second.raw.name = str_string_alias} 
     ).if {      
-      profil_add_alias := Self
+      profil_add_alias := self
     }
     typ_sim := type_self.raw
     (
       (profil_hash_code_alias = NULL) && {typ_sim.itm_type != NULL} && 
-      {typ_sim.itm_type.name = "STRING_ALIAS"} && 
+      {typ_sim.itm_type.name = str_string_alias} && 
       {s.name = "hash_code_intern"}
     ).if {
-      profil_hash_code_alias := Self
+      profil_hash_code_alias := self
     }
     //
-    list_current := LIST.create (s.position)
-    profil_current := profil_slot := Self
+    list_current := List.create (s.position)
+    profil_current := profil_slot := self
     //
     (debug_level_option != 0).if {
       // Debug mode : Add context local.
-      context := TYPE_CONTEXT.default.new_local (s.position) name "__pos" style '+'
+      context := Type_context.default.new_local (s.position) name "__pos" style '+'
       context.set_ensure_count 1
-      list_current.add_last (PUSH.create (slot_code.position) context context first TRUE)
+      list_current.add_last (Push.create (slot_code.position) context context first True)
     }
     //
     code := list_current
@@ -105,42 +102,42 @@ Public
     // Arguments.
     arg_type_tmp := call_lst
     item_lst := s.argument_list
-    argument_list := ARRAY LOCAL .create_with_capacity (call_lst.count) //s.argument_count)
-    ITM_ARGUMENT.reset_arg_count_tmp
-    (item_lst.lower).to (item_lst.upper) do { j:INTEGER
-      item_lst.at j.to_run_in argument_list for Self
+    argument_list := Array Local .create_with_capacity (call_lst.count) //s.argument_count)
+    Itm_argument.reset_arg_count_tmp
+    (item_lst.lower).to (item_lst.upper) do { j:Int
+      item_lst.at j.to_run_in argument_list for self
     }
     ((s.id_section.is_external) && {argument_list.count > 1}).if {
-      (argument_list.lower+1).to (argument_list.upper) do { j:INTEGER
-	loc := argument_list.at j
-	loc.set_ensure_count 1
-	loc.write (loc.position) value (
-	  EXTERNAL_C.create (loc.position) text "/* External slot */"
-	  access NULL persistant FALSE type (loc.type)
-	)
+      (argument_list.lower+1).to (argument_list.upper) do { j:Int
+        loc := argument_list.at j
+        loc.set_ensure_count 1
+        loc.write (loc.position) value (
+          External_c.create (loc.position) text "/* External slot */"
+          access NULL persistant False type (loc.type)
+        )
       }
     }
 
     // Results
     tm ?= s.result_type
     (tm != NULL).if {
-      result_list := SLIM_ARRAY LOCAL .create_with_capacity (tm.count)
-      (tm.lower).to (tm.upper) do { k:INTEGER
-        typ := tm.at k.to_run_for Self pos (position.prototype.filename)
+      result_list := Slim_array Local .create_with_capacity (tm.count)
+      (tm.lower).to (tm.upper) do { k:Int
+        typ := tm.at k.to_run_for self pos (position.prototype.filename)
         loc := typ.get (s.position) result (k+1)
         result_list.add_last loc
       }
     } else {
       ts ?= s.result_type
-      (ts != ITM_TYPE_SIMPLE.type_void).if {
-        result_list := SLIM_ARRAY LOCAL .create_with_capacity 1
-        typ := ts.to_run_for Self pos (position.prototype.filename)
+      (ts != Itm_type_simple.type_void).if {
+        result_list := Slim_array Local .create_with_capacity 1
+        typ := ts.to_run_for self pos (position.prototype.filename)
         result_list.add_last (typ.get (s.position) result 0)
         (is_external).if {
           result_list.last.set_ensure_count 1
         }
       } else {
-        result_list := SLIM_ARRAY LOCAL .create_with_capacity 0
+        result_list := Slim_array Local .create_with_capacity 0
       }
     }
     //
@@ -160,17 +157,17 @@ Public
   - remove_inline <-
   (
     parent_profil.remove_inline
-    slot_code.remove_profil Self
+    slot_code.remove_profil self
   )
 
   - remove <-
   (
     parent_profil.remove
-    slot_code.remove_profil Self
+    slot_code.remove_profil self
   )
 
   //
   // Genere.
   //
 
-  - is_static:BOOLEAN <- (! slot.id_section.is_interrupt) && {! slot.id_section.is_external}
+  - is_static:Boolean <- (! slot.id_section.is_interrupt) && {! slot.id_section.is_external}

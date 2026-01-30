@@ -1,61 +1,60 @@
 Header
-  + name := ARG;
-  
+  + name := Arg
 Inherit
-  + parent_decl:Expanded DECL
-  + parent_tok_itm:Expanded TOK_ITM
+  + parent_decl:Flat Decl
+  + parent_tok_itm:Flat Tok_itm
   
 Private
-  - stk:Expanded ARRAY (Strict ARG)
+  - stk:Flat Array (Exact Arg)
   
 Public
-  + lst:Expanded ARRAY LOCAL
+  + lst:Flat Array Local
   
-  - is_self:BOOLEAN <- (! lst.is_empty) && {lst.first.name_id = "Self"}
+  - is_self:Boolean <- (! lst.is_empty) && {lst.first.name_id = "self"}
   
-  - type:TYPE <-
-  ( + t:TYPE
+  - type:Type <-
+  ( + t:Type
     (upper = 0).if { t := first.type; } else {
-      + ts:ARRAY TONE
-      + to:TONE
+      + ts:Array Tone
+      + to:Tone
       ts := push_tone
-      0.to upper do { i:INTEGER
+      0.to upper do { i:Int
         to ?= lst.at i.type; ? {to != NULL}
         ts.add_last to
       }
-      t := TVEC.new ts
+      t := Tvec.new ts
       pop_tone
     }
     t    
   )
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- ( lst.foreach { l:LOCAL; l.free; }; lst.clear; stk.add_last Self; )
+  - free <- ( lst.foreach { l:Local; l.free; }; lst.clear; stk.add_last self; )
   
-  - new_parse t:INTEGER <-
+  - new_parse t:Int <-
   (
     rd_arg (t | 100b)
   )
   
-  - rd_arg op:INTEGER <-
+  - rd_arg op:Int <-
   //++ ARG          -> identifier ':' TYPE_RESULT
   //++               | '(' ARG_VEC ')'
-  ( + mute:BOOLEAN
-    + l:LOCAL
+  ( + mute:Boolean
+    + l:Local
     
     mute := (op&10b) != 0
     (read_c '(').if {
-      col (LOOK.symbol) sub 1
+      col (Look.symbol) sub 1
       rd_arg_vec op
       ((lst.is_empty) && {!mute}).if { err syntax msg "Incorrect argument definition."; }
       skip_spln
       (read_c ')').if {
-        col (LOOK.symbol) sub 1
+        col (Look.symbol) sub 1
       } else { (!mute).if { err warning msg "Added ')'. (2)"; }; }
     } else {
-      ((l := LOCAL.parse_sp op) != NULL).if {        
+      ((l := Local.parse_sp op) != NULL).if {        
         lst.add_last l;
         (l.last_argv != NULL).if { lst.add_last (l.last_argv) }
       }
@@ -66,39 +65,44 @@ Public
     }
   )
   
-  - rd_arg_vec op:INTEGER <-
+  - rd_arg_vec op:Int <-
   //++ ARG0         -> identifier [ ':' TYPE ] { , identifier [ ':' TYPE ] }
-  ( + lop,p:INTEGER
-    + i:INTEGER
-    + mute:BOOLEAN
-    + l,l2:LOCAL
-    + t:TTOK
-    + c:INTEGER
+  ( + lop,p:Int
+    + i:Int
+    + mute:Boolean
+    + l,l2:Local
+    + t:Ttok
+    + c:Int
     mute := (op&10b) != 0
     lop := op
     {
-      skip_spln
-      c := LOOK.local
-      ((read_idf) || {c := LOOK.keyword; word "Self" && {(lop & 01b) = 01b}}).if {
-        l := LOCAL.new.set_name last_str.set_style f_ro;
+      skip_spln      
+      (read_idf).if {
+        (last_str = "self").if {
+          ((lop & 01b) = 00b).if { err semantic msg "`self' incorrect." }
+          c := Look.keyword
+        } else {
+          c := Look.local
+        }
+        l := Local.new.set_name last_str.set_style f_ro;
         col c sub (last_str.count)
-        fnt (FONT.italic) sub (last_str.count)
-        fnt (FONT.roman) sub 0
+        fnt (Font.italic) sub (last_str.count)
+        fnt (Font.roman) sub 0
         l.finalize 0 db (pos_i-last_str.count) de pos_i
         lst.add_last l
         lop := lop & 110b
         ((read_c ':') && {(pos_i > upper) || {at pos_i != '='}}).if {
-          col (LOOK.symbol) sub 1
-          t := TTOK.parse_sp (TTOK.tres)
+          col (Look.symbol) sub 1
+          t := Ttok.parse_sp (Ttok.tres)
           (read_c '^').if {
             p := pos_i.pt - 1
-            col (LOOK.symbol) sub 1
+            col (Look.symbol) sub 1
             (read_idf).if {
               jmp 1 sub (pos_i - last_str.count - p + 1)
               col c sub (last_str.count)
-              exp TRUE sub (last_str.count)
-              exp FALSE sub 0
-              l2 := LOCAL.new.set_name last_str.set_style f_ro;              
+              exp True sub (last_str.count)
+              exp False sub 0
+              l2 := Local.new.set_name last_str.set_style f_ro;              
             }
           }
           l.set_dd (pos_i-(pt_b.pt+l.db))
@@ -115,7 +119,7 @@ Public
         (!mute).if { err warning msg "Local needed."; }
       }
       (read_c ',').if {
-        col (LOOK.symbol) sub 1
+        col (Look.symbol) sub 1
       }
     }.while_loop
     ((!mute) && {l != NULL} && {l.ttok = NULL}).if {
@@ -126,7 +130,7 @@ Public
   // DRAW
   
   - begin_draw <- ( ia := 0; )
-  - ia:INTEGER
+  - ia:Int
   
   - sub_draw <-
   ( 

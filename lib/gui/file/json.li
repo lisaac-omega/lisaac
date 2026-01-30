@@ -1,40 +1,39 @@
-Header  
-  + name := JSON;
-  
+Header
+  + name := Json
 Inherit  
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
   
-  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN
-  - item id:STRING_ALIAS int  v:INTEGER :BOOLEAN
-  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN
-  - item id:STRING_ALIAS bool v:BOOLEAN :BOOLEAN
+  - item id:String_alias str  v:String_alias :Boolean
+  - item id:String_alias int  v:Int :Boolean
+  - item id:String_alias real v:Real32 :Boolean
+  - item id:String_alias bool v:Boolean :Boolean
   
-  - object_null id:STRING_ALIAS :BOOLEAN
-  - object id:STRING_ALIAS :BOOLEAN
-  - object_in id:STRING_ALIAS :BOOLEAN
+  - object_null id:String_alias :Boolean
+  - object id:String_alias :Boolean
+  - object_in id:String_alias :Boolean
   
-  - new_value id:STRING_ALIAS :BOOLEAN
+  - new_value id:String_alias :Boolean
     
-  - put_str v:STRING <-
+  - put_str v:String <-
   ( puts "\""; puts v; puts "\""
     pre_print := ",\n"
   )
   
-  - put_int v:INTEGER <-
+  - put_int v:Int <-
   ( tmp_json.clear; v.append_in tmp_json
     puts tmp_json
     pre_print := ",\n"
   )
   
-  - put_real v:REAL_32 <-
+  - put_real v:Real32 <-
   ( tmp_json.clear; v.append_in tmp_json
     puts tmp_json
     pre_print := ",\n"
   )
   
-  - put_bool v:BOOLEAN <-
+  - put_bool v:Boolean <-
   ( v.if {
       puts "true"
     } else {
@@ -48,12 +47,12 @@ Public
     pre_print := ",\n"
   )
   
-  - put_object_in v:STRING <-
+  - put_object_in v:String <-
   ( puts "'"; puts v; puts "'"
     pre_print := ",\n"
   )
   
-  - put v:STRING value b:{} <-
+  - put v:String value b:{} <-
   ( puts pre_print
     put_indent
     puts v
@@ -63,9 +62,9 @@ Public
     pre_print := ",\n"
   )
 
-  - put_array b:{INTEGER; BOOLEAN} <-
-  ( + tst:BOOLEAN
-    + i:INTEGER
+  - put_array b:{Int; Boolean} <-
+  ( + tst:Boolean
+    + i:Int
     puts pre_print
     puts "[\n"
     sp_indent := sp_indent + 2
@@ -84,7 +83,7 @@ Public
   )
   
   - put_object b:{} <-
-  ( + tst:BOOLEAN
+  ( + tst:Boolean
     puts pre_print
     puts "{\n"
     sp_indent := sp_indent + 2
@@ -106,14 +105,14 @@ Public
     (! read_char '}').if { err warning msg "End object '}' needed."; }
   )
   
-  - read p:STRING_ALIAS src s:STRING_BUFFER :BOOLEAN <-
-  ( + r:BOOLEAN
+  - read p:String_alias src s:String_buffer :Boolean <-
+  ( + r:Boolean
     (src,filename,cur) := (s,p,0)
     {
       (! read_pair).if { err warning msg "Pair needed."; }
     }.do_while {read_char ','}
     (cur = src.upper+1).if {
-      r := TRUE
+      r := True
     } else {
       err warning msg "End of file incorrect."
       cur.print; '/'.print; (src.upper+1).println
@@ -122,18 +121,18 @@ Public
     r
   )
   
-  - update p:STRING_ALIAS src s:STRING_BUFFER <-
-  ( is_update := TRUE; read p src s; )
+  - update p:String_alias src s:String_buffer <-
+  ( is_update := True; read p src s; )
   
-  - syntax  :INTEGER := 0
-  - semantic:INTEGER := 1
-  - warning :INTEGER := 2
-  - message :INTEGER := 3
+  - syntax  :Int := 0
+  - semantic:Int := 1
+  - warning :Int := 2
+  - message :Int := 3
   
-  - err typ:INTEGER msg tx:STRING <-
-  ( + y,x,i:INTEGER
-    + c:CHARACTER
-    STRING.tmp2 { (msg,spc:STRING_BUFFER)
+  - err typ:Int msg tx:String <-
+  ( + y,x,i:Int
+    + c:Char
+    String.tmp2 { (msg,spc:String_buffer)
       msg += "--"
       typ
       .when syntax  then { msg += "SYNTAX--"; }.when semantic then { msg += "SEMANTIC"; }
@@ -159,22 +158,22 @@ Public
 
 Private
   
-  - puts s:STRING <-
+  - puts s:String <-
   ( src.insert_string s to cur; cur := cur + s.count; )
   
-  - pre_print:STRING_ALIAS := ""
+  - pre_print:String_alias := ""
   
-  - tmp_json:STRING_BUFFER := STRING_BUFFER.create 128
+  - tmp_json:String_buffer := String_buffer.create 128
   
-  - is_update:BOOLEAN
+  - is_update:Boolean
     
-  + filename:STRING_ALIAS
+  + filename:String_alias
   
-  + src:STRING_BUFFER
-  + cur:INTEGER
+  + src:String_buffer
+  + cur:Int
 
-  - column_line:(INTEGER,INTEGER) <-
-  ( + l,c,i:INTEGER
+  - column_line:(Int,Int) <-
+  ( + l,c,i:Int
     {(i > src.upper) || {i = cur}}.until_do {
       ((i <= src.upper) && {src.at i = '\n'}).if { (c,l) := (0,l + 1); } else { c := c + 1; }
       i := i + 1
@@ -182,21 +181,21 @@ Private
     c,l+1
   )
   
-  + last_char:CHARACTER
-  + last_str:STRING_ALIAS
+  + last_char:Char
+  + last_str:String_alias
   
-  + last_int:INTEGER
-  + last_real:REAL_32
-  + is_real:BOOLEAN
+  + last_int:Int
+  + last_real:Real32
+  + is_real:Boolean
   
-  - sp_indent:INTEGER
+  - sp_indent:Int
   - put_indent <-
   ( (sp_indent > 0).if { src.insert ' ' to cur on sp_indent; cur := cur + sp_indent; }; )
   
-  - skip_sp:BOOLEAN <-
-  ( + old_cur:INTEGER
-    + level:INTEGER
-    + c:CHARACTER
+  - skip_sp:Boolean <-
+  ( + old_cur:Int
+    + level:Int
+    + c:Char
     old_cur := -1
     {old_cur = cur}.until_do {
       old_cur := cur
@@ -223,22 +222,22 @@ Private
     cur != Old cur
   )
   
-  - read_char ch:CHARACTER :BOOLEAN <-
+  - read_char ch:Char :Boolean <-
   ( skip_sp; ((cur <= src.upper) && {src.at cur = ch}).if { (cur, last_char) := (cur+1, ch); })
   
-  - read_word st:STRING_ALIAS :BOOLEAN <-
-  ( + i:INTEGER
+  - read_word st:String_alias :Boolean <-
+  ( + i:Int
     skip_sp
     {(cur+i > src.upper) || {i > st.upper} || {src.at (cur+i) != st.at i}}.until_do { i := i + 1; }
     ((i > st.upper) && {(cur+i > src.upper) || {! src.at (cur+i).is_identifier}}).if { cur := cur + i; last_str := st; }
   )
   
-  - read_utf8:BOOLEAN <-
+  - read_utf8:Boolean <-
   (cur <= src.upper).if {
-    + n:UINTEGER_8
-    + c:CHARACTER
+    + n:Uint8
+    + c:Char
     tmp_json.clear
-    n := (c := src.at cur).to_uinteger_8
+    n := (c := src.at cur).to_uint8
     tmp_json.add_last c
     cur := cur + 1
     ((n & 80h) != 0).if {
@@ -250,9 +249,9 @@ Private
     last_str := tmp_json.to_string_alias
   }
   
-  - read_str e:CHARACTER :BOOLEAN <-
-  ( + c:CHARACTER
-    + old_cur,i:INTEGER
+  - read_str e:Char :Boolean <-
+  ( + c:Char
+    + old_cur,i:Int
     skip_sp
     old_cur := cur
     (cur <= src.upper).if {
@@ -281,24 +280,24 @@ Private
     old_cur != cur
   )
               
-  - read_num:BOOLEAN <-
-  ( + c:CHARACTER
-    + e0,e1,old_cur:INTEGER
-    + neg,f:BOOLEAN
+  - read_num:Boolean <-
+  ( + c:Char
+    + e0,e1,old_cur:Int
+    + neg,f:Boolean
     skip_sp
     old_cur := cur
     (cur <= src.upper).if {
       (((c := src.at cur).is_digit) || {(neg := c = '-') && {cur < src.upper} && {(c := src.at (cur+1)).is_digit}}).if {
-        is_real := FALSE
+        is_real := False
         tmp_json.clear
-        tmp_json | c; cur := cur + 1 + neg.to_integer
+        tmp_json | c; cur := cur + 1 + neg.to_int
         {(cur <= src.upper) && {((c := src.at cur).is_hexadecimal_digit) || {c = '_'} || {c = '\''} || {c = '.'}}}.while_do {
-          (c.is_hexadecimal_digit).if { tmp_json | c; e0 := e0 + f.to_integer; }
-          (c = '.').if { f.if { err syntax msg "Float invalid."; }; f := TRUE; }
+          (c.is_hexadecimal_digit).if { tmp_json | c; e0 := e0 + f.to_int; }
+          (c = '.').if { f.if { err syntax msg "Float invalid."; }; f := True; }
           cur := cur + 1
         }
         (f && {e0 = 0}).if {
-          f := FALSE
+          f := False
           cur := cur - 1
         }
         (c = 'h').if {
@@ -315,9 +314,9 @@ Private
               last_int := tmp_json.to_binary; cur := cur + 1
             }.elseif {c = 'd'} then {
               (f || {! tmp_json.is_integer_64}).if { err syntax msg "Incorrect decimal number."; }
-              last_int := tmp_json.to_integer_64; cur := cur + 1
+              last_int := tmp_json.to_int64; cur := cur + 1
             } else {
-              (c.to_upper = 'E').if { f := TRUE; cur := cur + 1
+              (c.to_upper = 'E').if { f := True; cur := cur + 1
                 read_char '-' || {read_char '+'}
                 {(cur <= src.upper) && {(c := src.at cur).is_digit}}.while_do { e1 := e1 * 10 + c.to_digit; cur := cur + 1; }
                 (last_char = '-').if { e1 := -e1; }
@@ -325,15 +324,15 @@ Private
               f.if {
                 e1 := e1 - e0
                 (! tmp_json.is_integer_64).if { err syntax msg "Not number."; }
-                last_real := tmp_json.to_integer_64.to_real_32 * 10.0.pow e1
-                is_real := TRUE
+                last_real := tmp_json.to_int64.to_real32 * 10.0.pow e1
+                is_real := True
               } else {                
-                last_int := tmp_json.to_integer_64
+                last_int := tmp_json.to_int64
                 last_real := last_int
               }
             }
           } else {
-            last_int := tmp_json.to_integer_64
+            last_int := tmp_json.to_int64
             last_real := last_int
           }
         }
@@ -347,8 +346,8 @@ Private
   )
   
   - skip_value <-
-  ( + cro,acc:INTEGER
-    + c:CHARACTER
+  ( + cro,acc:Int
+    + c:Char
     {(cur <= src.upper) && {((c := src.at cur) != ',') || {cro != 0} || {acc != 0}}}.while_do {
       ((! skip_sp) && {! read_str '\"'}).if {        
         (c = '{').if   { acc := acc + 1; }.elseif
@@ -362,10 +361,10 @@ Private
   
   // Grammar JSON
           
-  - read_pair:BOOLEAN <-
+  - read_pair:Boolean <-
   (read_str '\"').if {
-    + cur0,cur1:INTEGER
-    + n:STRING_ALIAS
+    + cur0,cur1:Int
+    + n:String_alias
     n := last_str
     (! read_char ':').if { err warning msg "':' needed."; }
     skip_sp
@@ -379,10 +378,10 @@ Private
         cur := cur - (cur1-cur0+1)
       } else {
         cur := cur0
-        traverse_value n array FALSE
+        traverse_value n array False
       }
     } else {
-      (! read_value n array FALSE).if {
+      (! read_value n array False).if {
         cur := cur0
         tmp_json.copy "Value not found for `";
         tmp_json += n += "'."
@@ -391,11 +390,11 @@ Private
     }
   }
   
-  - stack_array:Expanded ARRAY INTEGER
-  - array_index:INTEGER <- stack_array.last
+  - stack_array:Flat Array Int
+  - array_index:Int <- stack_array.last
   
-  - read_value id:STRING_ALIAS array is_tab:BOOLEAN :BOOLEAN <-
-  ( + result:BOOLEAN
+  - read_value id:String_alias array is_tab:Boolean :Boolean <-
+  ( + result:Boolean
     {
       (read_word "true" || {read_word "false"}).if {
         result := item id bool (last_str = "true")
@@ -407,7 +406,7 @@ Private
         (is_real).if {
           result := item id real last_real
         } else {
-          result := item id int last_int || {item id real (last_int.to_real_64)}
+          result := item id int last_int || {item id real (last_int.to_real64)}
         }
       }.elseif {read_char '\''} then {
         result := object_in id
@@ -416,7 +415,7 @@ Private
         result := object id
       }.elseif {read_char '['} then {
         stack_array.add_last 0
-        result := read_value id array TRUE
+        result := read_value id array True
         stack_array.remove_last
         (! read_char ']').if { err warning msg "End array ']' needed."; }
       }
@@ -425,7 +424,7 @@ Private
     result || {is_tab}
   )
   
-  - traverse_value id:STRING_ALIAS array is_tab:BOOLEAN <-
+  - traverse_value id:String_alias array is_tab:Boolean <-
   ( 
     (
       (read_word "true") || {read_word "false"} ||
@@ -436,11 +435,11 @@ Private
     }.elseif {read_char '{'} then {
       object id
     }.elseif {read_char '['} then {
-      traverse_value id array TRUE
+      traverse_value id array True
       (! read_char ']').if { err warning msg "End array ']' needed."; }
     }
     (is_tab).if {
-      (read_char ',').if { traverse_value id array TRUE; }
+      (read_char ',').if { traverse_value id array True; }
     }
   )
   

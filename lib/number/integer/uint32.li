@@ -1,0 +1,43 @@
+Header
+  + name := Flat Uint32
+/*
+  Unsigned 32 bits integer.
+  */
+  - type    := `uint32_t`;
+  - default := (0.to_raw_uint32);
+  - export  := Int, Uint64, Int64;
+Insert
+  - parent_unsigned_integer:Unsigned_integer := Unsigned_integer
+
+Public
+
+  - object_size:Int := 4
+
+  // Range.
+
+  - maximum:Uint64 := ~ 0.to_raw_uint32
+  
+  - clz:Int <-
+  // Count Leading Zeros.
+    (Asm_builtin.clz self) - 32
+  
+  - ctz:Int <-
+  // Count Trailing Zeros
+  ( 32 - 1 - (self & -self).clz)
+
+  // Conversion with test.
+  - ep0:Self <- (self @> 2) ^ (self @> 13) ^ (self @> 22)
+  - ep1:Self <- (self @> 6) ^ (self @> 11) ^ (self @> 25)
+  
+  - sig0:Self <- (self @>  7) ^ (self @> 18) ^ (self >>  3)
+  - sig1:Self <- (self @> 17) ^ (self @> 19) ^ (self >> 10)
+
+  - rev:Self <-
+  ( + tmp:Self
+    tmp := (self >> 16) | (self << 16)
+    ((tmp & 0FF00FF00h) >> 8) | ((tmp & 000FF00FFh) << 8)
+  )
+
+  - to_uint32:Uint32 <- self
+
+  - to_uint64:Uint64 <- to_raw_uint64

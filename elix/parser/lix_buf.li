@@ -1,21 +1,20 @@
 Header
-  + name := LIX_BUF;
-    
+  + name := Lix_buf
 Inherit
-  + p_txtbuf:Expanded TXT_BUF
+  + p_txtbuf:Flat Txt_buf
     
 Public
   
-  + proto:PROTO
+  + proto:Proto
   
   - pre_create <-
   ( 
     at 0 add_str
     "Header\n\
     \  + name := "
-    STRING.tmp { t:STRING_BUFFER
+    String.tmp { t:String_buffer
       t.copy name from (name.last_index_of '/'+1) to (name.upper-3)
-      t.to_upper
+      t.at 0 put (t.first.to_upper)
       at upper add_str t
     }
     at upper add_str "\n\n"
@@ -23,14 +22,14 @@ Public
     ? {at upper = '\0'}
   )
   
-  - init pth:STRING_ALIAS proto p:PROTO :SELF <-
+  - init pth:String_alias proto p:Proto :Self <-
   (
     proto := p
     init_path pth
   )
   
-  - detect_drw:TOK_DRW <-
-  ( + t:TOK_DRW
+  - detect_drw:Tok_drw <-
+  ( + t:Tok_drw
     //? {proto != NULL}
     (pos_i.pt = 0).if {      
       t := proto
@@ -38,9 +37,9 @@ Public
       //t := t.new;   // SUPPR
       ? {t != NULL}
     } else {
-      ((t := SECTION).detect)  || {(t := CODE_OUT).detect} ||
-      {(t := SLOT).detect}     || {(t := CHAPTER).detect}  ||
-      {(t := TOK_LINE).detect}
+      ((t := Section).detect)  || {(t := Code_out).detect} ||
+      {(t := Slot).detect}     || {(t := Chapter).detect}  ||
+      {(t := Tok_line).detect}
       t := t.new
     }
     t
@@ -50,16 +49,16 @@ Public
   ( proto.collect_slot_parent; )
   
   - draw_background <-
-  ( + w,h:REAL_32
-    + img:IMG
+  ( + w,h:Real32
+    + img:Img
     p_txtbuf.draw_background
     (proto.web_path != NULL).if {      
-      img := IMG.load (proto.web_path) asset FALSE
+      img := Img.load (proto.web_path) asset False
       (img != NULL).if {
-        IMG.update Self
+        Img.update self
         (w,h) := image_size (img.idf)
         (pos_y < h).if {          
-          img.draw Self to (xo+width-w,yo-pos_y) alpha 0.7 bar FALSE
+          img.draw self to (xo+width-w,yo-pos_y) alpha 0.7 bar False
         }
       }
     }
@@ -67,8 +66,8 @@ Public
   
   
   - old_draw_tmp_c <-
-  ( + c:CHARACTER
-    (last_div = NULL).if { last_div := DIV.new; }
+  ( + c:Char
+    (last_div = NULL).if { last_div := Div.new; }
     c := tmp_c.first
     (c = 'Ë').if {
       (c := tmp_c.second)
@@ -77,27 +76,27 @@ Public
       .when '„' then { escape := TRUE; exp_l; }   // Exposant (
       .when '†' then { escape := TRUE; exp_r (-6); } // Exposant )*/
       // Other.
-      .when '–' then { LIX_BUF.local_bar; }
-      .when 'š' then { DRW.type_self; }           // SELF
-      .when '™' then { DRW.arg_self;  }           // Self
-      .when '' then { DRW.dcl TRUE  exp FALSE; } // Clonable Pointer
-      .when '­' then { DRW.dcl TRUE  exp TRUE;  } // Clonable Expanded
-      .when '‘' then { DRW.dcl FALSE exp FALSE; } // Shared Pointer
-      .when '‰' then { DRW.dcl FALSE exp TRUE;  } // Shared Expanded
-      .when '¬' then { DRW.exp_res; }             // Result
-      .when '›' then { DRW.exp_old; }             // Old
-      .when '¿' then { DRW.assign FALSE; }        // <-
-      .when '·' then { DRW.assign TRUE;  }        // <?
+      .when '–' then { Lix_buf.local_bar; }
+      .when 'š' then { Drw.type_self; }           // Self
+      .when '™' then { Drw.arg_self;  }           // self
+      .when '' then { Drw.dcl True  exp False; } // Clonable Pointer
+      .when '­' then { Drw.dcl True  exp True;  } // Clonable Flat
+      .when '‘' then { Drw.dcl False exp False; } // Shared Pointer
+      .when '‰' then { Drw.dcl False exp True;  } // Shared Flat
+      .when '¬' then { Drw.exp_res; }             // Result
+      .when '›' then { Drw.exp_old; }             // Old
+      .when '¿' then { Drw.assign False; }        // <-
+      .when '·' then { Drw.assign True;  }        // <?
       .when '½' then { tex.set_x (text (tex.x,tex.y) msg "_"); }      // Joker
-      .when '¢' then { DRW.put_image; }
+      .when '¢' then { Drw.put_image; }
       .when '' then { tex.set_x (text (tex.x,tex.y) msg "\""); }
     } else {
       (",;:'\"".last_index_of c != -1).if {
         save
-        fill_color (LOOK.none)
-        FONT.app (FONT.roman) in Self
+        fill_color (Look.none)
+        Font.app (Font.roman) in self
         tex.set_x (text (tex.x,tex.y) msg tmp_c)
-        FONT.app (Old FONT.last_app_id) in Self
+        Font.app (Old Font.last_app_id) in self
         restore
       } else {
         tex.set_x (text (tex.x,tex.y) msg tmp_c)
@@ -107,7 +106,7 @@ Public
     detect_cur
   )
           
-  - read_affect:BOOLEAN <-
+  - read_affect:Boolean <-
   //-- affect         -> ":=" | "<-" | "?="
   (word ":=") || {word "?="} || {word "<-"}
 

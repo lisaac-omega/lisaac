@@ -1,99 +1,98 @@
 Header
-  + name := WIN;
-  
+  + name := Win
 Inherit
-  - parent_pen:PEN := PEN
+  - parent_pen:Pen := Pen
     
 Public
   
-  - get_pen:PEN <- parent_pen
+  - get_pen:Pen <- parent_pen
   
-  + id_name:STRING_ALIAS := "Win"
-  - idn n:STRING_ALIAS :SELF <- ( id_name := n; Self)
+  + id_name:String_alias := "Win"
+  - idn n:String_alias :Self <- ( id_name := n; self)
   
-  + parent:WIN
-  - set_parent p:WIN :SELF <- ( parent := p; Self)
+  + parent:Win
+  - set_parent p:Win :Self <- ( parent := p; self)
   
-  + child:Expanded ARRAY WIN
-  - child_rm w:WIN <-
-  ( + i:INTEGER
+  + child:Flat Array Win
+  - child_rm w:Win <-
+  ( + i:Int
     {child.at i != w}.while_do { i := i + 1; }
     child.remove i
   )
   
-  + xo:REAL_32
-  + yo:REAL_32
-  - set_xo x:REAL_32 :SELF <- ( xo := x; Self)
-  - set_yo y:REAL_32 :SELF <- ( yo := y; Self)
-  - xy (x,y:REAL_32) :SELF <- ( (xo,yo) := (x,y); Self)
-  - add_xy (dx,dy:REAL_32)  <-
+  + xo:Real32
+  + yo:Real32
+  - set_xo x:Real32 :Self <- ( xo := x; self)
+  - set_yo y:Real32 :Self <- ( yo := y; self)
+  - xy (x,y:Real32) :Self <- ( (xo,yo) := (x,y); self)
+  - add_xy (dx,dy:Real32)  <-
   ( (xo,yo) := (xo+dx, yo+dy)
-    child.foreach {w:WIN; w.add_xy (dx,dy); }
+    child.foreach {w:Win; w.add_xy (dx,dy); }
   )
   
-  + width:REAL_32
-  + height:REAL_32
-  - set_width w:REAL_32 :SELF  <- ( width  := w; Self)
-  - set_height h:REAL_32 :SELF <- ( height := h; Self)
-  - size (w,h:REAL_32) :SELF <-
+  + width:Real32
+  + height:Real32
+  - set_width w:Real32 :Self  <- ( width  := w; self)
+  - set_height h:Real32 :Self <- ( height := h; self)
+  - size (w,h:Real32) :Self <-
   (
     (w = -1).if { width  := width_min;  } else { width  := w; set width_locked;  }
     (h = -1).if { height := height_min; } else { height := h; set height_locked; }
-    Self
+    self
   )
-  - size_min:SELF <- size (-1,-1)
+  - size_min:Self <- size (-1,-1)
   
-  - width_min:REAL_32
-  - height_min:REAL_32
+  - width_min:Real32
+  - height_min:Real32
   
-  - xmax:REAL_32 <- xo + width  - 1
-  - ymax:REAL_32 <- yo + height - 1
+  - xmax:Real32 <- xo + width  - 1
+  - ymax:Real32 <- yo + height - 1
   
-  - new:SELF <- clone
+  - new:Self <- clone
   - free
   
-  - copy o:SELF <-
-  ( + sav_s:NATIVE_ARRAY WIN
-    + sav_c:INTEGER
+  - copy o:Self <-
+  ( + sav_s:C_array Win
+    + sav_c:Int
     (sav_s,sav_c) := (child.storage,child.capacity)
-    o.copy_intern_in Self
+    o.copy_intern_in self
     child.set_storage sav_s cap sav_c up (-1)
-    o.child.foreach { w:WIN; w.dup Self; }
+    o.child.foreach { w:Win; w.dup self; }
   )
   
-  - dup p:WIN :SELF <-
-  ( + res:SELF
-    (res := SELF.new).copy Self
+  - dup p:Win :Self <-
+  ( + res:Self
+    (res := Self.new).copy self
     res.init_parent p
   )
   
-  - init p:WIN :SELF <-
+  - init p:Win :Self <-
   (
     flag := 0
     init_parent p
   )
   
-  - init_parent p:WIN at i:INTEGER :SELF <- 
-  ( (p != NULL).if { p.child.at (i.min (p.child.count)) add Self; }
-    ? {p != Self}
+  - init_parent p:Win at i:Int :Self <- 
+  ( (p != NULL).if { p.child.at (i.min (p.child.count)) add self; }
+    ? {p != self}
     parent := p
-    Self
+    self
   )
   
-  - init_parent p:WIN :SELF <-
-  [ ? {p != Self}; ]
+  - init_parent p:Win :Self <-
+  [ ? {p != self}; ]
   (    
-    (p != NULL).if { p.child.add_last Self; }
+    (p != NULL).if { p.child.add_last self; }
     parent := p
-    Self
+    self
   )
   
-  - window:WINDOW <- parent.window
+  - window:Window <- parent.window
   - ask_refresh <- parent.ask_refresh
-  - refresh <- child.foreach { w:WIN; w.refresh; }
+  - refresh <- child.foreach { w:Win; w.refresh; }
   
   - draw
-  - draw_child <- child.foreach { w:WIN; w.draw_all; }
+  - draw_child <- child.foreach { w:Win; w.draw_all; }
   - draw_forward
   
   - draw_all <-
@@ -107,24 +106,24 @@ Public
   - draw_debug <-
   (
     begin_path
-    stroke_color (COLOR.green)
+    stroke_color (Color.green)
     stroke_width 1
     rect_varying (xo,yo) size (width,height) radius (8,0,8,0)
     stroke
     //(is inside).if {
       save
-      STRING.tmp { tmp:STRING_BUFFER
+      String.tmp { tmp:String_buffer
         (flag&11_1111_1111b).append_in tmp
-        fill_color (COLOR.magenta)
+        fill_color (Color.magenta)
         font_size 15; text (xo+width/2,yo+height/2) msg tmp
       }
       restore
     //}
   )
   
-  - line_p (x0,y0:REAL_32) to (x1,y1:REAL_32) <-
+  - line_p (x0,y0:Real32) to (x1,y1:Real32) <-
   [ ? {(x0 = x1) || {y0 = y1}}; ]
-  ( + p,b,e:REAL_32
+  ( + p,b,e:Real32
     (x0 = x1).if {
       (y0 < y1).if { (b,e) := (y0,y1); } else { (b,e) := (y1,y0); }
       p := b
@@ -139,11 +138,11 @@ Public
   - print <-
   ( '['.print; xo.print; ' '.print; yo.print; ' '.print; width.print; 'x'.print; height.print; ']'.println; )
   
-  - is_inside (x,y:REAL_32) :BOOLEAN <- (x.in_range xo to xmax) && {y.in_range yo to ymax}
+  - is_inside (x,y:Real32) :Boolean <- (x.in_range xo to xmax) && {y.in_range yo to ymax}
   
-  - get_win (x,y:REAL_32) :WIN <-
-  ( + result:WIN
-    + i:INTEGER
+  - get_win (x,y:Real32) :Win <-
+  ( + result:Win
+    + i:Int
     (is_inside (x,y)).if {      
       i := child.upper
       {
@@ -151,70 +150,70 @@ Public
       }.while_do {
         i := i - 1
       }
-      (result = NULL).if { result := Self; }
+      (result = NULL).if { result := self; }
     }
     result
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN
+  - event ev:Uint8 :Boolean
   
-  - focus:WIN
+  - focus:Win
   - get_focus <-
-  ( + pg:BUF_PG
-    + w:WIN
+  ( + pg:Buf_pg
+    + w:Win
     w := parent
     {
       pg ?= w
       w := w.parent
     }.do_while {(w != NULL) && {pg = NULL}}
-    (pg != NULL).if { PAGE.set_cur_pg (pg.page); }
-    focus := Self
+    (pg != NULL).if { Page.set_cur_pg (pg.page); }
+    focus := self
   )
   - release_focus <- ( focus := NULL; )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  ( + r:BOOLEAN
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + r:Boolean
     (focus != NULL).if { r := focus.key s cmd c; }
     r
   )
   
-  - depth_event ev:UINTEGER_8 :WIN <- send { w:WIN; w.event ev}
+  - depth_event ev:Uint8 :Win <- send { w:Win; w.event ev}
   
-  - send a:{WIN; BOOLEAN} :WIN <-
-  ( + dd:WIN
-    dd := Self
+  - send a:{Win; Boolean} :Win <-
+  ( + dd:Win
+    dd := self
     {(dd != NULL) && {! a.value dd}}.while_do { dd := dd.parent; }
     dd
   )
   
-  + flag:INTEGER
-  - full_width:INTEGER    := 1<<7
-  - full_height:INTEGER   := 1<<8
-  - stretch:INTEGER       := full_width | full_height
-  - width_locked:INTEGER  := 1<<9
-  - height_locked:INTEGER := 1<<10
-  - size_locked:INTEGER   := width_locked | height_locked
-  - inside:INTEGER        := 1<<11
-  - fix_panel:INTEGER     := 1<<12
+  + flag:Int
+  - full_width:Int    := 1<<7
+  - full_height:Int   := 1<<8
+  - stretch:Int       := full_width | full_height
+  - width_locked:Int  := 1<<9
+  - height_locked:Int := 1<<10
+  - size_locked:Int   := width_locked | height_locked
+  - inside:Int        := 1<<11
+  - fix_panel:Int     := 1<<12
   
-  - is f:INTEGER :BOOLEAN <- flag & f != 0
-  - set f:INTEGER :SELF <-
+  - is f:Int :Boolean <- flag & f != 0
+  - set f:Int :Self <-
   (
     (f & 01000_0111b != 0).if { flag := flag & ~01000_0111b; }
     {f & 10011_1000b != 0}.if { flag := flag & ~10011_1000b; }
     flag := flag |  f
-    Self
+    self
   )
-  - unset f:INTEGER :SELF <- ( flag := flag & ~f; Self)
-  - set f:INTEGER with b:BOOLEAN <- ( b.if { set f; } else { unset f; }; )
+  - unset f:Int :Self <- ( flag := flag & ~f; self)
+  - set f:Int with b:Boolean <- ( b.if { set f; } else { unset f; }; )
   
-  - setr f:INTEGER :SELF <-
+  - setr f:Int :Self <-
   (
     set f
-    child.foreach { w:WIN
+    child.foreach { w:Win
       ((w.flag & 11_1111_1111b) = 0).if { w.setr f; }
     }
-    Self
+    self
   )
   
   - print_flag <-
@@ -232,11 +231,11 @@ Public
     '\n'.print
   )
   
-  - Self:SELF '/' other:WIN :PANEL <- PANEL.new.init_obj.add Self.add other.set (PANEL.vertical)
-  - Self:SELF '|' other:WIN :PANEL <- PANEL.new.init_obj.add Self.add other
+  - self:Self '/' other:Win :Panel <- Panel.new.init_obj.add self.add other.set (Panel.vertical)
+  - self:Self '|' other:Win :Panel <- Panel.new.init_obj.add self.add other
   
-  - cursor (x,y:REAL_32) ascdes (a,d:REAL_32) col c:COLOR <-
-  ( + y0,y1:REAL_32
+  - cursor (x,y:Real32) ascdes (a,d:Real32) col c:Color <-
+  ( + y0,y1:Real32
     stroke_width 4
     stroke_color c
     begin_path

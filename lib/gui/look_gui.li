@@ -1,71 +1,70 @@
-Header  
-  + name := LOOK_GUI;
-  
+Header
+  + name := Look_gui
 Inherit
-  - parent_json:JSON := JSON
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_json:Json := Json
+  - parent_any_gui:Any_gui := Any_gui
       
 Public
   
   // Icones
   
-  - background:IMG
-  - background_color:COLOR := COLOR.black
+  - background:Img
+  - background_color:Color := Color.black
   
-  - focus_off:COLOR := COLOR.rgba (0,0,0,150)
+  - focus_off:Color := Color.rgba (0,0,0,150)
   
-  - menu_ico:IMG
-  - buffer_ico:IMG
-  - setup_ico:IMG
+  - menu_ico:Img
+  - buffer_ico:Img
+  - setup_ico:Img
   
   // Color
   
-  - cols:Expanded ARRAY COLOR
-  - cols_size:INTEGER <- ( abstract; 0)
+  - cols:Flat Array Color
+  - cols_size:Int <- ( abstract; 0)
   
-  - text_ui:COLOR    := COLOR.rgb (0,0,0)
-  - txt_nui:COLOR    := COLOR.rgb (255,255,255)
-  - text_bg_ui:COLOR := COLOR.rgb ( 40, 40, 40)
-  - short_ui:COLOR   := COLOR.rgb (  0,  0,255)
+  - text_ui:Color    := Color.rgb (0,0,0)
+  - txt_nui:Color    := Color.rgb (255,255,255)
+  - text_bg_ui:Color := Color.rgb ( 40, 40, 40)
+  - short_ui:Color   := Color.rgb (  0,  0,255)
   //- menu_bar:COLOR
-  - border_on:COLOR   := COLOR.rgb (215, 215, 255)
-  - border_off:COLOR  := COLOR.rgb (115, 115, 155)
-  - help_ui:COLOR     := COLOR.rgb (219,166,0)
-  - elevator_ui:COLOR := COLOR.rgba (0,0,0, 77)
-  - select_ui:COLOR   := COLOR.rgba (0,0,0, 38)
+  - border_on:Color   := Color.rgb (215, 215, 255)
+  - border_off:Color  := Color.rgb (115, 115, 155)
+  - help_ui:Color     := Color.rgb (219,166,0)
+  - elevator_ui:Color := Color.rgba (0,0,0, 77)
+  - select_ui:Color   := Color.rgba (0,0,0, 38)
   
   // Used by STY :
-  - none:COLOR       := COLOR.rgb (  0,  0,   0)
-  - fmt_li:COLOR     := COLOR.rgb (  0,118,  17)
-  - fmt_c:COLOR      := COLOR.rgb (  0, 18, 118)
-  - fmt_txt:COLOR    := COLOR.rgb (  0,118, 170)
-  - fmt_img:COLOR    := COLOR.rgb (118,118,  17)
+  - none:Color       := Color.rgb (  0,  0,   0)
+  - fmt_li:Color     := Color.rgb (  0,118,  17)
+  - fmt_c:Color      := Color.rgb (  0, 18, 118)
+  - fmt_txt:Color    := Color.rgb (  0,118, 170)
+  - fmt_img:Color    := Color.rgb (118,118,  17)
   
-  - read:BOOLEAN <-
-  ( + pth:STRING_ALIAS
+  - read:Boolean <-
+  ( + pth:String_alias
     buftxt.clear
     cols.make cols_size
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       tmp.copy look_file
       tmp.append ".sty"
       pth := tmp.to_string_alias
     }
-    SYSTEM_IO.read_asset pth in_txt buftxt
+    System_io.read_asset pth in_txt buftxt
     read pth src buftxt
   )
   
-  //- read:SELF <- ( read_object; Self)
+  //- read:Self <- ( read_object; self)
           
-  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str v:String_alias :Boolean <-
   ( id
-    .case "background" then { background := IMG.load v asset TRUE; }
-    .case "menu_ico"   then { menu_ico   := IMG.load v asset TRUE; }
-    .case "buffer_ico" then { buffer_ico := IMG.load v asset TRUE; }
-    .case "setup_ico"  then { setup_ico  := IMG.load v asset TRUE; }
-    = STRING_ALIAS
+    .case "background" then { background := Img.load v asset True; }
+    .case "menu_ico"   then { menu_ico   := Img.load v asset True; }
+    .case "buffer_ico" then { buffer_ico := Img.load v asset True; }
+    .case "setup_ico"  then { setup_ico  := Img.load v asset True; }
+    = String_alias
   )
   
-  - put id:STRING_ALIAS col c:COLOR :BOOLEAN <-
+  - put id:String_alias col c:Color :Boolean <-
   (
     id
     .case "focus_off"  then { focus_off := c; }
@@ -84,26 +83,26 @@ Public
     .case "fmt_c"      then { fmt_c := c;}
     .case "fmt_txt"    then { fmt_txt := c;}
     .case "fmt_img"    then { fmt_img := c;}
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
-  ( - r,g,b,a:UINTEGER_8
-    - i:INTEGER
-    + ok:BOOLEAN
-    ok := TRUE
+  - item id:String_alias int v:Int :Boolean <-
+  ( - r,g,b,a:Uint8
+    - i:Int
+    + ok:Boolean
+    ok := True
     i
-    .when 0 then { r := v.to_uinteger_8; }
-    .when 1 then { g := v.to_uinteger_8; }
-    .when 2 then { b := v.to_uinteger_8; }
-    .when 3 then { a := v.to_uinteger_8
-      ok := put id col (COLOR.rgba (r,g,b,a))
+    .when 0 then { r := v.to_uint8; }
+    .when 1 then { g := v.to_uint8; }
+    .when 2 then { b := v.to_uint8; }
+    .when 3 then { a := v.to_uint8
+      ok := put id col (Color.rgba (r,g,b,a))
     }
     i := (i + 1) & 11b
     ok
   )
   
-  - to_alpha a:REAL_32 <-
+  - to_alpha a:Real32 <-
   (    
     none := none.set_af a
   )
@@ -115,7 +114,7 @@ Public
   
   // Draw.
   
-  - drw c:INTEGER :REAL_32 <-
+  - drw c:Int :Real32 <-
   (
     abstract
     0

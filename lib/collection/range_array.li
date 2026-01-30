@@ -1,57 +1,77 @@
 Header
-  + name := RANGE_ARRAY V;
-  /*
+  + name := Range_array V
+/*
     General purpose resizable ARRAYs .
-    The `lower' bound can be any arbitrary value, even a negative one.
+    The `lower` bound can be any arbitrary value, even a negative one.
     
-    This implementation uses only one chunk of memory, the `storage' area which is a
-    NATIVE_ARRAY. One must keep in mind that this internal `storage' area is always kept
+    This implementation uses only one chunk of memory, the `storage` area which is a
+    C_array. One must keep in mind that this internal `storage` area is always kept
     left align. Thus, you can expect good performances while using an ARRAY to modelize a
-    stack behavior with `add_last' / `last' / `remove_last'.
+    stack behavior with `add_last` / `last` / `remove_last`.
     
-    Conversely `add_first' and `remove_first' are likely to slow down your program if
-    they are too often used. If the fact that `lower' is always stuck to 0 is not a 
+    Conversely `add_first` and `remove_first` are likely to slow down your program if
+    they are too often used. If the fact that `lower` is always stuck to 0 is not a 
     problem for you, also consider ARRAY to get better performances.
   */
-
 Inherit
-  - parent_arrayed:ARRAYED := ARRAYED
-  - parent_collection:COLLECTION V := COLLECTION V
+  + parent_collection:Flat Collection V
+  - parent_arrayed:Arrayed := Arrayed
+Public  
+  
+  + lower:Int
+  
+  + storage:C_array V
+  
+  + capacity:Int
+  
+  
+  // Creation:
+  
+  - new self:Self lower l:Int capacity c:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.set_lower l capacity c
+    result
+  )
+  [
+    Result.capacity >= c
+    Result.count = 0
+    Result.lower = l
+  ]
+  
 
-Public
-  // Indexing:
-  + lower:INTEGER
+  - new self:Self of v: V^n :Self <-
+  ( + result:Self
+    result := new Self lower 1 capacity 32
+    add_last v
+    result
+  )
   
-  + upper:INTEGER
   
-  + storage:NATIVE_ARRAY V
-  
-  + capacity:INTEGER
-  
-  - at i:INTEGER :V <-
+  - at i:Int :V <-
   (
     storage.at (i - lower)
   )
   
   // Creation and Modification:
 
-  - create min_index:INTEGER to max_index:INTEGER :SELF <-
+  - create min_index:Int to max_index:Int :Self <-
   // Prepare the array to hold values for indexes in range
-  // [`min_index' .. `max_index']. Set all values to default.
-  // When `max_index' = `min_index' - 1, the array `is_empty'.
-  ( + result:SELF
-    result := SELF.clone
+  // [`min_index` .. `max_index`]. Set all values to default.
+  // When `max_index` = `min_index` - 1, the array `is_empty`.
+  ( + result:Self
+    result := Self.clone
     result.make min_index to max_index
     result
   )
 
-  - make min_index:INTEGER to max_index:INTEGER <-
+  - make min_index:Int to max_index:Int <-
   // Prepare the array to hold values for indexes in range
-  // [`min_index' .. `max_index']. Set all values to default.
-  // When `max_index' = `min_index' - 1, the array `is_empty'.
-  // * Require: `min_index' inferior or equal to `max_index' + 1
-  // * Ensure: `lower' is equal to `min_index'
-  // * Ensure: `upper' is equal to `max_index'
+  // [`min_index` .. `max_index`]. Set all values to default.
+  // When `max_index` = `min_index` - 1, the array `is_empty`.
+  // * Require: `min_index` inferior or equal to `max_index` + 1
+  // * Ensure: `lower` is equal to `min_index`
+  // * Ensure: `upper` is equal to `max_index`
   // * Ensure: all values are in default
   [ // Old
     {min_index <= max_index + 1} -? "Valid bounds."
@@ -65,19 +85,19 @@ Public
     "Items set." +? { all_default }
   ]
 
-  - create_with_capacity needed_capacity:INTEGER lower low:INTEGER :SELF <-
-  // Create an empty array with `capacity' initialized
-  // at least to `needed_capacity' and `lower' set to `low'.
-  ( + result:SELF
+  - create_with_capacity needed_capacity:Int lower low:Int :Self <-
+  // Create an empty array with `capacity` initialized
+  // at least to `needed_capacity` and `lower` set to `low`.
+  ( + result:Self
 
     result := clone
     result.with_capacity needed_capacity lower low
     result
   )
 
-  - with_capacity needed_capacity:INTEGER lower low:INTEGER <-
-  // Create an empty array with `capacity' initialized
-  // at least to `needed_capacity' and `lower' set to `low'.
+  - with_capacity needed_capacity:Int lower low:Int <-
+  // Create an empty array with `capacity` initialized
+  // at least to `needed_capacity` and `lower` set to `low`.
   [ // Old
     -? { needed_capacity >= 0}
   ]
@@ -92,16 +112,16 @@ Public
 
 Public
 
-  - ensure_capacity needed_capacity:INTEGER and_bounds low:INTEGER to up:INTEGER <-
+  - ensure_capacity needed_capacity:Int and_bounds low:Int to up:Int <-
   // Extend needed capacity and bouds if necessary
-  // * Require: `up' superior or equal to `low' - 1
+  // * Require: `up` superior or equal to `low` - 1
   [ // Old
     -? { up >= low - 1 }
     -? { needed_capacity >= up - low + 1 }
   ]
   (
     (capacity < needed_capacity).if {
-      storage := NATIVE_ARRAY(V).create needed_capacity
+      storage := C_array(V).create needed_capacity
       capacity := needed_capacity
     }
     lower := low
@@ -116,24 +136,24 @@ Public
 
   // Modification:
 
-  - resize min_index:INTEGER to max_index:INTEGER <-
-  // Resize to bounds `min_index' and `max_index'. Do not lose any
-  // item whose index is in both [`lower' .. `upper'] and
-  // [`min_index' .. `max_index']. New positions if any are
+  - resize min_index:Int to max_index:Int <-
+  // Resize to bounds `min_index` and `max_index`. Do not lose any
+  // item whose index is in both [`lower` .. `upper`] and
+  // [`min_index` .. `max_index`]. New positions if any are
   // initialized with the appropriate default value.
-  // * Require: `min_index' inferior or equal to `max_index' + 1
-  // * Ensure: `lower' is equal to `min_index'
-  // * Ensure: `upper' is equal to `max_index'
+  // * Require: `min_index` inferior or equal to `max_index` + 1
+  // * Ensure: `lower` is equal to `min_index`
+  // * Ensure: `upper` is equal to `max_index`
   [ // Old
     -? { min_index <= max_index + 1 }
   ]
-  ( + needed, offset, intersize:INTEGER
+  ( + needed, offset, intersize:Int
 
     needed := max_index - min_index + 1
     (needed > 0).if {
       (needed > capacity).if {
       (capacity = 0).if {
-        storage := NATIVE_ARRAY(V).calloc_intern needed
+        storage := C_array(V).calloc_intern needed
         capacity := needed
       } else {
         storage := storage.realloc capacity with needed
@@ -172,12 +192,12 @@ Public
   ]
 
 
-  - reindex new_lower:INTEGER <-
-  // Change indexing to take in account the expected `new_lower'
-  // index. The `upper' index is translated accordingly.
-  // * Ensure: `lower' is equal to `new_lower'
-  // * Ensure: `count' is equal to `count' before
-  ( + i:INTEGER
+  - reindex new_lower:Int <-
+  // Change indexing to take in account the expected `new_lower`
+  // index. The `upper` index is translated accordingly.
+  // * Ensure: `lower` is equal to `new_lower`
+  // * Ensure: `count` is equal to `count` before
+  ( + i:Int
 
     i := new_lower - lower
     lower := lower + i
@@ -190,10 +210,10 @@ Public
 
   // Implementation of abstract:
 
-  - subarray min:INTEGER to max:INTEGER :SELF <-
-  // Return the subarray between `min' to `max'
-  // * Ensure: `Result.lower' is equal to `min' before
-  ( + result:SELF
+  - subarray min:Int to max:Int :Self <-
+  // Return the subarray between `min` to `max`
+  // * Ensure: `Result.lower` is equal to `min` before
+  ( + result:Self
 
     result := slice min to max
     result.reindex min
@@ -203,18 +223,15 @@ Public
     +? { Result.lower = min }
   ]
 
-  - is_empty:BOOLEAN <-
+  - is_empty:Boolean <-
   (upper < lower)
 
-  - count:INTEGER <-
-  (upper - lower + 1)
-
-  - at i:INTEGER put v:V <-
+  - at i:Int put v:V <-
   (
     storage.at (i - lower) put v
   )
   
-  - at i:INTEGER add v:V <-
+  - at i:Int add v:V <-
   (
     add_last v
     (i != upper).if {
@@ -223,7 +240,7 @@ Public
     }
   )
   
-  - force element:V to index:INTEGER <-
+  - force element:V to index:Int <-
   (
     (upper < index).if {
       (index = upper + 1).if {
@@ -243,8 +260,8 @@ Public
     +? { lower = index.min (Old lower) }
   ]
 
-  - copy other:SELF <-
-  ( +  needed_capacity:INTEGER
+  - copy other:Self <-
+  ( +  needed_capacity:Int
     lower := other.lower
     upper := other.upper
     needed_capacity := upper - lower + 1
@@ -276,7 +293,7 @@ Public
     upper := upper - 1
   )
   
-  - remove_head n:INTEGER <-
+  - remove_head n:Int <-
   (
     storage.move (n - lower + 1) to (upper - lower) by (-n)
     lower := lower + n
@@ -285,7 +302,7 @@ Public
     +? {upper = Old upper}
   ]
 
-  - remove index:INTEGER <-
+  - remove index:Int <-
   (
     storage.remove (index - lower) until (upper - lower)
     upper := upper - 1
@@ -299,37 +316,33 @@ Public
     capacity = Old capacity
   ]
 
-  - add_first element:V <-
+  - add_first element:V^n <-
+  ( + idx:Int
+    set_capacity (count + n)
+    if (upper >= 0) then {
+      storage.move 0 to upper by n
+    }
+    upper := upper + n
+    { e:V
+      storage.at idx put e
+      idx := idx + 1
+    }.value element
+  )
+
+  - add_last element:V^n <-
   (
-    add_last element
-    (lower < upper).if {
-      move lower to (upper - 1) by 1
-      at lower put element
-    }
+    set_capacity (count + n)
+    { e:V
+      upper := upper + 1
+      at upper put element
+    }.value element
   )
 
-  - add_last element:V <-
-  ( + new_capacity:INTEGER
-    (capacity < count + 1).if {
-      (capacity = 0).if {
-        new_capacity := 16
-        storage := storage.create new_capacity
-        capacity := new_capacity
-      } else {
-      new_capacity := 2 * capacity
-      storage := storage.realloc capacity with new_capacity
-      capacity := new_capacity
-      }
-    }
-    upper := upper + 1
-    at upper put element
-  )
-
-  - from_collection model:COLLECTION(V) <-
+  - from_collection model:Collection(V) <-
   (
     with_capacity ((model.count),(model.lower))
     upper := model.upper
-    (model.lower).to (model.upper) do { i:INTEGER
+    (model.lower).to (model.upper) do { i:Int
       put ((model.item i),i)
     }
   )
@@ -338,23 +351,23 @@ Public
     +? { upper = model.upper }
   ]
 
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   (
     storage.all_default (upper - lower)
   )
 
-  - occurrences element:V :INTEGER <-
+  - occurrences element:V :Int <-
   (
     storage.occurrences element until (upper - lower)
   )
 
-  - fast_occurrences element:V :INTEGER <-
+  - fast_occurrences element:V :Int <-
   (
     storage.fast_occurrences element until (upper - lower)
   )
 
-  - first_index_of element:V :INTEGER <-
-  ( + result:INTEGER
+  - first_index_of element:V :Int <-
+  ( + result:Int
 
     (upper >= lower).if {
       result := lower + storage.first_index_of element until (upper - lower)
@@ -363,8 +376,8 @@ Public
     }
   )
 
-  - index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - index_of element:V start start_index:Int :Int <-
+  ( + result:Int
 
     (upper >= lower).if {
       result := lower + storage.index_of (element,start_index - lower) until (upper - lower)
@@ -374,8 +387,8 @@ Public
     result
   )
 
-  - reverse_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - reverse_index_of element:V start start_index:Int :Int <-
+  ( + result:Int
 
     (upper >= lower).if {
       result := lower + storage.reverse_index_of element from (start_index - lower)
@@ -384,8 +397,8 @@ Public
     }
   )
 
-  - fast_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - fast_index_of element:V start start_index:Int :Int <-
+  ( + result:Int
 
     (upper >= lower).if {
       result := lower + storage.fast_index_of (element,start_index - lower) until (upper - lower)
@@ -395,8 +408,8 @@ Public
     result
   )
 
-  - fast_reverse_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - fast_reverse_index_of element:V start start_index:Int :Int <-
+  ( + result:Int
 
     (upper >= lower).if {
       result := lower + storage.fast_reverse_index_of element from (start_index - lower)
@@ -406,32 +419,40 @@ Public
     result
   )
 
-  - Self:SELF '=='  Right 60 other:SELF :BOOLEAN <-
-  ( + result:BOOLEAN
-    (Self = other).if {
-      result := TRUE
+  - self:Self '=='  Right 60 other:Self :Boolean <-
+  ( + result:Boolean
+    (self = other).if {
+      result := True
     }.elseif {(lower = other.lower) && {upper = other.upper}} then {
       result := storage.fast_memcmp (other.storage) until upper
     }
     result
   )
 
-  - is_equal_map other:SELF :BOOLEAN <-
-  ( + result:BOOLEAN
-    (Self = other).if {
-      result := TRUE
+  - is_equal_map other:Self :Boolean <-
+  ( + result:Boolean
+    (self = other).if {
+      result := True
     }.elseif {(lower = other.lower) && {upper = other.upper}} then {
       result := storage.memcmp (other.storage) until upper
     }
     result
   )
 
-  - slice min:INTEGER to max:INTEGER :SELF <-
-  ( + result:SELF
-    result := SELF.create lower to (lower + max - min)
+  - slice min:Int to max:Int :Self <-
+  ( + result:Self
+    result := Self.create lower to (lower + max - min)
     (max >= min).if {
       // Slice not empty
       result.storage.slice_copy storage to 0 from (min - lower) to (max - lower)
     }
   )
 
+Private
+  - set_lower l:Int capacity c:Int <-
+  (    
+    lower := l
+    upper := l - 1
+    set_capacity c
+  )
+  

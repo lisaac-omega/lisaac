@@ -1,26 +1,25 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Private
-  - values:ARRAY INTN
+  - values:Array Intn
   
-  - valook: ARRAY STRING_ALIAS
+  - valook: Array String_alias
   
-  - operations:STRING_ALIAS := "+++++++++++++++++++++++*****"
+  - operations:String_alias := "+++++++++++++++++++++++*****"
   
 Public
   - main <-
-  ( + intn:INTN
-    + a,b,c:INTN
-    + j:INTEGER
-    + op:CHARACTER
-    values := ARRAY INTN .create_with_capacity 1024
-    valook := ARRAY STRING_ALIAS .create_with_capacity 1024
+  ( + intn:Intn
+    + a,b,c:Intn
+    + j:Int
+    + op:Char
+    values := Array Intn .create_with_capacity 1024
+    valook := Array String_alias .create_with_capacity 1024
     intn := 1
     values_add intn
     intn := 2
     values_add intn
-    0.to (operations.upper) do { i:INTEGER
+    0.to (operations.upper) do { i:Int
       a := values.at (values.upper - 1)
       b := values.at (values.upper)
       op := operations.at i
@@ -31,12 +30,12 @@ Public
       }.elseif {op = '*'} then {
         values_add (a * b)
       } else {
-        TEST.check FALSE
+        Test.check False
       }
     }
-    TEST.check (values.upper = valook.upper)
+    Test.check (values.upper = valook.upper)
     j := values.upper
-    (operations.upper).downto 0 do { i:INTEGER
+    (operations.upper).downto 0 do { i:Int
       c := values_at (values.upper)
       b := values_at (values.upper - 1)
       a := values_at (values.upper - 2)
@@ -48,27 +47,27 @@ Public
       }.elseif {op = '*'} then {
         intn := c / b
       } else {
-        TEST.check FALSE
+        Test.check False
       }
-      TEST.check (intn == a)
-      TEST.check (intn.to_string) string (a.to_string)
+      Test.check (intn == a)
+      Test.check (intn.to_string) string (a.to_string)
       remove_last
     }
-    TEST.check (values.upper = 1)
-    TEST.check (valook.upper = 1)
+    Test.check (values.upper = 1)
+    Test.check (valook.upper = 1)
   )
   
-  - values_add z:INTN <-
+  - values_add z:Intn <-
   (
     values.add_last z
     valook.add_last (z.to_string)
-    TEST.check ((valook.last) == (z.to_string))
+    Test.check ((valook.last) == (z.to_string))
   )
   
-  - values_at z:INTEGER :INTN <-
-  ( + result:INTN
+  - values_at z:Int :Intn <-
+  ( + result:Intn
     result := values.at z
-    TEST.check (result.to_string) string (valook.at z)
+    Test.check (result.to_string) string (valook.at z)
     result
   )
 

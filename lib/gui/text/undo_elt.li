@@ -1,60 +1,59 @@
 Header
-  + name := Strict UNDO_ELT;
-  
+  + name := Exact Undo_elt
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Private
-  - stk:Expanded ARRAY UNDO_ELT
-  - tmp:STRING_BUFFER := STRING_BUFFER.create 4
+  - stk:Flat Array Undo_elt
+  - tmp:String_buffer := String_buffer.create 4
 Public
-  - stack_size:INTEGER := 32_768; // Power 2 !!
+  - stack_size:Int := 32_768; // Power 2 !!
   
-  + pt_i:INTEGER
-  + char:UINTEGER_32
-  + type:INTEGER_8
+  + pt_i:Int
+  + char:Uint32
+  + type:Int8
   
-  - str:STRING_BUFFER <-
-  ( + c:UINTEGER_32
+  - str:String_buffer <-
+  ( + c:Uint32
     tmp.clear
     c := char
     {c != 0}.while_do {
-      tmp.add_first (c.to_uinteger_8.to_character)
+      tmp.add_first (c.to_uint8.to_character)
       c := c >> 8
     }
     tmp
   )
   
-  - run t:TXT_BUF dir dir:INTEGER_8 <-
+  - run t:Txt_buf dir dir:Int8 <-
   (
     (type ^ dir)
-    .when (UNDO.t_rm)  then { rm t;  }
-    .when (UNDO.t_add) then { add t; }
+    .when (Undo.t_rm)  then { rm t;  }
+    .when (Undo.t_add) then { add t; }
   )
     
-  - rm t:TXT_BUF <-
+  - rm t:Txt_buf <-
   ( t.rm pt_i
     t.set_pos_raw pt_i
   )
   
-  - add t:TXT_BUF <-
+  - add t:Txt_buf <-
   ( t.at pt_i add str
     t.set_pos_raw (pt_i + tmp.count)
   )
   
-  - init i:INTEGER char c:UINTEGER_32 type t:INTEGER_8 :SELF <-
-  ( (pt_i,char,type) := (i,c,t); Self)
+  - init i:Int char c:Uint32 type t:Int8 :Self <-
+  ( (pt_i,char,type) := (i,c,t); self)
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
   - print <-
   (
     pt_i.print; ' '.print
     type
-    .when (UNDO.t_rm)  then { "rm".print;  }
-    .when (UNDO.t_add) then { "add".print; }
+    .when (Undo.t_rm)  then { "rm".print;  }
+    .when (Undo.t_add) then { "add".print; }
     "`".print; str.print; '\''.println;
   )

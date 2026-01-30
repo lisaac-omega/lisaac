@@ -1,71 +1,74 @@
 Header
-  + name := SUBACT;
-  
+  + name := Subact
 Inherit
-  - parent_clone:CLONE := CLONE
-  - parent_json:JSON := JSON
-  
-FILE_KEY
-  - dico:HMAP SUBACT KEY STRING_ALIAS := HMAP SUBACT KEY STRING_ALIAS.new
+  - parent_clone:Clone := Clone
+  - parent_json:Json := Json
+File_key
+  - dico:Hmap Subact Key String_alias := Hmap Subact Key String_alias.new
   //  
-  - old_list:ARRAY SHORTCUT
+  - old_list:Array Shortcut
   
-  - list_empty:ARRAY SHORTCUT := ARRAY SHORTCUT.create_with_capacity 0
+  - list_empty:Array Shortcut := Array Shortcut.create_with_capacity 0
 Public
-    
-  + key:STRING_ALIAS
+  + key:String_alias
   
-  + list:ARRAY SHORTCUT
-  + list_order:ARRAY SHORTCUT
+  + list:Array Shortcut
+  + list_order:Array Shortcut
   
-  - new:SELF <- clone
+  - new:Self <- clone
   
-  - read:SELF <-
+  - read:Self <-
   (
-    list_order := ARRAY SHORTCUT.create_with_capacity 16
-    SHORTCUT.set_list list_order
+    list_order := Array Shortcut.create_with_capacity 16
+    Shortcut.set_list list_order
     read_object
-    list := ARRAY SHORTCUT.create_with_capacity (list_order.count)
+    list := Array Shortcut.create_with_capacity (list_order.count)
     list.copy_collection list_order
-    SHORTCUT.sort
-    dico.add Self to key
-    SHORTCUT.set_list (Old SHORTCUT.list)
-    Self
+    Shortcut.sort
+    dico.at key add self
+    Shortcut.set_list (Old Shortcut.list)
+    self
   )
   
-  - get k:STRING_ALIAS :SUBACT <- dico.fast_reference_at k
+  - get k:String_alias :Subact <-
+  ( + found:Boolean ; + result:Subact
+    // DCDC
+    //dico.fast_reference_at k
+    (found, result) := dico.search k
+    result
+  )
   
-  - empty p:WIN <-
-  ( p.child.foreach { w:WIN; w.free; }; p.child.clear
-    old_list := SHORTCUT.list
+  - empty p:Win <-
+  ( p.child.foreach { w:Win; w.free; }; p.child.clear
+    old_list := Shortcut.list
     ? {list_empty.is_empty}
-    SHORTCUT.set_list list_empty
+    Shortcut.set_list list_empty
   )
   
-  - load p:WIN <-  
-  ( + i:INTEGER
-    p.child.foreach { w:WIN; w.free; }; p.child.clear
-    old_list := SHORTCUT.list
-    SHORTCUT.set_list list_order
+  - load p:Win <-  
+  ( + i:Int
+    p.child.foreach { w:Win; w.free; }; p.child.clear
+    old_list := Shortcut.list
+    Shortcut.set_list list_order
     {i < list.upper}.while_do {
       (list.at i.act != list.at (i+1).act).if {
-        ACT_ITM.new.init p act (list.at i); //.color (LOOK.text_ui)
+        Act_itm.new.init p act (list.at i); //.color (LOOK.text_ui)
       }
       i := i + 1
     }
-    ACT_ITM.new.init p act (list.at i); //.color (LOOK.text_ui)
+    Act_itm.new.init p act (list.at i); //.color (LOOK.text_ui)
   )
   
-  - restore <- SHORTCUT.set_list old_list
+  - restore <- Shortcut.set_list old_list
   
-  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str  v:String_alias :Boolean <-
   ( id
     .case "name" then { (get v != NULL).if { err semantic msg "Double name."; }; key := v; }
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - object id:STRING_ALIAS :BOOLEAN <-
+  - object id:String_alias :Boolean <-
   ( id
-    .case "ACT" then { ACT.new_read; }
-    = STRING_ALIAS
+    .case "ACT" then { Act.new_read; }
+    = String_alias
   )

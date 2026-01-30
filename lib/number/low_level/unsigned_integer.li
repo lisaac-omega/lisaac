@@ -1,45 +1,42 @@
 Header
-
-  + name    := UNSIGNED_INTEGER;
-
-  /*Generic Unsigned Integer.*/
-
+  + name := Unsigned_integer
+/*Generic Unsigned Int.*/
 Insert
 
-  - parent_integer:INTEGER := INTEGER
+  - parent_integer:Int := Int
 
 Public
 
   // Range
 
-  - minimum:INTEGER_64 := 0.to_raw_integer_64
+  - minimum:Int64 := 0.to_raw_int64
 
   // Function :
 
-  - sign:INTEGER <-
+  - sign:Int <-
   // Sign of Current (0 -1 or 1).
   (
-    (Self != 0).to_integer
+    (self != 0).to_int
   )
 
-  - abs:SELF <- Self; // Absolute value of `self'.
+  - abs:Self <- self; // Absolute value of `self'.
 
   // Convertion
 
-  - append_in b:STRING_BUFFER <-
-  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  - append_in b:String_buffer <-
+  // Append in the `b' the equivalent of `to_string'. No new String_buffer
   // creation during the process.
-  ( + val:SELF
-    + i,j:INTEGER
+  ( + val:Self
+    + i,j:Int
     ? {b!=NULL}
 
-    (Self = 0).if {
+    (self = 0).if {
       b.extend '0'
     } else {
 
       i := b.upper+1
 
-      val := Self
+      val := self
       {val = 0}.until_do {
         b.extend ((val % 10).digit)
         val := val / 10
@@ -60,11 +57,11 @@ Public
     print_positif
   )
 
-  - to_octal:SELF <-
+  - to_octal:Self <-
   // Gives coresponding octal value.
-  ( + result, unit, current:SELF
+  ( + result, unit, current:Self
 
-    current := Self
+    current := self
     unit := 1
     {current!=0}.while_do {
       result := result + ((current & 7)*unit)
@@ -76,39 +73,39 @@ Public
 
   // Hashing:
 
-  - hash_code:INTEGER <- to_integer
+  - hash_code:Int <- to_int
 
   // Looping
 
-  - downto limit_down:SELF do blc:{SELF; } <-
+  - downto limit_down:Self do blc:{Self; } <-
   (
-    (Self+1).downto_unsigned limit_down do blc
+    (self+1).downto_unsigned limit_down do blc
   )
 
   // Bound test
 
-  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  - bound_test low:Int64 to up:Uint64 :Boolean <-
   (
-    (up > to_raw_uinteger_64)
+    (up > to_raw_uint64)
   )
 
-  - number_bits:INTEGER <- object_size * 8
+  - number_bits:Int <- object_size * 8
   
-  - Self:SELF '@<' other:SELF :SELF <- (Self << other) | (Self >> (number_bits - other)); // rol: Rotation left
-  - Self:SELF '@>' other:SELF :SELF <- (Self >> other) | (Self << (number_bits - other)); // ror
+  - self:Self '@<' other:Self :Self <- (self << other) | (self >> (number_bits - other)); // rol: Rotation left
+  - self:Self '@>' other:Self :Self <- (self >> other) | (self << (number_bits - other)); // ror
   
   // Crypto (SHAxyz)
   
-  - ch (y,z:SELF) :SELF <- (Self & y) ^ (~Self & z)
-  - maj (y,z:SELF) :SELF <- (Self & y) ^ (Self & z) ^ (y & z)
+  - ch (y,z:Self) :Self <- (self & y) ^ (~self & z)
+  - maj (y,z:Self) :Self <- (self & y) ^ (self & z) ^ (y & z)
         
 Private
 
-  - downto_unsigned limit_down:SELF do blc:{SELF; } <-
+  - downto_unsigned limit_down:Self do blc:{Self; } <-
   (
-    (Self > limit_down).if {
-      blc.value (Self - 1)
-      (Self - 1).downto_unsigned limit_down do blc
+    (self > limit_down).if {
+      blc.value (self - 1)
+      (self - 1).downto_unsigned limit_down do blc
     }
   )
   

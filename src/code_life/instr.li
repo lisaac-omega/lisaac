@@ -1,16 +1,13 @@
 Header
-
-  + name        := INSTR;
-
-  /*Parent for all Instruction.*/
-
+  + name := Instr
+/*Parent for all Instruction.*/
 Inherit
 
-  + parent_itm_object:Expanded ITM_OBJECT
+  + parent_itm_object:Flat Itm_object
 
 Public
 
-  - is_invariant:BOOLEAN <- FALSE
+  - is_invariant:Boolean <- False
   // TODO: Documentation
   // For expressions, it seems they are invariant if they are constant, like
   // sizeof or binary operators on two invariant expressions.
@@ -20,10 +17,10 @@ Public
   //
   //
 
-  - hash_code:INTEGER <- CAST POSITION TO INTEGER.on position
+  - hash_code:Int <- Cast Position To Int.on position
   // Hash code of instruction for storage
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   // TODO: Documentation
   // Would be to copy the instruction and make sure memory is allocated
   // correctly. Not really sure though.
@@ -38,11 +35,11 @@ Public
   // Executing pass.
   //
 
-  - cmp other:INSTR :BOOLEAN := FALSE
+  - cmp other:Instr :Boolean := False
   // TODO: Documentation
   // Not redefined, Not used as far as I can grep. Seems unused.
 
-  - i_am_the_last i:INSTR :BOOLEAN <- (i = Self)
+  - i_am_the_last i:Instr :Boolean <- (i = self)
   // TODO: Documentation
   // It seems to have something to do with the last expression of a list that
   // is also a return value. Perhaps it checks whether the instruction i is the
@@ -50,7 +47,7 @@ Public
   // Redefined in LIST, SWITCH and PROFIL
   // Used in LIST, CALL_SLOT, SWITCH and PROFIL
 
-  - execute:INSTR <-
+  - execute:Instr <-
   // TODO: Documentation
   // Deferred
   (
@@ -82,7 +79,7 @@ Public
   // Display.
   //
 
-  - display_ref buffer:STRING_BUFFER <-
+  - display_ref buffer:String_buffer <-
   // Display reference for debug purposes
   (
     is_verbose.if {
@@ -92,7 +89,7 @@ Public
     }
   )
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   // Display instruction for debug purposes
   // Deferred
   (
@@ -102,29 +99,29 @@ Public
 
   - debug_display <-
   // Print the result of the `display' slot
-  ( + voir:STRING_BUFFER
+  ( + voir:String_buffer
 
-    voir := STRING_BUFFER.create 250
+    voir := String_buffer.create 250
     display voir
     voir.print
     '\n'.print
   )
 
-  - simplify_type v:VARIABLE <-
+  - simplify_type v:Variable <-
   // TODO: Documentation
   // Not redefined anywhere, used in LIST, READ and WRITE
-  ( + tmp_type:TYPES_TMP
+  ( + tmp_type:Types_tmp
     
 
-    ((! v.is_static) && {! v.type.is_strict}).if {     
+    ((! v.is_static) && {! v.type.is_exact}).if {     
       /*
       ((v.type_set.count = 2) && {v.type_set.first = TYPE_NULL}).if {
-        v.set_type (v.type_set.at 1.default.to_strict)
+        v.set_type (v.type_set.at 1.default.to_exact)
       */
-      tmp_type := TYPES_TMP.new
+      tmp_type := Types_tmp.new
       v.get_type tmp_type
-      ((tmp_type.count = 2) && {tmp_type.first = TYPE_NULL}).if {        
-        v.set_type (tmp_type.at 1.default.to_strict)
+      ((tmp_type.count = 2) && {tmp_type.first = Type_null}).if {        
+        v.set_type (tmp_type.at 1.default.to_exact)
       }
       tmp_type.free
       

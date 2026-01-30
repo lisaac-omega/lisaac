@@ -1,11 +1,9 @@
 Header
-
-  + name        := EXPR;
-
+  + name := Expr
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
-  - value:INTEGER <- abstract
+  - value:Int <- abstract

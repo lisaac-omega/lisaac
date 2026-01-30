@@ -1,19 +1,17 @@
 Header
-  
-  + name := FONS_ATLAS_NODE;
-  
+  + name := Fons_atlas_node
 Inherit
   
-  - parent_fontstash:FONTSTASH := FONTSTASH
+  - parent_fontstash:Fontstash := Fontstash
   
 Private
   
-  - stock:ARRAY FONS_ATLAS_NODE := ARRAY FONS_ATLAS_NODE.create_with_capacity 512
+  - stock:Array Fons_atlas_node := Array Fons_atlas_node.create_with_capacity 512
   
-  - new:FONS_ATLAS_NODE <-
-  ( + result:FONS_ATLAS_NODE
+  - new:Fons_atlas_node <-
+  ( + result:Fons_atlas_node
     (stock.is_empty).if {
-      result := FONS_ATLAS_NODE.clone
+      result := Fons_atlas_node.clone
     } else {
       result := stock.pop
     }
@@ -22,21 +20,21 @@ Private
   
 Public
   
-  + x:INTEGER_16
-  + y:INTEGER_16
-  + width:INTEGER_16
+  + x:Int16
+  + y:Int16
+  + width:Int16
   
-  - set_x px:INTEGER_16 <- ( x := px; )
-  - set_width pw:INTEGER_16 <- ( width := pw; )
+  - set_x px:Int16 <- ( x := px; )
+  - set_width pw:Int16 <- ( width := pw; )
   
-  - create (px,py:INTEGER_16) width pw:INTEGER_16 :FONS_ATLAS_NODE <-
-  ( + result:FONS_ATLAS_NODE
+  - create (px,py:Int16) width pw:Int16 :Fons_atlas_node <-
+  ( + result:Fons_atlas_node
     result := new
     result.make (px,py,pw)
     result
   )
   
-  - make (px,py,pw:INTEGER_16) <-
+  - make (px,py,pw:Int16) <-
   (
     (x,y) := (px,py)
     width := pw
@@ -44,7 +42,7 @@ Public
   
   - free <-
   (
-    stock.add_last Self
+    stock.add_last self
   )
   
   - print <-

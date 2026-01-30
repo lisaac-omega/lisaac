@@ -1,19 +1,18 @@
 Header
-  + name := SIGNAL;
-  
-  - include := `
+  + name := Signal
+- include := `
 #include <signal.h>
 #include <unistd.h>
   `;
     
 External,Public
 
-  - handle s:INTEGER_32 <-
+  - handle s:Int32 <-
   [
-    ? {s = `SIGSEGV`:INTEGER_32}
+    ? {s = `SIGSEGV`:Int32}
   ]
   (
-    UTILS.is_debug_mode.if {
+    Utils.is_debug_mode.if {
       `lisaac_stack_print(10)`
       `print_string("Stack overflow (INFINITE RECURSION)\n")`
     }
@@ -23,7 +22,7 @@ External,Public
 Public
   - infinite_recursion <-
   (
-    UTILS.is_debug_mode.if {
+    Utils.is_debug_mode.if {
       `stack_t sigstack`
       `struct sigaction act`
       

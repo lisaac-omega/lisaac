@@ -1,24 +1,21 @@
 Header
-
-  + name    := LOCAL;
-
-  /*Local slot*/
-
+  + name := Local
+/*Local slot*/
 Inherit
 
-  + parent_variable:Expanded VARIABLE
+  + parent_variable:Flat Variable
 
 Public
 
   // BSBS: Doit pas etre utile.
 
-  + is_result :BOOLEAN := FALSE
+  + is_result :Boolean := False
   
-  + lpow:LOCAL
-  + pow:INTEGER := 1
-  - set_pow n:INTEGER loc p:LOCAL <- ( (pow,lpow) := (n,p) )
+  + lpow:Local
+  + pow:Int := 1
+  - set_pow n:Int loc p:Local <- ( (pow,lpow) := (n,p) )
   
-  - set_result r:BOOLEAN <-
+  - set_result r:Boolean <-
   (
     is_result := r
   )
@@ -27,50 +24,50 @@ Public
   // Copy alias manager.
   //
 
-  - is_alias:BOOLEAN
+  - is_alias:Boolean
 
   - alias_on <-
   (
-    is_alias := TRUE
+    is_alias := True
   )
 
   - alias_off <-
   (
-    (list_alias.lower).to (list_alias.upper) do { j:INTEGER
+    (list_alias.lower).to (list_alias.upper) do { j:Int
       list_alias.at j.set_my_alias NULL
     }
     list_alias.clear
-    is_alias := FALSE
+    is_alias := False
   )
 
-  - list_alias:ARRAY LOCAL := ARRAY LOCAL .create_with_capacity 64
+  - list_alias:Array Local := Array Local .create_with_capacity 64
 
-  - get_alias:LOCAL <-
+  - get_alias:Local <-
   (
     (my_alias = NULL).if {
       my_alias := my_copy
       my_alias.set_type_set type_set
-      list_alias.add_last Self
+      list_alias.add_last self
     }
     my_alias
   )
 
-  + my_alias:LOCAL
+  + my_alias:Local
 
-  - set_my_alias new_loc:LOCAL <-
+  - set_my_alias new_loc:Local <-
   (
     my_alias := new_loc
   )
 
-  + list_level:INTEGER // Use generate with ALIASER_LOCAL
+  + list_level:Int // Use generate with ALIASER_LOCAL
 
-  - set_list_level lev:INTEGER <-
+  - set_list_level lev:Int <-
   (
     list_level := lev
   )
 
-  - write p:POSITION with r:EXPR value val:EXPR :WRITE <-
-  ( + result:WRITE
+  - write p:Position with r:Expr value val:Expr :Write <-
+  ( + result:Write
 
     (my_alias != NULL).if {
       result := my_alias.write_direct p with NULL value val
@@ -82,8 +79,8 @@ Public
     result
   )
 
-  - read p:POSITION with r:EXPR :READ <-
-  ( + result:READ
+  - read p:Position with r:Expr :Read <-
+  ( + result:Read
 
     (my_alias != NULL).if {
       result := my_alias.read_direct p with NULL
@@ -102,29 +99,29 @@ Public
   // Sequence optimizer
   //
 
-  + last_seq:LOCAL_SEQ
+  + last_seq:Local_seq
 
-  - reset_last_write w:WRITE <-
+  - reset_last_write w:Write <-
   (
     ((last_seq != NULL) && {last_seq.last_write = w}).if {
       last_seq.set_last_write NULL
     }
   )
 
-  - set_last_seq s:LOCAL_SEQ <-
+  - set_last_seq s:Local_seq <-
   (
     last_seq := s
   )
 
-  - set_write w:WRITE <-
+  - set_write w:Write <-
   (
     (last_seq = NULL).if {
-      LOCAL_SEQ.new Self
+      Local_seq.new self
       //"LOCAL:".print
       //intern_name.print; '\n'.print
     }
     (
-      (! PROFIL.mode_recursive) &&
+      (! Profil.mode_recursive) &&
       {loop_invariant = NULL} &&
       {last_seq.last_write != NULL} &&
       {last_seq.last_index != -1} &&
@@ -148,37 +145,37 @@ Public
     }
   )
 
-  - get_last_index:INTEGER <- last_seq.last_index
+  - get_last_index:Int <- last_seq.last_index
 
-  - is_invariant:BOOLEAN <-
+  - is_invariant:Boolean <-
   (
     (loop_seq_call_local_and_loop = seq_call_local_and_loop) &&
     {
       (
-	(last_seq != NULL) && {last_seq.last_write != NULL} &&
-	{last_seq.last_seq_index <= loop_seq_index}
+        (last_seq != NULL) && {last_seq.last_write != NULL} &&
+        {last_seq.last_seq_index <= loop_seq_index}
       ) || {style = ' '}
     }
   )
 
-  - get_last_value rec:EXPR :EXPR <-
+  - get_last_value rec:Expr :Expr <-
   [
     ? {rec = NULL}
   ]
-  ( + result:EXPR
-    + val:EXPR
-    + rd:READ
-    + l:LOCAL
-    + g:SLOT_DATA
+  ( + result:Expr
+    + val:Expr
+    + rd:Read
+    + l:Local
+    + g:Slot_data
     (
-      (! PROFIL.mode_recursive) && {loop_invariant = NULL} &&
+      (! Profil.mode_recursive) && {loop_invariant = NULL} &&
       {last_seq != NULL} && {last_seq.last_write != NULL}
     ).if {
       (
-	(is_seq_list (last_seq.last_list_current)) &&
-	{
-	  (last_seq.last_seq_call_local_and_loop = seq_call_local_and_loop) || {require_count = 1}
-	}
+        (is_seq_list (last_seq.last_list_current)) &&
+        {
+          (last_seq.last_seq_call_local_and_loop = seq_call_local_and_loop) || {require_count = 1}
+        }
       ).if {
         val := last_seq.last_write.value
         rd  ?= val
@@ -196,35 +193,35 @@ Public
                 {l.last_seq.last_seq_index < last_seq.last_seq_index} &&
                 {last_seq.last_seq_call_local_and_loop = seq_call_local_and_loop}
               ) || {(l.require_count <= 1) && {l.style != 'R'}} || {l.style = ' '}
-	    }
-	  } || { // Global propagation.
-	    (g != NULL) && {g.style = '-'} && {
-	      (
-		(g.last_write != NULL) && {g.last_seq_index < last_seq.last_seq_index} &&
-		{last_seq.last_seq_call_and_loop = seq_call_and_loop} &&
-		{is_seq_list (g.last_list_current)}
-	      ) || {g.require_count = 1}
-	    }
-	  }
-	).if {
-	  result := val.my_copy
-	}.elseif {
-	  // Propagation step by step.
-	  (last_seq.last_seq_or_and = seq_or_and) &&
-	  {ensure_count = 1} && {list_current.index > list_current.lower} &&
-	  {list_current.at (list_current.index - 1) = last_seq.last_write}
-	} then {
-	  unwrite (last_seq.last_write)
-	  last_seq.set_last_write NULL
-	  list_current.at (list_current.index - 1) put NOP
-	  result := val
-	}
+            }
+          } || { // Global propagation.
+            (g != NULL) && {g.style = '-'} && {
+              (
+                (g.last_write != NULL) && {g.last_seq_index < last_seq.last_seq_index} &&
+                {last_seq.last_seq_call_and_loop = seq_call_and_loop} &&
+                {is_seq_list (g.last_list_current)}
+              ) || {g.require_count = 1}
+            }
+          }
+        ).if {
+          result := val.my_copy
+        }.elseif {
+          // Propagation step by step.
+          (last_seq.last_seq_or_and = seq_or_and) &&
+          {ensure_count = 1} && {list_current.index > list_current.lower} &&
+          {list_current.at (list_current.index - 1) = last_seq.last_write}
+        } then {
+          unwrite (last_seq.last_write)
+          last_seq.set_last_write NULL
+          list_current.at (list_current.index - 1) put Nop
+          result := val
+        }
       }
     }
     result
   )
 
-  - set_type_set t:TYPES <-
+  - set_type_set t:Types <-
   (
     type_set := t
   )
@@ -233,31 +230,31 @@ Public
   //
   //
 
-  - is_local:BOOLEAN <- TRUE
+  - is_local:Boolean <- True
 
   //
   // Creation.
   //
 
-  - create p:POSITION name n:STRING_ALIAS
-  style c:CHARACTER type t:TYPE_FULL result r:BOOLEAN :SELF<-
-  ( + result:SELF
+  - create p:Position name n:String_alias
+  style c:Char type t:Type_full result r:Boolean :Self<-
+  ( + result:Self
     result := clone
     result.make p name n style c type t result r
     result
   )
 
-  - create p:POSITION name n:STRING_ALIAS
-  style c:CHARACTER type t:TYPE_FULL :SELF<-
-  ( + result:SELF
+  - create p:Position name n:String_alias
+  style c:Char type t:Type_full :Self<-
+  ( + result:Self
     result := clone
-    result.make p name n style c type t result FALSE
+    result.make p name n style c type t result False
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS
-  style c:CHARACTER type t:TYPE_FULL result r:BOOLEAN <-
-  ( + tmp:TYPES_TMP
+  - make p:Position name n:String_alias
+  style c:Char type t:Type_full result r:Boolean <-
+  ( + tmp:Types_tmp
     ? {p.code != 0}
     ? {t != NULL}
     
@@ -266,29 +263,29 @@ Public
     position    := p
     name        := n
     is_result   := r
-    intern_name := get_intern n type FALSE
+    intern_name := get_intern n type False
     //(name = "block").if { "LOCAL:".print; intern_name.println }
 
-    ((t.is_expanded) && {! t.is_expanded_c}).if {
-      type := t + TYPE_FULL.expanded_ref_bit
+    ((t.is_flat) && {! t.is_flat_c}).if {
+      type := t + Type_full.flat_ref_bit
     } else {
       type := t
     }
     style := c
 
     (is_static).if {
-      tmp := TYPES_TMP.new
+      tmp := Types_tmp.new
       tmp.add (t.raw)
       type_set := tmp.to_types
     } else {
-      type_set := TYPES_TMP.types_empty
+      type_set := Types_tmp.types_empty
     }
   )
 
-  - my_copy:LOCAL <-
-  ( + result:LOCAL
+  - my_copy:Local <-
+  ( + result:Local
 
-    result := LOCAL.create position name name style style type type
+    result := Local.create position name name style style type type
     result
   )
 
@@ -297,15 +294,15 @@ Public
   //
 
   - init <-
-  ( + val:EXPR
-    + i:INSTR
-    + int:INTEGER_CST
+  ( + val:Expr
+    + i:Instr
+    + int:Int_cst
 
     val := type.default_value position
     (is_integer (type.raw.name)).if {
       int ?= val
       (int != NULL).if {
-	int.cast_type type
+        int.cast_type type
       }
     } else {
       val := val.check_type type with position
@@ -314,30 +311,30 @@ Public
     list_current.add_last i
   )
 
-  - set_intern_name n:STRING_ALIAS <-
+  - set_intern_name n:String_alias <-
   (
     intern_name := n
   )
 
-VARIABLE
+Variable
 
-  - new_read p:POSITION with r:EXPR :READ <-
+  - new_read p:Position with r:Expr :Read <-
   [ -? {r = NULL}; ]
   (
-    READ_LOCAL.create p with Self
+    Read_local.create p with self
   )
 
-  - new_write p:POSITION with r:EXPR value v:EXPR :WRITE <-
+  - new_write p:Position with r:Expr value v:Expr :Write <-
   [ -? {r = NULL}; ]
-  ( + result:WRITE
-    result := WRITE_LOCAL.create p with v in Self
+  ( + result:Write
+    result := Write_local.create p with v in self
     result
   )
 
   /*
   - new_access r:EXPR :ACCESS <-
   (
-    ACCESS_LOCAL.create Self
+    ACCESS_LOCAL.create self
   )
   */
 

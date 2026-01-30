@@ -1,10 +1,9 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + r:REAL_24_8
+  ( + r:Real_24_8
     r := (0.5).to_real_24_8
     r.print
-    TEST.check (r.to_string) string "0.50000000"
+    Test.check (r.to_string) string "0.50000000"
   )

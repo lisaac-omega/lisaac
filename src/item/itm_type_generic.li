@@ -1,26 +1,23 @@
 Header
-
-  + name    := ITM_TYPE_GENERIC;
-
-  /*Generic style type*/
-
+  + name := Itm_type_generic
+/*Generic style type*/
 Inherit
 
-  + parent_itm_type_style:Expanded ITM_TYPE_STYLE
+  + parent_itm_type_style:Flat Itm_type_style
 
 Private
 
-  - dico_tg:ARRAY ITM_TYPE_GENERIC := ARRAY ITM_TYPE_GENERIC .create_with_capacity 32
+  - dico_tg:Array Itm_type_generic := Array Itm_type_generic .create_with_capacity 32
 
-  - create n:STRING_ALIAS style s:UINTEGER_8 with lt:ARRAY ITM_TYPE :SELF <-
-  ( + result:SELF
+  - create n:String_alias style s:Uint8 with lt:Array Itm_type :Self <-
+  ( + result:Self
 
     result := clone
     result.make n style s with lt
     result
   )
 
-  - make n:STRING_ALIAS style s:UINTEGER_8 with lt:ARRAY ITM_TYPE <-
+  - make n:String_alias style s:Uint8 with lt:Array Itm_type <-
   (
     name      := n
     style     := s
@@ -29,13 +26,13 @@ Private
 
 Public
 
-  - hash_code:INTEGER <- name.hash_code
+  - hash_code:Int <- name.hash_code
 
-  + list_type:ARRAY ITM_TYPE
+  + list_type:Array Itm_type
 
-  - get n:STRING_ALIAS style s:UINTEGER_8 with lt:ARRAY ITM_TYPE :SELF <-
-  ( + result:SELF
-    + idx:INTEGER
+  - get n:String_alias style s:Uint8 with lt:Array Itm_type :Self <-
+  ( + result:Self
+    + idx:Int
 
     idx := dico_tg.lower
     {
@@ -56,53 +53,53 @@ Public
     result
   )
 
-  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
-  ( + lst:ARRAY TYPE_FULL
-    + t:TYPE_FULL
-    + j:INTEGER
-    + result:TYPE_FULL
-    + itm_t:ITM_TYPE
-    + itm_tm:ITM_TYPE_MULTI
+  - to_run_for p:Parameter_to_type pos path:String_alias :Type_full <-
+  ( + lst:Array Type_full
+    + t:Type_full
+    + j:Int
+    + result:Type_full
+    + itm_t:Itm_type
+    + itm_tm:Itm_type_multi
 
-    lst := ALIAS_ARRAY TYPE_FULL .new
+    lst := Alias_array Type_full .new
     j := list_type.lower
     {
       itm_t := list_type.at j
       itm_tm ?= itm_t
       (itm_tm = NULL).if {
-        t := itm_t.to_run_for p pos path + TYPE_FULL.generic_bit
+        t := itm_t.to_run_for p pos path + Type_full.generic_bit
         lst.add_last t
       } else {
-        (itm_tm.lower).to (itm_tm.upper) do { i:INTEGER
-          t := itm_tm.at i.to_run_for p pos path + TYPE_FULL.generic_bit
+        (itm_tm.lower).to (itm_tm.upper) do { i:Int
+          t := itm_tm.at i.to_run_for p pos path + Type_full.generic_bit
           lst.add_last t
         }
       }
       j := j + 1
     }.do_while {(j <= list_type.upper) && {t != NULL}}
     (t = NULL).if {
-      ALIAS_ARRAY TYPE_FULL .free lst
+      Alias_array Type_full .free lst
     } else {
-      lst := ALIAS_ARRAY TYPE_FULL .alias lst
-      result := TYPE_GENERIC.get (path,Self) with lst
+      lst := Alias_array Type_full .alias lst
+      result := Type_generic.get (path,self) with lst
     }
     result
   )
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    append_style_in buffer
-    buffer.append name
-    buffer.add_last '('
-    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
-      list_type.at j.append_in buffer
-      buffer.add_last ','
+    append_style_in b
+    b.append name
+    b.add_last '('
+    (list_type.lower).to (list_type.upper - 1) do { j:Int
+      list_type.at j.append_in b
+      b.add_last ','
     }
-    list_type.last.append_in buffer
-    buffer.add_last ')'
+    list_type.last.append_in b
+    b.add_last ')'
   )
   
-  - shorter_in buf:STRING_BUFFER <-
+  - shorter_in buf:String_buffer <-
   (
     (style != NULL).if {
       put style to buf like "keyword"
@@ -110,7 +107,7 @@ Public
     }
     put name to buf like "prototype"
     buf.add_last '('
-    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+    (list_type.lower).to (list_type.upper - 1) do { j:Int
       list_type.at j.shorter_in buf
       buf.add_last ','
     }
@@ -122,11 +119,11 @@ Public
   // Cast.
   //
 
-  - append_cast_name_in buf:STRING_BUFFER <-
+  - append_cast_name_in buf:String_buffer <-
   (
     parent_itm_type_style.append_cast_name_in buf
     buf.append "_of_"
-    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+    (list_type.lower).to (list_type.upper - 1) do { j:Int
       list_type.at j.append_cast_name_in buf
       buf.append "_and_"
     }

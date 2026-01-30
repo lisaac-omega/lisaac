@@ -1,30 +1,30 @@
-Header  
-  + name := CONTEXT;
-  /*stbrp_context*/
+Header
+  + name := Context
+/*stbrp_context*/
   
 Public  
   
-  + width:INTEGER
-  + height:INTEGER
-  + x:INTEGER
-  + y:INTEGER
-  + bottom_y:INTEGER
+  + width:Int
+  + height:Int
+  + x:Int
+  + y:Int
+  + bottom_y:Int
   
-  - init_target (pw,ph:INTEGER) <-
+  - init_target (pw,ph:Int) <-
   (
     (width,height) := (pw,ph)
     x := y := bottom_y := 0
   )
 
-  - pack_rects rects:ARRAY RECT <-
-  ( + i:INTEGER
-    + break:BOOLEAN
+  - pack_rects rects:Array Rect <-
+  ( + i:Int
+    + break:Boolean
     {(i < rects.count) && {! break}}.while_do { 
       (x + rects.item i.w > width).if {
         (x,y) := (0,bottom_y)
       }
       (y + rects.item i.h > height).if {
-        break := TRUE
+        break := True
       } else {
         rects.item i.set_xy (x,y)
         rects.item i.set_was_packed 1

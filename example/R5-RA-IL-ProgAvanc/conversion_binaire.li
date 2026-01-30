@@ -1,7 +1,6 @@
 Header
-  
-  + name := CONVERSION_BINAIRE;
-  /*
+  + name := Conversion_binaire
+/*
 The classical factorial example in Lisaac Ω.
   
 In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
@@ -9,10 +8,10 @@ In this example, the traditional recursive implementation of the factorial funct
 
 Public
   
-  - convbin (n:INTEGER) :STRING <-
+  - convbin (n:Int) :String <-
   // Récursif non-terminal.
   // Joli, mais catastrophique en allocation mémoire...
-  ( + result:STRING
+  ( + result:String
     if (n < 2) then {
       result := n.to_string
     } else {
@@ -22,21 +21,21 @@ Public
   )
   
   - main <-
-  ( + n:INTEGER;  
-    if (COMMAND_ARGS upper != 1) then {
-      OUT # "usage: " # COMMAND_ARGS.at 0 # " <n>" # '\n'
-      SYSTEM exit 1
+  ( + n:Int;  
+    if (Command_args upper != 1) then {
+      Out # "usage: " # Command_args.at 0 # " <n>" # '\n'
+      System exit 1
     }
-    n := COMMAND_ARGS at 1 .to_integer
-    OUT # "recursif non terminal: " # (convbin n) # '\n'
-    OUT # "recursif terminal:     " # (convbin n acc "") # '\n'
-    OUT # "itératif:              " # (convbin n itératif) # '\n'
+    n := Command_args at 1 .to_int
+    Out # "recursif non terminal: " # (convbin n) # '\n'
+    Out # "recursif terminal:     " # (convbin n acc "") # '\n'
+    Out # "itératif:              " # (convbin n itératif) # '\n'
   );
   
-  - convbin (n:INTEGER) acc acc:STRING :STRING <-
+  - convbin (n:Int) acc acc:String :String <-
   // Récursif terminal.
   // Toujours aussi catastrophique en allocation mémoire...
-  ( + result:STRING
+  ( + result:String
     if (n < 2) then {
       result := n.to_string + acc
     } else {
@@ -45,11 +44,11 @@ Public
     result
   )
   
-  - convbin (n:INTEGER) itératif :STRING <-
+  - convbin (n:Int) itératif :String <-
   //  La solution à retenir.
-  ( + v:INTEGER;
-    + result:STRING_BUFFER;
-    STRING.tmp { buf:STRING_BUFFER
+  ( + v:Int;
+    + result:String_buffer;
+    String.tmp { buf:String_buffer
       v := n;
       while { v != 0 } do {
         if ((v % 2) = 0) then {
@@ -59,8 +58,8 @@ Public
         }
         v := v / 2
       }
-      result := STRING_BUFFER . create (buf.count)
-      from (buf.upper) down_to 0 do { idx:INTEGER
+      result := String_buffer . create (buf.count)
+      from (buf.upper) down_to 0 do { idx:Int
         result.add_last (buf.at idx)
       }
     }

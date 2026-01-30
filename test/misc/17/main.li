@@ -1,15 +1,13 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
   
-  - do action:{INTEGER} <-
-  ( + i_am_unused:INTEGER; // warning normal ici
+  - do action:{Int} <-
+  ( + i_am_unused:Int; // warning normal ici
 
     action.value
   )

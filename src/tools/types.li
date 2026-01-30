@@ -1,40 +1,37 @@
 Header
-
-  + name        := TYPES;
-
-  /*Aliser TYPE collection.*/
-
+  + name := Types
+/*Aliser TYPE collection.*/
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
   
 Public
   
-  - first_index:INTEGER <- (abstract; -1)
+  - first_index:Int <- (abstract; -1)
   
-  - count:INTEGER <- (abstract; 0)
+  - count:Int <- (abstract; 0)
   
-  - next_index i:INTEGER :INTEGER <- -1
+  - next_index i:Int :Int <- -1
   
-  - is_empty:BOOLEAN <- count = 0
+  - is_empty:Boolean <- count = 0
     
-  - first:TYPE <- (abstract; NULL)
+  - first:Type <- (abstract; NULL)
 
-  - at i:INTEGER :TYPE <-
+  - at i:Int :Type <-
   (
     abstract
     NULL
   )
 
-  - intersection_is_empty other:TYPES :BOOLEAN <-
-  ( + i1,i2:INTEGER
-    + result:BOOLEAN
+  - intersection_is_empty other:Types :Boolean <-
+  ( + i1,i2:Int
+    + result:Boolean
     
     (
       (is_empty) || {other.is_empty} ||
       {at (count-1).index < other.first.index} || {first.index > other.at (other.count-1).index}
     ).if {
-      result := TRUE
+      result := True
     } else {
       {
         {(i1 < count) && {at i1.index < other.at i2.index}}.while_do { i1 := i1 + 1; }
@@ -51,7 +48,7 @@ Public
   // Display.
   //
 
-  - types_append_in buf:STRING_BUFFER <-
+  - types_append_in buf:String_buffer <-
   ( 
     abstract
   )

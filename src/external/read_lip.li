@@ -1,41 +1,38 @@
 Header
-
-  + name    := READ_LIP;
-
-  /* Read lip variable. */
-
+  + name := Read_lip
+/* Read lip variable. */
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- var.is_invariant
+  - is_invariant:Boolean <- var.is_invariant
 
-  + static_type:TYPE_FULL
+  + static_type:Type_full
 
-  + var:EXPR
+  + var:Expr
 
   //
   // Creation.
   //
 
-  - create v:EXPR type t:TYPE_FULL :SELF <-
-  ( + result:SELF
+  - create v:Expr type t:Type_full :Self <-
+  ( + result:Self
 
     result := clone
     result.make v type t
     result
   )
 
-  - make v:EXPR type t:TYPE_FULL <-
+  - make v:Expr type t:Type_full <-
   (
     position    := v.position
     static_type := t
     var         := v
   )
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     create (var.my_copy) type static_type
   )
@@ -44,7 +41,7 @@ Public
   // Searching.
   //
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     (static_type = type_boolean.default).if {
       t.add type_false
@@ -63,41 +60,41 @@ Public
     var.remove
   )
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     var.execute_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + result:EXPR
-    + str:STRING_CST
+  - execute_link:Expr <-
+  ( + result:Expr
+    + str:String_cst
     
     var  := var.execute_link
     str ?= var
     (str != NULL).if {
-      + v:LIP_SLOT_DATA
-      + i:LIP_INTEGER
-      + b:LIP_BOOLEAN
-      + s:LIP_STRING
-      + t:TYPE
-      + tf:TYPE_FULL
-      v := LIP_CODE.get_data (str.string)
+      + v:Lip_slot_data
+      + i:Lip_integer
+      + b:Lip_boolean
+      + s:Lip_string
+      + t:Type
+      + tf:Type_full
+      v := Lip_code.get_data (str.string)
       var.remove
       (v = NULL).if { semantic_error (position,"Lip Variable not found."); }
       i ?= v.value
       (i != NULL).if {
-        result := INTEGER_CST.create position value (i.value) type (type_integer.default)
+        result := Int_cst.create position value (i.value) type (type_integer.default)
         t := type_integer
       }
       b ?= v.value
       (b != NULL).if {        
         tf := b.value.ok (type_true.default) or (type_false.default)
-        result := PROTOTYPE_CST.create position type tf
+        result := Prototype_cst.create position type tf
         t := type_boolean
       }
       s ?= v.value
       (s != NULL).if {
-        result := STRING_CST.create position text (s.value) length (s.value.count)
+        result := String_cst.create position text (s.value) length (s.value.count)
         t := type_string_alias
       }
       ((result = NULL) || {static_type.raw != t}).if {
@@ -105,7 +102,7 @@ Public
       }
       new_execute_pass
     } else {      
-      result := Self
+      result := self
     }
     result
   )
@@ -123,7 +120,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "READ_LIP "
     static_type.append_name_in buffer

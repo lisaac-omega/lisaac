@@ -1,38 +1,35 @@
 Header
-
-  + name    := FLOAT_MAP80;
-
-  /*Mapping for REAL_80.*/
-
+  + name := Float_map80
+/*Mapping for REAL_80.*/
 Inherit
 
-  - parent_float_map:FLOAT_MAP := FLOAT_MAP
+  - parent_float_map:Float_map := Float_map
 
 Mapping,Private
 
-  + exp_16:UINTEGER_16
-  + man_64:UINTEGER_64
+  + exp_16:Uint16
+  + man_64:Uint64
 
-REAL, REAL_32, REAL_64, REAL_80
+Real, Real32, Real64, Real80
 
-  - get_map f:SELF <-
-  ( + tab:NATIVE_ARRAY(SELF)
-    tab := CAST FLOAT_MAP80 TO (NATIVE_ARRAY SELF).on FLOAT_MAP80
+  - get_map f:Self <-
+  ( + tab:C_array(Self)
+    tab := Cast Float_map80 To (C_array Self).on Float_map80
     tab.put f to 0
   )
 
 Public
   
-  - sign:BOOLEAN         <- (exp_16 >> 15) = 0; // TRUE if positif, FALSE else.
+  - sign:Boolean         <- (exp_16 >> 15) = 0; // True if positif, False else.
 
-  - exponent:UINTEGER_32 <- exp_16 & 07F_FFh
+  - exponent:Uint32 <- exp_16 & 07F_FFh
 
-  - mantissa:UINTEGER_64 <- man_64
+  - mantissa:Uint64 <- man_64
 
 
   // Format.
 
-  - mantissa_bits:INTEGER_8 := 64
+  - mantissa_bits:Int8 := 64
 
-  - exponent_bits:INTEGER_8 := 15
+  - exponent_bits:Int8 := 15
 

@@ -1,11 +1,9 @@
 Header
-
-  + name := TOP1;
-  
+  + name := Top1
 Public
   
-  - to_top2 x:TOP1 :TOP2 <-
-  ( + result:TOP2  
+  - to_top2 x:Top1 :Top2 <-
+  ( + result:Top2  
     result ?= x
     result
   )

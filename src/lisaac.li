@@ -1,39 +1,37 @@
 Header
-
-  + name := LISAAC;
-  /* The lisaac compiler. */
-
+  + name := Lisaac
+/* The lisaac compiler. */
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
   - show_help <-
   (
-    COMMON.command_line_header "Compiler".print
+    Common.command_line_header "Compiler".print
     begin_usage.print
-    LIP_CODE.print_usage
+    Lip_code.print_usage
   )
 
   - show_version <-
   (
-    COMMON.command_line_header "Compiler".print
-    COMMON.print_info
+    Common.command_line_header "Compiler".print
+    Common.print_info
   )
 
 Private
 
-  - output_name     :STRING_ALIAS
-  - output_extension:STRING_ALIAS
+  - output_name     :String_alias
+  - output_extension:String_alias
 
-  - input_name:STRING_ALIAS
+  - input_name:String_alias
 
   //
   // Command.
   //
 
-  - begin_usage: STRING_ALIAS :=
+  - begin_usage: String_alias :=
   "Usage:                                                          \n\
   \------                                                          \n\
   \  lisaac [<lip_file.lip>] [<input_file[.li]>] {<Options>}       \n\
@@ -56,27 +54,27 @@ Private
   //
 
   - read_options <-
-  ( + cmd:STRING_ALIAS
-    + j,i,k:INTEGER
-    + f:POINTER
-    + lip_ok:BOOLEAN
-    + s:LIP_SLOT_CODE
-    + t:STRING_ALIAS
-    + arg:LIP_CONSTANT
-    + is_path_list:BOOLEAN
+  ( + cmd:String_alias
+    + j,i,k:Int
+    + f:Pointer
+    + lip_ok:Boolean
+    + s:Lip_slot_code
+    + t:String_alias
+    + arg:Lip_constant
+    + is_path_list:Boolean
     + hook_after_load_lip :{}
         
     hook_after_load_lip := {}
 
     // Default value.
-    is_ansi := TRUE
+    is_ansi := True
     // Read argument.
     j := 1
-    {j > COMMAND_ARGS.upper}.until_do {
-      cmd := COMMAND_ARGS.at j
+    {j > Command_args.upper}.until_do {
+      cmd := Command_args.at j
       (cmd.at 0 = '-').if {        
-	//
-	// Lecture des options :
+        //
+        // Lecture des options :
         //
         ((cmd.count >= 3) && {cmd.at 1 = '-'}).if {
           (cmd.at 2)
@@ -84,24 +82,24 @@ Private
             verbose_level := 1
           }
           .when 'p' then {
-            is_path_list := TRUE
+            is_path_list := True
           }
           .when 'r' then {
-            is_readable := TRUE
+            is_readable := True
           }
           .when 'g' then {
-            is_readable := is_graph := TRUE
+            is_readable := is_graph := True
           }
         } else {
           (lip_ok).if_false {            
             load_lip "make.lip"
             hook_after_load_lip.value
-            lip_ok := TRUE
+            lip_ok := True
           }
           string_tmp.copy cmd
           string_tmp.remove_first
           string_tmp.replace_all '-' with '_'
-          s := LIP_CODE.get_method (string_tmp.to_string_alias)
+          s := Lip_code.get_method (string_tmp.to_string_alias)
           ((s = NULL) || {s.section != "Public"}).if {
             "ERROR: Option `".print;
             cmd.print
@@ -110,28 +108,28 @@ Private
           }
           (s.argument != NULL).if {
             j := j + 1
-            (j > COMMAND_ARGS.upper).if {
+            (j > Command_args.upper).if {
               "ERROR: For option `".print;
               cmd.print
               "', argument needed.\n".print
               display_usage
             }
-            cmd := COMMAND_ARGS.at j
+            cmd := Command_args.at j
             t := s.argument.value.name
             arg := NULL
-            (t = "BOOLEAN").if {
+            (t = lip_boolean).if {
               //cmd.to_upper
-              ((cmd = "TRUE") || {cmd = "true"}).if {
-                arg := LIP_BOOLEAN.get TRUE
-              }.elseif {(cmd = "FALSE") || {cmd = "false"}} then {
-                arg := LIP_BOOLEAN.get FALSE
+              ((cmd = str_true) || {cmd = "true"}).if {
+                arg := Lip_boolean.get True
+              }.elseif {(cmd = str_false) || {cmd = "false"}} then {
+                arg := Lip_boolean.get False
               }
-            }.elseif {t = "INTEGER"} then {
+            }.elseif {t = lip_int} then {
               (cmd.is_integer).if {
-                arg := LIP_INTEGER.get (cmd.to_integer)
+                arg := Lip_integer.get (cmd.to_int)
               }
             } else {
-              arg := LIP_STRING.get (cmd.to_string_alias)
+              arg := Lip_string.get (cmd.to_string_alias)
             }
             (arg = NULL).if {
               "ERROR: Incorrect type for `".print;
@@ -148,8 +146,8 @@ Private
           }
         }
       } else {
-	//
-	// Input name & Current Directory.
+        //
+        // Input name & Current Directory.
         //
         (cmd.has_suffix ".lip").if {          
           // .lip
@@ -161,14 +159,14 @@ Private
           }
           load_lip cmd
           hook_after_load_lip.value
-          lip_ok := TRUE
+          lip_ok := True
         } else {
           // .li
           (input_name != NULL).if {
             display_usage
           }
           // Remove extension and replace '\'
-          string_tmp.copy (COMMAND_ARGS.at j)
+          string_tmp.copy (Command_args.at j)
           string_tmp.replace_all '\\' with '/'
           k := last_index_str (string_tmp,'/')
           i := last_index_str (string_tmp,'.')
@@ -177,8 +175,8 @@ Private
           }
           input_name := string_tmp.to_string_alias
           hook_after_load_lip := {
-            LIP_CODE.put_string input_name to "input_file"
-            LIP_CODE.put_string input_name to "output_file"
+            Lip_code.put_string input_name to "input_file"
+            Lip_code.put_string input_name to "output_file"
           }
           // get dirname
           i := last_index_str (string_tmp,'/')
@@ -197,39 +195,39 @@ Private
       hook_after_load_lip.value
     }
 
-    LIP_CODE.call_front_end
+    Lip_code.call_front_end
 
     (is_path_list).if {
       string_tmp.clear
-      (path_file.lower).to (path_file.upper) do { n:INTEGER
+      (path_file.lower).to (path_file.upper) do { n:Int
         string_tmp.append (path_file.at n)
         string_tmp.add_last '\n'
       }
-      f := FILE_UTILS.open_write "current_path.txt"
+      f := File_utils.open_write "current_path.txt"
       (f.is_null).if {
-        STDERR.put_string "Error: File `current_path.txt' is not created !\n";
+        Stderr.put_string "Error: File `current_path.txt' is not created !\n";
         exit exit_failure_code
       }
-      FILE_UTILS.write f with string_tmp size (string_tmp.count)
-      FILE_UTILS.close f
+      File_utils.write f with string_tmp size (string_tmp.count)
+      File_utils.close f
       exit 0
     }
 
     // Loading variable.
-    input_name         := LIP_CODE.get_string  "input_file"
-    output_name        := LIP_CODE.get_string  "output_file"
-    output_extension   := LIP_CODE.get_string  "output_extension"
-    debug_level_option := LIP_CODE.get_integer "debug_level"
-    debug_with_code    := LIP_CODE.get_boolean "debug_with_code"
-    is_all_warning     := LIP_CODE.get_boolean "is_all_warning"
-    is_optimization    := LIP_CODE.get_boolean "is_optimization"
-    inline_level       := LIP_CODE.get_integer "inline_level"
-    is_statistic       := LIP_CODE.get_boolean "is_statistic"
-    is_quiet           := LIP_CODE.get_boolean "is_quiet"
-    is_library         := LIP_CODE.get_boolean "is_library"
-    is_cop             := LIP_CODE.get_boolean "is_cop"
-    is_speed_push      := LIP_CODE.get_boolean "is_speed_push"
-    (LIP_CODE.get_boolean "multicore").if { core_count := LIP_CODE.get_integer "core_count" }
+    input_name         := Lip_code.get_string  "input_file"
+    output_name        := Lip_code.get_string  "output_file"
+    output_extension   := Lip_code.get_string  "output_extension"
+    debug_level_option := Lip_code.get_integer "debug_level"
+    debug_with_code    := Lip_code.get_boolean "debug_with_code"
+    is_all_warning     := Lip_code.get_boolean "is_all_warning"
+    is_optimization    := Lip_code.get_boolean "is_optimization"
+    inline_level       := Lip_code.get_integer "inline_level"
+    is_statistic       := Lip_code.get_boolean "is_statistic"
+    is_quiet           := Lip_code.get_boolean "is_quiet"
+    is_library         := Lip_code.get_boolean "is_library"
+    is_cop             := Lip_code.get_boolean "is_cop"
+    is_speed_push      := Lip_code.get_boolean "is_speed_push"
+    (Lip_code.get_boolean "multicore").if { core_count := Lip_code.get_integer "core_count" }
     //
     ((input_name = NULL) || {input_name.is_empty}).if {
       "ERROR: `input_file' is empty.\n".print;
@@ -245,7 +243,7 @@ Private
       string_tmp.remove_tail (string_tmp.upper-i)
       string_tmp2.remove_head (i+1)
     }
-    LIP_CALL.load_dir (string_tmp.to_string_alias) img NULL is_rec FALSE
+    Lip_call.load_dir (string_tmp.to_string_alias) img NULL is_rec False
     //
     string_tmp.copy (path_file.last)
     i := last_index_str (string_tmp,'/')
@@ -261,19 +259,19 @@ Private
       }
       string_tmp.append input_name
       output_name := string_tmp.to_string_alias
-      LIP_CODE.put_string output_name to "output_file"
+      Lip_code.put_string output_name to "output_file"
     }
     ((output_extension = NULL) || {output_extension.is_empty}).if {
       output_extension := ".c"
-      LIP_CODE.put_string output_extension to "output_extension"
+      Lip_code.put_string output_extension to "output_extension"
     }
-    LIP_CODE.init_path_file FALSE
+    Lip_code.init_path_file False
   )
 
-  - put_trace_code buf:STRING_BUFFER <-
-  ( + proto:PROTOTYPE
+  - put_trace_code buf:String_buffer <-
+  ( + proto:Prototype
 
-    ((debug_level_option != 0) || {CALL_NULL.is_necessary}).if {
+    ((debug_level_option != 0) || {Call_null.is_necessary}).if {
       title "DEBUG MANAGER" in buf
            
       buf.append
@@ -290,17 +288,17 @@ Private
 
     (debug_level_option != 0).if {            
       buf.append "char *trace["
-      PROTOTYPE.prototype_list.count.append_in buf
+      Prototype.prototype_list.count.append_in buf
       buf.append "]={\n"
-      (PROTOTYPE.prototype_list.lower).to (PROTOTYPE.prototype_list.upper-1) do { j:INTEGER
-        proto := PROTOTYPE.prototype_list.at j
+      (Prototype.prototype_list.lower).to (Prototype.prototype_list.upper-1) do { j:Int
+        proto := Prototype.prototype_list.at j
         buf.append "  \""
         buf.append (proto.name)
         buf.append " ("
         proto.append_filename buf
         buf.append ")\",\n"
       }
-      proto := PROTOTYPE.prototype_list.last
+      proto := Prototype.prototype_list.last
       buf.append "  \""
       buf.append (proto.name)
       buf.append " ("
@@ -312,7 +310,7 @@ Private
       //
 
       (debug_with_code).if {
-        + src:ARRAY POSITION
+        + src:Array Position
 
         title "SOURCE LINE REFERENCE" in buf
 
@@ -321,10 +319,10 @@ Private
           \  uint32_t pos;\n\
           \  char *line;\n\
         \} __src["
-          src := PUSH.source_line
+          src := Push.source_line
           src.count.append_in buf
         buf.append "]={\n"
-          (src.lower).to (src.upper) do { j:INTEGER
+          (src.lower).to (src.upper) do { j:Int
             buf.append "  {"
               src.at j.code.append_in buf
               buf.append ",\""
@@ -509,7 +507,7 @@ Private
         \  asm(\"movq %%rsp,%0\": \"=r\" (tmp_rsp) : );               \n\
         \  idx_mount = __li_get_back_index(0,tmp_rsp);                \n\
         \  for (i=0;i<up;i++)                                         \n\
-        \    idx_mount = __li_get_back_index(idx_mount,tmp_rsp);      \n\        
+        \    idx_mount = __li_get_back_index(idx_mount,tmp_rsp);      \n\
         \  __li_sub_stack_print(idx_mount,tmp_rsp);                   \n\
         \  print_string(\"================ TOP ===============\\n\"); \n\ 
         \}                                            \n\ /* { */
@@ -628,85 +626,85 @@ Private
   )
 
   - load_main_object <-
-  ( + type_gen:ARRAY ITM_TYPE
-    + itm_type_character:ITM_TYPE
-    + itm_type_n_a_character:ITM_TYPE
+  ( + type_gen:Array Itm_type
+    + itm_type_character:Itm_type
+    + itm_type_n_a_character:Itm_type
 
     // NULL, VOID, CONTEXT
-    TYPE_NULL.make_null
-    TYPE_VOID.make_void
-    TYPE_CONTEXT.make_context
-    TYPE_ID.make_type_id; // Pas utile !
+    Type_null.make_null
+    Type_void.make_void
+    Type_context.make_context
+    Type_id.make_type_id; // Pas utile !
     // Other prototype.
-    type_true    := ITM_TYPE_STYLE.get "TRUE"    style 1.to_run.raw
-    type_false   := ITM_TYPE_STYLE.get "FALSE"   style 1.to_run.raw
-    type_boolean := ITM_TYPE_STYLE.get "BOOLEAN" style 1.to_run.raw
-    type_integer := ITM_TYPE_STYLE.get "INTEGER" style 1.to_run.raw
-    type_real_64 := ITM_TYPE_STYLE.get "REAL_64" style 1.to_run.raw
-    type_integer_32:=ITM_TYPE_STYLE.get "INTEGER_32" style 1.to_run.raw
-    type_uinteger_32:=ITM_TYPE_STYLE.get "UINTEGER_32" style 1.to_run.raw
-    type_string_alias:=ITM_TYPE_SIMPLE.get "STRING_ALIAS".to_run.raw
-    itm_type_character:=ITM_TYPE_STYLE.get "CHARACTER" style 1
-    type_character := itm_type_character.to_run.raw
-    type_block     := ITM_TYPE_SIMPLE.get "BLOCK".to_run.raw
+    type_true    := Itm_type_style.get str_true  style 1.to_run.raw
+    type_false   := Itm_type_style.get str_false style 1.to_run.raw
+    type_boolean := Itm_type_style.get str_boolean style 1.to_run.raw
+    type_integer := Itm_type_style.get str_int style 1.to_run.raw
+    type_real64  := Itm_type_style.get "Real64" style 1.to_run.raw
+    type_integer_32:=Itm_type_style.get str_int_32 style 1.to_run.raw
+    type_uinteger_32:=Itm_type_style.get str_uint_32 style 1.to_run.raw
+    type_string_alias:=Itm_type_simple.get str_string_alias.to_run.raw
+    itm_type_character:=Itm_type_style.get "Char" style 1
+    type_char := itm_type_character.to_run.raw
+    type_block   := Itm_type_simple.get str_block.to_run.raw
     //
-    type_pointer   := ITM_TYPE_SIMPLE.get "POINTER".to_run.raw
-    type_object    := ITM_TYPE_SIMPLE.get "OBJECT" .to_run.raw
-    // NATIVE_ARRAY CHARACTER
-    type_gen  := ALIAS_ARRAY ITM_TYPE .new
+    type_pointer := Itm_type_simple.get "Pointer".to_run.raw
+    type_utils   := Itm_type_simple.get "Utils" .to_run.raw
+    // C_array Char
+    type_gen  := Alias_array Itm_type .new
     type_gen.add_last itm_type_character
-    type_gen  := ALIAS_ARRAY ITM_TYPE .alias type_gen
-    itm_type_n_a_character := ITM_TYPE_GENERIC.get "NATIVE_ARRAY" style 0 with type_gen
-    type_n_a_character := itm_type_n_a_character.to_run.raw
-    // NATIVE_ARRAY (NATIVE_ARRAY CHARACTER)
-    type_gen  := ALIAS_ARRAY ITM_TYPE .new
-    type_gen.add_last itm_type_n_a_character
-    type_gen  := ALIAS_ARRAY ITM_TYPE .alias type_gen
-    type_n_a_n_a_character := ITM_TYPE_GENERIC.get "NATIVE_ARRAY" style 0 with type_gen.to_run.raw
+    type_gen  := Alias_array Itm_type .alias type_gen
+    itm_type_n_a_character := Itm_type_generic.get str_n_a style 0 with type_gen
+    type_n_a_char := itm_type_n_a_character.to_run.raw
+    // C_array (C_array Char)
+    //type_gen  := ALIAS_ARRAY ITM_TYPE .new
+    //type_gen.add_last itm_type_n_a_character
+    //type_gen  := ALIAS_ARRAY ITM_TYPE .alias type_gen
+    //type_n_a_n_a_char := ITM_TYPE_GENERIC.get "C_array" style 0 with type_gen.to_run.raw
     // Input.
     string_tmp.copy input_name
-    string_tmp.to_upper
-    type_input   := ITM_TYPE_SIMPLE.get (string_tmp.to_string_alias).to_run.raw
+    string_tmp.at 0 put (string_tmp.first.to_upper)
+    type_input   := Itm_type_simple.get (string_tmp.to_string_alias).to_run.raw
     //
     (debug_level_option != 0).if {
       // Load for `print_char' and `die_with_code'
-      ITM_TYPE_SIMPLE.get "SYSTEM_IO".to_run
+      Itm_type_simple.get "System_io".to_run
     }
     ? {type_input != NULL}
   )
 
-  - print msg:STRING_ALIAS stat n:INTEGER for t:INTEGER <-
-  ( + pour_mil:INTEGER
+  - print msg:String_alias stat n:Int for t:Int <-
+  ( + pour_mil:Int
 
     (t != 0).if {
-      STDERR.put_string msg
-      pour_mil := `(int)((1000./ @t * @n))`:INTEGER
-      STDERR.put_integer (pour_mil/10)
-      STDERR.put_character '.'
-      STDERR.put_integer (pour_mil%10)
-      STDERR.put_string "% ("
-      STDERR.put_integer n
-      STDERR.put_character '/'
-      STDERR.put_integer t
-      STDERR.put_string ")\n"
+      Stderr.put_string msg
+      pour_mil := `(int)((1000./ @t * @n))`:Int
+      Stderr.put_integer (pour_mil/10)
+      Stderr.put_character '.'
+      Stderr.put_integer (pour_mil%10)
+      Stderr.put_string "% ("
+      Stderr.put_integer n
+      Stderr.put_character '/'
+      Stderr.put_integer t
+      Stderr.put_string ")\n"
     }
   )
 
 Public
 
-  - tab:ARRAY INTEGER := ARRAY INTEGER .create 128
-  - tab_null:ARRAY INTEGER := ARRAY INTEGER .create 128
+  - tab:Array Int := Array Int .create 128
+  - tab_null:Array Int := Array Int .create 128
 
   //
   // Creation.
   //
 
   - main <-
-  ( + file_output:POINTER
-    + begin_time:UINTEGER_64
-    + s:LIP_SLOT_CODE
+  ( + file_output:Pointer
+    + begin_time:Uint64
+    + s:Lip_slot_code
     
-    begin_time := TIME.gettimeofday
+    begin_time := Time.gettimeofday
     //
     // Load Environment.
     //
@@ -718,7 +716,7 @@ Public
       string_tmp.append output_name
       string_tmp.append output_extension
       string_tmp.append "\npath directory :\n"
-      path_file.lower.to (path_file.upper) do { j:INTEGER
+      path_file.lower.to (path_file.upper) do { j:Int
         string_tmp.append "  "
         string_tmp.append (path_file.at j)
         string_tmp.add_last '\n'
@@ -751,12 +749,12 @@ Public
     (core_count > 1).if {
       //"** Multicore **".println
       core_count.times {
-        output_list.add_last (STRING_BUFFER.create 4_000_000)
+        output_list.add_last (String_buffer.create 4_000_000)
         output_list.last # "#include \"" # output_name # ".h\"\n"
       }
       output_glob # "#include \"" # output_name # ".h\"\n"
     } else {
-      output_list.add_last (STRING_BUFFER.create 4_000_000)
+      output_list.add_last (String_buffer.create 4_000_000)
     }
     output := output_list.first
 
@@ -940,9 +938,9 @@ Public
       \------------------------------\n".print
     }
     
-    PROFIL_LIST.genere
+    Profil_list.genere
 
-    TYPE.genere_all_struct
+    Type.genere_all_struct
     
     // Debug source code.
     (debug_level_option != 0).if {
@@ -982,27 +980,27 @@ Public
     }
         
     // Just used in MEMORY.li (BSBS: A verifier si memory.li est vivant!!!)
-    output_glob # "\nvoid *table_type[" # TYPE.id_counter_without_type # "];\n"
+    output_glob # "\nvoid *table_type[" # Type.id_counter_without_type # "];\n"
     
-    ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
+    ((Slot_data.data_hash_code_alias != NULL) && {Slot_data.data_hash_code_alias.require_count > 0}).if {
       output.append "void init_string_alias() {\n"
-      output.append (STRING_CST.output_init)
+      output.append (String_cst.output_init)
       output.append "};\n"
     }
         
     // Trace code.
     put_trace_code output_glob
     
-    (STRING_CST.output_count != 0).if {
-      output_decl.append (STRING_CST.output_ext)
-      output_glob.append (STRING_CST.output_str)      
+    (String_cst.output_count != 0).if {
+      output_decl.append (String_cst.output_ext)
+      output_glob.append (String_cst.output_str)      
     }
     
     // Function header.
     title "FUNCTION HEADER" in output_decl
     output := output_decl
-    PROFIL_LIST.genere_handler
-    ((SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}).if {
+    Profil_list.genere_handler
+    ((Slot_data.data_hash_code_alias != NULL) && {Slot_data.data_hash_code_alias.require_count > 0}).if {
       output_decl # "void init_string_alias();\n#define INIT_STRING_ALIAS init_string_alias()\n"
     } else {
       output_decl # "#define INIT_STRING_ALIAS\n"
@@ -1013,70 +1011,70 @@ Public
     //
     (output_list.count = 1).if {
       string_tmp |# output_name # output_extension
-      file_output := FILE_UTILS.open_write string_tmp
-      (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
-      FILE_UTILS.write file_output with output_decl size (output_decl.count)
-      FILE_UTILS.write file_output with output_glob size (output_glob.count)
-      FILE_UTILS.write file_output with (output_list.first) size (output_list.first.count)
-      FILE_UTILS.close file_output
+      file_output := File_utils.open_write string_tmp
+      (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      File_utils.write file_output with output_decl size (output_decl.count)
+      File_utils.write file_output with output_glob size (output_glob.count)
+      File_utils.write file_output with (output_list.first) size (output_list.first.count)
+      File_utils.close file_output
     } else {
       // Decl
       string_tmp |# output_name # ".h"
-      file_output := FILE_UTILS.open_write string_tmp
-      (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
-      FILE_UTILS.write file_output with output_decl size (output_decl.count)
-      FILE_UTILS.close file_output
+      file_output := File_utils.open_write string_tmp
+      (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      File_utils.write file_output with output_decl size (output_decl.count)
+      File_utils.close file_output
       // Glob
       string_tmp |# output_name # "_data" # output_extension
-      file_output := FILE_UTILS.open_write string_tmp
-      (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
-      FILE_UTILS.write file_output with output_glob size (output_glob.count)
-      FILE_UTILS.close file_output
+      file_output := File_utils.open_write string_tmp
+      (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      File_utils.write file_output with output_glob size (output_glob.count)
+      File_utils.close file_output
       // Code
-      0.to (output_list.upper) do { i:INTEGER
+      0.to (output_list.upper) do { i:Int
         string_tmp |# output_name # "_code" # i # output_extension
-        file_output := FILE_UTILS.open_write string_tmp
-        (file_output.is_null).if { OUT # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
-        FILE_UTILS.write file_output with (output_list.at i) size (output_list.at i.count)
-        FILE_UTILS.close file_output
+        file_output := File_utils.open_write string_tmp
+        (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+        File_utils.write file_output with (output_list.at i) size (output_list.at i.count)
+        File_utils.close file_output
       }      
     }
     //
     //
     (is_all_warning).if {
       /* // DCDC no more TRAVERSABLE
-      (PROTOTYPE.prototype_dico.lower).to (PROTOTYPE.prototype_dico.upper) do { j:INTEGER
+      (PROTOTYPE.prototype_dico.lower).to (PROTOTYPE.prototype_dico.upper) do { j:Int
         PROTOTYPE.prototype_dico.at j.detect_slot_not_used
       }
       */
-      PROTOTYPE.prototype_dico.foreach_value { p:PROTOTYPE
+      Prototype.prototype_dico.foreach_value { p:Prototype
           p.detect_slot_not_used
       }
     }
     
     //
     begin_time := print_time begin_time
-    ((! is_quiet) && {POSITION.nb_warning != 0}).if {
-      OUT # " => " # POSITION.nb_warning # " warning(s).\n"
+    ((! is_quiet) && {Position.nb_warning != 0}).if {
+      Out # " => " # Position.nb_warning # " warning(s).\n"
     }
     (is_statistic).if {
-      //+ tmp,tmp2:INTEGER
-      STDERR.put_string "  Local counter        : "
-      STDERR.put_integer (LIST.local_counter)
-      STDERR.put_string "\n"
-      STDERR.put_string "  Context counter      : "
-      STDERR.put_integer (LIST.context_counter)
-      STDERR.put_string "\n"
-      print "  Null call score      : " stat null_counter for late_binding_counter
+      //+ tmp,tmp2:Int
+      Stderr.put_string "  Local counter        : "
+      Stderr.put_integer (List.local_counter)
+      Stderr.put_string "\n"
+      Stderr.put_string "  Context counter      : "
+      Stderr.put_integer (List.context_counter)
+      Stderr.put_string "\n"
+      print "  NULL call score      : " stat null_counter for late_binding_counter
       print "  Polymorphic call     : " stat polymorphic_counter for late_binding_counter
-      print "  Call on Expanded     : " stat late_binding_expanded_counter for late_binding_counter
-      print "  Call on Self         : " stat late_binding_self_counter     for late_binding_counter
+      print "  Call on Flat     : " stat late_binding_flat_counter for late_binding_counter
+      print "  Call on self         : " stat late_binding_self_counter     for late_binding_counter
       //
       //print "  Recursivity function : "
       //stat (PROFIL.counter_recursivity_function) for (PROFIL.counter_function)
       //
       (is_optimization).if {
-	"  Invariant loop score : ".print; count_invariant.print; '\n'.print
+        "  Invariant loop score : ".print; count_invariant.print; '\n'.print
       }
       // switch:
       "\nswitch          : ".print
@@ -1090,7 +1088,7 @@ Public
     // Execute finality command (front end).
     //
     // Executing `front_end':        
-    s := LIP_CODE.get_method "back_end"
+    s := Lip_code.get_method "back_end"
     if (s = NULL) then {
       "Warning: Slot `back_end' not found in *.lip file.\n".print;
     } else {
@@ -1099,18 +1097,18 @@ Public
     print_time begin_time
   )
   
-  - print_time b:UINTEGER_64 :UINTEGER_64 <-
-  ( + e:UINTEGER_64
-    + t:INTEGER
+  - print_time b:Uint64 :Uint64 <-
+  ( + e:Uint64
+    + t:Int
     (is_quiet).if_false {
-      e := TIME.gettimeofday
-      OUT # " => "
-      t := ((e - b)/1_000_000).to_integer
+      e := Time.gettimeofday
+      Out # " => "
+      t := ((e - b)/1_000_000).to_int
       (t >= 120).if {
-        OUT # (t/60) # " minutes, "
+        Out # (t/60) # " minutes, "
         t := t % 60
       }
-      OUT # t # " second(s).\n"
+      Out # t # " second(s).\n"
     }
     e
   )

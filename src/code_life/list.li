@@ -1,22 +1,19 @@
 Header
-
-  + name        := LIST;
-
-  /* Expression list, immediate evaluation*/
-
+  + name := List
+/* Expression list, immediate evaluation*/
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Private
 
-  + expr_list:NATIVE_ARRAY INSTR
+  + expr_list:C_array Instr
 
-  + capacity:INTEGER
+  + capacity:Int
 
-  - move lower_index:INTEGER to upper_index:INTEGER <-
+  - move lower_index:Int to upper_index:Int <-
   (
-    upper_index.downto lower_index do { i:INTEGER
+    upper_index.downto lower_index do { i:Int
       expr_list.at (i + 1) put (expr_list.at i)
     }
   )
@@ -24,8 +21,8 @@ Private
     +? {count = Old count}
   ]
 
-  - swap idx1:INTEGER with idx2:INTEGER <-
-  ( + e:INSTR
+  - swap idx1:Int with idx2:Int <-
+  ( + e:Instr
 
     e := expr_list.at idx1
     expr_list.at idx1 put (expr_list.at idx2)
@@ -34,11 +31,11 @@ Private
 
 Public
 
-  - is_invariant:BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_invariant:Boolean <-
+  ( + result:Boolean
+    + j:Int
 
-    result := TRUE
+    result := True
     j := lower
     {(j <= upper) && {result}}.while_do {
       result := at j.is_invariant
@@ -47,40 +44,40 @@ Public
     result
   )
 
-  - old_seq_or_and:UINTEGER_32
+  - old_seq_or_and:Uint32
 
   //
   // Linked list INSTR.
   //
 
-  - lower:INTEGER <- 0
-  + upper:INTEGER
-  - count:INTEGER <- upper + 1
+  - lower:Int <- 0
+  + upper:Int
+  - count:Int <- upper + 1
 
-  - first:INSTR  <-
+  - first:Instr  <-
   [ -? {upper >= 0}; ]
   (
     expr_list.at 0
   )
 
-  - second:INSTR <-
+  - second:Instr <-
   [ -? {upper >= 1}; ]
   (
     expr_list.at 1
   )
 
-  - at i:INTEGER :INSTR <-
+  - at i:Int :Instr <-
   [ -? {i.in_range 0 to upper}; ]
   (
     expr_list.at i
   )
 
-  - current_item:INSTR <- at index
+  - current_item:Instr <- at index
   
-  - next_item:INSTR <- // Used only PUSH BSBS: A virer !
-  ( + result:INSTR
-    + w:WRITE
-    + i:INTEGER
+  - next_item:Instr <- // Used only PUSH BSBS: A virer !
+  ( + result:Instr
+    + w:Write
+    + i:Int
     i := index + 1
     {(i <= upper) && {result = NULL}} .while_do {
       w ?= at i
@@ -93,9 +90,9 @@ Public
     result
   )
   
-  - last:INSTR <- at upper
+  - last:Instr <- at upper
 
-  - add_first i:INSTR <-
+  - add_first i:Instr <-
   (
     add_last i
     (upper = 0).if {
@@ -107,8 +104,8 @@ Public
     }
   )
 
-  - add_last i:INSTR <-
-  ( + new_capacity:INTEGER
+  - add_last i:Instr <-
+  ( + new_capacity:Int
 
     (upper + 1 >= capacity).if {
       new_capacity := 2 * capacity
@@ -119,7 +116,7 @@ Public
     expr_list.at upper put i
   )
 
-  - add element:INSTR to idx:INTEGER <-
+  - add element:Instr to idx:Int <-
   [ -? {idx.in_range 0 to (upper+1)}; ]
   (
     add_last element
@@ -129,7 +126,7 @@ Public
     }
   )
 
-  - at idx:INTEGER put e:INSTR <-
+  - at idx:Int put e:Instr <-
   [ -? {idx.in_range 0 to upper}; ]
   (
     expr_list.at idx put e
@@ -141,7 +138,7 @@ Public
     upper := upper - 1
   )
 
-  - remove_index idx:INTEGER <-
+  - remove_index idx:Int <-
   [ -? {idx.in_range 0 to upper}; ]
   (
     expr_list.remove idx until upper
@@ -154,7 +151,7 @@ Public
   
 //Section Private
   
-  + index:INTEGER := -1
+  + index:Int := -1
     
 //Section Public
   
@@ -163,14 +160,14 @@ Public
     index := index + 1
   )
 
-  - insert_before e:INSTR <-
+  - insert_before e:Instr <-
   [ -? {e != NULL}; ]
   (
     add e to index
     index := index + 1
   )
 
-  - insert e:INSTR to idx:INTEGER <-
+  - insert e:Instr to idx:Int <-
   [ -? {e != NULL}; ]
   (
     add e to idx
@@ -183,35 +180,35 @@ Public
   // Flags.
   //
 
-  - is_empty:BOOLEAN <- count = 0
+  - is_empty:Boolean <- count = 0
 
   //
   // Creation.
   //
 
-  - create p:POSITION :SELF <-
-  ( + result:SELF
+  - create p:Position :Self <-
+  ( + result:Self
 
     result := clone
     result.make p
     result
   )
 
-  - make p:POSITION <-
+  - make p:Position <-
   (
     new_depend_pass
     position  := p
     upper     := -1
     capacity  := 2
-    expr_list := NATIVE_ARRAY INSTR .calloc_intern capacity
+    expr_list := C_array Instr .calloc_intern capacity
     index := -1; // BSBS: PAs utile !
   )
 
-  - my_copy:SELF <-
-  ( + result:SELF
+  - my_copy:Self <-
+  ( + result:Self
 
-    result := SELF.create position
-    (lower).to (upper) do { j:INTEGER
+    result := Self.create position
+    (lower).to (upper) do { j:Int
       result.add_last (at j.my_copy)
     }
     result
@@ -223,7 +220,7 @@ Public
 
   - remove <-
   (
-    (lower).to (upper) do { j:INTEGER
+    (lower).to (upper) do { j:Int
       at j.remove
     }
   )
@@ -232,27 +229,27 @@ Public
   // Execute.
   //
 
-  - i_am_the_last i:INSTR :BOOLEAN <-
+  - i_am_the_last i:Instr :Boolean <-
   (
     last.i_am_the_last i
   )
 
-  - execute:INSTR <-
-  ( + result:INSTR
+  - execute:Instr <-
+  ( + result:Instr
     
-    POSITION.push_context Self
+    Position.push_context self
         
     execute_case
     //
     /*
-    (Self = SLOT_DATA.init_list).if {
+    (self = SLOT_DATA.init_list).if {
       OUT # '(' # pass_count # ")\n"
     }
     */
     (
       (list_current != NULL) && 
-      {(Self != SLOT_DATA.init_list) || {pass_count > 1}} && 
-      {Self != PROTOTYPE.external_list}
+      {(self != Slot_data.init_list) || {pass_count > 1}} && 
+      {self != Prototype.external_list}
     ).if {
       // Merge the child list in the parent list
       //
@@ -260,7 +257,7 @@ Public
       // so it avoid shifting all elements of 1 position before shifting them
       // back because the list is no longer there.
       (is_empty).if_false {
-        lower.to (upper-1) do { j:INTEGER
+        lower.to (upper-1) do { j:Int
           list_current.insert_before (at j)
         }
         result := last
@@ -268,24 +265,24 @@ Public
         new_execute_pass
       }
     } else {
-      result := Self
+      result := self
     }
-    POSITION.pop_context
+    Position.pop_context
     
     result
   )
 
   - execute_case <-
-  ( + new_expr:INSTR
-    + old_list_current:LIST
+  ( + new_expr:Instr
+    + old_list_current:List
     
     //
-    seq_list.add_last Self
+    seq_list.add_last self
     seq_inline := seq_inline + 1
 
     // Update Context.
     old_list_current := list_current
-    list_current := Self
+    list_current := self
 
     // Execute expression list.
     
@@ -316,7 +313,7 @@ Public
       (new_expr != NULL).if {
         at index put new_expr
         index := index + 1
-        (new_expr = CALL_NULL).if {
+        (new_expr = Call_null).if {
           // Delete all ...
           {index <= upper}.while_do {
             at index.remove
@@ -324,7 +321,7 @@ Public
           }
         }
       } else {
-	remove_index index
+        remove_index index
       }
     }
 
@@ -349,7 +346,7 @@ Public
 
   - genere <-
   (
-    (Self != PROTOTYPE.external_list).if {
+    (self != Prototype.external_list).if {
       output.append "{\n"
       indent.append "  "
       
@@ -365,17 +362,17 @@ Public
     }
   )
   
-  - genere_extern_result result_list:SLIM_ARRAY LOCAL <-
-  ( + pos_local,i_result:INTEGER
-    + t:TYPE_FULL
-    + loc:LOCAL
-    + idf:STRING
+  - genere_extern_result result_list:Slim_array Local <-
+  ( + pos_local,i_result:Int
+    + t:Type_full
+    + loc:Local
+    + idf:String
 
     // Local.
     pos_local := output.count+1
     stack_local.clear
 
-    ALIASER_LOCAL.reset
+    Aliaser_local.reset
 
     genere_body
     
@@ -390,7 +387,7 @@ Public
         output.append "return("
         t := loc.type
         (
-          (t.is_expanded) && {! t.is_expanded_ref} && {! t.is_expanded_c}
+          (t.is_flat) && {! t.is_flat_ref} && {! t.is_flat_c}
         ).if {
           output.add_last '&'
         }
@@ -399,7 +396,7 @@ Public
         } else {
           idf := loc.my_alias.intern_name
         }
-        ALIASER_LOCAL.add_var_size loc
+        Aliaser_local.add_var_size loc
         output.append idf
         output.append ");\n"
       }
@@ -407,10 +404,10 @@ Public
     
     // Local.
     string_tmp.clear
-    add_local (ALIASER_LOCAL.var_size.at 3) in string_tmp; // 64 bits
-    add_local (ALIASER_LOCAL.var_size.at 2) in string_tmp; // 32 bits
-    add_local (ALIASER_LOCAL.var_size.at 1) in string_tmp; // 16 bits
-    add_local (ALIASER_LOCAL.var_size.at 0) in string_tmp; //  8 bits
+    add_local (Aliaser_local.var_size.at 3) in string_tmp; // 64 bits
+    add_local (Aliaser_local.var_size.at 2) in string_tmp; // 32 bits
+    add_local (Aliaser_local.var_size.at 1) in string_tmp; // 16 bits
+    add_local (Aliaser_local.var_size.at 0) in string_tmp; //  8 bits
     output.insert_string string_tmp to pos_local
   )
   
@@ -418,7 +415,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     // Begin List.
     buffer.add_last '('
@@ -427,7 +424,7 @@ Public
     buffer.add_last '\n'
     indent.append "  "
 
-    lower.to upper do { j:INTEGER
+    lower.to upper do { j:Int
       buffer.append indent
       at j.display buffer
       buffer.add_last '\n'
@@ -443,7 +440,7 @@ Public
 Private
 
   - genere_body <-
-  ( + old_count,j:INTEGER
+  ( + old_count,j:Int
 
     j := lower
     {j <= upper}.while_do {
@@ -459,25 +456,25 @@ Private
   
 Public
 /*
-  - stat_local:ARRAY INTEGER := ARRAY INTEGER .create 128
-  - stat_local_null:ARRAY INTEGER := ARRAY INTEGER .create 128
+  - stat_local:ARRAY Int := ARRAY Int .create 128
+  - stat_local_null:ARRAY Int := ARRAY Int .create 128
 */
 Private
 
-  - add_local tab:ARRAY LOCAL in buf:STRING_BUFFER <-
+  - add_local tab:Array Local in buf:String_buffer <-
   // Generate C code to add locals
-  ( + loc:LOCAL
-    + t:TYPE_FULL
-    + cur:INTEGER
-    //+ i:INTEGER
+  ( + loc:Local
+    + t:Type_full
+    + cur:Int
+    //+ i:Int
 
     (! tab.is_empty).if {
-      (tab.lower).to (tab.upper) do { j:INTEGER
+      (tab.lower).to (tab.upper) do { j:Int
         loc := tab.at j
         loc.is_result.if_false {
           /*
-          (loc.type.is_expanded).if {
-            count_local_expanded := count_local_expanded + 1
+          (loc.type.is_flat).if {
+            count_local_flat := count_local_flat + 1
             stat_local.at 0 put (stat_local.at 0 + 1)
           } else {
             ((loc.type_set != NULL) && {! loc.type_set.is_empty}).if {
@@ -508,7 +505,7 @@ Private
             }
           }
           */
-          (loc.type.raw = TYPE_CONTEXT).if {
+          (loc.type.raw = Type_context).if {
             context_counter := context_counter + 1
           } else {
             local_counter := local_counter + 1
@@ -537,12 +534,12 @@ Private
     }
   )
 /*  
-  - add_local_gros tab:ARRAY LOCAL in buf:STRING_BUFFER <-
+  - add_local_gros tab:ARRAY LOCAL in buf:String_buffer <-
   // Generate C code to add locals
   ( + loc:LOCAL
     
     (! tab.is_empty).if {
-      (tab.lower).to (tab.upper) do { j:INTEGER
+      (tab.lower).to (tab.upper) do { j:Int
         loc := tab.at j
         loc.is_result.if_false {
           buf.append indent
@@ -556,8 +553,9 @@ Private
     }
   )
 */
-LISAAC
 
-  - local_counter:INTEGER
+Lisaac
 
-  - context_counter:INTEGER
+  - local_counter:Int
+
+  - context_counter:Int

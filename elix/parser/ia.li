@@ -1,7 +1,6 @@
 Header
-  + name := IA;
-  
-  /*
+  + name := Ia
+/*
    EXPR    -> 
    INFIX   -> PREFIX { infix PREFIX }
    PREFIX  -> { prefix } POSTFIX
@@ -15,14 +14,14 @@ Header
 Public
     
   // Stack I_NODE
-  - init <- stack_ino.add_last (ARRAY I_NODE)
-  - top_ino:INTEGER
-  - stack_ino:Expanded ARRAY (ARRAY I_NODE)
-  - push_ino:ARRAY I_NODE <-
-  ( + result:ARRAY I_NODE
+  - init <- stack_ino.add_last (Array I_node)
+  - top_ino:Int
+  - stack_ino:Flat Array (Array I_node)
+  - push_ino:Array I_node <-
+  ( + result:Array I_node
     top_ino := top_ino + 1
     (top_ino > stack_ino.upper).if {
-      result := ARRAY I_NODE.create_with_capacity 8
+      result := Array I_node.create_with_capacity 8
       stack_ino.add_last result
     } else {
       result := stack_ino.at top_ino
@@ -31,47 +30,47 @@ Public
     }
     result
   )
-  - pop_ino:ARRAY I_NODE <- ( top_ino := top_ino - 1; stack_ino.at top_ino)
+  - pop_ino:Array I_node <- ( top_ino := top_ino - 1; stack_ino.at top_ino)
   
-  - sol_slot:ARRAY I_STR := ARRAY I_STR.create_with_capacity 128
-  - sol_type:ARRAY I_STR := ARRAY I_STR.create_with_capacity 128
+  - sol_slot:Array I_str := Array I_str.create_with_capacity 128
+  - sol_type:Array I_str := Array I_str.create_with_capacity 128
     
-  - str:ARRAY I_NODE
-  - id:CHARACTER
+  - str:Array I_node
+  - id:Char
   
-  - src:STRING_BUFFER
-  - src_up:INTEGER
-  - sty:ARRAY UINTEGER_16
-  - src_arg:ARRAY EXPR
-  - arg_i:INTEGER
-  - proto:PROTO
-  - pos:INTEGER_64
-  - set_pos p:INTEGER_64 <- ( pos := p; )
+  - src:String_buffer
+  - src_up:Int
+  - sty:Array Uint16
+  - src_arg:Array Expr
+  - arg_i:Int
+  - proto:Proto
+  - pos:Int64
+  - set_pos p:Int64 <- ( pos := p; )
   
   - inc_arg_i <- ( arg_i := arg_i + 1; )
-  - set_arg_i i:INTEGER <- ( arg_i := i; )
+  - set_arg_i i:Int <- ( arg_i := i; )
   
-  - find_slot l:INTEGER to u:INTEGER arg a:INTEGER <-
+  - find_slot l:Int to u:Int arg a:Int <-
   (
-    sol_slot.foreach { n:I_STR; n.free; }
+    sol_slot.foreach { n:I_str; n.free; }
     sol_slot.clear
     str := push_ino
     id := 'S'
     arg_i := a
     //
-    NODE.rslot.i_next l to u
+    Node.rslot.i_next l to u
     //
     ? {str.is_empty}
     str := pop_ino
-    ? {str = ARRAY I_NODE}
+    ? {str = Array I_node}
     //
-    sol_slot.quick_sort {(a,b:I_STR); a.error < b.error}
+    sol_slot.quick_sort {(a,b:I_str); a.error < b.error}
     print_slot
   )
   
   - find <-
-  ( + i0,i1,a0,a1,ce,cne:INTEGER
-    + ex:EXPR
+  ( + i0,i1,a0,a1,ce,cne:Int
+    + ex:Expr
     {      
       i0 := skip_op i0
       "i0=".print; i0.print; '/'.print; src.upper.println
@@ -84,7 +83,7 @@ Public
         a1 := a0 + src.occurrences '\0' from i0 to i1 - 1
         (sol_slot.is_empty).if {
           "IA nothing".println
-          STY.put (STY.ul_red|STY.non) to i0 in sty; STY.put (STY.ul_red) to (i1+1) in sty
+          Sty.put (Sty.ul_red|Sty.non) to i0 in sty; Sty.put (Sty.ul_red) to (i1+1) in sty
           ex := NULL
         } else {
           "Solve found".println
@@ -110,28 +109,28 @@ Public
       }
     }.do_while {i0 <= src.upper}
     ((ce > 0) && {cne = 0}).if {
-      NODE.fonc
+      Node.fonc
     }
   )
   
   
-  - start err:ERR proto p:PROTO pos ps:INTEGER_64 :(EXPR,INTEGER_64) <-
-  ( + i:INTEGER
-    + typ:TYPE
-    + stop:BOOLEAN
-    + re:EXPR
+  - start err:Err proto p:Proto pos ps:Int64 :(Expr,Int64) <-
+  ( + i:Int
+    + typ:Type
+    + stop:Boolean
+    + re:Expr
     pos := ps
-    I_STR.msg_err.clear
+    I_str.msg_err.clear
     //
     (proto,src,src_arg,src_up,sty) := (p,err.txt,err.exp,err.txt.upper,err.sty)
     sty.clear
     //
     " on `".print; 
-    src.foreach { c:CHARACTER
+    src.foreach { c:Char
       (c = '\0').if {
         '('.print
         typ := src_arg.at i.type
-        (typ = NULL).if { "Pas de Type".print; stop := TRUE; } else { typ.print; }
+        (typ = NULL).if { "Pas de Type".print; stop := True; } else { typ.print; }
         ')'.print
         i := i + 1
       } else {
@@ -146,12 +145,12 @@ Public
       }
     }
     "============Error-Report============".println
-    (I_STR.msg_err.is_empty).if {
+    (I_str.msg_err.is_empty).if {
       "Not error.".println
-      DIV_HELP.set_msg ""
+      Div_help.set_msg ""
     } else {
-      DIV_HELP.set_msg (I_STR.msg_err)
-      I_STR.msg_err.println
+      Div_help.set_msg (I_str.msg_err)
+      I_str.msg_err.println
     }
     "====================================".println
     re,pos
@@ -160,29 +159,29 @@ Public
   - print_type <-
   (
     "-TYPE- ".print; sol_type.count.println
-    sol_type.foreach { n:I_STR; n.print; }
+    sol_type.foreach { n:I_str; n.print; }
   )
   
   - print_slot <-
-  ( + r:REAL_32
+  ( + r:Real32
     r := 40.0
     //DCPX.ia (1.0,0.5,0.2) color (COLOR.white,LUTILS.look.type,COLOR.red)
     //to (TO_SCREEN.x_max-54-r,TO_SCREEN.y_max-96-r) radius r
     "-SLOT- ".print; sol_slot.count.println
     //"Root slot:".print; NODE.rslot.child.count.println
-    sol_slot.foreach { n:I_STR; n.print; }
+    sol_slot.foreach { n:I_str; n.print; }
   )
   
-  - cutf8:STRING_BUFFER := STRING_BUFFER.create 4
-  - skip_op i0:INTEGER :INTEGER <-
+  - cutf8:String_buffer := String_buffer.create 4
+  - skip_op i0:Int :Int <-
   [ ? {i0 <= src.upper}; ]
-  ( + c:UINTEGER_8
-    + i,ib:INTEGER
-    + ch:STRING_ALIAS
+  ( + c:Uint8
+    + i,ib:Int
+    + ch:String_alias
     i := ib := i0
     {
       ib := i
-      c := src.at i.to_uinteger_8; i := i + 1
+      c := src.at i.to_uint8; i := i + 1
       cutf8.clear; cutf8.add_last (c.to_character)
       ((c & 1000_0000b) != 0).if {
         i.print; '/'.print; src.upper.println
@@ -197,15 +196,15 @@ Public
     ib
   )
   
-  - skip_sl i0:INTEGER :INTEGER <-
-  ( + c:UINTEGER_8
-    + i,ib:INTEGER
-    + ch:STRING_ALIAS
+  - skip_sl i0:Int :Int <-
+  ( + c:Uint8
+    + i,ib:Int
+    + ch:String_alias
     i := ib := i0
     (i <= src.upper).if {
       {
         ib := i
-        c := src.at i.to_uinteger_8; i := i + 1
+        c := src.at i.to_uint8; i := i + 1
         cutf8.clear; cutf8.add_last (c.to_character)
         ((c & 1000_0000b) != 0).if { cutf8.add_last (src.at i); i := i + 1
           ((c & 1110_0000b) = 1110_0000b).if { cutf8.add_last (src.at i); i := i + 1
@@ -220,9 +219,9 @@ Public
     ib
   )
   
-  - ope_list:HSET STRING_ALIAS :=
-  ( + r:HSET STRING_ALIAS
-    r := HSET STRING_ALIAS.create
+  - ope_list:Hset String_alias :=
+  ( + r:Hset String_alias
+    r := Hset String_alias.create
     r.fast_add_without_control "˛"; // Old
     r.fast_add_without_control "˿"; // <-
     r.fast_add_without_control "˷"; // <?
@@ -232,7 +231,7 @@ Public
     r.fast_add_without_control "≡"; // ==
     r.fast_add_without_control "×"; // *    
     //
-    "&~#|\\^@/+-%$*:=<>!?".foreach { c:CHARACTER
+    "&~#|\\^@/+-%$*:=<>!?".foreach { c:Char
       r.fast_add_without_control (c.to_string_alias)
     }
     r

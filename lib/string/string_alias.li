@@ -1,29 +1,26 @@
 Header
-
-  + name    := Strict STRING_ALIAS;
-
-  /*String built in.*/
-
+  + name := Exact String_alias
+/*String built in.*/
 Inherit
 
-  + inherit_string:Expanded STRING
+  + inherit_string:Flat String
   
 Public
   
-  - create sto:NATIVE_ARRAY CHARACTER :SELF <-
-  ( + up:INTEGER
+  - create sto:C_array Char :Self <-
+  ( + up:Int
     {sto.at up != '\0'}.while_do { up := up + 1; }
     create sto upper (up-1)
   )
   
-  - create sto:NATIVE_ARRAY CHARACTER upper up:INTEGER :SELF <-
-  ( + result:SELF
+  - create sto:C_array Char upper up:Int :Self <-
+  ( + result:Self
     result := clone
     result.make sto upper up
     result
   )
   
-  - make sto:NATIVE_ARRAY CHARACTER upper up:INTEGER <-
+  - make sto:C_array Char upper up:Int <-
   (
     storage := sto
     upper := up
@@ -32,20 +29,20 @@ Public
   )
   
   
-  - create_copy other:STRING_BUFFER :SELF <-
+  - create_copy other:String_buffer :Self <-
   // See ALIAS__TO.force_register
-  ( + result:SELF
+  ( + result:Self
     result := clone
     result.make_copy other
     result
   )
 
-  - make_copy other:STRING_BUFFER <-
-  ( + c:INTEGER
+  - make_copy other:String_buffer <-
+  ( + c:Int
 
     c := other.upper
     if (c > -1) then {
-      storage := NATIVE_ARRAY CHARACTER.create (c+2)
+      storage := C_array Char.create (c+2)
       storage.copy_from (other.storage) until c
       storage.put '\0' to (c+1)
       upper := c
@@ -55,20 +52,20 @@ Public
     
 Public
   
-  + hash_code:INTEGER 
+  + hash_code:Int 
   
-  - to_string_buffer:STRING_BUFFER <-
-  ( + new:STRING_BUFFER
-    new := STRING_BUFFER.create capacity
-    new.copy Self
+  - to_string_buffer:String_buffer <-
+  ( + new:String_buffer
+    new := String_buffer.create capacity
+    new.copy self
     new
   )
   
-  - to_string_alias:STRING_ALIAS <- Self
+  - to_string_alias:String_alias <- self
   
   // The Guru section: The Compiler consideration.
 
-  - to_external:NATIVE_ARRAY CHARACTER <- storage
+  - to_external:C_array Char <- storage
   // Gives C access to the internal `storage' (may be dangerous).
   // To be compatible with C, a null character is added at the end
   // of the internal `storage'. This extra null character is not
@@ -85,14 +82,14 @@ Public
 
   // Debug: Require / Ensure / Check
 
-  - Self:SELF '?'  test:{BOOLEAN} <- test ? Self
+  - self:Self '?'  test:{Boolean} <- test ? self
 
-  - Self:SELF '-?' test:{BOOLEAN} <- test -? Self
+  - self:Self '-?' test:{Boolean} <- test -? self
 
-  - Self:SELF '+?' test:{BOOLEAN} <- test +? Self
+  - self:Self '+?' test:{Boolean} <- test +? self
   
   // Lip Access
   
-  - lip Self:SELF bool :BOOLEAN <- `26`
-  - lip Self:SELF int  :INTEGER  <- `26`
-  - lip Self:SELF str  :STRING_ALIAS <- `26`
+  - lip self:Self bool :Boolean <- `26`
+  - lip self:Self int  :Int  <- `26`
+  - lip self:Self str  :String_alias <- `26`

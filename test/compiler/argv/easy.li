@@ -1,13 +1,14 @@
 Header
-  + name := EASY
-  /**/
+  + name := Easy
+  
+/**/
 
 
 Public
   
-  - run names:STRING_ALIAS^n <-
+  - run names:String_alias^n <-
   (
-    { ni:STRING;
+    { ni:String;
       ni.println
     }.value names
   )

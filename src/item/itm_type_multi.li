@@ -1,63 +1,60 @@
 Header
-
-  + name        := ITM_TYPE_MULTI;
-
-  /*List of type*/
-
+  + name := Itm_type_multi
+/*List of type*/
 Inherit
 
-  + parent_itm_type:Expanded ITM_TYPE
+  + parent_itm_type:Flat Itm_type
 
 Private
 
-  - dico:ARRAY ITM_TYPE_MULTI := ARRAY ITM_TYPE_MULTI .create_with_capacity 32
+  - dico:Array Itm_type_multi := Array Itm_type_multi .create_with_capacity 32
 
-  - create lt:ARRAY ITM_TYPE :SELF <-
-  ( + result:SELF
+  - create lt:Array Itm_type :Self <-
+  ( + result:Self
 
     result := clone
     result.make lt
     result
   )
 
-  - make lt:ARRAY ITM_TYPE <-
+  - make lt:Array Itm_type <-
   (
     list_type := lt
-    (list_type.lower).to (list_type.upper) do { i:INTEGER
+    (list_type.lower).to (list_type.upper) do { i:Int
       hash_code := hash_code + list_type.at i.hash_code
     }
   )
 
 Public
   
-  + hash_code:INTEGER
+  + hash_code:Int
   
-  + list_type:ARRAY ITM_TYPE
+  + list_type:Array Itm_type
 
-  - count:INTEGER <- list_type.count
+  - count:Int <- list_type.count
 
-  - lower:INTEGER <- list_type.lower
+  - lower:Int <- list_type.lower
 
-  - upper:INTEGER <- list_type.upper
+  - upper:Int <- list_type.upper
 
-  - at i:INTEGER :ITM_TYPE <-
+  - at i:Int :Itm_type <-
   (
     list_type.at i
   )
 
-  - last:ITM_TYPE <-
+  - last:Itm_type <-
   (
     list_type.last
   )
 
-  - first:ITM_TYPE <-
+  - first:Itm_type <-
   (
     list_type.first
   )
 
-  - get lt:ARRAY ITM_TYPE :SELF <-
-  ( + result:SELF
-    + idx:INTEGER
+  - get lt:Array Itm_type :Self <-
+  ( + result:Self
+    + idx:Int
 
     idx := dico.lower
     {(idx <= dico.upper) && {dico.at idx.list_type != lt}}.while_do {
@@ -76,28 +73,28 @@ Public
   // Runnable.
   //
 
-  - get_expr_for p:PARAMETER_TO_TYPE :EXPR <-
-  ( + lst:ARRAY EXPR
-    + t:TYPE_FULL
+  - get_expr_for p:Parameter_to_type :Expr <-
+  ( + lst:Array Expr
+    + t:Type_full
 
-    lst := ARRAY EXPR .create_with_capacity count
-    lower.to upper do { i:INTEGER
+    lst := Array Expr .create_with_capacity count
+    lower.to upper do { i:Int
       t := at i.to_run_for p pos (p.position.prototype.filename)
       lst.add_last (t.get_temporary_expr (p.position))
     }
-    EXPR_MULTIPLE.create lst
+    Expr_multiple.create lst
   )
 
-  - to_run_in lst:ARRAY TYPE_FULL for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS <-
-  ( + t:TYPE_FULL
+  - to_run_in lst:Array Type_full for p:Parameter_to_type pos path:String_alias <-
+  ( + t:Type_full
 
-    lower.to upper do { i:INTEGER
+    lower.to upper do { i:Int
       t := at i.to_run_for p pos path
       lst.add_last t
     }
   )
   
-  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  - to_run_for p:Parameter_to_type pos path:String_alias :Type_full <-
   (
     crash_with_message "ITM_TYPE_MULTI.to_run_for"
     NULL
@@ -107,23 +104,23 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    buffer.add_last '('
-    display_raw buffer
-    buffer.add_last ')'
+    b.add_last '('
+    display_raw b
+    b.add_last ')'
   )
 
-  - shorter_in buf:STRING_BUFFER <-
+  - shorter_in buf:String_buffer <-
   (
     buf.add_last '('
     shorter_raw_in buf
     buf.add_last ')'
   )
 
-  - display_raw buffer:STRING_BUFFER <-
+  - display_raw buffer:String_buffer <-
   (
-    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+    (list_type.lower).to (list_type.upper - 1) do { j:Int
       list_type.at j.append_in buffer
       buffer.add_last ','
     }
@@ -134,9 +131,9 @@ Public
     }
   )
 
-  - shorter_raw_in buf:STRING_BUFFER <-
+  - shorter_raw_in buf:String_buffer <-
   (
-    (list_type.lower).to (list_type.upper - 1) do { j:INTEGER
+    (list_type.lower).to (list_type.upper - 1) do { j:Int
       list_type.at j.shorter_in buf
       buf.add_last ','
     }

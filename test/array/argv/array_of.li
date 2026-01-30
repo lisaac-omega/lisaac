@@ -1,11 +1,10 @@
 Header
-  + name := ARRAY_OF;
-  
+  + name := Array_of
 Public
   - main <-
-  ( + a:ARRAY INTEGER
-    a := new ARRAY INTEGER of (4,3,2,1)
-    0.to (a.upper) do { i:INTEGER
+  ( + a:Array Int
+    a := new Array Int of (4,3,2,1)
+    0.to (a.upper) do { i:Int
       a.at i.println
     }
   )

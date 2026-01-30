@@ -1,23 +1,22 @@
 Header
-  + name := LINKED_LIST V;
-  /* Two way linked list with internal automatic memorization 
+  + name := Linked_list V
+/* Two way linked list with internal automatic memorization 
      of the last access .
   */
-
 Inherit
-  + parent_linked_collection:Expanded LINKED_COLLECTION V
+  + parent_linked_collection:Flat Linked_collection V
 
-LINKED_LIST
+Linked_list
 
-  + first_link:LINKED_LIST_NODE V
+  + first_link:Linked_list_node V
   // NULL when empty or gives access to the first element.
 
-  + last_link:LINKED_LIST_NODE V
+  + last_link:Linked_list_node V
   // NULL when empty or gives access to the last element.
 
-  + mem_idx:INTEGER
+  + mem_idx:Int
 
-  + mem_lnk:LINKED_LIST_NODE V
+  + mem_lnk:Linked_list_node V
   // To speed up accessing, `mem_idx' and `mem_lnk' is the
   // memory of the last access done. For example, after
   // item(1), `mem_idx' is 1 and `mem_lnk' is `first_link'.
@@ -25,48 +24,56 @@ LINKED_LIST
   // `mem_lnk' and `mem_idx' is 0
 
 Public
-  - is_empty:BOOLEAN <- first_link = NULL
-
-  - add_first element:V <-
-  (
-    (first_link = NULL).if {
-      first_link := LINKED_LIST_NODE V.create element previous NULL next NULL
-      last_link := first_link
-      upper := 0
-      mem_idx := 0
-      mem_lnk := first_link
+  - add_first element:V^n <-
+  ( + n1, n2, n3: Linked_list_node V
+    { e:V
+      if (n1 = NULL) then {
+        n1 := n2 := Linked_list_node V .create e previous NULL next NULL
+      } else { 
+        n3 := Linked_list_node V .create e previous n2 next NULL
+        n2.set_next n3
+        n2 := n3
+      };
+    }.value element
+    n2.set_next first_link
+    if (first_link != NULL) then {
+      first_link.set_previous n2
+      mem_idx := mem_idx + n
     } else {
-      first_link := LINKED_LIST_NODE V.create element previous NULL next first_link
-      first_link.next.set_previous first_link
-      upper := upper + 1
-      mem_idx := mem_idx + 1
+      mem_idx := 0
+      mem_lnk := n1
+      last_link := n2
     }
+    first_link := n1
+    upper := upper + n
+  )
+   
+  - add_last element:V^n <-
+  (
+    { e:V
+      if (first_link = NULL) then {
+        first_link := Linked_list_node V .create e previous NULL next NULL
+        last_link := first_link
+        upper := 0
+        mem_idx := 0
+        mem_lnk := first_link
+      } else {
+        last_link := Linked_list_node V .create e previous last_link next NULL
+        last_link.previous.set_next last_link
+        upper := upper + 1
+      }
+    }.value element
   )
 
-  - add_last element:V <-
-  (
-    (first_link = NULL).if {
-      first_link := LINKED_LIST_NODE V .create element previous NULL next NULL
-      last_link := first_link
-      upper := 0
-      mem_idx := 0
-      mem_lnk := first_link
-    } else {
-      last_link := LINKED_LIST_NODE V .create element previous last_link next NULL
-      last_link.previous.set_next last_link
-      upper := upper + 1
-    }
-  )
-
-  - at i:INTEGER add v:V <-
-  ( + link:LINKED_LIST_NODE V
+  - at i:Int add v:V <-
+  ( + link:Linked_list_node V
     (i = 0).if {
       add_first v
     }.elseif {i = upper + 1} then {
       add_last v
     } else {
       go_item (i - 1)
-      link := LINKED_LIST_NODE V.create v previous mem_lnk next (mem_lnk.next)
+      link := Linked_list_node V.create v previous mem_lnk next (mem_lnk.next)
       link.next.set_previous link
       mem_lnk.set_next link
       upper := upper + 1
@@ -94,8 +101,8 @@ Public
     }
   )
 
-  - remove index:INTEGER <-
-  ( + link:LINKED_LIST_NODE V
+  - remove index:Int <-
+  ( + link:Linked_list_node V
     (index = 0).if {
       remove_first
     }.elseif {index = upper} then {
@@ -113,13 +120,13 @@ Public
 
   - last:V <- last_link.item
 
-  - at i:INTEGER :V <-
+  - at i:Int :V <-
   (
     go_item i
     mem_lnk.item
   )
 
-  - at i:INTEGER put v:V <-
+  - at i:Int put v:V <-
   (
     go_item i
     mem_lnk.set_item v
@@ -132,18 +139,18 @@ Public
     }
   )
 
-  - copy other:SELF <-
+  - copy other:Self <-
   (
     from_collection other
   )
 
-  - Self:SELF '==' Right 60 other:SELF :BOOLEAN <-
-  ( + result:BOOLEAN
-    + lnk1, lnk2:LINKED_LIST_NODE V
-    (Self = other).if {
-      result := TRUE
+  - self:Self '==' Right 60 other:Self :Boolean <-
+  ( + result:Boolean
+    + lnk1, lnk2:Linked_list_node V
+    (self = other).if {
+      result := True
     }.elseif {upper = other.upper} then {
-      result := TRUE
+      result := True
       lnk1 := first_link
       lnk2 := other.first_link
       {(lnk1 = NULL) || {! result}}.until_do {
@@ -155,13 +162,13 @@ Public
     result
   )
 
-  - is_equal_map other:SELF :BOOLEAN <-
-  ( + result:BOOLEAN
-    + lnk1, lnk2:LINKED_LIST_NODE V
-    (Self = other).if {
-      result := TRUE
+  - is_equal_map other:Self :Boolean <-
+  ( + result:Boolean
+    + lnk1, lnk2:Linked_list_node V
+    (self = other).if {
+      result := True
     }.elseif {upper = other.upper} then {
-      result := TRUE
+      result := True
       lnk1 := first_link
       lnk2 := other.first_link
       {(lnk1 = NULL) || {! result}}.until_do {
@@ -173,9 +180,9 @@ Public
     result
   )
     
-  - fast_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
-    + u:INTEGER
+  - fast_index_of element:V start start_index:Int :Int <-
+  ( + result:Int
+    + u:Int
     result := lower
     u := upper
     {(result > u) || {element = at result}}.until_do {
@@ -184,10 +191,10 @@ Public
     result
   )
 
-  - fast_reverse_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + temporary_idx:INTEGER
-    + temporary_lnk:LINKED_LIST_NODE V
-    + result:INTEGER
+  - fast_reverse_index_of element:V start start_index:Int :Int <-
+  ( + temporary_idx:Int
+    + temporary_lnk:Linked_list_node V
+    + result:Int
     go_item start_index
     temporary_idx := mem_idx
     temporary_lnk := mem_lnk
@@ -213,15 +220,15 @@ Public
     }
   )
 
-  - from_collection model:COLLECTION V <-
-  ( + lnk:LINKED_LIST_NODE V
+  - from_collection model:Collection V <-
+  ( + lnk:Linked_list_node V
     (first_link = NULL).if {
-      (model.lower).to (model.upper) do { i:INTEGER
+      (model.lower).to (model.upper) do { i:Int
         add_last (model.item i)
       }
     } else {
       lnk := first_link
-      (model.lower).to (model.upper) do { i:INTEGER
+      (model.lower).to (model.upper) do { i:Int
         (lnk = NULL).if {
           add_last (model.item i)
         } else {
@@ -233,7 +240,7 @@ Public
         ? {model.count = 0}
         clear
       }.elseif {lnk != NULL} then {
-        + i:INTEGER
+        + i:Int
         i := model.count
         go_item i
         ? {lnk = mem_lnk.next}
@@ -244,26 +251,26 @@ Public
     }
   )
 
-  - slice low:INTEGER to up:INTEGER :SELF <-
-  ( + lnk:LINKED_LIST_NODE V
-    + result:SELF
+  - slice low:Int to up:Int :Self <-
+  ( + lnk:Linked_list_node V
+    + result:Self
 
-    result := SELF.create
+    result := Self.create
     (mem_idx != low).if {
       go_item low
     }
     lnk := mem_lnk
-    (up - low + 1).downto 1 do { i:INTEGER
+    (up - low + 1).downto 1 do { i:Int
       result.add_last (lnk.item)
       lnk := lnk.next
     }
     result
   )
   
-  - occurrences element:V :INTEGER <-
-  ( + lnk:LINKED_LIST_NODE V
-    + safe_equal:SAFE_EQUAL V
-    + result:INTEGER
+  - occurrences element:V :Int <-
+  ( + lnk:Linked_list_node V
+    + safe_equal:Safe_equal V
+    + result:Int
 
     lnk := first_link
     {lnk = NULL}.until_do {
@@ -275,9 +282,9 @@ Public
     result
   )
 
-  - fast_occurrences element:V :INTEGER <-
-  ( + lnk:LINKED_LIST_NODE V
-    + result:INTEGER
+  - fast_occurrences element:V :Int <-
+  ( + lnk:Linked_list_node V
+    + result:Int
 
     lnk := first_link
     {lnk = NULL}.until_do {
@@ -289,12 +296,12 @@ Public
     result
   )
 
-  - all_default:BOOLEAN <-
-  ( + l:LINKED_LIST_NODE V
+  - all_default:Boolean <-
+  ( + l:Linked_list_node V
     + d:V
-    + result:BOOLEAN
+    + result:Boolean
 
-    result := TRUE
+    result := True
     l := first_link
     {(! result) || {l = NULL}}.until_do {
       result := l.item = d
@@ -304,7 +311,7 @@ Public
   )
 
   - remove_last <-
-  ( + link:LINKED_LIST_NODE V
+  ( + link:Linked_list_node V
     (upper = 0).if {
       first_link := NULL
       last_link  := NULL
@@ -323,8 +330,8 @@ Public
   )
 
   - replace_all old_value:V with new_value:V <-
-  ( + safe_equal:SAFE_EQUAL V
-    lower.to upper do { i:INTEGER
+  ( + safe_equal:Safe_equal V
+    lower.to upper do { i:Int
       (safe_equal.test (item i) with old_value).if {
         put new_value to i
       }
@@ -333,7 +340,7 @@ Public
 
   - fast_replace_all old_value:V with new_value:V <-
   (
-    lower.to upper do { i:INTEGER
+    lower.to upper do { i:Int
       (item i = old_value).if {
         put new_value to i
       }
@@ -342,9 +349,9 @@ Public
 
   - reverse <-
   ( + temp:V
-    + low:LINKED_LIST_NODE V
-    + high:LINKED_LIST_NODE V
-    + i:INTEGER
+    + low:Linked_list_node V
+    + high:Linked_list_node V
+    + i:Int
     low  := first_link
     high := last_link
     i := count / 2
@@ -361,7 +368,7 @@ Public
   )
 
 Private
-  - go_item index:INTEGER <-
+  - go_item index:Int <-
   [ 
     ? {valid_index index}
     ? {mem_idx >= 0}

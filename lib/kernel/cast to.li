@@ -1,0 +1,9 @@
+Header
+  + name := Cast S To D
+/*Don't use this prototype !*/
+
+Public
+
+  - on src:S :D <- `13`
+
+

@@ -1,48 +1,47 @@
 Header
-  + name := FILE_KEY;
-  
+  + name := File_key
 Inherit
-  - parent_any:ANY := ANY
-  - parent_file_key_gui:FILE_KEY_GUI := FILE_KEY_GUI
+  - parent_any:Any := Any
+  - parent_file_key_gui:File_key_gui := File_key_gui
   
 Public
   
-  - function c0:STRING_ALIAS :(BOOLEAN,{BOOLEAN}) <-
-  ( + b:{BOOLEAN}
-    + ok:BOOLEAN
+  - function c0:String_alias :(Boolean,{Boolean}) <-
+  ( + b:{Boolean}
+    + ok:Boolean
     (ok,b) := parent_file_key_gui.function c0
     (!ok).if {
       ok := c0
       .case "compile"       then { b := {compile}; }
-      .case "compile_boost" then { b := {compile_boost := !compile_boost; TRUE}; }
-      = STRING_ALIAS
+      .case "compile_boost" then { b := {compile_boost := !compile_boost; True}; }
+      = String_alias
     }
     ok,b
   )
   
-  - function c0:STRING_ALIAS with_str :(BOOLEAN,{STRING_ALIAS; BOOLEAN}) <-
-  ( + b:{STRING_ALIAS; BOOLEAN}
-    + ok:BOOLEAN
+  - function c0:String_alias with_str :(Boolean,{String_alias; Boolean}) <-
+  ( + b:{String_alias; Boolean}
+    + ok:Boolean
     (ok,b) := parent_file_key_gui.function c0 with_str
     (!ok).if {
       ok := c0
       .case "target" then {
-        b := { s:STRING_ALIAS; set_target s}
+        b := { s:String_alias; set_target s}
       }
-      = STRING_ALIAS
+      = String_alias
     }
     ok,b
   )
   
-  - function c0:STRING_ALIAS check :(BOOLEAN,{ACT; BOOLEAN}) <-
-  ( + b:{ACT; BOOLEAN}
-    + ok:BOOLEAN
+  - function c0:String_alias check :(Boolean,{Act; Boolean}) <-
+  ( + b:{Act; Boolean}
+    + ok:Boolean
     (ok,b) := parent_file_key_gui.function c0 check
     (!ok).if {
       ok := c0
-      .case "compile_boost_check" then { b := {a:ACT; compile_boost}; }
-      .case "target_radio" then { b := {a:ACT; target_radio a}; }
-      = STRING_ALIAS
+      .case "compile_boost_check" then { b := {a:Act; compile_boost}; }
+      .case "target_radio" then { b := {a:Act; target_radio a}; }
+      = String_alias
     }
     ok,b
   )

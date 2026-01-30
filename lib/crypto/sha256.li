@@ -1,36 +1,35 @@
 Header
-  + name := SHA256;
-  
+  + name := Sha256
 Inherit
-  + parent_sha:Expanded SHA
+  + parent_sha:Flat Sha
   
-SHA
+Sha
   
-  + state:ARRAY UINTEGER_32
+  + state:Array Uint32
   
-  - data_size:INTEGER := 64
-  - short_data_size:INTEGER := (data_size - 8)
+  - data_size:Int := 64
+  - short_data_size:Int := (data_size - 8)
   
-  - add_bitlen x:INTEGER <-
+  - add_bitlen x:Int <-
   (
     bitlen := bitlen + x << 3
   )
   
   - put_bitlen <-
   (
-    data32.at 14 put ((bitlen>>32).to_raw_uinteger_32.rev)
-    data32.at 15 put ( bitlen     .to_raw_uinteger_32.rev)
+    data32.at 14 put ((bitlen>>32).to_raw_uint32.rev)
+    data32.at 15 put ( bitlen     .to_raw_uint32.rev)
   )
 
-  - add (a,b,c,d,e,f,g,h:UINTEGER_32) in t:ARRAY UINTEGER_32 <-
+  - add (a,b,c,d,e,f,g,h:Uint32) in t:Array Uint32 <-
   (
     t.add_last a; t.add_last b; t.add_last c; t.add_last d
     t.add_last e; t.add_last f; t.add_last g; t.add_last h
   )
   
-  - k:ARRAY UINTEGER_32 :=
-  ( + r:ARRAY UINTEGER_32
-    r := ARRAY UINTEGER_32.create_with_capacity 64
+  - k:Array Uint32 :=
+  ( + r:Array Uint32
+    r := Array Uint32.create_with_capacity 64
     add (0428A2F98h,071374491h,0B5C0FBCFh,0E9B5DBA5h,03956C25Bh,059F111F1h,0923F82A4h,0AB1C5ED5h) in r
     add (0D807AA98h,012835B01h,0243185BEh,0550C7DC3h,072BE5D74h,080DEB1FEh,09BDC06A7h,0C19BF174h) in r
     add (0E49B69C1h,0EFBE4786h,00FC19DC6h,0240CA1CCh,02DE92C6Fh,04A7484AAh,05CB0A9DCh,076F988DAh) in r
@@ -44,10 +43,10 @@ SHA
   
   - transform <-
   [ ? {data.count = data_size}; ]
-  ( + a, b, c, d, e, f, g, h, t1, t2, new:UINTEGER_32
-    + step:{(INTEGER,UINTEGER_32); }
+  ( + a, b, c, d, e, f, g, h, t1, t2, new:Uint32
+    + step:{(Int,Uint32); }
     
-    step := { (j:INTEGER,dta:UINTEGER_32)
+    step := { (j:Int,dta:Uint32)
       t1 := h + e.ep1 + e.ch (f,g) + k.at j + dta
       t2 := a.ep0 + a.maj (b,c)
       h := g;  g := f
@@ -59,12 +58,12 @@ SHA
     (a,b,c,d) := (state.at 0, state.at 1, state.at 2, state.at 3)
     (e,f,g,h) := (state.at 4, state.at 5, state.at 6, state.at 7)
     
-    0.to 15 do { i:INTEGER
+    0.to 15 do { i:Int
       new := data32.at i.rev
       data32.at i put new
       step.value (i,new)
     }
-    16.to 63 do { i:INTEGER
+    16.to 63 do { i:Int
       new := (
         data32.at ( i   &0Fh) + data32.at ((i+ 1)&0Fh).sig0 +
         data32.at ((i+9)&0Fh) + data32.at ((i+14)&0Fh).sig1        
@@ -81,13 +80,13 @@ SHA
   
 Public
   
-  - digest_size:INTEGER := 32
+  - digest_size:Int := 32
   
   - reset <-
   (
     (data = NULL).if {
-      data := ARRAY UINTEGER_8.create_with_capacity 64
-      state := ARRAY UINTEGER_32.create_with_capacity 8
+      data := Array Uint8.create_with_capacity 64
+      state := Array Uint32.create_with_capacity 8
     }
     data.clear
     state.clear
@@ -95,20 +94,20 @@ Public
     add (06A09E667h,0BB67AE85h,03C6EF372h,0A54FF53Ah,0510E527Fh,09B05688Ch,01F83D9ABh,05BE0CD19h) in state
   )
   
-  - sum_in digest:ARRAY UINTEGER_8 <-
-  ( + dig32:NATIVE_ARRAY UINTEGER_32
+  - sum_in digest:Array Uint8 <-
+  ( + dig32:C_array Uint32
     prepare_digest
-    dig32 := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on (digest.storage)
-    0.to 7 do { j:INTEGER
+    dig32 := Cast (C_array Uint8) To (C_array Uint32).on (digest.storage)
+    0.to 7 do { j:Int
       dig32.at j put (state.at j.rev)
     }
   )
   
-  - sum_in_string buffer:STRING_BUFFER <-
+  - sum_in_string buffer:String_buffer <-
   (
     prepare_digest
-    0.to 7 do { j:INTEGER
-      + u32:UINTEGER_32
+    0.to 7 do { j:Int
+      + u32:Uint32
       u32 := (state.at j).rev
       4.times {
         buffer.add_last (map.at ((u32 & 000000F0h) >> 4))

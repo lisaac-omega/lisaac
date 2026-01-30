@@ -1,18 +1,17 @@
 Header
-  + name    := LINKED_COLLECTION V;
-  /*
+  + name := Linked_collection V
+/*
   Common root of LINKED_LIST and SINGLE_LIST.
   */
-
 Inherit
-  - parent_collection:COLLECTION V := COLLECTION V
-
+  + parent_collection: Flat Collection V
 Public
+  - is_empty:Boolean <- ( first_link = NULL )
   
   // Creation:
   
-  - new Self:SELF of v: V^n :SELF <-
-  ( + result:SELF
+  - new self:Self of v: V^n :Self <-
+  ( + result:Self
     result := clone  
     { vi:V
       result.add_last vi
@@ -20,18 +19,10 @@ Public
     result
   )
   
-Public
-  - lower:INTEGER := 0
-  // Lower index bound is frozen.
-
-  + upper:INTEGER := -1
-  // Memorized upper index bound.
-  
-  - count:INTEGER <- (upper + 1)
-  
-  - new:SELF <-
+Public  
+  - new:Self <-
   // Make an empty list
-  ( + result:SELF
+  ( + result:Self
     result := clone
     result.make
     result
@@ -45,10 +36,9 @@ Private
   (
     upper := -1
   )
-  
 Public  
-  - remove_head n:INTEGER <-
-  ( + i:INTEGER
+  - remove_head n:Int <-
+  ( + i:Int
     i := n
     {i = 0}.until_do {
       remove_first
@@ -56,8 +46,8 @@ Public
     }
   )
 
-  - remove_tail n:INTEGER <-
-  ( + i:INTEGER
+  - remove_tail n:Int <-
+  ( + i:Int
 
     i := n
     {i = 0}.until_do {
@@ -66,36 +56,35 @@ Public
     }
   )
 
-  - first_index_of element:V :INTEGER <-
+  - first_index_of element:V :Int <-
   (
     index_of element start lower
   )
 
-  - fast_first_index_of element:V :INTEGER <-
+  - fast_first_index_of element:V :Int <-
   (
     fast_index_of element start lower
   )
 
   // Implement manifest generic creation.
 
-  - manifest_make needed_capacity:INTEGER <-
+  - manifest_make needed_capacity:Int <-
   // Manifest creation of a list of items of type E.
   (
     create
   )
 
-  - manifest_put index:INTEGER to element:V <-
+  - manifest_put index:Int to element:V <-
   (
     add_last element
   )
   
 Public
-  - twin:SELF <-
-  ( + result:SELF
-    result := SELF.new
-    0.to upper do { i:INTEGER
+  - twin:Self <-
+  ( + result:Self
+    result := Self.new
+    0.to upper do { i:Int
       result.add_last (at i)
     }
     result
   )
-  

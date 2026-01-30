@@ -1,13 +1,11 @@
 Header
-
-  + name      := EXPR;
-  /*
+  + name := Expr
+/*
   The expr abstract
   */
-
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 

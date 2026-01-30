@@ -1,28 +1,27 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + stridx:STRIDX
-    + counter:INTEGER
-    + ustring:USTRING
-    + ustring_buffer:USTRING_BUFFER
-    + char_32:CHAR
+  ( + stridx:Stridx
+    + counter:Int
+    + ustring:Ustring
+    + ustring_buffer:Ustring_buffer
+    + char_32:Char
     ustring_buffer := "Toto fait du vélo!"
     ustring := ustring_buffer
-    char_32 := CHAR.from_alias "o"
+    char_32 := Char.from_alias "o"
     stridx := ustring.index_of char_32
-    OUT # "1 - stridx=" # stridx # '\n'
+    Out # "1 - stridx=" # stridx # '\n'
     {ustring.valid_index stridx}.while_do {
-      OUT # "2 - stridx=" # stridx # '\n'
+      Out # "2 - stridx=" # stridx # '\n'
       counter := counter + 1
       stridx := stridx + 1
-      OUT # "3 - stridx=" # stridx # '\n'
+      Out # "3 - stridx=" # stridx # '\n'
       stridx := ustring.index_of char_32 start stridx
-      TEST.check (counter <= 3)
+      Test.check (counter <= 3)
     }
-    OUT # "4 - stridx=" # stridx # '\n'
-    TEST.check counter integer 3
+    Out # "4 - stridx=" # stridx # '\n'
+    Test.check counter integer 3
   )
   
   

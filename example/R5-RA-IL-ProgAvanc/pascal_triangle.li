@@ -1,7 +1,6 @@
 Header
-  
-  + name := PASCAL_TRIANGLE;
-  /*
+  + name := Pascal_triangle
+/*
   Le triangle de Pascal en fonctionnel (ni boucle ni affectations).
   */
 
@@ -19,11 +18,11 @@ Public
   
   - main <-
   ( + n:ℤ;  
-    if (COMMAND_ARGS upper != 1) then {
-      OUT # "usage: " # COMMAND_ARGS.at 0 # " <n>" # '\n'
-      SYSTEM exit 1
+    if (Command_args upper != 1) then {
+      Out # "usage: " # Command_args.at 0 # " <n>" # '\n'
+      System exit 1
     }
-    n := COMMAND_ARGS at 1 .to_integer
+    n := Command_args at 1 .to_int
     afficher_pascal n
   );
   
@@ -33,10 +32,10 @@ Private
   ( 
     if (l <= n) then {
       if (c <= l) then {
-        OUT # pascal (l,c) # ' ';
+        Out # pascal (l,c) # ' ';
         afficher (l, c + 1) pascal n
       } else {
-        OUT # '\n'
+        Out # '\n'
         afficher (l + 1, 1) pascal n        
       };
     };

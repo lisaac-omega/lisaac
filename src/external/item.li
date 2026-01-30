@@ -1,30 +1,27 @@
 Header
-
-  + name        := ITEM;
-
-  /*Item for NATIVE_ARRAY E.*/
-
+  + name := Item
+/*Item for C_array E.*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- receiver.is_invariant && {index.is_invariant}
+  - is_invariant:Boolean <- receiver.is_invariant && {index.is_invariant}
 
-  + receiver:EXPR
+  + receiver:Expr
 
-  + index:EXPR
+  + index:Expr
 
-  - static_type:TYPE_FULL <-
-  ( + t:TYPE_GENERIC
+  - static_type:Type_full <-
+  ( + t:Type_generic
 
     t ?= receiver.static_type.raw
     t.generic_list.first
   )
 
-  - get_type t:TYPES_TMP <-
-  ( + typ_gen:TYPE_GENERIC
+  - get_type t:Types_tmp <-
+  ( + typ_gen:Type_generic
 
     typ_gen ?= receiver.static_type.raw
     typ_gen.native_array_variable.get_type t
@@ -34,22 +31,22 @@ Public
   // Creation.
   //
 
-  - create p:POSITION base rec:EXPR index idx:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position base rec:Expr index idx:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p base rec index idx
     result
   )
 
-  - make p:POSITION base rec:EXPR index idx:EXPR <-
+  - make p:Position base rec:Expr index idx:Expr <-
   (
     position := p
     receiver := rec
     index    := idx
   )
 
-  - my_copy:SELF <- SELF.create position base (receiver.my_copy) index (index.my_copy)
+  - my_copy:Self <- Self.create position base (receiver.my_copy) index (index.my_copy)
 
   //
   // Remove
@@ -65,8 +62,8 @@ Public
   // Execute
   //
 
-  - execute_unlink:INSTR <-
-  ( + instr:INSTR
+  - execute_unlink:Instr <-
+  ( + instr:Instr
     instr := receiver.execute_unlink
     (instr != NULL).if {
       list_current.insert_before instr
@@ -74,11 +71,11 @@ Public
     index.execute_unlink
   )
 
-  - execute_link:EXPR <-
+  - execute_link:Expr <-
   (
     receiver := receiver.execute_link
     index    := index.execute_link
-    Self
+    self
   )
 
   //
@@ -97,7 +94,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     receiver.display buffer
     buffer.add_last '['

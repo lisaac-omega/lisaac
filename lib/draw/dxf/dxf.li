@@ -1,23 +1,22 @@
-Header  
-  + name := DXF;
-  
+Header
+  + name := Dxf
 Inherit  
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_any_gui:Any_gui := Any_gui
   
 Private
       
-  - path:STRING_ALIAS
-  - file:POINTER
-  - src:STRING_BUFFER := STRING_BUFFER.create 80
-  - line:INTEGER
-  - stroke:ARRAY REAL_32
+  - path:String_alias
+  - file:Pointer
+  - src:String_buffer := String_buffer.create 80
+  - line:Int
+  - stroke:Array Real32
   
-  - x_min:REAL_32
-  - y_min:REAL_32
-  - x_max:REAL_32
-  - y_max:REAL_32
+  - x_min:Real32
+  - y_min:Real32
+  - x_max:Real32
+  - y_max:Real32
   
-  - add (x,y:REAL_32) <-
+  - add (x,y:Real32) <-
   (
     (stroke.is_empty).if {
       x_min := x_max := x
@@ -31,18 +30,18 @@ Private
     stroke.add_last x; stroke.add_last y
   )
   
-  - error txt:STRING <-
+  - error txt:String <-
   (
     "Line ".print; line.println
     txt.println
     exit exit_failure_code
   )
     
-  - read_line:BOOLEAN <-
-  ( line := line + 1;  ! FILE_UTILS.read_line file in src)
+  - read_line:Boolean <-
+  ( line := line + 1;  ! File_utils.read_line file in src)
   
-  - code c:STRING_ALIAS :REAL_32 <-
-  ( + eof:BOOLEAN
+  - code c:String_alias :Real32 <-
+  ( + eof:Boolean
     //"Line ".print; line.println
     {
       eof := read_line
@@ -50,7 +49,7 @@ Private
       src.remove_last
     }.do_while {(!eof) && {src !== c}}
     ((eof) || {src.is_empty}).if {
-      STRING.tmp { tmp:STRING_BUFFER
+      String.tmp { tmp:String_buffer
         line := Old line
         tmp.copy "Code `";
         tmp.append c
@@ -59,11 +58,11 @@ Private
       }
     }
     read_line
-    src.to_real_64.to_real_32
+    src.to_real64.to_real32
   )
   
-  - spline (xb,yb:REAL_32) w1 (x1,y1:REAL_32) w2 (x2,y2:REAL_32) to (xe,ye:REAL_32) <-
-  ( + t,ti,t2,t3,ti2,ti3,step,x,y:REAL_32
+  - spline (xb,yb:Real32) w1 (x1,y1:Real32) w2 (x2,y2:Real32) to (xe,ye:Real32) <-
+  ( + t,ti,t2,t3,ti2,ti3,step,x,y:Real32
     t := step := 0.2
     { // Naive implemented            
       ti := 1.0 - t
@@ -80,25 +79,25 @@ Private
   
 Public
       
-  - open fn:STRING_ALIAS :BOOLEAN <-
+  - open fn:String_alias :Boolean <-
   ( path := fn
     line := 0
-    file := FILE_UTILS.open_read fn
+    file := File_utils.open_read fn
     file.is_not_null
   )
   
-  - close <- FILE_UTILS.close file
+  - close <- File_utils.close file
   
-  - read_in pth:ARRAY REAL_32 :(REAL_32,REAL_32,REAL_32,REAL_32) <-
-  ( + xb,yb,x1,y1,x2,y2,xe,ye:REAL_32
-    + n:INTEGER
-    + eof,eobj:BOOLEAN
+  - read_in pth:Array Real32 :(Real32,Real32,Real32,Real32) <-
+  ( + xb,yb,x1,y1,x2,y2,xe,ye:Real32
+    + n:Int
+    + eof,eobj:Boolean
     stroke := pth
     stroke.clear
     {
       eof := read_line
       ((!eof) && {! src.is_empty} && {src.first.is_upper}).if {        
-        (src == "BLOCK\n").if {
+        (src == "Block\n").if {
           //"New Block!\n".print
         }.elseif {src == "POLYLINE"} then {
           //"New PolyLine\n".print
@@ -108,9 +107,9 @@ Public
           add (xb,yb)
         }.elseif {src.has_prefix "SPLINE"} then {                              
           //"Spline".println
-          n := code "70".to_integer
+          n := code "70".to_int
           (n != 8).if { error "Sorry, the SPLINE not `Planar' not yet implemented."; };
-          n := code "71".to_integer
+          n := code "71".to_int
           (n != 3).if { error "Sorry, the SPLINE (Degree!=3) not yet implemented.";  }
           xb := code "10";  yb := code "20"
           x1 := code "10";  y1 := code "20"
@@ -118,7 +117,7 @@ Public
           xe := code "10";  ye := code "20"
           spline (xb,yb) w1 (x1,y1) w2 (x2,y2) to (xe,ye)
         }.elseif {src.has_prefix "LWPOLYLINE"} then {            
-          n := code "90".to_integer
+          n := code "90".to_int
           //"LWPOLY:".print; n.print; '\n'.print
           n.times {
             xb := code "10";  yb := code "20"
@@ -133,7 +132,7 @@ Public
             add (xe,ye)
             ((pth.count>=2) && {(pth.first,pth.second) = (pth.second_last,pth.last)}).if {
               //"---------------------Cut 0".println
-              eobj := TRUE
+              eobj := True
             }
           }
         }

@@ -1,7 +1,6 @@
 Header
-  + name := IMG_WRITE;
-  
-  - external := `
+  + name := Img_write
+- external := `
 unsigned short lengthc[] = { 3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258, 259 };
 unsigned char  lengtheb[]= { 0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0 };
 unsigned short distc[]   = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577, 32768 };
@@ -322,8 +321,8 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
 
 Public
 
-  - write_bmp filename:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
-  ( + pad:INTEGER
+  - write_bmp filename:String size (x,y,comp:Int) data data:C_array Uint8 :Boolean <-
+  ( + pad:Int
     pad := (-x*3) & 3
     outfile (filename,-1,-1,x,y,comp,data,0,pad) hdr {      
       hdr1 'B'; hdr1 'M'; hdr4 (14+40+(x*3+pad)*y); hdr2 0; hdr2 0; hdr4 (14+40); // 14
@@ -332,9 +331,9 @@ Public
     }
   )
   
-  - write_tga filename:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
-  ( + has_alpha:INTEGER
-    has_alpha := ((comp & 1) = 0).to_integer
+  - write_tga filename:String size (x,y,comp:Int) data data:C_array Uint8 :Boolean <-
+  ( + has_alpha:Int
+    has_alpha := ((comp & 1) = 0).to_int
     outfile (filename, -1,-1, x, y, comp, data, has_alpha, 0) hdr
     {            
       hdr1 0; hdr1 0; hdr1 2
@@ -344,18 +343,18 @@ Public
     }
   )
   
-  - write_png filename:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
-  ( + fn:NATIVE_ARRAY CHARACTER
+  - write_png filename:String size (x,y,comp:Int) data data:C_array Uint8 :Boolean <-
+  ( + fn:C_array Char
     fn := filename.to_external
     `stbi_write_png(@fn, @x,@y,@comp, @data, 0)`
-    TRUE
+    True
   )
   
   /*
-  - write_png fn:STRING size (x,y,comp:INTEGER) data data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
-  ( + f:POINTER
-    + len:INTEGER
-    + png:NATIVE_ARRAY UINTEGER_8
+  - write_png fn:STRING size (x,y,comp:Int) data data:C_array Uint8 :Boolean <-
+  ( + f:Pointer
+    + len:Int
+    + png:C_array Uint8
     (png,len) := write_png_to_mem data stride 0 size (x,y,comp)
     ((png != NULL) && {(f := FILE_UTILS.open_write fn).is_not_null}).if {
       FILE_UTILS.write f width png size len
@@ -366,36 +365,36 @@ Public
   */
   
 Private
-  - lengthc:NATIVE_ARRAY UINTEGER_16 <- `lengthc`:NATIVE_ARRAY UINTEGER_16
-  - lengtheb:NATIVE_ARRAY UINTEGER_8 <- `lengtheb`:NATIVE_ARRAY UINTEGER_8
-  - distc:NATIVE_ARRAY UINTEGER_16 <- `distc`:NATIVE_ARRAY UINTEGER_16
-  - disteb:NATIVE_ARRAY UINTEGER_8 <- `disteb`:NATIVE_ARRAY UINTEGER_8
+  - lengthc:C_array Uint16 <- `lengthc`:C_array Uint16
+  - lengtheb:C_array Uint8 <- `lengtheb`:C_array Uint8
+  - distc:C_array Uint16 <- `distc`:C_array Uint16
+  - disteb:C_array Uint8 <- `disteb`:C_array Uint8
     
-  - write3 f:POINTER v (a,b,c:UINTEGER_8) <-
+  - write3 f:Pointer v (a,b,c:Uint8) <-
   (
     arr.at 0 put a; arr.at 1 put b; arr.at 2 put c
-    FILE_UTILS.write f buffer arr size 3
+    File_utils.write f buffer arr size 3
   )
   
-  - write1 f:POINTER v a:UINTEGER_8 <-
+  - write1 f:Pointer v a:Uint8 <-
   (
     arr.at 0 put a
-    FILE_UTILS.write f buffer arr size 1
+    File_utils.write f buffer arr size 1
   )
   
-  - write f:POINTER zero n:INTEGER <-
+  - write f:Pointer zero n:Int <-
   [ ? {n < 4}; ]
   (
-    0.to (n-1) do { i:INTEGER; arr.at i put 0; }
-    FILE_UTILS.write f buffer arr size n
+    0.to (n-1) do { i:Int; arr.at i put 0; }
+    File_utils.write f buffer arr size n
   )
 
-  - write_pixels f:POINTER dir (rgb_dir,vdir:INTEGER) size (x,y,comp:INTEGER)
-  data data:NATIVE_ARRAY UINTEGER_8
-  alpha write_alpha:INTEGER pad scanline_pad:INTEGER <-
+  - write_pixels f:Pointer dir (rgb_dir,vdir:Int) size (x,y,comp:Int)
+  data data:C_array Uint8
+  alpha write_alpha:Int pad scanline_pad:Int <-
   [ ? {y > 0}; ]
-  ( + j,j_end:INTEGER
-    + d:NATIVE_ARRAY UINTEGER_8
+  ( + j,j_end:Int
+    + d:C_array Uint8
 
     (vdir < 0).if {
       j_end := -1;  j := y-1
@@ -403,7 +402,7 @@ Private
       j_end :=  y;  j := 0
     }
     {j != j_end}.while_do {
-      0.to (x-1) do { i:INTEGER
+      0.to (x-1) do { i:Int
         d := data + (j*x+i)*comp
         (write_alpha < 0).if { write1 f v (d.at (comp-1)); }
         (comp)
@@ -412,7 +411,7 @@ Private
         .when 4 then {
           (write_alpha = 0).if {
             // composite against pink background:
-            0.to 2 do { k:INTEGER
+            0.to 2 do { k:Int
               px.at k put (bg.at k + ((d.at k - bg.at k) * d.at 3)/255)
             }
             write3 f v (px.at (1-rgb_dir),px.at 1,px.at (1+rgb_dir))
@@ -427,17 +426,17 @@ Private
     }
   )
 
-  - outfile (filename:STRING, rgb_dir, vdir, x,y,comp:INTEGER, data:NATIVE_ARRAY UINTEGER_8, alpha, pad:INTEGER) hdr hdr:{} :BOOLEAN <-
+  - outfile (filename:String, rgb_dir, vdir, x,y,comp:Int, data:C_array Uint8, alpha, pad:Int) hdr hdr:{} :Boolean <-
   [ ? {y > 0}; ? {x > 0}; ]
-  ( + f:POINTER
-    f := FILE_UTILS.open_write filename
+  ( + f:Pointer
+    f := File_utils.open_write filename
     (f.is_not_null).if {      
       hdr_len := 0
       hdr.value
-      FILE_UTILS.write f buffer hdr_buf size hdr_len
+      File_utils.write f buffer hdr_buf size hdr_len
       //
       write_pixels f dir (rgb_dir,vdir) size (x,y,comp) data data alpha alpha pad pad
-      FILE_UTILS.close f
+      File_utils.close f
     }
   )
   
@@ -455,8 +454,8 @@ Private
   - sbcount a        <- (a != NULL).ok (sbn a) or 0
   - sbfree a         <- ( (a != NULL).if { free (sbraw a); }; )
 
-  - sbgrowf (void **arr, increment,itemsize:INTEGER) :NATIVE_ARRAY ? <-
-  ( + m:INTEGER
+  - sbgrowf (void **arr, increment,itemsize:Int) :C_array ? <-
+  ( + m:Int
     int m = *arr ? 2*stbi__sbm(*arr)+increment : increment+1
     void *p = realloc(*arr ? stbi__sbraw(*arr) : 0, itemsize * m + sizeof(int)*2)
     ? {p != NULL}
@@ -466,7 +465,7 @@ Private
     *arr
   )
 
-  - zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount) :NATIVE_ARRAY UINTEGER_8 <-
+  - zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount) :C_array Uint8 <-
   (
     {*bitcount >= 8}.while_do {
       sbpush(data, (unsigned char) *bitbuffer)
@@ -476,8 +475,8 @@ Private
     data
   )
 
-  - zlib_bitrev(code, codebits:INTEGER) :INTEGER <-
-  ( + res,i:INTEGER
+  - zlib_bitrev(code, codebits:Int) :Int <-
+  ( + res,i:Int
     i := codebits
     {i != 0}.while_do {
       res := (res << 1) | (code & 1)
@@ -487,7 +486,7 @@ Private
     res
   )
 
-  - zlib_countm (a,b:NATIVE_ARRAY UINTEGER_8, limit:INTEGER) :UINTEGER <-
+  - zlib_countm (a,b:C_array Uint8, limit:Int) :UINTEGER <-
   ( + i:UINTEGER
     {(i < limit) && {i < 258} && {a.at i = b.at i}}.while_do {
       i := i + 1
@@ -495,9 +494,9 @@ Private
     i
   )
 
-  - zhash data:NATIVE_ARRAY UINTEGER_8 :UINTEGER <-
+  - zhash data:C_array Uint8 :UINTEGER <-
   ( + hash:UINTEGER
-    hash := data.at 0.to_integer + (data.at 1.to_integer << 8) + (data.at 2.to_integer << 16)
+    hash := data.at 0.to_int + (data.at 1.to_int << 8) + (data.at 2.to_int << 16)
     hash := hash ^ (hash << 3)
     hash := hash + (hash >> 5)
     hash := hash ^ (hash << 4)
@@ -527,35 +526,35 @@ Private
   
   - zlib_huffb (n) : <- (n <= 143).ok (zlib_huff1 n) or (zlib_huff2 n)
 
-  - zhash:INTEGER := 16384
-  - hash_table:NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8) := NATIVE_ARRAY (NATIVE_ARRAY UINTEGER_8).create zhash
+  - zhash:Int := 16384
+  - hash_table:C_array (C_array Uint8) := C_array (C_array Uint8).create zhash
 
-  - zlib_compress(unsigned char *data, int data_len, int *out_len, int quality) :NATIVE_ARRAY UINTEGER_8 <-
+  - zlib_compress(unsigned char *data, int data_len, int *out_len, int quality) :C_array Uint8 <-
   [ ? {quality >= 5}; ]
   ( + bitbuf:UINTEGER
-    + i,j, bitcount:INTEGER
-    + out:NATIVE_ARRAY UINTEGER_8
+    + i,j, bitcount:Int
+    + out:C_array Uint8
     
     sbpush(out, 078h);   // DEFLATE 32K window
     sbpush(out, 05Eh);   // FLEVEL = 1
     zlib_add(1,1);  // BFINAL = 1
     zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
     
-    0.to (zhash-1) do { i:INTEGER; hash_table.at i put NULL; }
+    0.to (zhash-1) do { i:Int; hash_table.at i put NULL; }
 
     i := 0
     {i < data_len-3}.while_do {
       // hash next 3 bytes of data to be compressed
-      + h,best,n:INTEGER:
-      + bestloc,hlist:NATIVE_ARRAY UINTEGER_8
+      + h,best,n:Int:
+      + bestloc,hlist:C_array Uint8
       h := zhash.at (data+i) & (zhash-1); best := 3
       unsigned char *bestloc = 0
       hlist := hash_table.at h
       
       n := sbcount hlist
-      0.to (n-1) do { j:INTEGER
+      0.to (n-1) do { j:Int
         (hlist.at j - data > i-32768).if { // if entry lies within window
-          + d:INTEGER
+          + d:Int
           d := zlib_countm (hlist.at j, data+i, data_len-i)
           (d >= best).if { best := d; bestloc := hlist.at j; }
         }
@@ -572,9 +571,9 @@ Private
         h := zhash(data+i+1) & (ZHASH-1)
         hlist := hash_table.at h
         n := sbcount(hlist)
-        0.to (n-1) do { j:INTEGER
+        0.to (n-1) do { j:Int
           (hlist.at j-data > i-32767).if {
-            + e:INTEGER
+            + e:Int
             e := zlib_countm(hlist.at j, data+i+1, data_len-i-1)
             (e > best).if { // if next match is better, bail on current match
               bestloc := NULL
@@ -585,7 +584,7 @@ Private
       }
       //
       (bestloc).if {
-        + d:INTEGER
+        + d:Int
         d := data+i - bestloc; // distance back
         ? {(d <= 32767) && {best <= 258}}
         j := 0
@@ -619,12 +618,12 @@ Private
 
     (
       + i,s1,s2,blocklen:UINTEGER
-      + j:INTEGER
+      + j:Int
       // compute adler32 on input
       i := 0; s1 := 1; s2 := 0; blocklen := data_len % 5552
       j := 0
       {j < data_len}.while_do {
-        0.to (blocklen-1) do { i:INTEGER
+        0.to (blocklen-1) do { i:Int
           s1 := s1 + data.at (j+i)
           s2 := s2 + s1
         }
@@ -643,80 +642,80 @@ Private
     sbraw out
   )
 
-  - crc32 buffer:NATIVE_ARRAY UINTEGER_8 len len:INTEGER :UINTEGER <-
+  - crc32 buffer:C_array Uint8 len len:Int :UINTEGER <-
   ( + crc:UINTEGER
-    + i,j:INTEGER
+    + i,j:Int
     crc := ~0
     (crc_table.at 1 = 0).if {
-      0.to 255 do { i:INTEGER
+      0.to 255 do { i:Int
         crc_table.at i put i
-        0.to 7 do { j:INTEGER
+        0.to 7 do { j:Int
           crc_table.at i put (
             (crc_table.at i >> 1) ^ (crc_table.at i & 1 ? 0EDB88320h : 0)
           )
         }
       }
     }
-    0.to (len-1) do { i:INTEGER
+    0.to (len-1) do { i:Int
       crc := (crc >> 8) ^ crc_table.at (buffer.at i ^ (crc & 0FFh))
     }
     ~crc
   )
 
-  - wpng4 (o:NATIVE_ARRAY UINTEGER_8,a,b,c,d:UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  - wpng4 (o:C_array Uint8,a,b,c,d:Uint8) :C_array Uint8 <-
   (
     o.at 0 put a; o.at 1 put b; o.at 2 put c; o.at 3 put d
     o + 4
   )
   
-  - wp32 (data:NATIVE_ARRAY UINTEGER_8,v:INTEGER) :NATIVE_ARRAY UINTEGER_8 <-
+  - wp32 (data:C_array Uint8,v:Int) :C_array Uint8 <-
   ( wpng4 (data, v>>24 , v>>16, v>>8 , v) )
   
-  - wptag (data:NATIVE_ARRAY UINTEGER_8,s:STRING_ALIAS) :NATIVE_ARRAY UINTEGER_8 <-
+  - wptag (data:C_array Uint8,s:String_alias) :C_array Uint8 <-
   ( wpng4 (data, s.at 0, s.at 1, s.at 2, s.at 3) )
 
-  - wpcrc(unsigned char **data, int len) :NATIVE_ARRAY UINTEGER_8 <-
+  - wpcrc(unsigned char **data, int len) :C_array Uint8 <-
   ( + crc:UINTEGER
     crc := crc32 (data - len - 4) len (len+4)
     wp32 (data, crc)
   )
 
-  - paeth (a,b,c:INTEGER) :UINTEGER_8 <-
-  ( + p,pa,pb,pc,r:INTEGER
+  - paeth (a,b,c:Int) :Uint8 <-
+  ( + p,pa,pb,pc,r:Int
     p := a + b - c
     pa := (p-a).abs
     pb := (p-b).abs
     pc := (p-c).abs
     ((pa <= pb) && {pa <= pc}).if { r := a; }.elseif
     {pb <= pc} then { r := b; } else { r := c; }
-    r.to_integer_8
+    r.to_int8
   )
 
-  - write_png_to_mem pixels:NATIVE_ARRAY UINTEGER_8 stride pstride:INTEGER size (x,y,n:INTEGER) :(NATIVE_ARRAY UINTEGER_8,INTEGER) <-
-  ( + out_len:INTEGER
-    + out,o, filt, zlib:NATIVE_ARRAY UINTEGER_8
-    + line_buffer:NATIVE_ARRAY INTEGER_8
-    + i,j,k,p,zlen,stride_bytes:INTEGER
-    + mymap:NATIVE_ARRAY INTEGER
-    + best,bestval:INTEGER
+  - write_png_to_mem pixels:C_array Uint8 stride pstride:Int size (x,y,n:Int) :(C_array Uint8,Int) <-
+  ( + out_len:Int
+    + out,o, filt, zlib:C_array Uint8
+    + line_buffer:C_array Int8
+    + i,j,k,p,zlen,stride_bytes:Int
+    + mymap:C_array Int
+    + best,bestval:Int
 
     (pstride = 0).if {
       stride_bytes := x * n
     } else {
       stride_bytes := pstride
     }
-    filt := NATIVE_ARRAY UINTEGER_8.create ((x*n+1) * y)
-    line_buffer := NATIVE_ARRAY INTEGER_8.create (x * n)
-    0.to (y-1) do { j:INTEGER
+    filt := C_array Uint8.create ((x*n+1) * y)
+    line_buffer := C_array Int8.create (x * n)
+    0.to (y-1) do { j:Int
       mymap := (j!=0).ok mapping or firstmap
       best := 0; bestval := 07FFFFFFFh
-      0.to 1 do { p:INTEGER
-        ((p!=0).ok best or 0).to 4 do { k:INTEGER
-          + type,est:INTEGER
-          + z:NATIVE_ARRAY UINTEGER_8
+      0.to 1 do { p:Int
+        ((p!=0).ok best or 0).to 4 do { k:Int
+          + type,est:Int
+          + z:C_array Uint8
           type := mymap.at k; est := 0
           z := pixels + stride_bytes*j
-          0.to (n-1) do { i:INTEGER
+          0.to (n-1) do { i:Int
             (type)
             .when 0 or 1 then { line_buffer.at i put (z.at i); }
             .when 2 then { line_buffer.at i put (z.at i - z.at (i-stride_bytes)); }
@@ -724,7 +723,7 @@ Private
             .when 4 then { line_buffer.at i put ((signed char) (z.at i - stbi__paeth(0,z.at (i-stride_bytes),0))); }
             .when 5 or 6 then { line_buffer.at i put (z.at i); }
           }
-          n.to (x*n-1) do { i:INTEGER
+          n.to (x*n-1) do { i:Int
             (type)
             .when 0 then { line_buffer.at i put (z.at i); }
             .when 1 then { line_buffer.at i put (z.at i - z.at (i-n)); }
@@ -735,14 +734,14 @@ Private
             .when 6 then { line_buffer.at i put (z.at i - stbi__paeth(z.at (i-n), 0,0); }
           }
           if (p) break
-          0.to (x*n-1) do { i:INTEGER
-            est := est + (line_buffer.at i.to_integer_8).abs
+          0.to (x*n-1) do { i:Int
+            est := est + (line_buffer.at i.to_int8).abs
           }
           (est < bestval).if { bestval := est; best := k; }
         }
       }
       // when we get here, best contains the filter type, and line_buffer contains the data
-      filt.at (j*(x*n+1)) put (best.to_uinteger_8)
+      filt.at (j*(x*n+1)) put (best.to_uint8)
       memcpy(filt+j*(x*n+1)+1, line_buffer, x*n)
    }
    free(line_buffer)
@@ -762,7 +761,7 @@ Private
     o := wp32(o, x)
     o := wp32(o, y)
     o.at 0 put 8
-    o.at 1 put (ctype.at n.to_uinteger8)
+    o.at 1 put (ctype.at n.to_uint8)
     o.at 2 put 0
     o.at 3 put 0
     o.at 4 put 0
@@ -785,46 +784,46 @@ Private
   
 Private
   
-  - bg:NATIVE_ARRAY UINTEGER_8 :=
-  ( + r:NATIVE_ARRAY UINTEGER_8
-    r := NATIVE_ARRAY UINTEGER_8.create 3
+  - bg:C_array Uint8 :=
+  ( + r:C_array Uint8
+    r := C_array Uint8.create 3
     r.at 0 put 255; r.at 0 put 0; r.at 0 put 255
     r
   )
-  - px:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 3
+  - px:C_array Uint8 := C_array Uint8.create 3
   
-  - crc_table:NATIVE_ARRAY UINTEGER := NATIVE_ARRAY UINTEGER.create 256
+  - crc_table:C_array Uint := C_array Uint.create 256
   
-  - arr:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 3
+  - arr:C_array Uint8 := C_array Uint8.create 3
   
-  - mapping:NATIVE_ARRAY INTEGER :=
-  ( + r:NATIVE_ARRAY INTEGER
-    r := NATIVE_ARRAY INTEGER.create 5
+  - mapping:C_array Int :=
+  ( + r:C_array Int
+    r := C_array Int.create 5
     r.at 0 put 0; r.at 1 put 1; r.at 2 put 2
     r.at 3 put 3; r.at 4 put 4
     r
   )
   
-  - firstmap:NATIVE_ARRAY INTEGER :=
-  ( + r:NATIVE_ARRAY INTEGER
-    r := NATIVE_ARRAY INTEGER.create 5
+  - firstmap:C_array Int :=
+  ( + r:C_array Int
+    r := C_array Int.create 5
     r.at 0 put 0; r.at 1 put 1; r.at 2 put 0
     r.at 3 put 5; r.at 4 put 6
     r
   )
   
-  - ctype:NATIVE_ARRAY INTEGER :=
-  ( + r:NATIVE_ARRAY INTEGER
-    r := NATIVE_ARRAY INTEGER.create 5
+  - ctype:C_array Int :=
+  ( + r:C_array Int
+    r := C_array Int.create 5
     r.at 0 put (-1); r.at 1 put 0
     r.at 2 put 4;    r.at 3 put 2
     r.at 4 put 6
     r
   )
   
-  - sig:NATIVE_ARRAY UINTEGER_8 :=
-  ( + r:NATIVE_ARRAY UINTEGER_8
-    r := NATIVE_ARRAY UINTEGER_8.create 8
+  - sig:C_array Uint8 :=
+  ( + r:C_array Uint8
+    r := C_array Uint8.create 8
     r.at 0 put 137;  r.at 1 put 80
     r.at 2 put 78;   r.at 3 put 71
     r.at 4 put 13;   r.at 5 put 10
@@ -832,16 +831,16 @@ Private
     r
   )
 
-  - hdr_len:INTEGER
-  - hdr_buf:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 40
-  - hdr1 v:UINTEGER_8 <- ( hdr_buf.at hdr_len put v; hdr_len := hdr_len + 1; )
-  - hdr2 v:INTEGER <-
-  ( hdr_buf.at hdr_len put (( v      &0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
-    hdr_buf.at hdr_len put (((v >> 8)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+  - hdr_len:Int
+  - hdr_buf:C_array Uint8 := C_array Uint8.create 40
+  - hdr1 v:Uint8 <- ( hdr_buf.at hdr_len put v; hdr_len := hdr_len + 1; )
+  - hdr2 v:Int <-
+  ( hdr_buf.at hdr_len put (( v      &0FFh).to_raw_uint8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >> 8)&0FFh).to_raw_uint8); hdr_len := hdr_len + 1
   )
-  - hdr4 v:INTEGER <-
-  ( hdr_buf.at hdr_len put (( v       &0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
-    hdr_buf.at hdr_len put (((v >>  8)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
-    hdr_buf.at hdr_len put (((v >> 16)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
-    hdr_buf.at hdr_len put (((v >> 24)&0FFh).to_raw_uinteger_8); hdr_len := hdr_len + 1
+  - hdr4 v:Int <-
+  ( hdr_buf.at hdr_len put (( v       &0FFh).to_raw_uint8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >>  8)&0FFh).to_raw_uint8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >> 16)&0FFh).to_raw_uint8); hdr_len := hdr_len + 1
+    hdr_buf.at hdr_len put (((v >> 24)&0FFh).to_raw_uint8); hdr_len := hdr_len + 1
   )

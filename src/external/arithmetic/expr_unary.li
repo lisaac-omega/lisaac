@@ -1,28 +1,25 @@
 Header
-
-  + name        := EXPR_UNARY;
-
-  /*Unary Expression.*/
-
+  + name := Expr_unary
+/*Unary Expression.*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- right.is_invariant
+  - is_invariant:Boolean <- right.is_invariant
 
-  + right:EXPR
+  + right:Expr
 
-  - symbol:CHARACTER <-
+  - symbol:Char <-
   (
     abstract
     ' '
   )
 
-  - static_type:TYPE_FULL <- right.static_type
+  - static_type:Type_full <- right.static_type
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     t.add (static_type.raw)
   )
@@ -31,28 +28,28 @@ Public
   // Creation.
   //
 
-  - create p:POSITION with r:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position with r:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p with r
     result
   )
 
-  - make p:POSITION with r:EXPR <-
+  - make p:Position with r:Expr <-
   (
     position := p
     right := r
   )
 
-  - my_copy:SELF <- SELF.create position with (right.my_copy)
+  - my_copy:Self <- Self.create position with (right.my_copy)
 
   //
   // Comparaison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + same:SELF
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + same:Self
 
     same ?= other
     (same != NULL) && {right ~= same.right}
@@ -67,15 +64,15 @@ Public
   // Execute.
   //
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     right.execute_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + result:EXPR
-    + old_seq:UINTEGER_32
-    + right_cst:INTEGER_CST
+  - execute_link:Expr <-
+  ( + result:Expr
+    + old_seq:Uint32
+    + right_cst:Int_cst
 
     old_seq := seq_call_and_loop
     right := right.execute_link
@@ -91,7 +88,7 @@ Public
       result := exec
     }
     (result = NULL).if {
-      result := Self
+      result := self
     } else {
       result.set_position position
       new_execute_pass
@@ -100,11 +97,11 @@ Public
     result
   )
 
-  - exec_conservator:EXPR <- NULL
+  - exec_conservator:Expr <- NULL
 
-  - exec_right right_cst:INTEGER_CST :EXPR <- NULL
+  - exec_right right_cst:Int_cst :Expr <- NULL
 
-  - exec:EXPR <- NULL
+  - exec:Expr <- NULL
 
   //
   // Genere.
@@ -127,7 +124,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '('
     buffer.add_last symbol

@@ -1,80 +1,80 @@
 Header
-  + name := SECTION;
-
+  + name := Section
 Inherit
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
   
 Private
-  - stk:Expanded ARRAY (Strict SECTION)
+  - stk:Flat Array (Exact Section)
 
 Public  
-  + style:UINTEGER_8
-  + proto:PROTO
+  + style:Uint8
+  + proto:Proto
   
-  - a_private:UINTEGER_8   := 00b
-  - a_list:UINTEGER_8      := 01b
-  - a_directory:UINTEGER_8 := 10b
-  - a_public:UINTEGER_8    := 11b
+  - a_private:Uint8   := 00b
+  - a_list:Uint8      := 01b
+  - a_directory:Uint8 := 10b
+  - a_public:Uint8    := 11b
   
-  - p_insert:UINTEGER_8    := 001_00b
-  - p_inherit:UINTEGER_8   := 010_00b
+  - p_insert:Uint8    := 001_00b
+  - p_inherit:Uint8   := 010_00b
   
-  - t_mapping:UINTEGER_8   := 011_00b
-  - t_external:UINTEGER_8  := 100_00b
-  - t_interrupt:UINTEGER_8 := 101_00b
+  - t_mapping:Uint8   := 011_00b
+  - t_external:Uint8  := 100_00b
+  - t_interrupt:Uint8 := 101_00b
       
-  - is_insert:BOOLEAN   <- style & 111_00b = p_insert
-  - is_inherit:BOOLEAN  <- style & 111_00b = p_inherit
-  - is_external:BOOLEAN <- style & 111_00b = t_external
+  - is_insert:Boolean   <- style & 111_00b = p_insert
+  - is_inherit:Boolean  <- style & 111_00b = p_inherit
+  - is_external:Boolean <- style & 111_00b = t_external
   
-  - is_parent:BOOLEAN <- is_inherit || {is_insert}
+  - is_parent:Boolean <- is_inherit || {is_insert}
   
-//  - m_main:UINTEGER_8      := 1000_0000b
+//  - m_main:Uint8      := 1000_0000b
   
-  + exports:TTOK := TTOK
+  + exports:Ttok := Ttok
   
-  - Self:SELF '<>' other:SECTION :BOOLEAN <- (style != other.style) || {exports.type != other.exports.type}
+  - self:Self '<>' other:Section :Boolean <- (style != other.style) || {exports.type != other.exports.type}
   
 Public
   
-  - access p:PROTO :BOOLEAN <-
-  ( + f:UINTEGER_8
+  - access p:Proto :Boolean <-
+  ( + f:Uint8
     f := style & 11b
     ( f = a_public) ||
     {(f = a_private) && {proto = p}} ||
     {(f = a_directory) && {p.src.name.has_prefix (proto.src.name)}} ||
-    {(f = a_list) && {exports != NULL} && {
-        exports.type.foreach_until { t:TONE
-          + tp:TPRO
+    {(f = a_list) && {exports != NULL} && {        
+        exports.type.foreach_until { t:Tone
+          + tp:Tpro
           tp ?= t
-          ((t = TP.self) && {p.type <= proto.type}) ||
+          ((t = Tp.tself) && {p.type <= proto.type}) ||
           {(tp != NULL) && {p.type <= tp}}
         }
     }}
   )
   
+  
   /*  
-  - style f:UINTEGER_8 export t:TYPE :SELF <-
+  - style f:Uint8 export t:TYPE :Self <-
   ( style := f
     exports := t
-    Self
+    self
   );*/
   
-  + err:INTEGER
+  + err:Int
   
-  - new:SELF <- ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <- ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
   - free <-
   (
     (exports != NULL).if { exports.free; exports := NULL }
-    stk.add_last Self
+    stk.add_last self
   )
   
-  - detect:BOOLEAN <- (pos_i <= upper) && {at pos_i.is_upper}
+  - detect:Boolean <- (pos_i <= upper) && {at pos_i.is_upper}
   
   - parse <-
   (
-    proto := txt_buf.like LIX_BUF.proto
+    proto := txt_buf.like Lix_buf.proto
     style := 0
     word "Section"
     (
@@ -103,30 +103,30 @@ Public
       .when "Public"    then { style := style | a_public;    }
       .when "Private"   then { style := style | a_private;   }
       .when "Directory" then { style := style | a_directory; }
-      ((is_inherit) && {txt_buf.like LIX_BUF.proto.type.is (TYPE.expanded)}).if {
-        err warning msg "`Section Inherit' is not possible with Expanded object (Use `Section Insert')."
+      ((is_inherit) && {txt_buf.like Lix_buf.proto.type.is (Type.flat)}).if {
+        err warning msg "`Section Inherit' is not possible with Flat object (Use `Section Insert')."
       }
     } else {
       style := style | a_list
-      exports := TTOK.parse_sp (TTOK.tvec)
+      exports := Ttok.parse_sp (Ttok.tvec)
     }
   )
   
   - begin_draw <-
   (
-    fill_color (LOOK.cols.at (LOOK.keyword))
+    fill_color (Look.cols.at (Look.keyword))
   )
   
   - sub_draw <- 
   (
-    (pos_i.pt = pt_b.pt+err).if { fill_color (COLOR.red); }
+    (pos_i.pt = pt_b.pt+err).if { fill_color (Color.red); }
   )
   
   - end_draw <-
-  ( + pt:PAINT
-    + c:COLOR
-    + x:REAL_32
-    c := LOOK.section.at (style & 11b)
+  ( + pt:Paint
+    + c:Color
+    + x:Real32
+    c := Look.section.at (style & 11b)
     begin_path
     fill_color c
     x := tex.xmin + x_space*7
@@ -134,20 +134,20 @@ Public
     fill
     //
     begin_path
-    pt := PAINT.create_linear (x+1,tex.y-3) to (x+100,tex.y) color c to (c.set_af 0)
+    pt := Paint.create_linear (x+1,tex.y-3) to (x+100,tex.y) color c to (c.set_af 0)
     fill_paint pt
     rect (x+1,tex.y-3) to (x+100,tex.y)
     fill
     pt.free
   )
   
-  - draw_section y:REAL_32 <-
+  - draw_section y:Real32 <-
   ( //+ pt:PAINT
     begin_path
     //pt := PAINT.create_linear (xo+4,y) to (xo+16,y) color
     //(LOOK.section.at (style & 11b)) to (LOOK.section.at (style & 11b).set_af 0)
     //fill_paint pt
-    fill_color (LOOK.section.at (style & 11b))
+    fill_color (Look.section.at (style & 11b))
     rect (tex.xmin-4,y) to (tex.xmin-1,tex.y-1)
     fill
     //pt.free
@@ -155,9 +155,9 @@ Public
   
   - post_draw <-
   // Append extern slot without Chapter for first Section.
-  ( + sec:SECTION
+  ( + sec:Section
     (! is_parent).if {
-      sec := get_prev_tok SECTION
+      sec := get_prev_tok Section
       ((sec = NULL) || {sec.is_parent}).if {
         proto.draw_extern_slot_other
       }
@@ -178,13 +178,13 @@ Public
   - draw <-
   ( + x,y,r,p2,t,h,a:REAL_32
     + col1,col0:COLOR
-    + f:UINTEGER_8
+    + f:Uint8
     + p:PAINT
-    + c:CHARACTER
+    + c:Char
     pt_ci := pt_ci + 2
     c := buf.at pt_ci
     pt_ci := pt_ci + ((c = 'M') || {c = 'E'}).ok 2 or 1
-    ((old_sec = NULL) || {Self <> old_sec}).if {
+    ((old_sec = NULL) || {self <> old_sec}).if {
       (old_sec != NULL).if { old_sec.draw_finish; }
       //
       (r,t) := (80,20)
@@ -200,14 +200,14 @@ Public
       (x,y) := (tex.x + x_space + r + t,tex.y + FONT.size_app/2)
       f
       .when a_private then {
-        FONT.app (FONT.italic) in Self
+        FONT.app (FONT.italic) in self
         a := 0.2/(1.0-(col1.rf+col1.gf+col1.bf)/3)
         fill_color (col1.set_af a)
         text (x+ply+8,tex.y + asc_c) msg "Private"
         //font_face_id (FONT.app (FONT.roman))
       }
       .when a_public then {
-        FONT.app (FONT.italic) in Self
+        FONT.app (FONT.italic) in self
         a := 0.2/(1.0-(col1.rf+col1.gf+col1.bf)/3)
         fill_color (col1.set_af a)
         text (x+ply+8,tex.y + asc_c) msg "Public"
@@ -222,8 +222,8 @@ Public
         tex.pop
       }
       .when a_directory then {
-        + i:INTEGER
-        STRING.tmp { tmp:STRING_BUFFER
+        + i:Int
+        STRING.tmp { tmp:String_buffer
           tmp += name; tmp.keep_head (tmp.last_index_of '/')
           i := tmp.first_substring_index "lisaac"
           (i != -1).if { tmp.remove_head (i+7); }
@@ -265,7 +265,7 @@ Public
       "Change section".println
     }
     tex.push (x_space*3,0)
-    old_sec := Self
+    old_sec := self
     ? {buf.at pt_ci = '\n'}
     pt_ci := pt_ci+1
     //pt_ci := pt_ci + dd
@@ -322,14 +322,14 @@ Public
     tex.add_y hline_default
   )
     
-  - change_sec slo:SLOT all a:INTEGER <-
-  ( + f:UINTEGER_8
+  - change_sec slo:SLOT all a:Int <-
+  ( + f:Uint8
     + t:TYPE
     + pr:PROTO
-    + p:STRING_ALIAS
+    + p:String_alias
     + sec,sec2:SECTION
     + s,s2:SLOT
-    + i:INTEGER
+    + i:Int
     + t0,t1:STRING
     (a = 0).if {
       f := (style + 1) & 11b

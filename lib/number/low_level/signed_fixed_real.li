@@ -1,109 +1,106 @@
 Header
-
-  + name    := SIGNED_FIXED_REAL;
-
-  /*Signed real number of fixed decimal part.*/
-
+  + name := Signed_fixed_real
+/*Signed real number of fixed decimal part.*/
 Insert
 
-  - parent_fixed_real:FIXED_REAL := FIXED_REAL
+  - parent_fixed_real:Fixed_real := Fixed_real
 
 Public
 
   // Bound test
 
-  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  - bound_test low:Int64 to up:Uint64 :Boolean <-
   (
-    (low < to_raw_integer_64) && {up > to_raw_uinteger_64}
+    (low < to_raw_int64) && {up > to_raw_uint64}
   )
 
   // Around
 
-  - object_size:INTEGER := 4
+  - object_size:Int := 4
 
-  - floor:INTEGER <-
+  - floor:Int <-
   // Greatest integral value no greater than Current.
   (
-    to_raw_integer_32 >> shift_bits
+    to_raw_int32 >> shift_bits
   )
   [
-    +? {Self >= Result}
-    +? {(Self - Result) < 1}
+    +? {self >= Result}
+    +? {(self - Result) < 1}
   ]
 
-  - ceiling:INTEGER <-
+  - ceiling:Int <-
   // Smallest integral value no smaller than Current.
   (
-    (to_raw_integer_32 + ((1 << shift_bits) - 1)) >> shift_bits
+    (to_raw_int32 + ((1 << shift_bits) - 1)) >> shift_bits
   )
   [
-    +? {Self <= Result}
-    +? {(Self - Result) < 1}
+    +? {self <= Result}
+    +? {(self - Result) < 1}
   ]
 
-  - rounded:INTEGER <-
+  - rounded:Int <-
   // Rounded integral value.
   (
-    (to_raw_integer_32 + ((1 << shift_bits) / 2)) >> shift_bits
+    (to_raw_int32 + ((1 << shift_bits) / 2)) >> shift_bits
   )
 
-  - truncated_to_integer:INTEGER <- floor
-  // Integer part (largest absolute value no greater than Current).
+  - truncated_to_int:Int <- floor
+  // Int part (largest absolute value no greater than Current).
 
   // binary operator :
 
-  - Self:SELF '-'  Left 80  other:SELF :SELF <-
+  - self:Self '-'  Left 80  other:Self :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (to_raw_integer_32 - other.to_raw_integer_32)
+    Cast Int32 To Self.on (to_raw_int32 - other.to_raw_int32)
   )
 
-  - Self:SELF '*#' Left 90 other:INTEGER :SELF <-
+  - self:Self '*#' Left 90 other:Int :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (to_raw_integer_32 * other)
+    Cast Int32 To Self.on (to_raw_int32 * other)
   )
 
-  - Self:SELF '*'  Left 90 other:SELF :SELF <-
+  - self:Self '*'  Left 90 other:Self :Self <-
   (
-    CAST INTEGER_64 TO SELF.on ((to_raw_integer_64 * other.to_raw_integer_64) >> shift_bits)
+    Cast Int64 To Self.on ((to_raw_int64 * other.to_raw_int64) >> shift_bits)
   )
 
-  - Self:SELF '/#' Left 90 other:INTEGER :SELF <-
+  - self:Self '/#' Left 90 other:Int :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (to_raw_integer_32 / other)
+    Cast Int32 To Self.on (to_raw_int32 / other)
   )
 
-  - Self:SELF '/'  Left 90 other:SELF :SELF <-
+  - self:Self '/'  Left 90 other:Self :Self <-
   (
-    CAST INTEGER_64 TO SELF.on ((to_raw_integer_64 << shift_bits) / other.to_raw_integer_64)
+    Cast Int64 To Self.on ((to_raw_int64 << shift_bits) / other.to_raw_int64)
   )
 
-  - Self:SELF '&'  Left 90 other:SELF :SELF <-
+  - self:Self '&'  Left 90 other:Self :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (to_raw_integer_32 & other.to_raw_integer_32)
+    Cast Int32 To Self.on (to_raw_int32 & other.to_raw_int32)
   )
 
-  - Self:SELF '>>' Left 90 other:INTEGER :SELF <-
+  - self:Self '>>' Left 90 other:Int :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (to_raw_integer_32 >> other)
+    Cast Int32 To Self.on (to_raw_int32 >> other)
   )
 
-  - Self:SELF '<<' Left 90 other:INTEGER :SELF <-
+  - self:Self '<<' Left 90 other:Int :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (to_raw_integer_32 << other)
+    Cast Int32 To Self.on (to_raw_int32 << other)
   )
 
   // Test binary operator :
 
-  - Self:SELF '>' Right 60 other:SELF :BOOLEAN <-
+  - self:Self '>' Right 60 other:Self :Boolean <-
   (
-    to_raw_integer_32 > other.to_raw_integer_32
+    to_raw_int32 > other.to_raw_int32
   )
 
   // prefix : Unary operator
 
-  - '~' Self:SELF :SELF <-
+  - '~' self:Self :Self <-
   (
-    CAST INTEGER_32 TO SELF.on (~ to_raw_integer_32)
+    Cast Int32 To Self.on (~ to_raw_int32)
   )
 
 

@@ -1,63 +1,62 @@
 Header
-  + name := I_LOC;
-  
+  + name := I_loc
 Inherit
-  + parent_inode:Expanded I_NODE
+  + parent_inode:Flat I_node
   
 Public
   
-  - stck:Expanded ARRAY I_LOC
+  - stck:Flat Array I_loc
 
-  - new:I_LOC <-
-  ( + result:I_LOC
-    (stck.is_empty).if { result := I_LOC.clone; } else { result := stck.pop; }
+  - new:I_loc <-
+  ( + result:I_loc
+    (stck.is_empty).if { result := I_loc.clone; } else { result := stck.pop; }
     result
   )
   
 Public
   
-  + ref:LOCAL
+  + ref:Local
   
-  - type:TYPE <- ref.type
+  - type:Type <- ref.type
   
-  + error:INTEGER
+  + error:Int
     
-  - new (l,u:INTEGER) is r:LOCAL err d:INTEGER :I_LOC <- new.init (l,u) is r err d
+  - new (l,u:Int) is r:Local err d:Int :I_loc <- new.init (l,u) is r err d
   
-  - copy:I_NODE <- new.init (lower,upper) is ref err error
+  - copy:I_node <- new.init (lower,upper) is ref err error
   
-  - init (l,u:INTEGER) is r:LOCAL err d:INTEGER :I_LOC <-
+  - init (l,u:Int) is r:Local err d:Int :I_loc <-
   (
     (lower,upper,ref,error) := (l,u,r,d)
-    {IA.src.at upper = ' '}.while_do { upper := upper - 1; }
-    Self
+    {Ia.src.at upper = ' '}.while_do { upper := upper - 1; }
+    self
   )
   
-  - put_sty u:UINTEGER_16 slot s:SLOT <-
-  ( + m:UINTEGER_16
-    m := ref.is (LOCAL.readonly).ok (STY.car) or (STY.clo)|u
+  - put_sty u:Uint16 slot s:Slot <-
+  ( + m:Uint16
+    m := ref.is (Local.readonly).ok (Sty.car) or (Sty.clo)|u
     m := m | type_check s
-    STY.put m to lower in (IA.sty)
-    STY.put m to (upper+1) in (IA.sty)
-    IA.inc_arg_i
+    Sty.put m to lower in (Ia.sty)
+    Sty.put m to (upper+1) in (Ia.sty)
+    Ia.inc_arg_i
   )
   
-  - txt_in s:STRING_BUFFER <-
+  - txt_in s:String_buffer <-
   (
     s.append "˻"
-    s.append (IA.src) from lower to upper
+    s.append (Ia.src) from lower to upper
     s.append "˼"
   )
   
-  - rtxt_in s:STRING_BUFFER <-
-  ( + t:TYPE
+  - rtxt_in s:String_buffer <-
+  ( + t:Type
     s.append "˻"
     t := type
     (t != NULL).if { t.txt_in s sty NULL; }
     s.append "˼"
   )
   
-  - size:INTEGER <- ref.name.count; //upper - lower + 1
-  - to_expr:EXPR <- CAL.new ref arg NULL
+  - size:Int <- ref.name.count; //upper - lower + 1
+  - to_expr:Expr <- Cal.new ref arg NULL
   
-  - free <- stck.add_last Self
+  - free <- stck.add_last self

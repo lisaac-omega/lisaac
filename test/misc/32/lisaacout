@@ -1,10 +1,10 @@
 --WARNING----------
-`MAIN' ?= `NULL': always NULL assignment.
-Line 16 column 24 in MAIN(.../test/misc/32/main.li):
-    b := TRUE && {(m ?= NULL) && {m.flag}}
+`Main' ?= `NULL': always NULL assignment.
+Line 14 column 24 in Main(.../test/misc/32/main.li):
+    b := True && {(m ?= NULL) && {m.flag}}
                         ^
 --SEMANTIC---------
-Slot `__infix_and_and' not found in `MAIN'.
-Line 16 column 32 in MAIN(.../test/misc/32/main.li):
-    b := TRUE && {(m ?= NULL) && {m.flag}}
+Slot `__infix_and_and' not found in `Main'.
+Line 14 column 32 in Main(.../test/misc/32/main.li):
+    b := True && {(m ?= NULL) && {m.flag}}
                                 ^

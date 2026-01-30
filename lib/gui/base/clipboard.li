@@ -1,25 +1,23 @@
 Header
-  
-  + name := CLIPBOARD;
-  
+  + name := Clipboard
 Inherit
   
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_any_gui:Any_gui := Any_gui
   
 Public
   
-  - lower:INTEGER
-  - upper:INTEGER
-  - cursor:INTEGER
+  - lower:Int
+  - upper:Int
+  - cursor:Int
   
-  - ring:ARRAY STRING_BUFFER :=
-  ( + result:ARRAY STRING_BUFFER
-    result := ARRAY STRING_BUFFER.create_with_capacity 8
-    8.times { result.add_last (STRING_BUFFER.create 4096); }
+  - ring:Array String_buffer :=
+  ( + result:Array String_buffer
+    result := Array String_buffer.create_with_capacity 8
+    8.times { result.add_last (String_buffer.create 4096); }
     result
   )
   
-  - put buf:STRING <-
+  - put buf:String <-
   (
     (buf !== ring.at upper).if {
       upper := (upper + 1) % ring.count
@@ -28,12 +26,12 @@ Public
         lower := (lower + 1) % ring.count
       }
     }
-    PAPER.set_clipboard buf
+    Paper.set_clipboard buf
   )
   
-  - get_in buf:STRING_BUFFER <-
+  - get_in buf:String_buffer <-
   (
-    PAPER.get_clipboard_in buf
+    Paper.get_clipboard_in buf
     (buf !== ring.at upper).if {
       upper := (upper + 1) % ring.count
       ring.at upper.copy buf
@@ -44,7 +42,7 @@ Public
     cursor := upper
   )
   
-  - previous_in buf:STRING_BUFFER <-
+  - previous_in buf:String_buffer <-
   (
     cursor := (cursor - 1) % ring.count
     (cursor = lower).if { cursor := upper; }

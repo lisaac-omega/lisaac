@@ -1,0 +1,10 @@
+Header
+  + name := Flat Real80
+/*Float 80 bits (C `long double` mapping).*/
+  - type     := `long double`;
+  - default  := (0.to_raw_real80);
+  - export   := Real;
+Insert
+  - parent_float_map80:Float_map80 := Float_map80
+  - parent_float_real:Float_real := Float_real
+

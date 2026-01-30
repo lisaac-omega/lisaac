@@ -1,17 +1,16 @@
 Header
-  + name := MAIN;
- 
+  + name := Main
 Public
   - main <-
-  ( + v1:INTEGER
-    + v2:INTEGER
-    RANDOM.init(3)
-    v1 := RANDOM.min 1 max 1000
-    RANDOM.init(2)
-    v2 := RANDOM.min 1 max 1000
-    TEST.check (v1 != v2)
+  ( + v1:Int
+    + v2:Int
+    Random.init(3)
+    v1 := Random.min 1 max 1000
+    Random.init(2)
+    v2 := Random.min 1 max 1000
+    Test.check (v1 != v2)
     20.times {
-      (RANDOM.min (-5) max 5).println
+      (Random.min (-5) max 5).println
     }
   )
   

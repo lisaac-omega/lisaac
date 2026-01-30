@@ -1,15 +1,15 @@
 Header
-  + name := BUG_COPILO;
-  /**/
+  + name := Bug_copilo
+/**/
   
 Public
-  - str1:STRING_ALIAS := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\"
+  - str1:String_alias := "\0A7h\\0A8h\\0A9h\\0A0h\\0B9h\"
   
-  - str2:STRING_BUFFER
+  - str2:String_buffer
   
   - main <-
   ( 
-    str2 := STRING_BUFFER.create 6
+    str2 := String_buffer.create 6
     //OUT # str2.count # '\n'
     str2.add_last '\0A7h\'
     //OUT # str2.count # '\n'
@@ -18,7 +18,7 @@ Public
     str2.add_last '\0A0h\'
     str2.add_last '\0B9h\'
     //OUT # str1.count # "  " # str2.count # "\n"
-    from 0 to (str1.upper) do { i:INTEGER
-      TEST.check (str1.at i) character (str2.at i)
+    from 0 to (str1.upper) do { i:Int
+      Test.check (str1.at i) character (str2.at i)
     }
   )

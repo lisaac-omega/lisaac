@@ -1,52 +1,53 @@
 Header
-  + name := TOK_ITM;
-  
+  + name := Tok_itm
 Insert, Public
-  - parent_t_drw:TOK_DRW := TOK_DRW
+  - parent_t_drw:Tok_drw := Tok_drw
   
 Public
   
-  - set_parent_tok_drw t:TOK_DRW <- ( parent_t_drw := t; )
+  - set_parent_tok_drw t:Tok_drw <- ( parent_t_drw := t; )
     
-  + db:INTEGER
-  + dd:INTEGER
-  - de:INTEGER <- db + dd
-    
-  - set_dd d:INTEGER <- ( dd := d; )
+  + db:Int
+  + dd:Int
+  - de:Int <- db + dd
   
-  - copy_itm other:TOK_ITM <-
+  - virtual:Self <- ( db := -1; dd := 0; self)
+  
+  - set_dd d:Int <- ( dd := d; )
+  
+  - copy_itm other:Tok_itm <-
   (    
     (db,dd) := (other.db,other.dd)
   )
   
-  - now p:INTEGER :BOOLEAN <- p - pt_b.pt = db
+  - now p:Int :Boolean <- p - pt_b.pt = db
   
-  - finalize t:INTEGER db l:INTEGER de e:INTEGER <-
+  - finalize t:Int db l:Int de e:Int <-
   ( db := l-pt_b.pt; dd := e-l; )
   
-  - new_parse t:INTEGER <- ( abstract; )
+  - new_parse t:Int <- ( abstract; )
   
-  - force:INTEGER := 10h
+  - force:Int := 10h
   
-  - parse_sp t:INTEGER :SELF <-
-  ( + r:SELF
+  - parse_sp t:Int :Self <-
+  ( + r:Self
     skip_sp
     r := parse_cmd t
     //((r != NULL) && {r.dd = 0}).if { r.finalize t db (Old pos_i) de (Old pos_i); }
     r
   )
   
-  - parse_spln t:INTEGER :SELF <-
-  ( + r:SELF
+  - parse_spln t:Int :Self <-
+  ( + r:Self
     skip_spln_expr
     r := parse_cmd t
     //((r != NULL) && {r.dd = 0}).if { r.finalize t db (Old pos_i) de (Old pos_i); }
     r
   )
     
-  - parse_cmd t:INTEGER :SELF <-
-  ( + result:SELF
-    + old_cur:POS
+  - parse_cmd t:Int :Self <-
+  ( + result:Self
+    + old_cur:Pos
     old_cur := pos_i
     result := new
     result.new_parse t
@@ -83,8 +84,8 @@ Public
   
   // Command
   
-  - search s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
-  ( + r:INTEGER
+  - search s:String base b:Int at idx:Int :Int <-
+  ( + r:Int
     (idx < b + de).if {
       r := search s range ((b + db).max idx) to (b + de)
     } else {
@@ -93,8 +94,8 @@ Public
     r
   )
   
-  - search_back s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
-  ( + r:INTEGER
+  - search_back s:String base b:Int at idx:Int :Int <-
+  ( + r:Int
     (idx > b + db).if {
       r := search_back s range ((b + de).min idx) downto (b + db)
     } else {
@@ -106,10 +107,10 @@ Public
   // Color / Style
   /*
   - sty_run <- toks.at tok_cur.sty_run
-  - col n:INTEGER sub s:INTEGER <- toks.at tok_cur.col n sub s
-  - fnt n:INTEGER sub s:INTEGER <- toks.at tok_cur.fnt n sub s
-  - fsz n:INTEGER sub s:INTEGER <- toks.at tok_cur.fsz n sub s
-  - drw n:INTEGER sub s:INTEGER <- toks.at tok_cur.drw n sub s
-  - itm n:TOK_ITM sub s:INTEGER <- toks.at tok_cur.itm n sub s
+  - col n:Int sub s:Int <- toks.at tok_cur.col n sub s
+  - fnt n:Int sub s:Int <- toks.at tok_cur.fnt n sub s
+  - fsz n:Int sub s:Int <- toks.at tok_cur.fsz n sub s
+  - drw n:Int sub s:Int <- toks.at tok_cur.drw n sub s
+  - itm n:TOK_ITM sub s:Int <- toks.at tok_cur.itm n sub s
 */
   

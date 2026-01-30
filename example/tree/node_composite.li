@@ -1,18 +1,17 @@
 Header
-  + name := NODE_COMPOSITE;
-  /*
+  + name := Node_composite
+/*
   The composite tree node.
   */
-
 Inherit
 
-  + parent_node:Expanded NODE
+  + parent_node:Flat Node
 
 Public
 
-  + children:LINKED_LIST NODE
+  + children:Linked_list Node
 
-  - add n:NODE <-
+  - add n:Node <-
   (
     children.add_last n
   )
@@ -21,10 +20,10 @@ Public
   // Creation.
   //
 
-  - make lab:STRING <-
+  - make lab:String <-
   (
     parent_node.make lab
-    children := new LINKED_LIST NODE
+    children := new Linked_list Node
   )
 
   //
@@ -36,7 +35,7 @@ Public
     parent_node.print
     (children.is_empty).if_false {
       indent.append "  "
-      (children.lower).to (children.upper) do { j:INTEGER
+      (children.lower).to (children.upper) do { j:Int
         children.at j.print
       }
       indent.remove_tail 2

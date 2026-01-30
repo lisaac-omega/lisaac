@@ -1,20 +1,17 @@
 Header
-
-  + name        := DTA;
-
-  /*Parent for all late binding*/
-
+  + name := Dta
+/*Parent for all late binding*/
 Inherit
 
-  + parent_itm_object:Expanded ITM_OBJECT
+  + parent_itm_object:Flat Itm_object
 
 Public
 
-  + result_expr:EXPR
+  + result_expr:Expr
 
-  + slot:SLOT
+  + slot:Slot
 
-  + self_arg:EXPR
+  + self_arg:Expr
 
   //+ context:LOCAL
   
@@ -31,36 +28,36 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "DTA"
     abstract
   )
 
-NODE_TYPE, DTA
+Node_type, Dta
 
-  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
-  ( + result:LIST
+  - product t:Type with e:Expr self type_self:Type_full :List <-
+  ( + result:List
 
-    result := LIST.create (e.position)
-    (t = TYPE_NULL).if {      
-      result.add_last CALL_NULL      
+    result := List.create (e.position)
+    (t = Type_null).if {      
+      result.add_last Call_null      
     } else {
       lookup t with e in result
     }
     result
   )
 
-  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  - update_branch l:List self type_self:Type_full :Boolean <-
   [
     -? {type_self != NULL}
   ]
-  ( + node:NODE
-    + result:BOOLEAN
+  ( + node:Node
+    + result:Boolean
 
     node ?= l.first
     (node = NULL).if {
-      result := TRUE
+      result := True
     } else {
 
       /*
@@ -71,38 +68,38 @@ NODE_TYPE, DTA
       node.update_link type_self
       node ?= l.second
       (node != NULL).if {
-	node.update_link type_self
+        node.update_link type_self
       }
     }
     result
   )
 
-NODE_STYLE, SELF
+Node_style, Self
 
-  - get_argument:ARRAY EXPR <-
-  ( + result:ARRAY EXPR
+  - get_argument:Array Expr <-
+  ( + result:Array Expr
 
-    result := ARRAY EXPR .create_with_capacity 1
+    result := Array Expr .create_with_capacity 1
     result.add_last (self_arg.my_copy)
     result
   )
 
-DTA
+Dta
 
-  - finalise typ:TYPE with (expr:EXPR,s:SLOT) in lst:LIST <-
-  ( + node:NODE_STYLE
+  - finalise typ:Type with (expr:Expr,s:Slot) in lst:List <-
+  ( + node:Node_style
 
-    node := NODE_STYLE.create (expr.my_copy,s) with Self result result_expr
+    node := Node_style.create (expr.my_copy,s) with self result result_expr
     lst.add_last node
   )
 
 Private
 
-  - lookup typ:TYPE with expr:EXPR in lst:LIST <-
-  ( + s:SLOT
-    + name:STRING_ALIAS
-    + node_style:NODE_STYLE
-    + r:EXPR
+  - lookup typ:Type with expr:Expr in lst:List <-
+  ( + s:Slot
+    + name:String_alias
+    + node_style:Node_style
+    + r:Expr
 
     name := slot.name
     s := typ.get_local_slot name
@@ -113,13 +110,13 @@ Private
       // Then chain another NODE_TYPE to dispatch on r
       s := typ.get_path_slot name
       r := s.result_type.get_expr_for typ
-      node_style := NODE_STYLE.create (expr.my_copy,s) with Self result r
+      node_style := Node_style.create (expr.my_copy,s) with self result r
       lst.add_last node_style
-      lst.add_last (NODE_TYPE.create r with Self)
+      lst.add_last (Node_type.create r with self)
     } else {
       // Direct call.
       s.is_equal_profil slot
       finalise typ with (expr,s) in lst
     }
-    lst.add_last (PROTOTYPE_CST.create (expr.position) type (TYPE_VOID.default)); // BSBS: Alias.
+    lst.add_last (Prototype_cst.create (expr.position) type (Type_void.default)); // BSBS: Alias.
   )

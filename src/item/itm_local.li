@@ -1,12 +1,9 @@
 Header
-
-  + name    := ITM_LOCAL;
-
-  /*Local declaration slot*/
-
+  + name := Itm_local
+/*Local declaration slot*/
 Inherit
 
-  + parent_itm_object:Expanded ITM_OBJECT
+  + parent_itm_object:Flat Itm_object
 
 Public
 
@@ -14,30 +11,30 @@ Public
   // Data
   //
 
-  + type:ITM_TYPE
+  + type:Itm_type
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
   //
   // Constructor
   //
 
-  - create p:POSITION name n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p name n
     result
   )
 
-  - create p:POSITION name n:STRING_ALIAS type t:ITM_TYPE :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias type t:Itm_type :Self <-
+  ( + result:Self
     result := clone
     result.make p name n
     result.set_type t
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS <-
+  - make p:Position name n:String_alias <-
   (
     name     := n
     position := p
@@ -47,7 +44,7 @@ Public
   // Set
   //
 
-  - set_type t:ITM_TYPE <-
+  - set_type t:Itm_type <-
   (
     type := t
   )
@@ -56,30 +53,30 @@ Public
   // Runnable
   //
 
-  - to_run:LOCAL <-
-  ( + pos:POSITION
-    + result:LOCAL
+  - to_run:Local <-
+  ( + pos:Position
+    + result:Local
 
     last_position := position
     
-    result := LOCAL.create position name name style '+' type (type.to_run_for profil_slot pos (position.prototype.filename))
+    result := Local.create position name name style '+' type (type.to_run_for profil_slot pos (position.prototype.filename))
     last_position := pos
     result
   )
 
-  - to_run_static:LOCAL <-
+  - to_run_static:Local <-
   // Static local slot.
-  ( + result:LOCAL
-    + slot:ITM_SLOT
-    + larg:ARRAY ITM_ARGUMENT
-    + arg:ITM_ARGUMENT
-    + proto:PROTOTYPE
+  ( + result:Local
+    + slot:Itm_slot
+    + larg:Array Itm_argument
+    + arg:Itm_argument
+    + proto:Prototype
 
-    (type = ITM_TYPE_SIMPLE.type_self).if {
-      semantic_error (position,"Type `SELF' is not possible for `-' style local.")
+    (type = Itm_type_simple.type_self).if {
+      semantic_error (position,"Type `Self' is not possible for `-' style local.")
     }
     
-    result := LOCAL.create position name name style '-' type (type.to_run_for profil_slot pos (position.prototype.filename))
+    result := Local.create position name name style '-' type (type.to_run_for profil_slot pos (position.prototype.filename))
     //
     proto := position.prototype
     slot := proto.first_slot
@@ -87,13 +84,13 @@ Public
       slot := slot.next
     }
     (slot = NULL).if {
-      slot := ITM_SLOT.create position name (result.intern_name) idf_first FALSE feature (SECTION_.standard_private)
+      slot := Itm_slot.create position name (result.intern_name) idf_first False feature (Section_.standard_private)
       slot.set_style '-'
       slot.set_result_type type
-      larg := ALIAS_ARRAY ITM_ARGUMENT .new
-      arg := ITM_ARG.create position name "Self" type (ITM_TYPE_SIMPLE.type_self)
+      larg := Alias_array Itm_argument .new
+      arg := Itm_arg.create position name "self" type (Itm_type_simple.type_self) 
       larg.add_last arg
-      larg := ALIAS_ARRAY ITM_ARGUMENT .copy larg
+      larg := Alias_array Itm_argument .copy larg
       slot.set_argument_list larg
       proto.add_slot slot
     } else {
@@ -107,7 +104,7 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in buffer:String_buffer <-
   (
     buffer.append name
     buffer.add_last ':'

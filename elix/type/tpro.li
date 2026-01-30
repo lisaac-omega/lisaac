@@ -1,20 +1,19 @@
 Header
-  + name := TPRO;
-  
+  + name := Tpro
 Inherit
-  + parent_tone:Expanded TONE
-  - parent_expr:EXPR := EXPR
+  + parent_tone:Flat Tone
+  - parent_expr:Expr := Expr
     
 Public
-  - is_complex:BOOLEAN <- generic != NULL
+  - is_complex:Boolean <- generic != NULL
   
-  + attr:UINTEGER_8
-  + generic:ARRAY TYPE
-  + proto:PROTO
+  + attr:Uint8
+  + generic:Array Type
+  + proto:Proto
    
-  - type:TYPE <- Self
+  - type:Type <- self
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     (proto = NULL).if {
       b.append "<proto=NULL>"
@@ -23,18 +22,18 @@ Public
     }
   )
   
-  - Self:SELF '<=' o:TYPE :BOOLEAN <- 
-  ( + result:BOOLEAN
-    + i:INTEGER
-    + s:SLOT
-    + tp:TPRO
-    (Self = o).if {
-      result := TRUE
+  - self:Self '<=' o:Type :Boolean <- 
+  ( + result:Boolean
+    + i:Int
+    + s:Slot
+    + tp:Tpro
+    (self = o).if {
+      result := True
     } else {      
       {
         (i <= proto.slot.upper) && {(s := proto.slot.at i).section.is_parent} && {! result}
       }.while_do {
-        tp ?= s.type
+        tp ?= s.type        
         result := tp <= o
         i := i + 1
       }
@@ -42,14 +41,14 @@ Public
     result
   )
   
-  - key p:PROTO gen gen:ARRAY TYPE attr f:UINTEGER_8 :STRING_ALIAS <-
-  ( + k:STRING_ALIAS
-    + i,j:INTEGER
-    + c:CHARACTER
-    + err:BOOLEAN
-    STRING.tmp { tmp:STRING_BUFFER
-      (f = expanded).if { tmp += "Expanded "; }
-      (f = strict).if { tmp += "Strict "; }
+  - key p:Proto gen gen:Array Type attr f:Uint8 :String_alias <-
+  ( + k:String_alias
+    + i,j:Int
+    + c:Char
+    + err:Boolean
+    String.tmp { tmp:String_buffer
+      (f = flat).if { tmp += "Flat "; }
+      (f = exact).if { tmp += "Exact "; }
       {(!err) && {j <= p.key.upper}}.while_do {
         c := p.key.at j
         (c != '\0').if { tmp | c; } else {
@@ -62,19 +61,30 @@ Public
         }
         j := j + 1
       }
+      
       (err).if { k := ""; } else { k := tmp.to_string_alias; }
     }
     k
   )
     
-  - new p:PROTO gen gen:ARRAY TYPE attr f:UINTEGER_8 :TPRO <-
-  ( + result:TPRO
-    + k:STRING_ALIAS
+  - new p:Proto gen gen:Array Type attr f:Uint8 :Tpro <-
+  ( + result:Tpro
+    + k:String_alias
+    //Ttok.bug.if { "ICI".println }
     k := key p gen gen attr f
     (k.is_empty).if {
-      result := TERR
+      //Ttok.bug.if { "MERDE".println; exit 0 }
+      result := Terr
     } else {
-      result ?= dico.fast_reference_at k
+      /*
+      Ttok.bug.if {
+        Out # "key:" # k # '\n'
+        dico.foreach {(kk:String_alias,tt:Type);
+          Out # kk # tt.type_name # '\n'
+        }
+        exit 0
+      }*/
+      result ?= dico.reference_at k      
       (result = NULL).if {
         result := clone.init k proto p gen gen attr f
       }
@@ -82,18 +92,18 @@ Public
     result    
   )
   
-  - init (k:STRING_ALIAS) proto (p:PROTO) gen (g:ARRAY TYPE) attr f:UINTEGER_8 :SELF <-
+  - init (k:String_alias) proto (p:Proto) gen (g:Array Type) attr f:Uint8 :Self <-
   (
     (g.is_empty).if_false { generic := g.twin; }
     (key,proto,attr) := (k,p,f)
-    dico.add Self to k
-    Self
+    dico.at k add self
+    self
   )
         
-  - txt_in s:STRING_BUFFER sty st:STY <-
-  ( + i,j:INTEGER
-    + t:TYPE
-    + c:CHARACTER
+  - txt_in s:String_buffer sty st:Sty <-
+  ( + i,j:Int
+    + t:Type
+    + c:Char
     (name = NULL).if {
       type_name.println
     }
@@ -103,7 +113,7 @@ Public
       j := j + 1
       (c != '\0').if {
         s | c
-        (st != NULL).if { st.put (STY.typ) to (s.upper); }
+        (st != NULL).if { st.put (Sty.typ) to (s.upper); }
         {(j <= name.upper) && {(c := name.at j) != '\0'}}.while_do {
           (c = ' ').if { s += "·"; } else { s | c; }
           j := j + 1
@@ -114,9 +124,9 @@ Public
           s | '('; t.txt_in s sty st; s | ')'
         } else {
           (st != NULL)
-          .ok { st.put (STY.italic) to (s.count); }
+          .ok { st.put (Sty.italic) to (s.count); }
           do { t.txt_in s sty st; }
-          ok { st.put (STY.italic) to (s.count); }
+          ok { st.put (Sty.italic) to (s.count); }
         }
       }
       s | ' '
@@ -127,7 +137,7 @@ Public
   - run_default <-
   (
     (default = NULL).if {
-      EXPR.push TONE
+      Expr.push Tone
     } else {
       default.run
     }

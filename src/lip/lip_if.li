@@ -1,43 +1,43 @@
 Header
-  + name      := LIP_IF;
-
+  + name := Lip_if
 Inherit
 
-  + parent_lip_code:Expanded LIP_CODE
+  + parent_lip_code:Flat Lip_code
 
 Public
 
-  + condition:LIP_CODE
+  + condition:Lip_code
 
-  + then:ARRAY LIP_CODE
+  + then:Array Lip_code
 
-  + else:ARRAY LIP_CODE
+  + else:Array Lip_code
 
   //
   // Creation.
   //
 
-  - create p:POSITION if rec:LIP_CODE then the:ARRAY LIP_CODE
-  else els:ARRAY LIP_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position if rec:Lip_code then the:Array Lip_code
+  else els:Array Lip_code :Self <-
+  ( + result:Self
     result := clone
     result.make p if rec then the else els
     result
   )
 
-  - make p:POSITION if rec:LIP_CODE then the:ARRAY LIP_CODE
-  else els:ARRAY LIP_CODE <-
+  - make p:Position if rec:Lip_code then the:Array Lip_code
+  else els:Array Lip_code <-
   (
     position := p
     condition := rec
     then := the
     else := els
+    /*
     (then.last != NULL).if {
       warning_error (then.last.position,"Unreachable expression.")
     }
     ((else != NULL) && {else.last != NULL}).if {
       warning_error (else.last.position,"Unreachable expression.")
-    }
+    }*/
   )
 
   //
@@ -45,18 +45,18 @@ Public
   //
 
   - run <-
-  ( + val:LIP_BOOLEAN
+  ( + val:Lip_boolean
 
     val ?= condition.run_expr
     (val = NULL).if {
-      semantic_error (position,"BOOLEAN needed.")
+      semantic_error (position,"Boolean needed.")
     }
     (val.value).if {
-      (then.lower).to (then.upper-1) do { i:INTEGER
+      (then.lower).to (then.upper) do { i:Int
         then.at i.run
       }
     }.elseif {else != NULL} then {
-      (else.lower).to (else.upper-1) do { i:INTEGER
+      (else.lower).to (else.upper) do { i:Int
         else.at i.run
       }
     }

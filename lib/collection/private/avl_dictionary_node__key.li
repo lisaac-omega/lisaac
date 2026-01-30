@@ -1,11 +1,9 @@
 Header
-  + name := AVL_DICTIONARY_NODE V KEY K;
-
-  /*Auxiliary class to implement AVL_DICTIONARY.*/
-
+  + name := Avl_dictionary_node V Key K
+/*Auxiliary class to implement AVL_DICTIONARY.*/
 Inherit
 
-  + parent_avl_tree_node:Expanded AVL_TREE_NODE(K)
+  + parent_avl_tree_node:Flat Avl_tree_node(K)
 
 Public
 
@@ -25,12 +23,12 @@ Public
     +? {value = v}
   ]
 
-  - fast_at k:K :AVL_DICTIONARY_NODE V KEY K <-
+  - fast_at k:K :Avl_dictionary_node V Key K <-
   // Is element `e' in the tree?
-  ( + result:AVL_DICTIONARY_NODE V KEY K
+  ( + result:Avl_dictionary_node V Key K
 
     (key = k).if {
-      result := Self
+      result := self
     }.elseif {key == k } then {
       // because otherwise there would be an infinite recursion
       // result := NULL
@@ -46,12 +44,12 @@ Public
     result
   )
 
-  - occurrences v:V :INTEGER <-
+  - occurrences v:V :Int <-
   (
     occurrences v start 0
   )
 
-  - fast_occurrences v:V :INTEGER <-
+  - fast_occurrences v:V :Int <-
   (
     fast_occurrences v start 0
   )
@@ -84,8 +82,8 @@ Public
 
 Public
 
-  - occurrences v:V start cnt:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - occurrences v:V start cnt:Int :Int <-
+  ( + result:Int
 
     result := cnt
     (v == value).if {
@@ -103,8 +101,8 @@ Public
     +? {Result >= cnt}
   ]
 
-  - fast_occurrences v:V start cnt:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - fast_occurrences v:V start cnt:Int :Int <-
+  ( + result:Int
     result := cnt
     (v = value).if {
       result := result + 1
@@ -125,8 +123,8 @@ Public
 
   // Creation:
 
-  - create (v:V,k:K) :SELF <-
-  ( + result:SELF
+  - create (v:V,k:K) :Self <-
+  ( + result:Self
 
     result := clone
     result.make (v,k)

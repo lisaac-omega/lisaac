@@ -1,13 +1,12 @@
 Header
-  + name := TSET;
-  
+  + name := Tset
 Inherit
-  + parent_type:TYPE := TYPE
+  + parent_type:Type := Type
   
 Public
-  + set:Expanded HMAP TYPE KEY STRING_ALIAS
+  + set:Flat Hmap Type Key String_alias
   
-  - has t:TYPE :BOOLEAN <- set.fast_has t
+  - has t:Type :Boolean <- set.fast_has t
   
   - drw <- crash_with_message "TSET.drw"
   

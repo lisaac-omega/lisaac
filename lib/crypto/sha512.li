@@ -1,19 +1,18 @@
 Header
-  + name := SHA512;
-  
+  + name := Sha512
 Inherit
-  + parent_sha:Expanded SHA
+  + parent_sha:Flat Sha
   
-SHA
+Sha
   
-  + bitlen1:UINTEGER_64
-  + state:ARRAY UINTEGER_64; // 8
+  + bitlen1:Uint64
+  + state:Array Uint64; // 8
   
-  - data_size:INTEGER  := 128
-  - short_data_size:INTEGER   := (data_size - 16)
+  - data_size:Int  := 128
+  - short_data_size:Int   := (data_size - 16)
     
-  - add_bitlen x:INTEGER <-
-  ( + tmp:UINTEGER_64
+  - add_bitlen x:Int <-
+  ( + tmp:Uint64
     tmp := x << 3
     bitlen := bitlen + tmp
     (bitlen < tmp).if { bitlen1 := bitlen1 + 1; }
@@ -25,14 +24,14 @@ SHA
     data64.at (short_data_size / 8 + 1) put (bitlen .rev)
   )
   
-  - add (a,b,c,d:UINTEGER_64) in t:ARRAY UINTEGER_64 <-
+  - add (a,b,c,d:Uint64) in t:Array Uint64 <-
   (
     t.add_last a; t.add_last b; t.add_last c; t.add_last d
   )
               
-  - k:ARRAY UINTEGER_64 :=
-  ( + r:ARRAY UINTEGER_64
-    r := ARRAY UINTEGER_64.create_with_capacity 80
+  - k:Array Uint64 :=
+  ( + r:Array Uint64
+    r := Array Uint64.create_with_capacity 80
     add (0428A2F98D728AE22h,07137449123EF65CDh,0B5C0FBCFEC4D3B2Fh,0E9B5DBA58189DBBCh) in r
     add (03956C25BF348B538h,059F111F1B605D019h,0923F82A4AF194F9Bh,0AB1C5ED5DA6D8118h) in r
     add (0D807AA98A3030242h,012835B0145706FBEh,0243185BE4EE4B28Ch,0550C7DC3D5FFB4E2h) in r
@@ -57,10 +56,10 @@ SHA
   )
     
   - transform <-
-  ( + a,b,c,d, e,f,g,h, t1,t2, new:UINTEGER_64
-    + step:{(INTEGER,UINTEGER_64); }
+  ( + a,b,c,d, e,f,g,h, t1,t2, new:Uint64
+    + step:{(Int,Uint64); }
     
-    step := { (j:INTEGER,dta:UINTEGER_64)
+    step := { (j:Int,dta:Uint64)
       t1 := h + e.ep1 + e.ch (f,g) + k.at j + dta
       t2 := a.ep0 + a.maj (b,c)
       h := g;  g := f
@@ -72,12 +71,12 @@ SHA
     (a,b,c,d) := (state.at 0,state.at 1,state.at 2,state.at 3)
     (e,f,g,h) := (state.at 4,state.at 5,state.at 6,state.at 7)
     
-    0.to 15 do { i:INTEGER
+    0.to 15 do { i:Int
       new := data64.at i.rev
       data64.at i put new
       step.value (i,new)
     }
-    16.to 79 do { i:INTEGER
+    16.to 79 do { i:Int
       new := (
         data64.at ( i   &0Fh) + data64.at ((i+ 1)&0Fh).sig0 +
         data64.at ((i+9)&0Fh) + data64.at ((i+14)&0Fh).sig1
@@ -94,13 +93,13 @@ SHA
   
 Public
   
-  - digest_size:INTEGER := 64
+  - digest_size:Int := 64
   
   - reset <-
   (
     (data = NULL).if {
-      data := ARRAY UINTEGER_8.create_with_capacity data_size
-      state := ARRAY UINTEGER_64.create_with_capacity digest_size
+      data := Array Uint8.create_with_capacity data_size
+      state := Array Uint64.create_with_capacity digest_size
     }
     data.clear
     state.clear
@@ -109,20 +108,20 @@ Public
     bitlen := bitlen1 := 0
   )
   
-  - sum_in digest:ARRAY UINTEGER_8 <-
-  ( + dig64:NATIVE_ARRAY UINTEGER_64
+  - sum_in digest:Array Uint8 <-
+  ( + dig64:C_array Uint64
     prepare_digest
-    dig64 := CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_64).on (digest.storage)
-    0.to 7 do { j:INTEGER
+    dig64 := Cast (C_array Uint8) To (C_array Uint64).on (digest.storage)
+    0.to 7 do { j:Int
       dig64.at j put (state.at j.rev)
     }
   )
   
-  - sum_in_string buffer:STRING_BUFFER <-
+  - sum_in_string buffer:String_buffer <-
   (
     prepare_digest
-    0.to 7 do { j:INTEGER
-      + u64:UINTEGER_64
+    0.to 7 do { j:Int
+      + u64:Uint64
       u64 := (state.at j).rev
       8.times {
         buffer.add_last (map.at ((u64 & 000000F0h) >> 4))

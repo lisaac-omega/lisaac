@@ -1,9 +1,9 @@
 --SEMANTIC---------
 Argument assignment is not possible.
-Line 9 column 11 in MAIN(.../test/misc/23/main.li):
-  - bar foo:INTEGER <-
+Line 7 column 11 in Main(.../test/misc/23/main.li):
+  - bar foo:Int <-
            ^
 
-Line 12 column 11 in MAIN(.../test/misc/23/main.li):
+Line 10 column 11 in Main(.../test/misc/23/main.li):
     foo := foo
            ^

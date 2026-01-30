@@ -1,16 +1,15 @@
 Header
-  + name := PRINT;
-  /*
+  + name := Print
+/*
   print, append_in, to_string, etc.
   */
-  
 Public
+  - self:Self '#' e:E :Self <- ( crash; Self); // See OUT
+
   
-  - Self:SELF '#' e:E :SELF <- ( crash; SELF); // See OUT
-  
-  - extern s:NATIVE_ARRAY CHARACTER <-
-  ( + i:INTEGER
-    STRING.tmp { b:STRING_BUFFER
+  - extern s:C_array Char <-
+  ( + i:Int
+    String.tmp { b:String_buffer
       {s.at i != '\0'}.while_do { b | s.at i; i := i + 1; }
       b.print
     }
@@ -18,22 +17,22 @@ Public
   
   - print <-
   (
-    STRING.tmp { b:STRING_BUFFER
+    String.tmp { b:String_buffer
       append_in b
       b.print
     }
   )
   
-  - to_string:STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    STRING.tmp { b:STRING_BUFFER
+  - to_string:String_alias <-
+  ( + result:String_alias
+    String.tmp { b:String_buffer
       append_in b
       result := b.to_string_alias
     }
     result
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     to_pointer.append_in b
   )
@@ -46,6 +45,6 @@ Public
   
   // French corner
   
-  - écrire Self:SELF <- ( Self.print )
+  - écrire self:Self <- ( self.print )
   
   

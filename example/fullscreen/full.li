@@ -1,18 +1,17 @@
 Header
-  + name := FULL;
-  
+  + name := Full
 Inherit
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
   
 Public
     
   - main <-
   (
-    fullscreen := TRUE
+    fullscreen := True
     
     init "Full screen" size (512,860)
-    BUTTON.new.init "Exit" do { b:BUTTON; exit 0; TRUE}
-    .init_parent Self.size (width,height)
+    Button.new.init "Exit" do { b:Button; exit 0; True}
+    .init_parent self.size (width,height)
     
-    PAPER.run
+    Paper.run
   )

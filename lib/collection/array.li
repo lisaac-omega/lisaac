@@ -1,67 +1,68 @@
-Header  
-  + name := ARRAY V;  
-  /*Resizable, fixed lower bound array.
+Header
+  + name := Array V
+  /*Resizable, zero `lower` bound array. 
 array3.png
-Unlike ELASTIC_ARRAY, the `lower' bound of a ARRAY is frozen to 0.
-Thus, some memory is saved and looping toward `lower' bound (which is 0) run a little bit faster.
-General purpose resizable ARRAYs. The only difference with ELASTIC_ARRAY is the fact that the `lower' bound is actually frozen to 0.
-The `at' access is likely to be more efficient as well as loop going from `upper' to `lower' just because `lower' is 0.
-Keep in mind that even if the `lower' is frozen to 0 it is really better to use the `lower' attribute, and not 0 directly, just because you may decide in the future to use another COLLECTION implementation.
+General purpose resizable arrays. The `lower` bound is frozen to 0.
+The `at` access is likely to be more efficient, as well as loops going from `upper` to `lower`,
+simply because `lower` is 0.
+Keep in mind that even if `lower` is frozen to 0, it is still better to use the `lower` attribute,
+and not 0 directly, since you may decide in the future to use another `Collection` implementation.
 
-Like ARRAY, the ARRAY implementation uses only one chunk of memory, the `storage' area which is a NATIVE_ARRAY.
-One must keep in mind that this internal `storage' area is always kept left align.
-Thus, you can expect good performances while using a ARRAY to modelize a stack behavior with
-`add_last' / `last' / `remove_last'.
-Conversely `add_first' and `remove_first' are likely to slow down your program if they are too often used.
-If the fact that `lower' is stuck to 0 do matter, also consider ARRAY.*/
-  
+The `Array` implementation uses only one chunk of memory: the `storage` area, which is a `C_array`.
+One must keep in mind that this internal `storage` area is always kept left-aligned.
+Thus, you can expect good performance when using an `Array` to model a stack behavior with
+`add_last` / `last` / `remove_last`.
+Conversely, `add_first` and `remove_first` are likely to slow down your program if they are used too often.
+If the fact that `lower` is fixed to 0 does matter, also consider `Range_array`.
+For very large collections, prefer `Array_block`.
+If not yet done, have a look at our paper entitled "RIP Linked List" (B. Sonntag, D. Colnet).*/
 Inherit
-  
-  - parent_arrayed:ARRAYED := ARRAYED
-
-  - parent_collection:COLLECTION V := COLLECTION V
-  
+  + parent_collection: Flat Collection V
+  - parent_arrayed:Arrayed := Arrayed  
 Public
 
   // Creation:
   
-  - new Self:SELF of (v:V^n) :SELF <-
-  ( + result:SELF
-    result := clone    
-    result.add_last2 v
+  - new self:Self of (v:V^n) :Self <-
+  ( + result:Self
+    result := clone
+    result.add_last v
     result
   )
   
-  - add_last2 element:V^n <-
+  - add_last element:V^n <-
   ( 
-    set_capacity (count+n)
+    set_capacity (count + n)
     { e:V
       upper := upper + 1
       storage.at upper put e
     }.value element
   )
-  
+    
 Public
   
-  - at i:INTEGER :V <-
+  - at i:Int :V <-
   // Direct access in memory block.
   // array3.png
   (
     storage.at i
   )
   
-  - at i:INTEGER put v:V <- 
+  - at i:Int put v:V <- 
   (
     storage.at i put v
   )
   
-  - add element:V first n:INTEGER <-
+  - add element:V first n:Int <-
   // addfirst.gif
-  [ n > 0 ]
-  ( + new_capacity,new_count:INTEGER
+  [
+    deprecated True msg "array.li:l59:Use the new add_first instead. DC Jan 2026"
+    n > 0 
+  ]
+  ( + new_capacity,new_count:Int
     new_count := count + n
     (capacity = 0).if {
-      storage := NATIVE_ARRAY V.create new_count
+      storage := C_array V.create new_count
       capacity := new_count
     }.elseif {new_count > capacity} then {
       new_capacity := capacity * 2
@@ -71,100 +72,99 @@ Public
       storage := storage.realloc capacity with new_capacity
       capacity := new_capacity
     }
-    storage.move 0 to upper by n
+    storage.move 0 to upper by_fore n
     storage.set_slice_with element from lower until (n-1)
     upper := upper + n
   )
   
-  - lower:INTEGER := 0; // Frozen lower bound.
+  + storage:C_array V
   
-  + upper:INTEGER := -1
-  
-  + storage:NATIVE_ARRAY V
-  
-  + capacity:INTEGER
+  + capacity:Int
   // Internal storage capacity in number of item.
   
-  - element_sizeof:INTEGER <-
-  ( + result:INTEGER
+  - element_sizeof:Int <-
+  ( + result:Int
     (V.is_expanded_type).if {
       result := V.object_size
     } else {
-      result := POINTER.object_size
+      result := Pointer.object_size
     }
     result
   )
   
   // Creation and modification:
   
-  - create new_count:INTEGER :SELF <-
-  // Make array with range [0 .. `new_count' - 1].
-  // When `new_count' = 0 the array is empty.
-  ( + result:SELF
+  - create new_count:Int :Self <-
+  // Make array with range [0 .. `new_count` - 1].
+  // When `new_count` = 0 the array is empty.
+  ( + result:Self
     result := clone
     result.make new_count
     result
   )
   
-  - new Self:SELF capacity c:INTEGER :SELF <-
+  - new self:Self capacity c:Int :Self <-
   // New empty array with a given capacity.
-  ( + result:SELF
+  ( + result:Self
     result := clone
     result.with_capacity c
     result
   );
   
-  - create_with_capacity new_count:INTEGER :SELF <-
-  // Create an empty array with at least `needed_capacity'. <- DCDC VIRER / OBSOLETE
-  ( + result:SELF  
+  - create_with_capacity new_count:Int :Self <-
+  // Create an empty array with at least `needed_capacity`. <- DCDC VIRER / OBSOLETE
+  ( + result:Self  
     result := clone
     result.with_capacity new_count
     result
   )
   
-  - create_with_native_array_byte na:NATIVE_ARRAY UINTEGER_8 size s:INTEGER :SELF <-
-  ( + result:SELF
+  - create_with_native_array_byte na:C_array Uint8 size s:Int :Self <-
+  ( + result:Self
     result := clone
     result.make_with_native_array_byte na size s
     result
   )
   
-  - create_capacity c:INTEGER e0 e0:E :SELF <-
-  // New ARRAY of capacity 'c', initialized with `e0'.
+  - create_capacity c:Int e0 e0:E :Self <-
+  // New ARRAY of capacity `c`, initialized with `e0`.
   [
     c >= 1
   ]
-  ( + result:SELF
+  ( + result:Self
     result := create_with_capacity c
     result.add_last e0
     result
   )
   
-  - create_capacity c:INTEGER e0 e0:E e1 e1:E :SELF <-
-  // New ARRAY of capacity 'c', initialized with `e0' and `e1'.
+  - create_capacity c:Int e0 e0:E e1 e1:E :Self <-
+  // New ARRAY of capacity `c`, initialized with `e0` and `e1`.
   [
     c >= 2
   ]
-  ( + result:SELF
+  ( + result:Self
     result := create_with_capacity c
     result.add_last e0
     result.add_last e1
     result
   )
   
-  - new_storage c:INTEGER <-
+  - new_storage c:Int <-
+  [
+        deprecated True msg "array.li:l154:Still used ? DC Jan 2026"
+  ]
   (
     (c = 0).if {
       storage := NULL
     } else {
-      storage := NATIVE_ARRAY V.create c
+      storage := C_array V.create c
     }
     capacity := c
     upper := -1
   )
   
-  - new_copy o:ARRAY V <-
-  ( + u:INTEGER
+  - new_copy o:Array V <-
+  ( + u:Int
     u := o.upper
     upper := u
     (u = -1).if {
@@ -172,18 +172,19 @@ Public
       ? {capacity = 0}
     } else {
       capacity := u + 1
-      storage := NATIVE_ARRAY V.create capacity
+      storage := C_array V.create capacity
       storage.copy_from (o.storage) until u
     }
   )
   
-  - make_with_map_object obj:CLONE <-
+  - make_with_map_object obj:Clone <-
   // BSBS: A revoir.
   [ 
+    deprecated True msg "array.li:l183:Still used ? DC Jan 2026"
     element_sizeof = 1
   ]
   (
-    storage := CAST CLONE TO (NATIVE_ARRAY V).on obj
+    storage := Cast Clone To (C_array V).on obj
     capacity := obj.object_size
     upper := -1
   )
@@ -191,7 +192,7 @@ Public
     storage != NULL
   ]
   
-  - make_with_native_array_byte na:NATIVE_ARRAY UINTEGER_8 size s:INTEGER <-
+  - make_with_native_array_byte na:C_array Uint8 size s:Int <-
   [ 
     s > 0,
     na != NULL
@@ -205,16 +206,16 @@ Public
     storage != NULL
   ]
   
-  - make new_count:INTEGER <-
-  // Make array with range [0 .. `new_count' - 1].
-  // When `new_count' = 0 the array is empty.
+  - make new_count:Int <-
+  // Make array with range [0 .. `new_count` - 1].
+  // When `new_count` = 0 the array is empty.
   [
     new_count >= 0
   ]
   (
-    ( new_count.to_integer > capacity).if {
+    ( new_count.to_int > capacity).if {
       // The new one is bigger:
-      storage := NATIVE_ARRAY V.create new_count
+      storage := C_array V.create new_count
       capacity := new_count
     }.elseif { (capacity > 0) && { upper >= 0}} then {
       // The new one is smaller and just need to be cleared:
@@ -236,7 +237,7 @@ Public
   
   - second_last:V <- at (upper-1)
   
-  - at i:INTEGER add v:V <-
+  - at i:Int add v:V <-
   (
     // DCDC -> BSBS est-ce que c'est une bone idée de remonter le add_last ici ?
     // Je l'ai fait dans RANGE_ARRAY
@@ -268,13 +269,13 @@ Public
     upper := upper - 1
   )
 
-  - remove_tail n:INTEGER <-
+  - remove_tail n:Int <-
   (
     upper := upper - n
   )
   
   - remove_all u:V <-
-  ( + i,j:INTEGER
+  ( + i,j:Int
     + v:V
     {(i <= upper) && {at i != u}}.while_do {
       i := i + 1
@@ -303,7 +304,7 @@ Public
   )
 
   - reverse <-
-  ( + i,j:INTEGER
+  ( + i,j:Int
 
     i := lower
     j := upper
@@ -314,19 +315,19 @@ Public
     }
   )
   
-  - set_count new_count:INTEGER <-
+  - set_count new_count:Int <-
   (
     upper := new_count + lower - 1
   )
 
-  - to_native_array_uinteger_8:NATIVE_ARRAY UINTEGER_8 <-
+  - to_c_array_uint8:C_array Uint8 <-
   (
-    CAST (NATIVE_ARRAY V) TO (NATIVE_ARRAY UINTEGER_8).on storage
+    Cast (C_array V) To (C_array Uint8).on storage
   )
 
-  - add_last_buffer buf:ARRAY UINTEGER_8 from beg:INTEGER to end:INTEGER <-
-  ( + tab:NATIVE_ARRAY UINTEGER_8
-    + pos_beg,size,new_capacity:INTEGER
+  - add_last_buffer buf:Array Uint8 from beg:Int to end:Int <-
+  ( + tab:C_array Uint8
+    + pos_beg,size,new_capacity:Int
 
     pos_beg := count * element_sizeof; // + ofs_buf
     size    := end - beg + 1
@@ -341,23 +342,26 @@ Public
       crash
     }
 
-    tab := CAST (NATIVE_ARRAY V) TO (NATIVE_ARRAY UINTEGER_8).on storage
+    tab := Cast (C_array V) To (C_array Uint8).on storage
     tab.copy (buf.storage + beg) to pos_beg until size
     //ofs_buf := (pos_beg + size) % element_sizeof
     upper   := (pos_beg + size - 1) / element_sizeof
   )
 
-  - get_buffer_from_byte i:INTEGER size_bytes s:INTEGER :ARRAY UINTEGER_8 <-
-  ( + tab:NATIVE_ARRAY UINTEGER_8
-    tab := CAST (NATIVE_ARRAY V) TO (NATIVE_ARRAY UINTEGER_8).on storage
-    ARRAY UINTEGER_8.create_with_native_array_byte (tab + i) size s
+  - get_buffer_from_byte i:Int size_bytes s:Int :Array Uint8 <-
+  [
+    deprecated True msg "array.li:l353:Still used ? DC Jan 2026"
+  ]
+  ( + tab:C_array Uint8
+    tab := Cast (C_array V) To (C_array Uint8).on storage
+    Array Uint8.create_with_native_array_byte (tab + i) size s
   )
   
   // Interfacing with C:
 
-  - to_external:POINTER <-
-  // Gives C access into the internal `storage' of the ARRAY.
-  // Result is pointing the element at index `lower'.
+  - to_external:Pointer <-
+  // Gives C access into the internal `storage` of the ARRAY.
+  // Result is pointing the element at index `lower`.
   // NOTE: do not free/realloc the Result. Resizing of the array
   //       can makes this pointer invalid.
   [
@@ -370,9 +374,9 @@ Public
     Result.is_not_null
   ]
 
-  - to_native_array:NATIVE_ARRAY V <-
-  // Gives C access into the internal `storage' of the ARRAY.
-  // Result is pointing the element at index `lower'.
+  - to_c_array:C_array V <-
+  // Gives C access into the internal `storage` of the ARRAY.
+  // Result is pointing the element at index `lower`.
   // NOTE: do not free/realloc the Result. Resizing of the array
   //       can makes this pointer invalid.
   [
@@ -387,8 +391,8 @@ Public
 
 Public
   
-  - search cmp:{V; BOOLEAN} :V <-
-  ( + i:INTEGER
+  - search cmp:{V; Boolean} :V <-
+  ( + i:Int
     + result:V
     i := lower
     {(i <= upper) && {! cmp.value (at i)}}.while_do { 
@@ -400,14 +404,14 @@ Public
     result
   )
       
-  - with_capacity needed_capacity:INTEGER <-
-  // Create an empty array with at least `needed_capacity'.
+  - with_capacity needed_capacity:Int <-
+  // Create an empty array with at least `needed_capacity`.
   [
     needed_capacity >= 0
   ]
   (
     (capacity < needed_capacity).if {
-      storage := NATIVE_ARRAY V.create needed_capacity
+      storage := C_array V.create needed_capacity
       capacity := needed_capacity
       //}.elseif { capacity > needed_capacity } then {
       //  storage.clear 0 to upper; // BSBS: Ca serre a quoi de le vider !
@@ -421,36 +425,36 @@ Public
   
   // Hashable.
   
-  - create_copy other:ARRAY V :ARRAY V <-
-  // Make array with range [0 .. `new_count' - 1].
-  // When `new_count' = 0 the array is empty.
-  ( + result:ARRAY V
+  - create_copy other:Array V :Array V <-
+  // Make array with range [0 .. `new_count` - 1].
+  // When `new_count` = 0 the array is empty.
+  ( + result:Array V
     result := clone
     result.make_copy other
     result
   )
   
-  - twin:SELF <-
-  ( + result:SELF
-    result ?= ARRAY V.create_copy Self
+  - twin:Self <-
+  ( + result:Self
+    result ?= Array V.create_copy self
     result
   )
   
-  - make_copy other:ARRAY V <-
+  - make_copy other:Array V <-
   (
     capacity := other.count
     (capacity = 0).if { storage := NULL; } else {
-      storage := NATIVE_ARRAY V.create capacity
+      storage := C_array V.create capacity
     }
     upper := capacity - 1
-    0.to upper do { i:INTEGER
+    0.to upper do { i:Int
       storage.at i put (other.at i)
     }
   )
   
-  - hash_code:INTEGER <-
-  ( + result:INTEGER
-    + i,n:INTEGER
+  - hash_code:Int <-
+  ( + result:Int
+    + i,n:Int
     + elt:V
     
     {(i <= upper) && {n < 4}}.while_do {
@@ -465,28 +469,10 @@ Public
   
   // Modification:
   
-  - set_capacity new_capacity:INTEGER <-
-  // Resize capacity the array, but not count.
-  [
-    new_capacity >= 0
-  ]
-  (
-    (new_capacity > capacity).if {
-      (capacity = 0).if {
-        storage := NATIVE_ARRAY V.create new_capacity
-      } else {
-        storage := storage.realloc capacity with new_capacity
-      }
-      capacity := new_capacity
-    }
-  )
-  [
-    capacity >= Old capacity
-  ]
-  
-  - prepare_space n:INTEGER <-
+  - prepare_space n:Int <-
   // Makes sure that we have at least `n` places, ready to use, after `upper`.
   [
+    deprecated True msg "array.li:l492:Still used ? DC Jan 2026"
     n > 0
   ]
   (
@@ -498,7 +484,7 @@ Public
     upper = Old upper
   ]
   
-  - fast_resize new_count:INTEGER <-
+  - fast_resize new_count:Int <-
   [
     new_count <= capacity
   ]
@@ -506,18 +492,18 @@ Public
     upper := new_count - 1
   )
   
-  - resize new_count:INTEGER <-
-  // Resize the array. When `new_count' is greater than
-  // `count', new positions are initialized with appropriate
-  // default values.
+  - resize new_count:Int <-
+  // Resize the array. When `new_count` is greater than `count`, new positions are 
+  // initialized with appropriate default values.
   [
     new_count >= 0
   ]
-  ( + new_capacity:INTEGER
-    
-    ( new_count > count).if {
+  ( + new_capacity:Int
+    // DCDC apparemment, c'est encore utilisé, alors il faudrait toujours 
+    // mettre une puissance de 2 pour capacity ?  (DC le 26 janvier 2026)
+    if ( new_count > count ) then {
       (capacity = 0).if {
-        storage := NATIVE_ARRAY V.create new_count
+        storage := C_array V.create new_count
         capacity := new_count
       }.elseif { capacity < new_count } then {
         new_capacity := capacity * 2
@@ -538,44 +524,26 @@ Public
   
   // Implementation of abstract:
   
-  - is_empty:BOOLEAN <- ( upper < 0 )
+  - is_empty:Boolean <- ( upper < 0 )
     
   - put_last element:V <-
   (
     storage.at upper put element
   )
     
-  - add_first element:V <-
-  (
-    add_last element
-    (upper = 0).if {
-    }.elseif {upper = 1} then {
-      swap 0 with 1
-    } else {
-      move 0 to (upper - 1) by 1
-      storage.at 0 put element
+  - add_first element:V^n <-
+  ( + idx:Int
+    set_capacity (count + n)    
+    if (upper >= 0) then {
+      storage.move 0 to upper by_fore n
     }
+    upper := upper + n
+    { e:V
+      storage.at idx put e
+      idx := idx + 1
+    }.value element
   )
-  
-  - add_last element:V <-
-  ( + new_capacity:INTEGER
-    (upper + 1 < capacity).if {
-      upper := upper + 1
-    }.elseif {capacity = 0} then {
-      storage := NATIVE_ARRAY V.create 2
-      capacity := 2
-      upper := 0
-    } else {
-      new_capacity := 2 * capacity
-      storage := storage.realloc capacity with new_capacity
-      capacity := new_capacity
-      upper := upper + 1
-    }
-    storage.at upper put element
-  )
-  
-  - count:INTEGER <- ( upper + 1 ); // end count
-  
+ 
   - clear <-
   (
     upper := -1
@@ -584,15 +552,15 @@ Public
     capacity = Old capacity
   ]
   
-  - copy other:SELF <-
-  // Copy `other' onto Current.
-  ( + other_upper, new_capacity:INTEGER
+  - copy other:Self <-
+  // Copy `other` onto Current.
+  ( + other_upper, new_capacity:Int
     
     other_upper := other.upper
     (other_upper >= 0).if {
       new_capacity := other_upper + 1
       (capacity < new_capacity).if {
-        storage := NATIVE_ARRAY V.create new_capacity // BSBS Mettre colloc_intern !
+        storage := C_array V.create new_capacity // BSBS Mettre colloc_intern !
         capacity := new_capacity
       }
       storage.copy_from (other.storage) until other_upper
@@ -600,12 +568,12 @@ Public
     upper := other_upper
   )
   
-  - prepend o:ARRAY V <-
-  ( + n:INTEGER
+  - prepend o:Array V <-
+  ( + n:Int
     (o.upper >= 0).if {
       n := o.count
       set_capacity (count + n)
-      storage.move 0 to upper by n
+      storage.move 0 to upper by_fore n
       storage.copy_inc (o.storage) to 0 until (n-1)
       upper := upper + n
     }
@@ -616,28 +584,28 @@ Public
     storage.set_all_with v until upper
   )
   
-  - move_to_last low:INTEGER to up:INTEGER <-
+  - move_to_last low:Int to up:Int <-
   // A-BCD-EF move_to_last 1 to 3 => A-EF-BCD  
   [ 
     {low.in_range 0 to up},
     up <= upper
   ]
-  ( + d:INTEGER
+  ( + d:Int
     (up != upper).if {
       d := up - low + 1
       set_capacity (count+d)
-      storage.move low to up by (upper-low+1)
-      storage.move (up+1) to (upper+d) by (-d)
+      storage.move low to up by_fore (upper-low+1)
+      storage.move (up+1) to (upper+d) by_back (-d)
     }
   )
   
   // MHMH : reference_at :
   
-  - reference_at e:V with cmp:{(V,V); BOOLEAN} :V <-
+  - reference_at e:V with cmp:{(V,V); Boolean} :V <-
   // Searches the first item such that cmp(e, at) is true.
   // Returns NULL if no one match.
   ( + return:V
-    + i:INTEGER
+    + i:Int
     i := lower
     
     { (i <= upper) && { ! cmp.value(e, (at i)) } }.while_do { i := i + 1; }
@@ -650,23 +618,23 @@ Public
   
   // Other.
   
-  - from_collection model:COLLECTION V <-
-  ( + i1:INTEGER
+  - from_collection model:Collection V <-
+  ( + i1:Int
     
     with_capacity model.count
     upper := model.count - 1
     i1 := 0
-    (model.lower).to (model.upper) do { i2:INTEGER
+    (model.lower).to (model.upper) do { i2:Int
       storage.at i1 put (model.at i2)
       i1 := i1 + 1
     }
   )
   
-  - Self:SELF '=='  Right 60 other:E :BOOLEAN <-
-  ( + result:BOOLEAN
-    + same:SELF
-    ( Self = other).if {
-      result := TRUE
+  - self:Self '=='  Right 60 other:E :Boolean <-
+  ( + result:Boolean
+    + same:Self
+    ( self = other).if {
+      result := True
     } else {
       same ?= other
       ((same != NULL) && { upper = same.upper }).if {
@@ -676,17 +644,17 @@ Public
     result
   )
   
-  - is_equal_map other:SELF :BOOLEAN <-
-  ( + result:BOOLEAN
-    ( Self = other).if {
-      result := TRUE
+  - is_equal_map other:Self :Boolean <-
+  ( + result:Boolean
+    ( self = other).if {
+      result := True
     }.elseif {upper = other.upper} then {
       result := storage.memcmp (other.storage) until upper
     }
     result
   )
   
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   [
     storage != NULL
   ]
@@ -694,18 +662,18 @@ Public
     storage.all_default upper
   )
   
-  - occurrences element:V :INTEGER <-
+  - occurrences element:V :Int <-
   (
     storage.occurrences element until upper
   )
   
-  - fast_occurrences element:V :INTEGER <-
+  - fast_occurrences element:V :Int <-
   (
     storage.fast_occurrences element until upper
   )
   
-  - first_index_of element:V :INTEGER <-
-  ( + result:INTEGER
+  - first_index_of element:V :Int <-
+  ( + result:Int
     
     (upper >= 0).if {
       result := storage.first_index_of element until upper
@@ -713,8 +681,8 @@ Public
     result
   )
   
-  - index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - index_of element:V start start_index:Int :Int <-
+  ( + result:Int
     
     (upper >= 0).if {
       result := storage.index_of (element,start_index) until upper
@@ -722,16 +690,16 @@ Public
     result
   )
   
-  - reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  - reverse_index_of element:V start start_index:Int :Int <-
   (
     storage.reverse_index_of (element, start_index)
   )
   
-  - fast_index_of e:V :INTEGER <- fast_first_index_of e
+  - fast_index_of e:V :Int <- fast_first_index_of e
   
-  - fast_first_index_of element:V :INTEGER <-
+  - fast_first_index_of element:V :Int <-
   // BSBS: A virer (see fast_index_of)
-  ( + result:INTEGER
+  ( + result:Int
     
     (upper >= 0).if {
       result := storage.fast_first_index_of element until upper
@@ -739,8 +707,8 @@ Public
     result
   )
   
-  - fast_index_of element:V start start_index:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - fast_index_of element:V start start_index:Int :Int <-
+  ( + result:Int
     
     (upper >= 0).if {
       result := storage.fast_index_of (element,start_index) until upper
@@ -748,8 +716,8 @@ Public
     result
   )
   
-  - fast_reverse_index_of element:V :INTEGER <-
-  ( + result:INTEGER
+  - fast_reverse_index_of element:V :Int <-
+  ( + result:Int
     (upper >= lower).if {
       result := storage.fast_reverse_index_of element from upper
     } else {
@@ -758,22 +726,22 @@ Public
     result
   )
   
-  - fast_reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  - fast_reverse_index_of element:V start start_index:Int :Int <-
   (
     storage.fast_reverse_index_of element from start_index
   )
   
-  - subarray min:INTEGER to max:INTEGER :SELF <-  
+  - subarray min:Int to max:Int :Self <-  
   // slice
-  ( + result:SELF
+  ( + result:Self
     
-    result := SELF.create (max - min + 1)
+    result := Self.create (max - min + 1)
     result.storage.slice_copy storage to 0 from min to max
     
     result
   )
   
-  - force element:V to index:INTEGER <-
+  - force element:V to index:Int <-
   (
     ( index <= upper ).if {
       storage.at index put element
@@ -786,7 +754,7 @@ Public
   )
   
   - remove_first <-
-  ( + void_storage:NATIVE_ARRAY V
+  ( + void_storage:C_array V
     
     ( upper = 0).if {
       storage := void_storage
@@ -801,27 +769,50 @@ Public
     lower = Old lower
   ]
   
-  - remove_head n:INTEGER <-
+  - remove_head n:Int <-
   (
     (upper >= n).if {
-      storage.move n to upper by (-n)
+      storage.move n to upper by_back (-n)
     }
     upper := upper - n
   )
   
-  - remove index:INTEGER <-
+  - remove_ben (idx:Int^n) <-
+  // BSBS -> DCDC : Pour remplacer remove (Tu peux tester en -boost, il est aussi efficace en cas de n=1)
+  // Il y a juste l'obligation que les index doivent être dans l'ordre croissant.
+  [ + b:Int
+    b := -1
+    { i:Int
+      ? {i > b}          // Order test
+      ? {valid_index i}  // Valid index
+      b := i
+    }.value idx;
+  ]
+  ( + b,c:Int    
+    { e:Int
+      (c != 0).if {
+        storage.move b to (e-1) by_back c
+      }
+      b := e + 1
+      c := c - 1
+    }.value idx
+    storage.move b to upper by_back c
+    upper := upper + c
+  )
+  
+  - remove index:Int <-
   (
     storage.remove index until upper
     upper := upper - 1
   )
   
-  - remove beg:INTEGER to end:INTEGER <-
+  - remove beg:Int to end:Int <-
   [
     {valid_index beg},
     {valid_index end},
     beg <= end
   ]
-  ( + s:INTEGER
+  ( + s:Int
     
     (beg = end).if {
       remove beg
@@ -837,7 +828,7 @@ Public
   - remove_value v:V <- remove (fast_index_of v)
   
   - remove_value_force v:V <-
-  ( + i:INTEGER
+  ( + i:Int
     i := fast_index_of v
     (i <= upper).if { remove i; }
   )
@@ -852,26 +843,26 @@ Public
   - rotation_right <-
   ( + l:V
     l := last
-    storage.move 0 to (upper - 1) by 1
+    storage.move 0 to (upper - 1) by_fore 1
     storage.at 0 put l
   )
   
-  - rotation d:INTEGER <-
+  - rotation d:Int <-
   [ d != 0 ]
   ( 
     set_capacity (count+d)
     (d > 0).if {
-      storage.move 0 to upper by d
-      storage.move count to (count+d-1) by (-count)
+      storage.move 0 to upper by_fore d
+      storage.move count to (count+d-1) by_back (-count)
     } else {
-      storage.move 0 to (-d-1) by count
-      storage.move (-d) to (count-d-1) by d
+      storage.move 0 to (-d-1) by_fore count
+      storage.move (-d) to (count-d-1) by_back d
     }
   )
   
-  - intersection o:ARRAY V <-
+  - intersection o:Array V <-
   (
-    upper.downto 0 do { i:INTEGER
+    upper.downto 0 do { i:Int
       (! o.fast_has (at i)).if {
         remove i
       }
@@ -889,17 +880,17 @@ Public
   )
   
   - mean:V <-
-  // WARNING: mean invalid if V:UINTEGER_8
+  // WARNING: mean invalid if V:Uint8
   ( + sum:V    
     foreach { v:V; sum := sum + v }
     sum / count
   )
     
   - min_max_mean:(V,V,V) <-
-  // WARNING: mean invalid if V:UINTEGER_8
+  // WARNING: mean invalid if V:Uint8
   ( + min,max,mean,sum,v:V
     min := max := sum := first
-    1.to upper do { i:INTEGER
+    1.to upper do { i:Int
       v := at i
       sum := sum + v
       (v > max).if { max := v; }
@@ -909,10 +900,10 @@ Public
     min,max,mean  
   )
   
-  - median_index:INTEGER <-
+  - median_index:Int <-
   ( + sum,cum:V    
-    + j:INTEGER
-    0.to upper do { i:INTEGER;
+    + j:Int
+    0.to upper do { i:Int;
       sum := sum + at i;
     }
     sum := sum / 2
@@ -920,16 +911,16 @@ Public
     j
   )
     
-  - median_index_normalized:INTEGER <-
+  - median_index_normalized:Int <-
   ( + min,v:V
     + sum,cum:V
-    + j:INTEGER
+    + j:Int
     min := first
-    1.to upper do { i:INTEGER
+    1.to upper do { i:Int
       v := at i      
       (v < min).if { min := v; }
     }    
-    0.to upper do { i:INTEGER; sum := sum + at i - min }
+    0.to upper do { i:Int; sum := sum + at i - min }
     (sum = 0).if {
       j := count / 2
     } else {
@@ -944,13 +935,13 @@ Public
     
 Private
   
-  - partition l:INTEGER to r:INTEGER pivot piv:INTEGER :INTEGER <-
+  - partition l:Int to r:Int pivot piv:Int :Int <-
   ( + val:V
-    + res:INTEGER
+    + res:Int
     val := at piv
     swap piv with r;  // Move pivot to end
     res := l
-    l.to (r-1) do { i:INTEGER
+    l.to (r-1) do { i:Int
       (at i < val).if {
         swap i with res
         res := res + 1
@@ -960,9 +951,9 @@ Private
     res
   )
 
-  - qselect l:INTEGER to r:INTEGER pivot k:INTEGER :V <-
+  - qselect l:Int to r:Int pivot k:Int :V <-
   ( + result:V
-    + piv:INTEGER
+    + piv:Int
     (l = r).if {
       result := at l;  // Only one element
     } else {    
@@ -985,10 +976,10 @@ Public
   
   // Guru Section.
   
-  - set_storage s:NATIVE_ARRAY V cap c:INTEGER up u:INTEGER <-
+  - set_storage s:C_array V cap c:Int up u:Int <-
   ( (storage,capacity,upper) := (s,c,u); )
   
-  - set_upper new_upper:INTEGER <-
+  - set_upper new_upper:Int <-
   [
     {new_upper.in_range (-1) to (capacity - 1)}
   ]
@@ -996,18 +987,18 @@ Public
     upper := new_upper
   )
   
-  - swap_with_last idx:INTEGER <-
+  - swap_with_last idx:Int <-
   // DCDC: avec mot clef ça sera super
   (
     swap idx with upper
   )
   
-  - insert_with_last idx:INTEGER <-
+  - insert_with_last idx:Int <-
   // BSBS: avec mot clef ça sera super !!!! Yes Dom ;)
   ( + elt:V
     (idx != upper).if {
       elt := last
-      (upper-1).downto idx do { i:INTEGER
+      (upper-1).downto idx do { i:Int
         at (i+1) put (at i)
       }
       at idx put elt

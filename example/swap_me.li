@@ -1,6 +1,6 @@
 Header
-  + name := SWAP_ME;
-  /*It is possible to assign several variables at once.
+  + name := Swap_me
+/*It is possible to assign several variables at once.
 It is also possible for a function to return multiple results.
 
 
@@ -9,11 +9,11 @@ It is also possible for a function to return multiple results.
 Public
   
   - main <-
-  ( + swap,me:STRING
+  ( + swap,me:String
     swap := "swap"
     me := "me"  
     (swap,me) := (me,swap)
-    OUT # swap # ' ' # me # '\n'
+    Out # swap # ' ' # me # '\n'
     (swap,me) := ("swap","me")
-    OUT # swap # ' ' # me # '\n'
+    Out # swap # ' ' # me # '\n'
   )

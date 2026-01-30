@@ -1,19 +1,17 @@
 Header
-  
-  + name := EDGE;
-  
+  + name := Edge
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private  
   
-  - stock:ARRAY EDGE := ARRAY EDGE.create_with_capacity 32
+  - stock:Array Edge := Array Edge.create_with_capacity 32
 
-  - new:EDGE <-
-  ( + result:EDGE
+  - new:Edge <-
+  ( + result:Edge
     (stock.is_empty).if {
-      result := EDGE.clone
+      result := Edge.clone
     } else {
       result := stock.pop
     }
@@ -22,34 +20,34 @@ Private
   
 Public
   
-  - create:EDGE <- new
+  - create:Edge <- new
   
-  + x0:REAL_32
-  + y0:REAL_32
-  + x1:REAL_32
-  + y1:REAL_32
-  + invert:BOOLEAN
+  + x0:Real32
+  + y0:Real32
+  + x1:Real32
+  + y1:Real32
+  + invert:Boolean
   
-  - set_y0 y:REAL_32 <- ( y0 := y; )
+  - set_y0 y:Real32 <- ( y0 := y; )
     
-  - create i:BOOLEAN x0 px0:REAL_32 y0 py0:REAL_32 
-  x1 px1:REAL_32 y1 py1:REAL_32 :EDGE <-
-  ( + result:EDGE
+  - create i:Boolean x0 px0:Real32 y0 py0:Real32 
+  x1 px1:Real32 y1 py1:Real32 :Edge <-
+  ( + result:Edge
     result := new
     result.make i x0 px0 y0 py0 x1 px1 y1 py1
     result
   )
   
-  - free <- stock.add_last Self
+  - free <- stock.add_last self
   
 Private
   
-  - make i:BOOLEAN x0 px0:REAL_32 y0 py0:REAL_32 
-  x1 px1:REAL_32 y1 py1:REAL_32 :SELF <-
+  - make i:Boolean x0 px0:Real32 y0 py0:Real32 
+  x1 px1:Real32 y1 py1:Real32 :Self <-
   (
     invert := i
     (x0,y0) := (px0,py0)
     (x1,y1) := (px1,py1)
-    Self
+    self
   )
   

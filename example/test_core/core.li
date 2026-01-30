@@ -1,61 +1,59 @@
 Header
-
-  - name := CORE;
-  /*
+  - name := Core
+/*
   Mandelbrot generation for test core capacities. (COP project)
   */
   
-    
 Inherit
   
-  - parent_clone : CLONE := CLONE
+  - parent_clone : Clone := Clone
   
 Public
   
-  + identifier:INTEGER
+  + identifier:Int
   
-  - create idx:INTEGER :SELF <-
-  ( + result:SELF
+  - create idx:Int :Self <-
+  ( + result:Self
     
     result := clone
     result.make idx
     result
   )
   
-  - make idx:INTEGER <-
+  - make idx:Int <-
   (    
     identifier := idx
   )
   
   - mandelbrot <-
   ( 
-    + size, i, iter,sum: INTEGER
-    + zr, zi, cr, ci, pr, pi, limit: REAL_64
-    + stop, gone: BOOLEAN
-    + bit, bit_accu: UINTEGER_8
+    + size, i, iter,sum: Int
+    + zr, zi, cr, ci, pr, pi, limit: Real64
+    + stop, gone: Boolean
+    + bit, bit_accu: Uint8
     
     size := 300
     // compute mandelbrot's bitmap
     limit := 4.0
     iter  := 200_000
     bit   := 080h
-    0.to (size-1) do { y:INTEGER
-      ci := (y * 2).to_real_64 / size - 1.0
+    0.to (size-1) do { y:Int
+      ci := (y * 2).to_real64 / size - 1.0
 
-      0.to (size-1) do { x:INTEGER
-        cr := (x * 2).to_real_64 / size - 1.5
+      0.to (size-1) do { x:Int
+        cr := (x * 2).to_real64 / size - 1.5
 
         zr:=zi:=pr:=pi:=0
         i := 0
-        stop := FALSE
+        stop := False
         {stop}.until_do {
           zi := zr * zi * 2 + ci
           zr := pr - pi + cr
           pi := zi * zi
           pr := zr * zr
           (pi+pr > limit).if {
-            stop := TRUE
-            gone := TRUE
+            stop := True
+            gone := True
           } else {
             i := i+1
             stop := (i = iter)
@@ -63,7 +61,7 @@ Public
         }
 
         (gone).if {
-          gone := FALSE
+          gone := False
         } else {
           bit_accu := bit_accu | bit
         }

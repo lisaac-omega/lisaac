@@ -1,0 +1,14 @@
+Header
+  + name := New_range_array
+Public
+  - main <-
+  ( + a:Range_array Int
+    a := new Range_array Int of (4,3,2,1)
+    Test.check (a.at 1) integer 4
+    Test.check (a.at 2 = 3)
+    Test.check (a.at 3 = 2)
+    Test.check (a.at 4 = 1)
+    
+    a := new Range_array Int of (5)
+    Test.check (a.at 1 = 5)
+  )

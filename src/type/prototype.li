@@ -1,46 +1,43 @@
 Header
-
-  + name        := PROTOTYPE;
-
-  /*Prototype source code.*/
-
+  + name := Prototype
+/*Prototype source code.*/
 Inherit
 
-  + parent_named:Expanded NAMED
+  + parent_named:Flat Named
   
-  + parent_itm_pattern:Expanded ITM_PATTERN
+  + parent_itm_pattern:Flat Itm_pattern
   
 Public
 
-  - prototype_list:ARRAY PROTOTYPE := ARRAY PROTOTYPE.create_with_capacity 512
+  - prototype_list:Array Prototype := Array Prototype.create_with_capacity 512
   // BSBS: Voir si il faut le conserver !
 
-  - prototype_dico:HMAP PROTOTYPE KEY STRING_ALIAS := new HMAP PROTOTYPE KEY STRING_ALIAS
+  - prototype_dico:Hmap Prototype Key String_alias := new Hmap Prototype Key String_alias
   // Index by filename
 
-  - prototype_canonical_name:HMAP PROTOTYPE KEY STRING_ALIAS := new HMAP PROTOTYPE KEY STRING_ALIAS
+  - prototype_canonical_name:Hmap Prototype Key String_alias := new Hmap Prototype Key String_alias
 
 Public
 
-  + index:INTEGER; // in `prototype_list', for POSITION.
+  + index:Int; // in `prototype_list', for POSITION.
 
-  + shortname:STRING_ALIAS
+  + shortname:String_alias
 
-  + longname:STRING_ALIAS
+  + longname:String_alias
 
-  - is_lip :BOOLEAN <- (filename.last = 'p')
+  - is_lip :Boolean <- (filename.last = 'p')
 
   //
   // Slots
   //
 
-  + slot_list:HMAP ITM_SLOT KEY STRING_ALIAS
+  + slot_list:Hmap Itm_slot Key String_alias
 
-  + first_slot:ITM_SLOT
+  + first_slot:Itm_slot
 
-  + last_slot:ITM_SLOT
+  + last_slot:Itm_slot
 
-  - add_slot s:ITM_SLOT <-
+  - add_slot s:Itm_slot <-
   (
     // slot_list.fast_put s to (s.name)
     slot_list.at (s.name) put s
@@ -53,9 +50,9 @@ Public
     last_slot := s
   )
   
-  - search_parent n:STRING_ALIAS :BOOLEAN <-
-  ( + slot:ITM_SLOT
-    + result:BOOLEAN
+  - search_parent n:String_alias :Boolean <-
+  ( + slot:Itm_slot
+    + result:Boolean
 
     slot := first_slot
     {
@@ -70,24 +67,24 @@ Public
   // Run Slot.
   //
   
-  - external_list:LIST
+  - external_list:List
   
-  - init_slot_for typ:TYPE <-
-  ( + cur:ITM_SLOT
-    + slot:SLOT
-    + slot_code:SLOT_CODE
-    + expr:EXPR
-    + base:NODE
-    + old_profil_current:PROFIL
-    + old_profil_slot:PROFIL_SLOT
-    + old_list_current:LIST
-    + args:ARRAY EXPR
+  - init_slot_for typ:Type <-
+  ( + cur:Itm_slot
+    + slot:Slot
+    + slot_code:Slot_code
+    + expr:Expr
+    + base:Node
+    + old_profil_current:Profil
+    + old_profil_slot:Profil_slot
+    + old_list_current:List
+    + args:Array Expr
     
     // Parent.
     //last_position := position
     cur := first_slot
     {(cur != NULL) && {cur.id_section.is_inherit_or_insert}}.while_do {
-      typ.slot_run.add_last (SLOT.create cur type typ)
+      typ.slot_run.add_last (Slot.create cur type typ)
       typ.verify_cyclic_inheritance typ
       typ.verify_itm_slot_parent cur
       cur := cur.next
@@ -95,13 +92,13 @@ Public
     // Mapping.
     ((is_mapping) || {is_external}).if {      
       {cur != NULL}.while_do {
-	((cur.id_section.is_mapping) || {cur.id_section.is_external}).if {
+        ((cur.id_section.is_mapping) || {cur.id_section.is_external}).if {
           typ.verify_itm_slot_parent cur
-          slot := SLOT.create cur type typ
+          slot := Slot.create cur type typ
           typ.slot_run.add_last slot
           (cur.id_section.is_external).if {            
             (external_list = NULL).if {
-              external_list := LIST.create position
+              external_list := List.create position
             }
             slot_code ?= slot
                         
@@ -110,24 +107,24 @@ Public
             old_list_current   := list_current
             (slot_code.argument_count > 1).if {
               list_current := external_list
-              args := ARRAY EXPR.create_with_capacity (slot_code.argument_count)
-              args.add_last (PROTOTYPE_CST.create position type (typ.default))
-              1.to (slot_code.argument_count-1) do { i:INTEGER
+              args := Array Expr.create_with_capacity (slot_code.argument_count)
+              args.add_last (Prototype_cst.create position type (typ.default))
+              1.to (slot_code.argument_count-1) do { i:Int
                 args.add_last (
                   slot_code.get_argument_type i.to_run_for NULL pos filename.default_value (slot_code.position)
                 )
               }
               //slot_code.get_profil args self (typ.default)
               list_current := external_list
-              expr := PROTOTYPE_CST.create position type (typ.default)
-              base := NODE.new_read (slot.position) slot slot
-              receiver expr with args intern TRUE
+              expr := Prototype_cst.create position type (typ.default)
+              base := Node.new_read (slot.position) slot slot
+              receiver expr with args intern True
             } else {
               //slot_code.get_profil args self (typ.default)
               list_current := external_list
-              expr := PROTOTYPE_CST.create position type (typ.default)
-              base := NODE.new_read (slot.position) slot slot
-              receiver expr self expr intern TRUE
+              expr := Prototype_cst.create position type (typ.default)
+              base := Node.new_read (slot.position) slot slot
+              receiver expr self expr intern True
             }
             external_list.add_last base
             //
@@ -135,33 +132,33 @@ Public
             profil_current := old_profil_current
             profil_slot    := old_profil_slot
           }
-	}
-	cur := cur.next
+        }
+        cur := cur.next
       }
     }
   )
 
   //
-  // Mapping / Late binding / Expanded
+  // Mapping / Late binding / Flat
   //
 
-  + type_style:STRING_ALIAS; // Reference / Expanded / Strict.
+  + type_style:String_alias; // Reference / Flat / Exact.
 
-  + is_mapping:BOOLEAN
+  + is_mapping:Boolean
 
-  + is_external:BOOLEAN
+  + is_external:Boolean
 
   - set_mapping <-
   (
-    is_mapping := TRUE
+    is_mapping := True
   )
 
   - set_external <-
   (
-    is_external := TRUE
+    is_external := True
   )
 
-  - set_type_style s:STRING_ALIAS <-
+  - set_type_style s:String_alias <-
   (
     type_style := s
   )
@@ -170,15 +167,15 @@ Public
   // Cast information.
   //
 
-  + export_list:ITM_TYPE
-  + import_list:ITM_TYPE
+  + export_list:Itm_type
+  + import_list:Itm_type
 
-  - set_export_list s:ITM_TYPE <-
+  - set_export_list s:Itm_type <-
   (
     export_list := s
   )
 
-  - set_import_list s:ITM_TYPE <-
+  - set_import_list s:Itm_type <-
   (
     import_list := s
   )
@@ -187,20 +184,20 @@ Public
   // Source file.
   //
 
-  + filename:STRING_ALIAS;   // Pathname of prototype.
+  + filename:String_alias;   // Pathname of prototype.
 
-  + source  : STRING_BUFFER;   // Text source code.
+  + source  : String_buffer;   // Text source code.
 
-  + generic_count:INTEGER
+  + generic_count:Int
 
-  + idf_generic_list:ARRAY ITM_TYPE_PARAMETER
+  + idf_generic_list:Array Itm_type_parameter
 
-  - append_filename buffer:STRING_BUFFER <-
+  - append_filename buffer:String_buffer <-
   (
     (path_begin != 0).if {
       buffer.append "..."
     }
-    path_begin.to (filename.upper) do { j:INTEGER
+    path_begin.to (filename.upper) do { j:Int
       buffer.add_last (filename.at j)
     }
   )
@@ -209,31 +206,31 @@ Public
   // Default value.
   //
 
-  + default_value:ITM_CODE
+  + default_value:Itm_code
 
-  - set_default_value v:ITM_CODE <-
+  - set_default_value v:Itm_code <-
   (
-    default_value := v; //default_value v to_slot name in Self
+    default_value := v; //default_value v to_slot name in self
   )
 
   //
   // Creation.
   //
 
-  - create f:STRING_ALIAS name n:STRING_ALIAS generic_count c:INTEGER :SELF <-
-  ( + result:SELF
+  - create f:String_alias name n:String_alias generic_count c:Int :Self <-
+  ( + result:Self
     result := clone
     result.make f name n generic_count c
     result
   )
 
-  - make f:STRING_ALIAS name n:STRING_ALIAS generic_count c:INTEGER <-
+  - make f:String_alias name n:String_alias generic_count c:Int <-
   [
     -? {! prototype_dico.has f}
     -? {n != NULL}
   ]
-  ( + file:POINTER
-    + sz,idx:INTEGER
+  ( + file:Pointer
+    + sz,idx:Int
 
     filename := f
     longname := protopath_from_path filename
@@ -247,7 +244,7 @@ Public
       shortname := n
     }
     generic_count := c
-    idf_generic_list := ARRAY ITM_TYPE_PARAMETER.create_with_capacity c
+    idf_generic_list := Array Itm_type_parameter.create_with_capacity c
 
     is_lip.if_false {
       insert_prototype
@@ -255,29 +252,29 @@ Public
 
     // Collection.
     index := prototype_list.count
-    prototype_list.add_last Self
+    prototype_list.add_last self
     
-    //prototype_dico.fast_put Self to f
-    prototype_dico.at f put Self
+    //prototype_dico.fast_put self to f
+    prototype_dico.at f put self
 
     // Read file.
     //entry := FILE_SYSTEM.get f
     //file ?= entry.open_read_only
-    //source := STRING_BUFFER.create (file.size)
+    //source := String_buffer.create (file.size)
     //file.read source size (file.size)
     //file.close
 
-    file := FILE_UTILS.open_read f
-    sz := FILE_UTILS.size file
-    source := STRING_BUFFER.create (sz+1)
-    FILE_UTILS.read file in source size sz
-    FILE_UTILS.close file
+    file := File_utils.open_read f
+    sz := File_utils.size file
+    source := String_buffer.create (sz+1)
+    File_utils.read file in source size sz
+    File_utils.close file
 
     // Init.
-    //slot_list := HMAP ITM_SLOT KEY STRING_ALIAS.create
-    slot_list := new HMAP ITM_SLOT KEY STRING_ALIAS
+    //slot_list := HMAP ITM_SLOT KEY String_alias.create
+    slot_list := new Hmap Itm_slot Key String_alias
     
-    position  := POSITION.create Self line 1 column 0
+    position  := Position.create self line 1 column 0
     //
   )
 
@@ -286,25 +283,25 @@ Public
   //
 
   - depend <-
-  ( + slot_main:SLOT
-    + self_main:EXPR
-    + base:NODE    
-    + pass_recur:BOOLEAN
-    + i:INSTR
-    + cmd:STRING_ALIAS
+  ( + slot_main:Slot
+    + self_main:Expr
+    + base:Node    
+    + pass_recur:Boolean
+    + i:Instr
+    + cmd:String_alias
     + exec:{}
 
-    + buf:STRING_BUFFER
+    + buf:String_buffer
 
     //
     // Creation list execution.
     //
-    list_main := list_current := LIST.create position
+    list_main := list_current := List.create position
     (debug_level_option != 0).if {
       // Debug mode : Add context local.
-      context_main := TYPE_CONTEXT.default.new_local position name "__pos" style '+'
+      context_main := Type_context.default.new_local position name "__pos" style '+'
       context_main.set_ensure_count 1
-      list_current.add_last (PUSH.create position context context_main first TRUE)
+      list_current.add_last (Push.create position context context_main first True)
     }
 
     // Command argument.
@@ -326,17 +323,17 @@ Public
         \#endif\n"
       }
       cmd := string_tmp.to_string_alias
-      i := EXTERNAL_C.create position text cmd
-      access NULL persistant TRUE type (TYPE_VOID.default)
+      i := External_c.create position text cmd
+      access NULL persistant True type (Type_void.default)
       list_current.add_last i
     }
     // Init Slot.    
-    list_current.add_last (SLOT_DATA.init_list)
+    list_current.add_last (Slot_data.init_list)
     // Main Call.
     slot_main := get_slot_main
-    self_main := PROTOTYPE_CST.create position type (type_input.default)
-    base := NODE.new_read (slot_main.position) slot slot_main
-    receiver self_main self self_main intern TRUE
+    self_main := Prototype_cst.create position type (type_input.default)
+    base := Node.new_read (slot_main.position) slot slot_main
+    receiver self_main self self_main intern True
     list_current.add_last base
     
     // Attach external list.
@@ -345,47 +342,47 @@ Public
     }
     
     // Result.
-    list_current.add_last (INTEGER_CST.create position value 0 type (type_integer.default))
+    list_current.add_last (Int_cst.create position value 0 type (type_integer.default))
 
     //
     // Detect life code.
     //
     pass_count := 1
     (is_quiet).if_false {
-      STDERR.put_string "Depending pass:  "
+      Stderr.put_string "Depending pass:  "
     }
     {modify_count != 0}.while_do {            
       modify_count := 0
       (is_quiet).if_false {
         (pass_count & 3)
-        .when 0 then { STDERR.put_string "\b-";  }
-        .when 1 then { STDERR.put_string "\b\\"; }
-        .when 2 then { STDERR.put_string "\b|";  }
-        .when 3 then { STDERR.put_string "\b/";  }
+        .when 0 then { Stderr.put_string "\b-";  }
+        .when 1 then { Stderr.put_string "\b\\"; }
+        .when 2 then { Stderr.put_string "\b|";  }
+        .when 3 then { Stderr.put_string "\b/";  }
       }
       pass_count := pass_count + 1
-      NODE.extend_pass
+      Node.extend_pass
       //? {modify_count <0}
     }
 
     (is_quiet).if_false {      
-      STDERR.put_string "\b"
-      STDERR.put_integer pass_count
-      STDERR.put_string "\n"
+      Stderr.put_string "\b"
+      Stderr.put_integer pass_count
+      Stderr.put_string "\n"
     }
 
-    buf := STRING_BUFFER.create 2000
+    buf := String_buffer.create 2000
 
     (is_verbose).if {
-      PROFIL_LIST.display
+      Profil_list.display
     }
 
     //
     // Evaluation.
     //
-    VARIABLE.check_variable_block
+    Variable.check_variable_block
     (is_quiet).if_false {
-      STDERR.put_string "Executing pass: "
+      Stderr.put_string "Executing pass: "
     }
     //pass_count_depend := pass_count
     pass_count := 0
@@ -394,57 +391,57 @@ Public
         modify_count := 0
         null_counter := 0
         (is_quiet).if_false {
-          STDERR.put_string "."
+          Stderr.put_string "."
         }
         pass_count := pass_count + 1
 
-        SWITCH.reset_switch_new_pass
+        Switch.reset_switch_new_pass
 
-        PROFIL_LIST.execute_pass
+        Profil_list.execute_pass
         
-        (SWITCH.switch_new_pass).if {
+        (Switch.switch_new_pass).if {
           new_execute_pass
         }
         (modify_count != 0).if {
-          pass_recur := TRUE
+          pass_recur := True
         }
       }.do_while {modify_count != 0}
     }
     // First pass (recursive)
-    is_executing_pass := TRUE
+    is_executing_pass := True
     {
       (is_quiet).if_false {
-        STDERR.put_string "*"
+        Stderr.put_string "*"
       }
       pass_count := pass_count + 1
       
-      PROFIL_LIST.execute_pass_recursive
+      Profil_list.execute_pass_recursive
       
       (is_verbose).if {
         "==========================================================================\n\
         \=                                NEW PASS                                =\n\
         \==========================================================================\n".print
-        PROFIL_LIST.display
+        Profil_list.display
       }
-      pass_recur := FALSE
+      pass_recur := False
       // End first pass.
       exec.value
       (is_optimization).if {
-        is_optimization_type_set := TRUE
+        is_optimization_type_set := True
       }
       (pass_recur).if_false {
         exec.value
       }
     }.do_while {pass_recur}
     (is_quiet).if_false {
-      STDERR.put_string " ("
-      STDERR.put_integer pass_count 
-      STDERR.put_string ")\n"
+      Stderr.put_string " ("
+      Stderr.put_integer pass_count 
+      Stderr.put_string ")\n"
     }
     //
     (is_verbose).if {
       list_main.debug_display
-      PROFIL_LIST.display
+      Profil_list.display
     }
   )
 
@@ -452,9 +449,9 @@ Public
   // Type C
   //
 
-  + type_c     :STRING_ALIAS
+  + type_c     :String_alias
 
-  - set_c_type n:STRING_ALIAS <-
+  - set_c_type n:String_alias <-
   (
     type_c := n
   )
@@ -464,21 +461,21 @@ Public
   //
   
   /*
-  + comment_slot:STRING_ALIAS
-  + comment_header:STRING_ALIAS
+  + comment_slot:String_alias
+  + comment_header:String_alias
 
-  - set_comment_slot t:STRING_ALIAS <-
+  - set_comment_slot t:String_alias <-
   (
     comment_slot := t
   )
 
-  - set_comment_header t:STRING_ALIAS <-
+  - set_comment_header t:String_alias <-
   (
     comment_header := t
   )
 
-  - shorter_out buf:STRING_BUFFER <-
-  ( + title:STRING_ALIAS
+  - shorter_out buf:String_buffer <-
+  ( + title:String_alias
     + s:ITM_SLOT
     put name to buf like "title"
 
@@ -501,7 +498,7 @@ Public
       sl.name.has_prefix "create"
     } title "Constructor Summary" in buf
 
-    (list_tmp.lower).to (list_tmp.upper) do { j:INTEGER
+    (list_tmp.lower).to (list_tmp.upper) do { j:Int
       s := list_tmp.at j
       (s.stat_shorter = 0).if {
         title := s.comment_chapter
@@ -520,7 +517,7 @@ Public
       sl.name.has_prefix "create"
     } title "Constructor Detail" in buf
 
-    (list_tmp.lower).to (list_tmp.upper) do { j:INTEGER
+    (list_tmp.lower).to (list_tmp.upper) do { j:Int
       s := list_tmp.at j
       (s.stat_shorter = 1).if {
         title := s.comment_chapter
@@ -530,22 +527,22 @@ Public
       }
     }
 
-    (list_tmp.lower).to (list_tmp.upper) do { j:INTEGER
+    (list_tmp.lower).to (list_tmp.upper) do { j:Int
       list_tmp.at j.set_stat_shorter 0
     }
   )
   */
   
-PROTOTYPE
+Prototype
 
-  - get_slot_main:SLOT <-
-  ( + result:SLOT
+  - get_slot_main:Slot <-
+  ( + result:Slot
         
     result := type_input.get_slot "main"
     (result = NULL).if {
       semantic_error (position,"Entry point not found (slot `main' in `Section Public').")
     }
-    (result.result_type != ITM_TYPE_SIMPLE.type_void).if {
+    (result.result_type != Itm_type_simple.type_void).if {
       semantic_error (result.position,"Unix mode: Not value return.")
     }
     (result.argument_count != 1).if {
@@ -559,7 +556,7 @@ PROTOTYPE
   ( + s:ITM_SLOT
     + ps:ITM_TYPE_SIMPLE
     + p:PROTOTYPE
-    + i:INTEGER
+    + i:Int
 
     s := first_slot
     {s != NULL}.while_do {
@@ -580,7 +577,7 @@ PROTOTYPE
     {(s != NULL) && {s.id_section.is_inherit_or_insert}}.while_do {
       ps ?= s.result_type
       ((ps != NULL) && {
-          ({s.style = '+'} && {ps.style = "Expanded"}) ||
+          ({s.style = '+'} && {ps.style = "Flat"}) ||
           {s.name.has_prefix "inherit"} || {s.name.has_prefix "insert"}
       }).if {
         p := NULL
@@ -599,13 +596,13 @@ PROTOTYPE
     }
   )
 
-  - shorter_table lst:ARRAY ITM_SLOT select sel:{ITM_SLOT; BOOLEAN}
-  title t:STRING_ALIAS in buf:STRING_BUFFER <-
-  ( + is_first_cur:BOOLEAN
+  - shorter_table lst:ARRAY ITM_SLOT select sel:{ITM_SLOT; Boolean}
+  title t:String_alias in buf:String_buffer <-
+  ( + is_first_cur:Boolean
     + s:ITM_SLOT
 
-    is_first_cur := TRUE
-    (lst.lower).to (lst.upper) do { i:INTEGER
+    is_first_cur := True
+    (lst.lower).to (lst.upper) do { i:Int
       s := lst.at i
       ((sel.value s) && {s.stat_shorter = 0}).if {
         (is_first_cur).if {
@@ -614,7 +611,7 @@ PROTOTYPE
           } else {
             put t to buf like "table_begin"
           }
-          is_first_cur := FALSE
+          is_first_cur := False
         }
         s.set_stat_shorter 1
         string_tmp.clear
@@ -627,8 +624,8 @@ PROTOTYPE
             (
               (s.style != '+') || {
                 + ts:ITM_TYPE_SIMPLE
-                ts ?= s.result_type
-                (ts = NULL) || {ts.style != "Expanded"}
+                ts ?= s.result_type 
+                (ts = NULL) || {ts.style != "Flat"}
               }
             ) &&
             {! s.name.has_prefix "inherit"} &&
@@ -640,7 +637,7 @@ PROTOTYPE
         string_tmp2.clear
         get_all_comment_slot (s.name) in string_tmp2
         string_tmp3.clear
-        shorter_comment string_tmp2 in string_tmp3 light TRUE
+        shorter_comment string_tmp2 in string_tmp3 light True
         put string_tmp3 to string_tmp like "table_slot_comment"
         put string_tmp to buf like "table_item"
       }
@@ -650,13 +647,13 @@ PROTOTYPE
     }
   )
 
-  - shorter_detail lst:ARRAY ITM_SLOT select sel:{ITM_SLOT; BOOLEAN}
-  title t:STRING_ALIAS in buf:STRING_BUFFER <-
-  ( + is_first:BOOLEAN
+  - shorter_detail lst:ARRAY ITM_SLOT select sel:{ITM_SLOT; Boolean}
+  title t:String_alias in buf:String_buffer <-
+  ( + is_first:Boolean
     + s:ITM_SLOT
 
-    is_first := TRUE
-    (lst.lower).to (lst.upper) do { i:INTEGER
+    is_first := True
+    (lst.lower).to (lst.upper) do { i:Int
       s := lst.at i
       ((sel.value s) && {s.stat_shorter = 1}).if {
         (is_first).if {
@@ -665,7 +662,7 @@ PROTOTYPE
           } else {
             put t to buf like "sub_title"
           }
-          is_first := FALSE
+          is_first := False
         }
         s.set_stat_shorter 2
         //
@@ -688,16 +685,16 @@ PROTOTYPE
         //
         string_tmp.clear
         get_all_comment_slot (s.name) in string_tmp
-        shorter_comment string_tmp in buf light FALSE
+        shorter_comment string_tmp in buf light False
       }
     }
   )*/
 
-  - get_all_comment_slot n:STRING_ALIAS in buf:STRING_BUFFER <-
-  ( + s:ITM_SLOT
-    + ps:ITM_TYPE_SIMPLE
-    + p:PROTOTYPE
-    + i:INTEGER
+  - get_all_comment_slot n:String_alias in buf:String_buffer <-
+  ( + s:Itm_slot
+    + ps:Itm_type_simple
+    + p:Prototype
+    + i:Int
 
     s := slot_list.fast_reference_at n
     ((s != NULL) && {s.comment != NULL}).if {
@@ -727,17 +724,17 @@ PROTOTYPE
   /*
   - list_tmp:ARRAY ITM_SLOT := ARRAY ITM_SLOT.create_with_capacity 256
 
-  - str_tmp:STRING_BUFFER  := STRING_BUFFER.create 512
-  - str_tmp2:STRING_BUFFER := STRING_BUFFER.create 64
-  - str_tmp3:STRING_BUFFER := STRING_BUFFER.create 64
+  - str_tmp:String_buffer  := String_buffer.create 512
+  - str_tmp2:String_buffer := String_buffer.create 64
+  - str_tmp3:String_buffer := String_buffer.create 64
 
-  - shorter_comment str:STRING_BUFFER in buf:STRING_BUFFER light is_light:BOOLEAN <-
-  ( + cur:INTEGER
-    + stat,old_stat:INTEGER
-    + car:CHARACTER
-    + i:INTEGER
-    + lst:LINKED_LIST(STRING_ALIAS)
-    + code_balise:STRING_ALIAS
+  - shorter_comment str:String_buffer in buf:String_buffer light is_light:Boolean <-
+  ( + cur:Int
+    + stat,old_stat:Int
+    + car:Char
+    + i:Int
+    + lst:LINKED_LIST(String_alias)
+    + code_balise:String_alias
 
     cur := str.lower
     str_tmp.clear
@@ -847,8 +844,10 @@ PROTOTYPE
 
 Private
   
-  - protopath_from_path pathname:STRING :STRING_ALIAS <-
-  ( + strip_end :INTEGER
+  - protopath_from_path pathname:String :String_alias <-
+  ( + strip_end :Int
+    + c:Char
+    + up:Boolean
     is_lip.if {
       // *.lip
       strip_end := 4
@@ -856,35 +855,34 @@ Private
       // *.li
       strip_end := 3
     }
-
+    up := True
     string_tmp.clear
-    (pathname.lower).to (pathname.upper - strip_end) do { i:INTEGER
-      + c:CHARACTER
-      c := pathname.at i.to_upper
-      c.is_upper.if {
+    (pathname.lower).to (pathname.upper - strip_end) do { i:Int
+      c := pathname.at i //.to_upper
+      (c = ' ').if {
+        string_tmp.add_last ' '
+        up := True
+      }.elseif {(c = '_') && {string_tmp.count >= 1} && {string_tmp.last = '_'}} then {
+        string_tmp.put_last ' '
+        up := True
+      }.elseif {(c = '/') && {string_tmp.count >= 1}} then {
+        string_tmp.add_last '.'
+        up := True
+      } else {        
+        (up).if { c := c.to_upper; up := False }
         string_tmp.add_last c
-      }.elseif {c.is_digit} then {
-        string_tmp.add_last c
-      }.elseif {c = '/'} then {
-        ((string_tmp.count >= 1) && {string_tmp.last != '.'}).if {
-          string_tmp.add_last '.'
-        }
-      } else {
-        ((string_tmp.count >= 1) && {string_tmp.last != '_'} && {string_tmp.last != '.'}).if {
-          string_tmp.add_last '_'
-        }
       }
     }
+    // string_tmp.println
     string_tmp.to_string_alias
   )
 
-  - name_last n:INTEGER :STRING_ALIAS <-
+  - name_last n:Int :String_alias <-
   [
     -? { n > 0 }
   ]
-  ( + j, idx :INTEGER
-    j := 0
-
+  ( + j, idx :Int
+    
     idx := longname.upper
     {(idx >= longname.lower) && {j < n}}.while_do {
       (longname.at idx = '.').if {
@@ -901,7 +899,7 @@ Private
 
     // Copy last n members to string_tmp
     string_tmp.clear
-    idx.to (longname.upper) do { k:INTEGER
+    idx.to (longname.upper) do { k:Int
       string_tmp.add_last (longname.at k)
     }
     string_tmp.to_string_alias
@@ -913,9 +911,9 @@ Private
 
   - insert_prototype <- insert_prototype_start 1
 
-  - insert_prototype_start start:INTEGER <-
-  ( + i:INTEGER
-    + proto:PROTOTYPE
+  - insert_prototype_start start:Int <-
+  ( + i:Int
+    + proto:Prototype
 
     // Find canonical name
     // If we find PROTOTYPE in the dictionary, it's a marker to notify that more
@@ -927,11 +925,13 @@ Private
     } else {
       name := name_last i
     }
-    proto := prototype_canonical_name.fast_reference_at name
-    { proto = PROTOTYPE }.while_do {
+        
+    proto := prototype_canonical_name.reference_at name
+    
+    { proto = Prototype }.while_do {
       i := i + 1
-      name  := name_last i
-      proto := prototype_canonical_name.fast_reference_at name
+      name  := name_last i      
+      proto := prototype_canonical_name.reference_at name
     }
 
     // We find either an empty slot or a conflicting prototype
@@ -943,13 +943,13 @@ Private
         "       is: ".print; longname.println
       }
 
-      //prototype_canonical_name.fast_put Self to name
-      prototype_canonical_name.at name put Self
+      //prototype_canonical_name.fast_put self to name
+      prototype_canonical_name.at name put self
 
     } else {
 
       // We find a conflicting prototype.
-      ? { proto != Self }
+      ? { proto != self }
 
       (debug_proto_bestname).if {
         "Conflict: ".print; name.println
@@ -960,7 +960,7 @@ Private
       // Add PROTOTYPE marker and add more members to `name' of both prototypes
       
       //prototype_canonical_name.fast_put PROTOTYPE to name
-      prototype_canonical_name.at name put PROTOTYPE
+      prototype_canonical_name.at name put Prototype
       
       
       // Insert both prototypes again with another member to the name
@@ -973,8 +973,8 @@ Private
 Public
  
   - detect_slot_not_used <-
-  ( + s:ITM_SLOT
-    + idx,dif:INTEGER
+  ( + s:Itm_slot
+    + idx,dif:Int
     idx := type_input.prototype.longname.fast_last_index_of '.'
     dif := type_input.prototype.longname.first_diff longname
     (dif >= idx).if {
@@ -982,14 +982,14 @@ Public
       
       /*
       // DCDC finitos TRAVERSABLE
-      (slot_list.lower).to (slot_list.upper) do { j:INTEGER
+      (slot_list.lower).to (slot_list.upper) do { j:Int
         s := slot_list.at j
         (s.is_used).if_false {
           warning_error (s.position,"Slot not used.")
         }
       }
       */
-      slot_list.foreach_value { itms:ITM_SLOT
+      slot_list.foreach_value { itms:Itm_slot
         (itms.is_used).if_false {
           warning_error (s.position,"Slot not used.")
         }

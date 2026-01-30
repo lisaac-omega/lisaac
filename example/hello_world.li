@@ -1,7 +1,6 @@
 Header
-  
-  + name := HELLO_WORLD;
-  /*
+  + name := Hello_world
+/*
   The basic and traditional "Hello World" program in Lisaac Ω. 
   
   To run this example in a terminal window:
@@ -13,7 +12,10 @@ Header
        lisaac hello_world.li
 
   Step 3:
-       ./hello_world*/
+      ./hello_world     
+  
+   Or one single step on bash:
+      run=lisaac/example/hello_world.li ; lisaac ${run}-boost -q && ./${run%.li}    */
 Public
   
   - main <- print("Hello world!\n")

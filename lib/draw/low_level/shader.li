@@ -1,45 +1,43 @@
 Header
-  
-  + name := Expanded SHADER;
-  
+  + name := Flat Shader
 Inherit
   
-  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_constant_pen:Constant_pen := Constant_pen
   
 Public
 
-  - shader_fillgrad:INTEGER := 0
-  - shader_fillimg:INTEGER  := 1
-  - shader_simple:INTEGER   := 2
-  - shader_img:INTEGER      := 3
+  - shader_fillgrad:Int := 0
+  - shader_fillimg:Int  := 1
+  - shader_simple:Int   := 2
+  - shader_img:Int      := 3
 
 Public
   
-  + prog:UINTEGER_32
-  //+ frag:UINTEGER_32
-  //+ vert:UINTEGER_32
-  + loc_view_trans:INTEGER
-  + loc_view:INTEGER
-  + loc_trans_post:INTEGER
-  + loc_tex :INTEGER
-  + loc_frag:INTEGER
+  + prog:Uint32
+  //+ frag:Uint32
+  //+ vert:Uint32
+  + loc_view_trans:Int
+  + loc_view:Int
+  + loc_trans_post:Int
+  + loc_tex :Int
+  + loc_frag:Int
 
-  - make (name,header,opts,vshader,fshader:STRING_ALIAS) <-
-  ( + status:INTEGER
-    + iprog, ivert, ifrag:UINTEGER_32
-    + opt:STRING_ALIAS
+  - make (name,header,opts,vshader,fshader:String_alias) <-
+  ( + status:Int
+    + iprog, ivert, ifrag:Uint32
+    + opt:String_alias
     iprog := pen_gl.gl_create_program
     //"Create Prog #".print; iprog.print; '\n'.print
-    ivert := pen_gl.gl_create_shader `GL_VERTEX_SHADER`:INTEGER
-    ifrag := pen_gl.gl_create_shader `GL_FRAGMENT_SHADER`:INTEGER
+    ivert := pen_gl.gl_create_shader `GL_VERTEX_SHADER`:Int
+    ifrag := pen_gl.gl_create_shader `GL_FRAGMENT_SHADER`:Int
     opt := (opts != NULL).ok opts or ""
     pen_gl.gl_shader ivert source (header,opt,vshader)
     pen_gl.gl_shader ifrag source (header,opt,fshader)
     pen_gl.gl_compile_shader ivert
-    status := pen_gl.gl_get_shaderiv (ivert,`GL_COMPILE_STATUS`:INTEGER)
+    status := pen_gl.gl_get_shaderiv (ivert,`GL_COMPILE_STATUS`:Int)
     ? {status = 1}
     pen_gl.gl_compile_shader ifrag
-    status := pen_gl.gl_get_shaderiv (ifrag,`GL_COMPILE_STATUS`:INTEGER)
+    status := pen_gl.gl_get_shaderiv (ifrag,`GL_COMPILE_STATUS`:Int)
     ? {status = 1}
     pen_gl.gl_attach_shader(iprog, ivert)
     pen_gl.gl_attach_shader(iprog, ifrag)
@@ -48,7 +46,7 @@ Public
     pen_gl.gl_bind_attrib_location(iprog, 1, "tcoord")
 
     pen_gl.gl_link_program iprog
-    status := pen_gl.gl_get_programiv (iprog,`GL_LINK_STATUS`:INTEGER)
+    status := pen_gl.gl_get_programiv (iprog,`GL_LINK_STATUS`:Int)
     ? {status = 1}
     prog := iprog
     pen_gl.gl_delete_shader ivert
@@ -77,8 +75,8 @@ Public
     //"Shader prog #".print; prog.print; " frag:".print; loc_frag.print; '\n'.print
   )
   
-  - dump_shader_error (name,type:STRING_ALIAS) <-
-  ( + str:STRING_BUFFER
+  - dump_shader_error (name,type:String_alias) <-
+  ( + str:String_buffer
     str := pen_gl.gl_get_shader_info_log shader
     "Shader ".print;   name.print; '/'.print; type.print
     " error:\n".print; str.print;  '\n'.print

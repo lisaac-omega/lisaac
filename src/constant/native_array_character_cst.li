@@ -1,12 +1,9 @@
 Header
-
-  + name        := NATIVE_ARRAY_CHARACTER_CST;
-
-  /*String constant*/
-
+  + name := Native_array_character_cst
+/*String constant*/
 Inherit
 
-  + parent_constant:Expanded CONSTANT
+  + parent_constant:Flat Constant
 
 Public
 
@@ -14,34 +11,34 @@ Public
   // Value.
   //
 
-  + string:STRING_ALIAS
+  + string:String_alias
 
   //
   // Creation.
   //
 
-  - create p:POSITION text n:STRING_ALIAS :SELF<-
-  ( + result:SELF
+  - create p:Position text n:String_alias :Self<-
+  ( + result:Self
     result := clone
     result.make p text n
     result
   )
 
-  - make p:POSITION text n:STRING_ALIAS <-
+  - make p:Position text n:String_alias <-
   (
     position := p
     string   := n
-    static_type := type_n_a_character.default
+    static_type := type_n_a_char.default
   )
 
-  - my_copy:SELF <- SELF.create position text string
+  - my_copy:Self <- Self.create position text string
 
   //
   // Comparaison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + p:NATIVE_ARRAY_CHARACTER_CST
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + p:Native_array_character_cst
     p ?= other
     (p != NULL) && {string = p.string}
   )
@@ -61,7 +58,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '\"'
     buffer.append string

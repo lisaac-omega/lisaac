@@ -1,32 +1,29 @@
 Header
-
-  + name    := WRITE_GLOBAL;
-
-  /*Write global*/
-
+  + name := Write_global
+/*Write global*/
 Inherit
 
-  + parent_write:Expanded WRITE
+  + parent_write:Flat Write
 
 Public
 
-  + global:SLOT_DATA
+  + global:Slot_data
 
-  - variable:VARIABLE <- global
+  - variable:Variable <- global
 
   //
   // Creation.
   //
 
-  - create p:POSITION with val:EXPR in g:SLOT_DATA :SELF <-
-  ( + result:SELF
+  - create p:Position with val:Expr in g:Slot_data :Self <-
+  ( + result:Self
     ? {p.code != 0}
     result := clone
     result.make p with val in g
     result
   )
 
-  - make p:POSITION with val:EXPR in g:SLOT_DATA <-
+  - make p:Position with val:Expr in g:Slot_data <-
   (
     position := p
     value    := val
@@ -37,7 +34,7 @@ Public
   // Execute.
   //
 
-  - execute_access_unlink:INSTR <-
+  - execute_access_unlink:Instr <-
   (
     global.execute
     NULL
@@ -54,11 +51,11 @@ Public
 
   - genere <-
   (
-    TYPE.add_genere_global global
+    Type.add_genere_global global
     (quiet_generation).if_false {
       output.append (global.intern_name)
       //
-      ((value.static_type.raw = TYPE_NULL) && {variable.type.raw.is_block}).if {
+      ((value.static_type.raw = Type_null) && {variable.type.raw.is_block}).if {
         output.append ".__id=0"
       } else {
         output.add_last '='

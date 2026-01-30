@@ -1,60 +1,108 @@
 Header
-  + name := COLLECTION V;
+  + name := Collection V
   /*
 Common abstract definition of a sequenceable collection of objects.
-Such a collection is traversable using a simple INTEGER index from 
-`lower' to `upper' using `item'. All COLLECTIONs are resizable thanks to
-`add_last' / `remove_last', `add_first' / `remove_first' as well as 
-`add' / `remove'.
+Such a collection is traversable using a simple Int index from `lower` to `upper` using `at`.
+All collections are resizable thanks to `add_last` / `remove_last`, `add_first` / `remove_first`,
+as well as `add` / `remove`.
 
-This abstraction provides feature to view a COLLECTION as a stack 
-(as an example by using `add_last', `last', and `remove_last').
-One can also use a COLLECTION as a queue (as an example, by using
-`add_last', `first' and `remove_first').
+This abstraction provides features to view a `Collection` as a stack (for example by using
+`add_last`, `last`, and `remove_last`).
+One can also use a `Collection` as a queue (for example by using `add_last`, `first`, and
+`remove_first`).
 
-The Lisaac Ω library provides five implementations of COLLECTION: ARRAY, 
-ARRAY_RING, ARRAY_BLOCK LINKED_LIST and SINGLE_LIST.
-Except for creations all implementations have exactly the same behavior.
-Switching from one implementation to another only change the memory used 
-and the execution time.
-*/
+The Lisaac Ω library provides five implementations of `Collection`: `Array`, `Array_ring`,
+`Array_block`, `Range_array`, `Linked_list`, and `Single_list`.
+Except for creation, all implementations have exactly the same behavior.
+Switching from one implementation to another only changes the memory usage and execution time.
+We suggest that you read the paper entitled "RIP Linked List" (B. Sonntag and D. Colnet)
+to choose the best implementation of `Collection` for your needs.*/
 Insert
-  - parent_clone:CLONE := CLONE
-  
-Inherit
-  - parent_traversable:TRAVERSABLE V := TRAVERSABLE V
-
+  - parent_clone:Clone := Clone
 Public
   
   // Creation:
   
-  - new Self:SELF of v: V^n :SELF <-
+  - new self:Self of v: V^n :Self <-
+  // Creates and initialize with a set of items.
   (
     abstract
-    Self
+    self
   )
- 
+  
 Public
   
-  - has x:V :BOOLEAN <-
-  // Look for `x' using `equal' for comparison.
-  // * See: `fast_has', `index_of start', `fast_index_of start'.
+  // Query:
+  
+  - lower:Int <- 0
+  // Minimum index.
+  
+  + upper:Int := -1
+  // Maximum index.
+    
+  - valid_index i:Int :Boolean <-
+  // True when `i' is valid (i.e., inside actual bounds).
   (
-    valid_index (first_index_of x)
+    (lower <= i) && {i <= upper}
   )
-
-  - fast_has x:V :BOOLEAN <-
-  // Look for `x' using basic `=' for comparison.
-  // * See: `has', `fast_index_of start', `index_of start'.
+  
+  - count:Int <-
+  // Number of available items.
   (
-    valid_index (fast_first_index_of x)
+    upper - lower + 1
   )
+  [
+    Result = upper - lower + 1
+  ]
 
+  - is_empty:Boolean <-
+  // Is it empty ?
+  (
+    count = 0
+  )
+  [
+    Result = (count = 0)
+  ]
+  
+  - at i:Int :V <-
+  // Access item at index `i'.
+  [
+    {valid_index i}
+  ]
+  (
+    abstract
+    V
+  )
+  
+  - first:V <-
+  // Access to the `first' item.
+  [
+    ! is_empty
+  ]
+  (
+    at lower
+  )
+  [
+    Result = at lower
+  ]
+
+  - last:V <-
+  // Access to the `last' item.
+  [
+    ! is_empty
+  ]
+  (
+    at upper
+  )
+  [
+    Result = at upper
+  ]
+
+  
   // Writing:
 
-  - at i:INTEGER put v:V <-
+  - at i:Int put v:V <-
   // Make `v' the value `at' index `i'.
-  // * See also: `at' ,`lower', `upper', `valid_index', `swap', `force'...
   [
     {valid_index i}
   ]
@@ -66,15 +114,13 @@ Public
     count = Old count
   ]
   
-  - swap i1:INTEGER with i2:INTEGER <-
+  - swap i1:Int with i2:Int <-
   // Swap at at index `i1' with item at index `i2'.
-  // * See: `at', `at put'.
   [
     {valid_index i1},
     {valid_index i2}
   ]
   ( + tmp:V
-
     tmp := at i1
     at i1 put (at i2)
     at i2 put tmp
@@ -87,7 +133,6 @@ Public
 
   - set_all_with v:V <-
   // Set all items with value `v'.
-  // * See: `set_slice_with'.
   (
     abstract
   )
@@ -95,16 +140,15 @@ Public
     count = Old count
   ]
 
-  - set_slice lower_index:INTEGER to upper_index:INTEGER with v:V <-
+  - set_slice lower_index:Int to upper_index:Int with v:V <-
   // Set all items in range [`lower_index' .. `upper_index'] with `v'.
-  // * See: `set_all_with'.
   [
     lower_index <= upper_index,
     {valid_index lower_index},
     {valid_index upper_index}
   ]
   (
-    lower_index.to upper_index do { i:INTEGER
+    lower_index.to upper_index do { i:Int
       at i put v
     }
   )
@@ -117,7 +161,6 @@ Public
   // The `count' is not affected
   // see also `clear', `all_default'.
   ( + value:V
-
     set_all_with value
   )
   [
@@ -128,38 +171,32 @@ Public
 
   // Adding:
 
-  - add_first element:V <-
-  // Add a new item in first position: `count' is increased by
-  // one and all other items are shifted right.
-  // * See: `add_last', `first', `last', `add'.
+  - add_first element:V^n <-
+  // Add new items in first position: `count' is increased by `n' and all items are shifted right.
   (
     abstract
   )
   [
-    first = element,
-    count = 1 + Old count,
+    count = n + Old count,
     lower = Old lower,
-    upper = 1 + Old upper
+    upper = n + Old upper
   ]
 
-  - add_last element:V <-
-  // Add a new item at the end : `count' is increased by one.
-  // * See: `add_first', `last', `first', `add'.
+  - add_last element:V^n <-
+  // Add element(s) at the end.
   (
     abstract
   )
   [
-    last = element,
-    count = 1 + Old count,
+    count = n + Old count,
     lower = Old lower,
-    upper = 1 + Old upper
+    upper = n + Old upper
   ]
 
-  - at i:INTEGER add v:V <-
+  - at i:Int add v:V <-
   // Add a new `v' at rank `i' : `count' is increased
-  // by one and range [`i' .. `upper'] is shifted right
+  // by one and range [`i' .. upper] is shifted right
   // by one position.
-  // * See: `add_first', `add_last', `append_collection'.
   [
     {i.in_range lower to (upper + 1)}
   ]
@@ -172,15 +209,14 @@ Public
     upper = 1 + Old upper
   ]
 
-  - append_collection other:COLLECTION(V) <- 
+  - append_collection other:Collection(V) <- 
   // BSBS: append tout court ?
   // Append `other' to Current.
-  // * See: `add_last', `add_first', `add'.
   [
     other != NULL
   ]
   (
-    (other.lower).to (other.upper) do { i:INTEGER
+    (other.lower).to (other.upper) do { i:Int
       add_last (other.at i)
     }
   )
@@ -188,15 +224,14 @@ Public
     count = other.count + Old count
   ]
 
-  - copy_collection other:COLLECTION(V) <-
+  - copy_collection other:Collection(V) <-
   // Copy `other' to Current.
-  // * See: `copy'.
   [
     other != NULL
   ]
   ( 
     clear
-    (other.lower).to (other.upper) do { i:INTEGER
+    (other.lower).to (other.upper) do { i:Int
       add_last (other.at i)
     }
   )
@@ -204,20 +239,27 @@ Public
     count = other.count
   ]
   
-  - append other:COLLECTION V from l:INTEGER to u:INTEGER <-
+  - append other:Collection V from l:Int to u:Int <-
   (
-    l.to u do { i:INTEGER
+    l.to u do { i:Int
       add_last (other.at i)
     }
   )
   
+  // Searching:
+  
+  - fast_has v:V :BOOLEAN <-
+  // Look for `v' using basic `=' for comparison.
+  (
+    valid_index (fast_first_index_of v)
+  )
+  
   // Modification:
 
-  - force element:V to index:INTEGER <-
+  - force element:V to index:Int <-
   // Make `element' the item at `index', enlarging the collection if
   // necessary (new bounds except `index' are initialized with
   // default values).
-  // * See: `put', `at', `swap'.
   [
     index >= lower
   ]
@@ -232,17 +274,17 @@ Public
     at index = element
   ]
 
-  - copy other:SELF <-
+  - copy other:Self <-
   // Reinitialize by copying all the items of `other'.
   (
     abstract
   )
 
-  - from_collection model:COLLECTION(V) <-
+  - from_collection model:Collection(V) <-
   // Initialize the current object with the contents of `model'.
   [
     model != NULL,
-    model != Self
+    model != self
   ]
   (
     abstract
@@ -255,7 +297,6 @@ Public
 
   - remove_first <-
   // Remove the `first' element of the collection.
-  // * See: `remove_last', `remove', `remove_head'.
   [
     ! is_empty
   ]
@@ -267,9 +308,8 @@ Public
     (lower = Old lower + 1) ^ (upper = Old upper - 1)
   ]
 
-  - remove_head n:INTEGER <-
+  - remove_head n:Int <-
   // Remove the `n' elements of the collection.
-  // * See: `remove_tail', `remove', `remove_first'.
   [
     n >= 0,
     n <= count
@@ -282,9 +322,8 @@ Public
     (lower = Old lower + n) ^ (upper = Old upper - n)
   ]
 
-  - remove index:INTEGER <-
+  - remove index:Int <-
   // Remove the item at position `index'. Followings items are shifted left by one position.
-  // * See: `remove_first', `remove_head', `remove_tail', `remove_last'.
   [
     {valid_index index}
   ]
@@ -298,10 +337,7 @@ Public
 
   - remove_last <-
   // Remove the `last' item.
-  // * See: `remove_first', `remove', `remove_tail'.
-  [
-    ! is_empty
-  ]
+  [ ! is_empty ]
   (
     abstract
   )
@@ -310,9 +346,8 @@ Public
     upper = Old upper - 1
   ]
 
-  - remove_tail n:INTEGER <-
+  - remove_tail n:Int <-
   // Remove the last `n' item(s).
-  // * See: `remove_head', `remove', `remove_last'.
   [
     n >= 0,
     n <= count
@@ -337,24 +372,10 @@ Public
 
   // Looking and Searching:
   
-  - first_index_of element:V :INTEGER <-
+  - first_index_of element:V :Int <-
   // Give the index of the first occurrence of `element' using
   // `==' for comparison.
   // Answer `upper + 1' when `element' is not inside.
-  // * Parameter:
-  //    `element' : element to search.
-  // * Require: `element' not null.
-  // * Ensure: Very good fonction
-  // * See: `fast_first_index_of', `index_of start', `last_index_of',
-  // `reverse_index_of'.
-  // * Description en Francais: Donne l'index de la premiere occurence de `element'
-  // en utilisant `==' pour la comparaison.
-  // Renvoi `upper + 1' lorsque `element' est absent.
-  // * Parametre:
-  //    `element' : L'element que l'on veut chercher.
-  // * Necessite: `element' pas null.
-  // * Voir: `fast_first_index_of', `index_of', `last_index_of',
-  // `reverse_index_of'.
   (
     abstract
     0
@@ -363,11 +384,10 @@ Public
     {Result = index_of element start lower}
   ]
 
-  - index_of element:V start start_index:INTEGER :INTEGER <-
+  - index_of element:V start start_index:Int :Int <-
   // Using `is_equal' for comparison, gives the index of the first occurrence
   // of `element' at or after `start_index'. Answer `upper + 1' when `element'
   // when the search fail.
-  // * See: `fast_index_of', `reverse_index_of', `first_index_of'.
   (
     abstract
     0
@@ -377,12 +397,11 @@ Public
     valid_index Result ->> {element == at Result}
   ]
 
-  - reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  - reverse_index_of element:V start start_index:Int :Int <-
   // Using `is_equal' for comparison, gives the index of the first occurrence of
   // `element' at or before `start_index'. Search is done in reverse direction,
-  // which means from the `start_index' down to the `lower' index .
+  // which means from the `start_index' down to the lower index .
   // Answer `lower -1' when the search fail.
-  // * See: `fast_reverse_index_of', `last_index_of', `index_of'.
   [
     {valid_index start_index}
   ]
@@ -395,12 +414,11 @@ Public
     valid_index Result -> (at Result == element)
   ]
 
-  - last_index_of element:V :INTEGER <-
+  - last_index_of element:V :Int <-
   // Using `is_equal' for comparison, gives the index of the last occurrence
-  // of `element' at or before `upper'. Search is done in reverse direction,
-  // which means from the `upper' down to the `lower' index . Answer `lower -1'
+  // of `element' at or before upper. Search is done in reverse direction,
+  // which means from the upper down to the lower index . Answer `lower -1'
   // when the search fail.
-  // * See: `fast_last_index_of', `reverse_index_of', `index_of'.
   (
     reverse_index_of element start upper
   )
@@ -408,10 +426,9 @@ Public
     {Result = reverse_index_of element start upper}
   ]
 
-  - fast_first_index_of element:V :INTEGER <-
+  - fast_first_index_of element:V :Int <-
   // Give the index of the first occurrence of `element' using basic `='
   // for comparison. Answer `upper + 1' when `element' is not inside.
-  // * See: `first_index_of', `last_index_of', `fast_last_index_of'.
   (
     abstract
     0
@@ -420,11 +437,10 @@ Public
     {Result = fast_index_of element start lower}
   ]
 
-  - fast_index_of element:V start start_index:INTEGER :INTEGER <-
+  - fast_index_of element:V start start_index:Int :Int <-
   // Using basic `=' for comparison, gives the index of the first occurrence
   // of element `v' at or after `start_index'. Answer `upper + 1' when `element'
   // when the search fail.
-  // * See: `index_of', `fast_reverse_index_of', `fast_first_index_of'.
   (
     abstract
     0
@@ -434,12 +450,11 @@ Public
     valid_index Result ->> {element = at Result}
   ]
 
-  - fast_reverse_index_of element:V start start_index:INTEGER :INTEGER <-
+  - fast_reverse_index_of element:V start start_index:Int :Int <-
   // Using basic `=' comparison, gives the index of the first occurrence
   // of `element' at or before `start_index'. Search is done in reverse
-  // direction, which means from the `start_index' down to the `lower'
+  // direction, which means from the `start_index' down to the lower
   // index . Answer `lower -1' when the search fail.
-  // * See: `reverse_index_of', `fast_index_of', `fast_last_index_of'.
   [
     {valid_index start_index || {start_index = -1}}
   ]
@@ -452,12 +467,11 @@ Public
     valid_index Result ->> {at Result = element}
   ]
 
-  - fast_last_index_of element:V :INTEGER <-
+  - fast_last_index_of element:V :Int <-
   // Using basic `=' for comparison, gives the index of the last occurrence
-  // of `element' at or before `upper'. Search is done in reverse direction,
-  // which means from the `upper' down to the `lower' index . Answer `lower -1'
+  // of `element' at or before upper. Search is done in reverse direction,
+  // which means from the upper down to the lower index . Answer `lower -1'
   // when the search fail.
-  // * See: `fast_reverse_index_of', `last_index_of'.
   (
     fast_reverse_index_of element start upper
   )
@@ -465,11 +479,11 @@ Public
     {Result = fast_reverse_index_of element start upper}
   ]
   
-  - index_of_true b:{V;BOOLEAN} :INTEGER <-
+  - index_of_true b:{V;Boolean} :Int <-
   index_of_true b start 0
   
-  - index_of_true b:{V;BOOLEAN} start i:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - index_of_true b:{V;Boolean} start i:Int :Int <-
+  ( + result:Int
     result := i
     {(result <= upper) && {!b.value (at result)}}.while_do {
       result := result + 1
@@ -477,11 +491,11 @@ Public
     result
   )
   
-  - index_of_false b:{V;BOOLEAN} :INTEGER <-
+  - index_of_false b:{V;Boolean} :Int <-
   index_of_false b start 0
     
-  - index_of_false b:{V;BOOLEAN} start i:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - index_of_false b:{V;Boolean} start i:Int :Int <-
+  ( + result:Int
     result := i
     {(result <= upper) && {b.value (at result)}}.while_do {
       result := result + 1
@@ -491,65 +505,60 @@ Public
   
   // Looking and comparison:
 
-  - Self:SELF '=='  Right 60 other:E :BOOLEAN <-
-  // Do both collections have the same `lower', `upper', and
+  - self:Self '=='  Right 60 other:E :Boolean <-
+  // Do both collections have the same lower, upper, and
   // items?
   // The basic `=' is used for comparison of items.
-  // * See: `is_equal_map', `same_items'.
   (
     abstract
-    FALSE
+    False
   )
 
-  - Self:SELF '~='  Right 60 other:COLLECTION(V) :BOOLEAN <-
-  // Do both collections have the same `lower', `upper', and
+  - self:Self '~='  Right 60 other:Collection(V) :Boolean <-
+  // Do both collections have the same lower, upper, and
   // items?
   // The basic `=' is used for comparison of items.
-  // * See: `is_equal_map', `same_items'.
   (
     abstract
-    FALSE
+    False
   )
   [
     Result ->> {(lower = other.lower) & (upper = other.upper)}
   ]
 
-  - is_equal_map other:SELF :BOOLEAN <-
-  // Do both collections have the same `lower', `upper', and
+  - is_equal_map other:Self :Boolean <-
+  // Do both collections have the same lower, upper, and
   // items?
   // Feature `==' is used for comparison of items.
-  // * See: `==', `same_items'.
   (
     abstract
-    FALSE
+    False
   )
   [
     Result -> ((lower = other.lower) & (upper = other.upper))
   ]
 
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   // Do all items have their type's default value?
   // Note: for non NULL items, the test is performed with the `is_default' predicate.
-  // * See: `clear_all'.
   (
     abstract
-    FALSE
+    False
   )
 
-  - same_items other:COLLECTION(V) :BOOLEAN <-
+  - same_items other:Collection(V) :Boolean <-
   // Do both collections have the same items? The basic `=' is used
   // for comparison of items and indices are not considered (for
-  // example this routine may yeld true with `Current' indexed in
+  // example this routine may yeld true with Current indexed in
   // range [1..2] and `other' indexed in range [2..3]).
-  // * See: `is_equal_map', `is_equal'.
   [
     other != NULL
   ]
-  ( + result:BOOLEAN
-    + i,j:INTEGER
+  ( + result:Boolean
+    + i,j:Int
 
     (count = other.count).if {
-      result := TRUE
+      result := True
       i := lower
       j := other.lower
       {(! result) || {i > upper}}.until_do {
@@ -564,9 +573,8 @@ Public
     Result -> (count = other.count)
   ]
 
-  - occurrences element:V :INTEGER <-
+  - occurrences element:V :Int <-
   // Number of occurrences of `element' using `equal' for comparison.
-  // * See: `fast_occurrences', `index_of'.
   (
     abstract
     0
@@ -575,9 +583,8 @@ Public
     Result >= 0
   ]
 
-  - fast_occurrences element:V :INTEGER <-
+  - fast_occurrences element:V :Int <-
   // Number of occurrences of `element' using basic `=' for comparison.
-  // * See: `occurrences', `index_of'.
   (
     abstract
     0
@@ -590,24 +597,24 @@ Public
   
   - bubble_sort <- ( bubble_sort_with { (a,b:V); a < b }; )
   
-  - bubble_sort_with cmp:{ (V,V); BOOLEAN} <-
+  - bubble_sort_with cmp:{ (V,V); Boolean} <-
   // Two way bubble sort
-  ( + low,up,idx,max:INTEGER
-    + sw:BOOLEAN
+  ( + low,up,idx,max:Int
+    + sw:Boolean
     max := upper - 1
     low := 0
     up := max
     {
-      sw := FALSE
-      low.to up do { i:INTEGER
+      sw := False
+      low.to up do { i:Int
         (cmp.value (at i,at (i+1))).if_false {
           swap i with (i + 1)
-          sw := TRUE
+          sw := True
         }
         idx := max - i
         (cmp.value (at idx,at (idx+1))).if_false {
           swap idx with (idx+1)
-          sw := TRUE
+          sw := True
         }
       }
       up  := up  - 1
@@ -615,13 +622,13 @@ Public
     }.do_while {sw}
   )
   
-  - quick_sort cmp:{ (V,V); BOOLEAN} from low:INTEGER to up:INTEGER <-
-  ( + i:INTEGER
+  - quick_sort cmp:{ (V,V); Boolean} from low:Int to up:Int <-
+  ( + i:Int
     + pivot:V
     (low < up).if {
       pivot := at up
       i := low
-      low.to (up-1) do { j:INTEGER
+      low.to (up-1) do { j:Int
         (cmp.value (at j,pivot)).if {
           swap i with j
           i := i + 1
@@ -635,31 +642,31 @@ Public
   
   - quick_sort <- quick_sort { (a,b:V); a < b} from lower to upper
   
-  - quick_sort_with cmp:{ (V,V); BOOLEAN} <- quick_sort cmp from lower to upper
+  - quick_sort_with cmp:{ (V,V); Boolean} <- quick_sort cmp from lower to upper
   
   // foreach family:
   
   - foreach b:{V;} <- from lower to upper do b
   
-  - from low:INTEGER to up:INTEGER do b:{V;} <-
+  - from low:Int to up:Int do b:{V;} <-
   // *** deplacer la cible ?? DCDC
   (
     (up >= low).if {
-      low.to up do { i:INTEGER
+      low.to up do { i:Int
         b.value (at i)
       }
     }
   )
   
-  - while_do b:{V; BOOLEAN} :BOOLEAN <- from lower to upper while_do b
+  - while_do b:{V; Boolean} :Boolean <- from lower to upper while_do b
   
-  - until_do b:{V; BOOLEAN} :BOOLEAN <- from lower to upper until_do b
+  - until_do b:{V; Boolean} :Boolean <- from lower to upper until_do b
       
-  - from low:INTEGER to up:INTEGER while_do b:{V; BOOLEAN} :BOOLEAN <-
+  - from low:Int to up:Int while_do b:{V; Boolean} :Boolean <-
   // *** deplacer la cible DCDC
   // BSBS: True si il a tout fait. (A generalise')
   //  <=>  True si b a toujours ete true...
-  ( + i:INTEGER
+  ( + i:Int
     i := low
     {(i <= up) && {b.value (at i)}}.while_do {
       i := i + 1
@@ -667,10 +674,10 @@ Public
     i > up
   )
   
-  - from low:INTEGER to up:INTEGER until_do b:{V; BOOLEAN} :BOOLEAN <-
+  - from low:Int to up:Int until_do b:{V; Boolean} :Boolean <-
   // *** deplacer la cible DCDC
   // True, si b est toujours faux
-  ( + i:INTEGER
+  ( + i:Int
     i := low
     {(i <= up) && {!b.value (at i)}}.while_do {
       i := i + 1
@@ -678,8 +685,8 @@ Public
     i > up
   )
   
-  - search_until b:{V; BOOLEAN} :V <-
-  ( + i:INTEGER
+  - search_until b:{V; Boolean} :V <-
+  ( + i:Int
     + result:V
     i := lower
     {(i <= upper) && {!b.value (at i)}}.while_do { i := i + 1; }
@@ -687,9 +694,9 @@ Public
     result
   )
   
-  - count_if tst:{V; BOOLEAN} :INTEGER <- // DCDC STILL USED
-  ( + result:INTEGER
-    0.to upper do { i:INTEGER
+  - count_if tst:{V; Boolean} :Int <- // DCDC STILL USED
+  ( + result:Int
+    0.to upper do { i:Int
       (tst.value (at i)).if {
         result := result + 1
       }
@@ -702,23 +709,23 @@ Public
   - foreach_backward b:{V; } <- from upper downto lower do b
   // DCDC   ********  la fin
   
-  - from up:INTEGER downto low:INTEGER do b:{V; } <-
+  - from up:Int downto low:Int do b:{V; } <-
   // *** deplacer la cible DCDC
   (
     (up >= low).if {
-      up.downto low do { i:INTEGER
+      up.downto low do { i:Int
         b.value (at i)
       }
     }
   )
   
-  - while_do_backward b:{V; BOOLEAN} :BOOLEAN <- from upper downto lower while_do b
+  - while_do_backward b:{V; Boolean} :Boolean <- from upper downto lower while_do b
   
-  - until_do_backward b:{V; BOOLEAN} :BOOLEAN <- from upper downto lower until_do b
+  - until_do_backward b:{V; Boolean} :Boolean <- from upper downto lower until_do b
   
-  - from up:INTEGER downto low:INTEGER while_do b:{V; BOOLEAN} :BOOLEAN <-
+  - from up:Int downto low:Int while_do b:{V; Boolean} :Boolean <-
   // *** deplacer la cible DCDC
-  ( + i:INTEGER
+  ( + i:Int
     i := up
     {(i >= low) && {b.value (at i)}}.while_do {
       i := i - 1
@@ -726,9 +733,9 @@ Public
     i < low
   )
   
-  - from up:INTEGER downto low:INTEGER until_do b:{V; BOOLEAN} :BOOLEAN <-
+  - from up:Int downto low:Int until_do b:{V; Boolean} :Boolean <-
   // *** deplacer la cible DCDC
-  ( + i:INTEGER
+  ( + i:Int
     i := up
     {(i >= low) && {!b.value (at i)}}.while_do {
       i := i - 1
@@ -741,7 +748,6 @@ Public
   - replace_all old_value:V with new_value:V <-
   // Replace all occurrences of the element `old_value' by `new_value'
   // using `equal' for comparison.
-  // * See: `fast_replace_all', `move'.
   (
     abstract
   )
@@ -752,7 +758,6 @@ Public
   - fast_replace_all old_value:V with new_value:V <-
   // Replace all occurrences of the element `old_value' by `new_value'
   // using operator `=' for comparison.
-  // * See: `replace_all', `move'.
   (
     abstract
   )
@@ -761,11 +766,10 @@ Public
     { (old_value != new_value) ->> {occurrences old_value = 0}}
   ]
 
-  - move lower_index:INTEGER to upper_index:INTEGER by distance:INTEGER <-
+  - move lower_index:Int to upper_index:Int by distance:Int <-
   // Move range `lower_index' .. `upper_index' by `distance'
   // positions. Negative distance moves towards lower indices.
   // Free places get default values.
-  // * See: `slice', `replace_all'.
   [
     lower_index <= upper_index,
     {valid_index lower_index},
@@ -776,12 +780,12 @@ Public
   ( + default_value:V
     (distance != 0).if {
       (distance < 0).if {
-        lower_index.to upper_index do { i:INTEGER
+        lower_index.to upper_index do { i:Int
           at (i + distance) put (at i)
           at i put default_value
         }
       } else {
-        upper_index.downto lower_index do { i:INTEGER
+        upper_index.downto lower_index do { i:Int
           at (i + distance) put (at i)
           at i put default_value
         }
@@ -792,17 +796,10 @@ Public
     count = Old count
   ]
 
-  - slice min:INTEGER to max:INTEGER :SELF <-
-  // New collection consisting of items at indexes in [`min'..`max'].
-  // Result has the same dynamic type as `Current'.
-  // The `lower' index of the `Result' is the same as `lower'.
-  // * See: `from_collection', `move', `replace_all'.
-  // * require: `lower' inferior or equal to `min'
-  // * require: `max' inferior or equal to `upper'
-  // * require: `min' inferior or equal to `max' + 1
-  // * ensure: `Self' is same dynamic type of Result
-  // * ensure: Result size is equal to `max' - `min' + 1
-  // * ensure: Result first element index is same as `Self' first element index
+  - slice min:Int to max:Int :Self <-
+  // New collection consisting of items at indexes in [min..max].
+  // Result has the same dynamic type as Current.
+  // The lower index of the Result is the same as lower.
   [
     lower <= min,
     max <= upper,
@@ -835,9 +832,9 @@ Public
 
   // Debug
 
-  - inspect : STRING_BUFFER <-
-  ( + res : STRING_BUFFER
-     res := STRING_BUFFER.create 4096
+  - inspect : String_buffer <-
+  ( + res : String_buffer
+     res := String_buffer.create 4096
      res.append "[ "
     foreach { el : V; res.append "'"; res.append (el.to_string); res.append "' , ";}
     res.append "]"

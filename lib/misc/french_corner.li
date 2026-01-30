@@ -1,7 +1,6 @@
 Header
-  + name := FRENCH_CORNER;
-  
-  /*
+  + name := French_corner
+/*
   To insert to add a small touch of French for beginners in programming.
 
 
@@ -9,25 +8,25 @@ Header
   
 Private
   
-  - lire_entier:INTEGER <-
+  - lire_entier:Int <-
   (
-    STDIN.read_line
-    while {! STDIN.last_string.is_integer} do {
+    Stdin.read_line
+    while {! Stdin.last_string.is_integer} do {
       "Il faut taper un entier. Recommence.".print;
-      STDIN.read_line
+      Stdin.read_line
     }
-    STDIN.last_string.to_integer
+    Stdin.last_string.to_int
   )
   
-  - lire_chaine:STRING_ALIAS <- 
+  - lire_chaine:String_alias <- 
   (
-    STDIN.read_line
-    STDIN.last_string.to_string_alias
+    Stdin.read_line
+    Stdin.last_string.to_string_alias
   )
   
-  - vrai:BOOLEAN <- TRUE
+  - vrai:Boolean <- True
   
-  - faux:BOOLEAN <- FALSE
+  - faux:Boolean <- False
   
-  - non (b:BOOLEAN):BOOLEAN <- !b
+  - non (b:Boolean):Boolean <- !b
   

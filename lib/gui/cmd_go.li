@@ -1,29 +1,28 @@
 Header
-  + name := CMD_GO;
-  
+  + name := Cmd_go
 Inherit
-  - parent_cmd:CMD := CMD
+  - parent_cmd:Cmd := Cmd
 
 Public
   
-  - is_line:BOOLEAN
+  - is_line:Boolean
   
-  - open_line:BOOLEAN <- sub_open TRUE msg "Go line:"
+  - open_line:Boolean <- sub_open True msg "Go line:"
   
-  - open_point:BOOLEAN <- sub_open FALSE msg "Go point:"
+  - open_point:Boolean <- sub_open False msg "Go point:"
   
-  - sub_open s:BOOLEAN msg m:STRING_ALIAS :BOOLEAN <-
+  - sub_open s:Boolean msg m:String_alias :Boolean <-
   (
     mesg.copy m
     is_line := s
     text.clear
-    SUBACT.empty Self
+    Subact.empty self
     open
   )
       
-  - action:BOOLEAN <-
-  ( + n:INTEGER
-    ((text.is_integer) && {(n := text.to_integer) >= 0}).if {
+  - action:Boolean <-
+  ( + n:Int
+    ((text.is_integer) && {(n := text.to_int) >= 0}).if {
       is_line.if { cur_txt.cmd_go_line n; } else {
         n := n.min (cur_txt.text.upper)
         cur_txt.set_pos_raw (n)
@@ -33,5 +32,5 @@ Public
       beep
       info.copy "Please enter a number."
     }
-    TRUE
+    True
   )

@@ -1,20 +1,19 @@
 Header
-  + name := N_ARG;
-  
+  + name := N_arg
 Inherit
-  + parent_node:Expanded NODE
+  + parent_node:Flat Node
   
 Public
   
-  + type:TYPE
-  - set_type t:TYPE :SELF <- ( type := t; Self)
+  + type:Type
+  - set_type t:Type :Self <- ( type := t; self)
   
-  + is_rec:BOOLEAN
-  - set_rec r:BOOLEAN :SELF <- ( is_rec := r; Self)
+  + is_rec:Boolean
+  - set_rec r:Boolean :Self <- ( is_rec := r; self)
   
-  - new t:TYPE rec r:BOOLEAN :SELF <- clone.set_type t.set_rec r
+  - new t:Type rec r:Boolean :Self <- clone.set_type t.set_rec r
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     is_rec.if { b | '['; }
     b | '('

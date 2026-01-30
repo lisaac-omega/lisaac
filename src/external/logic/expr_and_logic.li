@@ -1,24 +1,21 @@
 Header
-
-  + name        := EXPR_AND_LOGIC;
-
-  /*And binary logical expression.*/
-
+  + name := Expr_and_logic
+/*And binary logical expression.*/
 Inherit
 
-  + parent_expr_binary_logic:Expanded EXPR_BINARY_LOGIC
+  + parent_expr_binary_logic:Flat Expr_binary_logic
 
 Public
 
-  + symbol:STRING_ALIAS := "&"
+  + symbol:String_alias := "&"
 
   //
   // Execute.
   //
 
-  - exec_conservator_left  left_cst :TYPE :EXPR <-
-  //-- TRUE & E -> E
-  ( + result:EXPR
+  - exec_conservator_left  left_cst :Type :Expr <-
+  //-- True & E -> E
+  ( + result:Expr
 
     (left_cst = type_true).if {
       result := right
@@ -27,9 +24,9 @@ Public
     result
   )
 
-  - exec_conservator_right right_cst:TYPE :EXPR <-
-  //-- E & TRUE -> E
-  ( + result:EXPR
+  - exec_conservator_right right_cst:Type :Expr <-
+  //-- E & True -> E
+  ( + result:Expr
 
     (right_cst = type_true).if {
       result := left
@@ -38,9 +35,9 @@ Public
     result
   )
 
-  - exec left_cst:TYPE and right_cst:TYPE :EXPR <-
+  - exec left_cst:Type and right_cst:Type :Expr <-
   //-- C1 & C2 -> C3
-  ( + result:EXPR
+  ( + result:Expr
 
     (left_cst = type_true).if {
       result := right
@@ -52,9 +49,9 @@ Public
     result
   )
 
-  - exec:EXPR <-
+  - exec:Expr <-
   //-- E & E -> E
-  ( + result:EXPR
+  ( + result:Expr
 
     (left ~= right).if {
       result := left
@@ -63,9 +60,9 @@ Public
     result
   )
 
-  - exec_left  left_cst :TYPE :EXPR <-
-  //-- FALSE & E -> FALSE
-  ( + result:EXPR
+  - exec_left  left_cst :Type :Expr <-
+  //-- False & E -> False
+  ( + result:Expr
 
     (left_cst = type_false).if {
       result := left
@@ -74,9 +71,9 @@ Public
     result
   )
 
-  - exec_right right_cst:TYPE :EXPR <-
-  //-- E & FALSE -> FALSE
-  ( + result:EXPR
+  - exec_right right_cst:Type :Expr <-
+  //-- E & False -> False
+  ( + result:Expr
 
     (right_cst = type_false).if {
       result := right

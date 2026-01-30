@@ -1,29 +1,24 @@
 Header
-
-  + name := STRING_BUFFER;
-
+  + name := String_buffer
 Inherit
-
-  + inherit_string:Expanded STRING
-  
-  - parent_arrayed:ARRAYED := ARRAYED
-
+  + inherit_string:Flat String
+  - parent_arrayed:Arrayed := Arrayed  
 Public
 
-  + capacity:INTEGER
+  + capacity:Int
 
   // General :
 
-  - set_storage tab:NATIVE_ARRAY(CHARACTER) <-
+  - set_storage tab:C_array(Char) <-
   ( ? {tab != NULL}
     storage := tab
   )
 
   // Creation / Modification :
 
-  - new Self:SELF capacity c:INTEGER :SELF <-
-  ( + result:SELF
-    result := SELF.clone
+  - new self:Self capacity c:Int :Self <-
+  ( + result:Self
+    result := Self.clone
     result.make c
     result
   )
@@ -31,22 +26,22 @@ Public
     Result.is_empty
   ]
   
-  - create needed_capacity:INTEGER :SELF <- new SELF capacity needed_capacity
+  - create needed_capacity:Int :Self <- new Self capacity needed_capacity
 
-  - create_from_string str:STRING :SELF <-
-  ( + result:SELF
+  - create_from_string str:String :Self <-
+  ( + result:Self
     result := create (str.count)
     result.copy str
     result
   )
 
-  - make needed_capacity:INTEGER <-
+  - make needed_capacity:Int <-
   // Initialize the string to have at least `needed_capacity'
   // characters of storage.
   ( ? {needed_capacity >= 0}
     (needed_capacity > 0).if {
       (capacity < needed_capacity).if {
-        storage := NATIVE_ARRAY CHARACTER.create needed_capacity
+        storage := C_array Char.create needed_capacity
         capacity := needed_capacity
       }
     }
@@ -62,14 +57,14 @@ Public
     make 0
   )
 
-  - create_filled (c:CHARACTER,n:INTEGER) :SELF <-
-  ( + result:SELF
-    result := SELF.clone
+  - create_filled (c:Char,n:Int) :Self <-
+  ( + result:Self
+    result := Self.clone
     result.make_filled (c,n)
     result
   )
 
-  - make_filled (c:CHARACTER,n:INTEGER) <-
+  - make_filled (c:Char,n:Int) <-
   // Initialize string with `n` copies of `c`
   [
     -? {n >= 0}
@@ -84,44 +79,44 @@ Public
     +? {occurrences c = count}
   ]
 
-  - twin:SELF <-
+  - twin:Self <-
   (
-    create_from_string Self
+    create_from_string self
   )
   
-  - create_from_external p:NATIVE_ARRAY CHARACTER :SELF <-
-  ( + result:SELF
+  - create_from_external p:C_array Char :Self <-
+  ( + result:Self
     result := clone
     result.from_external p
     result
   )
   
-  - to_string_alias:STRING_ALIAS <- ALIAS SELF TO STRING_ALIAS.register Self
+  - to_string_alias:String_alias <- Alias Self To String_alias.register self
   
 Public  
 //Section ALIAS TO
   
-  - create_alias:STRING_ALIAS <-
-  ( + up:INTEGER
-    + new_stor:NATIVE_ARRAY CHARACTER
-    + result:STRING_ALIAS
+  - create_alias:String_alias <-
+  ( + up:Int
+    + new_stor:C_array Char
+    + result:String_alias
     up := upper
     (up > -1).if {
-      new_stor := NATIVE_ARRAY CHARACTER.create (up+2)
+      new_stor := C_array Char.create (up+2)
       new_stor.copy_from storage until up
       new_stor.at (up+1) put '\0'
-      result := STRING_ALIAS.create new_stor upper up
+      result := String_alias.create new_stor upper up
     } else {
       result := ""
     }
     result
   )
   
-  - is_equal_alias other:STRING_ALIAS :BOOLEAN <-
-  ( + result:BOOLEAN
+  - is_equal_alias other:String_alias :Boolean <-
+  ( + result:Boolean
     (upper = other.upper).if {
       (upper = -1).if {
-        result := TRUE
+        result := True
       } else {
         result:=storage.fast_memcmp (other.storage) until upper
       }
@@ -133,9 +128,9 @@ Public
   
   // Modification :
 
-  - resize new_count:INTEGER <-
+  - resize new_count:Int <-
   // Resize self. When `new_count' is greater than `count',
-  // new positions are initialized with the default value of CHARACTER
+  // new positions are initialized with the default value of Char
   [
     -? { new_count >= 0 }
   ]
@@ -143,7 +138,7 @@ Public
     (new_count <= count).if {
     }.elseif { capacity < new_count } then {
       (capacity = 0).if {
-        storage := NATIVE_ARRAY(CHARACTER).create new_count
+        storage := C_array(Char).create new_count
       } else {
         storage := storage.realloc capacity with new_count
       }
@@ -158,13 +153,13 @@ Public
     +? {capacity >= Old capacity}
   ]
 
-  - set_capacity new_capacity:INTEGER <-
+  - set_capacity new_capacity:Int <-
   // Resize `capacity' self, but not count.
   [ ? { new_capacity >= 0 }; ]
   ( 
     (new_capacity > capacity).if {
       (capacity = 0).if {
-        storage := NATIVE_ARRAY(CHARACTER).create new_capacity
+        storage := C_array(Char).create new_capacity
       } else {
         storage := storage.realloc capacity with new_capacity
       }
@@ -173,9 +168,10 @@ Public
   )
   [ ? {(new_capacity > Old capacity) ->> {new_capacity = capacity}}; ]
 
-  - prepare_space n:INTEGER <-
+  - prepare_space n:Int <-
   // Makes sure that we have at least `n` places, ready to use, after `upper`.
   [
+    deprecated True msg "Still used ? DC Jan 2026"
     ? {n > 0}
   ]
   (
@@ -188,20 +184,20 @@ Public
   ]
   
   - clear <-
-  // Clear out the current STRING_BUFFER.
+  // Clear out the current String_buffer.
   // Note: internal `storage' memory is neither released nor shrunk.
   (
     upper := -1
     ? {count = 0}
   )
 
-  - copy other:STRING<-
+  - copy other:String<-
   // Copy `other' onto Current.
   (
     upper := other.upper
     (upper >= 0).if {
       (capacity < count).if {
-        storage  := NATIVE_ARRAY(CHARACTER).create count
+        storage  := C_array(Char).create count
         capacity := count
       }
       storage.copy_from (other.storage) until upper
@@ -209,18 +205,18 @@ Public
     ? {count = other.count}
   )
   
-  - copy other:STRING from l:INTEGER to e:INTEGER <-
-  ( + cnt:INTEGER
+  - copy other:String from l:Int to e:Int <-
+  ( + cnt:Int
     cnt := e-l+1
     (capacity < cnt).if {
-      storage  := NATIVE_ARRAY(CHARACTER).create cnt
+      storage  := C_array(Char).create cnt
       capacity := cnt
     }
     upper := cnt - 1
     storage.copy_from (other.storage+l) until upper
   )
 
-  - fill_with c:CHARACTER <-
+  - fill_with c:Char <-
   // Replace every character with `c'.
   (
     storage.set_all_with c until upper
@@ -228,7 +224,7 @@ Public
     ? {occurrences c = count}
   )
 
-  - replace_all old_char:CHARACTER with new_char:CHARACTER <-
+  - replace_all old_char:Char with new_char:Char <-
   // Replace all occurrences of the element `old_char' by `new_character'
   (
     storage.fast_replace_all old_char with new_char until upper
@@ -238,9 +234,9 @@ Public
     +? { occurrences old_char = 0}
   ]
 
-  - append other:STRING <-
+  - append other:String <-
   // Append `other' to Current.
-  ( + other_count, needed_capacity:INTEGER
+  ( + other_count, needed_capacity:Int
     ? {other != NULL}
 
     other_count := other.count
@@ -248,7 +244,7 @@ Public
     (capacity < needed_capacity).if {
       (capacity = 0).if {
         capacity := needed_capacity
-        storage  := NATIVE_ARRAY(CHARACTER).create capacity
+        storage  := C_array(Char).create capacity
       } else {
         storage  := storage.realloc capacity with needed_capacity
         capacity := needed_capacity
@@ -258,13 +254,13 @@ Public
     upper := needed_capacity - 1
   )
   
-  - append other:STRING from b:INTEGER to e:INTEGER<-
+  - append other:String from b:Int to e:Int<-
   // Append `other' to Current.
   [ ? {b.in_range 0 to (other.upper)}
     ? {e.in_range 0 to (other.upper)}
     ? {b <= e}
   ]
-  ( + other_count, needed_capacity:INTEGER
+  ( + other_count, needed_capacity:Int
     ? {other != NULL}
 
     other_count := e - b + 1
@@ -272,7 +268,7 @@ Public
     (capacity < needed_capacity).if {
       (capacity = 0).if {
         capacity := needed_capacity
-        storage  := NATIVE_ARRAY(CHARACTER).create capacity
+        storage  := C_array(Char).create capacity
       } else {
         storage  := storage.realloc capacity with needed_capacity
         capacity := needed_capacity
@@ -282,17 +278,17 @@ Public
     upper := needed_capacity - 1
   )
   
-  - Self:SELF '#' e:E :SELF <- ( e.append_in Self; Self)
+  - self:Self '#' e:E :Self <- ( e.append_in self; self)
   
-  - Self:SELF '|#' e:E :SELF <- ( clear; e.append_in Self; Self)
+  - self:Self '|#' e:E :Self <- ( clear; e.append_in self; self)
   
-  - prepend other:STRING from b:INTEGER to e:INTEGER<-
+  - prepend other:String from b:Int to e:Int<-
   // Append `other' to Current.
   [ ? {b.in_range 0 to (other.upper)}
     ? {e.in_range 0 to (other.upper)}
     ? {b <= e}
   ]
-  ( + other_count, needed_capacity:INTEGER
+  ( + other_count, needed_capacity:Int
     ? {other != NULL}
 
     other_count := e - b + 1
@@ -300,7 +296,7 @@ Public
     (capacity < needed_capacity).if {
       (capacity = 0).if {
         capacity := needed_capacity
-        storage  := NATIVE_ARRAY CHARACTER.create capacity
+        storage  := C_array Char.create capacity
       } else {
         storage  := storage.realloc capacity with needed_capacity
         capacity := needed_capacity
@@ -311,30 +307,30 @@ Public
     upper := needed_capacity - 1
   )
   
-  - Self:SELF '|' c:CHARACTER :STRING_BUFFER <-
+  - self:Self '|' c:Char :String_buffer <-
   (
     add_last c
-    Self
+    self
   )
     
-  - Self:SELF '+#' Left 60 other:INTEGER :STRING_BUFFER <-
+  - self:Self '+#' Left 60 other:Int :String_buffer <-
   (
-    other.append_in Self
-    Self
+    other.append_in self
+    self
   )
   
-  - Self:SELF '+=' other:STRING :STRING_BUFFER <-
+  - self:Self '+=' other:String :String_buffer <-
   (
     append other
-    Self
+    self
   )
 
-  - prepend other:STRING <-
+  - prepend other:String <-
   // Prepend `other' to Current
   [
     ? {other != NULL}
   ]
-  ( + i, j: INTEGER
+  ( + i, j: Int
     
     j := other.upper
     (j != -1).if {
@@ -347,10 +343,10 @@ Public
     }
   )
 
-  - insert_string s:STRING to i:INTEGER <-
+  - insert_string s:String to i:Int <-
   // Insert `s' at index `i', shifting characters from index `i'
   // to `count' rightwards.
-  ( + j,k:INTEGER
+  ( + j,k:Int
 
     ? { s != NULL }
     ? { i.in_range 0 to count}
@@ -364,9 +360,9 @@ Public
     storage.copy (s.storage) to i until k
   )
 
-  - replace_substring s:STRING from start:INTEGER to end:INTEGER <-
+  - replace_substring s:String from start:Int to end:Int <-
   // Replace the substring from start to end, inclusive, with s
-  ( + difference, old_upper: INTEGER
+  ( + difference, old_upper: Int
 
     ? {s != NULL}
     ? { end <= upper}
@@ -382,8 +378,8 @@ Public
     storage.copy (s.storage) to start until (s.upper+1)
   )
 
-  - replace_all_substring motif:STRING with txt:STRING <-
-  ( + idx:INTEGER
+  - replace_all_substring motif:String with txt:String <-
+  ( + idx:Int
 
     idx := lower
     {
@@ -395,9 +391,9 @@ Public
     }.do_while {idx != -1}
   )
   
-  - replace_all_substring motif:STRING with txt:STRING from start:INTEGER <-
+  - replace_all_substring motif:String with txt:String from start:Int <-
   [ ? {start.in_range 0 to upper}; ]
-  ( + idx:INTEGER
+  ( + idx:Int
 
     idx := start
     {
@@ -409,7 +405,7 @@ Public
     }.do_while {idx != -1}
   )
 
-  - at i:INTEGER put c:CHARACTER <-
+  - at i:Int put c:Char <-
   [
     ? {valid_index i}
   ]
@@ -417,15 +413,15 @@ Public
     storage.at i put c
   )
     
-  - put c:CHARACTER to i:INTEGER <- storage.at i put c
+  - put c:Char to i:Int <- storage.at i put c
   // BSBS -> DOM Pour que je puisse travailler ...
   
-  - swap i1:INTEGER with i2: INTEGER <-
+  - swap i1:Int with i2: Int <-
   [
     ? {valid_index i1}
     ? {valid_index i2}
   ]
-  ( + t:CHARACTER
+  ( + t:Char
     t := item i1
     at i1 put (item i2)
     at i2 put t
@@ -435,11 +431,11 @@ Public
     ? {item i2 = Old item i1}
   ]
   
-  - at i:INTEGER add c:CHARACTER <- insert c to i
+  - at i:Int add c:Char <- insert c to i
   
-  - insert ch:CHARACTER to index:INTEGER <-
+  - insert ch:Char to index:Int <-
   // Insert `ch' after position `index'.
-  ( + i:INTEGER
+  ( + i:Int
     ? {0 <= index}
     ? {index <= count}
 
@@ -454,9 +450,9 @@ Public
     ? {item index = ch}
   )
   
-  - escape_char c:CHARACTER <-
+  - escape_char c:Char <-
   // Example: "2 + 4".escape_char '+' => "2 \+ 4"
-  ( + i:INTEGER
+  ( + i:Int
     i := index_of c
     {i <= upper}.while_do {
       insert '\\' to i
@@ -464,7 +460,7 @@ Public
     }
   )
   
-  - insert ch:CHARACTER to i:INTEGER on nb:INTEGER <-
+  - insert ch:Char to i:Int on nb:Int <-
   // Insert `ch' after position `i'.
   [
     ? {0 <= i}
@@ -473,10 +469,10 @@ Public
   ]
   ( resize (count+nb)
     storage.move i to upper by nb
-    i.to (i+nb-1) do { j:INTEGER; storage.at j put ch; }
+    i.to (i+nb-1) do { j:Int; storage.at j put ch; }
   )
 
-  - shrink min_index:INTEGER to max_index:INTEGER <-
+  - shrink min_index:Int to max_index:Int <-
   // Keep only the slice [`min_index' .. `max_index'] or nothing
   // when the slice is empty.
   (
@@ -498,18 +494,18 @@ Public
     ? {upper = max_index - min_index + 1}
   )
 
-  - remove index:INTEGER <-
+  - remove index:Int <-
   // Remove character at position `index'.
   ( ? {valid_index index}
     remove index to index
     ? {count = Old count - 1}
   )
 
-  - add_first ch: CHARACTER <-
+  - add_first ch: Char <-
   // Add `ch' at first position.
   ( 
     add_last ' '
-    upper.downto 1 do { i:INTEGER
+    upper.downto 1 do { i:Int
       at i put (item (i - 1))
     }
     at 0 put ch
@@ -518,14 +514,14 @@ Public
     ? {item 0 = ch}
   )
 
-  - add_last ch:CHARACTER <-
+  - add_last ch:Char <-
   // Append `ch' to string
-  ( + new_capacity:INTEGER
+  ( + new_capacity:Int
     
     (capacity = count).if {
       (capacity = 0).if {
         capacity := 32
-        storage  := NATIVE_ARRAY(CHARACTER).create capacity
+        storage  := C_array(Char).create capacity
       } else {
         new_capacity := capacity * 2
         storage      := storage.realloc capacity with new_capacity
@@ -538,16 +534,18 @@ Public
     ? {count = 1 + Old count}
     ? {item upper = ch}
   )
-
-  - append_character c:CHARACTER <- add_last c
-
-  - extend c:CHARACTER <- add_last c
-
-  -  append_utf8 utf8: STRING <- append_utf8 (utf8.storage) native
   
-  -  append_utf8 utf8: NATIVE_ARRAY CHARACTER native <-
-  ( + i:INTEGER
-    + cu:UINTEGER_8
+  - put_last c:Char <- at upper put c
+  
+  - append_character c:Char <- add_last c
+
+  - extend c:Char <- add_last c
+
+  -  append_utf8 utf8: String <- append_utf8 (utf8.storage) native
+  
+  -  append_utf8 utf8: C_array Char native <-
+  ( + i:Int
+    + cu:Uint8
     cu := utf8.first
     add_last (utf8.first)
     i := 1 
@@ -567,7 +565,7 @@ Public
   - to_lower <-
   // Convert all characters to lower case.
   (
-    upper.downto 0 do { i:INTEGER
+    upper.downto 0 do { i:Int
       at i put (item i.to_lower)
     }
   )
@@ -575,12 +573,12 @@ Public
   - to_upper <-
   // Convert all characters to upper case.
   (
-    upper.downto 0 do { i:INTEGER
+    upper.downto 0 do { i:Int
       at i put (item i.to_upper)
     }
   )
 
-  - keep_head n:INTEGER <-
+  - keep_head n:Int <-
   // Remove all characters except for the first `n'.
   // Do nothing if `n' >= `count'.
   ( ? { n >= 0}
@@ -592,7 +590,7 @@ Public
     ? { count = n.min (Old count)}
   )
 
-  - keep_tail n:INTEGER <-
+  - keep_tail n:Int <-
   // Remove all characters except for the last `n'.
   // Do nothing if `n' >= `count'.
   ( ? { n >= 0}
@@ -606,7 +604,7 @@ Public
   
   - remove_first <- remove_head 1
   
-  - remove_head n:INTEGER <-
+  - remove_head n:Int <-
   // Remove `n' first characters.
   // If `n' >= `count', remove all.
   [ ? { n >= 0}; ]
@@ -622,17 +620,17 @@ Public
     ? { count = 0.max (Old count - n)}
   )
 
-  - remove start:INTEGER to end:INTEGER <-
+  - remove start:Int to end:Int <-
   // Remove all characters from `start_index' to `end_index' inclusive.
   // BSBS: ce ne serait pas plus simple `remove to'
   (
-    + len:INTEGER
+    + len:Int
     ? { end <= upper }
     ? { start.in_range 0 to (end + 1)}
 
     len := end - start + 1
     (len > 0).if {
-      (end + 1).to upper do { i:INTEGER
+      (end + 1).to upper do { i:Int
         at (i - len) put (item i)
       }
       upper := upper - len
@@ -640,14 +638,14 @@ Public
     ? {count = (Old count - (end - start + 1))}
   )
 
-  - remove_suffix s:STRING <-
+  - remove_suffix s:String <-
   // Remove the suffix `s' of current string.
   (
     ? {has_suffix s}
     remove_tail (s.count)
   )
 
-  - remove_tail n:INTEGER <-
+  - remove_tail n:Int <-
   // Remove `n' last characters. If `n' >= `count', remove all.    
   [ ?{ n >= 0 }; ]
   ( 
@@ -664,7 +662,7 @@ Public
     remove_tail 1
   )
 
-  - remove_prefix s:STRING <-
+  - remove_prefix s:String <-
   // Remove the prefix `s' of current string.
   (
     ? {has_prefix s}
@@ -673,7 +671,7 @@ Public
 
   - left_adjust <-
   // Remove leading blanks.
-  (+ i: INTEGER
+  (+ i: Int
     i := -1
     {((i + 1) > upper) || {item (i + 1) != ' '}}.until_do {
       i := i + 1
@@ -684,7 +682,7 @@ Public
 
   - right_adjust <-
   // Remove trailing blanks.
-  ( + i:INTEGER
+  ( + i:Int
     
     i := upper
     {(i = -1) || {item i != ' '}}.until_do {
@@ -695,18 +693,18 @@ Public
     ? {is_empty || {item upper != ' '}}
   )
 
-  - extend_multiple c:CHARACTER by n:INTEGER <-
+  - extend_multiple c:Char by n:Int <-
   // Extend Current with `n' times character `c'.
   ( ? { n >= -1}
         
-    (n - 1).downto 0 do { i:INTEGER
+    (n - 1).downto 0 do { i:Int
       add_last c
     }
 
     ? {count = n + Old count}
   )
 
-  - precede_multiple c:CHARACTER by n:INTEGER <-
+  - precede_multiple c:Char by n:Int <-
   // Prepend `n' times character `c' to Current.
   [ ? { n >= -1 }; ]
   ( 
@@ -722,7 +720,7 @@ Public
     ? {count = n + Old count}
   )
 
-  - extend_to_count c:CHARACTER until needed_count:INTEGER <-
+  - extend_to_count c:Char until needed_count:Int <-
   // Extend Current with `c' until `needed_count' is reached.
   // Do nothing if `needed_count' is already greater or equal
   // to `count'.
@@ -735,11 +733,11 @@ Public
     ? { count >= needed_count}
   )
 
-  -  precede_to_count c:CHARACTER until needed_count:INTEGER <-
+  -  precede_to_count c:Char until needed_count:Int <-
   // Prepend `c' to Current until `needed_count' is reached.
   // Do nothing if `needed_count' is already greater or equal
   // to `count'.
-  ( + offset, old_upper: INTEGER
+  ( + offset, old_upper: Int
     ? { needed_count >= 0}
         
     offset := needed_count - count
@@ -756,7 +754,7 @@ Public
   - reverse <-
   // Reverse the string.
   (
-    + i1, i2: INTEGER
+    + i1, i2: Int
     i1 := 0
     i2 := upper
     { i1 >= i2 }.until_do {
@@ -766,9 +764,9 @@ Public
     }
   )
 
-  - remove_all_occurrences ch:CHARACTER <-
+  - remove_all_occurrences ch:Char <-
   // Remove all occurrences of `ch'.
-  ( + j,i:INTEGER
+  ( + j,i:Int
     {(i <= upper) && {item i != ch}}.while_do { i := i + 1; }
     (i <= upper).if {
       j := i
@@ -784,7 +782,7 @@ Public
     }
   )
 
-  - extend_unless ch:CHARACTER <-
+  - extend_unless ch:Char <-
   // Extend `Current' (using `extend') with `ch' unless `ch' is
   // already the `last' character.
   ( 
@@ -795,16 +793,16 @@ Public
     ? { last = ch }
   )
 
-  - make_from_string model:STRING <-
+  - make_from_string model:String <-
   // Initialize from the characters of `model'.
-  // Useful in proper descendants of STRING_BUFFER.
-  ( + c:INTEGER
+  // Useful in proper descendants of String_buffer.
+  ( + c:Int
 
     ? { model != NULL }
     c := model.upper
     (capacity < c+1).if {
       capacity := c+1
-      storage := NATIVE_ARRAY(CHARACTER).calloc_intern capacity
+      storage := C_array(Char).calloc_intern capacity
     }
     upper := c
     storage.copy_from (model.storage) until c
@@ -812,7 +810,7 @@ Public
     ? {count = model.count}
   )
 
-  - set_count new_count:INTEGER <-
+  - set_count new_count:Int <-
   [
     -? { new_count <= capacity }
   ]
@@ -820,14 +818,14 @@ Public
     upper := new_count - 1
   )
   
-  - set_upper new_upper:INTEGER <-
+  - set_upper new_upper:Int <-
   (
     upper := new_upper
   )
   
   - unescape_c <-
-  ( + p,q,i,val,up:INTEGER
-    + c:CHARACTER
+  ( + p,q,i,val,up:Int
+    + c:Char
     
     {p <= upper}.while_do {
       ((c := at p) = '\\').if {
@@ -868,11 +866,11 @@ Public
   
   // Interfacing with C string :
 
-  - to_external:NATIVE_ARRAY CHARACTER <-
+  - to_external:C_array Char <-
   // Gives C access to the internal `storage' (may be dangerous).
   // To be compatible with C, a null character is added at the end
   // of the internal `storage'. This extra null character is not
-  // part of the Lisaac STRING_BUFFER.
+  // part of the Lisaac String_buffer.
   (
     // Append 0 terminal.
     (capacity > count).if {
@@ -888,12 +886,12 @@ Public
     +? {Result.is_not_null}
   ]
 
-  - from_external p:NATIVE_ARRAY(CHARACTER) <-
+  - from_external p:C_array(Char) <-
   // Internal `storage' is set using `p' (may be dangerous because
   // the external C string `p' is not duplicated).
   // Assume `p' has a null character at the end in order to
   // compute the Lisaac `count'. This extra null character
-  // is not part of the Lisaac STRING_BUFFER.
+  // is not part of the Lisaac String_buffer.
   // Also consider `from_external_copy' to choose the most appropriate.
   ( ? {p.is_not_null}
 
@@ -911,13 +909,13 @@ Public
     ? {p = to_external}
   )
 
-  - from_external_copy p:NATIVE_ARRAY(CHARACTER)  <-
+  - from_external_copy p:C_array(Char)  <-
   // Internal `storage' is set using a copy of `p'.
   // Assume `p' has a null character at the end in order to
   // compute the Eiffel `count'. This extra null character
-  // is not part of the Lisaac STRING_BUFFER.
+  // is not part of the Lisaac String_buffer.
   // Also consider `from_external' to choose the most appropriate.
-  ( + i:INTEGER
+  ( + i:Int
     ? {p.is_not_null}
     upper := -1
     {p.at i = '\0'}.until_do {
@@ -926,25 +924,25 @@ Public
     }
   )
 
-  - element_sizeof:INTEGER <- 1
+  - element_sizeof:Int <- 1
 
-  - to_native_array_uinteger_8:NATIVE_ARRAY(UINTEGER_8) <-
+  - to_c_array_uint8:C_array(Uint8) <-
   (
-    CAST (NATIVE_ARRAY CHARACTER) TO (NATIVE_ARRAY UINTEGER_8).on storage
+    Cast (C_array Char) To (C_array Uint8).on storage
   )
 
-  - add_last_buffer buf:ARRAY(UINTEGER_8) from beg:INTEGER to end:INTEGER <-
+  - add_last_buffer buf:Array(Uint8) from beg:Int to end:Int <-
   (
-    beg.to end do { j:INTEGER
+    beg.to end do { j:Int
       add_last (buf.at j.to_character)
     }
   )
 
-  - item_byte idx:INTEGER offset ofs:INTEGER :UINTEGER_8 <-
+  - item_byte idx:Int offset ofs:Int :Uint8 <-
   (
     ? {ofs = 0}
     ? {idx <= upper}
-    item idx.to_uinteger_8
+    item idx.to_uint8
   )
 
   - restore_after_external <-

@@ -1,22 +1,19 @@
 Header
-
-  + name      := SLIM_ARRAY E;
-  
-  /* BSBS: A mettre en Expanded.*/
-
+  + name := Slim_array E
+/* BSBS: A mettre en Flat.*/
 Insert
 
-  - parent_object:OBJECT := OBJECT
+  - parent_clone:Clone := Clone
 
 Private
 
   // Champs internes :
   // Capacité et compteur d'éléments présents
-  + capacity:INTEGER
-  + counter:INTEGER
+  + capacity:Int
+  + counter:Int
 
   // Utilisé comme first et tableau
-  + array:NATIVE_ARRAY E
+  + array:C_array E
 
   // MHMH :
   // Une capacité à 0 signifie que l'on utilise array comme stockage.
@@ -28,31 +25,31 @@ Public
   //
 
   // Borne inférieure :
-  // MHMH : Version originale... en fonction ?? - lower:INTEGER <- 0
-  - lower:INTEGER := 0
+  // MHMH : Version originale... en fonction ?? - lower:Int <- 0
+  - lower:Int := 0
 
   // Borne supérieure :
-  - upper:INTEGER <- (counter - 1)
+  - upper:Int <- (counter - 1)
 
   // Nombre d'éléments :
-  - count:INTEGER <- (counter)
+  - count:Int <- (counter)
 
   // Test de vacuité :
-  - is_empty:BOOLEAN <- ( counter = 0 )
+  - is_empty:Boolean <- ( counter = 0 )
 
 
   //
   // Création/Initialisation :
   //
   
-  - create_with_capacity n:INTEGER :SELF <-
-  ( + result:SELF
+  - create_with_capacity n:Int :Self <-
+  ( + result:Self
     result := clone
     result.make_with_capacity n
     result
   )
   
-  - make_with_capacity n:INTEGER <-
+  - make_with_capacity n:Int <-
   (
     // Réinitialisation :
     capacity := 0
@@ -61,7 +58,7 @@ Public
 
     // Allocation si nécessaire :
     (n > 1).if {
-      array := NATIVE_ARRAY E .create n
+      array := C_array E .create n
       capacity := n
     }
   )
@@ -73,7 +70,7 @@ Public
   - first:E <-
   ( + return:E
     (capacity = 0).if {
-      return := CAST (NATIVE_ARRAY E) TO E.on array
+      return := Cast (C_array E) To E.on array
     } else {
       return := array.at 0
     }
@@ -84,7 +81,7 @@ Public
   ( + return:E
 
     (capacity = 0).if {
-      return := CAST (NATIVE_ARRAY E) TO E.on array
+      return := Cast (C_array E) To E.on array
     } else {
       return := array.at upper
     }
@@ -92,12 +89,12 @@ Public
     return
   )
 
-  - at i:INTEGER:E <-
+  - at i:Int:E <-
   (
     + return:E
 
     (capacity = 0).if {
-      return := CAST (NATIVE_ARRAY E) TO E.on array
+      return := Cast (C_array E) To E.on array
     } else {
       return := array.at i
     }
@@ -109,10 +106,10 @@ Public
   // Accès en lecture :
   //
 
-  - at i:INTEGER put e:E <-
+  - at i:Int put e:E <-
   (
     (capacity = 0).if {
-      array := CAST E TO (NATIVE_ARRAY E).on e
+      array := Cast E To (C_array E).on e
     } else {
       array.at i put e
     }
@@ -122,14 +119,14 @@ Public
   (
     (capacity = 0).if {
       (counter = 0).if {
-        array := CAST E TO (NATIVE_ARRAY E).on e
+        array := Cast E To (C_array E).on e
         counter := counter + 1
       } else {
         + tmp:E
         // Sauvegarde élément courant :
-        tmp := CAST (NATIVE_ARRAY E) TO E.on array
+        tmp := Cast (C_array E) To E.on array
         // Création tableau :
-        array := NATIVE_ARRAY E .create 4
+        array := C_array E .create 4
         capacity := 4
         counter := 2
         // Restauration éléments :
@@ -139,7 +136,7 @@ Public
     } else {
       // Allocation de place supplémentaire si besoin :
       (counter = capacity).if {
-        + new_cap:INTEGER
+        + new_cap:Int
         new_cap := capacity*2
         array := array.realloc capacity with new_cap
         capacity := new_cap
@@ -173,8 +170,8 @@ Public
 
 
   /*
-  - upper:INTEGER <-
-  ( + result:INTEGER
+  - upper:Int <-
+  ( + result:Int
     (first = NULL).if {
       result := -1
     }.elseif {list != NULL} then {
@@ -185,15 +182,15 @@ Public
   */
 
   /*
-  - count:INTEGER <- upper + 1
+  - count:Int <- upper + 1
   */
 
   /*
-  - is_empty:BOOLEAN <- first = NULL
+  - is_empty:Boolean <- first = NULL
   */
 
   /*
-  - item i:INTEGER :E <-
+  - item i:Int :E <-
   ( + result:E
 
     (i = 0).if {
@@ -206,7 +203,7 @@ Public
   */
 
   /*
-  - put e:E to i:INTEGER <-
+  - put e:E to i:Int <-
   (
     (i = 0).if {
       first := e

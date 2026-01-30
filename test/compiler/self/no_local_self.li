@@ -1,0 +1,10 @@
+Header
+  - name := No_local_self
+Public
+ 
+  - main <-
+  ( + self:Int
+    self := 1
+  )
+    
+  

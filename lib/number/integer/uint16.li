@@ -1,0 +1,31 @@
+Header
+  + name := Flat Uint16
+/*Unsigned 16 bits integer.*/
+  - type    := `unsigned short`;  
+  - default := (0.to_raw_uint16);
+  - export := Uint64, Uint32, Int64, Int32, Int;
+Insert
+  - parent_unsigned_integer:Unsigned_integer := Unsigned_integer
+  
+Public
+  
+  - object_size:Int := 2
+  
+  // Range.
+  
+  - maximum:Uint64 := 65535.to_raw_uint64
+  
+  // Conversion with test.
+  
+  - to_uint16:Uint16 <- self
+  
+  - bit_reverse:Self <-
+  ( + n:Self
+    n := self
+    n := ((n & 0AAAAh) >>  1) | ((n & 05555h) << 1)
+    n := ((n & 0CCCCh) >>  2) | ((n & 03333h) << 2)
+    n := ((n & 0F0F0h) >>  4) | ((n & 00F0Fh) << 4)
+    n := ((n & 0FF00h) >>  8) | ((n & 000FFh) << 8)
+    n
+  )
+  

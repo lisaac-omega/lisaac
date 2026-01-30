@@ -1,50 +1,47 @@
 Header
-
-  + name        := SECTION_;
-
-  /*Test Section protection*/
-
+  + name := Section_
+/*Test Section protection*/
 Insert
 
-  + parent_itm_pattern:Expanded ITM_PATTERN
+  + parent_itm_pattern:Flat Itm_pattern
 
 Public
   
-  + position:POSITION
+  + position:Position
   
-  + style:STRING_ALIAS; // Header, Inherit, Insert, Mapping, Interrupt, External
+  + style:String_alias; // Header, Inherit, Insert, Mapping, Interrupt, External
   
-  + access_name:STRING_ALIAS; // := "Public"; // Private, Public, Directory
+  + access_name:String_alias; // := "Public"; // Private, Public, Directory
 
-  + access_list:ARRAY ITM_TYPE_MONO
+  + access_list:Array Itm_type_mono
   
   //
   // Creation.
   //
   
-  - create p:POSITION :SELF <-
-  ( + result:SELF
+  - create p:Position :Self <-
+  ( + result:Self
     result := clone
     result.make p
     result
   )
   
-  - make p:POSITION <-
+  - make p:Position <-
   (
     position := p
   )
 
-  - set_style n:STRING_ALIAS <-
+  - set_style n:String_alias <-
   ( 
     style := n
   )
     
-  - set_access_name n:STRING_ALIAS <-
+  - set_access_name n:String_alias <-
   (
     access_name := n
   )
   
-  - set_access_list t:ARRAY ITM_TYPE_MONO <-
+  - set_access_list t:Array Itm_type_mono <-
   [
     ? {access_name = NULL}
   ]
@@ -56,65 +53,65 @@ Public
   // Consultation style
   //
 
-  - is_header:BOOLEAN    <- style = "Header"
+  - is_header:Boolean    <- style = "Header"
   
-  - is_inherit:BOOLEAN   <- style = "Inherit"
+  - is_inherit:Boolean   <- style = "Inherit"
 
-  - is_insert:BOOLEAN    <- style = "Insert"
+  - is_insert:Boolean    <- style = "Insert"
 
-  - is_inherit_or_insert:BOOLEAN <- (is_inherit) || {is_insert}
+  - is_inherit_or_insert:Boolean <- (is_inherit) || {is_insert}
 
-  - is_mapping:BOOLEAN   <- style = "Mapping"
+  - is_mapping:Boolean   <- style = "Mapping"
 
-  - is_interrupt:BOOLEAN <- style = "Interrupt"
+  - is_interrupt:Boolean <- style = "Interrupt"
 
-  - is_external:BOOLEAN  <- style = "External"
+  - is_external:Boolean  <- style = "External"
   
   //
   // Consultation access
   //
   
-  - is_public:BOOLEAN    <- access_name = "Public"
+  - is_public:Boolean    <- access_name = "Public"
   
-  - is_private:BOOLEAN   <- access_name = "Private"
+  - is_private:Boolean   <- access_name = "Private"
   
-  - is_directory:BOOLEAN <- access_name = "Directory"
+  - is_directory:Boolean <- access_name = "Directory"
   
   //
   // Display.
   //
 
-  - append_in buf:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     (style != NULL).if {
-      buf.append style
-      buf.add_last ','
+      b.append style
+      b.add_last ','
     }
     (access_name != NULL).if {
-      buf.append access_name
-      buf.add_last ','
+      b.append access_name
+      b.add_last ','
     }
     (access_list != NULL).if {  
-      (access_list.lower).to (access_list.upper) do { j:INTEGER
-        access_list.at j.append_in buf
-        buf.add_last ','
+      (access_list.lower).to (access_list.upper) do { j:Int
+        access_list.at j.append_in b
+        b.add_last ','
       }
     }
-    buf.remove_last
-    append_pattern_in buf
+    b.remove_last
+    append_pattern_in b
   )
 
   //
   // Access test.
   //
 
-  - access me:TYPE with client:TYPE :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
-    + ts:ITM_TYPE_SIMPLE
+  - access me:Type with client:Type :Boolean <-
+  ( + result:Boolean
+    + j:Int
+    + ts:Itm_type_simple
 
     ((me = client) || {is_public}).if {
-      result := TRUE
+      result := True
     }.elseif {is_directory} then {
       string_tmp.copy (me.prototype.filename)
       j := string_tmp.last_index_of '/'
@@ -123,29 +120,29 @@ Public
     }.elseif {access_list != NULL} then {
       j := access_list.lower
       {(j <= access_list.upper) && {! result}}.while_do {
-	ts ?= access_list.at j
-	result := client.is_sub_type_with_name (ts.name)
-	j := j + 1
+        ts ?= access_list.at j
+        result := client.is_sub_type_with_name (ts.name)
+        j := j + 1
       }
     }
     result
   )
   
-  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
+  - self:Self '==' Right 60 other:E :Boolean <-
   (
     (style = other.style) && {access_name = other.access_name} && {access_list = other.access_list}
   )
       
-  - standard_public:SECTION_ :=
-  ( + result:SECTION_
-    result := create POSITION
+  - standard_public:Section_ :=
+  ( + result:Section_
+    result := create Position
     result.set_access_name "Public"
     result
   )
   
-  - standard_private:SECTION_ :=
-  ( + result:SECTION_
-    result := create POSITION
+  - standard_private:Section_ :=
+  ( + result:Section_
+    result := create Position
     result.set_access_name "Private"
     result
   )

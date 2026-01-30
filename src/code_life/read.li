@@ -1,32 +1,29 @@
 Header
-
-  + name        := READ;
-
-  /* Read for local, global or slot */
-
+  + name := Read
+/* Read for local, global or slot */
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_slot:BOOLEAN <- FALSE
+  - is_slot:Boolean <- False
 
-  - variable:VARIABLE <-
+  - variable:Variable <-
   (
     abstract
     NULL
   )
 
-  - static_type:TYPE_FULL <-
+  - static_type:Type_full <-
   (
     variable.type
   )
   
-  - ensure_count:INTEGER <- variable.ensure_count
+  - ensure_count:Int <- variable.ensure_count
 
-  - my_copy:SELF <-
-  ( + result:SELF
+  - my_copy:Self <-
+  ( + result:Self
     result ?= variable.read position
     result
   )
@@ -35,12 +32,12 @@ Public
   // Searching.
   //
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     variable.get_type t
   )
 
-  - get_last_value:EXPR <- variable.get_last_value NULL
+  - get_last_value:Expr <- variable.get_last_value NULL
 
   //
   // Executing pass.
@@ -48,17 +45,17 @@ Public
 
   - remove <-
   (
-    variable.unread Self
+    variable.unread self
   )
 
-  - is_require_constant:CONSTANT <-
-  ( + result:CONSTANT
-    + j:INTEGER
-    + val:EXPR
-    + req_list:ARRAY WRITE
+  - is_require_constant:Constant <-
+  ( + result:Constant
+    + j:Int
+    + val:Expr
+    + req_list:Array Write
     //? { variable.require_first != NULL }
     /* BSBS: A REVOIR
-    ((variable.require_first = NULL) && {!variable.type.is_expanded}).if {
+    ((variable.require_first = NULL) && {!variable.type.is_flat}).if {
       variable.intern_name.print; '\n'.print
       "style [".print; variable.style.print; "]\n".print
       warning_error (position,"READ : Compiler BUG! (require_first = NULL) ")
@@ -70,24 +67,24 @@ Public
     (variable.require_first != NULL).if {
       val := variable.require_first.value
       (val.is_constant).if {
-	result   ?= val
-	req_list := variable.require_list
-	(req_list != NULL).if {
-	  j := req_list.lower
-	  {(j > req_list.upper) || {result = NULL}}.until_do {
-	    val := req_list.at j.value
-	    ((! val.is_constant) || {result !~= val}).if {
-	      result := NULL
-	    }
-	    j := j + 1
-	  }
-	}
+        result   ?= val
+        req_list := variable.require_list
+        (req_list != NULL).if {
+          j := req_list.lower
+          {(j > req_list.upper) || {result = NULL}}.until_do {
+            val := req_list.at j.value
+            ((! val.is_constant) || {result !~= val}).if {
+              result := NULL
+            }
+            j := j + 1
+          }
+        }
       }
     }
     result
   )
 
-  - execute_access_unlink:INSTR <-
+  - execute_access_unlink:Instr <-
   (
     abstract
     NULL
@@ -95,22 +92,22 @@ Public
 
   - execute_access_link <- abstract
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   // Delete read
   (
-    variable.unread Self
+    variable.unread self
     new_execute_pass
     execute_access_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + cst:CONSTANT
-    + rec:INSTR
-    + result:EXPR
-    + val:EXPR
-    + s:SLOT_DATA
-    + l:LOCAL
-    + wrt:WRITE
+  - execute_link:Expr <-
+  ( + cst:Constant
+    + rec:Instr
+    + result:Expr
+    + val:Expr
+    + s:Slot_data
+    + l:Local
+    + wrt:Write
     //+ old_loop_invariant:LOOP
 
     simplify_type variable
@@ -119,31 +116,31 @@ Public
     s ?= variable
     (
       (s = NULL) || {
-	((s.style != '+') || {! s.id_section.is_mapping}) &&
-	{(! variable.type.is_expanded) || {variable.type.is_default_expanded}}
+        ((s.style != '+') || {! s.id_section.is_mapping}) &&
+        {(! variable.type.is_flat) || {variable.type.is_default_flat}}
       }
     ).if {
       cst := is_require_constant;  // BSBS: Ce cas devrait rentrer dans get_last_value
       ((cst != NULL) && {variable.style != 'R'}).if {
-	//
-	// CONSTANT propagation.
-	//
-	variable.unread Self
-	rec := execute_access_unlink
-	(rec != NULL).if {
-	  list_current.insert_before rec
-	}
-	result := cst.my_copy
-	new_execute_pass
-      }.elseif {
-	((val := get_last_value) != NULL)// && {FALSE}
-      } then {
-	//
-	// VALUE_EXPR propagation, step by step.
         //
-	result := val
-	variable.unread Self
-	new_execute_pass
+        // CONSTANT propagation.
+        //
+        variable.unread self
+        rec := execute_access_unlink
+        (rec != NULL).if {
+          list_current.insert_before rec
+        }
+        result := cst.my_copy
+        new_execute_pass
+      }.elseif {
+        ((val := get_last_value) != NULL)// && {False}
+      } then {
+        //
+        // VALUE_EXPR propagation, step by step.
+        //
+        result := val
+        variable.unread self
+        new_execute_pass
       }
     }/*.elseif {} then {
       
@@ -158,7 +155,7 @@ Public
         //loop_invariant := NULL
         //
         l := static_type.get_temporary position
-        wrt := l.write position value Self
+        wrt := l.write position value self
         loop_list.insert_before wrt
         result := l.read position
         //
@@ -169,13 +166,13 @@ Public
         count_invariant := count_invariant + 1
       } else {
         
-	variable.set_read
-	execute_access_link
-	result := Self
+        variable.set_read
+        execute_access_link
+        result := self
       }
     }
     l ?= variable
-    ((l != NULL) && {l.type.raw.dynamic_type = PROFIL_BLOCK}).if {
+    ((l != NULL) && {l.type.raw.dynamic_type = Profil_block}).if {
       count_block_sensitive := count_block_sensitive + 1
     }
     result
@@ -185,23 +182,23 @@ Public
   // Display.
   //
 
-  - display_ref buffer:STRING_BUFFER <-
-  ( + req_list:ARRAY WRITE
+  - display_ref buffer:String_buffer <-
+  ( + req_list:Array Write
     //is_verbose.if {
       buffer.add_last '<'
       //buffer.append (object_id.to_string_buffer)
       buffer.add_last 'R'
       (variable.require_first != NULL).if {
-	variable.require_first.object_id.append_in buffer
-	req_list := variable.require_list
-	(req_list != NULL).if {
-	  (req_list.lower).to (req_list.upper) do { j:INTEGER
-	    buffer.add_last ','
-	    req_list.at j.object_id.append_in buffer
-	  }
-	}
+        variable.require_first.object_id.append_in buffer
+        req_list := variable.require_list
+        (req_list != NULL).if {
+          (req_list.lower).to (req_list.upper) do { j:Int
+            buffer.add_last ','
+            req_list.at j.object_id.append_in buffer
+          }
+        }
       } else {
-	buffer.add_last '*'
+        buffer.add_last '*'
       }
       buffer.append "/E"
       variable.ensure_count.append_in buffer
@@ -209,7 +206,7 @@ Public
     //}
   )
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append (variable.intern_name)
     buffer.add_last '['

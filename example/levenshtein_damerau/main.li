@@ -1,17 +1,16 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
   
-  - test:ARRAY MAIN := ARRAY MAIN.create_with_capacity 64
+  - test:Array Main := Array Main.create_with_capacity 64
   
-  - set (s1,t1:STRING, l,d:INTEGER) :MAIN <-
-  ( (s,t,leven,damer) := (s1,t1,l,d); Self )
+  - set (s1,t1:String, l,d:Int) :Main <-
+  ( (s,t,leven,damer) := (s1,t1,l,d); self )
   
-  - new (s1,t1:STRING, l,d:INTEGER) <-
+  - new (s1,t1:String, l,d:Int) <-
   test.add_last (clone.set (s1,t1, l,d))
   
   - load <-
@@ -39,10 +38,10 @@ Public
     new ( "kitten","sitting", 3, 3 ); new ( "Saturday","Sunday", 3, 3 ); new ( "rosettacode","raisethysword",8,8)
   )
     
-  + s:STRING
-  + t:STRING
-  + leven:INTEGER
-  + damer:INTEGER
+  + s:String
+  + t:String
+  + leven:Int
+  + damer:Int
   
   - play <-
   (
@@ -55,5 +54,5 @@ Public
   - main <-
   (
     load
-    0.to (test.upper) do { i:INTEGER; test.at i.play; }
+    0.to (test.upper) do { i:Int; test.at i.play; }
   )

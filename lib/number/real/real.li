@@ -1,166 +1,165 @@
 Header
-  + name := Expanded REAL;
-  /*Generic real number. DCDC generic ou float ?? BSBS:generic!*/
+  + name := Flat Real
+/*Generic real number. DCDC generic ou float ?? BSBS:generic!*/
   - type    := `float`;
   - default := 0.0;
-  - export := REAL_32, REAL_64, REAL_80,
-  REAL_16_16,  REAL_24_8,  REAL_26_6,
-  UREAL_16_16, UREAL_24_8, UREAL_26_6;
+  - export := Real32, Real64, Real80,
+  Real_16_16,  Real_24_8,  Real_26_6,
+  Ureal_16_16, Ureal_24_8, Ureal_26_6;
   - lip     <-
   (
     add_lib "-lm";
   );
-
 Insert
-  - inherit_numeric:NUMERIC := NUMERIC
+  - inherit_numeric:Numeric := Numeric
 
 Public
 
-  - Self:SELF '+'  Left 80 <> other:SELF :SELF <- `@Self + @other`:SELF
+  - self:Self '+'  Left 80 <> other:Self :Self <- `@self + @other`:Self
   
-  - Self:SELF '%'  Left 90 other:SELF :SELF <- `fmodf(@Self,@other)`:SELF
+  - self:Self '%'  Left 90 other:Self :Self <- `fmodf(@self,@other)`:Self
   
-  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  - bound_test low:Int64 to up:Uint64 :Boolean <-
   (
-    TRUE
+    True
   )
 
-  - pi   :SELF <- 3.14159265358979323846
+  - pi   :Self <- 3.14159265358979323846
   // Pi number
   
-  - two_pi:SELF <- pi * 2.0
+  - two_pi:Self <- pi * 2.0
   
-  - pi_two:SELF <- pi / 2.0
+  - pi_two:Self <- pi / 2.0
   
-  - tan  :SELF <- `tan(@Self)`:SELF
+  - tan  :Self <- `tan(@self)`:Self
 
-  - atan :SELF <- `atan(@Self)`:SELF
+  - atan :Self <- `atan(@self)`:Self
   // Arctangent
   
-  - atan2 dx:SELF :SELF <- `atan2(@Self,@dx)`:SELF
+  - atan2 dx:Self :Self <- `atan2(@self,@dx)`:Self
   
-  - sqrt :SELF <-
-  [ ? {Self >= 0.0}; ]
-  `sqrt(@Self)`:SELF
+  - self:Self sqrt :Self <-
+  [ ? {self >= 0.0}; ]
+  `sqrt(@self)`:Self
   // Square root
 
-  - log  :SELF <-
-  [ ? {Self > 0.0}; ]
-  `log(@Self)`:SELF
+  - log  :Self <-
+  [ ? {self > 0.0}; ]
+  `log(@self)`:Self
   // Logarithm
 
-  - sin (Self:SELF) :SELF <- `sin(@Self)`:SELF
+  - sin (self:Self) :Self <- `sin(@self)`:Self
   // Sinus
   
-  - asin :SELF <- `asin(@Self)`:SELF
+  - asin :Self <- `asin(@self)`:Self
   // Arc Sinus
 
-  - cos (Self:SELF) :SELF <- `cos(@Self)`:SELF
+  - cos (self:Self) :Self <- `cos(@self)`:Self
   // Cosinus
   
-  - acos  :SELF <- `acos(@Self)`:SELF
+  - acos  :Self <- `acos(@self)`:Self
   // Arc Cosinus
 
-  - pow e:SELF :SELF <- `pow(@Self,@e)`:SELF
-  - exp:SELF <- `exp(@Self)`:SELF
+  - self:Self pow e:Self :Self <- `pow(@self,@e)`:Self
+  - exp:Self <- `exp(@self)`:Self
   // Power
 
-  - Self:SELF '**' Right 99 e:SELF :SELF <-
+  - self:Self '**' Right 99 e:Self :Self <-
   // Power
   (
-    Self.pow e
+    self.pow e
   )
 
-  - Self:SELF '^' Right 99 e:SELF :SELF <-
+  - self:Self '^' Right 99 e:Self :Self <-
   // Power
   (
-    Self.pow e
+    self.pow e
   )
     
   // Convertion format with test.
 
-  - floor:INTEGER <-
+  - floor:Int <-
   // Greatest integral value no greater than Current.
   (
-    `floor(@Self)`:INTEGER
-    //to_raw_integer
+    `floor(@self)`:Int
+    //to_raw_int
   )
   
-  - ceil:SELF <- `ceil(@Self)`:SELF
+  - ceil:Self <- `ceil(@self)`:Self
   
-  - ceiling:INTEGER <-
+  - ceiling:Int <-
   // Smallest integral value no smaller than Current.
   (
-    (Self + 0.9999).floor
+    (self + 0.9999).floor
   )
 
-  - round:INTEGER <-
+  - round:Int <-
   // Rounded integral value.
   (
-    (Self + 0.5).floor
+    (self + 0.5).floor
   )
 
-  - truncated_to_integer:INTEGER <- floor
-  // Integer part (largest absolute value no greater than Current).
+  - truncated_to_int:Int <- floor
+  // Int part (largest absolute value no greater than Current).
 
   // Comparaison.
 
-  - Self:SELF '~=' (other,delta:SELF) :BOOLEAN <-
+  - self:Self '~=' (other,delta:Self) :Boolean <-
   // Equal, close to 0.001
   (
-    (Self - other).abs <= delta
+    (self - other).abs <= delta
   )
   
-  - Self:SELF '!~=' (other,delta:SELF) :BOOLEAN <- ! (Self ~= (other,delta))
+  - self:Self '!~=' (other,delta:Self) :Boolean <- ! (self ~= (other,delta))
     
   // Print.
 
-  - append_in b:STRING_BUFFER <-
-  // Append `Self' decimal representation in `b' with 4 decimal
+  - append_in b:String_buffer <-
+  // Append `self' decimal representation in `b' with 4 decimal
   (
     append_in b decimal 4
   )
 
-  - append_in b:STRING_BUFFER format n:INTEGER decimal d:INTEGER <-
+  - append_in b:String_buffer format n:Int decimal d:Int <-
   (
     append_in b format n with ' ' decimal d
   )
 
-  - append_in b:STRING_BUFFER format n:INTEGER with c:CHARACTER decimal d:INTEGER <-
+  - append_in b:String_buffer format n:Int with c:Char decimal d:Int <-
   // String of the number in base 10 with `c' replacing blanck
   [
     -? {n >= 3}
   ]
-  ( + old_count:INTEGER
+  ( + old_count:Int
     old_count := b.count
     append_in b decimal d
     b.insert c to old_count on (n - (b.count - old_count))
   )
 
-  - append_in b:STRING_BUFFER decimal n:INTEGER <-
+  - append_in b:String_buffer decimal n:Int <-
   // String of the number in base 10 with 4 decimal
-  ( /*+ nc_buf:NATIVE_ARRAY(CHARACTER)
-    + old_count,cap:INTEGER
+  ( /*+ nc_buf:C_array(Char)
+    + old_count,cap:Int
 
     old_count := b.count
     cap       := b.capacity - old_count
     nc_buf    := b.to_external + old_count    
-    `snprintf(@nc_buf,@cap,"%.*f",@n,(double)@Self)`
+    `snprintf(@nc_buf,@cap,"%.*f",@n,(double)@self)`
     b.restore_after_external
     */
     //Bug avec Valgrind (nov. 2025)
-    + val:SELF
-    + val_10:INTEGER
-    + char:CHARACTER
-    + i:INTEGER
+    + val:Self
+    + val_10:Int
+    + char:Char
+    + i:Int
 
-    get_map Self
+    get_map self
     // Sign.
     (sign).if {
-      val := Self
+      val := self
     } else {
       b.add_last '-'
-      val := - Self
+      val := - self
     }
     (is_zero).if {      
       b.add_last '0'
@@ -170,10 +169,10 @@ Public
       b.append "nan"
     } else {
       // Value case = 1.mantisse x 2^(exp-127)
-      (val > INTEGER.maximum.to_real_32).if {
+      (val > Int.maximum.to_real32).if {
         scientific_append_in b
       } else {
-        val_10 := val.to_integer
+        val_10 := val.to_int
         val_10.append_in b
         val := val - val_10
         (n != 0).if {
@@ -181,7 +180,7 @@ Public
           i := n
           {(val != 0) && {i > 0}}.while_do {
             val := val * 10
-            val_10 := val.to_integer
+            val_10 := val.to_int
             char := val_10.decimal_digit
             b.add_last char
             val := val - val_10
@@ -193,20 +192,20 @@ Public
     }
   )
 
-  - scientific_append_in b:STRING_BUFFER <-
+  - scientific_append_in b:String_buffer <-
  // Scientific number representation
-  ( + val:SELF
-    + val_10:INTEGER
-    + exp_10:INTEGER
-    + char:CHARACTER
+  ( + val:Self
+    + val_10:Int
+    + exp_10:Int
+    + char:Char
 
-    get_map Self
+    get_map self
     // Sign.
     (sign).if {
-      val := Self
+      val := self
     } else {
       b.add_last '-'
-      val := - Self
+      val := - self
     }
     (is_zero).if {
       // Zero case.
@@ -227,14 +226,14 @@ Public
         val    := val * 10
         exp_10 := exp_10 - 1
       }
-      val_10 := val.to_integer
+      val_10 := val.to_int
       char := val_10.decimal_digit
       b.add_last char
       b.add_last '.'
       val := val - val_10
       {val != 0}.while_do {
         val := val * 10
-        val_10 := val.to_integer
+        val_10 := val.to_int
         char := val_10.decimal_digit
         b.add_last char
         val := val - val_10
@@ -244,33 +243,33 @@ Public
     }
   )
 
-  - append_in b:STRING_BUFFER format_c fmt:STRING <-
-  ( + nc_buf,nc_fmt:NATIVE_ARRAY(CHARACTER)
-    + old_count,cap:INTEGER
+  - append_in b:String_buffer format_c fmt:String <-
+  ( + nc_buf,nc_fmt:C_array(Char)
+    + old_count,cap:Int
 
     old_count := b.count
     cap       := b.capacity - old_count
     nc_buf    := b.to_external + old_count
     nc_fmt    := fmt.to_external
-    `snprintf(@nc_buf,@cap,@nc_fmt,@Self)`
+    `snprintf(@nc_buf,@cap,@nc_fmt,@self)`
     b.restore_after_external
   )
 
-  - print_decimal s:INTEGER <-
+  - print_decimal s:Int <-
   // print with `s' decimal
   (
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       append_in tmp decimal s
       tmp.print
     }
   )
 
-  - print_int i:INTEGER decimal d:INTEGER <-
+  - print_int i:Int decimal d:Int <-
   (
     print_format (i+d+1) decimal d
   )
 
-  - print_format s:INTEGER decimal d:INTEGER <-
+  - print_format s:Int decimal d:Int <-
   [
     -? {s > d}
   ]
@@ -278,20 +277,20 @@ Public
     print_format s with ' ' decimal d
   )
 
-  - print_format s:INTEGER with c:CHARACTER decimal d:INTEGER <-
+  - print_format s:Int with c:Char decimal d:Int <-
   [
     -? {s > d}
   ]
   (
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       append_in tmp format s with c decimal d
       tmp.print
     }
   )
 
-  - print_format_c fmt:STRING <-
+  - print_format_c fmt:String <-
   (
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       append_in tmp format_c fmt
       tmp.print
     }

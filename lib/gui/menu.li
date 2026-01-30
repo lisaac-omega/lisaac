@@ -1,33 +1,32 @@
 Header
-  + name := MENU;
-  
+  + name := Menu
 Inherit 
-  + parent_popup:Expanded POPUP
-  + parent_act:Expanded ACT
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_popup:Flat Popup
+  + parent_act:Flat Act
+  - parent_any_gui:Any_gui := Any_gui
   
 Public  
-  - list:ARRAY MENU := ARRAY MENU.create_with_capacity 8
+  - list:Array Menu := Array Menu.create_with_capacity 8
   
-  - height_max:REAL_32 <-
-  ( + result:REAL_32
-    child.foreach { win:WIN; result := result + win.height_min; }
-    result + ACT_ITM.margin*2
+  - height_max:Real32 <-
+  ( + result:Real32
+    child.foreach { win:Win; result := result + win.height_min; }
+    result + Act_itm.margin*2
   )
   
   - refresh <-
-  ( + w,y,x,mar:REAL_32
+  ( + w,y,x,mar:Real32
     refresh_popup.if {
-      mar := ACT_ITM.margin
+      mar := Act_itm.margin
       y := yo + height - mar
       x := xo + mar
-      child.foreach_backward { win:WIN
+      child.foreach_backward { win:Win
         (y,w) := (y - win.height_min, w.max (win.width_min))
         win.xy (x,y)
       }
-      child.foreach { win:WIN
+      child.foreach { win:Win
         win.size (w,win.height_min)
-        win.like ACT_ITM.color (LOOK.text_ui)
+        win.like Act_itm.color (Look.text_ui)
       }
       width := w+mar*2
     }
@@ -41,121 +40,121 @@ Public
     reset_scissor
   )
   
-  - read:SELF <-
-  ( list.add_last Self
+  - read:Self <-
+  ( list.add_last self
     read_object
-    Self
+    self
   )
   
-  - get_open:MENU <- list.search_until { m:MENU; m.is on}
+  - get_open:Menu <- list.search_until { m:Menu; m.is on}
   
   - close_all <- close_all_except NULL
   
-  - close_all_except x:ACT <-
-  ( + i:MENU
+  - close_all_except x:Act <-
+  ( + i:Menu
     i := get_open
     ((i != NULL) && {i != x}).if { i.set_open NULL; }
   )
       
-  - run:BOOLEAN <-
+  - run:Boolean <-
   ( 
-    ((! is on) || {parent != HAND.window_cur}).if {      
-      (xo,yo,height) := (HAND.win_cur.xo,HAND.win_cur.ymax,0)
-      set_open (HAND.window_cur)
+    ((! is on) || {parent != Hand.window_cur}).if {      
+      (xo,yo,height) := (Hand.win_cur.xo,Hand.win_cur.ymax,0)
+      set_open (Hand.window_cur)
     } else { set_open NULL; }
-    TRUE
+    True
   )
   
-  - object_in id:STRING_ALIAS :BOOLEAN
+  - object_in id:String_alias :Boolean
   
-  - item id:STRING_ALIAS str  v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str  v:String_alias :Boolean <-
   ( id
     .case "name" then { text_l := v; }
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - object_null id:STRING_ALIAS :BOOLEAN <-
+  - object_null id:String_alias :Boolean <-
   ( id
-    .case "ACT" then { ACT_ITM.new.init Self act NULL; }
-    = STRING_ALIAS
+    .case "ACT" then { Act_itm.new.init self act NULL; }
+    = String_alias
   )
   
-  - object id:STRING_ALIAS :BOOLEAN <-
+  - object id:String_alias :Boolean <-
   ( id
-    .case "ACT" then { ACT_ITM.new.init Self act (ACT.new_read); }
-    = STRING_ALIAS
+    .case "ACT" then { Act_itm.new.init self act (Act.new_read); }
+    = String_alias
   )
   
-ICON_LINE
+Icon_line
   
-  - make_sty:SELF <-
-  ( + d:DIRENT
-    + dir:DIRECTORY
-    + i:INTEGER
-    + a:ACT
-    + nn:STRING_ALIAS
-    list.add_last Self
+  - make_sty:Self <-
+  ( + d:Dirent
+    + dir:Directory
+    + i:Int
+    + a:Act
+    + nn:String_alias
+    list.add_last self
     text_l := "Theme"
-    STRING.tmp { tmp:STRING_BUFFER
-      tmp += COMMAND_ARGS.executable_directory
+    String.tmp { tmp:String_buffer
+      tmp += Command_args.executable_directory
       i := tmp.last_index_of '/'
       (i != -1).if { tmp.set_upper i; }
       tmp += "assets/"
-      d := FILE_SYSTEM.get tmp
+      d := File_system.get tmp
       ((d = NULL) || {! d.open}).if {
         "Error MENU: ".print; d.print; " not open.".println
         exit 1
       }
       dir ?= d
-      dir.foreach { dd:DIRENT
+      dir.foreach { dd:Dirent
         (dd.name.has_suffix ".sty").if {
           tmp.copy (dd.name)
           tmp.remove_suffix ".sty"
           nn := tmp.to_string_alias
-          a := ACT1 STRING_ALIAS.new.fn { n:STRING_ALIAS
+          a := Act1 String_alias.new.fn { n:String_alias
             look_file := n
-            LOOK.read
+            Look.read
           } val nn
           a.txt_l nn
-          ACT_ITM.new.init Self act a
+          Act_itm.new.init self act a
         }
       }
     }
-    Self
+    self
   )
   
-  - make_key:SELF <-
-  ( + d:DIRENT
-    + dir:DIRECTORY
-    + i:INTEGER
-    + a:ACT
-    + nn:STRING_ALIAS
-    list.add_last Self
+  - make_key:Self <-
+  ( + d:Dirent
+    + dir:Directory
+    + i:Int
+    + a:Act
+    + nn:String_alias
+    list.add_last self
     text_l := "Keymap"
-    STRING.tmp { tmp:STRING_BUFFER
-      tmp += COMMAND_ARGS.executable_directory
+    String.tmp { tmp:String_buffer
+      tmp += Command_args.executable_directory
       i := tmp.last_index_of '/'
       (i != -1).if { tmp.set_upper i; }
       tmp += "assets/"
-      d := FILE_SYSTEM.get tmp
+      d := File_system.get tmp
       ((d = NULL) || {! d.open}).if {
         "Error MENU: ".print; d.print; " not open.".println
         exit 1
       }
       dir ?= d
-      dir.foreach { dd:DIRENT
+      dir.foreach { dd:Dirent
         (dd.name.has_suffix ".key").if {
           tmp.copy (dd.name)
           tmp.remove_suffix ".key"
           nn := tmp.to_string_alias
-          a := ACT1 STRING_ALIAS.new.fn { n:STRING_ALIAS
+          a := Act1 String_alias.new.fn { n:String_alias
             shortcut_file := n
-            FILE_KEY.read
+            File_key.read
           } val nn
           a.txt_l nn
-          ACT_ITM.new.init Self act a
+          Act_itm.new.init self act a
         }
       }
     }
-    Self
+    self
   )

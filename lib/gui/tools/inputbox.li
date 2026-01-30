@@ -1,52 +1,51 @@
 Header
-  + name := Strict INPUTBOX;
-  
+  + name := Exact Inputbox
 Inherit
-  + parent_gobj:Expanded GOBJ INPUTBOX
+  + parent_gobj:Flat Gobj Inputbox
   
 Private
-  - stk:Expanded ARRAY INPUTBOX
+  - stk:Flat Array Inputbox
   
-  - bit_int:INTEGER := (1<<21)
-  - bit_float:INTEGER := (1<<20)
+  - bit_int:Int := (1<<21)
+  - bit_float:Int := (1<<20)
   
 Public
   
-  - integer:INTEGER := bit_int | align_right
-  - float:INTEGER   := bit_float | integer
+  - integer:Int := bit_int | align_right
+  - float:Int   := bit_float | integer
     
-  + width_min:REAL_32
+  + width_min:Real32
   
-  - height_min:REAL_32 <- FONT.size_sys * zom
+  - height_min:Real32 <- Font.size_sys * zom
   
-  + read:{STRING_BUFFER;}
-  + write:{STRING_BUFFER;}
-  + txt:STRING_BUFFER
-  + cur:INTEGER := -1
-  + x_cur:REAL_32 := -1
+  + read:{String_buffer;}
+  + write:{String_buffer;}
+  + txt:String_buffer
+  + cur:Int := -1
+  + x_cur:Real32 := -1
   
-  //- update_text:BOOLEAN <- ( read.value txt; TRUE)
+  //- update_text:Boolean <- ( read.value txt; True)
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - init g:{STRING_BUFFER;} set s:{STRING_BUFFER;} width w:REAL_32 :SELF <-
+  - init g:{String_buffer;} set s:{String_buffer;} width w:Real32 :Self <-
   (
-    (txt = NULL).if { txt := STRING_BUFFER.create 64; }
+    (txt = NULL).if { txt := String_buffer.create 64; }
     (read,write) := (g,s)
     width_min := w
     init_obj
   )
     
   - draw <-
-  ( + x,xc,y:REAL_32
+  ( + x,xc,y:Real32
     begin_path
     is inside.if {
-      fill_color (LOOK_GUI.text_ui)
+      fill_color (Look_gui.text_ui)
     } else {
-      fill_color (LOOK_GUI.text_bg_ui)
+      fill_color (Look_gui.text_bg_ui)
     }
     rect (xo,yo) size (width,height) radius 4
     fill
@@ -56,39 +55,39 @@ Public
     (x,xc) := x_txt
     (xc != -1).if {
       begin_path
-      stroke_color (COLOR.red)
+      stroke_color (Color.red)
       line_cap square
       stroke_width 3.0
-      line (xc+1,y-FONT.size_sys/2) to (xc+1,y+FONT.size_sys/2)
+      line (xc+1,y-Font.size_sys/2) to (xc+1,y+Font.size_sys/2)
       stroke
     }
     //
     save
     intersect_scissor (xo,yo) size (width,height)
-    fill_color (LOOK_GUI.txt_nui)
+    fill_color (Look_gui.txt_nui)
     text (x,y) msg txt
     reset_scissor
     restore
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
+  - event ev:Uint8 :Boolean <-
   (
-    (ev & ~1 = HAND.in).if {
-      set inside with (ev = HAND.in)
-    }.elseif {ev = HAND.clic} then {
+    (ev & ~1 = Hand.in).if {
+      set inside with (ev = Hand.in)
+    }.elseif {ev = Hand.clic} then {
       (vkeyb_dyn).if {
-        ((is bit_int) || {is bit_float}).if { VKEYB.load 2; } else { VKEYB.load 0; }
-        set_vkeyb TRUE
+        ((is bit_int) || {is bit_float}).if { Vkeyb.load 2; } else { Vkeyb.load 0; }
+        set_vkeyb True
       }
       get_focus
-      x_cur := HAND.x_cur
+      x_cur := Hand.x_cur
     }
-    TRUE
+    True
   )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  - key s:String cmd c:Uint8 :Boolean <-
   ( 
-    ((c & KEYBOARD.msk_cmd) = 0).if {
+    ((c & Keyboard.msk_cmd) = 0).if {
       (
         (!is bit_int) || {s.first.is_digit} ||
         {is bit_float && {s.first = '.'} && {!txt.has '.'}}
@@ -99,26 +98,26 @@ Public
     } else {      
       (s.first)
       .when '\n'   then { write.value txt; cur := -1; exit_focus; }
-      .when 'B'    then { (cur = 0).if { ANY_GUI.beep; } else { cur := 0; }; }
-      .when 'E'    then { (cur = txt.count).if { ANY_GUI.beep; } else { cur := txt.count; }; }
-      .when 'R'    then { inc_cur.if_false { ANY_GUI.beep; }; }
-      .when 'L'    then { dec_cur.if_false { ANY_GUI.beep; }; }
-      .when 'S'    then { suppr.if_false { ANY_GUI.beep; }; }
-      .when '\8d\' then { ((dec_cur) && {suppr}).if_false { ANY_GUI.beep; }; }
+      .when 'B'    then { (cur = 0).if { Any_gui.beep; } else { cur := 0; }; }
+      .when 'E'    then { (cur = txt.count).if { Any_gui.beep; } else { cur := txt.count; }; }
+      .when 'R'    then { inc_cur.if_false { Any_gui.beep; }; }
+      .when 'L'    then { dec_cur.if_false { Any_gui.beep; }; }
+      .when 'S'    then { suppr.if_false { Any_gui.beep; }; }
+      .when '\8d\' then { ((dec_cur) && {suppr}).if_false { Any_gui.beep; }; }
       .when '\27d\' then { exit_focus; }
     }
-    TRUE
+    True
   )
   
 Private
   
   - exit_focus <-
   ( focus := NULL
-    (vkeyb_dyn).if { set_vkeyb FALSE; }
+    (vkeyb_dyn).if { set_vkeyb False; }
   )
   
-  - width_txt up:INTEGER :REAL_32 <-
-  ( + x0,y0,x1,y1,wt:REAL_32
+  - width_txt up:Int :Real32 <-
+  ( + x0,y0,x1,y1,wt:Real32
     (up >= 0).if {
       (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt from 0 to up
     }
@@ -127,18 +126,18 @@ Private
   
   - load_txt <-
   (
-    font_face_id (FONT.sys (FONT.roman))
-    font_size (FONT.size_sys * zom)
+    font_face_id (Font.sys (Font.roman))
+    font_size (Font.size_sys * zom)
     text_align (align_left | align_middle)
-    (focus != Self).if {
+    (focus != self).if {
       txt.clear
       read.value txt
     }
   )
   
-  - x_txt:(REAL_32,REAL_32) <-  
-  ( + old_xc,xc,w,xp:REAL_32
-    + old_cur:INTEGER
+  - x_txt:(Real32,Real32) <-  
+  ( + old_xc,xc,w,xp:Real32
+    + old_cur:Int
     xp := xo
     (is (align_center | align_right)).if {
       w := width_txt (txt.upper)
@@ -172,24 +171,24 @@ Private
     xp,xc
   )
   
-  - suppr:BOOLEAN <-
+  - suppr:Boolean <-
   (cur < txt.count).if {
-    + n:UINTEGER_8
-    n := txt.at cur.to_uinteger_8
+    + n:Uint8
+    n := txt.at cur.to_uint8
     ((n & 80h) != 0).if { { txt.remove cur; n := n << 1; }.do_until {(n & 40h) = 0}; }
     txt.remove cur
   }
   
-  - inc_cur:BOOLEAN <-
+  - inc_cur:Boolean <-
   (cur < txt.count).if {
-    + n:UINTEGER_8
-    n := txt.at cur.to_uinteger_8
+    + n:Uint8
+    n := txt.at cur.to_uint8
     ((n & 80h) != 0).if { { cur := cur + 1; n := n << 1; }.do_until {(n & 40h) = 0}; }
     cur := cur + 1
   }
   
-  - dec_cur:BOOLEAN <-
+  - dec_cur:Boolean <-
   (cur > 0).if {
-    + n:UINTEGER_8
-    { cur := cur - 1; n := txt.at cur.to_uinteger_8; }.do_while {(cur >= 0) && {(n & 0C0h) = 80h}}
+    + n:Uint8
+    { cur := cur - 1; n := txt.at cur.to_uint8; }.do_while {(cur >= 0) && {(n & 0C0h) = 80h}}
   }

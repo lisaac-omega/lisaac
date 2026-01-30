@@ -1,17 +1,16 @@
 Header
-  + name := APPEND_UTF8;
-  
+  + name := Append_utf8
 Public
   
-  + str:STRING_BUFFER;
+  + str:String_buffer;
   
   - main <-
   (
-    str := STRING_BUFFER.create 4
-    TEST.check (str.count = 0)
+    str := String_buffer.create 4
+    Test.check (str.count = 0)
     str.append_utf8 "é€"
-    TEST.check (str.count = 2)
-    TEST.check (str == "é")
+    Test.check (str.count = 2)
+    Test.check (str == "é")
   )
   
   

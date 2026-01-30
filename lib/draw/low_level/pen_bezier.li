@@ -1,26 +1,24 @@
 Header
-  
-  + name := PEN_BEZIER;
-  
+  + name := Pen_bezier
 Inherit
   
-  + parent_pen_move:Expanded PEN_MOVE
+  + parent_pen_move:Flat Pen_move
 
 Private
   
-  - stack:ARRAY PEN_BEZIER := ARRAY PEN_BEZIER.create_with_capacity 16
+  - stack:Array Pen_bezier := Array Pen_bezier.create_with_capacity 16
   
 Public
   
-  + w1x:REAL_32
-  + w1y:REAL_32
+  + w1x:Real32
+  + w1y:Real32
   
-  + w2x:REAL_32
-  + w2y:REAL_32
+  + w2x:Real32
+  + w2y:Real32
   
-  - create_w1 (w1xx,w1yy:REAL_32) w2 (w2xx,w2yy:REAL_32) 
-  to (xx,yy:REAL_32) :PEN_BEZIER <-
-  ( + result:PEN_BEZIER
+  - create_w1 (w1xx,w1yy:Real32) w2 (w2xx,w2yy:Real32) 
+  to (xx,yy:Real32) :Pen_bezier <-
+  ( + result:Pen_bezier
     (stack.is_empty).if {
       result := clone
     } else {
@@ -31,7 +29,7 @@ Public
     result
   )
   
-  - make_w1 (w1xx,w1yy:REAL_32) w2 (w2xx,w2yy:REAL_32) to (xx,yy:REAL_32)  <-
+  - make_w1 (w1xx,w1yy:Real32) w2 (w2xx,w2yy:Real32) to (xx,yy:Real32)  <-
   (
     (w1x,w1y) := (w1xx,w1yy)
     (w2x,w2y) := (w2xx,w2yy)
@@ -40,19 +38,19 @@ Public
 
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
 
-  - to_path pc:PATH_CACHE <-
-  ( + path:PATH
-    + pt:POINT
+  - to_path pc:Path_cache <-
+  ( + path:Path
+    + pt:Point
     path := pc.paths.last
     pt := path.points.last
     tesselate_bezier path with (pt.x,pt.y) w1 (w1x,w1y) w2 (w2x,w2y) to (x,y) level 0 type pt_corner
     path.add_point (x,y) flags pt_corner
   )
   
-  - transform mtx:TRANSFORM <-
+  - transform mtx:Transform <-
   ( 
     (w1x,w1y) := get_tranform (w1x,w1y) with mtx
     (w2x,w2y) := get_tranform (w2x,w2y) with mtx
@@ -61,11 +59,11 @@ Public
     
 Private
   
-  - tesselate_bezier pth:PATH with (x1,y1:REAL_32) w1 (x2,y2:REAL_32) 
-  w2 (x3,y3:REAL_32) to (x4,y4:REAL_32) level lev:INTEGER type typ:INTEGER <-
+  - tesselate_bezier pth:Path with (x1,y1:Real32) w1 (x2,y2:Real32) 
+  w2 (x3,y3:Real32) to (x4,y4:Real32) level lev:Int type typ:Int <-
   // BSBS: Bizarre, implantation recursive (ce n'est pas mieux en iteratif ?)
-  ( + x12,y12,x23,y23,x34,y34,x123,y123,x234,y234,x1234,y1234:REAL_32
-    + dx,dy,d2,d3:REAL_32
+  ( + x12,y12,x23,y23,x34,y34,x123,y123,x234,y234,x1234,y1234:Real32
+    + dx,dy,d2,d3:Real32
     
     (lev <= 10).if {
       x12  := (x1 + x2)*0.5
@@ -100,7 +98,7 @@ Private
   
 Public
   
-  - svg_append_in buf:STRING_BUFFER <-
+  - svg_append_in buf:String_buffer <-
   (
     buf.add_last 'C'
     svg_put (w1x,w1y) in buf

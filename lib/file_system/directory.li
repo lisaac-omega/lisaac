@@ -1,31 +1,31 @@
 Header
-  + name := DIRECTORY;
-  
-  - include := `
+  + name := Directory
+- include := `
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 `;
 Inherit
-  + parent_dirent: /*EYE*/ Expanded DIRENT
+  + parent_dirent: /*EYE*/ Flat Dirent
 
-DIRECTORY
-  + list:Expanded ARRAY DIRENT
+Directory
+
+  + list:Flat Array Dirent
 
 Public
   
-  - is_directory:BOOLEAN <- TRUE
+  - is_directory:Boolean <- True
   
   // Manager.
 
   - remove_me <- remove "."
 
-  - remove p:STRING :BOOLEAN <-
+  - remove p:String :Boolean <-
   // Remove file or directory (WARNING: delete recursive)
-  ( + dir:DIRECTORY
-    + i:INTEGER
-    + result:BOOLEAN
-    + e:DIRENT
+  ( + dir:Directory
+    + i:Int
+    + result:Boolean
+    + e:Dirent
     e := get p
     (e != NULL).if {
       (e.is_directory).if {
@@ -46,14 +46,14 @@ Public
     result
   )
 
-  - move old_path:STRING to new_path:STRING :BOOLEAN <-
-  ( + result:BOOLEAN
+  - move old_path:String to new_path:String :Boolean <-
+  ( + result:Boolean
     //+ e:DIRENT
     "WARNING : Et les alias des sous rÃ©pertoires, fichiers, ...\n".print
     not_yet_implemented
     /*
-    STRING.tmp { tmp2:STRING_BUFFER
-      STRING.tmp { tmp:STRING_BUFFER
+    STRING.tmp { tmp2:String_buffer
+      STRING.tmp { tmp:String_buffer
         tmp.copy path
         tmp.add_last '/'
         tmp.append old_path
@@ -73,39 +73,42 @@ Public
     result
   )
 
-  - get p:STRING :DIRENT <-
-  ( + result:DIRENT ; + pth:STRING_ALIAS ; + found:BOOLEAN
-    STRING.tmp { tmp:STRING_BUFFER
+  - get p:String :Dirent <-
+  ( + result:Dirent
+    + pth:String_alias    
+    String.tmp { tmp:String_buffer
       tmp += path += p
       reduce_path tmp
       pth := tmp.to_string_alias
     }
-    (found, result) := dico.search pth
-    //result := dico.fast_reference_at pth
-    found.if_false {
+    result := dico.reference_at pth
+    (result = NULL).if {
       result := physical_get pth
-      dico.add result to pth
+      (result != NULL).if {
+        dico.at pth add result
+      }
     }
     result
   )
 
   // Indexing.
   
-  - open:BOOLEAN <-
-  ( + p,n:NATIVE_ARRAY(CHARACTER)
-    + dir,dirent:POINTER
-    + new_entry:DIRENT
-    + i:INTEGER
+  - open:Boolean <-
+  ( + p,n:C_array(Char)
+    + dir,dirent:Pointer
+    + new_entry:Dirent
+    + i:Int
+    + found:Boolean
     (! is_open).if {
-      ? {DIRECTORY.list.upper = -1}
+      ? {Directory.list.upper = -1}
       ? {list.upper = -1}
       p := path.to_external
-      dir := `opendir(@p)`:POINTER
+      dir := `opendir(@p)`:Pointer
       dir.is_not_null.if {        
-        is_open := TRUE
-        {(dirent := `readdir(@dir)`:POINTER).is_not_null}.while_do {
-          n := `((struct dirent *)@dirent)->d_name`:NATIVE_ARRAY(CHARACTER)
-          STRING.tmp { tmp:STRING_BUFFER
+        is_open := True
+        {(dirent := `readdir(@dir)`:Pointer).is_not_null}.while_do {
+          n := `((struct dirent *)@dirent)->d_name`:C_array(Char)
+          String.tmp { tmp:String_buffer
             tmp.append path
             //(path.last != '/').if { tmp.add_last '/'; }
             i := 0
@@ -114,16 +117,17 @@ Public
               i := i + 1
             }
             ((! tmp.has_suffix "/.") && {! tmp.has_suffix "/.."}).if {
-              + pth:STRING_ALIAS
+              + pth:String_alias
               p := tmp.to_external
               `{ struct stat t; stat(@p,&t)`
-              (`S_ISDIR(t.st_mode)`:INTEGER != 0).if {
+              (`S_ISDIR(t.st_mode)`:Int != 0).if {
                 tmp.add_last '/'
               }
               `}`
               pth := tmp.to_string_alias
-              new_entry := dico.fast_reference_at pth
-              (new_entry = NULL).if {
+              
+              (found, new_entry) := dico.search pth
+              found.if_false {
                 new_entry := get pth
               }
               (new_entry != NULL).if {                
@@ -133,7 +137,7 @@ Public
                   ? {d.list.upper = -1}
                 };*/
                 list.add_last new_entry
-                ? {dico.fast_reference_at (new_entry.path) != NULL}
+                ? {dico.has (new_entry.path)}
               }
             }
           }
@@ -147,25 +151,25 @@ Public
   - close <-
   (
     list.clear
-    is_open := FALSE
+    is_open := False
   )
 
-  - lower:INTEGER <- list.lower
+  - lower:Int <- list.lower
   // Minimum index.
 
-  - upper:INTEGER <- list.upper
+  - upper:Int <- list.upper
     
-  - is_empty:BOOLEAN <- list.is_empty
+  - is_empty:Boolean <- list.is_empty
 
-  - at i:INTEGER :DIRENT <- list.at i
+  - at i:Int :Dirent <- list.at i
 
-  - parent:DIRENT <- get ".."
+  - parent:Dirent <- get ".."
 
   // Writing:
 
-  - make_directory p:STRING :DIRECTORY <-
-  ( + result:DIRECTORY
-    STRING.tmp { tmp:STRING_BUFFER
+  - make_directory p:String :Directory <-
+  ( + result:Directory
+    String.tmp { tmp:String_buffer
       tmp.copy path
       tmp.add_last '/'
       tmp.append p
@@ -178,9 +182,9 @@ Public
     result
   )
 
-  - make_file p:STRING :FILE <-
-  ( + result:FILE
-    STRING.tmp { tmp:STRING_BUFFER
+  - make_file p:String :File <-
+  ( + result:File
+    String.tmp { tmp:String_buffer
       tmp.copy path
       tmp.add_last '/'
       tmp.append p
@@ -197,8 +201,8 @@ Public
 
   - print <-
   (
-    STRING.tmp { tmp:STRING_BUFFER
-      lower.to upper do { j:INTEGER
+    String.tmp { tmp:String_buffer
+      lower.to upper do { j:Int
         tmp.copy (at j.path)
         (at j.is_directory).if {
           tmp.append " D "
@@ -214,47 +218,47 @@ Public
     '\n'.print
   )
 
-DIRECTORY
+Directory
 
-  - physical_make_directory new_path:STRING :BOOLEAN <-
+  - physical_make_directory new_path:String :Boolean <-
   (
     abstract
-    FALSE
+    False
   )
 
-  - physical_make_file new_path:STRING :BOOLEAN <-
+  - physical_make_file new_path:String :Boolean <-
   (
     abstract
-    FALSE
+    False
   )
 
-  - physical_move old_path:STRING to new_path:STRING :BOOLEAN <-
+  - physical_move old_path:String to new_path:String :Boolean <-
   (
     abstract
-    FALSE
+    False
   )
 
 Private
     
-  - physical_remove p:STRING :BOOLEAN <-
-  ( + pa:NATIVE_ARRAY(CHARACTER)
-    `remove(@pa)`:(INTEGER) = 0
+  - physical_remove p:String :Boolean <-
+  ( + pa:C_array(Char)
+    `remove(@pa)`:(Int) = 0
   )
   
 Public
   - sort <-
   (
-    sort_with {(a,b:DIRENT); a.name < b.name}
+    sort_with {(a,b:Dirent); a.name < b.name}
   )
   
-  - sort_with cmp:{(DIRENT,DIRENT); BOOLEAN} <- list.quick_sort_with cmp
+  - sort_with cmp:{(Dirent,Dirent); Boolean} <- list.quick_sort_with cmp
  
 Public // DCDC pas possible d'hériter de TRAVERSABLE... ??? Voir avec Ben
-  - count:INTEGER <- upper - lower + 1; // DCDC deja dans TRAVERSABLE...
+  - count:Int <- upper - lower + 1; // DCDC deja dans TRAVERSABLE...
   
-  - foreach b:{DIRENT;} <- // DCDC deja dans TRAVERSABLE...
+  - foreach b:{Dirent;} <- // DCDC deja dans TRAVERSABLE...
   (
-    lower.to upper do { i:INTEGER
+    lower.to upper do { i:Int
       b.value (list.at i)
     }
   )

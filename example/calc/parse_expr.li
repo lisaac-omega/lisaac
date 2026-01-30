@@ -1,20 +1,18 @@
 Header
-
-  + name := PARSE_EXPR;
-  /*
+  + name := Parse_expr
+/*
   Parse arithmetic expression.
   */
-
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
 
 Private
 
   // Service and terminal parsing.
 
-  + index:INTEGER
-  + source:STRING
-  + last_character:CHARACTER
+  + index:Int
+  + source:String
+  + last_character:Char
   
   - skip_spaces <-
   (
@@ -23,22 +21,22 @@ Private
     }
   )
   
-  - read_character car:CHARACTER :BOOLEAN <-
-  ( + result:BOOLEAN
+  - read_character car:Char :Boolean <-
+  ( + result:Boolean
     ((index <= source.upper) && {car = source.item index}).if {
       last_character := car
       index  := index + 1
-      result := TRUE
+      result := True
     }
     result
   )
   
-  - last_constant:INTEGER
+  - last_constant:Int
 
-  - read_constant:BOOLEAN <-
-  ( + result:BOOLEAN
+  - read_constant:Boolean <-
+  ( + result:Boolean
     ((index <= source.upper) && {source.item index.in_range '0' to '9'}).if {
-      result := TRUE
+      result := True
       last_constant := 0
       {
         last_constant := last_constant * 10 + source.item index.decimal_value
@@ -53,19 +51,19 @@ Private
     "Error : \n".print
     source.print
     '\n'.print
-    1.to (index-1) do { j:INTEGER
+    1.to (index-1) do { j:Int
       ' '.print
     }
     "^\n".print
-    SYSTEM.exit exit_failure_code
+    System.exit exit_failure_code
   )
 
   // Grammar parsing.  
 
-  - read_expr:EXPR <-
+  - read_expr:Expr <-
   // EXPR <- EXPR_MUL { ( '+' | '-') EXPR_MUL }
-  ( + result,right:EXPR
-    + oper:CHARACTER
+  ( + result,right:Expr
+    + oper:Char
     result := read_expr_mul
     (result != NULL).if {
       {(read_character '+') || {read_character '-'}}.while_do {
@@ -75,19 +73,19 @@ Private
           error
         }
         (oper = '+').if {
-          result := EXPR_ADD.create result and right
+          result := Expr_add.create result and right
         } else {
-          result := EXPR_SUB.create result and right
+          result := Expr_sub.create result and right
         }
       }
     }
     result
   )
 
-  - read_expr_mul:EXPR <-
+  - read_expr_mul:Expr <-
   // EXPR_MUL <- EXPR_UNARY { ( '*' | '/') EXPR_UNARY }
-  ( + result,right:EXPR
-    + oper:CHARACTER
+  ( + result,right:Expr
+    + oper:Char
     result := read_expr_unary
     (result != NULL).if {
       {(read_character '*') || {read_character '/'}}.while_do {
@@ -97,20 +95,20 @@ Private
           error
         }
         (oper = '*').if {
-          result := EXPR_MUL.create result and right
+          result := Expr_mul.create result and right
         } else {
-          result := EXPR_DIV.create result and right
+          result := Expr_div.create result and right
         }
       }
     }
     result
   )
 
-  - read_expr_unary:EXPR <-
+  - read_expr_unary:Expr <-
   // EXPR_UNARY <- ( '+' | '-') EXPR_UNARY
   //             |  EXPR_CST
-  ( + result:EXPR
-    + oper:CHARACTER
+  ( + result:Expr
+    + oper:Char
     ((read_character '+') || {read_character '-'}).if {
       oper   := last_character
       result := read_expr_unary
@@ -118,7 +116,7 @@ Private
         error
       }
       (oper = '-').if {
-        result := EXPR_NEG.create result
+        result := Expr_neg.create result
       }
     } else {
       result := read_expr_cst
@@ -126,10 +124,10 @@ Private
     result
   )
 
-  - read_expr_cst:EXPR <-
+  - read_expr_cst:Expr <-
   // EXPR_CST <- '(' EXPR ')'
   //           |  constant
-  ( + result:EXPR
+  ( + result:Expr
     (read_character '(').if {
       result := read_expr
       (result = NULL).if {
@@ -139,15 +137,15 @@ Private
         error
       }
     }.elseif {read_constant} then {
-      result := EXPR_CST.create last_constant
+      result := Expr_cst.create last_constant
     }
     result
   )
 
 Public
 
-  - parse src:STRING :EXPR <-
-  ( + result:EXPR
+  - parse src:String :Expr <-
+  ( + result:Expr
     source := src
     index  := source.lower
     result := read_expr

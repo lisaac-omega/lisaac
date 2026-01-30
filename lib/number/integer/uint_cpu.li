@@ -1,0 +1,25 @@
+Header
+  + name := Flat Uint_cpu
+/*Unsigned integer (variable size according to CPU word).*/
+  - type    := `uintptr_t`;
+  - default := (0.to_raw_uinteger_cpu);
+  - export  := Uint64, Pointer, Int;
+Insert
+  - parent_unsigned_integer:Unsigned_integer := Unsigned_integer
+
+Public
+
+  - object_size:Int <- `sizeof(uintptr_t)`:Int
+
+  // Range.
+
+  - maximum:Uint64 := (~ 0.to_uint_cpu).to_raw_uint64
+
+  // Conversion with test.
+
+
+  - to_int:Int <- to_raw_int
+
+  - to_uint64:Uint64 <- to_raw_uint64
+
+  - to_pointer:Pointer <- to_raw_pointer

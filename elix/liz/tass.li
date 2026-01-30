@@ -1,19 +1,18 @@
 Header
-  + name := TASS;
-  
+  + name := Tass
 Inherit
-  - parent_texp:TEXP := TEXP
+  - parent_texp:Texp := Texp
   
 Public
   
-  + var:INTEGER
-  + value:TEXP
+  + var:Int
+  + value:Texp
   
-  - init v:INTEGER with e:TEXP :TASS <- ( (var,value) := (v,e); Self)
+  - init v:Int with e:Texp :Tass <- ( (var,value) := (v,e); self)
   
   - run <- ( stk.at (bp+var) put (value.eval); )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b | 'V'; var.append_in b
     b += " <- "

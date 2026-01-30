@@ -1,10 +1,9 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + bool:BOOLEAN
+  ( + bool:Boolean
     bool.print
-    TEST.check (bool.to_string) string "FALSE"
-    TEST.check (TRUE.to_string) string "TRUE"
+    Test.check (bool.to_string) string "False"
+    Test.check (True.to_string) string "True"
   )

@@ -1,28 +1,28 @@
 Header
-  + name := MAIN;
+  + name := Main
 Inherit
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Public
   
-  - cpt:INTEGER
+  - cpt:Int
   
-  - load_directory path:STRING_ALIAS <-
-  ( + dirent:DIRENT
-    + dir:DIRECTORY
+  - load_directory path:String_alias <-
+  ( + dirent:Dirent
+    + dir:Directory
     trace (path)
-    dirent := FILE_SYSTEM.get path
+    dirent := File_system.get path
     (dirent = NULL).if {
       ("Error: cannot open '" + path + "'").println
       exit 0
     }
-    TEST.check_not_null (dirent.path)
+    Test.check_not_null (dirent.path)
     trace (dirent.path)
     cpt_increment "ici"
     ((dirent.is_directory) && {dirent.open}).if {
       dir ?= dirent
       dir.sort
-      (dir.lower).to (dir.upper) do { j:INTEGER
+      (dir.lower).to (dir.upper) do { j:Int
         ("j=" + j.to_string + " ").print
         cpt_increment "la"
         load_directory (dir.at j.path)
@@ -31,31 +31,31 @@ Public
   )
   
   - main <-
-  ( + path:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
-      ENVIRONMENT.pwd_in tmp
+  ( + path:String_alias
+    String.tmp { tmp:String_buffer
+      Environment.pwd_in tmp
       path := tmp.to_string_alias
     }
-    TEST.check (path.has_suffix "6/") txt {path}
-    TEST.check (COMMAND_ARGS.count) integer 2
-    load_directory (COMMAND_ARGS.first)
+    Test.check (path.has_suffix "6/") txt {path}
+    Test.check (Command_args.count) integer 2
+    load_directory (Command_args.first)
     cpt_increment "main"
   )
   
-  - cpt_increment name:STRING <-
+  - cpt_increment name:String <-
   (
     cpt := cpt + 1
     ("cpt." + name + "=" + cpt.to_string).println
   )
   
-  - trace path:STRING <-
-  ( + i:INTEGER
+  - trace path:String <-
+  ( + i:Int
     ((i := path.first_substring_index "/lisaac/") < 0).if {
       i := 0
     }
-    i.to (path.upper) do { k:INTEGER
-      STDOUT.put_character (path.item k)
+    i.to (path.upper) do { k:Int
+      Stdout.put_character (path.item k)
     }
-    STDOUT.put_character '\n'
+    Stdout.put_character '\n'
   )
   

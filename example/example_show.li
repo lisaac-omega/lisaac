@@ -1,23 +1,23 @@
 Header
-  + name := EXAMPLE_SHOW
-  /**/
+  + name := Example_show
   
+/**/
 Insert
-  - code_show:CODE_SHOW := CODE_SHOW
+  - code_show:Code_show := Code_show
     
 Public
   
   - main <-
   (  
-    directory "" main "hello_world" run FALSE elix TRUE
-    directory "welcome" main "welcome" run TRUE elix TRUE
-    directory "startrek" main "startrek" run TRUE elix FALSE
-    directory "connect_four" main "connect_four" run TRUE elix FALSE
-    directory "tetris" main "tetris" run TRUE elix FALSE
-    directory "mapping" main "nayeli" run TRUE elix FALSE
-    directory "snake" main "snake" run TRUE elix TRUE 
-    directory "misc" main "glyph_example" run FALSE elix TRUE 
-    directory "basics" main "factorial_example" run FALSE elix TRUE 
-    directory "" main "fibonacci" run FALSE elix TRUE 
+    directory "" main "hello_world" run False elix True
+    directory "welcome" main "welcome" run True elix True
+    directory "startrek" main "startrek" run True elix False
+    directory "connect_four" main "connect_four" run True elix False
+    directory "tetris" main "tetris" run True elix False
+    directory "mapping" main "nayeli" run True elix False
+    directory "snake" main "snake" run True elix True 
+    directory "misc" main "glyph_example" run False elix True 
+    directory "basics" main "factorial_example" run False elix True 
+    directory "" main "fibonacci" run False elix True 
   )
   

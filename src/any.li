@@ -1,20 +1,17 @@
 Header
-
-  + name    := ANY;
-
-  /*Common parent for compiler*/
-
+  + name := Any
+/*Common parent for compiler*/
 Inherit
 
-  - parent_any_option:ANY_OPTION := ANY_OPTION
+  - parent_any_option:Any_option := Any_option
 
 Public
   
-  - is_ansi:BOOLEAN
+  - is_ansi:Boolean
 
-  - last_index_str (n:STRING,c:CHARACTER) :INTEGER <-
-  // BSBS: A Mettre dans STRING_BUFFER.
-  ( + result:INTEGER
+  - last_index_str (n:String,c:Char) :Int <-
+  // BSBS: A Mettre dans String_buffer.
+  ( + result:Int
     result := n.upper
     {(result < n.lower) || {n.at result = c}}.until_do {
       result := result-1
@@ -26,60 +23,60 @@ Public
   // Statistic information.
   //
 
-  - count_equal_const:INTEGER
-  - count_equal_ident:INTEGER
-  - count_equal_null :INTEGER
-  - count_equal_inter:INTEGER
-  - count_equal_gener:INTEGER
+  - count_equal_const:Int
+  - count_equal_ident:Int
+  - count_equal_null :Int
+  - count_equal_inter:Int
+  - count_equal_gener:Int
 
-  - count_equal_parse:INTEGER
-  - count_equal_live :INTEGER
-  - count_equal_creat:INTEGER
-  - count_equal_remov:INTEGER
+  - count_equal_parse:Int
+  - count_equal_live :Int
+  - count_equal_creat:Int
+  - count_equal_remov:Int
 
-  - count_na_expanded:INTEGER
-  - count_na_null:INTEGER
-  - count_na_not_null:INTEGER
-  - count_na_mono:INTEGER
-  - count_na_always_null:INTEGER
+  - count_na_flat:Int
+  - count_na_null:Int
+  - count_na_not_null:Int
+  - count_na_mono:Int
+  - count_na_always_null:Int
 
-  - count_local_expanded:INTEGER
-  - count_local_null:INTEGER
-  - count_local_not_null:INTEGER
-  - count_local_mono:INTEGER
-  - count_local_always_null:INTEGER
+  - count_local_flat:Int
+  - count_local_null:Int
+  - count_local_not_null:Int
+  - count_local_mono:Int
+  - count_local_always_null:Int
 
-  - count_switch:INTEGER
-  - count_switch_merging:INTEGER
+  - count_switch:Int
+  - count_switch_merging:Int
 
   //
   // Invariant loop system.
   //
-  - count_invariant:INTEGER
+  - count_invariant:Int
 
-  - loop_list:LIST
-  - loop_seq_index:INTEGER
-  - loop_seq_call_local_and_loop:INTEGER
-  - loop_seq_call_and_loop:INTEGER
-  - loop_invariant:LOOP
+  - loop_list:List
+  - loop_seq_index:Int
+  - loop_seq_call_local_and_loop:Int
+  - loop_seq_call_and_loop:Int
+  - loop_invariant:Loop
 
   //
 
-  - late_binding_counter:INTEGER
-  - late_binding_expanded_counter:INTEGER
-  - late_binding_self_counter:INTEGER
+  - late_binding_counter:Int
+  - late_binding_flat_counter:Int
+  - late_binding_self_counter:Int
 
-  - null_counter:INTEGER
+  - null_counter:Int
 
-  - polymorphic_counter:INTEGER
+  - polymorphic_counter:Int
 
   //
   // Display debug tools.
   //
 
-  + object_id:INTEGER <-
-  ( + result:INTEGER
-    - object_counter:INTEGER
+  + object_id:Int <-
+  ( + result:Int
+    - object_counter:Int
 
     result := object_counter
     object_counter := object_counter + 1
@@ -90,44 +87,44 @@ Public
   // Compiler Options.
   //
 
-  - debug_level_option:INTEGER
-  - debug_with_code:BOOLEAN
+  - debug_level_option:Int
+  - debug_with_code:Boolean
 
-  - is_all_warning:BOOLEAN
+  - is_all_warning:Boolean
 
-  - is_optimization:BOOLEAN
-  - is_optimization_type_set:BOOLEAN
-  - inline_level:INTEGER := 17
+  - is_optimization:Boolean
+  - is_optimization_type_set:Boolean
+  - inline_level:Int := 17
 
-  - is_statistic:BOOLEAN
-  - is_quiet:BOOLEAN
+  - is_statistic:Boolean
+  - is_quiet:Boolean
 
   //
   //
   //
 
-  - verbose_level:INTEGER
-  - is_verbose:BOOLEAN <- (verbose_level != 0)
+  - verbose_level:Int
+  - is_verbose:Boolean <- (verbose_level != 0)
 
-  - is_readable:BOOLEAN
-  - is_graph:BOOLEAN
-  - is_speed_push:BOOLEAN
+  - is_readable:Boolean
+  - is_graph:Boolean
+  - is_speed_push:Boolean
 
   //
   // Other flags.
   //
 
-  - is_cop:BOOLEAN
+  - is_cop:Boolean
 
-  - is_library:BOOLEAN
+  - is_library:Boolean
 
-  - is_copy_local:BOOLEAN
+  - is_copy_local:Boolean
 
-  - pass_count:INTEGER
+  - pass_count:Int
 
-  - modify_count:INTEGER
-  - count_context_sensitive:INTEGER
-  - count_block_sensitive:INTEGER
+  - modify_count:Int
+  - count_context_sensitive:Int
+  - count_block_sensitive:Int
 
   - new_depend_pass <-
   (
@@ -142,23 +139,23 @@ Public
     new_depend_pass
   )
 
-  - is_executing_pass:BOOLEAN
+  - is_executing_pass:Boolean
 
   //
   // Sequence counter.
   //
 
-  - seq_inline:UINTEGER_32
+  - seq_inline:Uint32
 
-  - seq_index              :UINTEGER_32; // Global index sequence.
-  - seq_or_and             :UINTEGER_32; // || or &&
-  - seq_call_and_loop      :UINTEGER_32; // Call or loop (or function).
-  - seq_call_local_and_loop:UINTEGER_32; // Call sensitive or loop.
-  - seq_list:ARRAY LIST := ARRAY LIST.create_with_capacity 64
+  - seq_index              :Uint32; // Global index sequence.
+  - seq_or_and             :Uint32; // || or &&
+  - seq_call_and_loop      :Uint32; // Call or loop (or function).
+  - seq_call_local_and_loop:Uint32; // Call sensitive or loop.
+  - seq_list:Array List := Array List.create_with_capacity 64
 
-  - is_seq_list l:LIST :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_seq_list l:List :Boolean <-
+  ( + result:Boolean
+    + j:Int
 
     j := seq_list.upper
     {(j >= seq_list.lower) && {! result}}.while_do {
@@ -172,30 +169,30 @@ Public
   // Runtime.
   //
 
-  - list_main:LIST
-  - context_main:LOCAL
+  - list_main:List
+  - context_main:Local
 
-  - profil_main:PROFIL_SLOT := // BSBS: A REVOIR (a uniformiser ((graph)))
-  ( + result:PROFIL_SLOT
+  - profil_main:Profil_slot := // BSBS: A REVOIR (a uniformiser ((graph)))
+  ( + result:Profil_slot
 
-    result := PROFIL_SLOT.my_clone
+    result := Profil_slot.my_clone
     result.alloc_profil_main
     result
   )
 
-  - list_current:LIST
+  - list_current:List
 
-  - current_list_level:INTEGER
+  - current_list_level:Int
 
-  - stack_local:ARRAY LOCAL := ARRAY LOCAL.create_with_capacity 64
+  - stack_local:Array Local := Array Local.create_with_capacity 64
 
-  - profil_slot:PROFIL_SLOT; // Principal slot.
-  - profil_current:PROFIL;   // Sub-profil or (profil = profil_slot)
+  - profil_slot:Profil_slot; // Principal slot.
+  - profil_current:Profil;   // Sub-profil or (profil = profil_slot)
 
   - display_stack_local <-
   (
     string_tmp.clear
-    (stack_local.lower).to (stack_local.upper) do { j:INTEGER
+    (stack_local.lower).to (stack_local.upper) do { j:Int
       stack_local.at j.display string_tmp
       string_tmp.add_last '\n'
     }
@@ -206,74 +203,74 @@ Public
   // Output Buffer and service.
   //
   
-  - core_count:INTEGER := 1
-  - output_decl:STRING_BUFFER := STRING_BUFFER.create 60_000
-  - output_glob:STRING_BUFFER := STRING_BUFFER.create 10_000
-  - output:STRING_BUFFER
-  - output_list:Expanded ARRAY STRING_BUFFER
+  - core_count:Int := 1
+  - output_decl:String_buffer := String_buffer.create 60_000
+  - output_glob:String_buffer := String_buffer.create 10_000
+  - output:String_buffer
+  - output_list:Flat Array String_buffer
 
-  - title txt:STRING_ALIAS in buf:STRING_BUFFER <-
+  - title txt:String_alias in buf:String_buffer <-
   (
     buf.append "\n/*"
-    3.to 28 do { j:INTEGER
+    3.to 28 do { j:Int
       buf.add_last '='
     }
     buf.append "*/\n/* "
     buf.append txt
-    (txt.count+5).to 28 do { j:INTEGER
+    (txt.count+5).to 28 do { j:Int
       buf.add_last ' '
     }
     buf.append " */\n/*"
-    3.to 28 do { j:INTEGER
+    3.to 28 do { j:Int
       buf.add_last '='
     }
     buf.append "*/\n\n"
   )
 
 
-  - indent:STRING_BUFFER := STRING_BUFFER.create 128
+  - indent:String_buffer := String_buffer.create 128
 
-  - operator typ:STRING name op:STRING :STRING_ALIAS <-
-  ( + c:CHARACTER
+  - operator typ:String name op:String :String_alias <-
+  ( + c:Char
     string_tmp.copy typ
     string_tmp2.clear
-    utf8 op to_ascii FALSE in string_tmp2
-    0.to (string_tmp2.upper) do { j:INTEGER
+    utf8 op to_ascii False in string_tmp2
+    0.to (string_tmp2.upper) do { j:Int
       c := string_tmp2.at j
       (c = '+').if {
-	string_tmp.append "_add"
+        string_tmp.append "_add"
       }.elseif { c = '-' } then {
-	string_tmp.append "_sub"
+        string_tmp.append "_sub"
       }.elseif { c = '~' } then {
-	string_tmp.append "_logicnot"
+        string_tmp.append "_logicnot"
       }.elseif { c = '!' } then {
-	string_tmp.append "_not"
+        string_tmp.append "_not"
       }.elseif { c = '/' } then {
-	string_tmp.append "_div"
+        string_tmp.append "_div"
       }.elseif { c = '*' } then {
-	string_tmp.append "_mul"
+        string_tmp.append "_mul"
       }.elseif { c = '^' } then {
-	string_tmp.append "_xor"
+        string_tmp.append "_xor"
       }.elseif { c = '%' } then {
-	string_tmp.append "_mod"
+        string_tmp.append "_mod"
       }.elseif { c = '>' } then {
-	string_tmp.append "_greater"
+        string_tmp.append "_greater"
       }.elseif { c = '<' } then {
-	string_tmp.append "_less"
+        string_tmp.append "_less"
       }.elseif { c = '=' } then {
-	string_tmp.append "_equal"
+        string_tmp.append "_equal"
       }.elseif { c = '\\' } then {
-	string_tmp.append "_notdiv"
+        string_tmp.append "_notdiv"
       }.elseif { c = '|' } then {
-	string_tmp.append "_or"
+        string_tmp.append "_or"
       }.elseif { c = '&' } then {
-	string_tmp.append "_and"
+        string_tmp.append "_and"
       }.elseif { c = '$' } then {
-	string_tmp.append "_dollar"
+        string_tmp.append "_dollar"
       }.elseif { c = '#' } then {
-	string_tmp.append "_diese"
+        string_tmp.append "_diese"
       }.elseif { c = '@' } then {
-	string_tmp.append "_at"
+        string_tmp.append "_at"
       }.elseif { c = '?' } then {
         string_tmp.append "_ask"
       } else {
@@ -283,14 +280,14 @@ Public
     string_tmp.to_string_alias
   )
   
-  - get_intern str:STRING type low:BOOLEAN :STRING_ALIAS <-
-  ( + v,m:INTEGER
-    - count_variable:INTEGER
+  - get_intern str:String type low:Boolean :String_alias <-
+  ( + v,m:Int
+    - count_variable:Int
     
     (is_readable).if {
       string_tmp2.clear
       utf8 str to_ascii low in string_tmp2
-      0.to (string_tmp2.upper) do { j:INTEGER
+      0.to (string_tmp2.upper) do { j:Int
         v := ",() .{};".last_index_of (string_tmp2.at j)
         (v != -1).if { string_tmp2.at j put ("xoo__bb_".at v); }
       }
@@ -309,69 +306,69 @@ Public
       }
       v := v >> 5
     }
-    ALIAS STRING_BUFFER TO STRING_ALIAS.force_register string_tmp2
+    Alias String_buffer To String_alias.force_register string_tmp2
   )
 
   //
   // Error manager.
   //
 
-  - syntax  :INTEGER := 0
-  - semantic:INTEGER := 1
-  - warning :INTEGER := 2
-  - message :INTEGER := 3
+  - syntax  :Int := 0
+  - semantic:Int := 1
+  - warning :Int := 2
+  - message :Int := 3
 
-  - syntax_error (pos:POSITION,txt:STRING) <-
+  - syntax_error (pos:Position,txt:String) <-
   (
     pos.put_error syntax text txt
     pos.put_position
-    POSITION.send_error
+    Position.send_error
   )
 
-  - syntax_error2 (p1:POSITION, p2:POSITION,txt:STRING) <-
+  - syntax_error2 (p1:Position, p2:Position,txt:String) <-
   (
     p1.put_error syntax text txt
     p1.put_position
     p2.put_position
-    POSITION.send_error
+    Position.send_error
   )
 
-  - semantic_error (pos:POSITION,txt:STRING) <-
+  - semantic_error (pos:Position,txt:String) <-
   (    
     pos.put_error semantic text txt
     pos.put_position
-    POSITION.send_error
+    Position.send_error
   )
 
-  - semantic_error2 (p1:POSITION, p2:POSITION,txt:STRING) <-
+  - semantic_error2 (p1:Position, p2:Position,txt:String) <-
   (
     p1.put_error semantic text txt
     p1.put_position
     p2.put_position
-    POSITION.send_error
+    Position.send_error
   )
 
-  - warning_error (pos:POSITION,txt:STRING) <-
+  - warning_error (pos:Position,txt:String) <-
   (
     pos.put_error warning text txt
     pos.put_position
-    POSITION.send_error
+    Position.send_error
   )
 
-  - warning_error2 (p1:POSITION, p2:POSITION,txt:STRING) <-
+  - warning_error2 (p1:Position, p2:Position,txt:String) <-
   (
     p1.put_error warning text txt
     p1.put_position
     p2.put_position
-    POSITION.send_error
+    Position.send_error
   )
 
-  - message_error (pos:POSITION,txt:STRING) <-
+  - message_error (pos:Position,txt:String) <-
   (
     is_verbose.if {
       pos.put_error message text txt
       pos.put_position
-      POSITION.send_error
+      Position.send_error
     }
   )
 
@@ -379,26 +376,26 @@ Public
   // String temporary.
   //
 
-  - string_tmp :STRING_BUFFER := STRING_BUFFER.create 256
-  - string_tmp2:STRING_BUFFER := STRING_BUFFER.create 256
-  - string_tmp3:STRING_BUFFER := STRING_BUFFER.create 256
-  - string_tmp4:STRING_BUFFER := STRING_BUFFER.create 256
+  - string_tmp :String_buffer := String_buffer.create 256
+  - string_tmp2:String_buffer := String_buffer.create 256
+  - string_tmp3:String_buffer := String_buffer.create 256
+  - string_tmp4:String_buffer := String_buffer.create 256
 
   //
   // Path directory and command front end.
   //
 
-  - input_path:STRING_ALIAS
+  - input_path:String_alias
 
-  - path_file:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 3000
-  - path_begin:INTEGER := 0
+  - path_file:Array String_alias := Array String_alias.create_with_capacity 3000
+  - path_begin:Int := 0
 
-  - path_lisaac:STRING_ALIAS <- COMMON.path_lisaac
+  - path_lisaac:String_alias <- Common.path_lisaac
     
-  - utf8_dico:HMAP STRING_ALIAS KEY STRING_ALIAS :=
-  ( + r:HMAP STRING_ALIAS KEY STRING_ALIAS
-    r := new HMAP STRING_ALIAS KEY STRING_ALIAS
-    r.add "z" to "ℤ"
+  - utf8_dico:Hmap String_alias Key String_alias :=
+  ( + r:Hmap String_alias Key String_alias
+    r := new Hmap String_alias Key String_alias
+    r.at "ℤ" add "z"
     r
   )
   
@@ -406,36 +403,60 @@ Public
   // Alias type.
   //
   
-  - type_object           :TYPE
-  - type_input            :TYPE
-  - type_integer          :TYPE
-  - type_real_64          :TYPE
-  - type_character        :TYPE
-  - type_block            :TYPE
-  - type_true             :TYPE
-  - type_false            :TYPE
-  - type_boolean          :TYPE
-  - type_integer_32       :TYPE
-  - type_uinteger_32      :TYPE
-  - type_pointer          :TYPE
-  - type_string_alias     :TYPE
-  - type_n_a_character    :TYPE
-  - type_n_a_n_a_character:TYPE
+  - type_utils       :Type
+  - type_input       :Type
+  - type_integer     :Type
+  - type_real64      :Type
+  - type_char        :Type
+  - type_block       :Type
+  - type_true        :Type
+  - type_false       :Type
+  - type_boolean     :Type
+  - type_integer_32  :Type
+  - type_uinteger_32 :Type
+  - type_pointer     :Type
+  - type_string_alias:Type
+  - type_n_a_char    :Type  
+  //- type_n_a_n_a_char:TYPE
   //- type_alias            :TYPE
-
+  
+  - str_null:String_alias  := "NULL"
+  - str_self:String_alias  := "Self"
+  - str_n_a:String_alias   := "C_array"
+  - str_n_a_v:String_alias := "C_array_volatile"
+  - str_block:String_alias := "Block"
+  - str_true:String_alias  := "True"
+  - str_false:String_alias := "False"
+  - str_boolean:String_alias := "Boolean"
+  - str_string_buffer:String_alias := "String_buffer"
+  - str_string_alias:String_alias  := "String_alias"
+  - str_int:String_alias     := "Int"
+  - str_int_8:String_alias   := "Int8"
+  - str_int_16:String_alias  := "Int16"
+  - str_int_32:String_alias  := "Int32"
+  - str_int_64:String_alias  := "Int64"
+  - str_uint_8:String_alias  := "Uint8"
+  - str_uint_16:String_alias := "Uint16"
+  - str_uint_32:String_alias := "Uint32"
+  - str_uint_64:String_alias := "Uint64"
+  
+  - lip_int:String_alias     := "Int"
+  - lip_boolean:String_alias := "Boolean"
+  - lip_string:String_alias  := "String"
+  
   //
   // Usage Variable.
   //
 
-  - last_position:POSITION
+  - last_position:Position
 
-  - load_lip file_lip:STRING <-
+  - load_lip file_lip:String <-
     load_lip file_lip in NULL
 
-  - load_lip file_lip:STRING in lip_dir:STRING_ALIAS <-
-  ( + path_lip:STRING_ALIAS
-    + is_good:BOOLEAN
-    + count:INTEGER
+  - load_lip file_lip:String in lip_dir:String_alias <-
+  ( + path_lip:String_alias
+    + is_good:Boolean
+    + count:Int
         
     //
     // Search in lip_dir
@@ -448,8 +469,8 @@ Public
       }
       string_tmp.append file_lip
       path_lip := string_tmp.to_string_alias
-      (! (is_good := PARSER.read_lip path_lip)).if {
-        LIP_CALL.load_dir lip_dir img NULL is_rec FALSE
+      (! (is_good := Parser.read_lip path_lip)).if {
+        Lip_call.load_dir lip_dir img NULL is_rec False
         string_tmp.remove_tail (file_lip.count)
       } else {
         (is_verbose).if {
@@ -464,7 +485,7 @@ Public
     {(count < 5) && {! is_good}}.while_do {
       string_tmp.append file_lip
       path_lip := string_tmp.to_string_alias
-      (! (is_good := PARSER.read_lip path_lip)).if {
+      (! (is_good := Parser.read_lip path_lip)).if {
         string_tmp.copy path_lip
         string_tmp.remove_tail (file_lip.count)
         string_tmp.append "../"
@@ -486,7 +507,7 @@ Public
       string_tmp.copy path_lisaac
       string_tmp.append "make.lip"
       path_lip := string_tmp.to_string_alias
-      (! (is_good := PARSER.read_lip path_lip)).if {
+      (! (is_good := Parser.read_lip path_lip)).if {
         "File `".print;
         path_lip.print
         "' not found !\nIncorrect installation.\n".print
@@ -497,15 +518,15 @@ Public
     //
     // Load parent .lip (inheritance)
     //
-    {LIP_CODE.list_parent.is_empty}.until_do {
-      path_lip := LIP_CODE.list_parent.first
-      LIP_CODE.list_parent.remove_first
+    {Lip_code.list_parent.is_empty}.until_do {
+      path_lip := Lip_code.list_parent.first
+      Lip_code.list_parent.remove_first
       (path_lip.is_empty).if {
         string_tmp.copy path_lisaac
         string_tmp.append "make.lip"
         path_lip := string_tmp.to_string_alias
       }
-      (! PARSER.read_lip path_lip).if {
+      (! Parser.read_lip path_lip).if {
         "File `".print;
         path_lip.print
         "' not found ! (see `*.lip')\n".print;
@@ -513,17 +534,17 @@ Public
       }
     }
     // Auto-load 'lisaac' variable.
-    LIP_CODE.put_string path_lisaac to "lisaac"
+    Lip_code.put_string path_lisaac to "lisaac"
   )
   
-  - is_integer n:STRING_ALIAS :BOOLEAN <-
+  - is_integer n:String_alias :Boolean <-
   (
-    (n = "UINTEGER_64") || {n = "UINTEGER_32"} || {n = "UINTEGER_16"} ||
-    {n = "UINTEGER_8" } || {n = "INTEGER_64" } || {n = "INTEGER_32" } ||
-    {n = "INTEGER_16" } || {n = "INTEGER_8"  } || {n = "INTEGER"    }
+    (n = str_uint_64) || {n = str_uint_32} || {n = str_uint_16} ||
+    {n = str_uint_8 } || {n = str_int_64 } || {n = str_int_32 } ||
+    {n = str_int_16 } || {n = str_int_8  } || {n = str_int    }
   )
 /*
-  - is_section n:STRING_ALIAS :BOOLEAN <-
+  - is_section n:String_alias :Boolean <-
   (
     (n = "Inherit"  ) ||
     {n = "Insert"   } ||
@@ -539,18 +560,18 @@ Public
   // Activate debug
   //
 
-  - debug_proto_bestname :BOOLEAN <- FALSE
+  - debug_proto_bestname :Boolean <- False
   // Debug the name of the prototypes choosen to avoid conflicts
   // See PROTOTYPE.insert_prototype
   
 Private
   
-  - utf8 s:STRING to_ascii low:BOOLEAN in buf:STRING_BUFFER <-
+  - utf8 s:String to_ascii low:Boolean in buf:String_buffer <-
   // Convert UTF8 -> ASCII
-  ( + j:INTEGER
-    + n,r,c:UINTEGER_8
-    + base:CHARACTER
-    + odd:BOOLEAN
+  ( + j:Int
+    + n,r,c:Uint8
+    + base:Char
+    + odd:Boolean
     base := low.ok 'a' or 'A'
     {j <= s.upper}.while_do {    
       n := s.at j
@@ -560,7 +581,7 @@ Private
       } else {
         buf.add_last (base +# (n&1111b))
         r := (n >> 2) & 1100b
-        odd := TRUE
+        odd := True
         {
           c := s.at j
           buf.add_last (base +# (c&1111b))

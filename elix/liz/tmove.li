@@ -1,15 +1,14 @@
 Header
-  + name := TMOVE;
-  
+  + name := Tmove
 Inherit
-  - parent_texp:TEXP := TEXP
+  - parent_texp:Texp := Texp
   
 Public
   
-  + val_x:TEXP
-  + val_y:TEXP
+  + val_x:Texp
+  + val_y:Texp
   
-  - init_xy (x,y:TEXP) :SELF <- ( (val_x,val_y) := (x,y); Self)
+  - init_xy (x,y:Texp) :Self <- ( (val_x,val_y) := (x,y); self)
   
   - run <-
   (
@@ -17,7 +16,7 @@ Public
     move_to (val_x.eval,val_y.eval)
   )
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b += "Move ("
     val_x.append_in b

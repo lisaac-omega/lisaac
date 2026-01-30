@@ -1,8 +1,6 @@
 Header
-
-  + name     := Strict MEMORY;
-
-  /*Memory manager 32/64 bits.*/
+  + name := Exact Memory
+/*Memory manager 32/64 bits.*/
   
   - include := `#define MINIMUM_SIZE 384
   extern void *table_size[];
@@ -13,20 +11,19 @@ Header
 void *table_size[MINIMUM_SIZE/sizeof(void *)];
 void *last_block[64];
 `;
-
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Mapping
 
-  + previous_linear:MEMORY
-  + size_and_id:UINTEGER_CPU
+  + previous_linear:Memory
+  + size_and_id:Uint_cpu
 
   //---------------> Limit for Busy
 
-  + next_free    :MEMORY
-  + previous_free:MEMORY
+  + next_free    :Memory
+  + previous_free:Memory
 
   //---------------> Limit for Free
 
@@ -36,58 +33,58 @@ Private
 
   // For GC only.
   /*
-  - get_object_size t:INTEGER :INTEGER <- `get_object_size(@t)`:INTEGER
+  - get_object_size t:Int :Int <- `get_object_size(@t)`:Int
 
   - mark_static_object   <- `mark_static_object()`
 
   - demark_static_object <- `demark_static_object()`
 
-  - mark_object ptr:POINTER type t:INTEGER <- `mark_object(@ptr,@t)`
+  - mark_object ptr:Pointer type t:Int <- `mark_object(@ptr,@t)`
 
-  - demark_object ptr:POINTER type t:INTEGER <- `demark_object(@ptr,@t)`
+  - demark_object ptr:Pointer type t:Int <- `demark_object(@ptr,@t)`
   */
 
 Public
 
-  - object_size:INTEGER               <- POINTER.object_size + UINTEGER_CPU.object_size
+  - object_size:Int               <- Pointer.object_size + Uint_cpu.object_size
 
-MEMORY
+Memory
 
-  - is_debug_memory:BOOLEAN := FALSE
-  //- is_debug_memory:BOOLEAN := TRUE
+  - is_debug_memory:Boolean := False
+  //- is_debug_memory:Boolean := True
 
-  - this:POINTER                      <- CAST MEMORY TO POINTER.on Self
+  - this:Pointer                      <- Cast Memory To Pointer.on self
 
-  - begin:POINTER                     <- this + object_size
+  - begin:Pointer                     <- this + object_size
 
-  - size:UINTEGER_CPU                 <- size_and_id & ~ 3.to_uinteger_cpu
+  - size:Uint_cpu                 <- size_and_id & ~ 3.to_uint_cpu
 
-  - next_linear:MEMORY                <- CAST POINTER TO MEMORY.on (begin + size)
+  - next_linear:Memory                <- Cast Pointer To Memory.on (begin + size)
 
-  - id:UINTEGER_CPU                   <- size_and_id & 01b
+  - id:Uint_cpu                   <- size_and_id & 01b
 
-  - id_end:UINTEGER_CPU               <- 10b
+  - id_end:Uint_cpu               <- 10b
 
-  - is_end:BOOLEAN                    <- (size_and_id & id_end).to_boolean
+  - is_end:Boolean                    <- (size_and_id & id_end).to_boolean
 
-  - set_previous_linear p:MEMORY      <- ( previous_linear := p; )
+  - set_previous_linear p:Memory      <- ( previous_linear := p; )
 
-  - set_size_and_id s:UINTEGER_CPU    <- ( size_and_id     := s; )
+  - set_size_and_id s:Uint_cpu    <- ( size_and_id     := s; )
 
-  - get_index p:POINTER :UINTEGER_CPU <- (p - begin_memory).to_uinteger_cpu >> 26
+  - get_index p:Pointer :Uint_cpu <- (p - begin_memory).to_uint_cpu >> 26
 
-  - nb_page:UINTEGER_CPU
+  - nb_page:Uint_cpu
 
-  - put_last m:MEMORY to idx:UINTEGER_CPU <-
+  - put_last m:Memory to idx:Uint_cpu <-
   (
     ? {idx < nb_page}
     `last_block[@idx] = @m`
   )
 
-  - get_last idx:UINTEGER_CPU :MEMORY <-
+  - get_last idx:Uint_cpu :Memory <-
   (
     ? {idx < nb_page}
-    `last_block[@idx]`:MEMORY
+    `last_block[@idx]`:Memory
   )
 
   - search_capacity <-
@@ -101,12 +98,12 @@ MEMORY
     "End      : ".print; (begin_memory+capacity_max-1).print_hexa; '\n'.print
     */
     {begin_memory != NULL} ? "Memory: Not memory."
-    {(begin_memory & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
+    {(begin_memory & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
   )
 
-  - new_page:MEMORY <-
-  ( + old_size,new_size:UINTEGER_CPU
-    + block:MEMORY
+  - new_page:Memory <-
+  ( + old_size,new_size:Uint_cpu
+    + block:Memory
 
     (capacity_max = 0).if {
       search_capacity
@@ -123,7 +120,7 @@ MEMORY
     (begin_memory + old_size).print_hexa; '\n'.print
     "object_size  ".print; object_size.print; '\n'.print
     */
-    block := CAST POINTER TO MEMORY.on (begin_memory + old_size)
+    block := Cast Pointer To Memory.on (begin_memory + old_size)
     block.set_previous_linear NULL
     block.set_size_and_id (id_free | id_end | (64.mb - object_size))
     block.add_link_free
@@ -134,14 +131,14 @@ MEMORY
 
   // Busy / Free Block.
 
-  - id_free:UINTEGER_CPU <- 00b
-  - id_busy:UINTEGER_CPU <- 01b
+  - id_free:Uint_cpu <- 00b
+  - id_busy:Uint_cpu <- 01b
 
-  - set_next_free     n:MEMORY <- ( next_free     := n; )
-  - set_previous_free p:MEMORY <- ( previous_free := p; )
+  - set_next_free     n:Memory <- ( next_free     := n; )
+  - set_previous_free p:Memory <- ( previous_free := p; )
 
   - delete_link_free <-
-  ( + prev,next:MEMORY
+  ( + prev,next:Memory
 
     prev := previous_free
     next := next_free
@@ -160,29 +157,29 @@ MEMORY
     next_free     := first_free
     previous_free := NULL
     (first_free != NULL).if {
-      first_free.set_previous_free Self
+      first_free.set_previous_free self
     }
-    first_free := Self
+    first_free := self
   )
 
-MEMORY
+Memory
 
-  - first_free:MEMORY
+  - first_free:Memory
 
   // Management.
 
-  - to_free idx:UINTEGER_CPU <-
-  ( + new_free,next:MEMORY
-    + new_size:UINTEGER_CPU
+  - to_free idx:Uint_cpu <-
+  ( + new_free,next:Memory
+    + new_size:Uint_cpu
     {id = id_busy} ? "Memory: Macro block not busy."
     {idx.in_range 0 to 63} ? "Memory: Bound index."
 
     next := next_linear
     new_free := previous_linear
-    new_size := size_and_id & ~ 1.to_uinteger_cpu
+    new_size := size_and_id & ~ 1.to_uint_cpu
     ((new_free = NULL) || {new_free.id != id_free}).if {
-      // `Self' => Free
-      new_free := Self
+      // `self' => Free
+      new_free := self
       add_link_free
     } else {
       // `previous_linear' => Free
@@ -204,19 +201,19 @@ MEMORY
     }
   )
 
-  - to_busy sz:POINTER index idx:UINTEGER_CPU <-
-  ( + siz,new_size:UINTEGER_CPU
-    + new,next:MEMORY
+  - to_busy sz:Pointer index idx:Uint_cpu <-
+  ( + siz,new_size:Uint_cpu
+    + new,next:Memory
     {id = id_free} ? "Memory: Macro block not free."
-    {(sz & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
+    {(sz & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
 
     delete_link_free
     siz      := size_and_id
     new_size := siz - sz
     (new_size > (minimum_size+object_size+object_size)).if {
       siz := sz
-      new := CAST POINTER TO MEMORY.on (begin+sz)
-      new.set_previous_linear Self
+      new := Cast Pointer To Memory.on (begin+sz)
+      new.set_previous_linear self
       new.set_size_and_id (new_size - object_size)
       new.add_link_free
       (new.is_end).if {
@@ -230,11 +227,11 @@ MEMORY
     {id = id_busy} ? "Memory: Macro Block not busy."
   )
 
-  - resize new_size:UINTEGER_CPU index idx:UINTEGER_CPU :MEMORY <-
-  ( + nxt,result:MEMORY
-    + old_size,sz:UINTEGER_CPU
+  - resize new_size:Uint_cpu index idx:Uint_cpu :Memory <-
+  ( + nxt,result:Memory
+    + old_size,sz:Uint_cpu
 
-    {(new_size & (POINTER.object_size -1)) = 0} ? "Memory: Alignment."
+    {(new_size & (Pointer.object_size -1)) = 0} ? "Memory: Alignment."
     {idx.in_range 0 to 63} ? "Memory: Bound index."
 
     old_size := size
@@ -244,14 +241,14 @@ MEMORY
         sz  := new_size - old_size - object_size
         ((nxt.id = id_free) && {nxt.size >= sz}).if {
           nxt.to_busy (sz.to_pointer) index idx
-          size_and_id := size_and_id + (nxt.size_and_id & ~ 1.to_uinteger_cpu) + object_size
+          size_and_id := size_and_id + (nxt.size_and_id & ~ 1.to_uint_cpu) + object_size
           (is_end).if {
-            put_last Self to idx
+            put_last self to idx
           } else {
             nxt := next_linear
-            nxt.set_previous_linear Self
+            nxt.set_previous_linear self
           }
-          result := Self
+          result := self
         }
       }
       (result = NULL).if {
@@ -261,20 +258,20 @@ MEMORY
         to_free idx
       }
     } else {
-      result := Self
+      result := self
     }
     result
   )
 
   // Searching.
 
-  - search new_size:UINTEGER_CPU :MEMORY <-
-  ( + result:MEMORY
-    + idx:UINTEGER_CPU
+  - search new_size:Uint_cpu :Memory <-
+  ( + result:Memory
+    + idx:Uint_cpu
 
 
-    {new_size > minimum_size-POINTER.object_size} ? "Memory: Big block."
-    {(new_size & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
+    {new_size > minimum_size-Pointer.object_size} ? "Memory: Big block."
+    {(new_size & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
 
     result := first_free
     {(result != NULL) && {result.size < new_size}}.while_do {
@@ -290,10 +287,10 @@ MEMORY
     result
   )
 
-  - new_lab t:UINTEGER_32 :POINTER <-
-  ( + idx:UINTEGER_CPU
-    + blc,prev:MEMORY
-    + result:POINTER
+  - new_lab t:Uint32 :Pointer <-
+  ( + idx:Uint_cpu
+    + blc,prev:Memory
+    + result:Pointer
 
     {
       (idx < nb_page) &&
@@ -322,53 +319,53 @@ MEMORY
     put_32 t to result
 
     {((result - begin_memory) & 0FFFh) = 0} ? "Memory: Alignment LAB."
-    result + UINTEGER_32.object_size
+    result + Uint32.object_size
   )
 
 Private
 
-  - minimum_size:UINTEGER_CPU <- `MINIMUM_SIZE`:UINTEGER_CPU
+  - minimum_size:Uint_cpu <- `MINIMUM_SIZE`:Uint_cpu
 
-  - table_type idx:UINTEGER_32 :POINTER <-
+  - table_type idx:Uint32 :Pointer <-
   (
     //{idx.in_range 0 to 17} ? "Memory: Bound table_type."
-    `&(table_type[@idx])`:POINTER
+    `&(table_type[@idx])`:Pointer
   )
 
-  - table_size idx:UINTEGER_CPU :POINTER <-
+  - table_size idx:Uint_cpu :Pointer <-
   (
-    {idx.in_range 1 to (minimum_size/POINTER.object_size)} ?
+    {idx.in_range 1 to (minimum_size/Pointer.object_size)} ?
     "Memory: Bound table_size."
-    `&(table_size[@idx-1])`:POINTER
+    `&(table_size[@idx-1])`:Pointer
   )
 
-  - begin_memory:POINTER
+  - begin_memory:Pointer
 
-  - capacity_max:UINTEGER_CPU
+  - capacity_max:Uint_cpu
 
-  - read_ptr p:POINTER :POINTER <-
-  ( + mem:NATIVE_ARRAY(POINTER)
-    mem := CAST POINTER TO (NATIVE_ARRAY POINTER).on p
+  - read_ptr p:Pointer :Pointer <-
+  ( + mem:C_array(Pointer)
+    mem := Cast Pointer To (C_array Pointer).on p
     mem.item 0
   )
 
-  - put_ptr v:POINTER to p:POINTER <-
-  ( + mem:NATIVE_ARRAY(POINTER)
-    mem := CAST POINTER TO (NATIVE_ARRAY POINTER).on p
+  - put_ptr v:Pointer to p:Pointer <-
+  ( + mem:C_array(Pointer)
+    mem := Cast Pointer To (C_array Pointer).on p
     mem.put v to 0
   )
 
-  - put_32 v:UINTEGER_32 to p:POINTER <-
-  ( + mem:NATIVE_ARRAY(UINTEGER_32)
-    mem := CAST POINTER TO (NATIVE_ARRAY UINTEGER_32).on p
+  - put_32 v:Uint32 to p:Pointer <-
+  ( + mem:C_array(Uint32)
+    mem := Cast Pointer To (C_array Uint32).on p
     mem.put v to 0
   )
 
-  - micro_alloc new_size:UINTEGER_CPU table ptr_table:POINTER lab lab_type:UINTEGER_32 :POINTER <-
-  ( + result,next,next2:POINTER
-    + page:POINTER
-    {(new_size & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
-    {new_size >= POINTER.object_size} ? "Memory: Size = 0."
+  - micro_alloc new_size:Uint_cpu table ptr_table:Pointer lab lab_type:Uint32 :Pointer <-
+  ( + result,next,next2:Pointer
+    + page:Pointer
+    {(new_size & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
+    {new_size >= Pointer.object_size} ? "Memory: Size = 0."
 
     result := read_ptr ptr_table
     (result = NULL).if {
@@ -392,7 +389,7 @@ Private
         put_ptr next to ptr_table
       } else {
         // Linked list allocation.
-        next2 := read_ptr next & ~ 11b.to_uinteger_cpu
+        next2 := read_ptr next & ~ 11b.to_uint_cpu
         put_ptr next2 to result
         result := next
       }
@@ -400,8 +397,8 @@ Private
     result
   )
 
-  - micro_free p:POINTER table ptr_table:POINTER <-
-  ( + next,last:POINTER
+  - micro_free p:Pointer table ptr_table:Pointer <-
+  ( + next,last:Pointer
     {p != NULL} ? "Memory: Pointer NULL."
 
     last := read_ptr ptr_table
@@ -413,54 +410,54 @@ Private
 
 Private
 
-  - copy src:POINTER to dst:POINTER size sz:UINTEGER_CPU <-
-  ( + na_src,na_dst:NATIVE_ARRAY(POINTER)
-    + siz:UINTEGER_CPU
+  - copy src:Pointer to dst:Pointer size sz:Uint_cpu <-
+  ( + na_src,na_dst:C_array(Pointer)
+    + siz:Uint_cpu
 
     siz := sz
-    {(siz & (POINTER.object_size -1)) = 0} ? "Memory: Copy alignment."
-    siz := siz / POINTER.object_size
-    na_src := CAST POINTER TO (NATIVE_ARRAY POINTER).on src
-    na_dst := CAST POINTER TO (NATIVE_ARRAY POINTER).on dst
-    0.to_uinteger_cpu.to (siz - 1) do { j:UINTEGER_CPU
+    {(siz & (Pointer.object_size -1)) = 0} ? "Memory: Copy alignment."
+    siz := siz / Pointer.object_size
+    na_src := Cast Pointer To (C_array Pointer).on src
+    na_dst := Cast Pointer To (C_array Pointer).on dst
+    0.to_uint_cpu.to (siz - 1) do { j:Uint_cpu
       na_dst.put (na_src.item j) to j
     }
   )
 
-  - fill_memory src:POINTER size sz:UINTEGER_CPU <-
+  - fill_memory src:Pointer size sz:Uint_cpu <-
   // Just for debug.
-  ( + na_src:NATIVE_ARRAY(POINTER)
-    + siz:UINTEGER_CPU
+  ( + na_src:C_array(Pointer)
+    + siz:Uint_cpu
 
-    {(sz & (POINTER.object_size -1)) = 0} ? "Memory: Copy alignment."
+    {(sz & (Pointer.object_size -1)) = 0} ? "Memory: Copy alignment."
 
-    siz := sz.align_power (POINTER.object_size) / POINTER.object_size
-    na_src := CAST POINTER TO (NATIVE_ARRAY POINTER).on src
-    ((siz-1).to_integer).downto 0 do { j:INTEGER
+    siz := sz.align_power (Pointer.object_size) / Pointer.object_size
+    na_src := Cast Pointer To (C_array Pointer).on src
+    ((siz-1).to_int).downto 0 do { j:Int
       na_src.put NULL to j
     }
   )
   /*
 External
 
-  - calloc (nb,sz:UINTEGER) :POINTER <-
-  ( + result:POINTER
-    + size:UINTEGER_32
-    + tab:NATIVE_ARRAY(UINTEGER_8)
+  - calloc (nb,sz:UINTEGER) :Pointer <-
+  ( + result:Pointer
+    + size:Uint32
+    + tab:C_array(Uint8)
 
     size := nb*sz
     "calloc = ".print
     size.print; '\n'.print
-    result := malloc (size.to_uinteger)
-    tab := CAST POINTER TO (NATIVE_ARRAY UINTEGER_8).on result
-    0.to (size-1) do { i:INTEGER
+    result := malloc (size.to_uint)
+    tab := CAST Pointer TO (C_array Uint8).on result
+    0.to (size-1) do { i:Int
       tab.put 0 to i
     }
     result
   )
 
-  - malloc sz:UINTEGER :POINTER <-
-  ( + result:POINTER
+  - malloc sz:UINTEGER :Pointer <-
+  ( + result:Pointer
     "malloc = ".print
     sz.print; '\n'.print
     result := MEMORY.alloc_dynamic (sz.to_pointer)
@@ -471,12 +468,12 @@ External
     result
   )
 
-  - free ptr:POINTER <-
+  - free ptr:Pointer <-
   ( + mem:MEMORY
 
     "FREE\n".print
     (ptr != NULL).if {
-      mem := CAST POINTER TO MEMORY.on (ptr - object_size)
+      mem := CAST Pointer TO MEMORY.on (ptr - object_size)
       mem.to_free (get_index ptr)
       //MEMORY.free_dynamic ptr size 500
     }
@@ -486,30 +483,30 @@ Public
 
   // MICRO ALLOCATOR
 
-  - alloc_type t:UINTEGER_32 size sz:UINTEGER_CPU :POINTER <-
+  - alloc_type t:Uint32 size sz:Uint_cpu :Pointer <-
   // Allocation for object without type. (LAB_TYPE)
-  ( + ptr_table,result:POINTER
-    + new_size:UINTEGER_CPU
+  ( + ptr_table,result:Pointer
+    + new_size:Uint_cpu
 
     verify_memory "Begin alloc_type size"
 
     {sz <= minimum_size} ? "Memory: Size bound."
 
-    new_size  := sz.align_power (POINTER.object_size)
-    {(new_size & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
+    new_size  := sz.align_power (Pointer.object_size)
+    {(new_size & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
     ptr_table := table_type t
     result := micro_alloc new_size table ptr_table lab (t | 1b)
 
     verify_memory "End alloc_type size"
 
     // MHMH: enregistrement taille :
-    CLONE.add_clone_total_size sz
+    Clone.add_clone_total_size sz
 
     result
   )
 
-  - free p:POINTER type t:UINTEGER_32 <-
-  ( + ptr_table:POINTER
+  - free p:Pointer type t:Uint32 <-
+  ( + ptr_table:Pointer
     {p != NULL} ? "Memory: Pointer NULL."
 
     verify_memory "Begin free type"
@@ -520,10 +517,10 @@ Public
     verify_memory "End free type"
   )
 
-  - alloc_size sz:UINTEGER_CPU :POINTER <-
+  - alloc_size sz:Uint_cpu :Pointer <-
   // Allocation for object with type. (LAB_SIZE)
-  ( + ptr_table,result:POINTER
-    + new_size:UINTEGER_CPU
+  ( + ptr_table,result:Pointer
+    + new_size:Uint_cpu
 
     verify_memory "Begin alloc_size"
 
@@ -540,51 +537,51 @@ Public
 
     {sz <= minimum_size} ? "Memory: Size bound."
 
-    new_size  := sz.align_power (POINTER.object_size)
+    new_size  := sz.align_power (Pointer.object_size)
 
-    {(new_size & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
+    {(new_size & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
 
-    ptr_table := table_size (new_size / POINTER.object_size)
-    result := micro_alloc new_size table ptr_table lab (new_size.to_uinteger_32)
+    ptr_table := table_size (new_size / Pointer.object_size)
+    result := micro_alloc new_size table ptr_table lab (new_size.to_uint32)
 
     verify_memory "End alloc_size"
 
     // MHMH: enregistrement taille :
-    CLONE.add_clone_total_size sz
+    Clone.add_clone_total_size sz
 
     result
   )
 
-  - free p:POINTER size sz:UINTEGER_CPU <-
-  ( + ptr_table:POINTER
-    + new_size:UINTEGER_CPU
+  - free p:Pointer size sz:Uint_cpu <-
+  ( + ptr_table:Pointer
+    + new_size:Uint_cpu
     {p != NULL} ? "Memory: Pointer NULL."
 
     verify_memory "Begin free size"
 
-    new_size  := sz.align_power (POINTER.object_size)
+    new_size  := sz.align_power (Pointer.object_size)
 
-    {(new_size & (POINTER.object_size - 1)) = 0} ? "Memory: Alignment."
+    {(new_size & (Pointer.object_size - 1)) = 0} ? "Memory: Alignment."
 
-    ptr_table := table_size (new_size / POINTER.object_size)
+    ptr_table := table_size (new_size / Pointer.object_size)
     micro_free p table ptr_table
 
     verify_memory "End free size"
   )
 
-  - alloc_dynamic sz:UINTEGER_CPU :POINTER <-
-  // Allocation NATIVE_ARRAY[E]. (LAB_SIZE or malloc)
-  ( + new_size,new_size2:UINTEGER_CPU
-    + result:POINTER
+  - alloc_dynamic sz:Uint_cpu :Pointer <-
+  // Allocation C_array[E]. (LAB_SIZE or malloc)
+  ( + new_size,new_size2:Uint_cpu
+    + result:Pointer
     {sz != 0} ? "Memory: Size = 0"
 
     verify_memory "Begin alloc_dynamic"
 
-    new_size  := sz.align_power (POINTER.object_size)
+    new_size  := sz.align_power (Pointer.object_size)
     new_size2 := new_size; // + UINTEGER_CPU.object_size
     (new_size2 <= minimum_size).if {
       result := alloc_size new_size2
-      //put_32 3 to result; // 3 : 2=NATIVE_ARRAY
+      //put_32 3 to result; // 3 : 2=C_array
       result := result; // + UINTEGER_CPU.object_size
     } else {
       result := search new_size .begin
@@ -593,48 +590,48 @@ Public
     verify_memory "End alloc_dynamic"
 
     // MHMH: enregistrement taille :
-    CLONE.add_clone_total_size sz
+    Clone.add_clone_total_size sz
 
     result
   )
 
-  - realloc_dynamic p:POINTER old_size old_sz:UINTEGER_CPU new_size new_sz:UINTEGER_CPU :POINTER <-
-  ( + old_size,old_size2,new_size:UINTEGER_CPU
-    + mem:MEMORY
-    + result:POINTER
+  - realloc_dynamic p:Pointer old_size old_sz:Uint_cpu new_size new_sz:Uint_cpu :Pointer <-
+  ( + old_size,old_size2,new_size:Uint_cpu
+    + mem:Memory
+    + result:Pointer
     {old_size < new_sz} ? "Memory: New size < Old size."
 
     verify_memory "Begin realloc_dynamic"
-    old_size  := old_sz.align_power (POINTER.object_size)
+    old_size  := old_sz.align_power (Pointer.object_size)
     old_size2 := old_size; // + UINTEGER_CPU.object_size
-    new_size  := new_sz.align_power (POINTER.object_size)
+    new_size  := new_sz.align_power (Pointer.object_size)
     (old_size2 <= minimum_size).if {
       result := alloc_dynamic new_size
       copy p to result size old_size
       free (p /*- UINTEGER_CPU.object_size*/) size old_size2
     } else {
-      mem := CAST POINTER TO MEMORY.on (p - object_size)
+      mem := Cast Pointer To Memory.on (p - object_size)
       result := mem.resize new_size index (get_index p).begin
     }
 
     verify_memory "End realloc_dynamic"
 
     // MHMH: enregistrement taille :
-    CLONE.add_clone_total_size (new_sz - old_size)
+    Clone.add_clone_total_size (new_sz - old_size)
 
     result
   )
 
-  - free_dynamic p:POINTER size sz:UINTEGER_CPU <-
-  ( + new_size,new_size2:UINTEGER_CPU
-    + mem:MEMORY
+  - free_dynamic p:Pointer size sz:Uint_cpu <-
+  ( + new_size,new_size2:Uint_cpu
+    + mem:Memory
 
-    new_size  := sz.align_power (POINTER.object_size); // BSBS: Optim, alignment by compilo.
+    new_size  := sz.align_power (Pointer.object_size); // BSBS: Optim, alignment by compilo.
     new_size2 := new_size; // + UINTEGER_CPU.object_size
     (new_size2 <= minimum_size).if {
       free (p /*- UINTEGER_CPU.object_size*/) size new_size2
     } else {
-      mem := CAST POINTER TO MEMORY.on (p - object_size)
+      mem := Cast Pointer To Memory.on (p - object_size)
       mem.to_free (get_index p)
     }
   )
@@ -650,23 +647,23 @@ Public
 Private
 
   - mark <-
-  ( + stack,lab:NATIVE_ARRAY(POINTER)
-  + ptr,beg_mem,end_mem,ptr_lab,ptr_table,lim_lab:POINTER
-  + size_stack:UINTEGER_32
-  + ptr_mem:UINTEGER_32
+  ( + stack,lab:C_array(Pointer)
+  + ptr,beg_mem,end_mem,ptr_lab,ptr_table,lim_lab:Pointer
+  + size_stack:Uint32
+  + ptr_mem:Uint32
   + mem:MEMORY
-  + type:UINTEGER_32
-  + type_object, size_object,step:UINTEGER_32
+  + type:Uint32
+  + type_object, size_object,step:Uint32
 
   // Mark Global + BSS.
   mark_static_object
 
   // Mark Stack object.
-  stack := `top_stack()`:NATIVE_ARRAY(POINTER)
-  size_stack := (`@stack - begin_stack`:UINTEGER_32) / POINTER.object_size.to_uinteger_32
+  stack := `top_stack()`:C_array(Pointer)
+  size_stack := (`@stack - begin_stack`:Uint32) / Pointer.object_size.to_uint32
   beg_mem := begin_memory
   end_mem := beg_mem + (nb_page << 26) - 1
-  size_stack.downto 0 do { i:UINTEGER_32
+  size_stack.downto 0 do { i:Uint32
     ptr := stack.item i
     (ptr.in_range beg_mem to end_mem).if {
       // `ptr' is in Store.
@@ -675,7 +672,7 @@ Private
       (ptr > mem.next_linear.this).if {
         // `ptr' is in LAB.
         ptr_lab := begin_memory + (ptr_mem & 0FFFFF000h)
-        type := read ptr_lab .to_uinteger_32
+        type := read ptr_lab .to_uint32
         (type & 01b != 0).if {
           // LAB Type.
           type_object := type & 0FFFFFFFEh
@@ -683,15 +680,15 @@ Private
           ptr_table   := table_type type_object
         } else {
           // LAB Size.
-          type_object := read ptr .to_uinteger_32 & 0FFFFFFFCh
+          type_object := read ptr .to_uint32 & 0FFFFFFFCh
           size_object := type
-          ptr_table   := table_size (size_object / POINTER.object_size.to_uinteger_32)
+          ptr_table   := table_size (size_object / Pointer.object_size.to_uint32)
         }
         lim_lab := read ptr_table - begin_memory
         (! ptr_mem.in_range lim_lab to ((lim_lab+4095)&0FFFFF000h)).if {
-          step := ptr - ptr_lab - POINTER.object_size
+          step := ptr - ptr_lab - Pointer.object_size
           ((step > 0) && {(step % size_object) = 0}).if {
-            ((read ptr .to_uinteger_32 & 11b) = 0).if {
+            ((read ptr .to_uint32 & 11b) = 0).if {
               mark_object ptr type type_object
             }
           }
@@ -703,20 +700,20 @@ Private
 
 - sweep <-
 ( + last:MEMORY
-  + ptr_lab,ptr_end,ptr,ptr_table,end_lab,ptr_max:POINTER
-  + type,type_object,size_object:UINTEGER_32
+  + ptr_lab,ptr_end,ptr,ptr_table,end_lab,ptr_max:Pointer
+  + type,type_object,size_object:Uint32
 
   // Demark a Global + BSS.
   demark_static_object
 
   // Demark a Store.
   ptr_end := begin_memory + 64.mb
-  (nb_page-1).downto 0 do { i:UINTEGER_32
+  (nb_page-1).downto 0 do { i:Uint32
     last := get_last i
     ptr_lab := last.next_linear.this
     {ptr_lab < ptr_end}.while_do {
-      type := read ptr_lab .to_uinteger_32
-      ptr  := ptr_lab + POINTER.object_size
+      type := read ptr_lab .to_uint32
+      ptr  := ptr_lab + Pointer.object_size
       ptr_lab := ptr_lab + 4096; // Next LAB
       (type & 01b != 0).if {
         // LAB Type.
@@ -736,7 +733,7 @@ Private
       } else {
         // LAB Size.
         size_object := type
-        ptr_table := table_size (size_object / POINTER.object_size.to_uinteger_32)
+        ptr_table := table_size (size_object / Pointer.object_size.to_uint32)
         end_lab   := read ptr_table
         (((end_lab + 4095) & 0FFFFF000h) = ptr_lab).if {
           ptr_max := end_lab
@@ -744,7 +741,7 @@ Private
           ptr_max := ptr_lab
         }
         {ptr < ptr_max}.while_do {
-          type_object := read ptr .to_uinteger_32 & 0FFFFFFFCh
+          type_object := read ptr .to_uint32 & 0FFFFFFFCh
           demark_object ptr type type_object
           ptr := ptr + size_object
         }
@@ -757,13 +754,13 @@ Private
 
 Private
 
-  - verify_memory msg:STRING_ALIAS<-
-  ( + m,next,prev:MEMORY
-    + msg_intern:STRING_ALIAS
+  - verify_memory msg:String_alias<-
+  ( + m,next,prev:Memory
+    + msg_intern:String_alias
 
     (is_debug_memory).if {
       (begin_memory != NULL).if {
-        next := CAST POINTER TO MEMORY.on begin_memory
+        next := Cast Pointer To Memory.on begin_memory
         {
           m := next
           next := m.next_linear
@@ -806,14 +803,14 @@ Private
   )
 
   - print_memory <-
-  ( + m,next:MEMORY
+  ( + m,next:Memory
 
     "------------------------------------\n".print
     "first free : ".print
     first_free.this.print_hexa
     '\n'.print
 
-    next := CAST POINTER TO MEMORY.on begin_memory
+    next := Cast Pointer To Memory.on begin_memory
     {
       m := next
       next := m.next_linear

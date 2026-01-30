@@ -1,28 +1,25 @@
 Header
-
-  + name    := ITM_TYPE_BLOCK;
-
-  /*Type block definition*/
-
+  + name := Itm_type_block
+/*Type block definition*/
 Inherit
 
-  + parent_itm_type_mono:Expanded ITM_TYPE_MONO
+  + parent_itm_type_mono:Flat Itm_type_mono
 
-ITM_TYPE_SIMPLE, ITM_TYPE_SELF
+Itm_type_simple, Itm_type_self
 
-  - dico:ARRAY ITM_TYPE_BLOCK := ARRAY ITM_TYPE_BLOCK .create_with_capacity 32
+  - dico:Array Itm_type_block := Array Itm_type_block .create_with_capacity 32
 
 Private
 
-  - create typ_arg:ITM_TYPE and typ_res:ITM_TYPE :SELF <-
-  ( + result:SELF
+  - create typ_arg:Itm_type and typ_res:Itm_type :Self <-
+  ( + result:Self
 
     result := clone
     result.make typ_arg and typ_res
     result
   )
 
-  - make typ_arg:ITM_TYPE and typ_res:ITM_TYPE <-
+  - make typ_arg:Itm_type and typ_res:Itm_type <-
   (
     type_argument := typ_arg
     type_result   := typ_res
@@ -30,12 +27,12 @@ Private
 
 Public
 
-  + type_argument:ITM_TYPE
-  + type_result:ITM_TYPE
+  + type_argument:Itm_type
+  + type_result:Itm_type
 
-  - get typ_arg:ITM_TYPE and typ_res:ITM_TYPE :ITM_TYPE_BLOCK <-
-  ( + result:ITM_TYPE_BLOCK
-    + idx:INTEGER
+  - get typ_arg:Itm_type and typ_res:Itm_type :Itm_type_block <-
+  ( + result:Itm_type_block
+    + idx:Int
 
     idx := dico.lower
     {
@@ -55,40 +52,40 @@ Public
     result
   )
 
-  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
+  - to_run_for p:Parameter_to_type pos path:String_alias :Type_full <-
   (
-    TYPE_BLOCK.get Self with p
+    Type_block.get self with p
   )
 
-  - hash_code:INTEGER <-
+  - hash_code:Int <-
   (
-    '{'.to_integer
+    '{'.to_int
   )
 
-  - append_in buffer:STRING_BUFFER <-
-  ( + typ_mul:ITM_TYPE_MULTI
-    buffer.add_last '{'
+  - append_in b:String_buffer <-
+  ( + typ_mul:Itm_type_multi
+    b.add_last '{'
     (type_argument != NULL).if {
-      type_argument.append_in buffer
-      buffer.add_last ';'
-      buffer.add_last ' '
+      type_argument.append_in b
+      b.add_last ';'
+      b.add_last ' '
     }
     (type_result != NULL).if {
       typ_mul ?= type_result
       (typ_mul = NULL).if {
-	type_result.append_in buffer
+        type_result.append_in b
       } else {
-	typ_mul.display_raw buffer
+        typ_mul.display_raw b
       }
     }
-    buffer.add_last '}'
+    b.add_last '}'
   )
     
   //
   // Cast.
   //
 
-  - append_cast_name_in buf:STRING_BUFFER <-
+  - append_cast_name_in buf:String_buffer <-
   (
     crash_with_message "ITM_TYPE_BLOCK.append_cast_name_in "
   )

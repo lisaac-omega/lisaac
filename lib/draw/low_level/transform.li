@@ -1,26 +1,24 @@
 Header
-  
-  + name := TRANSFORM;
-  
+  + name := Transform
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
   
-  - stack:ARRAY TRANSFORM := ARRAY TRANSFORM.create_with_capacity 16
+  - stack:Array Transform := Array Transform.create_with_capacity 16
   
 Public
   
-  + t0:REAL_32
-  + t1:REAL_32
-  + t2:REAL_32
-  + t3:REAL_32
-  + t4:REAL_32
-  + t5:REAL_32
+  + t0:Real32
+  + t1:Real32
+  + t2:Real32
+  + t3:Real32
+  + t4:Real32
+  + t5:Real32
   
-  - create:TRANSFORM <- 
-  ( + result:TRANSFORM
+  - create:Transform <- 
+  ( + result:Transform
     (stack.is_empty).if {
       result := clone
     } else {
@@ -31,10 +29,10 @@ Public
 
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - copy other:TRANSFORM <- 
+  - copy other:Transform <- 
   (
     (t0,t1) := (other.t0,other.t1)
     (t2,t3) := (other.t2,other.t3)
@@ -47,14 +45,14 @@ Public
     t3 := t4 := t5 := 0
   )
   
-  - set_all (p0,p1:REAL_32) and (p2,p3:REAL_32) and (p4,p5:REAL_32) <-
+  - set_all (p0,p1:Real32) and (p2,p3:Real32) and (p4,p5:Real32) <-
   (
     (t0,t1) := (p0,p1)
     (t2,t3) := (p2,p3)
     (t4,t5) := (p4,p5)
   )
   
-  - set_radial (cx,cy:REAL_32) <-
+  - set_radial (cx,cy:Real32) <-
   (
     t0 := t3 := 1
     t1 := t2 := 0
@@ -67,48 +65,48 @@ Public
     t1 := t2 := t4 := t5 := 0
   )
 
-  - translate (tx,ty:REAL_32) <-
+  - translate (tx,ty:Real32) <-
   (
     t0 := t3 := 1
     t1 := t2 := 0
     (t4,t5) := (tx,ty)
   )
   
-  - add_translate (tx,ty:REAL_32) <-
+  - add_translate (tx,ty:Real32) <-
   (
     (t4,t5) := (t4+tx,t5+ty)
   )
 
-  - scale (sx,sy:REAL_32) <-
+  - scale (sx,sy:Real32) <-
   (
     t1 := t2 := t4 := t5 := 0
     (t0,t3) := (sx,sy)
   )
 
-  - rotate a:REAL_32 <-
-  ( + cs,sn:REAL_32
+  - rotate a:Real32 <-
+  ( + cs,sn:Real32
     (cs,sn) := (a.cos,a.sin)
     (t0,t1) := ( cs,sn)
     (t2,t3) := (-sn,cs)
     t4 := t5 := 0
   )
 
-  - skew_x a:REAL_32 <-
+  - skew_x a:Real32 <-
   (
     t0 := t3 := 1
     t1 := t4 := t5 := 0
     t2 := a.tan
   )
 
-  - skew_y a:REAL_32 <-
+  - skew_y a:Real32 <-
   (
     t0 := t3 := 1
     t1 := a.tan
     t2 := t4 := t5 := 0
   )
 
-  - multiply s:TRANSFORM <-
-  ( + tt0,tt2,tt4:REAL_32
+  - multiply s:Transform <-
+  ( + tt0,tt2,tt4:Real32
     tt0 := t0 * s.t0 + t1 * s.t2
     tt2 := t2 * s.t0 + t3 * s.t2
     tt4 := t4 * s.t0 + t5 * s.t2 + s.t4
@@ -120,8 +118,8 @@ Public
     t4 := tt4
   )
 
-  - premultiply s:TRANSFORM <-
-  ( + tt0,tt1,tt2,tt3,tt4,tt5:REAL_32
+  - premultiply s:Transform <-
+  ( + tt0,tt1,tt2,tt3,tt4,tt5:Real32
     tt0 := s.t0 * t0 + s.t1 * t2
     tt1 := s.t0 * t1 + s.t1 * t3
     tt2 := s.t2 * t0 + s.t3 * t2
@@ -133,33 +131,33 @@ Public
     (t4,t5) := (tt4,tt5)
   )
 
-  - inverse o:TRANSFORM :BOOLEAN <-
-  ( + result:BOOLEAN
-    + invdet,det:REAL_64
-    det := o.t0.to_real_64 * o.t3 - o.t2.to_real_64 * o.t1
+  - inverse o:Transform :Boolean <-
+  ( + result:Boolean
+    + invdet,det:Real64
+    det := o.t0.to_real64 * o.t3 - o.t2.to_real64 * o.t1
     ((det > -0.000001) && {det < 0.000001}).if {
       identity
     } else {
       invdet := 1.0 / det
-      t0 := ( o.t3 * invdet).to_real_32
-      t2 := (-o.t2 * invdet).to_real_32
-      t4 := ((o.t2.to_real_64 * o.t5 - o.t3.to_real_64 * o.t4) * invdet).to_real_32
-      t1 := (-o.t1 * invdet).to_real_32
-      t3 := ( o.t0 * invdet).to_real_32
-      t5 := ((o.t1.to_real_64 * o.t4 - o.t0.to_real_64 * o.t5) * invdet).to_real_32
-      result := TRUE
+      t0 := ( o.t3 * invdet).to_real32
+      t2 := (-o.t2 * invdet).to_real32
+      t4 := ((o.t2.to_real64 * o.t5 - o.t3.to_real64 * o.t4) * invdet).to_real32
+      t1 := (-o.t1 * invdet).to_real32
+      t3 := ( o.t0 * invdet).to_real32
+      t5 := ((o.t1.to_real64 * o.t4 - o.t0.to_real64 * o.t5) * invdet).to_real32
+      result := True
     }
     result
   )
   
-  - average_scale:REAL_32 <-
-  ( + sx,sy:REAL_32
+  - average_scale:Real32 <-
+  ( + sx,sy:Real32
     sx := (t0*t0 + t2*t2).sqrt
     sy := (t1*t1 + t3*t3).sqrt
     (sx + sy) * 0.5
   )
   
-  - transform_point (sx,sy:REAL_32) :(REAL_32,REAL_32) <-
+  - transform_point (sx,sy:Real32) :(Real32,Real32) <-
   (
     sx*t0 + sy*t2 + t4,
     sx*t1 + sy*t3 + t5

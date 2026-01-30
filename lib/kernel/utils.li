@@ -1,35 +1,35 @@
-Header  
-  + name := UTILS;
-  /**/
+Header
+  + name := Utils
+/**/
   
 Public
   
-  - lieq o:SELF :BOOLEAN <- `@Self = @o`:BOOLEAN
-  - linoteq o:SELF :BOOLEAN <- `@Self != @o`:BOOLEAN
+  - lieq o:Self :Boolean <- `@self = @o`:Boolean
+  - linoteq o:Self :Boolean <- `@self != @o`:Boolean
   
   // Compiler consideration.
   
-  - object_size:INTEGER <- `12`
+  - object_size:Int <- `12`
   
-  //- pointer_size:INTEGER <- POINTER.pointer_size
+  //- pointer_size:Int <- Pointer.pointer_size
   
-  - is_debug_mode:BOOLEAN <- debug_level != 0
+  - is_debug_mode:Boolean <- debug_level != 0
   
-  - debug_level:INTEGER              <- lip "debug_level" int
-  - compiler_inlining_level:INTEGER  <- lip "inline_level" int
-  - compiler_optimization:BOOLEAN    <- lip "is_optimization" bool
-  - compiler_built_on:STRING_ALIAS    <- `20`
-  - compiler_debug_with_code:BOOLEAN <- lip "debug_with_code" bool
-  - compile_time:TIME               <- TIME.create_csecond `22`
-  - compile_date:DATE               <- DATE.decode `23`
+  - debug_level:Int              <- lip "debug_level" int
+  - compiler_inlining_level:Int  <- lip "inline_level" int
+  - compiler_optimization:Boolean    <- lip "is_optimization" bool
+  - compiler_built_on:String_alias    <- `20`
+  - compiler_debug_with_code:Boolean <- lip "debug_with_code" bool
+  - compile_time:Time               <- Time.create_csecond `22`
+  - compile_date:Date               <- Date.decode `23`
     
-  - is_ansi:BOOLEAN := SYSTEM.is_ansi
+  - is_ansi:Boolean := System.is_ansi
   
-  - print_runtime_stack_after stp:INTEGER <- `11`
+  - print_runtime_stack_after stp:Int <- `11`
   
   /*
-  - print_runtime_stack_after stp:INTEGER <-
-  ( + stop:STRING_BUFFER
+  - print_runtime_stack_after stp:Int <-
+  ( + stop:String_buffer
     (debug_level != 0).if {
       `lisaac_stack_print(@stp)`
       stop.add_last 'b' // En attendant un external !
@@ -46,7 +46,7 @@ Public
     }
   )
   
-  - deprecated d:BOOLEAN msg m:STRING : BOOLEAN <-
+  - deprecated d:Boolean msg m:String : Boolean <-
   // To be used in assertions.
   (
     /*
@@ -58,115 +58,115 @@ Public
     ! d
   )
   
-  - crash_with b:{} after stp:INTEGER <-
+  - crash_with b:{} after stp:Int <-
   (
     print_runtime_stack_after stp
     b.value
     exit exit_failure_code
   )
   
-  - crash_with_message m:STRING after stp:INTEGER :FALSE <-
+  - crash_with_message m:String after stp:Int :False <-
   (
     print_runtime_stack_after stp
     m.println
     exit exit_failure_code
     //crash_with { m.println } after stp    // Bug compilo Nov. 2025
-    FALSE
+    False
   )
   
-  - crash_with_message msg:STRING :FALSE <-
+  - crash_with_message msg:String :False <-
   (
     crash_with_message msg after 3
   )
   
-  - exit c:INTEGER <- SYSTEM.exit c
+  - exit c:Int <- System.exit c
   // Terminate execution with exit status code `c'.
   
-  - exit_success_code:INTEGER := 0
+  - exit_success_code:Int := 0
   
-  - exit_failure_code:INTEGER := 1
+  - exit_failure_code:Int := 1
   
-  - abstract:SELF <-
+  - abstract:Self <-
   (
     crash_with_message ("Call of abstract in " + type_name + ".") after 3
-    SELF
+    Self
   )
   
-  - crash:SELF <-
+  - crash:Self <-
   (
     crash_with_message "Crash system." after 3
-    SELF
+    Self
   )
   
-  - not_yet_implemented:SELF <-
+  - not_yet_implemented:Self <-
   (
     crash_with_message "Sorry, Some Feature is Not Yet Implemented." after 3
-    SELF
+    Self
   )
   
   // Slot_in/_out, Section_in/_out, Prototype_in/_out
   
-  - contract typ:STRING boolean tst:BOOLEAN <-
+  - contract typ:String boolean tst:Boolean <-
   (
     ((debug_level >= 10) && {! tst}).if {
-      crash_with { OUT # typ # ".\n" } after 5
+      crash_with { Out # typ # ".\n" } after 5
     }
   )
   
-  - contract typ:STRING block_boolean tst:{BOOLEAN} <-
+  - contract typ:String block_boolean tst:{Boolean} <-
   (
     ((debug_level >= 10) && {! tst.value}).if {
-      crash_with { OUT # typ # ".\n" } after 5
+      crash_with { Out # typ # ".\n" } after 5
     }
   )
   
-  - contract typ:STRING abstract_string msg:STRING <-
+  - contract typ:String abstract_string msg:String <-
   (
     ((debug_level >= 10) && {msg != NULL}).if {
-      crash_with { OUT # typ # ": " # msg # '\n' } after 5
+      crash_with { Out # typ # ": " # msg # '\n' } after 5
     }
   )
   
-  - contract typ:STRING block_abstract_string tst:{STRING} <-
-  ( + msg:STRING
+  - contract typ:String block_abstract_string tst:{String} <-
+  ( + msg:String
     ((debug_level >= 10) && {msg := tst.value; msg != NULL}).if {
-      crash_with { OUT # typ # ": " # msg # '\n' } after 5
+      crash_with { Out # typ # ": " # msg # '\n' } after 5
     }
   )
   
   // Common Function.
   
-  //- Self:SELF '=='  Right 60 other:E :BOOLEAN <- ( abstract; BOOLEAN.unpredictable)
+  //- self:Self '=='  Right 60 other:E :Boolean <- ( abstract; Boolean.unpredictable)
   
-  //- Self:SELF '!==' Right 60 other:CLONE :BOOLEAN <- (! (Self == other))
+  //- self:Self '!==' Right 60 other:CLONE :Boolean <- (! (self == other))
   
-  - to_pointer:POINTER <- CAST SELF TO POINTER.on Self
+  - to_pointer:Pointer <- Cast Self To Pointer.on self
   
-  - dynamic_type:SELF <- SELF
+  - dynamic_type:Self <- Self
   
-  - strict_same_type other:CLONE :BOOLEAN <- dynamic_type = other.dynamic_type
+  - strict_same_type other:Clone :Boolean <- dynamic_type = other.dynamic_type
   
-  - subtype_of ref:X :BOOLEAN <-
+  - subtype_of ref:X :Boolean <-
   // "String alias".subtype_of STRING
   ( + convert:X
-    convert ?= Self
+    convert ?= self
     convert != NULL
   )
   
   - like ref:X :X <-
-  // Example: str.like STRING_BUFFER.add_last 'a'
-  // `str' can be STRING_BUFFER or subtype of STRING_BUFFER
+  // Example: str.like String_buffer.add_last 'a'
+  // `str' can be String_buffer or subtype of String_buffer
   ( + res:X
-    res ?= Self
+    res ?= self
     res
   )
   
   // to_self_on
-  - cast obj:CLONE :SELF <-
-  // Example: STRING_BUFFER.cast str.add_last 'a'
-  // Warning: `str' must be Strict STRING_BUFFER (see: like)
+  - cast obj:Clone :Self <-
+  // Example: String_buffer.cast str.add_last 'a'
+  // Warning: `str' must be Exact String_buffer (see: like)
   [ ? {obj != NULL}; ]
-  ( + result:SELF
+  ( + result:Self
     result ?= obj
     result
   )
@@ -176,20 +176,20 @@ Public
   
   // Reflexivity.
   
-  - type_name:STRING_ALIAS <- `24`
+  - type_name:String_alias <- `24`
   
-  - foreach_data action:{ (STRING_ALIAS,INTEGER,INTEGER); } <-
+  - foreach_data action:{ (String_alias,Int,Int); } <-
   (
-    foreach_intern_data { (sec:STRING_ALIAS,nam:STRING_ALIAS,typ:INTEGER,val:INTEGER)
+    foreach_intern_data { (sec:String_alias,nam:String_alias,typ:Int,val:Int)
       (sec == "Mapping").if {
         action.value (nam,typ,val)
       }
     }
   )
   
-  - foreach_set_data action:{ (STRING_ALIAS,T); T} <-
+  - foreach_set_data action:{ (String_alias,T); T} <-
   (
-    foreach_set_intern_data { (sec:STRING_ALIAS,nam:STRING_ALIAS,typ:T)
+    foreach_set_intern_data { (sec:String_alias,nam:String_alias,typ:T)
       + r:T
       (sec == "Public").if {
         r := action.value (nam,typ)
@@ -200,15 +200,15 @@ Public
   
   // The Guru section (Don't touch, don't use !)
   
-  - is_expanded_type:BOOLEAN  <- `0`
+  - is_expanded_type:Boolean  <- `0`
   
-  - type_id_intern:INTEGER    <- `1`
+  - type_id_intern:Int    <- `1`
   
-  - is_cop_type:BOOLEAN       <- `15`
+  - is_cop_type:Boolean       <- `15`
   
-  - copy_intern_in other:SELF <- `*@other = *@Self`; // BSBS: Ne fonctionnera plus avec la nouvelle version !
+  - copy_intern_in other:Self <- `*@other = *@self`; // BSBS: Ne fonctionnera plus avec la nouvelle version !
   
-  - is_cop_active:BOOLEAN <- lip "is_cop" bool
+  - is_cop_active:Boolean <- lip "is_cop" bool
   
   - wait_all <-
   (
@@ -217,10 +217,10 @@ Public
     }
   )
   
-  - i_life:SELF <- `@Self`:SELF
+  - i_life:Self <- `@self`:Self
   
-  - print_c t:NATIVE_ARRAY CHARACTER <-
-  ( + i:INTEGER
+  - print_c t:C_array Char <-
+  ( + i:Int
     {t.item i != '\0'}.while_do {
       t.item i.print
       i := i + 1
@@ -233,10 +233,10 @@ Public
   
   // BSBS: a simplifier qd les types parameters ds les blocks seront good.
   
-  //  - foreach_intern_data_action (sec,nam:STRING_ALIAS,typ:T,val:V)
-  //  with action:{ (STRING_ALIAS,STRING_ALIAS,T,E); } <- `25`
+  //  - foreach_intern_data_action (sec,nam:String_alias,typ:T,val:V)
+  //  with action:{ (String_alias,String_alias,T,E); } <- `25`
   
-  - foreach_intern_data action:{ (STRING_ALIAS,STRING_ALIAS,INTEGER,INTEGER); } <- `25`
+  - foreach_intern_data action:{ (String_alias,String_alias,Int,Int); } <- `25`
   
-  - foreach_set_intern_data action:{ (STRING_ALIAS,STRING_ALIAS,T); T} <- `26`
+  - foreach_set_intern_data action:{ (String_alias,String_alias,T); T} <- `26`
   

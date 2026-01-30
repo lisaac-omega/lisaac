@@ -1,81 +1,80 @@
 Header
-  + name    := COLLECTION3 V;
-  /*
+  + name := Collection3 V
+/*
    Abstract definition of a 3 dimensional collection of elements of type E.
    The Lisaac Ω library provides two implementations of COLLECTION3: ARRAY3
    and FAST_ARRAY3. All implementations have exactly the same behavior.
    Switching from one implementation to another only change the memory
    used and the execution time.
   */
-
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
-  - lower1:INTEGER <-
+  - lower1:Int <-
   // Lower index bound for dimension 1.
   (
     abstract
     0
   )
 
-  - lower2:INTEGER <-
+  - lower2:Int <-
   // Lower index bound for dimension 2.
   (
     abstract
     0
   )
 
-  - lower3:INTEGER <-
+  - lower3:Int <-
   // Lower index bound for dimension 3.
   (
     abstract
     0
   )
 
-  - line_minimum:INTEGER <- lower1
+  - line_minimum:Int <- lower1
   // Equivalent of `lower1'.
 
-  - column_minimum:INTEGER <- lower2
+  - column_minimum:Int <- lower2
   // Equivalent of `lower2'.
 
-  - depth_minimum:INTEGER <- lower3
+  - depth_minimum:Int <- lower3
   // Equivalent of `lower3'.
 
-  - upper1:INTEGER <-
+  - upper1:Int <-
   // Upper index bound for dimension 1.
   (
     abstract
     0
   )
 
-  - upper2:INTEGER <-
+  - upper2:Int <-
   // Upper index bound for dimension 2.
   (
     abstract
     0
   )
 
-  - upper3:INTEGER <-
+  - upper3:Int <-
   // Upper index bound for dimension 3.
   (
     abstract
     0
   )
 
-  - line_maximum:INTEGER <- upper1
+  - line_maximum:Int <- upper1
   // Equivalent of `upper1'.
 
-  - column_maximum:INTEGER <- upper2
+  - column_maximum:Int <- upper2
   // Equivalent of `upper2'.
 
-  - depth_maximum:INTEGER <- upper3
+  - depth_maximum:Int <- upper3
   // Equivalent of `upper3'.
 
   // Reading:
 
-  - item (line, column, depth:INTEGER) :V <-
+  - item (line, column, depth:Int) :V <-
   [ -? { valid_index (line,column,depth) }; ]
   ( + result:V
 
@@ -85,14 +84,14 @@ Public
 
   // Writing:
 
-  - put element:V to (line, column, depth:INTEGER) <-
+  - put element:V to (line, column, depth:Int) <-
   [ -? {valid_index (line,column,depth) }; ]
   (
     abstract
   )
   [ +? { item(line,column,depth) = element}; ]
 
-  - force element:V to (line, column, depth:INTEGER) <-
+  - force element:V to (line, column, depth:Int) <-
   // Put `element' at position (`line',`column',`depth').
   // Collection is resized first when (`line',`column',`depth')
   // is not inside current bounds.
@@ -112,31 +111,31 @@ Public
 
   // Index validity:
 
-  - valid_line line:INTEGER :BOOLEAN <-
+  - valid_line line:Int :Boolean <-
   (
     (lower1 <= line) && {line <= upper1}
   )
   [ +? {Result = (lower1 <= line) && {line <= upper1}}; ]
 
-  - valid_index1 line:INTEGER :BOOLEAN <- valid_line line
+  - valid_index1 line:Int :Boolean <- valid_line line
 
-  - valid_column column:INTEGER :BOOLEAN <-
+  - valid_column column:Int :Boolean <-
   (
     (lower2 <= column) && {column <= upper2}
   )
   [ +? {Result = (lower2 <= column) && {column <= upper2}}; ]
 
-  - valid_index2 column:INTEGER :BOOLEAN <- valid_column column
+  - valid_index2 column:Int :Boolean <- valid_column column
 
-  - valid_depth depth:INTEGER :BOOLEAN <-
+  - valid_depth depth:Int :Boolean <-
   (
     (lower3 <= depth) && {depth <= upper3}
   )
   [ +? {Result = (lower3 <= depth) && {depth <= upper3}}; ]
 
-  - valid_index3 depth:INTEGER :BOOLEAN <- valid_depth depth
+  - valid_index3 depth:Int :Boolean <- valid_depth depth
 
-  - valid_index (line, column, depth:INTEGER) :BOOLEAN <-
+  - valid_index (line, column, depth:Int) :Boolean <-
   (
     (lower1 <= line  ) && {line   <= upper1} && {lower2 <= column} &&
     {column <= upper2} && {lower3 <= depth } && {depth  <= upper3}
@@ -145,7 +144,7 @@ Public
 
   // Counting:
 
-  - count1:INTEGER <-
+  - count1:Int <-
   // Size of the first dimension.
   (
     abstract
@@ -153,10 +152,10 @@ Public
   )
   [ +? {Result = upper1 - lower1 + 1}; ]
 
-  - line_count:INTEGER <- count1
+  - line_count:Int <- count1
   // Equivalent of `count1'.
 
-  - count2:INTEGER <-
+  - count2:Int <-
   // Size of the second dimension.
   (
     abstract
@@ -164,10 +163,10 @@ Public
   )
   [ +? {Result = upper2 - lower2 + 1}; ]
 
-  - column_count:INTEGER <- count2
+  - column_count:Int <- count2
   // Equivalent of `count2'.
 
-  - count3:INTEGER <-
+  - count3:Int <-
   // Size of the third dimension.
   (
     abstract
@@ -175,10 +174,10 @@ Public
   )
   [ +? {Result = upper3 - lower3 + 1}; ]
 
-  - depth_count:INTEGER <- count3
+  - depth_count:Int <- count3
   // Equivalent of `count3'.
 
-  - count:INTEGER <-
+  - count:Int <-
   // Total number of elements.
   (
     abstract
@@ -186,7 +185,7 @@ Public
   )
   [ +? {Result = line_count * column_count * depth_count}; ]
 
-  - swap (line1, column1, depth1:INTEGER) with (line2, column2, depth2:INTEGER) <-
+  - swap (line1, column1, depth1:Int) with (line2, column2, depth2:Int) <-
   // Swap the element at index (`line1',`column1',`depth1')
   // with the element at index (`line2',`column2',`depth2').
   [
@@ -222,7 +221,7 @@ Public
 
   // Creating or initializing:
 
-  - from_collection3 model:COLLECTION3(V) <-
+  - from_collection3 model:Collection3(V) <-
   //  Uses `model' to initialize self.
   [ -? {model != NULL}; ]
   (
@@ -234,7 +233,7 @@ Public
     +? {count3 = model.count3}
   ]
 
-  - from_model model:COLLECTION(COLLECTION(COLLECTION(V))) <-
+  - from_model model:Collection(Collection(Collection(V))) <-
   // The `model' is used to fill line by line self.
   // Assume all sub-collections have the same
   // dimension.
@@ -250,19 +249,19 @@ Public
 
   // Looking and comparison:
 
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   // Do all items have their type's default value?
   (
     abstract
   )
 
-  - Self:SELF '==' other:COLLECTION3(V) :BOOLEAN <-
+  - self:Self '==' other:Collection3(V) :Boolean <-
   // Do both collections have the same `lower1', `lower2', `lower3', `upper1', `upper2' and
   // `upper3', and items?
   // The basic `=' is used for comparison of items.
   // See also `is_equal_map'.
-  ( + line, column, depth: INTEGER
-    + result:BOOLEAN
+  ( + line, column, depth: Int
+    + result:Boolean
 
     (
       (lower1 = other.lower1) &&
@@ -272,7 +271,7 @@ Public
       {lower3 = other.lower3} &&
       {upper3 = other.upper3}
     ).if {
-      result := TRUE
+      result := True
       line := upper1
       {(! result) || {line < lower1}}.until_do {
         column := upper2
@@ -290,12 +289,12 @@ Public
     result
   )
 
-  - is_equal_map other: COLLECTION3(V) :BOOLEAN <-
+  - is_equal_map other: Collection3(V) :Boolean <-
   // Do both collections have the same `lower1', `lower2', `lower3', `upper1', `upper2' and `upper3',
   // and items?
   // See also `=='.
-  ( + line, column, depth:INTEGER
-    + result:BOOLEAN
+  ( + line, column, depth:Int
+    + result:Boolean
 
     (
       (lower1 = other.lower1) &&
@@ -305,7 +304,7 @@ Public
       {lower3 = other.lower3} &&
       {upper3 = other.upper3}
     ).if {
-      result := TRUE
+      result := True
       line := upper1
       {(! result) || {line < lower1}}.until_do {
         column := upper2
@@ -326,7 +325,7 @@ Public
 
   // Miscellaneous features:
 
-  - occurrences elt:V :INTEGER <-
+  - occurrences elt:V :Int <-
   // Number of occurrences using `equal'.
   // See also `fast_occurrences' to choose the apropriate one.
   (
@@ -335,7 +334,7 @@ Public
   )
   [ +? {Result >= 0}; ]
 
-  - fast_occurrences elt:V :INTEGER <-
+  - fast_occurrences elt:V :Int <-
   // Number of occurrences using `='.
   // See also `occurrences' to choose the apropriate one.
   (
@@ -344,19 +343,19 @@ Public
   )
   [ +? {Result >= 0}; ]
 
-  - has x:V :BOOLEAN <-
+  - has x:V :Boolean <-
   // Search if a element x is in the array using `equal'.
   // See also `fast_has' to choose the apropriate one.
   (
     abstract
-    FALSE
+    False
   )
 
-  - fast_has x:V :BOOLEAN <-
+  - fast_has x:V :Boolean <-
   // Search if a element x is in the array using `='.
   (
     abstract
-    FALSE
+    False
   )
 
   - replace_all old_value:V with new_value:V <-
@@ -383,8 +382,8 @@ Public
     +? {fast_occurrences old_value = 0}
   ]
 
-  - sub_collection3 (line_min, column_min, depth_min:INTEGER)
-  to (line_max, column_max, depth_max:INTEGER) :SELF <-
+  - sub_collection3 (line_min, column_min, depth_min:Int)
+  to (line_max, column_max, depth_max:Int) :Self <-
   // Create a new object using selected area of `self'.
   [
     -? { valid_index (line_min,column_min,depth_min)}
@@ -395,17 +394,17 @@ Public
   )
   [ +? {Result != NULL}; ]
 
-  - set_area (line_min, column_min, depth_min:INTEGER)
-  to (line_max, column_max, depth_max:INTEGER) with element:V <-
+  - set_area (line_min, column_min, depth_min:Int)
+  to (line_max, column_max, depth_max:Int) with element:V <-
   // Set all the elements of the selected area rectangle with `element'.
   [
     -? { valid_index (line_min,column_min,depth_min)}
     -? { valid_index (line_max,column_max,depth_max)}
   ]
   (
-    line_min.to line_max do { line:INTEGER
-      column_min.to column_max do { column:INTEGER
-        depth_min.to depth_max do { depth:INTEGER
+    line_min.to line_max do { line:Int
+      column_min.to column_max do { column:Int
+        depth_min.to depth_max do { depth:Int
           put element to (line,column,depth)
         }
       }

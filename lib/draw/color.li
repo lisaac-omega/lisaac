@@ -1,87 +1,85 @@
 Header
-  
-  + name := Expanded COLOR;
-  
+  + name := Flat Color
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
   
-  - stack:ARRAY COLOR := ARRAY COLOR.create_with_capacity 16; // BUG (ne sert a rien !!)
+  - stack:Array Color := Array Color.create_with_capacity 16; // BUG (ne sert a rien !!)
   
 Mapping, Public
 
-  + rf:REAL_32
-  + gf:REAL_32
-  + bf:REAL_32
-  + af:REAL_32
+  + rf:Real32
+  + gf:Real32
+  + bf:Real32
+  + af:Real32
   
-  - ri:INTEGER <- (rf*255.0).to_integer
-  - gi:INTEGER <- (gf*255.0).to_integer
-  - bi:INTEGER <- (bf*255.0).to_integer
-  - ai:INTEGER <- (af*255.0).to_integer
+  - ri:Int <- (rf*255.0).to_int
+  - gi:Int <- (gf*255.0).to_int
+  - bi:Int <- (bf*255.0).to_int
+  - ai:Int <- (af*255.0).to_int
   
 Public
   
-  - none:COLOR   := rgbaf (0,0,0,0)
+  - none:Color   := rgbaf (0,0,0,0)
   
   // Color list:
-  - black:COLOR := rgb (0,0,0)
-  - blue:COLOR := rgb(0,0,0FFh)
-  - brown:COLOR := rgb(096h,04Bh,0)
-  - cyan:COLOR := rgb(0,0FFh,0FFh)
-  - chocolate:COLOR := rgb(0D2h,069h,01Eh)
-  - dark_orange:COLOR := rgb(0FFh,08Ch,0)
-  - emerald_green:COLOR := rgb(050h,0C8h,078h)
-  - gray:COLOR := rgb (80h,80h,80h)
-  - green:COLOR := rgb(0,0FFh,0)
-  - light_gray:COLOR := rgb(0D3h,0D3h,0D3h)
-  - leaf_green:COLOR := rgb(022h,08Bh,022h)
-  - magenta:COLOR:= rgb(0FFh,0,0FFh)
-  - orange:COLOR := rgb(0FFh,080h,0)
-  - peru:COLOR := rgb(0CDh,085h,03Fh)
-  - pink:COLOR := rgb(0FFh,0C0h,0CBh)
-  - red:COLOR := rgb(0FFh,0,0)
-  - saddle_brown:COLOR := rgb(08Bh,045h,013h)
-  - white:COLOR := rgb(0FFh,0FFh,0FFh)
-  - yellow:COLOR := rgb(0FFh,0FFh,0)
+  - black:Color := rgb (0,0,0)
+  - blue:Color := rgb(0,0,0FFh)
+  - brown:Color := rgb(096h,04Bh,0)
+  - cyan:Color := rgb(0,0FFh,0FFh)
+  - chocolate:Color := rgb(0D2h,069h,01Eh)
+  - dark_orange:Color := rgb(0FFh,08Ch,0)
+  - emerald_green:Color := rgb(050h,0C8h,078h)
+  - gray:Color := rgb (80h,80h,80h)
+  - green:Color := rgb(0,0FFh,0)
+  - light_gray:Color := rgb(0D3h,0D3h,0D3h)
+  - leaf_green:Color := rgb(022h,08Bh,022h)
+  - magenta:Color:= rgb(0FFh,0,0FFh)
+  - orange:Color := rgb(0FFh,080h,0)
+  - peru:Color := rgb(0CDh,085h,03Fh)
+  - pink:Color := rgb(0FFh,0C0h,0CBh)
+  - red:Color := rgb(0FFh,0,0)
+  - saddle_brown:Color := rgb(08Bh,045h,013h)
+  - white:Color := rgb(0FFh,0FFh,0FFh)
+  - yellow:Color := rgb(0FFh,0FFh,0)
   
   //  Other:
   
-  - is_black:BOOLEAN <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
+  - is_black:Boolean <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
   
-  - rgb (pr,pg,pb:UINTEGER_8) :SELF <- rgba (pr,pg,pb,255)
+  - rgb (pr,pg,pb:Uint8) :Self <- rgba (pr,pg,pb,255)
 
-  - rgbf (pr,pg,pb:REAL_32) :SELF <- rgbaf (pr,pg,pb,1.0)
+  - rgbf (pr,pg,pb:Real32) :Self <- rgbaf (pr,pg,pb,1.0)
   
-  - rgba (pr,pg,pb,pa:UINTEGER_8) :COLOR <-
+  - rgba (pr,pg,pb,pa:Uint8) :Color <-
   (
     rgbaf (
-      pr.to_real_32/255,pg.to_real_32/255,
-      pb.to_real_32/255,pa.to_real_32/255
+      pr.to_real32/255,pg.to_real32/255,
+      pb.to_real32/255,pa.to_real32/255
     )
   )
 
-  - rgbaf (pr,pg,pb,pa:REAL_32) :COLOR <-
-  ( + result:COLOR
-    stack.add_last COLOR;    // BUG
+  - rgbaf (pr,pg,pb,pa:Real32) :Color <-
+  ( + result:Color
+    stack.add_last Color;    // BUG
     result := stack.last; //pop
     result.make (pr,pg,pb,pa)
     result
   )
 
-  - make (pr,pg,pb,pa:REAL_32) <-
+  - make (pr,pg,pb,pa:Real32) <-
   (
     (rf,gf,bf,af) := (pr,pg,pb,pa)
   )
   
-  //- set_a pa:UINTEGER_8 <- ( af := pa.to_real_32/255; )
+  //- set_a pa:Uint8 <- ( af := pa.to_real32/255; )
     
-  - set_af pa:REAL_32 :COLOR <- rgbaf (rf,gf,bf,pa)
+  - set_af pa:Real32 :Color <- rgbaf (rf,gf,bf,pa)
   
-  - to_gray:COLOR <-
-  ( + g:REAL_32
+  - to_gray:Color <-
+  ( + g:Real32
     g := (rf + gf + bf) / 9.0 + (3.0/9.0)
     rgbaf (g,g,g,af)
   )
@@ -91,8 +89,8 @@ Public
     (rf,gf,bf) := (rf*af,gf*af,bf*af)
   )
 
-  - lerp_rgba c:SELF coef u:REAL_32 <-
-  ( + uu,uui:REAL_32
+  - lerp_rgba c:Self coef u:Real32 <-
+  ( + uu,uui:Real32
     
     uu  := u.clamp 0 and 1
     uui := 1.0 - uu
@@ -102,10 +100,10 @@ Public
     af := uui*af + uu*c.af
   )
 
-  - hsl (h,s,l:REAL_32) :COLOR <- hsla (h,s,l) alpha 255
+  - hsl (h,s,l:Real32) :Color <- hsla (h,s,l) alpha 255
   
-  - hsla (h,s,l:REAL_32) alpha pa:UINTEGER_8 :COLOR <- // BSBS: Calcul en entier
-  ( + m1,m2,ss,ll,hh,aa,rr,gg,bb:REAL_32
+  - hsla (h,s,l:Real32) alpha pa:Uint8 :Color <- // BSBS: Calcul en entier
+  ( + m1,m2,ss,ll,hh,aa,rr,gg,bb:Real32
     
     hh := h % 1
     (hh < 0).if { hh := hh + 1; }
@@ -120,11 +118,11 @@ Public
     rr := hue (hh + 1.0/3) with (m1,m2).clamp 0 to 1
     gg := hue  hh          with (m1,m2).clamp 0 to 1
     bb := hue (hh - 1.0/3) with (m1,m2).clamp 0 to 1
-    aa := pa.to_real_32 / 255
+    aa := pa.to_real32 / 255
     rgbaf (rr,gg,bb,aa)
   )
   
-  - mul_a c:REAL_32 <-
+  - mul_a c:Real32 <-
   (
     af := c * af
   )
@@ -139,8 +137,8 @@ Public
   
 Private
   
-  - hue hh:REAL_32 with (m1,m2:REAL_32) :REAL_32 <-
-  ( + h,result:REAL_32
+  - hue hh:Real32 with (m1,m2:Real32) :Real32 <-
+  ( + h,result:Real32
     (hh < 0).if   { h := hh + 1; }.elseif
     {hh > 1} then { h := hh - 1; } else {
       h := hh
@@ -159,7 +157,7 @@ Private
   
 Public
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b.append "rgb("
     ri.append_in b

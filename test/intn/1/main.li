@@ -1,16 +1,15 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + n1,n2,n3:INTN
+  ( + n1,n2,n3:Intn
     n1 := 1
     n2 := 1
     n3 := n1 + n2
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       n3.append_in tmp
-      TEST.check tmp string "2"
+      Test.check tmp string "2"
     }
-    TEST.check (n3.to_string) string "2"
+    Test.check (n3.to_string) string "2"
   )
   

@@ -1,12 +1,9 @@
 Header
-
-  + name        := ITM_EXTERNAL_TYPE;
-
-  /*External C with type result*/
-
+  + name := Itm_external_type
+/*External C with type result*/
 Inherit
 
-  + parent_itm_extern:Expanded ITM_EXTERN
+  + parent_itm_extern:Flat Itm_extern
 
 Public
 
@@ -14,27 +11,27 @@ Public
   // Data
   //
 
-  + type:ITM_TYPE
+  + type:Itm_type
 
-  + type_list:ITM_TYPE
+  + type_list:Itm_type
 
-  + is_persistant:BOOLEAN
+  + is_persistant:Boolean
 
   //
   // Constructor
   //
 
-  - create p:POSITION text n:STRING_ALIAS persistant per:BOOLEAN :SELF <-
-  ( + result:SELF
+  - create p:Position text n:String_alias persistant per:Boolean :Self <-
+  ( + result:Self
     result := clone
     result.make p text n persistant per
     result
   )
 
-  - make p:POSITION text n:STRING_ALIAS persistant per:BOOLEAN <-
+  - make p:Position text n:String_alias persistant per:Boolean <-
   (
-    position      := p
-    extern        := n
+    position := p
+    text     := n
     is_persistant := per
   )
 
@@ -42,12 +39,12 @@ Public
   // Added
   //
 
-  - set_type t:ITM_TYPE <-
+  - set_type t:Itm_type <-
   (
     type := t
   )
 
-  - set_type_list t:ITM_TYPE <-
+  - set_type_list t:Itm_type <-
   (
     type_list := t
   )
@@ -56,25 +53,25 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + e:EXTERNAL_C
-    + lt:TYPES_TMP
-    + lst_acc:ARRAY EXPR
-    + typ:TYPE
-    + tmp:VARIABLE
-    + typ_mul:ITM_TYPE_MULTI
-    + typ_mon:ITM_TYPE_MONO
+  - to_run_expr:Expr <-
+  ( + e:External_c
+    + lt:Types_tmp
+    + lst_acc:Array Expr
+    + typ:Type
+    + tmp:Variable
+    + typ_mul:Itm_type_multi
+    + typ_mon:Itm_type_mono
 
     lst_acc := get_access
     last_position := position
-    e := EXTERNAL_C.create position text last_code
+    e := External_c.create position text last_code
     access lst_acc persistant is_persistant type (type.to_run_for profil_slot pos (position.prototype.filename))
 
     (type_list != NULL).if {
-      lt := TYPES_TMP.new
+      lt := Types_tmp.new
       typ_mul ?= type_list
       (typ_mul != NULL).if {
-        (typ_mul.lower).to (typ_mul.upper) do { j:INTEGER
+        (typ_mul.lower).to (typ_mul.upper) do { j:Int
           typ := typ_mul.at j.to_run_for profil_slot pos (position.prototype.filename).raw
           lt.add typ
         }

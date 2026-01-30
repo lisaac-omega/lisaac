@@ -1,42 +1,40 @@
 Header
-
-  + name := HANOI;
-  /*
+  + name := Hanoi
+/*
   The classic Tower of Hanoi problem.
   */
-
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
 
 Private
 
-  + nb:INTEGER
+  + nb:Int
 
-  + tower1:TOWER
-  + tower2:TOWER
-  + tower3:TOWER
+  + tower1:Tower
+  + tower2:Tower
+  + tower3:Tower
 
 Public
 
   - main <-
   (
-    (COMMAND_ARGS.upper = 0).if {
+    (Command_args.upper = 0).if {
       "Number of discus: ".print
-      STDIN.read_integer
-      nb := STDIN.last_integer
-    }.elseif {COMMAND_ARGS.upper != 1} then {
+      Stdin.read_integer
+      nb := Stdin.last_integer
+    }.elseif {Command_args.upper != 1} then {
       "Usage: hanoi <NumberOfDiscus>\n".print
       exit exit_failure_code
-    }.elseif {(COMMAND_ARGS.at 1).is_integer} then {
-      nb := (COMMAND_ARGS.at 1).to_integer.max 1
+    }.elseif {(Command_args.at 1).is_integer} then {
+      nb := (Command_args.at 1).to_int.max 1
     } else {
       "hanoi: bad argument (not an integer)\n".print
       exit exit_failure_code
     }
 
-    tower1 := TOWER.full nb
-    tower2 := TOWER.empty nb
-    tower3 := TOWER.empty nb
+    tower1 := Tower.full nb
+    tower2 := Tower.empty nb
+    tower3 := Tower.empty nb
 
     "Situation at the beginning:\n".print
     move (nb,tower1,tower2,tower3)
@@ -46,8 +44,8 @@ Public
 
 Private
 
-  - move (how_many:INTEGER, source, intermediate, destination:TOWER) <-
-  ( + discus:INTEGER
+  - move (how_many:Int, source, intermediate, destination:Tower) <-
+  ( + discus:Int
     (how_many > 0).if {
       move (how_many-1,source,destination,intermediate)
       print
@@ -62,7 +60,7 @@ Public
   - print <-
   (
     '\n'.print
-    (nb-1).downto 0 do { i:INTEGER
+    (nb-1).downto 0 do { i:Int
       ' '.print
       tower1.show_a_discus i
       ' '.print
@@ -71,7 +69,7 @@ Public
       tower3.show_a_discus i
       '\n'.print
     }
-    ((((2 * (nb + 1)) + 1) * 3) - 2).downto 1 do { i:INTEGER
+    ((((2 * (nb + 1)) + 1) * 3) - 2).downto 1 do { i:Int
       '-'.print
     }
     '\n'.print

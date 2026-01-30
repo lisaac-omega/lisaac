@@ -1,58 +1,55 @@
 Header
-
-  + name        := Expanded POSITION;
-
-  /*Coding position :    
+  + name := Flat Position
+/*Coding position :    
    9 bits  : Index prototype [1..511].  
    8 bits  : Column          [0..255].  
    15 bits : Line            [1..32767].*/
 
   - type        := `uint64_t`;
-  - default     := ( CAST INTEGER TO POSITION.on 0 );
-
+  - default     := ( Cast Int To Position.on 0 );
 Insert
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
-  - object_size:INTEGER <- POINTER.object_size
+  - object_size:Int <- Pointer.object_size
 
-  - code:UINTEGER_32 <- CAST POSITION TO UINTEGER_32.on Self
+  - code:Uint32 <- Cast Position To Uint32.on self
 
   //
   // Creation.
   //
 
-  - create proto:PROTOTYPE line l:INTEGER column c:INTEGER :POSITION <-
-  ( + cod:UINTEGER_32
+  - create proto:Prototype line l:Int column c:Int :Position <-
+  ( + cod:Uint32
     ? {l    .in_range 0 to 131071}
     ? {c    .in_range 0 to    255}
     ? {proto.index.in_range 0 to    511}
-    cod := proto.index.to_uinteger_32 | (c << 9) | (l << 17)
-    CAST UINTEGER_32 TO POSITION.on cod
+    cod := proto.index.to_uint32 | (c << 9) | (l << 17)
+    Cast Uint32 To Position.on cod
   )
 
   //
   // Localization.
   //
 
-  - prototype:PROTOTYPE <- PROTOTYPE.prototype_list.at (code.to_integer & 01FFh)
+  - prototype:Prototype <- Prototype.prototype_list.at (code.to_int & 01FFh)
 
-  - line:UINTEGER_32       <- code >> 17
+  - line:Uint32       <- code >> 17
 
-  - column:UINTEGER_32     <- (code >> 9) & 0FFh
+  - column:Uint32     <- (code >> 9) & 0FFh
 
   //
   // Information Generation.
   //
 
-  - nb_warning:INTEGER
+  - nb_warning:Int
 
   - send_error <-
   (
     append_context
-    STDERR.put_string msg_err
+    Stderr.put_string msg_err
     is_verbose.if {      
       msg_err.print
     }
@@ -63,7 +60,7 @@ Public
     }
   )
 
-  - put_error type:INTEGER text txt:STRING <-
+  - put_error type:Int text txt:String <-
   (
     type_error := type
     msg_err.clear
@@ -81,13 +78,13 @@ Public
   )
 
   - put_position <-
-  ( + pos:INTEGER
-    + c,cols:UINTEGER_32
-    + src:STRING_BUFFER
-    + char:CHARACTER
+  ( + pos:Int
+    + c,cols:Uint32
+    + src:String_buffer
+    + char:Char
     ? {code != 0}
     
-    (Self = POSITION).if {
+    (self = Position).if {
       msg_err.append "\nUnknown position.\n"
     } else {
       msg_err.append "\nLine "
@@ -102,7 +99,7 @@ Public
       // Search begin line :
       src := prototype.source
       pos := src.lower
-      1.to (line-1) do { l:INTEGER
+      1.to (line-1) do { l:Int
         {(char := src.at pos) != '\n'}.while_do {
           pos := pos + 1
         }
@@ -134,16 +131,16 @@ Public
     }
   )
 
-  - extract_line_in buf:STRING_BUFFER <-
-  [ ? {Self != POSITION}; ]
-  ( + pos:INTEGER
-    + src:STRING_BUFFER
-    + char:CHARACTER
+  - extract_line_in buf:String_buffer <-
+  [ ? {self != Position}; ]
+  ( + pos:Int
+    + src:String_buffer
+    + char:Char
     
     // Search begin line :
     src := prototype.source
     pos := src.lower
-    1.to (line-1) do { l:INTEGER
+    1.to (line-1) do { l:Int
       {src.at pos = '\n'}.until_do {
         pos := pos + 1
       }
@@ -167,9 +164,9 @@ Private
   // Service manager
   //
 
-  - type_error:INTEGER
+  - type_error:Int
 
-  - msg_err:STRING_BUFFER := STRING_BUFFER.create 256
+  - msg_err:String_buffer := String_buffer.create 256
   
 Public
   
@@ -177,7 +174,7 @@ Public
   // Push context
   //
   
-  - push_context i:INSTR <-
+  - push_context i:Instr <-
   (    
     stack_push.add_last i
   )
@@ -193,7 +190,7 @@ Public
   (
     (stack_push.is_empty).if_false {
       msg_err.append "Context:\n  ..."
-      (stack_push.lower.max (stack_push.upper-4)).to (stack_push.upper) do { i:INTEGER
+      (stack_push.lower.max (stack_push.upper-4)).to (stack_push.upper) do { i:Int
         stack_push.at i.position.put_position
       }
     }
@@ -201,4 +198,4 @@ Public
   
 Private
   
-  - stack_push:ARRAY INSTR := ARRAY INSTR .create_with_capacity 4
+  - stack_push:Array Instr := Array Instr .create_with_capacity 4

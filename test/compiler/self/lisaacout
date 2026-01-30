@@ -1,0 +1,5 @@
+--SEMANTIC---------
+`self' local is incorrect.
+Line 6 column 10 in No_local_self(.../test/compiler/self/no_local_self.li):
+  ( + self:Int
+          ^

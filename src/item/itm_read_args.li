@@ -1,26 +1,23 @@
 Header
-
-  + name        := ITM_READ_ARGS;
-
-  /*Message with a lot of arguments*/
-
+  + name := Itm_read_args
+/*Message with a lot of arguments*/
 Inherit
 
-  + parent_itm_read:Expanded ITM_READ
+  + parent_itm_read:Flat Itm_read
 
 Public
 
-  - is_affect:POSITION <-
-  ( + result,default:POSITION
-    + j:INTEGER
+  - is_affect:Position <-
+  ( + result,default:Position
+    + j:Int
 
     (args.first != NULL).if {
       result := args.first.position
     } else {
       j := args.lower + 1
       {(j <= args.upper) && {result = default}}.while_do {
-	result := args.at j.is_affect
-	j := j + 1
+        result := args.at j.is_affect
+        j := j + 1
       }
     }
     result
@@ -30,20 +27,20 @@ Public
   // Data
   //
 
-  + args:ARRAY ITM_CODE
+  + args:Array Itm_code
 
   //
   // Constructor
   //
 
-  - create p:POSITION name n:STRING_ALIAS args arg:ARRAY ITM_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias args arg:Array Itm_code :Self <-
+  ( + result:Self
     result := clone
     result.make p name n args arg
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS args arg:ARRAY ITM_CODE <-
+  - make p:Position name n:String_alias args arg:Array Itm_code <-
   (
     position := p
     name := n
@@ -54,11 +51,11 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + l_arg:ARRAY ITM_CODE
+  - to_run_expr:Expr <-
+  ( + l_arg:Array Itm_code
 
-    l_arg := ALIAS_ARRAY ITM_CODE .new
-    (args.lower+1).to (args.upper) do { j:INTEGER
+    l_arg := Alias_array Itm_code .new
+    (args.lower+1).to (args.upper) do { j:Int
       l_arg.add_last (args.at j)
     }
     to_run_with (args.first) args l_arg

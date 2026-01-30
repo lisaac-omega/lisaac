@@ -1,10 +1,9 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Private
   
-  - fac n:INTN :INTN <-
-  ( + result,nn,t1,t2:INTN
+  - fac n:Intn :Intn <-
+  ( + result,nn,t1,t2:Intn
     result := 1
     nn := n
     {nn > 1}.while_do {
@@ -20,12 +19,12 @@ Private
   
 Public
   - main <-
-  ( + n:INTN
+  ( + n:Intn
     n := fac 10_000
     
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       n.append_in tmp
-      TEST.check tmp string
+      Test.check tmp string
     "28462596809170545189064132121198688901480514017027992307941799942744\
     \11340003764443772990786757784775815884062142317528830042339940153518\
     \73905242116138271617481982419982759241828925978789812425312059465996\

@@ -1,34 +1,31 @@
 Header
-
-  + name    := SLOT_DATA;
-
-  /*Slot with data style*/
-
+  + name := Slot_data
+/*Slot with data style*/
 Inherit
 
-  + parent_variable:Expanded VARIABLE
+  + parent_variable:Flat Variable
 
-  + parent_slot:SLOT := SLOT
+  + parent_slot:Slot := Slot
 
 Public
   
-  - data_hash_code_alias:SLOT_DATA
+  - data_hash_code_alias:Slot_data
   
   // BUG COMPILO 0.11
 
-  - id_section:SECTION_ <-
-  ( + result:SECTION_
+  - id_section:Section_ <-
+  ( + result:Section_
 
     (parent_slot != NULL).if {
       result := parent_slot.id_section
     } else {
-      result := SECTION_.standard_private
+      result := Section_.standard_private
     }
     result
   )
 
-  - receiver_type:TYPE <-
-  ( + result:TYPE
+  - receiver_type:Type <-
+  ( + result:Type
 
     (parent_slot != NULL).if {
       result := parent_slot.receiver_type
@@ -40,22 +37,22 @@ Public
 
   //
 
-  - common_slot:SLOT <- parent_slot
+  - common_slot:Slot <- parent_slot
 
   //
   // Sequence optimizer
   //
 
-  + last_write:WRITE
-  + last_seq_index:UINTEGER_32
-  + last_seq_or_and:UINTEGER_32
-  + last_seq_call_and_loop:UINTEGER_32
-  + last_seq_call_local_and_loop:UINTEGER_32
+  + last_write:Write
+  + last_seq_index:Uint32
+  + last_seq_or_and:Uint32
+  + last_seq_call_and_loop:Uint32
+  + last_seq_call_local_and_loop:Uint32
 
-  + last_list_current:LIST
-  + last_index:INTEGER
+  + last_list_current:List
+  + last_index:Int
 
-  - is_invariant rec:EXPR :BOOLEAN <-
+  - is_invariant rec:Expr :Boolean <-
   (
     ((rec = NULL) || {rec.is_invariant}) &&
     {last_write != NULL} &&
@@ -63,7 +60,7 @@ Public
     {last_seq_index <= loop_seq_index}
   )
 
-  - reset_last_write w:WRITE <-
+  - reset_last_write w:Write <-
   (
     (last_write = w).if {
       last_write := NULL
@@ -75,9 +72,9 @@ Public
     last_index := -1
   )
 
-  - get_last_index:INTEGER <- last_index
+  - get_last_index:Int <- last_index
 
-  - set_write w:WRITE <-
+  - set_write w:Write <-
   (
     /* A FAIRE
     (
@@ -103,20 +100,20 @@ Public
     last_index        := list_current.index
   )
 
-  - get_last_value rec:EXPR :EXPR <-
-  ( + result:EXPR
-    + val:EXPR
-    + rd:READ
-    + rd_loc:READ_LOCAL
-    + wrt_slot:WRITE_SLOT
-    + l:LOCAL
-    + g:SLOT_DATA
-    + is_rec_ok:BOOLEAN
-    + my_require_count:INTEGER
-    + pb:PROFIL_BLOCK
-    + i:INSTR
+  - get_last_value rec:Expr :Expr <-
+  ( + result:Expr
+    + val:Expr
+    + rd:Read
+    + rd_loc:Read_local
+    + wrt_slot:Write_slot
+    + l:Local
+    + g:Slot_data
+    + is_rec_ok:Boolean
+    + my_require_count:Int
+    + pb:Profil_block
+    + i:Instr
 
-    ((! PROFIL.mode_recursive) && {loop_invariant = NULL} && {last_write != NULL}).if {
+    ((! Profil.mode_recursive) && {loop_invariant = NULL} && {last_write != NULL}).if {
 
       my_require_count := require_count
       (rec != NULL).if {
@@ -132,7 +129,7 @@ Public
           } else {
             my_require_count := 0
           }
-          (require_list.lower).to (require_list.upper) do { j:INTEGER
+          (require_list.lower).to (require_list.upper) do { j:Int
             wrt_slot ?= require_list.at j
             rd_loc   ?= wrt_slot.receiver
             (rd_loc.local = l).if {
@@ -149,7 +146,7 @@ Public
       ).if {
         // Receiver test.
         (rec = NULL).if {
-          is_rec_ok := TRUE
+          is_rec_ok := True
         }.elseif {rec.is_constant} then {
           wrt_slot ?= last_write
           is_rec_ok := rec ~= wrt_slot.receiver
@@ -231,7 +228,7 @@ Public
               wrt_slot.receiver.remove
             }
             unwrite last_write
-            list_current.at (list_current.index - 1) put NOP
+            list_current.at (list_current.index - 1) put Nop
             result := val
           }.elseif {
             (rec != NULL) && {is_seq_list last_list_current} &&
@@ -260,51 +257,51 @@ Public
   // Constructeur.
   //
 
-  - create b:SLOT type_full t:TYPE_FULL :SELF <-
+  - create b:Slot type_full t:Type_full :Self <-
   (
     create (b.position) name (b.name) style (b.style) base b type t
   )
 
-  - create pos:POSITION name n:STRING_ALIAS
-  style s:CHARACTER base b:SLOT type t:TYPE_FULL :SELF <-
-  ( + result:SELF
+  - create pos:Position name n:String_alias
+  style s:Char base b:Slot type t:Type_full :Self <-
+  ( + result:Self
     result := clone
     result.make pos name n style s base b type t
     result
   )
   
-  - make pos:POSITION name n:STRING_ALIAS style s:CHARACTER base b:SLOT type t:TYPE_FULL <-
-  ( + tmp:TYPES_TMP
-    + typ_sim:TYPE
+  - make pos:Position name n:String_alias style s:Char base b:Slot type t:Type_full <-
+  ( + tmp:Types_tmp
+    + typ_sim:Type
         
     parent_slot := b
     //
     position    := pos
     name        := n
     style       := s
-    intern_name := get_intern name type FALSE
+    intern_name := get_intern name type False
     //
     (parent_slot != NULL).if {
       typ_sim := parent_slot.receiver_type
       (
         (data_hash_code_alias = NULL) && {typ_sim.itm_type != NULL} && 
-        {typ_sim.itm_type.name = "STRING_ALIAS"} && 
+        {typ_sim.itm_type.name = str_string_alias} && 
         {name = "hash_code"}
       ).if {        
-        data_hash_code_alias := Self
+        data_hash_code_alias := self
       }
     }
     //
     type := t
     (is_static).if {
-      tmp := TYPES_TMP.new
+      tmp := Types_tmp.new
       tmp.add (type.raw)
       type_set := tmp.to_types
     } else {
-      type_set := TYPES_TMP.types_empty
+      type_set := Types_tmp.types_empty
     }
     ((type.raw.is_block) && {name != "__id"} && {name != "self"}).if {            
-      list_variable_block.add_last Self
+      list_variable_block.add_last self
     }
     ? {type != NULL}
   )
@@ -313,31 +310,31 @@ Public
   // Context
   //
   
-  - init_list:LIST := LIST.create POSITION
+  - init_list:List := List.create Position
   
-  + value_init:LIST
+  + value_init:List
 
   - init <-
-  ( + val,rec,rec_call:EXPR
-    + wrt:WRITE
-    + old_list:LIST
-    + rd:ITM_READ_ARG1
-    + old_profil_current:PROFIL
-    + old_profil_slot:PROFIL_SLOT
+  ( + val,rec,rec_call:Expr
+    + wrt:Write
+    + old_list:List
+    + rd:Itm_read_arg1
+    + old_profil_current:Profil
+    + old_profil_slot:Profil_slot
     /*
     string_tmp.copy "init : "
     string_tmp.append name
     warning_error (position,string_tmp)
     */
-    ((value_init = NULL) && {(affect != '<') || {Self = slot_id}}).if {      
-      (Self = slot_id).if {     
-        val := PROTOTYPE_CST.create position type type
+    ((value_init = NULL) && {(affect != '<') || {self = slot_id}}).if {      
+      (self = slot_id).if {     
+        val := Prototype_cst.create position type type
         (style = '+').if {
-          rec := PROTOTYPE_CST.create position type (receiver_type.default)
+          rec := Prototype_cst.create position type (receiver_type.default)
         }
         wrt := write position with rec value val
         init_list.add_first wrt
-        value_init := LIST; // BSBS: Pas utile (Faire en sorte de faire un init unique!)
+        value_init := List; // BSBS: Pas utile (Faire en sorte de faire un init unique!)
         ? {init_list.index = -1}
       } else {
         // Init with complex code.
@@ -345,26 +342,26 @@ Public
         old_profil_current := profil_current
         old_profil_slot    := profil_slot
         profil_current := profil_slot := NULL
-        value_init := list_current := LIST.create position
+        value_init := list_current := List.create position
         (value = NULL).if {
           val := type.default_value position
         } else {
           rd ?= value
           ((rd != NULL) && {rd.arg = NULL}).if {
-            rec_call := PROTOTYPE_CST.create position type (receiver_type.default)
-            val := rd.to_run NULL with_self (rec_call,FALSE,FALSE) args NULL
+            rec_call := Prototype_cst.create position type (receiver_type.default)
+            val := rd.to_run NULL with_self (rec_call,False,False) args NULL
           } else {
             val := value.to_run_expr; // ICI
             //(type.raw.is_block).if { list_current.debug_display; }
           }
         }
-	val := val.check_type type with position
+        val := val.check_type type with position
         (style = '+').if {
-          rec := PROTOTYPE_CST.create position type (receiver_type.default)
+          rec := Prototype_cst.create position type (receiver_type.default)
         }
         (debug_level_option != 0).if {
           value_init.add_last (
-            PUSH.create position context context_main first FALSE
+            Push.create position context context_main first False
           )
         }
         wrt := write position with rec value val
@@ -383,24 +380,24 @@ Public
   //
 
   - execute <-
-  ( + lst:ARRAY SLOT
-    + slot:SLOT_DATA
-    + s:SLOT
-    + val:LIST
-    + old_list_current:LIST
-    //- last_idx:INTEGER
-    + old_profil_current:PROFIL
-    + old_profil_slot:PROFIL_SLOT
-    //+ insert_index:INTEGER
+  ( + lst:Array Slot
+    + slot:Slot_data
+    + s:Slot
+    + val:List
+    + old_list_current:List
+    //- last_idx:Int
+    + old_profil_current:Profil
+    + old_profil_slot:Profil_slot
+    //+ insert_index:Int
 
-    ((value_init != NULL) && {value_init != LIST}).if {      
+    ((value_init != NULL) && {value_init != List}).if {      
       val := value_init
       value_init := NULL
       // For a good order.
-      (type.is_expanded).if {
+      (type.is_flat).if {
         lst := type.slot_run
         (lst != NULL).if {
-          (lst.lower).to (lst.upper) do { j:INTEGER
+          (lst.lower).to (lst.upper) do { j:Int
             s := lst.at j
             (s.style = '+').if {
               slot := s.slot_data_intern
@@ -439,7 +436,7 @@ Public
   // Genere
   //
 
-  - genere buf:STRING_BUFFER <-
+  - genere buf:String_buffer <-
   (    
     type.genere_declaration buf
     buf.add_last ' '
@@ -452,7 +449,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append intern_name
     buffer.add_last ' '
@@ -467,28 +464,28 @@ Public
     string_tmp.print
   )
 
-VARIABLE
+Variable
 
-  - new_read p:POSITION with r:EXPR :READ <-
-  ( + result:READ
+  - new_read p:Position with r:Expr :Read <-
+  ( + result:Read
     (style = '-').if {
       ? {r = NULL}
-      result := READ_GLOBAL.create p with Self
+      result := Read_global.create p with self
     } else {
       ? {r != NULL}
-      result := READ_SLOT.create p with (r,Self)
+      result := Read_slot.create p with (r,self)
     }
     result
   )
 
-  - new_write p:POSITION with r:EXPR value v:EXPR :WRITE <-
-  ( + result:WRITE
+  - new_write p:Position with r:Expr value v:Expr :Write <-
+  ( + result:Write
     (style = '-').if {
       ? {r = NULL}
-      result := WRITE_GLOBAL.create p with v in Self
+      result := Write_global.create p with v in self
     } else {
       ? {r != NULL}
-      result := WRITE_SLOT.create p with v in (r,Self)
+      result := Write_slot.create p with v in (r,self)
     }
     result
   )
@@ -498,20 +495,20 @@ VARIABLE
   ( + result:ACCESS
 
     (style = '-').if {
-      result := ACCESS_GLOBAL.create Self
+      result := ACCESS_GLOBAL.create self
     } else {
-      result := ACCESS_SLOT.create Self with r
+      result := ACCESS_SLOT.create self with r
     }
     result
   )
   */
-  - is_zero e:EXPR :BOOLEAN <-
-  ( + pro:PROTOTYPE_CST
-    + int:INTEGER_CST
+  - is_zero e:Expr :Boolean <-
+  ( + pro:Prototype_cst
+    + int:Int_cst
     (
       pro ?= e
       (pro != NULL) && {
-        (pro.static_type.raw = TYPE_NULL) || {pro.static_type.raw = type_false}
+        (pro.static_type.raw = Type_null) || {pro.static_type.raw = type_false}
       }
     ) || {
       int ?= e

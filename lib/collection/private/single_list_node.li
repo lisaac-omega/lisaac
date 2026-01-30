@@ -1,29 +1,27 @@
 Header
-
-  + name := SINGLE_LIST_NODE V;
-  /*
+  + name := Single_list_node V
+/*
   To implement SINGLE_LIST(V).
   */
-
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
   + item:V
 
-  + next:SINGLE_LIST_NODE V
+  + next:Single_list_node V
 
-SINGLE_LIST
+Single_list
 
-  - create i:V next n:SINGLE_LIST_NODE V :SELF <-
-  ( + result:SELF
+  - create i:V next n:Single_list_node V :Self <-
+  ( + result:Self
     result := clone
     result.make i next n
     result
   )
 
-  - make i:V next n:SINGLE_LIST_NODE(V) <-
+  - make i:V next n:Single_list_node(V) <-
   (
     item := i
     next := n
@@ -34,7 +32,7 @@ SINGLE_LIST
   ]
 
 
-SINGLE_LIST_NODE,SINGLE_LIST
+Single_list_node,Single_list
 
   - set_item i:V <-
   (
@@ -44,7 +42,7 @@ SINGLE_LIST_NODE,SINGLE_LIST
     +? {item = i}
   ]
 
-  - set_next n:SINGLE_LIST_NODE(V) <-
+  - set_next n:Single_list_node(V) <-
   (
     next := n
   )
@@ -53,9 +51,9 @@ SINGLE_LIST_NODE,SINGLE_LIST
   ]
 
   - set_all_with v:V <-
-  ( + lnk:SELF
+  ( + lnk:Self
 
-    lnk := Self
+    lnk := self
     {lnk = NULL}.until_do {
       lnk.set_item v
       lnk := lnk.next

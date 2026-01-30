@@ -1,21 +1,19 @@
 Header
-
-  + name := BOTTLES;
-    
-  /*
+  + name := Bottles
+/*
   From Luis Araujo <araujo@gentoo.org>
   
   The cool song 99 bottles of beer!
   */
 
 Private
-  - b:STRING_ALIAS := " bottles "
+  - b:String_alias := " bottles "
 
 Public
 
   - main <-
-  ( + v:INTEGER
-    99.downto 1 do { i:INTEGER
+  ( + v:Int
+    99.downto 1 do { i:Int
       i.print
       b.print
       "of beer on the wall, ".print

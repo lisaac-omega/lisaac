@@ -1,11 +1,10 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
-  ( + p:POINTER
-    TEST.check (p.is_null); // should not be... in the next release.
-    p := `"toto"`:POINTER
-    TEST.check (! p.is_null); // should not be... in the next release.
+  ( + p:Pointer
+    Test.check (p.is_null); // should not be... in the next release.
+    p := `"toto"`:Pointer
+    Test.check (! p.is_null); // should not be... in the next release.
   )
   

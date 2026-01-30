@@ -1,7 +1,8 @@
 Header
-  + name := MUSIC
+  + name := Music
   
-  - lip <-
+  
+- lip <-
   (
     (target = "windows").if {
       add_lib "-lwinmm";
@@ -55,8 +56,8 @@ void play_wav(const char *filename) {
 
 Public
   
-  - play_wav pth:STRING <-
-  ( + p:NATIVE_ARRAY CHARACTER
+  - play_wav pth:String <-
+  ( + p:C_array Char
     p := pth.to_external
     `play_wav(@p)`
   )

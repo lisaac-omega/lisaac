@@ -1,18 +1,16 @@
 Header
-  
-  + name := MAIN;
-  
+  + name := Main
 Public
   
-  - eb:Expanded STRING_BUFFER
+  - eb:Flat String_buffer
   
   - main <-
   (
     eb.copy "toto"
-    STRING.tmp { tmp:STRING_BUFFER
-      eb.foreach {c:CHARACTER
+    String.tmp { tmp:String_buffer
+      eb.foreach {c:Char
         tmp.add_last c
       }
-      TEST.check (tmp.to_string_alias = "toto")
+      Test.check (tmp.to_string_alias = "toto")
     }
   )

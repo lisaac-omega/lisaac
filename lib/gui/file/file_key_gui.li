@@ -1,18 +1,17 @@
 Header
-  + name := FILE_KEY_GUI;
-  
+  + name := File_key_gui
 Inherit
-  - parent_json:JSON := JSON
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_json:Json := Json
+  - parent_any_gui:Any_gui := Any_gui
     
 Public
   
-  - function c0:STRING_ALIAS :(BOOLEAN,{BOOLEAN}) <-
-  ( + b:{BOOLEAN}
+  - function c0:String_alias :(Boolean,{Boolean}) <-
+  ( + b:{Boolean}
     c0
-    .case "freeze_memory" then { b := {CLONE.set_detect_memory_leak TRUE; TRUE}; }
+    .case "freeze_memory" then { b := {Clone.set_detect_memory_leak True; True}; }
     .case "flip_header"   then { b := {flip_header};      }
-    .case "nyi"           then { b := {"FILE_KEY: Not yet implemented.".println; TRUE}; }
+    .case "nyi"           then { b := {"FILE_KEY: Not yet implemented.".println; True}; }
     .case "open"          then { b := {open_file};        }
     .case "save"          then { b := {save_file};        }
     .case "save_as"       then { b := {save_as};          }
@@ -28,13 +27,13 @@ Public
     .case "go_line"       then { b := {go_line};          }
     .case "new_line"      then { b := {new_line};         }
     .case "next_line"     then { b := {next_line};        }
-    .case "go_next_line"  then { b := {go_next_line FALSE}; }
-    .case "go_prev_line"  then { b := {go_prev_line FALSE}; }
+    .case "go_next_line"  then { b := {go_next_line False}; }
+    .case "go_prev_line"  then { b := {go_prev_line False}; }
     .case "about"         then { b := {about_cmd};         }
-    .case "font_app_up"   then { b := {FONT.inc_size_app (+1)}; }
-    .case "font_app_down" then { b := {FONT.inc_size_app (-1)}; }
-    .case "font_sys_up"   then { b := {FONT.inc_size_sys (+1)}; }
-    .case "font_sys_down" then { b := {FONT.inc_size_sys (-1)}; }
+    .case "font_app_up"   then { b := {Font.inc_size_app (+1)}; }
+    .case "font_app_down" then { b := {Font.inc_size_app (-1)}; }
+    .case "font_sys_up"   then { b := {Font.inc_size_sys (+1)}; }
+    .case "font_sys_down" then { b := {Font.inc_size_sys (-1)}; }
     .case "sound_switch"  then { b := {set_sound (!sound)}; }
     .case "decorated_switch" then { b := {set_decorated (!decorated)}; }
     .case "extend_code_sw"  then { b := {set_extend_code (!extend_code)}; } // Lisaac only
@@ -65,12 +64,12 @@ Public
     .case "go_point"      then { b := {go_point};           }
     .case "go_top"        then { b := {go_top};             }
     .case "go_eof"        then { b := {go_eof};             }
-    .case "go_next_word"  then { b := {go_next_word FALSE}; }
-    .case "go_prev_word"  then { b := {go_prev_word FALSE}; }
+    .case "go_next_word"  then { b := {go_next_word False}; }
+    .case "go_prev_word"  then { b := {go_prev_word False}; }
     .case "go_up_pg"      then { b := {go_up_pg};           }
     .case "go_down_pg"    then { b := {go_down_pg};         }
-    .case "go_beg_line"   then { b := {go_beg_line FALSE};  }
-    .case "go_end_line"   then { b := {go_end_line FALSE};  }
+    .case "go_beg_line"   then { b := {go_beg_line False};  }
+    .case "go_end_line"   then { b := {go_end_line False};  }
     .case "go_next_char"  then { b := {go_next_char};  }
     .case "go_prev_char"  then { b := {go_prev_char};  }
     .case "suppr_char"    then { b := {suppr_cmd};     }
@@ -79,87 +78,87 @@ Public
     .case "end_macro"     then { b := {end_macro};     }
     .case "call_macro"    then { b := {call_macro};    }
     .case "repeater"      then { b := {repeater};      }*/    
-    .case "cmd_listfile"  then { b := {CMD_FILE.listfile};  }
-    .case "cmd_cut"       then { b := {CMD_FILE.cut};       }
+    .case "cmd_listfile"  then { b := {Cmd_file.listfile};  }
+    .case "cmd_cut"       then { b := {Cmd_file.cut};       }
     .case "cmd_exp_word"  then { b := {cmd_cur.exp_word};   }
     .case "cmd_paste"     then { b := {cmd_cur.paste};      }
-    .case "cmd_to_next"   then { b := {CMD_SEARCH.to_next}; }
-    .case "cmd_switch"    then { b := {CMD_SEARCH.switch};  }
-    .case "cmd_to_prev"   then { b := {CMD_SEARCH.to_prev}; }
-    .case "cmd_stop"      then { b := {CMD_SEARCH.action};  }
+    .case "cmd_to_next"   then { b := {Cmd_search.to_next}; }
+    .case "cmd_switch"    then { b := {Cmd_search.switch};  }
+    .case "cmd_to_prev"   then { b := {Cmd_search.to_prev}; }
+    .case "cmd_stop"      then { b := {Cmd_search.action};  }
     .case "cmd_cancel"    then { b := {cmd_cur.cancel};     }
-    .case "cmd_rep_one"   then { b := {CMD_REPLACE.rep_one};}
-    .case "cmd_rep_skip"  then { b := {CMD_REPLACE.to_next};}
-    .case "cmd_rep_all"   then { b := {CMD_REPLACE.rep_all};}
-    .case "cmd_exp_next"  then { b := {CMD_EXPANSION.to_next};}
-    .case "cmd_exp_prev"  then { b := {CMD_EXPANSION.to_prev};}
-    = STRING_ALIAS, b
+    .case "cmd_rep_one"   then { b := {Cmd_replace.rep_one};}
+    .case "cmd_rep_skip"  then { b := {Cmd_replace.to_next};}
+    .case "cmd_rep_all"   then { b := {Cmd_replace.rep_all};}
+    .case "cmd_exp_next"  then { b := {Cmd_expansion.to_next};}
+    .case "cmd_exp_prev"  then { b := {Cmd_expansion.to_prev};}
+    = String_alias, b
   )
   
-  - function c0:STRING_ALIAS with_str :(BOOLEAN,{STRING_ALIAS; BOOLEAN}) <-
-  ( + b:{STRING_ALIAS; BOOLEAN}
+  - function c0:String_alias with_str :(Boolean,{String_alias; Boolean}) <-
+  ( + b:{String_alias; Boolean}
     c0
     .case "insert" then {
-      b := { s:STRING_ALIAS; insert s}
+      b := { s:String_alias; insert s}
     }
-    = STRING_ALIAS, b
+    = String_alias, b
   )
   
-  - function c0:STRING_ALIAS with_int :(BOOLEAN,{INTEGER; BOOLEAN}) <-
-  ( + b:{INTEGER; BOOLEAN}
+  - function c0:String_alias with_int :(Boolean,{Int; Boolean}) <-
+  ( + b:{Int; Boolean}
     c0
     .case "del_char" then {
-      b := { n:INTEGER; del_char n}
+      b := { n:Int; del_char n}
     }
-    = STRING_ALIAS, b
+    = String_alias, b
   )
   
-  - function c0:STRING_ALIAS check :(BOOLEAN,{ACT; BOOLEAN}) <-
-  ( + b:{ACT; BOOLEAN}
+  - function c0:String_alias check :(Boolean,{Act; Boolean}) <-
+  ( + b:{Act; Boolean}
     c0
-    .case "sound_check" then { b := {a:ACT; sound}; }
-    .case "decorated_check" then { b := {a:ACT; decorated}; }
-    .case "extend_code_check" then { b := {a:ACT; extend_code}; } // Lisaac Only
-    .case "auto_indent_check" then { b := {a:ACT; auto_indent}; } // Lisaac Only
-    .case "vkeyb_check" then { b := {a:ACT; vkeyb}; }
-    .case "help_check"  then { b := {a:ACT; help};  }
-    = STRING_ALIAS, b
+    .case "sound_check" then { b := {a:Act; sound}; }
+    .case "decorated_check" then { b := {a:Act; decorated}; }
+    .case "extend_code_check" then { b := {a:Act; extend_code}; } // Lisaac Only
+    .case "auto_indent_check" then { b := {a:Act; auto_indent}; } // Lisaac Only
+    .case "vkeyb_check" then { b := {a:Act; vkeyb}; }
+    .case "help_check"  then { b := {a:Act; help};  }
+    = String_alias, b
   )
   
-  - read:BOOLEAN <-
-  ( + pth:STRING_ALIAS
-    + result:BOOLEAN
-    SUBACT.dico.clear
-    MENU.list.clear
-    SHORTCUT.set_list shortcuts
+  - read:Boolean <-
+  ( + pth:String_alias
+    + result:Boolean
+    Subact.dico.clear
+    Menu.list.clear
+    Shortcut.set_list shortcuts
     shortcuts.clear
     buftxt.clear
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       tmp.copy shortcut_file
       tmp.append ".key"
       pth := tmp.to_string_alias
     }
-    ACT.set_read_func { + r:ACT
-      + b0:{BOOLEAN}
-      + b1:{STRING_ALIAS; BOOLEAN}
-      + bn:{INTEGER; BOOLEAN}
-      + ok:BOOLEAN
-      + c0,c1:STRING_ALIAS
-      + cn:INTEGER;
+    Act.set_read_func { + r:Act
+      + b0:{Boolean}
+      + b1:{String_alias; Boolean}
+      + bn:{Int; Boolean}
+      + ok:Boolean
+      + c0,c1:String_alias
+      + cn:Int;
     
       (read_str '\"').if {
         c0 := last_str
         (ok,b0) := function c0
         (ok).if {
-          r := ACT0.new.fn b0
+          r := Act0.new.fn b0
         } else {
           (read_str '\"').if {
             c1 := last_str
             (ok,b1) := function c0 with_str
             (ok).if {
-              r := ACT1 STRING_ALIAS.new.fn b1 val c1
+              r := Act1 String_alias.new.fn b1 val c1
             } else {
-              STRING.tmp { err:STRING_BUFFER
+              String.tmp { err:String_buffer
                 err # "Instruction `" # c0 # " \"" # c1 # "\"' invalid."
                 err semantic msg err
               }
@@ -168,15 +167,15 @@ Public
             cn := last_int
             (ok,bn) := function c0 with_int
             (ok).if {
-              r := ACT1 INTEGER.new.fn bn val cn
+              r := Act1 Int.new.fn bn val cn
             } else {
-              STRING.tmp { err:STRING_BUFFER
+              String.tmp { err:String_buffer
                 err # "Instruction `" # c0 # " \"" # cn # "\"' invalid."
                 err semantic msg err
               }
             }
           } else {
-            STRING.tmp { err:STRING_BUFFER
+            String.tmp { err:String_buffer
               err # "Instruction `" # c0 # "' invalid."
               err semantic msg err
             }
@@ -184,9 +183,9 @@ Public
         }
       }
       r
-    } read_check { a:ACT
-      + b0:{ACT; BOOLEAN}
-      + ok:BOOLEAN
+    } read_check { a:Act
+      + b0:{Act; Boolean}
+      + ok:Boolean
       (read_str '\"').if {
         (ok,b0) := function last_str check
         (ok).if {
@@ -196,20 +195,20 @@ Public
         }
       } else { err semantic msg "Instruction check not found."; }
     }
-    SYSTEM_IO.read_asset pth in_txt buftxt
+    System_io.read_asset pth in_txt buftxt
     result := read pth src buftxt
-    SHORTCUT.sort
-    ICON.update
+    Shortcut.sort
+    Icon.update
     result
   )
   
-  - object id:STRING_ALIAS :BOOLEAN <-
+  - object id:String_alias :Boolean <-
   (
     id
-    .case "KEYMAP"   then { VKEYB.read;      }    
-    .case "MENU"     then { MENU.new.read;   }
-    .case "ACT"      then { ACT.new_read;    }
-    .case "SUBACT"   then { SUBACT.new.read; }
-    = STRING_ALIAS
+    .case "KEYMAP"   then { Vkeyb.read;      }    
+    .case "MENU"     then { Menu.new.read;   }
+    .case "ACT"      then { Act.new_read;    }
+    .case "SUBACT"   then { Subact.new.read; }
+    = String_alias
   )
     

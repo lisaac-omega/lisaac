@@ -1,23 +1,20 @@
 Header
-
-  + name    := TYPES_TMP;
-
-  /*Aliser TYPE collection.*/
-
+  + name := Types_tmp
+/*Aliser TYPE collection.*/
 Inherit
 
-  + parent_types_set:Expanded TYPES_SET
+  + parent_types_set:Flat Types_set
 
 Private
 
-  - bucket:ARRAY (Strict TYPES_SET) := ARRAY (Strict TYPES_SET).create_with_capacity 3000; // BSBS: A mettre dans TYPES_SET
+  - bucket:Array (Exact Types_set) := Array (Exact Types_set).create_with_capacity 3000; // BSBS: A mettre dans TYPES_SET
 
-  - free_list:ARRAY TYPES_TMP := ARRAY TYPES_TMP.create_with_capacity 200
+  - free_list:Array Types_tmp := Array Types_tmp.create_with_capacity 200
 
-  + capacity:INTEGER
+  + capacity:Int
 
-  - create_types_tmp:TYPES_TMP <-
-  ( + result:TYPES_TMP
+  - create_types_tmp:Types_tmp <-
+  ( + result:Types_tmp
 
     result := clone
     result.make_types_tmp
@@ -28,16 +25,16 @@ Private
   (
     count := 0
     capacity := 128
-    storage  := NATIVE_ARRAY TYPE .calloc_intern capacity
+    storage  := C_array Type .calloc_intern capacity
   )
   [ +? {is_empty}; ]
 
 Public
 
   - print_all <-
-  ( + t:TYPES
+  ( + t:Types
     
-    (bucket.lower).to (bucket.upper) do { j:INTEGER
+    (bucket.lower).to (bucket.upper) do { j:Int
       t := bucket.at j
       t.types_print
       '\n'.print
@@ -46,14 +43,14 @@ Public
 
 Public
 
-  - types_empty:TYPES := TYPES_SET
+  - types_empty:Types := Types_set
 
   //
   // Creation.
   //
   
-  - new:TYPES_TMP <-
-  ( + result:TYPES_TMP
+  - new:Types_tmp <-
+  ( + result:Types_tmp
     
     (free_list.is_empty).if {
       result := create_types_tmp
@@ -64,11 +61,11 @@ Public
     result
   )
 
-  - update t:TYPES :TYPES <-
+  - update t:Types :Types <-
   [
-    -? { + tmp:TYPES_TMP; tmp ?= t; tmp = NULL}
+    -? { + tmp:Types_tmp; tmp ?= t; tmp = NULL}
   ]
-  ( + result:TYPES
+  ( + result:Types
 
     ((t != NULL) && {t.count = count}).if {
       result := t
@@ -79,10 +76,10 @@ Public
     result
   )
 
-  - to_types:TYPES <-
-  ( + result:TYPES
-    + nw,t:Strict TYPES_SET
-    + j,i:INTEGER
+  - to_types:Types <-
+  ( + result:Types
+    + nw,t:Exact Types_set
+    + j,i:Int
 
     (is_empty).if {
       result := types_empty
@@ -93,7 +90,7 @@ Public
       }/*.elseif {(count = 2) && {first = TYPE_NULL}} then {
         result := at 1.types_with_null
         (result = NULL).if {
-          t := TYPES_SET.create Self
+          t := TYPES_SET.create self
           at 1.set_types_with_null t
           result := t
         }
@@ -111,7 +108,7 @@ Public
           j := j + 1
         }
         (result = NULL).if {
-          nw := TYPES_SET.create Self
+          nw := Types_set.create self
           ? {nw != NULL}
           bucket.add_last nw
           result := nw
@@ -130,52 +127,52 @@ Public
   - free <-
   (
     clear
-    free_list.add_last Self
+    free_list.add_last self
   )
 
   //
   // Update list.
   //
   
-  - remove i:INTEGER <-
+  - remove i:Int <-
   ( 
-    (i+1).to (count-1) do { j:INTEGER
+    (i+1).to (count-1) do { j:Int
       storage.put (at j) to (j - 1)
     }
     count := count - 1
   )
 
-  - add t:TYPE <-
-  ( + idx:INTEGER
+  - add t:Type <-
+  ( + idx:Int
 
     (is_empty).if {
       add_last t
     } else {
       idx := search t from 0 to count
       (idx = count).if {
-	add_last t
+        add_last t
       }.elseif {at idx != t} then {
-	add t to idx
+        add t to idx
       }
     }
     (order_test).if_false { "MERDE!\n".print; }
   )
     
-  - union other:TYPES <-
-  ( + idx1,idx2,t2idx:INTEGER
-    + t2:TYPE
+  - union other:Types <-
+  ( + idx1,idx2,t2idx:Int
+    + t2:Type
     
     {idx2 = other.count}.until_do {
       t2    := other.at idx2
       t2idx := t2.index
       {(idx1 < count) && {at idx1.index < t2idx}}.while_do {
-	idx1 := idx1 + 1
+        idx1 := idx1 + 1
       }
       {(idx1 < count) && {at idx1.index = t2idx} && {at idx1 != t2}}.while_do {
         idx1 := idx1 + 1
       }
       ((idx1 = count) || {at idx1 != t2}).if {
-	add t2 to idx1
+        add t2 to idx1
       }
       idx1 := idx1 + 1
       idx2 := idx2 + 1
@@ -185,8 +182,8 @@ Public
 
 Private
   
-  - add_last t:TYPE <-
-  ( + new_capacity:INTEGER
+  - add_last t:Type <-
+  ( + new_capacity:Int
 
     (count + 1 > capacity).if {
       new_capacity := capacity * 2
@@ -197,41 +194,41 @@ Private
     storage.put t to (count - 1)
   )
 
-  - add t:TYPE to index:INTEGER <-
-  ( + new_capacity:INTEGER
+  - add t:Type to index:Int <-
+  ( + new_capacity:Int
     (index = count).if {
       add_last t
     } else {
       (count > capacity - 1 ).if {
         new_capacity := capacity * 2
-	storage := storage.realloc capacity with new_capacity
-	capacity := new_capacity
+        storage := storage.realloc capacity with new_capacity
+        capacity := new_capacity
       }
       count := count + 1
-      (count - 2).downto index do { i:INTEGER
-	storage.put (at i) to (i + 1)
+      (count - 2).downto index do { i:Int
+        storage.put (at i) to (i + 1)
       }
       storage.put t to index
     }
   )
 
-  - search t:TYPE from beg:INTEGER to end:INTEGER :INTEGER <-
+  - search t:Type from beg:Int to end:Int :Int <-
   // Dichotomic research.
-  ( + middle,result:INTEGER
+  ( + middle,result:Int
 
     ((end - beg) < 2).if {
       (t.index > at beg.index).if {
-	result := end
+        result := end
       } else {
-	result := beg
+        result := beg
       }
     } else {
       middle := (beg + end) >> 1
      
       (t.index > at middle.index).if {
-	result := search t from middle to end
+        result := search t from middle to end
       }.elseif {t.index < at middle.index} then {
-	result := search t from beg to middle
+        result := search t from beg to middle
       } else {
         {(middle > beg) && {at middle.index = t.index}}.while_do {
           middle := middle - 1
@@ -245,8 +242,8 @@ Private
     result
   )
 
-  - order_test:BOOLEAN <-
-  ( + j:INTEGER
+  - order_test:Boolean <-
+  ( + j:Int
 
     {(j < count-1) && {at j.index <= at (j+1).index}}.while_do {
       j := j + 1

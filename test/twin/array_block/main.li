@@ -1,15 +1,14 @@
 Header
-  + name := MAIN;
-
+  + name := Main
 Public
 
   - main <-
-  ( + b1,b2:ARRAY_BLOCK CHARACTER
-    b1 := ARRAY_BLOCK CHARACTER .new
+  ( + b1,b2:Array_block Char
+    b1 := Array_block Char .new
     b1.add_last '2'
     b2 := b1.twin
-    TEST.check (b1.upper = b2.upper)
-    TEST.check (b1.first = b2.last)
-    UTILS.exit 0
+    Test.check (b1.upper = b2.upper)
+    Test.check (b1.first = b2.last)
+    Utils.exit 0
   )
 

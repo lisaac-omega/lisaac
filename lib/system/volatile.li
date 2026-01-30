@@ -1,6 +1,5 @@
 Header
-  + name := VOLATILE;
-  
+  + name := Volatile
 Public
   
   - eval x:X <- ( `asm volatile ("/* VOLATILE.eval */" : : "r"(@x))`; )

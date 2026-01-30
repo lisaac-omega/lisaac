@@ -1,41 +1,39 @@
 Header
-
-  + name    := STRING_CST;
-
-  /*String constant*/
+  + name := String_cst
+/*String constant*/
 Inherit
 
-  + parent_constant:Expanded CONSTANT
+  + parent_constant:Flat Constant
 
 Public
 
-  - output_str:STRING_BUFFER :=
-  ( + result:STRING_BUFFER
+  - output_str:String_buffer :=
+  ( + result:String_buffer
 
-    result := STRING_BUFFER.create 256
+    result := String_buffer.create 256
     title "STRING ALIAS" in result
     result
   )
   
-  - output_ext:STRING_BUFFER := STRING_BUFFER.create 256
-  - output_init:STRING_BUFFER := STRING_BUFFER.create 256
+  - output_ext:String_buffer := String_buffer.create 256
+  - output_init:String_buffer := String_buffer.create 256
 
-  - output_count:INTEGER
+  - output_count:Int
 
   // Value.
 
-  + string:STRING_ALIAS
+  + string:String_alias
 
   // Creation.  
 
-  - create p:POSITION text n:STRING_ALIAS length len:INTEGER :SELF<-
-  ( + result:SELF
+  - create p:Position text n:String_alias length len:Int :Self<-
+  ( + result:Self
     result := clone
     result.make p text n length len
     result
   )
 
-  - make p:POSITION text n:STRING_ALIAS length len:INTEGER <-
+  - make p:Position text n:String_alias length len:Int <-
   (
     position := p
     string   := n
@@ -43,12 +41,12 @@ Public
     static_type := type_string_alias.default
   )
 
-  - my_copy:SELF <- clone
+  - my_copy:Self <- clone
   
   // Comparaison.
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + p:STRING_CST
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + p:String_cst
     p ?= other
     (p != NULL) && {string = p.string}
   )
@@ -58,19 +56,19 @@ Public
   //
 
   - genere <-
-  ( + idx,count,cur:INTEGER
-    - is_init:BOOLEAN
-    - is_storage:BOOLEAN
-    - is_upper:BOOLEAN
-    - is_hashcode:BOOLEAN
+  ( + idx,count,cur:Int
+    - is_init:Boolean
+    - is_storage:Boolean
+    - is_upper:Boolean
+    - is_hashcode:Boolean
 
     (is_init).if_false {
       is_storage := type_string_alias.get_slot "storage"
       .slot_data_intern.ensure_count != 0
       is_upper   := type_string_alias.get_slot "upper"
       .slot_data_intern.ensure_count != 0
-      is_hashcode := (SLOT_DATA.data_hash_code_alias != NULL) && {SLOT_DATA.data_hash_code_alias.require_count > 0}
-      is_init := TRUE
+      is_hashcode := (Slot_data.data_hash_code_alias != NULL) && {Slot_data.data_hash_code_alias.require_count > 0}
+      is_init := True
     }
 
     count := dico_string.at string
@@ -126,13 +124,13 @@ Public
       //dico_string.fast_put (-idx) to string
       dico_string.at string put (-idx)
       //
-      (PROFIL_SLOT.profil_add_alias != NULL).if {
+      (Profil_slot.profil_add_alias != NULL).if {
         /*
         (PROFIL_SLOT.profil_hash_code_alias = NULL).if {
-          semantic_error (position,"Method slot `STRING_ALIAS.hash_code_intern' not found.");
+          semantic_error (position,"Method slot `String_alias.hash_code_intern' not found.");
         }
         (SLOT_DATA.data_hash_code_alias = NULL).if {
-          semantic_error (position,"Data slot `STRING_ALIAS.hash_code' not found.");
+          semantic_error (position,"Data slot `String_alias.hash_code' not found.");
         }
         // Test Static HashCode and Dynamic hashcode:
         output_init.append "  if ("
@@ -160,7 +158,7 @@ Public
         output_init.append ");\n  "
         */
         // Append in Aliaser:
-        output_init # "  " # PROFIL_SLOT.profil_add_alias.name # "(&__string_" # idx # ");\n"
+        output_init # "  " # Profil_slot.profil_add_alias.name # "(&__string_" # idx # ");\n"
       }
     } else {
       idx := -count
@@ -177,7 +175,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '\"'
     buffer.append string
@@ -187,4 +185,4 @@ Public
 
 Private
 
-  - dico_string:HMAP INTEGER KEY STRING_ALIAS := new HMAP INTEGER KEY STRING_ALIAS
+  - dico_string:Hmap Int Key String_alias := new Hmap Int Key String_alias

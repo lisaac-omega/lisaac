@@ -1,4 +1,3 @@
-Header  
-  + name := UINT8X8X2;
-  
+Header
+  + name := Uint8x8x2
 Public

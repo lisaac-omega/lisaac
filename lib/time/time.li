@@ -1,111 +1,109 @@
 Header
-  + name := Expanded  TIME;
+  + name := Flat  Time
+- type := `uint64_t`;
 
-  - type := `uint64_t`;
-
-  - default := `0`:TIME;
+  - default := `0`:Time;
 
   - include := `#include <time.h>
   #include <sys/time.h>`;
-  
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
     
-  - to_raw:UINTEGER_32 <-
+  - to_raw:Uint32 <-
   (
-    CAST SELF TO UINTEGER_32.on Self
+    Cast Self To Uint32.on self
   )
 
 Public
   
-  - gettimeofday:UINTEGER_64 <-
-  ( + s:UINTEGER_64
-    + us:INTEGER_64
+  - gettimeofday:Uint64 <-
+  ( + s:Uint64
+    + us:Int64
     `{ struct timeval tv`
     `gettimeofday(&tv,NULL)`
-    s := `tv.tv_sec`:UINTEGER_64
-    us := `tv.tv_usec`:INTEGER_64
+    s := `tv.tv_sec`:Uint64
+    us := `tv.tv_usec`:Int64
     `}`
-    s*1_000_000 + ((us >= 0).ok us or 0).to_uinteger_64
+    s*1_000_000 + ((us >= 0).ok us or 0).to_uint64
   )
     
-  - hour:UINTEGER_8 <-
+  - hour:Uint8 <-
   (
-    (to_raw >> 24).to_uinteger_8
+    (to_raw >> 24).to_uint8
   )
 
-  - minute:UINTEGER_8 <-
+  - minute:Uint8 <-
   (
-    ((to_raw & 0FF0000h) >> 16).to_uinteger_8
+    ((to_raw & 0FF0000h) >> 16).to_uint8
   )
 
-  - second:UINTEGER_8 <-
+  - second:Uint8 <-
   (
-    ((to_raw & 0FF00h) >> 8).to_uinteger_8
+    ((to_raw & 0FF00h) >> 8).to_uint8
   )
 
-  - csecond:UINTEGER_8 <-
+  - csecond:Uint8 <-
   (
-    (to_raw & 0FFh).to_uinteger_8
+    (to_raw & 0FFh).to_uint8
   )
 
 Public
 
-  - Self:SELF '>' Right 60 other:SELF :BOOLEAN <- to_raw > other.to_raw
+  - self:Self '>' Right 60 other:Self :Boolean <- to_raw > other.to_raw
 
-  - Self:SELF '<' Right 60 other:SELF :BOOLEAN <- to_raw < other.to_raw
+  - self:Self '<' Right 60 other:Self :Boolean <- to_raw < other.to_raw
 
-  - Self:SELF '>=' Right 60 other:SELF :BOOLEAN <- to_raw >= other.to_raw
+  - self:Self '>=' Right 60 other:Self :Boolean <- to_raw >= other.to_raw
 
-  - Self:SELF '<=' Right 60 other:SELF :BOOLEAN <- to_raw <= other.to_raw
+  - self:Self '<=' Right 60 other:Self :Boolean <- to_raw <= other.to_raw
 
-  - to_csecond:INTEGER <- hour.to_integer * (60*60*100) + 
-minute.to_integer * (60*100) + 
-second.to_integer * 100 + 
+  - to_csecond:Int <- hour.to_int * (60*60*100) + 
+minute.to_int * (60*100) + 
+second.to_int * 100 + 
 csecond
 
-  - Self:SELF '-' Right 60 other:SELF :SELF <-
+  - self:Self '-' Right 60 other:Self :Self <-
   (
-    create_csecond (Self -# other)
+    create_csecond (self -# other)
   )
 
   // BSBS: A uniformiser -# +# ???
 
-  - Self:SELF '-#' Right 60 other:SELF :INTEGER <- to_csecond - other.to_csecond
+  - self:Self '-#' Right 60 other:Self :Int <- to_csecond - other.to_csecond
 
-  - Self:SELF '+#' Right 60 other:INTEGER :TIME <-
+  - self:Self '+#' Right 60 other:Int :Time <-
   (
     create_csecond (to_csecond + other)
   )
   
-  - now:TIME <-
-  ( + res:SELF
+  - now:Time <-
+  ( + res:Self
     `{time_t t = time(NULL)`
     `struct tm *c = localtime(&t)`
-    res := create (`c->tm_hour`:INTEGER,`c->tm_min`:INTEGER,`c->tm_sec`:INTEGER,0)
+    res := create (`c->tm_hour`:Int,`c->tm_min`:Int,`c->tm_sec`:Int,0)
     `}`
     res
   )
  
-  - create (h,m,s,cs:INTEGER) :TIME <-
-  ( + t:UINTEGER_32
+  - create (h,m,s,cs:Int) :Time <-
+  ( + t:Uint32
     ? {h.in_range 0 to 23}
     ? {m.in_range 0 to 59}
     ? {s.in_range 0 to 59}
     ? {cs.in_range 0 to 99}
     
     
-    t := h.to_uinteger_32 <<24
-    t := t | (m.to_uinteger_32 << 16)
-    t := t | (s.to_uinteger_32 << 8)
+    t := h.to_uint32 <<24
+    t := t | (m.to_uint32 << 16)
+    t := t | (s.to_uint32 << 8)
     t := t | cs
-    CAST UINTEGER_32 TO SELF.on t
+    Cast Uint32 To Self.on t
   )
 
-  - create_csecond csec:INTEGER :SELF <-
-  ( + h,m,s,cs,diff:INTEGER
+  - create_csecond csec:Int :Self <-
+  ( + h,m,s,cs,diff:Int
 
     diff := csec
     h := diff / (60*60*100)
@@ -118,7 +116,7 @@ csecond
     create (h,m,s,cs)
   )
 
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     hour.append_in b format 2 with '0'
     b.add_last ':'
@@ -129,21 +127,21 @@ csecond
     csecond.append_in b format 2 with '0'
   )
   
-  - append_hhmmss_in b:STRING_BUFFER <-
+  - append_hhmmss_in b:String_buffer <-
   (
     hour  .append_in b format 2 with '0'
     minute.append_in b format 2 with '0'
     second.append_in b format 2 with '0'
   )
   
-  - append_hhmm_in b:STRING_BUFFER <-
+  - append_hhmm_in b:String_buffer <-
   (
     hour  .append_in b format 2 with '0'
     b.add_last 'h'
     minute.append_in b format 2 with '0'
   )
 
-  - append_short_in b:STRING_BUFFER <-
+  - append_short_in b:String_buffer <-
   (
     hour.append_in b format 2 with '0'
     b.add_last ':'

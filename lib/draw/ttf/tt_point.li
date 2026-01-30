@@ -1,20 +1,18 @@
 Header
-  
-  + name := Expanded TT_POINT;
-  
+  + name := Flat Tt_point
 Insert
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Mapping,Public
   
-  + x:REAL_32
-  + y:REAL_32
+  + x:Real32
+  + y:Real32
   
-  - make (px,py:REAL_32) :TT_POINT <- 
+  - make (px,py:Real32) :Tt_point <- 
   (
     (x,y) := (px,py)
-    TT_POINT
+    Tt_point
   )
   
 Public

@@ -1,35 +1,33 @@
 Header
-  
-  + name := FONS_ATLAS;
-
+  + name := Fons_atlas
 Inherit
   
-  - parent_fontstash:FONTSTASH := FONTSTASH
+  - parent_fontstash:Fontstash := Fontstash
   
 Public
 
-  + width:INTEGER
-  + height:INTEGER
-  + nodes:ARRAY FONS_ATLAS_NODE
+  + width:Int
+  + height:Int
+  + nodes:Array Fons_atlas_node
   
-  - create (w,h:INTEGER) capacity nnodes:INTEGER :SELF <-
-  ( + result:SELF
+  - create (w,h:Int) capacity nnodes:Int :Self <-
+  ( + result:Self
     
     result := clone
     result.make (w,h) capacity nnodes
     result
   )
     
-  - make (w,h:INTEGER) capacity nnodes:INTEGER <- 
+  - make (w,h:Int) capacity nnodes:Int <- 
   (    
     (width,height) := (w,h)
     // Allocate space for skyline nodes
     (nnodes != 0).if {
-      nodes := ARRAY FONS_ATLAS_NODE.create_with_capacity nnodes
+      nodes := Array Fons_atlas_node.create_with_capacity nnodes
     }
     // Init root node.
     nodes.add_last (
-      FONS_ATLAS_NODE.create (0,0) width (w.to_integer_16)
+      Fons_atlas_node.create (0,0) width (w.to_int16)
     )
   )
   
@@ -43,20 +41,20 @@ Private
     //free(atlas)
   )
   
-  - insert_node (x,y,w:INTEGER) to idx:INTEGER <-
+  - insert_node (x,y,w:Int) to idx:Int <-
   (     
     ? {x+w <= width}
-    nodes.at idx add (FONS_ATLAS_NODE.create (x,y) width w)
+    nodes.at idx add (Fons_atlas_node.create (x,y) width w)
   )
 
-  - remove_node idx:INTEGER <-
+  - remove_node idx:Int <-
   (
     //"Remove line\n".print
     nodes.at idx.free
     nodes.remove idx
   )
 
-  - expand (w,h:INTEGER) <-
+  - expand (w,h:Int) <-
   (
     "Expand...\n".print
     // Insert node for empty space
@@ -66,9 +64,9 @@ Private
     (width,height) := (w,h)
   )
 
-  - add_skyline_level (idx,x,y,w,h:INTEGER) <-
-  ( + i:INTEGER
-    + break:BOOLEAN
+  - add_skyline_level (idx,x,y,w,h:Int) <-
+  ( + i:Int
+    + break:Boolean
     // Insert new node    
     insert_node (x,y+h,w) to idx
     
@@ -76,18 +74,18 @@ Private
     i := idx+1
     {(i < nodes.count) && {! break}}.while_do {
       (nodes.at i.x < nodes.at (i-1).x + nodes.at (i-1).width).if {
-        + shrink:INTEGER
+        + shrink:Int
         shrink := nodes.at (i-1).x + nodes.at (i-1).width - nodes.at i.x
-        nodes.at i.set_x ((nodes.at i.x+shrink).to_integer_16)
-        nodes.at i.set_width ((nodes.at i.width-shrink).to_integer_16)
+        nodes.at i.set_x ((nodes.at i.x+shrink).to_int16)
+        nodes.at i.set_width ((nodes.at i.width-shrink).to_int16)
         (nodes.at i.width <= 0).if {
           remove_node i
           i := i - 1
         } else {
-          break := TRUE
+          break := True
         }
       } else {
-        break := TRUE
+        break := True
       }
       i := i + 1
     }
@@ -106,7 +104,7 @@ Private
   
 Public
   
-  - reset (w,h:INTEGER) <-
+  - reset (w,h:Int) <-
   (
     //"reset\n".print
     (width,height) := (w,h)
@@ -114,12 +112,12 @@ Public
 
     // Init root node.
     nodes.add_last (
-      FONS_ATLAS_NODE.create (0,0) width (w.to_integer_16)
+      Fons_atlas_node.create (0,0) width (w.to_int16)
     )
   )
   
-  - rect_fits (pi,w,h:INTEGER) :INTEGER <-
-  ( + result,x,y,space_left,i:INTEGER
+  - rect_fits (pi,w,h:Int) :Int <-
+  ( + result,x,y,space_left,i:Int
     // Checks if there is enough space at the location of skyline span 'i',
     // and return the max height of all skyline spans under that at that location,
     // (think tetris block being dropped at that position). Or -1 if no space found.
@@ -160,8 +158,8 @@ Public
     result
   )
 
-  - add_rect (rw,rh:INTEGER) :(INTEGER,INTEGER) <-
-  ( + besth,bestw,besti,bestx,besty:INTEGER
+  - add_rect (rw,rh:Int) :(Int,Int) <-
+  ( + besth,bestw,besti,bestx,besty:Int
     
     (besth,bestw) := (height,width)
     besti := bestx := besty := -1
@@ -170,8 +168,8 @@ Public
     //"rh:".print; rh.print; " (".print; height.print; ") ".print; '\n'.print
     ? {! nodes.is_empty}
     // Bottom left fit heuristic.
-    0.to (nodes.upper) do { i:INTEGER
-      + y:INTEGER
+    0.to (nodes.upper) do { i:Int
+      + y:Int
       y := rect_fits (i, rw, rh)
       //nodes.at i.print; '\n'.print
       (y != -1).if {

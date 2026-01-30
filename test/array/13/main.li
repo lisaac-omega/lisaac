@@ -1,18 +1,17 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
   
-  + bidon:ARRAY INTEGER
+  + bidon:Array Int
     
   - main <-
-  ( + sto1,sto2:NATIVE_ARRAY INTEGER
-    + other:MAIN
-    + v:INTEGER
-    bidon := ARRAY INTEGER .create_with_capacity 2
+  ( + sto1,sto2:C_array Int
+    + other:Main
+    + v:Int
+    bidon := Array Int .create_with_capacity 2
     bidon.add_last 1
     other := clone
     ? {other.bidon.upper = 0}.txt {other.bidon.upper.to_string}

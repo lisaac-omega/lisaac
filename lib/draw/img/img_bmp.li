@@ -1,30 +1,29 @@
 Header
-  + name := IMG_BMP;
-  /*Microbite - Windobe BMP image*/
-  
+  + name := Img_bmp
+/*Microbite - Windobe BMP image*/
 Inherit  
-  + parent_image:Expanded IMAGE
+  + parent_image:Flat Image
   
 Private
   
-  - pal:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create 1024
+  - pal:C_array Uint8 := C_array Uint8.create 1024
   
 Private
   
-  + bpp:INTEGER
-  + offset:INTEGER
-  + hsz:INTEGER
-  + mr:UINTEGER_32
-  + mg:UINTEGER_32
-  + mb:UINTEGER_32
-  + ma:UINTEGER_32
-  + all_a:UINTEGER_8
+  + bpp:Int
+  + offset:Int
+  + hsz:Int
+  + mr:Uint32
+  + mg:Uint32
+  + mb:Uint32
+  + ma:Uint32
+  + all_a:Uint8
   
 Public
   
-  - name:STRING_ALIAS := "BMP - BitMaP (Microdobe & IBM)"
+  - name:String_alias := "BMP - BitMaP (Microdobe & IBM)"
   
-  - test:BOOLEAN <-
+  - test:Boolean <-
   ( 
     rewind
     (get8 = 'B') && {get8 = 'M'} && {
@@ -37,14 +36,14 @@ Public
     }
   )
   
-  - info:BOOLEAN <-
+  - info:Boolean <-
   ( 
     all_a := 255
     parse_header
   )
 
-  - parse_header:BOOLEAN <-
-  ( + result:BOOLEAN
+  - parse_header:Boolean <-
+  ( + result:Boolean
     (test).if {
       (hsz = 12).if {
         img_x := get16le
@@ -57,11 +56,11 @@ Public
       ((get16le != 1) || {(bpp := get16le) = 1}).if { 
         error := "bad BMP"
       } else {
-        result := TRUE
+        result := True
         //"bpp=".print; bpp.println
         //"hsz=".print; hsz.println
         (hsz != 12).if {
-          + compress:INTEGER
+          + compress:Int
           compress := get32le
           //"compress: ".print; compress.println
           ((compress = 1) || {compress = 2}).if {
@@ -127,11 +126,11 @@ Public
     result
   )
 
-  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
-  ( + out:NATIVE_ARRAY UINTEGER_8
-    + psize,width,pad,target:INTEGER
-    + flip_vertically,r:BOOLEAN
-    + v,v2:INTEGER
+  - load req_comp:Int :C_array Uint8 <-
+  ( + out:C_array Uint8
+    + psize,width,pad,target:Int
+    + flip_vertically,r:Boolean
+    + v,v2:Int
  
     all_a := 255
     r := parse_header
@@ -150,14 +149,14 @@ Public
     } else {
       target := img_n; // if they want monochrome, we'll post-convert
     }
-    out := NATIVE_ARRAY UINTEGER_8.create (target * img_x * img_y)
+    out := C_array Uint8.create (target * img_x * img_y)
     (bpp < 16).if {
-      + z:INTEGER
+      + z:Int
       ((psize = 0) || {psize > 256}).if { 
         //STBI_FREE(out)
         crash_with_message "Corrupt BMP"
       }
-      0.to (psize-1) do { i:INTEGER
+      0.to (psize-1) do { i:Int
         pal.at (i*4+2) put get8
         pal.at (i*4+1) put get8
         pal.at (i*4+0) put get8
@@ -174,8 +173,8 @@ Public
         crash_with_message "Corrupt BMP"
       }
       pad := (-width)&3
-      0.to (img_y-1) do { j:INTEGER
-        from 0 to (img_x-1) step 2 do { i:INTEGER
+      0.to (img_y-1) do { j:Int
+        from 0 to (img_x-1) step 2 do { i:Int
           v := get8
           (bpp = 4).if {
             v2 := v & 15
@@ -190,7 +189,7 @@ Public
             out.at z put 255; z := z + 1
           }
           (i+1 != img_x).if {
-            v := (bpp != 8).ok v2 else { get8.to_integer }
+            v := (bpp != 8).ok v2 else { get8.to_int }
             out.at z put (pal.at (v*4+0)); z := z + 1
             out.at z put (pal.at (v*4+1)); z := z + 1
             out.at z put (pal.at (v*4+2)); z := z + 1
@@ -202,10 +201,10 @@ Public
         skip pad
       }
     } else {
-      + rshift,gshift,bshift,ashift,rcount,gcount,bcount,acount:INTEGER
-      + z:INTEGER
-      + easy:INTEGER
-      + a:UINTEGER_8
+      + rshift,gshift,bshift,ashift,rcount,gcount,bcount,acount:Int
+      + z:Int
+      + easy:Int
+      + a:Uint8
       skip (offset - 14 - hsz)
       (bpp = 24).if { 
         width := 3 * img_x
@@ -233,14 +232,14 @@ Public
         bshift := high_bit mb -7; bcount := bitcount mb
         ashift := high_bit ma -7; acount := bitcount ma
       }
-      0.to (img_y-1) do { j:INTEGER
+      0.to (img_y-1) do { j:Int
         (easy != 0).if {          
-          0.to (img_x-1) do { i:INTEGER
+          0.to (img_x-1) do { i:Int
             out.at (z+2) put get8
             out.at (z+1) put get8
             out.at (z+0) put get8
             z := z + 3
-            a := (easy != 2).ok (255.to_uinteger_8) else { get8 }
+            a := (easy != 2).ok (255.to_uint8) else { get8 }
             all_a := all_a | a
             (target = 4).if { 
               out.at z put a
@@ -248,16 +247,16 @@ Public
             }
           }
         } else {      
-          + val:UINTEGER_32
-          0.to (img_x-1) do { i:INTEGER
+          + val:Uint32
+          0.to (img_x-1) do { i:Int
             (bpp = 16).if { val := get16le; } else { val := get32le; }
             out.at z put (shiftsigned (val & mr) shift rshift bits rcount); z := z + 1
             out.at z put (shiftsigned (val & mg) shift gshift bits gcount); z := z + 1
             out.at z put (shiftsigned (val & mb) shift bshift bits bcount); z := z + 1
-            a := (ma = 0).ok (255.to_uinteger_8) else { shiftsigned (val & ma) shift ashift bits acount }
+            a := (ma = 0).ok (255.to_uint8) else { shiftsigned (val & ma) shift ashift bits acount }
             all_a := all_a | a
             (target = 4).if {
-              out.at z put (a.to_uinteger_8); z := z + 1
+              out.at z put (a.to_uint8); z := z + 1
             }
           }
         }
@@ -267,17 +266,17 @@ Public
    
     // if alpha channel is all 0s, replace with all 255s
     ((target = 4) && {all_a = 0}).if {
-      (4*img_x*img_y-1).downto 0 by 4 do { i:INTEGER
+      (4*img_x*img_y-1).downto 0 by 4 do { i:Int
         out.at i put 255
       }
     }
     (flip_vertically).if {
-      + t:UINTEGER_8
-      + p1,p2:NATIVE_ARRAY UINTEGER_8
-      0.to (img_y>>1 - 1) do { j:INTEGER
+      + t:Uint8
+      + p1,p2:C_array Uint8
+      0.to (img_y>>1 - 1) do { j:Int
         p1 := out +          j *img_x*target
         p2 := out + (img_y-1-j)*img_x*target
-        0.to (img_x*target-1) do { i:INTEGER; // BSBS: Mettre un swap
+        0.to (img_x*target-1) do { i:Int; // BSBS: Mettre un swap
           t := p1.at i
           p1.at i put (p2.at i)
           p2.at i put t
@@ -291,15 +290,15 @@ Public
     out
   )
   
-  - write filename:STRING_ALIAS to (x,y:INTEGER) format comp:INTEGER img data:NATIVE_ARRAY UINTEGER_8 :BOOLEAN <-
-  ( + pad:INTEGER
-    + f:POINTER
+  - write filename:String_alias to (x,y:Int) format comp:Int img data:C_array Uint8 :Boolean <-
+  ( + pad:Int
+    + f:Pointer
     
-    f := FILE_UTILS.open_write filename
+    f := File_utils.open_write filename
     // Header.
     pad := (-x*3) & 3
-    put8 ('B'.to_uinteger_8) to f
-    put8 ('M'.to_uinteger_8) to f
+    put8 ('B'.to_uint8) to f
+    put8 ('M'.to_uint8) to f
     put32 (14+40+(x*3+pad)*y) to f
     put32 0; // Reserved.
     put32 (14+40) to f
@@ -311,16 +310,16 @@ Public
     6.times { put32 0 to f; }
     // Image.
     write data rgb_dir (-1) v_dir (-1) size (x,y) type comp with_alpha 0 pad pad in f
-    FILE_UTILS.close f
-    TRUE
+    File_utils.close f
+    True
   )
   
 Private
   
-  - high_bit pz:UINTEGER_32 :INTEGER <-
+  - high_bit pz:Uint32 :Int <-
   // returns 0..31 for the highest set bit
-  ( + n:INTEGER
-    + z:UINTEGER_32
+  ( + n:Int
+    + z:Uint32
     z := pz
     (z = 0).if { n := -1; } else {
       (z >= 10000h).if { n := n + 16; z := z >> 16; }
@@ -332,19 +331,19 @@ Private
     n
   )
 
-  - bitcount pa:UINTEGER_32 :INTEGER <- // BSBS: A voir avec la lib...
-  ( + a:UINTEGER_32
+  - bitcount pa:Uint32 :Int <- // BSBS: A voir avec la lib...
+  ( + a:Uint32
     a := pa
     a := (a & 55555555h) + ((a >>  1) & 55555555h); // max 2
     a := (a & 33333333h) + ((a >>  2) & 33333333h); // max 4
     a := (a + (a >> 4)) & 0f0f0f0fh; // max 8 per 4, now 8 bits
     a := (a + (a >> 8));  // max 16 per 8 bits
     a := (a + (a >> 16)); // max 32 per 8 bits
-    (a & 0ffh).to_integer
+    (a & 0ffh).to_int
   )
 
-  - shiftsigned v:INTEGER shift shift:INTEGER bits bits:INTEGER :UINTEGER_8 <-
-  ( + result,z,vv:UINTEGER_8
+  - shiftsigned v:Int shift shift:Int bits bits:Int :Uint8 <-
+  ( + result,z,vv:Uint8
     (shift < 0).if { vv := v << -shift; } else { vv := v >> shift; }
     result := vv
     z := bits

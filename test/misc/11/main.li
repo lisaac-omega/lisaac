@@ -1,13 +1,11 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
-  + foo:INTEGER
+  + foo:Int
   
   - main <-
-  ( + foo:INTEGER
+  ( + foo:Int
     
     foo := 1; // qui c'est qui qu'on écrit ?
   )

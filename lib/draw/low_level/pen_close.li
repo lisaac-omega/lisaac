@@ -1,14 +1,12 @@
 Header
-  
-  + name := PEN_CLOSE;
-  
+  + name := Pen_close
 Inherit
   
-  + parent_pen_cmd:Expanded PEN_CMD
+  + parent_pen_cmd:Flat Pen_cmd
   
 Public
   
-  - to_path pc:PATH_CACHE <-
+  - to_path pc:Path_cache <-
   (
     pc.paths.last.close
   )
@@ -18,7 +16,7 @@ Public
     // Nothing.
   )
   
-  - svg_append_in buf:STRING_BUFFER <-
+  - svg_append_in buf:String_buffer <-
   (
     buf.add_last 'Z'
   )

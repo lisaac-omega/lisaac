@@ -1,20 +1,18 @@
 Header
-  
-  + name := CALL_TRIANGLES;
-  
+  + name := Call_triangles
 Inherit
   
-  + parent_pen_call_2d:Expanded PEN_CALL_2D
+  + parent_pen_call_2d:Flat Pen_call_2d
   
 Private
   
-  - stack:ARRAY CALL_TRIANGLES := ARRAY CALL_TRIANGLES.create_with_capacity 16
+  - stack:Array Call_triangles := Array Call_triangles.create_with_capacity 16
 
 Public
     
-  - create_image img:INTEGER path (pofs,pcnt:INTEGER) 
-  triangle (tofs,tcnt:INTEGER) uniform uofs:INTEGER :PEN_CALL_2D <-
-  ( + result:CALL_TRIANGLES
+  - create_image img:Int path (pofs,pcnt:Int) 
+  triangle (tofs,tcnt:Int) uniform uofs:Int :Pen_call_2d <-
+  ( + result:Call_triangles
     (stack.is_empty).if {
       result := clone
     } else {
@@ -27,7 +25,7 @@ Public
   
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - run_2d <- pen_gl.triangles Self
+  - run_2d <- pen_gl.triangles self

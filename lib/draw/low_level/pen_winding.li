@@ -1,21 +1,19 @@
-Header 
-  
-  + name := PEN_WINDING;
-  
+Header
+  + name := Pen_winding
 Inherit
   
-  + parent_pen_cmd:Expanded PEN_CMD
+  + parent_pen_cmd:Flat Pen_cmd
 
 Private
   
-  - stack:ARRAY PEN_WINDING := ARRAY PEN_WINDING.create_with_capacity 16
+  - stack:Array Pen_winding := Array Pen_winding.create_with_capacity 16
   
 Public
   
-  + direction:INTEGER
+  + direction:Int
   
-  - create dir:INTEGER :PEN_WINDING <-
-  ( + result:PEN_WINDING
+  - create dir:Int :Pen_winding <-
+  ( + result:Pen_winding
     (stack.is_empty).if {
       result := clone
     } else {
@@ -26,17 +24,17 @@ Public
     result
   )
   
-  - make dir:INTEGER <-
+  - make dir:Int <-
   (
     direction := dir
   )
   
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - to_path pc:PATH_CACHE <-
+  - to_path pc:Path_cache <-
   (
     pc.paths.last.set_winding direction
   )

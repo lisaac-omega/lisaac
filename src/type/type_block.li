@@ -1,35 +1,32 @@
 Header
-
-  + name    := TYPE_BLOCK;
-
-  /*Virtual type for BLOCK manager*/
-
+  + name := Type_block
+/*Virtual type for Block manager*/
 Inherit
 
-  + parent_type:Expanded TYPE
+  + parent_type:Flat Type
 
 Private
 
-  - dico:ARRAY TYPE_BLOCK := ARRAY TYPE_BLOCK .create_with_capacity 2048
+  - dico:Array Type_block := Array Type_block .create_with_capacity 2048
 
-TYPE_BLOCK //,PROFIL_BLOCK
+Type_block //,PROFIL_BLOCK
 
   //
   // Creation.
   //
 
-  - create a_list:ARRAY TYPE_FULL result r_list:ARRAY TYPE_FULL :SELF <-
-  ( + result:SELF
+  - create a_list:Array Type_full result r_list:Array Type_full :Self <-
+  ( + result:Self
     result := clone
     result.make a_list result r_list
     result
   )
 
-  - make a_list:ARRAY TYPE_FULL result r_list:ARRAY TYPE_FULL <-
+  - make a_list:Array Type_full result r_list:Array Type_full <-
   (
     argument_list := a_list
     result_list   := r_list
-    default := TYPE_FULL.create Self with 0
+    default := Type_full.create self with 0
   )
 
 Public
@@ -39,55 +36,55 @@ Public
     type_block.set_late_binding
   )
 
-  - intern_name:STRING_ALIAS <- type_block.intern_name
+  - intern_name:String_alias <- type_block.intern_name
 
-  - is_block:BOOLEAN := TRUE
+  - is_block:Boolean := True
   
-  + itm_block:ITM_BLOCK
-  + argument_list:ARRAY TYPE_FULL
-  + result_list:ARRAY TYPE_FULL
+  + itm_block:Itm_block
+  + argument_list:Array Type_full
+  + result_list:Array Type_full
 
-  - get_expr_for p:POSITION :EXPR <-
-  ( + result:EXPR
-    + lst:ARRAY EXPR
+  - get_expr_for p:Position :Expr <-
+  ( + result:Expr
+    + lst:Array Expr
 
     (result_list.count > 1).if {
-      lst := ARRAY EXPR.create_with_capacity (result_list.count)
-      (result_list.lower).to (result_list.upper) do { j:INTEGER
+      lst := Array Expr.create_with_capacity (result_list.count)
+      (result_list.lower).to (result_list.upper) do { j:Int
         lst.add_last (result_list.at j.get_temporary_expr p)
       }
-      result := EXPR_MULTIPLE.create lst
+      result := Expr_multiple.create lst
     }.elseif {result_list.count = 1} then {
       result := result_list.first.get_temporary_expr p
     } else {
-      result := PROTOTYPE_CST.create p type (TYPE_VOID.default)
+      result := Prototype_cst.create p type (Type_void.default)
     }
     result
   )
 
-  - get t:ITM_TYPE_BLOCK with p:PARAMETER_TO_TYPE :TYPE_FULL <-
-  ( + a_list:ARRAY TYPE_FULL
-    + r_list:ARRAY TYPE_FULL
+  - get t:Itm_type_block with p:Parameter_to_type :Type_full <-
+  ( + a_list:Array Type_full
+    + r_list:Array Type_full
 
     // Argument.
-    a_list := ALIAS_ARRAY TYPE_FULL.new
+    a_list := Alias_array Type_full.new
     (t.type_argument != NULL).if {
       t.type_argument.to_run_in a_list for p pos (p.position.prototype.filename)
     }
-    a_list := ALIAS_ARRAY TYPE_FULL.alias a_list
+    a_list := Alias_array Type_full.alias a_list
     // Result.
-    r_list := ALIAS_ARRAY TYPE_FULL.new
+    r_list := Alias_array Type_full.new
     (t.type_result != NULL).if {
       t.type_result.to_run_in r_list for p pos (p.position.prototype.filename)
     }
-    r_list := ALIAS_ARRAY TYPE_FULL.alias r_list
+    r_list := Alias_array Type_full.alias r_list
     //
     get_direct a_list result r_list.default
   )
 
-  - get_direct a_list:ARRAY TYPE_FULL result r_list:ARRAY TYPE_FULL :TYPE_BLOCK <-
-  ( + idx:INTEGER
-    + result:TYPE_BLOCK
+  - get_direct a_list:Array Type_full result r_list:Array Type_full :Type_block <-
+  ( + idx:Int
+    + result:Type_block
 
     idx := dico.lower
     {
@@ -107,11 +104,11 @@ Public
     result
   )
   
-  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
-  ( + result:BOOLEAN
-    + o:TYPE_BLOCK
-    + oo:PROFIL_BLOCK
-    + i:INTEGER
+  - self:Self '==' Right 60 other:E :Boolean <-
+  ( + result:Boolean
+    + o:Type_block
+    + oo:Profil_block
+    + i:Int
     oo ?= other
     (oo != NULL).if {
       o := oo.to_type_block
@@ -133,7 +130,7 @@ Public
       {result_list.count = o.result_list.count}
     ).if {
       //"Test arg & result...\n".print
-      result := TRUE
+      result := True
       i := argument_list.lower
       {(result) && {i <= argument_list.upper}}.while_do {
         result := argument_list.at i == o.argument_list.at i
@@ -167,63 +164,63 @@ Public
     result    
   )
   
-  - prototype:PROTOTYPE <- type_block.prototype
+  - prototype:Prototype <- type_block.prototype
 
-  - get_slot n:STRING_ALIAS :SLOT <-
+  - get_slot n:String_alias :Slot <-
   (
     type_block.get_slot n
   )
 
-  - get_local_slot n:STRING_ALIAS :SLOT <-
+  - get_local_slot n:String_alias :Slot <-
   (
     type_block.get_local_slot n
   )
 
-  - get_path_slot n:STRING_ALIAS :SLOT <-
+  - get_path_slot n:String_alias :Slot <-
   (
     type_block.get_path_slot n
   )
 
   - genere_struct <- type_block.genere_struct
 
-  - get_type_creation:TYPE <-
+  - get_type_creation:Type <-
   (
-    TYPE_CREATION(TYPE_BLOCK).create_type_creation Self
+    Type_creation(Type_block).create_type_creation self
   )
 
   //
   // Code source generation.
   //
 
-  - put_id buffer:STRING_BUFFER <- index.append_in buffer
+  - put_id buffer:String_buffer <- index.append_in buffer
 
-  - put_access_id e:EXPR <-
+  - put_access_id e:Expr <-
   (
     output.append "(int)"
     e.genere
   )
 
-  - put_value buffer:STRING_BUFFER <-
+  - put_value buffer:String_buffer <-
   (
     buffer.append "(void *)"
     index.append_in buffer
   )
 
-  - is_sub_type other:TYPE :BOOLEAN <-
-  ( + me:TYPE_BLOCK    
+  - is_sub_type other:Type :Boolean <-
+  ( + me:Type_block    
     me ?= other
     (me != NULL) && 
     {me.argument_list = argument_list} && 
     {me.result_list = result_list}
   )
 
-  - is_sub_type_result other:TYPE_BLOCK :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_sub_type_result other:Type_block :Boolean <-
+  ( + result:Boolean
+    + j:Int
     (result_list = other.result_list) || {
       (result_list != NULL) && {other.result_list != NULL} /* BSBS c'est jamais null*/ && 
       {result_list.count = other.result_list.count} && {
-        result := TRUE
+        result := True
         j := result_list.lower
         {(j <= result_list.upper) && {result}}.while_do {
           result := result_list.at j.is_sub_type (other.result_list.at j)
@@ -234,12 +231,12 @@ Public
     }
   )
   
-  - is_invariant_type_arg other:TYPE_BLOCK :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_invariant_type_arg other:Type_block :Boolean <-
+  ( + result:Boolean
+    + j:Int
     (argument_list = other.argument_list) || {      
       (argument_list.count = other.argument_list.count) && {
-        result := TRUE
+        result := True
         j := argument_list.lower
         {(j <= argument_list.upper) && {result}}.while_do {
           result := argument_list.at j == other.argument_list.at j
@@ -254,13 +251,13 @@ Public
   // Display.
   //
 
-  - append_name_in buf:STRING_BUFFER <-
+  - append_name_in buf:String_buffer <-
   (
     buf.add_last '{'
     (argument_list.is_empty).if_false {
       (argument_list.count > 1).if {
         buf.add_last '('
-        (argument_list.lower).to (argument_list.upper-1) do { j:INTEGER
+        (argument_list.lower).to (argument_list.upper-1) do { j:Int
           argument_list.at j.display buf
           buf.add_last ','
         }
@@ -273,7 +270,7 @@ Public
       buf.add_last ' '
     }
     (result_list.is_empty).if_false {
-      (result_list.lower).to (result_list.upper-1) do { j:INTEGER
+      (result_list.lower).to (result_list.upper-1) do { j:Int
         result_list.at j.display buf
         buf.add_last ','
       }

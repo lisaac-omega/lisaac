@@ -1,12 +1,12 @@
-Section Inherit
+Inherit
 
-  + parent:STRING;
+  + parent:String
 
-Section Private
+Private
   
-  + any:STRING;
+  + any:String
   
-  + is_valid:BOOLEAN;
+  + is_valid:Boolean
 
   //
   // Execute function.
@@ -15,40 +15,40 @@ Section Private
   - front_end <-
   (
     (input_file = "").if {
-      input_file := "lisaac";
-    };
+      input_file := "lisaac"
+    }
     (input_file = "lisaac").if {
-      any := "compiler";
+      any := "compiler"
     } else {
-      any := "lidoc";        
-    };    
-    path "./*";
+      any := "lidoc"
+    }
+    path "./*"
     (is_valid).if {
-      boost;
-    };       
-    general_front_end;
-  );
+      boost
+    }
+    general_front_end
+  )
 
   - back_end <-
   (
-    general_back_end;
+    general_back_end
     (is_valid).if {
       (any = "compiler").if {
-        execute "cp lisaac.c ../bin/.";
-        execute "cp lisaac ../bin/.";
+        execute "cp lisaac.c ../bin/."
+        execute "cp lisaac ../bin/."
       } else {
-        execute "cp lidoc.c ../bin/.";
-        execute "cp lidoc ../bin/.";
-      };      
-    };
-  );
+        execute "cp lidoc.c ../bin/."
+        execute "cp lidoc ../bin/."
+      }
+    }
+  )
 
-Section Public
+Public
   
   - valid <-
   // Compile the Lisaac compiler with `-boost' option and
   // update your `/bin' compiler version.
   (
-    is_valid := TRUE;
-  );
+    is_valid := True
+  )
 

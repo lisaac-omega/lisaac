@@ -1,16 +1,15 @@
 Header
-  + name := ACT0;
-  
+  + name := Act0
 Inherit
-  + parent_act:Expanded ACT
+  + parent_act:Flat Act
   
 Public
   
-  + func:{BOOLEAN}
+  + func:{Boolean}
   
-  - fn f:{BOOLEAN} :SELF <- ( func := f; Self)
+  - fn f:{Boolean} :Self <- ( func := f; self)
   
-  - run:BOOLEAN <-
+  - run:Boolean <-
   (
     parent_act.run
     func.value

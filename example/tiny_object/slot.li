@@ -1,25 +1,22 @@
 Header
-
-  + name      := SLOT;
-
-  /*The slot*/
-
+  + name := Slot
+/*The slot*/
 Inherit
 
-  - parent_instr:Expanded INSTR
+  - parent_instr:Flat Instr
 
 Public
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + local_list:HMAP LOCAL KEY STRING_ALIAS
+  + local_list:Hmap Local Key String_alias
 
-  + expr_list:LINKED_LIST EXPR
+  + expr_list:Linked_list Expr
 
   // -- VFT --
-  + index:INTEGER
+  + index:Int
 
-  - set_index idx:INTEGER <-
+  - set_index idx:Int <-
   (
     index := idx
   )
@@ -29,30 +26,30 @@ Public
   // Creation.
   //
 
-  - create p:INTEGER name n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Int name n:String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p name n
     result
   )
 
-  - make p:INTEGER name n:STRING_ALIAS <-
+  - make p:Int name n:String_alias <-
   (
     position  := p
     name      := n
-    expr_list := LINKED_LIST (EXPR) .new
+    expr_list := Linked_list (Expr) .new
   )
 
   //
   // Added.
   //
 
-  - set_local_list d:HMAP LOCAL KEY STRING_ALIAS <-
+  - set_local_list d:Hmap Local Key String_alias <-
   (
     local_list := d
   )
 
-  - add_expr e:EXPR <-
+  - add_expr e:Expr <-
   (
     expr_list.add_last e
   )
@@ -61,22 +58,23 @@ Public
   // Access.
   //
 
-  - get_local n:STRING_ALIAS :LOCAL <-
+  - get_local n:String_alias :Local <-
   (
-    local_list.fast_reference_at n
+ // local_list.fast_reference_at n
+    local_list.reference_at n
   )
 
   //
   // Run.
   //
 
-  - run t:CLASS <-
-  ( + this:LOCAL
+  - run t:Class <-
+  ( + this:Local
     // Fix dynamic type for This.
     this := get_local keyword_this
     this.set_the_dynamic_type t
     // Execute instr.
-    (expr_list.lower).to (expr_list.upper) do { i:INTEGER
+    (expr_list.lower).to (expr_list.upper) do { i:Int
       expr_list.at i.run
     }
   )
@@ -91,13 +89,13 @@ Public
     name.print
     " = \n".print
     "  ( ".print
-    (local_list.lower).to (local_list.upper-1) do { i:INTEGER
+    (local_list.lower).to (local_list.upper-1) do { i:Int
       local_list.at i.print
       ','.print
     }
     local_list.last.print
     " |\n".print
-    (expr_list.lower).to (expr_list.upper) do { i:INTEGER
+    (expr_list.lower).to (expr_list.upper) do { i:Int
       "    ".print
       expr_list.at i.print
       ";\n".print

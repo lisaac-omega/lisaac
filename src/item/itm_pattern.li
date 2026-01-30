@@ -1,28 +1,26 @@
 Header
-  
-  + name      := ITM_PATTERN;
-
+  + name := Itm_pattern
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
   
-  + pattern_in :ITM_LIST
+  + pattern_in :Itm_list
   
-  + pattern_out:ITM_LIST
+  + pattern_out:Itm_list
   
-  - set_pattern_in p:ITM_LIST <-
+  - set_pattern_in p:Itm_list <-
   (
     pattern_in := p
   )
   
-  - set_pattern_out p:ITM_LIST <-
+  - set_pattern_out p:Itm_list <-
   (
     pattern_out := p
   )
   
-  - append_pattern_in buf:STRING_BUFFER <-
+  - append_pattern_in buf:String_buffer <-
   (
     (pattern_in != NULL).if {
       buf.append "In: "

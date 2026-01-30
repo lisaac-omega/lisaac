@@ -1,11 +1,9 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + a,b:INTEGER
+  ( + a,b:Int
     (a,b) := (1,2)
     ? {a = 1}
     ? {b = 2}

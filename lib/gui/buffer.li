@@ -1,21 +1,20 @@
 Header
-  + name := BUFFER;
-  
+  + name := Buffer
 Inherit
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  - parent_any_gui:Any_gui := Any_gui
   
 Public
   
   - init_key <-
-  ( STRING.tmp { k:STRING_BUFFER
-      k | KEYBOARD.key_cmd.to_character | 'a'
-      0.to 11 do { j:INTEGER
+  ( String.tmp { k:String_buffer
+      k | Keyboard.key_cmd.to_character | 'a'
+      0.to 11 do { j:Int
         k.at 1 put ('a' +# j)
-        SHORTCUT.new.key (k.to_string_alias) act (ACT1 INTEGER.new
+        Shortcut.new.key (k.to_string_alias) act (Act1 Int.new
           .txt_l "Select current buffer." 
-          .fn {i:INTEGER
+          .fn {i:Int
             (i <= catalog.upper).if {
-              PAGE.cur_pg.set_buffer (catalog.at i)
+              Page.cur_pg.set_buffer (catalog.at i)
             }
           } val j
         )
@@ -23,47 +22,47 @@ Public
     }
   )
 
-  - catalog:ARRAY BUFFER := ARRAY BUFFER.create_with_capacity 16
-  - get n:STRING_ALIAS :BUFFER <-
-  ( + result:BUFFER
-    + nn:STRING_ALIAS
+  - catalog:Array Buffer := Array Buffer.create_with_capacity 16
+  - get n:String_alias :Buffer <-
+  ( + result:Buffer
+    + nn:String_alias
     nn := abs_path n
-    result := catalog.search_until { b:BUFFER; b.name = nn}
-    (result = NULL).if { result := FILE_CFG.read_buffer nn; }
+    result := catalog.search_until { b:Buffer; b.name = nn}
+    (result = NULL).if { result := File_cfg.read_buffer nn; }
     result
   )
   
   - put_first <-
-  ( + i:INTEGER
-    i := BUFFER.catalog.fast_index_of Self
-    i.downto 1 do { j:INTEGER; catalog.at j put (catalog.at (j - 1)); }
-    catalog.at 0 put Self
-    PAPER.refresh_all
+  ( + i:Int
+    i := Buffer.catalog.fast_index_of self
+    i.downto 1 do { j:Int; catalog.at j put (catalog.at (j - 1)); }
+    catalog.at 0 put self
+    Paper.refresh_all
   )
   
-  - put n:STRING_ALIAS to idx:INTEGER :BOOLEAN <-
-  ( + i:INTEGER
-    + nn:STRING_ALIAS
+  - put n:String_alias to idx:Int :Boolean <-
+  ( + i:Int
+    + nn:String_alias
     nn := abs_path n
     {(i <= catalog.upper) && {catalog.at i.name != nn}}.while_do { i := i + 1; }
     (i > catalog.upper).if { get nn; }
     (idx <= catalog.upper).if { catalog.swap i with idx; }
   )
   
-  + name:STRING_ALIAS
-  + shortname:STRING_ALIAS
-  + tag:STRING_ALIAS
-  + is_save:BOOLEAN := TRUE
-  - set_save s:BOOLEAN <- ( is_save := s )
+  + name:String_alias
+  + shortname:String_alias
+  + tag:String_alias
+  + is_save:Boolean := True
+  - set_save s:Boolean <- ( is_save := s )
   
-  + date_create:DATE
-  + date_update:DATE
-  + time_update:TIME
+  + date_create:Date
+  + date_update:Date
+  + time_update:Time
   
-  + last_pos:POS
-  + last_pos_y:REAL_32
-  + last_pos_x:REAL_32
-  - set_last_pos p:POS <-
+  + last_pos:Pos
+  + last_pos_y:Real32
+  + last_pos_x:Real32
+  - set_last_pos p:Pos <-
   (    
     last_pos := p.undefine_xy;
     /*(shortname = "print.li").if {
@@ -71,18 +70,18 @@ Public
       (last_pos.pt = 0).if { p.pt.println; exit 1; }
     }*/
   )
-  - set_last_pos_xy (x,y:REAL_32) <- ( (last_pos_x,last_pos_y) := (x,y); )
-  - set_last_pos_x (x:REAL_32) <- ( last_pos_x := x; )
-  - set_last_pos_y (y:REAL_32) <- ( last_pos_y := y; )
+  - set_last_pos_xy (x,y:Real32) <- ( (last_pos_x,last_pos_y) := (x,y); )
+  - set_last_pos_x (x:Real32) <- ( last_pos_x := x; )
+  - set_last_pos_y (y:Real32) <- ( last_pos_y := y; )
   
-  - buf_pg:BUF_PG <- abstract
-  - set_parent_buffer p:BUF_PG <- abstract
+  - buf_pg:Buf_pg <- abstract
+  - set_parent_buffer p:Buf_pg <- abstract
     
   - draw_all <-
   (
     begin_path
     rect (xo,yo) size (width,height)
-    fill_color (LOOK.background_color)
+    fill_color (Look.background_color)
     fill
     draw
     draw_child
@@ -92,47 +91,47 @@ Public
   - draw
   - draw_forward
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
+  - event ev:Uint8 :Boolean <-
   (
     ev < 16
   )
   
-  - new:SELF <- clone
+  - new:Self <- clone
   
-  - init_buf n:STRING_ALIAS :SELF <-
+  - init_buf n:String_alias :Self <-
   ( name := n
-    catalog.add_last Self
+    catalog.add_last self
     build_shortname
-    Self
+    self
   )
   
-  - new_gui:WIN
+  - new_gui:Win
   - refresh <-
-  ( + x,y:REAL_32    
+  ( + x,y:Real32    
     (x,y) := (xo+32,yo+32)
     child.at 0.xy (x,y)
-    child.foreach { w:WIN; w.refresh; }
+    child.foreach { w:Win; w.refresh; }
     
-    ((focus != NULL) && {focus.ymax > ymax} && {focus.dynamic_type = INPUTBOX}).if {
+    ((focus != NULL) && {focus.ymax > ymax} && {focus.dynamic_type = Inputbox}).if {
       y := y-(focus.ymax - ymax + 10)
       child.at 0.xy (x,y)
-      child.foreach { w:WIN; w.refresh; }
+      child.foreach { w:Win; w.refresh; }
     }
   )
   
   - reload;
-  - save_buffer:BOOLEAN <- BOOLEAN.abstract
-  - copy_buffer o:BUFFER :BOOLEAN <- BOOLEAN.abstract
+  - save_buffer:Boolean <- Boolean.abstract
+  - copy_buffer o:Buffer :Boolean <- Boolean.abstract
     
-BUFFER
+Buffer
   
   - build_shortname <-
-  ( + i0,i1:INTEGER
-    STRING.tmp { tmp:STRING_BUFFER
+  ( + i0,i1:Int
+    String.tmp { tmp:String_buffer
       name.substring (name.last_index_of '/' + 1) to (name.upper) in tmp
       shortname := tmp.to_string_alias
-      catalog.foreach { b:BUFFER
-        ((b != Self) && {shortname = b.shortname}).if {
+      catalog.foreach { b:Buffer
+        ((b != self) && {shortname = b.shortname}).if {
           (i0,i1) := name.reverse_first_difference_index (b.name)
           build_tag i0; b.build_tag i1
         }
@@ -140,12 +139,12 @@ BUFFER
     }
   )
 
-  - build_tag i:INTEGER <-
-  ( + b,e:INTEGER
+  - build_tag i:Int <-
+  ( + b,e:Int
     (i = -1).if { tag := "</>"; } else {
       b := name.last_index_of '/' since i + 1
       e := name.index_of '/' since i - 1
-      STRING.tmp { tmp:STRING_BUFFER
+      String.tmp { tmp:String_buffer
         tmp | '<'; name.substring b to e in tmp; tmp | '>'
         tag := tmp.to_string_alias
       }

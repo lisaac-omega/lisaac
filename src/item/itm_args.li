@@ -1,36 +1,33 @@
 Header
-
-  + name    := ITM_ARGS;
-
-  /*One argument vector*/
-
+  + name := Itm_args
+/*One argument vector*/
 Inherit
 
-  + parent_itm_argument:Expanded ITM_ARGUMENT
+  + parent_itm_argument:Flat Itm_argument
 
 Public
 
-  + name:ARRAY STRING_ALIAS
+  + name:Array String_alias
 
-  + type:ITM_TYPE_MULTI
+  + type:Itm_type_multi
 
-  - upper:INTEGER <- name.upper
+  - upper:Int <- name.upper
   
-  - is_self:BOOLEAN <- name.first = "Self"
+  - is_self:Boolean <- name.first = "self"
   
   //
   // Creation.
   //
 
-  - create p:POSITION name n:ARRAY STRING_ALIAS type t:ITM_TYPE_MULTI :SELF <-
-  ( + result:SELF
+  - create p:Position name n:Array String_alias type t:Itm_type_multi :Self <-
+  ( + result:Self
 
-    result := SELF.clone
+    result := Self.clone
     result.make p name n type t
     result
   )
 
-  - make p:POSITION name n:ARRAY STRING_ALIAS type t:ITM_TYPE_MULTI <-
+  - make p:Position name n:Array String_alias type t:Itm_type_multi <-
   (
     position := p
     name     := n
@@ -41,19 +38,19 @@ Public
   // Running.
   //
 
-  - at idx:INTEGER :ITM_TYPE <-
+  - at idx:Int :Itm_type <-
   ( ? {idx.in_range 0 to upper}
     type.at idx
   )
 
-  - to_run_in arg_lst:ARRAY LOCAL for p:PARAMETER_TO_TYPE <-
-  ( + t:TYPE_FULL
+  - to_run_in arg_lst:Array Local for p:Parameter_to_type <-
+  ( + t:Type_full
   
-    (name.lower).to (name.upper) do { j:INTEGER
+    (name.lower).to (name.upper) do { j:Int
       t := type.at j.to_run_for p pos (position.prototype.filename)
      
       arg_lst.add_last (
-	LOCAL.create position name (name.at j) style ' ' type t
+        Local.create position name (name.at j) style ' ' type t
       )
       (verify).if {
         check_local_with_slot position name (name.at j)
@@ -62,8 +59,8 @@ Public
     arg_count_tmp := arg_count_tmp + name.count
   )
 
-  - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-
-  ( + i:INTEGER
+  - get_index_type p:Itm_type_parameter :Int <-
+  ( + i:Int
 
     i := name.lower
     {(i <= name.upper) && {type.at i != p}}.while_do {
@@ -72,10 +69,10 @@ Public
     i
   )
 
-  - check larg:ARRAY EXPR index idx:INTEGER for p:PARAMETER_TO_TYPE :INTEGER <-
-  ( + new_expr:EXPR
+  - check larg:Array Expr index idx:Int for p:Parameter_to_type :Int <-
+  ( + new_expr:Expr
 
-    (type.lower).to (type.upper) do { i:INTEGER
+    (type.lower).to (type.upper) do { i:Int
       new_expr := larg.at (idx+i).check_type (type.at i.to_run_for p pos (position.prototype.filename)) with position
       larg.at (idx+i) put new_expr
     }
@@ -86,10 +83,10 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in buffer:String_buffer <-
   (
     buffer.add_last '('
-    (name.lower).to (name.upper - 1) do { j:INTEGER
+    (name.lower).to (name.upper - 1) do { j:Int
       buffer.append (name.at j)
       buffer.add_last ':'
       type.at j.append_in buffer
@@ -101,11 +98,11 @@ Public
     buffer.add_last ')'
   )
 
-  - shorter_in buf:STRING_BUFFER <-
+  - shorter_in buf:String_buffer <-
   (
     buf.add_last '('
-    (name.lower).to (name.upper - 1) do { j:INTEGER
-      (name.at j = "Self").if {
+    (name.lower).to (name.upper - 1) do { j:Int
+      (name.at j = "self").if { 
         put (name.at j) to buf like "keyword"
       } else {
         put (name.at j) to buf like "local"

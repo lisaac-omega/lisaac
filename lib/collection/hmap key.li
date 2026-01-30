@@ -1,0 +1,327 @@
+Header
+  + name := Hmap V Key K
+/*
+  Associative memory. Values of type `V` are stored using keys of type `K`.
+  Assumes that keys of type `K` provide an efficient `hash_code` method.
+  Also assumes that keys are aliased, allowing all comparisons to be performed
+  using the efficient `=` comparison operator.
+  */
+Insert
+  - parent_clone:Clone := Clone
+Private
+  + buckets:C_array(Hmap_node V Key K)
+  // The `buckets' storage area is the primary hash table of `capacity'
+  // elements. To search some key, the first access is done in `buckets'
+  // using the remainder of the division of the key `hash_code' by
+  // `capacity'. In order to try to avoid clashes, `capacity' is always a
+  // prime number (selected using HASH_TABLE_SIZE).
+  
+  - minimum_capacity:Int := 193
+  // Minimum size for the 'buckets' storage area (prime number).
+
+  - free_list:Flat Array (Hmap_node V Key K)
+
+Public
+  + capacity:Int
+  // Of the `buckets' storage area.
+
+  + count:Int
+  // Actual `count' of stored elements.
+  
+  // Creation:
+  - new self:Self :Self <- new self capacity minimum_capacity
+  
+  - new self:Self capacity c:Int :Self <- clone.with_capacity c
+  // If you can roughly predict the required capacity, it is important for performance.
+  // Note that this capacity will be automatically adjusted to the next prime number  
+  
+Private
+  - with_capacity medium_size:Int :Self <-
+  // May be used to save some execution time if one is sure that
+  // storage size will rapidly become really bigger than 'minimum_capacity'.
+  // When first `remove' occurs, storage size may naturally become
+  // smaller than `medium_size'. Afterall, tuning of storage size is
+  // done automatically according to usage.
+  [medium_size >= 97]
+  ( 
+    capacity := Hash_table_size.prime_number_ceiling medium_size
+    buckets := C_array(Hmap_node V Key K).create capacity
+    self
+  )
+  [    
+    ? { is_empty }
+    ? { capacity >= medium_size }
+  ]
+  
+Public
+  
+  // Query:
+  
+  - is_empty:Boolean <- count = 0
+  // Is it empty?
+  
+  - has k:K :Boolean <-
+  // Is there a value currently associated with key `k'?
+  ( + idx:Int
+    + node:Hmap_node V Key K
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    until {(node = NULL) || {node.key = k}} do {
+      node := node.next
+    }
+    node != NULL
+  )
+  
+  - at k:K :V <-
+  // Very fast in -boost mode.
+  [ ? {has k} ]
+  ( + idx:Int 
+    + node:Hmap_node V Key K
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    until {node.key = k} do {
+      node := node.next
+    }
+    node.value
+  )
+  
+  - reference_at k:K :V <-
+  ( + found:Boolean
+    + result:V
+    (found,result) := search k
+    result
+  )
+  
+  - search k:K : (Boolean,V) <-
+  ( + found:Boolean
+    + v:V
+    + idx:Int
+    + node:Hmap_node V Key K
+    idx := k.hash_code % capacity
+    node := buckets.at idx
+    until {(node = NULL) || {node.key = k}} do {
+      node := node.next
+    }
+    if (node != NULL) then {
+      found := True
+      v := node.value
+    }
+    (found, v)
+  )
+   
+  - search_key blk: {K; Boolean} : (Boolean,V) <-
+  // Sequential searching. May be slow.
+  ( + b:Boolean
+    + k:K
+    + v:V
+    (b,k,v) := search_key blk value {foo:V; True}
+    (b,v)
+  )
+    
+  - search_value blk: {V; Boolean} : (Boolean,K) <-
+  // Sequential searching. May be slow.
+  ( + b:Boolean
+    + k:K
+    + v:V
+    (b,k,v) := search_key {foo:K; True} value blk
+    (b,k)
+  )
+  
+  - search_key bk: {K; Boolean} value bv: {V; Boolean}  : (Boolean,K,V) <-
+  // Sequential searching. May be slow.
+  ( + found:Boolean 
+    + k:K 
+    + v:V 
+    + idx:Int 
+    + node:Hmap_node V Key K
+    until {found || {idx >= capacity}} do {
+      node := buckets.at idx
+      while {node != NULL} do {
+        if (found := (bk.value(node.key)) && {bv.value(node.value)}) then {
+          k := node.key
+          v := node.value
+        }
+        node := node.next
+      }
+      idx := idx + 1;
+    }
+    (found, k, v)
+  )
+    
+  // Adding or changing:
+  
+  - at (k:K^n) put (v:V^n)  <- 
+  // Change some existing entry or add the new one.
+  ( + h, idx:Int
+    + node:Hmap_node V Key K
+    {(ki:K,vi:V)
+      h := ki.hash_code
+      idx := h % capacity
+      node := buckets.at idx
+      until {(node = NULL) || {node.key = ki}} do {
+        node := node.next
+      }
+      (node = NULL).if {
+        count := count + 1
+        set_capacity count.if { idx := h % capacity }
+        node := new_node vi key ki next (buckets.at idx)
+        buckets.put node to idx
+      } else {
+        node.set_value vi
+      }
+    }.value (k,v)
+  )
+  [ {ki:K; ? {has ki}; }.value k ]
+  
+  - at (k:K^n) add (v:V^n) :Self <-
+  // Add a list n key-value pairs.
+  // Assumes k is a new entry. Actually, this is equivalent to 
+  // call `at__put', but may run a little bit faster.
+  [ {ki:K; ? {!has ki}; }.value k ]
+  ( + idx:Int 
+    + node:Hmap_node V Key K
+    set_capacity (count + n)
+    { (ki:K, vi:V)
+      idx := ki.hash_code % capacity
+      node := new_node vi key ki next (buckets.at idx)
+      buckets.at idx put node
+    }.value (k,v)
+    count := count + n;
+    self
+  )
+  [ {ki:K; ? {has ki}; }.value k ]
+  
+  - at (k:K^n) update (v:V^n) <-
+  // Assumes k is an existing entry. Actually, this is equivalent to 
+  // call `at__put', but may run a little bit faster.
+  [ {ki:K; ? {has ki}; }.value k ]
+  ( + node:Hmap_node V Key K
+    {(ki:K,vi:V)
+      node := buckets.at (ki.hash_code % capacity)
+      until {node.key = ki} do {
+        node := node.next
+      }
+      node.set_value vi
+    }.value (k,v)
+  )  
+  
+  // Removing:
+
+  - remove (k:K^n) <-
+  // Remove entry `k' (which may exist or not before this call).
+  ( + idx:Int
+    + node, previous_node:Hmap_node V Key K
+    { ki:K
+      idx := (ki.hash_code) % capacity
+      node := buckets.at idx
+      if (node != NULL ) then {
+        if (node.key = ki ) then {
+          count := count - 1
+          buckets.at idx put (node.next)
+        } else {
+          previous_node := node
+          node := node.next
+          until {(node = NULL) || {node.key = ki}} do {
+            previous_node := node
+            node := node.next
+          }
+          if (node != NULL ) then {
+            count := count - 1
+            previous_node.set_next (node.next)
+          }
+        }
+      };
+    }.value k
+  )
+  [ {ki:K; ? {!has ki}; }.value k ]
+  
+  - clear <-
+  // Discard all items.
+  ( + node:Hmap_node V Key K
+    count := 0
+    from 0 to (capacity - 1) do { idx:Int
+      node := buckets.at idx
+      buckets.at idx put NULL 
+      while {node != NULL} do {
+        free_list.add_last node        
+        node := node.next
+      }
+    }
+  )
+  [
+    ? {count = 0}
+    ? {capacity = Old capacity}
+  ]
+
+  // Traversal:
+  
+  - foreach blk:{(K,V);} <-
+  ( + idx:Int
+    + node:Hmap_node V Key K
+    while {idx < capacity} do {
+      node := buckets.at idx
+      while {node != NULL} do {
+        blk.value (node.key,node.value)
+        node := node.next        
+      }
+      idx := idx + 1
+    }
+  )
+  
+  - foreach_key blk:{K;} <- foreach {(k:K,v:V); blk.value k }  
+  
+  - foreach_value blk:{V;} <- foreach {(k:K,v:V); blk.value v }
+  
+  //  Others:
+
+  - copy other:Self <-
+  // Reinitialize by copying all associations of `other'.
+  (
+    clear
+    set_capacity (other.count)
+    other.foreach { (k:K,v:V)
+      at k add v
+    }
+  )
+
+Private
+
+  - set_capacity n:Int :Boolean <-
+  // There is no more free slots:the dictionary must grow.
+  (n > capacity).if {
+    + idx, new_capacity,i:Int
+    + old_buckets:C_array(Hmap_node V Key K)
+    + node1, node2:Hmap_node V Key K
+    
+    old_buckets  := buckets
+    new_capacity := Hash_table_size.prime_number_ceiling n
+    
+    buckets := C_array(Hmap_node V Key K).create new_capacity
+    i := capacity -1
+    capacity := new_capacity
+    until {i < 0} do {
+      node1 := old_buckets.at i
+      {node1 = NULL}.until_do {
+        node2 := node1.next
+        idx := node1.key.hash_code % capacity
+        node1.set_next (buckets.at idx)
+        buckets.at idx put node1
+        node1 := node2
+      }
+      i := i - 1
+    }
+  }
+  [
+    ? { count = Old count }
+    ? { Result ->> {capacity > Old capacity} }
+  ]
+    
+  - new_node v:V key k:K next nxt:Hmap_node V Key K :Hmap_node V Key K <- 
+  ( + result: Hmap_node V Key K
+    if (free_list.is_empty) then { 
+      result := new Hmap_node V Key K
+    } else {
+      result := free_list.pop
+    }
+    result.value v key k next nxt
+  )

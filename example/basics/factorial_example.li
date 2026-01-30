@@ -1,7 +1,6 @@
 Header
-  
-  + name := FACTORIAL_EXAMPLE;
-  /*
+  + name := Factorial_example
+/*
 The classical factorial example in Lisaac Ω.
   
 In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
@@ -19,29 +18,29 @@ Public
   )
 
   - main <-
-  ( + x:INTEGER
+  ( + x:Int
     
-    if ((COMMAND_ARGS upper != 1) || {! COMMAND_ARGS at 1.is_integer}) then {
+    if ((Command_args upper != 1) || {! Command_args at 1.is_integer}) then {
       "usage: ./factorial_example <n>" println
-      SYSTEM exit 1
+      System exit 1
     }
       
-    x := COMMAND_ARGS first .to_integer
+    x := Command_args first .to_int
     
     if ( x <= 19 ) then {
-      OUT # "factorial " # x # " non_terminal = " # (factorial x non_terminal) # '\n'
+      Out # "factorial " # x # " non_terminal = " # (factorial x non_terminal) # '\n'
     }.elseif { x <= 20} then {
-      OUT # "factorial " # x # " terminal = " # factorial x terminal # '\n'
+      Out # "factorial " # x # " terminal = " # factorial x terminal # '\n'
     }.elseif { x <= 1000} then {
-      OUT # "factorial " # x # " = " # (factorial x) # '\n'
+      Out # "factorial " # x # " = " # (factorial x) # '\n'
     } else {
       // The factorial code do exist in Lisaac Ω library:
-      OUT # x # "! = " # (x.to_z !) # '\n'
+      Out # x # "! = " # (x.to_z !) # '\n'
     }      
   )
     
-  - factorial n:INTEGER non_terminal :INTEGER <-
-  ( + result:INTEGER
+  - factorial n:Int non_terminal :Int <-
+  ( + result:Int
     if (n <= 1) then {
       result := 1
     } else {
@@ -52,8 +51,8 @@ Public
   
 Private
   
-  - factorial n:INTEGER acc acc:INTEGER :INTEGER <-
-  ( + result:INTEGER
+  - factorial n:Int acc acc:Int :Int <-
+  ( + result:Int
     if (n <= 1) then {
       result := acc
     } else {
@@ -64,5 +63,5 @@ Private
   
 Public
   
-  - factorial n:INTEGER terminal :INTEGER <- factorial n acc 1
+  - factorial n:Int terminal :Int <- factorial n acc 1
   

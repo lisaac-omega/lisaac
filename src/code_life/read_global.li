@@ -1,27 +1,24 @@
 Header
-
-  + name    := READ_GLOBAL;
-
-  /*Read for global*/
-
+  + name := Read_global
+/*Read for global*/
 Inherit
 
-  + parent_read:Expanded READ
+  + parent_read:Flat Read
 
 Public
 
-  - is_invariant:BOOLEAN <- global.is_invariant NULL
+  - is_invariant:Boolean <- global.is_invariant NULL
 
-  + global:SLOT_DATA
+  + global:Slot_data
 
-  - variable:VARIABLE <- global
+  - variable:Variable <- global
 
   //
   // Comparison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <-
-  ( + rd:READ_GLOBAL
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + rd:Read_global
 
     rd ?= other
     ((rd != NULL) && {global = rd.global})
@@ -31,15 +28,15 @@ Public
   // Creation.
   //
 
-  - create p:POSITION with g:SLOT_DATA :SELF <-
-  ( + result:SELF
+  - create p:Position with g:Slot_data :Self <-
+  ( + result:Self
 
     result := clone
     result.make p with g
     result
   )
 
-  - make p:POSITION with g:SLOT_DATA <-
+  - make p:Position with g:Slot_data <-
   (
     position := p
     global   := g
@@ -49,7 +46,7 @@ Public
   // Execute
   //
 
-  - execute_access_unlink:INSTR <-
+  - execute_access_unlink:Instr <-
   (
     global.execute
     NULL

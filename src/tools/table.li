@@ -1,31 +1,28 @@
 Header
-
-  - name        := TABLE;
-
-  /*Display array manager.*/
-
+  - name := Table
+/*Display array manager.*/
 Inherit
 
-  - parent_object:OBJECT := OBJECT
+  - parent_clone:Clone := Clone
 
 Private
 
-  - table:ARRAY2 STRING := ARRAY2 STRING .create (10,10)
+  - table:Array2 String := Array2 String .create (10,10)
 
-  - size:ARRAY INTEGER := ARRAY INTEGER .create_with_capacity 10
+  - size:Array Int := Array Int .create_with_capacity 10
 
-  - line:INTEGER
-  - column:INTEGER
+  - line:Int
+  - column:Int
 
 Public
 
-  - new_table (l,c:INTEGER) <-
+  - new_table (l,c:Int) <-
   (
     table.make (l,c)
     line := column := 0
   )
 
-  - add n:STRING <-
+  - add n:String <-
   (
     ? {n != NULL}
 
@@ -38,40 +35,40 @@ Public
     }
   )
 
-  - append_in buffer:STRING_BUFFER <-
-  ( + siz:INTEGER
-    + append_line,append_bar:BLOCK
+  - append_in buffer:String_buffer <-
+  ( + siz:Int
+    + append_line,append_bar:Block
 
     // Size column.
     size.make (table.count2)
-    0.to (table.upper1) do { l:INTEGER
-      0.to (table.upper2) do { c:INTEGER
-	siz := table.at (l,c).count
-	(siz > size.at c).if {
-	  size.put siz to c
-	}
+    0.to (table.upper1) do { l:Int
+      0.to (table.upper2) do { c:Int
+        siz := table.at (l,c).count
+        (siz > size.at c).if {
+          size.put siz to c
+        }
       }
     }
 
     // Sub-code for one line.
     append_line :=
-    { l:INTEGER
-      + n:STRING
+    { l:Int
+      + n:String
       buffer.append "// "
-      0.to (table.upper2) do { c:INTEGER
-	n := table.at (l,c)
-	buffer.append "| "
-	buffer.append n
-	buffer.extend_multiple ' ' by (size.at c - n.count + 1)
+      0.to (table.upper2) do { c:Int
+        n := table.at (l,c)
+        buffer.append "| "
+        buffer.append n
+        buffer.extend_multiple ' ' by (size.at c - n.count + 1)
       }
       buffer.append "|\n"
     }
     append_bar :=
     {
       buffer.append "// "
-      0.to (table.upper2) do { c:INTEGER
-	buffer.add_last '+'
-	buffer.extend_multiple '-' by (size.at c + 2)
+      0.to (table.upper2) do { c:Int
+        buffer.add_last '+'
+        buffer.extend_multiple '-' by (size.at c + 2)
       }
       buffer.append "+\n"
     }
@@ -81,7 +78,7 @@ Public
     append_line.value 0
     append_bar.value
     // Display table.
-    1.to (table.upper1) do { l:INTEGER
+    1.to (table.upper1) do { l:Int
       append_line.value l
     }
     // Display End.

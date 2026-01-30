@@ -1,49 +1,47 @@
 Header
-  
-  + name := PEN_CALL_3D;
-   
+  + name := Pen_call_3d
 Inherit
   
-  + parent_pen_call:Expanded PEN_CALL
+  + parent_pen_call:Flat Pen_call
   
 Private
   
-  - stack:ARRAY PEN_CALL_3D := ARRAY PEN_CALL_3D.create_with_capacity 16
+  - stack:Array Pen_call_3d := Array Pen_call_3d.create_with_capacity 16
   
 Public
   
-  + img:INTEGER
-  + color:COLOR
-  + model:MAT4X4
+  + img:Int
+  + color:Color
+  + model:Mat4x4
   
-  + start:INTEGER
-  + count:INTEGER
+  + start:Int
+  + count:Int
     
-  - create (col:COLOR,i:INTEGER) start st:INTEGER count cnt:INTEGER model m:MAT4X4 :PEN_CALL_3D <-
-  ( + result:PEN_CALL_3D
+  - create (col:Color,i:Int) start st:Int count cnt:Int model m:Mat4x4 :Pen_call_3d <-
+  ( + result:Pen_call_3d
     (stack.is_empty).if { result := clone; } else { result := stack.pop; }
     result.make (col,i) start st count cnt model m
   )
   
-  - make (col:COLOR,i:INTEGER) start st:INTEGER count cnt:INTEGER model m:MAT4X4 :PEN_CALL_3D <-
+  - make (col:Color,i:Int) start st:Int count cnt:Int model m:Mat4x4 :Pen_call_3d <-
   (
     (color,img) := (col,i)
     start := st
     count := cnt
     model := m.dup
-    Self
+    self
   )
   
   - free <-
   (
     model.free
-    stack.add_last Self
+    stack.add_last self
   )
   
   - run <-
-  ( + shader:SHADER_3D
-    + model_norm,model_inv:MAT4X4
-    shader := PEN_CALL_3D_BEGIN.shader
+  ( + shader:Shader_3d
+    + model_norm,model_inv:Mat4x4
+    shader := Pen_call_3d_begin.shader
     shader.set "model" mat4 model
     model_inv := model.invert
     model_norm := model_inv.transpose
@@ -51,9 +49,9 @@ Public
     (img = -1).if {
       shader.set "objectColor" xyzw (color.rf, color.gf, color.bf,color.af)
     } else {
-      pen_gl.gl_bind_texture (`GL_TEXTURE_2D`:INTEGER,img)
+      pen_gl.gl_bind_texture (`GL_TEXTURE_2D`:Int,img)
     }
-    pen_gl.gl_draw_elements (`GL_TRIANGLES`:INTEGER,3*count, `GL_UNSIGNED_INT`:INTEGER, start)
+    pen_gl.gl_draw_elements (`GL_TRIANGLES`:Int,3*count, `GL_UNSIGNED_INT`:Int, start)
     model_inv.free
     model_norm.free
   )

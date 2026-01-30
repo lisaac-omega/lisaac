@@ -1,28 +1,25 @@
 Header
-
-  + name        := PUT_TO;
-
-  /*Put for NATIVE_ARRAY E (see ITEM)*/
-
+  + name := Put_to
+/*Put for C_array E (see ITEM)*/
 Inherit
 
-  + parent_write:Expanded WRITE
+  + parent_write:Flat Write
 
-  + parent_expr:Expanded EXPR; // Note: It's an INSTR, but pb with ITM_EXTERNAL
+  + parent_expr:Flat Expr; // Note: It's an INSTR, but pb with ITM_EXTERNAL
 
 Public
 
-  - is_invariant:BOOLEAN <-
+  - is_invariant:Boolean <-
   receiver.is_invariant && {index.is_invariant} && {value.is_invariant}
 
-  + receiver:EXPR
+  + receiver:Expr
 
-  + index:EXPR
+  + index:Expr
 
-  - static_type:TYPE_FULL <- TYPE_VOID.default
+  - static_type:Type_full <- Type_void.default
 
-  - variable:VARIABLE <-
-  ( + typ_gen:TYPE_GENERIC
+  - variable:Variable <-
+  ( + typ_gen:Type_generic
 
     typ_gen ?= receiver.static_type.raw
     typ_gen.native_array_variable
@@ -32,26 +29,26 @@ Public
   // Creation.
   //
 
-  - create p:POSITION base rec:EXPR index idx:EXPR value v:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position base rec:Expr index idx:Expr value v:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p base rec index idx value v
     result
   )
 
-  - make p:POSITION base rec:EXPR index idx:EXPR value v:EXPR <-
+  - make p:Position base rec:Expr index idx:Expr value v:Expr <-
   (
     position := p
     receiver := rec
     index    := idx
     value    := v
     //
-    variable.add_write Self
+    variable.add_write self
   )
 
-  - my_copy:SELF <-
-  SELF.create position base (receiver.my_copy) index (index.my_copy) value (value.my_copy)
+  - my_copy:Self <-
+  Self.create position base (receiver.my_copy) index (index.my_copy) value (value.my_copy)
 
   //
   // Remove
@@ -59,7 +56,7 @@ Public
 
   - remove <-
   (
-    variable.unwrite Self
+    variable.unwrite self
     //
     receiver.remove
     index.remove
@@ -70,20 +67,20 @@ Public
   // Execute
   //
 
-  - execute:INSTR <- execute_unlink
+  - execute:Instr <- execute_unlink
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     execute_link
   )
 
-  - execute_link:EXPR <-
+  - execute_link:Expr <-
   (
     receiver := receiver.execute_link
     index    := index.execute_link
     value    := value.execute_link
-    //variable.set_write Self
-    Self
+    //variable.set_write self
+    self
   )
 
   //
@@ -91,8 +88,8 @@ Public
   //
 
   - genere <-
-  ( + type_generic:TYPE_GENERIC
-    + first_type:TYPE_FULL
+  ( + type_generic:Type_generic
+    + first_type:Type_full
 
     receiver.genere
     output.add_last '['
@@ -100,12 +97,12 @@ Public
     output.add_last ']'
     type_generic ?= receiver.static_type.raw
     first_type := type_generic.generic_list.first
-    ((first_type.raw.is_block) && {value.static_type.raw = TYPE_NULL}).if {
+    ((first_type.raw.is_block) && {value.static_type.raw = Type_null}).if {
       output.append ".__id=0"
     } else {
       output.add_last '='
-      ((first_type.is_expanded) && {! first_type.is_expanded_c}).if {
-        (value.static_type.is_expanded_ref).if {
+      ((first_type.is_flat) && {! first_type.is_flat_c}).if {
+        (value.static_type.is_flat_ref).if {
           output.append "*("
           value.genere
           output.add_last ')'
@@ -122,7 +119,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     receiver.display buffer
     buffer.add_last '['

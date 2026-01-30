@@ -1,6 +1,6 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 Public
   
   - meth b:{} <-

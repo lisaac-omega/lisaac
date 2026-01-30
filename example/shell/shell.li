@@ -1,27 +1,18 @@
 Header
-
-  + name    := SHELL;
-  /*
+  + name := Shell
+/*
   Small Shell, example File System manager.
   */
-
-Inherit
-
-  - parent_clone:CLONE := CLONE
+Insert
+  - parent_utils:Utils := Utils
 
 Private
-
-  - command:STRING_BUFFER
-
-  - cmds:ARRAY(STRING_BUFFER)
-
-  - dir:DIRECTORY
-
-  - string_tmp:STRING_BUFFER := STRING_BUFFER.create 255
+  + command:String_buffer
+  + cmds:Array(String_buffer)
+  + dir:Directory
 
   - execute <-
-  ( + cmd:STRING_BUFFER
-
+  ( + cmd:String_buffer
     cmd := cmds.first
     //
     // Entry command.
@@ -76,42 +67,42 @@ Private
     \  cat <src>           : Open and display file <src>.\n\
     \  mkfile <src> <text> : Creat <src> file with <text>.\n".print
   )
-
-  //
+ 
   // Entry manager.
-  //
-
+  
   - ls <-
-  ( + e:DIRENT
-    + f:FILE
+  ( + e:Dirent
+    + f:File
     (! dir.open).if {
       "`ls\': Permission denied.\n".print;
     } else {
       "----Access----  ----Update----  ---Size--   ----Name----\n".print
-      dir.lower.to (dir.upper) do { i:INTEGER
+      dir.lower.to (dir.upper) do { i:Int
         e := dir.at i
-        string_tmp.clear
-        // Access.
-        e.access_date.append_in string_tmp
-        string_tmp.add_last ' '
-        // Name.
-        (e.is_directory).if {
-          string_tmp.append "          d "
-        } else {
-          // Size.
-          f ?= e
-          f.size.append_in string_tmp format 9
-          string_tmp.append " - "
+        String.tmp { string_tmp: String_buffer
+          ? {string_tmp.is_empty}
+          // Access.
+          e.access_date.append_in string_tmp
+          string_tmp.add_last ' '
+          // Name.
+          (e.is_directory).if {
+            string_tmp.append "          d "
+          } else {
+            // Size.
+            f ?= e
+            f.size.append_in string_tmp format 9
+            string_tmp.append " - "
+          }
+          string_tmp.append (e.name)
+          string_tmp.add_last '\n'
+          string_tmp.print
         }
-        string_tmp.append (e.name)
-        string_tmp.add_last '\n'
-        string_tmp.print
       }
     }
   )
 
   - mv <-
-  ( + src,dst:STRING_BUFFER
+  ( + src,dst:String_buffer
     (cmds.count < 3).if {
       "`mv\': Too few arguments.\n".print;
     }.elseif {cmds.count != 3} then {
@@ -128,7 +119,7 @@ Private
   )
 
   - rm <-
-  ( + param:STRING_BUFFER
+  ( + param:String_buffer
     (cmds.count = 1).if {
       "`rm\': Too few arguments.\n".print;
     }.elseif {cmds.count != 2} then {
@@ -143,18 +134,16 @@ Private
     }
   )
 
-  //
   // Directory manager
-  //
 
   - cd <-
-  ( + e:DIRENT
-    + param:STRING_BUFFER
+  ( + e:Dirent
+    + param:String_buffer
 
     (cmds.count > 2).if {
       "`cd\': Too many arguments.\n".print;
     }.elseif {cmds.count = 1} then {
-      dir := FILE_SYSTEM
+      dir := File_system
     } else {
       param := cmds.at 1
       e := dir.get param
@@ -175,8 +164,8 @@ Private
   )
 
   - mkdir <-
-  ( + e:DIRENT
-    + param:STRING_BUFFER
+  ( + e:Dirent
+    + param:String_buffer
 
     (cmds.count = 1).if {
       "`mkdir\': Too few arguments.\n".print;
@@ -193,14 +182,12 @@ Private
     }
   )
 
-  //
   // File manager.
-  //
 
   - cat <-
-  ( + e:DIRENT
-    + param:STRING_BUFFER
-    + file:FILE
+  ( + e:Dirent
+    + param:String_buffer
+    + file:File
     (cmds.count = 1).if {
       "`cat\': Too few arguments.\n".print;
     }.elseif {cmds.count != 2} then {
@@ -219,20 +206,22 @@ Private
           param.print
           "\': Not open.\n".print
         } else {
-          string_tmp.clear
-          string_tmp.set_capacity (file.size.to_integer)
-          file.read string_tmp size (file.size)
-          file.close
-          string_tmp.print
-          '\n'.print
+          String.tmp { string_tmp:String_buffer
+            ? {string_tmp.is_empty}
+            string_tmp.set_capacity (file.size.to_int)
+            file.read string_tmp size (file.size)
+            file.close
+            string_tmp.print
+            '\n'.print
+          }
         }
       }
     }
   )
 
   - mkfile <-
-  ( + f:FILE
-    + param:STRING_BUFFER
+  ( + f:File
+    + param:String_buffer
     (cmds.count = 1).if {
       "`mkfile\': Too few arguments.\n".print;
     } else {
@@ -244,10 +233,12 @@ Private
         "\': File exists, cannot create file.\n".print
       }.elseif {cmds.count > 2} then {
         f.open
-        2.to (cmds.upper) do { j:INTEGER
-          string_tmp.copy (cmds.at j)
-          string_tmp.add_last ' '
-          f.write string_tmp from 1 size (string_tmp.count)
+        String.tmp { string_tmp:String_buffer
+          2.to (cmds.upper) do { j:Int
+            string_tmp.copy (cmds.at j)
+            string_tmp.add_last ' '
+            f.write string_tmp from 1 size (string_tmp.count)
+          }
         }
         f.close
       }
@@ -267,17 +258,17 @@ Public
   //
 
   - main <-
-  ( + cmd:STRING_BUFFER
+  ( + cmd:String_buffer
 
-    cmds := ARRAY(STRING_BUFFER).create_with_capacity 10
-    cmd := STRING_BUFFER.create 100
-    dir := FILE_SYSTEM
+    cmds := Array(String_buffer).create_with_capacity 10
+    cmd := String_buffer.create 100
+    dir := File_system
 
     {
       dir.path.print
       " > ".print
       cmd.clear
-      STDIN.read_line_in cmd
+      Stdin.read_line_in cmd
 
       (cmd.is_empty).if_false {
         cmds.clear

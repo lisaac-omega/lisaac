@@ -1,9 +1,8 @@
-Header  
-  + name := LOOK;
-  
+Header
+  + name := Look
 Inherit
-  - parent_look_gui:LOOK_GUI := LOOK_GUI
-  - parent_tok_drw:TOK_ITM := TOK_ITM
+  - parent_look_gui:Look_gui := Look_gui
+  - parent_tok_drw:Tok_itm := Tok_itm
       
 Public
   
@@ -11,50 +10,50 @@ Public
   // Icones
   //
   
-  - entry:IMG
-  - comment:IMG
-  - card:IMG
-  - path:IMG
-  - calendar:IMG
-  - export:IMG
-  - import:IMG
-  - type_c:IMG
-  - include_c:IMG
-  - extern_c:IMG
-  - lip:IMG
-  - default:IMG
+  - entry:Img
+  - comment:Img
+  - card:Img
+  - path:Img
+  - calendar:Img
+  - export:Img
+  - import:Img
+  - type_c:Img
+  - include_c:Img
+  - extern_c:Img
+  - lip:Img
+  - default:Img
   
-  - inherit:IMG
-  - eye_open:IMG
-  - eye_close:IMG
+  - inherit:Img
+  - eye_open:Img
+  - eye_close:Img
   
-  - swap:IMG
-  - left:IMG
-  - right:IMG
+  - swap:Img
+  - left:Img
+  - right:Img
     
   //
   // Color
   //
     
   // Used by STY :
-  - erro:INTEGER     := 0
-  - symbol:INTEGER   := 1
-  - rmk:INTEGER      := 2
-  - sub_rmk:INTEGER  := 3
-  - type:INTEGER     := 4
-  - slot:INTEGER     := 5
-  - local:INTEGER    := 6
-  - operator:INTEGER := 7
-  - string:INTEGER   := 8
-  - external:INTEGER := 9
-  - number:INTEGER   := 10
-  - keyword:INTEGER  := 11
-  - style:INTEGER    := 12
-  - codeout:INTEGER  := 13
-  - cursor:INTEGER   := 14
-  - dead:INTEGER     := 15
+  - erro:Int     := 0
+  - symbol:Int   := 1
+  - rmk:Int      := 2
+  - sub_rmk:Int  := 3
+  - type:Int     := 4
+  - slot:Int     := 5
+  - local:Int    := 6
+  - operator:Int := 7
+  - string:Int   := 8
+  - external:Int := 9
+  - number:Int   := 10
+  - keyword:Int  := 11
+  - style:Int    := 12
+  - codeout:Int  := 13
+  - cursor:Int   := 14
+  - dead:Int     := 15
   
-  - cols_size:INTEGER := 16
+  - cols_size:Int := 16
   /*
   - rmk:COLOR        := COLOR.rgb (159,  0, 10)
   - sub_rmk:COLOR    := COLOR.rgb (130, 46, 51)
@@ -67,45 +66,45 @@ Public
   - number:COLOR     := COLOR.rgb (160, 32,240)
   - keyword:COLOR    := COLOR.rgb (145, 76, 38); // OK
   */
-  - rem:COLOR        := COLOR.rgb (200,200,200)
-  - directive:COLOR  := COLOR.rgb (200,200,200)
+  - rem:Color        := Color.rgb (200,200,200)
+  - directive:Color  := Color.rgb (200,200,200)
   
   // Other:
-  - header:COLOR     := COLOR.rgb (128,  0,  0)
-  - contract:COLOR   := COLOR.rgb (248,206, 95)
+  - header:Color     := Color.rgb (128,  0,  0)
+  - contract:Color   := Color.rgb (248,206, 95)
 //  - require:COLOR    := COLOR.rgb (219,194,  6)
 //  - req_parent:COLOR := COLOR.rgb (152,134,  0)
-  - text_bg:COLOR    := COLOR.rgb ( 64, 64, 64)
+  - text_bg:Color    := Color.rgb ( 64, 64, 64)
   
-  - error:COLOR      := COLOR.rgb ( 60,  0,  0)
+  - error:Color      := Color.rgb ( 60,  0,  0)
   
-  - section:ARRAY COLOR := ARRAY COLOR.create 4
+  - section:Array Color := Array Color.create 4
             
-  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str v:String_alias :Boolean <-
   ( id
-    .case "entry"     then { entry     := IMG.load v asset TRUE; }
-    .case "comment"   then { comment   := IMG.load v asset TRUE; }    
-    .case "card"      then { card      := IMG.load v asset TRUE; }
-    .case "path"      then { path      := IMG.load v asset TRUE; }
-    .case "calendar"  then { calendar  := IMG.load v asset TRUE; }
-    .case "export"    then { export    := IMG.load v asset TRUE; }
-    .case "import"    then { import    := IMG.load v asset TRUE; }
-    .case "type_c"    then { type_c    := IMG.load v asset TRUE; }
-    .case "lip"       then { lip       := IMG.load v asset TRUE; }
-    .case "include_c" then { include_c := IMG.load v asset TRUE; }
-    .case "extern_c"  then { extern_c  := IMG.load v asset TRUE; }
-    .case "default"   then { default   := IMG.load v asset TRUE; }
-    .case "inherit"   then { inherit   := IMG.load v asset TRUE; }
-    .case "eye_open"  then { eye_open  := IMG.load v asset TRUE; }
-    .case "eye_close" then { eye_close := IMG.load v asset TRUE; }
+    .case "entry"     then { entry     := Img.load v asset True; }
+    .case "comment"   then { comment   := Img.load v asset True; }    
+    .case "card"      then { card      := Img.load v asset True; }
+    .case "path"      then { path      := Img.load v asset True; }
+    .case "calendar"  then { calendar  := Img.load v asset True; }
+    .case "export"    then { export    := Img.load v asset True; }
+    .case "import"    then { import    := Img.load v asset True; }
+    .case "type_c"    then { type_c    := Img.load v asset True; }
+    .case "lip"       then { lip       := Img.load v asset True; }
+    .case "include_c" then { include_c := Img.load v asset True; }
+    .case "extern_c"  then { extern_c  := Img.load v asset True; }
+    .case "default"   then { default   := Img.load v asset True; }
+    .case "inherit"   then { inherit   := Img.load v asset True; }
+    .case "eye_open"  then { eye_open  := Img.load v asset True; }
+    .case "eye_close" then { eye_close := Img.load v asset True; }
     //
-    .case "swap"  then { swap  := IMG.load v asset TRUE; }
-    .case "left"  then { left  := IMG.load v asset TRUE; }
-    .case "right" then { right := IMG.load v asset TRUE; }
-    = STRING_ALIAS
+    .case "swap"  then { swap  := Img.load v asset True; }
+    .case "left"  then { left  := Img.load v asset True; }
+    .case "right" then { right := Img.load v asset True; }
+    = String_alias
   ) || {parent_look_gui.item id str v}
   
-  - put id:STRING_ALIAS col c:COLOR :BOOLEAN <-
+  - put id:String_alias col c:Color :Boolean <-
   (    
     id
     .case "none"       then { none := c;     }
@@ -134,14 +133,14 @@ Public
     .case "text_bg"    then { text_bg := c;   }
     .case "error"      then { error := c; cols.at erro put c; }
     //
-    .case "slot_private"   then { section.at (SECTION.a_private) put c;   }
-    .case "slot_public"    then { section.at (SECTION.a_public) put c;    }
-    .case "slot_list"      then { section.at (SECTION.a_list) put c;      }
-    .case "slot_directory" then { section.at (SECTION.a_directory) put c; }
-    = STRING_ALIAS
+    .case "slot_private"   then { section.at (Section.a_private) put c;   }
+    .case "slot_public"    then { section.at (Section.a_public) put c;    }
+    .case "slot_list"      then { section.at (Section.a_list) put c;      }
+    .case "slot_directory" then { section.at (Section.a_directory) put c; }
+    = String_alias
   ) || {parent_look_gui.put id col c}
   
-  - to_alpha a:REAL_32 <-
+  - to_alpha a:Real32 <-
   (
     rmk := rmk.set_af a
     rem := rem.set_af a
@@ -189,16 +188,16 @@ Public
   // Draw
   //
   
-  - drw c:INTEGER :REAL_32 <-
-  ( + x:REAL_32
+  - drw c:Int :Real32 <-
+  ( + x:Real32
     c
-    .when 0 then { x := clone (at pos_i = '+') exp FALSE to (tex.x,tex.y) }
+    .when 0 then { x := clone (at pos_i = '+') exp False to (tex.x,tex.y) }
     .when 1 then { x := arrow_to (tex.x,tex.y) }
     .when 2 then { x := commutativity_to (tex.x,tex.y) }
     x
   )
   
-  - x_space:REAL_32 <- TXT_BUF.x_space
+  - x_space:Real32 <- Txt_buf.x_space
   
   /*
   - type_self <-
@@ -308,7 +307,7 @@ Public
     tex.ascdes (asc_c,des_c)
   )
 
-  - assign c:BOOLEAN <-
+  - assign c:Boolean <-
   ( + t:REAL_32
     t := x_space * 0.46; //7; //(x_space*2)/3
     tex.add_x (x_space)
@@ -340,23 +339,23 @@ Public
     tex.ascdes (asc_c,des_c)
   )*/
       
-  - clone c:BOOLEAN exp e:BOOLEAN to (x,y:REAL_32) :REAL_32 <-
-  ( + radius,xx,x0:REAL_32
+  - clone c:Boolean exp e:Boolean to (x,y:Real32) :Real32 <-
+  ( + radius,xx,x0:Real32
     save
     radius := get_state.font_size * 0.266; // 8
     begin_path
     x0 := x+radius+2+c.ok 0 or 2
     (e).if {
-      fill_color (COLOR.gray)
+      fill_color (Color.gray)
       circle (x0,y-radius) radius (radius+3.6/2)
       fill
       begin_path
-      stroke_color (COLOR.white)
+      stroke_color (Color.white)
       stroke_width 1.5
       circle (x0,y-radius) radius radius
       stroke
     } else {
-      stroke_color (COLOR.gray)
+      stroke_color (Color.gray)
       stroke_width 3.6
       circle (x0,y-radius) radius radius
       stroke
@@ -385,10 +384,10 @@ Public
     x+xx+(radius * 2 + 4)    
   )
   
-  - arrow_to (x,y:REAL_32) :REAL_32 <-
-  ( + px,py,w,h,l:REAL_32
+  - arrow_to (x,y:Real32) :Real32 <-
+  ( + px,py,w,h,l:Real32
     h := asc_c * 0.3
-    w := FONT.size_app * 0.1
+    w := Font.size_app * 0.1
     l := x_space*1.8
     begin_path
     stroke_color (cols.at symbol)
@@ -406,12 +405,12 @@ Public
     x + l + w*2
   )
   
-  - commutativity_to (x,y:REAL_32) :REAL_32 <-
-  ( + px,py,w,h,l,r:REAL_32
+  - commutativity_to (x,y:Real32) :Real32 <-
+  ( + px,py,w,h,l,r:Real32
     h := asc_c * 0.3
-    w := FONT.size_app * 0.1
+    w := Font.size_app * 0.1
     l := x_space*1.8
-    r := FONT.size_app * 0.15
+    r := Font.size_app * 0.15
     (px,py) := (x + w, y - h)
     begin_path
     stroke_color (cols.at symbol)

@@ -1,18 +1,18 @@
 --WARNING----------
 Double declaration for `foo' slot.
-Line 7 column 11 in MAIN(.../test/misc/9/main.li):
-  - foo foo:INTEGER <-
+Line 5 column 11 in Main(.../test/misc/9/main.li):
+  - foo foo:Int <-
            ^
 
-Line 8 column 9 in MAIN(.../test/misc/9/main.li):
-  ( + foo:INTEGER
+Line 6 column 9 in Main(.../test/misc/9/main.li):
+  ( + foo:Int
          ^
 --WARNING----------
 Conflict `foo' name between slot and local.
-Line 7 column 20 in MAIN(.../test/misc/9/main.li):
-  - foo foo:INTEGER <-
-                    ^
+Line 5 column 16 in Main(.../test/misc/9/main.li):
+  - foo foo:Int <-
+                ^
 
-Line 8 column 9 in MAIN(.../test/misc/9/main.li):
-  ( + foo:INTEGER
+Line 6 column 9 in Main(.../test/misc/9/main.li):
+  ( + foo:Int
          ^

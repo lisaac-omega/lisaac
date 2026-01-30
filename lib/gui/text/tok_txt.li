@@ -1,23 +1,22 @@
 Header
-  + name := TOK_TXT;
-  
+  + name := Tok_txt
 Inherit
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
   
 Private
-  - stk:Expanded ARRAY (Strict TOK_TXT)
+  - stk:Flat Array (Exact Tok_txt)
   
 Public
      
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
   - begin_draw <-
   (    
-    fill_color (LOOK.none)
+    fill_color (Look.none)
   )
     
-  - detect:BOOLEAN <- TRUE
+  - detect:Boolean <- True
   
   - parse <-
   (    
@@ -25,4 +24,4 @@ Public
     (at pos_i = '\n').if { nl := nl + 1; pos_i := pos_i + 1; }
   )
     
-  - free <- stk.add_last Self
+  - free <- stk.add_last self

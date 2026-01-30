@@ -1,62 +1,60 @@
 Header
-  + name := FILE;
-
-  /*Abstract File Management*/
-
+  + name := File
+/*Abstract File Management*/
 Inherit
-  + parent_dirent:Expanded DIRENT
+  + parent_dirent:Flat Dirent
 
 Private
 
-  + stream:POINTER; // Unix file pointer (FILE *).
+  + stream:Pointer; // Unix file pointer (FILE *).
   
 Public
   
-  - is_file:BOOLEAN <- TRUE
+  - is_file:Boolean <- True
   
-  - is_open:BOOLEAN <- stream != NULL
+  - is_open:Boolean <- stream != NULL
 
-  - size:UINTEGER_32 <-
-  ( + pe:NATIVE_ARRAY(CHARACTER)
-    + result:UINTEGER_32
+  - size:Uint32 <-
+  ( + pe:C_array(Char)
+    + result:Uint32
     pe := path.to_external
     `{ struct stat t; stat(@pe,&t)`
-      result := `t.st_size`:UINTEGER_32
+      result := `t.st_size`:Uint32
     `}`
     result
   )
 
-  - cursor:UINTEGER_32 <-
-  ( + str:POINTER
+  - cursor:Uint32 <-
+  ( + str:Pointer
     str := stream
-    `ftell((FILE *)@str)`:UINTEGER_32
+    `ftell((FILE *)@str)`:Uint32
   )
 
-  - set_cursor n:UINTEGER_32 <-
+  - set_cursor n:Uint32 <-
   [
     /* BSBS Old; */
     -? {stream != NULL}
     -? {n <= size}
   ]
-  ( + str:POINTER
+  ( + str:Pointer
     str := stream
     `fseek((FILE*)(@str),@n,SEEK_SET)`
   )
 
-  - open:BOOLEAN <-
+  - open:Boolean <-
   [
     -? {stream = NULL}
   ]
-  ( + pa:NATIVE_ARRAY(CHARACTER)
+  ( + pa:C_array(Char)
     pa := path.to_external
-    stream := `fopen((char*)@pa,"r+b")`:(POINTER)
+    stream := `fopen((char*)@pa,"r+b")`:(Pointer)
     stream != NULL
   )
 
-  - open_read_only:BOOLEAN <-
-  ( + pa:NATIVE_ARRAY(CHARACTER)
+  - open_read_only:Boolean <-
+  ( + pa:C_array(Char)
     pa := path.to_external
-    stream := `fopen((char*)@pa,"rb")`:(POINTER)
+    stream := `fopen((char*)@pa,"rb")`:(Pointer)
     stream != NULL
   )
 
@@ -64,7 +62,7 @@ Public
   [
     -? {stream != NULL}
   ]
-  ( + str:POINTER
+  ( + str:Pointer
 
     str := stream
     `fclose((FILE*)(@str))`
@@ -72,48 +70,48 @@ Public
   )
 
 
-  - is_empty:BOOLEAN <- size = 0
+  - is_empty:Boolean <- size = 0
   
-  - read_uinteger_8:UINTEGER_8 <-
+  - read_uinteger_8:Uint8 <-
   (
     physical_read tmp_uinteger_8 size 1
     tmp_uinteger_8.item 0
   )
   
-  - read_integer_16:INTEGER_16 <-
+  - read_integer_16:Int16 <-
   (
     physical_read tmp_uinteger_8 size 2
-    (tmp_uinteger_8.item 1.to_integer_16 << 8) | tmp_uinteger_8.item 0
+    (tmp_uinteger_8.item 1.to_int16 << 8) | tmp_uinteger_8.item 0
   )
   
-  - read_uinteger_16:UINTEGER_16 <-
+  - read_uinteger_16:Uint16 <-
   (
     physical_read tmp_uinteger_8 size 2
-    (tmp_uinteger_8.item 1.to_uinteger_16 << 8) | tmp_uinteger_8.item 0
+    (tmp_uinteger_8.item 1.to_uint16 << 8) | tmp_uinteger_8.item 0
   )
   
-  - read dest:CLONE :INTEGER <-
+  - read dest:Clone :Int <-
   // WARNING: It's good for Mapping objects, else serializable is necessary.
   [
     -? {is_open}
   ]
-  ( + buf:NATIVE_ARRAY(UINTEGER_8)
-    buf := CAST CLONE TO (NATIVE_ARRAY UINTEGER_8).on dest
+  ( + buf:C_array(Uint8)
+    buf := Cast Clone To (C_array Uint8).on dest
     physical_read buf size (dest.object_size)
   )
 
-  - read dest:ARRAYED size nb_elt:INTEGER :INTEGER <-
+  - read dest:Arrayed size nb_elt:Int :Int <-
   [
     -? {is_open}
   ]
-  ( + buf:NATIVE_ARRAY(UINTEGER_8)
-    + index,s:INTEGER
-    + result:INTEGER
-    + new_count:INTEGER
+  ( + buf:C_array Uint8
+    + index,s:Int
+    + result:Int
+    + new_count:Int
 
     new_count := dest.count + nb_elt
     dest.set_capacity new_count
-    buf := dest.to_native_array_uinteger_8
+    buf := dest.to_c_array_uint8
     index := dest.count * dest.element_sizeof
     s := nb_elt * dest.element_sizeof
     result := physical_read (buf+index) size s
@@ -124,21 +122,21 @@ Public
 
   // Write.
   
-  - write src:CLONE :INTEGER <-
-  ( + buf:NATIVE_ARRAY(UINTEGER_8)
-    buf := CAST CLONE TO (NATIVE_ARRAY UINTEGER_8).on src
+  - write src:Clone :Int <-
+  ( + buf:C_array(Uint8)
+    buf := Cast Clone To (C_array Uint8).on src
     physical_write buf size (src.object_size)
   )
 
-  - write src:ARRAYED from start:INTEGER size nb_elt:INTEGER :INTEGER <-
+  - write src:Arrayed from start:Int size nb_elt:Int :Int <-
   [
     -? {is_open}
   ]
-  ( + buf:NATIVE_ARRAY(UINTEGER_8)
-    + index,s:INTEGER
-    + result:INTEGER
+  ( + buf:C_array Uint8
+    + index,s:Int
+    + result:Int
 
-    buf := src.to_native_array_uinteger_8
+    buf := src.to_c_array_uint8
     index := (start-src.lower) * src.element_sizeof
     s := nb_elt * src.element_sizeof
     result := physical_write (buf+index) size s
@@ -146,27 +144,27 @@ Public
     result / src.element_sizeof
   )
 
-  - write src:ARRAYED size nb_elt:INTEGER :INTEGER <-
+  - write src:Array Uint8 size nb_elt:Int :Int <-
   (
     write src from (src.lower) size nb_elt
   )
 
 Private
   
-  - tmp_uinteger_8:NATIVE_ARRAY(UINTEGER_8) := NATIVE_ARRAY(UINTEGER_8).create 8
+  - tmp_uinteger_8:C_array(Uint8) := C_array(Uint8).create 8
 
-  - physical_read buf:NATIVE_ARRAY(UINTEGER_8) size s:INTEGER :INTEGER <-
+  - physical_read buf:C_array(Uint8) size s:Int :Int <-
   // return size read or 0 if end of input (-1 on error => exception ?)
-  ( + str:POINTER
+  ( + str:Pointer
     str := stream
-    `fread((void *)(@buf),(size_t)(1), (size_t)(@s),(FILE*)(@str))`:(INTEGER)
+    `fread((void *)(@buf),(size_t)(1), (size_t)(@s),(FILE*)(@str))`:(Int)
   )
 
-  - physical_write buf:NATIVE_ARRAY(UINTEGER_8) size s:INTEGER :INTEGER <-
+  - physical_write buf:C_array(Uint8) size s:Int :Int <-
   // return size read or 0 if end of input (-1 on error => exception ?)
-  ( + str:POINTER
+  ( + str:Pointer
     str := stream
-    `fwrite((void *)(@buf),(size_t)(1), (size_t)(@s),(FILE*)(@str))`:(INTEGER)
+    `fwrite((void *)(@buf),(size_t)(1), (size_t)(@s),(FILE*)(@str))`:(Int)
   )
 
   

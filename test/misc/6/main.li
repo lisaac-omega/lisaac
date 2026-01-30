@@ -1,9 +1,7 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + i_am_unused:INTEGER
+  ( + i_am_unused:Int
   )

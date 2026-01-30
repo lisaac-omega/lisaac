@@ -1,18 +1,17 @@
 Header
-  + name := TRD;
-  
+  + name := Trd
 Inherit
-  - parent_texp:TEXP := TEXP
+  - parent_texp:Texp := Texp
   
 Public
   
-  + var:INTEGER
+  + var:Int
   
-  - init_v v:INTEGER :TRD <- ( var := v; Self)
+  - init_v v:Int :Trd <- ( var := v; self)
   
-  - eval:REAL_32 <- stk.at (bp+var)
+  - eval:Real32 <- stk.at (bp+var)
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b | 'V'; var.append_in b
   )

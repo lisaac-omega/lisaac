@@ -1,81 +1,78 @@
 Header
-
-  + name    := CLOCK;
-
-  - include := `#include <time.h>
+  + name := Clock
+- include := `#include <time.h>
   #include <unistd.h>`;
-
 Insert
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
   
-  - date_time:(DATE,TIME) <-
-  ( + wd,d,mo:UINTEGER_8
-    + s,m,h:UINTEGER_8
-    + y:UINTEGER_16
+  - date_time:(Date,Time) <-
+  ( + wd,d,mo:Uint8
+    + s,m,h:Uint8
+    + y:Uint16
     `{
     struct tm *t; time_t tt
     tt = time(NULL)
     t = localtime(&tt)`;
-    wd := `t->tm_wday`:UINTEGER_8 + 1
-    d  := `t->tm_mday`:UINTEGER_8
-    mo := `t->tm_mon` :UINTEGER_8 + 1
-    y  := `t->tm_year`:UINTEGER_16 + 1900
-    h := `t->tm_hour`:UINTEGER_8
-    m := `t->tm_min` :UINTEGER_8
-    s := `t->tm_sec` :UINTEGER_8
+    wd := `t->tm_wday`:Uint8 + 1
+    d  := `t->tm_mday`:Uint8
+    mo := `t->tm_mon` :Uint8 + 1
+    y  := `t->tm_year`:Uint16 + 1900
+    h := `t->tm_hour`:Uint8
+    m := `t->tm_min` :Uint8
+    s := `t->tm_sec` :Uint8
     `}`
-    DATE.create (y,mo,d,wd),TIME.create (h,m,s,0)
+    Date.create (y,mo,d,wd),Time.create (h,m,s,0)
   )
   
-  - date:DATE <-
-  ( + wd,d,mo:UINTEGER_8
-    + y:UINTEGER_16
+  - date:Date <-
+  ( + wd,d,mo:Uint8
+    + y:Uint16
 
     `{
       struct tm *t; time_t tt
       tt = time(NULL)
       t = localtime(&tt)`;
-      wd := `t->tm_wday`:UINTEGER_8 + 1
-      d  := `t->tm_mday`:UINTEGER_8
-      mo := `t->tm_mon` :UINTEGER_8 + 1
-      y  := `t->tm_year`:UINTEGER_16 + 1900
+      wd := `t->tm_wday`:Uint8 + 1
+      d  := `t->tm_mday`:Uint8
+      mo := `t->tm_mon` :Uint8 + 1
+      y  := `t->tm_year`:Uint16 + 1900
     `}`
-    DATE.create (y,mo,d,wd)
+    Date.create (y,mo,d,wd)
   )
 
-  - time:TIME <-
-  ( + s,m,h:UINTEGER_8
+  - time:Time <-
+  ( + s,m,h:Uint8
 
     `{
       struct tm *t; time_t tt
       tt = time(NULL)
       t = localtime(&tt)`;
-      h := `t->tm_hour`:UINTEGER_8
-      m := `t->tm_min` :UINTEGER_8
-      s := `t->tm_sec` :UINTEGER_8
+      h := `t->tm_hour`:Uint8
+      m := `t->tm_min` :Uint8
+      s := `t->tm_sec` :Uint8
     `}`
-    TIME.create (h,m,s,0)
+    Time.create (h,m,s,0)
   )
   
-  - time_raw:UINTEGER_64 <- `time(NULL)`:UINTEGER_64
+  - time_raw:Uint64 <- `time(NULL)`:Uint64
   
-  - clock:UINTEGER_64 <- `clock()`:UINTEGER_64
+  - clock:Uint64 <- `clock()`:Uint64
   
-  - usleep usec:UINTEGER_64 <- `usleep(@usec)`
+  - usleep usec:Uint64 <- `usleep(@usec)`
   
-  - clocks_per_sec:UINTEGER_64 <- `CLOCKS_PER_SEC`:UINTEGER_64
+  - clocks_per_sec:Uint64 <- `CLOCKS_PER_SEC`:Uint64
   
-  //- seconds:REAL_32 <- clock.to_real_32 / clocks_per_sec.to_real_32
+  //- seconds:REAL_32 <- clock.to_real32 / clocks_per_sec.to_real32
   
-  - seconds:REAL_32 <- nanoseconds.to_real_32 / 1000_000_000.0
+  - seconds:Real32 <- nanoseconds.to_real32 / 1000_000_000.0
   
-  - nanoseconds:UINTEGER_64 <-
+  - nanoseconds:Uint64 <-
   ( `struct timespec now`
     `clock_gettime(CLOCK_MONOTONIC, &now)`
-    `now.tv_sec*1000000000LL + now.tv_nsec`:UINTEGER_64
+    `now.tv_sec*1000000000LL + now.tv_nsec`:Uint64
   )
     
   - make <-

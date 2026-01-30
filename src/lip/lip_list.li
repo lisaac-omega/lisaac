@@ -1,27 +1,25 @@
 Header
-
-  + name      := LIP_LIST;
-
+  + name := Lip_list
 Inherit
 
-  + parent_lip_code:Expanded LIP_CODE
+  + parent_lip_code:Flat Lip_code
 
 Public
 
-  + list:ARRAY LIP_CODE
+  + list:Array Lip_code
 
   //
   // Creation.
   //
 
-  - create p:POSITION with v:ARRAY LIP_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position with v:Array Lip_code :Self <-
+  ( + result:Self
     result := clone
     result.make p with v
     result
   )
 
-  - make p:POSITION with v:ARRAY LIP_CODE <-
+  - make p:Position with v:Array Lip_code <-
   (
     position := p
     list := v
@@ -34,17 +32,20 @@ Public
   - run <-
   (
     run_intern
+    list.last.run
+    /*
     (list.last != NULL).if {
       semantic_error (position,"Incorrect expression.")
-    }
+    }*/
   )
 
-  - run_expr:LIP_CONSTANT <-
+  - run_expr:Lip_constant <-
   (
     run_intern
+    /*
     (list.last = NULL).if {
-      semantic_error (position,"Unreachable expression.")
-    }
+      semantic_error (position,"Unreachable expression.(1)")
+    }*/
     list.last.run_expr
   )
 
@@ -52,7 +53,7 @@ Private
 
   - run_intern <-
   (
-    (list.lower).to (list.upper-1) do { i:INTEGER
+    (list.lower).to (list.upper-1) do { i:Int
       list.at i.run
     }
   )

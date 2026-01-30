@@ -1,29 +1,26 @@
 Header
-
-  + name        := EXPR_SUP;
-
-  /*Superior binary comparison expression.*/
-
+  + name := Expr_sup
+/*Superior binary comparison expression.*/
 Inherit
 
-  + parent_expr_binary_cmp:Expanded EXPR_BINARY_CMP
+  + parent_expr_binary_cmp:Flat Expr_binary_cmp
 
 Public
 
-  - symbol:STRING_ALIAS := ">"
+  - symbol:String_alias := ">"
 
   //
   // Execute.
   //
 
-  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
-  //-- C1 > C2 -> TRUE/FALSE
-  ( + result:PROTOTYPE_CST
+  - exec left_cst:Int_cst and right_cst:Int_cst :Expr <-
+  //-- C1 > C2 -> True/False
+  ( + result:Prototype_cst
 
     (left_cst.value > right_cst.value).if {
-      result := PROTOTYPE_CST.create position type (type_true.default)
+      result := Prototype_cst.create position type (type_true.default)
     } else {
-      result := PROTOTYPE_CST.create position type (type_false.default)
+      result := Prototype_cst.create position type (type_false.default)
     }
     left_cst .remove
     right_cst.remove
@@ -31,24 +28,24 @@ Public
     result
   )
 
-  - exec_left  left_cst :INTEGER_CST :EXPR <-
-  //-- 0 > E (unsigned) -> FALSE
-  ( + result:EXPR
+  - exec_left  left_cst :Int_cst :Expr <-
+  //-- 0 > E (unsigned) -> False
+  ( + result:Expr
 
     ((left_cst.value = 0) && {right.static_type.raw.name.first = 'U'}).if {
-      result := PROTOTYPE_CST.create position type (type_false.default)
+      result := Prototype_cst.create position type (type_false.default)
       left .remove
       right.remove
     }
     result
   )
 
-  - exec:EXPR <-
-  //-- E > E -> FALSE
-  ( + result:PROTOTYPE_CST
+  - exec:Expr <-
+  //-- E > E -> False
+  ( + result:Prototype_cst
 
     (left ~= right).if {
-      result := PROTOTYPE_CST.create position type (type_false.default)
+      result := Prototype_cst.create position type (type_false.default)
       left .remove
       right.remove
     }

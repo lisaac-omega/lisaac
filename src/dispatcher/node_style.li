@@ -1,34 +1,31 @@
 Header
-
-  + name    := NODE_STYLE;
-
-  /*Switch node for style*/
-
+  + name := Node_style
+/*Switch node for style*/
 Inherit
 
-  + parent_node:Expanded NODE
+  + parent_node:Flat Node
 
 Public
 
-  + result_expr:EXPR
+  + result_expr:Expr
 
-  + slot:SLOT
+  + slot:Slot
 
-NODE, DTA
+Node, Dta
 
   //
   // Creation.
   //
 
-  - create (e:EXPR,sl:SLOT) with dta:DTA result r:EXPR :SELF <-
-  ( + result:SELF
+  - create (e:Expr,sl:Slot) with dta:Dta result r:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make (e,sl) with dta result r
     result
   )
 
-  - make (e:EXPR,sl:SLOT) with dta:DTA result r:EXPR <-
+  - make (e:Expr,sl:Slot) with dta:Dta result r:Expr <-
   (
     expr        := e
     slot        := sl
@@ -38,88 +35,88 @@ NODE, DTA
 
 Public
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     crash_with_message "NODE_STYLE.my_copy"
     NULL
   )
 
-NODE, DTA
+Node, Dta
 
   //
   // Update.
   //
 
-  - update_link self_type:TYPE_FULL :BOOLEAN <-
+  - update_link self_type:Type_full :Boolean <-
   [
     -? {self_type != NULL}
   ]
-  ( + typ:TYPE
-    + list:ARRAY CASE
-    + case:CASE
-    + e:EXPR
-    + low,up,cnt:INTEGER
+  ( + typ:Type
+    + list:Array Case
+    + case:Case
+    + e:Expr
+    + low,up,cnt:Int
 
     (slot.slot_id = NULL).if {
       (first_code = NULL).if {
-	first_type := TYPE_ID.get_index (slot.lower_style)
-	first_code := call_for first_type self self_type
+        first_type := Type_id.get_index (slot.lower_style)
+        first_code := call_for first_type self self_type
       }
     } else {
       low := slot.lower_style
       up  := slot.upper_style
       cnt := up-low + 1
       (switch = NULL).if {
-	(slot.style = '-').if {
-	  e := slot.slot_id.read position
-	  expr.remove
-	} else {
-	  e := slot.slot_id.read position with expr
-	}
-	switch := SWITCH.create Self with e size cnt
+        (slot.style = '-').if {
+          e := slot.slot_id.read position
+          expr.remove
+        } else {
+          e := slot.slot_id.read position with expr
+        }
+        switch := Switch.create self with e size cnt
       }
       list := switch.list
       (list.count != cnt).if {
-	0.to (cnt-1) do { j:INTEGER
-	  typ := TYPE_ID.get_index (j+low)
+        0.to (cnt-1) do { j:Int
+          typ := Type_id.get_index (j+low)
 
-	  ((j > list.upper) || {typ != list.at j.id}).if {
-	    case := CASE.create typ with (call_for typ self self_type)
-	    list.at j add case
-	  }
-	}
+          ((j > list.upper) || {typ != list.at j.id}).if {
+            case := Case.create typ with (call_for typ self self_type)
+            list.at j add case
+          }
+        }
       }
     }
-    FALSE
+    False
   )
 
 Private
 
-  - call_for t:TYPE self type_self:TYPE_FULL :LIST <-
+  - call_for t:Type self type_self:Type_full :List <-
   [
     -? {type_self != NULL}
   ]
-  ( + result:LIST
-    + typ:TYPE_ID
-    + call:CALL_SLOT
-    + em:EXPR_MULTIPLE
-    + rd:READ
-    + wrt:WRITE
-    + result_var:VARIABLE
-    + new_larg:ARRAY EXPR
-    + slot_dta:SLOT_DATA
-    + slot_cod:SLOT_CODE
-    + idx:INTEGER
-    + type:TYPE_FULL
-    + my_profil:PROFIL
-    + wrt_lst:ARRAY WRITE
-    + new_type_self:TYPE_FULL
-    + data_rd:DTA_RD
-    + cop_arg:EXPR
-    + new_val:EXPR
-    + val:EXPR
+  ( + result:List
+    + typ:Type_id
+    + call:Call_slot
+    + em:Expr_multiple
+    + rd:Read
+    + wrt:Write
+    + result_var:Variable
+    + new_larg:Array Expr
+    + slot_dta:Slot_data
+    + slot_cod:Slot_code
+    + idx:Int
+    + type:Type_full
+    + my_profil:Profil
+    + wrt_lst:Array Write
+    + new_type_self:Type_full
+    + data_rd:Dta_rd
+    + cop_arg:Expr
+    + new_val:Expr
+    + val:Expr
 
-    result := LIST.create position
+    result := List.create position
 
     data_rd ?= data
     ((is_cop) && {type_self.prototype.style = '-'} && {data_rd != NULL} && {! data_rd.is_intern}).if {
@@ -131,36 +128,36 @@ Private
     (idx = 0).if {
       // Data.
       (cop_arg != NULL).if {
-        result.add_last (COP_LOCK.create position with cop_arg)
+        result.add_last (Cop_lock.create position with cop_arg)
       }
       //
       slot_dta := slot.slot_data
       slot_dta.init
       (slot.slot_data_list != NULL).if {
-	(slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { j:INTEGER
-	  slot.slot_data_list.at j.init
-	}
+        (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { j:Int
+          slot.slot_data_list.at j.init
+        }
       }
       //
-      (result_expr.static_type.raw = TYPE_VOID).if {
+      (result_expr.static_type.raw = Type_void).if {
         // BSBS: Pourquoi tu produit quelque chose qui serre à rien ???
-	(slot_dta.style = '-').if {
-	  result.add_last (slot_dta.read position)
-	} else {
-	  result.add_last (slot_dta.read position with (expr.my_copy))
-	}
+        (slot_dta.style = '-').if {
+          result.add_last (slot_dta.read position)
+        } else {
+          result.add_last (slot_dta.read position with (expr.my_copy))
+        }
       } else {
-	em ?= result_expr
-	(em != NULL).if {
-	  (em.lower).to (em.upper - 1) do { j:INTEGER
-	    rd ?= em.at j
-	    ? {rd != NULL}
-	    result_var := rd.variable
-	    result.add_last (new_write result_var with (expr,slot.slot_data_list.at j))
-	  }
-	  rd ?= em.last
-	} else {
-	  rd ?= result_expr
+        em ?= result_expr
+        (em != NULL).if {
+          (em.lower).to (em.upper - 1) do { j:Int
+            rd ?= em.at j
+            ? {rd != NULL}
+            result_var := rd.variable
+            result.add_last (new_write result_var with (expr,slot.slot_data_list.at j))
+          }
+          rd ?= em.last
+        } else {
+          rd ?= result_expr
         }
 
         //(slot_dta.name == "storage").if {
@@ -174,7 +171,7 @@ Private
           string_tmp.append (data.slot.name)
         }
         result.add_last (
-          EXTERNAL_C.create position text (string_tmp.to_string_alias) access NULL persistant TRUE type (TYPE_NULL.default)
+          EXTERNAL_C.create position text (string_tmp.to_string_alias) access NULL persistant True type (TYPE_NULL.default)
         )
          */
           /*
@@ -186,30 +183,30 @@ Private
           '\n'.print
           */
         //}
-	result_var := rd.variable
-	result.add_last (new_write result_var with (expr,slot_dta))
+        result_var := rd.variable
+        result.add_last (new_write result_var with (expr,slot_dta))
       }
       (cop_arg != NULL).if {
-        result.add_last (COP_UNLOCK.create position)
+        result.add_last (Cop_unlock.create position)
       }
     } else {
       // Function.
       slot_cod := slot.slot_code idx
       (slot_cod.id_section.is_inherit_or_insert).if {
-	new_larg := ARRAY EXPR .create_with_capacity 1
-	new_larg.add_last (data.self_arg.my_copy)
+        new_larg := Array Expr .create_with_capacity 1
+        new_larg.add_last (data.self_arg.my_copy)
       } else {
-	new_larg := data.get_argument
+        new_larg := data.get_argument
       }
       type := new_larg.first.static_type
       ? {type != NULL}
       //
       rd ?= new_larg.first
-      ((rd != NULL) && {rd.variable.name = "Self"}).if {
-        // Fix Self type for resend call (else it's fixed by NODE_TYPE)
+      ((rd != NULL) && {rd.variable.name = "self"}).if { 
+        // Fix self type for resend call (else it's fixed by NODE_TYPE)
         new_type_self := type
       } else {
-	new_type_self := type_self
+        new_type_self := type_self
       }
       /*
       string_tmp.copy "// "
@@ -218,15 +215,15 @@ Private
       type_self.display string_tmp
       result.add_last (
         EXTERNAL_C.create (data.position)
-        text (string_tmp.to_string_alias) access NULL persistant TRUE type (TYPE_VOID.default)
+        text (string_tmp.to_string_alias) access NULL persistant True type (TYPE_VOID.default)
       )
       */
-      new_val := CAST.create new_type_self value (new_larg.first)
+      new_val := Cast.create new_type_self value (new_larg.first)
       new_larg.at 0 put new_val
 
 
       /*
-      (new_larg.lower+1).to (new_larg.upper) do { j:INTEGER
+      (new_larg.lower+1).to (new_larg.upper) do { j:Int
         ts ?= slot_cod.get_argument_type j
         ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
           (new_larg.at j.static_type != new_type_self).if {
@@ -234,13 +231,13 @@ Private
             new_larg.at j.static_type.print
             ts.print
             string_tmp.clear
-            (slot_cod.argument_list.lower).to (slot_cod.argument_list.upper) do { h:INTEGER
+            (slot_cod.argument_list.lower).to (slot_cod.argument_list.upper) do { h:Int
               slot_cod.argument_list.at h.append_in string_tmp
             }
             string_tmp.print
             '\n'.print
             warning_error (position,"BUG")
-            semantic_error (new_larg.at j.position,"Type not compatible SELF.")
+            semantic_error (new_larg.at j.position,"Type not compatible Self.")
           }
           //new_val := CAST.create new_type_self value (new_larg.at j)
           //new_larg.at j put new_val
@@ -249,44 +246,44 @@ Private
       */
       (my_profil, wrt_lst) := slot_cod.get_profil new_larg self new_type_self
       //
-      (result_expr.static_type.raw = TYPE_VOID).if {
+      (result_expr.static_type.raw = Type_void).if {
         result.add_last (
-          CALL_SLOT.create position profil my_profil with wrt_lst cop cop_arg
+          Call_slot.create position profil my_profil with wrt_lst cop cop_arg
         )
       } else {
-        call := CALL_SLOT.create position profil my_profil with wrt_lst cop NULL
+        call := Call_slot.create position profil my_profil with wrt_lst cop NULL
         (cop_arg != NULL).if {
-          result.add_last (COP_LOCK.create position with cop_arg)
+          result.add_last (Cop_lock.create position with cop_arg)
           result.add_last call
-          result.add_last (COP_UNLOCK.create position)
+          result.add_last (Cop_unlock.create position)
         } else {
           result.add_last call
         }
-	em ?= result_expr
-	(em != NULL).if {
-	  (em.lower).to (em.upper) do { j:INTEGER
-	    rd ?= em.at j
-	    ? {rd != NULL}
-	    result_var := rd.variable
-	    rd  := call.profil.result_list.at j.read position
-	    wrt := result_var.write position value rd
-            call.result_list.add_last (RESULT.create wrt)
-	  }
-	}.elseif {
+        em ?= result_expr
+        (em != NULL).if {
+          (em.lower).to (em.upper) do { j:Int
+            rd ?= em.at j
+            ? {rd != NULL}
+            result_var := rd.variable
+            rd  := call.profil.result_list.at j.read position
+            wrt := result_var.write position value rd
+            call.result_list.add_last (Res.create wrt)
+          }
+        }.elseif {
           (call.profil.result_list.count != 0) || {call.is_interrupt}
         } then {
           rd ?= result_expr
           result_var := rd.variable
           (call.is_interrupt).if {
             //val := PROTOTYPE_CST.create position type (TYPE_NULL.default)
-            val := EXTERNAL_C.create position text "/* NODE_STYLE */"
-            access NULL persistant FALSE type (type_pointer.default)
+            val := External_c.create position text "/* NODE_STYLE */"
+            access NULL persistant False type (type_pointer.default)
           } else {
             val := call.profil.result_list.first.read position
           }
           wrt := result_var.write position value val
-          call.result_list.add_last (RESULT.create wrt)
-	}
+          call.result_list.add_last (Res.create wrt)
+        }
       }
     }
     result
@@ -294,8 +291,8 @@ Private
 
 Private
 
-  - new_write var:VARIABLE with (e:EXPR,slo:SLOT_DATA) :WRITE <-
-  ( + rd:READ
+  - new_write var:Variable with (e:Expr,slo:Slot_data) :Write <-
+  ( + rd:Read
 
     (slo.style = '-').if {
       rd  := slo.read position

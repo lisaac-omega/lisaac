@@ -1,23 +1,24 @@
 Header
-
-  + name    := TYPE;
-
-  /*Type without style*/
+  + name := Type
+/*Type without style*/
 Inherit
-  + parent_any:Expanded ANY
+  + parent_any:Flat Any
 
-  - parent_parameter_to_type:Expanded PARAMETER_TO_TYPE
+  - parent_parameter_to_type:Flat Parameter_to_type
   
-  - parent_types:TYPES := TYPES
-PROFIL_LIST
-  - is_alias_struct:BOOLEAN := TRUE
+  - parent_types:Types := Types
+  
+Profil_list
+  
+  - is_alias_struct:Boolean := True
+
 Private
 
-  - dico_type:HMAP TYPE KEY STRING_ALIAS := new HMAP TYPE KEY STRING_ALIAS
+  - dico_type:Hmap Type Key String_alias := new Hmap Type Key String_alias
   
-TYPES  
+Types  
   
-  - index_max:INTEGER
+  - index_max:Int
   
 //  - type_list:ARRAY TYPE := ARRAY TYPE .create_with_capacity 256; // Linear representation of all types. (index corresponding)
 
@@ -35,13 +36,13 @@ Public
   )
   */
   
-  - first_index:INTEGER <- 0
-  - count:INTEGER <- 1
-  - next_index i:INTEGER :INTEGER <- -1
-  - first:TYPE <- Self
-  - at i:INTEGER :TYPE <- Self
+  - first_index:Int <- 0
+  - count:Int <- 1
+  - next_index i:Int :Int <- -1
+  - first:Type <- self
+  - at i:Int :Type <- self
   
-  - types_append_in buf:STRING_BUFFER <-
+  - types_append_in buf:String_buffer <-
   (
     append_name_in buf
     buf.add_last '('
@@ -53,40 +54,40 @@ Public
   // End TYPES
   //
   
-  - switch_global:ARRAY SWITCH := ARRAY SWITCH .create_with_capacity 256
-  - add_switch_global sw:SWITCH <-
+  - switch_global:Array Switch := Array Switch .create_with_capacity 256
+  - add_switch_global sw:Switch <-
   (
     switch_global.add_last sw
   )
 
-  + switch_list:ARRAY SWITCH
+  + switch_list:Array Switch
 
-  + id:INTEGER := -1
+  + id:Int := -1
 
-  - add_switch_list sw:SWITCH <-
+  - add_switch_list sw:Switch <-
   (
     (switch_list = NULL).if {
-      switch_list := ARRAY SWITCH.create_with_capacity 16
+      switch_list := Array Switch.create_with_capacity 16
     }
     switch_list.add_last sw
   )
 
-  + param_count:INTEGER
+  + param_count:Int
 
-  - set_param n:INTEGER <-
+  - set_param n:Int <-
   (
     param_count := param_count.max n
   )
 
-  + subtype_list:HSET TYPE
+  + subtype_list:Hset Type
 
-  + default:TYPE_FULL
+  + default:Type_full
 
-  + size:INTEGER
+  + size:Int
   
-  - position:POSITION <- prototype.position
+  - position:Position <- prototype.position
 
-  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
+  - parameter_to_type p:Itm_type_parameter :Type_full <-
   (
     NULL
   )
@@ -95,9 +96,9 @@ Public
   //
   //
 
-  + last_pass_binding:INTEGER
+  + last_pass_binding:Int
 
-  - is_late_binding:BOOLEAN <- pass_count = last_pass_binding
+  - is_late_binding:Boolean <- pass_count = last_pass_binding
 
   - set_late_binding <-
   (
@@ -108,43 +109,42 @@ Public
   //
   //
 
-  + itm_type:ITM_TYPE_SIMPLE
+  + itm_type:Itm_type_simple
 
-  + prototype:PROTOTYPE
+  + prototype:Prototype
   
-  - pattern_in :ITM_LIST <- prototype.pattern_in
-  - pattern_out:ITM_LIST <- prototype.pattern_out
+  - pattern_in :Itm_list <- prototype.pattern_in
+  - pattern_out:Itm_list <- prototype.pattern_out
 
-  - type_c:STRING_ALIAS <- prototype.type_c
+  - type_c:String_alias <- prototype.type_c
 
-  + slot_run:ARRAY SLOT
+  + slot_run:Array Slot
 
-  + index:INTEGER
+  + index:Int
 
-  + intern_name:STRING_ALIAS
+  + intern_name:String_alias
 
-  - name:STRING_ALIAS <- prototype.name
+  - name:String_alias <- prototype.name
 
-  - hash_code:INTEGER <- intern_name.hash_code
+  - hash_code:Int <- intern_name.hash_code
 
-  - key:STRING_ALIAS <- prototype.filename
+  - key:String_alias <- prototype.filename
 
   //
   // Get.
   //
 
-  - get (path:STRING_ALIAS,itm_typ:ITM_TYPE_SIMPLE) :TYPE_FULL <-
-  ( + result:TYPE_FULL
-    + base:TYPE
-    + styl:UINTEGER_8
-    + proto:PROTOTYPE
-
-    + r:TYPE
+  - get (path:String_alias,itm_typ:Itm_type_simple) :Type_full <-
+  ( + result:Type_full
+    + base:Type
+    + styl:Uint8
+    + proto:Prototype
+    + r:Type
 
     proto := load_prototype (path,itm_typ.name) generic_count 0
-    base := dico_type.fast_reference_at (proto.filename)
+    base := dico_type.reference_at (proto.filename)
     (base = NULL).if {
-      base := TYPE.clone
+      base := Type.clone
       
       //dico_type.fast_put base to (proto.filename)
       dico_type.at (proto.filename) put base 
@@ -163,19 +163,19 @@ Public
     result
   )
   
-  - Self:SELF '==' Right 60 other:E :BOOLEAN <- Self = other
+  - self:Self '==' Right 60 other:E :Boolean <- self = other
   
   //
   // Contract
   //
 
-  - last_type_contract:TYPE
+  - last_type_contract:Type
 
-  - search_require n:STRING_ALIAS :ITM_SLOT <-
-  ( + j:INTEGER
-    + result:ITM_SLOT
-    + typ:TYPE
-    + ts:ITM_TYPE_SIMPLE
+  - search_require n:String_alias :Itm_slot <-
+  ( + j:Int
+    + result:Itm_slot
+    + typ:Type
+    + ts:Itm_type_simple
 
     j := slot_run.lower
     {
@@ -184,23 +184,23 @@ Public
       {result = NULL}
     }.while_do {
       ts  ?= slot_run.at j.result_type
-      typ := ts.to_run_for Self pos (slot_run.at j.position.prototype.filename).raw
-      result := typ.prototype.slot_list.fast_reference_at n
+      typ := ts.to_run_for self pos (slot_run.at j.position.prototype.filename).raw
+      result := typ.prototype.slot_list.reference_at n
       ((result = NULL) || {result.pattern_in = NULL}).if {
-	result := typ.search_require n
+        result := typ.search_require n
       } else {
-	last_type_contract := typ
+        last_type_contract := typ
       }
       j := j + 1
     }
     result
   )
 
-  - search_ensure n:STRING_ALIAS :ITM_SLOT <-
-  ( + j:INTEGER
-    + result:ITM_SLOT
-    + typ:TYPE
-    + ts:ITM_TYPE_SIMPLE
+  - search_ensure n:String_alias :Itm_slot <-
+  ( + j:Int
+    + result:Itm_slot
+    + typ:Type
+    + ts:Itm_type_simple
 
     j := slot_run.lower
     {
@@ -209,12 +209,12 @@ Public
       {result = NULL}
     }.while_do {
       ts     ?= slot_run.at j.result_type
-      typ    := ts.to_run_for Self pos (slot_run.at j.position.prototype.filename).raw
-      result := typ.prototype.slot_list.fast_reference_at n
+      typ    := ts.to_run_for self pos (slot_run.at j.position.prototype.filename).raw
+      result := typ.prototype.slot_list.reference_at n
       ((result = NULL) || {result.pattern_out = NULL}).if {
-	result := typ.search_ensure n
+        result := typ.search_ensure n
       } else {
-	last_type_contract := typ
+        last_type_contract := typ
       }
       j := j + 1
     }
@@ -225,51 +225,51 @@ Public
   // Searching.
   //
 
-  - add_subtype t:TYPE <-
-  ( + j:INTEGER
-    + it:ITM_TYPE_MONO
+  - add_subtype t:Type <-
+  ( + j:Int
+    + it:Itm_type_mono
 
     (! subtype_list.fast_has t).if {
       subtype_list.fast_add t
       j := slot_run.lower
       {
-	(j <= slot_run.upper) && {slot_run.at j.id_section.is_inherit_or_insert}
+        (j <= slot_run.upper) && {slot_run.at j.id_section.is_inherit_or_insert}
       }.while_do {
         (slot_run.at j.id_section.is_inherit).if {
           it ?= slot_run.at j.result_type
-          it.to_run_for Self pos (slot_run.at j.position.prototype.filename).raw.add_subtype t
-	}
-	j := j + 1
+          it.to_run_for self pos (slot_run.at j.position.prototype.filename).raw.add_subtype t
+        }
+        j := j + 1
       }
     }
   )
 
-  - get_slot n:STRING_ALIAS :SLOT <-
+  - get_slot n:String_alias :Slot <-
   // Static lookup algorithm.
-  ( + result:SLOT
-    + j:INTEGER
-    + it:ITM_TYPE_MONO
+  ( + result:Slot
+    + j:Int
+    + it:Itm_type_mono
     
     result := get_local_slot n
     (result = NULL).if {
       j := slot_run.lower
       {
-	(j <= slot_run.upper) &&
-	{slot_run.at j.id_section.is_inherit_or_insert} &&
-	{result = NULL}
+        (j <= slot_run.upper) &&
+        {slot_run.at j.id_section.is_inherit_or_insert} &&
+        {result = NULL}
       }.while_do {        
         it ?= slot_run.at j.result_type
-	result := it.to_run_for Self pos (slot_run.at j.position.prototype.filename).get_slot n
-	j := j + 1
+        result := it.to_run_for self pos (slot_run.at j.position.prototype.filename).get_slot n
+        j := j + 1
       }
     }
     result
   )
 
-  - get_local_slot n:STRING_ALIAS :SLOT <-
-  ( + j:INTEGER
-    + itm_slot:ITM_SLOT
-    + result:SLOT
+  - get_local_slot n:String_alias :Slot <-
+  ( + j:Int
+    + itm_slot:Itm_slot
+    + result:Slot
 
     j := slot_run.lower
     {(j <= slot_run.upper) && {slot_run.at j.name != n}}.while_do {
@@ -285,42 +285,43 @@ Public
         '\n'.print
       }
       */
-      itm_slot := prototype.slot_list.fast_reference_at n
+      itm_slot := prototype.slot_list.reference_at n
       (itm_slot != NULL).if {
         verify_itm_slot_parent itm_slot
-	result := SLOT.create itm_slot type Self
-	slot_run.add_last result
+        result := Slot.create itm_slot type self
+        slot_run.add_last result
       }
     }
     result
   )
   
-  - get_itm_slot n:STRING_ALIAS :ITM_SLOT <-
-  ( + result:ITM_SLOT
-    + j:INTEGER
-    + it:ITM_TYPE_MONO
-    result := prototype.slot_list.fast_reference_at n
+  - get_itm_slot n:String_alias :Itm_slot <-
+  ( + result:Itm_slot
+    + j:Int
+    + it:Itm_type_mono
+    
+    result := prototype.slot_list.reference_at n
     ((result = NULL) && {slot_run != NULL}).if {
       j := slot_run.lower
       {
-	(j <= slot_run.upper) &&
-	{slot_run.at j.id_section.is_inherit_or_insert} &&
-	{result = NULL}
+        (j <= slot_run.upper) &&
+        {slot_run.at j.id_section.is_inherit_or_insert} &&
+        {result = NULL}
       }.while_do {        
         it ?= slot_run.at j.result_type
-	result := it.to_run_for Self pos (slot_run.at j.position.prototype.filename).get_itm_slot n
-	j := j + 1
+        result := it.to_run_for self pos (slot_run.at j.position.prototype.filename).get_itm_slot n
+        j := j + 1
       }
     }
 
     result
   )
 
-  - get_path_slot n:STRING_ALIAS :SLOT <-
-  ( + result,r:SLOT
-    + j:INTEGER
-    + it:ITM_TYPE_MONO
-    + t:TYPE_FULL
+  - get_path_slot n:String_alias :Slot <-
+  ( + result,r:Slot
+    + j:Int
+    + it:Itm_type_mono
+    + t:Type_full
 
     j := slot_run.lower
     {
@@ -329,7 +330,7 @@ Public
       {slot_run.at j.id_section.is_inherit_or_insert} /* BSBS NE doit jamais arriv*/
     }.while_do {
       it ?= slot_run.at j.result_type
-      t := it.to_run_for Self pos (slot_run.at j.position.prototype.filename)
+      t := it.to_run_for self pos (slot_run.at j.position.prototype.filename)
       result := t.get_slot n
       j := j + 1
     }
@@ -346,42 +347,42 @@ Public
     r
   )
   
-  - get_type_creation:TYPE <-
+  - get_type_creation:Type <-
   (
-    TYPE_CREATION(TYPE).create_type_creation Self    
+    Type_creation(Type).create_type_creation self    
   )
   
   //
   // Import / Export
   //
 
-  - last_cast_name:STRING_BUFFER := STRING_BUFFER.create 32
+  - last_cast_name:String_buffer := String_buffer.create 32
 
-  - is_export_to t:TYPE_FULL :BOOLEAN <-
+  - is_export_to t:Type_full :Boolean <-
   (
     is_cast t with "to_" on (prototype.export_list)
   )
 
-  - is_import_to t:TYPE_FULL :BOOLEAN <-
+  - is_import_to t:Type_full :Boolean <-
   (
     is_cast t with "from_" on (prototype.import_list)
   )
 
 Private
 
-  - is_cast t:TYPE_FULL with msg:STRING_ALIAS on lst:ITM_TYPE :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_cast t:Type_full with msg:String_alias on lst:Itm_type :Boolean <-
+  ( + result:Boolean
+    + j:Int
 
     (lst != NULL).if {
       j := lst.lower
       {(j <= lst.upper) && {! (lst.at j.to_run_for profil_slot pos (prototype.filename)== t)}}.while_do {
-	j := j + 1
+        j := j + 1
       }
       (j <= lst.upper).if {
-	result := TRUE
-	last_cast_name.copy msg
-	lst.at j.append_cast_name_in last_cast_name
+        result := True
+        last_cast_name.copy msg
+        lst.at j.append_cast_name_in last_cast_name
       }
     }
     result
@@ -393,19 +394,19 @@ Public
   // Genere.
   //
 
-  - genere_list:ARRAY TYPE := ARRAY TYPE .create_with_capacity 128
-  - genere_list_global:ARRAY SLOT_DATA := ARRAY SLOT_DATA .create_with_capacity 256
+  - genere_list:Array Type := Array Type .create_with_capacity 128
+  - genere_list_global:Array Slot_data := Array Slot_data .create_with_capacity 256
 
   - add_genere_list <-
   (
     ((slot_run != NULL) && {(slot_run.is_empty) || {slot_run.first != NULL}}).if {
-      (genere_list.fast_first_index_of Self > genere_list.upper).if { // BSBS: a revoir !!
-	genere_list.add_last Self
+      (genere_list.fast_first_index_of self > genere_list.upper).if { // BSBS: a revoir !!
+        genere_list.add_last self
       }
     }
   )
 
-  - add_genere_global s:SLOT_DATA <-
+  - add_genere_global s:Slot_data <-
   (
     (genere_list_global.fast_first_index_of s > genere_list_global.upper).if { // BSBS: a revoir !!
       genere_list_global.add_last s
@@ -414,16 +415,16 @@ Public
 
 Public
 /*
-  - stat_global:ARRAY INTEGER := ARRAY INTEGER .create 128
-  - stat_global_null:ARRAY INTEGER := ARRAY INTEGER .create 128
-  - stat_slot:ARRAY INTEGER := ARRAY INTEGER .create 128
-  - stat_slot_null:ARRAY INTEGER := ARRAY INTEGER .create 128
+  - stat_global:ARRAY Int := ARRAY Int .create 128
+  - stat_global_null:ARRAY Int := ARRAY Int .create 128
+  - stat_slot:ARRAY Int := ARRAY Int .create 128
+  - stat_slot_null:ARRAY Int := ARRAY Int .create 128
   */
 
   - genere_id_family <-
-  ( + sw:SWITCH
-    + case:CASE
-    + j,i:INTEGER
+  ( + sw:Switch
+    + case:Case
+    + j,i:Int
     (switch_list != NULL).if {
       id := 0
       j := switch_list.lower
@@ -432,7 +433,7 @@ Public
         i := sw.list.lower
         {i <= sw.list.upper}.while_do {
           case := sw.list.at i
-          ((case.id != Self) && {case.id.id = id}).if {
+          ((case.id != self) && {case.id.id = id}).if {
             id := id + 1
             j := switch_list.lower - 1
             i := sw.list.upper
@@ -446,33 +447,33 @@ Public
   
   - genere_id <-
   ( 
-    (genere_list.lower).to (genere_list.upper) do { j:INTEGER
+    (genere_list.lower).to (genere_list.upper) do { j:Int
       genere_list.at j.genere_id_family
     }
   )
     
   - genere_all_struct <-
-  ( + sd:SLOT_DATA
-    TYPE_NULL.genere_typedef
+  ( + sd:Slot_data
+    Type_null.genere_typedef
     genere_id
-    (genere_list.lower).to (genere_list.upper) do { j:INTEGER
+    (genere_list.lower).to (genere_list.upper) do { j:Int
       genere_list.at j.genere_typedef_struct
     }
-    TYPE_NULL.genere_struct
-    (genere_list.lower).to (genere_list.upper) do { j:INTEGER
+    Type_null.genere_struct
+    (genere_list.lower).to (genere_list.upper) do { j:Int
       genere_list.at j.genere_struct
     }
     (debug_level_option != 0).if {
-      TYPE_CONTEXT.genere_typedef
-      TYPE_CONTEXT.genere_struct
+      Type_context.genere_typedef
+      Type_context.genere_struct
     }
-    (genere_list_global.lower).to (genere_list_global.upper) do { j:INTEGER
+    (genere_list_global.lower).to (genere_list_global.upper) do { j:Int
       // In global.
       /*
       + s:SLOT_DATA
-      + idx:INTEGER
+      + idx:Int
       s := genere_list_global.at j
-      (s.type.is_expanded).if {
+      (s.type.is_flat).if {
         stat_global.put (stat_global.at 0 + 1) to 0
       } else {
         //(s.type.raw.subtype_list != NULL).if {
@@ -495,64 +496,51 @@ Public
     }
   )
 
-  - id_counter_with_type:INTEGER    := 4
-  - id_counter_without_type:INTEGER := 0
+  - id_counter_with_type:Int    := 4
+  - id_counter_without_type:Int := 0
 
-  - slot_size:ARRAY (ARRAY SLOT_DATA) :=
-  ( + result:ARRAY (ARRAY SLOT_DATA)
+  - slot_size:Array (Array Slot_data) :=
+  ( + result:Array (Array Slot_data)
 
-    result := ARRAY (ARRAY SLOT_DATA) .create_with_capacity 5
-    0.to 4 do { j:INTEGER
-      result.add_last (ARRAY SLOT_DATA .create_with_capacity 8)
+    result := Array (Array Slot_data) .create_with_capacity 5
+    0.to 4 do { j:Int
+      result.add_last (Array Slot_data .create_with_capacity 8)
     }
     result
   )
 
-  + detect_recursivity_generation:BOOLEAN
+  + detect_recursivity_generation:Boolean
 
   //
   // Detect Alias.
   //
 
-  + alias_slot:SLOT_DATA
+  + alias_slot:Slot_data
 
-  - alias_type:TYPE <- alias_slot.type.raw
+  - alias_type:Type <- alias_slot.type.raw
 
   - detect_alias <-
   (
-    
-    /*
-    // DCDC PLUS de TRAVERSABLE
-    (dico_type.lower).to (dico_type.upper) do { j:INTEGER
-      dico_type.at j.detect_alias_struct
-    }
-    */
-    
-    dico_type.foreach_value { t:TYPE
+    dico_type.foreach_value { t:Type
       t.detect_alias_struct
     }
-
-    
-    
-    
-    
   )
 
   - detect_alias_struct <-
   [
     -? {is_alias_struct}
   ]
-  ( + slot:SLOT
-    + i,nb:INTEGER
-    + action:{SLOT_DATA; }
+  ( + slot:Slot
+    + i,nb:Int
+    + action:{Slot_data; }
 
     (! is_late_binding).if {
       ((alias_slot = NULL) && {slot_run != NULL}).if {
 
-        action := { s:SLOT_DATA
+        action := { s:Slot_data
           ((s.ensure_count > 0) || {s.id_section.is_mapping}).if {
             (nb = 0).if {
-              ((s.type.is_expanded) && {s.type.raw.type_c = NULL}).if {
+              ((s.type.is_flat) && {s.type.raw.type_c = NULL}).if {
                 alias_slot := s
               }
             } else {
@@ -567,7 +555,7 @@ Public
           slot := slot_run.at i
           ((slot.style = '+') && {slot.lower_style = 0}).if {
             (slot.slot_data_list != NULL).if {
-              (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:INTEGER
+              (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:Int
                 action.value (slot.slot_data_list.at k)
               }
             }
@@ -583,11 +571,11 @@ Public
   )
 
   - genere_struct <-
-  ( + slot_data:SLOT_DATA
-    + slot:SLOT
-    + tab:ARRAY SLOT_DATA
-    + action:{SLOT_DATA; }
-    + tg:TYPE_GENERIC
+  ( + slot_data:Slot_data
+    + slot:Slot
+    + tab:Array Slot_data
+    + action:{Slot_data; }
+    + tg:Type_generic
 
     ((slot_run.is_empty) || {slot_run.first != NULL}).if {
       (detect_recursivity_generation).if {
@@ -596,82 +584,82 @@ Public
         string_tmp.add_last '.'
         semantic_error (position,string_tmp)
       }
-      detect_recursivity_generation := TRUE
+      detect_recursivity_generation := True
 
       // Depending.
-      (slot_run.lower).to (slot_run.upper) do { j:INTEGER
+      (slot_run.lower).to (slot_run.upper) do { j:Int
         slot := slot_run.at j
 
-	((slot.style = '+') && {slot.lower_style = 0}).if {
-          action := { s:SLOT_DATA
+        ((slot.style = '+') && {slot.lower_style = 0}).if {
+          action := { s:Slot_data
             (
               (
                 (s.ensure_count > 0) || {s.id_section.is_mapping}
-              ) && {s.type.raw != Self} && {
+              ) && {s.type.raw != self} && {
                 (s.type.raw.is_block) ||
-                {is_far_expanded (s.type)} ||
+                {is_far_flat (s.type)} ||
                 {s.type.raw.type_c != NULL}
               }
             ).if {
               s.type.raw.genere_struct
             }
-	  }
-	  (slot.slot_data_list != NULL).if {
-	    (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:INTEGER
-	      action.value (slot.slot_data_list.at k)
-	    }
-	  }
-	  action.value (slot.slot_data)
-	}
+          }
+          (slot.slot_data_list != NULL).if {
+            (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:Int
+              action.value (slot.slot_data_list.at k)
+            }
+          }
+          action.value (slot.slot_data)
+        }
       }
       // Sort slot.
-      (slot_run.lower).to (slot_run.upper) do { j:INTEGER
-	slot := slot_run.at j
-	(slot.style = '+').if {
-	  // In struct.
-	  (slot.lower_style = 0).if {
-	    action := { s:SLOT_DATA
-	      (
-		(s.id_section.is_mapping) || {s.ensure_count > 0}
-	      ).if {
-		add_slot_struct s
-	      }
-	    }
-	    (slot.slot_data_list != NULL).if {
-	      (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:INTEGER
-		action.value (slot.slot_data_list.at k)
-	      }
-	    }
-	    action.value (slot.slot_data)
-	  }
-	  slot_data := slot.slot_id
-	  ((slot_data != NULL) && {slot_data.ensure_count > 0}).if {
-	    add_slot_struct slot_data
-	  }
-	}
+      (slot_run.lower).to (slot_run.upper) do { j:Int
+        slot := slot_run.at j
+        (slot.style = '+').if {
+          // In struct.
+          (slot.lower_style = 0).if {
+            action := { s:Slot_data
+              (
+                (s.id_section.is_mapping) || {s.ensure_count > 0}
+              ).if {
+                add_slot_struct s
+              }
+            }
+            (slot.slot_data_list != NULL).if {
+              (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:Int
+                action.value (slot.slot_data_list.at k)
+              }
+            }
+            action.value (slot.slot_data)
+          }
+          slot_data := slot.slot_id
+          ((slot_data != NULL) && {slot_data.ensure_count > 0}).if {
+            add_slot_struct slot_data
+          }
+        }
       }
 
       (
-	(prototype.name = "NATIVE_ARRAY") || {prototype.name = "NATIVE_ARRAY_VOLATILE"}
+        (prototype.name = str_n_a) || {prototype.name = str_n_a_v}
       ).if {        
-	tg ?= Self
-	tg.generic_list.first.raw.genere_struct
+        tg ?= self
+        tg.generic_list.first.raw.genere_struct
       } else {
-	(type_c != NULL).if {
-	  0.to 4 do { j:INTEGER
-	    tab := slot_size.at j
-	    // BSBS: A tester sont utilité !
-	    (! tab.is_empty).if {
-	      semantic_error (tab.first.position,"Slot is not possible with a type C")
-	    }
+        (type_c != NULL).if {
+          0.to 4 do { j:Int
+            tab := slot_size.at j
+            // BSBS: A tester sont utilité !
+            (! tab.is_empty).if {
+              semantic_error (tab.first.position,"Slot is not possible with a type C")
+            }
           }
 
           
-          ((name = "TRUE") || {name = "FALSE"}).if {
+          ((name = str_true) || {name = str_false}).if {
             output_decl.append "#define "
             output_decl.append intern_name
             output_decl.append "__ "
-            output_decl.add_last ((name = "TRUE").to_character)
+            output_decl.add_last ((name = str_true).to_character)
             output_decl.add_last '\n'
           } else {
             genere_typedef_type_c
@@ -707,46 +695,46 @@ Public
             (prototype.style = '-').if {
               semantic_error (position,"Late binding on '-' prototype is not yet implemented.")
             }
-	    (prototype.is_mapping).if {
-	      semantic_error (prototype.position,
-	      "Late binding is not possible with `mapping' object.");
+            (prototype.is_mapping).if {
+              semantic_error (prototype.position,
+              "Late binding is not possible with `mapping' object.");
             }
           } else {
-	    id_counter_without_type.append_in output_decl
-	    id_counter_without_type := id_counter_without_type + 1
+            id_counter_without_type.append_in output_decl
+            id_counter_without_type := id_counter_without_type + 1
           }
           output_decl.add_last '\n'
           ((is_cop) && {prototype.style = '-'}).if {
             string_tmp.append "  lith_object thread;\n"
             (param_count != 0).if {
-              1.to param_count do { n:INTEGER
+              1.to param_count do { n:Int
                 string_tmp.append "  int param_"
                 (n-1).append_in string_tmp
                 string_tmp.append ";\n"
               }
             }
           }
-	  4.downto 0 do { j:INTEGER
-	    tab := slot_size.at j
-	    (tab.lower).to (tab.upper) do { i:INTEGER
-	      slot_data := tab.at i
-	      ((prototype.is_mapping) && {slot_data.type.is_expanded_c}).if {
-		string_tmp.append "  volatile "
-	      } else {
-		string_tmp.append "  "
-	      }
-	      slot_data.genere string_tmp
-	    }
-	    tab.clear
-	  }
+          4.downto 0 do { j:Int
+            tab := slot_size.at j
+            (tab.lower).to (tab.upper) do { i:Int
+              slot_data := tab.at i
+              ((prototype.is_mapping) && {slot_data.type.is_flat_c}).if {
+                string_tmp.append "  volatile "
+              } else {
+                string_tmp.append "  "
+              }
+              slot_data.genere string_tmp
+            }
+            tab.clear
+          }
 
-          (Self = type_block).if {
-	    string_tmp.append "  void *self;\n"
-	  }
+          (self = type_block).if {
+            string_tmp.append "  void *self;\n"
+          }
 
-	  (string_tmp.is_empty).if {
-	    string_tmp.append "  void *Nothing;\n"
-	  }
+          (string_tmp.is_empty).if {
+            string_tmp.append "  void *Nothing;\n"
+          }
           
           (alias_slot = NULL).if {
             (prototype.is_mapping).if {
@@ -762,7 +750,7 @@ Public
             } else {
               output_decl.append "};\n"
             }
-	  }
+          }
           // Prototype declaration.
           (output_list.count > 1).if {
             output_decl # "extern __" # intern_name # ' ' # intern_name # "_;\n"
@@ -774,7 +762,7 @@ Public
             output_glob # "={__" # intern_name # "__}"
           }
           output_glob # ";\n"
-	}
+        }
       }
 
       // Flag on:
@@ -783,11 +771,11 @@ Public
   )
 
   - genere_typedef_type_c <-
-  ( + tg:TYPE_GENERIC
+  ( + tg:Type_generic
     (
-      (prototype.name = "NATIVE_ARRAY") || {prototype.name = "NATIVE_ARRAY_VOLATILE"}
+      (prototype.name = str_n_a) || {prototype.name = str_n_a_v}
     ).if {
-      tg ?= Self
+      tg ?= self
       tg.generic_list.first.raw.genere_typedef_type_c
     } else {
       output_decl.append "typedef "
@@ -825,18 +813,15 @@ Public
   )
 
   - genere_typedef_struct <-
-  ( + tg:TYPE_GENERIC
-    + t:TYPE
+  ( + tg:Type_generic
+    + t:Type
 
-    (
-      (prototype.name = "NATIVE_ARRAY") ||
-      {prototype.name = "NATIVE_ARRAY_VOLATILE"}
-    ).if {
-      tg ?= Self
+    ((prototype.name = str_n_a) || {prototype.name = str_n_a_v}).if {
+      tg ?= self
       tg.generic_list.first.raw.genere_typedef_struct
     }.elseif {type_c = NULL} then {
       output_decl.append "typedef "
-      t := Self
+      t := self
       {t.alias_slot = NULL}.until_do {
         t := t.alias_type
       }
@@ -857,10 +842,10 @@ Public
 
 Private
 
-  - add_slot_struct s:SLOT_DATA <-
+  - add_slot_struct s:Slot_data <-
   (/*
-    + idx:INTEGER
-    (s.type.is_expanded).if {
+    + idx:Int
+    (s.type.is_flat).if {
       stat_slot.put (stat_slot.at 0 + 1) to 0
     } else {
       //(s.type.raw.subtype_list != NULL).if {
@@ -876,15 +861,15 @@ Private
 */
     (prototype.is_mapping).if {
       (s.id_section.is_mapping).if {
-	slot_size.first.add_last s
+        slot_size.first.add_last s
       } else {
-	semantic_error (s.position,"Slot is not in `Mapping' section.");
+        semantic_error (s.position,"Slot is not in `Mapping' section.");
       }
     } else {
-      ((s.type.is_expanded) && {! s.type.is_default_expanded}).if {
-	slot_size.at 4.add_last s
+      ((s.type.is_flat) && {! s.type.is_default_flat}).if {
+        slot_size.at 4.add_last s
       } else {
-	slot_size.at (s.type.size).add_last s
+        slot_size.at (s.type.size).add_last s
       }
     }
   )
@@ -895,27 +880,27 @@ Public
   // Declaration generation.
   //
 
-  - put_reference_declaration buffer:STRING_BUFFER <-
+  - put_reference_declaration buffer:String_buffer <-
   (
     buffer.append "__"
     buffer.append intern_name
     add_genere_list
   )
 
-  - put_reference_star_declaration buffer:STRING_BUFFER <-
+  - put_reference_star_declaration buffer:String_buffer <-
   (
     (is_block).if_false { // BSBS: A mettre dans TYPE_BLOCK
         buffer.add_last '*'
     }
   )
 
-  - put_expanded_declaration buffer:STRING_BUFFER <-
+  - put_flat_declaration buffer:String_buffer <-
   (
 //    (type_c != NULL).if {
 //      buffer.append type_c
 //    } else {
       buffer.append "__"
-      ((name = "FALSE") || {name = "TRUE"}).if {
+      ((name = str_false) || {name = str_true}).if {
         buffer.append (type_boolean.intern_name)
       } else {
         buffer.append intern_name
@@ -924,10 +909,10 @@ Public
     add_genere_list
   )
 
-  - put_generic_declaration buffer:STRING_BUFFER <-
+  - put_generic_declaration buffer:String_buffer <-
   (
     (is_block).if { // BSBS: A mettre dans TYPE_BLOCK
-      put_expanded_declaration buffer
+      put_flat_declaration buffer
     } else {      
       buffer.append "void"
     }
@@ -937,16 +922,16 @@ Public
   // Code source generation.
   //
 
-  - put_id buffer:STRING_BUFFER <-
+  - put_id buffer:String_buffer <-
   (
     buffer.append "__"
     buffer.append intern_name
     buffer.append "__"
   )
 
-  - put_access_id e:EXPR <-
+  - put_access_id e:Expr <-
   // For switch.
-  ( + t:TYPE
+  ( + t:Type
 
     t := e.static_type.raw
     (t = type_boolean).if {
@@ -962,7 +947,7 @@ Public
     }
   )
 
-  - put_value buffer:STRING_BUFFER <-
+  - put_value buffer:String_buffer <-
   (
     buffer.append intern_name
     buffer.append "__"
@@ -973,15 +958,15 @@ Public
   // Display.
   //
   
-  - append_contract_name_in buf:STRING_BUFFER <-
-  ( + n:STRING_ALIAS
+  - append_contract_name_in buf:String_buffer <-
+  ( + n:String_alias
     n := name
-    (n.lower).to (n.upper) do { j:INTEGER
+    (n.lower).to (n.upper) do { j:Int
       buf.add_last (n.at j.to_lower)
     }
   )
   
-  - append_name_in buf:STRING_BUFFER <-
+  - append_name_in buf:String_buffer <-
   (
     buf.append name
   )
@@ -995,61 +980,61 @@ Public
 
 Public
 
-  - is_block:BOOLEAN := FALSE
+  - is_block:Boolean := False
 
-  - Self:SELF '~=' Right 60 other:TYPE :BOOLEAN <- (Self = other)
+  - self:Self '~=' Right 60 other:Type :Boolean <- (self = other)
 
-  - is_sub_type other:TYPE :BOOLEAN <-
-  ( + result:BOOLEAN
+  - is_sub_type other:Type :Boolean <-
+  ( + result:Boolean
 
-    (Self = other).if {
-      result := TRUE
+    (self = other).if {
+      result := True
     }.elseif {other.subtype_list != NULL} then {
-      result := other.subtype_list.fast_has Self
+      result := other.subtype_list.fast_has self
     }
     result
   )
 
-  - is_sub_type_with_name n:STRING_ALIAS :BOOLEAN <-
-  ( + result:BOOLEAN
-    + idx:INTEGER
-    + type_parent:TYPE
-    + ts:ITM_TYPE_SIMPLE
+  - is_sub_type_with_name n:String_alias :Boolean <-
+  ( + result:Boolean
+    + idx:Int
+    + type_parent:Type
+    + ts:Itm_type_simple
 
     (n = prototype.name).if {
-      result := TRUE
+      result := True
     } else {
       idx := slot_run.lower
       {
-	(idx <= slot_run.upper) && {slot_run.at idx.id_section.is_inherit_or_insert} && {! result}
+        (idx <= slot_run.upper) && {slot_run.at idx.id_section.is_inherit_or_insert} && {! result}
       }.while_do {
         (slot_run.at idx.id_section.is_inherit).if {
           ts ?= slot_run.at idx.result_type
-	  type_parent := ts.to_run_for Self pos (slot_run.at idx.position.prototype.filename).raw
-	  result := type_parent.is_sub_type_with_name n
-	}
-	idx := idx + 1
+          type_parent := ts.to_run_for self pos (slot_run.at idx.position.prototype.filename).raw
+          result := type_parent.is_sub_type_with_name n
+        }
+        idx := idx + 1
       }
     }
     result
   )
 
-TYPE
+Type
 
-  - load_prototype (call_path:STRING_ALIAS,n:STRING_ALIAS)
-  generic_count gen_count:INTEGER :PROTOTYPE <-
-  ( + j,idx_path,idx_name,idx_name_old,idx_path_old:INTEGER
-    + entry:POINTER
-    + result:PROTOTYPE
-    + path,found,cur_found:STRING_ALIAS
-    + cn,cp:CHARACTER
+  - load_prototype (call_path:String_alias,n:String_alias)
+  generic_count gen_count:Int :Prototype <-
+  ( + j,idx_path,idx_name,idx_name_old,idx_path_old:Int
+    + entry:Pointer
+    + result:Prototype
+    + path,found,cur_found:String_alias
+    + cn,cp:Char
     + read_char:{}
-    + stat,found_index,cur_index:INTEGER
-    + is_only:BOOLEAN
+    + stat,found_index,cur_index:Int
+    + is_only:Boolean
     
     //call_path.print; ' '.print; n.print; '\n'.print
 
-    result := dico_name_to_prototype.fast_reference_at n
+    result := dico_name_to_prototype.reference_at n
     (result = NULL).if {
       read_char := {
         cn := n.at idx_name
@@ -1069,7 +1054,7 @@ TYPE
         }
       }
       j := path_file.lower
-      is_only := TRUE
+      is_only := True
       {(j > path_file.upper) || {stat = 2}}.until_do {
         path := path_file.at j
         cur_found := NULL
@@ -1124,7 +1109,7 @@ TYPE
             found := cur_found
             found_index := cur_index
           } else {
-            is_only := FALSE
+            is_only := False
             (cur_index > found_index).if {
               found := cur_found
               found_index := cur_index
@@ -1135,22 +1120,21 @@ TYPE
       }
 
       (stat = 0).if {
-        string_tmp.copy n
-        string_tmp.append " is not found.\n"
-        POSITION.put_error semantic text string_tmp
+        string_tmp |# '`' # n # "' is not found. (0)\n"        
+        Position.put_error semantic text string_tmp
         (list_current != NULL).if {
           list_current.position.put_position
         }
-        POSITION.send_error
+        Position.send_error
       } else {
-        result := PROTOTYPE.prototype_dico.fast_reference_at found
+        result := Prototype.prototype_dico.reference_at found
         (result = NULL).if {
-          entry := FILE_UTILS.open_read found
+          entry := File_utils.open_read found
           (entry.is_not_null).if {
             // Load prototype.
-            FILE_UTILS.close entry
-            result := PROTOTYPE.create found name n generic_count gen_count
-            PARSER.go_on result
+            File_utils.close entry
+            result := Prototype.create found name n generic_count gen_count
+            Parser.go_on result
           } else {
             string_tmp.copy "Cannot open `";
             string_tmp.append found
@@ -1159,20 +1143,20 @@ TYPE
           }
         }
         (is_only).if {
-          dico_name_to_prototype.add result to n
+          dico_name_to_prototype.at n put result
         }
       }
     }
     (result.generic_count != gen_count).if {
       //crash
-      POSITION.put_error semantic text "Incorrect genericity definition."
+      Position.put_error semantic text "Incorrect genericity definition."
       result.position.put_position
       (last_position.code != 0).if {
         last_position.put_position
       } else {
-        ? {crash; TRUE}
+        ? {crash; True}
       }
-      POSITION.send_error
+      Position.send_error
     }
 
     //result.filename.print; '\n'.print; '\n'.print
@@ -1180,84 +1164,84 @@ TYPE
     result
   )
 
-  - make itm_typ:ITM_TYPE_SIMPLE with proto:PROTOTYPE <-
-  ( + mask_bit:UINTEGER_8
+  - make itm_typ:Itm_type_simple with proto:Prototype <-
+  ( + mask_bit:Uint8
     
-    //type_list.add_last Self
+    //type_list.add_last self
     index     := index_max; //type_list.upper
     index_max := index_max + 1
     //
     prototype   := proto
-    intern_name := get_intern name type TRUE
+    intern_name := get_intern name type True
     itm_type    := itm_typ
-    slot_run    := ARRAY SLOT.create_with_capacity 10; // BSBS: A voir.
-    (prototype.type_style = "Expanded").if {
-      // Expanded.
-      mask_bit := TYPE_FULL.expanded_bit | TYPE_FULL.default_expanded_bit
-    }.elseif {prototype.type_style = "Strict"} then {
-      // Strict.
-      mask_bit := TYPE_FULL.strict_bit | TYPE_FULL.default_strict_bit
+    slot_run    := Array Slot.create_with_capacity 10; // BSBS: A voir.
+    (prototype.type_style = "Flat").if { 
+      // Flat.
+      mask_bit := Type_full.flat_bit | Type_full.default_flat_bit
+    }.elseif {prototype.type_style = "Exact"} then { 
+      // Exact.
+      mask_bit := Type_full.exact_bit | Type_full.default_exact_bit
     }
-    default := TYPE_FULL.create Self with mask_bit
-    prototype.init_slot_for Self
+    default := Type_full.create self with mask_bit
+    prototype.init_slot_for self
     //
-    subtype_list := HSET TYPE.create
-    subtype_list.fast_add TYPE_NULL
-    add_subtype Self
+    subtype_list := Hset Type.create
+    subtype_list.fast_add Type_null
+    add_subtype self
     // Size.
-    (POINTER.object_size = 4).if {
+    (Pointer.object_size = 4).if {
       size := 2; // 32 bits
     } else {
       size := 3; // 64 bits
     }
     name
-    .when "INTEGER" then {
-      size := 2; // 32 bits
+    .when str_int then {
+      size := 3; // 64 bits
     }
-    .when "INTEGER_8" or "UINTEGER_8" then {
+    .when str_int_8 or str_uint_8 then {
       size := 0; // 8 bits
     }
-    .when "CHARACTER" or "BOOLEAN" then {
+    .when "Char" or str_boolean then {
       size := 0; // 8 bits
     }
-    .when "INTEGER_16" or "UINTEGER_16" then {
+    .when str_int_16 or str_uint_16 then {
       size := 1; // 16 bits
     }
-    .when "INTEGER_32" or "UINTEGER_32" then {
+    .when str_int_32 or str_uint_32 then {
       size := 2; // 32 bits
     }
-    .when "INTEGER_64" or "UINTEGER_64" then {
+    .when str_int_64 or str_uint_64 then {
       size := 3; // 64 bits
     }
   )
 
-  - dico_name_to_prototype:HMAP PROTOTYPE KEY STRING_ALIAS := new HMAP PROTOTYPE KEY STRING_ALIAS
+  - dico_name_to_prototype:Hmap Prototype Key String_alias := new Hmap Prototype Key String_alias
 
-TYPE, TYPE_FULL
+Type, Type_full
 
-  + type_full_list:ARRAY TYPE_FULL
+  + type_full_list:Array Type_full
 
-  - get_with flg:UINTEGER_8 :TYPE_FULL <-
-  ( + result:TYPE_FULL
-    + i:INTEGER
+  - get_with flg:Uint8 :Type_full <-
+  ( + result:Type_full
+    + i:Int
 
     (flg = default.flag).if {
       result := default
     } else {
       (type_full_list = NULL).if {
-	type_full_list := ARRAY TYPE_FULL.create_with_capacity 2
-	result := TYPE_FULL.create Self with flg
-	type_full_list.add_last result
+        type_full_list := Array Type_full.create_with_capacity 2
+        result := Type_full.create self with flg
+        type_full_list.add_last result
       } else {
-	{(i <= type_full_list.upper) && {type_full_list.at i.flag != flg}}.while_do {
-	  i := i + 1
-	}
-	(i <= type_full_list.upper).if {
-	  result := type_full_list.at i
-	} else {
-	  result := TYPE_FULL.create Self with flg
-	  type_full_list.add_last result
-	}
+        {(i <= type_full_list.upper) && {type_full_list.at i.flag != flg}}.while_do {
+          i := i + 1
+        }
+        (i <= type_full_list.upper).if {
+          result := type_full_list.at i
+        } else {
+          result := Type_full.create self with flg
+          type_full_list.add_last result
+        }
       }
     }
     result
@@ -1265,36 +1249,34 @@ TYPE, TYPE_FULL
 
 Private
 
-  - is_far_expanded t:TYPE_FULL :BOOLEAN <-
+  - is_far_flat t:Type_full :Boolean <-
   // BSBS: Met en non recurssif!!
-  ( + tg:TYPE_GENERIC
-    + result:BOOLEAN
-    (t.is_expanded).if {
-      result := TRUE
-    }.elseif {
-      (t.raw.prototype.name = "NATIVE_ARRAY") || {t.raw.prototype.name = "NATIVE_ARRAY_VOLATILE"}
-    } then {
+  ( + tg:Type_generic
+    + result:Boolean
+    (t.is_flat).if {
+      result := True
+    }.elseif {(t.raw.prototype.name = str_n_a) || {t.raw.prototype.name = str_n_a_v}} then {
       tg ?= t.raw
-      result := is_far_expanded (tg.generic_list.first)
+      result := is_far_flat (tg.generic_list.first)
     }
     result
   )
 
-TYPE,PROTOTYPE
+Type,Prototype
 
-  - verify_itm_slot_parent ref:ITM_SLOT <-
-  ( + idx:INTEGER
-    + type_parent:TYPE
-    + ts:ITM_TYPE_SIMPLE
-    + other:ITM_SLOT
+  - verify_itm_slot_parent ref:Itm_slot <-
+  ( + idx:Int
+    + type_parent:Type
+    + ts:Itm_type_simple
+    + other:Itm_slot
 
     idx := slot_run.lower
     {
       (idx <= slot_run.upper) && {slot_run.at idx.id_section.is_inherit_or_insert}
     }.while_do {
       ts ?= slot_run.at idx.result_type
-      type_parent := ts.to_run_for Self pos (slot_run.at idx.position.prototype.filename).raw
-      other := type_parent.prototype.slot_list.fast_reference_at (ref.name)
+      type_parent := ts.to_run_for self pos (slot_run.at idx.position.prototype.filename).raw
+      other := type_parent.prototype.slot_list.reference_at (ref.name)
       (other != NULL).if {
         ref.is_equal_profil other
       }
@@ -1303,11 +1285,11 @@ TYPE,PROTOTYPE
     }
   )
 
-  - verify_cyclic_inheritance ref:TYPE <-
-  ( + idx:INTEGER
-    + type_parent:TYPE
-    + ts:ITM_TYPE_SIMPLE
-    + s:SLOT
+  - verify_cyclic_inheritance ref:Type <-
+  ( + idx:Int
+    + type_parent:Type
+    + ts:Itm_type_simple
+    + s:Slot
 
     idx := slot_run.lower
     {
@@ -1315,7 +1297,7 @@ TYPE,PROTOTYPE
     }.while_do {
       s := slot_run.at idx
       ts ?= s.result_type
-      type_parent := ts.to_run_for Self pos (slot_run.at idx.position.prototype.filename).raw
+      type_parent := ts.to_run_for self pos (slot_run.at idx.position.prototype.filename).raw
       (type_parent = ref).if {
         semantic_error (s.position,"Static cyclic inheritance.")
       }
@@ -1326,9 +1308,9 @@ TYPE,PROTOTYPE
 
 Private
 
-  - parse_type_c t:STRING :BOOLEAN <-
-  ( + idx,idx2:INTEGER
-    + result:BOOLEAN
+  - parse_type_c t:String :Boolean <-
+  ( + idx,idx2:Int
+    + result:Boolean
     idx := type_c.first_substring_index t
     (idx != -1).if {
       (

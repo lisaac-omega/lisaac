@@ -1,36 +1,33 @@
 Header
-
-  + name        := EXPR_MOD;
-
-  /*Add Binary Expression.*/
-
+  + name := Expr_mod
+/*Add Binary Expression.*/
 Inherit
 
-  + parent_expr_binary:Expanded EXPR_BINARY
+  + parent_expr_binary:Flat Expr_binary
 
 Public
 
-  + symbol:STRING_ALIAS := "%"
+  + symbol:String_alias := "%"
 
   //
   // Execute.
   //
 
-  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  - exec_conservator_right right_cst:Int_cst :Expr <-
   //-- E %   0 -> Error
   //-- E % 2^n -> E & (2^n -1)
-  ( + result:EXPR
+  ( + result:Expr
 
     (right_cst.value = 0).if {
       warning_error (position,"Division by zero.")
     }.elseif {right_cst.to_power != -1} then {
       right_cst.set_value (right_cst.value - 1)
-      result := EXPR_AND.create position with left and right_cst
+      result := Expr_and.create position with left and right_cst
     }
     result
   )
 
-  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  - exec left_cst:Int_cst and right_cst:Int_cst :Expr <-
   //-- C1 % C2 -> C3
   (
     left_cst.set_value (left_cst.value % right_cst.value)
@@ -38,21 +35,21 @@ Public
     left_cst
   )
 
-  - exec:EXPR <-
+  - exec:Expr <-
   //-- E % E -> 0
-  ( + result:EXPR
+  ( + result:Expr
 
     (left ~= right).if {
-      result := INTEGER_CST.create position value 0 type static_type
+      result := Int_cst.create position value 0 type static_type
       left.remove
       right.remove
     }
     result
   )
 
-  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  - exec_left  left_cst :Int_cst :Expr <-
   //-- 0 % E -> 0
-  ( + result:EXPR
+  ( + result:Expr
 
     (left_cst.value = 0).if {
       result := left_cst
@@ -61,10 +58,10 @@ Public
     result
   )
 
-  - exec_right right_cst:INTEGER_CST :EXPR <-
+  - exec_right right_cst:Int_cst :Expr <-
   //-- E %   1 -> 0
   //-- E %  -1 -> 0
-  ( + result:EXPR
+  ( + result:Expr
 
     (right_cst.value = 1).if {
       right_cst.set_value 0

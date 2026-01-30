@@ -1,0 +1,57 @@
+Header
+  + name := Af_range_array
+Public
+  - main <-
+  ( + a:Range_array Int
+    
+    a := new Range_array Int lower 0 capacity 32
+    a.add_first 1
+    Test.check (a.at 0 = 1)  
+    
+    a := new Range_array Int lower 2 capacity 1
+    a.add_first 1
+    Test.check (a.at 2 = 1)  
+    
+    a := new Range_array Int lower (-2) capacity 1
+    a.add_first 1
+    Test.check (a.at (-2) = 1)  
+    
+    a := new Range_array Int lower 2 capacity 3
+    a.add_first (1, 2)
+    Test.check (a.at 2) integer 1  
+    Test.check (a.at 3 = 2)  
+    
+    a := new Range_array Int lower 0 capacity 2
+    a.add_first (1, 2, 3)
+    Test.check (a.at 0 = 1)  
+    Test.check (a.at 1 = 2)  
+    Test.check (a.at 2 = 3)
+        
+    a := new Range_array Int of 2
+    a.add_first 1
+    Test.check (a.at 0 = 1)
+    Test.check (a.at 1 = 2)
+    
+    a := new Range_array Int of (3,4)
+    a.add_first(1,2)
+    Test.check (a.at 0 = 1)
+    Test.check (a.at 1 = 2)
+    Test.check (a.at 2 = 3)
+    Test.check (a.at 3 = 4)
+    
+    a := new Range_array Int of 4
+    a.add_first(1,2,3)
+    Test.check (a.at 0) integer 1
+    Test.check (a.at 1 = 2)
+    Test.check (a.at 2 = 3)
+    Test.check (a.at 3 = 4)
+    
+    a := new Range_array Int of (5, 6)
+    a.add_first(1,2,3,4)
+    Test.check (a.at 0) integer 1
+    Test.check (a.at 1 = 2)
+    Test.check (a.at 2 = 3)
+    Test.check (a.at 3 = 4)
+    Test.check (a.at 4 = 5)
+    Test.check (a.at 5 = 6)
+  )

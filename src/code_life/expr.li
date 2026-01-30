@@ -1,60 +1,57 @@
 Header
-
-  + name    := EXPR;
-
-  /* Parent for all expression */
-
+  + name := Expr
+/* Parent for all expression */
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  - cardinality:INTEGER <- 1
+  - cardinality:Int <- 1
 
   //
   // Comparison.
   //
 
-  - Self:SELF '~=' Right 60 other:EXPR :BOOLEAN <- FALSE
+  - self:Self '~=' Right 60 other:Expr :Boolean <- False
 
-  - Self:SELF '!~=' Right 60 other:EXPR :BOOLEAN <- ! (Self ~= other)
+  - self:Self '!~=' Right 60 other:Expr :Boolean <- ! (self ~= other)
 
   //
   // Type.
   //
 
-  - static_type:TYPE_FULL <-
+  - static_type:Type_full <-
   (
     abstract
     NULL
   )
 
-  - get_type t:TYPES_TMP <- abstract
+  - get_type t:Types_tmp <- abstract
 
   //
   // Flag.
   //
 
-  - is_constant:BOOLEAN <- FALSE
+  - is_constant:Boolean <- False
 
   //
   // Check type.
   //
   
-  - to_export t:TYPE_FULL pos p:POSITION :EXPR <-
-  ( + local:VARIABLE
-    + instr:INSTR
-    + rec:EXPR
-    + slot_name:STRING_ALIAS
-    + slot_msg:SLOT
-    + node:NODE
-    + ts:ITM_TYPE_SIMPLE
+  - to_export t:Type_full pos p:Position :Expr <-
+  ( + local:Variable
+    + instr:Instr
+    + rec:Expr
+    + slot_name:String_alias
+    + slot_msg:Slot
+    + node:Node
+    + ts:Itm_type_simple
     local := static_type.get_temporary position
-    instr := local.write position value Self
+    instr := local.write position value self
     list_current.add_last instr
     //
-    slot_name := TYPE.last_cast_name.to_string_alias
+    slot_name := Type.last_cast_name.to_string_alias
     slot_msg  := static_type.get_slot slot_name
     (slot_msg = NULL).if {
       string_tmp.clear
@@ -66,10 +63,10 @@ Public
       string_tmp.append "' not found in `";
       static_type.append_name_in string_tmp
       string_tmp.append "'."
-      POSITION.put_error semantic text string_tmp
+      Position.put_error semantic text string_tmp
       p.put_position
       static_type.prototype.position.put_position
-      POSITION.send_error
+      Position.send_error
     }
     (slot_msg.argument_count != 1).if {
       semantic_error (slot_msg.position,"No argument for this slot.")
@@ -81,32 +78,32 @@ Public
       string_tmp.append "' is incorrect (Used for auto-conversion to `";
       t.append_name_in string_tmp
       string_tmp.append "')."
-      POSITION.put_error semantic text string_tmp
+      Position.put_error semantic text string_tmp
       slot_msg.position.put_position
       position.put_position
-      POSITION.send_error
+      Position.send_error
     }
     //
     rec  := local.read position
-    node := NODE.new_read position slot slot_msg receiver rec self rec intern FALSE
+    node := Node.new_read position slot slot_msg receiver rec self rec intern False
     list_current.add_last node
     //
     node.result_expr
   )
   
-  - to_import t:TYPE_FULL pos p:POSITION :EXPR <-
-  ( + local:VARIABLE
-    + instr:INSTR
-    + slot_name:STRING_ALIAS
-    + slot_msg:SLOT
-    + node:NODE
-    + args:ARRAY EXPR
-    + ts:ITM_TYPE_SIMPLE
+  - to_import t:Type_full pos p:Position :Expr <-
+  ( + local:Variable
+    + instr:Instr
+    + slot_name:String_alias
+    + slot_msg:Slot
+    + node:Node
+    + args:Array Expr
+    + ts:Itm_type_simple
     local := static_type.get_temporary position
-    instr := local.write position value Self
+    instr := local.write position value self
     list_current.add_last instr
     //
-    slot_name := TYPE.last_cast_name.to_string_alias
+    slot_name := Type.last_cast_name.to_string_alias
     slot_msg  := t.get_slot slot_name
     (slot_msg = NULL).if {
       string_tmp.clear
@@ -118,44 +115,44 @@ Public
       string_tmp.append "' not found in `";
       t.append_name_in string_tmp
       string_tmp.append "'."
-      POSITION.put_error semantic text string_tmp
+      Position.put_error semantic text string_tmp
       p.put_position
       t.prototype.position.put_position
-      POSITION.send_error
+      Position.send_error
     }
     (slot_msg.argument_count != 2).if {
       semantic_error (slot_msg.position,"Incorrect argument for this slot.")
     }
     ts ?= slot_msg.result_type
-    ((ts = NULL) || {! (ts == ITM_TYPE_PARAMETER.type_self)}).if {
+    ((ts = NULL) || {! (ts == Itm_type_parameter.type_self)}).if {
       string_tmp.copy "Type result `";
       slot_msg.result_type.append_in string_tmp
       string_tmp.append "' is incorrect (Used for auto-conversion to `";
       t.append_name_in string_tmp
       string_tmp.append "')."
-      POSITION.put_error semantic text string_tmp
+      Position.put_error semantic text string_tmp
       slot_msg.position.put_position
       position.put_position
-      POSITION.send_error
+      Position.send_error
     }
     //
-    args := ARRAY EXPR .create_with_capacity 2
-    args.add_last (PROTOTYPE_CST.create position type t)
+    args := Array Expr .create_with_capacity 2
+    args.add_last (Prototype_cst.create position type t)
     args.add_last (local.read position)
-    node := NODE.new_read position slot slot_msg
-    receiver (args.first.my_copy) with args intern FALSE
+    node := Node.new_read position slot slot_msg
+    receiver (args.first.my_copy) with args intern False
     list_current.add_last node
     //
     node.result_expr
   )
   
-  - check_type t:TYPE_FULL with p:POSITION :EXPR <-
-  ( + result:EXPR
+  - check_type t:Type_full with p:Position :Expr <-
+  ( + result:Expr
     ? {static_type != NULL}
     ? {t != NULL}
 
     (t.affect_with static_type).if {
-      result := Self
+      result := self
     } else {
       ? {list_current != NULL}
       (static_type.is_export_to t).if {
@@ -165,15 +162,15 @@ Public
       } else {        
         // Type Error
         //crash;
-	string_tmp.copy "Type `";
-	t.append_name_in string_tmp
-	string_tmp.append "' is invalid with `";
-	static_type.append_name_in string_tmp
-	string_tmp.append "'."
-	POSITION.put_error semantic text string_tmp
-	p.put_position
+        string_tmp.copy "Type `";
+        t.append_name_in string_tmp
+        string_tmp.append "' is invalid with `";
+        static_type.append_name_in string_tmp
+        string_tmp.append "'."
+        Position.put_error semantic text string_tmp
+        p.put_position
         position.put_position
-	POSITION.send_error
+        Position.send_error
       }
     }
     result
@@ -183,30 +180,30 @@ Public
   // Contract Slot in/out, Section in/out, Prototype in/out
   //
   
-  - to_run_contract msg:STRING_ALIAS <-
+  - to_run_contract msg:String_alias <-
   (
     "EXPR 179: ".print
     type_name.print
-    list_current.add_last Self
+    list_current.add_last self
   )
   
   //
   // Execute.
   //
 
-  - execute:INSTR <-
+  - execute:Instr <-
   (
     execute_unlink
   )
 
-  - execute_link:EXPR <-
+  - execute_link:Expr <-
   (
     abstract
     NULL
   )
   //[ ? {Result != NULL}; ]
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     abstract
     NULL

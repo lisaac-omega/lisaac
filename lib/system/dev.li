@@ -1,7 +1,6 @@
 Header
-  + name := DEV;
-  
-  - include := `
+  + name := Dev
+- include := `
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -11,14 +10,14 @@ Header
 
 Public
 
-  - open n:STRING :INTEGER <-
-  ( + buf:NATIVE_ARRAY CHARACTER
+  - open n:String :Int <-
+  ( + buf:C_array Char
     buf := n.to_external
-    `open((char*)@buf,O_RDWR | O_NONBLOCK)`:(INTEGER)
+    `open((char*)@buf,O_RDWR | O_NONBLOCK)`:(Int)
   )
   
-  - ioctl f:INTEGER cmd cmd:INTEGER ptr p:POINTER :INTEGER <- `ioctl(@f,@cmd,@p)`:INTEGER
+  - ioctl f:Int cmd cmd:Int ptr p:Pointer :Int <- `ioctl(@f,@cmd,@p)`:Int
   
   
   
-  - close f:INTEGER <- `close(@f)`
+  - close f:Int <- `close(@f)`

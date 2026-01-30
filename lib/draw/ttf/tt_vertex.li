@@ -1,10 +1,8 @@
 Header
-  
-  + name := Expanded TT_VERTEX;
-  
+  + name := Flat Tt_vertex
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private  
   /*
@@ -24,33 +22,33 @@ Public
   
  // - create:TT_VERTEX <- new
   
-  + x:INTEGER_16
-  - xf:REAL_32 <- x.to_real_32
+  + x:Int16
+  - xf:Real32 <- x.to_real32
   
-  + y:INTEGER_16
-  - yf:REAL_32 <- y.to_real_32
+  + y:Int16
+  - yf:Real32 <- y.to_real32
   
-  + cx:INTEGER_16
-  - cxf:REAL_32 <- cx.to_real_32
+  + cx:Int16
+  - cxf:Real32 <- cx.to_real32
   
-  + cy:INTEGER_16
-  - cyf:REAL_32 <- cy.to_real_32
+  + cy:Int16
+  - cyf:Real32 <- cy.to_real32
   
-  + type:UINTEGER_8
-  + padding:UINTEGER_8
+  + type:Uint8
+  + padding:Uint8
   
-  - set_type t:UINTEGER_8 <- ( type := t; )
+  - set_type t:Uint8 <- ( type := t; )
   
-  - make typ:UINTEGER_8 pos (px,py,pcx,pcy:INTEGER_32) <-
+  - make typ:Uint8 pos (px,py,pcx,pcy:Int32) <-
   (
     type    := typ
-    (x,y)   := (px .to_integer_16,py .to_integer_16)
-    (cx,cy) := (pcx.to_integer_16,pcy.to_integer_16)
+    (x,y)   := (px .to_int16,py .to_int16)
+    (cx,cy) := (pcx.to_int16,pcy.to_int16)
   )
   
-  - set_x  p:INTEGER_16 <- ( x  := p; )
-  - set_y  p:INTEGER_16 <- ( y  := p; )
-  - set_cx p:INTEGER_16 <- ( cx := p; )
-  - set_cy p:INTEGER_16 <- ( cy := p; )
+  - set_x  p:Int16 <- ( x  := p; )
+  - set_y  p:Int16 <- ( y  := p; )
+  - set_cx p:Int16 <- ( cx := p; )
+  - set_cy p:Int16 <- ( cy := p; )
   
-//  - free <- stock.add_last Self
+//  - free <- stock.add_last self

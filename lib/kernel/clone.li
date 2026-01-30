@@ -1,35 +1,34 @@
 Header
-  + name := CLONE;
-  
+  + name := Clone
 Insert
-  - parent_print:PRINT := PRINT
-  - parent_utils:UTILS := UTILS
+  - parent_print:Print := Print
+  - parent_utils:Utils := Utils
   
 Public
   
-  - clone_allocation_size:UINTEGER_CPU
+  - clone_allocation_size:Uint_cpu
   
-  - clone_total_size:UINTEGER_CPU:=0
+  - clone_total_size:Uint_cpu:=0
   
-  - add_clone_total_size siz:UINTEGER_CPU <- (clone_total_size := clone_total_size+siz;)
+  - add_clone_total_size siz:Uint_cpu <- (clone_total_size := clone_total_size+siz;)
   
-  - set_detect_memory_leak b:BOOLEAN <-
+  - set_detect_memory_leak b:Boolean <-
   (
     "Memory leak: ".print; b.print; '\n'.print
     detect_memory_leak := b
   )
 
-SELF
+Self
   
-  - cnt_clone:INTEGER
+  - cnt_clone:Int
   
-  - detect_memory_leak:BOOLEAN
+  - detect_memory_leak:Boolean
   
-  - clone:SELF <-
-  ( + result:SELF
-    + ptr:POINTER
-    + sz:UINTEGER_CPU
-    + typ_id:INTEGER
+  - clone:Self <-
+  ( + result:Self
+    + ptr:Pointer
+    + sz:Uint_cpu
+    + typ_id:Int
     (detect_memory_leak).if {            
       type_name.println
       //crash_with_message "Memory leak !";
@@ -43,11 +42,11 @@ SELF
     ///*clone_stats.li*/type_name.print; '\n'.print
     sz := object_size
     (sz = 0).if {
-      result := Self; // BSBS: Pas genial (result devrait etre diff SELF)
+      result := self; // BSBS: Pas genial (result devrait etre diff Self)
     } else {
       typ_id := type_id_intern
-      ptr := `malloc((@sz + 3) & ~3)`:POINTER; // ANDROID
-      //( + tp:INTEGER; tp := cnt_clone
+      ptr := `malloc((@sz + 3) & ~3)`:Pointer; // ANDROID
+      //( + tp:Int; tp := cnt_clone
         // `printf("%ld\n",@tp)`
       //)
       //cnt_clone := cnt_clone + 1
@@ -66,11 +65,11 @@ SELF
       ptr := MEMORY.alloc_size sz
       } else
       {
-      ptr := MEMORY.alloc_type (typ_id.to_uinteger_32) size sz
+      ptr := MEMORY.alloc_type (typ_id.to_uint32) size sz
       }
       */
-      result := CAST POINTER TO SELF.on ptr
-      //MEMORY.copy to_pointer to ptr size (CAST POINTER TO UINTEGER_32.on sz)
+      result := Cast Pointer To Self.on ptr
+      //MEMORY.copy to_pointer to ptr size (CAST Pointer TO Uint32.on sz)
       copy_intern_in result
       (is_cop_type).if {
         `((lith_object *)@result)->first = NULL`
@@ -80,37 +79,37 @@ SELF
     result
   )
   
-SELF
+Self
   
   - free_allocation_memory <-
   // Static free, don't use with GC.
-  ( + ptr:POINTER
-    + sz:UINTEGER_CPU
-    + typ_id:INTEGER
+  ( + ptr:Pointer
+    + sz:Uint_cpu
+    + typ_id:Int
     
     sz := object_size
     (sz != 0).if
     {
       typ_id := type_id_intern
-      //ptr := `free(@Self)`
+      //ptr := `free(@self)`
       clone_allocation_size := clone_allocation_size - sz
       ptr := to_pointer
-      (typ_id = -1).if { MEMORY.free ptr size sz; }
-      else {  MEMORY.free ptr type (typ_id.to_uinteger_32); }
+      (typ_id = -1).if { Memory.free ptr size sz; }
+      else {  Memory.free ptr type (typ_id.to_uint32); }
     }
   )
   
 Public
 
-  - twin:SELF <-
+  - twin:Self <-
   (
     abstract
-    Self
+    self
   )
   
-SELF
+Self
 
-  - safe_equal (e1, e2:V) :BOOLEAN <-
+  - safe_equal (e1, e2:V) :Boolean <-
   (
     (e1=e2) || {(e1!=NULL) && {e1==e2}}
   )

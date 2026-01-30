@@ -1,29 +1,26 @@
 Header
-
-  + name        := ITM_WRITE_CAST;
-
-  /*Assignment slot `?=' style*/
-
+  + name := Itm_write_cast
+/*Assignment slot ?= style*/
 Inherit
 
-  + parent_itm_write:Expanded ITM_WRITE
+  + parent_itm_write:Flat Itm_write
 
 Public
 
-  - type:STRING_ALIAS <- "?="
+  - type:String_alias <- "?="
 
   //
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + val:EXPR
-    + loc:LOCAL
-    + node:NODE
-    + nm:STRING_ALIAS
-    + typ_cast:TYPE_FULL
-    + slot:SLOT
-    + ts:ITM_TYPE_SIMPLE
+  - to_run_expr:Expr <-
+  ( + val:Expr
+    + loc:Local
+    + node:Node
+    + nm:String_alias
+    + typ_cast:Type_full
+    + slot:Slot
+    + ts:Itm_type_simple
 
     // Value -> local.
     val := value.to_run_expr
@@ -38,12 +35,12 @@ Public
     } else {
       slot := profil_slot.type_self.get_slot nm
       (slot = NULL).if {
-	string_tmp.copy "Slot `";
-	string_tmp.append nm
-	string_tmp.append "' not found in static type "
-	profil_slot.type_self.append_name_in string_tmp
-	string_tmp.add_last '.'
-	semantic_error (position,string_tmp)
+        string_tmp.copy "Slot `";
+        string_tmp.append nm
+        string_tmp.append "' not found in static type "
+        profil_slot.type_self.append_name_in string_tmp
+        string_tmp.add_last '.'
+        semantic_error (position,string_tmp)
       }
       ts ?= slot.result_type
       typ_cast := ts.to_run_for profil_slot pos (position.prototype.filename)
@@ -52,7 +49,7 @@ Public
       (! val.static_type.is_generic).if {
         /*
         (typ_cast.affect_with (val.static_type)).if {
-          STRING.tmp { tmp:STRING_BUFFER
+          STRING.tmp { tmp:String_buffer
             typ_cast.append_name_in tmp
             tmp.append " ?= "
             val.static_type.append_name_in tmp
@@ -60,7 +57,7 @@ Public
             warning_error (position,tmp)
           }
         };*/
-        ((! val.static_type.affect_with typ_cast) && {! val.static_type.is_strict}).if {
+        ((! val.static_type.affect_with typ_cast) && {! val.static_type.is_exact}).if {
           string_tmp.copy "`";
           typ_cast.append_name_in string_tmp
           string_tmp.append "' ?= `";
@@ -71,7 +68,7 @@ Public
       }
     }
     // Dispatch case.
-    node := NODE.new_cast position type typ_cast with val
+    node := Node.new_cast position type typ_cast with val
     list_current.add_last node
     // Assignment result.
     affect nm with (node.result_expr)

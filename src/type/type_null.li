@@ -1,18 +1,15 @@
 Header
-
-  + name        := TYPE_NULL;
-
-  /*Special type NULL*/
-
+  + name := Type_null
+/*Special type NULL*/
 Inherit
 
-  + parent_type:Expanded TYPE
+  + parent_type:Flat Type
 
 Public
 
-  - name:STRING_ALIAS <- "NULL"
+  - name:String_alias <- str_null
 
-  - intern_name:STRING_ALIAS <- name
+  - intern_name:String_alias <- name
 
   //
   // Creation.
@@ -20,24 +17,24 @@ Public
 
   - make_null <-
   (
-    //type_list.add_last Self
+    //type_list.add_last self
     index := index_max
     index_max := index_max + 1
     
-    dico_type.at name put Self
-    slot_run := ARRAY SLOT.create_with_capacity 1; // BSBS: Plus utile !
-    default := TYPE_FULL.create Self with 0
+    dico_type.at name put self
+    slot_run := Array Slot.create_with_capacity 1; // BSBS: Plus utile !
+    default := Type_full.create self with 0
   )
 
-  - get_local_slot n:STRING_ALIAS :SLOT <- NULL
+  - get_local_slot n:String_alias :Slot <- NULL
 
-  - get_path_slot n:STRING_ALIAS :SLOT <- NULL
+  - get_path_slot n:String_alias :Slot <- NULL
 
   //
   // Error.
   //
 
-  //- bug:INTEGER
+  //- bug:Int
 
 Public
 
@@ -45,15 +42,15 @@ Public
   // Import / Export
   //
 
-  - is_export_to t:TYPE_FULL :BOOLEAN <- FALSE
+  - is_export_to t:Type_full :Boolean <- False
 
-  - is_import_to t:TYPE_FULL :BOOLEAN <- FALSE
+  - is_import_to t:Type_full :Boolean <- False
 
   //
   //
   //
 
-  - is_sub_type other:TYPE :BOOLEAN <- TRUE
+  - is_sub_type other:Type :Boolean <- True
 
   - genere_typedef <-
   (
@@ -72,14 +69,14 @@ Public
   // Code source generation.
   //
 
-  - put_id buffer:STRING_BUFFER <-
+  - put_id buffer:String_buffer <-
   (
     put_value buffer
   )
 
-  - put_access_id e:EXPR <- e.genere
+  - put_access_id e:Expr <- e.genere
 
-  - put_value buffer:STRING_BUFFER <-
+  - put_value buffer:String_buffer <-
   (
-    buffer.append name
+    buffer.append "NULL" //name
   )

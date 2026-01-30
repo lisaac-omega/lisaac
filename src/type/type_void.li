@@ -1,34 +1,31 @@
 Header
-
-  + name        := TYPE_VOID;
-
-  /*Special virtual Void type*/
-
+  + name := Type_void
+/*Special virtual Void type*/
 Inherit
 
-  + parent_type:Expanded TYPE
+  + parent_type:Flat Type
 
 Public
 
-  - name:STRING_ALIAS <- "VOID"
+  - name:String_alias <- "VOID"
 
-  - intern_name:STRING_ALIAS <- name
+  - intern_name:String_alias <- name
 
   // Creation.
   
 
   - make_void <-
   (
-    dico_type.at name put Self
-    default := TYPE_FULL.create Self with 0
+    dico_type.at name put self
+    default := Type_full.create self with 0
   )
 
   // Import / Export
   
 
-  - is_export_to t:TYPE_FULL :BOOLEAN <- FALSE
+  - is_export_to t:Type_full :Boolean <- False
 
-  - is_import_to t:TYPE_FULL :BOOLEAN <- FALSE
+  - is_import_to t:Type_full :Boolean <- False
 
   //
   // Genere.
@@ -46,5 +43,5 @@ Public
 
 Public
 
-  - is_sub_type other:TYPE :BOOLEAN <- FALSE
+  - is_sub_type other:Type :Boolean <- False
 

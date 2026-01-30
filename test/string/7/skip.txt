@@ -1,1 +1,1 @@
-(1 << 48) bug
+Character Unicode ?

@@ -1,6 +1,5 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
   ( + intz:ℤ 
@@ -11,6 +10,6 @@ Public
     400.times {
       intz := intz / 2
     }
-    TEST.check (intz.to_hexadecimal) string "1"
+    Test.check (intz.to_hexadecimal) string "1"
   )
   

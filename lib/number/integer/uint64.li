@@ -1,0 +1,77 @@
+Header
+  + name := Flat Uint64
+/*Unsigned 64 bits integer.*/
+  - type    := `uint64_t`;
+  - default := (0.to_raw_uint64);
+  - export  := Int;
+  - include := `#include <stdint.h>`;
+Insert
+
+  - parent_unsigned_integer:Unsigned_integer := Unsigned_integer
+
+Public
+
+  - object_size:Int := 8
+
+  // Range.
+
+  - maximum:Uint64 := `0xFFFFFFFFFFFFFFFFLLU`:Uint64; //BSBS pb C 0FFFFFFFFFFFFFFFFh
+  
+  - clz:Int <-
+  // Count Leading Zeros.
+  Asm_builtin.clz self
+  
+  // Conversion with test.
+  
+  - ep0:Self <- ((self @> 28) ^ (self @> 34) ^ (self @> 39))
+  - ep1:Self <- ((self @> 14) ^ (self @> 18) ^ (self @> 41))
+  
+  - sig0:Self  <- ((self @>  1) ^ (self @>  8) ^ (self >>  7))
+  - sig1:Self  <- ((self @> 19) ^ (self @> 61) ^ (self >>  6))
+  
+  - rev:Self <-
+  ( + tmp:Self
+    tmp := (self >> 32) | (self << 32)
+    tmp := ((tmp & 0FF00FF00FF00FF00h) >> 8) | ((tmp & 000FF00FF00FF00FFh) << 8)
+    ((tmp & 0FFFF0000FFFF0000h) >> 16) | ((tmp & 00000FFFF0000FFFFh) << 16)
+  )
+  
+  - to_uint64:Uint64   <- self
+  
+  - append_in b:String_buffer base base:Int :Int <-
+  ( + bits:Int
+    + sn:Int
+    + map:String_alias
+    + spu:C_array Uint8
+    (self = 0).if {
+      b.add_last '0'
+      sn := 1
+    } else {
+      + low,new_cap,i:Int
+      + x,msk:Uint64
+      low := b.count
+      new_cap := low + 64
+      b.set_capacity new_cap
+      x := self
+      map := (base = 64).ok (ℤ.base64) or (ℤ.digits)
+      spu := Cast (C_array Char) To (C_array Uint8).on (b.storage) + low
+      bits := Asm_builtin.base_power_of_two base
+      (bits != 0).if {
+        msk := (1 << bits) - 1
+        i := (Asm_builtin.size_in_base_2 x + bits-1) / bits
+        sn := sn + i
+        {x != 0}.while_do {
+          i := i - 1
+          spu.at i put ((x & msk).to_uint8)
+          x := x >> bits
+        }
+      } else {       
+        not_yet_implemented
+      }
+      b.set_upper (low+sn-1)
+      low.to (b.upper) do { j:Int
+        b.at j put (map.item (b.item j.to_uint8))
+      }
+    }
+    sn
+  )

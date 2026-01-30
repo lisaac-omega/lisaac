@@ -1,10 +1,8 @@
 Header
-  
-  + name := PEN_CALL;
-  
+  + name := Pen_call
 Inherit
   
-  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_constant_pen:Constant_pen := Constant_pen
   
 Public
       

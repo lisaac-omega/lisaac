@@ -1,26 +1,24 @@
 Header
-  
-  + name := IMG_PSD;
-  
+  + name := Img_psd
 Inherit
   
-  + parent_image:Expanded IMAGE
+  + parent_image:Flat Image
   
 Public
   
-  - name:STRING_ALIAS := "PSD - PhotoShop Document (Adobe)"
+  - name:String_alias := "PSD - PhotoShop Document (Adobe)"
   
-  + channel_count:INTEGER
-  + bitdepth:INTEGER
+  + channel_count:Int
+  + bitdepth:Int
   
-  - test:BOOLEAN <-
+  - test:Boolean <-
   ( 
     rewind
     (get32be = 038_42_50_53h)    
   )
   
-  - info:BOOLEAN <-
-  ( + result:BOOLEAN
+  - info:Boolean <-
+  ( + result:Boolean
     rewind
     ((get32be = 038425053h) && {get16be = 1}).if {
       skip 6
@@ -41,7 +39,7 @@ Public
           //   8: Duotone
           //   9: Lab color
           img_n := 4
-          result := TRUE
+          result := True
         }
         //"Depth:".print; bitdepth.println
       }
@@ -49,11 +47,11 @@ Public
     result
   )
 
-  - load req_comp:INTEGER :NATIVE_ARRAY UINTEGER_8 <-
-  ( + pixel_count,compression:INTEGER
-    + count, len:INTEGER
-    + out:NATIVE_ARRAY UINTEGER_8
-    + r:BOOLEAN
+  - load req_comp:Int :C_array Uint8 <-
+  ( + pixel_count,compression:Int
+    + count, len:Int
+    + out:C_array Uint8
+    + r:Boolean
 
     r := info
     ? {r}
@@ -72,7 +70,7 @@ Public
     }
     // Create the destination image.
     pixel_count := img_x*img_y
-    out := NATIVE_ARRAY UINTEGER_8.create (pixel_count * 4)
+    out := C_array Uint8.create (pixel_count * 4)
     
     // Finally, the image data.
     (compression != 0).if {
@@ -90,14 +88,14 @@ Public
       skip (img_y * channel_count * 2)
       //"channel_count:".print; channel_count.println
       // Read the RLE data by channel.
-      0.to 3 do { channel:INTEGER
-        + p:NATIVE_ARRAY UINTEGER_8
+      0.to 3 do { channel:Int
+        + p:C_array Uint8
         p := out+channel
         (channel >= channel_count).if {
-          + val:UINTEGER_8
+          + val:Uint8
           // Fill this channel with default data.
           val := (channel = 3).ok 255 or 0
-          0.to (pixel_count-1) do { i:INTEGER
+          0.to (pixel_count-1) do { i:Int
              p.at 0 put val
              p := p + 4
           }
@@ -118,7 +116,7 @@ Public
                 len := len - 1
               }
             }.elseif {len > 128} then {
-              + val:UINTEGER_8
+              + val:Uint8
               // Next -len+1 bytes in the dest are replicated from next source byte.
               // (Interpret len as a negative 8-bit int.)
               len := len ^ 0FFh
@@ -139,24 +137,24 @@ Public
       // where each channel consists of an 8-bit value for each pixel in the image.
       //"Pas compress\n".print
       // Read the data by channel.
-      0.to 3 do { channel:INTEGER
-        + p:NATIVE_ARRAY UINTEGER_8
+      0.to 3 do { channel:Int
+        + p:C_array Uint8
         p := out + channel
         (channel >= channel_count).if {
-          + val:UINTEGER_8
+          + val:Uint8
           // Fill this channel with default data.
           val := (channel = 3).ok 255 or 0
-          0.to (pixel_count-1) do { i:INTEGER
+          0.to (pixel_count-1) do { i:Int
             p.at (i*4) put val
           }
         } else {
           // Read the data.
           (bitdepth = 16).if {
-            0.to (pixel_count-1) do { i:INTEGER
-              p.at (i*4) put ((get16be >> 8).to_uinteger_8)
+            0.to (pixel_count-1) do { i:Int
+              p.at (i*4) put ((get16be >> 8).to_uint8)
             }
           } else {
-            0.to (pixel_count-1) do { i:INTEGER
+            0.to (pixel_count-1) do { i:Int
               p.at (i*4) put get8
             }
           }

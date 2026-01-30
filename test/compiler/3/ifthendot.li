@@ -1,7 +1,6 @@
 Header
-  
-  + name := IFTHENDOT;
-  /*
+  + name := Ifthendot
+/*
 
   */
 
@@ -9,11 +8,11 @@ Public
   
   - main <-
   (
-    (if TRUE then {
-        TEST.check TRUE
-    }) elseif {FALSE} then {
-      TEST.check TRUE      
+    (if True then {
+        Test.check True
+    }) elseif {False} then {
+      Test.check True      
     }
-    TEST.check (TEST.counter = 1)
+    Test.check (Test.counter = 1)
   );
   

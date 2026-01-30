@@ -1,39 +1,38 @@
 Header
-  + name := Strict WIN_IMG;
-  
+  + name := Exact Win_img
 Inherit
-  + parent_gobj:Expanded GOBJ WIN_IMG
+  + parent_gobj:Flat Gobj Win_img
   
 Private
-  - stk:Expanded ARRAY WIN_IMG
+  - stk:Flat Array Win_img
   
 Public
   
-  - width_min:REAL_32 := 1024
-  - height_min:REAL_32 := 512
+  - width_min:Real32 := 1024
+  - height_min:Real32 := 512
   
-  + img_w:INTEGER
-  + img_h:INTEGER
-  + img:NATIVE_ARRAY UINTEGER_8
-  + img_time:UINTEGER_64
-  + img_cap:INTEGER
-  + img_id:INTEGER := -1
+  + img_w:Int
+  + img_h:Int
+  + img:C_array Uint8
+  + img_time:Uint64
+  + img_cap:Int
+  + img_id:Int := -1
   
-  + update_time:{UINTEGER_64}
+  + update_time:{Uint64}
   
-  + img_x:REAL_32
-  + img_y:REAL_32
-  - set_img_xy (x,y:REAL_32) zoom z:REAL_32 <-
+  + img_x:Real32
+  + img_y:Real32
+  - set_img_xy (x,y:Real32) zoom z:Real32 <-
   (
     (img_x,img_y,zom) := (x,y,z)
   )
   
-  //+ is_event_extern:BOOLEAN
-  + event_extern:{WIN_IMG;}
-  - set_event_extern e:{WIN_IMG;} <- ( event_extern := e );
+  //+ is_event_extern:Boolean
+  + event_extern:{Win_img;}
+  - set_event_extern e:{Win_img;} <- ( event_extern := e );
   
-  - thumbnail_xyz:(REAL_32,REAL_32,REAL_32) <-
-  ( + x,y,z,w,hi,wi:REAL_32
+  - thumbnail_xyz:(Real32,Real32,Real32) <-
+  ( + x,y,z,w,hi,wi:Real32
     w := height
     z := (height/img_w).min (height/img_h)
     (wi,hi) := (z*img_w, z*img_h)
@@ -49,19 +48,19 @@ Public
   - new_img <- (  )
   
   - update_zoom <-
-  ( + w:REAL_32
+  ( + w:Real32
     w := width - height
     (w > zom * img_w).if {
-      zom := ((w+w-1) / img_w).to_integer
+      zom := ((w+w-1) / img_w).to_int
     }
   )
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - init i:NATIVE_ARRAY UINTEGER_8 size (w,h:INTEGER) time t:{UINTEGER_64} :SELF <-
+  - init i:C_array Uint8 size (w,h:Int) time t:{Uint64} :Self <-
   (
     width := width_min; // BSBS: A METTRE PAR DEFAUT
     height := height_min
@@ -76,9 +75,9 @@ Public
   )
     
   - draw <-
-  ( + p:PAINT
-    + x,y,w,h,c,wi,hi:REAL_32
-    + t:UINTEGER_64
+  ( + p:Paint
+    + x,y,w,h,c,wi,hi:Real32
+    + t:Uint64
     t := update_time.value
     (img_time != t).if {
       img_time := t
@@ -88,7 +87,7 @@ Public
     (x,y) := (xo,yo)
     (img_id != -1).if {
       //p := PAINT.create_pattern (x,y) size (img_w*zom, img_h*zom) img_id img_id angle 0 alpha 1.0
-      p := PAINT.create_pattern (x+zom*img_x,y+zom*img_y) size (zom*img_w, zom*img_h) img_id img_id angle 0 alpha 1.0
+      p := Paint.create_pattern (x+zom*img_x,y+zom*img_y) size (zom*img_w, zom*img_h) img_id img_id angle 0 alpha 1.0
       begin_path
       rect (x,y) size (w,h)
       fill_paint p
@@ -96,12 +95,12 @@ Public
       p.free
       x := x + w
       begin_path
-      fill_color (COLOR.rgb (40,0,40))
+      fill_color (Color.rgb (40,0,40))
       rect (x,y) to (xmax,ymax)
       fill
       (x,y,c) := thumbnail_xyz
       (wi,hi) := (c*img_w, c*img_h)
-      p := PAINT.create_pattern (x,y) size (wi,hi) img_id img_id angle 0 alpha 1.0
+      p := Paint.create_pattern (x,y) size (wi,hi) img_id img_id angle 0 alpha 1.0
       begin_path
       rect (x,y) size (wi,hi)
       fill_paint p
@@ -109,45 +108,45 @@ Public
       p.free
       begin_path
       stroke_width 1.0
-      stroke_color (COLOR.red)
+      stroke_color (Color.red)
       rect (x-c*img_x,y-c*img_y) size (c*w/zom,c*h/zom)
       stroke
     }
-    (x,y) := (xo, yo+h-FONT.size_app - 8)
+    (x,y) := (xo, yo+h-Font.size_app - 8)
     begin_path
-    fill_color (COLOR.rgbaf (0,0,0,0.5))
-    rect (x,y) size (w,FONT.size_app + 8)
+    fill_color (Color.rgbaf (0,0,0,0.5))
+    rect (x,y) size (w,Font.size_app + 8)
     fill
-    fill_color (COLOR.white)
-    font_face_id (FONT.sys (FONT.roman))
-    font_size (FONT.size_app)
+    fill_color (Color.white)
+    font_face_id (Font.sys (Font.roman))
+    font_size (Font.size_app)
     text_align (align_center | align_middle)
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       tmp.add_last 'x'
-      zom.to_integer.append_in tmp
-      text (x+w/2,y+(FONT.size_app+8)/2) msg tmp
-      text (x+w/4,y+(FONT.size_app+8)/2) msg "-"
-      text (x+(3*w)/4,y+(FONT.size_app+8)/2) msg "+"
+      zom.to_int.append_in tmp
+      text (x+w/2,y+(Font.size_app+8)/2) msg tmp
+      text (x+w/4,y+(Font.size_app+8)/2) msg "-"
+      text (x+(3*w)/4,y+(Font.size_app+8)/2) msg "+"
     }
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
-  ( + e:UINTEGER_8
-    + cx,cy,w,h:REAL_32
+  - event ev:Uint8 :Boolean <-
+  ( + e:Uint8
+    + cx,cy,w,h:Real32
     e := ev & ~1
-    (e = HAND.drag).if {
-      (HAND.x_begin-xo < width - height).if {
-        img_x := (img_x + HAND.dx/zom).min 0.max ((width-height).to_real_32/zom - img_w)
-        img_y := (img_y + HAND.dy/zom).min 0.max (height.to_real_32/zom - img_h)
+    (e = Hand.drag).if {
+      (Hand.x_begin-xo < width - height).if {
+        img_x := (img_x + Hand.dx/zom).min 0.max ((width-height).to_real32/zom - img_w)
+        img_y := (img_y + Hand.dy/zom).min 0.max (height.to_real32/zom - img_h)
       } else {
         move_tag
       }
-    }.elseif {e = HAND.clic} then {
-      (HAND.x_cur-xo < width-height).if {
+    }.elseif {e = Hand.clic} then {
+      (Hand.x_cur-xo < width-height).if {
         (w,h) := (width-height,height)
-        (HAND.y_cur - yo > height - FONT.size_app - 8).if {
+        (Hand.y_cur - yo > height - Font.size_app - 8).if {
           (cx,cy) := (img_x - w/2/zom, img_y - h/2/zom)
-          (HAND.x_cur - xo < (width-height)/2).if {
+          (Hand.x_cur - xo < (width-height)/2).if {
             zom := (zom - 1).max 1
           } else {
             zom := (zom + 1).min 7
@@ -157,9 +156,9 @@ Public
           img_y := (cy + h/2/zom).min 0.max (h/zom-img_h)
         } else {
           (event_extern != NULL).if {
-            event_extern.value Self
+            event_extern.value self
           } else {
-            (cx,cy) := (HAND.x_cur-(xo+w/2),HAND.y_cur-(yo+h/2))
+            (cx,cy) := (Hand.x_cur-(xo+w/2),Hand.y_cur-(yo+h/2))
             img_x := (img_x - cx/zom).min 0.max (w/zom-img_w)
             img_y := (img_y - cy/zom).min 0.max (h/zom-img_h)
           }
@@ -168,18 +167,18 @@ Public
         move_tag
       }
     }
-    TRUE
+    True
   )
     
 Private
   
   - move_tag <-
-  ( + c,x,y,w,h,wi,hi,wv,hv:REAL_32
+  ( + c,x,y,w,h,wi,hi,wv,hv:Real32
     (x,y,w,h) := (xo+width-height,yo,height,height)
     c := (w/img_w).min (h/img_h)
     (wi,hi) := (c * img_w,c*img_h)
     (x,y) := (x+(w - wi)/2, y+(h - hi)/2)
     (wv,hv) := (c * w / zom, c * h / zom)
-    img_x := -(HAND.x_cur - wv/2 - x).max 0.min (wi-wv)/c
-    img_y := -(HAND.y_cur - hv/2 - y).max 0.min (hi-hv)/c
+    img_x := -(Hand.x_cur - wv/2 - x).max 0.min (wi-wv)/c
+    img_y := -(Hand.y_cur - hv/2 - y).max 0.min (hi-hv)/c
   )

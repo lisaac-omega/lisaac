@@ -1,104 +1,101 @@
 Header
-
-  + name    := ITM_TYPE_SIMPLE;
-
-  /*Simple type*/
+  + name := Itm_type_simple
+/*Simple type*/
 Inherit
 
-  + parent_itm_type_mono:Expanded ITM_TYPE_MONO
+  + parent_itm_type_mono:Flat Itm_type_mono
 
-ITM_TYPE_SIMPLE, ITM_TYPE_SELF
+Itm_type_simple, Itm_type_self
 
-  - dico:HMAP ITM_TYPE_SIMPLE KEY STRING_ALIAS := new HMAP ITM_TYPE_SIMPLE KEY STRING_ALIAS
+  - dico:Hmap Itm_type_simple Key String_alias := new Hmap Itm_type_simple Key String_alias
 
-ITM_TYPE_SIMPLE
+Itm_type_simple
 
-  - create n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create n:String_alias :Self <-
+  ( + result:Self
 
     result := clone
     result.make n
     result
   )
 
-  - make n:STRING_ALIAS <-
+  - make n:String_alias <-
   (
     name := n
-    dico.at n put Self
+    dico.at n put self
   )
 
 Public
 
-  - type_null:ITM_TYPE_SIMPLE := ITM_TYPE_SIMPLE.get "NULL"
-  - type_void:ITM_TYPE_SIMPLE := ITM_TYPE_SIMPLE.get "VOID"
-  - type_self:ITM_TYPE_SIMPLE := ITM_TYPE_PARAMETER.create "SELF"
-  - type_self_with_escape:ITM_TYPE_SIMPLE := type_self; // BSBS A revoir...
+  - type_null:Itm_type_simple := Itm_type_simple.get str_null
+  - type_void:Itm_type_simple := Itm_type_simple.get "VOID"
+  - type_self:Itm_type_simple := Itm_type_parameter.create str_self
+  - type_self_with_escape:Itm_type_simple := type_self; // BSBS A revoir...
 
-  - hash_code:INTEGER <- name.hash_code
+  - hash_code:Int <- name.hash_code
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  - style:UINTEGER_8 <- 0
+  - style:Uint8 <- 0
 
-  - is_expanded:BOOLEAN <- (style & TYPE_FULL.expanded_bit) != 0
+  - is_flat:Boolean <- (style & Type_full.flat_bit) != 0
   
-  - is_strict:BOOLEAN   <- (style & TYPE_FULL.strict_bit) != 0
+  - is_exact:Boolean   <- (style & Type_full.exact_bit) != 0
   
-  - is_escape:BOOLEAN   <- (style & TYPE_FULL.escape_bit) != 0
+  - is_escape:Boolean   <- (style & Type_full.escape_bit) != 0
   
-  - get n:STRING_ALIAS :ITM_TYPE_SIMPLE <-
+  - get n:String_alias :Itm_type_simple <-
   [
     -? {n != NULL}
   ]
-  ( + found:BOOLEAN ; + result:ITM_TYPE_SIMPLE
-    // result := fast_reference_at n
-    (found, result) := dico.search n
-    found.if_false {
+  ( + result:Itm_type_simple
+    result := dico.reference_at n
+    (result = NULL).if {
       result := create n
     }
     result
   )
 
-  - to_run_for p:PARAMETER_TO_TYPE pos path:STRING_ALIAS :TYPE_FULL <-
-  ( + result:TYPE_FULL
+  - to_run_for p:Parameter_to_type pos path:String_alias :Type_full <-
+  ( + result:Type_full
 
-    (Self = type_null).if {
-      result := TYPE_NULL.default
-    }.elseif {Self = type_void} then {
-      result := TYPE_VOID.default
+    (self = type_null).if {
+      result := Type_null.default
+    }.elseif {self = type_void} then {
+      result := Type_void.default
     } else {      
-      result := TYPE.get (path,Self)
+      result := Type.get (path,self)
     }
     result
   )
   
-  - Self:SELF '==' Right 60 other:E :BOOLEAN <-
-  ( + o:SELF
+  - self:Self '==' Right 60 other:E :Boolean <-
+  ( + o:Self
     
     o ?= other
-    (o != NULL) && {Self = o}
+    (o != NULL) && {self = o}
   )
   
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    append_style_in buffer
-    buffer.append name
+    append_style_in b
+    b.append name
   )
   
-  - append_style_in buffer:STRING_BUFFER <-
+  - append_style_in buffer:String_buffer <-
   (
-    (is_expanded).if {
-      buffer.append "Expanded "
+    (is_flat).if {
+      buffer.append "Flat "
     }
-    (is_strict).if {
-      buffer.append "Strict "
+    (is_exact).if {
+      buffer.append "Exact "
     }
     (is_escape).if {
       buffer.add_last '\\'
     }
   )
 
-  - shorter_in buf:STRING_BUFFER <-
+  - shorter_in buf:String_buffer <-
   (
     (style != NULL).if {
       put style to buf like "keyword"
@@ -111,9 +108,9 @@ Public
   // Cast.
   //
 
-  - append_cast_name_in buf:STRING_BUFFER <-
+  - append_cast_name_in buf:String_buffer <-
   (
-    (name.lower).to (name.upper) do { j:INTEGER
+    (name.lower).to (name.upper) do { j:Int
       buf.add_last (name.at j.to_lower)
     }
   )

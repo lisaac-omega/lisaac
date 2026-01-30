@@ -1,22 +1,21 @@
-Header  
-  + name := Strict VEC3;
-  
+Header
+  + name := Exact Vec3
 Insert  
-  - parent_vec:VEC := VEC
+  - parent_vec:Vec := Vec
   
-SELF  
-  - dim:INTEGER := 3
+Self  
+  - dim:Int := 3
   
-  - free_list:ARRAY VEC3 := ARRAY VEC3.create_with_capacity 4
+  - free_list:Array Vec3 := Array Vec3.create_with_capacity 4
   
 Mapping, Public 
-  + xy:Expanded VEC2
-  + z:REAL_32
+  + xy:Flat Vec2
+  + z:Real32
   
 Public
   
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     (free_list.is_empty).if {
       result := clone
     } else {
@@ -25,23 +24,23 @@ Public
     result
   )
   
-  - create_xyz (px,py,pz:REAL_32) :SELF <-
-  ( + result:SELF
+  - create_xyz (px,py,pz:Real32) :Self <-
+  ( + result:Self
     result := create
     result.make (px,py,pz)
     result
   )
   
-  - free <- free_list.add_last Self
+  - free <- free_list.add_last self
   
-  - x:REAL_32 <- item 0
-  - y:REAL_32 <- item 1
+  - x:Real32 <- item 0
+  - y:Real32 <- item 1
     
-  - make (px,py,pz:REAL_32) <- ( xy.make (px,py); z := pz; )
+  - make (px,py,pz:Real32) <- ( xy.make (px,py); z := pz; )
   
-  - Self:SELF '**' other:SELF :SELF <-
+  - self:Self '**' other:Self :Self <-
   // Cross (Scalar product)
-  ( + result:SELF
+  ( + result:Self
     result := create
     result.put (item 1 * other.item 2 - item 2 * other.item 1) to 0
     result.put (item 2 * other.item 0 - item 0 * other.item 2) to 1
@@ -49,10 +48,10 @@ Public
     result
   )
   
-  - reflect other:SELF <-
-  ( + p:REAL_32
-    p := (Self #* other) * 2.0
-    0.to 2 do { i:INTEGER
+  - reflect other:Self <-
+  ( + p:Real32
+    p := (self #* other) * 2.0
+    0.to 2 do { i:Int
       put (item i - p * other.item i) to i
     }
   )

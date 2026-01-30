@@ -1,15 +1,12 @@
 Header
-
-  + name      := INSTR;
-
-  /*
+  + name := Instr
+/*
   The instr prototype
   */
-
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
-  + position:INTEGER
+  + position:Int

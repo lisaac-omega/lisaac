@@ -1,7 +1,5 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main := "Hello world!\n".print

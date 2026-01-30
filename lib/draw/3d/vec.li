@@ -1,102 +1,101 @@
-Header  
-  + name := VEC;
-  
+Header
+  + name := Vec
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
-SELF  
-  - dim:INTEGER <- ( abstract; 0)
+Self  
+  - dim:Int <- ( abstract; 0)
         
 Public
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     abstract
     result
   )
   
   - free <- abstract
   
-  - item i:INTEGER :REAL_32    <- `((float *)@Self)[@i]`:REAL_32
+  - item i:Int :Real32    <- `((float *)@self)[@i]`:Real32
   
-  - put e:REAL_32 to i:INTEGER <- `((float *)@Self)[@i] = @e`
+  - put e:Real32 to i:Int <- `((float *)@self)[@i] = @e`
   
-  - dup:SELF <-
-  ( + result:SELF
+  - dup:Self <-
+  ( + result:Self
     result := create
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       result.put (item i) to i
     }
     result
   )
   
-  - add other:SELF <-
+  - add other:Self <-
   ( 
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       put (item i + other.item i) to i
     }
   )
   
-  - Self:SELF '+' other:SELF :SELF <-
-  ( + result:SELF
+  - self:Self '+' other:Self :Self <-
+  ( + result:Self
     result := dup
     result.add other
     result
   )
   
-  - sub other:SELF <-
+  - sub other:Self <-
   ( 
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       put (item i - other.item i) to i
     }
   )
   
-  - Self:SELF '-' other:SELF :SELF <-
-  ( + result:SELF
+  - self:Self '-' other:Self :Self <-
+  ( + result:Self
     result := dup
     result.sub other
     result
   )
   
-  - mul_scale scale:REAL_32 <-
+  - mul_scale scale:Real32 <-
   ( 
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       put (item i * scale) to i
     }
   )
   
-  - Self:SELF '*#' scale:REAL_32 :SELF <-
-  ( + result:SELF
+  - self:Self '*#' scale:Real32 :Self <-
+  ( + result:Self
     result := dup
     result.mul_scale scale
     result
   )
   
-  - Self:SELF '#*' other:SELF :REAL_32 <-
-  ( + result:REAL_32
-    0.to (dim-1) do { i:INTEGER
+  - self:Self '#*' other:Self :Real32 <-
+  ( + result:Real32
+    0.to (dim-1) do { i:Int
       result := result + (item i * other.item i)
     }
     result
   )
   
-  - length:REAL_32 <- (Self #* Self).sqrt
+  - length:Real32 <- (self #* self).sqrt
   
   - normalize <-
-  ( + k:REAL_32
+  ( + k:Real32
     k := 1.0 / length
     mul_scale k
   )
   
-  - min other:SELF <-
+  - min other:Self <-
   ( 
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       put (item i.min (other.item i)) to i
     }
   )
   
-  - max other:SELF <-
+  - max other:Self <-
   ( 
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       put (item i.max (other.item i)) to i
     }
   )
@@ -104,7 +103,7 @@ Public
   - print <-
   (
     "[ ".print
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       item i.print_format_c "%4.2f"; ' '.print
     }
     "]".print
@@ -113,7 +112,7 @@ Public
   - print_cm <-
   (
     "[ ".print
-    0.to (dim-1) do { i:INTEGER
+    0.to (dim-1) do { i:Int
       item i.to_cm.print; "cm ".print
     }
     "]".print

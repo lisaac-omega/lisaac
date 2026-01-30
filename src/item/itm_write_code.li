@@ -1,35 +1,32 @@
 Header
-
-  + name    := ITM_WRITE_CODE;
-
-  /*Assignment slot with new code*/
-
+  + name := Itm_write_code
+/*Assignment slot with new code*/
 Inherit
 
-  + parent_itm_write:Expanded ITM_WRITE
+  + parent_itm_write:Flat Itm_write
 
 Public
 
-  - type:STRING_ALIAS <- "<-"
+  - type:String_alias <- "<-"
 
   //
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + itm_read:ITM_READ
-    + loc:LOCAL
-    + rec:EXPR
-    + node:NODE
-    + result:EXPR
-    + typ:TYPE_FULL
-    + slot:SLOT
-    + name:STRING_ALIAS
+  - to_run_expr:Expr <-
+  ( + itm_read:Itm_read
+    + loc:Local
+    + rec:Expr
+    + node:Node
+    + result:Expr
+    + typ:Type_full
+    + slot:Slot
+    + name:String_alias
 
     itm_read ?= assign
     name := itm_read.name
     ? {itm_read != NULL}
-    loc := lookup "Self"
+    loc := lookup "self"
     rec := loc.read position
     //
     typ  := rec.static_type
@@ -43,7 +40,7 @@ Public
       semantic_error (position,string_tmp)
     }
     //
-    node := NODE.new_write position slot slot receiver rec code value
+    node := Node.new_write position slot slot receiver rec code value
     list_current.add_last node
     result := node.result_expr
 

@@ -1,32 +1,31 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
-  - max:INTEGER <- 3000
+  - max:Int <- 3000
   
   - main <-
-  ( + a:ARRAY INTEGER
-    a := ARRAY INTEGER .create_with_capacity max
+  ( + a:Array Int
+    a := Array Int .create_with_capacity max
     a.add_last 0
-    1.to max do { k:INTEGER
+    1.to max do { k:Int
       a.at (a.lower + 1) add k
     }
-    TEST.check (a.first) integer 0
-    TEST.check (a.last) integer 1
-    1.to (a.upper) do { k:INTEGER
-      TEST.check (a.at k) integer (max - k + 1)
+    Test.check (a.first) integer 0
+    Test.check (a.last) integer 1
+    1.to (a.upper) do { k:Int
+      Test.check (a.at k) integer (max - k + 1)
     }
     1022.times {
       a.remove 1
     }
-    TEST.check (a.at 1) integer 1978
+    Test.check (a.at 1) integer 1978
     a.remove 1
-    TEST.check (a.at 1) integer 1977
+    Test.check (a.at 1) integer 1977
     a.remove 1
-    TEST.check (a.at 1) integer 1976
+    Test.check (a.at 1) integer 1976
     a.remove 1
-    TEST.check (a.at 1) integer 1975
+    Test.check (a.at 1) integer 1975
     a.remove 1
-    TEST.check (a.at 1) integer 1974
-    TEST.check (a.count) integer 1975
+    Test.check (a.at 1) integer 1974
+    Test.check (a.count) integer 1975
   )

@@ -1,23 +1,21 @@
 Header
-  
-  + name := PATH_CACHE;
-  
+  + name := Path_cache
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
     
-  + paths:ARRAY PATH
-  + vertexes:ARRAY VERTEX
+  + paths:Array Path
+  + vertexes:Array Vertex
   
-  + x_min:REAL_32; // 0
-  + y_min:REAL_32; // 1
-  + x_max:REAL_32; // 2
-  + y_max:REAL_32; // 3
+  + x_min:Real32; // 0
+  + y_min:Real32; // 1
+  + x_max:Real32; // 2
+  + y_max:Real32; // 3
     
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     result := clone
     result.make
     result
@@ -25,31 +23,31 @@ Public
   
   - make <-
   (
-    paths    := ARRAY PATH  .create_with_capacity 16
-    vertexes := ARRAY VERTEX.create_with_capacity 256
+    paths    := Array Path  .create_with_capacity 16
+    vertexes := Array Vertex.create_with_capacity 256
   )
   
   - delete <-
   (
-    0.to (paths.upper) do { i:INTEGER
+    0.to (paths.upper) do { i:Int
       paths.at i.free
     }
     paths.clear
     vertexes.clear
   )
     
-  - flatten_paths cmds:ARRAY PEN_CMD <-
-  ( + path:PATH
-    + tx_min,ty_min,tx_max,ty_max:REAL_32
+  - flatten_paths cmds:Array Pen_cmd <-
+  ( + path:Path
+    + tx_min,ty_min,tx_max,ty_max:Real32
 
     // Flatten
-    0.to (cmds.upper) do { i:INTEGER
-      cmds.at i.to_path Self
+    0.to (cmds.upper) do { i:Int
+      cmds.at i.to_path self
     }
     x_min := y_min :=  1000_000
     x_max := y_max := -1000_000
     // Calculate the direction and length of line segments.
-    0.to (paths.upper) do { j:INTEGER
+    0.to (paths.upper) do { j:Int
       path := paths.at j
       (tx_min,ty_min,tx_max,ty_max) := path.flatten
       (x_min,y_min) := (x_min.min tx_min,y_min.min ty_min)
@@ -57,10 +55,10 @@ Public
     }
   )
   
-  - max_vert_count:INTEGER <-
-  ( + count:INTEGER
-    + path:PATH
-    0.to (paths.upper) do { i:INTEGER
+  - max_vert_count:Int <-
+  ( + count:Int
+    + path:Path
+    0.to (paths.upper) do { i:Int
       path := paths.at i
       count := count + path.fill.count + path.stroke.count
     }

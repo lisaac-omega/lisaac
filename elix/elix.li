@@ -1,7 +1,7 @@
 Header
-  + name := ELIX;
-  /*TODO:
-  - Open Buffer (ctrl x,b)
+  + name := Elix
+/*TODO:
+  - Quitter proprement quand il y a une deco fenetre
   - Reprise de fonction apres un CMD_***
   ------------------- Plus tard --------
   - Search dans les extern (eye)
@@ -23,16 +23,16 @@ Header
   0xFFD6D3DC,0xFFFDFFFC};`;
 
 Inherit
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
   
 Private
   
   - put_icon <-
-  ( + img:NATIVE_ARRAY UINTEGER_32
-    + c:UINTEGER_32
-    + l:INTEGER    
-    img := PAPER.icon    
-    0.to (48*48-1) do { i:INTEGER
+  ( + img:C_array Uint32
+    + c:Uint32
+    + l:Int    
+    img := Paper.icon    
+    0.to (48*48-1) do { i:Int
       l := (
         "gggggggggggggjjjjjkkntwzzzzzzzzzzzzzzztfffffffff\
         \ggggggggggggjjjjkkknrrrsuuuuppyzzzzzzzzjffffffff\
@@ -82,8 +82,8 @@ Private
         \eeeeeedddddddddddddddddcdertzzzzzzzyyrcbbbbbaaaa\
         \eeeeedddddddddddddddddjwzzzzzzzzzjcbbbbbbbbaaaaa\
         \eeeddddddddddddddgtyyzzzzzztrnhcbbbbbbbbbaaaaaaa".item i - 'a'
-      ).to_integer
-      c := `col_elit[@l]`:UINTEGER_32
+      ).to_int
+      c := `col_elit[@l]`:Uint32
       img.put c to i
     }    
   )
@@ -91,52 +91,52 @@ Private
 Public
   
   - init <-
-  ( + b:UINTEGER_64
-    b := TIME.gettimeofday
-    LIZ.load_all
-    FILE_CFG.load_all
-    FILE_CFG.read
-    LOOK.read
-    FILE_KEY.read
+  ( + b:Uint64
+    b := Time.gettimeofday
+    Liz.load_all
+    File_cfg.load_all
+    File_cfg.read
+    Look.read
+    File_key.read
     print_time b
   )
   
-  - print_time b:UINTEGER_64 :UINTEGER_64 <-
-  ( + e:UINTEGER_64
-    + t:INTEGER
-    e := TIME.gettimeofday
-    OUT # " => "
-    t := ((e - b)/1_000_000).to_integer
+  - print_time b:Uint64 :Uint64 <-
+  ( + e:Uint64
+    + t:Int
+    e := Time.gettimeofday
+    Out # " => "
+    t := ((e - b)/1_000_000).to_int
     (t >= 120).if {
-      OUT # (t/60) # " minutes, "
+      Out # (t/60) # " minutes, "
       t := t % 60
     }
-    OUT # t # " second(s).\n"
+    Out # t # " second(s).\n"
     e
   )
   
   - main <-
-  ( + b:BUFFER
+  ( + b:Buffer
    
-    SIGNAL.infinite_recursion
+    Signal.infinite_recursion
     put_icon
     init    
-    (COMMAND_ARGS.count > 1).if {
-      STRING.tmp { pth:STRING_BUFFER
-        ENVIRONMENT.pwd_in pth
-        pth.append (COMMAND_ARGS.at 1)
-        DIRENT.reduce_path pth
-        (FILE_UTILS.file_exists pth).if {
-          OUT # "Open file `" # pth # "'.\n";          
+    (Command_args.count > 1).if {
+      String.tmp { pth:String_buffer
+        Environment.pwd_in pth
+        pth.append (Command_args.at 1)
+        Dirent.reduce_path pth
+        (File_utils.file_exists pth).if {
+          Out # "Open file `" # pth # "'.\n";          
         } else {          
-          OUT # "File `" # pth # "' not found. New file...\n";
+          Out # "File `" # pth # "' not found. New file...\n";
         }
-        b := BUFFER.get (pth.to_string_alias)
-        PAGE.cur_pg.set_buffer b
+        b := Buffer.get (pth.to_string_alias)
+        Page.cur_pg.set_buffer b
       }
     }
     /*
-    STRING.tmp { tmp:STRING_BUFFER
+    STRING.tmp { tmp:String_buffer
       NODE.rslot.print_rec tmp
       tmp.clear
       NODE.rprefix.print_rec tmp

@@ -1,52 +1,49 @@
 Header
-
-  + name      := SLOT_CODE;
-
-  /*Slot with method*/
-
+  + name := Slot_code
+/*Slot with method*/
 Inherit
 
-  + parent_slot:SLOT := SLOT
+  + parent_slot:Slot := Slot
 
 Public
 
-  - common_slot:SLOT <- parent_slot
+  - common_slot:Slot <- parent_slot
 
-  + index:INTEGER
+  + index:Int
 
   //
   // Static and Dynamic profil.
   //
 
-  + value:ITM_CODE
+  + value:Itm_code
 
   //
   // Dynamic profil.
   //
 
-  + profil:ARRAY PROFIL_SLOT
+  + profil:Array Profil_slot
 
-  - get_profil args:ARRAY EXPR self type_self:TYPE_FULL :(PROFIL, ARRAY WRITE) <-
+  - get_profil args:Array Expr self type_self:Type_full :(Profil, Array Write) <-
   [
     -? {type_self != NULL}
   ]
-  ( + result:PROFIL_SLOT
-    + res_lst:ARRAY WRITE
-    + pro:PROFIL_SLOT
-    + j,i,idx:INTEGER
-    + loc:LOCAL
-    + typ:TYPE_FULL
-    + typ_block:PROFIL_BLOCK
-    + typ_list:TYPES_TMP
-    + pro_list:ARRAY PROFIL_SLOT
-    + is_new:BOOLEAN
+  ( + result:Profil_slot
+    + res_lst:Array Write
+    + pro:Profil_slot
+    + j,i,idx:Int
+    + loc:Local
+    + typ:Type_full
+    + typ_block:Profil_block
+    + typ_list:Types_tmp
+    + pro_list:Array Profil_slot
+    + is_new:Boolean
 
     (id_section.is_external).if {
       // For auto-load external section.
       (profil.is_empty).if {
-        result := PROFIL_SLOT.my_clone
+        result := Profil_slot.my_clone
         profil.add_last result
-        is_new := TRUE
+        is_new := True
       } else {
         result := profil.first
       }
@@ -56,12 +53,12 @@ Public
       {(j <= args.upper) && {(typ = NULL) || {! typ.raw.is_block}}}.while_do {
         typ := args.at j.static_type
         (typ.raw.is_block).if {
-          typ_list := TYPES_TMP.new
+          typ_list := Types_tmp.new
           args.at j.get_type typ_list
           idx := typ_list.first_index
           (idx = -1).if {
             args.at j.debug_display
-            ( + rd:READ
+            ( + rd:Read
               rd ?= args.at j
               rd.variable.require_first.debug_display
               rd ?= rd.variable.require_first.value
@@ -70,7 +67,7 @@ Public
             //list_current.debug_display
             semantic_error (position,"Lisaac BUG!!! SLOT_CODE l.61")
           }
-          (typ_list.at idx = TYPE_NULL).if {
+          (typ_list.at idx = Type_null).if {
             (typ_list.count > 1).if {
               idx := typ_list.next_index idx
               typ_block ?= typ_list.at idx
@@ -91,7 +88,7 @@ Public
         {(i <= pro_list.upper) && {result = NULL}}.while_do {
           pro := pro_list.at i
           (
-            (pro.slot = Self) && {
+            (pro.slot = self) && {
               (pro.type_self = NULL) || {pro.type_self == type_self}
             } // BSBS: il fo aussi tester les args comme plus bas...
           ).if {
@@ -101,12 +98,12 @@ Public
         }
 
         (result = NULL).if {
-          result := PROFIL_SLOT.my_clone
+          result := Profil_slot.my_clone
           result.set_context_sensitive
           typ_block.profil_list.add_last result
-          is_new := TRUE
+          is_new := True
         }
-      } else { // Normal call (without BLOCK)
+      } else { // Normal call (without Block)
         j := profil.lower
         {(j <= profil.upper) && {result = NULL}}.while_do {
           pro := profil.at j
@@ -132,14 +129,14 @@ Public
         }
         //
         (result = NULL).if {
-          result := PROFIL_SLOT.my_clone
+          result := Profil_slot.my_clone
           profil.add_last result
-          is_new := TRUE
+          is_new := True
         }
       }
     }
     (is_new).if {
-      res_lst := result.make Self with (type_self, args) verify (profil.count = 1)
+      res_lst := result.make self with (type_self, args) verify (profil.count = 1)
     } else {
       res_lst := result.write_argument args
     }
@@ -150,30 +147,30 @@ Public
   // Constructeur.
   //
 
-  - create base:SLOT with val:ITM_CODE :SLOT_CODE <-
-  ( + result:SELF
+  - create base:Slot with val:Itm_code :Slot_code <-
+  ( + result:Self
     result := clone
     result.make base with val
     result
   )
 
-  - count_slot:INTEGER
+  - count_slot:Int
 
-  - make base:SLOT with val:ITM_CODE <-
+  - make base:Slot with val:Itm_code <-
   (
     count_slot := count_slot + 1
 
     parent_slot := base
     value := val
-    profil := ARRAY PROFIL_SLOT .create_with_capacity 1
+    profil := Array Profil_slot .create_with_capacity 1
   )
 
   //
   // Execute.
   //
 
-  + last_type_contract:TYPE
-  + is_require:BOOLEAN
+  + last_type_contract:Type
+  + is_require:Boolean
 /*
   - previous_contract:ITM_LIST <-
   ( + slot:ITM_SLOT
@@ -195,12 +192,12 @@ Public
     contract
   )
 */
-  - create_code is_first:BOOLEAN <-
-  ( + contract:ITM_LIST
-    + slot:ITM_SLOT
-    + result,res:EXPR
-    + mul:EXPR_MULTIPLE
-    + nb_list,nb_profil:INTEGER
+  - create_code is_first:Boolean <-
+  ( + contract:Itm_list
+    + slot:Itm_slot
+    + result,res:Expr
+    + mul:Expr_multiple
+    + nb_list,nb_profil:Int
     
     verify := is_first
     
@@ -218,17 +215,17 @@ Public
     }
       
     // Require    
-    is_require := TRUE
+    is_require := True
     last_type_contract := receiver_type
     contract := pattern_in
     (contract = NULL).if {
       slot := receiver_type.search_require name
       (slot != NULL).if {
-	(verify).if {
-	  is_equal_profil slot
-	}
-	contract := slot.pattern_in
-	last_type_contract := receiver_type.last_type_contract
+        (verify).if {
+          is_equal_profil slot
+        }
+        contract := slot.pattern_in
+        last_type_contract := receiver_type.last_type_contract
       }
     }
     (contract != NULL).if {
@@ -240,8 +237,8 @@ Public
     nb_profil := profil_slot.result_list.count
     // Body.   
     result := value.to_run_expr
-    // BSBS nb_profil = 0 NO ERROR BLOCK
-    ((result.static_type.raw = TYPE_VOID) || {nb_profil = 0}).if {
+    // BSBS nb_profil = 0 NO ERROR Block
+    ((result.static_type.raw = Type_void) || {nb_profil = 0}).if {
       list_current.add_last result
       nb_list := 0
     } else {
@@ -264,23 +261,23 @@ Public
     (nb_list = 1).if {
       put_result result in (profil_slot.result_list.first)
     }.elseif {nb_list > 1} then {
-      (mul.lower).to (mul.upper) do { j:INTEGER
+      (mul.lower).to (mul.upper) do { j:Int
         put_result (mul.at j) in (profil_slot.result_list.at j)
       }
     }
 
     // Ensure
-    is_require := FALSE
+    is_require := False
     contract := pattern_out
     last_type_contract := receiver_type
     (contract = NULL).if {
       slot := receiver_type.search_ensure name
       (slot != NULL).if {
-	(verify).if {
-	  is_equal_profil slot
-	}
+        (verify).if {
+          is_equal_profil slot
+        }
         contract := slot.pattern_out
-	last_type_contract := receiver_type.last_type_contract
+        last_type_contract := receiver_type.last_type_contract
       }
     }
     (contract != NULL).if {
@@ -304,21 +301,21 @@ Public
     // Result.
     (id_section.is_interrupt).if {
       list_current.add_first (
-        EXTERNAL_C.create position text "__BEGIN_INTERRUPT__" access NULL
-        persistant TRUE type (TYPE_VOID.default)
+        External_c.create position text "__BEGIN_INTERRUPT__" access NULL
+        persistant True type (Type_void.default)
       )
       list_current.add_last (
-        EXTERNAL_C.create position text "__END_INTERRUPT__" access NULL
-        persistant TRUE type (TYPE_VOID.default)
+        External_c.create position text "__END_INTERRUPT__" access NULL
+        persistant True type (Type_void.default)
       )
     }
   )
 
-  - remove_profil prof:PROFIL_SLOT <-
-  ( + idx:INTEGER
+  - remove_profil prof:Profil_slot <-
+  ( + idx:Int
 
     idx := profil.fast_first_index_of prof
-    (idx <= profil.upper).if { // Else, This profil is in BLOCK
+    (idx <= profil.upper).if { // Else, This profil is in Block
       profil.remove idx
     }
   )
@@ -327,10 +324,10 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append name
-    (argument_list.lower).to (argument_list.upper) do { j:INTEGER
+    (argument_list.lower).to (argument_list.upper) do { j:Int
       buffer.add_last ' '
       argument_list.at j.display buffer
     }
@@ -340,13 +337,13 @@ Public
   )
 
   - display_all <-
-  ( + prof:PROFIL
+  ( + prof:Profil
 
     string_tmp.clear
     (profil != NULL).if {
-      (profil.upper).downto (profil.lower) do { k:INTEGER
-	prof := profil.at k
-	prof.display_all string_tmp
+      (profil.upper).downto (profil.lower) do { k:Int
+        prof := profil.at k
+        prof.display_all string_tmp
       }
     }
     string_tmp.print
@@ -354,9 +351,9 @@ Public
 
 Private
 
-  - put_result e:EXPR in v:LOCAL <-
-  ( + val:EXPR
-    + wrt:WRITE
+  - put_result e:Expr in v:Local <-
+  ( + val:Expr
+    + wrt:Write
     val := e.check_type (v.type) with (v.position)
     wrt := v.write position value val
     list_current.add_last wrt

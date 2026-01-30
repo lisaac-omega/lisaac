@@ -1,49 +1,46 @@
 Header
-
-  + name        := SWITCH;
-
-  /* Switch for late binding resolution 
+  + name := Switch
+/* Switch for late binding resolution 
 
    BSBS: Optim. : Détecter les switch identique l'un après l'autre
    pour les fusionner...
   */
-
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
   
-//  + count_my_switch_merge:INTEGER
+//  + count_my_switch_merge:Int
   
-  - is_invariant:BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_invariant:Boolean <-
+  ( + result:Boolean
+    + j:Int
 
     (expr.is_invariant).if {
-      result := TRUE
+      result := True
       j := list.lower
       {(j <= list.upper) && {result}}.while_do {
-	result := list.at j.code.is_invariant
-	j := j + 1
+        result := list.at j.code.is_invariant
+        j := j + 1
       }
     }
     result
   )
 
-  + expr:EXPR
+  + expr:Expr
 
-  + list:ARRAY CASE
+  + list:Array Case
 
-  - count:INTEGER <- list.count
+  - count:Int <- list.count
 
   //
   // Creation.
   //
 
-  - create n:NODE with e:EXPR size s:INTEGER :SELF <-
+  - create n:Node with e:Expr size s:Int :Self <-
   [ -? {n.position != 0}; ]
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make n with e size s
@@ -51,14 +48,14 @@ Public
   )
 
 
-  - make n:NODE with e:EXPR size s:INTEGER <-
-  ( + first:CASE
+  - make n:Node with e:Expr size s:Int <-
+  ( + first:Case
 
     position := n.position
     expr     := e
-    list     := ARRAY CASE .create_with_capacity s
+    list     := Array Case .create_with_capacity s
     (n.first_code != NULL).if {
-      first := CASE.create (n.first_type) with (n.first_code)
+      first := Case.create (n.first_type) with (n.first_code)
       list.add_last first
     }
   )
@@ -67,18 +64,18 @@ Public
   // Copy.
   //
 
-  - set_expr e:EXPR list l:ARRAY CASE <-
+  - set_expr e:Expr list l:Array Case <-
   (
     expr := e
     list := l
   )
 
-  - my_copy:SELF <-
-  ( + result:SELF
-    + new_list:ARRAY CASE
+  - my_copy:Self <-
+  ( + result:Self
+    + new_list:Array Case
 
-    new_list := ARRAY CASE .create_with_capacity (list.count)
-    (list.lower).to (list.upper) do { j:INTEGER
+    new_list := Array Case .create_with_capacity (list.count)
+    (list.lower).to (list.upper) do { j:Int
       new_list.add_last (list.at j.my_copy)
     }
 
@@ -96,7 +93,7 @@ Public
     (expr != NULL).if {
       expr.remove
     }
-    (list.lower).to (list.upper) do { j:INTEGER
+    (list.lower).to (list.upper) do { j:Int
       list.at j.remove
     }
   )
@@ -105,9 +102,9 @@ Public
   // Execute
   //
 
-  - i_am_the_last i:INSTR :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - i_am_the_last i:Instr :Boolean <-
+  ( + result:Boolean
+    + j:Int
 
     j := list.lower
     {(j <= list.upper) && {!result}}.while_do {
@@ -117,24 +114,24 @@ Public
     result
   )
 
-  - execute:INSTR <-
-  ( + lst_typ:TYPES_TMP
-    + result:INSTR
-    + typ:TYPE
-    + wrt:WRITE
-    + lst:LIST
-    + tb:PROFIL_BLOCK
-    + is_end:BOOLEAN
-    + count_empty,idx,idx2:INTEGER
+  - execute:Instr <-
+  ( + lst_typ:Types_tmp
+    + result:Instr
+    + typ:Type
+    + wrt:Write
+    + lst:List
+    + tb:Profil_block
+    + is_end:Boolean
+    + count_empty,idx,idx2:Int
 
     //switch_fusion; // BSBS: A revoir assure toi que le receiver ne bouge pas!!!
                       // Rappel toi du step=0 ds cortex
 
     // Update.
-    lst_typ := TYPES_TMP.new
+    lst_typ := Types_tmp.new
     // BSBS: optim a voir si necessaire ...
     /*
-    (expr.static_type.is_strict).if {
+    (expr.static_type.is_exact).if {
       lst_typ.add (expr.static_type.raw)
     } else {
       */
@@ -146,9 +143,9 @@ Public
       lst_typ.print_all
       "\nOld type: ".print
       string_tmp.clear
-      list.lower.to (list.upper) do { j:INTEGER
-	list.at j.id.append_name_in string_tmp
-	string_tmp.add_last ','
+      list.lower.to (list.upper) do { j:Int
+        list.at j.id.append_name_in string_tmp
+        string_tmp.add_last ','
       }
       string_tmp.print
       '\n'.print
@@ -171,7 +168,7 @@ Public
         wrt2 := var.require_first
         wrt2.debug_display
         "==============\n".print
-        (var.require_list.lower).to (var.require_list.upper) do { i:INTEGER
+        (var.require_list.lower).to (var.require_list.upper) do { i:Int
           "==============\n".print
           i.print; '\n'.print
           wrt2 := var.require_list.at i
@@ -192,7 +189,7 @@ Public
     {idx != -1}.while_do {
       typ := lst_typ.at idx
       {typ = list.at idx2.id}.until_do {
-	list.at idx2.remove
+        list.at idx2.remove
         list.remove idx2
       }
       (list.at idx2.code.is_empty).if {
@@ -210,45 +207,45 @@ Public
     // Execute.
     (
       (list.count = 1) || {
-	(list.count = 2) && {debug_level_option = 0} &&
-        {list.first.id = TYPE_NULL} && {! list.first.code.is_empty} &&
+        (list.count = 2) && {debug_level_option = 0} &&
+        {list.first.id = Type_null} && {! list.first.code.is_empty} &&
         {
-	  wrt ?= list.first.code.first; // For ?= with NULL type.
-	  wrt = NULL
-	}
+          wrt ?= list.first.code.first; // For ?= with NULL type.
+          wrt = NULL
+        }
       }
     ).if {
       result := expr.execute_unlink
       (result != NULL).if {
-	list_current.insert_before result
+        list_current.insert_before result
       }
       tb ?= list.last.id
       (tb != NULL).if {
-	tb.dec_id
+        tb.dec_id
       }
       result := list.last.code.execute
       //expr.debug_display; " (0)".println
-      is_end := TRUE
+      is_end := True
     }.elseif {count_empty = list.count} then {
       //expr.debug_display; " (1)".println
       result := expr.execute_unlink
-      (list.lower).to (list.upper) do { j:INTEGER
+      (list.lower).to (list.upper) do { j:Int
         list.at j.remove
       }
-      is_end := TRUE
+      is_end := True
     }
     //
     (! is_end).if {
       // Normal execution.
       (
-	(expr.static_type.raw = type_boolean) &&
-	{list.count = 2} && {list.first.code.is_empty}
+        (expr.static_type.raw = type_boolean) &&
+        {list.count = 2} && {list.first.code.is_empty}
       ).if {
-	? {! list.second.code.is_empty}
-	expr := EXPR_NOT_LOGIC.create (expr.position) with expr
-	lst := list.first.code
-	list.first .set_code (list.second.code)
-	list.second.set_code lst
+        ? {! list.second.code.is_empty}
+        expr := Expr_not_logic.create (expr.position) with expr
+        lst := list.first.code
+        list.first .set_code (list.second.code)
+        list.second.set_code lst
       }
       /*
       seq_or_and := seq_or_and + 1
@@ -256,21 +253,21 @@ Public
       */
       expr := expr.execute_link
 
-      CALL_SLOT.reset_count_no_recursive
-      ((list.first.id = TYPE_NULL) && {list.count = 2}).if {
-	list.first .code.execute_case
+      Call_slot.reset_count_no_recursive
+      ((list.first.id = Type_null) && {list.count = 2}).if {
+        list.first .code.execute_case
         list.second.code.execute_case
         ((list.second.id.is_block) && {debug_level_option != 0}).if {
           list.second.id.set_late_binding
         }
       } else {
-	(list.lower).to (list.upper) do { j:INTEGER
+        (list.lower).to (list.upper) do { j:Int
           list.at j.execute
-	}
+        }
       }
       result := detect_logic_expr
       (result = NULL).if {
-	result := Self
+        result := self
       }
     }
 
@@ -281,53 +278,53 @@ Public
   // Genere.
   //
 
-  - count_bug:INTEGER
+  - count_bug:Int
 
   - genere <-
-  ( + lst:LIST
-    + first_case:INTEGER
-    + typ_first:TYPE
-    + typ_id:TYPE_ID
-    + wrt:WRITE
-    + is_genered:BOOLEAN
-    + c1,c2:CASE
-    + lst_case:ARRAY CASE
-    + cases:ARRAY (ARRAY CASE)
+  ( + lst:List
+    + first_case:Int
+    + typ_first:Type
+    + typ_id:Type_id
+    + wrt:Write
+    + is_genered:Boolean
+    + c1,c2:Case
+    + lst_case:Array Case
+    + cases:Array (Array Case)
 
-    TYPE.add_switch_global Self
-    (list.lower).to (list.upper) do { j:INTEGER
-      list.at j.id.add_switch_list Self
+    Type.add_switch_global self
+    (list.lower).to (list.upper) do { j:Int
+      list.at j.id.add_switch_list self
     }
 
     count_switch := count_switch + 1
     (
-      (list.first.id = TYPE_NULL)  &&
+      (list.first.id = Type_null)  &&
       {debug_level_option = 0}     &&
       {! list.first.code.is_empty} && {
-	wrt ?= list.first.code.first; // For ?= with NULL type.
-	wrt = NULL
+        wrt ?= list.first.code.first; // For ?= with NULL type.
+        wrt = NULL
       }
     ).if {
       list.remove_first
     }
     typ_first := list.first.id
     typ_id ?= typ_first
-    ((list.count <= 2) || {typ_first = TYPE_NULL}).if {
+    ((list.count <= 2) || {typ_first = Type_null}).if {
       output.append "if "
       par {
         //
-        ((expr.static_type.raw.is_block) && {typ_first = TYPE_NULL}).if {
+        ((expr.static_type.raw.is_block) && {typ_first = Type_null}).if {
           expr.genere
-          is_genered := TRUE
+          is_genered := True
           output.append ".__id==0"
         } else {
           typ_first.put_access_id expr
-          is_genered := TRUE
+          is_genered := True
           (expr.static_type.raw != type_boolean).if {
             output.append "=="
             typ_first.put_id output
           } else {
-            ? {typ_first.name = "TRUE"}
+            ? {typ_first.name = str_true}
           }
         }
       }
@@ -384,14 +381,14 @@ Public
           list.at first_case.id.put_access_id expr
         }
         output.append " {\n"
-        (cases.lower).to (cases.upper) do { j:INTEGER
+        (cases.lower).to (cases.upper) do { j:Int
           lst_case := cases.at j
           (! lst_case.first.code.is_empty).if {
             (j = cases.upper).if {
               output.append indent
               output.append "default: "
             } else {
-              (lst_case.lower).to (lst_case.upper) do { i:INTEGER
+              (lst_case.lower).to (lst_case.upper) do { i:Int
                 output.append indent
                 output.append "case "
                 lst_case.at i.id.put_id output
@@ -402,7 +399,7 @@ Public
             lst_case.first.genere
             output.append " break;\n"
           } else { // Debug...
-            (lst_case.lower).to (lst_case.upper) do { i:INTEGER
+            (lst_case.lower).to (lst_case.upper) do { i:Int
               output.append indent
               output.append "case "
               lst_case.at i.id.put_id output
@@ -439,12 +436,12 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
-  ( + line:{INTEGER; }
+  - display buffer:String_buffer <-
+  ( + line:{Int; }
 
     line :=
-    { j:INTEGER
-      + i:LIST
+    { j:Int
+      + i:List
       buffer.append indent
       buffer.at (buffer.upper-1) put '+'
       buffer.at (buffer.upper)   put '-'
@@ -453,9 +450,9 @@ Public
       buffer.append indent
       i := list.at j.code
       (i = NULL).if {
-	buffer.append "<Empty>"
+        buffer.append "<Empty>"
       } else {
-	i.display buffer
+        i.display buffer
       }
     }
 
@@ -464,9 +461,9 @@ Public
     buffer.add_last '\n'
     (list.count > 0).if {
       indent.append "| "
-      0.to (list.upper - 1) do { j:INTEGER
-	line.value j
-	buffer.add_last '\n'
+      0.to (list.upper - 1) do { j:Int
+        line.value j
+        buffer.add_last '\n'
       }
       indent.at (indent.upper-1) put ' '
       line.value (list.upper)
@@ -474,21 +471,21 @@ Public
     }
   )
 
-  - switch_new_pass:BOOLEAN
+  - switch_new_pass:Boolean
   - reset_switch_new_pass <-
   (
-    switch_new_pass := FALSE
+    switch_new_pass := False
   )
 
 Private
 
-  - detect_logic_expr:INSTR <-
+  - detect_logic_expr:Instr <-
   // Detection !, |, &, ||, && :
-  ( + result:INSTR
-    + wr_true,wr_false:WRITE
-    + rd:READ
-    + val_true,val_false:EXPR
-    + a,b,c,d:BOOLEAN
+  ( + result:Instr
+    + wr_true,wr_false:Write
+    + rd:Read
+    + val_true,val_false:Expr
+    + a,b,c,d:Boolean
 
     (
       (expr.static_type.raw = type_boolean) && {list.count = 2} &&
@@ -497,7 +494,7 @@ Private
       ((list.first.id != type_true) || {list.second.id != type_false}).if {
         list.first.id.intern_name.print;  ' '.print;
         list.second.id.intern_name.print; '\n'.print;
-	syntax_error (position,"PB dans SWITCH.")
+        syntax_error (position,"PB dans SWITCH.")
       }
       ? {list.first.id  = type_true }
       ? {list.second.id = type_false}
@@ -505,79 +502,79 @@ Private
       wr_true  ?= list.first .code.first
       wr_false ?= list.second.code.first
       (
-	(wr_true  != NULL) && {wr_false != NULL} &&
-	{wr_true.static_type.raw = type_boolean} &&
-	{wr_true.variable = wr_false.variable}
+        (wr_true  != NULL) && {wr_false != NULL} &&
+        {wr_true.static_type.raw = type_boolean} &&
+        {wr_true.variable = wr_false.variable}
       ).if {
-	val_true  := wr_true .value
-	val_false := wr_false.value
-	// BSBS: val_true.static_type = type_true ???
-	(
-	  (a := val_true.is_constant) && {b := (val_true.static_type.raw = type_true)}
-	).if {
-	  // | or ||
-	  rd ?= val_false
-	  (rd != NULL).if {
-	    // |
-	    wr_true.remove
-	    val_false := EXPR_OR_LOGIC.create position with expr and val_false
-	    wr_false.set_value val_false
-	    result := wr_false
-	    new_execute_pass
-	  }.elseif {(CALL_SLOT.count_no_recursive = 0) || {modify_count = 0}} then {
-	    // ||
-	    wr_true.remove
-	    val_false := EXPR_OR_OR_LOGIC.create position with expr and val_false
-	    wr_false.set_value val_false
-	    result := wr_false
-	    switch_new_pass := TRUE
-	  }
-	}.elseif {
-	  (c := val_false.is_constant) && {d := (val_false.static_type.raw = type_false)}
-	} then {
-	  // & or &&
-	  rd ?= val_true
-	  (rd != NULL).if {
-	    // &
-	    wr_false.remove
-	    val_true := EXPR_AND_LOGIC.create position with expr and val_true
-	    wr_true.set_value val_true
-	    result := wr_true
-	    new_execute_pass
-	  }.elseif {(CALL_SLOT.count_no_recursive = 0) || {modify_count = 0}} then {
-	    // &&
-	    wr_false.remove
-	    val_true := EXPR_AND_AND_LOGIC.create position with expr and val_true
-	    wr_true.set_value val_true
-	    result := wr_true
-	    switch_new_pass := TRUE
-	  }
-	}.elseif {
-	  (a) && {!b} && {c} && {!d}
-	} then {
-	  // !
-	  wr_false.remove
-	  wr_true.set_value (EXPR_NOT_LOGIC.create position with expr)
-	  result := wr_true
-	  new_execute_pass
-	}
+        val_true  := wr_true .value
+        val_false := wr_false.value
+        // BSBS: val_true.static_type = type_true ???
+        (
+          (a := val_true.is_constant) && {b := (val_true.static_type.raw = type_true)}
+        ).if {
+          // | or ||
+          rd ?= val_false
+          (rd != NULL).if {
+            // |
+            wr_true.remove
+            val_false := Expr_or_logic.create position with expr and val_false
+            wr_false.set_value val_false
+            result := wr_false
+            new_execute_pass
+          }.elseif {(Call_slot.count_no_recursive = 0) || {modify_count = 0}} then {
+            // ||
+            wr_true.remove
+            val_false := Expr_or_or_logic.create position with expr and val_false
+            wr_false.set_value val_false
+            result := wr_false
+            switch_new_pass := True
+          }
+        }.elseif {
+          (c := val_false.is_constant) && {d := (val_false.static_type.raw = type_false)}
+        } then {
+          // & or &&
+          rd ?= val_true
+          (rd != NULL).if {
+            // &
+            wr_false.remove
+            val_true := Expr_and_logic.create position with expr and val_true
+            wr_true.set_value val_true
+            result := wr_true
+            new_execute_pass
+          }.elseif {(Call_slot.count_no_recursive = 0) || {modify_count = 0}} then {
+            // &&
+            wr_false.remove
+            val_true := Expr_and_and_logic.create position with expr and val_true
+            wr_true.set_value val_true
+            result := wr_true
+            switch_new_pass := True
+          }
+        }.elseif {
+          (a) && {!b} && {c} && {!d}
+        } then {
+          // !
+          wr_false.remove
+          wr_true.set_value (Expr_not_logic.create position with expr)
+          result := wr_true
+          new_execute_pass
+        }
       }
     }
     result
   )
 
   - switch_fusion <-
-  ( + other:SWITCH
-    + index:INTEGER
-    + wrt:WRITE
-    + rd,rd2:READ
+  ( + other:Switch
+    + index:Int
+    + wrt:Write
+    + rd,rd2:Read
 
     index := list_current.index + 1
     (index <= list_current.upper).if {
       other ?= list_current.at index
       ((other != NULL) && {other.expr ~= expr} && {other.list.count = list.count}).if {
         concat_switch other
-        list_current.at index put NOP
+        list_current.at index put Nop
         //warning_error (position,"ICI")
       }
       
@@ -593,13 +590,13 @@ Private
           {other.expr ~= expr} && {other.list.count = list.count}).if {
             count_switch_merging := count_switch_merging + 1
             count_my_switch_merge := count_my_switch_merge + 1
-            (list.lower).to (list.upper-1) do { j:INTEGER
+            (list.lower).to (list.upper-1) do { j:Int
               list.at j.code.add_last (wrt.my_copy)
             }
             list.last.code.add_last wrt
-            list_current.at index put NOP
+            list_current.at index put Nop
             concat_switch other
-            list_current.at (index + 1) put NOP
+            list_current.at (index + 1) put Nop
           }
         }
       }
@@ -607,13 +604,13 @@ Private
     }
   )
 
-  - concat_switch other:SWITCH <-
-  ( + other_list:ARRAY CASE
-    + code:LIST
+  - concat_switch other:Switch <-
+  ( + other_list:Array Case
+    + code:List
 
     other.expr.remove
     other_list := other.list
-    (list.lower).to (list.upper) do { j:INTEGER
+    (list.lower).to (list.upper) do { j:Int
       code := list.at j.code
       code.add_last (other_list.at j.code)
     }
@@ -624,16 +621,16 @@ Private
   // Case fusion manager.
   //
 
-  - store_list_cases:ARRAY (ARRAY (ARRAY CASE)) :=
-  ARRAY (ARRAY (ARRAY CASE)).create_with_capacity 32
+  - store_list_cases:Array (Array (Array Case)) :=
+  Array (Array (Array Case)).create_with_capacity 32
 
-  - store_cases:ARRAY (ARRAY CASE) :=
-  ARRAY (ARRAY CASE).create_with_capacity 32
+  - store_cases:Array (Array Case) :=
+  Array (Array Case).create_with_capacity 32
 
-  - new_cases:ARRAY CASE <-
-  ( + result:ARRAY CASE
+  - new_cases:Array Case <-
+  ( + result:Array Case
     (store_cases.is_empty).if {
-      result := ARRAY CASE .create_with_capacity 32
+      result := Array Case .create_with_capacity 32
     } else {
       result := store_cases.last
       store_cases.remove_last
@@ -641,10 +638,10 @@ Private
     result
   )
 
-  - new_list_cases:ARRAY(ARRAY CASE) <-
-  ( + result:ARRAY(ARRAY CASE)
+  - new_list_cases:Array(Array Case) <-
+  ( + result:Array(Array Case)
     (store_list_cases.is_empty).if {
-      result := ARRAY(ARRAY CASE).create_with_capacity 32
+      result := Array(Array Case).create_with_capacity 32
     } else {
       result := store_list_cases.last
       store_list_cases.remove_last
@@ -652,9 +649,9 @@ Private
     result
   )
 
-  - free_list_cases l:ARRAY(ARRAY CASE) <-
-  ( + lst:ARRAY CASE
-    (l.lower).to (l.upper) do { i:INTEGER
+  - free_list_cases l:Array(Array Case) <-
+  ( + lst:Array Case
+    (l.lower).to (l.upper) do { i:Int
       lst := l.at i
       lst.clear
       store_cases.add_last lst
@@ -663,14 +660,14 @@ Private
     store_list_cases.add_last l
   )
 
-  - case_fusion low:INTEGER :ARRAY(ARRAY CASE) <-
-  ( + c1,c2:CASE
-    + lst:ARRAY CASE
-    + j:INTEGER
-    + result:ARRAY (ARRAY CASE)
+  - case_fusion low:Int :Array(Array Case) <-
+  ( + c1,c2:Case
+    + lst:Array Case
+    + j:Int
+    + result:Array (Array Case)
 
     result := new_list_cases
-    (low).to (list.upper) do { i:INTEGER
+    (low).to (list.upper) do { i:Int
       c1 := list.at i
       lst := NULL
       j := result.lower
@@ -694,7 +691,7 @@ Private
   // Parenthese manager
   
   - par b:{} <-
-  ( + pos:INTEGER
+  ( + pos:Int
     output.add_last '('
     pos := output.upper
     b.value

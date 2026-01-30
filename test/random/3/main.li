@@ -1,13 +1,12 @@
 Header
-  + name := MAIN;
- 
+  + name := Main
 Public
   - main <-
-  ( + r:RANDOM
-    r := new RANDOM.init 1
-    TEST.check (r.real_64 != RANDOM.real_64)
+  ( + r:Random
+    r := new Random.init 1
+    Test.check (r.real_64 != Random.real_64)
     5.times {
-      println(RANDOM.min 1 max 5)
+      println(Random.min 1 max 5)
     }
   )
   

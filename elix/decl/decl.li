@@ -1,9 +1,9 @@
 Header
-  + name := DECL;
-  /* root of all DECLarations */
+  + name := Decl
+/* root of all DECLarations */
 
 Inherit  
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
     
 Public
   
@@ -11,34 +11,34 @@ Public
   // Flag local
   //
   
-  - f_ro:UINTEGER_8     := 0000_0001
-  - f_static:UINTEGER_8 := 0000_0010
+  - f_ro:Uint8     := 0000_0001
+  - f_static:Uint8 := 0000_0010
   
   //
   // Type
   //
   
-  - arg_to_type a:ARRAY LOCAL self t:TYPE :TYPE <-
-  ( + result:TYPE
-    + ts:ARRAY TONE
+  - arg_to_type a:Array Local self t:Type :Type <-
+  ( + result:Type
+    + ts:Array Tone
     (a.is_empty).if {
-      result := TYPE.void
+      result := Type.void
     } else {
       (a.count = 1).if {
         result := a.first.type
-        ((result != NULL) && {result.dynamic_type = TP} && {TP.cast result.is_self}).if {
+        ((result != NULL) && {result.dynamic_type = Tp} && {Tp.cast result.is_self}).if {
           result := t
         }
       } else {
         ts := push_tone
-        a.foreach { l:LOCAL
+        a.foreach { l:Local
           (l.type != NULL).if { // BIZARRE
             crash
             //l.type.foreach { to:TONE; ts.add_last to; }
           }
         }
         (ts.count > 1).if { // BIZARRE II
-          result := TVEC.new ts
+          result := Tvec.new ts
         }
         pop_tone
       }

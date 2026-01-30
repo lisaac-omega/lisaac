@@ -1,47 +1,46 @@
 Header
-  + name    := ARRAY2 V;
-  /*
+  + name := Array2 V
+/*
    Resizable two dimensional array.                   
    Unlike ARRAY2, the `lower1' bound and the `lower2' 
    bound are frozen to 0. Thus, one can expect better 
    performances.
   */
-  
 Inherit
-  + parent_collection2:Expanded COLLECTION2 V
+  + parent_collection2:Flat Collection2 V
 
 Public
 
-  + upper1:INTEGER
-  + count1:INTEGER
+  + upper1:Int
+  + count1:Int
 
-  + upper2:INTEGER
-  + count2:INTEGER
+  + upper2:Int
+  + count2:Int
 
-  + count:INTEGER
+  + count:Int
 
-ARRAY2
+Array2
 
-  + storage:NATIVE_ARRAY V
+  + storage:C_array V
 
-  + capacity :INTEGER; // of `storage'.
+  + capacity :Int; // of `storage'.
 
 Public
 
-  - lower1:INTEGER := 0
+  - lower1:Int := 0
 
-  - lower2:INTEGER := 0
+  - lower2:Int := 0
 
-  - create (new_count1,new_count2:INTEGER) :SELF<-
+  - create (new_count1,new_count2:Int) :Self<-
   // Create with new dimensions.
   // All elements are set to the default value of type E.
-  ( + result:SELF
+  ( + result:Self
     result := clone
     result.make (new_count1,new_count2)
     result
   )
 
-  - make (new_count1,new_count2:INTEGER) <-
+  - make (new_count1,new_count2:Int) <-
   // Create or reset self with new dimensions.
   // All elements are set to the default value of type E.
   [ /* BSBS Old; */
@@ -56,7 +55,7 @@ Public
     count := count1 * count2
     (capacity < count).if {
       capacity := count
-      storage := NATIVE_ARRAY(V).create capacity
+      storage := C_array(V).create capacity
     }.elseif {capacity != 0} then {
       storage.clear_all (capacity - 1)
     }
@@ -68,19 +67,19 @@ Public
   ]
 
 
-  - from_collection2 model:COLLECTION2(V) <-
+  - from_collection2 model:Collection2(V) <-
   // Uses the `model' to update self.
   (
     make ((model.upper1 + 1), (model.upper2 + 1))
 
-    lower1.to upper1 do { i:INTEGER
-      lower2.to upper2 do {j :INTEGER
+    lower1.to upper1 do { i:Int
+      lower2.to upper2 do {j :Int
         at (i,j) put (model.at (i,j))
       }
     }
   )
 
-  - from_collection contents:COLLECTION(V) size (new_count1, new_count2:INTEGER) <-
+  - from_collection contents:Collection(V) size (new_count1, new_count2:Int) <-
   //  Reset all bounds using `new_count#i'.
   //  Copy all elements of `contents', line by line into Current.
   [ /* BSBS Old; */
@@ -90,7 +89,7 @@ Public
   ]
   (
     make (new_count1, new_count2)
-    0.to (count - 1) do { i:INTEGER
+    0.to (count - 1) do { i:Int
       storage.at i put (contents.at (contents.lower + i))
     }
   )
@@ -100,16 +99,16 @@ Public
     +? { count = contents.count }
   ]
 
-  - from_model model:COLLECTION(COLLECTION(V)) <-
+  - from_model model:Collection(Collection(V)) <-
   // The `model' is used to fill line by line the COLLECTION2.
   // Assume all sub-collections of `model' have the number of items.
-  ( + l,c:INTEGER
+  ( + l,c:Int
 
     make(model.count, model.first.count)
     l := model.lower
-    lower1.to upper1 do { line:INTEGER
+    lower1.to upper1 do { line:Int
       c := model.at l.lower
-      lower2.to upper2 do { column:INTEGER
+      lower2.to upper2 do { column:Int
         at (line, column) put (model.at l.at c)
         c := c + 1
       }
@@ -117,15 +116,15 @@ Public
     }
   )
 
-  - sub_collection2 (line_min,column_min:INTEGER) to (line_max,column_max:INTEGER) :SELF <-
-  ( + l,c:INTEGER
-    + result:SELF
+  - sub_collection2 (line_min,column_min:Int) to (line_max,column_max:Int) :Self <-
+  ( + l,c:Int
+    + result:Self
 
     result := create (line_max - line_min + 1, column_max - column_min + 1)
     l := line_min
-    (result.lower1).to (result.upper1) do { line:INTEGER
+    (result.lower1).to (result.upper1) do { line:Int
       c := column_min
-      (result.lower2).to (result.upper2) do { column:INTEGER
+      (result.lower2).to (result.upper2) do { column:Int
         result.at (line, column) put (at (l, c))
         c := c + 1
       }
@@ -135,17 +134,17 @@ Public
 
   // Implementation of others feature from COLLECTION2:
   
-  - at (line, column:INTEGER) :V <-
+  - at (line, column:Int) :V <-
   (
     storage.at (line * count2 + column)
   )
 
-  - at (line, column:INTEGER) put element:V<-
+  - at (line, column:Int) put element:V<-
   (
     storage.at (line * count2 + column) put element
   )
 
-  - force element:V to (line , column :INTEGER) <-
+  - force element:V to (line , column :Int) <-
   (
     (! valid_index (line, column)).if {
       resize (line.max upper1,column.max upper2)
@@ -153,7 +152,7 @@ Public
     at (line,column) put element
   )
 
-  - copy other:SELF <-
+  - copy other:Self <-
   (
     count1 := other.count1
     upper1 := count1 - 1
@@ -175,39 +174,39 @@ Public
     storage.set_all_with v until (count - 1)
   )
 
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   (
     storage.all_default (count - 1)
   )
 
-  -  slice (l1,up1:INTEGER) to (l2,up2:INTEGER) :SELF <-
+  -  slice (l1,up1:Int) to (l2,up2:Int) :Self <-
   // Create a new collection initialized with elements of
   // range `low'..`up'. result has the same dynamic type
   // as self collection.
-  ( + result:SELF
+  ( + result:Self
 
-    result := SELF.create ((up1 - l1 + 1),(up2 - l2 + 1))
-    l1.to up1 do { line:INTEGER
-      l2.to up2 do { column:INTEGER
+    result := Self.create ((up1 - l1 + 1),(up2 - l2 + 1))
+    l1.to up1 do { line:Int
+      l2.to up2 do { column:Int
         result.at (line - l1,column - l2) put (at (line,column))
       }
     }
   )
 
-  - set_slice (l1,up1:INTEGER) to (l2,up2:INTEGER) with element:V <-
+  - set_slice (l1,up1:Int) to (l2,up2:Int) with element:V <-
   // Set all the elements in the range [(l1,up1),(l2,up2)] of
   // self with the element 'element'.
   (
-    (l1 * count2).to (up1 * count2) by count2 do { i:INTEGER
-      l2.to up2 do { j:INTEGER
+    (l1 * count2).to (up1 * count2) by count2 do { i:Int
+      l2.to up2 do { j:Int
         storage.at (i + j) put element
       }
     }
   )
 
-  - swap (line1, column1:INTEGER) with (line2, column2:INTEGER) <-
+  - swap (line1, column1:Int) with (line2, column2:Int) <-
   ( + tmp:V
-    + c2, index1, index2:INTEGER
+    + c2, index1, index2:Int
 
     c2 := count2
     index1 := line1 * c2 + column1
@@ -219,30 +218,30 @@ Public
 
   // Looking and comparison:
 
-  - occurrences elt:V :INTEGER <-
+  - occurrences elt:V :Int <-
   (
     storage.occurrences elt until (count - 1)
   )
 
-  - fast_occurrences elt:V :INTEGER <-
+  - fast_occurrences elt:V :Int <-
   (
     storage.fast_occurrences elt until (count - 1)
   )
 
   // Resizing:
 
-  - resize (new_count1,new_count2:INTEGER) <-
+  - resize (new_count1,new_count2:Int) <-
   [ /* BSBS Old; */
     -? {new_count1 > 0}
     -? {new_count2 > 0}
   ]
-  ( + tmp:SELF
+  ( + tmp:Self
 
-    tmp := SELF.create (new_count1, new_count2)
+    tmp := Self.create (new_count1, new_count2)
     // It may be possible to avoid this ceation when :
     //    new `capacity' <= old `capacity'
-    line_maximum.downto 0 do { l:INTEGER
-      column_maximum.downto 0 do { c:INTEGER
+    line_maximum.downto 0 do { l:Int
+      column_maximum.downto 0 do { c:Int
         (tmp.valid_index (l,c)).if {
           tmp.at (l,c) put (at (l,c))
         }
@@ -261,9 +260,9 @@ Public
 
   // Looking and Searching:
 
-  - has x:V :BOOLEAN <-
+  - has x:V :Boolean <-
   // Look for `x' using `equal' for comparison.
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     (count > 0).if {
       result := storage.first_index_of x until (count-1) <= count - 1
@@ -271,9 +270,9 @@ Public
     result
   )
 
-  - fast_has x:V :BOOLEAN <-
+  - fast_has x:V :Boolean <-
   // Same as `has' but use `=' for comparison
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     (count > 0).if {
       result := storage.fast_first_index_of x until (count - 1) <= count - 1
@@ -295,22 +294,22 @@ Public
 
   - transpose <-
   // Transpose the self array
-  ( + oldu1,oldu2,tmp:INTEGER
+  ( + oldu1,oldu2,tmp:Int
 
     oldu1 := upper1
     oldu2 := upper2
     tmp := count2.max count1
     resize (tmp,tmp)
 
-    lower1.to upper1 do {i :INTEGER
-      (i + 1).to upper2 do { j:INTEGER
+    lower1.to upper1 do {i :Int
+      (i + 1).to upper2 do { j:Int
         swap (i,j) with (j,i)
       }
     }
     resize (oldu2,oldu1)
   )
 
-  - to_external:POINTER <-
+  - to_external:Pointer <-
   // Gives C access to the internal `storage' (may be dangerous).
   (
     storage.to_external

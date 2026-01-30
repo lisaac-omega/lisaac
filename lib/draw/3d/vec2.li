@@ -1,22 +1,21 @@
-Header  
-  + name := Strict VEC2;
-  
+Header
+  + name := Exact Vec2
 Insert  
-  - parent_vec:VEC := VEC
+  - parent_vec:Vec := Vec
   
-SELF  
-  - dim:INTEGER := 2
+Self  
+  - dim:Int := 2
   
-  - free_list:ARRAY VEC2 := ARRAY VEC2.create_with_capacity 4
+  - free_list:Array Vec2 := Array Vec2.create_with_capacity 4
   
 Mapping, Public 
-  + x:REAL_32
-  + y:REAL_32
+  + x:Real32
+  + y:Real32
   
 Public
   
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     (free_list.is_empty).if {
       result := clone
     } else {
@@ -25,6 +24,6 @@ Public
     result
   )
   
-  - free <- free_list.add_last Self
+  - free <- free_list.add_last self
      
-  - make (px,py:REAL_32) <- ( (x, y) := (px,py); )
+  - make (px,py:Real32) <- ( (x, y) := (px,py); )

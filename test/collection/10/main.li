@@ -1,15 +1,14 @@
-Header  
-  + name := MAIN;
-  
+Header
+  + name := Main
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Private  
   
-  + nsize:INTEGER
+  + nsize:Int
   
-  + array_block_1:ARRAY_BLOCK INTEGER
-  + array_block_2:ARRAY_BLOCK INTEGER
+  + array_block_1:Array_block Int
+  + array_block_2:Array_block Int
   
 Public
   
@@ -34,35 +33,35 @@ Private
 Private
   - new <-
   (
-    array_block_1 := ARRAY_BLOCK INTEGER .new_tiny
-    array_block_2 := ARRAY_BLOCK INTEGER .new
+    array_block_1 := Array_block Int .new_tiny
+    array_block_2 := Array_block Int .new
   )
   
 Private 
   - idem <-
-  ( + i:INTEGER
-    TEST.check (array_block_2.lower) integer (array_block_1.lower)
-    TEST.check (array_block_2.upper) integer (array_block_1.upper)
-    TEST.check (array_block_2.count) integer (array_block_1.count)
+  ( + i:Int
+    Test.check (array_block_2.lower) integer (array_block_1.lower)
+    Test.check (array_block_2.upper) integer (array_block_1.upper)
+    Test.check (array_block_2.count) integer (array_block_1.count)
     //
     array_block_2.is_empty.if {
-      TEST.check (array_block_1.is_empty)
+      Test.check (array_block_1.is_empty)
     } else {
-      TEST.check (! array_block_1.is_empty)
+      Test.check (! array_block_1.is_empty)
     }
     //
     array_block_2.is_empty.if_false {
-      TEST.check (array_block_2.last) integer (array_block_1.last)
-      TEST.check (array_block_2.first) integer (array_block_1.first)
+      Test.check (array_block_2.last) integer (array_block_1.last)
+      Test.check (array_block_2.first) integer (array_block_1.first)
     }
     i := 0
     {i <= array_block_2.upper}.while_do {
-      TEST.check (array_block_2.at i) integer (array_block_1.at i)
+      Test.check (array_block_2.at i) integer (array_block_1.at i)
       i := i + 1
     }
   )
   
-  - add_last v:INTEGER <-
+  - add_last v:Int <-
   (
     array_block_1.add_last v
     array_block_2.add_last v
@@ -74,7 +73,7 @@ Private
     array_block_2.remove_last
   )
   
-  - add_first v:INTEGER <-
+  - add_first v:Int <-
   (
     array_block_1.add_first v
     array_block_2.add_first v
@@ -86,20 +85,20 @@ Private
     array_block_2.remove_first
   )
   
-  - remove idx:INTEGER <-
+  - remove idx:Int <-
   (
     array_block_1.remove idx
     array_block_2.remove idx
   )
   
-  - add v:INTEGER to idx:INTEGER <-
+  - add v:Int to idx:Int <-
   (
     array_block_1.at idx add v
     array_block_2.at idx add v
   )
   
   - check_fair_bench <-
-  ( + n,tier,idx:INTEGER
+  ( + n,tier,idx:Int
     new
     tier := (nsize.max 3) / 3
     tier.times {

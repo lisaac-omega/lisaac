@@ -1,17 +1,15 @@
 Header
-
-  + name        := EXPR_DIV;
-  /*
+  + name := Expr_div
+/*
   Div Expression.
   */
-
 Inherit
 
-  + parent_expr_binary:Expanded EXPR_BINARY
+  + parent_expr_binary:Flat Expr_binary
 
 Public
 
-  - value:INTEGER <-
+  - value:Int <-
   (
     left.value / right.value
   )

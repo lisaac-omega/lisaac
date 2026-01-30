@@ -1,0 +1,9 @@
+--WARNING----------
+Conflict `foo' name between slot and local.
+Line 5 column 14 in Main(.../test/misc/8/main.li):
+  - foo x:Int <-
+              ^
+
+Line 6 column 9 in Main(.../test/misc/8/main.li):
+  ( + foo:Int; // ben non...
+         ^

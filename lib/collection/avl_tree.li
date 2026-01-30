@@ -1,16 +1,15 @@
 Header
-  + name := AVL_TREE V;
-  /*
+  + name := Avl_tree V
+/*
     Definition of a mathematical set of comparable objects. All common
     operations on mathematical sets are available.
   */
-
 Insert
-  - parent_avl_constants:AVL_CONSTANTS := AVL_CONSTANTS
+  - parent_avl_constants:Avl_constants := Avl_constants
 
 Public
 
-  + count:INTEGER
+  + count:Int
 
 Public
 
@@ -26,37 +25,37 @@ Public
     root := fast_do_remove (root, e)
   )
 
-SELF
+Self
 
-  + root:AVL_TREE_NODE(V)
+  + root:Avl_tree_node(V)
 
-  + rebalance:BOOLEAN
+  + rebalance:Boolean
 
   + item_memory:V
 
-  - set_value_and_key n:AVL_TREE_NODE(V) <-
+  - set_value_and_key n:Avl_tree_node(V) <-
   (
     abstract
   )
 
-  - set_value n:AVL_TREE_NODE(V) <-
+  - set_value n:Avl_tree_node(V) <-
   (
     abstract
   )
 
-  - fast_do_insert n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
-  ( + result:AVL_TREE_NODE(V)
+  - fast_do_insert n:Avl_tree_node(V) :Avl_tree_node(V) <-
+  ( + result:Avl_tree_node(V)
 
     (n = NULL).if {
       result := new_node
       set_value_and_key result
       count := count + 1
-      map_dirty := TRUE
-      rebalance := TRUE
+      map_dirty := True
+      rebalance := True
     }.elseif {item_memory = n.item} then {
       result := n
       set_value result
-      rebalance := FALSE
+      rebalance := False
     }.elseif {item_memory < n.item} then {
       n.set_left (do_insert (n.left))
       (rebalance).if {
@@ -81,15 +80,15 @@ SELF
     +? {rebalance = (node_height Result > Old node_height n)}
   ]
 
-  - do_insert n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
-  ( + result:AVL_TREE_NODE(V)
+  - do_insert n:Avl_tree_node(V) :Avl_tree_node(V) <-
+  ( + result:Avl_tree_node(V)
 
     (n = NULL).if {
       result := new_node
       set_value_and_key result
       count := count + 1
-      map_dirty := TRUE
-      rebalance := TRUE
+      map_dirty := True
+      rebalance := True
     }.elseif {item_memory < n.item} then {
       n.set_left (do_insert (n.left))
       (rebalance).if {
@@ -108,7 +107,7 @@ SELF
       ? {item_memory == n.item}
       result := n
       set_value result
-      rebalance := FALSE
+      rebalance := False
     }
     result
   )
@@ -118,13 +117,13 @@ SELF
     +? {rebalance = (node_height Result > Old node_height n)}
   ]
 
-  - left_grown n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  - left_grown n:Avl_tree_node(V) :Avl_tree_node(V) <-
   [
     -? {rebalance}
     -? {n != NULL}
     -? {node_height (n.right) - node_height (n.left) + 1 = n.balance}
   ]
-  ( + result:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
 
     (n.balance)
     .when imbalanced_left then {
@@ -149,7 +148,7 @@ SELF
         n.set_left (n.left.rotate_left)
       }
       result := n.rotate_right
-      rebalance := FALSE
+      rebalance := False
     }
     .when balanced then {
       n.set_balance imbalanced_left
@@ -158,7 +157,7 @@ SELF
     .when imbalanced_right then {
       n.set_balance balanced
       result := n
-      rebalance := FALSE
+      rebalance := False
     }
     result
   )
@@ -171,13 +170,13 @@ SELF
     }
   ]
 
-  - right_grown n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  - right_grown n:Avl_tree_node(V) :Avl_tree_node(V) <-
   [
     -? {rebalance}
     -? {n != NULL}
     -? {node_height (n.right) - 1 - node_height (n.left) = n.balance}
   ]
-  ( + result:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
 
     (n.balance)
     .when imbalanced_right then {
@@ -203,7 +202,7 @@ SELF
         n.set_right (n.right.rotate_right)
       }
       result := n.rotate_left
-      rebalance := FALSE
+      rebalance := False
     }
     .when balanced then {
       n.set_balance imbalanced_right
@@ -212,7 +211,7 @@ SELF
     .when imbalanced_left then {
       n.set_balance balanced
       result := n
-      rebalance := FALSE
+      rebalance := False
     }
     result
   )
@@ -225,11 +224,11 @@ SELF
     }
   ]
 
-  - fast_do_remove (n:AVL_TREE_NODE(V),e:V) :AVL_TREE_NODE(V) <-
-  ( + result:AVL_TREE_NODE(V)
+  - fast_do_remove (n:Avl_tree_node(V),e:V) :Avl_tree_node(V) <-
+  ( + result:Avl_tree_node(V)
 
     (n = NULL).if {
-      rebalance := FALSE
+      rebalance := False
     }.elseif {e = n.item} then {
       (n.left = NULL).if {
         result := n.right
@@ -270,11 +269,11 @@ SELF
     +? {rebalance = (node_height Result < Old node_height n)}
   ]
 
-  - do_remove (n:AVL_TREE_NODE(V),e:V) :AVL_TREE_NODE(V) <-
-  ( + result:AVL_TREE_NODE(V)
+  - do_remove (n:Avl_tree_node(V),e:V) :Avl_tree_node(V) <-
+  ( + result:Avl_tree_node(V)
 
     (n = NULL).if {
-      rebalance := FALSE
+      rebalance := False
     }.elseif {e < n.item} then {
       n.set_left (do_remove (n.left, e))
       (rebalance).if {
@@ -311,12 +310,12 @@ SELF
     +? {rebalance = (node_height Result < Old node_height n)}
   ]
 
-  - remove_right (n1, n2:AVL_TREE_NODE(V)) :AVL_TREE_NODE(V) <-
+  - remove_right (n1, n2:Avl_tree_node(V)) :Avl_tree_node(V) <-
   [
     -? {n1 != NULL}
     -? {n2 != NULL}
   ]
-  ( + result:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
 
     (n2.right = NULL).if {
       result := n2.left
@@ -337,13 +336,13 @@ SELF
     +? {rebalance = (node_height Result < Old node_height n2)}
   ]
 
-  - left_shrunk n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  - left_shrunk n:Avl_tree_node(V) :Avl_tree_node(V) <-
   [
     -? {rebalance}
     -? {n != NULL}
     -? {node_height (n.right) - node_height (n.left) - 1 = n.balance}
   ]
-  ( + result:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
 
     (n.balance)
     .when imbalanced_left then {
@@ -353,7 +352,7 @@ SELF
     .when balanced then {
       n.set_balance imbalanced_right
       result := n
-      rebalance := FALSE
+      rebalance := False
     }
     .when imbalanced_right then {
       (n.right.balance)
@@ -378,7 +377,7 @@ SELF
       .when balanced then {
         n.set_balance imbalanced_right
         n.right.set_balance imbalanced_left
-        rebalance := FALSE
+        rebalance := False
       }
       .when imbalanced_right then {
         n.set_balance balanced
@@ -395,13 +394,13 @@ SELF
     Old node_height (n.right).max (node_height (n.left) + 1))}
   ]
 
-  - right_shrunk n:AVL_TREE_NODE(V) :AVL_TREE_NODE(V) <-
+  - right_shrunk n:Avl_tree_node(V) :Avl_tree_node(V) <-
   [
     -? {rebalance}
     -? {n != NULL}
     -? {node_height (n.right) + 1 - node_height (n.left) = n.balance}
   ]
-  ( + result:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
 
     (n.balance)
     .when imbalanced_right then {
@@ -411,7 +410,7 @@ SELF
     .when balanced then {
       n.set_balance imbalanced_left
       result := n
-      rebalance := FALSE
+      rebalance := False
     }
     .when imbalanced_left then {
       (n.left.balance)
@@ -435,7 +434,7 @@ SELF
       .when balanced then {
         n.set_balance imbalanced_left
         n.left.set_balance imbalanced_right
-        rebalance := FALSE
+        rebalance := False
       }
       .when imbalanced_left then {
         n.set_balance balanced
@@ -452,7 +451,7 @@ SELF
     Old node_height (n.left).max (node_height (n.right) + 1))}
   ]
 
-  - exchange_and_discard (n1, n2:AVL_TREE_NODE(V)) <-
+  - exchange_and_discard (n1, n2:Avl_tree_node(V)) <-
   [
     -? {n1 != NULL}
     -? {n2 != NULL}
@@ -466,7 +465,7 @@ SELF
     +? {rebalance}
   ]
 
-  - clear_nodes node:AVL_TREE_NODE(V) <-
+  - clear_nodes node:Avl_tree_node(V) <-
   (
     (node.left != NULL).if {
       clear_nodes (node.left)
@@ -477,8 +476,8 @@ SELF
     discard_node node
   )
 
-  - node_height node:AVL_TREE_NODE(V) :INTEGER <-
-  ( + result:INTEGER
+  - node_height node:Avl_tree_node(V) :Int <-
+  ( + result:Int
 
     (node != NULL).if {
       result := node.height
@@ -490,19 +489,19 @@ Public
 
   // Looking and searching:
 
-  - has e:V :BOOLEAN <-
+  - has e:V :Boolean <-
   // Is element `e' in the set?
   (
     (root != NULL) && {root.has e}
   )
 
-  - fast_has e:V :BOOLEAN <-
+  - fast_has e:V :Boolean <-
   // Is element `e' in the set?
   (
     (root != NULL) && {root.fast_has e}
   )
 
-SELF
+Self
 
   // Iterating internals:
 
@@ -515,33 +514,33 @@ SELF
     (count > 0).if {
       root.map_in map
     }
-    map_dirty := FALSE
+    map_dirty := False
   )
   [
     "build_done" +? {! map_dirty}
   ]
 
-  + map:ARRAY(AVL_TREE_NODE(V))
+  + map:Array(Avl_tree_node(V))
   // Elements in a row for iteration. See `build_map'.
 
-  + map_dirty:BOOLEAN
+  + map_dirty:Boolean
   // True when the map needs to be built again for the iterators.
   // See `build_map'.
 
-SELF
+Self
 
-  - new_node:AVL_TREE_NODE(V) <-
+  - new_node:Avl_tree_node(V) <-
   (
     a_new_node
   )
 
-  - a_new_node:AVL_TREE_NODE(V) <-
+  - a_new_node:Avl_tree_node(V) <-
   (
     abstract
     NULL
   )
 
-  - discard_node n:AVL_TREE_NODE(V) <-
+  - discard_node n:Avl_tree_node(V) <-
   [
     -? {n != NULL}
   ]

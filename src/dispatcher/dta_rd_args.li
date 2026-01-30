@@ -1,30 +1,27 @@
 Header
-
-  + name        := DTA_RD_ARGS;
-
-  /*Read site with arguments*/
-
+  + name := Dta_rd_args
+/*Read site with arguments*/
 Inherit
 
-  + parent_dta_rd:Expanded DTA_RD
+  + parent_dta_rd:Flat Dta_rd
 
 Public
 
-  - self_arg:EXPR <- argument_list.first
+  - self_arg:Expr <- argument_list.first
 
   // Add.
 
-  + argument_list:ARRAY EXPR
+  + argument_list:Array Expr
 
-  + copy_argument:BOOLEAN
+  + copy_argument:Boolean
 
-  - parameter_to_type p:ITM_TYPE_PARAMETER :TYPE_FULL <-
-  ( + result:TYPE_FULL
-    + idx:INTEGER
+  - parameter_to_type p:Itm_type_parameter :Type_full <-
+  ( + result:Type_full
+    + idx:Int
     // For Genericity.
     result := slot.receiver_type.parameter_to_type p
     (result = NULL).if {
-      // For Self + type parametric.
+      // For self + type parametric.
       idx := slot.get_index_argument_type p
       (idx != - 1).if {
         result := argument_list.at idx.static_type
@@ -37,46 +34,46 @@ Public
   // Creation.
   //
 
-  - create p:POSITION call sl:SLOT with args:ARRAY EXPR intern flag:BOOLEAN :SELF <-
+  - create p:Position call sl:Slot with args:Array Expr intern flag:Boolean :Self <-
   [ -? {p != 0}; ]
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make p call sl with args intern flag
     result
   )
 
-  - make p:POSITION call sl:SLOT with args:ARRAY EXPR intern flag:BOOLEAN <-
-  ( + ctxt:LOCAL
+  - make p:Position call sl:Slot with args:Array Expr intern flag:Boolean <-
+  ( + ctxt:Local
     slot := sl
     position      := p
     argument_list := args
     result_expr   := get_expr_result
     is_intern     := flag
-    ((debug_level_option != 0) && {list_current != PROTOTYPE.external_list}).if {
+    ((debug_level_option != 0) && {list_current != Prototype.external_list}).if {
       (profil_current = NULL).if {
         ctxt := context_main
       } else {
         ctxt := profil_current.context
       }      
-      list_current.add_last (PUSH.create position context ctxt first FALSE)
+      list_current.add_last (Push.create position context ctxt first False)
     }
-    slot.check_argument_type args for Self
+    slot.check_argument_type args for self
   )
 
   //
   // Just for ITM_EXPRESSION
   //
 
-  - create_partial p:POSITION call sl:SLOT :SELF <-
-  ( + result:SELF
+  - create_partial p:Position call sl:Slot :Self <-
+  ( + result:Self
 
     result := clone
     result.make_partial p call sl
     result
   )
 
-  - make_partial p:POSITION call sl:SLOT <-
+  - make_partial p:Position call sl:Slot <-
   (
     position := p
     slot := sl
@@ -86,7 +83,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "DTA_RD_ARGS:"
     buffer.append (slot.name)
@@ -99,26 +96,26 @@ Public
   - remove <-
   (
     (! copy_argument).if {
-      (argument_list.lower).to (argument_list.upper) do { j:INTEGER
-	argument_list.at j.remove
+      (argument_list.lower).to (argument_list.upper) do { j:Int
+        argument_list.at j.remove
       }
-      copy_argument := TRUE
+      copy_argument := True
     }
   )
 
-NODE_STYLE, SELF
+Node_style, Self
 
-  - get_argument:ARRAY EXPR <-
-  ( + result:ARRAY EXPR
+  - get_argument:Array Expr <-
+  ( + result:Array Expr
 
     (copy_argument).if {
-      result := ARRAY EXPR .create_with_capacity (argument_list.count)
-      (argument_list.lower).to (argument_list.upper) do { j:INTEGER
-	result.add_last (argument_list.at j.my_copy)
+      result := Array Expr .create_with_capacity (argument_list.count)
+      (argument_list.lower).to (argument_list.upper) do { j:Int
+        result.add_last (argument_list.at j.my_copy)
       }
     } else {
       result := argument_list
-      copy_argument := TRUE
+      copy_argument := True
     }
     result
   )

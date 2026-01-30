@@ -1,18 +1,18 @@
 Header
-  + name := PACKED_CHAR;
-  /*Proto utile ?*/
+  + name := Packed_char
+/*Proto utile ?*/
   
 Mapping
   
-  + x0:UINTEGER_16;
-  + y0:UINTEGER_16;
-  + x1:UINTEGER_16;
-  + y1:UINTEGER_16;
-  + xoff:REAL_32;
-  + yoff:REAL_32;
-  + xadvance:REAL_32;
-  + xoff2:REAL_32;
-  + yoff2:REAL_32;
+  + x0:Uint16;
+  + y0:Uint16;
+  + x1:Uint16;
+  + y1:Uint16;
+  + xoff:Real32;
+  + yoff:Real32;
+  + xadvance:Real32;
+  + xoff2:Real32;
+  + yoff2:Real32;
   
 Public
   

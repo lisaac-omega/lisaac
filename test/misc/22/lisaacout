@@ -1,19 +1,19 @@
 --WARNING----------
-`STRING_BUFFER' ?= `FILE': always NULL assignment.
-Line 11 column 9 in MAIN(.../test/misc/22/main.li):
+`String_buffer' ?= `File': always NULL assignment.
+Line 9 column 9 in Main(.../test/misc/22/main.li):
     s ?= i; // au moins un warning ?? 
          ^
 --WARNING----------
-Stupid comparison between `STRING_BUFFER' and `FILE'.
-Line 13 column 8 in MAIN(.../test/misc/22/main.li):
+Stupid comparison between `String_buffer' and `File'.
+Line 11 column 8 in Main(.../test/misc/22/main.li):
     (s = i).if {
         ^
 --WARNING----------
-Stupid comparison between `STRING_BUFFER' and `Expanded INTEGER'.
-Line 17 column 8 in MAIN(.../test/misc/22/main.li):
+Stupid comparison between `String_buffer' and `Flat Int'.
+Line 15 column 8 in Main(.../test/misc/22/main.li):
     (s = 1).if {
         ^
 /home/colnet/lisaac/test/misc/22/main.c: In function ‘main’:
-/home/colnet/lisaac/test/misc/22/main.c:370:16: warning: comparison between pointer and integer
-  370 |   __tmp__UG=(1 == (void *)NULL);
+/home/colnet/lisaac/test/misc/22/main.c:369:16: warning: comparison between pointer and integer
+  369 |   __tmp__OG=(1 == (void *)NULL);
       |                ^~

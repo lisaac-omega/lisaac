@@ -1,55 +1,54 @@
 Header
-  + name := BUF_PG;
-  
+  + name := Buf_pg
 Inherit
-  + parent_win:Expanded WIN
-  + parent_elevator:Expanded ELEVATOR
+  + parent_win:Flat Win
+  + parent_elevator:Flat Elevator
   
 Private
-  - stk_bpg:Expanded ARRAY (Strict BUF_PG)
+  - stk_bpg:Flat Array (Exact Buf_pg)
   
 Public
-  + buffer:BUFFER
-  - fix_buffer <- ( buffer.set_parent_buffer Self; )
+  + buffer:Buffer
+  - fix_buffer <- ( buffer.set_parent_buffer self; )
   
-  - page:PAGE <- PAGE.cast parent
-  - name:STRING_ALIAS <- buffer.name
-  - shortname:STRING_ALIAS <- buffer.shortname
-  - is_save:BOOLEAN <- buffer.is_save
+  - page:Page <- Page.cast parent
+  - name:String_alias <- buffer.name
+  - shortname:String_alias <- buffer.shortname
+  - is_save:Boolean <- buffer.is_save
   
-  - footnote_left:STRING_BUFFER := STRING_BUFFER.create 80
-  - footnote_right:STRING_BUFFER := STRING_BUFFER.create 80
+  - footnote_left:String_buffer := String_buffer.create 80
+  - footnote_right:String_buffer := String_buffer.create 80
   
-  - new:SELF <-
-  ( + result:SELF
+  - new:Self <-
+  ( + result:Self
     (stk_bpg.is_empty).if { result := clone; } else { result := stk_bpg.pop; }
     result
   )
   
   - free <-
-  ( child.foreach { c:WIN; c.free; }; child.clear
-    stk_bpg.add_last Self
+  ( child.foreach { c:Win; c.free; }; child.clear
+    stk_bpg.add_last self
   )
   
   - save_last_pos <-
   ( (buffer != NULL).if { buffer.set_last_pos_xy (pos_x,pos_y); }; )
   
-  - init p:WIN buf b:BUFFER :SELF <-
-  ( + r:SELF
-    + w:WIN
+  - init p:Win buf b:Buffer :Self <-
+  ( + r:Self
+    + w:Win
     //save_last_pos => FAIT ds PAGE.set_buffer
     buffer := b
     set_pos_xy (b.last_pos_x,b.last_pos_y)
     w := b.new_gui
-    (w != NULL).if { w.init_parent Self; }
+    (w != NULL).if { w.init_parent self; }
     r := init p
     r
   )
   
-  - copy o:SELF <-
+  - copy o:Self <-
   (
     buffer := o.buffer
-    o.child.foreach { c:WIN; c.dup Self; }
+    o.child.foreach { c:Win; c.dup self; }
   )
   
   - refresh <-
@@ -59,7 +58,7 @@ Public
   )
   
   - draw_all <-
-  ( + check_upper:INTEGER
+  ( + check_upper:Int
     check_upper := states.upper
     //
     footnote_right.clear
@@ -76,24 +75,24 @@ Public
     ? {check_upper = states.upper}
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
+  - event ev:Uint8 :Boolean <-
   ( 
-    (ev = HAND.ldrag).if {      
-      (HAND.is_begin).if {
+    (ev = Hand.ldrag).if {      
+      (Hand.is_begin).if {
         //stop_cmd
-        PAGE.set_cur_pg page
+        Page.set_cur_pg page
       } else {
         
       }
-    }.elseif {ev = HAND.clic} then {      
-      (HAND.nb_clic % 3)
+    }.elseif {ev = Hand.clic} then {      
+      (Hand.nb_clic % 3)
       .when 0 then {
         //stop_cmd
-        PAGE.set_cur_pg page
+        Page.set_cur_pg page
         
       }
-      .when 1 then { HAND.run "2Clic"; }
-      .when 2 then { HAND.run "3Clic"; }
+      .when 1 then { Hand.run "2Clic"; }
+      .when 2 then { Hand.run "3Clic"; }
     } || {event_elevator ev}
   )
     

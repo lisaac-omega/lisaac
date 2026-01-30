@@ -1,68 +1,67 @@
 Header
-  + name := WIN_WAIT;
-  
+  + name := Win_wait
 Inherit
-  + parent_win:Expanded WIN
+  + parent_win:Flat Win
   
 Public
   
-  - img:IMG
-  - title:STRING_ALIAS
-  - subtitle:STRING_ALIAS
-  - subsubtitle:STRING_ALIAS
-  - set_subsub t:STRING_ALIAS <- ( subsubtitle := t; )
+  - img:Img
+  - title:String_alias
+  - subtitle:String_alias
+  - subsubtitle:String_alias
+  - set_subsub t:String_alias <- ( subsubtitle := t; )
   
   - todo:{}
-  - done:BOOLEAN
-  - until:{BOOLEAN}
+  - done:Boolean
+  - until:{Boolean}
   - after:{}
   
-  - begin_time:UINTEGER_64
+  - begin_time:Uint64
   
   - refresh <-
-  ( + w:WINDOW
+  ( + w:Window
     w := window
     size (w.width,w.height)
   )
   
-  - put t:STRING_ALIAS sub tt:STRING_ALIAS <-
-  put t sub tt do {} until {FALSE} after {}
+  - put t:String_alias sub tt:String_alias <-
+  put t sub tt do {} until {False} after {}
   
-  - put t:STRING_ALIAS sub tt:STRING_ALIAS do d:{} until u:{BOOLEAN} after a:{} <-
-  ( + w:WINDOW
-    begin_time := TIME.gettimeofday
+  - put t:String_alias sub tt:String_alias do d:{} until u:{Boolean} after a:{} <-
+  ( + w:Window
+    begin_time := Time.gettimeofday
     (title,subtitle) := (t,tt)
     (todo,until,after) := (d,u,a)
-    done := FALSE
-    w := PAGE.cur_pg.window
+    done := False
+    w := Page.cur_pg.window
     init_parent w
     //yo := yo + 50
     (width,height) := (w.width,w.height)
     old_focus := focus
-    focus := Self
+    focus := self
     refresh
-    img := IMG.load "img/wait.gif" asset TRUE
+    img := Img.load "img/wait.gif" asset True
   )
   
   - remove <-
   (
-    window.child_rm Self
+    window.child_rm self
     focus := old_focus
   )
   
   - draw <-
-  ( + x,y:REAL_32
+  ( + x,y:Real32
     begin_path
-    fill_color (COLOR.rgbaf (0,0,0,0.9))
+    fill_color (Color.rgbaf (0,0,0,0.9))
     rect (0,0) size (width,height)
     fill
     //
     (x,y) := ((width - img.width)/2, (height - img.height)/2)
-    img.draw Self to (x,y) alpha 1 bar FALSE
+    img.draw self to (x,y) alpha 1 bar False
     //
     (x,y) := (width/2, (height+img.height)/2 + 30)
-    fill_color (COLOR.white)
-    font_face_id (FONT.roman)
+    fill_color (Color.white)
+    font_face_id (Font.roman)
     text_align (align_center | align_middle)
     (title != NULL).if {
       font_size 50
@@ -81,23 +80,23 @@ Public
     }
     y := height - 30
     font_size 25
-    fill_color (COLOR.gray)
-    STRING.tmp { tmp:STRING_BUFFER
-      + d:REAL_32
-      + m:INTEGER
-      d := (TIME.gettimeofday - begin_time).to_real_32 / 1000_000
+    fill_color (Color.gray)
+    String.tmp { tmp:String_buffer
+      + d:Real32
+      + m:Int
+      d := (Time.gettimeofday - begin_time).to_real32 / 1000_000
       (d > 60).if {
-        m := d.to_integer / 60
+        m := d.to_int / 60
         m.append_in tmp
         tmp += "min "
         d := d - m * 60
       }
-      d.to_integer.append_in tmp
+      d.to_int.append_in tmp
       tmp += "s"
       text (x,y) msg tmp
     }
     (! done).if {
-      done := TRUE
+      done := True
       todo.value
     }
     until.value.if {      
@@ -106,18 +105,18 @@ Public
     }
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
+  - event ev:Uint8 :Boolean <-
   (    
-    TRUE
+    True
   )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  - key s:String cmd c:Uint8 :Boolean <-
   (
-    TRUE
+    True
   )
   
 Private
     
-  - old_focus:WIN
+  - old_focus:Win
 
  

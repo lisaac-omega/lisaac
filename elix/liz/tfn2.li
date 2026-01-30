@@ -1,23 +1,22 @@
 Header
-  + name := TFN2;
-  
+  + name := Tfn2
 Inherit
-  + parent_tmove:Expanded TMOVE
+  + parent_tmove:Flat Tmove
   
 Public
   
-  + exec:{(REAL_32,REAL_32); REAL_32}
+  + exec:{(Real32,Real32); Real32}
   
-  - init (x,y:TEXP) with b:{(REAL_32,REAL_32); REAL_32} :TFN2 <-
+  - init (x,y:Texp) with b:{(Real32,Real32); Real32} :Tfn2 <-
   (
     (val_x,val_y) := (x,y)
     exec := b
-    Self
+    self
   )
     
-  - eval:REAL_32 <- exec.value (val_x.eval,val_y.eval)
+  - eval:Real32 <- exec.value (val_x.eval,val_y.eval)
   
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
     b += "FN2("
     val_x.append_in b

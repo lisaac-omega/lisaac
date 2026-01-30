@@ -1,0 +1,39 @@
+Header
+  + name :=Flat Int8
+/*Signed 8 bits integer.*/
+  - type    := `signed char`;
+  - default := (`(0)`:Int8); 
+  - export  := Int, Int64, Int32, Int16;
+Insert
+
+  - parent_signed_integer:Signed_integer := Signed_integer
+
+Public
+
+  - object_size:Int := 1
+
+  // Range
+
+  - maximum:Uint64 <- 127.to_raw_uint64
+
+  - minimum:Int64  <- - 128.to_raw_int64
+
+  // Conversion.
+
+  - to_int8:Int8 <-
+  [ ]
+  (
+    self
+  )
+  [ ]
+
+  - to_character:Char <- `@self`:Char; // `13`
+
+
+
+
+
+
+
+
+

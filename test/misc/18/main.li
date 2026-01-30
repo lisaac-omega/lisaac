@@ -1,12 +1,10 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + i:INTEGER_32
-    + s:STRING_BUFFER
+  ( + i:Int32
+    + s:String_buffer
     
     s ?= i; // au moins un warning ?? 
   )

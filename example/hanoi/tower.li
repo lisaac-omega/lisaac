@@ -1,29 +1,27 @@
 Header
-
-  + name         := TOWER;
-
+  + name := Tower
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
 
-  + t:ARRAY INTEGER
+  + t:Array Int
 
-  + top:INTEGER
+  + top:Int
 
 Public
 
-  - full n:INTEGER :SELF <-
-  ( + result:SELF
+  - full n:Int :Self <-
+  ( + result:Self
     result := clone
     result.full_make n
     result
   )
 
-  - full_make n:INTEGER <-
+  - full_make n:Int <-
   ( ? {n >= 1}
-    t := ARRAY(INTEGER).create n
-    (n-1).downto 0 do { i:INTEGER
+    t := Array(Int).create n
+    (n-1).downto 0 do { i:Int
       t.at i put (n-i)
     }
     top := n-1
@@ -33,47 +31,47 @@ Public
     ? {t.at top = 1}
   )
 
-  - empty n:INTEGER :SELF <-
-  ( + result:SELF
+  - empty n:Int :Self <-
+  ( + result:Self
     result := clone
     result.empty_make n
     result
   )
 
-  - empty_make n:INTEGER <-
+  - empty_make n:Int <-
   ( ? {n >= 1}
-    t := ARRAY(INTEGER).create n
+    t := Array(Int).create n
     top := 0
     ? {nb+1 = n}
     ? {top = 0}
   )
 
-HANOI
+Hanoi
 
-  - nb:INTEGER <- t.upper
+  - nb:Int <- t.upper
 
-  - show_a_discus d:INTEGER <-
-  ( + nb_of_free_slots, nb_of_used_slots:INTEGER
+  - show_a_discus d:Int <-
+  ( + nb_of_free_slots, nb_of_used_slots:Int
     ? {d.in_range d to nb}
     nb_of_used_slots := t.at d
     nb_of_free_slots := nb+1 - nb_of_used_slots
-    nb_of_free_slots.downto 1 do { i:INTEGER
+    nb_of_free_slots.downto 1 do { i:Int
       ' '.print
     }
-    nb_of_used_slots.downto 1 do { i:INTEGER
+    nb_of_used_slots.downto 1 do { i:Int
       '='.print
     }
     '|'.print
-    nb_of_used_slots.downto 1 do { i:INTEGER
+    nb_of_used_slots.downto 1 do { i:Int
       '='.print
     }
-    nb_of_free_slots.downto 1 do { i:INTEGER
+    nb_of_free_slots.downto 1 do { i:Int
       ' '.print
     }
   )
 
-  - remove_discus:INTEGER <-
-  ( + result:INTEGER
+  - remove_discus:Int <-
+  ( + result:Int
     result := t.at top
     t.at top put 0
     (top > 0).if {
@@ -83,7 +81,7 @@ HANOI
     result
   )
 
-  - add_discus d:INTEGER <-
+  - add_discus d:Int <-
   (
     (t.at top > d).if {
       top := top + 1

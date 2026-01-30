@@ -1,14 +1,12 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + string:STRING_BUFFER
+  ( + string:String_buffer
     
-    string := STRING_BUFFER.create 256
-    STDIN.read_line_in string
-    STDERR.put_string string
+    string := String_buffer.create 256
+    Stdin.read_line_in string
+    Stderr.put_string string
   )
   

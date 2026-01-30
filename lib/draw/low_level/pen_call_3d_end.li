@@ -1,24 +1,22 @@
 Header
-  
-  + name := PEN_CALL_3D_END;
-  
+  + name := Pen_call_3d_end
 Inherit
   
-  + parent_pen_call:Expanded PEN_CALL
+  + parent_pen_call:Flat Pen_call
   
 Public
     
-  - create shader:SHADER_3D :PEN_CALL_3D_END <-
+  - create shader:Shader_3d :Pen_call_3d_end <-
   (
-    PEN_CALL_3D_BEGIN.last.set_shader shader
-    Self
+    Pen_call_3d_begin.last.set_shader shader
+    self
   )
   
   - free
   
   - run <-
-  ( + fb_width,fb_height:INTEGER
-    (fb_width,fb_height) := PAPER.framebuffer_size (PAPER.wins.first.win_ptr); // window_size
+  ( + fb_width,fb_height:Int
+    (fb_width,fb_height) := Paper.framebuffer_size (Paper.wins.first.win_ptr); // window_size
     `glViewport(0,0,@fb_width,@fb_height)`
     `glDisable(GL_DEPTH_TEST)`
     pen_gl.gl_use_program (pen_gl.shader.prog)

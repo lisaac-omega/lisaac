@@ -1,79 +1,78 @@
 Header
-  + name := TYPE;
-
+  + name := Type
 Inherit
-  - parent_clone:CLONE := CLONE
-  - parent_any:ANY := ANY
+  - parent_clone:Clone := Clone
+  - parent_any:Any := Any
   
 //Section Insert
 //  - parent_print:PRINT := PRINT
   
 Public
   
-  - is_complex:BOOLEAN <- FALSE
+  - is_complex:Boolean <- False
   
-  - hash_code:UINTEGER_32 <- key.hash_code
+  - hash_code:Uint32 <- key.hash_code
   
-  - Self:SELF '==' other:E :BOOLEAN <-
-  (Self = other) || {(other.dynamic_type = TERR) && {TERR.cast other.p_type = Self}}
+  - self:Self '==' other:E :Boolean <-
+  (self = other) || {(other.dynamic_type = Terr) && {Terr.cast other.p_type = self}}
   
-  + key:STRING_ALIAS; // 0: NULL
+  + key:String_alias; // 0: NULL
   
-  - dico:HMAP TYPE KEY STRING_ALIAS := HMAP TYPE KEY STRING_ALIAS.new
+  - dico:Hmap Type Key String_alias := Hmap Type Key String_alias.new
   
-  - attr:UINTEGER_8 := 0
-  - expanded:UINTEGER_8 := 001b
-  - strict:UINTEGER_8   := 010b
-  - is msk:UINTEGER_8 :BOOLEAN <- (attr & msk) != 0
+  - attr:Uint8 := 0
+  - flat:Uint8 := 001b
+  - exact:Uint8   := 010b
+  - is msk:Uint8 :Boolean <- (attr & msk) != 0
   
-  - is_vector:BOOLEAN := FALSE
-  - foreach_until b:{TONE;BOOLEAN} :BOOLEAN <- ( + a:TONE; a ?= Self; b.value a)
+  - is_vector:Boolean := False
+  - foreach_until b:{Tone;Boolean} :Boolean <- ( + a:Tone; a ?= self; b.value a)
   
-  - is_self:BOOLEAN <- FALSE
+  - is_self:Boolean <- False
   
 Public
-  - type:TYPE <- ( crash; TYPE)
+  - type:Type <- ( crash; Type)
   
-  - to_block a:TYPE :TBLC <-
-  ( + argt,rest:TYPE
-    (Self != void).if { rest := Self; }
-    (a != void).if { argt := Self; }
-    TBLC.new argt type rest
+  - to_block a:Type :Tblc <-
+  ( + argt,rest:Type
+    (self != void).if { rest := self; }
+    (a != void).if { argt := self; }
+    Tblc.new argt type rest
   )
   
-  - twin:SELF <- Self
+  - twin:Self <- self
   - free
   
-  - null:TONE
-  - void:TPRO
-  - numeric:TPRO
-  - boolean:TPRO
-  - true:TPRO
-  - false:TPRO
-  - character:TPRO
-  - string_alias:TPRO
+  - null:Tone
+  - void:Tpro
+  - numeric:Tpro
+  - boolean:Tpro
+  - true:Tpro
+  - false:Tpro
+  - character:Tpro
+  - string_alias:Tpro
 
-  - init_base n:STRING with t:TPRO <-
+  - init_base n:String with t:Tpro <-
   ( 
     n
     .case "VOID"         then { void := t;         }
     .case "NUMERIC"      then { numeric := t;      }
-    .case "BOOLEAN"      then { boolean := t;      }
+    .case "Boolean"      then { boolean := t;      }
     .case "TRUE"         then { true := t;         }
     .case "FALSE"        then { false := t;        }
-    .case "CHARACTER"    then { character := t;    }
-    .case "STRING_ALIAS" then { string_alias := t; }
+    .case "Char"    then { character := t;    }
+    .case "String_alias" then { string_alias := t; }
   )
   
-  - new_power n:INTEGER :TYPE <-
-  ( + result:TYPE
+  - new_power n:Int :Type <-
+  ( + result:Type
     (n = 1).if {
-      result := Self
+      result := self
     } else {
-      + ts:LIARRAY TYPE
-      ts := LIARRAY TYPE.new
-      foreach { t:TONE; ts.add_last t; }
-      result := TVEC.new ts
+      + ts:Liarray Type
+      ts := Liarray Type.new
+      foreach { t:Tone; ts.add_last t; }
+      result := Tvec.new ts
       ts.free
     }
     result
@@ -81,35 +80,35 @@ Public
   
 //  - tdrw:TYPE <- TYPE.abstract
   
-//  - upper:INTEGER := 0
-//  - at i:INTEGER :TONE <- ( abstract; TONE)
+//  - upper:Int := 0
+//  - at i:Int :TONE <- ( abstract; TONE)
 //  - foreach b:{TONE; } <- ( abstract; )
   
-  - lookup n:NODE :SLOT <-
+  - lookup n:Node :Slot <-
   (
     "Lookup ".print; n.print; " in ".print; type_name.println
-    SLOT.abstract
+    Slot.abstract
   )
   
-  - lookup_idf n:STRING_ALIAS :SLOT <-
+  - lookup_idf n:String_alias :Slot <-
   (
     "Lookup idf ".print; n.print; " in ".print; type_name.println
-    SLOT.abstract
+    Slot.abstract
   )
     
   - run_default <- ( abstract; )
     
-  - Self:SELF '<=' o:TYPE :BOOLEAN <- BOOLEAN.abstract
+  - self:Self '<=' o:Type :Boolean <- Boolean.abstract
   
   //
   // Output
   //
   
-  - node tn:ARRAY NODE map s:STRING_BUFFER predict tp:ARRAY NODE :INTEGER <- INTEGER.abstract
+  - node tn:Array Node map s:String_buffer predict tp:Array Node :Int <- Int.abstract
   
-  - txt_in s:STRING_BUFFER sty st:STY <- ( abstract; )
+  - txt_in s:String_buffer sty st:Sty <- ( abstract; )
   
-  - append_in b:STRING_BUFFER <- key.append_in b; //txt_in b sty NULL
+  - append_in b:String_buffer <- key.append_in b; //txt_in b sty NULL
   
 //  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- ( abstract; 0,0,0)
   

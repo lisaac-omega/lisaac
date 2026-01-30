@@ -1,41 +1,39 @@
 Header
-
-  + name    := FORALL_DATA;
-
+  + name := Forall_data
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  + action:ITM_READ_ARG2
+  + action:Itm_read_arg2
 
-  + list_data:ARRAY (COUPLE (SLOT_DATA,EXPR))
+  + list_data:Array (Couple (Slot_data,Expr))
 
   //
   // Creation.
   //
 
-  - create t:TYPE_FULL action ac:ITM_BLOCK :SELF <-
-  ( + result:SELF
+  - create t:Type_full action ac:Itm_block :Self <-
+  ( + result:Self
     result := clone
     result.make t action ac
     result
   )
 
-  - make t:TYPE_FULL action ac:ITM_BLOCK <-
-  ( + lst:ARRAY SLOT
-    + dta:SLOT_DATA
-    + c:COUPLE(SLOT_DATA,EXPR)
+  - make t:Type_full action ac:Itm_block <-
+  ( + lst:Array Slot
+    + dta:Slot_data
+    + c:Couple(Slot_data,Expr)
 
-    action := ITM_READ_ARG2.create (ac.position) name "value" args (,)
-    list_data := ARRAY (COUPLE (SLOT_DATA,EXPR)).create
-    t.add_reflexivity Self
+    action := Itm_read_arg2.create (ac.position) name "value" args (,)
+    list_data := Array (Couple (Slot_data,Expr)).create
+    t.add_reflexivity self
     lst := t.slot_run
-    (lst.lower).to (lst.upper) do { i:INTEGER
+    (lst.lower).to (lst.upper) do { i:Int
       dta := lst.at i.slot_data_intern
       (dta != NULL).if {
-        c := COUPLE(SLOT_DATA,LIST).create dta and ()
+        c := Couple(Slot_data,List).create dta and ()
         list_data.add_last c
       }
     }
@@ -45,7 +43,7 @@ Public
   //
   //
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     clone
   )
@@ -54,7 +52,7 @@ Public
   // Depend.
   //
 
-  - add var:SLOT_DATA <-
+  - add var:Slot_data <-
   (
 
   )
@@ -63,7 +61,7 @@ Public
   // Execute.
   //
 
-  - execute:INSTR <-
+  - execute:Instr <-
   (
 
   )
@@ -74,7 +72,7 @@ Public
 
   - genere <-
   (
-    (list_data.lower).to (list_data.upper) do { i:INTEGER
+    (list_data.lower).to (list_data.upper) do { i:Int
       list_data.at i.second.genere
     }
   )
@@ -83,11 +81,11 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "Forall_data:\n"
     indent.append "  "
-    (list_data.lower).to (list_data.upper) do { i:INTEGER
+    (list_data.lower).to (list_data.upper) do { i:Int
       buffer.append indent
       buffer.append "- "
       buffer.append (list_data.at i.first.intern_name)

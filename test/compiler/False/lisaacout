@@ -1,5 +1,14 @@
 --SEMANTIC---------
-Cannot resolve type for type parameter Generic:F
-Line 19 column 22 in MSG_GENERIC(.../test/compiler/False/msg_generic.li):
-  - est_premier (n:ℤ) : BOOLEAN <-
-                      ^
+Recursivity without end (call_slot).
+Line 19 column 35 in Block(.../lib/kernel/block.li):
+  - while self:{Boolean} do blk:{} <-
+                                   ^
+
+Line 23 column 23 in Block(.../lib/kernel/block.li):
+      while self do blk
+                       ^
+Context:
+  ...
+Line 19 column 35 in Block(.../lib/kernel/block.li):
+  - while self:{Boolean} do blk:{} <-
+                                   ^

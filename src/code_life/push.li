@@ -1,30 +1,27 @@
 Header
-
-  + name        := PUSH;
-
-  /*Push context for debug mode*/
-
+  + name := Push
+/*Push context for debug mode*/
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
-PUSH,LISAAC
+Push,Lisaac
 
-  - source_line:ARRAY POSITION :=
-  ARRAY POSITION .create_with_capacity 32_000
+  - source_line:Array Position :=
+  Array Position .create_with_capacity 32_000
   
-  - my_clone:SELF <- clone
+  - my_clone:Self <- clone
   
 Public
     
-  + context:LOCAL
+  + context:Local
 
-  + is_first:BOOLEAN
+  + is_first:Boolean
   
-  + is_rm:BOOLEAN
-  - set_rm <- ( is_rm := TRUE )
+  + is_rm:Boolean
+  - set_rm <- ( is_rm := True )
 
-  - set_first f:BOOLEAN <-
+  - set_first f:Boolean <-
   (
     is_first := f
   )
@@ -33,19 +30,19 @@ Public
   // Creation.
   //
 
-  - create pos:POSITION context v:LOCAL first f:BOOLEAN :PUSH <-
-  ( + result:PUSH
+  - create pos:Position context v:Local first f:Boolean :Push <-
+  ( + result:Push
         
     (is_speed_push).if {
-      result := PUSH_SPEED.my_clone
+      result := Push_speed.my_clone
     } else {
-      result := PUSH_STANDARD.my_clone
+      result := Push_standard.my_clone
     }
     result.make pos context v first f
     result
   )
 
-  - make pos:POSITION context v:LOCAL first f:BOOLEAN <-
+  - make pos:Position context v:Local first f:Boolean <-
   [
     ? {pos.code != 0}
     ? {v != NULL}
@@ -56,12 +53,12 @@ Public
     is_first := f
   )
 
-  - my_copy:SELF <-
-  ( + result:SELF
-    + new_context:LOCAL
+  - my_copy:Self <-
+  ( + result:Self
+    + new_context:Local
     
     result := clone
-    (LOCAL.is_alias).if {
+    (Local.is_alias).if {
       new_context := context.get_alias
       new_context.set_ensure_count 1
       result.make position context new_context first is_first
@@ -80,7 +77,7 @@ Public
     // Nothing.
   )
   
-  - stair:Expanded ARRAY PUSH
+  - stair:Flat Array Push
   
   - break <-
   (
@@ -93,12 +90,12 @@ Public
   )
   
   
-  - execute:INSTR <-
-  ( + result:INSTR
-    + p:PUSH
-    + i:INTEGER
+  - execute:Instr <-
+  ( + result:Instr
+    + p:Push
+    + i:Int
     (pass_count <= 1).if {
-      result := Self
+      result := self
     } else {
       (! is_rm).if {
         (! is_first).if {
@@ -113,8 +110,8 @@ Public
             p.set_rm
           }
         }
-        stair.add_last Self
-        result := Self
+        stair.add_last self
+        result := self
       }
     }
     result
@@ -126,13 +123,13 @@ Public
   ( + result:INSTR
     + other:PUSH
 
-    result := Self
+    result := self
     other ?= list_current.next_item
     (other != NULL).if {
       (other.context = context).if {
         result := NULL
         (is_first).if {
-          other.set_first TRUE
+          other.set_first True
         }
       }.elseif {(is_first) && {! other.is_first}} then {
         result := NULL
@@ -155,7 +152,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "push("
     buffer.append (context.intern_name)

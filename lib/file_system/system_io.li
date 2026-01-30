@@ -1,8 +1,6 @@
 Header
-
-  + name := SYSTEM_IO;
-  
-  - include := `
+  + name := System_io
+- include := `
 #if defined(ARDUINO)
 
 #elif(__ANDROID__)
@@ -52,20 +50,19 @@ char output[256];
 int output_idx;
 #endif
 `;
-
 Insert  
-  - parent_system_io_default:SYSTEM_IO_DEFAULT := SYSTEM_IO_DEFAULT
+  - parent_system_io_default:System_io_default := System_io_default
   
 Public
   
-  - print_error_char byte:CHARACTER <-
+  - print_error_char byte:Char <-
   // Low level buffered error output.
   (
     (lip "target" str = "arduino").if {
       (byte = '\n').if { `Serial.print("\r\n")`; } else { `Serial.print(@byte)`; }
     }.elseif {lip "target" str = "android"} then {
       `output[output_idx++]=@byte`
-      ((byte = '\n') || {`output_idx`:INTEGER=256}).if {
+      ((byte = '\n') || {`output_idx`:Int=256}).if {
         `LOGE("%s",output)`
         `output_idx = 0`
       }
@@ -74,22 +71,22 @@ Public
     }
   )
 
-  - get_char :CHARACTER <- `fgetc(stdin)`:(CHARACTER)
+  - get_char :Char <- `fgetc(stdin)`:(Char)
 
-  - eof:CHARACTER <- `EOF`:CHARACTER
+  - eof:Char <- `EOF`:Char
   
-  - exit code:INTEGER <- die_with_code code
+  - exit code:Int <- die_with_code code
   
 External, Public  
   
   - bug_compilo_042 <-
-  ( + a:CLONE
-    (! UTILS.is_debug_mode).if {
+  ( + a:Clone
+    (! Utils.is_debug_mode).if {
       a.print
     }
   )
 
-  - print_char byte:CHARACTER <-
+  - print_char byte:Char <-
   // Low level buffered output.
   (
     ((lip "target" str = "arduino") || {lip "target" str = "android"}).if {
@@ -99,7 +96,7 @@ External, Public
     }
   )
   
-  - die_with_code code:INTEGER <-
+  - die_with_code code:Int <-
   (
     (lip "target" str = "web").if {
       `emscripten_force_exit(@code)`

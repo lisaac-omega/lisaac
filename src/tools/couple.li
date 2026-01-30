@@ -1,18 +1,16 @@
 Header
-
-  + name        := COUPLE(E,F);
-
+  + name := Couple(E,F)
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
   + first :E
   + second:F
 
-  - create elt1:E and elt2:F :SELF <-
-  ( + result:SELF
+  - create elt1:E and elt2:F :Self <-
+  ( + result:Self
 
     result := clone
     result.make elt1 and elt2

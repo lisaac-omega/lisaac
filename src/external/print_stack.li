@@ -1,28 +1,25 @@
 Header
-
-  + name        := PRINT_STACK;
-
-  /*Call `lisaac_stack_print(step)' */
-
+  + name := Print_stack
+/*Call `lisaac_stack_print(step)` */
 Inherit
 
-  + parent_expr:Expanded EXPR // Note: It's an INSTR, but pb with ITM_EXTERNAL
+  + parent_expr:Flat Expr // Note: It's an INSTR, but pb with ITM_EXTERNAL
 
 Public
 
-  - static_type:TYPE_FULL <- TYPE_VOID.default
+  - static_type:Type_full <- Type_void.default
 
-  + step:EXPR
+  + step:Expr
   
-  - new:SELF <- clone
+  - new:Self <- clone
   
-  - make e:EXPR :SELF <-
+  - make e:Expr :Self <-
   (
     step := e
-    Self
+    self
   )
   
-  - my_copy:SELF <- SELF.new.make (step.my_copy)
+  - my_copy:Self <- Self.new.make (step.my_copy)
   
   //
   // Remove
@@ -34,21 +31,21 @@ Public
   // Execute
   //
    
-  - execute:INSTR <- execute_unlink
+  - execute:Instr <- execute_unlink
 
-  - execute_unlink:INSTR <-
-  ( + result:INSTR
+  - execute_unlink:Instr <-
+  ( + result:Instr
     (debug_level_option = 0).if {
       result := step.execute_unlink
     } else {
       step := step.execute_link
-      PUSH.break
-      result := Self
+      Push.break
+      result := self
     }
     result
   )
   
-  - execute_link:EXPR <- ( crash_with_message "PRINT_STACK.execute_link"; NULL)
+  - execute_link:Expr <- ( crash_with_message "PRINT_STACK.execute_link"; NULL)
   
   //
   // Genere.
@@ -65,7 +62,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer # "Call `print_stack("
     step.display buffer

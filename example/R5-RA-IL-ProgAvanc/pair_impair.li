@@ -1,26 +1,25 @@
 Header
-  
-  + name := PAIR_IMPAIR;
-  /*
+  + name := Pair_impair
+/*
   Exemple de récursivité croisée
   */
 
 Public
   
-  - pair n:ℤ :BOOLEAN <-
-  ( + result:BOOLEAN
+  - pair n:ℤ :Boolean <-
+  ( + result:Boolean
     if (n = 0) then {
-      result := TRUE
+      result := True
     } else {
       result := impair(n - 1)
     }
     result
   )
   
-  - impair n:ℤ :BOOLEAN <-
-  ( + result:BOOLEAN
+  - impair n:ℤ :Boolean <-
+  ( + result:Boolean
     if (n = 0) then {
-      result := FALSE
+      result := False
     } else {
       result := pair(n - 1)
     }
@@ -29,11 +28,11 @@ Public
   
   - main <-
   ( + n:ℤ;  
-    if (COMMAND_ARGS upper != 1) then {
-      OUT # "usage: " # COMMAND_ARGS.at 0 # " <n>" # '\n'
-      SYSTEM exit 1
+    if (Command_args upper != 1) then {
+      Out # "usage: " # Command_args.at 0 # " <n>" # '\n'
+      System exit 1
     }
-    n := COMMAND_ARGS at 1 .to_integer
-    OUT # "pair(" # n # ")=" # (pair(n)) # '\n';
+    n := Command_args at 1 .to_int
+    Out # "pair(" # n # ")=" # (pair(n)) # '\n';
   );
   

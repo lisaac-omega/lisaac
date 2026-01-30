@@ -1,45 +1,45 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 
 Public 
   - main <-
-  ( + map: HMAP INTEGER KEY CHARACTER
-    + found:BOOLEAN; + value: INTEGER
-    map := new HMAP INTEGER KEY CHARACTER
-    TEST.check (map.count = 0)
-    (found,value) := map.search_key { k:CHARACTER
+  ( + map: Hmap Int Key Char
+    + found:Boolean; + value: Int
+    map := new Hmap Int Key Char
+    Test.check (map.count = 0)
+    (found,value) := map.search_key { k:Char
       k = '0'
     }
-    TEST.check (! found)
-    TEST.check (value = 0)
+    Test.check (! found)
+    Test.check (value = 0)
     map.at '1' put 1
-    (found,value) := map.search_key { k:CHARACTER
+    (found,value) := map.search_key { k:Char
       k = '1'
     }
-    TEST.check (found)
-    TEST.check (value = 1)
-    TEST.check (map.count = 1)
+    Test.check (found)
+    Test.check (value = 1)
+    Test.check (map.count = 1)
     map.at '2' add 2
-    TEST.check (map.count = 2)
+    Test.check (map.count = 2)
     map.at '3' add 3
-    TEST.check (map.count = 3)
+    Test.check (map.count = 3)
     map.at '5' add 5
-    TEST.check (map.count = 4)    
-    (found,value) := map.search_key { k:CHARACTER
+    Test.check (map.count = 4)    
+    (found,value) := map.search_key { k:Char
       k = '3'
     }
-    TEST.check (value = 3)
-    TEST.check (found)
-    (found,value) := map.search_key { k:CHARACTER
+    Test.check (value = 3)
+    Test.check (found)
+    (found,value) := map.search_key { k:Char
       k = '4' 
     }
-    TEST.check (!found)
-    TEST.check (value = 0)
-    (found,value) := map.search_key { k:CHARACTER
+    Test.check (!found)
+    Test.check (value = 0)
+    (found,value) := map.search_key { k:Char
       k = '5' 
     }
-    TEST.check (found)
-    TEST.check (value = 5)
+    Test.check (found)
+    Test.check (value = 5)
   )
   

@@ -1,8 +1,6 @@
 Header
-  
-  + name := PYRAMID;
-
-  /*
+  + name := Pyramid
+/*
   Solving the problem of the Pyramid for small pyramid only.
   This program uses the back-tracking method.
   Its goal is to try to fill a pyramid by making a substraction
@@ -19,29 +17,29 @@ Header
   
 Private
 
-  + size:INTEGER // PYRAMID size (number of lines/colums) 
+  + size:Int // PYRAMID size (number of lines/colums) 
   
-  + max_value:INTEGER
+  + max_value:Int
   
-  + pyram:ARRAY INTEGER
+  + pyram:Array Int
   
-  + used:ARRAY BOOLEAN; // Already used numbers in `pyramid'.
+  + used:Array Boolean; // Already used numbers in `pyramid'.
   
 Public 
   
   - main <-
-  ( + arg:STRING
-    if (COMMAND_ARGS.upper = 0) then {
+  ( + arg:String
+    if (Command_args.upper = 0) then {
       "Want to compute a small pyramid ?\n\
       \Enter a small number (> 1): ".print
-      STDIN.read_integer
-      size := STDIN.last_integer
-    }.elseif {COMMAND_ARGS.upper = 1} then {
-      if (! (arg := COMMAND_ARGS.at 1).is_integer) then {
-        OUT # "\"" # arg # "\" is not an integer\n"
+      Stdin.read_integer
+      size := Stdin.last_integer
+    }.elseif {Command_args.upper = 1} then {
+      if (! (arg := Command_args.at 1).is_integer) then {
+        Out # "\"" # arg # "\" is not an integer\n"
         usage_exit
       }
-      size := arg.to_integer
+      size := arg.to_int
     } else {
       usage_exit
     }
@@ -53,8 +51,8 @@ Public
       "Warning: you may wait a very long time.\n".print
     }
     max_value := (size * (size + 1)) / 2
-    used := ARRAY BOOLEAN .create (max_value + 1)
-    pyram := ARRAY INTEGER.create (max_value + 1)
+    used := Array Boolean .create (max_value + 1)
+    pyram := Array Int.create (max_value + 1)
     if (fill_up 1) then {
       "Full pyramid:\n".print
       print
@@ -65,39 +63,39 @@ Public
   
 Private  
   
-  - propagate val1:INTEGER column col:INTEGER :BOOLEAN <-
+  - propagate val1:Int column col:Int :Boolean <-
   [
     ? { val1.in_range 1 to max_value}
     ? { col.in_range 1 to size}
   ]  
-  ( + stop:BOOLEAN
-    + line, val, idx:INTEGER
-    + result:BOOLEAN
+  ( + stop:Boolean
+    + line, val, idx:Int
+    + result:Boolean
     if (used.at val1) then {
-      result := FALSE 
+      result := False 
     } else {
       idx := index (1,col)
       ? {pyram.at idx = 0}
       pyram.at idx put val1
-      used.at val1 put TRUE
+      used.at val1 put True
       
       line := 1
       val := val1
-      result := TRUE
+      result := True
       until {stop} do {
         line := line + 1
         if (line > col) then {
-          stop := TRUE
+          stop := True
         } else {
           val := val - pyram.at (index (line-1,col-line+1))
           val := val.abs
           if (used.at val) then {
             clear_column col
-            stop := TRUE
-            result := FALSE
+            stop := True
+            result := False
           } else {
             pyram.at (index (line,col-line+1)) put val
-            used.at val put TRUE
+            used.at val put True
           }
         }
       }
@@ -105,14 +103,14 @@ Private
     result
   )
 
-  - fill_up col:INTEGER :BOOLEAN <-
+  - fill_up col:Int :Boolean <-
   [ 
   ? { col.in_range 1 to (size + 1)}
   ]
-  ( + stop,result:BOOLEAN
-    + nb:INTEGER
+  ( + stop,result:Boolean
+    + nb:Int
     if (col > size) then {
-      result := TRUE
+      result := True
     } else {
       nb := max_value
       until {stop} do {
@@ -120,7 +118,7 @@ Private
           nb := nb - 1 ; stop := nb = 0
         }.elseif {propagate nb column col} then {
           if (fill_up (col + 1)) then {
-            stop := TRUE
+            stop := True
           } else {
             clear_column col
             nb := nb - 1 ; stop := nb = 0
@@ -134,13 +132,13 @@ Private
     result
   )
 
-  - index (line,col:INTEGER) :INTEGER <-
+  - index (line,col:Int) :Int <-
   [
     ? {line.in_range 1 to size}
     ? {col.in_range 1 to size}    
   ]
-  ( + l:INTEGER
-    + result:INTEGER
+  ( + l:Int
+    + result:Int
     l := size - line + 1
     result := max_value - ((l * (l + 1)) / 2) + col
     result
@@ -149,29 +147,29 @@ Private
     ? {Result.in_range 1 to max_value}
   ] 
 
-  - clear_column col:INTEGER <-
+  - clear_column col:Int <-
   [
     ? {col.in_range 1 to size}
   ]
-  ( + idx:INTEGER
-    from 1 to col do { line:INTEGER
+  ( + idx:Int
+    from 1 to col do { line:Int
       idx := index (line, col - line + 1)
-      used.at (pyram.at idx) put FALSE
+      used.at (pyram.at idx) put False
       pyram.at idx put 0
     }
   )
 
   - print <-
-  ( + nb, c, s:INTEGER
+  ( + nb, c, s:Int
     nb := 1
-    STRING.tmp2 { (sps:STRING_BUFFER, buf:STRING_BUFFER)
+    String.tmp2 { (sps:String_buffer, buf:String_buffer)
       (size / 2).times {
         5.times { 
           sps.add_last ' '
         }
       }
       buf.append sps
-      from max_value down_to 1 do { v:INTEGER
+      from max_value down_to 1 do { v:Int
         s := buf.upper
         buf.add_last ' '
         pyram.at v .append_in buf
@@ -194,7 +192,7 @@ Private
   
   - usage_exit <-
   (
-    OUT # "usage: " # (COMMAND_ARGS.at 0) # " <small-integer>\n"
-    SYSTEM.exit 1
+    Out # "usage: " # (Command_args.at 0) # " <small-integer>\n"
+    System.exit 1
   )
   

@@ -1,36 +1,33 @@
 Header
-
-  + name    := COP_LOCK;
-
-  /*COP in for data or function.*/
-
+  + name := Cop_lock
+/*COP in for data or function.*/
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  + data:EXPR
+  + data:Expr
 
   //
   // Creation.
   //
 
-  - create p:POSITION with dta:EXPR :SELF <-
-  ( + result:SELF
+  - create p:Position with dta:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make p with dta
     result
   )
 
-  - make p:POSITION with dta:EXPR <-
+  - make p:Position with dta:Expr <-
   (
     position := p
     data := dta
   )
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     create position with (data.my_copy)
   )
@@ -44,9 +41,9 @@ Public
   // Execute.
   //
 
-  - execute:INSTR <-
+  - execute:Instr <-
   (
-    Self
+    self
   )
 
   //
@@ -108,7 +105,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "COP_LOCK("
     data.display buffer

@@ -1,0 +1,18 @@
+Header
+  + name := Main
+/**/
+
+Public 
+  - main <-
+  ( + map: Hmap Int Key Char
+    map := new Hmap Int Key Char
+    Test.check ((map.count) = 0)
+    map.at '1' put 1
+    Test.check ((map.count) = 1)
+    map.at '1' update 2
+    Test.check ((map.count) = 1)
+    Test.check (map.has '1')
+    Test.check ((map.at '1') = 2)
+    Test.check ((map.count) = 1)
+  )
+  

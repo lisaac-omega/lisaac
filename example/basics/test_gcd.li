@@ -1,19 +1,17 @@
 Header
-
-  + name := TEST_GCD;
-  /*
+  + name := Test_gcd
+/*
   Find the great common divisor between 2 values
   */
-
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
 
-  - gcd (value_1,value_2:INTEGER) :INTEGER <-
+  - gcd (value_1,value_2:Int) :Int <-
   // Great Common Divisor of `value_1' and `value_2'.
-  ( + value,result:INTEGER
+  ( + value,result:Int
     ? { value_1 > 0}
     ? { value_2 > 0}
     result := value_1
@@ -31,13 +29,13 @@ Private
 Public
 
   - main <-
-  ( + v1,v2:INTEGER
+  ( + v1,v2:Int
     "Enter the first number: ".print
-    STDIN.read_integer
-    v1 := STDIN.last_integer
+    Stdin.read_integer
+    v1 := Stdin.last_integer
     "\nEnter the second number: ".print
-    STDIN.read_integer
-    v2 := STDIN.last_integer
+    Stdin.read_integer
+    v2 := Stdin.last_integer
     "\nThe Great Common Divisor is: ".print
     gcd (v1,v2).print
     '\n'.print

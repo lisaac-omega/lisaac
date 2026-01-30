@@ -1,8 +1,6 @@
 Header
-  
-  + name := PAPER;
-
-  - external := `
+  + name := Paper
+- external := `
 #include <jni.h>
 #include <EGL/egl.h>
 //#include <GLES/gl.h>
@@ -324,36 +322,35 @@ void android_main(struct android_app* state) {
   }
 }
 `;
-  
 Inherit
   
-  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_constant_pen:Constant_pen := Constant_pen
   
 Public
   
-  - wins:ARRAY WINDOW := ARRAY WINDOW.create_with_capacity 1
+  - wins:Array Window := Array Window.create_with_capacity 1
   
-  - refresh_all <- wins.foreach { w:WINDOW; w.ask_refresh; }
+  - refresh_all <- wins.foreach { w:Window; w.ask_refresh; }
   
-  - shader_header:STRING_ALIAS := "#version 300 es\nprecision highp float;\n"
+  - shader_header:String_alias := "#version 300 es\nprecision highp float;\n"
   
-  - loc_pen:PEN
+  - loc_pen:Pen
   
-  - mybuf:STRING_BUFFER := STRING_BUFFER.create 256
+  - mybuf:String_buffer := String_buffer.create 256
     
-  - load p:PEN font n:STRING id id:STRING_ALIAS <-
-  ( + dta_font:ARRAY UINTEGER_8
+  - load p:Pen font n:String id id:String_alias <-
+  ( + dta_font:Array Uint8
     mybuf.copy "font/"
     mybuf.append n
-    dta_font := ARRAY UINTEGER_8.create 0
-    SYSTEM_IO.read_asset mybuf in dta_font
-    (p.create_font_mem id data dta_font free TRUE = -1).if {
+    dta_font := Array Uint8.create 0
+    System_io.read_asset mybuf in dta_font
+    (p.create_font_mem id data dta_font free True = -1).if {
       "Warning in PAPER: Could not add font `".print;
       id.print; "' id `".print; n.print; "'.".println;      
     }
   )
   
-  - load_font p:PEN <-
+  - load_font p:Pen <-
   ( 
     load p font "Roboto-Regular.ttf" id "sans"
     load p font "Roboto-Bold.ttf" id "sans-bold"
@@ -361,7 +358,7 @@ Public
     load p font "Roboto-BoldItalic.ttf" id "bold-italic"
   )
   
-  - old_load_font p:PEN <-
+  - old_load_font p:Pen <-
   (
     //"----------------------------------------------------------------\n".print
     /*(p.create_font "sans-bold" path "/system/fonts/Roboto-Bold.ttf" = -1).if {
@@ -374,24 +371,24 @@ Public
   
 Public
   
-  - is_gl:BOOLEAN; // False (GLES3)
+  - is_gl:Boolean; // False (GLES3)
 
-  - screen_width:INTEGER
-  - screen_height:INTEGER
+  - screen_width:Int
+  - screen_height:Int
   
-  - animation:INTEGER
-  - set_animation n:INTEGER <- ( animation := n; )
+  - animation:Int
+  - set_animation n:Int <- ( animation := n; )
   - inc_animation <- ( animation := animation + 1; )
   - dec_animation <- ( animation := animation - 1; )
   
   - no_decorated; // Nothing for Android.
-  - set_font_path p:STRING_ALIAS; // Pour voir...
-  - set_window_pos (x,y:INTEGER)
-  - get_window_pos:(INTEGER,INTEGER) <- (0,0)
+  - set_font_path p:String_alias; // Pour voir...
+  - set_window_pos (x,y:Int)
+  - get_window_pos:(Int,Int) <- (0,0)
   
   - new_event_empty; // <- `glfwPostEmptyEvent()`
     
-  - create_window (w,h:INTEGER) title t:STRING_ALIAS for winobj:WINDOW :POINTER <-
+  - create_window (w,h:Int) title t:String_alias for winobj:Window :Pointer <-
   (
     wins.add_last winobj
     //`glfwSetWindowUserPointer(@win, (void *)@winobj)`
@@ -400,26 +397,26 @@ Public
     
   - run <- ( /* Nothing */ )
   
-  - flag_refresh:BOOLEAN
-  - refresh_again <- ( flag_refresh := TRUE; )
+  - flag_refresh:Boolean
+  - refresh_again <- ( flag_refresh := True; )
 
-  - set_window win:POINTER size (w,h:INTEGER)
-  - get_window_size:(INTEGER,INTEGER) <- (screen_width,screen_height)
+  - set_window win:Pointer size (w,h:Int)
+  - get_window_size:(Int,Int) <- (screen_width,screen_height)
   
-  - get_focus:BOOLEAN <- TRUE
+  - get_focus:Boolean <- True
   
-  - set_cursor p:POINTER; // Nothing.
-  - get_cursor v:INTEGER :POINTER <- NULL; // Nothing
+  - set_cursor p:Pointer; // Nothing.
+  - get_cursor v:Int :Pointer <- NULL; // Nothing
   
-  - get_cursor_pos:(INTEGER,INTEGER) <- (0,0)
+  - get_cursor_pos:(Int,Int) <- (0,0)
   
-  - framebuffer_size:(INTEGER,INTEGER) <- ( screen_width, screen_height )
+  - framebuffer_size:(Int,Int) <- ( screen_width, screen_height )
   
 External
   
-  - init_gl e:POINTER <-
-  ( + wt,ht:INTEGER
-    + w_scr,h_scr:INTEGER
+  - init_gl e:Pointer <-
+  ( + wt,ht:Int
+    + w_scr,h_scr:Int
     `struct engine* e=@e`
     `int maxGeoShader`
     (get_pen e != NULL).if {
@@ -450,25 +447,25 @@ External
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
     `glViewport(0, 0, w, h)`
     `eglSwapInterval(e->display, 0)`
-    wt := `w`:INTEGER
-    ht := `h`:INTEGER
+    wt := `w`:Int
+    ht := `h`:Int
     //`ANativeWindow nativeWindow = ANativeWindow_fromSurface(env, surface)`
-    w_scr := `ANativeWindow_getWidth(e->app->window)`:INTEGER
-    h_scr := `ANativeWindow_getHeight(e->app->window)`:INTEGER
+    w_scr := `ANativeWindow_getWidth(e->app->window)`:Int
+    h_scr := `ANativeWindow_getHeight(e->app->window)`:Int
     (screen_width,screen_height) := (wt,ht)
     "Surface: ".print; wt.print;    'x'.print; ht.print;    '\n'.print
     "Window : ".print; w_scr.print; 'x'.print; h_scr.print; '\n'.print
     //`glGetIntegerv(GL_MAX_GEOMETRY_SHADER_INVOCATIONS, &maxGeoShader)`
-    //"MaxGeometryShaderInvocations:".print; `maxGeoShader`:INTEGER.println
+    //"MaxGeometryShaderInvocations:".print; `maxGeoShader`:Int.println
   )
   
-  - init_pen e:POINTER <-
-  ( + pen:PEN
+  - init_pen e:Pointer <-
+  ( + pen:Pen
     `struct engine* e=@e`
     pen := get_pen e
     (pen = NULL).if {
       "------------Init Pen\n".print
-      pen := loc_pen := PEN.new_pen
+      pen := loc_pen := Pen.new_pen
       wins.first.set_pen pen
       //PEN_GL.init (antialias | stencil_strokes | debug)
       load_font loc_pen
@@ -478,8 +475,8 @@ External
     }
   )
   
-  - lost_focus e:POINTER <-
-  ( + pen:PEN
+  - lost_focus e:Pointer <-
+  ( + pen:Pen
     `struct engine *e=@e`
     pen := get_pen e
     (pen != NULL).if { pen.delete; }
@@ -490,11 +487,11 @@ External
     `e->display = EGL_NO_DISPLAY`
   )
   
-  - term_window e:POINTER <-
+  - term_window e:Pointer <-
   ( //`struct engine *e=@e`
-    //(`e->display`:POINTER != `EGL_NO_DISPLAY`:POINTER).if {
+    //(`e->display`:Pointer != `EGL_NO_DISPLAY`:Pointer).if {
       //`eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
-      //(`e->surface`:POINTER != `EGL_NO_SURFACE`:POINTER).if {
+      //(`e->surface`:Pointer != `EGL_NO_SURFACE`:Pointer).if {
      // `eglDestroySurface(e->display,e->surface )`
      // `ANativeWindow_release(e->app->window)`
       //}
@@ -502,24 +499,24 @@ External
     //`e->surface = EGL_NO_SURFACE`
   )
   
-  - draw_in e:POINTER <-
-  ( + wt,ht:INTEGER
-    + pen:PEN
-    + me:WINDOW
-    + rl,gl,bl,al:REAL_32
+  - draw_in e:Pointer <-
+  ( + wt,ht:Int
+    + pen:Pen
+    + me:Window
+    + rl,gl,bl,al:Real32
     me := wins.first
     (new_gest).if {
       "PAPER 511: Not yet implemented.".println
       // root.gesture_event
-      new_gest := FALSE
+      new_gest := False
     }
     `struct engine* e=@e`
     `int w,h`
     `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
-    wt := `w`:INTEGER
-    ht := `h`:INTEGER
-    pen := `e->pen`:PEN
+    wt := `w`:Int
+    ht := `h`:Int
+    pen := `e->pen`:Pen
     
     //pen.set_size (wt,ht)
     // Update and render
@@ -527,36 +524,36 @@ External
     (rl,gl,bl,al) := (0,0,0,255)
     `glClearColor(@rl,@gl,@bl,@al)`
     `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
-    pen.gl.gl_enable (`GL_BLEND`:INTEGER)
-    pen.gl.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
-    pen.gl.gl_enable (`GL_CULL_FACE`:INTEGER)
-    pen.gl.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+    pen.gl.gl_enable (`GL_BLEND`:Int)
+    pen.gl.gl_blend_func (`GL_SRC_ALPHA`:Int,`GL_ONE_MINUS_SRC_ALPHA`:Int)
+    pen.gl.gl_enable (`GL_CULL_FACE`:Int)
+    pen.gl.gl_disable (`GL_DEPTH_TEST`:Int)
 
-    ((me.width.to_integer != wt) || {me.height.to_integer != ht}).if {
+    ((me.width.to_int != wt) || {me.height.to_int != ht}).if {
       me.size (wt,ht)
     }
     me.draw_all
     //    `glEnable(GL_DEPTH_TEST)`
-    COLOR.stack.clear
+    Color.stack.clear
     `eglSwapBuffers(e->display, e->surface)`
   )
     
 Public
   
   // Event Mouse
-  - new_gest:BOOLEAN
+  - new_gest:Boolean
   
-  - first_x:REAL_32
-  - first_y:REAL_32
-  - first_t:REAL_32
-  - first_d:REAL_32
+  - first_x:Real32
+  - first_y:Real32
+  - first_t:Real32
+  - first_d:Real32
   
-  - last_x:REAL_32
-  - last_y:REAL_32
-  - last_z:BOOLEAN
-  - last_t:REAL_32
+  - last_x:Real32
+  - last_y:Real32
+  - last_z:Boolean
+  - last_t:Real32
     
-  - mstate:UINTEGER_8
+  - mstate:Uint8
   // 0: Sleep.
   // 1: Drag in progress...
   // 2: Drag end.
@@ -567,7 +564,7 @@ Public
   // 7: Short Clic. 
   // 8: Long Clic.
   
-  - mouse_ack s:UINTEGER_8 <-
+  - mouse_ack s:Uint8 <-
   (
     (s = mstate).if {
       ((mstate = 1) || {mstate = 3} || {mstate = 5}).if {
@@ -578,18 +575,18 @@ Public
     }
   )
   
-  - mouse_base_time:UINTEGER_64  := TIME.gettimeofday
-  - mouse_pause:REAL_32 := 0.2
-  - mouse_dis:REAL_32 := 12; // BSBS: ca depend du nombre de pix/mm (info)
-  - mouse_time:REAL_32 <- ((TIME.gettimeofday-mouse_base_time) / 10_000).to_real_32 / 100
+  - mouse_base_time:Uint64  := Time.gettimeofday
+  - mouse_pause:Real32 := 0.2
+  - mouse_dis:Real32 := 12; // BSBS: ca depend du nombre de pix/mm (info)
+  - mouse_time:Real32 <- ((Time.gettimeofday-mouse_base_time) / 10_000).to_real32 / 100
   
-  - count_finger:INTEGER
+  - count_finger:Int
 External
   
-  - mouse_action (e:POINTER,n,s,x,y:INTEGER) <-
-  ( + new_z:BOOLEAN
-    + pen:PEN
-    + lx,ly,lt:REAL_32
+  - mouse_action (e:Pointer,n,s,x,y:Int) <-
+  ( + new_z:Boolean
+    + pen:Pen
+    + lx,ly,lt:Real32
     //"point = ".print; x.print; 'x'.print; y.println
     pen := get_pen e
     (pen != NULL).if {      
@@ -600,10 +597,10 @@ External
           (s = 0).if {
             count_finger := count_finger - 1
             //"End finger #2 : ".print; count_finger.println
-            (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+            (count_finger = 0).if { mstate := 6; last_z := False; }
           } else {
             ((mstate != 5) && {s != -1}).if {
-              + dx,dy:REAL_32
+              + dx,dy:Real32
               ((mstate = 1) || {mstate = 3}).if {
                 mstate := mstate + 1
                 //root.gesture_event
@@ -622,7 +619,7 @@ External
           (s = 0).if {
             count_finger := count_finger - 1
             //"End finger #1 : ".print; count_finger.println
-            (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+            (count_finger = 0).if { mstate := 6; last_z := False; }
           } else {
             (first_x,first_y,first_t) := (lx,ly,lt)
           }
@@ -639,7 +636,7 @@ External
                 mstate := mstate + 1; // Drag end Or Select end
               } else {
                 last_t := mouse_time
-                mstate := 7 + (last_t - first_t > mouse_pause).to_integer; // Short Or Long Clic
+                mstate := 7 + (last_t - first_t > mouse_pause).to_int; // Short Or Long Clic
               }
             } else {
               "PAPER.mouse_button BUG !!!\n".print
@@ -647,31 +644,31 @@ External
             last_z := new_z
           } else {
             (last_z).if {
-              + dx,dy,d:REAL_32
+              + dx,dy,d:Real32
               (dx,dy) := (last_x - first_x,last_y - first_y)
               d := (dx*dx + dy*dy).sqrt
               ((d > mouse_dis) && {mstate = 0}).if { // Moving mode (distance > 8 pix)
                 mstate := mstate | 1
-                mstate := mstate | ((last_t - first_t > mouse_pause).to_integer << 1); // Select
+                mstate := mstate | ((last_t - first_t > mouse_pause).to_int << 1); // Select
               }
             }
           }
         }
       }
     }
-    new_gest := TRUE
+    new_gest := True
   )
 
 Private
   
-  - get_pen e:POINTER :PEN <-
-  ( + pen:PEN
-    + ptr:POINTER
+  - get_pen e:Pointer :Pen <-
+  ( + pen:Pen
+    + ptr:Pointer
     `{ struct engine* e=@e`
-    ptr := `e->pen`:POINTER
+    ptr := `e->pen`:Pointer
     `}`
     (ptr.is_null).if_false {
-      pen := CAST POINTER TO PEN.on ptr
+      pen := Cast Pointer To Pen.on ptr
     }
     pen
   )
@@ -679,5 +676,5 @@ Private
   - update_accelerometer <-
   (
     `update_accelerometer()`
-    ACCELEROMETER.set_xyz (`acc_x`:REAL_32,`acc_y`:REAL_32,`acc_z`:REAL_32)
+    Accelerometer.set_xyz (`acc_x`:Real32,`acc_y`:Real32,`acc_z`:Real32)
   )

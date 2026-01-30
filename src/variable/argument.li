@@ -1,32 +1,29 @@
 Header
-
-  + name      := ARGUMENT;
-
-  /*Argument runnable*/
-
+  + name := Argument
+/*Argument runnable*/
 Inherit
 
-  + parent_itm_object:Expanded ITM_OBJECT
+  + parent_itm_object:Flat Itm_object
 
 Public
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + type:TYPE_FULL
+  + type:Type_full
 
   //
   // Creation.
   //
 
-  - create p:POSITION name n:STRING_ALIAS type t:TYPE_FULL :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias type t:Type_full :Self <-
+  ( + result:Self
 
     result := clone
     result.make p name n type t
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS type t:TYPE_FULL <-
+  - make p:Position name n:String_alias type t:Type_full <-
   (
     position := p
     name := n
@@ -37,9 +34,9 @@ Public
   // To profil
   //
 
-  - to_local:LOCAL <-
+  - to_local:Local <-
   (
-    LOCAL.create position name name style ' ' type (type.fix)
+    Local.create position name name style ' ' type (type.fix)
   )
 
   //

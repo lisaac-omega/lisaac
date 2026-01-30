@@ -1,29 +1,26 @@
 Header
-
-  + name        := ITM_OLD_EXPR;
-
-  /*Old primitive for contract*/
-
+  + name := Itm_old_expr
+/*Old primitive for contract*/
 Inherit
 
-  + parent_itm_code:Expanded ITM_CODE
+  + parent_itm_code:Flat Itm_code
 
 Public
 
-  + value:ITM_CODE
+  + value:Itm_code
 
   //
   // Constructor
   //
 
-  - create p:POSITION value val:ITM_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position value val:Itm_code :Self <-
+  ( + result:Self
     result := clone
     result.make p value val
     result
   )
 
-  - make p:POSITION value val:ITM_CODE <-
+  - make p:Position value val:Itm_code <-
   (
     position := p
     value    := val
@@ -33,15 +30,15 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + expr_old:EXPR
-    + instr:INSTR
-    + result_old:LOCAL
-    + lst:LIST
-    + old_upper,diff:INTEGER
-    + node:NODE_TYPE
-    + old_stack_local:ARRAY LOCAL
-    + old_profil:PROFIL
+  - to_run_expr:Expr <-
+  ( + expr_old:Expr
+    + instr:Instr
+    + result_old:Local
+    + lst:List
+    + old_upper,diff:Int
+    + node:Node_type
+    + old_stack_local:Array Local
+    + old_profil:Profil
 
     old_stack_local := stack_local
     old_profil      := profil_current
@@ -59,25 +56,25 @@ Public
     {diff != 0}.while_do {
       instr := list_current.last
       //
-      (NODE.node_list != NODE.node_list_base).if {
+      (Node.node_list != Node.node_list_base).if {
         `/* Bug1 */`
         node ?= instr
         `/* Bug-end */`
         (node != NULL).if {
-	  NODE.node_list.remove (NODE.node_list.fast_first_index_of node)
-	  NODE.node_list_base.add_last node
-	}
+          Node.node_list.remove (Node.node_list.fast_first_index_of node)
+          Node.node_list_base.add_last node
+        }
       }
 
       list_current.remove_last
       (debug_level_option != 0).if {
-	? { + push:PUSH
-	  push ?= lst.first
-	  (push != NULL) && {push.is_first}
-	}
-	lst.add instr to (lst.lower + 1)
+        ? { + push:Push
+          push ?= lst.first
+          (push != NULL) && {push.is_first}
+        }
+        lst.add instr to (lst.lower + 1)
       } else {
-	lst.add_first instr
+        lst.add_first instr
       }
       diff := diff - 1
     }
@@ -92,12 +89,12 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    buffer.append "Old "
-    value.append_in buffer
+    b.append "Old "
+    value.append_in b
   )
 
 Private
 
-  - stack_local_empty:ARRAY LOCAL := ARRAY LOCAL .create 0
+  - stack_local_empty:Array Local := Array Local .create 0

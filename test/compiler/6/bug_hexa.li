@@ -1,13 +1,13 @@
 Header
-  + name := BUG_HEXA;
-  /**/
+  + name := Bug_hexa
+/**/
   
 Public
   
   - main <-
-  ( + a,b:INTEGER
+  ( + a,b:Int
     a := 0C7h
-    OUT # a # '\n'
+    Out # a # '\n'
     b := 0C7
-    OUT # b # '\n'
+    Out # b # '\n'
   )

@@ -1,20 +1,17 @@
 Header
-
-  + name     := COMMON;
-
-  /*Common code to shorter and the compiler*/
-
+  + name := Common
+/*Common code to shorter and the compiler*/
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
-  - version :STRING_ALIAS := "0.5 (Ω)"
+  - version :String_alias := "0.6 (Ω)"
 
-  - command_line_header name:STRING_ALIAS :STRING_ALIAS <-
-  ( + before, after :STRING_ALIAS
-    + total_length:INTEGER
+  - command_line_header name:String_alias :String_alias <-
+  ( + before, after :String_alias
+    + total_length:Int
     total_length := 60
     before :=
     "----------------------------------------------------------------\n\
@@ -41,7 +38,7 @@ Public
   )
 
   - print_info <-
-  ( + debug_code, lisaac_optim :STRING_ALIAS
+  ( + debug_code, lisaac_optim :String_alias
     
     compiler_debug_with_code.if {
       debug_code := " (with source code)"
@@ -64,11 +61,11 @@ Public
     "Lisaac directory path: ".print; path_lisaac.println
   )
 
-  - path_lisaac:STRING_ALIAS :=
-  ( + r:STRING_ALIAS
-    + i:INTEGER
-    STRING.tmp { tmp:STRING_BUFFER
-      tmp.copy (COMMAND_ARGS.executable_directory)
+  - path_lisaac:String_alias :=
+  ( + r:String_alias
+    + i:Int
+    String.tmp { tmp:String_buffer
+      tmp.copy (Command_args.executable_directory)
       tmp.remove_last
       i := tmp.last_path_separator
       (i != -1).if { tmp.set_upper i; }

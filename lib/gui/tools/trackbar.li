@@ -1,55 +1,54 @@
 Header
-  + name := Strict TRACKBAR E;
-  
+  + name := Exact Trackbar E
 Inherit
-  + parent_gobj:Expanded GOBJ (TRACKBAR E)
+  + parent_gobj:Flat Gobj (Trackbar E)
   
 Private
   
-  - stk:Expanded ARRAY (TRACKBAR E)
-  - radius:REAL_32 := 8
+  - stk:Flat Array (Trackbar E)
+  - radius:Real32 := 8
   
 Public
   
-  - margin:REAL_32 := 16
+  - margin:Real32 := 16
   
-  - width_min:REAL_32 := margin * 2
-  - height_min:REAL_32 := width_min
+  - width_min:Real32 := margin * 2
+  - height_min:Real32 := width_min
   
-  - vertical:INTEGER := 1 << 15
+  - vertical:Int := 1 << 15
   
   + min:E
   + max:E
     
   + read:{E}
   + write:{E;}
-  + txt:{STRING_BUFFER;}
+  + txt:{String_buffer;}
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - init (mn,mx:E) get g:{E} set s:{E;} txt t:{STRING_BUFFER;} :SELF <-
+  - init (mn,mx:E) get g:{E} set s:{E;} txt t:{String_buffer;} :Self <-
   ( (min,max) := (mn,mx)
     (write,read,txt) := (s,g,t)
     init_obj
   )
     
   - draw <-
-  ( + y,x:REAL_32
-    + x0,y0,x1,y1,wt:REAL_32
+  ( + y,x:Real32
+    + x0,y0,x1,y1,wt:Real32
     begin_path
     stroke_width 4
     line_cap round
-    stroke_color (LOOK.text_ui)
+    stroke_color (Look.text_ui)
     (is vertical).if {
       x := xo + width/2
       y := yo + margin + (height-margin*2) / (max-min) * (read.value - min)
       line (x, yo+margin) to (x,y)
       stroke
       begin_path
-      stroke_color (LOOK.text_bg_ui)
+      stroke_color (Look.text_bg_ui)
       line (x,y) to (x, ymax-margin)
       stroke
     } else {
@@ -58,27 +57,27 @@ Public
       line (xo+margin,y) to (x,y)
       stroke
       begin_path
-      stroke_color (LOOK.text_bg_ui)
+      stroke_color (Look.text_bg_ui)
       line (x,y) to (xmax-margin,y)
       stroke
     }
-    fill_color (LOOK.text_ui)
-    (((HAND.x_cur - x).abs < margin*2) && {(HAND.y_cur - y).abs < margin*2}).if {
-      STRING.tmp { tmp:STRING_BUFFER
+    fill_color (Look.text_ui)
+    (((Hand.x_cur - x).abs < margin*2) && {(Hand.y_cur - y).abs < margin*2}).if {
+      String.tmp { tmp:String_buffer
         txt.value tmp
         (tmp.is_empty).if {
           begin_path
           circle (x,y) radius radius
           fill
         } else {
-          font_face_id (FONT.sys (FONT.roman))
+          font_face_id (Font.sys (Font.roman))
           font_size (radius*2)
           text_align (align_center | align_middle)
           (wt,x0,y0,x1,y1) := text_bounds (x,y) msg tmp
           begin_path
           rect (x0-2,y0-2) to (x1+2,y1+2) radius (radius/2)
           fill
-          fill_color (LOOK.txt_nui)
+          fill_color (Look.txt_nui)
           text (x,y) msg tmp
         }
       }
@@ -89,21 +88,21 @@ Public
     }
   )
     
-  - event ev:UINTEGER_8 :BOOLEAN <-
-  ( + e:UINTEGER_8
-    + d:REAL_32
+  - event ev:Uint8 :Boolean <-
+  ( + e:Uint8
+    + d:Real32
     + v:E
     e := ev & ~1
-    ((e = HAND.clic) || {e = HAND.drag}).if {
+    ((e = Hand.clic) || {e = Hand.drag}).if {
       (is vertical).if {
-        d := HAND.y_cur - (yo+margin)
-        v := CAST REAL_32 TO E.on (d * (max - min) / (height-margin*2) + min)
+        d := Hand.y_cur - (yo+margin)
+        v := Cast Real32 To E.on (d * (max - min) / (height-margin*2) + min)
       } else {
-        d := HAND.x_cur - (xo+margin)
-        v := CAST REAL_32 TO E.on (d * (max - min) / (width-margin*2) + min)
+        d := Hand.x_cur - (xo+margin)
+        v := Cast Real32 To E.on (d * (max - min) / (width-margin*2) + min)
       }
       v := v.min max.max min
       write.value v
     }
-    TRUE
+    True
   )

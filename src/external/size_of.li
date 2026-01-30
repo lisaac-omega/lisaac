@@ -1,22 +1,19 @@
 Header
-
-  + name        := SIZE_OF;
-
-  /*Size of object*/
-
+  + name := Size_of
+/*Size of object*/
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- TRUE
+  - is_invariant:Boolean <- True
 
-  + receiver:TYPE_FULL
+  + receiver:Type_full
 
-  - static_type:TYPE_FULL <- type_integer.default
+  - static_type:Type_full <- type_integer.default
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     t.add type_integer
   )
@@ -25,22 +22,22 @@ Public
   // Creation.
   //
 
-  - create p:POSITION receiver e:TYPE_FULL :SELF <-
-  ( + result:SELF
+  - create p:Position receiver e:Type_full :Self <-
+  ( + result:Self
 
     result := clone
     result.make p receiver e
     result
   )
 
-  - make p:POSITION receiver e:TYPE_FULL <-
+  - make p:Position receiver e:Type_full <-
   (
     position := p
     receiver := e
   )
 
-  - my_copy:SELF <- SELF.create position receiver receiver
-  // BSBS: Tu peux meme juste renvoyer Self! Non ?
+  - my_copy:Self <- Self.create position receiver receiver
+  // BSBS: Tu peux meme juste renvoyer self! Non ?
 
   //
   // Remove
@@ -55,14 +52,14 @@ Public
   // Execute
   //
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     NULL
   )
 
-  - execute_link:EXPR <-
+  - execute_link:Expr <-
   (
-    Self
+    self
   )
 
   //
@@ -72,7 +69,7 @@ Public
   - genere <-
   (
     output.append "sizeof("
-    receiver.raw.put_expanded_declaration output
+    receiver.raw.put_flat_declaration output
     output.add_last ')'
   )
 
@@ -80,7 +77,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "size_of("
     receiver.display buffer

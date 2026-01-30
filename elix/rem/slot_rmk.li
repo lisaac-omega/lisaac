@@ -1,27 +1,26 @@
 Header
-  + name := SLOT_RMK;
-  
+  + name := Slot_rmk
 Inherit
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
   
 Insert
-  - parent_lix_buf:LIX_BUF := LIX_BUF
+  - parent_lix_buf:Lix_buf := Lix_buf
   
 Private
-  - stk:Expanded ARRAY (Strict SLOT_RMK)
+  - stk:Flat Array (Exact Slot_rmk)
   
 Public
-  - is_major:BOOLEAN := FALSE
+  - is_major:Boolean := False
      
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
-  - free <- stk.add_last Self
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last self
     
   // PARSER
   
-  - key:STRING_ALIAS := "  // "
+  - key:String_alias := "  // "
   
-  - detect:BOOLEAN <- look key
+  - detect:Boolean <- look key
   
   - parse <-
   ( 
@@ -31,14 +30,14 @@ Public
     }
   )
   
-  - cmd_new_line:BOOLEAN <-
+  - cmd_new_line:Boolean <-
   (
     txt_buf.at pos add_text "\n  // "
     pos := pos + 6
-    TRUE
+    True
   )
   
-  - cmd_suppr:BOOLEAN <-
+  - cmd_suppr:Boolean <-
   (
     (txt_buf.at (pos - 5) = '\n').if {
       pos := pos - 2
@@ -46,7 +45,7 @@ Public
     } else {
       txt_buf.rm pos
     }
-    TRUE
+    True
   )
   
   // DRAW
@@ -72,10 +71,10 @@ Public
     
 Private
   
-  - rmk (x0,y0:REAL_32) to (x1,y1:REAL_32) <-
+  - rmk (x0,y0:Real32) to (x1,y1:Real32) <-
   ( 
     begin_path
-    stroke_color (LOOK.cols.at (LOOK.rmk))
+    stroke_color (Look.cols.at (Look.rmk))
     stroke_width 3
     line (x0,y0) to (x0,y1)
     stroke

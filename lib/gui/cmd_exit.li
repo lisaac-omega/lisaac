@@ -1,43 +1,42 @@
 Header
-  + name := CMD_EXIT;
-  
+  + name := Cmd_exit
 Inherit
-  - parent_cmd:CMD := CMD
+  - parent_cmd:Cmd := Cmd
 
 Public
   
-  - idx:INTEGER
+  - idx:Int
   
-  - exit_value:INTEGER
+  - exit_value:Int
   
-  - open_with v:INTEGER :BOOLEAN <-
+  - open_with v:Int :Boolean <-
   (
     exit_value := v
     idx := -1
     (next_buf).if {
       mesg.copy "Save file "
       info.copy "?  [y]es / [n]o / [a]ll / [e]dit."
-      SUBACT.empty Self
-      no_cursor := TRUE
+      Subact.empty self
+      no_cursor := True
       open
     } else {
       exil
     }
-    TRUE
+    True
   )
     
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  ( + r:BOOLEAN
-    ((c & KEYBOARD.msk_cmd) = 0).if {
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + r:Boolean
+    ((c & Keyboard.msk_cmd) = 0).if {
       (s.first)
-      .when 'y' or ' ' then { r := TRUE; save_buf; (!next_buf).if { exil; }; }
-      .when 'n'        then { r := TRUE; (!next_buf).if { exil; }; }
-      .when 'a' or '!' then { r := TRUE; { save_buf; }.do_while {next_buf}; exil; }
-      .when 'e'        then { r := TRUE; cur_txt.page.set_buffer (BUFFER.catalog.at idx); close; }
+      .when 'y' or ' ' then { r := True; save_buf; (!next_buf).if { exil; }; }
+      .when 'n'        then { r := True; (!next_buf).if { exil; }; }
+      .when 'a' or '!' then { r := True; { save_buf; }.do_while {next_buf}; exil; }
+      .when 'e'        then { r := True; cur_txt.page.set_buffer (Buffer.catalog.at idx); close; }
     } else {      
       //s.first.println
       (s.first)      
-      .when '\27d\' then { r := TRUE; close; }
+      .when '\27d\' then { r := True; close; }
     }
     r
   )
@@ -46,26 +45,26 @@ Private
 
   - exil <-
   ( 
-    FILE_CFG.update
-    COMMAND_ARGS.at 0.print; " exit.".println
-    PAPER.destroy_all_window
+    File_cfg.update
+    Command_args.at 0.print; " exit.".println
+    Paper.destroy_all_window
     exit exit_value
   )
   
   - save_buf <-
-  ( (BUFFER.catalog.at idx.save_buffer).if_false { beep; }; )
+  ( (Buffer.catalog.at idx.save_buffer).if_false { beep; }; )
   
-  - next_buf:BOOLEAN <-
-  ( + good:BOOLEAN
+  - next_buf:Boolean <-
+  ( + good:Boolean
     
     {
       idx := idx + 1
-      good := FALSE
-      (idx <= BUFFER.catalog.upper).if { // BSBS: Bug compilo du {}.do_while {} optim du &&
-        good := BUFFER.catalog.at idx.is_save
+      good := False
+      (idx <= Buffer.catalog.upper).if { // BSBS: Bug compilo du {}.do_while {} optim du &&
+        good := Buffer.catalog.at idx.is_save
       }
     }.do_while {good}
-    (idx <= BUFFER.catalog.upper).if {
-      text.copy (BUFFER.catalog.at idx.name)
+    (idx <= Buffer.catalog.upper).if {
+      text.copy (Buffer.catalog.at idx.name)
     }
   )

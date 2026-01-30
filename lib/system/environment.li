@@ -1,6 +1,6 @@
 Header
-  + name := ENVIRONMENT;
-  /*To get/set environment variables. Hence include cd, pwd builtins.*/
+  + name := Environment
+/*To get/set environment variables. Hence include cd, pwd builtins.*/
 
   - include := `
 #include <stdlib.h>
@@ -43,9 +43,9 @@ int run_background(const char *cmd) {
 `;
   
 Public
-  - read_variable variable:STRING in buffer:STRING_BUFFER <-
+  - read_variable variable:String in buffer:String_buffer <-
   // append `variable' value in `buffer'. 
-  ( + p:NATIVE_ARRAY CHARACTER
+  ( + p:C_array Char
     p := getenv(variable.to_external)
     (p != NULL).if {
       mybuffer.from_external_copy p
@@ -53,9 +53,9 @@ Public
     }
   )
   
-  - read_variable variable:STRING :STRING_ALIAS <-
-  ( + p:NATIVE_ARRAY CHARACTER
-    + result:STRING_ALIAS
+  - read_variable variable:String :String_alias <-
+  ( + p:C_array Char
+    + result:String_alias
     p := getenv(variable.to_external)
     (p != NULL).if {
       mybuffer.from_external_copy p
@@ -64,13 +64,13 @@ Public
     result
   )
 
-  - write_variable variable:STRING value value:STRING <-
+  - write_variable variable:String value value:String <-
   // setenv `variable' with `value'.
   [
     ? { ! variable.is_empty}
     ? { value != NULL }
   ]
-  ( + na1,na2:NATIVE_ARRAY CHARACTER
+  ( + na1,na2:C_array Char
     mybuffer.copy variable
     na1 := mybuffer.to_external
     mybuffer2.copy value
@@ -79,26 +79,26 @@ Public
     ? {(read_variable variable) == value}.txt {read_variable variable}
   )
 
-  - run system_command_line:STRING  :INTEGER <-
+  - run system_command_line:String  :Int <-
   // To execute a `system_command_line' as for example, "ls -l" on UNIX.
   // The `Result' gives the usual exit status.
-  ( + na:NATIVE_ARRAY CHARACTER
-    + r:INTEGER
+  ( + na:C_array Char
+    + r:Int
     na := system_command_line.to_external
     `{`
-    r := `system((char*)(@na))`:(INTEGER)
+    r := `system((char*)(@na))`:(Int)
     `}`
-    `WEXITSTATUS(@r)`:(INTEGER)
+    `WEXITSTATUS(@r)`:(Int)
   )
 
-  - run cmd:STRING background <-
-  ( + c:NATIVE_ARRAY CHARACTER
+  - run cmd:String background <-
+  ( + c:C_array Char
     c := cmd.to_external
     `run_background(@c)`
   )
 
-  - run cmd:STRING back b:BOOLEAN :INTEGER <-
-  ( + result:INTEGER
+  - run cmd:String back b:Boolean :Int <-
+  ( + result:Int
     if b then {
       run cmd background
     } else {
@@ -109,19 +109,19 @@ Public
   
 Public
   
-  - fork:INTEGER <- `fork()`:INTEGER
-  - waitpid pid:INTEGER :BOOLEAN <-
-  ( + r:INTEGER
+  - fork:Int <- `fork()`:Int
+  - waitpid pid:Int :Boolean <-
+  ( + r:Int
     `{ int status`
-    r := `waitpid(@pid,&status,WNOHANG)`:INTEGER
+    r := `waitpid(@pid,&status,WNOHANG)`:Int
     `}`
     r = pid
   )
   
-  - pwd_in buffer:STRING_BUFFER <-
+  - pwd_in buffer:String_buffer <-
   // Access to the `get_current_dir_name` C function or equivalent.
-  ( + na:NATIVE_ARRAY CHARACTER
-    + cap:INTEGER
+  ( + na:C_array Char
+    + cap:Int
     na := buffer.to_external
     cap := buffer.capacity
     `getcwd(@na,@cap)`
@@ -129,58 +129,58 @@ Public
     buffer.add_last '/'
   )
   
-  - pwd:STRING_ALIAS <-
+  - pwd:String_alias <-
   (
     mybuffer.clear
     pwd_in mybuffer
     mybuffer.to_string_alias
   )
   
-  - chdir destination:STRING :INTEGER <-
+  - chdir destination:String :Int <-
   // Access to the `chdir` C function or equivalent.
-  ( + na:NATIVE_ARRAY CHARACTER
+  ( + na:C_array Char
     mybuffer.copy destination
     na := mybuffer.to_external
-    `chdir((char*)@na)`:INTEGER
+    `chdir((char*)@na)`:Int
   )
   
-  - execute s:STRING in b:STRING_BUFFER <-
-  ( + buf:NATIVE_ARRAY CHARACTER
-    + cap/*,idx*/:INTEGER
+  - execute s:String in b:String_buffer <-
+  ( + buf:C_array Char
+    + cap/*,idx*/:Int
     buf := s.to_external
     `{ FILE *cmd; cmd = popen(@buf,"r")`
     mybuffer.clear
     cap := mybuffer.capacity
     buf := mybuffer.to_external
-    mybuffer.set_upper (`fread(@buf,1,@cap,cmd)`:INTEGER - 1)
+    mybuffer.set_upper (`fread(@buf,1,@cap,cmd)`:Int - 1)
     `pclose(cmd); }`
     b.append mybuffer
   )
   
-  - which s:STRING in b:STRING_BUFFER <-
-  ( + c:INTEGER
+  - which s:String in b:String_buffer <-
+  ( + c:Int
     c := b.count
     mybuffer.copy "which "
     mybuffer.append s
     execute mybuffer in b
     ((b.count = c) || {b.at c = '.'}).if {
       b.set_upper (c-1)
-      b.append (ENVIRONMENT.read_variable "PWD")
+      b.append (Environment.read_variable "PWD")
       b.add_last '/'
       b.append s
-      FILE_SYSTEM.reduce_path b
+      File_system.reduce_path b
     } else {
       b.remove_last; // Remove '\n'
     }
   )
 
 Private
-  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 1024
+  - mybuffer:String_buffer := String_buffer.create 1024
   
-  - mybuffer2:STRING_BUFFER := STRING_BUFFER.create 1024
+  - mybuffer2:String_buffer := String_buffer.create 1024
   
-  - getenv variable:NATIVE_ARRAY(CHARACTER) :NATIVE_ARRAY(CHARACTER) <-
+  - getenv variable:C_array(Char) :C_array(Char) <-
   (
-    `getenv((char*)@variable)`:NATIVE_ARRAY(CHARACTER){NATIVE_ARRAY(CHARACTER),NULL}
+    `getenv((char*)@variable)`:C_array(Char){C_array(Char),NULL}
   )
   

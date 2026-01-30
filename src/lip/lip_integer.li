@@ -1,30 +1,28 @@
 Header
-
-  + name      := LIP_INTEGER;
-
+  + name := Lip_integer
 Inherit
 
-  + parent_lip_constant:Expanded LIP_CONSTANT
+  + parent_lip_constant:Flat Lip_constant
 
 Private
 
-  - storage:ARRAY LIP_INTEGER := ARRAY LIP_INTEGER .create_with_capacity 10
+  - storage:Array Lip_integer := Array Lip_integer .create_with_capacity 10
 
-  - set_value v:INTEGER <-
+  - set_value v:Int <-
   (
     value := v
   )
 
 Public
 
-  + value:INTEGER
+  + value:Int
 
   //
   // Creation.
   //
 
-  - get i:INTEGER :LIP_INTEGER <-
-  ( + result:LIP_INTEGER
+  - get i:Int :Lip_integer <-
+  ( + result:Lip_integer
     (storage.is_empty).if {
       result := clone
     } else {
@@ -37,28 +35,28 @@ Public
 
   - free <-
   (
-    storage.add_last Self
+    storage.add_last self
   )
 
   //
   // Operation.
   //
 
-  - name:STRING_ALIAS <- "INTEGER"
+  - name:String_alias <- lip_int
 
-  - '-' Self:SELF :LIP_CONSTANT <-
+  - '-' self:Self :Lip_constant <-
   (
     value := - value
-    Self
+    self
   )
 
-  - '!' Self:SELF :LIP_CONSTANT <-
+  - '!' self:Self :Lip_constant <-
   (
     value := ~ value
-    Self
+    self
   )
 
-  - copy:LIP_CONSTANT <-
+  - copy:Lip_constant <-
   (
     get value
   )
@@ -68,80 +66,80 @@ Public
     value.print
   )
 
-LIP_CONSTANT
+Lip_constant
 
-  - my_copy other:SELF :LIP_CONSTANT <-
+  - my_copy other:Self :Lip_constant <-
   (
     value := other.value
-    Self
+    self
   )
 
-  - Self:SELF '|#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '|#'  other:Self :Lip_constant <-
   (
     value := value | other.value
     other.free
-    Self
+    self
   )
 
-  - Self:SELF '&#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '&#'  other:Self :Lip_constant <-
   (
     value := value & other.value
     other.free
-    Self
+    self
   )
 
-  - Self:SELF '+#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '+#'  other:Self :Lip_constant <-
   (
     value := value + other.value
     other.free
-    Self
+    self
   )
 
-  - Self:SELF '-#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '-#'  other:Self :Lip_constant <-
   (
     value := value - other.value
     other.free
-    Self
+    self
   )
 
-  - Self:SELF '>#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '>#'  other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value > other.value)
+    Lip_boolean.get (value > other.value)
   )
 
-  - Self:SELF '<#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '<#'  other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value < other.value)
+    Lip_boolean.get (value < other.value)
   )
 
-  - Self:SELF '=#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '=#'  other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value = other.value)
+    Lip_boolean.get (value = other.value)
   )
 
-  - Self:SELF '>=#' other:SELF :LIP_CONSTANT <-
+  - self:Self '>=#' other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value >= other.value)
+    Lip_boolean.get (value >= other.value)
   )
 
-  - Self:SELF '<=#' other:SELF :LIP_CONSTANT <-
+  - self:Self '<=#' other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value <= other.value)
+    Lip_boolean.get (value <= other.value)
   )
 
-  - Self:SELF '!=#' other:SELF :LIP_CONSTANT <-
+  - self:Self '!=#' other:Self :Lip_constant <-
   (
     other.free
     free
-    LIP_BOOLEAN.get (value != other.value)
+    Lip_boolean.get (value != other.value)
   )

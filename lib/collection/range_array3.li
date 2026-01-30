@@ -1,58 +1,55 @@
 Header
-
-  + name := RANGE_ARRAY3 V;
-
-  /*
+  + name := Range_array3 V
+/*
   General purpose, resizable, three dimensional array.
   The lower bounds can be any arbitrary value, even a negative one.
   
   */
-
 Inherit
 
-  + parent_collection3:Expanded COLLECTION3 V
+  + parent_collection3:Flat Collection3 V
 
 Public
 
-  + lower1:INTEGER
-  + lower2:INTEGER
-  + lower3:INTEGER
+  + lower1:Int
+  + lower2:Int
+  + lower3:Int
 
-  + upper1:INTEGER
-  + upper2:INTEGER
-  + upper3:INTEGER
+  + upper1:Int
+  + upper2:Int
+  + upper3:Int
 
-  + count1:INTEGER
-  + count2:INTEGER
-  + count3:INTEGER
+  + count1:Int
+  + count2:Int
+  + count3:Int
 
-  + count:INTEGER
+  + count:Int
 
-ARRAY3
+Array3
 
-  + storage:NATIVE_ARRAY(V)
+  + storage:C_array(V)
   // To store elements line by line.
 
-  + capacity:INTEGER
+  + capacity:Int
   // Number of elements in `storage'.
 
 Public
 
   // Creation / modification:
 
-  - create (line_min, column_min, depth_min:INTEGER)
-  to (line_max, column_max, depth_max:INTEGER) :SELF <-
+  - create (line_min, column_min, depth_min:Int)
+  to (line_max, column_max, depth_max:Int) :Self <-
   // Reset all bounds `line_minimum' / `line_maximum' / `column_minimum'
   // `column_maximum' / `depth_min' and `depth_max' using arguments as
   // new values. All elements are set to the default value of type E.
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make (line_min, column_min, depth_min) to (line_max, column_max, depth_max)
     result
   )
 
-  - make (line_min, column_min, depth_min:INTEGER) to (line_max, column_max, depth_max:INTEGER) <-
+  - make (line_min, column_min, depth_min:Int) to (line_max, column_max, depth_max:Int) <-
   // Reset all bounds `line_minimum' / `line_maximum' / `column_minimum'
   // `column_maximum' / `depth_min' and `depth_max' using arguments as
   // new values. All elements are set to the default value of type E.
@@ -76,7 +73,7 @@ Public
       storage.clear_all (count - 1)
     } else {
       capacity := count
-      storage := NATIVE_ARRAY(V).calloc_intern count
+      storage := C_array(V).calloc_intern count
     }
   )
   [ ...
@@ -88,14 +85,14 @@ Public
     +? { depth_maximum = depth_max }
   ]
 
-  - from_collection3 model:COLLECTION3(V) <-
+  - from_collection3 model:Collection3(V) <-
   (
     make (model.line_minimum, model.column_minimum, model.depth_minimum)
     to   (model.line_maximum, model.column_maximum, model.depth_maximum)
 
-    line_minimum.to line_maximum do { i:INTEGER
-      column_minimum.to column_maximum do { j:INTEGER
-        depth_minimum.to depth_maximum do { k:INTEGER
+    line_minimum.to line_maximum do { i:Int
+      column_minimum.to column_maximum do { j:Int
+        depth_minimum.to depth_maximum do { k:Int
           put (model.item (i,j,k)) to (i,j,k)
         }
       }
@@ -107,9 +104,9 @@ Public
     +? { lower3 = model.lower3 }
   ]
 
-  - from_collection contents:COLLECTION(V)
-  size (line_min,column_min,depth_min:INTEGER)
-  to (line_max,column_max,depth_max:INTEGER) <-
+  - from_collection contents:Collection(V)
+  size (line_min,column_min,depth_min:Int)
+  to (line_max,column_max,depth_max:Int) <-
   // Reset all bounds using `line_min', `line_max', `column_min',
   // `column_max', `depth_min', and `depth_max'.
   // Copy all elements of `contents', line by line into Current.
@@ -126,7 +123,7 @@ Public
   (
     make (line_min,column_min,depth_min) to (line_max,column_max,depth_max)
 
-    0.to (count - 1) do { i:INTEGER
+    0.to (count - 1) do { i:Int
       storage.put (contents.item (contents.lower + i)) to i
     }
   )
@@ -140,16 +137,16 @@ Public
     +? { count = contents.count }
   ]
 
-  - from_model model:COLLECTION(COLLECTION(COLLECTION(V))) <-
+  - from_model model:Collection(Collection(Collection(V))) <-
   //The `model' is used to fill line by line the COLLECTION3.
   //Assume all sub-collections of have the same indexing.
   (
     make (model.lower,model.first.lower,model.first.first.lower)
     to   (model.upper,model.first.upper,model.first.first.upper)
 
-    (model.lower).to (model.upper) do { line:INTEGER
-      (model.first.lower).to (model.first.upper) do { column:INTEGER
-        (model.first.first.lower).to (model.first.first.upper) do { depth:INTEGER
+    (model.lower).to (model.upper) do { line:Int
+      (model.first.lower).to (model.first.upper) do { column:Int
+        (model.first.first.lower).to (model.first.first.upper) do { depth:Int
           put (model.item line.item column.item depth) to (line,column,depth)
         }
       }
@@ -166,23 +163,23 @@ Public
 
   // Resizing:
 
-  - resize (line_min, column_min, depth_min:INTEGER) to (line_max, column_max, depth_max:INTEGER) <-
+  - resize (line_min, column_min, depth_min:Int) to (line_max, column_max, depth_max:Int) <-
   // Resize bounds of the Current array
   [ ...
     -? { line_max   >= line_min   }
     -? { column_max >= column_min }
     -? { depth_max  >= depth_min  }
   ]
-  ( + tmp:SELF
+  ( + tmp:Self
 
-    tmp := SELF.clone
+    tmp := Self.clone
     tmp.make (line_min, column_min, depth_min) to (line_max, column_max, depth_max)
     //BSBS: It may be possible to avoid this creation when :
     //BSBS:   new `capacity' <= old `capacity'
 
-    lower1.to line_maximum do { l:INTEGER
-      lower2.to column_maximum do { c:INTEGER
-        lower3.to depth_maximum do { d:INTEGER
+    lower1.to line_maximum do { l:Int
+      lower2.to column_maximum do { c:Int
+        lower3.to depth_maximum do { d:Int
           (tmp.valid_index (l,c,d)).if {
             tmp.put (item (l,c,d)) to (l,c,d)
           }
@@ -203,7 +200,7 @@ Public
 
   // Implementation of others feature from COLLECTION3:
 
-  - item (line, column, depth:INTEGER) :V <-
+  - item (line, column, depth:Int) :V <-
   (
     storage.item (
       (line - lower1) * count2 * count3 +
@@ -211,7 +208,7 @@ Public
     )
   )
 
-  - put element:V to (line, column, depth:INTEGER) <-
+  - put element:V to (line, column, depth:Int) <-
   (
     storage.put element to (
       (line - lower1) * count2 * count3 +
@@ -219,7 +216,7 @@ Public
     )
   )
 
-  - force x:V to (line, column, depth:INTEGER) <-
+  - force x:V to (line, column, depth:Int) <-
   (
     (! valid_index (line,column,depth)).if {
       resize (line.min lower1,column.min lower2,depth.min lower3)
@@ -243,16 +240,16 @@ Public
     storage.fast_replace_all old_value with new_value until (count - 1)
   )
 
-  - sub_collection3 (line_min, column_min, depth_min:INTEGER)
-  to (line_max, column_max, depth_max:INTEGER) :SELF <-
-  ( + n:INTEGER
-    + result:SELF
+  - sub_collection3 (line_min, column_min, depth_min:Int)
+  to (line_max, column_max, depth_max:Int) :Self <-
+  ( + n:Int
+    + result:Self
 
     result := create (line_min,column_min,depth_min) to (line_max,column_max,depth_max)
 
-    line_min.to line_max do { i:INTEGER
-      column_min.to column_max do { j:INTEGER
-        depth_min.to depth_max do { k:INTEGER
+    line_min.to line_max do { i:Int
+      column_min.to column_max do { j:Int
+        depth_min.to depth_max do { k:Int
           result.storage.put (item (i,j,k)) to n
           n := n + 1
         }
@@ -271,20 +268,20 @@ Public
 
   // Looking and comparison:
 
-  - occurrences elt:V :INTEGER <-
+  - occurrences elt:V :Int <-
   (
     storage.occurrences elt until (count - 1)
   )
 
-  - fast_occurrences elt:V :INTEGER <-
+  - fast_occurrences elt:V :Int <-
   (
     storage.fast_occurrences elt until (count - 1)
   )
 
-  - has x:V :BOOLEAN <-
+  - has x:V :Boolean <-
   //Search if a element x is in the array using `equal'.
   //See also `fast_has' to choose the apropriate one.
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     (count > 0).if {
       result := storage.index_of x until (count - 1) <= count - 1
@@ -292,9 +289,9 @@ Public
     result
   )
 
-  - fast_has x:V :BOOLEAN <-
+  - fast_has x:V :Boolean <-
   // Search if a element x is in the array using `='.
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     (count > 0).if {
       result := storage.fast_index_of x until (count - 1) <= count -1
@@ -302,14 +299,14 @@ Public
     result
   )
 
-  - all_default:BOOLEAN <-
+  - all_default:Boolean <-
   (
     storage.all_default (count - 1)
   )
 
-  - swap (line1, column1, depth1:INTEGER) with (line2, column2, depth2:INTEGER) <-
+  - swap (line1, column1, depth1:Int) with (line2, column2, depth2:Int) <-
   ( + tmp:V
-    + index1, index2:INTEGER
+    + index1, index2:Int
 
     index1 := (line1 - lower1) * count2 * count3 + (column1 - lower2) * count3 + depth1 - lower3
     index2 := (line2 - lower1) * count2 * count3 + (column2 - lower2) * count3 + depth2 - lower3
@@ -318,7 +315,7 @@ Public
     storage.put tmp to index2
   )
 
-  - copy other:SELF <-
+  - copy other:Self <-
   (
     lower1 := other.lower1
     upper1 := other.upper1

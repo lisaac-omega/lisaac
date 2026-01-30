@@ -1,39 +1,37 @@
 Header
-  
-  + name := Expanded RESAMPLE;
-  
+  + name := Flat Resample
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
       
-  + line0:NATIVE_ARRAY UINTEGER_8
-  - set_line0 l:NATIVE_ARRAY UINTEGER_8 <- ( line0 := l; )
+  + line0:C_array Uint8
+  - set_line0 l:C_array Uint8 <- ( line0 := l; )
   
-  + line1:NATIVE_ARRAY UINTEGER_8
-  - set_line1 l:NATIVE_ARRAY UINTEGER_8 <- ( line1 := l; )
+  + line1:C_array Uint8
+  - set_line1 l:C_array Uint8 <- ( line1 := l; )
   
-  + hs:INTEGER;      // expansion factor in each axis
-  + vs:INTEGER
-  + w_lores:INTEGER; // horizontal pixels pre-expansion
+  + hs:Int;      // expansion factor in each axis
+  + vs:Int
+  + w_lores:Int; // horizontal pixels pre-expansion
   
-  + ystep:INTEGER;   // how far through vertical expansion we are
-  - set_ystep ys:INTEGER <- ( ystep := ys; )
+  + ystep:Int;   // how far through vertical expansion we are
+  - set_ystep ys:Int <- ( ystep := ys; )
   
-  + ypos:INTEGER;    // which pre-expansion row we're on
-  - set_ypos yp:INTEGER <- ( ypos := yp; )
+  + ypos:Int;    // which pre-expansion row we're on
+  - set_ypos yp:Int <- ( ypos := yp; )
 
-  - hs phs:INTEGER vs pvs:INTEGER ystep pys:INTEGER w_lores wl:INTEGER ypos yp:INTEGER
-  line0 l0:NATIVE_ARRAY UINTEGER_8 line1 l1:NATIVE_ARRAY UINTEGER_8 <-
+  - hs phs:Int vs pvs:Int ystep pys:Int w_lores wl:Int ypos yp:Int
+  line0 l0:C_array Uint8 line1 l1:C_array Uint8 <-
   (
     (hs,vs,ystep,w_lores,ypos) := (phs,pvs,pys,wl,yp)
     (line0,line1) := (l0,l1)
   )
   
-  - resample out:NATIVE_ARRAY UINTEGER_8 :NATIVE_ARRAY UINTEGER_8 <-
-  ( + result,near,far:NATIVE_ARRAY UINTEGER_8
-    + y_bot:BOOLEAN
+  - resample out:C_array Uint8 :C_array Uint8 <-
+  ( + result,near,far:C_array Uint8
+    + y_bot:Boolean
     y_bot := ystep >= (vs >> 1)
     (y_bot).if {
       near := line1
@@ -54,22 +52,22 @@ Private
   
   // static jfif-centered resampling (across block boundaries)
 
-  - resample_row_1 (out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  - resample_row_1 (out,in_near,in_far:C_array Uint8) :C_array Uint8 <-
   ( in_near )
 
-  - resample_row_v_2 (out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  - resample_row_v_2 (out,in_near,in_far:C_array Uint8) :C_array Uint8 <-
   ( 
     // need to generate two samples vertically for every one in input
-    0.to (w_lores-1) do { i:INTEGER
+    0.to (w_lores-1) do { i:Int
       out.at i put ((3*in_near.at i + in_far.at i + 2)>>2)
     }
     out
   )
 
-  - resample_row_h_2(out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
-  ( + input:NATIVE_ARRAY UINTEGER_8
-    + c:UINTEGER_8
-    + i:INTEGER
+  - resample_row_h_2(out,in_near,in_far:C_array Uint8) :C_array Uint8 <-
+  ( + input:C_array Uint8
+    + c:Uint8
+    + i:Int
     // need to generate two samples horizontally for every one in input
     input := in_near
     (w_lores = 1).if {
@@ -78,25 +76,25 @@ Private
       out.at 0 put c;  out.at 1 put c
     } else {
       out.at 0 put (input.at 0)
-      out.at 1 put ((input.at 0.to_integer * 3 + input.at 1 + 2)>>2)
+      out.at 1 put ((input.at 0.to_int * 3 + input.at 1 + 2)>>2)
       i := 1
       {i < (w_lores-1)}.while_do {
-        + n:INTEGER
+        + n:Int
         n := 3*input.at i + 2
         out.at (i*2+0) put ((n+input.at (i-1))>>2)
         out.at (i*2+1) put ((n+input.at (i+1))>>2)
         i := i + 1
       }
-      out.at (i*2+0) put ((input.at (w_lores-2).to_integer*3 + input.at (w_lores-1) + 2)>>2)
+      out.at (i*2+0) put ((input.at (w_lores-2).to_int*3 + input.at (w_lores-1) + 2)>>2)
       out.at (i*2+1) put ( input.at (w_lores-1))
       //STBI_NOTUSED(in_far)
     }
     out
   )
 
-  - resample_row_hv_2(out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
-  ( + t0,t1:INTEGER
-    + c:UINTEGER_8
+  - resample_row_hv_2(out,in_near,in_far:C_array Uint8) :C_array Uint8 <-
+  ( + t0,t1:Int
+    + c:Uint8
     // need to generate 2x2 samples for every one in input
     (w_lores = 1).if {
       c := (3*in_near.first + in_far.first + 2)>>2
@@ -104,7 +102,7 @@ Private
     } else {
       t1 := 3*in_near.first + in_far.first
       out.at 0 put ((t1+2)>>2)
-      1.to (w_lores-1) do { i:INTEGER
+      1.to (w_lores-1) do { i:Int
         t0 := t1
         t1 := 3*in_near.at i + in_far.at i
         c := (3*t0 + t1 + 8) >> 4
@@ -116,11 +114,11 @@ Private
     out
   )
 
-  - resample_row_generic (out,in_near,in_far:NATIVE_ARRAY UINTEGER_8) :NATIVE_ARRAY UINTEGER_8 <-
+  - resample_row_generic (out,in_near,in_far:C_array Uint8) :C_array Uint8 <-
   (
     // resample with nearest-neighbor
-    0.to (w_lores-1) do { i:INTEGER
-      0.to (hs-1) do { j:INTEGER
+    0.to (w_lores-1) do { i:Int
+      0.to (hs-1) do { j:Int
         out.at (i*hs+j) put (in_near.at i)
       }
     }

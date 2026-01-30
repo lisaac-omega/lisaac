@@ -1,48 +1,46 @@
 Header
-  
-  + name := STATE;
-  
+  + name := State
 Inherit
   
-  - parent_constant_pen:CONSTANT_PEN := CONSTANT_PEN
+  - parent_constant_pen:Constant_pen := Constant_pen
   
 Private
   
-  - stack:ARRAY STATE := ARRAY STATE.create_with_capacity 16
+  - stack:Array State := Array State.create_with_capacity 16
 
   - make <-
   (
-    xform  := TRANSFORM.create
-    fill   := PAINT.create
-    stroke := PAINT.create
-    scissor := SCISSOR.create
+    xform  := Transform.create
+    fill   := Paint.create
+    stroke := Paint.create
+    scissor := Scissor.create
     scissor.make
   )
 
 Public
   
-  + call_count:INTEGER
+  + call_count:Int
   - update_call_count <- ( call_count := pen_gl.calls.count; )
   
-  + composite_operation:COMPOSITE_OPERATION_STATE
-  + fill:PAINT
-  + stroke:PAINT
-  + stroke_width:REAL_32
-  + miter_limit:REAL_32
-  + line_join:INTEGER
-  + line_cap:INTEGER
-  + alpha:REAL_32
-  + xform:TRANSFORM
-  + scissor:SCISSOR
-  + font_size:REAL_32
-  + letter_spacing:REAL_32
-  + line_height:REAL_32
-  + font_blur:REAL_32
-  + text_align:INTEGER
-  + font_id:INTEGER
+  + composite_operation:Composite_operation_state
+  + fill:Paint
+  + stroke:Paint
+  + stroke_width:Real32
+  + miter_limit:Real32
+  + line_join:Int
+  + line_cap:Int
+  + alpha:Real32
+  + xform:Transform
+  + scissor:Scissor
+  + font_size:Real32
+  + letter_spacing:Real32
+  + line_height:Real32
+  + font_blur:Real32
+  + text_align:Int
+  + font_id:Int
 
-  - create:STATE <- 
-  ( + result:STATE
+  - create:State <- 
+  ( + result:State
     (stack.is_empty).if {
       result := clone
     } else {
@@ -59,16 +57,16 @@ Public
     stroke.free
     scissor.free
     //(scissor.xform != NULL).if { scissor.xform.free; }
-    stack.add_last Self
+    stack.add_last self
   )
 
-  - copy other:STATE <-
+  - copy other:State <-
   (
     call_count := pen_gl.calls.count
     copy_not_call_count other
   )
   
-  - copy_not_call_count other:STATE <-
+  - copy_not_call_count other:State <-
   (
     composite_operation := other.composite_operation
     fill.copy   (other.fill)
@@ -94,35 +92,35 @@ Public
     font_id := other.font_id
   )
 
-  - set_letter_spacing s:REAL_32 <- ( letter_spacing := s; )
+  - set_letter_spacing s:Real32 <- ( letter_spacing := s; )
   
-  - set_line_height w:REAL_32 <- ( line_height := w; )
+  - set_line_height w:Real32 <- ( line_height := w; )
   
-  - set_composite_operation o:INTEGER <- ( composite_operation.make o; )
+  - set_composite_operation o:Int <- ( composite_operation.make o; )
   
-  - set_line_cap cap:INTEGER <- ( line_cap := cap; )
+  - set_line_cap cap:Int <- ( line_cap := cap; )
   
-  - set_line_join cap:INTEGER <- ( line_join := cap; )
+  - set_line_join cap:Int <- ( line_join := cap; )
   
-  - set_stroke_width w:REAL_32 <- ( stroke_width := w; )
+  - set_stroke_width w:Real32 <- ( stroke_width := w; )
   
-  - set_miter_limit l:REAL <- ( miter_limit := l; )
+  - set_miter_limit l:Real <- ( miter_limit := l; )
   
-  - set_stroke p:PAINT <- ( stroke := p; )
+  - set_stroke p:Paint <- ( stroke := p; )
   
-  - set_font_size s:REAL_32 <- ( font_size := s; )
+  - set_font_size s:Real32 <- ( font_size := s; )
 
-  - set_font_blur b:REAL_32 <- ( font_blur := b; )
+  - set_font_blur b:Real32 <- ( font_blur := b; )
   
-  - set_font_id id:INTEGER <- ( font_id := id; )
+  - set_font_id id:Int <- ( font_id := id; )
 
-  - set_text_align a:INTEGER <- ( text_align := a; )
+  - set_text_align a:Int <- ( text_align := a; )
 
   - reset <-
   (
     composite_operation.make /* := COMPOSITE_OPERATION_STATE.create*/ source_over
-    fill  .set_color (COLOR.rgba (255,255,255,255))
-    stroke.set_color (COLOR.rgba (  0,  0,  0,255))
+    fill  .set_color (Color.rgba (255,255,255,255))
+    stroke.set_color (Color.rgba (  0,  0,  0,255))
     stroke_width := 1
     miter_limit := 10
     line_join := miter
@@ -138,14 +136,14 @@ Public
     font_id := 0
   )
   
-  - get_font_scale:REAL_32 <-
+  - get_font_scale:Real32 <-
   (
     quantize (xform.average_scale, 0.01).min 4.0
   )
   
 Private
   
-  - quantize (a,d:REAL_32) :REAL_32 <-
+  - quantize (a,d:Real32) :Real32 <-
   (
-    d * (a / d + 0.5).to_integer
+    d * (a / d + 0.5).to_int
   )

@@ -1,39 +1,36 @@
 Header
-
-  + name    := LOOP_END;
-
-  /* Loop end (call tail recursive). */
-
+  + name := Loop_end
+/* Loop end (call tail recursive). */
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  + loop:LOOP
+  + loop:Loop
 
   //
   // Creation.
   //
 
-  - create p:POSITION loop l:LOOP :SELF <-
-  ( + result:SELF
+  - create p:Position loop l:Loop :Self <-
+  ( + result:Self
     result := clone
     result.make p loop l
     result
   )
 
-  - make p:POSITION loop l:LOOP <-
+  - make p:Position loop l:Loop <-
   (
     position := p
     loop := l
     loop.set_link
   )
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     // Warning: See LOOP.my_copy
-    Self
+    self
   )
 
   //
@@ -45,13 +42,13 @@ Public
     loop.unset_link
   )
 
-  - execute:INSTR <-
+  - execute:Instr <-
   (
     (list_current = loop.body).if {
-      POSITION.put_error warning text "Recursivity without end (LOOP_END)."
+      Position.put_error warning text "Recursivity without end (LOOP_END)."
       loop.position.put_position
       position.put_position
-      POSITION.send_error
+      Position.send_error
     }
 
     ((is_optimization) && {loop_invariant = NULL} && {loop.link_count = 1}).if {
@@ -61,14 +58,14 @@ Public
     seq_call_local_and_loop := seq_call_local_and_loop - 1
     seq_call_and_loop       := seq_call_and_loop - 1
     seq_inline := seq_inline + 1
-    Self
+    self
   )
 
   //
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "goto "
     buffer.append (loop.name)

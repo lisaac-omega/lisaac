@@ -1,18 +1,16 @@
 Header
-  
-  + name := Expanded VERTEX3D;
-  
+  + name := Flat Vertex3d
 Insert
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Mapping  
-  + point:Expanded VEC3
-//  + norm:Expanded VEC3
+  + point:Flat Vec3
+//  + norm:Flat VEC3
   
 Public
   
-  - make (x,y,z:REAL_32) /*norm (nx,ny,nz:REAL_32)*/ <-
+  - make (x,y,z:Real32) /*norm (nx,ny,nz:REAL_32)*/ <-
   (
     point.make (x,y,z)
 //    norm.make (nx,ny,nz)

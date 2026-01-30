@@ -1,20 +1,18 @@
 Header
-  
-  + name := MAIN;
- 
+  + name := Main
 Public
-  - working_directory:STRING_BUFFER := STRING_BUFFER.create 256
+  - working_directory:String_buffer := String_buffer.create 256
   
   - main <-
-  ( + executable_path,src_path:STRING_ALIAS
-    executable_path := COMMAND_ARGS.at 0
-    TEST.check (FILE_UTILS.file_exists executable_path)
+  ( + executable_path,src_path:String_alias
+    executable_path := Command_args.at 0
+    Test.check (File_utils.file_exists executable_path)
     working_directory.copy executable_path
     //working_directory.remove_tail ("main".count)
     src_path := (working_directory + ".li").to_string_alias
     //src_path.println
-    TEST.check (FILE_UTILS.file_exists src_path)
-    TEST.check (ENVIRONMENT.chdir (COMMAND_ARGS.executable_directory)) integer 0
-    TEST.check (FILE_UTILS.file_exists "main.li")
+    Test.check (File_utils.file_exists src_path)
+    Test.check (Environment.chdir (Command_args.executable_directory)) integer 0
+    Test.check (File_utils.file_exists "main.li")
     //TEST.check (ENVIRONMENT.chdir working_directory) integer 0
   )

@@ -1,70 +1,68 @@
 Header
-  
-  + name := FONS_CONTEXT;
-  
+  + name := Fons_context
 Inherit
   
-  - parent_fontstash:FONTSTASH := FONTSTASH
+  - parent_fontstash:Fontstash := Fontstash
   
 Private
   
   
 Public
 
-  + params:FONS_PARAMS
+  + params:Fons_params
   
-  + itw:REAL_32
-  + ith:REAL_32
+  + itw:Real32
+  + ith:Real32
   
-  + tex_data:NATIVE_ARRAY UINTEGER_8
+  + tex_data:C_array Uint8
   
-  + dirty_rect_x0:INTEGER
-  + dirty_rect_y0:INTEGER
-  + dirty_rect_x1:INTEGER
-  + dirty_rect_y1:INTEGER
+  + dirty_rect_x0:Int
+  + dirty_rect_y0:Int
+  + dirty_rect_x1:Int
+  + dirty_rect_y1:Int
   
-  + fonts:ARRAY FONS_FONT
-  + atlas:FONS_ATLAS
-  + cfonts:INTEGER
-  + nfonts:INTEGER
-  + verts:ARRAY REAL_32; //[FONS_VERTEX_COUNT*2]
-  + tcoords:ARRAY REAL_32; //[FONS_VERTEX_COUNT*2]
-  + colors:ARRAY UINTEGER_32; //[FONS_VERTEX_COUNT]
-  + scratch:ARRAY UINTEGER_8
-  + states:ARRAY FONS_STATE; //[FONS_MAX_STATES]
+  + fonts:Array Fons_font
+  + atlas:Fons_atlas
+  + cfonts:Int
+  + nfonts:Int
+  + verts:Array Real32; //[FONS_VERTEX_COUNT*2]
+  + tcoords:Array Real32; //[FONS_VERTEX_COUNT*2]
+  + colors:Array Uint32; //[FONS_VERTEX_COUNT]
+  + scratch:Array Uint8
+  + states:Array Fons_state; //[FONS_MAX_STATES]
   //void (*handleError)(void* uptr, int error, int val)
   //void* errorUptr
   
-  - create_internal pparams:FONS_PARAMS :SELF <-
-  ( + result:SELF
+  - create_internal pparams:Fons_params :Self <-
+  ( + result:Self
     result := clone
     result.make_internal pparams
     result
   )
 
-  - make_internal pparams:FONS_PARAMS <-
+  - make_internal pparams:Fons_params <-
   (
     params := pparams
     
-    states := ARRAY FONS_STATE.create_with_capacity fons_max_states
-    colors := ARRAY UINTEGER_32.create_with_capacity fons_vertex_count
-    tcoords:= ARRAY REAL_32.create_with_capacity (fons_vertex_count*2)
-    verts  := ARRAY REAL_32.create_with_capacity (fons_vertex_count*2)
-    fonts  := ARRAY FONS_FONT.create_with_capacity 8
+    states := Array Fons_state.create_with_capacity fons_max_states
+    colors := Array Uint32.create_with_capacity fons_vertex_count
+    tcoords:= Array Real32.create_with_capacity (fons_vertex_count*2)
+    verts  := Array Real32.create_with_capacity (fons_vertex_count*2)
+    fonts  := Array Fons_font.create_with_capacity 8
         
     // Allocate scratch buffer.
-    scratch := ARRAY UINTEGER_8.create_with_capacity fons_scratch_buf_size
+    scratch := Array Uint8.create_with_capacity fons_scratch_buf_size
     // Initialize implementation library
     //init
     //PEN_GL.render_create (params.width,params.height)
    
-    atlas := FONS_ATLAS.create (params.width,params.height) capacity fons_init_atlas_nodes
+    atlas := Fons_atlas.create (params.width,params.height) capacity fons_init_atlas_nodes
     // Allocate space for fonts.
-    fonts := ARRAY FONS_FONT.create_with_capacity fons_init_fonts
+    fonts := Array Fons_font.create_with_capacity fons_init_fonts
     // Create texture for the cache.
     itw := 1.0/params.width
     ith := 1.0/params.height
-    tex_data := NATIVE_ARRAY UINTEGER_8.create (params.width * params.height)
+    tex_data := C_array Uint8.create (params.width * params.height)
     dirty_rect_x0 := params.width
     dirty_rect_y0 := params.height
     dirty_rect_x1 := 0
@@ -76,7 +74,7 @@ Public
     clear_state
   )
 
-  - free_font font:FONS_FONT <- 
+  - free_font font:Fons_font <- 
   (
     "fons_context: FREE! (TODO)\n".print
     /*
@@ -87,16 +85,16 @@ Public
     */
   )
   
-  - add_white_rect (w,h:INTEGER) <-
-  ( + gx,gy:INTEGER
-    + dst:NATIVE_ARRAY UINTEGER_8
+  - add_white_rect (w,h:Int) <-
+  ( + gx,gy:Int
+    + dst:C_array Uint8
     
     (gx,gy) := atlas.add_rect (w, h)
 
     // Rasterize
     dst := tex_data + (gx + gy * params.width)
-    0.to (h-1) do { y:INTEGER
-      0.to (w-1) do { x:INTEGER
+    0.to (h-1) do { y:Int
+      0.to (w-1) do { x:Int
         dst.at x put 0FFh
       }
       dst := dst + params.width
@@ -108,11 +106,11 @@ Public
     dirty_rect_y1 := dirty_rect_y1.max (gy+h)
   )
   
-  - get_state:FONS_STATE <- states.last
+  - get_state:Fons_state <- states.last
 
-  - add_fallback_font base:INTEGER back fallback:INTEGER :INTEGER <-
-  ( + base_font:FONS_FONT
-    + result:INTEGER
+  - add_fallback_font base:Int back fallback:Int :Int <-
+  ( + base_font:Fons_font
+    + result:Int
     base_font := fonts.item base
     (base_font.fallbacks.count < fons_max_fallbacks).if {
       base_font.fallbacks.add_last fallbacks
@@ -121,15 +119,15 @@ Public
     result
   )
 
-  - set_size size:REAL_32 <- get_state.set_size size
-  - set_color color:UINTEGER_32 <- get_state.set_color color
-  - set_spacing spacing:REAL_32 <- get_state.set_spacing spacing
-  - set_blur blur:REAL_32 <- get_state.set_blur blur
-  - set_align align:INTEGER <- get_state.set_align align
-  - set_font font:INTEGER <- get_state.set_font font
+  - set_size size:Real32 <- get_state.set_size size
+  - set_color color:Uint32 <- get_state.set_color color
+  - set_spacing spacing:Real32 <- get_state.set_spacing spacing
+  - set_blur blur:Real32 <- get_state.set_blur blur
+  - set_align align:Int <- get_state.set_align align
+  - set_font font:Int <- get_state.set_font font
   
-  - size s:REAL_32 spacing sp:REAL_32 blur b:REAL_32 
-  align a:INTEGER font f:INTEGER <-
+  - size s:Real32 spacing sp:Real32 blur b:Real32 
+  align a:Int font f:Int <-
   (
     get_state.size s spacing sp blur b align a font f
   )
@@ -137,7 +135,7 @@ Public
   - push_state <-
   (
     (states.count < fons_max_states).if {
-      states.add_last (FONS_STATE.my_clone)
+      states.add_last (Fons_state.my_clone)
     }
   )
 
@@ -153,55 +151,55 @@ Public
     get_state.size 12.0 color 0ff_ff_ff_ffh font 0 blur 0 spacing 0 align (fons_align_left | fons_align_baseline)
   )
   
-  - add_font name_id:STRING_ALIAS path pth:STRING :INTEGER <-
-  ( + fp:POINTER
-    + result,sz:INTEGER
-    + dta:ARRAY UINTEGER_8
+  - add_font name_id:String_alias path pth:String :Int <-
+  ( + fp:Pointer
+    + result,sz:Int
+    + dta:Array Uint8
 
     // Read in the font data.
-    fp := FILE_SYSTEM.open_read pth
+    fp := File_system.open_read pth
     (fp = NULL).if {
       result := fons_invalid
     } else {
-      sz := FILE_SYSTEM.file_size fp
-      dta := ARRAY UINTEGER_8.create sz
-      FILE_SYSTEM.read_raw fp in (dta.storage) size sz
-      FILE_SYSTEM.close fp
-      result := add_font_mem name_id data dta free TRUE
+      sz := File_system.file_size fp
+      dta := Array Uint8.create sz
+      File_system.read_raw fp in (dta.storage) size sz
+      File_system.close fp
+      result := add_font_mem name_id data dta free True
     }
     result
   )
 
-  - add_font_mem name_id:STRING_ALIAS data dta:ARRAY UINTEGER_8 
-  free free_dta:BOOLEAN :INTEGER <-
-  ( + font:FONS_FONT
+  - add_font_mem name_id:String_alias data dta:Array Uint8 
+  free free_dta:Boolean :Int <-
+  ( + font:Fons_font
     
     scratch.clear
-    font := FONS_FONT.create name_id data dta free free_dta
+    font := Fons_font.create name_id data dta free free_dta
     fonts.add_last font
     fonts.upper
   )
 
-  - get_font_by_name name_id:STRING_ALIAS :INTEGER <-
-  ( + i:INTEGER
+  - get_font_by_name name_id:String_alias :Int <-
+  ( + i:Int
     {(i <= fonts.upper) && {fonts.at i.name != name_id}}.while_do {
       i := i + 1
     }
     (i <= fonts.upper).ok i or fons_invalid
   )
   
-  - get_glyph font:FONS_FONT code codepoint:UINTEGER_32
-  size isize:INTEGER_16 blur piblur:INTEGER_16 :FONS_GLYPH <-
-  ( + i,g,advance,lsb,x0,y0,x1,y1,gw,gh,gx,gy:INTEGER
-    + scal,siz:REAL_32
-    + glyph:FONS_GLYPH
-    + h:UINTEGER_32
-    + pad:INTEGER
-    + bdst:NATIVE_ARRAY UINTEGER_8
-    + dst:NATIVE_ARRAY UINTEGER_8
-    + gx0,gy0,gx1,gy1,iblur:INTEGER_16
-    + result:FONS_GLYPH
-    siz := isize.to_real_32/10.0
+  - get_glyph font:Fons_font code codepoint:Uint32
+  size isize:Int16 blur piblur:Int16 :Fons_glyph <-
+  ( + i,g,advance,lsb,x0,y0,x1,y1,gw,gh,gx,gy:Int
+    + scal,siz:Real32
+    + glyph:Fons_glyph
+    + h:Uint32
+    + pad:Int
+    + bdst:C_array Uint8
+    + dst:C_array Uint8
+    + gx0,gy0,gx1,gy1,iblur:Int16
+    + result:Fons_glyph
+    siz := isize.to_real32/10.0
     ? {isize >= 2}
     (piblur > 20).if {
       iblur := 20
@@ -235,7 +233,7 @@ Public
         
         i := 0
         {(i < font.fallbacks.count) && {result = NULL}}.while_do { 
-          + fallback_glyph:FONS_GLYPH
+          + fallback_glyph:Fons_glyph
           fallback_glyph := get_glyph (fonts.at (font.fallbacks.at i)) 
           code codepoint size isize blur iblur
           ((fallback_glyph != NULL) && {fallback_glyph.index != 0}).if {
@@ -258,14 +256,14 @@ Public
         (gx,gy) := atlas.add_rect (gw,gh)
         (gx != -1).if {        
           // Init glyph.
-          (gx0,gy0) := (gx.to_integer_16,gy.to_integer_16)
-          (gx1,gy1) := ((gx+gw).to_integer_16,(gy+gh).to_integer_16)
+          (gx0,gy0) := (gx.to_int16,gy.to_int16)
+          (gx1,gy1) := ((gx+gw).to_int16,(gy+gh).to_int16)
           
           //"Glyph create\n".print
           
-          glyph := FONS_GLYPH.create codepoint size isize blur iblur index g
-          xy0 (gx0,gy0) xy1 (gx1,gy1) xadv ((scal*advance*10.0).to_integer_16)
-          off (((x0 - pad).to_integer_16),((y0 - pad).to_integer_16))
+          glyph := Fons_glyph.create codepoint size isize blur iblur index g
+          xy0 (gx0,gy0) xy1 (gx1,gy1) xadv ((scal*advance*10.0).to_int16)
+          off (((x0 - pad).to_int16),((y0 - pad).to_int16))
           next (font.lut.at h)
           font.glyphs.add_last glyph
           //"codepoint:".print; codepoint.print; '\n'.print
@@ -280,14 +278,14 @@ Public
           
           // Make sure there is one pixel empty border.
           dst := tex_data + (params.width*glyph.y0+glyph.x0)
-          0.to (gh-1) do { y:INTEGER
+          0.to (gh-1) do { y:Int
             dst.at (y*params.width) put 0
             dst.at (gw-1 + y*params.width) put 0
           }
           //"gh:".print; gh.print; '\n'.print
           //"w :".print; params.width.print; '\n'.print
           
-          0.to (gw-1) do { x:INTEGER
+          0.to (gw-1) do { x:Int
             dst.at x put 0
             dst.at (x + (gh-1)*params.width) put 0
           }
@@ -308,48 +306,48 @@ Public
     result
   )
 
-  - get_quad (font:FONS_FONT,prev_glyph_index:INTEGER, 
-    glyph:FONS_GLYPH,scale,spacing:REAL_32,x,y:REAL_32,
-  q:FONS_QUAD) :(REAL_32,REAL_32) <-
-  ( + rx,ry,xoff,yoff,x0,y0,x1,y1,nx,ny:REAL_32
+  - get_quad (font:Fons_font,prev_glyph_index:Int, 
+    glyph:Fons_glyph,scale,spacing:Real32,x,y:Real32,
+  q:Fons_quad) :(Real32,Real32) <-
+  ( + rx,ry,xoff,yoff,x0,y0,x1,y1,nx,ny:Real32
     
     (nx,ny) := (x,y)
     (prev_glyph_index != -1).if {
-      + adv:REAL_32
+      + adv:Real32
       adv := scale*font.font.get_glyph_kern_advance(prev_glyph_index,glyph.index)
-      nx := nx + (adv + spacing + 0.5).to_integer
+      nx := nx + (adv + spacing + 0.5).to_int
     }
     // Each glyph has 2px border to allow good interpolation,
     // one pixel to prevent leaking, and one to allow good interpolation 
     // for rendering.
     // Inset the texture region by one pixel for correct interpolation.
-    xoff := (glyph.xoff+1).to_integer_16.to_real_32
-    yoff := (glyph.yoff+1).to_integer_16.to_real_32
-    x0 := (glyph.x0+1).to_real_32
-    y0 := (glyph.y0+1).to_real_32
-    x1 := (glyph.x1-1).to_real_32
-    y1 := (glyph.y1-1).to_real_32
+    xoff := (glyph.xoff+1).to_int16.to_real32
+    yoff := (glyph.yoff+1).to_int16.to_real32
+    x0 := (glyph.x0+1).to_real32
+    y0 := (glyph.y0+1).to_real32
+    x1 := (glyph.x1-1).to_real32
+    y1 := (glyph.y1-1).to_real32
 
     ((params.flags & fons_zero_topleft) != 0).if {      
-      rx := (nx + xoff).to_integer.to_real_32
-      ry := (ny + yoff).to_integer.to_real_32
+      rx := (nx + xoff).to_int.to_real32
+      ry := (ny + yoff).to_int.to_real32
       
       q.xy0 (rx,ry) xy1 (rx+x1-x0,ry+y1-y0)
       q.st0 (x0*itw,y0*ith) st1 (x1*itw,y1*ith)
-      ( + w,h:REAL_32
+      ( + w,h:Real32
         (w,h) := (itw,ith)
         //`printf("%6.4f %6.4f\n",@w,@h)`
       )
       //itw.print; ' '.print; ith.print; '\n'.print
     } else {      
-      rx := (nx + xoff).to_integer.to_real_32
-      ry := (ny - yoff).to_integer.to_real_32
+      rx := (nx + xoff).to_int.to_real32
+      ry := (ny - yoff).to_int.to_real32
 
       q.xy0 (rx,ry) xy1 (rx+x1-x0,ry-y1+y0)
       q.st0 (x0*itw,y0*ith) st1 (x1*itw,y1*ith)
     }
     //"xadv:".print; glyph.xadv.print; '\n'.print
-    nx := nx + (glyph.xadv.to_real_32 / 10.0 + 0.5).to_integer
+    nx := nx + (glyph.xadv.to_real32 / 10.0 + 0.5).to_int
     nx,ny
   )
 
@@ -377,7 +375,7 @@ Public
     }
   )
 
-  - vertex (x,y,s,t:REAL_32,c:UINTEGER) <-
+  - vertex (x,y,s,t:Real32,c:Uint) <-
   (
     verts.add_last x
     verts.add_last y
@@ -386,8 +384,8 @@ Public
     colors.add_last c
   )
 
-  - get_vert_align font:FONS_FONT align alig:INTEGER size isize:INTEGER_16 :REAL_32 <-
-  ( + result:REAL_32
+  - get_vert_align font:Fons_font align alig:Int size isize:Int16 :Real32 <-
+  ( + result:Real32
     result := font.get_vert_align alig size isize
     ((params.flags & fons_zero_topleft) = 0).if {
       result := -result
@@ -395,31 +393,31 @@ Public
     result
   )
 
-  - draw_text (x,y:REAL_32) msg str:STRING 
-  from start:INTEGER to end:INTEGER :REAL_32 <-
-  ( + state:FONS_STATE
-    + codepoint:UINTEGER_32
-    + utf8state:UINTEGER_32
-    + glyph:FONS_GLYPH
-    + q:FONS_QUAD
-    + prev_glyph_index:INTEGER
-    + isize,iblur:INTEGER_16
-    + scale:REAL_32
-    + font:FONS_FONT
-    + width:REAL_32
-    + pos:INTEGER
+  - draw_text (x,y:Real32) msg str:String 
+  from start:Int to end:Int :Real32 <-
+  ( + state:Fons_state
+    + codepoint:Uint32
+    + utf8state:Uint32
+    + glyph:Fons_glyph
+    + q:Fons_quad
+    + prev_glyph_index:Int
+    + isize,iblur:Int16
+    + scale:Real32
+    + font:Fons_font
+    + width:Real32
+    + pos:Int
     
     state := get_state
     prev_glyph_index := -1
-    isize := (state.size*10.0).to_integer_16
-    iblur := state.blur.to_integer_16
+    isize := (state.size*10.0).to_int16
+    iblur := state.blur.to_int16
     
     ? {state.font >= 0}
     ? {state.font >= fonts.count}
     font := fonts.at (state.font)
     ? {font.data != NULL}
 
-    scale := font.scale_for_pixel_height (isize.to_real_32/10.0)
+    scale := font.scale_for_pixel_height (isize.to_real32/10.0)
 
     (end = -1).if { end := str.count; }
 
@@ -463,24 +461,24 @@ Public
     x
   )
 
-  - text_iter_init (px,py:REAL_32) 
-  msg str:STRING from start:INTEGER to pend:INTEGER :FONS_TEXT_ITER <-
-  ( + state:FONS_STATE
-    + width,x0,y0,x1,y1,x,y:REAL_32
-    + font:FONS_FONT
-    + isze,iblr:INTEGER_16
-    + scal:REAL_32
-    + iter:FONS_TEXT_ITER
-    + end:INTEGER
+  - text_iter_init (px,py:Real32) 
+  msg str:String from start:Int to pend:Int :Fons_text_iter <-
+  ( + state:Fons_state
+    + width,x0,y0,x1,y1,x,y:Real32
+    + font:Fons_font
+    + isze,iblr:Int16
+    + scal:Real32
+    + iter:Fons_text_iter
+    + end:Int
     (x,y) := (px,py)
     end := pend
     state := get_state
     //iter.reset
     font  := fonts.at (state.font)
-    isze := (state.size*10.0).to_integer_16
-    iblr := state.blur.to_integer_16
-    scal := font.scale_for_pixel_height (state.size.to_real_32)
-    iter := FONS_TEXT_ITER.create font isize isze iblur iblr scale scal
+    isze := (state.size*10.0).to_int16
+    iblr := state.blur.to_int16
+    scal := font.scale_for_pixel_height (state.size.to_real32)
+    iter := Fons_text_iter.create font isize isze iblur iblr scale scal
     
     // Align horizontally
     ((state.align & fons_align_left) != 0).if {
@@ -502,12 +500,12 @@ Public
     iter
   )
 
-  - text_iter_next (iter:FONS_TEXT_ITER, quad:FONS_QUAD) :BOOLEAN <-
-  ( + glyph:FONS_GLYPH
-    + str:STRING
-    + pos:INTEGER
-    + utf8state,codepoint:UINTEGER_32
-    + nxt_x,nxt_y:REAL_32
+  - text_iter_next (iter:Fons_text_iter, quad:Fons_quad) :Boolean <-
+  ( + glyph:Fons_glyph
+    + str:String
+    + pos:Int
+    + utf8state,codepoint:Uint32
+    + nxt_x,nxt_y:Real32
         
     pos := iter.next
     iter.set_start pos
@@ -595,30 +593,30 @@ Public
       }
   */
 
-  - text_bounds (px,py:REAL_32) msg str:STRING
-  from start:INTEGER to pend:INTEGER 
-  :(REAL_32, REAL_32,REAL_32,REAL_32,REAL_32) <-
-  ( + state:FONS_STATE
-    + codepoint,utf8state:UINTEGER_32
-    + q:FONS_QUAD
-    + glyph:FONS_GLYPH
-    + prev_glyph_index:INTEGER
-    + isize,iblur:INTEGER_16
-    + scale:REAL_32
-    + font:FONS_FONT
-    + startx, advance:REAL_32
-    + minx, miny, maxx, maxy,x,y:REAL_32
-    + pos,end:INTEGER
+  - text_bounds (px,py:Real32) msg str:String
+  from start:Int to pend:Int 
+  :(Real32, Real32,Real32,Real32,Real32) <-
+  ( + state:Fons_state
+    + codepoint,utf8state:Uint32
+    + q:Fons_quad
+    + glyph:Fons_glyph
+    + prev_glyph_index:Int
+    + isize,iblur:Int16
+    + scale:Real32
+    + font:Fons_font
+    + startx, advance:Real32
+    + minx, miny, maxx, maxy,x,y:Real32
+    + pos,end:Int
     
-    q := FONS_QUAD.create
+    q := Fons_quad.create
     
     (x,y) := (px,py)
     state := get_state
     prev_glyph_index := -1
-    isize := (state.size*10.0).to_integer_16
-    iblur := state.blur.to_integer_16
+    isize := (state.size*10.0).to_int16
+    iblur := state.blur.to_int16
     font := fonts.at (state.font)
-    scale := font.scale_for_pixel_height (isize.to_real_32/10.0)
+    scale := font.scale_for_pixel_height (isize.to_real32/10.0)
 
     // Align vertically.
     y := y + get_vert_align font align (state.align) size isize
@@ -678,10 +676,10 @@ Public
     maxx,maxy
   )
 
-  - vert_metrics:(REAL_32,REAL_32,REAL_32) <-
-  ( + font:FONS_FONT
-    + state:FONS_STATE
-    + isize:REAL_32
+  - vert_metrics:(Real32,Real32,Real32) <-
+  ( + font:Fons_font
+    + state:Fons_state
+    + isize:Real32
     
     state := get_state
     font := fonts.at (state.font)
@@ -692,35 +690,35 @@ Public
     font.lineh*isize/10.0
   )
 
-  - line_bounds py:REAL_32 :(REAL_32,REAL_32) <-
-  ( + font:FONS_FONT
-    + state:FONS_STATE
-    + isize:INTEGER_16
-    + miny,maxy,y:REAL_32
+  - line_bounds py:Real32 :(Real32,Real32) <-
+  ( + font:Fons_font
+    + state:Fons_state
+    + isize:Int16
+    + miny,maxy,y:Real32
     y := py
     state := get_state
     font := fonts.at (state.font)
-    isize := (state.size*10.0).to_integer_16
+    isize := (state.size*10.0).to_int16
     y := y + get_vert_align font align (state.align) size isize
 
     ((params.flags & fons_zero_topleft) != 0).if {
-      miny := y - font.ascender * isize.to_real_32/10.0
-      maxy := miny + (font.lineh * isize.to_real_32)/10.0
+      miny := y - font.ascender * isize.to_real32/10.0
+      maxy := miny + (font.lineh * isize.to_real32)/10.0
     } else {
-      maxy := y + font.descender * isize.to_real_32/10.0
-      miny := maxy - (font.lineh * isize.to_real_32)/10.0
+      maxy := y + font.descender * isize.to_real32/10.0
+      miny := maxy - (font.lineh * isize.to_real32)/10.0
     }
     miny,maxy
   )
 
-  - get_texture_data:(NATIVE_ARRAY UINTEGER_8,INTEGER,INTEGER) <-
+  - get_texture_data:(C_array Uint8,Int,Int) <-
   ( 
     tex_data,
     params.width,params.height
   )
 
-  - validate_texture:(BOOLEAN,INTEGER,INTEGER,INTEGER,INTEGER) <-
-  ( + x0,y0,x1,y1:INTEGER
+  - validate_texture:(Boolean,Int,Int,Int,Int) <-
+  ( + x0,y0,x1,y1:Int
     ((dirty_rect_x0 < dirty_rect_x1) && {dirty_rect_y0 < dirty_rect_y1}).if {
       (x0,y0) := (dirty_rect_x0,dirty_rect_y0)
       (x1,y1) := (dirty_rect_x1,dirty_rect_y1)
@@ -735,7 +733,7 @@ Public
     //if (stash->params.renderDelete)
     //PEN_GL.render_delete(stash->params.userPtr)
     /*
-    0.to (fonts.upper) do { i:INTEGER
+    0.to (fonts.upper) do { i:Int
       fonts.at i.free
     }
 
@@ -756,16 +754,16 @@ Public
   }
   */
 
-  - old_get_atlas_size:(INTEGER,INTEGER) <-
+  - old_get_atlas_size:(Int,Int) <-
   (
     params.width, params.height
   )
 
-  - expand_atlas (pwidth,pheight:INTEGER) :INTEGER <-
-  ( + i,maxy,w,h:INTEGER
-    + width,height:INTEGER
-    + dst,src,dta:NATIVE_ARRAY UINTEGER_8
-    + data:ARRAY UINTEGER_8
+  - expand_atlas (pwidth,pheight:Int) :Int <-
+  ( + i,maxy,w,h:Int
+    + width,height:Int
+    + dst,src,dta:C_array Uint8
+    + data:Array Uint8
 "Expand\n".print
     width  := params.width .max pwidth
     height := params.height.max pheight
@@ -782,9 +780,9 @@ Public
       //}
     
       // Copy old texture data over.
-      data := ARRAY UINTEGER_8.create (width * height)
+      data := Array Uint8.create (width * height)
       dta := data.storage
-      0.to (params.height-1) do { i:INTEGER
+      0.to (params.height-1) do { i:Int
         dst := dta + (i*width)
         src := tex_data + (i*params.width)
         dst.copy_from src until (params.width-1)
@@ -803,7 +801,7 @@ Public
       atlas.expand (width, height)
 
       // Add existing data as dirty.
-      0.to (atlas.nodes.upper) do { i:INTEGER
+      0.to (atlas.nodes.upper) do { i:Int
         maxy := atlas.nodes.item i.y.max maxy
       }
       dirty_rect_x0 := 0
@@ -818,7 +816,7 @@ Public
     }
   )
 
-  - reset_atlas (width,height:INTEGER) <-
+  - reset_atlas (width,height:Int) <-
   (
     // Flush pending glyphs.
     flush
@@ -834,7 +832,7 @@ Public
     atlas.reset (width, height)
 
     // Clear texture data.
-    tex_data := NATIVE_ARRAY UINTEGER_8.create (width * height)
+    tex_data := C_array Uint8.create (width * height)
     tex_data.clear_all (width * height-1)
 
     // Reset dirty rect
@@ -844,11 +842,11 @@ Public
     dirty_rect_y1 := 0
 
     // Reset cached glyphs
-    0.to (fonts.upper) do { i:INTEGER
-      + font:FONS_FONT
+    0.to (fonts.upper) do { i:Int
+      + font:Fons_font
       font := fonts.at i
       font.glyphs.clear
-      0.to (fons_hash_lut_size-1) do { j:INTEGER
+      0.to (fons_hash_lut_size-1) do { j:Int
         font.lut.at j put (-1)
       }
     }

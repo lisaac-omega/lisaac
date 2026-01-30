@@ -1,20 +1,18 @@
 Header
-  
-  + name := CALL_STROKE;
-  
+  + name := Call_stroke
 Inherit
   
-  + parent_pen_call_2d:Expanded PEN_CALL_2D
+  + parent_pen_call_2d:Flat Pen_call_2d
   
 Private
   
-  - stack:ARRAY CALL_STROKE := ARRAY CALL_STROKE.create_with_capacity 16
+  - stack:Array Call_stroke := Array Call_stroke.create_with_capacity 16
 
 Public
     
-  - create_image img:INTEGER path (pofs,pcnt:INTEGER) 
-  triangle (tofs,tcnt:INTEGER) uniform uofs:INTEGER :PEN_CALL_2D <-
-  ( + result:CALL_STROKE
+  - create_image img:Int path (pofs,pcnt:Int) 
+  triangle (tofs,tcnt:Int) uniform uofs:Int :Pen_call_2d <-
+  ( + result:Call_stroke
     (stack.is_empty).if {
       result := clone
     } else {
@@ -26,7 +24,7 @@ Public
   
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - run_2d <- pen_gl.stroke Self
+  - run_2d <- pen_gl.stroke self

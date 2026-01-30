@@ -1,15 +1,13 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
   (
-    1.to (COMMAND_ARGS.upper) do { k:INTEGER
+    1.to (Command_args.upper) do { k:Int
       k.print
       ' '.print
-      COMMAND_ARGS.at k .print
+      Command_args.at k .print
       '\n'.print
     }
   )

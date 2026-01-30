@@ -1,55 +1,54 @@
 Header
-  + name := UNDO;
-  
+  + name := Undo
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
-  - stack_size:INTEGER := 32_768; // Power 2 !!
-  - stack_mask:INTEGER := stack_size - 1
+  - stack_size:Int := 32_768; // Power 2 !!
+  - stack_mask:Int := stack_size - 1
   
-  + stack:Expanded ARRAY UNDO_ELT
-  + lower:INTEGER
-  + count:INTEGER
-  - upper:INTEGER <- count - 1
-  + ptr:INTEGER
-  + ptr_save:INTEGER
+  + stack:Flat Array Undo_elt
+  + lower:Int
+  + count:Int
+  - upper:Int <- count - 1
+  + ptr:Int
+  + ptr_save:Int
   
-  + auto:BOOLEAN := TRUE
-  - set_auto b:BOOLEAN <- ( auto := b; )
+  + auto:Boolean := True
+  - set_auto b:Boolean <- ( auto := b; )
   
-  - is_empty:BOOLEAN <- count = 0
+  - is_empty:Boolean <- count = 0
   
-  - new:SELF <- clone
+  - new:Self <- clone
   
   - clear <-
-  ( stack.foreach { e:UNDO_ELT; e.free }
+  ( stack.foreach { e:Undo_elt; e.free }
     stack.clear
     lower := count := ptr := ptr_save := 0
   )
   
-  - rm i:INTEGER  char c:UINTEGER_32 <- gen i char c type t_rm
-  - add i:INTEGER char c:UINTEGER_32 <- gen i char c type t_add
+  - rm i:Int  char c:Uint32 <- gen i char c type t_rm
+  - add i:Int char c:Uint32 <- gen i char c type t_add
   - add_stop                         <- ((!is_empty) && {at upper != NULL}).if { add NULL; }
   
   - last_save <- ( ptr_save := ptr; );
   
-  - do t:TXT_BUF :BOOLEAN <-
-  ( + u:UNDO_ELT
-    + p:INTEGER
+  - do t:Txt_buf :Boolean <-
+  ( + u:Undo_elt
+    + p:Int
     p := ptr - 1
     {(p >= 0) && {at p = NULL}}.while_do { p := p - 1; }
     (p >= 0).if {
       //print "Before UNDO"
-      busy := TRUE
+      busy := True
       {(p >= 0) && {(u := at p) != NULL}}.while_do {
         u.run t dir 0
         p := p - 1
       }
       ptr := p + 1
-      busy := FALSE
+      busy := False
       //OUT # "ptr=" # ptr # " ptr_save=" # ptr_save # '\n'
-      (ptr = ptr_save).if { t.set_save TRUE }
+      (ptr = ptr_save).if { t.set_save True }
       //print "After UNDO"
       t.footnote_left.clear
     } else {
@@ -57,49 +56,49 @@ Public
     }
   )
   
-  - redo t:TXT_BUF :BOOLEAN <-
+  - redo t:Txt_buf :Boolean <-
   (ptr < count).if {
-    + u:UNDO_ELT
+    + u:Undo_elt
     //print "Before REDO"
-    busy := TRUE
+    busy := True
     {(ptr < count) && {(u := at ptr) != NULL}}.while_do {
       u.run t dir 1
       ptr := ptr + 1
     }
     {(ptr < count) && {at ptr = NULL}}.while_do { ptr := ptr + 1; }
-    (ptr = ptr_save).if { t.set_save TRUE }
-    busy := FALSE
+    (ptr = ptr_save).if { t.set_save True }
+    busy := False
     t.footnote_left.clear
     //print "After REDO"
   } else {
     t.footnote_left.copy "No further redo information."
   }
   
-  - print t:STRING <-
-  ( + u:UNDO_ELT
+  - print t:String <-
+  ( + u:Undo_elt
     "----------------".print; t.println
-    0.to upper do { i:INTEGER
+    0.to upper do { i:Int
       (i = ptr).if { "> ".print; } else { "  ".print; }
       i.print; ':'.print
       u := at i
-      (u = NULL).if { "Null".println; } else { u.print; }
+      (u = NULL).if { "NULL".println; } else { u.print; }
     }
     (count = ptr).if { "> ".println; }
   )
   
-UNDO, UNDO_ELT
+Undo, Undo_elt
   
-  - busy:BOOLEAN
+  - busy:Boolean
   
-  - t_rm:INTEGER_8  := 0
-  - t_add:INTEGER_8 := 1
-  - t_sav:INTEGER_8 := 2
+  - t_rm:Int8  := 0
+  - t_add:Int8 := 1
+  - t_sav:Int8 := 2
   
-  - at i:INTEGER :UNDO_ELT <- stack.at ((lower + i) & stack_mask)
-  - at i:INTEGER put e:UNDO_ELT <- stack.at ((lower + i) & stack_mask) put e
+  - at i:Int :Undo_elt <- stack.at ((lower + i) & stack_mask)
+  - at i:Int put e:Undo_elt <- stack.at ((lower + i) & stack_mask) put e
   
-  - add e:UNDO_ELT <-
-  ( + u:UNDO_ELT
+  - add e:Undo_elt <-
+  ( + u:Undo_elt
     (! busy).if {
       (stack.capacity = 0).if { stack.make stack_size; }
       ((u := at ptr) != NULL).if { u.free; }
@@ -115,14 +114,14 @@ UNDO, UNDO_ELT
     }
   )
   
-  - gen i:INTEGER char c:UINTEGER_32 type t:INTEGER_8 <-
-  ( + new_t:UINTEGER_64
-    - time:UINTEGER_64
+  - gen i:Int char c:Uint32 type t:Int8 <-
+  ( + new_t:Uint64
+    - time:Uint64
     ((auto) && {(ptr = 0) || {at (ptr-1) != NULL}}).if {
-      new_t := CLOCK.time_raw
+      new_t := Clock.time_raw
       ((new_t - time) >= 1).if { add NULL; }
       time := new_t
     }
-    add (UNDO_ELT.new.init i char c type t)
+    add (Undo_elt.new.init i char c type t)
   )
   

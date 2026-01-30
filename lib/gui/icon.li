@@ -1,41 +1,40 @@
 Header
-  + name := Strict ICON;
-  
+  + name := Exact Icon
 Inherit
-  - parent_any_gui:ANY_GUI := ANY_GUI
-  + parent_win:Expanded WIN
+  - parent_any_gui:Any_gui := Any_gui
+  + parent_win:Flat Win
   
 Private
-  - list:ARRAY ICON := ARRAY ICON.create_with_capacity 4
-  - dx_move:REAL_32
-  - dy_move:REAL_32
-  - is_move:BOOLEAN <- window.child.last = Self
+  - list:Array Icon := Array Icon.create_with_capacity 4
+  - dx_move:Real32
+  - dy_move:Real32
+  - is_move:Boolean <- window.child.last = self
   
 Public
     
-  - height:REAL_32 <- ICON.dim
+  - height:Real32 <- Icon.dim
   
-  - dim:REAL_32 <- FONT.size_sys + 8
+  - dim:Real32 <- Font.size_sys + 8
   
-  + do_bar:{WIN; }
+  + do_bar:{Win; }
   
   - refresh <-
   ( (is_move).if {
       dx_move := dx_move.min width
-      (xo,yo) := (HAND.x_cur - dx_move, HAND.y_cur - dy_move)
+      (xo,yo) := (Hand.x_cur - dx_move, Hand.y_cur - dy_move)
     }
     child.first.xy (xo+dim/2,yo).refresh
     width := (dim/2 + child.first.width).max dim
   )
   
   - draw_all <-
-  ( + d,a,cx,cy,p:REAL_32
-    + pt:PAINT
-    + pop:POPUP
-    + img:IMG
+  ( + d,a,cx,cy,p:Real32
+    + pt:Paint
+    + pop:Popup
+    + img:Img
     child.first.draw_all
     pop ?= child.first
-    a := -REAL_32.pi/2
+    a := -Real32.pi/2
     p := pop.percent
     pop.is (pop.on).if { a := a * p; } else { a := a * (1.0 - p); }
     save
@@ -45,25 +44,25 @@ Public
     rotate a
     d := dim/2 - 2
     rect (-d,-d) to (d,d) radius 8
-    fill_color (LOOK.border_off)
-    stroke_color (COLOR.black)
+    fill_color (Look.border_off)
+    stroke_color (Color.black)
     stroke_width 1
     stroke
     fill
     (! pop.is (pop.on)).if { p := 0.5-p; }
     begin_path
     rect (-d,-d) to (d,d) radius 8
-    pt := PAINT.create_box (-d-2,-d+2) size (d+d-2, d+d-2) radius 8 feather 4
-    color (COLOR.none) to (COLOR.rgbaf (p,p,p,0.6+p*0.3))
+    pt := Paint.create_box (-d-2,-d+2) size (d+d-2, d+d-2) radius 8 feather 4
+    color (Color.none) to (Color.rgbaf (p,p,p,0.6+p*0.3))
     fill_paint pt
     fill
     pt.free
     id_name
-    .case "MENU_BAR"   then { img := LOOK.menu_ico; }
-    .case "BUFFER_BAR" then { img := LOOK.buffer_ico; }
-    .case "SETUP_BAR"  then { img := LOOK.setup_ico; }
+    .case "MENU_BAR"   then { img := Look.menu_ico; }
+    .case "BUFFER_BAR" then { img := Look.buffer_ico; }
+    .case "SETUP_BAR"  then { img := Look.setup_ico; }
     d := d - 4
-    pt := PAINT.create_pattern (-d,-d) size (d+d,d+d) img_id (img.idf) angle 0 alpha 1
+    pt := Paint.create_pattern (-d,-d) size (d+d,d+d) img_id (img.idf) angle 0 alpha 1
     begin_path
     rect (-d,-d) size (d+d,d+d)
     fill_paint pt
@@ -72,68 +71,68 @@ Public
     restore
   )
   
-  - new:SELF <-
-  ( + r:SELF; r := clone; list.add_last r; r)
+  - new:Self <-
+  ( + r:Self; r := clone; list.add_last r; r)
   
-  - copy o:SELF <-
-  ( o.child.first.dup Self
+  - copy o:Self <-
+  ( o.child.first.dup self
     (do_bar,id_name) := (o.do_bar,o.id_name)
   )
   
   - update <-
-  ( list.foreach { ico:ICON
-      + bar:WIN
+  ( list.foreach { ico:Icon
+      + bar:Win
       bar := ico.child.first
       bar.child.clear
       ico.do_bar.value bar
     }
   )
   
-  - init p:WIN name (n:STRING_ALIAS) bar b:{WIN; } :SELF <-
-  ( BAR.new.init Self
+  - init p:Win name (n:String_alias) bar b:{Win; } :Self <-
+  ( Bar.new.init self
     (do_bar,id_name) := (b,n)
     init p
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
-  ( + d,dl:INTEGER
-    + e:UINTEGER_8
-    + hdr:HEADER
-    + xxo:REAL_32
-    + pop:POPUP
-    + l:ICON_LINE
+  - event ev:Uint8 :Boolean <-
+  ( + d,dl:Int
+    + e:Uint8
+    + hdr:Header
+    + xxo:Real32
+    + pop:Popup
+    + l:Icon_line
     pop ?= child.first
     e := ev & ~1
-    ((e = HAND.clic) && {HAND.x_cur-xo < dim}).if {      
-      ICON_LINE.cast parent.set_open ((!pop.is (pop.on)).ok Self or NULL)
-      MENU.close_all
-    }.elseif {e = HAND.drag} then {      
-      (HAND.is_begin).if {
+    ((e = Hand.clic) && {Hand.x_cur-xo < dim}).if {      
+      Icon_line.cast parent.set_open ((!pop.is (pop.on)).ok self or NULL)
+      Menu.close_all
+    }.elseif {e = Hand.drag} then {      
+      (Hand.is_begin).if {
         l ?= parent
-        (l.line_open = Self).if { l.set_open NULL; }
-        ? {window.child.last != Self}
-        window.child.add_last Self
-        (dx_move,dy_move) := (HAND.x_cur - xo, HAND.y_cur - yo)
+        (l.line_open = self).if { l.set_open NULL; }
+        ? {window.child.last != self}
+        window.child.add_last self
+        (dx_move,dy_move) := (Hand.x_cur - xo, Hand.y_cur - yo)
         //"Op ICO".println
       }
-      parent.child_rm Self
+      parent.child_rm self
       hdr ?= parent.parent
       (parent.child.is_empty).if { hdr.child_rm parent; parent.free; }
-      dl := ((HAND.y_cur - hdr.height_min) / ICON.dim).to_integer.max 0
+      dl := ((Hand.y_cur - hdr.height_min) / Icon.dim).to_int.max 0
       (dl > hdr.child.upper).if {
-        parent := ICON_LINE.new.init_parent hdr
+        parent := Icon_line.new.init_parent hdr
       } else {
         parent := hdr.child.at dl
       }
-      xxo := HAND.x_cur - dx_move
+      xxo := Hand.x_cur - dx_move
       {(d <= parent.child.upper) && {parent.child.at d.xo+dim*0.5 < xxo}}.while_do { d := d + 1; }
       (
         (d <= parent.child.upper) &&
-        {HAND.x_last < HAND.x_cur} &&
+        {Hand.x_last < Hand.x_cur} &&
         {xxo+dim*0.5 > parent.child.at d.xo}
       ).if { d := d + 1; }
-      parent.child.at d add Self
-      (HAND.is_end).if { /*"Clo ICO".println;*/ ? {window.child.last = Self}; window.child.remove_last; }
+      parent.child.at d add self
+      (Hand.is_end).if { /*"Clo ICO".println;*/ ? {window.child.last = self}; window.child.remove_last; }
       ask_refresh
     }
   )

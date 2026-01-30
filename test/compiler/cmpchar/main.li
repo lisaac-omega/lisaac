@@ -1,9 +1,9 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 
 Public 
   - main <-
   (
-    TEST.check (' ' = 32)
+    Test.check (' ' = 32)
   )

@@ -1,31 +1,29 @@
 Header
-
-  + name := Expanded BOOLEAN;
-  /*     Boolean library (Self mapping on char C).*/
+  + name := Flat Boolean
+/*     Boolean library (self mapping on char C).*/
 
   - type    := `char`;
-  - default := FALSE;
-
+  - default := False;
 Insert
-  - parent_print:PRINT := PRINT
-  - parent_utils:UTILS := UTILS
+  - parent_print:Print := Print
+  - parent_utils:Utils := Utils
 
 Public  
   
 
   // Conditional :
 
-  - if Self:SELF then tblk:{} else fblk:{} :BOOLEAN <- abstract
+  - if self:Self then tblk:{} else fblk:{} :Boolean <- abstract
 
-  - if true_block:{} else false_block:{} :BOOLEAN /* deprecated/obsolete */ <- abstract
+  - if true_block:{} else false_block:{} :Boolean /* deprecated/obsolete */ <- abstract
     
-  - if Self:SELF then tblk:{} :BOOLEAN <- abstract
+  - if self:Self then tblk:{} :Boolean <- abstract
 
-  - if true_block:{} :BOOLEAN /* deprecated/obsolete */ <- abstract
+  - if true_block:{} :Boolean /* deprecated/obsolete */ <- abstract
 
-  - elseif cond:{BOOLEAN} then block:{} :BOOLEAN <- abstract
+  - elseif cond:{Boolean} then block:{} :Boolean <- abstract
 
-  - elseif cond:{BOOLEAN} then block:{} else block_else:{} <- abstract
+  - elseif cond:{Boolean} then block:{} else block_else:{} <- abstract
   
   - ok value_ok:E else block_or:{E} :E <- ( abstract; E)
   
@@ -33,44 +31,44 @@ Public
   
   - ok tb1:{} do bdy:{} ok tb2:{} <- abstract
   
-  - if_true block:{} :BOOLEAN <- abstract
+  - if_true block:{} :Boolean <- abstract
 
-  - if_false block:{} :BOOLEAN <- abstract
+  - if_false block:{} :Boolean <- abstract
   
   // Binary operator :
 
-  - Self:SELF '=='  Right 60 other:SELF :BOOLEAN <- Self = other
+  - self:Self '=='  Right 60 other:Self :Boolean <- self = other
 
-  - Self:SELF '!==' Right 60 other:SELF :BOOLEAN <- Self != other
+  - self:Self '!==' Right 60 other:Self :Boolean <- self != other
 
-  - Self:SELF '||' Left 10  other:{BOOLEAN}   :BOOLEAN <- abstract
+  - self:Self '||' Left 10  other:{Boolean}   :Boolean <- abstract
   
-  - Self:SELF '&&' Left 20  other:{BOOLEAN}   :BOOLEAN <- abstract
+  - self:Self '&&' Left 20  other:{Boolean}   :Boolean <- abstract
   
-  - Self:SELF '|'  Left 10  other:BOOLEAN :BOOLEAN <- abstract
+  - self:Self '|'  Left 10  other:Boolean :Boolean <- abstract
 
-  - Self:SELF '&'  Left 20  other:BOOLEAN :BOOLEAN <- abstract
+  - self:Self '&'  Left 20  other:Boolean :Boolean <- abstract
 
-  - Self:SELF '^' Left 10  other:BOOLEAN :BOOLEAN  <- abstract
+  - self:Self '^' Left 10  other:Boolean :Boolean  <- abstract
 
-  - Self:SELF '->' Right 25 other:BOOLEAN :BOOLEAN <- abstract
+  - self:Self '->' Right 25 other:Boolean :Boolean <- abstract
 
-  - Self:SELF '->>' Right 25 other:{BOOLEAN}  :BOOLEAN <- abstract
+  - self:Self '->>' Right 25 other:{Boolean}  :Boolean <- abstract
 
-  - Self:SELF '=>' s:STRING :STRING <- abstract
+  - self:Self '=>' s:String :String <- abstract
   
-  - Self:SELF '??' true_value:{E} :(SELF,{E}) <- 
+  - self:Self '??' true_value:{E} :(Self,{E}) <- 
   (
-    Self,true_value
+    self,true_value
   )
 
-  - (Self:SELF,true_value:{E}) '!!' false_value:{E} :E <- 
+  - (self:Self,true_value:{E}) '!!' false_value:{E} :E <- 
   (
     abstract
     E
   )
 
-  - (Self:SELF,true_value:E) '!>' false_value:E :E <- 
+  - (self:Self,true_value:E) '!>' false_value:E :E <- 
   (
     abstract
     E
@@ -78,51 +76,51 @@ Public
   
   // Prefix operator
 
-  - '!' Self:SELF :BOOLEAN <- abstract
+  - '!' self:Self :Boolean <- abstract
 
   // Convertion
 
-  - to_string_b:STRING_BUFFER <-
-  ( + result:STRING_BUFFER
+  - to_string_b:String_buffer <-
+  ( + result:String_buffer
 
     abstract
     result
   )
 
-  - to_string:STRING_ALIAS <- "BOOLEAN"
+  - to_string:String_alias <- "Boolean"
 
-  - to_integer:INTEGER <-
+  - to_int:Int <-
   (
     abstract
-    INTEGER
+    Int
   )
 
-  - to_character:CHARACTER <-
+  - to_character:Char <-
   (
     abstract
-    CHARACTER
+    Char
   )
 
-  - append_in b:STRING_BUFFER <- b.append to_string
+  - append_in b:String_buffer <- b.append to_string
   
-  - abstract:SELF <- unpredictable
+  - abstract:Self <- unpredictable
   
-  - unpredictable:BOOLEAN <- (`(1)`:INTEGER = 1)
+  - unpredictable:Boolean <- (`(1)`:Int = 1)
   
-  - Self:SELF gand other:BOOLEAN :BOOLEAN <- Self & other
+  - self:Self gand other:Boolean :Boolean <- self & other
   
-  - Self:SELF gor other:BOOLEAN :BOOLEAN <- Self | other
+  - self:Self gor other:Boolean :Boolean <- self | other
   
-  - Self:SELF gxor other:BOOLEAN :BOOLEAN <- Self ^ other
+  - self:Self gxor other:Boolean :Boolean <- self ^ other
   
   
   // French corner
   
-  - si Self:SELF alors tblk:{} sinon fblk:{} <- ( if Self then tblk else fblk )
+  - si self:Self alors tblk:{} sinon fblk:{} <- ( if self then tblk else fblk )
   
-  - si Self:SELF alors tblk:{} <- ( if Self then tblk )
+  - si self:Self alors tblk:{} <- ( if self then tblk )
   
-  - Self:SELF ou other:BOOLEAN   :BOOLEAN <- (Self || {other})
+  - self:Self ou other:Boolean   :Boolean <- (self || {other})
   
-  - Self:SELF et other:BOOLEAN   :BOOLEAN <- (Self && {other})
+  - self:Self et other:Boolean   :Boolean <- (self && {other})
   

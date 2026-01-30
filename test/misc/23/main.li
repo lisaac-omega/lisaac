@@ -1,12 +1,10 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
-  + foo:INTEGER
+  + foo:Int
   
-  - bar foo:INTEGER <-
+  - bar foo:Int <-
   ( 
     // conflict for foo
     foo := foo

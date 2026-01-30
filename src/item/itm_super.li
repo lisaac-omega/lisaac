@@ -1,12 +1,9 @@
 Header
-
-  + name        := ITM_SUPER;
-
-  /*Super*/
-
+  + name := Itm_super
+/*Super*/
 Inherit
 
-  + parent_itm_code:Expanded ITM_CODE
+  + parent_itm_code:Flat Itm_code
 
 Public
   
@@ -14,14 +11,14 @@ Public
   // Constructor
   //
 
-  - create p:POSITION :SELF <-
-  ( + result:SELF
+  - create p:Position :Self <-
+  ( + result:Self
     result := clone
     result.make p
     result
   )
 
-  - make p:POSITION <-
+  - make p:Position <-
   (
     position := p
   )
@@ -30,7 +27,7 @@ Public
   // Runnable
   //
 
-  - to_run:INSTR <-
+  - to_run:Instr <-
   ( crash_with_message "ITM_SUPER.to_run"
     /*
     + contract:ITM_LIST
@@ -43,10 +40,10 @@ Public
       res := contract.to_run_expr
       res.to_run_contract "Section exit violated"
     };*/
-    NOP
+    Nop
   )
   
-  - to_run_expr:EXPR <-
+  - to_run_expr:Expr <-
   ( 
     crash_with_message "ITM_SUPER.to_run_expr"
     NULL
@@ -56,7 +53,7 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in buffer:String_buffer <-
   (
     buffer.add_last '.'
   )

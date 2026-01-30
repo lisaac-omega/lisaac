@@ -1,42 +1,41 @@
 Header
-  + name := IMG;
-  
+  + name := Img
 Inherit
-  - parent_any_gui:ANY_GUI := ANY_GUI
-  - parent_clone:CLONE := CLONE
+  - parent_any_gui:Any_gui := Any_gui
+  - parent_clone:Clone := Clone
   
-IMG
-  - dico:ARRAY IMG := // Warning: first=NULL for font texture.
-  ( + r:ARRAY IMG; r := ARRAY IMG.create_with_capacity 16; r.add_last NULL; r.add_last NULL; r)
+Img
+  - dico:Array Img := // Warning: first=NULL for font texture.
+  ( + r:Array Img; r := Array Img.create_with_capacity 16; r.add_last NULL; r.add_last NULL; r)
   
-  - init pth:STRING_ALIAS anim t:ARRAY (NATIVE_ARRAY UINTEGER_8) size (w,h:INTEGER) delay d:REAL_32 :IMG <-
+  - init pth:String_alias anim t:Array (C_array Uint8) size (w,h:Int) delay d:Real32 :Img <-
   (
     (path,idf,anim,width,height,delay) := (pth,dico.count,t,w,h,d)
-    dico.add_last Self
-    Self
+    dico.add_last self
+    self
   )
     
 Public
-  + idf:INTEGER
+  + idf:Int
   
-  + anim:ARRAY (NATIVE_ARRAY UINTEGER_8)
-  + width:INTEGER
-  + height:INTEGER
-  + delay:REAL_32
-  + time:REAL_32
-  + idx:INTEGER
-  + path:STRING_ALIAS
+  + anim:Array (C_array Uint8)
+  + width:Int
+  + height:Int
+  + delay:Real32
+  + time:Real32
+  + idx:Int
+  + path:String_alias
   
-  - set_idx i:INTEGER  <- ( idx  := i; )
-  - set_time t:REAL_32 <- ( time := t; )
+  - set_idx i:Int  <- ( idx  := i; )
+  - set_time t:Real32 <- ( time := t; )
   
-  - load k:STRING asset is_ass:BOOLEAN :IMG <-
-  ( + img:IMG
-    + i:INTEGER
-    + d:REAL_32
-    + map:ARRAY (NATIVE_ARRAY UINTEGER_8)
-    + map1:NATIVE_ARRAY UINTEGER_8
-    + is_gif:BOOLEAN
+  - load k:String asset is_ass:Boolean :Img <-
+  ( + img:Img
+    + i:Int
+    + d:Real32
+    + map:Array (C_array Uint8)
+    + map1:C_array Uint8
+    + is_gif:Boolean
     //k.print; " : ".print
     i := 2
     {(i <= dico.upper) && {dico.at i.path !== k}}.while_do { i := i + 1; }
@@ -44,11 +43,11 @@ Public
       img := dico.at i
     } else {
       is_gif := k.has_suffix ".gif"
-      map := ARRAY (NATIVE_ARRAY UINTEGER_8).create_with_capacity (is_gif.ok 16 or 1)
+      map := Array (C_array Uint8).create_with_capacity (is_gif.ok 16 or 1)
       bufraw.clear
-      (is_ass).if { SYSTEM_IO.read_asset k in bufraw; } else {
-        + e:FILE
-        e ?= FILE_SYSTEM.get k
+      (is_ass).if { System_io.read_asset k in bufraw; } else {
+        + e:File
+        e ?= File_system.get k
         ((e != NULL) && {e.open_read_only}).if {
           e.read bufraw size (e.size)
           e.close
@@ -59,39 +58,39 @@ Public
         }
       }
       (! bufraw.is_empty).if {
-        IMAGE.init (bufraw.to_native_array) size (bufraw.count)
-        map1 := IMAGE.load (IMAGE.rgb_alpha)
+        Image.init (bufraw.to_c_array) size (bufraw.count)
+        map1 := Image.load (Image.rgb_alpha)
         map.add_last map1
         (is_gif).if {
-          d := IMG_GIF.delay.to_real_32 / 100.0
+          d := Img_gif.delay.to_real32 / 100.0
           {
-            map1 := IMG_GIF.load_next 0 begin FALSE
+            map1 := Img_gif.load_next 0 begin False
             (map1 != NULL).if { map.add_last map1; }
           }.do_while {map1 != NULL}
         }
-        img := clone.init (k.to_string_alias) anim map size (IMAGE.img_x,IMAGE.img_y) delay d
+        img := clone.init (k.to_string_alias) anim map size (Image.img_x,Image.img_y) delay d
         //"ok".println
       }
     }
     img
   )
   
-  - update pen:PEN <-
-  ( + id,c:INTEGER
-    + img:IMG
+  - update pen:Pen <-
+  ( + id,c:Int
+    + img:Img
     c := pen.pen_gl.texture_id + 1
-    c.to (dico.upper) do { i:INTEGER
+    c.to (dico.upper) do { i:Int
       img := dico.at i
       id := pen.create_image_rgba (img.anim.first) size (img.width,img.height) flags 6
       ? {id = img.idf}
     }
   )
   
-  - draw pen:PEN to (x,y:REAL_32) alpha pa:REAL_32 bar b:BOOLEAN <-
-  ( + p:PAINT
-    + t,a:REAL_32
+  - draw pen:Pen to (x,y:Real32) alpha pa:Real32 bar b:Boolean <-
+  ( + p:Paint
+    + t,a:Real32
     pen.save
-    p := PAINT.create_pattern (x,y) size (width,height) img_id idf angle 0 alpha pa
+    p := Paint.create_pattern (x,y) size (width,height) img_id idf angle 0 alpha pa
     pen.begin_path
     pen.rect (x,y) size (width,height)
     pen.fill_paint p
@@ -99,29 +98,29 @@ Public
     p.free
     (anim.count > 1).if {
       (b).if {
-        a := idx.to_real_32/anim.upper
+        a := idx.to_real32/anim.upper
         pen.begin_path
         pen.rect (x,y+height-5) size (a*width,5)
-        pen.fill_color (COLOR.rgbaf (1.0,0.0,0.0,0.2))
+        pen.fill_color (Color.rgbaf (1.0,0.0,0.0,0.2))
         pen.fill
       }
       //pen.fill_color (LOOK.rmk.set_af 0); // BUG dans update_image
-      t := CLOCK.seconds
+      t := Clock.seconds
       (t - time > delay).if {
         idx := (idx + 1) % anim.count
         pen.update_image (anim.at idx) id idf
         time := t
       }
-      PAPER.refresh_again
+      Paper.refresh_again
     }
     pen.restore
   )
   
-  - draw pen:PEN to (x,y:REAL_32) height h:REAL_32 alpha a:REAL_32 :REAL_32 <-
-  ( + w:REAL_32
-    + p:PAINT
+  - draw pen:Pen to (x,y:Real32) height h:Real32 alpha a:Real32 :Real32 <-
+  ( + w:Real32
+    + p:Paint
     w := (h * width) / height
-    p := PAINT.create_pattern (x,y) size (w,h) img_id idf angle 0 alpha a
+    p := Paint.create_pattern (x,y) size (w,h) img_id idf angle 0 alpha a
     pen.begin_path
     pen.rect (x,y) size (w,h)
     pen.fill_paint p

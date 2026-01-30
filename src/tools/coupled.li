@@ -1,20 +1,17 @@
 Header
-
-  + name        := COUPLED(E);
-
-  /*Couple object*/
-
+  + name := Coupled(E)
+/*Couple object*/
 Inherit
 
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
 
 Public
 
   + first :E
   + second:E
 
-  - create elt1:E and elt2:E :SELF <-
-  ( + result:SELF
+  - create elt1:E and elt2:E :Self <-
+  ( + result:Self
 
     result := clone
     result.make elt1 and elt2

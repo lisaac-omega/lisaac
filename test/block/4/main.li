@@ -1,10 +1,10 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 Public
  
-  - meth b:{INTEGER; INTEGER} <-
-  ( + n:INTEGER
+  - meth b:{Int; Int} <-
+  ( + n:Int
     n := b.value 1
     n := b.value n
     n := b.value n
@@ -12,5 +12,5 @@ Public
   
   - main <-
   (
-    meth {(v:INTEGER); v.println ; v + 1 }
+    meth {(v:Int); v.println ; v + 1 }
   )

@@ -1,38 +1,35 @@
 Header
-
-  + name        := DTA_WR_CODE;
-
-  /*Write site with code*/
-
+  + name := Dta_wr_code
+/*Write site with code*/
 Inherit
 
-  + parent_dta:Expanded DTA
+  + parent_dta:Flat Dta
 
 Public
 
   // Add.
 
-  + code:ITM_CODE
+  + code:Itm_code
 
   //
   // Creation.
   //
 
-  - create p:POSITION slot sl:SLOT self arg:EXPR code v:ITM_CODE :SELF <-
+  - create p:Position slot sl:Slot self arg:Expr code v:Itm_code :Self <-
   [ -? {p != 0}; ]
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make p slot sl self arg code v
     result
   )
 
-  - make p:POSITION slot sl:SLOT self arg:EXPR code v:ITM_CODE <-
+  - make p:Position slot sl:Slot self arg:Expr code v:Itm_code <-
   (
     position    := p
     slot        := sl
     self_arg    := arg
-    result_expr := PROTOTYPE_CST.create (v.position) type (TYPE_VOID.default)
+    result_expr := Prototype_cst.create (v.position) type (Type_void.default)
     code        := v    
   )
 
@@ -40,7 +37,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "DTA_WR_CODE:"
     buffer.append (slot.name)
@@ -50,14 +47,14 @@ Public
   // Service
   //
 
-DTA
+Dta
 
-  - finalise typ:TYPE with (expr:EXPR,s:SLOT) in lst:LIST <-
-  ( + id:PROTOTYPE_CST
-    + pos:POSITION
+  - finalise typ:Type with (expr:Expr,s:Slot) in lst:List <-
+  ( + id:Prototype_cst
+    + pos:Position
 
     pos := expr.position
-    id := PROTOTYPE_CST.create pos type (TYPE_ID.get_index (s.add_style code).default)
+    id := Prototype_cst.create pos type (Type_id.get_index (s.add_style code).default)
     (s.style = '+').if {
       lst.add_last (s.slot_id.write pos with (expr.my_copy) value id)
     } else {

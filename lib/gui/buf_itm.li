@@ -1,35 +1,34 @@
 Header
-  + name := BUF_ITM;
-  
+  + name := Buf_itm
 Inherit
-  + parent_win:Expanded WIN
-  - parent_json:JSON := JSON
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_win:Flat Win
+  - parent_json:Json := Json
+  - parent_any_gui:Any_gui := Any_gui
   
 Public
   
-  - list:Expanded ARRAY BUF_ITM
+  - list:Flat Array Buf_itm
   
-  - new:SELF <- ( + r:SELF; r := parent_win.new; list.add_last r; r)
+  - new:Self <- ( + r:Self; r := parent_win.new; list.add_last r; r)
   
-  - margin_x:REAL_32 := 8
-  - fsize:REAL_32 <- FONT.size_sys - 4
+  - margin_x:Real32 := 8
+  - fsize:Real32 <- Font.size_sys - 4
   
-  + idx:INTEGER
-  + fx:STRING_ALIAS
+  + idx:Int
+  + fx:String_alias
   
-  - name:STRING_ALIAS <- BUFFER.catalog.at idx.shortname
+  - name:String_alias <- Buffer.catalog.at idx.shortname
   
-  - width_min:REAL_32 <-
-  ( + w1,w2,x0,y0,x1,y1,result:REAL_32
-    (idx <= BUFFER.catalog.upper).if {
+  - width_min:Real32 <-
+  ( + w1,w2,x0,y0,x1,y1,result:Real32
+    (idx <= Buffer.catalog.upper).if {
       text_align align_middle
-      font_face_id (FONT.sys (FONT.roman))
+      font_face_id (Font.sys (Font.roman))
       font_size (fsize-4)
       (w1,x0,y0,x1,y1) := text_bounds (xo+margin_x,yo) msg "F"
-      font_face_id (FONT.sys (FONT.bold))
+      font_face_id (Font.sys (Font.bold))
       (w1,x0,y0,x1,y1) := text_bounds (x1,yo) msg fx
-      font_face_id (FONT.sys (FONT.bold))
+      font_face_id (Font.sys (Font.bold))
       font_size fsize
       (w2,x0,y0,x1,y1) := text_bounds (x1,yo) msg name
       result := x1 - xo + margin_x
@@ -37,38 +36,38 @@ Public
     result
   )
   
-  - copy o:SELF <-
+  - copy o:Self <-
   ( (idx,fx) := (o.idx,o.fx); )
   
-  - init p:WIN idx i:INTEGER :SELF <-
+  - init p:Win idx i:Int :Self <-
   ( idx := i
-    STRING.tmp { tmp:STRING_BUFFER; (idx+1).append_in tmp; tmp | ' '; fx := tmp.to_string_alias; }
+    String.tmp { tmp:String_buffer; (idx+1).append_in tmp; tmp | ' '; fx := tmp.to_string_alias; }
     init p
   )
   
   - draw <-
-  ( + p:PAINT
-    + py,px:REAL_32
-    + txt:STRING_ALIAS
-    + col:COLOR
-    + j,fnt:INTEGER
-    + buf:BUFFER
-    (idx <= BUFFER.catalog.upper).if {
-      (fnt,col) := (FONT.roman,LOOK.text_ui)
-      buf := BUFFER.catalog.at idx
+  ( + p:Paint
+    + py,px:Real32
+    + txt:String_alias
+    + col:Color
+    + j,fnt:Int
+    + buf:Buffer
+    (idx <= Buffer.catalog.upper).if {
+      (fnt,col) := (Font.roman,Look.text_ui)
+      buf := Buffer.catalog.at idx
       txt := buf.shortname
-      {(j <= PAGE.pages_upper) && {PAGE.pages.at j.buf_pg.buffer != buf}}.while_do { j := j + 1; }
-      (j <= PAGE.pages_upper).if { fnt := FONT.bold; }
+      {(j <= Page.pages.upper) && {Page.pages.at j.buf_pg.buffer != buf}}.while_do { j := j + 1; }
+      (j <= Page.pages.upper).if { fnt := Font.bold; }
       (is inside).if {        
         begin_path
-        fill_color (LOOK.border_on)
+        fill_color (Look.border_on)
         rect (xo,yo+2) size (width, height-4) radius 8
         fill
       }
-      (buf = PAGE.cur_pg.buf_pg.buffer).if {
+      (buf = Page.cur_pg.buf_pg.buffer).if {
         begin_path
-        p := PAINT.create_box (xo+6,yo+8) size (width-12, height-16) radius 8 feather 12
-        color (COLOR.rgbaf(1,1,1,0.3)) to (LOOK.border_off)
+        p := Paint.create_box (xo+6,yo+8) size (width-12, height-16) radius 8 feather 12
+        color (Color.rgbaf(1,1,1,0.3)) to (Look.border_off)
         rect (xo,yo+2) size (width, height-4) radius 8
         fill_paint p
         fill
@@ -77,34 +76,34 @@ Public
       text_align align_middle
       (px,py) := (xo + margin_x, yo + height/2)
       font_size (fsize-4)
-      fill_color (LOOK.short_ui)
-      font_face_id (FONT.sys (FONT.roman))
+      fill_color (Look.short_ui)
+      font_face_id (Font.sys (Font.roman))
       px := text (px,py+1) msg "F"
-      font_face_id (FONT.sys (FONT.bold))
+      font_face_id (Font.sys (Font.bold))
       px := text (px,py+1) msg fx
       (! buf.is_save).if {
         begin_path
-        fill_color (COLOR.rgb (250,0,0))
+        fill_color (Color.rgb (250,0,0))
         rect (px,py+fsize/2 - 3) to (xmax - margin_x,py+fsize/2)
         fill
       }
-      font_face_id (FONT.sys fnt)
+      font_face_id (Font.sys fnt)
       font_size fsize
       fill_color col
       text (px,py) msg txt
     }
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
-  ( + result:BOOLEAN
-    (idx <= BUFFER.catalog.upper).if {
+  - event ev:Uint8 :Boolean <-
+  ( + result:Boolean
+    (idx <= Buffer.catalog.upper).if {
       result :=
-      ((ev & ~1) = HAND.in).if {
-        set inside with (ev = HAND.in)
-      }.elseif {ev = HAND.clic} then {
-        PAGE.cur_pg.set_buffer (BUFFER.catalog.at idx)
-      }.elseif {ev = HAND.lclic} then {
-        BUFFER.catalog.at idx.save_buffer
+      ((ev & ~1) = Hand.in).if {
+        set inside with (ev = Hand.in)
+      }.elseif {ev = Hand.clic} then {
+        Page.cur_pg.set_buffer (Buffer.catalog.at idx)
+      }.elseif {ev = Hand.lclic} then {
+        Buffer.catalog.at idx.save_buffer
       }
     }
     result
@@ -114,36 +113,36 @@ Public
   
   - read <- read_object
   
-  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
-  ( + b:BUFFER
-    buffer_read_ok.if { b := BUFFER.catalog.at array_index; }
+  - item id:String_alias int v:Int :Boolean <-
+  ( + b:Buffer
+    buffer_read_ok.if { b := Buffer.catalog.at array_index; }
     id
-    .case "point" then { buffer_read_ok.if { b.set_last_pos (v.min (b.like TXT_BUF.upper)); }; }
-    = STRING_ALIAS
+    .case "point" then { buffer_read_ok.if { b.set_last_pos (v.min (b.like Txt_buf.upper)); }; }
+    = String_alias
   )
   
-  - item id:STRING_ALIAS real v:REAL_32 :BOOLEAN <-
-  ( + b:BUFFER
-    buffer_read_ok.if { b := BUFFER.catalog.at array_index; }
+  - item id:String_alias real v:Real32 :Boolean <-
+  ( + b:Buffer
+    buffer_read_ok.if { b := Buffer.catalog.at array_index; }
     id
     .case "pos_x" then { buffer_read_ok.if { b.set_last_pos_x v; }; }
     .case "pos_y" then { buffer_read_ok.if { b.set_last_pos_y v; }; }
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - buffer_read_ok:BOOLEAN
-  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  - buffer_read_ok:Boolean
+  - item id:String_alias str v:String_alias :Boolean <-
   (
     id
-    .case "buffer"   then { buffer_read_ok := BUFFER.put v to (array_index); }
-    = STRING_ALIAS
+    .case "buffer"   then { buffer_read_ok := Buffer.put v to (array_index); }
+    = String_alias
   )
   
   - write_object <-
-  ( + b:BUFFER
-    + pt:INTEGER
-    + t:TXT_BUF
-    b := BUFFER.catalog.at idx
+  ( + b:Buffer
+    + pt:Int
+    + t:Txt_buf
+    b := Buffer.catalog.at idx
     put_object {
       put "buffer" value { put_str (rel_path (b.name)); }
       put "pos_x"  value { put_real (b.last_pos_x); }

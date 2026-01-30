@@ -1,31 +1,29 @@
 Header
-
-  + name      := LIP_CODE;
-
+  + name := Lip_code
 Inherit
 
-  + parent_itm_object:Expanded ITM_OBJECT
+  + parent_itm_object:Flat Itm_object
 
 Public
 
-  - list_parent:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS .create_with_capacity 1
+  - list_parent:Array String_alias := Array String_alias .create_with_capacity 1
 
-  - list_method:ARRAY LIP_SLOT_CODE := ARRAY LIP_SLOT_CODE .create_with_capacity 32
+  - list_method:Array Lip_slot_code := Array Lip_slot_code .create_with_capacity 32
 
-  - list_data:HMAP LIP_SLOT_DATA KEY STRING_ALIAS := new HMAP LIP_SLOT_DATA KEY STRING_ALIAS
+  - list_data:Hmap Lip_slot_data Key String_alias := new Hmap Lip_slot_data Key String_alias
 
-  - stack:ARRAY LIP_SLOT_DATA := ARRAY LIP_SLOT_DATA .create_with_capacity 8  
+  - stack:Array Lip_slot_data := Array Lip_slot_data .create_with_capacity 8  
 
-  - get_data n:STRING_ALIAS :LIP_SLOT_DATA <-
-  ( + found:BOOLEAN 
-    + result:LIP_SLOT_DATA    
+  - get_data n:String_alias :Lip_slot_data <-
+  ( + found:Boolean 
+    + result:Lip_slot_data    
     (found, result) := list_data.search n       
     result
   )
 
-  - get_method n:STRING_ALIAS :LIP_SLOT_CODE <-
-  ( + j:INTEGER
-    + result:LIP_SLOT_CODE
+  - get_method n:String_alias :Lip_slot_code <-
+  ( + j:Int
+    + result:Lip_slot_code
 
     j := list_method.lower
     {(j <= list_method.upper) && {list_method.at j.name != n}}.while_do {
@@ -38,13 +36,13 @@ Public
   )
 
   - print_usage <-
-  ( + slot:LIP_SLOT_CODE
-    + is_ok:BOOLEAN
+  ( + slot:Lip_slot_code
+    + is_ok:Boolean
 
-    (list_method.lower).to (list_method.upper) do { j:INTEGER
+    (list_method.lower).to (list_method.upper) do { j:Int
       slot := list_method.at j
       (slot.section = "Public").if {
-        is_ok := TRUE
+        is_ok := True
         slot.print
       }
     }
@@ -53,10 +51,10 @@ Public
     }
   )
 
-  - get_integer n:STRING_ALIAS :INTEGER <-
-  ( + d:LIP_SLOT_DATA
-    + int:LIP_INTEGER
-    + result:INTEGER
+  - get_integer n:String_alias :Int <-
+  ( + d:Lip_slot_data
+    + int:Lip_integer
+    + result:Int
 
     d := get_data n
     (d = NULL).if {
@@ -66,17 +64,17 @@ Public
     } else {
       int ?= d.value
       (int = NULL).if {
-        semantic_error (d.position,"INTEGER type is needed.")
+        semantic_error (d.position,"Int type is needed.")
       }
       result := int.value
     }
     result
   )
 
-  - get_boolean n:STRING_ALIAS :BOOLEAN <-
-  ( + d:LIP_SLOT_DATA
-    + bool:LIP_BOOLEAN
-    + result:BOOLEAN
+  - get_boolean n:String_alias :Boolean <-
+  ( + d:Lip_slot_data
+    + bool:Lip_boolean
+    + result:Boolean
 
     d := get_data n
     (d = NULL).if {
@@ -86,17 +84,17 @@ Public
     } else {
       bool ?= d.value
       (bool = NULL).if {
-        semantic_error (d.position,"BOOLEAN type is needed.")
+        semantic_error (d.position,"Boolean type is needed.")
       }
       result := bool.value
     }
     result
   )
 
-  - get_string n:STRING_ALIAS :STRING_ALIAS <-
-  ( + d:LIP_SLOT_DATA
-    + str:LIP_STRING
-    + result:STRING_ALIAS
+  - get_string n:String_alias :String_alias <-
+  ( + d:Lip_slot_data
+    + str:Lip_string
+    + result:String_alias
 
     d := get_data n
     (d = NULL).if {
@@ -113,9 +111,9 @@ Public
     result
   )
 
-  - put_string v:STRING_ALIAS to n:STRING_ALIAS <-
-  ( + d:LIP_SLOT_DATA
-    + str:LIP_STRING
+  - put_string v:String_alias to n:String_alias <-
+  ( + d:Lip_slot_data
+    + str:Lip_string
 
     d := get_data n
     (d = NULL).if {
@@ -131,8 +129,8 @@ Public
     }
   )
 
-  - put_boolean v:BOOLEAN to n:STRING_ALIAS <-
-  ( + d:LIP_SLOT_DATA
+  - put_boolean v:Boolean to n:String_alias <-
+  ( + d:Lip_slot_data
 
     d := get_data n
     (d = NULL).if {
@@ -140,8 +138,8 @@ Public
       n.print
       "' not found.\n".print
     } else {
-      (d.set_value (LIP_BOOLEAN.get v)).if_false {
-        semantic_error (d.position,"BOOLEAN type is needed.")
+      (d.set_value (Lip_boolean.get v)).if_false {
+        semantic_error (d.position,"Boolean type is needed.")
       }
     }
   )
@@ -152,19 +150,19 @@ Public
 
   - run <-
   (
-    warning_error (position,"Unreachable code.")
+    warning_error (position,"Unreachable code.(0)")
   )
 
-  - run_expr:LIP_CONSTANT <-
+  - run_expr:Lip_constant <-
   (
     semantic_error (position,"No expression result.")
     NULL
   )
 
   - call_front_end <-
-  ( + s:LIP_SLOT_CODE
+  ( + s:Lip_slot_code
     // Executing `front_end':
-    s := LIP_CODE.get_method "front_end"
+    s := Lip_code.get_method "front_end"
     (s = NULL).if {
       "Slot `front_end' not found in *.lip file.\n".print;
       exit exit_failure_code
@@ -172,15 +170,15 @@ Public
     s.run_with NULL
   )
 
-  - init_path_file order:BOOLEAN <-
-  ( + k,i:INTEGER
-    + p1,p2:STRING_ALIAS
+  - init_path_file order:Boolean <-
+  ( + k,i:Int
+    + p1,p2:String_alias
 
     (order).if {
-      path_file.bubble_sort_with { (a,b:STRING_ALIAS)
-        + ii,ai,bi,up:INTEGER
-        + ac,bc:CHARACTER
-        + result:BOOLEAN
+      path_file.bubble_sort_with { (a,b:String_alias)
+        + ii,ai,bi,up:Int
+        + ac,bc:Char
+        + result:Boolean
         ii := a.lower
         up := a.upper.min (b.upper)
         {(ii <= up) && {a.at ii = b.at ii}}.while_do { ii := ii + 1; }
@@ -195,7 +193,7 @@ Public
         result
       }
     } else {
-      path_file.bubble_sort_with { (a,b:STRING_ALIAS)
+      path_file.bubble_sort_with { (a,b:String_alias)
         b !< a
       }
     }

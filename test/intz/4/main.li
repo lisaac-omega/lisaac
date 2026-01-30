@@ -1,12 +1,11 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
   - main <-
   ( + a,b,a_prim:ℤ
     a := (1 << 62)
     b := a * a
     a_prim := b / a
-    TEST.check (a_prim == a)
-    TEST.check (a_prim.to_string) string (a.to_string)
+    Test.check (a_prim == a)
+    Test.check (a_prim.to_string) string (a.to_string)
   )

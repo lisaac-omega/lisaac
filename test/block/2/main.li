@@ -1,9 +1,9 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 Public
   
-  - meth b:{STRING} <-
+  - meth b:{String} <-
   (
     "1\n" print
     (b.value) print

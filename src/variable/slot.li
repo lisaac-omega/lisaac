@@ -1,34 +1,31 @@
 Header
-
-  + name        := SLOT;
-
-  /*Parent for slot runnable*/
-
+  + name := Slot
+/*Parent for slot runnable*/
 Inherit
 
-  + parent_itm_slot:ITM_SLOT := ITM_SLOT
+  + parent_itm_slot:Itm_slot := Itm_slot
 
 Public
 
-  - common_slot:SLOT <- Self
+  - common_slot:Slot <- self
 
-  + slot_id:SLOT_DATA
+  + slot_id:Slot_data
 
-  + receiver_type:TYPE
+  + receiver_type:Type
   
   //
   // Creation.
   //
 
-  - create s:ITM_SLOT type t:TYPE :SLOT <-
-  ( + result:SLOT
+  - create s:Itm_slot type t:Type :Slot <-
+  ( + result:Slot
 
     result := clone
     result.make s type t
   )
 
-  - make s:ITM_SLOT type t:TYPE :SLOT <-
-  ( + result:SLOT
+  - make s:Itm_slot type t:Type :Slot <-
+  ( + result:Slot
     
     s.set_used
     parent_itm_slot := s
@@ -37,7 +34,7 @@ Public
     (t != NULL).if { // '=' or '!=' case
       (affect = '<').if {
         // Code.
-        result := slot_code_intern := SLOT_CODE.create Self with value
+        result := slot_code_intern := Slot_code.create self with value
       } else {
         // Data
         create_slot_data
@@ -52,40 +49,40 @@ Public
   // Style.
   //
 
-  - lower_style:INTEGER <-
-  ( + result:INTEGER
+  - lower_style:Int <-
+  ( + result:Int
     (slot_data_intern = NULL).if {
       result := 1
     }
     result
   )
 
-  - upper_style:INTEGER <-
-  ( + result:INTEGER
+  - upper_style:Int <-
+  ( + result:Int
     (slot_code_intern != NULL).if {
       (slot_code_list != NULL).if {
-	result := slot_code_list.upper + 2
+        result := slot_code_list.upper + 2
       } else {
-	result := 1
+        result := 1
       }
     }
     result
   )
 
-  - slot_data:SLOT_DATA <-
+  - slot_data:Slot_data <-
   (
     (slot_data_intern = NULL).if {
       create_slot_data
       (slot_id = NULL).if {
-	slot_id := SLOT_DATA.create common_slot type_full (TYPE_ID.get_index 1.default)
-	slot_id.init
+        slot_id := Slot_data.create common_slot type_full (Type_id.get_index 1.default)
+        slot_id.init
       }
     }
     slot_data_intern
   )
 
-  - slot_code idx:INTEGER :SLOT_CODE <-
-  ( + result:SLOT_CODE
+  - slot_code idx:Int :Slot_code <-
+  ( + result:Slot_code
 
     (idx = 1).if {
       result := slot_code_intern
@@ -95,24 +92,24 @@ Public
     result
   )
 
-  - add_style v:ITM_CODE :INTEGER <-
-  ( + slot:SLOT_CODE
-    + result:INTEGER
+  - add_style v:Itm_code :Int <-
+  ( + slot:Slot_code
+    + result:Int
 
-    slot := SLOT_CODE.create common_slot with v
+    slot := Slot_code.create common_slot with v
     (slot_code_intern = NULL).if {
       slot_code_intern := slot
-      slot_id := SLOT_DATA.create common_slot type_full (TYPE_ID.get_index 0.default)
+      slot_id := Slot_data.create common_slot type_full (Type_id.get_index 0.default)
       slot_id.init
       result := 1
     } else {
       (slot_code_list = NULL).if {
-	slot_code_list := ARRAY SLOT_CODE .create_with_capacity 1
+        slot_code_list := Array Slot_code .create_with_capacity 1
       }
       slot_code_list.add_last slot
       (slot_id = NULL).if {
-	slot_id := SLOT_DATA.create common_slot type_full (TYPE_ID.get_index 1.default)
-	slot_id.init
+        slot_id := Slot_data.create common_slot type_full (Type_id.get_index 1.default)
+        slot_id.init
       }
       result := slot_code_list.upper + 2
     }
@@ -125,38 +122,38 @@ Public
 
   - display_all <-
   (
-    (lower_style).to (upper_style) do { j:INTEGER
+    (lower_style).to (upper_style) do { j:Int
       item_style j.display_all
     }
   )
 
 Public
 
-  + slot_data_intern:SLOT_DATA; // Index 0
-  + slot_code_intern:SLOT_CODE; // Index 1
+  + slot_data_intern:Slot_data; // Index 0
+  + slot_code_intern:Slot_code; // Index 1
 
-  + slot_code_list:ARRAY SLOT_CODE; // Index x+2
-  + slot_data_list:ARRAY SLOT_DATA; // Vector data slot
+  + slot_code_list:Array Slot_code; // Index x+2
+  + slot_data_list:Array Slot_data; // Vector data slot
 
   - create_slot_data <-
-  ( + typ:TYPE_FULL
-    + tm:ITM_TYPE_MULTI
-    + ts:ITM_TYPE_MONO
+  ( + typ:Type_full
+    + tm:Itm_type_multi
+    + ts:Itm_type_mono
 
     tm ?= result_type
     (tm != NULL).if {
-      slot_data_list := ARRAY SLOT_DATA .create_with_capacity (tm.count-1)
-      (tm.lower).to (tm.upper-1) do { k:INTEGER
-	typ := tm.at k.to_run_for receiver_type pos (position.prototype.filename)
-	slot_data_list.add_last (
-	  SLOT_DATA.create common_slot type_full typ
-	)
+      slot_data_list := Array Slot_data .create_with_capacity (tm.count-1)
+      (tm.lower).to (tm.upper-1) do { k:Int
+        typ := tm.at k.to_run_for receiver_type pos (position.prototype.filename)
+        slot_data_list.add_last (
+          Slot_data.create common_slot type_full typ
+        )
       }
       typ := tm.last.to_run_for receiver_type pos (position.prototype.filename)
     } else {
       ts ?= result_type
       typ := ts.to_run_for receiver_type pos (position.prototype.filename)
     }
-    slot_data_intern := SLOT_DATA.create common_slot type_full typ
+    slot_data_intern := Slot_data.create common_slot type_full typ
   )
   

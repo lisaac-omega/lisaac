@@ -1,24 +1,24 @@
 Header
-  + name := WHILE1;
-  /**/
+  + name := While1
+/**/
   
     
 Public
   
   - main <-
-  ( + i:INTEGER
-    TEST.check (2 + 2 = 4)
-    TEST.check (i = 0)
+  ( + i:Int
+    Test.check (2 + 2 = 4)
+    Test.check (i = 0)
     
     while {i = 1} do {
       i := i + 1
     }
     
-    TEST.check (i = 0)
+    Test.check (i = 0)
     
     while {i < 2} do {
       i := i + 1
     }
     
-    TEST.check (i = 2)
+    Test.check (i = 2)
   )

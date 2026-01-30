@@ -1,21 +1,20 @@
 Header
-  + name := USTRING;
-  /*UTF8 STRINGs.*/
-  - export  := USTRING_BUFFER;
-
+  + name := Ustring
+/*UTF8 STRINGs.*/
+  - export  := Ustring_buffer;
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
-STRING, FILE_SYSTEM, INTN_BIG, FILE_UTILS
-  + storage:NATIVE_ARRAY UINTEGER_8; // UTF8 encoding
+String, File_system, Intn_big, File_utils
+  + storage:C_array Uint8; // UTF8 encoding
 
-  + upper_idx:INTEGER := -1; // index of the last one used in `storage'
+  + upper_idx:Int := -1; // index of the last one used in `storage'
   
 Private
-  + count_memory:INTEGER := -1; // when not up to date
+  + count_memory:Int := -1; // when not up to date
   
 Private
-  - utf8_starter byte:UINTEGER_8 :BOOLEAN <-
+  - utf8_starter byte:Uint8 :Boolean <-
   // The one who decides:
   // 0bbb_bbbb
   // 11bb_bbbb
@@ -23,21 +22,21 @@ Private
     (byte & 1100_0000b) != 128
   )
   
-  - utf8_follower byte:UINTEGER_8 :BOOLEAN <-
+  - utf8_follower byte:Uint8 :Boolean <-
   // Second, third or fourth:
   // 10bb_bbbb
   (
     (byte & 1100_0000b) = 128
   )
   
-  - normalize stridx:STRIDX :INTEGER <-
+  - normalize stridx:Stridx :Int <-
   [
-    ? {stridx != STRIDX.not_valid}
+    ? {stridx != Stridx.not_valid}
     //? {valid_index stridx}; // DCDC recursive....
   ]
-  ( + offset,result:INTEGER_64
-    + char:CHAR
-    ((result := CAST STRIDX TO INTEGER_64.on stridx) = -1).if {
+  ( + offset,result:Int64
+    + char:Char
+    ((result := Cast Stridx To Int64.on stridx) = -1).if {
       result := -1
     } else {
       result := stridx.base
@@ -57,49 +56,49 @@ Private
     result
   )
   
-  - next bidx:INTEGER :(INTEGER,CHAR) <-
+  - next bidx:Int :(Int,Char) <-
   // First result gives the next index or (`upper_idx` + 1).
   // Second result is the CHARacter at `bidx`.
   [
     ? {bidx.in_range 0 to upper_idx}
     ? {utf8_starter bidx}
   ]
-  ( + r,s:INTEGER
-    + char:UINTEGER_32
+  ( + r,s:Int
+    + char:Uint32
     r := bidx
     {
-      char := (storage.at r.to_uinteger_32 << s) | char
+      char := (storage.at r.to_uint32 << s) | char
       (r,s) := (r + 1, s + 8)
     }.do_while {(r <= upper_idx) && {(storage.at r & 11_00_0000b) = 10_00_0000b}}
-    (r,CHAR.to_self char)
+    (r,Char.to_self char)
   )
   
-  - previous bidx:INTEGER :(INTEGER,CHAR) <-
+  - previous bidx:Int :(Int,Char) <-
   // First result gives the previous index or -1.
   // Second result, when -1 is not reached, gives the CHARacter just before `bidx`.
   [
     ? {bidx.in_range 0 to upper_idx}
     ? {utf8_starter bidx}
   ]
-  ( + r,s:INTEGER
-    + char:UINTEGER_32
+  ( + r,s:Int
+    + char:Uint32
     r := bidx - 1
     {(r < 0) || {utf8_starter (storage.at r)}}.until_do {
-      char := (storage.at r .to_uinteger_32 << s) | char
+      char := (storage.at r .to_uint32 << s) | char
       (r,s) := (r - 1,s + 8)
     }
     (r >= 0).if {
-      char := (storage.at r .to_uinteger_32 << s) | char
+      char := (storage.at r .to_uint32 << s) | char
     }
-    (r,CHAR.to_self char)
+    (r,Char.to_self char)
   )
   
 Public
-  - count:INTEGER <-
+  - count:Int <-
   // In number of CHARacters.
-  ( + result:INTEGER
+  ( + result:Int
     (count_memory < 0).if {
-      foreach {c:CHAR
+      foreach {c:Char
         result := result + 1
       }
       count_memory := result
@@ -109,36 +108,36 @@ Public
     result
   )
   
-  - upper:STRIDX <-
-  ( + result:INTEGER
+  - upper:Stridx <-
+  ( + result:Int
     result := upper_idx
     (result >= 0).if {
       {utf8_starter (storage.at result)}.until_do {
         result := result - 1
       }
     }
-    STRIDX.to_self result
+    Stridx.to_self result
   )
 
-  - lower:STRIDX <- STRIDX.to_self 0
+  - lower:Stridx <- Stridx.to_self 0
 
-  - tmp:USTRING_BUFFER := USTRING_BUFFER.create 512
+  - tmp:Ustring_buffer := Ustring_buffer.create 512
   
   // Access.
 
-  - at i:STRIDX :CHAR <-
+  - at i:Stridx :Char <-
   // Unicode 32 bits CHAR at position `i'.
   [
     ? {valid_index i}
   ]
-  ( + char:CHAR
-    + bidx:INTEGER
+  ( + char:Char
+    + bidx:Int
     bidx := normalize i
     (bidx,char) := next bidx
     char
   )
 
-  - at_utf8 byte_idx:INTEGER :UINTEGER_8 <-
+  - at_utf8 byte_idx:Int :Uint8 <-
   // Low level access in utf8 storage (see also `at`).
   [
     ? {byte_idx.in_range 0 to upper_idx}
@@ -149,40 +148,40 @@ Public
 
   // Switch case :
 
-  - when val:USTRING then block:{} :USTRING <-
-  // When `Self' equal `val', execute `block'
+  - when val:Ustring then block:{} :Ustring <-
+  // When `self' equal `val', execute `block'
   (
-    (Self === val).if block
-    Self
+    (self === val).if block
+    self
   )
 
-  - when value1:USTRING or value2:USTRING then block:{} :USTRING <-
-  // When `Self' equal `value1' or `value2', execute `block'
+  - when value1:Ustring or value2:Ustring then block:{} :Ustring <-
+  // When `self' equal `value1' or `value2', execute `block'
   (
-    ((Self === value1) || {Self === value2}).if block
-    Self
+    ((self === value1) || {self === value2}).if block
+    self
   )
 
-  - case val:USTRING then block:{} :USTRING <-
+  - case val:Ustring then block:{} :Ustring <-
   // * See: `when_then'
-  ( + result :USTRING
-    ((Self != USTRING) && {Self === val}).if {
+  ( + result :Ustring
+    ((self != Ustring) && {self === val}).if {
       block.value
-      result := USTRING
+      result := Ustring
     } else {
-      result := Self
+      result := self
     }
     result
   )
 
-  - case_if test:{BOOLEAN} then block:{} :USTRING <-
+  - case_if test:{Boolean} then block:{} :Ustring <-
   // If `test' is true then `block'
-  ( + result :USTRING
-    ((Self != USTRING) && test).if {
+  ( + result :Ustring
+    ((self != Ustring) && test).if {
       block.value
-      result := USTRING
+      result := Ustring
     } else {
-      result := Self
+      result := self
     }
     result
   )
@@ -190,39 +189,39 @@ Public
   - case_else block:{} <-
   // otherwise, execute `block'
   (
-    (Self != USTRING).if block
+    (self != Ustring).if block
   )
   
   // Traversal.
   
-  - foreach do:{CHAR; } <-
-  ( + bidx:INTEGER
-    + char:CHAR
+  - foreach do:{Char; } <-
+  ( + bidx:Int
+    + char:Char
     {bidx <= upper_idx}.while_do {
       (bidx,char) := next bidx
       do.value char
     }
   )
   
-  - foreach_utf8 do:{UINTEGER_8; } <-
-  ( + bidx:INTEGER
-    + char:CHAR
+  - foreach_utf8 do:{Uint8; } <-
+  ( + bidx:Int
+    + char:Char
     {bidx > upper_idx}.until_do {
       do.value (storage.at bidx)
       bidx := bidx + 1
     }
   )
   
-  - forward start:STRIDX search cond:{CHAR; BOOLEAN} :STRIDX <-
+  - forward start:Stridx search cond:{Char; Boolean} :Stridx <-
   // Search forward, from `start` index until `cond` or until out of bounds.
   // Returns the corresponding index.
   [
     ? {valid_index start}
   ]
-  ( + result:STRIDX
-    + bidx,bidx2:INTEGER
-    + char:CHAR
-    + mem:BOOLEAN
+  ( + result:Stridx
+    + bidx,bidx2:Int
+    + char:Char
+    + mem:Boolean
     bidx := normalize start
     (bidx2,char) := next bidx
     {(mem := (cond.value char)) || {bidx2 > upper_idx}}.until_do {
@@ -230,31 +229,31 @@ Public
       (bidx2,char) := next bidx
     }
     mem.if {
-      result := STRIDX.to_self bidx
+      result := Stridx.to_self bidx
     } else {
-      result := STRIDX.not_valid
+      result := Stridx.not_valid
     }
     result
   )
   
-  - backward start:STRIDX search cond:{CHAR; BOOLEAN} :STRIDX <-
+  - backward start:Stridx search cond:{Char; Boolean} :Stridx <-
   // Search backward, from `start` index until `cond` or until out of bounds.
   // Returns the corresponding index.
   [
     ? {valid_index start}
   ]
-  ( + result:STRIDX
-    + bidx,bidx2:INTEGER
-    + char:CHAR
+  ( + result:Stridx
+    + bidx,bidx2:Int
+    + char:Char
     bidx := normalize start
     (bidx2,char) := next bidx
     {(bidx < 0) || {cond.value char}}.until_do {
       (bidx,char) := previous bidx
     }
     (bidx < 0).if {
-      result := STRIDX.not_valid
+      result := Stridx.not_valid
     } else {
-      result := STRIDX.to_self bidx
+      result := Stridx.to_self bidx
     }
     result
   )
@@ -262,11 +261,11 @@ Public
   
   // Testing.
 
-  - valid_index i:STRIDX :BOOLEAN <-
+  - valid_index i:Stridx :Boolean <-
   // True when `i' is valid (i.e., inside actual bounds).
-  ( + result:BOOLEAN
-    + bidx:INTEGER
-    (i != STRIDX.not_valid).if {
+  ( + result:Boolean
+    + bidx:Int
+    (i != Stridx.not_valid).if {
       bidx := normalize i
       result := bidx.in_range 0 to upper_idx
       ? {(!result) || {utf8_starter bidx}}
@@ -274,18 +273,18 @@ Public
     result
   )
 
-  - is_empty: BOOLEAN <- upper_idx < 0
+  - is_empty: Boolean <- upper_idx < 0
 
-  - hash_code: INTEGER <- hash_code_intern
+  - hash_code: Int <- hash_code_intern
   
-  - Self:SELF '<' other:SELF :BOOLEAN <- Self ~< other
+  - self:Self '<' other:Self :Boolean <- self ~< other
 
-  - Self:SELF '~>' other:USTRING :BOOLEAN <- other ~< Self
+  - self:Self '~>' other:Ustring :Boolean <- other ~< self
 
-  - Self:SELF '~<' other:USTRING :BOOLEAN <-
+  - self:Self '~<' other:Ustring :Boolean <-
   // Is Current less than `other' ?
-  ( + i: INTEGER
-    + result: BOOLEAN
+  ( + i: Int
+    + result: Boolean
     {(i > upper) || {i > other.upper} || {item i != other.item i}}.until_do {
       i := i + 1
     }
@@ -299,10 +298,10 @@ Public
     result
   )
 
-  - Self:SELF '!<' other:USTRING :BOOLEAN <-
+  - self:Self '!<' other:Ustring :Boolean <-
   // Is Current less than `other' ? But, the `upper' to `lower' comparaison
-  ( + i1,i2: INTEGER
-    + result:BOOLEAN
+  ( + i1,i2: Int
+    + result:Boolean
     i1 := upper
     i2 := other.upper
     {(i1 < lower) || {i2 < other.lower} || {item i1 != other.item i2}}.until_do {
@@ -319,10 +318,10 @@ Public
     result
   )
 
-  - compare other:USTRING :INTEGER <-
-  // Compare alphabetically `Self' to `other'
-  ( + i: INTEGER
-    + result:INTEGER
+  - compare other:Ustring :Int <-
+  // Compare alphabetically `self' to `other'
+  ( + i: Int
+    + result:Int
     {(i > upper) || {i > other.upper} || {item i != other.item i}}.until_do {
       i := i + 1
     }
@@ -346,20 +345,20 @@ Public
     result
   )
 
-  - same_as other:USTRING :BOOLEAN <-
+  - same_as other:Ustring :Boolean <-
   // Case insensitive `=='.
-  ( + s1,s2:NATIVE_ARRAY CHAR
-    + i:INTEGER
-    + result:BOOLEAN
+  ( + s1,s2:C_array Char
+    + i:Int
+    + result:Boolean
     ? {other != NULL}
     i := upper
     (i = other.upper).if {
       (storage.fast_memcmp (other.storage) until i).if {
-        result := TRUE
+        result := True
       } else {        
         s1 := storage
         s2 := other.storage
-        result := TRUE
+        result := True
         {(i!=0) && {result}}.while_do {
           result:=s1.item i.same_as (s2.item i)
           i:=i-1
@@ -369,22 +368,22 @@ Public
     result
   )
   
-  - Self:SELF '==' Left 40 other:E :BOOLEAN <-
+  - self:Self '==' Left 40 other:E :Boolean <-
   // Has Current the same text as `other' ?
-  ( + str:USTRING
+  ( + str:Ustring
     str ?= other
-    (str != NULL) && {Self === str}
+    (str != NULL) && {self === str}
   )
 
-  - Self:SELF '===' Left 40 other:USTRING :BOOLEAN <-
+  - self:Self '===' Left 40 other:Ustring :Boolean <-
   // Has Current the same text as `other' ?
-  ( + result:BOOLEAN
-    (Self = other).if {
-      result := TRUE
+  ( + result:Boolean
+    (self = other).if {
+      result := True
     }.elseif {other != NULL} then {      
       (upper = other.upper).if {
         (upper = -1).if {
-          result := TRUE
+          result := True
         } else {
           result:=storage.fast_memcmp (other.storage) until upper
         }
@@ -393,28 +392,28 @@ Public
     result
   )
 
-  - index_of c:CHAR start index:STRIDX :STRIDX <-
+  - index_of c:Char start index:Stridx :Stridx <-
   // Index of first occurrence of `c' at or after `start_index'.
   // or some non valid_index, if none.
   [
     ? {valid_index index}
   ]
-  ( + bidx,bidx2:INTEGER
-    + c2:CHAR
-    + result:STRIDX
+  ( + bidx,bidx2:Int
+    + c2:Char
+    + result:Stridx
     bidx := normalize index
     {((bidx2,c2) := next bidx; c = c2) || {bidx2 > upper_idx}}.until_do {
       bidx := bidx2
     }
     (c = c2).if {
-      result := STRIDX.to_self bidx
+      result := Stridx.to_self bidx
     } else {
-      result := STRIDX.not_valid
+      result := Stridx.not_valid
     }
     result
   )
 
-  - new_last_index_of c:CHAR start index:STRIDX :STRIDX <-
+  - new_last_index_of c:Char start index:Stridx :Stridx <-
   // DCDC index_of x start y reverse
   // Index of first occurrence of `c' at or before `index',
   // -1 if none.
@@ -422,18 +421,18 @@ Public
     ? {valid_index index}
   ]
   (
-    upper.reverse Self search {c2:CHAR; c = c2}
+    upper.reverse self search {c2:Char; c = c2}
   )
-  - last_index_of c:CHAR start index:STRIDX :STRIDX <-
+  - last_index_of c:Char start index:Stridx :Stridx <-
   // DCDC index_of x start y reverse
   // Index of first occurrence of `c' at or before `start_index',
   // -1 if none.
   [
     ? {valid_index index}
   ]
-  ( + bidx,bidx2:INTEGER_64
-    + c2:CHAR
-    + result:STRIDX
+  ( + bidx,bidx2:Int64
+    + c2:Char
+    + result:Stridx
     bidx := normalize index
     until {
       (((bidx2,c2) := previous bidx); (c2 = c)) || {bidx2 <= 0}
@@ -441,26 +440,26 @@ Public
       bidx := bidx2
     }
     if (c2 = c) then {
-      result := STRIDX.to_self bidx
+      result := Stridx.to_self bidx
     } else {
-      result := STRIDX.not_valid
+      result := Stridx.not_valid
     }
     result
   )
 
-  - index_of c:CHAR :STRIDX <-
+  - index_of c:Char :Stridx <-
   // Gives the index of the first occurrence of 'c' or some non valid index if none.
   (
     index_of c start lower
   )
 
-  - first_difference_index other:STRING :INTEGER <-
+  - first_difference_index other:String :Int <-
   // First difference index with `other'.
-  // if `other' is equal `Self', return `upper' + 1
+  // if `other' is equal `self', return `upper' + 1
   [ -? {other != NULL}; ]
-  ( + result:INTEGER
+  ( + result:Int
 
-    (Self = other).if {
+    (self = other).if {
       result := upper + 1
     } else {
       result := lower
@@ -475,9 +474,9 @@ Public
     result
   )
   
-  - reverse_first_difference_index other:STRING :(INTEGER,INTEGER) <-
-  // First result: index in Self, Second result: index in other.
-  ( + i,io:INTEGER
+  - reverse_first_difference_index other:String :(Int,Int) <-
+  // First result: index in self, Second result: index in other.
+  ( + i,io:Int
     i := upper
     io := other.upper
     {(i >= 0) && {io >= 0} && {item i = other.item io}}.while_do {
@@ -487,20 +486,20 @@ Public
     i,io
   )
 
-  - has ch:CHARACTER :BOOLEAN <- storage.fast_has ch until upper
-  // True if `ch' is in the STRING_BUFFER.
+  - has ch:Char :Boolean <- storage.fast_has ch until upper
+  // True if `ch' is in the String_buffer.
 
-  - has_substring other:STRING :BOOLEAN <-
-  // True if `other' is in the STRING_BUFFER.
+  - has_substring other:String :Boolean <-
+  // True if `other' is in the String_buffer.
   ( first_substring_index other != -1 )
   
-  - submatch other:STRING separator sep:CHARACTER :INTEGER <-
+  - submatch other:String separator sep:Char :Int <-
   // Ex.: "home.ben.java.lang.string".submatch "string.length" separator '.'  
   //                                ^          ^      R=6
   // else R=0
   [ ? {! other.is_empty}; ? {! is_empty}; ] 
-  ( + io,is:INTEGER
-    + result,cur_is,last_sep_o:INTEGER
+  ( + io,is:Int
+    + result,cur_is,last_sep_o:Int
     {(is <= upper) && {result != other.count}}.while_do {      
       cur_is := is
       io := 0
@@ -524,22 +523,22 @@ Public
     result
   )
   
-  - occurrences c:CHARACTER :INTEGER <-
+  - occurrences c:Char :Int <-
   // Number of times character `c' appears in the string.
   (
     occurrences c until upper
   )
   
-  - occurrences c:CHARACTER until up:INTEGER :INTEGER <-
+  - occurrences c:Char until up:Int :Int <-
   (
     storage.fast_occurrences c until up
   )
 
-  - has_suffix s:STRING :BOOLEAN <-
+  - has_suffix s:String :Boolean <-
   // True if suffix of `Current' is `s'.
   (
-    + result:BOOLEAN
-    + i1,i2:INTEGER
+    + result:Boolean
+    + i1,i2:Int
 
     ? { s != NULL }
 
@@ -556,11 +555,11 @@ Public
     result
   )
 
-  - has_prefix p:STRING :BOOLEAN <-
+  - has_prefix p:String :Boolean <-
   // True if prefix of `Current' is `p'.
   [ ? { p != NULL }; ]
-  ( + result:BOOLEAN
-    + i:INTEGER
+  ( + result:Boolean
+    + i:Int
     (p.upper <= upper).if {
       i := p.upper
       {(i = -1) || { item i != p.item i}}.until_do {
@@ -573,38 +572,38 @@ Public
 
   // Testing and Conversion:
   
-  - is_uppercase_identifier:BOOLEAN <-
+  - is_uppercase_identifier:Boolean <-
   // 'A'-'Z' {'A'-'Z' | '0'-'9' | '_'}
-  ( + i:INTEGER
-    + c:CHARACTER
+  ( + i:Int
+    + c:Char
     {(i <= upper) && {(c := item i).is_upper || {c.is_digit} || {c = '_'}}}.while_do {
       i := i + 1
     }
     i > upper
   )
   
-  - is_boolean:BOOLEAN <-
-  // does self represent a BOOLEAN?
-  // valid BOOLEANS are "TRUE" and "FALSE".
+  - is_boolean:Boolean <-
+  // does self represent a Boolean?
+  // valid BOOLEANS are "True" and "False".
   (
-    (Self == "TRUE") || { Self == "FALSE"}
+    (self == "True") || { self == "False"}
   )
 
-  - to_boolean:BOOLEAN <-
+  - to_boolean:Boolean <-
   // Boolean value
   // "true" yields true, "false" yields false (what a surprise).
   (
     ?{ is_boolean }
-    Self == "TRUE"
+    self == "True"
   )
 
-  - is_bit:BOOLEAN <-
+  - is_bit:Boolean <-
   // True when the contents is a sequence of bits (i.e., mixed
   // characters `0' and characters `1').
-  ( + i:INTEGER
-    + result:BOOLEAN
+  ( + i:Int
+    + result:Boolean
     i := upper
-    result := TRUE
+    result := True
     { (! result) || { i = -1}}.until_do {
       result := item i.is_bit
       i := i - 1
@@ -613,19 +612,19 @@ Public
     result
   )
 
-  - is_integer:BOOLEAN <-
-  // Does self represent an INTEGER?
+  - is_integer:Boolean <-
+  // Does self represent an Int?
   // `Result' is true if and only if the following two conditions hold:
   // 1. In the following BNF grammar, the value of self can be
-  // produced by "Integer_literal", if leading and trailing
+  // produced by "Int_literal", if leading and trailing
   // separators are ignored:
-  // Integer_literal = ['+'|'-'] Digit { Digit }
+  // Int_literal = ['+'|'-'] Digit { Digit }
   // Digit           = '0' .. "9"
   // 2. The numerical value represented by self is within the
-  // range that can be represented by an instance of type INTEGER.
-  ( + result:BOOLEAN
-    + cc: CHARACTER
-    + i:INTEGER
+  // range that can be represented by an instance of type Int.
+  ( + result:Boolean
+    + cc: Char
+    + i:Int
     
     (is_empty).if_false {      
       cc := item 0
@@ -642,24 +641,24 @@ Public
     result
   )
   
-  - is_integer_64:BOOLEAN <-
-  // Does self represent an INTEGER_64?
+  - is_integer_64:Boolean <-
+  // Does self represent an Int64?
   // `Result' is true if and only if the following two conditions hold:
   // 1. In the following BNF grammar, the value of self can be
-  // produced by "Integer_literal", if leading and trailing
+  // produced by "Int_literal", if leading and trailing
   // separators are ignored:
-  // Integer_literal = [Sign] Integer
+  // Int_literal = [Sign] Int
   // Sign            = "+" | "-"
-  // Integer         = Digit | Digit Integer
+  // Int         = Digit | Digit Int
   // Digit           = "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
   // 2. The numerical value represented by self is within the
-  // range that can be represented by an instance of type INTEGER_64.
+  // range that can be represented by an instance of type Int64.
   (
-    + i, state: INTEGER
-    + value:INTEGER_64
-    + negative: BOOLEAN
-    + result:BOOLEAN
-    + cc: CHARACTER
+    + i, state: Int
+    + value:Int64
+    + negative: Boolean
+    + result:Boolean
+    + cc: Char
 
     // state 0: nothing read.
     // state 1: "+" or "-" read.
@@ -675,7 +674,7 @@ Public
         }.elseif {cc = '+'} then {
           state := 1
         }.elseif {cc = '-'} then {
-          negative := TRUE
+          negative := True
           state := 1
         }.elseif {cc.is_digit} then {
           value := cc.decimal_value
@@ -718,19 +717,19 @@ Public
       i := i + 1
     }
     ( (state != 0) && { state != 4}).if {
-      result := TRUE
+      result := True
     }
 
     result
   )
     
-  - to_integer:INTEGER <-
-  // self must look like an INTEGER.
+  - to_int:Int <-
+  // self must look like an Int.
   (
-    + i, state:INTEGER
-    + cc: CHARACTER
-    + negative: BOOLEAN
-    + result:INTEGER
+    + i, state:Int
+    + cc: Char
+    + negative: Boolean
+    + result:Int
 
     ? { is_integer }
     // state 0: nothing read.
@@ -748,7 +747,7 @@ Public
         }.elseif {cc = '+'} then {
           state := 1
         }.elseif {cc = '-'} then {
-          negative := TRUE
+          negative := True
           state := 1
         } else { // cc.is_digit
           result := cc.decimal_value
@@ -782,12 +781,12 @@ Public
     result
   )
 
-  - to_integer_64:INTEGER_64 <-
-  // self must look like an INTEGER.
-  ( + i, state:INTEGER
-    + cc: CHARACTER
-    + negative: BOOLEAN
-    + result:INTEGER_64
+  - to_int64:Int64 <-
+  // self must look like an Int.
+  ( + i, state:Int
+    + cc: Char
+    + negative: Boolean
+    + result:Int64
 
     ? { is_integer_64 }
     // state 0: nothing read.
@@ -804,7 +803,7 @@ Public
         }.elseif {cc = '+'} then {
           state := 1
         }.elseif {cc = '-'} then {
-          negative := TRUE
+          negative := True
           state := 1
         } else { // cc.is_digit
           result := cc.decimal_value
@@ -837,9 +836,9 @@ Public
     result
   )
   
-  - is_hexadecimal:BOOLEAN <-
-  ( + j:INTEGER
-    + result:BOOLEAN
+  - is_hexadecimal:Boolean <-
+  ( + j:Int
+    + result:Boolean
     (is_empty).if_false {
       j := lower
       {(j > upper) || {! item j.is_hexadecimal_digit}}.until_do {
@@ -850,18 +849,18 @@ Public
     result
   )
 
-  - to_hexadecimal:UINTEGER_64 <-
-  ( + result:UINTEGER_64
+  - to_hexadecimal:Uint64 <-
+  ( + result:Uint64
     ? {is_hexadecimal}
-    lower.to upper do { j:INTEGER
+    lower.to upper do { j:Int
       result := (result << 4) | item j.hexadecimal_value
     }
     result
   )
 
-  - is_octal :BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_octal :Boolean <-
+  ( + result:Boolean
+    + j:Int
     (is_empty).if_false {
       j := lower
       {(j > upper) || {! item j.is_octal_digit}}.until_do {
@@ -872,19 +871,19 @@ Public
     result
   )
 
-  - to_octal:UINTEGER_64 <-
-  ( + result:UINTEGER_64
+  - to_octal:Uint64 <-
+  ( + result:Uint64
     ? {is_octal}
 
-    lower.to upper do { j:INTEGER
+    lower.to upper do { j:Int
       result := (result << 3) | item j.octal_value
     }
     result
   )
 
-  - is_binary:BOOLEAN <-
-  ( + result:BOOLEAN
-    + j:INTEGER
+  - is_binary:Boolean <-
+  ( + result:Boolean
+    + j:Int
 
     (is_empty).if_false {
       j := lower
@@ -898,11 +897,11 @@ Public
     result
   )
 
-  - to_binary :UINTEGER_64 <-
-  ( + result:UINTEGER_64
+  - to_binary :Uint64 <-
+  ( + result:Uint64
     ? {is_bit}
 
-    lower.to upper do { j:INTEGER
+    lower.to upper do { j:Int
       result := result << 1
       (item j = '1').if {
         result := result | 1
@@ -911,26 +910,26 @@ Public
     result
   )
 
-  - is_real_16_16:BOOLEAN <-
+  - is_real_16_16:Boolean <-
   // Does self represent an REAL_16_16 ?
   // `Result' is true if and only if the following two conditions hold:
   // 1. In the following BNF grammar, the value of self can be
   // produced by "real_literal", if leading and trailing
   // separators are ignored:
-  // Real_literal = [Sign] Integer [Point Integer]
+  // Real_literal = [Sign] Int [Point Int]
   // Sign            = "+" | "-"
   // Point           = "."
-  // Integer         = Digit | Digit Integer
+  // Int         = Digit | Digit Int
   // Digit           = "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
   // 2. The numerical value represented by self is within the
   // range that can be represented by an instance of type REAL_16_16.
   (
-    + i, state, value_int: INTEGER
-    + value:REAL_16_16
-    + negative: BOOLEAN
-    + result:BOOLEAN
-    + cc: CHARACTER
-    + d:INTEGER
+    + i, state, value_int: Int
+    + value:Real_16_16
+    + negative: Boolean
+    + result:Boolean
+    + cc: Char
+    + d:Int
 
     // state 0: nothing read.
     // state 1: "+" or "-" read.
@@ -949,7 +948,7 @@ Public
         }.elseif {cc = '+'} then {
           state := 1
         }.elseif {cc = '-'} then {
-          negative := TRUE
+          negative := True
           state := 1
         }.elseif {cc.is_digit} then {
           value_int := cc.decimal_value
@@ -1000,19 +999,19 @@ Public
       value := - value
     }
     ( (state != 0) && { state != 5}).if {
-      result := TRUE
+      result := True
     }
 
     result
   )
 
-  - to_real_16_16:REAL_16_16 <-
+  - to_real_16_16:Real_16_16 <-
   (
-    + i, state, value_int: INTEGER
-    + value:REAL_16_16
-    + negative: BOOLEAN
-    + cc: CHARACTER
-    + d:INTEGER
+    + i, state, value_int: Int
+    + value:Real_16_16
+    + negative: Boolean
+    + cc: Char
+    + d:Int
 
     // state 0: nothing read.
     // state 1: "+" or "-" read.
@@ -1030,7 +1029,7 @@ Public
         }.elseif {cc = '+'} then {
           state := 1
         }.elseif {cc = '-'} then {
-          negative := TRUE
+          negative := True
           state := 1
         }.elseif {cc.is_digit} then {
           value_int := cc.decimal_value
@@ -1079,24 +1078,24 @@ Public
   
   // Loop.
   
-  - do_all do:{CHARACTER;} <-
+  - do_all do:{Char;} <-
   (
-    0.to upper do { i:INTEGER
+    0.to upper do { i:Int
       do.value (item i)
     }
   )
   
   // Modification:
 
-  - Self:SELF '+' other:STRING :STRING_BUFFER <-
-  // Create a new STRING_BUFFER which is the concatenation of
+  - self:Self '+' other:String :String_buffer <-
+  // Create a new String_buffer which is the concatenation of
   // `self' and `other'.
   [
     -? {other != NULL}
   ]
-  ( + result:STRING_BUFFER
-    result:=STRING_BUFFER.create (count + other.count)
-    result.append Self
+  ( + result:String_buffer
+    result:=String_buffer.create (count + other.count)
+    result.append self
     result.append other
     result
   )
@@ -1104,44 +1103,44 @@ Public
     +? {Result.count = Old count + other.count}
   ]
   
-  - as_lower:STRING_BUFFER <-
+  - as_lower:String_buffer <-
   // New object with all letters in lower case.
   (
-    + result:STRING_BUFFER
-    result := STRING_BUFFER.create capacity
-    result.copy Self
+    + result:String_buffer
+    result := String_buffer.create capacity
+    result.copy self
     result.to_lower
     result
   )
 
-  - as_upper:STRING_BUFFER <-
+  - as_upper:String_buffer <-
   // New object with all letters in upper case.
   (
-    + result:STRING_BUFFER
-    result := STRING_BUFFER.create capacity
-    result.copy Self
+    + result:String_buffer
+    result := String_buffer.create capacity
+    result.copy self
     result.to_upper
     result
   )
 
   // Other features:
 
-  - first:CHARACTER <-
+  - first:Char <-
   // Access to the very `first' character.
   [ ? {! is_empty}; ]
   ( storage.item 0 )
   [ /*? { result == item lower};*/ ]
   
-  - second:CHARACTER <-
+  - second:Char <-
   // Access to the very `second' character.
   [ ? {upper > 0}; ]
   ( storage.item 1 )
   [ /*? { result == item (lower+1)};*/ ]
 
-  - last:CHARACTER <-
+  - last:Char <-
   // Access to the very `last' character.
   (
-    + result:CHARACTER
+    + result:Char
     ? {! is_empty}
 
     result := storage.item upper
@@ -1150,32 +1149,32 @@ Public
     result
   )
   
-  - substring start_index:INTEGER to end_index:INTEGER in str:STRING_BUFFER <-
+  - substring start_index:Int to end_index:Int in str:String_buffer <-
   // New string consisting of items [`start_index'.. `end_index'].
   [
     -? { start_index >= 0 }
     -? { end_index <= upper }
     -? { start_index <= end_index + 1 }
   ]
-  ( + c:INTEGER
+  ( + c:Int
     c := end_index - start_index + 1
     str.set_capacity c
     str.set_upper (c-1)
     str.storage.slice_copy storage to 0 from start_index to end_index
   )
   
-  - substring start_index:INTEGER to end_index:INTEGER :STRING_BUFFER <-
+  - substring start_index:Int to end_index:Int :String_buffer <-
   // New string consisting of items [`start_index'.. `end_index'].
   [
     -? { start_index >= 0 }
     -? { end_index <= upper }
     -? { start_index <= end_index + 1 }
   ]
-  ( + c:INTEGER
-    + result:STRING_BUFFER
+  ( + c:Int
+    + result:String_buffer
 
     c := end_index - start_index + 1
-    result := STRING_BUFFER.create c
+    result := String_buffer.create c
     result.set_upper (c-1)
     result.storage.slice_copy storage to 0 from start_index to end_index
 
@@ -1185,23 +1184,23 @@ Public
     +? { Result.count = end_index - start_index + 1 }
   ]
 
-  - substring_begin start:INTEGER to_begin end:INTEGER :STRING_BUFFER <-
+  - substring_begin start:Int to_begin end:Int :String_buffer <-
   (
     substring start to end
   )
 
-  - substring_begin start:INTEGER to_end end:INTEGER :STRING_BUFFER <-
+  - substring_begin start:Int to_end end:Int :String_buffer <-
   (
     substring start to (upper-end-1)
   )
 
-  - substring_end start:INTEGER to_end end:INTEGER :STRING_BUFFER <-
+  - substring_end start:Int to_end end:Int :String_buffer <-
   (
     substring (upper-start-1) to (upper-end-1)
   )
   
-  - max_match from:INTEGER on other:STRING from start_other:INTEGER :(INTEGER,INTEGER) <-
-  ( + result,i:INTEGER
+  - max_match from:Int on other:String from start_other:Int :(Int,Int) <-
+  ( + result,i:Int
     result := from
     i := start_other
     {(result <= upper) && {i <= other.upper} && 
@@ -1212,10 +1211,10 @@ Public
     result, i
   )
   
-  - substring_index (other:STRING,start_index:INTEGER) :INTEGER <-
+  - substring_index (other:String,start_index:Int) :Int <-
   // Position of the first occurrence of `other' at or after 0
   // or -1 if none. // BSBS->DCDC renvoyer plutot upper+1 ce serait mieux...
-  ( + i,s,result:INTEGER
+  ( + i,s,result:Int
 
     ? {! other.is_empty }
     ? { (start_index >=0) && { start_index <= upper + 1 }}
@@ -1235,7 +1234,7 @@ Public
     result
   )
 
-  - first_substring_index other:STRING :INTEGER <-
+  - first_substring_index other:String :Int <-
   // Position of the first occurrence of `other' at or after 0
   // or -1 if none.
   (
@@ -1244,16 +1243,16 @@ Public
     substring_index (other,0)
   )
 
-  // Splitting a STRING_BUFFER:
+  // Splitting a String_buffer:
   
   /*
-  - partition sep:STRING from start_index:INTEGER :(STRING_BUFFER, STRING_BUFFER, STRING_BUFFER) <-
+  - partition sep:STRING from start_index:Int :(String_buffer, String_buffer, String_buffer) <-
   [
     -? {sep != NULL}
     -? {valid_index start_index}
   ]
-  ( + i, j:INTEGER
-    + head, sep, tail :STRING_BUFFER
+  ( + i, j:Int
+    + head, sep, tail :String_buffer
     i := substring_index (sep, start_index)
     (i = 0).if {
       // Not found
@@ -1272,21 +1271,21 @@ Public
     head, sep, tail
   )
 
-  - partition sep:STRING :(STRING_BUFFER, STRING_BUFFER, STRING_BUFFER) <-
+  - partition sep:STRING :(String_buffer, String_buffer, String_buffer) <-
   (
     partition sep from lower
   )
 */
-  - split_str sep:STRING :ARRAY(STRING_BUFFER) <-
+  - split_str sep:String :Array(String_buffer) <-
   [
     -? {sep != NULL}
   ]
-  ( + result:ARRAY(STRING_BUFFER)
+  ( + result:Array(String_buffer)
     ( count > 0 ).if {
       split_buffer.clear
       split_str sep in split_buffer
       (! split_buffer.is_empty).if {
-        result := ARRAY(STRING_BUFFER).create (split_buffer.lower) to (split_buffer.upper)
+        result := Array(String_buffer).create (split_buffer.lower) to (split_buffer.upper)
         result.copy split_buffer
       }
     }
@@ -1297,13 +1296,13 @@ Public
     +? { (Result != NULL) ->> { ! Result.is_empty }}
   ]
 
-  - split_str sep:STRING in words:COLLECTION(STRING_BUFFER) <-
+  - split_str sep:String in words:Collection(String_buffer) <-
   // Same jobs as `split_str' but result is appended in `words'.
   [
     -? {words != NULL}
     -? {sep != NULL}
   ]
-  ( + i, j:INTEGER
+  ( + i, j:Int
     // i    first character of the next word
     // j-1  last character of the next word
     // j    first character of the next separator
@@ -1316,16 +1315,16 @@ Public
     words.add_last (substring i to upper)
   )
 
-  - split:ARRAY(STRING_BUFFER) <-
+  - split:Array(String_buffer) <-
   // Split the string into an array of words. Uses `is_separator' of
-  // CHARACTER to find words. Gives Void or a non empty array.
+  // Char to find words. Gives Void or a non empty array.
   (
-    + result:ARRAY(STRING_BUFFER)
+    + result:Array(String_buffer)
     (upper >= 0 ).if {
       split_buffer.clear
       split_in split_buffer
       (! split_buffer.is_empty).if {
-        result := ARRAY(STRING_BUFFER).create (split_buffer.lower) to (split_buffer.upper)
+        result := Array(String_buffer).create (split_buffer.lower) to (split_buffer.upper)
         result.copy split_buffer
       }
     }
@@ -1334,18 +1333,18 @@ Public
     result
   )
 
-  - split_in words:COLLECTION(STRING_BUFFER) <-
+  - split_in words:Collection(String_buffer) <-
   // Same jobs as `split' but result is appended in `words'.
   (
-    + state,old_count: INTEGER
+    + state,old_count: Int
     // state = 0: waiting next word.
     // state = 1: inside a new word.
-    + c: CHARACTER
+    + c: Char
 
     ? { words != NULL}
     old_count := words.count
     (upper >= 0).if {
-      lower.to upper do { i:INTEGER
+      lower.to upper do { i:Int
         c := item i
         (state = 0).if {
           (! c.is_separator).if {
@@ -1370,10 +1369,10 @@ Public
     ? { (words.count) >= old_count }
   )
   
-  - is_upper:BOOLEAN <-
+  - is_upper:Boolean <-
   // True, if all characters `is_upper' or '_' or digit.
-  ( + i:INTEGER
-    + c:CHARACTER
+  ( + i:Int
+    + c:Char
     i := lower
     {(i <= upper) && {
       (c := item i; c.is_upper) || {c = '_'} || {c.is_digit}}
@@ -1383,15 +1382,15 @@ Public
     i > upper
   )
   
-  - split_at sep:CHARACTER :ARRAY(STRING_BUFFER) <-
+  - split_at sep:Char :Array(String_buffer) <-
   // Split the string at characters `c' into an array of words.
   (
-    + result:ARRAY(STRING_BUFFER)
+    + result:Array(String_buffer)
     ( count > 0 ).if {
       split_buffer.clear
       split_at sep in split_buffer
       (! split_buffer.is_empty).if {
-        result := ARRAY(STRING_BUFFER).create (split_buffer.lower) to (split_buffer.upper)
+        result := Array(String_buffer).create (split_buffer.lower) to (split_buffer.upper)
         result.copy split_buffer
       }
     }
@@ -1402,18 +1401,18 @@ Public
     +? { (Result != NULL) ->> { ! Result.is_empty }}
   ]
 
-  - split_at sep:CHARACTER in words:COLLECTION(STRING_BUFFER) <-
+  - split_at sep:Char in words:Collection(String_buffer) <-
   // Same jobs as `split' but result is appended in `words'.
   (
-    + state,old_count: INTEGER
+    + state,old_count: Int
     // state = 0: waiting next word.
     // state = 1: inside a new word.
-    + c: CHARACTER
+    + c: Char
 
     ? { words != NULL}
     old_count := words.count
     (count > 0).if {
-      0.to upper do { i:INTEGER
+      0.to upper do { i:Int
         c := item i
         (state = 0).if {
           (c != sep).if {
@@ -1438,56 +1437,56 @@ Public
     ? { (words.count) >= old_count }
   )
 
-  - to_string_buffer:STRING_BUFFER <-
-  // New STRING_BUFFER having the same character sequence as self.
-  // Useful in proper descendants of STRING_BUFFER.
+  - to_string_buffer:String_buffer <-
+  // New String_buffer having the same character sequence as self.
+  // Useful in proper descendants of String_buffer.
   (
-    STRING_BUFFER.create_from_string Self
+    String_buffer.create_from_string self
   )
   
-  - to_string_alias:STRING_ALIAS <-
+  - to_string_alias:String_alias <-
   (
     abstract
     NULL
   )
 
-  - to_string:STRING_ALIAS <- to_string_alias
+  - to_string:String_alias <- to_string_alias
   
-STRING
-  - string_buffer:STRING_BUFFER := STRING_BUFFER.create 256; // Private, temporary once buffer.
+String
+  - string_buffer:String_buffer := String_buffer.create 256; // Private, temporary once buffer.
 
-  - split_buffer:ARRAY(STRING_BUFFER) := ARRAY(STRING_BUFFER).create_with_capacity 4 lower 1
+  - split_buffer:Array(String_buffer) := Array(String_buffer).create_with_capacity 4 lower 1
 
 Public
   - print <-
   (    
-    0.to upper do { i:INTEGER
-      STDOUT.put_character (storage.item i)
+    0.to upper do { i:Int
+      Stdout.put_character (storage.item i)
     }
   )
   
   - print_error <-
   (    
-    0.to upper do { i:INTEGER
-      STDERR.put_character (storage.item i)
+    0.to upper do { i:Int
+      Stderr.put_character (storage.item i)
     }
   )
   
-  - to_external:NATIVE_ARRAY CHARACTER <-
+  - to_external:C_array Char <-
   // Gives C access to the internal `storage' (may be dangerous).
   // To be compatible with C, a null character is added at the end
   // of the internal `storage'. This extra null character is not
-  // part of the Lisaac STRING_BUFFER.
+  // part of the Lisaac String_buffer.
   (
     abstract
     NULL
   )
   
-STRING
-  - hash_code_intern: INTEGER <-
-  ( + result,up:INTEGER
+String
+  - hash_code_intern: Int <-
+  ( + result,up:Int
     up := upper.min 32
-    0.to up do { i:INTEGER
+    0.to up do { i:Int
       result := (result << 2) + item i.code
     }
     result & 07FFF_FFFFh

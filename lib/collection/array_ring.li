@@ -1,41 +1,43 @@
 Header
-
-  + name := ARRAY_RING V;
-
-  /*Resizable, fixed lower bound array. Circular handling of the storage area.*/
-
+  + name := Array_ring V
+/*Resizable, fixed lower bound array. Circular handling of the storage area.*/
 Inherit
-  - parent_collection:COLLECTION V := COLLECTION V
-  
-Public
-  - lower:INTEGER <- 0
-  
+  - parent_collection:Flat Collection V
 Private
-  + storage:NATIVE_ARRAY V
+  + storage:C_array V
   
-  + ring_low:INTEGER; // corresponding lower in storage
+  + ring_low:Int; // corresponding lower in storage
   
-  - ring_msk:INTEGER <- capacity - 1
+  - ring_msk:Int <- capacity - 1
   
-  - ring_up:INTEGER <- (ring_low + count - 1) & ring_msk
+  - ring_up:Int <- (ring_low + count - 1) & ring_msk
   
 Public
-  + capacity:INTEGER; // Which must be a power of 2 to ease computing overlays.
+  + capacity:Int; // Which must be a power of 2 to ease computing overlays.
   
-  + count:INTEGER
+  + count:Int
   
-  - upper:INTEGER <- ( count - 1 )
+  - upper:Int <- ( count - 1 )
   
-  - create_with_capacity new_count:INTEGER :SELF <-
-  // Create an empty array with at least `needed_capacity'.
-  ( + result:SELF
+  // Creation:
+  
+  - new self:Self of (v:V^n) :Self <-
+  ( + result:Self
+    result := new self capacity n 
+    result.add_last v
+    result
+  )
+ 
+  - new self:Self capacity c:Int :Self <-
+  // New empty array with at least capacity of c elements.
+  ( + result:Self
     result := clone
-    result.with_capacity new_count
+    result.with_capacity c
     result
   )
   
 Private
-  - with_capacity needed_capacity:INTEGER <-
+  - with_capacity needed_capacity:Int <-
   // Create an empty array with at least `needed_capacity'.
   [
     ? {needed_capacity >= 0}
@@ -46,7 +48,7 @@ Private
     {capacity >= needed_capacity}.until_do {
       capacity := capacity << 1
     }
-    storage := NATIVE_ARRAY V .create capacity
+    storage := C_array V .create capacity
     ring_low := 0
     count := 0
   )
@@ -57,37 +59,50 @@ Private
   
 Public
   
-  - is_empty:BOOLEAN <- (count = 0)
+  - is_empty:Boolean <- (count = 0)
   
-  - at i:INTEGER :V <-
+  - at i:Int :V <-
   ( + result:V
     result := storage.at ((ring_low + i) & ring_msk)
     result
   )
   
-  - at i:INTEGER put v:V  <-
+  - at i:Int put v:V  <-
   ( 
     storage.at ((ring_low + i) & ring_msk) put v
   )
   
-  - add_last element:V <-
+  - add_last element:V^n <-
   (
-    ensure_capacity
-    ? {ring_low.in_range 0 to capacity}
-    storage.at ((ring_low + count) & ring_msk) put element
-    count := count + 1
+    { e:V
+      ensure_capacity
+      ? {ring_low.in_range 0 to capacity}
+      storage.at ((ring_low + count) & ring_msk) put e
+      count := count + 1;
+    }.value element
   )
   
-  - add_first element:V <-
+  - add_first element:V^n <-
   (
-    ensure_capacity
-    ring_low := (ring_low - 1) & ring_msk
-    storage.at ring_low put element
-    count := count + 1
+    { e:V
+      ensure_capacity
+      ring_low := (ring_low - 1) & ring_msk
+      storage.at ring_low put e
+      count := count + 1;
+    }.value element
+    if (n > 1) then {
+      + i1, i2:Int
+      i1 := lower ; i2 := lower + n - 1
+      while {i1 < i2} do {
+        swap i1 with i2
+        i1 := i1 + 1
+        i2 := i2 - 1
+      }      
+    }
   )
   
-  - at i:INTEGER add v:V <-
-  ( + idx,up,lo,foo:INTEGER
+  - at i:Int add v:V <-
+  ( + idx,up,lo,foo:Int
     (i = 0).if {
       add_first v
     }.elseif {i = count} then {
@@ -129,8 +144,8 @@ Public
     count := count - 1
   )
   
-  - remove index:INTEGER <-
-  ( + idx,i,up:INTEGER
+  - remove index:Int <-
+  ( + idx,i,up:Int
     (index = lower).if {
       remove_first
     }.elseif {index = upper} then {
@@ -161,13 +176,13 @@ Private
   [
     ? {capacity > 0}
   ]
-  ( + new_capacity,oldx,newx:INTEGER
-    + new_storage,old_storage:NATIVE_ARRAY V
+  ( + new_capacity,oldx,newx:Int
+    + new_storage,old_storage:C_array V
     (count = capacity).if {
       oldx := ring_low
       old_storage := storage
       new_capacity := capacity << 1
-      new_storage := NATIVE_ARRAY V .create new_capacity
+      new_storage := C_array V .create new_capacity
       {oldx < capacity}.while_do {
         new_storage.at newx put (old_storage.at oldx)
         newx := newx + 1
@@ -191,7 +206,7 @@ Private
   [
     ? {capacity > 0}
   ]
-  ( + new_capacity,old_area,new_area,times:INTEGER
+  ( + new_capacity,old_area,new_area,times:Int
     (count = capacity).if {
       times := ring_up + 1
       new_capacity := capacity << 1
@@ -210,11 +225,11 @@ Private
   )
   
 Public
-  - to_string:STRING_ALIAS <-
-  ( + i:INTEGER
-    + result:STRING_ALIAS
+  - to_string:String_alias <-
+  ( + i:Int
+    + result:String_alias
     + v:V
-    STRING.tmp { ts:STRING_BUFFER
+    String.tmp { ts:String_buffer
       ts.append "-----------------\n"
       ts.append "capacity="; capacity.append_in ts; ts.add_last '\n'
       ts.append "count="; count.append_in ts; ts.add_last '\n'
@@ -242,10 +257,10 @@ Public
   )
   
 Public
-  - twin:SELF <-
-  ( + result:SELF
-    result := SELF.create_with_capacity (count)
-    0.to upper do { i:INTEGER
+  - twin:Self <-
+  ( + result:Self
+    result := Self.create_with_capacity (count)
+    0.to upper do { i:Int
       result.add_last (at i)
     }
     result

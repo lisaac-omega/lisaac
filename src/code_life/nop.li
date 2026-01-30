@@ -1,19 +1,16 @@
 Header
-
-  + name        := NOP;
-
-  /* The nop instruction 
+  + name := Nop
+/* The nop instruction 
 
   // BSBS: il faurai voir si c'est encore utile... (attention à la phase recursive)
   */
-  
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
-  - my_copy:SELF <- Self
+  - my_copy:Self <- self
 
   //
   // Execute.
@@ -24,13 +21,13 @@ Public
     // Nothing.
   )
 
-  - execute:INSTR <- NULL
+  - execute:Instr <- NULL
 
   //
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "nop"
   )

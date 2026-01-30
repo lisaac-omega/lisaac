@@ -1,63 +1,62 @@
 Header
-  + name := MAIN;
- 
+  + name := Main
 Public
   - main <-
-  ( + i:INTEGER
-    TEST.check (ASM_BUILTIN.clz 1) integer 63
-    TEST.check (ASM_BUILTIN.clz 2) integer 62
-    TEST.check (ASM_BUILTIN.clz 3) integer 62
-    TEST.check (ASM_BUILTIN.clz 4) integer 61
-    TEST.check (ASM_BUILTIN.clz 5) integer 61
-    TEST.check (ASM_BUILTIN.clz 6) integer 61
-    TEST.check (ASM_BUILTIN.clz 7) integer 61
-    TEST.check (ASM_BUILTIN.clz 8) integer 60
+  ( + i:Int
+    Test.check (Asm_builtin.clz 1) integer 63
+    Test.check (Asm_builtin.clz 2) integer 62
+    Test.check (Asm_builtin.clz 3) integer 62
+    Test.check (Asm_builtin.clz 4) integer 61
+    Test.check (Asm_builtin.clz 5) integer 61
+    Test.check (Asm_builtin.clz 6) integer 61
+    Test.check (Asm_builtin.clz 7) integer 61
+    Test.check (Asm_builtin.clz 8) integer 60
     i := 9
     {i < 16}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 60
+      Test.check (Asm_builtin.clz i) integer 60
       i := i + 1
     }
-    TEST.check i integer 16
+    Test.check i integer 16
     {i < 32}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 59
+      Test.check (Asm_builtin.clz i) integer 59
       i := i + 1
     }
-    TEST.check i integer 32
+    Test.check i integer 32
     {i < 64}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 58
+      Test.check (Asm_builtin.clz i) integer 58
       i := i + 1
     }
-    TEST.check i integer 64
+    Test.check i integer 64
     {i < 128}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 57
+      Test.check (Asm_builtin.clz i) integer 57
       i := i + 1
     }
-    TEST.check i integer 128
+    Test.check i integer 128
     {i < 256}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 56
+      Test.check (Asm_builtin.clz i) integer 56
       i := i + 1
     }
-    TEST.check i integer 256
+    Test.check i integer 256
     {i < 512}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 55
+      Test.check (Asm_builtin.clz i) integer 55
       i := i + 1
     }
-    TEST.check i integer 512
+    Test.check i integer 512
     {i < 1024}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 54
+      Test.check (Asm_builtin.clz i) integer 54
       i := i + 1
     }
-    TEST.check i integer 1024
+    Test.check i integer 1024
     {i < 2048}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 53
+      Test.check (Asm_builtin.clz i) integer 53
       i := i + 1
     }
-    TEST.check i integer 2048
+    Test.check i integer 2048
     {i < 4096}.while_do {
-      TEST.check (ASM_BUILTIN.clz i) integer 52
+      Test.check (Asm_builtin.clz i) integer 52
       i := i + 1
     }
-    TEST.check i integer 4096
+    Test.check i integer 4096
     check 4096 bits 51
     check 8192 bits 50
     check 16384 bits 49
@@ -113,13 +112,13 @@ Public
     // DCDC august 16th 2025, isn't that funny code :-)
   )
   
-  - check value:UINTEGER_64 bits bits:INTEGER <-
+  - check value:Uint64 bits bits:Int <-
   (
-    TEST.check (ASM_BUILTIN.clz value) integer bits
-    TEST.check (ASM_BUILTIN.clz (value + 1)) integer bits
-    TEST.check (ASM_BUILTIN.clz (value + 2)) integer bits
-    TEST.check (ASM_BUILTIN.clz (value + 3)) integer bits
-    TEST.check (ASM_BUILTIN.clz (value - 1)) integer (bits + 1)
-    TEST.check (ASM_BUILTIN.clz (value - 2)) integer (bits + 1)
-    TEST.check (ASM_BUILTIN.clz (value - 3)) integer (bits + 1)
+    Test.check (Asm_builtin.clz value) integer bits
+    Test.check (Asm_builtin.clz (value + 1)) integer bits
+    Test.check (Asm_builtin.clz (value + 2)) integer bits
+    Test.check (Asm_builtin.clz (value + 3)) integer bits
+    Test.check (Asm_builtin.clz (value - 1)) integer (bits + 1)
+    Test.check (Asm_builtin.clz (value - 2)) integer (bits + 1)
+    Test.check (Asm_builtin.clz (value - 3)) integer (bits + 1)
   )

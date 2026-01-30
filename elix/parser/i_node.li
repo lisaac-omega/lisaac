@@ -1,34 +1,34 @@
 Header
-  + name := I_NODE;
-  /* OBSOLETE */
+  + name := I_node
+/* OBSOLETE */
   
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 //  - parent_lutils:LUTILS := LUTILS
-//  + parent_spot:Expanded SPOT
+//  + parent_spot:Flat SPOT
 //  - parent_drw:DRW := DRW
   
 Public
     
-  - msg_err:STRING_BUFFER := STRING_BUFFER.create 256
+  - msg_err:String_buffer := String_buffer.create 256
   
-  + lower:INTEGER
-  + upper:INTEGER
+  + lower:Int
+  + upper:Int
   
-  - copy:I_NODE <- ( abstract; Self)
+  - copy:I_node <- ( abstract; self)
   
-  - type:TYPE <- ( abstract; NULL)
-  - error:INTEGER <- 0
+  - type:Type <- ( abstract; NULL)
+  - error:Int <- 0
   
-  - txt_in s:STRING_BUFFER <- ( abstract; )
-  - rtxt_in s:STRING_BUFFER <- ( abstract; )
+  - txt_in s:String_buffer <- ( abstract; )
+  - rtxt_in s:String_buffer <- ( abstract; )
   
-  - type_check s:SLOT :UINTEGER_16 <-
-  ( + ts:TYPE
-    + i:INTEGER
-    + result:UINTEGER_16
+  - type_check s:Slot :Uint16 <-
+  ( + ts:Type
+    + i:Int
+    + result:Uint16
     (s != NULL).if {
-      i := IA.arg_i
+      i := Ia.arg_i
       (i > s.arg.upper).if { crash_with_message ("I_STR: Arg#"+i.to_string); }
       ts := s.type_arg i
       (! (type <= ts)).if {
@@ -41,16 +41,16 @@ Public
           ts.txt_in msg_err sty NULL
         }
         msg_err += ". "
-        result := STY.ul_green
+        result := Sty.ul_green
       }
     }
     result
   )
   
-  - put_sty u:UINTEGER_16 slot s:SLOT <- ( abstract; )
+  - put_sty u:Uint16 slot s:Slot <- ( abstract; )
   
-  - size:INTEGER <- ( abstract; 0)
-  - to_expr:EXPR <- ( abstract; EXPR)
+  - size:Int <- ( abstract; 0)
+  - to_expr:Expr <- ( abstract; Expr)
   
   - free <- ( abstract; )
   
@@ -79,7 +79,7 @@ Public
           }.while_do {
             i := i - 1
           }
-          stack.add Self to i
+          stack.add self to i
           */
         }
       }.while_loop

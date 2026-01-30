@@ -1,20 +1,19 @@
-Header  
-  + name := MAIN;
-  
+Header
+  + name := Main
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Private  
-  + cltn_bbb:ARRAY INTEGER
-  + cltn_aaa:ARRAY_RING INTEGER
+  + cltn_bbb:Array Int
+  + cltn_aaa:Array_ring Int
   
-  - long:INTEGER <- 300
+  - long:Int <- 300
   
 Public
   - main <-
-  ( + x,idx:INTEGER
-    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
-    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+  ( + x,idx:Int
+    cltn_bbb := new Array Int capacity 2
+    cltn_aaa := new Array_ring Int capacity 2
     idem
     6.times {
       x := x + 1
@@ -34,9 +33,9 @@ Public
   )
   
   - main_1 <-
-  ( + x:INTEGER
-    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
-    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+  ( + x:Int
+    cltn_bbb := new Array Int capacity 2
+    cltn_aaa := new Array_ring Int capacity 2
     x := 1
     cltn_bbb.at 0 add x
     cltn_aaa.at 0 add x
@@ -46,7 +45,7 @@ Public
     cltn_aaa.at 0 add x
     idem
     1000.times {
-      + idx:INTEGER
+      + idx:Int
       x := x + 1
       idx := cltn_bbb.upper
       cltn_bbb.at idx add x
@@ -59,11 +58,11 @@ Public
   )
   
   - main_3 <-
-  ( + x:INTEGER
-    RANDOM.init 5
+  ( + x:Int
+    Random.init 5
     //
-    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
-    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+    cltn_bbb := new Array Int capacity 2
+    cltn_aaa := new Array_ring Int capacity 2
     cltn_bbb.add_last 1
     cltn_aaa.add_last 1
     idem
@@ -95,8 +94,8 @@ Public
     cltn_aaa.at 4 add 6
     idem
     //
-    cltn_bbb := ARRAY INTEGER .create_with_capacity 2
-    cltn_aaa := ARRAY_RING INTEGER .create_with_capacity 2
+    cltn_bbb := new Array Int capacity 2
+    cltn_aaa := new Array_ring Int capacity 2
     idem
     cltn_bbb.add_last 1
     cltn_aaa.add_last 1
@@ -133,8 +132,8 @@ Public
     cltn_aaa.at 0 add x
     idem
     long.times {
-      + idx:INTEGER
-      idx := RANDOM.min 0 max (cltn_bbb.count)
+      + idx:Int
+      idx := Random.min 0 max (cltn_bbb.count)
       //("cltn_bbb.count=" + cltn_bbb.count.to_string + " idx=" + idx.to_string).println
       cltn_bbb.at idx add x
       cltn_aaa.at idx add x
@@ -142,9 +141,9 @@ Public
       x := x + 1
     }
     {cltn_bbb.is_empty}.until_do {
-      + idx:INTEGER
+      + idx:Int
       (cltn_bbb.upper > 0).if {
-        idx := RANDOM.min 0 max (cltn_bbb.upper)
+        idx := Random.min 0 max (cltn_bbb.upper)
       } else {
         idx := 0
       }
@@ -155,27 +154,27 @@ Public
   )
   
   - idem <-
-  ( + i:INTEGER
+  ( + i:Int
     (cltn_bbb.lower != cltn_aaa.lower).if {
       crash_with_message "ERREUR"
     }
     (cltn_bbb.upper != cltn_aaa.upper).if {
       crash_with_message "ERREUR"
       "ERREUR".println
-      SYSTEM.exit 1
+      System.exit 1
     }
     (cltn_bbb.count != cltn_aaa.count).if {
       crash_with_message "ERREUR"
       "ERREUR".println
-      SYSTEM.exit 1
+      System.exit 1
     }
     cltn_bbb.is_empty.if_false {
-      TEST.check (cltn_bbb.last) integer (cltn_aaa.last)
-      TEST.check (cltn_bbb.first) integer (cltn_aaa.first)
+      Test.check (cltn_bbb.last) integer (cltn_aaa.last)
+      Test.check (cltn_bbb.first) integer (cltn_aaa.first)
     }
     i := 0
     {i <= cltn_bbb.upper}.while_do {
-      TEST.check (cltn_bbb.at i) integer (cltn_aaa.at i)
+      Test.check (cltn_bbb.at i) integer (cltn_aaa.at i)
       i := i + 1
     }
   )

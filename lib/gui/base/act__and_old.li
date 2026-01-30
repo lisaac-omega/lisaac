@@ -1,18 +1,17 @@
 Header
-  + name := ACT E AND F;
-  
+  + name := Act E And F
 Inherit
-  + parent_act:Expanded ACT
+  + parent_act:Flat Act
   
 Public
   
-  + func:{(E,F); BOOLEAN}
+  + func:{(E,F); Boolean}
   + val1:E
   + val2:F
   
-  - fn f:{(E,F); BOOLEAN} val (v1:E,v2:F) :SELF <- ( (func,val1,val2) := (f,v1,v2); Self)
+  - fn f:{(E,F); Boolean} val (v1:E,v2:F) :Self <- ( (func,val1,val2) := (f,v1,v2); self)
   
-  - run:BOOLEAN <-
+  - run:Boolean <-
   (
     parent_act.run
     func.value (val1,val2)

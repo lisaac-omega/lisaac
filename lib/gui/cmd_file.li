@@ -1,91 +1,90 @@
 Header
-  + name := CMD_FILE;
-  
+  + name := Cmd_file
 Inherit
-  - parent_cmd:CMD := CMD
+  - parent_cmd:Cmd := Cmd
   
 Private
-  - cmd_open_file:INTEGER   := 0
-  - cmd_save_file:INTEGER   := 1
-  - cmd_open_buffer:INTEGER := 2
+  - cmd_open_file:Int   := 0
+  - cmd_save_file:Int   := 1
+  - cmd_open_buffer:Int := 2
   
-  - sub_open m:STRING_ALIAS cmd f:INTEGER :BOOLEAN <-
-  ( + pth:STRING_ALIAS
+  - sub_open m:String_alias cmd f:Int :Boolean <-
+  ( + pth:String_alias
     open_cmd := f
     mesg.copy m
     text.clear
     (open_cmd != cmd_open_buffer).if {
-      pth := PAGE.cur_pg.buf_pg.name
+      pth := Page.cur_pg.buf_pg.name
       pth.substring 0 to (pth.last_index_of '/') in text
     }
-    SUBACT.get "List".load Self
-    BOX_LIST STRING_ALIAS.color { s:STRING_ALIAS
-      + c:COLOR
-      c := LOOK.none
-      ((s.last = '~') || {s.last = '#'}).if { c := COLOR.gray; }.elseif
+    Subact.get "List".load self
+    Box_list String_alias.color { s:String_alias
+      + c:Color
+      c := Look.none
+      ((s.last = '~') || {s.last = '#'}).if { c := Color.gray; }.elseif
       {(s.has_suffix ".li") || {s.has_suffix ".lip"}} then {
-        c := LOOK.fmt_li
+        c := Look.fmt_li
       }.elseif {(s.has_suffix ".c")  || {s.has_suffix ".cpp"}} then {
-        c := LOOK.fmt_c
+        c := Look.fmt_c
       }.elseif {s.has_suffix ".txt"} then {
-        c := LOOK.fmt_txt
+        c := Look.fmt_txt
       }.elseif {
         (s.has_suffix ".jpg") || {s.has_suffix ".png"} || {s.has_suffix ".bmp"} ||
         {s.has_suffix ".gif"} || {s.has_suffix ".ppm"} || {s.has_suffix ".pgm"} ||
         {s.has_suffix ".psd"} || {s.has_suffix ".tga"} 
       } then {
-        c := LOOK.fmt_img
+        c := Look.fmt_img
       }
       c
     }
     open
   )
   
-  - open_cmd:INTEGER
+  - open_cmd:Int
   
 Public
   
-  - open_file:BOOLEAN   <- sub_open "Find file:" cmd cmd_open_file    
-  - save_file:BOOLEAN   <- sub_open "Write file:" cmd cmd_save_file
-  - open_buffer:BOOLEAN <- sub_open "Switch to buffer:" cmd cmd_open_buffer
+  - open_file:Boolean   <- sub_open "Find file:" cmd cmd_open_file    
+  - save_file:Boolean   <- sub_open "Write file:" cmd cmd_save_file
+  - open_buffer:Boolean <- sub_open "Switch to buffer:" cmd cmd_open_buffer
   
-  - value:ARRAY STRING_ALIAS := ARRAY STRING_ALIAS.create_with_capacity 128
+  - value:Array String_alias := Array String_alias.create_with_capacity 128
   
-  - old_text:STRING_BUFFER := STRING_BUFFER.create 256
-  - listfile:BOOLEAN <-
+  - old_text:String_buffer := String_buffer.create 256
+  - listfile:Boolean <-
   ( info.clear
     (open_cmd != cmd_open_buffer).if {
-      DIRENT.reduce_path text
+      Dirent.reduce_path text
     }    
-    ((old_text == text) && {BOX_LIST STRING_ALIAS.is on}).if {      
-      BOX_LIST STRING_ALIAS.cmd_down_pg.if_false {
-        BOX_LIST STRING_ALIAS.cmd_top_pg
+    ((old_text == text) && {Box_list String_alias.is on}).if {      
+      Box_list String_alias.cmd_down_pg.if_false {
+        Box_list String_alias.cmd_top_pg
       }
     } else {
       old_text.copy text     
       (match_file > 1).if {
-        BOX_LIST STRING_ALIAS.update value label { s:STRING_ALIAS; s} action {s:STRING_ALIAS
+        Box_list String_alias.update value label { s:String_alias; s} action {s:String_alias
           text.keep_head (text.last_index_of '/' + 1)
           text.append s; cur := text.count
           (s == s)
         }
       } else {
-        BOX_LIST STRING_ALIAS.close
+        Box_list String_alias.close
       }        
     }
     cur := text.count
-    TRUE
+    True
   )
   
   - close <-
-  ( BOX_LIST STRING_ALIAS.close
+  ( Box_list String_alias.close
     old_text.clear
     parent_cmd.close
   )
   
-  - action:BOOLEAN <-
-  ( + b:BUFFER
-    + pth:STRING_ALIAS
+  - action:Boolean <-
+  ( + b:Buffer
+    + pth:String_alias
     (text.last = '/').if {
       listfile
     } else {
@@ -93,34 +92,34 @@ Public
       pth := text.to_string_alias
       (open_cmd = cmd_open_buffer).if {
         //OUT # "Open :" # text # '\n'
-        b := BUFFER.catalog.search_until {buf:BUFFER; buf.shortname = pth}
+        b := Buffer.catalog.search_until {buf:Buffer; buf.shortname = pth}
       } else {
-        b := BUFFER.get pth
+        b := Buffer.get pth
         (open_cmd = cmd_save_file).if {
-          b.copy_buffer (PAGE.cur_pg.buf_pg.buffer).if_false { beep; }
+          b.copy_buffer (Page.cur_pg.buf_pg.buffer).if_false { beep; }
           b.save_buffer
         }
       }
-      PAGE.cur_pg.set_buffer b
+      Page.cur_pg.set_buffer b
     }
-    TRUE
+    True
   )
   
-  - cut:BOOLEAN <-
+  - cut:Boolean <-
   (cur != text.count).if {    
     clipboard.clear
-    cur.to (text.upper) do { i:INTEGER
+    cur.to (text.upper) do { i:Int
       clipboard.add_last (text.at i)
     }
-    CLIPBOARD.put clipboard
+    Clipboard.put clipboard
     text.set_upper (cur-1)
   }
   
 Private
   
-  - match_file:INTEGER <-
-  ( + idx,pre:INTEGER    
-    + result:INTEGER
+  - match_file:Int <-
+  ( + idx,pre:Int    
+    + result:Int
 
     value.clear
     (open_cmd = cmd_open_buffer).if {
@@ -132,11 +131,11 @@ Private
     // Completion.
     (! value.is_empty).if {
       (idx > pre).if {
-        pre.to (idx-1) do { i:INTEGER
+        pre.to (idx-1) do { i:Int
           text.add_last (value.first.at i)
         }
         (open_cmd != cmd_open_buffer).if {
-          DIRENT.reduce_path text
+          Dirent.reduce_path text
         }
       } else {
         ((idx = value.first.count) && {idx = pre}).if {
@@ -155,10 +154,10 @@ Private
   )
   
   
-  - list_buffer:(INTEGER,INTEGER) <-
-  ( + idx:INTEGER
+  - list_buffer:(Int,Int) <-
+  ( + idx:Int
     idx := 4096    
-    BUFFER.catalog.foreach { b:BUFFER
+    Buffer.catalog.foreach { b:Buffer
       (b.shortname.has_prefix text).if {
         value.add_last (b.shortname)
         idx := value.first.first_diff (value.last).min idx
@@ -167,12 +166,12 @@ Private
     text.count ,idx
   )
   
-  - list_file:(INTEGER,INTEGER) <-
-  ( + idx:INTEGER
-    + pre:STRING_ALIAS
-    + e:DIRENT
-    + d:DIRECTORY
-    STRING.tmp2 { (tmp,tmp2:STRING_BUFFER)
+  - list_file:(Int,Int) <-
+  ( + idx:Int
+    + pre:String_alias
+    + e:Dirent
+    + d:Directory
+    String.tmp2 { (tmp,tmp2:String_buffer)
       tmp.copy text
       tmp2.copy text
       idx := tmp.last_index_of '/'
@@ -180,16 +179,16 @@ Private
         tmp.copy "./"
       } else {
         tmp.keep_head (idx+1)        
-        DIRENT.reduce_path tmp
+        Dirent.reduce_path tmp
         tmp2.remove_head (idx+1)
       }
       pre := tmp2.to_string_alias
-      e := FILE_SYSTEM.get tmp
+      e := File_system.get tmp
       ((e != NULL) && {e.is_directory}).if {
         d ?= e
         d.open
         idx := 4096
-        (d.lower).to (d.upper) do { i:INTEGER
+        (d.lower).to (d.upper) do { i:Int
           e := d.at i
           (e.name.has_prefix pre).if {
             (e.is_directory).if {
@@ -201,7 +200,7 @@ Private
               //e.name.println
             }
             idx := value.first.first_diff (value.last).min idx
-            //result := result | (value.last.count = text.count).to_integer
+            //result := result | (value.last.count = text.count).to_int
           }
         }
         d.close
@@ -211,10 +210,10 @@ Private
   )
   
   /*
-  - extract_name txt:STRING_ALIAS :STRING_ALIAS <-
-  ( + idx:INTEGER
-    + result:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
+  - extract_name txt:String_alias :String_alias <-
+  ( + idx:Int
+    + result:String_alias
+    STRING.tmp { tmp:String_buffer
       tmp.copy txt
       (tmp.last = '/').if {
         idx := tmp.last_index_of '/' since (tmp.upper-1)

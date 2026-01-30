@@ -1,0 +1,45 @@
+Header
+  + name := Flat Int64
+/*Signed 64 bits integer.*/
+  - type    := `int64_t`;  
+  - default := (0.to_raw_int64);
+  - export  := Int;
+Insert
+  - parent_signed_integer:Signed_integer := Signed_integer
+
+Public
+
+  - object_size:Int := 8
+
+  - '-' self:Self :Self <- zero - self
+
+  // Range
+
+  - maximum:Uint64 <- 7FFF_FFFF_FFFF_FFFFh
+
+  - minimum:Int64  <- `0x8000000000000000LLU`:Int64; // 8000_0000_0000_0000h
+  
+  // Conversion with test.
+
+  - to_int64:Int64 <- self
+
+  - append_in b:String_buffer <-
+  // Append in the `b' the equivalent of `to_string'. No new String_buffer
+  // creation during the process.
+  [ ? {b!=NULL}; ]
+  ( 
+    (self = minimum).if {
+      b.append "-9223372036854775808"
+    } else {
+      parent_signed_integer.append_in b
+    }
+  )
+  
+  - append_in b:String_buffer base base:Int :Int <- parent_signed_integer.append_in b base base
+  
+  - self:Self '&' Left 90 other:Self :Self <- `@self & @other`:Self
+  - self:Self '|' Left 80 other:Self :Self <- `@self | @other`:Self
+  - self:Self '>>' Left 90 other:Int :Self <- `@self >> @other`:Self
+  - self:Self '<<' Left 90 other:Int :Self <- `@self << @other`:Self
+  - '~' self:Self :Self <- `~@self`:Self
+

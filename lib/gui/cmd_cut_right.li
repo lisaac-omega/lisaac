@@ -1,43 +1,42 @@
 Header
-  + name := CMD_CUT_RIGHT;
-  
+  + name := Cmd_cut_right
 Inherit
-  - parent_cmd:CMD := CMD
+  - parent_cmd:Cmd := Cmd
 
 Public
   
-  - open:BOOLEAN <-
+  - open:Boolean <-
   ( 
-    (cmd_cur != Self).if {
+    (cmd_cur != self).if {
       clipboard.clear
-      cmd_cur := Self
+      cmd_cur := self
       set on
-      SUBACT.get "CutRight".load Self
+      Subact.get "CutRight".load self
     }
     cut
   )
 
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
+  - key s:String cmd c:Uint8 :Boolean <-
   (
     close
-    SCREEN.key s cmd c
+    Screen.key s cmd c
   )
   
   - close <-
   ( 
-    SUBACT.restore
+    Subact.restore
     unset on
-    CLIPBOARD.put clipboard
-    cmd_cur := CMD
+    Clipboard.put clipboard
+    cmd_cur := Cmd
   )
   
 Private
   
-  - cut:BOOLEAN <-
-  ( + p0,p:INTEGER
-    + c:CHARACTER
-    + pg:TXT_PG
-    + d:DIV
+  - cut:Boolean <-
+  ( + p0,p:Int
+    + c:Char
+    + pg:Txt_pg
+    + d:Div
     
     pg := cur_txt
     d ?= pg.child.at (pg.pt_div)

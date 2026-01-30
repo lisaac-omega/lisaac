@@ -1,107 +1,106 @@
 Header
-  + name := Strict ICON_LINE;
-  
+  + name := Exact Icon_line
 Inherit
-  + parent_win:Expanded WIN
-  - parent_json:JSON := JSON
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_win:Flat Win
+  - parent_json:Json := Json
+  - parent_any_gui:Any_gui := Any_gui
   
 Private
-  - stock:ARRAY ICON_LINE := ARRAY ICON_LINE.create_with_capacity 2
+  - stock:Array Icon_line := Array Icon_line.create_with_capacity 2
   
-  - init_open o:WIN <-
-  ( + pop:POPUP
+  - init_open o:Win <-
+  ( + pop:Popup
     line_open ?= o; pop ?= o.child.first; pop.set (pop.on)
   )
   
 Public
-  + line_open:ICON
+  + line_open:Icon
 
-  - set_open o:ICON <-
-  ( + pop:POPUP
+  - set_open o:Icon <-
+  ( + pop:Popup
     (line_open != NULL).if { pop ?= line_open.child.first; pop.set_open NULL; }
     line_open := o
     (line_open != NULL).if { pop ?= line_open.child.first; pop.set_open line_open; }
   )
     
   - refresh <-
-  ( + x:REAL_32
-    (width,height) := (parent.width,ICON.dim)
-    child.foreach { w:WIN; w.xy (x,yo); w.refresh; x := x + w.width; }
+  ( + x:Real32
+    (width,height) := (parent.width,Icon.dim)
+    child.foreach { w:Win; w.xy (x,yo); w.refresh; x := x + w.width; }
   )
   
-  - copy o:SELF <-
-  ( + ico:ICON
-    o.child.foreach { w:WIN
-      ico := ICON.cast (w.dup Self)
+  - copy o:Self <-
+  ( + ico:Icon
+    o.child.foreach { w:Win
+      ico := Icon.cast (w.dup self)
       (w = o.line_open).if { init_open ico; }
     }
   )
   
-  - new:SELF <-
-  ( + r:SELF
+  - new:Self <-
+  ( + r:Self
     (stock.is_empty).if { r := clone; } else { r := stock.pop; }
     r
   )
   
   - free <-
-  ( child.foreach { w:WIN; w.free; }; child.clear
-    stock.add_last Self
+  ( child.foreach { w:Win; w.free; }; child.clear
+    stock.add_last self
   )
   
-  - init p:WIN :SELF <- ( read_object; init_parent p)
+  - init p:Win :Self <- ( read_object; init_parent p)
   
   // Parsing.
   
-  - item id:STRING_ALIAS str v:STRING_ALIAS :BOOLEAN <-
+  - item id:String_alias str v:String_alias :Boolean <-
   ( 
     id
     .case "ICON" then {
       (
         v
         .case "MENU_BAR"   then {          
-          ICON.new.init Self name v bar { b:WIN
-            MENU.list.foreach { m:MENU
+          Icon.new.init self name v bar { b:Win
+            Menu.list.foreach { m:Menu
               ((m.text_l != "Theme") && {m.text_l != "Keymap"}).if { // C'est Naze
-                ACT_ITM.new.init b act m
+                Act_itm.new.init b act m
               }
             }
           }
         }
         .case "BUFFER_BAR" then {
-          ICON.new.init Self name v bar { b:WIN
-            0.to 11 do { i:INTEGER; BUF_ITM.new.init b idx i; }
+          Icon.new.init self name v bar { b:Win
+            0.to 11 do { i:Int; Buf_itm.new.init b idx i; }
           }
         }
         .case "SETUP_BAR" then {
-          ICON.new.init Self name v bar { b:WIN
+          Icon.new.init self name v bar { b:Win
             build_menu_setup b
           }
         }
-        != STRING_ALIAS
+        != String_alias
       ).if {
-        STRING.tmp { tmp:STRING_BUFFER
+        String.tmp { tmp:String_buffer
           tmp += "Tools box `" += v += "' not found.";
           err warning msg tmp
         }
       }
     }
-    = STRING_ALIAS
+    = String_alias
   )
   
-  - item id:STRING_ALIAS int v:INTEGER :BOOLEAN <-
+  - item id:String_alias int v:Int :Boolean <-
   (
     id
     .case "open" then { (v != -1).if { init_open (child.at v); }; }
-    = STRING_ALIAS
+    = String_alias
   )
   
   - write_object <-
   (
     put_object {
       put "ICON" value {
-        put_array { i:INTEGER
-          put_str (child.at i.like ICON.id_name)
+        put_array { i:Int
+          put_str (child.at i.like Icon.id_name)
           i = child.upper
         }
       }
@@ -117,10 +116,10 @@ Public
   
 Private
   
-  - build_menu_setup b:WIN <-
-  ( + m:MENU
-    m := MENU.new.make_sty
-    ACT_ITM.new.init b act m
-    m := MENU.new.make_key
-    ACT_ITM.new.init b act m
+  - build_menu_setup b:Win <-
+  ( + m:Menu
+    m := Menu.new.make_sty
+    Act_itm.new.init b act m
+    m := Menu.new.make_key
+    Act_itm.new.init b act m
   )

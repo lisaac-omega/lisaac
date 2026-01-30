@@ -1,0 +1,58 @@
+Header
+  + name := Main
+/**/
+Public 
+  - max:Int <- 128
+  
+  + map: Hmap Int Key Int
+  
+  - fill_add <-
+  (
+    from 1 to max do { x:Int
+      ? {x.hash_code = x}
+      map.at x add x
+      ? {map.has x}
+    }    
+  )
+  
+  - update <-
+  (
+    from 1 to max do { x:Int
+      + sa:Int
+      sa := x
+      map.at sa update (x + 1)
+    }    
+  )
+   
+  - main <-
+  (
+    map := new Hmap Int Key Int capacity 1000
+    Test.check (map.capacity) integer 1543
+    
+    fill_add
+    Test.check (map.count = max)
+    
+    from 1 to max do { x:Int
+      Test.check (map.has x)
+    }
+    
+    map.clear
+    Test.check (map.count = 0)
+    Test.check (map.capacity) integer 1543
+    
+    from 1 to max do { x:Int
+      Test.check (! map.has x)
+    }
+        
+    fill_add
+    Test.check (map.count = max)
+
+    from 1 to max do { x:Int
+      Test.check (map.has x)
+    }
+    /*
+    update
+    */
+    
+  )
+  

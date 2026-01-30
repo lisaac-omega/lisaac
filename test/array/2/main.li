@@ -1,13 +1,12 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Insert
-  - parent_print:PRINT := PRINT
+  - parent_print:Print := Print
     
 Public
   - main <-
-  ( + sb: Expanded STRING_BUFFER
+  ( + sb: Flat String_buffer
     //TEST.check_null (sb.storage)
-    TEST.check (sb.capacity = 0)
-    TEST.check (sb.is_empty)
+    Test.check (sb.capacity = 0)
+    Test.check (sb.is_empty)
   )

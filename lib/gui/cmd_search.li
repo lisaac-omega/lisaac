@@ -1,24 +1,23 @@
 Header
-  + name := CMD_SEARCH;
-  
+  + name := Cmd_search
 Inherit
-  - parent_cmd:CMD := CMD
+  - parent_cmd:Cmd := Cmd
 
 Public
-  - old_text:STRING_BUFFER   := STRING_BUFFER.create 32
-  - stack:ARRAY INTEGER := ARRAY INTEGER.create_with_capacity 64
-  - state:INTEGER
+  - old_text:String_buffer   := String_buffer.create 32
+  - stack:Array Int := Array Int.create_with_capacity 64
+  - state:Int
   
-  - is_back:BOOLEAN
+  - is_back:Boolean
   
-  - start:INTEGER <- stack.second_last
-  - end:INTEGER   <- stack.last
+  - start:Int <- stack.second_last
+  - end:Int   <- stack.last
   
-  - open_forward:BOOLEAN <- sub_open FALSE msg "I-search:" key "Search forward"
+  - open_forward:Boolean <- sub_open False msg "I-search:" key "Search forward"
   
-  - open_backward:BOOLEAN <- sub_open TRUE msg "I-search backward:" key "Search backward"
+  - open_backward:Boolean <- sub_open True msg "I-search backward:" key "Search backward"
   
-  - sub_open s:BOOLEAN msg m:STRING_ALIAS key key:STRING_ALIAS :BOOLEAN <-
+  - sub_open s:Boolean msg m:String_alias key key:String_alias :Boolean <-
   (
     mesg.copy m
     is_back := s
@@ -27,52 +26,52 @@ Public
     stack.add_last (cur_txt.pos)
     stack.add_last (cur_txt.pos)
     text.clear
-    SUBACT.get key.load Self
+    Subact.get key.load self
     open
   )
       
-  - action:BOOLEAN <-
+  - action:Boolean <-
   ( old_text.copy text
     close
-    TRUE
+    True
   )
   
-  - key s:STRING cmd c:UINTEGER_8 :BOOLEAN <-
-  ( + r:BOOLEAN
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + r:Boolean
     r := parent_cmd.key s cmd c
-    ((c & KEYBOARD.msk_cmd) = 0).if {
+    ((c & Keyboard.msk_cmd) = 0).if {
       search start
-      r := TRUE
+      r := True
     } else {
       //s.first.println
       ((c & 111b) = 0).if {
         (s.first)
-        .when 'R' or 'U' then { r := TRUE; action; }
-        .when 'L' or 'D' then { r := TRUE; action; }
+        .when 'R' or 'U' then { r := True; action; }
+        .when 'L' or 'D' then { r := True; action; }
       }
     }
     r
   )
   
-  - switch:BOOLEAN <-
+  - switch:Boolean <-
   ( old_text.copy text
     close
     (is_back).if { open_forward; } else { open_backward; }
     key old_text cmd 0
-    TRUE
+    True
   )
   
-  - to_prev:BOOLEAN <-
+  - to_prev:Boolean <-
   (stack.count > 2).if {
     stack.remove_tail 2
     cur_txt.set_pos_raw (is_back.ok start or end)
     text.clear
-    start.to (end-1) do { i:INTEGER; text.add_last (cur_txt.text.at i); }
+    start.to (end-1) do { i:Int; text.add_last (cur_txt.text.at i); }
     cur := text.count
   }
   
-  - to_next:BOOLEAN <-
-  ( + p:INTEGER
+  - to_next:Boolean <-
+  ( + p:Int
     (state = 1).if {
       info.copy "[Looped]"
       p := (is_back).ok (cur_txt.text.upper-1) or 0
@@ -106,16 +105,16 @@ Public
     (!text.is_empty) && {search p}
   )
     
-  - cancel:BOOLEAN <-
+  - cancel:Boolean <-
   ( cur_txt.set_pos_raw (stack.first)
     close
-    TRUE
+    True
   )
   
 Private
   
-  - search b:INTEGER :BOOLEAN <-
-  ( + p:INTEGER
+  - search b:Int :Boolean <-
+  ( + p:Int
     (is_back).if {
       p := cur_txt.text.search_back text at b
     } else {

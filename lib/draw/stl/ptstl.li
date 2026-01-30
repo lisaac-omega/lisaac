@@ -1,43 +1,42 @@
 Header
-  + name := Expanded PTSTL;
-  
+  + name := Flat Ptstl
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Mapping,Public
-  + xn:REAL_32
-  + yn:REAL_32
-  + zn:REAL_32
+  + xn:Real32
+  + yn:Real32
+  + zn:Real32
   
-  + x1:REAL_32
-  + y1:REAL_32
-  + z1:REAL_32
+  + x1:Real32
+  + y1:Real32
+  + z1:Real32
   
-  + x2:REAL_32
-  + y2:REAL_32
-  + z2:REAL_32
+  + x2:Real32
+  + y2:Real32
+  + z2:Real32
   
-  + x3:REAL_32
-  + y3:REAL_32
-  + z3:REAL_32
+  + x3:Real32
+  + y3:Real32
+  + z3:Real32
   
-  + ctrl:UINTEGER_16
+  + ctrl:Uint16
   
 Public
   
-  - x_min:REAL_32 <- x1.min x2.min x3
-  - y_min:REAL_32 <- y1.min y2.min y3
-  - z_min:REAL_32 <- z1.min z2.min z3
+  - x_min:Real32 <- x1.min x2.min x3
+  - y_min:Real32 <- y1.min y2.min y3
+  - z_min:Real32 <- z1.min z2.min z3
   
-  - x_max:REAL_32 <- x1.max x2.max x3
-  - y_max:REAL_32 <- y1.max y2.max y3
-  - z_max:REAL_32 <- z1.max z2.max z3
+  - x_max:Real32 <- x1.max x2.max x3
+  - y_max:Real32 <- y1.max y2.max y3
+  - z_max:Real32 <- z1.max z2.max z3
   
-  - gx:REAL_32 <- (x1+x2+x3) / 3
-  - gy:REAL_32 <- (y1+y2+y3) / 3
-  - gz:REAL_32 <- (z1+z2+z3) / 3
+  - gx:Real32 <- (x1+x2+x3) / 3
+  - gy:Real32 <- (y1+y2+y3) / 3
+  - gz:Real32 <- (z1+z2+z3) / 3
   
-  - translate (tx,ty,tz:REAL_32) <-
+  - translate (tx,ty,tz:Real32) <-
   (
     (x1,y1,z1) := (x1 + tx, y1 + ty, z1 + tz)
     (x2,y2,z2) := (x2 + tx, y2 + ty, z2 + tz)

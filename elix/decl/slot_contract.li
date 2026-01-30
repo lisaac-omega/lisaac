@@ -1,39 +1,38 @@
 Header
-  + name := SLOT_CONTRACT;
-
+  + name := Slot_contract
 Inherit  
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
 Insert
 //  - parent_lix_buf:LIX_BUF := LIX_BUF
     
 Private
-  - stk_s:Expanded ARRAY (Strict SLOT_CONTRACT)
+  - stk_s:Flat Array (Exact Slot_contract)
   
 Public   
-  - is_major:BOOLEAN := FALSE
+  - is_major:Boolean := False
 
-  + list:LIST
-  + require:BOOLEAN
-  - set_require <- ( require := TRUE; )
+  + list:List
+  + require:Boolean
+  - set_require <- ( require := True; )
   
-  + slot:SLOT
-  - set_slot s:SLOT <- ( slot := s; )
+  + slot:Slot
+  - set_slot s:Slot <- ( slot := s; )
       
-  - new:SELF <- ( + r:SELF; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
+  - new:Self <- ( + r:Self; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
   
   - free <-
   (
-    require := FALSE
-    (list != NULL).if { list.free; list := NULL; }; stk_s.add_last Self
+    require := False
+    (list != NULL).if { list.free; list := NULL; }; stk_s.add_last self
   )
       
-  - detect:BOOLEAN <- look "  ["
+  - detect:Boolean <- look "  ["
   
   - parse <-
   [ ? {detect}; ]
-  ( + par,acc,cro,ln:INTEGER
-    + c,in_str:CHARACTER
-    + stop:BOOLEAN
+  ( + par,acc,cro,ln:Int
+    + c,in_str:Char
+    + stop:Boolean
     pos_i := pos_i + 3
     cro := 1
     {(!stop) && {cro != 0} && {skip_sp; at pos_i != '\0'}}.while_do {
@@ -85,9 +84,10 @@ Public
   - begin_draw <-
   (
     (list = NULL).if {      
+      slot.load_arg
       ln_limit := pt_b.pt + di
-      list := LIST.parse_spln 1
-      (read_c ';').if { col (LOOK.symbol) sub 1; }
+      list := List.parse_spln 1
+      (read_c ';').if { col (Look.symbol) sub 1; }
       ln_limit := 0
       pos_i := Old pos_i
       nl := Old nl
@@ -106,9 +106,9 @@ Public
   
 Private
   
-  - req dr:{} dir d:BOOLEAN <-
-  ( + start,end:INTEGER
-    + x0,y0,x1,y1:REAL_32
+  - req dr:{} dir d:Boolean <-
+  ( + start,end:Int
+    + x0,y0,x1,y1:Real32
     (x0,y0) := (tex.x,tex.y - tex.asc)
     tex.push_line
     start := trace_pointer
@@ -120,10 +120,10 @@ Private
     foreground start to end
   )
   
-  - req_bg (x0,y0:REAL_32) to (x1,y1:REAL_32) dir d:BOOLEAN <-
-  ( + x,h,w,stp,hx:REAL_32
-    + a,da,k:REAL_32
-    + col:COLOR
+  - req_bg (x0,y0:Real32) to (x1,y1:Real32) dir d:Boolean <-
+  ( + x,h,w,stp,hx:Real32
+    + a,da,k:Real32
+    + col:Color
     w := 16
     h := y1-y0
     lisave
@@ -134,15 +134,15 @@ Private
     rect (x0,window.yo) size (window.width,window.height)
     stroke;*/
     intersect_scissor (x0,window.yo) size (window.width,window.height)
-    a := LOOK.contract.af
-    col := LOOK.contract
+    a := Look.contract.af
+    col := Look.contract
     fill_color col
     stp := (w*w*2).sqrt
     (d).if {
-      k := ((pos_y+y1 - x0) / (stp*2)).to_integer
+      k := ((pos_y+y1 - x0) / (stp*2)).to_int
       x := pos_y+y0 - k * (stp*2) - stp
     } else {
-      k := ((pos_y+y0 + x0) / (stp*2)).to_integer
+      k := ((pos_y+y0 + x0) / (stp*2)).to_int
       x := - (pos_y+y0 - k * (stp*2) - stp)
     }
     //x := x0 + d.ok (-h) or 0

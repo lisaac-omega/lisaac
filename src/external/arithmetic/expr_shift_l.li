@@ -1,24 +1,21 @@
 Header
-
-  + name        := EXPR_SHIFT_L;
-
-  /*Add Binary Expression.*/
-
+  + name := Expr_shift_l
+/*Add Binary Expression.*/
 Inherit
 
-  + parent_expr_binary:Expanded EXPR_BINARY
+  + parent_expr_binary:Flat Expr_binary
 
 Public
 
-  + symbol:STRING_ALIAS := "<<"
+  + symbol:String_alias := "<<"
 
   //
   // Execute.
   //
 
-  - exec_conservator_right right_cst:INTEGER_CST :EXPR <-
+  - exec_conservator_right right_cst:Int_cst :Expr <-
   //-- E <<  0 -> E
-  ( + result:EXPR
+  ( + result:Expr
 
     (right_cst.value = 0).if {
       result := left
@@ -27,7 +24,7 @@ Public
     result
   )
 
-  - exec left_cst:INTEGER_CST and right_cst:INTEGER_CST :EXPR <-
+  - exec left_cst:Int_cst and right_cst:Int_cst :Expr <-
   //-- C1 << C2  -> C3
   //-- C1 << -C2 -> Error.
   (
@@ -41,9 +38,9 @@ Public
     left_cst
   )
 
-  - exec_left  left_cst :INTEGER_CST :EXPR <-
+  - exec_left  left_cst :Int_cst :Expr <-
   //-- 0 << E   -> 0
-  ( + result:EXPR
+  ( + result:Expr
 
     (left_cst.value = 0).if {
       result := left_cst
@@ -52,9 +49,9 @@ Public
     result
   )
 
-  - exec_right right_cst:INTEGER_CST :EXPR <-
+  - exec_right right_cst:Int_cst :Expr <-
   //-- E << -C2 -> Error.
-  ( + result:EXPR
+  ( + result:Expr
 
     (right_cst.value < 0).if {
       warning_error (position,"Left shift count is negative.")

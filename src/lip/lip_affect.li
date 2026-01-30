@@ -1,29 +1,27 @@
 Header
-
-  + name      := LIP_AFFECT;
-
+  + name := Lip_affect
 Inherit
 
-  + parent_lip_code:Expanded LIP_CODE
+  + parent_lip_code:Flat Lip_code
 
 Public
 
-  + name:STRING_ALIAS
+  + name:String_alias
 
-  + value:LIP_CODE
+  + value:Lip_code
 
   //
   // Creation.
   //
 
-  - create p:POSITION name n:STRING_ALIAS value val:LIP_CODE :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias value val:Lip_code :Self <-
+  ( + result:Self
     result := clone
     result.make p name n value val
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS value val:LIP_CODE <-
+  - make p:Position name n:String_alias value val:Lip_code <-
   (
     position := p
     name := n
@@ -35,8 +33,8 @@ Public
   //
 
   - run <-
-  ( + slot:LIP_SLOT_DATA
-    + val:LIP_CONSTANT
+  ( + slot:Lip_slot_data
+    + val:Lip_constant
 
     slot := get_data name
     (slot = NULL).if {

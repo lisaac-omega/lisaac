@@ -1,63 +1,62 @@
 Header
-  + name := MAIN;
- 
+  + name := Main
 Public
   - main <-
-  ( + i:INTEGER
-    TEST.check (ASM_BUILTIN.size_in_base_2 1) integer 1
-    TEST.check (ASM_BUILTIN.size_in_base_2 2) integer 2
-    TEST.check (ASM_BUILTIN.size_in_base_2 3) integer 2
-    TEST.check (ASM_BUILTIN.size_in_base_2 4) integer 3
-    TEST.check (ASM_BUILTIN.size_in_base_2 5) integer 3
-    TEST.check (ASM_BUILTIN.size_in_base_2 6) integer 3
-    TEST.check (ASM_BUILTIN.size_in_base_2 7) integer 3
-    TEST.check (ASM_BUILTIN.size_in_base_2 8) integer 4
+  ( + i:Int
+    Test.check (Asm_builtin.size_in_base_2 1) integer 1
+    Test.check (Asm_builtin.size_in_base_2 2) integer 2
+    Test.check (Asm_builtin.size_in_base_2 3) integer 2
+    Test.check (Asm_builtin.size_in_base_2 4) integer 3
+    Test.check (Asm_builtin.size_in_base_2 5) integer 3
+    Test.check (Asm_builtin.size_in_base_2 6) integer 3
+    Test.check (Asm_builtin.size_in_base_2 7) integer 3
+    Test.check (Asm_builtin.size_in_base_2 8) integer 4
     i := 9
     {i < 16}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 4
+      Test.check (Asm_builtin.size_in_base_2 i) integer 4
       i := i + 1
     }
-    TEST.check i integer 16
+    Test.check i integer 16
     {i < 32}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 5
+      Test.check (Asm_builtin.size_in_base_2 i) integer 5
       i := i + 1
     }
-    TEST.check i integer 32
+    Test.check i integer 32
     {i < 64}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 6
+      Test.check (Asm_builtin.size_in_base_2 i) integer 6
       i := i + 1
     }
-    TEST.check i integer 64
+    Test.check i integer 64
     {i < 128}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 7
+      Test.check (Asm_builtin.size_in_base_2 i) integer 7
       i := i + 1
     }
-    TEST.check i integer 128
+    Test.check i integer 128
     {i < 256}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 8
+      Test.check (Asm_builtin.size_in_base_2 i) integer 8
       i := i + 1
     }
-    TEST.check i integer 256
+    Test.check i integer 256
     {i < 512}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 9
+      Test.check (Asm_builtin.size_in_base_2 i) integer 9
       i := i + 1
     }
-    TEST.check i integer 512
+    Test.check i integer 512
     {i < 1024}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 10
+      Test.check (Asm_builtin.size_in_base_2 i) integer 10
       i := i + 1
     }
-    TEST.check i integer 1024
+    Test.check i integer 1024
     {i < 2048}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 11
+      Test.check (Asm_builtin.size_in_base_2 i) integer 11
       i := i + 1
     }
-    TEST.check i integer 2048
+    Test.check i integer 2048
     {i < 4096}.while_do {
-      TEST.check (ASM_BUILTIN.size_in_base_2 i) integer 12
+      Test.check (Asm_builtin.size_in_base_2 i) integer 12
       i := i + 1
     }
-    TEST.check i integer 4096
+    Test.check i integer 4096
     check 4096 bits 13
     check 8192 bits 14
     check 16384 bits 15
@@ -113,13 +112,13 @@ Public
     // DCDC august 16th 2025, isn't that funny code :-)
   )
   
-  - check value:UINTEGER_64 bits bits:INTEGER <-
+  - check value:Uint64 bits bits:Int <-
   (
-    TEST.check (ASM_BUILTIN.size_in_base_2 value) integer bits
-    TEST.check (ASM_BUILTIN.size_in_base_2 (value + 1)) integer bits
-    TEST.check (ASM_BUILTIN.size_in_base_2 (value + 2)) integer bits
-    TEST.check (ASM_BUILTIN.size_in_base_2 (value + 3)) integer bits
-    TEST.check (ASM_BUILTIN.size_in_base_2 (value - 1)) integer (bits - 1)
-    TEST.check (ASM_BUILTIN.size_in_base_2 (value - 2)) integer (bits - 1)
-    TEST.check (ASM_BUILTIN.size_in_base_2 (value - 3)) integer (bits - 1)
+    Test.check (Asm_builtin.size_in_base_2 value) integer bits
+    Test.check (Asm_builtin.size_in_base_2 (value + 1)) integer bits
+    Test.check (Asm_builtin.size_in_base_2 (value + 2)) integer bits
+    Test.check (Asm_builtin.size_in_base_2 (value + 3)) integer bits
+    Test.check (Asm_builtin.size_in_base_2 (value - 1)) integer (bits - 1)
+    Test.check (Asm_builtin.size_in_base_2 (value - 2)) integer (bits - 1)
+    Test.check (Asm_builtin.size_in_base_2 (value - 3)) integer (bits - 1)
   )

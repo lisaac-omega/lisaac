@@ -1,32 +1,33 @@
 Header
-  + name := CODE_SHOW
-  /**/
+  + name := Code_show
+  
+/**/
 Insert
-  - parent_mini_bash:MINI_BASH := MINI_BASH
+  - parent_mini_bash:Mini_bash := Mini_bash
     
 Private
   
-  + run_dir:STRING_ALIAS  
+  + run_dir:String_alias  
   
-  - cd dir:STRING <-
+  - cd dir:String <-
   (
-    if (ENVIRONMENT.chdir dir = 0) then {
-      OUT # "cd " # dir #'\n'
+    if (Environment.chdir dir = 0) then {
+      Out # "cd " # dir #'\n'
       working_directory.clear
-      FILE_UTILS.working_directory_in working_directory
+      File_utils.working_directory_in working_directory
       //OUT # "cwd: " # working_directory # '\n'
     } else {
       crash_with_message ("Cannot chdir into \"" + dir + "\"")
     }
   )
   
-  - directory dir:STRING_ALIAS main m:STRING_ALIAS run r:BOOLEAN elix e:BOOLEAN <-
-  ( + cmd_lisaac, cmd_elix, cmd_run, cmd_rm:STRING
+  - directory dir:String_alias main m:String_alias run r:Boolean elix e:Boolean <-
+  ( + cmd_lisaac, cmd_elix, cmd_run, cmd_rm:String
     if (run_dir = NULL) then {
-      FILE_UTILS.working_directory_in working_directory
+      File_utils.working_directory_in working_directory
       run_dir := working_directory.to_string_alias  
     }
-    STRING.tmp { b:STRING_BUFFER
+    String.tmp { b:String_buffer
       b.copy run_dir
       b.extend_unless '/'
       b.append dir
@@ -47,35 +48,35 @@ Private
       }.elseif {(!e) && {!r}} then {
         run cmd_lisaac        
       } else {
-        ? {FALSE}
+        ? {False}
       }
     }
   )
   
-  - directory dir:STRING_ALIAS main m:STRING_ALIAS background <-
-  ( + cmd_run:STRING
+  - directory dir:String_alias main m:String_alias background <-
+  ( + cmd_run:String
     // OUT # "directory " # dir # " main " # m # '\n'
-    directory dir main m run FALSE elix FALSE
+    directory dir main m run False elix False
     cmd_run := "./" + m
     run cmd_run background
   )
   
-  - run cmd:STRING  <-
+  - run cmd:String  <-
   (
     cmd.println
-    ENVIRONMENT.run cmd
+    Environment.run cmd
   )
   
-  - run cmd:STRING background  <-
+  - run cmd:String background  <-
   (
-    OUT # cmd # " &\n"
-    ENVIRONMENT.run cmd background
+    Out # cmd # " &\n"
+    Environment.run cmd background
   )
   
-  - show list:STRING_ALIAS^n <-
+  - show list:String_alias^n <-
   (
-    { ex:STRING_ALIAS
-      directory "" main ex run TRUE elix TRUE
+    { ex:String_alias
+      directory "" main ex run True elix True
     }.value list
   )
- 
+  

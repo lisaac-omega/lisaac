@@ -1,20 +1,19 @@
-Header  
-  + name := L3D;
-  
+Header
+  + name := L3d
 Inherit  
-  + parent_o3d:Expanded O3D
+  + parent_o3d:Flat O3d
   
 Private
   
-  - free_list:ARRAY L3D := ARRAY L3D.create_with_capacity 4
+  - free_list:Array L3d := Array L3d.create_with_capacity 4
   
-O3D
-  + list:ARRAY O3D
+O3d
+  + list:Array O3d
   
-  - create l:O3D and r:O3D :L3D <-
-  ( + result:L3D
+  - create l:O3d and r:O3d :L3d <-
+  ( + result:L3d
     (free_list.is_empty).if {
-      result := L3D.clone
+      result := L3d.clone
       result.make l and r
     } else {
       result := free_list.pop
@@ -23,16 +22,16 @@ O3D
     result
   )
   
-  - free <- free_list.add_last Self
+  - free <- free_list.add_last self
   
-  - make l:O3D and r:O3D <-
+  - make l:O3d and r:O3d <-
   (
-    model := MAT4X4.create
-    list := ARRAY O3D.create_with_capacity 2
+    model := Mat4x4.create
+    list := Array O3d.create_with_capacity 2
     reset l and r
   )
   
-  - reset l:O3D and r:O3D <-
+  - reset l:O3d and r:O3d <-
   (    
     model.identity
     list.clear
@@ -42,8 +41,8 @@ O3D
   
 Public
     
-  - Self:SELF '+' other:O3D :O3D <-
-  ( + r3d:L3D
+  - self:Self '+' other:O3d :O3d <-
+  ( + r3d:L3d
     apply_model
     r3d ?= other
     (r3d = NULL).if {
@@ -53,45 +52,45 @@ Public
       list.append_collection (r3d.list)
       r3d.free
     }
-    Self
+    self
   )
   
   - apply_model <-
-  ( + new_model:MAT4X4
-    list.foreach { o:O3D
+  ( + new_model:Mat4x4
+    list.foreach { o:O3d
       new_model := model * o.model
       o.set_model new_model
     }
     model.identity
   )
     
-  - Self:SELF '<>' other:O3D :O3D <-
+  - self:Self '<>' other:O3d :O3d <-
   (
     apply_model
     other.translate (list.last.model.extract_translate)
-    Self + other
+    self + other
   )
     
   // Draw
   
-  - color c:COLOR :SELF <-
+  - color c:Color :Self <-
   (
-    list.foreach { o:O3D
+    list.foreach { o:O3d
       o.color c
     }
-    Self
+    self
   )
   
-O3D
+O3d
   
   - draw_intern <-
   ( apply_model
-    list.quick_sort_with { (o1,o2:O3D)
-      + p1,p2:P3D
+    list.quick_sort_with { (o1,o2:O3d)
+      + p1,p2:P3d
       p1 ?= o1; p2 ?= o2
       p1.col.af > p2.col.af
     }
-    list.foreach { o:O3D
+    list.foreach { o:O3d
       o.draw_intern
     }
     free

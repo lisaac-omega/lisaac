@@ -1,7 +1,6 @@
 Header
-  + name := MJPG;
-  
-  - include := `extern unsigned char dht[];`;
+  + name := Mjpg
+- include := `extern unsigned char dht[];`;
   
   - external := `unsigned char dht[] = {
   0xff, 0xc4, 0x01, 0xa2, 0x00, 0x00, 0x01, 0x05, 0x01, 0x01,
@@ -51,10 +50,10 @@ Header
   
 Public
   
-  - decode (src:NATIVE_ARRAY UINTEGER_8,  lsrc:INTEGER)
-  in (dst:NATIVE_ARRAY UINTEGER_8,dst_cap:INTEGER) :INTEGER <-
-  ( + ldst,ldht,p,i,sz:INTEGER
-    + c,d:UINTEGER_8
+  - decode (src:C_array Uint8,  lsrc:Int)
+  in (dst:C_array Uint8,dst_cap:Int) :Int <-
+  ( + ldst,ldht,p,i,sz:Int
+    + c,d:Uint8
     
     // Scan for an existing DHT segment or the first SOS segment.
     p := 2
@@ -63,7 +62,7 @@ Public
       (c = 0FFh).if {
         d := src.at p
         (d != 0DAh).if { // Move to next segment.
-          p := p + (src.at (p+1).to_integer << 8) + src.at (p+2)
+          p := p + (src.at (p+1).to_int << 8) + src.at (p+2)
         }
       }
     }
@@ -73,12 +72,12 @@ Public
       sz := lsrc
     } else {
       (d = 0DAh).if { i := p - 1; } else { i := 2; }
-      ldht := `sizeof(dht)`:INTEGER
+      ldht := `sizeof(dht)`:Int
       ldst := lsrc + ldht
       ? {dst_cap >= ldst}
       // Copy the JPEG data, inserting the DHT segment.
       dst.copy_from src until (i - 1)
-      (dst+i).copy_from (`dht`:NATIVE_ARRAY UINTEGER_8) until (ldht-1)
+      (dst+i).copy_from (`dht`:C_array Uint8) until (ldht-1)
       (dst+i+ldht).copy_from (src+i) until (lsrc - i - 1)
       sz := ldst
     }
@@ -86,29 +85,29 @@ Public
     sz
   )
   
-  - capture img:NATIVE_ARRAY UINTEGER_8 save n:STRING <-
-  ( + sz:INTEGER
-    + f:POINTER
+  - capture img:C_array Uint8 save n:String <-
+  ( + sz:Int
+    + f:Pointer
     
-    WEBCAM.grab
+    Webcam.grab
     // MPEG:
-    sz := MJPG.decode (WEBCAM.img,WEBCAM.len) in (img_jpg,img_jpg_count)
-    IMAGE.init img_jpg size img_jpg_count
-    IMAGE.load (IMAGE.rgb_alpha) in img
+    sz := Mjpg.decode (Webcam.img,Webcam.len) in (img_jpg,img_jpg_count)
+    Image.init img_jpg size img_jpg_count
+    Image.load (Image.rgb_alpha) in img
     //
-    WEBCAM.reset_buf
+    Webcam.reset_buf
     //
     (n != NULL).if {
-      f := FILE_UTILS.open_write n
+      f := File_utils.open_write n
       ? {f.is_not_null}
-      FILE_UTILS.write f buffer img_jpg size sz
-      FILE_UTILS.close f
+      File_utils.write f buffer img_jpg size sz
+      File_utils.close f
     }
   )
   
 Private
   
-  - img_jpg_count:INTEGER := 24_000_000
-  - img_jpg:NATIVE_ARRAY UINTEGER_8 := NATIVE_ARRAY UINTEGER_8.create img_jpg_count
+  - img_jpg_count:Int := 24_000_000
+  - img_jpg:C_array Uint8 := C_array Uint8.create img_jpg_count
   
   

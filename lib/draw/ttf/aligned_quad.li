@@ -1,23 +1,22 @@
 Header
-  + name := ALIGNED_QUAD;
-
+  + name := Aligned_quad
 Mapping
-  + x0:REAL_32;
-  + y0:REAL_32;
-  + s0:REAL_32;
-  + t0:REAL_32;
-  + x1:REAL_32;
-  + y1:REAL_32;
-  + s1:REAL_32;
-  + t1:REAL_32;
+  + x0:Real32;
+  + y0:Real32;
+  + s0:Real32;
+  + t0:Real32;
+  + x1:Real32;
+  + y1:Real32;
+  + s1:Real32;
+  + t1:Real32;
   
 Public
   
-  - get_packed_quad (chardata:ARRAY PACKED_CHAR,char_index:INTEGER) 
-  size (pw,ph:INTEGER) pos (xpos,ypos:REAL_32) 
-  align (align_to_int:INTEGER) :REAL_32 <-
-  ( + ipw,iph,x,y:REAL_32
-    + b:PACKED_CHAR
+  - get_packed_quad (chardata:Array Packed_char,char_index:Int) 
+  size (pw,ph:Int) pos (xpos,ypos:Real32) 
+  align (align_to_int:Int) :Real32 <-
+  ( + ipw,iph,x,y:Real32
+    + b:Packed_char
     (ipw,iph) := (1.0 / pw, 1.0 / ph)
     b := chardata.item char_index
 
@@ -41,12 +40,12 @@ Public
     xpos + b.xadvance
   )
  
-  - get_baked_quad chardata:BACKED_CHAR size (pw,ph:INTEGER) 
-  index char_index:INTEGER pos (xpos,ypos:REAL_32) 
-  align (q:ALIGNED_QUAD,opengl_fillrule:INTEGER) :REAL_32 <-
-  ( + d3d_bias,ipw,iph:REAL_32
-    + b:BACKED_CHAR
-    + round_x,round_y:INTEGER
+  - get_baked_quad chardata:Backed_char size (pw,ph:Int) 
+  index char_index:Int pos (xpos,ypos:Real32) 
+  align (q:Aligned_quad,opengl_fillrule:Int) :Real32 <-
+  ( + d3d_bias,ipw,iph:Real32
+    + b:Backed_char
+    + round_x,round_y:Int
     
     d3d_bias := (opengl_fillrule!=0).ok 0 or (-0.5)
     (ipw,iph) := (1.0 / pw, 1.0 / ph)

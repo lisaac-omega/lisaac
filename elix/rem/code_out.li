@@ -1,26 +1,25 @@
 Header
-  + name := CODE_OUT;
-  
+  + name := Code_out
 Inherit
-  + parent_tok_drw:Expanded TOK_DRW
+  + parent_tok_drw:Flat Tok_drw
   
 Insert
-  - parent_lix_buf:LIX_BUF := LIX_BUF
+  - parent_lix_buf:Lix_buf := Lix_buf
   
 Private
-  - stk:Expanded ARRAY (Strict CODE_OUT)
+  - stk:Flat Array (Exact Code_out)
   
 Public
      
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
-  - free <- stk.add_last Self
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last self
     
   //
   // PARSER / DRAW
   //
   
-  - detect:BOOLEAN <- look "  /*"
+  - detect:Boolean <- look "  /*"
   
   - parse <-
   (
@@ -30,4 +29,4 @@ Public
     (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }
   )
     
-  - begin_draw <- fill_color (COLOR.gray)
+  - begin_draw <- fill_color (Color.gray)

@@ -1,24 +1,23 @@
 Header
-  + name := DXF_SPLINE;
-  
+  + name := Dxf_spline
 Inherit
-  + parent_dxf_line:Expanded DXF_LINE
+  + parent_dxf_line:Flat Dxf_line
   
 Private
-  - stacks:ARRAY DXF_SPLINE := ARRAY DXF_SPLINE.create_with_capacity 256
+  - stacks:Array Dxf_spline := Array Dxf_spline.create_with_capacity 256
   
 Public
   
-  + x1:REAL_32
-  + y1:REAL_32
+  + x1:Real32
+  + y1:Real32
   
-  + x2:REAL_32
-  + y2:REAL_32
+  + x2:Real32
+  + y2:Real32
   
-  - create (px0,py0:REAL_32) p1 (px1,py1:REAL_32) p2 (px2,py2:REAL_32) to (px3,py3:REAL_32) :DXF_SPLINE <-
-  ( + result:DXF_SPLINE
+  - create (px0,py0:Real32) p1 (px1,py1:Real32) p2 (px2,py2:Real32) to (px3,py3:Real32) :Dxf_spline <-
+  ( + result:Dxf_spline
     (stacks.is_empty).if {
-      result := DXF_SPLINE.clone
+      result := Dxf_spline.clone
     } else {
       result := stacks.pop
     }
@@ -27,30 +26,30 @@ Public
     result
   )
   
-  - make_p1 (px1,py1:REAL_32) p2 (px2,py2:REAL_32) <-
+  - make_p1 (px1,py1:Real32) p2 (px2,py2:Real32) <-
   (
     (x1,y1) := (px1,py1)
     (x2,y2) := (px2,py2)
   )
   
-  - free <- stacks.add_last Self
+  - free <- stacks.add_last self
   
-  - compute_bound:(REAL_32,REAL_32,REAL_32,REAL_32) <-
-  ( + xmn,ymn,xmx,ymx:REAL_32
+  - compute_bound:(Real32,Real32,Real32,Real32) <-
+  ( + xmn,ymn,xmx,ymx:Real32
     (xmn,ymn,xmx,ymx) := parent_dxf_line.compute_bound
     xmn.min x1.min x2, ymn.min y1.min y2,
     xmn.max x1.max x2, ymn.max y1.max y2
   )
   
   - inverse <-
-  ( + tmp:REAL_32
+  ( + tmp:Real32
     parent_dxf_line.inverse
     tmp:=x1; x1:=x2; x2:=tmp
     tmp:=y1; y1:=y2; y2:=tmp
   )
   
-  - draw pen:PEN to (x,y:REAL_32) with (c:REAL_32,mtx:ARRAY REAL_32) <-
-  ( + px0,py0,px1,py1,px2,py2,px3,py3,tx,ty:REAL_32
+  - draw pen:Pen to (x,y:Real32) with (c:Real32,mtx:Array Real32) <-
+  ( + px0,py0,px1,py1,px2,py2,px3,py3,tx,ty:Real32
     (tx,ty) := get (xb,yb) with mtx
     (px0,py0) := (x+tx*c, y-ty*c)
     (tx,ty) := get (x1,y1) with mtx
@@ -62,10 +61,10 @@ Public
     pen.bezier_w1 (px1,py1) w2 (px2,py2) to (px3,py3)
   )
   
-  - bmp_line_to (dx,dy:REAL_32) zoom c:REAL_32 <-
-  ( + t,ti,t2,t3,ti2,ti3,step:REAL_32
-    + px0,py0,px1,py1,px2,py2,px3,py3:REAL_32
-    + x,y:INTEGER
+  - bmp_line_to (dx,dy:Real32) zoom c:Real32 <-
+  ( + t,ti,t2,t3,ti2,ti3,step:Real32
+    + px0,py0,px1,py1,px2,py2,px3,py3:Real32
+    + x,y:Int
     (px0,py0) := ((xb-dx)*c, (dy-yb)*c)
     (px1,py1) := ((x1-dx)*c, (dy-y1)*c)
     (px2,py2) := ((x2-dx)*c, (dy-y2)*c)
@@ -77,8 +76,8 @@ Public
       t3 := t2 * t
       ti2 := ti * ti
       ti3 := ti2 * ti
-      x := (ti3*px0 + 3.0*ti2*t*px1 + 3.0*ti*t2*px2 + t3*px3).to_integer+1
-      y := (ti3*py0 + 3.0*ti2*t*py1 + 3.0*ti*t2*py2 + t3*py3).to_integer+1
+      x := (ti3*px0 + 3.0*ti2*t*px1 + 3.0*ti*t2*px2 + t3*px3).to_int+1
+      y := (ti3*py0 + 3.0*ti2*t*py1 + 3.0*ti*t2*py2 + t3*py3).to_int+1
       bmp_line_to (x,y)
       t := t + step
     }.do_while {t <= 1.0}

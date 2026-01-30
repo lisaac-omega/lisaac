@@ -1,16 +1,16 @@
 Header
-  + name := MAIN;
-  /**/
+  + name := Main
+/**/
 Public 
   - main <-
-  ( + map: HMAP INTEGER KEY STRING_ALIAS
-    map := new HMAP INTEGER KEY STRING_ALIAS
-    TEST.check (! map.has "1")
+  ( + map: Hmap Int Key String_alias
+    map := new Hmap Int Key String_alias
+    Test.check (! map.has "1")
     map.at "1" put 1
-    TEST.check (map.has "1")
-    TEST.check ((map.at "1") = 1)
+    Test.check (map.has "1")
+    Test.check ((map.at "1") = 1)
     
-    TEST.check (! map.has "2")    
+    Test.check (! map.has "2")    
     map.at "2" add 2
-    TEST.check ((map.at "2") = 2)
+    Test.check ((map.at "2") = 2)
   )

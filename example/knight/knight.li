@@ -1,7 +1,6 @@
 Header
-
-  + name    := KNIGHT;
-  /*
+  + name := Knight
+/*
   The classic KNIGHT problem on a N times N square chessboard.
   The knight have to pass on all places of the chessboard once
   a time. For instance, here is solution for a 7 X 7 chesboard,
@@ -19,15 +18,15 @@ Header
   */
 
 Private
-  - chessboard:RANGE_ARRAY2 INTEGER
+  - chessboard:Range_array2 Int
 
-  - attempt_count:INTEGER
+  - attempt_count:Int
   
-  - retry_count:INTEGER
+  - retry_count:Int
 
-  - delta_rows:RANGE_ARRAY INTEGER :=
-  ( + result:RANGE_ARRAY INTEGER
-    result := RANGE_ARRAY INTEGER.create 1 to 8
+  - delta_rows:Range_array Int :=
+  ( + result:Range_array Int
+    result := Range_array Int.create 1 to 8
     result.at 1 put (-2); result.at 2 put (-1)
     result.at 3 put   1;  result.at 4 put   2
     result.at 5 put   2;  result.at 6 put   1
@@ -35,9 +34,9 @@ Private
     result
   )
 
-  - delta_cols:RANGE_ARRAY INTEGER :=
-  ( + result:RANGE_ARRAY INTEGER
-    result := RANGE_ARRAY INTEGER.create 1 to 8
+  - delta_cols:Range_array Int :=
+  ( + result:Range_array Int
+    result := Range_array Int.create 1 to 8
     result.at 1 put   1;  result.at 2 put   2
     result.at 3 put   2;  result.at 4 put   1
     result.at 5 put (-1); result.at 6 put (-2)
@@ -45,7 +44,7 @@ Private
     result
   )
 
-  - knight (size, line, column:INTEGER) <-
+  - knight (size, line, column:Int) <-
   [
     ? {size >= 3}
     ? {0 <= line}
@@ -54,7 +53,7 @@ Private
     ? {column < size}
   ]
   (
-    chessboard := RANGE_ARRAY2(INTEGER).create (1,1) to (size,size)
+    chessboard := Range_array2(Int).create (1,1) to (size,size)
     chessboard.at (line,column) put 1
     (solution (line,column)).if {
       print_board
@@ -64,11 +63,11 @@ Private
     ("attempt_count=" + attempt_count.to_string + " retry_count=" + retry_count.to_string).println
   )
 
-  - solution (line,column:INTEGER) :BOOLEAN <-
-  ( + value,i:INTEGER
-    + result:BOOLEAN
+  - solution (line,column:Int) :Boolean <-
+  ( + value,i:Int
+    + result:Boolean
     (chessboard.count = chessboard.at (line,column)).if {
-      result := TRUE
+      result := True
     } else {
       i := 1
       value := chessboard.at (line,column)
@@ -80,9 +79,9 @@ Private
     result
   )
 
-  - try (line, column, value:INTEGER) :BOOLEAN <-
+  - try (line, column, value:Int) :Boolean <-
   // Try to place the knight by used cross back-tracking method.
-  ( + result:BOOLEAN
+  ( + result:Boolean
     attempt_count := attempt_count + 1
     (chessboard.valid_index (line,column)).if {
       (chessboard.at (line,column) = 0).if {
@@ -99,12 +98,12 @@ Private
 
   - print_board <-
   (
-    STRING.tmp2 { (hline,value:STRING_BUFFER)
+    String.tmp2 { (hline,value:String_buffer)
       (4 * (chessboard.upper1 + 2)).times { hline.add_last '-'; }
       hline.add_last '\n'
       hline.print
-      (chessboard.lower1).to (chessboard.upper1) do { line:INTEGER
-        (chessboard.lower2).to (chessboard.upper2) do { column:INTEGER
+      (chessboard.lower1).to (chessboard.upper1) do { line:Int
+        (chessboard.lower2).to (chessboard.upper2) do { column:Int
           value.clear
           value.add_last ' '
           chessboard.at (line,column).append_in value
@@ -120,32 +119,32 @@ Private
 
 Public
   - main <-
-  ( + board_size, start_line, start_column:INTEGER
-    if ((COMMAND_ARGS.upper != 3) ||
-      {! COMMAND_ARGS.at 1.is_integer} ||
-      {! COMMAND_ARGS.at 2.is_integer} ||
-      {! COMMAND_ARGS.at 3.is_integer}
+  ( + board_size, start_line, start_column:Int
+    if ((Command_args.upper != 3) ||
+      {! Command_args.at 1.is_integer} ||
+      {! Command_args.at 2.is_integer} ||
+      {! Command_args.at 3.is_integer}
     ) then {
       "usage: ./knight <chessboard_size> <start_line> <start_column>".println
-      SYSTEM.exit 1
+      System.exit 1
     }
-    board_size := COMMAND_ARGS.at 1.to_integer
-    start_line := COMMAND_ARGS.at 2.to_integer
-    start_column := COMMAND_ARGS.at 3.to_integer
+    board_size := Command_args.at 1.to_int
+    start_line := Command_args.at 2.to_int
+    start_column := Command_args.at 3.to_int
     (board_size > 8).if {
       ("chessboard_size=" + board_size.to_string + " may take a lot of time...").println
     }
     (board_size < 3).if {
       ("chessboard_size=" + board_size.to_string + " is not valid.").println
-      SYSTEM.exit 1
+      System.exit 1
     }
     (! start_line.in_range 1 to board_size).if {
       ("start_line=" + start_line.to_string + " out of range.").println
-      SYSTEM.exit 1
+      System.exit 1
     }
     (! start_column.in_range 1 to board_size).if {
       ("start_column=" + start_column.to_string + " out of range.").println
-      SYSTEM.exit 1
+      System.exit 1
     }
     knight (board_size,start_line,start_column)
   )

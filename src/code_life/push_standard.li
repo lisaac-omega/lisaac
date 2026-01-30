@@ -1,12 +1,9 @@
 Header
-
-  + name        := PUSH_STANDARD;
-
-  /* Push context for debug mode */
-
+  + name := Push_standard
+/* Push context for debug mode */
 Inherit
 
-  + parent_push:Expanded PUSH
+  + parent_push:Flat Push
   
 Public
   
@@ -15,10 +12,10 @@ Public
   //
 
   - genere <-
-  ( + id:INTEGER
-    + idf:STRING_ALIAS
+  ( + id:Int
+    + idf:String_alias
 
-    idf := ALIASER_LOCAL.push Self
+    idf := Aliaser_local.push self
     
     (is_first).if {
       output.append "lisaac_push_first(&"

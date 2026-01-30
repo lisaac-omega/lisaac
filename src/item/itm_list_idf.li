@@ -1,36 +1,33 @@
 Header
-
-  + name        := ITM_LIST_IDF;
-
-  /*List identifier for assignment.*/
-
+  + name := Itm_list_idf
+/*List identifier for assignment.*/
 Inherit
 
-  + parent_itm_code:Expanded ITM_CODE
+  + parent_itm_code:Flat Itm_code
 
 Public
 
-  - is_affect:POSITION; // Nothing (it s good with 0).
+  - is_affect:Position; // Nothing (it s good with 0).
   // BSBS: A quoi ca sert ca ??? 
 
   //
   // Data
   //
 
-  + list_name:ARRAY STRING_ALIAS
+  + list_name:Array String_alias
 
   //
   // Constructor
   //
 
-  - create p:POSITION with lst:ARRAY STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Position with lst:Array String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p with lst
     result
   )
 
-  - make p:POSITION with lst:ARRAY STRING_ALIAS <-
+  - make p:Position with lst:Array String_alias <-
   (
     position  := p
     list_name := lst
@@ -40,7 +37,7 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
+  - to_run_expr:Expr <-
   (
     semantic_error (position,"ITM_LIST_IDF.to_run_expr")
     NULL

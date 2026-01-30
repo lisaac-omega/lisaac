@@ -1,48 +1,52 @@
 Header
-  + name := WINDOW;
-  /*
+  + name := Window
+/*
   X Window
   */
-  
 Inherit
-  + parent_win:Expanded WIN
+  + parent_win:Flat Win
   
 Public
   
-  + pen:PEN
-  - set_pen p:PEN <- ( pen := p; )
+  + pen:Pen
+  - set_pen p:Pen <- ( pen := p; )
   
-  + win_ptr:POINTER
-  + fullscreen:BOOLEAN
+  + win_ptr:Pointer
+  + fullscreen:Boolean
   
-  - window:WINDOW <- Self
+  - window:Window <- self
   
-  + refresh_ok:BOOLEAN
-  - ask_refresh <- ( refresh_ok := FALSE; )
+  + refresh_ok:Boolean
+  - ask_refresh <- ( refresh_ok := False; )
   
-  - have_the_focus:BOOLEAN
-  - set_have_the_focus b:BOOLEAN <- ( have_the_focus := b; PAPER.refresh_again )
+  - have_the_focus:Boolean
+  - set_have_the_focus b:Boolean <- ( have_the_focus := b; Paper.refresh_again )
 
-  - get_pos:(REAL_32,REAL_32) <-
-  ( + x,y:INTEGER
-    (x,y) := PAPER.get_window_pos win_ptr
-    x.to_real_32, y.to_real_32
+  - get_pos:(Real32,Real32) <-
+  ( + x,y:Int
+    (x,y) := Paper.get_window_pos win_ptr
+    x.to_real32, y.to_real32
   )
   
-  - get_cursor_pos:(REAL_32,REAL_32) <-
-  ( + x,y:INTEGER
-    (x,y) := PAPER.get_cursor_pos win_ptr
-    x.to_real_32, y.to_real_32
+  - get_cursor_pos:(Real32,Real32) <-
+  ( + x,y:Int
+    (x,y) := Paper.get_cursor_pos win_ptr
+    x.to_real32, y.to_real32
   )
   
-  - set_pos (x,y:REAL_32) :SELF <-
-  ( PAPER.set_window win_ptr pos (x.to_integer,y.to_integer); Self)
+  - set_pos (x,y:Real32) :Self <-
+  ( Paper.set_window win_ptr pos (x.to_int,y.to_int); self)
   
-  - size (w,h:REAL_32) :SELF <-
+  - size (w,h:Real32) :Self <-
   ( parent_win.size (w,h)
-    (! win_ptr.is_null).if { PAPER.set_window win_ptr size (w.to_integer,h.to_integer); }
+    (! win_ptr.is_null).if { Paper.set_window win_ptr size (w.to_int,h.to_int); }
     ask_refresh
-    Self
+    self
+  )
+  
+  - on_close <-
+  (    
+    PAPER.exit 0
   )
   
   - draw_all <-
@@ -53,8 +57,8 @@ Public
     //(pen.states != NULL).if { "OK2".println; } else { "no2".println; }
     //(states != NULL).if { "OK3".println; } else { "no3".println; }
     pen.load_gl
-    begin_frame (width.to_integer,height.to_integer) ratio 1.0; //px_ratio
-    (! refresh_ok).if { refresh_ok := TRUE; refresh; }
+    begin_frame (width.to_int,height.to_int) ratio 1.0; //px_ratio
+    (! refresh_ok).if { refresh_ok := True; refresh; }
     draw
     draw_child
     draw_forward
@@ -62,17 +66,17 @@ Public
     //"End Frame".println
   )
   
-  - init p:WIN :SELF <-
+  - init p:Win :Self <-
   [ ? {p = NULL}; ]
   (
-    win_ptr := PAPER.create_window (width.to_integer,height.to_integer) title id_name for Self
+    win_ptr := Paper.create_window (width.to_int,height.to_int) title id_name for self
     // BSBS: Bug Old compilo:
-    child.add_last WIN
+    child.add_last Win
     child.remove_last
     (lip "target" str != "android").if {
       // BSBS: Bug dans PEN...      
-      detect_memory_leak := FALSE
-      pen := PEN.new_pen_with_font (FONT.n_sys.at 0 = NULL)
+      detect_memory_leak := False
+      pen := Pen.new_pen_with_font (Font.n_sys.at 0 = NULL)
       detect_memory_leak := Old detect_memory_leak
     };
     /*
@@ -81,26 +85,26 @@ Public
       FONT.load pen
     }
     */  
-    Self
+    self
   )
   
-  - init n:STRING_ALIAS size (w,h:INTEGER) :SELF <-
+  - init n:String_alias size (w,h:Int) :Self <-
   (
     (id_name,width,height) := (n,w,h)
     init NULL
   )
     
-  - mouse_scroll (dx,dy:REAL_64)
+  - mouse_scroll (dx,dy:Real64)
   
 Private
   
   - wait_events <- ( `glfwWaitEvents()` )
   
-  - wait x: REAL_64 seconds action:{} <-
-  ( + t:REAL_64
-    t := `glfwGetTime()`:REAL_64
+  - wait x: Real64 seconds action:{} <-
+  ( + t:Real64
+    t := `glfwGetTime()`:Real64
     action.value
-    until {`glfwGetTime()`:REAL_64 - t >= x} do {
+    until {`glfwGetTime()`:Real64 - t >= x} do {
       `glfwPollEvents()`
     }
    )

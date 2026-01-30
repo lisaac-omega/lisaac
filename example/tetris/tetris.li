@@ -1,38 +1,36 @@
 Header
-
-  + name := TETRIS;
-  /*
+  + name := Tetris
+/*
   The TeTriS puzzle game.
   */
-
 Inherit
-  + parent_window:Expanded WINDOW
+  + parent_window:Flat Window
 
 Private
 
-  - level:UINTEGER_8
-  - line_count:UINTEGER_32
+  - level:Uint8
+  - line_count:Uint32
 
-  - face:ARRAY3(INTEGER)
+  - face:Array3(Int)
 
-  - scr_game:ARRAY2(UINTEGER_8)
+  - scr_game:Array2(Uint8)
 
-  - face_to_color n:UINTEGER_8 :COLOR <-
-  ( + result:COLOR
+  - face_to_color n:Uint8 :Color <-
+  ( + result:Color
     n
-    .when 1 then { result := COLOR.rgb (020h,020h,0E0h); }  // Blue.
-    .when 2 then { result := COLOR.rgb (0E0h,070h,020h); }  // Orange.
-    .when 3 then { result := COLOR.rgb (0E0h,0E0h,020h); }  // Yellow.
-    .when 4 then { result := COLOR.rgb (020h,0E0h,0E0h); }  // Cyan.
-    .when 5 then { result := COLOR.rgb (0E0h,020h,020h); }  // Red.
-    .when 6 then { result := COLOR.rgb (0E0h,020h,0E0h); }  // Magenta.
-    .when 7 then { result := COLOR.rgb (020h,0E0h,020h); }; // Green.
+    .when 1 then { result := Color.rgb (020h,020h,0E0h); }  // Blue.
+    .when 2 then { result := Color.rgb (0E0h,070h,020h); }  // Orange.
+    .when 3 then { result := Color.rgb (0E0h,0E0h,020h); }  // Yellow.
+    .when 4 then { result := Color.rgb (020h,0E0h,0E0h); }  // Cyan.
+    .when 5 then { result := Color.rgb (0E0h,020h,020h); }  // Red.
+    .when 6 then { result := Color.rgb (0E0h,020h,0E0h); }  // Magenta.
+    .when 7 then { result := Color.rgb (020h,0E0h,020h); }; // Green.
     result
   )
 
-  - case_busy (x,y:INTEGER) face n:UINTEGER_8 <-
-  ( + x0,y0:INTEGER
-    + col:COLOR
+  - case_busy (x,y:Int) face n:Uint8 <-
+  ( + x0,y0:Int
+    + col:Color
     x0 := x * 25
     y0 := y * 25
     col := face_to_color n
@@ -44,7 +42,7 @@ Private
   )
 
   - delete_line <-
-  ( + x,y:INTEGER
+  ( + x,y:Int
     y := 18
     do {
       x := 0
@@ -52,8 +50,8 @@ Private
         x := x+1
       }
       if (x = 10) then {
-        from y down_to 1 do { yy:INTEGER
-          from 0 to 9 do { xx:INTEGER
+        from y down_to 1 do { yy:Int
+          from 0 to 9 do { xx:Int
             scr_game.at (xx,yy) put (scr_game.at (xx,yy-1))
           }
         }
@@ -68,30 +66,30 @@ Private
     } while {y != 0}
   )
 
-  - load_face p:INTEGER <-
+  - load_face p:Int <-
   //   0 |  1  |  2  |  3  |  4  |  5  |  6  |
   // ----|-----|-----|-----|-----|-----|-----|
   //   1 |     |     |     |     |     |     |
   //   2 | 3 1 | 2   | 3   |   2 |     | 2   |
   //   X | X   | X 1 | X   | X 1 | X 1 | X 1 |
   //   3 | 2   | 3   | 2 1 | 3   | 2 3 |   3 |
-  ( + tmp:BOOLEAN
-    + tmp1,tmp2:INTEGER
+  ( + tmp:Boolean
+    + tmp1,tmp2:Int
 
     // First graph.
-    face.put ((p!=0).to_integer)      to (0,1,0)
-    face.put ((p-2)*(p<4).to_integer) to (0,1,1)
+    face.put ((p!=0).to_int)      to (0,1,0)
+    face.put ((p-2)*(p<4).to_int) to (0,1,1)
     tmp1:=((p&1)<<1)-1
-    face.put ((p=4).to_integer) to (0,2,0)
+    face.put ((p=4).to_int) to (0,2,0)
     face.put tmp1               to (0,2,1)
     tmp:=(p>4)
-    tmp2:=tmp.to_integer
+    tmp2:=tmp.to_int
     face.put tmp2                           to (0,3,0)
-    face.put (-tmp1*(!tmp).to_integer+tmp2) to (0,3,1)
+    face.put (-tmp1*(!tmp).to_int+tmp2) to (0,3,1)
 
     // 3 rotations (+pi/2).
-    from 1 to 3 do { r:INTEGER
-      from 0 to 3 do { c:INTEGER
+    from 1 to 3 do { r:Int
+      from 0 to 3 do { c:Int
         tmp1 := r - 1
         face.put (-face.at (tmp1,c,1)) to (r,c,0);  // x' = -y
         face.put (+face.at (tmp1,c,0)) to (r,c,1);  // y' = +x
@@ -99,16 +97,16 @@ Private
     }
   )
 
-  - pos_r:INTEGER
+  - pos_r:Int
 
-  - pos_x:INTEGER
+  - pos_x:Int
 
-  - pos_y:INTEGER
+  - pos_y:Int
 
-  - n_face:UINTEGER_8
+  - n_face:Uint8
 
-  - move (x,y:INTEGER) rotation r:INTEGER :BOOLEAN <-
-  ( + j,px,py:INTEGER
+  - move (x,y:Int) rotation r:Int :Boolean <-
+  ( + j,px,py:Int
     j:=0
     while {
       (j < 4) &&
@@ -126,8 +124,8 @@ Private
   )
 
   - put_face <-
-  ( + x,y:INTEGER
-    from 0 to 3 do { j:INTEGER
+  ( + x,y:Int
+    from 0 to 3 do { j:Int
       x := pos_x + face.at (pos_r,j,0)
       y := pos_y + face.at (pos_r,j,1)
       scr_game.at (x,y) put n_face
@@ -135,8 +133,8 @@ Private
   )
 
   - remove_face <-
-  ( + x,y:INTEGER
-    from 0 to 3 do { j:INTEGER
+  ( + x,y:Int
+    from 0 to 3 do { j:Int
       x := pos_x + face.at (pos_r,j,0)
       y := pos_y + face.at (pos_r,j,1)
       scr_game.at (x,y) put 0
@@ -145,34 +143,34 @@ Private
 
 Public
   
-  - info:STRING_BUFFER := STRING_BUFFER.create 80
+  - info:String_buffer := String_buffer.create 80
   
   - main <-
   (    
     // Initialization.
-    face := ARRAY3 INTEGER .create (4,4,2)
-    scr_game := ARRAY2 UINTEGER_8 .create (10,19)
+    face := Array3 Int .create (4,4,2)
+    scr_game := Array2 Uint8 .create (10,19)
     stat  := 0
     // Init window.    
     init "TetLIS" size (25 * 10,25 * 19 + 20)
     //PAPER.set_animation 1
-    PAPER.run
+    Paper.run
   )
 
   - draw <-
-  ( + n:UINTEGER_8
-    PAPER.refresh_again
+  ( + n:Uint8
+    Paper.refresh_again
     timer_event
         
     // Game array.
-    0.to 18 do { y:INTEGER
-      0.to 9 do { x:INTEGER
+    0.to 18 do { y:Int
+      0.to 9 do { x:Int
         n := scr_game.at (x,y)
         (n != 0).if {
           case_busy (x,y) face n
         } else {
           begin_path
-          fill_color (COLOR.white)
+          fill_color (Color.white)
           rect (x*25,y*25) size (23,23)
           fill
         }
@@ -196,21 +194,21 @@ Public
   //
   // Events.
   //
-  - delay:REAL_32
-  - stat:UINTEGER_8
-  - old_stat:UINTEGER_8
+  - delay:Real32
+  - stat:Uint8
+  - old_stat:Uint8
 
   - timer_event <-
-  ( + speed:UINTEGER_32
-    + t:REAL_32
+  ( + speed:Uint32
+    + t:Real32
     
-    t := CLOCK.seconds
+    t := Clock.seconds
 
     ia
 
     speed := 10 - (level >> 1)
-    //((t-delay)*10.0).to_uinteger_32.println
-    ((((t-delay)*10.0).to_uinteger_32 > speed) | TRUE).if {
+    //((t-delay)*10.0).to_uint32.println
+    ((((t-delay)*10.0).to_uint32 > speed) | True).if {
       delay := t
       stat
       .when 0 then {
@@ -242,7 +240,7 @@ Public
     }
   )
 
-  - key_event k:UINTEGER_16 <-
+  - key_event k:Uint16 <-
   (
     (((k & 0800h) != 0) && {stat=1}).if {
       remove_face
@@ -286,7 +284,7 @@ Public
     }
   )
 
-  - touch_event t:TOUCH <-
+  - touch_event t:Touch <-
   (
     ((t.id = 0) && {t.z != 0}).if {
       ((pos_x*25) < t.x).if {
@@ -306,7 +304,7 @@ Public
       put_face
     }
     /*
-    (win != Self).if {
+    (win != self).if {
       // Pause.
       (stat < 2).if {
         old_stat := stat
@@ -338,20 +336,20 @@ Public
   // IA
   //
 
-  - form:ARRAY3(INTEGER) := ARRAY3(INTEGER).create (4,4,2)
+  - form:Array3(Int) := Array3(Int).create (4,4,2)
 
-  - screen_ia:ARRAY2(UINTEGER_8) := ARRAY2(UINTEGER_8).create (10,19)
+  - screen_ia:Array2(Uint8) := Array2(Uint8).create (10,19)
 
-  - stat_ia:INTEGER
+  - stat_ia:Int
 
   - ia <-
-  ( + cnt,dx,dy,tmp,px,py,max,x,y:INTEGER
-    + firs,is_ok:BOOLEAN
-    - px_max,pr_max:INTEGER
+  ( + cnt,dx,dy,tmp,px,py,max,x,y:Int
+    + firs,is_ok:Boolean
+    - px_max,pr_max:Int
 
     // Copy game.
-    0.to 18 do { cy:INTEGER
-      0.to 9 do { cx:INTEGER
+    0.to 18 do { cy:Int
+      0.to 9 do { cx:Int
         (scr_game.at (cx,cy) != 0).if {
           screen_ia.at (cx,cy) put 1
         } else {
@@ -381,15 +379,15 @@ Public
       (cnt = 4).if {
         //"Face detect!\n".print
         // Normalize.
-        from 0 to 3 do { i:INTEGER
+        from 0 to 3 do { i:Int
           form.put (form.at (0,i,0)-dx) to (0,i,0)
           form.put (form.at (0,i,1)-dy) to (0,i,1)
         }
         // 3 rotation (+pi/2).
-        from 1 to 3 do { r:INTEGER
+        from 1 to 3 do { r:Int
           dx := dy := 10
           px_max := pr_max := 10
-          0.to 3 do { c:INTEGER
+          0.to 3 do { c:Int
             tmp := r - 1
             px := -form.at (tmp,c,1)
             py := +form.at (tmp,c,0)
@@ -413,7 +411,7 @@ Public
             form.put tmp to (r,max,1)
           }
           // Normalize.
-          0.to 3 do { i:INTEGER
+          0.to 3 do { i:Int
             form.put (form.at (r,i,0)-dx) to (r,i,0)
             form.put (form.at (r,i,1)-dy) to (r,i,1)
           }
@@ -423,7 +421,7 @@ Public
         abyss_list.clear
         result_list.clear
         mesure_abyss screen_ia in abyss_list
-        0.to 3 do { pr:INTEGER
+        0.to 3 do { pr:Int
           px := 0
           {
             is_ok := mesure pr pos px
@@ -439,8 +437,8 @@ Public
         */
         //IO.read_character
 
-        1.to pr_max do { i:INTEGER
-          key_event (0800h | 'U'.to_integer)
+        1.to pr_max do { i:Int
+          key_event (0800h | 'U'.to_int)
         }
 
         stat_ia := 1
@@ -457,20 +455,20 @@ Public
             (px = px_max).if {
 
               //(line_count < 34).if {
-              //  keyboard_event (0800h | 'D'.to_integer)
+              //  keyboard_event (0800h | 'D'.to_int)
               //}
 
               stat_ia := 2
               //"Wait...\n".print
             } else {
-              1.to (px - px_max) do { t:INTEGER
-                key_event (0800h | 'L'.to_integer)
+              1.to (px - px_max) do { t:Int
+                key_event (0800h | 'L'.to_int)
               }
-              1.to (px_max - px) do { t:INTEGER
-                key_event (0800h | 'R'.to_integer)
+              1.to (px_max - px) do { t:Int
+                key_event (0800h | 'R'.to_int)
               }
             }
-            firs := TRUE
+            firs := True
           }
           x := x + 1
         }
@@ -496,14 +494,14 @@ Public
     }
   )
 
-  - screen_after:ARRAY2(UINTEGER_8) := ARRAY2(UINTEGER_8).create (10,19)
+  - screen_after:Array2(Uint8) := Array2(Uint8).create (10,19)
 
-  - result_list:ARRAY(INTEGER) := ARRAY(INTEGER).create_with_capacity (40*7)
+  - result_list:Array(Int) := Array(Int).create_with_capacity (40*7)
 
-  - mesure pr:INTEGER pos px:INTEGER :BOOLEAN <-
-  ( + py:INTEGER
-    + m1,m2,m3,m4,m5:INTEGER
-    + result:BOOLEAN
+  - mesure pr:Int pos px:Int :Boolean <-
+  ( + py:Int
+    + m1,m2,m3,m4,m5:Int
+    + result:Boolean
 
     screen_after.copy_collection screen_ia
     py := put_ia pr pos px
@@ -560,14 +558,14 @@ Public
       result_list.add_last pr
       result_list.add_last px
       // Remove.
-      result := TRUE
+      result := True
     }
     result
   )
 
-  - choice_best:(INTEGER,INTEGER) <-
-  ( + idx_global,idx:INTEGER
-    + idx_left,idx_right:INTEGER
+  - choice_best:(Int,Int) <-
+  ( + idx_global,idx:Int
+    + idx_left,idx_right:Int
 
     print_result
 
@@ -599,21 +597,21 @@ Public
     result_list.at (idx+5),result_list.at (idx+6)
   )
 
-  - score i:INTEGER :INTEGER <-
+  - score i:Int :Int <-
   (
     result_list.at (i+0) + result_list.at (i+1) +
     result_list.at (i+2) + result_list.at (i+3) +
     result_list.at (i+4)
   )
 
-  - best_in_range low:INTEGER to up:INTEGER :INTEGER <-
-  ( + idx:INTEGER
-    + max,tmp:INTEGER
+  - best_in_range low:Int to up:Int :Int <-
+  ( + idx:Int
+    + max,tmp:Int
 
     idx := -1
     (low <= up).if {
       max := -1000_000
-      from 0 to (result_list.upper) step 7 do { i:INTEGER
+      from 0 to (result_list.upper) step 7 do { i:Int
         (result_list.at (i+6).in_range low to up).if {
           tmp := score i
           (tmp > max).if {
@@ -627,9 +625,9 @@ Public
   )
 
 
-  - put_ia r:INTEGER pos x:INTEGER :INTEGER <-
-  ( + j,px,py,y:INTEGER
-    + in:BOOLEAN
+  - put_ia r:Int pos x:Int :Int <-
+  ( + j,px,py,y:Int
+    + in:Boolean
 
     y := 3
     {
@@ -648,7 +646,7 @@ Public
       y := -1
     } else {
       y := y - 1
-      0.to 3 do { i:INTEGER
+      0.to 3 do { i:Int
         px := x + form.at (r,i,0)
         py := y + form.at (r,i,1)
         screen_after.at (px,py) put 2
@@ -661,14 +659,14 @@ Public
   // Sub-routine mesure.
   //
 
-  - abyss_list:ARRAY(INTEGER) := ARRAY(INTEGER).create_with_capacity 5
+  - abyss_list:Array(Int) := Array(Int).create_with_capacity 5
 
-  - abyss_list_after:ARRAY(INTEGER) := ARRAY(INTEGER).create_with_capacity 5
+  - abyss_list_after:Array(Int) := Array(Int).create_with_capacity 5
 
-  - mesure_abyss tab:ARRAY2(UINTEGER_8) in ab:ARRAY(INTEGER) <-
-  ( + y,yl,yr,ymx,depth,i:INTEGER
+  - mesure_abyss tab:Array2(Uint8) in ab:Array(Int) <-
+  ( + y,yl,yr,ymx,depth,i:Int
 
-    0.to 9 do { x:INTEGER
+    0.to 9 do { x:Int
       y := 4
       yl := yr := -1
       {(y < 19) && {tab.at (x,y) = 0}}.while_do {
@@ -704,8 +702,8 @@ Public
     }
   )
 
-  - mesure_ymax tab:ARRAY2(UINTEGER_8) detect n:INTEGER :INTEGER <-
-  ( + result,x:INTEGER
+  - mesure_ymax tab:Array2(Uint8) detect n:Int :Int <-
+  ( + result,x:Int
 
     result := 4
     {
@@ -718,9 +716,9 @@ Public
     result - 1
   )
 
-  - mesure_line tab:ARRAY2(UINTEGER_8) :INTEGER <-
-  ( + result:INTEGER
-    + y,x:INTEGER
+  - mesure_line tab:Array2(Uint8) :Int <-
+  ( + result:Int
+    + y,x:Int
 
     y := 18
     {
@@ -729,8 +727,8 @@ Public
         x := x + 1
       }
       (x = 10).if {
-        y.downto 5 do { yy:INTEGER
-          0.to 9 do { xx:INTEGER
+        y.downto 5 do { yy:Int
+          0.to 9 do { xx:Int
             tab.at (xx,yy) put (tab.at (xx,yy-1))
           }
         }
@@ -742,11 +740,11 @@ Public
     result
   )
 
-  - mesure_link tab:ARRAY2(UINTEGER_8) :INTEGER <-
-  ( + y,yb:INTEGER
-    + result:INTEGER
+  - mesure_link tab:Array2(Uint8) :Int <-
+  ( + y,yb:Int
+    + result:Int
 
-    0.to 9 do { x:INTEGER
+    0.to 9 do { x:Int
       y := 4
       {(y < 19) && {tab.at (x,y) != 2}}.while_do {
         y := y + 1
@@ -783,11 +781,11 @@ Public
     result
   )
 
-  - mesure_subhole tab:ARRAY2(UINTEGER_8) :INTEGER <-
-  ( + y,y_mx:INTEGER
-    + result:INTEGER
+  - mesure_subhole tab:Array2(Uint8) :Int <-
+  ( + y,y_mx:Int
+    + result:Int
 
-    0.to 9 do { x:INTEGER
+    0.to 9 do { x:Int
       y := 4
       {(y < 19) && {tab.at (x,y) != 2}}.while_do {
         y := y + 1
@@ -812,40 +810,40 @@ Public
   // Debug.
   //
 
-  - screen_txt:ARRAY2(CHARACTER) := ARRAY2(CHARACTER).create (4*5*2,4)
+  - screen_txt:Array2(Char) := Array2(Char).create (4*5*2,4)
 
   - print_form <-
-  ( + px,py:INTEGER
+  ( + px,py:Int
     screen_txt.set_all_with '-'
-    0.to 3 do { r:INTEGER
+    0.to 3 do { r:Int
       px := (r*5+form.at (r,0,0)) * 2
       py := form.at (r,0,1)
       screen_txt.put '(' to (px,py)
       screen_txt.put ')' to (px+1,py)
-      1.to 3 do { p:INTEGER
+      1.to 3 do { p:Int
         px := (r*5+form.at (r,p,0)) * 2
         py := form.at (r,p,1)
         screen_txt.put '[' to (px,py)
         screen_txt.put ']' to (px+1,py)
       }
-      0.to 3 do { y:INTEGER
+      0.to 3 do { y:Int
         px := (r*5+4)*2
         screen_txt.put ' ' to (px,y)
         screen_txt.put ' ' to (px+1,y)
       }
     }
-    0.to 3 do { y:INTEGER
-      0.to 39 do { x:INTEGER
+    0.to 3 do { y:Int
+      0.to 39 do { x:Int
         screen_txt.at (x,y).print
       }
       '\n'.print
     }
   )
 
-  - print_screen tab:ARRAY2(UINTEGER_8) <-
+  - print_screen tab:Array2(Uint8) <-
   (
-    0.to 18 do { y:INTEGER
-      0.to 9 do { x:INTEGER
+    0.to 18 do { y:Int
+      0.to 9 do { x:Int
         tab.at (x,y)
         .when 0 then {
           "--".print
@@ -859,7 +857,7 @@ Public
       }
       '\n'.print
     }
-    0.to 9 do { x:INTEGER
+    0.to 9 do { x:Int
       x.print
       ' '.print
     }
@@ -867,12 +865,12 @@ Public
   )
 
   - print_result <-
-  ( + tmp:INTEGER
+  ( + tmp:Int
     "|N \t||Link\t|Ymax\t|Hole\t|Abys\t|Line\t||Rot.\t|X   \t||Value\n".print
-    from (result_list.lower) to (result_list.upper) step 7 do { i:INTEGER
+    from (result_list.lower) to (result_list.upper) step 7 do { i:Int
       '|'.print
       (i/7).print; "\t||".print
-      0.to 4 do { j:INTEGER
+      0.to 4 do { j:Int
         result_list.at (i+j).print
         "\t|".print
       }
@@ -887,7 +885,7 @@ Public
       tmp.print
       '\n'.print
     }
-    from (abyss_list.lower) to (abyss_list.upper) step 2 do { i:INTEGER
+    from (abyss_list.lower) to (abyss_list.upper) step 2 do { i:Int
       "Abyss : x=".print
       abyss_list.at i.print
       " depth=".print

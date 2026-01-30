@@ -1,10 +1,8 @@
 Header
-  + name := STDOUT;
-
-  /*STanDard OUTput.*/
-
+  + name := Stdout
+/*STanDard OUTput.*/
 Inherit
-  - inherit_output_stream:OUTPUT_STREAM := OUTPUT_STREAM
+  - inherit_output_stream:Output_stream := Output_stream
 
 Public
   - flush <-
@@ -12,7 +10,7 @@ Public
     `fflush(stdout)`
   )
   
-  - put_character c:CHARACTER <- basic_io_putc c
+  - put_character c:Char <- basic_io_putc c
 
 
 

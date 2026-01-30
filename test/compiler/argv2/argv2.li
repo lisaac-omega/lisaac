@@ -1,6 +1,7 @@
 Header
-  + name := ARGV2
-  /**/
+  + name := Argv2
+  
+/**/
   
 
  
@@ -14,7 +15,7 @@ Public
     )
   )
   
-  - show list:STRING_ALIAS^n <-
+  - show list:String_alias^n <-
   (
     /*
     dir := new ARRAY STRING capacity n

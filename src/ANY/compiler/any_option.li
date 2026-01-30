@@ -1,23 +1,20 @@
 Header
-
-  + name        := ANY_OPTION;
-
-  /*Option for compiler (see shorter)*/
-
+  + name := Any_option
+/*Option for compiler (see shorter)*/
 Inherit
 
-  - parent_object:OBJECT := OBJECT
+  - parent_clone:Clone := Clone
 
 Public
 
-  - is_shorter :BOOLEAN := FALSE
+  - is_shorter :Boolean := False
 
-  - is_shorter2:BOOLEAN := FALSE
+  - is_shorter2:Boolean := False
 
   //
   // Option du Shorter.
   //
 
-  - is_short_private:BOOLEAN
-  - is_short_code:BOOLEAN
+  - is_short_private:Boolean
+  - is_short_code:Boolean
 

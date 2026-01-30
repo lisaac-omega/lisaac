@@ -1,23 +1,22 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Public
-  - max:INTEGER <- 100000
+  - max:Int <- 100000
   
   - main <-
-  ( + a:COLLECTION INTEGER
+  ( + a:Collection Int
     //a := ARRAY INTEGER .create_with_capacity max
-    a := ARRAY_BLOCK INTEGER .new
-    1.to max do { k:INTEGER
+    a := Array_block Int .new
+    1.to max do { k:Int
       a.add_first (max - k)
     }
-    1.to max do { k:INTEGER
-      TEST.check (a.at (k - 1)) integer (k - 1)
+    1.to max do { k:Int
+      Test.check (a.at (k - 1)) integer (k - 1)
     }
-    TEST.check (a.first) integer 0
-    TEST.check (a.last) integer (max - 1)
-    1.to max do { k:INTEGER
+    Test.check (a.first) integer 0
+    Test.check (a.last) integer (max - 1)
+    1.to max do { k:Int
       a.remove_first
     }
-    TEST.check (a.is_empty)
+    Test.check (a.is_empty)
   )

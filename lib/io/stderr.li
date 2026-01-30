@@ -1,10 +1,8 @@
 Header
-  + name := STDERR;
-
-  /*StanDard ERRor.*/
-
+  + name := Stderr
+/*StanDard ERRor.*/
 Inherit
-  - inherit_output_stream:OUTPUT_STREAM := OUTPUT_STREAM
+  - inherit_output_stream:Output_stream := Output_stream
 
 Public
   - flush <-
@@ -12,7 +10,7 @@ Public
     `fflush(stderr)`
   )
   
-  - put_character c:CHARACTER <-
+  - put_character c:Char <-
   (
     basic_error_putc c
   )

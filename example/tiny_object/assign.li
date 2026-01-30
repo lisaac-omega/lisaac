@@ -1,32 +1,30 @@
 Header
-
-  + name := ASSIGN;
-  /*
+  + name := Assign
+/*
   The print
   */
-
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  + local:LOCAL
+  + local:Local
 
-  + type:CLASS
+  + type:Class
 
   //
   // Creation.
   //
 
-  - create p:INTEGER local l:LOCAL type t:CLASS :SELF <-
-  ( + result:SELF
+  - create p:Int local l:Local type t:Class :Self <-
+  ( + result:Self
     result := clone
     result.make p local l type t
     result
   )
 
-  - make p:INTEGER local l:LOCAL type t:CLASS <-
+  - make p:Int local l:Local type t:Class <-
   (
     position := p
     local    := l

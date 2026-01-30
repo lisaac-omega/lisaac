@@ -1,0 +1,227 @@
+Header
+  + name := Int_cst
+/*Int constant*/
+Inherit
+
+  + parent_constant:Flat Constant
+
+Public
+
+  //
+  // Value.
+  //
+
+  + value:Int64
+
+  - set_value new_value:Int64 <-
+  (
+    value := new_value
+    check_type
+  )
+
+  - to_power:Int64 <-
+  // 2^Result = self or else -1
+  ( + result,val:Int64
+
+    val := value
+    (val = 0).if {
+      result := -1
+    } else {
+      {(val & 1) = 0}.while_do {
+        val := val >> 1
+        result := result + 1
+      }
+      (val != 1).if {
+        result := -1
+      }
+    }
+    result
+  )
+
+  - is_signed:Boolean <-
+  ( + typ:String_alias
+
+    typ := static_type.raw.name
+    (typ = str_int_64) || {typ = str_int_32} ||
+    {typ = str_int_16} || {typ = str_int_8 }
+  )
+
+  - is_saturated:Boolean <-
+  ( + result:Boolean
+
+    (is_signed).if {
+      result := value = -1
+    } else {
+      (static_type.raw.name)
+      .when str_uint_64 then {
+        result := False; // value = 0FFFFFFFFFFFFFFFFh
+      }
+      .when str_uint_32 then {
+        result := value = 0FFFF_FFFFh
+      }
+      .when str_uint_16 then {
+        result := value = 0FFFFh
+      }
+      .when str_uint_8 then {
+        result := value = 0FFh
+      }
+    }
+    result
+  )
+
+  //
+  // Creation.
+  //
+
+  - create p:Position value v:Int64 type t:Type_full :Self<-
+  ( + result:Self
+    result := clone
+    result.make p value v type t
+    result
+  )
+
+  - make p:Position value v:Int64 type t:Type_full <-
+  (
+    position := p
+    value := v
+    static_type := t
+    check_type
+  )
+
+  - my_copy:Self <- Self.create position value value type static_type
+
+  //
+  // Comparaison.
+  //
+
+  - self:Self '~=' Right 60 other:Expr :Boolean <-
+  ( + p:Int_cst
+    p ?= other
+    (p != NULL) && {value = p.value} && {static_type = p.static_type}
+  )
+
+  //
+  // Depend.
+  //
+
+  - cast_type p:Type_full <-
+  (
+   // ? { p.raw != type_integer }
+    static_type := p
+    check_type
+  )
+
+  //
+  // Generation.
+  //
+
+  - genere <-
+  (
+    (value.in_range (Int32.minimum) to (Int32.maximum.to_raw_int64)).if {
+      value.append_in output
+    } else {
+      output.append " 0x"
+      value.to_raw_uint64.to_hexadecimal_in output
+    }
+    (static_type.raw.name = str_int_64).if {
+      output.append "LL"
+    }.elseif {(value > Uint32.maximum.to_int64) || {static_type.raw.name = str_uint_64}} then {
+      output.append "LLU"
+    }.elseif {(value > Int.maximum.to_int64) || {static_type.raw.name = str_uint_32}} then {
+      output.append "LU"
+    }
+  )
+
+  //
+  // Display.
+  //
+
+  - display buffer:String_buffer <-
+  (
+    buffer.add_last '('
+    static_type.append_name_in buffer
+    buffer.add_last ')'
+    value.append_in buffer
+    display_ref buffer
+  )
+
+Private
+
+  - check_type <-
+  ( + error:Boolean
+    + min,max:Int64
+
+    // Check Range.
+    (static_type.raw.name)
+    .when str_uint_64 then {
+      // Nothing.
+    }
+    .when str_uint_32 then {
+      ((value < 0) || {value > Uint32.maximum.to_int64}).if {
+        error := True
+        max   := Uint32.maximum.to_int64
+      }
+    }
+    .when str_uint_16 then {
+      ((value < 0) || {value > Uint16.maximum.to_int64}).if {
+        error := True
+        max   := Uint16.maximum.to_int64
+      }
+    }
+    .when str_uint_8 then {
+      ((value < 0) || {value > Uint8.maximum.to_int64}).if {
+        error := True
+        max   := Uint8.maximum.to_int64
+      }
+    }
+    .when str_int_64 then {
+      // Nothing. 
+    }
+    .when str_int_32 then {
+      ((value < Int.minimum) || {value > Int.maximum.to_int64}).if {
+        error := True
+        min   := Int.minimum
+        max   := Int.maximum.to_int64
+      }
+    }
+    .when str_int_16 then {
+      ((value < Int16.minimum) || {value > Int16.maximum.to_int64}).if {
+        error := True
+        min   := Int16.minimum
+        max   := Int16.maximum.to_int64
+      }
+    }
+    .when str_int_8 then {
+      ((value < Int8.minimum) || {value > Int8.maximum.to_int64}).if {
+        error := True
+        min   := Int8.minimum
+        max   := Int8.maximum.to_int64
+      }
+    }
+
+    (error).if {
+      string_tmp.copy "Invalid constant integer ("
+      value.append_in string_tmp
+      string_tmp.append ") cast into "
+      static_type.append_name_in string_tmp
+      string_tmp.append " ["
+      min.append_in string_tmp
+      string_tmp.append ".."
+      max.append_in string_tmp
+      string_tmp.append "] => new value=0."
+      Position.put_error warning text string_tmp
+      position.put_position
+      list_current.position.put_position
+      Position.send_error
+      value := 0
+    }
+  )
+
+
+
+
+
+
+
+
+

@@ -1,20 +1,18 @@
 Header
-  
-  + name := CALL_FILL;
-  
+  + name := Call_fill
 Inherit
   
-  + parent_pen_call_2d:Expanded PEN_CALL_2D
+  + parent_pen_call_2d:Flat Pen_call_2d
   
 Private
   
-  - stack:ARRAY CALL_FILL := ARRAY CALL_FILL.create_with_capacity 16
+  - stack:Array Call_fill := Array Call_fill.create_with_capacity 16
 
 Public
     
-  - create_image img:INTEGER path (pofs,pcnt:INTEGER)
-  triangle (tofs,tcnt:INTEGER) uniform uofs:INTEGER :PEN_CALL_2D <-
-  ( + result:CALL_FILL
+  - create_image img:Int path (pofs,pcnt:Int)
+  triangle (tofs,tcnt:Int) uniform uofs:Int :Pen_call_2d <-
+  ( + result:Call_fill
     (stack.is_empty).if {
       result := clone
     } else {
@@ -27,7 +25,7 @@ Public
   
   - free <-
   ( 
-    stack.add_last Self
+    stack.add_last self
   )
   
-  - run_2d <- pen_gl.fill Self
+  - run_2d <- pen_gl.fill self

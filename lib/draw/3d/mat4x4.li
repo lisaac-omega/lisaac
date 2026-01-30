@@ -1,23 +1,22 @@
-Header  
-  + name := Strict MAT4X4;
-  
+Header
+  + name := Exact Mat4x4
 Insert  
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Mapping, Public  
-  + c0:Expanded VEC4
-  + c1:Expanded VEC4
-  + c2:Expanded VEC4
-  + c3:Expanded VEC4
+  + c0:Flat Vec4
+  + c1:Flat Vec4
+  + c2:Flat Vec4
+  + c3:Flat Vec4
   
 Private
   
-  - free_list:ARRAY MAT4X4 := ARRAY MAT4X4.create_with_capacity 4
+  - free_list:Array Mat4x4 := Array Mat4x4.create_with_capacity 4
   
 Public
   
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     (free_list.is_empty).if {
       result := clone
     } else {
@@ -26,12 +25,12 @@ Public
     result
   )
   
-  - free <- free_list.add_last Self
+  - free <- free_list.add_last self
 
-  - make (l00,l01,l02,l03:REAL_32)
-  and (l10,l11,l12,l13:REAL_32)
-  and (l20,l21,l22,l23:REAL_32)
-  and (l30,l31,l32,l33:REAL_32) <-
+  - make (l00,l01,l02,l03:Real32)
+  and (l10,l11,l12,l13:Real32)
+  and (l20,l21,l22,l23:Real32)
+  and (l30,l31,l32,l33:Real32) <-
   (
     c0.make (l00,l10,l20,l30)
     c1.make (l01,l11,l21,l31)
@@ -39,16 +38,16 @@ Public
     c3.make (l03,l13,l23,l33)
   )
   
-  - put e:REAL_32 to (x,y:INTEGER) <- col x.put e to y
+  - put e:Real32 to (x,y:Int) <- col x.put e to y
   
-  - put c:VEC4 to_col x:INTEGER <-
+  - put c:Vec4 to_col x:Int <-
   (
     col x.make (c.item 0,c.item 1,c.item 2,c.item 3)
   )
   
-  //- x px:INTEGER y py:INTEGER :REAL_32 <- col px.item py
-  - x px:INTEGER y py:INTEGER :REAL_32 <- `((float *)@Self)[@px*4 + @py]`:REAL_32
-  - y py:INTEGER x px:INTEGER :REAL_32 <- `((float *)@Self)[@px*4 + @py]`:REAL_32
+  //- x px:Int y py:Int :REAL_32 <- col px.item py
+  - x px:Int y py:Int :Real32 <- `((float *)@self)[@px*4 + @py]`:Real32
+  - y py:Int x px:Int :Real32 <- `((float *)@self)[@px*4 + @py]`:Real32
   
   - identity <-
   (
@@ -58,79 +57,79 @@ Public
     c3.make (0.0, 0.0, 0.0, 1.0)
   )
   
-  - col i:INTEGER :VEC4 <- `&(((float *)@Self)[@i*4])`:VEC4
+  - col i:Int :Vec4 <- `&(((float *)@self)[@i*4])`:Vec4
   
-  - row i:INTEGER :VEC4 <-
-  ( + result:VEC4
-    result := VEC4.create
+  - row i:Int :Vec4 <-
+  ( + result:Vec4
+    result := Vec4.create
     result.make (col 0.item i,col 1.item i,col 2.item i,col 3.item i)
     result
   )
   
-  - dup:SELF <-
-  ( + result:SELF
+  - dup:Self <-
+  ( + result:Self
     result := create
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       result.put (col i) to_col i
     }
     result
   )
   
-  - transpose:SELF <-
-  ( + result:SELF
+  - transpose:Self <-
+  ( + result:Self
     result := create
-    0.to 3 do { j:INTEGER
-      0.to 3 do { i:INTEGER
+    0.to 3 do { j:Int
+      0.to 3 do { i:Int
         result.put (x i y j) to (j,i)
       }
     }
     result
   )
   
-  - add other:SELF <-
+  - add other:Self <-
   ( 
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       col i.add (other.col i)
     }
   )
   
-  - sub other:SELF <-
+  - sub other:Self <-
   ( 
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       col i.sub (other.col i)
     }
   )
   
-  - Self:SELF '-' other:SELF :SELF <-
-  ( + result:SELF
+  - self:Self '-' other:Self :Self <-
+  ( + result:Self
     result := create
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       result.put (col i) to_col i
       result.col i.sub (other.col i)
     }
     result
   )
   
-  - mul_scale scale:REAL_32 <-
+  - mul_scale scale:Real32 <-
   (     
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       col i.mul_scale scale
     }
   )
   
-  - Self:SELF '*#' scale:REAL_32 :SELF <-
-  ( + result:SELF
+  - self:Self '*#' scale:Real32 :Self <-
+  ( + result:Self
     result := create
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       result.put (col i) to_col i
       result.col i.mul_scale scale
     }
     result    
   )
   
-  - mul3_scale (x,y,z:REAL_32) <-
+  - mul3_scale (x,y,z:Real32) <-
   (     
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       col i.make (
         col i.item 0 * x,
         col i.item 1 * y,
@@ -140,21 +139,21 @@ Public
     }
   )
   
-  - Self:SELF '*###' (x,y,z:REAL_32) :SELF <-
-  ( + result:SELF
+  - self:Self '*###' (x,y,z:Real32) :Self <-
+  ( + result:Self
     result := dup
     result.mul3_scale (x,y,z)
     result
   )
   
-  - Self:SELF '*' other:SELF :SELF <-
-  ( + result:SELF
-    + t:REAL_32
+  - self:Self '*' other:Self :Self <-
+  ( + result:Self
+    + t:Real32
     result := create
-    0.to 3 do { c:INTEGER
-      0.to 3 do { r:INTEGER
+    0.to 3 do { c:Int
+      0.to 3 do { r:Int
         t := 0.0
-        0.to 3 do { k:INTEGER
+        0.to 3 do { k:Int
           t := t + x k y r * other.x c y k
         }
         result.put t to (c,r)
@@ -163,11 +162,11 @@ Public
     result
   )
   
-  - mul_vec4 other:VEC4 :VEC4 <-
-  ( + result:VEC4
-    + t:REAL_32
-    result := VEC4.create
-    0.to 3 do { r:INTEGER
+  - mul_vec4 other:Vec4 :Vec4 <-
+  ( + result:Vec4
+    + t:Real32
+    result := Vec4.create
+    0.to 3 do { r:Int
       t :=
       x 0 y r * other.xyz.item 0 +
       x 1 y r * other.xyz.item 1 +
@@ -178,17 +177,17 @@ Public
     result
   )
   
-  - mul_vec3 other:VEC3 :VEC3 <-
-  ( + x,y,z,ox,oy,oz:REAL_32
+  - mul_vec3 other:Vec3 :Vec3 <-
+  ( + x,y,z,ox,oy,oz:Real32
     (ox,oy,oz) := (other.x,other.y,other.z)
     //`/* MERDE */`
     x := x 0 y 0 * ox + x 1 y 0 * oy + x 2 y 0 * oz + x 3 y 0
     y := x 0 y 1 * ox + x 1 y 1 * oy + x 2 y 1 * oz + x 3 y 1
     z := x 0 y 2 * ox + x 1 y 2 * oy + x 2 y 2 * oz + x 3 y 2
-    VEC3.create_xyz (x,y,z)
+    Vec3.create_xyz (x,y,z)
   )
   
-  - translate (x,y,z:REAL_32) <-
+  - translate (x,y,z:Real32) <-
   ( 
     c0.make (1.0, 0.0, 0.0, 0.0)
     c1.make (0.0, 1.0, 0.0, 0.0)
@@ -196,7 +195,7 @@ Public
     c3.make (  x,   y,   z, 1.0)
   )
   
-  - translate_direct (x,y,z:REAL_32) <-
+  - translate_direct (x,y,z:Real32) <-
   (    
     col 3.make (
       col 3.item 0 + x,
@@ -206,22 +205,22 @@ Public
     )
   )
   
-  - extract_translate:(REAL_32,REAL_32,REAL_32) <-
+  - extract_translate:(Real32,Real32,Real32) <-
   ( 
     col 3.item 0, col 3.item 1, col 3.item 2
   )
   
-  - extract_translate2:(REAL_32,REAL_32,REAL_32) <-
-  ( + w:REAL_32
+  - extract_translate2:(Real32,Real32,Real32) <-
+  ( + w:Real32
     w := col 3.item 3
     col 3.item 0/w, col 3.item 1/w, col 3.item 2/w
   )
  
-  - translate_in_place (x,y,z:REAL_32) <-
-  ( + t,r:VEC4
-    t := VEC4.create
+  - translate_in_place (x,y,z:Real32) <-
+  ( + t,r:Vec4
+    t := Vec4.create
     t.make (x, y, z, 0)
-    0.to 3 do { i:INTEGER
+    0.to 3 do { i:Int
       r := row i
       c3.put (col 3.item i + (r #* t)) to i
       r.free
@@ -229,10 +228,10 @@ Public
     t.free
   )
     
-  - from_vec3_mul_outer (a,b:VEC3) <-
+  - from_vec3_mul_outer (a,b:Vec3) <-
   ( 
-    0.to 2 do { i:INTEGER
-      0.to 2 do { j:INTEGER
+    0.to 2 do { i:Int
+      0.to 2 do { j:Int
         put (a.item i * b.item j) to (i,j)
       }
       col i.put 0.0 to 3
@@ -240,39 +239,39 @@ Public
     c3.make (0.0,0.0,0.0,0.0)
   )
   
-  - rotate ax:VEC3 angle a:REAL_32 :MAT4X4 <-
+  - rotate ax:Vec3 angle a:Real32 :Mat4x4 <-
   [ ? {ax.length = 1.0}; ]
-  ( + c,s:REAL_32
-    + t:VEC3
-    + result,rot:MAT4X4
+  ( + c,s:Real32
+    + t:Vec3
+    + result,rot:Mat4x4
     (c,s) := (a.cos,s.sin)
     t := ax.dup
     t.mul_scale (1.0-c)
-    rot := MAT4X4.create
+    rot := Mat4x4.create
     rot.make
     (c + t.x * ax.x           , 0 + t.x * ax.y + s * ax.z, 0 + t.x * ax.z - s * ax.y, 0) and
     (0 + t.y * ax.x - s * ax.z, c + t.y * ax.y           , 0 + t.y * ax.z + s * ax.x, 0) and
     (0 + t.z * ax.x + s * ax.y, 0 + t.z * ax.y - s * ax.x, c + t.z * ax.z           , 0) and 
     (0                        , 0                        , 0                        , 1)
-    result := rot * Self
+    result := rot * self
     rot.free; t.free
     result
   )
   
-  - rotate (x, y, z:REAL_32) at angle:REAL_32 :SELF <-
-  ( + s,c:REAL_32
-    + u:VEC3
-    + rr:SELF
+  - rotate (x, y, z:Real32) at angle:Real32 :Self <-
+  ( + s,c:Real32
+    + u:Vec3
+    + rr:Self
     (s, c) := (angle.sin, angle.cos)
-    u := VEC3.create_xyz (x, y, z)
+    u := Vec3.create_xyz (x, y, z)
     u.length.println
     (u.length > 1.0E-4).if {
-      + ss,tt,cc:MAT4X4
+      + ss,tt,cc:Mat4x4
       u.normalize
-      tt := MAT4X4.create
+      tt := Mat4x4.create
       tt.from_vec3_mul_outer(u, u)
       
-      ss := MAT4X4.create
+      ss := Mat4x4.create
       ss.make
       (   0, -u.z,  u.y, 0) and
       ( u.z,    0, -u.x, 0) and
@@ -280,7 +279,7 @@ Public
       (   0,    0,    0, 0)
       ss.mul_scale s
       
-      cc := MAT4X4.create
+      cc := Mat4x4.create
       cc.identity
       cc.sub tt
       cc.mul_scale c
@@ -290,7 +289,7 @@ Public
       
       tt.put 1.0 to (3,3)
       tt.print
-      rr := Self * tt
+      rr := self * tt
       rr.print
       ss.free
       cc.free
@@ -303,9 +302,9 @@ Public
     rr
   )
   
-  - rotate_x angle:REAL_32 <-
-  ( + s,c:REAL_32
-    + r,t:SELF
+  - rotate_x angle:Real32 <-
+  ( + s,c:Real32
+    + r,t:Self
     (s, c) := (angle.sin, angle.cos)
     t := create
     t.make
@@ -313,14 +312,14 @@ Public
     (0.0,   c,  -s, 0.0) and
     (0.0,   s,   c, 0.0) and
     (0.0, 0.0, 0.0, 1.0)
-    r := t * Self
+    r := t * self
     (c0,c1,c2,c3) := (r.c0,r.c1,r.c2,r.c3)
     t.free; r.free
   )
   
-  - rotate_y angle:REAL_32 <-
-  ( + s,c:REAL_32
-    + r,t:SELF
+  - rotate_y angle:Real32 <-
+  ( + s,c:Real32
+    + r,t:Self
     (s, c) := (angle.sin, angle.cos)
     t := create
     t.make
@@ -328,14 +327,14 @@ Public
     (0.0, 1.0, 0.0, 0.0) and
     ( -s, 0.0,   c, 0.0) and
     (0.0, 0.0, 0.0, 1.0)
-    r := t * Self
+    r := t * self
     (c0,c1,c2,c3) := (r.c0,r.c1,r.c2,r.c3)
     t.free; r.free
   )
   
-  - rotate_z angle:REAL_32 <-
-  ( + s,c:REAL_32
-    + r,t:SELF
+  - rotate_z angle:Real32 <-
+  ( + s,c:Real32
+    + r,t:Self
     (s, c) := (angle.sin, angle.cos)
     t := create
     t.make
@@ -343,16 +342,16 @@ Public
     (  s,   c, 0.0, 0.0) and
     (0.0, 0.0, 1.0, 0.0) and
     (0.0, 0.0, 0.0, 1.0)
-    r := t * Self
+    r := t * self
     (c0,c1,c2,c3) := (r.c0,r.c1,r.c2,r.c3)
     t.free; r.free
   )
     
-  - invert:SELF <-
-  ( + t:SELF
-    + s0,s1,s2,s3,s4,s5:REAL_32
-    + x0,x1,x2,x3,x4,x5:REAL_32
-    + idet:REAL_32
+  - invert:Self <-
+  ( + t:Self
+    + s0,s1,s2,s3,s4,s5:Real32
+    + x0,x1,x2,x3,x4,x5:Real32
+    + idet:Real32
     s0 := x 0 y 0 * x 1 y 1 - x 1 y 0 * x 0 y 1
     s1 := x 0 y 0 * x 1 y 2 - x 1 y 0 * x 0 y 2
     s2 := x 0 y 0 * x 1 y 3 - x 1 y 0 * x 0 y 3
@@ -398,8 +397,8 @@ Public
   )
 
   - orthonormalize <-
-  ( + s:REAL_32
-    + h:VEC3
+  ( + s:Real32
+    + h:Vec3
     c2.xyz.normalize
 
     s := c1.xyz #* c2.xyz
@@ -420,7 +419,7 @@ Public
     c0.xyz.normalize
   )
     
-  - frustum (l,r,b,t,n,f:REAL_32) <-
+  - frustum (l,r,b,t,n,f:Real32) <-
   (
     c0.make (2.0*n/(r-l),         0.0,              0.0,  0.0)
     c1.make (        0.0, 2.0*n/(t-b),              0.0,  0.0)
@@ -428,7 +427,7 @@ Public
     c3.make (        0.0,         0.0, -2.0*(f*n)/(f-n),  0.0)
   )
 
-  - ortho (l,r,b,t,n,f:REAL_32) <-
+  - ortho (l,r,b,t,n,f:Real32) <-
   (
     c0.make (2.0/(r-l),       0.0,        0.0, 0.0)
     c1.make (      0.0, 2.0/(t-b),        0.0, 0.0)
@@ -436,8 +435,8 @@ Public
     c3.make (-(r+l)/(r-l),-(t+b)/(t-b),-(f+n)/(f-n),1.0)
   )
 
-  - perspective (y_fov,aspect,n,f:REAL_32) <-
-  ( + a:REAL_32
+  - perspective (y_fov,aspect,n,f:Real32) <-
+  ( + a:Real32
     a := 1.0 / (y_fov / 2.0).tan
     c0.make (a / aspect, 0.0,                        0.0,  0.0)
     c1.make (       0.0,   a,                        0.0,  0.0)
@@ -445,8 +444,8 @@ Public
     c3.make (       0.0, 0.0, -((2.0 * f * n) / (f - n)),  0.0)
   )
 
-  - look_at (eye,center,up:VEC3) <-
-  ( + f,s,t:VEC3
+  - look_at (eye,center,up:Vec3) <-
+  ( + f,s,t:Vec3
     
     // Adapted from Android's OpenGL Matrix.java.
     f := center.dup
@@ -465,16 +464,16 @@ Public
     f.free; s.free; t.free
   )
   
-  - look_at eye:VEC3 angle (a,b,c:REAL_32) <-
-  ( + f,s,t:VEC3
-    + m:MAT4X4
-    + x,y,z:REAL_32
+  - look_at eye:Vec3 angle (a,b,c:Real32) <-
+  ( + f,s,t:Vec3
+    + m:Mat4x4
+    + x,y,z:Real32
             
-    f := VEC3.create_xyz (-eye.x, -eye.y, -eye.z)
+    f := Vec3.create_xyz (-eye.x, -eye.y, -eye.z)
     f.normalize; // Direction (blue)
     //"Blue: ".print; f.print; '\n'.print
     
-    m := MAT4X4.create
+    m := Mat4x4.create
     m.identity
     m.translate (0.0, 0.0, -1.0); // BSBS: Ca depend du eye !
     m.rotate_y b
@@ -482,7 +481,7 @@ Public
     //(x,y,z) := m.extract_translate2
     //m.rotate (x,y,z) at a
     (x,y,z) := m.extract_translate2
-    s := VEC3.create_xyz (-x, -y, z)
+    s := Vec3.create_xyz (-x, -y, z)
     m.free
     //"Red : ".print; s.print; '\n'.print
     
@@ -496,11 +495,11 @@ Public
     f.free; s.free; t.free
   )
     
-  - arcball (pa,pb:VEC2, s:REAL_32) :SELF <-
-  ( + a,b:VEC2
-    + aa,bb,cc:VEC3
-    + z_a,z_b,angle:REAL_32
-    + r:SELF
+  - arcball (pa,pb:Vec2, s:Real32) :Self <-
+  ( + a,b:Vec2
+    + aa,bb,cc:Vec3
+    + z_a,z_b,angle:Real32
+    + r:Self
     a := pa.dup
     b := pb.dup
     (a.length < 1.0).if {
@@ -524,12 +523,12 @@ Public
     r
   )
   
-  - to_quat:VEC4 <-
-  ( + q:VEC4
+  - to_quat:Vec4 <-
+  ( + q:Vec4
     not_yet_implemented
     q
     /*+ r,m:REAL_32
-    + i:INTEGER
+    + i:Int
 
     int perm[] = { 0, 1, 2, 0, 1 }
     int *p = perm
@@ -556,8 +555,8 @@ Public
     q*/
   )
   
-  - mul_quat q:VEC4 <-
-  ( + t0,t1,t2:VEC3
+  - mul_quat q:Vec4 <-
+  ( + t0,t1,t2:Vec3
     //  XXX: The way this is written only works for orthogonal matrices. 
     // TODO: Take care of non-orthogonal case.
     t0 := q.mul_vec3 (c0.xyz)
@@ -571,9 +570,9 @@ Public
 
   - print <-
   (    
-    0.to 3 do { y:INTEGER
+    0.to 3 do { y:Int
       '['.print
-      0.to 3 do { x:INTEGER
+      0.to 3 do { x:Int
         x x y y.print
         ' '.print
       }
@@ -584,9 +583,9 @@ Public
   
   - print_cm <-
   (    
-    0.to 3 do { y:INTEGER
+    0.to 3 do { y:Int
       '['.print
-      0.to 3 do { x:INTEGER
+      0.to 3 do { x:Int
         x x y y.to_cm.print
         ' '.print
       }

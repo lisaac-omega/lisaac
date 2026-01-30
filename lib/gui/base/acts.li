@@ -1,17 +1,16 @@
 Header
-  + name := ACTS;
-  
+  + name := Acts
 Inherit
-  + parent_act:Expanded ACT
+  + parent_act:Flat Act
   
 Public
   
-  + list:ARRAY ACT
+  + list:Array Act
   
-  - lst l:ARRAY ACT :SELF <- ( list := l.twin; Self)
+  - lst l:Array Act :Self <- ( list := l.twin; self)
   
-  - run:BOOLEAN <-
+  - run:Boolean <-
   (list.first.run).if {
-    ANY_GUI.acts_wait.append_collection list
-    ANY_GUI.acts_wait.remove_first
+    Any_gui.acts_wait.append_collection list
+    Any_gui.acts_wait.remove_first
   }

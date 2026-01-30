@@ -1,49 +1,48 @@
 Header
-  + name := TXT_BUF;
-  
+  + name := Txt_buf
 Inherit
-  + parent_buffer:Expanded BUFFER
-  - parent_text_pg:TXT_PG := TXT_PG
+  + parent_buffer:Flat Buffer
+  - parent_text_pg:Txt_pg := Txt_pg
   
-TXT, TXT_PG, CMD
-  - tmp_c:STRING_BUFFER := STRING_BUFFER.create 4
-  - stackd:Expanded ARRAY INTEGER
+Txt, Txt_pg, Cmd
+  - tmp_c:String_buffer := String_buffer.create 4
+  - stackd:Flat Array Int
   
 Public
   
-  - current:TXT_BUF; // TOK_DRW
-  - buf_pg:BUF_PG := TXT_PG
-  - set_parent_buffer p:BUF_PG <- ( parent_text_pg ?= p; )
+  - current:Txt_buf; // TOK_DRW
+  - buf_pg:Buf_pg := Txt_pg
+  - set_parent_buffer p:Buf_pg <- ( parent_text_pg ?= p; )
     
-  + buf:Expanded ARRAY_BLOCK CHARACTER
+  + buf:Flat Array_block Char
       
-  - init_path p:STRING_ALIAS :SELF <-
-  ( buf.init; undo := UNDO.new; init_buf p)
+  - init_path p:String_alias :Self <-
+  ( buf.init; undo := Undo.new; init_buf p)
   
-  - load_file:SELF <-
-  ( + f:POINTER
-    + e:DIRENT
-    (! (f := FILE_UTILS.open_read name).is_null).if {
+  - load_file:Self <-
+  ( + f:Pointer
+    + e:Dirent
+    (! (f := File_utils.open_read name).is_null).if {
       buf.read_file f
-      FILE_UTILS.close f
-      e := FILE_SYSTEM.get name
+      File_utils.close f
+      e := File_system.get name
       buf.add_last '\0'
       (date_create,date_update,time_update) := (e.create_date,e.update_date,e.update_time)
-      is_save := TRUE
+      is_save := True
       undo.last_save;
     } else {
       //f := FILE_UTILS.open_write name
-      date_create := date_update := DATE.create_now
+      date_create := date_update := Date.create_now
       //"NAME:".print; type_name.println
       buf.add_last '\0'
       pre_create
     }
-    Self
+    self
   )
   
   - reload <-
-  ( + e:DIRENT
-    e := FILE_SYSTEM.get name    
+  ( + e:Dirent
+    e := File_system.get name    
     ((e != NULL) && {is_save} && {(e.update_date != date_update) || {e.update_time != time_update}}).if {
       (footnote_left.is_empty).if {
         footnote_left # "Reloaded "
@@ -61,67 +60,67 @@ Public
       // FIN TEST
       */
       //      
-      //detect_memory_leak := TRUE
+      //detect_memory_leak := True
       //"CLEAR...".println;
       undo.clear
-      toks.foreach { t:TOK_DRW; t.free; }; toks.clear
+      toks.foreach { t:Tok_drw; t.free; }; toks.clear
       buf.clear
       //"RELOAD..." println
       load_file
       parse_all
-      //detect_memory_leak := FALSE
+      //detect_memory_leak := False
     }
   );
   
   - pre_create
   
-  - copy_buffer o:BUFFER :BOOLEAN <-
-  ( + oo:TXT_BUF
+  - copy_buffer o:Buffer :Boolean <-
+  ( + oo:Txt_buf
     oo ?= o
     (oo != NULL).if {
-      toks.foreach { t:TOK_DRW; t.free; }
+      toks.foreach { t:Tok_drw; t.free; }
       toks.clear
       buf.copy (oo.buf)
       parse_all
     }
   )
   
-  + backup_ok:BOOLEAN
-  - save_buffer:BOOLEAN <-
-  ( + f:POINTER
-    + e:DIRENT
+  + backup_ok:Boolean
+  - save_buffer:Boolean <-
+  ( + f:Pointer
+    + e:Dirent
     (! backup_ok).if {
-      backup_ok := TRUE
-      STRING.tmp { tmp:STRING_BUFFER
+      backup_ok := True
+      String.tmp { tmp:String_buffer
         tmp += "cp -f -p " += name += " " += name += "~ 2>/dev/null"
-        ENVIRONMENT.run tmp
+        Environment.run tmp
       }
     }
-    f := FILE_UTILS.open_write name
+    f := File_utils.open_write name
     (f.is_not_null).if {
       ? {buf.last = '\0'}
       buf.remove_last
       buf.save_file f
       buf.add_last '\0'
-      FILE_UTILS.close f
-      e := FILE_SYSTEM.get name
+      File_utils.close f
+      e := File_system.get name      
       date_update := e.update_date
       time_update := e.update_time
-      is_save := TRUE
+      is_save := True
       undo.last_save;
       footnote_left |# "Wrote `" # rel_path name # '\''
     }
   )
   
-  - upper:INTEGER <- buf.upper
-  - is_empty:BOOLEAN <- buf.is_empty
+  - upper:Int <- buf.upper
+  - is_empty:Boolean <- buf.is_empty
   
-  - from l:INTEGER to u:INTEGER in tmp:STRING_BUFFER <-
-  ( l.to u do { i:INTEGER; tmp | at i; }; )
+  - from l:Int to u:Int in tmp:String_buffer <-
+  ( l.to u do { i:Int; tmp | at i; }; )
   /*
-  - from l:INTEGER to u:INTEGER :STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    STRING.tmp { tmp:STRING_BUFFER
+  - from l:Int to u:Int :String_alias <-
+  ( + result:String_alias
+    STRING.tmp { tmp:String_buffer
       from l to u in tmp
       result := tmp.to_string_alias
     }
@@ -129,18 +128,18 @@ Public
   )
   */
   
-  - at i:INTEGER add_str s:STRING <-
-  ( 0.to (s.upper) do { j:INTEGER; buf.at (i+j) add (s.at j); }; )
+  - at i:Int add_str s:String <-
+  ( 0.to (s.upper) do { j:Int; buf.at (i+j) add (s.at j); }; )
   
-  - at_tmp i:INTEGER :INTEGER <- ( tmp_c.clear; at i in tmp_c; tmp_c.count)
-  - at_back_tmp i:INTEGER :INTEGER <- ( tmp_c.clear; at_back i in tmp_c; tmp_c.count)
+  - at_tmp i:Int :Int <- ( tmp_c.clear; at i in tmp_c; tmp_c.count)
+  - at_back_tmp i:Int :Int <- ( tmp_c.clear; at_back i in tmp_c; tmp_c.count)
   
-  - at i:INTEGER in b:STRING_BUFFER :INTEGER <-
-  ( + n:UINTEGER_8
-    + c:CHARACTER
-    + j:INTEGER
-    j := i
-    n := (c := buf.at j).to_uinteger_8
+  - at i:Int in b:String_buffer :Int <-
+  ( + n:Uint8
+    + c:Char
+    + j:Int
+    j := i    
+    n := (c := buf.at j).to_uint8
     b.add_last c
     (((n & 80h) != 0) || {c = '\r'}).if {
       { j := j + 1
@@ -151,15 +150,15 @@ Public
     b.upper - Old b.upper
   )
   
-  - at_back i:INTEGER in b:STRING_BUFFER :INTEGER <-
-  ( + n:UINTEGER_8
-    + c:CHARACTER
-    + j,a:INTEGER
+  - at_back i:Int in b:String_buffer :Int <-
+  ( + n:Uint8
+    + c:Char
+    + j,a:Int
     j := i
     a := b.count
     {
       j := j - 1
-      n := (c := buf.at j).to_uinteger_8
+      n := (c := buf.at j).to_uint8
       b.at a add c
     }.do_while {
       (j >= 0) && {((n & 0C0h) = 80h) || {(c='\n') && {at (j-1) = '\r'}}}
@@ -167,35 +166,35 @@ Public
     b.upper - Old b.upper
   )
   
-  - size_at i:INTEGER :INTEGER <-
-  ( + cpt:INTEGER
-    + n:UINTEGER_8
-    n := buf.at i.to_uinteger_8
+  - size_at i:Int :Int <-
+  ( + cpt:Int
+    + n:Uint8
+    n := buf.at i.to_uint8
     (((n & 80h) != 0) || {n.to_character = '\r'}).if {
       { cpt := cpt + 1; n := n << 1; }.do_until {(n & 40h) = 0}
     }
     cpt + 1
   )
   
-  - size_back_at i:INTEGER :INTEGER <-
-  ( + n:UINTEGER_8
-    + j:INTEGER
+  - size_back_at i:Int :Int <-
+  ( + n:Uint8
+    + j:Int
     j := i
-    { j := j - 1; n := buf.at j.to_uinteger_8; }.do_while {
+    { j := j - 1; n := buf.at j.to_uint8; }.do_while {
       (j >= 0) && {((n & 0C0h) = 80h) || {(n.to_character='\n') && {at (j-1) = '\r'}}}
     }
     i - j
   )
   
-  - at i:INTEGER :CHARACTER <- buf.at i
-  //- at i:INTEGER put c:CHARACTER <- buf.at i put c
-  - intern_at i:INTEGER add txt:STRING_ALIAS <-
-  ( 0.to (txt.upper) do { j:INTEGER; buf.at (i+j) add (txt.at j); }; )
+  - at i:Int :Char <- buf.at i
+  //- at i:Int put c:Char <- buf.at i put c
+  - intern_at i:Int add txt:String_alias <-
+  ( 0.to (txt.upper) do { j:Int; buf.at (i+j) add (txt.at j); }; )
   
-  - line_col pi:INTEGER :(INTEGER,INTEGER) <-
-  ( + l,c,i,p:INTEGER
-    + t:TOK_DRW
-    + cc:CHARACTER
+  - line_col pi:Int :(Int,Int) <-
+  ( + l,c,i,p:Int
+    + t:Tok_drw
+    + cc:Char
     {(i < toks.upper) && {p + (t := toks.at i).di < pi}}.while_do {
       l := l + t.nl
       p := p + t.di
@@ -211,9 +210,9 @@ Public
     l+1,c
   )
     
-  - search s:STRING at p:INTEGER :INTEGER <-  
-  ( + res,bas,i,ofs:INTEGER
-    + t:TOK_DRW
+  - search s:String at p:Int :Int <-  
+  ( + res,bas,i,ofs:Int
+    + t:Tok_drw
     res := -1
     (bas,i) := pos_to_tok p
     ofs := p - bas; ? {ofs >= 0}
@@ -223,7 +222,7 @@ Public
         ? {i = toks.upper}
         i := i + 1
       } else {
-        TOK_ITM.set_parent_tok_drw t
+        Tok_itm.set_parent_tok_drw t
         //OUT # "di=" # t.di # " ofs=" # ofs # " i=" # i # "/" # toks.upper # '\n'
         res := t.search s base bas at ofs
         (res = -1).if {
@@ -233,12 +232,12 @@ Public
         }
       }
     }
-    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    Tok_itm.set_parent_tok_drw (Old Tok_itm.parent_t_drw)
     res
   )
   
-  - search s:STRING range idx:INTEGER to up:INTEGER  :INTEGER <-
-  ( + p,i:INTEGER
+  - search s:String range idx:Int to up:Int  :Int <-
+  ( + p,i:Int
     p := idx
     {(p + s.count <= up) && {i <= s.upper}}.while_do {
       i := 0
@@ -248,15 +247,15 @@ Public
     (i > s.upper).ok p or (-1)
   )
   
-  - search_back s:STRING at p:INTEGER :INTEGER <-  
-  ( + res,bas,i,ofs:INTEGER
-    + t:TOK_DRW
+  - search_back s:String at p:Int :Int <-  
+  ( + res,bas,i,ofs:Int
+    + t:Tok_drw
     res := -1
     (bas,i) := pos_to_tok p
     ofs := p - bas; ? {ofs >= 0}
     t := toks.at i
     {(i >= 0) && {res = -1}}.while_do {
-      TOK_ITM.set_parent_tok_drw t
+      Tok_itm.set_parent_tok_drw t
       res := t.search_back s base bas at ofs
       (res = -1).if {
         i := i - 1
@@ -267,12 +266,12 @@ Public
         }
       }
     }
-    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    Tok_itm.set_parent_tok_drw (Old Tok_itm.parent_t_drw)
     res
   )
   
-  - search_back s:STRING range idx:INTEGER downto low:INTEGER :INTEGER <-
-  ( + p,i:INTEGER
+  - search_back s:String range idx:Int downto low:Int :Int <-
+  ( + p,i:Int
     p := idx.min (upper-s.upper)
     {(p >= low) && {i <= s.upper}}.while_do {
       i := 0
@@ -284,18 +283,18 @@ Public
   
   // High level update buffer (with undo/redo manager)
   
-  + undo:UNDO
+  + undo:Undo
   
-  - cmd_undo:BOOLEAN <- undo.do Self
-  - cmd_redo:BOOLEAN <- undo.redo Self
+  - cmd_undo:Boolean <- undo.do self
+  - cmd_redo:Boolean <- undo.redo self
     
-  - at i:INTEGER add s:STRING :INTEGER <-
+  - at i:Int add s:String :Int <-
   [ ? {s.count <= 4}; ]
-  ( + c:CHARACTER
-    + u:UINTEGER_32
-    0.to (s.upper) do { j:INTEGER
+  ( + c:Char
+    + u:Uint32
+    0.to (s.upper) do { j:Int
       c := s.at j
-      u := (u << 8) | c.to_uinteger_8
+      u := (u << 8) | c.to_uint8
       buf.at (i+j) add c
     }
     undo.rm i char u
@@ -303,16 +302,16 @@ Public
     s.count
   )
   
-  - at i:INTEGER add_text s:STRING <- at i add_text s range (0,s.upper)
+  - at i:Int add_text s:String <- at i add_text s range (0,s.upper)
   
-  - at i:INTEGER add_text s:STRING range (l,u:INTEGER) <-
-  ( + j,p:INTEGER
-    + n:UINTEGER_8
-    + c:CHARACTER
-    + cc:UINTEGER_32
+  - at i:Int add_text s:String range (l,u:Int) <-
+  ( + j,p:Int
+    + n:Uint8
+    + c:Char
+    + cc:Uint32
     j := l
     {j <= u}.while_do {    
-      n := (c := s.at j).to_uinteger_8
+      n := (c := s.at j).to_uint8
       cc := n
       p := i+j-l
       buf.at p add c
@@ -320,7 +319,7 @@ Public
       ((n & 80h) != 0).if {        
         {
           c := s.at j
-          cc := (cc << 8) | c.to_uinteger_8
+          cc := (cc << 8) | c.to_uint8
           buf.at (i+j-l) add c
           n := n << 1
           j := j + 1
@@ -331,16 +330,16 @@ Public
     update i pg (upper - Old upper)
   )
   
-  - rm i:INTEGER :INTEGER <-
-  ( + n:UINTEGER_8
-    + c:CHARACTER
-    + u:UINTEGER_32
-    + s:INTEGER
-    n := (c := buf.at i).to_uinteger_8
+  - rm i:Int :Int <-
+  ( + n:Uint8
+    + c:Char
+    + u:Uint32
+    + s:Int
+    n := (c := buf.at i).to_uint8
     u := n
     buf.remove i
     (((n & 80h) != 0) || {c = '\r'}).if {
-      { u := u << 8 | buf.at i.to_uinteger_8
+      { u := u << 8 | buf.at i.to_uint8
         buf.remove i
         n := n << 1
       }.do_until {(n & 40h) = 0}
@@ -351,17 +350,17 @@ Public
     -s
   )
   
-  - rm i:INTEGER times ss:INTEGER :INTEGER <-
-  ( + n:UINTEGER_8
-    + c:CHARACTER
-    + u:UINTEGER_32
-    + s:INTEGER
+  - rm i:Int times ss:Int :Int <-
+  ( + n:Uint8
+    + c:Char
+    + u:Uint32
+    + s:Int
     {s < ss}.while_do {
-      n := (c := buf.at i).to_uinteger_8
+      n := (c := buf.at i).to_uint8
       u := n
       buf.remove i; s := s + 1
       ((n & 80h) != 0).if {
-        { u := u << 8 | buf.at i.to_uinteger_8
+        { u := u << 8 | buf.at i.to_uint8
           buf.remove i; s := s + 1
           n := n << 1
         }.do_until {(n & 40h) = 0}
@@ -373,18 +372,18 @@ Public
     s
   )
   
-  - update i:INTEGER pg (d_i:INTEGER) <-
-  ( + di, pi,tcur, sav_pt,sav_cur, end:INTEGER
-    + bug:BOOLEAN
+  - update i:Int pg (d_i:Int) <-
+  ( + di, pi,tcur, sav_pt,sav_cur, end:Int
+    + bug:Boolean
     /*
-    0.to (toks.upper) do { i:INTEGER;
+    0.to (toks.upper) do { i:Int;
       OUT # '(' # i # ')' # toks.at i.di # '/' # toks.at i.sty.count # ' ';
     }
     '\n'.print;
     */
-    bug := ! TRUE
-    current := Self
-    is_save := FALSE
+    bug := ! True
+    current := self
+    is_save := False
     tok_cur := tcur := 0
     pos_i := 0
     pi := 0
@@ -408,15 +407,15 @@ Public
     (sav_pt,sav_cur) := (pos_i,tok_cur)
     end := pi
     (bug).if {
-      OUT # "Debut #" # tok_cur # " pt:" # pos_i.pt # '\n'
-      OUT # "Rebuild from " # pos_i.pt # " to " # end # "\n\n"
+      Out # "Debut #" # tok_cur # " pt:" # pos_i.pt # '\n'
+      Out # "Rebuild from " # pos_i.pt # " to " # end # "\n\n"
     }
     // Suppr:
     ( tcur := tok_cur; ); // Just debug
     pi := pos_i
     {pi < end}.while_do {
       di := toks.at tok_cur.di
-      (bug).if { OUT # "Suppr Old #" # tcur # " from " # pi # " to " # (pi+di) # '\n'; }
+      (bug).if { Out # "Suppr Old #" # tcur # " from " # pi # " to " # (pi+di) # '\n'; }
       toks.at tok_cur.free
       toks.remove tok_cur
       pi := pi + di
@@ -428,20 +427,20 @@ Public
     (pos_i,tok_cur) := (sav_pt,sav_cur); // Pas utils
     // BSBS un doute sur le upper-1
     {(pos_i < upper) && {pos_i < end+d_i}}.while_do {
-      (bug).if { OUT # "New #" # tok_cur # " from " # pos_i.pt; }
+      (bug).if { Out # "New #" # tok_cur # " from " # pos_i.pt; }
       parse_drw
-      (bug).if { OUT # " to " # pos_i.pt # '\n'; }
+      (bug).if { Out # " to " # pos_i.pt # '\n'; }
       //(bug).if { `getchar()`; }
       tok_cur := tok_cur + 1
     }
     {pos_i.pt > end+d_i}.while_do {
-      (bug).if { OUT # "Suppr Old " # tcur # '\n'; tcur := tcur + 1; }
+      (bug).if { Out # "Suppr Old " # tcur # '\n'; tcur := tcur + 1; }
       end := end + toks.at tok_cur.di
       toks.at tok_cur.free
       toks.remove tok_cur
     }
     (pos_i.pt != end+d_i).if {
-      OUT # "BUG !!! pos_i=" # pos_i.pt # " pi=" # (end+d_i) # '\n'
+      Out # "BUG !!! pos_i=" # pos_i.pt # " pi=" # (end+d_i) # '\n'
     }
     ? {pos_i.pt = end+d_i}
     //
@@ -449,22 +448,24 @@ Public
       (tok_cur > toks.upper).if {
         ((upper = 0) || {at (upper-1) = '\n'}).if {
           tok_cur := toks.count
-          (bug).if { OUT # "New END #" # tok_cur # " from " # pos_i.pt; }
+          (bug).if { Out # "New END #" # tok_cur # " from " # pos_i.pt; }
           parse_drw
-          (bug).if { OUT # " to " # pos_i.pt # '\n'; }
+          (bug).if { Out # " to " # pos_i.pt # '\n'; }
           //(bug).if { `getchar()`; }
         }
       } else {
         (at (upper-1) != '\n').if {
-          (bug).if { OUT # "Suppr End.\n"; }
+          (bug).if { Out # "Suppr End.\n"; }
           toks.last.free
           toks.remove_last
         }
       }
     }    
-    (bug).if { "--------------".println; }
+    (bug).if { Out # "--------------" # (Old toks.count) # '/' # toks.count # '\n'
+      //crash
+    }
     /*
-    0.to (toks.upper) do { i:INTEGER;
+    0.to (toks.upper) do { i:Int;
       OUT # '(' # i # ')' # toks.at i.di # '/' # toks.at i.sty.count # ' ';
     }
     '\n'.print;
@@ -474,11 +475,11 @@ Public
       
   // Parsing Tools
     
-  + toks:Expanded ARRAY TOK_DRW
+  + toks:Flat Array Tok_drw
   
-  - pos_to_tok p:INTEGER :(INTEGER,INTEGER) <-
-  ( + i,n:INTEGER
-    + t:TOK_DRW
+  - pos_to_tok p:Int :(Int,Int) <-
+  ( + i,n:Int
+    + t:Tok_drw
     {(i <= toks.upper) && {p >= n + (t := toks.at i).di}}.while_do {
       n := n + t.di
       i := i + 1
@@ -487,7 +488,7 @@ Public
   )
   
   - get_prev_tok t:E :E <-
-  ( + i:INTEGER
+  ( + i:Int
     + r:E
     i := tok_cur - 1
     {(i >= 0) && {(r ?= toks.at i) = NULL}}.while_do {      
@@ -496,15 +497,15 @@ Public
     r
   )
     
-  - str_tmp:STRING_BUFFER := STRING_BUFFER.create 256
-  - last_str:STRING_ALIAS
-  - last_int:INTEGER
-  - last_real:REAL_64
-  - is_real:BOOLEAN
+  - str_tmp:String_buffer := String_buffer.create 256
+  - last_str:String_alias
+  - last_int:Int
+  - last_real:Real64
+  - is_real:Boolean
 
-  - word w:STRING_ALIAS :BOOLEAN <-
-  ( + i:INTEGER
-    + old:POS
+  - word w:String_alias :Boolean <-
+  ( + i:Int
+    + old:Pos
     skip_sp
     old := pos_i
     {(i <= w.upper) && {buf.at pos_i = w.at i}}.while_do {
@@ -513,21 +514,21 @@ Public
     (i > w.upper).if { last_str := w; } else { pos_i := old; }    
   )
     
-  - skip_until c:CHARACTER <-
-  ( + l:CHARACTER
+  - skip_until c:Char <-
+  ( + l:Char
     {((l := buf.at pos_i) != c) && {l != '\0'}}.while_do { pos_i := pos_i + 1; }
   )
   
-  - skip_line:BOOLEAN <-
-  ( + l:CHARACTER
+  - skip_line:Boolean <-
+  ( + l:Char
     {(l := at pos_i) = ' '}.while_do { pos_i := pos_i + 1; }
     (l = '\n').if { toks.at tok_cur.inc_nl; pos_i := pos_i + 1; }
   )
   
-  - ln_limit:INTEGER
+  - ln_limit:Int
     
   - skip_spln <-
-  ( + c:CHARACTER
+  ( + c:Char
     {
       rd_rem_c; rd_rem_cpp
       (((c := buf.at pos_i) = ' ') || {c = '\n'}) &&
@@ -549,13 +550,13 @@ Public
   )
   
   - skip_sp_only <-
-  ( + c:CHARACTER
+  ( + c:Char
     {((c := buf.at pos_i) = ' ') && {c != '\0'} && {pos_i.pt != ln_limit}}.while_do { pos_i := pos_i + 1; }
   )
 
   - skip_sp <-
-  ( + p:POS
-    + c:CHARACTER
+  ( + p:Pos
+    + c:Char
     {
       p := pos_i
       {
@@ -579,11 +580,11 @@ Public
     };
   );
     
-  - rd_rem_c1:BOOLEAN <-
+  - rd_rem_c1:Boolean <-
   (look "/*" && {pos_i.pt != ln_limit}).if {
-    + lev,p:INTEGER
-    + c:CHARACTER
-    col (LOOK.dead) sub 0
+    + lev,p:Int
+    + c:Char
+    col (Look.dead) sub 0
     pos_i := pos_i + 2
     lev := 1
     p := pos_i
@@ -605,17 +606,17 @@ Public
         pos_i := pos_i + 1
       }
     }
-    (lev != 0).if {	
+    (lev != 0).if {        
       //crash
       err warning msg "End of comment mono-line not found !"
     }
   }
   
-  - rd_rem_c:BOOLEAN <-
+  - rd_rem_c:Boolean <-
   (look "/*" && {pos_i.pt != ln_limit}).if {
-    + lev,p:INTEGER
-    + c:CHARACTER
-    col (LOOK.dead) sub 0
+    + lev,p:Int
+    + c:Char
+    col (Look.dead) sub 0
     pos_i := pos_i + 2
     p := pos_i
     lev := 1
@@ -635,7 +636,7 @@ Public
             img (p+1) to (pos_i + 4); pos_i := pos_i + 3
             /*
             (name.has_suffix "array.li").if {
-              (p+1).to (pos_i.pt) do { i:INTEGER; at i.print; }
+              (p+1).to (pos_i.pt) do { i:Int; at i.print; }
               '\n'.print
             };*/            
           }
@@ -643,16 +644,16 @@ Public
         pos_i := pos_i + 1
       }
     }
-    (lev != 0).if {	
+    (lev != 0).if {        
       err syntax msg "End of comment not found !"
     }
   }
   
-  - rd_rem_cpp:BOOLEAN <-
+  - rd_rem_cpp:Boolean <-
   (look "//" && {pos_i.pt != ln_limit}).if {
-    + p:INTEGER
-    + c:CHARACTER
-    col (LOOK.rmk) sub 0
+    + p:Int
+    + c:Char
+    col (Look.rmk) sub 0
     pos_i := pos_i + 2
     p := pos_i
     {((c := at pos_i) != '\0') && {c != '\n'} /*&& {c != '\r'}*/}.while_do {      
@@ -674,8 +675,8 @@ Public
   //--                 | '\\' integer '\\'
   //-- escape_seq     -> 'a' | 'b'  | 'f' | 'n'  | 'r'  | 't'
   //--                 | 'v' | '\\' | '?' | '\'' | '\"' | '0'
-  ( + val:INTEGER
-    + c:CHARACTER
+  ( + val:Int
+    + c:Char
     (c := at pos_i).is_separator.if {
       skip_spln
       (at pos_i != '\\').if { err syntax msg "Unknown escape sequence. (1)"; }
@@ -686,20 +687,20 @@ Public
     } then {      
       pos_i := pos_i + 1
     }.elseif {c.is_digit} then {      
-      read_num FALSE
+      read_num False
       ((last_int > 255) || {is_real}).if { err syntax msg "Invalid range character number [0,255]."; }
-      val := last_int.to_integer
-      (at pos_i != '\\').if { err syntax msg "Character '\' is needed."; }
+      val := last_int.to_int
+      (at pos_i != '\\').if { err syntax msg "CHARACTERacter '\' is needed."; }
       pos_i := pos_i + 1
     } else {
       err syntax msg "Unknown escape sequence."
     }
   )
 
-  - rd_chars:BOOLEAN <-
+  - rd_chars:Boolean <-
   //-- character      -> '\'' ascii '\''
-  ( + count:INTEGER
-    + c:CHARACTER
+  ( + count:Int
+    + c:Char
     //skip_sp
     (at pos_i = '\'').if {      
       pos_i := pos_i + 1
@@ -714,16 +715,16 @@ Public
       }
       (c = '\'').if {
         pos_i := pos_i + 1
-        (count != 1).if { err syntax msg "Character constant too long." }
+        (count != 1).if { err syntax msg "CHARACTERacter constant too long." }
       } else {
-        err syntax msg "Character constant too long."
+        err syntax msg "CHARACTERacter constant too long."
       }
     }
   )
 
-  - rd_str:BOOLEAN <-
+  - rd_str:Boolean <-
   //-- string         -> '\"' string_char '\"'
-  ( + c:CHARACTER
+  ( + c:Char
     //skip_sp
     (at pos_i = '\"').if {      
       pos_i := pos_i + 1
@@ -743,9 +744,9 @@ Public
     }
   )
 
-  - rd_ext:BOOLEAN <-
+  - rd_ext:Boolean <-
   //-- external       -> '`' ascii_c_code '`'
-  ( + c:CHARACTER
+  ( + c:Char
     //skip_sp
     (at pos_i = '`').if {
       pos_i := pos_i + 1
@@ -761,13 +762,14 @@ Public
       (c = '`').if {
         pos_i := pos_i + 1
       } else {
+        pos_i := Old pos_i + 1
         err syntax msg "Unterminated external."
       }
     }
   )
   
-  - read_c c:CHARACTER :BOOLEAN <-
-  ( + old:POS
+  - read_c c:Char :Boolean <-
+  ( + old:Pos
     skip_sp
     old := pos_i
     (buf.at pos_i = c).if {
@@ -775,53 +777,72 @@ Public
     } else { pos_i := old; }
   )
   
-  - skip_c c:CHARACTER <-
+  - skip_c c:Char <-
   ( ? {buf.at pos_i = c}; pos_i := pos_i + 1; )
   
-  - prev_line_empty:INTEGER <-
-  ( + p,l:INTEGER
-    + c:CHARACTER
+  - prev_line_empty:Int <-
+  ( + p,l:Int
+    + c:Char
     p := pos_i - 1
     {(p >=0) && {((c := at p) = '\n') || {c = ' '}}}.while_do {
       (c = '\n').if { l := l + 1; }
       p := p - 1
     }
-    l - (p >= 0).to_integer
+    l - (p >= 0).to_int
   )
   
-  - look c:STRING at p:INTEGER :BOOLEAN <-
-  ( + i:INTEGER
-    + l:CHARACTER
+  - look c:String at p:Int :Boolean <-
+  ( + i:Int
+    + l:Char
     {((l := at (p+i)) != '\0') && {i <= c.upper} && {l = c.at i}}.while_do { i := i + 1; }
     i > c.upper
   )
-  - look c:STRING :BOOLEAN <- look c at pos_i
+  - look c:String :Boolean <- look c at pos_i
        
-  - read_idf:BOOLEAN <-
+  - read_idf:Boolean <-
   //-- identifier     -> 'a'-'z' {'a'-'z' | '0'-'9' | '_'}
   (
     skip_sp
-    (char TRUE ascii {c:CHARACTER; c.is_lower} utf8 {UTF8.is_lower last_utf8}).if {
-      {char FALSE ascii {c:CHARACTER; c.is_lower} utf8 {UTF8.is_lower last_utf8}}.while_loop
+    (char True ascii {c:Char; c.is_lower} utf8 {Utf8.is_lower last_utf8}).if {
+      {char False ascii {c:Char; c.is_lower} utf8 {Utf8.is_lower last_utf8}}.while_loop
       last_str := str_tmp.to_string_alias
     }
   )
 
-  - read_cap_idf:BOOLEAN <-
+  - read_cap_idf:Boolean <-
   //-- cap_identifier -> 'A'-'Z' {'A'-'Z' | '0'-'9' | '_'}
-  ( 
+  ( + result:Boolean
+    + i:Int
+    + p:Pos
     skip_sp
-    (char TRUE ascii {c:CHARACTER; c.is_upper} utf8 {UTF8.is_upper last_utf8}).if {
-      {char FALSE ascii {c:CHARACTER; c.is_upper} utf8 {UTF8.is_upper last_utf8}}.while_loop
+    p := pos_i
+    (char True ascii {c:Char; c.is_upper} utf8 {Utf8.is_upper last_utf8}).if {
+      {char False ascii {c:Char; c.is_letter} utf8 {Utf8.is_letter last_utf8}}.while_loop
       last_str := str_tmp.to_string_alias
-      //is_parameter_type := last_str.count = 1
+      (
+        (last_str = "Old")  || {last_str = "Exact"}  || 
+        {last_str = "Flat"} || {last_str = "Result"} || 
+        {
+          (last_str.has_prefix "Result_") && {
+            i := "Result_".count
+            {(i <= last_str.upper) && {last_str.at i.is_digit}}.while_do { i := i + 1 }
+            i > last_str.upper
+          }
+        }
+      ).if {
+        pos_i := p // BSBS: n'arrive jamais ;)
+      } else {
+        result := True
+        //is_parameter_type := (last_string.count = 1) && {last_string.first.is_upper}
+      }      
     }
+    result
   )
 
   
 Private
-  - char first:BOOLEAN ascii ascii:{CHARACTER;BOOLEAN} utf8 utf8:{BOOLEAN} :BOOLEAN <-
-  ( + c:CHARACTER
+  - char first:Boolean ascii ascii:{Char;Boolean} utf8 utf8:{Boolean} :Boolean <-
+  ( + c:Char
     (ascii.value (c := at pos_i) || {(!first) && {c.is_digit || {c = '_'}}}).if {
       first.if {
         str_tmp.clear
@@ -835,11 +856,11 @@ Private
     }
   )
     
-  - butf8:STRING_BUFFER := STRING_BUFFER.create 8
-  - last_utf8:STRING_ALIAS
+  - butf8:String_buffer := String_buffer.create 8
+  - last_utf8:String_alias
   
-  - read_utf8:BOOLEAN <-
-  ( + n:UINTEGER_8
+  - read_utf8:Boolean <-
+  ( + n:Uint8
     n := at pos_i
     ((n & 80h) != 0).if {
       butf8.clear
@@ -853,19 +874,19 @@ Private
     }
   )
   
-  - char_operator:BOOLEAN <-
-  ( + c:CHARACTER
+  - char_operator:Boolean <-
+  ( + c:Char
     ("!@#$%^&<|*-+=~/?\\>".has (c := at pos_i)).if {
       str_tmp.add_last c; pos_i := pos_i + 1
-    }.elseif {read_utf8 && {UTF8.is_symbol last_utf8}} then {      
+    }.elseif {read_utf8 && {Utf8.is_symbol last_utf8}} then {      
       str_tmp.append last_utf8; pos_i := pos_i + last_utf8.count
     }
   )
   
 Public
   
-  - read_symbol :BOOLEAN <-
-  ( + old:POS
+  - read_symbol :Boolean <-
+  ( + old:Pos
     skip_sp
     old := pos_i
     str_tmp.clear
@@ -875,13 +896,13 @@ Public
     } else { pos_i := old; }
   )
   
-  - read_num n:BOOLEAN :BOOLEAN <-
-  // n:TRUE for negative number.
+  - read_num n:Boolean :Boolean <-
+  // n:True for negative number.
   // BSBS: Ocptim (version identique a JSON.li) (Cette version la mieux)
-  ( + c:CHARACTER
-    + e0,e1:INTEGER
-    + old:POS
-    + neg,eneg,dec:BOOLEAN
+  ( + c:Char
+    + e0,e1:Int
+    + old:Pos
+    + neg,eneg,dec:Boolean
     skip_sp
     old := pos_i
     (
@@ -893,17 +914,17 @@ Public
         }
       }
     ).if {
-      is_real := FALSE
-      dec := TRUE
+      is_real := False
+      dec := True
       str_tmp.clear
-      str_tmp | c; pos_i := pos_i + 1 + neg.to_integer
+      str_tmp | c; pos_i := pos_i + 1 + neg.to_int
       {(pos_i <= upper) && {((c := at pos_i).is_hexadecimal_digit) || {c = '_'} || {c = '\''}}}.while_do {
         (c.is_hexadecimal_digit).if { str_tmp | c; dec := dec && {c.is_digit}; }
         pos_i := pos_i + 1
       }
       ((c = '.') && {dec} && {pos_i+1 <= upper} && {(c := at (pos_i+1)).is_digit}).if {
         str_tmp | c; pos_i := pos_i + 2
-        is_real := TRUE
+        is_real := True
         e0 := 1
         {(pos_i <= upper) && {((c := at pos_i).is_digit) || {c = '_'} || {c = '\''}}}.while_do {
           (c.is_digit).if { str_tmp | c; e0 := e0 + 1; }
@@ -919,7 +940,7 @@ Public
         }
         e1 := e1 - e0
         (str_tmp.is_integer_64).if {
-          last_real := str_tmp.to_integer_64.to_real_32 * 10.0.pow e1
+          last_real := str_tmp.to_int64.to_real32 * 10.0.pow e1
         } else {
           err syntax msg "Not number."; last_real := 0
         }
@@ -946,7 +967,7 @@ Public
             pos_i := pos_i + 1
           } else {                      
             (str_tmp.is_integer_64).if {
-              last_int := str_tmp.to_integer_64
+              last_int := str_tmp.to_int64
               last_real := last_int
             } else {              
               err syntax msg "Incorrect decimal number."; last_int := 0
@@ -955,7 +976,7 @@ Public
           }
         } else {
           (str_tmp.is_integer_64).if {
-            last_int := str_tmp.to_integer_64
+            last_int := str_tmp.to_int64
             last_real := last_int
           } else {
             err syntax msg "Incorrect decimal number."; last_int := 0
@@ -965,15 +986,15 @@ Public
     } else { pos_i := old; }
   )
   
-  - warning:STRING_ALIAS  := "Warning"
-  - syntax:STRING_ALIAS   := "Syntax"
-  - semantic:STRING_ALIAS := "Semantic"
+  - warning:String_alias  := "Warning"
+  - syntax:String_alias   := "Syntax"
+  - semantic:String_alias := "Semantic"
   
-  - error_active:BOOLEAN := TRUE
-  - set_error_active b:BOOLEAN <- ( error_active := b; )
+  - error_active:Boolean := True
+  - set_error_active b:Boolean <- ( error_active := b; )
   
-  - err t:STRING_ALIAS msg s:STRING <-
-  ( + l,c,i:INTEGER
+  - err t:String_alias msg s:String <-
+  ( + l,c,i:Int
     (error_active).if {
       '\n'.print; t.print; " error in ".print
       rel_path name.print
@@ -999,8 +1020,8 @@ Public
   
 Private
   
-  - line_col_err:(INTEGER,INTEGER) <-
-  ( + l,c,i:INTEGER
+  - line_col_err:(Int,Int) <-
+  ( + l,c,i:Int
     //"cpti:".print; cpti.print; '/'.print; upper.println
     {(i <= upper) && {i != pos_i.pt}}.while_do {
       (at i = '\n').if { l := l + 1; c := 0; } else { c := c + 1; }
@@ -1011,18 +1032,18 @@ Private
   
 Public
     
-  - detect_drw:TOK_DRW <- TOK_TXT.new
+  - detect_drw:Tok_drw <- Tok_txt.new
   
   - parse_drw <-
-  ( + t:TOK_DRW
-    current := Self
+  ( + t:Tok_drw
+    current := self
     t := detect_drw
     toks.at tok_cur add t
     t.product
     t.next_parse
   )
   
-  - parse_all:SELF <-
+  - parse_all:Self <-
   (    
     pos_i := 0
     {at pos_i != '\0'}.while_do {
@@ -1040,23 +1061,23 @@ Public
       ' '.print; toks.count.println
     }
     // Restore Old global variables.    
-    TOK_DRW.begin (Old TOK_DRW.pt_b)
+    Tok_drw.begin (Old Tok_drw.pt_b)
     tok_cur := Old tok_cur
     pos_i := Old pos_i
     current := Old current
-    Self
+    self
   )
   
   // Draw
     
-  - x_space:REAL_32
-  - asc_c:REAL_32
-  - des_c:REAL_32
-  - interline_default:REAL_32 := 3
-  - interline:REAL_32 := interline_default
-  - hline_default:REAL_32 <- asc_c - des_c + interline
+  - x_space:Real32
+  - asc_c:Real32
+  - des_c:Real32
+  - interline_default:Real32 := 3
+  - interline:Real32 := interline_default
+  - hline_default:Real32 <- asc_c - des_c + interline
   
-  - hline:REAL_32 <- tex.asc - tex.des + interline
+  - hline:Real32 <- tex.asc - tex.des + interline
   
   - stop_line <- ( (last_div != NULL).if { last_div.fix_size; detect_cur; }; last_div := NULL; )
   
@@ -1077,43 +1098,43 @@ Public
   ( 
     stop_line
     translate_calls (0,tex.asc)
-    stackd.last.to (child.upper) do { i:INTEGER; child.at i.add_xy (0,tex.asc); }
+    stackd.last.to (child.upper) do { i:Int; child.at i.add_xy (0,tex.asc); }
     tex.set_xy (tex.xmin, tex.y + hline)
     tex.set_ascdes (0,0)
   )
   
   - lisave <- ( parent_buf_pg.save; stackd.add_last (child.upper+1); )
-  - lirestore (dx,dy:REAL_32) <-
+  - lirestore (dx,dy:Real32) <-
   ( restore_and_translate (dx,dy)
     stackd.remove_last
-    stackd.last.to (child.upper) do { i:INTEGER; child.at i.add_xy (dx,dy); }
+    stackd.last.to (child.upper) do { i:Int; child.at i.add_xy (dx,dy); }
   )
   
-  - restore_to (dx,dy:REAL_32) <-
+  - restore_to (dx,dy:Real32) <-
   ( translate_and_copy (dx,dy)
-    stackd.last.to (child.upper) do { i:INTEGER; child.at i.add_xy (dx,dy); }
+    stackd.last.to (child.upper) do { i:Int; child.at i.add_xy (dx,dy); }
     stackd.remove_last
   )
     
-  - busy:BOOLEAN
-  - tok_cur:INTEGER
+  - busy:Boolean
+  - tok_cur:Int
   
   - pre_draw
   
   - draw <-
-  ( + t:TOK_DRW
-    + y,yb,ye,x:REAL_32
-    + debug_tok_beg,end_bg,di,nxt:INTEGER
-    + d:DIV
+  ( + t:Tok_drw
+    + y,yb,ye,x:Real32
+    + debug_tok_beg,end_bg,di,nxt:Int
+    + d:Div
     pre_draw
     /*
-    ( + b:INTEGER
+    ( + b:Int
       "=================".println
       toks.foreach { a:TOK_DRW; a.print_sty b; b := b + a.di; }
     )
     */    
     //(pos_y = 13).if { "TXT_BUF.draw".println; exit 1; }
-    //+ bug:INTEGER
+    //+ bug:Int
     start_bg := trace_pointer
     debug_tok_beg := toks.count
     //draw_background
@@ -1123,7 +1144,7 @@ Public
     pos_i := 0
     tok_cur := 0
     //"TXT_BUF:".print; pos_y.println
-    ((!pos.is_xy) && {PAGE.cur_pg != page}).if { pos := pos.undefine_xy; }
+    ((!pos.is_xy) && {Page.cur_pg != page}).if { pos := pos.undefine_xy; }
     stackd.clear
     lisave
     lisave
@@ -1147,7 +1168,7 @@ Public
         //OUT # "Draw " # tok_cur # '\n';
         t.draw
         ((tex.y < yb) && {! pos.is_define_all}).if {
-          child.foreach { d:WIN; d.free; }
+          child.foreach { d:Win; d.free; }
           child.clear
         }
         (tok_cur + 1 != nxt).if {
@@ -1174,7 +1195,7 @@ Public
     //pos_i.pt.print; '/'.print; upper.println
     //" pt=".print; pti.print; '.'.print; ptv.print
     //" ptoi=".print; ptoi.print; '.'.print; ptov.println
-    /*( + i:INTEGER
+    /*( + i:Int
       {(i <= child.upper) && {child.at i.like DIV.ptoi != ptoi}}.while_do { i := i + 1; }
       (i > child.upper).if {
         "ptoi:".print; ptoi.println
@@ -1182,7 +1203,7 @@ Public
         (child.is_empty).if {
           "Child empty !".println
         } else {
-          0.to (child.upper) do { i:INTEGER
+          0.to (child.upper) do { i:Int
             child.at i.like DIV.ptoi.print; ' '.print
           }
         }
@@ -1193,7 +1214,7 @@ Public
     "---------------".println
     pos.print
     "---".println
-    0.to 9 do { i:INTEGER
+    0.to 9 do { i:Int
       + dd:DIV
       dd := child.at i.like DIV
       dd.pos.hook.print; " [".print; dd.pos.offset.print; '-'.print; dd.pte.offset.print
@@ -1201,7 +1222,7 @@ Public
     };    */
     
     // Elevator upper:    
-    height_upper := (pos_y+tex.y)/pos_i.pt.to_real_32 * text.upper + height/2
+    height_upper := (pos_y+tex.y)/pos_i.pt.to_real32 * text.upper + height/2
     width_upper := pos_x + tex.xmax + 100
     //"--------------".println
     //"pt_div=".print; ptoi.print; '/'.print; child.upper.print
@@ -1213,34 +1234,34 @@ Public
       //"y=".print; y.println
       (y < margin_cursor_y).if { // Top
         pos_y := (pos_y + y - margin_cursor_y).max 0
-        PAPER.refresh_again
+        Paper.refresh_again
       }
       y := y + d.height
       (y > height-margin_cursor_y).if { // Bottom
         pos_y := pos_y + y + margin_cursor_y - height
-        PAPER.refresh_again
+        Paper.refresh_again
       }
-    } else { drag_pos_y := FALSE; PAPER.refresh_again }
+    } else { drag_pos_y := False; Paper.refresh_again }
     
     (! drag_pos_x).if {
       d ?= child.at pt_div
       x := d.abs_x - xo
       (x < margin_cursor_x).if { // Left
         pos_x := (pos_x + x - margin_cursor_x).max 0
-        PAPER.refresh_again
+        Paper.refresh_again
       }
       (x > width-margin_cursor_x).if { // Right
         pos_x := pos_x + x + margin_cursor_x - width
-        PAPER.refresh_again
+        Paper.refresh_again
       }
-    } else { drag_pos_x := FALSE; PAPER.refresh_again }
+    } else { drag_pos_x := False; Paper.refresh_again }
     
     //lirestore (0,0)
     restore; stackd.remove_last
     //"translate: ".print; (-(pos_y - Old pos_y)).println
     restore_to (-(pos_x - Old pos_x),-(pos_y - Old pos_y))
     ? {stackd.count = 0}
-    tex.pop; ? {tex = TEX}
+    tex.pop; ? {tex = Tex}
     end_bg := trace_pointer
     draw_background
     foreground start_bg to end_bg
@@ -1248,25 +1269,25 @@ Public
   )
     
   - draw_all <-
-  ( //+ check_upper:INTEGER
+  ( //+ check_upper:Int
     //check_upper := states.upper
-    busy := TRUE
+    busy := True
     reset_scissor
     intersect_scissor (xo,yo) size (width,height)
-    child.foreach { c:WIN; c.free; }; child.clear; last_div := NULL
-    DIV.set_parent parent_text_pg
-    font_size (FONT.size_app)
-    FONT.app (FONT.roman) in Self
+    child.foreach { c:Win; c.free; }; child.clear; last_div := NULL
+    Div.set_parent parent_text_pg
+    font_size (Font.size_app)
+    Font.app (Font.roman) in self
     text_align (align_left | align_baseline)
     line_join round; line_cap round
-    ( + w,x0,y0,x1,y1:REAL_32
+    ( + w,x0,y0,x1,y1:Real32
       (asc_c,des_c,w) := text_metrics
       (w,x0,y0,x1,y1) := text_bounds (0,0) msg " "
       x_space := w
     )
     draw
     reset_scissor
-    child.foreach { d:WIN; /*d.add_xy (xo,yo);*/ d.draw; }
+    child.foreach { d:Win; /*d.add_xy (xo,yo);*/ d.draw; }
     /*
     (check_upper != states.upper).if {
       "Old:".print; check_upper.println
@@ -1274,25 +1295,25 @@ Public
     }
     ? {check_upper = states.upper}
     */
-    busy := FALSE
+    busy := False
     //"END:".print; child.last.yo.println
   )
   
   - refresh
   
-  - start_bg:INTEGER
+  - start_bg:Int
 
   - draw_background <-
-  ( + p:PAINT
-    + d:DIV
-    + x,y,w,h:REAL_32
-    + id:INTEGER
-    + c:COLOR
+  ( + p:Paint
+    + d:Div
+    + x,y,w,h:Real32
+    + id:Int
+    + c:Color
     
-    (LOOK.background != NULL).if {
-      id := LOOK.background.idf
+    (Look.background != NULL).if {
+      id := Look.background.idf
       (w,h) := image_size id
-      p := PAINT.create_pattern (-pos_x+xo,-pos_y+yo) size (w,h) img_id id angle 0 alpha 1.0
+      p := Paint.create_pattern (-pos_x+xo,-pos_y+yo) size (w,h) img_id id angle 0 alpha 1.0
       begin_path
       rect (xo,yo) size (width,height)
       fill_paint p
@@ -1300,16 +1321,16 @@ Public
       p.free
     } else {
       begin_path
-      fill_color (LOOK.background_color)
+      fill_color (Look.background_color)
       rect (xo,yo) size (width,height)
       fill
     }
-    (page = PAGE.cur_pg).if {      
+    (page = Page.cur_pg).if {      
       d ?= child.at pt_div
       (x,y) := (d.abs_x,d.abs_y)
-      c := LOOK.cols.at (LOOK.cursor)
+      c := Look.cols.at (Look.cursor)
       begin_path
-      p := PAINT.create_radial (x,y) radius (10,512)
+      p := Paint.create_radial (x,y) radius (10,512)
       color c to (c.set_af 0.0)
       rect (xo,yo) size (width,height)
       fill_paint p
@@ -1322,7 +1343,7 @@ Public
   
   // Graphics elements
   /*
-  - txt_dir:STRING_BUFFER
+  - txt_dir:String_buffer
   - drw_directive <-
   ( ((txt_dir != NULL) && {page = PAGE.cur_pg}).if {
       fill_color (LOOK.directive)
@@ -1338,17 +1359,17 @@ Public
   (
     (last_div = NULL).if {
       (tex.x = tex.xmin).if { begin_line; }
-      last_div := DIV.new.text
+      last_div := Div.new.text
     }
     tex.ascdes (asc_c,des_c)
     ((pos_i = upper) || {tmp_c.first = '\n'}).if {      
       end_line
     }.elseif {tmp_c == "\r\n"} then {
-      save; fill_color (COLOR.gray); text (tex.x,tex.y) msg "↩"; restore
+      save; fill_color (Color.gray); text (tex.x,tex.y) msg "↩"; restore
       end_line
     } else {
       tex.set_x (text (tex.x,tex.y) msg tmp_c)
-      (TOK_DRW.underline).if {
+      (Tok_drw.underline).if {
         begin_path
         fill_color (get_state.fill.inner_color)
         rect (Old tex.x,tex.y + 2) to (tex.x,tex.y + 3)
@@ -1358,13 +1379,17 @@ Public
     }
   )
   
-  - put_image pth:STRING :BOOLEAN <-
-  ( + img:IMG
-    + h:REAL_32
-    ((img := IMG.load pth asset FALSE) != NULL).if {
-      IMG.update WIN
+  - put_image pth:String :Boolean <-
+  ( + img:Img
+    + h:Real32
+    ((img := Img.load pth asset False) != NULL).if {
+      (last_div = NULL).if {
+        (tex.x = tex.xmin).if { begin_line; }
+        last_div := Div.new.text
+      }
+      Img.update Win
       h := des_c + img.height
-      img.draw WIN to (tex.x,tex.y - h) alpha 1 bar TRUE
+      img.draw Win to (tex.x,tex.y - h) alpha 1 bar True
       tex.add_x (img.width)
       tex.ascdes (h,des_c)
     }

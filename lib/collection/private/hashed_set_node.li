@@ -1,20 +1,17 @@
 Header
-
-  + name := HASHED_SET_NODE V;
-
-  /*Auxilliary class to implement SET(V).*/
-
+  + name := Hashed_set_node V
+/*Auxilliary class to implement SET(V).*/
 Insert
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Public
 
   + item:V
 
-  + next:HASHED_SET_NODE V
+  + next:Hashed_set_node V
   // The `next' one when some clash occurs.
 
-  - set_next n:HASHED_SET_NODE V <-
+  - set_next n:Hashed_set_node V <-
   (
     next := n
   )
@@ -24,16 +21,16 @@ Public
 
 Public
 
-  - create i:V next n:HASHED_SET_NODE(V) :SELF <-
+  - create i:V next n:Hashed_set_node(V) :Self <-
   //[ ? {i.hash_code >= 0}; ]
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make i next n
     result
   )
 
-  - make i:V next n:HASHED_SET_NODE(V) <-
+  - make i:V next n:Hashed_set_node(V) <-
   (
     item := i
     next := n

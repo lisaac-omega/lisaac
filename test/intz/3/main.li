@@ -1,12 +1,11 @@
 Header
-  + name := MAIN;
-  
+  + name := Main
 Private
-  - values:ARRAY ℤ
+  - values:Array ℤ
   
-  - valook: ARRAY STRING_ALIAS
+  - valook: Array String_alias
   
-  - operations:STRING_ALIAS := "---------------------------------------------------------------------\
+  - operations:String_alias := "---------------------------------------------------------------------\
   \--------------------------------------------------------------------------------------------------\
   \--------------------------------------------------------------------------------------------------\
   \--------------------------------------------------------------------------------------------------\
@@ -31,15 +30,15 @@ Public
   - main <-
   ( + intz:ℤ
     + a,b,c:ℤ
-    + j:INTEGER
-    + op:CHARACTER
-    values := ARRAY ℤ .create_with_capacity 1024
-    valook := ARRAY STRING_ALIAS .create_with_capacity 1024
+    + j:Int
+    + op:Char
+    values := Array ℤ .create_with_capacity 1024
+    valook := Array String_alias .create_with_capacity 1024
     intz := 1
     values_add intz
     intz := 2
     values_add intz
-    0.to (operations.upper) do { i:INTEGER
+    0.to (operations.upper) do { i:Int
       a := values.at (values.upper - 1)
       b := values.at (values.upper)
       op := operations.at i
@@ -48,11 +47,11 @@ Public
       }.elseif {op = '-'} then {
         values_add (a - b)
       } else {
-        TEST.check FALSE
+        Test.check False
       }
       //("values.last= " + op.to_string + " " + valook.last).println
     }
-    TEST.check (values.upper = valook.upper)
+    Test.check (values.upper = valook.upper)
     /*
     "=============".println
     0.to (valook.upper) do { idx:INTEGER
@@ -62,31 +61,31 @@ Public
     */
     
     j := values.upper
-    (operations.upper).downto 0 do { i:INTEGER
+    (operations.upper).downto 0 do { i:Int
       c := values.at (values.upper)
       //("c=" + c.to_string).println
-      TEST.check (c.to_string) string (valook.at (values.upper))
+      Test.check (c.to_string) string (valook.at (values.upper))
       b := values.at (values.upper - 1)
       //("b=" + b.to_string).println
-      TEST.check (b.to_string) string (valook.at (values.upper - 1))
+      Test.check (b.to_string) string (valook.at (values.upper - 1))
       a := values.at (values.upper - 2)
       //("a=" + a.to_string).println
-      TEST.check (a.to_string) string (valook.at (values.upper - 2))
+      Test.check (a.to_string) string (valook.at (values.upper - 2))
       op := operations.at i
       (op = '+').if {
         intz := c - b
-        TEST.check (intz.to_string) string (a.to_string)
+        Test.check (intz.to_string) string (a.to_string)
       }.elseif {op = '-'} then {
         intz := c + b
-        TEST.check (intz.to_string) string (a.to_string)
+        Test.check (intz.to_string) string (a.to_string)
       } else {
-        TEST.check FALSE
+        Test.check False
       }
       values.remove_last
       valook.remove_last
     }
-    TEST.check (values.upper = 1)
-    TEST.check (valook.upper = 1)
+    Test.check (values.upper = 1)
+    Test.check (valook.upper = 1)
   )
   
   - values_add z:ℤ <-

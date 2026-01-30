@@ -1,38 +1,35 @@
 Header
-
-  + name    := ITM_READ;
-
-  /*For local access variable or send message without argument
+  + name := Itm_read
+/*For local access variable or send message without argument
 
   // BSBS: Optim: Penser à faire un ITM_READ_ARG3 pour tous les `if then else'
   */
-  
 Inherit
 
-  + parent_itm_code:Expanded ITM_CODE
+  + parent_itm_code:Flat Itm_code
 
 Public
 
-  - is_affect:POSITION; // Nothing (it's good with 0).
+  - is_affect:Position; // Nothing (it's good with 0).
 
   //
   // Data
   //
 
-  + name:STRING_ALIAS
+  + name:String_alias
   
   //
   // Constructor
   //
 
-  - create p:POSITION name n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p name n
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS <-
+  - make p:Position name n:String_alias <-
   (
     position := p
     name := n
@@ -42,12 +39,12 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + result:EXPR
-    + loc:LOCAL
-    + n:INTEGER
+  - to_run_expr:Expr <-
+  ( + result:Expr
+    + loc:Local
+    + n:Int
 
-    loc := lookup name
+    loc := lookup name    
     (loc != NULL).if {
       //
       // Local Access.
@@ -58,17 +55,17 @@ Public
         result := to_run_with NULL args NULL
       } else {
         ((n := loc.pow) > 1).if {          
-          + l:ARRAY EXPR          
-          l := ARRAY EXPR.create_with_capacity n
+          + l:Array Expr          
+          l := Array Expr.create_with_capacity n
           l.add_last (loc.read position)
-          STRING.tmp { tmp:STRING_BUFFER
-            1.to (n-1) do { i:INTEGER
+          String.tmp { tmp:String_buffer
+            1.to (n-1) do { i:Int
               tmp.copy name
               tmp # "__" # i              
               l.add_last (lookup (tmp.to_string_alias).read position)
             }
           }
-          result := EXPR_MULTIPLE.create l          
+          result := Expr_multiple.create l          
         } else {
           result := loc.read position
         }        
@@ -86,23 +83,23 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    buffer.append name
-    buffer.append "()"
+    b.append name
+    b.append "()"
   )
 
-ITM_READ, SLOT_DATA
+Itm_read, Slot_data
 
-  - to_run_with pfirst_itm:ITM_CODE args larg:ARRAY ITM_CODE :EXPR <-
-  ( + rec:EXPR
+  - to_run_with pfirst_itm:Itm_code args larg:Array Itm_code :Expr <-
+  ( + rec:Expr
     //
-    + itm_list:ITM_LIST
-    + itm_read:ITM_READ
-    + is_resend,implicit_self:BOOLEAN
-    + self:LOCAL
-    + s:SLOT
-    + first_itm:ITM_CODE
+    + itm_list:Itm_list
+    + itm_read:Itm_read
+    + is_resend,implicit_self:Boolean
+    + myself:Local
+    + s:Slot
+    + first_itm:Itm_code
     
     first_itm := pfirst_itm
     //
@@ -110,13 +107,13 @@ ITM_READ, SLOT_DATA
     //
 
     (first_itm = NULL).if {
-      // Implicit Self.
-      self := lookup "Self"
-      s := self.type.get_slot name
+      // Implicit self.
+      myself := lookup "self"      
+      s := myself.type.get_slot name
       (((s != NULL) && {! s.idf_first}) || {larg = NULL}).if {
-        rec := self.read position
-        implicit_self := TRUE
-      } else { // Idf (Self:SELF) Idf
+        rec := myself.read position
+        implicit_self := True
+      } else { // Idf (self:Self) Idf
         s := NULL
         first_itm := larg.first
         larg.remove_first
@@ -142,28 +139,29 @@ ITM_READ, SLOT_DATA
     to_run s with_self (rec,implicit_self,is_resend) args larg
   )
   
-SLOT_DATA
+Slot_data
   
-  - to_run s:SLOT with_self (r:EXPR,implicit_self,is_resend:BOOLEAN)
-  args larg:ARRAY ITM_CODE :EXPR <-
-  ( + args:ARRAY EXPR
-    + rec_type:TYPE
-    + rec:EXPR
-    + em:EXPR_MULTIPLE
-    + pos_null:POSITION
+  - to_run s:Slot with_self (r:Expr,implicit_self,is_resend:Boolean)
+  args larg:Array Itm_code :Expr <-
+  ( + args:Array Expr
+    + rec_type:Type
+    + rec:Expr
+    + em:Expr_multiple
+    + pos_null:Position
     //
-    + slot_msg:SLOT
-    + is_block_value:BOOLEAN
+    + slot_msg:Slot
+    + is_block_value:Boolean
     //
-    + base:NODE
+    + base:Node
+    + myself:Local
 
     rec := r
     //
     // Detect slot.
     //
-    args := ALIAS_ARRAY EXPR.new
+    args := Alias_array Expr.new
     rec_type := rec.static_type.raw
-    (rec_type = TYPE_VOID).if {
+    (rec_type = Type_void).if {
       // BSBS: Ce cas ne doit jamais arriver !
       // il se déclenche avec parent.msg.truc lorsque msg du parent n'a pas de type de retour
       // Mais que le profil général en a un...
@@ -171,7 +169,7 @@ SLOT_DATA
     }
     ((rec_type.is_block) && {name = "value"}).if {
       // { ... }.value
-      is_block_value := TRUE
+      is_block_value := True
     } else {
       (s != NULL).if { slot_msg := s; } else {
         slot_msg := rec_type.get_slot name
@@ -191,25 +189,25 @@ SLOT_DATA
           ((larg  = NULL) && {slot_msg.argument_list.count != 1}) ||
           {(larg != NULL) && {larg.count != slot_msg.argument_list.count-1}}
         ).if {
-          POSITION.put_error semantic text "Incorrect number argument."
-	  slot_msg.position.put_position
-	  position.put_position
-	  POSITION.send_error
-	}
-	last_position := slot_msg.position
+          Position.put_error semantic text "Incorrect number argument."
+          slot_msg.position.put_position
+          position.put_position
+          Position.send_error
+        }
+        last_position := slot_msg.position
         (
           (profil_slot != NULL) &&
           {! slot_msg.id_section.access rec_type with (profil_slot.type_self.raw)}
-	).if {
-	  string_tmp.copy "Type "
-	  profil_slot.type_self.append_name_in string_tmp
-	  string_tmp.append " does not have access to this slot."
-	  POSITION.put_error warning text string_tmp
-	  slot_msg.position.put_position
-	  position.put_position
-	  POSITION.send_error
-	}
-	last_position := pos_null
+        ).if {
+          string_tmp.copy "Type "
+          profil_slot.type_self.append_name_in string_tmp
+          string_tmp.append " does not have access to this slot."
+          Position.put_error warning text string_tmp
+          slot_msg.position.put_position
+          position.put_position
+          Position.send_error
+        }
+        last_position := pos_null
       }
     }
     //
@@ -221,8 +219,8 @@ SLOT_DATA
       rec := em.expr_list.first
     }
     (larg != NULL).if {
-      (larg.lower).to (larg.upper) do { j:INTEGER
-	add_arg (larg.at j.to_run_expr) to (j+1) in args for slot_msg block is_block_value
+      (larg.lower).to (larg.upper) do { j:Int
+        add_arg (larg.at j.to_run_expr) to (j+1) in args for slot_msg block is_block_value
       }
     }
 
@@ -231,44 +229,46 @@ SLOT_DATA
     //
     (is_block_value).if {
       // { ... }.value
-      args := ALIAS_ARRAY EXPR.copy args
+      args := Alias_array Expr.copy args
       args.at 0 put (args.first.my_copy)
       //rec := slot_msg.slot_data_intern.read position with rec
-      base := NODE.new_block position receiver rec with args
+      base := Node.new_block position receiver rec with args
     }.elseif {args.count = 1} then {
       // Classic message without arguments.
       (is_resend).if {
-	args.at 0 put (lookup "Self".read position)
-	args.first.remove
+        myself := lookup "self" 
+        args.at 0 put (myself.read position)
+        args.first.remove
       }
 
       ((verify) && {is_all_warning} && {name == "abstract"}).if {
-	string_tmp.copy "Deferred in `";
-	profil_slot.slot.pretty_name_in string_tmp
-	string_tmp.append "' for "
-	rec.static_type.append_name_in string_tmp
-	warning_error (position,string_tmp)
+        string_tmp.copy "Deferred in `";
+        profil_slot.slot.pretty_name_in string_tmp
+        string_tmp.append "' for "
+        rec.static_type.append_name_in string_tmp
+        warning_error (position,string_tmp)
       }
 
-      base := NODE.new_read position slot slot_msg
+      base := Node.new_read position slot slot_msg
       receiver rec self (args.first) intern implicit_self
 
-      ALIAS_ARRAY EXPR.free args
+      Alias_array Expr.free args
     } else {
       // Classic message with arguments.
       (is_resend).if {
-	args.at 0 put (lookup "Self".read position)
+        myself := lookup "self" 
+        args.at 0 put (myself.read position)
       } else {
-	args.at 0 put (args.first.my_copy)
+        args.at 0 put (args.first.my_copy)
       }
-      args := ALIAS_ARRAY EXPR .copy args
-      base := NODE.new_read position slot slot_msg
+      args := Alias_array Expr .copy args
+      base := Node.new_read position slot slot_msg
       receiver rec with args intern implicit_self
     }
     list_current.add_last base
 
     (larg != NULL).if {
-      ALIAS_ARRAY ITM_CODE .free larg
+      Alias_array Itm_code .free larg
     }
 
     ? {base.result_expr != NULL}
@@ -277,14 +277,14 @@ SLOT_DATA
 
 Private
 
-  - add_arg e:EXPR to idx:INTEGER
-  in args:ARRAY EXPR for slot:SLOT block is_block_value:BOOLEAN <-
-  ( + em:EXPR_MULTIPLE
-    + upper,nv:INTEGER
-    + itm_arg:ITM_ARGUMENT
-    + ts:ITM_TYPE_SIMPLE
-    + ex:EXPR
-    + av:ITM_ARGV
+  - add_arg e:Expr to idx:Int
+  in args:Array Expr for slot:Slot block is_block_value:Boolean <-
+  ( + em:Expr_multiple
+    + upper,nv:Int
+    + itm_arg:Itm_argument
+    + ts:Itm_type_simple
+    + ex:Expr
+    + av:Itm_argv
 
     em ?= e
     (em != NULL).if {
@@ -297,12 +297,12 @@ Private
     (! is_block_value).if {
       itm_arg := slot.argument_list.at idx
       (itm_arg.upper = -1).if {
-        av := itm_arg.like ITM_ARGV
+        av := itm_arg.like Itm_argv
         (av.first = NULL).if { // ^ n
           nv := upper + 1 
-          itm_arg.like ITM_ARGV.set_pow nv
+          itm_arg.like Itm_argv.set_pow nv
           //OUT # "ITM_READ=" # nv # '\n'
-          args.at (Old args.count) add (INTEGER_CST.create (e.position) value nv type (type_integer.default))
+          args.at (Old args.count) add (Int_cst.create (e.position) value nv type (type_integer.default))
         } else {
           nv := av.first.pow
         }
@@ -322,24 +322,24 @@ Private
           string_tmp.append ", call #"
           (upper+1).append_in string_tmp
           string_tmp.add_last ')'
-          POSITION.put_error semantic text string_tmp
+          Position.put_error semantic text string_tmp
           itm_arg.position.put_position
           e.position.put_position
-          POSITION.send_error
+          Position.send_error
         }
         (args.count > 1).if {
           (itm_arg.upper = -1).if { // ^n
             ts ?= itm_arg.at 0
-            ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
-              0.to upper do { i:INTEGER
+            ((ts != NULL) && {ts = Itm_type_simple.type_self}).if {
+              0.to upper do { i:Int
                 ex := args.at (args.upper - upper + i)
                 check ex and itm_arg
               }
             }
           } else { // Standard
-            (itm_arg.lower).to (itm_arg.upper) do { i:INTEGER
+            (itm_arg.lower).to (itm_arg.upper) do { i:Int
               ts ?= itm_arg.at i
-              ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
+              ((ts != NULL) && {ts = Itm_type_simple.type_self}).if {
                 ex := args.at (args.upper - itm_arg.upper + i)
                 check ex and itm_arg
               }
@@ -352,17 +352,17 @@ Private
     }
   )
 
-  - check ex:EXPR and itm_arg:ITM_ARGUMENT <-
-  ( + t:TYPE_FULL
+  - check ex:Expr and itm_arg:Itm_argument <-
+  ( + t:Type_full
     t := ex.static_type
-    ((! t.is_expanded) && {! t.is_strict}).if {
+    ((! t.is_flat) && {! t.is_exact}).if {
       string_tmp.copy "Type expression ("
       t.append_name_in string_tmp
-      string_tmp.append ") is not Expanded or Strict for SELF argument type."
-      POSITION.put_error semantic text string_tmp
+      string_tmp.append ") is not Flat or Exact for Self argument type."
+      Position.put_error semantic text string_tmp
       itm_arg.position.put_position
       ex.position.put_position
       position.put_position
-      POSITION.send_error
+      Position.send_error
     }
   )              

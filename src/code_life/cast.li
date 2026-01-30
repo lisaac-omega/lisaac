@@ -1,41 +1,38 @@
 Header
-
-  + name    := CAST;
-
-  /* Cast type. */
-
+  + name := Cast
+/* Cast type. */
 Inherit
 
-  + parent_expr:Expanded EXPR
+  + parent_expr:Flat Expr
 
 Public
 
-  - is_invariant:BOOLEAN <- value.is_invariant
+  - is_invariant:Boolean <- value.is_invariant
 
-  + static_type:TYPE_FULL
+  + static_type:Type_full
 
-  + value:EXPR
+  + value:Expr
 
   //
   // Creation.
   //
 
-  - create t:TYPE_FULL value v:EXPR :SELF <-
-  ( + result:SELF
+  - create t:Type_full value v:Expr :Self <-
+  ( + result:Self
 
     result := clone
     result.make t value v
     result
   )
 
-  - make t:TYPE_FULL value v:EXPR <-
+  - make t:Type_full value v:Expr <-
   (
     position    := v.position
     static_type := t
     value       := v
   )
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     create static_type value (value.my_copy)
   )
@@ -44,7 +41,7 @@ Public
   // Searching.
   //
 
-  - get_type t:TYPES_TMP <-
+  - get_type t:Types_tmp <-
   (
     t.add (static_type.raw)
   )
@@ -58,27 +55,27 @@ Public
     value.remove
   )
 
-  - execute_unlink:INSTR <-
+  - execute_unlink:Instr <-
   (
     value.execute_unlink
   )
 
-  - execute_link:EXPR <-
-  ( + result:EXPR
-    + int:INTEGER_CST
-    + lst_typ:TYPES_TMP
-    + other:CAST
+  - execute_link:Expr <-
+  ( + result:Expr
+    + int:Int_cst
+    + lst_typ:Types_tmp
+    + other:Cast
 
     value  := value.execute_link
-    result := Self
+    result := self
     //
     ((static_type.raw = type_integer) && {value.is_constant}).if { // -------> OK
       result := value
       new_execute_pass
     }.elseif {  
       (is_integer (static_type.raw.name)) && {value.is_constant} &&
-      { int ?= value;  // BSBS: Merde avc les prototype_cst de type type_id : INTEGER
-	int != NULL
+      { int ?= value;  // BSBS: Merde avc les prototype_cst de type type_id : Int
+        int != NULL
       }
     } then {
       int.cast_type static_type
@@ -91,7 +88,7 @@ Public
       result := value
       new_execute_pass
     } else {
-      lst_typ := TYPES_TMP.new
+      lst_typ := Types_tmp.new
       value.get_type lst_typ
       ((lst_typ.count = 1) && {lst_typ.first = static_type.raw}).if {
         result := value
@@ -123,11 +120,11 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.add_last '('
     static_type.append_name_in buffer
-    (static_type.is_expanded).if_false {
+    (static_type.is_flat).if_false {
       buffer.add_last '*'
     }
     buffer.add_last ')'

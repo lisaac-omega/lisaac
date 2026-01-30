@@ -1,30 +1,29 @@
 Header
-  + name := AVL_TREE_NODE V;
-  /*
+  + name := Avl_tree_node V
+/*
    Auxiliary class to implement AVL_SET.
    This a classic implementation of an AVL tree (balanced tree first designed
    by Adelson-Velskii and Landis (hence A.V.L.), 1960)
   */
-
 Insert
-  - parent_avl_constants:AVL_CONSTANTS := AVL_CONSTANTS
+  - parent_avl_constants:Avl_constants := Avl_constants
 
 Public
   //AVL_TREE_NODE, AVL_TREE
 
-  + left:AVL_TREE_NODE(V)
+  + left:Avl_tree_node(V)
 
-  + right:AVL_TREE_NODE(V)
+  + right:Avl_tree_node(V)
 
   + item:V
 
-  + balance:INTEGER
+  + balance:Int
   // Balance factor; either `balanced' (the tree is balanced),
   // `imbalanced_left' (the left branch is the longer) or
   // `imbalanced_right' (the right branch is the longer)
 
-  - count:INTEGER <-
-  ( + result:INTEGER
+  - count:Int <-
+  ( + result:Int
 
     result := 1
     (left != NULL).if {
@@ -36,8 +35,8 @@ Public
     result
   )
 
-  - height:INTEGER <-
-  ( + result:INTEGER
+  - height:Int <-
+  ( + result:Int
 
     (left != NULL).if {
       result := left.height
@@ -48,7 +47,7 @@ Public
     result + 1
   )
 
-  - map_in map:COLLECTION(AVL_TREE_NODE(V)) <-
+  - map_in map:Collection(Avl_tree_node(V)) <-
   [
     -? {map != NULL}
   ]
@@ -56,7 +55,7 @@ Public
     (left != NULL).if {
       left.map_in map
     }
-    map.add_last Self
+    map.add_last self
     (right != NULL).if {
       right.map_in map
     }
@@ -65,9 +64,9 @@ Public
     +? {map.count = Old map.count + count}
   ]
 
-  - has e:V :BOOLEAN <-
+  - has e:V :Boolean <-
   // Is element `e' in the tree?
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     result := item == e
     (! result).if {
@@ -80,9 +79,9 @@ Public
     result
   )
 
-  - fast_has e:V :BOOLEAN <-
+  - fast_has e:V :Boolean <-
   // Is element `e' in the tree?
-  ( + result:BOOLEAN
+  ( + result:Boolean
 
     result := item = e
     ((! result) && {! item == e}).if {
@@ -98,12 +97,12 @@ Public
     +? {Result -> (count > 0)}
   ]
 
-  - at e:V :AVL_TREE_NODE(V) <-
+  - at e:V :Avl_tree_node(V) <-
   // Is element `e' in the tree?
-  ( + result:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
 
     (item == e ).if {
-      result := Self
+      result := self
     }.elseif {e < item} then {
       (left != NULL).if {
         result := left.at e
@@ -129,7 +128,7 @@ Public
     +? {item = i}
   ]
 
-  - set_left l:AVL_TREE_NODE(V) <-
+  - set_left l:Avl_tree_node(V) <-
   [
     // Equality admitted for the free list
     -? {(l != NULL) -> ((l.item = item) || {l.item < item})}
@@ -141,7 +140,7 @@ Public
     +? {left = l}
   ]
 
-  - set_right r:AVL_TREE_NODE(V) <-
+  - set_right r:Avl_tree_node(V) <-
   [
     -? {(r != NULL) ->> {r.item > item}}
   ]
@@ -152,7 +151,7 @@ Public
     +? {right = r}
   ]
 
-  - set_balance b:INTEGER <-
+  - set_balance b:Int <-
   (
     balance := b
   )
@@ -165,14 +164,14 @@ Public
 
   // Rotations:
 
-  - rotate_right:AVL_TREE_NODE(V) <-
+  - rotate_right:Avl_tree_node(V) <-
   // Proceeds to some reorganisation and returns the upper node.
-  ( + result:AVL_TREE_NODE(V)
-    + left_right:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
+    + left_right:Avl_tree_node(V)
 
     result := left
     left_right := left.right
-    left.set_right Self
+    left.set_right self
     set_left left_right
     result
   )
@@ -180,14 +179,14 @@ Public
     +? {Result != NULL}
   ]
 
-  - rotate_left:AVL_TREE_NODE(V) <-
+  - rotate_left:Avl_tree_node(V) <-
   // Proceeds to some reorganisation and returns the upper node.
-  ( + result:AVL_TREE_NODE(V)
-    + right_left:AVL_TREE_NODE(V)
+  ( + result:Avl_tree_node(V)
+    + right_left:Avl_tree_node(V)
 
     result := right
     right_left := right.left
-    right.set_left Self
+    right.set_left self
     set_right right_left
     result
   )

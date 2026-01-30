@@ -1,49 +1,48 @@
 Header
-  + name := ICO;
-  
+  + name := Ico
 Inherit
-  + parent_gobj:Expanded GOBJ ICO
+  + parent_gobj:Flat Gobj Ico
   
 Private
-  - stk:Expanded ARRAY (Strict ICO)
+  - stk:Flat Array (Exact Ico)
   
 Public
     
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - margin:INTEGER := 8
+  - margin:Int := 8
   
-  - mute:INTEGER  := 1 << 15
-  - barre:INTEGER := 1 << 16
-  - dark:INTEGER  := 1 << 17
-  - no_back:INTEGER := 1 << 18
+  - mute:Int  := 1 << 15
+  - barre:Int := 1 << 16
+  - dark:Int  := 1 << 17
+  - no_back:Int := 1 << 18
     
-  + img:IMG
-  + act:{ICO;BOOLEAN}
+  + img:Img
+  + act:{Ico;Boolean}
   
-  - width_min:REAL_32  <- zom * img.width
-  - height_min:REAL_32 <- zom * img.height
+  - width_min:Real32  <- zom * img.width
+  - height_min:Real32 <- zom * img.height
   
-  - init i:STRING_ALIAS do d:{ICO;BOOLEAN} :SELF <-
+  - init i:String_alias do d:{Ico;Boolean} :Self <-
   (
-    img := IMG.load i asset TRUE
+    img := Img.load i asset True
     act := d
     init_obj
   )
   
   - draw <-
-  ( + y,x,z,w,h:REAL_32
+  ( + y,x,z,w,h:Real32
     //+ c:COLOR
     //draw_debug
     //
     (! is no_back).if {
       (is inside).if {
-        fill_color (LOOK.border_on)
+        fill_color (Look.border_on)
       } else {
-        fill_color (LOOK.border_off); //COLOR.rgba (0,0,0,10))
+        fill_color (Look.border_off); //COLOR.rgba (0,0,0,10))
       }
       begin_path
       rect (xo,yo) size (width, height) radius 8
@@ -53,19 +52,19 @@ Public
     (x,y) := (xo + width/2, yo + height/2)
     z := (width/img.width).min (height/img.height)
     (w,h) := (z*img.width, z*img.height)
-    img.draw Self to (x - w/2,y - h/2) height h alpha 1
+    img.draw self to (x - w/2,y - h/2) height h alpha 1
   )
   
-  - event ev:UINTEGER_8 :BOOLEAN <-
-  ( + e:UINTEGER_8
+  - event ev:Uint8 :Boolean <-
+  ( + e:Uint8
     e := ev & ~1
     (is mute).if {
       // Nothing.
-    }.elseif {e = HAND.in} then {
-      set inside with (ev = HAND.in)
-    }.elseif {e = HAND.clic} then {
+    }.elseif {e = Hand.in} then {
+      set inside with (ev = Hand.in)
+    }.elseif {e = Hand.clic} then {
       //"Act:".print; act.text_l.println
       //MENU.close_all_except act
-      act.value Self.if_false { beep; }
+      act.value self.if_false { beep; }
     }
   )

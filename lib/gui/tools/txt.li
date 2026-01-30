@@ -1,50 +1,49 @@
 Header
-  + name := Strict TXT;
-  
+  + name := Exact Txt
 Inherit
-  + parent_gobj:Expanded GOBJ TXT
+  + parent_gobj:Flat Gobj Txt
   
 Private
-  - stk:Expanded ARRAY TXT
+  - stk:Flat Array Txt
 Public
   
-  - width_min:REAL_32 <-
-  ( + x0,y0,x1,y1,wt:REAL_32
-    font_face_id (FONT.sys (FONT.roman))
-    font_size (FONT.size_sys * zom)
+  - width_min:Real32 <-
+  ( + x0,y0,x1,y1,wt:Real32
+    font_face_id (Font.sys (Font.roman))
+    font_size (Font.size_sys * zom)
     (wt,x0,y0,x1,y1) := text_bounds (0,0) msg txt
     wt
   )
   
-  - height_min:REAL_32 <- FONT.size_sys * zom
+  - height_min:Real32 <- Font.size_sys * zom
   
-  - mute:INTEGER := 1 << 15
+  - mute:Int := 1 << 15
   
-  + txt:STRING
-  - set_txt t:STRING <- ( txt := t; )
+  + txt:String
+  - set_txt t:String <- ( txt := t; )
   
-  - new:SELF <-
-  ( + r:SELF; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
-  - free <- stk.add_last Self
+  - free <- stk.add_last self
   
-  - init_str t:STRING :SELF <-
+  - init_str t:String :Self <-
   ( txt := t
     init_obj
   )
     
   - draw <-
-  ( + c:COLOR
-    + x:REAL_32
+  ( + c:Color
+    + x:Real32
    
     (is mute).if {
-      c := LOOK_GUI.text_bg_ui
+      c := Look_gui.text_bg_ui
     } else {
-      c := (col=COLOR).ok (LOOK_GUI.text_ui) or col
+      c := (col=Color).ok (Look_gui.text_ui) or col
     }
     fill_color c
-    font_face_id (FONT.sys (FONT.roman))
-    font_size (FONT.size_sys * zom)
+    font_face_id (Font.sys (Font.roman))
+    font_size (Font.size_sys * zom)
     text_align ((flag & 111) | align_middle)
     x := xo
     (flag & 111)

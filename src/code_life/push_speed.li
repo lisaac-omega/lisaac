@@ -1,24 +1,21 @@
 Header
-
-  + name        := PUSH_SPEED;
-
-  /* Push context for debug mode */
-
+  + name := Push_speed
+/* Push context for debug mode */
 Inherit
 
-  + parent_push:Expanded PUSH
+  + parent_push:Flat Push
   
 Public
   
-  + index:INTEGER
+  + index:Int
   
-  + back_link:PUSH_SPEED
+  + back_link:Push_speed
   
-  - name:STRING_ALIAS
+  - name:String_alias
   
-  - stack:ARRAY PUSH_SPEED := ARRAY PUSH_SPEED .create_with_capacity 64
+  - stack:Array Push_speed := Array Push_speed .create_with_capacity 64
   
-  - start_c_function nam:STRING_ALIAS <-
+  - start_c_function nam:String_alias <-
   (     
     stack.clear
     name := nam
@@ -28,9 +25,9 @@ Public
   // Genere
   //
   
-  - get_old ctxt:LOCAL :PUSH_SPEED <-
-  ( + i:INTEGER
-    + result:PUSH_SPEED
+  - get_old ctxt:Local :Push_speed <-
+  ( + i:Int
+    + result:Push_speed
     i := stack.upper
     {(i >= 0) && {stack.at i.context != ctxt}}.while_do {
       i := i - 1
@@ -42,8 +39,8 @@ Public
   )
   
   - genere <-
-  ( + id:INTEGER
-    + old:PUSH_SPEED
+  ( + id:Int
+    + old:Push_speed
     
     (stack.is_empty).if {
       output.append "asm(\"# @LI "
@@ -80,7 +77,7 @@ Public
     } else {
       back_link := old.back_link
     }
-    stack.add_last Self
+    stack.add_last self
     //
     output.append (context.intern_name)
     output.add_last '_'
@@ -108,10 +105,10 @@ Public
   )
   
 /*
-  - genere buffer:STRING_BUFFER <-
+  - genere buffer:String_buffer <-
   ( + back:PUSH_SPEED
-    + i:INTEGER
-    + id:UINTEGER_32
+    + i:Int
+    + id:Uint32
         
     (is_first).if {
       ? {index = 0}
@@ -131,7 +128,7 @@ Public
       index := back.index + 1
       back_link := back.back_link
     }
-    push_stack.add_last Self
+    push_stack.add_last self
     //
     buffer.append "asm(\"# @LI "
     //

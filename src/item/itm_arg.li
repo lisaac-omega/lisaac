@@ -1,37 +1,34 @@
 Header
-
-  + name    := ITM_ARG;
-
-  /*One argument*/
-
+  + name := Itm_arg
+/*One argument*/
 Inherit
 
-  + parent_itm_argument:Expanded ITM_ARGUMENT
+  + parent_itm_argument:Flat Itm_argument
 
 Public
 
-  + name:STRING_ALIAS
-  //+ pretty_name:STRING_ALIAS
+  + name:String_alias
+  //+ pretty_name:String_alias
 
-  + type:ITM_TYPE
+  + type:Itm_type
 
-  - upper:INTEGER := 0
+  - upper:Int := 0
   
-  - is_self:BOOLEAN <- name = "Self"
+  - is_self:Boolean <- name = "self"
   
   //
   // Creation.
   //
 
-  - create p:POSITION name n:STRING_ALIAS type t:ITM_TYPE :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias type t:Itm_type :Self <-
+  ( + result:Self
 
-    result := SELF.clone
+    result := Self.clone
     result.make p name n type t
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS type t:ITM_TYPE <-
+  - make p:Position name n:String_alias type t:Itm_type <-
   (
     position := p
     name     := n
@@ -42,22 +39,22 @@ Public
   // Running.
   //
 
-  - at idx:INTEGER :ITM_TYPE <-
+  - at idx:Int :Itm_type <-
   ( ? {idx = 0}
     type
   )
 
-  - to_run_in arg_lst:ARRAY LOCAL for p:PARAMETER_TO_TYPE <-
-  ( + t:ITM_TYPE
+  - to_run_in arg_lst:Array Local for p:Parameter_to_type <-
+  ( + t:Itm_type
 
-    (name = "Self").if {
-      t := ITM_TYPE_SIMPLE.type_self
+    (name = "self").if { 
+      t := Itm_type_simple.type_self
     } else {
       t := type
     }
         
     arg_lst.add_last (      
-      LOCAL.create position name name style ' ' type (t.to_run_for p pos (position.prototype.filename))
+      Local.create position name name style ' ' type (t.to_run_for p pos (position.prototype.filename))
     )
     (verify).if {
       check_local_with_slot position name name
@@ -65,16 +62,16 @@ Public
     arg_count_tmp := arg_count_tmp + 1
   )
 
-  - get_index_type p:ITM_TYPE_PARAMETER :INTEGER <-
-  ( + result:INTEGER
+  - get_index_type p:Itm_type_parameter :Int <-
+  ( + result:Int
     (type != p).if {
       result := 1
     }
     result
   )
 
-  - check larg:ARRAY EXPR index idx:INTEGER for p:PARAMETER_TO_TYPE :INTEGER <-
-  ( + new_expr:EXPR
+  - check larg:Array Expr index idx:Int for p:Parameter_to_type :Int <-
+  ( + new_expr:Expr
 
     new_expr := larg.at idx.check_type (type.to_run_for p pos (position.prototype.filename)) with position
     larg.at idx put new_expr
@@ -85,16 +82,16 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in buffer:String_buffer <-
   (
     buffer.append name
     buffer.add_last ':'
     type.append_in buffer
   )
 
-  - shorter_in buf:STRING_BUFFER <-
+  - shorter_in buf:String_buffer <-
   (
-    (name = "Self").if {
+    (name = "self").if {
       put name to buf like "keyword"
     } else {
       put name to buf like "local"

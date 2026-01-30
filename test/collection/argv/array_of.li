@@ -1,8 +1,7 @@
 Header
-  + name := ARRAY_OF;
-  
+  + name := Array_of
 Public
   - main <-
-  ( + a:ARRAY INTEGER
-    a := new ARRAY INTEGER of (4,3,2,1)
+  ( + a:Array Int
+    a := new Array Int of (4,3,2,1)
   )

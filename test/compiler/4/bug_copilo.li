@@ -1,9 +1,9 @@
 Header
-  + name := BUG_COPILO;
-  /**/
+  + name := Bug_copilo
+/**/
   
 Public
   - main <-
-  ( + str:STRING_BUFFER
-    str := new STRING_BUFFER capacity 4    
+  ( + str:String_buffer
+    str := new String_buffer capacity 4    
   )

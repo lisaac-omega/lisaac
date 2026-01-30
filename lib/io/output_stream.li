@@ -1,38 +1,37 @@
 Header
-  + name := OUTPUT_STREAM;
-
+  + name := Output_stream
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Public
-  - put_string str:STRING <-
+  - put_string str:String <-
   (
-    str.foreach {c:CHARACTER
+    str.foreach {c:Char
       put_character c
     }
   )
   
-  - put_character c:CHARACTER <-
+  - put_character c:Char <-
   (
     abstract
   )
 
-  - put_integer i:INTEGER <-
+  - put_integer i:Int <-
   // Output `i' to current output device.
   (
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       i.append_in tmp
       put_string tmp
     }
   )
 
-  - put_integer_format (i, s:INTEGER) <-
+  - put_integer_format (i, s:Int) <-
   // Output `i' to current output device using at most
   // `s' character.
   (
     not_yet_implemented
     /*
-    STRING.tmp { tmp:STRING_BUFFER
+    STRING.tmp { tmp:String_buffer
       i.append_in_format (tmp,s)
       put_string tmp
     };*/
@@ -40,17 +39,17 @@ Public
 
   // Other features:
 
-  - put_boolean b:BOOLEAN <-
+  - put_boolean b:Boolean <-
   // Output `b' to current output device according
   // to the Eiffel format.
   (
     put_string (b.to_string)
   )
 
-  - put_pointer p:POINTER <-
+  - put_pointer p:Pointer <-
   // Output a viewable version of `p'.
   (
-    STRING.tmp { tmp:STRING_BUFFER
+    String.tmp { tmp:String_buffer
       p.append_in tmp
       put_string tmp
     }
@@ -62,7 +61,7 @@ Public
     put_character '\n'
   )
 
-  - put_spaces nb:INTEGER <-
+  - put_spaces nb:Int <-
   // Output `nb' spaces character.
   ( ? {nb >= 0}
 
@@ -71,7 +70,7 @@ Public
     }
   )
 
-  - file_exists path:STRING :BOOLEAN<-
+  - file_exists path:String :Boolean<-
   (
     not_yet_implemented
     //DIRECTORY.scan_current_working_directory
@@ -87,6 +86,6 @@ Public
 
 Private
 
-  - basic_io_putc c:CHARACTER <- SYSTEM_IO.print_char c
+  - basic_io_putc c:Char <- System_io.print_char c
 
-  - basic_error_putc c:CHARACTER <- SYSTEM_IO.print_error_char c
+  - basic_error_putc c:Char <- System_io.print_error_char c

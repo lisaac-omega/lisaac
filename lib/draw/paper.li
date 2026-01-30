@@ -1,6 +1,6 @@
-Header  
-  + name := PAPER;
-  /*
+Header
+  + name := Paper
+/*
     sudo apt-get install libglu1-mesa-dev
     sudo apt-get install libglew-dev
   */
@@ -81,6 +81,7 @@ void new_key(int64_t,int64_t,int64_t,int64_t);
 void on_window_focus(void*, char);
 void on_window_focus_c(GLFWwindow* w, int focused);
 void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods);
+void on_close_c(GLFWwindow* w);
 #endif
 
 extern unsigned long col_icon[];  
@@ -106,6 +107,12 @@ void intern_key(GLFWwindow* window, int key, int scancode, int action, int mods)
 //  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 //    glfwSetWindowShouldClose(window, GL_TRUE);
 }
+
+void on_close_c(GLFWwindow* w)
+{
+  glfwSetWindowShouldClose(w, GLFW_FALSE);
+  on_close(w);
+}
 #endif
 
 unsigned long col_icon[]={0x00000000,
@@ -114,21 +121,20 @@ unsigned long col_icon[]={0x00000000,
 0xFF878481, 0xFF639748, 0xFF77B856, 0xFF84B961,
 0xFFAEAAA8, 0xFFCECBC7, 0xFFE9E7E4, 0xFFFDFFFC};
 `;
-  
 Inherit  
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Public
   
-  - wins:ARRAY WINDOW := ARRAY WINDOW.create_with_capacity 2
+  - wins:Array Window := Array Window.create_with_capacity 2
   
-  - get_win w:POINTER :WINDOW <-
-  wins.search_until { win:WINDOW; win.win_ptr = w}
+  - get_win w:Pointer :Window <-
+  wins.search_until { win:Window; win.win_ptr = w}
   //`glfwGetWindowUserPointer(@w)`:WINDOW; // BSBS: BUG COMPILO ASCII
   
   - init <-
   (
-    (`glfwInit()`:INTEGER = 0).if { 
+    (`glfwInit()`:Int = 0).if { 
       "Failed to init GLFW.\n".print
       exit exit_failure_code
     }
@@ -153,11 +159,11 @@ Public
     }
   )
   
-  - window_should_close:BOOLEAN <-
-  ( + i:INTEGER
-    + w:POINTER
+  - window_should_close:Boolean <-
+  ( + i:Int
+    + w:Pointer
     {
-      (i <= wins.upper) && {w := wins.at i.win_ptr; `glfwWindowShouldClose(@w)`:INTEGER = 0}
+      (i <= wins.upper) && {w := wins.at i.win_ptr; `glfwWindowShouldClose(@w)`:Int = 0}
     }.while_do {
       i := i + 1
     }
@@ -166,14 +172,14 @@ Public
   
 Public
   
-  - flag:UINTEGER_8 := decorated
-  - decorated:UINTEGER_8   := 0000_0001b
-  - transparent:UINTEGER_8 := 0000_0010b
-  - set f:UINTEGER_8   <- ( flag := flag | f; )
-  - unset f:UINTEGER_8 <- ( flag := flag & ~f; )
+  - flag:Uint8 := decorated
+  - decorated:Uint8   := 0000_0001b
+  - transparent:Uint8 := 0000_0010b
+  - set f:Uint8   <- ( flag := flag | f; )
+  - unset f:Uint8 <- ( flag := flag & ~f; )
   
-  - shader_header:STRING_ALIAS :=
-  ( + res:STRING_ALIAS
+  - shader_header:String_alias :=
+  ( + res:String_alias
     (lip "target" str = "android").if {
       res := "#version 300 es\nprecision highp float;\n"
     } else {
@@ -182,12 +188,12 @@ Public
     res
   )
   
-  - icon:NATIVE_ARRAY UINTEGER_32 :=
-  ( + c:UINTEGER_32
-    + l:INTEGER
-    + r:NATIVE_ARRAY UINTEGER_32
-    r := NATIVE_ARRAY UINTEGER_32.create (48*48)
-    0.to (48*48-1) do { i:INTEGER
+  - icon:C_array Uint32 :=
+  ( + c:Uint32
+    + l:Int
+    + r:C_array Uint32
+    r := C_array Uint32.create (48*48)
+    0.to (48*48-1) do { i:Int
       l := (
         "AJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJG\
         \NQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQN\
@@ -237,15 +243,15 @@ Public
         \AAAAAAAAAAAAAAAAAAAAAAAAAAOOOPQQQQQQPONJIGGGGGGG\
         \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNPQQQQQQQQQQQQQP\
         \AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJNNNNNNNJJG".at i - 'A'
-      ).to_integer
-      c := `col_icon[@l]`:UINTEGER_32
+      ).to_int
+      c := `col_icon[@l]`:Uint32
       r.at i put c
     }
     r
   )
   
-  - put_window_icon w:POINTER <-
-  ( + img:NATIVE_ARRAY UINTEGER_32
+  - put_window_icon w:Pointer <-
+  ( + img:C_array Uint32
     img := icon
     `{ GLFWimage img`    
     `img.width = 48; img.height = 48; img.pixels = (unsigned char *)@img`
@@ -255,30 +261,30 @@ Public
   
 Public
   
-  - refresh_all <- wins.foreach { w:WINDOW; w.ask_refresh; }
+  - refresh_all <- wins.foreach { w:Window; w.ask_refresh; }
   
-  - is_gl:BOOLEAN <- `lisaac_gl`:INTEGER = 1
+  - is_gl:Boolean <- `lisaac_gl`:Int = 1
   
-  - flag_refresh:BOOLEAN
-  - refresh_again <- ( flag_refresh := TRUE; )
-  //- new_event_empty <- ( flag_refresh := TRUE; ); //`glfwPostEmptyEvent()`
+  - flag_refresh:Boolean
+  - refresh_again <- ( flag_refresh := True; )
+  //- new_event_empty <- ( flag_refresh := True; ); //`glfwPostEmptyEvent()`
   
-  - create_window (w,h:INTEGER) title t:STRING_ALIAS for winobj:WINDOW :POINTER <-
-  ( + result:POINTER
+  - create_window (w,h:Int) title t:String_alias for winobj:Window :Pointer <-
+  ( + result:Pointer
     (lip "target" str != "android").if {
-      + win,mon:POINTER
-      + tc:NATIVE_ARRAY CHARACTER
-      + ww,hh:INTEGER
+      + win,mon:Pointer
+      + tc:C_array Char
+      + ww,hh:Int
       (wins.is_empty).if { init; }
       tc := t.to_external
       (winobj.fullscreen).if {      
-        mon := `glfwGetPrimaryMonitor()`:POINTER
+        mon := `glfwGetPrimaryMonitor()`:Pointer
         `const GLFWvidmode* mode = glfwGetVideoMode(@mon)`
-        ww := `mode->width`:INTEGER
-        hh := `mode->height`:INTEGER
+        ww := `mode->width`:Int
+        hh := `mode->height`:Int
         winobj.size (ww,hh)
       } else { (ww,hh) := (w,h); }
-      win := `glfwCreateWindow((int)@ww,(int)@hh,@tc, @mon, NULL)`:POINTER
+      win := `glfwCreateWindow((int)@ww,(int)@hh,@tc, @mon, NULL)`:Pointer
       (win.is_null).if {
         "Paper: Window not open.".println
         `glfwTerminate()`
@@ -293,8 +299,9 @@ Public
       `glfwSetScrollCallback(@win,(GLFWscrollfun)mouse_scroll)`
       `glfwMakeContextCurrent(@win)`
       `glfwSetWindowRefreshCallback(@win,(GLFWwindowrefreshfun) refresh_callback)`
+      `glfwSetWindowCloseCallback(@win, on_close_c)`;
       (lip "target" str = "windows").if {
-        if (`gladLoadGL()`:INTEGER = 0) then { // WinMerde
+        if (`gladLoadGL()`:Int = 0) then { // WinMerde
           "Failed to initialize GLAD\n".print
           exit 1
         }
@@ -307,25 +314,26 @@ Public
     result
   )
   
-  - destroy_window w:WINDOW <-
-  ( + ptr:POINTER
-    + i:INTEGER
+  - destroy_window w:Window <-
+  (lip "target" str != "android").if {
+    + ptr:Pointer
+    + i:Int
     i := wins.upper
     {wins.at i != w}.while_do { i := i - 1; }
     wins.remove i
     ptr := w.win_ptr
     `glfwDestroyWindow(@ptr)`
-  )
+  }
   
   - destroy_all_window <-
-  (
-    wins.foreach_backward { w:WINDOW; destroy_window w; }
+  (lip "target" str != "android").if {
+    wins.foreach_backward { w:Window; destroy_window w; }
     `glfwPollEvents()`
     `glfwTerminate()`
-  )
+  }
   
   - run <-
-  ( + ptr:POINTER
+  ( + ptr:Pointer
     (lip "target" str != "android").if {
       (lip "target" str = "web").if {
         ptr := wins.first.win_ptr        
@@ -334,122 +342,127 @@ Public
         {! window_should_close}.while_do {
           `glfwPollEvents()`
           (flag_refresh).if {
-            flag_refresh := FALSE
+            flag_refresh := False
             //"wins.count:".print; wins.count.println
-            0.to (wins.upper) do { i:INTEGER
+            0.to (wins.upper) do { i:Int
               generate_frame (wins.at i.win_ptr)
             }
           }
         }
         //PEN.delete
-        {! wins.is_empty}.while_do { destroy_window (wins.last); }
-        `glfwTerminate()`
+        exit 0
       }
     }
+  )
+  
+  - exit c:Int <-
+  (    
+    destroy_all_window
+    System.exit c
   )
       
   // Position/Resize window
   
-  - get_screen_size:(INTEGER,INTEGER) <-
-  ( + xm,ym,n,wt,ht:INTEGER
+  - get_screen_size:(Int,Int) <-
+  ( + xm,ym,n,wt,ht:Int
     `int n; GLFWmonitor** monitors = glfwGetMonitors(&n)`
-    n := `n`:INTEGER
-    0.to (n-1) do { i:INTEGER
+    n := `n`:Int
+    0.to (n-1) do { i:Int
       `const GLFWvidmode* mode = glfwGetVideoMode(monitors[@i])`
       `int x, y, w, h; glfwGetMonitorWorkarea(monitors[i], &x, &y, &w, &h)`
-      (xm,ym) := (`x+w`:INTEGER,`y+h`:INTEGER)
+      (xm,ym) := (`x+w`:Int,`y+h`:Int)
       (xm > wt).if { wt := xm; }
       (ym > ht).if { ht := ym; }
     }
     wt,ht
   )
   
-  - set_window win:POINTER pos (x,y:INTEGER) <-
+  - set_window win:Pointer pos (x,y:Int) <-
   (
     (lip "target" str != "android").if {
       `glfwSetWindowPos(@win,@x,@y)`
     }
   )
   
-  - get_window_pos win:POINTER :(INTEGER,INTEGER) <-
-  ( + x,y:INTEGER
+  - get_window_pos win:Pointer :(Int,Int) <-
+  ( + x,y:Int
     (lip "target" str != "android").if {
       `{ int x,y; glfwGetWindowPos(@win,&x,&y)`
-      x := `x`:INTEGER; y := `y`:INTEGER
+      x := `x`:Int; y := `y`:Int
       `}`
     }
     x,y
   )
   
-  - set_window win:POINTER size (w,h:INTEGER) <-
+  - set_window win:Pointer size (w,h:Int) <-
   (
     (lip "target" str != "android").if {
       `glfwSetWindowSize(@win,@w,@h)`
     }
   )
   
-  - get_window_size w:POINTER :(INTEGER,INTEGER) <-
-  ( + ww,hh:INTEGER
+  - get_window_size w:Pointer :(Int,Int) <-
+  ( + ww,hh:Int
     (lip "target" str = "android").if {
       (ww,hh) := (screen_width,screen_height)
     } else {
       `{ int ww,wh; glfwGetWindowSize(@w, &ww, &wh)`
-      (ww,hh) := (`ww`:INTEGER, `wh`:INTEGER)
+      (ww,hh) := (`ww`:Int, `wh`:Int)
       `}`
     }
     ww,hh
   )
   
-  - get_focus win:POINTER :BOOLEAN <-
-  ( + res:BOOLEAN
+  - get_focus win:Pointer :Boolean <-
+  ( + res:Boolean
     (lip "target" str = "android").if {
-      res := TRUE
+      res := True
     } else {
-      res := `glfwGetWindowAttrib(@win,GLFW_FOCUSED)`:INTEGER != 0
+      res := `glfwGetWindowAttrib(@win,GLFW_FOCUSED)`:Int != 0
     }
     res
   )
   
   // Set cursor
   
-  - create_cursor img:NATIVE_ARRAY UINTEGER_32 size (w,h:INTEGER) hot (x,y:INTEGER) :POINTER <-
-  ( + result:POINTER
+  - create_cursor img:C_array Uint32 size (w,h:Int) hot (x,y:Int) :Pointer <-
+  ( + result:Pointer
     (lip "target" str != "android").if {
       `{GLFWimage cursor`
       `cursor.width = @w; cursor.height = @h; cursor.pixels = (unsigned char *)@img`
-      result := `glfwCreateCursor(&cursor,@x,@y)`:(POINTER)
+      result := `glfwCreateCursor(&cursor,@x,@y)`:(Pointer)
       `}`
     }
     result
   )
   
-  - get_cursor v:INTEGER :POINTER <-
-  ( + res:POINTER
+  - get_cursor v:Int :Pointer <-
+  ( + res:Pointer
     (lip "target" str != "android").if {
-      res := `glfwCreateStandardCursor(@v)`:POINTER
+      res := `glfwCreateStandardCursor(@v)`:Pointer
     }
     res
   )
   
-  - set_cursor w:POINTER img p:POINTER <-
+  - set_cursor w:Pointer img p:Pointer <-
   (
     (lip "target" str != "android").if {
       `glfwSetCursor(@w,@p)`
     }
   )
   
-  - set_cursor w:POINTER pos (x,y:INTEGER) <-
+  - set_cursor w:Pointer pos (x,y:Int) <-
   (
     (lip "target" str != "android").if {
       `glfwSetCursorPos(@w,@x,@y)`
     }
   )
   
-  - get_cursor_pos w:POINTER :(INTEGER,INTEGER) <-
-  ( + x,y:INTEGER
+  - get_cursor_pos w:Pointer :(Int,Int) <-
+  ( + x,y:Int
     (lip "target" str != "android").if {
       `{ double x,y; glfwGetCursorPos(@w,&x,&y)`
-      (x,y) := (`x`:INTEGER, `y`:INTEGER)
+      (x,y) := (`x`:Int, `y`:Int)
       `}`
     }
     x,y
@@ -457,19 +470,19 @@ Public
   
   // Clipboard Support
   
-  - get_clipboard_in buf:STRING_BUFFER :BOOLEAN <-
-  ( + tab:NATIVE_ARRAY CHARACTER
-    + win:POINTER
+  - get_clipboard_in buf:String_buffer :Boolean <-
+  ( + tab:C_array Char
+    + win:Pointer
     win := wins.first.win_ptr
-    tab := `glfwGetClipboardString(@win)`:NATIVE_ARRAY CHARACTER
+    tab := `glfwGetClipboardString(@win)`:C_array Char
     (tab.is_not_null).if {      
       buf.from_external_copy tab
     }
   )
   
-  - set_clipboard buf:STRING <-
-  ( + tab:NATIVE_ARRAY CHARACTER
-    + win:POINTER
+  - set_clipboard buf:String <-
+  ( + tab:C_array Char
+    + win:Pointer
     win := wins.first.win_ptr
     tab := buf.to_external
     `glfwSetClipboardString(@win,@tab)`
@@ -477,19 +490,19 @@ Public
   
 Public
           
-  - framebuffer_size w:POINTER :(INTEGER,INTEGER) <-
+  - framebuffer_size w:Pointer :(Int,Int) <-
   ( `int fbw,fbh; glfwGetFramebufferSize(@w, &fbw, &fbh)`
-    `fbw`:INTEGER,`fbh`:INTEGER
+    `fbw`:Int,`fbh`:Int
   )
   
-  - li_refresh_callback w:POINTER :INTEGER <-
+  - li_refresh_callback w:Pointer :Int <-
   ( 
     (lip "target" str != "android").if {  
-      + win_width,win_height:INTEGER
-      + fb_width,fb_height:INTEGER
-      + px_ratio:REAL_64
-      + me:WINDOW
-      + rl,gl,bl,al:UINTEGER_8
+      + win_width,win_height:Int
+      + fb_width,fb_height:Int
+      + px_ratio:Real64
+      + me:Window
+      + rl,gl,bl,al:Uint8
       
       me := get_win w
       //"Call back:".print; me.id_name.println
@@ -497,7 +510,7 @@ Public
       
       (win_width,win_height) := get_window_size w
       (fb_width,fb_height) := framebuffer_size w
-      px_ratio := fb_width.to_real_64 / win_width.to_real_64
+      px_ratio := fb_width.to_real64 / win_width.to_real64
       //px_ratio.println
       // Update and render
       
@@ -507,11 +520,11 @@ Public
         `glClearColor(@rl,@gl,@bl,@al)`
       }
       `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
-      PEN_GL.gl_enable (`GL_BLEND`:INTEGER)
-      PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
-      //PEN_GL.gl_enable (`GL_CULL_FACE`:INTEGER)
-      PEN_GL.gl_disable (`GL_DEPTH_TEST`:INTEGER)
-      ((me.width.to_integer != win_width) || {me.height.to_integer != win_height}).if {
+      Pen_gl.gl_enable (`GL_BLEND`:Int)
+      Pen_gl.gl_blend_func (`GL_SRC_ALPHA`:Int,`GL_ONE_MINUS_SRC_ALPHA`:Int)
+      //PEN_GL.gl_enable (`GL_CULL_FACE`:Int)
+      Pen_gl.gl_disable (`GL_DEPTH_TEST`:Int)
+      ((me.width.to_int != win_width) || {me.height.to_int != win_height}).if {
         me.size (win_width,win_height)
       }
       //win_width.print; ' '.print; win_height.println
@@ -520,7 +533,7 @@ Public
         d.draw pen
       };*/
       
-      COLOR.stack.clear
+      Color.stack.clear
       `glfwSwapBuffers(@w)`
       //`glfwPollEvents()`
       //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
@@ -530,39 +543,41 @@ Public
     
 External
   
-  - on_window_focus (w:POINTER,f:CHARACTER) <-
-  ( - count:INTEGER
+  - on_window_focus (w:Pointer,f:Char) <-
+  ( - count:Int
         
     (f != '\0').if {
       count := count + 1;
-      (count = 1).if { wins.first.set_have_the_focus TRUE }
+      (count = 1).if { wins.first.set_have_the_focus True }
     } else {
       count := count - 1;
-      (count = 0).if { wins.first.set_have_the_focus FALSE }
+      (count = 0).if { wins.first.set_have_the_focus False }
     }
   )
+  
+  - on_close (w:Pointer) <- get_win w.on_close
 
-  - generate_frame w:POINTER <-
+  - generate_frame w:Pointer <-
   (    
     li_refresh_callback w //(wins.first.win_ptr)
     //}
     //`glfwWaitEvents()`
   )
     
-  - refresh_callback w:POINTER :INTEGER <- ( li_refresh_callback w)
+  - refresh_callback w:Pointer :Int <- ( li_refresh_callback w)
   /*
-  ( + win_width,win_height:INTEGER
-    + fb_width,fb_height:INTEGER
-    + px_ratio:REAL_64
+  ( + win_width,win_height:Int
+    + fb_width,fb_height:Int
+    + px_ratio:Real64
     + me:WINDOW
-    + rl,gl,bl,al:UINTEGER_8
+    + rl,gl,bl,al:Uint8
 
     me := get_win w
     //"Call back:".print; me.id_name.println
     `glfwMakeContextCurrent(@w)`
     (win_width,win_height) := get_window_size w
     (fb_width,fb_height) := framebuffer_size w
-    px_ratio := fb_width.to_real_64 / win_width.to_real_64
+    px_ratio := fb_width.to_real64 / win_width.to_real64
     //px_ratio.println
     // Update and render
     `glViewport(0, 0, @fb_width, @fb_height)`
@@ -571,11 +586,11 @@ External
       `glClearColor(@rl,@gl,@bl,@al)`
     }
     `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
-    PEN_GL.gl_enable (`GL_BLEND`:INTEGER)
-    PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
-    //PEN_GL.gl_enable (`GL_CULL_FACE`:INTEGER)
-    PEN_GL.gl_disable (`GL_DEPTH_TEST`:INTEGER)
-    ((me.width.to_integer != win_width) || {me.height.to_integer != win_height}).if {
+    PEN_GL.gl_enable (`GL_BLEND`:Int)
+    PEN_GL.gl_blend_func (`GL_SRC_ALPHA`:Int,`GL_ONE_MINUS_SRC_ALPHA`:Int)
+    //PEN_GL.gl_enable (`GL_CULL_FACE`:Int)
+    PEN_GL.gl_disable (`GL_DEPTH_TEST`:Int)
+    ((me.width.to_int != win_width) || {me.height.to_int != win_height}).if {
       me.size (win_width,win_height)
     }
     //win_width.print; ' '.print; win_height.println
@@ -584,20 +599,20 @@ External
       d.draw pen
     };*/
     
-    COLOR.stack.clear
+    Color.stack.clear
     `glfwSwapBuffers(@w)`
     //`glfwPollEvents()`
     //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
     0
   );*/
     
-  - new_key (key:INTEGER,scancode:INTEGER,action:INTEGER,mods:INTEGER) <-
+  - new_key (key:Int,scancode:Int,action:Int,mods:Int) <-
   (
     (lip "target" str != "android").if {  
       //`{ _____CONTEXT *old = top_context; top_context = NULL`
       // Action: 0:Unpress, 1:Press, 2:Repeat.
       refresh_again
-      KEYBOARD.key key code (scancode.to_uinteger_8) press (action != 0) mods mods
+      Keyboard.key key code (scancode.to_uint8) press (action != 0) mods mods
       //`top_context = old; }`
     }
   )
@@ -608,19 +623,19 @@ Public
     
 External
   
-  - mouse_move(win:POINTER,xpos,ypos:REAL_64) <-
+  - mouse_move(win:Pointer,xpos,ypos:Real64) <-
   (
     refresh_again
-    HAND.set_ptr (get_win win) xy (xpos.to_integer,ypos.to_integer)
+    Hand.set_ptr (get_win win) xy (xpos.to_int,ypos.to_int)
   )
   
-  - mouse_button(win:POINTER,but,act,mod:INTEGER) <-
+  - mouse_button(win:Pointer,but,act,mod:Int) <-
   (
     refresh_again
-    HAND.set_ptr (get_win win) press (but,act != 0)
+    Hand.set_ptr (get_win win) press (but,act != 0)
   )
 
-  - mouse_scroll(win:POINTER,wx,wy:REAL_64) <-
+  - mouse_scroll(win:Pointer,wx,wy:Real64) <-
   (
     refresh_again
     get_win win.mouse_scroll (wx,wy)
@@ -630,24 +645,24 @@ Public
   
   // ANDROID ONLY
   
-  - loc_pen:PEN
-  - screen_width:INTEGER
-  - screen_height:INTEGER
+  - loc_pen:Pen
+  - screen_width:Int
+  - screen_height:Int
     
   // Event Mouse
-  - new_gest:BOOLEAN
+  - new_gest:Boolean
   
-  - first_x:REAL_32
-  - first_y:REAL_32
-  - first_t:REAL_32
-  - first_d:REAL_32
+  - first_x:Real32
+  - first_y:Real32
+  - first_t:Real32
+  - first_d:Real32
   
-  - last_x:REAL_32
-  - last_y:REAL_32
-  - last_z:BOOLEAN
-  - last_t:REAL_32
+  - last_x:Real32
+  - last_y:Real32
+  - last_z:Boolean
+  - last_t:Real32
     
-  - mstate:UINTEGER_8
+  - mstate:Uint8
   // 0: Sleep.
   // 1: Drag in progress...
   // 2: Drag end.
@@ -658,7 +673,7 @@ Public
   // 7: Short Clic. 
   // 8: Long Clic.
   
-  - mouse_ack s:UINTEGER_8 <-
+  - mouse_ack s:Uint8 <-
   (
     (s = mstate).if {
       ((mstate = 1) || {mstate = 3} || {mstate = 5}).if {
@@ -669,21 +684,21 @@ Public
     }
   )
   
-  - mouse_base_time:UINTEGER_64  := TIME.gettimeofday
-  - mouse_pause:REAL_32 := 0.2
-  - mouse_dis:REAL_32 := 12; // BSBS: ca depend du nombre de pix/mm (info)
-  - mouse_time:REAL_32 <- ((TIME.gettimeofday-mouse_base_time) / 10_000).to_real_32 / 100
+  - mouse_base_time:Uint64  := Time.gettimeofday
+  - mouse_pause:Real32 := 0.2
+  - mouse_dis:Real32 := 12; // BSBS: ca depend du nombre de pix/mm (info)
+  - mouse_time:Real32 <- ((Time.gettimeofday-mouse_base_time) / 10_000).to_real32 / 100
   
-  - count_finger:INTEGER
+  - count_finger:Int
   
 External
   
-  - mouse_action (e:POINTER,n,s,x,y:INTEGER) <-
+  - mouse_action (e:Pointer,n,s,x,y:Int) <-
   (
     (lip "target" str = "android").if {    
-      + new_z:BOOLEAN
-      + pen:PEN
-      + lx,ly,lt:REAL_32
+      + new_z:Boolean
+      + pen:Pen
+      + lx,ly,lt:Real32
       //"point = ".print; x.print; 'x'.print; y.println
       pen := get_pen e
       (pen != NULL).if {
@@ -695,10 +710,10 @@ External
             (s = 0).if {
               count_finger := count_finger - 1
               //"End finger #2 : ".print; count_finger.println
-              (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+              (count_finger = 0).if { mstate := 6; last_z := False; }
             } else {
               ((mstate != 5) && {s != -1}).if {
-                + dx,dy:REAL_32
+                + dx,dy:Real32
                 ((mstate = 1) || {mstate = 3}).if {
                   mstate := mstate + 1
                   //root.gesture_event
@@ -717,7 +732,7 @@ External
             (s = 0).if {
               count_finger := count_finger - 1
               //"End finger #1 : ".print; count_finger.println
-              (count_finger = 0).if { mstate := 6; last_z := FALSE; }
+              (count_finger = 0).if { mstate := 6; last_z := False; }
             } else {
               (first_x,first_y,first_t) := (lx,ly,lt)
             }
@@ -734,7 +749,7 @@ External
                   mstate := mstate + 1; // Drag end Or Select end
                 } else {
                   last_t := mouse_time
-                  mstate := 7 + (last_t - first_t > mouse_pause).to_integer; // Short Or Long Clic
+                  mstate := 7 + (last_t - first_t > mouse_pause).to_int; // Short Or Long Clic
                 }
               } else {
                 "PAPER.mouse_button BUG !!!\n".print
@@ -742,32 +757,32 @@ External
               last_z := new_z
             } else {
               (last_z).if {
-                + dx,dy,d:REAL_32
+                + dx,dy,d:Real32
                 (dx,dy) := (last_x - first_x,last_y - first_y)
                 d := (dx*dx + dy*dy).sqrt
                 ((d > mouse_dis) && {mstate = 0}).if { // Moving mode (distance > 8 pix)
                   mstate := mstate | 1
-                  mstate := mstate | ((last_t - first_t > mouse_pause).to_integer << 1); // Select
+                  mstate := mstate | ((last_t - first_t > mouse_pause).to_int << 1); // Select
                 }
               }
             }
           }
         }
       }
-      new_gest := TRUE
+      new_gest := True
     }
   )
 
 Private
   
-  - get_pen e:POINTER :PEN <-
-  ( + pen:PEN
-    + ptr:POINTER
+  - get_pen e:Pointer :Pen <-
+  ( + pen:Pen
+    + ptr:Pointer
     `{ struct engine* e=@e`
-    ptr := `e->pen`:POINTER
+    ptr := `e->pen`:Pointer
     `}`
     (ptr.is_null).if_false {
-      pen := CAST POINTER TO PEN.on ptr
+      pen := Cast Pointer To Pen.on ptr
     }
     pen
   )
@@ -775,14 +790,14 @@ Private
   - update_accelerometer <-
   (
     `update_accelerometer()`
-    ACCELEROMETER.set_xyz (`acc_x`:REAL_32,`acc_y`:REAL_32,`acc_z`:REAL_32)
+    Accelerometer.set_xyz (`acc_x`:Real32,`acc_y`:Real32,`acc_z`:Real32)
   )
   
 External
   
-  - init_gl e:POINTER :BOOLEAN <-
-  (lip "target" str = "android").if { + wt,ht:INTEGER
-    + w_scr,h_scr:INTEGER
+  - init_gl e:Pointer :Boolean <-
+  (lip "target" str = "android").if { + wt,ht:Int
+    + w_scr,h_scr:Int
     `struct engine* e=@e`
     `int maxGeoShader`
     (get_pen e != NULL).if {
@@ -813,26 +828,26 @@ External
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
     `glViewport(0, 0, w, h)`
     `eglSwapInterval(e->display, 0)`
-    wt := `w`:INTEGER
-    ht := `h`:INTEGER
+    wt := `w`:Int
+    ht := `h`:Int
     //`ANativeWindow nativeWindow = ANativeWindow_fromSurface(env, surface)`
-    w_scr := `ANativeWindow_getWidth(e->app->window)`:INTEGER
-    h_scr := `ANativeWindow_getHeight(e->app->window)`:INTEGER
+    w_scr := `ANativeWindow_getWidth(e->app->window)`:Int
+    h_scr := `ANativeWindow_getHeight(e->app->window)`:Int
     (screen_width,screen_height) := (wt,ht)
     "Surface: ".print; wt.print;    'x'.print; ht.print;    '\n'.print
     "Window : ".print; w_scr.print; 'x'.print; h_scr.print; '\n'.print
     //`glGetIntegerv(GL_MAX_GEOMETRY_SHADER_INVOCATIONS, &maxGeoShader)`
-    //"MaxGeometryShaderInvocations:".print; `maxGeoShader`:INTEGER.println
+    //"MaxGeometryShaderInvocations:".print; `maxGeoShader`:Int.println
   }
   
-  - init_pen e:POINTER :BOOLEAN <-
-  (lip "target" str = "android").if { + pen:PEN
+  - init_pen e:Pointer :Boolean <-
+  (lip "target" str = "android").if { + pen:Pen
     `struct engine* e=@e`
     pen := get_pen e
     (pen = NULL).if {
       "------------Init Pen\n".print
       
-      pen := loc_pen := PEN.new_pen_with_font (FONT.n_sys.at 0 = NULL)
+      pen := loc_pen := Pen.new_pen_with_font (Font.n_sys.at 0 = NULL)
       wins.first.set_pen pen
             
       `e->pen=@pen`
@@ -841,9 +856,9 @@ External
     }
   }
   
-  - lost_focus e:POINTER :BOOLEAN <-
+  - lost_focus e:Pointer :Boolean <-
   (lip "target" str = "android").if {
-    + pen:PEN
+    + pen:Pen
     `struct engine *e=@e`
     pen := get_pen e
     (pen != NULL).if { pen.delete; }
@@ -854,12 +869,12 @@ External
     `e->display = EGL_NO_DISPLAY`
   }
   
-  - term_window e:POINTER :BOOLEAN <-
+  - term_window e:Pointer :Boolean <-
   (lip "target" str = "android").if {
    //`struct engine *e=@e`
-    //(`e->display`:POINTER != `EGL_NO_DISPLAY`:POINTER).if {
+    //(`e->display`:Pointer != `EGL_NO_DISPLAY`:Pointer).if {
       //`eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
-      //(`e->surface`:POINTER != `EGL_NO_SURFACE`:POINTER).if {
+      //(`e->surface`:Pointer != `EGL_NO_SURFACE`:Pointer).if {
      // `eglDestroySurface(e->display,e->surface )`
      // `ANativeWindow_release(e->app->window)`
       //}
@@ -867,25 +882,25 @@ External
     //`e->surface = EGL_NO_SURFACE`
   }
   
-  - draw_in e:POINTER :BOOLEAN <-
+  - draw_in e:Pointer :Boolean <-
   (lip "target" str = "android").if {
-    + wt,ht:INTEGER
-    + pen:PEN
-    + me:WINDOW
-    + rl,gl,bl,al:REAL_32
+    + wt,ht:Int
+    + pen:Pen
+    + me:Window
+    + rl,gl,bl,al:Real32
     me := wins.first
     (new_gest).if {
       "PAPER 511: Not yet implemented.".println
       // root.gesture_event
-      new_gest := FALSE
+      new_gest := False
     }
     `struct engine* e=@e`
     `int w,h`
     `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
-    wt := `w`:INTEGER
-    ht := `h`:INTEGER
-    pen := `e->pen`:PEN
+    wt := `w`:Int
+    ht := `h`:Int
+    pen := `e->pen`:Pen
     
     //pen.set_size (wt,ht)
     // Update and render
@@ -893,16 +908,16 @@ External
     (rl,gl,bl,al) := (0,0,0,255)
     `glClearColor(@rl,@gl,@bl,@al)`
     `glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)`
-    pen.gl.gl_enable (`GL_BLEND`:INTEGER)
-    pen.gl.gl_blend_func (`GL_SRC_ALPHA`:INTEGER,`GL_ONE_MINUS_SRC_ALPHA`:INTEGER)
-    pen.gl.gl_enable (`GL_CULL_FACE`:INTEGER)
-    pen.gl.gl_disable (`GL_DEPTH_TEST`:INTEGER)
+    pen.gl.gl_enable (`GL_BLEND`:Int)
+    pen.gl.gl_blend_func (`GL_SRC_ALPHA`:Int,`GL_ONE_MINUS_SRC_ALPHA`:Int)
+    pen.gl.gl_enable (`GL_CULL_FACE`:Int)
+    pen.gl.gl_disable (`GL_DEPTH_TEST`:Int)
 
-    ((me.width.to_integer != wt) || {me.height.to_integer != ht}).if {
+    ((me.width.to_int != wt) || {me.height.to_int != ht}).if {
       me.size (wt,ht)
     }
     me.draw_all
     //    `glEnable(GL_DEPTH_TEST)`
-    COLOR.stack.clear
+    Color.stack.clear
     `eglSwapBuffers(e->display, e->surface)`
   }

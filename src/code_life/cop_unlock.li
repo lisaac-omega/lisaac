@@ -1,12 +1,9 @@
 Header
-
-  + name    := COP_UNLOCK;
-
-  /* COP in for data or function.*/
-
+  + name := Cop_unlock
+/* COP in for data or function.*/
 Inherit
 
-  + parent_instr:Expanded INSTR
+  + parent_instr:Flat Instr
 
 Public
 
@@ -14,20 +11,20 @@ Public
   // Creation.
   //
 
-  - create p:POSITION :SELF <-
-  ( + result:SELF
+  - create p:Position :Self <-
+  ( + result:Self
 
     result := clone
     result.make p
     result
   )
 
-  - make p:POSITION <-
+  - make p:Position <-
   (
     position := p
   )
 
-  - my_copy:SELF <-
+  - my_copy:Self <-
   (
     create position
   )
@@ -41,9 +38,9 @@ Public
   // Execute.
   //
 
-  - execute:INSTR <-
+  - execute:Instr <-
   (
-    Self
+    self
   )
 
   //
@@ -80,7 +77,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "COP_UNLOCK()"
   )

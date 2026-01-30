@@ -1,9 +1,8 @@
 Header
-  + name := PARENT_MAIN;
-  
+  + name := Parent_main
 Inherit
   
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
 Public
     

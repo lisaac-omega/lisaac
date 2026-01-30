@@ -1,33 +1,30 @@
 Header
-
-  + name        := DTA_CAST;
-
-  /*Cast base*/
-
+  + name := Dta_cast
+/*Cast base*/
 Inherit
 
-  - parent_dta:DTA := DTA
+  - parent_dta:Dta := Dta
 
 Public
 
-  + position:POSITION
+  + position:Position
 
-  + result_expr:EXPR
+  + result_expr:Expr
 
   //
   // Creation.
   //
 
-  - create p:POSITION type t:TYPE_FULL :SELF <-
+  - create p:Position type t:Type_full :Self <-
   [ -? {p != 0}; ]
-  ( + result:SELF
+  ( + result:Self
 
     result := clone
     result.make p type t
     result
   )
 
-  - make p:POSITION type t:TYPE_FULL <-
+  - make p:Position type t:Type_full <-
   (
     position := p
     result_expr := t.get_temporary_expr p    
@@ -37,7 +34,7 @@ Public
   // Display.
   //
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append "DTA_CAST"
   )
@@ -46,35 +43,35 @@ Public
   // Service
   //
 
-NODE_TYPE, DTA
+Node_type, Dta
 
-  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
-  ( + mycast:LOCAL
-    + rd:READ
-    + new_value:EXPR
-    + result:LIST
+  - product t:Type with e:Expr self type_self:Type_full :List <-
+  ( + mycast:Local
+    + rd:Read
+    + new_value:Expr
+    + result:List
 
-    result := LIST.create (e.position)
+    result := List.create (e.position)
     rd   ?= result_expr
     mycast ?= rd.variable
-    (t != TYPE_NULL).if {
-      (mycast.type.is_strict).if {
-	(mycast.type.raw = t).if {
-	  new_value := CAST.create (mycast.type) value (e.my_copy)
-	}
+    (t != Type_null).if {
+      (mycast.type.is_exact).if {
+        (mycast.type.raw = t).if {
+          new_value := Cast.create (mycast.type) value (e.my_copy)
+        }
       }.elseif {t.is_sub_type (mycast.type.raw)} then {
-	new_value := CAST.create (t.default) value (e.my_copy)
+        new_value := Cast.create (t.default) value (e.my_copy)
       }
     }
     (new_value = NULL).if {
-      new_value := PROTOTYPE_CST.create (e.position) type (TYPE_NULL.default)
+      new_value := Prototype_cst.create (e.position) type (Type_null.default)
     }
     result.add_last (mycast.write (e.position) value new_value)
-    result.add_last (PROTOTYPE_CST.create (e.position) type (TYPE_VOID.default)); // BSBS : Alias.
+    result.add_last (Prototype_cst.create (e.position) type (Type_void.default)); // BSBS : Alias.
     result
   )
 
-  - update_branch l:LIST self type_self:TYPE_FULL :BOOLEAN <-
+  - update_branch l:List self type_self:Type_full :Boolean <-
   (
-    TRUE
+    True
   )

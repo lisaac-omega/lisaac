@@ -1,37 +1,35 @@
 Header
-
-  + name      := LIP_BOOLEAN;
-
+  + name := Lip_boolean
 Inherit
 
-  + parent_lip_constant:Expanded LIP_CONSTANT
+  + parent_lip_constant:Flat Lip_constant
 
 Private
 
-  - true:LIP_BOOLEAN :=
-  ( + result:LIP_BOOLEAN
+  - true:Lip_boolean :=
+  ( + result:Lip_boolean
     result := clone
-    result.set_value TRUE
+    result.set_value True
     result
   )
 
-  - false:LIP_BOOLEAN := LIP_BOOLEAN
+  - false:Lip_boolean := Lip_boolean
 
-  - set_value i:BOOLEAN <-
+  - set_value i:Boolean <-
   (
     value := i
   )
 
 Public
 
-  + value:BOOLEAN
+  + value:Boolean
 
   //
   // Creation.
   //
 
-  - get b:BOOLEAN :LIP_BOOLEAN <-
-  ( + result:LIP_BOOLEAN
+  - get b:Boolean :Lip_boolean <-
+  ( + result:Lip_boolean
     b.if {
       result := true
     } else {
@@ -46,37 +44,37 @@ Public
   // Operation.
   //
 
-  - name:STRING_ALIAS <- "BOOLEAN"
+  - name:String_alias <- lip_boolean
 
-  - '!' Self:SELF :LIP_CONSTANT <- get (! value)
+  - '!' self:Self :Lip_constant <- get (! value)
 
-  - copy:LIP_CONSTANT <- Self
+  - copy:Lip_constant <- self
 
   - print <-
   (
     value.print
   )
 
-LIP_CONSTANT
+Lip_constant
 
-  - my_copy other:SELF :LIP_CONSTANT <- other
+  - my_copy other:Self :Lip_constant <- other
 
-  - Self:SELF '|#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '|#'  other:Self :Lip_constant <-
   (
     get (value | other.value)
   )
 
-  - Self:SELF '&#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '&#'  other:Self :Lip_constant <-
   (
     get (value & other.value)
   )
 
-  - Self:SELF '=#'  other:SELF :LIP_CONSTANT <-
+  - self:Self '=#'  other:Self :Lip_constant <-
   (
     get (value = other.value)
   )
 
-  - Self:SELF '!=#' other:SELF :LIP_CONSTANT <-
+  - self:Self '!=#' other:Self :Lip_constant <-
   (
     get (value != other.value)
   )

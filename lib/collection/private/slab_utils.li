@@ -1,17 +1,16 @@
 Header
-  + name := SLAB_UTILS;
-  
+  + name := Slab_utils
 Public
   
   // The best values:
-  - slab_cap:INTEGER <- 2048; // must be some power of 2
-  - sperfect:INTEGER <- 2000; // to have a few space left 
+  - slab_cap:Int <- 2048; // must be some power of 2
+  - sperfect:Int <- 2000; // to have a few space left 
   
   // Minimal size (for debug only).
-  //- slab_cap:INTEGER <- 8
-  //- sperfect:INTEGER <- 4
+  //- slab_cap:Int <- 8
+  //- sperfect:Int <- 4
   
 Private
-  - to_string_style:STRING_ALIAS <- "compact"
-  //- to_string_style:STRING_ALIAS <- "details"
+  - to_string_style:String_alias <- "compact"
+  //- to_string_style:String_alias <- "details"
   

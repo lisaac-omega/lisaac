@@ -1,20 +1,19 @@
-Header  
-  + name := MAIN;
-  
+Header
+  + name := Main
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Private  
-  + cltn_aaa:ARRAY INTEGER
-  + cltn_bbb:ARRAY_BLOCK INTEGER
+  + cltn_aaa:Array Int
+  + cltn_bbb:Array_block Int
   
-  - long:INTEGER <- 300
+  - long:Int <- 300
   
 Public
   - main <-
-  ( + x:INTEGER
-    cltn_aaa := ARRAY INTEGER .create_with_capacity 2
-    cltn_bbb := ARRAY_BLOCK INTEGER .new
+  ( + x:Int
+    cltn_aaa := Array Int .create_with_capacity 2
+    cltn_bbb := Array_block Int .new
     x := -1
     cltn_aaa.at 0 add x
     cltn_bbb.at 0 add x
@@ -26,7 +25,7 @@ Public
     //cltn_bbb.debug_print
     x := 0
     1000.times {
-      + idx:INTEGER
+      + idx:Int
       x := x + 1
       idx := cltn_aaa.upper
       cltn_aaa.at idx add x
@@ -37,14 +36,14 @@ Public
       idem
     }
     {cltn_aaa.is_empty}.until_do {
-      + idx:INTEGER
+      + idx:Int
       (cltn_aaa.count = 1).if {
         idx := 0
       } else {
-        idx := RANDOM.min 0 max (cltn_aaa.upper)
+        idx := Random.min 0 max (cltn_aaa.upper)
       }
-      TEST.check (cltn_aaa.valid_index idx)
-      TEST.check (cltn_bbb.valid_index idx)
+      Test.check (cltn_aaa.valid_index idx)
+      Test.check (cltn_bbb.valid_index idx)
       //"cltn_bbb.count=".print; cltn_bbb.count.println
       cltn_bbb.remove idx
       cltn_aaa.remove idx
@@ -53,27 +52,27 @@ Public
   )
   
   - idem <-
-  ( + i:INTEGER
+  ( + i:Int
     (cltn_aaa.lower != cltn_bbb.lower).if {
       crash_with_message "ERREUR"
     }
     (cltn_aaa.upper != cltn_bbb.upper).if {
       crash_with_message "ERREUR"
       "ERREUR".println
-      SYSTEM.exit 1
+      System.exit 1
     }
     (cltn_aaa.count != cltn_bbb.count).if {
       crash_with_message "ERREUR"
       "ERREUR".println
-      SYSTEM.exit 1
+      System.exit 1
     }
     cltn_aaa.is_empty.if_false {
-      TEST.check (cltn_aaa.last) integer (cltn_bbb.last)
-      TEST.check (cltn_aaa.first) integer (cltn_bbb.first)
+      Test.check (cltn_aaa.last) integer (cltn_bbb.last)
+      Test.check (cltn_aaa.first) integer (cltn_bbb.first)
     }
     i := 0
     {i <= cltn_aaa.upper}.while_do {
-      TEST.check (cltn_aaa.at i) integer (cltn_bbb.at i)
+      Test.check (cltn_aaa.at i) integer (cltn_bbb.at i)
       i := i + 1
     }
   )

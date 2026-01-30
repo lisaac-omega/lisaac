@@ -1,30 +1,27 @@
 Header
-
-  + name    := ITM_STRING;
-
-  /*String constant*/
-
+  + name := Itm_string
+/*String constant*/
 Inherit
 
-  + parent_itm_constant:Expanded ITM_CONSTANT
+  + parent_itm_constant:Flat Itm_constant
 
 Public
 
-  + string:STRING_ALIAS
-  + len:INTEGER
+  + string:String_alias
+  + len:Int
 
   //
   // Constructor
   //
 
-  - create p:POSITION text n:STRING_ALIAS len l:INTEGER :SELF <-
-  ( + result:SELF
+  - create p:Position text n:String_alias len l:Int :Self <-
+  ( + result:Self
     result := clone
     result.make p text n len l
     result
   )
 
-  - make p:POSITION text n:STRING_ALIAS len l:INTEGER <-
+  - make p:Position text n:String_alias len l:Int <-
   (
     position := p
     string   := n
@@ -35,25 +32,25 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
-  ( + result:EXPR
-    + slt:SLOT_DATA
-    + wrt:WRITE
-    //+ len:INTEGER
+  - to_run_expr:Expr <-
+  ( + result:Expr
+    + slt:Slot_data
+    + wrt:Write
+    //+ len:Int
 
     //len := length
-    result := STRING_CST.create position text string length len
+    result := String_cst.create position text string length len
     // upper
     slt := type_string_alias.get_slot "upper".slot_data_intern
     wrt := slt.write position with (result.my_copy) value (
-      INTEGER_CST.create position value (len-1) type (slt.type)
+      Int_cst.create position value (len-1) type (slt.type)
     )
     wrt.set_quiet_generation
     list_current.add_last wrt
     // storage
     slt := type_string_alias.get_slot "storage".slot_data_intern
     wrt := slt.write position with (result.my_copy) value (
-      NATIVE_ARRAY_CHARACTER_CST.create position text string
+      Native_array_character_cst.create position text string
     )
     wrt.set_quiet_generation
     list_current.add_last wrt
@@ -65,18 +62,18 @@ Public
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    buffer.add_last '\"'
-    buffer.append string
-    buffer.add_last '\"'
+    b.add_last '\"'
+    b.append string
+    b.add_last '\"'
   )
 
 Private
   
   /*
-  - length:INTEGER <-
-  ( + i,result:INTEGER
+  - length:Int <-
+  ( + i,result:Int
     i := string.lower
     {i <= string.upper}.while_do {
       (string.at i = '\\').if {

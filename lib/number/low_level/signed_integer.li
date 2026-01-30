@@ -1,28 +1,25 @@
 Header
-
-  + name := SIGNED_INTEGER;
-
-  /*Generic Signed Integer.*/
-
+  + name := Signed_integer
+/*Generic Signed Int.*/
 Insert
 
-  - parent_integer:INTEGER := INTEGER
+  - parent_integer:Int := Int
 
 Public
 
-  - append_in b:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   // Append in the `b' the equivalent of `to_string'.
   // No memory allocation during the process.
   [ ? {b != NULL}; ]
-  ( + val:SELF
-    + i,j:INTEGER
-    (Self = 0).if {
+  ( + val:Self
+    + i,j:Int
+    (self = 0).if {
       b.extend '0'
     } else {
-      (Self > 0).if {
-        val := Self
+      (self > 0).if {
+        val := self
       } else {
-        val := - Self
+        val := - self
         b.extend '-'
       }
       i := b.upper + 1
@@ -39,13 +36,13 @@ Public
     }
   )
   
-  - to_octal:SELF <-
+  - to_octal:Self <-
   // Gives coresponding octal value.
-  ( + result,unit,current:SELF
-    (Self < 0).if {
-      result := -((-Self).to_octal)
+  ( + result,unit,current:Self
+    (self < 0).if {
+      result := -((-self).to_octal) 
     } else {
-      current := Self
+      current := self
       unit := 1
       {current != 0}.while_do {
         result := result + ((current & 7)*unit)
@@ -56,21 +53,21 @@ Public
     result
   )
   
-  - to_hexadecimal_in buffer:STRING_BUFFER <-
-  // Append in `buffer' the equivalent of `to_hexadecimal'. No new STRING_BUFFER
+  - to_hexadecimal_in buffer:String_buffer <-
+  // Append in `buffer' the equivalent of `to_hexadecimal'. No new String_buffer
   // creation during the process.
   [ -? {buffer!=NULL}; ]
-  ( + val:SELF
-    + i,old_count,j,sz:INTEGER
+  ( + val:Self
+    + i,old_count,j,sz:Int
     
-    (Self = 0).if {
+    (self = 0).if {
       buffer.extend '0'
     } else {
-      (Self < 0).if {
+      (self < 0).if {
         buffer.extend '-'
-        val := -Self
+        val := -self
       } else {
-        val := Self
+        val := self
       }
       i := buffer.count
       sz := object_size * 2
@@ -90,12 +87,12 @@ Public
   
   // Hashing:
 
-  - hash_code:INTEGER <-
-  ( + result:INTEGER
-    (Self < 0).if {
-      result := ~ Self
+  - hash_code:Int <-
+  ( + result:Int
+    (self < 0).if {
+      result := ~ self
     } else {
-      result := Self
+      result := self
     }
     result
   )
@@ -105,7 +102,7 @@ Public
 
   // Bound test
 
-  - bound_test low:INTEGER_64 to up:UINTEGER_64 :BOOLEAN <-
+  - bound_test low:Int64 to up:Uint64 :Boolean <-
   (
-    (low < to_raw_integer_64) && {up.to_raw_integer_64 > to_raw_integer_64}
+    (low < to_raw_int64) && {up.to_raw_int64 > to_raw_int64}
   )

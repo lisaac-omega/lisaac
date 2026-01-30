@@ -1,29 +1,27 @@
 Header
-  
-  + name := BUILD_LABEL;
-  
+  + name := Build_label
 Inherit
   
-  - parent_any:ANY := ANY
+  - parent_any:Any := Any
   
 Public
   
-  - line:STRING_BUFFER := STRING_BUFFER.create 256
+  - line:String_buffer := String_buffer.create 256
   
-  - output_file:POINTER
-  - input_file:POINTER
+  - output_file:Pointer
+  - input_file:Pointer
   
-  - label_set:HSET STRING := 
-  ( + result:HSET STRING
-    result := HSET STRING.create
+  - label_set:Hset String := 
+  ( + result:Hset String
+    result := Hset String.create
     result.fast_add "-1"
     result.fast_add "-2"
     result
   )
 
-  - get str:STRING :STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    + tmp:STRING
+  - get str:String :String_alias <-
+  ( + result:String_alias
+    + tmp:String
     ? {str != NULL}
     ? {label_set != NULL}
 
@@ -38,22 +36,22 @@ Public
     result
   )
   
-  - convert_dico:HMAP STRING_ALIAS KEY STRING_ALIAS := new HMAP STRING_ALIAS KEY STRING_ALIAS
+  - convert_dico:Hmap String_alias Key String_alias := new Hmap String_alias Key String_alias
   // One dictionary for One redondance
   
-  - first_copy:STRING_ALIAS
+  - first_copy:String_alias
   // Key for a end redondance or NULL. (= label_back from first redondance)
   
-  - mountain:ARRAY STRING := ARRAY STRING .create_with_capacity 16384
+  - mountain:Array String := Array String .create_with_capacity 16384
   
   - parse_line <-
-  ( + idx:INTEGER
-    + label,label_back,new_label,pos:STRING_ALIAS
-    + is_inline:BOOLEAN
-    - fight_counter:INTEGER
-    - nline:INTEGER
-    - count_method,sub_count_method:INTEGER
-    - is_method:BOOLEAN
+  ( + idx:Int
+    + label,label_back,new_label,pos:String_alias
+    + is_inline:Boolean
+    - fight_counter:Int
+    - nline:Int
+    - count_method,sub_count_method:Int
+    - is_method:Boolean
     nline := nline + 1
     idx := line.first_substring_index "	.size"
     ((idx != 0) && {is_method}).if {
@@ -64,7 +62,7 @@ Public
       //
       count_method := count_method + 1
       sub_count_method := 0
-      is_method := FALSE
+      is_method := False
     }
     (line.first_index_of '\"' != 0).if {
       idx := 0
@@ -92,7 +90,7 @@ Public
         (label = NULL).if {        
           label := get string_tmp
         } else {
-          is_inline := TRUE
+          is_inline := True
         }
         // label_back
         idx := idx + 1
@@ -110,18 +108,22 @@ Public
             first_copy := label_back
           }
           // Current inline:
+          // DCDC
+          //new_label := convert_dico.fast_reference_at label
           new_label := convert_dico.reference_at label
-          (new_label = NULL).if {
+          (new_label = NULL).if {            
             string_tmp.copy label
             string_tmp.add_last '_'
             fight_counter.append_in string_tmp
             fight_counter := fight_counter + 1
             new_label := get string_tmp
-            convert_dico.add new_label to label
+            convert_dico.at label add new_label
             label := new_label
           } else {
             label := new_label
           }
+          // DCDC
+          //new_label := convert_dico.fast_reference_at label_back
           new_label := convert_dico.reference_at label_back
           (new_label = NULL).if {
             ((label_back.first != '-') && {label_back != first_copy}).if {
@@ -153,7 +155,7 @@ Public
         string_tmp.append "_end"
         pos := get string_tmp
         label_back := "-3"
-        is_method := TRUE
+        is_method := True
         sub_count_method := sub_count_method + 1
       }
       //
@@ -163,27 +165,27 @@ Public
     }
   )
   
-  - on n:STRING <-
-  ( + j:INTEGER
+  - on n:String <-
+  ( + j:Int
     "Build label...\n".print
     // Open
-    input_file := FILE_UTILS.open_read n
+    input_file := File_utils.open_read n
     (input_file = NULL).if {
-      STDERR.put_string "Error: File is not opened !\n"
+      Stderr.put_string "Error: File is not opened !\n"
       exit exit_failure_code
     }
     string_tmp.copy n
     string_tmp.remove_tail 2
     string_tmp.append "_label.s"
-    output_file := FILE_UTILS.open_write string_tmp
+    output_file := File_utils.open_write string_tmp
     (output_file.is_null).if {
-      STDERR.put_string "Error: File is not created !\n"
+      Stderr.put_string "Error: File is not created !\n"
       exit exit_failure_code
     }
     // Read / Write
-    {FILE_UTILS.read_line input_file in line}.while_do {
+    {File_utils.read_line input_file in line}.while_do {
       parse_line
-      FILE_UTILS.write output_file with line size (line.count)
+      File_utils.write output_file with line size (line.count)
     }
     //
     
@@ -196,7 +198,7 @@ Public
     line.append ",\t-1\n\
     \# Table mountain: <@current,code position,backlink index>\n"
     //
-    from (mountain.lower) to (mountain.upper) step 3 do { i:INTEGER
+    from (mountain.lower) to (mountain.upper) step 3 do { i:Int
       ((mountain.at (i+2).first = '-') && {mountain.at (i+2).last = '3'}).if {
         line.add_last '\n'
       }
@@ -214,7 +216,7 @@ Public
       }
       
       line.append "\t /* index:"
-      ((i+3)/3).to_integer.append_in line
+      ((i+3)/3).to_int.append_in line
       (mountain.at (i+2).first != '-').if {
         line.append " back:"
         line.append (mountain.at (i+2))
@@ -226,9 +228,9 @@ Public
       line.add_last '\n'
     }
         
-    FILE_UTILS.write output_file with line size (line.count)
+    File_utils.write output_file with line size (line.count)
            
     // Close
-    FILE_UTILS.close input_file
-    FILE_UTILS.close output_file
+    File_utils.close input_file
+    File_utils.close output_file
   )

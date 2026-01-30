@@ -1,7 +1,6 @@
 Header
-  
-  + name := PRINT_ARGS;
-  /*How to get command arguments and how to print in Lisaac Ω. 
+  + name := Print_args
+/*How to get command arguments and how to print in Lisaac Ω. 
   
 To run this example in a terminal window, as usual:
 
@@ -18,19 +17,19 @@ To run this example in a terminal window, as usual:
 Public
   
   - main <-
-  ( + arg:STRING;
-    + value:INTEGER;
-    if (COMMAND_ARGS upper < 1) then {
+  ( + arg:String;
+    + value:Int;
+    if (Command_args upper < 1) then {
       "usage: ./print_args foo bar ..." println
-      SYSTEM exit 1
+      System exit 1
     }
-    from 1 to (COMMAND_ARGS.upper) do { i:INTEGER;
-      arg := COMMAND_ARGS at i
+    from 1 to (Command_args.upper) do { i:Int;
+      arg := Command_args at i
       if (arg.is_integer) then {
-        value := arg.to_integer;
+        value := arg.to_int;
         "value is ".print; value.print ; '\n' .print;
       } else {
-        OUT # "arg " # i # " = \"" # arg # "\"\n"
+        Out # "arg " # i # " = \"" # arg # "\"\n"
       }
     }
     "Have " print ; "fun using Lisaac Ω" println

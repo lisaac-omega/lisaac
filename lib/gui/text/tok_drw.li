@@ -1,28 +1,26 @@
 Header
-  + name := TOK_DRW;
-  
+  + name := Tok_drw
 Insert
-  + parent_txt_buf:TXT_BUF := TXT_BUF
-  
+  + parent_txt_buf:Txt_buf := Txt_buf
 Inherit
-  - parent_clone:CLONE := CLONE; // Just for DIV.data:CLONE
+  - parent_clone:Clone := Clone; // Just for DIV.data:CLONE
 
 Public
   
-  - is_major:BOOLEAN := TRUE
-  - di_major:INTEGER <- ( ? {is_major}; di)
+  - is_major:Boolean := True
+  - di_major:Int <- ( ? {is_major}; di)
   
-  - txt_buf:TXT_BUF <- parent_txt_buf
+  - txt_buf:Txt_buf <- parent_txt_buf
   //- set_p_txt_buf t:TXT_BUF <- ( parent_txt_buf := t; )
   
-  - pt_b:POS
-  - begin p:POS <-
+  - pt_b:Pos
+  - begin p:Pos <-
   (
-    TOK_ITM.set_parent_tok_drw Self
+    Tok_itm.set_parent_tok_drw self
     pt_b := p
   )
   
-  - new:SELF <- (crash; SELF)
+  - new:Self <- (crash; Self)
   - free
         
   - begin_draw
@@ -30,8 +28,9 @@ Public
   - end_draw
   - post_draw
       
-  - draw_std e:INTEGER <-
-  ( + old_pt:POS
+  - draw_std e:Int <-
+  [ ? {e.in_range 0 to (upper+1)} ] 
+  ( + old_pt:Pos    
     {pos_i < e}.while_do {
       old_pt := pos_i
       sty_run
@@ -41,7 +40,7 @@ Public
         draw_tmp_c
         pos_i := pos_i + tmp_c.count
       }
-    }
+    }    
     sty_run
     old_pt := pos_i; // DEBUG:
     //pt_ri := pt_ci - pt_b
@@ -55,21 +54,21 @@ Public
     //? {pos_i = old_pt}
   )
   
-  //- is_phys:BOOLEAN := TRUE
+  //- is_phys:Boolean := True
   
-  + di:INTEGER
-  - end d:POS :SELF <- ( di := d.pt - pt_b.pt; Self)
+  + di:Int
+  - end d:Pos :Self <- ( di := d.pt - pt_b.pt; self)
   
-  + dh:REAL_32; // Delta Height
+  + dh:Real32; // Delta Height
   //- set_dh h:REAL_32 <- ( dh := h; )
     
-  + nl:INTEGER
+  + nl:Int
   - inc_nl <- ( nl := nl + 1; )
   - dec_nl <- ( nl := nl - 1; )
-  - set_nl l:INTEGER <- ( nl := l; )
+  - set_nl l:Int <- ( nl := l; )
   
-  - cmd_new_line:BOOLEAN <-
-  ( + r:BOOLEAN
+  - cmd_new_line:Boolean <-
+  ( + r:Boolean
     r := txt_buf.cmd_add "\n"
     (r && {auto_indent}).if {
       pos := pos + indent_line (pos-1)
@@ -78,8 +77,8 @@ Public
     r
   )
   
-  - cmd_new_line2:BOOLEAN <-
-  ( + r:BOOLEAN
+  - cmd_new_line2:Boolean <-
+  ( + r:Boolean
     r := txt_buf.cmd_add "\r\n"
     (r && {auto_indent}).if {
       pos := pos + indent_line (pos-2)
@@ -88,36 +87,36 @@ Public
     r
   )
   
-  - cmd_suppr:BOOLEAN <- ( txt_buf.rm pos; TRUE)
+  - cmd_suppr:Boolean <- ( txt_buf.rm pos; True)
   
-  - printi i:INTEGER <-
+  - printi i:Int <-
   (    
     "=== ".print; i.print; " ===".println
     "Size   : ".print; di.println
     "Size y : ".print; dh.println
   )
   
-  - check_end d:INTEGER :BOOLEAN <-
-  ( + result:BOOLEAN
+  - check_end d:Int :Boolean <-
+  ( + result:Boolean
     (pt_b+di != d).if {
       "Error TOK_DRW:\n pos real:".print; d.println
       " pt_b:".print; pt_b.print; " + di:".print; di.print; " = ".print; (pt_b+di).println
-      result := TRUE
+      result := True
     }
     ? {pt_b+di = d}
     result
   )
   
-  - detect:BOOLEAN <-
-  [ parent_txt_buf := TXT_BUF.current; ]
-  ( abstract; TRUE)
+  - detect:Boolean <-
+  [ parent_txt_buf := Txt_buf.current; ]
+  ( abstract; True)
   
   - parse          <- ( abstract; )
   - next_parse
   
   - product <-
   (
-    parent_txt_buf := TXT_BUF.current
+    parent_txt_buf := Txt_buf.current
     nl := 0
     sty.clear
     begin pos_i
@@ -127,7 +126,7 @@ Public
     (! ((pos_i = upper) || {(pos_i-1 < upper) && {at (pos_i-1) = '\n'}})).if {
       "TOK_DRW 103 ".print; type_name.print; ' '.print; pos_i.print
       '/'.print; upper.print
-      '\n'.print; at (pos_i-1).to_uinteger_8.print
+      '\n'.print; at (pos_i-1).to_uint8.print
       " in ".print; name.println
       exit 0
     }
@@ -138,22 +137,22 @@ Public
     }
   )
   
-  - is_empty:BOOLEAN <- di = 1
+  - is_empty:Boolean <- di = 1
   
-  - my_pos:POS <-
-  ( + i:INTEGER
-    + p:POS
-    + t:TOK_DRW
-    {(t := toks.at i) != Self}.while_do {      
+  - my_pos:Pos <-
+  ( + i:Int
+    + p:Pos
+    + t:Tok_drw
+    {(t := toks.at i) != self}.while_do {      
       p := p + t.di
       i := i + 1
     }
     p
   )
   
-  - my_tok_cur:INTEGER <-
-  ( + i:INTEGER
-    {toks.at i != Self}.while_do { i := i + 1; }
+  - my_tok_cur:Int <-
+  ( + i:Int
+    {toks.at i != self}.while_do { i := i + 1; }
     i
   )
   
@@ -161,16 +160,16 @@ Public
   (
     pos_i := my_pos
     tok_cur := my_tok_cur
-    TOK_ITM.set_parent_tok_drw Self
+    Tok_itm.set_parent_tok_drw self
     draw
-    TOK_ITM.set_parent_tok_drw (Old TOK_ITM.parent_t_drw)
+    Tok_itm.set_parent_tok_drw (Old Tok_itm.parent_t_drw)
     tok_cur := Old tok_cur
     pos_i := Old pos_i
   )
   
   - draw <-
-  ( + e,i,v:INTEGER
-    + dx:REAL_32
+  ( + e,i,v:Int
+    + dx:Real32
     begin pos_i
     styi := 0
     //pt_ri := 0
@@ -182,7 +181,7 @@ Public
       (i < sty.upper).if {
         v := sty.at (i+1)
         ((v < 0) && {sty.at (i-1) = v}).if {          
-          itm_cur := v; //CAST INTEGER TO TOK_ITM.on (v & 07FFF_FFFF_FFFF_FFFFh)
+          itm_cur := v; //CAST Int TO TOK_ITM.on (v & 07FFF_FFFF_FFFF_FFFFh)
         }
       }
     } else { itm_cur := -1; }
@@ -191,16 +190,16 @@ Public
     ((pos_i = upper) && {tok_cur = toks.upper}).if { end_text; }
     end_draw
     //
-    (DIV.debug_div).if {
+    (Div.debug_div).if {
       dx := x_space*2
       save
       begin_path
       line (dx,tex.y) to (width-dx,tex.y)
       stroke_width 1.0
-      stroke_color (COLOR.white)
+      stroke_color (Color.white)
       stroke
-      fill_color (COLOR.white)
-      STRING.tmp { tmp:STRING_BUFFER
+      fill_color (Color.white)
+      String.tmp { tmp:String_buffer
         tmp.copy "Tok#"
         tok_cur.append_in tmp
         tmp.append " L"
@@ -215,32 +214,32 @@ Public
     dh := tex.y - Old tex.y
   )
   
-  - search s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
+  - search s:String base b:Int at idx:Int :Int <-
   ( ? {idx.in_range 0 to (di-1)}; // No valid for TOK_ITM
     search s range (b+idx) to (b+di-1)
   )
   
-  - search_back s:STRING base b:INTEGER at idx:INTEGER :INTEGER <-
+  - search_back s:String base b:Int at idx:Int :Int <-
   ( ? {idx.in_range 0 to di}; // No valid for TOK_ITM
     search_back s range (b+idx) downto b
   )
   
   // Style / Color
   
-  - esc_char_style:INTEGER_32 := 30100h
-  - esc_char_arrow:INTEGER_32 := 30201h
-  - esc_char_commu:INTEGER_32 := 30202h
+  - esc_char_style:Int32 := 30100h
+  - esc_char_arrow:Int32 := 30201h
+  - esc_char_commu:Int32 := 30202h
     
-  + sty:Expanded ARRAY INTEGER_32
-  - styi:INTEGER
-  - underline:BOOLEAN
-  - last_color:COLOR; // Used LIZ
+  + sty:Flat Array Int32
+  - styi:Int
+  - underline:Boolean
+  - last_color:Color; // Used LIZ
   
-  - ope_val:Expanded ARRAY STRING_ALIAS // See LIZ
+  - ope_val:Flat Array String_alias // See LIZ
   
   - sty_run <-
-  ( + f,n,j:INTEGER_32
-    + sz:REAL_32
+  ( + f,n,j:Int32
+    + sz:Real32
     {(styi <= sty.upper) && {pos_i >= pt_b.pt + sty.at styi}}.while_do {
       f := sty.at (styi+1)
       (f = itm_cur).if {
@@ -254,24 +253,24 @@ Public
             OUT # "Color " # n # " x=" # tex.x # " pt_b=" # pt_b.pt # "\n";
             OUT # "c=" # at pos_i # '\n';
             //(at pos_i = ':').if { exit 1; };
-            from (styi) to (sty.upper.min (styi+8)) step 2 do { i:INTEGER;
+            from (styi) to (sty.upper.min (styi+8)) step 2 do { i:Int;
               sty.at i.print; ' '.print;
             };
             '\n'.print;
           };*/
-          last_color := LOOK.cols.at n
+          last_color := Look.cols.at n
           fill_color last_color
           //stroke_color (COLOR.white)
         }
         .when 1 then { // Font
           //OUT # "FONT:" # n # " pos:" # (pt_b.pt + sty.at styi) # '\n'
-          FONT.app n in txt_buf
+          Font.app n in txt_buf
         }
         .when 2 then { // Size
           n
-          .when 0 then { sz := FONT.size_app; }
-          .when 1 then { sz := FONT.size_app * 0.8; }
-          .when 2 then { sz := FONT.size_app * 1.1; }
+          .when 0 then { sz := Font.size_app; }
+          .when 1 then { sz := Font.size_app * 0.8; }
+          .when 2 then { sz := Font.size_app * 1.1; }
           font_size sz
         }
         .when 3 then { // Escape character
@@ -279,9 +278,9 @@ Public
           (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {            
             (last_div = NULL).if {
               (tex.x = tex.xmin).if { begin_line; }
-              last_div := DIV.new.text
+              last_div := Div.new.text
             }
-            tex.set_x (LOOK.drw n)
+            tex.set_x (Look.drw n)
             //
             tex.ascdes (asc_c,des_c)
             detect_cur
@@ -290,12 +289,12 @@ Public
         }
         .when 4 then { // Img
           (! pos.in_range (pos_i.pt) to (pos_i.pt+n)).if {
-            STRING.tmp { tmp:STRING_BUFFER
+            String.tmp { tmp:String_buffer
               tmp.copy name
               tmp.remove_suffix shortname
-              (pos_i.pt).to (pos_i.pt + n - 1) do { i:INTEGER
+              (pos_i.pt).to (pos_i.pt + n - 1) do { i:Int
                 tmp | at i
-              }
+              }              
               (put_image tmp).if {
                 pos_i := pos_i + n
               }
@@ -306,16 +305,22 @@ Public
           n
           // Exposant
           .when 0 then {
-            font_size (FONT.size_app)
-            tex.add_y (+ FONT.size_app * 0.2)
+            font_size (Font.size_app)
+            tex.add_y (+ Font.size_app * 0.2)
           }
           .when 1 then {
-            font_size (FONT.size_app * 0.8)            
-            tex.add_y (- FONT.size_app * 0.2)
+            font_size (Font.size_app * 0.8)            
+            tex.add_y (- Font.size_app * 0.2)
           }
           // Indice
-          .when 2 then { not_yet_implemented }
-          .when 3 then { not_yet_implemented }
+          .when 2 then {
+            font_size (Font.size_app)
+            tex.add_y (- Font.size_app * 0.2)
+          }
+          .when 3 then {
+            font_size (Font.size_app * 0.8)            
+            tex.add_y (+ Font.size_app * 0.2)
+          }
         }
         .when 6 then { // Jump
           (! pos.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
@@ -335,7 +340,7 @@ Public
     }
   )
   
-  - col n:INTEGER sub s:INTEGER <-
+  - col n:Int sub s:Int <-
   //[ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   (
     (sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}).if_false {
@@ -345,57 +350,63 @@ Public
     sty.add_last n
   )
   
-  - fnt n:INTEGER sub s:INTEGER <-
+  - fnt n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last (n | 10000h)
   )
   
-  - fsz n:INTEGER sub s:INTEGER <-
+  - fsz n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last (n | 20000h)
   )
   
-  - drw n:INTEGER sub s:INTEGER <-
+  - drw n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last (n | 30000h)
   )
   
-  - img b:INTEGER to e:INTEGER <-
+  - img b:Int to e:Int <-
   [ ? {sty.is_empty || {b - pt_b.pt >= sty.second_last}}; ]
   ( sty.add_last (b - pt_b.pt)
     sty.add_last ((e-b) | 40000h)
   )
   
-  - exp b:BOOLEAN sub s:INTEGER <-
+  - exp b:Boolean sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (b.to_integer | 50000h)
+    sty.add_last (b.to_int | 50000h)
   )
   
-  - jmp n:INTEGER sub s:INTEGER <-
+  - ind b:Boolean sub s:Int <-
+  [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
+  ( sty.add_last (pos_i.pt - pt_b.pt - s)
+    sty.add_last ((b.to_int+2) | 50000h)
+  )
+  
+  - jmp n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last (n | 60000h)
   )
   
-  - utf n:INTEGER sub s:INTEGER <-
+  - utf n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last (n | 70000h)
   )
   
-  - itm_cur:INTEGER; //OK_ITM
-  - itm n:TOK_ITM sub s:INTEGER <-
+  - itm_cur:Int; //OK_ITM
+  - itm n:Tok_itm sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n.to_pointer.to_integer | 8000_0000h)
+    sty.add_last (n.to_pointer.to_int | 8000_0000h)
   )
   
-  - get_col p:INTEGER :INTEGER <-
-  ( + i,c,v:INTEGER    
+  - get_col p:Int :Int <-
+  ( + i,c,v:Int    
     {(i <= sty.upper) && {sty.at i <= p}}.while_do {
       v := sty.at (i+1)
       ((v >> 16) = 0).if {
@@ -407,11 +418,11 @@ Public
     c
   )
     
-  - print_sty b:INTEGER <-
-  ( + f,n:INTEGER_32
+  - print_sty b:Int <-
+  ( + f,n:Int32
     
-    "-------------".println
-    from 0 to (sty.upper) step 2 do { i:INTEGER
+    "-------------".println    
+    from 0 to (sty.upper) step 2 do { i:Int
       i.print; ": ".print
       (b + sty.at i).print; ' '.print
       f := sty.at (i+1)
@@ -420,26 +431,26 @@ Public
       .when 0 then { // Color
         "Color: ".print; n.print; ' '.print
         n
-        .when (LOOK.dead) then { "dead".print; }
-        .when (LOOK.symbol) then { "symbol".print; }
-        .when (LOOK.rmk) then { "rmk".print; }
-        .when (LOOK.sub_rmk) then { "sub_rmk".print; }
-        .when (LOOK.type) then { "type".print; }
-        .when (LOOK.slot) then { "slot".print; }
-        .when (LOOK.local) then { "local".print; }
-        .when (LOOK.operator) then { "operator".print; }
-        .when (LOOK.string) then { "string".print; }
-        .when (LOOK.external) then { "external".print; }
-        .when (LOOK.number) then { "number".print; }
-        .when (LOOK.keyword) then { "keyword".print; }
+        .when (Look.dead) then { "dead".print; }
+        .when (Look.symbol) then { "symbol".print; }
+        .when (Look.rmk) then { "rmk".print; }
+        .when (Look.sub_rmk) then { "sub_rmk".print; }
+        .when (Look.type) then { "type".print; }
+        .when (Look.slot) then { "slot".print; }
+        .when (Look.local) then { "local".print; }
+        .when (Look.operator) then { "operator".print; }
+        .when (Look.string) then { "string".print; }
+        .when (Look.external) then { "external".print; }
+        .when (Look.number) then { "number".print; }
+        .when (Look.keyword) then { "keyword".print; }
       }
       .when 1 then { // Font
         "Font: ".print; n.print; ' '.print
         n
-        .when (FONT.roman)  then { "Roman".print; }
-        .when (FONT.bold)   then { "Bold".print; }
-        .when (FONT.italic) then { "Italic".print; }
-        .when (FONT.italic | FONT.bold) then { "Bold/Italic".print; }
+        .when (Font.roman)  then { "Roman".print; }
+        .when (Font.bold)   then { "Bold".print; }
+        .when (Font.italic) then { "Italic".print; }
+        .when (Font.italic | Font.bold) then { "Bold/Italic".print; }
       }
       .when 2 then { // Size
         "Font size: ".print; n.print; ' '.print

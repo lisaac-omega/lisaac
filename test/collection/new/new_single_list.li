@@ -1,0 +1,15 @@
+Header
+  + name := New_single_list
+Public
+  - main <-
+  ( + a:Single_list Int
+    a := new Single_list Int of (4,3,2,1)
+    Test.check (a.at 0 = 4)
+    Test.check (a.at 1 = 3)
+    Test.check (a.at 2 = 2)
+    Test.check (a.at 3 = 1)
+    
+    a := new Single_list Int of (5)
+    Test.check (a.at 0 = 5)
+    
+  )

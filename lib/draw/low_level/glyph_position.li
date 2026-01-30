@@ -1,19 +1,17 @@
 Header
-  
-  + name      := GLYPH_POSITION;
-
+  + name := Glyph_position
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private  
   
-  - stock:ARRAY GLYPH_POSITION := ARRAY GLYPH_POSITION.create_with_capacity 32
+  - stock:Array Glyph_position := Array Glyph_position.create_with_capacity 32
   
-  - new:GLYPH_POSITION <-
-  ( + result:GLYPH_POSITION
+  - new:Glyph_position <-
+  ( + result:Glyph_position
     (stock.is_empty).if {
-      result := GLYPH_POSITION.clone
+      result := Glyph_position.clone
     } else {
       result := stock.pop
     }
@@ -22,23 +20,23 @@ Private
 
 Public
   
-  + cur:INTEGER;        // Position of the glyph in the input string.
-  + x:REAL_32;                // The x-coordinate of the logical glyph position.
-  + minx:REAL_32;        // The bounds of the glyph shape.
-  + maxx:REAL_32
+  + cur:Int;        // Position of the glyph in the input string.
+  + x:Real32;                // The x-coordinate of the logical glyph position.
+  + minx:Real32;        // The bounds of the glyph shape.
+  + maxx:Real32
   
-  - create c:INTEGER to px:REAL_32 range (mi,ma:REAL_32) :GLYPH_POSITION <-
-  ( + result:GLYPH_POSITION
+  - create c:Int to px:Real32 range (mi,ma:Real32) :Glyph_position <-
+  ( + result:Glyph_position
     result := new
     result.make c to px range (mi,ma)
     result    
   )
   
-  - make c:INTEGER to px:REAL_32 range (mi,ma:REAL_32) <-
+  - make c:Int to px:Real32 range (mi,ma:Real32) <-
   (
     cur := c
     x := px
     (minx,maxx) := (mi,ma)
   )
   
-  - free <- stock.add_last Self
+  - free <- stock.add_last self

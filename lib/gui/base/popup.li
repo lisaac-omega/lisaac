@@ -1,36 +1,35 @@
 Header
-  + name := POPUP;
-  
+  + name := Popup
 Inherit
-  + parent_win:Expanded WIN
-  - parent_any_gui:ANY_GUI := ANY_GUI
+  + parent_win:Flat Win
+  - parent_any_gui:Any_gui := Any_gui
   
 Public
   
   - free <- ( parent := NULL; unset on; )
   
-  + timestamp:UINTEGER_64
-  - on:INTEGER := 1<<12
+  + timestamp:Uint64
+  - on:Int := 1<<12
     
-  - width_max:REAL_32
-  - height_max:REAL_32
+  - width_max:Real32
+  - height_max:Real32
   
-  - percent:REAL_32 <-
-  ( + dt:UINTEGER_64
-    + result:REAL_32
-    dt := TIME.gettimeofday - timestamp
+  - percent:Real32 <-
+  ( + dt:Uint64
+    + result:Real32
+    dt := Time.gettimeofday - timestamp
     (dt <= delay_popup).if {
-      PAPER.refresh_again
+      Paper.refresh_again
       ask_refresh
-      result := dt.to_real_32 / delay_popup.to_real_32
+      result := dt.to_real32 / delay_popup.to_real32
     } else {
       result := 1.0
     }
     result
   )
   
-  - refresh_popup:BOOLEAN <-
-  ( + p0,p1,p,r:REAL_32
+  - refresh_popup:Boolean <-
+  ( + p0,p1,p,r:Real32
     p := percent
     (! is on).if { p := 1.0 - p; }
     ((p1 := height_max) != 0).if {
@@ -41,7 +40,7 @@ Public
       r := width := p0 + (p1 - p0) * p
     }
     ! ((! is on) && {p = 0} && {r = 0} && {parent != NULL}).if {      
-      parent.child_rm Self; parent := NULL
+      parent.child_rm self; parent := NULL
     }
   )
   
@@ -57,22 +56,22 @@ Public
     reset_scissor
   )
   
-  - set_open w:WIN <- set_open w at 1000
+  - set_open w:Win <- set_open w at 1000
   
-  - set_open w:WIN at i:INTEGER <-
+  - set_open w:Win at i:Int <-
   ( 
     (w = NULL).if {
       (is on).if {
-        timestamp := TIME.gettimeofday - delay_popup + (percent * delay_popup.to_real_64).to_uinteger_64
+        timestamp := Time.gettimeofday - delay_popup + (percent * delay_popup.to_real64).to_uint64
         unset on
         ask_refresh
       }
     } else {
       (parent != w).if {
-        (parent != NULL).if { parent.child_rm Self; ask_refresh; }
+        (parent != NULL).if { parent.child_rm self; ask_refresh; }
         init_parent w at i
       }
-      timestamp := TIME.gettimeofday - delay_popup + (percent * delay_popup.to_real_64).to_uinteger_64
+      timestamp := Time.gettimeofday - delay_popup + (percent * delay_popup.to_real64).to_uint64
       set on
       ask_refresh
     }

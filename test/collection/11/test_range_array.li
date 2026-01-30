@@ -1,22 +1,21 @@
 Header
-  + name := TEST_RANGE_ARRAY;
-  
+  + name := Test_range_array
 Insert
-  - parent_utils:UTILS := UTILS
+  - parent_utils:Utils := Utils
   
 Private  
-  + nrmal_array:ARRAY INTEGER
+  + nrmal_array:Array Int
   
-  + range_array:RANGE_ARRAY INTEGER
+  + range_array:Range_array Int
   
-  - long:INTEGER <- 300
+  - long:Int <- 300
   
 Public
   - main <-
-  ( + x,idx:INTEGER
-    RANDOM.init 2
-    nrmal_array := ARRAY INTEGER .create_with_capacity 2
-    range_array := RANGE_ARRAY INTEGER .create_with_capacity 2 lower 0
+  ( + x,idx:Int
+    Random.init 2
+    nrmal_array := Array Int .create_with_capacity 2
+    range_array := Range_array Int .create_with_capacity 2 lower 0
     idem
     6.times {
       x := x + 1
@@ -36,10 +35,10 @@ Public
   )
   
   - main_1 <-
-  ( + x:INTEGER
-    RANDOM.init 2
-    nrmal_array := ARRAY INTEGER .create_with_capacity 2
-    range_array := RANGE_ARRAY INTEGER .create_with_capacity 2 lower 0
+  ( + x:Int
+    Random.init 2
+    nrmal_array := Array Int .create_with_capacity 2
+    range_array := Range_array Int .create_with_capacity 2 lower 0
     x := 1
     nrmal_array.at 0 add x
     range_array.at 0 add x
@@ -51,7 +50,7 @@ Public
     idem
     //"2 ok\n".print
     1000.times {
-      + idx:INTEGER
+      + idx:Int
       x := x + 1
       idx := nrmal_array.upper
       nrmal_array.at idx add x
@@ -62,11 +61,11 @@ Public
   )
   
   - main_3 <-
-  ( + x:INTEGER
-    RANDOM.init 5
+  ( + x:Int
+    Random.init 5
     //
-    nrmal_array := ARRAY INTEGER .create_with_capacity 2
-    range_array := RANGE_ARRAY INTEGER .create_with_capacity 2 lower 0
+    nrmal_array := Array Int .create_with_capacity 2
+    range_array := Range_array Int .create_with_capacity 2 lower 0
     nrmal_array.add_last 1
     range_array.add_last 1
     idem
@@ -98,8 +97,8 @@ Public
     range_array.at 4 add 6
     idem
     //
-    nrmal_array := ARRAY INTEGER .create_with_capacity 2
-    range_array := RANGE_ARRAY INTEGER .create_with_capacity 2 lower 0
+    nrmal_array := Array Int .create_with_capacity 2
+    range_array := Range_array Int .create_with_capacity 2 lower 0
     idem
     nrmal_array.add_last 1
     range_array.add_last 1
@@ -136,8 +135,8 @@ Public
     range_array.at (range_array.lower) add x
     idem
     long.times {
-      + idx:INTEGER
-      idx := RANDOM.min 0 max (nrmal_array.count)
+      + idx:Int
+      idx := Random.min 0 max (nrmal_array.count)
       //("nrmal_array.count=" + nrmal_array.count.to_string + " idx=" + idx.to_string).println
       nrmal_array.at idx add x
       range_array.at (idx + range_array.lower) add x
@@ -145,9 +144,9 @@ Public
       x := x + 1
     }
     {nrmal_array.is_empty}.until_do {
-      + idx:INTEGER
+      + idx:Int
       (nrmal_array.upper > 0).if {
-        idx := RANDOM.min 0 max (nrmal_array.upper)
+        idx := Random.min 0 max (nrmal_array.upper)
       } else {
         idx := 0
       }
@@ -158,19 +157,19 @@ Public
   )
   
   - idem <-
-  ( + i:INTEGER
+  ( + i:Int
     (nrmal_array.count != range_array.count).if {
       crash_with_message "ERREUR"
       "ERREUR".println
-      SYSTEM.exit 1
+      System.exit 1
     }
     nrmal_array.is_empty.if_false {
-      TEST.check (nrmal_array.last) integer (range_array.last)
-      TEST.check (nrmal_array.first) integer (range_array.first)
+      Test.check (nrmal_array.last) integer (range_array.last)
+      Test.check (nrmal_array.first) integer (range_array.first)
     }
     i := 0
     {i <= nrmal_array.upper}.while_do {
-      TEST.check (nrmal_array.at i) integer (range_array.at (i + range_array.lower))
+      Test.check (nrmal_array.at i) integer (range_array.at (i + range_array.lower))
       i := i + 1
     }
   )

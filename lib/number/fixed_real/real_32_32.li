@@ -1,23 +1,22 @@
 Header
-  + name    := Expanded REAL_32_32;
-  /*signed 32.32 fixed float.*/
+  + name := Flat Real_32_32
+/*signed 32.32 fixed float.*/
   - type    := `signed long long `;
   - default := (0.to_raw_real_32_32);
-  - export  := REAL_32, REAL_64;
-
+  - export  := Real32, Real64;
 Insert
-  - parent_signed_fixed_real:SIGNED_FIXED_REAL := SIGNED_FIXED_REAL
+  - parent_signed_fixed_real:Signed_fixed_real := Signed_fixed_real
 
-SELF
+Self
 
-  - shift_bits:INTEGER <- 32
+  - shift_bits:Int <- 32
 
 Public
 
-  - round:INTEGER <-
+  - round:Int <-
   // Rounded integral value.
-  ( + result:INTEGER
-    result := to_raw_integer
+  ( + result:Int
+    result := to_raw_int
     ((result & 8000_0000h) != 0).if {
       result := (result >> shift_bits) + 1
     } else {
@@ -28,23 +27,23 @@ Public
 
   // Range.
 
-  - minimum:INTEGER_64  <- INTEGER_32.minimum
+  - minimum:Int64  <- Int32.minimum
 
-  - maximum:UINTEGER_64 <- INTEGER_32.maximum
+  - maximum:Uint64 <- Int32.maximum
 
   // Convertion format with test.
 
-  - to_real_32_32:REAL_32_32 <- Self
+  - to_real_32_32:Real_32_32 <- self
 
   // Convertion
 
-  - append_in b:STRING_BUFFER <-
-  // Append in the `b' the equivalent of `to_string'. No new STRING_BUFFER
+  - append_in b:String_buffer <-
+  // Append in the `b' the equivalent of `to_string'. No new String_buffer
   // creation during the process.
-  ( + val:INTEGER
-    + old_count,new_count:INTEGER
+  ( + val:Int
+    + old_count,new_count:Int
     ? {b!=NULL}
-    val := to_raw_integer
+    val := to_raw_int
     (val < 0).if {
       val := - val
       b.extend '-'
@@ -53,7 +52,7 @@ Public
     b.extend '.'
     old_count := b.count
     //     1/65536 = 0.00390625 => 8 digit.
-    (((val & 0FFFF_FFFFh).to_uinteger_64 * 100000000)>>32).to_integer.append_in b
+    (((val & 0FFFF_FFFFh).to_uint64 * 100000000)>>32).to_int.append_in b
     new_count:=old_count+8
     {b.count!=new_count}.while_do {
       b.insert '0' to old_count

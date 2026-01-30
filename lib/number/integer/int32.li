@@ -1,0 +1,26 @@
+Header
+  + name := Flat Int32
+/*Signed 32 bits integer.*/
+  - type := `int32_t`;
+  - default := (0.to_raw_int32);
+  - export := Int, Int64, Pointer;
+Insert
+  - parent_signed_integer:Signed_integer := Signed_integer
+
+Public
+
+  - object_size:Int := 4
+
+  // Range
+
+  - maximum:Uint64 <- 7FFF_FFFFh.to_raw_uint64
+
+  - minimum:Int64 <- - 8000_0000h.to_raw_int64
+    
+  // Conversion with test.
+
+  - to_int32:Int32     <- self
+
+
+
+

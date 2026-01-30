@@ -1,12 +1,9 @@
 Header
-
-  + name        := ITM_CHARACTER;
-
-  /*Character constant*/
-
+  + name := Itm_character
+/*CHARACTERacter constant*/
 Inherit
 
-  + parent_itm_constant:Expanded ITM_CONSTANT
+  + parent_itm_constant:Flat Itm_constant
 
 Public
 
@@ -14,20 +11,20 @@ Public
   // Data
   //
 
-  + character:STRING_ALIAS
+  + character:String_alias
 
   //
   // Creation
   //
 
-  - create p:POSITION char n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Position char n:String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p char n
     result
   )
 
-  - make p:POSITION char n:STRING_ALIAS <-
+  - make p:Position char n:String_alias <-
   (
     position:=p
     character:=n
@@ -37,18 +34,18 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
+  - to_run_expr:Expr <-
   (
-    CHARACTER_CST.create position char character
+    Character_cst.create position char character
   )
 
   //
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    buffer.add_last '\''
-    buffer.append character
-    buffer.add_last '\''
+    b.add_last '\''
+    b.append character
+    b.add_last '\''
   )

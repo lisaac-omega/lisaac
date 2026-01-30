@@ -1,16 +1,16 @@
-Header  
-  + name := CP;
-  /*cp unix-like command*/
+Header
+  + name := Cp
+/*cp unix-like command*/
   
 Public
-  - src p1:STRING dest p2:STRING : INTEGER <-
-  ( + result:INTEGER
-    STRING.tmp { tmp:STRING_BUFFER
+  - src p1:String dest p2:String : Int <-
+  ( + result:Int
+    String.tmp { tmp:String_buffer
       tmp.append "cp "
       tmp.append p1
       tmp.add_last ' '
       tmp.append p2
-      result := ENVIRONMENT.execute_command tmp
+      result := Environment.execute_command tmp
     }
     result
   )

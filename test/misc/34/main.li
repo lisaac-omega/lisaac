@@ -1,11 +1,9 @@
 Header
-
-  + name := MAIN;
-
+  + name := Main
 Public
   
   - main <-
-  ( + i,x:INTEGER
+  ( + i,x:Int
     
     {"tst1".println; i < 10}.while_do {
       i := i + 1

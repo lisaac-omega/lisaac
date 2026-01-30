@@ -1,41 +1,39 @@
 Header
-
-  + name    := FLOAT_MAP;
-
-  /*Mapping for REAL_xx.*/
+  + name := Float_map
+/*Mapping for REAL_xx.*/
 
 Private
 
   - abstract <- crash_with_message "Slot abstract."
 
-REAL, REAL_32, REAL_64, REAL_80
+Real, Real32, Real64, Real80
 
-  - get_map f:SELF <-
+  - get_map f:Self <-
   (
     abstract
   )
 
 Public
   
-  - sign:BOOLEAN         <- abstract; // TRUE if positif, FALSE else.
+  - sign:Boolean         <- abstract; // True if positif, False else.
 
-  - exponent:UINTEGER_32 <- abstract
+  - exponent:Uint32 <- abstract
 
-  - mantissa:UINTEGER_64 <- abstract
+  - mantissa:Uint64 <- abstract
 
   // Consultation.
 
-  - is_infinite:BOOLEAN <-
+  - is_infinite:Boolean <-
   (exponent = ((1 << exponent_bits) - 1)) && {(mantissa >> (mantissa_bits-1)) = 0}
 
-  - is_nan:BOOLEAN <-
+  - is_nan:Boolean <-
   (exponent = ((1 << exponent_bits) - 1)) && {(mantissa >> (mantissa_bits-1)) != 0}
 
-  - is_zero:BOOLEAN <- (exponent = 0) && {mantissa = 0}
+  - is_zero:Boolean <- (exponent = 0) && {mantissa = 0}
 
 
   // Format.
 
-  - mantissa_bits:INTEGER_8 <- abstract
+  - mantissa_bits:Int8 <- abstract
 
-  - exponent_bits:INTEGER_8 <- abstract
+  - exponent_bits:Int8 <- abstract

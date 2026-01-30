@@ -1,13 +1,11 @@
 Header
-
-  + name := SU_DOKU;
-  /*
+  + name := Su_doku
+/*
   Du_doku Solver.
   */
-
 Inherit
 
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
 
 Private
 
@@ -15,7 +13,7 @@ Private
   // Data.
   //
 
-  - array  :ARRAY2(INTEGER) := ARRAY2(INTEGER).create (9,9)
+  - array  :Array2(Int) := Array2(Int).create (9,9)
 
   //
   // Example.
@@ -42,16 +40,16 @@ Private
   //
 
   - display <-
-  ( + v:INTEGER
+  ( + v:Int
 
 
-    0.to 8 do { y:INTEGER
+    0.to 8 do { y:Int
       ((y % 3) = 0).if {
         "#####################################\n".print
       } else {
         "#---+---+---#---+---+---#---+---+---#\n".print
       }
-      0.to 8 do { x:INTEGER
+      0.to 8 do { x:Int
       ((x % 3) = 0).if {
         "# ".print
       } else {
@@ -74,10 +72,10 @@ Private
   // Solver.
   //
 
-  - is_good value:INTEGER to (x,y:INTEGER) :BOOLEAN <-
-  ( + j,k,bx,by:INTEGER
-    + result:BOOLEAN
-    result := TRUE
+  - is_good value:Int to (x,y:Int) :Boolean <-
+  ( + j,k,bx,by:Int
+    + result:Boolean
+    result := True
     // Horizontal/Vertical test.
     {(j<9) && {result}}.while_do {
       result := (array.at (x,j) != value) && {array.at (j,y) != value}
@@ -100,10 +98,10 @@ Private
     result
   )
 
-  - solver (x,y:INTEGER) :BOOLEAN <-
-  ( + px,py:INTEGER
-    + v:INTEGER
-    + is_found:BOOLEAN
+  - solver (x,y:Int) :Boolean <-
+  ( + px,py:Int
+    + v:Int
+    + is_found:Boolean
 
     px := x
     py := y
@@ -115,7 +113,7 @@ Private
       }
     }
     (py = 9).if {
-      is_found := TRUE
+      is_found := True
     } else {
       v := 1
       {
@@ -133,13 +131,13 @@ Private
     is_found
   )
 
-  - graph_table:ARRAY2(G_IN)
+  - graph_table:Array2(G_in)
 
   - array_to_graph <-
-  ( + val:INTEGER
-    + in:G_IN
-    0.to 8 do { x:INTEGER
-      0.to 8 do { y:INTEGER
+  ( + val:Int
+    + in:G_in
+    0.to 8 do { x:Int
+      0.to 8 do { y:Int
         val := array.at (x,y)
         in  := graph_table.at (x,y)
         in.text.clear
@@ -152,38 +150,38 @@ Private
   )
 
   - graph_to_array <-
-  ( + val:INTEGER
-    + in:G_IN
-    0.to 8 do { x:INTEGER
-      0.to 8 do { y:INTEGER
+  ( + val:Int
+    + in:G_in
+    0.to 8 do { x:Int
+      0.to 8 do { y:Int
         in  := graph_table.at (x,y)
         (in.text.is_empty).if {
           val := 0
         } else {
-          val := in.text.to_integer
+          val := in.text.to_int
         }
         array.at (x,y) put val
       }
     }
   )
 
-  - message:G_OUT
+  - message:G_out
 
 Public
 
-  - run:G_WIN_OUT <-
-  ( + c1,l1,c2,l2,r:G_EXPR
-    + g:G_IN
+  - run:G_win_out <-
+  ( + c1,l1,c2,l2,r:G_expr
+    + g:G_in
 
-    graph_table := ARRAY2(G_IN).create (9,9)
-    0.to 2 do { xx:INTEGER
+    graph_table := Array2(G_in).create (9,9)
+    0.to 2 do { xx:Int
       c2 := NULL
-      0.to 2 do { yy:INTEGER
+      0.to 2 do { yy:Int
         l1 := NULL
-        0.to 2 do { x:INTEGER
+        0.to 2 do { x:Int
           c1 := NULL
-          0.to 2 do { y:INTEGER
-            g := G_IN.create (2,1) justify (G_IN.center) action { in:G_IN
+          0.to 2 do { y:Int
+            g := G_in.create (2,1) justify (G_in.center) action { in:G_in
               in.text.remove_last 1
               ((in.text.count > 1) || {! in.text.first.in_range '1' to '9'}).if {
                 in.text.clear
@@ -194,7 +192,7 @@ Public
               message.refresh
             }
             graph_table.at (xx*3+x,yy*3+y) put g
-            r := G_RAW.create g
+            r := G_raw.create g
             (c1 = NULL).if {
               c1 := r
             } else {
@@ -207,7 +205,7 @@ Public
             l1 := l1 | c1
           }
         }
-        r := G_RAW.create l1
+        r := G_raw.create l1
         (c2 = NULL).if {
           c2 := r
         } else {
@@ -220,26 +218,26 @@ Public
         l2 := l2 | c2
       }
     }
-    G_WIN_OUT.create "Sudoku Solver" with (
+    G_win_out.create "Sudoku Solver" with (
       (
-        G_BUTTON.create (G_OUT.create "Clear" justify (G_OUT.center))
-        action { b:G_BUTTON
-          + in:G_IN
-          0.to 8 do { x:INTEGER
-            0.to 8 do { y:INTEGER
+        G_button.create (G_out.create "Clear" justify (G_out.center))
+        action { b:G_button
+          + in:G_in
+          0.to 8 do { x:Int
+            0.to 8 do { y:Int
               in := graph_table.at (x,y)
               in.text.clear
               in.refresh
             }
           }
         } |
-        G_BUTTON.create (G_OUT.create "Load"  justify (G_OUT.center))
-        action { b:G_BUTTON
+        G_button.create (G_out.create "Load"  justify (G_out.center))
+        action { b:G_button
           load_example
           array_to_graph
         } |
-        G_BUTTON.create (G_OUT.create "Solve" justify (G_OUT.center))
-        action { b:G_BUTTON
+        G_button.create (G_out.create "Solve" justify (G_out.center))
+        action { b:G_button
           graph_to_array
           solver (0,0).if {
             message.text.copy " Found !"
@@ -251,12 +249,12 @@ Public
         }
       ).fix_height /
       l2 /
-      (G_RAW.create (message := G_OUT.create " ")).fix_height
+      (G_raw.create (message := G_out.create " ")).fix_height
     )
   )
 
   - main <-
-  ( + choice:CHARACTER
+  ( + choice:Char
 
     "====================================================\n\
     \Welcome the SU DOKU solver (V.1.0 by Sonntag Benoit)\n\
@@ -266,9 +264,9 @@ Public
       "[a]:Load example. [b]:Display. [c]:New. [d]:Solve! [e]:Exit\n\
       \Choice ?\n".print
       {
-        choice := STDIN.read_character
+        choice := Stdin.read_character
       }.do_until {choice.in_range 'a' to 'e'}
-      STDIN.read_character
+      Stdin.read_character
 
       choice
       .when 'a' then {
@@ -279,21 +277,21 @@ Public
         display
       }
       .when 'c' then {
-        0.to 8 do { y:INTEGER
-          0.to 8 do { x:INTEGER
+        0.to 8 do { y:Int
+          0.to 8 do { x:Int
             "Line #".print
             (y+1).print
             " Column #".print
             (x+1).print
             " ?\n".print
             {
-              choice := STDIN.read_character
+              choice := Stdin.read_character
             }.do_until {(choice.in_range '1' to '9') || {choice = '\n'}}
             (choice = '\n').if {
               array.at (x,y) put 0
             } else {
               array.at (x,y) put (choice.decimal_value)
-              STDIN.read_character
+              Stdin.read_character
             }
           }
         }

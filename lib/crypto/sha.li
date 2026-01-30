@@ -1,24 +1,23 @@
 Header
-  + name := SHA;
-  
+  + name := Sha
 Inherit
-  - parent_clone:CLONE := CLONE
+  - parent_clone:Clone := Clone
   
-SHA
+Sha
   
-  + data:ARRAY UINTEGER_8
-  + bitlen:UINTEGER_64
+  + data:Array Uint8
+  + bitlen:Uint64
     
-  - data32:NATIVE_ARRAY UINTEGER_32 <-
-  CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_32).on (data.storage)
-  - data64:NATIVE_ARRAY UINTEGER_64 <-
-  CAST (NATIVE_ARRAY UINTEGER_8) TO (NATIVE_ARRAY UINTEGER_64).on (data.storage)
+  - data32:C_array Uint32 <-
+  Cast (C_array Uint8) To (C_array Uint32).on (data.storage)
+  - data64:C_array Uint64 <-
+  Cast (C_array Uint8) To (C_array Uint64).on (data.storage)
   
-  - data_size:INTEGER   <- INTEGER.abstract
+  - data_size:Int   <- Int.abstract
   
-  - mybuffer:STRING_BUFFER := STRING_BUFFER.create 2048
+  - mybuffer:String_buffer := String_buffer.create 2048
   
-  - map:STRING_ALIAS := "0123456789abcdef"
+  - map:String_alias := "0123456789abcdef"
   
   - prepare_digest <-
   (
@@ -44,10 +43,10 @@ SHA
   
 Public
   
-  - digest_size:INTEGER <- ( abstract; 0); // in number of bytes
+  - digest_size:Int <- ( abstract; 0); // in number of bytes
   
-  - create:SELF <-
-  ( + result:SELF
+  - create:Self <-
+  ( + result:Self
     result := clone
     result.reset
     result
@@ -55,9 +54,9 @@ Public
   
   - reset <- abstract
   
-  - update dta:ARRAY UINTEGER_8 <-
+  - update dta:Array Uint8 <-
   ( 
-    0.to (dta.upper) do { i:INTEGER
+    0.to (dta.upper) do { i:Int
       data.add_last (dta.item i)
       (data.count = data_size).if {
         transform
@@ -67,9 +66,9 @@ Public
     }
   )
   
-  - update_str dta:STRING <-
+  - update_str dta:String <-
   ( 
-    0.to (dta.upper) do { i:INTEGER
+    0.to (dta.upper) do { i:Int
       data.add_last (dta.item i); //.code)
       (data.count = data_size).if {
         transform
@@ -80,19 +79,19 @@ Public
   )
   
   
-  - sum_in digest:ARRAY UINTEGER_8 <- ( abstract; )
+  - sum_in digest:Array Uint8 <- ( abstract; )
   
-  - sum_in_string buffer:STRING_BUFFER <- ( abstract; )
+  - sum_in_string buffer:String_buffer <- ( abstract; )
   
-  - sum file_path:STRING in buffer:STRING_BUFFER <-
-  ( + file_input:POINTER
-    + sz:INTEGER
+  - sum file_path:String in buffer:String_buffer <-
+  ( + file_input:Pointer
+    + sz:Int
     reset
-    file_input := FILE_UTILS.open_read file_path
+    file_input := File_utils.open_read file_path
     ? {file_input != NULL}
-    sz := FILE_UTILS.size file_input
+    sz := File_utils.size file_input
     {sz = 0}.until_do {
-      + s,blksize:INTEGER
+      + s,blksize:Int
       blksize := 512
       (sz >= blksize).if {
         s := blksize
@@ -102,9 +101,9 @@ Public
         sz := 0
       }
       mybuffer.clear
-      FILE_UTILS.read file_input in mybuffer size s
+      File_utils.read file_input in mybuffer size s
       update_str mybuffer
     }
-    FILE_UTILS.close file_input
+    File_utils.close file_input
     sum_in_string buffer
   )

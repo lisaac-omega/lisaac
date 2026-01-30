@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+echo $1android
+if [ ! -d "$1android" ]; then
+    version=$(lisaac -version | grep Version | grep -oP '\d+\.\d+')
+    zipandroid="android_${version}.zip"
+    url="https://www.lisaac.org/downloads/${zipandroid}"
+    pushd "$1" >/dev/null
+    echo Wait download ${url} ...
+    wget -q --show-progress -O ${zipandroid} ${url}
+    unzip -q ${zipandroid}
+    popd >/dev/null    
+fi    
+

@@ -1,6 +1,6 @@
 Header
-  + name := FIBONACCI;
-  /*
+  + name := Fibonacci
+/*
   Function with multiple results example. The gain is not only syntactical!
   Example below shows an efficient, still recursive, solution for the
   Fibonacci example. Thanks to the usage of two results, the exponential
@@ -28,11 +28,11 @@ Public
   
   - main <-
   ( + n:ℤ
-    if ((COMMAND_ARGS.count != 2) || {! COMMAND_ARGS at 1.is_integer}) then {
-      OUT # "usage: " # (COMMAND_ARGS.at 0) # " <integer>\n"
-      SYSTEM.exit 1
+    if ((Command_args.count != 2) || {! Command_args at 1.is_integer}) then {
+      Out # "usage: " # (Command_args.at 0) # " <integer>\n"
+      System.exit 1
     }
-    n := COMMAND_ARGS.first .to_integer
+    n := Command_args.first .to_int
     ? {n >= 1};
-    OUT # "fibonacci(" # n # ")=" # (fibonacci n) # '\n'
+    Out # "fibonacci(" # n # ")=" # (fibonacci n) # '\n'
   )

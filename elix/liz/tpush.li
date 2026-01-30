@@ -1,30 +1,29 @@
 Header
-  + name := TPUSH;
-  
+  + name := Tpush
 Inherit
-  - parent_texp:TEXP := TEXP
+  - parent_texp:Texp := Texp
   
 Public
   
-  + base:INTEGER
+  + base:Int
   
-  - init_b b:INTEGER :SELF <- ( base := b; Self)
+  - init_b b:Int :Self <- ( base := b; self)
   
   - run <-
   (
     crash_with_message "Not call."
   )
   
-  - run_arg elt:TOK_ITM <-
-  ( + a,d,x,y:REAL_32
+  - run_arg elt:Tok_itm <-
+  ( + a,d,x,y:Real32
     tex.push (0,0)
     lisave
     //    
     begin_line
     (elt != NULL).if {
       pos_i := elt.pt_b + elt.db
-      ((elt.dynamic_type = LIST) && {elt.like LIST.is_simple_expr}).if {
-        elt.like LIST.draw_body
+      ((elt.dynamic_type = List) && {elt.like List.is_simple_expr}).if {
+        elt.like List.draw_body
       } else {
         elt.draw
       }
@@ -39,4 +38,4 @@ Public
     stk.at (bp+base+2) put (x - tex.x)
   )
   
-  - append_in b:STRING_BUFFER <- ( b += "Push"; )
+  - append_in b:String_buffer <- ( b += "Push"; )

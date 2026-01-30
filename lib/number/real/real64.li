@@ -1,0 +1,14 @@
+Header
+  + name := Flat Real64
+/*Float (C `double` mapping).*/
+  - type     := `double`;
+  - default  := (0.to_raw_real64);
+  - export   := Real, Real32, Real80, Real_16_16;
+Insert
+  - parent_float_map64:Float_map64 := Float_map64
+  - parent_float_real:Float_real := Float_real
+
+
+
+
+

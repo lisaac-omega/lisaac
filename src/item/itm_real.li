@@ -1,12 +1,9 @@
 Header
-
-  + name        := ITM_REAL;
-
-  /*Real float constant*/
-
+  + name := Itm_real
+/*Real float constant*/
 Inherit
 
-  + parent_itm_constant:Expanded ITM_CONSTANT
+  + parent_itm_constant:Flat Itm_constant
 
 Public
 
@@ -14,19 +11,19 @@ Public
   // Data
   //
 
-  + value:STRING_ALIAS
+  + value:String_alias
 
   //
   // Constructor
   //
-  - create p:POSITION value n:STRING_ALIAS :SELF <-
-  ( + result:SELF
+  - create p:Position value n:String_alias :Self <-
+  ( + result:Self
     result := clone
     result.make p value n
     result
   )
 
-  - make p:POSITION value n:STRING_ALIAS <-
+  - make p:Position value n:String_alias <-
   (
     position:=p
     value:=n
@@ -36,17 +33,17 @@ Public
   // Runnable
   //
 
-  - to_run_expr:EXPR <-
+  - to_run_expr:Expr <-
   (
-    REAL_CST.create position value value type (type_real_64.default)
+    Real_cst.create position value value type (type_real64.default)
   )
 
   //
   // Display.
   //
 
-  - append_in buffer:STRING_BUFFER <-
+  - append_in b:String_buffer <-
   (
-    buffer.append value
+    b.append value
   )
 

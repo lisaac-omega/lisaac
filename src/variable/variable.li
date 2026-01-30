@@ -1,43 +1,40 @@
 Header
-
-  + name    := VARIABLE;
-
-  /*Parent for all variable*/
-
+  + name := Variable
+/*Parent for all variable*/
 Inherit
 
-  + parent_named:Expanded NAMED
+  + parent_named:Flat Named
 
 Public
 
-  - is_local:BOOLEAN <- FALSE
+  - is_local:Boolean <- False
   
-  - is_result:BOOLEAN <- FALSE
+  - is_result:Boolean <- False
 
   //
   // Creation.
   //
 
-  - create p:POSITION name n:STRING_ALIAS type t:TYPE_FULL :SELF <-
-  ( + result:SELF
+  - create p:Position name n:String_alias type t:Type_full :Self <-
+  ( + result:Self
 
     result := clone
     result.make p name n type t
     result
   )
 
-  - make p:POSITION name n:STRING_ALIAS type t:TYPE_FULL <-
-  ( + tmp:TYPES_TMP
+  - make p:Position name n:String_alias type t:Type_full <-
+  ( + tmp:Types_tmp
     position := p
     name := n
-    intern_name := get_intern n type FALSE
+    intern_name := get_intern n type False
     type := t
     (is_static).if {
-      tmp := TYPES_TMP.new
+      tmp := Types_tmp.new
       tmp.add (t.raw)
       type_set := tmp.to_types
     } else {
-      type_set := TYPES_TMP.types_empty
+      type_set := Types_tmp.types_empty
     }
   )
 
@@ -45,22 +42,22 @@ Public
   //
   //
 
-  + intern_name:STRING_ALIAS
+  + intern_name:String_alias
 
-  - set_intern_name n:STRING_ALIAS <-
+  - set_intern_name n:String_alias <-
   (
     intern_name := n
   )
 
-  - is_argument:BOOLEAN <- (style = ' ')
+  - is_argument:Boolean <- (style = ' ')
 
   //
   // Type.
   //
 
-  + type:TYPE_FULL
+  + type:Type_full
 
-  - set_type t:TYPE_FULL <-
+  - set_type t:Type_full <-
   (
     ? {t != NULL}
     type      := t
@@ -72,55 +69,55 @@ Public
   // Typing Context.
   //
 
-  - is_static:BOOLEAN <-
-  ((type.is_expanded) && {type.raw != type_boolean}) || {name = "Self"}
+  - is_static:Boolean <-
+  ((type.is_flat) && {type.raw != type_boolean}) || {name = "self"}
 
-  + type_set:TYPES
+  + type_set:Types
 
-  + ensure_count:INTEGER
+  + ensure_count:Int
 
-  - set_ensure_count c:INTEGER <-
-  // Necessary for `context' local, `External' argument slot and `BLOCK' manager.
+  - set_ensure_count c:Int <-
+  // Necessary for `context' local, `External' argument slot and `Block' manager.
   (
     ensure_count := c
   )
 
-  + require_list:ARRAY WRITE
-  + require_first:WRITE
-  - require_count:INTEGER <-
-  ( + result:INTEGER
+  + require_list:Array Write
+  + require_first:Write
+  - require_count:Int <-
+  ( + result:Int
     (require_first != NULL).if {
       (require_list != NULL).if {
-	result := 1 + require_list.count
+        result := 1 + require_list.count
       } else {
-	result := 1
+        result := 1
       }
     }
     result
   )
 
-  - set_require w:WRITE list wl:ARRAY WRITE <-
+  - set_require w:Write list wl:Array Write <-
   (
     require_first := w
     require_list  := wl
   )
 
-  + level_type:INTEGER
-  - level_pass:INTEGER
+  + level_type:Int
+  - level_pass:Int
 
   - update <-
   (
     level_pass := level_pass + 1
   )
 
-  - busy_set:HSET(VARIABLE) := HSET(VARIABLE).create
-  - get_type t:TYPES_TMP <-
-  ( + tmp_type:TYPES_TMP
+  - busy_set:Hset(Variable) := Hset(Variable).create
+  - get_type t:Types_tmp <-
+  ( + tmp_type:Types_tmp
 
     ((is_optimization_type_set) && {! busy_set.is_empty}).if {
-      (! busy_set.fast_has Self).if {
+      (! busy_set.fast_has self).if {
         ((level_type < level_pass) && {! is_static}).if {
-          busy_set.fast_add_without_control Self
+          busy_set.fast_add_without_control self
           sub_get_type t
         } else {
           t.union type_set
@@ -130,8 +127,8 @@ Public
       ((level_type < level_pass) && {! is_static}).if {
         ((is_executing_pass) || {require_first != NULL}).if {
           level_type := level_pass
-          //busy_set.fast_add Self
-          tmp_type := TYPES_TMP.new
+          //busy_set.fast_add self
+          tmp_type := Types_tmp.new
           sub_get_type tmp_type
           type_set := tmp_type.update type_set
           //busy_set.clear
@@ -143,12 +140,12 @@ Public
 
 Private
 
-  - sub_get_type t:TYPES_TMP <-
+  - sub_get_type t:Types_tmp <-
   (
     (require_first != NULL).if {
       require_first.get_type t
       (require_list != NULL).if {
-        (require_list.lower).to (require_list.upper) do { j:INTEGER
+        (require_list.lower).to (require_list.upper) do { j:Int
           require_list.at j.get_type t
         }
       }
@@ -161,12 +158,12 @@ Public
   // Sequence optimizer
   //
 
-  - reset_last_write w:WRITE <-
+  - reset_last_write w:Write <-
   (
     // Nothing.
   )
 
-  - set_write w:WRITE <-
+  - set_write w:Write <-
   (
     abstract
   )
@@ -176,9 +173,9 @@ Public
     abstract
   )
 
-  - get_last_index:INTEGER <- abstract
+  - get_last_index:Int <- abstract
 
-  - get_last_value rec:EXPR :EXPR <-
+  - get_last_value rec:Expr :Expr <-
   (
     abstract
     NULL
@@ -188,41 +185,41 @@ Public
   // Writing.
   //
 
-  - add_write wrt:WRITE <-
-  ( + tmp_type:TYPES_TMP
+  - add_write wrt:Write <-
+  ( + tmp_type:Types_tmp
 
     (require_first = NULL).if {
       require_first := wrt
     } else {
       (require_list = NULL).if {
-	require_list := ARRAY WRITE .create_with_capacity 1
+        require_list := Array Write .create_with_capacity 1
       }
       require_list.add_last wrt
     }
 
     // Update type list.
     ((! is_static) && {wrt.value != NULL} && {! is_executing_pass}).if {
-      tmp_type := TYPES_TMP.new
+      tmp_type := Types_tmp.new
       (type_set != NULL).if {
-	tmp_type.union type_set
+        tmp_type.union type_set
       }
       wrt.value.get_type tmp_type
       type_set := tmp_type.update type_set
     }
   )
 
-  - write p:POSITION value val:EXPR :WRITE <-
+  - write p:Position value val:Expr :Write <-
   (
     write p with NULL value val
   )
 
-  - write p:POSITION with r:EXPR value val:EXPR :WRITE <-
+  - write p:Position with r:Expr value val:Expr :Write <-
   (
     write_direct p with r value val
   )
 
-  - write_direct p:POSITION with r:EXPR value val:EXPR :WRITE <-
-  ( + e:WRITE
+  - write_direct p:Position with r:Expr value val:Expr :Write <-
+  ( + e:Write
 
     e := new_write p with r value val
     add_write e
@@ -230,9 +227,9 @@ Public
     e
   )
 
-VARIABLE
+Variable
 
-  - new_write p:POSITION with r:EXPR value v:EXPR :WRITE <-
+  - new_write p:Position with r:Expr value v:Expr :Write <-
   (
     abstract
     NULL
@@ -240,14 +237,14 @@ VARIABLE
 
 Public
 
-  - unwrite e:WRITE <-
-  ( + idx:INTEGER
+  - unwrite e:Write <-
+  ( + idx:Int
 
     (e.is_delete).if {
-      POSITION.put_error semantic text "Recurssivity error..."
+      Position.put_error semantic text "Recurssivity error..."
       e.position.put_position
       position.put_position      
-      POSITION.send_error
+      Position.send_error
     }
 
     e.set_delete
@@ -257,13 +254,13 @@ Public
     // Require list.
     (require_first = e).if {
       (require_list != NULL).if {
-	require_first := require_list.first;  // BSBS: pourquoi conserver l'ordre?
-	require_list.remove_first;            // C'est plus rapide de faire remove_last
-	(require_list.is_empty).if {
-	  require_list := NULL
-	}
+        require_first := require_list.first;  // BSBS: pourquoi conserver l'ordre?
+        require_list.remove_first;            // C'est plus rapide de faire remove_last
+        (require_list.is_empty).if {
+          require_list := NULL
+        }
       } else {
-	require_first := NULL
+        require_first := NULL
       }
     } else {
       ? {require_list != NULL}
@@ -277,7 +274,7 @@ Public
         } else {
           require_first.debug_display
         }
-	crash_with_message "******** VARIABLE.unwrite : BUG require_list = NULL **********\n"
+        crash_with_message "******** VARIABLE.unwrite : BUG require_list = NULL **********\n"
       }
 
       idx := require_list.fast_first_index_of e
@@ -285,12 +282,12 @@ Public
 
       (idx > require_list.upper).if {
         e.debug_display
-	intern_name.print; '\n'.print
-	"\n--------\n".print
-	require_first.debug_display
-	(require_list.lower).to (require_list.upper) do { j:INTEGER
-	  require_list.at j.debug_display
-	}
+        intern_name.print; '\n'.print
+        "\n--------\n".print
+        require_first.debug_display
+        (require_list.lower).to (require_list.upper) do { j:Int
+          require_list.at j.debug_display
+        }
 
         //warning_error (position,"ICI")
         crash_with_message "******** VARIABLE.unwrite : BUG !!! **********\n"
@@ -299,7 +296,7 @@ Public
 
       require_list.remove idx
       (require_list.is_empty).if {
-	require_list := NULL
+        require_list := NULL
       }
     }
 
@@ -309,19 +306,19 @@ Public
   // Reading.
   //
 
-  - read p:POSITION :READ <-
+  - read p:Position :Read <-
   (
     read p with NULL
   )
   //[ ? {ensure_count := Old ensure_count + 1}; ]
 
-  - read p:POSITION with r:EXPR :READ <-
+  - read p:Position with r:Expr :Read <-
   (
     read_direct p with r
   )
 
-  - read_direct p:POSITION with r:EXPR :READ <-
-  ( + result:READ
+  - read_direct p:Position with r:Expr :Read <-
+  ( + result:Read
 
     result := new_read position with r
     ensure_count := ensure_count + 1
@@ -336,7 +333,7 @@ Public
   )
   //[ ? {ensure_count := Old ensure_count + 1}; ]
 
-  - unread e:READ <-
+  - unread e:Read <-
   (
     /*
     (intern_name == "__tmp__35").if {
@@ -369,8 +366,8 @@ Public
   // Display.
   //
 
-  - display_require buffer:STRING_BUFFER <-
-  ( + rd:READ
+  - display_require buffer:String_buffer <-
+  ( + rd:Read
 
     (require_first != NULL).if {
       buffer.append indent
@@ -383,7 +380,7 @@ Public
         indent.remove_last 2
       }
       (require_list != NULL).if {
-        (require_list.lower).to (require_list.upper) do { i:INTEGER
+        (require_list.lower).to (require_list.upper) do { i:Int
           buffer.append indent
           require_list.at i.display buffer
           buffer.add_last '\n'
@@ -398,7 +395,7 @@ Public
     }
   )
 
-  - display buffer:STRING_BUFFER <-
+  - display buffer:String_buffer <-
   (
     buffer.append intern_name
     buffer.add_last ':'
@@ -406,13 +403,13 @@ Public
     //buffer.append (type.intern_name)
   )
 
-  - display_type buffer:STRING_BUFFER <-
-  ( + j:INTEGER
+  - display_type buffer:String_buffer <-
+  ( + j:Int
     buffer.add_last '{'
     (type_set.is_empty).if_false {
       j := type_set.first_index
       {j != -1}.while_do {
-	buffer.append (type_set.at j.intern_name)
+        buffer.append (type_set.at j.intern_name)
         buffer.add_last 'x'
         j := type_set.next_index j
       }
@@ -421,9 +418,9 @@ Public
     buffer.add_last '}'
   )
 
-VARIABLE, PROTOTYPE
+Variable, Prototype
 
-  - list_variable_block:ARRAY VARIABLE := ARRAY VARIABLE .create_with_capacity 64
+  - list_variable_block:Array Variable := Array Variable .create_with_capacity 64
 
   - check_variable_block <-
   (
@@ -433,21 +430,21 @@ VARIABLE, PROTOTYPE
     }
   )
 
-  + is_check:BOOLEAN; // BSBS: Warning Memory!
+  + is_check:Boolean; // BSBS: Warning Memory!
 
   - check_rec <-
-  ( + val:EXPR
-    + rd_g:READ_GLOBAL
-    + rd_s:READ_SLOT
-    + rd_l:READ_LOCAL
-    + block:PROFIL_BLOCK
-    + check_action:{WRITE; }
+  ( + val:Expr
+    + rd_g:Read_global
+    + rd_s:Read_slot
+    + rd_l:Read_local
+    + block:Profil_block
+    + check_action:{Write; }
 
     (is_check).if_false {
 
-      is_check := TRUE
+      is_check := True
 
-      check_action := { wrt:WRITE
+      check_action := { wrt:Write
         val := wrt.value
         (
           (rd_g ?= val; rd_g = NULL) && {rd_s ?= val; rd_s = NULL}
@@ -459,11 +456,11 @@ VARIABLE, PROTOTYPE
             string_tmp.copy "This block is extern context sensitive (with `";
             string_tmp.append (block.context_extern.name)
             string_tmp.append "' local variable)."
-            POSITION.put_error warning text string_tmp
+            Position.put_error warning text string_tmp
             block.code.position.put_position
             list_variable_block.last.position.put_position
             block.context_extern.position.put_position
-            POSITION.send_error
+            Position.send_error
           } else {
             rd_l ?= val
             (rd_l != NULL).if {
@@ -475,7 +472,7 @@ VARIABLE, PROTOTYPE
       (require_first != NULL).if {
         check_action.value require_first
         (require_list != NULL).if {
-          (require_list.lower).to (require_list.upper) do { j:INTEGER
+          (require_list.lower).to (require_list.upper) do { j:Int
             check_action.value (require_list.at j)
           }
         }

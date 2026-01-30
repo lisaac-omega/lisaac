@@ -1,33 +1,32 @@
 Header
-  + name := RANDOM;
-  /*
+  + name := Random
+/*
    RANDOM number generation.
   */
-  
 Inherit  
-  - parent_rgn_common: /*EYE*/ RGN_COMMON := RGN_COMMON
+  - parent_rgn_common: /*EYE*/ Rgn_common := Rgn_common
     
 Private
-  + seedmem:INTEGER_32 := 1
+  + seedmem:Int32 := 1
 
-  + iv:NATIVE_ARRAY INTEGER_32
+  + iv:C_array Int32
   
-  + iy:INTEGER_32
+  + iy:Int32
   
   - minimal_next <-
-  ( + k:INTEGER_32
+  ( + k:Int32
     k := seedmem / 127773
     seedmem := 16807 * (seedmem - k * 127773) - 2836 * k
     (seedmem < 0).if {
       seedmem := seedmem + 2147483647
     }
     (iv = NULL).if {
-       iv := NATIVE_ARRAY INTEGER_32 .create 32
+       iv := C_array Int32 .create 32
     }
   )
   
   - next <-
-  ( + tmp:INTEGER_32
+  ( + tmp:Int32
     tmp := iy % 32
     minimal_next
     iy := iv.at tmp
@@ -36,10 +35,10 @@ Private
 
 Public
   
-  - init seed:UINTEGER_32 : SELF <-
-  ( + i:INTEGER_32
-    seedmem := seed.to_raw_integer_32
-    iv := NATIVE_ARRAY INTEGER_32 .create 32
+  - init seed:Uint32 : Self <-
+  ( + i:Int32
+    seedmem := seed.to_raw_int32
+    iv := C_array Int32 .create 32
     minimal_next
     {i <= 6}.while_do {
       minimal_next
@@ -53,12 +52,12 @@ Public
     }
     iy := iv.at 0
     next
-    Self
+    self
   )
   
-  - uint32:UINTEGER_32 <-
+  - uint32:Uint32 <-
   (
     next
-    iy.to_raw_uinteger_32
+    iy.to_raw_uint32
   )
   

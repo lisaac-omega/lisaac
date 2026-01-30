@@ -1,50 +1,47 @@
 Header
-  + name := SLAB V;
-  
+  + name := Slab V
 Insert
-  - parent_clone: CLONE := CLONE
+  - parent_clone: Clone := Clone
   
-  - parent_slab_utils: SLAB_UTILS := SLAB_UTILS
+  - parent_slab_utils: Slab_utils := Slab_utils
   
-Mapping, ARRAY_BLOCK
-  + storage: NATIVE_ARRAY V
-  
-  + count:INTEGER_16
-  
-  + low:INTEGER_16
+Mapping, Array_block
+  + storage: C_array V
+  + count:Int16
+  + low:Int16
   
 Private
-  - slab_msk:INTEGER <- slab_cap - 1
+  - slab_msk:Int <- slab_cap - 1
   
   - init_clear <-
   (
     ? {count = 0}; ? {low = 0}
     ? {storage = NULL}
-    storage := NATIVE_ARRAY V.create slab_cap
+    storage := C_array V.create slab_cap
   )
   
-  - init b:NATIVE_ARRAY V <-
+  - init b:C_array V <-
   (
     ? {count = 0}; ? {low = 0}
     ? {storage = NULL}
     storage := b
   )
   
-ARRAY_BLOCK
-  - up:INTEGER_16 <- (low + count - 1) & slab_msk
+Array_block
+  - up:Int16 <- (low + count - 1) & slab_msk
   
-  - new:SELF <-
-  ( + result:SELF
+  - new:Self <-
+  ( + result:Self
     result := clone
     result.init_clear
     result
   )
   
-  - new3:(SELF,SELF,SELF) <-
-  ( + r1,r2,r3:SELF
-    + buf:NATIVE_ARRAY V
+  - new3:(Self,Self,Self) <-
+  ( + r1,r2,r3:Self
+    + buf:C_array V
     (r1,r2,r3) := (clone,clone,clone)
-    buf := NATIVE_ARRAY V.create (slab_cap*3)
+    buf := C_array V.create (slab_cap*3)
     r1.init buf
     r2.init (buf + slab_cap)
     r3.init (buf + (slab_cap*2))
@@ -61,18 +58,18 @@ ARRAY_BLOCK
     ? {count = 0}
   ]
   
-  - read_file f:POINTER :INTEGER <-
-  ( count := FILE_UTILS.read_native_char f in storage size slab_cap )
+  - read_file f:Pointer :Int <-
+  ( count := File_utils.read_native_char f in storage size slab_cap )
   [ ? {count != 0}; ]
   
-  - save_file f:POINTER <-
-  ( + end:INTEGER
+  - save_file f:Pointer <-
+  ( + end:Int
     end := (low + count - 1) & slab_msk
-    (end >= low).if {      
-      FILE_UTILS.write f native_char (storage+low) size (end-low+1)
+    if (end >= low) then {      
+      File_utils.write f native_char (storage+low) size (end-low+1)
     } else {
-      FILE_UTILS.write f native_char (storage+low) size (slab_cap-low)
-      FILE_UTILS.write f native_char storage size (end+1)
+      File_utils.write f native_char (storage+low) size (slab_cap-low)
+      File_utils.write f native_char storage size (end+1)
     }
   )
   
@@ -92,7 +89,7 @@ ARRAY_BLOCK
     storage.at up
   )
   
-  - at user_idx:INTEGER cache cache_low:INTEGER :V <-
+  - at user_idx:Int cache cache_low:Int :V <-
   [
     ? {! is_empty}
   ]
@@ -100,7 +97,7 @@ ARRAY_BLOCK
     storage.at ((low + user_idx - cache_low) & slab_msk)
   )
   
-  - at user_idx:INTEGER put v:V cache cache_low:INTEGER <-
+  - at user_idx:Int put v:V cache cache_low:Int <-
   [
     ? {! is_empty}
   ]
@@ -108,7 +105,7 @@ ARRAY_BLOCK
     storage.at ((low + user_idx - cache_low) & slab_msk) put v
   )
 
-  - is_full:BOOLEAN <-
+  - is_full:Boolean <-
   [
     ? {storage != NULL}
   ]
@@ -116,33 +113,33 @@ ARRAY_BLOCK
     count = slab_cap
   )
   
-  - is_empty:BOOLEAN <- count = 0
+  - is_empty:Boolean <- count = 0
   
-  - contains idx:INTEGER cache cache_low:INTEGER :BOOLEAN <-
+  - contains idx:Int cache cache_low:Int :Boolean <-
   [
     ? {storage != NULL}
   ]
-  ( + i:INTEGER
+  ( + i:Int
     i := idx - cache_low
     (i >= 0) && {i < count}
   )
     
-  - Self:SELF '>>' (b,e:INTEGER) :V <-
+  - self:Self '>>' (b,e:Int) :V <-
   // [b .. e-1] -> [b+1 .. e] Result = Old [e]
   // Assume idx is a valid logical index into the used area.
   // The result is the right falling V.
   ( + result,tmp:V
     result := storage.at e
     (b < e).if { // Basic
-      e.downto (b+1) do { i:INTEGER
+      e.downto (b+1) do { i:Int
         storage.at i put (storage.at (i-1))
       }
     } else {
       tmp := storage.at (slab_cap-1)
-      (slab_cap-1).downto (b+1) do { i:INTEGER
+      (slab_cap-1).downto (b+1) do { i:Int
         storage.at i put (storage.at (i-1))
       }
-      e.downto 1 do { i:INTEGER
+      e.downto 1 do { i:Int
         storage.at i put (storage.at (i-1))
       }
       storage.at 0 put tmp
@@ -150,22 +147,22 @@ ARRAY_BLOCK
     result
   )
   
-  - Self:SELF '<<' (b,e:INTEGER) :V <-
+  - self:Self '<<' (b,e:Int) :V <-
   // [b .. e-1] <- [b+1 .. e], Result = Old [b]
   // Assume idx is a valid logical index into the used area.
   // The result is the left falling V.
   ( + result,tmp:V
     result := storage.at b
     (b < e).if { // Basic
-      b.to (e-1) do { i:INTEGER
+      b.to (e-1) do { i:Int
         storage.at i put (storage.at (i+1))
       }
     } else {
       tmp := storage.at 0
-      0.to (e-1) do { i:INTEGER
+      0.to (e-1) do { i:Int
         storage.at i put (storage.at (i+1))
       }
-      b.to (slab_cap-2) do { i:INTEGER
+      b.to (slab_cap-2) do { i:Int
         storage.at i put (storage.at (i+1))
       }
       storage.at (slab_cap-1) put tmp
@@ -173,8 +170,8 @@ ARRAY_BLOCK
     result
   )
   
-  - remove_first:BOOLEAN <-
-  // TRUE indicates is_empty after removal.
+  - remove_first:Boolean <-
+  // True indicates is_empty after removal.
   [
     ? {! is_empty}
   ]
@@ -184,8 +181,8 @@ ARRAY_BLOCK
     count = 0
   )
   
-  - remove_last :BOOLEAN <-
-  // TRUE indicates is_empty after removal.
+  - remove_last :Boolean <-
+  // True indicates is_empty after removal.
   [
     ? {! is_empty}
   ]
@@ -194,8 +191,8 @@ ARRAY_BLOCK
     count = 0
   )
   
-  - remove user_idx:INTEGER cache cache_low:INTEGER :BOOLEAN <-
-  ( + result:BOOLEAN
+  - remove user_idx:Int cache cache_low:Int :Boolean <-
+  ( + result:Boolean
     (user_idx = cache_low).if {
       result := remove_first
     }.elseif {user_idx = (cache_low + count - 1)} then {
@@ -206,34 +203,34 @@ ARRAY_BLOCK
     result
   )
   
-  - raw_remove user_idx:INTEGER cache cache_low:INTEGER :BOOLEAN <-
-  // TRUE when empty after removal.
+  - raw_remove user_idx:Int cache cache_low:Int :Boolean <-
+  // True when empty after removal.
   [
     ? {count > 2}
     ? {user_idx > cache_low}
     ? {user_idx < (cache_low + count - 1)}
     ? {contains user_idx cache cache_low} 
   ]
-  ( + tlow,tup,e:INTEGER
+  ( + tlow,tup,e:Int
     count := count - 1
     tlow := user_idx - cache_low
     tup := cache_low + count - user_idx
     e := (low + tlow) & slab_msk
     (tlow < tup). if {
-      Self >> (low,e)
+      self >> (low,e)
       low := (low + 1) & slab_msk
     } else {      
-      Self << (e,(low + count) & slab_msk)
+      self << (e,(low + count) & slab_msk)
     }
     count = 0
   )
   
 Public
-  - to_string:STRING_ALIAS <-
-  ( + result:STRING_ALIAS
-    + i:INTEGER
+  - to_string:String_alias <-
+  ( + result:String_alias
+    + i:Int
     //+ v:V
-    STRING.tmp { sb:STRING_BUFFER
+    String.tmp { sb:String_buffer
       (to_string_style = "compact").if {
         (count = 0).if {
           sb.append "empty"
@@ -253,7 +250,7 @@ Public
         ? {storage != NULL}
         /*
         sb.add_last '['
-        0.to (slab_cap - 1) do { i:INTEGER
+        0.to (slab_cap - 1) do { i:Int
           ? {storage != NULL}
           ? {sb != NULL}
           v := storage.at i
@@ -286,13 +283,13 @@ Public
     result
   )
   
-  - space_left:INTEGER <- slab_cap - count
+  - space_left:Int <- slab_cap - count
   
-  - set_low l:INTEGER <- ( low := l; )
+  - set_low l:Int <- ( low := l; )
   
-  - set_count c:INTEGER <- ( count := c; )
+  - set_count c:Int <- ( count := c; )
   
-  - Self:SELF '<+' right: SLAB V <-
+  - self:Self '<+' right: Slab V <-
   [
     ? {right.count >= slab_cap - 1}
     ? {is_empty}
@@ -305,16 +302,16 @@ Public
     right.set_low ((right.low + 1) & slab_msk)
   )
   /*
-  - Self:SELF '<+' right: SLAB V <-
+  - self:Self '<+' right: SLAB V <-
   [
     ? {right.count >= slab_cap - 1}
     ? {is_empty}
   ]
-  ( + r:INTEGER
+  ( + r:Int
     low := 0
     count := (slab_cap >> 1)
     r := right.low
-    0.to ((slab_cap >> 1) - 1) do { l:INTEGER
+    0.to ((slab_cap >> 1) - 1) do { l:Int
       storage.at l put (right.storage.at r)
       r := (r + 1) & slab_msk
     }
@@ -327,7 +324,7 @@ Public
   ]
   */
   
-  - Self:SELF '+>' right: SLAB V <-
+  - self:Self '+>' right: Slab V <-
   [
     ? {count >= slab_cap - 1}
     ? {right.is_empty}
@@ -339,16 +336,16 @@ Public
     count := count - 1
   )
   /*
-  - Self:SELF '+>' right: SLAB V <-
+  - self:Self '+>' right: SLAB V <-
   [
     ? {count >= slab_cap - 1}
     ? {right.is_empty}
   ]
-  ( + l:INTEGER
+  ( + l:Int
     right.set_low 0
     right.set_count (slab_cap >> 1)
     l := (up - (slab_cap >> 1) + 1) & slab_msk
-    0.to ((slab_cap >> 1) - 1) do { r:INTEGER
+    0.to ((slab_cap >> 1) - 1) do { r:Int
       right.storage.at r put (storage.at l)
       l := (l + 1) & slab_msk
     }
@@ -378,18 +375,18 @@ Public
     count := count + 1
   )
   
-  - add v:V to user_idx:INTEGER cache cache_low:INTEGER <-
-  ( + tlow,tup,e,p:INTEGER
+  - add v:V to user_idx:Int cache cache_low:Int <-
+  ( + tlow,tup,e,p:Int
     tlow := user_idx - cache_low
     tup := cache_low + count - user_idx
     e := (low + tlow) & slab_msk
     (tlow < tup).if {      
       low := (low - 1) & slab_msk
       p := (e - 1) & slab_msk
-      Self << (low,e)
+      self << (low,e)
     } else {
       p := e
-      Self >> (e,(low + count) & slab_msk)
+      self >> (e,(low + count) & slab_msk)
     }
     storage.at p put v
     count := count + 1
