@@ -108,13 +108,14 @@ Public
       output.add_last ')'
       receiver.genere
       output.append ".self)"
-    } else {
+    } else {      
       tf := receiver.static_type
       t  := slot.receiver_type
       (t.alias_slot != NULL).if {
         tf2 := slot.type
-        ptr  := (! tf .is_flat) || {tf .is_flat_ref} || {tf .is_exact}
-        ptr2 := (! tf2.is_flat) || {tf2.is_flat_ref} || {tf2.is_exact}
+        ptr  := (! tf .is_flat) || {tf .is_flat_ref} //|| {tf .is_exact}
+        ptr2 := (! tf2.is_flat) || {tf2.is_flat_ref} // || {tf2.is_exact}
+        //output # "/*LA " # ptr # ptr2 # " */"
         (ptr != ptr2).if {
           add_end := True
           (ptr).if {
@@ -138,7 +139,7 @@ Public
         output.add_last ')'
       }
       (t.alias_slot = NULL).if {
-        ((tf.is_flat) && {! tf.is_flat_ref} && {! tf.is_exact}).if {
+        ((tf.is_flat) && {! tf.is_flat_ref} /*&& {! tf.is_exact}*/).if {
           output.add_last '.'
         } else {
           output.append "->"

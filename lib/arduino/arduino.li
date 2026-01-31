@@ -3,7 +3,7 @@ Header
 - lip <-
   (
     (target != "arduino").if {
-      "Sorry, `ARDUINO' prototype is for only arduino target.\n".print;
+      "Sorry, `Arduino' prototype works only for -target arduino\n".print;
       die_with_code 1;
     };
   );

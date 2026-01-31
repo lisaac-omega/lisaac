@@ -8,10 +8,11 @@ Header
 Insert
   - parent_clone:Clone := Clone
 Public
-  // Counting:
+  
+  // Query:
 
   - count:Int <-
-  // Cardinality of the set (i.e. actual `count' of stored elements).
+  // Cardinality of the set.
   (
     abstract
     0

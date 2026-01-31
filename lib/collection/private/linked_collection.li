@@ -5,7 +5,9 @@ Header
   */
 Inherit
   + parent_collection: Flat Collection V
+  
 Public
+  
   - is_empty:Boolean <- ( first_link = NULL )
   
   // Creation:
@@ -20,6 +22,7 @@ Public
   )
   
 Public  
+  
   - new:Self <-
   // Make an empty list
   ( + result:Self
@@ -32,11 +35,14 @@ Public
   ]
   
 Private
+  
   - make <-
   (
     upper := -1
   )
+  
 Public  
+  
   - remove_head n:Int <-
   ( + i:Int
     i := n
@@ -80,6 +86,7 @@ Public
   )
   
 Public
+  
   - twin:Self <-
   ( + result:Self
     result := Self.new

@@ -49,7 +49,8 @@ Public
     -? {n != NULL}
   ]
   ( + result:Itm_type_simple
-    result := dico.reference_at n
+  //result := dico.reference_at n
+    result := dico.search n raw
     (result = NULL).if {
       result := create n
     }

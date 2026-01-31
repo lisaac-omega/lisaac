@@ -1,0 +1,146 @@
+Header
+  + name := Elit
+/*TODO:
+  - Quitter proprement quand il y a une deco fenetre
+  - Reprise de fonction apres un CMD_***
+  ------------------- Plus tard --------
+  - Search dans les extern (eye)
+  - Update qd tu change le nom du proto + name := ???
+  - Update qd ajout Section (les slots s'attache a l'ancien)
+  - Update child_inherit lors du changement Section Parent (Insert<>Inherit)
+  - Changement du repertoire projet  
+  --------------------------------------
+  - Arbre inherit dynamique
+  - Color C/C++, Python, Java
+  */
+  
+  - include  := `extern unsigned long col_elit[];`;
+  
+  - external := `unsigned long col_elit[] = {
+  0x10502266,0x104B2565,0x10482A63,0x10432F63,0x104A3667,0x10453D68,0x104B466D,0x40574374,
+  0x20624E7F,0x205A527B,0x20675D88,0x20715B8D,0x207D639F,0x20736A93,0x208167B4,0x20797788,
+  0xFF73846C,0xFF847B9F,0xFF80A96F,0xFFA09AB4,0xFF78B956,0xFF86BB63,0xFFC2BACC,0xFFB9D8A7,
+  0xFFD6D3DC,0xFFFDFFFC};`;
+
+Inherit
+  - parent_any:Any := Any
+  
+Private
+  
+  - put_icon <-
+  ( + img:C_array Uint32
+    + c:Uint32
+    + l:Int    
+    img := Paper.icon    
+    0.to (48*48-1) do { i:Int
+      l := (
+        "gggggggggggggjjjjjkkntwzzzzzzzzzzzzzzztfffffffff\
+        \ggggggggggggjjjjkkknrrrsuuuuppyzzzzzzzzjffffffff\
+        \gggggggggggjjjkkkknnnnnvuuuupnkkyzzzzzzygfffffff\
+        \ggggggggggjjjkkkknnnnnnvuuuupnnnyzzzzzzyhhfffffe\
+        \gggggggggjjjkkknnnnnnnruuuuuvtzzzzzzzzzyihffffee\
+        \gggggggggjjjjjjknrrrtwyxxxzzzzzzzzzzzzzyihhffeee\
+        \ggggggggjjrtwzzzzzzzzzzzzzzzzzzzzzzzzzztiihhfeee\
+        \gggggggjjzzzzzzzzzzzzzzzzzzzzzzzzzzzzztiiihhfeee\
+        \gggggggjzzzzzzzzzzzzzzzzzzzzzzzzzzzzwrlkiiihffee\
+        \gggggggpzzzzzzzzzzzzzzzzxxxxuprnnmmlnlllkiihheee\
+        \gggggggpzzzzzzzzzzzzytuuuuuuupmmmmmmlnllkiihhhee\
+        \ggggggjjyzzzzzzzzzwnmouuuuuuupooommmlnllkiiihhee\
+        \ggggggjjkzzzzzzzzymooouuuuuuuroooommmlllliiihhee\
+        \ggggggjjjtzzzzzzzymmoouuuuuuurooooommllllkiihhee\
+        \ggggggjjkktzzzzzzzyooouuuuuuupooooommmllliiihhee\
+        \ggffggjjkkkrzzzzzzzyrouuuuuuuqooooommmlllkiihhee\
+        \gfffggjjkkknnyzzzzzzzyuuuuuuurooooommmllliiihhee\
+        \ffffggjjkkknnntyzzzzzzzzsuuuvrooooommmllliiihhee\
+        \fffgggjjjkknnnnmtzzzzzzzzyxuurooooommmllliiihhed\
+        \ffgfggjjjkknnnnmmmtzzzzzzzzzvrooooommmllliihhhed\
+        \gffffggjjkkknnnmmmooryzzzzzzzzwoooommmllliihheed\
+        \fffffggjjkkknnnnmmmmmouxzzzzzzzztmommmlliiihheed\
+        \fffffggjjjklknntwzzzzzzzzzzzzzzzzztmmmlliihhhedd\
+        \ffffffggjiiryyzzzzzzzzzzzzzzzzzzzzwrmlliiihheedd\
+        \fffffffhjtzzzzzzzzzzzzzzzzzzzywrmmmmllliihhheddd\
+        \ffffffftzzzzzzzzzzzzzzzzzzxvuommmmmmlliiihheeddd\
+        \ffffftyzzzzzzzzzzzzzzzyxvuvvvommmmllliiihhhedddd\
+        \fffftzzzzzzzzzzzzzzywnmvvvvvvmmmmllliiihhheedddd\
+        \ffftzzzzzzzzzzzzzzpllllsvvvvqmmlllliiiihheedddcc\
+        \fftzzzzzzzzzzzzzwklllllsvvvuplllliiiiihheeddcccc\
+        \ffzzzzzzzzzzzzztiikklllqvvvvnlliiiiihhheeeddcccc\
+        \fpzzzzzzzzzzzzthiiiiiilqvvvviiiiiiihhheeedcccccc\
+        \ftzzzzzzzzzzzzhhhiiiiiiiuvvsiiiiihhhheedcccccccc\
+        \fpzzzzzzzzzzzpehhhhhiiihsvvsiihhhhheeedccccccccc\
+        \ffzzzzzzzzzzzpeehhhhhhhhpvvhhhhhheeeedcccccccccc\
+        \ffwzzzzzzzzzzzndeeehhhhhgvschhheeeedcccccccccccc\
+        \ffdyzzzzzzzzzzzynedeeeeeeqjeeeeedddccccccccccccc\
+        \feeepzzzzzzzzzzzzzypgeeeeeeeddddddcccccccccccccb\
+        \eeeeekwzzzzzzzzzzzzzzzyyyyywwwwwwwwtrjgecbcccbbb\
+        \eeeeeedjyzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzwrebbbb\
+        \eeeeeeeeefpzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzlbbb\
+        \eeeeeeeeeedejryzzzzzzzzzzzzzzzzzzzzzzzzzzzzznbbb\
+        \eeeeeeeeeeddddddgwyyyyyyyyyywwwwwyzzzzzzzzzwbbbb\
+        \eeeeeeeeedddddddddddddddddccccccetzzzzzzzzhbbbba\
+        \eeeeeeedddddddddddddddddcccbbfwyzzzzzzzwlbbbbaaa\
+        \eeeeeedddddddddddddddddcdertzzzzzzzyyrcbbbbbaaaa\
+        \eeeeedddddddddddddddddjwzzzzzzzzzjcbbbbbbbbaaaaa\
+        \eeeddddddddddddddgtyyzzzzzztrnhcbbbbbbbbbaaaaaaa".item i - 'a'
+      ).to_int
+      c := `col_elit[@l]`:Uint32
+      img.put c to i
+    }    
+  )
+  
+Public
+  
+  - init <-
+  ( + b:Uint64
+    b := Time.gettimeofday
+    Liz.load_all
+    File_cfg.load_all
+    File_cfg.read
+    Look.read
+    File_key.read
+    print_time b
+  )
+  
+  - print_time b:Uint64 :Uint64 <-
+  ( + e:Uint64
+    + t:Int
+    e := Time.gettimeofday
+    Out # " => "
+    t := ((e - b)/1_000_000).to_int
+    (t >= 120).if {
+      Out # (t/60) # " minutes, "
+      t := t % 60
+    }
+    Out # t # " second(s).\n"
+    e
+  )
+  
+  - main <-
+  ( + b:Buffer
+   
+    Signal.infinite_recursion
+    put_icon
+    init    
+    (Command_args.count > 1).if {
+      String.tmp { pth:String_buffer
+        Environment.pwd_in pth
+        pth.append (Command_args.at 1)
+        Dirent.reduce_path pth
+        (File_utils.file_exists pth).if {
+          Out # "Open file `" # pth # "'.\n";          
+        } else {          
+          Out # "File `" # pth # "' not found. New file...\n";
+        }
+        b := Buffer.get (pth.to_string_alias)
+        Page.cur_pg.set_buffer b
+      }
+    }
+    /*
+    STRING.tmp { tmp:String_buffer
+      NODE.rslot.print_rec tmp
+      tmp.clear
+      NODE.rprefix.print_rec tmp
+      //tmp.println
+    };*/    
+    run_gui
+  )

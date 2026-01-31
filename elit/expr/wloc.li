@@ -1,0 +1,30 @@
+Header
+  + name := Exact Wloc
+Inherit
+  + parent_expr:Flat Expr
+  
+Private
+  - stk:Flat Array Wloc
+  
+Public
+  + loc:Local
+  + expr:Expr
+  
+Public
+  - type:Type <- expr.type
+  
+  - res e:Expr :Self <-
+  ( expr := e
+    copy_itm e
+    self
+  )
+  
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <-
+  ( (expr != NULL).if { expr.free; expr := NULL; }; stk.add_last self; )
+    
+  - sub_draw <-
+  (
+    (expr.now pos_i).if { expr.draw; }
+  )

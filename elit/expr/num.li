@@ -1,0 +1,104 @@
+Header
+  + name := Num
+/* NUMerical Constant*/
+
+Inherit
+  //+ parent_tok_itm:Flat TOK_ITM
+  + parent_expr:Flat Expr
+  //- parent_type_numeric:TPRO := TPRO
+  
+Private
+  - stack_num:Flat Array (Exact Num)
+  
+Public
+  
+  + is_int:Boolean
+  + int_val:Int
+  
+Public
+  //- set_parent_tpro t:TPRO <- ( ? {t != NULL}; parent_type_numeric := t; )
+  
+  - type:Type <- Type.numeric
+    
+  - new:Self <-
+  ( + r:Self; (stack_num.is_empty).if { r := clone; } else { r := stack_num.pop; }; r)
+  - free <- ( stack_num.add_last self; )
+  
+  //
+  // PARSER / DRAW
+  //
+  
+  - new_parse t:Int <-
+  ( 
+    (read_num False).if {
+      col (Look.number) sub (pos_i.pt - Old pos_i.pt)
+      int_val := (is_int := ! is_real).ok last_int or 0
+    }
+  )
+      
+  //
+  // RUN
+  //
+  
+  - run <-
+  ( + base:Int
+    (view.last)
+    .when 'h' then { base := 16; }
+    .when 'd' then { base := 10; }
+    .when 'o' then { base := 8; }
+    .when 'b' then { base := 2; }
+    String.tmp { tmp:String_buffer; tmp += view
+      (base = 0).if {
+        base := 10
+      } else {
+        tmp.remove_last
+      }
+      tmp.remove_all_occurrences ' '
+      value := Intn.init tmp base base
+    }
+    push self
+  )
+  
+  //
+  // Output
+  //
+  
+  - out_c <-
+  ( + x:Uint64
+    (value <= Uint64.maximum.to_intn).if {
+      x := value.to_uint64
+      (x <= 999).if {
+        x.append_in outbuf base 10
+      } else {
+        outbuf += "0x"
+        x.append_in outbuf base 16
+        (x <= Uint32.maximum).if {
+          (x > Uint16.maximum).if {
+            outbuf += "LU"
+          }
+        } else {
+          outbuf += "LLU"
+        }
+      }
+    } else {
+      outbuf += "__LI_intn(\""
+      value.append_in outbuf base 64
+      outbuf += "\")"
+    }
+  )
+  
+  - is_number t:String :Boolean <-
+  ( + result:Boolean
+    + i:Int
+    + c:Char
+    result := True
+    {
+      (i <= t.upper) &&
+      {((c := t.at i).is_hexadecimal_digit) || {c = '\''}}
+    }.while_do {
+      i := i + 1
+    }
+    ((i = t.upper) && {"bodh".has (t.last)}).if { i := i + 1; }
+    i > t.upper
+  )
+  

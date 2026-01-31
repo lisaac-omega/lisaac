@@ -1,14 +1,14 @@
 Welcome to the Lisaac Ω world !
 
-Once properly installed, you will have access to the code editor 'elix' as well as
+Once properly installed, you will have access to the code editor 'elit' as well as
 the command-line compiler 'lisaac'.
 With these two commands, you can do almost everything.
 
-The simplest way to get started is to launch elix from a terminal and explore the example code,
+The simplest way to get started is to launch elit from a terminal and explore the example code,
 which will be accessible through the tabs and is mostly located in the lisaac/example directory.
 For instance, you can start with lisaac/example/hello_world.li.
 
-The full source code of the lisaac compiler as well as that of elix is included in this distribution.
+The full source code of the lisaac compiler as well as that of elit is included in this distribution.
 
 The remainder of this file provides installation instructions for Lisaac Ω.
 

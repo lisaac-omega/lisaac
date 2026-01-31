@@ -1,0 +1,86 @@
+Header
+  + name := File_cfg
+Inherit
+  - parent_file_cfg_gui:File_cfg_gui := File_cfg_gui
+  - parent_any:Any := Any
+  
+Public
+    
+  - load_proto npth:String_alias web wimg:String_alias :Proto <-
+  ( + p:Proto
+    p := Proto.get_proto npth
+    (p = NULL).if {
+      //(wimg != NULL).if { npth.print; " -> ".print; wimg.println; }
+      p := Proto.new.init npth web wimg
+    }
+    p
+  )
+    
+  - load_all <-
+  ( + p:Proto
+    
+    Node.init
+    String.tmp { tmp:String_buffer
+      tmp.copy "NULL"; Node.rtype.n_idf tmp.set_proto Proto
+    }    
+    Lip_elit.load app_path do {(pth,img:String_alias)      
+      load_proto pth web img
+    }    
+    //
+    String.tmp { tmp:String_buffer
+      0.to (Proto.list.upper) do { i:Int
+        p := Proto.list.at i
+        (p.src.toks.is_empty).if {
+          p.src.parse_all
+          ((i & 11b) = 0).if {
+            tmp.copy "\r"
+            ((i*100)/Proto.list.upper).append_in tmp
+            tmp.add_last ' '
+            tmp.add_last ("|/-\\".at ((i&1100b)>>2))
+            Stderr.put_string tmp
+          }
+        }
+      }
+      Stderr.put_string "\r     \n"
+    }
+    Expr.set_parse True
+    Txt_buf.set_error_active False
+  )
+
+Public
+  
+  - app_path:String_alias := Environment.pwd
+  
+  - read_buffer n:String_alias :Buffer <-
+  ( + r:Buffer
+    (n.has_suffix ".c" ).if   { r := Txt_buf.new.init_path n.load_file.parse_all; }.elseif
+    {n.has_suffix ".li"} then {
+      + p:Proto
+      p := load_proto n web NULL
+      (p.src.toks.is_empty).if { p.src.parse_all; }
+      r := p.src
+    } else {
+      r := parent_file_cfg_gui.read_buffer n
+    }
+    r
+  )
+    
+  - item id:String_alias bool v:Boolean :Boolean <-
+  (
+    (
+      id
+      .case "extend_code" then { extend_code := v; }
+      .case "auto_indent" then { auto_indent := v; }
+      = String_alias
+    ) || {parent_file_cfg_gui.item id bool v}
+  )
+  
+  - new_value id:String_alias :Boolean <-
+  (
+    (
+      id
+      .case "extend_code" then { put_bool extend_code;   }
+      .case "auto_indent" then { put_bool auto_indent;   }
+      = String_alias
+    ) || {parent_file_cfg_gui.new_value id}  
+  )

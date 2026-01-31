@@ -7,8 +7,11 @@ Header
   using the efficient `=` comparison operator.
   */
 Insert
+  
   - parent_clone:Clone := Clone
+  
 Private
+  
   + buckets:C_array(Hmap_node V Key K)
   // The `buckets' storage area is the primary hash table of `capacity'
   // elements. To search some key, the first access is done in `buckets'
@@ -22,6 +25,7 @@ Private
   - free_list:Flat Array (Hmap_node V Key K)
 
 Public
+  
   + capacity:Int
   // Of the `buckets' storage area.
 
@@ -36,6 +40,7 @@ Public
   // Note that this capacity will be automatically adjusted to the next prime number  
   
 Private
+  
   - with_capacity medium_size:Int :Self <-
   // May be used to save some execution time if one is sure that
   // storage size will rapidly become really bigger than 'minimum_capacity'.
@@ -85,14 +90,8 @@ Public
     node.value
   )
   
-  - reference_at k:K :V <-
-  ( + found:Boolean
-    + result:V
-    (found,result) := search k
-    result
-  )
-  
   - search k:K : (Boolean,V) <-
+  // True if the search succeeds; otherwise V is set to its default value (NULL for reference types).
   ( + found:Boolean
     + v:V
     + idx:Int
@@ -108,7 +107,22 @@ Public
     }
     (found, v)
   )
-   
+  
+  - search k:K raw :V <-  
+  ( + found:Boolean
+    + result:V
+    (found,result) := search k
+    result
+  )
+  
+  - reference_at k:K :V <-
+  [
+    deprecated True msg "Use search k raw instead. DCBS jan 2026"
+  ]
+  (
+    search k raw
+  ) 
+  
   - search_key blk: {K; Boolean} : (Boolean,V) <-
   // Sequential searching. May be slow.
   ( + b:Boolean

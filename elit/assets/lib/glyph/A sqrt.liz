@@ -1,0 +1,25 @@
+Push
+v0 <- Max (-A0.Descent/2, SP)
+v1 <- v0 + SP
+Pop (v1,0)
+X0 <- Ox
+Y0 <- Oy - SP
+Move (X0,Y0)
+X0 <- X0 + 5
+Line (X0,Y0-2)
+X1 <- Ox + v0
+Y1 <- Oy - A0.Descent
+Line (X1,Y1)
+X2 <- Ox + v1 - 4
+Y2 <- Oy - A0.Ascent - 4
+Line (X2,Y2)
+X2 <- Ox + A0.Width + v1 + 4
+Line (X2,Y2)
+Line (X2,Y2 + 5)
+Stroke 2.5
+Move (X0+1,Y0-1.5)
+Line (X1+1,Y1-4)
+Stroke 3.5
+Ascent <- A0.Ascent + 8
+Descent <- A0.Descent - 4
+Width <- A0.Width + v1 + 4

@@ -1,0 +1,17 @@
+Header
+  + name := Trd
+Inherit
+  - parent_texp:Texp := Texp
+  
+Public
+  
+  + var:Int
+  
+  - init_v v:Int :Trd <- ( var := v; self)
+  
+  - eval:Real32 <- stk.at (bp+var)
+  
+  - append_in b:String_buffer <-
+  (
+    b | 'V'; var.append_in b
+  )

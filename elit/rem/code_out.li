@@ -1,0 +1,32 @@
+Header
+  + name := Code_out
+Inherit
+  + parent_tok_drw:Flat Tok_drw
+  
+Insert
+  - parent_lix_buf:Lix_buf := Lix_buf
+  
+Private
+  - stk:Flat Array (Exact Code_out)
+  
+Public
+     
+  - new:Self <-
+  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- stk.add_last self
+    
+  //
+  // PARSER / DRAW
+  //
+  
+  - detect:Boolean <- look "  /*"
+  
+  - parse <-
+  (
+    pos_i := pos_i + 2
+    rd_rem_c
+    skip_until '\n'
+    (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }
+  )
+    
+  - begin_draw <- fill_color (Color.gray)

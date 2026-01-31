@@ -285,7 +285,19 @@ Public
     ? {valid cache_prim with cache_lower }
   )
   
-  - at i:Int add v:V <-  
+  - at i:Int add v:V^n <-
+  ( + j:Int
+    j := i
+    { u:V
+      at j add_one u
+      j := j + 1
+    } value v
+  )
+    
+  
+Private
+  
+  - at i:Int add_one v:V <-  
   ( + slab,before,after,s1,s2,s3:Slab V
     + i_before,i_after,left:Int
     ? {invariant}

@@ -21,8 +21,8 @@ Private
     }
   )
   
-  - directory dir:String_alias main m:String_alias run r:Boolean elix e:Boolean <-
-  ( + cmd_lisaac, cmd_elix, cmd_run, cmd_rm:String
+  - directory dir:String_alias main m:String_alias run r:Boolean elit e:Boolean <-
+  ( + cmd_lisaac, cmd_elit, cmd_run, cmd_rm:String
     if (run_dir = NULL) then {
       File_utils.working_directory_in working_directory
       run_dir := working_directory.to_string_alias  
@@ -34,15 +34,15 @@ Private
       b.extend_unless '/'
       cd b
       cmd_lisaac := "lisaac " + m + " -boost -q"
-      cmd_elix := "elix " + b + m + ".li"
+      cmd_elit := "elit " + b + m + ".li"
       cmd_run := "./" + m
       cmd_rm := "rm -f " + m + " " + m + "*.c " + m + "*.h " + m + "*.o"
       if (e && {r}) then {
-        run cmd_elix background
+        run cmd_elit background
         run cmd_lisaac ; run cmd_run ; run cmd_rm
       }.elseif {e && {! r}} then {
         run cmd_lisaac
-        run cmd_elix
+        run cmd_elit
       }.elseif {(!e) && {r}} then {
         run cmd_lisaac ; run cmd_run ; run cmd_rm
       }.elseif {(!e) && {!r}} then {
@@ -56,7 +56,7 @@ Private
   - directory dir:String_alias main m:String_alias background <-
   ( + cmd_run:String
     // OUT # "directory " # dir # " main " # m # '\n'
-    directory dir main m run False elix False
+    directory dir main m run False elit False
     cmd_run := "./" + m
     run cmd_run background
   )
@@ -76,7 +76,7 @@ Private
   - show list:String_alias^n <-
   (
     { ex:String_alias
-      directory "" main ex run True elix True
+      directory "" main ex run True elit True
     }.value list
   )
   

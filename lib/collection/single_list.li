@@ -164,24 +164,6 @@ Public
     result
   )
 
-  - is_equal_map other:Self :Boolean <-
-  ( + result:Boolean
-    + lnk1, lnk2:Single_list_node(V)
-    ( self = other).if {
-      result := True
-    }.elseif {upper = other.upper} then {
-      result := True
-      lnk1 := first_link
-      lnk2 := other.first_link
-      {(lnk1 = NULL) || {! result}}.until_do {
-        result := safe_equal (lnk1.item,lnk2.item)
-        lnk1 := lnk1.next
-        lnk2 := lnk2.next
-      }
-    }
-    result
-  )
-
   - index_of element:V start start_index:Int :Int <-
   ( + result:Int
     result := start_index

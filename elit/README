@@ -1,0 +1,19 @@
+In this directory, you will find the code for the elit command,
+which is the IDE for the Lisaac Ω language.
+To recompile with assertions enabled:
+
+   lisaac elit
+
+Note that elit is a very large piece of software, and compiling it with all
+assertions enabled can take a long time, and the resulting executable may
+be quite large.
+As always, to compile without assertions and without crash information:
+
+   lisaac elit -boost
+
+It is possible to provide a path to a source file when launching elit,
+for example:
+
+   elit ~/lisaac/example/welcome/welcome.li
+   
+When closing elit, all your preferences are automatically saved in ~/.elit.cfg.

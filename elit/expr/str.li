@@ -1,0 +1,46 @@
+Header
+  + name := Str
+/* STRing Constant */
+
+Inherit
+  //+ parent_tok_itm:Flat TOK_ITM
+  + parent_expr:Flat Expr
+  //- parent_type_string_alias:TPRO := TPRO
+  
+Private
+  - stack_txt:Flat Array (Exact Str)
+    
+Public
+  //- set_parent_tpro t:TPRO <- ( ? {t != NULL}; parent_type_string_alias := t; )
+  
+  + type:Type
+    
+  - new:Self <-
+  ( + r:Self; (stack_txt.is_empty).if { r := clone; } else { r := stack_txt.pop; }; r)
+  
+  - free <- stack_txt.add_last self
+  
+  //
+  // PARSER / DRAW
+  //
+  
+  - new_parse t:Int <-
+  ( + d:Int
+    (rd_str).if     { type := Type.string_alias; }.elseif
+    {rd_chars} then { type := Type.character;    }
+    d := pos_i.pt - Old pos_i.pt
+    (d != 0).if { col (Look.string) sub d; }
+  )
+  
+  //
+  // RUN
+  //
+  
+  - run <- push self
+  
+  - out_c <-
+  (
+    outbuf | 's'
+    0.append_in outbuf base 16
+  )
+  

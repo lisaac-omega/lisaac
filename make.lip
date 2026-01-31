@@ -175,7 +175,9 @@ Private
         "ls /dev/ttyUSB* 2> /dev/null".run_in arduino_port
       }
       (arduino_port = "").if {
-        "ERROR: Arduino not connected.\n".print
+        (! is_quiet).if {    
+          "ERROR: Arduino not connected.\n".print
+	}
         die_with_code 1
       }
       execute_fail ("mv " + output_file + ".c $(basename $(pwd)).ino")
@@ -267,7 +269,9 @@ Private
         }
         
       } else {
-        ("Written: " + output_file + output_extension + "\n").print
+        (! is_quiet).if {
+          ("Written: " + output_file + output_extension + "\n").print
+	}
         (target = "android").if {
           execute_fail (lisaac+"android/run.sh " + output_file + opt_android)
         }

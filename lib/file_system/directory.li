@@ -81,7 +81,8 @@ Public
       reduce_path tmp
       pth := tmp.to_string_alias
     }
-    result := dico.reference_at pth
+  //result := dico.reference_at pth
+    result := dico.search pth raw
     (result = NULL).if {
       result := physical_get pth
       (result != NULL).if {
@@ -256,7 +257,8 @@ Public
 Public // DCDC pas possible d'hériter de TRAVERSABLE... ??? Voir avec Ben
   - count:Int <- upper - lower + 1; // DCDC deja dans TRAVERSABLE...
   
-  - foreach b:{Dirent;} <- // DCDC deja dans TRAVERSABLE...
+  - foreach b:{Dirent;} <- 
+  // DCDC deja dans TRAVERSABLE...
   (
     lower.to upper do { i:Int
       b.value (list.at i)

@@ -926,12 +926,14 @@ Private
       name := name_last i
     }
         
-    proto := prototype_canonical_name.reference_at name
+  //proto := prototype_canonical_name.reference_at name
+    proto := prototype_canonical_name.search name raw
     
     { proto = Prototype }.while_do {
       i := i + 1
       name  := name_last i      
-      proto := prototype_canonical_name.reference_at name
+    //proto := prototype_canonical_name.reference_at name
+      proto := prototype_canonical_name.search name raw
     }
 
     // We find either an empty slot or a conflicting prototype

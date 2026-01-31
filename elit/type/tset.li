@@ -1,0 +1,12 @@
+Header
+  + name := Tset
+Inherit
+  + parent_type:Type := Type
+  
+Public
+  + set:Flat Hmap Type Key String_alias
+  
+  - has t:Type :Boolean <- set.fast_has t
+  
+  - drw <- crash_with_message "TSET.drw"
+  

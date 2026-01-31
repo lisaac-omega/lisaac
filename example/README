@@ -1,20 +1,20 @@
 # Lisaac Ω – Examples
 This directory contains example programs written in Lisaac Ω. Source files are always named with the `.li` suffix.
-Although these files can be opened with any text editor, it is strongly recommended to view them with the editor named `elix`.
+Although these files can be opened with any text editor, it is strongly recommended to view them with the editor named `elit`.
 Even though `.li` files look like plain source code, they are not formatted for readability in standard editors,
 especially regarding graphical operators.
 
-Moreover, `elix` provides syntax highlighting for type names and method selectors, which quickly becomes essential for
+Moreover, `elit` provides syntax highlighting for type names and method selectors, which quickly becomes essential for
 understanding and progressing in Lisaac Ω.
 
-There are essentially two indispensable tools: `elix` and `lisaac`.
+There are essentially two indispensable tools: `elit` and `lisaac`.
 
-The `elix` command is the source code editor and viewer. The `lisaac` command is the compiler for the Lisaac Ω language.
+The `elit` command is the source code editor and viewer. The `lisaac` command is the compiler for the Lisaac Ω language.
 To view the code of a program, open a terminal, move to this directory and run, for example:
 
-elix hello_world.li
+elit hello_world.li
 
-Unlike the compiler, the `elix` command requires the full filename, including the `.li` suffix.
+Unlike the compiler, the `elit` command requires the full filename, including the `.li` suffix.
 The naming convention in Lisaac Ω is that object files on disk use lowercase names, while their corresponding type names in
 the source code are written in uppercase. For example, the file `hello_world.li` contains the definition of the type `HELLO_WORLD`.
 

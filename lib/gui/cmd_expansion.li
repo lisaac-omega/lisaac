@@ -99,7 +99,7 @@ Public
             }.while_loop
             n := tmp.to_string_alias
           }
-          (! comp_lst.fast_has n).if {
+          (! comp_lst.has n).if {
             //"Nouveau:".print; n.print; " in ".print; buf.name.println
             cur_txt.text.at (cur_txt.pos.pt) add_text n range (comp_lst.first.count,n.upper)
             cur_txt.set_pos_raw (comp_pti.first + n.count)

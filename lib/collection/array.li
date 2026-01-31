@@ -1,7 +1,7 @@
 Header
-  + name := Array V
+  + name :=   Exact Array V
   /*Resizable, zero `lower` bound array. 
-array3.png
+array.gif
 General purpose resizable arrays. The `lower` bound is frozen to 0.
 The `at` access is likely to be more efficient, as well as loops going from `upper` to `lower`,
 simply because `lower` is 0.
@@ -17,7 +17,7 @@ If the fact that `lower` is fixed to 0 does matter, also consider `Range_array`.
 For very large collections, prefer `Array_block`.
 If not yet done, have a look at our paper entitled "RIP Linked List" (B. Sonntag, D. Colnet).*/
 Inherit
-  + parent_collection: Flat Collection V
+  + parent_collection: /*EYE*/  Flat Collection V
   - parent_arrayed:Arrayed := Arrayed  
 Public
 
@@ -40,6 +40,8 @@ Public
   )
     
 Public
+  
+  // Query:
   
   - at i:Int :V <-
   // Direct access in memory block.
@@ -72,7 +74,7 @@ Public
       storage := storage.realloc capacity with new_capacity
       capacity := new_capacity
     }
-    storage.move 0 to upper by_fore n
+    storage.move 0 to upper forward n
     storage.set_slice_with element from lower until (n-1)
     upper := upper + n
   )
@@ -237,17 +239,18 @@ Public
   
   - second_last:V <- at (upper-1)
   
-  - at i:Int add v:V <-
-  (
-    // DCDC -> BSBS est-ce que c'est une bone idée de remonter le add_last ici ?
-    // Je l'ai fait dans RANGE_ARRAY
-    (i = upper + 1).if {
-      add_last v
-    } else {
-      add_last v
-      move i to (upper - 1) by 1
-      at i put v
+  - at i:Int add (v:V^n) <-
+  ( + j:Int  
+    set_capacity (count + n)
+    (i != count).if {
+      storage.move i to upper forward n
     }
+    upper := upper + n
+    j := i
+    { u:V
+      storage.at j put u
+      j := j + 1
+    } value v
   )
   
   - pop:V <-
@@ -535,7 +538,7 @@ Public
   ( + idx:Int
     set_capacity (count + n)    
     if (upper >= 0) then {
-      storage.move 0 to upper by_fore n
+      storage.move 0 to upper forward n
     }
     upper := upper + n
     { e:V
@@ -573,7 +576,7 @@ Public
     (o.upper >= 0).if {
       n := o.count
       set_capacity (count + n)
-      storage.move 0 to upper by_fore n
+      storage.move 0 to upper forward n
       storage.copy_inc (o.storage) to 0 until (n-1)
       upper := upper + n
     }
@@ -594,8 +597,8 @@ Public
     (up != upper).if {
       d := up - low + 1
       set_capacity (count+d)
-      storage.move low to up by_fore (upper-low+1)
-      storage.move (up+1) to (upper+d) by_back (-d)
+      storage.move low to up forward (upper-low+1)
+      storage.move (up+1) to (upper+d) backward (-d)
     }
   )
   
@@ -640,16 +643,6 @@ Public
       ((same != NULL) && { upper = same.upper }).if {
         result := storage.fast_memcmp (same.storage) until upper
       }
-    }
-    result
-  )
-  
-  - is_equal_map other:Self :Boolean <-
-  ( + result:Boolean
-    ( self = other).if {
-      result := True
-    }.elseif {upper = other.upper} then {
-      result := storage.memcmp (other.storage) until upper
     }
     result
   )
@@ -772,7 +765,7 @@ Public
   - remove_head n:Int <-
   (
     (upper >= n).if {
-      storage.move n to upper by_back (-n)
+      storage.move n to upper backward (-n)
     }
     upper := upper - n
   )
@@ -791,12 +784,12 @@ Public
   ( + b,c:Int    
     { e:Int
       (c != 0).if {
-        storage.move b to (e-1) by_back c
+        storage.move b to (e-1) backward c
       }
       b := e + 1
       c := c - 1
     }.value idx
-    storage.move b to upper by_back c
+    storage.move b to upper backward c
     upper := upper + c
   )
   
@@ -843,7 +836,7 @@ Public
   - rotation_right <-
   ( + l:V
     l := last
-    storage.move 0 to (upper - 1) by_fore 1
+    storage.move 0 to (upper - 1) forward 1
     storage.at 0 put l
   )
   
@@ -852,11 +845,11 @@ Public
   ( 
     set_capacity (count+d)
     (d > 0).if {
-      storage.move 0 to upper by_fore d
-      storage.move count to (count+d-1) by_back (-count)
+      storage.move 0 to upper forward d
+      storage.move count to (count+d-1) backward (-count)
     } else {
-      storage.move 0 to (-d-1) by_fore count
-      storage.move (-d) to (count-d-1) by_back d
+      storage.move 0 to (-d-1) forward count
+      storage.move (-d) to (count-d-1) backward d
     }
   )
   

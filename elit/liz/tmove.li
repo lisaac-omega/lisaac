@@ -1,0 +1,26 @@
+Header
+  + name := Tmove
+Inherit
+  - parent_texp:Texp := Texp
+  
+Public
+  
+  + val_x:Texp
+  + val_y:Texp
+  
+  - init_xy (x,y:Texp) :Self <- ( (val_x,val_y) := (x,y); self)
+  
+  - run <-
+  (
+    begin_path
+    move_to (val_x.eval,val_y.eval)
+  )
+  
+  - append_in b:String_buffer <-
+  (
+    b += "Move ("
+    val_x.append_in b
+    b | ','
+    val_y.append_in b
+    b | ')'
+  )

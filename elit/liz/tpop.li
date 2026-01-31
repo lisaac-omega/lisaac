@@ -1,0 +1,22 @@
+Header
+  + name := Tpop
+Inherit
+  - parent_texp:Texp := Texp
+  
+Public
+  
+  + dx:Texp
+  + dy:Texp
+  
+  - init_xy (x,y:Texp) :Tpop <- ( (dx,dy) := (x,y); self)
+  
+  - run <- ( restore_to (dx.eval,dy.eval); )
+  
+  - append_in b:String_buffer <-
+  (
+    b += "Pop ("
+    dx.append_in b
+    b | ','
+    dy.append_in b
+    b | ')'
+  )

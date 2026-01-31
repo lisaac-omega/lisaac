@@ -1,0 +1,370 @@
+Header
+  + name := I_str
+Inherit
+  + parent_inode:Flat I_node
+  
+Public
+  
+  - stck:Flat Array I_str
+
+  - new:I_str <-
+  ( + result:I_str
+    (stck.is_empty).if { result := I_str.clone; } else { result := stck.pop; }
+    //result := clone
+    result
+  )
+  
+  - copy_of o:I_str :I_str <-
+  (
+    (ref,error,slot,type,sty) := (o.ref,o.error,o.slot,o.type,o.sty)
+    (o.fix != NULL).if {
+      (fix = NULL).if { fix := String.new_tmp; }
+      fix.copy (o.fix)
+    } else {
+      (fix != NULL).if { fix.free_tmp; }
+      fix := NULL
+    }
+    str.foreach { nn:I_node; nn.free; }; str.clear
+    o.str.foreach { nn:I_node; str.add_last (nn.copy); }
+    self
+  )
+  
+Public
+  
+  + ref:Node
+  + str:Flat Array I_node
+  + fix:String_buffer
+  + error:Int
+  + slot:Slot
+  + type:Type
+  + sty:Uint16
+  
+  - new s:Array I_node node n:Node add ad:String_buffer :I_str <- new.init s node n add ad
+  
+  - copy:I_node <- new.copy_of self
+  
+  - init s:Array I_node node n:Node add ad:String_buffer :I_str <-
+  ( + to:Tpro
+    + i,l,u,err:Int
+    + n1,n2:Node
+    + ii:I_idf
+    + in:I_node
+    (fix != NULL).if { fix.free_tmp; }
+    (ref,fix) := (n,ad)
+    error := 0; str.clear
+    str.foreach { nn:I_node; nn.free; }; str.clear
+    {i <= s.upper}.while_do {
+      ii ?= in := s.at i
+      error := error + in.error
+      (ii = NULL).if {
+        str.add_last (in.copy)
+        i := i + 1
+      } else {
+        err := 0
+        l := ii.lower
+        {(i <= s.upper) && {(ii ?= s.at i) != NULL}}.while_do {
+          u := ii.upper
+          err := err + ii.error
+          i := i + 1
+        }
+        error := error + err
+        str.add_last (I_idf.new (l,u) is (I_idf.cast(s.at (i-1)).ref) err err)
+      }
+    }
+    error := error << 8
+    (fix != NULL).if { error := error + fix.count; }
+    //
+    slot := type := NULL
+    ((ref.slot.is_empty) && {ref.dynamic_type = N_idf}).if {      
+      error := error + 1
+    }
+    (! ref.slot.is_empty).if { n1 := ref; }
+    ((! ref.carg.is_empty) && {! ref.carg.first.slot.is_empty}).if {
+      n2 := ref.carg.first
+    }
+    ((n1 != NULL) || {n2 != NULL}).if {
+      (n1 != NULL).if {
+        to := get_type n1
+        (to != NULL).if { get_slot n1 with to; }
+      } else {
+        to := get_type n2
+      }
+      ((slot = NULL) && {n2 != NULL}).if { get_slot n2 with to; }
+    }
+    (type != NULL).if {
+      "SLOT: ".print
+      (slot != NULL).if { slot.print_debug; } else { "Not found.".print; }
+    }
+    sty := Sty.ctx
+    self
+  )
+  
+  - init_type <-
+  (
+    error := error >> 8
+    ((error = 0) && {ref.is_type}).if {
+      type := build_type
+    } else { type := NULL; }
+    sty := Sty.typ
+  )
+  
+  - new_t (l,u:Int) is n:Node err e:Int :I_str <- new.init_t (l,u) is n err e
+  
+  - init_t (l,u:Int) is n:Node err e:Int :I_str <-
+  ( + gen:Array Type
+    (fix != NULL).if { fix.free_tmp; fix := NULL; }
+    str.clear
+    (lower,upper,ref,error) := (l,u,n,e); // Artemis
+    {Ia.src.at upper = ' '}.while_do { upper := upper - 1; }
+    slot := NULL
+    gen := push_type; pop_type
+    type := Tpro.new n generic gen flag 0
+    sty := Sty.typ
+    self
+  )
+    
+  - build_type:Tone <-
+  [ ? {ref.is_type}; ? {error = 0}; ]
+  ( + result,to:Tone
+    + gen:Array Type
+    + i:Int
+    gen := push_type
+    str.foreach { in:I_node
+      (in.dynamic_type = I_expr).if {
+        gen.add_last (I_expr.cast in.type)
+      }.elseif {in.dynamic_type = I_str} then {
+        gen.add_last (I_str.cast in.type)
+      }
+    }
+    result := Tone.new ref generic gen flag 0
+    pop_type
+    result
+  )
+  
+  - put_sty u:Uint16 slot s:Slot <-
+  (
+    put_sty u
+  )
+  
+  - put_sty u:Uint16 :Expr <-
+  ( + result:Expr
+    (sty = Sty.typ).if {
+      put_typ_sty u
+    } else {      
+      result := put_slo_sty u
+    }
+    result
+  )
+  
+  - put_typ_sty u:Uint16 <-
+  (
+    not_yet_implemented
+    /*+ m:Uint16
+    + t:TYPE
+    m := sty | s
+    (str.is_empty).if {
+      m := m | STY.italic
+      STY.put m to lower in (IA.sty)
+      STY.put m to (upper+1) in (IA.sty)
+    } else {
+      ((! ref.is (NODE.typ_bit)) || {fix != NULL}).if {
+        m := m | STY.light
+        msg_err += "Expansion type : "
+        (fix != NULL).if { msg_err += fix; } else { msg_err += "TODO"; }
+      }.elseif {type = NULL} then {
+        m := m | STY.ul_red
+        msg_err += "Type undefine. "
+      }
+      str.foreach { in:I_NODE
+        (in.dynamic_type = I_IDF).if { in.put_sty m; } else {
+          t := in.type
+          ((type != NULL) && {t = NULL}).if {
+            in.put_sty (STY.ul_red)
+            msg_err += "Type not found. "
+          } else {
+            in.put_sty 0
+          }
+        }
+      }
+    };*/
+  )
+
+  - put_slo_sty u:Uint16 :Expr <-
+  ( + m,mm:Uint16
+    + t:Type
+    + i,old_arg_i:Int
+    + in:I_node
+    + result:Expr
+    old_arg_i := Ia.arg_i
+    Ia.set_arg_i 0
+    m := sty | u
+    (str.is_empty).if {
+      m := m | Sty.italic
+      Sty.put m to lower in (Ia.sty)
+      Sty.put m to (upper+1) in (Ia.sty)
+    }.elseif {
+      (str.count = 1) &&
+      {(str.first.dynamic_type = I_expr) || {str.first.dynamic_type = I_loc}}      
+    } then {
+      result := str.first.to_expr
+    } else {
+      (ref.slot.is_empty || {fix != NULL}).if {
+        msg_err += "Expansion : "
+        (fix != NULL).if {
+          (fix.is_empty).if {
+            msg_err += "Wait identifier"
+          } else {
+            ((msg_err | '\'') += fix) | '\''
+          }
+        } else {
+          i := str.count - (str.first.dynamic_type = I_idf).to_int
+          (i.is_odd).if {
+            msg_err += "Wait identifier"
+          } else {
+            i := i / 2
+            msg_err += "Wait arg. #"
+            i.append_in msg_err
+            (slot != NULL).if {
+              msg_err += " of type "
+              t := slot.type_arg i
+              (t != NULL).if {
+                t.append_in msg_err
+              } else { msg_err += "BUG"; }
+            }
+          }
+        }
+        msg_err += ". "
+      }.elseif {slot = NULL} then {
+        m := m | Sty.ul_red
+        msg_err += "Slot undefine. "
+      }
+      0.to (str.upper) do { ia:Int
+        in := str.at ia
+        mm := m
+        (in.dynamic_type = I_idf).if {
+          (ref.slot.is_empty || {(str.last.dynamic_type = I_idf) && {fix != NULL}}).if {
+            mm := mm | Sty.light
+          }
+        } else {
+          ((ia = str.upper) && {fix != NULL}).if {
+            mm := mm | Sty.light
+          }
+        }
+        in.put_sty mm slot slot
+      }
+      ((slot != NULL) && {fix = NULL}).if {
+        ((slot.is_glyph) && {Ia.sol_slot.count = 1}).if {
+          "! BINGO ! Transform en Glyph !!!!".println
+          result := to_glyph
+        }.elseif {(! ref.slot.is_empty) && {Ia.src.last != ' '}} then {
+          result := to_cas
+        }
+      }
+    }
+    Ia.set_arg_i old_arg_i
+    Ia.inc_arg_i
+    result
+  )
+  
+  - txt_in s:String_buffer <-
+  (
+    s.append ((sty=Sty.typ).ok "˂" or "ˎ")
+    (str.is_empty).if {
+      s.append (Ia.src) from lower to upper
+    } else {
+      str.foreach { n:I_node; n.txt_in s }
+    }
+    s.append ((sty=Sty.typ).ok "˃" or "ˏ")
+  )
+  
+  - rtxt_in s:String_buffer <-  
+  (
+    s.append ((sty=Sty.typ).ok "˂" or "ˎ")
+    (type != NULL).if { type.txt_in s sty NULL; }
+    s.append ((sty=Sty.typ).ok "˃" or "ˏ")
+  )
+  
+  - print <-
+  ( + s,sr:String_buffer
+    (s,sr) := (String.new_tmp,String.new_tmp)
+    str.foreach { n:I_node
+      n.txt_in s
+      ? {s != sr}
+      n.rtxt_in sr
+    }
+    // Print.
+    s.print; (fix != NULL).if { '{'.print; fix.print; '}'.print; }; " | ".print
+    sr.print; " | ".print
+    "E:".print
+    (error>>8).print; '.'.print
+    (error&0FFh).print
+    " | ".print
+    (slot != NULL).if { slot.name.print; } else { "No slot".print; }
+    '\n'.print
+    // Free
+    s.free_tmp; sr.free_tmp
+  )
+  
+  - to_glyph:Cas <-
+  [ ? {slot.is_glyph}; ]
+  ( + a:Array Expr
+    + result:Cas
+    + d:Int
+    a := push_expr
+    d := Ia.src.count
+    d := d - 1; // Glyph is character
+    str.foreach { in:I_node
+      (in.dynamic_type != I_idf).if {
+        a.add_last (in.to_expr)
+        d := d - in.size
+        d := d - 1; // Add character
+      }
+    }
+    //
+    {a.count < slot.arg.count}.while_do { a.add_last NULL; }
+    result := Cas.new (slot.name) arg a self (slot.iself) fn False
+    "DIS POS=".print; d.println
+    Ia.set_pos (Ia.pos - d)
+    result
+  )
+  
+  - to_expr:Expr <- to_cas
+  
+  - to_cas:Cas <-
+  ( + a:Array Expr
+    + result:Cas
+    a := push_expr
+    str.foreach { in:I_node
+      (in.dynamic_type != I_idf).if {
+        a.add_last (in.to_expr)
+      }
+    }
+    ? {a.count = slot.arg.count}
+    result := Cas.new (slot.name) arg a self (slot.iself) fn False
+    Ia.set_pos (Ia.pos + str.upper)
+    result
+  )
+  
+  - get_type n:Node :Tpro <-
+  ( + idx_self:Int
+    + t:Type
+    + to:Tpro
+    idx_self := n.slot.first.iself * 2
+    (str.first.dynamic_type = I_idf).if { idx_self := idx_self + 1; }
+    "self: index=".print; idx_self.print
+    t := str.at idx_self.type
+    " type=".print; t.println
+    to ?= t; ((t != NULL) && {to = NULL}).if { "Not Yet Impl.: I_STR!".println; }
+    to
+  )
+  
+  - get_slot n:Node with to:Tpro <-
+  ( + i:Int
+    {(i <= n.slot.upper) && {! (to <= n.slot.at i.proto.type)}}.while_do { i := i + 1; }
+    (i <= n.slot.upper).if {
+      slot := n.slot.at i
+      type := slot.type
+    }
+  )
+  
+  - free <- stck.add_last self

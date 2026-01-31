@@ -35,7 +35,7 @@ Public
   )
   [
     Result.capacity >= c
-    Result.count = 0
+    ? {Result.count = 0}
     Result.lower = l
   ]
   
@@ -43,7 +43,7 @@ Public
   - new self:Self of v: V^n :Self <-
   ( + result:Self
     result := new Self lower 1 capacity 32
-    add_last v
+    result.add_last v
     result
   )
   
@@ -59,7 +59,10 @@ Public
   // Prepare the array to hold values for indexes in range
   // [`min_index` .. `max_index`]. Set all values to default.
   // When `max_index` = `min_index` - 1, the array `is_empty`.
-  ( + result:Self
+  [
+    deprecated True msg "range_array.li:l63:Use new instead. DC Jan 2026"
+  ]
+( + result:Self
     result := Self.clone
     result.make min_index to max_index
     result
@@ -73,7 +76,8 @@ Public
   // * Ensure: `lower` is equal to `min_index`
   // * Ensure: `upper` is equal to `max_index`
   // * Ensure: all values are in default
-  [ // Old
+  [
+    deprecated True msg "range_array.li:l63:Use new instead. DC Jan 2026"
     {min_index <= max_index + 1} -? "Valid bounds."
   ]
   (
@@ -82,7 +86,6 @@ Public
   [ // Old
     "Lower set." +? { lower = min_index }
     "Upper set." +? { upper = max_index }
-    "Items set." +? { all_default }
   ]
 
   - create_with_capacity needed_capacity:Int lower low:Int :Self <-
@@ -334,7 +337,7 @@ Public
     set_capacity (count + n)
     { e:V
       upper := upper + 1
-      at upper put element
+      at upper put e
     }.value element
   )
 
@@ -425,16 +428,6 @@ Public
       result := True
     }.elseif {(lower = other.lower) && {upper = other.upper}} then {
       result := storage.fast_memcmp (other.storage) until upper
-    }
-    result
-  )
-
-  - is_equal_map other:Self :Boolean <-
-  ( + result:Boolean
-    (self = other).if {
-      result := True
-    }.elseif {(lower = other.lower) && {upper = other.upper}} then {
-      result := storage.memcmp (other.storage) until upper
     }
     result
   )

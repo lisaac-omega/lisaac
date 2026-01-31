@@ -13,7 +13,7 @@ Private
   + user_homedir:String_alias // "" for windows
   + shell:String_alias; // $SHELL or ""
   + lisaac_bin_dir:String_alias
-  + elix_dir:String_alias
+  + elit_dir:String_alias
   + rc_file:String_alias
   
 Private
@@ -76,7 +76,7 @@ Private
       String.tmp2 { (rc_txt, export_txt :String_buffer)
         export_txt.append "export PATH=\""
         export export_txt add lisaac_bin_dir
-        export export_txt add elix_dir
+        export export_txt add elit_dir
         export_txt.append "$PATH\"\n"
         (open_read rc in rc_txt).if {
           if ((index := rc_txt.first_substring_index comment_unix) < 0) then {
@@ -116,38 +116,38 @@ Private
     }
   )
   
-  - update_elix_cfg <-
+  - update_elit_cfg <-
   ( + index:Int
     + value:String_alias
-    "Update lisaac/elix/assets/elix.cfg.".println
-    chdir elix_dir or_exit
+    "Update lisaac/elit/assets/elit.cfg.".println
+    chdir elit_dir or_exit
     chdir "assets" or_exit
-    String.tmp { (elix_cfg:String_buffer)
-      (open_read "elix.cfg" in elix_cfg).if_false {
-        die "Cannot read lisaac/elix/assets/elix.cfg." exit 1
+    String.tmp { (elit_cfg:String_buffer)
+      (open_read "elit.cfg" in elit_cfg).if_false {
+        die "Cannot read lisaac/elit/assets/elit.cfg." exit 1
       }
       //
-      index := idx_after "shortcut   : \"" in elix_cfg from "elix.cfg"
+      index := idx_after "shortcut   : \"" in elit_cfg from "elit.cfg"
       value := "standard"
       if (system = "apple") then {
         value := "mac_os"
       }
-      until {elix_cfg.at index = '\"'} do {
-        elix_cfg.remove index
+      until {elit_cfg.at index = '\"'} do {
+        elit_cfg.remove index
       }
-      elix_cfg.insert_string value to index
+      elit_cfg.insert_string value to index
       //
-      index := idx_after "decorated  : " in elix_cfg from "elix.cfg"
+      index := idx_after "decorated  : " in elit_cfg from "elit.cfg"
       value := "false"
       if (system = "apple") then {
         value := "true"
       }
-      until {elix_cfg.at index = ','} do {
-        elix_cfg.remove index
+      until {elit_cfg.at index = ','} do {
+        elit_cfg.remove index
       }
-      elix_cfg.insert_string value to index
+      elit_cfg.insert_string value to index
       //
-      write "elix.cfg" content elix_cfg
+      write "elit.cfg" content elit_cfg
     }
   )
   
@@ -209,19 +209,19 @@ Public
       ("lisaac_dir=\"" + lisaac_dir + "\".").println
     }
     lisaac_bin_dir_set
-    elix_dir_set
+    elit_dir_set
     user_homedir_detection
     if verbose then {
       ("user_homedir=\"" + user_homedir + "\".").println
     }
-    remove_old_elix_cfg
+    remove_old_elit_cfg
     shell_detection
     cc_compile_bin_lisaac
     check_update_export_path
     update_make_lip
-    update_elix_cfg
+    update_elit_cfg
     update_misc_new_assets_sh
-    compile_elix
+    compile_elit
     welcome_omega
     "Installation Completed Successfully.".println
     "Open a new terminal window.".println
@@ -263,13 +263,13 @@ Private
     }
   )
   
-  - elix_dir_set <-
+  - elit_dir_set <-
   (
     chdir lisaac_dir or_exit
-    chdir "elix" or_exit
-    elix_dir := working_directory.to_string_alias
+    chdir "elit" or_exit
+    elit_dir := working_directory.to_string_alias
     if verbose then {
-      ("elix_dir=\"" + elix_dir + "\".").println
+      ("elit_dir=\"" + elit_dir + "\".").println
     }
   )
 
@@ -299,14 +299,14 @@ Private
     export_txt.append ":"
   )
   
-  - compile_elix <-
+  - compile_elit <-
   ( + exit_status:Int
-    "Compiling lisaac/elix ... wait...".println
-    chdir elix_dir or_exit
+    "Compiling lisaac/elit ... wait...".println
+    chdir elit_dir or_exit
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
       cmd.extend_unless '/'
-      cmd.append "lisaac elix -q -boost"
+      cmd.append "lisaac elit -q -boost"
       exit_status := execute_command cmd
     }
   )
@@ -318,9 +318,9 @@ Private
     chdir "example" or_exit
     chdir "welcome" or_exit
     String.tmp { cmd:String_buffer
-      cmd.append elix_dir
+      cmd.append elit_dir
       cmd.extend_unless '/'
-      cmd.append "elix welcome.li"
+      cmd.append "elit welcome.li"
       execute_command cmd background True
     }
     String.tmp { cmd:String_buffer
@@ -337,12 +337,12 @@ Private
     }
   )
   
-  - remove_old_elix_cfg <-
+  - remove_old_elit_cfg <-
   (
     String.tmp { path:String_buffer
       path.append user_homedir
       path.extend_unless '/'
-      path.append ".elix.cfg"
+      path.append ".elit.cfg"
       if ( verbose ) then {
         ("Remove old \"" + path + "\".").println
       }
@@ -362,7 +362,7 @@ Private
       chdir "misc" or_exit
       String.tmp { (new_assets_sh:String_buffer)
         (open_read "new_assets.sh" in new_assets_sh).if_false {
-          die "Cannot read lisaac/elix/assets/new_assets.sh." exit 1
+          die "Cannot read lisaac/elit/assets/new_assets.sh." exit 1
         }
         {new_assets_sh.first = '\n'}.until_do {
           new_assets_sh.remove_first

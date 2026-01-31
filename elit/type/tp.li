@@ -1,0 +1,63 @@
+Header
+  + name := Tp
+Inherit
+  + parent_tpro:Flat Tpro
+  
+Public
+    
+  + local:Local
+  
+  + attr:Uint8
+  
+  + index:Uint8; // iiii.gggg : Index vector, Genericity index - 1
+  // Ex.: local:(Self,A,HMAP V KEY K)
+  // - for A : index = 20h
+  // - for Self : index = 00h
+  // - for K : index = 32h
+  
+  - set_local l:Local      <- [ ? {l!=NULL}; ]( local := l; )
+  - set_index i:Uint8 <- ( index := i; )
+  
+  - is_self:Boolean <- key.first = 'Ë'
+  
+  - list:Flat Array Tp
+  - set_key k:String_alias :Self <- ( key := k; self)
+  
+Public
+  - type:Type <-
+  ( + t:Type
+    + tg:Tpro
+    t := local.type.at (index >> 4)
+    ((index & 0Fh) != 0).if {
+      tg ?= t
+      t := tg.generic.at ((index & 0Fh)-1)
+    }
+    t
+  )
+  
+  - tself:Tp <- letter 26
+  
+  - new:Self <- ( crash; self)
+  
+  - letter let:Uint8 :Tp <-
+  (
+    (list.is_empty).if {
+      0.to 25 do { i:Int
+        list.add_last (clone.set_key (('A' +# i).to_string_alias))
+      }
+      list.add_last (clone.set_key "Ëš")
+    }
+    list.at let
+  )
+    
+  - txt_in s:String_buffer sty st:Sty <-
+  (
+    (st != NULL).if { st.put (Sty.tp) to (s.count); }
+    s += key
+    (st != NULL).if { st.put (Sty.typ) to (s.count); }
+  )
+      
+  - dup:Tp <- new letter flag attr
+  
+  - out_c <- ( crash; )
+  

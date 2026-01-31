@@ -1,0 +1,27 @@
+Header
+  + name := Tok_line
+Inherit
+  + parent_tok_txt:Flat Tok_txt
+  
+Private
+  - stkl:Flat Array (Exact Tok_line)
+  
+Public
+     
+  - new:Self <- ( + r:Self; (stkl.is_empty).if { r := clone; } else { r := stkl.pop; }; r)
+  
+  - free <- stkl.add_last self
+  
+  - y_section:Real32
+  - begin_draw <-
+  (    
+    y_section := tex.y
+    fill_color (Look.none)
+  )
+  
+  - post_draw <-
+  ( + sec:Section
+    sec := get_prev_tok Section
+    (sec != NULL).if { sec.draw_section y_section; }
+  )
+    

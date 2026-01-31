@@ -29,29 +29,29 @@ Public
         
     a := new Range_array Int of 2
     a.add_first 1
-    Test.check (a.at 0 = 1)
-    Test.check (a.at 1 = 2)
+    Test.check (a.at 1 = 1)
+    Test.check (a.at 2 = 2)
     
     a := new Range_array Int of (3,4)
     a.add_first(1,2)
-    Test.check (a.at 0 = 1)
-    Test.check (a.at 1 = 2)
-    Test.check (a.at 2 = 3)
-    Test.check (a.at 3 = 4)
+    Test.check (a.at 1 = 1)
+    Test.check (a.at 2 = 2)
+    Test.check (a.at 3 = 3)
+    Test.check (a.at 4 = 4)
     
     a := new Range_array Int of 4
     a.add_first(1,2,3)
-    Test.check (a.at 0) integer 1
-    Test.check (a.at 1 = 2)
-    Test.check (a.at 2 = 3)
-    Test.check (a.at 3 = 4)
+    Test.check (a.at 1) integer 1
+    Test.check (a.at 2 = 2)
+    Test.check (a.at 3 = 3)
+    Test.check (a.at 4 = 4)
     
     a := new Range_array Int of (5, 6)
     a.add_first(1,2,3,4)
-    Test.check (a.at 0) integer 1
-    Test.check (a.at 1 = 2)
-    Test.check (a.at 2 = 3)
-    Test.check (a.at 3 = 4)
-    Test.check (a.at 4 = 5)
-    Test.check (a.at 5 = 6)
+    Test.check (a.at 1) integer 1
+    Test.check (a.at 2 = 2)
+    Test.check (a.at 3 = 3)
+    Test.check (a.at 4 = 4)
+    Test.check (a.at 5 = 5)
+    Test.check (a.at 6 = 6)
   )

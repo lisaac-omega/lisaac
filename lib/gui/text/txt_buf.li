@@ -757,6 +757,7 @@ Public
             err syntax msg "Unterminated external."
           }
         }
+        (c = '\n').if { toks.at tok_cur.inc_nl }
         pos_i := pos_i + 1
       }
       (c = '`').if {

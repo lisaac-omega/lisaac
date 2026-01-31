@@ -1,0 +1,55 @@
+Ce texte contient des phrases en latin, russe, chinois, japonais,
+coréen, grec, espagnol, français, allemand, italien, portugais,
+turc, hébreu, hindi, persan, thaï, vietnamien, norvégien, suédois,
+cqroate, letton, slovaque, serbe, estonien, géorgien, bulgare, tamoul,
+pendjabi, cinghalais et birman.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+
+Привет, как дела? Добро пожаловать в наш магазин.
+πώς
+Γειά σου, πώς είσαι;
+
+Hola, ¿cómo estás?
+
+Bonjour, comment ça va?
+
+Hallo, wie geht es dir?
+
+Ciao, come stai?
+
+Olá, como você está?
+
+Merhaba, nasılsın?
+
+سلام، چطور هستید؟
+
+Chào bạn, bạn khỏe không?
+
+Hei, hvordan har du det?
+
+Hej, hur mår du?
+
+Pozdrav, kako si?
+
+Olá, como vai?
+
+Salve, quid agis?
+
+Szervusz, hogy vagy?
+
+Sveiki, kaip sekasi?
+
+Ahoj, ako sa máš?
+
+Здраво, како си?
+
+Tere, kuidas läheb?
+
+გამარჯობა, როგორ ხარ?
+
+Здравейте, как сте?
+
+Mingalaba, ne kaun la?
+
+---

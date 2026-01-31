@@ -134,7 +134,9 @@ Public
   - set_all_with v:V <-
   // Set all items with value `v'.
   (
-    abstract
+    lower.to upper do { i:Int
+      at i put v
+    }
   )
   [
     count = Old count
@@ -188,12 +190,10 @@ Public
     abstract
   )
   [
-    count = n + Old count,
-    lower = Old lower,
     upper = n + Old upper
   ]
 
-  - at i:Int add v:V <-
+  - at i:Int add (v:V^n) <-
   // Add a new `v' at rank `i' : `count' is increased
   // by one and range [`i' .. upper] is shifted right
   // by one position.
@@ -204,13 +204,11 @@ Public
     abstract
   )
   [
-    at i = v,
-    count = 1 + Old count,
-    upper = 1 + Old upper
+    upper = n + Old upper
   ]
 
   - append_collection other:Collection(V) <- 
-  // BSBS: append tout court ?
+  // BSBS: append tout court ! Passer en Self
   // Append `other' to Current.
   [
     other != NULL
@@ -240,6 +238,7 @@ Public
   ]
   
   - append other:Collection V from l:Int to u:Int <-
+  // BSDC: Passer en Self !
   (
     l.to u do { i:Int
       add_last (other.at i)
@@ -249,6 +248,13 @@ Public
   // Searching:
   
   - fast_has v:V :BOOLEAN <-
+  // Look for `v' using basic `=' for comparison.
+  [ deprecated True msg "Collection.li:252: Use has. BSDC Jan 2026" ]
+  (
+    valid_index (fast_first_index_of v)
+  )
+  
+  - has v:V :Boolean <-
   // Look for `v' using basic `=' for comparison.
   (
     valid_index (fast_first_index_of v)

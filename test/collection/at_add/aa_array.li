@@ -1,0 +1,21 @@
+Header
+  + name := Aa_array
+Public
+  - main <-
+  ( + a:Array Int
+    
+    a := new Array Int of (1,2,3,4)
+    a.at 0 add 0    
+    Test.check (a.at 0 = 0)  
+    Test.check (a.at 1 = 1)  
+    
+    a := new Array Int of (0,1,2,3)
+    a.at 4 add (4,5,6)    
+    Test.check (a.at 3 = 3)  
+    Test.check (a.at 6 = 6)  
+    
+    a := new Array Int of (0,1,4,5)
+    a.at 2 add (2,3)    
+    Test.check (a.at 2 = 2)  
+    Test.check (a.at 3 = 3)    
+  )

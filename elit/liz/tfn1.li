@@ -1,0 +1,21 @@
+Header
+  + name := Tfn1
+Inherit
+  - parent_texp:Texp := Texp
+  
+Public
+  
+  + val:Texp
+  + exec:{Real32; Real32}
+  
+  - init x:Texp with b:{Real32; Real32} :Tfn1 <-
+  ( val := x; exec := b; self)
+  
+  - eval:Real32 <- exec.value (val.eval)
+  
+  - append_in b:String_buffer <-
+  (
+    b += "FN1("
+    val.append_in b
+    b | ')'
+  )

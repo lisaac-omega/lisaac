@@ -142,7 +142,8 @@ Public
     + r:Type
 
     proto := load_prototype (path,itm_typ.name) generic_count 0
-    base := dico_type.reference_at (proto.filename)
+  //base := dico_type.reference_at (proto.filename)
+    base := dico_type.search (proto.filename) raw
     (base = NULL).if {
       base := Type.clone
       
@@ -185,7 +186,8 @@ Public
     }.while_do {
       ts  ?= slot_run.at j.result_type
       typ := ts.to_run_for self pos (slot_run.at j.position.prototype.filename).raw
-      result := typ.prototype.slot_list.reference_at n
+    //result := typ.prototype.slot_list.reference_at n
+      result := typ.prototype.slot_list.search n raw
       ((result = NULL) || {result.pattern_in = NULL}).if {
         result := typ.search_require n
       } else {
@@ -210,7 +212,8 @@ Public
     }.while_do {
       ts     ?= slot_run.at j.result_type
       typ    := ts.to_run_for self pos (slot_run.at j.position.prototype.filename).raw
-      result := typ.prototype.slot_list.reference_at n
+    //result := typ.prototype.slot_list.reference_at n
+      result := typ.prototype.slot_list.search n raw
       ((result = NULL) || {result.pattern_out = NULL}).if {
         result := typ.search_ensure n
       } else {
@@ -285,7 +288,8 @@ Public
         '\n'.print
       }
       */
-      itm_slot := prototype.slot_list.reference_at n
+    //itm_slot := prototype.slot_list.reference_at n
+      itm_slot := prototype.slot_list.search n raw
       (itm_slot != NULL).if {
         verify_itm_slot_parent itm_slot
         result := Slot.create itm_slot type self
@@ -300,7 +304,8 @@ Public
     + j:Int
     + it:Itm_type_mono
     
-    result := prototype.slot_list.reference_at n
+  //result := prototype.slot_list.reference_at n
+    result := prototype.slot_list.search n raw
     ((result = NULL) && {slot_run != NULL}).if {
       j := slot_run.lower
       {
@@ -1034,7 +1039,8 @@ Type
     
     //call_path.print; ' '.print; n.print; '\n'.print
 
-    result := dico_name_to_prototype.reference_at n
+  //result := dico_name_to_prototype.reference_at n
+    result := dico_name_to_prototype.search n raw
     (result = NULL).if {
       read_char := {
         cn := n.at idx_name
@@ -1127,7 +1133,8 @@ Type
         }
         Position.send_error
       } else {
-        result := Prototype.prototype_dico.reference_at found
+      //result := Prototype.prototype_dico.reference_at found
+        result := Prototype.prototype_dico.search found raw
         (result = NULL).if {
           entry := File_utils.open_read found
           (entry.is_not_null).if {
@@ -1276,7 +1283,8 @@ Type,Prototype
     }.while_do {
       ts ?= slot_run.at idx.result_type
       type_parent := ts.to_run_for self pos (slot_run.at idx.position.prototype.filename).raw
-      other := type_parent.prototype.slot_list.reference_at (ref.name)
+    //other := type_parent.prototype.slot_list.reference_at (ref.name)
+      other := type_parent.prototype.slot_list.search (ref.name) raw
       (other != NULL).if {
         ref.is_equal_profil other
       }

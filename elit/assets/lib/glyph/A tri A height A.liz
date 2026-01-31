@@ -1,0 +1,71 @@
+Push
+Push
+Push
+Pop (A1.Width+8,A2.Descent-A1.Ascent)
+Pop (A0.Width,A1.Ascent-A0.Descent)
+Pop (0,0)
+X0 <- Ox + A0.Width
+Move (X0,Oy)
+X1 <- X0 + A1.Width
+Line (X1,Oy)
+v0 <- A2.Descent - A2.Ascent
+Line (X1,Oy + v0)
+Line (X0,Oy)
+Stroke 3
+Width <- A0.Width + A1.Width + A2.Width + 8
+Ascent <- Max(A0.Ascent,A2.Ascent)
+Descent <- A1.Descent - A1.Ascent
+v2 <- A1.Width/10 * 1
+v3 <- v0/10 * 1
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 2
+v3 <- v0/10 * 2
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 3
+v3 <- v0/10 * 3
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 4
+v3 <- v0/10 * 4
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 5
+v3 <- v0/10 * 5
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 6
+v3 <- v0/10 * 6
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 7
+v3 <- v0/10 * 7
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 8
+v3 <- v0/10 * 8
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1
+v2 <- A1.Width/10 * 9
+v3 <- v0/10 * 9
+Move (X0 + v2,Oy + v3)
+v4 <- Max (v2 - v3 - A1.Width,0)
+Line (X0 + v2 - v3 - v4,Oy - v4)
+Stroke 1

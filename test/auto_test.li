@@ -191,7 +191,7 @@ Private
       }
     }
     if continue then { 
-      if ((fname = "elix.li") || {fname = "lisaac.li"}) then {
+      if ((fname = "elit.li") || {fname = "lisaac.li"}) then {
         continue := False
         OUT # ".(skip:" # fname # ")"
       }
@@ -327,7 +327,7 @@ Private
     + continue:Boolean
     continue := True
     ? {fname != "auto_test.li"}
-    ? {fname != "elix.li"}
+    ? {fname != "elit.li"}
     ? {fname != "lisaac.li"}
     test_counter := test_counter + 1
     '.'.print
@@ -388,7 +388,7 @@ Private
         remove_list_add ((main_exec + ".c").to_string_alias)
         '.'.print
       } else {
-        ". ERROR:no main.ERROR".print
+        Out # dirpath # ' ' # main_exec # ". ERROR:no main.ERROR"
         error_counter := error_counter + 1
         first_error_exit.if {
           exit 1
@@ -405,7 +405,7 @@ Private
   [
     ? {fname != "auto_test.li"}
     ? {fname != "lisaac.li"}
-    ? {fname != "elix.li"}
+    ? {fname != "elit.li"}
     ? {fname != "build_lisaac.li"}
   ]
   ( + continue,stdin,stdout,stderr:Boolean

@@ -325,7 +325,8 @@ Public
       string_tmp.add_last c; position := position + 1
     }.elseif {read_utf8 && utf8} then {
       first.if { string_tmp.clear; }
-      s := utf8_dico.reference_at last_utf8
+    //s := utf8_dico.reference_at last_utf8
+      s := utf8_dico.search last_utf8 raw
       (s = NULL).if { string_tmp.append last_utf8 } else { string_tmp.append s }
       position := position + last_utf8.count
     }
@@ -754,7 +755,8 @@ Public
       read_char ';'; // Optionnel
  
       // Added slot in prototype :
-      s := object.slot_list.reference_at (last_slot.name)
+    //s := object.slot_list.reference_at (last_slot.name)
+      s := object.slot_list.search (last_slot.name) raw
       (s != NULL).if {
         Position.put_error semantic text "Double slot declaration."
         s.position.put_position

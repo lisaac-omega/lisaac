@@ -43,6 +43,7 @@ Public
     } else {
       usage_exit
     }
+    
     if (size <= 1) then {
       "size must be bigger than 1\n".print
       usage_exit
@@ -53,6 +54,7 @@ Public
     max_value := (size * (size + 1)) / 2
     used := Array Boolean .create (max_value + 1)
     pyram := Array Int.create (max_value + 1)
+    
     if (fill_up 1) then {
       "Full pyramid:\n".print
       print

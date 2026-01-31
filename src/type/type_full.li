@@ -62,7 +62,7 @@ Type,Node_type
   (
     the_parent_type := typ
     flag := code
-    ? {is_flat -> (! is_exact)}
+    //? {is_flat -> (! is_exact)}
   )
 
 Public

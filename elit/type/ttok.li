@@ -1,0 +1,271 @@
+Header
+  + name := Ttok
+Inherit
+  + parent_expr:Flat Expr
+  
+Insert
+  - parent_lix_buf:Lix_buf := Lix_buf
+  
+Private
+  - stk_ttok:Flat Array (Exact Ttok)
+  
+Public
+  
+  + type:Type
+  - set_type t:Type <- ( type := t; )
+    
+  - new:Self <-
+  ( + r:Self; (stk_ttok.is_empty).if { r := Self.clone; } else { r := stk_ttok.pop; }; r)
+  
+  - free <- ((stk_ttok.is_empty) || {stk_ttok.last != self}).if { stk_ttok.add_last self }
+  
+  - begin_draw <-
+  (
+    //STY.color (LOOK.type)
+    //type.draw
+  )
+    
+  //- end_draw <- FONT.app (FONT.roman) in txt_buf
+  
+//  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- type.draw_to (x,y)
+  
+  - tone:Int := 00h
+  - tvec:Int := 01h
+  - tres:Int := 02h
+  - tpro:Int := 03h
+  //- no_section:Int := 20h
+  
+  //- bug:Boolean
+  
+  - new_parse t:Int <-
+  (
+    //bug := (name.has_suffix "txt_buf.li") && {pos_i.pt = 1084}
+    //bug.if { "bug actif".println }
+    //(((t & force) = 0) || {(pos_i > 0) && {at (pos_i-1) != '\n'}}).if {
+      (t & 0Fh)
+      .when tone then { type := rd_type; }
+      .when tvec then { type := rd_type_vector; }
+      .when tres then { type := rd_type_result; }
+      .when tpro then { type := rd_prototype; }
+      //
+      (t & force != 0).if {
+        + op:Int;
+        op := pos_i;
+        skip_until '\n'
+        {at (pos_i - 1) = ' '}.while_do { pos_i := pos_i - 1; }
+        (at (pos_i - 1) = ';').if { pos_i := pos_i - 1; }
+        (pos_i.pt != op).if { col (Look.erro) sub (pos_i.pt - op); };
+      };
+    //}
+  )
+  
+  //
+  // Parser
+  //
+  
+  - rd_type_result:Type <-
+  //++ TYPE_RESULT  -> TYPE
+  //++               | '(' TYPE_VECTOR ')'
+  ( + result:Type
+    result := rd_type
+    ((result = NULL) && {read_c '('}).if {
+      col (Look.symbol) sub 1
+      result := rd_type_vector
+      (result = NULL).if { err syntax msg "Incorrect type."; }
+      (read_c ')').if {
+        col (Look.symbol) sub 1
+      } else { err warning msg "Added ')'. (1)"; }
+    }
+    result
+  )
+  
+  - rd_type_vector:Type <-
+  //++ TYPE_VECTOR  -> TYPE { ',' TYPE }   
+  ( + lst:Array Tone
+    + t0,t1:Tone
+    + result:Type
+    result := t0 := rd_type
+    ((result != NULL) && {read_c ','}).if {
+      skip_spln_expr
+      t1 := rd_type
+      (t1 != NULL).if {        
+        lst := push_tone
+        lst.add_last t0
+        lst.add_last t1
+        {read_c ','}.while_do {
+          skip_spln_expr
+          t1 := rd_type
+          (t1 = NULL).if { err syntax msg "Incorrect type vector."; }
+          lst.add_last t1
+        }
+        result := Tvec.new lst
+        pop_tone
+      } else { err syntax msg "Incorrect type vector."; }
+    }
+    result
+  )
+
+  - rd_type:Tone <-
+  //++ TYPE         -> PROTOTYPE
+  //++               | TYPE_BLOCK
+  ( + result:Tone
+    result := rd_prototype
+    (result = NULL).if { result := rd_type_block; }
+    result
+  )
+  
+  - rd_type_block:Tone <-
+  //++ TYPE_BLOCK   -> '{' [ TYPE_RESULT ';' ] [ TYPE_VECTOR ] '}'
+  ( + t,typ_arg,typ_res:Type
+    + to,result:Tone
+    + lst:Array Tone
+    (read_c '{').if {
+      col (Look.type) sub 1
+      // '{' [ TYPE_RESULT ';' ] [ TYPE_VECTOR ] '}'
+      t := rd_type_result
+      (t != NULL).if {
+        (read_c ';').if {
+          col (Look.symbol) sub 1
+          typ_arg := t
+          typ_res := rd_type_vector
+        } else {
+          to ?= t
+          (to = NULL).if {
+            typ_res := t
+          } else {
+            lst := push_tone
+            lst.add_last to
+            {read_c ','}.while_do {
+              col (Look.symbol) sub 1
+              to := rd_type
+              (to = NULL).if { err syntax msg "Type not found."; }
+              lst.add_last to
+            }
+            (lst.count > 1).if {
+              typ_res := Tvec.new lst
+            } else {
+              typ_res := lst.first
+            }
+            pop_tone
+          }
+        }
+      }
+      (read_c '}').if {
+        col (Look.type) sub 1
+      } else { err warning msg "Added '}'. (1)"; }
+      result := Tblc.new typ_arg type typ_res
+    }
+    result
+  )
+  
+  - rd_prototype:Tpro <-
+  //++ PROTOTYPE    -> TYPE_BEGIN { TYPE_ARG [ cap_identifier ] }
+  //++ TYPE_BEGIN   -> {"Exact" | "Flat"} cap_identifier  
+  ( + gen:Array Type
+    + t:Type
+    + result:Tpro
+    + attr:Uint8
+    + n:Node
+    + p:Int
+    (word "Flat").if { col (Look.keyword) sub (last_str.count); attr := attr | Type.flat; }
+    (word "Exact").if   { col (Look.keyword) sub (last_str.count); attr := attr | Type.exact;   }
+    (((attr & Type.flat) != 0) && {attr != Type.flat}).if {
+      err warning msg "Flat only."
+      attr := Type.flat
+    }
+    
+    (read_cap_idf).if {
+      col (Look.type) sub (last_str.count)
+      p := pos_i      
+      (last_str.count = 1).if {        
+        result := Tp.letter (last_str.first - 'A')
+      }.elseif {last_str = "Self"} then {
+        ((attr & (Type.flat|Type.exact)) != 0).if {
+          err warning msg "Style Flat or Exact ignored."
+        }
+        result := Tp.letter 26
+      } else {
+        + i:Int
+        i := last_str.upper
+        {last_str.at i.is_digit}.while_do { i := i - 1; }
+        (i < last_str.upper).if {
+          ind True sub (last_str.upper - i)
+          ind False sub 0
+        }
+        //fsz 1 sub (last_str.count - 1)
+        //fsz 0 sub 0
+        gen := push_type
+        n := Node.rtype.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
+        {((t := rd_type_arg) != NULL) && {p := pos_i; read_cap_idf}}.while_do {
+          p := pos_i
+          ((n != NULL) && {!n.carg.is_empty}).if { n := n.carg.first; } else { n := NULL; }
+          (n != NULL).if {
+            n := n.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
+          }
+          gen.add_last t
+        }
+        (t != NULL).if {
+          ((n != NULL) && {! n.carg.is_empty}).if {
+            n := n.carg.first
+          } else {            
+            n := NULL
+          }
+          gen.add_last t
+        }
+        ((n != NULL) && {n.proto != NULL}).if {
+          //bug.if { "Av. Tpro ".println }
+          result := Tpro.new (n.proto) gen gen attr attr          
+        } else {
+          result := Terr
+        }
+        pop_type
+      }
+      pos_i := p
+    } else {
+      (attr != 0).if { err warning msg "Style (Flat or Exact) ignored."; }
+    }
+    result
+  )
+     
+  - rd_type_arg:Type <-
+  //++ TYPE_ARG     -> cap_identifier
+  //++               | TYPE_BLOCK
+  //++               | '(' TYPE_VECTOR ')'
+  ( + result:Type
+    + n:Node
+    (read_cap_idf).if {
+      fnt (Font.italic) sub (last_str.count)
+      col (Look.type) sub (last_str.count)
+      (last_str.count = 1).if {        
+        result := Tp.letter (last_str.first - 'A')
+      }.elseif {last_str = "Self"} then {
+        result := Tp.letter 26        
+      } else {
+        + i:Int
+        i := last_str.upper
+        {last_str.at i.is_digit}.while_do { i := i - 1; }
+        (i < last_str.upper).if {
+          ind True sub (last_str.upper - i)
+          ind False sub 0
+        }
+        //fsz 1 sub (last_str.count - 1)
+        //fsz 0 sub 0
+        n := Node.rtype.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
+        ((n != NULL) && {n.proto != NULL}).if {
+          result := Tpro.new (n.proto) gen (Array Type) attr 0
+        } else {
+          result := Terr
+        }
+      }
+      fnt (Font.roman) sub 0
+    }.elseif {read_c '('} then {
+      result := rd_type_vector
+      (result = NULL).if { err syntax msg "Incorrect vector type."; }
+      (! read_c ')').if { err warning msg "Added ')' (4)."; }
+    } else {
+      result := rd_type_block
+    }
+    result
+  )
+  
+  

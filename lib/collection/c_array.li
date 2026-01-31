@@ -672,7 +672,7 @@ Public
     }
   )
   
-  - move lower:Int to up:Int by_fore offset:Int <-
+  - move lower:Int to up:Int forward offset:Int <-
   // Move range [`lower' .. `up'] by `offset' positions.
   // Freed positions are not initialized to default values.
   [ //BSBS Old
@@ -687,7 +687,7 @@ Public
     }
   )  
   
-  - move lower:Int to up:Int by_back offset:Int <-
+  - move lower:Int to up:Int backward offset:Int <-
   // Move range [`lower' .. `up'] by `offset' positions.
   // Freed positions are not initialized to default values.
   [ //BSBS Old

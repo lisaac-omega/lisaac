@@ -1,0 +1,119 @@
+Header
+  + name := Type
+Inherit
+  - parent_clone:Clone := Clone
+  - parent_any:Any := Any
+  
+//Section Insert
+//  - parent_print:PRINT := PRINT
+  
+Public
+  
+  - is_complex:Boolean <- False
+  
+  - hash_code:Uint32 <- key.hash_code
+  
+  - self:Self '==' other:E :Boolean <-
+  (self = other) || {(other.dynamic_type = Terr) && {Terr.cast other.p_type = self}}
+  
+  + key:String_alias; // 0: NULL
+  
+  - dico:Hmap Type Key String_alias := Hmap Type Key String_alias.new
+  
+  - attr:Uint8 := 0
+  - flat:Uint8 := 001b
+  - exact:Uint8   := 010b
+  - is msk:Uint8 :Boolean <- (attr & msk) != 0
+  
+  - is_vector:Boolean := False
+  - foreach_until b:{Tone;Boolean} :Boolean <- ( + a:Tone; a ?= self; b.value a)
+  
+  - is_self:Boolean <- False
+  
+Public
+  - type:Type <- ( crash; Type)
+  
+  - to_block a:Type :Tblc <-
+  ( + argt,rest:Type
+    (self != void).if { rest := self; }
+    (a != void).if { argt := self; }
+    Tblc.new argt type rest
+  )
+  
+  - twin:Self <- self
+  - free
+  
+  - null:Tone
+  - void:Tpro
+  - numeric:Tpro
+  - boolean:Tpro
+  - true:Tpro
+  - false:Tpro
+  - character:Tpro
+  - string_alias:Tpro
+
+  - init_base n:String with t:Tpro <-
+  ( 
+    n
+    .case "VOID"         then { void := t;         }
+    .case "NUMERIC"      then { numeric := t;      }
+    .case "Boolean"      then { boolean := t;      }
+    .case "TRUE"         then { true := t;         }
+    .case "FALSE"        then { false := t;        }
+    .case "Char"    then { character := t;    }
+    .case "String_alias" then { string_alias := t; }
+  )
+  
+  - new_power n:Int :Type <-
+  ( + result:Type
+    (n = 1).if {
+      result := self
+    } else {
+      + ts:Liarray Type
+      ts := Liarray Type.new
+      foreach { t:Tone; ts.add_last t; }
+      result := Tvec.new ts
+      ts.free
+    }
+    result
+  )
+  
+//  - tdrw:TYPE <- TYPE.abstract
+  
+//  - upper:Int := 0
+//  - at i:Int :TONE <- ( abstract; TONE)
+//  - foreach b:{TONE; } <- ( abstract; )
+  
+  - lookup n:Node :Slot <-
+  (
+    "Lookup ".print; n.print; " in ".print; type_name.println
+    Slot.abstract
+  )
+  
+  - lookup_idf n:String_alias :Slot <-
+  (
+    "Lookup idf ".print; n.print; " in ".print; type_name.println
+    Slot.abstract
+  )
+    
+  - run_default <- ( abstract; )
+    
+  - self:Self '<=' o:Type :Boolean <- Boolean.abstract
+  
+  //
+  // Output
+  //
+  
+  - node tn:Array Node map s:String_buffer predict tp:Array Node :Int <- Int.abstract
+  
+  - txt_in s:String_buffer sty st:Sty <- ( abstract; )
+  
+  - append_in b:String_buffer <- key.append_in b; //txt_in b sty NULL
+  
+//  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- ( abstract; 0,0,0)
+  
+  - out_c <- ( crash; )
+  
+  - out_id <- out_c
+  
+  
