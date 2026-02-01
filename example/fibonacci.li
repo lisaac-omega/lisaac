@@ -6,8 +6,8 @@ Header
   Fibonacci example. Thanks to the usage of two results, the exponential
   runtime complexity is avoided.
   */
-  
 Private
+  
   - fiborec n:ℤ : (ℤ, ℤ) <-
   ( + f0,f1:ℤ
     if (n <= 1) then {
@@ -20,6 +20,7 @@ Private
   )
   
 Public
+  
   - fibonacci n:ℤ : ℤ <-
   ( + f1,f2:ℤ
     (f1,f2) := fiborec n

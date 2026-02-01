@@ -223,7 +223,7 @@ Private
             ".ok.1.".print
           } else {
             error_counter := error_counter + 1
-            ".ERROR.".print
+            Out # '.' # exit_status # ".ERROR."
           }
         }
         continue := False

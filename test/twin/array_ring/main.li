@@ -3,7 +3,7 @@ Header
 Public
   - main <-
   ( + a1,a2:Array_ring Int
-    a1 := Array_ring Int .create_with_capacity 1024
+    a1 := new Array_ring Int capacity 1024
     a1.add_last 2
     a2 := a1.twin
     Test.check (a1.upper = a2.upper)

@@ -17,9 +17,13 @@ If the fact that `lower` is fixed to 0 does matter, also consider `Range_array`.
 For very large collections, prefer `Array_block`.
 If not yet done, have a look at our paper entitled "RIP Linked List" (B. Sonntag, D. Colnet).*/
 Inherit
-  + parent_collection: /*EYE*/  Flat Collection V
+  
+  + parent_collection: Flat Collection V
+  
   - parent_arrayed:Arrayed := Arrayed  
+    
 Public
+  
 
   // Creation:
   

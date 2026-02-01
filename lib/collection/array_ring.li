@@ -2,8 +2,13 @@ Header
   + name := Array_ring V
 /*Resizable, fixed lower bound array. Circular handling of the storage area.*/
 Inherit
-  - parent_collection:Flat Collection V
+  
+  + parent_collection:Flat Collection V
+  
+  - parent_arrayed:Arrayed := Arrayed
+  
 Private
+  
   + storage:C_array V
   
   + ring_low:Int; // corresponding lower in storage
@@ -259,7 +264,7 @@ Public
 Public
   - twin:Self <-
   ( + result:Self
-    result := Self.create_with_capacity (count)
+    result := new Self capacity count
     0.to upper do { i:Int
       result.add_last (at i)
     }

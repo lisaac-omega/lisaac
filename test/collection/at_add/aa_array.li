@@ -8,6 +8,9 @@ Public
     a.at 0 add 0    
     Test.check (a.at 0 = 0)  
     Test.check (a.at 1 = 1)  
+    Test.check (a.at 2 = 2)  
+    Test.check (a.at 3 = 3)  
+    Test.check (a.at 4 = 4)  
     
     a := new Array Int of (0,1,2,3)
     a.at 4 add (4,5,6)    
