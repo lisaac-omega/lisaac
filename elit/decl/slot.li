@@ -10,6 +10,7 @@ Private
   - stk_s:Flat Array (Exact Slot)
   
 Public
+  
   - di_major:Int <-
   ( + r:Int
     r := di
@@ -65,7 +66,8 @@ Public
    
 Public
     
-  - init_node <- // A METTRE DANS NODE...
+  - init_node <- 
+  // A METTRE DANS NODE...
   ( + i,j:Int
     + c:Char
     + sl:Slot
@@ -206,7 +208,7 @@ Public
       i := i - 1
     }
     s,c
-  );
+  )
   
   - parse <-
   ( + a:Arg
@@ -368,7 +370,7 @@ Public
       //end_code := cpti - pt_b
       //cpti := pt_b + di
       //ln_limit := 0
-    }
+    }    
   )
   
   - next_parse <-
@@ -533,30 +535,23 @@ Public
     (mute).if { Div.end_mute; }
   )
   
-  - cur_slot_arg:Slot
+ // - cur_slot_arg:Slot
   - load_arg <-  
   ( 
-    (cur_slot_arg != self).if {
+   // (cur_slot_arg != self).if {
       Expr.local_list.clear
       arg.foreach { a:Arg; (a != NULL).if { a.lst.foreach { l:Local; Expr.local_list.add_last l; }; }; }
-      cur_slot_arg := self
-      /*
-      Out # "============\n"
-      Out # name_id # '\n'
-      arg.foreach { a:Arg;
-        (a != NULL).if { a.lst.foreach { l:Local; l.name_id.println; }; };
-      }
-      Out # "---------\n"
-      Expr.print_local
-      */
-    }
+      //cur_slot_arg := self      
+    //}
   )
   
   - y_section:Real32
   - super_slot:Array Slot := Array Slot.create_with_capacity 16
   - begin_draw <-
   (
-    cur_slot_arg := NULL
+    //cur_slot_arg := NULL
+    load_arg
+    //Expr.print_local
     y_section := tex.y
     super_slot.copy_collection (proto.collect_parent self)
     (! super_slot.is_empty).if {
@@ -635,10 +630,9 @@ Public
       //
       ((parse_level = 2) && {body = NULL} && {affect != ' '}).if {        
         ln_limit := pt_b.pt + di
+        //load_arg
         body    := Expr.rd_expr_op
-        (read_c ';').if {
-          col (Look.symbol) sub 1
-        } else { err warning msg "Added `;'."; };
+        (read_c ';').if { col (Look.symbol) sub 1 }
         skip_spln
         ln_limit := 0
         //

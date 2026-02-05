@@ -1,20 +1,22 @@
 Header
   + name :=   Exact Array V
-  /*Resizable, zero `lower` bound array. 
-array.gif
-General purpose resizable arrays. The `lower` bound is frozen to 0.
-The `at` access is likely to be more efficient, as well as loops going from `upper` to `lower`,
-simply because `lower` is 0.
-Keep in mind that even if `lower` is frozen to 0, it is still better to use the `lower` attribute,
-and not 0 directly, since you may decide in the future to use another `Collection` implementation.
+  /*Resizable, zero @lower bound array.
+  
+array.png
+  
+General purpose resizable arrays. The @lower bound is frozen to 0.
+The @at access is likely to be more efficient, as well as loops going from @upper to @lower,
+simply because @lower is 0.
+Keep in mind that even if @lower is frozen to 0, it is still better to use the @lower attribute,
+and not 0 directly, since you may decide in the future to use another @Collection implementation.
 
-The `Array` implementation uses only one chunk of memory: the `storage` area, which is a `C_array`.
-One must keep in mind that this internal `storage` area is always kept left-aligned.
-Thus, you can expect good performance when using an `Array` to model a stack behavior with
-`add_last` / `last` / `remove_last`.
-Conversely, `add_first` and `remove_first` are likely to slow down your program if they are used too often.
-If the fact that `lower` is fixed to 0 does matter, also consider `Range_array`.
-For very large collections, prefer `Array_block`.
+The @Array implementation uses only one chunk of memory: the @storage area, which is a @C_array.
+One must keep in mind that this internal @storage area is always kept left-aligned.
+Thus, you can expect good performance when using an @Array to model a stack behavior with
+@add_last / @last / @remove_last.
+Conversely, @add_first and @remove_first are likely to slow down your program if they are used too often.
+If the fact that @lower is fixed to 0 does matter, also consider @Range_array.
+For very large collections, prefer @Array_block.
 If not yet done, have a look at our paper entitled "RIP Linked List" (B. Sonntag, D. Colnet).*/
 Inherit
   
@@ -101,8 +103,8 @@ Public
   // Creation and modification:
   
   - create new_count:Int :Self <-
-  // Make array with range [0 .. `new_count` - 1].
-  // When `new_count` = 0 the array is empty.
+  // Make array with range [0 .. @new_count - 1].
+  // When @new_count = 0 the array is empty.
   ( + result:Self
     result := clone
     result.make new_count
@@ -118,7 +120,7 @@ Public
   );
   
   - create_with_capacity new_count:Int :Self <-
-  // Create an empty array with at least `needed_capacity`. <- DCDC VIRER / OBSOLETE
+  // Create an empty array with at least @needed_capacity. <- DCDC VIRER / OBSOLETE
   ( + result:Self  
     result := clone
     result.with_capacity new_count
@@ -133,7 +135,7 @@ Public
   )
   
   - create_capacity c:Int e0 e0:E :Self <-
-  // New ARRAY of capacity `c`, initialized with `e0`.
+  // New ARRAY of capacity @c, initialized with @e0.
   [
     c >= 1
   ]
@@ -144,7 +146,7 @@ Public
   )
   
   - create_capacity c:Int e0 e0:E e1 e1:E :Self <-
-  // New ARRAY of capacity `c`, initialized with `e0` and `e1`.
+  // New ARRAY of capacity @c, initialized with @e0 and @e1.
   [
     c >= 2
   ]
@@ -213,8 +215,8 @@ Public
   ]
   
   - make new_count:Int <-
-  // Make array with range [0 .. `new_count` - 1].
-  // When `new_count` = 0 the array is empty.
+  // Make array with range [0 .. @new_count - 1].
+  // When @new_count = 0 the array is empty.
   [
     new_count >= 0
   ]
@@ -367,8 +369,8 @@ Public
   // Interfacing with C:
 
   - to_external:Pointer <-
-  // Gives C access into the internal `storage` of the ARRAY.
-  // Result is pointing the element at index `lower`.
+  // Gives C access into the internal @storage of the ARRAY.
+  // Result is pointing the element at index @lower.
   // NOTE: do not free/realloc the Result. Resizing of the array
   //       can makes this pointer invalid.
   [
@@ -382,8 +384,8 @@ Public
   ]
 
   - to_c_array:C_array V <-
-  // Gives C access into the internal `storage` of the ARRAY.
-  // Result is pointing the element at index `lower`.
+  // Gives C access into the internal @storage of the ARRAY.
+  // Result is pointing the element at index @lower.
   // NOTE: do not free/realloc the Result. Resizing of the array
   //       can makes this pointer invalid.
   [
@@ -412,7 +414,7 @@ Public
   )
       
   - with_capacity needed_capacity:Int <-
-  // Create an empty array with at least `needed_capacity`.
+  // Create an empty array with at least @needed_capacity.
   [
     needed_capacity >= 0
   ]
@@ -433,8 +435,8 @@ Public
   // Hashable.
   
   - create_copy other:Array V :Array V <-
-  // Make array with range [0 .. `new_count` - 1].
-  // When `new_count` = 0 the array is empty.
+  // Make array with range [0 .. @new_count - 1].
+  // When @new_count = 0 the array is empty.
   ( + result:Array V
     result := clone
     result.make_copy other
@@ -477,7 +479,7 @@ Public
   // Modification:
   
   - prepare_space n:Int <-
-  // Makes sure that we have at least `n` places, ready to use, after `upper`.
+  // Makes sure that we have at least @n places, ready to use, after @upper.
   [
     deprecated True msg "array.li:l492:Still used ? DC Jan 2026"
     n > 0
@@ -500,7 +502,7 @@ Public
   )
   
   - resize new_count:Int <-
-  // Resize the array. When `new_count` is greater than `count`, new positions are 
+  // Resize the array. When @new_count is greater than @count, new positions are 
   // initialized with appropriate default values.
   [
     new_count >= 0
@@ -560,7 +562,7 @@ Public
   ]
   
   - copy other:Self <-
-  // Copy `other` onto Current.
+  // Copy @other onto self.
   ( + other_upper, new_capacity:Int
     
     other_upper := other.upper

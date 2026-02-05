@@ -441,7 +441,7 @@ External
       `e->display = display`
       `e->context = context`
     }
-    `eglMakeCurrent(e->display, e->surface, e->surface, e->context)`
+    `eglMakeself(e->display, e->surface, e->surface, e->context)`
     `EGLint w, h`
     `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
@@ -490,7 +490,7 @@ External
   - term_window e:Pointer <-
   ( //`struct engine *e=@e`
     //(`e->display`:Pointer != `EGL_NO_DISPLAY`:Pointer).if {
-      //`eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
+      //`eglMakeself(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
       //(`e->surface`:Pointer != `EGL_NO_SURFACE`:Pointer).if {
      // `eglDestroySurface(e->display,e->surface )`
      // `ANativeWindow_release(e->app->window)`

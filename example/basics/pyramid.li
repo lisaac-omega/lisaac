@@ -23,7 +23,7 @@ Private
   
   + pyram:Array Int
   
-  + used:Array Boolean; // Already used numbers in `pyramid'.
+  + used:Array Boolean; // Already used numbers in @pyramid.
   
 Public 
   

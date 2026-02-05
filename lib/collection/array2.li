@@ -23,7 +23,7 @@ Array2
 
   + storage:C_array V
 
-  + capacity :Int; // of `storage'.
+  + capacity :Int; // of @storage.
 
 Public
 
@@ -68,7 +68,7 @@ Public
 
 
   - from_collection2 model:Collection2(V) <-
-  // Uses the `model' to update self.
+  // Uses the @model to update self.
   (
     make ((model.upper1 + 1), (model.upper2 + 1))
 
@@ -81,7 +81,7 @@ Public
 
   - from_collection contents:Collection(V) size (new_count1, new_count2:Int) <-
   //  Reset all bounds using `new_count#i'.
-  //  Copy all elements of `contents', line by line into Current.
+  //  Copy all elements of @contents, line by line into self.
   [ /* BSBS Old; */
     -? { new_count1 >= 0 }
     -? { new_count2 >= 0 }
@@ -100,8 +100,8 @@ Public
   ]
 
   - from_model model:Collection(Collection(V)) <-
-  // The `model' is used to fill line by line the COLLECTION2.
-  // Assume all sub-collections of `model' have the number of items.
+  // The @model is used to fill line by line the COLLECTION2.
+  // Assume all sub-collections of @model have the number of items.
   ( + l,c:Int
 
     make(model.count, model.first.count)
@@ -181,7 +181,7 @@ Public
 
   -  slice (l1,up1:Int) to (l2,up2:Int) :Self <-
   // Create a new collection initialized with elements of
-  // range `low'..`up'. result has the same dynamic type
+  // range @low..@up. result has the same dynamic type
   // as self collection.
   ( + result:Self
 
@@ -239,7 +239,7 @@ Public
 
     tmp := Self.create (new_count1, new_count2)
     // It may be possible to avoid this ceation when :
-    //    new `capacity' <= old `capacity'
+    //    new @capacity <= old @capacity
     line_maximum.downto 0 do { l:Int
       column_maximum.downto 0 do { c:Int
         (tmp.valid_index (l,c)).if {
@@ -261,7 +261,7 @@ Public
   // Looking and Searching:
 
   - has x:V :Boolean <-
-  // Look for `x' using `equal' for comparison.
+  // Look for @x using @equal for comparison.
   ( + result:Boolean
 
     (count > 0).if {
@@ -271,7 +271,7 @@ Public
   )
 
   - fast_has x:V :Boolean <-
-  // Same as `has' but use `=' for comparison
+  // Same as @has but use `=' for comparison
   ( + result:Boolean
 
     (count > 0).if {
@@ -310,7 +310,7 @@ Public
   )
 
   - to_external:Pointer <-
-  // Gives C access to the internal `storage' (may be dangerous).
+  // Gives C access to the internal @storage (may be dangerous).
   (
     storage.to_external
   )

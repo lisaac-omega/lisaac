@@ -90,6 +90,7 @@ Public
   
   - bound_test low:Int64 to up:Uint64 :Boolean <-
   (
+    //(low <= self) && {up >= self}
     True
   )
   
@@ -175,7 +176,7 @@ Public
   
   // Unary operator
   
-  - '~' self:Self :Self <- - self - Self.one
+  - '~' self:Self :Self <- - self - 1
   
   // Test.
   
@@ -190,8 +191,10 @@ Public
   )
   
   - is_power_2:Boolean <-
-  // True is self is power of 2
-  [ ? {self != 0} ]
+  // @True if @self is a power of 2
+  [ 
+    self != 0 
+  ]
   (
     (self & - self) = self
   )
@@ -264,9 +267,9 @@ Public
   ! is_odd
   
   - gcd other:Self :Self <-
-  // Great Common Divisor of `self' and `other'.
+  // Great Common Divisor of @self and @other.
   // * Require: self >= 0
-  // * Require: `other' >= 0
+  // * Require: @other >= 0
   // * Ensure:
   [
     -? {self  >= 0}
@@ -287,7 +290,7 @@ Public
   ]
     
   - is_prime : Boolean <-
-  // True if `self' is prime
+  // True if @self is prime
   ( + diviseur : Int
     + sqrt_s : Int
     + result : Boolean
@@ -309,7 +312,7 @@ Private
 Public
     
   - random :Self <-
-  // Random number between 0 to `maximum' in Self.
+  // Random number between 0 to @maximum in Self.
   (
     r_seed := (110351524 * r_seed + 12345) % 214748364
     Cast Uint64 To Self.on (maximum & r_seed)
@@ -319,7 +322,7 @@ Public
   ]
   
   - random_upper:Self <-
-  // Random number between 0 to `self'.
+  // Random number between 0 to @self.
   [
     -? {self >= 0}
   ]
@@ -331,7 +334,7 @@ Public
   ]
   
   - random_to upper:Self :Self <-
-  // Random number between `self' to `upper'.
+  // Random number between @self to @upper.
   [
     -? {self < upper}
   ]
@@ -343,7 +346,7 @@ Public
   ]
     
   - random_between lower:Self and  upper:Self :Self <-
-  // Random number between `lower' to `upper'.
+  // Random number between @lower to @upper.
   (
     lower + (upper-lower).random_upper
   )
@@ -373,9 +376,7 @@ Public
   )
   
   - append_in b:String_buffer <- to_int64.append_in b
-  // Append in the `b' the equivalent of `to_string'. No new String_buffer
-  // creation during the process.
-  
+   
   - append_in b:String_buffer base base:Int :Int <-
   ( + r:Int
     (self < 0).if {
@@ -432,10 +433,10 @@ Public
   )
   
   - to_hexadecimal:String_buffer <-
-  // Convert the hexadecimal view of `self' into a new allocated
-  // String_buffer. For example, if `self' is -1 the new String_buffer is
+  // Convert the hexadecimal view of @self into a new allocated
+  // String_buffer. For example, if @self is -1 the new String_buffer is
   // "FFFFFFFF" on a 32 bit machine.
-  // * See:  `to_hexadecimal_in' to save memory.
+  // * See:  @to_hexadecimal_in to save memory.
   ( + result:String_buffer
     
     result := String_buffer.create 8
@@ -444,10 +445,10 @@ Public
   )
   
   - to_hexadecimal_format s:Int :String_buffer <-
-  // Convert the hexadecimal view of `self' into a new allocated
-  // String_buffer. For example, if `self' is -1 the new String_buffer is
+  // Convert the hexadecimal view of @self into a new allocated
+  // String_buffer. For example, if @self is -1 the new String_buffer is
   // "FFFFFFFF" on a 32 bit machine.
-  // * See:  `to_hexadecimal_in' to save memory.
+  // * See:  @to_hexadecimal_in to save memory.
   ( + result:String_buffer
     
     result := String_buffer.create 8
@@ -456,7 +457,7 @@ Public
   )
   
   - to_hexadecimal_in buffer:String_buffer <-
-  // Append in `buffer' the equivalent of `to_hexadecimal'. No new String_buffer
+  // Append in @buffer the equivalent of @to_hexadecimal. No new String_buffer
   // creation during the process.
   [ -? {buffer!=NULL}; ]
   ( + val:Self
@@ -483,7 +484,7 @@ Public
   )
   
   - to_hexadecimal_in buffer:String_buffer format s:Int <-
-  // Append in `buffer' the equivalent of `to_hexadecimal'. No new String_buffer
+  // Append in @buffer the equivalent of @to_hexadecimal. No new String_buffer
   // creation during the process.
   [ -? {buffer!=NULL}; ]
   ( + val:Self
@@ -510,7 +511,7 @@ Public
   )
   
   - to_binary_in buffer:String_buffer format s:Int <-
-  // Append in `buffer' the equivalent of `to_binary_string'. No new String_buffer
+  // Append in @buffer the equivalent of @to_binary_string. No new String_buffer
   // creation during the process.
   // * Require: buffer not null
   [ -? {buffer!=NULL}; ]
@@ -596,7 +597,9 @@ Public
 Int
   
   - to_raw_pointer:Pointer <- Cast Uint_cpu To Pointer.on to_uint_cpu
-
+  
+  - to_raw_self a:Uint :Self <- Cast Uint To Self.on a
+  
 Public
   //  French corner
   - répéter self:Self fois action:{} <- (repeat self times action)

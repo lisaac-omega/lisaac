@@ -1,5 +1,5 @@
 Header
-  + name := Array_ring V
+  + name := Exact Array_ring V
 /*Resizable, fixed lower bound array. Circular handling of the storage area.*/
 Inherit
   
@@ -43,7 +43,7 @@ Public
   
 Private
   - with_capacity needed_capacity:Int <-
-  // Create an empty array with at least `needed_capacity'.
+  // Create an empty array with at least @needed_capacity.
   [
     ? {needed_capacity >= 0}
   ]

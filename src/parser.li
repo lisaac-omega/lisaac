@@ -3,7 +3,7 @@ Header
 /* Parser for Lisaac language. 
 
    You can to get with
-   `grep "//++" parser.li' : Current grammar.
+   `grep "//++" parser.li' : self grammar.
    `grep "//--" parser.li' : Syntax rules.
    `grep "////" parser.li' : lip grammar.
   */
@@ -1765,7 +1765,7 @@ Public
       (first).if {
         (read_word "name").if {
           //
-          // Read `name' slot.
+          // Read @name slot.
           //
           
           // style "name" ':=' [type] cap_identifier [ PARAM { cap_identifier PARAM } ]
@@ -1824,7 +1824,7 @@ Public
         }
       }.elseif {read_word "include"} then {
         //
-        // Read `include' slot.
+        // Read @include slot.
         //
         
         // - "include" ':=' `<code_c>`
@@ -1843,7 +1843,7 @@ Public
         output_decl.add_last '\n'
       }.elseif {read_word "external"} then {
         //
-        // Read `external' slot.
+        // Read @external slot.
         //
         
         // - "external" ':=' `<code_c>`
@@ -1862,7 +1862,7 @@ Public
         output_glob.add_last '\n'
       }.elseif {read_word "default"} then {
         //
-        // Read `default' slot.
+        // Read @default slot.
         //
         
         // '-' "default" ':=' EXPR_PRIMARY
@@ -1881,7 +1881,7 @@ Public
         object.set_default_value v
       }.elseif {read_word "type"} then {
         //
-        // Read `type' slot.
+        // Read @type slot.
         //
         
         // '-' "type" ':=' `<type C>`

@@ -64,7 +64,7 @@ Public
     Paper run
   )
   
-  - event ev:Uint8 :Boolean <- if (ev = Hand clic) then { exit 0 }
+  - event ev:Int :Boolean <- if (ev = Hand clic) then { exit 0 }
   
   - key s:String cmd c:Uint8 :Boolean <- ( exit 0; True)
   

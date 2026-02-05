@@ -103,7 +103,7 @@ Itm_read, Slot_data
     
     first_itm := pfirst_itm
     //
-    // Compute `rec'.
+    // Compute @rec.
     //
 
     (first_itm = NULL).if {

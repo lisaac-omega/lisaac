@@ -193,7 +193,7 @@ Private
     if continue then { 
       if ((fname = "elit.li") || {fname = "lisaac.li"}) then {
         continue := False
-        OUT # ".(skip:" # fname # ")"
+        Out # ".(skip:" # fname # ")"
       }
     }
     if continue then {

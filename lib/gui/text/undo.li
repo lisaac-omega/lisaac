@@ -22,14 +22,20 @@ Public
   - new:Self <- clone
   
   - clear <-
-  ( stack.foreach { e:Undo_elt; e.free }
-    stack.clear
+  ( + e:Undo_elt
+    0.to upper do { i:Int
+      e := at i
+      (e != NULL).if {
+        e.free
+        at i put NULL
+      }
+    }    
     lower := count := ptr := ptr_save := 0
   )
   
   - rm i:Int  char c:Uint32 <- gen i char c type t_rm
   - add i:Int char c:Uint32 <- gen i char c type t_add
-  - add_stop                         <- ((!is_empty) && {at upper != NULL}).if { add NULL; }
+  - add_stop <- ((!is_empty) && {at upper != NULL}).if { add NULL; }
   
   - last_save <- ( ptr_save := ptr; );
   
@@ -100,8 +106,8 @@ Undo, Undo_elt
   - add e:Undo_elt <-
   ( + u:Undo_elt
     (! busy).if {
-      (stack.capacity = 0).if { stack.make stack_size; }
-      ((u := at ptr) != NULL).if { u.free; }
+      (stack.capacity = 0).if { stack.make stack_size }
+      ((u := at ptr) != NULL).if { u.free }
       at ptr put e
       (ptr = stack_size).if {
         (ptr_save = lower).if { ptr_save := -1 }

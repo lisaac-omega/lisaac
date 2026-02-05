@@ -77,7 +77,7 @@ Public
   + ensure_count:Int
 
   - set_ensure_count c:Int <-
-  // Necessary for `context' local, `External' argument slot and `Block' manager.
+  // Necessary for @context local, @External argument slot and @Block manager.
   (
     ensure_count := c
   )

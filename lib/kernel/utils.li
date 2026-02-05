@@ -80,7 +80,7 @@ Public
   )
   
   - exit c:Int <- System.exit c
-  // Terminate execution with exit status code `c'.
+  // Terminate execution with exit status code @c.
   
   - exit_success_code:Int := 0
   
@@ -155,7 +155,7 @@ Public
   
   - like ref:X :X <-
   // Example: str.like String_buffer.add_last 'a'
-  // `str' can be String_buffer or subtype of String_buffer
+  // @str can be String_buffer or subtype of String_buffer
   ( + res:X
     res ?= self
     res
@@ -164,7 +164,7 @@ Public
   // to_self_on
   - cast obj:Clone :Self <-
   // Example: String_buffer.cast str.add_last 'a'
-  // Warning: `str' must be Exact String_buffer (see: like)
+  // Warning: @str must be Exact String_buffer (see: like)
   [ ? {obj != NULL}; ]
   ( + result:Self
     result ?= obj
@@ -234,7 +234,7 @@ Public
   // BSBS: a simplifier qd les types parameters ds les blocks seront good.
   
   //  - foreach_intern_data_action (sec,nam:String_alias,typ:T,val:V)
-  //  with action:{ (String_alias,String_alias,T,E); } <- `25`
+  //  with action:{ (String_alias,String_alias,T,E); } <- @25
   
   - foreach_intern_data action:{ (String_alias,String_alias,Int,Int); } <- `25`
   

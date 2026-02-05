@@ -84,7 +84,7 @@ Public
   - begin_draw <-
   (
     (list = NULL).if {      
-      slot.load_arg
+      //slot.load_arg
       ln_limit := pt_b.pt + di
       list := List.parse_spln 1
       (read_c ';').if { col (Look.symbol) sub 1; }

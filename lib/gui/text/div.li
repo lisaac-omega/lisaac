@@ -73,7 +73,7 @@ Public
   
   - fix_size <-  
   ( (self != Self).if {
-      (pte,yo,width,height) := (txt_pg.pos_i,tex.y0,tex.x-xo,tex.y1-tex.y0)
+      (pte,yo,width,height) := (txt_pg.pos_i,tex.y0,tex.x-xo,tex.y1-tex.y0)      
       tex.add_x 0
     }
   )
@@ -132,7 +132,7 @@ Public
   - pointer:Int := 2
   - codeout:Int := 3
   
-  - debug_div:Boolean :=  False
+  - debug_div:Boolean := False
   
   - draw <-
   (
@@ -181,7 +181,7 @@ Public
     act_clic.value self
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ((ev = Hand.clic) && {act_clic != NULL}).if {    
     txt_pg.set_pos pos
     run

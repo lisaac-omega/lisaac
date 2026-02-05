@@ -1,0 +1,9 @@
+--SEMANTIC---------
+Type `Exact Aa' is invalid with `Bb'.
+Line 9 column 10 in Main(.../test/compiler-msg/Exact/2/main.li):
+    aa := bb
+          ^
+
+Line 8 column 8 in Main(.../test/compiler-msg/Exact/2/main.li):
+    + bb: Bb
+        ^

@@ -20,6 +20,7 @@ Public
   // Color
   
   - cols:Flat Array Color
+  - cols_bland:Flat Array Color
   - cols_size:Int <- ( abstract; 0)
   
   - text_ui:Color    := Color.rgb (0,0,0)
@@ -44,6 +45,7 @@ Public
   ( + pth:String_alias
     buftxt.clear
     cols.make cols_size
+    cols_bland.make cols_size
     String.tmp { tmp:String_buffer
       tmp.copy look_file
       tmp.append ".sty"
@@ -101,12 +103,7 @@ Public
     i := (i + 1) & 11b
     ok
   )
-  
-  - to_alpha a:Real32 <-
-  (    
-    none := none.set_af a
-  )
-  
+    
   - to_gray <-
   (
     none := none.to_gray

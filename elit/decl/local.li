@@ -67,7 +67,7 @@ Public
     last_argv := NULL
     
     (read_idf).if {
-      (last_str = "self").if {
+      (last_str = "self").if { // BSBS on ne passe jamais ici Bizarre 
         ((t & 01b) = 00b).if { err semantic msg "`self' incorrect." }
         c := Look.keyword
       } else {

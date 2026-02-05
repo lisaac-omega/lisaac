@@ -175,7 +175,7 @@ Public
   
   - action:Boolean <- ( abstract; True)
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   (
     (ev = Hand.clic).if {
       (Hand.y_cur < ymax-height_bot).if {

@@ -1,5 +1,5 @@
 Header
-  + name := Single_list V
+  + name := Exact Single_list V
 /*
    One way linked list with internal automatic memorization of the last access.
    One way linked list implementation with internal automatic cached memorization
@@ -23,10 +23,10 @@ Single_list
 
   + mem_idx:Int
   + mem_lnk:Single_list_node V
-  // To speed up accessing, `mem_idx' and `mem_lnk' is the memory cache of
-  // the last access done. For example, after item(1), `mem_idx' is 1 and
-  // `mem_lnk' is `first_link'.
-  // When list is empty, `first_link' is NULL as well as `mem_lnk' and `mem_idx' is -1;
+  // To speed up accessing, @mem_idx and @mem_lnk is the memory cache of
+  // the last access done. For example, after item(1), @mem_idx is 1 and
+  // @mem_lnk is @first_link.
+  // When list is empty, @first_link is NULL as well as @mem_lnk and @mem_idx is -1;
 
 Public
   - add_first element:V^n <-

@@ -94,9 +94,9 @@ Public
     init p
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( + d,dl:Int
-    + e:Uint8
+    + e:Int
     + hdr:Header
     + xxo:Real32
     + pop:Popup

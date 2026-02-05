@@ -1,7 +1,7 @@
 Header
   + name := Elit
 /*TODO:
-  - Quitter proprement quand il y a une deco fenetre
+  - Deux protos ayant le même noms doit être écrit avec rep/proto.li
   - Reprise de fonction apres un CMD_***
   ------------------- Plus tard --------
   - Search dans les extern (eye)

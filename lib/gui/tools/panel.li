@@ -255,7 +255,7 @@ Public
     draw_elevator
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( 
     (event_elevator ev) || {
       False

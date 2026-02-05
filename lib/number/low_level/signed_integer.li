@@ -8,9 +8,6 @@ Insert
 Public
 
   - append_in b:String_buffer <-
-  // Append in the `b' the equivalent of `to_string'.
-  // No memory allocation during the process.
-  [ ? {b != NULL}; ]
   ( + val:Self
     + i,j:Int
     (self = 0).if {
@@ -54,7 +51,7 @@ Public
   )
   
   - to_hexadecimal_in buffer:String_buffer <-
-  // Append in `buffer' the equivalent of `to_hexadecimal'. No new String_buffer
+  // Append in @buffer the equivalent of @to_hexadecimal. No new String_buffer
   // creation during the process.
   [ -? {buffer!=NULL}; ]
   ( + val:Self

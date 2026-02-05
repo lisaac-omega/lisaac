@@ -86,23 +86,27 @@ Public
     //(width,height) := (Old width, Old height)
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( + p:Pointer
     - psh,psv:Page_split
     (ev = Hand.in).if {
-      p := (Hand.x_cur >= xmax-margin_right).ok cursor_h or cursor_v
-      Paper.set_cursor (window.win_ptr) img p
+      (! decorated).if {
+        p := (Hand.x_cur >= xmax-margin_right).ok cursor_h or cursor_v
+        Paper.set_cursor (window.win_ptr) img p
+      }
     }.elseif {ev = Hand.out} then {
       Paper.set_cursor (window.win_ptr) img cursor_std
     }.elseif {(ev & ~1) = Hand.drag} then {
-      (Hand.is_begin).if {
-        (Hand.x_begin >= xmax-margin_right).if {
-          (psh,psv) := (get_split True,Page_split)
-        } else {
-          (psh,psv) := (Page_split,get_split False)
+      (! decorated).if {        
+        (Hand.is_begin).if {
+          (Hand.x_begin >= xmax-margin_right).if {
+            (psh,psv) := (get_split True,Page_split)
+          } else {
+            (psh,psv) := (Page_split,get_split False)
+          }
         }
+        Page_split.move psh and psv win self
       }
-      Page_split.move psh and psv win self
     }
   )
   

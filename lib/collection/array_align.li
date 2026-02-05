@@ -25,8 +25,8 @@ Public
   // Creation and modification:
 
   - create new_count:Int align a:Int :Self <-
-  // Make array with range [0 .. `new_count' - 1].
-  // When `new_count' = 0 the array is empty.
+  // Make array with range [0 .. @new_count - 1].
+  // When @new_count = 0 the array is empty.
   ( + result:Self
 
     result := clone
@@ -35,7 +35,7 @@ Public
   )
 
   - create_with_capacity new_count:Int align a:Int :Self <-
-  // Create an empty array with at least `needed_capacity'.
+  // Create an empty array with at least @needed_capacity.
   ( + result:Self
 
     result := clone
@@ -44,8 +44,8 @@ Public
   )
 
   - make new_count:Int align a:Int <-
-  // Make array with range [0 .. `new_count' - 1].
-  // When `new_count' = 0 the array is empty.
+  // Make array with range [0 .. @new_count - 1].
+  // When @new_count = 0 the array is empty.
   [ /* BSBS Old; */
     -? { new_count >= 0}
   ]
@@ -68,7 +68,7 @@ Public
   ]
 
   - with_capacity needed_capacity:Int align a:Int <-
-  // Create an empty array with at least `needed_capacity'.
+  // Create an empty array with at least @needed_capacity.
   [ /* BSBS Old; */
     -? { needed_capacity >= 0 }
   ]
@@ -116,8 +116,8 @@ Public
   ]
 
   - resize new_count:Int <-
-  // Resize the array. When `new_count' is greater than
-  // `count', new positions are initialized with appropriate
+  // Resize the array. When @new_count is greater than
+  // @count, new positions are initialized with appropriate
   // default values.
   [ /* BSBS Old; */
     -? {new_count >= 0}

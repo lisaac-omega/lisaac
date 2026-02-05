@@ -115,15 +115,21 @@ Public
     //pos.print
     {(i <= child.upper) && {!p.inside (child.at i.like Div)}}.while_do { i := i + 1; }
     (i > child.upper).if {
-      "BUG TXT_PG.pt_div".println
+      "=================================\nBUG TXT_PG.pt_div".println
       p.print; ' '.print
       name.println
       "Toks.count = ".print; text.toks.count.println
       "---".println
+      child.first.like Div.pos.print
+      "->".print; child.first.like Div.pte.print
+      ".........".println
+      child.last.like Div.pos.print
+      "->".print; child.last.like Div.pte.print
+      /*
       0.to (child.upper) do { j:Int
         child.at j.like Div.pos.print
         "->".print; child.at j.like Div.pte.print
-      }
+      }*/
       //child.last.like DIV.pos.print
       crash
     }
@@ -142,7 +148,7 @@ Public
     result
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( 
     (
       (ev = Hand.ldrag) && 
@@ -151,7 +157,7 @@ Public
       (Hand.is_begin).if {
         stop_cmd
         Page.set_cur_pg page
-        (sel.is_undefine).if { put_pos_xy (Hand.x_cur,Hand.y_cur); }
+        (sel.is_undefine).if { put_pos_xy (Hand.x_begin,Hand.y_begin); }
       } else {
         (sel.is_undefine).if { select_on; }
         put_pos_xy (Hand.x_cur,Hand.y_cur)
@@ -271,10 +277,12 @@ Public
     }
   )
   
+  - detect_ico_ok:Boolean
   - detect_ico d:Div <- 
   (
     (pos === pos_i).if { ? {pos_i.is_ico}; ? {pos.is_ico}
       pos := pos_i.set_xy (d.width/2,d.good_y)
+      detect_ico_ok := True
     }
   )
   

@@ -9,35 +9,35 @@ Inherit
   + parent_set:Flat Set V
 Set
   + buckets:C_array(Hashed_set_node V)
-  // The `buckets' storage area is the primary hash table of `capacity'
+  // The @buckets storage area is the primary hash table of @capacity
   // elements. To search some element, the first access is done in
-  // `buckets' using the remainder of the division of the key `hash_code' by
-  // `capacity'. In order to try to avoid clashes, `capacity' is always a
+  // @buckets using the remainder of the division of the key @hash_code by
+  // @capacity. In order to try to avoid clashes, @capacity is always a
   // prime number (selected using HASH_TABLE_SIZE).
 
   // Internal cache handling:
 
   + cache_user:Int
-  // The last user's external index in range [1 .. `count'] (see `item'
-  // and `valid_index' for example) may be saved in `cache_user' otherwise
+  // The last user's external index in range [1 .. @count] (see @item
+  // and @valid_index for example) may be saved in @cache_user otherwise
   // -1 to indicate that the cache is not active. When the cache is
-  // active, the corresponding index in `buckets' is save in
-  // `cache_buckets' and the corresponding node in `cache_node'.
+  // active, the corresponding index in @buckets is save in
+  // @cache_buckets and the corresponding node in @cache_node.
 
   + cache_node:Hashed_set_node V
-  // Meaningful only when `cache_user' is not -1.
+  // Meaningful only when @cache_user is not -1.
 
   + cache_buckets:Int
-  // Meaningful only when `cache_user' is not -1.
+  // Meaningful only when @cache_user is not -1.
 
 Public
 
   - create:Self <-
-  // Create an empty set. Internal storage `capacity' of the set is
-  // initialized using the `Default_size' value. Then, tuning of needed
+  // Create an empty set. Internal storage @capacity of the set is
+  // initialized using the @Default_size value. Then, tuning of needed
   // storage size is done automatically according to usage. If you
   // are really sure that your set is always really bigger than
-  // `Default_size', you may use `with_capacity' to save some execution time.
+  // @Default_size, you may use @with_capacity to save some execution time.
   ( + result:Self
     result := clone
     result.make
@@ -53,13 +53,13 @@ Public
   ]
 
   - create_with_capacity sz:Int :Self <-
-  // Create an empty set using `medium_size' as an appropriate value
-  // to help initialization of `capacity'. Thus, this feature may be used
-  // in place of `make' to save some execution time if one is sure that
-  // storage size will rapidly become really bigger than `Default_size' (if
-  // not sure, simply use `make'). Anyway, the initial `medium_size' value
+  // Create an empty set using @medium_size as an appropriate value
+  // to help initialization of @capacity. Thus, this feature may be used
+  // in place of @make to save some execution time if one is sure that
+  // storage size will rapidly become really bigger than @Default_size (if
+  // not sure, simply use @make). Anyway, the initial @medium_size value
   // is just an indication and never a limit for the possible
-  // `capacity'. Keep in mind that the `capacity' tuning is done
+  // @capacity. Keep in mind that the @capacity tuning is done
   // automatically according to usage.
   ( + result:Self
 
@@ -90,7 +90,7 @@ Public
 
   // Counting:
 
-  + capacity:Int; // Of the `buckets' storage area.
+  + capacity:Int; // Of the @buckets storage area.
 
   + count:Int
 
@@ -164,7 +164,7 @@ Public
   )
   
   - remove_key k:K <-
-  // Remove item `e' from the set:the mathematical definition of
+  // Remove item @e from the set:the mathematical definition of
   // removing from a set is followed.
   ( + h, idx:Int
     + node, previous_node:Hashed_set_node(V)
@@ -194,11 +194,11 @@ Public
   )
   
   - remove e:V <- remove_key (e.key)
-  // Remove item `e' from the set:the mathematical definition of
+  // Remove item @e from the set:the mathematical definition of
   // removing from a set is followed.
   
   - fast_remove_key k:K <-
-  // Remove item `e' from the set:the mathematical definition of
+  // Remove item @e from the set:the mathematical definition of
   // removing from a set is followed.
   ( + h, idx:Int
     + node, previous_node:Hashed_set_node(V)
@@ -228,7 +228,7 @@ Public
   )
 
   - fast_remove e:V <- fast_remove_key (e.key)
-  // Remove item `e' from the set:the mathematical definition of
+  // Remove item @e from the set:the mathematical definition of
   // removing from a set is followed.
 
   - clear <-
@@ -245,7 +245,7 @@ Public
   // Looking and searching:
   
   - has_key k:K :Boolean <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   ( + idx:Int
     + node:Hashed_set_node(V)
 
@@ -258,10 +258,10 @@ Public
   )
   
   - has e:V :Boolean <- has_key (e.key)
-  // Is element `e' in the set?
+  // Is element @e in the set?
 
   - fast_has_key k:K :Boolean <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   ( + idx:Int
     + node:Hashed_set_node(V)
 
@@ -274,7 +274,7 @@ Public
   )
   
   - fast_has e:V :Boolean <- fast_has_key (e.key)
-  // Is element `e' in the set?
+  // Is element @e in the set?
   
   - reference_at_key k:K :V <-
   ( + idx:Int
@@ -314,7 +314,7 @@ Public
   // To provide iterating facilities:
 
   - item i:Int :V <-
-  // Return the item indexed by `index'.
+  // Return the item indexed by @index.
   (
     set_cache_user i
     cache_node.item
@@ -323,7 +323,7 @@ Public
   // Mathematical operations:
 
   - intersection other:Self <-
-  // Make the intersection of the `self' set with `other'.
+  // Make the intersection of the @self set with @other.
   ( + i,c:Int
     + node1, node2:Hashed_set_node(V)
 
@@ -360,7 +360,7 @@ Public
   // Copy 'other' into the current set
   (
     // Note:this is a naive implementation because we should
-    // recycle already allocated nodes of `self'.
+    // recycle already allocated nodes of @self.
     ( capacity = 0 ).if {
       with_capacity (other.count + 1)
     } else {
@@ -463,7 +463,7 @@ Public
 
 
   - union other:Self <-
-  // Make the union of the `self' set with `other'.
+  // Make the union of the @self set with @other.
   ( + old_count:Int
 
     ? {old_count := count
@@ -476,7 +476,7 @@ Public
   )
 
   - fast_union other:Set V <-
-  // Make the union of the `self' set with `other'.
+  // Make the union of the @self set with @other.
   ( + old_count:Int
     ? {old_count := count
     other != NULL}
@@ -553,7 +553,7 @@ Public
   */
   
   - minus other:Self <-
-  // Make the set `self' - `other'.
+  // Make the set @self - @other.
   (
     + old_count:Int
 
@@ -589,7 +589,7 @@ Public
   // Comparison:
 
   - is_subset_of other:Self :Boolean <-
-  // Is the `self' set a subset of `other'?
+  // Is the @self set a subset of @other?
   (
     + i:Int
     + result:Boolean
@@ -614,7 +614,7 @@ Public
 
 
   - is_disjoint_from other:Self :Boolean <-
-  // Is the `self' set disjoint from `other' ?
+  // Is the @self set disjoint from @other ?
   (
     + result:Boolean
     + i:Int
@@ -645,7 +645,7 @@ Public
 
 
   - self:Self '=='  Right 60 other:Self :Boolean <-
-  // Is the `self' set equal to `other'?
+  // Is the @self set equal to @other?
   (
     + i:Int
     + result:Boolean
@@ -671,7 +671,7 @@ Public
   // Copy 'other' into the current set
   (
     // Note:this is a naive implementation because we should
-    // recycle already allocated nodes of `self'.
+    // recycle already allocated nodes of @self.
     ( capacity = 0 ).if {
       with_capacity (other.count + 1)
     } else {
@@ -706,7 +706,7 @@ Public
   )
 
   - search e:V :V <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   ( + idx:Int
     + node:Hashed_set_node(V)
     + result:V
@@ -723,7 +723,7 @@ Public
   )
 
   - get_if cmp:Block with_hash h:Int :V <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   ( + idx:Int
     + node:Hashed_set_node(V)
     + result:V
@@ -740,7 +740,7 @@ Public
   )
 
   - fast_search e:V :V <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   ( + idx:Int
     + node:Hashed_set_node(V)
     + result:V

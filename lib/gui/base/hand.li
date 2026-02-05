@@ -56,7 +56,17 @@ Public
   
   - x_last:Real32
   - y_last:Real32
-    
+  
+  - destroy_window w:Window <-
+  (
+    (window_cur = w).if {      
+      window_cur := NULL 
+    }
+    ((win_cur != NULL) && {win_cur.window = w}).if {      
+      win_cur := NULL 
+    }
+  )
+  
   - set_ptr (w:Window) xy (x,y:Int) <-  
   ( + xx,yy:Real32
     (x_cur,y_cur,window_cur) := (x.to_real32,y.to_real32,w)

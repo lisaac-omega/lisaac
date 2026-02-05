@@ -335,7 +335,7 @@ Public
   
   - clamp x:Int :Uint8 <-
   ( + result:Uint8
-    (x.to_raw_uinteger > 255).if {
+    (x.to_raw_uint > 255).if {
       (x > 255).if { result := 255; }
     } else { result := x.to_uint8; }
     result

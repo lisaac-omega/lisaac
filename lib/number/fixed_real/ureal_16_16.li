@@ -24,7 +24,7 @@ Public
   // Convertion
 
   - append_in b:String_buffer <-
-  // Append in the `b' the equivalent of `to_string'. No new String_buffer
+  // Append in the @b the equivalent of @to_string. No new String_buffer
   // creation during the process.
   ( + val:Int
     + old_count,new_count:Int

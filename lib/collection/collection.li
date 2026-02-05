@@ -2,21 +2,21 @@ Header
   + name := Collection V
   /*
 Common abstract definition of a sequenceable collection of objects.
-Such a collection is traversable using a simple Int index from `lower` to `upper` using `at`.
-All collections are resizable thanks to `add_last` / `remove_last`, `add_first` / `remove_first`,
-as well as `add` / `remove`.
+Such a collection is traversable using a simple Int index from @lower to @upper using @at.
+All collections are resizable thanks to @add_last / @remove_last, @add_first / @remove_first,
+as well as @add / @remove.
 
-This abstraction provides features to view a `Collection` as a stack (for example by using
-`add_last`, `last`, and `remove_last`).
-One can also use a `Collection` as a queue (for example by using `add_last`, `first`, and
-`remove_first`).
+This abstraction provides features to view a @Collection as a stack (for example by using
+@add_last, @last, and @remove_last).
+One can also use a @Collection as a queue (for example by using @add_last, @first, and
+@remove_first).
 
-The Lisaac Ω library provides five implementations of `Collection`: `Array`, `Array_ring`,
-`Array_block`, `Range_array`, `Linked_list`, and `Single_list`.
+The Lisaac Ω library provides five implementations of @Collection: @Array, @Array_ring,
+@Array_block, @Range_array, @Linked_list, and @Single_list.
 Except for creation, all implementations have exactly the same behavior.
 Switching from one implementation to another only changes the memory usage and execution time.
 We suggest that you read the paper entitled "RIP Linked List" (B. Sonntag and D. Colnet)
-to choose the best implementation of `Collection` for your needs.*/
+to choose the best implementation of @Collection for your needs.*/
 Insert
   - parent_clone:Clone := Clone
 Public
@@ -41,7 +41,7 @@ Public
   // Maximum index.
     
   - valid_index i:Int :Boolean <-
-  // True when `i' is valid (i.e., inside actual bounds).
+  // True when @i is valid (i.e., inside actual bounds).
   (
     (lower <= i) && {i <= upper}
   )
@@ -65,7 +65,7 @@ Public
   ]
   
   - at i:Int :V <-
-  // Access item at index `i'.
+  // Access item at index @i.
   [
     {valid_index i}
   ]
@@ -75,7 +75,7 @@ Public
   )
   
   - first:V <-
-  // Access to the `first' item.
+  // Access to the @first item.
   [
     ! is_empty
   ]
@@ -87,7 +87,7 @@ Public
   ]
 
   - last:V <-
-  // Access to the `last' item.
+  // Access to the @last item.
   [
     ! is_empty
   ]
@@ -102,7 +102,7 @@ Public
   // Writing:
 
   - at i:Int put v:V <-
-  // Make `v' the value `at' index `i'.
+  // Make @v the value @at index @i.
   [
     {valid_index i}
   ]
@@ -115,7 +115,7 @@ Public
   ]
   
   - swap i1:Int with i2:Int <-
-  // Swap at at index `i1' with item at index `i2'.
+  // Swap at at index @i1 with item at index @i2.
   [
     {valid_index i1},
     {valid_index i2}
@@ -132,7 +132,7 @@ Public
   ]
 
   - set_all_with v:V <-
-  // Set all items with value `v'.
+  // Set all items with value @v.
   (
     lower.to upper do { i:Int
       at i put v
@@ -143,7 +143,7 @@ Public
   ]
 
   - set_slice lower_index:Int to upper_index:Int with v:V <-
-  // Set all items in range [`lower_index' .. `upper_index'] with `v'.
+  // Set all items in range [@lower_index .. @upper_index] with @v.
   [
     lower_index <= upper_index,
     {valid_index lower_index},
@@ -160,8 +160,8 @@ Public
 
   - clear_all <-
   // Set every item to its default value.
-  // The `count' is not affected
-  // see also `clear', `all_default'.
+  // The @count is not affected
+  // see also @clear, @all_default.
   ( + value:V
     set_all_with value
   )
@@ -174,7 +174,7 @@ Public
   // Adding:
 
   - add_first element:V^n <-
-  // Add new items in first position: `count' is increased by `n' and all items are shifted right.
+  // Add new items in first position: @count is increased by @n and all items are shifted right.
   (
     abstract
   )
@@ -194,8 +194,8 @@ Public
   ]
 
   - at i:Int add (v:V^n) <-
-  // Add a new `v' at rank `i' : `count' is increased
-  // by one and range [`i' .. upper] is shifted right
+  // Add a new @v at rank @i : @count is increased
+  // by one and range [@i .. upper] is shifted right
   // by one position.
   [
     {i.in_range lower to (upper + 1)}
@@ -209,7 +209,7 @@ Public
 
   - append_collection other:Collection(V) <- 
   // BSBS: append tout court ! Passer en Self
-  // Append `other' to Current.
+  // Append @other to @self.
   [
     other != NULL
   ]
@@ -223,7 +223,8 @@ Public
   ]
 
   - copy_collection other:Collection(V) <-
-  // Copy `other' to Current.
+  // Copy @other to @self.
+  // DC: Passer aussi en Self non ?
   [
     other != NULL
   ]
@@ -247,15 +248,15 @@ Public
   
   // Searching:
   
-  - fast_has v:V :BOOLEAN <-
-  // Look for `v' using basic `=' for comparison.
+  - fast_has v:V :Boolean <-
+  // Look for @v using basic @= for comparison.
   [ deprecated True msg "Collection.li:252: Use has. BSDC Jan 2026" ]
   (
     valid_index (fast_first_index_of v)
   )
   
   - has v:V :Boolean <-
-  // Look for `v' using basic `=' for comparison.
+  // Look for @v using basic @= for comparison.
   (
     valid_index (fast_first_index_of v)
   )
@@ -263,8 +264,8 @@ Public
   // Modification:
 
   - force element:V to index:Int <-
-  // Make `element' the item at `index', enlarging the collection if
-  // necessary (new bounds except `index' are initialized with
+  // Make @element the item at @index, enlarging the collection if
+  // necessary (new bounds except @index are initialized with
   // default values).
   [
     index >= lower
@@ -281,13 +282,13 @@ Public
   ]
 
   - copy other:Self <-
-  // Reinitialize by copying all the items of `other'.
+  // Reinitialize by copying all the items of @other.
   (
     abstract
   )
 
   - from_collection model:Collection(V) <-
-  // Initialize the current object with the contents of `model'.
+  // Initialize the current object with the contents of @model.
   [
     model != NULL,
     model != self
@@ -302,7 +303,7 @@ Public
   // Removing:
 
   - remove_first <-
-  // Remove the `first' element of the collection.
+  // Remove the @first element of the collection.
   [
     ! is_empty
   ]
@@ -315,7 +316,7 @@ Public
   ]
 
   - remove_head n:Int <-
-  // Remove the `n' elements of the collection.
+  // Remove the @n elements of the collection.
   [
     n >= 0,
     n <= count
@@ -329,7 +330,7 @@ Public
   ]
 
   - remove index:Int <-
-  // Remove the item at position `index'. Followings items are shifted left by one position.
+  // Remove the item at position @index. Followings items are shifted left by one position.
   [
     {valid_index index}
   ]
@@ -342,7 +343,7 @@ Public
   ]
 
   - remove_last <-
-  // Remove the `last' item.
+  // Remove the @last item.
   [ ! is_empty ]
   (
     abstract
@@ -353,7 +354,7 @@ Public
   ]
 
   - remove_tail n:Int <-
-  // Remove the last `n' item(s).
+  // Remove the last @n item(s).
   [
     n >= 0,
     n <= count
@@ -367,8 +368,7 @@ Public
   ]
 
   - clear <-
-  // Discard all items in order to make it `is_empty'.
-  
+  // Discard all items in order to make it @is_empty.
   (
     abstract
   )
@@ -379,9 +379,9 @@ Public
   // Looking and Searching:
   
   - first_index_of element:V :Int <-
-  // Give the index of the first occurrence of `element' using
-  // `==' for comparison.
-  // Answer `upper + 1' when `element' is not inside.
+  // Give the index of the first occurrence of @element using
+  // @== for comparison.
+  // Answer @upper @+ @1 when @element is not inside.
   (
     abstract
     0
@@ -391,8 +391,8 @@ Public
   ]
 
   - index_of element:V start start_index:Int :Int <-
-  // Using `is_equal' for comparison, gives the index of the first occurrence
-  // of `element' at or after `start_index'. Answer `upper + 1' when `element'
+  // Using @is_equal for comparison, gives the index of the first occurrence
+  // of @element at or after @start_index. Answer @upper @+ @1 when @element
   // when the search fail.
   (
     abstract
@@ -404,10 +404,10 @@ Public
   ]
 
   - reverse_index_of element:V start start_index:Int :Int <-
-  // Using `is_equal' for comparison, gives the index of the first occurrence of
-  // `element' at or before `start_index'. Search is done in reverse direction,
-  // which means from the `start_index' down to the lower index .
-  // Answer `lower -1' when the search fail.
+  // Using @is_equal for comparison, gives the index of the first occurrence of
+  // @element at or before @start_index. Search is done in reverse direction,
+  // which means from the @start_index down to the lower index .
+  // Answer @lower @- @1 when the search fail.
   [
     {valid_index start_index}
   ]
@@ -421,9 +421,9 @@ Public
   ]
 
   - last_index_of element:V :Int <-
-  // Using `is_equal' for comparison, gives the index of the last occurrence
-  // of `element' at or before upper. Search is done in reverse direction,
-  // which means from the upper down to the lower index . Answer `lower -1'
+  // Using @is_equal for comparison, gives the index of the last occurrence
+  // of @element at or before upper. Search is done in reverse direction,
+  // which means from the upper down to the lower index . Answer @lower @- @1
   // when the search fail.
   (
     reverse_index_of element start upper
@@ -433,8 +433,8 @@ Public
   ]
 
   - fast_first_index_of element:V :Int <-
-  // Give the index of the first occurrence of `element' using basic `='
-  // for comparison. Answer `upper + 1' when `element' is not inside.
+  // Give the index of the first occurrence of @element using basic @=
+  // for comparison. Answer @upper @+ @1 when @element is not inside.
   (
     abstract
     0
@@ -444,8 +444,8 @@ Public
   ]
 
   - fast_index_of element:V start start_index:Int :Int <-
-  // Using basic `=' for comparison, gives the index of the first occurrence
-  // of element `v' at or after `start_index'. Answer `upper + 1' when `element'
+  // Using basic @= for comparison, gives the index of the first occurrence
+  // of element @v at or after @start_index. Answer @upper @+ @1 when @element
   // when the search fail.
   (
     abstract
@@ -457,10 +457,10 @@ Public
   ]
 
   - fast_reverse_index_of element:V start start_index:Int :Int <-
-  // Using basic `=' comparison, gives the index of the first occurrence
-  // of `element' at or before `start_index'. Search is done in reverse
-  // direction, which means from the `start_index' down to the lower
-  // index . Answer `lower -1' when the search fail.
+  // Using basic @= comparison, gives the index of the first occurrence
+  // of @element at or before @start_index. Search is done in reverse
+  // direction, which means from the @start_index down to the lower
+  // index . Answer @lower @- @1 when the search fail.
   [
     {valid_index start_index || {start_index = -1}}
   ]
@@ -474,9 +474,9 @@ Public
   ]
 
   - fast_last_index_of element:V :Int <-
-  // Using basic `=' for comparison, gives the index of the last occurrence
-  // of `element' at or before upper. Search is done in reverse direction,
-  // which means from the upper down to the lower index . Answer `lower -1'
+  // Using basic @= for comparison, gives the index of the last occurrence
+  // of @element at or before upper. Search is done in reverse direction,
+  // which means from the upper down to the lower index . Answer @lower @- @1
   // when the search fail.
   (
     fast_reverse_index_of element start upper
@@ -512,9 +512,8 @@ Public
   // Looking and comparison:
 
   - self:Self '=='  Right 60 other:E :Boolean <-
-  // Do both collections have the same lower, upper, and
-  // items?
-  // The basic `=' is used for comparison of items.
+  // Do both collections have the same @lower, @upper, and items?
+  // The basic @= is used for comparison of items.
   (
     abstract
     False
@@ -523,7 +522,7 @@ Public
   - self:Self '~='  Right 60 other:Collection(V) :Boolean <-
   // Do both collections have the same lower, upper, and
   // items?
-  // The basic `=' is used for comparison of items.
+  // The basic @= is used for comparison of items.
   (
     abstract
     False
@@ -531,32 +530,20 @@ Public
   [
     Result ->> {(lower = other.lower) & (upper = other.upper)}
   ]
-
-  - is_equal_map other:Self :Boolean <-
-  // Do both collections have the same lower, upper, and
-  // items?
-  // Feature `==' is used for comparison of items.
-  (
-    abstract
-    False
-  )
-  [
-    Result -> ((lower = other.lower) & (upper = other.upper))
-  ]
-
+  
   - all_default:Boolean <-
   // Do all items have their type's default value?
-  // Note: for non NULL items, the test is performed with the `is_default' predicate.
+  // Note: for non NULL items, the test is performed with the @is_default predicate.
   (
     abstract
     False
   )
 
   - same_items other:Collection(V) :Boolean <-
-  // Do both collections have the same items? The basic `=' is used
+  // Do both collections have the same items? The basic @= is used
   // for comparison of items and indices are not considered (for
-  // example this routine may yeld true with Current indexed in
-  // range [1..2] and `other' indexed in range [2..3]).
+  // example this routine may yeld true with self indexed in
+  // range [1..2] and @other indexed in range [2..3]).
   [
     other != NULL
   ]
@@ -580,7 +567,7 @@ Public
   ]
 
   - occurrences element:V :Int <-
-  // Number of occurrences of `element' using `equal' for comparison.
+  // Number of occurrences of @element using @equal for comparison.
   (
     abstract
     0
@@ -590,7 +577,7 @@ Public
   ]
 
   - fast_occurrences element:V :Int <-
-  // Number of occurrences of `element' using basic `=' for comparison.
+  // Number of occurrences of @element using basic @= for comparison.
   (
     abstract
     0
@@ -752,8 +739,8 @@ Public
   // Others features:
   
   - replace_all old_value:V with new_value:V <-
-  // Replace all occurrences of the element `old_value' by `new_value'
-  // using `equal' for comparison.
+  // Replace all occurrences of the element @old_value by @new_value
+  // using @equal for comparison.
   (
     abstract
   )
@@ -762,8 +749,8 @@ Public
   ]
 
   - fast_replace_all old_value:V with new_value:V <-
-  // Replace all occurrences of the element `old_value' by `new_value'
-  // using operator `=' for comparison.
+  // Replace all occurrences of the element @old_value by @new_value
+  // using operator @= for comparison.
   (
     abstract
   )
@@ -773,7 +760,7 @@ Public
   ]
 
   - move lower_index:Int to upper_index:Int by distance:Int <-
-  // Move range `lower_index' .. `upper_index' by `distance'
+  // Move range @lower_index .. @upper_index by @distance
   // positions. Negative distance moves towards lower indices.
   // Free places get default values.
   [
@@ -804,7 +791,7 @@ Public
 
   - slice min:Int to max:Int :Self <-
   // New collection consisting of items at indexes in [min..max].
-  // Result has the same dynamic type as Current.
+  // Result has the same dynamic type as self.
   // The lower index of the Result is the same as lower.
   [
     lower <= min,
@@ -845,5 +832,4 @@ Public
     foreach { el : V; res.append "'"; res.append (el.to_string); res.append "' , ";}
     res.append "]"
     res
-  )
-  
+  )  

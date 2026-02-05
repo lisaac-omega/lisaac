@@ -3,7 +3,7 @@ Header
 Public
   
   - eval x:X <- ( `asm volatile ("/* VOLATILE.eval */" : : "r"(@x))`; )
-  // Useful for performinl speed tests. It brings 'x' to life. (Use `to_pointer')
+  // Useful for performinl speed tests. It brings @x to life. (Use @to_pointer)
   
   - return x:X :X <-
   ( + r:X

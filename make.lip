@@ -271,7 +271,7 @@ Private
       } else {
         (! is_quiet).if {
           ("Written: " + output_file + output_extension + "\n").print
-	}
+        }
         (target = "android").if {
           execute_fail (lisaac+"android/run.sh " + output_file + opt_android)
         }

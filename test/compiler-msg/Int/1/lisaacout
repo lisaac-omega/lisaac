@@ -1,0 +1,9 @@
+--SEMANTIC---------
+Type `Flat Int16' is invalid with `Flat Int32'.
+Line 9 column 11 in Main(.../test/compiler-msg/Int/1/main.li):
+    i16 := i32    
+           ^
+
+Line 7 column 9 in Main(.../test/compiler-msg/Int/1/main.li):
+  ( + i32: Int32
+         ^

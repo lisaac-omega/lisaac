@@ -55,8 +55,8 @@ Public
     img.draw self to (x - w/2,y - h/2) height h alpha 1
   )
   
-  - event ev:Uint8 :Boolean <-
-  ( + e:Uint8
+  - event ev:Int :Boolean <-
+  ( + e:Int
     e := ev & ~1
     (is mute).if {
       // Nothing.

@@ -61,7 +61,7 @@ Public
     text (x,y) msg text
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   (    
     True
   )

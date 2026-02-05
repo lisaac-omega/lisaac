@@ -31,7 +31,7 @@ Array3
   // To store elements line by line.
 
   + capacity:Int
-  // Number of elements in `storage'.
+  // Number of elements in @storage.
 
 Public
 
@@ -39,8 +39,8 @@ Public
 
   - create (line_min, column_min, depth_min:Int)
   to (line_max, column_max, depth_max:Int) :Self <-
-  // Reset all bounds `line_minimum' / `line_maximum' / `column_minimum'
-  // `column_maximum' / `depth_min' and `depth_max' using arguments as
+  // Reset all bounds @line_minimum / @line_maximum / @column_minimum
+  // @column_maximum / @depth_min and @depth_max using arguments as
   // new values. All elements are set to the default value of type E.
   ( + result:Self
 
@@ -50,8 +50,8 @@ Public
   )
 
   - make (line_min, column_min, depth_min:Int) to (line_max, column_max, depth_max:Int) <-
-  // Reset all bounds `line_minimum' / `line_maximum' / `column_minimum'
-  // `column_maximum' / `depth_min' and `depth_max' using arguments as
+  // Reset all bounds @line_minimum / @line_maximum / @column_minimum
+  // @column_maximum / @depth_min and @depth_max using arguments as
   // new values. All elements are set to the default value of type E.
   [ ...
     -? { line_min   <= line_max   }
@@ -107,9 +107,9 @@ Public
   - from_collection contents:Collection(V)
   size (line_min,column_min,depth_min:Int)
   to (line_max,column_max,depth_max:Int) <-
-  // Reset all bounds using `line_min', `line_max', `column_min',
-  // `column_max', `depth_min', and `depth_max'.
-  // Copy all elements of `contents', line by line into Current.
+  // Reset all bounds using @line_min, @line_max, @column_min,
+  // @column_max, @depth_min, and @depth_max.
+  // Copy all elements of @contents, line by line into self.
   [ ...
     -? { line_min <= line_max }
     -? { column_min <= column_max }
@@ -138,7 +138,7 @@ Public
   ]
 
   - from_model model:Collection(Collection(Collection(V))) <-
-  //The `model' is used to fill line by line the COLLECTION3.
+  //The @model is used to fill line by line the COLLECTION3.
   //Assume all sub-collections of have the same indexing.
   (
     make (model.lower,model.first.lower,model.first.first.lower)
@@ -164,7 +164,7 @@ Public
   // Resizing:
 
   - resize (line_min, column_min, depth_min:Int) to (line_max, column_max, depth_max:Int) <-
-  // Resize bounds of the Current array
+  // Resize bounds of the self array
   [ ...
     -? { line_max   >= line_min   }
     -? { column_max >= column_min }
@@ -175,7 +175,7 @@ Public
     tmp := Self.clone
     tmp.make (line_min, column_min, depth_min) to (line_max, column_max, depth_max)
     //BSBS: It may be possible to avoid this creation when :
-    //BSBS:   new `capacity' <= old `capacity'
+    //BSBS:   new @capacity <= old @capacity
 
     lower1.to line_maximum do { l:Int
       lower2.to column_maximum do { c:Int
@@ -279,8 +279,8 @@ Public
   )
 
   - has x:V :Boolean <-
-  //Search if a element x is in the array using `equal'.
-  //See also `fast_has' to choose the apropriate one.
+  //Search if a element x is in the array using @equal.
+  //See also @fast_has to choose the apropriate one.
   ( + result:Boolean
 
     (count > 0).if {

@@ -104,26 +104,32 @@ Public
     = String_alias
   ) || {parent_look_gui.item id str v}
   
+  - cols_at i:Int put c:Color <-
+  (
+    cols.at i put c
+    cols_bland.at i put (c.set_af 0.6)
+  )  
+  
   - put id:String_alias col c:Color :Boolean <-
   (    
     id
     .case "none"       then { none := c;     }
     
-    .case "dead"       then { cols.at dead put c;  }
-    .case "symbol"     then { cols.at symbol put c;  }
-    .case "rmk"        then { cols.at rmk put c;     }
-    .case "sub_rmk"    then { cols.at sub_rmk put c; }
-    .case "type"       then { cols.at type put c;    }
-    .case "slot"       then { cols.at slot put c;    }
-    .case "local"      then { cols.at local put c;   }    
-    .case "operator"   then { cols.at operator put c;}
-    .case "string"     then { cols.at string put c;  }
-    .case "external"   then { cols.at external put c;}
-    .case "number"     then { cols.at number put c;  }
-    .case "keyword"    then { cols.at keyword put c; }
-    .case "style"      then { cols.at style put c;   }
-    .case "codeout"    then { cols.at codeout put c; }
-    .case "cursor"     then { cols.at cursor put c; }
+    .case "dead"       then { cols_at dead put c;  }
+    .case "symbol"     then { cols_at symbol put c;  }
+    .case "rmk"        then { cols_at rmk put c;     }
+    .case "sub_rmk"    then { cols_at sub_rmk put c; }
+    .case "type"       then { cols_at type put c;    }
+    .case "slot"       then { cols_at slot put c;    }
+    .case "local"      then { cols_at local put c;   }    
+    .case "operator"   then { cols_at operator put c;}
+    .case "string"     then { cols_at string put c;  }
+    .case "external"   then { cols_at external put c;}
+    .case "number"     then { cols_at number put c;  }
+    .case "keyword"    then { cols_at keyword put c; }
+    .case "style"      then { cols_at style put c;   }
+    .case "codeout"    then { cols_at codeout put c; }
+    .case "cursor"     then { cols_at cursor put c; }
     
     .case "header"     then { header := c;    }
     .case "directive"  then { directive := c; }
@@ -131,7 +137,7 @@ Public
     .case "contract"   then { contract := c;  }
  //   .case "req_parent" then { req_parent := c; }
     .case "text_bg"    then { text_bg := c;   }
-    .case "error"      then { error := c; cols.at erro put c; }
+    .case "error"      then { error := c; cols_at erro put c; }
     //
     .case "slot_private"   then { section.at (Section.a_private) put c;   }
     .case "slot_public"    then { section.at (Section.a_public) put c;    }
@@ -139,29 +145,7 @@ Public
     .case "slot_directory" then { section.at (Section.a_directory) put c; }
     = String_alias
   ) || {parent_look_gui.put id col c}
-  
-  - to_alpha a:Real32 <-
-  (
-    rmk := rmk.set_af a
-    rem := rem.set_af a
-    require := require.set_af a
-    //reqparent := reqparent.set_af a
-    string := string.set_af a
-    external := external.set_af a
-    text_bg := text_bg.set_af a
-    slot_txt := slot_txt.set_af a
-    slot_fn := slot_fn.set_af a
-    number := number.set_af a
-    type := type.set_af a
-    call_txt := call_txt.set_af a
-    call_loc := call_loc.set_af a
-    call_arg := call_arg.set_af a
-    keyword := keyword.set_af a
-    error := error.set_af a
-    //
-    parent_look_gui.to_alpha a
-  )
-  
+    
   - to_gray <-
   (
     rmk := rmk.to_gray

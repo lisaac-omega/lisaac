@@ -88,8 +88,8 @@ Public
     }
   )
     
-  - event ev:Uint8 :Boolean <-
-  ( + e:Uint8
+  - event ev:Int :Boolean <-
+  ( + e:Int
     + d:Real32
     + v:E
     e := ev & ~1

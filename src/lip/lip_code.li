@@ -161,7 +161,7 @@ Public
 
   - call_front_end <-
   ( + s:Lip_slot_code
-    // Executing `front_end':
+    // Executing @front_end:
     s := Lip_code.get_method "front_end"
     (s = NULL).if {
       "Slot `front_end' not found in *.lip file.\n".print;

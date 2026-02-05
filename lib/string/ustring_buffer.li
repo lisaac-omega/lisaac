@@ -55,7 +55,7 @@ Public
   )
 
   - make needed_capacity:Int <-
-  // Initialize the string to have at least `needed_capacity'
+  // Initialize the string to have at least @needed_capacity
   // characters of storage.
   ( ? {needed_capacity >= 0}
     (needed_capacity > 0).if {
@@ -84,7 +84,7 @@ Public
   )
 
   - make_filled (c:Char,n:Int) <-
-  // Initialize string with `n` copies of `c`
+  // Initialize string with @n copies of @c
   [
     -? {n >= 0}
   ]
@@ -148,7 +148,7 @@ Public
   // Modification :
 
   - resize new_count:Int <-
-  // Resize self. When `new_count' is greater than `count',
+  // Resize self. When @new_count is greater than @count,
   // new positions are initialized with the default value of Char
   [
     -? { new_count >= 0 }
@@ -173,7 +173,7 @@ Public
   ]
 
   - set_capacity new_capacity:Int <-
-  // Resize `capacity' self, but not count.
+  // Resize @capacity self, but not count.
   [ ? { new_capacity >= 0 }; ]
   ( 
     (new_capacity > capacity).if {
@@ -188,7 +188,7 @@ Public
   [ ? {(new_capacity > Old capacity) ->> {new_capacity = capacity}}; ]
 
   - prepare_space n:Int <-
-  // Makes sure that we have at least `n` places, ready to use, after `upper`.
+  // Makes sure that we have at least @n places, ready to use, after @upper.
   [
     deprecated True msg "Still used ? DC Jan 2026"
     ? {n > 0}
@@ -204,14 +204,14 @@ Public
   
   - clear <-
   // Clear out the current String_buffer.
-  // Note: internal `storage' memory is neither released nor shrunk.
+  // Note: internal @storage memory is neither released nor shrunk.
   (
     upper := -1
     ? {count = 0}
   )
 
   - copy other:String<-
-  // Copy `other' onto Current.
+  // Copy @other onto self.
   (
     upper := other.upper
     (upper >= 0).if {
@@ -236,7 +236,7 @@ Public
   )
 
   - fill_with c:Char <-
-  // Replace every character with `c'.
+  // Replace every character with @c.
   (
     storage.set_all_with c until upper
 
@@ -244,7 +244,7 @@ Public
   )
 
   - replace_all old_char:Char with new_char:Char <-
-  // Replace all occurrences of the element `old_char' by `new_character'
+  // Replace all occurrences of the element @old_char by @new_character
   (
     storage.fast_replace_all old_char with new_char until upper
   )
@@ -254,7 +254,7 @@ Public
   ]
 
   - append other:String <-
-  // Append `other' to Current.
+  // Append @other to self.
   ( + other_count, needed_capacity:Int
     ? {other != NULL}
 
@@ -274,7 +274,7 @@ Public
   )
   
   - append other:String from b:Int to e:Int<-
-  // Append `other' to Current.
+  // Append @other to self.
   [ ? {b.in_range 0 to (other.upper)}
     ? {e.in_range 0 to (other.upper)}
     ? {b <= e}
@@ -316,7 +316,7 @@ Public
   )
 
   - prepend other:String <-
-  // Prepend `other' to Current
+  // Prepend @other to self
   [
     ? {other != NULL}
   ]
@@ -334,8 +334,8 @@ Public
   )
 
   - insert_string s:String to i:Int <-
-  // Insert `s' at index `i', shifting characters from index `i'
-  // to `count' rightwards.
+  // Insert @s at index @i, shifting characters from index @i
+  // to @count rightwards.
   ( + j,k:Int
 
     ? { s != NULL }
@@ -382,7 +382,7 @@ Public
   )
 
   - put ch:Char to index:Int<-
-  // Put `ch' at position `index'.
+  // Put @ch at position @index.
   ( ? {valid_index index}
 
     storage.put ch to index
@@ -404,7 +404,7 @@ Public
   )
 
   - insert ch:Char to index:Int <-
-  // Insert `ch' after position `index'.
+  // Insert @ch after position @index.
   ( + i:Int
     ? {0 <= index}
     ? {index <= count}
@@ -421,7 +421,7 @@ Public
   )
 
   - insert ch:Char to index:Int on nb:Int <-
-  // Insert `ch' after position `index'.
+  // Insert @ch after position @index.
   [
     ? {0 <= index}
     ? {index <= count}
@@ -434,7 +434,7 @@ Public
   )
 
   - shrink min_index:Int to max_index:Int <-
-  // Keep only the slice [`min_index' .. `max_index'] or nothing
+  // Keep only the slice [@min_index .. @max_index] or nothing
   // when the slice is empty.
   (
     ? {0 <= min_index}
@@ -456,14 +456,14 @@ Public
   )
 
   - remove index:Int <-
-  // Remove character at position `index'.
+  // Remove character at position @index.
   ( ? {valid_index index}
     remove_between index to index
     ? {count = Old count - 1}
   )
 
   - add_first ch: Char <-
-  // Add `ch' at first position.
+  // Add @ch at first position.
   ( 
     add_last ' '
     upper.downto 1 do { i:Int
@@ -476,7 +476,7 @@ Public
   )
 
   - add_last ch:Char <-
-  // Append `ch' to string
+  // Append @ch to string
   ( + new_capacity:Int
     
     (capacity = count).if {
@@ -517,8 +517,8 @@ Public
   )
 
   - keep_head n:Int <-
-  // Remove all characters except for the first `n'.
-  // Do nothing if `n' >= `count'.
+  // Remove all characters except for the first @n.
+  // Do nothing if @n >= @count.
   ( ? { n >= 0}
     
     (n < count).if {
@@ -529,8 +529,8 @@ Public
   )
 
   - keep_tail n:Int <-
-  // Remove all characters except for the last `n'.
-  // Do nothing if `n' >= `count'.
+  // Remove all characters except for the last @n.
+  // Do nothing if @n >= @count.
   ( ? { n >= 0}
        
     (n < count).if {
@@ -543,8 +543,8 @@ Public
   - remove_first <- remove_head 1
   
   - remove_head n:Int <-
-  // Remove `n' first characters.
-  // If `n' >= `count', remove all.
+  // Remove @n first characters.
+  // If @n >= @count, remove all.
   [ ? { n >= 0}; ]
   (         
     (n > upper).if {
@@ -559,7 +559,7 @@ Public
   )
 
   - remove_between start:Int to end:Int <-
-  // Remove all characters from `start_index' to `end_index' inclusive.
+  // Remove all characters from @start_index to @end_index inclusive.
   (
     + len:Int
     ? { end <= upper }
@@ -576,14 +576,14 @@ Public
   )
 
   - remove_suffix s:String <-
-  // Remove the suffix `s' of current string.
+  // Remove the suffix @s of current string.
   (
     ? {has_suffix s}
     remove_tail (s.count)
   )
 
   - remove_tail n:Int <-
-  // Remove `n' last characters. If `n' >= `count', remove all.    
+  // Remove @n last characters. If @n >= @count, remove all.    
   [ ?{ n >= 0 }; ]
   ( 
     (n > upper).if {
@@ -601,7 +601,7 @@ Public
   )
 
   - remove_prefix s:String <-
-  // Remove the prefix `s' of current string.
+  // Remove the prefix @s of current string.
   (
     ? {has_prefix s}
     remove_first (s.count)
@@ -632,7 +632,7 @@ Public
   )
 
   - extend_multiple c:Char by n:Int <-
-  // Extend Current with `n' times character `c'.
+  // Extend self with @n times character @c.
   ( ? { n >= -1}
         
     (n - 1).downto 0 do { i:Int
@@ -643,7 +643,7 @@ Public
   )
 
   - precede_multiple c:Char by n:Int <-
-  // Prepend `n' times character `c' to Current.
+  // Prepend @n times character @c to self.
   [ ? { n >= -1 }; ]
   ( 
     (n > 0).if {
@@ -659,9 +659,9 @@ Public
   )
 
   - extend_to_count c:Char until needed_count:Int <-
-  // Extend Current with `c' until `needed_count' is reached.
-  // Do nothing if `needed_count' is already greater or equal
-  // to `count'.
+  // Extend self with @c until @needed_count is reached.
+  // Do nothing if @needed_count is already greater or equal
+  // to @count.
   ( ? { needed_count >= 0 }
     
     (needed_count - upper).times {
@@ -672,9 +672,9 @@ Public
   )
 
   -  precede_to_count c:Char until needed_count:Int <-
-  // Prepend `c' to Current until `needed_count' is reached.
-  // Do nothing if `needed_count' is already greater or equal
-  // to `count'.
+  // Prepend @c to self until @needed_count is reached.
+  // Do nothing if @needed_count is already greater or equal
+  // to @count.
   ( + offset, old_upper: Int
     ? { needed_count >= 0}
         
@@ -703,7 +703,7 @@ Public
   )
 
   - remove_all_occurrences ch:Char <-
-  // Remove all occurrences of `ch'.
+  // Remove all occurrences of @ch.
   ( + j:Int
     j := 0
     lower.to upper do { i:Int
@@ -716,8 +716,8 @@ Public
   )
 
   - extend_unless ch:Char <-
-  // Extend `Current' (using `extend') with `ch' unless `ch' is
-  // already the `last' character.
+  // Extend @self (using @extend) with @ch unless @ch is
+  // already the @last character.
   ( 
     ( (upper = -1) || {item upper != ch}).if {
       add_last ch
@@ -727,7 +727,7 @@ Public
   )
 
   - make_from_string model:String <-
-  // Initialize from the characters of `model'.
+  // Initialize from the characters of @model.
   // Useful in proper descendants of String_buffer.
   ( + c:Int
 
@@ -789,9 +789,9 @@ Public
   // Interfacing with C string :
 
   - to_external:C_array Char <-
-  // Gives C access to the internal `storage' (may be dangerous).
+  // Gives C access to the internal @storage (may be dangerous).
   // To be compatible with C, a null character is added at the end
-  // of the internal `storage'. This extra null character is not
+  // of the internal @storage. This extra null character is not
   // part of the Lisaac String_buffer.
   (
     // Append 0 terminal.
@@ -809,12 +809,12 @@ Public
   ]
 
   - from_external p:C_array(Char) <-
-  // Internal `storage' is set using `p' (may be dangerous because
-  // the external C string `p' is not duplicated).
-  // Assume `p' has a null character at the end in order to
-  // compute the Lisaac `count'. This extra null character
+  // Internal @storage is set using @p (may be dangerous because
+  // the external C string @p is not duplicated).
+  // Assume @p has a null character at the end in order to
+  // compute the Lisaac @count. This extra null character
   // is not part of the Lisaac String_buffer.
-  // Also consider `from_external_copy' to choose the most appropriate.
+  // Also consider @from_external_copy to choose the most appropriate.
   ( ? {p.is_not_null}
 
     upper := -1
@@ -832,11 +832,11 @@ Public
   )
 
   - from_external_copy p:C_array(Char)  <-
-  // Internal `storage' is set using a copy of `p'.
-  // Assume `p' has a null character at the end in order to
-  // compute the Eiffel `count'. This extra null character
+  // Internal @storage is set using a copy of @p.
+  // Assume @p has a null character at the end in order to
+  // compute the Eiffel @count. This extra null character
   // is not part of the Lisaac String_buffer.
-  // Also consider `from_external' to choose the most appropriate.
+  // Also consider @from_external to choose the most appropriate.
   ( + i:Int
     ? {p.is_not_null}
     upper := -1

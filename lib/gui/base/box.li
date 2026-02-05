@@ -60,7 +60,7 @@ Public
     ask_refresh
   }
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( 
     /*(event_elevator ev) || {
       False

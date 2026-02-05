@@ -12,7 +12,7 @@ Public
   + height_min:Real32
   
   + drw:{User_box;}
-  + evt:{(User_box,Uint8); Boolean}
+  + evt:{(User_box,Int); Boolean}
   
   - new:Self <-
   ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
@@ -20,9 +20,9 @@ Public
   - free <- stk.add_last self
   
   - init (w,h:Real32) draw d:{User_box;} :Self <-
-  init (w,h) draw d event {(d:User_box,e:Uint8); False}
+  init (w,h) draw d event {(d:User_box,e:Int); False}
   
-  - init (w,h:Real32) draw d:{User_box;} event e:{(User_box,Uint8);Boolean} :Self <-
+  - init (w,h:Real32) draw d:{User_box;} event e:{(User_box,Int);Boolean} :Self <-
   (
     (width_min,height_min) := (width,height) := (w,h)
     (drw,evt) := (d,e)
@@ -31,4 +31,4 @@ Public
     
   - draw <- drw.value self
   
-  - event ev:Uint8 :Boolean <- evt.value (self,ev)
+  - event ev:Int :Boolean <- evt.value (self,ev)

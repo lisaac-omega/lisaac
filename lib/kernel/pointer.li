@@ -21,10 +21,10 @@ Public
 
 
   - to_c_array:C_array(Uint8) <- Cast Self To (C_array Uint8).on self
-  // Convert `pointer' into 'native_array' type.
+  // Convert @pointer into @C_array .
 
 //  - to_uint32:Uint32 <- `(unsigned int)@self`:Uint32
-  // convert `pointer' into uinteger type (adress of the pointer)
+  // convert @pointer into uinteger type (adress of the pointer)
 
 //  - from_uinteger p:Uint32 :Pointer <- CAST Uint32 TO Pointer.on p
   // create Pointer from an adress

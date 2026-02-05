@@ -1,7 +1,7 @@
 Header
   + name := Array3 V
 /*
-    Unlike ARRAY3, the `lower1`, `lower2` and `lower3` bounds 
+    Unlike ARRAY3, the @lower1, @lower2 and @lower3 bounds 
     are frozen to 0. Thus, one can expect better performances. .
   */
 Inherit
@@ -24,13 +24,13 @@ Private
 
   + count2x3:Int
   // To speed up access, this value is always equal to
-  // `count2` * `count3`
+  // @count2 * @count3
 
 Array3
 
   + storage:C_array V
 
-  + capacity:Int; // of `storage`.
+  + capacity:Int; // of @storage.
 
 Public
 
@@ -41,7 +41,7 @@ Public
   - lower3:Int := 0
 
   - create (new_count1, new_count2, new_count3:Int) :Self<-
-  // Create or reset `Current` with new dimensions.
+  // Create or reset @self with new dimensions.
   // All elements are set to the default value of type E.
   ( + result:Self
 
@@ -51,7 +51,7 @@ Public
   )
 
   - make (new_count1, new_count2, new_count3 :Int) <-
-  // Create or reset `self` with new dimensions.
+  // Create or reset @self with new dimensions.
   // All elements are set to the default value of type E.
   [ // Old
     -? { new_count1 > 0 }
@@ -82,7 +82,7 @@ Public
   ]
 
   - from_collection3 model:Collection3(V) <-
-  // Uses the `model` to update self.
+  // Uses the @model to update self.
   (
     make (model.upper1 + 1, model.upper2 + 1, model.upper3 + 1)
     lower1.to upper1 do { i:Int
@@ -96,7 +96,7 @@ Public
 
   - from_collection contents:Collection(V) size (new_count1, new_count2, new_count3:Int) <-
   //  Reset all bounds using `new_count#i`.
-  //  Copy all elements of `contents`, line by line into self.
+  //  Copy all elements of @contents, line by line into self.
   [ // Old
     -? { new_count1 >= 0 }
     -? { new_count2 >= 0 }
@@ -118,7 +118,7 @@ Public
 
 
   - from_model model:Collection(Collection(Collection(V))) <-
-  // The `model` is used to fill line by line the COLLECTION3.
+  // The @model is used to fill line by line the COLLECTION3.
   // Assume all sub-collections of have the same indexing.
   ( + n:Int
 
@@ -225,7 +225,7 @@ Public
 
   - slice (l1,up1:Int) to (l2,up2:Int) to (l3,up3:Int) :Self <-
   // Create a new collection initialized with elements of
-  // range `low`..`up`. result has the same dynamic type
+  // range @low..@up. result has the same dynamic type
   // as self collection.
   ( + result:Self
 
@@ -242,7 +242,7 @@ Public
   - set_slice (l1,up1:Int) to (l2,up2:Int) to (l3,up3:Int) with element:V <-
   // Set all the elements in the
   // range [(l1,up1),(l2,up2),(l3,up3)] of
-  // self with the element `element`.
+  // self with the element @element.
   (
     (l1 * count2x3).to (up1 * count2x3) by count2x3 do { i:Int
       (l2 * count3).to (up2 * count3) by count3 do { j:Int
@@ -289,7 +289,7 @@ Public
 
     tmp := Self.create (new_count1, new_count2, new_count3)
     // BSBS: It may be possible to avoid this creation when :
-    // BSBS:   new `capacity` <= old `capacity`
+    // BSBS:   new @capacity <= old @capacity
 
     line_maximum.downto 0 do { l:Int
       column_maximum.downto 0 do { c:Int
@@ -315,7 +315,7 @@ Public
   // Looking and Searching:
 
   - has x:V :Boolean <-
-  // Look for `x` using `equal` for comparison.
+  // Look for @x using @equal for comparison.
   ( + result:Boolean
 
     (count > 0).if {
@@ -325,7 +325,7 @@ Public
   )
 
   - fast_has x:V :Boolean <-
-  // Same as `has` but use `=` for comparison
+  // Same as @has but use `=` for comparison
   ( + result:Boolean
 
     (count > 0).if {

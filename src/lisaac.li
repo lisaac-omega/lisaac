@@ -147,7 +147,7 @@ Private
         }
       } else {
         //
-        // Input name & Current Directory.
+        // Input name & self Directory.
         //
         (cmd.has_suffix ".lip").if {          
           // .lip

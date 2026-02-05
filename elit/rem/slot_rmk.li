@@ -25,8 +25,10 @@ Public
   - parse <-
   ( 
     {look key}.while_do {
-      pos_i := pos_i + 2
-      rd_rem_cpp
+      pos_i := pos_i + 4
+      skip_until '\n'
+      (at pos_i = '\n').if { nl := nl + 1; pos_i := pos_i + 1; }
+      //rd_rem_cpp
     }
   )
   
@@ -51,7 +53,15 @@ Public
   // DRAW
     
   - begin_draw <-
-  (  
+  ( 
+    (sty.is_empty).if {      
+      {look key}.while_do {
+        pos_i := pos_i + 2        
+        rd_rem_cpp
+      }
+      pos_i := Old pos_i
+      nl := Old nl
+    }
     tex.push (x_space*2,0)
     pos_i := pos_i + 4
   )

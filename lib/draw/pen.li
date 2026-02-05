@@ -1773,7 +1773,7 @@ Public
     
     //- cpt_bug:Int
     + max_raws:Int
-    max_raws := 3; // BSBS: A revoir (avec les returns `exit_flag' ps utile...)
+    max_raws := 3; // BSBS: A revoir (avec les returns @exit_flag ps utile...)
     
     row_start := row_end := word_start := break_end := -1
     q := Fons_quad.create

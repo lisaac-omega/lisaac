@@ -69,15 +69,12 @@ Public
     value  := value.execute_link
     result := self
     //
-    ((static_type.raw = type_integer) && {value.is_constant}).if { // -------> OK
-      result := value
-      new_execute_pass
-    }.elseif {  
-      (is_integer (static_type.raw.name)) && {value.is_constant} &&
-      { int ?= value;  // BSBS: Merde avc les prototype_cst de type type_id : Int
+    ((is_integer (static_type.raw.name)) && {value.is_constant} &&
+      {
+        int ?= value;  
         int != NULL
-      }
-    } then {
+      } 
+    ).if {
       int.cast_type static_type
       result := value
       new_execute_pass

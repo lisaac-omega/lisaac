@@ -70,8 +70,8 @@ Public
   
   // Moving
   
-  - event ev:Uint8 :Boolean <-
-  ( + e:Uint8
+  - event ev:Int :Boolean <-
+  ( + e:Int
     e := ev & ~1
     (e = Hand.drag).if {
       camera.set_position (Hand.dx,Hand.dy) alpha 0 ray (camera.ray)

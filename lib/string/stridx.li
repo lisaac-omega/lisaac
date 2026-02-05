@@ -37,7 +37,7 @@ Public
   - lower:Self <- to_self 0
   
   - to limit_up:Self do blc:{Self;} <-
-  // Classical loop from `self' to `limit_up'
+  // Classical loop from @self to @limit_up
   (
     (self <= limit_up).if {
       blc.value self
@@ -46,7 +46,7 @@ Public
   )
 
   - downto limit_down:Self do blc:{Self;} <-
-  // Classical backward loop from `self' to `limit_down'
+  // Classical backward loop from @self to @limit_down
   (
     (self >= limit_down).if {
       blc.value self

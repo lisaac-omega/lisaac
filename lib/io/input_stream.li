@@ -14,11 +14,11 @@ Public
   // True if one char is already pushed back.
 
   - last_integer:Int
-  // Last integer read using `read_integer'.
+  // Last integer read using @read_integer.
 
   - last_string:String_buffer :=
   // Access to the unique common buffer to get for example the result
-  // computed by `read_line', `read_word', `newline', etc. This is a once
+  // computed by @read_line, @read_word, @newline, etc. This is a once
   // function (the same common buffer is used for all streams).
   (
     String_buffer.create 1024
@@ -46,7 +46,7 @@ Public
   // To read one character at a time:
 
   - read_character:Char <-
-  // Read a character and assign it to `last_character'.
+  // Read a character and assign it to @last_character.
   ( + result:Char
     ? {! end_of_input}
     abstract
@@ -56,7 +56,7 @@ Public
 
 
   - last_character:Char <-
-  // Last character read with `read_character'.
+  // Last character read with @read_character.
   (
     ? { is_connected }
     abstract
@@ -73,12 +73,12 @@ Public
   // Skipping separators:
 
   - skip_separators <-
-  // Skip all separators (see `is_separator' of class Char) and
-  // make the first non-separator available in `last_character'. This
+  // Skip all separators (see @is_separator of class Char) and
+  // make the first non-separator available in @last_character. This
   // non-separator character is pushed back into the stream (see
-  // `unread_character') to be available one more time (the next
-  // `read_character' will consider this non-separator). When
-  // `end_of_input' occurs, this process is automatically stopped.
+  // @unread_character) to be available one more time (the next
+  // @read_character will consider this non-separator). When
+  // @end_of_input occurs, this process is automatically stopped.
   (
     { end_of_input || {!last_character.is_separator}}.until_do {
       read_character
@@ -89,7 +89,7 @@ Public
   )
 
   - skip_separators_using separators:String_buffer <-
-  // Same job as `skip_separators' using the `separators' set.
+  // Same job as @skip_separators using the @separators set.
   (
     ? { separators != NULL }
 
@@ -125,9 +125,9 @@ Public
 
   - read_integer <-
   // Read an integer according to the Lisaac Ω syntax.
-  // Make result available in `last_integer'.
+  // Make result available in @last_integer.
   // Heading separators are automatically skipped using
-  // `is_separator' of class Char.
+  // @is_separator of class Char.
   // Trailing separators are not skipped.
   (
     + state:Int
@@ -195,9 +195,9 @@ Public
 
   
   - read_real <-
-  // Read a REAL and make the result available in `last_real'
-  // and in `last_double'.
-  // The integral part is available in `last_integer'.
+  // Read a REAL and make the result available in @last_real
+  // and in @last_double.
+  // The integral part is available in @last_integer.
   (
     ? { !end_of_input }
     read_double
@@ -205,10 +205,10 @@ Public
   )
 
   - last_real:Real
-  // Last real read with `read_real'.
+  // Last real read with @read_real.
 
   - read_double <-
-  // Read a DOUBLE and make the result available in `last_double'.
+  // Read a DOUBLE and make the result available in @last_double.
   (
     + state:Int
     + sign:Boolean
@@ -296,14 +296,14 @@ Public
 
 
   - last_double:Real64
-  // Last double read with `read_double'.
+  // Last double read with @read_double.
 
   // To read one line or one word at a time:
 
   - read_line <-
-  // Read a complete line ended by '\n' or `end_of_input'. Make the
-  // result available in `last_string' common buffer. The end of line
-  // character (usually '\n') is not added in the `last_string' buffer.
+  // Read a complete line ended by '\n' or @end_of_input. Make the
+  // result available in @last_string common buffer. The end of line
+  // character (usually '\n') is not added in the @last_string buffer.
   (
     ? { !end_of_input }
     last_string.clear
@@ -312,10 +312,10 @@ Public
 
 
   - read_word <-
-  // Read a word using `is_separator' of class Char. Result is
-  // available in the `last_string' common buffer. Heading separators are
+  // Read a word using @is_separator of class Char. Result is
+  // available in the @last_string common buffer. Heading separators are
   // automatically skipped. Trailing separators are not skipped
-  // (`last_character' is left on the first one). If `end_of_input' is
+  // (@last_character is left on the first one). If @end_of_input is
   // encountered, Result can be the empty string.
   (
     ? { !end_of_input }
@@ -334,7 +334,7 @@ Public
 
   - newline <-
   // Consume input until newline ('\n') is found. Corresponding
-  // String_buffer is stored in `last_string' common buffer.
+  // String_buffer is stored in @last_string common buffer.
   (
     + stop:Boolean
 
@@ -352,11 +352,11 @@ Public
   )
 
   - reach_and_skip keyword:String_buffer <-
-  // Try to skip enough characters in order to reach the `keyword'
-  // which is skipped too. If the `keyword' is not in the remainder of
-  // this stream, the process is stopped as soon  as `end_of_input'
-  // occurs. As for `skip_separators' the following character of the
-  // `keyword' is available in `last_character' and not yet read.
+  // Try to skip enough characters in order to reach the @keyword
+  // which is skipped too. If the @keyword is not in the remainder of
+  // this stream, the process is stopped as soon  as @end_of_input
+  // occurs. As for @skip_separators the following character of the
+  // @keyword is available in @last_character and not yet read.
   (
     + stop:Boolean
     + i:Int
@@ -368,7 +368,7 @@ Public
     first := keyword.first
 
     { end_of_input || stop }.until_do {
-      // Reach the first character of the `keyword':
+      // Reach the first character of the @keyword:
       i := 2
       { (i > last_string.count) || { last_string.item i = first }}.until_do {
         i := i + 1
@@ -390,7 +390,7 @@ Public
       ? { !end_of_input ->> {last_string.item 1 = first}}
       ? { last_string.count <= keyword.count }
 
-      // Now we need as many characters as in `keyword':
+      // Now we need as many characters as in @keyword:
       { end_of_input || { last_string.count = keyword.count } }.until_do {
         read_character
         last_string.extend last_character
@@ -409,7 +409,7 @@ Public
   // Other features:
 
   - read_line_in buffer:String_buffer <-
-  // Same jobs as `read_line' but storage is directly done in `buffer'.
+  // Same jobs as @read_line but storage is directly done in @buffer.
   (
     ? { !end_of_input }
     ? { buffer != NULL }
@@ -417,7 +417,7 @@ Public
   )
 
   - read_word_using separators:String_buffer <-
-  // Same jobs as `read_word' using `separators'.
+  // Same jobs as @read_word using @separators.
   (
     ? { !end_of_input }
     ? { separators != NULL }
@@ -434,7 +434,7 @@ Public
   )
 
   - read_tail_in str:String_buffer <-
-  // Read all remaining character of the file in `str'.
+  // Read all remaining character of the file in @str.
   (
     ? { str != NULL }
 

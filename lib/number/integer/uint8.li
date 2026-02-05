@@ -16,7 +16,7 @@ Public
 
   // Range.
 
-  - maximum:Uint64 := 255.to_raw_uint64
+  - maximum:Uint64 := 0FFh
 
   // Conversion with test.
 

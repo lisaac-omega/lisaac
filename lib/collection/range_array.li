@@ -1,16 +1,16 @@
 Header
-  + name := Range_array V
+  + name := Exact Range_array V
 /*
     General purpose resizable ARRAYs .
-    The `lower` bound can be any arbitrary value, even a negative one.
+    The @lower bound can be any arbitrary value, even a negative one.
     
-    This implementation uses only one chunk of memory, the `storage` area which is a
-    C_array. One must keep in mind that this internal `storage` area is always kept
+    This implementation uses only one chunk of memory, the @storage area which is a
+    C_array. One must keep in mind that this internal @storage area is always kept
     left align. Thus, you can expect good performances while using an ARRAY to modelize a
-    stack behavior with `add_last` / `last` / `remove_last`.
+    stack behavior with @add_last / @last / @remove_last.
     
-    Conversely `add_first` and `remove_first` are likely to slow down your program if
-    they are too often used. If the fact that `lower` is always stuck to 0 is not a 
+    Conversely @add_first and @remove_first are likely to slow down your program if
+    they are too often used. If the fact that @lower is always stuck to 0 is not a 
     problem for you, also consider ARRAY to get better performances.
   */
 Inherit
@@ -57,8 +57,8 @@ Public
 
   - create min_index:Int to max_index:Int :Self <-
   // Prepare the array to hold values for indexes in range
-  // [`min_index` .. `max_index`]. Set all values to default.
-  // When `max_index` = `min_index` - 1, the array `is_empty`.
+  // [@min_index .. @max_index]. Set all values to default.
+  // When @max_index = @min_index - 1, the array @is_empty.
   [
     deprecated True msg "range_array.li:l63:Use new instead. DC Jan 2026"
   ]
@@ -70,11 +70,11 @@ Public
 
   - make min_index:Int to max_index:Int <-
   // Prepare the array to hold values for indexes in range
-  // [`min_index` .. `max_index`]. Set all values to default.
-  // When `max_index` = `min_index` - 1, the array `is_empty`.
-  // * Require: `min_index` inferior or equal to `max_index` + 1
-  // * Ensure: `lower` is equal to `min_index`
-  // * Ensure: `upper` is equal to `max_index`
+  // [@min_index .. @max_index]. Set all values to default.
+  // When @max_index = @min_index - 1, the array @is_empty.
+  // * Require: @min_index inferior or equal to @max_index + 1
+  // * Ensure: @lower is equal to @min_index
+  // * Ensure: @upper is equal to @max_index
   // * Ensure: all values are in default
   [
     deprecated True msg "range_array.li:l63:Use new instead. DC Jan 2026"
@@ -89,8 +89,8 @@ Public
   ]
 
   - create_with_capacity needed_capacity:Int lower low:Int :Self <-
-  // Create an empty array with `capacity` initialized
-  // at least to `needed_capacity` and `lower` set to `low`.
+  // Create an empty array with @capacity initialized
+  // at least to @needed_capacity and @lower set to @low.
   ( + result:Self
 
     result := clone
@@ -99,8 +99,8 @@ Public
   )
 
   - with_capacity needed_capacity:Int lower low:Int <-
-  // Create an empty array with `capacity` initialized
-  // at least to `needed_capacity` and `lower` set to `low`.
+  // Create an empty array with @capacity initialized
+  // at least to @needed_capacity and @lower set to @low.
   [ // Old
     -? { needed_capacity >= 0}
   ]
@@ -117,7 +117,7 @@ Public
 
   - ensure_capacity needed_capacity:Int and_bounds low:Int to up:Int <-
   // Extend needed capacity and bouds if necessary
-  // * Require: `up` superior or equal to `low` - 1
+  // * Require: @up superior or equal to @low - 1
   [ // Old
     -? { up >= low - 1 }
     -? { needed_capacity >= up - low + 1 }
@@ -140,13 +140,13 @@ Public
   // Modification:
 
   - resize min_index:Int to max_index:Int <-
-  // Resize to bounds `min_index` and `max_index`. Do not lose any
-  // item whose index is in both [`lower` .. `upper`] and
-  // [`min_index` .. `max_index`]. New positions if any are
+  // Resize to bounds @min_index and @max_index. Do not lose any
+  // item whose index is in both [@lower .. @upper] and
+  // [@min_index .. @max_index]. New positions if any are
   // initialized with the appropriate default value.
-  // * Require: `min_index` inferior or equal to `max_index` + 1
-  // * Ensure: `lower` is equal to `min_index`
-  // * Ensure: `upper` is equal to `max_index`
+  // * Require: @min_index inferior or equal to @max_index + 1
+  // * Ensure: @lower is equal to @min_index
+  // * Ensure: @upper is equal to @max_index
   [ // Old
     -? { min_index <= max_index + 1 }
   ]
@@ -196,10 +196,10 @@ Public
 
 
   - reindex new_lower:Int <-
-  // Change indexing to take in account the expected `new_lower`
-  // index. The `upper` index is translated accordingly.
-  // * Ensure: `lower` is equal to `new_lower`
-  // * Ensure: `count` is equal to `count` before
+  // Change indexing to take in account the expected @new_lower
+  // index. The @upper index is translated accordingly.
+  // * Ensure: @lower is equal to @new_lower
+  // * Ensure: @count is equal to @count before
   ( + i:Int
 
     i := new_lower - lower
@@ -214,8 +214,8 @@ Public
   // Implementation of abstract:
 
   - subarray min:Int to max:Int :Self <-
-  // Return the subarray between `min` to `max`
-  // * Ensure: `Result.lower` is equal to `min` before
+  // Return the subarray between @min to @max
+  // * Ensure: `Result.lower` is equal to @min before
   ( + result:Self
 
     result := slice min to max

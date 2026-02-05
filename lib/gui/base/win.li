@@ -155,7 +155,7 @@ Public
     result
   )
   
-  - event ev:Uint8 :Boolean
+  - event ev:Int :Boolean
   
   - focus:Win
   - get_focus <-

@@ -59,9 +59,9 @@ Public
   // The Guru section: The Compiler consideration.
 
   - to_external:C_array Char <- storage
-  // Gives C access to the internal `storage' (may be dangerous).
+  // Gives C access to the internal @storage (may be dangerous).
   // To be compatible with C, a null character is added at the end
-  // of the internal `storage'. This extra null character is not
+  // of the internal @storage. This extra null character is not
   // part of the Lisaac STRING.
 
   - println <-

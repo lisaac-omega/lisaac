@@ -50,7 +50,7 @@ Public
   - exec_right right_cst:Int_cst :Expr <-
   //-- ~ C1 -> C2
   ( + result:Expr
-    (right_cst.is_signed).if {
+    (right_cst.is_signed).if {      
       right_cst.set_value (~ right_cst.value)
       result := right_cst
     }

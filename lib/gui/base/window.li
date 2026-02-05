@@ -12,6 +12,8 @@ Public
   - set_pen p:Pen <- ( pen := p; )
   
   + win_ptr:Pointer
+  - set_win_ptr p:Pointer <- ( win_ptr := p )
+  
   + fullscreen:Boolean
   
   - window:Window <- self
@@ -39,14 +41,14 @@ Public
   
   - size (w,h:Real32) :Self <-
   ( parent_win.size (w,h)
-    (! win_ptr.is_null).if { Paper.set_window win_ptr size (w.to_int,h.to_int); }
+    //(! win_ptr.is_null).if { Paper.set_window win_ptr size (w.to_int,h.to_int); }
     ask_refresh
     self
   )
   
   - on_close <-
   (    
-    PAPER.exit 0
+    Paper.exit 0
   )
   
   - draw_all <-

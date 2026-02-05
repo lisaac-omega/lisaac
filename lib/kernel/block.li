@@ -1,9 +1,9 @@
 Header
   + name := Block
 /*Block instruction library { ... } .*/
-Inherit
+Insert
 
-  - parent_clone:Clone := Clone
+  - parent_utils:Utils := Utils
 
 Public
   
@@ -118,7 +118,7 @@ Public
   )
 
   - self:{Boolean} while_do body:{} ensure test:{Boolean} <-
-  // Mix loop version beetween `while_do' and `do_while'
+  // Mix loop version beetween @while_do and @do_while
   (
     value.if {
       body.value

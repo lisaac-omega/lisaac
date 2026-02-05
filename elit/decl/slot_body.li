@@ -29,13 +29,13 @@ Public
   (
     Expr.skip_body
     end pos_i
-    ((Page.cur_pg != NULL) && {Page.cur_pg = page}).if {
+   /* ((Page.cur_pg != NULL) && {Page.cur_pg = page}).if {
       + p,n:Int;      
       (p,n) := (pos_i,nl)
       pos_i := Old pos_i
       parse_real
       (pos_i,nl) := (p,n)      
-    }   
+    }   */
   )
   
   - begin_draw <-
@@ -56,7 +56,8 @@ Private
   
   - parse_real <-
   (
-    slot.load_arg
+    //EXPR.print_local
+    //slot.load_arg
     ln_limit := pt_b.pt + di
     expr := Expr.rd_expr_op
     (read_c ';').if { col (Look.symbol) sub 1; }

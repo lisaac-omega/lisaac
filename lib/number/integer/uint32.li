@@ -15,7 +15,7 @@ Public
 
   // Range.
 
-  - maximum:Uint64 := ~ 0.to_raw_uint32
+  - maximum:Uint64 := 0FFFF_FFFFh
   
   - clz:Int <-
   // Count Leading Zeros.

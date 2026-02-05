@@ -70,7 +70,7 @@ Public
     restore
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   (
     (ev & ~1 = Hand.in).if {
       set inside with (ev = Hand.in)

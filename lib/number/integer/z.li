@@ -1023,7 +1023,7 @@ Div_inv
     bm1 := pp + 3*n;  // n
     v1 := scratch;    // 2n + 1
     vm1 := pp;        // 2n + 1
-    scratch_out := scratch + 2*n + 1; // Currently unused.
+    scratch_out := scratch + 2*n + 1; // selfly unused.
     // Scratch need: 2*n + 1 + scratch for the recursive multiplications.
     
     // Compute ap1 = a0 + a1 + a2, am1 = a0 - a1 + a2
@@ -1244,7 +1244,7 @@ Div_inv
     vinf := pp + 4 * n;        // s+t
     vm1 := scratch;            // 2n+1
     v2 := scratch + 2 * n + 1; // 2n+2
-    scratch_out := scratch + 4 * n + 4; // Currently unused.
+    scratch_out := scratch + 4 * n + 4; // selfly unused.
 
     // vm1, 2n+1 limbs
     toom22_n_rec (vm1, asm1, bsm1, n, scratch_out)

@@ -409,7 +409,7 @@ Public
   // conversion
 
   - append_in b:String_buffer <-
-  // Append in the `b' the equivalent of `to_string'. No new String_buffer
+  // Append in the @b the equivalent of @to_string. No new String_buffer
   // creation during the process.
   ( + value:Uint_big
     + mod:Uint32
@@ -500,11 +500,11 @@ Public
   )
 
   - divide_one_word divisor:Uint32 :Uint32 <-
-  // This method is used by `divide'. The one word divisor is
-  // specified by `divisor' is saw as unsigned.
-  // `self' is the dividend (saw positive) at invocation but is replaced by
+  // This method is used by @divide. The one word divisor is
+  // specified by @divisor is saw as unsigned.
+  // @self is the dividend (saw positive) at invocation but is replaced by
   // the quotient. The remainder is returned as unsigned Int.
-  // Note: `Current' is modified by this method.
+  // Note: @self is modified by this method.
   [ -? {divisor != 0}; ]
   ( + i, remainder_word1, remainder_word0:Int
     + result:Uint32
@@ -557,8 +557,8 @@ Public
   [ +? {item upper < 0}; ]
 
   - shift_left n:Int <-
-  // Shift bits of magnitude by `n' position left. (Note that no bit can
-  // be lost because the `storage' area is automatically extended when
+  // Shift bits of magnitude by @n position left. (Note that no bit can
+  // be lost because the @storage area is automatically extended when
   // it is necessary.)
   [ -? {n > 0}; ]
   ( + left,right: Int8
@@ -589,7 +589,7 @@ Public
   )
 
   - shift_right n:Int <-
-  // Shift bits of magnitude by `n' position right.
+  // Shift bits of magnitude by @n position right.
   [ -? {n > 0}; ]
   ( + left,right: Int8
     + word_right:Int
@@ -615,7 +615,7 @@ Public
 
   - multiply_and_subtract (u1, qhat: Int, d_storage: Array(Uint32),
   d_offset:Int, r_storage:Array(Uint32),r_offset, length: Int):Boolean <-
-  // Only used by `divide'.
+  // Only used by @divide.
   [ -? {qhat != 0}; ]
   ( + i, j, jmax, m1, m2: Int
     + dec,result:Boolean
@@ -690,8 +690,8 @@ Public
 
   - add_back (old_u1:Int, d_storage:Array(Uint32),d_offset:Int,
     r_storage:Array(Uint32),r_offset, length:Int):Boolean <-
-  // Only used by `divide'.
-  // `old_u1' is the value of `u1' before `multiply_and_subtract'.
+  // Only used by @divide.
+  // @old_u1 is the value of @u1 before @multiply_and_subtract.
   ( + i, j, jmax:Int
     + inc,result:Boolean
 
@@ -737,8 +737,8 @@ Public
 
   - divide_to (other, quotient, remainder:Self) <-
   // Euclidian division.
-  // Calculates the `quotient' and `remainder' of `Current'
-  // divided by `other'. (The contents of `Current' and `other' are
+  // Calculates the @quotient and @remainder of @self
+  // divided by @other. (The contents of @self and @other are
   // not changed.)
   // Note: Uses Algorithm D in Knuth
   [ -? {! other.is_zero}

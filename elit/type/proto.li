@@ -118,7 +118,7 @@ Private
       ((p.ttok != NULL) && {p.type != NULL}).if {
         pp := p.type.like Tpro.proto
         (pp != NULL).if {
-          r := pp.lookup (s.name_id) filter 01
+          r := pp.lookup_slot s
           (r != NULL).if { set_op.add_last r; }
           pp.collect_rec_parent s
         }
@@ -285,6 +285,17 @@ Public
         (to != NULL).if { result := to.proto.lookup n filter (m|1); }
         i := i + 1
       }
+    }
+    result
+  )
+  
+  - lookup_slot s:Slot :Slot <-
+  ( + i:Int
+    + result,r:Slot
+    {(i <= slot.upper) && {result = NULL}}.while_do {
+      r := slot.at i
+      ((r.name_id,r.arg.count) = (s.name_id,s.arg.count)).if { result := r }
+      i := i + 1
     }
     result
   )
@@ -663,10 +674,8 @@ Private
     tex.pop_add_y hline_default
   )
   
-  //
   // Comment
-  //
-  
+    
   - draw_comment <-
   ( + e:Int
     + old_pt:Pos
@@ -712,11 +721,9 @@ Private
       }
     }
   )
-  
-  //
+    
   // Card
-  //
-  
+    
   - draw_card <-
   ( + cpt:Int
     - menu:Boolean
@@ -732,8 +739,8 @@ Private
         end_line
         //
         String.tmp { tmp:String_buffer
-          date_create.append_ddmmyy_in tmp
-          tmp += " ↦ "; // tmp += " ➔ "
+          //date_create.append_ddmmyy_in tmp
+          //tmp += " ↦ "; // tmp += " ➔ "
           date_update.append_ddmmyy_in tmp
           begin_line
           Div.ico (Look.calendar) alpha 1 act NULL

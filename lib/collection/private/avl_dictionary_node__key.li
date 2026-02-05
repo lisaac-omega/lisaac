@@ -24,7 +24,7 @@ Public
   ]
 
   - fast_at k:K :Avl_dictionary_node V Key K <-
-  // Is element `e' in the tree?
+  // Is element @e in the tree?
   ( + result:Avl_dictionary_node V Key K
 
     (key = k).if {

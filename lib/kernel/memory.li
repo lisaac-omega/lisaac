@@ -178,16 +178,16 @@ Memory
     new_free := previous_linear
     new_size := size_and_id & ~ 1.to_uint_cpu
     ((new_free = NULL) || {new_free.id != id_free}).if {
-      // `self' => Free
+      // @self => Free
       new_free := self
       add_link_free
     } else {
-      // `previous_linear' => Free
+      // @previous_linear => Free
       new_size := new_size + new_free.size_and_id + object_size
     }
 
     ((! is_end) && {next.id = id_free}).if {
-      // Delete and concat `next_linear'
+      // Delete and concat @next_linear
       new_size := new_size + next.size_and_id + object_size
       next.delete_link_free
     }

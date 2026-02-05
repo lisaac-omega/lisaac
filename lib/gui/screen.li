@@ -17,6 +17,7 @@ Public
   ( child.foreach {c:Win; c.free; }
     child.clear
     stk.add_last self
+    Hand.destroy_window self
     Paper.destroy_window self
   )
   
@@ -25,7 +26,17 @@ Public
   
   - is_split:Boolean
   
-  - on_close <- exit_cmd
+  - on_close <- 
+  (
+    (Paper.wins.count > 1).if {
+      {self = Page.cur_pg.window}.while_do {         
+        change_pg; 
+      }
+      free
+    } else {
+      exit_cmd
+    }
+  )
     
   - draw <-
   ( 
@@ -94,7 +105,7 @@ Public
       }
     }
     (Cmd.parent = self).if {
-      child.at 2.refresh; // Current CMD
+      child.at 2.refresh; // self CMD
       (Cmd.parent = self).if {
         height:= height - Cmd.height
         l := l + 1
@@ -106,7 +117,7 @@ Public
     height := Old height
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( 
     (is_split && {ev & ~1 = Hand.clic}).if {
       split_win

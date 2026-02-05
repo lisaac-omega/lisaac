@@ -1,0 +1,11 @@
+Header
+  + name := Main
+
+Public
+  
+  - main <-
+  ( + i32: Int32
+    + i16: Int16
+    i16 := i32    
+  )
+  

@@ -17,7 +17,7 @@ Public
   )
 
   - put_integer i:Int <-
-  // Output `i' to current output device.
+  // Output @i to current output device.
   (
     String.tmp { tmp:String_buffer
       i.append_in tmp
@@ -26,8 +26,8 @@ Public
   )
 
   - put_integer_format (i, s:Int) <-
-  // Output `i' to current output device using at most
-  // `s' character.
+  // Output @i to current output device using at most
+  // @s character.
   (
     not_yet_implemented
     /*
@@ -40,14 +40,14 @@ Public
   // Other features:
 
   - put_boolean b:Boolean <-
-  // Output `b' to current output device according
+  // Output @b to current output device according
   // to the Eiffel format.
   (
     put_string (b.to_string)
   )
 
   - put_pointer p:Pointer <-
-  // Output a viewable version of `p'.
+  // Output a viewable version of @p.
   (
     String.tmp { tmp:String_buffer
       p.append_in tmp
@@ -62,7 +62,7 @@ Public
   )
 
   - put_spaces nb:Int <-
-  // Output `nb' spaces character.
+  // Output @nb spaces character.
   ( ? {nb >= 0}
 
     nb.times {

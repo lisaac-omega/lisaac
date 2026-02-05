@@ -107,7 +107,7 @@ Public
           (convert_dico.is_empty).if {
             first_copy := label_back
           }
-          // Current inline:
+          // self inline:
           // DCDC
           //new_label := convert_dico.fast_reference_at label
           new_label := convert_dico.reference_at label

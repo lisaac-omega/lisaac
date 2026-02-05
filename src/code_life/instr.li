@@ -65,7 +65,7 @@ Public
   )
 
   - genere <-
-  // Generate the C code in `buffer'
+  // Generate the C code in @buffer
   // Deferred
   (
     // BUG.
@@ -98,7 +98,7 @@ Public
   )
 
   - debug_display <-
-  // Print the result of the `display' slot
+  // Print the result of the @display slot
   ( + voir:String_buffer
 
     voir := String_buffer.create 250

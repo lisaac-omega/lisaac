@@ -79,7 +79,7 @@ Public
   // Convertion format with test.
 
   - floor:Int <-
-  // Greatest integral value no greater than Current.
+  // Greatest integral value no greater than self.
   (
     `floor(@self)`:Int
     //to_raw_int
@@ -88,7 +88,7 @@ Public
   - ceil:Self <- `ceil(@self)`:Self
   
   - ceiling:Int <-
-  // Smallest integral value no smaller than Current.
+  // Smallest integral value no smaller than self.
   (
     (self + 0.9999).floor
   )
@@ -100,7 +100,7 @@ Public
   )
 
   - truncated_to_int:Int <- floor
-  // Int part (largest absolute value no greater than Current).
+  // Int part (largest absolute value no greater than self).
 
   // Comparaison.
 
@@ -115,7 +115,7 @@ Public
   // Print.
 
   - append_in b:String_buffer <-
-  // Append `self' decimal representation in `b' with 4 decimal
+  // Append @self decimal representation in @b with 4 decimal
   (
     append_in b decimal 4
   )
@@ -126,7 +126,7 @@ Public
   )
 
   - append_in b:String_buffer format n:Int with c:Char decimal d:Int <-
-  // String of the number in base 10 with `c' replacing blanck
+  // String of the number in base 10 with @c replacing blanck
   [
     -? {n >= 3}
   ]
@@ -256,7 +256,7 @@ Public
   )
 
   - print_decimal s:Int <-
-  // print with `s' decimal
+  // print with @s decimal
   (
     String.tmp { tmp:String_buffer
       append_in tmp decimal s

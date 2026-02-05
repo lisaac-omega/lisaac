@@ -104,7 +104,7 @@ Public
       buf.add_last '\0'
       File_utils.close f
       e := File_system.get name      
-      date_update := e.update_date
+      date_update := e.update_date // BSBS: il n'y a qu'une seul date selon OS/FS
       time_update := e.update_time
       is_save := True
       undo.last_save;
@@ -634,12 +634,9 @@ Public
         {c = '.'} then {
           (look ".gif" || {look ".png"} || {look ".jpg"}).if {            
             img (p+1) to (pos_i + 4); pos_i := pos_i + 3
-            /*
-            (name.has_suffix "array.li").if {
-              (p+1).to (pos_i.pt) do { i:Int; at i.print; }
-              '\n'.print
-            };*/            
           }
+        }.elseif {(c = '@') && {p + 1 = pos_i.pt}} then {
+          toks.at tok_cur.rmk_extern
         }
         pos_i := pos_i + 1
       }
@@ -657,18 +654,21 @@ Public
     pos_i := pos_i + 2
     p := pos_i
     {((c := at pos_i) != '\0') && {c != '\n'} /*&& {c != '\r'}*/}.while_do {      
-      (c = ' ').if { p := pos_i; }.elseif
-      {c = '.'} then {
+      (c = ' ').if { 
+        p := pos_i; 
+      }.elseif {c = '.'} then { 
         (look ".gif" || {look ".png"} || {look ".jpg"}).if {
           img (p+1) to (pos_i + 4); pos_i := pos_i + 3
         }
+      }.elseif {(c = '@') && {p + 1 = pos_i.pt}} then {
+        toks.at tok_cur.rmk_extern
       }
       pos_i := pos_i + 1
     }
     //(c = '\n').if { pos_i := pos_i - 1; }
     (c != '\0').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
   }
-  
+    
   - rd_escape_char <-
   //-- escape         -> '\\' separator {separator} '\\'
   //--                 | '\\' escape_seq
@@ -1144,6 +1144,7 @@ Public
     //OUT # xo # " pos_x=" # pos_x # '\n'
     pos_i := 0
     tok_cur := 0
+    detect_ico_ok := False
     //"TXT_BUF:".print; pos_y.println
     ((!pos.is_xy) && {Page.cur_pg != page}).if { pos := pos.undefine_xy; }
     stackd.clear
@@ -1167,7 +1168,11 @@ Public
       ).if { // Draw  
         //debug_tok_beg := debug_tok_beg.min tok_cur
         //OUT # "Draw " # tok_cur # '\n';
-        t.draw
+        t.draw        
+        ((pos.is_ico) && {pos.tok = tok_cur} && {! detect_ico_ok}).if {
+          pos := Tok_drw.pt_b
+          {at pos = ' '}.while_do { pos := pos + 1 }
+        }
         ((tex.y < yb) && {! pos.is_define_all}).if {
           child.foreach { d:Win; d.free; }
           child.clear
@@ -1229,16 +1234,19 @@ Public
     //"pt_div=".print; ptoi.print; '/'.print; child.upper.print
     //':'.print; child.first.like DIV.ptoi.println
     
+    //(pt_div <= child.upper).if {
+    
     (! drag_pos_y).if {
       d ?= child.at pt_div
       y := d.abs_y - yo
       //"y=".print; y.println
-      (y < margin_cursor_y).if { // Top
-        pos_y := (pos_y + y - margin_cursor_y).max 0
+      //pos_y.println
+      (y < margin_cursor_y).if { // Top        
+        pos_y := (pos_y + y - margin_cursor_y).max 0        
         Paper.refresh_again
       }
       y := y + d.height
-      (y > height-margin_cursor_y).if { // Bottom
+      (y > height-margin_cursor_y).if { // Bottom       
         pos_y := pos_y + y + margin_cursor_y - height
         Paper.refresh_again
       }
@@ -1256,10 +1264,22 @@ Public
         Paper.refresh_again
       }
     } else { drag_pos_x := False; Paper.refresh_again }
-    
+    //}
     //lirestore (0,0)
     restore; stackd.remove_last
-    //"translate: ".print; (-(pos_y - Old pos_y)).println
+    /*( + dy:Real32
+      dy := -(pos_y - Old pos_y)
+      (dy != 0).if {
+        "translate: ".print; dy.println
+        "pos = ".print; pos.print
+        0.to (child.upper) do { j:Int
+          child.at j.like Div.yo.print; ' '.print;
+          child.at j.like Div.pos.print
+          "->".print; child.at j.like Div.pte.print
+        }
+        ".............................".println
+      }
+    )*/
     restore_to (-(pos_x - Old pos_x),-(pos_y - Old pos_y))
     ? {stackd.count = 0}
     tex.pop; ? {tex = Tex}
@@ -1326,7 +1346,8 @@ Public
       rect (xo,yo) size (width,height)
       fill
     }
-    (page = Page.cur_pg).if {      
+    (page = Page.cur_pg).if {
+      //(pt_div <= child.upper).if {
       d ?= child.at pt_div
       (x,y) := (d.abs_x,d.abs_y)
       c := Look.cols.at (Look.cursor)
@@ -1337,6 +1358,7 @@ Public
       fill_paint p
       fill
       p.free
+      //}
     }
   )
   

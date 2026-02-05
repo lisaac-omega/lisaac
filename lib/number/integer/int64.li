@@ -24,9 +24,6 @@ Public
   - to_int64:Int64 <- self
 
   - append_in b:String_buffer <-
-  // Append in the `b' the equivalent of `to_string'. No new String_buffer
-  // creation during the process.
-  [ ? {b!=NULL}; ]
   ( 
     (self = minimum).if {
       b.append "-9223372036854775808"

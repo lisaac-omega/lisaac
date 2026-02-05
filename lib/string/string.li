@@ -72,21 +72,21 @@ Public
   // Switch case :
 
   - when val:String then block:{} :String <-
-  // When `self' equal `val', execute `block'
+  // When @self equal @val, execute @block
   (
     (self == val).if block
     self
   )
 
   - when value1:String or value2:String then block:{} :String <-
-  // When `self' equal `value1' or `value2', execute `block'
+  // When @self equal @value1 or @value2, execute @block
   (
     ((self == value1) || {self == value2}).if block
     self
   )
 
   - case val:Self then block:{} :Self <-
-  // * See: `when_then'
+  // * See: @when_then
   ( + result :Self
 
     (self == val).if {
@@ -99,7 +99,7 @@ Public
   )
 
   - case_if test:{Boolean} then block:{} :String <-
-  // If `test' is true then `block'
+  // If @test is true then @block
   ( + result :String
 
     ((self != String) && test).if {
@@ -112,7 +112,7 @@ Public
   )
 
   - default block:{} <-
-  // otherwise, execute `block'
+  // otherwise, execute @block
   (
     (self != String).if block
   )
@@ -127,7 +127,7 @@ Public
   // Testing.
 
   - valid_index index:Int :Boolean <-
-  // True when `index' is valid (i.e., inside actual bounds).
+  // True when @index is valid (i.e., inside actual bounds).
   ( index.in_range lower to upper )
 
   - is_empty : Boolean <- count = 0
@@ -143,7 +143,7 @@ Public
   - self:Self '~>' other:String :Boolean <- other ~< self
 
   - self:Self '~<' other:String :Boolean <-
-  // Is Current less than `other' ?
+  // Is @self less than @other ?
   ( + i: Int
     + result: Boolean
 
@@ -161,7 +161,7 @@ Public
   )
 
   - self:Self '!<' other:String :Boolean <-
-  // Is Current less than `other' ? But, the `upper' to `lower' comparaison
+  // Is @self less than @other ? But, the @upper to @lower comparaison
   ( + i1,i2: Int
     + result:Boolean
 
@@ -182,7 +182,7 @@ Public
   )
 
   - compare other:String :Int <-
-  // Compare alphabetically `self' to `other'
+  // Compare alphabetically @self to @other
   ( + i: Int
     + result:Int
    
@@ -235,7 +235,7 @@ Public
   )
   
   - self:Self '==' Left 40 other:String :Boolean <-
-  // Has Current the same text as `other' ?
+  // Has @self the same text as @other ?
   ( + result:Boolean
     (self = other).if {
       result := True
@@ -254,7 +254,7 @@ Public
   - self:Self '!==' Left 40 other:String :Boolean <- ! (self == other)
   
   - index_of ch:Char since start_index:Int :Int <-
-  // Index of first occurrence of `c' at or after `start_index',
+  // Index of first occurrence of @c at or after @start_index,
   // result = upper + 1, if none.
   ( + result:Int
     ? { start_index.in_range 0 to count}
@@ -269,7 +269,7 @@ Public
   )
 
   - last_index_of ch:Char since start_index:Int :Int <-
-  // Index of first occurrence of `c' at or before `start_index',
+  // Index of first occurrence of @c at or before @start_index,
   // -1 if none.
   ( + result:Int
     ? {start_index.in_range (-1) to upper}
@@ -285,7 +285,7 @@ Public
   )
 
   - fast_index_of ch:Char :Int <-
-  // Gives the index of the first occurrence `ch' or
+  // Gives the index of the first occurrence @ch or
   // upper+1 if none.
   (+ result:Int
     (upper >= 0).if {
@@ -303,13 +303,13 @@ Public
   )
 
   - first_index_of c:Char :Int <-
-  // Index of first occurrence of `c' at index 1 or after index 1.
+  // Index of first occurrence of @c at index 1 or after index 1.
   (
     fast_index_of c
   )
 
   - fast_last_index_of ch:Char :Int <-
-  // Gives the index of the last occurrence `ch' or
+  // Gives the index of the last occurrence @ch or
   // -1 if none.
   ( + result:Int
     result := storage.fast_reverse_index_of ch from upper
@@ -318,7 +318,7 @@ Public
   [ ? {(Result != -1) ->> {item Result = ch}}; ]
 
   - last_index_of c:Char :Int <-
-  // Index of last occurrence of `c' at index upper or before index upper.
+  // Index of last occurrence of @c at index upper or before index upper.
   (
     fast_last_index_of c
   )
@@ -331,8 +331,8 @@ Public
   )
 
   - first_diff other:String :Int <-
-  // First difference index with `other'.
-  // if `other' is equal `self', return `upper' + 1
+  // First difference index with @other.
+  // if @other is equal @self, return @upper @+ @1
   [ -? {other != NULL}; ]
   ( + result:Int
 
@@ -352,16 +352,16 @@ Public
   )
    
   - first_diff other:String from start:Int :Int <-
-  // First difference index with `other'.
-  // if `other' is equal `self', return `upper' + 1
+  // First difference index with @other.
+  // if @other is equal @self, return @upper @+ @1
   [ -? {other != NULL}; ]
   (
     first_diff_from 0 with other from start
   )
   
   - first_diff_from i:Int with other:String from start:Int :Int <-
-  // First difference index with `other'.
-  // if `other' is equal `self', return `upper' + 1
+  // First difference index with @other.
+  // if @other is equal @self, return @upper + 1
   [ -? {other != NULL}; ]
   ( + result,j:Int
 
@@ -395,10 +395,10 @@ Public
   )
 
   - has ch:Char :Boolean <- storage.fast_has ch until upper
-  // True if `ch' is in the String_buffer.
+  // True if @ch is in the String_buffer.
 
   - has_substring other:String :Boolean <-
-  // True if `other' is in the String_buffer.
+  // True if @other is in the String_buffer.
   ( first_substring_index other != -1 )
   
   - submatch other:String separator sep:Char :Int <-
@@ -432,7 +432,7 @@ Public
   )
   
   - occurrences c:Char :Int <-
-  // Number of times character `c' appears in the string.
+  // Number of times character @c appears in the string.
   (
     occurrences c until upper
   )
@@ -448,7 +448,7 @@ Public
   )
 
   - has_suffix s:String :Boolean <-
-  // True if suffix of `Current' is `s'.
+  // True if suffix of @self is @s.
   (
     + result:Boolean
     + i1,i2:Int
@@ -469,7 +469,7 @@ Public
   )
 
   - has_prefix p:String :Boolean <-
-  // True if prefix of `Current' is `p'.
+  // True if prefix of @self is @p.
   [ ? { p != NULL }; ]
   ( + result:Boolean
     + i:Int
@@ -512,7 +512,7 @@ Public
 
   - is_bit:Boolean <-
   // True when the contents is a sequence of bits (i.e., mixed
-  // characters `0' and characters `1').
+  // characters @0 and characters @1).
   ( + i:Int
     + result:Boolean
     i := upper
@@ -527,7 +527,7 @@ Public
 
   - is_integer:Boolean <-
   // Does self represent an Int?
-  // `Result' is true if and only if the following two conditions hold:
+  // @Result is true if and only if the following two conditions hold:
   // 1. In the following BNF grammar, the value of self can be
   // produced by "Int_literal", if leading and trailing
   // separators are ignored:
@@ -556,7 +556,7 @@ Public
   
   - is_integer_64:Boolean <-
   // Does self represent an Int64?
-  // `Result' is true if and only if the following two conditions hold:
+  // @Result is true if and only if the following two conditions hold:
   // 1. In the following BNF grammar, the value of self can be
   // produced by "Int_literal", if leading and trailing
   // separators are ignored:
@@ -869,7 +869,7 @@ Public
 
   - is_real_16_16:Boolean <-
   // Does self represent an REAl_16_16 ?
-  // `Result' is true if and only if the following two conditions hold:
+  // @Result is true if and only if the following two conditions hold:
   // 1. In the following BNF grammar, the value of self can be
   // produced by "real_literal", if leading and trailing
   // separators are ignored:
@@ -1063,7 +1063,7 @@ Public
 
   - self:Self '+' other:String :String_buffer <-
   // Create a new String_buffer which is the concatenation of
-  // `self' and `other'.
+  // @self and @other.
   [
     -? {other != NULL}
   ]
@@ -1101,19 +1101,19 @@ Public
   // Other features:
 
   - first:Char <-
-  // Access to the very `first' character.
+  // Access to the very @first character.
   [ ? {! is_empty}; ]
   ( storage.at 0 )
   [ /*? { result == item lower};*/ ]
   
   - second:Char <-
-  // Access to the very `second' character.
+  // Access to the very @second character.
   [ ? {upper > 0}; ]
   ( storage.at 1 )
   [ /*? { result == item (lower+1)};*/ ]
 
   - last:Char <-
-  // Access to the very `last' character.
+  // Access to the very @last character.
   (
     + result:Char
     ? {! is_empty}
@@ -1123,7 +1123,7 @@ Public
   )
   
   - substring start_index:Int to end_index:Int in str:String_buffer <-
-  // New string consisting of items [`start_index'.. `end_index'].
+  // New string consisting of items [@start_index.. @end_index].
   [
     -? { start_index >= 0 }
     -? { end_index <= upper }
@@ -1137,7 +1137,7 @@ Public
   )
   
   - substring start_index:Int to end_index:Int :String_buffer <-
-  // New string consisting of items [`start_index'.. `end_index'].
+  // New string consisting of items [@start_index.. @end_index].
   [
     -? { start_index >= 0 }
     -? { end_index <= upper }
@@ -1184,7 +1184,7 @@ Public
   )
   
   - substring_index (other:String,start_index:Int) :Int <-
-  // Position of the first occurrence of `other' at or after 0
+  // Position of the first occurrence of @other at or after 0
   // or -1 if none. // BSBS->DCDC renvoyer plutot upper+1 ce serait mieux...
   ( + i,s,result:Int
 
@@ -1207,8 +1207,7 @@ Public
   )
 
   - first_substring_index other:String :Int <-
-  // Position of the first occurrence of `other' at or after 0
-  // or -1 if none.
+  // Position of the first occurrence of @other at or after @0 or @-1 if none.
   [
     ? {! other.is_empty }
   ]
@@ -1270,7 +1269,7 @@ Public
   ]
 
   - split_str sep:String in words:Collection(String_buffer) <-
-  // Same jobs as `split_str' but result is appended in `words'.
+  // Same jobs as @split_str but result is appended in @words.
   [
     -? {words != NULL}
     -? {sep != NULL}
@@ -1289,7 +1288,7 @@ Public
   )
 
   - split:Array(String_buffer) <-
-  // Split the string into an array of words. Uses `is_separator' of
+  // Split the string into an array of words. Uses @is_separator of
   // Char to find words. Gives Void or a non empty array.
   (
     + result:Array(String_buffer)
@@ -1307,7 +1306,7 @@ Public
   )
 
   - split_in words:Collection(String_buffer) <-
-  // Same jobs as `split' but result is appended in `words'.
+  // Same jobs as @split but result is appended in @words.
   (
     + state,old_count: Int
     // state = 0: waiting next word.
@@ -1343,7 +1342,7 @@ Public
   )
   
   - is_upper:Boolean <-
-  // True, if all characters `is_upper' or '_' or digit.
+  // True, if all characters @is_upper or '_' or digit.
   ( + i:Int
     + c:Char
     i := lower
@@ -1356,7 +1355,7 @@ Public
   )
   
   - split_at sep:Char :Array(String_buffer) <-
-  // Split the string at characters `c' into an array of words.
+  // Split the string at characters @c into an array of words.
   (
     + result:Array(String_buffer)
     ( count > 0 ).if {
@@ -1375,7 +1374,7 @@ Public
   ]
 
   - split_at sep:Char in words:Collection(String_buffer) <-
-  // Same jobs as `split' but result is appended in `words'.
+  // Same jobs as @split but result is appended in @words.
   (
     + state,old_count: Int
     // state = 0: waiting next word.
@@ -1523,9 +1522,9 @@ Public
   - errno:String_alias <- String_alias.create (`strerror(errno)`:C_array Char)
   
   - to_external:C_array Char <-
-  // Gives C access to the internal `storage' (may be dangerous).
+  // Gives C access to the internal @storage (may be dangerous).
   // To be compatible with C, a null character is added at the end
-  // of the internal `storage'. This extra null character is not
+  // of the internal @storage. This extra null character is not
   // part of the String_buffer.
   (
     abstract

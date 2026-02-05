@@ -22,15 +22,15 @@ Array2
   // To store elements line by line.
 
   + capacity:Int
-  // Number of elements in `storage'.
+  // Number of elements in @storage.
 
 Public
 
   // Creation / modification:
 
   - create (line_min, column_min:Int) to (line_max, column_max:Int) :Self <-
-  // Reset all bounds `line_minimum' / `line_maximum' / `column_minimum' and
-  // `column_maximum' using arguments as new values.
+  // Reset all bounds @line_minimum / @line_maximum / @column_minimum and
+  // @column_maximum using arguments as new values.
   // All elements are set to the default value of type E.
   ( + result:Self
 
@@ -40,8 +40,8 @@ Public
   )
 
   - make (line_min, column_min:Int) to (line_max, column_max:Int) <-
-  // Reset all bounds `line_minimum' / `line_maximum' / `column_minimum' and
-  // `column_maximum' using arguments as new values.
+  // Reset all bounds @line_minimum / @line_maximum / @column_minimum and
+  // @column_maximum using arguments as new values.
   // All elements are set to the default value of type E.
   [ // Old
     -? {line_min <= line_max}
@@ -84,9 +84,9 @@ Public
   ]
 
   - from_collection contents:Collection(V) size (line_min,column_min:Int) to (line_max,column_max:Int) <-
-  //  Reset all bounds using `line_min', `line_max', `column_min',
-  //  and `column_max' .
-  //  Copy all elements of `contents', line by line into Current.
+  //  Reset all bounds using @line_min, @line_max, @column_min,
+  //  and @column_max .
+  //  Copy all elements of @contents, line by line into self.
   [ // Old
     -? { line_min <= line_max }
     -? { column_min <= column_max }
@@ -107,8 +107,8 @@ Public
   ]
 
   - from_model model:Collection(Collection(V)) <-
-  // The `model' is used to fill line by line the COLLECTION2.
-  // Assume all sub-collections of `model' have the same indexing.
+  // The @model is used to fill line by line the COLLECTION2.
+  // Assume all sub-collections of @model have the same indexing.
   (
     make (model.lower,model.first.lower) to (model.upper,model.first.upper)
 
@@ -128,7 +128,7 @@ Public
   // Resizing:
 
   - resize (line_min, column_min:Int) to (line_max, column_max:Int) <-
-  // Resize bounds of the Current array
+  // Resize bounds of the self array
   [ // Old
     -? { line_max >= line_min }
     -? { column_max >= column_min }
@@ -137,7 +137,7 @@ Public
 
     tmp := Self.create (line_min,column_min) to (line_max, column_max)
     // BSBS: It may be possible to avoid this ceation when :
-    // BSBS:   new `capacity' <= old `capacity'
+    // BSBS:   new @capacity <= old @capacity
     lower1.to line_maximum do { l:Int
       lower2.to column_maximum do { c:Int
         (tmp.valid_index (l,c)).if {
@@ -239,8 +239,8 @@ Public
   )
 
   - has x:V :Boolean <-
-  // Search if a element x is in the array using `equal'.
-  // See also `fast_has' to chose the apropriate one.
+  // Search if a element x is in the array using @equal.
+  // See also @fast_has to chose the apropriate one.
   ( + result:Boolean
 
     (count > 0).if {
@@ -309,7 +309,7 @@ Public
   // Other features:
 
   - transpose <-
-  // Transpose the Current array
+  // Transpose the self array
   ( + oldu1,oldu2 :Int
     + oldl1,oldl2 :Int
     + tmp1,tmp2:Int
@@ -337,7 +337,7 @@ Public
   ]
 
   - to_external:Pointer <-
-  // Gives C access to the internal `storage' (may be dangerous).
+  // Gives C access to the internal @storage (may be dangerous).
   (
     storage.to_external
   )

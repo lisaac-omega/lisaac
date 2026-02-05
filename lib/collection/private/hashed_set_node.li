@@ -9,7 +9,7 @@ Public
   + item:V
 
   + next:Hashed_set_node V
-  // The `next' one when some clash occurs.
+  // The @next one when some clash occurs.
 
   - set_next n:Hashed_set_node V <-
   (

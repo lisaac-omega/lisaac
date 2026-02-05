@@ -1,0 +1,10 @@
+Header
+  + name := Main
+
+Public
+  
+  - main <-
+  ( + i16: Int16
+    i16 := 32768    
+  )
+  

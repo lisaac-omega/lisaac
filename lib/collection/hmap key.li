@@ -1,8 +1,8 @@
 Header
   + name := Hmap V Key K
 /*
-  Associative memory. Values of type `V` are stored using keys of type `K`.
-  Assumes that keys of type `K` provide an efficient `hash_code` method.
+  Associative memory. Values of type @V are stored using keys of type @K.
+  Assumes that keys of type @K provide an efficient @hash_code method.
   Also assumes that keys are aliased, allowing all comparisons to be performed
   using the efficient `=` comparison operator.
   */
@@ -13,10 +13,10 @@ Insert
 Private
   
   + buckets:C_array(Hmap_node V Key K)
-  // The `buckets' storage area is the primary hash table of `capacity'
-  // elements. To search some key, the first access is done in `buckets'
-  // using the remainder of the division of the key `hash_code' by
-  // `capacity'. In order to try to avoid clashes, `capacity' is always a
+  // The @buckets storage area is the primary hash table of @capacity
+  // elements. To search some key, the first access is done in @buckets
+  // using the remainder of the division of the key @hash_code by
+  // @capacity. In order to try to avoid clashes, @capacity is always a
   // prime number (selected using HASH_TABLE_SIZE).
   
   - minimum_capacity:Int := 193
@@ -27,10 +27,10 @@ Private
 Public
   
   + capacity:Int
-  // Of the `buckets' storage area.
+  // Of the @buckets storage area.
 
   + count:Int
-  // Actual `count' of stored elements.
+  // Actual @count of stored elements.
   
   // Creation:
   - new self:Self :Self <- new self capacity minimum_capacity
@@ -44,8 +44,8 @@ Private
   - with_capacity medium_size:Int :Self <-
   // May be used to save some execution time if one is sure that
   // storage size will rapidly become really bigger than 'minimum_capacity'.
-  // When first `remove' occurs, storage size may naturally become
-  // smaller than `medium_size'. Afterall, tuning of storage size is
+  // When first @remove occurs, storage size may naturally become
+  // smaller than @medium_size. Afterall, tuning of storage size is
   // done automatically according to usage.
   [medium_size >= 97]
   ( 
@@ -66,7 +66,7 @@ Public
   // Is it empty?
   
   - has k:K :Boolean <-
-  // Is there a value currently associated with key `k'?
+  // Is there a value currently associated with key @k?
   ( + idx:Int
     + node:Hmap_node V Key K
     idx := k.hash_code % capacity
@@ -190,7 +190,7 @@ Public
   - at (k:K^n) add (v:V^n) :Self <-
   // Add a list n key-value pairs.
   // Assumes k is a new entry. Actually, this is equivalent to 
-  // call `at__put', but may run a little bit faster.
+  // call @at__put, but may run a little bit faster.
   [ {ki:K; ? {!has ki}; }.value k ]
   ( + idx:Int 
     + node:Hmap_node V Key K
@@ -207,7 +207,7 @@ Public
   
   - at (k:K^n) update (v:V^n) <-
   // Assumes k is an existing entry. Actually, this is equivalent to 
-  // call `at__put', but may run a little bit faster.
+  // call @at__put, but may run a little bit faster.
   [ {ki:K; ? {has ki}; }.value k ]
   ( + node:Hmap_node V Key K
     {(ki:K,vi:V)
@@ -222,7 +222,7 @@ Public
   // Removing:
 
   - remove (k:K^n) <-
-  // Remove entry `k' (which may exist or not before this call).
+  // Remove entry @k (which may exist or not before this call).
   ( + idx:Int
     + node, previous_node:Hmap_node V Key K
     { ki:K
@@ -289,7 +289,7 @@ Public
   //  Others:
 
   - copy other:Self <-
-  // Reinitialize by copying all associations of `other'.
+  // Reinitialize by copying all associations of @other.
   (
     clear
     set_capacity (other.count)

@@ -740,7 +740,7 @@ Public
     + out:Boolean
     + res:String_alias
     
-    // `n' direction :
+    // @n direction :
     //    111(7) 000(0) 001(1)
     //       \    |    /
     // 110(6) ----|----> 010(2)

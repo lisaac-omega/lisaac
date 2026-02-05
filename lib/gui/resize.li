@@ -6,19 +6,23 @@ Inherit
     
 Public
     
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( 
     (ev = Hand.in).if {
-      Paper.set_cursor (window.win_ptr) img cursor_sz
+      (! decorated).if {
+        Paper.set_cursor (window.win_ptr) img cursor_sz
+      }
     }.elseif {ev = Hand.out} then {
       Paper.set_cursor (window.win_ptr) img cursor_std
     }.elseif {(ev & ~1) = Hand.drag} then {
-      - psh,psv:Page_split
-      (Hand.is_begin).if {
-        psh := Page.cast parent.get_split True
-        psv := Page.cast parent.get_split False
+      (! decorated).if {
+        - psh,psv:Page_split
+        (Hand.is_begin).if {
+          psh := Page.cast parent.get_split True
+          psv := Page.cast parent.get_split False
+        }
+        Page_split.move psh and psv win self
       }
-      Page_split.move psh and psv win self
     }
   )
   

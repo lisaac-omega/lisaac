@@ -10,7 +10,7 @@ Inherit
 Private
 
   - gcd (value_1,value_2:Int) :Int <-
-  // Great Common Divisor of `value_1' and `value_2'.
+  // Great Common Divisor of @value_1 and @value_2.
   ( + value,result:Int
     ? { value_1 > 0}
     ? { value_2 > 0}

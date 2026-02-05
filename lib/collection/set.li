@@ -24,11 +24,11 @@ Public
   // Adding and removing:
 
   - add e:V <-
-  // Add new item `e' to the set. The mathematical definition of adding
-  // in a set is followed, i.e. the element `e' is added only and only
+  // Add new item @e to the set. The mathematical definition of adding
+  // in a set is followed, i.e. the element @e is added only and only
   // if it is not yet present in the set.
-  // As this `add' feature is actually using `is_equal', you may consider
-  // to use `fast_add' for expanded objects as well while trying to get
+  // As this @add feature is actually using @is_equal, you may consider
+  // to use @fast_add for expanded objects as well while trying to get
   // the very best performances.
   [ /* BSBS Old; */
     -? {e != NULL}
@@ -43,7 +43,7 @@ Public
   ]
 
   - fast_add e:V <-
-  // Same job as `add', but uses basic `=' for comparison.
+  // Same job as @add, but uses basic `=' for comparison.
   [ /* BSBS Old; */
     -? {e != NULL}
   ]
@@ -57,7 +57,7 @@ Public
   ]
 
   - remove e:V <-
-  // Remove item `e' from the set: the mathematical definition of
+  // Remove item @e from the set: the mathematical definition of
   // removing from a set is followed.
   [ /* BSBS Old; */
     -? {e != NULL}
@@ -72,7 +72,7 @@ Public
   ]
 
   - fast_remove e:V <-
-  // Same job as `remove', but uses basic `=' for comparison.
+  // Same job as @remove, but uses basic `=' for comparison.
   [ /* BSBS Old; */
     -? {e != NULL}
   ]
@@ -88,11 +88,11 @@ Public
   - clear <- clear_count
 
   - clear_count <-
-  // Empty the current set (`is_empty' is True after that call).
+  // Empty the current set (@is_empty is True after that call).
   // If possible, the actual implementation is supposed to keep
-  // its internal storage area in order to refill `Current' in
+  // its internal storage area in order to refill @self in
   // an efficient way.
-  // See also `clear_count_and_capacity' to select the most appropriate.
+  // See also @clear_count_and_capacity to select the most appropriate.
   (
     abstract
   )
@@ -101,10 +101,10 @@ Public
   ]
 
   - clear_count_and_capacity <-
-  // Empty the current set (`is_empty' is True after that call).
+  // Empty the current set (@is_empty is True after that call).
   // If possible, the actual implementation is supposed to release
   // its internal storage area for this memory to be used by other objects.
-  // See also `clear_count' to select the most appropriate.
+  // See also @clear_count to select the most appropriate.
   (
     abstract
   )
@@ -115,9 +115,9 @@ Public
   // Looking and searching:
 
   - has e:V :Boolean <-
-  // Is element `e' in the set?
-  // As this query is actually using `is_equal', you may consider to use
-  // `fast_has' for expanded objects as well while trying to get the very
+  // Is element @e in the set?
+  // As this query is actually using @is_equal, you may consider to use
+  // @fast_has for expanded objects as well while trying to get the very
   // best performances.
   [ /* BSBS Old; */
     -? {e != NULL}
@@ -131,9 +131,9 @@ Public
   ]
 
   - fast_has e:V :Boolean <-
-  // Is element `e' actually stored in the set?
+  // Is element @e actually stored in the set?
   // Warning: this query is using basic `=' for comparison.
-  // See also `has' when dealing with reference types.
+  // See also @has when dealing with reference types.
   [ /* BSBS Old; */
     -? {e != NULL}
   ]
@@ -145,8 +145,8 @@ Public
   ]
 
   - reference_at e:V :V <-
-  // Non Void when `e' is in the set. In such a situation, `Result' is the
-  // object which is actually stored in the `Current' set (see ensure assertion).
+  // Non Void when @e is in the set. In such a situation, @Result is the
+  // object which is actually stored in the @self set (see ensure assertion).
   [ /* BSBS Old; */
     -? {e != NULL}
     -? {! e.is_expanded_type}
@@ -170,11 +170,11 @@ Public
   ]
 
   - item i:Int :V <-
-  // Item at the corresponding index `i'.
-  // See also `lower', `upper', `valid_index'.
+  // Item at the corresponding index @i.
+  // See also @lower, @upper, @valid_index.
   // SETs are intrinsically unordered, so there is no guarantee that
-  // `item'(i) after performing an `add' or `remove' operation is related
-  // in any way to `item'(i) before that operation.
+  // @item(i) after performing an @add or @remove operation is related
+  // in any way to @item(i) before that operation.
   ( + result:V
 
     abstract
@@ -185,23 +185,23 @@ Public
   ]
 
   - first:V <- item lower
-  // The very `first' item.
-  // See also `last', `item'.
+  // The very @first item.
+  // See also @last, @item.
   // SETs are intrinsically unordered, so there is no guarantee that
-  // `first' after performing an `add' or `remove' operation is related
-  // in any way to `first' before that operation.
+  // @first after performing an @add or @remove operation is related
+  // in any way to @first before that operation.
 
   - last:V <- item upper
-  // The `last' item.
-  // See also `first', `item'.
+  // The @last item.
+  // See also @first, @item.
   // SETs are intrinsically unordered, so there is no guarantee that
-  // `last' after performing an `add' or `remove' operation is related
-  // in any way to `last' before that operation.
+  // @last after performing an @add or @remove operation is related
+  // in any way to @last before that operation.
 
   // Mathematical operations:
 
   - union other:Self <-
-  // Make the union of the `Current' set with `other'.
+  // Make the union of the @self set with @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -222,7 +222,7 @@ Public
   ]
 
   - fast_union other:Set V <-
-  // Make the union of the `Current' set with `other'.
+  // Make the union of the @self set with @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -243,7 +243,7 @@ Public
   ]
 
   - self:Self '+' other:Self :Self <-
-  // Return the union of the `Current' set with `other'.
+  // Return the union of the @self set with @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -259,7 +259,7 @@ Public
   ]
 
   - intersection other:Self <-
-  // Make the intersection of the `Current' set with `other'.
+  // Make the intersection of the @self set with @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -280,7 +280,7 @@ Public
   ]
 
   - fast_intersection other:Self <-
-  // Make the intersection of the `Current' set with `other'.
+  // Make the intersection of the @self set with @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -301,7 +301,7 @@ Public
   ]
 
   - self:Self '^' other:Self :Self <-
-  // Return the intersection of the `Current' set with `other'.
+  // Return the intersection of the @self set with @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -317,7 +317,7 @@ Public
   ]
 
   - minus other:Self <-
-  // Make the set `Current' - `other'.
+  // Make the set @self - @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -338,7 +338,7 @@ Public
   ]
 
   - self:Self '-' other:Self :Self <-
-  // Return  the set `Current' - `other'.
+  // Return  the set @self - @other.
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -356,7 +356,7 @@ Public
   // Comparison:
 
   - is_subset_of other:Self :Boolean <-
-  // Is the `Current' set a subset of `other'?
+  // Is the @self set a subset of @other?
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -380,7 +380,7 @@ Public
   ]
 
   - is_disjoint_from other:Self :Boolean <-
-  // Is the `Current' set disjoint from `other' ?
+  // Is the @self set disjoint from @other ?
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -409,7 +409,7 @@ Public
   ]
 
   - fast_is_disjoint_from other:Self :Boolean <-
-  // Is the `Current' set disjoint from `other' ?
+  // Is the @self set disjoint from @other ?
   [ /* BSBS Old; */
     -? {other != NULL}
   ]
@@ -438,7 +438,7 @@ Public
   ]
 
   - self:Self '==' other:Self :Boolean <-
-  // Is the `Current' set equal to `other'?
+  // Is the @self set equal to @other?
   ( + i:Int
     + result:Boolean
 
@@ -476,7 +476,7 @@ Public
   )
 
   - from_collection model:Collection V <-
-  // Add all items of `model'.
+  // Add all items of @model.
   [ /* BSBS Old; */
     -? {model != NULL}
   ]
@@ -496,8 +496,8 @@ Public
   - foreach action:{V;} <- do_all action
 
   - do_all action:{V;} <-
-  // Apply `action' to every item of `self'.
-  // See also `for_all', `exists'.
+  // Apply @action to every item of @self.
+  // See also @for_all, @exists.
   ( + i:Int
 
     i := lower
@@ -508,8 +508,8 @@ Public
   )
 
   - for_all predicate:Block :Boolean <-
-  // Do all items satisfy `predicate'?
-  // See also `do_all', `exists'.
+  // Do all items satisfy @predicate?
+  // See also @do_all, @exists.
   ( + i:Int
     + result:Boolean
 
@@ -523,8 +523,8 @@ Public
   )
 
   - exists predicate:Block :Boolean <-
-  // Does at least one item satisfy `predicate'?
-  // See also `do_all', `for_all'.
+  // Does at least one item satisfy @predicate?
+  // See also @do_all, @for_all.
   ( + i:Int
     + result:Boolean
 

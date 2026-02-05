@@ -94,7 +94,7 @@ Public
   - move_pos_y dy:Real32
   - move_pos_x dx:Real32
     
-  - event_elevator ev:Uint8 :Boolean <-
+  - event_elevator ev:Int :Boolean <-
   ( - is_h,is_w:Boolean
     + w,h,x,y,wu,hu,dx,dy:Real32
     (ev & ~1 = Hand.drag).if {

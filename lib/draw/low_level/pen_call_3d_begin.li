@@ -55,7 +55,7 @@ Public
     pen_gl.gl_bind_vertex_array (Pen3d.vao)
         
     camera.on shader
-    // Current state
+    // self state
     Pen_call_3d_begin.set_shader shader
     Pen_call_3d_begin.set_camera camera
   )

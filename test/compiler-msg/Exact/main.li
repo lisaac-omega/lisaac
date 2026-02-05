@@ -1,0 +1,11 @@
+Header
+  + name := Main
+
+Public
+  
+  - main <-
+  ( + a: Array Int
+    + b: Inherit_array Int
+    a := b
+  )
+  

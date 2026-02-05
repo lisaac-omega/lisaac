@@ -94,7 +94,7 @@ Public
     }
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( + result:Boolean
     (idx <= Buffer.catalog.upper).if {
       result :=

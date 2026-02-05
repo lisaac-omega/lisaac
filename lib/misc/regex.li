@@ -65,7 +65,7 @@ Public
   )
   
   - regcomp regular_expression:String cflag f:Int :Int <-
-  // See `regcomp` in "man regex".
+  // See @regcomp in "man regex".
   [
     ? {! regular_expression.is_empty}
   ]
@@ -83,7 +83,7 @@ Public
   )
   
   - last_error_in b:String_buffer <-
-  // See `regerror` in "man regex".
+  // See @regerror in "man regex".
   [
     ? {status != 0}
   ]
@@ -103,7 +103,7 @@ Public
   )
   
   - whole_match data:String :Boolean <-
-  // Is the `data` completely swallowed by self ?
+  // Is the @data completely swallowed by self ?
   (
     ((match data start 0) = 0) &&
     {offset_start = 0} &&
@@ -113,7 +113,7 @@ Public
   - match data:String start idx:Int :Int <- regexec data start idx cflag 0
   
   - regexec data:String start idx:Int cflag f:Int :Int <-
-  // See `regexec` in "man regex".
+  // See @regexec in "man regex".
   [
     ? {data != NULL}
   ]

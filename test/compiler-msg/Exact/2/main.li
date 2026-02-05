@@ -1,0 +1,11 @@
+Header
+  + name := Main
+
+Public
+  
+  - main <-
+  ( + aa: Aa
+    + bb: Bb
+    aa := bb
+  )
+  

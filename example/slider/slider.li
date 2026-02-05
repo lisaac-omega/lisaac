@@ -117,7 +117,7 @@ Public
   - time_clic:Uint64
   
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   (
     if (ev = Hand clic) then {
       points.clear

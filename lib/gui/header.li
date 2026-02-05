@@ -62,9 +62,9 @@ Public
   
   - flip <- ( set_open ((!is on).ok parent or NULL); )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( + px,py,x,y,mx,my:Real32
-    + e:Uint8
+    + e:Int
     + w:Window
     e := ev & ~1
     (e = Hand.in).if {

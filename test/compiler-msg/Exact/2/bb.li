@@ -1,0 +1,7 @@
+Header
+  + name := Bb
+
+Inherit
+  
+  - parent_aa:Flat Aa
+  

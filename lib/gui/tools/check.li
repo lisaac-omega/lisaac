@@ -93,8 +93,8 @@ Public
     };*/    
   )
   
-  - event ev:Uint8 :Boolean <-
-  ( + e:Uint8
+  - event ev:Int :Boolean <-
+  ( + e:Int
     e := ev & ~1
     (is mute).if {
       // Nothing.

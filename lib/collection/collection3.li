@@ -34,13 +34,13 @@ Public
   )
 
   - line_minimum:Int <- lower1
-  // Equivalent of `lower1'.
+  // Equivalent of @lower1.
 
   - column_minimum:Int <- lower2
-  // Equivalent of `lower2'.
+  // Equivalent of @lower2.
 
   - depth_minimum:Int <- lower3
-  // Equivalent of `lower3'.
+  // Equivalent of @lower3.
 
   - upper1:Int <-
   // Upper index bound for dimension 1.
@@ -64,13 +64,13 @@ Public
   )
 
   - line_maximum:Int <- upper1
-  // Equivalent of `upper1'.
+  // Equivalent of @upper1.
 
   - column_maximum:Int <- upper2
-  // Equivalent of `upper2'.
+  // Equivalent of @upper2.
 
   - depth_maximum:Int <- upper3
-  // Equivalent of `upper3'.
+  // Equivalent of @upper3.
 
   // Reading:
 
@@ -92,8 +92,8 @@ Public
   [ +? { item(line,column,depth) = element}; ]
 
   - force element:V to (line, column, depth:Int) <-
-  // Put `element' at position (`line',`column',`depth').
-  // Collection is resized first when (`line',`column',`depth')
+  // Put @element at position (@line,@column,@depth).
+  // Collection is resized first when (@line,@column,@depth)
   // is not inside current bounds.
   // New bounds are initialized with default values.
   [
@@ -153,7 +153,7 @@ Public
   [ +? {Result = upper1 - lower1 + 1}; ]
 
   - line_count:Int <- count1
-  // Equivalent of `count1'.
+  // Equivalent of @count1.
 
   - count2:Int <-
   // Size of the second dimension.
@@ -164,7 +164,7 @@ Public
   [ +? {Result = upper2 - lower2 + 1}; ]
 
   - column_count:Int <- count2
-  // Equivalent of `count2'.
+  // Equivalent of @count2.
 
   - count3:Int <-
   // Size of the third dimension.
@@ -175,7 +175,7 @@ Public
   [ +? {Result = upper3 - lower3 + 1}; ]
 
   - depth_count:Int <- count3
-  // Equivalent of `count3'.
+  // Equivalent of @count3.
 
   - count:Int <-
   // Total number of elements.
@@ -186,8 +186,8 @@ Public
   [ +? {Result = line_count * column_count * depth_count}; ]
 
   - swap (line1, column1, depth1:Int) with (line2, column2, depth2:Int) <-
-  // Swap the element at index (`line1',`column1',`depth1')
-  // with the element at index (`line2',`column2',`depth2').
+  // Swap the element at index (@line1,@column1,@depth1)
+  // with the element at index (@line2,@column2,@depth2).
   [
     -? { valid_index (line1,column1,depth1)}
     -? { valid_index (line2,column2,depth2)}
@@ -202,7 +202,7 @@ Public
   ]
 
   - set_all_with v:V <-
-  // Set all item with value `v'.
+  // Set all item with value @v.
   (
     abstract
   )
@@ -222,7 +222,7 @@ Public
   // Creating or initializing:
 
   - from_collection3 model:Collection3(V) <-
-  //  Uses `model' to initialize self.
+  //  Uses @model to initialize self.
   [ -? {model != NULL}; ]
   (
     abstract
@@ -234,7 +234,7 @@ Public
   ]
 
   - from_model model:Collection(Collection(Collection(V))) <-
-  // The `model' is used to fill line by line self.
+  // The @model is used to fill line by line self.
   // Assume all sub-collections have the same
   // dimension.
   [ -? { model != NULL }; ]
@@ -256,10 +256,10 @@ Public
   )
 
   - self:Self '==' other:Collection3(V) :Boolean <-
-  // Do both collections have the same `lower1', `lower2', `lower3', `upper1', `upper2' and
-  // `upper3', and items?
+  // Do both collections have the same @lower1, @lower2, @lower3, @upper1, @upper2 and
+  // @upper3, and items?
   // The basic `=' is used for comparison of items.
-  // See also `is_equal_map'.
+  // See also @is_equal_map.
   ( + line, column, depth: Int
     + result:Boolean
 
@@ -290,7 +290,7 @@ Public
   )
 
   - is_equal_map other: Collection3(V) :Boolean <-
-  // Do both collections have the same `lower1', `lower2', `lower3', `upper1', `upper2' and `upper3',
+  // Do both collections have the same @lower1, @lower2, @lower3, @upper1, @upper2 and @upper3,
   // and items?
   // See also `=='.
   ( + line, column, depth:Int
@@ -326,8 +326,8 @@ Public
   // Miscellaneous features:
 
   - occurrences elt:V :Int <-
-  // Number of occurrences using `equal'.
-  // See also `fast_occurrences' to choose the apropriate one.
+  // Number of occurrences using @equal.
+  // See also @fast_occurrences to choose the apropriate one.
   (
     abstract
     0
@@ -336,7 +336,7 @@ Public
 
   - fast_occurrences elt:V :Int <-
   // Number of occurrences using `='.
-  // See also `occurrences' to choose the apropriate one.
+  // See also @occurrences to choose the apropriate one.
   (
     abstract
     0
@@ -344,8 +344,8 @@ Public
   [ +? {Result >= 0}; ]
 
   - has x:V :Boolean <-
-  // Search if a element x is in the array using `equal'.
-  // See also `fast_has' to choose the apropriate one.
+  // Search if a element x is in the array using @equal.
+  // See also @fast_has to choose the apropriate one.
   (
     abstract
     False
@@ -359,9 +359,9 @@ Public
   )
 
   - replace_all old_value:V with new_value:V <-
-  // Replace all occurences of the element `old_value' by `new_value'
-  // using `equal' for comparison.
-  // See also `fast_replace_all' to choose the apropriate one.
+  // Replace all occurences of the element @old_value by @new_value
+  // using @equal for comparison.
+  // See also @fast_replace_all to choose the apropriate one.
   (
     abstract
   )
@@ -371,9 +371,9 @@ Public
   ]
 
   - fast_replace_all old_value:V with new_value:V <-
-  // Replace all occurences of the element `old_value' by `new_value'
+  // Replace all occurences of the element @old_value by @new_value
   // using operator `=' for comparison.
-  // See also `replace_all' to choose the apropriate one.
+  // See also @replace_all to choose the apropriate one.
   (
     abstract
   )
@@ -384,7 +384,7 @@ Public
 
   - sub_collection3 (line_min, column_min, depth_min:Int)
   to (line_max, column_max, depth_max:Int) :Self <-
-  // Create a new object using selected area of `self'.
+  // Create a new object using selected area of @self.
   [
     -? { valid_index (line_min,column_min,depth_min)}
     -? { valid_index (line_max,column_max,depth_max)}
@@ -396,7 +396,7 @@ Public
 
   - set_area (line_min, column_min, depth_min:Int)
   to (line_max, column_max, depth_max:Int) with element:V <-
-  // Set all the elements of the selected area rectangle with `element'.
+  // Set all the elements of the selected area rectangle with @element.
   [
     -? { valid_index (line_min,column_min,depth_min)}
     -? { valid_index (line_max,column_max,depth_max)}

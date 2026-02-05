@@ -490,13 +490,13 @@ Public
   // Looking and searching:
 
   - has e:V :Boolean <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   (
     (root != NULL) && {root.has e}
   )
 
   - fast_has e:V :Boolean <-
-  // Is element `e' in the set?
+  // Is element @e in the set?
   (
     (root != NULL) && {root.fast_has e}
   )
@@ -521,11 +521,11 @@ Self
   ]
 
   + map:Array(Avl_tree_node(V))
-  // Elements in a row for iteration. See `build_map'.
+  // Elements in a row for iteration. See @build_map.
 
   + map_dirty:Boolean
   // True when the map needs to be built again for the iterators.
-  // See `build_map'.
+  // See @build_map.
 
 Self
 

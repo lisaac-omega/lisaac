@@ -183,7 +183,7 @@ Public
   - is_even:Boolean <- ! is_odd; // Is even ?
 
   - gcd other:Self :Self <-
-  // Great Common Divisor of `self' and `other'.
+  // Great Common Divisor of @self and @other.
   [
     -? {self  >= 0}
     -? {other >= 0}
@@ -205,7 +205,7 @@ Public
   // Random
 
   - random :Self <-
-  // Random number between 0 to `maximum' in Self.
+  // Random number between 0 to @maximum in Self.
   ( 
     randomize_seed := (110351524 * randomize_seed + 12345) % 214748364
     Cast Uint64 To Self.on (maximum & randomize_seed)
@@ -215,7 +215,7 @@ Public
   ]
 
   - random_upper upper:Self :Self <-
-  // Random number between 0 to `upper'.
+  // Random number between 0 to @upper.
   [
     -? {upper > 0}
   ]
@@ -227,7 +227,7 @@ Public
   ]
 
   - random_between lower:Self and upper:Self :Self <-
-  // Random number between `lower' to `upper'.
+  // Random number between @lower to @upper.
   [
     -? {lower < upper}
   ]
@@ -260,7 +260,7 @@ Public
   )
 
   - append_in b:String_buffer <- to_int32.append_in b
-  // Append in the `b' the equivalent of `to_string'. No new String_buffer
+  // Append in the @b the equivalent of @to_string. No new String_buffer
   // creation during the process.
 
   - decimal_digit:Char <-
@@ -308,10 +308,10 @@ Public
   )
 
   - to_hexadecimal:String_buffer <-
-  // Convert the hexadecimal view of `self' into a new allocated
-  // String_buffer. For example, if `self' is -1 the new String_buffer is
+  // Convert the hexadecimal view of @self into a new allocated
+  // String_buffer. For example, if @self is -1 the new String_buffer is
   // "FFFFFFFF" on a 32 bit machine.
-  // * See:  `to_hexadecimal_in' to save memory.
+  // * See:  @to_hexadecimal_in to save memory.
   ( + result:String_buffer
 
     result := String_buffer.create 8
@@ -320,10 +320,10 @@ Public
   )
 
   - to_hexadecimal_format s:Int :String_buffer <-
-  // Convert the hexadecimal view of `self' into a new allocated
-  // String_buffer. For example, if `self' is -1 the new String_buffer is
+  // Convert the hexadecimal view of @self into a new allocated
+  // String_buffer. For example, if @self is -1 the new String_buffer is
   // "FFFFFFFF" on a 32 bit machine.
-  // * See:  `to_hexadecimal_in' to save memory.
+  // * See:  @to_hexadecimal_in to save memory.
   ( + result:String_buffer
 
     result := String_buffer.create 8
@@ -332,7 +332,7 @@ Public
   )
 
   - to_hexadecimal_in b:String_buffer <-
-  // Append in `b' the equivalent of `to_hexadecimal'. No new String_buffer
+  // Append in @b the equivalent of @to_hexadecimal. No new String_buffer
   // creation during the process.
   [ -? {b!=NULL}; ]
   ( + val:Self
@@ -357,7 +357,7 @@ Public
   )
 
   - to_hexadecimal_in b:String_buffer format s:Int <-
-  // Append in `b' the equivalent of `to_hexadecimal'. No new String_buffer
+  // Append in @b the equivalent of @to_hexadecimal. No new String_buffer
   // creation during the process.
   [ -? {b!=NULL}; ]
   ( + val:Self
@@ -383,7 +383,7 @@ Public
   )
 
   - to_binary_in b:String_buffer format s:Int <-
-  // Append in `b' the equivalent of `to_binary_string'. No new String_buffer
+  // Append in @b the equivalent of @to_binary_string. No new String_buffer
   // creation during the process.
   [ -? {b!=NULL}; ]
   ( + val:Self

@@ -1,5 +1,5 @@
 Header
-  + name := Linked_list V
+  + name := Exact Linked_list V
 /* Two way linked list with internal automatic memorization 
      of the last access .
   */
@@ -17,11 +17,11 @@ Linked_list
   + mem_idx:Int
 
   + mem_lnk:Linked_list_node V
-  // To speed up accessing, `mem_idx' and `mem_lnk' is the
+  // To speed up accessing, @mem_idx and @mem_lnk is the
   // memory of the last access done. For example, after
-  // item(1), `mem_idx' is 1 and `mem_lnk' is `first_link'.
-  // When list is empty, `first_link' is NULL as well as
-  // `mem_lnk' and `mem_idx' is 0
+  // item(1), @mem_idx is 1 and @mem_lnk is @first_link.
+  // When list is empty, @first_link is NULL as well as
+  // @mem_lnk and @mem_idx is 0
 
 Public
   - add_first element:V^n <-
@@ -155,24 +155,6 @@ Public
       lnk2 := other.first_link
       {(lnk1 = NULL) || {! result}}.until_do {
         result := lnk1.item = lnk2.item
-        lnk1 := lnk1.next
-        lnk2 := lnk2.next
-      }
-    }
-    result
-  )
-
-  - is_equal_map other:Self :Boolean <-
-  ( + result:Boolean
-    + lnk1, lnk2:Linked_list_node V
-    (self = other).if {
-      result := True
-    }.elseif {upper = other.upper} then {
-      result := True
-      lnk1 := first_link
-      lnk2 := other.first_link
-      {(lnk1 = NULL) || {! result}}.until_do {
-        result := safe_equal (lnk1.item, lnk2.item)
         lnk1 := lnk1.next
         lnk2 := lnk2.next
       }

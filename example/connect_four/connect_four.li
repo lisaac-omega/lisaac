@@ -275,7 +275,7 @@ Public
       (
         Check.new.init "Articial Intelligence " pos {ia_ok} do { c:Check; ia_ok := !ia_ok; True}.color (Color.white)
         | (
-          Txt.new.init_str "Current player ".set align_center.color (Color.white) | 
+          Txt.new.init_str "self player ".set align_center.color (Color.white) | 
           (playerd := Disc.new.init 1 diameter 48 action {c:Disc;})
         )
       ) /

@@ -107,7 +107,7 @@ Public
         exp2 := profil_slot.argument_list.second.read position
         result := Cast.create type value exp2
       }
-      .when 14 then { // OLD `is_cop_actif' for COP
+      .when 14 then { // OLD @is_cop_actif for COP
         not_yet_implemented
       }
       .when 15 then { // is_cop_type:Boolean

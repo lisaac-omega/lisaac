@@ -21,7 +21,7 @@ Public
   - minimum:Int64 <- 0
 
   - floor:Int <-
-  // Greatest integral value no greater than Current.
+  // Greatest integral value no greater than self.
   (
     to_raw_uint32 >> shift_bits
   )
@@ -31,7 +31,7 @@ Public
   ]
 
   - ceiling:Int <-
-  // Smallest integral value no smaller than Current.
+  // Smallest integral value no smaller than self.
   (
     (to_raw_uint32 + ((1 << shift_bits) - 1)) >> shift_bits
   )
@@ -47,7 +47,7 @@ Public
   )
 
   - truncated_to_int:Int <- floor
-  // Int part (largest absolute value no greater than Current).
+  // Int part (largest absolute value no greater than self).
 
   // binary operator :
 

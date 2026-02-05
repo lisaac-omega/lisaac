@@ -14,17 +14,17 @@ Public
   // Function :
 
   - sign:Int <-
-  // Sign of Current (0 -1 or 1).
+  // Sign of self (0 -1 or 1).
   (
     (self != 0).to_int
   )
 
-  - abs:Self <- self; // Absolute value of `self'.
-
+  - self:Self abs:Self <- self; // Absolute value of @self.
+    
   // Convertion
 
   - append_in b:String_buffer <-
-  // Append in the `b' the equivalent of `to_string'. No new String_buffer
+  // Append in the @b the equivalent of @to_string. No new String_buffer
   // creation during the process.
   ( + val:Self
     + i,j:Int

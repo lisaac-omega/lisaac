@@ -19,7 +19,7 @@ Public
 
 Public
 
-  + index:Int; // in `prototype_list', for POSITION.
+  + index:Int; // in @prototype_list, for POSITION.
 
   + shortname:String_alias
 
@@ -918,7 +918,7 @@ Private
     // Find canonical name
     // If we find PROTOTYPE in the dictionary, it's a marker to notify that more
     // than one prototype matches the name. We can't take the slot and we must
-    // add more members to `name'
+    // add more members to @name
     i := start
     (i = 1).if {
       name := shortname
@@ -959,7 +959,7 @@ Private
         "          ".print; proto.longname.println
       }
 
-      // Add PROTOTYPE marker and add more members to `name' of both prototypes
+      // Add @Prototype marker and add more members to @name of both prototypes
       
       //prototype_canonical_name.fast_put PROTOTYPE to name
       prototype_canonical_name.at name put Prototype

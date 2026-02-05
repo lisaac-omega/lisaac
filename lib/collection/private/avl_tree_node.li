@@ -18,9 +18,9 @@ Public
   + item:V
 
   + balance:Int
-  // Balance factor; either `balanced' (the tree is balanced),
-  // `imbalanced_left' (the left branch is the longer) or
-  // `imbalanced_right' (the right branch is the longer)
+  // Balance factor; either @balanced (the tree is balanced),
+  // @imbalanced_left (the left branch is the longer) or
+  // @imbalanced_right (the right branch is the longer)
 
   - count:Int <-
   ( + result:Int
@@ -65,7 +65,7 @@ Public
   ]
 
   - has e:V :Boolean <-
-  // Is element `e' in the tree?
+  // Is element @e in the tree?
   ( + result:Boolean
 
     result := item == e
@@ -80,7 +80,7 @@ Public
   )
 
   - fast_has e:V :Boolean <-
-  // Is element `e' in the tree?
+  // Is element @e in the tree?
   ( + result:Boolean
 
     result := item = e
@@ -98,7 +98,7 @@ Public
   ]
 
   - at e:V :Avl_tree_node(V) <-
-  // Is element `e' in the tree?
+  // Is element @e in the tree?
   ( + result:Avl_tree_node(V)
 
     (item == e ).if {

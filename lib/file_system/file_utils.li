@@ -67,7 +67,7 @@ Public
   ]
   ( + ptr:C_array(Char)
     + result:Int
-    ptr := buf.storage; // Warning: Not used `to_external'    
+    ptr := buf.storage; // Warning: Not used @to_external    
     result := `fwrite((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(Int)
     result
   )

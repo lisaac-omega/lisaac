@@ -47,7 +47,7 @@ Public
   )
 
   - code:Int8 <-
-  // ASCII code of Current.
+  // ASCII code of self.
   // No Sign-extended conversion.
   ( + result:Int8
     result := to_int8
@@ -168,16 +168,16 @@ Public
   // An other difference syntax (Pascal like)
 
   - self:Self '<' other:Self :Boolean <- ( to_uint8 < other.to_uint8 )
-  // Comparison using `code'.
+  // Comparison using @code.
 
   - self:Self '<=' other:Self :Boolean <- ( to_uint8 <= other.to_uint8 )
-  // Comparison using `code'.
+  // Comparison using @code.
 
   - self:Self '>' other:Self :Boolean <- ( to_uint8 > other.to_uint8 )
-  // Comparison using `code'.
+  // Comparison using @code.
 
   - self:Self '>=' other:Self :Boolean <- ( to_uint8 >= other.to_uint8 )
-  // Comparison using `code'.
+  // Comparison using @code.
   
   - to_digit:Int <- decimal_value
   
@@ -347,7 +347,7 @@ Public
   " \t\n\r\0\f\v".has self
 
   - is_letter_or_digit:Boolean <-
-  // Is it a letter (see `is_letter') or a digit (see `is_digit') ?
+  // Is it a letter (see @is_letter) or a digit (see @is_digit) ?
   ( + result:Boolean
     result := (is_letter || {is_digit})
     ? {result = (is_letter | is_digit)}
@@ -370,10 +370,10 @@ Public
   // Is character a 8-bit ASCII character?
 
   - is_bit:Boolean <- ((self='0') || {self='1'})
-  // True for `0' and `1'.
+  // True for @0 and @1.
 
   - next:Char <-
-  // Give the next character (the following `code');
+  // Give the next character (the following @code);
   [
     ? {code <= 127}
   ]
@@ -397,7 +397,7 @@ Public
   )
   
   - previous:Char <-
-  // Give the previous character (the `code' before);
+  // Give the previous character (the @code before);
   ( ? {code > 0}
     (code - 1).to_character
   )
@@ -405,10 +405,10 @@ Public
   // Conversions:
 
   - to_hexadecimal:String_buffer <-
-  // Create a new String_buffer giving the `code' in hexadecimal.
+  // Create a new String_buffer giving the @code in hexadecimal.
   // For example :
   //    (255).to_character.to_hexadecimal gives "FF".
-  // Note: see `to_hexadecimal_in' to save memory.
+  // Note: see @to_hexadecimal_in to save memory.
   ( + result:String_buffer
     result := String_buffer.make 2
     to_hexadecimal_in result
@@ -417,8 +417,8 @@ Public
   )
 
   - to_hexadecimal_in str:String_buffer <-
-  // Append the equivalent of `to_hexadecimal' at the end of
-  // `str'. Thus you can save memory because no other
+  // Append the equivalent of @to_hexadecimal at the end of
+  // @str. Thus you can save memory because no other
   // String_buffer is allocate for the job.
   ( + c, old_count:Int
 
@@ -441,8 +441,8 @@ Public
   // Miscellaneous:
 
   - is_alpha:Boolean <-
-  // See `is_letter' (yes this is just a call to `is_letter').
-  // Isn't `is_letter' better English ;-)
+  // See @is_letter (yes this is just a call to @is_letter).
+  // Isn't @is_letter better English ;-)
   ( + result:Boolean
     result := is_letter
     ? {result = is_letter}

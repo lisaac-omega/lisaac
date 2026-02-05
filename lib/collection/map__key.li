@@ -10,7 +10,7 @@ Public
   // Counting:
 
   - count:Int <-
-  // Actual `count' of key-values pairs.
+  // Actual @count of key-values pairs.
   (
     abstract
     0
@@ -22,8 +22,8 @@ Public
   // Basic access:
 
   - has k:K :Boolean <-
-  // Is there a value currently associated with key `k'?
-  // See also `fast_has', `at'.
+  // Is there a value currently associated with key @k?
+  // See also @fast_has, @at.
   [ /* BSBS Old; */
     -? {k != NULL}
   ]
@@ -33,8 +33,8 @@ Public
   )
 
   - value_at k:K :V <-
-  // Return the value associated to key `k'.
-  // See also `fast_at', `reference_at', `has'.
+  // Return the value associated to key @k.
+  // See also @fast_at, @reference_at, @has.
   [ /* BSBS Old; */
     -? {has k}
   ]
@@ -45,11 +45,11 @@ Public
   )
 
   - reference_at k:K :V <-
-  // Return NULL or the value associated with key `k'. Actually, this
+  // Return NULL or the value associated with key @k. Actually, this
   // feature is useful when the type of values (the type V) is a
-  // reference type, to avoid using `has' just followed by `at' to get
+  // reference type, to avoid using @has just followed by @at to get
   // the corresponding value.
-  // See also `fast_reference_at', `at', `has'.
+  // See also @fast_reference_at, @at, @has.
   [ /* BSBS Old; */
     -? {k != NULL}
     // "Values are expanded." -? {(Result != NULL) -> (! Result.is_expanded_type)}
@@ -63,9 +63,9 @@ Public
   ]
 
   - fast_has k:K :Boolean <-
-  // Is there a value currently associated with key `k'?
+  // Is there a value currently associated with key @k?
   // Using basic `=' for comparison.
-  // See also `has', `at', `fast_at'.
+  // See also @has, @at, @fast_at.
   [ /* BSBS Old; */
     -? {k != NULL}
   ]
@@ -75,8 +75,8 @@ Public
   )
 
   - fast_at k:K :V <-
-  // Return the value associated to key `k' using basic `=' for comparison.
-  // See also `at', `reference_at', `fast_reference_at'.
+  // Return the value associated to key @k using basic `=' for comparison.
+  // See also @at, @reference_at, @fast_reference_at.
   [ /* BSBS Old; */
     -? {fast_has k}
   ]
@@ -87,8 +87,8 @@ Public
   )
 
   - fast_reference_at k:K :V <-
-  // Same work as `reference_at', but basic `=' is used for comparison.
-  // See also `reference_at', `at', `has'.
+  // Same work as @reference_at, but basic `=' is used for comparison.
+  // See also @reference_at, @at, @has.
   [ /* BSBS Old; */
     -? {k != NULL}
     // BSBS: Il faut que tu init Result, sinon ca ne marche pas !!!
@@ -107,8 +107,8 @@ Public
 
 
   - fast_put v:V to k:K <-
-  // Same job as `put', but uses basic `=' for comparison.
-  // See also `put', `add'.
+  // Same job as @put, but uses basic `=' for comparison.
+  // See also @put, @add.
   [ /* BSBS Old; */
     -? {k != NULL}
   ]
@@ -120,9 +120,9 @@ Public
   ]
 
   - add v:V to k:K <-
-  // To add a new entry `k' with its associated value `v'.
-  // Actually, this is equivalent to call `put', but it may run a little bit faster.
-  // See also `put', `fast_put'.
+  // To add a new entry @k with its associated value @v.
+  // Actually, this is equivalent to call @put, but it may run a little bit faster.
+  // See also @put, @fast_put.
   [ /* BSBS Old; */
     -? {! has k}
   ]
@@ -137,8 +137,8 @@ Public
   // Looking and searching some value:
   
   - occurrences v:V :Int <-
-  // Number of occurrences using `is_equal' for comparison.
-  // See also `fast_occurrences', `fast_has', `has'.
+  // Number of occurrences using @is_equal for comparison.
+  // See also @fast_occurrences, @fast_has, @has.
   ( + i,result:Int
     i := 1
     {i > count}.until_do {
@@ -155,7 +155,7 @@ Public
   
   - fast_occurrences v:V :Int <-
   // Number of occurrences using basic `=' for comparison.
-  // See also `occurrences', `fast_has', `has'.
+  // See also @occurrences, @fast_has, @has.
   ( + result,i:Int
 
     i := 1
@@ -172,8 +172,8 @@ Public
   ]
   
   - key_at v:V :K <-
-  // Retrieve the key used for value `v' using `is_equal' for comparison.
-  // See also `fast_key_at', `at'.
+  // Retrieve the key used for value @v using @is_equal for comparison.
+  // See also @fast_key_at, @at.
   [ /* BSBS Old; */
     -? {occurrences v = 1}
   ]
@@ -189,8 +189,8 @@ Public
   ]
   
   - fast_key_at v:V :K <-
-  // Retrieve the key used for value `v' using `=' for comparison.
-  // See also `key_at', `at'.
+  // Retrieve the key used for value @v using `=' for comparison.
+  // See also @key_at, @at.
   [ /* BSBS Old; */
     -? {fast_occurrences v = 1}
   ]
@@ -209,11 +209,11 @@ Public
   // Removing:
 
   - remove k:K <-
-  // Remove entry `k' (which may exist or not before this call).
-  // As the `remove' procedure actually uses `is_equal', you may
-  // consider to use `fast_remove' for expanded objects as well
+  // Remove entry @k (which may exist or not before this call).
+  // As the @remove procedure actually uses @is_equal, you may
+  // consider to use @fast_remove for expanded objects as well
   // while trying to get the very best performances.
-  // See also `fast_remove', `clear_count'.
+  // See also @fast_remove, @clear_count.
   [ /* BSBS Old; */
     -? {k != NULL}
   ]
@@ -225,8 +225,8 @@ Public
   ]
 
   - fast_remove k:K <-
-  // Same job as `remove', but uses basic `=' for comparison.
-  // See also `remove', `clear_count'.
+  // Same job as @remove, but uses basic `=' for comparison.
+  // See also @remove, @clear_count.
   [ /* BSBS Old; */
     -? {k != NULL}
   ]
@@ -238,9 +238,9 @@ Public
   ]
 
   - clear_count <-
-  // Discard all items (`is_empty' is True after that call).
-  // The internal `capacity' is not changed by this call.
-  // See also `clear_count_and_capacity', `remove'.
+  // Discard all items (@is_empty is True after that call).
+  // The internal @capacity is not changed by this call.
+  // See also @clear_count_and_capacity, @remove.
   (
     abstract
   )
@@ -250,9 +250,9 @@ Public
   ]
 
   - clear_count_and_capacity <-
-  // Discard all items (`is_empty' is True after that call).
-  // The internal `capacity' may also be reduced after this call.
-  // See also `clear_count', `remove'.
+  // Discard all items (@is_empty is True after that call).
+  // The internal @capacity may also be reduced after this call.
+  // See also @clear_count, @remove.
   (
     abstract
   )
@@ -262,12 +262,12 @@ Public
   ]
 
   - capacity:Int <-
-  // Approximation of the actual internal storage `capacity'.
-  // The `capacity' will grow automatically when needed
-  // (i.e. `capacity' is not a limit for the number of values stored).
-  // Also note that the `capacity' value may not be always accurate
-  // depending of the implementation (anyway, this `capacity' value
-  // is at least equals to `count').
+  // Approximation of the actual internal storage @capacity.
+  // The @capacity will grow automatically when needed
+  // (i.e. @capacity is not a limit for the number of values stored).
+  // Also note that the @capacity value may not be always accurate
+  // depending of the implementation (anyway, this @capacity value
+  // is at least equals to @count).
   (
     abstract
     0
@@ -282,9 +282,9 @@ Public
   )
 
   - key_map_in buffer:Collection(K) <-
-  // Append in `buffer', all available keys (this may be useful to
+  // Append in @buffer, all available keys (this may be useful to
   // speed up the traversal).
-  // See also `item_map_in'.
+  // See also @item_map_in.
   [buffer != NULL]
   (
     abstract
@@ -292,9 +292,9 @@ Public
   [ ? {buffer.count = count + Old buffer.count} ]
 
   - item_map_in buffer:Collection(V) <-
-  // Append in `buffer', all available items (this may be useful to
+  // Append in @buffer, all available items (this may be useful to
   // speed up the traversal).
-  // See also `key_map_in'.
+  // See also @key_map_in.
   [ buffer != NULL ]
   (
     abstract
@@ -304,7 +304,7 @@ Public
   // Comparaison.  
   
   - copy other:Self <-
-  // Reinitialize by copying all associations of `other'.
+  // Reinitialize by copying all associations of @other.
   (
     not_yet_implemented //ici !!!
   )
@@ -370,8 +370,8 @@ Public
   )
 
   - for_all test:{(V,K); } :Boolean <-
-  // Do all (V, K) associations satisfy `test'?
-  // See also `do_all', `exist'.
+  // Do all (V, K) associations satisfy @test?
+  // See also @do_all, @exist.
   ( + i:Int
     + v:V
     + k:K
@@ -389,8 +389,8 @@ Public
   )
 
   - exists test:{(V,K); } :Boolean <-
-  // Does at least one (V, K) association satisfy `test'?
-  // See also `for_all', `do_all'.
+  // Does at least one (V, K) association satisfy @test?
+  // See also @for_all, @do_all.
   ( + i:Int
     + v:V
     + k:K
@@ -410,8 +410,8 @@ Public
 
   - internal_key k:K :K <-
   // Retrieve the internal key object which correspond to the existing
-  // entry `k' (the one memorized into the `Current' dictionary).
-  // See also `has', `fast_has'.
+  // entry @k (the one memorized into the @self dictionary).
+  // See also @has, @fast_has.
   [ /* BSBS Old; */
     -? {has k}
   ]

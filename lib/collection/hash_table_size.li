@@ -10,7 +10,7 @@ Header
 Public
 
   - prime_number_ceiling integer:Int :Int <-
-  // A good prime number, large enough, and no smaller than `integer'.
+  // A good prime number, large enough, and no smaller than @integer.
   ( + result:Int
     if (integer <= 97) then {
       // This seems to be a good minimum value to start hashing with.

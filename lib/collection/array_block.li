@@ -1,5 +1,5 @@
 Header
-  + name := Array_block V
+  + name := Exact Array_block V
 /*
     If you can live using only `add_last', just stick to ARRAY, but if you need
     constant time performances for all kinds of insertions (i.e. `add_first',  `add_last',

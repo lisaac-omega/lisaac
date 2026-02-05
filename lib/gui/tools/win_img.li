@@ -130,8 +130,8 @@ Public
     }
   )
   
-  - event ev:Uint8 :Boolean <-
-  ( + e:Uint8
+  - event ev:Int :Boolean <-
+  ( + e:Int
     + cx,cy,w,h:Real32
     e := ev & ~1
     (e = Hand.drag).if {

@@ -75,7 +75,7 @@ Public
     ? {check_upper = states.upper}
   )
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   ( 
     (ev = Hand.ldrag).if {      
       (Hand.is_begin).if {

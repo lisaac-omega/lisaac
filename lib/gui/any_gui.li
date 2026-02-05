@@ -4,8 +4,8 @@ Insert
   - parent_utils:Utils := Utils
 
 Public
-  - version:String_alias := "0.5"
-  - window_title:String_alias := "ELIX - Lisaac Ω Editor"
+  - version:String_alias := "0.6"
+  - window_title:String_alias := "ELIT - Lisaac Ω Editor"
 
   
   - extend_code:Boolean := True; // Lisaac only

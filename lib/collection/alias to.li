@@ -18,7 +18,7 @@ Private
 
   - buckets:C_array(Hashed_set_node A)
   - id_capacity:Int
-  - capacity:Int; // Of the `buckets' storage area.
+  - capacity:Int; // Of the @buckets storage area.
   
 Private
   

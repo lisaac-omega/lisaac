@@ -7,10 +7,8 @@ Inherit
 
 Public
 
-  //
   // Value.
-  //
-
+  
   + value:Int64
 
   - set_value new_value:Int64 <-
@@ -22,7 +20,7 @@ Public
   - to_power:Int64 <-
   // 2^Result = self or else -1
   ( + result,val:Int64
-
+    // BSBS: Optimise avec ASM
     val := value
     (val = 0).if {
       result := -1
@@ -43,7 +41,8 @@ Public
 
     typ := static_type.raw.name
     (typ = str_int_64) || {typ = str_int_32} ||
-    {typ = str_int_16} || {typ = str_int_8 }
+    {typ = str_int_16} || {typ = str_int_8 } ||
+    {typ = str_int}
   )
 
   - is_saturated:Boolean <-
@@ -69,9 +68,7 @@ Public
     result
   )
 
-  //
   // Creation.
-  //
 
   - create p:Position value v:Int64 type t:Type_full :Self<-
   ( + result:Self
@@ -90,20 +87,16 @@ Public
 
   - my_copy:Self <- Self.create position value value type static_type
 
-  //
   // Comparaison.
-  //
-
+  
   - self:Self '~=' Right 60 other:Expr :Boolean <-
   ( + p:Int_cst
     p ?= other
     (p != NULL) && {value = p.value} && {static_type = p.static_type}
   )
 
-  //
   // Depend.
-  //
-
+  
   - cast_type p:Type_full <-
   (
    // ? { p.raw != type_integer }
@@ -111,10 +104,8 @@ Public
     check_type
   )
 
-  //
   // Generation.
-  //
-
+  
   - genere <-
   (
     (value.in_range (Int32.minimum) to (Int32.maximum.to_raw_int64)).if {
@@ -132,10 +123,8 @@ Public
     }
   )
 
-  //
   // Display.
-  //
-
+  
   - display buffer:String_buffer <-
   (
     buffer.add_last '('
@@ -208,12 +197,12 @@ Private
       min.append_in string_tmp
       string_tmp.append ".."
       max.append_in string_tmp
-      string_tmp.append "] => new value=0."
+      string_tmp.append "]."
       Position.put_error warning text string_tmp
       position.put_position
       list_current.position.put_position
       Position.send_error
-      value := 0
+      //value := 0
     }
   )
 

@@ -22,7 +22,46 @@ Public
   
   - new:Self <- (crash; Self)
   - free
-        
+  
+  - rmk_extern <-
+  ( + c:Char
+    + n:String_alias    
+    + p:Int
+    + l:Local
+    jmp 1 sub 0
+    p := sty.count
+    pos_i := pos_i + 1
+    String.tmp { tmp:String_buffer
+      {
+        c := at pos_i
+        tmp # c
+        pos_i := pos_i + 1        
+        (c = '\\').if {
+          tmp # at pos_i
+          jmp 1 sub 1
+          pos_i := pos_i + 1
+          c := at pos_i
+        }
+      }.do_while {! " \n\0\r.,".has c}
+      tmp.remove_last
+      n := tmp.to_string_alias
+    }
+    (! n.is_empty).if {
+      l := Expr.get_local n
+      (l = NULL).if {
+        sty.at p add (Old pos_i.pt - pt_b.pt, (n.first.is_upper).ok (Look.type | 80h) or (Look.slot | 80h))
+      } else {      
+        sty.at p add (Old pos_i.pt - pt_b.pt, (n = "self").ok (Look.keyword | 80h) or (Look.local | 80h))
+        (l.style_is (Decl.f_ro)).if {
+          sty.at p add (Old pos_i.pt - pt_b.pt, Font.italic | 10000h)
+          fnt (Font.roman) sub 1
+        }
+      }      
+      col (Look.rmk) sub 1
+    }
+    pos_i := pos_i - 2
+  )  
+  
   - begin_draw
   - sub_draw
   - end_draw
@@ -118,6 +157,7 @@ Public
   (
     parent_txt_buf := Txt_buf.current
     nl := 0
+    dh := 0
     sty.clear
     begin pos_i
     parse
@@ -248,17 +288,11 @@ Public
         n := f & 0FF_FFh
         (f >> 16)
         .when 0 then { // Color
-          /*
-          (n = 12).if {
-            OUT # "Color " # n # " x=" # tex.x # " pt_b=" # pt_b.pt # "\n";
-            OUT # "c=" # at pos_i # '\n';
-            //(at pos_i = ':').if { exit 1; };
-            from (styi) to (sty.upper.min (styi+8)) step 2 do { i:Int;
-              sty.at i.print; ' '.print;
-            };
-            '\n'.print;
-          };*/
-          last_color := Look.cols.at n
+          (n & 80h = 0).if {
+            last_color := Look.cols.at n
+          } else {
+            last_color := Look.cols_bland.at (n & 7Fh)
+          };
           fill_color last_color
           //stroke_color (COLOR.white)
         }

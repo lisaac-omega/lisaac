@@ -29,10 +29,10 @@ Public
   )
 
   - line_minimum:Int <- lower1
-  // Equivalent of `lower1'.
+  // Equivalent of @lower1.
 
   - column_minimum:Int <- lower2
-  // Equivalent of `lower2'.
+  // Equivalent of @lower2.
 
   - upper1:Int <-
   // First Upper index bounds.
@@ -49,10 +49,10 @@ Public
   )
 
   - line_maximum:Int <- upper1
-  // Equivalent of `upper1'.
+  // Equivalent of @upper1.
 
   - column_maximum:Int <- upper2
-  // Equivalent of `upper2'.
+  // Equivalent of @upper2.
 
   // Reading:
 
@@ -73,8 +73,8 @@ Public
   [ +? { at (line,column) = element}; ]
 
   - force element:V to (line, column:Int) <-
-  // Put `element' at position (`line',`column'). Collection is
-  // resized first when (`line',`column') is not inside current
+  // Put @element at position (@line,@column). Collection is
+  // resized first when (@line,@column) is not inside current
   // bounds. New bounds are initialized with default values.
   [
     -? { line >= 0   }
@@ -138,7 +138,7 @@ Public
   ]
 
   - line_count:Int <- count1
-  // Equivalent of `count1'.
+  // Equivalent of @count1.
 
   - count2 :Int <-
   // Size of the second dimension.
@@ -151,7 +151,7 @@ Public
   ]
 
   - column_count :Int <- count2
-  // Equivalent of `count2'.
+  // Equivalent of @count2.
 
   - count:Int <-
   // Total number of elements.
@@ -164,8 +164,8 @@ Public
   ]
 
   - swap (line1, column1:Int) with (line2, column2:Int) <-
-  // Swap the element at index (`line1',`column1') with the
-  // the element at index (`line2',`column2').
+  // Swap the element at index (@line1,@column1) with the
+  // the element at index (@line2,@column2).
   [
     -? { valid_index (line1,column1) }
     -? { valid_index (line2,column2) }
@@ -180,7 +180,7 @@ Public
   ]
 
   - set_all_with v:V <-
-  // Set all item with value `v'.
+  // Set all item with value @v.
   (
     abstract
   )
@@ -202,7 +202,7 @@ Public
   // Creating or initializing:
 
   - from_collection2 model:Collection2(V) <-
-  //  Uses `model' to initialize Current.
+  //  Uses @model to initialize self.
   [ -? { model != NULL }; ]
   (
     abstract
@@ -213,8 +213,8 @@ Public
   ]
 
   - from_model model:Collection(Collection(V)) <-
-  // The `model' is used to fill line by line Current.
-  // Assume all sub-collections of `model' have the same
+  // The @model is used to fill line by line self.
+  // Assume all sub-collections of @model have the same
   // number of lines.
   [
     -? { model.count >= 1 }
@@ -229,8 +229,8 @@ Public
   ]
 
   - copy_collection other:Collection2(V) <-
-  // Copy `other' to Current.
-  // * See: `copy'.
+  // Copy @other to self.
+  // * See: @copy.
   [
     -? { other != NULL }
   ]
@@ -254,9 +254,9 @@ Public
   )
 
   - self:Self '==' other:E :Boolean <-
-  // Do both collections have the same `lower1', `lower2', `upper1' and `upper2', and items?
+  // Do both collections have the same @lower1, @lower2, @upper1 and @upper2, and items?
   // The basic `=' is used for comparison of items.
-  // See also `is_equal_map'.
+  // See also @is_equal_map.
   ( + line, column:Int
     + result:Boolean
 
@@ -281,9 +281,9 @@ Public
   )
 
   - is_equal_map (other:Collection2(V)) :Boolean <-
-  // Do both collections have the same `lower1', `lower2', `upper1' and `upper2', and items?
-  // Feature `is_equal' is used for comparison of items.
-  // See also `is_equal'.
+  // Do both collections have the same @lower1, @lower2, @upper1 and @upper2, and items?
+  // Feature @is_equal is used for comparison of items.
+  // See also @is_equal.
   ( + line, column:Int
     + result:Boolean
     (
@@ -309,8 +309,8 @@ Public
   // Miscellaneous features:
 
   - occurrences elt:V :Int <-
-  // Number of occurrences using `equal'.
-  // See also `fast_occurrences' to chose the apropriate one.
+  // Number of occurrences using @equal.
+  // See also @fast_occurrences to chose the apropriate one.
   (
     abstract
     0
@@ -319,7 +319,7 @@ Public
 
   - fast_occurrences elt:V :Int <-
   // Number of occurrences using `='.
-  // See also `occurrences' to chose the apropriate one.
+  // See also @occurrences to chose the apropriate one.
   (
     abstract
     0
@@ -327,8 +327,8 @@ Public
   [ +? { Result >= 0 }; ]
 
   - has x:V :Boolean <-
-  // Search if a element x is in the array using `equal'.
-  // See also `fast_has' to chose the apropriate one.
+  // Search if a element x is in the array using @equal.
+  // See also @fast_has to chose the apropriate one.
   (
     abstract
     False
@@ -342,9 +342,9 @@ Public
   )
 
   - replace_all old_value:V with new_value:V <-
-  // Replace all occurences of the element `old_value' by `new_value'
-  // using `equal' for comparison.
-  // See also `fast_replace_all' to choose the apropriate one.
+  // Replace all occurences of the element @old_value by @new_value
+  // using @equal for comparison.
+  // See also @fast_replace_all to choose the apropriate one.
   (
     abstract
   )
@@ -354,9 +354,9 @@ Public
   ]
 
   - fast_replace_all old_value:V with new_value:V <-
-  // Replace all occurences of the element `old_value' by `new_value'
+  // Replace all occurences of the element @old_value by @new_value
   // using operator `=' for comparison.
-  // See also `replace_all' to choose the apropriate one.
+  // See also @replace_all to choose the apropriate one.
   (
     abstract
   )
@@ -366,7 +366,7 @@ Public
   ]
 
   - sub_collection2 (line_min,column_min:Int) to (line_max,column_max:Int) :Self <-
-  // Create a new object using selected area of `Current'.
+  // Create a new object using selected area of @self.
   [
     -? { valid_index (line_min,column_min) }
     -? { valid_index (line_max,column_max) }
@@ -380,7 +380,7 @@ Public
   ]
 
   - set_area (line_min,column_min:Int) to (line_max,column_max:Int) with element:V <-
-  // Set all the elements of the selected area rectangle with `element'.
+  // Set all the elements of the selected area rectangle with @element.
   [
     -? { valid_index (line_min,column_min) }
     -? { valid_index (line_max,column_max) }

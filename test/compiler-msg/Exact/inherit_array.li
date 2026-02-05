@@ -1,0 +1,7 @@
+Header
+  + name := Inherit_array V
+
+Inherit
+  
+  + parent_array: Flat Array V
+  

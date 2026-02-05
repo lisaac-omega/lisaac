@@ -6,14 +6,16 @@ Public
   - count:Int <- abstract
 
   - element_sizeof:Int <-
-  // The size in number of bytes for type `E'.
+  // The size in number of bytes for type @E.
   (
     abstract
     0
   )
 
   - set_capacity new_capacity:Int <-
-  // Resize capacity the array, but not count.
+  // Resize @capacity to the nearest greater power of two of @new_capacity.
+  // @count remains unchanged.
+  // 
   [
     new_capacity > 0
   ]

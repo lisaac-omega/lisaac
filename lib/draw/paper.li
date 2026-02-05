@@ -322,6 +322,8 @@ Public
     {wins.at i != w}.while_do { i := i - 1; }
     wins.remove i
     ptr := w.win_ptr
+    w.set_win_ptr NULL
+    `glfwSetCursor(@ptr, NULL)`;
     `glfwDestroyWindow(@ptr)`
   }
   
@@ -379,7 +381,7 @@ Public
   
   - set_window win:Pointer pos (x,y:Int) <-
   (
-    (lip "target" str != "android").if {
+    (lip "target" str != "android").if {      
       `glfwSetWindowPos(@win,@x,@y)`
     }
   )
@@ -396,7 +398,7 @@ Public
   
   - set_window win:Pointer size (w,h:Int) <-
   (
-    (lip "target" str != "android").if {
+    (lip "target" str != "android").if {  
       `glfwSetWindowSize(@win,@w,@h)`
     }
   )
@@ -558,10 +560,8 @@ External
   - on_close (w:Pointer) <- get_win w.on_close
 
   - generate_frame w:Pointer <-
-  (    
-    li_refresh_callback w //(wins.first.win_ptr)
-    //}
-    //`glfwWaitEvents()`
+  (        
+    li_refresh_callback w
   )
     
   - refresh_callback w:Pointer :Int <- ( li_refresh_callback w)
@@ -624,8 +624,8 @@ Public
 External
   
   - mouse_move(win:Pointer,xpos,ypos:Real64) <-
-  (
-    refresh_again
+  ( 
+    refresh_again    
     Hand.set_ptr (get_win win) xy (xpos.to_int,ypos.to_int)
   )
   
@@ -822,7 +822,7 @@ External
       `e->display = display`
       `e->context = context`
     }
-    `eglMakeCurrent(e->display, e->surface, e->surface, e->context)`
+    `eglMakeself(e->display, e->surface, e->surface, e->context)`
     `EGLint w, h`
     `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`
@@ -873,7 +873,7 @@ External
   (lip "target" str = "android").if {
    //`struct engine *e=@e`
     //(`e->display`:Pointer != `EGL_NO_DISPLAY`:Pointer).if {
-      //`eglMakeCurrent(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
+      //`eglMakeself(e->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)`
       //(`e->surface`:Pointer != `EGL_NO_SURFACE`:Pointer).if {
      // `eglDestroySurface(e->display,e->surface )`
      // `ANativeWindow_release(e->app->window)`

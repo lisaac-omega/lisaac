@@ -299,7 +299,7 @@ Private
         }
       }
     }
-    // BSBS: A revoir avec pb `list' l.352 et `profil' pour result
+    // BSBS: A revoir avec pb @list l.352 et @profil pour result
     (result_list.lower).to (result_list.upper) do { j:Int
       + loc:Read_local
       res := result_list.at j

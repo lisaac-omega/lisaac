@@ -64,11 +64,28 @@ Public
   )
 
   - exec left_cst:Int_cst and right_cst:Int_cst :Expr <-
+  //-- //(-C1) - 1 -> ~C1
+  //-- //(-1) - C2 -> ~C2
   //-- C1 - C2 -> C3
-  (
-    left_cst.set_value (left_cst.value - right_cst.value)
-    right_cst.remove
-    left_cst
+  ( + result:Expr
+    /*
+    Out # left_cst.value # '-' # right_cst.value # '\n'
+    ((left_cst.value <= 0) && {right_cst.value = 1}).if {
+      right_cst.remove
+      left_cst.set_value (-left_cst.value)
+      "Cas 0".println
+      result := Expr_not.create position with left_cst
+    }.elseif {left_cst.value = -1} then {
+      left_cst.remove
+      "Cas 1".println
+      result := Expr_not.create position with right_cst
+    } else {
+    */  
+      left_cst.set_value (left_cst.value - right_cst.value)
+      right_cst.remove
+      result := left_cst
+    //}
+    result
   )
 
   - exec:Expr <-

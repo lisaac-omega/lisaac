@@ -91,7 +91,7 @@ Public
   - draw
   - draw_forward
   
-  - event ev:Uint8 :Boolean <-
+  - event ev:Int :Boolean <-
   (
     ev < 16
   )
