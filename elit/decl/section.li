@@ -42,7 +42,7 @@ Public
     ( f = a_public) ||
     {(f = a_private) && {proto = p}} ||
     {(f = a_directory) && {p.src.name.has_prefix (proto.src.name)}} ||
-    {(f = a_list) && {exports != NULL} && {        
+    {(f = a_list) && {exports != NULL} && {exports.type != NULL} && {
         exports.type.foreach_until { t:Tone
           + tp:Tpro
           tp ?= t
@@ -65,21 +65,40 @@ Public
   - new:Self <- ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
   
   - free <-
-  (
+  ( + i:Int    
+    + se:Section
+    + sl:Slot
     (exports != NULL).if { exports.free; exports := NULL }
     stk.add_last self
+    //
+    i := tok_cur - 1
+    {(i > 0) && {se = NULL}}.while_do {
+      se ?= toks.at i
+      sl ?= toks.at i
+      (sl != NULL).if { se := sl.section }
+      i := i - 1
+    }
+    (se = NULL).if { se := Self }
+    i := tok_cur + 1
+    {(i <= toks.upper) && {toks.at i.dynamic_type != Section}}.while_do {
+      sl ?= toks.at i
+      (sl != NULL).if { sl.set_section se }
+      i := i + 1
+    }
   )
   
   - detect:Boolean <- (pos_i <= upper) && {at pos_i.is_upper}
   
   - parse <-
-  (
+  ( + i:Int
+    + sl:Slot
+    + se:Section
     proto := txt_buf.like Lix_buf.proto
     style := 0
-    word "Section"
+    rd_word "Section"
     (
-      (word "Inherit")   || {word "Insert"}   ||
-      {word "Interrupt"} || {word "External"} || {word "Mapping"}
+      (rd_word "Inherit")   || {rd_word "Insert"}   ||
+      {rd_word "Interrupt"} || {rd_word "External"} || {rd_word "Mapping"}
     ).if {
       last_str
       .when "Inherit"   then { style := p_inherit;   }
@@ -94,11 +113,19 @@ Public
     err := pos_i.pt - pt_b.pt
     skip_until '\n'
     (at pos_i = '\n').if { pos_i := pos_i + 1; nl := nl + 1; }
+    //
+    i := tok_cur + 1
+    {(i <= toks.upper) && {se = NULL}}.while_do {
+      se ?= toks.at i
+      sl ?= toks.at i
+      (sl != NULL).if { sl.set_section self }
+      i := i + 1
+    }
   )
   
   - read_access <-
   //++ ACCESS       -> 'Directory' | 'Public' | 'Private' | PROTOTYPE { ',' PROTOTYPE }
-  ( ((word "Public") || {word "Private"} || {word "Directory"}).if {
+  ( ((rd_word "Public") || {rd_word "Private"} || {rd_word "Directory"}).if {
       last_str
       .when "Public"    then { style := style | a_public;    }
       .when "Private"   then { style := style | a_private;   }

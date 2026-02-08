@@ -7,7 +7,7 @@ Inherit
   - parent_any:Any := Any
   
 Insert
-//  - parent_lix_buf:LIX_BUF := LIX_BUF
+  //  - parent_lix_buf:LIX_BUF := LIX_BUF
   
 Private
   - stk_e:Flat Array (Exact Expr)
@@ -138,7 +138,7 @@ Public
   ( + result:Expr
     + cas:Rslo
     
-    (word "...").if { err semantic msg "not_yet_implemented"; }
+    (rd_symbol "...").if { err semantic msg "not_yet_implemented"; }
     ((result := Old_e.parse_sp 0)!= NULL) || {(result := rd_expr_prim)    != NULL} ||
     {(result := Rslo.parse_sp 0) != NULL} || {(result := Rloc.parse_sp 0) != NULL}
     (result != NULL).if {

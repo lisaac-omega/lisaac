@@ -21,7 +21,7 @@ Public
   ( (expr != NULL).if { expr.free; expr := NULL; }; stk_old.add_last self; )
   
   - new_parse t:Int <-
-  ( (word "Old").if {
+  ( (rd_word "Old").if {
       col (Look.keyword) sub 3
       expr := rd_expr_op
       (expr = NULL).if { err syntax msg "Expression is needed."; }

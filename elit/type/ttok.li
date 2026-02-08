@@ -86,21 +86,24 @@ Public
     + result:Type
     result := t0 := rd_type
     ((result != NULL) && {read_c ','}).if {
-      skip_spln_expr
+      skip_ttok
       t1 := rd_type
       (t1 != NULL).if {        
         lst := push_tone
         lst.add_last t0
         lst.add_last t1
         {read_c ','}.while_do {
-          skip_spln_expr
+          skip_ttok
           t1 := rd_type
-          (t1 = NULL).if { err syntax msg "Incorrect type vector."; }
-          lst.add_last t1
+          (t1 = NULL).if { err syntax msg "Incorrect type vector."; } else {
+            lst.add_last t1
+          }
         }
-        result := Tvec.new lst
+        (lst.count > 1).if {          
+          result := Tvec.new lst
+        }        
         pop_tone
-      } else { err syntax msg "Incorrect type vector."; }
+      } else { err syntax msg "Incorrect type vector."; }      
     }
     result
   )
@@ -167,8 +170,8 @@ Public
     + attr:Uint8
     + n:Node
     + p:Int
-    (word "Flat").if { col (Look.keyword) sub (last_str.count); attr := attr | Type.flat; }
-    (word "Exact").if   { col (Look.keyword) sub (last_str.count); attr := attr | Type.exact;   }
+    (rd_word "Flat" ).if { col (Look.keyword) sub (last_str.count); attr := attr | Type.flat  }
+    (rd_word "Exact").if { col (Look.keyword) sub (last_str.count); attr := attr | Type.exact }
     (((attr & Type.flat) != 0) && {attr != Type.flat}).if {
       err warning msg "Flat only."
       attr := Type.flat

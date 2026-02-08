@@ -502,8 +502,8 @@ Public
   - last_int:Int
   - last_real:Real64
   - is_real:Boolean
-
-  - word w:String_alias :Boolean <-
+  
+  - rd_symbol w:String_alias :Boolean <-
   ( + i:Int
     + old:Pos
     skip_sp
@@ -512,6 +512,21 @@ Public
       i := i + 1; pos_i := pos_i + 1
     }
     (i > w.upper).if { last_str := w; } else { pos_i := old; }    
+  )
+
+  - rd_word w:String_alias :Boolean <-
+  ( + i:Int
+    + old:Pos
+    skip_sp
+    old := pos_i
+    {(i <= w.upper) && {buf.at pos_i = w.at i}}.while_do {
+      i := i + 1; pos_i := pos_i + 1
+    }
+    ((i > w.upper) && {! buf.at pos_i.is_identifier}).if { 
+      last_str := w; 
+    } else { 
+      pos_i := old; 
+    }
   )
     
   - skip_until c:Char <-
@@ -539,6 +554,16 @@ Public
       pos_i := pos_i + 1
     }
   )
+  
+  - skip_ttok <- 
+  // BSBS: C'est naze, mais bon...
+  ( + c:Char
+    skip_sp
+    c := at pos_i
+    (c)
+    .when '\n' then { pos_i := pos_i + 1; skip_sp }
+    .when '\r' then { pos_i := pos_i + 2; skip_sp }
+  )    
   
   - skip_spln_expr <-
   (

@@ -30,6 +30,22 @@ Public
   
   + chapter:Chapter
   + section:Section
+  - set_section s:Section <- 
+  ( + tp:Tpro
+    ((ttok != NULL) && {(tp ?= type) != NULL} && {tp.proto != NULL}).if {      
+      (section.is_inherit).if {
+        tp.proto.child_inherit.remove_value_force self
+      }.elseif {section.is_insert} then {
+        tp.proto.child_insert .remove_value_force self
+      }
+      (s.is_inherit).if {
+        tp.proto.child_inherit.add_last self
+      }.elseif {s.is_insert} then { 
+        tp.proto.child_insert .add_last self
+      }
+    }
+    section := s    
+  )
     
   + proto:Proto; // A FAIRE <- toks.first.like PROTO
     
@@ -436,17 +452,17 @@ Public
     (found, v) := Liz.ope_key.search last_str
     (v != 0).if { utf ((v-1) | (l<<8)) sub l }
     (! read_c '\'').if { err warning msg "Added `''." }
-    (swap := word "<>").if {
+    (swap := rd_symbol "<>").if {
       col (Look.symbol) sub 2
       drw esc_char_commu sub 2
     }
-    ((word "Left") || {word "Right"}).if {
+    ((rd_word "Left") || {rd_word "Right"}).if {
       col (Look.keyword) sub (last_str.count)
       right := (last_str = "Right")
       ((! read_num False) || {is_real}).if { err syntax msg "Priority level is needed or invalid."; }
       prio := last_int
       (! prio.in_range 1 to 99).if { err warning msg "Priority level is invalid [1..99]."; }
-      ((! swap) && {swap := word "<>"}).if {
+      ((! swap) && {swap := rd_symbol "<>"}).if {
         col (Look.symbol) sub 2
         drw esc_char_commu sub 2
       }
@@ -604,7 +620,7 @@ Public
         }
         (ri >= 3).if {
           (
-            (ri = 4) && {name_idz != NULL} &&
+            (ri = 4) && {name_idz != NULL} && 
             {(liz := Liz.find name_idz) != NULL} && {liz != Liz} && {! inside_glyph}
           ).if {
             liz.drw txt_buf color (Look.cols.at (Look.slot)) arg 

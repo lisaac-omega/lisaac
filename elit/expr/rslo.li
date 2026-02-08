@@ -35,19 +35,12 @@ Public
       
   - new:Self <-
   ( + r:Self; (stk_cslot.is_empty).if { r := clone; } else { r := stk_cslot.pop; }; r)
-  - free <- ( param.foreach {e:Expr; (e != NULL).if { e.free; }; }; param.clear; stk_cslot.add_last self; )
+  - free <- ( param.foreach {e:Expr; (e != NULL).if { e.free; }; }; param.clear; stk_cslot.add_last self; glyph := NULL )
   
   - add_first e:Expr <-
   (
     param.add_first e
-    (e != NULL).if {      
-      finalize 0 db (pt_b+e.db) de (pt_b.pt+db+dd)
-    }
-    String.tmp { tmp:String_buffer
-      tmp.add_last '\0'
-      tmp.append name_id
-      name_id := tmp.to_string_alias
-    }
+    finalize 0 db (pt_b+e.db) de (pt_b.pt+db+dd)    
   )
   
 /*  - or_rloc:EXPR <-
@@ -69,8 +62,10 @@ Public
   
   // PARSER
   
+  + glyph:Liz
+  
   - new_parse t:Int <-
-  ( name_id := "BUG";
+  ( 
     t
     .when 0 then {
       rd_send_msg
@@ -80,7 +75,14 @@ Public
       }
     }
     .when 1 then { rd_send_msg; }
-    .when 2 then { rd_send_small_msg; }    
+    .when 2 then { rd_send_small_msg; }
+    (pos_i != Old pos_i).if {      
+      String.tmp { tmp:String_buffer
+        tmp # '\0' # name_id
+        name_id := tmp.to_string_alias
+      }
+      (nl = Old nl).if { glyph := Liz.find name_id }
+    }
   )
   
   - rd_send_small_msg <-
@@ -143,15 +145,26 @@ Public
   // DRAW
   
   - begin_draw <-
-  ( + liz:Liz
+  ( 
+    //glyph := Liz.find name_id
+    //(glyph != NULL).if { "Draw:".print; name_id.println }
+    
     i_param := 0
-    (((liz := Liz.find name_id) != NULL) && {! inside_glyph}).if {
-      //print_sty (pt_b.pt)
-      //"----------- DEB------------".println
-      liz.drw txt_buf color (Look.cols.at (Look.slot)) arg { i:Int; param.at i}
-      pos_i := pt_b + db + dd
-      //"----------- FIN------------".println
-      //toks.at tok_cur.sty_run
+    ((glyph != NULL) && {! inside_glyph}).if {      
+      (
+        (glyph != Liz) || {
+          (param.count = 2) && {
+            + n:Num
+            + l:List
+            n ?= param.first
+            l ?= param.second            
+            (n != NULL) && {n.is_int} && {n.int_val > 0} && 
+            {l != NULL} && {l.is_simple_expr} && {l.exp.count > 0} && {(l.exp.count % n.int_val) = 0}
+        }}
+      ).if {
+        glyph.drw txt_buf color (Look.cols.at (Look.slot)) arg { i:Int; param.at i}
+        pos_i := pt_b + db + dd
+      }
     }
   )
   

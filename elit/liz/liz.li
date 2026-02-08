@@ -269,7 +269,8 @@ Private
     
   - dico:Hmap Liz Key String_alias := Hmap Liz Key String_alias new
   
-  - mtx:String_alias := // Bug ASCII compilo
+  - mtx:String_alias := 
+  // Bug ASCII compilo
   ( + r:String_alias
     String.tmp { tmp:String_buffer; ((tmp | '\0') += "mtx") | '\0'; r := tmp.to_string_alias; }
     r
@@ -280,15 +281,15 @@ Private
 Public
   
   - find n:String_alias :Liz <-
-  ( + result:Liz + found:Boolean
+  ( + result:Liz
     //"Search:".print; n.println
     //"DICO:".println
-    //dico.foreach { l:LIZ; l.name.println; }
+    //dico.foreach { (k:String_alias,l:LIZ); 
+    //  Out # k # ' ' # l.name # ' ' # (k = n) # '\n'      
+    //}
     //"----".println
     (n = mtx).if { result := Liz; } else {      
-      // DCDC
-      //result := dico.fast_reference_at n
-      (found, result) := dico.search n
+      result := dico.search n raw
     }
     result
   )

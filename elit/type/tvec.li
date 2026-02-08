@@ -41,7 +41,7 @@ Public
     + n:Tvec
     + k:String_alias
     + i:Int
-    + err, found:Boolean
+    + err:Boolean
     String.tmp { tmp:String_buffer
       tmp.copy (ts.first.key)
       err := tmp.is_empty
@@ -58,9 +58,7 @@ Public
     (err).if {
       result := Terr
     } else {
-      // DCDC
-      // result := dicotv.fast_reference_at k
-      (found, result) := dicotv.search k
+      result := dicotv.search k raw
       (result = NULL).if {
         types.new_copy ts
         key := k

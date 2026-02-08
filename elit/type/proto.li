@@ -201,17 +201,17 @@ Public
     //(name.has_suffix "truc.li").if { upper.println; }
     (upper = 0).if { src.like Lix_buf.pre_create; }
     //word "Section"
-    (! word "Header").if {
+    (! rd_word "Header").if {
       err syntax msg "`Header' is needed.";
     }
     { skip_sp; }.do_while {read_c '\n'}
     // NAME:
-    (((! read_c '+') && {! read_c '-'}) || {! word "name"}).if {
+    (((! read_c '+') && {! read_c '-'}) || {! rd_word "name"}).if {
       err syntax msg "name needed."
     }
-    (! word ":=").if { err syntax msg ":="; }; skip_sp
+    (! rd_symbol ":=").if { err syntax msg ":="; }; skip_sp
     //
-    (word "Flat") || {word "Exact"}
+    (rd_word "Flat") || {rd_word "Exact"}
     nod := Node.rtype
     ts := push_type
     /*
@@ -353,14 +353,14 @@ Public
     //v.if {
     //name.println
     //}
-    word "Section"
-    (! word "Header").if { err syntax msg "`Header' is needed."; };
+    rd_word "Section"
+    (! rd_word "Header").if { err syntax msg "`Header' is needed."; };
     skip_spln
     // NAME:
-    (((! read_c '+') && {!read_c '-'}) || {!word "name"}).if {
+    (((! read_c '+') && {!read_c '-'}) || {!rd_word "name"}).if {
       err syntax msg "name needed."
     }
-    (! word ":=").if { err syntax msg ":="; }; skip_sp
+    (! rd_symbol ":=").if { err syntax msg ":="; }; skip_sp
     tname := Ttok.parse_sp (Ttok.tpro | Ttok.force)
     ? {tname.db > 0}
     (tname.type = NULL).if {
@@ -435,7 +435,7 @@ Public
     + result:Tok_itm
     + ps:Int
     (look_hdr n).if { pos_i := pos_i + n.count; test_order id
-      (! word ass).if { err syntax msg ass; }
+      (! rd_symbol ass).if { err syntax msg ass; }
       result := p.value
       read_c ';'
       skip_line

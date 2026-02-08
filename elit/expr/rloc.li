@@ -38,8 +38,8 @@ Public
       }
     } else { ? {t = 1}
       (        
-        (word "Result")   || {word "Result_1"} ||
-        {word "Result_2"} || {word "Result_3"}
+        (rd_word "Result")   || {rd_word "Result_1"} ||
+        {rd_word "Result_2"} || {rd_word "Result_3"}
       ).if {
         col (Look.keyword) sub (last_str.count)
         local := get_local last_str

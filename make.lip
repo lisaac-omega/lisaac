@@ -6,7 +6,7 @@ Private
   + upper:String := "Ê,Ë,Î,Ï,Ö,Ô,É,È,Ù,À,Ç,Ñ,Ä,Ü,ẞ,А-Я"
   + lower:String := "ê,ë,î,ï,ö,ô,é,è,ù,à,ç,ñ,ä,ü,ß,а-я"
   + upper_star:String := "ℕ,ℤ,ℝ"
-  + lower_star:String := "π,α"
+  + lower_star:String := "π,α,β,Γ,Δ,θ,ε,λ,μ,ρ,σ,φ,Ω"
   + symbol:String := "≠,≤,≥,¡,¿"
   
   //
