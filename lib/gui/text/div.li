@@ -22,7 +22,11 @@ Public
   + pos:Pos
   + pte:Pos
   - set_pos p:Pos <- ( pos := p; )
-  - set_pos p:Pos pte pe:Pos <- ( (pos,pte) := (p,pe); )
+  - set_pos p:Pos pte pe:Pos <- 
+  ( 
+    (pos,pte) := (p,pe)
+    txt_pg.detect_ico self
+  )
   
   + act_clic:{Div; }
   - clic a:{Div; } :Self <- ( (self != Self).if { act_clic := a; }; self)
@@ -82,10 +86,9 @@ Public
   - zone (x0,y0:Real32) size (w,h:Real32) style s:Int act a:{Div;} :Self <-
   ( 
     (self != Self).if {      
-      pos := Txt_pg.pos_i
-      (pte,style,act_clic) := (Txt_pg.pos_i,s,a)
+      (style,act_clic) := (s,a)
       (xo,yo,width,height) := (x0,y0,w,h)
-      txt_pg.detect_ico self
+      set_pos (Txt_pg.pos_i) pte (Txt_pg.pos_i)
       Txt_pg.set_pos_i (pos+1)
     }
     self

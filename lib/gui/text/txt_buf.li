@@ -1105,7 +1105,7 @@ Public
   
   - hline:Real32 <- tex.asc - tex.des + interline
   
-  - stop_line <- ( (last_div != NULL).if { last_div.fix_size; detect_cur; }; last_div := NULL; )
+  - stop_line <- ( ((last_div != NULL) && {last_div != Div}).if { last_div.fix_size; detect_cur; }; last_div := NULL; )
   
   - begin_line <-
   (
@@ -1194,7 +1194,7 @@ Public
         //debug_tok_beg := debug_tok_beg.min tok_cur
         //OUT # "Draw " # tok_cur # '\n';
         t.draw        
-        ((pos.is_ico) && {pos.tok = tok_cur} && {! detect_ico_ok}).if {
+        ((pos.is_ico) && {pos.tok = tok_cur} && {! detect_ico_ok}).if {          
           pos := Tok_drw.pt_b
           {at pos = ' '}.while_do { pos := pos + 1 }
         }

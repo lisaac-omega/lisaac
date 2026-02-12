@@ -869,6 +869,7 @@ Private
   ( + x1,y1,x2,y2,xm,a,d,y3:Real32
     + beg_div,v:Int
     + div:Div
+    + p:Pos
     (open_win != '3').if {
       // Nothing.
     } else {
@@ -892,6 +893,12 @@ Private
         //
         begin_path; line (tex.x,0) to (xm,0); line (tex.x,hbox) to (xm,hbox)
         stroke_color (Look.header); stroke_width 3.0; stroke
+        //
+        restore_to (0,tex.y-y1)
+        tex.set_y (tex.y-y1+y2)
+        //
+        y3 := draw_map v
+        //
         // Sort DIV        
         child.quick_sort {(a,b:Win)
           + r:Boolean
@@ -902,18 +909,17 @@ Private
           }
           r
         } from beg_div to (child.upper)
+        p := pos_i
         (beg_div).to (child.upper) do { i:Int
           div ?= child.at i
           //div.ptov.print; "->".print
-          div.set_pos (Pos.new_ico v) pte (Pos.new_ico v)
+          pos_i := Pos.new_ico v
+          div.set_pos pos_i pte pos_i
           //v.println
           v := v + 1
         }
+        pos_i := p
         //
-        restore_to (0,tex.y-y1)
-        tex.set_y (tex.y-y1+y2)
-        //
-        y3 := draw_map v
         tex.add_y y3
       }
     }

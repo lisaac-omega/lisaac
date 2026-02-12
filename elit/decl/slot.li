@@ -852,7 +852,9 @@ Public
         + old:Pos
         old := pos_i
         pos_i := pt_b + ttok.db
-        ttok.draw
+        //Out # pos_i.pt # " " # Div.is_mute # "[\n"
+        ttok.draw        
+        //Out # pos_i.pt # " " # Div.is_mute # "]\n"
         pos_i := old
       }
     } act {d:Div
@@ -862,7 +864,7 @@ Public
         Page.cur_pg.set_buffer (tp.proto.src)
       }
     }
-    (rx,ra,rd) := (tex.x,tex.asc,tex.des)
+    (rx,ra,rd) := (tex.x,tex.asc,tex.des)    
     end_line
     // Restore Old environnement
     begin (Old pt_b)

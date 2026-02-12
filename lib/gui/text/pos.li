@@ -103,7 +103,8 @@ Public
   - self:Self '=='  Right 60 o:Pos :Boolean <- (to_raw & msk_cmp) = (o.to_raw & msk_cmp)
   - self:Self '!==' Right 60 o:Pos :Boolean <- ! (self == o)
   
-  - self:Self '==='  Right 60 o:Pos :Boolean <- (to_raw & msk_cmp2) = (o.to_raw & msk_cmp2)
+  - self:Self '==='  Right 60 o:Pos :Boolean <- 
+  (to_raw & msk_cmp2) = (o.to_raw & msk_cmp2)
   
   - in_range b:Int to e:Int :Boolean <- (!is_xy) && {pt.in_range b to e}
     

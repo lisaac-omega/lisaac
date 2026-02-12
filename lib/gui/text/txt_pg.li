@@ -200,11 +200,9 @@ Public
       + d:Div
       + ok:Boolean
       (x1,x2,y) := (tex.last_x,tex.x,tex.y)
-      d := last_div
-      //(d = NULL).if {
-      //  "Bug TXT_PG.detect_cur: last_div = NULL".println
-      //} else {
-      (d.style = d.cursor).if {
+      d := last_div      
+      (d.style = d.cursor).if {        
+        ? {d != Div}
         (pos.is_xy).if {
           ok := pos =| d.pos.set_xy ((x1+x2)/2-d.xo,1)
         } else {
@@ -212,7 +210,7 @@ Public
         }
         (ok).if {
           pos := pos.set_pt pos_i
-          (pos.is_undefine_xy).if { pos := pos.set_xy (x1-last_div.xo,tex.asc); }
+          (pos.is_undefine_xy).if { pos := pos.set_xy (x1-last_div.xo,tex.asc); }          
           cursor (x1,y) ascdes (tex.last_asc,tex.last_des) col ((page = Page.cur_pg).ok (Color.red) else {Color.gray})
           footnote_right_pos pos
         }
@@ -280,7 +278,8 @@ Public
   - detect_ico_ok:Boolean
   - detect_ico d:Div <- 
   (
-    (pos === pos_i).if { ? {pos_i.is_ico}; ? {pos.is_ico}
+    ((Div.is_mute = 0) && {pos_i.is_ico} && {pos === pos_i}).if { 
+      ? {pos_i.is_ico}; ? {pos.is_ico}
       pos := pos_i.set_xy (d.width/2,d.good_y)
       detect_ico_ok := True
     }
