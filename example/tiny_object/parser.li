@@ -17,7 +17,7 @@ Private
   - last_character:Char <-
   ( + result:Char
     (position > source.upper).if {
-      result := 0.to_character
+      result := 0.to_char
       } else {
       result := source.item position
     }
@@ -35,7 +35,7 @@ Private
     {posold = position}.until_do {
       posold := position
       // Skip spaces :
-      {(last_character = 0.to_character) || {last_character > ' '}}.until_do {
+      {(last_character = 0.to_char) || {last_character > ' '}}.until_do {
         position := position + 1
       }
 
@@ -45,7 +45,7 @@ Private
           position := position + 2
           pos2 := position
           {
-            (last_character = 0.to_character) ||
+            (last_character = 0.to_char) ||
             {last_character = '\n'}
           }.until_do {
             position := position + 1
@@ -59,7 +59,7 @@ Private
           position := position + 2
           level_comment := 1
           {
-            (last_character = 0.to_character) || {level_comment = 0}
+            (last_character = 0.to_char) || {level_comment = 0}
           }.until_do {
             ((last_character = '/') && {source.item (position+1) = '*'}).if {
               level_comment := level_comment + 1
@@ -80,7 +80,7 @@ Private
         }
       }
     }
-    ((position != pos) | (last_character != 0.to_character))
+    ((position != pos) | (last_character != 0.to_char))
   )
 
   - read_keyword st:String :Boolean <-
@@ -89,7 +89,7 @@ Private
     (read_space).if {
       posold := position
       j := st.lower
-      {(last_character = 0.to_character) || {(j > st.upper) || {last_character != st.item j}}}.until_do {
+      {(last_character = 0.to_char) || {(j > st.upper) || {last_character != st.item j}}}.until_do {
         j := j+1
         position := position+1
       }
@@ -116,7 +116,7 @@ Private
     ((read_space) && {last_character.is_lower}).if {
       string_tmp.clear
       {
-        (last_character = 0.to_character) ||
+        (last_character = 0.to_char) ||
         {
           (! last_character.is_lower) &&
           {! last_character.is_digit} &&
@@ -136,7 +136,7 @@ Private
     ((read_space) && {last_character.is_upper}).if {
       string_tmp.clear
       {
-        (last_character = 0.to_character) ||
+        (last_character = 0.to_char) ||
         {
           (! last_character.is_upper) &&
           {! last_character.is_digit} &&
@@ -158,7 +158,7 @@ Private
       old_pos := position
       position := position + 1
       string_tmp.clear
-      { (last_character = 0.to_character) || {last_character='"'} }.until_do {
+      { (last_character = 0.to_char) || {last_character='"'} }.until_do {
         string_tmp.add_last last_character
         position := position + 1
       }

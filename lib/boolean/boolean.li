@@ -95,7 +95,7 @@ Public
     Int
   )
 
-  - to_character:Char <-
+  - to_char:Char <-
   (
     abstract
     Char

@@ -856,7 +856,7 @@ Public
   - add_last_buffer buf:Array(Uint8) from beg:Int to end:Int <-
   (
     beg.to end do { j:Int
-      add_last (buf.item j.to_character)
+      add_last (buf.item j.to_char)
     }
   )
 

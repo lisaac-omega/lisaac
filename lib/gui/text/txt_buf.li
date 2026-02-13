@@ -170,7 +170,7 @@ Public
   ( + cpt:Int
     + n:Uint8
     n := buf.at i.to_uint8
-    (((n & 80h) != 0) || {n.to_character = '\r'}).if {
+    (((n & 80h) != 0) || {n.to_char = '\r'}).if {
       { cpt := cpt + 1; n := n << 1; }.do_until {(n & 40h) = 0}
     }
     cpt + 1
@@ -181,7 +181,7 @@ Public
     + j:Int
     j := i
     { j := j - 1; n := buf.at j.to_uint8; }.do_while {
-      (j >= 0) && {((n & 0C0h) = 80h) || {(n.to_character='\n') && {at (j-1) = '\r'}}}
+      (j >= 0) && {((n & 0C0h) = 80h) || {(n.to_char='\n') && {at (j-1) = '\r'}}}
     }
     i - j
   )
@@ -890,7 +890,7 @@ Private
     n := at pos_i
     ((n & 80h) != 0).if {
       butf8.clear
-      butf8.add_last (n.to_character)
+      butf8.add_last (n.to_char)
       { pos_i := pos_i + 1
         butf8.add_last (at pos_i)
         n := n << 1

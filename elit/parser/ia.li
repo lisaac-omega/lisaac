@@ -182,7 +182,7 @@ Public
     {
       ib := i
       c := src.at i.to_uint8; i := i + 1
-      cutf8.clear; cutf8.add_last (c.to_character)
+      cutf8.clear; cutf8.add_last (c.to_char)
       ((c & 1000_0000b) != 0).if {
         i.print; '/'.print; src.upper.println
         cutf8.add_last (src.at i); i := i + 1
@@ -205,7 +205,7 @@ Public
       {
         ib := i
         c := src.at i.to_uint8; i := i + 1
-        cutf8.clear; cutf8.add_last (c.to_character)
+        cutf8.clear; cutf8.add_last (c.to_char)
         ((c & 1000_0000b) != 0).if { cutf8.add_last (src.at i); i := i + 1
           ((c & 1110_0000b) = 1110_0000b).if { cutf8.add_last (src.at i); i := i + 1
             ((c & 1111_0000b) = 1111_0000b).if { cutf8.add_last (src.at i); i := i + 1; }

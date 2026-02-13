@@ -551,7 +551,7 @@ Public
   // Convert all characters to lower case.
   (
     upper.downto 0 do { i:Int
-      at i put (item i.to_lower)
+      at i put (at i.to_lower)
     }
   )
 
@@ -559,7 +559,7 @@ Public
   // Convert all characters to upper case.
   (
     upper.downto 0 do { i:Int
-      at i put (item i.to_upper)
+      at i put (at i.to_upper)
     }
   )
 
@@ -830,7 +830,7 @@ Public
             val := (val << 3) | (c -! '0')
             p := p + 1
           }.do_while {(p <= up) && {(c := at p).in_range '0' to '7'}}
-          at q put (val.to_character)          
+          at q put (val.to_char)          
         }.elseif {c = 'x'} then {
           // Seq. hexa : \xhh (2 hexdigits)
           p := p + 1; val := 0; up := (p+1).min upper
@@ -838,7 +838,7 @@ Public
             val := (val << 4) | c.hexadecimal_value
             p := p + 1
           }
-          at q put (val.to_character)        
+          at q put (val.to_char)        
         } else { // Other (copy)
           at q put c
           p := p + 1;
@@ -922,7 +922,7 @@ Public
   - add_last_buffer buf:Array(Uint8) from beg:Int to end:Int <-
   (
     beg.to end do { j:Int
-      add_last (buf.at j.to_character)
+      add_last (buf.at j.to_char)
     }
   )
 

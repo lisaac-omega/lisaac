@@ -577,7 +577,7 @@ Private
       n := s.at j
       j := j + 1
       ((n & 80h) = 0).if {
-        buf.add_last (n.to_character)
+        buf.add_last (n.to_char)
       } else {
         buf.add_last (base +# (n&1111b))
         r := (n >> 2) & 1100b

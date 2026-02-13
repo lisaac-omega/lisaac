@@ -22,7 +22,7 @@ Public
 
   - to_uint8:Uint8 <- self
 
-  - to_character:Char <-
+  - to_char:Char <-
   [ -? {in_range (Char.minimum) to (Char.maximum)}; ]
   (
     Cast Uint8 To Char.on self

@@ -1805,7 +1805,7 @@ Public
         //(iter.prev_glyph_index < 0).if {          
         //  "Alloc ".print
         //}
-        //iter.codepoint.to_character.println
+        //iter.codepoint.to_char.println
         
         ((iter.prev_glyph_index < 0) && {alloc_text_atlas}).if { // can not retrieve glyph?
           iter.copy prev_iter

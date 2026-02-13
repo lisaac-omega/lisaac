@@ -238,8 +238,8 @@ Private
       (verbose).if {
         v4l2_pal.print; ": [0x".print
         pix.print_hex; "] '".print
-        (pix >> 0).to_character.print;  (pix >> 8).to_character.print
-        (pix >> 16).to_character.print; (pix >> 24).to_character.print
+        (pix >> 0).to_char.print;  (pix >> 8).to_char.print
+        (pix >> 16).to_char.print; (pix >> 24).to_char.print
         "' (".print; Print.extern `fmtdesc.description`:C_array Char; ")\n".print
       }
       ((pix = 47504A4Dh) || {pix = 4745504Ah}).if { palette := pix; }; // MJPG
@@ -262,8 +262,8 @@ Private
       ).if {
         (verbose).if {
           "Using palette ".print
-          (pix >> 0).to_character.print;  (pix >> 8).to_character.print
-          (pix >> 16).to_character.print; (pix >> 24).to_character.println
+          (pix >> 0).to_char.print;  (pix >> 8).to_char.print
+          (pix >> 16).to_char.print; (pix >> 24).to_char.println
         }
         (w,h) := (`fmt.fmt.pix.width`:Int,`fmt.fmt.pix.height`:Int)
         ((w != width) || {h != height}).if {

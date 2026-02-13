@@ -154,7 +154,7 @@ Public
       }
     }
     
-    ((position != p) | (cur_char != 0.to_character))
+    ((position != p) | (cur_char != 0.to_char))
   )
     
   - read_space:Boolean <-
@@ -174,7 +174,7 @@ Public
         {cur_char <= ' '} && 
         {(cur_char != '\n') || {(position > 0) && {source.at (position-1) = '\r'}}}
       }.while_do {
-      //{(cur_char = 0.to_character) || {(cur_char > ' ') || {cur_char = '\n'}}}.until_do {
+      //{(cur_char = 0.to_char) || {(cur_char > ' ') || {cur_char = '\n'}}}.until_do {
         (is_shorter2).if {
           (cur_char = '\n').if {
             (stat)
@@ -217,7 +217,7 @@ Public
         position := position + 2
         level_comment := 1
         {
-          (cur_char = 0.to_character) || {level_comment = 0}
+          (cur_char = 0.to_char) || {level_comment = 0}
         }.until_do {
           ((cur_char = '/') && {source.at (position+1) = '*'}).if {
             level_comment := level_comment + 1
@@ -239,7 +239,7 @@ Public
     }
     // False : Last character.
     begin_position := position
-    ((position != pos) | (cur_char != 0.to_character))
+    ((position != pos) | (cur_char != 0.to_char))
   )
 
   - read_symbol st:String_alias :Boolean <-
@@ -303,7 +303,7 @@ Public
     n := cur_char
     ((n & 80h) != 0).if {
       butf8.clear
-      butf8.add_last (n.to_character)
+      butf8.add_last (n.to_char)
       { position := position + 1
         butf8.add_last cur_char
         n := n << 1

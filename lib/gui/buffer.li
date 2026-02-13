@@ -7,7 +7,7 @@ Public
   
   - init_key <-
   ( String.tmp { k:String_buffer
-      k | Keyboard.key_cmd.to_character | 'a'
+      k | Keyboard.key_cmd.to_char | 'a'
       0.to 11 do { j:Int
         k.at 1 put ('a' +# j)
         Shortcut.new.key (k.to_string_alias) act (Act1 Int.new

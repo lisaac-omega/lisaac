@@ -36,16 +36,18 @@ Public
   
   - new_parse t:Int <-
   ( + e:Expr
+    + a:Boolean
     read_op
     {(e := rd_expr_msg) != NULL}.while_do {
       exp.add_last e
       ope.add_last NULL
       //
       skip_sp
-      ((look ":=") || {look "<-"} || {look "?="}).if {
+      ((look ":=") || {a := look "<-"} || {look "?="}).if {
         ope.add_last ":="
         pos_i := pos_i + 2
         col (Look.symbol) sub 2
+        (a).if { drw esc_char_arrow sub 2 }
       }
       //
       read_op

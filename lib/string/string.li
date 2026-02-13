@@ -1038,7 +1038,7 @@ Public
     + j:Int
     buf.clear
     n := at i
-    buf.add_last (n.to_character)
+    buf.add_last (n.to_char)
     ((n & 80h) != 0).if {
       j := i
       { j := j + 1

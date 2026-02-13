@@ -112,7 +112,7 @@ Public
   - print <-
   (
     "codepoint:".print
-    (codepoint != 0).if { codepoint.to_character.print; '='.print; }; codepoint.print
+    (codepoint != 0).if { codepoint.to_char.print; '='.print; }; codepoint.print
     "\nstart:".print; start.print
     "\nnext:".print; next.print
     "\nend:".print; end.print

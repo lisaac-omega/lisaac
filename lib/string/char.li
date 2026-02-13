@@ -118,7 +118,7 @@ Public
   (
     (self<=limit_up).if {
       blc.value self
-      (self+1.to_character).to limit_up do blc
+      (self+1.to_char).to limit_up do blc
     }
   )
 
@@ -126,7 +126,7 @@ Public
   (
     (self>=limit_down).if {
       blc.value self
-      (self-1.to_character).downto limit_down do blc
+      (self-1.to_char).downto limit_down do blc
     }
   )
 
@@ -134,7 +134,7 @@ Public
   (
     (self<=limit_up).if {
       blc.value self
-      (self+step.to_character).to limit_up by step do blc
+      (self+step.to_char).to limit_up by step do blc
     }
   )
 
@@ -142,7 +142,7 @@ Public
   (
     (self>=limit_down).if {
       blc.value self
-      (self-step.to_character).downto limit_down by step do blc
+      (self-step.to_char).downto limit_down by step do blc
     }
   )
 
@@ -150,19 +150,19 @@ Public
   
   - self:Self '&' msk:Uint8 :Uint8 <- to_uint8 & msk
   
-  - self:Self '^' msk:Uint8 :Char <- (to_uint8 ^ msk).to_character
+  - self:Self '^' msk:Uint8 :Char <- (to_uint8 ^ msk).to_char
 
-  - self:Self '+' other:Char :Char <- (code+other.code).to_character
+  - self:Self '+' other:Char :Char <- (code+other.code).to_char
 
-  - self:Self '-' other:Char :Char <- (code-other.code).to_character
+  - self:Self '-' other:Char :Char <- (code-other.code).to_char
 
   - self:Self '-!' other:Char :Int   <- code - other.code
 
-  - self:Self '+#' other:Int :Char <- (code + other).to_character
+  - self:Self '+#' other:Int :Char <- (code + other).to_char
   
-  - self:Self '|' other:Int :Char <- (code | other).to_character
+  - self:Self '|' other:Int :Char <- (code | other).to_char
 
-  - self:Self '-#' other:Int :Char <- (code - other).to_character
+  - self:Self '-#' other:Int :Char <- (code - other).to_char
 
   - self:Self '<>' other:Self :Boolean <- ( code != other.code )
   // An other difference syntax (Pascal like)
@@ -241,14 +241,14 @@ Public
     }
     result
   )
-
+    
   - to_upper:Self <-
   // Conversion to the corresponding upper case.
   ( + result:Self
     ((code < 97) || {code > 122}).if {
       result := self
     } else {
-      result := (code - 32).to_character
+      result := (code - 32).to_char
     }
     result
   )
@@ -259,7 +259,7 @@ Public
     ((code < 65) || {code > 90}).if {
       result := self
     } else {
-      result := (code + 32).to_character
+      result := (code + 32).to_char
     }
     result
   )
@@ -378,7 +378,7 @@ Public
     ? {code <= 127}
   ]
   (
-    (code + 1).to_character
+    (code + 1).to_char
   )
   
   - hexadecimal_next:Char <-
@@ -399,7 +399,7 @@ Public
   - previous:Char <-
   // Give the previous character (the @code before);
   ( ? {code > 0}
-    (code - 1).to_character
+    (code - 1).to_char
   )
 
   // Conversions:
@@ -407,7 +407,7 @@ Public
   - to_hexadecimal:String_buffer <-
   // Create a new String_buffer giving the @code in hexadecimal.
   // For example :
-  //    (255).to_character.to_hexadecimal gives "FF".
+  //    (255).to_char.to_hexadecimal gives "FF".
   // Note: see @to_hexadecimal_in to save memory.
   ( + result:String_buffer
     result := String_buffer.make 2
@@ -425,15 +425,15 @@ Public
     old_count:=str.count
     c := code >> 4
     (c<10).if {
-      str.extend (('0'.code + c).to_character)
+      str.extend (('0'.code + c).to_char)
     } else {
-      str.extend (('A'.code - 10 + c).to_character)
+      str.extend (('A'.code - 10 + c).to_char)
     }
     c := code & 00001111b
     (c<10).if {
-      str.extend (('0'.code + c).to_character)
+      str.extend (('0'.code + c).to_char)
     } else {
-      str.extend (('A'.code - 10 + c).to_character)
+      str.extend (('A'.code - 10 + c).to_char)
     }
     ? {str.count = (2 + old_count)}
   )

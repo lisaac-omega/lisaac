@@ -4,21 +4,20 @@ Header
   The classic Snake game in Lisaac Ω.
   The snake grows each time it eats and also moves faster.  
 
-  
   To compile, as usual in a terminal:  
   $ lisaac snake -q -boost  
   $ ./snake  
   
-
   It can also be compiled and executed via elix menus.  
   
-
   Originally written in October 2025 by Benjamin Scheffer and Marcelin Ray 
-
   */
 Inherit 
+  
   + parent_window:Flat Window
+  
 Private
+  
   - grid_width:Int := 20
   - grid_height:Int := 15
   - cell_size:Int := 28
@@ -36,7 +35,9 @@ Private
   + snake_y:Array Int
   
   + timer:Real64
+  
 Public
+  
   - main <-
   ( 
     Random.init_clock
@@ -167,6 +168,7 @@ Public
   )
 
 Private
+  
   - score:Int <- snake_x.count
   
   - grow_snake <-
@@ -181,6 +183,7 @@ Private
   - go_right <- ( (dir_x, dir_y) := ( 1 , 0) )
   
 Public
+  
   - key s:String cmd c:Uint8 :Boolean <-
   (
     (s.first)

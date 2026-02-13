@@ -89,7 +89,7 @@ Public
     //"Append stack raw:".print; s.println
     {i <= s.upper}.while_do {
       stack.add_last '\0'
-      c := s.at i; stack.add_last (c.to_character); i := i + 1
+      c := s.at i; stack.add_last (c.to_char); i := i + 1
       ((c & 1000_0000b) != 0).if { // utf8 sequence:
         stack.add_last (s.at i); i := i + 1
         ((c & 1110_0000b) = 1110_0000b).if {
@@ -106,7 +106,7 @@ Public
   ( + cm,c:Uint8
     (stack.is_empty).if_false {
       (cm,c) := (stack.first,stack.second)
-      str.clear; str | c.to_character
+      str.clear; str | c.to_char
       ((c & 1000_0000b) != 0).if { // utf8 sequence:
         str.add_last (stack.at 2)
         ((c & 1110_0000b) = 1110_0000b).if {
@@ -184,7 +184,7 @@ Public
         (! read_touch s).if { err syntax msg "Key needed."; }
         {read_touch s}.while_do { }
         (s.upper != i).if {
-          s.put (code.to_character) to i
+          s.put (code.to_char) to i
           (s.upper - i != 1).if { err semantic msg "Key invalid."; }
         } else {
           s.remove_last

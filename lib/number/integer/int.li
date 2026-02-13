@@ -295,7 +295,7 @@ Public
     + sqrt_s : Int
     + result : Boolean
     diviseur := 5
-    sqrt_s := sqrt
+    sqrt_s := self.sqrt
     result := True
     ((self % 2 = 0) || {self % 3 = 0}).if_false {
       1.to sqrt_s until {(self % diviseur) = 0} do { cpt : Int
@@ -394,7 +394,7 @@ Public
     -? {in_range 0 to 9}
   ]
   (
-    (self.to_int8 + '0'.code).to_character
+    (self.to_int8 + '0'.code).to_char
   )
   [
     //+? {"0123456789".has Result}; // BSBS: Provoque un bug du compilo
@@ -413,7 +413,7 @@ Public
     (self <= 9).if {
       result := digit
     } else {
-      result := ('A'.to_int8 + (self - 10).to_int8).to_character
+      result := ('A'.to_int8 + (self - 10).to_int8).to_char
     }
     result
   )
@@ -421,7 +421,7 @@ Public
     +? {"0123456789ABCDEF".has Result}
   ]
   
-  - to_character:Char <- to_uint8.to_character
+  - to_char:Char <- to_uint8.to_char
   // Return the coresponding ASCII character.
   
   - to_octal:Self <-

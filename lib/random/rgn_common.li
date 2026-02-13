@@ -44,7 +44,7 @@ Public
     } else {
       j := ('A'.code) - 10 + i
     }
-    j.to_character
+    j.to_char
   )
   [
     ? {Result.is_hexadecimal_digit}.txt{Result.to_string}

@@ -27,7 +27,7 @@ Public
   )
   [ ]
 
-  - to_character:Char <- `@self`:Char; // `13`
+  - to_char:Char <- Cast Int8 To Char.on self
 
 
 

@@ -664,7 +664,7 @@ Public
             output_decl.append "#define "
             output_decl.append intern_name
             output_decl.append "__ "
-            output_decl.add_last ((name = str_true).to_character)
+            output_decl.add_last ((name = str_true).to_char)
             output_decl.add_last '\n'
           } else {
             genere_typedef_type_c

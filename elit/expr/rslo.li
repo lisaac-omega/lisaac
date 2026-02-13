@@ -152,7 +152,7 @@ Public
     i_param := 0
     ((glyph != NULL) && {! inside_glyph}).if {      
       (
-        (glyph != Liz) || {
+        ((glyph != Liz) && {glyph.arg_count = param.count}) || {
           (param.count = 2) && {
             + n:Num
             + l:List
@@ -161,8 +161,8 @@ Public
             (n != NULL) && {n.is_int} && {n.int_val > 0} && 
             {l != NULL} && {l.is_simple_expr} && {l.exp.count > 0} && {(l.exp.count % n.int_val) = 0}
         }}
-      ).if {
-        glyph.drw txt_buf color (Look.cols.at (Look.slot)) arg { i:Int; param.at i}
+      ).if {        
+        glyph.drw txt_buf color (Look.cols.at (Look.slot)) arg { i:Int; param.at i}          
         pos_i := pt_b + db + dd
       }
     }

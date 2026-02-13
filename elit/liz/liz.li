@@ -11,7 +11,7 @@ Private
   - push_count:Int
   
   + texps:Flat Array Texp
-
+  
   - read_liz <-
   //** TIKZ -> { INTR '\n' }
   ( + i:Texp
@@ -81,6 +81,7 @@ Private
       result := Tstroke.new.init_w last_real
     }.elseif {read_word "Push"} then {
       result := Tpush.new.init_b (vars.count)
+      arg_count := arg_count + 1
       String.tmp { tmp:String_buffer
         tmp | 'A'; push_count.append_in tmp; push_count := push_count + 1; tmp | '.'
         tmp += "Ascent"
@@ -295,6 +296,7 @@ Public
   )
   
   + name:String_alias
+  + arg_count:Int    
   + stack_size:Int := 8
     
   - drw p:Txt_buf color c:Color arg arg:{Int; Tok_itm} <-

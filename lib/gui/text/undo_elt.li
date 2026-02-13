@@ -18,7 +18,7 @@ Public
     tmp.clear
     c := char
     {c != 0}.while_do {
-      tmp.add_first (c.to_uint8.to_character)
+      tmp.add_first (c.to_uint8.to_char)
       c := c >> 8
     }
     tmp

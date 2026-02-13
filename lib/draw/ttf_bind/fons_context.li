@@ -211,7 +211,7 @@ Public
     scratch.clear
     // Find code point and size.
     h := hashint codepoint & (fons_hash_lut_size-1)
-    //"Je cherche ".print; codepoint.to_character.print; " en ".print; h.print; '\n'.print
+    //"Je cherche ".print; codepoint.to_char.print; " en ".print; h.print; '\n'.print
     i := font.lut.at h
     {(i != -1) && {result = NULL}}.while_do {
       (
@@ -267,7 +267,7 @@ Public
           next (font.lut.at h)
           font.glyphs.add_last glyph
           //"codepoint:".print; codepoint.print; '\n'.print
-          //"Je range ".print; codepoint.to_character.print; " en :".print; h.print; '\n'.print
+          //"Je range ".print; codepoint.to_char.print; " en :".print; h.print; '\n'.print
           // Insert char to hash lookup.
           font.lut.at h put (font.glyphs.upper)
           
@@ -520,7 +520,7 @@ Public
         (utf8state = 0).if {
           // Get glyph and quad
           iter.set_xy (iter.nextx,iter.nexty)
-          //"code:".print; iter.codepoint.to_character.print; '\n'.print
+          //"code:".print; iter.codepoint.to_char.print; '\n'.print
           //iter.isize.print; ' '.print; iter.iblur.print
           //'\n'.print
           

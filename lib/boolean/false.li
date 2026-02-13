@@ -79,5 +79,5 @@ Public
 
   - to_int:Int <- 0
 
-  - to_character:Char <- '0'
+  - to_char:Char <- '0'
 

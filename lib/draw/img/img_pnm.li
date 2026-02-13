@@ -20,8 +20,8 @@ Public
   - test:Boolean <-
   ( + p, t:Char
     rewind
-    p := get8.to_character
-    t := get8.to_character
+    p := get8.to_char
+    t := get8.to_char
     ((p = 'P') && {(t = '5') || {t = '6'} || {t = '2'} || {t = '3'}}).if { 
       is_binary := (t = '5') || {t = '6'}
       img_n := ((t = '6') || {t = '3'}).ok 3 or 1; // '5' is 1-component .pgm; '6'/'3' is 3-component .ppm 
@@ -77,10 +77,10 @@ Private
   
   - skip_space <-
   ( 
-    {(! at_eof) && {(last_get8.to_character.is_separator) || {last_get8 = '#'}}}.while_do {
-      (last_get8.to_character = '#').if { // Skip comment.
+    {(! at_eof) && {(last_get8.to_char.is_separator) || {last_get8 = '#'}}}.while_do {
+      (last_get8.to_char = '#').if { // Skip comment.
         get8
-        {(! at_eof) && {get8.to_character != '\n'}}.while_do { }
+        {(! at_eof) && {get8.to_char != '\n'}}.while_do { }
       } else {
         get8
       }
@@ -89,8 +89,8 @@ Private
 
   - get_integer:Int <-
   ( + value:Int
-    ((! at_eof) && {last_get8.to_character.is_digit}).if {      
-      {(! at_eof) && {last_get8.to_character.is_digit}}.while_do {
+    ((! at_eof) && {last_get8.to_char.is_digit}).if {      
+      {(! at_eof) && {last_get8.to_char.is_digit}}.while_do {
         value := value * 10 + (last_get8 - '0'.to_int)
         get8
       }
