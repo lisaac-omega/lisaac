@@ -306,7 +306,7 @@ Private
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
       cmd.extend_unless '/'
-      cmd.append "lisaac elit -q -boost"
+      cmd.append "lisaac elit -q -boost -split"
       exit_status := execute_command cmd
     }
   )

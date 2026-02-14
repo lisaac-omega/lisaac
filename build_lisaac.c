@@ -474,7 +474,7 @@ ts.sh."},1388517837};
 __li__FB __string_59={__li__FB__,{1,"#!"},173};
 __li__FB __string_60={__li__FB__,{37,"lisaac/misc/new_assets.sh not updated."},434446708};
 __li__FB __string_61={__li__FB__,{32,"Compiling lisaac/elit ... wait..."},601324998};
-__li__FB __string_62={__li__FB__,{20,"lisaac elit -q -boost"},1649179376};
+__li__FB __string_62={__li__FB__,{27,"lisaac elit -q -boost -split"},515853272};
 __li__FB __string_63={__li__FB__,{46,"Compiling lisaac/example/welcome.li ...\
  wait..."},1437157202};
 __li__FB __string_64={__li__FB__,{6,"example"},570709};

@@ -22,6 +22,7 @@ Header
   ./run.sh
   */
 Inherit 
+  
   + parent_window:Flat Window
   
 Public 
@@ -76,6 +77,7 @@ Public
   )
   
   - star:Array Real32
+  
   - draw_space (px,py:Real32) size (w,h:Real32) time t:Real32 <-
   ( + p:Paint
     + x,y,r,c,rr:Real32
