@@ -64,7 +64,7 @@ Public
   ]
   ( + result:C_array V
 
-    result:=calloc_intern nb_elements
+    result := calloc_intern nb_elements
     result.clear_all (nb_elements-1)
     result
   )
@@ -127,8 +127,7 @@ Public
   )
   
   - at index:Int put element:V <-
-  // To write an item.
-  // Assume that @calloc is already done and that the @index is valid.
+  // No check. Assume that the @index is correct.
   (
     `9`    
   )

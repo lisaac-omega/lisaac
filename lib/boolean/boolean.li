@@ -120,7 +120,7 @@ Public
   
   - si self:Self alors tblk:{} <- ( if self then tblk )
   
-  - self:Self ou other:Boolean   :Boolean <- (self || {other})
+  - self:Self ou other:Boolean   :Boolean <- (self | other)
   
-  - self:Self et other:Boolean   :Boolean <- (self && {other})
+  - self:Self et other:Boolean   :Boolean <- (self & other)
   

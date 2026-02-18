@@ -1,0 +1,10 @@
+Header
+  + name := Classic_autotest
+Public
+  
+  - main <- 
+  (
+    Test.check (2 + 2 = 4)
+  )
+  
+  

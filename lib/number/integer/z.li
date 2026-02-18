@@ -2020,7 +2020,10 @@ Public
   - '+' self:Self :Self <- copy
   
   - self:Self '!' :Self <-
-  [ ? {!is_big}; ? {self >= 0}; ]
+  [
+    !is_big,
+    self >= 0 
+  ]
   ( + r,tmp,i:Self
     r := 1
     i := self

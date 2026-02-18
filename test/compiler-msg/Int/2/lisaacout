@@ -4,7 +4,7 @@ Line 8 column 16 in Main(.../test/compiler-msg/Int/2/main.li):
     i16 := 32768    
                 ^
 
-Line 658 column 16 in Numeric(.../lib/number/numeric.li):
+Line 653 column 16 in Numeric(.../lib/number/numeric.li):
   - to_raw_int16:Int16    <- Cast Self To Int16 on self
                 ^
 Context:
@@ -13,7 +13,7 @@ Line 2 column 8 in Main(.../test/compiler-msg/Int/2/main.li):
   + name := Main
         ^
 
-Line 658 column 16 in Numeric(.../lib/number/numeric.li):
+Line 653 column 16 in Numeric(.../lib/number/numeric.li):
   - to_raw_int16:Int16    <- Cast Self To Int16 on self
                 ^
 --WARNING----------
@@ -22,7 +22,7 @@ Line 8 column 16 in Main(.../test/compiler-msg/Int/2/main.li):
     i16 := 32768    
                 ^
 
-Line 658 column 16 in Numeric(.../lib/number/numeric.li):
+Line 653 column 16 in Numeric(.../lib/number/numeric.li):
   - to_raw_int16:Int16    <- Cast Self To Int16 on self
                 ^
 Context:
@@ -31,6 +31,6 @@ Line 2 column 8 in Main(.../test/compiler-msg/Int/2/main.li):
   + name := Main
         ^
 
-Line 658 column 16 in Numeric(.../lib/number/numeric.li):
+Line 653 column 16 in Numeric(.../lib/number/numeric.li):
   - to_raw_int16:Int16    <- Cast Self To Int16 on self
                 ^

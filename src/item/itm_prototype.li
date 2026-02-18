@@ -9,10 +9,8 @@ Public
 
   + type:Itm_type
 
-  //
   // Constructor
-  //
-
+  
   - create p:Position type n:Itm_type :Self <-
   ( + result:Self
     result := clone
@@ -26,14 +24,12 @@ Public
     type := n
   )
 
-  //
   // Runnable
-  //
 
   - to_run_expr:Expr <-
   ( + t:Type_full
     + result:Expr
-
+    last_position := position
     t := type.to_run_for profil_slot pos (position.prototype.filename)
     (t = NULL).if {
       string_tmp.copy "Type `";
@@ -54,18 +50,9 @@ Public
     result
   )
 
-  //
   // Display.
-  //
 
   - append_in b:String_buffer <-
   (
     type.append_in b
   )
-
-
-
-
-
-
-

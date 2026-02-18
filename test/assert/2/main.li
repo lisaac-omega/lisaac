@@ -1,0 +1,22 @@
+Header
+  - name := Main
+  /**/
+  
+
+Public
+  
+  
+  - main <-
+  ( + i:Int
+    i := `2`:Int
+    Test.check i integer 2
+    foo i
+  )
+  
+  - foo i:Int <-
+  [ 
+    ? {i > 2} // must crash here
+  ]
+  (
+  )
+  

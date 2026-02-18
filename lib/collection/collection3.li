@@ -75,7 +75,7 @@ Public
   // Reading:
 
   - item (line, column, depth:Int) :V <-
-  [ -? { valid_index (line,column,depth) }; ]
+  [ ? { valid_index (line,column,depth) }; ]
   ( + result:V
 
     abstract
@@ -85,7 +85,7 @@ Public
   // Writing:
 
   - put element:V to (line, column, depth:Int) <-
-  [ -? {valid_index (line,column,depth) }; ]
+  [ ? {valid_index (line,column,depth) }; ]
   (
     abstract
   )
@@ -97,9 +97,9 @@ Public
   // is not inside current bounds.
   // New bounds are initialized with default values.
   [
-    -? { line >= 0  }
-    -? { column >= 0}
-    -? { depth >= 0 }
+    ? { line >= 0  }
+    ? { column >= 0}
+    ? { depth >= 0 }
   ]
   (
     abstract
@@ -189,8 +189,8 @@ Public
   // Swap the element at index (@line1,@column1,@depth1)
   // with the element at index (@line2,@column2,@depth2).
   [
-    -? { valid_index (line1,column1,depth1)}
-    -? { valid_index (line2,column2,depth2)}
+    ? { valid_index (line1,column1,depth1)}
+    ? { valid_index (line2,column2,depth2)}
   ]
   (
     abstract
@@ -223,7 +223,7 @@ Public
 
   - from_collection3 model:Collection3(V) <-
   //  Uses @model to initialize self.
-  [ -? {model != NULL}; ]
+  [ ? {model != NULL}; ]
   (
     abstract
   )
@@ -237,7 +237,7 @@ Public
   // The @model is used to fill line by line self.
   // Assume all sub-collections have the same
   // dimension.
-  [ -? { model != NULL }; ]
+  [ ? { model != NULL }; ]
   (
     abstract
   )
@@ -386,8 +386,8 @@ Public
   to (line_max, column_max, depth_max:Int) :Self <-
   // Create a new object using selected area of @self.
   [
-    -? { valid_index (line_min,column_min,depth_min)}
-    -? { valid_index (line_max,column_max,depth_max)}
+    ? { valid_index (line_min,column_min,depth_min)}
+    ? { valid_index (line_max,column_max,depth_max)}
   ]
   (
     abstract
@@ -398,8 +398,8 @@ Public
   to (line_max, column_max, depth_max:Int) with element:V <-
   // Set all the elements of the selected area rectangle with @element.
   [
-    -? { valid_index (line_min,column_min,depth_min)}
-    -? { valid_index (line_max,column_max,depth_max)}
+    ? { valid_index (line_min,column_min,depth_min)}
+    ? { valid_index (line_max,column_max,depth_max)}
   ]
   (
     line_min.to line_max do { line:Int

@@ -705,6 +705,7 @@ Public
     (c := at pos_i).is_separator.if {
       skip_spln
       (at pos_i != '\\').if { err syntax msg "Unknown escape sequence. (1)"; }
+      col (Look.string) sub 0
       pos_i := pos_i + 1
     }.elseif {
       ("abfnrtv\\?'\"".has c) ||
@@ -728,6 +729,7 @@ Public
     + c:Char
     //skip_sp
     (at pos_i = '\'').if {      
+      col (Look.string) sub 0
       pos_i := pos_i + 1
       {((c := at pos_i) != '\0') && {c != '\n'} && {c != '\''}}.while_do {        
         (c = '\\').if {
@@ -752,6 +754,7 @@ Public
   ( + c:Char
     //skip_sp
     (at pos_i = '\"').if {      
+      col (Look.string) sub 0
       pos_i := pos_i + 1
       {((c := at pos_i) != '\0') && {c != '\n'} && {c != '\"'}}.while_do {        
         (c = '\\').if {

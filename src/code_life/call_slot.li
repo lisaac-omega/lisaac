@@ -493,15 +493,15 @@ Public
       ).if {
         low := 1
       }
+      //
+      string_cop_arg.clear
+      output := string_cop_arg
+      cop_argument.genere
+      output := Old output
+      //
       (argument_list.count-low > 0).if {
         back := output.count
-        output.append "pthread_mutex_lock (&("
-        //
-        string_cop_arg.clear
-        output := string_cop_arg
-        cop_argument.genere
-        output := Old output
-        //
+        output.append "pthread_mutex_lock (&("        
         output.append string_cop_arg
         output.append "->thread.mutex));\n"
         (low).to (argument_list.upper) do { j:Int

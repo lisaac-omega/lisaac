@@ -25,11 +25,9 @@ Public
   //
   
   - new_parse t:Int <-
-  ( + d:Int
+  ( 
     (rd_str).if     { type := Type.string_alias; }.elseif
-    {rd_chars} then { type := Type.character;    }
-    d := pos_i.pt - Old pos_i.pt
-    (d != 0).if { col (Look.string) sub d; }
+    {rd_chars} then { type := Type.character;    }    
   )
   
   //

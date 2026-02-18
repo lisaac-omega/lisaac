@@ -33,7 +33,7 @@ Private
     "C compiling lisaac/bin/lisaac.c ... wait...".println
     chdir lisaac_bin_dir or_exit
     String.tmp {cmd: String_buffer
-      cmd.append "gcc lisaac.c -o lisaac -O2"
+      cmd.append "gcc -Wno-unused lisaac.c -o lisaac -O2"
       exit_status := execute_command cmd
     }
   )
@@ -306,7 +306,11 @@ Private
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
       cmd.extend_unless '/'
-      cmd.append "lisaac elit -q -boost -split"
+      cmd.append "lisaac elit -q -boost"
+      if (system != "windows") then {
+        // -split does work yet on "windows".
+        cmd.append " -split"
+      }
       exit_status := execute_command cmd
     }
   )

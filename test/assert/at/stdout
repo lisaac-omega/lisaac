@@ -1,0 +1,13 @@
+
+============== BOTTOM ==============
+Line #9 Column #9 in Main (.../test/assert/at/main.li).
+  - main <-
+         ^
+Line #14 Column #22 in Main (.../test/assert/at/main.li).
+    Test.check (a.at 2) integer 3    
+                      ^
+Line #70 Column #17 in Collection (.../lib/collection/collection.li).
+    valid_index i
+                 ^
+================ TOP ===============
+Require violated.

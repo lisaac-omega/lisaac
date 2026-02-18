@@ -1,0 +1,9 @@
+--SEMANTIC---------
+Invalid generic definition or usage.
+Line 2 column 8 in Array(.../lib/collection/array.li):
+  + name :=   Exact Array V
+        ^
+
+Line 11 column 19 in Main(.../test/compiler-msg/CallerCallee/1/main.li):
+    a := new Array int of (1, 2, 3)
+                   ^

@@ -121,9 +121,9 @@ typedef struct li__AC_struct __li__AC;
 typedef struct li__XB_struct __li__XB;
 typedef struct li__OH_struct __li__OH;
 typedef struct li__NH_struct __li__NH;
-typedef struct li__C4E_struct __li__C4E;
-typedef struct li__BFB_struct __li__BFB;
-typedef struct li__AFB_struct __li__AFB;
+typedef struct li__U4E_struct __li__U4E;
+typedef struct li__KFB_struct __li__KFB;
+typedef struct li__JFB_struct __li__JFB;
 typedef struct li__WB_struct __li__WB;
 typedef struct li__PB_struct __li__PB;
 /* NULL */
@@ -145,7 +145,7 @@ struct li__GB_struct {
 struct li__FB_struct {
   int __id;
   __li__GB li__LB;
-  __li__K li__L5E;
+  __li__K li__35E;
 };
 #define li__FB__ (&li__FB_)
 /* li__AC */
@@ -153,12 +153,12 @@ struct li__FB_struct {
 struct li__AC_struct {
   int __id;
   __li__GB li__BC;
-  __li__K li__T2;
+  __li__K li__22;
 };
 #define li__AC__ (&li__AC_)
-typedef uintptr_t __li__Y0C;
-#define li__Y0C__ (&li__Y0C_)
-#define __li__Y0C__ 1
+typedef uintptr_t __li__K1C;
+#define li__K1C__ (&li__K1C_)
+#define __li__K1C__ 1
 
 typedef char __li__C;
 /* li__XB */
@@ -171,44 +171,44 @@ struct li__XB_struct {
 /* li__OH */
 #define __li__OH__ 3
 struct li__OH_struct {
-  __li__K li__J4;
+  __li__K li__S4;
 };
 #define li__OH__ (&li__OH_)
 /* li__NH */
 #define __li__NH__ 4
 struct li__NH_struct {
   __li__OH li__QH;
-  __li__K li__0BC;
-  __li__FB **li__GCC;
+  __li__K li__MCC;
+  __li__FB **li__YCC;
 };
 #define li__NH__ (&li__NH_)
-/* li__C4E */
-#define __li__C4E__ 5
-struct li__C4E_struct {
-  __li__FB *li__I5E;
-  __li__C4E *li__55E;
+/* li__U4E */
+#define __li__U4E__ 5
+struct li__U4E_struct {
+  __li__FB *li__05E;
+  __li__U4E *li__RAF;
 };
-#define li__C4E__ (&li__C4E_)
+#define li__U4E__ (&li__U4E_)
 typedef void * __li__RB;
 typedef uint64_t __li__T;
 #define li__T__ (&li__T_)
 #define __li__T__ 6
 
 #define li__I__ 0
-/* li__BFB */
-#define __li__BFB__ 7
-struct li__BFB_struct {
-  __li__K li__GSB;
+/* li__KFB */
+#define __li__KFB__ 7
+struct li__KFB_struct {
+  __li__K li__PSB;
 };
-#define li__BFB__ (&li__BFB_)
-/* li__AFB */
-#define __li__AFB__ 8
-struct li__AFB_struct {
-  __li__BFB li__DFB;
-  __li__K li__HWC;
-  void **li__MSB;
+#define li__KFB__ (&li__KFB_)
+/* li__JFB */
+#define __li__JFB__ 8
+struct li__JFB_struct {
+  __li__KFB li__MFB;
+  __li__K li__ZWC;
+  void **li__VSB;
 };
-#define li__AFB__ (&li__AFB_)
+#define li__JFB__ (&li__JFB_)
 /* li__WB */
 #define __li__WB__ 9
 struct li__WB_struct {
@@ -222,69 +222,69 @@ struct li__WB_struct {
 };
 #define li__WB__ (&li__WB_)
 #define li__B__ 1
-typedef signed char __li__K1C;
+typedef signed char __li__21C;
 /* li__PB */
 #define __li__PB__ 10
 struct li__PB_struct {
   void *self;
 };
 #define li__PB__ (&li__PB_)
-typedef int64_t __li__O1C;
+typedef int64_t __li__A2C;
 
 /*==========================*/
 /* FUNCTION HEADER          */
 /*==========================*/
 
-void die_with_code(__li__K li__SFD);
-void print_char(__li__MB li__XED);
+void die_with_code(__li__K li__EGD);
+void print_char(__li__MB li__JFD);
 void bug_compilo_042();
-static __li__AC* li__LKB(__li__K li__NKB);
-static void li__MVE(__li__AC *li__NVE,__li__MB *li__OVE);
-static __li__FB* li__ZGE(__li__AC *li__0GE);
-static void li__W1(__li__FB *li__X1);
+static __li__AC* li__UKB(__li__K li__WKB);
+static void li__4VE(__li__AC *li__5VE,__li__MB *li__AWE);
+static __li__FB* li__LHE(__li__AC *li__MHE);
+static void li__51(__li__FB *li__A2);
 static void li__XF(__li__AC *li__ZF);
-static void li__GIE(__li__AC *li__HIE,__li__FB *li__IIE);
-static void li__YJE(__li__AC *li__ZJE,void *li__0JE);
-static __li__AC* li__1QE(__li__AC *li__2QE,void *li__3QE);
-static void li__3ZI(__li__AC *li__4ZI);
-static __li__AC* li__CRB();
-static void li__0RB(__li__AFB *li__1RB,__li__AC *li__3RB);
+static void li__YIE(__li__AC *li__ZIE,__li__FB *li__0IE);
+static void li__KKE(__li__AC *li__LKE,void *li__MKE);
+static __li__AC* li__NRE(__li__AC *li__ORE,void *li__PRE);
+static void li__0YI(__li__AC *li__1YI);
+static __li__AC* li__LRB();
+static void li__DSB(__li__JFB *li__ESB,__li__AC *li__GSB);
 static __li__C li__IK(__li__FB *li__JK,__li__MB li__KK);
-static void li__LPB(void *li__NPB);
-static void li__5CB(__li__FB *li__BDB);
-static __li__FB* li__2DB(void *li__4DB);
-static void li__MUL(__li__AC *li__NUL);
-static __li__MB* li__XLE(__li__AC *li__YLE);
-static __li__RB li__2CC(void *li__4CC);
-static void li__QKC(__li__AC *li__SKC);
-static __li__K li__TXC(__li__AC *li__VXC);
-static void li__SXB(__li__FB *li__UXB);
-static void li__WRD(__li__FB *li__YRD);
-static __li__C li__ZXC(void *li__1XC,__li__AC *li__2XC);
-static __li__K li__P1B(void *li__R1B,__li__AC *li__S1B,__li__FB *li__T1B);
-static void li__KFN(__li__AC *li__LFN,__li__K li__MFN,__li__K li__NFN);
-static void li__KPM(__li__AC *li__LPM,__li__FB *li__MPM,__li__K li__NPM);
-static void li__W2B(__li__FB *li__Y2B,__li__AC *li__Z2B);
-static void li__NRM(__li__AC *li__ORM,__li__AC *li__PRM,__li__K li__QRM);
-static __li__K li__AZC(__li__AC *li__CZC);
-static void li__JAC(__li__AC *li__KAC,__li__K li__LAC);
-static __li__MB* li__PPG(__li__K li__RPG);
-static void li__X5G(__li__MB *li__Y5G,__li__K li__Z5G,__li__K li__05G);
-static __li__FB* li__JBG(__li__AC *li__KBG);
-static void li__ICG(__li__FB *li__KCG);
-static void li__ZNE(__li__AC *li__0NE,__li__MB li__1NE);
-static void li__ZBF(__li__MB *li__0BF,__li__MB *li__1BF,__li__K li__2BF,__li__K li__3BF);
-static void li__Z3F(__li__MB *li__03F,__li__MB *li__13F,__li__K li__23F);
-static __li__K li__KJD(__li__AC *li__MJD,__li__C li__NJD);
-static void li__NXF(__li__K li__OXF);
-static __li__C li__GEC(void *li__IEC);
-static void li__APC(__li__AC *li__CPC,__li__FB *li__DPC);
-static __li__K li__H5M(__li__AC *li__I5M,void *li__J5M);
-static void li__3UM(__li__AC *li__4UM,__li__AC *li__5UM);
-static void li__P1M(__li__AC *li__Q1M,__li__K li__R1M);
-static void li__MKO(__li__MB *li__NKO,__li__K li__OKO,__li__K li__PKO,__li__K li__QKO);
-static __li__K li__IEI(__li__FB *li__JEI);
-static void li__M1J(__li__K li__N1J);
+static void li__UPB(void *li__WPB);
+static void li__IDB(__li__FB *li__KDB);
+static __li__FB* li__FEB(void *li__HEB);
+static void li__URL(__li__AC *li__VRL);
+static __li__MB* li__JME(__li__AC *li__KME);
+static __li__RB li__ODC(void *li__QDC);
+static void li__CLC(__li__AC *li__ELC);
+static __li__K li__FYC(__li__AC *li__HYC);
+static void li__1XB(__li__FB *li__3XB);
+static void li__ISD(__li__FB *li__KSD);
+static __li__C li__LYC(void *li__NYC,__li__AC *li__OYC);
+static __li__K li__Y1B(void *li__01B,__li__AC *li__11B,__li__FB *li__21B);
+static void li__CCN(__li__AC *li__DCN,__li__K li__ECN,__li__K li__FCN);
+static void li__HMM(__li__AC *li__IMM,__li__FB *li__JMM,__li__K li__KMM);
+static void li__52B(__li__FB *li__B3B,__li__AC *li__C3B);
+static void li__KOM(__li__AC *li__LOM,__li__AC *li__MOM,__li__K li__NOM);
+static __li__K li__SZC(__li__AC *li__UZC);
+static void li__1AC(__li__AC *li__2AC,__li__K li__3AC);
+static __li__MB* li__NOG(__li__K li__POG);
+static void li__V4G(__li__MB *li__W4G,__li__K li__X4G,__li__K li__Y4G);
+static __li__FB* li__UAG(__li__AC *li__VAG);
+static void li__TBG(__li__FB *li__VBG);
+static void li__LOE(__li__AC *li__MOE,__li__MB li__NOE);
+static void li__LCF(__li__MB *li__MCF,__li__MB *li__NCF,__li__K li__OCF,__li__K li__PCF);
+static void li__E3F(__li__MB *li__F3F,__li__MB *li__G3F,__li__K li__H3F);
+static __li__K li__2JD(__li__AC *li__4JD,__li__C li__5JD);
+static void li__5XF(__li__K li__AYF);
+static __li__C li__YEC(void *li__0EC);
+static void li__SPC(__li__AC *li__UPC,__li__FB *li__VPC);
+static __li__K li__51M(__li__AC *li__A2M,void *li__B2M);
+static void li__0RM(__li__AC *li__1RM,__li__AC *li__2RM);
+static void li__HYM(__li__AC *li__IYM,__li__K li__JYM);
+static void li__4GO(__li__MB *li__5GO,__li__K li__AHO,__li__K li__BHO,__li__K li__CHO);
+static __li__K li__FDI(__li__FB *li__GDI);
+static void li__J0J(__li__K li__K0J);
 void init_string_alias();
 #define INIT_STRING_ALIAS init_string_alias()
 
@@ -368,25 +368,25 @@ char **arg_vector;
 __li__GB li__GB_;
 __li__FB li__FB_={__li__FB__};
 __li__AC li__AC_={__li__AC__};
-__li__Y0C li__Y0C_;
+__li__K1C li__K1C_;
 __li__XB li__XB_;
 __li__OH li__OH_;
 __li__NH li__NH_;
-__li__C4E li__C4E_;
+__li__U4E li__U4E_;
 __li__T li__T_;
-__li__BFB li__BFB_;
-__li__AFB li__AFB_;
+__li__KFB li__KFB_;
+__li__JFB li__JFB_;
 __li__WB li__WB_;
 __li__PB li__PB_;
-__li__Y0C li__M2C;
-__li__Y0C li__P2C;
-__li__K li__H4E;
-__li__K li__RCG;
-void **li__Z4E;
-__li__K li__1CG;
+__li__K1C li__42C;
+__li__K1C li__B3C;
+__li__K li__Z4E;
+__li__K li__2BG;
+void **li__L5E;
+__li__K li__GCG;
 __li__NH *li__SH;
-__li__AFB li__FFB;
-__li__AC *li__KEB;
+__li__JFB li__OFB;
+__li__AC *li__TEB;
 
 void *table_type[11];
 
@@ -444,7 +444,7 @@ __li__FB __string_31={__li__FB__,{8,"/bin/bash"},5248964};
 __li__FB __string_32={__li__FB__,{6,"shell=\""},612310};
 __li__FB __string_33={__li__FB__,{42,"C compiling lisaac/bin/lisaac.c ... wai\
 t..."},1101908318};
-__li__FB __string_34={__li__FB__,{25,"gcc lisaac.c -o lisaac -O2"},2097005374};
+__li__FB __string_34={__li__FB__,{37,"gcc -Wno-unused lisaac.c -o lisaac -O2"},1918844757};
 __li__FB __string_35={__li__FB__,{6,".bashrc"},323179};
 __li__FB __string_36={__li__FB__,{7,"/bin/zsh"},1312660};
 __li__FB __string_37={__li__FB__,{5,".zshrc"},87915};
@@ -474,41 +474,42 @@ ts.sh."},1388517837};
 __li__FB __string_59={__li__FB__,{1,"#!"},173};
 __li__FB __string_60={__li__FB__,{37,"lisaac/misc/new_assets.sh not updated."},434446708};
 __li__FB __string_61={__li__FB__,{32,"Compiling lisaac/elit ... wait..."},601324998};
-__li__FB __string_62={__li__FB__,{27,"lisaac elit -q -boost -split"},515853272};
-__li__FB __string_63={__li__FB__,{46,"Compiling lisaac/example/welcome.li ...\
+__li__FB __string_62={__li__FB__,{20,"lisaac elit -q -boost"},1649179376};
+__li__FB __string_63={__li__FB__,{6," -split"},216024};
+__li__FB __string_64={__li__FB__,{46,"Compiling lisaac/example/welcome.li ...\
  wait..."},1437157202};
-__li__FB __string_64={__li__FB__,{6,"example"},570709};
-__li__FB __string_65={__li__FB__,{6,"welcome"},627145};
-__li__FB __string_66={__li__FB__,{14,"elit welcome.li"},174356281};
-__li__FB __string_67={__li__FB__,{23,"lisaac welcome -q -boost"},492600048};
-__li__FB __string_68={__li__FB__,{22,"example/welcome/welcome"},1373524425};
-__li__FB __string_69={__li__FB__,{35,"Installation Completed Successfully."},568466528};
-__li__FB __string_70={__li__FB__,{26,"Open a new terminal window."},673293306};
-__li__FB __string_71={__li__FB__,{2,"or:"},2290};
-__li__FB __string_72={__li__FB__,{8,"source ~/"},9984103};
-__li__FB __string_73={__li__FB__,{37,"Rerun using --verbose to try to debug."},843204820};
-__li__FB __string_74={__li__FB__,{3,"cd \""},8098};
-__li__FB __string_75={__li__FB__,{0,"\""},34};
-__li__FB __string_76={__li__FB__,{4,"Fail."},26286};
-__li__FB __string_77={__li__FB__,{11,"exit status:"},585729878};
-__li__FB __string_78={__li__FB__,{14,"Create/Update \""},2120307954};
-__li__FB __string_79={__li__FB__,{25,"Checking export PATH for \""},1318816130};
-__li__FB __string_80={__li__FB__,{9,"Creating \""},27241362};
-__li__FB __string_81={__li__FB__,{12,"export PATH=\""},206478230};
-__li__FB __string_82={__li__FB__,{6,"$PATH\"\n"},252690};
-__li__FB __string_83={__li__FB__,{31,"\n# **** LISAAC-OMEGA TOOLS ****\n"},2078533586};
-__li__FB __string_84={__li__FB__,{12,"Cannot read \""},1684556834};
-__li__FB __string_85={__li__FB__,{4,"Tag \""},29522};
-__li__FB __string_86={__li__FB__,{8,"\" not in "},3350632};
-__li__FB __string_87={__li__FB__,{0,"."},46};
-__li__FB __string_88={__li__FB__,{11,"Open write \""},483640562};
-__li__FB __string_89={__li__FB__,{19,"-9223372036854775808"},240231608};
-__li__FB __string_90={__li__FB__,{6,"writen "},640552};
-__li__FB __string_91={__li__FB__,{6," bytes."},271946};
-__li__FB __string_92={__li__FB__,{6,"Close \""},422578};
-__li__FB __string_93={__li__FB__,{29,"Crash ALIAS TO : hash code < 0"},693219696};
-__li__FB __string_94={__li__FB__,{1,"/\\"},280};
-__li__FB __string_95={__li__FB__,{0,":"},58};
+__li__FB __string_65={__li__FB__,{6,"example"},570709};
+__li__FB __string_66={__li__FB__,{6,"welcome"},627145};
+__li__FB __string_67={__li__FB__,{14,"elit welcome.li"},174356281};
+__li__FB __string_68={__li__FB__,{23,"lisaac welcome -q -boost"},492600048};
+__li__FB __string_69={__li__FB__,{22,"example/welcome/welcome"},1373524425};
+__li__FB __string_70={__li__FB__,{35,"Installation Completed Successfully."},568466528};
+__li__FB __string_71={__li__FB__,{26,"Open a new terminal window."},673293306};
+__li__FB __string_72={__li__FB__,{2,"or:"},2290};
+__li__FB __string_73={__li__FB__,{8,"source ~/"},9984103};
+__li__FB __string_74={__li__FB__,{37,"Rerun using --verbose to try to debug."},843204820};
+__li__FB __string_75={__li__FB__,{3,"cd \""},8098};
+__li__FB __string_76={__li__FB__,{0,"\""},34};
+__li__FB __string_77={__li__FB__,{4,"Fail."},26286};
+__li__FB __string_78={__li__FB__,{11,"exit status:"},585729878};
+__li__FB __string_79={__li__FB__,{14,"Create/Update \""},2120307954};
+__li__FB __string_80={__li__FB__,{25,"Checking export PATH for \""},1318816130};
+__li__FB __string_81={__li__FB__,{9,"Creating \""},27241362};
+__li__FB __string_82={__li__FB__,{12,"export PATH=\""},206478230};
+__li__FB __string_83={__li__FB__,{6,"$PATH\"\n"},252690};
+__li__FB __string_84={__li__FB__,{31,"\n# **** LISAAC-OMEGA TOOLS ****\n"},2078533586};
+__li__FB __string_85={__li__FB__,{12,"Cannot read \""},1684556834};
+__li__FB __string_86={__li__FB__,{4,"Tag \""},29522};
+__li__FB __string_87={__li__FB__,{8,"\" not in "},3350632};
+__li__FB __string_88={__li__FB__,{0,"."},46};
+__li__FB __string_89={__li__FB__,{11,"Open write \""},483640562};
+__li__FB __string_90={__li__FB__,{19,"-9223372036854775808"},240231608};
+__li__FB __string_91={__li__FB__,{6,"writen "},640552};
+__li__FB __string_92={__li__FB__,{6," bytes."},271946};
+__li__FB __string_93={__li__FB__,{6,"Close \""},422578};
+__li__FB __string_94={__li__FB__,{29,"Crash ALIAS TO : hash code < 0"},693219696};
+__li__FB __string_95={__li__FB__,{1,"/\\"},280};
+__li__FB __string_96={__li__FB__,{0,":"},58};
 
 /*==========================*/
 /* CODE                     */
@@ -516,21 +517,21 @@ __li__FB __string_95={__li__FB__,{0,":"},58};
 
 int main(int argc,char **argv)
 {
-   __li__AC *li__2CD,*li__XKG,*li__3MT,*li__0C,*li__VIT,*li__5NT,*li__0TM;
-  __li__K li__2LB,li__XVJ,li__2BL,li__NHT,li__HAG,li__P5D,li__XEJ;
-  __li__K li__I4;
-  __li__RB li__F3C;
-  __li__Y0C li__OLD;
-  __li__FB *li__LMB,*li__4J,*li__PE,*li__JQ;
-  __li__T li__3VD;
-  __li__GB *li__QIT,*li__RIT,*li__SIT,*li__TIT;
-  __li__NH *li__E3C,*li__WBC,*li__DAG,*li__4RG;
-  __li__NH *li__S4C;
-  __li__FB **li__HFK;
+   __li__AC *li__ODD,*li__VJG,*li__WIT,*li__0C,*li__JET,*li__YJT,*li__XQM;
+  __li__K li__FMB,li__UUJ,li__W5K,li__BDT,li__S5F,li__BAE,li__UDJ;
+  __li__K li__R4;
+  __li__RB li__X3C;
+  __li__K1C li__AMD;
+  __li__FB *li__UMB,*li__4J,*li__PE,*li__JQ;
+  __li__T li__PWD;
+  __li__GB *li__EET,*li__FET,*li__GET,*li__HET;
+  __li__NH *li__W3C,*li__ICC,*li__O5F,*li__2QG;
+  __li__NH *li__E5C;
+  __li__FB **li__EEK;
   __li__C li__5G,li__LJ,li__AM;
-  __li__OH *li__KIT,*li__LIT;
-  __li__FB **li__JTG,**li__UCH;
-  __li__MB *li__X5;
+  __li__OH *li__OIT,*li__PIT;
+  __li__FB **li__HSG,**li__SBH;
+  __li__MB *li__AAB;
   __li__MB li__1L;
  arg_count  = argc;
   arg_vector = argv;
@@ -539,270 +540,271 @@ int main(int argc,char **argv)
   ((__li__GB *)li__GB__)->li__2B=-1;
   li__FB__->li__LB=(*li__GB__);
   ((__li__AC *)li__AC__)->li__BC=(*li__GB__);
-  li__M2C=((__li__Y0C )0);
-  li__P2C=((__li__Y0C )0);
-  li__2CD=li__LKB(2048);
-  ((__li__XB *)li__XB__)->li__EC=li__2CD;
-  ((__li__OH *)li__OH__)->li__J4=-1;
+  li__42C=((__li__K1C )0);
+  li__B3C=((__li__K1C )0);
+  li__ODD=li__UKB(2048);
+  ((__li__XB *)li__XB__)->li__EC=li__ODD;
+  ((__li__OH *)li__OH__)->li__S4=-1;
   li__NH__->li__QH=(*li__OH__);
-  li__XKG=li__LKB(512);
-  li__2LB=((__li__K )(arg_count));
-  li__E3C=(__li__NH *)NULL;
-  li__F3C=((__li__RB )(NULL));
-  li__OLD=((__li__Y0C )sizeof(__li__NH));
-  if (0 == li__OLD) {
-    li__E3C=li__NH__;
+  li__VJG=li__UKB(512);
+  li__FMB=((__li__K )(arg_count));
+  li__W3C=(__li__NH *)NULL;
+  li__X3C=((__li__RB )(NULL));
+  li__AMD=((__li__K1C )sizeof(__li__NH));
+  if (0 == li__AMD) {
+    li__W3C=li__NH__;
   } else /* False */ {
-    li__F3C=((__li__RB )(malloc(((li__OLD) + 3) & ~3)));
-    li__M2C=(__li__Y0C)(li__M2C - (__li__Y0C)(((__li__Y0C )0) - li__OLD));
-    li__P2C=(__li__Y0C)(li__P2C - (__li__Y0C)(((__li__Y0C )0) - li__OLD));
-    li__S4C=((__li__NH *)li__F3C);
-    li__E3C=li__S4C;
-    *(li__S4C) = *(li__NH__);
+    li__X3C=((__li__RB )(malloc(((li__AMD) + 3) & ~3)));
+    li__42C=(__li__K1C)(li__42C - (__li__K1C)(((__li__K1C )0) - li__AMD));
+    li__B3C=(__li__K1C)(li__B3C - (__li__K1C)(((__li__K1C )0) - li__AMD));
+    li__E5C=((__li__NH *)li__X3C);
+    li__W3C=li__E5C;
+    *(li__E5C) = *(li__NH__);
   };
-  li__WBC=((__li__NH *)li__E3C);
-  if (li__WBC->li__0BC < li__2LB) {
-    li__HFK=((__li__FB **)((__li__RB )(malloc(((__li__K)(li__2LB * ((__li__K )(sizeof(void *)))))))));
-    li__XVJ=(__li__K)(li__2LB - 1);
-    li__2BL=li__XVJ;
-    while ((li__2BL >= 0)) {
-      li__HFK[li__2BL]=NULL;
-      li__2BL=(__li__K)(li__2BL - 1);
+  li__ICC=((__li__NH *)li__W3C);
+  if (li__ICC->li__MCC < li__FMB) {
+    li__EEK=((__li__FB **)((__li__RB )(malloc(((__li__K)(li__FMB * ((__li__K )(sizeof(void *)))))))));
+    li__UUJ=(__li__K)(li__FMB - 1);
+    li__W5K=li__UUJ;
+    while ((li__W5K >= 0)) {
+      li__EEK[li__W5K]=NULL;
+      li__W5K=(__li__K)(li__W5K - 1);
     };
-    li__WBC->li__GCC=li__HFK;
-    li__WBC->li__0BC=li__2LB;
+    li__ICC->li__YCC=li__EEK;
+    li__ICC->li__MCC=li__FMB;
   };
-  li__WBC->li__QH.li__J4=-1;
-  li__WBC=li__E3C;
-  li__2LB=0;
-  li__XVJ=(__li__K)(((__li__K )(arg_count)) - 1);
-  while ((li__2LB <= li__XVJ)) {
-    li__MVE(((__li__AC *)li__XKG),((__li__MB *)(arg_vector[(li__2LB)])));
-    li__LMB=li__ZGE(((__li__AC *)li__XKG));
-    li__DAG=((__li__NH *)li__WBC);
-    li__NHT=(__li__K)(li__DAG->li__QH.li__J4 + 1);
-    li__HAG=(__li__K)(li__NHT + 1);
-    if (li__HAG > li__DAG->li__0BC) {
-      li__3VD=((__li__T )li__HAG);
-      li__P5D=0;
-      if (0 == li__3VD) {
-        li__P5D=64;
+  li__ICC->li__QH.li__S4=-1;
+  li__ICC=li__W3C;
+  li__FMB=0;
+  li__UUJ=(__li__K)(((__li__K )(arg_count)) - 1);
+  while ((li__FMB <= li__UUJ)) {
+    li__4VE(((__li__AC *)li__VJG),((__li__MB *)(arg_vector[(li__FMB)])));
+    li__UMB=li__LHE(((__li__AC *)li__VJG));
+    li__O5F=((__li__NH *)li__ICC);
+    li__BDT=(__li__K)(li__O5F->li__QH.li__S4 + 1);
+    li__S5F=(__li__K)(li__BDT + 1);
+    if (li__S5F > li__O5F->li__MCC) {
+      li__PWD=((__li__T )li__S5F);
+      li__BAE=0;
+      if (0 == li__PWD) {
+        li__BAE=64;
       } else /* False */ {
-        li__P5D=((__li__K )(__builtin_clzll((li__3VD))));
+        li__BAE=((__li__K )(__builtin_clzll((li__PWD))));
       };
-      li__XEJ=(__li__K)(1 << (__li__K)(64 - li__P5D));
-      li__DAG->li__GCC=((__li__FB **)((__li__RB )(realloc((((__li__RB )((__li__FB **)li__DAG->li__GCC))),((__li__K)(li__XEJ * ((__li__K )(sizeof(void *)))))))));
-      li__DAG->li__0BC=li__XEJ;
+      li__UDJ=(__li__K)(1 << (__li__K)(64 - li__BAE));
+      li__O5F->li__YCC=((__li__FB **)((__li__RB )(realloc((((__li__RB )((__li__FB **)li__O5F->li__YCC))),((__li__K)(li__UDJ * ((__li__K )(sizeof(void *)))))))));
+      li__O5F->li__MCC=li__UDJ;
     };
-    li__DAG->li__QH.li__J4=(__li__K)(li__DAG->li__QH.li__J4 + 1);
-    ((__li__FB **)li__DAG->li__GCC)[li__DAG->li__QH.li__J4]=li__LMB;
-    li__2LB=(__li__K)(li__2LB + 1);
+    li__O5F->li__QH.li__S4=(__li__K)(li__O5F->li__QH.li__S4 + 1);
+    ((__li__FB **)li__O5F->li__YCC)[li__O5F->li__QH.li__S4]=li__UMB;
+    li__FMB=(__li__K)(li__FMB + 1);
   };
-  li__SH=li__E3C;
+  li__SH=li__W3C;
   ((__li__XB *)li__XB__)->li__QC=li__I__;
-  ((__li__BFB *)li__BFB__)->li__GSB=-1;
-  li__AFB__->li__DFB=(*li__BFB__);
-  li__FFB=(*li__AFB__);
-  li__XKG=li__LKB(1024);
-  li__KEB=li__XKG;
-  li__W1((&__string_1));
+  ((__li__KFB *)li__KFB__)->li__PSB=-1;
+  li__JFB__->li__MFB=(*li__KFB__);
+  li__OFB=(*li__JFB__);
+  li__VJG=li__UKB(1024);
+  li__TEB=li__VJG;
+  li__51((&__string_1));
   print_char('\n');
-  li__XF(li__2CD);
+  li__XF(li__ODD);
   li__5G=li__I__;
-  li__2LB=1;
-  li__KIT=&(li__E3C->li__QH);
-  li__LIT=&(li__E3C->li__QH);
-  while ((li__2LB <= li__KIT->li__J4)) {
-    li__DAG=((__li__NH *)li__SH);
-    if ((void *)(&__string_2) == (void *)((__li__FB **)li__DAG->li__GCC)[li__2LB]) {
+  li__FMB=1;
+  li__OIT=&(li__W3C->li__QH);
+  li__PIT=&(li__W3C->li__QH);
+  while ((li__FMB <= li__OIT->li__S4)) {
+    li__O5F=((__li__NH *)li__SH);
+    ((0 <= li__FMB) && (li__FMB <= li__O5F->li__QH.li__S4));
+    if ((void *)(&__string_2) == (void *)((__li__FB **)li__O5F->li__YCC)[li__FMB]) {
       li__5G=li__B__;
-      li__4RG=((__li__NH *)li__SH);
-      li__JTG=li__4RG->li__GCC;
-      li__P5D=li__4RG->li__QH.li__J4;
-      li__UCH=((__li__FB **)li__JTG);
-      li__XEJ=li__2LB;
-      while ((li__XEJ != li__P5D)) {
-        li__UCH[li__XEJ]=li__UCH[(__li__K)(li__XEJ + 1)];
-        li__XEJ=(__li__K)(li__XEJ + 1);
+      li__2QG=((__li__NH *)li__SH);
+      li__HSG=li__2QG->li__YCC;
+      li__BAE=li__2QG->li__QH.li__S4;
+      li__SBH=((__li__FB **)li__HSG);
+      li__UDJ=li__FMB;
+      while ((li__UDJ != li__BAE)) {
+        li__SBH[li__UDJ]=li__SBH[(__li__K)(li__UDJ + 1)];
+        li__UDJ=(__li__K)(li__UDJ + 1);
       };
-      li__4RG->li__QH.li__J4=(__li__K)(li__4RG->li__QH.li__J4 - 1);
-      li__2LB=li__LIT->li__J4;
+      li__2QG->li__QH.li__S4=(__li__K)(li__2QG->li__QH.li__S4 - 1);
+      li__FMB=li__PIT->li__S4;
     };
-    li__2LB=(__li__K)(li__2LB + 1);
+    li__FMB=(__li__K)(li__FMB + 1);
   };
   ((__li__XB *)li__XB__)->li__QC=li__5G;
-  li__I4=(__li__K)(((__li__NH *)li__E3C)->li__QH.li__J4 + 1);
-  if (li__I4 != 1) {
-    li__LMB=(__li__FB *)NULL;
-    if (1 <= ((__li__NH *)li__E3C)->li__QH.li__J4) {
-      li__DAG=((__li__NH *)li__E3C);
-      li__LMB=((__li__FB **)li__DAG->li__GCC)[1];
+  li__R4=(__li__K)(((__li__NH *)li__W3C)->li__QH.li__S4 + 1);
+  if (li__R4 != 1) {
+    li__UMB=(__li__FB *)NULL;
+    if (1 <= ((__li__NH *)li__W3C)->li__QH.li__S4) {
+      li__O5F=((__li__NH *)li__W3C);
+      li__UMB=((__li__FB **)li__O5F->li__YCC)[1];
     };
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_3)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__LMB)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_3));
-    li__YJE(((__li__AC *)li__3MT),li__LMB);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
-    li__W1((&__string_5));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_3)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__UMB)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_3));
+    li__KKE(((__li__AC *)li__WIT),li__UMB);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
+    li__51((&__string_5));
     print_char('\n');
     exit((1));
   };
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_6)->li__LB.li__2B + 1) + (__li__K)(((__li__AC *)li__2CD)->li__BC.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_6));
-    li__YJE(((__li__AC *)li__3MT),li__2CD);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_6)->li__LB.li__2B + 1) + (__li__K)(((__li__AC *)li__ODD)->li__BC.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_6));
+    li__KKE(((__li__AC *)li__WIT),li__ODD);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__X5=((__li__MB *)(system_name()));
-  li__XKG=li__CRB();
-  li__MVE(((__li__AC *)li__XKG),li__X5);
-  li__LMB=li__ZGE(((__li__AC *)li__XKG));
-  li__0RB(&(li__FFB),li__XKG);
-  ((__li__WB *)li__WB__)->li__XI=li__LMB;
-  if ((void *)li__LMB != (void *)(&__string_7)) {
-    li__LJ=((void *)li__LMB != (void *)(&__string_8));
+  li__AAB=((__li__MB *)(system_name()));
+  li__VJG=li__LRB();
+  li__4VE(((__li__AC *)li__VJG),li__AAB);
+  li__UMB=li__LHE(((__li__AC *)li__VJG));
+  li__DSB(&(li__OFB),li__VJG);
+  ((__li__WB *)li__WB__)->li__XI=li__UMB;
+  if ((void *)li__UMB != (void *)(&__string_7)) {
+    li__LJ=((void *)li__UMB != (void *)(&__string_8));
   } else /* False */ {
     li__LJ=li__I__;
   };
   if (li__LJ) {
-    li__LJ=((void *)li__LMB != (void *)(&__string_9));
+    li__LJ=((void *)li__UMB != (void *)(&__string_9));
   } else /* False */ {
     li__LJ=li__I__;
   };
   if (li__LJ) {
-    li__LJ=((void *)li__LMB != (void *)(&__string_10));
+    li__LJ=((void *)li__UMB != (void *)(&__string_10));
   } else /* False */ {
     li__LJ=li__I__;
   };
   if (li__LJ) {
-    li__W1((&__string_11));
-    li__W1(((__li__FB *)li__LMB));
-    li__W1((&__string_12));
+    li__51((&__string_11));
+    li__51(((__li__FB *)li__UMB));
+    li__51((&__string_12));
   };
   if (((__li__XB *)li__XB__)->li__QC) {
     li__4J=((__li__WB *)li__WB__)->li__XI;
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_13)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__4J)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_13));
-    li__YJE(((__li__AC *)li__3MT),li__4J);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_13)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__4J)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_13));
+    li__KKE(((__li__AC *)li__WIT),li__4J);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__LMB=li__ZGE(((__li__AC *)li__2CD));
-  ((__li__WB *)li__WB__)->li__OD=li__LMB;
-  li__5G=li__IK(((__li__FB *)li__LMB),' ');
+  li__UMB=li__LHE(((__li__AC *)li__ODD));
+  ((__li__WB *)li__WB__)->li__OD=li__UMB;
+  li__5G=li__IK(((__li__FB *)li__UMB),' ');
   if (li__5G) {
-    li__W1((&__string_14));
+    li__51((&__string_14));
     li__4J=((__li__WB *)li__WB__)->li__OD;
-    li__W1((&__string_15));
-    li__W1(((__li__FB *)li__4J));
-    li__W1((&__string_12));
+    li__51((&__string_15));
+    li__51(((__li__FB *)li__4J));
+    li__51((&__string_12));
   };
-  li__LMB=((__li__WB *)li__WB__)->li__OD;
-  li__4J=((__li__FB *)li__LMB);
+  li__UMB=((__li__WB *)li__WB__)->li__OD;
+  li__4J=((__li__FB *)li__UMB);
   li__5G=li__I__;
-  li__2LB=0;
-  li__XVJ=0;
+  li__FMB=0;
+  li__UUJ=0;
   if ((&__string_16)->li__LB.li__2B <= li__4J->li__LB.li__2B) {
-    li__2LB=(__li__K)(li__4J->li__LB.li__2B - (&__string_16)->li__LB.li__2B);
-    li__XVJ=0;
-    li__QIT=&(li__4J->li__LB);
-    li__RIT=&((&__string_16)->li__LB);
-    li__SIT=&(li__4J->li__LB);
-    li__TIT=&((&__string_16)->li__LB);
-    li__KOF:
+    li__FMB=(__li__K)(li__4J->li__LB.li__2B - (&__string_16)->li__LB.li__2B);
+    li__UUJ=0;
+    li__EET=&(li__4J->li__LB);
+    li__FET=&((&__string_16)->li__LB);
+    li__GET=&(li__4J->li__LB);
+    li__HET=&((&__string_16)->li__LB);
+    li__2OF:
     {
-      if ((li__2LB > li__QIT->li__2B) || (li__XVJ > li__RIT->li__2B)) {
+      if ((li__FMB > li__EET->li__2B) || (li__UUJ > li__FET->li__2B)) {
         li__AM=li__B__;
       } else /* False */ {
-        li__1L=((__li__MB *)li__SIT->li__3B)[li__2LB];
-        li__AM=(li__1L != ((__li__MB *)li__TIT->li__3B)[li__XVJ]);
+        li__1L=((__li__MB *)li__GET->li__3B)[li__FMB];
+        li__AM=(li__1L != ((__li__MB *)li__HET->li__3B)[li__UUJ]);
       };
       if (! li__AM) {
-        li__2LB=(__li__K)(li__2LB + 1);
-        li__XVJ=(__li__K)(li__XVJ + 1);
-        goto li__KOF;
+        li__FMB=(__li__K)(li__FMB + 1);
+        li__UUJ=(__li__K)(li__UUJ + 1);
+        goto li__2OF;
       };
     };
-    li__5G=(li__2LB > li__4J->li__LB.li__2B);
+    li__5G=(li__FMB > li__4J->li__LB.li__2B);
   };
   if (! li__5G) {
-    li__LPB((&__string_17));
+    li__UPB((&__string_17));
   };
   if (((__li__XB *)li__XB__)->li__QC) {
     li__PE=((__li__WB *)li__WB__)->li__OD;
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_15)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_15));
-    li__YJE(((__li__AC *)li__3MT),li__PE);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_15)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_15));
+    li__KKE(((__li__AC *)li__WIT),li__PE);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__5CB(((__li__WB *)li__WB__)->li__OD);
-  li__5CB((&__string_18));
-  li__LMB=li__ZGE(((__li__AC *)li__2CD));
-  ((__li__WB *)li__WB__)->li__5M=li__LMB;
+  li__IDB(((__li__WB *)li__WB__)->li__OD);
+  li__IDB((&__string_18));
+  li__UMB=li__LHE(((__li__AC *)li__ODD));
+  ((__li__WB *)li__WB__)->li__5M=li__UMB;
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_19)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__LMB)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_19));
-    li__YJE(((__li__AC *)li__3MT),li__LMB);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_19)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__UMB)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_19));
+    li__KKE(((__li__AC *)li__WIT),li__UMB);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__5CB(((__li__WB *)li__WB__)->li__OD);
-  li__5CB((&__string_20));
-  li__LMB=li__ZGE(((__li__AC *)li__2CD));
-  ((__li__WB *)li__WB__)->li__SN=li__LMB;
+  li__IDB(((__li__WB *)li__WB__)->li__OD);
+  li__IDB((&__string_20));
+  li__UMB=li__LHE(((__li__AC *)li__ODD));
+  ((__li__WB *)li__WB__)->li__SN=li__UMB;
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_21)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__LMB)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_21));
-    li__YJE(((__li__AC *)li__3MT),li__LMB);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_21)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__UMB)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_21));
+    li__KKE(((__li__AC *)li__WIT),li__UMB);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__LMB=li__2DB((&__string_22));
-  ((__li__WB *)li__WB__)->li__1E=li__LMB;
-  if ((void *)NULL == (void *)li__LMB) {
-    li__LPB((&__string_23));
+  li__UMB=li__FEB((&__string_22));
+  ((__li__WB *)li__WB__)->li__1E=li__UMB;
+  if ((void *)NULL == (void *)li__UMB) {
+    li__UPB((&__string_23));
   };
   if (((__li__XB *)li__XB__)->li__QC) {
     li__PE=((__li__WB *)li__WB__)->li__1E;
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_24)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_24));
-    li__YJE(((__li__AC *)li__3MT),li__PE);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_24)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_24));
+    li__KKE(((__li__AC *)li__WIT),li__PE);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__2CD=li__CRB();
-  li__GIE(((__li__AC *)li__2CD),((__li__WB *)li__WB__)->li__1E);
-  li__MUL(((__li__AC *)li__2CD));
-  li__GIE(((__li__AC *)li__2CD),(&__string_25));
+  li__ODD=li__LRB();
+  li__YIE(((__li__AC *)li__ODD),((__li__WB *)li__WB__)->li__1E);
+  li__URL(((__li__AC *)li__ODD));
+  li__YIE(((__li__AC *)li__ODD),(&__string_25));
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_26)->li__LB.li__2B + 1) + (__li__K)(((__li__AC *)li__2CD)->li__BC.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_26));
-    li__YJE(((__li__AC *)li__3MT),li__2CD);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_26)->li__LB.li__2B + 1) + (__li__K)(((__li__AC *)li__ODD)->li__BC.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_26));
+    li__KKE(((__li__AC *)li__WIT),li__ODD);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__X5=li__XLE(((__li__AC *)li__2CD));
-  remove((char*)(li__X5));
+  li__AAB=li__JME(((__li__AC *)li__ODD));
+  remove((char*)(li__AAB));
   li__5G=li__I__;
-  li__F3C=li__2CC(li__2CD);
-  if (li__F3C != (void *)NULL) {
+  li__X3C=li__ODC(li__ODD);
+  if (li__X3C != (void *)NULL) {
     li__5G=li__B__;
-    fclose((FILE*)((li__F3C)));
+    fclose((FILE*)((li__X3C)));
   };
   if (li__5G) {
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_27)->li__LB.li__2B + 1) + (__li__K)(((__li__AC *)li__2CD)->li__BC.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_27));
-    li__YJE(((__li__AC *)li__3MT),li__2CD);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__QKC(li__0C);
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_27)->li__LB.li__2B + 1) + (__li__K)(((__li__AC *)li__ODD)->li__BC.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_27));
+    li__KKE(((__li__AC *)li__WIT),li__ODD);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__CLC(li__0C);
   };
-  li__0RB(&(li__FFB),li__2CD);
-  li__LMB=li__2DB((&__string_28));
-  ((__li__WB *)li__WB__)->li__VP=li__LMB;
-  if ((void *)NULL == (void *)li__LMB) {
-    li__LPB((&__string_29));
+  li__DSB(&(li__OFB),li__ODD);
+  li__UMB=li__FEB((&__string_28));
+  ((__li__WB *)li__WB__)->li__VP=li__UMB;
+  if ((void *)NULL == (void *)li__UMB) {
+    li__UPB((&__string_29));
     li__LJ=li__B__;
   } else /* False */ {
     li__LJ=li__I__;
@@ -821,22 +823,22 @@ int main(int argc,char **argv)
   };
   if (((__li__XB *)li__XB__)->li__QC) {
     li__PE=((__li__WB *)li__WB__)->li__VP;
-    li__3MT=li__LKB((__li__K)((__li__K)((&__string_32)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__3MT),(&__string_32));
-    li__YJE(((__li__AC *)li__3MT),li__PE);
-    li__0C=li__1QE(((__li__AC *)li__3MT),(&__string_4));
-    li__3ZI(((__li__AC *)li__0C));
+    li__WIT=li__UKB((__li__K)((__li__K)((&__string_32)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WIT),(&__string_32));
+    li__KKE(((__li__AC *)li__WIT),li__PE);
+    li__0C=li__NRE(((__li__AC *)li__WIT),(&__string_4));
+    li__0YI(((__li__AC *)li__0C));
   };
-  li__W1((&__string_33));
+  li__51((&__string_33));
   print_char('\n');
-  li__5CB(((__li__WB *)li__WB__)->li__5M);
-  li__2CD=li__CRB();
-  li__GIE(((__li__AC *)li__2CD),(&__string_34));
-  li__TXC(li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__LMB=((__li__WB *)li__WB__)->li__VP;
-  if ((void *)(&__string_31) == (void *)li__LMB) {
-    li__SXB((&__string_35));
+  li__IDB(((__li__WB *)li__WB__)->li__5M);
+  li__ODD=li__LRB();
+  li__YIE(((__li__AC *)li__ODD),(&__string_34));
+  li__FYC(li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__UMB=((__li__WB *)li__WB__)->li__VP;
+  if ((void *)(&__string_31) == (void *)li__UMB) {
+    li__1XB((&__string_35));
     li__LJ=li__B__;
   } else /* False */ {
     li__LJ=li__I__;
@@ -846,7 +848,7 @@ int main(int argc,char **argv)
   } else /* False */ {
     li__PE=((__li__WB *)li__WB__)->li__VP;
     if ((void *)(&__string_36) == (void *)li__PE) {
-      li__SXB((&__string_37));
+      li__1XB((&__string_37));
       li__AM=li__B__;
     } else /* False */ {
       li__AM=li__I__;
@@ -856,177 +858,181 @@ int main(int argc,char **argv)
   if (! li__LJ) {
     li__PE=((__li__WB *)li__WB__)->li__XI;
     if ((void *)(&__string_7) == (void *)li__PE) {
-      li__SXB((&__string_35));
+      li__1XB((&__string_35));
     } else /* False */ {
-      li__WRD((&__string_35));
-      li__WRD((&__string_37));
-      li__WRD((&__string_38));
+      li__ISD((&__string_35));
+      li__ISD((&__string_37));
+      li__ISD((&__string_38));
     };
   };
   if (((__li__XB *)li__XB__)->li__QC) {
     if ((void *)NULL == (void *)((__li__WB *)li__WB__)->li__DF) {
-      li__W1((&__string_39));
+      li__51((&__string_39));
       print_char('\n');
     };
   };
-  li__W1((&__string_40));
+  li__51((&__string_40));
   print_char('\n');
-  li__5CB(((__li__WB *)li__WB__)->li__OD);
-  li__2CD=li__CRB();
-  li__5G=li__ZXC((&__string_41),li__2CD);
+  li__IDB(((__li__WB *)li__WB__)->li__OD);
+  li__ODD=li__LRB();
+  li__5G=li__LYC((&__string_41),li__ODD);
   if (! li__5G) {
-    li__LPB((&__string_42));
+    li__UPB((&__string_42));
   };
-  li__2LB=li__P1B((&__string_43),li__2CD,(&__string_41));
-  li__I2B:
+  li__FMB=li__Y1B((&__string_43),li__ODD,(&__string_41));
+  li__R2B:
   {
-    li__VIT=((__li__AC *)li__2CD);
-    if (((__li__MB *)li__VIT->li__BC.li__3B)[li__2LB] != '\"') {
-      li__5NT=((__li__AC *)li__2CD);
-      li__KFN(li__5NT,li__2LB,li__2LB);
-      goto li__I2B;
+    li__JET=((__li__AC *)li__ODD);
+    if (((__li__MB *)li__JET->li__BC.li__3B)[li__FMB] != '\"') {
+      li__YJT=((__li__AC *)li__ODD);
+      li__CCN(li__YJT,li__FMB,li__FMB);
+      goto li__R2B;
     };
   };
-  li__KPM(((__li__AC *)li__2CD),((__li__WB *)li__WB__)->li__XI,li__2LB);
-  li__W2B((&__string_41),li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__W1((&__string_44));
+  li__HMM(((__li__AC *)li__ODD),((__li__WB *)li__WB__)->li__XI,li__FMB);
+  li__52B((&__string_41),li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__51((&__string_44));
   print_char('\n');
-  li__5CB(((__li__WB *)li__WB__)->li__SN);
-  li__5CB((&__string_45));
-  li__2CD=li__CRB();
-  li__5G=li__ZXC((&__string_46),li__2CD);
+  li__IDB(((__li__WB *)li__WB__)->li__SN);
+  li__IDB((&__string_45));
+  li__ODD=li__LRB();
+  li__5G=li__LYC((&__string_46),li__ODD);
   if (! li__5G) {
-    li__LPB((&__string_47));
+    li__UPB((&__string_47));
   };
-  li__2LB=li__P1B((&__string_48),li__2CD,(&__string_46));
-  li__XVJ=li__2LB;
-  li__LMB=(&__string_49);
+  li__FMB=li__Y1B((&__string_48),li__ODD,(&__string_46));
+  li__UUJ=li__FMB;
+  li__UMB=(&__string_49);
   li__4J=((__li__WB *)li__WB__)->li__XI;
   if ((void *)(&__string_9) == (void *)li__4J) {
-    li__LMB=(&__string_50);
+    li__UMB=(&__string_50);
   };
-  li__O4B:
+  li__X4B:
   {
-    li__VIT=((__li__AC *)li__2CD);
-    if (((__li__MB *)li__VIT->li__BC.li__3B)[li__XVJ] != '\"') {
-      li__5NT=((__li__AC *)li__2CD);
-      li__KFN(li__5NT,li__XVJ,li__XVJ);
-      goto li__O4B;
+    li__JET=((__li__AC *)li__ODD);
+    if (((__li__MB *)li__JET->li__BC.li__3B)[li__UUJ] != '\"') {
+      li__YJT=((__li__AC *)li__ODD);
+      li__CCN(li__YJT,li__UUJ,li__UUJ);
+      goto li__X4B;
     };
   };
-  li__KPM(((__li__AC *)li__2CD),li__LMB,li__2LB);
-  li__2LB=li__P1B((&__string_51),li__2CD,(&__string_46));
-  li__XVJ=li__2LB;
-  li__LMB=(&__string_52);
+  li__HMM(((__li__AC *)li__ODD),li__UMB,li__FMB);
+  li__FMB=li__Y1B((&__string_51),li__ODD,(&__string_46));
+  li__UUJ=li__FMB;
+  li__UMB=(&__string_52);
   li__4J=((__li__WB *)li__WB__)->li__XI;
   if ((void *)(&__string_9) == (void *)li__4J) {
-    li__LMB=(&__string_53);
+    li__UMB=(&__string_53);
   };
-  li__J5B:
+  li__S5B:
   {
-    li__VIT=((__li__AC *)li__2CD);
-    if (((__li__MB *)li__VIT->li__BC.li__3B)[li__XVJ] != ',') {
-      li__5NT=((__li__AC *)li__2CD);
-      li__KFN(li__5NT,li__XVJ,li__XVJ);
-      goto li__J5B;
+    li__JET=((__li__AC *)li__ODD);
+    if (((__li__MB *)li__JET->li__BC.li__3B)[li__UUJ] != ',') {
+      li__YJT=((__li__AC *)li__ODD);
+      li__CCN(li__YJT,li__UUJ,li__UUJ);
+      goto li__S5B;
     };
   };
-  li__KPM(((__li__AC *)li__2CD),li__LMB,li__2LB);
-  li__W2B((&__string_46),li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__LMB=((__li__WB *)li__WB__)->li__VP;
-  if ((void *)li__LMB != (void *)(&__string_54)) {
-    li__W1((&__string_55));
+  li__HMM(((__li__AC *)li__ODD),li__UMB,li__FMB);
+  li__52B((&__string_46),li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__UMB=((__li__WB *)li__WB__)->li__VP;
+  if ((void *)li__UMB != (void *)(&__string_54)) {
+    li__51((&__string_55));
     print_char('\n');
-    li__5CB(((__li__WB *)li__WB__)->li__OD);
-    li__5CB((&__string_56));
-    li__3MT=li__CRB();
-    li__LJ=li__ZXC((&__string_57),li__3MT);
+    li__IDB(((__li__WB *)li__WB__)->li__OD);
+    li__IDB((&__string_56));
+    li__WIT=li__LRB();
+    li__LJ=li__LYC((&__string_57),li__WIT);
     if (! li__LJ) {
-      li__LPB((&__string_58));
+      li__UPB((&__string_58));
     };
-    li__ZLC:
+    li__LMC:
     {
-      li__5NT=((__li__AC *)li__3MT);
-      if (((__li__MB *)li__5NT->li__BC.li__3B)[0] != '\n') {
-        li__0TM=((__li__AC *)li__3MT);
-        if (1 > li__0TM->li__BC.li__2B) {
-          li__0TM->li__BC.li__2B=-1;
+      li__YJT=((__li__AC *)li__WIT);
+      if (((__li__MB *)li__YJT->li__BC.li__3B)[0] != '\n') {
+        li__XQM=((__li__AC *)li__WIT);
+        if (1 > li__XQM->li__BC.li__2B) {
+          li__XQM->li__BC.li__2B=-1;
         } else /* False */ {
-          li__KFN(li__0TM,0,0);
+          li__CCN(li__XQM,0,0);
         };
-        goto li__ZLC;
+        goto li__LMC;
       };
     };
     li__PE=((__li__WB *)li__WB__)->li__VP;
-    li__0C=li__LKB((__li__K)((__li__K)((&__string_59)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__0C),(&__string_59));
-    li__YJE(((__li__AC *)li__0C),li__PE);
-    li__NRM(((__li__AC *)li__3MT),li__0C,0);
-    li__W2B((&__string_57),li__3MT);
-    li__0RB(&(li__FFB),li__3MT);
+    li__0C=li__UKB((__li__K)((__li__K)((&__string_59)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__PE)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__0C),(&__string_59));
+    li__KKE(((__li__AC *)li__0C),li__PE);
+    li__KOM(((__li__AC *)li__WIT),li__0C,0);
+    li__52B((&__string_57),li__WIT);
+    li__DSB(&(li__OFB),li__WIT);
   } else /* False */ {
-    li__W1((&__string_60));
+    li__51((&__string_60));
     print_char('\n');
   };
-  li__W1((&__string_61));
+  li__51((&__string_61));
   print_char('\n');
-  li__5CB(((__li__WB *)li__WB__)->li__SN);
-  li__2CD=li__CRB();
-  li__GIE(((__li__AC *)li__2CD),((__li__WB *)li__WB__)->li__5M);
-  li__MUL(((__li__AC *)li__2CD));
-  li__GIE(((__li__AC *)li__2CD),(&__string_62));
-  li__TXC(li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__W1((&__string_63));
+  li__IDB(((__li__WB *)li__WB__)->li__SN);
+  li__ODD=li__LRB();
+  li__YIE(((__li__AC *)li__ODD),((__li__WB *)li__WB__)->li__5M);
+  li__URL(((__li__AC *)li__ODD));
+  li__YIE(((__li__AC *)li__ODD),(&__string_62));
+  li__UMB=((__li__WB *)li__WB__)->li__XI;
+  if ((void *)li__UMB != (void *)(&__string_7)) {
+    li__YIE(((__li__AC *)li__ODD),(&__string_63));
+  };
+  li__FYC(li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__51((&__string_64));
   print_char('\n');
-  li__5CB(((__li__WB *)li__WB__)->li__OD);
-  li__5CB((&__string_64));
-  li__5CB((&__string_65));
-  li__2CD=li__CRB();
-  li__GIE(((__li__AC *)li__2CD),((__li__WB *)li__WB__)->li__SN);
-  li__MUL(((__li__AC *)li__2CD));
-  li__GIE(((__li__AC *)li__2CD),(&__string_66));
-  li__AZC(li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__2CD=li__CRB();
-  li__GIE(((__li__AC *)li__2CD),((__li__WB *)li__WB__)->li__5M);
-  li__MUL(((__li__AC *)li__2CD));
-  li__GIE(((__li__AC *)li__2CD),(&__string_67));
-  li__TXC(li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__2CD=li__CRB();
-  li__GIE(((__li__AC *)li__2CD),((__li__WB *)li__WB__)->li__OD);
-  li__MUL(((__li__AC *)li__2CD));
-  li__GIE(((__li__AC *)li__2CD),(&__string_68));
-  li__AZC(li__2CD);
-  li__0RB(&(li__FFB),li__2CD);
-  li__W1((&__string_69));
+  li__IDB(((__li__WB *)li__WB__)->li__OD);
+  li__IDB((&__string_65));
+  li__IDB((&__string_66));
+  li__ODD=li__LRB();
+  li__YIE(((__li__AC *)li__ODD),((__li__WB *)li__WB__)->li__SN);
+  li__URL(((__li__AC *)li__ODD));
+  li__YIE(((__li__AC *)li__ODD),(&__string_67));
+  li__SZC(li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__ODD=li__LRB();
+  li__YIE(((__li__AC *)li__ODD),((__li__WB *)li__WB__)->li__5M);
+  li__URL(((__li__AC *)li__ODD));
+  li__YIE(((__li__AC *)li__ODD),(&__string_68));
+  li__FYC(li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__ODD=li__LRB();
+  li__YIE(((__li__AC *)li__ODD),((__li__WB *)li__WB__)->li__OD);
+  li__URL(((__li__AC *)li__ODD));
+  li__YIE(((__li__AC *)li__ODD),(&__string_69));
+  li__SZC(li__ODD);
+  li__DSB(&(li__OFB),li__ODD);
+  li__51((&__string_70));
   print_char('\n');
-  li__W1((&__string_70));
+  li__51((&__string_71));
   print_char('\n');
-  li__W1((&__string_71));
+  li__51((&__string_72));
   print_char('\n');
-  li__LMB=((__li__WB *)li__WB__)->li__DF;
-  li__2CD=li__LKB((__li__K)((__li__K)((&__string_72)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__LMB)->li__LB.li__2B + 1)));
-  li__GIE(((__li__AC *)li__2CD),(&__string_72));
-  li__YJE(((__li__AC *)li__2CD),li__LMB);
-  li__3ZI(((__li__AC *)li__2CD));
+  li__UMB=((__li__WB *)li__WB__)->li__DF;
+  li__ODD=li__UKB((__li__K)((__li__K)((&__string_73)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__UMB)->li__LB.li__2B + 1)));
+  li__YIE(((__li__AC *)li__ODD),(&__string_73));
+  li__KKE(((__li__AC *)li__ODD),li__UMB);
+  li__0YI(((__li__AC *)li__ODD));
   return(0);
 }
 
 
-void die_with_code(__li__K li__SFD)
+void die_with_code(__li__K li__EGD)
 /* (Flat Int{li__K}) Void Recursive, Inlinable. NO CONTEXT! */
 {
-  exit((li__SFD));
+  exit((li__EGD));
 }
 
-void print_char(__li__MB li__XED)
+void print_char(__li__MB li__JFD)
 /* (Flat Char{li__MB}) Void No recursive, Inlinable. NO CONTEXT! */
 {
-  fputc((int)(li__XED),stdout);
+  fputc((int)(li__JFD),stdout);
 }
 
 void bug_compilo_042()
@@ -1035,1364 +1041,1365 @@ void bug_compilo_042()
   print_string("Call on NULL\n(Do not use `-boost' option for print stack trace)\n"); die_with_code(1);
 }
 
-static __li__AC* li__LKB(__li__K li__NKB)
+static __li__AC* li__UKB(__li__K li__WKB)
 /* (Flat Int{li__K}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__V0C,*li__OKB;
-  __li__RB li__W0C;
-  __li__Y0C li__30P;
-  __li__AC *li__T2C;
- li__V0C=(__li__AC *)NULL;
-  li__W0C=((__li__RB )(NULL));
-  li__30P=((__li__Y0C )sizeof(__li__AC));
-  if (0 == li__30P) {
-    li__V0C=li__AC__;
+   __li__AC *li__H1C,*li__XKB;
+  __li__RB li__I1C;
+  __li__K1C li__PXP;
+  __li__AC *li__F3C;
+ li__H1C=(__li__AC *)NULL;
+  li__I1C=((__li__RB )(NULL));
+  li__PXP=((__li__K1C )sizeof(__li__AC));
+  if (0 == li__PXP) {
+    li__H1C=li__AC__;
   } else /* False */ {
-    li__W0C=((__li__RB )(malloc(((li__30P) + 3) & ~3)));
-    li__M2C=(__li__Y0C)(li__M2C - (__li__Y0C)(((__li__Y0C )0) - li__30P));
-    li__P2C=(__li__Y0C)(li__P2C - (__li__Y0C)(((__li__Y0C )0) - li__30P));
-    li__T2C=((__li__AC *)li__W0C);
-    li__V0C=li__T2C;
-    *(li__T2C) = *(li__AC__);
+    li__I1C=((__li__RB )(malloc(((li__PXP) + 3) & ~3)));
+    li__42C=(__li__K1C)(li__42C - (__li__K1C)(((__li__K1C )0) - li__PXP));
+    li__B3C=(__li__K1C)(li__B3C - (__li__K1C)(((__li__K1C )0) - li__PXP));
+    li__F3C=((__li__AC *)li__I1C);
+    li__H1C=li__F3C;
+    *(li__F3C) = *(li__AC__);
   };
-  li__JAC(((__li__AC *)li__V0C),li__NKB);
-  li__OKB=li__V0C;
-  return(li__OKB);
+  li__1AC(((__li__AC *)li__H1C),li__WKB);
+  li__XKB=li__H1C;
+  return(li__XKB);
 }
 
-static void li__MVE(__li__AC *li__NVE,__li__MB *li__OVE)
+static void li__4VE(__li__AC *li__5VE,__li__MB *li__AWE)
 /* (Exact String_buffer{li__AC},Exact C_array(Flat Char){NULLxli__TB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__PVE,li__0VG,li__MOT;
-  __li__MB li__DWE;
-  __li__MB *li__SVG;
-  __li__MB *li__LOT;
- li__PVE=0;
-  li__NVE->li__BC.li__2B=-1;
-  while ((((__li__MB *)li__OVE)[li__PVE] != '\0')) {
-    li__DWE=((__li__MB *)li__OVE)[li__PVE];
-    if (li__NVE->li__T2 == (__li__K)(li__NVE->li__BC.li__2B + 1)) {
-      if (0 == li__NVE->li__T2) {
-        li__NVE->li__T2=32;
-        li__SVG=li__PPG(32);
-        li__NVE->li__BC.li__3B=li__SVG;
+   __li__K li__BWE,li__YUG,li__FKT;
+  __li__MB li__VWE;
+  __li__MB *li__QUG;
+  __li__MB *li__EKT;
+ li__BWE=0;
+  li__5VE->li__BC.li__2B=-1;
+  while ((((__li__MB *)li__AWE)[li__BWE] != '\0')) {
+    li__VWE=((__li__MB *)li__AWE)[li__BWE];
+    if (li__5VE->li__22 == (__li__K)(li__5VE->li__BC.li__2B + 1)) {
+      if (0 == li__5VE->li__22) {
+        li__5VE->li__22=32;
+        li__QUG=li__NOG(32);
+        li__5VE->li__BC.li__3B=li__QUG;
       } else /* False */ {
-        li__0VG=(__li__K)(li__NVE->li__T2 << 1);
-        li__SVG=((__li__MB *)li__NVE->li__BC.li__3B);
-        li__MOT=li__NVE->li__T2;
-        li__LOT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__SVG)),(li__0VG)))));
-        li__X5G(li__LOT,li__MOT,(__li__K)(li__0VG - 1));
-        li__NVE->li__BC.li__3B=li__LOT;
-        li__NVE->li__T2=li__0VG;
+        li__YUG=(__li__K)(li__5VE->li__22 << 1);
+        li__QUG=((__li__MB *)li__5VE->li__BC.li__3B);
+        li__FKT=li__5VE->li__22;
+        li__EKT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__QUG)),(li__YUG)))));
+        li__V4G(li__EKT,li__FKT,(__li__K)(li__YUG - 1));
+        li__5VE->li__BC.li__3B=li__EKT;
+        li__5VE->li__22=li__YUG;
       };
     };
-    li__NVE->li__BC.li__2B=(__li__K)(li__NVE->li__BC.li__2B + 1);
-    ((__li__MB *)li__NVE->li__BC.li__3B)[li__NVE->li__BC.li__2B]=li__DWE;
-    li__PVE=(__li__K)(li__PVE + 1);
+    li__5VE->li__BC.li__2B=(__li__K)(li__5VE->li__BC.li__2B + 1);
+    ((__li__MB *)li__5VE->li__BC.li__3B)[li__5VE->li__BC.li__2B]=li__VWE;
+    li__BWE=(__li__K)(li__BWE + 1);
   };
 }
 
-static __li__FB* li__ZGE(__li__AC *li__0GE)
+static __li__FB* li__LHE(__li__AC *li__MHE)
 /* (Exact String_buffer{li__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__B4E,li__DNG,li__XYG,li__1YG,li__MNG,li__OWI;
-  __li__FB *li__F4E,*li__G4E;
-  __li__FB *li__O4E,*li__IAF,*li__1GE;
-  __li__GB *li__EJT;
-  __li__C4E *li__E4E;
-  __li__MB *li__DCT,*li__QOI,*li__KWI;
-  __li__C li__Y5E,li__ZNI,li__V5E;
- li__B4E=0;
-  li__E4E=(__li__C4E *)NULL;
-  li__F4E=(__li__FB *)NULL;
-  li__G4E=(__li__FB *)NULL;
-  if (0 == li__H4E) {
-    li__O4E=li__JBG(li__0GE);
-    li__F4E=li__O4E;
-    li__ICG(li__O4E);
+   __li__K li__T4E,li__BMG,li__VXG,li__ZXG,li__KMG,li__LVI;
+  __li__FB *li__X4E,*li__Y4E;
+  __li__FB *li__A5E,*li__0AF,*li__NHE;
+  __li__GB *li__YET;
+  __li__U4E *li__W4E;
+  __li__MB *li__U3S,*li__NNI,*li__HVI;
+  __li__C li__KAF,li__WMI,li__HAF;
+ li__T4E=0;
+  li__W4E=(__li__U4E *)NULL;
+  li__X4E=(__li__FB *)NULL;
+  li__Y4E=(__li__FB *)NULL;
+  if (0 == li__Z4E) {
+    li__A5E=li__UAG(li__MHE);
+    li__X4E=li__A5E;
+    li__TBG(li__A5E);
   } else /* False */ {
-    li__DNG=0;
-    li__XYG=li__0GE->li__BC.li__2B;
-    li__1YG=li__XYG;
-    if (li__XYG > 32) {
-      li__1YG=32;
+    li__BMG=0;
+    li__VXG=li__MHE->li__BC.li__2B;
+    li__ZXG=li__VXG;
+    if (li__VXG > 32) {
+      li__ZXG=32;
     };
-    li__XYG=li__1YG;
-    li__1YG=0;
-    li__EJT=&(li__0GE->li__BC);
-    while ((li__1YG <= li__XYG)) {
-      li__MNG=(__li__K)(li__DNG << 2);
-      li__DNG=(__li__K)(li__MNG + ((__li__K )((__li__K1C )((__li__MB *)li__EJT->li__3B)[li__1YG])));
-      li__1YG=(__li__K)(li__1YG + 1);
+    li__VXG=li__ZXG;
+    li__ZXG=0;
+    li__YET=&(li__MHE->li__BC);
+    while ((li__ZXG <= li__VXG)) {
+      li__KMG=(__li__K)(li__BMG << 2);
+      li__BMG=(__li__K)(li__KMG + ((__li__K )((__li__21C )((__li__MB *)li__YET->li__3B)[li__ZXG])));
+      li__ZXG=(__li__K)(li__ZXG + 1);
     };
-    li__XYG=(__li__K)(li__DNG & 2147483647);
-    li__B4E=li__XYG;
-    li__E4E=(__li__C4E *)((void **)li__Z4E)[(__li__K)(li__XYG % li__H4E)];
-    li__DNG=li__0GE->li__BC.li__2B;
-    li__XYG=li__0GE->li__BC.li__2B;
-    li__DCT=li__0GE->li__BC.li__3B;
-    li__1YG=li__0GE->li__BC.li__2B;
-    li__VFG:
+    li__VXG=(__li__K)(li__BMG & 2147483647);
+    li__T4E=li__VXG;
+    li__W4E=(__li__U4E *)((void **)li__L5E)[(__li__K)(li__VXG % li__Z4E)];
+    li__BMG=li__MHE->li__BC.li__2B;
+    li__VXG=li__MHE->li__BC.li__2B;
+    li__U3S=li__MHE->li__BC.li__3B;
+    li__ZXG=li__MHE->li__BC.li__2B;
+    li__AFG:
     {
-      if ((void *)NULL == (void *)li__E4E) {
-        li__Y5E=li__B__;
+      if ((void *)NULL == (void *)li__W4E) {
+        li__KAF=li__B__;
       } else /* False */ {
-        li__G4E=li__E4E->li__I5E;
-        if (li__G4E /* Always NULL */ ->li__L5E == li__B4E) {
-          li__ZNI=li__I__;
-          if (li__DNG == li__G4E /* Always NULL */ ->li__LB.li__2B) {
-            if (-1 == li__XYG) {
-              li__ZNI=li__B__;
+        li__Y4E=li__W4E->li__05E;
+        if (li__Y4E /* Always NULL */ ->li__35E == li__T4E) {
+          li__WMI=li__I__;
+          if (li__BMG == li__Y4E /* Always NULL */ ->li__LB.li__2B) {
+            if (-1 == li__VXG) {
+              li__WMI=li__B__;
             } else /* False */ {
-              li__QOI=li__G4E /* Always NULL */ ->li__LB.li__3B;
-              li__KWI=((__li__MB *)li__DCT);
-              li__OWI=li__1YG;
-              while (((li__OWI >= 0) && (li__KWI[li__OWI] == ((__li__MB *)li__QOI)[li__OWI]))) {
-                li__OWI=(__li__K)(li__OWI - 1);
+              li__NNI=li__Y4E /* Always NULL */ ->li__LB.li__3B;
+              li__HVI=((__li__MB *)li__U3S);
+              li__LVI=li__ZXG;
+              while (((li__LVI >= 0) && (li__HVI[li__LVI] == ((__li__MB *)li__NNI)[li__LVI]))) {
+                li__LVI=(__li__K)(li__LVI - 1);
               };
-              li__ZNI=(li__OWI < 0);
+              li__WMI=(li__LVI < 0);
             };
           };
-          li__V5E=li__ZNI;
+          li__HAF=li__WMI;
         } else /* False */ {
-          li__V5E=li__I__;
+          li__HAF=li__I__;
         };
-        li__Y5E=li__V5E;
+        li__KAF=li__HAF;
       };
-      if (! li__Y5E) {
-        li__E4E=li__E4E->li__55E;
-        goto li__VFG;
+      if (! li__KAF) {
+        li__W4E=li__W4E->li__RAF;
+        goto li__AFG;
       };
     };
-    if ((void *)NULL == (void *)li__E4E) {
-      li__IAF=li__JBG(li__0GE);
-      li__F4E=li__IAF;
-      li__ICG(li__IAF);
+    if ((void *)NULL == (void *)li__W4E) {
+      li__0AF=li__UAG(li__MHE);
+      li__X4E=li__0AF;
+      li__TBG(li__0AF);
     } else /* False */ {
-      li__F4E=li__E4E->li__I5E;
+      li__X4E=li__W4E->li__05E;
     };
   };
-  li__1GE=li__F4E;
-  return(li__1GE);
+  li__NHE=li__X4E;
+  return(li__NHE);
 }
 
-static void li__W1(__li__FB *li__X1)
+static void li__51(__li__FB *li__A2)
 /* (Exact String_alias{li__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__Y1,li__0DD;
- li__Y1=li__X1->li__LB.li__2B;
-  li__0DD=0;
-  while ((li__0DD <= li__Y1)) {
-    print_char(((__li__MB *)li__X1->li__LB.li__3B)[li__0DD]);
-    li__0DD=(__li__K)(li__0DD + 1);
+   __li__K li__B2,li__MED;
+ li__B2=li__A2->li__LB.li__2B;
+  li__MED=0;
+  while ((li__MED <= li__B2)) {
+    print_char(((__li__MB *)li__A2->li__LB.li__3B)[li__MED]);
+    li__MED=(__li__K)(li__MED + 1);
   };
 }
 
 static void li__XF(__li__AC *li__ZF)
 /* (Exact String_buffer{NULLxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__DNE;
-  __li__GB *li__GJT,*li__HJT,*li__IJT;
-  __li__MB *li__S2;
- li__S2=li__XLE(((__li__AC *)li__ZF));
-  getcwd((li__S2),(li__ZF->li__T2));
-  li__DNE=((__li__AC *)li__ZF);
-  li__DNE->li__BC.li__2B=-1;
-  li__S2=li__DNE->li__BC.li__3B;
-  li__GJT=&(li__DNE->li__BC);
-  li__HJT=&(li__DNE->li__BC);
-  li__IJT=&(li__DNE->li__BC);
-  while ((((__li__MB *)li__S2)[(__li__K)(li__GJT->li__2B + 1)] != '\0')) {
-    li__HJT->li__2B=(__li__K)(li__IJT->li__2B + 1);
+   __li__AC *li__VNE;
+  __li__GB *li__0ET,*li__1ET,*li__2ET;
+  __li__MB *li__12;
+ li__12=li__JME(((__li__AC *)li__ZF));
+  getcwd((li__12),(li__ZF->li__22));
+  li__VNE=((__li__AC *)li__ZF);
+  li__VNE->li__BC.li__2B=-1;
+  li__12=li__VNE->li__BC.li__3B;
+  li__0ET=&(li__VNE->li__BC);
+  li__1ET=&(li__VNE->li__BC);
+  li__2ET=&(li__VNE->li__BC);
+  while ((((__li__MB *)li__12)[(__li__K)(li__0ET->li__2B + 1)] != '\0')) {
+    li__1ET->li__2B=(__li__K)(li__2ET->li__2B + 1);
   };
-  li__ZNE(((__li__AC *)li__ZF),'/');
+  li__LOE(((__li__AC *)li__ZF),'/');
   ;
 }
 
-static void li__GIE(__li__AC *li__HIE,__li__FB *li__IIE)
+static void li__YIE(__li__AC *li__ZIE,__li__FB *li__0IE)
 /* (Exact String_buffer{li__AC},Exact String_alias{NULLxli__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__VAR,li__TIE,li__ROT;
-  __li__MB *li__CJE;
-  __li__MB *li__QOT;
- li__VAR=(__li__K)(((__li__FB *)li__IIE)->li__LB.li__2B + 1);
-  li__TIE=(__li__K)((__li__K)(li__HIE->li__BC.li__2B + 1) + li__VAR);
-  if (li__HIE->li__T2 < li__TIE) {
-    if (0 == li__HIE->li__T2) {
-      li__HIE->li__T2=li__TIE;
-      li__CJE=li__PPG(li__TIE);
-      li__HIE->li__BC.li__3B=li__CJE;
+   __li__K li__T2Q,li__FJE,li__KKT;
+  __li__MB *li__UJE;
+  __li__MB *li__JKT;
+ li__T2Q=(__li__K)(((__li__FB *)li__0IE)->li__LB.li__2B + 1);
+  li__FJE=(__li__K)((__li__K)(li__ZIE->li__BC.li__2B + 1) + li__T2Q);
+  if (li__ZIE->li__22 < li__FJE) {
+    if (0 == li__ZIE->li__22) {
+      li__ZIE->li__22=li__FJE;
+      li__UJE=li__NOG(li__FJE);
+      li__ZIE->li__BC.li__3B=li__UJE;
     } else /* False */ {
-      li__CJE=((__li__MB *)li__HIE->li__BC.li__3B);
-      li__ROT=li__HIE->li__T2;
-      li__QOT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__CJE)),(li__TIE)))));
-      li__X5G(li__QOT,li__ROT,(__li__K)(li__TIE - 1));
-      li__HIE->li__BC.li__3B=li__QOT;
-      li__HIE->li__T2=li__TIE;
+      li__UJE=((__li__MB *)li__ZIE->li__BC.li__3B);
+      li__KKT=li__ZIE->li__22;
+      li__JKT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__UJE)),(li__FJE)))));
+      li__V4G(li__JKT,li__KKT,(__li__K)(li__FJE - 1));
+      li__ZIE->li__BC.li__3B=li__JKT;
+      li__ZIE->li__22=li__FJE;
     };
   };
-  li__ZBF(((__li__MB *)li__HIE->li__BC.li__3B),li__IIE->li__LB.li__3B,(__li__K)(li__HIE->li__BC.li__2B + 1),li__VAR);
-  li__HIE->li__BC.li__2B=(__li__K)(li__TIE - 1);
+  li__LCF(((__li__MB *)li__ZIE->li__BC.li__3B),li__0IE->li__LB.li__3B,(__li__K)(li__ZIE->li__BC.li__2B + 1),li__T2Q);
+  li__ZIE->li__BC.li__2B=(__li__K)(li__FJE - 1);
 }
 
-static void li__YJE(__li__AC *li__ZJE,void *li__0JE)
+static void li__KKE(__li__AC *li__LKE,void *li__MKE)
 /* (Exact String_buffer{li__AC},String{NULLxli__FBxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__DKE,li__FKE,li__LMT;
-  __li__MB *li__UKE,*li__FLE;
-  __li__MB *li__KMT;
- if (((struct ___OBJ *)li__0JE)->__id==__li__FB__) {
-    li__DKE=(__li__K)(((__li__FB *)li__0JE)->li__LB.li__2B + 1);
+   __li__K li__VKE,li__XKE,li__0HT;
+  __li__MB *li__GLE,*li__XLE;
+  __li__MB *li__ZHT;
+ if (((struct ___OBJ *)li__MKE)->__id==__li__FB__) {
+    li__VKE=(__li__K)(((__li__FB *)li__MKE)->li__LB.li__2B + 1);
   } else /* String_buffer */ {
-    li__DKE=(__li__K)(((__li__AC *)li__0JE)->li__BC.li__2B + 1);
+    li__VKE=(__li__K)(((__li__AC *)li__MKE)->li__BC.li__2B + 1);
   };
-  li__FKE=(__li__K)((__li__K)(li__ZJE->li__BC.li__2B + 1) + li__DKE);
-  if (li__ZJE->li__T2 < li__FKE) {
-    if (0 == li__ZJE->li__T2) {
-      li__ZJE->li__T2=li__FKE;
-      li__UKE=li__PPG(li__FKE);
-      li__ZJE->li__BC.li__3B=li__UKE;
+  li__XKE=(__li__K)((__li__K)(li__LKE->li__BC.li__2B + 1) + li__VKE);
+  if (li__LKE->li__22 < li__XKE) {
+    if (0 == li__LKE->li__22) {
+      li__LKE->li__22=li__XKE;
+      li__GLE=li__NOG(li__XKE);
+      li__LKE->li__BC.li__3B=li__GLE;
     } else /* False */ {
-      li__UKE=((__li__MB *)li__ZJE->li__BC.li__3B);
-      li__LMT=li__ZJE->li__T2;
-      li__KMT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__UKE)),(li__FKE)))));
-      li__X5G(li__KMT,li__LMT,(__li__K)(li__FKE - 1));
-      li__ZJE->li__BC.li__3B=li__KMT;
-      li__ZJE->li__T2=li__FKE;
+      li__GLE=((__li__MB *)li__LKE->li__BC.li__3B);
+      li__0HT=li__LKE->li__22;
+      li__ZHT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__GLE)),(li__XKE)))));
+      li__V4G(li__ZHT,li__0HT,(__li__K)(li__XKE - 1));
+      li__LKE->li__BC.li__3B=li__ZHT;
+      li__LKE->li__22=li__XKE;
     };
   };
-  li__UKE=li__ZJE->li__BC.li__3B;
-  if (((struct ___OBJ *)li__0JE)->__id==__li__FB__) {
-    li__FLE=((__li__FB *)li__0JE)->li__LB.li__3B;
+  li__GLE=li__LKE->li__BC.li__3B;
+  if (((struct ___OBJ *)li__MKE)->__id==__li__FB__) {
+    li__XLE=((__li__FB *)li__MKE)->li__LB.li__3B;
   } else /* String_buffer */ {
-    li__FLE=((__li__AC *)li__0JE)->li__BC.li__3B;
+    li__XLE=((__li__AC *)li__MKE)->li__BC.li__3B;
   };
-  li__ZBF(((__li__MB *)li__UKE),li__FLE,(__li__K)(li__ZJE->li__BC.li__2B + 1),li__DKE);
-  li__ZJE->li__BC.li__2B=(__li__K)(li__FKE - 1);
+  li__LCF(((__li__MB *)li__GLE),li__XLE,(__li__K)(li__LKE->li__BC.li__2B + 1),li__VKE);
+  li__LKE->li__BC.li__2B=(__li__K)(li__XKE - 1);
 }
 
-static __li__AC* li__1QE(__li__AC *li__2QE,void *li__3QE)
+static __li__AC* li__NRE(__li__AC *li__ORE,void *li__PRE)
 /* (Exact String_buffer{li__AC},String{li__FB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__LRE,*li__ZAJ,*li__4QE;
-  __li__K li__44Q,li__FBJ,li__FQG;
-  __li__MB *li__UBJ;
-  __li__MB *li__U5G;
- li__LRE=li__LKB((__li__K)((__li__K)(li__2QE->li__BC.li__2B + 1) + (__li__K)(((__li__FB *)li__3QE)->li__LB.li__2B + 1)));
-  li__ZAJ=((__li__AC *)li__LRE);
-  li__44Q=(__li__K)(li__2QE->li__BC.li__2B + 1);
-  li__FBJ=(__li__K)((__li__K)(li__ZAJ->li__BC.li__2B + 1) + li__44Q);
-  if (li__ZAJ->li__T2 < li__FBJ) {
-    if (0 == li__ZAJ->li__T2) {
-      li__ZAJ->li__T2=li__FBJ;
-      li__UBJ=li__PPG(li__FBJ);
-      li__ZAJ->li__BC.li__3B=li__UBJ;
+   __li__AC *li__3RE,*li__W5I,*li__QRE;
+  __li__K li__20Q,li__CAJ,li__DPG;
+  __li__MB *li__RAJ;
+  __li__MB *li__S4G;
+ li__3RE=li__UKB((__li__K)((__li__K)(li__ORE->li__BC.li__2B + 1) + (__li__K)(((__li__FB *)li__PRE)->li__LB.li__2B + 1)));
+  li__W5I=((__li__AC *)li__3RE);
+  li__20Q=(__li__K)(li__ORE->li__BC.li__2B + 1);
+  li__CAJ=(__li__K)((__li__K)(li__W5I->li__BC.li__2B + 1) + li__20Q);
+  if (li__W5I->li__22 < li__CAJ) {
+    if (0 == li__W5I->li__22) {
+      li__W5I->li__22=li__CAJ;
+      li__RAJ=li__NOG(li__CAJ);
+      li__W5I->li__BC.li__3B=li__RAJ;
     } else /* False */ {
-      li__UBJ=((__li__MB *)li__ZAJ->li__BC.li__3B);
-      li__FQG=li__ZAJ->li__T2;
-      li__U5G=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__UBJ)),(li__FBJ)))));
-      li__X5G(li__U5G,li__FQG,(__li__K)(li__FBJ - 1));
-      li__ZAJ->li__BC.li__3B=li__U5G;
-      li__ZAJ->li__T2=li__FBJ;
+      li__RAJ=((__li__MB *)li__W5I->li__BC.li__3B);
+      li__DPG=li__W5I->li__22;
+      li__S4G=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__RAJ)),(li__CAJ)))));
+      li__V4G(li__S4G,li__DPG,(__li__K)(li__CAJ - 1));
+      li__W5I->li__BC.li__3B=li__S4G;
+      li__W5I->li__22=li__CAJ;
     };
   };
-  li__ZBF(((__li__MB *)li__ZAJ->li__BC.li__3B),li__2QE->li__BC.li__3B,(__li__K)(li__ZAJ->li__BC.li__2B + 1),li__44Q);
-  li__ZAJ->li__BC.li__2B=(__li__K)(li__FBJ - 1);
-  li__YJE(((__li__AC *)li__LRE),li__3QE);
-  li__4QE=li__LRE;
+  li__LCF(((__li__MB *)li__W5I->li__BC.li__3B),li__ORE->li__BC.li__3B,(__li__K)(li__W5I->li__BC.li__2B + 1),li__20Q);
+  li__W5I->li__BC.li__2B=(__li__K)(li__CAJ - 1);
+  li__KKE(((__li__AC *)li__3RE),li__PRE);
+  li__QRE=li__3RE;
   ;
-  return(li__4QE);
+  return(li__QRE);
 }
 
-static void li__3ZI(__li__AC *li__4ZI)
+static void li__0YI(__li__AC *li__1YI)
 /* (Exact String_buffer{li__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__MOJ,li__V4J;
- li__MOJ=li__4ZI->li__BC.li__2B;
-  li__V4J=0;
-  while ((li__V4J <= li__MOJ)) {
-    print_char(((__li__MB *)li__4ZI->li__BC.li__3B)[li__V4J]);
-    li__V4J=(__li__K)(li__V4J + 1);
+   __li__K li__JNJ,li__S3J;
+ li__JNJ=li__1YI->li__BC.li__2B;
+  li__S3J=0;
+  while ((li__S3J <= li__JNJ)) {
+    print_char(((__li__MB *)li__1YI->li__BC.li__3B)[li__S3J]);
+    li__S3J=(__li__K)(li__S3J + 1);
   };
   print_char('\n');
 }
 
-static __li__AC* li__CRB()
+static __li__AC* li__LRB()
 /* () With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__FRB,*li__NRB,*li__ERB;
-  __li__K li__UJT;
-  __li__C li__MCT;
- li__FRB=(__li__AC *)NULL;
-  li__MCT=(li__FFB.li__DFB.li__GSB < 0);
-  if (li__MCT) {
-    li__NRB=li__LKB(512);
-    li__FRB=li__NRB;
+   __li__AC *li__ORB,*li__WRB,*li__NRB;
+  __li__K li__MKT;
+  __li__C li__33S;
+ li__ORB=(__li__AC *)NULL;
+  li__33S=(li__OFB.li__MFB.li__PSB < 0);
+  if (li__33S) {
+    li__WRB=li__UKB(512);
+    li__ORB=li__WRB;
   } else /* False */ {
-    li__UJT=li__FFB.li__DFB.li__GSB;
-    li__NRB=(__li__AC *)((void **)li__FFB.li__MSB)[li__UJT];
-    li__FFB.li__DFB.li__GSB=(__li__K)(li__FFB.li__DFB.li__GSB - 1);
-    li__FRB=li__NRB;
-    ((__li__AC *)li__NRB)->li__BC.li__2B=-1;
+    li__MKT=li__OFB.li__MFB.li__PSB;
+    li__WRB=(__li__AC *)((void **)li__OFB.li__VSB)[li__MKT];
+    li__OFB.li__MFB.li__PSB=(__li__K)(li__OFB.li__MFB.li__PSB - 1);
+    li__ORB=li__WRB;
+    ((__li__AC *)li__WRB)->li__BC.li__2B=-1;
     ;
   };
-  li__ERB=li__FRB;
-  return(li__ERB);
+  li__NRB=li__ORB;
+  return(li__NRB);
 }
 
-static void li__0RB(__li__AFB *li__1RB,__li__AC *li__3RB)
-/* (Exact Flat Array(String_buffer){li__AFB},Exact String_buffer{NULLxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
+static void li__DSB(__li__JFB *li__ESB,__li__AC *li__GSB)
+/* (Exact Flat Array(String_buffer){li__JFB},Exact String_buffer{NULLxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__WWB,li__5RB,li__CKT,li__XWC;
-  __li__T li__DKT;
-  __li__C li__JWC;
-  __li__PB li__LXC;
-  __li__AFB *li__OWC;
-  __li__PB li__QSB;
- li__WWB=(__li__K)(li__1RB->li__DFB.li__GSB + 1);
-  li__5RB=(__li__K)(li__WWB + 1);
-  li__JWC=(li__5RB > li__1RB->li__HWC);
-  li__LXC.self=li__1RB;
-  if (li__JWC) {
-    li__OWC=((__li__AFB *)li__LXC.self);
-    li__DKT=((__li__T )li__5RB);
-    li__CKT=0;
-    if (0 == li__DKT) {
-      li__CKT=64;
+   __li__K li__5WB,li__ISB,li__RFT,li__JXC;
+  __li__T li__SFT;
+  __li__C li__1WC;
+  __li__PB li__3XC;
+  __li__JFB *li__AXC;
+  __li__PB li__ZSB;
+ li__5WB=(__li__K)(li__ESB->li__MFB.li__PSB + 1);
+  li__ISB=(__li__K)(li__5WB + 1);
+  li__1WC=(li__ISB > li__ESB->li__ZWC);
+  li__3XC.self=li__ESB;
+  if (li__1WC) {
+    li__AXC=((__li__JFB *)li__3XC.self);
+    li__SFT=((__li__T )li__ISB);
+    li__RFT=0;
+    if (0 == li__SFT) {
+      li__RFT=64;
     } else /* False */ {
-      li__CKT=((__li__K )(__builtin_clzll((li__DKT))));
+      li__RFT=((__li__K )(__builtin_clzll((li__SFT))));
     };
-    li__XWC=(__li__K)(1 << (__li__K)(64 - li__CKT));
-    li__OWC->li__MSB=((void **)((__li__RB )(realloc((((__li__RB )((void **)li__OWC->li__MSB))),((__li__K)(li__XWC * ((__li__K )(sizeof(void *)))))))));
-    li__OWC->li__HWC=li__XWC;
+    li__JXC=(__li__K)(1 << (__li__K)(64 - li__RFT));
+    li__AXC->li__VSB=((void **)((__li__RB )(realloc((((__li__RB )((void **)li__AXC->li__VSB))),((__li__K)(li__JXC * ((__li__K )(sizeof(void *)))))))));
+    li__AXC->li__ZWC=li__JXC;
   };
-  li__QSB.self=li__1RB;
-  li__OWC=((__li__AFB *)li__QSB.self);
-  li__OWC->li__DFB.li__GSB=(__li__K)(li__OWC->li__DFB.li__GSB + 1);
-  ((void **)li__OWC->li__MSB)[li__OWC->li__DFB.li__GSB]=li__3RB;
+  li__ZSB.self=li__ESB;
+  li__AXC=((__li__JFB *)li__ZSB.self);
+  li__AXC->li__MFB.li__PSB=(__li__K)(li__AXC->li__MFB.li__PSB + 1);
+  ((void **)li__AXC->li__VSB)[li__AXC->li__MFB.li__PSB]=li__GSB;
   ;
 }
 
 static __li__C li__IK(__li__FB *li__JK,__li__MB li__KK)
 /* (Exact String_alias{li__FB},Flat Char{li__MB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__NK,li__KBB;
-  __li__MB *li__MK,*li__3AB;
+   __li__K li__NK,li__TBB;
+  __li__MB *li__MK,*li__GBB;
   __li__C li__LK;
  li__MK=li__JK->li__LB.li__3B;
   li__NK=li__JK->li__LB.li__2B;
-  li__3AB=((__li__MB *)li__MK);
-  li__KBB=li__NK;
-  while ((! ((li__KBB < 0) || (li__KK == li__3AB[li__KBB])))) {
-    li__KBB=(__li__K)(li__KBB - 1);
+  li__GBB=((__li__MB *)li__MK);
+  li__TBB=li__NK;
+  while ((! ((li__TBB < 0) || (li__KK == li__GBB[li__TBB])))) {
+    li__TBB=(__li__K)(li__TBB - 1);
   };
-  li__LK=(li__KBB >= 0);
+  li__LK=(li__TBB >= 0);
   return(li__LK);
 }
 
-static void li__LPB(void *li__NPB)
+static void li__UPB(void *li__WPB)
 /* (String{li__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-  li__W1((__li__FB *)li__NPB);
+  li__51((__li__FB *)li__WPB);
   print_char('\n');
   if (! ((__li__XB *)li__XB__)->li__QC) {
-    li__W1((&__string_73));
+    li__51((&__string_74));
     print_char('\n');
   };
   exit((1));
 }
 
-static void li__5CB(__li__FB *li__BDB)
+static void li__IDB(__li__FB *li__KDB)
 /* (Exact String_alias{NULLxli__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__HKT,*li__IDB;
-  __li__MB *li__OUE;
+   __li__AC *li__WFT,*li__RDB;
+  __li__MB *li__AVE;
  if (((__li__XB *)li__XB__)->li__QC) {
-    li__HKT=li__LKB((__li__K)((__li__K)((&__string_74)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__BDB)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__HKT),(&__string_74));
-    li__YJE(((__li__AC *)li__HKT),li__BDB);
-    li__IDB=li__1QE(((__li__AC *)li__HKT),(&__string_75));
-    li__3ZI(((__li__AC *)li__IDB));
+    li__WFT=li__UKB((__li__K)((__li__K)((&__string_75)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__KDB)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WFT),(&__string_75));
+    li__KKE(((__li__AC *)li__WFT),li__KDB);
+    li__RDB=li__NRE(((__li__AC *)li__WFT),(&__string_76));
+    li__0YI(((__li__AC *)li__RDB));
   };
-  li__HKT=((__li__AC *)li__KEB);
-  li__HKT->li__BC.li__2B=li__BDB->li__LB.li__2B;
-  if (li__HKT->li__BC.li__2B >= 0) {
-    if (li__HKT->li__T2 < (__li__K)(li__HKT->li__BC.li__2B + 1)) {
-      li__OUE=li__PPG((__li__K)(li__HKT->li__BC.li__2B + 1));
-      li__HKT->li__BC.li__3B=li__OUE;
-      li__HKT->li__T2=(__li__K)(li__HKT->li__BC.li__2B + 1);
+  li__WFT=((__li__AC *)li__TEB);
+  li__WFT->li__BC.li__2B=li__KDB->li__LB.li__2B;
+  if (li__WFT->li__BC.li__2B >= 0) {
+    if (li__WFT->li__22 < (__li__K)(li__WFT->li__BC.li__2B + 1)) {
+      li__AVE=li__NOG((__li__K)(li__WFT->li__BC.li__2B + 1));
+      li__WFT->li__BC.li__3B=li__AVE;
+      li__WFT->li__22=(__li__K)(li__WFT->li__BC.li__2B + 1);
     };
-    li__Z3F(((__li__MB *)li__HKT->li__BC.li__3B),li__BDB->li__LB.li__3B,li__HKT->li__BC.li__2B);
+    li__E3F(((__li__MB *)li__WFT->li__BC.li__3B),li__KDB->li__LB.li__3B,li__WFT->li__BC.li__2B);
   };
-  li__OUE=li__XLE(((__li__AC *)li__KEB));
-  if (((__li__K )(chdir((char*)(li__OUE)))) != 0) {
-    li__LPB((&__string_76));
+  li__AVE=li__JME(((__li__AC *)li__TEB));
+  if (((__li__K )(chdir((char*)(li__AVE)))) != 0) {
+    li__UPB((&__string_77));
   };
   li__XF(((__li__XB *)li__XB__)->li__EC);
 }
 
-static __li__FB* li__2DB(void *li__4DB)
+static __li__FB* li__FEB(void *li__HEB)
 /* (String{li__FB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__FB *li__BEB,*li__NEB,*li__5DB;
-  __li__MB *li__EEB;
- li__BEB=(__li__FB *)NULL;
-  li__EEB=((__li__MB *)(getenv((char*)(((__li__FB *)li__4DB)->li__LB.li__3B))));
-  if ((void *)li__EEB != (void *)NULL) {
-    li__MVE(((__li__AC *)li__KEB),li__EEB);
-    li__NEB=li__ZGE(((__li__AC *)li__KEB));
-    li__BEB=li__NEB;
+   __li__FB *li__KEB,*li__WEB,*li__IEB;
+  __li__MB *li__NEB;
+ li__KEB=(__li__FB *)NULL;
+  li__NEB=((__li__MB *)(getenv((char*)(((__li__FB *)li__HEB)->li__LB.li__3B))));
+  if ((void *)li__NEB != (void *)NULL) {
+    li__4VE(((__li__AC *)li__TEB),li__NEB);
+    li__WEB=li__LHE(((__li__AC *)li__TEB));
+    li__KEB=li__WEB;
   };
-  li__5DB=li__BEB;
-  return(li__5DB);
+  li__IEB=li__KEB;
+  return(li__IEB);
 }
 
-static void li__MUL(__li__AC *li__NUL)
+static void li__URL(__li__AC *li__VRL)
 /* (Exact String_buffer{li__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__LKT;
-  __li__C li__0UL;
- if (-1 == li__NUL->li__BC.li__2B) {
-    li__0UL=li__B__;
+   __li__K li__0FT;
+  __li__C li__CSL;
+ if (-1 == li__VRL->li__BC.li__2B) {
+    li__CSL=li__B__;
   } else /* False */ {
-    li__LKT=li__NUL->li__BC.li__2B;
-    li__0UL=(((__li__MB *)li__NUL->li__BC.li__3B)[li__LKT] != '/');
+    li__0FT=li__VRL->li__BC.li__2B;
+    li__CSL=(((__li__MB *)li__VRL->li__BC.li__3B)[li__0FT] != '/');
   };
-  if (li__0UL) {
-    li__ZNE(li__NUL,'/');
+  if (li__CSL) {
+    li__LOE(li__VRL,'/');
   };
   ;
 }
 
-static __li__MB* li__XLE(__li__AC *li__YLE)
+static __li__MB* li__JME(__li__AC *li__KME)
 /* (Exact String_buffer{li__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__MB *li__ZLE;
- if (li__YLE->li__T2 > (__li__K)(li__YLE->li__BC.li__2B + 1)) {
-    ((__li__MB *)li__YLE->li__BC.li__3B)[(__li__K)(li__YLE->li__BC.li__2B + 1)]='\0';
+   __li__MB *li__LME;
+ if (li__KME->li__22 > (__li__K)(li__KME->li__BC.li__2B + 1)) {
+    ((__li__MB *)li__KME->li__BC.li__3B)[(__li__K)(li__KME->li__BC.li__2B + 1)]='\0';
   } else /* False */ {
-    li__ZNE(li__YLE,'\0');
-    li__YLE->li__BC.li__2B=(__li__K)(li__YLE->li__BC.li__2B - 1);
+    li__LOE(li__KME,'\0');
+    li__KME->li__BC.li__2B=(__li__K)(li__KME->li__BC.li__2B - 1);
   };
-  li__ZLE=li__YLE->li__BC.li__3B;
+  li__LME=li__KME->li__BC.li__3B;
   ;
-  return(li__ZLE);
+  return(li__LME);
 }
 
-static __li__RB li__2CC(void *li__4CC)
+static __li__RB li__ODC(void *li__QDC)
 /* (String{NULLxli__FBxli__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__RB li__5CC;
-  __li__MB *li__BDC;
- if (((struct ___OBJ *)li__4CC)->__id==__li__FB__) {
-    li__BDC=((__li__FB *)li__4CC)->li__LB.li__3B;
+   __li__RB li__RDC;
+  __li__MB *li__TDC;
+ if (((struct ___OBJ *)li__QDC)->__id==__li__FB__) {
+    li__TDC=((__li__FB *)li__QDC)->li__LB.li__3B;
   } else /* String_buffer */ {
-    li__BDC=li__XLE(((__li__AC *)li__4CC));
+    li__TDC=li__JME(((__li__AC *)li__QDC));
   };
-  li__5CC=((__li__RB )(fopen((char*)(li__BDC),"rb")));
-  return(li__5CC);
+  li__RDC=((__li__RB )(fopen((char*)(li__TDC),"rb")));
+  return(li__RDC);
 }
 
-static void li__QKC(__li__AC *li__SKC)
+static void li__CLC(__li__AC *li__ELC)
 /* (Exact String_buffer{NULLxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-  li__3ZI(((__li__AC *)li__SKC));
+  li__0YI(((__li__AC *)li__ELC));
   if (! ((__li__XB *)li__XB__)->li__QC) {
-    li__W1((&__string_73));
+    li__51((&__string_74));
     print_char('\n');
   };
   exit((1));
 }
 
-static __li__K li__TXC(__li__AC *li__VXC)
+static __li__K li__FYC(__li__AC *li__HYC)
 /* (Exact String_buffer{NULLxli__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__UHD,li__WXC;
+   __li__K li__GID,li__IYC;
  if (((__li__XB *)li__XB__)->li__QC) {
-    li__3ZI(((__li__AC *)li__VXC));
+    li__0YI(((__li__AC *)li__HYC));
   };
   fflush(stdout);
-  li__UHD=li__KJD(li__VXC,li__I__);
-  if (((__li__XB *)li__XB__)->li__QC && (li__UHD != 0)) {
-    li__W1((&__string_77));
-    li__NXF(li__UHD);
+  li__GID=li__2JD(li__HYC,li__I__);
+  if (((__li__XB *)li__XB__)->li__QC && (li__GID != 0)) {
+    li__51((&__string_78));
+    li__5XF(li__GID);
   };
-  if (li__UHD != 0) {
-    exit((li__UHD));
+  if (li__GID != 0) {
+    exit((li__GID));
   };
-  li__WXC=li__UHD;
-  return(li__WXC);
+  li__IYC=li__GID;
+  return(li__IYC);
 }
 
-static void li__SXB(__li__FB *li__UXB)
+static void li__1XB(__li__FB *li__3XB)
 /* (Exact String_alias{li__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__WXB,li__UOT;
-  __li__AC *li__PKT,*li__YXB,*li__TKT,*li__AYB,*li__XKT,*li__1YB;
-  __li__AC *li__0KT,*li__WOT;
-  __li__RB li__3QD;
-  __li__C li__GYB,li__SZB;
- li__WXB=0;
-  li__PKT=li__LKB((__li__K)((__li__K)((&__string_78)->li__LB.li__2B + 1) + (__li__K)(li__UXB->li__LB.li__2B + 1)));
-  li__GIE(((__li__AC *)li__PKT),(&__string_78));
-  li__YJE(((__li__AC *)li__PKT),li__UXB);
-  li__YXB=li__1QE(((__li__AC *)li__PKT),(&__string_4));
-  li__3ZI(((__li__AC *)li__YXB));
+   __li__K li__5XB,li__SKT;
+  __li__AC *li__4FT,*li__BYB,*li__CGT,*li__JYB,*li__GGT,*li__EZB;
+  __li__AC *li__JGT,*li__UKT;
+  __li__RB li__PRD;
+  __li__C li__PYB,li__1ZB;
+ li__5XB=0;
+  li__4FT=li__UKB((__li__K)((__li__K)((&__string_79)->li__LB.li__2B + 1) + (__li__K)(li__3XB->li__LB.li__2B + 1)));
+  li__YIE(((__li__AC *)li__4FT),(&__string_79));
+  li__KKE(((__li__AC *)li__4FT),li__3XB);
+  li__BYB=li__NRE(((__li__AC *)li__4FT),(&__string_4));
+  li__0YI(((__li__AC *)li__BYB));
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__TKT=li__LKB((__li__K)((__li__K)((&__string_79)->li__LB.li__2B + 1) + (__li__K)(li__UXB->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__TKT),(&__string_79));
-    li__YJE(((__li__AC *)li__TKT),li__UXB);
-    li__AYB=li__1QE(((__li__AC *)li__TKT),(&__string_4));
-    li__3ZI(((__li__AC *)li__AYB));
+    li__CGT=li__UKB((__li__K)((__li__K)((&__string_80)->li__LB.li__2B + 1) + (__li__K)(li__3XB->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__CGT),(&__string_80));
+    li__KKE(((__li__AC *)li__CGT),li__3XB);
+    li__JYB=li__NRE(((__li__AC *)li__CGT),(&__string_4));
+    li__0YI(((__li__AC *)li__JYB));
   };
-  li__5CB(((__li__WB *)li__WB__)->li__1E);
-  li__GYB=li__GEC(li__UXB);
-  if (! li__GYB) {
+  li__IDB(((__li__WB *)li__WB__)->li__1E);
+  li__PYB=li__YEC(li__3XB);
+  if (! li__PYB) {
     if (((__li__XB *)li__XB__)->li__QC) {
-      li__XKT=li__LKB((__li__K)((__li__K)((&__string_80)->li__LB.li__2B + 1) + (__li__K)(li__UXB->li__LB.li__2B + 1)));
-      li__GIE(((__li__AC *)li__XKT),(&__string_80));
-      li__YJE(((__li__AC *)li__XKT),li__UXB);
-      li__1YB=li__1QE(((__li__AC *)li__XKT),(&__string_4));
-      li__3ZI(((__li__AC *)li__1YB));
+      li__GGT=li__UKB((__li__K)((__li__K)((&__string_81)->li__LB.li__2B + 1) + (__li__K)(li__3XB->li__LB.li__2B + 1)));
+      li__YIE(((__li__AC *)li__GGT),(&__string_81));
+      li__KKE(((__li__AC *)li__GGT),li__3XB);
+      li__EZB=li__NRE(((__li__AC *)li__GGT),(&__string_4));
+      li__0YI(((__li__AC *)li__EZB));
     };
-    li__3QD=((__li__RB )(fopen((char*)(li__UXB->li__LB.li__3B),"w+b")));
-    if (li__3QD != (void *)NULL) {
-      fclose((FILE*)((li__3QD)));
+    li__PRD=((__li__RB )(fopen((char*)(li__3XB->li__LB.li__3B),"w+b")));
+    if (li__PRD != (void *)NULL) {
+      fclose((FILE*)((li__PRD)));
     };
   };
-  li__GYB=li__GEC(li__UXB);
-  if (li__GYB) {
-    ((__li__WB *)li__WB__)->li__DF=li__UXB;
-    li__TKT=li__CRB();
-    li__AYB=li__CRB();
-    li__GIE(((__li__AC *)li__AYB),(&__string_81));
-    li__APC(li__AYB,((__li__WB *)li__WB__)->li__5M);
-    li__APC(li__AYB,((__li__WB *)li__WB__)->li__SN);
-    li__GIE(((__li__AC *)li__AYB),(&__string_82));
-    li__SZB=li__ZXC(li__UXB,li__TKT);
-    if (li__SZB) {
-      li__XKT=((__li__AC *)li__TKT);
-      li__UOT=li__H5M(li__XKT,(&__string_83));
-      li__WXB=li__UOT;
-      if (li__UOT < 0) {
-        li__GIE(((__li__AC *)li__TKT),(&__string_83));
-        li__3UM(((__li__AC *)li__TKT),li__AYB);
+  li__PYB=li__YEC(li__3XB);
+  if (li__PYB) {
+    ((__li__WB *)li__WB__)->li__DF=li__3XB;
+    li__CGT=li__LRB();
+    li__JYB=li__LRB();
+    li__YIE(((__li__AC *)li__JYB),(&__string_82));
+    li__SPC(li__JYB,((__li__WB *)li__WB__)->li__5M);
+    li__SPC(li__JYB,((__li__WB *)li__WB__)->li__SN);
+    li__YIE(((__li__AC *)li__JYB),(&__string_83));
+    li__1ZB=li__LYC(li__3XB,li__CGT);
+    if (li__1ZB) {
+      li__GGT=((__li__AC *)li__CGT);
+      li__SKT=li__51M(li__GGT,(&__string_84));
+      li__5XB=li__SKT;
+      if (li__SKT < 0) {
+        li__YIE(((__li__AC *)li__CGT),(&__string_84));
+        li__0RM(((__li__AC *)li__CGT),li__JYB);
       } else /* False */ {
-        li__WXB=(__li__K)(li__UOT + (__li__K)((&__string_83)->li__LB.li__2B + 1));
-        li__NWJ:
+        li__5XB=(__li__K)(li__SKT + (__li__K)((&__string_84)->li__LB.li__2B + 1));
+        li__KVJ:
         {
-          li__0KT=((__li__AC *)li__TKT);
-          if (((__li__MB *)li__0KT->li__BC.li__3B)[li__WXB] != '\n') {
-            li__WOT=((__li__AC *)li__TKT);
-            li__KFN(li__WOT,li__WXB,li__WXB);
-            goto li__NWJ;
+          li__JGT=((__li__AC *)li__CGT);
+          if (((__li__MB *)li__JGT->li__BC.li__3B)[li__5XB] != '\n') {
+            li__UKT=((__li__AC *)li__CGT);
+            li__CCN(li__UKT,li__5XB,li__5XB);
+            goto li__KVJ;
           };
         };
-        li__0KT=((__li__AC *)li__TKT);
-        li__KFN(li__0KT,li__WXB,li__WXB);
-        li__NRM(((__li__AC *)li__TKT),li__AYB,li__WXB);
+        li__JGT=((__li__AC *)li__CGT);
+        li__CCN(li__JGT,li__5XB,li__5XB);
+        li__KOM(((__li__AC *)li__CGT),li__JYB,li__5XB);
       };
-      li__W2B(li__UXB,li__TKT);
+      li__52B(li__3XB,li__CGT);
     } else /* False */ {
-      li__XKT=li__LKB((__li__K)((__li__K)((&__string_84)->li__LB.li__2B + 1) + (__li__K)(li__UXB->li__LB.li__2B + 1)));
-      li__GIE(((__li__AC *)li__XKT),(&__string_84));
-      li__YJE(((__li__AC *)li__XKT),li__UXB);
-      li__1YB=li__1QE(((__li__AC *)li__XKT),(&__string_4));
-      li__QKC(li__1YB);
+      li__GGT=li__UKB((__li__K)((__li__K)((&__string_85)->li__LB.li__2B + 1) + (__li__K)(li__3XB->li__LB.li__2B + 1)));
+      li__YIE(((__li__AC *)li__GGT),(&__string_85));
+      li__KKE(((__li__AC *)li__GGT),li__3XB);
+      li__EZB=li__NRE(((__li__AC *)li__GGT),(&__string_4));
+      li__CLC(li__EZB);
     };
-    li__0RB(&(li__FFB),li__AYB);
-    li__0RB(&(li__FFB),li__TKT);
+    li__DSB(&(li__OFB),li__JYB);
+    li__DSB(&(li__OFB),li__CGT);
   };
 }
 
-static void li__WRD(__li__FB *li__YRD)
+static void li__ISD(__li__FB *li__KSD)
 /* (Exact String_alias{li__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__0RD,li__LUM;
-  __li__AC *li__DLT,*li__2RD,*li__HLT,*li__ESD,*li__3TM,*li__PRG;
-  __li__AC *li__0OT;
-  __li__C li__ITD,li__WTD;
- li__0RD=0;
-  li__DLT=li__LKB((__li__K)((__li__K)((&__string_78)->li__LB.li__2B + 1) + (__li__K)(li__YRD->li__LB.li__2B + 1)));
-  li__GIE(((__li__AC *)li__DLT),(&__string_78));
-  li__YJE(((__li__AC *)li__DLT),li__YRD);
-  li__2RD=li__1QE(((__li__AC *)li__DLT),(&__string_4));
-  li__3ZI(((__li__AC *)li__2RD));
+   __li__K li__MSD,li__IRM;
+  __li__AC *li__SGT,*li__OSD,*li__WGT,*li__WSD,*li__0QM,*li__NQG;
+  __li__AC *li__YKT;
+  __li__C li__0TD,li__IUD;
+ li__MSD=0;
+  li__SGT=li__UKB((__li__K)((__li__K)((&__string_79)->li__LB.li__2B + 1) + (__li__K)(li__KSD->li__LB.li__2B + 1)));
+  li__YIE(((__li__AC *)li__SGT),(&__string_79));
+  li__KKE(((__li__AC *)li__SGT),li__KSD);
+  li__OSD=li__NRE(((__li__AC *)li__SGT),(&__string_4));
+  li__0YI(((__li__AC *)li__OSD));
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__HLT=li__LKB((__li__K)((__li__K)((&__string_79)->li__LB.li__2B + 1) + (__li__K)(li__YRD->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__HLT),(&__string_79));
-    li__YJE(((__li__AC *)li__HLT),li__YRD);
-    li__ESD=li__1QE(((__li__AC *)li__HLT),(&__string_4));
-    li__3ZI(((__li__AC *)li__ESD));
+    li__WGT=li__UKB((__li__K)((__li__K)((&__string_80)->li__LB.li__2B + 1) + (__li__K)(li__KSD->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__WGT),(&__string_80));
+    li__KKE(((__li__AC *)li__WGT),li__KSD);
+    li__WSD=li__NRE(((__li__AC *)li__WGT),(&__string_4));
+    li__0YI(((__li__AC *)li__WSD));
   };
-  li__5CB(((__li__WB *)li__WB__)->li__1E);
-  li__GEC(li__YRD);
-  li__ITD=li__GEC(li__YRD);
-  if (li__ITD) {
-    ((__li__WB *)li__WB__)->li__DF=li__YRD;
-    li__HLT=li__CRB();
-    li__ESD=li__CRB();
-    li__GIE(((__li__AC *)li__ESD),(&__string_81));
-    li__APC(li__ESD,((__li__WB *)li__WB__)->li__5M);
-    li__APC(li__ESD,((__li__WB *)li__WB__)->li__SN);
-    li__GIE(((__li__AC *)li__ESD),(&__string_82));
-    li__WTD=li__ZXC(li__YRD,li__HLT);
-    if (li__WTD) {
-      li__3TM=((__li__AC *)li__HLT);
-      li__LUM=li__H5M(li__3TM,(&__string_83));
-      li__0RD=li__LUM;
-      if (li__LUM < 0) {
-        li__GIE(((__li__AC *)li__HLT),(&__string_83));
-        li__3UM(((__li__AC *)li__HLT),li__ESD);
+  li__IDB(((__li__WB *)li__WB__)->li__1E);
+  li__YEC(li__KSD);
+  li__0TD=li__YEC(li__KSD);
+  if (li__0TD) {
+    ((__li__WB *)li__WB__)->li__DF=li__KSD;
+    li__WGT=li__LRB();
+    li__WSD=li__LRB();
+    li__YIE(((__li__AC *)li__WSD),(&__string_82));
+    li__SPC(li__WSD,((__li__WB *)li__WB__)->li__5M);
+    li__SPC(li__WSD,((__li__WB *)li__WB__)->li__SN);
+    li__YIE(((__li__AC *)li__WSD),(&__string_83));
+    li__IUD=li__LYC(li__KSD,li__WGT);
+    if (li__IUD) {
+      li__0QM=((__li__AC *)li__WGT);
+      li__IRM=li__51M(li__0QM,(&__string_84));
+      li__MSD=li__IRM;
+      if (li__IRM < 0) {
+        li__YIE(((__li__AC *)li__WGT),(&__string_84));
+        li__0RM(((__li__AC *)li__WGT),li__WSD);
       } else /* False */ {
-        li__0RD=(__li__K)(li__LUM + (__li__K)((&__string_83)->li__LB.li__2B + 1));
-        li__FXJ:
+        li__MSD=(__li__K)(li__IRM + (__li__K)((&__string_84)->li__LB.li__2B + 1));
+        li__CWJ:
         {
-          li__PRG=((__li__AC *)li__HLT);
-          if (((__li__MB *)li__PRG->li__BC.li__3B)[li__0RD] != '\n') {
-            li__0OT=((__li__AC *)li__HLT);
-            li__KFN(li__0OT,li__0RD,li__0RD);
-            goto li__FXJ;
+          li__NQG=((__li__AC *)li__WGT);
+          if (((__li__MB *)li__NQG->li__BC.li__3B)[li__MSD] != '\n') {
+            li__YKT=((__li__AC *)li__WGT);
+            li__CCN(li__YKT,li__MSD,li__MSD);
+            goto li__CWJ;
           };
         };
-        li__PRG=((__li__AC *)li__HLT);
-        li__KFN(li__PRG,li__0RD,li__0RD);
-        li__NRM(((__li__AC *)li__HLT),li__ESD,li__0RD);
+        li__NQG=((__li__AC *)li__WGT);
+        li__CCN(li__NQG,li__MSD,li__MSD);
+        li__KOM(((__li__AC *)li__WGT),li__WSD,li__MSD);
       };
-      li__W2B(li__YRD,li__HLT);
+      li__52B(li__KSD,li__WGT);
     } else /* False */ {
-      li__3TM=li__LKB((__li__K)((__li__K)((&__string_84)->li__LB.li__2B + 1) + (__li__K)(li__YRD->li__LB.li__2B + 1)));
-      li__GIE(((__li__AC *)li__3TM),(&__string_84));
-      li__YJE(((__li__AC *)li__3TM),li__YRD);
-      li__PRG=li__1QE(((__li__AC *)li__3TM),(&__string_4));
-      li__QKC(li__PRG);
+      li__0QM=li__UKB((__li__K)((__li__K)((&__string_85)->li__LB.li__2B + 1) + (__li__K)(li__KSD->li__LB.li__2B + 1)));
+      li__YIE(((__li__AC *)li__0QM),(&__string_85));
+      li__KKE(((__li__AC *)li__0QM),li__KSD);
+      li__NQG=li__NRE(((__li__AC *)li__0QM),(&__string_4));
+      li__CLC(li__NQG);
     };
-    li__0RB(&(li__FFB),li__ESD);
-    li__0RB(&(li__FFB),li__HLT);
+    li__DSB(&(li__OFB),li__WSD);
+    li__DSB(&(li__OFB),li__WGT);
   };
 }
 
-static __li__C li__ZXC(void *li__1XC,__li__AC *li__2XC)
+static __li__C li__LYC(void *li__NYC,__li__AC *li__OYC)
 /* (String{li__FB},Exact String_buffer{NULLxli__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__RB li__CYC;
-  __li__K li__ZXD;
-  __li__C li__4XC,li__3XC;
- li__4XC=li__I__;
-  li__CYC=li__2CC(li__1XC);
-  if (li__CYC != (void *)NULL) {
-    li__4XC=li__B__;
-    fseek((FILE*)((li__CYC)),0,SEEK_END);
-    li__ZXD=((__li__K )(ftell((FILE *)(li__CYC))));
-    fseek((FILE*)((li__CYC)),0,SEEK_SET);
-    li__JAC(((__li__AC *)li__2XC),li__ZXD);
-    fread((void *)((li__2XC->li__BC.li__3B)),(size_t)(1), (size_t)((li__ZXD)),(FILE*)((li__CYC)));
-    ((__li__AC *)li__2XC)->li__BC.li__2B=(__li__K)(li__ZXD - 1);
-    fclose((FILE*)((li__CYC)));
+   __li__RB li__UYC;
+  __li__K li__LYD;
+  __li__C li__QYC,li__PYC;
+ li__QYC=li__I__;
+  li__UYC=li__ODC(li__NYC);
+  if (li__UYC != (void *)NULL) {
+    li__QYC=li__B__;
+    fseek((FILE*)((li__UYC)),0,SEEK_END);
+    li__LYD=((__li__K )(ftell((FILE *)(li__UYC))));
+    fseek((FILE*)((li__UYC)),0,SEEK_SET);
+    li__1AC(((__li__AC *)li__OYC),li__LYD);
+    fread((void *)((li__OYC->li__BC.li__3B)),(size_t)(1), (size_t)((li__LYD)),(FILE*)((li__UYC)));
+    ((__li__AC *)li__OYC)->li__BC.li__2B=(__li__K)(li__LYD - 1);
+    fclose((FILE*)((li__UYC)));
   };
-  li__3XC=li__4XC;
-  return(li__3XC);
+  li__PYC=li__QYC;
+  return(li__PYC);
 }
 
-static __li__K li__P1B(void *li__R1B,__li__AC *li__S1B,__li__FB *li__T1B)
+static __li__K li__Y1B(void *li__01B,__li__AC *li__11B,__li__FB *li__21B)
 /* (String{li__FB},Exact String_buffer{NULLxli__AC},Exact String_alias{li__FB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__TQM,*li__1UJ,*li__41B;
-  __li__K li__BRM,li__U1B;
- li__TQM=((__li__AC *)li__S1B);
-  li__BRM=li__H5M(li__TQM,li__R1B);
-  if (li__BRM < 0) {
-    li__1UJ=li__LKB((__li__K)((__li__K)((&__string_85)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__R1B)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__1UJ),(&__string_85));
-    li__YJE(((__li__AC *)li__1UJ),li__R1B);
-    li__41B=li__1QE(((__li__AC *)li__1UJ),(&__string_86));
-    li__1UJ=li__1QE(((__li__AC *)li__41B),li__T1B);
-    li__41B=li__1QE(((__li__AC *)li__1UJ),(&__string_87));
-    li__QKC(li__41B);
+   __li__AC *li__QNM,*li__YTJ,*li__H2B;
+  __li__K li__4NM,li__31B;
+ li__QNM=((__li__AC *)li__11B);
+  li__4NM=li__51M(li__QNM,li__01B);
+  if (li__4NM < 0) {
+    li__YTJ=li__UKB((__li__K)((__li__K)((&__string_86)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__01B)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__YTJ),(&__string_86));
+    li__KKE(((__li__AC *)li__YTJ),li__01B);
+    li__H2B=li__NRE(((__li__AC *)li__YTJ),(&__string_87));
+    li__YTJ=li__NRE(((__li__AC *)li__H2B),li__21B);
+    li__H2B=li__NRE(((__li__AC *)li__YTJ),(&__string_88));
+    li__CLC(li__H2B);
   };
-  li__U1B=(__li__K)(li__BRM + (__li__K)(((__li__FB *)li__R1B)->li__LB.li__2B + 1));
-  return(li__U1B);
+  li__31B=(__li__K)(li__4NM + (__li__K)(((__li__FB *)li__01B)->li__LB.li__2B + 1));
+  return(li__31B);
 }
 
-static void li__KFN(__li__AC *li__LFN,__li__K li__MFN,__li__K li__NFN)
+static void li__CCN(__li__AC *li__DCN,__li__K li__ECN,__li__K li__FCN)
 /* (Exact String_buffer{li__AC},Flat Int{li__K},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__BGN,li__IGN,li__KGN,li__K1O,li__QGN;
-  __li__GB *li__BMT,*li__CMT;
-  __li__MB li__SGN;
- li__BGN=(__li__K)((__li__K)(li__NFN - li__MFN) + 1);
-  if (li__BGN > 0) {
-    li__IGN=(__li__K)(li__NFN + 1);
-    li__KGN=li__LFN->li__BC.li__2B;
-    li__K1O=li__IGN;
-    li__BMT=&(li__LFN->li__BC);
-    li__CMT=&(li__LFN->li__BC);
-    while ((li__K1O <= li__KGN)) {
-      li__QGN=(__li__K)(li__K1O - li__BGN);
-      li__SGN=((__li__MB *)li__BMT->li__3B)[li__K1O];
-      ((__li__MB *)li__CMT->li__3B)[li__QGN]=li__SGN;
-      li__K1O=(__li__K)(li__K1O + 1);
+   __li__K li__ZCN,li__ADN,li__CDN,li__2XO,li__IDN;
+  __li__GB *li__QHT,*li__RHT;
+  __li__MB li__KDN;
+ li__ZCN=(__li__K)((__li__K)(li__FCN - li__ECN) + 1);
+  if (li__ZCN > 0) {
+    li__ADN=(__li__K)(li__FCN + 1);
+    li__CDN=li__DCN->li__BC.li__2B;
+    li__2XO=li__ADN;
+    li__QHT=&(li__DCN->li__BC);
+    li__RHT=&(li__DCN->li__BC);
+    while ((li__2XO <= li__CDN)) {
+      li__IDN=(__li__K)(li__2XO - li__ZCN);
+      li__KDN=((__li__MB *)li__QHT->li__3B)[li__2XO];
+      ((__li__MB *)li__RHT->li__3B)[li__IDN]=li__KDN;
+      li__2XO=(__li__K)(li__2XO + 1);
     };
-    li__LFN->li__BC.li__2B=(__li__K)(li__LFN->li__BC.li__2B - li__BGN);
+    li__DCN->li__BC.li__2B=(__li__K)(li__DCN->li__BC.li__2B - li__ZCN);
   };
   ;
 }
 
-static void li__KPM(__li__AC *li__LPM,__li__FB *li__MPM,__li__K li__NPM)
+static void li__HMM(__li__AC *li__IMM,__li__FB *li__JMM,__li__K li__KMM)
 /* (Exact String_buffer{li__AC},Exact String_alias{NULLxli__FB},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__OPM,li__JKB;
- li__OPM=li__LPM->li__BC.li__2B;
-  li__JKB=(__li__K)(((__li__FB *)li__MPM)->li__LB.li__2B + 1);
-  li__P1M(li__LPM,(__li__K)((__li__K)(li__OPM + li__JKB) + 1));
-  if (li__NPM <= li__OPM) {
-    li__MKO(((__li__MB *)li__LPM->li__BC.li__3B),li__NPM,li__OPM,li__JKB);
+   __li__K li__LMM,li__SKB;
+ li__LMM=li__IMM->li__BC.li__2B;
+  li__SKB=(__li__K)(((__li__FB *)li__JMM)->li__LB.li__2B + 1);
+  li__HYM(li__IMM,(__li__K)((__li__K)(li__LMM + li__SKB) + 1));
+  if (li__KMM <= li__LMM) {
+    li__4GO(((__li__MB *)li__IMM->li__BC.li__3B),li__KMM,li__LMM,li__SKB);
   };
-  li__ZBF(((__li__MB *)li__LPM->li__BC.li__3B),li__MPM->li__LB.li__3B,li__NPM,li__JKB);
+  li__LCF(((__li__MB *)li__IMM->li__BC.li__3B),li__JMM->li__LB.li__3B,li__KMM,li__SKB);
 }
 
-static void li__W2B(__li__FB *li__Y2B,__li__AC *li__Z2B)
+static void li__52B(__li__FB *li__B3B,__li__AC *li__C3B)
 /* (Exact String_alias{li__FB},Exact String_buffer{NULLxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__PLT,*li__D3B,*li__RYM;
-  __li__RB li__I3B;
-  __li__K li__QCR,li__L3B,li__MJJ,li__NJJ;
-  __li__O1C li__3AG,li__JJJ,li__VHL;
-  __li__FB *li__P0E;
-  __li__K1C li__RKL,li__SKL;
-  __li__MB li__EZM,li__FZM;
+   __li__AC *li__4GT,*li__M3B,*li__JVM;
+  __li__RB li__R3B;
+  __li__K li__O4Q,li__U3B,li__JIJ,li__KIJ;
+  __li__A2C li__IAG,li__GIJ,li__0FL;
+  __li__FB *li__B1E;
+  __li__21C li__GIL,li__HIL;
+  __li__MB li__2VM,li__3VM;
  if (((__li__XB *)li__XB__)->li__QC) {
-    li__PLT=li__LKB((__li__K)((__li__K)((&__string_88)->li__LB.li__2B + 1) + (__li__K)(li__Y2B->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__PLT),(&__string_88));
-    li__YJE(((__li__AC *)li__PLT),li__Y2B);
-    li__D3B=li__1QE(((__li__AC *)li__PLT),(&__string_4));
-    li__3ZI(((__li__AC *)li__D3B));
+    li__4GT=li__UKB((__li__K)((__li__K)((&__string_89)->li__LB.li__2B + 1) + (__li__K)(li__B3B->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__4GT),(&__string_89));
+    li__KKE(((__li__AC *)li__4GT),li__B3B);
+    li__M3B=li__NRE(((__li__AC *)li__4GT),(&__string_4));
+    li__0YI(((__li__AC *)li__M3B));
   };
-  li__I3B=((__li__RB )(fopen((char*)(li__Y2B->li__LB.li__3B),"wb")));
-  li__QCR=(__li__K)(((__li__AC *)li__Z2B)->li__BC.li__2B + 1);
-  li__L3B=((__li__K )(fwrite((void *)((li__Z2B->li__BC.li__3B)),(size_t)(1), (size_t)((li__QCR)),(FILE*)((li__I3B)))));
+  li__R3B=((__li__RB )(fopen((char*)(li__B3B->li__LB.li__3B),"wb")));
+  li__O4Q=(__li__K)(((__li__AC *)li__C3B)->li__BC.li__2B + 1);
+  li__U3B=((__li__K )(fwrite((void *)((li__C3B->li__BC.li__3B)),(size_t)(1), (size_t)((li__O4Q)),(FILE*)((li__R3B)))));
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__PLT=li__CRB();
-    li__3AG=((__li__O1C )li__L3B);
-    if (li__3AG == ((__li__O1C )(0x8000000000000000LLU))) {
-      li__GIE(((__li__AC *)li__PLT),(&__string_89));
+    li__4GT=li__LRB();
+    li__IAG=((__li__A2C )li__U3B);
+    if (li__IAG == ((__li__A2C )(0x8000000000000000LLU))) {
+      li__YIE(((__li__AC *)li__4GT),(&__string_90));
     } else /* False */ {
-      li__JJJ=0LL;
-      li__MJJ=0;
-      li__NJJ=0;
-      if (0 == li__3AG) {
-        li__ZNE(((__li__AC *)li__PLT),'0');
+      li__GIJ=0LL;
+      li__JIJ=0;
+      li__KIJ=0;
+      if (0 == li__IAG) {
+        li__LOE(((__li__AC *)li__4GT),'0');
       } else /* False */ {
-        if (li__3AG > 0LL) {
-          li__JJJ=li__3AG;
+        if (li__IAG > 0LL) {
+          li__GIJ=li__IAG;
         } else /* False */ {
-          li__JJJ=(__li__O1C)(- li__3AG);
-          li__ZNE(((__li__AC *)li__PLT),'-');
+          li__GIJ=(__li__A2C)(- li__IAG);
+          li__LOE(((__li__AC *)li__4GT),'-');
         };
-        li__MJJ=(__li__K)(li__PLT->li__BC.li__2B + 1);
-        while ((li__JJJ != 0)) {
-          li__VHL=(__li__O1C)(li__JJJ % 10LL);
-          li__RKL=((__li__K1C )li__VHL);
-          li__SKL=((__li__K1C )'0');
-          li__ZNE(((__li__AC *)li__PLT),((__li__MB )(__li__K1C)(li__RKL + li__SKL)));
-          li__JJJ=(__li__O1C)(li__JJJ / 10LL);
+        li__JIJ=(__li__K)(li__4GT->li__BC.li__2B + 1);
+        while ((li__GIJ != 0)) {
+          li__0FL=(__li__A2C)(li__GIJ % 10LL);
+          li__GIL=((__li__21C )li__0FL);
+          li__HIL=((__li__21C )'0');
+          li__LOE(((__li__AC *)li__4GT),((__li__MB )(__li__21C)(li__GIL + li__HIL)));
+          li__GIJ=(__li__A2C)(li__GIJ / 10LL);
         };
-        li__NJJ=li__PLT->li__BC.li__2B;
-        while ((li__MJJ < li__NJJ)) {
-          li__RYM=((__li__AC *)li__PLT);
-          li__EZM=((__li__MB *)li__RYM->li__BC.li__3B)[li__MJJ];
-          li__FZM=((__li__MB *)li__RYM->li__BC.li__3B)[li__NJJ];
-          ((__li__MB *)li__RYM->li__BC.li__3B)[li__MJJ]=li__FZM;
-          ((__li__MB *)li__RYM->li__BC.li__3B)[li__NJJ]=li__EZM;
-          li__NJJ=(__li__K)(li__NJJ - 1);
-          li__MJJ=(__li__K)(li__MJJ + 1);
+        li__KIJ=li__4GT->li__BC.li__2B;
+        while ((li__JIJ < li__KIJ)) {
+          li__JVM=((__li__AC *)li__4GT);
+          li__2VM=((__li__MB *)li__JVM->li__BC.li__3B)[li__JIJ];
+          li__3VM=((__li__MB *)li__JVM->li__BC.li__3B)[li__KIJ];
+          ((__li__MB *)li__JVM->li__BC.li__3B)[li__JIJ]=li__3VM;
+          ((__li__MB *)li__JVM->li__BC.li__3B)[li__KIJ]=li__2VM;
+          li__KIJ=(__li__K)(li__KIJ - 1);
+          li__JIJ=(__li__K)(li__JIJ + 1);
         };
       };
     };
-    li__P0E=li__ZGE(((__li__AC *)li__PLT));
-    li__0RB(&(li__FFB),li__PLT);
-    li__PLT=li__LKB((__li__K)((__li__K)((&__string_90)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__P0E)->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__PLT),(&__string_90));
-    li__YJE(((__li__AC *)li__PLT),li__P0E);
-    li__D3B=li__1QE(((__li__AC *)li__PLT),(&__string_91));
-    li__3ZI(((__li__AC *)li__D3B));
+    li__B1E=li__LHE(((__li__AC *)li__4GT));
+    li__DSB(&(li__OFB),li__4GT);
+    li__4GT=li__UKB((__li__K)((__li__K)((&__string_91)->li__LB.li__2B + 1) + (__li__K)(((__li__FB *)li__B1E)->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__4GT),(&__string_91));
+    li__KKE(((__li__AC *)li__4GT),li__B1E);
+    li__M3B=li__NRE(((__li__AC *)li__4GT),(&__string_92));
+    li__0YI(((__li__AC *)li__M3B));
   };
-  fclose((FILE*)((li__I3B)));
+  fclose((FILE*)((li__R3B)));
   if (((__li__XB *)li__XB__)->li__QC) {
-    li__PLT=li__LKB((__li__K)((__li__K)((&__string_92)->li__LB.li__2B + 1) + (__li__K)(li__Y2B->li__LB.li__2B + 1)));
-    li__GIE(((__li__AC *)li__PLT),(&__string_92));
-    li__YJE(((__li__AC *)li__PLT),li__Y2B);
-    li__D3B=li__1QE(((__li__AC *)li__PLT),(&__string_4));
-    li__3ZI(((__li__AC *)li__D3B));
+    li__4GT=li__UKB((__li__K)((__li__K)((&__string_93)->li__LB.li__2B + 1) + (__li__K)(li__B3B->li__LB.li__2B + 1)));
+    li__YIE(((__li__AC *)li__4GT),(&__string_93));
+    li__KKE(((__li__AC *)li__4GT),li__B3B);
+    li__M3B=li__NRE(((__li__AC *)li__4GT),(&__string_4));
+    li__0YI(((__li__AC *)li__M3B));
   };
 }
 
-static void li__NRM(__li__AC *li__ORM,__li__AC *li__PRM,__li__K li__QRM)
+static void li__KOM(__li__AC *li__LOM,__li__AC *li__MOM,__li__K li__NOM)
 /* (Exact String_buffer{li__AC},Exact String_buffer{NULLxli__AC},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__RRM,li__WDR;
- li__RRM=li__ORM->li__BC.li__2B;
-  li__WDR=(__li__K)(((__li__AC *)li__PRM)->li__BC.li__2B + 1);
-  li__P1M(li__ORM,(__li__K)((__li__K)(li__RRM + li__WDR) + 1));
-  if (li__QRM <= li__RRM) {
-    li__MKO(((__li__MB *)li__ORM->li__BC.li__3B),li__QRM,li__RRM,li__WDR);
+   __li__K li__OOM,li__U5Q;
+ li__OOM=li__LOM->li__BC.li__2B;
+  li__U5Q=(__li__K)(((__li__AC *)li__MOM)->li__BC.li__2B + 1);
+  li__HYM(li__LOM,(__li__K)((__li__K)(li__OOM + li__U5Q) + 1));
+  if (li__NOM <= li__OOM) {
+    li__4GO(((__li__MB *)li__LOM->li__BC.li__3B),li__NOM,li__OOM,li__U5Q);
   };
-  li__ZBF(((__li__MB *)li__ORM->li__BC.li__3B),li__PRM->li__BC.li__3B,li__QRM,li__WDR);
+  li__LCF(((__li__MB *)li__LOM->li__BC.li__3B),li__MOM->li__BC.li__3B,li__NOM,li__U5Q);
 }
 
-static __li__K li__AZC(__li__AC *li__CZC)
+static __li__K li__SZC(__li__AC *li__UZC)
 /* (Exact String_buffer{NULLxli__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__OZC,li__EZC;
+   __li__K li__A0C,li__WZC;
  if (((__li__XB *)li__XB__)->li__QC) {
-    li__3ZI(((__li__AC *)li__CZC));
+    li__0YI(((__li__AC *)li__UZC));
   };
   fflush(stdout);
-  li__OZC=li__KJD(li__CZC,li__B__);
-  if (((__li__XB *)li__XB__)->li__QC && (li__OZC != 0)) {
-    li__W1((&__string_77));
-    li__NXF(li__OZC);
+  li__A0C=li__2JD(li__UZC,li__B__);
+  if (((__li__XB *)li__XB__)->li__QC && (li__A0C != 0)) {
+    li__51((&__string_78));
+    li__5XF(li__A0C);
   };
-  if (li__OZC != 0) {
-    exit((li__OZC));
+  if (li__A0C != 0) {
+    exit((li__A0C));
   };
-  li__EZC=li__OZC;
-  return(li__EZC);
+  li__WZC=li__A0C;
+  return(li__WZC);
 }
 
-static void li__JAC(__li__AC *li__KAC,__li__K li__LAC)
+static void li__1AC(__li__AC *li__2AC,__li__K li__3AC)
 /* (Exact String_buffer{li__AC},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__MB *li__ABC;
- if (li__LAC > 0) {
-    if (li__KAC->li__T2 < li__LAC) {
-      li__ABC=li__PPG(li__LAC);
-      li__KAC->li__BC.li__3B=li__ABC;
-      li__KAC->li__T2=li__LAC;
+   __li__MB *li__SBC;
+ if (li__3AC > 0) {
+    if (li__2AC->li__22 < li__3AC) {
+      li__SBC=li__NOG(li__3AC);
+      li__2AC->li__BC.li__3B=li__SBC;
+      li__2AC->li__22=li__3AC;
     };
   };
-  li__KAC->li__BC.li__2B=-1;
+  li__2AC->li__BC.li__2B=-1;
 }
 
-static __li__MB* li__PPG(__li__K li__RPG)
+static __li__MB* li__NOG(__li__K li__POG)
 /* (Flat Int{li__K}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__3PG,li__C5H;
-  __li__MB *li__51G;
-  __li__MB *li__SPG;
- li__51G=((__li__MB *)((__li__RB )(malloc((li__RPG)))));
-  li__3PG=(__li__K)(li__RPG - 1);
-  li__C5H=li__3PG;
-  while ((li__C5H >= 0)) {
-    li__51G[li__C5H]='\0';
-    li__C5H=(__li__K)(li__C5H - 1);
+   __li__K li__1OG,li__53H;
+  __li__MB *li__30G;
+  __li__MB *li__QOG;
+ li__30G=((__li__MB *)((__li__RB )(malloc((li__POG)))));
+  li__1OG=(__li__K)(li__POG - 1);
+  li__53H=li__1OG;
+  while ((li__53H >= 0)) {
+    li__30G[li__53H]='\0';
+    li__53H=(__li__K)(li__53H - 1);
   };
-  li__SPG=li__51G;
-  return(li__SPG);
+  li__QOG=li__30G;
+  return(li__QOG);
 }
 
-static void li__X5G(__li__MB *li__Y5G,__li__K li__Z5G,__li__K li__05G)
+static void li__V4G(__li__MB *li__W4G,__li__K li__X4G,__li__K li__Y4G)
 /* (Exact C_array(Flat Char){li__TB},Flat Int{li__K},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__ZAI;
- li__ZAI=li__Z5G;
-  while ((li__ZAI <= li__05G)) {
-    li__Y5G[li__ZAI]='\0';
-    li__ZAI=(__li__K)(li__ZAI + 1);
+   __li__K li__W5H;
+ li__W5H=li__X4G;
+  while ((li__W5H <= li__Y4G)) {
+    li__W4G[li__W5H]='\0';
+    li__W5H=(__li__K)(li__W5H + 1);
   };
 }
 
-static __li__FB* li__JBG(__li__AC *li__KBG)
+static __li__FB* li__UAG(__li__AC *li__VAG)
 /* (Exact String_buffer{li__AC}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__FB *li__OBG,*li__JWH,*li__GYH,*li__LBG;
-  __li__K li__MBG,li__JYH;
-  __li__RB li__KWH;
-  __li__Y0C li__EKQ;
-  __li__FB *li__XXH;
-  __li__MB *li__ZBG;
- li__OBG=(__li__FB *)NULL;
-  li__MBG=li__KBG->li__BC.li__2B;
-  if (li__MBG > -1) {
-    li__ZBG=li__PPG((__li__K)(li__MBG + 2));
-    li__Z3F(li__ZBG,li__KBG->li__BC.li__3B,li__MBG);
-    li__ZBG[(__li__K)(li__MBG + 1)]='\0';
-    li__JWH=(__li__FB *)NULL;
-    li__KWH=((__li__RB )(NULL));
-    li__EKQ=((__li__Y0C )sizeof(__li__FB));
-    if (0 == li__EKQ) {
-      li__JWH=li__FB__;
+   __li__FB *li__ZAG,*li__GVH,*li__DXH,*li__WAG;
+  __li__K li__XAG,li__GXH;
+  __li__RB li__HVH;
+  __li__K1C li__KGQ;
+  __li__FB *li__UWH;
+  __li__MB *li__EBG;
+ li__ZAG=(__li__FB *)NULL;
+  li__XAG=li__VAG->li__BC.li__2B;
+  if (li__XAG > -1) {
+    li__EBG=li__NOG((__li__K)(li__XAG + 2));
+    li__E3F(li__EBG,li__VAG->li__BC.li__3B,li__XAG);
+    li__EBG[(__li__K)(li__XAG + 1)]='\0';
+    li__GVH=(__li__FB *)NULL;
+    li__HVH=((__li__RB )(NULL));
+    li__KGQ=((__li__K1C )sizeof(__li__FB));
+    if (0 == li__KGQ) {
+      li__GVH=li__FB__;
     } else /* False */ {
-      li__KWH=((__li__RB )(malloc(((li__EKQ) + 3) & ~3)));
-      li__M2C=(__li__Y0C)(li__M2C - (__li__Y0C)(((__li__Y0C )0) - li__EKQ));
-      li__P2C=(__li__Y0C)(li__P2C - (__li__Y0C)(((__li__Y0C )0) - li__EKQ));
-      li__XXH=((__li__FB *)li__KWH);
-      li__JWH=li__XXH;
-      *(li__XXH) = *(li__FB__);
+      li__HVH=((__li__RB )(malloc(((li__KGQ) + 3) & ~3)));
+      li__42C=(__li__K1C)(li__42C - (__li__K1C)(((__li__K1C )0) - li__KGQ));
+      li__B3C=(__li__K1C)(li__B3C - (__li__K1C)(((__li__K1C )0) - li__KGQ));
+      li__UWH=((__li__FB *)li__HVH);
+      li__GVH=li__UWH;
+      *(li__UWH) = *(li__FB__);
     };
-    li__GYH=((__li__FB *)li__JWH);
-    li__GYH->li__LB.li__3B=li__ZBG;
-    li__GYH->li__LB.li__2B=li__MBG;
-    li__JYH=li__IEI(li__GYH);
-    li__GYH->li__L5E=li__JYH;
-    li__OBG=li__JWH;
+    li__DXH=((__li__FB *)li__GVH);
+    li__DXH->li__LB.li__3B=li__EBG;
+    li__DXH->li__LB.li__2B=li__XAG;
+    li__GXH=li__FDI(li__DXH);
+    li__DXH->li__35E=li__GXH;
+    li__ZAG=li__GVH;
   } else /* False */ {
-    li__OBG=(&__string_54);
+    li__ZAG=(&__string_54);
   };
-  li__LBG=li__OBG;
-  return(li__LBG);
+  li__WAG=li__ZAG;
+  return(li__WAG);
 }
 
-static void li__ICG(__li__FB *li__KCG)
+static void li__TBG(__li__FB *li__VBG)
 /* (Generic Exact String_alias{NULLxli__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__LCG,li__MCG,li__LHH,li__ENI,li__2DG;
-  __li__RB li__SGJ;
-  __li__Y0C li__0LQ;
-  __li__C4E *li__NCG,*li__OCG,*li__RGJ,*li__BYG;
-  void **li__PCG;
-  void **li__A0H;
-  __li__C4E *li__5HJ;
- li__LCG=0;
-  li__MCG=0;
-  li__NCG=(__li__C4E *)NULL;
-  li__OCG=(__li__C4E *)NULL;
-  li__PCG=(void **)NULL;
-  if (li__H4E == li__RCG) {
-    li__MCG=(__li__K)(li__H4E - 1);
-    li__PCG=li__Z4E;
-    li__LCG=li__1CG;
-    li__H4E=((__li__K )(hash_table[(li__LCG)]));
-    li__A0H=((void **)((__li__RB )(malloc(((__li__K)(li__H4E * ((__li__K )(sizeof(void *)))))))));
-    li__LHH=(__li__K)(li__H4E - 1);
-    li__ENI=li__LHH;
-    while ((li__ENI >= 0)) {
-      li__A0H[li__ENI]=NULL;
-      li__ENI=(__li__K)(li__ENI - 1);
+   __li__K li__WBG,li__XBG,li__JGH,li__BMI,li__HDG;
+  __li__RB li__PFJ;
+  __li__K1C li__AIQ;
+  __li__U4E *li__YBG,*li__ZBG,*li__OFJ,*li__5WG;
+  void **li__0BG;
+  void **li__3YH;
+  __li__U4E *li__2GJ;
+ li__WBG=0;
+  li__XBG=0;
+  li__YBG=(__li__U4E *)NULL;
+  li__ZBG=(__li__U4E *)NULL;
+  li__0BG=(void **)NULL;
+  if (li__Z4E == li__2BG) {
+    li__XBG=(__li__K)(li__Z4E - 1);
+    li__0BG=li__L5E;
+    li__WBG=li__GCG;
+    li__Z4E=((__li__K )(hash_table[(li__WBG)]));
+    li__3YH=((void **)((__li__RB )(malloc(((__li__K)(li__Z4E * ((__li__K )(sizeof(void *)))))))));
+    li__JGH=(__li__K)(li__Z4E - 1);
+    li__BMI=li__JGH;
+    while ((li__BMI >= 0)) {
+      li__3YH[li__BMI]=NULL;
+      li__BMI=(__li__K)(li__BMI - 1);
     };
-    li__Z4E=li__A0H;
-    li__1CG=(__li__K)(li__1CG + 1);
-    while ((! (li__MCG < 0))) {
-      li__NCG=(__li__C4E *)((void **)li__PCG)[li__MCG];
-      while (((void *)li__NCG != (void *)NULL)) {
-        li__OCG=li__NCG->li__55E;
-        li__2DG=(__li__K)(li__NCG->li__I5E->li__L5E % li__H4E);
-        li__LCG=li__2DG;
-        if (li__2DG < 0) {
-          li__W1((&__string_93));
+    li__L5E=li__3YH;
+    li__GCG=(__li__K)(li__GCG + 1);
+    while ((! (li__XBG < 0))) {
+      li__YBG=(__li__U4E *)((void **)li__0BG)[li__XBG];
+      while (((void *)li__YBG != (void *)NULL)) {
+        li__ZBG=li__YBG->li__RAF;
+        li__HDG=(__li__K)(li__YBG->li__05E->li__35E % li__Z4E);
+        li__WBG=li__HDG;
+        if (li__HDG < 0) {
+          li__51((&__string_94));
           print_char('\n');
-          li__NXF(li__NCG->li__I5E->li__L5E);
-          printf("%p\n",(void*)(((__li__FB *)li__NCG->li__I5E)->li__LB.li__3B));
-          li__LCG=0;
+          li__5XF(li__YBG->li__05E->li__35E);
+          printf("%p\n",(void*)(((__li__FB *)li__YBG->li__05E)->li__LB.li__3B));
+          li__WBG=0;
         };
-        ((__li__C4E *)li__NCG)->li__55E=(__li__C4E *)((void **)li__Z4E)[li__LCG];
-        ((void **)li__Z4E)[li__LCG]=li__NCG;
-        li__NCG=li__OCG;
+        ((__li__U4E *)li__YBG)->li__RAF=(__li__U4E *)((void **)li__L5E)[li__WBG];
+        ((void **)li__L5E)[li__WBG]=li__YBG;
+        li__YBG=li__ZBG;
       };
-      li__MCG=(__li__K)(li__MCG - 1);
+      li__XBG=(__li__K)(li__XBG - 1);
     };
   };
-  li__MCG=(__li__K)(li__KCG->li__L5E % li__H4E);
-  li__LCG=li__MCG;
-  li__OCG=(__li__C4E *)((void **)li__Z4E)[li__MCG];
-  li__RGJ=(__li__C4E *)NULL;
-  li__SGJ=((__li__RB )(NULL));
-  li__0LQ=((__li__Y0C )sizeof(__li__C4E));
-  if (0 == li__0LQ) {
-    li__RGJ=(__li__C4E *)li__C4E__;
+  li__XBG=(__li__K)(li__VBG->li__35E % li__Z4E);
+  li__WBG=li__XBG;
+  li__ZBG=(__li__U4E *)((void **)li__L5E)[li__XBG];
+  li__OFJ=(__li__U4E *)NULL;
+  li__PFJ=((__li__RB )(NULL));
+  li__AIQ=((__li__K1C )sizeof(__li__U4E));
+  if (0 == li__AIQ) {
+    li__OFJ=(__li__U4E *)li__U4E__;
   } else /* False */ {
-    li__SGJ=((__li__RB )(malloc(((li__0LQ) + 3) & ~3)));
-    li__M2C=(__li__Y0C)(li__M2C - (__li__Y0C)(((__li__Y0C )0) - li__0LQ));
-    li__P2C=(__li__Y0C)(li__P2C - (__li__Y0C)(((__li__Y0C )0) - li__0LQ));
-    li__5HJ=((__li__C4E *)li__SGJ);
-    li__RGJ=li__5HJ;
-    *(li__5HJ) = *(li__C4E__);
+    li__PFJ=((__li__RB )(malloc(((li__AIQ) + 3) & ~3)));
+    li__42C=(__li__K1C)(li__42C - (__li__K1C)(((__li__K1C )0) - li__AIQ));
+    li__B3C=(__li__K1C)(li__B3C - (__li__K1C)(((__li__K1C )0) - li__AIQ));
+    li__2GJ=((__li__U4E *)li__PFJ);
+    li__OFJ=li__2GJ;
+    *(li__2GJ) = *(li__U4E__);
   };
-  li__BYG=((__li__C4E *)li__RGJ);
-  li__BYG->li__I5E=li__KCG;
-  li__BYG->li__55E=li__OCG;
-  li__NCG=li__RGJ;
-  ((void **)li__Z4E)[li__MCG]=li__RGJ;
-  li__RCG=(__li__K)(li__RCG + 1);
+  li__5WG=((__li__U4E *)li__OFJ);
+  li__5WG->li__05E=li__VBG;
+  li__5WG->li__RAF=li__ZBG;
+  li__YBG=li__OFJ;
+  ((void **)li__L5E)[li__XBG]=li__OFJ;
+  li__2BG=(__li__K)(li__2BG + 1);
 }
 
-static void li__ZNE(__li__AC *li__0NE,__li__MB li__1NE)
+static void li__LOE(__li__AC *li__MOE,__li__MB li__NOE)
 /* (Exact String_buffer{li__AC},Flat Char{li__MB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__TOE,li__GMT;
-  __li__MB *li__LOE;
-  __li__MB *li__FMT;
- if (li__0NE->li__T2 == (__li__K)(li__0NE->li__BC.li__2B + 1)) {
-    if (0 == li__0NE->li__T2) {
-      li__0NE->li__T2=32;
-      li__LOE=li__PPG(32);
-      li__0NE->li__BC.li__3B=li__LOE;
+   __li__K li__FPE,li__VHT;
+  __li__MB *li__3OE;
+  __li__MB *li__UHT;
+ if (li__MOE->li__22 == (__li__K)(li__MOE->li__BC.li__2B + 1)) {
+    if (0 == li__MOE->li__22) {
+      li__MOE->li__22=32;
+      li__3OE=li__NOG(32);
+      li__MOE->li__BC.li__3B=li__3OE;
     } else /* False */ {
-      li__TOE=(__li__K)(li__0NE->li__T2 << 1);
-      li__LOE=((__li__MB *)li__0NE->li__BC.li__3B);
-      li__GMT=li__0NE->li__T2;
-      li__FMT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__LOE)),(li__TOE)))));
-      li__X5G(li__FMT,li__GMT,(__li__K)(li__TOE - 1));
-      li__0NE->li__BC.li__3B=li__FMT;
-      li__0NE->li__T2=li__TOE;
+      li__FPE=(__li__K)(li__MOE->li__22 << 1);
+      li__3OE=((__li__MB *)li__MOE->li__BC.li__3B);
+      li__VHT=li__MOE->li__22;
+      li__UHT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__3OE)),(li__FPE)))));
+      li__V4G(li__UHT,li__VHT,(__li__K)(li__FPE - 1));
+      li__MOE->li__BC.li__3B=li__UHT;
+      li__MOE->li__22=li__FPE;
     };
   };
-  li__0NE->li__BC.li__2B=(__li__K)(li__0NE->li__BC.li__2B + 1);
-  ((__li__MB *)li__0NE->li__BC.li__3B)[li__0NE->li__BC.li__2B]=li__1NE;
+  li__MOE->li__BC.li__2B=(__li__K)(li__MOE->li__BC.li__2B + 1);
+  ((__li__MB *)li__MOE->li__BC.li__3B)[li__MOE->li__BC.li__2B]=li__NOE;
   ;
 }
 
-static void li__ZBF(__li__MB *li__0BF,__li__MB *li__1BF,__li__K li__2BF,__li__K li__3BF)
+static void li__LCF(__li__MB *li__MCF,__li__MB *li__NCF,__li__K li__OCF,__li__K li__PCF)
 /* (Exact C_array(Flat Char){li__TB},Exact C_array(Flat Char){NULLxli__TB},Flat Int{li__K},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__OCF,li__NCF;
- li__OCF=0;
-  li__NCF=li__2BF;
-  while ((li__OCF != li__3BF)) {
-    li__0BF[li__NCF]=((__li__MB *)li__1BF)[li__OCF];
-    li__OCF=(__li__K)(li__OCF + 1);
-    li__NCF=(__li__K)(li__NCF + 1);
+   __li__K li__ADF,li__5CF;
+ li__ADF=0;
+  li__5CF=li__OCF;
+  while ((li__ADF != li__PCF)) {
+    li__MCF[li__5CF]=((__li__MB *)li__NCF)[li__ADF];
+    li__ADF=(__li__K)(li__ADF + 1);
+    li__5CF=(__li__K)(li__5CF + 1);
   };
 }
 
-static void li__Z3F(__li__MB *li__03F,__li__MB *li__13F,__li__K li__23F)
+static void li__E3F(__li__MB *li__F3F,__li__MB *li__G3F,__li__K li__H3F)
 /* (Exact C_array(Flat Char){li__TB},Exact C_array(Flat Char){NULLxli__TB},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__PUG;
- li__PUG=0;
-  while ((li__PUG <= li__23F)) {
-    li__03F[li__PUG]=((__li__MB *)li__13F)[li__PUG];
-    li__PUG=(__li__K)(li__PUG + 1);
+   __li__K li__NTG;
+ li__NTG=0;
+  while ((li__NTG <= li__H3F)) {
+    li__F3F[li__NTG]=((__li__MB *)li__G3F)[li__NTG];
+    li__NTG=(__li__K)(li__NTG + 1);
   };
 }
 
-static __li__K li__KJD(__li__AC *li__MJD,__li__C li__NJD)
+static __li__K li__2JD(__li__AC *li__4JD,__li__C li__5JD)
 /* (Exact String_buffer{NULLxli__AC},Flat Boolean{li__Bxli__I}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__PJD,li__QCE,li__OJD;
-  __li__MB *li__JCE;
- li__PJD=0;
-  if (li__NJD) {
-    li__JCE=li__XLE(((__li__AC *)li__MJD));
-    run_background((li__JCE));
+   __li__K li__BKD,li__CDE,li__AKD;
+  __li__MB *li__1CE;
+ li__BKD=0;
+  if (li__5JD) {
+    li__1CE=li__JME(((__li__AC *)li__4JD));
+    run_background((li__1CE));
   } else /* False */ {
-    li__JCE=li__XLE(((__li__AC *)li__MJD));
+    li__1CE=li__JME(((__li__AC *)li__4JD));
     {;
-    li__QCE=((__li__K )(system((char*)((li__JCE)))));
+    li__CDE=((__li__K )(system((char*)((li__1CE)))));
     };
-    li__PJD=((__li__K )(WEXITSTATUS((li__QCE))));
+    li__BKD=((__li__K )(WEXITSTATUS((li__CDE))));
   };
-  li__OJD=li__PJD;
-  return(li__OJD);
+  li__AKD=li__BKD;
+  return(li__AKD);
 }
 
-static void li__NXF(__li__K li__OXF)
+static void li__5XF(__li__K li__AYF)
 /* (Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__C li__44F;
- if (0 == li__OXF) {
+   __li__C li__J4F;
+ if (0 == li__AYF) {
     print_char('0');
-    li__44F=li__B__;
+    li__J4F=li__B__;
   } else /* False */ {
-    li__44F=li__I__;
+    li__J4F=li__I__;
   };
-  if (! li__44F) {
-    if (li__OXF < 0) {
+  if (! li__J4F) {
+    if (li__AYF < 0) {
       print_char('-');
-      li__M1J((__li__K)(- li__OXF));
+      li__J0J((__li__K)(- li__AYF));
     } else /* False */ {
-      li__M1J(li__OXF);
+      li__J0J(li__AYF);
     };
   };
   print_char('\n');
 }
 
-static __li__C li__GEC(void *li__IEC)
+static __li__C li__YEC(void *li__0EC)
 /* (String{li__FB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__RB li__NEC;
-  __li__C li__KEC,li__JEC;
- li__KEC=li__I__;
-  li__NEC=li__2CC(li__IEC);
-  if (li__NEC != (void *)NULL) {
-    li__KEC=li__B__;
-    fclose((FILE*)((li__NEC)));
+   __li__RB li__5EC;
+  __li__C li__2EC,li__1EC;
+ li__2EC=li__I__;
+  li__5EC=li__ODC(li__0EC);
+  if (li__5EC != (void *)NULL) {
+    li__2EC=li__B__;
+    fclose((FILE*)((li__5EC)));
   };
-  li__JEC=li__KEC;
-  return(li__JEC);
+  li__1EC=li__2EC;
+  return(li__1EC);
 }
 
-static void li__APC(__li__AC *li__CPC,__li__FB *li__DPC)
+static void li__SPC(__li__AC *li__UPC,__li__FB *li__VPC)
 /* (Exact String_buffer{NULLxli__AC},Exact String_alias{NULLxli__FB}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__AC *li__TYF,*li__0UM;
-  __li__MB li__AZF;
-  __li__C li__GPC;
- li__GIE(((__li__AC *)li__CPC),li__DPC);
-  li__TYF=((__li__AC *)li__CPC);
-  li__AZF=((__li__MB *)li__TYF->li__BC.li__3B)[li__TYF->li__BC.li__2B];
-  li__GPC=li__IK((&__string_94),li__AZF);
-  if (li__GPC) {
-    li__0UM=((__li__AC *)li__CPC);
-    if (1 > li__0UM->li__BC.li__2B) {
-      li__0UM->li__BC.li__2B=-1;
+   __li__AC *li__FZF,*li__XRM;
+  __li__MB li__SZF;
+  __li__C li__YPC;
+ li__YIE(((__li__AC *)li__UPC),li__VPC);
+  li__FZF=((__li__AC *)li__UPC);
+  li__SZF=((__li__MB *)li__FZF->li__BC.li__3B)[li__FZF->li__BC.li__2B];
+  li__YPC=li__IK((&__string_95),li__SZF);
+  if (li__YPC) {
+    li__XRM=((__li__AC *)li__UPC);
+    if (1 > li__XRM->li__BC.li__2B) {
+      li__XRM->li__BC.li__2B=-1;
     } else /* False */ {
-      li__0UM->li__BC.li__2B=(__li__K)(li__0UM->li__BC.li__2B - 1);
+      li__XRM->li__BC.li__2B=(__li__K)(li__XRM->li__BC.li__2B - 1);
     };
     ;
   };
-  li__GIE(((__li__AC *)li__CPC),(&__string_95));
+  li__YIE(((__li__AC *)li__UPC),(&__string_96));
 }
 
-static __li__K li__H5M(__li__AC *li__I5M,void *li__J5M)
+static __li__K li__51M(__li__AC *li__A2M,void *li__B2M)
 /* (Exact String_buffer{li__AC},String{li__FB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__M5M,li__O5M,li__N5M,li__4FT,li__L5M;
-  __li__GB *li__GGT,*li__HGT,*li__IGT,*li__JGT,*li__TMT,*li__UMT;
-  __li__C li__TBN;
-  __li__MB li__PBN;
- li__M5M=0;
-  li__O5M=-1;
-  li__N5M=0;
-  li__GGT=&(((__li__FB *)li__J5M)->li__LB);
-  li__HGT=&(((__li__FB *)li__J5M)->li__LB);
-  li__IGT=&(((__li__FB *)li__J5M)->li__LB);
-  li__JGT=&(((__li__FB *)li__J5M)->li__LB);
-  li__TMT=&(li__I5M->li__BC);
-  li__UMT=&(li__I5M->li__BC);
-  while ((! ((li__O5M != -1) || ((__li__K)(li__N5M + li__GGT->li__2B) > li__TMT->li__2B)))) {
-    li__M5M=0;
-    li__1JP:
+   __li__K li__E2M,li__G2M,li__F2M,li__SBT,li__D2M;
+  __li__GB *li__0BT,*li__1BT,*li__2BT,*li__3BT,*li__CIT,*li__DIT;
+  __li__C li__L4M;
+  __li__MB li__H4M;
+ li__E2M=0;
+  li__G2M=-1;
+  li__F2M=0;
+  li__0BT=&(((__li__FB *)li__B2M)->li__LB);
+  li__1BT=&(((__li__FB *)li__B2M)->li__LB);
+  li__2BT=&(((__li__FB *)li__B2M)->li__LB);
+  li__3BT=&(((__li__FB *)li__B2M)->li__LB);
+  li__CIT=&(li__A2M->li__BC);
+  li__DIT=&(li__A2M->li__BC);
+  while ((! ((li__G2M != -1) || ((__li__K)(li__F2M + li__0BT->li__2B) > li__CIT->li__2B)))) {
+    li__E2M=0;
+    li__NGP:
     {
-      if (li__M5M > li__HGT->li__2B) {
-        li__TBN=li__B__;
+      if (li__E2M > li__1BT->li__2B) {
+        li__L4M=li__B__;
       } else /* False */ {
-        li__4FT=(__li__K)(li__N5M + li__M5M);
-        li__PBN=((__li__MB *)li__UMT->li__3B)[li__4FT];
-        li__TBN=(li__PBN != ((__li__MB *)li__IGT->li__3B)[li__M5M]);
+        li__SBT=(__li__K)(li__F2M + li__E2M);
+        li__H4M=((__li__MB *)li__DIT->li__3B)[li__SBT];
+        li__L4M=(li__H4M != ((__li__MB *)li__2BT->li__3B)[li__E2M]);
       };
-      if (! li__TBN) {
-        li__M5M=(__li__K)(li__M5M + 1);
-        goto li__1JP;
+      if (! li__L4M) {
+        li__E2M=(__li__K)(li__E2M + 1);
+        goto li__NGP;
       };
     };
-    if (li__M5M > li__JGT->li__2B) {
-      li__O5M=li__N5M;
+    if (li__E2M > li__3BT->li__2B) {
+      li__G2M=li__F2M;
     } else /* False */ {
-      li__N5M=(__li__K)(li__N5M + 1);
+      li__F2M=(__li__K)(li__F2M + 1);
     };
   };
-  li__L5M=li__O5M;
-  return(li__L5M);
+  li__D2M=li__G2M;
+  return(li__D2M);
 }
 
-static void li__3UM(__li__AC *li__4UM,__li__AC *li__5UM)
+static void li__0RM(__li__AC *li__1RM,__li__AC *li__2RM)
 /* (Exact String_buffer{li__AC},Exact String_buffer{NULLxli__AC}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__VOQ,li__KVM,li__QMT;
-  __li__MB *li__ZVM;
-  __li__MB *li__PMT;
- li__VOQ=(__li__K)(((__li__AC *)li__5UM)->li__BC.li__2B + 1);
-  li__KVM=(__li__K)((__li__K)(li__4UM->li__BC.li__2B + 1) + li__VOQ);
-  if (li__4UM->li__T2 < li__KVM) {
-    if (0 == li__4UM->li__T2) {
-      li__4UM->li__T2=li__KVM;
-      li__ZVM=li__PPG(li__KVM);
-      li__4UM->li__BC.li__3B=li__ZVM;
+   __li__K li__1KQ,li__HSM,li__5HT;
+  __li__MB *li__WSM;
+  __li__MB *li__4HT;
+ li__1KQ=(__li__K)(((__li__AC *)li__2RM)->li__BC.li__2B + 1);
+  li__HSM=(__li__K)((__li__K)(li__1RM->li__BC.li__2B + 1) + li__1KQ);
+  if (li__1RM->li__22 < li__HSM) {
+    if (0 == li__1RM->li__22) {
+      li__1RM->li__22=li__HSM;
+      li__WSM=li__NOG(li__HSM);
+      li__1RM->li__BC.li__3B=li__WSM;
     } else /* False */ {
-      li__ZVM=((__li__MB *)li__4UM->li__BC.li__3B);
-      li__QMT=li__4UM->li__T2;
-      li__PMT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__ZVM)),(li__KVM)))));
-      li__X5G(li__PMT,li__QMT,(__li__K)(li__KVM - 1));
-      li__4UM->li__BC.li__3B=li__PMT;
-      li__4UM->li__T2=li__KVM;
+      li__WSM=((__li__MB *)li__1RM->li__BC.li__3B);
+      li__5HT=li__1RM->li__22;
+      li__4HT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__WSM)),(li__HSM)))));
+      li__V4G(li__4HT,li__5HT,(__li__K)(li__HSM - 1));
+      li__1RM->li__BC.li__3B=li__4HT;
+      li__1RM->li__22=li__HSM;
     };
   };
-  li__ZBF(((__li__MB *)li__4UM->li__BC.li__3B),li__5UM->li__BC.li__3B,(__li__K)(li__4UM->li__BC.li__2B + 1),li__VOQ);
-  li__4UM->li__BC.li__2B=(__li__K)(li__KVM - 1);
+  li__LCF(((__li__MB *)li__1RM->li__BC.li__3B),li__2RM->li__BC.li__3B,(__li__K)(li__1RM->li__BC.li__2B + 1),li__1KQ);
+  li__1RM->li__BC.li__2B=(__li__K)(li__HSM - 1);
 }
 
-static void li__P1M(__li__AC *li__Q1M,__li__K li__R1M)
+static void li__HYM(__li__AC *li__IYM,__li__K li__JYM)
 /* (Exact String_buffer{li__AC},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__YMT;
-  __li__MB *li__V2M;
-  __li__MB *li__XMT;
- if (! (li__R1M <= (__li__K)(li__Q1M->li__BC.li__2B + 1))) {
-    if (li__Q1M->li__T2 < li__R1M) {
-      if (0 == li__Q1M->li__T2) {
-        li__V2M=li__PPG(li__R1M);
-        li__Q1M->li__BC.li__3B=li__V2M;
+   __li__K li__HIT;
+  __li__MB *li__NZM;
+  __li__MB *li__GIT;
+ if (! (li__JYM <= (__li__K)(li__IYM->li__BC.li__2B + 1))) {
+    if (li__IYM->li__22 < li__JYM) {
+      if (0 == li__IYM->li__22) {
+        li__NZM=li__NOG(li__JYM);
+        li__IYM->li__BC.li__3B=li__NZM;
       } else /* False */ {
-        li__V2M=((__li__MB *)li__Q1M->li__BC.li__3B);
-        li__YMT=li__Q1M->li__T2;
-        li__XMT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__V2M)),(li__R1M)))));
-        li__X5G(li__XMT,li__YMT,(__li__K)(li__R1M - 1));
-        li__Q1M->li__BC.li__3B=li__XMT;
+        li__NZM=((__li__MB *)li__IYM->li__BC.li__3B);
+        li__HIT=li__IYM->li__22;
+        li__GIT=((__li__MB *)((__li__RB )(realloc((((__li__RB )li__NZM)),(li__JYM)))));
+        li__V4G(li__GIT,li__HIT,(__li__K)(li__JYM - 1));
+        li__IYM->li__BC.li__3B=li__GIT;
       };
-      li__Q1M->li__T2=li__R1M;
+      li__IYM->li__22=li__JYM;
     } else /* False */ {
-      li__X5G(((__li__MB *)li__Q1M->li__BC.li__3B),(__li__K)(li__Q1M->li__BC.li__2B + 1),(__li__K)(li__R1M - 1));
+      li__V4G(((__li__MB *)li__IYM->li__BC.li__3B),(__li__K)(li__IYM->li__BC.li__2B + 1),(__li__K)(li__JYM - 1));
     };
   };
-  li__Q1M->li__BC.li__2B=(__li__K)(li__R1M - 1);
+  li__IYM->li__BC.li__2B=(__li__K)(li__JYM - 1);
   ;
 }
 
-static void li__MKO(__li__MB *li__NKO,__li__K li__OKO,__li__K li__PKO,__li__K li__QKO)
+static void li__4GO(__li__MB *li__5GO,__li__K li__AHO,__li__K li__BHO,__li__K li__CHO)
 /* (Exact C_array(Flat Char){li__TB},Flat Int{li__K},Flat Int{li__K},Flat Int{li__K}) Void No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__Z5O;
- if (li__QKO != 0) {
-    if (li__QKO < 0) {
-      li__Z5O=li__OKO;
-      while ((li__Z5O <= li__PKO)) {
-        li__NKO[(__li__K)(li__Z5O + li__QKO)]=li__NKO[li__Z5O];
-        li__Z5O=(__li__K)(li__Z5O + 1);
+   __li__K li__L2O;
+ if (li__CHO != 0) {
+    if (li__CHO < 0) {
+      li__L2O=li__AHO;
+      while ((li__L2O <= li__BHO)) {
+        li__5GO[(__li__K)(li__L2O + li__CHO)]=li__5GO[li__L2O];
+        li__L2O=(__li__K)(li__L2O + 1);
       };
     } else /* False */ {
-      li__Z5O=li__PKO;
-      while ((li__Z5O >= li__OKO)) {
-        li__NKO[(__li__K)(li__Z5O + li__QKO)]=li__NKO[li__Z5O];
-        li__Z5O=(__li__K)(li__Z5O - 1);
+      li__L2O=li__BHO;
+      while ((li__L2O >= li__AHO)) {
+        li__5GO[(__li__K)(li__L2O + li__CHO)]=li__5GO[li__L2O];
+        li__L2O=(__li__K)(li__L2O - 1);
       };
     };
   };
 }
 
-static __li__K li__IEI(__li__FB *li__JEI)
+static __li__K li__FDI(__li__FB *li__GDI)
 /* (Exact String_alias{li__FB}) With result No recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__LEI,li__12S,li__22S,li__GRI,li__UEI,li__KEI;
-  __li__GB *li__0MT;
- li__LEI=0;
-  li__12S=li__JEI->li__LB.li__2B;
-  li__22S=li__12S;
-  if (li__12S > 32) {
-    li__22S=32;
+   __li__K li__IDI,li__IYS,li__JYS,li__DQI,li__RDI,li__HDI;
+  __li__GB *li__JIT;
+ li__IDI=0;
+  li__IYS=li__GDI->li__LB.li__2B;
+  li__JYS=li__IYS;
+  if (li__IYS > 32) {
+    li__JYS=32;
   };
-  li__12S=0;
-  li__GRI=li__22S;
-  li__0MT=&(li__JEI->li__LB);
-  while ((li__12S <= li__GRI)) {
-    li__UEI=(__li__K)(li__LEI << 2);
-    li__LEI=(__li__K)(li__UEI + ((__li__K )((__li__K1C )((__li__MB *)li__0MT->li__3B)[li__12S])));
-    li__12S=(__li__K)(li__12S + 1);
+  li__IYS=0;
+  li__DQI=li__JYS;
+  li__JIT=&(li__GDI->li__LB);
+  while ((li__IYS <= li__DQI)) {
+    li__RDI=(__li__K)(li__IDI << 2);
+    li__IDI=(__li__K)(li__RDI + ((__li__K )((__li__21C )((__li__MB *)li__JIT->li__3B)[li__IYS])));
+    li__IYS=(__li__K)(li__IYS + 1);
   };
-  li__KEI=(__li__K)(li__LEI & 2147483647);
-  return(li__KEI);
+  li__HDI=(__li__K)(li__IDI & 2147483647);
+  return(li__HDI);
 }
 
-static void li__M1J(__li__K li__N1J)
+static void li__J0J(__li__K li__K0J)
 /* (Flat Int{li__K}) Void Recursive, No inlinable. NO CONTEXT! */
 {
-   __li__K li__X1J;
-  __li__K1C li__2MK,li__A4K;
-  __li__MB li__ANK;
- li__X1J=(__li__K)(li__N1J % 10);
-  li__2MK=((__li__K1C )li__X1J);
-  li__A4K=((__li__K1C )'0');
-  li__ANK=((__li__MB )(__li__K1C)(li__2MK + li__A4K));
-  li__X1J=(__li__K)(li__N1J / 10);
-  if (li__X1J != 0) {
-    li__M1J(li__X1J);
+   __li__K li__U0J;
+  __li__21C li__ZLK,li__W1K;
+  __li__MB li__3LK;
+ li__U0J=(__li__K)(li__K0J % 10);
+  li__ZLK=((__li__21C )li__U0J);
+  li__W1K=((__li__21C )'0');
+  li__3LK=((__li__MB )(__li__21C)(li__ZLK + li__W1K));
+  li__U0J=(__li__K)(li__K0J / 10);
+  if (li__U0J != 0) {
+    li__J0J(li__U0J);
   };
-  print_char(li__ANK);
+  print_char(li__3LK);
 }
 void init_string_alias() {
-  li__ICG(&__string_1);
-  li__ICG(&__string_2);
-  li__ICG(&__string_3);
-  li__ICG(&__string_4);
-  li__ICG(&__string_5);
-  li__ICG(&__string_6);
-  li__ICG(&__string_7);
-  li__ICG(&__string_8);
-  li__ICG(&__string_9);
-  li__ICG(&__string_10);
-  li__ICG(&__string_11);
-  li__ICG(&__string_12);
-  li__ICG(&__string_13);
-  li__ICG(&__string_14);
-  li__ICG(&__string_15);
-  li__ICG(&__string_16);
-  li__ICG(&__string_17);
-  li__ICG(&__string_18);
-  li__ICG(&__string_19);
-  li__ICG(&__string_20);
-  li__ICG(&__string_21);
-  li__ICG(&__string_22);
-  li__ICG(&__string_23);
-  li__ICG(&__string_24);
-  li__ICG(&__string_25);
-  li__ICG(&__string_26);
-  li__ICG(&__string_27);
-  li__ICG(&__string_28);
-  li__ICG(&__string_29);
-  li__ICG(&__string_30);
-  li__ICG(&__string_31);
-  li__ICG(&__string_32);
-  li__ICG(&__string_33);
-  li__ICG(&__string_34);
-  li__ICG(&__string_35);
-  li__ICG(&__string_36);
-  li__ICG(&__string_37);
-  li__ICG(&__string_38);
-  li__ICG(&__string_39);
-  li__ICG(&__string_40);
-  li__ICG(&__string_41);
-  li__ICG(&__string_42);
-  li__ICG(&__string_43);
-  li__ICG(&__string_44);
-  li__ICG(&__string_45);
-  li__ICG(&__string_46);
-  li__ICG(&__string_47);
-  li__ICG(&__string_48);
-  li__ICG(&__string_49);
-  li__ICG(&__string_50);
-  li__ICG(&__string_51);
-  li__ICG(&__string_52);
-  li__ICG(&__string_53);
-  li__ICG(&__string_54);
-  li__ICG(&__string_55);
-  li__ICG(&__string_56);
-  li__ICG(&__string_57);
-  li__ICG(&__string_58);
-  li__ICG(&__string_59);
-  li__ICG(&__string_60);
-  li__ICG(&__string_61);
-  li__ICG(&__string_62);
-  li__ICG(&__string_63);
-  li__ICG(&__string_64);
-  li__ICG(&__string_65);
-  li__ICG(&__string_66);
-  li__ICG(&__string_67);
-  li__ICG(&__string_68);
-  li__ICG(&__string_69);
-  li__ICG(&__string_70);
-  li__ICG(&__string_71);
-  li__ICG(&__string_72);
-  li__ICG(&__string_73);
-  li__ICG(&__string_74);
-  li__ICG(&__string_75);
-  li__ICG(&__string_76);
-  li__ICG(&__string_77);
-  li__ICG(&__string_78);
-  li__ICG(&__string_79);
-  li__ICG(&__string_80);
-  li__ICG(&__string_81);
-  li__ICG(&__string_82);
-  li__ICG(&__string_83);
-  li__ICG(&__string_84);
-  li__ICG(&__string_85);
-  li__ICG(&__string_86);
-  li__ICG(&__string_87);
-  li__ICG(&__string_88);
-  li__ICG(&__string_89);
-  li__ICG(&__string_90);
-  li__ICG(&__string_91);
-  li__ICG(&__string_92);
-  li__ICG(&__string_93);
-  li__ICG(&__string_94);
-  li__ICG(&__string_95);
+  li__TBG(&__string_1);
+  li__TBG(&__string_2);
+  li__TBG(&__string_3);
+  li__TBG(&__string_4);
+  li__TBG(&__string_5);
+  li__TBG(&__string_6);
+  li__TBG(&__string_7);
+  li__TBG(&__string_8);
+  li__TBG(&__string_9);
+  li__TBG(&__string_10);
+  li__TBG(&__string_11);
+  li__TBG(&__string_12);
+  li__TBG(&__string_13);
+  li__TBG(&__string_14);
+  li__TBG(&__string_15);
+  li__TBG(&__string_16);
+  li__TBG(&__string_17);
+  li__TBG(&__string_18);
+  li__TBG(&__string_19);
+  li__TBG(&__string_20);
+  li__TBG(&__string_21);
+  li__TBG(&__string_22);
+  li__TBG(&__string_23);
+  li__TBG(&__string_24);
+  li__TBG(&__string_25);
+  li__TBG(&__string_26);
+  li__TBG(&__string_27);
+  li__TBG(&__string_28);
+  li__TBG(&__string_29);
+  li__TBG(&__string_30);
+  li__TBG(&__string_31);
+  li__TBG(&__string_32);
+  li__TBG(&__string_33);
+  li__TBG(&__string_34);
+  li__TBG(&__string_35);
+  li__TBG(&__string_36);
+  li__TBG(&__string_37);
+  li__TBG(&__string_38);
+  li__TBG(&__string_39);
+  li__TBG(&__string_40);
+  li__TBG(&__string_41);
+  li__TBG(&__string_42);
+  li__TBG(&__string_43);
+  li__TBG(&__string_44);
+  li__TBG(&__string_45);
+  li__TBG(&__string_46);
+  li__TBG(&__string_47);
+  li__TBG(&__string_48);
+  li__TBG(&__string_49);
+  li__TBG(&__string_50);
+  li__TBG(&__string_51);
+  li__TBG(&__string_52);
+  li__TBG(&__string_53);
+  li__TBG(&__string_54);
+  li__TBG(&__string_55);
+  li__TBG(&__string_56);
+  li__TBG(&__string_57);
+  li__TBG(&__string_58);
+  li__TBG(&__string_59);
+  li__TBG(&__string_60);
+  li__TBG(&__string_61);
+  li__TBG(&__string_62);
+  li__TBG(&__string_63);
+  li__TBG(&__string_64);
+  li__TBG(&__string_65);
+  li__TBG(&__string_66);
+  li__TBG(&__string_67);
+  li__TBG(&__string_68);
+  li__TBG(&__string_69);
+  li__TBG(&__string_70);
+  li__TBG(&__string_71);
+  li__TBG(&__string_72);
+  li__TBG(&__string_73);
+  li__TBG(&__string_74);
+  li__TBG(&__string_75);
+  li__TBG(&__string_76);
+  li__TBG(&__string_77);
+  li__TBG(&__string_78);
+  li__TBG(&__string_79);
+  li__TBG(&__string_80);
+  li__TBG(&__string_81);
+  li__TBG(&__string_82);
+  li__TBG(&__string_83);
+  li__TBG(&__string_84);
+  li__TBG(&__string_85);
+  li__TBG(&__string_86);
+  li__TBG(&__string_87);
+  li__TBG(&__string_88);
+  li__TBG(&__string_89);
+  li__TBG(&__string_90);
+  li__TBG(&__string_91);
+  li__TBG(&__string_92);
+  li__TBG(&__string_93);
+  li__TBG(&__string_94);
+  li__TBG(&__string_95);
+  li__TBG(&__string_96);
 };

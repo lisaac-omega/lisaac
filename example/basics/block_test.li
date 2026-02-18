@@ -1,29 +1,24 @@
 Header
   + name := Block_test
-Inherit
+Public
 
-  - parent_clone:Clone := Clone
-
-Private
-
-  - action n:Int if_odd odd_block:{} if_even even_block:{} <-
+  - action n:Int when_odd odd_block:{} when_even even_block:{} <-
   (
-    (n.is_even).if {
+    if (n.is_even) then {
       even_block.value
     } else {
       odd_block.value
     }
   )
 
-Public
-
   - main <-
   ( + n:Int
-
-    "Entry a number:\n".print
+    "Enter a number:\n".print
     Stdin.read_integer
     n := Stdin.last_integer
-    action n
-    if_odd  { "This integer is odd.\n".print;  }
-    if_even { "This integer is even.\n".print; }
+    action n when_odd { 
+      "odd\n".print  
+    } when_even { 
+      "even.\n".print 
+    }
   )

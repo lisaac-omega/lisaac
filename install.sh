@@ -5,5 +5,5 @@ if [ ! -f "./install.sh" ]; then
     echo 'Change to the "lisaac" directory and try again.'
     exit 1
 fi
-gcc build_lisaac.c -o build_lisaac
+gcc -Wno-unused build_lisaac.c -o build_lisaac
 ./build_lisaac $*

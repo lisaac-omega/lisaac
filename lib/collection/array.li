@@ -51,7 +51,7 @@ Public
   
   - at i:Int :V <-
   // Direct access in memory block.
-  // array3.png
+  
   (
     storage.at i
   )
@@ -64,7 +64,7 @@ Public
   - add element:V first n:Int <-
   // addfirst.gif
   [
-    deprecated True msg "array.li:l59:Use the new add_first instead. DC Jan 2026"
+    deprecated True msg "array.li:l59:Use the new add_first instead. DC Jan 2026",
     n > 0 
   ]
   ( + new_capacity,new_count:Int

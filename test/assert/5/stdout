@@ -1,0 +1,14 @@
+2
+
+============== BOTTOM ==============
+Line #9 Column #9 in Main (.../test/assert/5/main.li).
+  - main <-
+         ^
+Line #13 Column #9 in Main (.../test/assert/5/main.li).
+    foo i
+         ^
+Line #21 Column #7 in Main (.../test/assert/5/main.li).
+    i > 2, // must crash here
+       ^
+================ TOP ===============
+Ensure violated.

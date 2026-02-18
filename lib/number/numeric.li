@@ -264,21 +264,16 @@ Public
     result
   )
   
-  - self:Self '!' :Self <-
-  // Factorial. Use it like "45!" or "bar!.print;"
-  factorial
+  - self:Self '!' :Self <- factorial
   
   - factorial:Self <-
-  // Factorial
-  // * Require: self >= 0
   [
-    ? {self >= 0}
+    self >= 0
   ]
-  ( + result,value:Self
-    
+  ( + result,value:Self 
     result := 1
     value  := self
-    {value <= 1}.until_do {
+    until {value <= 1} do {
       result := result * value
       value  := value - 1
     }

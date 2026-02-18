@@ -67,7 +67,7 @@ Public
   - at i:Int :V <-
   // Access item at index @i.
   [
-    {valid_index i}
+    valid_index i
   ]
   (
     abstract
@@ -104,7 +104,7 @@ Public
   - at i:Int put v:V <-
   // Make @v the value @at index @i.
   [
-    {valid_index i}
+    valid_index i
   ]
   (
     abstract
@@ -117,8 +117,8 @@ Public
   - swap i1:Int with i2:Int <-
   // Swap at at index @i1 with item at index @i2.
   [
-    {valid_index i1},
-    {valid_index i2}
+    valid_index i1,
+    valid_index i2
   ]
   ( + tmp:V
     tmp := at i1

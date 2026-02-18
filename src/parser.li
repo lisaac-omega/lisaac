@@ -1793,8 +1793,8 @@ Public
               string_tmp.add_last ' '
               string_tmp.append last_string
               name := string_tmp.to_string_alias
-              (! read_name_param).if {
-                syntax_error (current_position,"Incorrect genericity definition.")
+              if (! read_name_param) then {
+                syntax_error (current_position,"Invalid generic definition.")
               }
             }
           }

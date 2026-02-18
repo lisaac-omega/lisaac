@@ -40,11 +40,9 @@ Public
 
   - lower3:Int := 0
 
-  - create (new_count1, new_count2, new_count3:Int) :Self<-
-  // Create or reset @self with new dimensions.
-  // All elements are set to the default value of type E.
+  - new (new_count1, new_count2, new_count3:Int) : Self <-
+  // All elements are set to the default value of type @E.
   ( + result:Self
-
     result := clone
     result.make (new_count1, new_count2, new_count3)
     result
@@ -53,10 +51,10 @@ Public
   - make (new_count1, new_count2, new_count3 :Int) <-
   // Create or reset @self with new dimensions.
   // All elements are set to the default value of type E.
-  [ // Old
-    -? { new_count1 > 0 }
-    -? { new_count2 > 0 }
-    -? { new_count3 > 0 }
+  [ 
+    ? {new_count1 > 0} 
+    ? {new_count2 > 0}
+    ? {new_count3 > 0}
   ]
   (
     count1 := new_count1
@@ -67,18 +65,18 @@ Public
     count2x3 := count2 * count3
     upper3 := new_count3 - 1
     count := count1 * count2x3
-    (capacity < count).if {
+    if (capacity < count) then {
       capacity := count
       storage := C_array(V).create capacity
     } else {
       storage.clear_all (capacity - 1)
     }
   )
-  [ // Old
-    +? { count1 = new_count1 }
-    +? { count2 = new_count2 }
-    +? { count3 = new_count3 }
-    +? { all_default }
+  [ 
+    ? { count1 = new_count1 }
+    ? { count2 = new_count2 }
+    ? { count3 = new_count3 }
+    ? { all_default }
   ]
 
   - from_collection3 model:Collection3(V) <-
@@ -97,11 +95,11 @@ Public
   - from_collection contents:Collection(V) size (new_count1, new_count2, new_count3:Int) <-
   //  Reset all bounds using `new_count#i`.
   //  Copy all elements of @contents, line by line into self.
-  [ // Old
-    -? { new_count1 >= 0 }
-    -? { new_count2 >= 0 }
-    -? { new_count3 >= 0 }
-    -? { contents.count = new_count1 * new_count2 * new_count3 }
+  [ 
+    ? { new_count1 >= 0 }
+    ? { new_count2 >= 0 }
+    ? { new_count3 >= 0 }
+    ? { contents.count = new_count1 * new_count2 * new_count3 }
   ]
   (
     make (new_count1, new_count2, new_count3)
@@ -109,11 +107,11 @@ Public
       storage.put (contents.item (contents.lower + i)) to i
     }
   )
-  [ // Old
-    +? { line_maximum   = new_count1 - 1 }
-    +? { column_maximum = new_count2 - 1 }
-    +? { depth_maximum  = new_count3 - 1 }
-    +? { count = contents.count }
+  [ 
+    ? { line_maximum   = new_count1 - 1 }
+    ? { column_maximum = new_count2 - 1 }
+    ? { depth_maximum  = new_count3 - 1 }
+    ? { count = contents.count }
   ]
 
 
@@ -137,10 +135,10 @@ Public
       }
     }
   )
-  [ // Old
-    +? { line_maximum   = model.upper - model.lower }
-    +? { column_maximum = model.first.upper - model.first.lower }
-    +? { depth_maximum  = model.first.first.upper - model.first.first.lower }
+  [ 
+    ? { line_maximum   = model.upper - model.lower }
+    ? { column_maximum = model.first.upper - model.first.lower }
+    ? { depth_maximum  = model.first.first.upper - model.first.first.lower }
   ]
 
   // Implementation of others feature from COLLECTION3:
@@ -188,7 +186,7 @@ Public
   ( + n:Int
     + result:Self
 
-    result := Self.create (
+    result := Self.new (
       line_max - line_min + 1,
       column_max - column_min + 1,
       depth_max - depth_min + 1
@@ -204,10 +202,10 @@ Public
     }
     result
   )
-  [ // Old
-    +? { Result.upper1 = line_max - line_min     }
-    +? { Result.upper2 = column_max - column_min }
-    +? { Result.upper3 = depth_max - depth_min   }
+  [ 
+    ? { Result.upper1 = line_max - line_min     }
+    ? { Result.upper2 = column_max - column_min }
+    ? { Result.upper3 = depth_max - depth_min   }
   ]
 
   // Writing:
@@ -229,7 +227,7 @@ Public
   // as self collection.
   ( + result:Self
 
-    result := Self.create (up1 - l1 + 1, up2 - l2 + 1, up3 - l3 + 1)
+    result := Self.new (up1 - l1 + 1, up2 - l2 + 1, up3 - l3 + 1)
     l1.to up1 do { line:Int
       l2.to up2 do { column:Int
         l3.to up3 do { depth:Int
@@ -280,14 +278,14 @@ Public
   // Resizing:
 
   - resize (new_count1,new_count2,new_count3:Int) <-
-  [ // Old
-    -? { new_count1 > 0}
-    -? { new_count2 > 0}
-    -? { new_count3 > 0}
+  [ 
+    ? { new_count1 > 0}
+    ? { new_count2 > 0}
+    ? { new_count3 > 0}
   ]
   ( + tmp:Self
 
-    tmp := Self.create (new_count1, new_count2, new_count3)
+    tmp := Self.new (new_count1, new_count2, new_count3)
     // BSBS: It may be possible to avoid this creation when :
     // BSBS:   new @capacity <= old @capacity
 
@@ -302,14 +300,14 @@ Public
     }
     copy tmp
   )
-  [ // Old
-    +? { upper1 = new_count1 - 1}
-    +? { count1 = new_count1    }
-    +? { upper2 = new_count2 - 1}
-    +? { count2 = new_count2    }
-    +? { upper3 = new_count3 - 1}
-    +? { count3 = new_count3    }
-    +? { count = new_count1 * new_count2 * new_count3 }
+  [ 
+    ? { upper1 = new_count1 - 1}
+    ? { count1 = new_count1    }
+    ? { upper2 = new_count2 - 1}
+    ? { count2 = new_count2    }
+    ? { upper3 = new_count3 - 1}
+    ? { count3 = new_count3    }
+    ? { count = new_count1 * new_count2 * new_count3 }
   ]
 
   // Looking and Searching:

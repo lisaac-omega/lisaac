@@ -1,0 +1,10 @@
+
+============== BOTTOM ==============
+Line #8 Column #9 in Main (.../test/assert/1/main.li).
+  - main <-
+         ^
+Line #12 Column #5 in Main (.../test/assert/1/main.li).
+    ? {i > 2} // must crash here
+     ^
+================ TOP ===============
+User assertion violated.

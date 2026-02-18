@@ -16,11 +16,6 @@ n = "unix";
 #endif
 return n;
 }`;
-
-Private
-  
-  + name_memory:String_alias
-    
 Public
   
   - name:String_alias <- // "Linux" "Android" "Apple" "Windows"

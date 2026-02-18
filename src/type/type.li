@@ -1156,7 +1156,7 @@ Type
     }
     (result.generic_count != gen_count).if {
       //crash
-      Position.put_error semantic text "Incorrect genericity definition."
+      Position.put_error semantic text "Invalid generic definition or usage."
       result.position.put_position
       (last_position.code != 0).if {
         last_position.put_position

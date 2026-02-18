@@ -1,0 +1,16 @@
+Header
+  - name := Main
+  /**/
+  
+
+Public
+  
+  
+  - main <-
+  ( + a: Array Int
+    a := new Array Int of (1, 2)
+    Test.check (a.at 0) integer 1
+    Test.check (a.at 1) integer 2
+    Test.check (a.at 2) integer 3    
+  )
+  

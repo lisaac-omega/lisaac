@@ -1,14 +1,16 @@
 Header
   + name := Tetris
 /*
-  The TeTriS puzzle game.
+  The TeTriS puzzle game automatic simulator.
   */
 Inherit
+  
   + parent_window:Flat Window
 
 Private
 
   - level:Uint8
+  
   - line_count:Uint32
 
   - face:Array3(Int)
@@ -148,7 +150,7 @@ Public
   - main <-
   (    
     // Initialization.
-    face := Array3 Int .create (4,4,2)
+    face := (Array3 Int).new (4,4,2)
     scr_game := Array2 Uint8 .create (10,19)
     stat  := 0
     // Init window.    
@@ -163,8 +165,8 @@ Public
     timer_event
         
     // Game array.
-    0.to 18 do { y:Int
-      0.to 9 do { x:Int
+    from 0 to 18 do { y:Int
+      from 0 to 9 do { x:Int
         n := scr_game.at (x,y)
         (n != 0).if {
           case_busy (x,y) face n
@@ -191,9 +193,8 @@ Public
     .when 3 then { info.append " Pause"; }
   )
 
-  //
   // Events.
-  //
+
   - delay:Real32
   - stat:Uint8
   - old_stat:Uint8
@@ -242,7 +243,7 @@ Public
 
   - key_event k:Uint16 <-
   (
-    (((k & 0800h) != 0) && {stat=1}).if {
+    if (((k & 0800h) != 0) && {stat=1}) then {
       remove_face
       (k & 0FFh).to_char
       .when 'U' then {
@@ -332,11 +333,9 @@ Public
     };*/
   )
 
-  //
   // IA
-  //
 
-  - form:Array3(Int) := Array3(Int).create (4,4,2)
+  - form:Array3(Int) := Array3(Int).new (4,4,2)
 
   - screen_ia:Array2(Uint8) := Array2(Uint8).create (10,19)
 
@@ -505,7 +504,7 @@ Public
 
     screen_after.copy_collection screen_ia
     py := put_ia pr pos px
-    (py != -1).if {
+    if (py != -1) then {
       // Evaluation.
       m1 := mesure_link screen_after
       m3 := mesure_subhole screen_after * -3
@@ -514,23 +513,23 @@ Public
 
       abyss_list_after.clear
       mesure_abyss screen_after in abyss_list_after
-      (m5 >= 2).if {
+      if (m5 >= 2) then {
         // Si tu gagnes 2 lignes, tu acceptes deux abyss.
         m4 := ((abyss_list_after.count/2)-1).max 0 * -100
       } else {
         m4 := (abyss_list_after.count/2) * -100
       }
-      (abyss_list_after.count < abyss_list.count).if {
+      if (abyss_list_after.count < abyss_list.count) then {
         m2 := m2 + 4
       }
-      (m2 <= 9).if {
+      if (m2 <= 9) then {
         (m2 <= 4).if {
           m2 := m2 - 1000
         } else {
           m2 := m2 - 100; //25 * (13 - m2)
         }
       }
-      (mesure_ymax screen_ia detect 1 <= 7).if {
+      if (mesure_ymax screen_ia detect 1 <= 7) then {
         (m5 >= 2).if {
           m2 := m2 + 1000
         }
@@ -548,15 +547,8 @@ Public
         print_screen screen_after
       }
       */
-
-      result_list.add_last m1
-      result_list.add_last m2
-      result_list.add_last m3
-      result_list.add_last m4
-      result_list.add_last m5
-      //
-      result_list.add_last pr
-      result_list.add_last px
+      
+      result_list.add_last (m1, m2, m3, m4, m5, pr, px)      
       // Remove.
       result := True
     }

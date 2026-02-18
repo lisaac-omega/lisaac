@@ -4,7 +4,7 @@ Line 195 column 51 in Numeric(.../lib/number/numeric.li):
   - self:Self '-'  Left 80  other:Self :Self <- `3`
                                                    ^
 
-Line 549 column 12 in Numeric(.../lib/number/numeric.li):
+Line 544 column 12 in Numeric(.../lib/number/numeric.li):
   - to_int16:Int16 <-
             ^
 Context:
@@ -13,7 +13,7 @@ Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
   + name := Main
         ^
 
-Line 549 column 12 in Numeric(.../lib/number/numeric.li):
+Line 544 column 12 in Numeric(.../lib/number/numeric.li):
   - to_int16:Int16 <-
             ^
 --WARNING----------
@@ -22,7 +22,7 @@ Line 195 column 51 in Numeric(.../lib/number/numeric.li):
   - self:Self '-'  Left 80  other:Self :Self <- `3`
                                                    ^
 
-Line 549 column 12 in Numeric(.../lib/number/numeric.li):
+Line 544 column 12 in Numeric(.../lib/number/numeric.li):
   - to_int16:Int16 <-
             ^
 Context:
@@ -31,7 +31,7 @@ Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
   + name := Main
         ^
 
-Line 549 column 12 in Numeric(.../lib/number/numeric.li):
+Line 544 column 12 in Numeric(.../lib/number/numeric.li):
   - to_int16:Int16 <-
             ^
 --WARNING----------

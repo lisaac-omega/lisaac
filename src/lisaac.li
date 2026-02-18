@@ -788,9 +788,10 @@ Public
     title "CODE" in output
     
     (is_cop).if {
-      output_glob.append
+      output_decl.append
       "#include <pthread.h>                                    \n\
       \#include <limits.h>                                     \n\
+      \#define STACK_MIN (64 * 1024)                           \n\
       \                                                        \n\
       \void print_char(char car);                              \n\
       \void die_with_code(int64_t code);                       \n\
@@ -803,7 +804,7 @@ Public
       \volatile int thread_counter_busy;                       \n\
       \                                                        \n\
       \// One `stack' per Thread:                              \n\ 
-      \static char thread_stack[512][PTHREAD_STACK_MIN];       \n\
+      \static char thread_stack[512][STACK_MIN];               \n\
       \                                                        \n\
       \typedef struct lith_object_struct lith_object;          \n\
       \typedef struct lith_node_struct lith_node;              \n\
@@ -897,7 +898,7 @@ Public
       \  pthread_mutex_unlock(&pool.mutex);                    \n\
       \  // Run thread.                                        \n\
       \  if (node == NULL) {                                   \n\
-      \    pthread_attr_setstack(&thread_attr, thread_stack[thread_counter],PTHREAD_STACK_MIN);            \n\
+      \    pthread_attr_setstack(&thread_attr, thread_stack[thread_counter],STACK_MIN);            \n\
       \    if ((thread_counter>512) || pthread_create(&c_thread,&thread_attr, thread_life, (void *)obj)) { \n\
       \      while (*msg != 0) print_char(*(msg++));           \n\
       \      die_with_code(1);                                 \n\

@@ -1,0 +1,12 @@
+Header
+  - name := Main
+  /**/
+  
+
+Public
+  
+  
+  - main <-
+  ( + a:Array Int
+    a := new Array int of (1, 2, 3)
+  )
