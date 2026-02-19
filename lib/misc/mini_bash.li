@@ -17,10 +17,6 @@ Private
   
   + error_counter:Int
   
-  - mybuffer:String_buffer := String_buffer.create 128
-  
-  - mybuffer2:String_buffer := String_buffer.create 128
-  
   - mini_bash_init <-
   // Not mandatory, just an example.
   ( 
@@ -144,11 +140,13 @@ Private
   )
   
   - file_exists name:String in dirpath:String :Boolean <-
-  (
-    mybuffer2.copy dirpath
-    mybuffer2.append name
-    //FILE_SYSTEM.file_exists mybuffer2
-    File_utils.file_exists mybuffer2
+  ( + result:Boolean
+    String.tmp { buf:String_buffer
+      buf.append dirpath
+      buf.append name
+      result := File_utils.file_exists buf
+    }
+    result
   )
   
   - file_remove path:String :Int <-
@@ -166,29 +164,21 @@ Private
   
   - diff dirpath:String n1 n1:String_alias n2 n2:String_alias :Int <-
   ( + exit_status:Int
-    + p1,p2:String_buffer
-    p1 := mybuffer
-    p2 := mybuffer2
-    p1.copy dirpath
-    p1.append n1
-    p2.copy dirpath
-    p2.append n2
-    verbose.if {
-      "diff ".print
-      p1.print
-      ' '.print
-      p2.println
-    }
-    exit_status := Diff.path p1 path p2
-    (exit_status != 0).if {
-      error_counter := error_counter + 1
-      "diff ".print
-      p1.print
-      ' '.print
-      p2.println
-      "diff failed".println
-      first_error_exit.if {
-        exit exit_status
+    String.tmp2 { (buf1, buf2: String_buffer)
+      buf1.append dirpath
+      buf1.append n1
+      buf2.append dirpath
+      buf2.append n2
+      verbose.if {
+        Out # "diff " # buf1 # ' ' # buf2 # '\n'
+      }
+      exit_status := Diff.path buf1 path buf2
+      if (exit_status != 0) then {
+        error_counter := error_counter + 1
+        Out # "diff " # buf1 # ' ' # buf2 # "diff failed\n"
+        first_error_exit.if {
+          exit exit_status
+        }
       }
     }
     exit_status

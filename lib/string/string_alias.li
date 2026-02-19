@@ -63,6 +63,18 @@ Public
   
   - to_string_alias:String_alias <- self
   
+  - match others:Self^n :Boolean <-
+  // To compare self with multiple values (for only one, @= is enough).
+  ( + result:Boolean
+    { + o:Self
+      result.if_false {
+        result := (self = o)
+      };
+    }.value others
+    
+    result
+  )
+  
   // The Guru section: The Compiler consideration.
 
   - to_external:C_array Char <- storage

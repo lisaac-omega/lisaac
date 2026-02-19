@@ -1,16 +1,16 @@
 Header
   + name := Diff
 /*diff unix-like command*/
-  
 Public
+  
   - path p1:String path p2:String : Int <-
   ( + result:Int
-    String.tmp { tmp:String_buffer
-      tmp.append "diff "
-      tmp.append p1
-      tmp.add_last ' '
-      tmp.append p2
-      result := Environment.run tmp
+    String.tmp { buf:String_buffer
+      buf.append "diff "
+      buf.append p1
+      buf.add_last ' '
+      buf.append p2
+      result := Environment.run buf
     }
     result
   )

@@ -18,7 +18,7 @@ return n;
 }`;
 Public
   
-  - name:String_alias <- // "Linux" "Android" "Apple" "Windows"
+  - name:String_alias <-
   ( + n:C_array Char
     + r:String_alias
     n := `system_name()`:C_array Char
@@ -28,6 +28,10 @@ Public
     }
     r
   )
+  [
+    (Result = "unix") || {Result = "android"} || {Result = "apple"} || {Result = "windows"}  
+    //Result.match ("unix", "android", "apple", "windows")
+  ]
   
   - exit code:Int <- `exit(@code)`
   

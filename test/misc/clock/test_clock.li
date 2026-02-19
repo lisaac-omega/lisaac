@@ -1,0 +1,11 @@
+Header
+  + name := Test_clock
+Public
+  
+  - main <-
+  ( + clock: Uint32
+    clock := Clock.clock.to_raw_uint32
+    Test.check (clock > 0)
+  )
+  
+  

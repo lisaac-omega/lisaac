@@ -14,7 +14,7 @@ Public
   
   - init_clock :Self <-
   ( + seed: Uint32
-    seed := Clock.clock.to_raw_uint32
+    seed := Clock.time_raw.to_raw_uint32
     init seed
   )
   

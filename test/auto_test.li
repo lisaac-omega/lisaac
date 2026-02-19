@@ -140,13 +140,61 @@ Private
   )
   
   - is_main file:File :Boolean <-
+  // No grep on windows...
   ( + result:Boolean
-    String.tmp { cmd:String_buffer
-      cmd.append "grep -q -E '^ +\\- main *<-' '"
-      cmd.append (file.path)
-      cmd.append "'"
-      verbose.if { cmd.println; }
-      result := Environment.run cmd = 0
+    + state:String_alias
+    + path:String
+    + idx:Int
+    + cc:Char
+    path := file.path
+    verbose.if {
+      Out # "Searching - main in '" # path # "'.\n" 
+    }
+    String.tmp { src:String_buffer
+      (open_read path in src).if_false {
+        crash_with_message ("Cannot read '" + path + "'\n")
+      }
+      state := "next_line"
+      while {state != "the_end"} do {
+        cc := src.at idx
+        if ("no_context_info" = state) then {
+          if (" \n".has cc) then {
+            // wait here
+          }.elseif {cc = '-'} then {
+            state := "after_minus"
+          } else {
+            state := "next_line"
+          }
+        }.elseif {"next_line" = state} then {
+          if (cc = '\n') then {
+            state := "no_context_info"
+          }
+        } else {
+          ? {state = "after_minus"}
+          if (cc = ' ') then {
+            // wait here
+          }.elseif {match "main" in src at idx} then {
+            idx := idx + 4 ; cc := src.at idx
+            if (" <".has cc) then {
+              result := True ; state := "the_end"
+            } else {
+              state := "next_line"
+            }
+          } else {
+            state := "next_line"
+          }
+        }
+        idx := idx + 1 
+        src.valid_index(idx).if_false {
+          state := "the_end"
+        }
+      }
+    }
+    verbose.if {
+      result.if_false {
+        Out # "NO "
+      }
+      Out # "main found in '" # path # "'.\n" 
     }
     result
   )
@@ -296,12 +344,12 @@ Private
     remove_list.append n
   )
   
-  - add_redirect r:String_alias dirpath dirpath:String new stdnew:String_alias <-
+  - add cmd_buf:String_buffer redirect r:String_alias dirpath dirpath:String new stdnew:String_alias <-
   (
-    mybuffer.add_last ' '
-    mybuffer.append r
-    mybuffer.append dirpath
-    mybuffer.append stdnew
+    cmd_buf.add_last ' '
+    cmd_buf.append r
+    cmd_buf.append dirpath
+    cmd_buf.append stdnew
   )
   
   - diff_dot dirpath:String name n:String_alias :Boolean <-
@@ -332,29 +380,34 @@ Private
     test_counter := test_counter + 1
     '.'.print
     String.tmp { me:String_buffer
-      me.copy fname
+      me.append fname
       me.remove_suffix ".li"
+      if (System.name = "windows") then {
+        me.append ".exe"
+      }
       main_exec := me.to_string_alias
     }
-    mybuffer.copy "lisaac "
-    mybuffer.append dirpath
-    mybuffer.append fname
-    mybuffer.add_last ' '
-    if boost_mode then {
-      mybuffer.append "-boost "
+    String.tmp { cmd_buf:String_buffer
+      cmd_buf.append "lisaac "
+      cmd_buf.append dirpath
+      cmd_buf.append fname
+      cmd_buf.add_last ' '
+      if boost_mode then {
+        cmd_buf.append "-boost "
+      }
+      if partial then {
+        cmd_buf.append "-partial "
+      }
+      cmd_buf.append lisaac_options
+      lisaacout.if {
+        '.'.print; test_counter := test_counter + 1
+        add cmd_buf redirect ">" dirpath dirpath new "lisaacout.new"
+        cmd_buf.append " 2>&1"
+      }.elseif {! verbose} then {
+        cmd_buf.append " 1>/dev/null"
+      }
+      cmd := cmd_buf.to_string_alias
     }
-    if partial then {
-      mybuffer.append "-partial "
-    }
-    mybuffer.append lisaac_options
-    lisaacout.if {
-      '.'.print; test_counter := test_counter + 1
-      add_redirect ">" dirpath dirpath new "lisaacout.new"
-      mybuffer.append " 2>&1"
-    }.elseif {! verbose} then {
-      mybuffer.append " 1>/dev/null"
-    }
-    cmd := mybuffer.to_string_alias
     '.'.print
     first_error_exit False do {
       exit_status := execute_command cmd
@@ -416,30 +469,32 @@ Private
       ? {False}
     }
     '.'.print
-    mybuffer.copy dirpath
-    mybuffer.append main_exec
-    (args != NULL).if {
-      '.'.print
-      mybuffer.add_last ' '
-      mybuffer.append args
+    String.tmp { cmd_buf:String_buffer
+      cmd_buf.append dirpath
+      cmd_buf.append main_exec
+      (args != NULL).if {
+        '.'.print
+        cmd_buf.add_last ' '
+        cmd_buf.append args
+      }
+      (file_exists "stdin" in dirpath).if {
+        stdin := True
+        cmd_buf.append " <"
+        cmd_buf.append dirpath
+        cmd_buf.append "stdin"
+      }
+      (file_exists "stdout" in dirpath).if {
+        stdout := True
+        add cmd_buf redirect "1>" dirpath dirpath new "stdout.new"
+      }
+      (file_exists "stderr" in dirpath).if {
+        stderr := True
+        add cmd_buf redirect "2>" dirpath dirpath new "stderr.new"
+      }
+      cmd := cmd_buf.to_string_alias
     }
-    (file_exists "stdin" in dirpath).if {
-      stdin := True
-      mybuffer.append " <"
-      mybuffer.append dirpath
-      mybuffer.append "stdin"
-    }
-    (file_exists "stdout" in dirpath).if {
-      stdout := True
-      add_redirect "1>" dirpath dirpath new "stdout.new"
-    }
-    (file_exists "stderr" in dirpath).if {
-      stderr := True
-      add_redirect "2>" dirpath dirpath new "stderr.new"
-    }
-    cmd := mybuffer.to_string_alias
     exit_status := execute_command cmd
-    (exit_status = 0).if {
+    if (exit_status = 0) then {
       '.'.print
     } else {
       error_counter := error_counter + 1
@@ -507,4 +562,12 @@ Private
   (
     msg.println
     System.exit 1
+  )
+  
+  - match key:String_alias in src:String at idx:Int :Boolean <-
+  ( + i:Int
+    while {(src.valid_index(idx + i)) && {key.valid_index i} && {(key.at i) = (src.at (idx + i))}} do {
+      i := i + 1
+    }
+    (i > key.upper) && {src.valid_index(idx + i)}
   )
