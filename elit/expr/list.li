@@ -76,10 +76,8 @@ Public
     is_line := False
   )
   
-  //
   // PARSER / DRAW
-  //
-  
+    
   - new_parse t:Int <-  
   (
     t
@@ -179,9 +177,7 @@ Public
           l.set_ttok t
           (c = '-').if { l.set (Local.f_static); }
         }
-        (read_c ';').if {
-          col (Look.symbol) sub 1
-        } else { err warning msg "Added ';'. (2)"; }
+        (read_c ';').if { col (Look.symbol) sub 1 }
       } else {
         toks.at tok_cur.sty.set_upper (Old toks.at tok_cur.sty.upper)
         lo.to (loc.upper) do { j:Int; loc.at j.free; }
@@ -277,8 +273,22 @@ Public
     //
     (pos_i.pt = pt_b.pt+db+dd-1).if {
       (is_line).if {
+        + x,a,d:Real32
+        + c:Color
         tmp_c.copy " "
         draw_tmp_c
+        
+        ((pt_b.pt+db+1 = pos.pt) || {pt_b.pt+db+dd = pos.pt}).if {
+          c := col_peer
+        } else {
+          c := Look.cols.at (Look.symbol)
+        }        
+        lstblc c        
+        (x,a,d) := (tex.x,tex.asc,tex.des)
+        tex.pop
+        tex.set_x x 
+        tex.ascdes (a,d)
+        
         pos_i := pos_i + 1
       }.elseif {(pt_b.pt+db+1 = pos.pt) || {pt_b.pt+db+dd = pos.pt}} then {
         fill_color col_peer
@@ -286,22 +296,6 @@ Public
     }
   )
   
-  - end_draw <-
-  ( + x,a,d:Real32
-    + c:Color
-    (is_line).if {
-      ((pt_b.pt+db+1 = pos.pt) || {pt_b.pt+db+dd = pos.pt}).if {
-        c := col_peer
-      } else {
-        c := Look.cols.at (Look.symbol)
-      }
-      lstblc c
-      (x,a,d) := (tex.x,tex.asc,tex.des)
-      tex.pop
-      tex.set_x x
-      tex.ascdes (a,d)
-    }
-  )
   
 /* OLD OLD OLD  - end_draw <-
   (

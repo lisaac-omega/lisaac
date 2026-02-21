@@ -47,15 +47,17 @@ Private
   // When first @remove occurs, storage size may naturally become
   // smaller than @medium_size. Afterall, tuning of storage size is
   // done automatically according to usage.
-  [medium_size >= 97]
+  [
+    medium_size >= 97
+  ]
   ( 
     capacity := Hash_table_size.prime_number_ceiling medium_size
     buckets := C_array(Hmap_node V Key K).create capacity
     self
   )
   [    
-    ? { is_empty }
-    ? { capacity >= medium_size }
+    is_empty,
+    capacity >= medium_size
   ]
   
 Public
@@ -79,7 +81,9 @@ Public
   
   - at k:K :V <-
   // Very fast in -boost mode.
-  [ ? {has k} ]
+  [
+    has k
+  ]
   ( + idx:Int 
     + node:Hmap_node V Key K
     idx := k.hash_code % capacity
@@ -185,13 +189,21 @@ Public
       }
     }.value (k,v)
   )
-  [ {ki:K; ? {has ki}; }.value k ]
+  [
+    { ki:K
+      ? {has ki}; 
+    }.value k 
+  ]
   
   - at (k:K^n) add (v:V^n) :Self <-
   // Add a list n key-value pairs.
   // Assumes k is a new entry. Actually, this is equivalent to 
   // call @at__put, but may run a little bit faster.
-  [ {ki:K; ? {!has ki}; }.value k ]
+  [
+    { ki:K
+      ? {!has ki}; 
+    }.value k 
+  ]
   ( + idx:Int 
     + node:Hmap_node V Key K
     set_capacity (count + n)
@@ -203,12 +215,20 @@ Public
     count := count + n;
     self
   )
-  [ {ki:K; ? {has ki}; }.value k ]
+  [
+    {ki:K
+      ? {has ki}; 
+    }.value k 
+  ]
   
   - at (k:K^n) update (v:V^n) <-
   // Assumes k is an existing entry. Actually, this is equivalent to 
   // call @at__put, but may run a little bit faster.
-  [ {ki:K; ? {has ki}; }.value k ]
+  [
+    {ki:K
+      ? {has ki}; 
+    }.value k 
+  ]
   ( + node:Hmap_node V Key K
     {(ki:K,vi:V)
       node := buckets.at (ki.hash_code % capacity)
@@ -247,7 +267,11 @@ Public
       };
     }.value k
   )
-  [ {ki:K; ? {!has ki}; }.value k ]
+  [
+    {ki:K
+      ? {!has ki}; 
+    }.value k 
+  ]
   
   - clear <-
   // Discard all items.
@@ -263,8 +287,8 @@ Public
     }
   )
   [
-    ? {count = 0}
-    ? {capacity = Old capacity}
+    count = 0,
+    capacity = Old capacity
   ]
 
   // Traversal:
@@ -326,8 +350,8 @@ Private
     }
   }
   [
-    ? { count = Old count }
-    ? { Result ->> {capacity > Old capacity} }
+    count = Old count,
+    Result ->> {capacity > Old capacity}
   ]
     
   - new_node v:V key k:K next nxt:Hmap_node V Key K :Hmap_node V Key K <- 

@@ -223,6 +223,7 @@ Public
         }
         pop_type
       }
+      toks.at tok_cur.reset_sty (p+1)
       pos_i := p
     } else {
       (attr != 0).if { err warning msg "Style (Flat or Exact) ignored."; }

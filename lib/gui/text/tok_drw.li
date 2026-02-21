@@ -277,6 +277,13 @@ Public
   
   - ope_val:Flat Array String_alias // See LIZ
   
+  - reset_sty p:Int <-
+  ( + d:Int
+    d := p - pt_b.pt
+    {(!sty.is_empty) && {sty.second_last >= d}}.while_do { sty.remove_tail 2 }
+  )
+  
+  
   - sty_run <-
   ( + f,n,j:Int32
     + sz:Real32
@@ -365,7 +372,7 @@ Public
           j := n >> 8; n := n & 0FFh
           (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
             tmp_c.copy (ope_val.at n)
-            draw_tmp_c
+            draw_tmp_c            
             pos_i := pos_i + j
           }
         }
@@ -378,8 +385,9 @@ Public
   //[ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   (
     ((!sty.is_empty) && {pos_i.pt - pt_b.pt - s < sty.second_last}).if {
-      print_sty 0
+      print_sty (pt_b.pt)
       Out # (pos_i.pt - pt_b.pt - s) # " < " # sty.second_last # '\n'
+      Out # "Pos_i = " # pos_i.pt # '\n'
       //crash
     } else {
     sty.add_last (pos_i.pt - pt_b.pt - s)
@@ -460,8 +468,7 @@ Public
     
     "-------------".println    
     from 0 to (sty.upper) step 2 do { i:Int
-      i.print; ": ".print
-      (b + sty.at i).print; ' '.print
+      Out # i # ": " # sty.at i # " (" # (b + sty.at i) # ") "
       f := sty.at (i+1)
       n := f & 0FFFFh
       (f >> 16)
@@ -499,6 +506,10 @@ Public
       .when 3 then { // Special character
         n
         .when 0 then { "Clone".print; }
+      }
+      
+      .when 6 then {
+        "Jump ".print; n.print
       }
       ((f >> 16) > 3).if { (f>>16).print; }
       '\n'.print

@@ -48,8 +48,8 @@ Private
         p1 := d1.path
         p2 := d2.path
         {(r != 0) || {i1 > p1.upper} || {i2 > p2.upper}}.until_do {
-          c1 := p1.item i1
-          c2 := p2.item i2
+          c1 := p1.at i1
+          c2 := p2.at i2
           (c1 = c2).if {
             // nothing:
           }.elseif {c1 < c2} then {

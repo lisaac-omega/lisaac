@@ -139,7 +139,7 @@ Public
     + cas:Rslo
     
     (rd_symbol "...").if { err semantic msg "not_yet_implemented"; }
-    ((result := Old_e.parse_sp 0)!= NULL) || {(result := rd_expr_prim)    != NULL} ||
+    ((result := Old_e.parse_sp 0) != NULL) || {(result := rd_expr_prim)    != NULL} ||
     {(result := Rslo.parse_sp 0) != NULL} || {(result := Rloc.parse_sp 0) != NULL}
     (result != NULL).if {
       {skip_spln_expr; read_c '.'}.while_do {

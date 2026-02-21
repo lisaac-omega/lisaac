@@ -85,10 +85,12 @@ Private
 
   - path_exist_check path:String <-
   (
-    (run (ls + " " + path + " 2> /dev/null") = 0).if {
-      ("\nmake.lip:ERROR file: `" + path + "' not found.\n").print
-      die_with_code exit_failure_code
-    }
+    (target != "windows").if {
+      (run (ls + " " + path + " 2> /dev/null") = 0).if {
+        ("\nmake.lip:ERROR file: `" + path + "' not found.\n").print
+        die_with_code exit_failure_code
+      }
+    }  
   )  
 
   - add_lib_i dir:String <-

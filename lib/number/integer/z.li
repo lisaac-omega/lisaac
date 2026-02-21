@@ -21,7 +21,7 @@ Div_inv, Number, Uint64
   - last_bit x:Int :Int <-
   [ ? {x != 0}; ]
   ( + pos:Int
-    pos := 63 - `__builtin_clzl(@x)`:Int64
+    pos := 63 - `__builtin_clzll(@x)`:Int64
     pos
   )
     
@@ -46,7 +46,7 @@ Div_inv, Number, Uint64
     rh,rl
   )
 
-/*
+  /*
   - umul_128 (u, v:Uint64) :(Uint64,Uint64) <-
   ( + rh,rl:Uint64
     `{ unsigned long rh=0,rl=0;
@@ -60,7 +60,7 @@ Div_inv, Number, Uint64
     `}`
     rh,rl
   )
-*/
+  */
 
 Div_inv
 
@@ -74,7 +74,9 @@ Div_inv
   )
   
   - new cap:Int :C_array Uint64 <-
-  [ ? {cap.in_range 0 to 31}; ]
+  [ 
+    ? {cap.in_range 0 to 31}; 
+  ]
   ( + r:C_array Uint64
     (stck.at cap.is_empty).if {
       r := C_array Uint64.calloc_intern ((1<<cap) + 1) + 1
@@ -270,6 +272,7 @@ Div_inv
   ( + rr:C_array Uint64
     + cf:Uint64
     + cap,up:Int
+    
     cap := upper_to_cap (an+1)
     rr := new cap
     cf := add_1 (rr,aa,an,v)

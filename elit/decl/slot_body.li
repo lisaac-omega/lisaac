@@ -26,7 +26,7 @@ Public
   )
     
   - parse <-
-  (
+  ( //? {sty.is_empty}
     Expr.skip_body
     end pos_i
    /* ((Page.cur_pg != NULL) && {Page.cur_pg = page}).if {
@@ -55,11 +55,12 @@ Public
 Private
   
   - parse_real <-
-  (
+  (    
     //EXPR.print_local
     //slot.load_arg
     ln_limit := pt_b.pt + di
-    expr := Expr.rd_expr_op
+    ? {sty.is_empty}
+    expr := Expr.rd_expr_op    
     (read_c ';').if { col (Look.symbol) sub 1; }
     //"\nSLOT_BODY:".print; pos_i.pt.print; '/'.print; di.println
     ln_limit := 0    

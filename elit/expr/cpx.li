@@ -36,8 +36,8 @@ Public
   
   - new_parse t:Int <-
   ( + e:Expr
-    + a:Boolean
-    read_op
+    + a:Boolean    
+    read_op    
     {(e := rd_expr_msg) != NULL}.while_do {
       exp.add_last e
       ope.add_last NULL
@@ -52,18 +52,16 @@ Public
       //
       read_op
       skip_spln_expr
-    }
+    }    
     (exp.is_empty && {!ope.is_empty}).if { err syntax msg "Expr needed."; }
   )
   
   - read_op <-
-  ( + v,l:Int ; + found:Boolean
+  ( + v,l:Int 
     {read_symbol}.while_do {
       l := last_str.count
-      col (Look.operator) sub l; ope.add_last last_str;
-      // DCDC
-      //v := LIZ.ope_key.fast_reference_at last_str
-      (found, v) := Liz.ope_key.search last_str
+      col (Look.operator) sub l; ope.add_last last_str
+      v := Liz.ope_key.search last_str raw
       (v != 0).if { utf ((v-1) | (l<<8)) sub l };
     }
   )

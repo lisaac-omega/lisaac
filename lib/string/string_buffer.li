@@ -407,13 +407,13 @@ Public
     ? {valid_index i2}
   ]
   ( + t:Char
-    t := item i1
-    at i1 put (item i2)
+    t := at i1
+    at i1 put (at i2)
     at i2 put t
   )
   [
-    ? {item i1 = Old item i2}
-    ? {item i2 = Old item i1}
+    ? {at i1 = Old at i2}
+    ? {at i2 = Old at i1}
   ]
   
   - at i:Int add c:Char <- insert c to i
@@ -427,12 +427,12 @@ Public
     i := upper
     extend ' '
     {i >= index}.while_do {
-      at (i + 1) put (item i)
+      at (i + 1) put (at i)
       i := i - 1
     }
     at index put ch
 
-    ? {item index = ch}
+    ? {at index = ch}
   )
   
   - escape_char c:Char <-
@@ -491,12 +491,12 @@ Public
   ( 
     add_last ' '
     upper.downto 1 do { i:Int
-      at i put (item (i - 1))
+      at i put (at (i - 1))
     }
     at 0 put ch
 
     ? {count = 1 + Old count}
-    ? {item 0 = ch}
+    ? {at 0 = ch}
   )
 
   - add_last ch:Char <-
@@ -517,7 +517,7 @@ Public
     storage.at upper put ch
 
     ? {count = 1 + Old count}
-    ? {item upper = ch}
+    ? {at upper = ch}
   )
   
   - put_last c:Char <- at upper put c
@@ -619,7 +619,7 @@ Public
     len := end - start + 1
     (len > 0).if {
       (end + 1).to upper do { i:Int
-        at (i - len) put (item i)
+        at (i - len) put (at i)
       }
       upper := upper - len
     }
@@ -661,11 +661,11 @@ Public
   // Remove leading blanks.
   (+ i: Int
     i := -1
-    {((i + 1) > upper) || {item (i + 1) != ' '}}.until_do {
+    {((i + 1) > upper) || {at (i + 1) != ' '}}.until_do {
       i := i + 1
     }
     remove_first i
-    ? {is_empty || {item 0 != ' '}}
+    ? {is_empty || {at 0 != ' '}}
   )
 
   - right_adjust <-
@@ -673,12 +673,12 @@ Public
   ( + i:Int
     
     i := upper
-    {(i = -1) || {item i != ' '}}.until_do {
+    {(i = -1) || {at i != ' '}}.until_do {
       i := i - 1
     }
     upper := i
     
-    ? {is_empty || {item upper != ' '}}
+    ? {is_empty || {at upper != ' '}}
   )
 
   - extend_multiple c:Char by n:Int <-
@@ -755,13 +755,13 @@ Public
   - remove_all_occurrences ch:Char <-
   // Remove all occurrences of @ch.
   ( + j,i:Int
-    {(i <= upper) && {item i != ch}}.while_do { i := i + 1; }
+    {(i <= upper) && {at i != ch}}.while_do { i := i + 1; }
     (i <= upper).if {
       j := i
       i := i + 1
       {i <= upper}.while_do {
-        (item i != ch).if {
-          at j put (item i)
+        (at i != ch).if {
+          at j put (at i)
           j := j + 1
         }
         i := i + 1
@@ -774,7 +774,7 @@ Public
   // Extend @self (using @extend) with @ch unless @ch is
   // already the @last character.
   ( 
-    ( (upper = -1) || {item upper != ch}).if {
+    ( (upper = -1) || {at upper != ch}).if {
       add_last ch
     }
 
@@ -930,7 +930,7 @@ Public
   (
     ? {ofs = 0}
     ? {idx <= upper}
-    item idx.to_uint8
+    at idx.to_uint8
   )
 
   - restore_after_external <-

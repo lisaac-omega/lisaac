@@ -160,7 +160,7 @@ Public
     + i:Int
     result := False
     i := 0
-    while {(i <= (snake_x.upper)) && {!result}} do {
+    while {(i <= snake_x.upper) && {!result}} do {
       result := (snake_x.at i = apple_x) && {snake_y.at i = apple_y}
       i := i + 1
     }

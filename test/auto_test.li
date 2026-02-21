@@ -31,7 +31,9 @@ Private
   + partial:Boolean
   
   + dirlist:Array String_alias := Array String_alias .create_with_capacity 8
-    
+  
+  - system_name:String_alias := System.name
+  
 Public
   - main <-
   ( + arg:String_alias
@@ -53,7 +55,7 @@ Public
       }
     }
     verbose.if {
-      ("System.name = \"" + System.name + "\"").println
+      ("system_name = \"" + system_name + "\"").println
       ("working_directory = \"" + working_directory + "\"").println
     }
     dirlist.foreach { dir:String_alias
@@ -263,11 +265,11 @@ Private
             exit_status := execute_command cmd
           }
         }
-        (exit_status = 0).if {
+        if (exit_status = 0) then {
           ".ok.0.".print
         } else {
           continue := False
-          (exit_status = 1).if {
+          if (exit_status = 1) then {
             ".ok.1.".print
           } else {
             error_counter := error_counter + 1
@@ -382,7 +384,7 @@ Private
     String.tmp { me:String_buffer
       me.append fname
       me.remove_suffix ".li"
-      if (System.name = "windows") then {
+      if (system_name = "windows") then {
         me.append ".exe"
       }
       main_exec := me.to_string_alias

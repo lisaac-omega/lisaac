@@ -58,15 +58,18 @@ Public
   
   // Access.
   
-  - at index:Int :Char <- item index
-  
-  - item index:Int :Char <-
-  // DCDC utiliser at
+  - at index:Int :Char <-
   [
-    -? {valid_index index}
+    valid_index index
   ]
   (
     storage.at index
+  )
+  
+  - item index:Int :Char <-
+  //[    deprecated True msg "String.li:71: Use at. DC Feb 2026"   ]
+  (
+    at index
   )
 
   // Switch case :
@@ -120,7 +123,7 @@ Public
   - foreach do:{Char; } <-
   (
     0.to upper do { i:Int
-      do.value (item i)
+      do.value (at i)
     }
   )
   
@@ -147,14 +150,14 @@ Public
   ( + i: Int
     + result: Boolean
 
-    {(i > upper) || {i > other.upper} || {item i != other.item i}}.until_do {
+    {(i > upper) || {i > other.upper} || {at i != other.at i}}.until_do {
       i := i + 1
     }
     (i > upper).if {
       result := other.upper >= i
     } else {
       (i <= other.upper).if {
-        result := item i < other.item i
+        result := at i < other.at i
       }
     }
     result
@@ -167,7 +170,7 @@ Public
 
     i1 := upper
     i2 := other.upper
-    {(i1 < lower) || {i2 < other.lower} || {item i1 != other.item i2}}.until_do {
+    {(i1 < lower) || {i2 < other.lower} || {at i1 != other.at i2}}.until_do {
       i1 := i1 - 1
       i2 := i2 - 1
     }
@@ -175,7 +178,7 @@ Public
       result := i2 >= other.lower
     } else {
       (i2 >= other.lower).if {
-        result := item i1 < other.item i2
+        result := at i1 < other.at i2
       }
     }
     result
@@ -186,7 +189,7 @@ Public
   ( + i: Int
     + result:Int
    
-    {(i > upper) || {i > other.upper} || {item i != other.item i}}.until_do {
+    {(i > upper) || {i > other.upper} || {at i != other.at i}}.until_do {
       i := i + 1
     }
     (i > upper).if {
@@ -199,7 +202,7 @@ Public
       (i > other.upper).if {
         result := 1
       } else {
-        (item i < other.item i).if {
+        (at i < other.at i).if {
           result := -1
         } else {
           result := 1
@@ -226,7 +229,7 @@ Public
         s2 := other.storage
         result:=True
         {(i!=0) && {result}}.while_do {
-          result:=s1.item i.same_as (s2.item i)
+          result:=s1.at i.same_as (s2.at i)
           i:=i-1
         }
       }
@@ -261,7 +264,7 @@ Public
 
     result := start_index
 
-    {(result > upper) || {ch = item result}}.until_do {
+    {(result > upper) || {ch = at result}}.until_do {
       result := result + 1
     }
 
@@ -276,11 +279,11 @@ Public
 
     result := start_index
 
-    {(result < lower) || {ch = item result}}.until_do {
+    {(result < lower) || {ch = at result}}.until_do {
       result := result - 1
     }
 
-    ? {(result != -1) ->> {item result = ch}}
+    ? {(result != -1) ->> {at result = ch}}
     result
   )
 
@@ -290,7 +293,7 @@ Public
   (+ result:Int
     (upper >= 0).if {
       result := storage.fast_index_of (ch,0) until upper
-      ? {(result != upper + 1) ->> {item result = ch}}
+      ? {(result != upper + 1) ->> {at result = ch}}
     }
     result
   )
@@ -315,7 +318,7 @@ Public
     result := storage.fast_reverse_index_of ch from upper
     result    
   )
-  [ ? {(Result != -1) ->> {item Result = ch}}; ]
+  [ ? {(Result != -1) ->> {at Result = ch}}; ]
 
   - last_index_of c:Char :Int <-
   // Index of last occurrence of @c at index upper or before index upper.
@@ -343,7 +346,7 @@ Public
       {
         (result <= upper) &&
         {result <= other.upper} &&
-        {item result = other.item result}
+        {at result = other.at result}
       }.while_do {
         result := result + 1
       }
@@ -373,7 +376,7 @@ Public
       {
         (result <= upper) && 
         {j <= other.upper} && 
-        {item result = other.item j}
+        {at result = other.at j}
       }.while_do {
         result := result + 1
         j := j + 1
@@ -387,7 +390,7 @@ Public
   ( + i,io:Int
     i := upper
     io := other.upper
-    {(i >= 0) && {io >= 0} && {item i = other.item io}}.while_do {
+    {(i >= 0) && {io >= 0} && {at i = other.at io}}.while_do {
       i := i - 1
       io := io - 1
     }
@@ -411,19 +414,19 @@ Public
     {(is <= upper) && {result != other.count}}.while_do {      
       cur_is := is
       io := 0
-      {(cur_is <= upper) && {io <= other.upper} && {item cur_is = other.item io}}.while_do {
-        (other.item io = sep).if { last_sep_o := io; }
+      {(cur_is <= upper) && {io <= other.upper} && {at cur_is = other.at io}}.while_do {
+        (other.at io = sep).if { last_sep_o := io; }
         cur_is := cur_is + 1
         io := io + 1
       }
       (cur_is > upper).if { 
-        ((io > other.upper) || {other.item io = sep}).if { 
+        ((io > other.upper) || {other.at io = sep}).if { 
           result := io
         } else { 
           result := result.max last_sep_o
         }
       }
-      {(is <= upper) && {item is != sep}}.while_do {
+      {(is <= upper) && {at is != sep}}.while_do {
         is := is + 1
       }
       is := is + 1
@@ -458,7 +461,7 @@ Public
     (s.upper <= upper).if {
       i1 := upper - s.upper
       i2 := 0
-      { (i1 > upper) || { i2 > s.upper} || { item i1 != s.item i2}}.until_do {
+      { (i1 > upper) || { i2 > s.upper} || { at i1 != s.at i2}}.until_do {
         i1 := i1 + 1
         i2 := i2 + 1
       }
@@ -475,7 +478,7 @@ Public
     + i:Int
     (p.upper <= upper).if {
       i := p.upper
-      {(i = -1) || { item i != p.item i}}.until_do {
+      {(i = -1) || { at i != p.at i}}.until_do {
         i := i - 1
       }
       result := i = -1
@@ -489,7 +492,7 @@ Public
   // 'A'-'Z' {'A'-'Z' | '0'-'9' | '_'}
   ( + i:Int
     + c:Char
-    {(i <= upper) && {(c := item i).is_upper || {c.is_digit} || {c = '_'}}}.while_do {
+    {(i <= upper) && {(c := at i).is_upper || {c.is_digit} || {c = '_'}}}.while_do {
       i := i + 1
     }
     i > upper
@@ -518,7 +521,7 @@ Public
     i := upper
     result := True
     { (! result) || { i = -1}}.until_do {
-      result := item i.is_bit
+      result := at i.is_bit
       i := i - 1
     }
     ? {result = (count = occurrences '0' + occurrences '1')}
@@ -540,12 +543,12 @@ Public
     + i:Int
     
     (is_empty).if_false {      
-      cc := item 0
+      cc := at 0
       ((cc = '-') || {cc = '+'}).if {
         i := 1
       }
       (i <= upper).if {
-        {(i <= upper) && {item i.is_digit}}.while_do {
+        {(i <= upper) && {at i.is_digit}}.while_do {
           i := i + 1
         }
         result := i > upper
@@ -581,7 +584,7 @@ Public
 
     i := 0
     { (state = 4) || {i > upper}}.until_do {
-      cc := item i
+      cc := at i
       ( state = 0).if {
         cc.is_separator.if {
         }.elseif {cc = '+'} then {
@@ -653,7 +656,7 @@ Public
     i := 0
 
     { i > upper}.until_do {
-      cc := item i
+      cc := at i
 
       (state = 0).if {
         cc.is_separator.if {
@@ -754,7 +757,7 @@ Public
 
     i := 0
     {i > upper}.until_do {
-      cc := item i
+      cc := at i
 
       (state = 0).if {
         cc.is_separator.if {
@@ -798,7 +801,7 @@ Public
     + result:Boolean
     (is_empty).if_false {
       j := lower
-      {(j > upper) || {! item j.is_hexadecimal_digit}}.until_do {
+      {(j > upper) || {! at j.is_hexadecimal_digit}}.until_do {
         j:=j+1
       }
       result := j > upper
@@ -810,7 +813,7 @@ Public
   ( + result:Uint64
     ? {is_hexadecimal}
     lower.to upper do { j:Int
-      result := (result << 4) | item j.hexadecimal_value
+      result := (result << 4) | at j.hexadecimal_value
     }
     result
   )
@@ -820,7 +823,7 @@ Public
     + j:Int
     (is_empty).if_false {
       j := lower
-      {(j > upper) || {! item j.is_octal_digit}}.until_do {
+      {(j > upper) || {! at j.is_octal_digit}}.until_do {
         j:=j+1
       }
       result:= j > upper
@@ -833,7 +836,7 @@ Public
     ? {is_octal}
 
     lower.to upper do { j:Int
-      result := (result << 3) | item j.octal_value
+      result := (result << 3) | at j.octal_value
     }
     result
   )
@@ -844,7 +847,7 @@ Public
 
     (is_empty).if_false {
       j := lower
-      { (j > upper) || {! item j.is_binary_digit} }.until_do {
+      { (j > upper) || {! at j.is_binary_digit} }.until_do {
         j := j + 1
       }
 
@@ -860,7 +863,7 @@ Public
 
     lower.to upper do { j:Int
       result := result << 1
-      (item j = '1').if {
+      (at j = '1').if {
         result := result | 1
       }
     }
@@ -899,7 +902,7 @@ Public
     d := 1
 
     { (state = 5) || {i > upper}}.until_do {
-      cc := item i
+      cc := at i
       ( state = 0).if {
         cc.is_separator.if {
         }.elseif {cc = '+'} then {
@@ -980,7 +983,7 @@ Public
     d := 1
 
     {i > upper}.until_do {
-      cc := item i
+      cc := at i
       ( state = 0).if {
         cc.is_separator.if {
         }.elseif {cc = '+'} then {
@@ -1055,7 +1058,7 @@ Public
   - do_all do:{Char;} <-
   (
     0.to upper do { i:Int
-      do.value (item i)
+      do.value (at i)
     }
   )
   
@@ -1104,13 +1107,13 @@ Public
   // Access to the very @first character.
   [ ? {! is_empty}; ]
   ( storage.at 0 )
-  [ /*? { result == item lower};*/ ]
+  [ /*? { result == at lower};*/ ]
   
   - second:Char <-
   // Access to the very @second character.
   [ ? {upper > 0}; ]
   ( storage.at 1 )
-  [ /*? { result == item (lower+1)};*/ ]
+  [ /*? { result == at (lower+1)};*/ ]
 
   - last:Char <-
   // Access to the very @last character.
@@ -1118,7 +1121,7 @@ Public
     + result:Char
     ? {! is_empty}
     result := storage.at upper
-    ? { result = item upper}
+    ? { result = at upper}
     result
   )
   
@@ -1176,7 +1179,7 @@ Public
     result := from
     i := start_other
     {(result <= upper) && {i <= other.upper} && 
-    {item result = other.item i}}.while_do {
+    {at result = other.at i}}.while_do {
       result := result + 1
       i := i + 1
     }
@@ -1194,7 +1197,7 @@ Public
     s := start_index
     {(result != -1) || {(s + other.upper) > upper}}.until_do {
       i := 0
-      {(i > other.upper) || {item (s + i) != other.item i}}.until_do {
+      {(i > other.upper) || {at (s + i) != other.at i}}.until_do {
         i := i + 1
       }
       (i > other.upper).if {
@@ -1317,7 +1320,7 @@ Public
     old_count := words.count
     (upper >= 0).if {
       lower.to upper do { i:Int
-        c := item i
+        c := at i
         (state = 0).if {
           (! c.is_separator).if {
             string_buffer.clear
@@ -1347,7 +1350,7 @@ Public
     + c:Char
     i := lower
     {(i <= upper) && {
-      (c := item i; c.is_upper) || {c = '_'} || {c.is_digit}}
+      (c := at i; c.is_upper) || {c = '_'} || {c.is_digit}}
     }.while_do { 
       i := i + 1
     }
@@ -1385,7 +1388,7 @@ Public
     old_count := words.count
     (count > 0).if {
       0.to upper do { i:Int
-        c := item i
+        c := at i
         (state = 0).if {
           (c != sep).if {
             string_buffer.clear
@@ -1540,7 +1543,7 @@ String
     result := 7
     up := upper.min 32
     0.to up do { i:Int
-      result := result * 31 + item i.code
+      result := result * 31 + at i.code
     }
     result & 07FFF_FFFFh
   )
@@ -1552,7 +1555,7 @@ String
     
     up := upper.min 32
     0.to up do { i:Int
-      result := (result << 2) + item i.code
+      result := (result << 2) + at i.code
     }
     result & 07FFF_FFFFh
   )

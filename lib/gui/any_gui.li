@@ -349,7 +349,7 @@ Public
       \                     X_X\
       \         XXXXXXXXXXXXX_X\
       \         X_____________X\
-      \         XXXXXXXXXXXXXXX".item i
+      \         XXXXXXXXXXXXXXX".at i
       .when 'X' then { result.at i put 0_FF_00_00_00h; }
       .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
     }
@@ -383,7 +383,7 @@ Public
       \         X___X          \
       \          X_X           \
       \           X            \
-      \                        ".item i
+      \                        ".at i
       .when 'X' then { result.at i put 0_FF_00_00_00h; }
       .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
     }

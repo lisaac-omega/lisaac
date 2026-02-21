@@ -250,7 +250,9 @@ Public
   
   - fast_has v:V :Boolean <-
   // Look for @v using basic @= for comparison.
-  [ deprecated True msg "Collection.li:252: Use has. BSDC Jan 2026" ]
+  [
+    deprecated True msg "Collection.li:252: Use has. BSDC Jan 2026" 
+  ]
   (
     valid_index (fast_first_index_of v)
   )
