@@ -59,10 +59,8 @@ Public
     //}
   )
   
-  //
   // Parser
-  //
-  
+    
   - rd_type_result:Type <-
   //++ TYPE_RESULT  -> TYPE
   //++               | '(' TYPE_VECTOR ')'

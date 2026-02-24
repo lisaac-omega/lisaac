@@ -228,7 +228,7 @@ Public
     //fill_color (COLOR.black)
     draw_std e
     ((pos_i = upper) && {tok_cur = toks.upper}).if { end_text; }
-    end_draw
+    end_draw    
     //
     (Div.debug_div).if {
       dx := x_space*2
@@ -285,101 +285,110 @@ Public
   
   
   - sty_run <-
+  ( 
+    {(styi <= sty.upper) && {pos_i >= pt_b.pt + sty.at styi}}.while_do {
+      sty_run_step
+    }
+  )
+  
+Private
+  
+  - sty_run_step <-
   ( + f,n,j:Int32
     + sz:Real32
-    {(styi <= sty.upper) && {pos_i >= pt_b.pt + sty.at styi}}.while_do {
-      f := sty.at (styi+1)
-      (f = itm_cur).if {
-        underline := !underline
-      } else {
-        n := f & 0FF_FFh
-        (f >> 16)
-        .when 0 then { // Color
-          (n & 80h = 0).if {
-            last_color := Look.cols.at n
-          } else {
-            last_color := Look.cols_bland.at (n & 7Fh)
-          };
-          fill_color last_color
-          //stroke_color (COLOR.white)
+    f := sty.at (styi+1)
+    (f = itm_cur).if {
+      underline := !underline
+    } else {
+      n := f & 0FF_FFh
+      (f >> 16)
+      .when 0 then { // Color
+        (n & 80h = 0).if {
+          last_color := Look.cols.at n
+        } else {
+          last_color := Look.cols_bland.at (n & 7Fh)
+        };
+        fill_color last_color
+        //stroke_color (COLOR.white)
+      }
+      .when 1 then { // Font
+        //OUT # "FONT:" # n # " pos:" # (pt_b.pt + sty.at styi) # '\n'
+        Font.app n in txt_buf
+      }
+      .when 2 then { // Size
+        n
+        .when 0 then { sz := Font.size_app; }
+        .when 1 then { sz := Font.size_app * 0.8; }
+        .when 2 then { sz := Font.size_app * 1.1; }
+        font_size sz
+      }
+      .when 3 then { // Escape character
+        j := n >> 8; n := n & 0FFh
+        (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {            
+          (last_div = NULL).if {
+            (tex.x = tex.xmin).if { begin_line; }
+            last_div := Div.new.text
+          }
+          tex.set_x (Look.drw n)
+          //
+          tex.ascdes (asc_c,des_c)
+          detect_cur
+          pos_i := pos_i + j
         }
-        .when 1 then { // Font
-          //OUT # "FONT:" # n # " pos:" # (pt_b.pt + sty.at styi) # '\n'
-          Font.app n in txt_buf
-        }
-        .when 2 then { // Size
-          n
-          .when 0 then { sz := Font.size_app; }
-          .when 1 then { sz := Font.size_app * 0.8; }
-          .when 2 then { sz := Font.size_app * 1.1; }
-          font_size sz
-        }
-        .when 3 then { // Escape character
-          j := n >> 8; n := n & 0FFh
-          (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {            
-            (last_div = NULL).if {
-              (tex.x = tex.xmin).if { begin_line; }
-              last_div := Div.new.text
+      }
+      .when 4 then { // Img
+        (! pos.in_range (pos_i.pt) to (pos_i.pt+n)).if {
+          String.tmp { tmp:String_buffer
+            tmp.copy name
+            tmp.remove_suffix shortname
+            (pos_i.pt).to (pos_i.pt + n - 1) do { i:Int
+              tmp | at i
+            }              
+            (put_image tmp).if {
+              pos_i := pos_i + n
             }
-            tex.set_x (Look.drw n)
-            //
-            tex.ascdes (asc_c,des_c)
-            detect_cur
-            pos_i := pos_i + j
-          }
-        }
-        .when 4 then { // Img
-          (! pos.in_range (pos_i.pt) to (pos_i.pt+n)).if {
-            String.tmp { tmp:String_buffer
-              tmp.copy name
-              tmp.remove_suffix shortname
-              (pos_i.pt).to (pos_i.pt + n - 1) do { i:Int
-                tmp | at i
-              }              
-              (put_image tmp).if {
-                pos_i := pos_i + n
-              }
-            }
-          }
-        }
-        .when 5 then { // Exposant / Indice
-          n
-          // Exposant
-          .when 0 then {
-            font_size (Font.size_app)
-            tex.add_y (+ Font.size_app * 0.2)
-          }
-          .when 1 then {
-            font_size (Font.size_app * 0.8)            
-            tex.add_y (- Font.size_app * 0.2)
-          }
-          // Indice
-          .when 2 then {
-            font_size (Font.size_app)
-            tex.add_y (- Font.size_app * 0.2)
-          }
-          .when 3 then {
-            font_size (Font.size_app * 0.8)            
-            tex.add_y (+ Font.size_app * 0.2)
-          }
-        }
-        .when 6 then { // Jump
-          (! pos.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
-            pos_i := pos_i + n
-          }
-        }        
-        .when 7 then { // UTF8 conversion
-          j := n >> 8; n := n & 0FFh
-          (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
-            tmp_c.copy (ope_val.at n)
-            draw_tmp_c            
-            pos_i := pos_i + j
           }
         }
       }
-      styi := styi + 2
+      .when 5 then { // Exposant / Indice
+        n
+        // Exposant
+        .when 0 then {
+          font_size (Font.size_app)
+          tex.add_y (+ Font.size_app * 0.2)
+        }
+        .when 1 then {
+          font_size (Font.size_app * 0.8)            
+          tex.add_y (- Font.size_app * 0.2)
+        }
+        // Indice
+        .when 2 then {
+          font_size (Font.size_app)
+          tex.add_y (- Font.size_app * 0.2)
+        }
+        .when 3 then {
+          font_size (Font.size_app * 0.8)            
+          tex.add_y (+ Font.size_app * 0.2)
+        }
+      }
+      .when 6 then { // Jump
+        (! pos.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
+          pos_i := pos_i + n
+        }
+      }        
+      .when 7 then { // UTF8 conversion
+        j := n >> 8; n := n & 0FFh
+        (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
+          tmp_c.copy (ope_val.at n)
+          draw_tmp_c            
+          pos_i := pos_i + j
+        }
+      }
     }
+    styi := styi + 2
   )
+  
+Public
   
   - col n:Int sub s:Int <-
   //[ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
@@ -507,14 +516,22 @@ Public
         n
         .when 0 then { "Clone".print; }
       }
-      
+      .when 4 then {
+        "Img".print
+      }
+      .when 5 then {
+        n
+        .when 0 then { "Exposant Off".print }
+        .when 1 then { "Exposant On".print }
+        .when 2 then { "Index Off".print }
+        .when 3 then { "Index On".print }
+      }
       .when 6 then {
         "Jump ".print; n.print
       }
-      ((f >> 16) > 3).if { (f>>16).print; }
+      ((f >> 16) > 6).if { (f>>16).print; }
       '\n'.print
     }
     // crash
   )
-    
   

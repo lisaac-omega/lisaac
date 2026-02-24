@@ -59,7 +59,8 @@ Private
     //EXPR.print_local
     //slot.load_arg
     ln_limit := pt_b.pt + di
-    ? {sty.is_empty}
+    //? {sty.is_empty}
+    reset_sty pt_b    
     expr := Expr.rd_expr_op    
     (read_c ';').if { col (Look.symbol) sub 1; }
     //"\nSLOT_BODY:".print; pos_i.pt.print; '/'.print; di.println

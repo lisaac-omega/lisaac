@@ -571,7 +571,7 @@ Public
     ((pos_i > 0) && {at (pos_i-1) = '\n'}).if {
       toks.at tok_cur.set_nl (Old toks.at tok_cur.nl)
       pos_i := Old pos_i
-      reset_sty pos_i // BSBS: C'est naze à refaire !!
+      reset_sty (pos_i + 1) // BSBS: C'est naze à refaire !!
       //Out # "txt_buf574 = " # pos_i.pt # '\n'
     }
   )
