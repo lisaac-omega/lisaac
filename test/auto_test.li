@@ -384,9 +384,14 @@ Private
     String.tmp { me:String_buffer
       me.append fname
       me.remove_suffix ".li"
+      
+      // Even on MYS2 UCRT64 there is no need for that:
+      /*
       if (system_name = "windows") then {
         me.append ".exe"
       }
+      */
+      
       main_exec := me.to_string_alias
     }
     String.tmp { cmd_buf:String_buffer

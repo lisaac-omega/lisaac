@@ -307,8 +307,11 @@ Public
   )
     
   // Random
+
 Private
+  
   - r_seed:Uint32 := `time(NULL)`:Uint32
+  
 Public
     
   - random :Self <-
@@ -601,6 +604,8 @@ Int
   - to_raw_self a:Uint :Self <- Cast Uint To Self.on a
   
 Public
+  
   //  French corner
+  
   - répéter self:Self fois action:{} <- (repeat self times action)
   
