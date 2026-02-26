@@ -146,8 +146,8 @@ Public
   // Set all items in range [@lower_index .. @upper_index] with @v.
   [
     lower_index <= upper_index,
-    {valid_index lower_index},
-    {valid_index upper_index}
+    valid_index lower_index,
+    valid_index upper_index
   ]
   (
     lower_index.to upper_index do { i:Int
@@ -168,24 +168,13 @@ Public
   [
     upper = Old upper,
     lower = Old lower,
-    { all_default }
+    all_default
   ]
 
   // Adding:
 
-  - add_first element:V^n <-
-  // Add new items in first position: @count is increased by @n and all items are shifted right.
-  (
-    abstract
-  )
-  [
-    count = n + Old count,
-    lower = Old lower,
-    upper = n + Old upper
-  ]
-
-  - add_last element:V^n <-
-  // Add element(s) at the end.
+  - add_first v:V^n <-
+  // Add one or more @v in first position: @count is increased by @n and all items are shifted right.
   (
     abstract
   )
@@ -193,12 +182,20 @@ Public
     upper = n + Old upper
   ]
 
-  - at i:Int add (v:V^n) <-
-  // Add a new @v at rank @i : @count is increased
-  // by one and range [@i .. upper] is shifted right
-  // by one position.
+  - add_last v:V^n <-
+  // Add one or more @v at the end.
+  (
+    abstract
+  )
   [
-    {i.in_range lower to (upper + 1)}
+    upper = n + Old upper
+  ]
+
+  - at i:Int add v:V^n <-
+  // Add one or more @v at rank @i : @count is increased by @n and range [ @i .. @upper ] is 
+  // shifted right by @n position(s).
+  [
+    i.in_range lower to (upper + 1)
   ]
   (
     abstract
@@ -214,7 +211,7 @@ Public
     other != NULL
   ]
   (
-    (other.lower).to (other.upper) do { i:Int
+    from (other.lower) to (other.upper) do { i:Int
       add_last (other.at i)
     }
   )
@@ -334,7 +331,7 @@ Public
   - remove index:Int <-
   // Remove the item at position @index. Followings items are shifted left by one position.
   [
-    {valid_index index}
+    valid_index index
   ]
   (
     abstract
@@ -346,12 +343,13 @@ Public
 
   - remove_last <-
   // Remove the @last item.
-  [ ! is_empty ]
+  [ 
+    ! is_empty 
+  ]
   (
     abstract
   )
   [
-    count = Old count - 1,
     upper = Old upper - 1
   ]
 
@@ -389,7 +387,7 @@ Public
     0
   )
   [
-    {Result = index_of element start lower}
+    Result = index_of element start lower
   ]
 
   - index_of element:V start start_index:Int :Int <-
@@ -401,7 +399,7 @@ Public
     0
   )
   [
-    {Result.in_range start_index to (upper + 1)},
+    Result.in_range start_index to (upper + 1),
     valid_index Result ->> {element == at Result}
   ]
 
@@ -411,14 +409,14 @@ Public
   // which means from the @start_index down to the lower index .
   // Answer @lower @- @1 when the search fail.
   [
-    {valid_index start_index}
+    valid_index start_index
   ]
   (
     abstract
     0
   )
   [
-    {Result.in_range (lower - 1) to start_index},
+    Result.in_range (lower - 1) to start_index,
     valid_index Result -> (at Result == element)
   ]
 
@@ -431,7 +429,7 @@ Public
     reverse_index_of element start upper
   )
   [
-    {Result = reverse_index_of element start upper}
+    Result = reverse_index_of element start upper
   ]
 
   - fast_first_index_of element:V :Int <-
@@ -442,7 +440,7 @@ Public
     0
   )
   [
-    {Result = fast_index_of element start lower}
+    Result = fast_index_of element start lower
   ]
 
   - fast_index_of element:V start start_index:Int :Int <-
@@ -454,7 +452,7 @@ Public
     0
   )
   [
-    {Result.in_range start_index to (upper + 1)},
+    Result.in_range start_index to (upper + 1),
     valid_index Result ->> {element = at Result}
   ]
 
@@ -464,14 +462,14 @@ Public
   // direction, which means from the @start_index down to the lower
   // index . Answer @lower @- @1 when the search fail.
   [
-    {valid_index start_index || {start_index = -1}}
+    valid_index start_index || {start_index = -1}
   ]
   (
     abstract
     0
   )
   [
-    {Result.in_range (lower - 1) to start_index},
+    Result.in_range (lower - 1) to start_index,
     valid_index Result ->> {at Result = element}
   ]
 
@@ -484,14 +482,14 @@ Public
     fast_reverse_index_of element start upper
   )
   [
-    {Result = fast_reverse_index_of element start upper}
+    Result = fast_reverse_index_of element start upper
   ]
   
-  - index_of_true b:{V;Boolean} :Int <-
-  index_of_true b start 0
+  - index_of_true b:{V;Boolean} :Int <- index_of_true b start 0
   
   - index_of_true b:{V;Boolean} start i:Int :Int <-
   ( + result:Int
+    
     result := i
     {(result <= upper) && {!b.value (at result)}}.while_do {
       result := result + 1
@@ -499,11 +497,11 @@ Public
     result
   )
   
-  - index_of_false b:{V;Boolean} :Int <-
-  index_of_false b start 0
+  - index_of_false b:{V;Boolean} :Int <- index_of_false b start 0
     
   - index_of_false b:{V;Boolean} start i:Int :Int <-
   ( + result:Int
+    
     result := i
     {(result <= upper) && {b.value (at result)}}.while_do {
       result := result + 1

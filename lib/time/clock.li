@@ -1,7 +1,8 @@
 Header
   + name := Clock
   /**/
-- include := `#include <time.h>
+  - include := `
+  #include <time.h>
   #include <unistd.h>`;
 Insert
 

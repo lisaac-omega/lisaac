@@ -13,8 +13,11 @@ Header
    (also consider LINKED_LIST).
   */
 Inherit
+  
   + parent_linked_collection:Flat Linked_collection V
+  
 Single_list
+  
   + first_link:Single_list_node V
   // NULL when empty or gives access to the first element.
 
@@ -29,7 +32,8 @@ Single_list
   // When list is empty, @first_link is NULL as well as @mem_lnk and @mem_idx is -1;
 
 Public
-  - add_first element:V^n <-
+  
+  - add_first v:V^n <-
   ( + n1, n2, n3: Single_list_node V
     { e:V
       if (n1 = NULL) then {
@@ -38,7 +42,7 @@ Public
         n3 := Single_list_node V .create e next NULL
         n2.set_next n3 ; n2 := n3
       };
-    }.value element
+    }.value v
     n2.set_next first_link
     first_link := n1
     if (upper < 0) then {
@@ -49,7 +53,7 @@ Public
     upper := upper + n
   )
 
-  - add_last element:V^n <-
+  - add_last v:V^n <-
   ( + lnk:Single_list_node(V)
     { e:V
       (first_link = NULL).if {
@@ -64,21 +68,7 @@ Public
         upper := upper + 1
         last_link := lnk
       }
-    }.value element
-  )
-
-  - at i:Int add v:V <-
-  ( + link:Single_list_node(V)
-    (i = 0).if {
-      add_first v
-    }.elseif { i = upper + 1 } then {
-      add_last v
-    } else {
-      go_item (i - 1)
-      link := Single_list_node(V).create v next (mem_lnk.next)
-      mem_lnk.set_next link
-      upper := upper + 1
-    }
+    }.value v
   )
 
   - remove_first <-
@@ -121,7 +111,7 @@ Public
 
   - at i:Int :V <-
   (
-    (i != mem_idx).if {
+    if (i != mem_idx) then {
       go_item i
     }
     mem_lnk.item
@@ -388,32 +378,38 @@ Public
 Private
   - go_item i:Int <-
   [
-    ? {valid_index i}
-    ? {mem_idx >= 0}
-    ? {mem_lnk != NULL}
+    valid_index i,
+    mem_idx >= 0,
+    mem_lnk != NULL
   ]
   (
-    (mem_idx > i).if {
+    if (mem_idx > i) then {
       mem_idx := 0
       mem_lnk := first_link
     }
-    {i = mem_idx}.until_do {
+    until {i = mem_idx} do {
       mem_lnk := mem_lnk.next
       mem_idx := mem_idx + 1
     }
   )
   [
-    +? {mem_idx = i}
-    +? {mem_lnk != NULL}
+    mem_idx = i,
+    mem_lnk != NULL
   ]
-
-  // Invariant
-
-//  [ /* BSBS Old; */
-//    "Empty status." -? {(first_link = NULL) ->>
-//    {(last_link = NULL) & (upper = 0) & (mem_idx = 0) & (mem_lnk = NULL)}}
-
-//    "Not empty status." -? {(first_link != NULL) ->>
-//    {(last_link != NULL) & (upper > 0) & (mem_idx > 0) & (mem_lnk != NULL)}}
-//  ]
-
+  
+  
+Private
+  
+  - at i:Int add (v:V^n) finish <-
+  ( + link:Single_list_node(V)
+    
+    go_item (i - 1)
+    { u:V
+      link := Single_list_node(V).create v next (mem_lnk.next)
+      mem_lnk.set_next link
+      mem_lnk := link
+    }.value v
+    mem_idx := mem_idx + n
+    upper := upper + n
+  )
+  

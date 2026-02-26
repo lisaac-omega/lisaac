@@ -95,3 +95,21 @@ Public
     }
     result
   )
+  
+Public
+  
+  - at i:Int add (v:V^n) <-
+  (
+    if (i = 0) then {
+      add_first v
+    }.elseif { i = upper + 1 } then {
+      add_last v
+    } else {
+      at i add v finish
+    }
+  )
+  
+Private
+  
+  - at i:Int add (v:V^n) finish <- abstract
+  

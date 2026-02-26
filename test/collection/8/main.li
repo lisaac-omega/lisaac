@@ -187,12 +187,6 @@ Private
     }
     //
     array.is_empty.if_false {
-      Test.check (array.last) integer (array_block.last)
-      Test.check (array.last) integer (single_list.last)
-      Test.check (array.last) integer (array_ring.last)
-      Test.check (array.last) integer (linked_list.last)
-    }
-    array.is_empty.if_false {
       Test.check (array.first) integer (array_block.first)
       Test.check (array.first) integer (single_list.first)
       Test.check (array.first) integer (array_ring.first)
@@ -206,6 +200,12 @@ Private
       Test.check (array.at i) integer (array_ring.at i)
       Test.check (array.at i) integer (linked_list.at i)
       i := i + 1
+    }
+    array.is_empty.if_false {
+      Test.check (array.last) integer (array_block.last)
+      Test.check (array.last) integer (single_list.last)
+      Test.check (array.last) integer (linked_list.last)
+      Test.check (array.last) integer (array_ring.last)
     }
   )
   

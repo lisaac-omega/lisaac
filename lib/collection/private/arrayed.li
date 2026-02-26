@@ -13,13 +13,14 @@ Public
   )
 
   - set_capacity new_capacity:Int <-
-  // Resize @capacity to the nearest greater power of two of @new_capacity.
-  // @count remains unchanged.
+  // If necessary, make @capacity growing to the nearest greater power of two of @new_capacity.
+  // The @count remains unchanged.
   // 
   [
     new_capacity > 0
   ]
   ( + new_cap:Int
+    
     if (new_capacity > capacity) then {
       new_cap := 1 << Asm_builtin.size_in_base_2 new_capacity
       ? {(capacity = 0) ->> {storage = NULL}}      

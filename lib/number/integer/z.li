@@ -2028,9 +2028,10 @@ Public
     self >= 0 
   ]
   ( + r,tmp,i:Self
+    
     r := 1
     i := self
-    {i > 1}.while_do {
+    while {i > 1} do {
       tmp := r * i
       r.free
       r := tmp

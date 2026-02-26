@@ -15,10 +15,9 @@ Private
   
   - ring_msk:Int <- capacity - 1
   
-  - ring_up:Int <- (ring_low + count - 1) & ring_msk
-  
 Public
-  + capacity:Int; // Which must be a power of 2 to ease computing overlays.
+  
+  + capacity:Int; // Always a power of 2 to ease computing overlays.
   
   + count:Int
   
@@ -42,10 +41,11 @@ Public
   )
   
 Private
+  
   - with_capacity needed_capacity:Int <-
   // Create an empty array with at least @needed_capacity.
   [
-    ? {needed_capacity >= 0}
+    needed_capacity >= 0
   ]
   (
     ? {capacity = 0}
@@ -58,8 +58,8 @@ Private
     count := 0
   )
   [
-    ? {capacity >= needed_capacity}
-    ? {is_empty}
+    capacity >= needed_capacity,
+    is_empty
   ]
   
 Public
@@ -77,27 +77,27 @@ Public
     storage.at ((ring_low + i) & ring_msk) put v
   )
   
-  - add_last element:V^n <-
+  - add_last v:V^n <-
   (
+    set_capacity (count + n)
     { e:V
-      ensure_capacity
       ? {ring_low.in_range 0 to capacity}
       storage.at ((ring_low + count) & ring_msk) put e
       count := count + 1;
-    }.value element
+    }.value v
   )
   
-  - add_first element:V^n <-
+  - add_first v:V^n <-
   (
+    set_capacity (count + n)
     { e:V
-      ensure_capacity
       ring_low := (ring_low - 1) & ring_msk
       storage.at ring_low put e
       count := count + 1;
-    }.value element
-    if (n > 1) then {
+    }.value v
+    if (n > 1) then {      
       + i1, i2:Int
-      i1 := lower ; i2 := lower + n - 1
+      i2 := n - 1
       while {i1 < i2} do {
         swap i1 with i2
         i1 := i1 + 1
@@ -106,35 +106,38 @@ Public
     }
   )
   
-  - at i:Int add v:V <-
-  ( + idx,up,lo,foo:Int
-    (i = 0).if {
+  - at i:Int add v:V^n <-
+  ( + idx, up, lo, foo:Int
+    
+    if (i = 0) then {
       add_first v
     }.elseif {i = count} then {
       add_last v
     } else {
-      ensure_capacity
-      idx := (ring_low + i) & ring_msk
-      (i < (count - i)).if {
-        foo := ring_low
-        lo := ring_low := (ring_low - 1) & ring_msk
-        {foo = idx}.until_do {
-          storage.at lo put (storage.at foo)
-          lo := foo
-          foo := (foo + 1) & ring_msk
+      set_capacity (count + n)
+      { e:V
+        idx := (ring_low + i) & ring_msk
+        if (i < (count - i)) then {
+          foo := ring_low
+          lo := ring_low := (ring_low - 1) & ring_msk
+          until {foo = idx} do {
+            storage.at lo put (storage.at foo)
+            lo := foo
+            foo := (foo + 1) & ring_msk
+          }
+          idx := lo
+        } else {
+          up := (ring_low + count) & ring_msk
+          foo := (up - 1) & ring_msk
+          until {idx = up} do {
+            storage.at up put (storage.at foo)
+            up := foo
+            foo := (foo - 1) & ring_msk
+          }
         }
-        idx := lo
-      } else {
-        up := (ring_low + count) & ring_msk
-        foo := (up - 1) & ring_msk
-        {idx = up}.until_do {
-          storage.at up put (storage.at foo)
-          up := foo
-          foo := (foo - 1) & ring_msk
-        }
-      }
-      storage.at idx put v
-      count := count + 1
+        storage.at idx put e
+        count := count + 1
+      }.value v
     }
   )
   
@@ -176,60 +179,6 @@ Public
     }
   )
   
-Private
-  - ensure_capacity <-
-  [
-    ? {capacity > 0}
-  ]
-  ( + new_capacity,oldx,newx:Int
-    + new_storage,old_storage:C_array V
-    (count = capacity).if {
-      oldx := ring_low
-      old_storage := storage
-      new_capacity := capacity << 1
-      new_storage := C_array V .create new_capacity
-      {oldx < capacity}.while_do {
-        new_storage.at newx put (old_storage.at oldx)
-        newx := newx + 1
-        oldx := oldx + 1
-      }
-      oldx := 0
-      {newx < capacity}.while_do {
-        new_storage.at newx put (old_storage.at oldx)
-        newx := newx + 1
-        oldx := oldx + 1
-      }
-      `free(@old_storage)`
-      storage := new_storage
-      ring_low := 0
-      capacity := new_capacity
-    } else {
-      ? {count < capacity}
-    }
-  )
-  - old_ensure_capacity <-
-  [
-    ? {capacity > 0}
-  ]
-  ( + new_capacity,old_area,new_area,times:Int
-    (count = capacity).if {
-      times := ring_up + 1
-      new_capacity := capacity << 1
-      storage := storage.realloc capacity with new_capacity
-      new_area := capacity
-      times.times {
-        storage.at new_area put (storage.at old_area)
-        new_area := new_area + 1
-        old_area := old_area + 1
-      }
-      capacity := new_capacity
-      //("ensure_capacity " + to_string).print
-    } else {
-      ? {count < capacity}
-    }
-  )
-  
-Public
   - to_string:String_alias <-
   ( + i:Int
     + result:String_alias
@@ -262,6 +211,7 @@ Public
   )
   
 Public
+  
   - twin:Self <-
   ( + result:Self
     result := new Self capacity count

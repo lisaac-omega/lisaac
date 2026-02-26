@@ -14,8 +14,11 @@ Header
     problem for you, also consider ARRAY to get better performances.
   */
 Inherit
+  
   + parent_collection:Flat Collection V
+  
   - parent_arrayed:Arrayed := Arrayed
+  
 Public  
   
   + lower:Int
@@ -34,8 +37,8 @@ Public
     result
   )
   [
-    Result.capacity >= c
-    ? {Result.count = 0}
+    Result.capacity >= c,
+    Result.count = 0,
     Result.lower = l
   ]
   
@@ -69,13 +72,9 @@ Public
   )
 
   - make min_index:Int to max_index:Int <-
-  // Prepare the array to hold values for indexes in range
-  // [@min_index .. @max_index]. Set all values to default.
-  // When @max_index = @min_index - 1, the array @is_empty.
-  // * Require: @min_index inferior or equal to @max_index + 1
-  // * Ensure: @lower is equal to @min_index
-  // * Ensure: @upper is equal to @max_index
-  // * Ensure: all values are in default
+  // Prepare the array to hold values for indexes in range [ @min_index .. @max_index ]. 
+  // Set all values to default.
+  // When @max_index = @min_index - @1, the array @is_empty.
   [
     deprecated True msg "range_array.li:l63:Use new instead. DC Jan 2026"
     {min_index <= max_index + 1} -? "Valid bounds."
@@ -234,13 +233,19 @@ Public
     storage.at (i - lower) put v
   )
   
-  - at i:Int add v:V <-
-  (
-    add_last v
-    (i != upper).if {
-      move i to (upper - 1) by 1
-      at i put v
+  - at i:Int add v:V^n <-
+  ( + j:Int
+    
+    set_capacity (count + n)
+    (i != (upper + 1)).if {
+      storage.move (i - lower) to (upper - lower) forward n
     }
+    upper := upper + n
+    j := i - lower
+    { u:V
+      storage.at j put u
+      j := j + 1
+    } value v
   )
   
   - force element:V to index:Int <-
@@ -319,7 +324,7 @@ Public
     capacity = Old capacity
   ]
 
-  - add_first element:V^n <-
+  - add_first v:V^n <-
   ( + idx:Int
     set_capacity (count + n)
     if (upper >= 0) then {
@@ -329,16 +334,16 @@ Public
     { e:V
       storage.at idx put e
       idx := idx + 1
-    }.value element
+    }.value v
   )
 
-  - add_last element:V^n <-
+  - add_last v:V^n <-
   (
     set_capacity (count + n)
     { e:V
       upper := upper + 1
       at upper put e
-    }.value element
+    }.value v
   )
 
   - from_collection model:Collection(V) <-

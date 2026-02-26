@@ -237,8 +237,9 @@ Public
   
 Public
   
-  - add_first element:V^n <-
+  - add_first v:V^n <-
   ( + slab:Slab V
+    
     ? {invariant}
     { e:V
       ((slab := prim.at prim_lower).count > sperfect).if {
@@ -255,7 +256,7 @@ Public
         ? {cache_lower = 0}
       }
       upper := upper + 1 ;
-    }.value element
+    }.value v
     if (n > 1) then {
       + i1, i2:Int
       i1 := 0 ; i2 := n - 1
@@ -268,8 +269,9 @@ Public
     ? {invariant}
   )
   
-  - add_last element:V^n <-
+  - add_last v:V^n <-
   ( + slab:Slab V
+    
     ? {invariant}
     ((slab := prim.at prim_upper).count > sperfect).if {
       ensure_prim_capacity (prim_count + 1)
@@ -280,7 +282,7 @@ Public
     { e:V
       slab.add_last e
       upper := upper + 1 ; // DCDC -> BEN souci ici si tu enlèves le ;
-    }.value element
+    }.value v
     ? {invariant}
     ? {valid cache_prim with cache_lower }
   )

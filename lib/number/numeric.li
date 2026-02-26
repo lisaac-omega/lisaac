@@ -6,6 +6,7 @@ Header
 Insert
   
   - parent_print:Print := Print
+  
   - parent_utils:Utils := Utils
 
 Public
@@ -270,7 +271,8 @@ Public
   [
     self >= 0
   ]
-  ( + result,value:Self 
+  ( + result, value: Self
+    
     result := 1
     value  := self
     until {value <= 1} do {

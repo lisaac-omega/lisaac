@@ -24,7 +24,7 @@ Linked_list
   // @mem_lnk and @mem_idx is 0
 
 Public
-  - add_first element:V^n <-
+  - add_first v:V^n <-
   ( + n1, n2, n3: Linked_list_node V
     { e:V
       if (n1 = NULL) then {
@@ -34,7 +34,7 @@ Public
         n2.set_next n3
         n2 := n3
       };
-    }.value element
+    }.value v
     n2.set_next first_link
     if (first_link != NULL) then {
       first_link.set_previous n2
@@ -48,7 +48,7 @@ Public
     upper := upper + n
   )
    
-  - add_last element:V^n <-
+  - add_last v:V^n <-
   (
     { e:V
       if (first_link = NULL) then {
@@ -62,24 +62,10 @@ Public
         last_link.previous.set_next last_link
         upper := upper + 1
       }
-    }.value element
+    }.value v
   )
 
-  - at i:Int add v:V <-
-  ( + link:Linked_list_node V
-    (i = 0).if {
-      add_first v
-    }.elseif {i = upper + 1} then {
-      add_last v
-    } else {
-      go_item (i - 1)
-      link := Linked_list_node V.create v previous mem_lnk next (mem_lnk.next)
-      link.next.set_previous link
-      mem_lnk.set_next link
-      upper := upper + 1
-    }
-  )
-
+  
   - remove_first <-
   (
     (upper = 0).if {
@@ -391,3 +377,19 @@ Private
     ? {mem_idx = index}
     ? {mem_lnk != NULL}
   ]
+  
+Private
+  
+  - at i:Int add (v:V^n) finish <-
+  ( + link:Linked_list_node V
+    
+    go_item (i - 1)
+    { u:V
+      link := Linked_list_node V.create v previous mem_lnk next (mem_lnk.next)
+      link.next.set_previous link
+      mem_lnk.set_next link
+      mem_lnk := link
+    }.value v
+    mem_idx := mem_idx + n
+    upper := upper + n
+  )
