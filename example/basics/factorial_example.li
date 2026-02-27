@@ -9,6 +9,7 @@ Public
   
   - factorial (n:ℤ) :ℤ <-
   ( + result:ℤ
+    
     if (n <= 1) then {
       result := 1
     } else {

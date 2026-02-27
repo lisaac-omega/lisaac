@@ -211,7 +211,7 @@ Public
     other != NULL
   ]
   (
-    from (other.lower) to (other.upper) do { i:Int
+    (other.lower).to (other.upper) do { i:Int
       add_last (other.at i)
     }
   )
