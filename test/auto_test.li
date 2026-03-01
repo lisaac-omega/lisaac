@@ -5,9 +5,11 @@ Header
   */
   
 Insert
+
   - parent_mini_bash:Mini_bash := Mini_bash
   
-Private  
+Private
+  
   - print_usage_exit <-
   (
     (Command_args.at 0).println
@@ -15,7 +17,8 @@ Private
     exit 1
   )
   
-Private  
+Private 
+ 
   - lisaac_options:String := "--r -q"
   
   + test_counter:Int
@@ -30,13 +33,15 @@ Private
   
   + partial:Boolean
   
-  + dirlist:Array String_alias := Array String_alias .create_with_capacity 8
+  + dirlist:Array String_alias := new Array String_alias capacity 8
   
   - system_name:String_alias := System.name
   
 Public
+
   - main <-
   ( + arg:String_alias
+
     File_utils.working_directory_in working_directory
     ? {working_directory.last = '/'}
     verbose := Command_args.option_shift "--verbose"
@@ -44,7 +49,7 @@ Public
     (Command_args.count = 1).if {
       print_usage_exit
     }
-    {Command_args.count > 1}.while_do {
+    while {Command_args.count > 1} do {
       arg := Command_args.at 1
       Command_args.shift
       (Environment.chdir arg = 0).if {

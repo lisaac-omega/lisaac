@@ -42,8 +42,8 @@ Private
 
   - args:Array String_alias :=
   ( + result:Array String_alias
-    result := Array String_alias.create_with_capacity arg_count
-    0.to (arg_count - 1) do { j:Int
+    result := new Array String_alias capacity arg_count
+    from 0 to (arg_count - 1) do { j:Int
       mybuffer.from_external_copy (arg_vector j)
       result.add_last (mybuffer.to_string_alias)
     }

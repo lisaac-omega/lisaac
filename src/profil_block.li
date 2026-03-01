@@ -97,8 +97,8 @@ Public
     slot_value := Slot_data.create position name "__id" style '+' base NULL type default
     slot_value.set_intern_name "__id"
     //
-    profil_list := Array Profil_slot .create_with_capacity 2
-    node_list   := Array Node_type .create_with_capacity 8
+    profil_list := new Array Profil_slot capacity 2
+    node_list   := new Array Node_type capacity 8
     old_node_list := Node.node_list
     Node.set_node_list node_list
 
@@ -129,7 +129,7 @@ Public
     a_list := Alias_array Type_full .new
     (base.argument != NULL).if {
       //arg_type_tmp :=
-      argument_list := Array Local .create_with_capacity (base.argument.count+1)
+      argument_list := new Array Local capacity (base.argument.count+1)
       argument_list.add_last NULL
       base.argument.to_run_in argument_list for self
       1.to (argument_list.upper) do { j:Int
@@ -244,7 +244,7 @@ Public
     ((result_list = NULL) || {result_list.is_empty}).if {
       result := Prototype_cst.create (code.position) type (Type_void.default); //BSBS: Alias.
     }.elseif {result_list.count > 1} then {
-      lst := Array Expr .create_with_capacity (result_list.count)
+      lst := new Array Expr capacity (result_list.count)
       (result_list.lower).to (result_list.upper) do { k:Int
         loc := result_list.at k
         lst.add_last (loc.type.get_temporary_expr (loc.position))

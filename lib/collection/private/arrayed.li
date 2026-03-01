@@ -22,7 +22,7 @@ Public
   ( + new_cap:Int
     
     if (new_capacity > capacity) then {
-      new_cap := 1 << Asm_builtin.size_in_base_2 new_capacity
+      new_cap := 1 << Asm_builtin.size_in_base_2 (new_capacity - 1)      
       ? {(capacity = 0) ->> {storage = NULL}}      
       storage := storage.realloc_intern new_cap
       capacity := new_cap

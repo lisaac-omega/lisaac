@@ -5,8 +5,8 @@ Inherit
 
 Public
   
-  - lower:Array String_alias := Array String_alias.create_with_capacity 32
-  - upper:Array String_alias := Array String_alias.create_with_capacity 32
+  - lower:Array String_alias := new Array String_alias capacity 32
+  - upper:Array String_alias := new Array String_alias capacity 32
   - low:Hset String_alias := Hset String_alias.create
   - up:Hset String_alias := Hset String_alias.create
   - symbol:Hset String_alias := Hset String_alias.create

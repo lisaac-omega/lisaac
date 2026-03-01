@@ -6,13 +6,13 @@ Inherit
 
 Public
 
-  - list_parent:Array String_alias := Array String_alias .create_with_capacity 1
+  - list_parent:Array String_alias := new Array String_alias capacity 1
 
-  - list_method:Array Lip_slot_code := Array Lip_slot_code .create_with_capacity 32
+  - list_method:Array Lip_slot_code := new Array Lip_slot_code capacity 32
 
   - list_data:Hmap Lip_slot_data Key String_alias := new Hmap Lip_slot_data Key String_alias
 
-  - stack:Array Lip_slot_data := Array Lip_slot_data .create_with_capacity 8  
+  - stack:Array Lip_slot_data := new Array Lip_slot_data capacity 8  
 
   - get_data n:String_alias :Lip_slot_data <-
   ( + found:Boolean 

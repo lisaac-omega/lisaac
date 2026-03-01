@@ -40,6 +40,20 @@ Public
     result
   )
   
+  - set_capacity new_capacity:Int ring <-
+  // DCDC faire un super...
+  ( + old_capacity, i1:Int
+
+    old_capacity := capacity
+    set_capacity new_capacity
+    if ((capacity != old_capacity) && {ring_low > (old_capacity - count)}) then {
+      Out # "capacity:" # old_capacity # "/" # capacity # " ring_low= " # ring_low # " upper=" # upper # " count=" # count #'\n'
+      i1 := ring_low
+      ring_low := capacity - (old_capacity - ring_low)
+      storage.move i1 to (old_capacity - 1) forward (old_capacity - ring_low)
+    }
+  )
+
 Private
   
   - with_capacity needed_capacity:Int <-
@@ -49,7 +63,7 @@ Private
   ]
   (
     ? {capacity = 0}
-    capacity := 1024
+    capacity := 1024 // DCDC faire comme dans arrayed
     {capacity >= needed_capacity}.until_do {
       capacity := capacity << 1
     }
@@ -78,67 +92,65 @@ Public
   )
   
   - add_last v:V^n <-
-  (
-    set_capacity (count + n)
+  ( + msk:Int
+    set_capacity (count + n) ring
+    msk := ring_msk
     { e:V
-      ? {ring_low.in_range 0 to capacity}
-      storage.at ((ring_low + count) & ring_msk) put e
+      storage.at ((ring_low + count) & msk) put e
       count := count + 1;
     }.value v
   )
   
   - add_first v:V^n <-
-  (
-    set_capacity (count + n)
+  ( + i, msk:Int
+    set_capacity (count + n) ring
+    msk := ring_msk
+    count := count + n
+    ring_low := (ring_low - n) & msk
     { e:V
-      ring_low := (ring_low - 1) & ring_msk
-      storage.at ring_low put e
-      count := count + 1;
+      storage.at ((ring_low + i) & msk) put e
+      i := i + 1;
     }.value v
-    if (n > 1) then {      
-      + i1, i2:Int
-      i2 := n - 1
-      while {i1 < i2} do {
-        swap i1 with i2
-        i1 := i1 + 1
-        i2 := i2 - 1
-      }      
-    }
   )
   
   - at i:Int add v:V^n <-
-  ( + idx, up, lo, foo:Int
-    
-    if (i = 0) then {
-      add_first v
-    }.elseif {i = count} then {
-      add_last v
+  ( + i1, i2, msk:Int
+    + right_shift:Boolean
+
+    set_capacity (count + n) ring
+  //if (i > (upper >> 1)) then {
+    if (True) then {
+      i1 := upper
+      i2 := upper + n
+      right_shift := True
     } else {
-      set_capacity (count + n)
-      { e:V
-        idx := (ring_low + i) & ring_msk
-        if (i < (count - i)) then {
-          foo := ring_low
-          lo := ring_low := (ring_low - 1) & ring_msk
-          until {foo = idx} do {
-            storage.at lo put (storage.at foo)
-            lo := foo
-            foo := (foo + 1) & ring_msk
-          }
-          idx := lo
-        } else {
-          up := (ring_low + count) & ring_msk
-          foo := (up - 1) & ring_msk
-          until {idx = up} do {
-            storage.at up put (storage.at foo)
-            up := foo
-            foo := (foo - 1) & ring_msk
-          }
-        }
-        storage.at idx put e
-        count := count + 1
-      }.value v
+      ring_low := ring_low - n
+      if (ring_low < 0) then {
+        ring_low := capacity + ring_low
+      }
     }
+    count := count + n
+    msk := ring_msk
+    right_shift.if {
+      while {i1 >= i} do {
+        storage.at ((ring_low + i2) & msk) put (storage.at ((ring_low + i1) & msk))
+        i1 := i1 - 1
+        i2 := i2 - 1
+      }
+    } else {
+      i1 := 0
+      i2 := n      
+      while {i2 < (i - n)} do {
+        storage.at ((ring_low + i1) & msk) put (storage.at ((ring_low + i2) & msk))
+        i1 := i1 + 1
+        i2 := i2 + 1
+      }
+    }
+    i1 := i
+    { e:V
+      storage.at ((ring_low + i1) & msk) put e
+      i1 := i1 + 1
+    }.value v
   )
   
   - remove_last <-

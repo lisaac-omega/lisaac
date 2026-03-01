@@ -6,7 +6,7 @@ Inherit
 
 Private
 
-  - storage:Array Lip_string := Array Lip_string .create_with_capacity 10
+  - storage:Array Lip_string := new Array Lip_string capacity 10
 
 Public
 

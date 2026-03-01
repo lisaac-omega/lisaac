@@ -405,7 +405,7 @@ Private
     
     go_item (i - 1)
     { u:V
-      link := Single_list_node(V).create v next (mem_lnk.next)
+      link := Single_list_node(V).create u next (mem_lnk.next)
       mem_lnk.set_next link
       mem_lnk := link
     }.value v

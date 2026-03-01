@@ -18,7 +18,9 @@ Switching from one implementation to another only changes the memory usage and e
 We suggest that you read the paper entitled "RIP Linked List" (B. Sonntag and D. Colnet)
 to choose the best implementation of @Collection for your needs.*/
 Insert
+
   - parent_clone:Clone := Clone
+
 Public
   
   // Creation:
@@ -29,6 +31,9 @@ Public
     abstract
     self
   )
+  [
+    Result.count = n
+  ]
   
 Public
   

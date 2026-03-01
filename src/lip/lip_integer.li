@@ -6,7 +6,7 @@ Inherit
 
 Private
 
-  - storage:Array Lip_integer := Array Lip_integer .create_with_capacity 10
+  - storage:Array Lip_integer := new Array Lip_integer capacity 10
 
   - set_value v:Int <-
   (

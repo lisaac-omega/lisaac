@@ -1,0 +1,68 @@
+Header
+  + name := Main
+
+Public
+
+  + array:Array Int
+
+  + linked_list:Linked_list Int
+
+  - main <-
+  ( + idx: Int
+
+    array := new Array Int capacity 16  ; Test.check (array.capacity) integer 16
+    linked_list := new Linked_list Int
+
+    idems
+
+    array.add_last (1,2,3)
+    linked_list.add_last (1,2,3)
+    
+    idems
+
+    array.add_first (4,5,6)
+    linked_list.add_first (4,5,6)
+    
+    idems
+
+    array.at 2 add (7,8,9)
+    linked_list.at 2 add (7,8,9)
+    
+    idems
+
+    array.at 0 add 10
+    linked_list.at 0 add 10
+    
+    idems
+
+    array.at 1 add (11, 12)
+    linked_list.at 1 add (11, 12)
+    
+    idems
+
+    idx := array.upper
+    array.at idx add (13, 14)
+    linked_list.at idx add (13, 14)
+    
+    idems
+
+    idx := array.upper + 1
+    array.at idx add (15, 16)
+    linked_list.at idx add (15, 16)
+    
+    idems
+  )
+
+
+  - idems <-
+  ( + idx:Int
+    
+    while { idx <= array.upper} do {
+      Test.check (array.at idx) integer (linked_list.at idx)
+      idx := idx + 1
+      
+    }
+    Test.check idx integer (1 + array.upper)
+    Test.check idx integer (1 + linked_list.upper)
+
+  )

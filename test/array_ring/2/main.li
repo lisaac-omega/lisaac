@@ -1,0 +1,68 @@
+Header
+  + name := Main
+
+Public
+
+  + array:Array Int
+
+  + array_block:Array_block Int
+
+  - main <-
+  ( + idx: Int
+
+    array := new Array Int capacity 16 ; Test.check (array.capacity) integer 16 
+    array_block := new Array_block Int
+
+    idems
+
+    array.add_last (1,2,3)
+    array_block.add_last (1,2,3)
+    
+    idems
+
+    array.add_first (4,5,6)
+    array_block.add_first (4,5,6)
+    
+    idems
+
+    array.at 2 add (7,8,9)
+    array_block.at 2 add (7,8,9)
+    
+    idems
+
+    array.at 0 add 10
+    array_block.at 0 add 10
+    
+    idems
+
+    array.at 1 add (11, 12)
+    array_block.at 1 add (11, 12)
+    
+    idems
+
+    idx := array.upper
+    array.at idx add (13, 14)
+    array_block.at idx add (13, 14)
+    
+    idems
+
+    idx := array.upper + 1
+    array.at idx add (15, 16)
+    array_block.at idx add (15, 16)
+    
+    idems
+  )
+
+
+  - idems <-
+  ( + idx:Int
+    
+    while { idx <= array.upper} do {
+      Test.check (array.at idx) integer (array_block.at idx)
+      idx := idx + 1
+      
+    }
+    Test.check idx integer (1 + array.upper)
+    Test.check idx integer (1 + array_block.upper)
+
+  )

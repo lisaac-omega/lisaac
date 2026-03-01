@@ -17,9 +17,9 @@ Public
 
   - code:Uint32 <- Cast Position To Uint32.on self
 
-  //
+
   // Creation.
-  //
+  
 
   - create proto:Prototype line l:Int column c:Int :Position <-
   ( + cod:Uint32
@@ -198,4 +198,4 @@ Public
   
 Private
   
-  - stack_push:Array Instr := Array Instr .create_with_capacity 4
+  - stack_push:Array Instr := new Array Instr capacity 4

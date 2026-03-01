@@ -22,8 +22,7 @@ Public
     (b = 1 << r).ok r or 0
   )
   
-  - size_in_base_2 (u:Uint64) :Int <-
-  [ ? {u != 0}; ]
+  - size_in_base_2 (u:Uint64) :Int <-  
   ( 
     64 - clz u
   )

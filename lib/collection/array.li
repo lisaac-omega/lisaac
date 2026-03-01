@@ -26,6 +26,13 @@ Inherit
     
 Public
   
+  + storage:C_array V
+  
+Public
+
+  + capacity:Int
+  // Internal storage capacity in number of item.
+  
 
   // Creation:
   
@@ -35,7 +42,37 @@ Public
     result.add_last v
     result
   )
+
+  - new self:Self capacity c:Int :Self <-
+  // New empty array with a given capacity.
+  ( + result:Self
+    
+    result := clone
+    if (c > 0) then {
+      result.set_capacity c
+    }
+    result
+  )
+  [
+    Result.is_empty
+  ]
+
+  - create new_count:Int :Self <-
+  // Make array with range [ 0 .. @new_count - 1 ].
+  // When @new_count = 0 the array @is_empty.
+  ( + result:Self
   
+    result := clone
+    result.make new_count
+    result
+  )
+  [
+    Result.count = new_count
+  ]
+
+  
+  // 
+
   - add_last v:V^n <-
   ( 
     set_capacity (count + n)
@@ -64,10 +101,11 @@ Public
   - add element:V first n:Int <-
   // addfirst.gif
   [
-    deprecated True msg "array.li:l59:Use the new add_first instead. DC Jan 2026",
+    deprecated True msg "array.li:l67:Use the new add_first instead. DC Jan 2026",
     n > 0 
   ]
   ( + new_capacity,new_count:Int
+  
     new_count := count + n
     (capacity = 0).if {
       storage := C_array V.create new_count
@@ -85,13 +123,10 @@ Public
     upper := upper + n
   )
   
-  + storage:C_array V
-  
-  + capacity:Int
-  // Internal storage capacity in number of item.
-  
+
   - element_sizeof:Int <-
   ( + result:Int
+  
     (V.is_expanded_type).if {
       result := V.object_size
     } else {
@@ -102,26 +137,12 @@ Public
   
   // Creation and modification:
   
-  - create new_count:Int :Self <-
-  // Make array with range [0 .. @new_count - 1].
-  // When @new_count = 0 the array is empty.
-  ( + result:Self
-    result := clone
-    result.make new_count
-    result
-  )
-  
-  - new self:Self capacity c:Int :Self <-
-  // New empty array with a given capacity.
-  ( + result:Self
-    result := clone
-    result.with_capacity c
-    result
-  );
-  
+
   - create_with_capacity new_count:Int :Self <-
   // Create an empty array with at least @needed_capacity. <- DCDC VIRER / OBSOLETE
+  //[ deprecated True msg "array.li:l128:Use new__capacity, DC Feb 2026" ]
   ( + result:Self  
+  
     result := clone
     result.with_capacity new_count
     result
@@ -129,6 +150,7 @@ Public
   
   - create_with_native_array_byte na:C_array Uint8 size s:Int :Self <-
   ( + result:Self
+  
     result := clone
     result.make_with_native_array_byte na size s
     result
@@ -137,7 +159,7 @@ Public
   - create_capacity c:Int e0 e0:E :Self <-
   // New ARRAY of capacity @c, initialized with @e0.
   [
-    c >= 1
+    deprecated True msg "array.li:l148:Use new__of, DC Feb 2026"
   ]
   ( + result:Self
     result := create_with_capacity c
@@ -148,7 +170,7 @@ Public
   - create_capacity c:Int e0 e0:E e1 e1:E :Self <-
   // New ARRAY of capacity @c, initialized with @e0 and @e1.
   [
-    c >= 2
+    deprecated True msg "array.li:l159:Use new__of, DC Feb 2026"
   ]
   ( + result:Self
     result := create_with_capacity c
@@ -159,7 +181,7 @@ Public
   
   - new_storage c:Int <-
   [
-        deprecated True msg "array.li:l154:Still used ? DC Jan 2026"
+    deprecated True msg "array.li:l154:Still used ? DC Jan 2026"
   ]
   (
     (c = 0).if {
@@ -173,6 +195,7 @@ Public
   
   - new_copy o:Array V <-
   ( + u:Int
+
     u := o.upper
     upper := u
     (u = -1).if {
@@ -287,6 +310,7 @@ Public
   - remove_all u:V <-
   ( + i,j:Int
     + v:V
+
     {(i <= upper) && {at i != u}}.while_do {
       i := i + 1
     }
@@ -417,6 +441,7 @@ Public
   - with_capacity needed_capacity:Int <-
   // Create an empty array with at least @needed_capacity.
   [
+    // deprecated True msg "array.li:l430:Use set_capacity DC Feb 2026",
     needed_capacity >= 0
   ]
   (
@@ -1005,3 +1030,16 @@ Public
     }
   )
   
+  // Other and Less Common
+
+  - new self:Self empty :Self <-
+  ( + result:Self
+
+    result := clone
+    result.set_upper (-1)
+    result
+  )
+  [
+    Result.capacity = 0,
+    Result.upper = (-1)
+  ]

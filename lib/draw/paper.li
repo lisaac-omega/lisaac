@@ -342,13 +342,16 @@ Public
         `emscripten_set_main_loop_arg(generate_frame,@ptr, 0, 0/*false*/)`
       } else {
         {! window_should_close}.while_do {
-          `glfwPollEvents()`
-          (flag_refresh).if {
+          //`glfwPollEvents()`          
+          (flag_refresh).if {          
             flag_refresh := False
             //"wins.count:".print; wins.count.println
             0.to (wins.upper) do { i:Int
               generate_frame (wins.at i.win_ptr)
             }
+            `glfwWaitEventsTimeout(1.0/60.0)` // ~60 Hz            
+          } else {
+            `glfwWaitEvents()`
           }
         }
         //PEN.delete

@@ -9,7 +9,7 @@ Inherit
   
 Public
 
-  - prototype_list:Array Prototype := Array Prototype.create_with_capacity 512
+  - prototype_list:Array Prototype := new Array Prototype capacity 512
   // BSBS: Voir si il faut le conserver !
 
   - prototype_dico:Hmap Prototype Key String_alias := new Hmap Prototype Key String_alias
@@ -107,7 +107,7 @@ Public
             old_list_current   := list_current
             (slot_code.argument_count > 1).if {
               list_current := external_list
-              args := Array Expr.create_with_capacity (slot_code.argument_count)
+              args := new Array Expr capacity (slot_code.argument_count)
               args.add_last (Prototype_cst.create position type (typ.default))
               1.to (slot_code.argument_count-1) do { i:Int
                 args.add_last (
@@ -244,7 +244,7 @@ Public
       shortname := n
     }
     generic_count := c
-    idf_generic_list := Array Itm_type_parameter.create_with_capacity c
+    idf_generic_list := new Array Itm_type_parameter capacity c
 
     is_lip.if_false {
       insert_prototype

@@ -10,22 +10,19 @@ Private
   - bucket:Hset(Array E) :=
   Hset(Array E).create
 
-  - free_list:Array(Array E) :=
-  Array(Array E).create_with_capacity 5
+  - free_list:Array(Array E) := new Array (Array E) capacity 5
 
-  - empty_list:Array E := Array E .create_with_capacity 0
+  - empty_list:Array E := new Array E empty
 
 Public
 
-  //
   // Temporary manager.
-  //
 
   - new:Array E <-
   ( + result:Array E
 
     (free_list.is_empty).if {
-      result := Array E .create_with_capacity 16
+      result := new Array E capacity 16
     } else {
       result := free_list.last
       free_list.remove_last
@@ -42,7 +39,7 @@ Public
     } else {
       result := bucket.reference_at tmp
       (result = NULL).if {
-        result := Array E .create_with_capacity (tmp.count)
+        result := new Array E capacity (tmp.count)
         result.copy_collection tmp
         bucket.fast_add result
       }
@@ -54,7 +51,7 @@ Public
   - copy tmp:Array E :Array E <-
   ( + result:Array E
 
-    result := Array E .create_with_capacity (tmp.count)
+    result := new Array E capacity (tmp.count)
     result.copy_collection tmp
     free tmp
     result

@@ -385,7 +385,7 @@ Private
     
     go_item (i - 1)
     { u:V
-      link := Linked_list_node V.create v previous mem_lnk next (mem_lnk.next)
+      link := Linked_list_node V.create u previous mem_lnk next (mem_lnk.next)
       link.next.set_previous link
       mem_lnk.set_next link
       mem_lnk := link
