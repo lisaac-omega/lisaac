@@ -1,0 +1,8 @@
+Header
+  + name := Strange
+Public
+
+  - main <-
+  (
+    "Slot not found ?".crash_with_message "not so strange actually"
+  )

@@ -12,8 +12,8 @@ Public
 
     array := new Array Int capacity 3
     Test.check (array.capacity) integer 4
-    array_ring := new Array_ring Int capacity 18
-    Test.check (array_ring.capacity) integer 1024
+    array_ring := new Array_ring Int capacity 2
+    Test.check (array_ring.capacity) integer 2
 
     idems
 
@@ -27,15 +27,18 @@ Public
     
     idems
 
-    array.at 2 add (7,8,9)
+
+    array.at 2 add (7,8,9)    
     array_ring.at 2 add (7,8,9)
-    
+
     idems
 
     array.at 0 add 10
     array_ring.at 0 add 10
     
+
     idems
+
 
     array.at 1 add (11, 12)
     array_ring.at 1 add (11, 12)
@@ -45,8 +48,9 @@ Public
     idx := array.upper
     array.at idx add (13, 14)
     array_ring.at idx add (13, 14)
-    
+
     idems
+
 
     idx := array.upper + 1
     array.at idx add (15, 16)

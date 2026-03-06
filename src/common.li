@@ -20,8 +20,7 @@ Public
     after :=                                                      "--\n\
     \--             UL - UDS - LORIA - INRIA - FRANCE              --\n\
     \--         Benoit SONNTAG - benoit.sonntag@lisaac.org         --\n\
-    \--         Dominique COLNET - Dominique.Colnet@loria.fr       --\n\
-    \--                   http://www.lisaac.org/                   --\n\
+    \--                     http://lisaac.org/                     --\n\
     \----------------------------------------------------------------\n"
     string_tmp.copy name
     string_tmp.append " - version "

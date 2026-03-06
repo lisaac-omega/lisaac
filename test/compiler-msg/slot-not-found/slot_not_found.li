@@ -1,0 +1,8 @@
+Header
+  + name := Slot_not_found
+Public
+
+  - main <-
+  (
+    crash_with_messag "Slot not found !"
+  )

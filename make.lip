@@ -44,6 +44,7 @@ Private
   
   + is_o3:Boolean
   + is_tcc:Boolean
+  + is_compact:Boolean
   
   + flag_draw_debug:Boolean
   + bug_stack:Boolean
@@ -276,6 +277,11 @@ Private
         execute_fail ("cp "+lisaac+"webli/run.sh "+ output_file)
       }
     }
+    (is_compact).if {      
+      execute_fail ("strip --strip-all " + output_file)
+      execute_fail ("upx-ucl -9 " + output_file)
+      execute_fail ("ls -alh " + output_file)
+    }
   )
   
   - front_end <-
@@ -444,7 +450,15 @@ Public
     without_source
     bug_stack := True
   )
-  
+
+  - compact <-
+  // Optimal executable size
+  (
+    (target = "unix").if {      
+      is_compact := True
+    }
+  )	
+
   //
   // Other:
   //

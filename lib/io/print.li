@@ -4,6 +4,7 @@ Header
   print, append_in, to_string, etc.
   */
 Public
+
   - self:Self '#' e:E :Self <- ( crash; Self); // See OUT
 
   
@@ -25,6 +26,7 @@ Public
   
   - to_string:String_alias <-
   ( + result:String_alias
+
     String.tmp { b:String_buffer
       append_in b
       result := b.to_string_alias
@@ -46,5 +48,4 @@ Public
   // French corner
   
   - écrire self:Self <- ( self.print )
-  
   

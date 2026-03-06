@@ -1,0 +1,56 @@
+Header
+  + name := Main2
+
+Public
+
+  + array:Array Int
+
+  + array_ring:Array_ring Int
+
+  - main <-
+  (
+    array := new Array Int capacity 2
+    Test.check (array.capacity) integer 2
+    array_ring := new Array_ring Int capacity 2
+    Test.check (array_ring.capacity) integer 2
+
+    idems
+
+    array     .at 0 add (5,6)
+    array_ring.at 0 add (5,6) ; idems
+
+    array     .at 0 add (1,2)
+    array_ring.at 0 add (1,2) ; idems
+
+    array     .at 2 add (3,4)
+    array_ring.at 2 add (3,4) ; idems
+
+    array     .at 6 add (7,8)
+    array_ring.at 6 add (7,8) ; idems
+
+    array     .at 8 add 9
+    array_ring.at 8 add 9 ; idems
+
+    array     .at 0 add 0
+    array_ring.at 0 add 0 ; idems
+
+    array     .at 0 add (-3, -2, -1)
+    array_ring.at 0 add (-3, -2, -1) ; idems
+
+    array     .at 0 add (10, 11, 12)
+    array_ring.at 0 add (10, 11, 12) ; idems
+  )
+
+
+  - idems <-
+  ( + idx:Int
+    
+    while { idx <= array.upper} do {
+      Test.check (array.at idx) integer (array_ring.at idx)
+      idx := idx + 1
+      
+    }
+    Test.check idx integer (1 + array.upper)
+    Test.check idx integer (1 + array_ring.upper)
+
+  )

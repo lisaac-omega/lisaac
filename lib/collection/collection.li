@@ -126,6 +126,7 @@ Public
     valid_index i2
   ]
   ( + tmp:V
+
     tmp := at i1
     at i1 put (at i2)
     at i2 put tmp
@@ -821,20 +822,28 @@ Public
     count = Old count
   ]
 
-  // Invariant.
-
-  //  [
-  //    -? { lower <= upper + 1 }
-  //  ]
-
 
   // Debug
 
-  - inspect : String_buffer <-
+  - inspect_virer : String_buffer <-
   ( + res : String_buffer
      res := String_buffer.create 4096
      res.append "[ "
     foreach { el : V; res.append "'"; res.append (el.to_string); res.append "' , ";}
     res.append "]"
     res
+  ) 
+
+  - append_in b: String_buffer <-
+  ( 
+    b.add_last '[' 
+    foreach { e: V
+      b.add_last ' ' 
+      e.append_in b
+      b.add_last ','
+    }
+    if (! is_empty) then {
+      b.remove_last
+    }
+    b.add_last ']'     
   )  

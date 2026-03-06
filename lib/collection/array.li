@@ -71,17 +71,10 @@ Public
   ]
 
   
-  // 
+  // Query:
 
-  - add_last v:V^n <-
-  ( 
-    set_capacity (count + n)
-    { e:V
-      upper := upper + 1
-      storage.at upper put e
-    }.value v
-  )
-    
+  // Writing:
+
 Public
   
   // Query:
@@ -122,8 +115,30 @@ Public
     storage.set_slice_with element from lower until (n-1)
     upper := upper + n
   )
-  
 
+  // Adding:
+  - add_first v:V^n <-
+  ( + idx:Int
+    set_capacity (count + n)    
+    if (upper >= 0) then {
+      storage.move 0 to upper forward n
+    }
+    upper := upper + n
+    { e:V
+      storage.at idx put e
+      idx := idx + 1
+    }.value v
+  )
+ 
+  - add_last v:V^n <-
+  ( 
+    set_capacity (count + n)
+    { e:V
+      upper := upper + 1
+      storage.at upper put e
+    }.value v
+  )
+     
   - element_sizeof:Int <-
   ( + result:Int
   
@@ -564,21 +579,8 @@ Public
   - put_last element:V <-
   (
     storage.at upper put element
-  )
-    
-  - add_first v:V^n <-
-  ( + idx:Int
-    set_capacity (count + n)    
-    if (upper >= 0) then {
-      storage.move 0 to upper forward n
-    }
-    upper := upper + n
-    { e:V
-      storage.at idx put e
-      idx := idx + 1
-    }.value v
-  )
- 
+  )  
+  
   - clear <-
   (
     upper := -1

@@ -10,7 +10,7 @@ Inherit
 Private
   
   + storage:C_array V
-  
+    
   + ring_low:Int; // corresponding lower in storage
   
   - ring_msk:Int <- capacity - 1
@@ -36,45 +36,25 @@ Public
   // New empty array with at least capacity of c elements.
   ( + result:Self
     result := clone
-    result.with_capacity c
+    result.set_capacity c
     result
   )
   
-  - set_capacity new_capacity:Int ring <-
-  // DCDC faire un super...
-  ( + old_capacity, i1:Int
-
+  - set_capacity new_capacity:Int <-
+  ( + old_capacity:Int
+    
+    //(capacity < new_capacity).if { debug_print "avant set_capacity "}
     old_capacity := capacity
-    set_capacity new_capacity
-    if ((capacity != old_capacity) && {ring_low > (old_capacity - count)}) then {
-      Out # "capacity:" # old_capacity # "/" # capacity # " ring_low= " # ring_low # " upper=" # upper # " count=" # count #'\n'
-      i1 := ring_low
-      ring_low := capacity - (old_capacity - ring_low)
-      storage.move i1 to (old_capacity - 1) forward (old_capacity - ring_low)
+    self.parent_arrayed.set_capacity new_capacity
+    if (old_capacity = 0) then {
+      ? {ring_low = 0}
+      ? {count = 0}
+    }.elseif {(capacity > old_capacity) && {ring_low + count > old_capacity}} then {
+      storage.move ring_low to (old_capacity - 1) forward (capacity - old_capacity)
+      ring_low := ring_low + (capacity - old_capacity)
     }
+    //(capacity != old_capacity).if { debug_print "après set_capacity" }
   )
-
-Private
-  
-  - with_capacity needed_capacity:Int <-
-  // Create an empty array with at least @needed_capacity.
-  [
-    needed_capacity >= 0
-  ]
-  (
-    ? {capacity = 0}
-    capacity := 1024 // DCDC faire comme dans arrayed
-    {capacity >= needed_capacity}.until_do {
-      capacity := capacity << 1
-    }
-    storage := C_array V .create capacity
-    ring_low := 0
-    count := 0
-  )
-  [
-    capacity >= needed_capacity,
-    is_empty
-  ]
   
 Public
   
@@ -93,62 +73,105 @@ Public
   
   - add_last v:V^n <-
   ( + msk:Int
-    set_capacity (count + n) ring
+
+    //debug_print ("avant add_last " + n.to_string)
+    set_capacity (count + n)
     msk := ring_msk
     { e:V
       storage.at ((ring_low + count) & msk) put e
       count := count + 1;
     }.value v
+    //debug_print ("après add_last " + n.to_string)
   )
   
   - add_first v:V^n <-
-  ( + i, msk:Int
-    set_capacity (count + n) ring
-    msk := ring_msk
+  ( + i, rmsk:Int
+
+    //debug_print ("avant add_first " + n.to_string)
+    set_capacity (count + n)
+    rmsk := ring_msk
     count := count + n
-    ring_low := (ring_low - n) & msk
+    ring_low := (ring_low - n) & rmsk
     { e:V
-      storage.at ((ring_low + i) & msk) put e
+      storage.at ((ring_low + i) & rmsk) put e
       i := i + 1;
     }.value v
+    //debug_print "appres add_first"
   )
   
   - at i:Int add v:V^n <-
-  ( + i1, i2, msk:Int
-    + right_shift:Boolean
+  ( + i1, i2:Int
 
-    set_capacity (count + n) ring
-  //if (i > (upper >> 1)) then {
-    if (True) then {
+    //debug_print ("avant at " + i.to_string + " add " + n.to_string)
+    set_capacity (count + n)
+    //if (i < (upper -i)) then {
+    if (False) then { // DCDC to do...
+      // shift left:
+      count := count + n
+      ring_low := (ring_low - n) & ring_msk
+      i1 := 0
+      i2 := i + (n - 1)
+      while {i1 < i} do {
+        //Out # "left ring_low:" # ring_low # " i1:" # i1 # " i2:" # i2 # " ring_msk:" # ring_msk # '\n'
+        at i1 put (at i2)
+        i1 := i1 + 1
+        i2 := i2 + 1
+      }
+    } else {
+      // shift right:
       i1 := upper
       i2 := upper + n
-      right_shift := True
-    } else {
-      ring_low := ring_low - n
-      if (ring_low < 0) then {
-        ring_low := capacity + ring_low
+      count := count + n
+      while {i1 >= i} do {
+        //Out # "right ring_low:" # ring_low # " i1:" # i1 # " i2:" # i2 # " ring_msk:" # ring_msk # '\n'
+        storage.at ((ring_low + i2) & ring_msk) put (storage.at ((ring_low + i1) & ring_msk))
+        i1 := i1 - 1
+        i2 := i2 - 1
       }
     }
-    count := count + n
-    msk := ring_msk
-    right_shift.if {
+    // writing values:
+    i1 := i
+    { e:V
+      storage.at ((ring_low + i1) & ring_msk) put e
+      i1 := i1 + 1
+    }.value v
+    //debug_print ("après at " + i.to_string + " add " + n.to_string)
+  )
+  - old_at i:Int add v:V^n <-
+  ( + i1, i2, rmsk:Int
+
+    set_capacity (count + n)
+    rmsk := ring_msk
+
+    //if (i > (upper >> 1)) then {
+    if (True) then {
+      // right shift:
+      i1 := upper
+      i2 := upper + n
+      count := count + n
       while {i1 >= i} do {
-        storage.at ((ring_low + i2) & msk) put (storage.at ((ring_low + i1) & msk))
+        storage.at ((ring_low + i2) & rmsk) put (storage.at ((ring_low + i1) & rmsk))
         i1 := i1 - 1
         i2 := i2 - 1
       }
     } else {
-      i1 := 0
-      i2 := n      
-      while {i2 < (i - n)} do {
-        storage.at ((ring_low + i1) & msk) put (storage.at ((ring_low + i2) & msk))
-        i1 := i1 + 1
-        i2 := i2 + 1
+      if (ring_low + count > capacity) then {
+        // left shift when already split in two:
+        Out # "split ring_low:" # ring_low # '/' # (ring_low - n) # '\n'
+        storage.move ring_low to (capacity - 1) backward (-n)
+        ring_low := ring_low - n
+      } else {
+        // left shift, splitting in two:
+        Out # "2 ring_low:" # ring_low # '/' # (ring_low - n) # '\n'
+        storage.move 0 to n forward (capacity - n)
+        ring_low := capacity - n
       }
+      count := count + n
     }
+    // writing values:
     i1 := i
     { e:V
-      storage.at ((ring_low + i1) & msk) put e
+      storage.at ((ring_low + i1) & rmsk) put e
       i1 := i1 + 1
     }.value v
   )
@@ -191,35 +214,21 @@ Public
     }
   )
   
-  - to_string:String_alias <-
-  ( + i:Int
-    + result:String_alias
-    + v:V
-    String.tmp { ts:String_buffer
-      ts.append "-----------------\n"
-      ts.append "capacity="; capacity.append_in ts; ts.add_last '\n'
-      ts.append "count="; count.append_in ts; ts.add_last '\n'
-      ts.append "upper="; upper.append_in ts; ts.add_last '\n'
-      ts.append "ring_low="; ring_low.append_in ts; ts.add_last '\n'
-      ts.append "ring_msk="; ring_msk.append_in ts; ts.add_last '\n'
-      i := ring_low
-      /*
-      count.times {
-        ts.append "i="; i.append_in ts
-        ts.add_last ' '
-        v := storage.at i
-        (v = NULL).if {
-          ts.append "NULL"
-        } else {
-          ts.append (v.to_string)
-        }
-        ts.add_last '\n'
-        i := (i + 1) & ring_msk
+  - debug_print tag:String <-
+  (
+    Out # "\n--- " # tag # '\n'
+    Out # "capacity:" # capacity # " ring_low:" # ring_low # " count:" # count # " upper:" # upper # '\n'
+    '['.print
+    0.to (capacity - 1) do { i:Int
+      storage.at i .print
+      (i < (capacity - 1)). if {
+        ' '.print
       }
-      */
-      result := ts.to_string_alias
     }
-    result
+    "]\n Normal print:".println
+    
+    self.print
+    "\n---\n".print
   )
   
 Public
@@ -232,4 +241,3 @@ Public
     }
     result
   )
-    

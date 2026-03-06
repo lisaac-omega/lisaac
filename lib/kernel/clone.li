@@ -112,7 +112,7 @@ Self
 
   - safe_equal (e1, e2:V) :Boolean <-
   [
-    deprecated True msg "clone.li:115:Still used gigi ?. DC Jan 2026" 
+    deprecated True msg "clone.li:l121:Still used gigi ?. DC Jan 2026" 
   ]
   (
     (e1=e2) || {(e1!=NULL) && {e1==e2}}
