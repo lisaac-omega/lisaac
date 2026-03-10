@@ -52,7 +52,7 @@ Public
           Button.new.init "OK" do {b:Button; close; True}.size (120,48) / 
           blk.value 16
         ) / (
-          Txt.new.init_str "Author: Benoît Sonntag; Major Contributor: Dominique Colnet".color (Look_gui.text_ui.set_af 0.2)
+          Txt.new.init_str "Main Author: Benoît Sonntag - Co-Author: Dominique Colnet".color (Look_gui.text_ui.set_af 0.2)
         )
       ).size (width-16,height-16).init_parent self
     }
