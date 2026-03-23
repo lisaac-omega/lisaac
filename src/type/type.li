@@ -419,7 +419,7 @@ Public
   )
 
 Public
-/*
+  /*
   - stat_global:ARRAY Int := ARRAY Int .create 128
   - stat_global_null:ARRAY Int := ARRAY Int .create 128
   - stat_slot:ARRAY Int := ARRAY Int .create 128
@@ -655,7 +655,7 @@ Public
             tab := slot_size.at j
             // BSBS: A tester sont utilité !
             (! tab.is_empty).if {
-              semantic_error (tab.first.position,"Slot is not possible with a type C")
+             // 14Mars semantic_error (tab.first.position,"Slot is not possible with a type C")
             }
           }
 
@@ -759,8 +759,10 @@ Public
           // Prototype declaration.
           (output_list.count > 1).if {
             output_decl # "extern __" # intern_name # ' ' # intern_name # "_;\n"
-          }
-          output_decl # "#define " # intern_name # "__ (&" # intern_name # "_)\n"
+          }          
+          output_decl # "#define " # intern_name # "__ ("
+          (! default.is_default_flat).if { output_decl # '&' }
+          output_decl # intern_name # "_)\n"
           //
           output_glob # "__" # intern_name # ' ' # intern_name # '_'
           (is_late_binding).if {

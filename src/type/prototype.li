@@ -145,18 +145,12 @@ Public
   + type_style:String_alias; // Reference / Flat / Exact.
 
   + is_mapping:Boolean
+  + is_external:Boolean  
+  //+ is_complex_flat:Boolean
 
-  + is_external:Boolean
-
-  - set_mapping <-
-  (
-    is_mapping := True
-  )
-
-  - set_external <-
-  (
-    is_external := True
-  )
+  - set_mapping <- is_mapping := True
+  - set_external <- is_external := True  
+  //- set_complex_flat <- is_complex_flat := True
 
   - set_type_style s:String_alias <-
   (
@@ -241,7 +235,7 @@ Public
       string_tmp.remove_head (idx+1)
       shortname := string_tmp.to_string_alias
     } else {
-      shortname := n
+      shortname := n      
     }
     generic_count := c
     idf_generic_list := new Array Itm_type_parameter capacity c

@@ -396,6 +396,7 @@ Public
   ( + r:Hmap String_alias Key String_alias
     r := new Hmap String_alias Key String_alias
     r.at "ℤ" add "z"
+    r.at "ℂ" add "c"
     r
   )
   

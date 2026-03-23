@@ -1,5 +1,5 @@
 Header
-  + name := Flat Gif_lzw
+  + name :=  Gif_lzw
 Insert
   
   - parent_clone:Clone := Clone

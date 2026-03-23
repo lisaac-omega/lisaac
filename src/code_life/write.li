@@ -141,22 +141,22 @@ Public
       // Execution normal.
       //
       /*( // BSBS: Bug, mais de toute facon le gain n'est pas la... (entre +5 a +20)
-	(loop_invariant != NULL) && {list_current = loop_invariant.body} &&
-	{is_invariant} && {variable.get_last_index != -1}
+      (loop_invariant != NULL) && {list_current = loop_invariant.body} &&
+      {is_invariant} && {variable.get_last_index != -1}
       ).if {
-	//old_loop_invariant := loop_invariant
-	//loop_invariant := NULL
-	//
-	variable.reset_last_write self
-	loop_list.insert_before self
-	//
-	//execute_access_link
-	//value := value.execute_link
-	//seq_index := seq_index + 1
-	//
-	//loop_invariant := old_loop_invariant
-	result := NOP
-	count_invariant := count_invariant + 1
+      //old_loop_invariant := loop_invariant
+      //loop_invariant := NULL
+      //
+      variable.reset_last_write self
+      loop_list.insert_before self
+      //
+      //execute_access_link
+      //value := value.execute_link
+      //seq_index := seq_index + 1
+      //
+      //loop_invariant := old_loop_invariant
+      result := NOP
+      count_invariant := count_invariant + 1
       } else { */
 
         execute_access_link
@@ -181,14 +181,12 @@ Public
     value.remove
   )
 
-  //
   // Genere
-  //
-
+  
   - genere_value <-
   (
     (
-      (static_type.is_flat_ref) && {! value.static_type.is_flat_ref}
+      (static_type.is_flat_ref && {! static_type.is_default_flat} /*14Mars*/) && {! value.static_type.is_flat_ref}
     ).if {
       ? {value.static_type.is_flat}
       output.append "&("
@@ -196,7 +194,8 @@ Public
       output.add_last ')'
     }.elseif {
       (static_type.is_flat) && {! static_type.is_flat_ref} &&
-      {(! value.static_type.is_flat) || {value.static_type.is_flat_ref}} &&
+      {(! value.static_type.is_flat) || {value.static_type.is_flat_ref}} && 
+      {! value.static_type.is_default_flat} && 
       {value.static_type.raw != Type_null} // For Pointer := NULL
     } then {
       output.append "*("

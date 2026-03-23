@@ -20,7 +20,7 @@ Itm_type_simple
   )
 
   - make n:String_alias <-
-  (
+  (    
     name := n
     dico.at n put self
   )

@@ -1,0 +1,13 @@
+Header
+  - name := Main
+Public
+  
+  - main <-
+  ( + a,b,c,d:ℂ
+    
+    a := 2 + 3i 
+    b := 4 + 2i
+    c := a + b
+    Out # "(" # a # ") + (" # b # ") = " # c # '\n'    
+    d.println
+  )

@@ -39,12 +39,12 @@ Public
     }
     // TYPE Classic.
     (
-      (t.is_flat_c) && {t.raw != type_boolean} &&
+      (t.is_flat) && {t.raw != type_boolean} &&
       {t.raw != type_true} && {t.raw != type_false}
     ).if {
       result := t.default_value position
       result := result.check_type t with position
-    } else {
+    } else {      
       result := Prototype_cst.create position type t
     }
     result

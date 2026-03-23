@@ -139,7 +139,7 @@ Public
         output.add_last ')'
       }
       (t.alias_slot = NULL).if {
-        ((tf.is_flat) && {! tf.is_flat_ref} /*&& {! tf.is_exact}*/).if {
+        ((tf.is_flat) && /*14Mars*/ {(! tf.is_flat_ref) || {tf.is_default_flat}}).if {
           output.add_last '.'
         } else {
           output.append "->"

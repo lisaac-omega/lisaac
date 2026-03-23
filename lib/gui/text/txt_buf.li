@@ -561,8 +561,8 @@ Public
     skip_sp
     c := at pos_i
     (c)
-    .when '\n' then { pos_i := pos_i + 1; skip_sp }
-    .when '\r' then { pos_i := pos_i + 2; skip_sp }
+    .when '\n' then { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; skip_sp }
+    .when '\r' then { pos_i := pos_i + 2; toks.at tok_cur.inc_nl; skip_sp }
   )    
   
   - skip_spln_expr <-
@@ -590,11 +590,11 @@ Public
         ((c := buf.at pos_i) != '\0') && {pos_i.pt != ln_limit} && {c <= ' '} &&
         {(c != '\n') || {(pos_i > 0) && {buf.at (pos_i-1) = '\r'}}}
       }.while_do {
-        (c = '\n').if { toks.at tok_cur.inc_nl; }
+        (c = '\n').if { toks.at tok_cur.inc_nl }
         pos_i := pos_i + 1
       }
       rd_rem_cpp
-      rd_rem_c1
+      rd_rem_c
     }.do_while {pos_i != p}
   )
   
@@ -607,12 +607,16 @@ Public
     };
   );
     
-  - rd_rem_c1:Boolean <-
+  - rd_rem_c1_old:Boolean <-
   (look "/*" && {pos_i.pt != ln_limit}).if {
     + lev,p:Int
     + c:Char
     col (Look.dead) sub 0
     pos_i := pos_i + 2
+    /*(name.has_suffix "hello.li").if {
+      Out # "rd_rem_c1 = " # pos_i.pt # '\n'
+      crash
+    }*/
     lev := 1
     p := pos_i
     {((c := at pos_i) != '\0') && {c != '\n'} && {pos_i.pt != ln_limit} && {lev != 0}}.while_do {
@@ -637,16 +641,18 @@ Public
       //crash
       err warning msg "End of comment mono-line not found !"
     }
-  }
+  }  
   
   - rd_rem_c:Boolean <-
   (look "/*" && {pos_i.pt != ln_limit}).if {
-    + lev,p:Int
+    + lev,p,oldp,oldnl:Int
     + c:Char
     col (Look.dead) sub 0
     pos_i := pos_i + 2
-    p := pos_i
-    lev := 1
+    oldp := p := pos_i
+    oldnl := toks.at tok_cur.nl
+    
+    lev := 1     
     {(at pos_i != '\0') && {pos_i.pt != ln_limit} && {lev != 0}}.while_do {
       (look "/*").if {
         lev := lev + 1
@@ -668,7 +674,10 @@ Public
         pos_i := pos_i + 1
       }
     }
-    (lev != 0).if {        
+    (lev != 0).if {
+      pos_i := oldp      
+      toks.at tok_cur.set_nl oldnl
+      reset_sty (pos_i + 1)
       err syntax msg "End of comment not found !"
     }
   }

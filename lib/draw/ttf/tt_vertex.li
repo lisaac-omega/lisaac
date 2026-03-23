@@ -1,5 +1,5 @@
 Header
-  + name := Flat Tt_vertex
+  + name :=  Tt_vertex
 Inherit
   
   - parent_clone:Clone := Clone

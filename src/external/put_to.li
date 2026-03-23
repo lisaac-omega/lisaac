@@ -25,10 +25,8 @@ Public
     typ_gen.native_array_variable
   )
 
-  //
   // Creation.
-  //
-
+  
   - create p:Position base rec:Expr index idx:Expr value v:Expr :Self <-
   ( + result:Self
 
@@ -50,10 +48,8 @@ Public
   - my_copy:Self <-
   Self.create position base (receiver.my_copy) index (index.my_copy) value (value.my_copy)
 
-  //
   // Remove
-  //
-
+  
   - remove <-
   (
     variable.unwrite self
@@ -63,10 +59,8 @@ Public
     value.remove
   )
 
-  //
   // Execute
-  //
-
+  
   - execute:Instr <- execute_unlink
 
   - execute_unlink:Instr <-
@@ -83,10 +77,8 @@ Public
     self
   )
 
-  //
   // Genere.
-  //
-
+  
   - genere <-
   ( + type_generic:Type_generic
     + first_type:Type_full
@@ -102,7 +94,7 @@ Public
     } else {
       output.add_last '='
       ((first_type.is_flat) && {! first_type.is_flat_c}).if {
-        (value.static_type.is_flat_ref).if {
+        ((value.static_type.is_flat_ref) && {! value.static_type.is_default_flat}).if {
           output.append "*("
           value.genere
           output.add_last ')'

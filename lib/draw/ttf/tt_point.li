@@ -1,8 +1,8 @@
 Header
-  + name := Flat Tt_point
+  + name := Flat Tt_point  
 Insert
   
-  - parent_clone:Clone := Clone
+  - parent_utils:Utils := Utils
   
 Mapping,Public
   
@@ -12,7 +12,7 @@ Mapping,Public
   - make (px,py:Real32) :Tt_point <- 
   (
     (x,y) := (px,py)
-    Tt_point
+    self
   )
   
 Public

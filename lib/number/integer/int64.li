@@ -39,4 +39,3 @@ Public
   - self:Self '>>' Left 90 other:Int :Self <- `@self >> @other`:Self
   - self:Self '<<' Left 90 other:Int :Self <- `@self << @other`:Self
   - '~' self:Self :Self <- `~@self`:Self
-

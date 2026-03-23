@@ -15,10 +15,8 @@ Public
 
   + receiver:Expr
 
-  //
   // Creation.
-  //
-
+  
   - create p:Position with val:Expr in (r:Expr,s:Slot_data) :Self <-
   ( + result:Self
     ? {p.code != 0}
@@ -58,8 +56,8 @@ Public
   )
 
   - execute_access_link <-
-  (
-    slot.execute
+  ( 
+    slot.execute 
     receiver := receiver.execute_link
   )
 
@@ -69,10 +67,8 @@ Public
     parent_write.remove
   )
 
-  //
   // Genere
-  //
-
+  
   - genere <-
   ( + tf:Type_full
     + t:Type
@@ -101,7 +97,7 @@ Public
       } else {
         // Receiver.        
         tf := receiver.static_type
-        ((tf.is_exact) || {tf.is_flat_ref}).if {
+        ((tf.is_exact) || {(tf.is_flat_ref) && {!tf.is_default_flat} /* 14Mars */}).if {
           receiver.genere
           output.append "->"
         }.elseif {tf.is_flat} then {
@@ -130,20 +126,11 @@ Public
     }
   )
   
-  //
   // Display.
-  //
-
+  
   - display buffer:String_buffer <-
   (
     receiver.display buffer
     buffer.append "->"
     parent_write.display buffer
   )
-
-
-
-
-
-
-

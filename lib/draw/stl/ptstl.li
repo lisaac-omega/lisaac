@@ -1,5 +1,5 @@
 Header
-  + name := Flat Ptstl
+  + name := Ptstl
 Inherit
   - parent_clone:Clone := Clone
   

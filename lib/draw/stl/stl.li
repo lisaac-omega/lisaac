@@ -10,7 +10,7 @@ Private
   
 Public
   
-  - body:Array Ptstl := Array Ptstl.create_with_capacity 1024
+  - body:Array (Flat Ptstl) := Array (Flat Ptstl).create_with_capacity 1024
   
   - info:Boolean
   

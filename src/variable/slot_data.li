@@ -326,7 +326,16 @@ Public
     string_tmp.append name
     warning_error (position,string_tmp)
     */
-    ((value_init = NULL) && {(affect != '<') || {self = slot_id}}).if {      
+    ((value_init = NULL) && {(affect != '<') || {self = slot_id}}).if {
+      /*
+      ((style = '+') && {receiver_type.default.is_default_flat}).if {
+        /* 14Mars
+        (receiver_type.type_c != NULL).if {
+          semantic_error (position,"Clonable slot impossible with C type mapping prototype.")
+        } */       
+        receiver_type.prototype.set_complex_flat
+      }
+      */
       (self = slot_id).if {     
         val := Prototype_cst.create position type type
         (style = '+').if {

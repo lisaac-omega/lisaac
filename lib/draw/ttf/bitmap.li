@@ -344,7 +344,7 @@ Public
   )
 
   // returns number of contours
-  - flatten_curves vertices:Array Tt_vertex pix objspace_flatness:Real32
+  - flatten_curves vertices:Array (Flat Tt_vertex) pix objspace_flatness:Real32
   :(Array Tt_point,Array Int) <-
   ( + points:Array Tt_point
     + x,y:Real32
@@ -405,7 +405,7 @@ Public
   )
 
   - rasterize flatness_in_pixels:Real32 
-  vertex vertices:Array Tt_vertex scale (scale_x,scale_y:Real32) 
+  vertex vertices:Array (Flat Tt_vertex) scale (scale_x,scale_y:Real32) 
   shift (shift_x,shift_y:Real32) offset (x_off,y_off:Int) 
   int invert:Int <-
   ( + scal:Real32

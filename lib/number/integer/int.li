@@ -3,14 +3,14 @@ Header
 /*Generic Int.*/
   - type    := `int64_t`;
   - default := 0;
-  - export := Uint8,  Uint16, Uint32 , Uint64,
-  Int8 ,  Int16 , Int32  , Int64 , 
-  Uint_big,Uint   , Uint_cpu,
-  Ureal_16_16, Ureal_24_8 , Ureal_26_6  ,
-  Real_16_16 , Real_24_8  , Real_26_6   ,
-  Real_32_32 ,
+  - export := Uint8, Uint16, Uint32, Uint64,
+  Int8, Int16, Int32, Int64,
+  Uint_big, Uint, Uint_cpu,
+  Ureal_16_16, Ureal_24_8, Ureal_26_6,
+  Real_16_16, Real_24_8, Real_26_6 ,
+  Real_32_32,
   Real, Real32, Real64, Real80,
-  Pointer, ℤ;
+  Pointer, ℤ, ℂ;  
 Insert
   
   - parent_numeric: /*EYE*/ Numeric := Numeric
@@ -71,8 +71,8 @@ Public
   
   - to up:Self sum s:{Int; Real32} :Real32 <-
   ( + result:Real32
-    to up do { i:Int
-      result := result + s.value i
+    to up do { j:Int
+      result := result + s.value j
     }
     result
   )
@@ -80,8 +80,8 @@ Public
   - to up:Self product p:{Int; Real32} :Real32 <-
   ( + result:Real32
     result := p.value self
-    (self+1).to up do { i:Int
-      result := result * p.value i
+    (self+1).to up do { j:Int
+      result := result * p.value j
     }
     result
   )
@@ -366,14 +366,14 @@ Public
     ? {self >= 0}
   ]
   (
-    from 1 to self do { i:Int
+    from 1 to self do { j:Int
       action.value
     }
   )
   
   - times action:{} <-
   (
-    1.to self do { i:Int
+    1.to self do { j:Int
       action.value
     }
   )
@@ -464,12 +464,12 @@ Public
   // creation during the process.
   [ -? {buffer!=NULL}; ]
   ( + val:Self
-    + i,old_count,j,sz:Int
+    + k,old_count,j,sz:Int
     
     (self = 0).if {
       buffer.extend '0'
     } else {
-      i := buffer.count
+      k := buffer.count
       val := self
       sz := object_size * 2
       {(val != 0) && {j < sz}}.while_do {
@@ -478,10 +478,10 @@ Public
         j := j + 1
       }
       old_count := buffer.upper
-      {i >= old_count}.until_do {
-        buffer.swap i with old_count
+      {k >= old_count}.until_do {
+        buffer.swap k with old_count
         old_count := old_count - 1
-        i := i + 1
+        k := k + 1
       }
     }
   )
@@ -491,7 +491,7 @@ Public
   // creation during the process.
   [ -? {buffer!=NULL}; ]
   ( + val:Self
-    + i,old_upper,beg:Int
+    + j,old_upper,beg:Int
     
     beg := buffer.count
     (self = 0).if {
@@ -502,12 +502,12 @@ Public
         buffer.extend ((val & 15).hexadecimal_digit)
         val := val >> 4
       }
-      i := beg
+      j := beg
       old_upper := buffer.upper
-      {i >= old_upper}.until_do {
-        buffer.swap i with old_upper
+      {j >= old_upper}.until_do {
+        buffer.swap j with old_upper
         old_upper := old_upper - 1
-        i := i + 1
+        j := j + 1
       }
     }
     buffer.insert '0' to beg on (s + beg - buffer.count)
@@ -519,7 +519,7 @@ Public
   // * Require: buffer not null
   [ -? {buffer!=NULL}; ]
   ( + val:Self
-    + beg,i,old_upper,c:Int
+    + beg,j,old_upper,c:Int
     
     beg := buffer.count
     (self = 0).if {
@@ -532,12 +532,12 @@ Public
         val := val >> 1
         c := c - 1
       }
-      i := beg
+      j := beg
       old_upper := buffer.upper
-      {i >= old_upper}.until_do {
-        buffer.swap i with old_upper
+      {j >= old_upper}.until_do {
+        buffer.swap j with old_upper
         old_upper := old_upper - 1
-        i := i + 1
+        j := j + 1
       }
     }
     (s != 0).if {

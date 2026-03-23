@@ -20,7 +20,7 @@ Real, Real32, Real64, Real80
 
 Public
   
-  - sign:Boolean         <- (exp_16 >> 15) = 0; // True if positif, False else.
+  - sign:Boolean    <- (exp_16 >> 15) = 0; // True if positif, False else.
 
   - exponent:Uint32 <- exp_16 & 07F_FFh
 
@@ -32,4 +32,3 @@ Public
   - mantissa_bits:Int8 := 64
 
   - exponent_bits:Int8 := 15
-

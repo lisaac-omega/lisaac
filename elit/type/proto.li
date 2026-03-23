@@ -398,18 +398,25 @@ Public
     include_c?= field 7 name "- include"  ass ":=" value "``" parse {Ext.parse_sp 1}
     extern_c ?= field 8 name "- external" ass ":=" value "``" parse {Ext.parse_sp 1}
     //
-    
+    //(name.has_suffix "/int.li").if {
+    //  Out # "Av.:" # toks.at tok_cur.nl # " pos:" # pos_i.pt # '\n'
+    //}
     p := pos_i
     {
       {at (p-1) = ' '}.while_do { p := p - 1 }        
       (at (p-1) = '\n').if {
         pos_i := p
+        //(name.has_suffix "/int.li").if {
+        //  Out # "blc:" # toks.at tok_cur.nl # " pos:" # pos_i.pt # '\n'
+        //}
         toks.at tok_cur.dec_nl;
         p := p - 1
       }
     }.while_loop
     toks.at tok_cur.inc_nl;
-    
+    //(name.has_suffix "/int.li").if {
+    //  Out # "Ap.:" # toks.at tok_cur.nl # " pos:" # pos_i.pt # '\n'
+    //}
     /*
     (name.has_suffix "test/misc/1/main.li").if {
       "FIN : ".print; pos_i.pt.println

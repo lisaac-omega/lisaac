@@ -67,12 +67,12 @@ Public
   - free <-
   ( + i:Int    
     + se:Section
-    + sl:Slot
+    + sl:Slot 
     (exports != NULL).if { exports.free; exports := NULL }
-    stk.add_last self
+    stk.add_last self 
     //
-    i := tok_cur - 1
-    {(i > 0) && {se = NULL}}.while_do {
+    i := (tok_cur - 1).min (toks.upper) // BSBS: c'est bizarre le min n'est pas nécessaire normalement
+    {(i > 0) && {se = NULL}}.while_do {      
       se ?= toks.at i
       sl ?= toks.at i
       (sl != NULL).if { se := sl.section }

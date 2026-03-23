@@ -402,24 +402,32 @@ Public
       
   - draw <-
   ( + t:Real32
+    //+ p:Paint
         
     t := Clock.seconds
         
     draw_space (0,0) size (width,height) time t
     draw_logo  (0,0) size (width,height) time t
     /*
-    intersect_scissor (400,400) size (50,50)
-        
     begin_path
-    fill_color (COLOR.white)
+    circle (300,300) radius 200
+    p := Paint.create_radial (300,300) 
+              radius (1,200) 
+              color (Color.rgba(255,255,255,255))
+              to (Color.rgba(255,255,255,0))
+    fill_paint p
+    fill
+    */
+    /*
+    begin_path
+    fill_color (Color.white)
     rect (300,300) size (800,800)
     fill
-    
-    reset_scissor
-    */    
+    */
+            
     draw_title (0,0) size (width,height) time t
     draw_mouse
-    Paper.refresh_again
+    Paper.refresh_again    
   )
   
 Public

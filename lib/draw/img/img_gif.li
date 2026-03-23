@@ -21,7 +21,7 @@ Public
   + delay:Int
   + pal:C_array Uint8  := C_array Uint8.create (256*4); // pal[256][4]
   + lpal:C_array Uint8 := C_array Uint8.create (256*4); // lpal[256][4]
-  + codes:C_array Gif_lzw := C_array Gif_lzw.create 4096
+  + codes:C_array (Flat Gif_lzw) := C_array (Flat Gif_lzw).create 4096
   + color_table:C_array Uint8
   + parse:Int
   + step:Int

@@ -212,7 +212,7 @@ Public
     result
   )
 
-  - pow exp:Self :Self <- not_yet_implemented
+  - self:Self pow exp:Self :Self <- not_yet_implemented
 
   // Comparaison.
 

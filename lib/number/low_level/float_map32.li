@@ -14,8 +14,8 @@ Mapping,Private
 Real, Real32, Real64, Real80
 
   - get_map f:Self <-
-  ( `{ float f; uint32_t i; f = @f; memcpy(&i,&f,sizeof(float))`;
-    map_32 := `i`:Uint32
+  ( `{ float f; uint32_t j; f = @f; memcpy(&j,&f,sizeof(float))`;
+    map_32 := `j`:Uint32
     `}`
     /*
     + tab:C_array(Self)
@@ -26,7 +26,7 @@ Real, Real32, Real64, Real80
   
 Public
 
-  - sign:Boolean         <- (map_32 >> 31) = 0; // True if positif, False else.
+  - sign:Boolean    <- (map_32 >> 31) = 0; // True if positif, False else.
 
   - exponent:Uint32 <- (map_32 >> mantissa_bits) & 0FFh
 

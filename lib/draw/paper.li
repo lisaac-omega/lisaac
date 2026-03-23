@@ -538,7 +538,7 @@ Public
         d.draw pen
       };*/
       
-      Color.stack.clear
+      //Color.stack.clear
       `glfwSwapBuffers(@w)`
       //`glfwPollEvents()`
       //`glfwSwapInterval(1)`; // Pour eviter des dechirure de l'ecran (marche pas).
@@ -921,6 +921,6 @@ External
     }
     me.draw_all
     //    `glEnable(GL_DEPTH_TEST)`
-    Color.stack.clear
+    //Color.stack.clear
     `eglSwapBuffers(e->display, e->surface)`
   }

@@ -107,6 +107,7 @@ Public
       (local_list.lower).to (local_list.upper) do { j:Int
         var := local_list.at j.to_run
         stack_local.add_last var
+        //"ITM_LIST: ".print; var.name.println
         var.init
       }
     }

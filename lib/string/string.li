@@ -7,14 +7,20 @@ Header
 #include <string.h>  
   `;
 Inherit
+  
   - parent_clone:Clone := Clone
+  
 String, File_system, Intn_big, ℤ_Big, ℤ, File_utils, Int64, Uint64
+  
   + storage:C_array Char
   // Collection containing characters
   
 Private
+  
   - stack_tmp:Flat Array String_buffer 
+  
 Public
+  
   - new_tmp:String_buffer <-
   ( + result:String_buffer
     (stack_tmp.is_empty).if {
@@ -43,6 +49,7 @@ Public
   )
   
   // BSBS: Pb de priority, a revoir dans la new version.
+  
   - self:Self '+=' other:String :String_buffer <- String_buffer.crash
   - self:Self '|' c:Char :String_buffer <- String_buffer.crash
   

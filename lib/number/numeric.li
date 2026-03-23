@@ -1,7 +1,6 @@
 Header
   + name := Numeric
-/**/
-  
+/**/  
   - export := Intn;
 Insert
   
@@ -32,8 +31,8 @@ Public
   
   - self:Self sum (up:Self) of a:{Self; Self} :Self <-
   ( + sum:Self
-    self.to up do { i:Self
-      sum := sum + a.value i
+    self.to up do { j:Self
+      sum := sum + a.value j
     }
     sum
   )
@@ -434,11 +433,11 @@ Public
   )
 
   - append_in b:String_buffer format s:Int with char:Char <-
-  ( + old_count,i:Int
+  ( + old_count,j:Int
     old_count := b.count
     append_in b
-    i := s - (b.count - old_count)
-    (i > 0).if { b.insert char to old_count on i; }
+    j := s - (b.count - old_count)
+    (j > 0).if { b.insert char to old_count on j }
   )
   [
     ? {b.count = (Old b.count + s)}
@@ -680,6 +679,12 @@ Public
 
   - to_raw_real80:Real80          <- Cast Self To Real80 on self
   
+  // Type C
+  
+  - i:ℂ <- ℂ.init (0,self)
+  
+  - to_c:ℂ <- ℂ.init (self,0)
+  
   // To test type ℤ
   
   - to_z:ℤ <- ℤ.init_si to_int64
@@ -687,5 +692,4 @@ Public
 
   // French corner
   - de self:Self à limit_up:Self répéter blc:{Self;} <- ( from self to limit_up do blc)
-  
   

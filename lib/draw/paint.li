@@ -170,3 +170,10 @@ Public
     image := 0
   )
   
+Pen
+  
+  - apply_alpha a:Real32 <-
+  (
+    inner_color := inner_color.mul_a a
+    outer_color := outer_color.mul_a a
+  )

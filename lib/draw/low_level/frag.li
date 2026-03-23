@@ -75,10 +75,8 @@ Public
   fringe,stro_thr:Real32) :Self <-
   ( + t0,t2,t1,t3:Real32
     
-    inner_col := paint.inner_color
-    inner_col.premul_color
-    outer_col := paint.outer_color
-    outer_col.premul_color
+    inner_col := paint.inner_color.premul_color    
+    outer_col := paint.outer_color.premul_color
     
     //"Frag84.Color: ".print; inner_col.print; ':'.print; outer_col.print; '\n'.print
     

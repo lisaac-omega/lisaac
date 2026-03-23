@@ -1,5 +1,5 @@
 Header
-  + name := Flat Composite_operation_state
+  + name := Composite_operation_state
 Inherit
   
   - parent_constant_pen:Constant_pen := Constant_pen

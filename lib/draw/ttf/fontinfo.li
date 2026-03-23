@@ -189,7 +189,7 @@ Public
     result
   )
     
-  - get_codepoint_shape unicode_pt:Int in vertices:Array Tt_vertex :Int <-
+  - get_codepoint_shape unicode_pt:Int in vertices:Array (Flat Tt_vertex) :Int <-
   (
     get_glyph_shape (find_glyph_index unicode_pt) in vertices
   )
@@ -238,7 +238,7 @@ Public
     (g < 0) || {ttshort(data + g) = 0}
   )
 
-  - close_shape (vertices:Array Tt_vertex,num_verts:Int)
+  - close_shape (vertices:Array (Flat Tt_vertex),num_verts:Int)
   offset (was_off,start_off:Boolean)
   size (sx,sy,scx,scy,cx,cy:Int32) :Int <-
   ( + num_vertices:Int
@@ -262,10 +262,10 @@ Public
     num_vertices
   )
 
-  - get_glyph_shape glyph_index:Int :Array Tt_vertex <-
+  - get_glyph_shape glyph_index:Int :Array (Flat Tt_vertex) <-
   ( + number_of_contours:Int16
     + dta,end_pts_of_contours:C_array Uint8
-    + vertices:Array Tt_vertex
+    + vertices:Array (Flat Tt_vertex)
     + g,num_vertices:Int
     dta := data
     g := get_glyf_offset glyph_index
@@ -429,7 +429,7 @@ Public
         {more}.while_do {
           + flags, gidx:Int16
           + t0,m,n:Real32
-          + comp_verts:Array Tt_vertex
+          + comp_verts:Array (Flat Tt_vertex)
           + mtx0,mtx1,mtx2,mtx3,mtx4,mtx5:Real32
           mtx0 := mtx3 := 1
           
@@ -470,16 +470,14 @@ Public
           //"comp_verts:".print; comp_verts.count.print; '\n'.print
           (comp_verts.count > 0).if {
             // Transform vertices.
-            0.to (comp_verts.upper) do { i:Int
-              + v:Tt_vertex
+            0.to (comp_verts.upper) do { i:Int              
               + x,y:Real32
-              v := comp_verts.at i
-              (x,y) := (v.x.to_real32,v.y.to_real32)
-              v.set_x ((m * (mtx0*x + mtx2*y + mtx4)).to_int16)
-              v.set_y ((n * (mtx1*x + mtx3*y + mtx5)).to_int16)
-              (x,y) := (v.cx.to_real32,v.cy.to_real32)
-              v.set_cx ((m * (mtx0*x + mtx2*y + mtx4)).to_int16)
-              v.set_cy ((n * (mtx1*x + mtx3*y + mtx5)).to_int16)
+              (x,y) := (comp_verts.at i.x.to_real32,comp_verts.at i.y.to_real32)
+              comp_verts.at i.set_x ((m * (mtx0*x + mtx2*y + mtx4)).to_int16)
+              comp_verts.at i.set_y ((n * (mtx1*x + mtx3*y + mtx5)).to_int16)
+              (x,y) := (comp_verts.at i.cx.to_real32,comp_verts.at i.cy.to_real32)
+              comp_verts.at i.set_cx ((m * (mtx0*x + mtx2*y + mtx4)).to_int16)
+              comp_verts.at i.set_cy ((n * (mtx1*x + mtx3*y + mtx5)).to_int16)
             }
             // Append vertices.                        
             (vertices = NULL).if {
@@ -604,7 +602,7 @@ Public
   [ ? {(scale_x != 0) || {scale_y != 0}}; ]
   ( + ix0,iy0,ix1,iy1:Int
     + gbm:Bitmap
-    + vertices:Array Tt_vertex
+    + vertices:Array (Flat Tt_vertex)
     + scal_x,scal_y:Real32
     
     vertices := get_glyph_shape gly
@@ -688,7 +686,7 @@ Public
   shift (shift_x,shift_y:Real32) glyph glif:Int <-
   ( + ix0,iy0,tmp0,tmp1:Int
     + gbm:Bitmap
-    + vertices:Array Tt_vertex
+    + vertices:Array (Flat Tt_vertex)
 
     vertices := get_glyph_shape glif
     
@@ -717,12 +715,12 @@ Public
   
   // ARRAY TT_VERTEX
   
-  - stock_array_tt_vertex:Array (Array Tt_vertex) := Array (Array Tt_vertex).create_with_capacity 32
+  - stock_array_tt_vertex:Array (Array (Flat Tt_vertex)) := Array (Array (Flat Tt_vertex)).create_with_capacity 32
   
-  - alloc_vertices n:Int :Array Tt_vertex <-
-  ( + result:Array Tt_vertex
+  - alloc_vertices n:Int :Array (Flat Tt_vertex) <-
+  ( + result:Array (Flat Tt_vertex)
     (stock_array_tt_vertex.is_empty).if {
-      result := Array Tt_vertex.create n
+      result := Array (Flat Tt_vertex).create n
     } else {
       result := stock_array_tt_vertex.pop
       result.with_capacity n
@@ -735,7 +733,7 @@ Public
     result    
   )
   
-  - free_vertices t:Array Tt_vertex <-
+  - free_vertices t:Array (Flat Tt_vertex) <-
   (
     (t != NULL).if {
       //{t.is_empty}.until_do { t.pop.free; }; BSBSBS

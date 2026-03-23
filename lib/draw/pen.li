@@ -242,6 +242,7 @@ Public // Private
   )
 
   // State setting
+  
   - stroke_width w:Real32 <- states.last.set_stroke_width w
   - miter_limit  l:Real32 <- states.last.set_miter_limit l
   - line_cap c:Int     <- states.last.set_line_cap c
@@ -1260,8 +1261,7 @@ Public
       expand_fill (0.0, miter, 2.4)
     }
     // Apply global alpha
-    paint.inner_color.mul_a (states.last.alpha)
-    paint.outer_color.mul_a (states.last.alpha)
+    paint.apply_alpha (states.last.alpha)
 
     render_fill paint
     paint.free
@@ -1339,13 +1339,11 @@ Public
       // use alpha to emulate coverage.
       // Since coverage is area, scale by alpha*alpha.
       alpha := (strok_width / fringe_width).clamp 0 to 1
-      strok_paint.inner_color.mul_a (alpha*alpha)
-      strok_paint.outer_color.mul_a (alpha*alpha)
+      strok_paint.apply_alpha (alpha*alpha)      
       strok_width := fringe_width
     }
     // Apply global alpha
-    strok_paint.inner_color.mul_a (state.alpha)
-    strok_paint.outer_color.mul_a (state.alpha)
+    strok_paint.apply_alpha (state.alpha)
 
     cache.flatten_paths commands
 
@@ -1562,8 +1560,7 @@ Public
     paint.set_image (font_images.at font_image_idx)
     //"image:".print; paint.image.print; '\n'.print
     // Apply global alpha
-    paint.inner_color.mul_a (state.alpha)
-    paint.outer_color.mul_a (state.alpha)
+    paint.apply_alpha (state.alpha)    
     render_triangles (paint, state.scissor, verts)
   )
   

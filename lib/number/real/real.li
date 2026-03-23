@@ -5,7 +5,7 @@ Header
   - default := 0.0;
   - export := Real32, Real64, Real80,
   Real_16_16,  Real_24_8,  Real_26_6,
-  Ureal_16_16, Ureal_24_8, Ureal_26_6;
+  Ureal_16_16, Ureal_24_8, Ureal_26_6, ℂ;
   - lip     <-
   (
     add_lib "-lm";
@@ -151,7 +151,7 @@ Public
     + val:Self
     + val_10:Int
     + char:Char
-    + i:Int
+    + j:Int
 
     get_map self
     // Sign.
@@ -177,16 +177,16 @@ Public
         val := val - val_10
         (n != 0).if {
           b.add_last '.'
-          i := n
-          {(val != 0) && {i > 0}}.while_do {
+          j := n
+          {(val != 0) && {j > 0}}.while_do {
             val := val * 10
             val_10 := val.to_int
             char := val_10.decimal_digit
             b.add_last char
             val := val - val_10
-            i := i - 1
+            j := j - 1
           }
-          b.extend_multiple '0' by i
+          b.extend_multiple '0' by j
         }
       }
     }

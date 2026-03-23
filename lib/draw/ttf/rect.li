@@ -1,5 +1,5 @@
 Header
-  + name := Flat Rect
+  + name :=  Rect
 Public
 
   + x:Int

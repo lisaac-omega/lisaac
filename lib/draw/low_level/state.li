@@ -22,7 +22,7 @@ Public
   + call_count:Int
   - update_call_count <- ( call_count := pen_gl.calls.count; )
   
-  + composite_operation:Composite_operation_state
+  + composite_operation:Flat Composite_operation_state
   + fill:Paint
   + stroke:Paint
   + stroke_width:Real32

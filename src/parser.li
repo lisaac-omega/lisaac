@@ -1224,7 +1224,7 @@ Public
         }
       }.do_while {continue}
       //
-      nam := string_tmp2.to_string_alias
+      nam := string_tmp2.to_string_alias      
       (is_parameter_type).if {
         (style != 0).if { warning_error (current_position,"Style Flat, Exact or \'\\\' is ignored."); }
         result := Itm_type_parameter.get nam
@@ -1799,6 +1799,7 @@ Public
             }
           }
           (object.shortname != name).if {
+            //Out # object.shortname # " " # name # '\n'
             warning_error (current_position,"Incorrect name (filename != name).")
           }
         } else {

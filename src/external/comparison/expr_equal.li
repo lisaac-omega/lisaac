@@ -121,12 +121,12 @@ Public
       {right.static_type.raw.type_c = NULL}
     ).if {
       output.append "(memcmp("
-      (left.static_type.is_flat_ref).if_false {
+      ((! left.static_type.is_flat_ref) || {left.static_type.is_default_flat}).if {
         output.add_last '&'
       }
       left.genere
       output.add_last ','
-      (right.static_type.is_flat_ref).if_false {
+      ((! right.static_type.is_flat_ref) || {right.static_type.is_default_flat}).if {
         output.add_last '&'
       }
       right.genere

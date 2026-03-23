@@ -16,8 +16,6 @@ Private
     "Usage:auto_test [--verbose] [--first-error-exit] <directory...>".println
     exit 1
   )
-  
-Private 
  
   - lisaac_options:String := "--r -q"
   
@@ -81,7 +79,7 @@ Public
       }
     }
     ".\n".print
-    (error_counter = 0).if {
+    if (error_counter = 0) then {
       "Cool (no errors).".println
     }.elseif {error_counter = 1} then {
       "just one ERROR left".println
@@ -90,9 +88,11 @@ Public
     } else {
       (error_counter.to_string + " ERRORS !!").println
     }
+    System.exit error_counter
   )
   
-Private  
+Private
+  
   - scan_directory (root:String_alias) <-
   (
     (Environment.chdir root = 0).if {
@@ -260,7 +260,7 @@ Private
     }
     if continue then {
       + exit_status:Int
-      (autotest_script := file_exists "auto_test.sh" in dirpath).if {
+      if (autotest_script := file_exists "auto_test.sh" in dirpath) then {
         ".auto_test.sh.".print; test_counter := test_counter + 1
         script_counter := script_counter + 1
         String.tmp { cmd:String_buffer
@@ -270,21 +270,22 @@ Private
             exit_status := execute_command cmd
           }
         }
+        Out # '.' # exit_status # '.'
         if (exit_status = 0) then {
-          ".ok.0.".print
+          ".ok.continue.".print
         } else {
           continue := False
           if (exit_status = 1) then {
-            ".ok.1.".print
+            ".ok.stop.".print
           } else {
             error_counter := error_counter + 1
-            Out # '.' # exit_status # ".ERROR."
+            ".ERROR.".print
           }
         }
         continue := False
       }
     }
-    continue.if {
+    if continue then {
       if (boost_only := file_exists "boost-only" in dirpath) then {
         ".boost-only.".print
       }
@@ -337,9 +338,6 @@ Private
     }
     '.'.println
   )
-    
-Private
-  
   
   - remove_list:String_buffer := String_buffer.create 256
   
@@ -375,7 +373,6 @@ Private
     continue
   )
   
-Private
   - compile_boost boost_mode:Boolean dirpath dirpath:String_alias main fname:String_alias lisaacout lisaacout:Boolean :Boolean <-
   ( + cmd:String_alias
     + exit_status:Int
@@ -546,7 +543,6 @@ Private
     }
   )
   
-Private
   - buf buf:String_buffer counter counter:Int name name:String_alias <-
   (
     (counter > 0).if {
@@ -557,7 +553,6 @@ Private
     }
   )
   
-Private
   - chdir arg:String_alias :Boolean <-
   ( + result:Boolean
     if verbose then {
@@ -583,3 +578,4 @@ Private
     }
     (i > key.upper) && {src.valid_index(idx + i)}
   )
+  

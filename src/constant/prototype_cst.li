@@ -56,10 +56,8 @@ Public
     // Nothing.
   )
   
-  //
   // Generation.
-  //
-
+  
   - genere <-
   (
     static_type.genere_value output

@@ -316,19 +316,19 @@ Public
     (other.upper < upper).if {
       storage.remove_tail (upper - other.upper)
     }
-    lower.to upper do { i:Int
-      put (item i & other.item i) to i
+    lower.to upper do { j:Int
+      put (item j & other.item j) to j
     }
     normalize
   )
 
   - or_binary other:Self :Self <-
   (
-    lower.to (upper.min (other.upper)) do { i:Int
-      put (item i | other.item i) to i
+    lower.to (upper.min (other.upper)) do { j:Int
+      put (item j | other.item j) to j
     }
-    upper.to (other.upper) do { i:Int
-      add_last (other.item i)
+    upper.to (other.upper) do { j:Int
+      add_last (other.item j)
     }
   )
 
@@ -342,20 +342,20 @@ Public
     }.elseif {count < other.count} then {
       result  := False
     } else {
-      + i:Int
+      + j:Int
       + find:Boolean
-      i := lower
+      j := lower
 
-      {find || {i > upper}}.until_do {
-        (item i > other.item i).if {
+      {find || {j > upper}}.until_do {
+        (item j > other.item j).if {
           result := True
           find := True
-        }.elseif {item i < other.item i} then {
+        }.elseif {item j < other.item j} then {
           result := False
           find := True
         }
 
-        i := i + 1
+        j := j + 1
       }
     }
 
@@ -400,8 +400,8 @@ Public
       set_with_zero
       put 1 to 0
     } else {
-      2.to n do { i:Int
-        multiply_integer i
+      2.to n do { j:Int
+        multiply_integer j
       }
     }
   )
@@ -471,15 +471,15 @@ Public
   // +1 if self > other
   ( + result,up_s,up_o:Int
     + v_s,v_o:Int32
-    + i:Int
+    + j:Int
 
     up_s := upper
     up_o := other.upper
     (up_s = up_o).if {
-      i := upper
+      j := upper
       {
-        v_s := item i
-        v_o := other.item i
+        v_s := item j
+        v_o := other.item j
         (v_s < v_o).if {
           result := -1
         } else {
@@ -487,8 +487,8 @@ Public
             result := 1
           }
         }
-        i := i - 1
-      }.do_until {(i < lower) || {result != 0}}
+        j := j - 1
+      }.do_until {(j < lower) || {result != 0}}
     } else {
       (up_s < up_o).if {
         result := -1
@@ -506,7 +506,7 @@ Public
   // the quotient. The remainder is returned as unsigned Int.
   // Note: @self is modified by this method.
   [ -? {divisor != 0}; ]
-  ( + i, remainder_word1, remainder_word0:Int
+  ( + j, remainder_word1, remainder_word0:Int
     + result:Uint32
     + x:Uint64
 
@@ -520,13 +520,13 @@ Public
         result := result % divisor
       }
     } else {
-      i := upper
-      {i < lower}.until_do {
-        remainder_word0 := item i
+      j := upper
+      {j < lower}.until_do {
+        remainder_word0 := item j
         x := (remainder_word1.to_uint64 << 32) | remainder_word0
         remainder_word1 := x % divisor
-        put (x / divisor) to i
-        i := i - 1
+        put (x / divisor) to j
+        j := j - 1
       }
       (item upper = 0).if {
         storage.remove_last
@@ -571,16 +571,16 @@ Public
       right := 32 - left
       ((last >> right) = 0).if {
         storage.add 0 first (word_shift+1)
-        word_shift.to (upper-1) do { i:Int
-          new_value := (item (i+1) << left) | (item i >> right)
+        word_shift.to (upper-1) do { j:Int
+          new_value := (item (j+1) << left) | (item j >> right)
         }
         new_value := item upper >> right
         storage.put new_value to upper
       } else {
         storage.add 0 first word_shift
-        upper.downto (word_shift+1) do { i:Int
-          new_value := (item i << left) | (item (i-1) >> right)
-          storage.put new_value to i
+        upper.downto (word_shift+1) do { j:Int
+          new_value := (item j << left) | (item (j-1) >> right)
+          storage.put new_value to j
         }
         new_value := item word_shift << left
         storage.put new_value to word_shift
@@ -599,9 +599,9 @@ Public
       word_right := n >> 5
       right := (n & 1Fh).to_int8; // Optimistic prediction
       left  := 32 - right
-      word_shift.to (upper-1) do { i:Int
-        new_value := (item (i+1) << left) | (item i >> right)
-        storage.put new_value to (i - word_shift)
+      word_shift.to (upper-1) do { j:Int
+        new_value := (item (j+1) << left) | (item j >> right)
+        storage.put new_value to (j - word_shift)
       }
       new_value := item upper >> right
       (new_value = 0).if {
@@ -613,28 +613,28 @@ Public
     }
   )
 
-  - multiply_and_subtract (u1, qhat: Int, d_storage: Array(Uint32),
-  d_offset:Int, r_storage:Array(Uint32),r_offset, length: Int):Boolean <-
+  - multiply_and_subtract (u1, qhat: Int, d_storage: Array Uint32,
+  d_offset:Int, r_storage:Array Uint32,r_offset, length: Int):Boolean <-
   // Only used by @divide.
   [ -? {qhat != 0}; ]
-  ( + i, j, jmax, m1, m2: Int
+  ( + k, j, jmax, m1, m2: Int
     + dec,result:Boolean
 
     (qhat = 1).if {
-      i := d_offset
+      k := d_offset
       j := r_offset
       jmax := r_offset + length
       {j = jmax}.until_do {
         (dec).if {
-          x_32 := r_storage.item j - d_storage.item i - 1
+          x_32 := r_storage.item j - d_storage.item k - 1
           dec := x_32 >= r_storage.item j
           r_storage.put x_32 to j
         } else {
-          x_32 := r_storage.item j - d_storage.item i
+          x_32 := r_storage.item j - d_storage.item k
           dec := x_32 > r_storage.item j
           r_storage.put x_32 to j
         }
-        i := i + 1
+        k := k + 1
         j := j + 1
       }
       (dec).if {
@@ -648,11 +648,11 @@ Public
         }
       }
     } else {
-      i := d_offset
+      k := d_offset
       j := r_offset
       jmax := r_offset + length
       {j = jmax}.until_do {
-        x := qhat.to_uint64 * d_storage.item i + m1
+        x := qhat.to_uint64 * d_storage.item k + m1
         m2 := (x & 0FFFF_FFFFh).to_uint32
         m1 := (x >> 32).to_uint32
         (dec).if {
@@ -664,7 +664,7 @@ Public
           dec := x_32 > r_storage.item j
           r_storage.put x_32 to j
         }
-        i := i + 1
+        k := k + 1
         j := j + 1
       }
       (dec).if {
@@ -692,23 +692,23 @@ Public
     r_storage:Array(Uint32),r_offset, length:Int):Boolean <-
   // Only used by @divide.
   // @old_u1 is the value of @u1 before @multiply_and_subtract.
-  ( + i, j, jmax:Int
+  ( + k, j, jmax:Int
     + inc,result:Boolean
 
-    i := d_offset
+    k := d_offset
     j := r_offset
     jmax := r_offset + length
     {j = jmax}.until_do {
       (inc).if {
-        x_32 := r_storage.item j + d_storage.item i + 1
+        x_32 := r_storage.item j + d_storage.item k + 1
         inc := x_32 <= r_storage.item j
         r_storage.put x_32 to j
       } else {
-        x_32 := r_storage.item j + d_storage.item i
+        x_32 := r_storage.item j + d_storage.item k
         inc := x_32 < r_storage.item j
         r_storage.put x_32 to j
       }
-      i := i + 1
+      k := k + 1
       j := j + 1
     }
     (inc).if {

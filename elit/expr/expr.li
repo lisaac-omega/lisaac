@@ -105,7 +105,10 @@ Public
   // For PROTO: lip and default
   ( + c:Char
     Expr.skip_body
-    {((c := at (pos_i-1)) = ' ') || {c = '\n'}}.while_do { pos_i := pos_i - 1; }
+    {((c := at (pos_i-1)) = ' ') || {c = '\n'}}.while_do { 
+      (c = '\n').if { toks.at tok_cur.dec_nl }
+      pos_i := pos_i - 1; 
+    }
     (c = ';').if { pos_i := pos_i - 1; }
   )
   
@@ -114,11 +117,10 @@ Public
     {((c := at pos_i) != '\0') && {c != '\n'} && {c != ';'}}.while_do { pos_i := pos_i + 1; }
   )
   
-  - set_parse b:Boolean; // TODO !!!
-  
-  //
+  - set_parse b:Boolean; 
+  // TODO !!!
+    
   // Original Parser
-  //
   
   - rd_expr_op:Expr <-
   //++ EXPR_OPERATOR-> { operator } EXPR_MESSAGE { operator {operator} EXPR_MESSAGE } {operator}

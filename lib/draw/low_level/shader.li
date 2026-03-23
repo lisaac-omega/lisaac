@@ -1,5 +1,5 @@
 Header
-  + name := Flat Shader
+  + name :=  Shader
 Inherit
   
   - parent_constant_pen:Constant_pen := Constant_pen
@@ -21,7 +21,9 @@ Public
   + loc_trans_post:Int
   + loc_tex :Int
   + loc_frag:Int
-
+  
+  - create:Self <- clone
+  
   - make (name,header,opts,vshader,fshader:String_alias) <-
   ( + status:Int
     + iprog, ivert, ifrag:Uint32

@@ -1,0 +1,40 @@
+Header
+  + name := Flat ℂ
+Insert
+  
+  - parent_numeric:Numeric := Numeric
+  
+Public
+    
+  + re:Real64
+  + im:Real64
+  
+Directory
+  
+  - init (real,img:Real64) :Self <-
+  (
+    (re,im) := (real,img)   
+    self
+  )
+  
+Public  
+  
+  - self:Self '+' Left 80 <> other:Self :Self <- ℂ init (re + other.re, im + other.im)
+  
+  - self:Self '-' Left 80 <> other:Self :Self <- ℂ init (re - other.re, im - other.im)
+    
+  - self:Self '*' Left 80 <> other:Self :Self <- 
+  (
+    ℂ init (re * other.re - im * other.im, re * other.im + im * other.re)
+  )
+  
+  - self:Self '/' Left 80 <> other:Self :Self <- 
+  ( + q:Real64    
+    q := other.re * other.re + other.im * other.im
+    ℂ init ( (re * other.re + im * other.im) / q, (im * other.re - re * other.im) / q )
+  )
+  
+  - append_in b:String_buffer <-
+  (    
+    b # re # " + " # im # 'i'
+  )

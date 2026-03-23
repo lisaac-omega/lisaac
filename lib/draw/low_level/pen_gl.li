@@ -22,7 +22,7 @@ Private
   
 Public
     
-  + shader:Shader
+  + shader:Shader := Shader create
   + textures:Array Texture
   + view0:Real32
   + view1:Real32
@@ -52,7 +52,8 @@ Public
     calls    := Array Pen_call.create_with_capacity 64
     verts    := Array (Flat Vertex).create_with_capacity 512
     a := gl_get_integerv `GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT`:Int
-    uniforms := Array_align Frag.create_with_capacity 256 align a
+  //uniforms := Array_align Frag.create_with_capacity 256 align a
+    uniforms := new Array_align Frag capacity 256 align a
     frag_size := Frag.object_size + a - (Frag.object_size % a)
     paths    := Array Path_low.create_with_capacity 512
   )
@@ -147,7 +148,7 @@ Public
     }
   )
 
-  - blend_composite_operation op:Composite_operation_state <-
+  - blend_composite_operation op:Flat Composite_operation_state <-
   ( + src_rgb,dst_rgb,src_alpha,dst_alpha,err:Int
     + c:Composite_operation_state
     c := Composite_operation_state
@@ -288,7 +289,7 @@ Public
     free gl
   )
 */  
-  - render_flush composite_operation:Composite_operation_state <-
+  - render_flush composite_operation:Flat Composite_operation_state <-
   ( + dta:C_array Real32
     + call:Pen_call
     (calls.count > 0).if {

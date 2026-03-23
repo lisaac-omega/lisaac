@@ -1,5 +1,5 @@
 Header
-  + name := Flat Jpeg_comp
+  + name := Jpeg_comp
 Insert
   
   - parent_clone:Clone := Clone

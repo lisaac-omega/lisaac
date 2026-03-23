@@ -135,7 +135,7 @@ Public
   - pointer:Int := 2
   - codeout:Int := 3
   
-  - debug_div:Boolean := False
+  - debug_div:Boolean :=  False
   
   - draw <-
   (
@@ -255,7 +255,7 @@ Private
       a := aa / 10.0
     }
     c := Look.cols.at (Look.codeout)
-    begin_path
+    begin_path    
     p := Paint.create_linear (xo,yo) to (xo+width,yo)
     color (c.set_af (a+0.2)) to (c.set_af 0)
     rect (xo,yo) size (width,height)

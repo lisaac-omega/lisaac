@@ -42,7 +42,7 @@ Public
     result
   )
 
-  - pow exp:Self :Self <-
+  - self:Self pow exp:Self :Self <-
   (
     self ** exp
   )
@@ -150,7 +150,7 @@ Public
 
   // Function :
 
-  - sqrt:Self <-
+  - self:Self sqrt:Self <-
   // Square root
   ( + r,x:Self
 
@@ -242,7 +242,7 @@ Public
 
   - times action:Block <-
   (
-    1.to self do { i:Int
+    1.to self do { j:Int
       action.value
     }
   )
@@ -336,22 +336,22 @@ Public
   // creation during the process.
   [ -? {b!=NULL}; ]
   ( + val:Self
-    + i,old_count:Int
+    + j,old_count:Int
 
     (self = 0).if {
       b.extend '0'
     } else {
-      i := b.count + 1
+      j := b.count + 1
       val := self
       {val != 0}.while_do { //JBJB
         b.extend ((val & 15).hexadecimal_digit)
         val := val >> 4
       }
       old_count := b.count
-      {i >= old_count}.until_do {
-        b.swap i with old_count
+      {j >= old_count}.until_do {
+        b.swap j with old_count
         old_count := old_count - 1
-        i := i + 1
+        j := j + 1
       }
     }
   )
@@ -361,22 +361,22 @@ Public
   // creation during the process.
   [ -? {b!=NULL}; ]
   ( + val:Self
-    + i,old_count:Int
+    + j,old_count:Int
 
     (self = 0).if {
       b.extend '0'
     } else {
-      i := b.count + 1
+      j := b.count + 1
       val := self
       {val != 0}.while_do { //JBJB
         b.extend ((val & 15).hexadecimal_digit)
         val := val >> 4
       }
       old_count := b.count
-      {i >= old_count}.until_do {
-        b.swap i with old_count
+      {j >= old_count}.until_do {
+        b.swap j with old_count
         old_count := old_count - 1
-        i := i + 1
+        j := j + 1
       }
     }
     b.precede_multiple '0' by (s.to_int - b.count)
@@ -387,22 +387,22 @@ Public
   // creation during the process.
   [ -? {b!=NULL}; ]
   ( + val:Self
-    + i,old_count:Int
+    + j,old_count:Int
 
     (self = 0).if {
       b.extend '0'
     } else {
-      i := b.count + 1
+      j := b.count + 1
       val := self
       {val != 0}.while_do {
         b.extend ('0' +# (val.to_int & 1))
         val := val >> 1
       }
       old_count := b.upper
-      {i >= old_count}.until_do {
-        b.swap i with old_count
+      {j >= old_count}.until_do {
+        b.swap j with old_count
         old_count := old_count - 1
-        i := i + 1
+        j := j + 1
       }
     }
     b.precede_multiple '0' by ((s.to_int) - b.count)
@@ -468,4 +468,3 @@ Int
 Private
   
   - randomize_seed:Uint64
-

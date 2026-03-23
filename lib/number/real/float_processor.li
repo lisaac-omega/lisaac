@@ -7,7 +7,7 @@ Public
 
   - init; // Compatibility IsaacOS.
 
-  - atan    n:Real    :Real    <- `atanf(@n)`:Real
+  - atan    n:Real    :Real <- `atanf(@n)`:Real
   - atan_32 n:Real32 :Real32 <- `atanf(@n)`:Real32
   - atan_64 n:Real64 :Real64 <- `atan(@n)`:Real64
   - atan_80 n:Real80 :Real80 <- `atanl(@n)`:Real80
@@ -22,17 +22,17 @@ Public
   - log_64  n:Real64 :Real64 <- `log(@n)`:Real64
   - log_80  n:Real80 :Real80 <- `logl(@n)`:Real80
 
-  - sin     n:Real    :Real    <- `sinf(@n)`:Real
+  - sin     n:Real  :Real   <- `sinf(@n)`:Real
   - sin_32  n:Real32 :Real32 <- `sinf(@n)`:Real32
   - sin_64  n:Real64 :Real64 <- `sin(@n)`:Real64
   - sin_80  n:Real80 :Real80 <- `sinl(@n)`:Real80
 
-  - cos     n:Real    :Real    <- `cosf(@n)`:Real
+  - cos     n:Real   :Real  <- `cosf(@n)`:Real
   - cos_32  n:Real32 :Real32 <- `cosf(@n)`:Real32
   - cos_64  n:Real64 :Real64 <- `cos(@n)`:Real64
   - cos_80  n:Real80 :Real80 <- `cosl(@n)`:Real80
 
-  - pow    (n,exp:Real)    :Real    <- `powf(@n,@exp)`:Real
+  - self:Self pow    (n,exp:Real)    :Real  <- `powf(@n,@exp)`:Real
   - pow_32 (n,exp:Real32) :Real32 <- `powf(@n,@exp)`:Real32
   - pow_64 (n,exp:Real64) :Real64 <- `pow(@n,@exp)`:Real64
   - pow_80 (n,exp:Real80) :Real80 <- `powl(@n,@exp)`:Real80

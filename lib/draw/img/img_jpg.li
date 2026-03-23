@@ -76,7 +76,7 @@ Public
   + img_mcu_h:Int
 
   // definition of jpeg image component
-  + img_comp:Array Jpeg_comp := Array Jpeg_comp.create 4
+  + img_comp:Array (Flat Jpeg_comp) := Array (Flat Jpeg_comp).create 4
 
   + code_buffer:Uint32; // jpeg entropy-coded buffer
   + code_bits:Int;       // number of valid bits
@@ -948,9 +948,10 @@ Public
   ( + lf,p,q, h_max,v_max,c,w2,h2:Int
     h_max := v_max := 1
     lf := get16be;         (lf < 11).if { return_error "bad SOF len"; }; // JPEG
-    p  := get8;            (p != 8).if { return_error "only 8-bit"; }; // JPEG baseline
+    p  := get8;              (p != 8).if { return_error "only 8-bit"; }; // JPEG baseline
     img_y := get16be;    (img_y = 0).if { return_error "no header height"; }; // Legal, but we don't handle it--but neither does IJG
     img_x := get16be;    (img_x = 0).if { return_error "0 width"; }; // JPEG requires
+    //Out # "x=" # img_x # " y=" # img_y # '\n'
     c := get8
     ((c != 3) && {c != 1}).if { return_error "bad component count"; };    // JFIF requires
     img_n := c
@@ -960,8 +961,8 @@ Public
     }
     (lf != 8+3*img_n).if { return_error "bad SOF len"; }
     0.to (img_n-1) do { i:Int
-      img_comp.at i.set_id get8
-      (img_comp.at i.id != i+1).if {   // JFIF requires
+      img_comp.at i.set_id get8      
+      (img_comp.at i.id != i+1).if {   // JFIF requires        
         (img_comp.at i.id != i).if {  // some version of jpegtran outputs non-JFIF-compliant files!
           return_error "bad component ID"
         }
@@ -1194,7 +1195,7 @@ Public
   )
   
   - coutput_load:C_array (C_array Uint8) := C_array (C_array Uint8).create 4
-  - res_comp_load:C_array Resample := C_array Resample.create 4
+  - res_comp_load:C_array (Flat Resample) := C_array (Flat Resample).create 4
   
   - load req_comp:Int :C_array Uint8 <- load req_comp in NULL
   
@@ -1202,7 +1203,7 @@ Public
   ( + n, decode_n:Int
     + output:C_array Uint8
     + coutput:C_array (C_array Uint8)
-    + res_comp:C_array Resample
+    + res_comp:C_array (Flat Resample)
     stk_uint8_up := -1
     //img_buffer := buffer_start
     rewind
@@ -1239,7 +1240,7 @@ Public
       }; '\n'.print
       */
       0.to (decode_n-1) do { k:Int
-        + r:Resample
+        + r:Flat Resample
         + hs,vs:Int
         + line:C_array Uint8
         r := res_comp.at k
@@ -1267,7 +1268,7 @@ Public
         + out,y:C_array Uint8
         out := output + n * img_x * j
         0.to (decode_n-1) do { k:Int
-          + r:Resample
+          + r:Flat Resample
           r := res_comp.at k
           coutput.at k put (r.resample(img_comp.at k.linebuf))
           r.set_ystep (r.ystep + 1)

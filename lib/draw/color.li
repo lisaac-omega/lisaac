@@ -4,9 +4,9 @@ Inherit
   
   - parent_clone:Clone := Clone
 
-Public
+Private
   
-  - stack:Array Color := Array Color.create_with_capacity 16; // BUG (ne sert a rien !!)
+  //- stack:Array Color := Array Color.create_with_capacity 16; // BUG (ne sert a rien !!)
   
 Mapping, Public
 
@@ -62,47 +62,47 @@ Public
   )
 
   - rgbaf (pr,pg,pb,pa:Real32) :Color <-
-  ( + result:Color
-    stack.add_last Color;    // BUG
-    result := stack.last; //pop
-    result.make (pr,pg,pb,pa)
-    result
+  ( //+ result:Color
+    //stack.add_last Color;    // BUG
+    //result := stack.last; //pop
+    (rf,gf,bf,af) := (pr,pg,pb,pa)
+    self
   )
-
+  
+  /*
   - make (pr,pg,pb,pa:Real32) <-
   (
     (rf,gf,bf,af) := (pr,pg,pb,pa)
   )
-  
+  */
   //- set_a pa:Uint8 <- ( af := pa.to_real32/255; )
     
-  - set_af pa:Real32 :Color <- rgbaf (rf,gf,bf,pa)
+  - set_af pa:Real32 :Color <- Color rgbaf (rf,gf,bf,pa)
   
   - to_gray:Color <-
   ( + g:Real32
     g := (rf + gf + bf) / 9.0 + (3.0/9.0)
-    rgbaf (g,g,g,af)
+    Color rgbaf (g,g,g,af)
   )
-  
-  - premul_color <-
+    
+  - premul_color:Color <-
   ( 
     (rf,gf,bf) := (rf*af,gf*af,bf*af)
+    self
   )
-
-  - lerp_rgba c:Self coef u:Real32 <-
+  
+  - lerp_rgba c:Self coef u:Real32 :Color <-
   ( + uu,uui:Real32
     
     uu  := u.clamp 0 and 1
     uui := 1.0 - uu
-    rf := uui*rf + uu*c.rf
-    gf := uui*gf + uu*c.gf
-    bf := uui*bf + uu*c.bf
-    af := uui*af + uu*c.af
+    Color rgba(uui*rf + uu*c.rf, uui*gf + uu*c.gf, uui*bf + uu*c.bf, uui*af + uu*c.af)
   )
 
   - hsl (h,s,l:Real32) :Color <- hsla (h,s,l) alpha 255
   
-  - hsla (h,s,l:Real32) alpha pa:Uint8 :Color <- // BSBS: Calcul en entier
+  - hsla (h,s,l:Real32) alpha pa:Uint8 :Color <- 
+  // BSBS: Calcul en entier
   ( + m1,m2,ss,ll,hh,aa,rr,gg,bb:Real32
     
     hh := h % 1
@@ -119,13 +119,18 @@ Public
     gg := hue  hh          with (m1,m2).clamp 0 to 1
     bb := hue (hh - 1.0/3) with (m1,m2).clamp 0 to 1
     aa := pa.to_real32 / 255
-    rgbaf (rr,gg,bb,aa)
+    Color rgbaf (rr,gg,bb,aa)
   )
   
-  - mul_a c:Real32 <-
+Paint
+  
+  - mul_a c:Real32 :Color <-
   (
     af := c * af
-  )
+    self
+  )  
+  
+Public
   
   - print <-
   (

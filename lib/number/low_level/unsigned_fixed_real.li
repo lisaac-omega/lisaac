@@ -104,8 +104,3 @@ Public
   (
     Cast Uint32 To Self.on (~ to_raw_uint32)
   )
-
-
-
-
-

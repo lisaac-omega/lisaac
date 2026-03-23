@@ -9,7 +9,7 @@ Public
 
   - append_in b:String_buffer <-
   ( + val:Self
-    + i,j:Int
+    + k,j:Int
     (self = 0).if {
       b.extend '0'
     } else {
@@ -19,16 +19,16 @@ Public
         val := - self
         b.extend '-'
       }
-      i := b.upper + 1
+      k := b.upper + 1
       {val = 0}.until_do {
         b.extend ((val % 10).digit)
         val := val / 10
       }
       j := b.upper
-      {i >= j}.until_do {
-        b.swap i with j
+      {k >= j}.until_do {
+        b.swap k with j
         j := j - 1
-        i := i + 1
+        k := k + 1
       }
     }
   )
@@ -55,7 +55,7 @@ Public
   // creation during the process.
   [ -? {buffer!=NULL}; ]
   ( + val:Self
-    + i,old_count,j,sz:Int
+    + k,old_count,j,sz:Int
     
     (self = 0).if {
       buffer.extend '0'
@@ -66,7 +66,7 @@ Public
       } else {
         val := self
       }
-      i := buffer.count
+      k := buffer.count
       sz := object_size * 2
       {(val != 0) && {j < sz}}.while_do {
         buffer.extend ((val & 0Fh).hexadecimal_digit)
@@ -74,10 +74,10 @@ Public
         j := j + 1
       }
       old_count := buffer.upper
-      {i >= old_count}.until_do {
-        buffer.swap i with old_count
+      {k >= old_count}.until_do {
+        buffer.swap k with old_count
         old_count := old_count - 1
-        i := i + 1
+        k := k + 1
       }
     }
   )

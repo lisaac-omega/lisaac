@@ -22,7 +22,7 @@ Aliaser_local,List
 
 Public
 
-  - is_on:Boolean := True
+  - is_on:Boolean := True 
 
   - reset <-
   (

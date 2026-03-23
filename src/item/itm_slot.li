@@ -292,59 +292,7 @@ Public
   
   - pretty_name_in buffer:String_buffer <-
   ( buffer.append name; )
-  
-/*
-  - shorter_profile_in buf:String_buffer <-
-  (
-    // style.
-    (style = '+').if {
-      put "+" to buf like "slot_style"
-    } else {
-      put "-" to buf like "slot_style"
-    }
-    shorter_profile_intern_in buf
-    // Result.
-    (result_type != ITM_TYPE_SIMPLE.type_void).if {
-      buf.add_last ':'
-      result_type.shorter_in buf
-    }
-  )
-  */
-  
-Itm_slot
-  
-/*
-  - shorter_profile_intern_in buf:String_buffer <-
-  ( + j,i:Int
-    // Name + arguments.
-    string_tmp.clear
-    j := name.lower
-    argument_list.first.shorter_in buf
-    buf.add_last '.'
-    i := argument_list.lower+1
-    {j < name.upper}.while_do {
-      ((name.at j = '_') && {name.at (j+1) = '_'}).if {
-        put string_tmp to buf like "slot"
-        buf.add_last ' '
-        argument_list.at i.shorter_in buf
-        buf.add_last ' '
-        string_tmp.clear
-        j := j + 2
-        i := i + 1
-      } else {
-        string_tmp.add_last (name.at j)
-        j := j + 1
-      }
-    }
-    string_tmp.add_last (name.last)
-    put string_tmp to buf like "slot"
-    (i <= argument_list.upper).if {
-      buf.add_last ' '
-      argument_list.last.shorter_in buf
-      buf.add_last ' '
-    }
-  )
-*/
+    
 Private
 
   - default_value v:Itm_code in t:Prototype :Itm_code <-
@@ -356,7 +304,7 @@ Private
 
     // Add function for init.
     string_tmp.copy "__init_"
-    string_tmp.append name
+    string_tmp.append name    
     n := string_tmp.to_string_alias
     larg := Array Itm_argument .create_with_capacity 1
     larg.add_last (

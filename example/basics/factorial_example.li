@@ -22,7 +22,7 @@ Public
   ( + x:Int
     
     if ((Command_args upper != 1) || {! Command_args at 1.is_integer}) then {
-      "usage: ./factorial_example <n>" println
+      "usage: ./factorial_example <n>".println
       System exit 1
     }
       

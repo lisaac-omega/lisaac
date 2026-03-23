@@ -274,7 +274,7 @@ Public
 
   // rects array must be big enough to accommodate 
   // all characters in the given ranges
-  - pack_font_ranges_gather_rects (info:Fontinfo,ranges:Array Pack_range, rects:Array Rect) :Int <-
+  - pack_font_ranges_gather_rects (info:Fontinfo,ranges:Array Pack_range, rects:Array (Flat Rect)) :Int <-
   ( + i,j,k:Int
     not_yet_implemented
     /*
@@ -308,11 +308,11 @@ Public
   // all characters in the given ranges
   - pack_font info:Fontinfo 
   ranges_render ranges:Array Pack_range 
-  into_rects rects:Array Rect <-
+  into_rects rects:Array (Flat Rect) <-
   ( + i,j,k,return_value:Int
     + old_h_over,old_v_over:Int
     + fh,scale,recip_h,recip_v,sub_x,sub_y:Real32
-    + r:Rect
+    + r:Flat Rect
     not_yet_implemented
     /*
     // save current values
@@ -386,12 +386,12 @@ Public
     return_value
   )
 
-  - pack_font_ranges_pack_rects prects:Array Rect <-
+  - pack_font_ranges_pack_rects prects:Array (Flat Rect) <-
   (
     pack_info.pack_rects prects
   )
   
-  - rects:Array Rect := Array Rect.create_with_capacity 32
+  - rects:Array (Flat Rect) := Array (Flat Rect).create_with_capacity 32
   - pack_font_ranges fontdata:Array Uint8
   index font_index:Int ranges ranges:Array Pack_range <-
   ( + info:Fontinfo

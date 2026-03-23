@@ -111,9 +111,9 @@ Public
     //+ old_loop_invariant:LOOP
 
     simplify_type variable
-
+    
     //
-    s ?= variable
+    s ?= variable    
     (
       (s = NULL) || {
         ((s.style != '+') || {! s.id_section.is_mapping}) &&
@@ -121,7 +121,10 @@ Public
       }
     ).if {
       cst := is_require_constant;  // BSBS: Ce cas devrait rentrer dans get_last_value
-      ((cst != NULL) && {variable.style != 'R'}).if {
+      ((cst != NULL) && {variable.style != 'R'} && {! variable.type.is_flat_without_default}).if { 
+        /*variable.type.prototype.is_complex_flat.if {
+          Out # variable.intern_name # " " # variable.type.prototype.name # " Constant propa\n"
+        };*/
         //
         // CONSTANT propagation.
         //
@@ -133,8 +136,11 @@ Public
         result := cst.my_copy
         new_execute_pass
       }.elseif {
-        ((val := get_last_value) != NULL)// && {False}
+        ((val := get_last_value) != NULL) && {(! variable.type.is_flat_without_default) || {! val.is_constant}}
       } then {
+        /*variable.type.prototype.is_complex_flat.if {
+          Out # variable.intern_name # " " # variable.type.prototype.name # " Step by step propa\n"
+        };*/
         //
         // VALUE_EXPR propagation, step by step.
         //
@@ -142,10 +148,8 @@ Public
         variable.unread self
         new_execute_pass
       }
-    }/*.elseif {} then {
-      
+    }/*
     }*/
-
     (result = NULL).if {
       //
       // Normal.
@@ -178,9 +182,7 @@ Public
     result
   )
 
-  //
   // Display.
-  //
 
   - display_ref buffer:String_buffer <-
   ( + req_list:Array Write

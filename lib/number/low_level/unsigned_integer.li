@@ -27,14 +27,14 @@ Public
   // Append in the @b the equivalent of @to_string. No new String_buffer
   // creation during the process.
   ( + val:Self
-    + i,j:Int
+    + k,j:Int
     ? {b!=NULL}
 
     (self = 0).if {
       b.extend '0'
     } else {
 
-      i := b.upper+1
+      k := b.upper+1
 
       val := self
       {val = 0}.until_do {
@@ -43,10 +43,10 @@ Public
       }
       j := b.upper
 
-      {i >= j}.until_do {
-        b.swap i with j
+      {k >= j}.until_do {
+        b.swap k with j
         j := j - 1
-        i := i + 1
+        k := k + 1
       }
 
     }

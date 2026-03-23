@@ -12,14 +12,16 @@ Public
   
   - d:Real32 <- (x*x + y*y).sqrt
   
-  - make (px,py:Real32) <-
+  - make (px,py:Real32) :Self <-
   (
     (x,y) := (px,py)
     time := `(float)clock()/CLOCKS_PER_SEC`
+    self
   )
   
-  - delta (px,py:Real32) <-
+  - delta (px,py:Real32) :Self <-
   (
     (x,y) := (px - Mevent.x,py - Mevent.y)
     time := `(float)clock()/CLOCKS_PER_SEC` - Mevent.t
+    self
   )

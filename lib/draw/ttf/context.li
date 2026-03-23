@@ -16,7 +16,7 @@ Public
     x := y := bottom_y := 0
   )
 
-  - pack_rects rects:Array Rect <-
+  - pack_rects rects:Array (Flat Rect) <-
   ( + i:Int
     + break:Boolean
     {(i < rects.count) && {! break}}.while_do { 

@@ -69,7 +69,7 @@ Div_inv
   - stck:C_array (Flat Array (C_array Uint64)) :=
   ( + r:C_array (Flat Array (C_array Uint64))
     r := C_array (Flat Array (C_array Uint64)).create 32
-    0.to 31 do { i:Int; r.at i.set_upper (-1); }; // BUG COMPILO
+    0.to 31 do { j:Int; r.at j.set_upper (-1) }; // BUG COMPILO
     r
   )
   
@@ -164,13 +164,13 @@ Div_inv
   
   - cmp_n (ap,bp:C_array Uint64,n:Int) :Int <-  
   ( + result:Int
-    + i:Int
+    + j:Int
     + a,b:Uint64
-    i := n
-    {(i >= 0) && {result = 0}}.while_do {
-      (a,b) := (ap.at i,bp.at i)
+    j := n
+    {(j >= 0) && {result = 0}}.while_do {
+      (a,b) := (ap.at j,bp.at j)
       (a != b).if { result := ((a > b).to_int << 1) -1; }
-      i := i - 1
+      j := j - 1
     }
     result
   )
@@ -200,18 +200,18 @@ Div_inv
   // Addition tools
   
   - add_1 (rp,ap:C_array Uint64, n:Int,b:Uint64) :Uint64 <-  
-  ( + i:Int
+  ( + j:Int
     + r,v:Uint64
     v := b
-    {(v != 0) && {i <= n}}.while_do {
-      r := ap.at i + v
+    {(v != 0) && {j <= n}}.while_do {
+      r := ap.at j + v
       v := (r < v).to_int
-      rp.at i put r
-      i := i + 1
+      rp.at j put r
+      j := j + 1
     }
-    {i <= n}.while_do { // Just copy
-      rp.at i put (ap.at i)
-      i := i + 1
+    {j <= n}.while_do { // Just copy
+      rp.at j put (ap.at j)
+      j := j + 1
     }
     v
   )
@@ -219,8 +219,8 @@ Div_inv
   /*
   - add_n_old (rp,ap,bp:C_array Uint64, n:Int) :Uint64 <-
   ( + cy,a,b,r:Uint64
-    0.to n do { i:Int
-      (a,b) := (ap.at i, bp.at i)
+    0.to n do { j:Int
+      (a,b) := (ap.at j, bp.at j)
       r := a + cy
       cy := (r < cy).to_int
       r := r + b
@@ -234,19 +234,19 @@ Div_inv
   ( + cy,cy2,a,b,r:Uint64
     + dn:Int
     dn := (n+1) >> 1
-    0.to (dn-1) do { i:Int
-      (a,b) := (ap.at i, bp.at i)
+    0.to (dn-1) do { j:Int
+      (a,b) := (ap.at j, bp.at j)
       r := a + cy
       cy := (r < cy).to_int
       r := r + b
       cy := cy | (r < b).to_int
-      rp.at i put r
-      (a,b) := (ap.at (i+dn), bp.at (i+dn))
+      rp.at j put r
+      (a,b) := (ap.at (j+dn), bp.at (j+dn))
       r := a + cy2
       cy2 := (r < cy2).to_int
       r := r + b
       cy2 := cy2 | (r < b).to_int
-      rp.at (i+dn) put r
+      rp.at (j+dn) put r
     }
     (n.is_even).if {      
       (a,b) := (ap.at n, bp.at n)
@@ -328,26 +328,26 @@ Div_inv
   // Substract tools
   
   - sub_1 (rp,ap:C_array Uint64, n:Int, b:Uint64) :Uint64 <-
-  ( + i:Int
+  ( + j:Int
     + a,v,cy:Uint64
     v := b
     {
-      a := ap.at i
+      a := ap.at j
       cy := (a < v).to_int
-      rp.at i put (a - v)
+      rp.at j put (a - v)
       v := cy
-      i := i + 1
-    }.do_while {i <= n}
+      j := j + 1
+    }.do_while {j <= n}
     v
   )
   
   - sub_n (rp,ap,bp:C_array Uint64, n:Int) :Uint64 <-
   ( + cy,a,b:Uint64
-    0.to n do { i:Int
-      (a,b) := (ap.at i, bp.at i)
+    0.to n do { j:Int
+      (a,b) := (ap.at j, bp.at j)
       b := b + cy
       cy := (b < cy).to_int + (a < b).to_int
-      rp.at i put (a - b)
+      rp.at j put (a - b)
     }
     cy
   )
@@ -485,11 +485,11 @@ Div_inv
   
   - mul_1 (rp,up:C_array Uint64, n:Int, vl:Uint64) :Uint64 <-  
   ( + cf, h, l:Uint64
-    0.to n do { i:Int
-      (h,l) := umul_128 (up.at i, vl)
+    0.to n do { j:Int
+      (h,l) := umul_128 (up.at j, vl)
       l := l + cf
       cf := h + (l < cf).to_int
-      rp.at i put l
+      rp.at j put l
     }
     cf
   )
@@ -497,8 +497,8 @@ Div_inv
   - mul4 (rp,u:C_array Uint64, un:Int, v:C_array Uint64, vn:Int) :Uint64 <-
   ( // BSBS: c'est une connerie de l'appeller avec un<vn
     rp.at (vn+1) put (mul_1(rp,v,vn,u.first))
-    1.to un do { i:Int
-      rp.at (i + vn+1) put (addmul_1 (rp+i,v,vn,u.at i))
+    1.to un do { j:Int
+      rp.at (j + vn+1) put (addmul_1 (rp+j,v,vn,u.at j))
     }
     rp.at (un+vn+1)
   )
@@ -701,48 +701,48 @@ Div_inv
   
   - propagate_cf_n (p:C_array Uint64,n:Int) :Uint64 <-
   ( + v:Uint64
-    + i:Int
+    + j:Int
     {
-      v := p.at i + 1
-      p.at i put v
-      i := i + 1
-    }.do_while {(i<=n) && {v = 0}}
+      v := p.at j + 1
+      p.at j put v
+      j := j + 1
+    }.do_while {(j<=n) && {v = 0}}
     (v = 0).to_int
   )
 
   - incr_u (p:C_array Uint64,cf:Int) <-
   ( + v:Uint64
-    + i:Int
+    + j:Int
     v := p.at 0 + cf
     p.at 0 put v
     (v < cf).if {
       {
-        i := i + 1
-        v := p.at i + 1
-        p.at i put v
+        j := j + 1
+        v := p.at j + 1
+        p.at j put v
       }.do_while {v = 0}
     }
   )
   
   - decr_u (p:C_array Uint64,cf:Uint64) <-
   ( + v:Uint64
-    + i:Int
+    + j:Int
     v := p.at 0
     p.at 0 put (v - cf)
     (v < cf).if {
       {
-        i := i + 1
-        v := p.at i
-        p.at i put (v-1)
+        j := j + 1
+        v := p.at j
+        p.at j put (v-1)
       }.do_while {v = 0}
     }
   )
   
   - zero_p (p:C_array Uint64,n:Int):Boolean <-
   // Return True if X is zero, False if it is non-zero.
-  ( + i:Int
-    {(i <= n) && {p.at i = 0}}.while_do { i := i + 1; }
-    i > n
+  ( + j:Int
+    {(j <= n) && {p.at j = 0}}.while_do { j := j + 1; }
+    j > n
   )
   
   - addlsh1_n (rp,u,v:C_array Uint64, n:Int) :Uint64 <-
@@ -763,13 +763,13 @@ Div_inv
   - bdiv_dbm1c (qp, ap:C_array Uint64, n:Int, bd,hp:Uint64) :Uint64 <-
   ( + a, p0, p1, cy,h:Uint64
     h := hp
-    0.to (n-1) do { i:Int
-      a := ap.at i
+    0.to (n-1) do { j:Int
+      a := ap.at j
       (p1,p0) := umul_128 (a, bd); // bd << GMP_NAIL_BITS
       //p0 >>= GMP_NAIL_BITS
       cy := (h < p0).to_int
       h := h - p0
-      qp.at i put h
+      qp.at j put h
       h := h - p1 - cy
     }
     h
@@ -1290,19 +1290,19 @@ Div_inv
   [ ? {cnt.in_range 1 to 63}; ]
   ( + h, l, r:Uint64
     + tnc:Uint64
-    + i:Int
-    i := n
+    + j:Int
+    j := n
     tnc := 64 - cnt
-    l := up.at i
+    l := up.at j
     r := l >> tnc
     h := l << cnt
-    {i != 0}.while_do {
-      l := up.at (i-1)
-      rp.at i put (h | (l >> tnc))
+    {j != 0}.while_do {
+      l := up.at (j-1)
+      rp.at j put (h | (l >> tnc))
       h := (l << cnt)
-      i := i - 1
+      j := j - 1
     }
-    rp.at i put h
+    rp.at j put h
     r
   )
   */
@@ -1310,24 +1310,24 @@ Div_inv
   [ ? {cnt.in_range 1 to 63}; ]
   ( + h, l, r:Uint64
     + tnc:Uint64
-    + i,stop:Int
+    + j,stop:Int
     stop := n & 1
-    i := n
+    j := n
     tnc := 64 - cnt
-    l := up.at i
+    l := up.at j
     r := l >> tnc
     h := l << cnt
-    {i != stop}.while_do {
-      l := up.at (i-1)
-      rp.at i put (h | (l >> tnc))
+    {j != stop}.while_do {
+      l := up.at (j-1)
+      rp.at j put (h | (l >> tnc))
       h := (l << cnt)
-      i := i - 1
-      l := up.at (i-1)
-      rp.at i put (h | (l >> tnc))
+      j := j - 1
+      l := up.at (j-1)
+      rp.at j put (h | (l >> tnc))
       h := (l << cnt)
-      i := i - 1
+      j := j - 1
     }
-    (i != 0).if {
+    (j != 0).if {
       l := up.at 0
       rp.at 1 put (h | (l >> tnc))
       h := (l << cnt)
@@ -1340,46 +1340,47 @@ Div_inv
   [ ? {cnt.in_range 1 to 63}; ]
   ( + h, l, r:Uint64
     + tnc:Int
-    + i:Int
+    + j:Int
     tnc := 64 - cnt
     h := up.at 0
-    i := 1
+    j := 1
     r := h << tnc
     l := h >> cnt
-    {i <= n}.while_do {
-      h := up.at i
-      rp.at (i-1) put (l | (h << tnc))
+    {j <= n}.while_do {
+      h := up.at j
+      rp.at (j-1) put (l | (h << tnc))
       l := h >> cnt
-      i := i + 1
+      j := j + 1
     }
-    rp.put l to (i-1); // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
+    rp.put l to (j-1); // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
     r
   )
   */
+  
   - rshift_n (rp,up:C_array Uint64,n:Int, cnt:Int) :Uint64 <-
   [ ? {cnt.in_range 1 to 63}; ]
   ( + h, l, r:Uint64
     + tnc:Int
-    + i,stop:Int
+    + j,stop:Int
     tnc := 64 - cnt
     h := up.at 0
-    i := 1
+    j := 1
     stop := n & ~1
     r := h << tnc
     l := h >> cnt
-    {i <= stop}.while_do {
-      h := up.at i
-      rp.at (i-1) put (l | (h << tnc))
+    {j <= stop}.while_do {
+      h := up.at j
+      rp.at (j-1) put (l | (h << tnc))
       l := h >> cnt
-      i := i + 1
-      h := up.at i
-      rp.at (i-1) put (l | (h << tnc))
+      j := j + 1
+      h := up.at j
+      rp.at (j-1) put (l | (h << tnc))
       l := h >> cnt
-      i := i + 1
+      j := j + 1
     }
-    (i = n).if {
-      h := up.at i
-      rp.at (i-1) put (l | (h << tnc))
+    (j = n).if {
+      h := up.at j
+      rp.at (j-1) put (l | (h << tnc))
       l := h >> cnt
     }
     rp.at n put l; // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
@@ -1616,7 +1617,7 @@ Div_inv
   - native_put_in (sp:C_array Uint8) bits bits:Int :Int <-
   // bits = 1:Binary, 3:Octal, 4:Hexa, 6:FORMAT64
   ( + mask,digit:Uint8
-    + sn, j,i:Int
+    + sn, j,k:Int
     + shift,up:Int
     + d:C_array Uint64
     d := to_na
@@ -1626,13 +1627,13 @@ Div_inv
     j := sn
     {j > 0}.while_do {
       j := j - 1
-      digit := (d.at i >> shift).to_uint8
+      digit := (d.at k >> shift).to_uint8
       shift := shift + bits
       (shift >= 64).if {
-        i := i + 1
-        (i <= up).if {
+        k := k + 1
+        (k <= up).if {
           shift := shift - 64
-          digit := digit | (d.at i << (bits - shift)).to_uint8
+          digit := digit | (d.at k << (bits - shift)).to_uint8
         }
       }
       sp.at j put (digit & mask)
@@ -1731,8 +1732,8 @@ Div_inv
     }
     sn := sn + binv.get_str (sp + sn, na.at 0)
     // Reverse order
-    0.to (sn/2-1) do { i:Int
-      sp.swap i with (sn - i - 1)
+    0.to (sn/2-1) do { j:Int
+      sp.swap j with (sn - j - 1)
     }
     binv.free
     sn
@@ -1744,19 +1745,19 @@ Public
   
   // Init / Input
   
-  - init_si i:Int64 :Self <-
+  - init_si x:Int64 :Self <-
   ( + r:Self
-    (i.abs < 4000_0000_0000_0000h).if {
-      r := Cast Int64 To ℤ.on (i << 1)
+    (x.abs < 4000_0000_0000_0000h).if {
+      r := Cast Int64 To ℤ.on (x << 1)
     } else {
       + na:C_array Uint64
       + s,v:Uint64
       na := new 0
-      (i < 0).if {
-        v := (-i).to_raw_uint64
+      (x < 0).if {
+        v := (-x).to_raw_uint64
         s := smsk
       } else {
-        v := i.to_raw_uint64
+        v := x.to_raw_uint64
       }
       na.at 0 put v
       r := na na cap 0 up 0 sign s
@@ -1764,14 +1765,14 @@ Public
     r
   )
   
-  - init_ui i:Uint64 :Self <-
+  - init_ui x:Uint64 :Self <-
   ( + r:Self
-    (i < 4000_0000_0000_0000h).if {
-      r := Cast Uint64 To ℤ.on (i << 1)
+    (x < 4000_0000_0000_0000h).if {
+      r := Cast Uint64 To ℤ.on (x << 1)
     } else {
       + na:C_array Uint64
       na := new 0
-      na.at 0 put i
+      na.at 0 put x
       r := na na cap 0 up 0 sign 0
     }
     r    
@@ -1779,7 +1780,7 @@ Public
   
   - init (sp:String) from idx:Int base (base:Int) :Self <-
   ( + bits, value_of_a:Int
-    + dn,i,j:Int
+    + dn,k,j:Int
     + c,digit:Uint8
     + dp:C_array Uint8
     + natmp,na:C_array Uint64
@@ -1787,14 +1788,14 @@ Public
     + s:Uint64
     
     dn := sp.count - idx
-    i := idx
-    (sp.at idx = '-').if { s := smsk; i := i + 1; dn := dn - 1; }
+    k := idx
+    (sp.at idx = '-').if { s := smsk; k := k + 1; dn := dn - 1; }
     captmp := upper_to_cap (((dn+7)>>3) - 1)
     natmp := new captmp
     dp := Cast (C_array Uint64) To (C_array Uint8).on natmp
     value_of_a := (base > 36).ok 36 or 10
-    {i <= sp.upper}.while_do {
-      c := sp.at i
+    {k <= sp.upper}.while_do {
+      c := sp.at k
       (c.in_range '0' to '9').if {
         digit := c - '0'
       }.elseif {c.in_range 'a' to 'z'} then {
@@ -1805,7 +1806,7 @@ Public
         ? {False}
       }
       dp.at j put digit
-      i := i + 1
+      k := k + 1
       j := j + 1
     }
     bits := last_bit base
@@ -1882,26 +1883,7 @@ Public
       }
     }
     r
-  )
-  
-  /*
-  - self:Self '++' other:Self :Self <-
-  ( + r:Self
-    ((to_raw | other.to_raw).to_int64 < 0).if { 
-      (is_big).if {
-        (other.is_big).if {          
-          r := addz (self,other)
-        } else {
-          r := add self si other
-        }
-      } else {      
-        r := add other si self
-      }
-    } else {
-      r := init_si (to_i64 + other.to_i64)
-    }
-    r
-  );*/
+  )  
       
   - self:Self '-' other:Self :Self <-
   ( + r:Self
@@ -2027,15 +2009,15 @@ Public
     !is_big,
     self >= 0 
   ]
-  ( + r,tmp,i:Self
+  ( + r,tmp,j:Self
     
     r := 1
-    i := self
-    while {i > 1} do {
-      tmp := r * i
+    j := self
+    while {j > 1} do {
+      tmp := r * j
       r.free
       r := tmp
-      i := i - 1
+      j := j - 1
     }
     r
   )
@@ -2112,8 +2094,8 @@ Public
         free tp cap cap
       }
       b.set_upper (low+res-1)
-      low.to (b.upper) do { i:Int
-        b.put (map.at (spu.at (i-low))) to i
+      low.to (b.upper) do { j:Int
+        b.put (map.at (spu.at (j-low))) to j
       }
     } else {
       ? {(base = 10) || {base = 16}}; // Other: Not yet implemented      

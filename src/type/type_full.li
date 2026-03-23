@@ -35,12 +35,13 @@ Type,Node_type
 
   + flag:Uint8
   // 7 6 5 4 3 2 1 0
-  // |   | | | | | +- 0:Reference / 1:Flat
-  // |   | | | | +--- 0:Reference / 1:Flat (by default)
-  // |   | | | +----- 0:Normal    / 1:Exact
-  // |   | | +------- 0:Normal    / 1:Exact (by default)
-  // |   | +--------- 0:Normal    / 1:Temporary
-  // |   +----------- 0:Normal    / 1:Old generic
+  // | | | | | | | +- 0:Reference / 1:Flat
+  // | | | | | | +--- 0:Reference / 1:Flat (by default)
+  // | | | | | +----- 0:Normal    / 1:Exact
+  // | | | | +------- 0:Normal    / 1:Exact (by default)
+  // | | | +--------- 0:Normal    / 1:Temporary
+  // | | +----------- 0:Normal    / 1:Old generic
+  // | +------------- FREE
   // +--------------- 0:Normal    / 1:Escape
   
   //
@@ -80,27 +81,28 @@ Public
   // Set.
   //
 
-  - flat_bit        :Uint8 := 0000_0001b
-  - default_flat_bit:Uint8 := 0000_0010b
-  - exact_bit          :Uint8 := 0000_0100b
-  - default_exact_bit  :Uint8 := 0000_1000b
-  - flat_ref_bit    :Uint8 := 0001_0000b
-  - generic_bit         :Uint8 := 0010_0000b
-  - escape_bit          :Uint8 := 1000_0000b
+  - flat_bit         :Uint8 := 0000_0001b
+  - default_flat_bit :Uint8 := 0000_0010b
+  - exact_bit        :Uint8 := 0000_0100b
+  - default_exact_bit:Uint8 := 0000_1000b
+  - flat_ref_bit     :Uint8 := 0001_0000b
+  - generic_bit      :Uint8 := 0010_0000b
+  
+  - escape_bit       :Uint8 := 1000_0000b
 
-  //
   // Access.
-  //
 
-  - is_flat          :Boolean <- (flag & flat_bit        ) != 0
-  - is_default_flat  :Boolean <- (flag & default_flat_bit) != 0
-  - is_exact            :Boolean <- (flag & exact_bit          ) != 0
-  - is_default_exact    :Boolean <- (flag & default_exact_bit  ) != 0
-  - is_flat_ref      :Boolean <- (flag & flat_ref_bit    ) != 0
-  - is_generic           :Boolean <- (flag & generic_bit         ) != 0
-  - is_escape            :Boolean <- (flag & escape_bit          ) != 0
+  - is_flat          :Boolean <- (flag & flat_bit         ) != 0
+  - is_default_flat  :Boolean <- (flag & default_flat_bit ) != 0
+  - is_exact         :Boolean <- (flag & exact_bit        ) != 0
+  - is_default_exact :Boolean <- (flag & default_exact_bit) != 0
+  - is_flat_ref      :Boolean <- (flag & flat_ref_bit     ) != 0
+  - is_generic       :Boolean <- (flag & generic_bit      ) != 0
+
+  - is_escape        :Boolean <- (flag & escape_bit       ) != 0
 
   - is_flat_c:Boolean <- (is_flat) && {raw.type_c != NULL}
+  - is_flat_without_default:Boolean <- (is_default_flat) && {prototype.default_value = NULL}
 
   - self:Self '==' Right 60 other:E :Boolean <-
   ( + same:Type_full
@@ -209,16 +211,16 @@ Public
   //
 
   //+----------+----------+----------+----------+
-  //| A := B-->| Reference| Flat | Exact   |
+  //| A := B-->| Reference| Flat     | Exact    |
   //| V        | TYPE     | TYPE     | TYPE     |
   //+----------+----------+----------+----------+
   //| Reference| B.sub A  | False    | B.sub A  |
   //| TYPE     |          |          |          |
   //+----------+----------+----------+----------+
-  //| Flat | False    | A = B    | A = B    |
+  //| Flat     | False    | A = B    | A = B    |
   //| TYPE     |          |          |          |
   //+----------+----------+----------+----------+
-  //| Exact   | False    | False    | A = B    |
+  //| Exact    | False    | False    | A = B    |
   //| TYPE     |Sauf NULL |          |          |
   //+----------+----------+----------+----------+
   - affect_with other:Type_full :Boolean <-
@@ -265,23 +267,20 @@ Public
   + recursivity_test:Boolean
   - default_value p:Position :Expr <-
   ( + result:Expr
-
     ((prototype != NULL) && {prototype.default_value != NULL}).if {
       // Prototype User definition.
-      (recursivity_test).if {
-        crash
+      (recursivity_test).if {        
         Position.put_error semantic text "Recursivity without end (default used default, ...)."
         list_current.position.put_position
         prototype.default_value.position.put_position
         Position.send_error
       } else {
         recursivity_test := True
-        result := prototype.default_value.to_run_expr
+        result := prototype.default_value.to_run_expr        
         recursivity_test := False
       }
     } else {
-      (is_flat).if {
-        // Copy of model prototype.
+      (is_flat).if {        
         result := Prototype_cst.create p type self
       } else {
         result := Prototype_cst.create p type (Type_null.default)
@@ -308,7 +307,7 @@ Public
 
   - genere_star_declaration buffer:String_buffer <-
   (
-    ((! is_flat) || {is_flat_ref}).if {
+    ((! is_flat) || {is_flat_ref && {! is_default_flat} /* 14Mars */}).if {
       raw.put_reference_star_declaration buffer
     }
   )
@@ -320,8 +319,8 @@ Public
   - genere_value buffer:String_buffer <-
   ( + tb:Profil_block
     (
-      (is_flat) && {! is_flat_ref} &&
-      {raw != type_true} && {raw != type_false} &&
+      (is_flat) && {! is_flat_ref} && {! is_default_flat} &&
+      {raw != type_true} && {raw != type_false} && {raw != Type_null} &&
       {tb ?= raw; tb = NULL}
     ).if {
       buffer.append "(*"

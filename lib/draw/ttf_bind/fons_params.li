@@ -40,7 +40,7 @@ Public
     0
   )
   
-  - render_update (rect:Rect,data:Array Uint8) <-
+  - render_update (rect:Flat Rect,data:Array Uint8) <-
   (
     "`render_update' not implemented.\n.".print;
   )

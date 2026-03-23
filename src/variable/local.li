@@ -330,13 +330,3 @@ Variable
     result := Write_local.create p with v in self
     result
   )
-
-  /*
-  - new_access r:EXPR :ACCESS <-
-  (
-    ACCESS_LOCAL.create self
-  )
-  */
-
-
-
