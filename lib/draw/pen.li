@@ -78,14 +78,15 @@ Public // Private
   - new_pen_with_font f:Boolean :Self <- clone.init_pen f
   
   - init_font <-
-  (   
+  ( //+ dta:C_array Uint8
     font_images := Array Int.create max_fontimages
     params := Fons_params.create (512,512)
     fs := Fons_context.create_internal params
     // Create font texture
     //params.width.print; 'x'.print; params.height.print; '\n'.print
+    //dta := C_array Uint8.create (params.width*params.height*4)
     font_images.at 0 put (
-      pen_gl.render_create_texture texture_alpha size (params.width,params.height) flags 0 data NULL
+      pen_gl.render_create_texture texture_alpha size (params.width,params.height) flags 0 data NULL //dta
     )
   )
   

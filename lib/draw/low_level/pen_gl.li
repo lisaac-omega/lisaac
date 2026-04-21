@@ -43,6 +43,8 @@ Public
   + stencil_func_ref:Int
   + stencil_func_mask:Uint32
   
+  + dummy_tex:Int
+  
   - new:Self <- clone
   
   - init f:Int <-
@@ -55,7 +57,7 @@ Public
   //uniforms := Array_align Frag.create_with_capacity 256 align a
     uniforms := new Array_align Frag capacity 256 align a
     frag_size := Frag.object_size + a - (Frag.object_size % a)
-    paths    := Array Path_low.create_with_capacity 512
+    paths    := Array Path_low.create_with_capacity 512    
   )
   
   - set_flags f:Int <-
@@ -389,7 +391,9 @@ Public
     //align := 4; // GLES2
     // fin GLES3    
     //"PEN GL: align=".print; frag_size.print; '\n'.print
-        
+    dummy_tex := render_create_texture texture_alpha size (1,1) flags 0 data NULL
+    //Out # "dummy_tex = " # dummy_tex # '\n'
+    
     check_error "create done"
     gl_finish
   )
@@ -561,6 +565,7 @@ Public
     //+ r:REAL_32
     // GLES3    
     //"bind buffer range ".print; cpt.println; cpt := cpt + 1
+    + tex:Texture
     /*
     t := CAST Uint32 TO (C_array REAL_32).on frag_buf
     0.to 3 do { y:Int
@@ -582,15 +587,14 @@ Public
     //"uniform_offset: ".print; uniform_offset.print; '\n'.print
     //frag.print2
     //gl_uniform4fv(shader.loc_frag, 11,frag.to_array)
-    (image != 0).if {
-      + tex:Texture
-      //check_error " (0)PEN_GL: tex paint tex"
+    (image != 0).if {      
       tex := find_texture image
-      bind_texture ((tex != NULL).ok (tex.tex) or 0)
-      check_error "PEN_GL: tex paint tex"
-    } else {      
-      bind_texture 0
+    } 
+    (tex = NULL).if {
+      tex := find_texture dummy_tex
     }
+    bind_texture ((tex = NULL).ok (0.to_uint32) else {tex.tex})
+    check_error "PEN_GL: tex paint tex"
   )
 
   - fill call:Pen_call_2d <-
@@ -1084,7 +1088,9 @@ Public
   - gl_tex_image_2d (target:Int,level,internalformat:Int32,
     width,height:Int64,border:Int32,format,type:Int,
   pixels:C_array Uint8) <- 
-  `glTexImage2D(@target,@level,@internalformat,@width,@height,@border,@format,@type,@pixels)`
+  (
+    `glTexImage2D(@target,@level,@internalformat,@width,@height,@border,@format,@type,@pixels)`
+  )
   
   - gl_tex_sub_image_2d (target:Int,level,xoffset,yoffset:Int32,
   width,height:Int64,format,type:Int,pixels:C_array Uint8) <- 

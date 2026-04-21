@@ -98,6 +98,7 @@ Public
   - rd_send_msg <-
   //++ SEND_MSG     -> identifier { ARGUMENT [ identifier ] }
   ( + arg:Expr
+    + key:Int
     read_idf.if {
       //
       ((! sty.is_empty) && {pos_i.pt - pt_b.pt - last_str.count < sty.second_last}).if {
@@ -106,16 +107,16 @@ Public
         print_sty pt_b
       }
       col (Look.slot) sub (last_str.count)
-      itm self sub (last_str.count)
-      itm self sub 0
+      key := itm_sub (last_str.count)
+      itm key sub 0
       //
       String.tmp { n:String_buffer
         n.append last_str
         {((arg := rd_arg) != NULL) && {read_idf}}.while_do {
           //
           col (Look.slot) sub (last_str.count)
-          itm self sub (last_str.count)
-          itm self sub 0
+          itm key sub (last_str.count)
+          itm key sub 0
           //
           param.add_last arg
           n.add_last '\0'

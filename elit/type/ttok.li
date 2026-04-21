@@ -167,7 +167,7 @@ Public
     + result:Tpro
     + attr:Uint8
     + n:Node
-    + p:Int
+    + p,key:Int
     (rd_word "Flat" ).if { col (Look.keyword) sub (last_str.count); attr := attr | Type.flat  }
     (rd_word "Exact").if { col (Look.keyword) sub (last_str.count); attr := attr | Type.exact }
     (((attr & Type.flat) != 0) && {attr != Type.flat}).if {
@@ -176,7 +176,7 @@ Public
     }
     
     (read_cap_idf).if {
-      col (Look.type) sub (last_str.count)
+      col (Look.type) sub (last_str.count)      
       p := pos_i      
       (last_str.count = 1).if {        
         result := Tp.letter (last_str.first - 'A')
@@ -187,12 +187,20 @@ Public
         result := Tp.letter 26
       } else {
         + i:Int
+        //+ nam:String_buffer
+        key := itm_sub (last_str.count)
         i := last_str.upper
         {last_str.at i.is_digit}.while_do { i := i - 1; }
         (i < last_str.upper).if {
+          itm key sub (last_str.upper - i)
+          //
           ind True sub (last_str.upper - i)
-          ind False sub 0
+          ind False sub 0          
+        } else {
+          itm key sub 0
         }
+        //nam := String.new_tmp
+        //nam # last_str
         //fsz 1 sub (last_str.count - 1)
         //fsz 0 sub 0
         gen := push_type
@@ -203,7 +211,11 @@ Public
           (n != NULL).if {
             n := n.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
           }
+          itm key sub (last_str.count)
+          itm key sub 0
+          //
           gen.add_last t
+          //nam # '\0' # last_str
         }
         (t != NULL).if {
           ((n != NULL) && {! n.carg.is_empty}).if {
@@ -212,15 +224,17 @@ Public
             n := NULL
           }
           gen.add_last t
+          //nam # '\0'
         }
-        ((n != NULL) && {n.proto != NULL}).if {
-          //bug.if { "Av. Tpro ".println }
+        ((n != NULL) && {n.proto != NULL}).if {          
           result := Tpro.new (n.proto) gen gen attr attr          
         } else {
           result := Terr
+          itm key col (LOOK.err_syntax)
         }
         pop_type
-      }
+        //String.free_tmp nam
+      }      
       toks.at tok_cur.reset_sty (p+1)
       pos_i := p
     } else {
@@ -235,6 +249,7 @@ Public
   //++               | '(' TYPE_VECTOR ')'
   ( + result:Type
     + n:Node
+    + key:Int
     (read_cap_idf).if {
       fnt (Font.italic) sub (last_str.count)
       col (Look.type) sub (last_str.count)
@@ -244,11 +259,16 @@ Public
         result := Tp.letter 26        
       } else {
         + i:Int
+        key := itm_sub (last_str.count)
         i := last_str.upper
         {last_str.at i.is_digit}.while_do { i := i - 1; }
         (i < last_str.upper).if {
+          itm key sub (last_str.upper - i)
+          //
           ind True sub (last_str.upper - i)
           ind False sub 0
+        } else {
+          itm key sub 0
         }
         //fsz 1 sub (last_str.count - 1)
         //fsz 0 sub 0
@@ -257,6 +277,7 @@ Public
           result := Tpro.new (n.proto) gen (Array Type) attr 0
         } else {
           result := Terr
+          itm key col (LOOK.err_syntax)
         }
       }
       fnt (Font.roman) sub 0
@@ -269,5 +290,3 @@ Public
     }
     result
   )
-  
-  

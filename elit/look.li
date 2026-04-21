@@ -53,7 +53,9 @@ Public
   - cursor:Int   := 14
   - dead:Int     := 15
   
-  - cols_size:Int := 16
+  - err_syntax:Int := 16
+  
+  - cols_size:Int := 17
   /*
   - rmk:COLOR        := COLOR.rgb (159,  0, 10)
   - sub_rmk:COLOR    := COLOR.rgb (130, 46, 51)
@@ -130,6 +132,8 @@ Public
     .case "style"      then { cols_at style put c;   }
     .case "codeout"    then { cols_at codeout put c; }
     .case "cursor"     then { cols_at cursor put c; }
+    
+    .case "err_syntax" then { cols_at err_syntax put c; }
     
     .case "header"     then { header := c;    }
     .case "directive"  then { directive := c; }

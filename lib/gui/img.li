@@ -6,7 +6,7 @@ Inherit
   
 Img
   - dico:Array Img := // Warning: first=NULL for font texture.
-  ( + r:Array Img; r := Array Img.create_with_capacity 16; r.add_last NULL; r.add_last NULL; r)
+  ( + r:Array Img; r := Array Img.create_with_capacity 16; nothing_count.times { r.add_last NULL }; r)
   
   - init pth:String_alias anim t:Array (C_array Uint8) size (w,h:Int) delay d:Real32 :Img <-
   (
@@ -14,7 +14,9 @@ Img
     dico.add_last self
     self
   )
-    
+  
+  - nothing_count:Int := 3
+  
 Public
   + idf:Int
   
@@ -37,7 +39,7 @@ Public
     + map1:C_array Uint8
     + is_gif:Boolean
     //k.print; " : ".print
-    i := 2
+    i := nothing_count
     {(i <= dico.upper) && {dico.at i.path !== k}}.while_do { i := i + 1; }
     (i <= dico.upper).if {
       img := dico.at i
@@ -78,10 +80,10 @@ Public
   - update pen:Pen <-
   ( + id,c:Int
     + img:Img
-    c := pen.pen_gl.texture_id + 1
+    c := pen.pen_gl.texture_id + 1    
     c.to (dico.upper) do { i:Int
       img := dico.at i
-      id := pen.create_image_rgba (img.anim.first) size (img.width,img.height) flags 6
+      id := pen.create_image_rgba (img.anim.first) size (img.width,img.height) flags 6      
       ? {id = img.idf}
     }
   )

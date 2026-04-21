@@ -123,4 +123,3 @@ Public
   - max_fontimages:Int := 4
   - max_fontimage_size:Int := 2048
   
-  

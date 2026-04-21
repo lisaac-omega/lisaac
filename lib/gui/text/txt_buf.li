@@ -392,7 +392,7 @@ Public
     }.while_do {
       (pos_i,tok_cur) := (pi,tcur)
       pi := pi + di
-      { tcur := tcur + 1; }.do_while {(tcur <= toks.upper) && {! toks.at tcur.is_major}}
+      { tcur := tcur + 1 }.do_while {(tcur <= toks.upper) && {! toks.at tcur.is_major}}
     }
     //
     {
@@ -1432,11 +1432,18 @@ Public
       end_line
     } else {
       tex.set_x (text (tex.x,tex.y) msg tmp_c)
-      (Tok_drw.underline).if {
+      (Tok_drw.underline != 0).if {
+        + c:Color
         begin_path
-        fill_color (get_state.fill.inner_color)
+        c := get_state.fill.inner_color
+        (Tok_drw.underline = 255).if {
+          fill_color c
+        } else {
+          fill_color (Look.cols.at (Tok_drw.underline))
+        }
         rect (Old tex.x,tex.y + 2) to (tex.x,tex.y + 3)
         fill
+        fill_color c
       }
       detect_cur
     }

@@ -213,14 +213,7 @@ Public
     //
     (rd_word "Flat") || {rd_word "Exact"}
     nod := Node.rtype
-    ts := push_type
-    /*
-    (name.has_suffix "/z.li").if {
-      skip_sp
-      read_cap_idf.println;
-      UTF8.is_upper "ℤ".println;
-      UTF8.print;
-    };*/
+    ts := push_type    
     {read_cap_idf}.while_do {      
       (last_str.count = 1).if {
         n.add_last '\0'

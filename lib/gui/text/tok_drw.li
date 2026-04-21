@@ -53,7 +53,7 @@ Public
       } else {      
         sty.at p add (Old pos_i.pt - pt_b.pt, (n = "self").ok (Look.keyword | 80h) or (Look.local | 80h))
         (l.style_is (Decl.f_ro)).if {
-          sty.at p add (Old pos_i.pt - pt_b.pt, Font.italic | 10000h)
+          sty.at p add (Old pos_i.pt - pt_b.pt, Font.italic | 1000_0000h)
           fnt (Font.roman) sub 1
         }
       }      
@@ -220,7 +220,7 @@ Public
       {(i <= sty.upper) && {sty.at i + pt_b.pt < pos.pt}}.while_do { i := i + 2; }
       (i < sty.upper).if {
         v := sty.at (i+1)
-        ((v < 0) && {sty.at (i-1) = v}).if {          
+        ((v.to_raw_uint32 >> 28 = 8) && {sty.at (i-1) = v}).if {          
           itm_cur := v; //CAST Int TO TOK_ITM.on (v & 07FFF_FFFF_FFFF_FFFFh)
         }
       }
@@ -266,13 +266,13 @@ Public
   
   // Style / Color
   
-  - esc_char_style:Int32 := 30100h
-  - esc_char_arrow:Int32 := 30201h
-  - esc_char_commu:Int32 := 30202h
+  - esc_char_style:Int32 := 0100h // Length=1; id=#0
+  - esc_char_arrow:Int32 := 0201h // Length=2; id=#1
+  - esc_char_commu:Int32 := 0202h // Length=2; id=#2
     
   + sty:Flat Array Int32
   - styi:Int
-  - underline:Boolean
+  - underline:Int
   - last_color:Color; // Used LIZ
   
   - ope_val:Flat Array String_alias // See LIZ
@@ -295,93 +295,101 @@ Private
   
   - sty_run_step <-
   ( + f,n,j:Int32
-    + sz:Real32
+    + sz:Real32  
     f := sty.at (styi+1)
-    (f = itm_cur).if {
-      underline := !underline
-    } else {
-      n := f & 0FF_FFh
-      (f >> 16)
-      .when 0 then { // Color
-        (n & 80h = 0).if {
-          last_color := Look.cols.at n
-        } else {
-          last_color := Look.cols_bland.at (n & 7Fh)
-        };
-        fill_color last_color
-        //stroke_color (COLOR.white)
-      }
-      .when 1 then { // Font
-        //OUT # "FONT:" # n # " pos:" # (pt_b.pt + sty.at styi) # '\n'
-        Font.app n in txt_buf
-      }
-      .when 2 then { // Size
-        n
-        .when 0 then { sz := Font.size_app; }
-        .when 1 then { sz := Font.size_app * 0.8; }
-        .when 2 then { sz := Font.size_app * 1.1; }
-        font_size sz
-      }
-      .when 3 then { // Escape character
-        j := n >> 8; n := n & 0FFh
-        (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {            
-          (last_div = NULL).if {
-            (tex.x = tex.xmin).if { begin_line; }
-            last_div := Div.new.text
-          }
-          tex.set_x (Look.drw n)
-          //
-          tex.ascdes (asc_c,des_c)
-          detect_cur
-          pos_i := pos_i + j
+    //Out # "B" # f>>28 # '\n'
+    n := f & 0FFF_FFFFh
+    (f.to_raw_uint32 >> 28)
+    .when 0 then { // Color
+      (n & 80h = 0).if {
+        last_color := Look.cols.at n
+      } else {
+        last_color := Look.cols_bland.at (n & 7Fh)
+      };
+      fill_color last_color
+      //stroke_color (COLOR.white)
+    }
+    .when 1 then { // Font
+      //OUT # "FONT:" # n # " pos:" # (pt_b.pt + sty.at styi) # '\n'
+      Font.app n in txt_buf
+    }
+    .when 2 then { // Size
+      n
+      .when 0 then { sz := Font.size_app; }
+      .when 1 then { sz := Font.size_app * 0.8; }
+      .when 2 then { sz := Font.size_app * 1.1; }
+      font_size sz
+    }
+    .when 3 then { // Escape character
+      j := n >> 8; n := n & 0FFh
+      (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {            
+        (last_div = NULL).if {
+          (tex.x = tex.xmin).if { begin_line; }
+          last_div := Div.new.text
         }
+        tex.set_x (Look.drw n)
+        //
+        tex.ascdes (asc_c,des_c)
+        detect_cur
+        pos_i := pos_i + j
       }
-      .when 4 then { // Img
-        (! pos.in_range (pos_i.pt) to (pos_i.pt+n)).if {
-          String.tmp { tmp:String_buffer
-            tmp.copy name
-            tmp.remove_suffix shortname
-            (pos_i.pt).to (pos_i.pt + n - 1) do { i:Int
-              tmp | at i
-            }              
-            (put_image tmp).if {
-              pos_i := pos_i + n
-            }
+    }
+    .when 4 then { // Img
+      (! pos.in_range (pos_i.pt) to (pos_i.pt+n)).if {
+        String.tmp { tmp:String_buffer
+          tmp.copy name
+          tmp.remove_suffix shortname
+          (pos_i.pt).to (pos_i.pt + n - 1) do { i:Int
+            tmp | at i
+          }              
+          (put_image tmp).if {
+            pos_i := pos_i + n
           }
         }
       }
-      .when 5 then { // Exposant / Indice
-        n
-        // Exposant
-        .when 0 then {
-          font_size (Font.size_app)
-          tex.add_y (+ Font.size_app * 0.2)
-        }
-        .when 1 then {
-          font_size (Font.size_app * 0.8)            
-          tex.add_y (- Font.size_app * 0.2)
-        }
-        // Indice
-        .when 2 then {
-          font_size (Font.size_app)
-          tex.add_y (- Font.size_app * 0.2)
-        }
-        .when 3 then {
-          font_size (Font.size_app * 0.8)            
-          tex.add_y (+ Font.size_app * 0.2)
-        }
+    }
+    .when 5 then { // Exposant / Indice
+      n
+      // Exposant
+      .when 0 then {
+        font_size (Font.size_app)
+        tex.add_y (+ Font.size_app * 0.2)
       }
-      .when 6 then { // Jump
-        (! pos.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
-          pos_i := pos_i + n
-        }
-      }        
-      .when 7 then { // UTF8 conversion
-        j := n >> 8; n := n & 0FFh
-        (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
-          tmp_c.copy (ope_val.at n)
-          draw_tmp_c            
-          pos_i := pos_i + j
+      .when 1 then {
+        font_size (Font.size_app * 0.8)            
+        tex.add_y (- Font.size_app * 0.2)
+      }
+      // Indice
+      .when 2 then {
+        font_size (Font.size_app)
+        tex.add_y (- Font.size_app * 0.2)
+      }
+      .when 3 then {
+        font_size (Font.size_app * 0.8)            
+        tex.add_y (+ Font.size_app * 0.2)
+      }
+    }
+    .when 6 then { // Jump
+      (! pos.in_range (pos_i.pt-1) to (pos_i.pt+n+1)).if {
+        pos_i := pos_i + n
+      }
+    }        
+    .when 7 then { // UTF8 conversion
+      j := n >> 8; n := n & 0FFh
+      (! pos.in_range (pos_i.pt-1) to (pos_i.pt+j+1)).if {
+        tmp_c.copy (ope_val.at n)
+        draw_tmp_c            
+        pos_i := pos_i + j
+      }
+    }
+    .when 8 then { // Underline
+      (underline != 0).if {
+        underline := 0
+      } else {
+        (f = itm_cur).if {
+          underline := 255
+        }.elseif {(n & 0FFh) != 0} then {
+          underline := n & 0FFh
         }
       }
     }
@@ -407,56 +415,75 @@ Public
   - fnt n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 10000h)
+    ? {n < 10000h}
+    sty.add_last (n | 1000_0000h)
   )
   
   - fsz n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 20000h)
+    sty.add_last (n | 2000_0000h)
   )
   
   - drw n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 30000h)
+    sty.add_last (n | 3000_0000h)
   )
   
   - img b:Int to e:Int <-
   [ ? {sty.is_empty || {b - pt_b.pt >= sty.second_last}}; ]
   ( sty.add_last (b - pt_b.pt)
-    sty.add_last ((e-b) | 40000h)
+    sty.add_last ((e-b) | 4000_0000h)
   )
   
   - exp b:Boolean sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (b.to_int | 50000h)
+    sty.add_last (b.to_int | 5000_0000h)
   )
   
   - ind b:Boolean sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last ((b.to_int+2) | 50000h)
+    sty.add_last ((b.to_int+2) | 5000_0000h)
   )
   
   - jmp n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
   ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 60000h)
+    sty.add_last (n | 6000_0000h)
   )
   
   - utf n:Int sub s:Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
-  ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n | 70000h)
+  ( sty.add_last (pos_i.pt - pt_b.pt - s)    
+    sty.add_last (n | 7000_0000h)
   )
   
   - itm_cur:Int; //OK_ITM
-  - itm n:Tok_itm sub s:Int <-
+  - itm_sub s:Int :Int <-
   [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
-  ( sty.add_last (pos_i.pt - pt_b.pt - s)
-    sty.add_last (n.to_pointer.to_int | 8000_0000h)
+  ( + k:Int
+    k := pos_i.pt - pt_b.pt - s
+    sty.add_last k
+    ? {k < 0FFF_FFh}
+    k := (k << 8) | 8000_0000h
+    sty.add_last k
+    k
+  )
+  - itm k:Int sub s:Int <-
+  [ ? {sty.is_empty || {pos_i.pt - pt_b.pt - s >= sty.second_last}}; ]
+  ( sty.add_last (pos_i.pt - pt_b.pt - s)    
+    sty.add_last k
+  )
+  - itm k:Int col c:Int <-
+  (    
+    0.to (sty.upper) by 2 do { i:Int
+      (sty.at (i+1).to_raw_uint32 = k).if {        
+        sty.at (i+1) put (k | c)
+      }
+    }
   )
   
   - get_col p:Int :Int <-
@@ -479,8 +506,8 @@ Public
     from 0 to (sty.upper) step 2 do { i:Int
       Out # i # ": " # sty.at i # " (" # (b + sty.at i) # ") "
       f := sty.at (i+1)
-      n := f & 0FFFFh
-      (f >> 16)
+      n := f & 0FFF_FFFFh
+      (f.to_raw_uint32 >> 28)
       .when 0 then { // Color
         "Color: ".print; n.print; ' '.print
         n
@@ -529,7 +556,13 @@ Public
       .when 6 then {
         "Jump ".print; n.print
       }
-      ((f >> 16) > 6).if { (f>>16).print; }
+      .when 7 then {
+        "UTF8 convert".print;
+      }
+      .when 8 then {
+        Out # "Underline: Key=" # (n&0FFF_FF00h)>>8 # " Col=" # n&0FFh
+      }
+      ((f >> 28) > 8).if { (f>>28).print; }
       '\n'.print
     }
     // crash
