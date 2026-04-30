@@ -1,9 +1,0 @@
-Header
-  + name := Terr
-Inherit
-  - parent_tpro:Tpro := Tpro
-  
-Public
-  
-  - key:String_alias := ""
-  

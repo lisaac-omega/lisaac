@@ -1,8 +1,0 @@
-Header
-  + name := Tone
-Inherit
-  + parent_type:Flat Type
-    
-Public
-  //- at i:Int :TONE <- self
-  //- foreach b:{TONE; } <- b.value self
