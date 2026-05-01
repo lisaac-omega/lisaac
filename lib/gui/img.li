@@ -4,7 +4,8 @@ Inherit
   - parent_any_gui:Any_gui := Any_gui
   - parent_clone:Clone := Clone
   
-Img
+Img  
+    
   - dico:Array Img := // Warning: first=NULL for font texture.
   ( + r:Array Img; r := Array Img.create_with_capacity 16; nothing_count.times { r.add_last NULL }; r)
   
@@ -15,9 +16,10 @@ Img
     self
   )
   
-  - nothing_count:Int := 3
+  - nothing_count:Int := 3 // 0: Nothing, 1: Dummy_tex, 2: Font tex
   
 Public
+  
   + idf:Int
   
   + anim:Array (C_array Uint8)

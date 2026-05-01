@@ -788,7 +788,7 @@ Public
     {text.look "Mapping" at i}   || {text.look "Public" at i}    || 
     {text.look "Private" at i}   || {text.look "Directory" at i} || 
     { + ok:Boolean
-      ((i < text.upper-1) && {text.at i.is_upper} && {text.at (i+1).is_upper}).if {
+      ((i < text.upper-1) && {text.at i.is_upper} && {text.at (i+1).is_lower}).if {
         + j:Int
         j := i - 1
         {(j > 0) && {text.at j = ' '}}.while_do { j := j - 1; }

@@ -15,43 +15,27 @@ Header
 Inherit 
   
   + parent_window:Flat Window
-  
+
 Private
   
-  - grid_width:Int := 20
-  - grid_height:Int := 15
+  // Data
+  
+  - grid_w:Int := 20
+  - grid_h:Int := 15
   - cell_size:Int := 28
-  
-  + head_x:Int := 4
-  + head_y:Int := 8
-  
-  + apple_x:Int := 12
-  + apple_y:Int := 8
-
-  + dir_x:Int := -1
-  + dir_y:Int := 0
-  
-  + snake_x:Array Int
-  + snake_y:Array Int
-  
-  + timer:Real64
-  
-Public
-  
-  - main <-
-  ( 
-    Random.init_clock
-    init "Snake Game" size (grid_width * cell_size, (grid_height + 1) * cell_size)
     
-    snake_x := new Array Int capacity 16
-    snake_y := new Array Int capacity 16
-    from 1 to 3 do { i: Int
-      snake_x.add_last (head_x + i)
-      snake_y.add_last head_y
-    }
-        
-    Paper.run
-  )
+  - apple_x:Int := 12
+  - apple_y:Int := 8
+
+  - dir_x:Int := 1
+  - dir_y:Int := 0
+  
+  - snake_x:Flat Array Int
+  - snake_y:Flat Array Int
+  
+  - timer:Uint64
+  
+  // Services
   
   - draw_cell (x,y:Int) color col:Color <-
   (
@@ -61,140 +45,88 @@ Public
     fill
   )
 
-  - draw_score <-
-  (
-    String.tmp { score_text:String_buffer
-      score_text.append "Score: "
-      score.append_in score_text
-      score_text.append " Ω"
-      font_size 24
-      font_face_id (Font sys (Font bold))
-      fill_color (Color.white) 
-      text (cell_size - 20, (grid_height + 1) * cell_size - 10) msg score_text
-    }
-  )
-
-  - move_snake <-
-  ( + i:Int
-    // Move the body (each segment takes the position of the previous one):
-    i := snake_x.upper
-    while {i > 0} do {
-      snake_x.at i put (snake_x.at (i-1))
-      snake_y.at i put (snake_y.at (i-1))
-      i := i - 1
-    }
-    // The first body segment takes the old head position
-    snake_x.at 0 put head_x
-    snake_y.at 0 put head_y
-    
-    (head_x, head_y) := (head_x + dir_x, head_y + dir_y)
-    // Edge management (crossing over)
-    if (head_x >= grid_width) then {
-      head_x := 0
-    }.elseif {head_x < 0} then {
-      head_x := grid_width - 1
-    }.elseif {head_y >= grid_height} then { 
-      head_y := 0
-    }.elseif {head_y < 0} then { 
-      head_y := grid_height - 1
-    }
-  )
-
-  - self_collision:Boolean <-
+  - collision (x,y:Int) :Boolean <-
   ( + i:Int
     + result:Boolean
     while {(i <= snake_x.upper) && {! result}} do {
-      result := (snake_x.at i = head_x) && {snake_y.at i = head_y}
+      result := (x,y) = (snake_x.at i,snake_y.at i)
       i := i + 1
     }
     result
   )
-   
-  - draw <-
-  (
-     wait (timer) seconds {
-      // Draw the grid
-      from 0 to (grid_height-1) do { y:Int
-        from 0 to (grid_width-1) do { x:Int
-          if (((x+y) % 2) = 0) then {
-            draw_cell (x,y) color (Color.rgb(240,240,240)) // Light Grey
-          } else {
-            draw_cell (x,y) color (Color.rgb(200,200,200)) // Dark Grey
-          }
-        }
-      }
-      move_snake
-      if (self_collision) then {
-        Out # "Game Over!\nScore: " # score # "\n"
-        System.exit 0
-      }
-      // Check if the snake eats the apple
-      if ((head_x = apple_x) && {head_y = apple_y}) then {
-        grow_snake
-        do {
-          apple_x := Random.max (grid_width-1)
-          apple_y := Random.max (grid_height-1)
-        } while { apple_on_snake }
-      }
-      from 0 to (snake_y.upper) do { i:Int
-        draw_cell (snake_x.at i, snake_y.at i) color (Color.rgb(0,100,0))
-      }
-      draw_snake_head
-      draw_cell (apple_x,apple_y) color (Color.rgb(255,0,0)) 
-      draw_score
-      Paper.refresh_again
-      timer := (2.0 / score).max 0.07
-    }
-  )
-  
-  - draw_snake_head <-
-  ( + omgx, omgy:Int
-    draw_cell (head_x,head_y) color (Color.rgb(0,200,0))
-    omgx := cell_size * head_x + 6
-    omgy := cell_size * head_y + 21
-    fill_color (Color.black) ; text (omgx, omgy) msg "Ω" 
-  )
-  
-  - apple_on_snake:Boolean <-
-  ( + result:Boolean
-    + i:Int
-    result := False
-    i := 0
-    while {(i <= snake_x.upper) && {!result}} do {
-      result := (snake_x.at i = apple_x) && {snake_y.at i = apple_y}
-      i := i + 1
-    }
-    result
-  )
-
-Private
-  
-  - score:Int <- snake_x.count
-  
-  - grow_snake <-
-  (
-    snake_x.add_last (snake_x.last)
-    snake_y.add_last (snake_y.last)
-  )
-  
-  - go_up    <- ( (dir_x, dir_y) := ( 0 ,-1) )
-  - go_down  <- ( (dir_x, dir_y) := ( 0 , 1) ) 
-  - go_left  <- ( (dir_x, dir_y) := (-1 , 0) )
-  - go_right <- ( (dir_x, dir_y) := ( 1 , 0) )
   
 Public
   
+  - main <-
+  ( 
+    Random.init_clock
+    init "Snake Game" size (grid_w * cell_size, grid_h * cell_size + cell_size)
+    from 0 to 2 do { i: Int
+      snake_x.add_last (4 + i)
+      snake_y.add_last 8
+    }        
+    Paper.run
+  )
+     
+  - draw <-
+  ( + x,y:Int
+    + t:Uint64
+    font_size (cell_size - 4)
+    font_face_id (Font sys (Font bold))
+    text_align (align_middle | align_center)
+    // Draw the grid
+    from 0 to (grid_h-1) do { py:Int
+      from 0 to (grid_w-1) do { px:Int
+        draw_cell (px,py) color ((px+py).is_odd.ok (Color.rgb(240,240,240)) else {Color.rgb(200,200,200)}) 
+      }
+    }  
+    (x,y) := (snake_x.last,snake_y.last)
+    t := Time.gettimeofday
+    (t > timer).if {
+      // Move Snake
+      (x,y) := ((x + dir_x) % grid_w, (y + dir_y) % grid_h)
+      (x < 0).if { x := grid_w - 1 }
+      (y < 0).if { y := grid_h - 1 }      
+      if (collision (x,y)) then {
+        Out # "Game Over!\nScore: " # snake_x.count # '\n'; System.exit 0
+      }
+      // Check if the snake eats the apple
+      if ((x,y) = (apple_x,apple_y)) then {        
+        do {
+          apple_x := Random.max (grid_w-1)
+          apple_y := Random.max (grid_h-1)
+        } while {collision (apple_x,apple_y)}
+      } else {
+        snake_x.remove_first; snake_y.remove_first
+      }
+      snake_x.add_last x; snake_y.add_last y      
+      timer := t + (2_000_000 / snake_x.count).max 700      
+    }
+    // Display Snake
+    from 0 to (snake_y.upper-1) do { i:Int
+      draw_cell (snake_x.at i, snake_y.at i) color (Color.rgb(0,100,0))
+    }      
+    draw_cell (x,y) color (Color.rgb(0,200,0))      
+    fill_color (Color.black) ; text (x * cell_size + cell_size/2, y * cell_size + cell_size/2) msg "Ω" 
+    // Display Apple
+    draw_cell (apple_x,apple_y) color (Color.rgb(255,0,0)) 
+    // Display Score
+    String.tmp { score_text:String_buffer
+      score_text # "Score: " # snake_x.count # " Ω"      
+      fill_color (Color.white)       
+      text (grid_w * cell_size / 2, grid_h * cell_size + cell_size/2) msg score_text
+    }
+    //      
+    Paper.refresh_again    
+  )
+    
   - key s:String cmd c:Uint8 :Boolean <-
   (
     (s.first)
-    .when 'z' then { go_up }
-    .when 's' then { go_down }
-    .when 'q' then { go_left }
-    .when 'd' then { go_right }
-    .when 'U' then { go_up }
-    .when 'D' then { go_down }
-    .when 'L' then { go_left } 
-    .when 'R' then { go_right }
+    .when 'z' or 'U' then { (dir_x, dir_y) := ( 0 ,-1) }
+    .when 's' or 'D' then { (dir_x, dir_y) := ( 0 , 1) }
+    .when 'q' or 'L' then { (dir_x, dir_y) := (-1 , 0) }
+    .when 'd' or 'R' then { (dir_x, dir_y) := ( 1 , 0) }
     True
   )
   

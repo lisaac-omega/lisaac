@@ -22,20 +22,37 @@ Public
     }
   )
   
+  - lst:Flat Array Proto
+  
   - self:Self '<=' o:Type :Boolean <- 
+  ( + r:Boolean
+    //print; "<=".print; o.println    
+    lst.clear    
+    r := sub_type o
+    // "Ok".println
+    r
+  )
+  
+  - sub_type o:Type :Boolean <-
   ( + result:Boolean
     + i:Int
     + s:Slot
-    + tp:Tpro
-    (self = o).if {
-      result := True
-    } else {      
-      {
-        (i <= proto.slot.upper) && {(s := proto.slot.at i).section.is_parent} && {! result}
-      }.while_do {
-        tp ?= s.type        
-        result := tp <= o
-        i := i + 1
+    + tp:Tpro    
+    (! lst.has proto).if {
+      lst.add_last proto
+      (self = o).if {
+        result := True
+      } else {      
+        //proto.name.println
+        {
+          (i <= proto.slot.upper) && {(s := proto.slot.at i).section.is_parent} && {! result}
+        }.while_do {
+          //"Slot: ".print; proto.slot.at i.name_id.println
+          //(proto.slot.at i.name_id == "dico").if { crash }
+          tp ?= s.type                
+          result := tp.sub_type o
+          i := i + 1
+        }
       }
     }
     result

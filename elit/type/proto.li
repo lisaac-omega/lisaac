@@ -31,12 +31,15 @@ Public
       
   + child_insert:Flat Array Slot
   + child_inherit:Flat Array Slot
-    
+  
+  - lst:Flat Array Proto
+  
   + slot:Flat Array Slot; // Inherit Or Insert, ...
   //+ slot:HMAP SLOT KEY String_alias
     
   - collect_parent s:Slot :Array Slot <-
   (
+    lst.clear
     set_op.clear; set_cl.clear
     set_cl.at (s.name_id) add s
     collect_rec_parent s
@@ -45,6 +48,7 @@ Public
   
   - collect_child s:Slot :(Array Slot,Array Slot) <-
   (
+    lst.clear
     set_op.clear; set_op2.clear; set_proto.clear
     collect_rec_child s
     set_op,set_op2
@@ -78,12 +82,11 @@ Private
   - set_cl:Hmap Slot Key String_alias := Hmap Slot Key String_alias.new
   - set_proto:Hset Proto := Hset Proto.create
   
-  - collect_chapter lst:Array Slot eye y:Boolean access p:Proto <-
+  - collect_chapter l:Array Slot eye y:Boolean access p:Proto <-
   ( + i:Int
     + s:Slot
     + pp:Proto
-    + new_y:Boolean
-    //"PROTO L66:".print; name.println
+    + new_y:Boolean    
     (! set_proto.fast_has self).if {
       set_proto.fast_add_without_control self
       {(i <= slot.upper) && {(s := slot.at i).section.is_parent}}.while_do {
@@ -91,8 +94,40 @@ Private
           pp := s.type.like Tpro.proto          
           (pp != NULL).if {
             new_y := y & s.eye_open
-            pp.collect_local_chapter lst eye new_y access p
-            pp.collect_chapter lst eye new_y access p
+            pp.collect_local_chapter l eye new_y access p
+            pp.collect_chapter l eye new_y access p
+          }
+        }
+        i := i + 1
+      }
+    }   
+  )
+  
+  - collect_local_chapter l:Array Slot eye y:Boolean access p:Proto <-
+  (
+    //"DEB".println
+    slot.foreach { s:Slot
+      if ({s.section.access p} && {! set_op.has s} && {! set_cl.has (s.name_id)}) then {
+        (y).if { l.add_last s; } else { set_cl.at (s.name_id) add s; }
+      }
+    }
+    //"FIN".println
+  )
+  
+  - collect_rec_parent s:Slot <-
+  ( + i,cnt:Int
+    + p,r:Slot
+    + pp:Proto
+    (! lst.has self).if {
+      lst.add_last self      
+      cnt := set_op.count
+      {(i <= slot.upper) && {cnt = set_op.count} && {(p := slot.at i).section.is_parent}}.while_do {
+        ((p.ttok != NULL) && {p.type != NULL}).if {
+          pp := p.type.like Tpro.proto
+          (pp != NULL).if {
+            r := pp.lookup_slot s
+            (r != NULL).if { set_op.add_last r; }
+            pp.collect_rec_parent s
           }
         }
         i := i + 1
@@ -100,37 +135,13 @@ Private
     }
   )
   
-  - collect_local_chapter lst:Array Slot eye y:Boolean access p:Proto <-
-  (
-    slot.foreach { s:Slot
-      if ({s.section.access p} && {! set_op.has s} && {! set_cl.has (s.name_id)}) then {
-        (y).if { lst.add_last s; } else { set_cl.at (s.name_id) add s; }
-      }
-    }
-  )
-  
-  - collect_rec_parent s:Slot <-
-  ( + i,cnt:Int
-    + p,r:Slot
-    + pp:Proto
-    cnt := set_op.count
-    {(i <= slot.upper) && {cnt = set_op.count} && {(p := slot.at i).section.is_parent}}.while_do {
-      ((p.ttok != NULL) && {p.type != NULL}).if {
-        pp := p.type.like Tpro.proto
-        (pp != NULL).if {
-          r := pp.lookup_slot s
-          (r != NULL).if { set_op.add_last r; }
-          pp.collect_rec_parent s
-        }
-      }
-      i := i + 1
-    }
-  )
-  
   - collect_rec_child s:Slot <-
   ( 
-    child_inherit.foreach { sl:Slot; sl.proto.add_child_slot s in set_op }
-    child_insert .foreach { sl:Slot; sl.proto.add_child_slot s in set_op2}
+    (! lst.has self).if {
+      lst.add_last self
+      child_inherit.foreach { sl:Slot; sl.proto.add_child_slot s in set_op }
+      child_insert .foreach { sl:Slot; sl.proto.add_child_slot s in set_op2}
+    }
   )
   
 Private

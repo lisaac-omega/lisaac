@@ -37,19 +37,20 @@ Public
 Public
   
   - access p:Proto :Boolean <-
-  ( + f:Uint8
+  ( + f:Uint8    
     f := style & 11b
+    
     ( f = a_public) ||
     {(f = a_private) && {proto = p}} ||
     {(f = a_directory) && {p.src.name.has_prefix (proto.src.name)}} ||
     {(f = a_list) && {exports != NULL} && {exports.type != NULL} && {
         exports.type.foreach_until { t:Tone
-          + tp:Tpro
+          + tp:Tpro          
           tp ?= t
           ((t = Tp.tself) && {p.type <= proto.type}) ||
-          {(tp != NULL) && {p.type <= tp}}
+          {(tp != NULL) && {p.type <= tp}}          
         }
-    }}
+    }}    
   )
   
   
@@ -58,7 +59,8 @@ Public
   ( style := f
     exports := t
     self
-  );*/
+    );
+   */
   
   + err:Int
   
