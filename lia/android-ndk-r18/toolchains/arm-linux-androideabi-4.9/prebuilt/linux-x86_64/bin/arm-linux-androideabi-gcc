@@ -1,2 +1,0 @@
-#!/bin/bash
-exec `dirname $0`/../../../../llvm/prebuilt/linux-x86_64/bin/clang -target arm-linux-androideabi "$@"
