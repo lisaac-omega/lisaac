@@ -368,8 +368,11 @@ Public
           toks.at tok_cur.inc_nl
           parse_level := 1
         } else {
+          Expr.skip_body
+          /*
           skip_until '\n'
           (at pos_i = '\n').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+          */
           parse_level := 2
         }
       }
@@ -644,12 +647,13 @@ Public
       //
       // Body Short
       //
-      ((parse_level = 2) && {body = NULL} && {affect != ' '}).if {        
+      ((parse_level = 2) && {body = NULL} && {affect != ' '}).if {
+        
         ln_limit := pt_b.pt + di
         //load_arg
-        body    := Expr.rd_expr_op
+        body    := Expr.rd_expr_op        
         (read_c ';').if { col (Look.symbol) sub 1 }
-        skip_spln
+        skip_sp //ln
         ln_limit := 0
         //
         end_code := pos_i.pt - pt_b.pt
@@ -657,10 +661,12 @@ Public
         (name.has_suffix "build_lisaac.li").if {
           OUT # "end_code=" # pos_i.pt # '\n';
         }
-        */  
+        */
+        (end_code > di).if { Out # pos_i.pt # ' ' # pt_b.pt+di # '\n'; "BUG".println; }
         ? {end_code <= di}
         pos_i := Old pos_i
         nl := Old nl
+        
       }
       (ri < end_code).if {        
         ((body != NULL) && {body.now pos_i}).if { body.draw;    }

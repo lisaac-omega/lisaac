@@ -12,6 +12,8 @@ Public
     (ok,b) := parent_file_key_gui.function c0
     (!ok).if {
       ok := c0
+      .case "edit_compile"  then { b := {edit_compile} }
+      .case "ai_completion" then { b := {ai_completion} }
       .case "compile"       then { b := {compile}; }
       .case "compile_boost" then { b := {compile_boost := !compile_boost; True}; }
       = String_alias

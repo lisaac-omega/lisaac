@@ -39,6 +39,7 @@ Public
     + a:Boolean    
     read_op    
     {(e := rd_expr_msg) != NULL}.while_do {
+      //Out # "Cpx = " # pos_i.pt # '\n'
       exp.add_last e
       ope.add_last NULL
       //
@@ -51,7 +52,7 @@ Public
       }
       //
       read_op
-      skip_spln_expr
+      skip_sp //ln_expr
     }    
     (exp.is_empty && {!ope.is_empty}).if { err syntax msg "Expr needed."; }
   )

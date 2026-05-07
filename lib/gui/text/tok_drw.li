@@ -405,7 +405,7 @@ Public
       print_sty (pt_b.pt)
       Out # (pos_i.pt - pt_b.pt - s) # " < " # sty.second_last # '\n'
       Out # "Pos_i = " # pos_i.pt # '\n'
-      //crash
+      crash
     } else {
     sty.add_last (pos_i.pt - pt_b.pt - s)
     sty.add_last n

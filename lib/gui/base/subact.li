@@ -3,20 +3,24 @@ Header
 Inherit
   - parent_clone:Clone := Clone
   - parent_json:Json := Json
+  
 File_key
+  
   - dico:Hmap Subact Key String_alias := Hmap Subact Key String_alias.new
-  //  
+  
   - old_list:Array Shortcut
   
   - list_empty:Array Shortcut := Array Shortcut.create_with_capacity 0
+ 
 Public
+  
   + key:String_alias
   
   + list:Array Shortcut
   + list_order:Array Shortcut
   
   - new:Self <- clone
-  
+ 
   - read:Self <-
   (
     list_order := Array Shortcut.create_with_capacity 16
@@ -31,7 +35,8 @@ Public
   )
   
   - get k:String_alias :Subact <-
-  ( + found:Boolean ; + result:Subact
+  ( + found:Boolean ; 
+    + result:Subact
     // DCDC
     //dico.fast_reference_at k
     (found, result) := dico.search k
@@ -56,7 +61,9 @@ Public
       }
       i := i + 1
     }
-    Act_itm.new.init p act (list.at i); //.color (LOOK.text_ui)
+    (! list.is_empty).if {
+      Act_itm.new.init p act (list.at i); //.color (LOOK.text_ui)
+    }
   )
   
   - restore <- Shortcut.set_list old_list

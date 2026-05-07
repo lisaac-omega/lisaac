@@ -14,6 +14,6 @@ Line 15 column 8 in Main(.../test/misc/22/main.li):
     (s = 1).if {
         ^
 /home/colnet/lisaac/test/misc/22/main.c: In function ‘main’:
-/home/colnet/lisaac/test/misc/22/main.c:369:16: warning: comparison between pointer and integer
-  369 |   __tmp__OG=(1 == (void *)NULL);
+/home/colnet/lisaac/test/misc/22/main.c:370:16: warning: comparison between pointer and integer
+  370 |   __tmp__QG=(1 == (void *)NULL);
       |                ^~

@@ -589,7 +589,27 @@ Public
       //paste_state := 0
     }
   )
-    
+  
+  - cmd_ai_completion:Boolean <-
+  ( + bi,ei:Pos
+    (bi,ei) := get_sel
+    (bi.is_undefine).if {
+      Clipboard.put ""
+    } else {
+      clipboard.clear
+      (bi.pt).to (ei.pt) do { i:Int; clipboard.add_last (text.buf.at i); }
+      Clipboard.put clipboard
+      pos := bi
+      text.rm bi times (ei.pt - bi.pt + 1)      
+      set_sel (Pos.undefine)      
+      //      
+      Ai.request clipboard in clipboard
+      Clipboard.put clipboard
+      cmd_paste      
+    }
+    ! bi.is_undefine
+  )
+  
   - cmd_go_line n:Int <-
   ( + i,s,p,nn:Int
     + t:Tok_drw

@@ -1,0 +1,687 @@
+Header
+  + name := Ai
+Inherit
+  - parent_any_gui:Any_gui := Any_gui
+  - parent_json:Json := Json
+  
+Private
+  
+  - src:String_buffer := String_buffer.create 4096
+  
+  - model:String_buffer := String_buffer.create 128
+  
+  - keyword_request:String_alias := 
+  "Tu aides à chercher dans une bibliothèque standard Lisaac.\n\
+  \Tu dois produire des mots-clés pour ripgrep.\n\
+  \Réponds uniquement en JSON valide.\n\
+  \Ne donne pas d'explication."
+  
+  - keyword_0:String_alias := "Demande utilisateur : "
+  - keyword_1:String_alias := 
+  "\nRetourne uniquement des mots susceptibles d'apparaître comme noms de types, \
+  \prototypes ou méthodes dans une bibliothèque Lisaac.\n\nRègles strictes :\n\
+  \- 5 à 12 mots-clés maximum.\n\
+  \- Favorise les noms de types et méthodes.\n\
+  \- Inclus les synonymes anglais utiles.\n\
+  \- Interdit les mots génériques : procedure, parameter, function, loop, if, else, element, index, value, data, code.\n\
+  \- Mets plutôt des noms comme Array, Collection, sort, count, item, lower, upper, median.\n\nFormat exact : \
+  \{\"keywords\":[\"mot1\",\"mot2\"]}"
+  
+  - keyword_not:Array String_alias := new Array String_alias of ("if","then","else","value")
+  
+  - keywords:Flat Array String_alias
+  
+  - user_request:String_buffer := String_buffer.create 256
+  
+  - limit_lib:Int     := 10_000
+  - limit_example:Int := 2_000
+  
+  - context:String_buffer := String_buffer.create (limit_lib + limit_example + 1024)
+  
+  - content_request:String_alias := 
+  "Tu es un assistant de programmation Lisaac. Réponds uniquement avec du code Lisaac brut. \
+  \Pas de Markdown. Pas d explication. Respecte strictement le style du contexte fourni. \
+  \N invente pas d API absente du contexte."
+  
+  - content_0:String_alias := "===== FIXED LISAAC MINI MANUAL =====\
+  \You are generating standard Lisaac code.\
+  \Lisaac is a rare language. Do not rely on general programming-language intuition.\
+  \Follow only the syntax and conventions described here and the code examples provided in the context.\
+  \ \
+  \GENERAL RULES\
+  \ \
+  \- Reply only with raw Lisaac code.\
+  \- No Markdown.\
+  \- No explanations.\
+  \- Do not use French_corner syntax.\
+  \- Do not use French keywords such as: si, alors, sinon, de, à, répéter, écrire.\
+  \- Prefer simple, explicit Lisaac code.\
+  \- Do not invent APIs.\
+  \- Use a library method only if its name appears in the provided context.\
+  \- If an API is not visible in the context, write the logic explicitly.\
+  \ \
+  \FILE STRUCTURE\
+  \ \
+  \A Lisaac file is generally organized with sections such as:\
+  \ \
+  \Header\
+  \  + name := Example\
+  \ \
+  \Inherit\
+  \ \
+  \Public\
+  \ \
+  \Private\
+  \ \
+  \Common method structure:\
+  \ \
+  \  - method_name <-\
+  \  (\
+  \    ...\
+  \  )\
+  \ \
+  \A method returning a value usually has the returned expression as the last expression of the body:\
+  \ \
+  \  - size:Int <-\
+  \  (\
+  \    upper - lower + 1\
+  \  )\
+  \ \
+  \METHODS\
+  \ \
+  \A method is generally declared with `-` and `<-`.\
+  \ \
+  \Method without parameter:\
+  \ \
+  \  - main <-\
+  \  (\
+  \    ...\
+  \  )\
+  \ \
+  \Method with one parameter:\
+  \ \
+  \  - print_value value:Int <-\
+  \  (\
+  \    value.print\
+  \  )\
+  \ \
+  \Method with return value:\
+  \ \
+  \  - double value:Int :Int <-\
+  \  (\
+  \    value * 2\
+  \  )\
+  \ \
+  \Method with local result variable:\
+  \ \
+  \  - maximum a:Int with b:Int :Int <-\
+  \  ( + result:Int\
+  \  \
+  \    if (a > b) then {\
+  \      result := a\
+  \    } else {\
+  \      result := b\
+  \    }\
+  \    result\
+  \  )\
+  \ \
+  \The last expression is the returned value.\
+  \ \
+  \SLOTS\
+  \ \
+  \A slot declaration starts with `+` or `-`.\
+  \ \
+  \`+` means the slot is cloned with the object.\
+  \Use `+` for data/state that each clone must own separately.\
+  \ \
+  \`-` means the slot is shared by all clones, like a global/static slot.\
+  \Use `-` for methods and shared behavior.\
+  \ \
+  \Examples:\
+  \ \
+  \  + count:Int\
+  \ \
+  \  - global_count:Int\
+  \ \
+  \  - is_empty:Boolean <-\
+  \  (\
+  \    count = 0\
+  \  )\
+  \ \
+  \ASSIGNMENTS AND SLOT DEFINITIONS\
+  \ \
+  \There are three important operators:\
+  \ \
+  \1. `:=`\
+  \ \
+  \Defines a stored slot with an initial value, or assigns a value to an existing variable/slot.\
+  \ \
+  \Examples:\
+  \ \
+  \  + count:Int\
+  \ \
+  \  count := count + 1;\
+  \ \
+  \2. `?=`\
+  \ \
+  \Defines a stored slot without an explicit initial value.\
+  \The value is initialized by Lisaac/type default mechanisms.\
+  \ \
+  \Example:\
+  \ \
+  \  + buffer:Array Int ?=\
+  \ \
+  \3. `<-`\
+  \ \
+  \Defines a method or computed slot body.\
+  \ \
+  \Example:\
+  \ \
+  \  - size:Int <-\
+  \  (\
+  \    upper - lower + 1\
+  \  )\
+  \ \
+  \Do not confuse these:\
+  \ \
+  \- Use `:=` for stored initialized slots or assignment.\
+  \- Use `?=` for stored slots initialized by default.\
+  \- Use `<-` for methods / computed behavior.\
+  \ \
+  \For generated functions/procedures, usually use:\
+  \ \
+  \  - method_name ... <-\
+  \  (\
+  \    ...\
+  \  )\
+  \ \
+  \not:\
+  \ \
+  \  + method_name ... := ...\
+  \ \
+  \LOCAL VARIABLES\
+  \ \
+  \Local variables are declared at the beginning of a block after `(`.\
+  \ \
+  \Examples:\
+  \ \
+  \  ( + i:Int\
+  \    + result:Int\
+  \    \
+  \    i := 0\
+  \    result := i + 1\
+  \    result\
+  \  )\
+  \ \
+  \Several variables of the same type may be declared together when this style is visible in context:\
+  \ \
+  \  ( + i,j:Int\
+  \    \
+  \    ...\
+  \  )\
+  \ \
+  \NAMING CONVENTIONS\
+  \ \
+  \Types / prototypes:\
+  \ \
+  \- A type/prototype name starts with one uppercase letter.\
+  \- The rest is lowercase.\
+  \- Use `_` for multi-word prototype names when observed in the library.\
+  \- Do not write all-uppercase type names.\
+  \ \
+  \Correct examples:\
+  \ \
+  \Int\
+  \Boolean\
+  \String\
+  \Array\
+  \\
+  \Avoid:\
+  \\
+  \INTEGER\
+  \BOOLEAN\
+  \STRING\
+  \ARRAY\
+  \FAST_ARRAY\
+  \FastArray\
+  \ \
+  \Methods and local variables:\
+  \ \
+  \- Use lowercase names.\
+  \- Use underscores if needed and if this style is visible in the context.\
+  \ \
+  \Examples:\
+  \ \
+  \count\
+  \result\
+  \lower\
+  \upper\
+  \is_empty\
+  \set_capacity\
+  \ \
+  \BOOLEAN EXPRESSIONS AND BLOCKS\
+  \ \
+  \Parentheses `(...)` are used for grouping expressions and for method bodies.\
+  \ \
+  \Braces `{...}` create a delayed block.\
+  \ \
+  \This is very important for boolean short-circuiting.\
+  \ \
+  \Use:\
+  \ \
+  \(a > 10) && {b > 15}\
+  \ \
+  \Do not write:\
+  \ \
+  \(a > 10) && (b > 15)\
+  \ \
+  \because `&&` expects the right operand as a delayed Boolean block.\
+  \ \
+  \Rules:\
+  \ \
+  \- Use `&& { ... }` for short-circuit AND.\
+  \- Use `|| { ... }` for short-circuit OR.\
+  \- The right operand of `&&` and `||` must be a block returning Boolean.\
+  \- `(...)` means evaluated expression / grouping.\
+  \- `{...}` means delayed block passed as an argument.\
+  \ \
+  \Examples:\
+  \ \
+  \if ((obj != NULL) && {obj.open}) then {\
+  \  ...\
+  \}\
+  \\
+  \if ((lower <= i) && {i <= upper}) then {\
+  \  ...\
+  \}\
+  \ \
+  \if ((count > 0) || {force}) then {\
+  \  ...\
+  \}\
+  \ \
+  \CONDITIONS\
+  \ \
+  \Use standard Lisaac condition syntax:\
+  \ \
+  \if (condition) then {\
+  \  ...\
+  \}\
+  \ \
+  \With else:\
+  \ \
+  \if (condition) then {\
+  \  ...\
+  \} else {\
+  \  ...\
+  \}\
+  \ \
+  \Example:\
+  \ \
+  \if (a > b) then {\
+  \  result := a\
+  \} else {\
+  \  result := b\
+  \}\
+  \ \
+  \Do not use French condition syntax.\
+  \ \
+  \LOOPS\
+  \ \
+  \Use loop forms only when they are visible in the provided context.\
+  \ \
+  \Common observed forms include:\
+  \ \
+  \from lower to upper do { i:Int\
+  \  ...\
+  \}\
+  \ \
+  \Example:\
+  \ \
+  \from 1 to 100 do { i:Int\
+  \  i.print\
+  \  '\n' print\
+  \};\
+  \ \
+  \Another common style is a delayed condition block with `while_do`:\
+  \ \
+  \{condition}.while_do {\
+  \  ...\
+  \}\
+  \ \
+  \Example:\
+  \ \
+  \{(i <= upper) && {! stop}}.while_do {\
+  \  i := i + 1\
+  \}\
+  \ \
+  \Prefer loop syntax already visible in the context.\
+  \ \
+  \METHOD CALLS\
+  \\
+  \Lisaac uses message syntax, not C/Java function-call syntax.\
+  \\
+  \Examples:\
+  \\
+  \object.method\
+  \object.method argument\
+  \object.method arg1 put arg2\
+  \\
+  \Correct style:\
+  \\
+  \storage.at i\
+  \storage.at i put v\
+  \result.set_capacity c\
+  \\
+  \Avoid C/Java style:\
+  \\
+  \method(object, argument)\
+  \object.method(argument)\
+  \\
+  \ARRAY / COLLECTION STYLE\
+  \\
+  \Use only array/collection APIs visible in the provided context.\
+  \\
+  \Common names that may appear in the library:\
+  \\
+  \lower\
+  \upper\
+  \count\
+  \at\
+  \put\
+  \add_last\
+  \capacity\
+  \\
+  \Examples:\
+  \\
+  \array.at i\
+  \\
+  \array.at i put value\
+  \\
+  \from array.lower to array.upper do { i:Int\
+  \  array.at i .print\
+  \};\
+  \\
+  \Do not invent APIs like:\
+  \\
+  \array.length\
+  \array.size()\
+  \array[i]\
+  \array.push(...)\
+  \\
+  \unless they are explicitly visible in the provided context.\
+  \\
+  \RETURN VALUES\
+  \\
+  \A method returning a value has the return type after the parameters:\
+  \\
+  \- double value:Int :Int <-\
+  \(\
+  \  value * 2\
+  \)\
+  \\
+  \The returned value is usually the last expression of the block:\
+  \\
+  \  - maximum a:Int with b:Int :Int <-\
+  \  ( + result:Int\
+  \  \
+  \    if (a > b) then {\
+  \      result := a\
+  \    } else {\
+  \      result := b\
+  \    }\
+  \    result\
+  \  )\
+  \\
+  \Do not add semicolons blindly after the final returned expression if the local style does not use them.\
+  \\
+  \ANTI-HALLUCINATION RULES\
+  \\
+  \Never generate:\
+  \\
+  \- Python-like code\
+  \- C-like code\
+  \- Java-like method calls\
+  \- Eiffel-like syntax\
+  \- French_corner syntax\
+  \- all-uppercase type names\
+  \- array indexing with []\
+  \- method calls with Java parentheses\
+  \- invented library methods\
+  \\
+  \Wrong examples:\
+  \\
+  \if a > b:\
+  \  ...\
+  \\
+  \array[i]\
+  \\
+  \array.length()\
+  \\
+  \result = a\
+  \\
+  \INTEGER\
+  \\
+  \FAST_ARRAY\
+  \\
+  \si (...) alors {\
+  \  ...\
+  \}\
+  \\
+  \Correct Lisaac direction:\
+  \\
+  \if (a > b) then {\
+  \  ...\
+  \}\
+  \\
+  \array.at i\
+  \\
+  \count := count + 1;\
+  \\
+  \Int\
+  \\
+  \Array\
+  \\
+  \When unsure, imitate the provided Lisaac examples exactly.\
+  \===== END FIXED LISAAC MINI MANUAL =====\
+  \Voici des extraits de la lib standard et d exemples:\n\n"
+  
+  - content_1:String_alias := "The generated code must obey the fixed mini-manual first,\
+  \ then imitate the provided context. Do not use any syntax not shown or described.\
+  \\n\nDemande utilisateur :\n"
+  - content_2:String_alias := "\n\nRéponds uniquement avec le code à insérer."
+  
+  - reponse:String_buffer := String_buffer.create 65536
+  
+Public
+  
+  - request s:String_buffer in r:String_buffer <-
+  (
+    user_request.copy s
+    Out # "\n-REQUEST----------------\n" # s # '\n'
+    //
+    model.clear
+    Environment.execute "curl -s http://localhost:1234/v1/models | jq -r '.data[0].id'" in model
+    model.remove_last
+    //    
+    String.tmp { tmp:String_buffer
+      tmp # keyword_0 # user_request # keyword_1
+      system keyword_request user tmp temperature 0.0 max 256
+    }
+    Out # "\n-KEYWORD REQUEST--------------\n" # src # '\n'
+    //
+    request_ai    
+    Out # "\n-KEYWORD RESULT---------------\n" # src # '\n'
+    //
+    Out # "\n-PARSER--------------------\n"
+    read_content := { v:String_alias
+      String.tmp { tmp:String_buffer
+        tmp.copy v
+        src := tmp
+        cur := 0
+        read_char '{'
+        read_object
+      }      
+    }
+    cur := 0
+    keywords.clear
+    read_char '{'
+    read_object
+    Out # "\n-CONTEXT--------------------\n" 
+    String.tmp2 { (run,pattern:String_buffer)
+      0.to (keywords.upper) do { i:Int; pattern # keywords.at i # '|' }; pattern.remove_last
+      run # "( cd ~/lisaac && { echo \"===== LIB STANDARD =====\"; rg -n -C 5 \"" #
+      pattern # "\" lib -g '*.li' | head -c " # limit_lib # "; echo; echo \"===== EXAMPLES =====\"; rg -n -C 5 \"" #
+      pattern # "\" example -g '*.li' | head -c " # limit_example # "; } )"
+      //
+      run.println
+      context.clear
+      Environment.execute run in context
+      Out # '<' # context # '>'
+    }      
+    Out # "\n-AI REQUEST--------------------\n"
+    String.tmp { tmp:String_buffer
+      tmp # content_0 # context # content_1 # user_request # content_2
+      system content_request user tmp temperature 0.1 max 1024
+    }    
+    src.println
+    request_ai
+    Out # "\n-AI RESULT---------------\n" # src # '\n'
+    src.println
+    "-------PARSE -----".println
+    read_content := { v:String_alias
+      reponse.copy v
+      //reponse.remove_head 3
+      //reponse.remove_tail 3
+    }
+    cur := 0    
+    read_char '{'
+    read_object
+    //
+    Out # "\n-AI RESULT---------------\n" # reponse # '\n'
+    r.copy reponse
+    //
+    field_quote := False
+  )
+  
+  // Parser JSON
+  
+  - read_content:{String_alias;}
+  
+  - item id:String_alias str v:String_alias :Boolean <-
+  (    
+    id
+    .case "content" then { 
+      read_content.value v 
+      cur := Old cur
+      src := Old src
+    }
+    .case "keywords"           then {
+      (! keyword_not.has v).if {
+        keywords.add_last v
+      }
+    }
+    .case "finish_reason"      then { }
+    .case "system_fingerprint" then { }
+    .case "reasoning_content"  then { }
+    .case "role"               then { }
+    .case "id"                 then { }
+    .case "object"             then { }
+    .case "model"              then { }
+    = String_alias
+  )
+  
+  - item id:String_alias int  v:Int :Boolean <-
+  (
+    id
+    .case "created"       then { }
+    .case "index"         then { }
+    .case "prompt_tokens" then { }
+    .case "completion_tokens" then { }
+    .case "total_tokens"      then { }
+    .case "reasoning_tokens"  then { }
+    = String_alias
+  )
+  
+  - object id:String_alias :Boolean <-
+  (
+    id
+    .case "choices"                   then { read_object }
+    .case "usage"                     then { read_object }
+    .case "message"                   then { read_object }
+    .case "completion_tokens_details" then { read_object }
+    .case "stats" then { }
+    = String_alias
+  )
+  
+  - object_null id:String_alias :Boolean <-
+  (
+    id
+    .case "logprobs" then { }
+    = String_alias
+  )
+  
+Private
+  
+  - system sys:String user user:String temperature t:Real32 max max:Int <-
+  (
+    src.clear
+    cur := 0    
+    field_quote := True
+    pre_print := ""
+    put_object {
+      put "model"    value { put_str model }
+      put "messages" value {
+        put_array {i:Int; 
+          ! (i = 0).if {
+            put_object {
+              put "role"    value { put_str "system" }
+              put "content" value { 
+                String.tmp { tmp:String_buffer
+                  tmp.copy sys
+                  escape tmp
+                  put_str tmp
+                }
+              }
+            }
+          } else {
+            put_object {
+              put "role"    value { put_str "user" }
+              put "content" value { 
+                String.tmp { tmp:String_buffer
+                  tmp.copy user
+                  escape tmp
+                  put_str tmp
+                }
+              }
+            }
+          }
+        }
+      }
+      put "temperature" value { put_real t }
+      put "max_tokens"  value { put_int max }
+    }
+  ) 
+  
+  - escape s:String_buffer <-
+  ( + i:Int
+    i := s.upper
+    {i >= 0}.while_do {
+      s.at i
+      .when '\n' then { s.remove i; s.insert_string "\\n" to i }
+      .when '\t' then { s.remove i; s.insert_string "\\t" to i }
+      .when '"'  then { s.insert '\\' to i }
+      .when '\'' then { s.at i put ' ' }
+      .when '\\' then { s.insert '\\' to i }
+      i := i - 1
+    }
+  )
+  
+  - request_ai <-
+  (
+    String.tmp { req:String_buffer
+      req # "curl -s http://localhost:1234/v1/chat/completions -H \"Content-Type: application/json\" --data-binary '" # src # "'"      
+      src.clear
+      src.set_capacity 65536
+      Environment.execute req in src      
+    }
+  )

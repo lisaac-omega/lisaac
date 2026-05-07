@@ -5,33 +5,46 @@ Insert
   
 Public
   
-  - target:String_alias := lip "target" str
-  - set_target t:String_alias :Boolean <- ( target := t; True)
-  - target_radio a:Act :Boolean <- (a.text_l = target)
+  - option_compile:String_buffer := String_buffer.create 128
+  
+  - edit_compile:Boolean <- Cmd_compile.open_option option_compile
+  
+  - target:String_alias := "" //lip "target" str
+  - set_target t:String_alias :Boolean <-
+  (
+    target := t
+    True
+  )
+  
+  - target_radio a:Act :Boolean <- (a.text_l = target) || {(a.text_l = "Default") && {target = ""}}
   
   - compile_boost:Boolean
   - compile:Boolean <-
-  ( + ok:Boolean
-    + n:String_alias
-    + t:Txt_pg
+  ( + n,s0,s1:String_alias
+    + t:Txt_pg    
     t ?= Page.cur_pg.buf_pg
     n := t.name
-    String.tmp { s:String_buffer
-      s # "lisaac " # n # " -target " # target
-      (compile_boost).if { s # " -boost"; }
-      s.println
-      ok := Environment.run s = 0
-      (ok).if {
-        s.copy n
-        s.remove_suffix ".li"
-        s # " &"
-        s.println
-        Environment.run s background
-      }
+    String.tmp { tmp:String_buffer
+      tmp # "lisaac " # n # ' ' # option_compile
+      (target != "").if { tmp # " -target " # target }
+      (compile_boost).if { tmp # " -boost"; }
+      s0 := tmp.to_string_alias
+      //
+      tmp.copy n
+      tmp.remove_suffix ".li"
+      tmp # " &"
+      s1 := tmp.to_string_alias
+      //
+      //s0.println
+      //s1.println
+      //
+      Compile.run s0 after s1 
     }
-    ok
+    True
   )
-        
+  
+  - ai_completion:Boolean <- cmd_txt {t:Txt_pg; t.cmd_ai_completion}
+  
   - lib_path:String_alias <- abs_path "lib/"
 
   // Stack EXPR

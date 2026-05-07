@@ -130,6 +130,7 @@ Public
   - rd_group <-
   //++ GROUP        -> DEF_LOCAL {EXPR ';'} [ EXPR {',' {EXPR ';'} EXPR } ]
   ( + e:Expr
+    + c:Char
     skip_spln_expr
     rd_def_local
     //
@@ -139,18 +140,26 @@ Public
     {
       e := rd_expr_op
       (e != NULL).if {
-        (read_c ';').if {
+        exp.add_last e
+        c := buf.at pos_i
+        ((c = ';') || {c = ','} || {c = '.'}).if {
+          pos_i := pos_i + 1
           col (Look.symbol) sub 1
-          exp.add_last e
-        }.elseif {read_c ','} then {
-          col (Look.symbol) sub 1
-          exp.add_last (Wloc.new.res e)
-        } else {
-          exp.add_last (Wloc.new.res e)
-          e := NULL
+          (c = ',').if { exp.put_last (Wloc.new.res e) }
         }
+        (c = '\n').if {          
+          pos_i := pos_i + 1          
+        }
+        skip_spln_expr        
       }
-    }.do_while {e != NULL}
+    }.do_while {(e != NULL) && {c != '.'}}
+    ((! exp.is_empty) && {c != ';'} && {c != '.'}).if {
+      (c = ',').if {
+        err warning msg "Extra comma."
+      } else {
+        exp.put_last (Wloc.new.res (exp.last))
+      }
+    }    
     skip_spln_expr
     //
     local_list.set_upper (Old local_list.upper)

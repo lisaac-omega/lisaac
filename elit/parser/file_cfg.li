@@ -75,12 +75,22 @@ Public
     ) || {parent_file_cfg_gui.item id bool v}
   )
   
+  - item id:String_alias str v:String_alias :Boolean <-
+  (
+    (
+      id
+      .case "option_compile" then { option_compile.copy v }
+      = String_alias
+    ) || {parent_file_cfg_gui.item id str v}
+  )
+  
   - new_value id:String_alias :Boolean <-
   (
     (
       id
-      .case "extend_code" then { put_bool extend_code;   }
-      .case "auto_indent" then { put_bool auto_indent;   }
+      .case "option_compile" then { put_str option_compile }
+      .case "extend_code"    then { put_bool extend_code;   }
+      .case "auto_indent"    then { put_bool auto_indent;   }
       = String_alias
     ) || {parent_file_cfg_gui.new_value id}  
   )

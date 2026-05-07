@@ -42,7 +42,7 @@ Public
   - append_in b:String_buffer <-
   (
     writable.append_in b
-    (src.at (style+1) = '¿').if { b += " := "; } else { b += " ?= "; }
+    (src.at (style+1) = ':').if { b += " := "; } else { b += " ?= "; }
     value.append_in b
   )
   

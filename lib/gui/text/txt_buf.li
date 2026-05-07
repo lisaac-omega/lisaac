@@ -575,7 +575,7 @@ Public
       //Out # "txt_buf574 = " # pos_i.pt # '\n'
     }
   )
-  
+    
   - skip_sp_only <-
   ( + c:Char
     {((c := buf.at pos_i) = ' ') && {c != '\0'} && {pos_i.pt != ln_limit}}.while_do { pos_i := pos_i + 1; }
@@ -715,7 +715,7 @@ Public
     + c:Char
     (c := at pos_i).is_separator.if {
       skip_spln
-      (at pos_i != '\\').if { err syntax msg "Unknown escape sequence. (1)"; }
+      (at pos_i != '\\').if { err warning msg "Unknown escape sequence. (1)"; }
       col (Look.string) sub 0
       pos_i := pos_i + 1
     }.elseif {
@@ -725,12 +725,12 @@ Public
       pos_i := pos_i + 1
     }.elseif {c.is_digit} then {      
       read_num False
-      ((last_int > 255) || {is_real}).if { err syntax msg "Invalid range character number [0,255]."; }
+      ((last_int > 255) || {is_real}).if { err warning msg "Invalid range character number [0,255]."; }
       val := last_int.to_int
-      (at pos_i != '\\').if { err syntax msg "CHARACTERacter '\' is needed."; }
+      (at pos_i != '\\').if { err warning msg "CHARACTERacter '\' is needed."; }
       pos_i := pos_i + 1
     } else {
-      err syntax msg "Unknown escape sequence."
+      err warning msg "Unknown escape sequence."
     }
   )
 
@@ -753,9 +753,9 @@ Public
       }
       (c = '\'').if {
         pos_i := pos_i + 1
-        (count != 1).if { err syntax msg "CHARACTERacter constant too long." }
+        (count != 1).if { err syntax msg "Chars constant too long." }
       } else {
-        err syntax msg "CHARACTERacter constant too long."
+        err syntax msg "Chars constant too long."
       }
     }
   )
@@ -763,21 +763,25 @@ Public
   - rd_str:Boolean <-
   //-- string         -> '\"' string_char '\"'
   ( + c:Char
+    + old_p:Int
     //skip_sp
     (at pos_i = '\"').if {      
       col (Look.string) sub 0
       pos_i := pos_i + 1
+      old_p := pos_i
       {((c := at pos_i) != '\0') && {c != '\n'} && {c != '\"'}}.while_do {        
         (c = '\\').if {
           pos_i := pos_i + 1
+          old_p := pos_i
           rd_escape_char
         } else {
           pos_i := pos_i + 1
         }
-      }
+      } 
       (c = '\"').if {
         pos_i := pos_i + 1
       } else {
+        pos_i := old_p        
         err syntax msg "Unterminated string constant."
       }
     }

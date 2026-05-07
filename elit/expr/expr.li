@@ -44,7 +44,7 @@ Public
   
   - skip_body <-
   ( + par,acc,cro,ln:Int
-    + c,in_str:Char
+    + c:Char
     + stop:Boolean
     {(!stop) && {skip_sp_only; pos_i < buf.upper}}.while_do {      
       c := buf.at pos_i
@@ -53,7 +53,7 @@ Public
         ln := ln + 1
         stop := (
           ( // 2 lines empty
-            (ln = 2) && {in_str = '\0'} &&
+            (ln = 2) && /*{in_str = '\0'} &&*/
             {cro = 0} && {acc = 0} && {par = 0}
           ) ||
           { // Begin other slot or contract.
@@ -69,11 +69,13 @@ Public
         )
       } else {
         ln := 0
+        /*
         (in_str != '\0').if {
           ((c = in_str) && {buf.at (pos_i-1) != '\\'}).if {
             in_str := '\0'
           }
-        } else {
+          } else {
+        */  
           (c = '{').if   { acc := acc + 1; }.elseif
           {c = '}'} then { acc := acc - 1; }.elseif
           {c = '('} then { par := par + 1; }.elseif
@@ -82,8 +84,8 @@ Public
           {c = ']'} then { cro := cro - 1; }.elseif
           {rd_rem_c}  then { pos_i := pos_i - 1; }.elseif
           {look "//"} then { skip_until '\n'; pos_i := pos_i - 1; }.elseif
-          {(c = '"') || {c = '\''} || {c = '`'}} then { in_str := c; };
-        }
+          {(rd_str) || {rd_chars} || {rd_ext}} then { pos_i := pos_i - 1 };
+        //}
       }
       pos_i := pos_i + 1
     }
@@ -141,16 +143,18 @@ Public
     + cas:Rslo
     
     (rd_symbol "...").if { err semantic msg "not_yet_implemented"; }
-    ((result := Old_e.parse_sp 0) != NULL) || {(result := rd_expr_prim)    != NULL} ||
+    ((result := Old_e.parse_sp 0) != NULL) || {(result := rd_expr_prim)   != NULL} ||
     {(result := Rslo.parse_sp 0) != NULL} || {(result := Rloc.parse_sp 0) != NULL}
     (result != NULL).if {
-      {skip_spln_expr; read_c '.'}.while_do {
+      //Out # "Expr = " # pos_i.pt # '\n'
+      {skip_spln; read_c '.'}.while_do {
         col (Look.symbol) sub 1
         cas := Rslo.parse_sp 1
         (cas = NULL).if { err syntax msg "Incorrect message."; } else {
           cas.add_first result; result := cas
         }
-      }
+      }      
+      //Out # "Expr2 = " # pos_i.pt # '\n'
     }
     result
   )

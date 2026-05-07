@@ -5,6 +5,8 @@ Inherit
   
 Public
   
+  - field_quote:Boolean
+  
   - item id:String_alias str  v:String_alias :Boolean
   - item id:String_alias int  v:Int :Boolean
   - item id:String_alias real v:Real32 :Boolean
@@ -55,7 +57,9 @@ Public
   - put v:String value b:{} <-
   ( puts pre_print
     put_indent
+    (field_quote).if { puts "\"" }
     puts v
+    (field_quote).if { puts "\"" }
     puts " : "
     pre_print := ""
     b.value

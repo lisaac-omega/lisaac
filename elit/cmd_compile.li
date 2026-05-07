@@ -1,0 +1,24 @@
+Header
+  + name := Cmd_compile
+Inherit
+  - parent_cmd:Cmd := Cmd
+  
+Public
+  
+  - options:String_buffer
+  
+  - open_option op:String_buffer :Boolean <-
+  ( 
+    mesg.copy "Options"
+    options := op
+    text.copy op    
+    Subact.get "EditCompile".load self
+    open
+  )
+  
+  - action:Boolean <-
+  ( 
+    options.copy text
+    close    
+    True
+  )

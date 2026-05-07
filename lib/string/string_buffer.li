@@ -445,6 +445,20 @@ Public
     }
   )
   
+  - escape <-
+  ( + i:Int
+    i := upper
+    {i >= 0}.while_do {
+      at i
+      .when '\n' then { remove i; insert_string "\\n" to i }
+      .when '\t' then { remove i; insert_string "\\t" to i }
+      .when '"'  then { insert '\\' to i }
+      .when '\'' then { insert '\\' to i }
+      .when '\\' then { insert '\\' to i }
+      i := i - 1
+    }
+  )
+  
   - insert ch:Char to i:Int on nb:Int <-
   // Insert @ch after position @i.
   [

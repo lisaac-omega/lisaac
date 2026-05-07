@@ -1,0 +1,32 @@
+Header
+  - name := Compile
+  /**/
+  - include := `#include <pthread.h>
+  extern pthread_t th;`
+  - external := `pthread_t th;`
+Public
+  
+  - compile:String_alias
+  - exec:String_alias
+     
+  - run s:String_alias after r:String_alias <-
+  ( 
+    (compile,exec) := (s,r)
+    `pthread_create(&th, NULL, run_compile, NULL)`;
+  )
+  
+External
+  
+  - run_compile:Pointer <-
+  (    
+    Page.cur_pg.buf_pg.footnote_left.copy "Compiling..."
+    (Environment.run compile = 0).if {      
+      Page.cur_pg.buf_pg.footnote_left.copy "Compiling OK - Running..."      
+      Environment.run exec background      
+    } else {
+      Page.cur_pg.buf_pg.footnote_left.copy "Compiling failure"
+    }
+    Paper.refresh_again
+    NULL
+  )  
+  
