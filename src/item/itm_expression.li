@@ -53,6 +53,7 @@ Public
     + l_arg:Array Expr
     + result:Expr
     + itm_op:Itm_operator
+    + em:Expr_multiple
 
     val_list := Alias_array Instr.new
     // Search unary message.
@@ -188,8 +189,18 @@ Public
       } else {
         // SW_READ.
         l_arg := Array Expr .create_with_capacity 2
-        l_arg.add_last left
-        l_arg.add_last right
+        em ?= left
+        (em = NULL).if {
+          l_arg.add_last left
+        } else {
+          l_arg.append_collection (em.expr_list)
+        }
+        em ?= right
+        (em = NULL).if {          
+          l_arg.add_last right
+        } else {
+          l_arg.append_collection (em.expr_list)
+        }        
         slo := left.static_type.raw.get_slot (n_t.data.slot.name)
         n_t.new_read_finalize (left.my_copy,slo) with l_arg
         list_current.add_last n_t

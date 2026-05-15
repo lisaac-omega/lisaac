@@ -34,7 +34,7 @@ Public
     + s:Self
     s ?= other
     (s != NULL).if {
-      result := self |# s
+      result := self ||# s
     }
     result
   )
@@ -135,7 +135,7 @@ Lip_constant
 
   - my_copy other:Self :Lip_constant <- NULL
 
-  - self:Self '|#'  other:Self :Lip_constant <- NULL
+  - self:Self '||#'  other:Self :Lip_constant <- NULL
 
   - self:Self '&#'  other:Self :Lip_constant <- NULL
 

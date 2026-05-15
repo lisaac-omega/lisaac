@@ -74,7 +74,7 @@ Lip_constant
     self
   )
 
-  - self:Self '|#'  other:Self :Lip_constant <-
+  - self:Self '||#'  other:Self :Lip_constant <-
   (
     value := value | other.value
     other.free

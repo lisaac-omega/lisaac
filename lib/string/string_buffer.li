@@ -262,10 +262,21 @@ Public
     storage.slice_copy (other.storage) to count from b to e
     upper := needed_capacity - 1
   )
-  
+    
   - self:Self '#' e:E :Self <- ( e.append_in self; self)
   
   - self:Self '|#' e:E :Self <- ( clear; e.append_in self; self)
+  
+  - self:Self '##' (e:E,a:Int,c:Char) :Self <-
+  ( + u,n:Int
+    u := upper
+    e.append_in self
+    n := a - (upper - u)
+    (n > 0).if {
+      insert c to (u+1) on n
+    }
+    self
+  )
   
   - prepend other:String from b:Int to e:Int<-
   // Append @other to @self.

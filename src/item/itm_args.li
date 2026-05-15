@@ -70,9 +70,8 @@ Public
   )
 
   - check larg:Array Expr index idx:Int for p:Parameter_to_type :Int <-
-  ( + new_expr:Expr
-
-    (type.lower).to (type.upper) do { i:Int
+  ( + new_expr:Expr    
+    (type.lower).to (type.upper) do { i:Int      
       new_expr := larg.at (idx+i).check_type (type.at i.to_run_for p pos (position.prototype.filename)) with position
       larg.at (idx+i) put new_expr
     }

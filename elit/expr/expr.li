@@ -7,7 +7,7 @@ Inherit
   - parent_any:Any := Any
   
 Insert
-  //  - parent_lix_buf:LIX_BUF := LIX_BUF
+  - parent_lix_buf:Lix_buf := Lix_buf
   
 Private
   - stk_e:Flat Array (Exact Expr)

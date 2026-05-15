@@ -115,7 +115,18 @@ csecond
     cs := diff % 100
     create (h,m,s,cs)
   )
-
+    
+  - timestamp t:Int in b:String_buffer format f:String <-
+  ( + a,g:C_array Char
+    `time_t ts = @t`
+    `struct tm *d = localtime(&ts)`
+    b.set_capacity (b.count + 32)
+    a := b.to_external + b.count
+    g := f.to_external
+    `strftime(@a,32,@g,d)`
+    b.restore_after_external
+  )
+  
   - append_in b:String_buffer <-
   (
     hour.append_in b format 2 with '0'

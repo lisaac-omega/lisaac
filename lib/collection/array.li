@@ -117,6 +117,7 @@ Public
   )
 
   // Adding:
+  
   - add_first v:V^n <-
   ( + idx:Int
     set_capacity (count + n)    

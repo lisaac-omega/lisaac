@@ -59,7 +59,7 @@ Lip_constant
 
   - my_copy other:Self :Lip_constant <- other
 
-  - self:Self '|#'  other:Self :Lip_constant <-
+  - self:Self '||#'  other:Self :Lip_constant <-
   (
     get (value | other.value)
   )

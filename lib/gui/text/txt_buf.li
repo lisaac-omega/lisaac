@@ -715,9 +715,13 @@ Public
     + c:Char
     (c := at pos_i).is_separator.if {
       skip_spln
-      (at pos_i != '\\').if { err warning msg "Unknown escape sequence. (1)"; }
-      col (Look.string) sub 0
-      pos_i := pos_i + 1
+      (at pos_i = '\\').if {
+        col (Look.string) sub 0
+        pos_i := pos_i + 1
+      } else {
+        pos_i := Old pos_i
+        err warning msg "Unknown escape sequence. (1)";
+      }
     }.elseif {
       ("abfnrtv\\?'\"".has c) ||
       {(c = '0') && {! at (pos_i+1).is_hexadecimal_digit}}

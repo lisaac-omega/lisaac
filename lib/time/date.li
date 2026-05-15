@@ -65,7 +65,25 @@ Public
     `tm_info = localtime(&@self);`
     `tm_info->tm_wday`:Uint8
   )
-
+  
+  - hour:Int <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_hour`:Int
+  )
+  
+  - min:Int <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_min`:Int
+  )
+  
+  - sec:Int <-
+  (
+    `tm_info = localtime(&@self);`
+    `tm_info->tm_sec`:Int
+  )
+  
 Public
   - create_now :Date <- (`time(NULL)`:Date)
   
@@ -105,6 +123,8 @@ Public
   (
     sec 0 min 0 hour 0 mday d mon m year (y - 1900) wday wd yday d isdt 0
   )
+  
+  - create_timestamp t:Int64 :Self <- from_raw t
   
   - append_in b:String_buffer <-
   (
@@ -175,7 +195,34 @@ Public
     b.add_last '/'
     year.append_in b format 4 with '0'
   )
-
+  
+  - weekday_fr:String_alias <-
+  ( + result:String_alias
+    week_day
+    .when 0 then {
+      result := "Dim"
+    }
+    .when 1 then {
+      result := "Lun"
+    }
+    .when 2 then {
+      result := "Mar"
+    }
+    .when 3 then {
+      result := "Mer"
+    }
+    .when 4 then {
+      result := "Jeu"
+    }
+    .when 5 then {
+      result := "Ven"
+    }
+    .when 6 then {      
+      result := "Sam"
+    }
+    result
+  )
+  
   - encode:Int64 <- to_raw
 
   - decode i:Int64 :Self <- from_raw i

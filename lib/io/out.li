@@ -8,3 +8,17 @@ Public
     self
   )
   
+  - self:Self '|#' e:E :Self <- 
+  (
+    '\n'.print
+    e.print
+    self
+  )
+  
+  - self:Self '#|' e:E :Self <- 
+  (
+    e.print
+    '\n'.print
+    self
+  )
+  

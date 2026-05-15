@@ -35,36 +35,38 @@ Public
   )
   
   - new_parse t:Int <-
-  ( + e:Expr
-    + a:Boolean    
-    read_op    
-    {(e := rd_expr_msg) != NULL}.while_do {
-      //Out # "Cpx = " # pos_i.pt # '\n'
-      exp.add_last e
-      ope.add_last NULL
-      //
-      skip_sp
-      ((look ":=") || {a := look "<-"} || {look "?="}).if {
-        ope.add_last ":="
-        pos_i := pos_i + 2
-        col (Look.symbol) sub 2
-        (a).if { drw esc_char_arrow sub 2 }
-      }
-      //
-      read_op
-      skip_sp //ln_expr
-    }    
-    (exp.is_empty && {!ope.is_empty}).if { err syntax msg "Expr needed."; }
+  ( + e:Expr    
+    read_op
+    e := rd_expr_msg
+    (e != NULL).if {
+      {
+        exp.add_last e
+        read_op.if {
+          e := rd_expr_msg
+        } else {
+          e := NULL
+        }
+      }.do_while {e != NULL}
+    }
+    (exp.is_empty && {!ope.is_empty}).if { err warning msg "Expr needed."; }
   )
   
-  - read_op <-
+  - read_op:Boolean <-
   ( + v,l:Int 
-    {read_symbol}.while_do {
+    {read_symbol || {read_affect}}.while_do {
       l := last_str.count
-      col (Look.operator) sub l; ope.add_last last_str
-      v := Liz.ope_key.search last_str raw
-      (v != 0).if { utf ((v-1) | (l<<8)) sub l };
+      ope.add_last last_str
+      ((last_str = ":=") || {last_str = "?="}).if {
+        col (Look.symbol) sub 2
+      }.elseif {last_str = "<-"} then {
+        drw esc_char_arrow sub 2
+      } else {
+        col (Look.operator) sub l
+        v := Liz.ope_key.search last_str raw
+        (v != 0).if { utf ((v-1) | (l<<8)) sub l };
+      }
     }
+    ope.upper != Old ope.upper
   )
   
   + ai:Int

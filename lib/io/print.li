@@ -6,8 +6,13 @@ Header
 Public
 
   - self:Self '#' e:E :Self <- ( crash; Self); // See OUT
-
   
+  - self:Self '|#' e:E :Self <- ( crash; Self); // See OUT
+   
+  - self:Self '#|' e:E :Self <- ( crash; Self); // See OUT
+  
+  - self:Self '##' (e:E,a:Int,c:Char) :Self <- ( crash; Self) 
+    
   - extern s:C_array Char <-
   ( + i:Int
     String.tmp { b:String_buffer

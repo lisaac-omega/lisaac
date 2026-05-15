@@ -112,9 +112,14 @@ Public
   - read p:String_alias src s:String_buffer :Boolean <-
   ( + r:Boolean
     (src,filename,cur) := (s,p,0)
-    {
-      (! read_pair).if { err warning msg "Pair needed."; }
-    }.do_while {read_char ','}
+    (read_char '{').if {
+      read_object
+      skip_sp
+    } else {
+      {
+        (! read_pair).if { err warning msg "Pair needed."; }
+      }.do_while {read_char ','}
+    }
     (cur = src.upper+1).if {
       r := True
     } else {
@@ -127,6 +132,14 @@ Public
   
   - update p:String_alias src s:String_buffer <-
   ( is_update := True; read p src s; )
+  
+  - create p:String_alias src s:String_buffer <-
+  (
+    (src,filename,cur) := (s,p,0)
+    src.clear
+    field_quote := True
+    pre_print := ""
+  )
   
   - syntax  :Int := 0
   - semantic:Int := 1
@@ -203,7 +216,7 @@ Private
     old_cur := -1
     {old_cur = cur}.until_do {
       old_cur := cur
-      {(cur > src.upper) || {(c:=src.at cur) > ' '}}.until_do { cur := cur + 1; }; // Spaces      
+      {(cur > src.upper) || {(c:=src.at cur) > ' '}}.until_do { cur := cur + 1; }; // Spaces
       ((cur < src.upper) && {c = '/'}).if {
         ((c := src.at (cur + 1)) = '/').if { // C++ comment style
           cur := cur + 2

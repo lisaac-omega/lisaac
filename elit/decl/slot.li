@@ -322,7 +322,7 @@ Public
         eye := pos_i.pt - pt_b
         ttok := Ttok.parse_sp (Ttok.tres)
         ((ttok = NULL) || {ttok.type = NULL}).if {
-          err syntax msg "Type result not found."
+          err warning msg "Type result not found."
         }
         (read_affect).if {
           affect := last_str.first

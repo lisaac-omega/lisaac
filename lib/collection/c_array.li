@@ -690,8 +690,7 @@ Public
   // Move range [@lower .. @up] by @offset positions.
   // Freed positions are not initialized to default values.
   [ //BSBS Old
-    -? {lower >= 0}
-    -? {up >= lower}
+    -? {lower >= 0}    
     -? {lower + offset >= 0}
     -? {offset < 0}
   ]
