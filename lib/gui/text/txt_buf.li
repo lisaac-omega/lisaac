@@ -1216,20 +1216,24 @@ Public
       ).if { // Draw  
         //debug_tok_beg := debug_tok_beg.min tok_cur
         //OUT # "Draw " # tok_cur # '\n';
-        t.draw        
-        ((pos.is_ico) && {pos.tok = tok_cur} && {! detect_ico_ok}).if {          
-          pos := Tok_drw.pt_b
-          {at pos = ' '}.while_do { pos := pos + 1 }
-        }
-        ((tex.y < yb) && {! pos.is_define_all}).if {
-          child.foreach { d:Win; d.free; }
-          child.clear
-        }
-        (tok_cur + 1 != nxt).if {
-          "TXT_BUF 1057 ".print
-          (tok_cur+1).print; " != ".print; nxt.print; " / ".print; toks.upper.println
-        }
-        ? {tok_cur + 1 = nxt}
+        (t.show || {pos.pt.in_range pos_i to (pos_i+di-1)}).if {
+          t.draw        
+          ((pos.is_ico) && {pos.tok = tok_cur} && {! detect_ico_ok}).if {          
+            pos := Tok_drw.pt_b
+            {at pos = ' '}.while_do { pos := pos + 1 }
+          }
+          ((tex.y < yb) && {! pos.is_define_all}).if {
+            child.foreach { d:Win; d.free; }
+            child.clear
+          }
+          (tok_cur + 1 != nxt).if {
+            "TXT_BUF 1057 ".print
+            (tok_cur+1).print; " != ".print; nxt.print; " / ".print; toks.upper.println
+          }
+          ? {tok_cur + 1 = nxt}
+        } else {
+          pos_i := pos_i + di
+        }  
       } else { // Skip draw
         //OUT # "Skip " # tok_cur # '\n';
         tex.add_y (t.dh)

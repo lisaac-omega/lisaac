@@ -3,10 +3,17 @@ Header
 Inherit
   + parent_tok_drw:Flat Tok_drw
   
+Insert
+  - parent_any:Any := Any
+  //- parent_lix_buf:Lix_buf := Lix_buf
+  
 Private
   - stk:Flat Array (Exact Section)
 
 Public  
+  
+  - show:Boolean <- (!is_parent) || {show_inherit} || {proto.open_win = '3'}
+  
   + style:Uint8
   + proto:Proto
   

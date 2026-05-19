@@ -12,10 +12,11 @@ Public
     (ok,b) := parent_file_key_gui.function c0
     (!ok).if {
       ok := c0
-      .case "edit_compile"  then { b := {edit_compile} }
-      .case "ai_completion" then { b := {ai_completion} }
-      .case "compile"       then { b := {compile}; }
-      .case "compile_boost" then { b := {compile_boost := !compile_boost; True}; }
+      .case "edit_compile"    then { b := {edit_compile} }
+      .case "ai_completion"   then { b := {ai_completion} }
+      .case "compile"         then { b := {compile}; }
+      .case "show_inherit_sw" then { b := {show_inherit := !show_inherit; True} }
+      .case "compile_boost"   then { b := {compile_boost := !compile_boost; True}; }
       = String_alias
     }
     ok,b
@@ -41,6 +42,7 @@ Public
     (ok,b) := parent_file_key_gui.function c0 check
     (!ok).if {
       ok := c0
+      .case "show_inherit_check" then { b := {a:Act; show_inherit}; }
       .case "compile_boost_check" then { b := {a:Act; compile_boost}; }
       .case "target_radio" then { b := {a:Act; target_radio a}; }
       = String_alias

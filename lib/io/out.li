@@ -22,3 +22,16 @@ Public
     self
   )
   
+  - self:Self '##' (e:E,a:Int,c:Char) :Self <-
+  ( + n:Int    
+    String.tmp { tmp:String_buffer
+      e.append_in tmp
+      n := a - (tmp.upper + 1)
+      (n > 0).if {
+        tmp.insert c to 0 on n
+      }
+      tmp.print
+    }
+    self
+  )
+ 

@@ -6,8 +6,17 @@ Inherit
 Private
   - stkl:Flat Array (Exact Tok_line)
   
+  - last_sec:Section
+  
 Public
-     
+  
+  - show:Boolean <- 
+  (
+    last_sec := get_prev_tok Section
+    (last_sec = NULL) || {! last_sec.is_parent} || {last_sec.show_inherit} || {last_sec.proto.open_win = '3'}
+  )
+    
+  
   - new:Self <- ( + r:Self; (stkl.is_empty).if { r := clone; } else { r := stkl.pop; }; r)
   
   - free <- stkl.add_last self
@@ -20,8 +29,7 @@ Public
   )
   
   - post_draw <-
-  ( + sec:Section
-    sec := get_prev_tok Section
-    (sec != NULL).if { sec.draw_section y_section; }
+  ( 
+    (last_sec != NULL).if { last_sec.draw_section y_section; }
   )
     

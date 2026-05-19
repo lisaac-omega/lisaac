@@ -69,8 +69,9 @@ Public
   (
     (
       id
-      .case "extend_code" then { extend_code := v; }
-      .case "auto_indent" then { auto_indent := v; }
+      .case "show_inherit" then { show_inherit := v }
+      .case "extend_code"  then { extend_code := v; }
+      .case "auto_indent"  then { auto_indent := v; }
       = String_alias
     ) || {parent_file_cfg_gui.item id bool v}
   )
@@ -89,8 +90,9 @@ Public
     (
       id
       .case "option_compile" then { put_str option_compile }
-      .case "extend_code"    then { put_bool extend_code;   }
-      .case "auto_indent"    then { put_bool auto_indent;   }
+      .case "show_inherit"   then { put_bool show_inherit  }
+      .case "extend_code"    then { put_bool extend_code   }
+      .case "auto_indent"    then { put_bool auto_indent   }
       = String_alias
     ) || {parent_file_cfg_gui.new_value id}  
   )

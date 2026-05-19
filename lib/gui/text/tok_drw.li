@@ -10,6 +10,8 @@ Public
   - is_major:Boolean := True
   - di_major:Int <- ( ? {is_major}; di)
   
+  - show:Boolean := True
+  
   - txt_buf:Txt_buf <- parent_txt_buf
   //- set_p_txt_buf t:TXT_BUF <- ( parent_txt_buf := t; )
   

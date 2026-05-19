@@ -46,7 +46,9 @@ Public
   - ai_completion:Boolean <- cmd_txt {t:Txt_pg; t.cmd_ai_completion}
   
   - lib_path:String_alias <- abs_path "lib/"
-
+  
+  - show_inherit:Boolean
+  
   // Stack EXPR
   - top_expr:Int := -1
   - stack_expr:Array (Array Expr) := Array (Array Expr).create_with_capacity 8

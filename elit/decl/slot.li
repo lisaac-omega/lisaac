@@ -10,7 +10,7 @@ Private
   - stk_s:Flat Array (Exact Slot)
   
 Public
-  
+    
   - di_major:Int <-
   ( + r:Int
     r := di
@@ -20,6 +20,8 @@ Public
     (ensure  != NULL).if { r := r + ensure.di; }
     r
   )
+  
+  - show:Boolean <- (!section.is_parent) || {show_inherit} || {proto.open_win = '3'}
   
   //  + key:String_alias; // Basic name
   + node:Node
