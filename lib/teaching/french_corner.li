@@ -1,0 +1,70 @@
+Header
+  + name := French_corner
+/*
+  To insert to add a small touch of French for beginners in programming.
+
+
+  */
+  
+Private
+  
+  - lire_entier:Int <-
+  (
+    Stdin.read_line
+    while {! Stdin.last_string.is_integer} do {
+      "Il faut taper un entier. Recommence.".print;
+      Stdin.read_line
+    }
+    Stdin.last_string.to_int
+  )
+  
+  - lire_chaine:String_alias <- 
+  (
+    Stdin.read_line
+    Stdin.last_string.to_string_alias
+  )
+  
+  - lire_réel:Real64 <-
+  ( + ok:Boolean
+    + result:Real64
+    Stdin.read_line
+    (ok, result) := Stdin.last_string.to_real64_at 0
+    until {ok} do {
+      "Il faut taper un réel. Recommence.".print;
+      Stdin.read_line
+      (ok, result) := Stdin.last_string.to_real64_at 0
+    }
+    result
+  )  
+  
+  - vrai:Boolean <- True
+  
+  - faux:Boolean <- False
+  
+  - non (b:Boolean):Boolean <- !b
+  
+  - écrire e:E et f:F <-
+  (
+    Out # e # f
+  )
+  
+  - écrire e:E et f:F et g:G <-
+  (
+    Out # e # f # g
+  )
+  
+  - argument_entier:Int <-
+  ( + result:Int
+    result := Command_args.first.to_int
+    Command_args.shift
+    result
+  )
+  
+  - argument_réel:Real64 <-
+  ( + ok: Boolean
+    + result:Real64
+    (ok, result) := Command_args.first.to_real64_at 0    
+    Command_args.shift
+    result
+  )
+  

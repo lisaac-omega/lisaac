@@ -80,3 +80,24 @@ Private
     }.value list
   )
   
+  - basic dir:String_alias run go:Boolean main m:String_alias <-
+  ( + cmd_lisaac, cmd_elit, cmd_run, cmd_rm:String
+    Environment.run "clear"
+    String.tmp { b:String_buffer
+      b.copy dir
+      b.extend_unless '/'
+      cd b
+      cmd_lisaac := "lisaac " + m + " -boost -q"
+      cmd_elit := "elit " + b + m + ".li 1>/dev/null"
+      cmd_run := "./" + m
+      cmd_rm := "rm -f " + m + " " + m + "*.c " + m + "*.h " + m + "*.o"
+      Environment.run cmd_lisaac
+      if (go) then {
+        Environment.run cmd_run background 
+      } else {
+        Out # b # m # '\n'
+      }
+      Environment.run cmd_elit
+      Environment.run cmd_rm      
+    }
+  )

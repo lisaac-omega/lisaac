@@ -1,0 +1,16 @@
+Header
+  + name := Main
+  /* Des exemples pour présenter le type Int. */
+
+Insert
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  (
+    + b1, b2:Boolean
+    b1 := False
+    b2 := True
+  )
+  

@@ -1,0 +1,249 @@
+Header
+  + name := Tortue
+/*    Tortue Logo Ω
+
+  */
+Inherit
+  
+  + parent_window:Flat Window
+Insert
+  
+  - french: French_corner := French_corner
+  
+Private
+  
+  + running:Boolean
+  
+  + turtle_x: Real64
+  + turtle_y: Real64
+  
+  + angle: Int // of the turtle in [0 , 360]
+  
+  + background: Color
+  
+  + pen_color: Color
+  + pen_width: Int  
+  + pen_down:Boolean
+  
+  + random:Random
+  
+  - aupif (min, max:Int) : Int <- (random.min min max max)
+ 
+Public
+  - main <-
+  (
+    dessin
+    running := True
+    Paper.run    
+  )
+     
+  - draw <-
+  ( - mem:Boolean
+    - x:Real64
+    - y:Real64
+    - a:Int
+    - c:Color
+    - w:Int
+    - d:Boolean
+    draw_background
+    mem.if_false {
+      mem := True
+      x := turtle_x
+      y := turtle_y
+      a := angle
+      c := pen_color
+      w := pen_width
+      d := pen_down
+    }
+    dessin
+    téléportation (x,y) angle a pen d couleur c épaisseur w
+  )
+   
+Private
+  
+  - titre t:String_alias départ (x,y:Int) taille (l,h:Int) <-
+  ( - mem:Boolean
+    mem.if_false {
+      mem := True
+      (turtle_x, turtle_y) := (x, y)
+      pen_down := True
+      pen_color := Color.black
+      pen_width := 1
+      background := Color.white
+      random := Random.new.init_clock    
+      init t size (l,h)
+      set_pos(0,0)
+    }
+  )
+  
+  - titre t:String_alias départ (x,y:Int) ratio r:Int <- titre t départ (x,y) taille (36 * r, 24 * r)
+  
+  - titre t:String_alias départ (x,y:Int) <- titre t départ (x,y) ratio 35
+  
+  - draw_background <-
+  (
+    begin_path
+    rect (0,0) size (width,height)
+    fill_color background
+    fill
+  )
+  
+Public
+  
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    if ("qQ".has (s.first)) then {
+      exit 0
+    }
+    String.tmp { key:String_buffer
+      Keyboard.key_to_string s cmd c in key
+      if ("Esc" == key) then {
+        exit 0
+      } else {
+        Out # "key " # key # "\n"
+      }
+    }
+    True
+  )
+   
+  - mouse_scroll (dx,dy: Real64) <- ();
+  
+Private
+  - π:Real32 := Real32 pi
+ 
+  - avance pixels:Int <-
+  ( + tx, ty:Real64
+    + rad:Real32
+    if running then {
+      //OUT # "(" # turtle_x # ',' # turtle_y # ") " # angle # " " # pen_down # '\n'  
+      ? {angle .in_range 0 to 360}
+      if (angle = 0) then {
+        (tx, ty) := (turtle_x + pixels, turtle_y)
+      }.elseif {angle = 180} then {
+        (tx, ty) := (turtle_x - pixels, turtle_y)      
+      }.elseif {angle = 90} then {
+        (tx, ty) := (turtle_x, turtle_y + pixels)
+      }.elseif {angle = 360} then {
+        (tx, ty) := (turtle_x, turtle_y - pixels)      
+      } else {
+        rad := (angle * π) .div 180.0
+        tx := cos(rad) * pixels + turtle_x  
+        ty := sin(rad) * pixels + turtle_y
+      }
+      tx := tx.clamp(0, width.to_raw_int)
+      ty := ty.clamp(0, height.to_raw_int)
+      if pen_down then {
+        stroke {
+          move_to (turtle_x, turtle_y)
+          line_to(tx, ty)
+        } width pen_width color pen_color
+      }
+      (turtle_x, turtle_y) := (tx, ty)
+    }
+  )
+  
+  - recule pixels:Int <- avance (- pixels)
+   
+  - tourne a:Int <-
+  (
+    ? {angle.in_range 0 to 360}
+    if running then {
+      angle := angle + a
+      if (a = 0) then {
+        // Nothing
+      }.elseif {a > 0} then {
+        while {angle >= 360} do {
+          angle := angle - 360
+        }
+      } else {
+        while {angle < 0} do {
+          angle := angle + 360
+        }      
+      }
+    }
+  )
+  
+  - tourne_gauche a:Int <- tourne (-a)
+  - tourne_droite a:Int <- tourne a
+  
+  - carré pixels:Int <-
+  (
+    4 times {
+      avance pixels
+      tourne 90
+    }
+  )
+  
+  - hexagone pixels:Int <-
+  (
+    6 times {
+      avance pixels
+      tourne 60
+    }
+  )
+  
+  - couleur_trait c:Color <- pen_color := c
+  
+  - épaisseur_trait e:Int <- pen_width := e.max 1
+  
+  - lève_crayon <- ( pen_down := False )
+  
+  - baisse_crayon <- ( pen_down := True )
+  
+  - téléportation (x:Real64, y:Real64) <- 
+  (
+    if running then {
+      turtle_x := x.clamp(0, width)
+      turtle_y := y.clamp(0, height)
+    }
+  )
+  
+  - téléportation (x:Real64, y:Real64) angle a:Int <-
+  (
+    if running then {
+      téléportation(x,y)
+      angle := a
+    }
+  )
+  
+  - téléportation (x:Real64, y:Real64) angle a:Int pen d:Boolean couleur c:Color épaisseur e:Int <-
+  (
+    if running then {
+      téléportation(x,y) angle a
+      pen_down := d
+      couleur_trait c
+      épaisseur_trait e
+    }
+  )
+  
+  - couleur_aupif: Color <-
+  ( + result: Color
+    (Random.min 1 max 10)
+    .when 1 then { result := Color.blue }
+    .when 2 then { result := Color.white }
+    .when 3 then { result := Color.red }
+    .when 4 then { result := Color.yellow }
+    .when 5 then { result := Color.orange }
+    .when 6 then { result := Color.green }
+    .when 7 then { result := Color.brown }
+    .else { result := Color.rgb(aupif(100,255), aupif(0, 128), aupif(0,100)) }  
+    result
+  )
+  
+  - tourne x:Int gauche <- tourne_gauche x
+  
+  - tourne x:Int droite <- tourne_droite x
+  
+  - fond bg:Color trait pc:Color <-
+  (
+    background := bg
+    pen_color := pc
+  )
+  
+  - fond bg:Color crayon (pw:Int, pc:Color) <-
+  (
+    background := bg
+    pen_color := pc
+    pen_width := pw
+  )
+  

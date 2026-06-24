@@ -120,7 +120,15 @@ Public
   
   - si self:Self alors tblk:{} <- ( if self then tblk )
   
-  - self:Self ou other:Boolean   :Boolean <- (self | other)
+  - si self:Self alors b1:{} sinon_si b2:{} sinon b3:{} <- 
+  ( 
+    if self then 
+    b1 
+    else fblk
+  )
   
-  - self:Self et other:Boolean   :Boolean <- (self & other)
+  - et (b:Boolean):Boolean <- (self & b)
+  
+  - ou (b:Boolean):Boolean <- (self | b)
+  
   

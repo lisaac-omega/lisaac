@@ -1,0 +1,204 @@
+Header
+  + name := Alien
+/*    CodEx Alien like exercice.
+
+  */
+Inherit
+  + parent_window:Flat Window
+Insert
+  
+  - french: French_corner := French_corner
+    
+Private
+  
+  - board_upper:Int <- 12
+  
+  - cell_size:Int <- 50
+  
+  + board: Array2 Color
+  
+  + moves_char: Array Char
+  
+  + moves_vals: Array Int
+  
+  + alien_x: Int // de l'alien
+  
+  + alien_y: Int // de l'alien
+  
+  + alien_start: Int // de l'alien
+   
+  - initialisation <-
+  ( + idx: Int
+    + color:Color
+    board := Array2 Color .create (board_upper + 1, board_upper + 1)
+    moves_char := new Array Char capacity 4
+    moves_vals := new Array Int capacity 4
+    from 0 to board_upper do { y:Int
+      from 0 to board_upper do { x:Int
+        if ((idx % 3) = 0) then {
+          color := Color.blue
+        }.elseif {(idx % 3) = 1} then {
+          color := Color.white
+        } else {
+          color := Color.red
+        }
+        idx := idx + 1
+        board.at (x,y) put color
+      }
+    }
+    alien_x := alien_y := alien_start := board_upper / 2
+    board.at (alien_x, alien_y) put (Color.black)
+    init "Alien CodEx" size (cell_size * (board_upper + 1),cell_size * (board_upper + 1))
+    set_pos(0,0)
+  )
+  
+  - fin <-
+  (
+    alien_x := alien_y := alien_start
+    Out # "Running...\n"
+    Paper.run
+  )
+  
+  + attente:Int
+  
+  + durée_attente:Int := 1000
+  
+Public
+  
+  - draw <-
+  (
+    if (durée_attente = 1000) then {
+      vitesse("normale")
+    }
+    attente := attente - 1
+    //OUT # "draw:" # attente # '\n'
+    from 0 to board_upper do { y:Int
+      from 0 to board_upper do { x:Int
+        begin_path
+        fill_color (board.at (x, y))
+        rect (x*cell_size,y*cell_size) size (cell_size - 2,cell_size - 2)
+        fill
+      }
+    }
+    fill_color (Color.green)
+    font_size (cell_size * 3 / 2)
+    text (alien_y*cell_size + 3, (alien_x + 1) * cell_size - 3) msg "Ω"
+    if ((attente <= 0) && {! moves_char.is_empty}) then {
+      attente := durée_attente
+      (moves_char.first)
+      .when 'H' then { 
+        alien_x := (alien_x - 1) . max 0 
+        "haut".println 
+      }  
+      .when 'B' then { 
+        alien_x := (alien_x + 1) . min board_upper 
+        "bas".println 
+      }  
+      .when 'G' then { 
+        alien_y := (alien_y - 1) . max 0 
+        "gauche".println 
+      }  
+      .when 'D' then {
+        alien_y := (alien_y + 1) . min board_upper 
+        "droite".println 
+      }
+      board.at (alien_y, alien_x) put (Color.black)
+      moves_vals.at 0 put (moves_vals.first - 1)
+      if (moves_vals.first <= 0) then {
+        moves_char.remove_first ; moves_vals.remove_first
+        if (moves_char.is_empty) then {
+          "fin".println
+        }
+      }
+    }    
+    Paper refresh_again    
+  )  
+  
+  - mouse_scroll (dx,dy: Real64) <- ();
+  
+Private
+  
+  - gauche n:Int <-
+  (
+    Out # "gauche(" # n # ")\n"
+    if (n > 0) then {
+      alien_x := (alien_x - n).max 0
+      moves_char.add_last 'G'
+      moves_vals.add_last n
+    }.elseif {n < 0} then {
+      droite n
+    } 
+  )
+  
+  - droite n:Int <-
+  (
+    Out # "droite(" # n # ")\n"
+    if (n > 0) then {
+      alien_y := (alien_y + n).min board_upper
+      moves_char.add_last 'D'
+      moves_vals.add_last n
+    }.elseif {n < 0} then {
+      gauche n
+    }       
+  )
+  
+  - haut n:Int <-
+  (
+    Out # "haut(" # n # ")\n"
+    if (n > 0) then {
+      alien_y := (alien_y - n).max 0
+      moves_char.add_last 'H'
+      moves_vals.add_last n
+    }.elseif {n < 0} then {
+      bas n
+    }             
+  )
+  
+  - bas n:Int <-
+  (
+    Out # "bas(" # n # ")\n"
+    if (n > 0) then {
+      alien_y := (alien_y + n).min board_upper
+      moves_char.add_last 'B'
+      moves_vals.add_last n
+    }.elseif {n < 0} then {
+      haut n
+    }      
+  )
+  
+  - couleur:Color <- board.at (alien_x, alien_y)
+  
+  - bleu:Color <- Color.blue
+  
+  - blanc:Color <- Color.white
+  
+  - rouge:Color <- Color.red
+  
+  - noir:Color <- Color.black
+  
+  - vitesse nom:String_alias <-
+  ( + normale:Int
+    normale := 40
+    if (nom = "très lente") then {
+      durée_attente := 120
+    }.elseif {nom = "lente"} then {
+      durée_attente := 60
+    }.elseif {nom = "normale"} then {
+      durée_attente := normale
+    }.elseif {nom = "rapide"} then {
+      durée_attente := 20
+    }.elseif {nom = "très rapide"} then {
+      durée_attente := 10
+    }.elseif {(nom.has_substring "fond") || 
+              {nom.has_substring "gaz"} ||
+              {nom.has_substring "pot"} ||
+              {nom.has_substring "plein"} 
+      
+    } then {
+      durée_attente := 0
+    } else {
+      durée_attente := normale      
+      Out # "vitesse " # nom # " = vitesse normale\n"
+    }
+    initialisation
+  )

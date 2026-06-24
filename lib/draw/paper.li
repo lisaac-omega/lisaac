@@ -825,7 +825,7 @@ External
       `e->display = display`
       `e->context = context`
     }
-    `eglMakeself(e->display, e->surface, e->surface, e->context)`
+    `eglMakeCurrent(e->display, e->surface, e->surface, e->context)`
     `EGLint w, h`
     `eglQuerySurface(e->display, e->surface, EGL_WIDTH,  &w)`
     `eglQuerySurface(e->display, e->surface, EGL_HEIGHT, &h)`

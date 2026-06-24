@@ -18,5 +18,9 @@ Header
       run=lisaac/example/hello_world.li ; lisaac ${run} -boost -q && ./${run%.li}    */
 Public
   
-  - main <- print("Hello world!\n")
+  - main <-
+  (
+    print("Hello world!\n")
+  )
+  
   

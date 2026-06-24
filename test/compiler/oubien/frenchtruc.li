@@ -1,0 +1,19 @@
+Header
+  + name := Frenchtruc
+Insert 
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  ( + b1, b2:Boolean
+    
+    b1 := b1.ou b2
+    b1 := (b1) ou b2
+    b1 := b1 ou b2 // DC -> BS
+    // Ben, vu que c'est une locale, donc forcément atomique, 
+    // c'est possible de ne pas imposer (b1) ou le point ?
+    // Après, s'il y a un risque d'ambiguité, c'est pas grave.
+    // Dis moi ce que tu en penses quand tu passe par ici (23 mai 2026).
+  )
+  
