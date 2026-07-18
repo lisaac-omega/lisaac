@@ -16,6 +16,7 @@ Public
     directory "tetris" main "tetris" run True elit False
     directory "mapping" main "nayeli" run True elit False
     directory "snake" main "snake" run True elit True 
+    directory "solitaire" main "solitaire" run True elit True 
     directory "misc" main "glyph_example" run False elit True 
     directory "basics" main "factorial_example" run False elit True 
     directory "" main "fibonacci" run False elit True 

@@ -176,6 +176,11 @@ Public
     }.value v
   )
   
+  - clear <-
+  (
+    count := 0
+  )
+  
   - remove_last <-
   (
     count := count - 1
@@ -185,6 +190,12 @@ Public
   (
     ring_low := (ring_low + 1) & ring_msk
     count := count - 1
+  )
+  
+  - remove_head n:Int <-
+  (
+    ring_low := (ring_low + n) & ring_msk
+    count := count - n 
   )
   
   - remove index:Int <-

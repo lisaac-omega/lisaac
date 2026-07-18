@@ -2004,6 +2004,21 @@ Public
   
   - '+' self:Self :Self <- copy
   
+  - self:Self pow e:Int :Self <-
+  // @self to the power of @e
+  ( + result:Self
+    (e = 0).if {
+      result := 1
+    } else {
+      ((e & 1) = 0).if {
+        result := (self * self).pow ((e / 2))
+      } else {
+        result := self * (self.pow ((e - 1)))
+      }
+    }
+    result
+  )
+  
   - self:Self '!' :Self <-
   [
     !is_big,

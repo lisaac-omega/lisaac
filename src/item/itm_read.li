@@ -12,15 +12,11 @@ Public
 
   - is_affect:Position; // Nothing (it's good with 0).
 
-  //
   // Data
-  //
-
+  
   + name:String_alias
   
-  //
   // Constructor
-  //
 
   - create p:Position name n:String_alias :Self <-
   ( + result:Self

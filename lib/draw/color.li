@@ -45,6 +45,13 @@ Public
   - white:Color := rgb(0FFh,0FFh,0FFh)
   - yellow:Color := rgb(0FFh,0FFh,0)
   
+  - list:Array Color := 
+  ( + result:Array Color
+    result := new Array Color of (black, blue, brown, cyan, chocolate, dark_orange, emerald_green,
+       gray, green, light_gray, leaf_green, magenta, orange, peru, pink, red, saddle_brown, white, yellow)
+    result
+  )
+  
   //  Other:
   
   - is_black:Boolean <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
@@ -130,16 +137,6 @@ Paint
     self
   )  
   
-Public
-  
-  - print <-
-  (
-    rf.print; ' '.print
-    gf.print; ' '.print
-    bf.print; ' '.print
-    af.print
-  )
-  
 Private
   
   - hue hh:Real32 with (m1,m2:Real32) :Real32 <-
@@ -172,3 +169,20 @@ Public
     bi.append_in b
     b.add_last ')'
   )
+  
+  // Comparison
+  
+  - too_similar other:Color threshold t:Real32 :Boolean <-
+  // 
+  //  Similarity threshold in the range [0.0, 1.0].
+  //  Smaller values require colors to be almost identical.
+  //  Larger values require colors to be more distinct.
+  //  A value around 0.20f is generally a good choice for games.
+  ( + drf,dgf,dbf,dist:Real32
+    drf := rf - other.rf
+    dgf := gf - other.gf
+    dbf := bf - other.bf
+    dist := (0.3*drf*drf + 0.59*dgf*dgf + 0.11*dbf*dbf).sqrt 
+    dist < t
+  )
+  

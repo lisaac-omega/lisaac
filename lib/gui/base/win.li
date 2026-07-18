@@ -48,6 +48,9 @@ Public
   - xmax:Real32 <- xo + width  - 1
   - ymax:Real32 <- yo + height - 1
   
+  + user_data:Clone
+  - set_user_data e:Clone :Self <- ( user_data := e; self)
+  
   - new:Self <- clone
   - free
   

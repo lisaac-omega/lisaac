@@ -22,7 +22,7 @@ struct tm tm_glob;
 Insert
   - parent_clone:Clone := Clone
 
-Private
+Public
   - to_raw:Int64 <-
   (
     Cast Self To Int64.on self
@@ -126,6 +126,49 @@ Public
   
   - create_timestamp t:Int64 :Self <- from_raw t
   
+  - iso8601_to_timestamp b:String at bi:Int :Self <- 
+  // 2025-05-27T23:55:00+00:00 => 1748383200 (timestamp)
+  ( + t:Self
+    + tz_sign:Char
+    + tz_h,tz_m,offset, y,m,d, h,n,s, i:Int
+    
+    i := bi
+    {b.at i.is_digit}.while_do { y := y * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = '-'}; i := i + 1
+    {b.at i.is_digit}.while_do { m := m * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = '-'}; i := i + 1
+    {b.at i.is_digit}.while_do { d := d * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = 'T'}; i := i + 1
+    {b.at i.is_digit}.while_do { h := h * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = ':'}; i := i + 1
+    {b.at i.is_digit}.while_do { n := n * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = ':'}; i := i + 1
+    {(i <= b.upper) && {b.at i.is_digit}}.while_do { s := s * 10 + b.at i.to_digit; i := i + 1 }
+    (i <= b.upper).if {
+      tz_sign := b.at i; ? {(tz_sign = '+') || {tz_sign = '-'}}; i := i + 1;
+      {b.at i.is_digit}.while_do { tz_h := tz_h * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = ':'}; i := i + 1
+      {(i <= b.upper) && {b.at i.is_digit}}.while_do { tz_m := tz_m * 10 + b.at i.to_digit; i := i + 1 } 
+    }
+    (y,m) := (y - 1900, m - 1)
+    `tm_glob.tm_year = @y; tm_glob.tm_mon  = @m; tm_glob.tm_mday = @d`
+    `tm_glob.tm_hour = @h; tm_glob.tm_min  = @n; tm_glob.tm_sec  = @s; tm_glob.tm_isdst = 0`
+    // Conversion UTC data
+    t := `timegm(&tm_glob)`:Self
+
+    // Shift timezone
+    offset := tz_h * 3600 + tz_m * 60
+
+    (tz_sign = '+').if {
+      t := t -# offset
+    } else {
+      t := t +# offset
+    }
+    t
+  )  
+  
+  //- self:Self '+' d:Self :Self <- from_raw (to_raw + d.to_raw)
+  - self:Self '-' d:Self :Int <- to_raw - d.to_raw
+  
+  - self:Self '+#' d:Int :Self <- from_raw (to_raw + d)
+  - self:Self '-#' d:Int :Self <- from_raw (to_raw - d)
+  
+  - in_range b:Self to e:Self :Boolean <- to_raw.in_range (b.to_raw) to (e.to_raw)
+  
   - append_in b:String_buffer <-
   (
     //week_day.append_in b
@@ -222,6 +265,15 @@ Public
     }
     result
   )
+  
+  - append_hhmmss_in b:String_buffer <-
+  (
+    hour.append_in b format 2 with '0'
+    b.add_last ':'
+    min.append_in b format 2 with '0'
+    b.add_last ':'
+    sec.append_in b format 2 with '0'
+  )    
   
   - encode:Int64 <- to_raw
 

@@ -90,7 +90,19 @@ Public
   [
     Result = at lower
   ]
-
+  
+  - second:V <-
+  // Access to the @first item.
+  [
+    count > 1
+  ]
+  (
+    at (lower+1)
+  )
+  [
+    Result = at (lower+1)
+  ]
+  
   - last:V <-
   // Access to the @last item.
   [
@@ -103,6 +115,7 @@ Public
     Result = at upper
   ]
 
+  - second_last:V <- at (upper-1)  
   
   // Writing:
 

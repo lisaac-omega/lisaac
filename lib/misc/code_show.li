@@ -3,6 +3,7 @@ Header
   
 /**/
 Insert
+  
   - parent_mini_bash:Mini_bash := Mini_bash
     
 Private
@@ -101,4 +102,30 @@ Private
       Environment.run cmd_rm      
     }
   )
+  
+  - show dir:String file f:String run r:String <-
+  (
+    cd dir
+    Out # working_directory # '\n'
+    String.tmp { cmd:String_buffer
+      cmd.copy "lisaac "
+      cmd.append f
+      cmd.append " -q"
+      Out # cmd # '\n'
+      Environment.run cmd
+      if (! r.is_empty) then {
+        Out # r # '\n'
+        Environment.run r
+      }
+      Out "Fermer elit pour passer au suivant.\n"
+      
+      cmd.copy "elit "
+      cmd.append f
+      Out # cmd # '\n'
+      Environment.run cmd background
+    }        
+  )
+  
+  - show dir:String file f:String <- show dir file f run " "
+  
   

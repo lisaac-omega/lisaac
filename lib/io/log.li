@@ -1,0 +1,73 @@
+Header
+  + name := Log
+Inherit
+  
+  - parent_clone:Clone := Clone
+  
+Private
+  
+  + file:Pointer
+  
+  + buf:String_buffer
+  
+Public
+  
+  + date:Boolean
+  
+  - path:String_alias
+  
+  + name:String_alias
+  
+  - set_path pth:String_alias <- ( path := pth )
+  
+  - new:Self <- clone
+  
+  - init n:String_alias date d:Boolean :Self <-
+  ( name := n
+    date := d
+    String.tmp { tmp:String_buffer
+      tmp # path
+      (tmp.last != '/').if { tmp # '/' }
+      tmp # name # ".log"
+      file := File_utils.open_write_append tmp
+    }
+    buf := String_buffer.create 256
+    self
+  )
+  
+  - flush <- 
+  ( + d:Date
+    (! buf.is_empty).if {
+      (date).if {
+        d := Date.create_now
+        String.tmp { tmp:String_buffer
+          d.append_yyyymmdd_in tmp
+          tmp # 'T' 
+          d.append_hhmmss_in tmp
+          tmp # ' ' # buf
+          File_utils.write file with tmp size (tmp.count)
+        }
+      } else {
+        File_utils.write file with buf size (buf.count)
+      }
+      File_utils.flush file
+      buf.clear
+    }
+  )
+  
+  - close <- ( flush; File_utils.close file )
+  
+  - self:Self '#' e:E :Self <- ( buf # e; self)
+  
+  - self:Self '|#' e:E :Self <- ( buf # '\n'; flush; buf # e; self)
+  
+  - self:Self '#|' e:E :Self <- ( buf # e # '\n'; flush; self)
+  
+  - self:Self '##' (e:E,a:Int,c:Char) :Self <- ( buf ## (e,a,c); self)
+  
+  - append o:E <-
+  (
+    o.append_in buf
+    buf # '\n'
+    flush
+  )

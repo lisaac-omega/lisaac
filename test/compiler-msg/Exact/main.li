@@ -6,6 +6,7 @@ Public
   - main <-
   ( + a: Array Int
     + b: Inherit_array Int
+    // BSBS->DCDC Si tu veux faire ça, il faut retirer le Exact dans l'entête de Array (on peut le faire).
     a := b
   )
   

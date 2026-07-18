@@ -113,11 +113,14 @@ Public
   - self:Self '!~=' (other,delta:Self) :Boolean <- ! (self ~= (other,delta))
     
   // Print.
-
+  
+  - default_decimal_precision:Int := 4
+  - set_default_decimal_precision d:Int <- ( default_decimal_precision := d )
+  
   - append_in b:String_buffer <-
   // Append @self decimal representation in @b with 4 decimal
   (
-    append_in b decimal 4
+    append_in b decimal default_decimal_precision
   )
 
   - append_in b:String_buffer format n:Int decimal d:Int <-
@@ -193,7 +196,7 @@ Public
   )
 
   - scientific_append_in b:String_buffer <-
- // Scientific number representation
+  // Scientific number representation
   ( + val:Self
     + val_10:Int
     + exp_10:Int

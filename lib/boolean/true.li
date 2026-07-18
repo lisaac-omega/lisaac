@@ -21,7 +21,7 @@ Public
  
   - if_false block:{} :Boolean <- True
 
-  - if true_block:{} else false_block:{} :Boolean /* deprecated/obsolete */ <-
+  - if true_block:{} else false_block:{} :Boolean <-
   (
     true_block.value
     True
@@ -33,7 +33,7 @@ Public
     True
   )
 
-  - if true_block:{} :Boolean /* deprecated/obsolete */ <-
+  - if true_block:{} :Boolean <-
   (
     true_block.value
     True

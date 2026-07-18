@@ -1,0 +1,27 @@
+Header
+  + name := Game
+Inherit
+  + parent_window:Flat Window
+  
+Private
+  
+  + init_graph_ok:Boolean
+  
+Public
+  
+  - init_graph
+  
+  - motion
+  
+  - draw_all <-
+  (
+    (! init_graph_ok).if {
+      init_graph
+      init_graph_ok := True
+    }
+    motion
+    parent_window.draw_all
+    Paper.refresh_again
+  )
+  
+  

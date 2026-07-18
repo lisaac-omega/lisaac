@@ -700,9 +700,8 @@ Public
         toks.at tok_cur.rmk_extern
       }
       pos_i := pos_i + 1
-    }
-    //(c = '\n').if { pos_i := pos_i - 1; }
-    (c != '\0').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
+    }    
+    //(c != '\0').if { pos_i := pos_i + 1; toks.at tok_cur.inc_nl; }
   }
     
   - rd_escape_char <-
@@ -845,7 +844,7 @@ Public
     {((l := at (p+i)) != '\0') && {i <= c.upper} && {l = c.at i}}.while_do { i := i + 1; }
     i > c.upper
   )
-  - look c:String :Boolean <- look c at pos_i
+  - look c:String_alias :Boolean <- (look c at pos_i).if { last_str := c }
        
   - read_idf:Boolean <-
   //-- identifier     -> 'a'-'z' {'a'-'z' | '0'-'9' | '_'}

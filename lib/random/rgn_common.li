@@ -76,3 +76,32 @@ Public
   
   - max v:Int32 :Int32 <- min 0 max v
   
+  
+  // Misc
+  
+  - color: Color <-
+  ( + result: Color
+    (min 1 max 17)
+    .when 1 then { result := Color.blue }
+    .when 2 then { result := Color.brown }
+    .when 3 then { result := Color.cyan }
+    .when 4 then { result := Color.chocolate }
+    .when 5 then { result := Color.dark_orange }
+    .when 6 then { result := Color.emerald_green }
+    .when 7 then { result := Color.gray }
+    .when 8 then { result := Color.green }
+    .when 9 then { result := Color.light_gray }
+    .when 10 then { result := Color.leaf_green }
+    .when 11 then { result := Color.magenta }
+    .when 12 then { result := Color.orange }
+    .when 13 then { result := Color.peru }
+    .when 14 then { result := Color.pink }
+    .when 15 then { result := Color.red }
+    .when 16 then { result := Color.saddle_brown }
+    .when 17 then { result := Color.yellow }
+    .else { result := Color.rgb(min 100 max 255.to_uint8, min 0 max 128.to_uint8, min 0 max 100.to_uint8) }  
+    result
+  )
+  
+  - flip_coin: Boolean <- ((min 0 max 1) = 0)
+  

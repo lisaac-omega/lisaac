@@ -104,7 +104,7 @@ Public
     + se:Section
     proto := txt_buf.like Lix_buf.proto
     style := 0
-    rd_word "Section"
+    //rd_word "Section"
     (
       (rd_word "Inherit")   || {rd_word "Insert"}   ||
       {rd_word "Interrupt"} || {rd_word "External"} || {rd_word "Mapping"}
@@ -140,7 +140,7 @@ Public
       .when "Private"   then { style := style | a_private;   }
       .when "Directory" then { style := style | a_directory; }
       ((is_inherit) && {txt_buf.like Lix_buf.proto.type.is (Type.flat)}).if {
-        err warning msg "`Section Inherit' is not possible with Flat object (Use `Section Insert')."
+        err warning msg "`Inherit' is not possible with Flat object (Use `Insert')."
       }
     } else {
       style := style | a_list

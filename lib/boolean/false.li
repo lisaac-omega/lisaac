@@ -25,7 +25,7 @@ Public
     False
   )
 
-  - if true_block:{} else false_block:{} :Boolean /* deprecated/obsolete */ <-
+  - if true_block:{} else false_block:{} :Boolean <-
   (
     false_block.value
     False
@@ -33,7 +33,7 @@ Public
 
   - if self:Self then tblk:{} :Boolean <- False
 
-  - if true_block:{} :Boolean /* deprecated/obsolete */ <- False
+  - if true_block:{} :Boolean <- False
 
   - elseif cond:{Boolean} then block:{} :Boolean <-
   ( 

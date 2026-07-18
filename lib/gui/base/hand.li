@@ -142,7 +142,7 @@ Private
   
   - depth_send e:Uint8 :Win <-
   ( + r:Win
-    last_ev := e
+    last_ev := e    
     (win_cur != NULL).if { r := win_cur.depth_event e; }
     r
   )

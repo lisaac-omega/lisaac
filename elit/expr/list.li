@@ -124,7 +124,7 @@ Public
         } else { err warning msg "Added '}'. (2)"; }
       }
     }
-    ok.if { is_line := nl = Old nl; }
+    ok.if { is_line := nl = Old nl }
   )
 
   - rd_group <-
@@ -148,6 +148,7 @@ Public
           (c = ',').if { exp.put_last (Wloc.new.res e) }
         }
         (c = '\n').if {          
+          nl := nl + 1
           pos_i := pos_i + 1          
         }
         skip_spln_expr        

@@ -135,7 +135,7 @@ Public
   - pointer:Int := 2
   - codeout:Int := 3
   
-  - debug_div:Boolean :=  False
+  - debug_div:Boolean := False
   
   - draw <-
   (

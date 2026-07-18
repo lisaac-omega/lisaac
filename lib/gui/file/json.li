@@ -172,9 +172,88 @@ Public
     }
     (typ != warning).if { exit exit_failure_code; }
   )
-
-Private
   
+  //
+  // Direct speed parse
+  //
+  
+  - parse_str str:String in (s:String_buffer,idx:Int) : (String_alias,Int) <-
+  ( + i:Int       
+    i := get_index str in (s,idx)
+    (i != -1).if {
+      (src,cur) := (s,i)
+      (! read_str '"').if {
+        last_str := NULL
+        i := -1
+      }
+    }
+    last_str,i
+  )
+  
+  - parse_real str:String in (s:String_buffer,idx:Int) : (Real64,Int) <-
+  ( + i:Int    
+    i := get_index str in (s,idx)
+    (i != -1).if {
+      (src,cur) := (s,i)
+      (! read_num).if {
+        last_real := 0
+        i := -1
+      }      
+    }
+    last_real,i
+  )
+  
+  - parse_int str:String in (s:String_buffer,idx:Int) : (Int,Int) <-
+  ( + i:Int        
+    i := get_index str in (s,idx)
+    (i != -1).if {
+      (src,cur) := (s,i)
+      ((! read_num) || {is_real}).if {
+        last_int := 0
+        i := -1
+      }
+    }
+    last_int,i
+  )
+  
+  - parse_obj str:String in (s:String_buffer,idx:Int) :Int <-
+  ( get_index str in (s,idx) )
+  
+Private
+
+  - get_index str:String in (s:String_buffer,idx:Int) : Int <-
+  ( + i:Int
+    + ok:Boolean
+    i := idx
+    (i != -1).if {
+      {
+        i := s.substring_index (str,i)
+        (
+          (i != -1) && {
+            ((i != 0) && {s.at (i-1).is_letter}) || {(i + str.count != s.count) && {s.at (i+str.count).is_letter}}
+          }
+        ).if {
+          i := i + 1
+        } else {
+          ok := True
+        }
+      }.do_while {! ok}
+      (i != -1).if {
+        i := i + str.count
+        ((i <= s.upper) && {s.at i = '"'}).if { i := i + 1 }
+        {(i <= s.upper) && {s.at i.is_separator}}.while_do { i := i + 1 }
+        ((i <= s.upper) && {s.at i = ':'}).if {
+          i := i + 1
+          {(i <= s.upper) && {s.at i.is_separator}}.while_do { i := i + 1 }
+          (i > s.upper).if { i := -1 }
+        } else {
+          i := -1
+        }
+      }
+    }
+    i
+  )
+
   - puts s:String <-
   ( src.insert_string s to cur; cur := cur + s.count; )
   

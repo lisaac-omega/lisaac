@@ -15,11 +15,11 @@ Public
 
   - if self:Self then tblk:{} else fblk:{} :Boolean <- abstract
 
-  - if true_block:{} else false_block:{} :Boolean /* deprecated/obsolete */ <- abstract
+  - if true_block:{} else false_block:{} :Boolean <- abstract
     
   - if self:Self then tblk:{} :Boolean <- abstract
 
-  - if true_block:{} :Boolean /* deprecated/obsolete */ <- abstract
+  - if true_block:{} :Boolean <- abstract
 
   - elseif cond:{Boolean} then block:{} :Boolean <- abstract
 
@@ -116,7 +116,10 @@ Public
   
   // French corner
   
-  - si self:Self alors tblk:{} sinon fblk:{} <- ( if self then tblk else fblk )
+  - si self:Self alors tblk:{} sinon fblk:{} <- 
+  ( 
+    if self then tblk else fblk 
+  )
   
   - si self:Self alors tblk:{} <- ( if self then tblk )
   

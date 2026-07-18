@@ -170,7 +170,7 @@ Public
     image := 0
   )
   
-Pen
+Public
   
   - apply_alpha a:Real32 <-
   (

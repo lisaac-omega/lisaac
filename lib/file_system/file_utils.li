@@ -17,11 +17,17 @@ Public
     buf := n.to_external
     `fopen((char*)@buf,"rb")`:(Pointer)
   )
-
+  
   - open_write n:String :Pointer <-
   ( + buf:C_array(Char)
     buf := n.to_external
     `fopen((char*)@buf,"wb")`:(Pointer)
+  )
+  
+  - open_write_append n:String :Pointer <-
+  ( + buf:C_array(Char)
+    buf := n.to_external
+    `fopen((char*)@buf,"a")`:(Pointer)
   )
   
   - read_line f:Pointer in buf:String_buffer :Boolean <-
@@ -89,6 +95,14 @@ Public
     `fseek((FILE*)(@p),0,SEEK_SET)`
     result
   )
+  
+  - rename src:String to dst:String <-
+  ( + psrc,pdst:C_array Char
+    (psrc,pdst) := (src.to_external, dst.to_external)
+    `rename(@psrc,@pdst)`
+  )    
+  
+  - flush p:Pointer <- `fflush((FILE*)(@p))`
   
   - seek p:Pointer at i:Int <- `fseek((FILE*)(@p),@i,SEEK_SET)`
 

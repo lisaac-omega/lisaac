@@ -329,7 +329,7 @@ Public // Private
     image
   )
 
-  - create_image data:C_array Uint8 size (ndata:Int) flags image_flags:Int :Int <- //JUJU :Int manquait je crois
+  - create_image data:C_array Uint8 size (ndata:Int) flags image_flags:Int :Int <- 
   ( + image:Int
     + img:C_array Uint8
     image := -1

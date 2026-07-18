@@ -1,0 +1,122 @@
+Header
+  + name := Line_fit E
+/*Orthogonal least-squares line fit for points (x,y).*/
+
+Inherit
+
+  - parent_clone:Clone := Clone
+
+Public
+
+  + a:E
+  + b:E
+  + c:E
+
+  + x_center:E
+  + y_center:E
+
+  + rms:E
+  + max:E
+  
+  + axis_rms:E
+  + ratio:E
+  + clean_score:E // 1.0:Perfect alignment, 0.0:No alignement (no line)
+  
+Public
+
+  - new:Self <- clone
+  
+  - get_y x:E offset ofs:E :E <-
+  [ ? {b != 0} ]
+  (
+    y_center + (ofs - a * (x - x_center)).div b
+    
+  )
+  
+  - get_y x:E :E <- get_y x offset 0
+  
+  - distance (x,y:E) :E <-
+  // Signed distance in scaled metric units.
+  (
+    a * (x - x_center) + b * (y - y_center)    
+  )
+
+  - on xy:Collection E scale (scx,scy:E) :Boolean <-
+  // xy = {x0,y0, x1,y1, ...}. Returns TRUE on success.
+  [ ? {xy != NULL}
+    ? {xy.count.is_even}
+    ? {xy.count >= 4}
+    ? {scx > 0}
+    ? {scy > 0}
+  ]
+  ( + result:Boolean
+    + i:Int    
+    + en, sx,sy, dx,dy, sxx,sxy,syy, theta, nor, ma,mb,mc, d,ad, rss:E
+    + trace,delta,lambda_major:E
+    
+    {i <= xy.upper}.while_do {
+      sx := sx + xy.at i
+      sy := sy + xy.at (i + 1)
+      en := en + 1.0
+      i := i + 2
+    }
+    (x_center,y_center) := (sx.div en, sy.div en)
+    //
+    i := 0
+    {i <= xy.upper}.while_do {
+      dx := (xy.at i       - x_center) * scx
+      dy := (xy.at (i + 1) - y_center) * scy
+      sxx := sxx + dx * dx
+      sxy := sxy + dx * dy
+      syy := syy + dy * dy      
+      i := i + 2
+    }
+    //
+    ((sxx + syy) > 0.0).if {
+      // Eigenvalue of the main PCA axis in metric space.
+      trace := sxx + syy
+      delta := (((sxx - syy) * (sxx - syy)) + (4.0 * sxy * sxy)).sqrt
+      lambda_major := (trace + delta).div 2
+
+      axis_rms := (lambda_major / en).sqrt
+
+      
+      // PCA closed form for the main axis.
+      theta := ((2.0 * sxy).atan2 (sxx - syy)).div 2
+      (ma,mb) := (- theta.sin, theta.cos)
+      nor := (ma * ma + mb * mb).sqrt
+      
+      (nor > 0.0).if {
+        ma := ma / nor
+        mb := mb / nor
+        mc := - (ma * x_center * scx + mb * y_center * scy)
+        
+        a := ma * scx
+        b := mb * scy
+        c := mc
+        
+        // Deterministic sign convention.
+        ((a < 0.0) || {(a = 0.0) && {b < 0.0}}).if { (a,b,c) := (-a, -b, -c) }
+                
+        i := 0; max := 0.0
+        {i <= xy.upper}.while_do {
+          d := distance (xy.at i, xy.at (i + 1))
+          ad := d.abs
+          rss := rss + d * d
+          (ad > max).if {
+            max := ad
+          }
+          i := i + 2
+        }
+        rms := (rss / en).sqrt        
+        (axis_rms > 0.0).if {
+          ratio := rms / axis_rms
+          clean_score := 1.0 - ratio
+          (clean_score < 0.0).if { clean_score := 0.0 }
+          (clean_score > 1.0).if { clean_score := 1.0 }
+        }
+        result := True
+      }
+    }
+    result
+  )

@@ -7,6 +7,7 @@ Header
   */
 Inherit
   + parent_set:Flat Set V
+  
 Set
   + buckets:C_array(Hashed_set_node V)
   // The @buckets storage area is the primary hash table of @capacity
@@ -306,6 +307,8 @@ Public
     }
     result
   )
+  
+  - at k:K :V <- fast_reference_at_key k
   
   - reference_at e:V :V <- reference_at_key (e.key)
   

@@ -267,6 +267,8 @@ Public
   
   - self:Self '|#' e:E :Self <- ( clear; e.append_in self; self)
   
+  - self:Self '#|' e:E :Self <- ( e.append_in self; add_last '\n'; self)
+  
   - self:Self '##' (e:E,a:Int,c:Char) :Self <-
   ( + u,n:Int
     u := upper
@@ -403,7 +405,7 @@ Public
 
   - at i:Int put c:Char <-
   [
-    ? {valid_index i}
+    valid_index i
   ]
   (
     storage.at i put c
@@ -794,7 +796,25 @@ Public
       upper := j - 1
     }
   )
-
+  
+  - remove_all_separator <-
+  // Remove all space
+  ( + j,i:Int
+    {(i <= upper) && {! at i.is_separator}}.while_do { i := i + 1; }
+    (i <= upper).if {
+      j := i
+      i := i + 1
+      {i <= upper}.while_do {
+        (! at i.is_separator).if {
+          at j put (at i)
+          j := j + 1
+        }
+        i := i + 1
+      }
+      upper := j - 1
+    }
+  )
+  
   - extend_unless ch:Char <-
   // Extend @self (using @extend) with @ch unless @ch is
   // already the @last character.

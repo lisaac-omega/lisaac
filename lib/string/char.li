@@ -59,7 +59,9 @@ Public
   // Auto-cast.
 
   - to_uint8:Uint8 <- Cast Char To Uint8.on self
-
+  
+  - to_uint:Uint <- to_uint8.to_uint
+  
   // Print.
   
   - append_in b:String_buffer <- b.add_last self

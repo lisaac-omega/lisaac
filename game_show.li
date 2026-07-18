@@ -1,0 +1,21 @@
+Header
+  + name := Game_show
+  
+  /*
+cd lisaac ; lisaac game_show && ./game_show
+
+Created and maintained by Benoît Sonntag and Dominique Colnet.*/
+Insert
+  
+  - code_show:Code_show := Code_show
+  
+Public
+  
+  - main <-
+  (
+    directory "example/snake" main "snake" background
+    directory "example/tetris" main "tetris" background
+    directory "example/solitaire" main "solitaire" background
+    directory "example/arrow_out" main "arrow_out" background
+    directory "example/break" main "break" background
+  )

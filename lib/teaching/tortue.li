@@ -216,19 +216,7 @@ Private
     }
   )
   
-  - couleur_aupif: Color <-
-  ( + result: Color
-    (Random.min 1 max 10)
-    .when 1 then { result := Color.blue }
-    .when 2 then { result := Color.white }
-    .when 3 then { result := Color.red }
-    .when 4 then { result := Color.yellow }
-    .when 5 then { result := Color.orange }
-    .when 6 then { result := Color.green }
-    .when 7 then { result := Color.brown }
-    .else { result := Color.rgb(aupif(100,255), aupif(0, 128), aupif(0,100)) }  
-    result
-  )
+  - couleur_aupif: Color <-  random.color
   
   - tourne x:Int gauche <- tourne_gauche x
   

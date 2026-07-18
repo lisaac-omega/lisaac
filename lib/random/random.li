@@ -60,4 +60,3 @@ Public
     next
     iy.to_raw_uint32
   )
-  

@@ -281,9 +281,7 @@ Public
   - second:V <- storage.at 1
 
   - last :V <- at upper
-  
-  - second_last:V <- at (upper-1)
-  
+    
   - at i:Int add (v:V^n) <-
   ( + j:Int
     
@@ -456,8 +454,7 @@ Public
       
   - with_capacity needed_capacity:Int <-
   // Create an empty array with at least @needed_capacity.
-  [
-    // deprecated True msg "array.li:l430:Use set_capacity DC Feb 2026",
+  [ // deprecated True msg "array.li:l430:Use set_capacity DC Feb 2026",
     needed_capacity >= 0
   ]
   (
@@ -470,7 +467,7 @@ Public
     upper := -1
   )
   [
-    capacity >= needed_capacity,
+    capacity >= needed_capacity, 
     is_empty
   ]
   

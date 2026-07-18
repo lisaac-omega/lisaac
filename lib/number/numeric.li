@@ -11,7 +11,7 @@ Insert
 Public
     
   - self:Self pow e:Self :Self <-
-  // @e
+  // @self to the power of @e
   ( + result:Self
     (e = 0).if {
       result := 1

@@ -15,10 +15,8 @@ Public
 
   + access_list:Array Itm_type_mono
   
-  //
   // Creation.
-  //
-  
+    
   - create p:Position :Self <-
   ( + result:Self
     result := clone
@@ -49,10 +47,8 @@ Public
     access_list := t
   )
     
-  //
   // Consultation style
-  //
-
+  
   - is_header:Boolean    <- style = "Header"
   
   - is_inherit:Boolean   <- style = "Inherit"
@@ -67,19 +63,15 @@ Public
 
   - is_external:Boolean  <- style = "External"
   
-  //
   // Consultation access
-  //
-  
+    
   - is_public:Boolean    <- access_name = "Public"
   
   - is_private:Boolean   <- access_name = "Private"
   
   - is_directory:Boolean <- access_name = "Directory"
   
-  //
   // Display.
-  //
 
   - append_in b:String_buffer <-
   (
@@ -101,14 +93,13 @@ Public
     append_pattern_in b
   )
 
-  //
   // Access test.
-  //
-
+  
   - access me:Type with client:Type :Boolean <-
   ( + result:Boolean
     + j:Int
     + ts:Itm_type_simple
+    
 
     ((me = client) || {is_public}).if {
       result := True
@@ -120,8 +111,8 @@ Public
     }.elseif {access_list != NULL} then {
       j := access_list.lower
       {(j <= access_list.upper) && {! result}}.while_do {
-        ts ?= access_list.at j
-        result := client.is_sub_type_with_name (ts.name)
+        ts ?= access_list.at j        
+        result := client.is_sub_type_with_name (ts.name)        
         j := j + 1
       }
     }

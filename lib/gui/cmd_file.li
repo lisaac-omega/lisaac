@@ -85,14 +85,15 @@ Public
   - action:Boolean <-
   ( + b:Buffer
     + pth:String_alias
+    + result:Boolean
     (text.last = '/').if {
       listfile
-    } else {
-      close
+      result := True
+    } else {      
       pth := text.to_string_alias
       (open_cmd = cmd_open_buffer).if {
         //OUT # "Open :" # text # '\n'
-        b := Buffer.catalog.search_until {buf:Buffer; buf.shortname = pth}
+        b := Buffer.catalog.search_until {buf:Buffer; buf.shortname = pth}        
       } else {
         b := Buffer.get pth
         (open_cmd = cmd_save_file).if {
@@ -100,9 +101,13 @@ Public
           b.save_buffer
         }
       }
-      Page.cur_pg.set_buffer b
+      (b != NULL).if {
+        close
+        Page.cur_pg.set_buffer b
+        result := True
+      }
     }
-    True
+    result
   )
   
   - cut:Boolean <-

@@ -14,7 +14,7 @@ Header
   */
 Inherit 
   
-  + parent_window:Flat Window
+  + parent_game:Flat Game
 
 Private
   
@@ -67,22 +67,13 @@ Public
     }        
     Paper.run
   )
-     
-  - draw <-
+  
+  - motion <-
   ( + x,y:Int
     + t:Uint64
-    font_size (cell_size - 4)
-    font_face_id (Font sys (Font bold))
-    text_align (align_middle | align_center)
-    // Draw the grid
-    from 0 to (grid_h-1) do { py:Int
-      from 0 to (grid_w-1) do { px:Int
-        draw_cell (px,py) color ((px+py).is_odd.ok (Color.rgb(240,240,240)) else {Color.rgb(200,200,200)}) 
-      }
-    }  
-    (x,y) := (snake_x.last,snake_y.last)
     t := Time.gettimeofday
     (t > timer).if {
+      (x,y) := (snake_x.last,snake_y.last)
       // Move Snake
       (x,y) := ((x + dir_x) % grid_w, (y + dir_y) % grid_h)
       (x < 0).if { x := grid_w - 1 }
@@ -102,6 +93,20 @@ Public
       snake_x.add_last x; snake_y.add_last y      
       timer := t + (2_000_000 / snake_x.count).max 700      
     }
+  )
+  
+  - draw <-
+  ( + x,y:Int    
+    font_size (cell_size - 4)
+    font_face_id (Font sys (Font bold))
+    text_align (align_middle | align_center)
+    // Draw the grid
+    from 0 to (grid_h-1) do { py:Int
+      from 0 to (grid_w-1) do { px:Int
+        draw_cell (px,py) color ((px+py).is_odd.ok (Color.rgb(240,240,240)) else {Color.rgb(200,200,200)}) 
+      }
+    }  
+    (x,y) := (snake_x.last,snake_y.last)    
     // Display Snake
     from 0 to (snake_y.upper-1) do { i:Int
       draw_cell (snake_x.at i, snake_y.at i) color (Color.rgb(0,100,0))
@@ -116,8 +121,6 @@ Public
       fill_color (Color.white)       
       text (grid_w * cell_size / 2, grid_h * cell_size + cell_size/2) msg score_text
     }
-    //      
-    Paper.refresh_again    
   )
     
   - key s:String cmd c:Uint8 :Boolean <-

@@ -142,7 +142,7 @@ Public
     } else {      
       //s.first.println
       (s.first)
-      .when '\n'   then { r := True; action; }
+      .when '\n'   then { r := True; action.if_false { beep } }
       .when 'B'    then { r := True; (cur = 0).if { beep; } else { cur := 0; }; }
       .when 'E'    then { r := True; (cur = text.count).if { beep; } else { cur := text.count; }; }
       .when 'R'    then { r := True; inc_cur.if_false { beep; }; }

@@ -108,6 +108,11 @@ Public
           
   - read_affect:Boolean <-
   //-- affect         -> ":=" | "<-" | "?="
-  (rd_word ":=") || {rd_word "?="} || {rd_word "<-"}
+  (
+    skip_sp
+    ((look ":=") || {look "?="} || {look "<-"}).if {
+      pos_i := pos_i + 2
+    }
+  )
 
   

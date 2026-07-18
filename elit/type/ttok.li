@@ -26,8 +26,7 @@ Public
   )
     
   //- end_draw <- FONT.app (FONT.roman) in txt_buf
-  
-//  - draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- type.draw_to (x,y)
+  //- draw_to (x,y:REAL_32) :(REAL_32,REAL_32,REAL_32) <- type.draw_to (x,y)
   
   - tone:Int := 00h
   - tvec:Int := 01h
@@ -48,6 +47,7 @@ Public
       .when tres then { type := rd_type_result; }
       .when tpro then { type := rd_prototype; }
       //
+      
       (t & force != 0).if {
         + op:Int;
         op := pos_i;
@@ -55,7 +55,8 @@ Public
         {at (pos_i - 1) = ' '}.while_do { pos_i := pos_i - 1; }
         (at (pos_i - 1) = ';').if { pos_i := pos_i - 1; }
         (pos_i.pt != op).if { col (Look.erro) sub (pos_i.pt - op); };
-      };
+      }
+      
     //}
   )
   
@@ -167,7 +168,7 @@ Public
     + result:Tpro
     + attr:Uint8
     + n:Node
-    + p,key:Int
+    + /*p,*/key:Int
     (rd_word "Flat" ).if { col (Look.keyword) sub (last_str.count); attr := attr | Type.flat  }
     (rd_word "Exact").if { col (Look.keyword) sub (last_str.count); attr := attr | Type.exact }
     (((attr & Type.flat) != 0) && {attr != Type.flat}).if {
@@ -177,7 +178,7 @@ Public
     
     (read_cap_idf).if {
       col (Look.type) sub (last_str.count)      
-      p := pos_i      
+      /*p := pos_i*/
       (last_str.count = 1).if {        
         result := Tp.letter (last_str.first - 'A')
       }.elseif {last_str = "Self"} then {
@@ -205,8 +206,8 @@ Public
         //fsz 0 sub 0
         gen := push_type
         n := Node.rtype.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
-        {((t := rd_type_arg) != NULL) && {p := pos_i; read_cap_idf}}.while_do {
-          p := pos_i
+        {((t := rd_type_arg) != NULL) && {/*p := pos_i;*/ read_cap_idf}}.while_do {
+          /*p := pos_i*/
           ((n != NULL) && {!n.carg.is_empty}).if { n := n.carg.first; } else { n := NULL; }
           (n != NULL).if {
             n := n.find txt_buf at (pos_i-last_str.count) up (pos_i-1)
@@ -235,8 +236,8 @@ Public
         pop_type
         //String.free_tmp nam
       }      
-      toks.at tok_cur.reset_sty (p+1)
-      pos_i := p
+      //toks.at tok_cur.reset_sty (p+1) // Provoque un +1 au niveau de nl quand le type est suivi d'un // comment
+      //pos_i := p // ICI
     } else {
       (attr != 0).if { err warning msg "Style (Flat or Exact) ignored."; }
     }
