@@ -22,14 +22,20 @@ Public
   
   - new:Self <- clone
   
-  - init n:String_alias date d:Boolean :Self <-
+  - is_empty:Boolean <- File_utils.position file = 0
+  
+  - init n:String_alias date d:Boolean new nw:Boolean :Self <-
   ( name := n
     date := d
     String.tmp { tmp:String_buffer
       tmp # path
       (tmp.last != '/').if { tmp # '/' }
       tmp # name # ".log"
-      file := File_utils.open_write_append tmp
+      (nw).if {
+        file := File_utils.open_write tmp
+      } else {
+        file := File_utils.open_write_append tmp
+      }
     }
     buf := String_buffer.create 256
     self

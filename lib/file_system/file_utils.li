@@ -87,12 +87,15 @@ Public
   `fwrite((void *)(@buf),(size_t)(1),(size_t)(@sz),(FILE *)(@f))`:(Int)
   
   - close p:Pointer <- `fclose((FILE*)(@p))`
-
+  
+  - position p:Pointer :Int <- `ftell((FILE *)@p)`:Int
+  
   - size p:Pointer :Int <-
-  ( + result:Int
+  ( + result,old_p:Int
+    old_p := position p
     `fseek((FILE*)(@p),0,SEEK_END)`
-    result := `ftell((FILE *)@p)`:Int
-    `fseek((FILE*)(@p),0,SEEK_SET)`
+    result := position p 
+    seek p at old_p    
     result
   )
   

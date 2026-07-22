@@ -17,7 +17,7 @@ Public
   
 External
   
-  - run_compile:Pointer <-
+  - run_compile a:Pointer :Pointer <-
   (    
     Page.cur_pg.buf_pg.footnote_left.copy "Compiling..."
     (Environment.run compile = 0).if {      

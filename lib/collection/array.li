@@ -81,7 +81,6 @@ Public
   
   - at i:Int :V <-
   // Direct access in memory block.
-  
   (
     storage.at i
   )

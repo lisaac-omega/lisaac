@@ -63,7 +63,8 @@ Private
   - argument_réel:Real64 <-
   ( + ok: Boolean
     + result:Real64
-    (ok, result) := Command_args.first.to_real64_at 0    
+    (ok, result) := Command_args.first.to_real64_at 0
+    Out # (result.to_string) # '\n'
     Command_args.shift
     result
   )

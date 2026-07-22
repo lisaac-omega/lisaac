@@ -1,0 +1,17 @@
+Header
+  + name := Micmac
+  /**/
+
+Insert
+  
+  - french: French_corner := French_corner
+
+
+Public
+  
+  - main <-
+  ( + s:String_alias
+    s := Command_args.first
+    Command_args.shift
+  )
+  

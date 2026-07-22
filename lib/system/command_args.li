@@ -2,7 +2,7 @@ Header
   + name := Command_args
 /*
     Gives access to the command line arguments.
-    Unix-like spirit: arg 0 is the command, other arguments can be shifted.
+    Unix-like spirit: arg 0 is the command name, other arguments may be shifted.
   */
   
   - include := `
@@ -34,6 +34,7 @@ void get_executable_path(char *buf, int64_t size) {
   `;
   
 Private  
+  
   - mybuffer:String_buffer := String_buffer.create 512
   
   - arg_vector idx:Int :C_array(Char) <- `arg_vector[@idx]`:C_array(Char)
@@ -51,6 +52,7 @@ Private
   )
   
 Public
+  
   - count:Int <- args.count
 
   - lower:Int := 0; // As in Unix, the first one is 0 and is the executable name
@@ -67,7 +69,11 @@ Public
   
   - foreach blk:{String_alias;} <- from 1 to upper do { i:Int; blk.value (at i)};
   
-  - first:String_alias <- at 1; // just after the executable.
+  - first:String_alias <-
+  // The one just after the command name. 
+  (
+    at 1
+  )
   
   - executable_directory:String_alias :=
   // Try to compute the absolute directory path. 
@@ -86,12 +92,15 @@ Public
   - shift <-
   // Mimic bash/sh shift.
   ( + i:Int
-    i := 1
-    {i >= upper}.until_do {
+    i := 1 
+    Out # "Command_args " # (args.upper) # '\n'    
+    until {i >= args.upper} do {
+      ? {args.at i = args.at i}
+      Out # i # " -- " # (args.at i) # " -- " # (args.at (i + 1)) # '\n'
       args.at i put (args.at (i + 1))
       i := i + 1
     }
-    (upper >= 1).if {
+    (args.upper >= 1).if {
       args.remove_last
     }
   )

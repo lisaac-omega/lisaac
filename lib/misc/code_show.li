@@ -122,6 +122,7 @@ Private
       cmd.copy "elit "
       cmd.append f
       Out # cmd # '\n'
+      cmd.append " 1> /dev/null"
       Environment.run cmd background
     }        
   )
