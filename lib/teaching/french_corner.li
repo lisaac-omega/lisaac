@@ -53,19 +53,53 @@ Private
     Out # e # f # g
   )
   
-  - argument_entier:Int <-
-  ( + result:Int
-    result := Command_args.first.to_int
-    Command_args.shift
-    result
+  // Accès aux arguments de la ligne de commande:
+  
+  - argument idx:Int :String_alias <- 
+  ( 
+    (Command_args.valid_index idx).if_false {
+      Out # "Il manque l'argument numéro " # idx # " en ligne de commande.\n"
+      Out # "Voici la commande lancée (" # (Command_args.upper) # ' '
+      if ((Command_args.upper) <= 1) then {
+        Out # "argument"
+      } else {
+        Out # "arguments"
+      }
+      Out # "):\n"
+      0.to (Command_args.upper) do { i:Int
+        Out # (Command_args.at i) # ' '
+      }
+      Out # '\n'
+      System.exit 1
+    }
+    Command_args.at idx
   )
   
-  - argument_réel:Real64 <-
-  ( + ok: Boolean
+  - argument idx:Int entier:Int <- 
+  ( + str:String
+    
+    str := argument idx
+    if (! str.is_integer) then {
+      Out # "L'argument numéro " # idx # " de la ligne de commande ne correspond pas à un entier.\n"
+      Out # "Voici cet argument: " # str # '\n'
+      System.exit 1
+    }
+    str.to_int
+  )
+  
+  - argument idx:Int réel:Real64 <-
+  ( + str:String
+    + ok: Boolean
     + result:Real64
-    (ok, result) := Command_args.first.to_real64_at 0
-    Out # (result.to_string) # '\n'
-    Command_args.shift
+    
+    str := argument idx
+    (ok, result) := str.to_real64_at 0
+    if (! ok) then {
+      Out # "L'argument numéro " # idx # " de la ligne de commande ne correspond pas à un réel.\n"
+      Out # "Voici cet argument: " # str # '\n'
+      System.exit 1
+    }
+    
     result
   )
   

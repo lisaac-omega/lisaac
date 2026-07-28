@@ -148,14 +148,19 @@ Public
   - info:String_buffer := String_buffer.create 80
   
   - main <-
-  (    
+  ( + music:Sound
+    
     // Initialization.
     face := (Array3 Int).new (4,4,2)
     scr_game := Array2 Uint8 .create (10,19)
     stat  := 0
     // Init window.    
     init "TetLIS" size (25 * 10,25 * 19 + 20)
-    //PAPER.set_animation 1
+    // Audio
+    Audio.init    
+    music := Sound.new
+    music.init_from_file "assets/tetris.mp3" flags (Sound.flag_stream | Sound.flag_looping | Sound.flag_no_spatialization)
+    music.start    
     Paper.run
   )
 

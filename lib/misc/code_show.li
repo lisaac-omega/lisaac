@@ -112,7 +112,10 @@ Private
       cmd.append f
       cmd.append " -q"
       Out # cmd # '\n'
-      Environment.run cmd
+      if ((Environment.run cmd) != 0) then {
+        Out # "Erreur de compilation.\n"
+        System.exit 1
+      }
       if (! r.is_empty) then {
         Out # r # '\n'
         Environment.run r
@@ -123,10 +126,9 @@ Private
       cmd.append f
       Out # cmd # '\n'
       cmd.append " 1> /dev/null"
-      Environment.run cmd background
-    }        
+      Environment.run cmd
+    }
   )
   
-  - show dir:String file f:String <- show dir file f run " "
-  
+  - show dir:String file f:String <- show dir file f run ""
   

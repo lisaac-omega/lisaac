@@ -2,6 +2,13 @@ Header
   + name := Exact Out
 Public
   
+  - reset:String_alias := "\033o\[0m"
+  - red:String_alias   := "\033o\[31m"
+  - green:String_alias := "\033o\[32m"
+  - yellow:String_alias:= "\033o\[33m"
+  - blue:String_alias  := "\033o\[34m"
+  - bold:String_alias  := "\033o\[1m"
+  
   - self:Self '#' e:E :Self <-
   (
     e.print

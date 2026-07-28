@@ -1,0 +1,317 @@
+Header
+  + name := Sound
+/*
+  Une voix ma_sound clonable attachee au moteur unique Audio.
+
+  L'attribut ma_sound reste prive. Avant chaque appel C, sa valeur est copiee
+  dans une variable locale qui seule est utilisee dans le bloc external C.
+*/
+
+Insert
+
+  - parent_clone:Clone := Clone
+
+Private
+
+  + ma_sound:Pointer
+  + sound_initialized:Boolean
+
+  - allocate <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := `ma_calloc(sizeof(ma_sound), NULL)`:Pointer
+    ma_sound := sound_ptr
+  )
+
+Public
+
+  // -------------------------------------------------------------------------
+  // Drapeaux de ma_sound_init_from_file().
+  // -------------------------------------------------------------------------
+
+  - flag_stream:Uint32            <- `MA_SOUND_FLAG_STREAM`:Uint32
+  - flag_decode:Uint32            <- `MA_SOUND_FLAG_DECODE`:Uint32
+  - flag_async:Uint32             <- `MA_SOUND_FLAG_ASYNC`:Uint32
+  - flag_wait_init:Uint32         <- `MA_SOUND_FLAG_WAIT_INIT`:Uint32
+  - flag_no_pitch:Uint32          <- `MA_SOUND_FLAG_NO_PITCH`:Uint32
+  - flag_no_spatialization:Uint32 <- `MA_SOUND_FLAG_NO_SPATIALIZATION`:Uint32
+  - flag_looping:Uint32           <- `MA_SOUND_FLAG_LOOPING`:Uint32
+
+  // -------------------------------------------------------------------------
+  // Creation et destruction de la voix.
+  // -------------------------------------------------------------------------
+
+  - new:Self <-
+  ( + result:Self
+
+    result := clone
+    result.allocate
+    result
+  )
+
+  - init_from_file file:String :Int <-
+    init_from_file file flags 0.to_uint32
+
+  - init_from_file file:String flags flags:Uint32 :Int <-
+    init_from_file file flags flags group NULL fence NULL
+
+  - init_from_file file:String flags flags:Uint32
+    group group:Pointer fence fence:Pointer :Int <-
+  ( + engine_ptr,sound_ptr:Pointer
+    + path:C_array Char
+    + result:Int
+
+    engine_ptr := Audio.handle
+    sound_ptr := ma_sound
+
+    (sound_ptr.is_null).if {
+      allocate
+      sound_ptr := ma_sound
+    }
+
+    ((engine_ptr.is_null) || {sound_ptr.is_null}).if {
+      result := Audio.invalid_operation
+    } else {
+      sound_initialized.if {
+        `ma_sound_uninit((ma_sound *)@sound_ptr)`
+        sound_initialized := False
+      }
+
+      path := file.to_external
+      result := `ma_sound_init_from_file((ma_engine *)@engine_ptr, @path, @flags, (ma_sound_group *)@group, (ma_fence *)@fence, (ma_sound *)@sound_ptr)`:(Int)
+      sound_initialized := result = Audio.success
+    }
+    result
+  )
+
+  - uninit <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    ((! sound_ptr.is_null) && {sound_initialized}).if {
+      `ma_sound_uninit((ma_sound *)@sound_ptr)`
+      sound_initialized := False
+    }
+  )
+
+  - delete <-
+  ( + sound_ptr:Pointer
+
+    uninit
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_free(@sound_ptr, NULL)`
+      ma_sound := NULL
+    }
+  )
+
+  - is_initialized:Boolean <- sound_initialized
+
+  // -------------------------------------------------------------------------
+  // Lecture.
+  // -------------------------------------------------------------------------
+
+  - start:Int <-
+  ( + sound_ptr:Pointer
+    + result:Int
+
+    sound_ptr := ma_sound
+    (sound_ptr.is_null).if {
+      result := Audio.invalid_operation
+    } else {
+      result := `ma_sound_start((ma_sound *)@sound_ptr)`:(Int)
+    }
+    result
+  )
+
+  - stop:Int <-
+  ( + sound_ptr:Pointer
+    + result:Int
+
+    sound_ptr := ma_sound
+    (sound_ptr.is_null).if {
+      result := Audio.invalid_operation
+    } else {
+      result := `ma_sound_stop((ma_sound *)@sound_ptr)`:(Int)
+    }
+    result
+  )
+
+  - seek_to_pcm_frame frame:Uint64 :Int <-
+  ( + sound_ptr:Pointer
+    + result:Int
+
+    sound_ptr := ma_sound
+    (sound_ptr.is_null).if {
+      result := Audio.invalid_operation
+    } else {
+      result := `ma_sound_seek_to_pcm_frame((ma_sound *)@sound_ptr, @frame)`:(Int)
+    }
+    result
+  )
+
+  - is_playing:Boolean <-
+  ( + sound_ptr:Pointer
+    + result:Boolean
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      result := `ma_sound_is_playing((ma_sound *)@sound_ptr)`:Int != 0
+    }
+    result
+  )
+
+  - at_end:Boolean <-
+  ( + sound_ptr:Pointer
+    + result:Boolean
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      result := `ma_sound_at_end((ma_sound *)@sound_ptr)`:Int != 0
+    }
+    result
+  )
+
+  // -------------------------------------------------------------------------
+  // Volume, panoramique, hauteur et boucle.
+  // -------------------------------------------------------------------------
+
+  - set_volume vol:Real32 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_volume((ma_sound *)@sound_ptr, @vol)`
+    }
+  )
+
+  - volume:Real32 <-
+  ( + sound_ptr:Pointer
+    + result:Real32
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      result := `ma_sound_get_volume((ma_sound *)@sound_ptr)`:Real32
+    }
+    result
+  )
+
+  - set_pan pan:Real32 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_pan((ma_sound *)@sound_ptr, @pan)`
+    }
+  )
+
+  - pan:Real32 <-
+  ( + sound_ptr:Pointer
+    + result:Real32
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      result := `ma_sound_get_pan((ma_sound *)@sound_ptr)`:Real32
+    }
+    result
+  )
+
+  - set_pitch pitch:Real32 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_pitch((ma_sound *)@sound_ptr, @pitch)`
+    }
+  )
+
+  - pitch:Real32 <-
+  ( + sound_ptr:Pointer
+    + result:Real32
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      result := `ma_sound_get_pitch((ma_sound *)@sound_ptr)`:Real32
+    }
+    result
+  )
+
+  - set_looping looping:Boolean <-
+  ( + sound_ptr:Pointer
+    + value:Int
+
+    sound_ptr := ma_sound
+    value := looping.to_int
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_looping((ma_sound *)@sound_ptr, (ma_bool32)@value)`
+    }
+  )
+
+  - is_looping:Boolean <-
+  ( + sound_ptr:Pointer
+    + result:Boolean
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      result := `ma_sound_is_looping((ma_sound *)@sound_ptr)`:Int != 0
+    }
+    result
+  )
+
+  // -------------------------------------------------------------------------
+  // Programmation temporelle et spatialisation.
+  // -------------------------------------------------------------------------
+
+  - set_start_time_in_pcm_frames frame:Uint64 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_start_time_in_pcm_frames((ma_sound *)@sound_ptr, @frame)`
+    }
+  )
+
+  - set_stop_time_in_pcm_frames frame:Uint64 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_stop_time_in_pcm_frames((ma_sound *)@sound_ptr, @frame)`
+    }
+  )
+
+  - set_fade volume_begin:Real32 to volume_end:Real32 frames frames:Uint64 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_fade_in_pcm_frames((ma_sound *)@sound_ptr, @volume_begin, @volume_end, @frames)`
+    }
+  )
+
+  - set_position x:Real32 y y:Real32 z z:Real32 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_position((ma_sound *)@sound_ptr, @x, @y, @z)`
+    }
+  )
+
+  - set_velocity x:Real32 y y:Real32 z z:Real32 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_velocity((ma_sound *)@sound_ptr, @x, @y, @z)`
+    }
+  )
+
+  - set_direction x:Real32 y y:Real32 z z:Real32 <-
+  ( + sound_ptr:Pointer
+
+    sound_ptr := ma_sound
+    (! sound_ptr.is_null).if {
+      `ma_sound_set_direction((ma_sound *)@sound_ptr, @x, @y, @z)`
+    }
+  )

@@ -58,7 +58,9 @@ Public
   - lower:Int := 0; // As in Unix, the first one is 0 and is the executable name
 
   - upper:Int <- args.upper
-
+  
+  - valid_index i:Int :Boolean <-  i.in_range lower to upper
+  
   - at i:Int :String_alias <-
   ( + result:String_alias
     (args.valid_index i).if {

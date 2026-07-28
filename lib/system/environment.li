@@ -43,6 +43,7 @@ int run_background(const char *cmd) {
 `;
   
 Public
+  
   - read_variable variable:String in buffer:String_buffer <-
   // append @variable value in @buffer. 
   ( + p:C_array Char
@@ -84,6 +85,7 @@ Public
   // The @Result gives the usual exit status.
   ( + na:C_array Char
     + r:Int
+    
     na := system_command_line.to_external
     `{`
     r := `system((char*)(@na))`:(Int)

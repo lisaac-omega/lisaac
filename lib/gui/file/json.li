@@ -400,7 +400,7 @@ Private
           f.if { err syntax msg "Float invalid."; }
           last_int := tmp_json.to_hexadecimal; cur := cur + 1
         } else {
-          (tmp_json.last > '9').if { tmp_json.remove_last; cur := cur - 1; }
+          (tmp_json.last > '9').if { f.if { e0 := e0 - 1 }; tmp_json.remove_last; cur := cur - 1; }
           (cur <= src.upper).if {
             ((c := src.at cur) = 'o').if {
               (f || {! tmp_json.is_octal}).if { err syntax msg "Incorrect octal number."; }
@@ -420,7 +420,7 @@ Private
               f.if {
                 e1 := e1 - e0
                 (! tmp_json.is_integer_64).if { err syntax msg "Not number."; }
-                last_real := tmp_json.to_int64.to_real32 * 10.0.pow e1
+                last_real := tmp_json.to_int64.to_real64 * 10.0.pow e1
                 is_real := True
               } else {                
                 last_int := tmp_json.to_int64

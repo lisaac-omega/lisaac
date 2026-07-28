@@ -117,6 +117,13 @@ Public
   - default_decimal_precision:Int := 4
   - set_default_decimal_precision d:Int <- ( default_decimal_precision := d )
   
+  - decimal_precision d:Int do b:{} <-
+  ( 
+    default_decimal_precision := d
+    b.value
+    default_decimal_precision := Old default_decimal_precision
+  )
+  
   - append_in b:String_buffer <-
   // Append @self decimal representation in @b with 4 decimal
   (

@@ -17,5 +17,6 @@ Public
     directory "example/tetris" main "tetris" background
     directory "example/solitaire" main "solitaire" background
     directory "example/arrow_out" main "arrow_out" background
+    directory "example/connect_four" main "connect_four" background
     directory "example/break" main "break" background
   )

@@ -1,0 +1,335 @@
+Header
+  + name := Audio
+/*
+  Moteur miniaudio unique et non clonable.
+
+  L'attribut ma_engine reste prive. Chaque appel C utilise une variable locale
+  contenant sa valeur : les attributs Lisaac ne sont jamais passes directement
+  dans un bloc external C.
+*/
+
+  - lip <-
+  (
+    add_lib_i (lisaac+"deps_lib/");
+
+    (target = "unix").if {
+      //add_lib "-ldl";
+      add_lib "-lpthread";
+      add_lib "-lm";
+    };
+
+    (target = "android").if {
+      //add_lib "-ldl";
+      add_lib "-lm";
+      add_lib "-llog";
+      add_lib "-landroid";
+    };
+  )
+
+  - include := `#define MINIAUDIO_IMPLEMENTATION
+  #include "miniaudio.h"`
+
+External
+
+  // Callback utilise par record_wav. pUserData contient un ma_encoder*.
+  - capture_to_wav_callback (device,output,input:Pointer, frame_count:Uint32) <-
+  ( + encoder_ptr:Pointer
+    + result:Int
+
+    encoder_ptr := `((ma_device *)@device)->pUserData`:Pointer
+    result := success
+
+    ((! encoder_ptr.is_null) && {! input.is_null}).if {
+      result := `ma_encoder_write_pcm_frames((ma_encoder *)@encoder_ptr, @input, (ma_uint64)@frame_count, NULL)`:(Int)
+    }
+    capture_result := result
+  )
+
+Private
+
+  + ma_engine:Pointer
+  + engine_initialized:Boolean
+
+  // Une seule capture est active a la fois, comme le moteur de sortie.
+  + ma_encoder:Pointer
+  + ma_device:Pointer
+  + capture_result:Int
+
+  - text_buffer:String_buffer := String_buffer.create 128
+
+Public
+
+  // -------------------------------------------------------------------------
+  // Resultats miniaudio.
+  // -------------------------------------------------------------------------
+
+  - success:Int           <- `MA_SUCCESS`:Int
+  - out_of_memory:Int     <- `MA_OUT_OF_MEMORY`:Int
+  - invalid_operation:Int <- `MA_INVALID_OPERATION`:Int
+
+  - result_description result:Int :String_alias <-
+  ( + description:C_array Char
+
+    description := `ma_result_description((ma_result)@result)`:C_array Char
+    text_buffer.from_external_copy description
+    text_buffer.to_string_alias
+  )
+
+  // -------------------------------------------------------------------------
+  // Cycle de vie du ma_engine unique.
+  // -------------------------------------------------------------------------
+
+  - init:Int <-
+  ( + engine_ptr:Pointer
+    + result:Int
+
+    result := success
+    (! engine_initialized).if {
+      engine_ptr := ma_engine
+
+      (engine_ptr.is_null).if {
+        engine_ptr := `ma_calloc(sizeof(ma_engine), NULL)`:Pointer
+        ma_engine := engine_ptr
+      }
+
+      (engine_ptr.is_null).if {
+        result := out_of_memory
+      } else {
+        result := `ma_engine_init(NULL, (ma_engine *)@engine_ptr)`:(Int)
+        engine_initialized := result = success
+      }
+    }
+    result
+  )
+
+  - uninit <-
+  ( + engine_ptr:Pointer
+
+    engine_ptr := ma_engine
+    ((! engine_ptr.is_null) && {engine_initialized}).if {
+      `ma_engine_uninit((ma_engine *)@engine_ptr)`
+      engine_initialized := False
+    }
+    (! engine_ptr.is_null).if {
+      `ma_free(@engine_ptr, NULL)`
+      ma_engine := NULL
+    }
+  )
+
+  - is_initialized:Boolean <- engine_initialized
+
+  - start:Int <-
+  ( + engine_ptr:Pointer
+    + result:Int
+
+    engine_ptr := ma_engine
+    (engine_ptr.is_null).if {
+      result := invalid_operation
+    } else {
+      result := `ma_engine_start((ma_engine *)@engine_ptr)`:(Int)
+    }
+    result
+  )
+
+  - stop:Int <-
+  ( + engine_ptr:Pointer
+    + result:Int
+
+    engine_ptr := ma_engine
+    (engine_ptr.is_null).if {
+      result := invalid_operation
+    } else {
+      result := `ma_engine_stop((ma_engine *)@engine_ptr)`:(Int)
+    }
+    result
+  )
+
+  - play file:String :Int <- play file in NULL
+
+  - play file:String in group:Pointer :Int <-
+  ( + engine_ptr:Pointer
+    + path:C_array Char
+    + result:Int
+
+    engine_ptr := ma_engine
+    (engine_ptr.is_null).if {
+      result := invalid_operation
+    } else {
+      path := file.to_external
+      result := `ma_engine_play_sound((ma_engine *)@engine_ptr, @path, (ma_sound_group *)@group)`:(Int)
+    }
+    result
+  )
+
+  - set_volume volume:Real32 :Int <-
+  ( + engine_ptr:Pointer
+    + result:Int
+
+    engine_ptr := ma_engine
+    (engine_ptr.is_null).if {
+      result := invalid_operation
+    } else {
+      result := `ma_engine_set_volume((ma_engine *)@engine_ptr, @volume)`:(Int)
+    }
+    result
+  )
+
+  - volume:Real32 <-
+  ( + engine_ptr:Pointer
+    + result:Real32
+
+    engine_ptr := ma_engine
+    (! engine_ptr.is_null).if {
+      result := `ma_engine_get_volume((ma_engine *)@engine_ptr)`:Real32
+    }
+    result
+  )
+
+  - sample_rate:Uint32 <-
+  ( + engine_ptr:Pointer
+    + result:Uint32
+
+    engine_ptr := ma_engine
+    (! engine_ptr.is_null).if {
+      result := `ma_engine_get_sample_rate((ma_engine *)@engine_ptr)`:Uint32
+    }
+    result
+  )
+
+  - time_in_pcm_frames:Uint64 <-
+  ( + engine_ptr:Pointer
+    + result:Uint64
+
+    engine_ptr := ma_engine
+    (! engine_ptr.is_null).if {
+      result := `ma_engine_get_time_in_pcm_frames((ma_engine *)@engine_ptr)`:Uint64
+    }
+    result
+  )
+
+  - set_time_in_pcm_frames frame:Uint64 :Int <-
+  ( + engine_ptr:Pointer
+    + result:Int
+
+    engine_ptr := ma_engine
+    (engine_ptr.is_null).if {
+      result := invalid_operation
+    } else {
+      result := `ma_engine_set_time_in_pcm_frames((ma_engine *)@engine_ptr, @frame)`:(Int)
+    }
+    result
+  )
+
+Public // Utilise uniquement par Sound.
+
+  - handle:Pointer <- ma_engine
+
+Public
+
+  // -------------------------------------------------------------------------
+  // Capture WAV unique. Cette partie permet de conserver le troisieme exemple
+  // sans ajouter un troisieme prototype pour le moment.
+  // -------------------------------------------------------------------------
+
+  - record_wav file:String channels channels:Uint32 rate smp_rate:Uint32 :Int <-
+  ( + encoder_ptr,encoder_config_ptr:Pointer
+    + device_ptr,device_config_ptr:Pointer
+    + path:C_array Char
+    + result:Int
+    + encoder_ok,device_ok:Boolean
+
+    stop_recording
+    capture_result := success
+
+    encoder_ptr := `ma_calloc(sizeof(ma_encoder), NULL)`:Pointer
+    encoder_config_ptr := `ma_calloc(sizeof(ma_encoder_config), NULL)`:Pointer
+    device_ptr := `ma_calloc(sizeof(ma_device), NULL)`:Pointer
+    device_config_ptr := `ma_calloc(sizeof(ma_device_config), NULL)`:Pointer
+
+    (
+      encoder_ptr.is_null || {encoder_config_ptr.is_null} || {device_ptr.is_null} || {device_config_ptr.is_null}
+    ).if {
+      result := out_of_memory
+    } else {
+      `*((ma_encoder_config *)@encoder_config_ptr) = ma_encoder_config_init(ma_encoding_format_wav, ma_format_s16, @channels, @smp_rate)`
+
+      path := file.to_external
+      result := `ma_encoder_init_file(@path, (const ma_encoder_config *)@encoder_config_ptr, (ma_encoder *)@encoder_ptr)`:(Int)
+      encoder_ok := result = success
+
+      (encoder_ok).if {
+        `*((ma_device_config *)@device_config_ptr) = ma_device_config_init(ma_device_type_capture)`
+        `((ma_device_config *)@device_config_ptr)->capture.format = ma_format_s16`
+        `((ma_device_config *)@device_config_ptr)->capture.channels = @channels`
+        `((ma_device_config *)@device_config_ptr)->sampleRate = @smp_rate`
+        `((ma_device_config *)@device_config_ptr)->dataCallback = (ma_device_data_proc)capture_to_wav_callback`
+        `((ma_device_config *)@device_config_ptr)->pUserData = @encoder_ptr`
+
+        result := `ma_device_init(NULL, (const ma_device_config *)@device_config_ptr, (ma_device *)@device_ptr)`:(Int)
+        device_ok := result = success
+      }
+
+      (device_ok).if {
+        result := `ma_device_start((ma_device *)@device_ptr)`:(Int)
+        (result = success).if {
+          ma_encoder := encoder_ptr
+          ma_device := device_ptr
+        }
+      }
+    }
+
+    (! encoder_config_ptr.is_null).if {
+      `ma_free(@encoder_config_ptr, NULL)`
+    }
+    (! device_config_ptr.is_null).if {
+      `ma_free(@device_config_ptr, NULL)`
+    }
+
+    (result != success).if {
+      (device_ok).if {
+        `ma_device_uninit((ma_device *)@device_ptr)`
+      }
+      (encoder_ok).if {
+        `ma_encoder_uninit((ma_encoder *)@encoder_ptr)`
+      }
+      (! device_ptr.is_null).if {
+        `ma_free(@device_ptr, NULL)`
+      }
+      (! encoder_ptr.is_null).if {
+        `ma_free(@encoder_ptr, NULL)`
+      }
+    }
+    result
+  )
+
+  - stop_recording <-
+  ( + device_ptr,encoder_ptr:Pointer
+
+    device_ptr := ma_device
+    encoder_ptr := ma_encoder
+
+    (! device_ptr.is_null).if {
+      `ma_device_uninit((ma_device *)@device_ptr)`
+      `ma_free(@device_ptr, NULL)`
+      ma_device := NULL
+    }
+
+    (! encoder_ptr.is_null).if {
+      `ma_encoder_uninit((ma_encoder *)@encoder_ptr)`
+      `ma_free(@encoder_ptr, NULL)`
+      ma_encoder := NULL
+    }
+  )
+
+  - is_recording:Boolean <-
+  ( + device_ptr:Pointer
+    + result:Boolean
+
+    device_ptr := ma_device
+    (! device_ptr.is_null).if {
+      result := `ma_device_is_started((ma_device *)@device_ptr)`:Int != 0
+    }
+    result
+  )
+
+  - capture_write_result:Int <- capture_result
