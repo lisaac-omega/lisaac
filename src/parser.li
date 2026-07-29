@@ -613,7 +613,7 @@ Public
     //
     // Read Section Header.
     //    
-    (read_word "Header").if_false { syntax_error (current_position,"Section `Header' is needed."); };
+    ((read_word "Header") || {read_word "Section Header"}).if_false { syntax_error (current_position,"Section `Header' is needed."); };
     last_section := Section_.create current_position
     last_section.set_style "Header"
     
