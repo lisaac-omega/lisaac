@@ -98,8 +98,7 @@ Private
       Out # "L'argument numéro " # idx # " de la ligne de commande ne correspond pas à un réel.\n"
       Out # "Voici cet argument: " # str # '\n'
       System.exit 1
-    }
-    
+    }  
     result
   )
   

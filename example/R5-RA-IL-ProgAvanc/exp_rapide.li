@@ -1,14 +1,11 @@
 Header
   + name := Exp_rapide
-/*
-The classical factorial example in Lisaac Ω.
-  
-In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
-  */
+/**/
 
 Public
 
   - exp_rapide (x:Real64, n:Int) :Real64 <-
+  
   ( + result:Real64
     if (n = 0) then {
       result := 1

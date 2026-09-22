@@ -1,6 +1,6 @@
 --SEMANTIC---------
 Type `Exact Array(Flat Int)' is invalid with `Inherit_array(Flat Int)'.
-Line 9 column 9 in Main(.../test/compiler-msg/Exact/main.li):
+Line 10 column 9 in Main(.../test/compiler-msg/Exact/main.li):
     a := b
          ^
 

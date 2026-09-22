@@ -12,11 +12,15 @@ Private
   
 Public
   
+  - cent_megabyte:Int := 100*1024*1024
+  
   + date:Boolean
   
   - path:String_alias
   
   + name:String_alias
+  
+  + limit:Int
   
   - set_path pth:String_alias <- ( path := pth )
   
@@ -24,9 +28,14 @@ Public
   
   - is_empty:Boolean <- File_utils.position file = 0
   
-  - init n:String_alias date d:Boolean new nw:Boolean :Self <-
+  - init n:String_alias :Self <- init n date False new False limit (-1)
+  
+  - init n:String_alias date d:Boolean new nw:Boolean :Self <- init n date d new nw limit (-1)
+  
+  - init n:String_alias date d:Boolean new nw:Boolean limit l:Int :Self <-
   ( name := n
     date := d
+    limit := l
     String.tmp { tmp:String_buffer
       tmp # path
       (tmp.last != '/').if { tmp # '/' }
@@ -44,36 +53,62 @@ Public
   - flush <- 
   ( + d:Date
     (! buf.is_empty).if {
-      (date).if {
-        d := Date.create_now
-        String.tmp { tmp:String_buffer
-          d.append_yyyymmdd_in tmp
-          tmp # 'T' 
-          d.append_hhmmss_in tmp
-          tmp # ' ' # buf
-          File_utils.write file with tmp size (tmp.count)
+      ((limit <= 0) || {File_utils.size file < limit}).if {
+        (date).if {
+          d := Date.create_now
+          String.tmp { tmp:String_buffer
+            d.append_yyyymmdd_in tmp
+            tmp # 'T' 
+            d.append_hhmmss_in tmp
+            tmp # ' ' # buf
+            File_utils.write file with tmp size (tmp.count)
+          }
+        } else {
+          File_utils.write file with buf size (buf.count)
         }
-      } else {
-        File_utils.write file with buf size (buf.count)
+        File_utils.flush file
       }
-      File_utils.flush file
       buf.clear
     }
   )
   
   - close <- ( flush; File_utils.close file )
   
-  - self:Self '#' e:E :Self <- ( buf # e; self)
+  - self:Self '#' e:E :Self <- 
+  ( 
+    (e = NULL).if { buf # "NULL" } else { buf # e }
+    self
+  )
   
-  - self:Self '|#' e:E :Self <- ( buf # '\n'; flush; buf # e; self)
+  - self:Self '|#' e:E :Self <- 
+  ( 
+    buf # '\n'
+    flush
+    (e = NULL).if { buf # "NULL" } else { buf # e }
+    self
+  )
   
-  - self:Self '#|' e:E :Self <- ( buf # e # '\n'; flush; self)
+  - self:Self '#|' e:E :Self <- 
+  ( 
+    (e = NULL).if { buf # "NULL" } else { buf # e }
+    buf # '\n'
+    flush
+    self
+  )
   
-  - self:Self '##' (e:E,a:Int,c:Char) :Self <- ( buf ## (e,a,c); self)
+  - self:Self '##' (e:E,a:Int,c:Char) :Self <- 
+  ( 
+    (e = NULL).if { buf ## ("NULL",a,c) } else { buf ## (e,a,c) }
+    self
+  )
   
   - append o:E <-
   (
-    o.append_in buf
+    (o = NULL).if { 
+      buf # "NULL"
+    } else {
+      o.append_in buf
+    }
     buf # '\n'
     flush
   )

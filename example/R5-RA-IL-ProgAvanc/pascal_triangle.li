@@ -8,6 +8,7 @@ Public
   
   - pascal (l:ℤ, c:ℤ) :ℤ <-
   ( + result:ℤ
+    
     if ((c = 1) || {c = l} || {l = 1}) then {
       result := 1
     } else {
@@ -17,14 +18,15 @@ Public
   )
   
   - main <-
-  ( + n:ℤ;  
+  ( + n:ℤ  
+    
     if (Command_args upper != 1) then {
       Out # "usage: " # Command_args.at 0 # " <n>" # '\n'
       System exit 1
     }
     n := Command_args at 1 .to_int
     afficher_pascal n
-  );
+  )
   
 Private
   
@@ -32,19 +34,19 @@ Private
   ( 
     if (l <= n) then {
       if (c <= l) then {
-        Out # pascal (l,c) # ' ';
+        Out # pascal (l,c) # ' '
         afficher (l, c + 1) pascal n
       } else {
         Out # '\n'
         afficher (l + 1, 1) pascal n        
-      };
-    };
-  );
+      }
+    }
+  )
   
 Public
   
   - afficher_pascal n:ℤ <-
   ( 
-    afficher (1,1) pascal n;
-  );
+    afficher (1,1) pascal n
+  )
   

@@ -137,7 +137,7 @@ void cmd_android(struct android_app* app, int32_t cmd)
 static int32_t input_android(struct android_app* app,AInputEvent* event)
 { int32_t key;
   int idx,x,y,mouse_id;
-  float cx,cy;
+  //float cx,cy;
   if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
     
     //LOGI("%7.2f \n",event->motionMaxX);AINPUT_MOTION_RANGE_X
@@ -145,18 +145,19 @@ static int32_t input_android(struct android_app* app,AInputEvent* event)
     key = AMotionEvent_getAction(event);
     idx = (key & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> 
     AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;    
+    /*
     if (AConfiguration_getOrientation(app->config) == 1) { // 1=Portrait
       cx = 320.0/ANativeWindow_getWidth(app->window);
     } else { //2=Landscape
       cx = 320.0/ANativeWindow_getHeight(app->window);
-    };
+    };*/
     //AMotionEvent_getXPrecision(event);
-    cy = cx;    
+    //cy = cx;    
     //AMotionEvent_getYPrecision(event);
     switch (key & AMOTION_EVENT_ACTION_MASK) {
       case AMOTION_EVENT_ACTION_DOWN: 
-        x = (int)((float)AMotionEvent_getX(event,0) / cx);
-        y = (int)((float)AMotionEvent_getY(event,0) / cy);
+        x = (int)((float)AMotionEvent_getX(event,0));
+        y = (int)((float)AMotionEvent_getY(event,0));
         /*
         LOGI("x=%7.2f y=%7.2f\n",AMotionEvent_getX(event,0),AMotionEvent_getY(event,0));        
         LOGI("x=%7.2f y=%7.2f\n",AMotionEvent_getRawX(event,0),AMotionEvent_getRawY(event,0));
@@ -192,8 +193,8 @@ static int32_t input_android(struct android_app* app,AInputEvent* event)
         mouse_action (app->userData,0,1,x,y);
         break;    
       case AMOTION_EVENT_ACTION_POINTER_DOWN:         
-        x = (int)((float)AMotionEvent_getX(event,idx) / cx);
-        y = (int)((float)AMotionEvent_getY(event,idx) / cy);
+        x = (int)((float)AMotionEvent_getX(event,idx));
+        y = (int)((float)AMotionEvent_getY(event,idx));
         mouse_id = AMotionEvent_getPointerId(event,idx);
         //LOGI("id ptr dwn = %d\n",mouse_id);
         if ((mouse_id>=0) && (mouse_id<10)) { 
@@ -201,8 +202,8 @@ static int32_t input_android(struct android_app* app,AInputEvent* event)
         };
         break;
       case AMOTION_EVENT_ACTION_UP: 
-        x = (int)((float)AMotionEvent_getX(event,0) / cx);
-        y = (int)((float)AMotionEvent_getY(event,0) / cy);
+        x = (int)((float)AMotionEvent_getX(event,0));
+        y = (int)((float)AMotionEvent_getY(event,0));
         //LOGI("scr %f %f\n",AMotionEvent_getXPrecision(event),AMotionEvent_getYPrecision(event));
         mouse_id = AMotionEvent_getPointerId(event,0);
         //LOGI("id up = %d\n",mouse_id);        
@@ -211,8 +212,8 @@ static int32_t input_android(struct android_app* app,AInputEvent* event)
         };
         break;    
       case AMOTION_EVENT_ACTION_POINTER_UP: 
-        x = (int)((float)AMotionEvent_getX(event,idx) / cx);
-        y = (int)((float)AMotionEvent_getY(event,idx) / cy);
+        x = (int)((float)AMotionEvent_getX(event,idx));
+        y = (int)((float)AMotionEvent_getY(event,idx));
         //LOGI("scr %d %d\n",x,y);
         mouse_id = AMotionEvent_getPointerId(event,idx);
         //LOGI("id ptr up = %d\n",mouse_id);        
@@ -223,8 +224,8 @@ static int32_t input_android(struct android_app* app,AInputEvent* event)
       case AMOTION_EVENT_ACTION_MOVE:        
         for (idx=0;idx<AMotionEvent_getPointerCount(event);idx++) {
           mouse_id = AMotionEvent_getPointerId(event,idx);           
-          x = (int)((float)AMotionEvent_getX(event,idx) / cx);
-          y = (int)((float)AMotionEvent_getY(event,idx) / cy);          
+          x = (int)((float)AMotionEvent_getX(event,idx));
+          y = (int)((float)AMotionEvent_getY(event,idx));          
           if ((mouse_id>=0) && (mouse_id<10)) { 
             mouse_action (app->userData,mouse_id,-1,x,y);                    
           };
@@ -260,11 +261,13 @@ ASensorManager* AcquireASensorManagerInstance(void) {
 // End Sensor
 
 void android_main(struct android_app* state) {
-  struct engine e;
+  struct engine e = {0};
   pthread_t t;
   ASensorManager *sensorManager;
   ALooper *looper;
   int status;  
+  
+  atomic_init(&e.animating, false);
   
   my_app = state; // Used by AssetManager_Open
   
@@ -276,6 +279,7 @@ void android_main(struct android_app* state) {
   } else {
     LOGI("----------- PAPER RELOAD --------\n");
     memcpy(&e,(struct engine *)state->savedState,sizeof(struct engine));
+    atomic_init(&e.animating, false);
     free(state->savedState);
     //e = state->savedState;
     state->savedState = NULL;

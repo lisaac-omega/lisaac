@@ -181,7 +181,7 @@ Public
   - shader_header:String_alias :=
   ( + res:String_alias
     (lip "target" str = "android").if {
-      res := "#version 300 es\nprecision highp float;\n"
+      res := "#version 300 es\nprecision highp float;\n"      
     } else {
       res := "#version 330 core\nprecision highp float;\n"
     }
@@ -655,17 +655,17 @@ Public
   // Event Mouse
   - new_gest:Boolean
   
-  - first_x:Real32
-  - first_y:Real32
-  - first_t:Real32
-  - first_d:Real32
+  //- first_x:Real32
+  //- first_y:Real32
+  //- first_t:Real32
+  //- first_d:Real32
   
   - last_x:Real32
   - last_y:Real32
   - last_z:Boolean
-  - last_t:Real32
+  //- last_t:Real32
     
-  - mstate:Uint8
+  //- mstate:Uint8
   // 0: Sleep.
   // 1: Drag in progress...
   // 2: Drag end.
@@ -676,6 +676,7 @@ Public
   // 7: Short Clic. 
   // 8: Long Clic.
   
+  /*
   - mouse_ack s:Uint8 <-
   (
     (s = mstate).if {
@@ -693,83 +694,27 @@ Public
   - mouse_time:Real32 <- ((Time.gettimeofday-mouse_base_time) / 10_000).to_real32 / 100
   
   - count_finger:Int
+  */
   
 External
   
   - mouse_action (e:Pointer,n,s,x,y:Int) <-
   (
-    (lip "target" str = "android").if {    
-      + new_z:Boolean
+    (lip "target" str = "android").if {          
       + pen:Pen
-      + lx,ly,lt:Real32
-      //"point = ".print; x.print; 'x'.print; y.println
+      + nx,ny:Real32
+      + w:Window
       pen := get_pen e
       (pen != NULL).if {
-        //(lx,ly,lt) := (512.0/pen.win_width*x,860.0/pen.win_height*y,mouse_time)
-        (lx,ly,lt) := (x,y,mouse_time)
-        ((mstate != 2) && {mstate != 4} && {mstate != 6}).if {
-          `/* BUG */`
-          (n = 1).if {
-            (s = 0).if {
-              count_finger := count_finger - 1
-              //"End finger #2 : ".print; count_finger.println
-              (count_finger = 0).if { mstate := 6; last_z := False; }
-            } else {
-              ((mstate != 5) && {s != -1}).if {
-                + dx,dy:Real32
-                ((mstate = 1) || {mstate = 3}).if {
-                  mstate := mstate + 1
-                  //root.gesture_event
-                }
-                (first_x,first_y,first_t) := (last_x,last_y,last_t)
-                (last_x,last_y,last_t) := (lx,ly,lt)
-                (dx,dy) := (last_x-first_x,last_y-first_y)
-                first_d := (dx*dx + dy*dy).sqrt
-                count_finger := 2
-                mstate := 5
-              } else {
-                (last_x,last_y,last_t) := (lx,ly,lt)
-              }
-            }
-          }.elseif {mstate = 5} then {
-            (s = 0).if {
-              count_finger := count_finger - 1
-              //"End finger #1 : ".print; count_finger.println
-              (count_finger = 0).if { mstate := 6; last_z := False; }
-            } else {
-              (first_x,first_y,first_t) := (lx,ly,lt)
-            }
-          } else {
-            (last_x,last_y,last_t) := (lx,ly,lt)
-            (s != -1).if {
-              new_z := s > 0
-              (!last_z & new_z).if { // Pressed.
-                mstate := 0
-                (first_x,first_y) := (last_x,last_y)
-                last_t := first_t := mouse_time
-              }.elseif {last_z & !new_z} then { // Released
-                ((mstate = 1) || {mstate = 3}).if {
-                  mstate := mstate + 1; // Drag end Or Select end
-                } else {
-                  last_t := mouse_time
-                  mstate := 7 + (last_t - first_t > mouse_pause).to_int; // Short Or Long Clic
-                }
-              } else {
-                "PAPER.mouse_button BUG !!!\n".print
-              }
-              last_z := new_z
-            } else {
-              (last_z).if {
-                + dx,dy,d:Real32
-                (dx,dy) := (last_x - first_x,last_y - first_y)
-                d := (dx*dx + dy*dy).sqrt
-                ((d > mouse_dis) && {mstate = 0}).if { // Moving mode (distance > 8 pix)
-                  mstate := mstate | 1
-                  mstate := mstate | ((last_t - first_t > mouse_pause).to_int << 1); // Select
-                }
-              }
-            }
-          }
+        w := wins.first        
+        (nx,ny) := (x,y)
+        ((last_x,last_y) != (nx,ny)).if {
+          (last_x,last_y) := (nx,ny)
+          Hand.set_ptr w xy (last_x.to_int,last_y.to_int)
+        }
+        (last_z != (s = -1)).if {
+          last_z := s = -1
+          Hand.set_ptr w press (n,last_z)
         }
       }
       new_gest := True
@@ -855,7 +800,7 @@ External
             
       `e->pen=@pen`
     } else {
-      "------------Restore Pen\n".print
+      //"------------Restore Pen\n".print
     }
   }
   
@@ -893,7 +838,7 @@ External
     + rl,gl,bl,al:Real32
     me := wins.first
     (new_gest).if {
-      "PAPER 511: Not yet implemented.".println
+      //"PAPER 511: Not yet implemented.".println
       // root.gesture_event
       new_gest := False
     }

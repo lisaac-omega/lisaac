@@ -95,10 +95,10 @@ Public
   // Mimic bash/sh shift.
   ( + i:Int
     i := 1 
-    Out # "Command_args " # (args.upper) # '\n'    
+    //Out # "Command_args " # (args.upper) # '\n'    
     until {i >= args.upper} do {
       ? {args.at i = args.at i}
-      Out # i # " -- " # (args.at i) # " -- " # (args.at (i + 1)) # '\n'
+      //Out # i # " -- " # (args.at i) # " -- " # (args.at (i + 1)) # '\n'
       args.at i put (args.at (i + 1))
       i := i + 1
     }

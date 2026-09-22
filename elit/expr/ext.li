@@ -35,7 +35,8 @@ Public
     (rd_ext).if {
       col (Look.external) sub (pos_i.pt - Old pos_i.pt)
       (read_c ':').if {
-        persistant := read_c '('
+        col (Look.symbol) sub 1
+        persistant := read_c '('          
         ttok := Ttok.parse_sp (Ttok.tpro)
         (ttok = NULL).if { err syntax msg "Incorrect type."; }
         (read_c '{').if {
@@ -43,7 +44,13 @@ Public
           (lttok = NULL).if { err syntax msg "Incorrect live type list."; }
           (! read_c '}').if { err warning msg "Added '}'. (3)"; }
         }
-        ((persistant) && {! read_c ')'}).if { err warning msg "Added ')'. (6)"; }
+        (persistant).if {
+          (read_c ')').if { 
+            col (Look.symbol) sub 1
+          } else {
+            err warning msg "Added ')'. (6)"; 
+          }
+        }
       }
     }
   )

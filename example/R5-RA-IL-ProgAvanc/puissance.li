@@ -1,15 +1,12 @@
 Header
   + name := Puissance
-/*
-The classical factorial example in Lisaac Ω.
-  
-In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
-  */
+/**/
 
 Public
   
-  - puissance (x:Real64, n:Int) :Real64 <-
-  ( + result:Real64
+  - puissance (x:ℤ, n:Int) :ℤ <-
+  ( + result:ℤ
+    
     if (n = 0) then {
       result := 1
     } else {
@@ -19,24 +16,49 @@ Public
   )
   
   - main <-
-  ( + x:Real64;
-    + n:Int;  
+  ( + x:ℤ
+    + n:Int  
     if ((Command_args upper != 2) || {! Command_args at 2 .is_integer}) then {
       "usage: ./puissance <x> <n>" println
       System exit 1
     }
-    x := Command_args at 1 .to_real64
+    x := Command_args at 1 .to_int
     n := Command_args at 2 .to_int
-    Out # "puissance(" # x # ',' # n # ")=" # (puissance (x,n)) # '\n'
+    
+    /*
+    "Départ".println
+    x := puissance (x,n) acc 1 big
+    "Big ok".println
+    x := puissance (x,n) acc 1
+    "Sans big".println
+    */
+    
     Out # "puissance(" # x # ',' # n # ")=" # (puissance (x,n) acc 1) # '\n'
+    "Yes 550_000 !".println
+     Out # "puissance(" # x # ',' # n # ")=" # (puissance (x,n)) # '\n'   
   );
   
-  - puissance (x:Real64, n:Int) acc acc:Real64 :Real64 <-
-  ( + result:Real64
+  - puissance (x:ℤ, n:Int) acc acc:ℤ :ℤ <-
+  ( + result:ℤ
+    
     if (n = 0) then {
       result := acc
     } else {
       result := puissance (x, n - 1) acc (x * acc)
+    }
+    result
+  )
+  
+  - puissance (x:ℤ, n:Int) acc acc:ℤ big :ℤ <-
+  // Tentative de supression d'une fuite de mémoire.
+  ( + result, tmp:ℤ
+    
+    if (n = 0) then {
+      result := acc
+    } else {
+      tmp := x * acc
+      acc.free
+      result := puissance (x, n - 1) acc tmp
     }
     result
   )

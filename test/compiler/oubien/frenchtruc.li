@@ -1,6 +1,7 @@
 Header
   + name := Frenchtruc
 Insert 
+  
   - french: French_corner := French_corner
   
 Public
@@ -10,7 +11,8 @@ Public
     
     b1 := b1.ou b2
     b1 := (b1) ou b2
-    b1 := b1 ou b2 // DC -> BS
+    
+    // b1 := b1 ou b2 // DCDC -> BSBS
     // Ben, vu que c'est une locale, donc forcément atomique, 
     // c'est possible de ne pas imposer (b1) ou le point ?
     // Après, s'il y a un risque d'ambiguité, c'est pas grave.

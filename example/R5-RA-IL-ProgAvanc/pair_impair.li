@@ -27,12 +27,12 @@ Public
   )
   
   - main <-
-  ( + n:ℤ;  
+  ( + n:ℤ  
     if (Command_args upper != 1) then {
       Out # "usage: " # Command_args.at 0 # " <n>" # '\n'
       System exit 1
     }
     n := Command_args at 1 .to_int
-    Out # "pair(" # n # ")=" # (pair(n)) # '\n';
-  );
+    Out # "pair(" # n # ")=" # (pair(n)) # '\n'
+  )
   

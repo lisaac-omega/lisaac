@@ -1,0 +1,24 @@
+Header
+  + name := Flip_coin
+Public
+  
+  - main <-
+  ( + random: Random
+    + t,f: Int
+    
+    random := Random.init_clock
+    
+    100.times {
+      while {random.flip_coin} do {
+        t := t + 1
+      }
+      
+      while {! random.flip_coin} do {
+        f := f + 1
+      }
+    }
+    
+    //Out # " true=" #t # " false=" # f # " dist=" #((t-f).abs) #'\n'
+    Test.check ((t-f).abs < 50)
+  )
+  

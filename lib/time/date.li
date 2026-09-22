@@ -127,10 +127,10 @@ Public
   - create_timestamp t:Int64 :Self <- from_raw t
   
   - iso8601_to_timestamp b:String at bi:Int :Self <- 
-  // 2025-05-27T23:55:00+00:00 => 1748383200 (timestamp)
+  // 2025-05-27T23:55:00+00:00 => 1748390100 (timestamp)
   ( + t:Self
-    + tz_sign:Char
-    + tz_h,tz_m,offset, y,m,d, h,n,s, i:Int
+    + tz_sign,c:Char
+    + tz_h,tz_m,offset, y,m,d, h,n,s, ms, i:Int
     
     i := bi
     {b.at i.is_digit}.while_do { y := y * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = '-'}; i := i + 1
@@ -140,9 +140,17 @@ Public
     {b.at i.is_digit}.while_do { n := n * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = ':'}; i := i + 1
     {(i <= b.upper) && {b.at i.is_digit}}.while_do { s := s * 10 + b.at i.to_digit; i := i + 1 }
     (i <= b.upper).if {
-      tz_sign := b.at i; ? {(tz_sign = '+') || {tz_sign = '-'}}; i := i + 1;
-      {b.at i.is_digit}.while_do { tz_h := tz_h * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = ':'}; i := i + 1
-      {(i <= b.upper) && {b.at i.is_digit}}.while_do { tz_m := tz_m * 10 + b.at i.to_digit; i := i + 1 } 
+      c := b.at i
+      (c = '.').if { 
+        i := i + 1
+        {(i <= b.upper) && {b.at i.is_digit}}.while_do { ms := ms * 10 + b.at i.to_digit; i := i + 1 } // ms not used
+        (i <= b.upper).if { c := b.at i } else { c := ' ' }
+      }
+      ((c = '+') || {c = '-'}).if {
+        tz_sign := c; i := i + 1;
+        {b.at i.is_digit}.while_do { tz_h := tz_h * 10 + b.at i.to_digit; i := i + 1 }; ? {b.at i = ':'}; i := i + 1
+        {(i <= b.upper) && {b.at i.is_digit}}.while_do { tz_m := tz_m * 10 + b.at i.to_digit; i := i + 1 } 
+      }
     }
     (y,m) := (y - 1900, m - 1)
     `tm_glob.tm_year = @y; tm_glob.tm_mon  = @m; tm_glob.tm_mday = @d`
@@ -151,12 +159,14 @@ Public
     t := `timegm(&tm_glob)`:Self
 
     // Shift timezone
-    offset := tz_h * 3600 + tz_m * 60
+    ((tz_h != 0) || {tz_m != 0}).if {
+      offset := tz_h * 3600 + tz_m * 60
 
-    (tz_sign = '+').if {
-      t := t -# offset
-    } else {
-      t := t +# offset
+      (tz_sign = '+').if {
+        t := t -# offset
+      } else {
+        t := t +# offset
+      }
     }
     t
   )  
