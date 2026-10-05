@@ -1,0 +1,29 @@
+Header
+  + name := Ph
+/*
+  Exercice 7 du poly des exercices.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+  
+Public
+  
+  - main <-
+  ( + ph:Int;
+    ph := argument 1 entier
+    "ph=".print; ph.println
+    si ( ph = 7 ) alors {
+      "neutre".println
+    }.elseif { ph < 2 } then {
+      "très acide".println
+    }.elseif { ph < 7 } then {
+      "acide".println
+    }.elseif { ph < 12 } then {
+      "alcaline".println
+    } else {      
+      "très alcaline".println
+    }    
+  )
+  

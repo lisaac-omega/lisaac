@@ -1,0 +1,5 @@
+--WARNING----------
+Expression has no effect.
+Line 20 column 13 in Main(.../test/varargs/1/main.li):
+      "mardi"
+             ^

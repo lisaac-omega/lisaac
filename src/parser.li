@@ -1615,8 +1615,11 @@ Public
       e := read_expr
       (e != NULL).if {
         c := cur_char
+        ((!result.is_empty) && {result.last.is_constant} && {c != '.'}).if {
+          warning_error (result.last.position, "Expression has no effect.") 
+        }
         (c = ',').if {
-          pos := current_position
+          pos := current_position          
           result.add_last (Itm_result.create e)
           position := position + 1
         } else {

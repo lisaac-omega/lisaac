@@ -5,6 +5,7 @@ Insert
   - parent_print:Print := Print
   
 Public  
+  
   + counter:Int
   
   - check assert:Boolean <-
@@ -82,5 +83,4 @@ Public
       crash_with_message ("TEST.check failed: '" + c1.to_string + "' != '" + c2.to_string + "'")
     }
   )
-  
   

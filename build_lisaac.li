@@ -17,6 +17,7 @@ Private
   + rc_file:String_alias
   
 Private
+  
   - chdir arg:String_alias or_exit <-
   (
     if verbose then {
@@ -67,7 +68,7 @@ Private
     chdir user_homedir or_exit
     if ((! File_utils.file_exists rc) && {create}) then {
       if verbose then {
-        ("Creating \"" + rc + "\".").println
+        Out # "Creating \"" # rc # "\".\n"
       }
       File_utils.make_empty_file rc
     }
@@ -255,11 +256,12 @@ Private
   
   - lisaac_bin_dir_set <-
   (
+    check lisaac_dir warning
     chdir lisaac_dir or_exit
     chdir "bin" or_exit
     lisaac_bin_dir := working_directory.to_string_alias
     if verbose then {
-      ("lisaac_bin_dir=\"" + lisaac_bin_dir + "\".").println
+      Out # "lisaac_bin_dir=\"" # lisaac_bin_dir # "\".\n"
     }
   )
   
@@ -378,3 +380,23 @@ Private
       "lisaac/misc/new_assets.sh not updated.".println
     }
   )
+  
+  - check path:String warning <-
+  ( + idx:Int
+    + c:Char
+    
+    {idx <= (path.upper)}.while_do {
+      c := path.at idx
+      (c = ' ').if {
+        Out # "The space character in \"" # path # "\" may cause future malfunctions.\n"
+      }
+      (c = ':').if {
+        Out # "Character : in \"" # path # "\" may cause future malfunctions.\n"
+      }
+      (! c.is_ascii).if {
+        Out # "Non ASCII character in \"" # path # "\" may cause future malfunctions.\n"
+      }
+      idx := idx + 1
+    }
+  )
+  

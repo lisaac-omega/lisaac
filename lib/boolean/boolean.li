@@ -5,6 +5,7 @@ Header
   - type    := `char`;
   - default := False;
 Insert
+  
   - parent_print:Print := Print
   - parent_utils:Utils := Utils
 
@@ -116,12 +117,12 @@ Public
   
   // French corner
   
-  - si self:Self alors tblk:{} sinon fblk:{} <- 
+  - si self:Self alors tblk:{} sinon fblk:{} :Boolean <- 
   ( 
     if self then tblk else fblk 
   )
   
-  - si self:Self alors tblk:{} <- ( if self then tblk )
+  - si self:Self alors tblk:{} :Boolean <- ( if self then tblk )
   
   - si self:Self alors b1:{} sinon_si b2:{} sinon b3:{} <- 
   ( 

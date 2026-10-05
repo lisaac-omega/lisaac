@@ -3,6 +3,9 @@ Header
 /*
   This example show how to use glyph in your code.
   Play with this code to understand how to edit the glyphs.
+  
+  Experts may also browse lisaac/lib/glyph/ 
+  
   */
 Public
   

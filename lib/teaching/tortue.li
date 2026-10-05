@@ -32,6 +32,7 @@ Private
 Public
   - main <-
   (
+    Out # "Le raccourci clavier Q ferme le dessin.\n"
     dessin
     running := True
     Paper.run    
@@ -79,6 +80,8 @@ Private
   - titre t:String_alias départ (x,y:Int) ratio r:Int <- titre t départ (x,y) taille (36 * r, 24 * r)
   
   - titre t:String_alias départ (x,y:Int) <- titre t départ (x,y) ratio 35
+  
+  - titre t:String_alias taille (x,y:Int) <- titre t départ (0,0) taille (x, y)
   
   - draw_background <-
   (

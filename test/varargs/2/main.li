@@ -1,0 +1,25 @@
+Header
+  + name := Main
+Insert
+  - parent_utils:Utils := Utils
+  
+Public
+  
+  + stock:Array Int := new Array Int capacity 4
+  
+  - show list:Int^n <-
+  (
+    { ex:Int
+      stock.add_last ex
+    }.value list    
+  )
+  
+  - main <-
+  (
+    show ( 0, 1  2, 3)
+    //        **** 
+    from 0 to (stock.upper) do { i: Int
+      Test.check ((stock.at i) = i)
+    }
+  )
+  

@@ -8,8 +8,137 @@ Insert
     
 Private
   
-  + run_dir:String_alias  
+  + exec_directory:String_alias
   
+  + elit_view:Boolean := False
+  
+  + background: Boolean := True
+  
+  - show list:String_alias^n <-
+  ( + dir, file, path_li, exec, args:String_alias
+    + idx, array_idx:Int
+    + array:Array String_alias
+    + bg, ev, do_run:Boolean
+    + cmd_run:String_buffer
+    
+    verbose := Command_args.option_shift "--verbose"
+    
+    if (Command_args.option_shift "--elit_view") then {
+      elit_view := True
+    }
+    
+    background := ! Command_args.option_shift "--no_background"
+    if (Command_args.upper != 0) then {
+      Out # (Command_args.at 0) # ": \"" # (Command_args.at 1) # "\" no such option.\n"
+      Out # "Possible options: --verbose --elit_view --no_background\n"
+      System.exit 1
+    }
+    File_utils.working_directory_in working_directory
+    ? {working_directory.last = '/'}
+    exec_directory := working_directory.to_string_alias  
+    verbose.if {
+      Out # "exec_directory=" # exec_directory # '\n'
+      Out # "elit_view=" # elit_view # '\n'
+      Out # "background=" # background # '\n'
+    }
+    array := new Array String_alias of list
+    verbose.if {
+      Out # array # '\n'
+    }
+    
+    while {array_idx <= array.upper} do {
+      path_li := array.at array_idx
+      (path_li.has_suffix ".li").if_false {
+        Out # "Wrong argument for the show: \"" # path_li # "\" at index " # array_idx # ".\n"
+        System.exit 1
+      }
+      array_idx := array_idx + 1
+      
+      bg := background
+      if (check "background" at (array, array_idx)) then {
+        array_idx := array_idx + 1
+        bg := True
+      }
+      if (check "wait" at (array, array_idx)) then {
+        array_idx := array_idx + 1
+        bg := False
+      }
+      
+      ev := elit_view
+      if (check "elit-view" at (array, array_idx)) then {
+        array_idx := array_idx + 1
+        ev := True
+      }
+      
+      do_run := True ; args := ""
+      if (check "run" at (array, array_idx)) then {
+        array_idx := array_idx + 1
+        args := array.at array_idx
+        array_idx := array_idx + 1
+      }
+      if (check "no-run" at (array, array_idx)) then {
+        array_idx := array_idx + 1
+        do_run := False
+      }
+              
+      String.tmp { buf: String_buffer
+        buf.append ".li"
+        idx := path_li.upper -3
+        while {(idx >= 0) && {path_li.at idx != '/'}} do {
+          buf.add_first (path_li.at idx)
+          idx := idx -1
+        }
+        file := buf.to_string_alias
+        buf.clear
+        dir := ""
+        (idx > 0).if {
+          0.to idx do { i:Int
+            buf.add_last (path_li.at i)
+          }
+        }
+        dir := buf.to_string_alias
+      } 
+      
+      String.tmp { buf:String_buffer
+        buf.copy file
+        buf.remove_tail 3
+        exec := buf.to_string_alias
+      }
+      
+      String.tmp { buf:String_buffer
+        buf.copy exec_directory
+        buf.extend_unless '/'
+        buf.append dir
+        buf.extend_unless '/'
+        cd buf
+      }
+      
+      Out # exec_directory # dir # exec # ' ' # args # '\n'
+      cmd_run := "./" + exec + " " + args
+      
+      do_run.if {
+        run ("lisaac " + file + " -boost -q")
+      }
+      if (elit_view || {ev}) then {
+        do_run.if {
+          run cmd_run background
+        } 
+        run ("elit " + file)
+      }.elseif {bg} then {
+        do_run.if {
+          run cmd_run background
+        }
+      } else {
+        do_run.if {
+          run cmd_run
+        }
+      }
+      do_run.if {
+        run ("rm -f " + exec + " " + exec + "*.c " +  exec + "*.h " + exec + "*.o") 
+      }
+    }
+  )
+    
   - cd dir:String <-
   (
     if (Environment.chdir dir = 0) then {
@@ -20,46 +149,6 @@ Private
     } else {
       crash_with_message ("Cannot chdir into \"" + dir + "\"")
     }
-  )
-  
-  - directory dir:String_alias main m:String_alias run r:Boolean elit e:Boolean <-
-  ( + cmd_lisaac, cmd_elit, cmd_run, cmd_rm:String
-    if (run_dir = NULL) then {
-      File_utils.working_directory_in working_directory
-      run_dir := working_directory.to_string_alias  
-    }
-    String.tmp { b:String_buffer
-      b.copy run_dir
-      b.extend_unless '/'
-      b.append dir
-      b.extend_unless '/'
-      cd b
-      cmd_lisaac := "lisaac " + m + " -boost -q"
-      cmd_elit := "elit " + b + m + ".li"
-      cmd_run := "./" + m
-      cmd_rm := "rm -f " + m + " " + m + "*.c " + m + "*.h " + m + "*.o"
-      if (e && {r}) then {
-        run cmd_elit background
-        run cmd_lisaac ; run cmd_run ; run cmd_rm
-      }.elseif {e && {! r}} then {
-        run cmd_lisaac
-        run cmd_elit
-      }.elseif {(!e) && {r}} then {
-        run cmd_lisaac ; run cmd_run ; run cmd_rm
-      }.elseif {(!e) && {!r}} then {
-        run cmd_lisaac        
-      } else {
-        ? {False}
-      }
-    }
-  )
-  
-  - directory dir:String_alias main m:String_alias background <-
-  ( + cmd_run:String
-    // OUT # "directory " # dir # " main " # m # '\n'
-    directory dir main m run False elit False
-    cmd_run := "./" + m
-    run cmd_run background
   )
   
   - run cmd:String  <-
@@ -74,61 +163,8 @@ Private
     Environment.run cmd background
   )
   
-  - show list:String_alias^n <-
-  (
-    { ex:String_alias
-      directory "" main ex run True elit True
-    }.value list
+  - check tag:String_alias at (array:Array String_alias, array_idx:Int): Boolean <-
+  ( 
+    ((array_idx <= array.upper) && {array.at array_idx = tag})
   )
-  
-  - basic dir:String_alias run go:Boolean main m:String_alias <-
-  ( + cmd_lisaac, cmd_elit, cmd_run, cmd_rm:String
-    Environment.run "clear"
-    String.tmp { b:String_buffer
-      b.copy dir
-      b.extend_unless '/'
-      cd b
-      cmd_lisaac := "lisaac " + m + " -boost -q"
-      cmd_elit := "elit " + b + m + ".li 1>/dev/null"
-      cmd_run := "./" + m
-      cmd_rm := "rm -f " + m + " " + m + "*.c " + m + "*.h " + m + "*.o"
-      Environment.run cmd_lisaac
-      if (go) then {
-        Environment.run cmd_run background 
-      } else {
-        Out # b # m # '\n'
-      }
-      Environment.run cmd_elit
-      Environment.run cmd_rm      
-    }
-  )
-  
-  - show dir:String file f:String run r:String <-
-  (
-    cd dir
-    Out # working_directory # '\n'
-    String.tmp { cmd:String_buffer
-      cmd.copy "lisaac "
-      cmd.append f
-      cmd.append " -q"
-      Out # cmd # '\n'
-      if ((Environment.run cmd) != 0) then {
-        Out # "Erreur de compilation.\n"
-        System.exit 1
-      }
-      if (! r.is_empty) then {
-        Out # r # '\n'
-        Environment.run r
-      }
-      Out "Fermer elit pour passer au suivant.\n"
-      
-      cmd.copy "elit "
-      cmd.append f
-      Out # cmd # '\n'
-      cmd.append " 1> /dev/null"
-      Environment.run cmd
-    }
-  )
-  
-  - show dir:String file f:String <- show dir file f run ""
   

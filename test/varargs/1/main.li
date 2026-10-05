@@ -1,0 +1,32 @@
+Header
+  + name := Main
+Insert
+  - parent_utils:Utils := Utils
+  
+Public
+  
+  + stock:Array String := new Array String capacity 4
+  
+  - show list:String_alias^n <-
+  (
+    { ex:String_alias
+      stock.add_last ex
+    }.value list    
+  )
+  
+  - main <-
+  (
+    show ( "lundi",
+      "mardi"
+      "mercredi"
+    )
+    // stock.println // DC -> BS 
+    /*
+    Et la virgule qui manque fait que le mardi n'est pas ajouté.
+    J'ai mis du temps à trouver ce bug (Dom :-)
+    */
+    Test.check (stock.at 0) string "lundi"
+    Test.check (stock.at 1) string "mardi"
+    Test.check (stock.at 2) string "mercredi"
+  )
+  

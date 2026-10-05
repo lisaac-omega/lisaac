@@ -1,0 +1,5 @@
+--WARNING----------
+Expression has no effect.
+Line 19 column 15 in Main(.../test/varargs/2/main.li):
+    show ( 0, 1  2, 3)
+               ^

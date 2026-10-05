@@ -851,7 +851,6 @@ Public
   ( 
     b.add_last '[' 
     foreach { e: V
-      b.add_last ' ' 
       e.append_in b
       b.add_last ','
     }

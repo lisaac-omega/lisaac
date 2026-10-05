@@ -1726,6 +1726,7 @@ Public
   )
   
   - bmp_trace bmpline:{(Int,Int,Int); } :(Int,Int) <-
+  // x_beg, y, x_end
   ( + edge,next_edge,edgep:Npedge
     + x_edges:Npedge
     + x0,x1,new_x,x_mx,y_mx:Int

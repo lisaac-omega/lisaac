@@ -13,10 +13,12 @@ Public
   
   - main <-
   (
-    directory "example/snake" main "snake" background
-    directory "example/tetris" main "tetris" background
-    directory "example/solitaire" main "solitaire" background
-    directory "example/arrow_out" main "arrow_out" background
-    directory "example/connect_four" main "connect_four" background
-    directory "example/break" main "break" background
+    show (
+      "example/snake/snake.li", "background",
+      "example/tetris/tetris.li", "background",
+      "example/solitaire/solitaire.li", "background",
+      "example/arrow_out/arrow_out.li", "background",
+      "example/connect_four/connect_four.li", "background",
+      "example/break/break.li", "background"
+    )
   )

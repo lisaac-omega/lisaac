@@ -10,6 +10,7 @@ Private
   
   - fiborec n:ℤ : (ℤ, ℤ) <-
   ( + f0,f1:ℤ
+    
     if (n <= 1) then {
       (f0,f1) := (0,1)
     } else {
@@ -23,6 +24,7 @@ Public
   
   - fibonacci n:ℤ : ℤ <-
   ( + f1,f2:ℤ
+    
     (f1,f2) := fiborec n
     f2
   )
