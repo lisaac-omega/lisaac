@@ -7,10 +7,13 @@ Header
 Inherit 
   + parent_window:Flat Window  
 Private
+  
   + key_mem: String_buffer := new String_buffer capacity 16
   
   + cmd_mem: Uint8
+  
 Public
+  
   - main <-
   (
     Keyboard.set_debug True

@@ -30,6 +30,7 @@ Private
   - aupif (min, max:Int) : Int <- (random.min min max max)
  
 Public
+  
   - main <-
   (
     Out # "Le raccourci clavier Q ferme le dessin.\n"
@@ -77,8 +78,6 @@ Private
     }
   )
   
-  - titre t:String_alias départ (x,y:Int) ratio r:Int <- titre t départ (x,y) taille (36 * r, 24 * r)
-  
   - titre t:String_alias départ (x,y:Int) <- titre t départ (x,y) ratio 35
   
   - titre t:String_alias taille (x,y:Int) <- titre t départ (0,0) taille (x, y)
@@ -112,11 +111,13 @@ Public
   - mouse_scroll (dx,dy: Real64) <- ();
   
 Private
+  
   - π:Real32 := Real32 pi
  
   - avance pixels:Int <-
   ( + tx, ty:Real64
     + rad:Real32
+    
     if running then {
       //OUT # "(" # turtle_x # ',' # turtle_y # ") " # angle # " " # pen_down # '\n'  
       ? {angle .in_range 0 to 360}
@@ -182,6 +183,26 @@ Private
     6 times {
       avance pixels
       tourne 60
+    }
+  )
+  
+  - texte txt:String <- texte txt xy (turtle_x, turtle_y) couleur pen_color
+  
+  - texte txt:String xy (x,y:Real64) <- texte txt xy (x,y) couleur pen_color
+  
+  - texte txt:String xy (x,y:Real64) couleur c:Color <-
+  (
+    if running then {
+      font_face_id (Font sys (Font roman))
+      fill_color c
+      text (x, y) msg txt
+    }
+  )
+  
+  - cercle rayon:Int <-
+  (
+    if running then {
+      circle (50, 50) radius 50
     }
   )
   
