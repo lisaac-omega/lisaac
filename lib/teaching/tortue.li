@@ -186,14 +186,17 @@ Private
     }
   )
   
-  - texte txt:String <- texte txt xy (turtle_x, turtle_y) couleur pen_color
+  - texte txt:String <- texte txt xy (turtle_x, turtle_y)
   
-  - texte txt:String xy (x,y:Real64) <- texte txt xy (x,y) couleur pen_color
+  - texte txt:String xy (x,y:Real64) <- 
+    texte txt xy (x,y) taille pen_width couleur pen_color
   
-  - texte txt:String xy (x,y:Real64) couleur c:Color <-
-  (
-    if running then {
-      font_face_id (Font sys (Font roman))
+  - texte txt:String xy (x,y:Real64) taille t: Int couleur c:Color <-
+  ( + state:State
+
+    if running then {      
+      state := get_state
+      state.set_font_size (14 + (8 * t))
       fill_color c
       text (x, y) msg txt
     }
@@ -201,8 +204,11 @@ Private
   
   - cercle rayon:Int <-
   (
+    Out # rayon # '\n'
     if running then {
-      circle (50, 50) radius 50
+      stroke {
+        circle (turtle_x, turtle_y) radius rayon
+      } width pen_width color pen_color      
     }
   )
   

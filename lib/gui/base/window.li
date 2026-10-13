@@ -111,3 +111,16 @@ Private
     }
    )
   
+  - debug_refresh <-
+  ( - r: Int
+    - t1: Uint64
+    + t2: Uint64
+    + diff:Real64
+    
+    r := r + 1
+    t2 := Time.gettimeofday
+    diff := (t2 - t1).to_real64
+    Out # "debug_refresh:" # r # "  elapsed: " # (diff / 1000000.0) # " sec. " # '\n'
+    t1 := t2
+  )
+  

@@ -15,6 +15,7 @@ Public
       "startrek/startrek.li", "background",
       "mapping/nayeli.li", "background",
       "arrow_out/arrow_out.li", "background",
+      "draw2d/draw2d_shapes.li", "background",
       "../game_show.li", "elit-view", "no-run",
       "basics/factorial_example.li", "elit-view", "run", "1000",
       "fibonacci.li", "elit-view", "run", "1000"

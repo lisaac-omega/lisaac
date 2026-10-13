@@ -15,7 +15,7 @@ Header
       ./hello_world     
   
    Or one single step on bash:
-      run=lisaac/example/hello_world.li ; lisaac ${run} -boost -q && ./${run%.li}    */
+      run=hello_world ; lisaac ${run} -boost -q && ./${run%.li}    */
 Public
   
   - main <-

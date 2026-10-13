@@ -183,7 +183,7 @@ Public // Private
     }
   )
   
-  - do blc:{} <-
+  - save blc:{} restore <-
   (
     save
     blc.value
@@ -246,9 +246,9 @@ Public // Private
   
   - stroke_width w:Real32 <- states.last.set_stroke_width w
   - miter_limit  l:Real32 <- states.last.set_miter_limit l
-  - line_cap c:Int     <- states.last.set_line_cap c
-  - line_join j:Int    <- states.last.set_line_join j
-  - global_alpha a:Real32 <- states.last.set_alpha a
+  - line_cap c:Int        <- states.last.set_line_cap c
+  - line_join j:Int       <- states.last.set_line_join j
+  - global_alpha a:Real32  <- states.last.set_alpha a
 
   - transform (a,b,c,d,e,f:Real32) <-
   ( 
@@ -972,7 +972,18 @@ Public
     fill
     restore
   )
-
+  
+  - fill d:{} paint p:Paint <-
+  // DCDC à méditer...
+  (
+    save
+    begin_path
+    fill_paint p
+    d.value
+    fill
+    restore
+  )
+  
   - move_to (x,y:Real32) <- 
   ( add_cmd (Pen_move.create (x,y)); )
 
