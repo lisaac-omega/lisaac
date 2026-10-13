@@ -15,7 +15,10 @@ jobs:
           token: ${{ secrets.PAT }}
 
       - name: Download external ZIP
-        run: curl -L -o lisaac_0.6.zip https://lisaac.org/downloads/lisaac_0.6.zip
+        run: |
+          curl -fSL -o lisaac_0.6.zip https://lisaac.org/downloads/lisaac_0.6.zip \
+            || curl -fSL -k -o lisaac_0.6.zip https://www.lisaac.org/downloads/lisaac_0.6.zip \
+            || curl -fSL -o lisaac_0.6.zip http://www.lisaac.org/downloads/lisaac_0.6.zip
 
       - name: Unzip lisaac content
         run: |
