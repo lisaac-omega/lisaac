@@ -1,0 +1,5 @@
+--SEMANTIC---------
+Slot `crash_with_messag' not found in `String_alias'.
+Line 7 column 40 in Slot_not_found(.../test/compiler-msg/slot-not-found/slot_not_found.li):
+    crash_with_messag "Slot not found !"
+                                        ^

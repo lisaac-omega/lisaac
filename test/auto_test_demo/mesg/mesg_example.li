@@ -1,0 +1,14 @@
+Header
+  + name := Mesg_example
+Public
+  
+  - main <-
+  //  Just to show where the "mesg.txt" file is printed.
+  ( 
+    Test.check (2 + 2 = 4)
+    (4).println
+    // This goes in the "stdout" file.
+    // In case of changes, auto_test creates "stdout.new" file.
+  )
+  
+  

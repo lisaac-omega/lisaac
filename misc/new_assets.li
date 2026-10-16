@@ -1,0 +1,32 @@
+Header
+  + name := New_assets
+Insert
+  
+  - parent_utils: Utils := Utils
+  
+Public
+  
+  - main <-
+  ( + arg1, arg2: String
+    arg1 := Command_args.at 1
+    arg2 := Command_args.at 2
+    String.tmp2 { (src, dest:String_buffer)
+      src.append arg1
+      src.append "misc/assets"
+      dest.append arg2
+      while {(! dest.is_empty) && {dest.last != '/'}} do {
+        dest.remove_last
+      }
+      (! dest.has_suffix "assets").if {
+        dest.append "assets"
+      }
+      //Out # "new_assets: cp -r " # src # " " # dest # '\n'
+      if (! File_utils.cpdir src dest dest) then {
+        Out # "new_assets:" # arg1 # ' ' # arg2 # '\n'
+        Out # "new_assets: cp -r " # src # " " # dest # '\n'
+        Out # "new_assets: not possible."
+        System.exit 1
+      }
+    }
+  )
+  

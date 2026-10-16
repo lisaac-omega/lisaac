@@ -26,7 +26,7 @@ Private
     if (Environment.chdir arg != 0) then {
       die "Fail." exit 1
     }
-    File_utils.working_directory_in working_directory
+    File_utils.pwd_in working_directory
   )
   
   - cc_compile_bin_lisaac <-
@@ -182,10 +182,11 @@ Private
   )
 
 Public
+  
   - main <-
-  (
+  (    
     "Installing Lisaac Ω Compiler and Tools.".println
-    File_utils.working_directory_in working_directory
+    File_utils.pwd_in working_directory
     ? {working_directory.last = '/'}
     verbose := Command_args.option_shift "--verbose"
     if (Command_args.count != 1) then {
@@ -221,14 +222,25 @@ Public
     check_update_export_path
     update_make_lip
     update_elit_cfg
-    update_misc_new_assets_sh
+    compile_new_assets
     compile_elit
     welcome_omega
     "Installation Completed Successfully.".println
-    "Open a new terminal window.".println
-    "or:".println
-    ("source ~/" + rc_file).println
     
+    String.tmp2 { (old_path, substr: String_buffer)
+      Environment.read_variable "PATH" in old_path
+      verbose.if {
+        Out # "Old PATH=\"" # old_path # "\"\n" 
+        Out # "lisaac_bin_dir=\"" # lisaac_bin_dir # "\"\n" 
+      }
+      substr.append lisaac_bin_dir
+      substr.remove_last
+      if (! old_path.has_substring substr) then {
+        "Open a new terminal window.".println
+        "or:".println
+        ("source ~/" + rc_file).println
+      }
+    }
   )
   
 Private
@@ -256,7 +268,7 @@ Private
   
   - lisaac_bin_dir_set <-
   (
-    check lisaac_dir warning
+    check lisaac_dir non_ascii_warning
     chdir lisaac_dir or_exit
     chdir "bin" or_exit
     lisaac_bin_dir := working_directory.to_string_alias
@@ -303,6 +315,7 @@ Private
   
   - compile_elit <-
   ( + exit_status:Int
+    
     "Compiling lisaac/elit ... wait...".println
     chdir elit_dir or_exit
     String.tmp { cmd:String_buffer
@@ -314,6 +327,7 @@ Private
         cmd.append " -split"
       }
       exit_status := execute_command cmd
+      
     }
   )
   
@@ -359,29 +373,20 @@ Private
     }
   )
   
-  - update_misc_new_assets_sh <-
+  - compile_new_assets <-
   (
-    ? {shell != NULL}
-    if (shell != "") then {
-      "Update lisaac/misc/new_assets.sh.".println
-      chdir lisaac_dir or_exit
-      chdir "misc" or_exit
-      String.tmp { (new_assets_sh:String_buffer)
-        (open_read "new_assets.sh" in new_assets_sh).if_false {
-          die "Cannot read lisaac/elit/assets/new_assets.sh." exit 1
-        }
-        {new_assets_sh.first = '\n'}.until_do {
-          new_assets_sh.remove_first
-        }
-        new_assets_sh.insert_string ("#!" + shell) to 0
-        write "new_assets.sh" content new_assets_sh
-      }
-    } else {
-      "lisaac/misc/new_assets.sh not updated.".println
+    "Compiling lisaac/misc/new_assets.li".println
+    chdir lisaac_dir or_exit
+    chdir "misc" or_exit
+    String.tmp { cmd:String_buffer
+      cmd.append lisaac_bin_dir
+      cmd.extend_unless '/'
+      cmd.append "lisaac new_assets -q"
+      execute_command cmd
     }
   )
   
-  - check path:String warning <-
+  - check path:String non_ascii_warning <-
   ( + idx:Int
     + c:Char
     
@@ -389,9 +394,6 @@ Private
       c := path.at idx
       (c = ' ').if {
         Out # "The space character in \"" # path # "\" may cause future malfunctions.\n"
-      }
-      (c = ':').if {
-        Out # "Character : in \"" # path # "\" may cause future malfunctions.\n"
       }
       (! c.is_ascii).if {
         Out # "Non ASCII character in \"" # path # "\" may cause future malfunctions.\n"

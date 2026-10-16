@@ -9,8 +9,8 @@ Public
   
   - main <-
   (
-    (System.name = "Windows").if {
-      not_yet_implemented
+    (System.name = "windows").if {
+      Test.check (File_utils.dir_exists "C:/Users/")
     } else {
       Test.check (File_utils.file_exists "/bin/bash")
       Test.check  (Environment.chdir "/bin") integer 0

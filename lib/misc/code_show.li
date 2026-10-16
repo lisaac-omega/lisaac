@@ -15,11 +15,10 @@ Private
   + background: Boolean := True
   
   - show list:String_alias^n <-
-  ( + dir, file, path_li, exec, args:String_alias
+  ( + dir, file, path_li, exec, args, cmd_run:String_alias
     + idx, array_idx:Int
     + array:Array String_alias
     + bg, ev, do_run:Boolean
-    + cmd_run:String_buffer
     
     verbose := Command_args.option_shift "--verbose"
     
@@ -33,7 +32,7 @@ Private
       Out # "Possible options: --verbose --elit_view --no_background\n"
       System.exit 1
     }
-    File_utils.working_directory_in working_directory
+    File_utils.pwd_in working_directory
     ? {working_directory.last = '/'}
     exec_directory := working_directory.to_string_alias  
     verbose.if {
@@ -113,8 +112,17 @@ Private
         cd buf
       }
       
-      Out # exec_directory # dir # exec # ' ' # args # '\n'
-      cmd_run := "./" + exec + " " + args
+      String.tmp { buf:String_buffer
+        buf.copy working_directory
+        buf.extend_unless '/'
+        buf.append exec
+        buf.append " "
+        buf.append args
+        cmd_run := buf.to_string_alias
+        verbose.if {
+          Out # "cmd_run=\"" # cmd_run # "\"\n"
+        }
+      }
       
       do_run.if {
         run ("lisaac " + file + " -boost -q")
@@ -133,9 +141,12 @@ Private
           run cmd_run
         }
       }
+      
+      /*
       do_run.if {
         run ("rm -f " + exec + " " + exec + "*.c " +  exec + "*.h " + exec + "*.o") 
       }
+      */
     }
   )
     
@@ -144,23 +155,32 @@ Private
     if (Environment.chdir dir = 0) then {
       Out # "cd " # dir #'\n'
       working_directory.clear
-      File_utils.working_directory_in working_directory
+      File_utils.pwd_in working_directory
       //OUT # "cwd: " # working_directory # '\n'
     } else {
       crash_with_message ("Cannot chdir into \"" + dir + "\"")
     }
   )
   
-  - run cmd:String  <-
-  (
-    cmd.println
-    Environment.run cmd
-  )
+  - run cmd:String  <- run cmd background_flag False
   
-  - run cmd:String background  <-
-  (
-    Out # cmd # " &\n"
-    Environment.run cmd background
+  - run cmd:String background  <- run cmd background_flag True
+  
+  - run cmd:String background_flag bf:Boolean  <-
+  ( + exit_status:Int
+    
+    verbose .if {
+      Out # "run \""  # cmd # "\" background=" # bf # '\n'
+    }
+    bf.if {
+      exit_status := Environment.run cmd background
+    } else {
+      exit_status := Environment.run cmd
+    }
+    ((!bf) && {exit_status != 0}).if {
+      Out # "code_show: exit_status=" # exit_status 
+          # " run \"" # cmd # "\" background_flag " # bf # '\n'
+    }   
   )
   
   - check tag:String_alias at (array:Array String_alias, array_idx:Int): Boolean <-

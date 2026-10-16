@@ -4,6 +4,7 @@ Public
   - main <-
   ( + p1,p2:String_alias
     p1 := Environment.pwd
+    Test.check (p1.has_suffix "3/")
     Test.check (Environment.chdir "..") integer 0
     p2 := Environment.pwd
     (p2.has_suffix "test/").if {

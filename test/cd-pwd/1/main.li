@@ -15,10 +15,11 @@ Private
   
   - check_point_1 <-
   (
-    (System.name != "Windows").if {
+    (System.name != "windows").if {
       Test.check (pwd.has_suffix "/lisaac/test/cd-pwd/1/")
     } else {
-      Test.check (pwd.has_suffix "\\lisaac\\test\\cd-pwd\\1\\")
+      //Out # pwd # '\n'
+      Test.check (pwd.has_suffix "\\lisaac\\test\\cd-pwd\\1/")
     }
   )
   

@@ -5,13 +5,219 @@ Header
   - include := `
 #undef  __wur
 #define __wur
+#include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <errno.h>
+#ifdef _WIN32
+#include <direct.h>
+#endif
+#include <dirent.h>
+#include <stdlib.h>
+
+static int li_path_kind(const char *p, int n) {
+struct stat st;
+#ifdef _WIN32
+  char buf[4096];
+  if (n < 0 || n >= (int)sizeof(buf)) return 0;
+  memcpy(buf,p,n);
+  buf[n] = '\0';
+  while (n > 1 && (buf[n-1]=='/' || buf[n-1]=='\\') && !(n==3 && buf[1]==':'))
+    buf[--n] = '\0';
+  p = buf;
+#else
+  (void)n;
+#endif
+  if (stat(p,&st) != 0) {
+#ifdef EOVERFLOW
+    if (errno == EOVERFLOW) return 2;
+#endif
+    return 0;
+  }
+  return S_ISDIR(st.st_mode) ? 1 : 2;
+}
+
+static int li_mkdir(const char *p) {
+#ifdef _WIN32
+  return _mkdir(p);
+#else
+  return mkdir(p,0777);
+#endif
+}
+
+static int li_rmdir(const char *p) {
+#ifdef _WIN32
+  return _rmdir(p);
+#else
+  return rmdir(p);
+#endif
+}
+
+/* 0 on success, -1 on first failure (stops there). */
+static int li_rmdir_recursive(const char *p) {
+  DIR *d;
+  struct dirent *e;
+  struct stat st;
+  size_t n = strlen(p);
+  int sep = (n > 0 && (p[n-1] == '/' || p[n-1] == '\\')) ? 0 : 1;
+  int result = 0;
+  d = opendir(p);
+  if (d == NULL) return -1;
+  while (result == 0 && (e = readdir(d)) != NULL) {
+    char *q;
+    if (strcmp(e->d_name,".") == 0 || strcmp(e->d_name,"..") == 0) continue;
+    q = malloc(n + sep + strlen(e->d_name) + 1);
+    if (q == NULL) { result = -1; break; }
+    memcpy(q,p,n);
+    if (sep) q[n] = '/';
+    strcpy(q + n + sep, e->d_name);
+#ifdef _WIN32
+    if (stat(q,&st) != 0) result = -1;
+#else
+    if (lstat(q,&st) != 0) result = -1;  /* ne suit pas les liens */
+#endif
+    else if (S_ISDIR(st.st_mode)) result = li_rmdir_recursive(q);
+    else result = remove(q);
+    free(q);
+  }
+  closedir(d);
+  if (result == 0) result = li_rmdir(p);
+  return result;
+}
+
+/* ---- Copie recursive de repertoire ---- */
+
+/* dir + '/' + name, alloue par malloc (NULL si plus de memoire). */
+static char *li_path_join(const char *dir, const char *name) {
+  size_t n = strlen(dir);
+  int sep = (n > 0 && (dir[n-1] == '/' || dir[n-1] == '\\')) ? 0 : 1;
+  char *q = malloc(n + sep + strlen(name) + 1);
+  if (q == NULL) return NULL;
+  memcpy(q,dir,n);
+  if (sep) q[n] = '/';
+  strcpy(q + n + sep, name);
+  return q;
+}
+
+static void li_chmod(const char *p, unsigned mode) {
+#ifdef _WIN32
+  (void)p; (void)mode;
+#else
+  chmod(p,(mode_t)(mode & 0777));
+#endif
+}
+
+/* Cree le repertoire p, ou accepte qu'il existe deja en tant que repertoire. */
+static int li_mkdir_or_dir(const char *p) {
+  struct stat st;
+  if (li_mkdir(p) == 0) return 0;
+  if (errno == EEXIST && stat(p,&st) == 0 && S_ISDIR(st.st_mode)) return 0;
+  return -1;
+}
+
+/* Copie d'un fichier regulier. 0 si OK, -1 sinon. */
+static int li_cpfile(const char *src, const char *dst, unsigned mode) {
+  char buf[65536];
+  FILE *in, *out;
+  size_t k;
+  int result = 0;
+  in = fopen(src,"rb");
+  if (in == NULL) return -1;
+  out = fopen(dst,"wb");
+  if (out == NULL) { fclose(in); return -1; }
+  while ((k = fread(buf,1,sizeof(buf),in)) > 0)
+    if (fwrite(buf,1,k,out) != k) { result = -1; break; }
+  if (ferror(in)) result = -1;
+  if (fclose(out) != 0) result = -1;
+  fclose(in);
+  if (result == 0) li_chmod(dst,mode);
+  return result;
+}
+
+#ifndef _WIN32
+/* Recree le lien symbolique src en dst (le lien est copie, pas sa cible). */
+static int li_cplink(const char *src, const char *dst, const struct stat *st) {
+  size_t n = (st->st_size > 0) ? (size_t)st->st_size + 1 : 4096;
+  char *buf = malloc(n);
+  ssize_t k;
+  int result = -1;
+  if (buf == NULL) return -1;
+  k = readlink(src,buf,n);
+  if (k >= 0 && (size_t)k < n) {
+    buf[k] = '\0';
+    result = symlink(buf,dst);
+  }
+  free(buf);
+  return result;
+}
+#endif
+
+/* Copie le contenu de src dans dst (qui existe deja).
+   root : stat de la destination racine, pour ne jamais la recopier
+   dans elle-meme quand dst est situe sous src. */
+static int li_cpdir_into(const char *src, const char *dst, const struct stat *root) {
+  DIR *d;
+  struct dirent *e;
+  struct stat st;
+  int result = 0;
+#ifdef _WIN32
+  (void)root;
+#endif
+  d = opendir(src);
+  if (d == NULL) return -1;
+  while (result == 0 && (e = readdir(d)) != NULL) {
+    char *s, *t;
+    if (strcmp(e->d_name,".") == 0 || strcmp(e->d_name,"..") == 0) continue;
+    s = li_path_join(src,e->d_name);
+    t = li_path_join(dst,e->d_name);
+    if (s == NULL || t == NULL) result = -1;
+#ifdef _WIN32
+    else if (stat(s,&st) != 0) result = -1;
+#else
+    else if (lstat(s,&st) != 0) result = -1;  /* ne suit pas les liens */
+    else if (st.st_dev == root->st_dev && st.st_ino == root->st_ino) {
+      /* c'est la destination elle-meme : on saute */
+    }
+    else if (S_ISLNK(st.st_mode)) result = li_cplink(s,t,&st);
+#endif
+    else if (S_ISDIR(st.st_mode)) {
+      result = li_mkdir_or_dir(t);
+      if (result == 0) result = li_cpdir_into(s,t,root);
+      if (result == 0) li_chmod(t,st.st_mode);  /* apres remplissage */
+    }
+    else if (S_ISREG(st.st_mode)) result = li_cpfile(s,t,st.st_mode);
+    /* autres (fifo, socket, peripherique) : ignores */
+    free(s);
+    free(t);
+  }
+  closedir(d);
+  return result;
+}
+
+/* Copie recursive de src vers dst (dst cree s'il n'existe pas,
+   fusion sinon). 0 on success, -1 on first failure (stops there). */
+static int li_cpdir(const char *src, const char *dst) {
+  struct stat ss, sd;
+  if (stat(src,&ss) != 0 || !S_ISDIR(ss.st_mode)) return -1;
+  if (li_mkdir_or_dir(dst) != 0 || stat(dst,&sd) != 0) return -1;
+#ifndef _WIN32
+  if (ss.st_dev == sd.st_dev && ss.st_ino == sd.st_ino) return -1;  /* src == dst */
+#endif
+  if (li_cpdir_into(src,dst,&sd) != 0) return -1;
+  li_chmod(dst,ss.st_mode);
+  return 0;
+}
+
+
 `;
 Inherit
   - parent_utils:Utils := Utils
 
 Public
-      
+  
+  // Files:  
+  
   - open_read n:String :Pointer <-
   ( + buf:C_array(Char)
     buf := n.to_external
@@ -37,7 +243,6 @@ Public
     sz := buf.capacity
     ptr := buf.to_external
     result := `fgets((void *)(@ptr),@sz,(FILE*)(@f))`:(Pointer)
- //   ptr.put '\0' to sz
     buf.from_external ptr
     result != NULL
   )
@@ -122,29 +327,77 @@ Public
   )
 
   - file_exists some_path:String :Boolean <-
-  ( + result:Boolean
-    + p:Pointer
-    ((p := open_read some_path).is_not_null).if {
-      result := True
-      close p
-    }
-    result
+  (
+    (li_path_kind some_path) = 2
   )
 
   - remove some_path:String :Int <-
   ( + p:C_array Char
+    
     p := some_path.to_external
     `remove((char*)@p)`:(Int)
   )
   
-  - create_directory some_path:String :Boolean <-
-  ( + p:C_array Char
-    p := some_path.to_external
-    `mkdir((char*)@p,0700)`:(Int) = 0
-  )
+  // Directory handling:
   
-  - working_directory_in buffer:String_buffer <-
+  - pwd_in buffer:String_buffer <-
   Environment.pwd_in buffer
   [
     ? {buffer.last = '/'}
   ]
+  
+  - dir_exists some_path:String :Boolean <-
+  (
+    (li_path_kind some_path) = 1
+  )
+
+  - mkdir some_path:String :Boolean <-
+  ( + p: C_array Char
+    
+    p := some_path.to_external
+    `li_mkdir(@p)`:(Int) = 0
+  )
+  
+  - rmdir some_path:String :Boolean <-
+  ( + p: C_array Char
+    
+    p := some_path.to_external
+    `li_rmdir(@p)`:(Int) = 0
+  )
+  
+  - rmdir_recursive some_path:String :Boolean <-
+  ( + p: C_array Char
+    
+    p := some_path.to_external
+    `li_rmdir_recursive(@p)`:(Int) = 0
+  )  
+  
+  - cpdir model_path:String dest path:String :Boolean <-
+  ( + s, d: C_array Char
+    
+    s := model_path.to_external
+    d := path.to_external
+    
+    `li_cpdir(@s,@d)`:(Int) = 0
+  )  
+  
+  // Other:
+  
+  - exists some_path:String : Boolean <-
+  (
+    (li_path_kind some_path) != 0
+  )
+  
+Private
+  
+  - li_path_kind some_path:String :Int <-
+  // 0: nothing, 1: directory, 2: other (regular file, device, ...) 
+  ( + result, strlen:Int
+    + p: C_array Char
+    
+    strlen := some_path.count
+    p := some_path.to_external
+    result := `li_path_kind(@p,@strlen)`:(Int)
+    result
+  )
+  

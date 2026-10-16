@@ -35,12 +35,14 @@ Private
   
   - system_name:String_alias := System.name
   
+  + rm_assets:Boolean
+  
 Public
 
   - main <-
   ( + arg:String_alias
 
-    File_utils.working_directory_in working_directory
+    File_utils.pwd_in working_directory
     ? {working_directory.last = '/'}
     verbose := Command_args.option_shift "--verbose"
     first_error_exit := Command_args.option_shift "--first-error-exit"
@@ -97,7 +99,7 @@ Private
   (
     (Environment.chdir root = 0).if {
       working_directory.clear
-      File_utils.working_directory_in working_directory
+      File_utils.pwd_in working_directory
     } else {
       crash_with_message ("Cannot chdir into \"" + root + "\"")
     }
@@ -153,6 +155,7 @@ Private
     + path:String
     + idx:Int
     + cc:Char
+    
     path := file.path
     verbose.if {
       Out # "Searching - main in '" # path # "'.\n" 
@@ -343,10 +346,17 @@ Private
   
   - remove_list_add n:String_alias <-
   (
-    remove_list.is_empty.if_false {
-      remove_list.add_last ' '
+    if (n = "new_assets") then {
+      // no
+    } else {
+      verbose.if {
+        Out # "remove_list_add \"" # n # "\"\n"  
+      }
+      remove_list.is_empty.if_false {
+        remove_list.add_last ' '
+      }
+      remove_list.append n
     }
-    remove_list.append n
   )
   
   - add cmd_buf:String_buffer redirect r:String_alias dirpath dirpath:String new stdnew:String_alias <-
@@ -383,6 +393,12 @@ Private
     ? {fname != "lisaac.li"}
     test_counter := test_counter + 1
     '.'.print
+    if (File_utils.dir_exists "assets") then {
+      rm_assets := False
+    } else {
+      rm_assets := True
+      '.'.print
+    }
     String.tmp { me:String_buffer
       me.append fname
       me.remove_suffix ".li"
@@ -526,7 +542,7 @@ Private
     String.tmp { fpath:String_buffer
       {remove_list.is_empty}.until_do {
         fpath.copy dirpath
-        {remove_list.is_empty || {remove_list.first = ' '}}.until_do {
+        until {remove_list.is_empty || {remove_list.first = ' '}} do {
           fpath.add_last (remove_list.first)
           remove_list.remove_first
         }
@@ -539,6 +555,21 @@ Private
             exit 1
           }
         }
+      }
+    }
+    rm_assets.if {
+      (File_utils.dir_exists "assets").if {
+        '+'.print
+        verbose.if {
+          "rmdir -r assets\n".print
+        }
+        (File_utils.rmdir_recursive "assets").if {
+        '+'.print 
+        } else {
+        '-'.print 
+        }
+      } else {
+        '-'.print 
       }
     }
   )
@@ -560,7 +591,7 @@ Private
     }
     if (Environment.chdir arg = 0) then {
       result := True
-      File_utils.working_directory_in working_directory
+      File_utils.pwd_in working_directory
     }
     result
   )

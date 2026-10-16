@@ -1,0 +1,36 @@
+Header
+  + name := Rmdir_rec
+
+Public
+  
+  - main <-
+  ( 
+    String.tmp { path:String_buffer
+      
+      Environment.pwd_in path
+      
+      Test.check (File_utils.exists "rmdir_rec.li")
+      
+      File_utils.mkdir "tmp"
+      
+      Test.check (Environment.chdir "tmp" = 0)
+      
+      File_utils.mkdir "tmp2"
+      
+      Test.check (File_utils.exists "tmp2")
+      
+      Test.check (Environment.chdir ".." = 0)
+      
+      Test.check (File_utils.dir_exists "tmp")
+      
+      Test.check (! File_utils.rmdir "tmp")
+      
+      Test.check (File_utils.dir_exists "tmp")
+      
+      Test.check (File_utils.rmdir_recursive "tmp")
+      
+     Test.check (! File_utils.dir_exists "tmp")
+      
+    }
+  )
+  

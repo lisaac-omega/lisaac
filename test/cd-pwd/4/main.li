@@ -1,17 +1,22 @@
 Header
   + name := Main
 Public
+  
   - working_directory:String_buffer := String_buffer.create 256
   
   - main <-
   ( + executable_path,src_path:String_alias
     executable_path := Command_args.at 0
-    Test.check (File_utils.file_exists executable_path)
+    if (System.name != "windows") then {
+      Test.check (File_utils.file_exists executable_path)
+    }
     working_directory.copy executable_path
     //working_directory.remove_tail ("main".count)
     src_path := (working_directory + ".li").to_string_alias
     //src_path.println
-    Test.check (File_utils.file_exists src_path)
+    if (System.name != "windows") then {
+      Test.check (File_utils.file_exists src_path)
+    }
     Test.check (Environment.chdir (Command_args.executable_directory)) integer 0
     Test.check (File_utils.file_exists "main.li")
     //TEST.check (ENVIRONMENT.chdir working_directory) integer 0

@@ -36,6 +36,7 @@ Public
   
   - tmp b:{String_buffer;} <-
   ( + t:String_buffer
+    
     t := new_tmp
     b.value t
     stack_tmp.add_last t
@@ -43,6 +44,7 @@ Public
   
   - tmp2 b:{(String_buffer,String_buffer);} <-
   ( + t1,t2:String_buffer
+    
     (t1,t2) := (new_tmp,new_tmp)
     b.value (t1,t2)
     stack_tmp.add_last t2; stack_tmp.add_last t1

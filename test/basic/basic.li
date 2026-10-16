@@ -1,0 +1,13 @@
+Header
+  + name := Basic
+Public
+  
+  - main <-
+  ( + i:Int
+    
+    i := 2
+    Test.check (i + i = 4)
+    
+    Test.check "toto" string ("to" + "to")
+  )
+  

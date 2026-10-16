@@ -1,0 +1,25 @@
+Header
+  + name := Mkdir_rmdir
+
+Public
+  
+  - main <-
+  ( 
+    String.tmp { path:String_buffer
+      
+      Environment.pwd_in path
+      
+      Test.check (File_utils.exists "mkdir_rmdir.li")
+      
+      Test.check (! File_utils.dir_exists "tmp")
+      
+      File_utils.mkdir "tmp"
+      
+      Test.check (File_utils.dir_exists "tmp")
+      
+      File_utils.rmdir "tmp"
+      
+      Test.check (! File_utils.dir_exists "tmp")
+    }
+  )
+  

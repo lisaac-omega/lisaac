@@ -1,51 +1,116 @@
 Header
   + name := Environment
-/*To get/set environment variables. Hence include cd, pwd builtins.*/
+  /*  Interface with the operating system environment (Linux, macOS, Windows):
+  environment variables, current directory, and execution of external
+  commands, either blocking or in background, with access to their exit status.
+  */
 
   - include := `
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
 
 #ifdef _WIN32
-#define WEXITSTATUS(status) (status)
+  #include <windows.h>
+  #include <direct.h>
+  #define getcwd _getcwd
+  #define chdir  _chdir
+  #define popen  _popen
+  #define pclose _pclose
+  static int setenv(const char *n, const char *v, int o) {
+    (void)o; return _putenv_s(n, v);
+  }
 #else
-#include <sys/wait.h>
+  #include <unistd.h>
+  #include <errno.h>
+  #include <spawn.h>
+  #include <sys/types.h>
+  #include <sys/wait.h>
+  extern char **environ;
 #endif
 
-#ifdef _WIN32
-    #include <process.h>   // pour _spawnl
-    #include <windows.h>
+#ifndef _WIN32
+/* Statut brut de wait/system -> code de sortie (128+n si tué par le signal n). */
+static int li_decode_status(int s) {
+  if (WIFEXITED(s))   return WEXITSTATUS(s);
+  if (WIFSIGNALED(s)) return 128 + WTERMSIG(s);
+  return -1;
+}
 #endif
-int run_background(const char *cmd);
-`;
 
-  - external := `
-/******************* Run background *************************/
-int run_background(const char *cmd) {
+/* Exécution bloquante : rend le code de sortie de la commande. */
+static int li_run_wait(const char *cmd) {
+  int s = system(cmd);
 #ifdef _WIN32
-    // Version Windows : _spawnl passe par cmd.exe /C "cmd"
-    return _spawnl(_P_NOWAIT, "C:\\Windows\\System32\\cmd.exe",
-                   "cmd.exe", "/C", cmd, NULL);
+  return s;            /* sous Windows, system() rend déjà le code de sortie */
 #else
-    // Version POSIX : fork + execlp "sh -c cmd"
-    pid_t pid = fork();
-    if (pid == 0) {
-        execlp("sh", "sh", "-c", cmd, (char*)NULL);
-        exit(1);
-    }
-    else if (pid < 0) {
-        return -1;
-    }
-    return pid; // le parent continue immédiatement
+  return (s == -1) ? -1 : li_decode_status(s);
+#endif
+}
+
+/* Lancement en arrière-plan : rend un identifiant de processus
+   (pid sous POSIX, HANDLE sous Windows) ou -1 en cas d'échec.
+   Le code de sortie s'obtient ensuite avec li_process_status. */
+static int li_run_background(const char *cmd) {
+#ifdef _WIN32
+  STARTUPINFOA si; PROCESS_INFORMATION pi;
+  const char *comspec = getenv("ComSpec");
+  size_t n; char *line; BOOL ok;
+  if (comspec == NULL) comspec = "cmd.exe";
+  n = strlen(comspec) + strlen(cmd) + 16;
+  line = (char*)malloc(n);
+  if (line == NULL) return -1;
+  snprintf(line, n, "\"%s\" /S /C \"%s\"", comspec, cmd);
+  ZeroMemory(&si, sizeof si); si.cb = sizeof si;
+  ZeroMemory(&pi, sizeof pi);
+  ok = CreateProcessA(NULL, line, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+  free(line);
+  if (!ok) return -1;
+  CloseHandle(pi.hThread);
+  return (int)(intptr_t)pi.hProcess;   /* les HANDLE tiennent sur 32 bits */
+#else
+  pid_t pid;
+  char *argv[4];
+  argv[0] = "sh"; argv[1] = "-c"; argv[2] = (char*)cmd; argv[3] = NULL;
+  if (posix_spawn(&pid, "/bin/sh", NULL, NULL, argv, environ) != 0) return -1;
+  return (int)pid;
+#endif
+}
+
+/* Statut d'un processus lancé par li_run_background.
+   block != 0 : attend la fin.  block == 0 : rend -2 s'il tourne encore.
+   Rend le code de sortie, ou -1 en cas d'erreur.
+   Une fois le code rendu, l'identifiant n'est plus valide (zombie récolté,
+   HANDLE fermé) : il ne faut le lire qu'une seule fois. */
+static int li_process_status(int id, int block) {
+#ifdef _WIN32
+  HANDLE h = (HANDLE)(intptr_t)id;
+  DWORD code, w = WaitForSingleObject(h, block ? INFINITE : 0);
+  if (w == WAIT_TIMEOUT) return -2;
+  if (w != WAIT_OBJECT_0 || !GetExitCodeProcess(h, &code)) {
+    CloseHandle(h); return -1;
+  }
+  CloseHandle(h);
+  return (int)code;
+#else
+  int s; pid_t r;
+  do {
+    r = waitpid((pid_t)id, &s, block ? 0 : WNOHANG);
+  } while (r == -1 && errno == EINTR);
+  if (r == 0)  return -2;
+  if (r == -1) return -1;
+  return li_decode_status(s);
 #endif
 }
 `;
-  
+
 Public
   
+  // Environement variables
+  
   - read_variable variable:String in buffer:String_buffer <-
-  // append @variable value in @buffer. 
+  // append @variable value in @buffer.
   ( + p:C_array Char
     p := getenv(variable.to_external)
     (p != NULL).if {
@@ -53,7 +118,7 @@ Public
       buffer.append mybuffer
     }
   )
-  
+
   - read_variable variable:String :String_alias <-
   ( + p:C_array Char
     + result:String_alias
@@ -72,6 +137,7 @@ Public
     ? { value != NULL }
   ]
   ( + na1,na2:C_array Char
+
     mybuffer.copy variable
     na1 := mybuffer.to_external
     mybuffer2.copy value
@@ -79,46 +145,72 @@ Public
     `setenv((char*)@na1,(char*)@na2,1)`
     ? {(read_variable variable) == value}.txt {read_variable variable}
   )
+  
+  // Execution of commands
+  
+  - run cmd_line:String :Int <-
+  // Execute @cmd_line as for example, "ls -l" on Unix, and wait for it.
+  // @Result gives exit status (128+n if killed by signal n, -1 on error).
+  ( + ca:C_array Char
 
-  - run system_command_line:String  :Int <-
-  // To execute a @system_command_line as for example, "ls -l" on UNIX.
-  // The @Result gives the usual exit status.
-  ( + na:C_array Char
-    + r:Int
-    
-    na := system_command_line.to_external
-    `{`
-    r := `system((char*)(@na))`:(Int)
-    `}`
-    `WEXITSTATUS(@r)`:(Int)
+    ca := cmd_line.to_external
+    `li_run_wait((char*)@ca)`:(Int)
   )
 
-  - run cmd:String background <-
-  ( + c:C_array Char
-    c := cmd.to_external
-    `run_background(@c)`
+  - run cmd_line:String background :Int <-
+  // Start @cmd_line without waiting.
+  // @Result is a process id (-1 on error), NOT an exit status:
+  // use `wait_process' or `poll_process' to get the exit status.
+  ( + ca:C_array Char
+
+    ca := cmd_line.to_external
+    `li_run_background((char*)@ca)`:(Int)
   )
 
-  - run cmd:String back b:Boolean :Int <-
+  - run cmd_line:String background_flag bf:Boolean :Int <-
+  // When @bf, same as `run background' (process id),
+  // otherwise same as `run' (exit status).
   ( + result:Int
-    if b then {
-      run cmd background
+
+    bf.if {
+      result := run cmd_line background
     } else {
-      result := run cmd
+      result := run cmd_line
     }
     result
   )
-  
-Public
-  
-  - fork:Int <- `fork()`:Int
-  - waitpid pid:Int :Boolean <-
-  ( + r:Int
-    `{ int status`
-    r := `waitpid(@pid,&status,WNOHANG)`:Int
-    `}`
-    r = pid
+
+  - wait_process id:Int :Int <-
+  // Wait for process @id (given by `run background') and give its exit status.
+  // To be called only once for a given @id.
+  [
+    ? { id != -1 }
+  ]
+  (
+    `li_process_status(@id,1)`:(Int)
   )
+
+  - poll_process id:Int :Int <-
+  // Non-blocking: -2 if process @id is still running, otherwise its exit status.
+  // Once the exit status is given, @id must no longer be used.
+  [
+    ? { id != -1 }
+  ]
+  (
+    `li_process_status(@id,0)`:(Int)
+  )
+
+  - fork:Int <- `fork()`:Int
+  // POSIX only.
+
+  - waitpid pid:Int :Boolean <-
+  // True if process @pid is finished (non-blocking). Kept for compatibility:
+  // prefer `poll_process' which also gives the exit status.
+  (
+    poll_process pid != -2
+  )
+  
+  // Working directory
   
   - pwd_in buffer:String_buffer <-
   // Access to the @get_current_dir_name C function or equivalent.
@@ -130,25 +222,32 @@ Public
     buffer.restore_after_external
     buffer.add_last '/'
   )
-  
+
   - pwd:String_alias <-
-  (
-    mybuffer.clear
-    pwd_in mybuffer
-    mybuffer.to_string_alias
+  ( + result:String_alias
+
+    String.tmp { buf:String_buffer
+      pwd_in buf
+      result := buf.to_string_alias
+    }
+    result
   )
-  
+
   - chdir destination:String :Int <-
   // Access to the @chdir C function or equivalent.
   ( + na:C_array Char
+
     mybuffer.copy destination
     na := mybuffer.to_external
     `chdir((char*)@na)`:Int
   )
   
+  // Misc
+  
   - execute s:String in b:String_buffer <-
   ( + buf:C_array Char
     + cap/*,idx*/:Int
+
     buf := s.to_external
     `{ FILE *cmd; cmd = popen(@buf,"r")`
     mybuffer.clear
@@ -158,7 +257,7 @@ Public
     `pclose(cmd); }`
     b.append mybuffer
   )
-  
+
   - which s:String in b:String_buffer <-
   ( + c:Int
     c := b.count
@@ -177,12 +276,12 @@ Public
   )
 
 Private
+  
   - mybuffer:String_buffer := String_buffer.create 1024
-  
+
   - mybuffer2:String_buffer := String_buffer.create 1024
-  
+
   - getenv variable:C_array(Char) :C_array(Char) <-
   (
     `getenv((char*)@variable)`:C_array(Char){C_array(Char),NULL}
   )
-  

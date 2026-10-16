@@ -21,7 +21,7 @@ Private
   - mini_bash_init <-
   // Not mandatory, just an example.
   ( 
-    File_utils.working_directory_in working_directory
+    File_utils.pwd_in working_directory
     ? {working_directory.last = '/'}
     verbose := Command_args.option_shift "--verbose"
     first_error_exit := Command_args.option_shift "--first-error-exit"
@@ -86,6 +86,7 @@ Private
   
   - working_directory_mapfile action:{File;} <-
   ( + file:File
+    
     working_directory_map { dirent:Dirent
       ((file ?= dirent) != NULL).if {
         action.value file
@@ -95,6 +96,7 @@ Private
   
   - working_directory_mapdir action:{Directory;} <-
   ( + directory:Directory
+    
     working_directory_map { dirent:Dirent
       ((directory ?= dirent) != NULL).if {
         action.value directory
@@ -104,6 +106,7 @@ Private
   
   - verbose force:Boolean do action:{} <-
   ( + oldverb:Boolean
+    
     oldverb := verbose
     verbose := force
     action.value
@@ -112,11 +115,12 @@ Private
   
   - execute_command cmd:String background bg:Boolean :Int <-
   ( + exit_status:Int
+    
     verbose.if {
       cmd.println
     }
     `fflush(stdout)`
-    exit_status := Environment.run cmd back bg
+    exit_status := Environment.run cmd background_flag bg
     (verbose && {exit_status != 0}).if {
       "exit status:".print
       exit_status.println
@@ -134,6 +138,7 @@ Private
     
   - first_error_exit force:Boolean do action:{} <-
   ( + oldverb:Boolean
+    
     oldverb := first_error_exit
     first_error_exit := force
     action.value
@@ -142,6 +147,7 @@ Private
   
   - file_exists name:String in dirpath:String :Boolean <-
   ( + result:Boolean
+    
     String.tmp { buf:String_buffer
       buf.append dirpath
       buf.append name
@@ -152,6 +158,7 @@ Private
   
   - file_remove path:String :Int <-
   ( + exit_status:Int
+    
     verbose.if {
       "rm ".print
       path.println
@@ -187,6 +194,7 @@ Private
   
   - execute_exit cmd:String <-
   ( + exit_status:Int
+    
     exit_status := execute_command cmd
     (exit_status != 0).if {
       "Command \"".print

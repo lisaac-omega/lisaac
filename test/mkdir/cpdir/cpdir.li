@@ -1,0 +1,50 @@
+Header
+  + name := Cpdir
+
+Public
+  
+  - main <-
+  ( 
+    String.tmp { path:String_buffer
+      
+      Environment.pwd_in path
+      
+      check_tree "model"
+      
+      Test.check (File_utils.dir_exists "model")
+      
+      Test.check (! File_utils.exists "copy")
+      
+      
+      File_utils.cpdir "model" dest "copy"
+      
+      check_tree "copy"
+      
+      Test.check (File_utils.rmdir_recursive "copy")
+      
+      Test.check (! File_utils.dir_exists "copy")      
+    }
+  )
+  
+  - check_tree root:String <-
+  (
+    Test.check (File_utils.dir_exists root)
+    Test.check (Environment.chdir root = 0)
+    Test.check (File_utils.file_exists "fa")
+    Test.check (File_utils.file_exists "fb")
+    Test.check (File_utils.dir_exists "d1")
+    Test.check (File_utils.dir_exists "d2")
+    Test.check (Environment.chdir "d1" = 0)
+    Test.check (File_utils.file_exists "fc")
+    Test.check (Environment.chdir ".." = 0)
+    Test.check (Environment.chdir "d2" = 0)
+    Test.check (File_utils.file_exists "fd")
+    Test.check (File_utils.dir_exists "d3")
+    Test.check (Environment.chdir "d3" = 0)
+    Test.check (File_utils.file_exists "fe")
+    Test.check (Environment.chdir ".." = 0)
+    Test.check (Environment.chdir ".." = 0)
+    Test.check (File_utils.file_exists "fa")        
+    Test.check (Environment.chdir ".." = 0)
+  )
+  

@@ -1,0 +1,20 @@
+Header
+  + name := Dir_exists
+
+Public
+  
+  - main <-
+  ( 
+    String.tmp { path:String_buffer
+      Environment.pwd_in path
+      Test.check (path.count > 0)
+      Test.check (File_utils.exists path)
+      Test.check (File_utils.dir_exists path)
+      Test.check (! File_utils.file_exists path)
+      Test.check (path.has_substring "dir_exists")
+      Test.check (File_utils.exists "dir_exists.li")
+      Test.check (File_utils.file_exists "dir_exists.li")
+      Test.check (! File_utils.dir_exists "dir_exists.li")
+    }
+  )
+  
