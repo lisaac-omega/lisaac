@@ -114,21 +114,24 @@ Private
   )
   
   - execute_command cmd:String background bg:Boolean :Int <-
-  ( + exit_status:Int
+  ( + exitstapid:Int
     
     verbose.if {
       cmd.println
     }
     `fflush(stdout)`
-    exit_status := Environment.run cmd background_flag bg
-    (verbose && {exit_status != 0}).if {
+    exitstapid := Environment.run cmd background_flag bg
+    bg.if {
+      exitstapid := 0
+    }
+    (verbose && {exitstapid != 0}).if {
       "exit status:".print
-      exit_status.println
+      exitstapid.println
     }
-    ((exit_status != 0) && {first_error_exit}).if {
-      exit exit_status
+    ((exitstapid != 0) && {first_error_exit}).if {
+      exit exitstapid
     }
-    exit_status
+    exitstapid
   )
   
   - execute_command cmd:String :Int <-
