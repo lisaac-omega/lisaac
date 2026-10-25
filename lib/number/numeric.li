@@ -307,11 +307,6 @@ Public
     self
   )
 
-  - else   block:{} <- // BSBS: c'est utile ce truc ???
-  (
-    block
-  )
-
   - from self:Self to limit_up:Self do blc:{Self;} <-
   (
     if (self <= limit_up) then {

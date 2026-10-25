@@ -1,0 +1,163 @@
+Header
+  + name := Code_show_console
+/*
+  Console of the graphical `Code_show': a status line, then the output
+  of the compiler (errors) or of the example run with arguments.
+  Long lines are wrapped; follows the end of the output.
+  */
+Inherit
+  + parent_gobj:Flat Gobj Code_show_console
+
+Public
+
+  + entry:Code_show_entry
+  + back:Real32      // Rows scrolled back from the end.
+
+  - head_h:Real32 := 34
+  - margin:Real32 := 12
+
+  - create:Self <-
+  ( + result:Self
+    result := clone
+    result.init_obj
+    result
+  )
+
+  - set_entry e:Code_show_entry <- ( entry := e; back := 0; )
+
+  - row_h:Real32 <- Code_show_look.console_size * 1.4
+
+  - scroll dy:Real32 <- ( back := (back + dy * 2).max 0; )
+
+  - set_font <-
+  (
+    (Code_show_look.mono >= 0).if {
+      font_face_id (Code_show_look.mono)
+    } else {
+      font_face_id (Font.sys (Font.roman))
+    }
+    font_size (Code_show_look.console_size)
+  )
+
+  - draw <-
+  ( + x0,y0,x1,y1,cw,y,rh,yt:Real32
+    + cols,rows,total,skip,row,b,e,n,cut:Int
+    + out:String_buffer
+    + c:Color
+    begin_path
+    rect (xo,yo) size (width,height)
+    fill_color (Code_show_look.panel)
+    fill
+    begin_path
+    rect (xo,yo) size (width,1)
+    fill_color (Code_show_look.border)
+    fill
+    // Title and status:
+    font_face_id (Font.sys (Font.bold))
+    font_size (Code_show_look.small_size)
+    text_align (align_left | align_middle)
+    fill_color (Code_show_look.text_dim)
+    x0 := (text (xo + margin, yo + head_h / 2) msg "CONSOLE") + 14
+    (entry != NULL).if {
+      (entry.phase = Code_show_entry.running).if {
+        c := Code_show_look.running
+      }.elseif {entry.phase = Code_show_entry.compiling} then {
+        c := Code_show_look.accent
+      }.elseif {entry.status = Code_show_entry.ok} then {
+        c := Code_show_look.ok
+      }.elseif {(entry.status != Code_show_entry.none) && {entry.status != Code_show_entry.stopped}} then {
+        c := Code_show_look.error
+      } else {
+        c := Code_show_look.text_dim
+      }
+      font_face_id (Font.sys (Font.roman))
+      fill_color c
+      text (x0, yo + head_h / 2) msg (entry.message)
+      // Output:
+      out := entry.output
+      set_font
+      (cw,x0,y0,x1,y1) := text_bounds (0,0) msg "0000000000"
+      cw := cw / 10
+      rh := row_h
+      cols := (((width - margin * 2) / cw).to_int).max 8
+      rows := (((height - head_h - margin) / rh).to_int).max 1
+      total := count_rows out cols cols
+      back := back.min (((total - rows).max 0).to_real32)
+      skip := (total - rows - back.to_int).max 0
+      save
+      intersect_scissor (xo,yo + head_h) size (width,height - head_h)
+      text_align (align_left | align_middle)
+      row := 0
+      b := 0
+      yt := yo + head_h + rh / 2
+      {b <= out.upper}.while_do {
+        e := b
+        {(e <= out.upper) && {out.at e != '\n'}}.while_do { e := e + 1; }
+        // Line [b, e-1], wrapped every `cols' characters:
+        fill_color (line_color out from b to (e - 1))
+        {
+          n := 0
+          cut := b
+          {(cut < e) && {n < cols}}.while_do {
+            cut := cut + 1
+            {(cut < e) && {(out.at cut).to_uint8 & 0C0h = 80h}}.while_do { cut := cut + 1; }
+            n := n + 1
+          }
+          ((row >= skip) && {row < skip + rows} && {cut > b}).if {
+            y := yt + (row - skip).to_real32 * rh
+            text (xo + margin, y) msg out from b to (cut - 1)
+          }
+          row := row + 1
+          b := cut
+        }.do_while {b < e}
+        b := e + 1
+      }
+      reset_scissor
+      restore
+    }
+  )
+
+  - count_rows out:String cols cols:Int :Int <-
+  ( + result,n,i:Int
+    i := 0
+    {i <= out.upper}.while_do {
+      n := 0
+      {(i <= out.upper) && {out.at i != '\n'}}.while_do {
+        ((out.at i).to_uint8 & 0C0h != 80h).if { n := n + 1; }
+        i := i + 1
+      }
+      result := result + (((n + cols - 1) / cols).max 1)
+      i := i + 1
+    }
+    result
+  )
+
+  - is_error_word out:String at i:Int :Boolean <-
+  ( + upper,lower:Boolean
+    upper := (out.at i = 'E') && {out.at (i+1) = 'R'} && {out.at (i+2) = 'R'}
+    lower := (out.at i = 'r') && {out.at (i+1) = 'r'} && {out.at (i+2) = 'o'} && {out.at (i+3) = 'r'}
+    upper || {lower}
+  )
+  
+  - line_color out:String from b:Int to e:Int :Color <-
+  ( + result:Color
+    + i:Int
+    result := Code_show_look.text
+    i := b
+    {i + 4 <= e}.while_do {
+      (is_error_word out at i).if {
+        result := Code_show_look.error
+        i := e
+      }
+      i := i + 1
+    }
+    ((b <= e) && {out.at b = '-'} && {out.at e = '-'}).if { result := Code_show_look.error; }
+    result
+  )
+
+  - event ev:Int :Boolean <-
+  ( + e:Int
+    e := ev & ~1
+    (e = Hand.clic).if { focus := NULL; }
+    True
+  )

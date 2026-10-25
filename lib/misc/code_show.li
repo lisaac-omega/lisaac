@@ -1,50 +1,78 @@
 Header
   + name := Code_show
-  
-/**/
+
+/*
+  Graphical "example player" for the *_show.li files of the distribution.
+
+  A show is a list of Lisaac files, each one possibly followed by tags:
+
+    show (
+      "example/hello_world.li",
+      "example/basics/factorial_example.li", "run", "1000",
+      "lib/boolean/boolean.li", "no-run"
+    )
+
+  The show opens a window (see `Code_show_player') with the list of the
+  examples on the left, the code of the current one in the middle, a
+  console under the code and, at the bottom, the transport bar:
+  compile only, previous, compile and run (or stop), next, auto mode.
+
+  Tags:
+    "run" ARGS    Arguments given to the example; ARGS is the default value,
+                  editable in the window; the output of the example is shown
+                  in the console.
+    "no-run"      Code only: the example is not compiled nor executed.
+    "background"  In auto mode, go to the next example without waiting
+                  for the end of this one.
+    "elit-view"   The button "Ouvrir dans elit" is highlighted.
+
+  Options of the command line:
+    --auto            Start in auto mode.
+    --verbose         Print the commands.
+    --elit_view       As "elit-view" for all the examples.
+
+  The executable and C files are removed after each run.
+  */
 Insert
-  
+
   - parent_mini_bash:Mini_bash := Mini_bash
-    
+
 Private
-  
+
   + exec_directory:String_alias
-  
+
   + elit_view:Boolean := False
-  
+
   + background: Boolean := True
-  
+
   - show list:String_alias^n <-
-  ( + dir, file, path_li, exec, args, cmd_run:String_alias
-    + idx, array_idx:Int
+  ( + path_li:String_alias
+    + array_idx:Int
     + array:Array String_alias
-    + bg, ev, do_run:Boolean
-    
+    + entries:Array Code_show_entry
+    + e:Code_show_entry
+    + auto:Boolean
+
     verbose := Command_args.option_shift "--verbose"
-    
+
     if (Command_args.option_shift "--elit_view") then {
       elit_view := True
     }
-    
-    background := ! Command_args.option_shift "--no_background"
+    auto := Command_args.option_shift "--auto"
     if (Command_args.upper != 0) then {
       Out # (Command_args.at 0) # ": \"" # (Command_args.at 1) # "\" no such option.\n"
-      Out # "Possible options: --verbose --elit_view --no_background\n"
+      Out # "Possible options: --auto --verbose --elit_view\n"
       System.exit 1
     }
     File_utils.pwd_in working_directory
-    ? {working_directory.last = '/'}
-    exec_directory := working_directory.to_string_alias  
+    working_directory.add_dirsep
+    exec_directory := working_directory.to_string_alias
     verbose.if {
       Out # "exec_directory=" # exec_directory # '\n'
-      Out # "elit_view=" # elit_view # '\n'
-      Out # "background=" # background # '\n'
     }
     array := new Array String_alias of list
-    verbose.if {
-      Out # array # '\n'
-    }
-    
+    entries := Array Code_show_entry.create_with_capacity n
+
     while {array_idx <= array.upper} do {
       path_li := array.at array_idx
       (path_li.has_suffix ".li").if_false {
@@ -52,139 +80,60 @@ Private
         System.exit 1
       }
       array_idx := array_idx + 1
-      
-      bg := background
-      if (check "background" at (array, array_idx)) then {
-        array_idx := array_idx + 1
-        bg := True
-      }
-      if (check "wait" at (array, array_idx)) then {
-        array_idx := array_idx + 1
-        bg := False
-      }
-      
-      ev := elit_view
-      if (check "elit-view" at (array, array_idx)) then {
-        array_idx := array_idx + 1
-        ev := True
-      }
-      
-      do_run := True ; args := ""
-      if (check "run" at (array, array_idx)) then {
-        array_idx := array_idx + 1
-        args := array.at array_idx
-        array_idx := array_idx + 1
-      }
-      if (check "no-run" at (array, array_idx)) then {
-        array_idx := array_idx + 1
-        do_run := False
-      }
-              
-      String.tmp { buf: String_buffer
-        buf.append ".li"
-        idx := path_li.upper -3
-        while {(idx >= 0) && {path_li.at idx != '/'}} do {
-          buf.add_first (path_li.at idx)
-          idx := idx -1
-        }
-        file := buf.to_string_alias
-        buf.clear
-        dir := ""
-        (idx > 0).if {
-          0.to idx do { i:Int
-            buf.add_last (path_li.at i)
+      e := Code_show_entry.create path_li home exec_directory
+      e.set_elit_view elit_view
+      // Tags, in any order:
+      while {is_tag (array, array_idx)} do {
+        if (check "background" at (array, array_idx)) then {
+          e.set_background True
+        }.elseif {check "wait" at (array, array_idx)} then {
+          e.set_background False
+        }.elseif {check "elit-view" at (array, array_idx)} then {
+          e.set_elit_view True
+        }.elseif {check "no-run" at (array, array_idx)} then {
+          e.set_can_run False
+        }.elseif {check "run" at (array, array_idx)} then {
+          array_idx := array_idx + 1
+          (array_idx <= array.upper).if {
+            e.set_args (array.at array_idx)
           }
+        } else {
+          Out # "Unknown tag for the show: \"" # (array.at array_idx) # "\" at index " # array_idx # ".\n"
+          System.exit 1
         }
-        dir := buf.to_string_alias
-      } 
-      
-      String.tmp { buf:String_buffer
-        buf.copy file
-        buf.remove_tail 3
-        exec := buf.to_string_alias
+        array_idx := array_idx + 1
       }
-      
-      String.tmp { buf:String_buffer
-        buf.copy exec_directory
-        buf.extend_unless '/'
-        buf.append dir
-        buf.extend_unless '/'
-        cd buf
-      }
-      
-      String.tmp { buf:String_buffer
-        buf.copy working_directory
-        buf.extend_unless '/'
-        buf.append exec
-        buf.append " "
-        buf.append args
-        cmd_run := buf.to_string_alias
-        verbose.if {
-          Out # "cmd_run=\"" # cmd_run # "\"\n"
-        }
-      }
-      
-      do_run.if {
-        run ("lisaac " + file + " -boost -q")
-      }
-      if (elit_view || {ev}) then {
-        do_run.if {
-          run cmd_run background
-        } 
-        run ("elit " + file)
-      }.elseif {bg} then {
-        do_run.if {
-          run cmd_run background
-        }
-      } else {
-        do_run.if {
-          run cmd_run
-        }
-      }
-      
-      /*
-      do_run.if {
-        run ("rm -f " + exec + " " + exec + "*.c " +  exec + "*.h " + exec + "*.o") 
-      }
-      */
+      entries.add_last e
     }
+    (entries.is_empty).if {
+      Out # "Empty show.\n"
+      System.exit 1
+    }
+    Code_show_player.start entries title show_title auto auto verbose verbose
   )
-    
-  - cd dir:String <-
+
+  - show_title:String_alias <-
+  // "big_show" gives "Big show".
+  ( + result:String_alias
+    + i:Int
+    String.tmp { buf:String_buffer
+      buf.copy (Command_args.at 0)
+      i := buf.last_index_of '/'
+      (i != -1).if { buf.remove_head (i + 1); }
+      (buf.has_suffix ".exe").if { buf.remove_tail 4; }
+      buf.replace_all '_' with ' '
+      (! buf.is_empty).if { buf.at 0 put ((buf.at 0).to_upper); }
+      result := buf.to_string_alias
+    }
+    result
+  )
+
+  - is_tag (array:Array String_alias, array_idx:Int) :Boolean <-
   (
-    if (Environment.chdir dir = 0) then {
-      Out # "cd " # dir #'\n'
-      working_directory.clear
-      File_utils.pwd_in working_directory
-      //OUT # "cwd: " # working_directory # '\n'
-    } else {
-      crash_with_message ("Cannot chdir into \"" + dir + "\"")
-    }
+    (array_idx <= array.upper) && {! (array.at array_idx).has_suffix ".li"}
   )
-  
-  - run cmd:String  <- run cmd background_flag False
-  
-  - run cmd:String background  <- run cmd background_flag True
-  
-  - run cmd:String background_flag bf:Boolean  <-
-  ( + exit_status:Int
-    
-    verbose .if {
-      Out # "run \""  # cmd # "\" background=" # bf # '\n'
-    }
-    bf.if {
-      exit_status := Environment.run cmd background
-    } else {
-      exit_status := Environment.run cmd
-    }
-    ((!bf) && {exit_status != 0}).if {
-      Out # "code_show: exit_status=" # exit_status 
-          # " run \"" # cmd # "\" background_flag " # bf # '\n'
-    }   
-  )
-  
+
   - check tag:String_alias at (array:Array String_alias, array_idx:Int): Boolean <-
-  ( 
+  (
     ((array_idx <= array.upper) && {array.at array_idx = tag})
   )
-  

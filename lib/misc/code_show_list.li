@@ -1,0 +1,196 @@
+Header
+  + name := Code_show_list
+/*
+  The "playlist" of the graphical `Code_show': one row per example,
+  the current one highlighted, with its state (running, error, ok...).
+  */
+Inherit
+  + parent_gobj:Flat Gobj Code_show_list
+
+Public
+
+  + entries:Array Code_show_entry
+  + current:Int
+  + hover:Int := -1
+  + scroll_y:Real32
+  + on_select:{Int;}
+
+  - item_h:Real32 := 54
+
+  - create e:Array Code_show_entry do a:{Int;} :Self <-
+  ( + result:Self
+    result := clone
+    result.make e do a
+    result
+  )
+
+  - make e:Array Code_show_entry do a:{Int;} <-
+  (
+    init_obj
+    (entries,on_select) := (e,a)
+    hover := -1
+  )
+
+  - set_current i:Int <-
+  ( + y:Real32
+    current := i
+    // Keep the current row visible:
+    (height > item_h).if {
+      y := i.to_real32 * item_h
+      (y < scroll_y).if { scroll_y := y; }
+      (y + item_h > scroll_y + height).if { scroll_y := y + item_h - height; }
+      clamp
+    }
+  )
+
+  - scroll dy:Real32 <-
+  (
+    scroll_y := scroll_y - dy * item_h
+    clamp
+  )
+
+  - clamp <-
+  ( + m:Real32
+    m := (entries.count.to_real32 * item_h - height).max 0
+    scroll_y := (scroll_y.max 0).min m
+  )
+
+  - row_at y:Real32 :Int <-
+  ( + result:Int
+    result := ((y - yo + scroll_y) / item_h).to_int
+    ((y < yo) || {result > entries.upper}).if { result := -1; }
+    result
+  )
+
+  - draw <-
+  ( + y,x,r:Real32
+    + e:Code_show_entry
+    + first,last:Int
+    begin_path
+    rect (xo,yo) size (width,height)
+    fill_color (Code_show_look.panel)
+    fill
+    save
+    intersect_scissor (xo,yo) size (width,height)
+    first := (scroll_y / item_h).to_int
+    last := (((scroll_y + height) / item_h).to_int).min (entries.upper)
+    first.to last do { i:Int
+      e := entries.at i
+      y := yo + i.to_real32 * item_h - scroll_y
+      (i = current).if {
+        begin_path
+        rect (xo,y) size (width,item_h)
+        fill_color (Code_show_look.panel_light)
+        fill
+        begin_path
+        rect (xo,y+6) size (3,item_h-12) radius 1.5
+        fill_color (Code_show_look.accent)
+        fill
+      }.elseif {i = hover} then {
+        begin_path
+        rect (xo,y) size (width,item_h)
+        fill_color (Code_show_look.panel_hover)
+        fill
+      }
+      // Number:
+      String.tmp { tmp:String_buffer
+        (i < 9).if { tmp.add_last '0'; }
+        (i + 1).append_in tmp
+        (Code_show_look.mono >= 0).if {
+          font_face_id (Code_show_look.mono)
+        } else {
+          font_face_id (Font.sys (Font.roman))
+        }
+        font_size (Code_show_look.small_size)
+        text_align (align_left | align_middle)
+        fill_color ((i = current).ok (Code_show_look.accent) or (Code_show_look.text_faint))
+        text (xo + 16, y + item_h / 2) msg tmp
+      }
+      // Name and directory:
+      x := xo + 50
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.ui_size - 1)
+      fill_color (Code_show_look.text)
+      text (x, y + 20) msg (e.exec)
+      font_face_id (Font.sys (Font.roman))
+      font_size (Code_show_look.small_size - 1)
+      fill_color (Code_show_look.text_dim)
+      String.tmp { tmp:String_buffer
+        (e.subdir.is_empty).if { tmp.append "."; } else { tmp.append (e.subdir); }
+        (! e.can_run).if {
+          tmp.append "   ·  code seul"
+        }.elseif {e.has_args} then {
+          tmp.append "   ·  "
+          tmp.append (e.args)
+        }
+        text (x, y + 38) msg tmp
+      }
+      // State, on the right:
+      r := xo + width - 22
+      (e.phase = Code_show_entry.running).if {
+        draw_equalizer (r, y + item_h / 2) seed i
+      }.elseif {e.phase = Code_show_entry.compiling} then {
+        draw_dots (r, y + item_h / 2)
+      }.elseif {e.status = Code_show_entry.ok} then {
+        draw_dot (r, y + item_h / 2) color (Code_show_look.ok)
+      }.elseif {e.status = Code_show_entry.stopped} then {
+        draw_dot (r, y + item_h / 2) color (Code_show_look.text_faint)
+      }.elseif {e.status != Code_show_entry.none} then {
+        draw_dot (r, y + item_h / 2) color (Code_show_look.error)
+      }
+      // Separator:
+      begin_path
+      rect (xo + 16,y + item_h - 1) size (width - 32,1)
+      fill_color (Code_show_look.border)
+      fill
+    }
+    reset_scissor
+    restore
+  )
+
+  - draw_dot (x,y:Real32) color c:Color <-
+  (
+    begin_path
+    circle (x,y) radius 4
+    fill_color c
+    fill
+  )
+
+  - draw_dots (x,y:Real32) <-
+  ( + k:Int
+    k := (Code_show_look.ms / 250) % 3
+    0.to 2 do { j:Int
+      begin_path
+      circle (x - 16 + j.to_real32 * 8, y) radius 2.5
+      fill_color ((j = k).ok (Code_show_look.accent) or (Code_show_look.accent_dark))
+      fill
+    }
+  )
+
+  - draw_equalizer (x,y:Real32) seed s:Int <-
+  // Three bouncing bars, as in a music player.
+  ( + p,h:Int
+    0.to 2 do { j:Int
+      p := (Code_show_look.ms / 45 + j * 7 + s * 3) % 20
+      h := (p - 10).abs + 3
+      begin_path
+      rect (x - 18 + j.to_real32 * 7, y + 7 - h.to_real32) size (4, h.to_real32) radius 1
+      fill_color (Code_show_look.running)
+      fill
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + e,i:Int
+    e := ev & ~1
+    (e = Hand.in).if {
+      (ev = Hand.out).if { hover := -1; } else { hover := row_at (Hand.y_cur); }
+    }.elseif {e = Hand.move} then {
+      hover := row_at (Hand.y_cur)
+    }.elseif {e = Hand.clic} then {
+      focus := NULL
+      i := row_at (Hand.y_cur)
+      (i != -1).if { on_select.value i; }
+    }
+    True
+  )

@@ -1,0 +1,146 @@
+Header
+  + name := Code_show_field
+/*
+  One line text field of the graphical `Code_show', used to edit the
+  arguments given to an example ("run" in the show list).
+  Enter runs the example, Escape leaves the field.
+  */
+Inherit
+  + parent_gobj:Flat Gobj Code_show_field
+
+Public
+
+  + txt:String_buffer
+  + cur:Int
+  + on_enter:{}
+  + visible:Boolean
+
+  - set_visible b:Boolean <- ( visible := b; )
+
+  - create_with a:{} :Self <-
+  ( + result:Self
+    result := clone
+    result.init_obj
+    result.make a
+    result
+  )
+
+  - make a:{} <- ( on_enter := a; )
+
+  - attach t:String_buffer <-
+  // Edit `t' directly.
+  (
+    txt := t
+    cur := t.count
+  )
+
+  - has_focus:Boolean <- focus = self
+
+  - set_font <-
+  (
+    (Code_show_look.mono >= 0).if {
+      font_face_id (Code_show_look.mono)
+    } else {
+      font_face_id (Font.sys (Font.roman))
+    }
+    font_size (Code_show_look.ui_size - 1)
+  )
+
+  - draw <-
+  ( + x,y,w,x0,y0,x1,y1:Real32
+    visible.if {
+      begin_path
+      rect (xo,yo) size (width,height) radius 6
+      fill_color (Code_show_look.background)
+      fill
+      begin_path
+      rect (xo+0.5,yo+0.5) size (width-1,height-1) radius 6
+      stroke_width (has_focus.ok 2 or 1)
+      stroke_color (has_focus.ok (Code_show_look.accent) or (is inside.ok (Code_show_look.text_faint) or (Code_show_look.border)))
+      stroke
+      (txt != NULL).if {
+        save
+        intersect_scissor (xo+4,yo) size (width-8,height)
+        set_font
+        text_align (align_left | align_middle)
+        y := yo + height / 2
+        x := xo + 10
+        fill_color (Code_show_look.text)
+        (! txt.is_empty).if { text (x,y) msg txt; }
+        has_focus.if {
+          w := 0
+          (cur > 0).if {
+            (w,x0,y0,x1,y1) := text_bounds (0,0) msg txt from 0 to (cur - 1)
+          }
+          begin_path
+          rect (x + w, y - 9) size (2,18)
+          fill_color (Code_show_look.accent)
+          fill
+        }
+        reset_scissor
+        restore
+      }
+    }
+  )
+
+  - get_win (x,y:Real32) :Win <-
+  ( + result:Win
+    visible.if { result := parent_gobj.get_win (x,y); }
+    result
+  )
+
+  - event ev:Int :Boolean <-
+  ( + e:Int
+    e := ev & ~1
+    (e = Hand.in).if {
+      set inside with (ev = Hand.in)
+    }.elseif {e = Hand.clic} then {
+      (txt != NULL).if {
+        get_focus
+        cur := txt.count
+      }
+    }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + n:Uint8
+    ((c & Keyboard.msk_cmd) = 0).if {
+      txt.insert_string s to cur
+      cur := cur + s.count
+    } else {
+      (s.first)
+      .when '\n'  then { focus := NULL; on_enter.value; }
+      .when 'B'   then { cur := 0; }
+      .when 'E'   then { cur := txt.count; }
+      .when 'R'   then {
+        (cur < txt.count).if {
+          cur := cur + 1
+          {(cur < txt.count) && {(txt.at cur).to_uint8 & 0C0h = 80h}}.while_do { cur := cur + 1; }
+        }
+      }
+      .when 'L'   then {
+        (cur > 0).if {
+          cur := cur - 1
+          {(cur > 0) && {(txt.at cur).to_uint8 & 0C0h = 80h}}.while_do { cur := cur - 1; }
+        }
+      }
+      .when '\8d\' then {
+        (cur > 0).if {
+          {
+            cur := cur - 1
+            n := (txt.at cur).to_uint8
+            txt.remove cur
+          }.do_while {(cur > 0) && {n & 0C0h = 80h}}
+        }
+      }
+      .when 'S'   then {
+        (cur < txt.count).if {
+          txt.remove cur
+          {(cur < txt.count) && {(txt.at cur).to_uint8 & 0C0h = 80h}}.while_do { txt.remove cur; }
+        }
+      }
+      .when '\27d\' then { focus := NULL; }
+    }
+    True
+  )

@@ -11,12 +11,13 @@ Public
   (  
     show (
       "hello_world.li", "elit-view",
+      "basics/array_example.li", "elit-view",
       "welcome/welcome.li", "elit-view",
       "startrek/startrek.li", "background",
       "mapping/nayeli.li", "background",
       "arrow_out/arrow_out.li", "background",
       "draw2d/draw2d_shapes.li", "background",
-      "../game_show.li", "elit-view", "no-run",
+      "../game_show.li", "elit-view",
       "basics/factorial_example.li", "elit-view", "run", "1000",
       "fibonacci.li", "elit-view", "run", "1000"
     )

@@ -122,6 +122,7 @@ unsigned long col_icon[]={0x00000000,
 0xFFAEAAA8, 0xFFCECBC7, 0xFFE9E7E4, 0xFFFDFFFC};
 `;
 Inherit  
+  
   - parent_utils:Utils := Utils
   
 Public
@@ -374,7 +375,7 @@ Public
     n := `n`:Int
     0.to (n-1) do { i:Int
       `const GLFWvidmode* mode = glfwGetVideoMode(monitors[@i])`
-      `int x, y, w, h; glfwGetMonitorWorkarea(monitors[i], &x, &y, &w, &h)`
+      `int x, y, w, h; glfwGetMonitorWorkarea(monitors[@i], &x, &y, &w, &h)`
       (xm,ym) := (`x+w`:Int,`y+h`:Int)
       (xm > wt).if { wt := xm; }
       (ym > ht).if { ht := ym; }

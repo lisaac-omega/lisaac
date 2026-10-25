@@ -1,0 +1,799 @@
+Header
+  + name := Code_show_player
+/*
+  The window of the graphical `Code_show': an "example player".
+
+    +-----------------------------------------------------------+
+    | Lisaac Ω · Big show                               07 / 13 |
+    +--------------+--------------------------------------------+
+    | 01 hello     | example/basics/factorial_example.li [elit] |
+    | 02 welcome   |  1  Header                                 |
+    | 03 ...       |  2    + name := Factorial_example          |
+    |  (playlist)  |            (source code)                   |
+    |              +--------------------------------------------+
+    |              | CONSOLE  status / compiler or program output|
+    +==============+============================================+
+    | now playing    [Compiler]  |<   (>)   >|  [Auto]   args   |
+    +-----------------------------------------------------------+
+
+  Keyboard: Space/Enter run (or stop), Left/Right previous/next,
+  Home/End first/last, Up/Down/PgUp/PgDn scroll the code, C compile,
+  A auto mode, E open in elit, P edit the arguments, +/- zoom the code.
+  */
+Inherit
+  
+  + parent_window:Flat Window
+
+Public
+
+  + entries:Array Code_show_entry
+  + current:Int
+  + title:String_alias
+  + show_verbose:Boolean
+
+  + auto:Boolean
+  + auto_at:Int := -1     // Time (ms) to go to the next example (-1: waiting).
+  + auto_from:Int
+
+  + playlist:Code_show_list
+  + code:Code_show_code
+  + console:Code_show_console
+  + field:Code_show_field
+  + b_prev:Code_show_button
+  + b_play:Code_show_button
+  + b_next:Code_show_button
+  + b_compile:Code_show_button
+  + b_auto:Code_show_button
+  + b_elit:Code_show_button
+
+  // Layout:
+  - header_h:Real32 := 56
+  - list_head_h:Real32 := 40
+  - file_bar_h:Real32 := 44
+  - transport_h:Real32 := 96
+  + sidebar_w:Real32
+  + console_h:Real32
+
+  - start list:Array Code_show_entry title t:String_alias auto a:Boolean verbose v:Boolean <-
+  (
+    (entries,title,show_verbose) := (list,t,v)
+    init t size (1280,820)
+    fit_screen
+    load_mono_font
+    playlist := Code_show_list.create entries do { i:Int; select i; }
+    code := Code_show_code.create
+    console := Code_show_console.create
+    field := Code_show_field.create_with { play; }
+    b_prev := Code_show_button.create (Code_show_button.round) icon (Code_show_button.i_prev) label "" do { go (current - 1); }
+    b_play := Code_show_button.create (Code_show_button.primary) icon (Code_show_button.i_play) label "" do { play; }
+    b_next := Code_show_button.create (Code_show_button.round) icon (Code_show_button.i_next) label "" do { go (current + 1); }
+    b_compile := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Compiler" do { compile (entries.at current) then_run False; }
+    b_auto := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Auto" do { set_auto (! auto); }
+    b_elit := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Ouvrir dans elit" do { open_elit (entries.at current); }
+    playlist.init_parent self
+    code.init_parent self
+    console.init_parent self
+    field.init_parent self
+    b_prev.init_parent self
+    b_play.init_parent self
+    b_next.init_parent self
+    b_compile.init_parent self
+    b_auto.init_parent self
+    b_elit.init_parent self
+    select 0
+    a.if { set_auto True; }
+    Paper.run
+  )
+
+  // Actions
+
+  - go i:Int <-
+  (
+    (i.in_range 0 to (entries.upper)).if { select i; }
+  )
+
+  - select i:Int <-
+  ( + e,old:Code_show_entry
+    old := entries.at current
+    ((old != NULL) && {i != current}).if { cleanup old; }
+    current := i
+    e := entries.at i
+    playlist.set_current i
+    code.set_entry e
+    console.set_entry e
+    field.attach (e.args)
+    field.set_visible (e.has_args && {e.can_run})
+    focus := NULL
+    ((! e.is_active) && {e.status = Code_show_entry.none}).if {
+      e.message.clear
+      (e.can_run).if {
+        e.message.append "Prêt : Espace (ou le bouton lecture) compile puis exécute l'exemple."
+      } else {
+        e.message.append "Exemple à lire seulement (no-run)."
+      }
+    }
+    update_buttons
+    ask_refresh
+    auto.if { auto_start_current; }
+  )
+
+  - play <-
+  ( + e:Code_show_entry
+    e := entries.at current
+    (e.is_active).if {
+      stop e
+    }.elseif {e.compiled} then {
+      run e
+    } else {
+      compile e then_run True
+    }
+  )
+
+  - set_auto b:Boolean <-
+  (
+    auto := b
+    auto_at := -1
+    auto.if { auto_start_current; }
+    update_buttons
+  )
+
+  - zoom d:Real32 <-
+  (
+    Code_show_look.set_code_size (((Code_show_look.code_size + d).max 10).min 30)
+    code.clamp
+  )
+
+  // Processes
+
+  - exec_prefix:String_alias <- (lip "target" str = "windows").ok "" or "exec "
+
+  - tool name:String_alias :String_alias <-
+  // "bin/lisaac" gives "\"/home/.../lisaac/bin/lisaac\"" when it exists
+  // in the distribution used to compile the show, otherwise "lisaac".
+  ( + result:String_alias
+    + i:Int
+    String.tmp { buf:String_buffer
+      buf.copy (lip "lisaac" str)
+      buf.append name
+      (lip "target" str = "windows").if { buf.append ".exe"; }
+      (File_utils.exists buf).if {
+        buf.add_first '"'
+        buf.add_last '"'
+      } else {
+        i := name.last_index_of '/'
+        buf.copy name
+        buf.remove_head (i + 1)
+      }
+      result := buf.to_string_alias
+    }
+    result
+  )
+  
+  - spawn cmd:String in e:Code_show_entry :Int <-
+  ( + pid:Int
+    (Environment.chdir (e.dir) != 0).if {
+      Out # "code_show: cannot chdir into \"" # e.dir # "\"\n"
+    }
+    show_verbose.if { Out # "code_show: " # cmd # '\n'; }
+    pid := Environment.run cmd background
+    pid
+  )
+
+  - set_log e:Code_show_entry <-
+  (
+    String.tmp { buf:String_buffer
+      buf.copy (e.dir)
+      buf.add_last '.'
+      buf.append (e.exec)
+      buf.append "_code_show.log"
+      e.set_log_path (buf.to_string_alias)
+    }
+    remove_file (e.log_path)
+  )
+
+  - compile e:Code_show_entry then_run r:Boolean <-
+  ( + pid:Int
+    ((e.can_run) && {! e.is_active}).if {
+      set_log e
+      e.output.clear
+      e.clear_error
+      e.set_status (Code_show_entry.none)
+      e.set_run_after_compile r
+      e.message.copy "Compilation de "
+      e.message.append (e.file)
+      e.message.append " ..."
+      String.tmp { cmd:String_buffer
+        cmd.copy exec_prefix
+        cmd.append (tool "bin/lisaac")
+        cmd.add_last ' '
+        cmd.append (e.file)
+        cmd.append " -boost -q > \""
+        cmd.append (e.log_path)
+        cmd.append "\" 2>&1"
+        pid := spawn cmd in e
+      }
+      e.set_pid pid
+      (pid = -1).if {
+        e.set_status (Code_show_entry.compile_error)
+        e.message.copy "Impossible de lancer le compilateur lisaac."
+        auto_done e delay 3000
+      } else {
+        e.set_phase (Code_show_entry.compiling)
+      }
+      update_buttons
+    }
+  )
+
+  - run e:Code_show_entry <-
+  ( + pid:Int
+    ((e.can_run) && {! e.is_active}).if {
+      set_log e
+      e.set_capture (e.has_args)
+      e.set_status (Code_show_entry.none)
+      e.capture.if { e.output.clear; }
+      e.message.copy "Exécution de "
+      e.message.append (e.exec)
+      e.has_args.if {
+        e.message.add_last ' '
+        e.message.append (e.args)
+      } else {
+        e.message.append "  (sa sortie texte va dans le terminal)"
+      }
+      String.tmp { cmd:String_buffer
+        cmd.copy exec_prefix
+        cmd.add_last '"'
+        cmd.append (e.dir)
+        cmd.append (e.exec)
+        cmd.add_last '"'
+        e.has_args.if {
+          cmd.add_last ' '
+          cmd.append (e.args)
+        }
+        e.capture.if {
+          cmd.append " > \""
+          cmd.append (e.log_path)
+          cmd.append "\" 2>&1"
+        }
+        pid := spawn cmd in e
+      }
+      e.set_pid pid
+      (pid = -1).if {
+        e.set_status (Code_show_entry.run_error)
+        e.message.copy "Impossible de lancer l'exécutable."
+        auto_done e delay 3000
+      } else {
+        e.set_phase (Code_show_entry.running)
+        ((auto) && {e = entries.at current} && {e.background}).if {
+          auto_wait 3000
+        }
+      }
+      update_buttons
+    }
+  )
+
+  - stop e:Code_show_entry <-
+  (
+    ((e.is_active) && {e.pid != -1}).if {
+      String.tmp { cmd:String_buffer
+        cmd.copy "kill "
+        e.pid.append_in cmd
+        Environment.run cmd
+      }
+      e.message.copy "Arrêt demandé ..."
+    }
+  )
+
+  - open_elit e:Code_show_entry <-
+  (
+    String.tmp { cmd:String_buffer
+      cmd.copy (tool "elit/elit")
+      cmd.append " \""
+      cmd.append (e.file)
+      cmd.add_last '"'
+      spawn cmd in e
+    }
+  )
+
+  - poll <-
+  ( + st:Int
+    entries.foreach { e:Code_show_entry
+      (e.is_active).if {
+        st := Environment.poll_process (e.pid)
+        (st = -2).if {
+          ((e.phase = Code_show_entry.compiling) || {e.capture}).if {
+            e.reload_output
+          }
+        } else {
+          finished e status st
+        }
+      }
+    }
+  )
+
+  - finished e:Code_show_entry status st:Int <-
+  (
+    ((e.phase = Code_show_entry.compiling) || {e.capture}).if {
+      e.reload_output
+    }
+    remove_file (e.log_path)
+    e.set_pid (-1)
+    (e.phase = Code_show_entry.compiling).if {
+      e.set_phase (Code_show_entry.idle)
+      (st = 0).if {
+        e.set_compiled True
+        (e.output.is_empty).if {
+          e.output.copy "lisaac "
+          e.output.append (e.file)
+          e.output.append " -boost -q : compilation réussie.\n"
+        }
+        e.message.copy "Compilation réussie."
+        (e.run_after_compile).if {
+          run e
+        }
+      } else {
+        e.set_status (Code_show_entry.compile_error)
+        e.find_error
+        (e.error_line != -1).if {
+          e.message.copy "Erreur de compilation, ligne "
+          (e.error_line + 1).append_in (e.message)
+          e.message.add_last '.'
+          (e = entries.at current).if { code.show_line (e.error_line); }
+        } else {
+          e.message.copy "Erreur de compilation."
+        }
+        cleanup e
+        auto_done e delay 4000
+      }
+    } else {
+      e.set_phase (Code_show_entry.idle)
+      e.set_exit_code st
+      e.set_compiled False
+      cleanup e
+      (st = 0).if {
+        e.set_status (Code_show_entry.ok)
+        e.message.copy "Terminé normalement."
+      } else {
+        e.set_status (Code_show_entry.run_error)
+        (st = 143).if {
+          e.set_status (Code_show_entry.stopped)
+          e.message.copy "Arrêté."
+        } else {
+          e.message.copy "Terminé avec le code de sortie "
+          st.append_in (e.message)
+          e.message.add_last '.'
+        }
+      }
+      (! e.background).if { auto_done e delay 1500; }
+    }
+    update_buttons
+  )
+
+  - cleanup e:Code_show_entry <-
+  // Remove executable and generated files (as the textual version did).
+  (
+    (! e.is_active).if {
+      e.set_compiled False
+      String.tmp { buf:String_buffer
+        buf.copy (e.dir)
+        buf.append (e.exec)
+        remove_file buf
+        buf.append ".c"
+        remove_file buf
+        buf.remove_last
+        buf.add_last 'h'
+        remove_file buf
+        buf.remove_last
+        buf.add_last 'o'
+        remove_file buf
+        buf.remove_tail 2
+        buf.append ".exe"
+        remove_file buf
+      }
+    }
+  )
+
+  - remove_file p:String <-
+  (
+    ((p != NULL) && {File_utils.exists p}).if {
+      show_verbose.if { Out # "code_show: rm " # p # '\n'; }
+      File_utils.remove p
+    }
+  )
+
+  // Auto mode
+
+  - auto_wait d:Int <-
+  (
+    auto_from := Code_show_look.ms
+    auto_at := auto_from + d
+  )
+
+  - auto_done e:Code_show_entry delay d:Int <-
+  (
+    ((auto) && {e = entries.at current}).if { auto_wait d; }
+  )
+
+  - auto_start_current <-
+  ( + e:Code_show_entry
+    e := entries.at current
+    auto_at := -1
+    (e.is_active).if {
+      e.background.if { auto_wait 3000; }
+    }.elseif {e.can_run} then {
+      compile e then_run True
+    } else {
+      // Time to read the code:
+      auto_wait (((e.line_count * 150).max 5000).min 15000)
+    }
+  )
+
+  - auto_tick <-
+  (
+    ((auto) && {auto_at != -1} && {Code_show_look.ms >= auto_at}).if {
+      auto_at := -1
+      (current < entries.upper).if {
+        select (current + 1)
+      } else {
+        auto := False
+        (entries.at current).message.copy "Fin du programme."
+        update_buttons
+      }
+    }
+  )
+
+  - busy:Boolean <-
+  ( + result:Boolean
+    result := auto
+    entries.foreach { e:Code_show_entry
+      result := result || {e.is_active}
+    }
+    result
+  )
+
+  - update_buttons <-
+  ( + e:Code_show_entry
+    e := entries.at current
+    b_prev.set_enabled (current > 0)
+    b_next.set_enabled (current < entries.upper)
+    b_play.set_enabled (e.can_run)
+    b_play.set_icon ((e.is_active).ok (Code_show_button.i_stop) or (Code_show_button.i_play))
+    b_play.set_busy (e.phase = Code_show_entry.compiling)
+    b_compile.set_enabled ((e.can_run) && {! e.is_active})
+    b_auto.set_toggled auto
+    b_elit.set_toggled (e.elit_view)
+  )
+
+  // Window
+
+  - fit_screen <-
+  // Smaller window on small screens (laptops of the practical work rooms).
+  ( + sw,sh,w,h:Int
+    
+    (sw,sh) := Paper.get_screen_size
+    ((sw > 0) && {sh > 0}).if {
+      w := (sw - 40).min 1280
+      h := (sh - 80).min 820
+      ((w < 1280) || {h < 820}).if {
+        Paper.set_window win_ptr size (w.max 900,h.max 600)
+      }
+    }
+  )
+  
+  - load_mono_font <-
+  ( + f:File
+    + data:Array Uint8
+    String.tmp { p:String_buffer
+      p.copy (lip "lisaac" str)
+      p.append "elit/assets/font/DejaVuSansMono.ttf"
+      f ?= File_system.get p
+      ((f != NULL) && {f.open}).if {
+        data := Array Uint8.create_with_capacity (f.size)
+        f.read data size (f.size)
+        f.close
+        Code_show_look.set_mono (pen.create_font_mem "code_show_mono" data data free True)
+      }
+    }
+  )
+
+  - place w:Win at (x,y:Real32) size (ww,hh:Real32) <-
+  (
+    w.set_xo x
+    w.set_yo y
+    w.set_width (ww.max 1)
+    w.set_height (hh.max 1)
+  )
+
+  - refresh <-
+  ( + y,cx,cy,w,ty:Real32
+    sidebar_w := ((width * 0.26).max 230).min 340
+    console_h := ((height * 0.24).max 110).min 260
+    y := header_h + list_head_h
+    ty := height - transport_h
+    place playlist at (0,y) size (sidebar_w, ty - y)
+    y := header_h + file_bar_h
+    place code at (sidebar_w,y) size (width - sidebar_w, ty - console_h - y)
+    place console at (sidebar_w, ty - console_h) size (width - sidebar_w, console_h)
+    w := b_elit.width_min
+    place b_elit at (width - w - 14, header_h + 7) size (w,30)
+    // Transport:
+    cx := width / 2
+    cy := ty + 4 + (transport_h - 4) / 2 - 6
+    place b_play at (cx - 30, cy - 30) size (60,60)
+    place b_prev at (cx - 104, cy - 22) size (44,44)
+    place b_next at (cx + 60, cy - 22) size (44,44)
+    w := b_compile.width_min
+    place b_compile at (cx - 130 - w, cy - 15) size (w,30)
+    w := b_auto.width_min.max 70
+    place b_auto at (cx + 130, cy - 15) size (w,30)
+    w := ((width - cx - 260) - 40).min 260
+    place field at (width - w - 24, cy - 8) size (w,34)
+    field.set_visible ((field.visible) && {w > 80})
+    playlist.clamp
+  )
+
+  - draw <-
+  ( + x,y,ty,cx,cy,p,w:Real32
+    + e:Code_show_entry
+    + t:Int
+    e := entries.at current
+    ty := height - transport_h
+    // Background and header:
+    begin_path
+    rect (0,0) size (width,height)
+    fill_color (Code_show_look.background)
+    fill
+    begin_path
+    rect (0,0) size (width,header_h)
+    fill_color (Code_show_look.panel)
+    fill
+    hline (0,header_h - 1) width width
+    text_align (align_left | align_middle)
+    font_face_id (Font.sys (Font.bold))
+    font_size 21
+    fill_color (Code_show_look.accent)
+    x := text (22, header_h / 2) msg "Lisaac Ω"
+    font_face_id (Font.sys (Font.roman))
+    font_size 19
+    fill_color (Code_show_look.text_faint)
+    x := text (x + 12, header_h / 2) msg "·"
+    fill_color (Code_show_look.text)
+    text (x + 12, header_h / 2) msg title
+    String.tmp { tmp:String_buffer
+      (current < 9).if { tmp.add_last '0'; }
+      (current + 1).append_in tmp
+      tmp.append " / "
+      entries.count.append_in tmp
+      mono_font 16
+      text_align (align_right | align_middle)
+      fill_color (Code_show_look.text_dim)
+      text (width - 22, header_h / 2) msg tmp
+    }
+    // Playlist title:
+    begin_path
+    rect (0,header_h) size (sidebar_w,list_head_h)
+    fill_color (Code_show_look.panel)
+    fill
+    font_face_id (Font.sys (Font.bold))
+    font_size (Code_show_look.small_size)
+    text_align (align_left | align_middle)
+    fill_color (Code_show_look.text_dim)
+    String.tmp { tmp:String_buffer
+      tmp.append "PROGRAMME  ·  "
+      entries.count.append_in tmp
+      tmp.append " exemples"
+      text (18, header_h + list_head_h / 2) msg tmp
+    }
+    begin_path
+    rect (sidebar_w - 1,header_h) size (1,ty - header_h)
+    fill_color (Code_show_look.border)
+    fill
+    // File bar:
+    begin_path
+    rect (sidebar_w,header_h) size (width - sidebar_w,file_bar_h)
+    fill_color (Code_show_look.panel)
+    fill
+    hline (sidebar_w,header_h + file_bar_h - 1) width (width - sidebar_w)
+    save
+    intersect_scissor (sidebar_w,header_h) size (b_elit.xo - sidebar_w - 10,file_bar_h)
+    text_align (align_left | align_middle)
+    y := header_h + file_bar_h / 2
+    x := sidebar_w + 18
+    font_face_id (Font.sys (Font.roman))
+    font_size (Code_show_look.ui_size)
+    fill_color (Code_show_look.text_dim)
+    (! e.subdir.is_empty).if {
+      String.tmp { tmp:String_buffer
+        tmp.append (e.subdir)
+        tmp.add_last '/'
+        x := text (x,y) msg tmp
+      }
+    }
+    font_face_id (Font.sys (Font.bold))
+    fill_color (Code_show_look.text)
+    x := text (x,y) msg (e.file)
+    font_face_id (Font.sys (Font.roman))
+    font_size (Code_show_look.small_size)
+    fill_color (Code_show_look.text_faint)
+    String.tmp { tmp:String_buffer
+      tmp.append "   "
+      e.line_count.append_in tmp
+      tmp.append " lignes"
+      text (x,y + 1) msg tmp
+    }
+    reset_scissor
+    restore
+    // Transport bar:
+    begin_path
+    rect (0,ty) size (width,transport_h)
+    fill_color (Code_show_look.panel)
+    fill
+    // Progress in the show (and waiting time of the auto mode):
+    begin_path
+    rect (0,ty) size (width,4)
+    fill_color (Code_show_look.panel_light)
+    fill
+    p := (current + 1).to_real32 / entries.count.to_real32
+    begin_path
+    rect (0,ty) size (width * p,4)
+    fill_color (Code_show_look.accent)
+    fill
+    ((auto) && {auto_at != -1} && {auto_at > auto_from}).if {
+      t := Code_show_look.ms - auto_from
+      p := (t.to_real32 / (auto_at - auto_from).to_real32).min 1
+      begin_path
+      rect (width * current.to_real32 / entries.count.to_real32,ty) size (width / entries.count.to_real32 * p,4)
+      fill_color (Color.rgb (255,220,140))
+      fill
+    }
+    cx := width / 2
+    cy := ty + 4 + (transport_h - 4) / 2 - 6
+    // Now playing (left):
+    w := b_compile.xo - 40
+    (w > 60).if {
+      save
+      intersect_scissor (0,ty + 4) size (w + 22,transport_h - 4)
+      text_align (align_left | align_middle)
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.ui_size + 1)
+      fill_color (Code_show_look.text)
+      text (22, cy - 10) msg (e.exec)
+      font_face_id (Font.sys (Font.roman))
+      font_size (Code_show_look.small_size)
+      (e.phase = Code_show_entry.running).if {
+        fill_color (Code_show_look.running)
+        text (22, cy + 12) msg "en cours d'exécution"
+      }.elseif {e.phase = Code_show_entry.compiling} then {
+        fill_color (Code_show_look.accent)
+        text (22, cy + 12) msg "compilation ..."
+      }.elseif {auto} then {
+        fill_color (Code_show_look.accent)
+        text (22, cy + 12) msg "mode automatique"
+      }.elseif {e.status = Code_show_entry.ok} then {
+        fill_color (Code_show_look.ok)
+        text (22, cy + 12) msg "terminé"
+      }.elseif {e.status = Code_show_entry.compile_error} then {
+        fill_color (Code_show_look.error)
+        text (22, cy + 12) msg "erreur de compilation"
+      }.elseif {e.status = Code_show_entry.run_error} then {
+        fill_color (Code_show_look.error)
+        text (22, cy + 12) msg "erreur à l'exécution"
+      } else {
+        fill_color (Code_show_look.text_dim)
+        text (22, cy + 12) msg ((e.can_run).ok "prêt" or "code seul")
+      }
+      reset_scissor
+      restore
+    }
+    // Arguments (right):
+    (field.visible).if {
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.small_size - 1)
+      text_align (align_left | align_bottom)
+      fill_color (Code_show_look.text_dim)
+      text (field.xo + 2, field.yo - 6) msg "ARGUMENTS"
+      (e.args !== (e.default_args)).if {
+        String.tmp { tmp:String_buffer
+          tmp.append "défaut : "
+          tmp.append (e.default_args)
+          text_align (align_right | align_bottom)
+          font_face_id (Font.sys (Font.roman))
+          fill_color (Code_show_look.text_faint)
+          text (field.xmax, field.yo - 6) msg tmp
+        }
+      }
+    }
+    // Keyboard hints:
+    font_face_id (Font.sys (Font.roman))
+    font_size (Code_show_look.small_size - 2)
+    text_align (align_center | align_bottom)
+    fill_color (Code_show_look.text_faint)
+    text (cx, height - 6) msg "Espace : exécuter / arrêter   ·   flèches gauche / droite : précédent / suivant   ·   C : compiler   ·   A : auto   ·   E : elit   ·   + / - : taille du code"
+  )
+
+  - hline (x,y:Real32) width w:Real32 <-
+  (
+    begin_path
+    rect (x,y) size (w,1)
+    fill_color (Code_show_look.border)
+    fill
+  )
+
+  - mono_font s:Real32 <-
+  (
+    (Code_show_look.mono >= 0).if {
+      font_face_id (Code_show_look.mono)
+    } else {
+      font_face_id (Font.sys (Font.roman))
+    }
+    font_size s
+  )
+
+  - draw_all <-
+  (
+    poll
+    auto_tick
+    update_buttons
+    parent_window.draw_all
+    busy.if {
+      // About 10 frames per second while something is running.
+      `glfwWaitEventsTimeout(0.08)`
+      Paper.refresh_again
+    }
+  )
+
+  - mouse_scroll (dx,dy:Real64) <-
+  ( + x,y:Real32
+    (x,y) := (Hand.x_cur,Hand.y_cur)
+    (playlist.is_inside (x,y)).if {
+      playlist.scroll (dy.to_real32)
+    }.elseif {console.is_inside (x,y)} then {
+      console.scroll (dy.to_real32)
+    } else {
+      code.scroll (dy.to_real32)
+      (dx != 0).if { code.scroll_x (dx.to_real32); }
+    }
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (focus != NULL).if {
+      focus.key s cmd c
+    } else {
+      shortcut s cmd c
+    }
+    True
+  )
+
+  - shortcut s:String cmd c:Uint8 <-
+  (
+    ((c & Keyboard.msk_cmd) = 0).if {
+      (s.first)
+      .when ' ' then { play; }
+      .when 'c' or 'C' then { compile (entries.at current) then_run False; }
+      .when 'a' or 'A' then { set_auto (! auto); }
+      .when 'e' or 'E' then { open_elit (entries.at current); }
+      .when 'p' or 'P' then { (field.visible).if { field.get_focus; }; }
+      .when '+' or '=' then { zoom 1; }
+      .when '-' then { zoom (-1); }
+    } else {
+      (s.first)
+      .when 'L' then { go (current - 1); }
+      .when 'R' then { go (current + 1); }
+      .when 'U' then { code.scroll (1.0 / 3); }
+      .when 'D' then { code.scroll (-1.0 / 3); }
+      .when 'P' then { code.page (-1); }
+      .when 'N' then { code.page 1; }
+      .when 'B' then { go 0; }
+      .when 'E' then { go (entries.upper); }
+      .when '\n' then { play; }
+      .when '\27d\' then { stop (entries.at current); }
+    }
+  )
+
+  - on_close <-
+  (
+    entries.foreach { e:Code_show_entry
+      cleanup e
+    }
+    Paper.exit 0
+  )

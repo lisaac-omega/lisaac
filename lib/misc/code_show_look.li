@@ -1,0 +1,75 @@
+Header
+  + name := Code_show_look
+/*
+  Colors and fonts shared by all the widgets of the graphical `Code_show'.
+  Dark theme, close to the `dark.sty' style of elit.
+  */
+Public
+
+  // User interface:
+
+  - background:Color := Color.rgb (17,20,22)
+  - panel:Color       := Color.rgb (25,29,32)
+  - panel_light:Color := Color.rgb (34,40,44)
+  - panel_hover:Color := Color.rgb (44,51,56)
+  - border:Color      := Color.rgb (48,56,61)
+  - text:Color        := Color.rgb (226,229,233)
+  - text_dim:Color    := Color.rgb (138,148,156)
+  - text_faint:Color  := Color.rgb (88,97,104)
+  - accent:Color      := Color.rgb (255,176,32)
+  - accent_dark:Color := Color.rgb (110,76,14)
+  - on_accent:Color   := Color.rgb (24,18,6)
+  - ok:Color          := Color.rgb (74,201,120)
+  - error:Color       := Color.rgb (240,86,86)
+  - running:Color     := Color.rgb (86,182,255)
+
+  // Syntax coloring of the code (index used in `Code_show_entry.spans'):
+
+  - c_plain:Int    := 0
+  - c_comment:Int  := 1
+  - c_string:Int   := 2
+  - c_external:Int := 3
+  - c_number:Int   := 4
+  - c_type:Int     := 5
+  - c_section:Int  := 6
+  - c_special:Int  := 7
+  - c_operator:Int := 8
+  - c_punct:Int    := 9
+
+  - code_colors:Array Color :=
+  ( + a:Array Color
+    a := Array Color.create_with_capacity 10
+    a.add_last (Color.rgb (222,225,229)); // plain
+    a.add_last (Color.rgb (118,136,150)); // comment
+    a.add_last (Color.rgb (255,186,  0)); // string
+    a.add_last (Color.rgb (206,198, 96)); // external
+    a.add_last (Color.rgb (196,146,255)); // number
+    a.add_last (Color.rgb ( 92,205,128)); // type
+    a.add_last (Color.rgb (255,123,114)); // section
+    a.add_last (Color.rgb ( 96,186,255)); // self, Self, NULL, True...
+    a.add_last (Color.rgb (230,150, 96)); // operator
+    a.add_last (Color.rgb (150,158,166)); // punctuation
+    a
+  )
+
+  // Fonts:
+
+  - mono:Int := -1
+  - set_mono m:Int <- ( mono := m; )
+
+  - code_size:Real32 := 16
+  - set_code_size s:Real32 <- ( code_size := s; )
+
+  - console_size:Real32 := 14
+
+  - ui_size:Real32 := 16
+  - small_size:Real32 := 13
+
+Private
+
+  - stamp:Uint64 := Time.gettimeofday
+
+Public
+
+  - ms:Int <- ((Time.gettimeofday - stamp) / 1000).to_int
+  // Milliseconds since start (animations, timers).

@@ -212,6 +212,7 @@ static int li_cpdir(const char *src, const char *dst) {
 
 `;
 Inherit
+  
   - parent_utils:Utils := Utils
 
 Public
@@ -220,18 +221,21 @@ Public
   
   - open_read n:String :Pointer <-
   ( + buf:C_array(Char)
+    
     buf := n.to_external
     `fopen((char*)@buf,"rb")`:(Pointer)
   )
   
   - open_write n:String :Pointer <-
   ( + buf:C_array(Char)
+    
     buf := n.to_external
     `fopen((char*)@buf,"wb")`:(Pointer)
   )
   
   - open_write_append n:String :Pointer <-
   ( + buf:C_array(Char)
+    
     buf := n.to_external
     `fopen((char*)@buf,"a")`:(Pointer)
   )
@@ -240,6 +244,7 @@ Public
   ( + ptr:C_array(Char)
     + result:Pointer
     + sz:Int
+    
     sz := buf.capacity
     ptr := buf.to_external
     result := `fgets((void *)(@ptr),@sz,(FILE*)(@f))`:(Pointer)
@@ -253,6 +258,7 @@ Public
   ]
   ( + ptr:C_array(Char)
     + result:Int
+    
     ptr := buf.storage
     result := `fread((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(Int)
     buf.set_upper (sz-1)
@@ -260,7 +266,8 @@ Public
   )
   
   - force_read_raw f:Pointer in ptr:C_array Uint8 size sz:Int <-
-  ( (read_raw f in ptr size sz != sz).if {
+  (
+    (read_raw f in ptr size sz != sz).if {
       "Error: `fread()' on ".print; sz.print; "bytes.".println;
       exit (-1)
     }
@@ -278,6 +285,7 @@ Public
   ]
   ( + ptr:C_array(Char)
     + result:Int
+    
     ptr := buf.storage; // Warning: Not used @to_external    
     result := `fwrite((void *)(@ptr),(size_t)(1), (size_t)(@sz),(FILE*)(@f))`:(Int)
     result
@@ -297,6 +305,7 @@ Public
   
   - size p:Pointer :Int <-
   ( + result,old_p:Int
+    
     old_p := position p
     `fseek((FILE*)(@p),0,SEEK_END)`
     result := position p 
@@ -306,6 +315,7 @@ Public
   
   - rename src:String to dst:String <-
   ( + psrc,pdst:C_array Char
+    
     (psrc,pdst) := (src.to_external, dst.to_external)
     `rename(@psrc,@pdst)`
   )    
@@ -318,6 +328,7 @@ Public
   ( + p:C_array(Char)
     + stream:Pointer
     + result:Boolean
+    
     p := new_path.to_external
     stream := `fopen((char*)@p,"w+b")`:Pointer
     (result := (stream != NULL)).if {
@@ -340,11 +351,7 @@ Public
   
   // Directory handling:
   
-  - pwd_in buffer:String_buffer <-
-  Environment.pwd_in buffer
-  [
-    ? {buffer.last = '/'}
-  ]
+  - pwd_in buffer:String_buffer <- Environment.pwd_in buffer
   
   - dir_exists some_path:String :Boolean <-
   (
@@ -386,6 +393,18 @@ Public
   - exists some_path:String : Boolean <-
   (
     (li_path_kind some_path) != 0
+  )
+  
+  - add_dirsep path:String_buffer <-
+  // If not alreday at the end, add the correct directory separator.
+  ( + directory_separator:Char
+    
+    if (System.name = "windows") then {
+      directory_separator := '\\'
+    } else {
+      directory_separator := '/'
+    }
+    path.extend_unless directory_separator
   )
   
 Private

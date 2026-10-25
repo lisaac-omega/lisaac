@@ -1,6 +1,7 @@
 Header
   + name := Main
 Public
+  
   - mybuffer:String_buffer := String_buffer.create 256
   
   - main <-

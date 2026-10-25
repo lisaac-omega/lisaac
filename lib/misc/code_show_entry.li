@@ -1,0 +1,390 @@
+Header
+  + name := Code_show_entry
+/*
+  One example of a show (see `Code_show'): where the file is, what can be
+  done with it (tags of the show list), its current state (compiling,
+  running...), its text split into colored lines and its console output.
+  */
+Insert
+  
+  - parent_clone:Clone := Clone
+
+Public
+
+  // Description (from the show list):
+
+  + path:String_alias      // As given in the show list (relative).
+  + dir:String_alias       // Absolute directory, ending with a separator.
+  + file:String_alias      // File name only, e.g. "factorial_example.li".
+  + exec:String_alias      // Executable name, e.g. "factorial_example".
+  + subdir:String_alias    // Relative directory, for display only.
+
+  + can_run:Boolean := True     // False with "no-run".
+  + has_args:Boolean            // True with "run".
+  + default_args:String_alias := ""
+  + args:String_buffer
+  + background:Boolean          // "background": auto mode does not wait.
+  + elit_view:Boolean           // "elit-view".
+
+  - set_can_run b:Boolean <- ( can_run := b; )
+  - set_background b:Boolean <- ( background := b; )
+  - set_elit_view b:Boolean <- ( elit_view := b; )
+  - set_args a:String_alias <-
+  (
+    has_args := True
+    default_args := a
+    args.copy a
+  )
+
+  // State:
+
+  - idle:Int      := 0
+  - compiling:Int := 1
+  - running:Int   := 2
+
+  + phase:Int
+  + pid:Int := -1
+  + run_after_compile:Boolean
+  + compiled:Boolean            // Executable present (compile only).
+  + capture:Boolean             // Output of the running process goes to `output'.
+
+  - none:Int          := 0
+  - ok:Int            := 1
+  - compile_error:Int := 2
+  - run_error:Int     := 3
+  - stopped:Int       := 4
+  + status:Int
+  + exit_code:Int
+  + error_line:Int := -1        // From the compiler message (0 is the first line).
+  + error_column:Int
+
+  + message:String_buffer       // One line, shown under the console title.
+  + output:String_buffer        // Compiler or program output.
+  + log_path:String_alias
+
+  - set_phase p:Int <- ( phase := p; )
+  - set_pid p:Int <- ( pid := p; )
+  - set_run_after_compile b:Boolean <- ( run_after_compile := b; )
+  - set_compiled b:Boolean <- ( compiled := b; )
+  - set_capture b:Boolean <- ( capture := b; )
+  - set_status s:Int <- ( status := s; )
+  - set_exit_code c:Int <- ( exit_code := c; )
+  - set_log_path p:String_alias <- ( log_path := p; )
+  - clear_error <- ( error_line := -1; )
+  
+  - find_error <-
+  // Look for "Line L column C in Proto(.../dir/file.li):" in `output'.
+  ( + i,j,l,c:Int
+    error_line := -1
+    i := output.first_substring_index "Line "
+    (i != -1).if {
+      (l,j) := read_int (i + 5)
+      ((j + 8 <= output.upper) && {output.at j = ' '}).if {
+        (c,j) := read_int (j + 8)
+        String.tmp { tmp:String_buffer
+          tmp.add_last '/'
+          tmp.append file
+          tmp.append "):"
+          i := output.first_substring_index tmp
+          ((i > j) && {l > 0}).if {
+            (error_line,error_column) := (l - 1,(c - 1).max 0)
+          }
+        }
+      }
+    }
+  )
+  
+  - read_int j:Int :(Int,Int) <-
+  ( + n,k:Int
+    k := j
+    {(k <= output.upper) && {(output.at k).is_digit}}.while_do {
+      n := n * 10 + ((output.at k).to_uint8 - '0'.to_uint8).to_int
+      k := k + 1
+    }
+    n,k
+  )
+
+  - is_active:Boolean <- phase != idle
+
+  // Creation:
+
+  - create path_li:String_alias home home:String_alias :Self <-
+  ( + result:Self
+    
+    result := clone
+    result.make path_li home home
+    result
+  )
+
+  - make path_li:String_alias home home:String_alias <-
+  ( + idx:Int
+    
+    path := path_li
+    args := String_buffer.create 32
+    message := String_buffer.create 128
+    output := String_buffer.create 1024
+    String.tmp { buf:String_buffer
+      idx := path_li.upper
+      while {(idx >= 0) && {path_li.at idx != '/'}} do {
+        idx := idx - 1
+      }
+      buf.copy path_li
+      buf.remove_head (idx + 1)
+      file := buf.to_string_alias
+      buf.remove_tail 3
+      exec := buf.to_string_alias
+      buf.clear
+      (idx > 0).if {
+        buf.append path_li from 0 to (idx - 1)
+      }
+      subdir := buf.to_string_alias
+      buf.clear
+      buf.append home
+      (idx >= 0).if {
+        buf.add_dirsep
+        buf.append path_li from 0 to idx
+      }
+      buf.add_dirsep
+      dir := buf.to_string_alias
+    }
+  )
+
+  // Text of the file (loaded at first use):
+
+  + lines:Array String_alias
+  + span_first:Array Int
+  + spans:Array Int
+  // For line `i', spans are quadruples (first byte, last byte, column, color)
+  // stored in `spans' from index `span_first.at i' to `span_first.at (i+1)' excluded.
+
+  - line_count:Int <- ( load; lines.count )
+
+  - load <-
+  ( + content,line:String_buffer
+    + c:Char
+    (lines = NULL).if {
+      lines := Array String_alias.create_with_capacity 128
+      span_first := Array Int.create_with_capacity 128
+      spans := Array Int.create_with_capacity 4096
+      in_comment := False
+      content := String_buffer.create 4096
+      line := String_buffer.create 256
+      String.tmp { p:String_buffer
+        p.copy dir
+        p.append file
+        (! read_file p in content).if {
+          content.copy "// Cannot read file \""
+          content.append p
+          content.append "\".\n"
+        }
+      }
+      0.to (content.upper) do { i:Int
+        c := content.at i
+        (c = '\n').if {
+          add_line line
+        }.elseif {c = '\t'} then {
+          line.append "  "
+        }.elseif {c != '\r'} then {
+          line.add_last c
+        }
+      }
+      (! line.is_empty).if { add_line line; }
+      span_first.add_last (spans.count)
+    }
+  )
+
+  - read_file p:String in content:String_buffer :Boolean <-
+  ( + f:Pointer
+    + sz:Int
+    + result:Boolean
+    f := File_utils.open_read p
+    (f != NULL).if {
+      sz := File_utils.size f
+      content.make (sz + 1)
+      (sz > 0).if {
+        File_utils.read f in content size sz
+      }
+      File_utils.close f
+      result := True
+    }
+    result
+  )
+
+  - reload_output <-
+  // Read again `log_path' into `output' (kept small).
+  (
+    (log_path != NULL).if {
+      (read_file log_path in output).if {
+        (output.count > max_output).if {
+          output.remove_head (output.count - max_output)
+        }
+      }
+    }
+  )
+
+  - max_output:Int := 65536
+
+Private
+
+  + in_comment:Boolean
+
+  - add_line line:String_buffer <-
+  ( + s:String_alias
+    s := line.to_string_alias
+    lines.add_last s
+    tokenize s
+    line.clear
+  )
+
+  - is_op c:Char :Boolean <- "<-:=?+*/!&|>#^~@%\\".has c
+
+  - is_word c:Char :Boolean <-
+  (c.is_letter_or_digit) || {c = '_'} || {! c.is_ascii}
+
+  - is_number_char s:String at j:Int :Boolean <-
+  (is_word (s.at j)) || {(s.at j = '.') && {j < s.upper} && {(s.at (j + 1)).is_digit}}
+  
+  - close_comment s:String from p:Int :Int <-
+  // Index just after "*/" at or after `p', or -1.
+  ( + i,result:Int
+    result := -1
+    i := p
+    while {(result = -1) && {i < s.upper}} do {
+      ((s.at i = '*') && {s.at (i + 1) = '/'}).if { result := i + 2; }
+      i := i + 1
+    }
+    result
+  )
+
+  - end_quote s:String from p:Int quote q:Char :Int <-
+  // Index just after the closing `q' (or end of line).
+  ( + i:Int
+    i := p
+    while {(i <= s.upper) && {s.at i != q}} do {
+      ((s.at i = '\\') && {q != '`'}).if { i := i + 1; }
+      i := i + 1
+    }
+    (i + 1).min (s.count)
+  )
+
+  - same s:String from b:Int to e:Int as w:String :Boolean <-
+  ( + result:Boolean
+    + i:Int
+    (e - b + 1 = w.count).if {
+      result := True
+      i := 0
+      while {result && {i < w.count}} do {
+        result := s.at (b + i) = w.at i
+        i := i + 1
+      }
+    }
+    result
+  )
+
+  - is_section s:String from b:Int to e:Int :Boolean <-
+  ( + result:Boolean
+    section_words.foreach { w:String_alias
+      result := result || {same s from b to e as w}
+    }
+    result
+  )
+  
+  - is_special s:String from b:Int to e:Int :Boolean <-
+  ( + result:Boolean
+    special_words.foreach { w:String_alias
+      result := result || {same s from b to e as w}
+    }
+    result || {(e > b + 5) && {same s from b to (b + 5) as "Result"}}
+  )
+  
+  - section_words:Array String_alias :=
+  ( + a:Array String_alias
+    a := Array String_alias.create_with_capacity 10
+    a.add_last "Header"; a.add_last "Inherit"; a.add_last "Insert"
+    a.add_last "Public"; a.add_last "Private"; a.add_last "Section"
+    a.add_last "Mapping"; a.add_last "External"; a.add_last "Interrupt"
+    a.add_last "Directory"
+    a
+  )
+  
+  - special_words:Array String_alias :=
+  ( + a:Array String_alias
+    a := Array String_alias.create_with_capacity 8
+    a.add_last "Self"; a.add_last "NULL"; a.add_last "True"
+    a.add_last "False"; a.add_last "Old"; a.add_last "Result"
+    a.add_last "self"
+    a
+  )
+  
+  - word_color s:String from b:Int to e:Int :Int <-
+  ( + result:Int
+    + c:Char
+    result := Code_show_look.c_plain
+    c := s.at b
+    (c.is_upper).if {
+      result := Code_show_look.c_type
+      (is_section s from b to e).if {
+        result := Code_show_look.c_section
+      }.elseif {is_special s from b to e} then {
+        result := Code_show_look.c_special
+      }
+    }.elseif {(c.to_uint8 = 0E2h) && {b < e} && {(s.at (b + 1)).to_uint8 = 084h}} then {
+      result := Code_show_look.c_type; // ℕ, ℤ, ℚ, ℝ, ℂ
+    }.elseif {same s from b to e as "self"} then {
+      result := Code_show_look.c_special
+    }
+    result
+  )
+
+  - tokenize s:String <-
+  ( + i,j,n,k,col:Int
+    + c:Char
+    span_first.add_last (spans.count)
+    n := s.count
+    {i < n}.while_do {
+      c := s.at i
+      j := i + 1
+      in_comment.if {
+        j := close_comment s from i
+        (j = -1).if { j := n; } else { in_comment := False; }
+        k := Code_show_look.c_comment
+      }.elseif {c = ' '} then {
+        {(j < n) && {s.at j = ' '}}.while_do { j := j + 1; }
+        k := -1
+      }.elseif {(c = '/') && {j < n} && {s.at j = '/'}} then {
+        j := n
+        k := Code_show_look.c_comment
+      }.elseif {(c = '/') && {j < n} && {s.at j = '*'}} then {
+        j := close_comment s from (i + 2)
+        (j = -1).if { j := n; in_comment := True; }
+        k := Code_show_look.c_comment
+      }.elseif {(c = '"') || {c = '\''}} then {
+        j := end_quote s from j quote c
+        k := Code_show_look.c_string
+      }.elseif {c = '`'} then {
+        j := end_quote s from j quote c
+        k := Code_show_look.c_external
+      }.elseif {c.is_digit} then {
+        {(j < n) && {is_number_char s at j}}.while_do { j := j + 1; }
+        k := Code_show_look.c_number
+      }.elseif {is_word c} then {
+        {(j < n) && {is_word (s.at j)}}.while_do { j := j + 1; }
+        k := word_color s from i to (j - 1)
+      }.elseif {is_op c} then {
+        {(j < n) && {is_op (s.at j)}}.while_do { j := j + 1; }
+        k := Code_show_look.c_operator
+      } else {
+        k := Code_show_look.c_punct
+      }
+      (k != -1).if {
+        spans.add_last i
+        spans.add_last (j - 1)
+        spans.add_last col
+        spans.add_last k
+      }
+      {i < j}.while_do {
+        ((s.at i).to_uint8 & 0C0h != 80h).if { col := col + 1; }
+        i := i + 1
+      }
+    }
+  )

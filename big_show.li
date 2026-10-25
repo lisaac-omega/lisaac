@@ -18,29 +18,24 @@ prototype-based programming models.
 
 Created and maintained by Benoît Sonntag and Dominique Colnet.*/
 Insert
+  
   - code_show:Code_show := Code_show 
+  
 Public
   
   - main <-
   (
     show (
-      "example/startrek/startrek.li", "background",
-      "example/connect_four/connect_four.li", "background",
-      "example/solitaire/solitaire.li", "background",
-      "example/snake/snake.li", "background",
-      "example/arrow_out/arrow_out.li", "background",
+      "example/startrek/startrek.li",
+      "game_show.li", "elit-view",
       "example/hello_world.li", "elit-view",
       "example/welcome/welcome.li", "elit-view",
       "example/misc/glyph_example.li", "elit-view", "no-run", 
       "example/CodEx/Tortue/dessin_maison.li", "elit-view",
-      "example/CodEx/Tortue/flocon_koch.li", "background",
-      "example/CodEx/Tortue/dessin_feuille.li", "background",
-      "example/CodEx/Tortue/arbre_fractale.li", "background",
-      "example/CodEx/Tortue/hilbert.li", "wait",
+      "example/CodEx/Tortue/tortue_show.li", "elit-view",
       "example/basics/factorial_example.li", "elit-view", "run", "1000",
       "example/CodEx/Fibonacci/fibonacci.li", "elit-view", "run", "v2 500",
       "lib/collection/collection.li", "elit-view", "no-run",
-      "lib/boolean/boolean.li", "elit-view", "no-run" 
+      "lib/boolean/boolean.li", "elit-view", "no-run"
     )
   )
-

@@ -8,6 +8,8 @@ Insert
   
   - parent_utils:Utils := Utils
   
+  - parent_diff:Diff := Diff
+  
 Private
   
   + verbose:Boolean := False
@@ -163,34 +165,11 @@ Private
   ( + exit_status:Int
     
     verbose.if {
-      "rm ".print
-      path.println
+      Out # "rm " #| path
     }
     exit_status := File_utils.remove path
     (verbose && {exit_status != 0}).if {
-      "rm failed".println
-    }
-    exit_status
-  )
-  
-  - diff dirpath:String n1 n1:String_alias n2 n2:String_alias :Int <-
-  ( + exit_status:Int
-    String.tmp2 { (buf1, buf2: String_buffer)
-      buf1.append dirpath
-      buf1.append n1
-      buf2.append dirpath
-      buf2.append n2
-      verbose.if {
-        Out # "diff " # buf1 # ' ' # buf2 # '\n'
-      }
-      exit_status := Diff.path buf1 path buf2
-      if (exit_status != 0) then {
-        error_counter := error_counter + 1
-        Out # "diff " # buf1 # ' ' # buf2 # "diff failed\n"
-        first_error_exit.if {
-          exit exit_status
-        }
-      }
+      Out # "rm " # path #| " failed"
     }
     exit_status
   )

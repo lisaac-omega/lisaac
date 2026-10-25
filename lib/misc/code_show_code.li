@@ -1,0 +1,171 @@
+Header
+  + name := Code_show_code
+/*
+  Read only view of the source code of the current example of the
+  graphical `Code_show': line numbers, syntax coloring, scrolling.
+  */
+Inherit
+  + parent_gobj:Flat Gobj Code_show_code
+
+Public
+
+  + entry:Code_show_entry
+  + top:Real32      // First visible line (may be fractional).
+  + left:Real32     // Horizontal scroll, in pixels.
+
+  - margin:Real32 := 14
+
+  - create:Self <-
+  ( + result:Self
+    result := clone
+    result.init_obj
+    result
+  )
+
+  - set_entry e:Code_show_entry <-
+  (
+    entry := e
+    entry.load
+    (top,left) := (0,0)
+  )
+
+  - show_line l:Int <-
+  // Scroll so that line `l' is visible, at one third of the view.
+  ( + v:Real32
+    v := visible_lines
+    ((l.to_real32 < top) || {l.to_real32 > top + v - 2}).if {
+      top := l.to_real32 - v / 3
+    }
+    clamp
+  )
+  
+  - line_h:Real32 <- Code_show_look.code_size * 1.45
+
+  - visible_lines:Real32 <- (height - margin * 2) / line_h
+
+  - scroll dy:Real32 <-
+  (
+    top := top - dy * 3
+    clamp
+  )
+
+  - scroll_x dx:Real32 <-
+  (
+    left := (left - dx * 40).max 0
+  )
+
+  - page dir:Int <-
+  (
+    top := top + dir.to_real32 * ((visible_lines - 2).max 1)
+    clamp
+  )
+
+  - clamp <-
+  ( + m:Real32
+    (entry != NULL).if {
+      m := (entry.line_count.to_real32 - visible_lines + 1).max 0
+      top := (top.max 0).min m
+    }
+  )
+
+  - char_w:Real32 <-
+  ( + x0,y0,x1,y1,w:Real32
+    set_font
+    (w,x0,y0,x1,y1) := text_bounds (0,0) msg "0000000000"
+    w / 10
+  )
+
+  - set_font <-
+  (
+    (Code_show_look.mono >= 0).if {
+      font_face_id (Code_show_look.mono)
+    } else {
+      font_face_id (Font.sys (Font.roman))
+    }
+    font_size (Code_show_look.code_size)
+  )
+
+  - draw <-
+  ( + cw,lh,gut,x0,y,yb:Real32
+    + first,last,b,e,k,digits:Int
+    + s:String_alias
+    + colors:Array Color
+    begin_path
+    rect (xo,yo) size (width,height)
+    fill_color (Code_show_look.background)
+    fill
+    (entry != NULL).if {
+      clamp
+      colors := Code_show_look.code_colors
+      cw := char_w
+      lh := line_h
+      digits := 3
+      (entry.line_count >= 1000).if { digits := 4; }
+      gut := cw * digits.to_real32 + margin * 2
+      // Gutter:
+      begin_path
+      rect (xo,yo) size (gut,height)
+      fill_color (Code_show_look.panel)
+      fill
+      save
+      intersect_scissor (xo,yo) size (width,height)
+      first := top.to_int
+      last := ((top + visible_lines + 1).to_int).min (entry.lines.upper)
+      text_align (align_left | align_middle)
+      first.to last do { i:Int
+        y := yo + margin + (i.to_real32 - top) * lh + lh / 2
+        String.tmp { tmp:String_buffer
+          (i + 1).append_in tmp
+          fill_color ((i = entry.error_line).ok (Code_show_look.error) or (Code_show_look.text_faint))
+          text (xo + gut - margin - cw * tmp.count.to_real32, y) msg tmp
+        }
+      }
+      intersect_scissor (xo + gut,yo) size (width - gut,height)
+      x0 := xo + gut + margin - left
+      // Line of the compilation error:
+      ((entry.error_line).in_range first to last).if {
+        y := yo + margin + ((entry.error_line).to_real32 - top) * lh
+        begin_path
+        rect (xo + gut,y) size (width - gut,lh)
+        fill_color (Color.rgba (240,86,86,40))
+        fill
+        begin_path
+        rect (xo + gut,y) size (3,lh)
+        fill_color (Code_show_look.error)
+        fill
+        begin_path
+        rect (x0 + cw * (entry.error_column).to_real32,y + lh - 3) size (cw,2)
+        fill_color (Code_show_look.error)
+        fill
+      }
+      first.to last do { i:Int
+        y := yo + margin + (i.to_real32 - top) * lh + lh / 2
+        s := entry.lines.at i
+        b := entry.span_first.at i
+        e := entry.span_first.at (i + 1)
+        {b < e}.while_do {
+          k := entry.spans.at (b + 3)
+          fill_color (colors.at k)
+          text (x0 + cw * (entry.spans.at (b + 2)).to_real32, y) msg s from (entry.spans.at b) to (entry.spans.at (b + 1))
+          b := b + 4
+        }
+      }
+      reset_scissor
+      restore
+      // Vertical scroll indicator:
+      yb := (visible_lines / entry.line_count.to_real32).min 1
+      (yb < 1).if {
+        begin_path
+        rect (xmax - 6, yo + 4 + (height - 8) * top / entry.line_count.to_real32) size (4, (height - 8) * yb) radius 2
+        fill_color (Code_show_look.panel_hover)
+        fill
+      }
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + e:Int
+    e := ev & ~1
+    (e = Hand.clic).if { focus := NULL; }
+    True
+  )

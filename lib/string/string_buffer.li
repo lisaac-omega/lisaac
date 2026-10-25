@@ -1,8 +1,10 @@
 Header
   + name := String_buffer
 Inherit
+  
   + inherit_string:Flat String
-  - parent_arrayed:Arrayed := Arrayed  
+  - parent_arrayed:Arrayed := Arrayed
+  
 Public
 
   + capacity:Int
@@ -985,3 +987,11 @@ Public
       upper := upper + 1
     }
   )
+  
+  // Misc
+  
+  - add_dirsep <-
+  (
+    File_utils.add_dirsep self
+  )
+  

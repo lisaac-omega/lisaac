@@ -203,14 +203,29 @@ Private
   )
   
   - cercle rayon:Int <-
-  (
-    Out # rayon # '\n'
-    if running then {
-      stroke {
-        circle (turtle_x, turtle_y) radius rayon
-      } width pen_width color pen_color      
+  // La tortue marche sur le cercle (36 pas de 10°), elle part et revient au même endroit,
+  // dans la même direction. Le centre est sur le côté.
+  ( + pas:Int
+
+    pas := (rayon * 6283) / 36000 // 2.pi.r / 36
+    répéter 36 fois {
+      avance pas ; tourne 10
     }
   )
+  
+  - arc r:Int degrés d:Int <-
+  // La tortue marche sur un arc de cercle de rayon r et de d degrés
+  // (pas de 10°). Elle tourne donc de d au total.
+  [
+    ((d % 10) = 0)
+  ]
+  ( + pas:Int
+
+    pas := (r * 6283) / 36000 // 2.pi.r / 36
+    répéter (d / 10) fois {
+      avance pas ; tourne 10
+    }
+  )  
   
   - couleur_trait c:Color <- pen_color := c
   

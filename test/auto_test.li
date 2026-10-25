@@ -3,7 +3,6 @@ Header
 /*
   Performs tests automatically for the Lisaac Ω project.
   */
-  
 Insert
 
   - parent_mini_bash:Mini_bash := Mini_bash
@@ -97,11 +96,22 @@ Private
   
   - scan_directory (root:String_alias) <-
   (
+    working_directory.clear
+    File_utils.pwd_in working_directory
     (Environment.chdir root = 0).if {
       working_directory.clear
       File_utils.pwd_in working_directory
     } else {
-      crash_with_message ("Cannot chdir into \"" + root + "\"")
+      working_directory.clear
+      File_utils.pwd_in working_directory
+      String.tmp { msg:String_buffer
+        msg.append "From \""
+        msg.append working_directory
+        msg.append "\", cannot chdir into \""
+        msg.append root
+        msg.append "\"."
+        crash_with_message msg
+      }
     }
     verbose.if {
       "scanning \"".print
@@ -402,14 +412,9 @@ Private
     String.tmp { me:String_buffer
       me.append fname
       me.remove_suffix ".li"
-      
-      // Even on MYS2 UCRT64 there is no need for that:
-      /*
       if (system_name = "windows") then {
         me.append ".exe"
       }
-      */
-      
       main_exec := me.to_string_alias
     }
     String.tmp { cmd_buf:String_buffer
@@ -463,10 +468,17 @@ Private
     continue.if {
       (file_exists main_exec in dirpath).if {
         remove_list_add main_exec
-        remove_list_add ((main_exec + ".c").to_string_alias)
+        String.tmp { buf:String_buffer
+          buf.append main_exec
+          (main_exec.has_suffix ".exe").if {
+            buf.remove_tail 4
+          }
+          buf.append ".c"
+          remove_list_add (buf.to_string_alias)
+        } 
         '.'.print
       } else {
-        Out # dirpath # ' ' # main_exec # ". ERROR:no main.ERROR"
+        Out # dirpath # main_exec # ". ERROR:no main.ERROR"
         error_counter := error_counter + 1
         first_error_exit.if {
           exit 1

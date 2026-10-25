@@ -92,7 +92,7 @@ Public
   ]
   
   - second:V <-
-  // Access to the @first item.
+  // Access to the @second item.
   [
     count > 1
   ]

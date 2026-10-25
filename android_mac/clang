@@ -1,0 +1,4 @@
+#!/bin/bash
+# LiA (macOS) : clang d'Apple en compilateur croise pour Android arm64 (API 24).
+. "$(dirname "$0")/env.sh"
+exec "$CLANG" --target=aarch64-linux-android24 --sysroot "$SYSROOT" "$@"

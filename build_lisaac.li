@@ -4,6 +4,7 @@ Header
 
   - include := `#include <unistd.h>`;
 Insert
+  
   - parent_mini_bash:Mini_bash := Mini_bash
 
 Private
@@ -120,10 +121,11 @@ Private
   - update_elit_cfg <-
   ( + index:Int
     + value:String_alias
-    "Update lisaac/elit/assets/elit.cfg.".println
+    
+    Out #| "Update lisaac/elit/assets/elit.cfg."
     chdir elit_dir or_exit
     chdir "assets" or_exit
-    String.tmp { (elit_cfg:String_buffer)
+    String.tmp { elit_cfg:String_buffer
       (open_read "elit.cfg" in elit_cfg).if_false {
         die "Cannot read lisaac/elit/assets/elit.cfg." exit 1
       }
@@ -187,7 +189,8 @@ Public
   (    
     "Installing Lisaac Ω Compiler and Tools.".println
     File_utils.pwd_in working_directory
-    ? {working_directory.last = '/'}
+    working_directory.add_dirsep
+    
     verbose := Command_args.option_shift "--verbose"
     if (Command_args.count != 1) then {
       ("Unknow option \"" + (Command_args.at 1) + "\".").println
@@ -204,7 +207,11 @@ Public
       Out # "Warning: Warning: Avoid spaces in the Lisaac Ω path.\n"
       Out # "lisaac_dir=\"" # lisaac_dir # "\".\n"
     }
-    if (! lisaac_dir.has_suffix "lisaac/") then {
+    if (lisaac_dir.has_suffix "lisaac/") then {
+      // ok
+    }.elseif {lisaac_dir.has_suffix "lisaac\\"} then {
+      // windows
+    } else {
       die "buid_lisaac must be run from lisaac directory." exit 1
     }
     if verbose then {
@@ -212,6 +219,7 @@ Public
     }
     lisaac_bin_dir_set
     elit_dir_set
+    
     user_homedir_detection
     if verbose then {
       ("user_homedir=\"" + user_homedir + "\".").println
@@ -241,6 +249,7 @@ Public
         ("source ~/" + rc_file).println
       }
     }
+    final_cleanup
   )
   
 Private
@@ -320,7 +329,7 @@ Private
     chdir elit_dir or_exit
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
-      cmd.extend_unless '/'
+      cmd.add_dirsep
       cmd.append "lisaac elit -q -boost"
       if (system != "windows") then {
         // -split does work yet on "windows".
@@ -339,19 +348,19 @@ Private
     chdir "welcome" or_exit
     String.tmp { cmd:String_buffer
       cmd.append elit_dir
-      cmd.extend_unless '/'
+      cmd.add_dirsep
       cmd.append "elit welcome.li"
       execute_command cmd background True
     }
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
-      cmd.extend_unless '/'
+      cmd.add_dirsep
       cmd.append "lisaac welcome -q -boost"
       execute_command cmd
     }
     String.tmp { cmd:String_buffer
       cmd.append lisaac_dir
-      cmd.extend_unless '/'
+      cmd.add_dirsep
       cmd.append "example/welcome/welcome"
       execute_command cmd background True
     }
@@ -361,7 +370,7 @@ Private
   (
     String.tmp { path:String_buffer
       path.append user_homedir
-      path.extend_unless '/'
+      path.add_dirsep
       path.append ".elit.cfg"
       if ( verbose ) then {
         ("Remove old \"" + path + "\".").println
@@ -380,7 +389,7 @@ Private
     chdir "misc" or_exit
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
-      cmd.extend_unless '/'
+      cmd.add_dirsep
       cmd.append "lisaac new_assets -q"
       execute_command cmd
     }
@@ -400,5 +409,42 @@ Private
       }
       idx := idx + 1
     }
+  )
+  
+  - final_cleanup <-
+  ( + i, status:Int
+    
+    verbose.if {
+      Out # "Final cleanup (after installation)\n"
+    }
+    chdir elit_dir or_exit
+    String.tmp { path:String_buffer
+      
+      path.copy elit_dir
+      path.add_dirsep
+      path.append "elit.h"
+      file_remove path
+      
+      path.copy elit_dir
+      path.add_dirsep
+      path.append "elit.c"
+      file_remove path
+      
+      path.copy elit_dir
+      path.add_dirsep
+      path.append "elit_data.c"
+      file_remove path
+      
+      {status = 0}.while_do {
+        path.copy elit_dir
+        path.add_dirsep
+        path.append "elit_code"
+        i.append_in path
+        path.append ".c"
+        status := file_remove path
+        (i > 100).if { status := 1 }
+        i := i + 1
+      }
+    }  
   )
   

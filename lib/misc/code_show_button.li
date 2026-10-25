@@ -1,0 +1,194 @@
+Header
+  + name := Code_show_button
+/*
+  Button of the graphical `Code_show': a round transport button with a
+  vector icon (play, stop, previous, next) or a text pill (toggle or not).
+  */
+Inherit
+  + parent_gobj:Flat Gobj Code_show_button
+
+Public
+
+  // Kinds:
+  - round:Int   := 0
+  - primary:Int := 1
+  - pill:Int    := 2
+
+  // Icons:
+  - no_icon:Int := 0
+  - i_play:Int  := 1
+  - i_stop:Int  := 2
+  - i_prev:Int  := 3
+  - i_next:Int  := 4
+
+  + kind:Int
+  + icon:Int
+  + label:String_alias
+  + act:{}
+  + enabled:Boolean := True
+  + toggled:Boolean
+  + busy:Boolean     // Animated ring (e.g. compiling).
+
+  - set_icon i:Int <- ( icon := i; )
+  - set_label l:String_alias <- ( label := l; )
+  - set_enabled b:Boolean <- ( enabled := b; )
+  - set_toggled b:Boolean <- ( toggled := b; )
+  - set_busy b:Boolean <- ( busy := b; )
+
+  - create k:Int icon i:Int label l:String_alias do a:{} :Self <-
+  ( + result:Self
+    result := clone
+    result.make k icon i label l do a
+    result
+  )
+
+  - make k:Int icon i:Int label l:String_alias do a:{} <-
+  (
+    init_obj
+    (kind,icon,label,act) := (k,i,l,a)
+    enabled := True
+  )
+
+  - width_min:Real32 <-
+  ( + x0,y0,x1,y1,wt:Real32
+    + result:Real32
+    (kind = pill).if {
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.small_size)
+      (wt,x0,y0,x1,y1) := text_bounds (0,0) msg label
+      result := wt + 32
+    } else {
+      result := height_min
+    }
+    result
+  )
+
+  - height_min:Real32 <-
+  ( + result:Real32
+    (kind = primary).if {
+      result := 60
+    }.elseif {kind = pill} then {
+      result := 30
+    } else {
+      result := 44
+    }
+    result
+  )
+
+  - draw <-
+  ( + cx,cy,r,s,a:Real32
+    + c,back:Color
+    + hover:Boolean
+    hover := enabled && {is inside}
+    (cx,cy) := (xo + width / 2, yo + height / 2)
+    (kind = pill).if {
+      r := height / 2
+      begin_path
+      rect (xo,yo) size (width,height) radius r
+      (toggled).if {
+        fill_color (Code_show_look.accent)
+        fill
+        c := Code_show_look.on_accent
+      } else {
+        hover.if {
+          fill_color (Code_show_look.panel_hover)
+        } else {
+          fill_color (Code_show_look.panel_light)
+        }
+        fill
+        begin_path
+        rect (xo+0.5,yo+0.5) size (width-1,height-1) radius r
+        stroke_width 1
+        stroke_color (Code_show_look.border)
+        stroke
+        enabled.if {
+          c := Code_show_look.text
+        } else {
+          c := Code_show_look.text_faint
+        }
+      }
+      fill_color c
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.small_size)
+      text_align (align_center | align_middle)
+      text (cx,cy+1) msg label
+    } else {
+      r := (width.min height) / 2
+      (kind = primary).if {
+        enabled.if {
+          back := hover.ok (Color.rgb (255,198,92)) or (Code_show_look.accent)
+          c := Code_show_look.on_accent
+        } else {
+          back := Code_show_look.accent_dark
+          c := Code_show_look.panel
+        }
+      } else {
+        back := hover.ok (Code_show_look.panel_hover) or (Code_show_look.panel_light)
+        c := enabled.ok (Code_show_look.text) or (Code_show_look.text_faint)
+      }
+      begin_path
+      circle (cx,cy) radius r
+      fill_color back
+      fill
+      busy.if {
+        // Small comet turning around the button.
+        a := (Code_show_look.ms % 1000).to_real32 / 1000 * 6.2831853
+        begin_path
+        circle (cx + (r + 5) * cos(a), cy + (r + 5) * sin(a)) radius 3
+        fill_color (Code_show_look.accent)
+        fill
+      }
+      s := r * 0.42
+      fill_color c
+      (icon)
+      .when i_play then {
+        begin_path
+        move_to (cx - s * 0.7, cy - s)
+        line_to (cx + s, cy)
+        line_to (cx - s * 0.7, cy + s)
+        close_path
+        fill
+      }
+      .when i_stop then {
+        begin_path
+        rect (cx - s * 0.8, cy - s * 0.8) size (s * 1.6, s * 1.6) radius 3
+        fill
+      }
+      .when i_prev then {
+        begin_path
+        rect (cx - s, cy - s) size (s * 0.35, s * 2)
+        fill
+        begin_path
+        move_to (cx + s, cy - s)
+        line_to (cx - s * 0.55, cy)
+        line_to (cx + s, cy + s)
+        close_path
+        fill
+      }
+      .when i_next then {
+        begin_path
+        rect (cx + s * 0.65, cy - s) size (s * 0.35, s * 2)
+        fill
+        begin_path
+        move_to (cx - s, cy - s)
+        line_to (cx + s * 0.55, cy)
+        line_to (cx - s, cy + s)
+        close_path
+        fill
+      }
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + e:Int
+    e := ev & ~1
+    (e = Hand.in).if {
+      set inside with (ev = Hand.in)
+    }.elseif {e = Hand.clic} then {
+      enabled.if {
+        focus := NULL
+        act.value
+      }
+    }
+    True
+  )

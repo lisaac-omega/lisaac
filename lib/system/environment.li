@@ -71,9 +71,19 @@ static int li_run_background(const char *cmd) {
   return (int)(intptr_t)pi.hProcess;   /* les HANDLE tiennent sur 32 bits */
 #else
   pid_t pid;
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 28
   char *argv[4];
   argv[0] = "sh"; argv[1] = "-c"; argv[2] = (char*)cmd; argv[3] = NULL;
   if (posix_spawn(&pid, "/bin/sh", NULL, NULL, argv, environ) != 0) return -1;
+#else
+  /* posix_spawn n'existe qu'à partir de l'API Android 28. */
+  pid = fork();
+  if (pid == -1) return -1;
+  if (pid == 0) {
+    execl("/bin/sh", "sh", "-c", cmd, (char*)NULL);
+    _exit(127);
+  }
+#endif
   return (int)pid;
 #endif
 }
@@ -220,7 +230,7 @@ Public
     cap := buffer.capacity
     `getcwd(@na,@cap)`
     buffer.restore_after_external
-    buffer.add_last '/'
+    buffer.add_dirsep
   )
 
   - pwd:String_alias <-

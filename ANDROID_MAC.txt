@@ -1,0 +1,125 @@
+=====================================================================
+  Lisaac -> Android sur macOS : installation des outils
+=====================================================================
+
+Sous macOS, `lisaac mon_projet -target android' utilise les scripts
+de `lisaac/android_mac/' au lieu de ceux de `lisaac/android/'.
+
+`lisaac/android/' reste necessaire : on y reprend tout ce qui ne depend
+pas de la plateforme (sysroot Android, android.jar, apksigner.jar,
+tools/ : glue C, AndroidManifest.xml, keystore, icones).
+Les binaires Linux qu'il contient (clang, aapt2, zipalign) ne servent
+pas sur Mac : ils sont remplaces par les outils ci-dessous.
+
+Contenu de `lisaac/android_mac/' :
+  setup.sh  verifie les outils (et telecharge `lisaac/android' si absent)
+  run.sh    compile, fabrique, signe et installe l'APK
+  clang     clang d'Apple en compilateur croise aarch64-linux-android24
+  env.sh    chemins communs, recherche de aapt2/zipalign
+  log.sh    affiche les logs de l'application (adb logcat)
+
+
+1) Outils de compilation
+------------------------
+
+a) Compilateur C : le clang d'Apple suffit (il sait produire du code
+   ARM64/ELF pour Android), pas besoin du NDK.
+
+     xcode-select --install
+
+b) Homebrew (si pas deja installe) : voir https://brew.sh
+
+c) Editeur de liens ELF (ld.lld), absent de Xcode :
+
+     brew install lld
+
+
+2) Outils de fabrication de l'APK
+---------------------------------
+
+a) Java (pour apksigner et sdkmanager) :
+
+     brew install --cask temurin     # demande le mot de passe (sudo)
+     java -version          # doit repondre sans erreur
+
+   Sans droits administrateur, l'openjdk de Homebrew convient aussi.
+   Il n'est pas dans le PATH, mais les scripts le trouvent seuls :
+
+     brew install openjdk
+     export JAVA_HOME=/opt/homebrew/opt/openjdk   # pour sdkmanager
+
+b) aapt2 et zipalign (build-tools du SDK Android) :
+
+     brew install --cask android-commandlinetools
+     yes | sdkmanager --licenses        # accepter les licences
+     sdkmanager "build-tools;35.0.0"
+
+   Ils sont installes dans
+     /opt/homebrew/share/android-commandlinetools/build-tools/35.0.0/
+   et trouves automatiquement. Si tu as deja un SDK Android ailleurs
+   (Android Studio : ~/Library/Android/sdk), il est aussi trouve,
+   ou bien definis ANDROID_HOME. Le build-tools le plus recent est pris.
+
+
+3) Outil de transfert vers le telephone (adb)
+---------------------------------------------
+
+     brew install --cask android-platform-tools
+     adb version
+
+Sur le telephone :
+  - Parametres > A propos du telephone > appuyer 7 fois sur
+    "Numero de build" pour activer le mode developpeur ;
+  - Parametres > Options pour les developpeurs > activer
+    "Debogage USB" ;
+  - brancher le telephone en USB, accepter l'autorisation qui
+    s'affiche, puis verifier :
+
+     adb devices            # le telephone doit apparaitre en "device"
+
+Transfert sans fil (Android 11 et plus), optionnel :
+  - Options pour les developpeurs > "Debogage sans fil" >
+    "Associer l'appareil avec un code" ;
+
+     adb pair <ip>:<port_appairage>      # saisir le code affiche
+     adb connect <ip>:<port>
+
+Transfert manuel : l'APK produit (`mon_projet.apk') peut aussi etre
+copie sur le telephone et ouvert (autoriser les sources inconnues).
+
+
+4) Utilisation
+--------------
+
+     cd mon_projet
+     lisaac mon_projet -target android
+
+`setup.sh' verifie d'abord que tout est installe et indique la
+commande manquante sinon. Ensuite `run.sh' :
+  - cree `android/' (manifest, icones) et `assets/' s'ils manquent
+    (`misc/new_assets.li' est compile automatiquement au besoin) ;
+  - compile le C, fabrique l'APK, l'aligne, le signe ;
+  - l'installe sur le telephone avec `adb install -r'.
+
+Pour voir les traces de l'application :
+
+     ~/lisaac/android_mac/log.sh          # filtre LIA par defaut
+     ~/lisaac/android_mac/log.sh <motif>
+
+Variables optionnelles :
+  CLANG=<chemin>       autre clang (ex: /opt/homebrew/opt/llvm/bin/clang)
+  JAVA_HOME=<jdk>      Java a utiliser pour signer l'APK
+  ANDROID_HOME=<sdk>   SDK Android ou chercher aapt2/zipalign
+
+
+Recapitulatif
+-------------
+
+  xcode-select --install
+  brew install lld
+  brew install --cask temurin android-platform-tools android-commandlinetools
+  yes | sdkmanager --licenses
+  sdkmanager "build-tools;35.0.0"
+
+  (sans sudo : `brew install openjdk' au lieu de temurin, et
+   `export JAVA_HOME=/opt/homebrew/opt/openjdk' avant sdkmanager)

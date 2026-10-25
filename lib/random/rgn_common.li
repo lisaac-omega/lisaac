@@ -81,7 +81,7 @@ Public
   
   - color: Color <-
   ( + result: Color
-    (min 1 max 17)
+    (min 1 max 18)
     .when 1 then { result := Color.blue }
     .when 2 then { result := Color.brown }
     .when 3 then { result := Color.cyan }
@@ -99,7 +99,11 @@ Public
     .when 15 then { result := Color.red }
     .when 16 then { result := Color.saddle_brown }
     .when 17 then { result := Color.yellow }
-    .else { result := Color.rgb(min 100 max 255.to_uint8, min 0 max 128.to_uint8, min 0 max 100.to_uint8) }  
+    .when 18 then { 
+      result := Color.rgb(min 100 max 255.to_uint8, 
+                          min 0 max 128.to_uint8, 
+                          min 0 max 100.to_uint8)
+      }  
     result
   )
   

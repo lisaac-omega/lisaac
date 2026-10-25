@@ -1,0 +1,80 @@
+Header
+  + name := Diff
+/*diff unix-like command*/
+Public
+  
+  - path p1:String path p2:String : Int <-
+  // Use the actual command line 'diff' of your system.
+  ( + result:Int
+    
+    String.tmp { buf:String_buffer
+      buf.append "diff "
+      buf.append p1
+      buf.add_last ' '
+      buf.append p2
+      result := Environment.run buf
+    }
+    result
+  )
+    
+Private
+  
+  - diff (file_path1, file_path2: String): Int <-
+  // Byte-by-byte comparison of two files, stopping at the first difference.
+  // Result (same convention as Unix `diff'): 0 if identical, 1 if different,
+  // 2 if a file cannot be opened or read.
+  ( + result, remaining, chunk, i:Int
+    + f1, f2:Pointer
+
+    result := 2
+    f1 := File_utils.open_read file_path1
+    (f1 != NULL).if {
+      f2 := File_utils.open_read file_path2
+      (f2 != NULL).if {
+        remaining := File_utils.size f1
+        (remaining != File_utils.size f2).if {
+          result := 1
+        } else {
+          result := 0
+          String.tmp2 { (b1, b2: String_buffer)
+            //Out # "Diff: b1.capacity=" # b1.capacity # " b2.capacity=" # b2.capacity # '\n'
+            b1.set_capacity 4096
+            b2.set_capacity 4096
+            { (result = 0) && {remaining > 0} }.while_do {
+              chunk := remaining.min (b1.capacity.min (b2.capacity))
+              ( (File_utils.read f1 in b1 size chunk != chunk) ||
+                {File_utils.read f2 in b2 size chunk != chunk} ).if {
+                result := 2
+              } else {
+                i := 0
+                { (i < chunk) && {b1.at i = b2.at i} }.while_do {
+                  i := i + 1
+                }
+                (i < chunk).if { result := 1 }
+                remaining := remaining - chunk
+              }
+            }
+          }
+        }
+        File_utils.close f2
+      }
+      File_utils.close f1
+    }
+    result
+  )
+  
+  - diff dirpath:String n1 n1:String_alias n2 n2:String_alias :Int <-
+  ( + result:Int
+    
+    String.tmp2 { (buf1, buf2: String_buffer)
+      buf1.append dirpath
+      buf1.append n1
+      buf2.append dirpath
+      buf2.append n2
+      result := diff(buf1, buf2)
+    }
+    result
+  )
+  
+  
+ 
