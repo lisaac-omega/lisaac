@@ -19,6 +19,8 @@ Public
       "example/solitaire/solitaire.li", "background",
       "example/arrow_out/arrow_out.li", "background",
       "example/connect_four/connect_four.li", "background",
-      "example/break/break.li", "background"
+      "example/break/break.li", "background",
+      "example/minesweeper/minesweeper.li", "background",
+      "example/shooter/shooter.li", "background"
     )
   )

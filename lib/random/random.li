@@ -1,62 +1,65 @@
 Header
   + name := Random
 /*
-   RANDOM number generation.
+   RANDOM number generation with xoshiro256** (Blackman & Vigna, 2018):
+   64 bits, period 2^256 - 1, 4 words of state.
+   The state is filled from the seed with SplitMix64, as recommended by
+   the authors (see https://prng.di.unimi.it/).
+   Without any init, the state is the one SplitMix64 gives for the
+   seed 0, which `init' does not allow (seed > 0): so it differs from
+   any initialized generator.
   */
-Inherit  
+Inherit
   - parent_rgn_common: /*EYE*/ Rgn_common := Rgn_common
-    
-Private
-  + seedmem:Int32 := 1
 
-  + iv:C_array Int32
-  
-  + iy:Int32
-  
-  - minimal_next <-
-  ( + k:Int32
-    k := seedmem / 127773
-    seedmem := 16807 * (seedmem - k * 127773) - 2836 * k
-    (seedmem < 0).if {
-      seedmem := seedmem + 2147483647
-    }
-    (iv = NULL).if {
-       iv := C_array Int32 .create 32
-    }
-  )
-  
-  - next <-
-  ( + tmp:Int32
-    tmp := iy % 32
-    minimal_next
-    iy := iv.at tmp
-    iv.at tmp put seedmem
+Private
+
+  // The state, by default the one of the seed 0.
+  + s0:Uint64 := `0xE220A8397B1DCDAFULL`:Uint64
+  + s1:Uint64 := `0x6E789E6AA1B965F4ULL`:Uint64
+  + s2:Uint64 := `0x06C45D188009454FULL`:Uint64
+  + s3:Uint64 := `0xF88BB8A8724C81ECULL`:Uint64
+
+  - splitmix64 i:Int seed s:Uint64 :Uint64 <-
+  // The @i-th output of SplitMix64 started with @s.
+  ( + z:Uint64
+    z := s + `0x9E3779B97F4A7C15ULL`:Uint64 * i.to_raw_uint64
+    z := (z ^ (z >> 30)) * `0xBF58476D1CE4E5B9ULL`:Uint64
+    z := (z ^ (z >> 27)) * `0x94D049BB133111EBULL`:Uint64
+    z ^ (z >> 31)
   )
 
 Public
-  
+
   - init seed:Uint32 : Self <-
-  ( + i:Int32
-    seedmem := seed.to_raw_int32
-    iv := C_array Int32 .create 32
-    minimal_next
-    {i <= 6}.while_do {
-      minimal_next
-      i := i + 1
-    }
-    i := 31
-    {i >= 0}.while_do {
-      iv.at i put seedmem
-      minimal_next
-      i := i - 1
-    }
-    iy := iv.at 0
-    next
+  ( + s:Uint64
+    s := seed.to_uint64
+    s0 := splitmix64 1 seed s
+    s1 := splitmix64 2 seed s
+    s2 := splitmix64 3 seed s
+    s3 := splitmix64 4 seed s
     self
   )
-  
-  - uint32:Uint32 <-
-  (
-    next
-    iy.to_raw_uint32
+
+  - uint64:Uint64 <-
+  ( + result,t:Uint64
+    
+    result := ((s1 * 5) @< 7) * 9
+    t := s1 << 17
+    s2 := s2 ^ s0
+    s3 := s3 ^ s1
+    s1 := s1 ^ s2
+    s0 := s0 ^ s3
+    s2 := s2 ^ t
+    s3 := s3 @< 45
+    result
   )
+
+  - uint32:Uint32 <- (uint64 >> 32).to_raw_uint32
+  // The upper bits are the best ones.
+
+  - real_64:Real64 <- (uint64 >> 11).to_real64 / 9007199254740992.0
+  // 53 bits (the precision of a Real64), in [0, 1).
+
+  - real_32:Real32 <- (uint64 >> 40).to_real32 / 16777216.0
+  // 24 bits (the precision of a Real32), in [0, 1).

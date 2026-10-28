@@ -686,5 +686,9 @@ Public
   
 
   // French corner
-  - de self:Self à limit_up:Self répéter blc:{Self;} <- ( from self to limit_up do blc)
+  
+  - de self:Self à limit_up:Self répéter blc:{Self;} <- 
+  ( 
+    from self to limit_up do blc
+  )
   

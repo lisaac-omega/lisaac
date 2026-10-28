@@ -1,19 +1,42 @@
 Header
   + name := Main
 Public
+  
+  - check f:Boolean path p:String has_suffix s:String : Boolean <-
+  ( + result:Boolean
+
+    if ((s.last = '/') && {System.name = "windows"}) then {
+      String.tmp { s2: String_buffer
+        s2.append s
+        s2.at (s2.upper) put '\\'
+        result := p.has_suffix s2 
+      }
+    } else {
+      result := p.has_suffix s
+    }
+    ((! result) && {f}).if {
+      Out # "path:" # p # " suffix:" #| s
+    }
+    f.if {
+      Test.check result
+    }
+    result
+  )
+  
   - main <-
   ( + p1,p2:String_alias
+    
     p1 := Environment.pwd
-    Test.check (p1.has_suffix "3/")
+    check True path p1 has_suffix "3/"
     Test.check (Environment.chdir "..") integer 0
     p2 := Environment.pwd
-    (p2.has_suffix "test/").if {
+    (check False path p2 has_suffix "test/").if {
       Test.check (Environment.chdir "cd-pwd") integer 0
       Test.check (Environment.chdir "3") integer 0
       p1 := Environment.pwd
-    }.elseif {p2.has_suffix "cd-pwd/"} then {
+    }.elseif {check False path p2 has_suffix "cd-pwd/"} then {
       Test.check (Environment.chdir "3") integer 0
-    }.elseif {p2.has_suffix "lisaac/"} then {
+    }.elseif {check False path p2 has_suffix "lisaac/"} then {
       Test.check (Environment.chdir "test") integer 0
       Test.check (Environment.chdir "cd-pwd") integer 0
       Test.check (Environment.chdir "3") integer 0
@@ -24,5 +47,5 @@ Public
     Test.check p1 string (Environment.pwd)
     Test.check (Environment.chdir "..") integer 0
     Test.check (Environment.chdir "..") integer 0
-    Test.check (Environment.pwd.has_suffix "test/")
+    check True path (Environment.pwd) has_suffix "test/"
   )

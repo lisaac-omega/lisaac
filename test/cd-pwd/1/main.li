@@ -1,72 +1,92 @@
 Header
   + name := Main
 Private
-  + pwd:String_alias
   
-  + mybuffer:String_buffer := String_buffer.create 256
-  
-  - pwd_update <-
-  (
-    mybuffer.clear
-    Environment.pwd_in mybuffer
-    pwd := mybuffer.to_string_alias
-    //("MAIN.14 " + pwd).println
-  )
-  
-  - check_point_1 <-
-  (
-    (System.name != "windows").if {
-      Test.check (pwd.has_suffix "/lisaac/test/cd-pwd/1/")
-    } else {
-      //Out # pwd # '\n'
-      Test.check (pwd.has_suffix "\\lisaac\\test\\cd-pwd\\1/")
+  + pwd:String_alias <-
+  ( + result: String_alias
+    
+    String.tmp { buf:String_buffer
+      Environment.pwd_in buf
+      result := buf.to_string_alias
     }
+    result
   )
   
 Public
+  
   - main <-
   (
-    pwd_update
-    (pwd.has_suffix "1/").if {
-      check_point_1
-    }.elseif {pwd.has_suffix "cd-pwd/"} then {
-      Test.check (Environment.chdir "1") integer 0
-      pwd_update
-      check_point_1
-    }.elseif {pwd.has_suffix "test/"} then {
-      Test.check (Environment.chdir "cd-pwd") integer 0
-      pwd_update
-      Test.check (Environment.chdir "1") integer 0
-      pwd_update
-      check_point_1
-    } else {
-      Utils.crash_with_message (pwd + " here to do or error ?")
-    }
-    Test.check (pwd.has_suffix "1/") txt {pwd}
-    // Now going up to "lisaac" directory:
-    Test.check (Environment.chdir "..") integer 0
-    pwd_update
-    Test.check (pwd.has_suffix "cd-pwd/") txt {pwd}
-    Test.check (Environment.chdir "..") integer 0
-    pwd_update
-    Test.check (pwd.has_suffix "test/") txt {pwd}
-    Test.check (Environment.chdir "..") integer 0
-    pwd_update
-    Test.check (pwd.has_suffix "lisaac/") txt {pwd}
-    (System.name != "Windows").if {
-      Test.check (File_utils.file_exists "test/cd-pwd/1/main.li")
-    } else {
+    if (System.name = "windows") then {
+      // Going down:    
+      (pwd.has_suffix "\\lisaac\\test\\cd-pwd\\1\\").if {
+        // Ok
+      }.elseif {pwd.has_suffix "cd-pwd\\"} then {
+        Test.check (Environment.chdir "1") integer 0
+      }.elseif {pwd.has_suffix "test\\"} then {
+        Test.check (Environment.chdir "cd-pwd") integer 0
+        Test.check (Environment.chdir "1") integer 0
+      }.elseif {pwd.has_suffix "lisaac\\"} then {
+        Test.check (Environment.chdir "test") integer 0
+        Test.check (Environment.chdir "cd-pwd") integer 0
+        Test.check (Environment.chdir "1") integer 0
+      } else {
+        Utils.crash_with_message pwd
+      }
+      Test.check (pwd.has_suffix "lisaac\\test\\cd-pwd\\1\\")
+      Test.check (File_utils.file_exists "main.li")
+      
+      // Now going up to "lisaac" directory:
+      Test.check (Environment.chdir "..") integer 0
+      Test.check (pwd.has_suffix "cd-pwd\\") txt {pwd}
+      Test.check (Environment.chdir "..") integer 0
+      Test.check (pwd.has_suffix "test\\") txt {pwd}
+      Test.check (Environment.chdir "..") integer 0
+      Test.check (pwd.has_suffix "lisaac\\") txt {pwd}
       Test.check (File_utils.file_exists "test\\cd-pwd\\1\\main.li")
+      
+      // Now going down:
+      Test.check (Environment.chdir "test") integer 0
+      Test.check (pwd.has_suffix "test\\")
+      Test.check (Environment.chdir "cd-pwd") integer 0
+      Test.check (pwd.has_suffix "cd-pwd\\") txt {pwd}
+      Test.check (Environment.chdir "1") integer 0
+      Test.check (pwd.has_suffix "1\\") txt {pwd}
+      Test.check (File_utils.file_exists "main.li")
+    } else {
+      // Going down:    
+      (pwd.has_suffix "/lisaac/test/cd-pwd/1/").if {
+        // Ok
+      }.elseif {pwd.has_suffix "cd-pwd/"} then {
+        Test.check (Environment.chdir "1") integer 0
+      }.elseif {pwd.has_suffix "test/"} then {
+        Test.check (Environment.chdir "cd-pwd") integer 0
+        Test.check (Environment.chdir "1") integer 0
+      }.elseif {pwd.has_suffix "lisaac/"} then {
+        Test.check (Environment.chdir "test") integer 0
+        Test.check (Environment.chdir "cd-pwd") integer 0
+        Test.check (Environment.chdir "1") integer 0
+      } else {
+        Utils.crash_with_message pwd
+      }
+      Test.check (pwd.has_suffix "lisaac/test/cd-pwd/1/")
+      Test.check (File_utils.file_exists "main.li")
+      
+      // Now going up to "lisaac" directory:
+      Test.check (Environment.chdir "..") integer 0
+      Test.check (pwd.has_suffix "cd-pwd/") txt {pwd}
+      Test.check (Environment.chdir "..") integer 0
+      Test.check (pwd.has_suffix "test/") txt {pwd}
+      Test.check (Environment.chdir "..") integer 0
+      Test.check (pwd.has_suffix "lisaac/") txt {pwd}
+      Test.check (File_utils.file_exists "test/cd-pwd/1/main.li")
+      
+      // Now going down:
+      Test.check (Environment.chdir "test") integer 0
+      Test.check (pwd.has_suffix "test/")
+      Test.check (Environment.chdir "cd-pwd") integer 0
+      Test.check (pwd.has_suffix "cd-pwd/") txt {pwd}
+      Test.check (Environment.chdir "1") integer 0
+      Test.check (pwd.has_suffix "1/") txt {pwd}
+      Test.check (File_utils.file_exists "main.li")
     }
-    // Now going down:
-    Test.check (Environment.chdir "test") integer 0
-    pwd_update
-    Test.check (pwd.has_suffix "test/") txt {pwd}
-    Test.check (Environment.chdir "cd-pwd") integer 0
-    pwd_update
-    Test.check (pwd.has_suffix "cd-pwd/") txt {pwd}
-    Test.check (Environment.chdir "1") integer 0
-    pwd_update
-    Test.check (pwd.has_suffix "1/") txt {pwd}
-    Test.check (File_utils.file_exists "main.li")
   )

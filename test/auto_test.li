@@ -42,7 +42,7 @@ Public
   ( + arg:String_alias
 
     File_utils.pwd_in working_directory
-    ? {working_directory.last = '/'}
+    working_directory.add_dirsep
     verbose := Command_args.option_shift "--verbose"
     first_error_exit := Command_args.option_shift "--first-error-exit"
     (Command_args.count = 1).if {
@@ -98,6 +98,9 @@ Private
   (
     working_directory.clear
     File_utils.pwd_in working_directory
+    verbose.if {
+      Out # "scan_directory " # working_directory # " root " #| root
+    }
     (Environment.chdir root = 0).if {
       working_directory.clear
       File_utils.pwd_in working_directory
@@ -245,9 +248,9 @@ Private
       }
       remove_list.clear
     }
-    if (dirpath.has_substring "/libot/") then {
-      partial := True
-    }
+    // Computed again for each test: a /libot/ directory must not make
+    // all the following tests partial.
+    partial := dirpath.has_substring "/libot/"
     if continue then {
       String.tmp { mesg:String_buffer
         (open_read "mesg.txt" in mesg).if {
@@ -333,7 +336,7 @@ Private
     }
     if (continue && {! no_run} && {! boost_only}) then {
       '.'.print; test_counter := test_counter + 1
-      execute_main dirpath fname fname args args
+      continue := execute_main dirpath fname fname args args
     }
     continue.if {
       remove_list_proceed dirpath
@@ -386,6 +389,11 @@ Private
     '.'.print
     (diff dirpath n1 n n2 n_new != 0).if {
       continue := False
+      error_counter := error_counter + 1
+      Out # ".ERROR:diff " # n # " " # n_new # ".ERROR."
+      first_error_exit.if {
+        exit 1
+      }
     } else {
       remove_list_add n_new
       '.'.print
@@ -434,7 +442,11 @@ Private
         add cmd_buf redirect ">" dirpath dirpath new "lisaacout.new"
         cmd_buf.append " 2>&1"
       }.elseif {! verbose} then {
-        cmd_buf.append " 1>/dev/null"
+        if (system_name = "windows") then {
+          cmd_buf.append " 1>NUL"
+        } else {
+          cmd_buf.append " 1>/dev/null"
+        }
       }
       cmd := cmd_buf.to_string_alias
     }

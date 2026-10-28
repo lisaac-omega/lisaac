@@ -4,13 +4,14 @@ Public
   - main <-
   ( + v1:Int
     + v2:Int
+    
     Random.init(3)
     v1 := Random.min 1 max 1000
     Random.init(2)
     v2 := Random.min 1 max 1000
     Test.check (v1 != v2)
-    20.times {
-      (Random.min (-5) max 5).println
+    40.times {
+      Out #| (Random.min (-5) max 5)
     }
   )
   

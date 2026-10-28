@@ -11,6 +11,7 @@ compilé vers du C ANSI puis vers un binaire natif via `gcc`.
 - **Librairie Lisaac** : `~/lisaac/lib/`
 - **Compilation normale** (avec assertions/contrats) : `lisaac <fichier>`
 - **Compilation boost** (sans assertions, x20 plus rapide) : `lisaac <fichier> -boost`
+- **Gestion de version** : SVN (pas git). **Jamais de `svn commit`** : l'utilisateur relit avec `svn diff` et commite lui-même. `svn add` / `svn rm` sont permis pour que les fichiers créés ou supprimés apparaissent dans le diff.
 
 ---
 
@@ -68,6 +69,7 @@ Public
 - `<-` introduit la définition d'une méthode
 - `[ ? {...} ]` avant le corps : **préconditions** (programmation par contrat)
 - `[ ? {...} ]` après le corps : **postconditions** ; `Result` désigne la valeur de retour, `Result1`, `Result2`... pour les retours multiples
+- La forme standard est `? {condition}` ; une simple expression booléenne `[ (condition) ]` est aussi vérifiée.
 - Les contrats sont désactivés avec `-boost`. Doser avec soin : trop de contrats ralentit l'exécution, pas assez ouvre aux bugs.
 
 ### Fins de ligne — règle critique
@@ -77,6 +79,10 @@ Public
 
 Autrement dit : un fichier avec des fins de ligne Windows (`\r\n`) produit des continuations là où un fichier Unix (`\n`) couperait. Cette distinction est sémantique, pas seulement stylistique.
 
+Un `\n` termine l'instruction **même à l'intérieur de parenthèses** : un appel écrit sur plusieurs lignes sans `\r\n` est coupé, et l'erreur est trompeuse (par exemple « Slot `at' not found »). Dans le doute, garder l'appel sur une seule ligne, quitte à passer par des variables locales.
+
+**Toute édition par script doit préserver les `\r\n`.** En Python, ouvrir le fichier avec `newline=''` : par défaut, `open()` convertit silencieusement les `\r\n` en `\n` et casse les continuations (erreurs du type `__postfix_or_or` non trouvé). Après l'édition, comparer le nombre de `\r` avec la version SVN (`svn cat f | tr -cd '\r' | wc -c`) et recompiler.
+
 ### Blocs et dispatch polymorphique
 
 Les blocs `{...}` sont des objets de première classe. **Il n'y a pas de mots-clés de contrôle de flux** : tout est méthode définie en lib sur les prototypes `True`, `False`, `Block`.
@@ -84,14 +90,27 @@ Les blocs `{...}` sont des objets de première classe. **Il n'y a pas de mots-cl
 ```lisaac
 (condition).if { ... }                      // if
 (condition).if { ... } else { ... }         // if/else
-(condition).if { ... }                      // if sans else
+if (condition) then { ... } else { ... }    // même chose, forme « phrase »
 .elseif {condition2} then { ... }           // elseif (chaînable)
 {condition}.while_do { ...corps... }        // while
 { ...corps... }.do_while { condition }      // do/while (récursif terminal dérécursivé)
-0.to (n-1) do { i:Int ... }                 // for loop
+n.times { ... }                             // répéter n fois (aussi : repeat n times { ... })
+0.to (n-1) do { i:Int ... }                 // for loop (aussi : from 0 to (n-1) do { i:Int ... })
+n.downto 0 do { i:Int ... }                 // for à rebours
 collection.foreach { e:Type ... }           // foreach
 collection.foreach_backward { e:Type ... }  // foreach à rebours (pour suppressions en cours d'itération)
 ```
+
+Les formes `if c then`, `repeat n times` ou `from a to b do` existent parce qu'un slot peut prendre `self` comme argument (`- from self:Self to limit_up:Self do ...`) : le receveur s'écrit alors comme un argument.
+
+**« French corner »** (pour les débutants, `lib/teaching/`, `lib/boolean/boolean.li`, `lib/number/integer/int.li`) : `répéter n fois { }`, `de a à b répéter { i:Int }`, `si (c) alors { } sinon { }`. À réserver aux tout premiers exemples : la lib est en anglais et le code des élèves doit y revenir vite.
+
+### Appels de méthodes et parenthèses
+
+- Les mots-clés font partie du nom de la méthode : `hilbert n:Int gauche l:Int` et `hilbert n:Int droite l:Int` sont **deux méthodes différentes**.
+- Les parenthèses autour d'un argument simple sont **optionnelles** : `avance(80)` ≡ `avance 80`. Elles sont nécessaires pour un calcul (`avance (i * p)`), un nombre négatif (`tourne(-45)`) ou le résultat d'un appel (`(random.min 1 max 10).times`).
+- Une signature à couple `- rectangle (longueur, largeur:Int)` s'appelle toujours avec parenthèses : `rectangle(300, 200)`.
+- Les variables locales entières sont initialisées à 0.
 
 **Évaluation paresseuse par dispatch :**
 ```lisaac
@@ -154,6 +173,13 @@ Les slots `Flat` ne peuvent jamais être `NULL`.
 - init param:Type :Self <- ( ...; self )   // initialisation chaînable, retourne self
 ```
 
+Pour pouvoir appeler `clone`, un prototype qui n'hérite d'aucun prototype en disposant (`Window`, etc.) doit insérer `Clone` :
+
+```lisaac
+Insert
+  - parent_clone:Clone := Clone
+```
+
 ---
 
 ## Collections courantes de la lib
@@ -177,9 +203,9 @@ Les slots `Flat` ne peuvent jamais être `NULL`.
 5. **Utiliser `String.tmp { tmp:String_buffer ... }`** pour toute construction de chaîne temporaire.
 6. **`foreach_backward`** pour les suppressions en cours d'itération sur les collections.
 7. **Externals C avec `()`** si effet de bord, sans si résultat seul nécessaire.
-8. **Attention aux fins de ligne** : une ligne = une instruction, sauf double saut de ligne.
-9. **Ne pas utiliser `Self` à la place de `self`** : ce sont deux choses fondamentalement différentes.
-10. **Les `Flat` ne sont jamais `NULL`** : inutile de les tester.
+8. **Ne pas utiliser `Self` à la place de `self`** : ce sont deux choses fondamentalement différentes.
+9. **Les `Flat` ne sont jamais `NULL`** : inutile de les tester.
+10. **Dans les commentaires, préfixer les variables par `@`** (par exemple `@i`, `@nb`) : elit les affiche alors correctement.
 
 ---
 
@@ -196,3 +222,7 @@ lisaac mon_fichier -boost
 ```
 
 En cas d'erreur de compilation, analyser le message Lisaac avant le message gcc.
+
+Pour vérifier qu'un fichier compile sans rien laisser derrière soi : `lisaac <fichier> -q`, puis supprimer le binaire, le `.c` et le dossier `assets/` générés dans le répertoire courant.
+
+Un prototype qui hérite de `Tortue` sans définir `dessin` (parent abstrait, comme `Curseur_tortue` ou `Rosace`) ne compile pas seul : c'est normal. Pour les exemples Tortue, `./auto_test.sh tortue_show.li` compile tous les exemples qui contiennent ` dessin `.

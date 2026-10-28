@@ -1,7 +1,16 @@
 Header
   + name := Tetris
 /*
-  The TeTriS puzzle game automatic simulator.
+  The classic falling blocks puzzle game in Lisaac Ω.
+  Arrow keys: left / right to move, up to rotate, down to drop.
+  Space bar: pause, resume, or start a new game once it is over.
+
+  Shows: a 2D grid (Array2), rotations stored in an Array3, a timer
+  driven game loop, background music, keyboard and touch control.
+
+  To compile, as usual in a terminal:
+  $ lisaac tetris -q -boost
+  $ ./tetris
   */
 Inherit
   

@@ -5,6 +5,7 @@ Header
   vector icon (play, stop, previous, next) or a text pill (toggle or not).
   */
 Inherit
+  
   + parent_gobj:Flat Gobj Code_show_button
 
 Public

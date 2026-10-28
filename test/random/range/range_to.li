@@ -7,42 +7,42 @@ Public
     + v1:Int
     random := new Random.init 3
     v1 := random.min 1 max 10
-    Test.check v1 integer 10
-    v1 := random.min 1 max 10
-    Test.check v1 integer 3
-    v1 := random.min 1 max 10
-    Test.check v1 integer 3
-    v1 := random.min 1 max 10
-    Test.check v1 integer 7
-    v1 := random.min 1 max 10
-    Test.check v1 integer 2
-    v1 := random.min 1 max 10
-    Test.check v1 integer 7
-    v1 := random.min 1 max 10
-    Test.check v1 integer 7
-    v1 := random.min 1 max 10
-    Test.check v1 integer 2
-    v1 := random.min 1 max 10
-    Test.check v1 integer 8    
-    v1 := random.min 1 max 10
-    Test.check v1 integer 2
+    Test.check v1 integer 1
     v1 := random.min 1 max 10
     Test.check v1 integer 5
     v1 := random.min 1 max 10
-    Test.check v1 integer 4
-    v1 := random.min 1 max 10
-    Test.check v1 integer 2
+    Test.check v1 integer 6
     v1 := random.min 1 max 10
     Test.check v1 integer 4
     v1 := random.min 1 max 10
-    Test.check v1 integer 2
+    Test.check v1 integer 6
     v1 := random.min 1 max 10
-    Test.check v1 integer 3
+    Test.check v1 integer 9
+    v1 := random.min 1 max 10
+    Test.check v1 integer 4
+    v1 := random.min 1 max 10
+    Test.check v1 integer 6
+    v1 := random.min 1 max 10
+    Test.check v1 integer 10    
+    v1 := random.min 1 max 10
+    Test.check v1 integer 8
+    v1 := random.min 1 max 10
+    Test.check v1 integer 5
+    v1 := random.min 1 max 10
+    Test.check v1 integer 6
+    v1 := random.min 1 max 10
+    Test.check v1 integer 8
+    v1 := random.min 1 max 10
+    Test.check v1 integer 1
+    v1 := random.min 1 max 10
+    Test.check v1 integer 10
+    v1 := random.min 1 max 10
+    Test.check v1 integer 9
     while {v1 != 1} do {
       v1 := random.min 1 max 10
       Test.check True
     }
-    Test.check (Test.counter) integer 25
+    Test.check (Test.counter) integer 19
     
     mt19937 := new Mt19937.init 3
     v1 := mt19937.min 1 max 10
@@ -55,5 +55,5 @@ Public
       v1 := mt19937.min 1 max 10
       Test.check True
     }
-    Test.check (Test.counter) integer 31
+    Test.check (Test.counter) integer 25
   )

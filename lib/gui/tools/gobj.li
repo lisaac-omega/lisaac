@@ -1,6 +1,7 @@
 Header
   + name := Gobj E
 Inherit
+  
   + parent_win:Flat Win
   - parent_any_gui:Any_gui := Any_gui
   

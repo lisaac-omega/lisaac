@@ -5,9 +5,9 @@ Public
   ( + r:Random
     + x,cm1,c0,c1:Int
     r := new Random.init 3
-    Test.check (r.min 3 max 4) integer 4
+    Test.check (r.min 3 max 4) integer 3
     Test.check (r.min 0 max 1 = 0)
-    Test.check (r.min (-1) max (0) = -1)
+    Test.check (r.min (-1) max (0) = 0)
     1000.times {
       x := r.min (-1) max 1
       (x = -1).if {
@@ -19,9 +19,9 @@ Public
         c1 := c1 + 1
       }
     }
-    Test.check cm1 integer 315
-    Test.check c0 integer 329
-    Test.check c1 integer 356
+    Test.check cm1 integer 337
+    Test.check c0 integer 301
+    Test.check c1 integer 362
     // Not so bad !
   )
   

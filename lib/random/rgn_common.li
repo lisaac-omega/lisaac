@@ -6,6 +6,7 @@ Header
    A common interface that allows you to quickly switch from one generator to another.
   */
 Insert  
+  
   - parent_clone:Clone := Clone
     
 Public
@@ -28,6 +29,9 @@ Public
   
   - uint32:Uint32 <- abstract
 
+  - uint64:Uint64 <- (uint32.to_uint64 << 32) | uint32.to_uint64
+  // Generators with a native 64 bits output redefine it.
+
   - real_64:Real64 <- uint32.to_real64 / 0FFFF_FFFFh
   
   - real_32:Real32 <- uint32.to_real32 / 0FFFF_FFFFh
@@ -38,6 +42,7 @@ Public
   
   - hexadecimal_digit:Char <-
   ( + i,j:Int
+    
     i := min 0 max 15
     (i <= 9).if {
       j := ('0'.code) + i

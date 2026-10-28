@@ -1,6 +1,7 @@
 Header
   + name := Rand_max
 Public
+  
   - main <-
   ( + random: Random
     + mt19937: Mt19937
@@ -12,7 +13,7 @@ Public
       v1 := random.max 1
       Test.check True
     }
-    Test.check (Test.counter - c) integer 1 // Good
+    Test.check (Test.counter - c) integer 5
     
     c := Test.counter
     random := new Random.init 5
@@ -20,7 +21,7 @@ Public
       v1 := random.max 1
       Test.check True
     }
-    Test.check (Test.counter - c) integer 4 // Mouais...
+    Test.check (Test.counter - c) integer 1
     
     c := Test.counter    
     mt19937 := new Mt19937.init 5
