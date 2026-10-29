@@ -88,9 +88,9 @@ Public
       0.to (w-1) do { x:Int
         (r,g,b,a) := (row.item 0, row.item 1, row.item 2, row.item 3)
         (a != 0).if {
-          row.put ((r*255/a).min 255) to 0
-          row.put ((g*255/a).min 255) to 1
-          row.put ((b*255/a).min 255) to 2
+          row.at 0 put ((r*255/a).min 255)
+          row.at 1 put ((g*255/a).min 255)
+          row.at 2 put ((b*255/a).min 255)
         }
         row := row + 4
       }
@@ -129,9 +129,9 @@ Public
             n := n + 1
           }
           (n > 0).if {
-            row.put (r/n) to 0
-            row.put (g/n) to 1
-            row.put (b/n) to 2
+            row.at 0 put (r/n)
+            row.at 1 put (g/n)
+            row.at 2 put (b/n)
           }
         }
         row := row + 4
@@ -145,7 +145,7 @@ Public
     0.to (h-1) do { y:Int
       row := image + (y*stride)
       0.to (w-1) do { x:Int
-        row.put a to (x*4+3)
+        row.at (x*4+3) put a
       }
     }
   )
@@ -516,7 +516,7 @@ Public
     } else {
       /*0.to 15 do { yy:Int
         0.to 13 do { xx:Int
-          //" .:ioVM@".item (dta.item (yy*8+xx)>>5).print
+          //" .:ioVM@".at (dta.item (yy*8+xx)>>5).print
           dta.item (yy*13+xx).print
         }
         '\n'.print

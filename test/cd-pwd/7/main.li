@@ -38,7 +38,7 @@ Public
       i := 0
     }
     i.to (path.upper) do { k:Int
-      Stdout.put_character (path.item k)
+      Stdout.put_character (path.at k)
     }
     Stdout.put_character '\n'
   )

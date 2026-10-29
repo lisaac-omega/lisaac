@@ -140,7 +140,7 @@ Public
         m := k.to_int
         (m > 255).if { m := 255; }
         pixels.at (j*stride + i) put (m.to_uint8)
-        //"#*+-".item (m.to_uint8>>6).print; //m.print
+        //"#*+-".at (m.to_uint8>>6).print; //m.print
       }
       //'\n'.print
       // advance all the edges

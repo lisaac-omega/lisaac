@@ -1,12 +1,86 @@
 Welcome to the Lisaac Ω world !
 
-Once properly installed, you will have access to the code editor 'elit' as well as
-the command-line compiler 'lisaac'.
-With these two commands, you can do almost everything.
+Lisaac Ω is a prototype-based, object-oriented programming language, designed to teach
+programming on solid foundations, from the very first steps up to professional software.
+- Safe typing, checked at compile time, and design by contract (pre- and postconditions).
+- Compiled to portable C, then to native code: the same program runs on Linux, Windows,
+  macOS, Android and in a web browser (WebAssembly), with no compromise on performance.
+- A consistent notation, close to mathematics: even `if' and `while' are ordinary
+  methods of the library, not keywords.
+- A graphical editor, elit, which displays the code with true mathematical symbols.
+- Free software and free of charge.
 
-The simplest way to get started is to launch elit from a terminal and explore the example code,
-which will be accessible through the tabs and is mostly located in the lisaac/example directory.
-For instance, you can start with lisaac/example/hello_world.li.
+Lisaac Ω is developed at the Université de Strasbourg, by Benoît Sonntag, who is the
+most important author, and Dominique Colnet from the Université de Lorraine
+(IUT Nancy-Charlemagne).
 
-The full source code of the lisaac compiler as well as that of elit is included in this distribution.
+Web site: https://lisaac.org
 
+Installation
+
+From this directory (lisaac), run:
+
+  ./install.sh
+
+In case of trouble, add the --verbose option.
+
+
+Two commands
+
+Once installed, two commands are enough for almost everything:
+- elit, the code editor and viewer;
+- lisaac, the command-line compiler.
+
+To read a program, give elit the full name of the file:
+
+  elit example/hello_world.li
+
+To compile it and run it:
+
+  lisaac example/hello_world.li
+  ./hello_world
+
+During development, compile without options: all the contracts are checked.
+For a much smaller and faster executable, add -boost (and -q for a quiet compilation):
+
+  lisaac example/hello_world -q -boost
+
+All the options are listed by: lisaac -help
+
+
+Guided tours
+
+Each of these programs opens a window that shows a series of examples, with their code:
+
+  lisaac big_show && ./big_show               #  A general tour of Lisaac Ω.
+  lisaac game_show && ./game_show             #  The games (see below).
+  cd example && lisaac example_show && ./example_show
+  cd example/CodEx/Tortue && lisaac tortue_show && ./tortue_show
+                                              #  The Logo turtle, for beginners (in French).
+
+
+Games
+
+Each game lives in its own directory of lisaac/example, with its source code (read the
+comment at the top of each file):
+- snake, tetris, solitaire, arrow_out, connect_four, break, minesweeper, gems (match three
+  gems or more), shooter, startrek.
+
+
+Contents of this directory
+
+- example/   Example programs, from hello_world.li to complete applications.
+             example/CodEx/: exercises and examples for teaching, in French.
+- lib/       The library, written in Lisaac Ω: collections, strings, numbers, graphics,
+             windows, sound, files... lib/teaching/ holds the Logo turtle.
+- src/       The full source code of the lisaac compiler.
+- elit/      The full source code of the elit editor.
+- doc/       The manual (doc/manual.pdf) and slides.
+- android/, wasm/, arduino/   Tools for these targets.
+- COPYING.txt   The GNU General Public License, version 3.
+
+
+Thanks
+
+To the Université de Strasbourg, the Université de Lorraine, the IUT Nancy-Charlemagne, 
+the LORIA and INRIA, for their support.

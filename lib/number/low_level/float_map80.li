@@ -15,7 +15,7 @@ Real, Real32, Real64, Real80
   - get_map f:Self <-
   ( + tab:C_array(Self)
     tab := Cast Float_map80 To (C_array Self).on Float_map80
-    tab.put f to 0
+    tab.at 0 put f
   )
 
 Public

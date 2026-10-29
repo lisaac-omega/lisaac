@@ -105,7 +105,7 @@ Public
   )
   
   - tag p:C_array Uint8 with str:String_alias :Boolean <-
-  tag4 p with (str.item 0,str.item 1,str.item 2,str.item 3)
+  tag4 p with (str.at 0,str.at 1,str.at 2,str.at 3)
 
   // @OPTIMIZE: binary search
   - find_table (dta:C_array Uint8,start:Int) 

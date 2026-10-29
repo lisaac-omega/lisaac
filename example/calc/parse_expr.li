@@ -23,7 +23,7 @@ Private
   
   - read_character car:Char :Boolean <-
   ( + result:Boolean
-    ((index <= source.upper) && {car = source.item index}).if {
+    ((index <= source.upper) && {car = source.at index}).if {
       last_character := car
       index  := index + 1
       result := True
@@ -35,13 +35,13 @@ Private
 
   - read_constant:Boolean <-
   ( + result:Boolean
-    ((index <= source.upper) && {source.item index.in_range '0' to '9'}).if {
+    ((index <= source.upper) && {source.at index.in_range '0' to '9'}).if {
       result := True
       last_constant := 0
       {
-        last_constant := last_constant * 10 + source.item index.decimal_value
+        last_constant := last_constant * 10 + source.at index.decimal_value
         index := index + 1
-      }.do_while {(index <= source.upper) && {source.item index.in_range '0' to '9'}}
+      }.do_while {(index <= source.upper) && {source.at index.in_range '0' to '9'}}
     }
     result
   )

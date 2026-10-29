@@ -1617,7 +1617,7 @@ Public
       {(fs.text_iter_next(iter,q)) && {!break}}.while_do {
         + c0,c1,c2,c3,c4,c5,c6,c7:Real32
         //iter.print
-        //"----- ".print; iter.str.item (iter.start).print; '\n'.print
+        //"----- ".print; iter.str.at (iter.start).print; '\n'.print
         (iter.prev_glyph_index = -1).if { // can not retrieve glyph?          
           (! alloc_text_atlas).if {
             //"CALL A\n".print

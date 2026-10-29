@@ -116,7 +116,7 @@ Public
         idx := h % capacity
       }
       node := Hashed_set_node V.create e next (buckets.at idx)
-      buckets.put node to idx
+      buckets.at idx put node
       count := count + 1
     }
   )
@@ -140,7 +140,7 @@ Public
         idx := h % capacity
       }
       node := Hashed_set_node V.create e next (buckets.at idx)
-      buckets.put node to idx
+      buckets.at idx put node
       count := count + 1
     }
   )
@@ -160,7 +160,7 @@ Public
       idx := h % capacity
     }
     node := Hashed_set_node(V).create e next (buckets.at idx)
-    buckets.put node to idx
+    buckets.at idx put node
     count := count + 1
   )
   
@@ -178,7 +178,7 @@ Public
       ( node.item.key == k).if {
         count := count - 1
         node := node.next
-        buckets.put node to idx
+        buckets.at idx put node
       } else {
         previous_node := node
         node := node.next
@@ -212,7 +212,7 @@ Public
       (node.item.key = k).if {
         count := count - 1
         node := node.next
-        buckets.put node to idx
+        buckets.at idx put node
       } else {
         previous_node := node
         node := node.next
@@ -338,7 +338,7 @@ Public
       {(node1 = NULL) || {other.has (node1.item)}}.until_do {
         node1 := node1.next
         c := c - 1
-        buckets.put node1 to i
+        buckets.at i put node1
         count := count - 1
       }
       (node1 != NULL).if {
@@ -411,7 +411,7 @@ Private
         node2 := node1.next
         idx := node1.item.key.hash_code % capacity
         node1.set_next (buckets.at idx)
-        buckets.put node1 to idx
+        buckets.at idx put node1
         node1 := node2
       }
       i := i - 1
@@ -703,7 +703,7 @@ Public
     }
     idx := h % capacity
   node := Hashed_set_node(V).create e next (buckets.at idx)
-    buckets.put node to idx
+    buckets.at idx put node
     count := count + 1
     ? {fast_has e}
   )

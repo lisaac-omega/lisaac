@@ -123,7 +123,7 @@ Public
     (up != -1).if {
       new_stor := C_array Char.create (up+2)
       new_stor.copy_from storage until up
-      new_stor.put '\0' to (up+1)
+      new_stor.at (up+1) put '\0'
       result := String_alias.create new_stor upper up
     } else {
       result := ""

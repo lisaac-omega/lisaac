@@ -44,7 +44,7 @@ Public
     if (c > -1) then {
       storage := C_array Char.create (c+2)
       storage.copy_from (other.storage) until c
-      storage.put '\0' to (c+1)
+      storage.at (c+1) put '\0'
       upper := c
       hash_code := hash_code_intern
     }

@@ -124,7 +124,7 @@ Public
     make (line_min,column_min,depth_min) to (line_max,column_max,depth_max)
 
     0.to (count - 1) do { i:Int
-      storage.put (contents.item (contents.lower + i)) to i
+      storage.at i put (contents.item (contents.lower + i))
     }
   )
   [ ...
@@ -210,10 +210,10 @@ Public
 
   - put element:V to (line, column, depth:Int) <-
   (
-    storage.put element to (
+    storage.at (
       (line - lower1) * count2 * count3 +
       (column - lower2) * count3 + depth - lower3
-    )
+    ) put element
   )
 
   - force x:V to (line, column, depth:Int) <-
@@ -250,7 +250,7 @@ Public
     line_min.to line_max do { i:Int
       column_min.to column_max do { j:Int
         depth_min.to depth_max do { k:Int
-          result.storage.put (item (i,j,k)) to n
+          result.storage.at n put (item (i,j,k))
           n := n + 1
         }
       }
@@ -311,8 +311,8 @@ Public
     index1 := (line1 - lower1) * count2 * count3 + (column1 - lower2) * count3 + depth1 - lower3
     index2 := (line2 - lower1) * count2 * count3 + (column2 - lower2) * count3 + depth2 - lower3
     tmp := storage.item index1
-    storage.put(storage.item index2) to index1
-    storage.put tmp to index2
+    storage.at index1 put (storage.item index2)
+    storage.at index2 put tmp
   )
 
   - copy other:Self <-

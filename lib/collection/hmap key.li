@@ -183,7 +183,7 @@ Public
         count := count + 1
         set_capacity count.if { idx := h % capacity }
         node := new_node vi key ki next (buckets.at idx)
-        buckets.put node to idx
+        buckets.at idx put node
       } else {
         node.set_value vi
       }

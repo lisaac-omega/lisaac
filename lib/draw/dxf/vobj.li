@@ -105,8 +105,8 @@ Public
     0.to (pts.upper) do { i:Int
       p := pts.at i
       ofs := (p.y*bmp_width+p.x)*4
-      bmp.put 0FFh to ofs
-      bmp.put 0FFh to (ofs+3)
+      bmp.at ofs put 0FFh
+      bmp.at (ofs+3) put 0FFh
     }
     compute_rays (bmp_xo,bmp_yo)
   )
@@ -217,10 +217,10 @@ Public
       masse := masse + dx
       x0.to x1 do { x:Int
         sum_x := sum_x + x
-        bmp.put 000h to (ofs+0)
-        bmp.put 0FFh to (ofs+1)
-        bmp.put 000h to (ofs+2)
-        bmp.put 0FFh to (ofs+3)
+        bmp.at (ofs+0) put 000h
+        bmp.at (ofs+1) put 0FFh
+        bmp.at (ofs+2) put 000h
+        bmp.at (ofs+3) put 0FFh
         ofs := ofs + 4
       }
     }
@@ -228,7 +228,7 @@ Public
     bmp_yo := sum_y.to_real32/masse
     //bmp_xo.print; ','.print; bmp_yo.print; ' '.print; bmp_width.print; 'x'.print; bmp_height.print
     //'\n'.print
-    //bmp.put 000h to ((bmp_yo.to_int*bmp_width+bmp_xo.to_int)*4+1)
+    //bmp.at ((bmp_yo.to_int*bmp_width+bmp_xo.to_int)*4+1) put 000h
     xo := x_min + bmp_xo/c
     yo := y_min + (bmp_height.to_real32-bmp_yo)/c
     //"VOBJ y:".print; yo.cm.to_real32.println

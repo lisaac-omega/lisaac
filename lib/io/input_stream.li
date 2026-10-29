@@ -370,7 +370,7 @@ Public
     { end_of_input || stop }.until_do {
       // Reach the first character of the @keyword:
       i := 2
-      { (i > last_string.count) || { last_string.item i = first }}.until_do {
+      { (i > last_string.count) || { last_string.at i = first }}.until_do {
         i := i + 1
       }
 
@@ -387,7 +387,7 @@ Public
         last_string.extend last_character
       }
 
-      ? { !end_of_input ->> {last_string.item 1 = first}}
+      ? { !end_of_input ->> {last_string.at 1 = first}}
       ? { last_string.count <= keyword.count }
 
       // Now we need as many characters as in @keyword:

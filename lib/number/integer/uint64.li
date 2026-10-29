@@ -70,7 +70,7 @@ Public
       }
       b.set_upper (low+sn-1)
       low.to (b.upper) do { k:Int
-        b.at k put (map.item (b.item k.to_uint8))
+        b.at k put (map.at (b.at k.to_uint8))
       }
     }
     sn

@@ -81,10 +81,10 @@ Private
         \eeeeeeedddddddddddddddddcccbbfwyzzzzzzzwlbbbbaaa\
         \eeeeeedddddddddddddddddcdertzzzzzzzyyrcbbbbbaaaa\
         \eeeeedddddddddddddddddjwzzzzzzzzzjcbbbbbbbbaaaaa\
-        \eeeddddddddddddddgtyyzzzzzztrnhcbbbbbbbbbaaaaaaa".item i - 'a'
+        \eeeddddddddddddddgtyyzzzzzztrnhcbbbbbbbbbaaaaaaa".at i - 'a'
       ).to_int
       c := `col_elit[@l]`:Uint32
-      img.put c to i
+      img.at i put c
     }    
   )
   

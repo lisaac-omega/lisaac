@@ -104,7 +104,7 @@ Public
   (
     make (new_count1, new_count2, new_count3)
     lower1.to (count - 1) do { i:Int
-      storage.put (contents.item (contents.lower + i)) to i
+      storage.at i put (contents.item (contents.lower + i))
     }
   )
   [ 
@@ -129,7 +129,7 @@ Public
     (model.lower).to (model.upper) do { line:Int
       (model.first.lower).to (model.first.upper) do { column:Int
         (model.first.first.lower).to (model.first.first.upper) do { depth:Int
-          storage.put (model.item line.item column.item depth) to n
+          storage.at n put (model.item line.item column.item depth)
           n := n + 1
         }
       }
@@ -152,7 +152,7 @@ Public
 
   - put element:V to (line, column, depth:Int) <-
   (
-    storage.put element to (line * count2x3 + column * count3 + depth)
+    storage.at (line * count2x3 + column * count3 + depth) put element
   )
 
 
@@ -195,7 +195,7 @@ Public
     line_min.to line_max do { i:Int
       column_min.to column_max do { j:Int
         depth_min.to depth_max do { k:Int
-          result.storage.put (item (i,j,k)) to n
+          result.storage.at n put (item (i,j,k))
           n := n + 1
         }
       }
@@ -245,7 +245,7 @@ Public
     (l1 * count2x3).to (up1 * count2x3) by count2x3 do { i:Int
       (l2 * count3).to (up2 * count3) by count3 do { j:Int
         l3.to up3 do { k:Int
-          storage.put element to (i + j + k)
+          storage.at (i + j + k) put element
         }
       }
     }
@@ -259,8 +259,8 @@ Public
     index1 := line1 * c2x3 + column1 * c3 + depth1
     index2 := line2 * c2x3 + column2 * c3 + depth2
     tmp := storage.at index1 
-    storage.put (storage.at index2) to index1
-    storage.put tmp to index2
+    storage.at index1 put (storage.at index2)
+    storage.at index2 put tmp
   )
 
   // Looking and comparison:

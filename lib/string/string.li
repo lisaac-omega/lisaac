@@ -74,12 +74,6 @@ Public
   (
     storage.at index
   )
-  
-  - item index:Int :Char <-
-  //[    deprecated True msg "String.li:71: Use at. DC Feb 2026"   ]
-  (
-    at index
-  )
 
   // Switch case :
 

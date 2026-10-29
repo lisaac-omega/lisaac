@@ -48,7 +48,7 @@ Paper
         .when `GLFW_KEY_ESCAPE`:Int then { (cm,cc) := (cm | key_cmd, '\27\') }
         .when `GLFW_KEY_ENTER`:Int or `GLFW_KEY_KP_ENTER`:Int then { (cm,cc) := (cm | key_cmd, '\0Ah\') }
         .when `GLFW_KEY_TAB`:Int to `GLFW_KEY_END`:Int then {
-          (cm,cc) := (cm | key_cmd, "\t\bISRLDUPNBE".item (k - `GLFW_KEY_TAB`:Int))
+          (cm,cc) := (cm | key_cmd, "\t\bISRLDUPNBE".at (k - `GLFW_KEY_TAB`:Int))
         }
         .when `GLFW_KEY_CAPS_LOCK`:Int   then { cmd := cmd ^ cap }
         .when `GLFW_KEY_NUM_LOCK`:Int    then { cmd := cmd ^ num_lock }
@@ -77,10 +77,10 @@ Paper
       //OUT # "ICI mods:" # mods # " k: " # k # " key:" # key # '\n'
       press.if {        
         ((cmd & num_lock = 0) && {k.in_range `GLFW_KEY_KP_0`:Int to `GLFW_KEY_KP_DECIMAL`:Int}).if {
-          (cm,cc) := (cm | key_cmd, "IEDNL5RBUPS".item (k - `GLFW_KEY_KP_0`:Int))
+          (cm,cc) := (cm | key_cmd, "IEDNL5RBUPS".at (k - `GLFW_KEY_KP_0`:Int))
           str.add_last cc
         }.elseif {cmd & alt_gr != 0} then {          
-          (k.in_range 50 to 57).if { str.add_last ("~#{[|`\\^".item (k-50)); }
+          (k.in_range 50 to 57).if { str.add_last ("~#{[|`\\^".at (k-50)); }
           .elseif {k = 48} then { str.add_last '@'; }.elseif {k = 45} then { str.add_last ']'; }
           .elseif {k = 61} then { str.add_last '}'; }.elseif {k = 69} then { str.append "€"; }
         }.elseif {(mods = 1) && {k = 92} && {key = 42}} then {          

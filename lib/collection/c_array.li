@@ -7,6 +7,7 @@ Header
    you can do in plain C code for example).
   */
 Insert
+  
   - parent_clone: Clone := Clone
   
 Public
@@ -130,12 +131,6 @@ Public
   // No check. Assume that the @index is correct.
   (
     `9`    
-  )
-  
-  - put element:V to index:Int <-
-  // BSBS -> DOM Pour que je puisse travailler ...
-  (
-    at index put element    
   )
   
   - swap i:Int with j:Int <-
@@ -643,7 +638,7 @@ Public
         (element != NULL).if {
           element := element.deep_twin
         }
-        result.put element to i
+        result.at i put element
       }
     };*/
     result

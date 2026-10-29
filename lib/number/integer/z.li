@@ -1352,7 +1352,7 @@ Div_inv
       l := h >> cnt
       j := j + 1
     }
-    rp.put l to (j-1); // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
+    rp.at (j-1) put l; // If (l = 0) not necessary (see patch rshift), but necessary for DIV_INV !
     r
   )
   */

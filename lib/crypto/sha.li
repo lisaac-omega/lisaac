@@ -69,7 +69,7 @@ Public
   - update_str dta:String <-
   ( 
     0.to (dta.upper) do { i:Int
-      data.add_last (dta.item i); //.code)
+      data.add_last (dta.at i); //.code)
       (data.count = data_size).if {
         transform
         add_bitlen data_size

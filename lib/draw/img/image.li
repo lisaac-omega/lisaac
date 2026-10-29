@@ -379,7 +379,7 @@ Image
           (write_alpha = 0).if {
             // composite against pink background
             //0.to 2 do { k:Int
-            //  buf32.put (bg.item k + ((d.item k - bg.item k) * d.item 3)/255) to k
+            //  buf32.at k put (bg.item k + ((d.item k - bg.item k) * d.item 3)/255)
             //}
             c := 0; //(buf32.item (1+rgb_dir)<<16) | (buf32.item 1<<8) | buf32.item (1-rgb_dir)
           } else {

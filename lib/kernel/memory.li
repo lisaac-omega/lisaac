@@ -352,13 +352,13 @@ Private
   - put_ptr v:Pointer to p:Pointer <-
   ( + mem:C_array(Pointer)
     mem := Cast Pointer To (C_array Pointer).on p
-    mem.put v to 0
+    mem.at 0 put v
   )
 
   - put_32 v:Uint32 to p:Pointer <-
   ( + mem:C_array(Uint32)
     mem := Cast Pointer To (C_array Uint32).on p
-    mem.put v to 0
+    mem.at 0 put v
   )
 
   - micro_alloc new_size:Uint_cpu table ptr_table:Pointer lab lab_type:Uint32 :Pointer <-
@@ -420,7 +420,7 @@ Private
     na_src := Cast Pointer To (C_array Pointer).on src
     na_dst := Cast Pointer To (C_array Pointer).on dst
     0.to_uint_cpu.to (siz - 1) do { j:Uint_cpu
-      na_dst.put (na_src.item j) to j
+      na_dst.at j put (na_src.item j)
     }
   )
 
@@ -434,7 +434,7 @@ Private
     siz := sz.align_power (Pointer.object_size) / Pointer.object_size
     na_src := Cast Pointer To (C_array Pointer).on src
     ((siz-1).to_int).downto 0 do { j:Int
-      na_src.put NULL to j
+      na_src.at j put NULL
     }
   )
   /*
@@ -451,7 +451,7 @@ External
     result := malloc (size.to_uint)
     tab := CAST Pointer TO (C_array Uint8).on result
     0.to (size-1) do { i:Int
-      tab.put 0 to i
+      tab.at i put 0
     }
     result
   )

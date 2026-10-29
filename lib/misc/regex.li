@@ -97,8 +97,8 @@ Public
     sz := `regerror (@ss,((regex_t*)(@rt)),((char*)@er),@cy)`:(Int)
     error_buffer.set_upper sz
     0.to (sz - 2) do { k:Int
-      ? {error_buffer.item k != '\0'}
-      b.add_last (error_buffer.item k)
+      ? {error_buffer.at k != '\0'}
+      b.add_last (error_buffer.at k)
     }
   )
   

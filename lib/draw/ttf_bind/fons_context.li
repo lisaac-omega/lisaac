@@ -435,7 +435,7 @@ Public
     y := y + get_vert_align font align (state.align) size isize
     pos := start
     {pos <= end}.while_do { 
-      (utf8state,codepoint) := decutf8(utf8state,codepoint,str.item pos)
+      (utf8state,codepoint) := decutf8(utf8state,codepoint,str.at pos)
       (utf8state = 0).if {
         glyph := get_glyph font code codepoint size isize blur iblur
         (glyph != NULL).if {
@@ -514,7 +514,7 @@ Public
     (pos != iter.end).if {
       utf8state := 1; // BSBS
       {(pos != iter.end) && {utf8state != 0}}.while_do {
-        (utf8state,codepoint) := decutf8(iter.utf8state,iter.codepoint,str.item pos)
+        (utf8state,codepoint) := decutf8(iter.utf8state,iter.codepoint,str.at pos)
         iter.set_utf8state utf8state
         iter.set_codepoint codepoint
         (utf8state = 0).if {
@@ -633,7 +633,7 @@ Public
     pos := start
     {pos != end}.while_do {
       //"pos:".print; pos.print; " end:".print; end.print; '\n'.print
-      (utf8state,codepoint) := decutf8(utf8state,codepoint,str.item pos)
+      (utf8state,codepoint) := decutf8(utf8state,codepoint,str.at pos)
       (utf8state = 0).if {
         glyph := get_glyph font code codepoint size isize blur iblur
         (glyph != NULL).if {

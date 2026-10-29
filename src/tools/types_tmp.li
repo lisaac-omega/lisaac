@@ -191,7 +191,7 @@ Private
       capacity := new_capacity
     }
     count := count + 1
-    storage.put t to (count - 1)
+    storage.at (count - 1) put t
   )
 
   - add t:Type to index:Int <-
@@ -206,9 +206,9 @@ Private
       }
       count := count + 1
       (count - 2).downto index do { i:Int
-        storage.put (at i) to (i + 1)
+        storage.at (i + 1) put (at i)
       }
-      storage.put t to index
+      storage.at index put t
     }
   )
 
