@@ -36,6 +36,9 @@ Private
     chdir lisaac_bin_dir or_exit
     String.tmp {cmd: String_buffer
       cmd.append "gcc -Wno-unused lisaac.c -o lisaac -O2"
+      if (system = "windows") then {
+        cmd.append " ../deps_lib/windows/utf8.res"
+      }
       exit_status := execute_command cmd
     }
   )

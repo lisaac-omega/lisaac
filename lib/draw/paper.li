@@ -70,6 +70,12 @@ Header
 
 #include <GLFW/glfw3.h>
 
+#if defined(_WIN32)
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+void raise_window_c(GLFWwindow* w);
+#endif
+
 void errorcb(int error, const char* desc);
 
 void new_key(int64_t,int64_t,int64_t,int64_t);
@@ -111,6 +117,19 @@ void on_close_c(GLFWwindow* w)
   glfwSetWindowShouldClose(w, GLFW_FALSE);
   on_close(w);
 }
+
+#if defined(_WIN32)
+// Windows refuses SetForegroundWindow (done by glfwCreateWindow) to a process
+// launched from a terminal: a keyboard event (0xE8 is an unassigned key) gives
+// the right to do it.
+void raise_window_c(GLFWwindow* w)
+{
+  HWND win = glfwGetWin32Window(w);
+  keybd_event(0xE8,0,0,0);
+  keybd_event(0xE8,0,KEYEVENTF_KEYUP,0);
+  SetForegroundWindow(win);
+}
+#endif
 #endif
 
 unsigned long col_icon[]={0x00000000,
@@ -289,6 +308,8 @@ Public
         `glfwTerminate()`
         exit exit_failure_code
       }
+      // Before the callbacks: @winobj is not yet in @wins for on_window_focus.
+      (lip "target" str = "windows").if { `raise_window_c(@win)`; }
       `glfwSetWindowFocusCallback(@win, on_window_focus_c)`;
       //"Create window ".print; w.print; "x".print; h.println
       (lip "target" str = "apple").if_false { put_window_icon win; }
