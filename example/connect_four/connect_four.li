@@ -1,20 +1,37 @@
 Header
   + name := Connect_four
 /*
-  Connect_four game
+  Connect four in Lisaac Ω.
+  Two players drop discs in turn in a 7 x 7 grid; the first who lines
+  up four discs (horizontally, vertically or diagonally) wins. Tick
+  "Artificial Intelligence" to play against the computer.
+
+  Shows: a window built with the GUI widgets (@Txt, @Button, @Check) laid
+  out with | and /, an @Array2 for the board, and the min-max algorithm
+  with alpha-beta pruning for the computer.
+
+  To compile, as usual in a terminal:
+  $ lisaac connect_four -q -boost
+  $ ./connect_four
   */
 Inherit
+  
   + parent_window:Flat Window
-
+  
+Insert
+  
+  - parent_colors:Flat Colors
+  
 Public
   
   - draw_forward <-
   ( + p:Paint
+    
     if (stat != 0) then {
       save
       //
       p := Paint.create_box (50,400) size (width-100,height-550) radius 200
-      feather 100 color (Color.rgba(255,255,255,150)) to (Color.rgba(0,0,0,0))
+      feather 100 color (Color.rgba(255,255,255,150)) to none
       begin_path
       rect (0,350) size (width,height-450)
       fill_paint p
@@ -270,22 +287,22 @@ Public
     }
             
     (      
-      Txt.new.init_str "Connect Four".zoom 3.set align_center.color (Color.red) /
+      Txt.new.init_str "Connect Four".zoom 3.set align_center.color red /
       Button.new.init "Reset" do { b:Button; reset} /
       (
-        Check.new.init "Articial Intelligence " pos {ia_ok} do { c:Check; ia_ok := !ia_ok; True}.color (Color.white)
+        Check.new.init "Articial Intelligence " pos {ia_ok} do { c:Check; ia_ok := !ia_ok; True}.color white
         | (
-          Txt.new.init_str "self player ".set align_center.color (Color.white) | 
+          Txt.new.init_str "self player ".set align_center.color white | 
           (playerd := Disc.new.init 1 diameter 48 action {c:Disc;})
         )
       ) /
       game.setr height_locked /
       (
         (
-          Txt.new.init_str "Connect Four".color (Color.gray) /
-          Txt.new.init_str "Android example".color (Color.gray) /
-          Txt.new.init_str "Lisaac Ω".zoom 2 .color (Color.gray) /
-          Txt.new.init_str "http://www.lisaac.org".color (Color.gray).set align_center
+          Txt.new.init_str "Connect Four".color gray /
+          Txt.new.init_str "Android example".color gray /
+          Txt.new.init_str "Lisaac Ω".zoom 2 .color gray /
+          Txt.new.init_str "http://www.lisaac.org".color gray.set align_center
         ).setr (height_locked|align_center) | Logo.put_size (200,100)
       )
     ).init_parent self.size (width,height).setr stretch

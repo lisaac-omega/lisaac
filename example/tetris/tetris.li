@@ -14,7 +14,7 @@ Header
   */
 Inherit
   
-  + parent_window:Flat Window
+  + parent_game:Flat Game
 
 Private
 
@@ -29,13 +29,13 @@ Private
   - face_to_color n:Uint8 :Color <-
   ( + result:Color
     n
-    .when 1 then { result := Color.rgb (020h,020h,0E0h); }  // Blue.
-    .when 2 then { result := Color.rgb (0E0h,070h,020h); }  // Orange.
-    .when 3 then { result := Color.rgb (0E0h,0E0h,020h); }  // Yellow.
-    .when 4 then { result := Color.rgb (020h,0E0h,0E0h); }  // Cyan.
-    .when 5 then { result := Color.rgb (0E0h,020h,020h); }  // Red.
-    .when 6 then { result := Color.rgb (0E0h,020h,0E0h); }  // Magenta.
-    .when 7 then { result := Color.rgb (020h,0E0h,020h); }; // Green.
+    .when 1 then { result := blue }
+    .when 2 then { result := orange }
+    .when 3 then { result := yellow }
+    .when 4 then { result := cyan }
+    .when 5 then { result := red }
+    .when 6 then { result := magenta }
+    .when 7 then { result := lime }
     result
   )
 
@@ -186,7 +186,7 @@ Public
           case_busy (x,y) face n
         } else {
           begin_path
-          fill_color (Color.white)
+          fill_color white
           rect (x*25,y*25) size (23,23)
           fill
         }

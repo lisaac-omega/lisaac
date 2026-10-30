@@ -11,7 +11,7 @@ This abstraction provides features to view a @Collection as a stack (for example
 One can also use a @Collection as a queue (for example by using @add_last, @first, and
 @remove_first).
 
-The Lisaac Ω library provides five implementations of @Collection: @Array, @Array_ring,
+The Lisaac Ω library provides six implementations of @Collection: @Array, @Array_ring,
 @Array_block, @Range_array, @Linked_list, and @Single_list.
 Except for creation, all implementations have exactly the same behavior.
 Switching from one implementation to another only changes the memory usage and execution time.

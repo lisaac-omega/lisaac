@@ -1,9 +1,18 @@
 Header
   + name := Factorial_example
 /*
-The classical factorial example in Lisaac Ω.
-  
-In this example, the traditional recursive implementation of the factorial function, both the tail-recursive and non-tail-recursive versions, as well as an example with signed integers that do not overflow.
+  The classical factorial example in Lisaac Ω.
+  The argument n chooses the version used: up to 19, the usual
+  recursive one; for 20, the tail-recursive one (with an accumulator);
+  up to 1000, a version on @ℤ, the signed integers that never overflow;
+  beyond, the factorial of the library: n.to_z !
+
+  Shows: recursion and tail recursion, the 64 bits limit of @Int and the
+  unbounded integers @ℤ, the arguments of the command line.
+
+  To compile, as usual in a terminal:
+  $ lisaac factorial_example -q -boost
+  $ ./factorial_example 1000
   */
 Public
   

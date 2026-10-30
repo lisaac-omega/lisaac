@@ -1,0 +1,123 @@
+=====================================================================
+  Lisaac -> Android sous Windows : installation des outils
+=====================================================================
+
+Sous Windows, `lisaac mon_projet -target android' utilise les scripts
+de `lisaac/android_windows/' au lieu de ceux de `lisaac/android/'.
+Ce sont des scripts bash, executes par le bash de MSYS2.
+
+`lisaac/android/' reste necessaire : on y reprend tout ce qui ne depend
+pas de la plateforme (sysroot Android, android.jar, apksigner.jar,
+tools/ : glue C, AndroidManifest.xml, keystore, icones, et les builtins
+de compiler-rt). Les binaires Linux qu'il contient (clang, aapt2,
+zipalign) ne servent pas sous Windows.
+
+Contenu de `lisaac/android_windows/' :
+  setup.sh  verifie les outils et installe ceux qui manquent
+  run.sh    compile, fabrique, signe et installe l'APK
+  clang     clang de MSYS2 en compilateur croise aarch64-linux-android24
+  env.sh    chemins communs, recherche des outils
+  log.sh    affiche les logs de l'application (adb logcat)
+  sdk/      outils telecharges automatiquement par setup.sh
+
+
+1) Prerequis : MSYS2
+--------------------
+
+Lisaac sous Windows s'installe deja avec MSYS2 (https://www.msys2.org),
+gcc venant de `C:\msys64\mingw64\bin'. Le PATH de Windows doit contenir,
+dans cet ordre :
+
+  C:\msys64\mingw64\bin
+  C:\msys64\usr\bin          (bash, zip, unzip, curl, ...)
+
+`C:\msys64\usr\bin' doit passer avant `C:\Windows\System32', sinon
+`bash' designe celui de WSL.
+
+
+2) Installation automatique
+---------------------------
+
+Au premier `lisaac mon_projet -target android', `setup.sh' installe
+seul ce qui manque :
+
+  - clang, lld et zip, par pacman (paquets MSYS2) ;
+  - aapt2 et zipalign (build-tools 36.1 du SDK Android) dans
+    `android_windows/sdk/build-tools/' ;
+  - adb (platform-tools du SDK Android) dans
+    `android_windows/sdk/platform-tools/' ;
+  - un Java 21 (JRE Temurin, pour apksigner) dans `android_windows/sdk/jre/'.
+
+Rien ne demande de droits administrateur. Environ 200 Mo de
+telechargement la premiere fois (dont clang/LLVM).
+
+Si pacman echoue (base MSYS2 trop ancienne : un clang recent qui ne
+demarre pas, erreur 0xC0000139), mettre MSYS2 a jour dans un terminal
+MSYS2, puis recommencer :
+
+     pacman -Syu
+     pacman -S mingw-w64-x86_64-clang mingw-w64-x86_64-lld zip
+
+Outils deja installes : un SDK Android existant (Android Studio :
+%LOCALAPPDATA%\Android\Sdk, ou ANDROID_HOME / ANDROID_SDK_ROOT) et un
+Java present (JAVA_HOME ou PATH) sont utilises en priorite, sans rien
+telecharger. Le build-tools le plus recent est pris.
+
+
+3) Le telephone (adb)
+---------------------
+
+Sur le telephone :
+  - Parametres > A propos du telephone > appuyer 7 fois sur
+    "Numero de build" pour activer le mode developpeur ;
+  - Parametres > Options pour les developpeurs > activer
+    "Debogage USB" ;
+  - brancher le telephone en USB, accepter l'autorisation qui
+    s'affiche, puis verifier :
+
+     C:\Users\<moi>\lisaac\android_windows\sdk\platform-tools\adb devices
+
+Selon le telephone, Windows peut demander un pilote USB : celui du
+constructeur, ou "Google USB Driver" (https://developer.android.com/studio/run/win-usb).
+
+Transfert sans fil (Android 11 et plus), optionnel :
+  - Options pour les developpeurs > "Debogage sans fil" >
+    "Associer l'appareil avec un code" ;
+
+     adb pair <ip>:<port_appairage>      # saisir le code affiche
+     adb connect <ip>:<port>
+
+Transfert manuel : l'APK produit (`mon_projet.apk') peut aussi etre
+copie sur le telephone et ouvert (autoriser les sources inconnues).
+Sans telephone branche, l'APK est quand meme produit : seule l'etape
+finale `adb install' echoue.
+
+
+4) Utilisation
+--------------
+
+     cd mon_projet
+     lisaac mon_projet -target android
+
+`setup.sh' verifie d'abord les outils. Ensuite `run.sh' :
+  - cree `android/' (manifest, icones) et `assets/' s'ils manquent ;
+  - compile le C, fabrique l'APK, l'aligne, le signe ;
+  - l'installe sur le telephone avec `adb install -r'.
+
+Difference avec Linux/macOS : `aapt2.exe -A' ecrit les sous-repertoires
+des assets avec des `\', illisibles sur Android ; `run.sh' ajoute donc
+les assets avec zip.
+
+Pour voir les traces de l'application (dans un terminal MSYS2, ou
+`bash ...' depuis cmd/PowerShell) :
+
+     /c/Users/<moi>/lisaac/android_windows/log.sh          # filtre LIA par defaut
+     /c/Users/<moi>/lisaac/android_windows/log.sh <motif>
+
+(attention : sous MSYS2, `~' designe C:\msys64\home\<moi>, pas le
+repertoire Windows de l'utilisateur.)
+
+Variables optionnelles :
+  CLANG=<chemin>       autre clang
+  JAVA_HOME=<jdk>      Java a utiliser pour signer l'APK
+  ANDROID_HOME=<sdk>   SDK Android ou chercher aapt2/zipalign/adb

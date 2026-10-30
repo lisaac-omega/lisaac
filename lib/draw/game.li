@@ -1,7 +1,12 @@
 Header
   + name := Game
 Inherit
+  
   + parent_window:Flat Window
+  
+Insert
+  
+  - parent_colors:Flat Colors
   
 Private
   

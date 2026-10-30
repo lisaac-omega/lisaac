@@ -1,74 +1,454 @@
 Header
   + name := Calculator
-/**/
+/*
+  A calculator on @ℤ, the signed integers without size limit, in two
+  versions from the same program.
+  With one argument, it computes the expression and prints the result
+  in the terminal, without any window:
+    $ ./calculator "(2+3)*4"
+    20
+  Without argument, it opens a window: type the expression with the
+  mouse or the keyboard (Enter or '=' computes, Backspace deletes, Escape
+  clears). The result is shown in the 4 bases 16, 10, 8 and 2.
+  Operators: + - * / (integer division) % (remainder) ^ (power)
+  ! (factorial) and parentheses; the multiplication may also be written
+  x or ×. In the window, a click on a line of the result (HEX, DEC, OCT
+  or BIN) chooses the base of the input: only the digits of that base
+  can be typed. On the command line, numbers may be written 0x1F, 0o17
+  or 0b101.
+
+  Shows: one prototype @Calc_expr for the parsing and the evaluation,
+  shared by both versions; a recursive descent parser where each rule of
+  the grammar is one method, so that the priority of the operators comes
+  from the grammar itself; the integers @ℤ that never overflow (try
+  2^200 or 100!); a mouse driven @Window that draws its own keys on a
+  regular grid, with a click sound loaded from assets/key.wav.
+
+  To compile, as usual in a terminal:
+  $ lisaac calculator -q -boost
+  $ ./calculator "2^100 - 1"
+  $ ./calculator
+  */
 Inherit
+
   + parent_window:Flat Window
 
+Insert
+
+  - parent_colors:Flat Colors
+
 Private
-    
-  - input:Inputbox
-  - error:Txt
-  
+
+  // The expression being typed, the previous one, and the last result
+  // in the 4 bases (which may be very long: they are cut when drawn).
   - text:String_buffer := String_buffer.create 80
-    
-  - add c:Char :Boolean <- ( text.add_last c; True)
-  
-  - eval:Boolean <-
-  ( + result:Real32
-    + ok:Boolean
-    if (text.count > 0) then {
-      result := Parse_expr.parse text
-      error.set_txt (Parse_expr.error_message)
-      if (Parse_expr.error_message.is_empty) then {
-        text.clear
-        result.append_in text
-        ok := True
+  - history:String_buffer := String_buffer.create 80
+  - dec:String_buffer := String_buffer.create 80
+  - hex:String_buffer := String_buffer.create 80
+  - oct:String_buffer := String_buffer.create 80
+  - bin:String_buffer := String_buffer.create 80
+  - error:String_buffer := String_buffer.create 80
+
+  // Command line version.
+
+  - compute src:String <-
+  (
+    String.tmp { tmp:String_buffer
+      (Calc_expr.evaluate src).if {
+        Calc_expr.append (Calc_expr.value) in tmp base 10
+        tmp.add_last '\n'
+        tmp.print
+      } else {
+        // The expression, then a '^' under the error.
+        tmp.append "Error: "
+        tmp.append (Calc_expr.error_message)
+        tmp.add_last '\n'
+        tmp.append src
+        tmp.add_last '\n'
+        (Calc_expr.error_index).times { tmp.add_last ' '; }
+        tmp.append "^\n"
+        Stderr.put_string tmp
+        System.exit 1
       }
     }
-    ok
+  )
+
+  // Window version.
+
+
+  - margin:Real32 := 16
+  - gap:Real32 := 10
+  - panel_height:Real32 := 270
+  - cols:Int := 6
+  - rows:Int := 5
+
+  // The keys, row by row. Each key has a kind, which gives its color,
+  // and a place on the grid (column + row * @cols); "=" is 2 cells wide.
+  - keys:Array String_alias :=
+    new Array String_alias of ("AC", "DEL", "(", ")", "%", "/",
+      "A", "B", "7", "8", "9", "×",
+      "C", "D", "4", "5", "6", "−",
+      "E", "F", "1", "2", "3", "+",
+      "^", "!", "±", "0", "=")
+
+  // Kinds: 0 digit, 1 operator, 2 function, 3 erase, 4 letter, 5 equal.
+  - kinds:Array Int :=
+    new Array Int of (3, 3, 2, 2, 1, 1,  4, 4, 0, 0, 0, 1,  4, 4, 0, 0, 0, 1,
+      4, 4, 0, 0, 0, 1,  2, 2, 2, 0, 5)
+
+  - colors:Array Color :=
+    new Array Color of (Color.rgb(62,66,82), Color.rgb(242,140,40),
+      Color.rgb(64,120,180), Color.rgb(214,72,82), Color.rgb(132,92,190),
+      Color.rgb(46,170,100))
+
+  - hover_colors:Array Color :=
+    new Array Color of (Color.rgb(84,90,110), Color.rgb(255,170,80),
+      Color.rgb(92,150,212), Color.rgb(238,104,112), Color.rgb(160,122,218),
+      Color.rgb(70,200,128))
+
+  // The 4 lines of the result, which also choose the base of the input.
+  - bases:Array Int := new Array Int of (16, 10, 8, 2)
+  - base_names:Array String_alias := new Array String_alias of ("HEX", "DEC", "OCT", "BIN")
+  - base_colors:Array Color :=
+    new Array Color of (Color.rgb(242,140,40), Color.rgb(46,170,100),
+      Color.rgb(64,120,180), Color.rgb(132,92,190))
+
+  - base_line_y i:Int :Real32 <- margin + 120 + i * 34
+
+  - results:Array String_buffer <-
+  ( - r:Array String_buffer
+    (r = NULL).if { r := new Array String_buffer of (hex, dec, oct, bin); }
+    r
+  )
+
+  - key_sound:Sound
+
+  - click p:Real32 <-
+  // Play the key sound, at the pitch @p (1 is normal).
+  (
+    (key_sound != NULL).if {
+      key_sound.stop
+      key_sound.seek_to_pcm_frame 0
+      key_sound.set_pitch p
+      key_sound.start
+    }
+  )
+
+  - key_width:Real32 <- (width - margin * 2 - gap * (cols - 1)) / cols
+
+  - key_height:Real32 <- (height - keys_top - margin - gap * (rows - 1)) / rows
+
+  - keys_top:Real32 <- margin * 2 + panel_height
+
+  - key_rect k:Int :(Real32,Real32,Real32,Real32) <-
+  // Position and size of the key @k: the keys follow each other on the
+  // grid, and the last one, "=", takes the 2 last cells.
+  ( + x,y,w:Real32
+    x := margin + (k % cols) * (key_width + gap)
+    y := keys_top + (k / cols) * (key_height + gap)
+    w := key_width
+    (k = keys.upper).if { w := key_width * 2 + gap; }
+    x, y, w, key_height
+  )
+
+  - key_at (x,y:Real32) :Int <-
+  // Index in @keys of the key under (@x,@y), -1 if none.
+  ( + result:Int
+    + kx,ky,kw,kh:Real32
+    result := -1
+    0.to (keys.upper) do { k:Int
+      (kx,ky,kw,kh) := key_rect k
+      ((x >= kx) && {x <= kx + kw} && {y >= ky} && {y <= ky + kh}).if {
+        result := k
+      }
+    }
+    result
+  )
+
+  - base_at (x,y:Real32) :Int <-
+  // Index in @bases of the result line under (@x,@y), -1 if none.
+  ( + result:Int
+    result := -1
+    ((x >= margin) && {x <= width - margin}).if {
+      0.to (bases.upper) do { i:Int
+        ((y - base_line_y i).abs <= 16).if { result := i; }
+      }
+    }
+    result
+  )
+
+  - is_enabled t:String :Boolean <-
+  // A digit is enabled only if it exists in the input base.
+  ( + result:Boolean
+    result := True
+    ((t.count = 1) && {t.first.is_hexadecimal_digit}).if {
+      result := t.first.hexadecimal_value < Calc_expr.input_base
+    }
+    result
+  )
+
+  - box (x,y:Real32) size (w,h:Real32) radius r:Real32 color c:Color <-
+  (
+    begin_path
+    rect (x,y) size (w,h) radius r
+    fill_color c
+    fill
+  )
+
+  - text_width s:String :Real32 <-
+  ( + w,x0,y0,x1,y1:Real32
+    (w,x0,y0,x1,y1) := text_bounds (0,0) msg s
+    w
+  )
+
+  - draw s:String right x:Real32 at y:Real32 width w:Real32 from_end e:Boolean <-
+  // Draw @s right aligned at @x, cut to fit in @w pixels: only its end
+  // when @e, else its beginning followed by its number of digits.
+  // The '*' of an expression is drawn as a true multiplication sign.
+  ( + n,digits:Int
+    String.tmp { buf:String_buffer
+      n := s.count.min 80
+      {
+        buf.clear
+        ((n = s.count) || {e}).if {
+          (n < s.count).if { buf.append "…"; }
+          (s.count - n).to (s.upper) do { i:Int
+            (s.at i = '*').if {
+              buf.append "×"
+            } else {
+              buf.add_last (s.at i)
+            }
+          }
+        } else {
+          0.to (n - 1) do { i:Int
+            buf.add_last (s.at i)
+          }
+          digits := s.count
+          (s.first = '-').if { digits := digits - 1; }
+          buf.append "… ("
+          digits.append_in buf
+          buf.append " digits)"
+        }
+        n := n - 1
+      }.do_while {(n > 0) && {text_width buf > w}}
+      text_align (align_right | align_middle)
+      text (x,y) msg buf
+    }
+  )
+
+  - draw_watermark <-
+  // "Lisaac Ω" in shadow, at the bottom left of the display.
+  ( + x,y:Real32
+    (x,y) := (margin * 2, margin + panel_height - 20)
+    font_face_id (Font.sys (Font.italic))
+    font_size 30
+    text_align (align_left | align_middle)
+    fill_color (Color.rgba(0,0,0,160))
+    text (x + 2, y + 2) msg "Lisaac Ω"
+    fill_color (Color.rgba(255,255,255,34))
+    text (x,y) msg "Lisaac Ω"
+  )
+
+  - draw_base_line i:Int <-
+  ( + y:Real32
+    + c:Color
+    + selected:Boolean
+    y := base_line_y i
+    selected := bases.at i = Calc_expr.input_base
+    c := base_colors.at i
+    selected.if {
+      box (margin + 6, y - 16) size (width - margin * 2 - 12, 32) radius 8 color (Color.rgb(30,34,46))
+    } else {
+      c := c.set_af 0.35
+    }
+    box (margin * 2, y - 12) size (48,24) radius 6 color c
+    font_face_id (Font.sys (Font.bold))
+    font_size 14
+    fill_color (selected.ok white or (Color.rgb(150,154,170)))
+    text_align (align_center | align_middle)
+    text (margin * 2 + 24, y) msg (base_names.at i)
+    font_face_id (Font.sys (Font.roman))
+    font_size 18
+    fill_color (selected.ok white or (Color.rgb(170,176,192)))
+    draw (results.at i) right (width - margin * 2) at y width (width - margin * 4 - 60) from_end False
+  )
+
+  - draw_key k:Int <-
+  ( + x,y,w,h:Real32
+    + c:Color
+    + t:String_alias
+    (x,y,w,h) := key_rect k
+    t := keys.at k
+    (is_enabled t).if {
+      // A shadow under the key; a pressed key goes down on it.
+      box (x, y + 4) size (w,h) radius 12 color (Color.rgb(10,11,16))
+      c := colors.at (kinds.at k)
+      (key_at (Hand.x_cur, Hand.y_cur) = k).if {
+        c := hover_colors.at (kinds.at k)
+        Hand.press_cur.if { y := y + 3; }
+      }
+      box (x,y) size (w,h) radius 12 color c
+      fill_color white
+    } else {
+      // Not a digit of the input base: flat and dark.
+      box (x,y) size (w,h) radius 12 color (Color.rgb(38,41,53))
+      fill_color (Color.rgb(70,74,90))
+    }
+    text_align (align_center | align_middle)
+    text (x + w / 2, y + h / 2) msg t
+  )
+
+  - select_base i:Int <-
+  // The expression, if it is correct, is rewritten in the new base.
+  ( + b:Int
+    b := bases.at i
+    (b != Calc_expr.input_base).if {
+      ((! text.is_empty) && {Calc_expr.evaluate text}).if {
+        text.clear
+        Calc_expr.append (Calc_expr.value) in text base b
+      }
+      Calc_expr.set_input_base b
+      error.clear
+      click 1.0
+    }
+  )
+
+  - press t:String <-
+  // The action of the key @t, from the mouse or the keyboard.
+  (
+    (t == "AC").if {
+      text.clear
+      error.clear
+    }.elseif {t == "DEL"} then {
+      (! text.is_empty).if { text.remove_last; }
+    }.elseif {t == "±"} then {
+      (! text.is_empty).if {
+        text.prepend "-("
+        text.add_last ')'
+      }
+    }.elseif {t == "="} then {
+      eval
+    }.elseif {t == "×"} then {
+      text.add_last '*'
+    }.elseif {t == "−"} then {
+      text.add_last '-'
+    } else {
+      text.append t
+    }
+    error.is_empty.if { click 1.0; } else { click 0.5; }
+  )
+
+  - eval <-
+  // The result, in the input base, replaces the expression, which goes
+  // to @history: so the next computation can go on with it.
+  ( + z:ℤ
+    error.clear
+    (! text.is_empty).if {
+      (Calc_expr.evaluate text).if {
+        z := Calc_expr.value
+        history.copy text
+        history.append " ="
+        0.to (bases.upper) do { i:Int
+          results.at i.clear
+          Calc_expr.append z in (results.at i) base (bases.at i)
+        }
+        text.clear
+        Calc_expr.append z in text base (Calc_expr.input_base)
+      } else {
+        error.append (Calc_expr.error_message)
+        error.append " (at character "
+        (Calc_expr.error_index + 1).append_in error
+        error.append ")"
+      }
+    }
   )
 
 Public
-    
+
+  - draw <-
+  (
+    box (0,0) size (width,height) radius 0 color (Color.rgb(30,32,42))
+    box (margin,margin) size (width - margin * 2, panel_height) radius 14 color (Color.rgb(14,16,22))
+    draw_watermark
+    // The display.
+    font_face_id (Font.sys (Font.roman))
+    font_size 18
+    fill_color (Color.rgb(130,136,156))
+    draw history right (width - margin * 2) at (margin + 24) width (width - margin * 4) from_end True
+    font_face_id (Font.sys (Font.bold))
+    font_size 38
+    fill_color white
+    draw text right (width - margin * 2) at (margin + 68) width (width - margin * 4) from_end True
+    0.to (bases.upper) do { i:Int
+      draw_base_line i
+    }
+    font_face_id (Font.sys (Font.roman))
+    font_size 16
+    fill_color (Color.rgb(255,96,96))
+    draw error right (width - margin * 2) at (margin + panel_height - 26) width (width - margin * 4 - 150) from_end False
+    // The keys.
+    font_face_id (Font.sys (Font.bold))
+    font_size 24
+    0.to (keys.upper) do { k:Int
+      draw_key k
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + k:Int
+    (ev = Hand.clic).if {
+      k := key_at (Hand.x_cur, Hand.y_cur)
+      ((k != -1) && {is_enabled (keys.at k)}).if {
+        press (keys.at k)
+      }.elseif {(k := base_at (Hand.x_cur, Hand.y_cur)) != -1} then {
+        select_base k
+      }
+    }
+    Paper.refresh_again
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + ch:Char
+    ch := s.first
+    ((c & Keyboard.key_cmd) != 0).if {
+      ch
+      .when '\0Ah\' then { press "="; }
+      .when '\b'    then { press "DEL"; }
+      .when '\27\'  then { press "AC"; }
+    }.elseif {(c & (Keyboard.ctrl | Keyboard.alt)) != 0} then {
+      // Nothing.
+    }.elseif {ch = '='} then {
+      press "="
+    }.elseif {(ch = 'x') || {ch = 'X'}} then {
+      press "×"
+    }.elseif {"+-*/%^!() ".has ch} then {
+      press s
+    }.elseif {ch.is_hexadecimal_digit} then {
+      // A digit of the input base, in upper case.
+      String.tmp { tmp:String_buffer
+        tmp.add_last (ch.to_upper)
+        (is_enabled tmp).if { press tmp; }
+      }
+    }
+    Paper.refresh_again
+    True
+  )
+
   - main <-
-  ( 
-    init "LiCalc" size (412,560)    
-    (
-      (
-        input := Inputbox.new.init {t:String_buffer; t.copy text; }
-        set {t:String_buffer; text.copy t; }
-        width (Font.size_sys*9).zoom 3.set (align_right | height_locked)
-      ) / (
-        (
-          Button.new.init "DEL" do { b:Button
-            (! text.is_empty).if { text.remove_last; }
-          } /
-          Button.new.init " 7 " do { b:Button; add '7'} /
-          Button.new.init " 4 " do { b:Button; add '4'} /
-          Button.new.init " 1 " do { b:Button; add '1'} /
-          Button.new.init " 0 " do { b:Button; add '0'}
-        ) | (
-          Button.new.init "CLR" do { b:Button; text.clear; True} /
-          Button.new.init " 8 " do { b:Button; add '8'} /
-          Button.new.init " 5 " do { b:Button; add '5'} /
-          Button.new.init " 2 " do { b:Button; add '2'} /
-          Button.new.init " . " do { b:Button; add '.'}
-        ) | (
-          Button.new.init " ( " do { b:Button; add '('} /
-          Button.new.init " 9 " do { b:Button; add '9'} /
-          Button.new.init " 6 " do { b:Button; add '6'} /
-          Button.new.init " 3 " do { b:Button; add '3'} /
-          Button.new.init " = " do { b:Button; eval}
-        ) | (
-          Button.new.init " ) " do { b:Button; add ')'} /
-          Button.new.init " / " do { b:Button; add '/'} /
-          Button.new.init " x " do { b:Button; add 'x'} /
-          Button.new.init " - " do { b:Button; add '-'} /
-          Button.new.init " + " do { b:Button; add '+'}
-        )
-      ) /
-      (error := Txt.new.init_str "").set height_locked.color (Color.red)
-    ).init_parent self.size (width,height).setr stretch
-        
-    Paper.run
+  (
+    (Command_args.upper = 1).if {
+      compute (Command_args.at 1)
+    }.elseif {Command_args.upper > 1} then {
+      Out # "Usage: " # (Command_args.at 0) # " [\"expression\"]\n"
+      System.exit 1
+    } else {
+      init "Calculator ℤ" size (460,720)
+      Audio.init
+      key_sound := Sound.new
+      (key_sound.init_from_asset "key.wav" != Audio.success).if {
+        key_sound := NULL; // No sound, but the calculator still works.
+      }
+      Paper.run
+    }
   )

@@ -23,10 +23,10 @@ Public
   - cols_bland:Flat Array Color
   - cols_size:Int <- ( abstract; 0)
   
-  - text_ui:Color    := Color.rgb (0,0,0)
-  - txt_nui:Color    := Color.rgb (255,255,255)
+  - text_ui:Color    := Color.black
+  - txt_nui:Color    := Color.white
   - text_bg_ui:Color := Color.rgb ( 40, 40, 40)
-  - short_ui:Color   := Color.rgb (  0,  0,255)
+  - short_ui:Color   := Color.blue
   //- menu_bar:COLOR
   - border_on:Color   := Color.rgb (215, 215, 255)
   - border_off:Color  := Color.rgb (115, 115, 155)
@@ -35,7 +35,7 @@ Public
   - select_ui:Color   := Color.rgba (0,0,0, 38)
   
   // Used by STY :
-  - none:Color       := Color.rgb (  0,  0,   0)
+  - none:Color       := Color.black
   - fmt_li:Color     := Color.rgb (  0,118,  17)
   - fmt_c:Color      := Color.rgb (  0, 18, 118)
   - fmt_txt:Color    := Color.rgb (  0,118, 170)

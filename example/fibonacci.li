@@ -1,10 +1,17 @@
 Header
   + name := Fibonacci
 /*
-  Function with multiple results example. The gain is not only syntactical!
-  Example below shows an efficient, still recursive, solution for the
-  Fibonacci example. Thanks to the usage of two results, the exponential
-  runtime complexity is avoided.
+  Fibonacci with a function that has two results, in Lisaac Ω.
+  The gain is not only syntactical: by returning both fib(n - 1) and
+  fib(n), the recursive function calls itself only once at each step,
+  and the exponential runtime of the naive version is avoided.
+
+  Shows: a slot with multiple results, (a,b) := ... to get them, and
+  the unbounded integers @ℤ.
+
+  To compile, as usual in a terminal:
+  $ lisaac fibonacci -q -boost
+  $ ./fibonacci 1000
   */
 Private
   

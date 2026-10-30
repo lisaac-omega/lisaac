@@ -4,10 +4,13 @@ Header
 
   */
 Inherit
+  
   + parent_window:Flat Window
 Insert
   
-  - french: French_corner := French_corner
+  - parent_french: Flat French_corner
+  
+  - parent_colors: Flat Colors
     
 Private
   
@@ -36,18 +39,18 @@ Private
     from 0 to board_upper do { y:Int
       from 0 to board_upper do { x:Int
         if ((idx % 3) = 0) then {
-          color := Color.blue
+          color := blue
         }.elseif {(idx % 3) = 1} then {
-          color := Color.white
+          color := white
         } else {
-          color := Color.red
+          color := red
         }
         idx := idx + 1
         board.at (x,y) put color
       }
     }
     alien_x := alien_y := alien_start := board_upper / 2
-    board.at (alien_x, alien_y) put (Color.black)
+    board.at (alien_x, alien_y) put black
     init "Alien CodEx" size (cell_size * (board_upper + 1),cell_size * (board_upper + 1))
     set_pos(0,0)
   )
@@ -80,7 +83,7 @@ Public
         fill
       }
     }
-    fill_color (Color.green)
+    fill_color lime
     font_size (cell_size * 3 / 2)
     text (alien_y*cell_size + 3, (alien_x + 1) * cell_size - 3) msg "Ω"
     if ((attente <= 0) && {! moves_char.is_empty}) then {
@@ -102,7 +105,7 @@ Public
         alien_y := (alien_y + 1) . min board_upper 
         "droite".println 
       }
-      board.at (alien_y, alien_x) put (Color.black)
+      board.at (alien_y, alien_x) put black
       moves_vals.at 0 put (moves_vals.first - 1)
       if (moves_vals.first <= 0) then {
         moves_char.remove_first ; moves_vals.remove_first
@@ -168,13 +171,13 @@ Private
   
   - couleur:Color <- board.at (alien_x, alien_y)
   
-  - bleu:Color <- Color.blue
+  - bleu:Color <- blue
   
-  - blanc:Color <- Color.white
+  - blanc:Color <- white
   
-  - rouge:Color <- Color.red
+  - rouge:Color <- red
   
-  - noir:Color <- Color.black
+  - noir:Color <- black
   
   - vitesse nom:String_alias <-
   ( + normale:Int

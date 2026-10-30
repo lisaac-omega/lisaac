@@ -1,15 +1,19 @@
 Header
   + name := Slot_rmk
 Inherit
+  
   + parent_tok_drw:Flat Tok_drw
   
 Insert
+  
   - parent_lix_buf:Lix_buf := Lix_buf
   
 Private
+  
   - stk:Flat Array (Exact Slot_rmk)
   
 Public
+  
   - is_major:Boolean := False
      
   - new:Self <-
@@ -58,6 +62,7 @@ Public
       {look key}.while_do {
         pos_i := pos_i + 2        
         rd_rem_cpp
+        (at pos_i = '\n').if { pos_i := pos_i + 1; }
       }
       pos_i := Old pos_i
       nl := Old nl

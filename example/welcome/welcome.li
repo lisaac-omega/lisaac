@@ -1,21 +1,32 @@
 Header
   + name := Welcome
   
-/*Welcome to Lisaac Ω
-A programming language designed to become the reference for teaching programming.
-Lisaac Ω aims to provide a clear, consistent, and modern environment to help
-students grasp the core principles of programming with ease and efficiency.
+/*
+  Welcome to Lisaac Ω
+  A programming language designed to become the reference for teaching
+  programming. Lisaac Ω aims to provide a clear, consistent, and modern
+  environment to help students grasp the core principles of programming
+  with ease and efficiency.
 
-Developed at the University of Lorraine and the University of Strasbourg,
-Lisaac Ω is the result of research and innovation in object-oriented and 
-prototype-based programming models.
+  This window draws three animated curves (the lemniscate of Bernoulli,
+  a flower and a Lissajous curve) and a bouncing text.
 
+  Shows: a @Window redrawn at each frame, parametric curves written with
+  the mathematical glyphs (π, cos, sin, pow, sqrt).
 
-lisaac.png
-Created and maintained by Benoît Sonntag and Dominique Colnet.*/
+  To compile, as usual in a terminal:
+  $ lisaac welcome -q -boost
+  $ ./welcome
+
+  Created and maintained by Benoît Sonntag and Dominique Colnet.
+  */
 Inherit 
   
   + parent_window:Flat Window
+  
+Insert
+  
+  - parent_colors:Flat Colors
   
 Public
     
@@ -28,17 +39,17 @@ Public
       // Lemniscate of Bernouilli (Blue)
       x := cos(t2).div (1 + (sin(t2)).pow 2)
       y := (cos(t2) * sin(t2)).div (1 + (sin(t2)).pow 2)
-      point (x,y) color (Color blue) alpha i
+      point (x,y) color blue alpha i
       
       // Flower (White)
       x := (cos(3 * t)).abs.sqrt * cos(t)
       y := (cos(3 * t)).abs.sqrt * sin(t)
-      point (x,y) color (Color white) alpha i
+      point (x,y) color white alpha i
       
       // Lisaajous (Red)
       x := sin(3 * t + π.div 4)
       y := cos(2 * t)
-      point (x,y) color (Color red) alpha i
+      point (x,y) color red alpha i
     }
     //
     font_size size_font

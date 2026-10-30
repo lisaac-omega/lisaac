@@ -553,24 +553,33 @@ Public
   
   - print <-
   // Print without the need of some String_buffer.
-  (
-    (self = 0).if {
-      '0'.print
-    }.elseif {self < 0} then {
+  // The last digit of a negative @self is printed apart: the opposite of
+  // @self may not exist for the smallest negative, the one of @self / 10 does.
+  ( + val:Self
+
+    (self < 0).if {
       '-'.print
-      (- self).print_positif 
+      val := - (self / 10)
+      (val != 0).if {
+        val.print_positif
+      }
+      (- (self % 10)).decimal_digit.print
     } else {
       print_positif
     }
   )
   
 Private
+  
   - print_positif <-
   // Print without the need of some String_buffer.
   // * Require: self >= 0
-  [ -? {self >= 0}; ]
+  [
+    self >= 0 
+  ]
   ( + char:Char
     + val:Self
+    
     char := (self % 10).decimal_digit
     val  := self / 10
     (val != 0).if {
@@ -585,6 +594,7 @@ Public
   // Print without the need of some String_buffer.
   ( + char:Char
     + val:Self
+    
     char := (self & 0Fh).hexadecimal_digit
     val  := self / 16
     (val != 0).if {

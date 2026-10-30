@@ -1964,7 +1964,7 @@ Public
       0.to (r.upper) do { j:Int
         py := y+100.0-100.0/max * r.at j
         pen.begin_path
-        pen.fill_color (Color.green)
+        pen.fill_color (Color.lime)
         pen.circle (px,py) radius 2
         pen.fill
       }

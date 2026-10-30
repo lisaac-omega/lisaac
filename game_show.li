@@ -1,10 +1,20 @@
 Header
   + name := Game_show
   
-  /*
-cd lisaac ; lisaac game_show && ./game_show
+/*
+  The games of the Lisaac Ω distribution, one after the other:
+  Snake, Tetris, Solitaire, Arrow out, Connect four, Break,
+  Minesweeper, Gems and Shooter.
+  Each game is a complete program of a few hundred lines, written to be
+  read: open it in elit to see how it works.
 
-Created and maintained by Benoît Sonntag and Dominique Colnet.*/
+  To compile, in a terminal:
+  $ cd lisaac
+  $ lisaac game_show -q -boost
+  $ ./game_show
+
+  Created and maintained by Benoît Sonntag and Dominique Colnet.
+  */
 Insert
   
   - code_show:Code_show := Code_show

@@ -15,7 +15,6 @@ Header
       add_lib "-framework IOKit";
       add_lib "-framework CoreVideo";
       add_lib "-framework OpenGL";
-      execute_fail (lisaac+"misc/new_assets "+lisaac+" "+input_file);
     };
     (target = "windows").if {
       cc_option (lisaac+"deps_lib/windows/glad.c");
@@ -23,7 +22,6 @@ Header
       add_lib "-lopengl32";
       add_lib "-lglfw3";
       add_lib "-lgdi32";
-      execute_fail (lisaac+"misc/new_assets "+lisaac+" "+input_file);
     };
     (target = "unix").if {
       add_lib_a (lisaac+"deps_lib/linux/libglfw3.a");
@@ -32,8 +30,8 @@ Header
       add_lib "-lpthread";
       add_lib "-lX11";
       add_lib "-ldl";
-      execute_fail (lisaac+"misc/new_assets "+lisaac+" "+input_file);
     };
+    execute_fail (lisaac+"misc/new_assets "+lisaac+" "+input_file);  
   );
   
   - include := `
@@ -371,14 +369,19 @@ Public
   
   - get_screen_size:(Int,Int) <-
   ( + xm,ym,n,wt,ht:Int
-    `int n; GLFWmonitor** monitors = glfwGetMonitors(&n)`
-    n := `n`:Int
-    0.to (n-1) do { i:Int
-      `const GLFWvidmode* mode = glfwGetVideoMode(monitors[@i])`
-      `int x, y, w, h; glfwGetMonitorWorkarea(monitors[@i], &x, &y, &w, &h)`
-      (xm,ym) := (`x+w`:Int,`y+h`:Int)
-      (xm > wt).if { wt := xm; }
-      (ym > ht).if { ht := ym; }
+    (lip "target" str = "android").if {
+      (wt,ht) := (screen_width,screen_height)
+    } else {
+      `{ int n; GLFWmonitor** monitors = glfwGetMonitors(&n)`
+      n := `n`:Int
+      0.to (n-1) do { i:Int
+        `const GLFWvidmode* mode = glfwGetVideoMode(monitors[@i])`
+        `int x, y, w, h; glfwGetMonitorWorkarea(monitors[@i], &x, &y, &w, &h)`
+        (xm,ym) := (`x+w`:Int,`y+h`:Int)
+        (xm > wt).if { wt := xm; }
+        (ym > ht).if { ht := ym; }
+      }
+      `}`
     }
     wt,ht
   )
@@ -479,26 +482,37 @@ Public
   - get_clipboard_in buf:String_buffer :Boolean <-
   ( + tab:C_array Char
     + win:Pointer
-    win := wins.first.win_ptr
-    tab := `glfwGetClipboardString(@win)`:C_array Char
-    (tab.is_not_null).if {      
-      buf.from_external_copy tab
+    (lip "target" str != "android").if {
+      win := wins.first.win_ptr
+      tab := `glfwGetClipboardString(@win)`:C_array Char
+      (tab.is_not_null).if {
+        buf.from_external_copy tab
+      }
     }
   )
-  
+
   - set_clipboard buf:String <-
   ( + tab:C_array Char
     + win:Pointer
-    win := wins.first.win_ptr
-    tab := buf.to_external
-    `glfwSetClipboardString(@win,@tab)`
+    (lip "target" str != "android").if {
+      win := wins.first.win_ptr
+      tab := buf.to_external
+      `glfwSetClipboardString(@win,@tab)`
+    }
   )
   
 Public
           
   - framebuffer_size w:Pointer :(Int,Int) <-
-  ( `int fbw,fbh; glfwGetFramebufferSize(@w, &fbw, &fbh)`
-    `fbw`:Int,`fbh`:Int
+  ( + fbw,fbh:Int
+    (lip "target" str = "android").if {
+      (fbw,fbh) := (screen_width,screen_height)
+    } else {
+      `{ int fbw,fbh; glfwGetFramebufferSize(@w, &fbw, &fbh)`
+      (fbw,fbh) := (`fbw`:Int, `fbh`:Int)
+      `}`
+    }
+    fbw,fbh
   )
   
   - li_refresh_callback w:Pointer :Int <-
@@ -705,17 +719,24 @@ External
       + pen:Pen
       + nx,ny:Real32
       + w:Window
+      + z:Boolean
       pen := get_pen e
       (pen != NULL).if {
-        w := wins.first        
-        (nx,ny) := (x,y)
-        ((last_x,last_y) != (nx,ny)).if {
-          (last_x,last_y) := (nx,ny)
-          Hand.set_ptr w xy (last_x.to_int,last_y.to_int)
-        }
-        (last_z != (s = -1)).if {
-          last_z := s = -1
-          Hand.set_ptr w press (n,last_z)
+        w := wins.first
+        (n = 0).if {
+          // Only the first finger moves the pointer (s: 1=down, -1=move, 0=up).
+          z := s != 0
+          (nx,ny) := (x,y)
+          ((last_x,last_y) != (nx,ny)).if {
+            (last_x,last_y) := (nx,ny)
+            Hand.set_ptr w xy (last_x.to_int,last_y.to_int)
+          }
+          (last_z != z).if {
+            last_z := z
+            Hand.set_ptr w press (0,last_z)
+          }
+        }.elseif {s = 0} then {
+          Hand.set_ptr w press (n,False)
         }
       }
       new_gest := True

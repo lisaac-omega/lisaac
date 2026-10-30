@@ -1,21 +1,20 @@
 Header
   + name := Hello_world
 /*
-  The basic and traditional "Hello World" program in Lisaac Ω. 
-  
-  To run this example in a terminal window:
+  The basic and traditional "Hello World" program in Lisaac Ω.
+  It prints one line in the terminal.
 
-  Step 1:
-       cd lisaac/example
+  Shows: the smallest complete program, a prototype with a single
+  slot `main', where the execution starts.
 
-  Step 2:
-       lisaac hello_world.li
+  To compile, as usual in a terminal:
+  $ cd lisaac/example
+  $ lisaac hello_world -q -boost
+  $ ./hello_world
 
-  Step 3:
-      ./hello_world     
-  
-   Or one single step on bash:
-      run=hello_world ; lisaac ${run} -boost -q && ./${run%.li}    */
+  Or in one single step with bash:
+  $ run=hello_world ; lisaac ${run} -q -boost && ./${run}
+  */
 Public
   
   - main <-

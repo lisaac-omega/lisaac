@@ -1,8 +1,11 @@
 Header
   + name := Code_show_code
 /*
-  Read only view of the source code of the current example of the
-  graphical `Code_show': line numbers, syntax coloring, scrolling.
+  Read only view of the header comment of the current example of the
+  graphical `Code_show' (the code itself is opened in elit): long lines
+  are wrapped, keeping their indentation; scrolling. As in elit, a name
+  written with an at sign before it is shown without the at sign, in
+  blue for a variable or a slot, in green for a prototype.
   */
 Inherit
   + parent_gobj:Flat Gobj Code_show_code
@@ -10,10 +13,16 @@ Inherit
 Public
 
   + entry:Code_show_entry
-  + top:Real32      // First visible line (may be fractional).
-  + left:Real32     // Horizontal scroll, in pixels.
+  + top:Real32      // First visible row (may be fractional).
 
-  - margin:Real32 := 14
+  - margin:Real32 := 28
+
+  + rows:Array Int
+  // Wrapped rows: quadruples (line of the comment, first byte, last byte,
+  // indentation in columns of the continuation rows, 0 otherwise).
+  + rows_width:Real32
+  + rows_size:Real32
+  + rows_entry:Code_show_entry
 
   - create:Self <-
   ( + result:Self
@@ -25,33 +34,24 @@ Public
   - set_entry e:Code_show_entry <-
   (
     entry := e
-    entry.load
-    (top,left) := (0,0)
+    entry.load_comment
+    top := 0
   )
 
-  - show_line l:Int <-
-  // Scroll so that line `l' is visible, at one third of the view.
-  ( + v:Real32
-    v := visible_lines
-    ((l.to_real32 < top) || {l.to_real32 > top + v - 2}).if {
-      top := l.to_real32 - v / 3
-    }
-    clamp
-  )
-  
-  - line_h:Real32 <- Code_show_look.code_size * 1.45
+  - line_h:Real32 <- Code_show_look.code_size * 1.5
 
   - visible_lines:Real32 <- (height - margin * 2) / line_h
+
+  - row_count:Int <-
+  ( + result:Int
+    (rows != NULL).if { result := rows.count / 4; }
+    result
+  )
 
   - scroll dy:Real32 <-
   (
     top := top - dy * 3
     clamp
-  )
-
-  - scroll_x dx:Real32 <-
-  (
-    left := (left - dx * 40).max 0
   )
 
   - page dir:Int <-
@@ -62,10 +62,8 @@ Public
 
   - clamp <-
   ( + m:Real32
-    (entry != NULL).if {
-      m := (entry.line_count.to_real32 - visible_lines + 1).max 0
-      top := (top.max 0).min m
-    }
+    m := (row_count.to_real32 - visible_lines).max 0
+    top := (top.max 0).min m
   )
 
   - char_w:Real32 <-
@@ -85,82 +83,156 @@ Public
     font_size (Code_show_look.code_size)
   )
 
-  - draw <-
-  ( + cw,lh,gut,x0,y,yb:Real32
-    + first,last,b,e,k,digits:Int
+  - wrap <-
+  // Compute `rows' for the current width and font size.
+  ( + cols,c,b,i,sp,ind,lead:Int
     + s:String_alias
-    + colors:Array Color
+    (rows = NULL).if { rows := Array Int.create_with_capacity 256; }
+    rows.clear
+    (rows_entry,rows_width,rows_size) := (entry,width,Code_show_look.code_size)
+    cols := (((width - margin * 2) / char_w).to_int).max 20
+    0.to (entry.comment.upper) do { k:Int
+      s := entry.comment.at k
+      lead := 0
+      {(lead <= s.upper) && {s.at lead = ' '}}.while_do { lead := lead + 1; }
+      (lead > cols / 2).if { lead := 0; }
+      (s.is_empty).if {
+        add_row (k,0,-1,0)
+      }
+      b := 0
+      ind := 0
+      {b <= s.upper}.while_do {
+        // As many characters as possible, cut after the last space:
+        i := b
+        c := ind
+        sp := -1
+        {(i <= s.upper) && {c < cols}}.while_do {
+          (s.at i = ' ').if { sp := i; }
+          ((s.at i).to_uint8 & 0C0h != 80h).if { c := c + 1; }
+          i := i + 1
+        }
+        {(i <= s.upper) && {(s.at i).to_uint8 & 0C0h = 80h}}.while_do { i := i + 1; }
+        ((i <= s.upper) && {s.at i = ' '}).if { sp := i; }
+        (i > s.upper).if {
+          add_row (k,b,s.upper,ind)
+          b := s.count
+        }.elseif {sp > b} then {
+          add_row (k,b,sp - 1,ind)
+          b := sp + 1
+          {(b <= s.upper) && {s.at b = ' '}}.while_do { b := b + 1; }
+        } else {
+          add_row (k,b,i - 1,ind)
+          b := i
+        }
+        ind := lead
+      }
+    }
+  )
+
+  - add_row (k,b,e,ind:Int) <-
+  (
+    rows.add_last k
+    rows.add_last b
+    rows.add_last e
+    rows.add_last ind
+  )
+
+  - draw <-
+  ( + cw,lh,x0,y,yb:Real32
+    + first,last,r:Int
+    + s:String_alias
     begin_path
     rect (xo,yo) size (width,height)
     fill_color (Code_show_look.background)
     fill
     (entry != NULL).if {
+      ((rows_entry != entry) || {rows_width != width} || {rows_size != Code_show_look.code_size}).if {
+        wrap
+      }
       clamp
-      colors := Code_show_look.code_colors
       cw := char_w
       lh := line_h
-      digits := 3
-      (entry.line_count >= 1000).if { digits := 4; }
-      gut := cw * digits.to_real32 + margin * 2
-      // Gutter:
-      begin_path
-      rect (xo,yo) size (gut,height)
-      fill_color (Code_show_look.panel)
-      fill
+      x0 := xo + margin
       save
       intersect_scissor (xo,yo) size (width,height)
-      first := top.to_int
-      last := ((top + visible_lines + 1).to_int).min (entry.lines.upper)
       text_align (align_left | align_middle)
-      first.to last do { i:Int
-        y := yo + margin + (i.to_real32 - top) * lh + lh / 2
-        String.tmp { tmp:String_buffer
-          (i + 1).append_in tmp
-          fill_color ((i = entry.error_line).ok (Code_show_look.error) or (Code_show_look.text_faint))
-          text (xo + gut - margin - cw * tmp.count.to_real32, y) msg tmp
-        }
-      }
-      intersect_scissor (xo + gut,yo) size (width - gut,height)
-      x0 := xo + gut + margin - left
-      // Line of the compilation error:
-      ((entry.error_line).in_range first to last).if {
-        y := yo + margin + ((entry.error_line).to_real32 - top) * lh
-        begin_path
-        rect (xo + gut,y) size (width - gut,lh)
-        fill_color (Color.rgba (240,86,86,40))
-        fill
-        begin_path
-        rect (xo + gut,y) size (3,lh)
-        fill_color (Code_show_look.error)
-        fill
-        begin_path
-        rect (x0 + cw * (entry.error_column).to_real32,y + lh - 3) size (cw,2)
-        fill_color (Code_show_look.error)
-        fill
-      }
-      first.to last do { i:Int
-        y := yo + margin + (i.to_real32 - top) * lh + lh / 2
-        s := entry.lines.at i
-        b := entry.span_first.at i
-        e := entry.span_first.at (i + 1)
-        {b < e}.while_do {
-          k := entry.spans.at (b + 3)
-          fill_color (colors.at k)
-          text (x0 + cw * (entry.spans.at (b + 2)).to_real32, y) msg s from (entry.spans.at b) to (entry.spans.at (b + 1))
-          b := b + 4
+      (row_count = 0).if {
+        font_face_id (Font.sys (Font.roman))
+        font_size (Code_show_look.ui_size)
+        fill_color (Code_show_look.text_faint)
+        text (x0, yo + margin + lh / 2) msg "Pas de commentaire d'entête dans ce fichier : le code est à voir dans elit."
+      } else {
+        first := top.to_int
+        last := ((top + visible_lines + 1).to_int).min (row_count - 1)
+        first.to last do { i:Int
+          r := i * 4
+          (rows.at (r + 1) <= rows.at (r + 2)).if {
+            y := yo + margin + (i.to_real32 - top) * lh + lh / 2
+            s := entry.comment.at (rows.at r)
+            draw_row (x0 + cw * (rows.at (r + 3)).to_real32, y) msg s from (rows.at (r + 1)) to (rows.at (r + 2))
+          }
         }
       }
       reset_scissor
       restore
       // Vertical scroll indicator:
-      yb := (visible_lines / entry.line_count.to_real32).min 1
-      (yb < 1).if {
-        begin_path
-        rect (xmax - 6, yo + 4 + (height - 8) * top / entry.line_count.to_real32) size (4, (height - 8) * yb) radius 2
-        fill_color (Code_show_look.panel_hover)
-        fill
+      (row_count > 0).if {
+        yb := (visible_lines / row_count.to_real32).min 1
+        (yb < 1).if {
+          begin_path
+          rect (xmax - 6, yo + 4 + (height - 8) * top / row_count.to_real32) size (4, (height - 8) * yb) radius 2
+          fill_color (Code_show_look.panel_hover)
+          fill
+        }
       }
     }
+  )
+
+  - draw_row (x,y:Real32) msg s:String from b:Int to e:Int <-
+  // Draw @s from @b to @e, with the colors of the referenced names.
+  ( + i,j,n:Int
+    + cw:Real32
+    cw := char_w
+    i := b
+    {i <= e}.while_do {
+      // Plain text, up to the next referenced name:
+      j := i
+      {(j <= e) && {! is_ref s at j from b to e}}.while_do { j := j + 1; }
+      (j > i).if {
+        fill_color (Code_show_look.text)
+        text (x + cw * n.to_real32, y) msg s from i to (j - 1)
+        n := n + columns s from i to (j - 1)
+      }
+      // The referenced name, without its at sign:
+      (j <= e).if {
+        i := j + 1
+        j := i
+        {(j <= e) && {is_word (s.at j)}}.while_do { j := j + 1; }
+        fill_color ((is_prototype s at i).ok (Code_show_look.comment_type) or (Code_show_look.comment_slot))
+        text (x + cw * n.to_real32, y) msg s from i to (j - 1)
+        n := n + columns s from i to (j - 1)
+      }
+      i := j
+    }
+  )
+
+  - is_word c:Char :Boolean <-
+  (c.is_letter_or_digit) || {c = '_'} || {! c.is_ascii}
+
+  - is_ref s:String at j:Int from b:Int to e:Int :Boolean <-
+  // A `@' at the start of a word, followed by a name (as in elit).
+  (s.at j = '@') && {(j = b) || {s.at (j - 1) = ' '}} && {j < e} && {is_word (s.at (j + 1))}
+
+  - is_prototype s:String at i:Int :Boolean <-
+  // Starts with an upper case letter, or with ℕ, ℤ, ℚ, ℝ, ℂ.
+  ((s.at i).is_upper) || {((s.at i).to_uint8 = 0E2h) && {i < s.upper} && {(s.at (i + 1)).to_uint8 = 084h}}
+
+  - columns s:String from b:Int to e:Int :Int <-
+  ( + result:Int
+    b.to e do { k:Int
+      ((s.at k).to_uint8 & 0C0h != 80h).if { result := result + 1; }
+    }
+    result
   )
 
   - event ev:Int :Boolean <-

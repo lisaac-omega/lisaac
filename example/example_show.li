@@ -1,8 +1,18 @@
 Header
   + name := Example_show
   
-/**/
+/*
+  A short tour of the examples of the Lisaac Ω distribution: from
+  "Hello world" to 2D drawing, 3D mapping, a slide show and games.
+  The first examples run in the terminal, the others open a window.
+
+  To compile, in a terminal:
+  $ cd lisaac/example
+  $ lisaac example_show -q -boost
+  $ ./example_show
+  */
 Insert
+  
   - code_show:Code_show := Code_show
     
 Public
@@ -10,16 +20,19 @@ Public
   - main <-
   (  
     show (
-      "hello_world.li", "elit-view",
-      "basics/array_example.li", "elit-view",
-      "welcome/welcome.li", "elit-view",
+      "hello_world.li",
+      "basics/array_example.li",
+      "welcome/welcome.li",
+      "calculator/calculator.li",
+      "calculator/calculator.li", "run", "'(2+3)*4 + 2^100'",
       "startrek/startrek.li", "background",
+      "slider/slider.li", "background",
       "mapping/nayeli.li", "background",
       "arrow_out/arrow_out.li", "background",
       "draw2d/draw2d_shapes.li", "background",
-      "../game_show.li", "elit-view",
-      "basics/factorial_example.li", "elit-view", "run", "1000",
-      "fibonacci.li", "elit-view", "run", "1000"
+      "../game_show.li",
+      "basics/factorial_example.li", "run", "1000",
+      "fibonacci.li", "run", "1000"
     )
   )
   

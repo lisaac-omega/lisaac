@@ -15,5 +15,5 @@ Line 15 column 8 in Main(.../test/misc/22/main.li):
         ^
 /home/colnet/lisaac/test/misc/22/main.c: In function ‘main’:
 /home/colnet/lisaac/test/misc/22/main.c:370:16: warning: comparison between pointer and integer
-  370 |   __tmp__QG=(1 == (void *)NULL);
+  370 |   __tmp__RG=(1 == (void *)NULL);
       |                ^~

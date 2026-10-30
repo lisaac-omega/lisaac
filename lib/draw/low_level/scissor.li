@@ -75,7 +75,8 @@ Public
       // Intersect rects.            
       ax := pxform.t4-tex
       ay := pxform.t5-tey
-      aw := ah := tex*2
+      aw := tex*2
+      ah := tey*2
       minx := ax.max x
       miny := ay.max y
       maxx := (ax+aw).min (x+w)

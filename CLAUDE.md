@@ -11,7 +11,8 @@ compilé vers du C ANSI puis vers un binaire natif via `gcc`.
 - **Librairie Lisaac** : `~/lisaac/lib/`
 - **Compilation normale** (avec assertions/contrats) : `lisaac <fichier>`
 - **Compilation boost** (sans assertions, x20 plus rapide) : `lisaac <fichier> -boost`
-- **Gestion de version** : SVN (pas git). **Jamais de `svn commit`** : l'utilisateur relit avec `svn diff` et commite lui-même. `svn add` / `svn rm` sont permis pour que les fichiers créés ou supprimés apparaissent dans le diff.
+- **Gestion de version** : SVN ou GIT `svn add` / `svn rm` sont permis pour que les fichiers créés ou supprimés apparaissent dans le diff.
+- **Ne jamais commiter**, quel que soit l'outil : l'utilisateur relit le diff et commite toujours lui-même.
 
 ---
 
@@ -22,6 +23,8 @@ compilé vers du C ANSI puis vers un binaire natif via `gcc`.
 Lisaac est un langage **orienté prototype**. Tout est prototype, il n'y a pas de classes.
 
 Les noms de prototypes sont en `Snake_case` avec majuscule initiale : `Nom_du_prototype`, `String_buffer`, `File_utils`, etc.
+
+Le fichier d'un prototype porte son nom en minuscules : `Nom_du_prototype` est dans `nom_du_prototype.li`. Renommer un prototype, c'est donc aussi renommer son fichier (`svn mv`) et mettre à jour toutes ses références, `@Nom` dans les commentaires compris. Le qualificatif `Flat` de `+ name := Flat ...` ne compte pas dans le nom du fichier ; `ℤ` est une exception, dans `z.li`.
 
 ```
 Header
@@ -205,7 +208,7 @@ Insert
 7. **Externals C avec `()`** si effet de bord, sans si résultat seul nécessaire.
 8. **Ne pas utiliser `Self` à la place de `self`** : ce sont deux choses fondamentalement différentes.
 9. **Les `Flat` ne sont jamais `NULL`** : inutile de les tester.
-10. **Dans les commentaires, préfixer les variables par `@`** (par exemple `@i`, `@nb`) : elit les affiche alors correctement.
+10. **Dans les commentaires, préfixer par `@` les variables et les noms de prototypes** (par exemple `@i`, `@nb`, `@True`, `@False`, `@Array`, `@ℤ`) : elit les affiche alors correctement. Ne pas en mettre dans un extrait de code cité tel quel (`Out # ...`, `i:Int`).
 
 ---
 

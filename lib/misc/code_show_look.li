@@ -23,6 +23,10 @@ Public
   - error:Color       := Color.rgb (240,86,86)
   - running:Color     := Color.rgb (86,182,255)
 
+  // The @references in the comments, as in elit (`slot' and `type' of dark.sty):
+  - comment_slot:Color := Color.rgb (0,192,255)
+  - comment_type:Color := Color.rgb (34,139,34)
+
   // Syntax coloring of the code (index used in `Code_show_entry.spans'):
 
   - c_plain:Int    := 0
@@ -57,13 +61,16 @@ Public
   - mono:Int := -1
   - set_mono m:Int <- ( mono := m; )
 
-  - code_size:Real32 := 16
+  - code_size:Real32 := 19
   - set_code_size s:Real32 <- ( code_size := s; )
 
   - console_size:Real32 := 14
 
   - ui_size:Real32 := 16
   - small_size:Real32 := 13
+  - big_size:Real32 := 20
+  - list_size:Real32 := 22
+  - field_size:Real32 := 18
 
 Private
 

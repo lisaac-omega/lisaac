@@ -54,9 +54,9 @@ Line 195 column 51 in Numeric(.../lib/number/numeric.li):
   - self:Self '-'  Left 80  other:Self :Self <- `3`
                                                    ^
 
-Line 559 column 5 in Int(.../lib/number/integer/int.li):
-    }.elseif {self < 0} then {
-     ^
+Line 560 column 11 in Int(.../lib/number/integer/int.li):
+    (self < 0).if {
+           ^
 Context:
   ...
 Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
@@ -68,9 +68,9 @@ Line 195 column 51 in Numeric(.../lib/number/numeric.li):
   - self:Self '-'  Left 80  other:Self :Self <- `3`
                                                    ^
 
-Line 2 column 8 in Block(.../lib/kernel/block.li):
-  + name := Block
-        ^
+Line 560 column 11 in Int(.../lib/number/integer/int.li):
+    (self < 0).if {
+           ^
 Context:
   ...
 Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
@@ -82,47 +82,25 @@ Line 195 column 51 in Numeric(.../lib/number/numeric.li):
   - self:Self '-'  Left 80  other:Self :Self <- `3`
                                                    ^
 
-Line 2 column 8 in Block(.../lib/kernel/block.li):
-  + name := Block
-        ^
+Line 560 column 11 in Int(.../lib/number/integer/int.li):
+    (self < 0).if {
+           ^
 Context:
   ...
 Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
   + name := Main
         ^
 --WARNING----------
-Invalid constant integer (32769) cast into Flat Int16 [-32768..32767].
+Invalid constant integer (-32769) cast into Flat Int16 [-32768..32767].
 Line 195 column 51 in Numeric(.../lib/number/numeric.li):
   - self:Self '-'  Left 80  other:Self :Self <- `3`
                                                    ^
 
-Line 2 column 8 in Block(.../lib/kernel/block.li):
-  + name := Block
-        ^
+Line 560 column 11 in Int(.../lib/number/integer/int.li):
+    (self < 0).if {
+           ^
 Context:
   ...
 Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
   + name := Main
-        ^
-
-Line 2 column 8 in Block(.../lib/kernel/block.li):
-  + name := Block
-        ^
---WARNING----------
-Invalid constant integer (32769) cast into Flat Int16 [-32768..32767].
-Line 195 column 51 in Numeric(.../lib/number/numeric.li):
-  - self:Self '-'  Left 80  other:Self :Self <- `3`
-                                                   ^
-
-Line 2 column 8 in Block(.../lib/kernel/block.li):
-  + name := Block
-        ^
-Context:
-  ...
-Line 2 column 8 in Main(.../test/compiler-msg/Int/3/main.li):
-  + name := Main
-        ^
-
-Line 2 column 8 in Block(.../lib/kernel/block.li):
-  + name := Block
         ^

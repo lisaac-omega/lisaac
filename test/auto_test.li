@@ -250,7 +250,7 @@ Private
     }
     // Computed again for each test: a /libot/ directory must not make
     // all the following tests partial.
-    partial := dirpath.has_substring "/libot/"
+    //partial := dirpath.has_substring "/libot/"
     if continue then {
       String.tmp { mesg:String_buffer
         (open_read "mesg.txt" in mesg).if {

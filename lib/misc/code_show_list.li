@@ -15,7 +15,11 @@ Public
   + scroll_y:Real32
   + on_select:{Int;}
 
-  - item_h:Real32 := 54
+  + item_h:Real32 := 74
+  // Between `item_min_h' and `item_max_h', so that the whole list fits
+  // in the window when possible (see `clamp'); the fonts follow.
+  - item_min_h:Real32 := 46
+  - item_max_h:Real32 := 74
 
   - create e:Array Code_show_entry do a:{Int;} :Self <-
   ( + result:Self
@@ -51,6 +55,7 @@ Public
 
   - clamp <-
   ( + m:Real32
+    item_h := ((height / entries.count.to_real32).min item_max_h).max item_min_h
     m := (entries.count.to_real32 * item_h - height).max 0
     scroll_y := (scroll_y.max 0).min m
   )
@@ -101,19 +106,21 @@ Public
         } else {
           font_face_id (Font.sys (Font.roman))
         }
-        font_size (Code_show_look.small_size)
+        font_size (Code_show_look.ui_size)
         text_align (align_left | align_middle)
         fill_color ((i = current).ok (Code_show_look.accent) or (Code_show_look.text_faint))
-        text (xo + 16, y + item_h / 2) msg tmp
+        text (xo + 18, y + item_h / 2) msg tmp
       }
       // Name and directory:
-      x := xo + 50
+      x := xo + 60
+      save
+      intersect_scissor (x,y) size (width - 60 - 34,item_h)
       font_face_id (Font.sys (Font.bold))
-      font_size (Code_show_look.ui_size - 1)
+      font_size ((Code_show_look.list_size * item_h / item_max_h).max 16)
       fill_color (Code_show_look.text)
-      text (x, y + 20) msg (e.exec)
+      text (x, y + item_h * 0.37) msg (e.exec)
       font_face_id (Font.sys (Font.roman))
-      font_size (Code_show_look.small_size - 1)
+      font_size (((Code_show_look.small_size + 2) * item_h / item_max_h).max 12)
       fill_color (Code_show_look.text_dim)
       String.tmp { tmp:String_buffer
         (e.subdir.is_empty).if { tmp.append "."; } else { tmp.append (e.subdir); }
@@ -123,8 +130,9 @@ Public
           tmp.append "   ·  "
           tmp.append (e.args)
         }
-        text (x, y + 38) msg tmp
+        text (x, y + item_h * 0.72) msg tmp
       }
+      restore
       // State, on the right:
       r := xo + width - 22
       (e.phase = Code_show_entry.running).if {
@@ -146,6 +154,13 @@ Public
     }
     reset_scissor
     restore
+    // Vertical scroll indicator, when the list does not fit:
+    (entries.count.to_real32 * item_h > height).if {
+      begin_path
+      rect (xmax - 6, yo + 4 + (height - 8) * scroll_y / (entries.count.to_real32 * item_h)) size (4, (height - 8) * height / (entries.count.to_real32 * item_h)) radius 2
+      fill_color (Code_show_look.panel_hover)
+      fill
+    }
   )
 
   - draw_dot (x,y:Real32) color c:Color <-

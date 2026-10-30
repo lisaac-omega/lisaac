@@ -231,8 +231,13 @@ static int32_t input_android(struct android_app* app,AInputEvent* event)
           };
         };  
         break;
-      case AMOTION_EVENT_ACTION_OUTSIDE:        
-      case AMOTION_EVENT_ACTION_CANCEL:        
+      case AMOTION_EVENT_ACTION_CANCEL:
+        // Gesture stolen by the system (e.g. edge swipe): release like an UP.
+        x = (int)((float)AMotionEvent_getX(event,0));
+        y = (int)((float)AMotionEvent_getY(event,0));
+        mouse_action (app->userData,0,0,x,y);
+        break;
+      case AMOTION_EVENT_ACTION_OUTSIDE:
         break;
     };
   }

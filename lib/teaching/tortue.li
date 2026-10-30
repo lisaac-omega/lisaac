@@ -8,7 +8,9 @@ Inherit
   + parent_window:Flat Window
 Insert
   
-  - french: French_corner := French_corner
+  - parent_french:Flat French_corner
+  
+  - parent_colors:Flat Colors
   
 Private
   
@@ -69,9 +71,9 @@ Private
       mem := True
       (turtle_x, turtle_y) := (x, y)
       pen_down := True
-      pen_color := Color.black
+      pen_color := black
       pen_width := 1
-      background := Color.white
+      background := white
       random := Random.new.init_clock    
       init t size (l,h)
       set_pos(0,0)
@@ -214,8 +216,8 @@ Private
   )
   
   - arc r:Int degrés d:Int <-
-  // La tortue marche sur un arc de cercle de rayon r et de d degrés
-  // (pas de 10°). Elle tourne donc de d au total.
+  // La tortue marche sur un arc de cercle de rayon @r et de @d degrés
+  // (pas de 10°). Elle tourne donc de @d au total.
   [
     ((d % 10) = 0)
   ]

@@ -86,25 +86,34 @@ Public
   )
   
   - set_position (dx,dy:Real32) alpha a:Real32 ray r:Real32 <-
-  ( + d_ri,d_up:Vec3
+  // Trackball: rotate the camera frame around its own `up' and `right' axes
+  // (no fixed up vector, so no singularity over the poles).
+  // A drag over the whole view width is a half turn.
+  ( + k,t,c,s:Real32
+    + x0,y0,z0:Real32
     (alpha,ray) := (alpha + a, r)
-    d_ri := right *# (-dx/100)
-    d_up := up *# (dy/100)
-    position.add d_ri
-    position.add d_up
-    position.normalize
-    position.mul_scale r
-    d_ri.free; d_up.free
-    /*
-    (! position.y.in_range (-sin_45*r) to (+sin_45*r)).if {
-      position.make (Old position.x,Old position.y,Old position.z)
-    };*/
+    k := Real32.pi / width.max 1
+    dir.make (- position.x, - position.y, - position.z)
+    dir.normalize
+    // Horizontal drag: rotation around `up'.
+    t := dx * k
+    (c,s) := (t.cos,t.sin)
+    (x0,y0,z0) := (dir.x,dir.y,dir.z)
+    dir.make (x0*c + right.x*s, y0*c + right.y*s, z0*c + right.z*s)
+    right.make (right.x*c - x0*s, right.y*c - y0*s, right.z*c - z0*s)
+    // Vertical drag: rotation around `right'.
+    t := dy * k
+    (c,s) := (t.cos,t.sin)
+    (x0,y0,z0) := (dir.x,dir.y,dir.z)
+    dir.make (x0*c - up.x*s, y0*c - up.y*s, z0*c - up.z*s)
+    up.make (up.x*c + x0*s, up.y*c + y0*s, up.z*c + z0*s)
+    position.make (- dir.x*r, - dir.y*r, - dir.z*r)
   )
   
   - set_zoom zo:Real32 <- ( zoom := zo; )
   
   - update (wx,wy:Int) size (w,h:Int) <-
-  ( + aspect,rl:Real32
+  ( + aspect,d:Real32
         
     (xo,yo) := (wx,wy)
     (width,height) := (w,h)
@@ -136,7 +145,10 @@ view_matrix = rotation_matrix * view_matrix
     dir.make (- position.x, - position.y, - position.z)
     dir.normalize
         
-    right.free; right := dir ** up_ref; rl := right.length;  right.normalize
+    // Keep the frame orthonormal (Gram-Schmidt), without any fixed up vector.
+    d := dir #* right
+    right.make (right.x - dir.x*d, right.y - dir.y*d, right.z - dir.z*d)
+    right.normalize
     up.free;    up := right ** dir
     
     up.normalize

@@ -29,7 +29,7 @@ Public
   
   - make m:O3d_model <-
   ( model := Mat4x4.create
-    col := Color.rgb (255,0,0)
+    col := Color.red
     img_id := -1
     reset m
   )

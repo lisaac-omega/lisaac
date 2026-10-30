@@ -84,7 +84,7 @@ Public
       var := value_max - value_min
       (var != 0).if {
         begin_path
-        fill_color (Color.rgb (0,128,0))
+        fill_color (Color.green)
         (is vertical).if {
           (is flip).if {
             x := xo

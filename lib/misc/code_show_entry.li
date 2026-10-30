@@ -3,7 +3,8 @@ Header
 /*
   One example of a show (see `Code_show'): where the file is, what can be
   done with it (tags of the show list), its current state (compiling,
-  running...), its text split into colored lines and its console output.
+  running...), its text split into colored lines, its header comment and
+  its console output.
   */
 Insert
   
@@ -24,11 +25,9 @@ Public
   + default_args:String_alias := ""
   + args:String_buffer
   + background:Boolean          // "background": auto mode does not wait.
-  + elit_view:Boolean           // "elit-view".
 
   - set_can_run b:Boolean <- ( can_run := b; )
   - set_background b:Boolean <- ( background := b; )
-  - set_elit_view b:Boolean <- ( elit_view := b; )
   - set_args a:String_alias <-
   (
     has_args := True
@@ -191,6 +190,86 @@ Public
       (! line.is_empty).if { add_line line; }
       span_first.add_last (spans.count)
     }
+  )
+
+  // Header comment (the first `/* ... */' before the first section after
+  // `Header'), shown in the window instead of the code:
+
+  + comment:Array String_alias
+
+  - comment_count:Int <- ( load_comment; comment.count )
+
+  - load_comment <-
+  ( + i,b,e,w,indent,lo,hi:Int
+    + s:String_alias
+    + inside,done:Boolean
+    + raw:Array String_alias
+    load
+    (comment = NULL).if {
+      raw := Array String_alias.create_with_capacity 32
+      String.tmp { buf:String_buffer
+        {done || {i > lines.upper}}.until_do {
+          s := lines.at i
+          b := 0
+          (! inside).if {
+            w := 0
+            {(w <= s.upper) && {is_word (s.at w)}}.while_do { w := w + 1; }
+            ((w > 0) && {is_section s from 0 to (w - 1)} && {! same s from 0 to (w - 1) as "Header"}).if {
+              done := True
+            } else {
+              b := s.first_substring_index "/*"
+              (b != -1).if {
+                inside := True
+                // The text on the line of "/*" has no meaningful indentation:
+                b := b + 2
+                {(b <= s.upper) && {s.at b = ' '}}.while_do { b := b + 1; }
+              }
+            }
+          }
+          (inside && {! done}).if {
+            e := close_comment s from b
+            buf.clear
+            (e = -1).if {
+              (b <= s.upper).if { buf.append s from b to (s.upper); }
+            } else {
+              (e - 3 >= b).if { buf.append s from b to (e - 3); }
+              done := True
+            }
+            raw.add_last (buf.to_string_alias)
+          }
+          i := i + 1
+        }
+        // Common indentation (first line excluded), blank lines around:
+        indent := -1
+        1.to (raw.upper) do { k:Int
+          s := raw.at k
+          w := 0
+          {(w <= s.upper) && {s.at w = ' '}}.while_do { w := w + 1; }
+          ((w <= s.upper) && {(indent = -1) || {w < indent}}).if { indent := w; }
+        }
+        indent := indent.max 0
+        lo := 0
+        hi := raw.upper
+        {(lo <= hi) && {is_blank (raw.at lo)}}.while_do { lo := lo + 1; }
+        {(hi >= lo) && {is_blank (raw.at hi)}}.while_do { hi := hi - 1; }
+        comment := Array String_alias.create_with_capacity (hi - lo + 2)
+        lo.to hi do { k:Int
+          s := raw.at k
+          buf.clear
+          b := (k = 0).ok 0 or indent
+          e := s.upper
+          {(e >= 0) && {s.at e = ' '}}.while_do { e := e - 1; }
+          (b <= e).if { buf.append s from b to e; }
+          comment.add_last (buf.to_string_alias)
+        }
+      }
+    }
+  )
+
+  - is_blank s:String :Boolean <-
+  ( + i:Int
+    {(i <= s.upper) && {s.at i = ' '}}.while_do { i := i + 1; }
+    i > s.upper
   )
 
   - read_file p:String in content:String_buffer :Boolean <-

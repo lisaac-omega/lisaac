@@ -2,6 +2,7 @@ Header
   + name := Print_real
 
 Public
+  
   - main <-
   ( + r:Real
     r := 2.0

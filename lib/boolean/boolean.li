@@ -1,6 +1,17 @@
 Header
   + name := Flat Boolean
-/*     Boolean library (self mapping on char C).*/
+/*
+  The @Boolean type of Lisaac Ω, with its two values @True and @False
+  (stored in C as a char).
+
+  There is no keyword for control flow in Lisaac Ω: if, then, else,
+  elseif, &&, || are ordinary slots of @Boolean, written in @True and
+  @False. As && and || take a block as argument, the right side is only
+  evaluated when needed.
+
+  The French corner, for beginners, provides si ... alors ... sinon,
+  et and ou.
+  */
 
   - type    := `char`;
   - default := False;

@@ -119,8 +119,8 @@ Public
   - reset <-
   (
     composite_operation.make /* := COMPOSITE_OPERATION_STATE.create*/ source_over
-    fill  .set_color (Color.rgba (255,255,255,255))
-    stroke.set_color (Color.rgba (  0,  0,  0,255))
+    fill  .set_color (Color.white)
+    stroke.set_color (Color.black)
     stroke_width := 1
     miter_limit := 10
     line_join := miter

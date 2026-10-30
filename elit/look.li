@@ -72,7 +72,7 @@ Public
   - directive:Color  := Color.rgb (200,200,200)
   
   // Other:
-  - header:Color     := Color.rgb (128,  0,  0)
+  - header:Color     := Color.maroon
   - contract:Color   := Color.rgb (248,206, 95)
 //  - require:COLOR    := COLOR.rgb (219,194,  6)
 //  - req_parent:COLOR := COLOR.rgb (152,134,  0)

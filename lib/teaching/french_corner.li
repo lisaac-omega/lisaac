@@ -102,3 +102,9 @@ Private
     result
   )
   
+  // Divers
+  
+  - bleu:Color := Colors.blue
+  - blanc:Color := Colors.white
+  - rouge:Color := Colors.red
+  

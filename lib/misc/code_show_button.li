@@ -2,7 +2,8 @@ Header
   + name := Code_show_button
 /*
   Button of the graphical `Code_show': a round transport button with a
-  vector icon (play, stop, previous, next) or a text pill (toggle or not).
+  vector icon (play, stop, previous, next), a text pill (toggle or not)
+  or a big call to action pill.
   */
 Inherit
   
@@ -14,6 +15,7 @@ Public
   - round:Int   := 0
   - primary:Int := 1
   - pill:Int    := 2
+  - big:Int     := 3
 
   // Icons:
   - no_icon:Int := 0
@@ -58,6 +60,11 @@ Public
       font_size (Code_show_look.small_size)
       (wt,x0,y0,x1,y1) := text_bounds (0,0) msg label
       result := wt + 32
+    }.elseif {kind = big} then {
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.big_size)
+      (wt,x0,y0,x1,y1) := text_bounds (0,0) msg label
+      result := wt + 72
     } else {
       result := height_min
     }
@@ -70,6 +77,8 @@ Public
       result := 60
     }.elseif {kind = pill} then {
       result := 30
+    }.elseif {kind = big} then {
+      result := 54
     } else {
       result := 44
     }
@@ -82,7 +91,22 @@ Public
     + hover:Boolean
     hover := enabled && {is inside}
     (cx,cy) := (xo + width / 2, yo + height / 2)
-    (kind = pill).if {
+    (kind = big).if {
+      r := height / 2
+      begin_path
+      rect (xo,yo) size (width,height) radius r
+      hover.if {
+        fill_color (Color.rgb (255,198,92))
+      } else {
+        fill_color (Code_show_look.accent)
+      }
+      fill
+      fill_color (Code_show_look.on_accent)
+      font_face_id (Font.sys (Font.bold))
+      font_size (Code_show_look.big_size)
+      text_align (align_center | align_middle)
+      text (cx,cy+1) msg label
+    }.elseif {kind = pill} then {
       r := height / 2
       begin_path
       rect (xo,yo) size (width,height) radius r

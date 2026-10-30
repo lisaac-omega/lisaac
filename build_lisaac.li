@@ -232,6 +232,7 @@ Public
     update_elit_cfg
     compile_new_assets
     compile_elit
+    big_show
     welcome_omega
     "Installation Completed Successfully.".println
     
@@ -340,18 +341,30 @@ Private
     }
   )
   
+  - big_show <-
+  (
+    "Compiling lisaac/big_show.li ...".println
+    chdir lisaac_dir or_exit
+    String.tmp { cmd:String_buffer
+      cmd.append lisaac_bin_dir
+      cmd.add_dirsep
+      cmd.append "lisaac big_show -q -boost"
+      execute_command cmd
+    }
+    String.tmp { cmd:String_buffer
+      cmd.append lisaac_dir
+      cmd.add_dirsep
+      cmd.append "big_show"
+      execute_command cmd background True
+    }
+  )
+  
   - welcome_omega <-
   (
     "Compiling lisaac/example/welcome.li ... wait...".println
     chdir lisaac_dir or_exit
     chdir "example" or_exit
     chdir "welcome" or_exit
-    String.tmp { cmd:String_buffer
-      cmd.append elit_dir
-      cmd.add_dirsep
-      cmd.append "elit welcome.li"
-      execute_command cmd background True
-    }
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
       cmd.add_dirsep
@@ -361,7 +374,11 @@ Private
     String.tmp { cmd:String_buffer
       cmd.append lisaac_dir
       cmd.add_dirsep
-      cmd.append "example/welcome/welcome"
+      cmd.append "example"
+      cmd.add_dirsep
+      cmd.append "welcome"
+      cmd.add_dirsep
+      cmd.append "welcome"
       execute_command cmd background True
     }
   )

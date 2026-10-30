@@ -3,10 +3,10 @@ Header
 Inherit
   
   - parent_clone:Clone := Clone
-
-Private
   
-  //- stack:Array Color := Array Color.create_with_capacity 16; // BUG (ne sert a rien !!)
+Insert
+  
+  - parent_colors:Flat Colors
   
 Mapping, Public
 
@@ -21,38 +21,6 @@ Mapping, Public
   - ai:Int <- (af*255.0).to_int
   
 Public
-  
-  - none:Color   := rgbaf (0,0,0,0)
-  
-  // Color list:
-  - black:Color := rgb (0,0,0)
-  - blue:Color := rgb(0,0,0FFh)
-  - brown:Color := rgb(096h,04Bh,0)
-  - cyan:Color := rgb(0,0FFh,0FFh)
-  - chocolate:Color := rgb(0D2h,069h,01Eh)
-  - dark_orange:Color := rgb(0FFh,08Ch,0)
-  - emerald_green:Color := rgb(050h,0C8h,078h)
-  - gray:Color := rgb (80h,80h,80h)
-  - green:Color := rgb(0,0FFh,0)
-  - light_gray:Color := rgb(0D3h,0D3h,0D3h)
-  - leaf_green:Color := rgb(022h,08Bh,022h)
-  - magenta:Color:= rgb(0FFh,0,0FFh)
-  - orange:Color := rgb(0FFh,080h,0)
-  - peru:Color := rgb(0CDh,085h,03Fh)
-  - pink:Color := rgb(0FFh,0C0h,0CBh)
-  - red:Color := rgb(0FFh,0,0)
-  - saddle_brown:Color := rgb(08Bh,045h,013h)
-  - white:Color := rgb(0FFh,0FFh,0FFh)
-  - yellow:Color := rgb(0FFh,0FFh,0)
-  
-  - list:Array Color := 
-  ( + result:Array Color
-    result := new Array Color of (black, blue, brown, cyan, chocolate, dark_orange, emerald_green,
-       gray, green, light_gray, leaf_green, magenta, orange, peru, pink, red, saddle_brown, white, yellow)
-    result
-  )
-  
-  //  Other:
   
   - is_black:Boolean <- ((rf=0) && {gf=0} && {bf=0} && {af=0})
   

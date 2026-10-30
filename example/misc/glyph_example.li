@@ -1,11 +1,17 @@
 Header
   + name := Glyph_example
 /*
-  This example show how to use glyph in your code.
-  Play with this code to understand how to edit the glyphs.
-  
-  Experts may also browse lisaac/lib/glyph/ 
-  
+  Glyphs in Lisaac Ω: the code is written as text, elit shows it as
+  mathematics. For example 4.pow 2 is shown as 4², 4.sqrt as √4,
+  1.div 2 as a fraction, gor / gxor as ∨ / ⊕, and the .sum of loop as Σ.
+  Units such as 400 cm are also glyphs.
+
+  Open this example in elit and play with the code to see how the
+  glyphs are edited. Experts may also browse lisaac/lib/glyph/.
+
+  To compile, as usual in a terminal:
+  $ lisaac glyph_example -q -boost
+  $ ./glyph_example
   */
 Public
   

@@ -43,7 +43,7 @@ Public
     } else {
       font_face_id (Font.sys (Font.roman))
     }
-    font_size (Code_show_look.ui_size - 1)
+    font_size (Code_show_look.field_size)
   )
 
   - draw <-
@@ -64,7 +64,7 @@ Public
         set_font
         text_align (align_left | align_middle)
         y := yo + height / 2
-        x := xo + 10
+        x := xo + 12
         fill_color (Code_show_look.text)
         (! txt.is_empty).if { text (x,y) msg txt; }
         has_focus.if {
@@ -73,7 +73,7 @@ Public
             (w,x0,y0,x1,y1) := text_bounds (0,0) msg txt from 0 to (cur - 1)
           }
           begin_path
-          rect (x + w, y - 9) size (2,18)
+          rect (x + w, y - 11) size (2,22)
           fill_color (Code_show_look.accent)
           fill
         }

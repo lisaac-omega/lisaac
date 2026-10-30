@@ -97,24 +97,24 @@ Public
       time_base := result_list.at 0
       
       begin_path
-      line (0,height-20) to (width,height-20) color (Color.white)
+      line (0,height-20) to (width,height-20) color (Colors.white)
       stroke
       
       0.to (sample_max-1) do { j:Int
         begin_path
-        line (j*32+4,64) to (j*32+4,height) color (Color.white)
+        line (j*32+4,64) to (j*32+4,height) color (Colors.white)
         stroke
         
         string_tmp.clear
         (j+1).append_in string_tmp
-        fill_color (Color.white)
+        fill_color (Colors.white)
         text ((j+1)*32-16,height-18) msg string_tmp
         //
         xx := j*32+12
         yy := (height-20-time_base*(j+1)*2).max 0
         begin_path
         rect (xx-3,yy) to (xx+3,height-21)
-        fill_color (Color.rgb (0,80h,0))
+        fill_color (Colors.green)
         fill
         //
         xx := j*32+20
@@ -125,7 +125,7 @@ Public
         }
         begin_path
         rect (xx-3,yy) to (xx+3,height-21)
-        fill_color (Color.blue)
+        fill_color (Colors.blue)
         fill
         //
         (j < result_list.count).if {
@@ -133,7 +133,7 @@ Public
           yy := height-20-(result_list.at j)*2
           begin_path
           rect (xx-3,yy) to (xx+3,height-21)
-          fill_color (Color.red)
+          fill_color (Colors.red)
           fill
         }
       }
@@ -142,19 +142,19 @@ Public
       fill_color (Color.rgb (0DDh,0DDh,0DDh))
       fill
       
-      fill_color (Color.rgb (0,80h,0))
+      fill_color (Colors.green)
       text (4,4) msg "Theoretical times with 1 core"
       //
       string_tmp.copy "Theoretical times with "
       physical_core.append_in string_tmp
       string_tmp.append " cores"
-      fill_color (Color.blue)
+      fill_color (Colors.blue)
       text (4,24) msg string_tmp
       //
-      fill_color (Color.red)
+      fill_color (Colors.red)
       text (4,44) msg "Real times"
     } else {
-      fill_color (Color.red)
+      fill_color (Colors.red)
       text (4,4) msg "Please wait..."
     }
     //

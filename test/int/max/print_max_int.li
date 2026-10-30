@@ -1,0 +1,23 @@
+Header
+  + name := Print_max_int
+Public
+  
+  - main <-
+  ( + m:Int
+    
+    
+    m := Int64.maximum
+    m.println    
+    m := 07fffffffffffffffh
+    Test.check (m = Int64.maximum)
+    m.println
+    m := 9223372036854775807
+    m.println    
+    
+    String.tmp { buf:String_buffer
+      m.append_in buf 
+      Test.check (buf.to_string_alias) string "9223372036854775807"
+    }
+    
+  )
+  

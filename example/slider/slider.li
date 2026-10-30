@@ -1,5 +1,20 @@
 Header
   + name := Slider
+/*
+  A slide show in Lisaac Ω.
+  The slides are the images assets/diapo-1.png, diapo-2.png...
+  Click or drag to go to the next or the previous slide; a long click
+  shows an animated pointer, and a drag with the Ctrl key held draws a
+  trail on the slide.
+
+  Shows: images loaded from the assets/ directory and drawn with a
+  @Paint pattern, mouse events (click, long click, drag), a smooth
+  sliding animation driven by the time.
+
+  To compile, as usual in a terminal:
+  $ lisaac slider -q -boost
+  $ ./slider
+  */
 Inherit
   + parent_window:Flat Window
   
@@ -150,12 +165,12 @@ Public
     } else {
       (is_end).if {
         drag.clear
-        drag.add_last (Paper.last_x)
-        drag.add_last (Paper.last_y)
+        drag.add_last (Hand.x_last)
+        drag.add_last (Hand.y_last)
       } else {
-        (x0,y0,t0) := (Paper.first_x,Paper.first_y,Paper.first_t)
+        (x0,y0,t0) := (Hand.x_begin,Hand.y_begin,0/*Hand.first_t*/)
         (drag.is_empty).if { drag.add_last x0; drag.add_last y0; drag.add_last t0; }
-        (x1,y1,t1) := (Paper.last_x,Paper.last_y,Paper.last_t)
+        (x1,y1,t1) := (Hand.x_last,Hand.y_last,0/*Hand.last_t*/)
         drag.add_last x1; drag.add_last y1; drag.add_last t1
       }
     }

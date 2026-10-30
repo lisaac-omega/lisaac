@@ -78,7 +78,7 @@ Public
       pen.fill_color   (Color.rgba (0,255,0, 64))
     } else {
       pen.stroke_color (Color.red)
-      pen.fill_color   (Color.green)
+      pen.fill_color   (Color.lime)
     }
     (px,py) := get (xb,yb) with mtx
     (px,py) := (x+px*c, y-py*c)

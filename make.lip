@@ -68,7 +68,7 @@ Private
   + cc:String := "gcc"
 
   + opt_android:String := ""
-  + android_dir:String := "android/" // `android_mac/' on macOS
+  + android_dir:String := "android/" // `android_mac/' on macOS, `android_windows/' on Windows
   
   //
   // Service
@@ -269,7 +269,11 @@ Private
           ("Written: " + output_file + output_extension + "\n").print
         }
         (target = "android").if {
-          execute_fail (lisaac+android_dir+"run.sh " + output_file + opt_android)
+          (android_dir = "android_windows/").if {
+            execute_fail ("bash \"" + lisaac + android_dir + "run.sh\" " + output_file + opt_android)
+          } else {
+            execute_fail (lisaac+android_dir+"run.sh " + output_file + opt_android)
+          }
         }
       }
       (target = "web").if {
@@ -388,8 +392,14 @@ Public
           execute_fail (lisaac+"android_mac/setup.sh "+lisaac)
           android_dir := "android_mac/"
         } else {
-          "Target 'android' is on Unix or macOS only.\n".print
-          die_with_code exit_failure_code
+          (target = "windows").if {
+            // Scripts bash : il faut le bash de MSYS2 (voir ANDROID_WINDOWS.txt).
+            execute_fail ("bash \"" + lisaac + "android_windows/setup.sh\"")
+            android_dir := "android_windows/"
+          } else {
+            "Target 'android' is on Unix, macOS or Windows only.\n".print
+            die_with_code exit_failure_code
+          }
         }
       }
     }

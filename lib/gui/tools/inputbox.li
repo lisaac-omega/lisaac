@@ -1,9 +1,11 @@
 Header
   + name := Exact Inputbox
 Inherit
+  
   + parent_gobj:Flat Gobj Inputbox
   
 Private
+  
   - stk:Flat Array Inputbox
   
   - bit_int:Int := (1<<21)
@@ -55,7 +57,7 @@ Public
     (x,xc) := x_txt
     (xc != -1).if {
       begin_path
-      stroke_color (Color.red)
+      stroke_color (Colors.red)
       line_cap square
       stroke_width 3.0
       line (xc+1,y-Font.size_sys/2) to (xc+1,y+Font.size_sys/2)

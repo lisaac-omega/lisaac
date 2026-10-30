@@ -2,15 +2,17 @@ Header
   + name := Snake
 /*
   The classic Snake game in Lisaac Ω.
-  The snake grows each time it eats and also moves faster.  
+  The snake grows each time it eats an apple and also moves faster.
+  Keys: 'z' / 'q' / 's' / 'd' or the arrow keys to turn.
 
-  To compile, as usual in a terminal:  
-  $ lisaac snake -q -boost  
-  $ ./snake  
-  
-  It can also be compiled and executed via elit menus.  
-  
-  Originally written in October 2025 by Benjamin Scheffer and Marcelin Ray 
+  Shows: a real-time @Game (motion / draw), the snake stored in two
+  @Array of coordinates, a timer to set the speed.
+
+  To compile, as usual in a terminal:
+  $ lisaac snake -q -boost
+  $ ./snake
+
+  Originally written in October 2025 by Benjamin Scheffer and Marcelin Ray.
   */
 Inherit 
   
@@ -109,12 +111,12 @@ Public
     (x,y) := (snake_x.last,snake_y.last)    
     // Display Snake
     from 0 to (snake_y.upper-1) do { i:Int
-      draw_cell (snake_x.at i, snake_y.at i) color (Color.rgb(0,100,0))
+      draw_cell (snake_x.at i, snake_y.at i) color (Color.dark_green)
     }      
     draw_cell (x,y) color (Color.rgb(0,200,0))      
     fill_color (Color.black) ; text (x * cell_size + cell_size/2, y * cell_size + cell_size/2) msg "Ω" 
     // Display Apple
-    draw_cell (apple_x,apple_y) color (Color.rgb(255,0,0)) 
+    draw_cell (apple_x,apple_y) color (Color.red) 
     // Display Score
     String.tmp { score_text:String_buffer
       score_text # "Score: " # snake_x.count # " Ω"      

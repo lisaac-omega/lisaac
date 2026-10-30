@@ -1,22 +1,27 @@
 Header
   + name := Big_show
   
-/*cd lisaac ; lisaac big_show && ./big_show
+/*
+  Welcome to Lisaac Ω
+  A programming language designed to become the reference for teaching
+  programming. Lisaac Ω aims to provide a clear, consistent, and modern
+  environment to help students grasp the core principles of programming
+  with ease and efficiency.
 
-  
-  
-Welcome to Lisaac Ω
-A programming language designed to become the reference for teaching programming.
-Lisaac Ω aims to provide a clear, consistent, and modern environment to help
-students grasp the core principles of programming with ease and efficiency.
+  Developed at the University of Lorraine and the University of
+  Strasbourg, Lisaac Ω is the result of research and innovation in
+  object-oriented and prototype-based programming models.
 
-Developed at the University of Lorraine and the University of Strasbourg,
-Lisaac Ω is the result of research and innovation in object-oriented and 
-prototype-based programming models.
+  This show plays a tour of the distribution: demos, games, teaching
+  examples and two prototypes of the library itself.
 
+  To compile, in a terminal:
+  $ cd lisaac
+  $ lisaac big_show -q -boost
+  $ ./big_show
 
-
-Created and maintained by Benoît Sonntag and Dominique Colnet.*/
+  Created and maintained by Benoît Sonntag and Dominique Colnet.
+  */
 Insert
   
   - code_show:Code_show := Code_show 
@@ -26,16 +31,24 @@ Public
   - main <-
   (
     show (
-      "example/startrek/startrek.li",
-      "game_show.li", "elit-view",
-      "example/hello_world.li", "elit-view",
-      "example/welcome/welcome.li", "elit-view",
-      "example/misc/glyph_example.li", "elit-view", "no-run", 
-      "example/CodEx/Tortue/dessin_maison.li", "elit-view",
-      "example/CodEx/Tortue/tortue_show.li", "elit-view",
-      "example/basics/factorial_example.li", "elit-view", "run", "1000",
-      "example/CodEx/Fibonacci/fibonacci.li", "elit-view", "run", "v2 500",
-      "lib/collection/collection.li", "elit-view", "no-run",
-      "lib/boolean/boolean.li", "elit-view", "no-run"
+      "example/welcome/welcome.li",
+      
+      "example/hello_world.li",
+      
+      "example/gems/gems.li", "background",
+      "game_show.li",
+      
+      "example/CodEx/Tortue/rosace_cercles.li",
+      "example/CodEx/Tortue/tortue_show.li",
+      
+      "example/misc/glyph_example.li", "no-run", 
+      
+      "example/basics/factorial_example.li", "run", "1000",
+      "example/CodEx/Fibonacci/fibonacci.li", "run", "v2 500",
+      
+      "lib/collection/collection.li", "no-run",
+      "lib/boolean/boolean.li", "no-run",
+      
+      "example/startrek/startrek.li"
     )
   )

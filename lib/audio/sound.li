@@ -464,12 +464,12 @@ Public
     result
   )
 
-  - set_pitch pitch:Real32 <-
+  - set_pitch p:Real32 <-
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
     (! sound_ptr.is_null).if {
-      `ma_sound_set_pitch((ma_sound *)@sound_ptr, @pitch)`
+      `ma_sound_set_pitch((ma_sound *)@sound_ptr, @p)`
     }
   )
 

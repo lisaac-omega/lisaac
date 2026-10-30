@@ -20,13 +20,13 @@ Public
     (w,h) := (64,64)
     
     c := Paint.create_radial (x+w/2,y+h/2) radius (3,(t*5).sin*32)
-    color (Color.rgba(255,0,0,255)) 
+    color (Color.red) 
     to (Color.rgba(72, 116, 80,0))
     
     begin_path
     rect (x,y) size (w,h)
     fill_paint c
-    stroke_color (Color.rgba (0,0,0,0))
+    stroke_color (Color.none)
     fill
     c.free
     

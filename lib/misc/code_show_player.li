@@ -5,20 +5,21 @@ Header
 
     +-----------------------------------------------------------+
     | Lisaac Ω · Big show                               07 / 13 |
-    +--------------+--------------------------------------------+
-    | 01 hello     | example/basics/factorial_example.li [elit] |
-    | 02 welcome   |  1  Header                                 |
-    | 03 ...       |  2    + name := Factorial_example          |
-    |  (playlist)  |            (source code)                   |
-    |              +--------------------------------------------+
-    |              | CONSOLE  status / compiler or program output|
-    +==============+============================================+
+    +------------------+----------------------------------------+
+    | 01 hello         | example/basics/factorial_example.li    |
+    | 02 welcome       |  The classical factorial example in    |
+    | 03 ...           |  Lisaac Ω. ...                         |
+    |                  |      (header comment of the file)      |
+    |   (playlist)     |      ( Voir le code dans elit )        |
+    |                  +----------------------------------------+
+    |                  | CONSOLE status / compiler or output    |
+    +==================+========================================+
     | now playing    [Compiler]  |<   (>)   >|  [Auto]   args   |
     +-----------------------------------------------------------+
 
   Keyboard: Space/Enter run (or stop), Left/Right previous/next,
-  Home/End first/last, Up/Down/PgUp/PgDn scroll the code, C compile,
-  A auto mode, E open in elit, P edit the arguments, +/- zoom the code.
+  Home/End first/last, Up/Down/PgUp/PgDn scroll the comment, C compile,
+  A auto mode, E open in elit, P edit the arguments, +/- zoom the comment.
   */
 Inherit
   
@@ -51,6 +52,7 @@ Public
   - list_head_h:Real32 := 40
   - file_bar_h:Real32 := 44
   - transport_h:Real32 := 96
+  - elit_zone_h:Real32 := 92
   + sidebar_w:Real32
   + console_h:Real32
 
@@ -69,7 +71,7 @@ Public
     b_next := Code_show_button.create (Code_show_button.round) icon (Code_show_button.i_next) label "" do { go (current + 1); }
     b_compile := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Compiler" do { compile (entries.at current) then_run False; }
     b_auto := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Auto" do { set_auto (! auto); }
-    b_elit := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Ouvrir dans elit" do { open_elit (entries.at current); }
+    b_elit := Code_show_button.create (Code_show_button.big) icon (Code_show_button.no_icon) label "Voir le code dans elit" do { open_elit (entries.at current); }
     playlist.init_parent self
     code.init_parent self
     console.init_parent self
@@ -337,7 +339,6 @@ Public
           e.message.copy "Erreur de compilation, ligne "
           (e.error_line + 1).append_in (e.message)
           e.message.add_last '.'
-          (e = entries.at current).if { code.show_line (e.error_line); }
         } else {
           e.message.copy "Erreur de compilation."
         }
@@ -422,8 +423,8 @@ Public
     }.elseif {e.can_run} then {
       compile e then_run True
     } else {
-      // Time to read the code:
-      auto_wait (((e.line_count * 150).max 5000).min 15000)
+      // Time to read the comment:
+      auto_wait (((e.comment_count * 600).max 5000).min 15000)
     }
   )
 
@@ -460,7 +461,6 @@ Public
     b_play.set_busy (e.phase = Code_show_entry.compiling)
     b_compile.set_enabled ((e.can_run) && {! e.is_active})
     b_auto.set_toggled auto
-    b_elit.set_toggled (e.elit_view)
   )
 
   // Window
@@ -505,16 +505,16 @@ Public
 
   - refresh <-
   ( + y,cx,cy,w,ty:Real32
-    sidebar_w := ((width * 0.26).max 230).min 340
+    sidebar_w := ((width * 0.34).max 300).min 460
     console_h := ((height * 0.24).max 110).min 260
     y := header_h + list_head_h
     ty := height - transport_h
     place playlist at (0,y) size (sidebar_w, ty - y)
     y := header_h + file_bar_h
-    place code at (sidebar_w,y) size (width - sidebar_w, ty - console_h - y)
+    place code at (sidebar_w,y) size (width - sidebar_w, ty - console_h - elit_zone_h - y)
     place console at (sidebar_w, ty - console_h) size (width - sidebar_w, console_h)
-    w := b_elit.width_min
-    place b_elit at (width - w - 14, header_h + 7) size (w,30)
+    w := (b_elit.width_min.max 320).min (width - sidebar_w - 40)
+    place b_elit at (sidebar_w + (width - sidebar_w - w) / 2, ty - console_h - elit_zone_h + (elit_zone_h - 54) / 2) size (w,54)
     // Transport:
     cx := width / 2
     cy := ty + 4 + (transport_h - 4) / 2 - 6
@@ -525,8 +525,8 @@ Public
     place b_compile at (cx - 130 - w, cy - 15) size (w,30)
     w := b_auto.width_min.max 70
     place b_auto at (cx + 130, cy - 15) size (w,30)
-    w := ((width - cx - 260) - 40).min 260
-    place field at (width - w - 24, cy - 8) size (w,34)
+    w := (width - cx - 254).min 400
+    place field at (width - w - 24, cy - 12) size (w,42)
     field.set_visible ((field.visible) && {w > 80})
     playlist.clamp
   )
@@ -574,7 +574,7 @@ Public
     fill_color (Code_show_look.panel)
     fill
     font_face_id (Font.sys (Font.bold))
-    font_size (Code_show_look.small_size)
+    font_size (Code_show_look.small_size + 1)
     text_align (align_left | align_middle)
     fill_color (Code_show_look.text_dim)
     String.tmp { tmp:String_buffer
@@ -594,7 +594,7 @@ Public
     fill
     hline (sidebar_w,header_h + file_bar_h - 1) width (width - sidebar_w)
     save
-    intersect_scissor (sidebar_w,header_h) size (b_elit.xo - sidebar_w - 10,file_bar_h)
+    intersect_scissor (sidebar_w,header_h) size (width - sidebar_w - 18,file_bar_h)
     text_align (align_left | align_middle)
     y := header_h + file_bar_h / 2
     x := sidebar_w + 18
@@ -687,7 +687,7 @@ Public
     // Arguments (right):
     (field.visible).if {
       font_face_id (Font.sys (Font.bold))
-      font_size (Code_show_look.small_size - 1)
+      font_size (Code_show_look.small_size)
       text_align (align_left | align_bottom)
       fill_color (Code_show_look.text_dim)
       text (field.xo + 2, field.yo - 6) msg "ARGUMENTS"
@@ -707,7 +707,7 @@ Public
     font_size (Code_show_look.small_size - 2)
     text_align (align_center | align_bottom)
     fill_color (Code_show_look.text_faint)
-    text (cx, height - 6) msg "Espace : exécuter / arrêter   ·   flèches gauche / droite : précédent / suivant   ·   C : compiler   ·   A : auto   ·   E : elit   ·   + / - : taille du code"
+    text (cx, height - 6) msg "Espace : exécuter / arrêter   ·   flèches gauche / droite : précédent / suivant   ·   C : compiler   ·   A : auto   ·   E : elit   ·   + / - : taille du texte"
   )
 
   - hline (x,y:Real32) width w:Real32 <-
@@ -736,7 +736,9 @@ Public
     parent_window.draw_all
     busy.if {
       // About 10 frames per second while something is running.
-      `glfwWaitEventsTimeout(0.08)`
+      (lip "target" str != "android").if {
+        `glfwWaitEventsTimeout(0.08)`
+      }
       Paper.refresh_again
     }
   )
@@ -750,7 +752,6 @@ Public
       console.scroll (dy.to_real32)
     } else {
       code.scroll (dy.to_real32)
-      (dx != 0).if { code.scroll_x (dx.to_real32); }
     }
   )
 

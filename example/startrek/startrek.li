@@ -1,25 +1,25 @@
 Header
   + name := Startrek
 /*
-  Try the 3 following recipes below.
-  
-  # (recipe #1) To compile as a standalone executable in a terminal window:
-  lisaac startrek -boost  
-  # then run with:
-  ./startrek
-  
+  Star Trek: an animated space scene in Lisaac Ω.
+  A star field, a logo and a title drawn with vector paths and moving
+  gradients. The same program runs on a desktop, on an Android device
+  and in a web browser.
 
-  # (recipe #2) To compile an app for android:
-  # Do not forget to plug your android device
-  # Do not forget to turn on the developper mode on your android device
-  # then compile using:
-  lisaac startrek -boost -target android
-  # then run the updated app on your android device. 
-  
-  (recipe #3) To compile in a web window:
-  lisaac startrek -boost -target web
-  # then run:
-  ./run.sh
+  Shows: 2D drawing with paths, radial and box gradients, a scene that
+  is redrawn at each frame and follows the size of the window.
+
+  To compile as a standalone executable, in a terminal:
+  $ lisaac startrek -q -boost
+  $ ./startrek
+
+  To compile an app for Android (plug the device and turn on its
+  developer mode first), then run the updated app on the device:
+  $ lisaac startrek -q -boost -target android
+
+  To compile for a web window:
+  $ lisaac startrek -q -boost -target web
+  $ ./run.sh
   */
 Inherit 
   
@@ -93,7 +93,7 @@ Public
         
     save
     p := Paint.create_box (px+50,py+50) size (w-100,h-100) radius 200
-    feather 100 color (Color.rgba(14,23,56,255)) to (Color.rgba(0,0,0,0))
+    feather 100 color (Color.rgba(14,23,56,255)) to (Color.none)
     //COLOR.rgb(14,23,56)
     begin_path
     rect (px,py) size (w,h)
@@ -134,7 +134,7 @@ Public
     )
     
     p := Paint.create_radial (310.0+t.cos*60,476.0+t.sin*35) 
-    radius (5,40) color (Color.rgb(255,255,255)) to (Color.rgb(78h,21h,21h))
+    radius (5,40) color (Color.white) to (Color.rgb(78h,21h,21h))
 /*    
     begin_path
     fill_paint p
@@ -413,7 +413,7 @@ Public
     circle (300,300) radius 200
     p := Paint.create_radial (300,300) 
               radius (1,200) 
-              color (Color.rgba(255,255,255,255))
+              color (Color.white)
               to (Color.rgba(255,255,255,0))
     fill_paint p
     fill

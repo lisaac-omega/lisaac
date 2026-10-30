@@ -1,16 +1,19 @@
 Header
   + name := Nayeli
-/*How to do image mapping in Lisaac Ω. 
-  
-As usual, to run this example in a terminal window, cd in the good directory:
+/*
+  Image mapping in 3D with Lisaac Ω.
+  A cube turns in front of the camera, each face covered with a photo
+  (assets/face1.jpg ... face6.jpg). Drag with the mouse to turn around
+  the cube.
 
+  Shows: images loaded from assets/, a 3D object built by adding six
+  squares moved with rotate_x / rotate_y / rotate_z, a @Camera moved by
+  the mouse.
 
-  lisaac nayeli
-
-
-  ./nayeli
-  
-*/
+  To compile, as usual in a terminal:
+  $ lisaac nayeli -q -boost
+  $ ./nayeli
+  */
 Inherit
   + parent_window:Flat Window
   

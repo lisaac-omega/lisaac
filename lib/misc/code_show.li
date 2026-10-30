@@ -13,9 +13,10 @@ Header
     )
 
   The show opens a window (see `Code_show_player') with the list of the
-  examples on the left, the code of the current one in the middle, a
-  console under the code and, at the bottom, the transport bar:
-  compile only, previous, compile and run (or stop), next, auto mode.
+  examples on the left, the header comment of the current one in the
+  middle with the button to see its code in elit, a console under it and,
+  at the bottom, the transport bar: compile only, previous, compile and
+  run (or stop), next, auto mode.
 
   Tags:
     "run" ARGS    Arguments given to the example; ARGS is the default value,
@@ -24,12 +25,10 @@ Header
     "no-run"      Code only: the example is not compiled nor executed.
     "background"  In auto mode, go to the next example without waiting
                   for the end of this one.
-    "elit-view"   The button "Ouvrir dans elit" is highlighted.
 
   Options of the command line:
     --auto            Start in auto mode.
     --verbose         Print the commands.
-    --elit_view       As "elit-view" for all the examples.
 
   The executable and C files are removed after each run.
   */
@@ -40,8 +39,6 @@ Insert
 Private
 
   + exec_directory:String_alias
-
-  + elit_view:Boolean := False
 
   + background: Boolean := True
 
@@ -55,13 +52,10 @@ Private
 
     verbose := Command_args.option_shift "--verbose"
 
-    if (Command_args.option_shift "--elit_view") then {
-      elit_view := True
-    }
     auto := Command_args.option_shift "--auto"
     if (Command_args.upper != 0) then {
       Out # (Command_args.at 0) # ": \"" # (Command_args.at 1) # "\" no such option.\n"
-      Out # "Possible options: --auto --verbose --elit_view\n"
+      Out # "Possible options: --auto --verbose\n"
       System.exit 1
     }
     File_utils.pwd_in working_directory
@@ -81,15 +75,12 @@ Private
       }
       array_idx := array_idx + 1
       e := Code_show_entry.create path_li home exec_directory
-      e.set_elit_view elit_view
       // Tags, in any order:
       while {is_tag (array, array_idx)} do {
         if (check "background" at (array, array_idx)) then {
           e.set_background True
         }.elseif {check "wait" at (array, array_idx)} then {
           e.set_background False
-        }.elseif {check "elit-view" at (array, array_idx)} then {
-          e.set_elit_view True
         }.elseif {check "no-run" at (array, array_idx)} then {
           e.set_can_run False
         }.elseif {check "run" at (array, array_idx)} then {

@@ -1,9 +1,0 @@
-Header
-  + name := Expr
-Inherit
-
-  - parent_clone:Clone := Clone
-
-Public
-
-  - value:Int <- abstract

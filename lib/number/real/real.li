@@ -1,7 +1,7 @@
 Header
   + name := Flat Real
 /*Generic real number. DCDC generic ou float ?? BSBS:generic!*/
-  - type    := `float`;
+  - type    := `double`;
   - default := 0.0;
   - export := Real32, Real64, Real80,
   Real_16_16,  Real_24_8,  Real_26_6,
@@ -11,8 +11,10 @@ Header
     add_lib "-lm";
   );
 Insert
+  
+  - parent_float_map64:Float_map64 := Float_map64
   - inherit_numeric:Numeric := Numeric
-
+  
 Public
 
   - self:Self '+'  Left 80 <> other:Self :Self <- `@self + @other`:Self

@@ -110,7 +110,7 @@ Public
   - draw_debug <-
   (
     begin_path
-    stroke_color (Color.green)
+    stroke_color (Color.lime)
     stroke_width 1
     rect_varying (xo,yo) size (width,height) radius (8,0,8,0)
     stroke

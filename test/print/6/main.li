@@ -3,6 +3,7 @@ Header
 Public
   - main <-
   ( + r:Real_32_32
+    
     r := 0.5
     r.print
     Test.check (r.to_string) string "0.50000000"

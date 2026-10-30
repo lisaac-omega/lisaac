@@ -1,0 +1,4 @@
+#!/bin/bash
+# LiA (Windows) : clang de MSYS2 en compilateur croise pour Android arm64 (API 24).
+. "$(cygpath -u "$0" | sed 's,/[^/]*$,,')/env.sh"
+exec "$CLANG" --target=aarch64-linux-android24 --sysroot "$SYSROOT" "$@"
