@@ -16,8 +16,8 @@ Private
   
   + running:Boolean
   
-  + turtle_x: Real64
-  + turtle_y: Real64
+  + turtle_x: Real32
+  + turtle_y: Real32
   
   + angle: Int // of the turtle in [0 , 360]
   
@@ -43,8 +43,8 @@ Public
      
   - draw <-
   ( - mem:Boolean
-    - x:Real64
-    - y:Real64
+    - x:Real32
+    - y:Real32
     - a:Int
     - c:Color
     - w:Int
@@ -117,8 +117,7 @@ Private
   - π:Real32 := Real32 pi
  
   - avance pixels:Int <-
-  ( + tx, ty:Real64
-    + rad:Real32
+  ( + tx, ty, rad:Real32
     
     if running then {
       //OUT # "(" # turtle_x # ',' # turtle_y # ") " # angle # " " # pen_down # '\n'  
@@ -129,7 +128,7 @@ Private
         (tx, ty) := (turtle_x - pixels, turtle_y)      
       }.elseif {angle = 90} then {
         (tx, ty) := (turtle_x, turtle_y + pixels)
-      }.elseif {angle = 360} then {
+      }.elseif {angle = 270} then {
         (tx, ty) := (turtle_x, turtle_y - pixels)      
       } else {
         rad := (angle * π) .div 180.0
@@ -190,10 +189,10 @@ Private
   
   - texte txt:String <- texte txt xy (turtle_x, turtle_y)
   
-  - texte txt:String xy (x,y:Real64) <- 
+  - texte txt:String xy (x,y:Real32) <- 
     texte txt xy (x,y) taille pen_width couleur pen_color
   
-  - texte txt:String xy (x,y:Real64) taille t: Int couleur c:Color <-
+  - texte txt:String xy (x,y:Real32) taille t: Int couleur c:Color <-
   ( + state:State
 
     if running then {      
@@ -237,7 +236,7 @@ Private
   
   - baisse_crayon <- ( pen_down := True )
   
-  - téléportation (x:Real64, y:Real64) <- 
+  - téléportation (x:Real32, y:Real32) <- 
   (
     if running then {
       turtle_x := x.clamp(0, width)
@@ -245,7 +244,7 @@ Private
     }
   )
   
-  - téléportation (x:Real64, y:Real64) angle a:Int <-
+  - téléportation (x:Real32, y:Real32) angle a:Int <-
   (
     if running then {
       téléportation(x,y)
@@ -253,7 +252,7 @@ Private
     }
   )
   
-  - téléportation (x:Real64, y:Real64) angle a:Int pen d:Boolean couleur c:Color épaisseur e:Int <-
+  - téléportation (x:Real32, y:Real32) angle a:Int pen d:Boolean couleur c:Color épaisseur e:Int <-
   (
     if running then {
       téléportation(x,y) angle a

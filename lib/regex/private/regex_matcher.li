@@ -1,0 +1,343 @@
+Header
+  + name := Regex_matcher
+  /*
+  Run a @Regex_program on a text, with the POSIX semantics: for the leftmost
+  start of a match, the longest match.
+  
+  This is a backtracking loop with an explicit stack, so that the size of the 
+  text is not limited by the C stack. All the paths are explored to get the longest 
+  match. Without back-reference, the result of a state (instruction, position) 
+  does not depend on the path, so each state is visited once: the time is at most 
+  proportional to size of program * size of text. With back-references there is 
+  no such shortcut and a pathological expression can be exponential.
+  */
+Insert
+  - parent_clone:Clone := Clone
+  
+Private
+  
+  - stk:Flat Array (Exact Regex_matcher)
+  
+  + program:Regex_program
+  
+  + text:C_array Char
+  + first:Int;  // Start of the text.
+  + last:Int;   // End of the text (excluded).
+  + no_bol:Boolean
+  + no_eol:Boolean
+  
+  + reg:C_array Int
+  + nb_reg:Int
+  + reg_cap:Int
+  
+  + stack:C_array Int;  // Pairs: (instruction,position) or (-1-register,old value).
+  + stack_cap:Int
+  + sp:Int
+  
+  + visited:C_array Uint8;  // One bit by state.
+  + visited_cap:Int
+  + touched:C_array Int;    // Bytes of @visited to clear at the end.
+  + touched_cap:Int
+  + nb_touched:Int
+  + width:Int;              // Number of positions by instruction.
+  + with_visited:Boolean
+  
+  + best_end:Int
+  + steps:Int
+  + steps_max:Int
+  
+  - sub_steps_max:Int := 200_000; // Effort to choose the sub-expressions.
+  
+  - visited_max:Int := 800_000_000; // Bytes.
+  
+  - push (a,b:Int) <-
+  (
+    (sp + 2 > stack_cap).if {
+      stack := stack.realloc stack_cap with (stack_cap * 2)
+      stack_cap := stack_cap * 2
+    }
+    stack.at sp put a
+    stack.at (sp + 1) put b
+    sp := sp + 2
+  )
+  
+  - is_new (pc,pos:Int) :Boolean <-
+  // Mark the state as visited.
+  ( + i,byte:Int
+    + bit,old:Uint8
+    + r:Boolean
+    i := pc * width + pos - first
+    byte := i >> 3
+    bit := (1 << (i & 7)).to_uint8
+    old := visited.at byte
+    ((old & bit) = 0).if {
+      (old = 0).if {
+        (nb_touched = touched_cap).if {
+          touched := touched.realloc touched_cap with (touched_cap * 2)
+          touched_cap := touched_cap * 2
+        }
+        touched.at nb_touched put byte
+        nb_touched := nb_touched + 1
+      }
+      visited.at byte put (old | bit)
+      r := True
+    }
+    r
+  )
+  
+  - clear_visited <-
+  (
+    0.to (nb_touched - 1) do { i:Int
+      visited.at (touched.at i) put 0
+    }
+    nb_touched := 0
+  )
+  
+  - is_word_at pos:Int :Boolean <-
+  ( + c:Char
+    + r:Boolean
+    ((pos >= first) && {pos < last}).if {
+      c := text.at pos
+      r := (c.is_letter) || {c.in_range '0' to '9'} || {c = '_'}
+    }
+    r
+  )
+  
+  - check_assert (o,pos:Int) :Boolean <-
+  ( + before,after:Boolean
+    + r:Boolean
+    (o = Regex_program.op_bol).if {
+      r := ((pos = first) && {! no_bol}) || {(program.is_newline) && {pos > first} && {text.at (pos - 1) = '\n'}}
+    }.elseif {o = Regex_program.op_eol} then {
+      r := ((pos = last) && {! no_eol}) || {(program.is_newline) && {pos < last} && {text.at pos = '\n'}}
+    }.elseif {o = Regex_program.op_buf_first} then {
+      r := pos = first
+    }.elseif {o = Regex_program.op_buf_last} then {
+      r := pos = last
+    } else {
+      before := is_word_at (pos - 1)
+      after := is_word_at pos
+      (o = Regex_program.op_word_first).if {
+        r := (! before) && {after}
+      }.elseif {o = Regex_program.op_word_last} then {
+        r := before && {! after}
+      }.elseif {o = Regex_program.op_word_delim} then {
+        r := before != after
+      } else {
+        r := before = after
+      }
+    }
+    r
+  )
+  
+  - same_text (from,to,pos:Int) :Boolean <-
+  // Is the text at @pos the same as the one in [@from,@to[ ?
+  ( + n:Int
+    + r:Boolean
+    n := to - from
+    r := pos + n <= last
+    0.to (n - 1) do { i:Int
+      (r).if {
+        (program.is_icase).if {
+          r := (text.at (from + i)).to_lower = (text.at (pos + i)).to_lower
+        } else {
+          r := text.at (from + i) = text.at (pos + i)
+        }
+      }
+    }
+    r
+  )
+  
+  - is_better:Boolean <-
+  // Are the sub-expressions in @reg better than the ones in @best ?
+  // The first path found is greedy: it stays, except if a sub-expression can be longer.
+  ( + i,n,a0,a1,b0,b1:Int
+    + r,the_end:Boolean
+    n := 2 * (program.nb_sub + 1)
+    i := 2
+    {(! the_end) && {i < n}}.while_do {
+      (a0,a1) := (reg.at i,reg.at (i + 1))
+      (b0,b1) := (best.at i,best.at (i + 1))
+      ((a0 != b0) || {a1 != b1}).if {
+        the_end := True
+        r := (a0 = b0) && {a1 > b1} && {b1 >= 0}
+      }
+      i := i + 2
+    }
+    r
+  )
+  
+  - run (pc0,pos0:Int) <-
+  // Follow one path, with the alternatives pushed on the stack.
+  ( + pc,pos,o,len:Int
+    + ops,args,alts:C_array Int
+    + sets:C_array Boolean
+    + live:Boolean
+    + c:Char
+    ops := program.op.storage
+    args := program.arg.storage
+    alts := program.alt.storage
+    sets := program.sets.storage
+    (pc,pos) := (pc0,pos0)
+    live := True
+    {live}.while_do {
+      steps := steps + 1
+      (steps > steps_max).if {
+        sp := 0
+        live := False
+      }
+      ((live) && {with_visited} && {! is_new (pc,pos)}).if {
+        live := False
+      }
+      (live).if {
+        o := ops.at pc
+        (o <= Regex_program.op_set).if {
+          (pos < last).if {
+            c := text.at pos
+            (o = Regex_program.op_char).if {
+              live := c.to_uint8.to_int = args.at pc
+            }.elseif {o = Regex_program.op_any} then {
+              live := (! program.is_newline) || {c != '\n'}
+            } else {
+              live := sets.at (args.at pc + c.to_uint8.to_int)
+            }
+            pc := pc + 1
+            pos := pos + 1
+          } else {
+            live := False
+          }
+        }.elseif {o = Regex_program.op_split} then {
+          push (pc + alts.at pc,pos)
+          pc := pc + args.at pc
+        }.elseif {o = Regex_program.op_jump} then {
+          pc := pc + args.at pc
+        }.elseif {o = Regex_program.op_save} then {
+          push (-1 - args.at pc,reg.at (args.at pc))
+          reg.at (args.at pc) put pos
+          pc := pc + 1
+        }.elseif {o = Regex_program.op_test} then {
+          (reg.at (args.at pc) = pos).if {
+            live := False
+          } else {
+            pc := pc + alts.at pc
+          }
+        }.elseif {o = Regex_program.op_backref} then {
+          len := reg.at (2 * args.at pc + 1)
+          ((reg.at (2 * args.at pc) >= 0) && {len >= 0} && {same_text (reg.at (2 * args.at pc),len,pos)}).if {
+            pos := pos + len - reg.at (2 * args.at pc)
+            pc := pc + 1
+          } else {
+            live := False
+          }
+        }.elseif {o = Regex_program.op_match} then {
+          ((pos > best_end) || {(pos = best_end) && {is_better}}).if {
+            best_end := pos
+            reg.at 1 put pos
+            best.copy reg to 0 until nb_reg
+          }
+          live := False
+        } else {
+          live := check_assert (o,pos)
+          pc := pc + 1
+        }
+      }
+    }
+  )
+  
+  - search_at start:Int <-
+  ( + a,b:Int
+    sp := 0
+    0.to (nb_reg - 1) do { i:Int
+      reg.at i put (-1)
+    }
+    reg.at 0 put start
+    push (0,start)
+    {sp > 0}.while_do {
+      sp := sp - 2
+      a := stack.at sp
+      b := stack.at (sp + 1)
+      (a < 0).if {
+        reg.at (-1 - a) put b
+      } else {
+        run (a,b)
+      }
+    }
+  )
+  
+  - prepare <-
+  ( + size:Int
+    width := last - first + 1
+    size := program.count * width / 8 + 1
+    with_visited := (! program.has_backref) && {size <= visited_max}
+    ((with_visited) && {size > visited_cap}).if {
+      (visited = NULL).if {
+        visited := C_array Uint8.create size
+      } else {
+        visited := visited.realloc visited_cap with size
+      }
+      visited_cap := size
+    }
+  )
+  
+Public
+  
+  + best:C_array Int; // Registers of the best match.
+  
+  - create p:Regex_program :Self <-
+  ( + r:Self
+    (stk.is_empty).if { r := clone; } else { r := stk.pop; }
+    r.make p
+    r
+  )
+  
+  - free <-
+  // The buffers stay here, for the next one.
+  (
+    program := NULL
+    text := NULL
+    stk.add_last self
+  )
+  
+  - make p:Regex_program <-
+  (
+    program := p
+    nb_reg := p.nb_reg
+    (stack = NULL).if {
+      reg_cap := nb_reg.max 16
+      reg := C_array Int.create reg_cap
+      best := C_array Int.create reg_cap
+      stack_cap := 1024
+      stack := C_array Int.create stack_cap
+      touched_cap := 1024
+      touched := C_array Int.create touched_cap
+    }.elseif {nb_reg > reg_cap} then {
+      reg := reg.realloc reg_cap with nb_reg
+      best := best.realloc reg_cap with nb_reg
+      reg_cap := nb_reg
+    }
+  )
+  
+  - search (txt:C_array Char,f,from,l:Int) notbol nb:Boolean noteol ne:Boolean sub sub:Boolean :Boolean <-
+  // Search in the bytes [@f,@l[, with the match starting at @from or later.
+  // With @sub, the sub-expressions follow the POSIX rules as far as @sub_steps_max allows.
+  ( + start:Int
+    (text,first,last) := (txt,f,l)
+    (no_bol,no_eol) := (nb,ne)
+    prepare
+    best_end := -1
+    steps_max := Int.maximum.to_int
+    start := from
+    {(best_end < 0) && {start <= last}}.while_do {
+      search_at start
+      start := start + 1
+    }
+    (with_visited).if {
+      clear_visited
+      ((sub) && {best_end >= 0} && {program.nb_sub > 0}).if {
+        with_visited := False
+        (steps,steps_max) := (0,sub_steps_max)
+        search_at (best.at 0)
+      }
+    }
+    best_end >= 0
+  )

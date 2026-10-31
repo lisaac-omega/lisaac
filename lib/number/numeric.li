@@ -683,7 +683,12 @@ Public
   // To test type ℤ
   
   - to_z:ℤ <- ℤ.init_si to_int64
+
+  // To rational
   
+  - self:Self divq d:Self :ℚ <- ℚ.init (self.to_z,d.to_z)
+  - to_q:ℚ <- ℚ.init (self,ℤ.one)
+    
 
   // French corner
   

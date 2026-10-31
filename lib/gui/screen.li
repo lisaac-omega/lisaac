@@ -125,8 +125,9 @@ Public
   )
   
   - mouse_scroll (dx,dy:Real64) <-
-  ( + d:Real64
-    d := dy * Page.cur_pg.height * -0.20
+  ( + d:Real32
+    
+    d := dy.to_real32 * Page.cur_pg.height * -0.20
     Page.cur_pg.buf_pg.set_pos_y (Page.cur_pg.buf_pg.pos_y + d)
     Page.cur_pg.buf_pg.move_pos_y d
   )

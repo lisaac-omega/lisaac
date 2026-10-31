@@ -1,0 +1,222 @@
+Header
+  + name := Regex_program
+  /*
+  A compiled regular expression, run by @Regex_matcher.
+  
+  Each instruction uses the same index in @op, @arg and @alt. Jumps are relative: 
+  a code fragment can be moved or copied as it is, this is how {m,n} is done.
+  
+  A @Regex_program has one register for each bound of each sub-expression,
+  then one register for each loop (see @emit_star).
+  */
+Insert
+  - parent_clone:Clone := Clone
+  
+Private
+  
+  - stk:Flat Array (Exact Regex_program)
+  
+  + seen:Array Boolean;  // Work area of @is_nullable.
+  + todo:Array Int
+  
+Public
+  
+  // Instructions.
+  
+  - op_char:Int := 0;     // Byte @arg.
+  - op_any:Int := 1;      // Any byte.
+  - op_set:Int := 2;      // Any byte of the set at index @arg in @sets.
+  - op_split:Int := 3;    // Try @arg, then @alt.
+  - op_jump:Int := 4;     // Go to @arg.
+  - op_save:Int := 5;     // Register @arg := current position.
+  - op_test:Int := 6;     // Fail if register @arg = current position, else go to @alt.
+  - op_backref:Int := 7;  // Same text as the sub-expression @arg.
+  - op_match:Int := 8
+  - op_bol:Int := 9;      // ^
+  - op_eol:Int := 10;     // $
+  - op_buf_first:Int := 11; // \`
+  - op_buf_last:Int := 12;  // \'
+  - op_word_first:Int := 13; // \<
+  - op_word_last:Int := 14;  // \>
+  - op_word_delim:Int := 15; // \b
+  - op_not_word_delim:Int := 16; // \B
+  
+  // Code.
+  
+  + op:Array Int
+  + arg:Array Int
+  + alt:Array Int
+  + sets:Array Boolean; // 256 items by set.
+  
+  + nb_sub:Int;     // Number of sub-expressions.
+  + nb_loop:Int
+  + nb_reg:Int;     // Number of registers.
+  + has_backref:Boolean
+  + is_icase:Boolean
+  + is_newline:Boolean; // ^ and $ also match around a newline, @op_any and negative sets skip it.
+  
+  - count:Int <- op.count
+  
+  - set_backref <- has_backref := True
+  
+  - create (icase,newline:Boolean) :Self <-
+  ( + r:Self
+    (stk.is_empty).if { r := clone; } else { r := stk.pop; }
+    r.make (icase,newline)
+    r
+  )
+  
+  - free <- stk.add_last self
+  
+  - make (icase,newline:Boolean) <-
+  (
+    (op = NULL).if {
+      op := Array Int.create_with_capacity 64
+      arg := Array Int.create_with_capacity 64
+      alt := Array Int.create_with_capacity 64
+      sets := Array Boolean.create_with_capacity 256
+      seen := Array Boolean.create_with_capacity 64
+      todo := Array Int.create_with_capacity 16
+    }
+    op.clear
+    arg.clear
+    alt.clear
+    sets.clear
+    (nb_sub,nb_loop,nb_reg) := (0,0,0)
+    has_backref := False
+    (is_icase,is_newline) := (icase,newline)
+  )
+  
+  // Emit.
+  
+  - emit (o,a,b:Int) <-
+  (
+    op.add_last o
+    arg.add_last a
+    alt.add_last b
+  )
+  
+  - emit_op o:Int <- emit (o,0,0)
+  
+  - emit_copy (f,a,b:Array Int) <-
+  // Add a code fragment.
+  (
+    0.to (f.upper) do { i:Int
+      emit (f.at i,a.at i,b.at i)
+    }
+  )
+  
+  - insert (o,a,b:Int) at i:Int <-
+  // Jumps are relative: the code moved is unchanged as long as it is a whole fragment.
+  (
+    op.add_last 0
+    arg.add_last 0
+    alt.add_last 0
+    (op.upper - 1).downto i do { j:Int
+      op.at (j + 1) put (op.at j)
+      arg.at (j + 1) put (arg.at j)
+      alt.at (j + 1) put (alt.at j)
+    }
+    op.at i put o
+    arg.at i put a
+    alt.at i put b
+  )
+  
+  - cut_from i:Int <-
+  (
+    op.set_count i
+    arg.set_count i
+    alt.set_count i
+  )
+  
+  - emit_star (f,a,b:Array Int) first first:Boolean <-
+  // f*, or the end of f{n,} without @first.
+  // Only the first iteration can match the empty string, @op_test rejects the others:
+  // a loop without progress would never end.
+  ( + n,start:Int
+    n := f.count
+    start := count
+    emit_copy (f,a,b)
+    (is_nullable (start,count)).if {
+      cut_from start
+      (first).if {
+        emit (op_split,1,n + 1)
+        emit_copy (f,a,b)
+      }
+      emit (op_split,1,n + 3)
+      emit (op_save,nb_loop,1)
+      emit_copy (f,a,b)
+      emit (op_test,nb_loop,-(n + 2))
+      nb_loop := nb_loop + 1
+    } else {
+      cut_from start
+      emit (op_split,1,n + 2)
+      emit_copy (f,a,b)
+      emit (op_jump,-(n + 1),0)
+    }
+  )
+  
+  - emit_optional (f,a,b:Array Int) nb n:Int <-
+  // f{0,n}
+  ( + size:Int
+    size := f.count + 1
+    n.downto 1 do { i:Int
+      emit (op_split,1,i * size)
+      emit_copy (f,a,b)
+    }
+  )
+  
+  - is_nullable (start,end:Int) :Boolean <-
+  // Can the fragment [@start,@end[ match the empty string ?
+  ( + i,o:Int
+    + r:Boolean
+    seen.clear
+    start.to end do { k:Int
+      seen.add_last False
+    }
+    todo.clear
+    todo.add_last start
+    {(! r) && {! todo.is_empty}}.while_do {
+      i := todo.last
+      todo.remove_last
+      (i = end).if {
+        r := True
+      }.elseif {! seen.at (i - start)} then {
+        seen.at (i - start) put True
+        o := op.at i
+        (o = op_split).if {
+          todo.add_last (i + arg.at i)
+          todo.add_last (i + alt.at i)
+        }.elseif {o = op_jump} then {
+          todo.add_last (i + arg.at i)
+        }.elseif {(o > op_set) && {o != op_test}} then {
+          todo.add_last (i + 1)
+        }
+      }
+    }
+    r
+  )
+  
+  - add_set s:Array Boolean :Int <-
+  // Index of the new set.
+  ( + r:Int
+    r := sets.count
+    0.to 255 do { i:Int
+      sets.add_last (s.at i)
+    }
+    r
+  )
+  
+  - finish n:Int <-
+  // End of the compilation: loops use the registers after the sub-expressions.
+  ( + base:Int
+    nb_sub := n
+    base := 2 * (n + 1)
+    nb_reg := base + nb_loop
+    0.to (op.upper) do { i:Int
+      ((op.at i = op_test) || {(op.at i = op_save) && {alt.at i = 1}}).if {
+        arg.at i put (arg.at i + base)
+      }
+    }
+    emit_op op_match
+  )

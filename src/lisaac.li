@@ -640,7 +640,7 @@ Private
     type_false   := Itm_type_style.get str_false style 1.to_run.raw
     type_boolean := Itm_type_style.get str_boolean style 1.to_run.raw
     type_integer := Itm_type_style.get str_int style 1.to_run.raw
-    type_real64  := Itm_type_style.get "Real64" style 1.to_run.raw
+    type_real    := Itm_type_style.get "Real" style 1.to_run.raw
     type_integer_32:=Itm_type_style.get str_int_32 style 1.to_run.raw
     type_uinteger_32:=Itm_type_style.get str_uint_32 style 1.to_run.raw
     type_string_alias:=Itm_type_simple.get str_string_alias.to_run.raw
@@ -734,6 +734,9 @@ Public
     "#define _LARGE_FILE_API\n\
     \#define _LARGEFILE_SOURCE\n\
     \#define _LARGEFILE64_SOURCE\n"
+
+    // The generated code needs `uint32_t', `uint64_t' and `uintptr_t'.
+    output_decl.append "#include <stdint.h>\n"
 
     // ANSI argument command.
     (debug_level_option != 0).if {

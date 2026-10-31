@@ -1,0 +1,14 @@
+//v0 <- SP * 0.46
+//v1 <- 2
+Push
+Push
+v0 <- A1.Ascent - A0.Descent
+v1 <- A1.Ascent - A1.Descent
+Pop (A0.Width, v0)
+Pop (0, A0.Descent)
+Move (Ox + A0.Width + v0/2, Oy - v0/2)
+Line (Ox + A0.Width - v1/2, Oy + v1/2)
+Stroke 3
+Ascent <- A0.Ascent - A0.Descent
+Descent <- A1.Descent - v0
+Width <- A0.Width + A1.Width

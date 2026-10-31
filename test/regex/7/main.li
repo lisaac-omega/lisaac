@@ -1,0 +1,61 @@
+Header
+  + name := Main
+  /*
+  Expressions where a backtracking engine usually explodes, and very long texts:
+  the time must stay low, and the C stack must not overflow.
+  The last ones are cases where the GNU libc 2.39 is wrong: the anchors of a 
+  repeated expression are ignored, or a correct match is missed.
+  */
+Insert
+  - parent_utils:Utils := Utils
+  
+Private
+  
+  - t (p:String,c:Char,n:Int,tail:String,the_end:Int) <-
+  // Search @p in @n times @c then @tail: @the_end is the end of the match, or -1.
+  ( + d:String_buffer
+    + re:Regex
+    + e:Int
+    d := String_buffer.create (n + 8)
+    d.extend_multiple c by n
+    d.append tail
+    re := Regex.create_nmatch 2
+    Test.check (re.compile p)
+    e := re.match d start 0
+    (the_end < 0).if {
+      Test.check (e = Regex.no_match)
+    } else {
+      Test.check (e = 0)
+      Test.check (re.offset_end) integer the_end
+    }
+  )
+  
+  - s (p,d:String,start,the_end:Int) <-
+  ( + re:Regex
+    re := Regex.create_nmatch 2
+    Test.check (re.regcomp p cflag (Regex.extended)) integer 0
+    Test.check ((re.match d start 0) = 0)
+    Test.check (re.offset_start) integer start
+    Test.check (re.offset_end) integer the_end
+  )
+  
+Public
+  
+  - main <-
+  (
+    t ("(a*)*b",'a',5_000,"",-1)
+    t ("(a|aa)+$",'a',5_000,"!",-1)
+    t ("(a+)+b",'a',100_000,"",-1)
+    t ("(x+x+)+y",'x',20_000,"",-1)
+    t ("((a*)*)*b",'a',2_000,"",-1)
+    t ("(.*)(.*)(.*)(.*)(.*)z",'a',3_000,"",-1)
+    t ("(a{1,100}){1,100}b",'a',2_000,"",-1)
+    t ("(a|a)*",'a',1_000_000,"",1_000_000)
+    t (".*",'a',5_000_000,"",5_000_000)
+    t ("(a?){50}a{50}",'a',50,"",50)
+    
+    s ("(\\b.([0-1b])*){,2}a","aaabbabbbaa",0,2)
+    s ("[ab](\\'b{,2}){,2}"," _BABbb-aB- bb",5,6)
+    s ("(a{,2}){,2}\\1b","aabaabbaab",0,3)
+    s ("(a{,2}^.{,2}){2}|b|","ab",0,3 - 1)
+  )

@@ -1,0 +1,708 @@
+Header
+  + name := Regex_parser
+  /*
+  Compile a POSIX regular expression into a @Regex_program.
+  The grammar and its corner cases are the ones of the GNU libc: basic or extended syntax,
+  with the GNU operators \w \W \s \S \b \B \< \> \` \'
+  Everything works on bytes, like the "C" locale.
+  */
+Insert
+  - parent_clone:Clone := Clone
+  
+Public
+  
+  // Errors, with the values of <regex.h>.
+  
+  - err_badpat:Int := 2
+  - err_collate:Int := 3
+  - err_ctype:Int := 4
+  - err_escape:Int := 5
+  - err_subreg:Int := 6
+  - err_brack:Int := 7
+  - err_paren:Int := 8
+  - err_brace:Int := 9
+  - err_badbr:Int := 10
+  - err_range:Int := 11
+  - err_badrpt:Int := 13
+  - err_size:Int := 15
+  
+  + error:Int
+  + program:Regex_program
+  
+Private
+  
+  // Tokens.
+  
+  - t_end:Int := 0
+  - t_char:Int := 1
+  - t_any:Int := 2
+  - t_bracket:Int := 3
+  - t_star:Int := 4
+  - t_plus:Int := 5
+  - t_quest:Int := 6
+  - t_open_dup:Int := 7
+  - t_close_dup:Int := 8
+  - t_open:Int := 9
+  - t_close:Int := 10
+  - t_alt:Int := 11
+  - t_anchor:Int := 12
+  - t_backref:Int := 13
+  - t_class:Int := 14
+  - t_bad_escape:Int := 15
+  
+  - dup_max:Int := 32767;      // RE_DUP_MAX
+  - program_max:Int := 4_000_000; // Size limit of a program.
+  
+  + src:String
+  + pos:Int
+  + is_extended:Boolean
+  + is_icase:Boolean
+  
+  + tok:Int
+  + tok_char:Char
+  + tok_val:Int
+  + tok_len:Int
+  
+  - stk:Flat Array (Exact Regex_parser)
+  
+  + set_tmp:Array Boolean;  // Set being built.
+  + frag_op:Array Int;      // Fragment being repeated.
+  + frag_arg:Array Int
+  + frag_alt:Array Int
+  
+  + nb_sub:Int
+  + completed:Int; // One bit for each sub-expression closed, as seen by a back-reference.
+  
+  - fail e:Int <- (error = 0).if { error := e; }
+  
+  - new_set:Array Boolean <-
+  // Empty set: there is never more than one at a time.
+  (
+    set_tmp.clear
+    256.times {
+      set_tmp.add_last False
+    }
+    set_tmp
+  )
+  
+  - ok:Boolean <- error = 0
+  
+  - here:Int <- program.count
+  
+  // Tokenizer.
+  
+  - set_tok (t:Int,v:Int) <- (tok,tok_val) := (t,v)
+  
+  - peek_escape <-
+  ( + c:Char
+    (pos = src.upper).if {
+      (tok,tok_char) := (t_bad_escape,'\\')
+    } else {
+      c := src.at (pos + 1)
+      tok_len := 2
+      (tok,tok_char) := (t_char,c)
+      c.when '<' then {
+        set_tok (t_anchor,Regex_program.op_word_first)
+      }.when '>' then {
+        set_tok (t_anchor,Regex_program.op_word_last)
+      }.when 'b' then {
+        set_tok (t_anchor,Regex_program.op_word_delim)
+      }.when 'B' then {
+        set_tok (t_anchor,Regex_program.op_not_word_delim)
+      }.when '`' then {
+        set_tok (t_anchor,Regex_program.op_buf_first)
+      }.when '\'' then {
+        set_tok (t_anchor,Regex_program.op_buf_last)
+      }.when 'w' or 'W' then {
+        tok := t_class
+      }.when 's' or 'S' then {
+        tok := t_class
+      }
+      (c.in_range '1' to '9').if {
+        set_tok (t_backref,c.to_int - '0'.to_int)
+      }
+      (! is_extended).if {
+        c.when '|' then {
+          tok := t_alt
+        }.when '(' then {
+          tok := t_open
+        }.when ')' then {
+          tok := t_close
+        }.when '{' then {
+          tok := t_open_dup
+        }.when '}' then {
+          tok := t_close_dup
+        }.when '+' then {
+          tok := t_plus
+        }.when '?' then {
+          tok := t_quest
+        }
+      }
+    }
+  )
+  
+  - is_bre_end_of_branch:Boolean <-
+  // Is the $ at @pos before the end of a branch ?
+  ( + r:Boolean
+    (pos = src.upper).if {
+      r := True
+    }.elseif {pos + 2 <= src.upper} then {
+      r := (src.at (pos + 1) = '\\') && {(src.at (pos + 2) = ')') || {src.at (pos + 2) = '|'}}
+    }
+    r
+  )
+  
+  - peek_plain (c:Char,caret_here:Boolean) <-
+  (
+    (tok,tok_char) := (t_char,c)
+    c.when '.' then {
+      tok := t_any
+    }.when '[' then {
+      tok := t_bracket
+    }.when '*' then {
+      tok := t_star
+    }.when '^' then {
+      (is_extended || {caret_here} || {pos = 0}).if {
+        set_tok (t_anchor,Regex_program.op_bol)
+      }
+    }.when '$' then {
+      (is_extended || {is_bre_end_of_branch}).if {
+        set_tok (t_anchor,Regex_program.op_eol)
+      }
+    }
+    (is_extended).if {
+      c.when '|' then {
+        tok := t_alt
+      }.when '(' then {
+        tok := t_open
+      }.when ')' then {
+        tok := t_close
+      }.when '{' then {
+        tok := t_open_dup
+      }.when '}' then {
+        tok := t_close_dup
+      }.when '+' then {
+        tok := t_plus
+      }.when '?' then {
+        tok := t_quest
+      }
+    }
+  )
+  
+  - peek caret_here:Boolean <-
+  ( + c:Char
+    tok_len := 1
+    (pos > src.upper).if {
+      tok := t_end
+    } else {
+      c := src.at pos
+      (c = '\\').if {
+        peek_escape
+      } else {
+        peek_plain (c,caret_here)
+      }
+    }
+  )
+  
+  - fetch caret_here:Boolean <-
+  (
+    pos := pos + tok_len
+    peek caret_here
+  )
+  
+  - next <- fetch False
+  
+  // Grammar.
+  
+  - parse_alternative nest:Int visible initial:Int <-
+  // branch | ... | branch
+  // A back-reference only sees the sub-expressions of its branch, and the @initial ones.
+  ( + start,jump,seen:Int
+    start := here
+    parse_branch nest
+    ((ok) && {tok = t_alt}).if {
+      jump := here
+      program.emit (Regex_program.op_jump,0,0)
+      program.insert (Regex_program.op_split,1,jump - start + 2) at start
+      jump := jump + 1
+      fetch True
+      seen := completed
+      completed := initial
+      parse_alternative nest visible initial
+      completed := completed | seen
+      program.arg.at jump put (here - jump)
+    }
+  )
+  
+  - parse_branch nest:Int <-
+  (
+    {(ok) && {tok != t_alt} && {tok != t_end} && {(nest = 0) || {tok != t_close}}}.while_do {
+      parse_expression nest
+    }
+  )
+  
+  - emit_char c:Char <-
+  ( + s:Array Boolean
+    ((is_icase) && {c.is_letter}).if {
+      s := new_set
+      s.at (c.to_lower.to_uint8.to_int) put True
+      s.at (c.to_upper.to_uint8.to_int) put True
+      program.emit (Regex_program.op_set,program.add_set s,0)
+    } else {
+      program.emit (Regex_program.op_char,c.to_uint8.to_int,0)
+    }
+  )
+  
+  - emit_class c:Char <-
+  // \w \W \s \S
+  ( + s:Array Boolean
+    s := new_set
+    (c.to_lower = 'w').if {
+      add_class "alnum" in s
+      s.at ('_'.to_uint8.to_int) put True
+    } else {
+      add_class "space" in s
+    }
+    fold_set s
+    ((c = 'W') || {c = 'S'}).if {
+      negate_set s
+    }
+    program.emit (Regex_program.op_set,program.add_set s,0)
+  )
+  
+  - parse_group nest:Int <-
+  ( + n:Int
+    nb_sub := nb_sub + 1
+    n := nb_sub
+    program.emit (Regex_program.op_save,2 * n,0)
+    fetch True
+    (tok != t_close).if {
+      parse_alternative (nest + 1) visible completed
+    }
+    (ok).if {
+      (tok = t_close).if {
+        program.emit (Regex_program.op_save,2 * n + 1,0)
+        completed := completed | (1 << (n.min 62))
+        next
+      } else {
+        fail err_paren
+      }
+    }
+  )
+  
+  - parse_expression nest:Int <-
+  ( + start:Int
+    + with_dup:Boolean
+    start := here
+    with_dup := True
+    (tok = t_char).if {
+      emit_char tok_char
+      next
+    }.elseif {tok = t_any} then {
+      program.emit_op (Regex_program.op_any)
+      next
+    }.elseif {tok = t_bracket} then {
+      pos := pos + 1
+      parse_bracket
+      tok_len := 0
+      (ok).if { next; }
+    }.elseif {tok = t_open} then {
+      parse_group nest
+    }.elseif {tok = t_backref} then {
+      (((completed >> tok_val) & 1) != 0).if {
+        program.emit (Regex_program.op_backref,tok_val,0)
+        program.set_backref
+        next
+      } else {
+        fail err_subreg
+      }
+    }.elseif {tok = t_class} then {
+      emit_class tok_char
+      next
+    }.elseif {tok = t_anchor} then {
+      program.emit_op tok_val
+      next
+      with_dup := False
+    }.elseif {tok = t_star} then {
+      (is_extended).if {
+        fail err_badrpt
+      } else {
+        emit_char tok_char
+        next
+      }
+    }.elseif {(tok = t_plus) || {tok = t_quest}} then {
+      (is_extended).if {
+        fail err_badrpt
+      } else {
+        emit_char tok_char
+        next
+      }
+    }.elseif {tok = t_open_dup} then {
+      fail err_badrpt
+    }.elseif {tok = t_close} then {
+      (is_extended).if {
+        emit_char ')'
+        next
+      } else {
+        fail err_paren
+      }
+    }.elseif {tok = t_close_dup} then {
+      emit_char tok_char
+      next
+    } else {
+      fail err_escape
+    }
+    ((ok) && {with_dup}).if {
+      parse_dup start
+    }
+  )
+  
+  - parse_dup start:Int <-
+  ( + min,max:Int
+    {(ok) && {(tok = t_star) || {tok = t_plus} || {tok = t_quest} || {tok = t_open_dup}}}.while_do {
+      (min,max) := (0,-1)
+      (tok = t_plus).if {
+        min := 1
+      }.elseif {tok = t_quest} then {
+        max := 1
+      }.elseif {tok = t_open_dup} then {
+        (min,max) := parse_interval
+      }
+      (ok).if {
+        apply_dup (start,min,max)
+        next
+        ((! is_extended) && {(tok = t_star) || {tok = t_open_dup}}).if {
+          fail err_badrpt
+        }
+      }
+    }
+  )
+  
+  - fetch_number:Int <-
+  // Number in the next tokens: -1 if nothing, -2 if incorrect.
+  ( + r:Int
+    + c:Char
+    + the_end:Boolean
+    r := -1
+    {! the_end}.while_do {
+      next
+      c := tok_char
+      (tok = t_end).if {
+        r := -2
+        the_end := True
+      }.elseif {(tok = t_close_dup) || {c = ','}} then {
+        the_end := True
+      }.elseif {(tok != t_char) || {! c.in_range '0' to '9'} || {r = -2}} then {
+        r := -2
+      } else {
+        r := ((r.max 0) * 10 + c.to_int - '0'.to_int).min (dup_max + 1)
+      }
+    }
+    r
+  )
+  
+  - parse_interval:(Int,Int) <-
+  // After this, @tok is the end of the interval.
+  ( + min,max:Int
+    min := fetch_number
+    (min = -1).if {
+      ((tok != t_close_dup) && {tok != t_end} && {tok_char = ','}).if {
+        min := 0
+      } else {
+        fail err_badbr
+      }
+    }
+    (ok).if {
+      (min = -2).if {
+        max := -2
+      }.elseif {tok = t_close_dup} then {
+        max := min
+      }.elseif {tok_char = ','} then {
+        max := fetch_number
+      } else {
+        max := -2
+      }
+      (max = -2).if {
+        (tok = t_end).if {
+          fail err_brace
+        } else {
+          fail err_badbr
+        }
+      }.elseif {((max != -1) && {min > max}) || {tok != t_close_dup}} then {
+        fail err_badbr
+      }.elseif {dup_max < (min.max max)} then {
+        fail err_size
+      }
+    }
+    min,max
+  )
+  
+  - apply_dup (start,min,max:Int) <-
+  // Replace the fragment from @start by @min copies, then the optional part.
+  ( + f,a,b:Array Int
+    + n,lo,up:Int
+    n := here - start
+    (lo,up) := (min,max)
+    ((lo > 1) && {up < 0} && {program.is_nullable (start,here)}).if {
+      // The extra iterations would be empty: the loop gives the same result.
+      lo := 1
+    }
+    (f,a,b) := (frag_op,frag_arg,frag_alt)
+    f.clear
+    a.clear
+    b.clear
+    0.to (n - 1) do { i:Int
+      f.add_last (program.op.at (start + i))
+      a.add_last (program.arg.at (start + i))
+      b.add_last (program.alt.at (start + i))
+    }
+    (n * ((min.max 1) + (max.max 0) + 1) + here > program_max).if {
+      fail err_size
+    } else {
+      program.cut_from start
+      lo.times {
+        program.emit_copy (f,a,b)
+      }
+      (up < 0).if {
+        program.emit_star (f,a,b) first (lo = 0)
+      } else {
+        program.emit_optional (f,a,b) nb (up - lo)
+      }
+    }
+  )
+  
+  // Bracket expression.
+  
+  - add_range (lo,up:Int) in s:Array Boolean <-
+  (
+    lo.to up do { i:Int
+      s.at i put True
+    }
+  )
+  
+  - add_class name:String in s:Array Boolean :Boolean <-
+  // False if @name is not a class.
+  ( + r:Boolean
+    r := True
+    (name == "alpha").if {
+      add_range ('a'.to_int,'z'.to_int) in s
+      add_range ('A'.to_int,'Z'.to_int) in s
+    }.elseif {name == "digit"} then {
+      add_range ('0'.to_int,'9'.to_int) in s
+    }.elseif {name == "alnum"} then {
+      add_class "alpha" in s
+      add_class "digit" in s
+    }.elseif {name == "upper"} then {
+      add_range ('A'.to_int,'Z'.to_int) in s
+    }.elseif {name == "lower"} then {
+      add_range ('a'.to_int,'z'.to_int) in s
+    }.elseif {name == "space"} then {
+      add_range (9,13) in s
+      add_range (32,32) in s
+    }.elseif {name == "blank"} then {
+      add_range (9,9) in s
+      add_range (32,32) in s
+    }.elseif {name == "punct"} then {
+      add_range (33,47) in s
+      add_range (58,64) in s
+      add_range (91,96) in s
+      add_range (123,126) in s
+    }.elseif {name == "print"} then {
+      add_range (32,126) in s
+    }.elseif {name == "graph"} then {
+      add_range (33,126) in s
+    }.elseif {name == "cntrl"} then {
+      add_range (0,31) in s
+      add_range (127,127) in s
+    }.elseif {name == "xdigit"} then {
+      add_class "digit" in s
+      add_range ('a'.to_int,'f'.to_int) in s
+      add_range ('A'.to_int,'F'.to_int) in s
+    } else {
+      r := False
+    }
+    r
+  )
+  
+  - fold_set s:Array Boolean <-
+  ( + c:Char
+    (is_icase).if {
+      'a'.to_int.to ('z'.to_int) do { i:Int
+        c := i.to_char
+        ((s.at i) || {s.at (c.to_upper.to_uint8.to_int)}).if {
+          s.at i put True
+          s.at (c.to_upper.to_uint8.to_int) put True
+        }
+      }
+    }
+  )
+  
+  - negate_set s:Array Boolean <-
+  (
+    0.to 255 do { i:Int
+      s.at i put (! s.at i)
+    }
+  )
+  
+  - read_named (delim:Char,buf:String_buffer) <-
+  // Read until delim] with @pos after [delim
+  ( + the_end:Boolean
+    {! the_end}.while_do {
+      (pos >= src.upper).if {
+        fail err_brack
+        the_end := True
+      }.elseif {(src.at pos = delim) && {src.at (pos + 1) = ']'}} then {
+        pos := pos + 2
+        the_end := True
+      } else {
+        buf.add_last (src.at pos)
+        pos := pos + 1
+        (buf.count >= 32).if {
+          fail err_brack
+          the_end := True
+        }
+      }
+    }
+  )
+  
+  - read_element s:Array Boolean end is_end:Boolean :Int <-
+  // Byte value at @pos, or -1 for a class added in @s. Like the C library, the end 
+  // of a range is not checked: a class here is only an invalid range.
+  ( + r:Int
+    + c:Char
+    r := -1
+    (pos > src.upper).if {
+      fail err_brack
+    } else {
+      c := src.at pos
+      ((c = '[') && {pos < src.upper} && {(src.at (pos + 1) = ':') || {src.at (pos + 1) = '.'} || {src.at (pos + 1) = '='}}).if {
+        c := src.at (pos + 1)
+        pos := pos + 2
+        String.tmp { tmp:String_buffer
+          read_named (c,tmp)
+          (ok).if {
+            (c = ':').if {
+              ((! is_end) && {! add_class tmp in s}).if {
+                fail err_ctype
+              }
+            }.elseif {(c = '.') && {! is_end} && {(pos > src.upper) || {(pos = src.upper) && {src.at pos = '-'}}}} then {
+              fail err_brack
+            }.elseif {(c != '=') || {! is_end}} then {
+              (tmp.count != 1).if {
+                fail err_collate
+              }.elseif {c = '='} then {
+                s.at (tmp.first.to_uint8.to_int) put True
+              } else {
+                r := tmp.first.to_uint8.to_int
+              }
+            }
+          }
+        }
+      } else {
+        r := c.to_uint8.to_int
+        pos := pos + 1
+      }
+    }
+    r
+  )
+  
+  - bound v:Int :Int <-
+  // Bound of a range: with @is_icase, the C library compares the upper cases.
+  ( + r:Int
+    r := v
+    ((is_icase) && {v >= 0} && {v < 128}).if {
+      r := v.to_char.to_upper.to_uint8.to_int
+    }
+    r
+  )
+  
+  - parse_bracket <-
+  // @pos is after the '['.
+  ( + s:Array Boolean
+    + neg,first,the_end:Boolean
+    + lo,up:Int
+    s := new_set
+    ((pos <= src.upper) && {src.at pos = '^'}).if {
+      neg := True
+      pos := pos + 1
+    }
+    first := True
+    (pos > src.upper).if {
+      fail err_badpat
+    }
+    {(ok) && {! the_end}}.while_do {
+      (pos > src.upper).if {
+        fail err_brack
+      }.elseif {(src.at pos = ']') && {! first}} then {
+        pos := pos + 1
+        the_end := True
+      }.elseif {(src.at pos = '-') && {! first} && {pos = src.upper}} then {
+        fail err_brack
+      }.elseif {(src.at pos = '-') && {! first} && {src.at (pos + 1) != ']'}} then {
+        fail err_range
+      } else {
+        lo := read_element s end False
+        ((ok) && {lo >= 0} && {pos > src.upper}).if {
+          fail err_brack
+        }.elseif {(ok) && {lo >= 0} && {pos < src.upper} && {src.at pos = '-'} && {src.at (pos + 1) != ']'}} then {
+          pos := pos + 1
+          up := read_element s end True
+          (ok).if {
+            ((lo < 0) || {up < 0} || {bound lo > bound up}).if {
+              fail err_range
+            } else {
+              add_range (bound lo,bound up) in s
+            }
+          }
+        }.elseif {(ok) && {lo >= 0}} then {
+          s.at lo put True
+        }
+        first := False
+      }
+    }
+    (ok).if {
+      fold_set s
+      (neg).if {
+        negate_set s
+        (program.is_newline).if {
+          s.at 10 put False
+        }
+      }
+      program.emit (Regex_program.op_set,program.add_set s,0)
+    }
+  )
+  
+Public
+  
+  - create (sp:String,extended,icase,newline:Boolean) :Self <-
+  ( + r:Self
+    (stk.is_empty).if { r := clone; } else { r := stk.pop; }
+    r.make (sp,extended,icase,newline)
+    r
+  )
+  
+  - free <-
+  // @program goes on with its own life: the caller keeps it, or frees it.
+  (
+    src := NULL
+    program := NULL
+    stk.add_last self
+  )
+  
+  - make (sp:String,extended,icase,newline:Boolean) <-
+  (
+    (src,is_extended,is_icase) := (sp,extended,icase)
+    (pos,error,nb_sub,completed) := (0,0,0,0)
+    (set_tmp = NULL).if {
+      set_tmp := Array Boolean.create_with_capacity 256
+      frag_op := Array Int.create_with_capacity 64
+      frag_arg := Array Int.create_with_capacity 64
+      frag_alt := Array Int.create_with_capacity 64
+    }
+    program := Regex_program.create (icase,newline)
+    peek True
+    parse_alternative 0 visible 0
+    (ok).if {
+      program.finish nb_sub
+    }
+  )

@@ -420,7 +420,7 @@ Private
               f.if {
                 e1 := e1 - e0
                 (! tmp_json.is_integer_64).if { err syntax msg "Not number."; }
-                last_real := tmp_json.to_int64.to_real64 * 10.0.pow e1
+                last_real := tmp_json.to_int64.to_real32 * 10.0.pow e1
                 is_real := True
               } else {                
                 last_int := tmp_json.to_int64
@@ -502,7 +502,7 @@ Private
         (is_real).if {
           result := item id real last_real
         } else {
-          result := item id int last_int || {item id real (last_int.to_real64)}
+          result := item id int last_int || {item id real (last_int.to_real32)}
         }
       }.elseif {read_char '\''} then {
         result := object_in id

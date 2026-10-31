@@ -1,0 +1,9 @@
+--SEMANTIC---------
+Type `Flat Real32' is invalid with `Flat Real64'.
+Line 12 column 11 in Affect(.../test/real/2/affect.li):
+    r32 := r64
+           ^
+
+Line 8 column 9 in Affect(.../test/real/2/affect.li):
+    + r64:Real64
+         ^

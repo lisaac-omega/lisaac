@@ -35,7 +35,7 @@ Public
 
   - to_run_expr:Expr <-
   (
-    Real_cst.create position value value type (type_real64.default)
+    Real_cst.create position value value type (type_real.default)
   )
 
   //

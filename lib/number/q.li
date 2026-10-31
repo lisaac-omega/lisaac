@@ -1,0 +1,317 @@
+Header
+  + name := Flat ℚ;
+  /*
+  The set ℚ (from the Italian quoziente, meaning quotient) denotes the set of rational numbers,
+  which includes every quotient n/d of two integers, with d != 0.
+  
+  A value is always canonical: @num and @den have no common factor, @den > 0, and zero is 0/1.
+  Like @ℤ, memory is manual: a result owns its integers, the operands are never
+  changed or kept, and @free releases a value which is no more used.
+  */
+Insert
+  - parent_utils:Utils := Utils
+  - parent_print:Print := Print
+  - parent_hexadecimal:Hexadecimal := Hexadecimal
+  
+Public
+  
+  + num:ℤ
+  
+  - den:ℤ <-
+  // Denominator, > 0: a @Self still zeroed (default value, @Array item) is 0/1.
+  ( + r:ℤ
+    r := den_raw
+    (r = 0).if { r := 1; }
+    r
+  )
+  
+Private
+  
+  + den_raw:ℤ
+  
+  - set (n,d:ℤ) <- (num,den_raw) := (n,d)
+  
+  - raw (n,d:ℤ) :Self <-
+  // Value of @n / @d, already canonical: @n and @d are now owned by the result.
+  ( + r:Self
+    r.set (n,d)
+    r
+  )
+  
+  - raw_sign (n,d:ℤ) :Self <-
+  // Same as @raw, with @d which can be negative.
+  ( + rn,rd:ℤ
+    (d < 0).if {
+      rn := - n
+      rd := - d
+      n.free
+      d.free
+    } else {
+      (rn,rd) := (n,d)
+    }
+    raw (rn,rd)
+  )
+  
+  - mul (an,ad,bn,bd:ℤ) :Self <-
+  // (@an / @ad) * (@bn / @bd), both reduced: only the crossed factors are left.
+  ( + g,n1,d1,n2,d2,n,d:ℤ
+    + r:Self
+    ((an !== 0) && {bn !== 0}).if {
+      g := an.gcd bd
+      n1 := an / g
+      d2 := bd / g
+      g.free
+      g := bn.gcd ad
+      n2 := bn / g
+      d1 := ad / g
+      g.free
+      n := n1 * n2
+      d := d1 * d2
+      n1.free
+      d1.free
+      n2.free
+      d2.free
+      r := raw_sign (n,d)
+    }
+    r
+  )
+  
+Public
+  
+  // Init
+  
+  - init (n,d:ℤ) :Self <-
+  // Canonical value of @n / @d, which are kept by the caller.
+  [ ? {d !== 0}; ]
+  ( + g,rn,rd:ℤ
+    + r:Self
+    (n !== 0).if {
+      g := n.gcd d
+      rn := n / g
+      rd := d / g
+      g.free
+      r := raw_sign (rn,rd)
+    }
+    r
+  )
+  
+  - init_d x:Real64 :Self <-
+  // Exact value of @x: 0 for NaN and infinities.
+  ( + b,y:Real64
+    + e:Int
+    + n:ℤ
+    + t,r:Self
+    y := x
+    ((! x.is_nan) && {! x.is_infinite} && {! x.is_zero}).if {
+      b := `18446744073709551616.0`:Real64
+      {y != (y + 0.5)}.while_do {
+        y := y * b
+        e := e + 64
+      }
+      n := ℤ.init_d y
+      t := raw (n,ℤ.one)
+      r := t >> e
+      n.free
+    }
+    r
+  )
+  
+  - init_s (sp:String) base (base:Int) :Self <-
+  // Read `num' or `num/den', with @sp canonical or not.
+  ( + i:Int
+    + n,d:ℤ
+    + r:Self
+    i := sp.index_of '/'
+    (i > sp.upper).if {
+      r := raw (ℤ.init sp base base,ℤ.one)
+    } else {
+      String.tmp { tmp:String_buffer
+        sp.substring 0 to (i-1) in tmp
+        n := ℤ.init tmp base base
+      }
+      d := ℤ.init sp from (i+1) base base
+      r := init (n,d)
+      n.free
+      d.free
+    }
+    r
+  )
+  
+  - init_s (sp:String) :Self <- init_s sp base 10
+  
+  - copy:Self <- raw (num.copy,den.copy)
+  
+  - free <-
+  (
+    num.free
+    den.free
+  )
+  
+  // Arithmetic standard.
+  
+  - self:Self '+' Left 80 <> other:Self :Self <-
+  ( + g,x,y,n,d,t:ℤ
+    g := den.gcd (other.den)
+    (g = 1).if {
+      x := num * other.den
+      y := other.num * den
+      n := x + y
+      d := den * other.den
+      x.free
+      y.free
+    } else {
+      t := other.den / g
+      x := num * t
+      t.free
+      d := den / g
+      y := other.num * d
+      n := x + y
+      x.free
+      y.free
+      x := n.gcd g
+      t := n / x
+      n.free
+      n := t
+      y := other.den / x
+      t := y * d
+      d.free
+      d := t
+      x.free
+      y.free
+    }
+    g.free
+    raw (n,d)
+  )
+  
+  - self:Self '-' Left 80 other:Self :Self <-
+  ( + n:ℤ
+    + r:Self
+    n := - other.num
+    r := self + raw (n,other.den)
+    n.free
+    r
+  )
+  
+  - self:Self '*' Left 90 <> other:Self :Self <-
+  (
+    mul (num,den,other.num,other.den)
+  )
+  
+  - self:Self '/' Left 90 other:Self :Self <-
+  [ ? {other.num !== 0}; ]
+  (
+    mul (num,den,other.den,other.num)
+  )
+  
+  - '-' self:Self :Self <- raw (- num,den.copy)
+  
+  - '+' self:Self :Self <- copy
+  
+  - self:Self abs :Self <- raw (num.abs,den.copy)
+  
+  - inv:Self <-
+  // 1 / @self
+  [ ? {num !== 0}; ]
+  (
+    raw_sign (den.copy,num.copy)
+  )
+  
+  - self:Self pow e:Int :Self <-
+  // @self to the power of @e, which can be negative.
+  [ ? {(e >= 0) || {num !== 0}}; ]
+  ( + r:Self
+    (e < 0).if {
+      r := raw_sign (den.pow (-e),num.pow (-e))
+    } else {
+      r := raw (num.pow e,den.pow e)
+    }
+    r
+  )
+  
+  // Shift
+  
+  - self:Self '<<' Left 90 bits:Int :Self <-
+  // @self * 2^@bits
+  [ ? {bits >= 0}; ]
+  ( + z:Int
+    z := den.scan1.min bits
+    raw (num << (bits - z),den >> z)
+  )
+  
+  - self:Self '>>' Left 90 bits:Int :Self <-
+  // @self / 2^@bits
+  [ ? {bits >= 0}; ]
+  ( + z:Int
+    (num = 0).if {
+      z := bits
+    } else {
+      z := num.scan1.min bits
+    }
+    raw (num >> z,den << (bits - z))
+  )
+  
+  // Comparaison
+  
+  - sign:Int <- (num > 0).to_int - (num < 0).to_int
+  
+  - cmp other:Self :Int <-
+  // self > other => 1, self < other => -1, else self = other => 0
+  ( + a,b:ℤ
+    + r:Int
+    a := num * other.den
+    b := other.num * den
+    r := (a > b).to_int - (a < b).to_int
+    a.free
+    b.free
+    r
+  )
+  
+  - self:Self '=' Right 50 <> other:Self :Boolean <-
+  (num = other.num) && {den = other.den}
+  
+  - self:Self '!==' Right 60 other:Self :Boolean <- ! (self = other)
+  - self:Self '==' Right 60 other:Self :Boolean <- self = other
+  - self:Self '>' Right 60 other:Self :Boolean <- cmp other >  0
+  - self:Self '<' Right 60 other:Self :Boolean <- cmp other <  0
+  - self:Self '>=' Right 60 other:Self :Boolean <- cmp other >= 0
+  - self:Self '<=' Right 60 other:Self :Boolean <- cmp other <= 0
+  
+  // Conversion
+  
+  - to_z:ℤ <- num / den
+  // Integer part of @self, rounded toward zero.
+  
+  - to_real64:Real64 <-
+  // Value of @self in a @Real64, truncated if needed.
+  ( + ne,de,ee:Int
+    + t,z:ℤ
+    + r,b:Real64
+    ne := num.size_bits
+    de := den.size_bits
+    ((de = 1) || {ne > de + 64}).if {
+      ee := 0
+    } else {
+      ee := (64 + de - ne) / 64 + 1
+    }
+    t := num << (ee * 64)
+    z := t / den
+    r := z.to_real64
+    t.free
+    z.free
+    b := 1.0 / `18446744073709551616.0`:Real64
+    ee.times { r := r * b; }
+    r
+  )
+  
+  // Output
+  
+  - append_in b:String_buffer base base:Int <-
+  (
+    num.append_in b base base
+    (den !== 1).if {
+      b.add_last '/'
+      den.append_in b base base
+    }
+  )
+  
+  - append_in b:String_buffer <- append_in b base 10

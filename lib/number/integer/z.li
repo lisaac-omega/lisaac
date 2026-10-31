@@ -6,6 +6,7 @@ Header
   */
   - type := `signed long long`;
   - default := (Cast Int To ℤ.on 0); 
+  - export := ℚ;
 Insert
   - parent_utils:Utils := Utils
   - parent_print:Print := Print
@@ -24,6 +25,10 @@ Div_inv, Number, Uint64
     pos := 63 - `__builtin_clzll(@x)`:Int64
     pos
   )
+  
+  - first_bit x:Int :Int <-
+  [ ? {x != 0}; ]
+  `__builtin_ctzll(@x)`:Int
     
   /* // DCDC Marche pas sous Mac
   - last_bit x:Int :Int <-
@@ -1391,15 +1396,7 @@ Div_inv
   ( + tiny:Boolean
     + r:Self
     (v != 0).if {
-      (v > 0).if {
-        tiny := (last_bit v + bits) < 62
-      } else {
-        (v = -1).if {
-          tiny := bits < 63
-        } else {
-          tiny := last_bit (~v) + bits < 62
-        }
-      }
+      tiny := (last_bit (v.abs) + bits) < 62; // -2^62 is not tiny (see @init_si).
       (tiny).if {
         r := Cast Int64 To ℤ.on (v << (bits+1))
       } else {
@@ -1452,7 +1449,7 @@ Div_inv
   
   - rshift_si (v:Int64,bits:Int) :Self <-
   [ ? {bits > 0}; ]
-  Cast Int64 To ℤ.on ((v >> (bits-1)) & imsk)
+  Cast Int64 To ℤ.on ((v >> ((bits-1).min 63)) & imsk); // C shift is undefined from 64.
     
   - rshift bits:Int :Self <-
   [ ? {is_big}; ]
@@ -1469,11 +1466,10 @@ Div_inv
       mod := bits & 63
       p := p & 63
       (up = 0).if {
-        v := na.at nn
-        (nn = 0).if {
-          v := v >> mod
-        } else {          
-          v := (v << (64-mod)) | (na.at (nn-1) >> mod)
+        lo := bits / 64
+        v := na.at lo >> mod
+        (lo < nn).if {
+          v := v | (na.at nn << (64-mod))
         }
         (v <= 3FFF_FFFF_FFFF_FFFFh).if {
           (is_neg).if { v := -v; }
@@ -1517,6 +1513,7 @@ Div_inv
       ? {cy = 0}
     } else { tp := dp; }
     Div_inv.qr_preinv (qp, np, nn+1, tp, dn+1)
+    (tp != dp).if { free tp cap tpcap; }
   )
   
   - div_qr (n,d:Self) :(Self,Self) <-
@@ -1557,6 +1554,31 @@ Div_inv
     (q,r) := div_qr (n,d2)
     free dd cap 0
     q,r
+  )
+  
+  // GCD tools
+  
+  - gcd_11 (pu,pv:Uint64) :Uint64 <-
+  // Binary GCD on one limb: @pu and @pv are not null.
+  [ ? {pu != 0}; ? {pv != 0}; ]
+  ( + u,v:Uint64
+    + shift:Int
+    (u,v) := (pu,pv)
+    shift := first_bit (u | v)
+    u := u >> shift
+    v := v >> shift
+    (u.is_even).if { (u,v) := (v,u); }
+    v := v >> first_bit v
+    {u != v}.while_do {
+      (u > v).if {
+        u := u - v
+        u := u >> first_bit u
+      } else {
+        v := v - u
+        v := v >> first_bit v
+      }
+    }
+    u << shift
   )
   
   // Input/Output tools
@@ -1702,6 +1724,7 @@ Div_inv
     }
     ? {j = sn}
     ? {up >= rn}
+    (rn + 1).to up do { i:Int; rp.at i put 0; }; // @up is only an upper bound.
   )
   
   - native_put_in (sp:C_array Uint8) base (base:Int)
@@ -1745,20 +1768,21 @@ Public
   
   // Init / Input
   
+  - one:ℤ := 1
+  
   - init_si x:Int64 :Self <-
   ( + r:Self
-    (x.abs < 4000_0000_0000_0000h).if {
+    + s,v:Uint64
+    v := x.to_raw_uint64
+    (x < 0).if {
+      v := - v; // In @Uint64: `x.abs' overflows on @Int64.minimum.
+      s := smsk
+    }
+    (v < 4000_0000_0000_0000h).if {
       r := Cast Int64 To ℤ.on (x << 1)
     } else {
       + na:C_array Uint64
-      + s,v:Uint64
       na := new 0
-      (x < 0).if {
-        v := (-x).to_raw_uint64
-        s := smsk
-      } else {
-        v := x.to_raw_uint64
-      }
       na.at 0 put v
       r := na na cap 0 up 0 sign s
     }
@@ -1832,6 +1856,43 @@ Public
     
   - init (sp:String) :Self <- init sp base 10
   
+  - init_d x:Real64 :Self <-
+  // Truncate @x to an integer: 0 for NaN and infinities.
+  ( + y,b,bi:Real64
+    + f:Uint64
+    + s:Uint64
+    + up,j,cap:Int
+    + rp:C_array Uint64
+    + r:Self
+    y := x
+    ((! x.is_nan) && {! x.is_infinite}).if {
+      (y < 0.0).if { y := -y; s := smsk; }
+      (y >= 1.0).if {
+        b := `18446744073709551616.0`:Real64
+        bi := 1.0 / b
+        {y >= b}.while_do {
+          y := y * bi
+          up := up + 1
+        }
+        cap := upper_to_cap up
+        rp := new cap
+        j := up
+        f := `(uint64_t)@y`:Uint64
+        y := y - `(double)@f`:Real64
+        rp.at j put f
+        {j > 0}.while_do {
+          j := j - 1
+          y := y * b
+          f := `(uint64_t)@y`:Uint64
+          y := y - `(double)@f`:Real64
+          rp.at j put f
+        }
+        r := normalize rp cap cap up up sign s
+      }
+    }
+    r
+  )
+  
   - copy:Self <-
   ( + r:Self
     is_big.if {
@@ -1863,7 +1924,7 @@ Public
   
   // Arithmetic standard.
   
-  - self:Self '+' other:Self :Self <-
+  - self:Self '+' Left 80 <> other:Self :Self <-
   ( + r:Self
     //((self.to_raw | other.to_raw) >= 0).if { Alternative a tester...
     //  r := init_si (to_i64 + other.to_i64)
@@ -1885,7 +1946,7 @@ Public
     r
   )  
       
-  - self:Self '-' other:Self :Self <-
+  - self:Self '-' Left 80 other:Self :Self <-
   ( + r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -1903,7 +1964,7 @@ Public
     r
   )
   
-  - self:Self '*' other:Self :Self <-
+  - self:Self '*' Left 90 <> other:Self :Self <-
   ( + r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -1921,7 +1982,7 @@ Public
     r
   )
     
-  - self:Self '/' other:Self :Self <-
+  - self:Self '/' Left 90 other:Self :Self <-
   ( + q,r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -1939,7 +2000,7 @@ Public
     q
   )
   
-  - self:Self '%' other:Self :Self <-
+  - self:Self '%' Left 90 other:Self :Self <-
   ( + q,r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -1959,7 +2020,7 @@ Public
     r
   )
   
-  - self:Self '/%' other:Self :(Self,Self) <-
+  - self:Self '/%' Left 90 other:Self :(Self,Self) <-
   ( + q,r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -1987,7 +2048,7 @@ Public
     (is_big).if {
       r := not_big
     } else {
-      r := Cast Uint64 To ℤ.on ((~ to_raw) & imsk)
+      r := init_si (~ to_i64)
     }
     r
   )
@@ -2005,18 +2066,62 @@ Public
   - '+' self:Self :Self <- copy
   
   - self:Self pow e:Int :Self <-
-  // @self to the power of @e
-  ( + result:Self
-    (e = 0).if {
-      result := 1
-    } else {
-      ((e & 1) = 0).if {
-        result := (self * self).pow ((e / 2))
-      } else {
-        result := self * (self.pow ((e - 1)))
+  // @self to the power of @e (always a new value).
+  [ ? {e >= 0}; ]
+  ( + result,b,t:Self
+    + n:Int
+    result := 1
+    b := copy
+    n := e
+    {n > 0}.while_do {
+      (n.is_odd).if {
+        t := result * b
+        result.free
+        result := t
+      }
+      n := n >> 1
+      (n > 0).if {
+        t := b * b
+        b.free
+        b := t
       }
     }
+    b.free
     result
+  )
+  
+  - self:Self abs :Self <-
+  // Absolute value of @self (always a new value).
+  ( + r:Self
+    (is_neg).if {
+      r := - self
+    } else {
+      r := copy
+    }
+    r
+  )
+  
+  - self:Self gcd other:Self :Self <-
+  // Greatest common divisor of @self and @other, always >= 0 (gcd(0,0) = 0).
+  ( + a,b,t:Self
+    a := self.abs
+    b := other.abs
+    {b.is_big}.while_do {
+      t := a % b
+      a.free
+      a := b
+      b := t
+    }
+    (b != 0).if {
+      t := a % b
+      a.free
+      (t = 0).if {
+        a := b
+      } else {
+        a := init_ui (gcd_11 (t.to_abs64,b.to_abs64))
+      }
+    }
+    a
   )
   
   - self:Self '!' :Self <-
@@ -2037,20 +2142,54 @@ Public
     r
   )
   
+  // Bits
+  
+  - size_bits:Int <-
+  // Number of bits of the absolute value of @self (1 for 0, like `sizeinbase 2').
+  ( + r:Int
+    + d:C_array Uint64
+    + up:Int
+    (is_big).if {
+      d := to_na
+      up := upper d
+      r := up * 64 + last_bit (d.at up) + 1
+    }.elseif {to_abs64 != 0} then {
+      r := last_bit (to_abs64) + 1
+    } else {
+      r := 1
+    }
+    r
+  )
+  
+  - scan1:Int <-
+  // Index of the lowest bit set in the absolute value of @self, which is not 0.
+  ( + r,j:Int
+    + d:C_array Uint64
+    (is_big).if {
+      d := to_na
+      {d.at j = 0}.while_do { j := j + 1; }
+      r := j * 64 + first_bit (d.at j)
+    } else {
+      ? {to_abs64 != 0}
+      r := first_bit (to_abs64)
+    }
+    r
+  )
+  
   // Comparaison
   
   - self:Self '=' Right 50 <> other:Self :Boolean <- cmp other =  0
   
-  - self:Self '!=='other:Self :Boolean <- cmp other != 0
-  - self:Self '==' other:Self :Boolean <- cmp other =  0
-  - self:Self '>'  other:Self :Boolean <- cmp other >  0
-  - self:Self '<'  other:Self :Boolean <- cmp other <  0
-  - self:Self '>=' other:Self :Boolean <- cmp other >= 0
-  - self:Self '<=' other:Self :Boolean <- cmp other <= 0
+  - self:Self '!==' Right 60 other:Self :Boolean <- cmp other != 0
+  - self:Self '==' Right 60 other:Self :Boolean <- cmp other =  0
+  - self:Self '>' Right 60 other:Self :Boolean <- cmp other >  0
+  - self:Self '<' Right 60 other:Self :Boolean <- cmp other <  0
+  - self:Self '>=' Right 60 other:Self :Boolean <- cmp other >= 0
+  - self:Self '<=' Right 60 other:Self :Boolean <- cmp other <= 0
   
   // Shift
   
-  - self:Self '<<' bits:Int :Self <-
+  - self:Self '<<' Left 90 bits:Int :Self <-
   [ ? {bits >= 0}; ]
   ( + r:Self
     (is_big).if {
@@ -2061,19 +2200,64 @@ Public
     r
   )
   
-  - self:Self '>>' bits:Int :Self <-
+  - self:Self '>>' Left 90 bits:Int :Self <-
+  // Like a two's complement binary word: rounded toward -infinity.
   [ ? {bits >= 0}; ]
-  ( + r:Self
+  ( + r,t:Self
     (bits = 0).if {
       r := copy
     } else {
       (is_big).if {
-        r := rshift bits
+        r := rshift bits; // On the absolute value.
+        ((is_neg) && {scan1 < bits}).if {
+          t := r - 1
+          r.free
+          r := t
+        }
       } else {
         r := rshift_si (to_i64,bits)
       }
     }
     r
+  )
+  
+  // Conversion
+  
+  - to_q:ℚ <- ℚ.init (self,one)
+  
+  - self:Self divq d:Self :ℚ <- ℚ.init (self,d)
+  
+  - to_real64:Real64 <-
+  // Value of @self in a @Real64, truncated if needed.
+  ( + x,b:Real64
+    + l:Uint64
+    + m,j:Int
+    + d:C_array Uint64
+    (is_big).if {
+      d := to_na
+      j := upper d
+      l := d.at j
+    } else {
+      l := to_abs64
+    }
+    (l != 0).if {
+      m := 63 - last_bit l + 53 - 64
+      (m < 0).if { l := l & (Uint64.maximum << (-m)); }
+      x := `(double)@l`:Real64
+      b := `18446744073709551616.0`:Real64
+      {j > 0}.while_do {
+        j := j - 1
+        x := x * b
+        (m > 0).if {
+          l := d.at j
+          m := m - 64
+          (m < 0).if { l := l & (Uint64.maximum << (-m)); }
+          x := x + `(double)@l`:Real64
+        }
+      }
+      (is_neg).if { x := -x; }
+    }
+    x
   )
   
   // Ouput

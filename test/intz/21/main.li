@@ -1,0 +1,56 @@
+Header
+  + name := Main
+Private
+  - show v:Int64 of s:String <-
+  ( + x,y:ℤ
+    x := ℤ.init_si v
+    y := ℤ.init s
+    Out # x # ' ' # (x = y) # ' ' # (- x = - y) # ' ' # (x - y) # '\n'
+    x.free
+    y.free
+  )
+Public
+  - main <-
+  ( + a,b,c,x:ℤ
+    
+    // Priorities, as for @Int.
+    a := 2
+    b := 3
+    c := 4
+    Out # a + b * c # ' ' # a * b + c # ' ' # c - b - a # '\n'
+    Out # c * c / a % b # ' ' # c + c / a # ' ' # c - b * a + c % b # '\n'
+    Out # a + b << 2 # ' ' # c >> 1 # ' ' # a * b >> 1 # '\n'
+    Out # (a + b > c) # ' ' # (a * b = c + a) # ' ' # (a + b !== c + 1) # ' ' # (a + b == c + 1) # '\n'
+    
+    // Power.
+    x := ℤ.init "123456789012345678901234567890"
+    Out # a.pow 0 # ' ' # a.pow 1 # ' ' # a.pow 10 # ' ' # (-a).pow 3 # ' ' # (a - a).pow 5 # '\n'
+    Out # x.pow 0 # ' ' # x.pow 1 # '\n'
+    Out # x.pow 7 # '\n'
+    Out # a.pow 1000 + 1 # '\n'
+    
+    // ~x = -x-1, around the limit of the small values.
+    x := ℤ.init "4611686018427387901"
+    6.times {
+      Out # ~ x # ' ' # (~ x = - x - 1) # ' ' # (~ (- x) = x - 1) # '\n'
+      x := x + 1
+    }
+    
+    // init_si, on the limits of the small values and of @Int64.
+    show (Int64.minimum) of "-9223372036854775808"
+    show (Int64.minimum + 1) of "-9223372036854775807"
+    show (-4000_0000_0000_0001h) of "-4611686018427387905"
+    show (-4000_0000_0000_0000h) of "-4611686018427387904"
+    show (-3FFF_FFFF_FFFF_FFFFh) of "-4611686018427387903"
+    show (3FFF_FFFF_FFFF_FFFFh) of "4611686018427387903"
+    show (4000_0000_0000_0000h) of "4611686018427387904"
+    show (Int64.maximum.to_raw_int64) of "9223372036854775807"
+    Out # Int64.minimum.to_z # ' ' # (Int64.minimum.to_int).divq 2 # '\n'
+    
+    // >> of 64 bits or more, on small and big values.
+    Out # (15.to_z >> 63) # ' ' # (15.to_z >> 64) # ' ' # (15.to_z >> 129) # '\n'
+    Out # ((-15).to_z >> 64) # ' ' # ((-15).to_z >> 129) # '\n'
+    Out # (ℤ.init "129127208515966861312" >> 64) # ' ' # (ℤ.init "129127208515966861312" >> 65) # ' ' # (ℤ.init "129127208515966861312" >> 67) # '\n'
+    Out # (ℤ.init "-18446744073709551616" >> 1) # ' ' # (ℤ.init "-18446744073709551617" >> 1) # ' ' # (ℤ.init "-18446744073709551616" >> 64) # ' ' # (ℤ.init "-18446744073709551617" >> 64) # '\n'
+    Out # (ℤ.init "-18446744073709551616" >> 65) # ' ' # (ℤ.init "-18446744073709551617" >> 200) # ' ' # (ℤ.init "-3541774862152233910272" >> 69) # '\n'
+  )

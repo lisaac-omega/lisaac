@@ -165,7 +165,6 @@ Public
     + char:Char
     + j:Int
 
-    get_map self
     // Sign.
     (sign).if {
       val := self
@@ -211,7 +210,6 @@ Public
     + exp_10:Int
     + char:Char
 
-    get_map self
     // Sign.
     (sign).if {
       val := self

@@ -7,21 +7,9 @@ Inherit
 
   - parent_float_map:Float_map := Float_map
 
-Mapping,Private
+Private
 
-  + map_64:Uint64
-
-Real, Real32, Real64, Real80
-
-  - get_map f:Self <-
-  ( `{ double f; uint64_t j=0; f = @f; memcpy(&j,&f,sizeof(double))`;
-    map_64 := `j`:Uint64
-    `}`    
-    /*+ tab:C_array(Self)
-    tab := CAST FLOAT_MAP64 TO (C_array Self).on FLOAT_MAP64
-    `/* Bug GCC */`
-    tab.at 0 put f*/
-  )
+  - map_64:Uint64 <- `((union { double f; uint64_t j; }){.f = @self}).j`:Uint64
 
 Public
   

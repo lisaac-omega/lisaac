@@ -6,13 +6,6 @@ Private
 
   - abstract <- crash_with_message "Slot abstract."
 
-Real, Real32, Real64, Real80
-
-  - get_map f:Self <-
-  (
-    abstract
-  )
-
 Public
   
   - sign:Boolean         <- abstract; // True if positif, False else.
@@ -23,13 +16,11 @@ Public
 
   // Consultation.
 
-  - is_infinite:Boolean <-
-  (exponent = ((1 << exponent_bits) - 1)) && {(mantissa >> (mantissa_bits-1)) = 0}
+  - is_infinite:Boolean <- `__builtin_isinf(@self)`:Int != 0
 
-  - is_nan:Boolean <-
-  (exponent = ((1 << exponent_bits) - 1)) && {(mantissa >> (mantissa_bits-1)) != 0}
+  - is_nan:Boolean <- `__builtin_isnan(@self)`:Int != 0
 
-  - is_zero:Boolean <- (exponent = 0) && {mantissa = 0}
+  - is_zero:Boolean <- `@self == 0`:Int != 0
 
 
   // Format.

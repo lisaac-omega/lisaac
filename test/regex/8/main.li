@@ -1,0 +1,67 @@
+Header
+  + name := Main
+  /* @free and @regfree reuse the memory: nothing must stay from the previous expression. */
+Insert
+  - parent_utils:Utils := Utils
+  
+Private
+  
+  - run (p:String,f:Int,d:String,n:Int,the_end,sub_end:Int) <-
+  // A new @Regex, for @n sub-expressions, which comes from the pool.
+  ( + re:Regex
+    re := Regex.create_nmatch n
+    Test.check (re.regcomp p cflag f) integer 0
+    Test.check ((re.match d start 0) = 0)
+    Test.check (re.offset_end) integer the_end
+    (n > 1).if {
+      Test.check (re.offset_end_index 1) integer sub_end
+    }
+    re.free
+  )
+  
+Public
+  
+  - main <-
+  ( + re:Regex
+    + big:String_buffer
+    
+    // Flags, sub-expressions, back-references and sizes of the previous one do not remain.
+    big := String_buffer.create 1_000_000
+    big.extend_multiple 'a' by 999_999
+    big.add_last 'b'
+    1.to 3 do { i:Int
+      run ("(a|b)*",Regex.extended,big,2,1_000_000,1_000_000)
+      run ("HELLO",Regex.extended | Regex.icase,"hello",1,5,0)
+      run ("(a)\\1",Regex.extended,"aa",2,2,1)
+      run ("hello",Regex.extended,"xhello",1,6,0)
+      run ("(((((((a)))))))b",Regex.extended,"ab",8,2,1)
+      run ("a.c",0,"a\nc",1,3,0)
+      run ("(a|ab)(c|bcd)",Regex.extended,"abcd",3,4,1)
+    }
+    
+    // @nosub does not remain on the same @Regex.
+    re := Regex.create_nmatch 2
+    Test.check (re.regcomp "(a)" cflag (Regex.extended | Regex.nosub)) integer 0
+    Test.check ((re.match "a" start 0) = 0)
+    Test.check (re.regcomp "x(b)" cflag (Regex.extended)) integer 0
+    Test.check ((re.match "xb" start 0) = 0)
+    Test.check (re.offset_end_index 1) integer 2
+    
+    // A failed compilation keeps the previous expression.
+    Test.check (re.regcomp "(" cflag (Regex.extended) != 0)
+    Test.check ((re.match "xb" start 0) = 0)
+    
+    // @regfree is allowed twice, and before @free.
+    re.regfree
+    re.regfree
+    re.free
+    
+    // No growth: this leaks more than 10 Gb without the pools.
+    1.to 500_000 do { i:Int
+      re := Regex.create_nmatch 3
+      re.regcomp "(a|b)*[[:alpha:]]{2,5}x?(c+)" cflag (Regex.extended)
+      re.match "ababccdefcc" start 0
+      re.regcomp "a(b" cflag (Regex.extended)
+      re.free
+    }
+  )

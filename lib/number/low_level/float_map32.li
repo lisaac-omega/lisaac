@@ -7,23 +7,10 @@ Inherit
 
   - parent_float_map:Float_map := Float_map
 
-Mapping,Private
+Private
 
-  + map_32:Uint32
+  - map_32:Uint32 <- `((union { float f; uint32_t j; }){.f = @self}).j`:Uint32
 
-Real, Real32, Real64, Real80
-
-  - get_map f:Self <-
-  ( `{ float f; uint32_t j; f = @f; memcpy(&j,&f,sizeof(float))`;
-    map_32 := `j`:Uint32
-    `}`
-    /*
-    + tab:C_array(Self)
-    tab := CAST FLOAT_MAP32 TO (C_array Self).on FLOAT_MAP32
-    `/* Bug GCC -Wall */`
-    tab.at 0 put f*/
-  )
-  
 Public
 
   - sign:Boolean    <- (map_32 >> 31) = 0; // True if positif, False else.

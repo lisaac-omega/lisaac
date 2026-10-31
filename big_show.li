@@ -45,6 +45,7 @@ Public
       
       "example/basics/factorial_example.li", "run", "1000",
       "example/CodEx/Fibonacci/fibonacci.li", "run", "v2 500",
+      "example/example_show.li",
       
       "lib/collection/collection.li", "no-run",
       "lib/boolean/boolean.li", "no-run",

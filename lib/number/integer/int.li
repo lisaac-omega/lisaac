@@ -10,7 +10,7 @@ Header
   Real_16_16, Real_24_8, Real_26_6 ,
   Real_32_32,
   Real, Real32, Real64, Real80,
-  Pointer, ℤ, ℂ;  
+  Pointer, ℤ, ℚ, ℂ;  
 Insert
   
   - parent_numeric: /*EYE*/ Numeric := Numeric
@@ -21,13 +21,13 @@ Public
   
   // Range.
   
-  - maximum:Uint64 <-
+  - maximum:Uint64 <- Int64.maximum
   // Maximum of integer
-  07FFF_FFFFh.to_raw_uint64
+
   
-  - minimum:Int64  <-
+  - minimum:Int64  <- Int64.minimum
   // Minimum of integer
-  (- 07FFF_FFFFh).to_raw_int64
+
   
   // Binary Operator.
   

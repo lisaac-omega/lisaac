@@ -73,13 +73,3 @@ Public
     buffer.append value
     display_ref buffer
   )
-
-
-
-
-
-
-
-
-
-

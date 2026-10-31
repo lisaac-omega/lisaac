@@ -1,0 +1,46 @@
+Header
+  + name := Main
+Private
+  
+  - check32 x:Real32 <- Out # x.sign # ' ' # x.exponent # ' ' # x.mantissa # '\n'
+  - check64 x:Real64 <- Out # x.sign # ' ' # x.exponent # ' ' # x.mantissa # '\n'
+  - check80 x:Real80 <- Out # x.sign # ' ' # x.exponent # ' ' # x.mantissa # '\n'
+  - check   x:Real   <- Out # x.sign # ' ' # x.exponent # ' ' # x.mantissa # '\n'
+  
+Public
+  
+  - main <-
+  (
+    // In order: 1, -1.5, +0, -0, min denormal, -inf, quiet NaN.
+    check32 (`1.0f`:Real32)
+    check32 (`-1.5f`:Real32)
+    check32 (`0.0f`:Real32)
+    check32 (`-0.0f`:Real32)
+    check32 (`1e-45f`:Real32)
+    check32 (`-__builtin_inff()`:Real32)
+    check32 (`__builtin_nanf("")`:Real32)
+    
+    check64 (`1.0`:Real64)
+    check64 (`-1.5`:Real64)
+    check64 (`0.0`:Real64)
+    check64 (`-0.0`:Real64)
+    check64 (`5e-324`:Real64)
+    check64 (`-__builtin_inf()`:Real64)
+    check64 (`__builtin_nan("")`:Real64)
+    
+    check80 (`1.0L`:Real80)
+    check80 (`-1.5L`:Real80)
+    check80 (`0.0L`:Real80)
+    check80 (`-0.0L`:Real80)
+    check80 (`4e-4951L`:Real80)
+    check80 (`-__builtin_infl()`:Real80)
+    check80 (`__builtin_nanl("")`:Real80)
+    
+    check (`1.0`:Real)
+    check (`-1.5`:Real)
+    check (`0.0`:Real)
+    check (`-0.0`:Real)
+    check (`5e-324`:Real)
+    check (`-__builtin_inf()`:Real)
+    check (`__builtin_nan("")`:Real)
+  )

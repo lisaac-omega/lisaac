@@ -396,6 +396,7 @@ Public
   ( + r:Hmap String_alias Key String_alias
     r := new Hmap String_alias Key String_alias
     r.at "ℤ" add "z"
+    r.at "ℚ" add "q"
     r.at "ℂ" add "c"
     r
   )
@@ -407,7 +408,7 @@ Public
   - type_utils       :Type
   - type_input       :Type
   - type_integer     :Type
-  - type_real64      :Type
+  - type_real        :Type
   - type_char        :Type
   - type_block       :Type
   - type_true        :Type

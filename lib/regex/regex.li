@@ -1,0 +1,202 @@
+Header
+  + name := Regex
+/*
+   POSIX regular expression, in pure Lisaac: same behavior as the <regex.h> C library
+   in the "C" locale, including the GNU operators \w \W \s \S \b \B \< \> \` \'.
+   Everything works on bytes.
+   @regfree gives back the memory of the compiled expression, and @free the
+   one of the @Regex itself, which is reused by the next @create.
+   See examples in test/regex directory.
+   See also the Unix grep manual (man regex).
+  */
+Insert
+  - parent_clone:Clone := Clone
+  
+Public
+  + regex:String; // original source
+  
+  + regfree_done:Boolean; // False also indicate a correct compilation status.
+  
+  + nmatch:Int; // size of pmatch
+  
+Private
+  - stk:Flat Array (Exact Regex)
+  
+  + program:Regex_program; // the compiled regex
+  
+  + matcher:Regex_matcher
+  
+  + pmatch:C_array Int; // start and end of each sub-expression
+  
+  + pmatch_cap:Int
+  
+  + is_nosub:Boolean
+  
+  + status:Int; // last result of regcomp / regexec
+  
+  - make n:Int <-
+  (
+    nmatch := n
+    (pmatch = NULL).if {
+      pmatch_cap := 2 * n
+      pmatch := C_array Int.create pmatch_cap
+    }.elseif {2 * n > pmatch_cap} then {
+      pmatch := pmatch.realloc pmatch_cap with (2 * n)
+      pmatch_cap := 2 * n
+    }
+    regfree_done := True
+  )
+  
+Public
+  
+  - extended:Int := 1
+  - icase:Int := 2
+  - newline:Int := 4
+  - nosub:Int := 8
+  
+  - notbol:Int := 1
+  - noteol:Int := 2
+  - startend:Int := 4
+  
+  - no_match:Int := 1; // Result of @regexec without match.
+  
+  - create: Self <- create_nmatch 1
+  
+  - create_nmatch n:Int : Self <-
+  ( + result:Self
+    (stk.is_empty).if { result := clone; } else { result := stk.pop; }
+    result.make n
+    result
+  )
+  
+  - compile regular_expression:String :Boolean <-
+  // False in case of compilation error.
+  [
+    ? {! regular_expression.is_empty}
+  ]
+  (
+    regcomp regular_expression cflag extended
+    status = 0
+  )
+  
+  - regcomp regular_expression:String cflag f:Int :Int <-
+  // See @regcomp in "man regex".
+  [
+    ? {! regular_expression.is_empty}
+  ]
+  ( + parser:Regex_parser
+    regex := regular_expression
+    parser := Regex_parser.create (regular_expression,(f & extended) != 0,(f & icase) != 0,(f & newline) != 0)
+    status := parser.error
+    (status = 0).if {
+      regfree
+      program := parser.program
+      matcher := Regex_matcher.create program
+      is_nosub := (f & nosub) != 0
+      regfree_done := False
+    } else {
+      parser.program.free
+    }
+    parser.free
+    status
+  )
+  
+  - last_error_in b:String_buffer <-
+  // See @regerror in "man regex".
+  [
+    ? {status != 0}
+  ]
+  (
+    status
+    .when 1 then { b.append "No match"; }
+    .when 2 then { b.append "Invalid regular expression"; }
+    .when 3 then { b.append "Invalid collation character"; }
+    .when 4 then { b.append "Invalid character class name"; }
+    .when 5 then { b.append "Trailing backslash"; }
+    .when 6 then { b.append "Invalid back reference"; }
+    .when 7 then { b.append "Unmatched [, [^, [:, [., or [="; }
+    .when 8 then { b.append "Unmatched ( or \\("; }
+    .when 9 then { b.append "Unmatched \\{"; }
+    .when 10 then { b.append "Invalid content of \\{\\}"; }
+    .when 11 then { b.append "Invalid range end"; }
+    .when 13 then { b.append "Invalid preceding regular expression"; }
+    .when 15 then { b.append "Regular expression too big"; }
+  )
+  
+  - whole_match data:String :Boolean <-
+  // Is the @data completely swallowed by self ?
+  (
+    ((match data start 0) = 0) && {offset_start = 0} && {offset_end = (data.upper + 1)}
+  )
+  
+  - match data:String start idx:Int :Int <- regexec data start idx cflag 0
+  
+  - regexec data:String start idx:Int cflag f:Int :Int <-
+  // See @regexec in "man regex": offsets are relative to @idx.
+  [
+    ? {data != NULL}
+    ? {! regfree_done}
+  ]
+  ( + ca:C_array Char
+    + from,to:Int
+    ca := data.to_external
+    from := idx
+    to := data.count
+    ((f & startend) != 0).if {
+      from := idx + pmatch.at 0
+      to := idx + pmatch.at 1
+    }
+    (matcher.search (ca,idx,from,to) notbol ((f & notbol) != 0) noteol ((f & noteol) != 0) sub ((! is_nosub) && {nmatch > 1})).if {
+      status := 0
+      (is_nosub).if_false {
+        0.to (nmatch - 1) do { i:Int
+          (i <= program.nb_sub).if {
+            pmatch.at (2 * i) put (relative_to idx value (matcher.best.at (2 * i)))
+            pmatch.at (2 * i + 1) put (relative_to idx value (matcher.best.at (2 * i + 1)))
+          } else {
+            pmatch.at (2 * i) put (-1)
+            pmatch.at (2 * i + 1) put (-1)
+          }
+        }
+      }
+    } else {
+      status := no_match
+    }
+    status
+  )
+  
+  - offset_start:Int <- offset_start_index 0
+  
+  - offset_start_index idx:Int :Int <- pmatch.at (2 * idx)
+  
+  - offset_end:Int <- offset_end_index 0
+
+  - offset_end_index idx:Int :Int <- pmatch.at (2 * idx + 1)
+
+  - regfree <-
+  (
+    (regfree_done).if_false {
+      matcher.free
+      program.free
+      matcher := NULL
+      program := NULL
+      regfree_done := True
+    }
+  )
+  
+  - free <-
+  // Give back self: it must not be used anymore.
+  (
+    regfree
+    regex := NULL
+    stk.add_last self
+  )
+
+Private
+  
+  - relative_to idx:Int value v:Int :Int <-
+  ( + r:Int
+    r := -1
+    (v >= 0).if { r := v - idx; }
+    r
+  )

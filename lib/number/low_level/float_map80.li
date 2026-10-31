@@ -5,18 +5,13 @@ Inherit
 
   - parent_float_map:Float_map := Float_map
 
-Mapping,Private
+Private
 
-  + exp_16:Uint16
-  + man_64:Uint64
+  // x86 layout: 64 bits of mantissa, then the sign and the 15 bits of exponent.
+  
+  - exp_16:Uint16 <- `((union { long double f; struct { uint64_t m; uint16_t e; } b; }){.f = @self}).b.e`:Uint16
 
-Real, Real32, Real64, Real80
-
-  - get_map f:Self <-
-  ( + tab:C_array(Self)
-    tab := Cast Float_map80 To (C_array Self).on Float_map80
-    tab.at 0 put f
-  )
+  - man_64:Uint64 <- `((union { long double f; struct { uint64_t m; uint16_t e; } b; }){.f = @self}).b.m`:Uint64
 
 Public
   

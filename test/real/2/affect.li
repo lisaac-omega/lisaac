@@ -1,0 +1,14 @@
+Header
+  + name := Affect
+
+Public
+  
+  - main <-
+  ( + r32:Real32
+    + r64:Real64
+    
+    r32 := 32.5
+    r64 := 62.5
+    r32 := r64
+  )
+  

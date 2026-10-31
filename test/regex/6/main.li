@@ -1,0 +1,104 @@
+Header
+  + name := Main
+  /* The @Regex API: flags, offsets relative to @start, errors. */
+Insert
+  - parent_utils:Utils := Utils
+  
+Private
+  
+  - error_of p:String cflag f:Int is msg:String <-
+  ( + re:Regex
+    re := Regex.create
+    Test.check (re.regcomp p cflag f != 0)
+    String.tmp { tmp:String_buffer
+      re.last_error_in tmp
+      Test.check tmp string msg
+    }
+  )
+  
+Public
+  
+  - main <-
+  ( + re:Regex
+    + data:String
+    
+    // Offsets are relative to @start, where ^ also matches.
+    re := Regex.create
+    Test.check (re.compile "^b+")
+    data := "aabbbcc"
+    Test.check ((re.match data start 0) = Regex.no_match)
+    Test.check ((re.match data start 2) = 0)
+    Test.check (re.offset_start) integer 0
+    Test.check (re.offset_end) integer 3
+    Test.check ((re.regexec data start 2 cflag (Regex.notbol)) = Regex.no_match)
+    
+    // Walk on all the matches.
+    re := Regex.create_nmatch 2
+    Test.check (re.compile "([0-9]+)-")
+    data := "1- 22- 333-"
+    Test.check ((re.match data start 0) = 0)
+    Test.check (re.offset_end_index 1) integer 1
+    Test.check ((re.match data start 2) = 0)
+    Test.check (re.offset_start) integer 1
+    Test.check (re.offset_end) integer 4
+    Test.check ((re.match data start 6) = 0)
+    Test.check (re.offset_start_index 1) integer 1
+    Test.check (re.offset_end_index 1) integer 4
+    Test.check ((re.match data start 11) = Regex.no_match)
+    
+    // More @nmatch than sub-expressions.
+    re := Regex.create_nmatch 3
+    Test.check (re.compile "(a)|(b)")
+    Test.check ((re.match "b" start 0) = 0)
+    Test.check (re.offset_start_index 1) integer (-1)
+    Test.check (re.offset_start_index 2) integer 0
+    
+    // Leftmost longest, not the first alternative.
+    re := Regex.create_nmatch 4
+    Test.check (re.compile "(a|ab)(c|bcd)(d*)")
+    Test.check ((re.match "abcd" start 0) = 0)
+    Test.check (re.offset_end) integer 4
+    Test.check (re.offset_end_index 1) integer 2
+    Test.check (re.offset_end_index 2) integer 3
+    Test.check (re.offset_end_index 3) integer 4
+    
+    // @newline
+    re := Regex.create
+    Test.check (re.regcomp "^b$" cflag (Regex.newline)) integer 0
+    Test.check ((re.match "a\nb\nc" start 0) = 0)
+    Test.check (re.offset_start) integer 2
+    Test.check (re.regcomp "^b$" cflag 0) integer 0
+    Test.check ((re.match "a\nb\nc" start 0) = Regex.no_match)
+    Test.check (re.regcomp "a.c" cflag (Regex.newline)) integer 0
+    Test.check ((re.match "a\nc" start 0) = Regex.no_match)
+    
+    // Basic syntax, @icase and @whole_match.
+    Test.check (re.regcomp "\\(ab*\\)\\1" cflag (Regex.icase)) integer 0
+    Test.check (re.whole_match "aBBabb")
+    Test.check (! re.whole_match "aBBab")
+    
+    // @regfree then compile again.
+    re.regfree
+    Test.check (re.regfree_done)
+    Test.check (re.compile "x")
+    Test.check (! re.regfree_done)
+    Test.check (re.whole_match "x")
+    
+    // Messages.
+    error_of "[a" cflag (Regex.extended) is "Unmatched [, [^, [:, [., or [="
+    error_of "(a" cflag (Regex.extended) is "Unmatched ( or \\("
+    error_of "a{2" cflag (Regex.extended) is "Unmatched \\{"
+    error_of "a{2,1}" cflag (Regex.extended) is "Invalid content of \\{\\}"
+    error_of "[b-a]" cflag (Regex.extended) is "Invalid range end"
+    error_of "*a" cflag (Regex.extended) is "Invalid preceding regular expression"
+    error_of "a{99999}" cflag (Regex.extended) is "Regular expression too big"
+    error_of "(a)\\2" cflag (Regex.extended) is "Invalid back reference"
+    error_of "a\\" cflag (Regex.extended) is "Trailing backslash"
+    error_of "[[.ab.]]" cflag (Regex.extended) is "Invalid collation character"
+    error_of "[" cflag (Regex.extended) is "Invalid regular expression"
+    Test.check ((re.match "y" start 0) = Regex.no_match)
+    String.tmp { tmp:String_buffer
+      re.last_error_in tmp
+      Test.check tmp string "No match"
+    }
+  )

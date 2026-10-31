@@ -484,6 +484,8 @@ Public
     + data:Array Uint8
     String.tmp { p:String_buffer
       p.copy (lip "lisaac" str)
+      
+      // DCDC mouais.... il a pas d'asset
       p.append "elit/assets/font/DejaVuSansMono.ttf"
       f ?= File_system.get p
       ((f != NULL) && {f.open}).if {

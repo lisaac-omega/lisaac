@@ -57,8 +57,8 @@ Public
       .when 7 then { zero_track; }
       .when 8 then { randomize; }
       .when 9 then { check_append_in_base_10; }
-      .when 10 then { check_shift_left (loop & 111b); }
-      .when 11 then { check_shift_right (loop & 111b); }
+      .when 10 then { check_shift_left (Random.min 0 max 200); }
+      .when 11 then { check_shift_right (Random.min 0 max 200); }
       .when 12 then { check_comparison; }
       .when 13 then { check_unary_minus; }
       .when 14 then { check_unary_plus; }
@@ -284,15 +284,11 @@ Public
     ? {i >= 0}
   ]
   (
-    (mpz2.sgn >= 0).if {
-      verbose .if { "shift_right".println; }
-      shift_mem := i
-      mpz3.shift_right(mpz2,i)
-      big3.free; big3 := big2 >> i
-      check_vars "shift_right"
-    } else {
-      check_shift_left i
-    }
+    verbose .if { "shift_right".println; }
+    shift_mem := i
+    mpz3.shift_right(mpz2,i)
+    big3.free; big3 := big2 >> i
+    check_vars "shift_right"
   )
   
   - check_shift_left (i:Int) <-

@@ -1,0 +1,44 @@
+Header
+  - name := Main
+Public
+  
+  - main <-
+  ( + a,b,c:ℚ
+    + z,y:ℤ
+    + t:Array ℚ
+    
+    a := 3.divq 2 + 4 + (17.divq 3)
+    b := ℚ.init_s "-6/4"
+    Out # a # ' ' # b # ' ' # 6.divq (-4) # ' ' # 0.divq 7 # '\n'
+    Out # a + b # ' ' # a - b # ' ' # a * b # ' ' # a / b # '\n'
+    Out # a + 2 * b # ' ' # -a # ' ' # b.abs # ' ' # b.inv # '\n'
+    Out # a.pow 3 # ' ' # b.pow (-3) # ' ' # a << 3 # ' ' # a >> 3 # '\n'
+    Out # a.cmp b # ' ' # (a > b) # ' ' # (a = a.copy) # ' ' # b.sign # ' ' # a.to_z # ' ' # b.to_z # '\n'
+    Out # (1.divq 3).to_real64 # '\n'
+    Out # ℚ.init_d 0.75 # ' ' # ℚ.init_d (`0.0/0.0`:Real64) # ' ' # ℚ.init_d (`1.0/0.0`:Real64) # '\n'
+    Out # ℚ.init_s "FF/3" base 16 # '\n'
+    
+    // Beyond one limb, read in base 10.
+    z := ℤ.init "16639562348171317811"
+    c := ℚ.init (z * z,ℤ.init "340282366920938463463374607431768211456" * z)
+    Out # c # '\n'
+    z := 5
+    y := z << 64
+    Out # (y >> 65) # ' ' # (y.gcd (ℤ.init "1000000000000000000000000000000")) # '\n'
+    
+    // -2^62 has only one representation.
+    y := ℤ.init_si (-(1 << 61))
+    Out # ((y << 1) = ℤ.init_si (-(1 << 62))) # '\n'
+    
+    // A zeroed value is 0/1.
+    t := Array ℚ.create 3
+    t.at 1 put a
+    Out # t.at 0 # ' ' # t.at 0.den # ' ' # t.at 0 + a # ' ' # a * t.at 2 # ' ' # (t.at 0 = 0) # ' ' # t.at 1 # '\n'
+    t.set_count 5
+    Out # t.at 4 # ' ' # t.at 4.den # ' ' # t.at 4.to_real64 # '\n'
+    b := ℚ.init (0,7)
+    Out # (t.at 2 = b) # '\n'
+    t.at 2.free
+    (t.at 2.copy).println
+    (- t.at 2).println
+  )
