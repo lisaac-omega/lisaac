@@ -17,7 +17,8 @@ Public
   //-- E /   0 -> Error.
   //-- E /   1 -> E
   //-- E /  -1 -> - E
-  //-- E / 2^n -> E >> n
+  //-- E(unsigned) / 2^n -> E >> n
+  // Not for signed E: @>> rounds down, whereas @/ truncates toward zero.
   ( + result:Expr
     + v:Int64
 
@@ -34,7 +35,7 @@ Public
     }.elseif {right_cst.value = -1} then {
       result := Expr_neg.create position with left
       right_cst.remove
-    }.elseif {(v := right_cst.to_power) != -1} then {
+    }.elseif {(! right_cst.is_signed) && {(v := right_cst.to_power) != -1}} then {
       right_cst.set_value v
       result := Expr_shift_r.create position with left and right_cst
     }
