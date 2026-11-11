@@ -1,0 +1,51 @@
+Header
+  + name := Hilbert
+/*
+  Niveau 6 - La courbe de Hilbert : deux procédures qui s'appellent
+  l'une l'autre.
+
+  hilbert @n gauche @l et hilbert @n droite @l sont deux méthodes
+  différentes : en Lisaac Ω, les mots-clés gauche et droite font partie
+  du nom de la méthode. Chacune appelle l'autre : c'est une récursivité
+  croisée. Les deux méthodes sont symétriques : tout ce qui tourne à
+  gauche dans l'une tourne à droite dans l'autre.
+
+  Cette courbe passe une seule fois par chaque point d'une grille sans
+  jamais se croiser. Au niveau 7, la grille fait 128 x 128 cases.
+
+  À essayer : hilbert 2 gauche 150, puis 3 gauche 80 pour comprendre.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - hilbert n:Int gauche l:Int <-
+  (
+    if (n > 0) then {
+      tourne_gauche 90 ; hilbert (n - 1) droite l ; avance l
+      tourne_droite 90 ; hilbert (n - 1) gauche l ; avance l
+      hilbert (n - 1) gauche l ; tourne_droite 90
+      avance l ; hilbert (n - 1) droite l ; tourne_gauche 90
+    }
+  )
+
+  - hilbert n:Int droite l:Int <-
+  (
+    if (n > 0) then {
+      tourne_droite 90 ; hilbert (n - 1) gauche l ; avance l
+      tourne_gauche 90 ; hilbert (n - 1) droite l ; avance l
+      hilbert (n - 1) droite l ; tourne_gauche 90
+      avance l ; hilbert (n - 1) gauche l ; tourne_droite 90
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Hilbert" départ (0,0) taille (765, 765)
+    fond white crayon (1, Color.rgb(255,20,20))
+
+    téléportation (0,765)
+    hilbert 7 gauche 6
+  )

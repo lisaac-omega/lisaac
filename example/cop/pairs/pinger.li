@@ -1,0 +1,29 @@
+Header
+  - name := Pinger
+// Active object: plays @k rounds with its @Ponger, then tells the @Counter.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + partner:Ponger
+
+  + counter:Counter
+
+  - play p:Ponger counter c:Counter rounds k:Int <-
+  (
+    partner := p
+    counter := c
+    partner.ping self rest k
+  )
+
+  - pong k:Int <-
+  (
+    (k = 0).if {
+      counter.done
+    } else {
+      partner.ping self rest (k - 1)
+    }
+  )

@@ -1,0 +1,31 @@
+Header
+  + name := Main
+/* The thread-ring of the Benchmarks Game: 503 universes linked in a ring pass a token N times
+   (by default 50_000_000, or the first argument; the second argument changes the number of
+   universes); the program prints the number (1..503) of the universe which holds the token
+   when it reaches 0. Each pass is an asynchronous message
+   to the next universe: it measures the cost of a message, to compare with Go, Erlang...
+   Compile with `-cop -boost': `lisaac main -cop -boost', then `./main 50000000'. */
+
+Public
+
+  - main <-
+  ( + ring:Array Link
+    + n,passes:Int
+    n := 503
+    passes := 50_000_000
+    (Command_args.count > 1).if {
+      passes := Command_args.at 1.to_int
+    }
+    (Command_args.count > 2).if {
+      n := Command_args.at 2.to_int
+    }
+    ring := Array Link .create_with_capacity n
+    1.to n do { i:Int
+      ring.add_last (Link.new)
+    }
+    0.to (n - 1) do { i:Int
+      ring.at i.set_id (i + 1) next (ring.at ((i + 1) % n))
+    }
+    ring.first.pass passes
+  )

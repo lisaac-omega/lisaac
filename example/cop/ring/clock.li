@@ -1,0 +1,29 @@
+Header
+  - name := Clock
+// Active object: the time of the tour of the token.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + begin:Uint64
+
+  + nodes:Int
+
+  - start n:Int <-
+  (
+    nodes := n
+    begin := Time.gettimeofday
+  )
+
+  - stop <-
+  ( + d:Uint64
+    d := Time.gettimeofday - begin
+    Out # nodes # " universes in a ring, " # count_messages # " messages in " # (d / 1000) # " ms\n"
+  )
+
+Private
+
+  - count_messages:Int <- nodes * 1000

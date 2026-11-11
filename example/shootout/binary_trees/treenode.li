@@ -1,0 +1,21 @@
+Header
+  + name := Treenode
+// Node of binary-trees.
+
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + left:Treenode
+  + right:Treenode
+
+  - set (l,r:Treenode) :Self <- ( left := l; right := r; self )
+
+  - check:Int <-
+  // Number of nodes.
+  ( + result:Int
+    result := 1
+    (left != NULL).if { result := result + left.check + right.check; }
+    result
+  )

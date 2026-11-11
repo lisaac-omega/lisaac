@@ -1,0 +1,33 @@
+Header
+  + name := Alien_ex8
+/*
+  Alien 8 - Un tableau.
+
+  Le tableau @tab contient trois entiers : 2, 6 et 10. La boucle va de
+  tab.lower à tab.upper, et tab.at i donne la valeur rangée à l'indice
+  @i.
+
+  À faire : écrire la valeur de tab.at i à chaque tour, puis prévoir la
+  case d'arrivée.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - main <-
+  ( + tab: Array(Int) 
+    vitesse("plein gaz")
+    tab := new Array(Int) of (2, 6, 10)    
+    de (tab.lower) à (tab.upper) répéter { i:Int
+      gauche(tab.at i)
+      haut(tab.at i)
+      droite((tab.at i) + 2)
+      bas((tab.at i) + 2)
+    }
+    gauche(12)
+    fin
+  )
+  
+  

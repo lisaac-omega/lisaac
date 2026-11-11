@@ -1,0 +1,62 @@
+Header
+  + name := Calcul_du_prix
+/*
+  Exercice 1 page 3 des exercices
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - chercher_minimum (a, b:Real64): Real64 <-
+  ( + minimum:Real64
+    
+    si (a < b) alors {
+      minimum := a
+    } sinon {
+      minimum := b
+    }
+    minimum // est retourné
+  )
+  
+  - chercher_maximum (a, b:Real64): Real64 <-
+  ( + maximum:Real64
+    
+    si (a > b) alors {
+      maximum := a
+    } sinon {
+      maximum := b
+    }
+    maximum // est retourné
+  )
+  
+  - main <-
+  ( + prix:Real64 // pour chaque lecture
+    + total:Real64
+    + prix_moins_cher:Real64
+    + prix_plus_cher:Real64
+    + total_après_réduction:Real64
+    
+    prix := lire_réel
+    total := 0
+    prix_plus_cher := prix
+    prix_moins_cher := prix
+    tant_que {prix != 0} faire {
+      total := total + prix
+      prix_moins_cher := chercher_minimum(prix, prix_moins_cher)
+      prix_plus_cher  := chercher_maximum(prix, prix_plus_cher)
+      prix := lire_réel
+    }    
+    si (total >= 100) alors {
+      total_après_réduction := total - prix_moins_cher - (prix_plus_cher * 0.1)
+    } sinon {
+      total_après_réduction := total
+    }
+    Out # "total=" # total # "\n" 
+    Out # "prix_moins_cher=" # prix_moins_cher # "\n"
+    Out # "prix_plus_cher=" # prix_plus_cher # "\n"
+    Out # "total_après_réduction=" # total_après_réduction # "\n"
+    Out # "remise=" # (total - total_après_réduction) # "\n"
+  )
+  

@@ -1,0 +1,49 @@
+Header
+  + name := Arbre_fractale
+/*
+  Niveau 6 - La récursivité : l'arbre fractal.
+
+  Une procédure récursive s'appelle elle-même. Un arbre, c'est un tronc
+  qui porte deux arbres plus petits : tronc appelle donc deux fois tronc,
+  avec une longueur multipliée par r (r < 1) et une hauteur h - 1.
+
+  Le test if (h > 0) arrête la récursivité : sans lui, la tortue
+  dessinerait des branches de plus en plus petites, sans jamais finir.
+
+  Après avoir dessiné ses deux branches, la tortue revient à son point
+  et à sa direction de départ (tourne_droite 30, puis recule) : c'est
+  indispensable pour que le dessin des autres branches tombe juste.
+
+  À essayer : hauteur 5, puis réduction 0.6 ou 0.85.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+  
+  - tronc longueur:Real64 trait épaisseur:Int hauteur h:Int réduction r:Real64 <-
+  (
+    pen_color := (h < 5) ok leaf_green or brown
+    if (h > 0) then {
+      épaisseur_trait (épaisseur.max 1) ; avance (longueur.floor)
+
+      tourne_droite 30
+      tronc (longueur * r) trait (épaisseur - épaisseur.div 2) hauteur (h - 1) réduction r
+
+      tourne_gauche 60
+      tronc (longueur * r) trait (épaisseur - épaisseur.div 2) hauteur (h - 1) réduction r
+
+      tourne_droite 30
+      recule (longueur.floor)
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Arbre Fractale" départ (0,0) taille (1130,850)
+    fond black crayon (2, brown)
+    téléportation (540,839)
+    tourne_gauche 90
+    tronc 218 trait 18 hauteur 14 réduction 0.76
+  )

@@ -1,0 +1,47 @@
+Header
+  + name := Golden_ratio
+/*
+  The golden ratio φ = (1 + √5) / 2 is the positive solution of x^2 = x + 1.
+  The quotients F(n+1) / F(n) of the Fibonacci numbers get closer and closer
+  to φ: the gap is divided by about φ^2 = 2.618... at each step.
+
+  With @ℝ, φ^2 = φ + 1 is checked as written, and the gap is printed exactly,
+  even when it is smaller than 10^-30. Each step is computed in a
+  `ℝ.region_do', which frees the values of the step at its end.
+
+  Shows: the real numbers @ℝ, `sqrt', `=', @ℤ converted to @ℝ, and `ℝ.region_do'.
+
+  To compile, as usual in a terminal:
+  $ lisaac golden_ratio -q -boost
+  $ ./golden_ratio
+  */
+Public
+
+  - main <-
+  ( + phi,gap:ℝ
+    + a,b,c:ℤ
+    phi := (1 + 5.to_r.sqrt) / 2
+    Out # "phi = " # phi # '\n'
+    Out # "phi^2 = phi + 1: " # (phi * phi = phi + 1) # '\n'
+    Out # "1 / phi = phi - 1: " # (1 / phi = phi - 1) # '\n'
+    a := 1
+    b := 1
+    1.to 80 do { n:Int
+      c := a + b
+      a.free
+      (a,b) := (b,c)
+      (n % 10 = 0).if {
+        ℝ.region_do {
+          gap := b.to_r / a.to_r - phi
+          Out # "F(" # n + 2 # ") / F(" # n + 1 # ") - phi = "
+          String.tmp { tmp:String_buffer
+            gap.append_in tmp decimal 40
+            Out # tmp
+          }
+          Out # '\n'
+        }
+      }
+    }
+    a.free
+    b.free
+  )

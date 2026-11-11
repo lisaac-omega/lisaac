@@ -1,0 +1,52 @@
+Header
+  - name := Filter
+// Active object (`-' in the name): each clone is a universe, with its thread and its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + prime:Int
+
+  + next:Filter
+  // The next filter of the chain (NULL at the end).
+
+  + out:Printer
+
+  - create p:Int out o:Printer :Self <-
+  // A new universe (its fields start from their initial values), given its prime by a message.
+  ( + result:Self
+    result := clone
+    result.set_prime p out o
+    result
+  )
+
+  - set_prime p:Int out o:Printer <-
+  (
+    prime := p
+    out := o
+    out.found p
+  )
+
+  - push n:Int <-
+  // Asynchronous: a number for this filter.
+  (
+    ((n % prime) != 0).if {
+      (next = NULL).if {
+        // A new prime: a new filter, created from this universe.
+        next := create n out out
+      } else {
+        next.push n
+      }
+    }
+  )
+
+  - close <-
+  // The end of the numbers.
+  (
+    (next = NULL).if {
+      out.close
+    } else {
+      next.close
+    }
+  )

@@ -1,0 +1,41 @@
+Header
+  + name := Bernoulli
+/*
+  The Bernoulli numbers B(n), exact, with the Akiyama-Tanigawa algorithm
+  (B is the traditional name, after Jacob Bernoulli). For each m from 0
+  to n, the table @a receives 1/(m+1) at index m; then, for j from m
+  down to 1, a(j-1) becomes j (a(j-1) - a(j)). B(m) is then a(0).
+
+  Every step divides and subtracts: with @Real64, the error would be
+  multiplied at each step, and B(30) would be wrong. With @ℚ, each
+  value is exact and always reduced: B(30) = 8615841276005/14322.
+
+  Shows: the rational numbers @ℚ, `divq' to make one from two @Int,
+  @ℚ mixed with @Int, and an @Array of @ℚ.
+
+  To compile, as usual in a terminal:
+  $ lisaac bernoulli -q -boost
+  $ ./bernoulli 60
+  */
+Public
+
+  - main <-
+  ( + n:Int
+    + a:Array ℚ
+    + b:ℚ
+    n := 30
+    (Command_args.count = 2).if {
+      n := Command_args.at 1.to_int
+    }
+    a := Array ℚ.create (n + 1)
+    0.to n do { m:Int
+      a.at m put (1.divq (m + 1))
+      m.downto 1 do { j:Int
+        a.at (j-1) put ((a.at (j-1) - a.at j) * j)
+      }
+      b := a.at 0
+      ((m < 2) || {m.is_even}).if {
+        Out # "B(" # m # ") = " # b # '\n'
+      }
+    }
+  )

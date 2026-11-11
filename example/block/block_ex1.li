@@ -1,0 +1,17 @@
+Header
+  + name := Block_ex1
+  /**/
+Public
+  
+  - main <-
+  (+ b:{} // No parameter, no result.
+ 
+    (Random.init_clock.flip_coin).if {
+      b := { "first block.\n".print }
+    } else {
+      b := { "else block.\n".print }
+    }
+    "I'll run the ".print
+    b.value
+  )
+  

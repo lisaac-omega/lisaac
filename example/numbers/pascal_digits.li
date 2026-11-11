@@ -1,0 +1,89 @@
+Header
+  + name := Pascal_digits
+/*
+  The first 100 rows of the Pascal triangle, computed with @ℕ and only
+  additions: C(n,k) = C(n-1,k-1) + C(n-1,k). The color of a cell is its
+  number of digits, from blue (1 digit) to red (30 digits for C(100,50)).
+  
+  The cells with a dark dot hold a value of 2^63 or more: a @ℕ which no
+  longer fits in one 64 bits word, and has become a big number.
+  
+  Shows: the natural numbers @ℕ, `+' and `to_int64', a @Window.
+  
+  To compile, as usual in a terminal:
+  $ lisaac pascal_digits -q -boost
+  $ ./pascal_digits
+  */
+Inherit
+  
+  + parent_window:Flat Window
+  
+Private
+  
+  - rows:Int := 100
+  
+  - cell:Real32 := 8.0
+  
+  - digits:Array Int := new Array Int capacity 5050
+  // Number of digits of each cell, row after row.
+  
+  - big:Array Boolean := new Array Boolean capacity 5050
+  // Does the cell need more than one word?
+  
+  - digit_count n:ℕ :Int <-
+  ( + r:Int
+    String.tmp { tmp:String_buffer
+      n.append_in tmp
+      r := tmp.count
+    }
+    r
+  )
+  
+  - compute <-
+  ( + row,next:Array ℕ
+    + ok:Boolean
+    + x:Int64
+    row := Array ℕ.create 1
+    row.at 0 put (ℕ.from_int64 1)
+    1.to rows do { n:Int
+      row.foreach { c:ℕ
+        digits.add_last (digit_count c)
+        (ok,x) := c.to_int64
+        big.add_last (! ok)
+      }
+      next := Array ℕ.create (n + 1)
+      next.at 0 put (ℕ.from_int64 1)
+      next.at n put (ℕ.from_int64 1)
+      1.to (n - 1) do { k:Int
+        next.at k put (row.at (k - 1) + row.at k)
+      }
+      row.foreach { c:ℕ c.free; }
+      row := next
+    }
+  )
+  
+Public
+  
+  - draw <-
+  ( + i:Int
+    + x,y,h:Real32
+    0.to (rows - 1) do { n:Int
+      0.to n do { k:Int
+        x := 10 + (rows - 1 - n + 2 * k) * cell / 2
+        y := 10 + n * cell
+        h := (2.0 / 3.0) * (1.0 - (digits.at i - 1).to_real32 / 29.0)
+        fill { rect (x,y) size (cell - 1,cell - 1); } color (Color.hsl (h,0.8,0.5))
+        (big.at i).if {
+          fill { circle (x + cell / 2,y + cell / 2) radius 1.5; } color (Color.rgb (40,40,40))
+        }
+        i := i + 1
+      }
+    }
+  )
+  
+  - main <-
+  (
+    compute
+    init "Pascal triangle with ℕ" size ((20 + rows * cell).to_int,(20 + rows * cell).to_int)
+    Paper.run
+  )

@@ -1,0 +1,29 @@
+Header
+  + name := Point
+  /*
+*/
+Insert
+  
+  - parent_print:Print := Print
+  
+Public
+  // ou Public ou Private ou Directory ou Essai_point
+  
+  + x:Int
+  
+  + y:Int
+  
+  - set_x vx:Int <-
+  (
+    x := vx
+  )
+  
+  - append_in (b: String_buffer) <-
+  (
+    "x=".append_in b
+    x.append_in b
+    "y=".append_in b
+    y.append_in b    
+  )
+  
+  

@@ -1,0 +1,38 @@
+Header
+  + name := Palindrome
+/*
+  LAVAL, RADAR, SENONES
+  */
+
+Public
+  
+  - être_palindrome ch:String: Boolean <-
+  ( + résultat:Boolean
+    + idx_gauche, idx_droit:Int 
+    
+    idx_gauche := 0
+    idx_droit := ch.upper
+    
+    résultat := True
+    while {résultat && {idx_gauche < idx_droit}} do {
+      if ((ch.at idx_gauche) != (ch.at idx_droit)) then {
+        résultat := False
+      }
+      idx_gauche := idx_gauche + 1
+      idx_droit := idx_droit - 1
+    }
+    résultat
+  )
+  
+  - main <-
+  ( + s: String
+    + p: Boolean
+    
+    if (! Command_args.valid_index 1) then {
+      "Manque un arguement dans la commande.".println
+      System.exit 1
+    }
+    s := Command_args.at 1
+    p := être_palindrome(s)
+    p.println
+  )

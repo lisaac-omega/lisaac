@@ -1,0 +1,29 @@
+Header
+  + name := Main
+/* A parallel sum (map-reduce): a big @Immutable_array is read by several universes at the same
+   time, without copy and without lock (it is immutable: it can be shared). Each @Summer adds
+   its slice and sends its partial sum to the @Reducer, which adds the partial sums.
+   Compile with `-cop': `lisaac main -cop'. */
+
+Public
+
+  - main <-
+  ( + data:Immutable_array Int
+    + reducer:Reducer
+    + s:Summer
+    + n,parts,size:Int
+    n := 20_000_000
+    parts := 4
+    data := Immutable_array Int .create n with { i:Int; i + 1 }
+    reducer := Reducer.new
+    reducer.expect parts total n
+    size := n / parts
+    0.to (parts - 1) do { k:Int
+      s := Summer.new
+      (k = parts - 1).if {
+        s.sum data from (k * size) to (n - 1) reply reducer
+      } else {
+        s.sum data from (k * size) to ((k + 1) * size - 1) reply reducer
+      }
+    }
+  )

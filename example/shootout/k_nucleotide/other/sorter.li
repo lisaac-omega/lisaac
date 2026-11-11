@@ -1,0 +1,51 @@
+Header
+  + name := Sorter
+Inherit
+  - parent_clone:Clone := Clone
+  
+  + parent_string:Flat String_buffer
+  
+Public  
+  + hash_code:Int
+  
+  + freq:Int := 1
+  
+  - new:Self <- clone
+  
+  - init_with buf:C_array(Char) <-
+  (
+    storage   := buf
+    hash_code := count := 0
+  )
+  
+  - set_count new_count:Int <-
+  ( + result,low:Int
+    
+    result := hash_code
+    low    := count + 1
+    count  := new_count
+    (low).to (new_count) do { i:Int
+      result := (result * 5) + at i.code
+    }
+    (result < 0).if {
+      result := ~ result
+    }
+    hash_code := result
+    capacity := count
+  )
+  
+  - self:Self '~=' Left 40 other:String :Boolean <-
+  ( + result:Boolean
+   
+    ((count = other.count) && {hash_code = other.hash_code}).if {
+      ? {count != 0}
+      result:=storage.fast_memcmp (other.storage) until count
+    }
+    result
+  )
+  
+  - inc_freq <-
+  ( 
+    freq := freq + 1
+  )
+    

@@ -1,0 +1,34 @@
+Header
+  + name := Array_example
+/*
+  A first use of an @Array in Lisaac Ω.
+  An @Array of @Int is filled with add_first and add_last, every element
+  is printed and changed, then printed again.
+
+  Shows: the creation of an @Array, its indexes from @lower to @upper,
+  @at and @at...put to read and write an element, and the two ways to
+  walk through it: a loop on the indexes and @foreach.
+
+  To compile, as usual in a terminal:
+  $ lisaac array_example -q -boost
+  $ ./array_example
+  */
+Public
+  
+  + arr: Array Int := new Array Int capacity 32
+  
+  - main <-
+  (
+    Out # "count:" # (arr.count) # '\n'
+    arr.add_last 2
+    arr.add_first 1
+    from (arr.lower) to (arr.upper) do { idx:Int
+      (arr.at idx) .println
+      arr.at idx put (arr.at idx + 2)
+    }
+    "after:" println
+    arr.foreach { val:Int 
+      val.println
+    }
+  )
+  

@@ -1,0 +1,28 @@
+Header
+  + name := Rosace
+/*
+  Le parent commun de rosace_cadres.li, rosace_cercles.li et
+  rosace_fleurs.li : le curseur propose tous les diviseurs entiers
+  de 360, pour que la division 360 / n tombe juste.
+*/
+Inherit
+
+  + parent_curseur:Flat Curseur_tortue
+
+Public
+
+  // Tous les diviseurs entiers de 360, pour que la division tombe juste.
+  - valeurs: Array Int :=
+      new Array Int of (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20,
+                        24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360)
+
+  - choix_initial:Int <- 15; // n = 36
+
+  - légende msg:String_buffer <-
+  (
+    msg.copy "n = "
+    valeur.append_in msg
+    msg.append " angle = "
+    (360 / valeur).append_in msg
+    msg.append "°"
+  )

@@ -1,0 +1,26 @@
+Header
+  + name := Main
+/* A ring of universes (Joe Armstrong's exercise): each @Node gives a token to the next one,
+   round the ring, again and again. It measures the cost of a message from one universe to
+   another (with a thread for each universe: a message wakes up the next thread).
+   Compile with `-cop -boost': `lisaac main -cop -boost'. */
+
+Public
+
+  - main <-
+  ( + nodes:Array Node
+    + clock:Clock
+    + n,rounds:Int
+    n := 100
+    rounds := 1000
+    clock := Clock.new
+    nodes := Array Node .create_with_capacity n
+    1.to n do { i:Int
+      nodes.add_last (Node.new)
+    }
+    0.to (n - 1) do { i:Int
+      nodes.at i.link (nodes.at ((i + 1) % n)) clock clock
+    }
+    clock.start n
+    nodes.first.pass (n * rounds)
+  )

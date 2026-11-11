@@ -1,0 +1,45 @@
+Header
+  + name := Point_polaire
+Inherit
+  
+  - parent_point:Point := Point
+  
+Public
+  
+  + radius:Real64
+  
+  + angle:Real64
+  
+  
+  - x:Int <-
+  (
+    ((radius * cos(angle)).to_int).abs
+  )
+  
+  
+  - y:Int <-
+  (
+    ((radius * sin(angle)).to_int).abs
+  )
+  
+  - set_x vx:Int <-
+  (
+    not_yet_implemented
+  )
+   
+  - new self:Self radius r:Real64 angle a:Real64 :Self <-
+  ( + result:Self
+    
+    result := clone
+    result.radius r angle a
+    result  
+  )
+  
+Private  
+  
+  - radius r:Real64 angle a:Real64 <-
+  (
+    radius := r
+    angle := a
+  )
+  

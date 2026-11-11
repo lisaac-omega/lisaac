@@ -1,0 +1,127 @@
+Header
+  + name := Arrow_data
+Private
+  
+      
+  // Game data: 
+  
+  - lives:Int := 3 
+  
+  - score:Int := 0 
+  
+  - grid:Array2 Arrow
+  
+  - background_color:Color := Colors.white
+  
+  - free_cells:Int
+  
+  - random:Random
+  
+  // Motion data:
+  - moving:Boolean
+  - head_x:Int
+  - head_y:Int
+  - tail_x:Int
+  - tail_y:Int
+    
+  
+  // Shapes constants - Four kinds of arrow heads (0 to 3):
+  - arrow_north:Int := 0 // Arrow to the North
+  - arrow_east:Int := 1 // Arrow to the East
+  - arrow_south:Int := 2 // Arrow to the South
+  - arrow_west:Int := 3 // Arrow to the West
+  
+  // Shapes constants - Vertical bar:
+  - south_to_north:Int := 4
+  - north_to_south:Int := 5
+  
+  // Shapes constants - Horizontal bar:
+  - west_to_east:Int := 6
+  - east_to_west:Int := 7
+  
+  // Quarter turn:
+  - south_to_east:Int := 8
+  - east_to_south:Int := 9
+  - west_to_south:Int := 10
+  - south_to_west:Int := 11
+  - west_to_north:Int := 12
+  - north_to_west:Int := 13
+  - east_to_north:Int := 14 
+  - north_to_east:Int := 15 
+  
+  // Shapes constants - Tail family:
+  - tail_to_south:Int := 16 
+  - tail_to_west:Int := 17
+  - tail_to_north:Int := 18
+  - tail_to_east:Int := 19
+  
+  // Shapes constants:
+  - shape_empty:Int := 20
+  - shape_track:Int := 21
+  
+  // Misc  
+  - north:(Int,Int) <- (0,-1) 
+  - south:(Int,Int) <- (0,1) 
+  - east:(Int,Int) <- (1,0) 
+  - west:(Int,Int) <- (-1,0) 
+  
+  - arrow_shape shp:Int : Boolean <- shp.in_range 0 to 3
+  - body_shape shp:Int : Boolean <- shp.in_range 4 to 15
+  - tail_shape shp:Int : Boolean <- shp.in_range 16 to 19
+  
+  - dirto_tail shp:Int :(Int,Int) <-
+  // Direction to go to the tail using @shp.
+  ( - tdx,tdy:Array Int
+    
+    (tdx = NULL).if {
+      tdx := new Array Int of ( 0,-1, 0, 1, 0, 0,-1, 1, 0, 1,-1, 0,-1, 0, 1, 0, 0, 1, 0,-1)
+      tdy := new Array Int of ( 1, 0,-1, 0, 1,-1, 0, 0, 1, 0, 0, 1, 0,-1, 0,-1,-1, 0, 1, 0)
+    }
+    (tdx.at shp, tdy.at shp)
+  )
+
+Private
+  
+  - prev: Array (Array Int) <-
+  // Previous shapes (from the head of the arrow to the tail).
+  ( + result:Array (Array Int)
+  
+    result := new Array(Array Int) capacity 32  
+    result.add_last (new Array Int of (4,12,14,18)) ; ? {result.upper = arrow_north}
+    result.add_last (new Array Int of (6,8,15,19))  ; ? {result.upper = arrow_east}
+    result.add_last (new Array Int of (5,9,10,16))  ; ? {result.upper = arrow_south}
+    result.add_last (new Array Int of (7,11,13,17)) ; ? {result.upper = arrow_west}
+    result.add_last (new Array Int of (4,12,14,18)) ; ? {result.upper = south_to_north}
+    result.add_last (new Array Int of (5,9,10,16))  ; ? {result.upper = north_to_south}
+    result.add_last (new Array Int of (6,8,15,19))  ; ? {result.upper = west_to_east}
+    result.add_last (new Array Int of (7,11,13,17)) ; ? {result.upper = east_to_west}
+    result.add_last (new Array Int of (4,12,14,18)) ; ? {result.upper = south_to_east}
+    result.add_last (new Array Int of (7,11,13,17)) ; ? {result.upper = east_to_south}
+    result.add_last (new Array Int of (6,8,15,19))  ; ? {result.upper = west_to_south}
+    result.add_last (new Array Int of (4,12,14,18)) ; ? {result.upper = south_to_west}
+    result.add_last (new Array Int of (6,8,15,19))  ; ? {result.upper = west_to_north}
+    result.add_last (new Array Int of (5,9,10,16))  ; ? {result.upper = north_to_west}
+    result.add_last (new Array Int of (7,11,13,17)) ; ? {result.upper = east_to_north}
+    result.add_last (new Array Int of (5,9,10,16))  ; ? {result.upper = north_to_east}
+    result.add_last (Array Int)      ; ? {result.upper = tail_to_south}
+    result.add_last (Array Int)      ; ? {result.upper = tail_to_west}
+    result.add_last (Array Int)      ; ? {result.upper = tail_to_north}
+    result.add_last (Array Int)      ; ? {result.upper = tail_to_east}
+    prev := result
+  )
+  
+  - tail_for shp:Int :Int <-
+  [
+    shp.in_range 0 to 19
+  ]
+  ( + a:Array Int
+    + i,result:Int
+    a := prev.at shp
+    result := a.at i
+    while {! tail_shape result} do {
+      i := i + 1
+      result := a.at i
+    }
+    result
+  )
+    

@@ -1,0 +1,234 @@
+Header
+  + name := Shooter
+/*
+  A small space shooter in Lisaac Ω.
+  Enemies fall from the top of the screen, faster and faster. Move the
+  ship with the mouse or the arrow keys, fire with a click or the space
+  bar. An enemy that hits the ship or reaches the bottom costs a life.
+  Key 'q': quit.
+
+  Shows: a real-time Game (motion / draw), many objects created and
+  destroyed during the game, each one a clone of the Sprite prototype
+  (see sprite.li), stored in an Array, collisions between all of them,
+  and the safe way to remove items from an Array: backward.
+  Three sound effects (Sound), loaded from the assets/ directory.
+
+  To compile, as usual in a terminal:
+  $ lisaac shooter -q -boost
+  $ ./shooter
+  */
+Inherit
+
+  + parent_game:Flat Game
+
+Private
+
+  // Data
+
+  - ship:Sprite
+  - bullets:Array Sprite
+  - enemies:Array Sprite
+  - stars:Array Sprite
+
+  - score:Int
+  - lives:Int
+  - game_over:Boolean
+
+  - timer:Uint64        // Next step of the game.
+  - next_enemy:Uint64   // Time of the next enemy.
+  - next_shot:Uint64    // A new shot is not allowed before this time.
+
+  - shot_snd:Sound
+  - explosion_snd:Sound
+  - ouch_snd:Sound
+
+  // Services
+
+  - play snd:Sound <-
+  // Restart @snd from its beginning, even if it is still playing.
+  (
+    snd.seek_to_pcm_frame 0
+    snd.start
+  )
+
+  - new_game <-
+  (
+    ship := Sprite.new.at (width / 2.0, height - 40.0) speed (0, 0) radius 18
+    bullets.clear
+    enemies.clear
+    (score, lives, game_over) := (0, 3, False)
+  )
+
+  - fire <-
+  ( + t:Uint64
+
+    t := Time.gettimeofday
+    (t > next_shot).if {
+      bullets.add_last (Sprite.new.at (ship.x, ship.y - ship.r) speed (0, -8) radius 3)
+      next_shot := t + 200_000
+      play shot_snd
+    }
+  )
+
+  - move_ship dx:Real32 <-
+  (
+    ship.go_to ((ship.x + dx).max (ship.r).min (width - ship.r), ship.y)
+  )
+
+  - lose_life <-
+  (
+    lives := lives - 1
+    (lives = 0).if { game_over := True }
+    play ouch_snd
+  )
+
+  - remove_dead list:Array Sprite <-
+  // Remove the dead sprites of @list. The loop goes backward: removing
+  // the item @i shifts the items after it, which are already visited.
+  (
+    list.upper.downto (list.lower) do { i:Int
+      (list.at i).alive.if_false {
+        list.remove i
+      }
+    }
+  )
+
+  - disc s:Sprite color c:Color <-
+  (
+    begin_path
+    circle (s.x, s.y) radius (s.r)
+    fill_color c
+    fill
+  )
+
+  - draw_ship <-
+  (
+    begin_path
+    move_to (ship.x, ship.y - ship.r)
+    line_to (ship.x - ship.r, ship.y + ship.r)
+    line_to (ship.x + ship.r, ship.y + ship.r)
+    close_path
+    fill_color (Color.rgb(80,200,255))
+    fill
+  )
+
+Public
+
+  - main <-
+  (
+    Random.init_clock
+    bullets := Array Sprite.create_with_capacity 32
+    enemies := Array Sprite.create_with_capacity 32
+    stars := Array Sprite.create_with_capacity 60
+    Audio.init
+    (shot_snd, explosion_snd, ouch_snd) := (Sound.new, Sound.new, Sound.new)
+    shot_snd.init_from_asset "shot.wav"
+    explosion_snd.init_from_asset "explosion.wav"
+    ouch_snd.init_from_asset "ouch.wav"
+    init "Shooter" size (480,640)
+    Paper.run
+  )
+
+  - init_graph <-
+  // Called once, when the size of the window is known.
+  ( + x,y:Real32
+
+    60.times {
+      (x,y) := (Random.between 0 and width, Random.between 0 and height)
+      stars.add_last (Sprite.new.at (x,y) speed (0, Random.between 0.2 and 1) radius 1)
+    }
+    new_game
+  )
+
+  - motion <-
+  ( + t:Uint64
+    + x,vx,vy:Real32
+
+    t := Time.gettimeofday
+    (t > timer).if {
+      timer := t + 16_000  // About 60 steps per second.
+      stars.foreach { s:Sprite
+        s.move
+        (s.y > height).if { s.go_to (s.x, 0) }
+      }
+      game_over.if_false {
+        // A new enemy from time to time, more often when the score grows:
+        (t > next_enemy).if {
+          x := Random.between 20 and (width - 20)
+          vx := Random.between (-1) and 1
+          vy := Random.between 1 and (2 + score.to_real32 / 10)
+          enemies.add_last (Sprite.new.at (x, -20) speed (vx,vy) radius 16)
+          next_enemy := t + (1_000_000 - 20_000 * score).max 250_000
+        }
+        bullets.foreach { b:Sprite
+          b.move
+          (b.y < 0).if { b.kill }
+        }
+        enemies.foreach { e:Sprite
+          e.move
+          e.bounce_between (0, width)
+          ((e.y > height) || {e.hits ship}).if {
+            e.kill
+            lose_life
+          }
+          bullets.foreach { b:Sprite
+            (b.alive && {e.alive} && {b.hits e}).if {
+              b.kill
+              e.kill
+              score := score + 1
+              play explosion_snd
+            }
+          }
+        }
+        remove_dead bullets
+        remove_dead enemies
+      }
+    }
+  )
+
+  - draw <-
+  (
+    begin_path
+    rect (0,0) size (width,height)
+    fill_color (Color.rgb(5,5,25))
+    fill
+    stars.foreach { s:Sprite disc s color (Color.rgb(180,180,200)) }
+    bullets.foreach { b:Sprite disc b color (Color.rgb(255,230,0)) }
+    enemies.foreach { e:Sprite disc e color (Color.rgb(220,60,60)) }
+    draw_ship
+    // Score and lives:
+    font_size 22
+    font_face_id (Font sys (Font bold))
+    text_align (align_top | align_center)
+    fill_color (Color.white)
+    String.tmp { msg:String_buffer
+      msg # "Score: " # score # "   Lives: " # lives
+      text (width / 2.0, 8) msg msg
+    }
+    game_over.if {
+      text_align (align_middle | align_center)
+      text (width / 2.0, height / 2.0) msg "GAME OVER"
+      text (width / 2.0, height / 2.0 + 30) msg "Click or press space to play again"
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  (
+    move_ship (Hand.x_cur - ship.x)
+    (ev = Hand clic).if {
+      if (game_over) then { new_game } else { fire }
+    }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (s.first)
+    .when 'L' then { move_ship (-20) }
+    .when 'R' then { move_ship 20 }
+    .when ' ' then {
+      if (game_over) then { new_game } else { fire }
+    }
+    .when 'q' or 'Q' then { System.exit 0 }
+    True
+  )

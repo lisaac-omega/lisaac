@@ -1,0 +1,38 @@
+Header
+  - name := Counter
+// Active object: counts the primes of an interval.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + found:Int
+
+  - count_from a:Int to b:Int <-
+  // Asynchronous (no result): counts the primes of [@a, @b].
+  (
+    a.to b do { n:Int
+      (is_prime n).if {
+        found := found + 1
+      }
+    }
+  )
+
+  - result:Int <- found
+  // Synchronous (a result): waits for the end of the previous messages.
+
+Private
+
+  - is_prime n:Int :Boolean <-
+  ( + d:Int
+    + r:Boolean
+    r := n >= 2
+    d := 2
+    {(r) && {d * d <= n}}.while_do {
+      r := (n % d) != 0
+      d := d + 1
+    }
+    r
+  )

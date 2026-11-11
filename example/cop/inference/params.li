@@ -1,0 +1,21 @@
+Header
+  + name := Params
+// An ordinary prototype: its objects are written only at their creation.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + scale:Int
+
+  - create s:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.set_scale s
+    result
+  )
+
+  - set_scale s:Int <-
+  (
+    scale := s
+  )

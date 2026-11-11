@@ -1,8 +1,0 @@
-name: Dummy check
-on: [push, pull_request]
-
-jobs:
-  dummy:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Check passed"

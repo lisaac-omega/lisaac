@@ -1,0 +1,41 @@
+Header
+  + name := Main
+/* Transfers between bank accounts. Each @Account is a universe: only its thread changes its
+   balance, so there is no race and no lock. A transfer is two messages: `transfer' to the
+   account debited (it checks its balance, then debits it), then `deposit' to the account
+   credited. Between both, the money is "in the message": it is neither lost nor created.
+   Several @Client (universes) make transfers at the same time, each one after the answer to
+   the previous one; some are refused (balance too low). The clients share the list of the
+   accounts, an @Immutable_array (it can go to any universe).
+   At the end, each client counts down a @Latch; when it opens, the @Auditor checks: the total
+   is the same, no balance is negative.
+   Compile with `-cop': `lisaac main -cop'. */
+
+Public
+
+  - main <-
+  ( + list:Array Account
+    + accounts:Immutable_array Account
+    + auditor:Auditor
+    + latch:Latch Auditor
+    + c:Client
+    + n,clients,transfers:Int
+    n := 10
+    clients := 4
+    transfers := 10_000
+    auditor := Auditor.new
+    list := Array Account .create_with_capacity n
+    1.to n do { i:Int
+      list.add_last (Account.new)
+      list.last.open 1000
+    }
+    accounts := Immutable_array Account .create_copy list
+    auditor.watch accounts total (n * 1000)
+    latch := Latch Auditor .create clients
+    latch.await auditor tag 0
+    1.to clients do { i:Int
+      c := Client.new
+      auditor.add c
+      c.start transfers on accounts seed i end latch
+    }
+  )

@@ -1,0 +1,27 @@
+Header
+  - name := Counter
+// Active object: counts the pairs which are done.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + count:Int
+
+  + target:Int
+
+  - set_target n:Int <-
+  (
+    target := n
+  )
+
+  - done <-
+  (
+    count := count + 1
+    (count = target).if {
+      count.print
+      '\n'.print
+    }
+  )

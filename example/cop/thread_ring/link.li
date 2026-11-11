@@ -1,0 +1,30 @@
+Header
+  - name := Link
+// Active object (`-' in the name): each clone is a universe.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + id:Int
+
+  + next:Link
+
+  - set_id i:Int next l:Link <-
+  (
+    id := i
+    next := l
+  )
+
+  - pass k:Int <-
+  // Asynchronous: the token, with the passes still to do.
+  (
+    (k = 0).if {
+      id.print
+      '\n'.print
+    } else {
+      next.pass (k - 1)
+    }
+  )

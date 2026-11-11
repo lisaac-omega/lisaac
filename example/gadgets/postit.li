@@ -1,0 +1,122 @@
+Header
+  + name := Postit
+/*
+  A yellow sticky note to put on the desktop, with a big Lisaac Ω in
+  watermark. Type your text: Backspace erases, Enter goes to the next
+  line. The text is saved at each key in your home directory, so it is
+  there again at the next start. Drag the note to move it, Escape closes
+  it.
+
+  Each name gives another note:
+  $ ./postit           (the note `.postit_note' in your home directory)
+  $ ./postit shopping  (the note `.postit_shopping')
+
+  Shows: a @Gadget, the reading and writing of a whole text file with
+  @File_utils, a text cut in lines by @text_box, the UTF-8 characters
+  (é, €, ℤ) typed and erased as one character.
+
+  To compile, as usual in a terminal:
+  $ lisaac postit -q -boost
+  $ ./postit
+  */
+Inherit
+
+  + parent_gadget:Flat Gadget
+
+Public
+
+  - draw <-
+  ( + b,x0,y0,x1,y1,f:Real32
+    b := 8
+    (x0,y0,x1,y1) := (b,b,width - b,height - b)
+    f := 30; // Size of the folded corner.
+    // The shadow, then the yellow paper without its bottom right corner.
+    begin_path
+    rect (x0 + 4,y0 + 6) size (x1 - x0 - 4,y1 - y0 - 6)
+    fill_color (Color.rgba (0,0,0,60))
+    fill
+    begin_path
+    move_to (x0,y0); line_to (x1,y0); line_to (x1,y1 - f); line_to (x1 - f,y1); line_to (x0,y1)
+    close_path
+    fill_color (Color.rgb (255,236,120))
+    fill
+    // The sticky band at the top, and the folded corner.
+    begin_path
+    rect (x0,y0) size (x1 - x0,34)
+    fill_color (Color.rgba (230,190,40,70))
+    fill
+    begin_path
+    move_to (x1,y1 - f); line_to (x1 - f,y1 - f); line_to (x1 - f,y1)
+    close_path
+    fill_color (Color.rgb (225,200,80))
+    fill
+    // The watermark.
+    font_face_id (Font.sys (Font.bold))
+    font_size (height * 0.6)
+    text_align (align_center | align_middle)
+    fill_color (Color.rgba (200,170,0,60))
+    text (width / 2,height / 2) msg "Ω"
+    // The text, cut in lines at the width of the note.
+    font_face_id (Font.sys (Font.roman))
+    font_size 22
+    text_align (align_left | align_top)
+    fill_color (Color.rgb (40,40,40))
+    text_box (x0 + 14,y0 + 42) width (x1 - x0 - 28) msg note
+    signature (width / 2,y1 - 10)
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (c & Keyboard.key_cmd = 0).if {
+      note.append s
+    }.elseif {s.first = '\n'} then {
+      note.add_last '\n'
+    }.elseif {(s.first = '\b') && {! note.is_empty}} then {
+      // A UTF-8 character: its continuation bytes, then its first byte.
+      {(note.last.to_uint8 & 0C0h) = 80h}.while_do { note.remove_last; }
+      note.remove_last
+    } else {
+      parent_gadget.key s cmd c
+    }
+    save_note
+    Paper.refresh_again
+    True
+  )
+
+  - main <-
+  (
+    String.tmp { tmp:String_buffer
+      tmp.copy (Environment.read_variable ((System.name = "windows").ok "USERPROFILE" or "HOME"))
+      tmp.add_dirsep
+      tmp.append ".postit_"
+      tmp.append ((Command_args.upper >= 1).ok (Command_args.at 1) or "note")
+      file_name := tmp.to_string_alias
+    }
+    load_note
+    show "Post-it · Lisaac Ω" size (320,320)
+  )
+
+Private
+
+  - note:String_buffer := String_buffer.create 256
+
+  - file_name:String_alias
+
+  - load_note <-
+  ( + f:Pointer
+    f := File_utils.open_read file_name
+    (f != NULL).if {
+      note.set_capacity (File_utils.size f)
+      File_utils.read f in note size (File_utils.size f)
+      File_utils.close f
+    }
+  )
+
+  - save_note <-
+  ( + f:Pointer
+    f := File_utils.open_write file_name
+    (f != NULL).if {
+      File_utils.write f with note size (note.count)
+      File_utils.close f
+    }
+  )

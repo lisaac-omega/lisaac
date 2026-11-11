@@ -1,0 +1,25 @@
+Header
+  + name := Triangle_print
+/*
+  Exercice ?? du cours ??.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  ( + size:Int
+    
+    écrire("Taille du triangle: ")
+    size := lire_entier
+    de 1 à size répéter { ligne:Int
+      de 1 à ligne répéter { colonne:Int
+        écrire(colonne)
+        écrire(" ")
+      }
+      écrire("\n")
+    }
+  )
+  

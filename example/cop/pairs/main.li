@@ -1,0 +1,24 @@
+Header
+  + name := Main
+/* Ping-pong pairs: @n pairs of universes, each pair exchanges @m round trips (2 messages each):
+   the messages of different pairs are independent, they use all the cores. */
+
+Public
+
+  - main <-
+  ( + counter:Counter
+    + n,m:Int
+    n := 1000
+    m := 20000
+    (Command_args.count > 1).if {
+      n := Command_args.at 1.to_int
+    }
+    (Command_args.count > 2).if {
+      m := Command_args.at 2.to_int
+    }
+    counter := Counter.new
+    counter.set_target n
+    1.to n do { i:Int
+      Pinger.new.play (Ponger.new) counter counter rounds m
+    }
+  )

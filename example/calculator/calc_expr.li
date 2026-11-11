@@ -1,0 +1,337 @@
+Header
+  + name := Calc_expr
+/*
+ Parsing and evaluation of an arithmetic expression on @ℤ, the signed integers 
+ without size limit: a result never overflows. Shared by the two versions of
+ @Calculator, the command line and the window.
+
+ Grammar, from the lowest priority to the highest:
+   EXPR    <- TERM { ('+' | '-') TERM }
+   TERM    <- UNARY { ('*' | 'x' | '×' | '/' | '%') UNARY }
+   UNARY   <- ('+' | '-') UNARY | POWER
+   POWER   <- POSTFIX [ '^' UNARY ]          (2^3^2 = 2^9)
+   POSTFIX <- PRIMARY { '!' }                (factorial)
+   PRIMARY <- '(' EXPR ')' | NUMBER
+   NUMBER  <- digits in @input_base
+             | '0x' hexadecimal | '0o' octal | '0b' binary digits
+  The prefixes are read only when @input_base is 10: in base 16, 0b1 is the 
+  number B1. The multiplication may be written '*', 'x' or '×' (but 0x1 
+  is the hexadecimal number 1). The division '/' is the integer division, 
+  '%' its remainder. Spaces are allowed between the tokens.
+
+  The parsing is a recursive descent: one method per rule of the grammar, each
+  one returns the value of what it has read. After the first error, @error_message 
+  is set and the parsing stops.
+  */
+Private
+
+  - source:String
+  - index:Int                      // Next character to read in @source.
+  - digits:String_buffer := String_buffer.create 64
+
+  - error msg:String_alias at pos:Int <-
+  // Keep only the first error.
+  (
+    (error_message.is_empty).if {
+      error_message.copy msg
+      error_index := pos
+    }
+  )
+
+  - skip_spaces <-
+  (
+    {(index <= source.upper) && {" \t".has (source.at index)}}.while_do {
+      index := index + 1
+    }
+  )
+
+  - current:Char <-
+  // The next character after the spaces, '\0' at the end of @source.
+  ( + result:Char
+    skip_spaces
+    (index <= source.upper).if {
+      result := source.at index
+    }
+    result
+  )
+
+  - read_character c:Char :Boolean <-
+  ( + result:Boolean
+    (is_ok && {current = c}).if {
+      index := index + 1
+      result := True
+    }
+    result
+  )
+
+  - is_digit c:Char base b:Int :Boolean <-
+  ( + result:Boolean
+    (b = 2).if {
+      result := c.is_binary_digit
+    }.elseif {b = 8} then {
+      result := c.is_octal_digit
+    }.elseif {b = 16} then {
+      result := c.is_hexadecimal_digit
+    } else {
+      result := c.is_digit
+    }
+    result
+  )
+
+  - to_int z:ℤ :Int <-
+  // @z must be small enough for an @Int.
+  ( + result:Int
+    String.tmp { tmp:String_buffer
+      z.append_in tmp
+      result := tmp.to_int
+    }
+    result
+  )
+
+  - bit_count z:ℤ :Int <-
+  // Number of bits of |@z|, from its hexadecimal digits.
+  ( + result,d:Int
+    String.tmp { tmp:String_buffer
+      Calc_expr.append z in tmp base 16
+      (tmp.first = '-').if { tmp.remove_first; }
+      d := tmp.first.hexadecimal_value
+      result := (tmp.count - 1) * 4 + 1
+      {d > 1}.while_do {
+        result := result + 1
+        d := d >> 1
+      }
+    }
+    result
+  )
+
+  // Grammar.
+
+  - read_expr:ℤ <-
+  // EXPR <- TERM { ('+' | '-') TERM }
+  ( + result:ℤ
+    + oper:Char
+    result := read_term
+    {oper := current; is_ok && {"+-".has oper}}.while_do {
+      index := index + 1
+      (oper = '+').if {
+        result := result + read_term
+      } else {
+        result := result - read_term
+      }
+    }
+    result
+  )
+
+  - read_term:ℤ <-
+  // TERM <- UNARY { ('*' | 'x' | '×' | '/' | '%') UNARY }
+  ( + result,right:ℤ
+    + oper:Char
+    + pos,w:Int
+    result := read_unary
+    {
+      // @w: number of bytes of the operator, 2 for '×' in UTF-8.
+      (oper, w) := (current, 1)
+      ((oper = 'x') || {oper = 'X'}).if {
+        oper := '*'
+      }.elseif {(oper = '\0C3h\') && {index < source.upper} && {source.at (index + 1) = '\97h\'}} then {
+        (oper, w) := ('*', 2)
+      }
+      is_ok && {"*/%".has oper}
+    }.while_do {
+      pos := index
+      index := index + w
+      right := read_unary
+      (oper = '*').if {
+        result := result * right
+      }.elseif {right = 0} then {
+        error "Division by zero" at pos
+      }.elseif {oper = '/'} then {
+        result := result / right
+      } else {
+        result := result % right
+      }
+    }
+    result
+  )
+
+  - read_unary:ℤ <-
+  // UNARY <- ('+' | '-') UNARY | POWER
+  ( + result:ℤ
+    (read_character '-').if {
+      result := - read_unary
+    }.elseif {read_character '+'} then {
+      result := read_unary
+    } else {
+      result := read_power
+    }
+    result
+  )
+
+  - read_power:ℤ <-
+  // POWER <- POSTFIX [ '^' UNARY ]
+  ( + result,e:ℤ
+    + pos:Int
+    result := read_postfix
+    (read_character '^').if {
+      pos := index
+      e := read_unary
+      is_ok.if {
+        (e < 0).if {
+          error "Negative exponent" at pos
+        }.elseif {(result = 0) || {result = 1} || {result = -1}} then {
+          // No size problem: the exponent may be huge.
+          ((result = -1) && {(e % 2) = 1}).if {
+            result := -1
+          }.elseif {(result = 0) && {e > 0}} then {
+            result := 0
+          } else {
+            result := 1
+          }
+        } else {
+          result := result.pow (to_int e)
+        }
+      }
+    }
+    result
+  )
+
+  - read_postfix:ℤ <-
+  // POSTFIX <- PRIMARY { '!' }
+  ( + result:ℤ
+    
+    result := read_primary
+    {read_character '!'}.while_do {
+      (result < 0).if {
+        error "Factorial of a negative number" at (index - 1)
+      } else {
+        result := result !
+      }
+    }
+    result
+  )
+
+  - read_primary:ℤ <-
+  // PRIMARY <- '(' EXPR ')' | NUMBER
+  ( + result:ℤ
+    + c:Char
+    + b:Int
+    
+    c := current
+    (! is_ok).if {
+      // Stop here.
+    }.elseif {read_character '('} then {
+      result := read_expr
+      (read_character ')').if_false {
+        error "')' expected" at index
+      }
+    }.elseif {is_digit c base input_base} then {
+      b := input_base
+      ((b = 10) && {c = '0'} && {index < source.upper}).if {
+        (source.at (index + 1))
+        .when 'x' or 'X' then { b := 16; }
+        .when 'o' or 'O' then { b := 8; }
+        .when 'b' or 'B' then { b := 2; }
+        (b != 10).if { index := index + 2; }
+      }
+      digits.clear
+      {(index <= source.upper) && {is_digit (source.at index) base b}}.while_do {
+        digits.add_last (source.at index)
+        index := index + 1
+      }
+      (digits.is_empty).if {
+        error "Digit expected" at index
+      } else {
+        result := ℤ.init digits base b
+      }
+    }.elseif {index > source.upper} then {
+      error "Unexpected end" at index
+    } else {
+      error "Number expected" at index
+    }
+    result
+  )
+
+Public
+
+  - input_base:Int := 10           // The base of the numbers without prefix.
+
+  - set_input_base b:Int <-
+  [ ? {(b = 2) || {b = 8} || {b = 10} || {b = 16}} ]
+  (
+    input_base := b
+  )
+
+  - value:ℤ                        // The result of the last @evaluate.
+
+  - error_message:String_buffer := String_buffer.create 64
+  - error_index:Int                // Where the error was found in the source.
+
+  - is_ok:Boolean <- error_message.is_empty
+
+  - evaluate src:String :Boolean <-
+  // Compute @value from @src; False if @src is not a correct expression.
+  (
+    (source, index) := (src, src.lower)
+    error_message.clear
+    value := read_expr
+    (is_ok && {current != '\0'}).if {
+      error "Unexpected character" at index
+    }
+    (! is_ok).if { value := 0; }
+    is_ok
+  )
+
+  - append z:ℤ in buf:String_buffer base b:Int <-
+  // Append @z written in base @b (2, 8, 10 or 16) to @buf. The binary
+  // digits come from the hexadecimal ones (4 bits for each), the octal
+  // ones from the binary ones (3 bits for each).
+  [ ? {(b = 2) || {b = 8} || {b = 10} || {b = 16}} ]
+  ( + d,g:Int
+    + started:Boolean
+    (b = 10).if {
+      z.append_in buf
+    } else {
+      String.tmp { hex:String_buffer
+        (z < 0).if {
+          buf.add_last '-'
+          (- z).append_in hex base 16
+        } else {
+          z.append_in hex base 16
+        }
+        (b = 16).if {
+          buf.append hex
+        } else {
+          String.tmp { bits:String_buffer
+            hex.foreach { c:Char
+              d := c.hexadecimal_value
+              3.downto 0 do { k:Int
+                (((d >> k) & 1) = 1).if {
+                  bits.add_last '1'
+                  started := True
+                }.elseif {started} then {
+                  bits.add_last '0'
+                }
+              }
+            }
+            started.if_false { bits.add_last '0'; }
+            (b = 2).if {
+              buf.append bits
+            } else {
+              // Groups of 3 bits, from the right: the first one may be shorter.
+              g := bits.count % 3
+              (g = 0).if { g := 3; }
+              d := 0
+              bits.foreach { c:Char
+                d := d * 2 + c.binary_value
+                g := g - 1
+                (g = 0).if {
+                  buf.add_last ("01234567".at d)
+                  (d, g) := (0, 3)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )

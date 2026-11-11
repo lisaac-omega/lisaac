@@ -1,0 +1,56 @@
+Header
+  + name := Conditionnelles_imbriquees
+/*
+  Les conditionnelles imbriquées.
+
+  Calculer le salaire d'un employé payé à l'heure à partir de son
+  salaire horaire et du nombre d'heures de travail. Le taux horaire est
+  majoré pour les heures supplémentaires : 25 % au-delà de 160 h et
+  50 % au-delà de 200 h.
+
+  Le salaire horaire et le nombre d'heures sont les deux arguments du
+  programme :
+  $ ./conditionnelles_imbriquees 12.5 210
+  */
+
+Insert
+  
+  - french: French_corner := French_corner
+
+
+Public
+  
+  - calculer_salaire (sh:Real64, nbh:Int): Real64 <-
+  // @sh est le salaire horaire et @nbh le nombre d'heures. 
+  (
+    + salaire:Real64 // Pour calculer le salaire
+    
+    si (nbh < 160) alors {
+      salaire := nbh * sh
+    } sinon {
+      si (nbh <= 200) alors {
+        salaire := (160 * sh) + (nbh - 160) * (sh * 1.25)
+      } sinon {
+        salaire := 160 * sh + 40 * sh * 1.25 + (nbh - 200) * sh * 1.5
+      }
+    }
+    salaire // retourne
+  )
+  
+  - main <-
+  ( + salaire_horaire: Real64
+    + salaire: Real64
+    + nombre_heures:Int
+    
+    // Pour récupérer le premier argument qui est de type @Real64:
+    salaire_horaire := argument 1 réel
+    
+    Out # "salaire_horaire: " # salaire_horaire # '\n' 
+    
+    nombre_heures := argument 2 entier
+    Out # "nombre_heures: " # nombre_heures # '\n' 
+    
+    salaire := calculer_salaire(salaire_horaire, nombre_heures)
+    Out # "salaire: " # salaire # '\n'
+  )
+  

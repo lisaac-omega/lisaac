@@ -1,0 +1,95 @@
+Header
+  + name := Reverse_complement
+// The Computer Language Benchmarks Game: reverse-complement.
+// Each sequence is reversed and complemented in place (the lines of 60 do not move) on the
+// cores (@Parallel), then written in the background, while the next one is read.
+
+Public
+
+  - complement:C_array Char := C_array Char .create 256
+
+  - buf:String_buffer
+  - data:C_array Char
+  // Storage of @buf.
+  - body:Int
+  - length:Int
+  // The sequence in progress: its @length bases from @body.
+  - ranges:Array Int := Array Int .create_with_capacity 16
+  // Start and end of each sequence, for the writes in the background.
+
+  - base k:Int :Int <- body + k + k / 60
+  // Position of the base @k (lines of 60).
+
+  - flush <-
+  // Wait for the end of the work (reverses and writes).
+  (
+    Parallel.wait
+    Parallel.wait_background
+  )
+
+  - reverse (s,e:Int) <-
+  // Starts the sequence of [@s, @e[ (header line first) and its write.
+  ( + k:Int
+    Parallel.wait
+    body := buf.index_of '\n' since s + 1
+    length := (e - body) - (e - body + 60) / 61
+    data := buf.to_external
+    Parallel.start (Parallel.cores) do { part:Int
+      // In locals: a write of a @Char could change a slot (for gcc).
+      + i,j,n,l,b0,b1:Int
+      + p,cp:C_array Char
+      + c:Char
+      p := data; cp := complement; n := body; l := length
+      b0 := part * (l / 2) / Parallel.cores
+      b1 := (part + 1) * (l / 2) / Parallel.cores
+      b0.to (b1 - 1) do { b:Int
+        i := n + b + b / 60
+        j := n + (l - 1 - b) + (l - 1 - b) / 60
+        c := p.at i
+        p.at i put (cp.at (p.at j.code))
+        p.at j put (cp.at (c.code))
+      }
+    }
+    // The middle base.
+    ((length & 1) = 1).if {
+      k := base (length / 2)
+      buf.put (complement.at (buf.at k.code)) to k
+    }
+    ranges.add_last s
+    ranges.add_last e
+    Parallel.background (ranges.upper / 2) do { n:Int
+      Parallel.wait
+      Stdout.put_chars (data + ranges.at (2 * n)) size (ranges.at (2 * n + 1) - ranges.at (2 * n))
+    }
+  )
+
+  - main <-
+  ( + pairs:String_alias
+    + s,scan,e:Int
+
+    0.to 255 do { i:Int; complement.at i put (i.to_char); }
+    pairs := "ATCGGCTAUAMKRYWWSSYRKMVBHDDHBVNN"
+    0.to (pairs.upper) by 2 do { j:Int
+      complement.at (pairs.at j.code) put (pairs.at (j + 1))
+      complement.at (pairs.at j.to_lower.code) put (pairs.at (j + 1))
+    }
+    buf := Stdin.new_buffer
+    {
+      // The buffer moves if it grows: after the end of the sequence in progress.
+      (buf.capacity - buf.count < 1 << 20).if { flush; }
+      Stdin.read_more buf > 0
+    }.while_do {
+      // The complete sequences: until a '>' after the header line.
+      {
+        e := buf.index_of '>' since ((buf.index_of '\n' since s).max scan)
+        scan := buf.count
+        e < buf.count
+      }.while_do {
+        reverse (s, e)
+        s := e
+        scan := e
+      }
+    }
+    (s < buf.count).if { reverse (s, buf.count); }
+    flush
+  )

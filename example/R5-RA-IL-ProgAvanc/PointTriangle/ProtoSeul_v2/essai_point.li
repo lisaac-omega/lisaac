@@ -1,0 +1,17 @@
+Header
+  + name := Essai_point
+Public
+  
+  - main <-
+  ( + p:Point
+    
+    p := Point
+    
+    p.println
+    
+    p.set_x 2 
+    
+    p.println
+  )
+  
+  

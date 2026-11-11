@@ -1,0 +1,26 @@
+Header
+  + name := Essai
+Insert
+  
+  - parent_utils:Utils := Utils
+  
+Public
+  
+  - main <-
+  ( + p1, p2, p3:Point
+    + t:Triangle
+    
+    p1 := new Point x 1 y 2
+    p2 := new Point x 2 y 3
+    p3 := new Point x 3 y 4
+    
+    
+    t := new Triangle p1 p1 p2 p2 p3 p3
+    
+    t.println
+    
+    /* 
+    Exercice: ajouter un Point_polaire qui hérite de Point.
+    */
+    
+  )

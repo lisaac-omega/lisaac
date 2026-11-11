@@ -1,0 +1,64 @@
+Header
+  + name := Dessin_maison
+/*
+  Niveau 2 - Plusieurs procédures pour un seul dessin.
+
+  La maison est faite d'un rectangle (les murs), d'un triangle (le toit)
+  et d'un autre rectangle (la porte). Chaque forme est une procédure.
+
+  Deux façons d'écrire les arguments en Lisaac Ω :
+    - triangle pixel:Int           s'utilise ainsi : triangle 300
+    - rectangle (longueur, largeur:Int)  s'utilise ainsi : rectangle(300,200)
+  Dans le second cas, les deux arguments forment un couple : les
+  parenthèses sont alors obligatoires.
+
+  lève_crayon et baisse_crayon permettent de déplacer la tortue sans
+  dessiner. Pour tourner d'un angle négatif, on écrit tourne(-45) avec
+  des parenthèses.
+
+  Comme dans plusieurs_triangles.li, l'instruction titre continue sur
+  trois lignes grâce aux fins de ligne \r\n.
+
+  À essayer : ajouter une fenêtre carrée sur le mur de droite.
+*/
+Inherit
+  
+  + parent_tortue:Flat Tortue
+   
+Public
+  
+  - dessin <-
+  ( 
+    titre "La belle maison" 
+      départ (150,300)
+      taille (600,600)
+    
+    épaisseur_trait 5
+    // Les murs :
+    couleur_trait black ; rectangle(300,200)
+    // Le toit :
+    tourne 180 ; lève_crayon ; recule 300 
+    baisse_crayon ; couleur_trait red ; triangle 300
+    // La porte :
+    tourne(-45) 
+    lève_crayon 
+    avance 140
+    baisse_crayon ; tourne(45 + 180) ; couleur_trait lime
+    rectangle(60,90)
+  )
+  
+  - triangle pixel:Int <-
+  (
+    répéter 3 fois {
+      avance pixel
+      tourne 120
+    }
+  )
+  
+  - rectangle (longueur, largeur:Int) <-
+  (
+    avance longueur ; tourne 90
+    avance largeur ; tourne 90
+    avance longueur ; tourne 90
+    avance largeur ; tourne 90
+  )

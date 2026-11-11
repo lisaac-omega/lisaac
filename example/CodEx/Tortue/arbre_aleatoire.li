@@ -1,0 +1,53 @@
+Header
+  + name := Arbre_aleatoire
+/*
+  Niveau 6 - Récursivité et hasard : un arbre plus naturel.
+
+  C'est l'arbre fractal, mais les angles des branches et leur réduction
+  sont tirés au hasard. Les variables @a1 et @a2 sont déclarées avec + :
+  chaque appel de branche a les siennes, elles ne se mélangent pas.
+
+  Le tronc et les grosses branches sont marron, les dernières sont
+  vertes. Pour revenir en arrière sans repasser sur le dessin avec une
+  autre couleur, la tortue lève le crayon.
+
+  Redimensionnez la fenêtre : un nouvel arbre pousse !
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - branche longueur:Int hauteur h:Int <-
+  ( + a1, a2:Int
+
+    if (h > 0) then {
+      épaisseur_trait h
+      if (h <= 3) then {
+        couleur_trait leaf_green
+      } else {
+        couleur_trait brown
+      }
+      avance longueur
+      a1 := random.min 10 max 40
+      a2 := random.min 10 max 40
+
+      tourne_droite a1
+      branche ((longueur * (random.min 60 max 80)) / 100) hauteur (h - 1)
+
+      tourne_gauche (a1 + a2)
+      branche ((longueur * (random.min 60 max 80)) / 100) hauteur (h - 1)
+
+      tourne_droite a2
+      lève_crayon ; recule longueur ; baisse_crayon
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Arbre aléatoire" départ (450, 690) taille (900, 700)
+    fond white crayon (1, brown)
+    tourne_gauche 90
+    branche 150 hauteur 10
+  )

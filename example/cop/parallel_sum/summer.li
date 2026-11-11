@@ -1,0 +1,18 @@
+Header
+  - name := Summer
+// Active object (`-' in the name): each clone is a universe, with its thread and its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  - sum data:Immutable_array Int from a:Int to b:Int reply r:Reducer <-
+  // Asynchronous: the sum of a slice of @data (read only), sent to @r.
+  ( + s:Int
+    a.to b do { i:Int
+      s := s + data.at i
+    }
+    r.partial s
+  )

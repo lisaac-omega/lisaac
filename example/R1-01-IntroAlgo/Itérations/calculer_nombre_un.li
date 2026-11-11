@@ -1,0 +1,32 @@
+Header
+  + name := Calculer_nombre_un
+/*
+  Poly exercice 5 page 2.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - calculer_nombre_de_un (n:Int) : Int <-
+  ( + q, nb1:Int // Variable locales
+    
+    q := n
+    nb1 := 0
+    tant_que { q != 0 } faire {
+      nb1 := nb1 + (q % 2)
+      q := q.div 2;
+    }
+    nb1 // retourne
+  )
+  
+  - main <-
+  ( + n:Int
+    
+    écrire("Donner un nombre entier positif: ")
+    n := lire_entier // lecture clavier
+    écrire("Nombre de un dans le binaire: ")
+    écrire(calculer_nombre_de_un n)
+    écrire("\n")    
+  )

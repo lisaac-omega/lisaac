@@ -1,0 +1,77 @@
+Header
+  + name := Fibonacci
+/*
+  Fibonacci : une fonction à deux résultats.
+
+  fibonacci_v1 est la version récursive classique : elle recalcule sans
+  cesse les mêmes valeurs, et son temps d'exécution double presque à
+  chaque fois que n augmente de 1.
+  fibonacci_v2 utilise fiborec, qui rend deux résultats à la fois
+  (fib(n - 1) et fib(n)) : elle ne s'appelle plus qu'une fois par étape.
+
+  À essayer, et comparer :
+  $ ./fibonacci v1 40
+  $ ./fibonacci v2 40
+  */
+Public
+  
+  - fibonacci_v1 n:ℤ : ℤ <-
+  ( + result:ℤ
+    
+    if (n <= 1) then {
+      result := n
+    } else { 
+      result := fibonacci_v1 (n - 1) + fibonacci_v1 (n - 2)
+    }
+    result
+  )
+  
+  - fibonacci_v2 n:ℤ : ℤ <-
+  ( + f1,f2:ℤ
+    
+    (f1,f2) := fiborec n
+    f2
+  )
+
+Private
+  
+  - fiborec n:ℤ : (ℤ, ℤ) <-
+  ( + f0,f1:ℤ
+    
+    if (n <= 1) then {
+      (f0,f1) := (0,1)
+    } else {
+      (f0,f1) := fiborec (n-1)
+      (f0,f1) := (f1, f0+f1)
+    }
+    (f0,f1)
+  )
+  
+Public
+      
+  - main <-
+  ( + n, res:ℤ
+    if ((Command_args.count != 3)) then {
+      print_usage_exit
+    }
+    if (! (Command_args.at 2).is_integer) then {
+      print_usage_exit
+    }
+    n := (Command_args.at 2) .to_int
+    if ((Command_args.at 1) = "v1") then {
+      res := fibonacci_v1(n)
+    }.elseif {(Command_args.at 1) = "v2"} then {
+      res := fibonacci_v2(n)
+    } else {
+      print_usage_exit
+    }
+    Out # "fibonacci(" # n # ")=" # res # '\n'
+  )
+  
+Private
+  
+  - print_usage_exit <-
+  (
+    Out # "usage: " # (Command_args.at 0) # " [v1|v2] <integer>\n"
+    System exit 1
+  )

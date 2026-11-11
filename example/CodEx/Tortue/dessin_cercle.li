@@ -1,0 +1,50 @@
+Header
+  + name := Dessin_cercle
+/*
+  Niveau 2 - Du polygone au cercle.
+
+  On dessine des polygones qui ont tous le même périmètre (720 pixels)
+  avec de plus en plus de côtés : 3, 4, 6, 12 et enfin 360 côtés de
+  2 pixels. Ce dernier polygone ressemble à s'y méprendre à un cercle !
+
+  La procédure polygone nb périmètre p réutilise la procédure polygone
+  nb côté c, en lui passant le calcul (p / nb) entre parenthèses.
+
+  Attention, 360 / nb est une division entière : avec nb = 7, on obtient
+  51 et la tortue ne tourne que de 7 x 51 = 357 degrés. Le polygone ne se
+  referme pas tout à fait. À essayer : ajouter polygone 7 périmètre 720.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - polygone nb:Int côté c:Int <-
+  ( + r:Int
+
+    r := 360 / nb
+    répéter nb fois {
+      avance c ; tourne r
+    }
+  )
+
+  - polygone nb:Int périmètre p:Int <-
+  (
+    polygone nb côté (p / nb)
+  )
+
+  - dessin <-
+  (
+    titre "Le Cercle" départ (130, 120) taille (500, 500)
+    fond white crayon (3, blue)
+    polygone 3 périmètre 720
+    couleur_trait lime
+    polygone 4 périmètre 720
+    couleur_trait brown
+    polygone 6 périmètre 720
+    couleur_trait black
+    polygone 12 périmètre 720
+    couleur_trait red
+    polygone 360 périmètre 720
+  )

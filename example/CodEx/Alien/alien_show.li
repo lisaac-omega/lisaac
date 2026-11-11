@@ -1,0 +1,33 @@
+Header
+  + name := Alien_show
+  
+/*
+  Les exercices de l'alien, du plus simple au plus difficile.
+
+  L'alien part du centre d'un damier de cases bleues, blanches et
+  rouges. Pour chaque exercice : lire le code, prévoir la case où
+  l'alien va s'arrêter, puis lancer l'exemple pour vérifier.
+
+  Pour compiler, dans un terminal :
+  $ lisaac alien_show -q -boost
+  $ ./alien_show
+  */
+Insert
+  - code_show:Code_show := Code_show
+    
+Public
+  
+  - main <-
+  (
+    show (
+      "alien_ex1.li", 
+      "alien_ex2.li", 
+      "alien_ex3.li", 
+      "alien_ex4.li", 
+      "alien_ex5.li", 
+      "alien_ex6.li", 
+      "alien_ex7.li", 
+      "alien_ex8.li"
+    )
+  )
+ 

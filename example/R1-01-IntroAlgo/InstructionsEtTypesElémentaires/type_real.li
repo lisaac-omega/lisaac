@@ -1,0 +1,29 @@
+Header
+  + name := Type_real
+/*
+  Le type @Real64 : les nombres à virgule (64 bits).
+
+  On écrit 12.5 avec un point. Les opérations habituelles (+, *)
+  fonctionnent comme avec les entiers.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  (
+   // Déclaration de deux variables de type @Real64
+    + x:Real64
+    + y:Real64
+    
+    écrire("Exemple de variables de type Real64\n")
+    x := 12.5
+    écrire("x vaut ") ; écrire(x) ; écrire("\n")  
+    y := x + 4
+    Out # "y vaut " # y # "\n"    
+    y := y * y
+    Out # "maintenant y vaut " # y # "\n"
+  )
+  

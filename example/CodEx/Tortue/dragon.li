@@ -1,0 +1,38 @@
+Header
+  + name := Dragon
+/*
+  Niveau 6 - La courbe du dragon.
+
+  Pliez une bande de papier en deux, puis encore en deux, et ainsi de
+  suite. Dépliez-la en laissant chaque pli à angle droit : vous obtenez
+  la courbe du dragon !
+
+  dragon n est fait de deux dragons de niveau n - 1, séparés par un
+  quart de tour. Le premier tourne d'un côté (signe 1), le second de
+  l'autre (signe -1) : c'est le pli du papier.
+
+  À essayer : niveau 2, 3, 4 avec côté 40 pour comprendre la construction.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - dragon n:Int côté c:Int signe s:Int <-
+  (
+    if (n = 0) then {
+      avance c
+    } else {
+      dragon (n - 1) côté c signe 1
+      tourne (90 * s)
+      dragon (n - 1) côté c signe (-1)
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Courbe du dragon" départ (528, 396) taille (800, 620)
+    fond black crayon (1, Color.rgb(255, 120, 0))
+    dragon 13 côté 4 signe 1
+  )

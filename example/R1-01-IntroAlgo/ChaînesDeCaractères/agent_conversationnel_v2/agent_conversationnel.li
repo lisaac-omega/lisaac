@@ -1,0 +1,27 @@
+Header
+  + name := Agent_conversationnel
+/**/
+
+Public
+  
+  - lire_chaine:String_alias <- 
+  (
+    Stdin.read_line
+    Stdin.last_string.to_string_alias
+  )
+  
+  - main <-
+  ( + cout, prix_mot: Int
+    + token: String
+    
+    "Entrer les tokens (stop pour finir).\n".print
+    cout := 0
+    
+    token := lire_chaine
+    while {token != "stop"} do {
+      prix_mot := ((token.count) / 10) + 1
+      cout := cout + prix_mot
+      token := lire_chaine
+    }    
+    Out # "coût du message: " # cout # '\n'
+  )

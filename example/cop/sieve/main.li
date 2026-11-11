@@ -1,0 +1,26 @@
+Header
+  + name := Main
+/* The sieve of Eratosthenes as a chain of universes (CSP, Hoare 1978). The numbers 2, 3, 4...
+   go through a chain of filters, one for each prime: each @Filter (a universe) keeps its prime,
+   drops its multiples and passes the other numbers to the next filter, which it creates for the
+   first number that passes. The filters work at the same time, as a pipeline.
+   The @Printer receives the primes in their order: a filter gives its prime before it passes
+   any number, so the message of each prime is in the FIFO of the printer before the next one.
+   No lock, no shared memory: only messages.
+   Compile with `-cop': `lisaac main -cop'. */
+
+Public
+
+  - main <-
+  ( + first:Filter
+    + printer:Printer
+    + limit:Int
+    limit := 2000
+    printer := Printer.new
+    first := Filter.create 2 out printer
+    3.to limit do { n:Int
+      first.push n
+    }
+    // After the last number, in each FIFO of the chain.
+    first.close
+  )

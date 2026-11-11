@@ -1,0 +1,19 @@
+Header
+  + name := Bad_capture
+Public
+  
+  + b:{} // Not in the stack
+  
+  - main <-
+  ( + capture:Int // In the stack
+    
+    (Random.init_clock.flip_coin).if {
+      b := { capture := capture + 1 }
+    } else {
+      b := { capture := capture + 2 }
+    }
+    Out # "before " # capture # '\n'
+    b.value
+    Out # "after " # capture # '\n'
+  )
+  

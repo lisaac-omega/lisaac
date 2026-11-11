@@ -1,0 +1,36 @@
+Header
+  + name := Dessin_triangle
+/*
+  Niveau 1 - Le triangle : deux variables locales.
+
+  Les variables @côté et @rotation sont déclarées au début du corps de
+  la méthode avec + (comme + côté:Int). On leur donne une valeur avec :=
+  puis on les utilise à la place des nombres : pour changer la taille
+  du triangle, il suffit maintenant de modifier une seule ligne.
+
+  Le ; permet d'écrire plusieurs instructions sur la même ligne.
+
+  Pourquoi 120 et pas 60 ? La tortue tourne de l'angle extérieur :
+  après trois virages, elle a fait un tour complet, 3 x 120 = 360.
+
+  À essayer : @côté := 100, puis @rotation := 60 (que se passe-t-il ?).
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - dessin <-
+  ( + côté, rotation:Int // Deux variables locales
+
+    titre "Tortue : triangle" départ (50,50) taille (360, 300)
+    côté := 200
+    rotation := 120
+    épaisseur_trait 3
+    couleur_trait rouge
+    avance côté
+    tourne rotation
+    avance côté ; tourne rotation
+    avance côté ; tourne rotation
+  )

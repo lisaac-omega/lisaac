@@ -1,0 +1,53 @@
+Header
+  + name := Exact_real
+/*
+  What is really inside a @Real64?
+
+  A @Real64 is a rational number whose denominator is a power of two:
+  0.1 cannot be one, so the compiler keeps the nearest one, and
+  0.1 + 0.2 is not 0.3. `ℚ.init_d' gives the exact value of a @Real64,
+  and with @ℚ, 1/10 + 2/10 is exactly 3/10.
+
+  The second part sums 1/k for k from 1 to n, in both types, and shows
+  the error of @Real64 grow while @ℚ stays exact.
+
+  Shows: `ℚ.init_d', `divq', `to_real64' and the comparison of @ℚ.
+
+  To compile, as usual in a terminal:
+  $ lisaac exact_real -q -boost
+  $ ./exact_real
+  */
+Public
+
+  - main <-
+  ( + x,y,z:Real64
+    + h,e:ℚ
+    + r:Real64
+
+    x := 0.1
+    y := 0.2
+    z := 0.3
+    Out # "In a Real64:\n"
+    Out # "  0.1       = " # ℚ.init_d x # '\n'
+    Out # "  0.2       = " # ℚ.init_d y # '\n'
+    Out # "  0.1 + 0.2 = " # ℚ.init_d (x + y) # '\n'
+    Out # "  0.3       = " # ℚ.init_d z # '\n'
+    Out # "  0.1 + 0.2 = 0.3 ? " # (x + y = z) # '\n'
+    Out # "In a ℚ:\n"
+    Out # "  1/10 + 2/10 = " # (1.divq 10 + 2.divq 10) # '\n'
+    Out # "  1/10 + 2/10 = 3/10 ? " # (1.divq 10 + 2.divq 10 = 3.divq 10) # '\n'
+
+    Out # "\nSum of 1/k, k = 1..n:\n"
+    h := 0
+    1.to 1000 do { k:Int
+      h := h + 1.divq k
+      r := r + 1.0 / k.to_real64
+      ((k = 10) || {k = 20} || {k = 50}).if {
+        Out # "  n = " # k # ": " # h # '\n'
+      }
+    }
+    e := h - ℚ.init_d r
+    Out # "  n = 1000: the numerator has " # h.num.size_bits # " bits, "
+    Out # "the denominator " # h.den.size_bits # " bits.\n"
+    Out # "  Real64 error = " # (e * 1_000_000_000_000_000).to_real64 # " x 10^-15\n"
+  )

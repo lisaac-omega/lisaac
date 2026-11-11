@@ -1,0 +1,43 @@
+Header
+  + name := Representation_binaire
+/*  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  + concat (ch1, ch2:String): String <-
+  (
+    ch1 + ch2 // est retourné
+  )
+  
+  - calculer_rep_binaire (x:Int): String <-
+  ( + rep_bin, chaîne_reste:String
+    + quotient, dividende, reste:Int 
+      
+    rep_bin := ""
+    quotient := x
+    tant_que {quotient != 0} faire {
+      dividende := quotient
+      reste := dividende % 2
+      si (reste = 0) alors {
+        chaîne_reste := "0"
+      } sinon {
+        chaîne_reste := "1"
+      }
+      rep_bin := concat(chaîne_reste, rep_bin)
+      quotient := dividende / 2
+    }
+    rep_bin // est retourné
+  )
+  
+  - main <-
+  ( + i: Int
+    + r: String
+    
+    i := argument 1 entier
+    r := calculer_rep_binaire(i)
+    écrire r
+    écrire "\n"
+  )

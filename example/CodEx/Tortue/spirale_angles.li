@@ -1,0 +1,55 @@
+Header
+  + name := Spirale_angles
+/*
+  Niveau 4 - Spirale : les angles grandissent (INSPI).
+
+  Cette fois, le côté reste le même et c'est l'angle qui grandit : une
+  variable @a, modifiée à chaque tour de boucle ( @a := @a + @k ), mémorise
+  l'angle courant. Le % 360 la garde entre 0 et 359.
+
+  Surprise : la tortue finit par revenir à son point de départ et
+  recommence la même figure... sauf pour certains incréments.
+  (INSPI vient du livre « Turtle Geometry » d'Abelson et diSessa.)
+*/
+Inherit
+
+  + parent_curseur:Flat Curseur_tortue
+
+Public
+
+  // Les incréments proposés. Les multiples de 8 (8, 16, 24, 32, 40)
+  // n'y sont pas : la tortue ne revient jamais à son point de départ
+  // et part tout droit hors de la fenêtre. À essayer en exercice !
+  - valeurs: Array Int :=
+      new Array Int of (1, 2, 3, 5, 7, 11, 13, 14, 17, 19,
+                        22, 23, 26, 29, 31, 34, 41, 43)
+
+  - choix_initial:Int <- 4; // 7°
+
+  - légende msg:String_buffer <-
+  (
+    msg.copy "incrément = "
+    valeur.append_in msg
+    msg.append "°"
+  )
+
+  - spirale nb:Int côté c:Int incrément k:Int <-
+  // Le côté reste le même, c'est l'angle qui grandit :
+  // à chaque segment, la tortue tourne de @k degrés de plus.
+  ( + a:Int
+
+    nb.times {
+      avance c
+      tourne a
+      a := (a + k) % 360
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Spirale : les angles grandissent" départ (285, 290) taille (600, 640)
+    fond white crayon (1, Color.rgb(120, 40, 180))
+
+    spirale 720 côté 15 incrément valeur
+    curseur
+  )

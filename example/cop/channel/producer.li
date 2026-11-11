@@ -1,0 +1,35 @@
+Header
+  - name := Producer
+// Active object (`-' in the name): each clone is a universe, with its thread and its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + channel:Channel Int From Producer To Consumer
+
+  + next_value:Int
+
+  + left:Int
+
+  - start ch:Channel Int From Producer To Consumer from first:Int count n:Int <-
+  (
+    channel := ch
+    next_value := first
+    left := n
+    ready 0
+  )
+
+  - ready k:Int <-
+  // Asynchronous: the channel has taken the last value (see @Channel).
+  (
+    (left = 0).if {
+      channel.finish
+    } else {
+      left := left - 1
+      channel.put next_value from self tag 0
+      next_value := next_value + 1
+    }
+  )

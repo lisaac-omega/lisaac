@@ -1,0 +1,59 @@
+Header
+  + name := Play_mp3
+
+Public
+
+  - main <-
+  ( + music:Sound
+    + status:Int
+    + flags:Uint32
+    + volume:Real32
+    + file:String_alias
+
+    ((Command_args.count < 2) || {Command_args.count > 3}).if {
+      "Usage: play_mp3 file.mp3 [volume_0_a_1]".println
+      System.exit 1
+    }
+
+    file := Command_args.at 1
+    volume := 0.35
+
+    (Command_args.count = 3).if {
+      volume := (Command_args.at 2).to_real32
+      ((volume < 0.0) || {volume > 1.0}).if {
+        Out # "Volume hors de [0,1], utilisation de 0.35.\n"
+        volume := 0.35
+      }
+    }
+
+    status := Audio.init
+    (status != Audio.success).if {
+      Out # "Initialisation audio impossible: " #| Audio.result_description status
+      System.exit 2
+    }
+
+    music := Sound.new
+    flags := Sound.flag_stream | Sound.flag_looping | Sound.flag_no_spatialization
+
+    status := music.init_from_file file flags flags
+    (status != Audio.success).if {
+      Out # "Chargement du MP3 impossible: " #| Audio.result_description status
+      music.delete
+      Audio.uninit
+      System.exit 3
+    }
+
+    music.set_volume volume
+    status := music.start
+
+    (status != Audio.success).if {
+      Out # "Lecture impossible: " #| Audio.result_description status
+    } else {
+      Out # "Musique en boucle. Appuyez sur Entree pour arreter.\n"
+      Stdin.read_line
+      status := music.stop
+    }
+
+    music.delete
+    Audio.uninit
+  )

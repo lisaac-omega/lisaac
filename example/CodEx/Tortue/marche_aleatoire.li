@@ -1,0 +1,33 @@
+Header
+  + name := Marche_aleatoire
+/*
+  Niveau 5 - La marche aléatoire et le test if.
+
+  À chaque pas, la tortue avance un peu puis tourne au hasard d'un
+  quart de tour : 0, 90, 180 ou 270 degrés. Où sera-t-elle après
+  3000 pas ? Personne ne peut le prévoir !
+
+  Le test s'écrit aussi en anglais :
+      si (c) alors { ... }    devient    if (c) then { ... }
+  Ici, une fois sur 20 en moyenne, la tortue change de couleur.
+
+  Redimensionnez la fenêtre : la tortue refait une autre promenade.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - dessin <-
+  (
+    titre "Marche aléatoire" départ (400, 300) taille (800, 600)
+    fond black crayon (2, white)
+    3000.times {
+      if ((random.min 1 max 20) = 1) then {
+        couleur_trait couleur_aupif
+      }
+      avance 6
+      tourne (90 * (random.min 0 max 3))
+    }
+  )

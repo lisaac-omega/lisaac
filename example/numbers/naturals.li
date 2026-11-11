@@ -1,0 +1,63 @@
+Header
+  + name := Naturals
+/*
+  The natural numbers @ℕ: n! and the binomial coefficients C(n,k) of the
+  Pascal triangle, where C(n,k) = C(n-1,k-1) + C(n-1,k).
+  
+  A @ℕ below 2^63 stays in one 64 bits word; a larger one becomes a big
+  number, without any change in the code. Here, 20! is the last factorial
+  which fits in an @Int64, and C(68,34) is the first middle coefficient
+  which does not.
+  
+  There is no automatic conversion: a @ℕ is built with @from_int64 or
+  @init, and @to_int64 tells if the value fits in an @Int64.
+  
+  Shows: the natural numbers @ℕ, `+' and `*' on @ℕ, `to_int64'.
+  
+  To compile, as usual in a terminal:
+  $ lisaac naturals -q -boost
+  $ ./naturals
+  */
+Private
+  
+  - fits n:ℕ :Boolean <-
+  ( + ok:Boolean
+    + x:Int64
+    (ok,x) := n.to_int64
+    ok
+  )
+  
+Public
+  
+  - main <-
+  ( + f:ℕ
+    + row,next:Array ℕ
+  
+    // The factorials.
+    f := ℕ.from_int64 1
+    1.to 25 do { n:Int
+      f := f * ℕ.from_int64 n
+      Out # n # "! = " # f
+      (fits f).if_false { Out # "  (big)"; }
+      Out # '\n'
+    }
+  
+    // The Pascal triangle, with only additions.
+    row := Array ℕ.create 1
+    row.at 0 put (ℕ.from_int64 1)
+    1.to 100 do { n:Int
+      next := Array ℕ.create (n + 1)
+      next.at 0 put (ℕ.from_int64 1)
+      next.at n put (ℕ.from_int64 1)
+      1.to (n - 1) do { k:Int
+        next.at k put (row.at (k - 1) + row.at k)
+      }
+      row.foreach { c:ℕ c.free; }
+      row := next
+      ((n % 2 = 0) && {(n = 100) || {(n >= 60) && {n <= 70}}}).if {
+        Out # "C(" # n # "," # n / 2 # ") = " # row.at (n / 2)
+        (fits (row.at (n / 2))).if_false { Out # "  (big)"; }
+        Out # '\n'
+      }
+    }
+  )

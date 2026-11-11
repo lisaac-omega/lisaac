@@ -1,0 +1,40 @@
+Header
+  + name := Triangle
+Insert
+  
+  - parent_clone:Clone := Clone
+  
+Public
+  
+  + p1:Point
+  
+  + p2:Point
+  
+  + p3:Point
+  
+  - append_in b:String_buffer <-
+  (
+    "Triangle[".append_in b
+    "p1=(".append_in b ; p1.append_in b ; ')'.append_in b
+    ",p2=(".append_in b ; p2.append_in b ; ')'.append_in b
+    ",p3=(".append_in b ; p3.append_in b ; ')'.append_in b
+    "]".append_in b
+  )
+  
+  - new self:Self p1 a:Point p2 b:Point p3 c:Point :Self <-
+  ( + result:Self
+    
+    result := clone
+    result.p1 a p2 b p3 c
+    result  
+  )
+  
+Private  
+  
+  - p1 a:Point p2 b:Point p3 c:Point <-
+  (
+    p1 := a
+    p2 := b
+    p3 := c
+  )
+  

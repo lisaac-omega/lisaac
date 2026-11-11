@@ -1,0 +1,13 @@
+Header
+  + name := Call_c_code
+
+Public
+    
+  - main <-
+  ( + i:Int
+    i := 3
+    `printf("i vaut %d\n",@i)`
+    i := `4`:Int
+    Out # "i vaut " # i # '\n'
+  )
+  

@@ -1,0 +1,98 @@
+Header
+  - name := Collector
+/* Active object: the sums of the bands, added in the order of the bands, and the time; with a
+   file name, the image of the grid (PPM, black - red - yellow - white). */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + sums:Array Real
+
+  + left:Int
+
+  + begin:Uint64
+
+  + n:Int
+
+  + file:String_alias
+
+  + pixels:Array Uint8
+
+  + rows_left:Int
+
+  - start blocks:Int size size:Int file f:String_alias <-
+  (
+    sums := Array Real .create blocks
+    left := blocks
+    n := size
+    file := f
+    (file != NULL).if {
+      pixels := Array Uint8 .create (3 * n * n)
+      rows_left := blocks
+    }
+    begin := Time.gettimeofday
+  )
+
+  - result k:Int sum s:Real <-
+  ( + total:Real
+    + d:Uint64
+    sums.at k put s
+    left := left - 1
+    (left = 0).if {
+      d := Time.gettimeofday - begin
+      sums.foreach { x:Real
+        total := total + x
+      }
+      Out # "heat: " # sums.count # " bands, sum "
+      total.print_format_c "%.10f"
+      Out # ", " # (d / 1000) # " ms\n"
+    }
+  )
+
+  - rows data:Array Real first f:Int <-
+  // The rows of a band, from the global row @f: their colors.
+  ( + v:Real
+    + p:Int
+    0.to (data.count - 1) do { i:Int
+      // The square root shows the warm areas, far from the hot row.
+      v := data.at i.sqrt
+      p := 3 * (f * n + i)
+      pixels.at p put (level (3.0 * v))
+      pixels.at (p + 1) put (level (3.0 * v - 1.0))
+      pixels.at (p + 2) put (level (3.0 * v - 2.0))
+    }
+    rows_left := rows_left - 1
+    (rows_left = 0).if {
+      write_image
+    }
+  )
+
+Private
+
+  - level x:Real :Uint8 <-
+  // @x in [0, 1] as a byte.
+  ( + r:Uint8
+    (x <= 0.0).if {
+      r := 0
+    }.elseif {x >= 1.0} then {
+      r := 255
+    } else {
+      r := (x * 255.0).floor.to_uint8
+    }
+    r
+  )
+
+  - write_image <-
+  ( + f:Pointer
+    + head:String_buffer
+    head := String_buffer.create 32
+    head # "P6\n" # n # " " # n # "\n255\n"
+    f := File_utils.open_write file
+    File_utils.write f string head
+    File_utils.write f buffer (pixels.storage) size (pixels.count)
+    File_utils.close f
+    Out # "image: " # file # "\n"
+  )

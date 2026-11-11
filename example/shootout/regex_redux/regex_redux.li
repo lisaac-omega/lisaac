@@ -1,0 +1,50 @@
+Header
+  + name := Regex_redux
+// The Computer Language Benchmarks Game: regex-redux.
+// Same algorithm as the C program #5: PCRE2 (@Pcre), the 5 replacements in parallel with the 9 counts.
+
+Public
+
+  - variants:Array String_buffer := ("agggtaaa|tttaccct [cgt]gggtaaa|tttaccc[acg] a[act]ggtaaa|tttacc[agt]t \
+  \ag[act]gtaaa|tttac[agt]ct agg[act]taaa|ttta[agt]cct aggg[acg]aaa|ttt[cgt]ccct agggt[cgt]aa|tt[acg]accct \
+  \agggta[cgt]a|t[acg]taccct agggtaa[cgt]|[acg]ttaccct").split
+
+  - substs:Array String_buffer := ("tHa[Nt] <4> aND|caN|Ha[DS]|WaS <3> a[NSt]|BY <2> <[^>]*> | \\|[^|][^|]*\\| -").split
+
+  - seq:String_buffer
+
+  - counts:C_array Int := C_array Int .create 9
+
+  - length:Int
+
+  - main <-
+  ( + input:String_buffer
+
+    input := Stdin.read_all
+    seq := String_buffer.create (input.count)
+    Pcre.create ">.*\n|\n" .replace_in input by "" to seq
+    Parallel.times 4 do { part:Int
+      + a,b,s:String_buffer
+      (part = 0).if {
+        // The 5 replacements, in 2 buffers in turn (@seq is read by the counts).
+        a := String_buffer.create (seq.count * 3 / 2)
+        b := String_buffer.create (seq.count * 3 / 2)
+        s := seq
+        0.to (substs.upper) by 2 do { i:Int
+          Pcre.create (substs.at i) .replace_in s by (substs.at (i + 1)) to a
+          s := a
+          a := b
+          b := s
+        }
+        length := s.count
+      } else {
+        (part - 1).to 8 by 3 do { i:Int
+          counts.at i put (Pcre.create (variants.at i) .count_in seq)
+        }
+      }
+    }
+    0.to 8 do { i:Int
+      Out # variants.at i # ' ' # counts.at i # '\n'
+    }
+    Out # '\n' # input.count # '\n' # seq.count # '\n' # length # '\n'
+  )

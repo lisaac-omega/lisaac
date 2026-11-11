@@ -1,0 +1,22 @@
+Header
+  + name := Varargs
+  /**/
+Public
+  
+  - main <-
+  ( + arr: Array String
+    
+    arr := new Array String of ("monday", "tuesday", "wednesday", "thursday")
+    
+    // Now adding two missing name's day:
+    arr.add_last ("friday", "saturday")
+    
+    // Then the last one:
+    arr.add_last "sunday"
+    
+    arr.foreach { day:String
+      day.println
+    }
+    
+  )
+  

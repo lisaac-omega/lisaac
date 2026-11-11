@@ -1,0 +1,55 @@
+Header
+  + name := Mandelbrot_ascii
+/*
+  The Mandelbrot set in the terminal: the point @c is in the set when
+  the sequence z(0) = 0, z(k+1) = z(k)^2 + c stays bounded. Once
+  |z| > 2, the sequence escapes: the more steps it needed, the darker
+  the character.
+
+  With @ℂ, the loop is written as in a math book: z := z * z + c.
+
+  Shows: the complex numbers @ℂ, written x + i y, `*', `+' and `norm'.
+
+  To compile, as usual in a terminal:
+  $ lisaac mandelbrot_ascii -q -boost
+  $ ./mandelbrot_ascii
+  */
+Private
+
+  - shades:String_alias := " .:-=+*#%@"
+
+  - steps c:ℂ max n:Int :Int <-
+  // Steps before |z| > 2, or @n if @c seems to be in the set.
+  ( + z:ℂ
+    + k:Int
+    {(k < n) && {z.norm <= 4.0}}.while_do {
+      z := z * z + c
+      k := k + 1
+    }
+    k
+  )
+
+Public
+
+  - main <-
+  ( + c:ℂ
+    + x0,y0:Real64
+    + k,n,width,height:Int
+    width := 78
+    height := 32
+    n := 200
+    0.to (height - 1) do { y:Int
+      0.to (width - 1) do { x:Int
+        x0 := -2.2 + 3.0 * x.to_real64 / width.to_real64
+        y0 := -1.2 + 2.4 * y.to_real64 / height.to_real64
+        c := x0 + i y0
+        k := steps c max n
+        (k = n).if {
+          Out # '@'
+        } else {
+          Out # shades.at ((k / 3).min (shades.count - 2))
+        }
+      }
+      Out # '\n'
+    }
+  )

@@ -1,0 +1,94 @@
+Header
+  + name := Fasta
+// The Computer Language Benchmarks Game: fasta.
+// Same algorithm as the C program #3 (Drake Diedrich): the random generator has @im outputs,
+// so the weighted selection is a lookup table of @im characters.
+
+Private
+
+  - im:Uint32 <- 139968
+  - ia:Uint32 <- 3877
+  - ic:Uint32 <- 29573
+  - seed:Uint32 := 42
+
+  - width:Int <- 60
+
+  - alu:String_alias := "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGGGAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGACCAGCCTGGCCAACATGGTGAAACCCC\
+  \GTCTCTACTAAAAATACAAAAATTAGCCGGGCGTGGTGGCGCGCGCCTGTAATCCCAGCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCCAGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"
+
+  - buf:C_array Char := C_array Char .create 65536
+  - pos:Int
+
+  - put c:Char <- ( buf.at pos put c; pos := pos + 1; )
+
+  - flush <- ( Stdout.put_chars buf size pos; pos := 0; )
+
+  - put_string s:String_alias <- ( s.foreach { c:Char; put c; }; )
+
+  - line_end <- ( put '\n'; (pos > 65000).if { flush; }; )
+
+  - repeat_fasta head:String_alias count n:Int <-
+  // @alu twice: a line never wraps.
+  ( + k,m,todo:Int
+    + alu2:String_buffer
+
+    alu2 := alu + alu
+    put_string head
+    todo := n
+    {todo <= 0}.until_do {
+      m := todo.min width
+      0.to (m - 1) do { i:Int; put (alu2.at (k + i)); }
+      k := (k + m) % alu.count
+      line_end
+      todo := todo - width
+    }
+  )
+
+  - random_fasta head:String_alias symbols s:String_alias probabilities text:String_alias count n:Int <-
+  ( + probs:Array String_buffer
+    + table:Array Char
+    + b:C_array Char
+    + sum:Real64
+    + j,todo,p:Int
+    + r:Uint32
+
+    // table.at r: first symbol whose cumulative probability is greater than r / im.
+    probs := text.split
+    table := Array Char .create (im.to_int)
+    sum := probs.first.to_real64
+    0.to (im.to_int - 1) do { i:Int
+      {(i.to_real64 / im.to_real64 < sum) || {j = probs.upper}}.until_do {
+        j := j + 1
+        sum := sum + probs.at j.to_real64
+      }
+      table.at i put (s.at j)
+    }
+    put_string head
+    todo := n
+    r := seed
+    {todo <= 0}.until_do {
+      // In locals: a write of a @Char could change a slot (for gcc).
+      p := pos; b := buf
+      (todo.min width).times {
+        r := (r * ia + ic) % im
+        b.at p put (table.at (r.to_int))
+        p := p + 1
+      }
+      pos := p
+      line_end
+      todo := todo - width
+    }
+    seed := r
+  )
+
+Public
+
+  - main <-
+  ( + n:Int
+
+    n := Command_args.at 1.to_int
+    repeat_fasta ">ONE Homo sapiens alu\n" count (n * 2)
+    random_fasta ">TWO IUB ambiguity codes\n" symbols "acgtBDHKMNRSVWY" probabilities "0.27 0.12 0.12 0.27 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02" count (n * 3)
+    random_fasta ">THREE Homo sapiens frequency\n" symbols "acgt" probabilities "0.3029549426680 0.1979883004921 0.1975473066391 0.3015094502008" count (n * 5)
+    flush
+  )

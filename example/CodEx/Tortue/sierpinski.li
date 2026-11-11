@@ -1,0 +1,47 @@
+Header
+  + name := Sierpinski
+/*
+  Niveau 6 - Le triangle de Sierpinski.
+
+  Un triangle de Sierpinski de niveau n, ce sont trois triangles de
+  Sierpinski de niveau @n - 1, deux fois plus petits, posés dans les
+  trois coins. Au niveau 0, c'est un simple triangle.
+
+  Comme pour l'arbre, chaque petit triangle ramène la tortue à son
+  point et à sa direction de départ : on peut alors avancer jusqu'au
+  coin suivant et tourner de 120 degrés.
+
+  À essayer : niveau 0, 1, 2, 3... pour voir la figure se construire.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - triangle c:Int <-
+  (
+    3.times {
+      avance c ; tourne_gauche 120
+    }
+  )
+
+  - sierpinski n:Int côté c:Int <-
+  (
+    if (n = 0) then {
+      triangle c
+    } else {
+      3.times {
+        sierpinski (n - 1) côté (c / 2)
+        avance c
+        tourne_gauche 120
+      }
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Sierpinski" départ (44, 510) taille (600, 560)
+    fond white crayon (1, Color.rgb(0, 90, 180))
+    sierpinski 7 côté 512
+  )

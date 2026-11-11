@@ -1,0 +1,27 @@
+Header
+  + name := Type_string
+/*
+  Le type @String : les chaînes de caractères.
+
+  Une chaîne s'écrit entre guillemets. + met deux chaînes bout à bout,
+  et to_string transforme un entier en chaîne.
+  Le programme lit un entier au clavier : il se lance dans un terminal.
+  */
+  
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  ( + s: String
+    
+    s := "Entrer "
+    s := s + "un entier:"
+    écrire(s)
+    
+    s := lire_entier.to_string
+    écrire("entier=" + s + "\n") 
+  )
+  

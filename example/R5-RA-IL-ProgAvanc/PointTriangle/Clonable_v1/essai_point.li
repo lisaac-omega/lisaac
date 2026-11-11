@@ -1,0 +1,36 @@
+Header
+  + name := Essai_point
+Public
+  
+  - main <-
+  ( + p, p2:Point
+    
+    p := Point.new
+    
+    p.println
+    
+    p.set_x 2 
+    
+    p.println
+    
+    p2 := p
+    p2.set_x 4
+    p.println
+    
+    /*
+    "Essai 1".println
+    p2 := Point.new
+    p2.println
+    
+    "Essai 2".println
+    p2 := p.new
+    p2.println
+        
+    "Essai 3".println
+    Point.set_x 8
+    p2 := Point.new
+    p2.println
+    */
+    
+  )
+  

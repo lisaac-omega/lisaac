@@ -1,0 +1,19 @@
+Header
+  + name := Block_ex5
+Public
+  
+  + capture:Int := 1
+  
+  - main <-
+  (+ b:{} // No parameter, no result
+    
+    (Random.init_clock.flip_coin).if {
+      b := { capture := capture + 1 }
+    } else {
+      b := { capture := capture + 2 }
+    }
+    Out # "before " # capture # '\n'
+    b.value
+    Out # "after " # capture # '\n'
+  )
+  

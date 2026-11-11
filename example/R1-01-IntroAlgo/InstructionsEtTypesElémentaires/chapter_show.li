@@ -1,0 +1,43 @@
+Header
+  + name := Chapter_show
+  
+/*
+  Chapitre « Instructions et types élémentaires » du cours R1-01.
+
+  Les exemples sont à regarder dans l'ordre : les types (@ℤ, @Int,
+  @Real64, @Boolean, @Char, @String), la lecture au clavier, les
+  affectations, une première fonction, puis les conditionnelles.
+
+  Les exemples marqués « code seul » lisent au clavier ou attendent des
+  arguments : ils se lancent dans un terminal.
+
+  Pour compiler, dans un terminal :
+  $ lisaac chapter_show -q -boost
+  $ ./chapter_show
+  */
+Insert
+  
+  - parent_code_show:Code_show := Code_show
+    
+Public
+  
+  - main <-
+  (
+    Out # "Regardez les exercices (ou exemples) dans l'ordre suivant:\n"
+    show (
+      "type_z.li",
+      "type_int.li",
+      "type_real.li",
+      "type_boolean.li",
+      "type_char.li",
+      "lecture_clavier.li", "no-run",
+      "type_string.li", "no-run",
+      "affectations.li",
+      "moneybreak.li", "no-run",
+      "perimetre_rectangle.li",
+      "conditionnelle_simple.li", "no-run",
+      "conditionnelles_imbriquees.li", "no-run",
+      "ph.li", "no-run"
+    )
+  )
+  

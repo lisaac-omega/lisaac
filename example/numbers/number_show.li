@@ -1,0 +1,36 @@
+Header
+  + name := Number_show
+
+/*
+  The numbers of Lisaac Ω, from ℕ to ℂ: the natural numbers @ℕ, the
+  unbounded integers @ℤ, the rational numbers @ℚ, the exact real
+  numbers @ℝ and the complex numbers @ℂ.
+
+  For each example: read the header comment, look at the code, then
+  run it. The arguments of some examples can be changed in the window.
+
+  To compile, as usual in a terminal:
+  $ lisaac number_show -q -boost
+  $ ./number_show
+  */
+Insert
+  - code_show:Code_show := Code_show
+
+Public
+
+  - main <-
+  (
+    show (
+      "naturals.li",
+      "pascal_digits.li", "background",
+      "growth.li", "background",
+      "mersenne.li", "run", "2300",
+      "bernoulli.li", "run", "60",
+      "exact_real.li",
+      "golden_ratio.li",
+      "almost_integers.li",
+      "pi_digits.li", "run", "5000",
+      "mandelbrot_ascii.li",
+      "polynomial_roots.li"
+    )
+  )

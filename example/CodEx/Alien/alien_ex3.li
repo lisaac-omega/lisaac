@@ -1,0 +1,40 @@
+Header
+  + name := Alien_ex3
+/*
+  Alien 3 - Une procédure.
+
+  déplacer(incr) fait quatre déplacements. Elle est appelée trois fois,
+  et la variable @mémoire garde sa valeur d'un appel à l'autre : chaque
+  appel repart de la valeur laissée par le précédent.
+
+  À faire : suivre la valeur de @mémoire pendant les trois appels.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - mémoire: Int
+  
+  - déplacer(incr:Int) <-
+  (
+    gauche(mémoire)
+    mémoire := mémoire + incr
+    haut(mémoire)
+    mémoire := mémoire + incr
+    droite(mémoire)
+    mémoire := mémoire + incr
+    bas(mémoire)
+    mémoire := mémoire + incr
+  )
+  
+  - main <-
+  (
+    vitesse("normale")
+    mémoire := 1
+    déplacer(1)
+    déplacer(1)
+    déplacer(1)
+    fin
+  )

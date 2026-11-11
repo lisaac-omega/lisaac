@@ -1,0 +1,64 @@
+Header
+  + name := Flocon_koch
+/*
+  Niveau 6 - Le flocon de von Koch : quatre appels récursifs.
+
+  La courbe de Koch de niveau n, c'est quatre courbes de niveau n - 1,
+  trois fois plus petites, avec une « bosse » au milieu. Au niveau 0,
+  c'est un simple segment. Le flocon est fait de trois courbes de Koch
+  disposées en triangle.
+
+  Remarquez la signature koch (l:Real64, n:Int) : les deux arguments
+  forment un couple, on écrit donc toujours koch (l, n) avec des
+  parenthèses. Comparez avec arbre_fractale.li, où chaque argument a
+  son mot-clé : tronc ... trait ... hauteur ... réduction ...
+
+  Le dernier flocon est de niveau 6 : 3 x 4^6 = 12288 segments !
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - koch (l:Real64, n:Int) <-
+  (
+    if (n = 0) then {
+      avance (l.to_raw_int)
+    } else {
+      koch (l.div 3, n - 1)
+      tourne_gauche 60
+      koch (l.div 3, n - 1)
+      tourne_droite 120
+      koch (l.div 3, n - 1)
+      tourne_gauche 60
+      koch (l.div 3, n - 1)
+    }
+  )
+
+  - flocon (l:Real64, n:Int) koch <-
+  (
+    couleur_trait bleu
+    koch (l, n)
+    tourne_droite 120
+    couleur_trait blanc
+    koch (l, n)
+    couleur_trait rouge
+    tourne_droite 120
+    koch (l, n)
+    tourne_droite 120
+  )
+
+  - dessin <-
+  (
+    titre "Von Koch - Flocons" taille (850, 850)
+    fond black crayon (2, white)
+    téléportation (379,415) ; flocon ( 30,1) koch
+    téléportation (365,408) ; flocon ( 60,1) koch
+    téléportation (345,396) ; flocon (100,2) koch
+    téléportation (309,375) ; flocon (175,2) koch
+    téléportation (258,346) ; flocon (280,3) koch
+    téléportation (189,306) ; flocon (430,3) koch
+    téléportation (108,259) ; flocon (630,4) koch
+    téléportation ( 25,210) ; flocon (770,6) koch
+  )

@@ -1,0 +1,54 @@
+In this directory, the Logo Turtle is asleep — but it will soon awaken and rise from its ashes,
+reborn through Lisaac Ω!
+
+Inspired by Brian Harvey and Harold Abelson, who awakened the first graphical Turtle
+on microcomputers with Apple Logo (1979).
+
+These examples are first meant for French pupils: the header comment of each file is in French.
+
+To run all examples (the launcher shows them in the order below):
+
+  lisaac tortue_show.li
+  ./tortue_show
+
+Suggested order:
+
+Level 1 - One instruction per line, variables, optional parentheses
+  dessin_quadrangle.li
+  dessin_triangle.li
+
+Level 2 - Loops (répéter n fois), procedures, arguments
+  plusieurs_triangles.li
+  dessin_maison.li
+  dessin_hexagone.li
+  dessin_etoile.li
+  dessin_cercle.li
+
+Level 3 - Rotating patterns; loops switch to English (repeat n times, n.times, from a to b do)
+  rosace_cadres.li
+  rosace_cercles.li
+  dessin_feuille.li
+  rosace_fleurs.li
+
+Level 4 - A variable that changes inside the loop (POLYSPI, INSPI)
+  spirale_longueurs.li
+  spirale_angles.li
+
+Level 5 - Randomness, if ... then
+  random_star.li
+  marche_aleatoire.li
+
+Level 6 - Recursion
+  arbre_fractale.li
+  arbre_aleatoire.li
+  flocon_koch.li
+  sierpinski.li
+  dragon.li
+  hilbert.li
+
+Appendix - Text and debugging (run from the command line)
+  tortexte.li
+  tortue_debug.li
+
+Not launched directly: curseur_tortue.li (the slider at the bottom of the window)
+and rosace.li (common parent of the three rosaces).

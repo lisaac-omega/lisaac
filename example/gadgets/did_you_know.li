@@ -1,0 +1,109 @@
+Header
+  + name := Did_you_know
+/*
+  "Did you know?": a small card on the desktop with a tip about Lisaac Ω,
+  a new one each day. A click on the card shows the next tip, a click on
+  "Lisaac Ω · lisaac.org" opens the web site. Drag the card to move it,
+  Escape closes it.
+
+  Add your own tips at the end of @tips: a tip is a title, then the text
+  (a "\n" goes to the next line).
+
+  Shows: a @Gadget, an @Array of @String_alias written in one go, the
+  number of the day computed from the clock (@Clock.time_raw).
+
+  To compile, as usual in a terminal:
+  $ lisaac did_you_know -q -boost
+  $ ./did_you_know
+  */
+Inherit
+
+  + parent_gadget:Flat Gadget
+
+Public
+
+  - draw <-
+  ( + b:Real32
+    b := 8
+    // The card, with its shadow.
+    begin_path
+    rect (b + 4,b + 6) size (width - 2 * b,height - 2 * b) radius 14
+    fill_color (Color.rgba (0,0,0,60))
+    fill
+    begin_path
+    rect (b,b) size (width - 2 * b,height - 2 * b) radius 14
+    fill_color (Color.rgb (225,238,255))
+    fill
+    // The Ω in a circle, and the title.
+    begin_path
+    circle (b + 34,b + 34) radius 20
+    fill_color (Color.rgb (40,90,170))
+    fill
+    font_face_id (Font.sys (Font.bold))
+    font_size 28
+    text_align (align_center | align_middle)
+    fill_color white
+    text (b + 34,b + 35) msg "Ω"
+    font_size 24
+    text_align (align_left | align_middle)
+    fill_color (Color.rgb (40,90,170))
+    text (b + 64,b + 34) msg "Did you know?"
+    // The tip: its title, then its text.
+    font_size 20
+    text_align (align_left | align_top)
+    fill_color (Color.rgb (30,30,30))
+    text_box (b + 18,b + 70) width (width - 2 * b - 36) msg (tips.at (2 * current))
+    font_face_id (Font.sys (Font.roman))
+    font_size 18
+    text_box (b + 18,b + 100) width (width - 2 * b - 36) msg (tips.at (2 * current + 1))
+    signature (width / 2,height - b - 12)
+  )
+
+  - event ev:Int :Boolean <-
+  (
+    (((ev & ~1) = Hand.clic) && {! is_on_signature}).if {
+      current := (current + 1) % count
+      Paper.refresh_again
+    }
+    parent_gadget.event ev
+  )
+
+  - main <-
+  (
+    // One tip by day: the number of days since 1970, modulo the number of tips.
+    current := (Clock.time_raw / (24 * 60 * 60)).to_int % count
+    show "Did you know? · Lisaac Ω" size (440,300)
+  )
+
+Private
+
+  - current:Int
+
+  - count:Int <- tips.count / 2
+
+  - tips:Array String_alias := new Array String_alias of (
+    "No keyword for the control flow",
+    "if, while or foreach are methods of True, False or Block, written in the library:\n  (x > 0).if { ... } else { ... }",
+    "Integers without limit",
+    "ℤ never overflows: 100! or 2^200 are exact. ℚ is exact too: 1/3 + 1/6 = 1/2.",
+    "Mathematics as in the book",
+    "With ℂ, you write x + i y, as in the book, and a slot may be named π.",
+    "Prototypes, not classes",
+    "Every object is a prototype, and clone makes a new one. Self is the prototype of self.",
+    "Inherit or Insert?",
+    "Inherit makes a subtype (assignment, dynamic dispatch). Insert only takes the slots: a toolbox.",
+    "One line, one instruction",
+    "A newline ends the instruction. To continue it on the next line, end the line with \\r\\n.",
+    "Contracts",
+    "A contract before the body of a method is checked at run time, and -boost removes it:\n  [ ? {n >= 0} ]",
+    "Strings",
+    "A String_alias is unique in the program: compare two of them with =. A String_buffer is the one you modify.",
+    "Concurrency without locks",
+    "With -cop, a prototype named with - is an active object: a universe with its own messages and its own slots.",
+    "French corner",
+    "For the very beginners:\n  répéter 4 fois { ... }\n  si (c) alors { ... } sinon { ... }",
+    "From Lisaac to C",
+    "lisaac hello -boost writes ANSI C, then gcc compiles it. Add --r to read the C produced.",
+    "This card",
+    "is 100 lines of Lisaac Ω: see example/gadgets. The post-it, the Ω eyes and the Christmas sky are there too."
+  )

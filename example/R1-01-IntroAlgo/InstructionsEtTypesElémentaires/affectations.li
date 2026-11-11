@@ -1,0 +1,36 @@
+Header
+  + name := Affectations
+/*
+  L'affectation : := donne une valeur à une variable.
+
+  La valeur de @i change à chaque affectation. Dans i := i + 2, on
+  calcule d'abord i + 2 avec l'ancienne valeur de @i, puis on range le
+  résultat dans @i.
+  À la fin, i! calcule la factorielle de 100 : un @ℤ ne déborde pas.
+  */
+
+Public
+  
+  - main <-
+  ( + i: ℤ
+    
+    écrire("Bonjour\n")
+    i := 1    
+    écrire("i vaut ") ; écrire(i)  ; écrire('\n')
+    i := 2
+    écrire("maintenant i vaut ") ; écrire(i)  ; écrire('\n')
+    i := i + 2
+    écrire("et maintenant i vaut ") ; écrire(i)  ; écrire('\n')
+    
+    i := i * (i + 5)
+    écrire("et donc i vaut ") ; écrire(i)  ; écrire('\n')
+    
+    i := (1024 * 2) / 2
+    écrire("i = ") ; écrire(i)  ; écrire('\n')
+        
+    écrire("factoriel 100 vaut ")
+    i := 100
+    i := i!
+    écrire(i)
+    écrire('\n')
+  )

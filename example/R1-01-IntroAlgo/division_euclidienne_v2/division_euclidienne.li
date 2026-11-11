@@ -1,0 +1,33 @@
+Header
+  + name := Division_euclidienne
+/*
+  Poly exercice page 2.
+  */
+  
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - division (a:ℤ, b:ℤ) : (ℤ,ℤ) <-
+  // Retourne deux résultats, le quotient et le reste.
+  ( + quotient,reste:ℤ
+    
+    reste := a
+    quotient := 0
+    while { reste >= b } do {
+      quotient := quotient + 1
+      reste := reste - b
+    }
+    (quotient,reste)
+  )
+  
+  - main <-
+  ( + va, vb, q, r:ℤ
+    
+    va := argument 1 entier
+    vb := argument 2 entier
+    (q, r) := division (va,vb)
+    Out # "quotient=" # q # " reste=" # r # '\n'
+  )

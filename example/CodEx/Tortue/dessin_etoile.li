@@ -1,0 +1,47 @@
+Header
+  + name := Dessin_etoile
+/*
+  Niveau 2 - L'étoile à 5 branches et le « théorème du tour total ».
+
+  C'est le grand classique de la tortue Logo : répéter 5 fois
+  { avance ; tourne 144 }. Pourquoi 144 ? Après 5 virages, la tortue
+  a tourné de 5 x 144 = 720 degrés, soit deux tours complets : elle
+  revient à son point de départ, dans sa direction de départ.
+
+  Règle générale (Abelson et diSessa, « Turtle Geometry ») : une figure
+  fermée est terminée quand la tortue a tourné d'un nombre entier de
+  tours. Ici, 8 x 135 = 1080 (3 tours) et 9 x 160 = 1440 (4 tours).
+
+  téléportation (x,y) déplace la tortue sans dessiner.
+
+  À essayer : étoile 12 angle 150, étoile 7 angle 155 (ça ne ferme
+  pas tout à fait : 7 x 155 n'est pas un multiple de 360).
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - étoile nb:Int angle a:Int côté c:Int <-
+  (
+    répéter nb fois {
+      avance c ; tourne a
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Étoiles" départ (40, 120) taille (950, 330)
+    fond black crayon (2, white)
+
+    étoile 5 angle 144 côté 250
+
+    téléportation (360, 120)
+    couleur_trait red
+    étoile 8 angle 135 côté 250
+
+    téléportation (660, 120)
+    couleur_trait leaf_green
+    étoile 9 angle 160 côté 250
+  )

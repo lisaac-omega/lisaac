@@ -1,0 +1,40 @@
+Header
+  + name := Main
+/* Several producers and consumers on a bounded @Channel (3 producers, 2 consumers, 8 places).
+   A producer puts a value, then waits for `ready' before the next one: when the channel is
+   full, `ready' comes only when a consumer has taken a value (back pressure: a fast producer
+   can not fill the memory). A consumer takes a value, receives it by `receive', then takes the
+   next one; it receives `closed' when all the producers have finished and the channel is empty.
+   The tags (0 here) tell a universe which request is answered, if it has several.
+   At the end, each consumer counts down a @Latch; when it opens, the @Report checks that each
+   value was received once.
+   Compile with `-cop': `lisaac main -cop'. */
+
+Public
+
+  - main <-
+  ( + channel:Channel Int From Producer To Consumer
+    + latch:Latch Report
+    + report:Report
+    + p:Producer
+    + c:Consumer
+    + producers,consumers,count:Int
+    producers := 3
+    consumers := 2
+    count := 100_000
+    channel := Channel Int From Producer To Consumer .create 8 producers producers
+    report := Report.new
+    report.expect (producers * count)
+    latch := Latch Report .create consumers
+    latch.await report tag 0
+    1.to consumers do { i:Int
+      c := Consumer.new
+      report.add c
+      c.start channel end latch
+    }
+    0.to (producers - 1) do { i:Int
+      // The producer @i gives i * count + 1 .. (i + 1) * count.
+      p := Producer.new
+      p.start channel from (i * count + 1) count count
+    }
+  )

@@ -1,0 +1,32 @@
+Header
+  + name := Carre_max
+/*
+  Exercice 1 page 3 des exercices
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - maximum (r1, r2:Real64): Real64 <-
+  ( + res:Real64
+    si (r1 > r2) alors {
+      res := r1
+    } sinon {
+      res := r2
+    }
+    res
+  )
+  
+  - main <-
+  ( + n, max:Real64
+    max := 0
+    Command_args.foreach { arg:String_alias
+      n := arg.to_real64
+      n := n.pow 2 
+      max := maximum(max,n) 
+    }
+    écrire("carré max: ") ; écrire(max) ; écrire("\n")
+  )
+  

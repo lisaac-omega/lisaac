@@ -1,0 +1,18 @@
+Header
+  + name := Point
+  /*
+*/
+
+Public
+  
+  + x:Int
+  
+  - set_x vx:Int <-
+  (
+    x := vx
+  )
+  
+Private
+      
+  + y:Int
+  

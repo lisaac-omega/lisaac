@@ -1,0 +1,276 @@
+Header
+  + name := Break
+/*
+  A classic brick breaker in Lisaac Ω.
+  Bounce the ball with the paddle to break all the bricks of the wall.
+  The paddle follows the mouse, or use the 'q' / 'd' or arrow keys.
+  The ball speeds up at each new level; losing the ball ends the game.
+
+  Shows: a real-time Game (motion / draw), ball and brick collisions,
+  mouse and keyboard control, sounds loaded from assets/.
+
+  To compile, as usual in a terminal:
+  $ lisaac break -q -boost
+  $ ./break
+  */
+Inherit 
+  
+  + parent_game:Flat Game
+
+Private
+  
+  - bounce_snd:Sound
+  - break_snd:Sound
+  - lost_snd:Sound
+  
+  // Data
+  
+  - lev:Array String_buffer := new (Array String_buffer) of (
+    String_buffer.create_from_string
+    "   A            \
+    \                \
+    \             A  ",
+    String_buffer.create_from_string
+    "AAAAAAAAAAAAAAAA\
+    \BABABABABABABABA\
+    \ABABABABABABABAB\   
+    \AAAAAAAAAAAAAAAA",
+    String_buffer.create_from_string
+    "AAAAABBAABBAAAAA\
+    \AAAABAABBAABAAAA\
+    \AAAABAAAAAABAAAA\
+    \AAAAABAAAABAAAAA\
+    \AAAAAABAABAAAAAA\
+    \AAAAAAABBAAAAAAA",
+    String_buffer.create_from_string
+    "BBBA       ABBBB\
+    \BBA         ABBB\
+    \BBBA       ABBBB\
+    \CCCCCCC CCCCCCCC\
+    \AAAAAA    AAAAAA\
+    \GGGGGGG GGGGGGGG",
+    String_buffer.create_from_string
+    "DDD   BB  B   B \
+    \D  D B  B BB BB \
+    \D  D B  B B B B \
+    \D  D B  B B   B \
+    \DDD   BB  B   B \
+    \                \
+    \DDD  BBBB B   B \
+    \D  D B    BB  B \
+    \DDD  BBB  B B B \
+    \D  D B    B  BB \
+    \DDD  BBBB B   B "
+  )
+  
+  - wall:String_buffer <- lev.at level
+
+  - level:Int := 0
+  
+  - margin_bottom:Real32  <- height * 0.05
+  - x_racket:Real32
+  - y_racket:Real32 <- height - 2 * h_racket - margin_bottom
+  - w_racket:Real32 <- width * 0.1
+  - h_racket:Real32 <- height * 0.01
+  
+  - x_ball:Real32
+  - y_ball:Real32
+  - radius_ball:Real32 <- width * 0.015
+  - dx:Real32
+  - dy:Real32
+    
+  - timer:Uint64
+  
+  // Services
+  
+  - brick done:{(Int,Real32,Real32,Real32,Real32);} <-
+  ( + i:Int
+    + x,y,w,h:Real32        
+    
+    w := width / 16
+    h := w * 0.6
+    {i <= wall.upper}.while_do {
+      done.value (i, x,y, w-1,h-1)      
+      x := x + w
+      (x >= width).if {
+        x := 0
+        y := y + h
+      }
+      i := i + 1
+    }
+  )
+    
+  - break_brick (bx,by:Real32) :Boolean <-
+  ( + result:Boolean
+    brick {(i:Int, x,y, w,h:Real32)
+      + b:Char
+      b := wall.at i
+      (b.is_upper).if {
+        (
+          (bx.in_range (x-radius_ball) to (x+w+radius_ball)) && 
+          {by.in_range (y-radius_ball) to (y+h+radius_ball)}
+        ).if {
+          break_snd.start
+          result := True
+          wall.at i put ((b > 'A').ok (b -# 1) or ' ') 
+        }
+      }      
+    }
+    result
+  )
+  
+  // Draw
+  
+  - draw_racket <-
+  (
+    begin_path
+    rect (x_racket,y_racket) size (w_racket,h_racket) radius (h_racket/2)
+    fill_color white
+    fill
+  )
+  
+  - draw_ball <-
+  ( + p:Paint
+    begin_path
+    p := Paint.create_radial (x_ball - radius_ball*0.3,y_ball - radius_ball*0.3) 
+    radius (radius_ball*0.0,radius_ball*0.8) 
+    color white to blue    
+    circle (x_ball,y_ball) radius radius_ball
+    fill_paint p
+    fill
+    p.free
+  )
+  
+  - draw_wall <-
+  ( 
+    brick {(i:Int, x,y, w,h:Real32)
+      + b:Char
+      + p:Paint
+      + c0,c1:Color
+      b := lev.at level.at i
+      (b.is_upper).if {
+        begin_path
+        (b = 'A').if { 
+          (c0,c1) := (Color.rgbf (0.3,0.2,0.2), Color.rgbf (0.7,0.8,0.8)) 
+        } else {
+          (c0,c1) := (Color.rgbf (0.8,0.3,0.3), Color.rgbf (1.0,0.7,0.7)) 
+        }
+        p := Paint.create_linear (x-w*0.2,y) to (x+w*0.3,y+h*0.3) color c0 to c1
+        fill_paint p
+        rect (x,y) size (w,h) radius 4
+        fill
+        p.free
+      }      
+    }    
+  )
+  
+  - level_color:Real32
+  - draw_level <-
+  (
+    (level_color > 0).if {
+      String.tmp { tmp:String_buffer
+        tmp # "Level #" # (level+1)
+        fill_color (Color.rgbaf (0,1,0,level_color))
+        font_size (width*0.1)
+        font_face_id (Font sys (Font bold))
+        text_align (align_middle | align_center)
+        text (width/2,height/2) msg tmp
+      }
+    }
+  )
+  
+Public
+  
+  - main <-
+  ( 
+    Random.init_clock
+    init "Break Wall Game" size (600,800)    
+    //
+    Audio.init
+    (bounce_snd,break_snd,lost_snd) := (Sound.new,Sound.new,Sound.new)
+    bounce_snd.init_from_asset "bounce.wav"    
+    break_snd .init_from_asset "break.wav"     
+    lost_snd  .init_from_asset "lost_ball.wav" 
+    //
+    Paper.run
+  )
+  
+  - init_graph <-
+  (
+    x_racket := (width - w_racket).div 2
+    (x_ball,y_ball) := (width.div 2, y_racket - radius_ball)
+    level_color := 1
+    
+    (dx,dy) := (+3.0 + level.to_real32/2, -3.0 - level.to_real32/2)
+  )  
+  
+  - motion <-
+  ( + t:Uint64
+    + new_x,new_y:Real32
+    t := Time.gettimeofday
+    (t > timer).if {      
+      (new_x,new_y) := (x_ball + dx, y_ball + dy)
+      (
+        (! new_x.in_range radius_ball to (width-radius_ball)) || 
+        {break_brick (new_x,y_ball)}
+      ).if {
+        dx := - dx
+      }
+      (
+        (new_y < radius_ball) || 
+        {(new_y+radius_ball > y_racket) && {new_x.in_range x_racket to (x_racket+w_racket)}} || 
+        {break_brick (x_ball,new_y)}
+      ).if {
+        dy := - dy
+      }
+      ((dx != Old dx) || {dy != Old dy}).if { bounce_snd.start }
+      (new_y > height).if { 
+        lost_snd.start; 
+        {! lost_snd.at_end}.while_do {
+          Clock.usleep 10_000
+        }
+        Out # "Game Over!\n"; exit 0 
+      }
+      
+      (x_ball,y_ball) := (x_ball + dx, y_ball + dy)
+      
+      (wall.occurrences ' ' = wall.count).if {
+        level := level + 1
+        (level > lev.upper).if {
+          Out # "Winner!\n"; exit 0
+        }
+        init_graph
+      }        
+      level_color := level_color - 0.01
+        
+      timer := t + 10
+    }
+  )
+  
+  - draw <-
+  ( 
+    draw_racket
+    draw_level
+    draw_ball
+    draw_wall
+    //
+    fill_color gray
+    font_size (margin_bottom * 0.8)
+    font_face_id (Font sys (Font bold))
+    text_align (align_bottom | align_center)
+    text (width/2, height) msg "Powered by Lisaac Ω  -  lisaac.org"
+  )
+    
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (s.first)    
+    .when 'q' or 'L' then { x_racket := (x_racket - width*0.05).max 0 }
+    .when 'd' or 'R' then { x_racket := (x_racket + width*0.05).min (width-w_racket) }
+    True
+  )
+  
+  - event ev:Int :Boolean <- 
+  (    
+    x_racket := (Hand.x_cur-w_racket/2).max 0.min (width-w_racket)
+    True
+  )

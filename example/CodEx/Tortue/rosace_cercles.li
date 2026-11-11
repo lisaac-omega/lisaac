@@ -1,0 +1,48 @@
+Header
+  + name := Rosace_cercles
+/*
+  Niveau 3 - Rosace de cercles : la boucle avec un compteur.
+
+  En français, on écrivait :
+      de 0 à (n - 1) répéter { i:Int ... }
+  En anglais :
+      from 0 to (n - 1) do { i:Int ... }
+  À chaque tour, la variable @i du bloc prend la valeur suivante :
+  0, 1, 2, ... n - 1.
+
+  Ici @i sert à choisir la couleur dans le tableau couleurs :
+  @i % couleurs.count est le reste de la division, qui fait revenir
+  aux couleurs du début (0, 1, 2, 3, 0, 1, 2, 3, ...).
+*/
+Inherit
+
+  + parent_rosace:Flat Rosace
+
+Public
+
+  - couleurs: Array Color :=
+      new Array Color of (red, blue, lime, dark_orange)
+
+  - rosace n:Int rayon r:Int <-
+  // @n cercles de rayon @r qui pivotent autour du même point.
+  [
+    ((360 % n) = 0)
+  ]
+  ( + rotation:Int
+
+    rotation := 360 / n
+    from 0 to (n - 1) do { i:Int
+      couleur_trait (couleurs.at (i % couleurs.count))
+      cercle r
+      tourne rotation
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Rosace de cercles" départ (300, 270) taille (600, 640)
+    fond (Color.white) crayon (2, Color.blue)
+
+    rosace valeur rayon 100
+    curseur
+  )

@@ -1,0 +1,180 @@
+Header
+  + name := Knucleotide
+Public
+  
+  - buffer:String_buffer
+  
+  - dico1:Hset(Sorter)
+  - dico2:Hset(Sorter)
+  - dico3:Hset(Sorter)
+  - dico4:Hset(Sorter)
+  - dico6:Hset(Sorter)
+  - dico12:Hset(Sorter)
+  - dico18:Hset(Sorter)
+  
+  - idf:String_alias := "GGTATTTTAATTTATAGT"
+  - key:Sorter
+  
+  - main <-
+  (
+    key := Sorter.new
+    // Read file.
+    buffer := String_buffer.create 10240
+    {      
+      buffer.clear
+      Stdin.read_line_in buffer
+    }.do_until {buffer.has_prefix ">THREE"}
+    buffer.clear
+    
+    {! Stdin.end_of_input}.while_do {      
+      Stdin.read_line_in buffer
+    }
+    buffer.to_upper
+    // Compute frequently.
+    dico1  := Hset(Sorter).create
+    dico2  := Hset(Sorter).create
+    dico3  := Hset(Sorter).create
+    dico4  := Hset(Sorter).create
+    dico6  := Hset(Sorter).create
+    dico12 := Hset(Sorter).create
+    dico18 := Hset(Sorter).create
+    
+    count
+    // Display.
+    sort dico1
+    sort dico2
+    
+    key.init_with (idf.to_external)
+    //
+    key.set_count 3
+    display key in dico3
+    //
+    key.set_count 4
+    display key in dico4
+    //
+    key.set_count 6
+    display key in dico6
+    //
+    key.set_count 12
+    display key in dico12
+    //
+    key.set_count 18
+    display key in dico18
+    
+  )
+  
+  - count <-
+  (     
+    (buffer.lower).to (buffer.upper - 1) do { j:Int
+      key.init_with (buffer.to_external + (j - 1))
+      //
+      key.set_count 1
+      inc_key key in dico1
+      //      
+      key.set_count 2
+      inc_key key in dico2
+      //
+      key.set_count 3
+      inc_key key in dico3
+      //
+      key.set_count 4
+      inc_key key in dico4
+      //
+      key.set_count 6
+      inc_key key in dico6
+      //
+      key.set_count 12
+      inc_key key in dico12
+      //
+      key.set_count 18
+      inc_key key in dico18
+    }
+    key.init_with (buffer.to_external + (buffer.upper - 1))
+    //
+    key.set_count 1
+    inc_key key in dico1
+  )
+  
+  - inc_key keysorter:Sorter in dico:Hset(Sorter) <-
+  ( + new_key:Sorter
+        
+    new_key := dico.reference_at keysorter
+    (new_key = NULL).if {      
+      new_key := keysorter.new
+      dico.add new_key
+    } else {
+      new_key.inc_freq
+    }
+  )
+  
+  - display keysorter:Sorter in dico:Hset(Sorter) <-
+  ( + ref:Sorter
+    
+    ref := dico.reference_at keysorter
+    (ref = NULL).if {
+      '0'.print
+    } else {
+      ref.freq.print
+    }
+    '\t'.print
+    keysorter.print
+    '\n'.print
+  )
+  
+  - array:C_array(Sorter) := C_array(Sorter).create 16
+  - string_tmp:String_buffer := String_buffer.create 5
+  
+  - sort dico:Hset(Sorter) <-
+  ( + counter,low,up,i,freq:Int
+    + r:Int
+    + swap:Boolean
+    + s:Sorter
+    + tmp:Sorter
+  
+    (dico.lower).to (dico.upper) do { j:Int
+      s := dico.at j
+      array.at (j-1) put s
+      counter := counter + s.freq
+    }
+    //array.bubble_sort
+    
+    low := 0
+    up  := dico.count - 2
+    {
+      swap := False
+      (low).to (up) do { j:Int
+        (array.at j.freq < array.at (j+1).freq).if {
+          tmp := array.at j
+          array.at j put (array.at (j+1))
+          array.at (j+1) put tmp
+          swap := True
+        }
+        i := dico.count - 2 - j
+        (array.at i.freq < array.at (i+1).freq).if {
+          tmp := array.at i
+          array.at i put (array.at (i+1))
+          array.at (i+1) put tmp
+          swap := True
+        }
+        
+      }
+      low := low + 1
+      up  := up  - 1
+    }.do_while {swap}
+    0.to (dico.count-1) do { j:Int
+      s := array.at j
+      s.print
+      ' '.print
+      freq := s.freq
+      //
+      r := (freq * 100_000) / counter
+      (r / 1000).print
+      '.'.print
+      string_tmp.clear
+      (r % 1000).append_in string_tmp format 3 with '0'
+      string_tmp.print
+      //
+      '\n'.print
+    }
+    '\n'.print
+  )

@@ -1,0 +1,28 @@
+Header
+  - name := Done
+// Active object: waits for the @Caller universes, then prints the time.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + left:Int
+
+  + begin:Uint64
+
+  - start n:Int <-
+  (
+    left := n
+    begin := Time.gettimeofday
+  )
+
+  - finished s:Int <-
+  ( + d:Uint64
+    left := left - 1
+    (left = 0).if {
+      d := Time.gettimeofday - begin
+      Out # "last " # s # " in " # (d / 1000) # " ms\n"
+    }
+  )

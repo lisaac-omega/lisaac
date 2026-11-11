@@ -1,0 +1,31 @@
+Header
+  + name := Alien_ex2
+/*
+  Alien 2 - Une variable.
+
+  La variable @x change de valeur entre deux déplacements : x := x + 1.
+  Pour savoir de combien de cases l'alien avance, il faut suivre la
+  valeur de @x ligne après ligne.
+
+  À faire : écrire la valeur de @x après chaque ligne, puis prévoir la
+  case d'arrivée.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - main <-
+  ( + x: Int
+    vitesse("lente")
+    x := 1
+    gauche(x)
+    x := x + 1
+    haut(x)
+    x := x + 1
+    droite(x)
+    x := x + 1
+    bas(x)
+    fin
+  )

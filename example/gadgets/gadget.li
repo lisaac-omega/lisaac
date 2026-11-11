@@ -1,0 +1,113 @@
+Header
+  + name := Gadget
+/*
+  The common part of the small desktop gadgets of this directory
+  (@Postit, @Did_you_know, @Omega_eyes, @Christmas): a window without
+  border and with a transparent background, which is moved by dragging
+  it with the mouse and closed with the Escape key. At the bottom, the
+  signature "Lisaac Ω · lisaac.org", a link: under the mouse, it is
+  underlined with a hand cursor, and a click on it opens the web site.
+
+  A gadget inherits @Gadget, draws itself in @draw and calls @show in
+  its @main. On macOS, the window keeps its border: there, a window
+  without border does not receive the mouse.
+
+  Shows: a parent prototype shared by several programs (@Inherit), the
+  resend to the parent (@parent_gadget.event), a transparent @Window,
+  a link with a hand cursor (@Clickable, inserted next to @Window).
+  */
+Inherit
+
+  + parent_window:Flat Window
+
+Insert
+
+  - parent_colors:Flat Colors
+  - parent_clickable:Clickable := Clickable
+
+Public
+
+  - show t:String_alias size (w,h:Int) <-
+  ( + dta:Array Uint8
+    + fallback,sz:Int
+    + f:Pointer
+    (System.name != "apple").if { Paper.unset (Paper.decorated); }
+    Paper.set (Paper.transparent)
+    init t size (w,h)
+    // ℤ, ℚ, ☕... are missing in the fonts of the system (Roboto): the font
+    // DejaVu of elit has them, use it when it is there.
+    String.tmp { tmp:String_buffer
+      tmp.copy (Command_args.executable_directory)
+      tmp.append "../../elit/assets/font/DejaVuSans.ttf"
+      f := File_utils.open_read tmp
+    }
+    (f != NULL).if {
+      sz := File_utils.size f
+      dta := Array Uint8.create sz
+      File_utils.force_read_raw f in (dta.storage) size sz
+      File_utils.close f
+      fallback := pen.create_font_mem "fallback" data dta free True
+      0.to 3 do { i:Int
+        pen.add_fallback_font_id (Font.sys i,fallback)
+      }
+    }
+    Paper.run
+  )
+
+  - signature_color:Color := Color.rgba (60,60,60,200)
+
+  - signature (x,y:Real32) <-
+  // Draws "Lisaac Ω · lisaac.org" centered on @x, its baseline at @y: a
+  // link, underlined under the mouse.
+  ( + w:Real32
+    font_face_id (Font.sys (Font.bold))
+    font_size 16
+    text_align (align_center | align_baseline)
+    fill_color (Color.rgba (0,0,0,70))
+    text (x + 1,y + 1) msg "Lisaac Ω · lisaac.org"
+    fill_color signature_color
+    w := text (x,y) msg "Lisaac Ω · lisaac.org" - x
+    zone (x - w,y - 20) size (2 * w,26) id signature_id
+    (is_on_signature).if {
+      begin_path
+      rect (x - w,y + 3) size (2 * w,2)
+      fill_color signature_color
+      fill
+    }
+  )
+
+  - is_on_signature:Boolean <- zone_under_hand = signature_id
+
+  - draw_all <-
+  // The zones are drawn again at each frame.
+  (
+    clear_zones
+    parent_window.draw_all
+  )
+
+  - event ev:Int :Boolean <-
+  // Drag: moves the window. Click on the signature: opens lisaac.org.
+  ( + wx,wy:Int
+    update_cursor
+    ((ev & ~1) = Hand.drag).if {
+      (wx,wy) := Paper.get_window_pos win_ptr
+      wx := wx + (Hand.x_cur - Hand.x_begin).to_int
+      wy := wy + (Hand.y_cur - Hand.y_begin).to_int
+      Paper.set_window win_ptr pos (wx,wy)
+    }.elseif {((ev & ~1) = Hand.clic) && {is_on_signature}} then {
+      open_url "https://lisaac.org"
+    }.elseif {ev = Hand.move} then {
+      Paper.refresh_again; // For the underline.
+    }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    ((c & Keyboard.key_cmd != 0) && {s.first = '\27\'}).if { Paper.exit 0; }
+    True
+  )
+
+Private
+
+  - signature_id:Int := 1

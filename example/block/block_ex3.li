@@ -1,0 +1,16 @@
+Header
+  + name := Block_ex3
+Public
+  
+  - main <-
+  (+ b:{Int; String} // One parameter, one result
+    
+    "The coin flip gave ".print
+    (Random.init_clock.flip_coin).if {
+      b := { i:Int ;  (i + 1).to_string + " peaches"}
+    } else {
+      b := { i:Int ;  (i + 2).to_string + " apples"}
+    }
+    (b.value 2).println
+  )
+  

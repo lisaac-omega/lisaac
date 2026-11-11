@@ -1,0 +1,17 @@
+Header
+  - name := Caller
+// Active object: @n synchronous calls to the @Counter, then tells @Main.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  - run c:Counter count n:Int done d:Done <-
+  ( + s:Int
+    1.to n do { i:Int
+      s := c.add 1
+    }
+    d.finished s
+  )

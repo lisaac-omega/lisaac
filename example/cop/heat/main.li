@@ -1,0 +1,43 @@
+Header
+  + name := Main
+/* Heat diffusion on a square grid of @n x @n (Jacobi, 5 points): the top row is hot (1.0),
+   the other borders are cold (0.0). The grid is cut into @k bands of rows, one @Band
+   universe each; at each step, each band exchanges its border rows with its neighbors.
+   @steps steps; the sum of the grid is printed (the sums of the bands added in order).
+   Arguments: n steps k [file] (by default 2000 500 8); with a file name, the final grid is
+   written in it as a color image (PPM).
+   Compile with `-cop -boost': `lisaac main -cop -boost'. */
+
+Public
+
+  - main <-
+  ( + blocks:Array Band
+    + c:Collector
+    + n,steps,k,first,rows:Int
+    + u,d:Band
+    + file:String_alias
+    n := 2000
+    steps := 500
+    k := 8
+    (Command_args.count > 1).if { n := Command_args.at 1.to_int; }
+    (Command_args.count > 2).if { steps := Command_args.at 2.to_int; }
+    (Command_args.count > 3).if { k := Command_args.at 3.to_int; }
+    (Command_args.count > 4).if { file := Command_args.at 4; }
+    c := Collector.new
+    c.start k size n file file
+    blocks := Array Band .create_with_capacity k
+    1.to k do { i:Int
+      blocks.add_last (Band.new)
+    }
+    first := 0
+    0.to (k - 1) do { i:Int
+      rows := (n - first) / (k - i)
+      (i = 0).if { u := NULL; } else { u := blocks.at (i - 1); }
+      (i = k - 1).if { d := NULL; } else { d := blocks.at (i + 1); }
+      blocks.at i.setup (n, steps, first, rows) up u down d collector c index i image (file != NULL)
+      first := first + rows
+    }
+    blocks.foreach { b:Band
+      b.start
+    }
+  )

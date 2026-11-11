@@ -1,0 +1,109 @@
+Header
+  + name := Curseur_tortue
+  /* Une tortue avec un curseur en bas de la fenêtre : on choisit
+     une valeur parmi @valeurs à la souris ou avec les flèches
+     gauche et droite. */
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - valeurs: Array Int <- deferred;
+  // Les valeurs proposées par le curseur, dans l'ordre.
+
+  - choix_initial:Int <- deferred;
+  // L'indice, dans @valeurs, de la valeur choisie au lancement.
+
+  - légende msg:String_buffer <- deferred;
+  // Le texte affiché au-dessus du curseur (commencer par @msg @copy).
+
+  // Position et longueur du curseur, en bas de la fenêtre :
+  - x_curseur:Int := 50
+  - y_curseur:Int := 600
+  - longueur_curseur:Int := 500
+
+  + choix:Int
+
+  - valeur:Int <-
+  // La valeur actuellement choisie avec le curseur.
+  ( - mem:Boolean
+
+    mem.if_false {
+      mem := True
+      choix := choix_initial
+    }
+    valeurs.at choix
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    if ("qQ".has (s.first)) then {
+      exit 0
+    }
+    String.tmp { key:String_buffer
+      Keyboard.key_to_string s cmd c in key
+      if ("Esc" == key) then {
+        exit 0
+      }.elseif {"Right" == key} then {
+        choix := (choix + 1).min (valeurs.upper)
+      }.elseif {"Left" == key} then {
+        choix := (choix - 1).max 0
+      } else {
+        Out # "s=" # s # " key=" # key # " c=" # c # '\n'
+      }
+    }
+    True
+  )
+
+  - event ev:Int :Boolean <-
+  // Clic ou glissé de la souris près du curseur :
+  // on choisit la valeur la plus proche de la souris.
+  ( + x:Real32
+    + i:Int
+    + près:Boolean
+
+    près := ((Hand y_cur - y_curseur.to_real32).abs < 30) || {(Hand y_begin - y_curseur.to_real32).abs < 30}
+    if (près && {(ev = Hand clic) || {ev = Hand lclic} || {ev = Hand drag} || {ev = Hand ldrag}}) then {
+      x := Hand x_cur - x_curseur.to_real32
+      i := ((x * valeurs.upper.to_real32) / longueur_curseur.to_real32 + 0.5).to_int
+      i := (i.max 0).min (valeurs.upper)
+      if (i != choix) then {
+        choix := i
+        Paper.refresh_again
+      }
+    }
+    True
+  )
+
+  - curseur <-
+  // Le curseur est dessiné par la tortue elle-même.
+  ( + x:Int
+
+    // Le rail :
+    couleur_trait (Color.rgb(190, 190, 190))
+    épaisseur_trait 3
+    téléportation (x_curseur, y_curseur) angle 0
+    avance longueur_curseur
+
+    // Une graduation par valeur :
+    épaisseur_trait 1
+    0.to (valeurs.upper) do { i:Int
+      x := x_curseur + (i * longueur_curseur) / valeurs.upper
+      téléportation (x, y_curseur - 6) angle 90
+      avance 12
+    }
+
+    // Le bouton, à la position du choix courant :
+    x := x_curseur + (choix * longueur_curseur) / valeurs.upper
+    couleur_trait red
+    épaisseur_trait 14
+    téléportation (x, y_curseur - 9) angle 90
+    avance 18
+
+    // Le texte au-dessus du curseur :
+    String.tmp { msg:String_buffer
+      légende msg
+      texte msg xy (x_curseur, y_curseur - 25) taille 0 couleur black
+    }
+  )

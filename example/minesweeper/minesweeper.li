@@ -1,0 +1,226 @@
+Header
+  + name := Minesweeper
+/*
+  The classic mine clearing game in Lisaac Ω.
+  Left click opens a cell, right click (or long click on a touch
+  screen) puts or removes a flag. A number tells how many mines are
+  hidden in the 8 cells around. Open all the safe cells to win!
+  Key 'n': new game, key 'q': quit.
+
+  Shows: a mouse driven Window (no game loop is needed: the window is
+  redrawn after each event), one Array2 Int where each cell is coded
+  by a single number, and a recursive method @open that floods the
+  empty areas. The first click is always safe: the mines are placed
+  after it.
+
+  To compile, as usual in a terminal:
+  $ lisaac minesweeper -q -boost
+  $ ./minesweeper
+  */
+Inherit
+
+  + parent_game:Flat Game
+  
+Private
+
+  // Data
+
+  - cols:Int := 12
+  - rows:Int := 12
+  - mines:Int := 20
+  - cell:Int := 36     // Size of a cell, in pixels.
+  - top:Int := 40      // Height of the status bar.
+
+  // State of the game:
+  - playing:Int := 0
+  - lost:Int := 1
+  - won:Int := 2
+  - game_state:Int
+
+  // Each cell of @grid is coded by one Int = content + cover:
+  //   content (units): 0 to 8 = number of mines around, 9 = a mine;
+  //   cover (tens):    0 = hidden, 10 = opened, 20 = flagged.
+  // For instance, 23 is a flagged cell with 3 mines around.
+  - grid:Array2 Int
+
+  - mine:Int := 9
+  - hidden:Int := 0
+  - opened:Int := 10
+  - flagged:Int := 20
+
+  - content (x,y:Int) :Int <- grid.at (x,y) % 10
+
+  - cover (x,y:Int) :Int <- grid.at (x,y) - content (x,y)
+
+  - put_cover (x,y:Int) cover c:Int <- grid.at (x,y) put (content (x,y) + c)
+
+  - mines_placed:Boolean
+  - opened_count:Int
+  - flag_count:Int
+
+  - digits:Array String_alias :=
+    new Array String_alias of ("", "1", "2", "3", "4", "5", "6", "7", "8")
+
+  - digit_colors:Array Color :=
+    new Array Color of (black, Color.rgb(0,0,220), Color.rgb(0,130,0),
+      Color.rgb(220,0,0), Color.rgb(0,0,120), Color.rgb(130,0,0),
+      Color.rgb(0,130,130), black, gray)
+
+  // Services
+
+  - new_game <-
+  (
+    grid.set_all_with 0
+    (mines_placed, opened_count, flag_count) := (False, 0, 0)
+    game_state := playing
+  )
+
+  - place_mines_except (x0,y0:Int) <-
+  // Place @mines mines at random, but never on (@x0,@y0) nor around it.
+  // Each new mine adds 1 to the content of its neighbours.
+  ( + x,y,n:Int
+
+    {n < mines}.while_do {
+      (x,y) := (Random.max (cols - 1), Random.max (rows - 1))
+      if ((content (x,y) != mine) && {((x - x0).abs > 1) || {(y - y0).abs > 1}}) then {
+        grid.at (x,y) put (cover (x,y) + mine)
+        (y - 1).to (y + 1) do { j:Int
+          (x - 1).to (x + 1) do { i:Int
+            ((grid.valid_index (i,j)) && {content (i,j) != mine}).if {
+              grid.at (i,j) put (grid.at (i,j) + 1)
+            }
+          }
+        }
+        n := n + 1
+      }
+    }
+    mines_placed := True
+  )
+
+  - open (x,y:Int) <-
+  // Open the cell (@x,@y). When there is no mine around, its 8
+  // neighbours are opened too: this recursion floods the empty area.
+  (
+    ((grid.valid_index (x,y)) && {cover (x,y) = hidden}).if {
+      put_cover (x,y) cover opened
+      opened_count := opened_count + 1
+      if (content (x,y) = mine) then {
+        game_state := lost
+      }.elseif {content (x,y) = 0} then {
+        (y - 1).to (y + 1) do { j:Int
+          (x - 1).to (x + 1) do { i:Int
+            open (i,j)
+          }
+        }
+      }
+    }
+  )
+
+  - box (x,y:Int) size s:Int color col:Color <-
+  (
+    begin_path
+    rect (x,y) size (s,s)
+    fill_color col
+    fill
+  )
+
+  - draw_cell (x,y:Int) <-
+  ( + px,py,c:Int
+
+    (px,py) := (x * cell, top + y * cell)
+    c := content (x,y)
+    if (cover (x,y) = opened) then {
+      if (c = mine) then {
+        box (px,py) size (cell - 1) color red
+        box (px + cell / 3, py + cell / 3) size (cell / 3) color black
+      } else {
+        box (px,py) size (cell - 1) color (Color.rgb(230,230,230))
+        fill_color (digit_colors.at c)
+        text (px + cell / 2, py + cell / 2) msg (digits.at c)
+      }
+    } else {
+      box (px,py) size (cell - 1) color (Color.rgb(160,160,170))
+      if (cover (x,y) = flagged) then {
+        // A small flag: a pole and a red square.
+        box (px + cell / 3, py + cell / 5) size (cell / 3) color red
+        box (px + cell / 3, py + cell / 5) size 3 color black
+        box (px + cell / 3, py + cell / 2) size 3 color black
+      }.elseif {(game_state = lost) && {c = mine}} then {
+        box (px + cell / 3, py + cell / 3) size (cell / 3) color black
+      }
+    }
+  )
+
+Public
+
+  - main <-
+  (
+    Random.init_clock
+    grid := Array2 Int .create (cols,rows)
+    new_game
+    init "Minesweeper" size (cols * cell, top + rows * cell)
+    Paper.run
+  )
+
+  - draw <-
+  (
+    box (0,0) size ((top + rows * cell).max (cols * cell)) color (Color.rgb(60,60,70))
+    font_size (cell - 10)
+    font_face_id (Font sys (Font bold))
+    text_align (align_middle | align_center)
+    0.to (rows - 1) do { y:Int
+      0.to (cols - 1) do { x:Int
+        draw_cell (x,y)
+      }
+    }
+    // The status bar:
+    String.tmp { msg:String_buffer
+      if (game_state = playing) then {
+        msg # "Mines: " # (mines - flag_count)
+      }.elseif {game_state = lost} then {
+        msg # "Boom! Click to play again."
+      } else {
+        msg # "You win! Click to play again."
+      }
+      fill_color white
+      text (cols * cell / 2, top / 2) msg msg
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + x,y:Int
+
+    if (game_state != playing) then {
+      (ev = Hand clic).if { new_game }
+    }.elseif {Hand.y_cur >= top.to_real32} then {
+      x := (Hand.x_cur / cell.to_real32).to_raw_int
+      y := ((Hand.y_cur - top.to_real32) / cell.to_real32).to_raw_int
+      (grid.valid_index (x,y)).if {
+        if (ev = Hand clic) then {
+          mines_placed.if_false { place_mines_except (x,y) }
+          open (x,y)
+          ((game_state = playing) && {opened_count = cols * rows - mines}).if {
+            game_state := won
+          }
+        }.elseif {(ev = Hand clic2) || {ev = Hand lclic}} then {
+          if (cover (x,y) = hidden) then {
+            put_cover (x,y) cover flagged
+            flag_count := flag_count + 1
+          }.elseif {cover (x,y) = flagged} then {
+            put_cover (x,y) cover hidden
+            flag_count := flag_count - 1
+          }
+        }
+      }
+    }
+    Paper.refresh_again
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (s.first.to_upper)
+    .when 'Q' then { System.exit 0 }
+    .when 'N' then { new_game ; Paper.refresh_again }
+    True
+  )

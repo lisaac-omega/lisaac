@@ -1,0 +1,32 @@
+Header
+  + name := Pidigits_gmp
+// The Computer Language Benchmarks Game: pidigits.
+// Same spigot algorithm as the C program #2, with GMP (@Mpz of the library), as all the C programs.
+// See @Pidigits for the algorithm of the C program #1 with the @ℤ of the library, without GMP.
+
+Public
+
+  - main <-
+  ( + n1,n2,d,u,v,w:Mpz
+    + n,i,k:Int
+
+    n := Command_args.at 1.to_int
+    u.init; v.init; w.init; n1.init_set_ui 4; n2.init_set_ui 3; d.init_set_ui 1
+    k := 1
+    {i < n}.while_do {
+      u.div (n1, d); v.div (n2, d)
+      (u.cmp v = 0).if {
+        // A digit: eliminate it.
+        Out # ('0'.code + u.get_ui.to_int).to_char
+        i := i + 1
+        ((i % 10) = 0).if { Out # "\t:" # i # '\n'; }
+        u.mul_si (u, -10); u.mul (d, u); n1.mul_si (n1, 10); n1.add (n1, u); n2.mul_si (n2, 10); n2.add (n2, u)
+      } else {
+        // Next term.
+        u.mul_si (n1, 2 * k - 1); v.add (n2, n2); w.mul_si (n1, k - 1); n1.add (u, v)
+        u.mul_si (n2, k + 2); n2.add (w, u); d.mul_si (d, 2 * k + 1)
+        k := k + 1
+      }
+    }
+    ((n % 10) != 0).if { (10 - n % 10).times { ' '.print; }; Out # "\t:" # n # '\n'; }
+  )

@@ -1,0 +1,59 @@
+Header
+  + name := Tortue_show
+/*
+  Tous les exemples de la tortue, dans l'ordre conseillé (voir README).
+  Aux niveaux 1 et 2, les boucles s'écrivent en français ; à partir du
+  niveau 3, les exemples passent à l'anglais, comme toute la
+  bibliothèque.
+
+  Pour compiler, dans un terminal :
+  $ lisaac tortue_show -q -boost
+  $ ./tortue_show
+  */
+Insert
+
+  - code_show:Flat Code_show
+
+Public
+
+  - main <-
+  (
+    show (
+      // Level 1: one instruction per line, variables.
+      "dessin_quadrangle.li", "background",
+      "dessin_triangle.li", "background",
+      
+      // Level 2: répéter, procedures, arguments.
+      "plusieurs_triangles.li", "background",
+      "dessin_maison.li", "background",
+      "dessin_hexagone.li", "background",
+      "dessin_etoile.li", "background",
+      "dessin_cercle.li", "background",
+      
+      // Level 3: rotating patterns, switch to English loops.
+      "rosace_cadres.li", "background",
+      "rosace_cercles.li", "background",
+      "dessin_feuille.li", "background",
+      "rosace_fleurs.li", "background",
+      
+      // Level 4: a variable that changes inside the loop.
+      "spirale_longueurs.li", "background",
+      "spirale_angles.li", "background",
+      
+      // Level 5: randomness, if.
+      "random_star.li", "background",
+      "marche_aleatoire.li", "background",
+      
+      // Level 6: recursion.
+      "arbre_fractale.li", "background",
+      "arbre_aleatoire.li", "background",
+      "flocon_koch.li", "background",
+      "sierpinski.li", "background",
+      "dragon.li", "background",
+      "hilbert.li", "background",
+      
+      // Appendix: text and debugging.
+      "tortexte.li", "background",
+      "tortue_debug.li"
+    )
+  )

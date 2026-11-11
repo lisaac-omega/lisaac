@@ -1,0 +1,14 @@
+Header
+  - name := Ponger
+// Active object: answers each ping.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  - ping p:Pinger rest k:Int <-
+  (
+    p.pong k
+  )

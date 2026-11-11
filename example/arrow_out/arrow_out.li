@@ -1,0 +1,375 @@
+Header
+  + name := Arrow_out
+/*
+  Arrow out: a puzzle game in Lisaac Ω.
+  The grid is filled with arrows. Click on an arrow to make it slide
+  out of the grid in the direction it points to. If another arrow is
+  in the way, you lose a life. Clear the grid to win!
+
+  Shows: a mouse driven Game, an Array2 of objects (Arrow), animation
+  with a timer in motion, a proportional layout that follows the
+  size of the window.
+
+  To compile, as usual in a terminal:
+  $ lisaac arrow_out -q -boost
+  $ ./arrow_out
+  */
+Inherit
+  
+  + parent_game:Flat Game
+
+Insert
+  
+  - parent_arrow_data:Arrow_data := Arrow_data
+
+Private
+
+  // Proportional layout
+
+  - margin_x:Real32 <- ( width / 100 )
+  
+  - cell_size:Real32 <-
+  // squares cells
+  ( + result:Real32
+    result := height .div (grid.count2 + 2.3) 
+    result
+  )
+
+  - init_game_data <-
+  ( random := (Random.new).init_clock
+    grid := (Array2 Arrow).create (18, 28)
+    
+    from 0 to (grid.upper1) do { x:Int
+      from 0 to (grid.upper2) do { y:Int
+        grid.at (x, y) put (new Arrow grid (x, y))
+      }
+    }
+    add_random_arrows
+  )
+  
+  // Draw
+  
+  - livescore cs:Real32 <-
+  (
+    String.tmp { txt:String_buffer
+      fill_color black
+      text (margin_x, cs.div 1.2) msg "Lives:"
+      
+      txt.clear
+      lives.times {
+        txt.append " Ω "
+      }
+      fill_color red
+      text (margin_x + 3*cs, cs.div 1.2) msg txt
+      
+      fill_color black
+      txt.copy "Score: "
+      score.append_in txt
+      text (width - 10 * cs, cs.div 1.2) msg txt
+    }
+  )
+  
+  - lisaac_omg cs:Real32<-
+  (
+    String.tmp { txt:String_buffer
+      txt # "Powered by Lisaac Ω  -  lisaac.org"
+      fill_color black
+      text (margin_x, height - margin_x) msg txt
+    }
+  )
+  
+  - draw_grid cs:Real32 <-
+  ( + cx,cy:Real32
+    cx := margin_x
+    from 0 to (grid.upper1) do { x:Int
+      cy := cs + cs.div 3
+      from 0 to (grid.upper2) do { y:Int
+        draw (grid.at (x, y)) to (cx, cy) cell_size cs
+        cy := cy + cs
+      }
+      cx := cx + cs 
+    }
+  )  
+  
+  - timer:Uint64
+  
+Public
+
+  - motion <-
+  ( + nx,ny:Int
+    + a1,a2:Arrow
+    + t:Uint64
+    
+    t := Time.gettimeofday
+    (moving && {t > timer}).if {
+      timer := t + (200000 - 1000 * score)
+      a1 := grid.at(head_x,head_y)
+      (arrow_shape (a1.shape)).if {
+        (nx,ny) := a1.step_head
+        (grid.valid_index(nx,ny)).if {
+          a2 := grid.at(nx,ny)
+          (a2.is_empty).if {
+            a2.set_shape (a1.shape) color (a1.color)
+            (head_x,head_y) := (nx,ny)
+            a1.bar_transformation
+            score := score + 1
+          } else {
+            lives := lives - 1
+            (lives <= 0).if {
+              score := 0 ; lives := 3
+            }
+            moving := False
+          }
+        }
+      }
+      moving.if {
+        ((head_x,head_y) = (tail_x,tail_y)).if {
+          grid.at(head_x,head_y).set_shape shape_empty color background_color
+          moving := False
+          same_player_shoot_again
+        } else {
+          score := score + 1
+          a1 := grid.at(tail_x,tail_y)
+          (tail_x,tail_y) := a1.step_head
+          a1.set_shape shape_empty color background_color
+          ((head_x,head_y) = (tail_x,tail_y)).if {
+            grid.at(head_x,head_y).tail_transformation
+          } else {
+            grid.at(tail_x,tail_y).tail_transformation
+          }
+        }
+      }
+    }
+  ) 
+  
+  - draw <-
+  ( + cs:Real32
+    
+    cs := cell_size 
+    begin_path
+    fill_color background_color
+    rect (0,0) size (width,height)
+    fill
+    
+    font_size (cs.div 1.2)
+    lisaac_omg cs
+    livescore cs
+    
+    font_size(cs.div 2)
+    draw_grid cs
+    Paper.refresh_again
+  )
+  
+  - handle_click (mx:Real32,my:Real32) <-
+  ( + gx,gy:Int
+    + cs,ma:Real32
+    
+    cs := cell_size
+    ma := margin_x
+    if (mx.in_range ma to (ma + grid.count1 * cs)) then {
+      gx := ((mx - ma).div cs).to_raw_int 
+      if (my.in_range (cs + cs.div 3) to (cs*(grid.count2 + 1) + cs.div 3)) then {
+        gy := ((my - (cs + cs.div 3)).div cs ).to_raw_int 
+        grid.at (gx,gy) .click
+      }
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  (
+    moving.if_false {
+      (ev & ~1 = Hand clic).if {
+        handle_click (Hand.x_cur, Hand.y_cur)      
+      }
+    }
+    True
+  )
+  
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (s.first.to_upper = 'Q').if { System.exit 0 }
+  )
+
+Public
+
+  - main <-
+  (
+    init_game_data
+    init "Arrow out" size (605, 1000)
+    Paper.run
+  )
+  
+Private
+  
+  - add_arrow arrow_shape:Int color color:Color <-
+  [ 
+    arrow_shape.in_range arrow_north to arrow_west
+  ]
+  ( + x,y,dirx,diry,margin:Int
+
+    arrow_shape
+    .when arrow_north then {
+      (dirx, diry) := south
+      (x, y) := (random.min 0 max (grid.upper1), 0)
+    }
+    .when arrow_east then { 
+      (dirx, diry) := west
+      (x, y) := (grid.upper1, random.min 0 max (grid.upper2))
+    }
+    .when arrow_south then {
+      (dirx, diry) := north
+      (x, y) := (random.min 0 max (grid.upper1), grid.upper2)      
+    }
+    .when arrow_west then {
+      (dirx, diry) := east
+      (x, y) := (0, random.min 0 max (grid.upper2))
+    }
+    margin := random.min 3 max ((grid.upper1.min (grid.upper2)).div 2)
+    until {margin = 0} do {
+      if (grid.at(x, y).add_head arrow_shape margin margin dir (dirx, diry) color color) then {
+        margin := 0
+      } else {
+        margin := margin - 1
+      }
+    }  
+  )
+  
+
+  - draw a:Arrow to (x,y:Real32) cell_size cs:Real32 <-
+  ( + cx, cy, wx, wy, line_width:Real32
+    + shape:Int
+    + c:Color
+    
+    shape := a.shape
+    c := a.color
+    
+    // Center:
+    (cx, cy) := (x + cs.div 2, y + cs.div 2)
+    line_width := cs.div 7
+    if (arrow_shape shape) then {
+      stroke {
+        shape
+        .when arrow_north then { // Arrow North
+          line (x + cs.div 2, y + cs) to (cx, cy)
+          (wx, wy) := (cx, cy - cs.div 5) 
+          bezier (cx - cs.div 4, cy + cs.div 4) w1 (wx, wy)  w2 (wx, wy) to (cx + cs.div 4, cy + cs.div 4)
+        }
+        .when arrow_east then { // Arrow East
+          line (x, y + cs.div 2) to (cx, cy)
+          (wx, wy) := (cx + cs.div 5, cy) 
+          bezier (cx - cs.div 4, cy - cs.div 4) w1 (wx, wy)  w2 (wx, wy) to (cx - cs.div 4, cy + cs.div 4)
+        }
+        .when arrow_south then { // Arrow South
+          line (x + cs.div 2, y) to (cx, cy)
+          (wx, wy) := (cx, cy + cs.div 5) 
+          bezier (cx - cs.div 4, cy - cs.div 4) w1 (wx, wy)  w2 (wx, wy) to (cx + cs.div 4, cy - cs.div 4)
+        }
+        .when arrow_west then { // Arrow West
+          line (x + cs, y + cs.div 2) to (cx, cy)
+          (wx, wy) := (cx - cs.div 5, cy) 
+          bezier (cx + cs.div 4, cy + cs.div 4) w1 (wx, wy)  w2 (wx, wy) to (cx + cs.div 4, cy - cs.div 4)
+        }        
+      } width line_width color c
+    }.elseif {body_shape shape} then {
+      stroke {
+        shape
+        .when south_to_north to north_to_south then { // Vertical bar
+          line (x + cs.div 2, y) to (x + cs.div 2, y + cs)          
+        }
+        .when west_to_east to east_to_west then { // Horizontal bar
+          line (x, y + cs.div 2) to (x + cs, y + cs.div 2)          
+        }
+        // utiliser arc à la place ???
+        .when south_to_east to east_to_south then { // Turn South East
+          bezier (x + cs.div 2, y + cs) w1 (cx,cy) w2 (cx, cy) to (x + cs, y + cs.div 2)
+        }
+        .when west_to_south to south_to_west then { // Turn South West
+          bezier (x + cs.div 2, y + cs) w1 (cx,cy) w2 (cx, cy) to (x, y + cs.div 2)
+        }   
+        .when west_to_north to north_to_west then { // Turn North West
+          bezier (x + cs.div 2, y) w1 (cx,cy) w2 (cx, cy) to (x, y + cs.div 2)
+        }   
+        .when east_to_north to north_to_east then { // Turn East North
+          bezier (x + cs, y + cs.div 2) w1 (cx,cy) w2 (cx, cy) to (x + cs.div 2, y)
+        }   
+      } width line_width color c
+    }
+    .elseif {tail_shape shape} then { // All tails
+      stroke {
+        circle (cx, cy) radius (cs.div 6)
+      } width (cs.div 4) color c
+      stroke {
+        shape
+        .when tail_to_south then { // Tail South
+          line (cx, cy) to (x + cs.div 2, y + cs)
+        }
+        .when tail_to_west then { // Tail West
+          line (cx, cy) to (x, y + cs.div 2)
+        }
+        .when tail_to_north then { // Tail North
+          line (cx, cy) to (x + cs.div 2, y)
+        }
+        .when tail_to_east then { // Tail Est
+          line (cx, cy) to (x + cs, y + cs.div 2)
+        }
+      } width line_width color c
+    }.elseif {shape = shape_empty} then { 
+    } else {
+      ? {shape = shape_track}
+      stroke {
+        circle (cx, cy) radius (cs.div 20)
+      } width line_width color gray      
+    }
+    /*
+    stroke {
+      rect (x,y) size (cs,cs)
+      text (x, y + cs) msg (shape.to_string)
+    } width 1 color blue
+    */
+  )
+  
+  - same_player_shoot_again <-
+  ( + i,j:Int
+    + shoot_again:Boolean
+    
+    shoot_again := True
+    while {shoot_again && {i <= grid.upper1}} do {
+      j := 0
+      while {shoot_again && {j <= grid.upper2}} do {
+        (grid.at(i,j).shape.in_range 0 to 19).if {
+          shoot_again := False
+        }
+        j := j + 1
+      }
+      i := i + 1
+    }
+    shoot_again.if {
+      add_random_arrows
+    }
+  )
+  
+  - add_random_arrows <-
+  ( + color:Color
+    + max,r,idx:Int
+    + list:Array Color 
+    
+    max := free_cells := grid.count1 * grid.count2
+    list := list_19
+    while {free_cells > max.div 10} do {
+      //Out # "free_cells:" # free_cells # '\n'
+      color := background_color
+      while {color = background_color} do {
+        if (!list.valid_index idx) then {
+          idx := 0
+        }
+        color := list.at idx
+        idx := idx + 1
+      }
+      add_arrow r color color ; free_cells := free_cells - 1
+      r := r + 1
+      if (r >= 4) then {
+        r := 0
+      }
+    }
+  )
+  

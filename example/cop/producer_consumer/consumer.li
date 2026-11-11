@@ -1,0 +1,41 @@
+Header
+  - name := Consumer
+// Active object: reads the buffers, in the order of its FIFO, and gives them back.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + expected:Int
+
+  + count:Int
+
+  + sum:Int
+
+  + last:Int
+  + is_ordered:Boolean := True
+
+  - expect n:Int <-
+  (
+    expected := n
+  )
+
+  - take buf:One Array Int from p:Producer <-
+  // Asynchronous: a full buffer, moved here (the producer has no more reference to it).
+  (
+    buf.foreach { x:Int
+      (x != last + 1).if {
+        is_ordered := False
+      }
+      last := x
+      sum := sum + x
+    }
+    count := count + buf.count
+    p.give_back buf
+    (count = expected).if {
+      Out # count # " numbers received, in order: " # is_ordered # ", sum: " # sum
+      Out # " (expected: " # ((expected.to_uint64 * (expected.to_uint64 + 1)) / 2) # ")\n"
+    }
+  )

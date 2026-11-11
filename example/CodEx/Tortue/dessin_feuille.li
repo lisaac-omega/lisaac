@@ -1,0 +1,43 @@
+Header
+  + name := Dessin_feuille
+/*
+  Niveau 3 - Les feuilles : une boucle dans une boucle.
+
+  Une autre écriture, la plus courante en Lisaac Ω : on demande
+  directement à l'entier de répéter le bloc avec le message times :
+      repeat 2 times { ... }    s'écrit aussi    2.times { ... }
+
+  Une feuille, ce sont deux arcs dos à dos : la tortue avance d'un pas,
+  tourne de 1 degré, et recommence ang fois. Il y a donc une boucle
+  (ang.times) à l'intérieur d'une autre boucle (2.times).
+
+  À essayer : pétale := 6, 12, 24 ou 30 (360 / pétale feuilles).
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - feuille ang:Int <-
+  (
+    2.times {
+      ang.times {
+        avance 2
+        tourne 1
+      }
+      tourne (180 - ang)
+    }
+  )
+
+  - dessin <-
+  ( + pétale:Int
+    
+    titre "Les belles Feuilles" départ (300, 300) taille (600, 600)
+    fond brown crayon (3, lime)
+    pétale := 20
+    (360 / pétale).times {
+      feuille 100
+      tourne pétale
+    }
+  )

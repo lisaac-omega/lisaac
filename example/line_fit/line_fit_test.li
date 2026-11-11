@@ -1,0 +1,185 @@
+Header
+  + name := Line_fit_test
+/*Small test for Line_fit Real64.*/
+
+Public
+
+  - print_line l:Line_fit Real64 <-
+  (
+    Out # "  a = " #| l.a
+    Out # "  b = " #| l.b
+    Out # "  c = " #| l.c
+    Out # "  centroid = (" # l.x_center # ", " # l.y_center # ")\n"
+    Out # "  rms distance = " #| l.rms
+    Out # "  max distance = " #| l.max
+  )
+  
+  - test_clean_score <-
+  ( + fit:Line_fit Real64
+    + xy:Array Real64
+    + ok:Boolean
+    + i:Int
+    + t0:Real64
+
+    fit := Line_fit Real64.new
+
+    "\n--- Clean score tests ---\n".print
+
+    //
+    // Test 1: perfect line => clean_score must be close to 1.
+    //
+    xy := Array Real64.create 20
+
+    i := 0
+    {i < 10}.while_do {
+      xy.at (2*i)     put (i.to_real64)
+      xy.at (2*i + 1) put ((2.0 * i.to_real64) + 1.0)
+      i := i + 1
+    }
+
+    ok := fit.on xy scale (1.0, 1.0)
+
+    "perfect line:\n".print
+    "  ok          = ".print; ok.print; "\n".print
+    "  rms         = ".print; fit.rms.print_decimal 6; "\n".print
+    "  axis_rms    = ".print; fit.axis_rms.print_decimal 6; "\n".print
+    "  ratio       = ".print; fit.ratio.print_decimal 6; "\n".print
+    "  clean_score = ".print; fit.clean_score.print_decimal 6; "\n\n".print
+
+    //
+    // Test 2: noisy but still line-shaped => clean_score should drop.
+    //
+    xy := Array Real64.create 20
+
+    xy.at 0  put 0.0; xy.at 1  put  1.0
+    xy.at 2  put 1.0; xy.at 3  put  2.0
+    xy.at 4  put 2.0; xy.at 5  put  6.0
+    xy.at 6  put 3.0; xy.at 7  put  6.0
+    xy.at 8  put 4.0; xy.at 9  put 10.0
+    xy.at 10 put 5.0; xy.at 11 put 10.0
+    xy.at 12 put 6.0; xy.at 13 put 14.0
+    xy.at 14 put 7.0; xy.at 15 put 14.0
+    xy.at 16 put 8.0; xy.at 17 put 18.0
+    xy.at 18 put 9.0; xy.at 19 put 18.0
+
+    ok := fit.on xy scale (1.0, 1.0)
+
+    "noisy line:\n".print
+    "  ok          = ".print; ok.print; "\n".print
+    "  rms         = ".print; fit.rms.print_decimal 6; "\n".print
+    "  axis_rms    = ".print; fit.axis_rms.print_decimal 6; "\n".print
+    "  ratio       = ".print; fit.ratio.print_decimal 6; "\n".print
+    "  clean_score = ".print; fit.clean_score.print_decimal 6; "\n\n".print
+
+    //
+    // Test 3: round/square cloud => clean_score should be low.
+    // This is the important anti-0.999 test.
+    //
+    xy := Array Real64.create 16
+
+    xy.at 0  put (-10.0); xy.at 1  put (-10.0)
+    xy.at 2  put (-10.0); xy.at 3  put   10.0
+    xy.at 4  put   10.0 ; xy.at 5  put (-10.0)
+    xy.at 6  put   10.0 ; xy.at 7  put   10.0
+    xy.at 8  put  (-5.0); xy.at 9  put    0.0
+    xy.at 10 put    5.0 ; xy.at 11 put    0.0
+    xy.at 12 put    0.0 ; xy.at 13 put  (-5.0)
+    xy.at 14 put    0.0 ; xy.at 15 put    5.0
+
+    ok := fit.on xy scale (1.0, 1.0)
+
+    "diffuse square cloud:\n".print
+    "  ok          = ".print; ok.print; "\n".print
+    "  rms         = ".print; fit.rms.print_decimal 6; "\n".print
+    "  axis_rms    = ".print; fit.axis_rms.print_decimal 6; "\n".print
+    "  ratio       = ".print; fit.ratio.print_decimal 6; "\n".print
+    "  clean_score = ".print; fit.clean_score.print_decimal 6; "\n\n".print
+
+    //
+    // Test 4: BAD metric example.
+    // Timestamp raw + raw forex level + scale(1,1) will almost always look too clean.
+    //
+    xy := Array Real64.create 20
+    t0 := 1700000000.0
+
+    xy.at 0  put t0;                xy.at 1  put 1.1000
+    xy.at 2  put (t0 +  300.0);     xy.at 3  put 1.1005
+    xy.at 4  put (t0 +  600.0);     xy.at 5  put 1.0996
+    xy.at 6  put (t0 +  900.0);     xy.at 7  put 1.1009
+    xy.at 8  put (t0 + 1200.0);     xy.at 9  put 1.0993
+    xy.at 10 put (t0 + 1500.0);     xy.at 11 put 1.1002
+    xy.at 12 put (t0 + 1800.0);     xy.at 13 put 1.0990
+    xy.at 14 put (t0 + 2100.0);     xy.at 15 put 1.1008
+    xy.at 16 put (t0 + 2400.0);     xy.at 17 put 1.0999
+    xy.at 18 put (t0 + 2700.0);     xy.at 19 put 1.1006
+
+    ok := fit.on xy scale (1.0, 1.0)
+
+    "BAD metric: raw timestamp + raw level + scale(1,1):\n".print
+    "  ok          = ".print; ok.print; "\n".print
+    "  rms         = ".print; fit.rms.print_decimal 12; "\n".print
+    "  axis_rms    = ".print; fit.axis_rms.print_decimal 6; "\n".print
+    "  ratio       = ".print; fit.ratio.print_decimal 12; "\n".print
+    "  clean_score = ".print; fit.clean_score.print_decimal 12; "\n\n".print
+
+    //
+    // Test 5: SAME data, but with metric conversion.
+    // x: seconds -> 5-minute candles.
+    // y: EURUSD level -> pips.
+    //
+    ok := fit.on xy scale ((1.0 / 300.0), 10000.0)
+
+    "GOOD metric: timestamp->bars, level->pips:\n".print
+    "  ok          = ".print; ok.print; "\n".print
+    "  rms         = ".print; fit.rms.print_decimal 6; "\n".print
+    "  axis_rms    = ".print; fit.axis_rms.print_decimal 6; "\n".print
+    "  ratio       = ".print; fit.ratio.print_decimal 6; "\n".print
+    "  clean_score = ".print; fit.clean_score.print_decimal 6; "\n\n".print
+  )
+  
+  - main <-
+  ( + pts:Array Real64
+    + fit:Line_fit Real64
+    + ok:Boolean
+
+    fit := Line_fit Real64.new
+
+    // Points close to y = 2*x + 1.
+    pts := new (Array Real64) of (
+      -2.0, -3.10,
+      -1.0, -1.05, 
+       0.0,  1.02,
+       1.0,  2.90,
+       2.0,  5.07,
+       3.0,  6.95,
+       4.0,  9.10,
+       5.0, 10.92
+    )
+
+    ok := fit.on pts scale (1,1)
+    "Test 1 - close to y = 2*x + 1\n".print
+    ok.if {
+      print_line fit
+    } else {
+      "Error".println
+    }
+
+    // Points close to x = 3.
+    pts := new (Array Real64) of (
+      3.00,-2.0,
+      3.02,-1.0,
+      2.99, 0.0,
+      3.01, 1.0,
+      3.00, 2.0
+    )
+
+    ok := fit.on pts scale (1,1)
+    "\nTest 2 - close to x = 3\n".print
+    ok.if {
+      print_line fit
+    } else {
+      "  error: ".println
+    }
+    
+    test_clean_score
+  )

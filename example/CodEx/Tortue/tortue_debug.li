@@ -1,0 +1,49 @@
+Header
+  + name := Tortue_debug
+/*
+  Annexe - Mettre la tortue au point (debug).
+
+  À lancer impérativement en ligne de commande pour voir les
+  affichages dans le terminal :
+    - debug_refresh affiche le nombre de réaffichages de la fenêtre ;
+    - Out # ... affiche la position de la tortue (turtle_x, turtle_y).
+
+  On modifie aussi directement la variable interne pen_color de la
+  tortue, au lieu de passer par couleur_trait.
+
+  (tx, ty) := (..., ...) est une affectation multiple : deux variables
+  reçoivent deux valeurs en une seule instruction.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - polygone nb:Int côté c:Int <-
+  ( + r:Int
+
+    r := 360 / nb
+    nb.times {
+      avance c ; tourne r
+    }
+    pen_color := random.color
+  )
+
+  - dessin <-
+  ( + tx, ty: Real32
+
+    titre "Tortue Debug" taille (400, 400)
+
+    debug_refresh // affiche le nombre de réaffichages
+
+    téléportation (180,140)
+
+    3.to 9 do { nb:Int
+      (tx, ty) := (turtle_x - nb, turtle_y - nb)
+      téléportation (tx,ty)
+      Out # "x=" # turtle_x # " y=" # turtle_y # '\n'
+      épaisseur_trait (nb - 2)
+      polygone nb côté (8 * nb)
+    }
+  )

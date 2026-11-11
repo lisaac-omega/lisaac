@@ -1,0 +1,13 @@
+Header
+  + name := Main
+
+Public
+  
+  - main <-
+  ( + p:Personne    
+    p := Personne.créer("toto", 32)
+    p.set_age(23)
+    
+    écrire(p.nom) ; écrire(" ") ; écrire(p.age) ; écrire('\n')
+  )
+  

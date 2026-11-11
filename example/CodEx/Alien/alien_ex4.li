@@ -1,0 +1,33 @@
+Header
+  + name := Alien_ex4
+/*
+  Alien 4 - La conditionnelle.
+
+  couleur donne la couleur de la case où se trouve l'alien (bleu,
+  blanc ou rouge). si ... alors ... sinon choisit le déplacement selon
+  cette couleur.
+
+  À faire : pour chaque si, chercher d'abord la couleur de la case.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - main <-
+  (
+    vitesse("normale")
+    haut(1)
+    si (couleur = rouge) alors {
+      gauche(2)
+    } sinon {
+      droite(2)
+    }
+    si (couleur = blanc) alors {
+      haut(3)
+    } sinon {
+      bas(3)
+    }
+    fin
+  )

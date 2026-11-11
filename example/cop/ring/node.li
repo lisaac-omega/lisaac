@@ -1,0 +1,29 @@
+Header
+  - name := Node
+// Active object (`-' in the name): each clone is a universe, with its thread and its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + next:Node
+
+  + clock:Clock
+
+  - link n:Node clock c:Clock <-
+  (
+    next := n
+    clock := c
+  )
+
+  - pass k:Int <-
+  // Asynchronous: the token, with the number of passes still to do.
+  (
+    (k = 0).if {
+      clock.stop
+    } else {
+      next.pass (k - 1)
+    }
+  )

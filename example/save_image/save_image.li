@@ -1,0 +1,169 @@
+Header
+  + name := Save_image
+/* Writes an image with @Img_write in the three formats (PNG, BMP, TGA), reads
+   the files back with @Image, checks them, and shows the original image and
+   the three files read back.
+   With the argument `check', only writes and checks the files (no window). */
+Inherit
+  + parent_window:Flat Window
+
+Private
+
+  - pw:Int := 256
+  - ph:Int := 192
+
+  - picture:C_array Uint8 // RGBA
+
+  - names:Array String_alias :=
+  ( + r:Array String_alias
+    r := Array String_alias.create_with_capacity 3
+    r.add_last "picture.png"; r.add_last "picture.bmp"; r.add_last "picture.tga"
+    r
+  )
+
+  - images:Array Int := Array Int.create_with_capacity 4
+
+  - make_picture <-
+  // A Mandelbrot set, more and more transparent from left to right.
+  ( + p:C_array Uint8
+    picture := p := C_array Uint8.create (pw * ph * 4)
+    0.to (ph-1) do { y:Int
+      0.to (pw-1) do { x:Int
+        + cr,ci,zr,zi,t:Real
+        + n:Int
+        cr := x.to_real * 3.0 / pw - 2.2
+        ci := y.to_real * 2.4 / ph - 1.2
+        {(n < 64) && {zr*zr + zi*zi < 4.0}}.while_do {
+          t := zr*zr - zi*zi + cr
+          zi := 2.0*zr*zi + ci
+          zr := t
+          n := n + 1
+        }
+        p.at 0 put (((n * 4) & 0FFh).to_raw_uint8)
+        p.at 1 put (((n * 13 + y) & 0FFh).to_raw_uint8)
+        p.at 2 put (((255 - n * 3 - x / 2) & 0FFh).to_raw_uint8)
+        p.at 3 put ((255 - x * 255 / (pw * 2)).to_raw_uint8)
+        p := p + 4
+      }
+    }
+  )
+
+  - file_path name:String_alias :String_alias <-
+  ( + result:String_alias
+    String.tmp { s:String_buffer
+      s.copy (Command_args.executable_directory)
+      s.add_dirsep
+      s.append name
+      result := s.to_string_alias
+    }
+    result
+  )
+
+  - expected (format:Int, i:Int) :Uint8 <-
+  // The value of byte @i of the file read back: BMP has no alpha, it is
+  // composited against a pink background (255,0,255).
+  ( + result:Uint8
+    + a,c:Int
+    (format = 1).if {
+      ((i & 3) = 3).if {
+        result := 255
+      } else {
+        + bg:Int
+        bg := ((i & 3) = 1).ok 0 or 255
+        c := picture.at i
+        a := picture.at (i | 3)
+        result := (bg + ((c - bg) * a) / 255).to_raw_uint8
+      }
+    } else {
+      result := picture.at i
+    }
+    result
+  )
+
+  - write_and_check <-
+  ( + ok:Boolean
+    + d:C_array Uint8
+    + errors:Int
+    make_picture
+    0.to 2 do { f:Int
+      (f)
+      .when 0 then { ok := Img_write.write_png (file_path (names.at f)) size (pw,ph,4) data picture; }
+      .when 1 then { ok := Img_write.write_bmp (file_path (names.at f)) size (pw,ph,4) data picture; }
+      .when 2 then { ok := Img_write.write_tga (file_path (names.at f)) size (pw,ph,4) data picture; }
+      Out # names.at f # ": "
+      (! ok).if {
+        Out # "not written\n"
+      }.elseif {! Image.init (file_path (names.at f))} then {
+        Out # "not read (" # Image.error # ")\n"
+      } else {
+        d := Image.load (Image.rgb_alpha)
+        (d = NULL).if {
+          Out # "not decoded (" # Image.error # ")\n"
+        }.elseif {(Image.img_x != pw) || {Image.img_y != ph}} then {
+          Out # "bad size " # Image.img_x # 'x' # Image.img_y # '\n'
+        } else {
+          errors := 0
+          0.to (pw*ph*4-1) do { i:Int
+            (d.at i != expected (f, i)).if { errors := errors + 1; }
+          }
+          (errors = 0).if {
+            Out # pw # 'x' # ph # ", " # Image.img_n # " components, identical\n"
+          } else {
+            Out # errors # " different bytes\n"
+          }
+        }
+      }
+    }
+  )
+
+Public
+
+  - draw <-
+  ( + p:Paint
+    + x,y:Real32
+    0.to (images.upper) do { i:Int
+      x := 20 + (i % 2) * (pw + 20)
+      y := 40 + (i / 2) * (ph + 40)
+      // a checkerboard behind, to see the transparency
+      0.to 15 do { cx:Int
+        0.to 11 do { cy:Int
+          begin_path
+          rect (x + cx * 16, y + cy * 16) size (16, 16)
+          (((cx + cy) & 1) = 0).if {
+            fill_color (Color.rgb (200,200,200))
+          } else {
+            fill_color (Color.rgb (255,255,255))
+          }
+          fill
+        }
+      }
+      (images.at i > 0).if {
+        p := Paint.create_pattern (x, y) size (pw, ph) img_id (images.at i) angle 0 alpha 1
+        begin_path
+        rect (x, y) size (pw, ph)
+        fill_paint p
+        fill
+        p.free
+      }
+      font_size 16
+      fill_color (Color.white)
+      (i = 0).if {
+        text (x, y - 8) msg "original"
+      } else {
+        text (x, y - 8) msg (names.at (i-1))
+      }
+    }
+  )
+
+  - main <-
+  (
+    write_and_check
+    ((Command_args.count > 1) && {Command_args.at 1 == "check"}).if_false {
+      init "Save image" size (2*pw + 60, 2*ph + 100)
+      images.add_last (create_image_rgba picture size (pw,ph) flags 0)
+      names.foreach { n:String_alias
+        images.add_last (create_image (file_path n) flags 0)
+      }
+      Paper.run
+    }
+  )

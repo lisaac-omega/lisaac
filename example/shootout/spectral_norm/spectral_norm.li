@@ -1,0 +1,74 @@
+Header
+  + name := Spectral_norm
+// The Computer Language Benchmarks Game: spectral-norm.
+// Same power method as the C programs: each line of A.u (or At.u) is computed 4 columns
+// at a time with @Real64x4 (SIMD), and the lines are shared by the cores (@Parallel).
+
+Public
+
+  - n:Int
+  - u:C_array Real64
+  - v:C_array Real64
+  - tmp:C_array Real64
+  - src:C_array Real64
+  - dst:C_array Real64
+  - transposed:Boolean
+
+  - a (i,j:Int) :Real64 <- 1.0 / ((i + j) * (i + j + 1) / 2 + i + 1).to_real64
+
+  - line i:Int :Real64 <-
+  // (A.@src)[@i], or (At.@src)[@i].
+  ( + acc,iv,jv,s,d:Real64x4
+    + j:Int
+    + result:Real64
+
+    iv := i.to_real64
+    jv := Real64x4.create (0.0, 1.0, 2.0, 3.0)
+    {j + 3 < n}.while_do {
+      s := iv + jv
+      d := s * (s + 1.0) * 0.5 + 1.0
+      (transposed).if { d := d + jv; } else { d := d + iv; }
+      acc := acc + Real64x4.load src at j / d
+      jv := jv + 4.0
+      j := j + 4
+    }
+    result := acc.sum
+    j.to (n - 1) do { k:Int
+      (transposed).if { result := result + a (k, i) * src.at k; } else { result := result + a (i, k) * src.at k; }
+    }
+    result
+  )
+
+  - multiply (s,d:C_array Real64, t:Boolean) <-
+  // @d := A.@s, or At.@s if @t.
+  (
+    src := s
+    dst := d
+    transposed := t
+    Parallel.times (Parallel.cores) do { part:Int
+      (part * n / Parallel.cores).to ((part + 1) * n / Parallel.cores - 1) do { i:Int
+        dst.at i put (line i)
+      }
+    }
+  )
+
+  - main <-
+  ( + vbv,vv:Real64
+
+    n := Command_args.at 1.to_int
+    u   := C_array Real64 .create n
+    v   := C_array Real64 .create n
+    tmp := C_array Real64 .create n
+    0.to (n - 1) do { i:Int
+      u.at i put 1.0
+    }
+    10.times {
+      multiply (u, tmp, False); multiply (tmp, v, True)
+      multiply (v, tmp, False); multiply (tmp, u, True)
+    }
+    0.to (n - 1) do { i:Int
+      vbv := vbv + u.at i * v.at i
+      vv  := vv + v.at i * v.at i
+    }
+    (vbv / vv).sqrt.print_format_c "%.9f\n"
+  )

@@ -1,0 +1,226 @@
+Header
+  + name := Arrow
+  /**/
+Insert
+  
+  - parent_arrow_data:Arrow_data := Arrow_data
+  
+  - parent_clone:Clone := Clone
+  
+Public
+  
+  + shape:Int8
+  + color:Color
+  + grid_x:Int
+  + grid_y:Int
+  
+  - new self:Self grid (gx, gy:Int) :Self <-
+  ( + result:Self
+    result := clone
+    result.set_grid (gx, gy)
+    result
+  )
+  
+  - is_empty:Boolean <- ( shape = shape_empty )
+    
+  - clear: Self <-
+  (
+    shape := shape_empty
+    color := background_color
+    self
+  )
+  
+  - set_grid (gx:Int, gy:Int) <-
+  (
+    shape := shape_empty
+    color := background_color
+    grid_x := gx
+    grid_y := gy    
+  )  
+  
+  - add_head as:Int margin margin:Int dir (dirx,diry:Int) color c:Color :Boolean <-
+  [
+    arrow_shape as,
+    c != background_color
+  ]
+  ( + length,nx,ny:Int
+    + result:Boolean
+    (nx,ny) := (grid_x+dirx,grid_y+diry)
+    if ((margin <= 0) && {is_empty} && {grid.valid_index(nx,ny)} && {grid.at(nx,ny).is_empty}) then {
+      result := True
+      color := c
+      set_shape as
+      length := random.min 6 max 20
+      grid.at(nx,ny).add as length length color c
+    }.elseif {is_empty && {grid.valid_index(nx,ny)}} then {
+      grid.at (grid_x,grid_y).set_track
+      grid.at (nx,ny).add_head as margin (margin-1) dir (dirx,diry) color c
+      grid.at (grid_x,grid_y).set_empty
+    } else {
+      ? {! is_empty}
+    }
+    result
+  )
+    
+
+  - add prev_shape:Int length length:Int color c:Color <-
+  [
+    is_empty
+  ]
+  ( + dirx,diry,nx,ny,s:Int
+    + good:Boolean
+    color := c
+    (length <= 1) if {
+      set_shape (tail_for prev_shape)
+    } else {
+      until {good || {s < 0}} do {
+        ((s := random (grid_x,grid_y) body prev_shape) > 0).if {
+          (dirx,diry) := dirto_tail s
+          (nx,ny) := (grid_x+dirx, grid_y+diry)
+          //Out # "prev_shape:" # prev_shape # " s:" # s # '\n'
+          if (grid.valid_index(nx,ny) && {grid.at(nx,ny).is_empty}) then {
+            good := True
+          }
+        }
+      }
+      good.if {
+        set_shape s
+        grid.at(nx,ny).add s length (length-1) color c
+      } else {
+        set_shape (tail_for prev_shape)
+      }
+    }
+  )
+  
+  - random (gx,gy:Int) body shp:Int : Int <-
+  ( - a:Array Int
+    - pgx,pgy,i,same_counter,frozen_counter:Int
+    + result:Int
+    
+    (a = prev.at shp).if { // same shape
+      same_counter := same_counter + 1
+    } else {
+      same_counter := 0
+    }
+    a := prev.at shp
+    
+    ((pgx,pgy) = (gx,gy)).if { // no move
+      frozen_counter := frozen_counter + 1
+    } else {
+      frozen_counter := 0
+    }
+    (pgx,pgy) := (gx,gy)
+    
+    ((same_counter > 4) || {frozen_counter > 4}).if {
+      result := -1
+    }.elseif {arrow_shape shp} then {
+      until {body_shape result} do {
+        (i <= a.upper).if {
+          result := a.at i
+        } else {
+          i := -1
+        }
+        i := i + 1
+      }
+    }.elseif {(frozen_counter = 0) && {same_counter >= 1}} then {
+      result := shp
+    } else { 
+      until {body_shape result} do {
+        (i <= a.upper)if {
+          result := a.at i
+        } else {
+          i := -1
+        }
+        i := i + 1
+      }
+    }
+    //Out # shp # " res:" # result # ' ' # i # ' ' # a # " same:" # same_counter # " frozen:" # frozen_counter # '\n'
+    result
+  )
+  [
+    (body_shape Result) || {Result < 0}
+  ]
+  
+  - set_shape s:Int <- 
+  ( 
+    shape := s
+    free_cells := free_cells - 1
+  )
+  
+  - set_track <- ( shape := shape_track )
+  
+  - set_empty <- ( shape := shape_empty )
+  
+  - click <-
+  (
+    moving.if {
+      score := score - 1
+    }.elseif {shape.in_range 0 to 19} then {
+      (head_x,head_y) := (grid_x,grid_y)
+      until {arrow_shape(grid.at(head_x,head_y).shape)} do {
+        (head_x,head_y) := grid.at(head_x,head_y).step_head
+      }
+      (tail_x,tail_y) := (grid_x,grid_y)
+      until {tail_shape(grid.at(tail_x,tail_y).shape)} do {
+        (tail_x,tail_y) := grid.at(tail_x,tail_y).step_tail
+      } 
+      moving := True
+    } else {
+      score := score - 1 
+    }
+  )
+  
+  - step_head:(Int,Int) <-
+  ( - tdx,tdy:Array Int
+    
+    (tdx = NULL).if {
+      tdx := new Array Int of ( 0, 1, 0,-1, 0, 0, 1,-1, 1, 0, 0,-1, 0,-1, 0, 1, 0,-1, 0, 1)
+      tdy := new Array Int of (-1, 0, 1, 0,-1, 1, 0, 0, 0, 1, 1, 0,-1, 0,-1, 0, 1, 0,-1, 0)
+    }
+    (grid_x + tdx.at shape, grid_y + tdy.at shape)
+  )
+  
+  - old_step_tail:(Int,Int) <-
+  ( - tdx,tdy:Array Int
+    
+    (tdx = NULL).if {
+      tdx := new Array Int of ( 0,-1, 0, 1, 0, 0,-1, 1, 0, 1,-1, 0,-1, 0, 1, 0, 0, 1, 0,-1)
+      tdy := new Array Int of ( 1, 0,-1, 0, 1,-1, 0, 0, 1, 0, 0, 1, 0,-1, 0,-1,-1, 0, 1, 0)
+    }
+    (grid_x + tdx.at shape, grid_y + tdy.at shape)
+  )
+  - step_tail:(Int,Int) <-
+  ( + dirx,diry:Int
+    
+    (dirx,diry) := dirto_tail shape
+    (grid_x + dirx,grid_y + diry)
+  )
+  
+  - set_color c:Color <- ( color := c )
+  
+  - set_shape s:Int color c:Color <- 
+  [
+    s.in_range arrow_north to shape_track
+  ]
+  ( 
+    shape := s
+    color := c 
+  )
+  
+  - tail_transformation <-
+  ( - trans:Array Int
+    
+    (trans = NULL).if {
+      trans := new Array Int of (18,17,16,17,18,16,19,17,19,16,16,17,18,17,18,19)
+    }
+    shape := trans.at shape
+  )
+  
+  - bar_transformation <-
+  ( - trans:Array Int
+    
+    (trans = NULL).if {
+      trans := new Array Int of (4,6,5,7)
+    }
+    shape := trans.at shape
+  )

@@ -1,0 +1,51 @@
+Header
+  + name := Binary_trees
+// The Computer Language Benchmarks Game: binary-trees.
+// Same algorithm as the C program #2: allocate, walk and free each tree in a @Pool, the
+// iterations of each depth shared by the cores (@Parallel).
+
+Public
+
+  - max_depth:Int
+  - checks:C_array Int := C_array Int .create 4096
+  // Sum of the checks of each part and depth (128 bytes apart).
+
+  - tree depth:Int in pool:Pool Treenode :Treenode <-
+  ( + l,r:Treenode
+    (depth > 0).if { l := tree (depth - 1) in pool; r := tree (depth - 1) in pool; }
+    pool.item.set (l, r)
+  )
+
+  - main <-
+  ( + pool:Pool Treenode
+    + long_lived:Treenode
+    + check:Int
+
+    max_depth := (Command_args.at 1.to_int).max 6
+    Parallel.start (Parallel.cores) do { part:Int
+      + p:Pool Treenode
+      + n,c:Int
+      p := Pool Treenode .create
+      4.to max_depth by 2 do { depth:Int
+        n := 1 << (max_depth - depth + 4)
+        c := 0
+        (part * n / Parallel.cores).to ((part + 1) * n / Parallel.cores - 1) do { i:Int
+          p.clear
+          c := c + tree depth in p.check
+        }
+        checks.at (part * 32 + depth) put c
+      }
+    }
+    // Meanwhile, the 2 big trees.
+    pool := Pool Treenode .create
+    Out # "stretch tree of depth " # (max_depth + 1) # "\t check: " # tree (max_depth + 1) in pool.check # '\n'
+    pool.clear
+    long_lived := tree max_depth in pool
+    Parallel.wait
+    4.to max_depth by 2 do { depth:Int
+      check := 0
+      0.to (Parallel.cores - 1) do { p:Int; check := check + checks.at (p * 32 + depth); }
+      Out # (1 << (max_depth - depth + 4)) # "\t trees of depth " # depth # "\t check: " # check # '\n'
+    }
+    Out # "long lived tree of depth " # max_depth # "\t check: " # long_lived.check # '\n'
+  )

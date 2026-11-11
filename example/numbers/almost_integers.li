@@ -1,0 +1,43 @@
+Header
+  + name := Almost_integers
+/*
+  Some famous real numbers are almost integers: e^(π √163) is
+  262537412640768743.99999999999925..., and e^π - π is 19.999099979...
+
+  With @Real64, the first one is printed 262537412640768256.0: only its first
+  15 digits are right, and the nines are lost. With @ℝ, each value is
+  computed from the decimals asked for, and all the printed decimals are right.
+
+  Shows: the real numbers @ℝ, `ℝ.π', `sqrt', `exp', and printing with
+  `append_in ... decimal'.
+
+  To compile, as usual in a terminal:
+  $ lisaac almost_integers -q -boost
+  $ ./almost_integers
+  */
+Private
+
+  - show (name:String_alias, x:ℝ) <-
+  (
+    Out # name # " = "
+    String.tmp { tmp:String_buffer
+      x.append_in tmp decimal 30
+      Out # tmp
+    }
+    Out # '\n'
+  )
+
+Public
+
+  - main <-
+  ( + x:ℝ
+    + y:Real64
+    y := (163.0.sqrt * Real64.pi).exp
+    Out # "With Real64: e^(pi sqrt 163) = " # y # '\n'
+    Out # "With ℝ:\n"
+    x := 163.to_r.sqrt * ℝ.π
+    show ("  e^(pi sqrt 163)", x.exp)
+    x := 67.to_r.sqrt * ℝ.π
+    show ("  e^(pi sqrt 67) ", x.exp)
+    show ("  e^pi - pi      ", ℝ.π.exp - ℝ.π)
+  )

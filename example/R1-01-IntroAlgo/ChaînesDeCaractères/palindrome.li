@@ -1,0 +1,43 @@
+Header
+  + name := Palindrome
+/*
+  LAVAL, RADAR, SENONES
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - être_palindrome (ch:String): Boolean <-
+  ( + résultat:Boolean
+    + i:Int // index repère coté gauche 
+    + j:Int // index repère coté droit
+    
+    i := 0 // comme dans quasi tous les langages le premier est en 0
+    j := ch.upper // index le plus à gauche
+    
+    résultat := True
+    tant_que {résultat.et (i < j)} faire {
+      si (ième(ch, i) != ième(ch, j)) alors {
+        résultat := False
+      }
+      i := i + 1
+      j := j - 1
+    }
+    résultat // la dernière expression est retournée
+  )
+  
+  - ième (ch:String, idx:Int): Char <-
+  (
+    ch.at idx
+  )
+  
+  - main <-
+  ( + s: String
+    + p: Boolean
+    
+    s := argument 1
+    p := être_palindrome(s)
+    écrire(p) ; écrire("\n")
+  )

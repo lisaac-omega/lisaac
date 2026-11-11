@@ -1,0 +1,79 @@
+Header
+  + name := Polynomial_roots
+/*
+  All the roots of a polynomial, real or complex, with the
+  Durand-Kerner method: the @n roots are searched at the same time,
+  and at each step every root r(k) moves by - p(r(k)) / d, where @d is
+  the product of the differences r(k) - r(j) with all the other roots.
+
+  Here p(x) = x^5 - x - 1, which has one real root and four complex
+  ones. The roots of a real polynomial come by conjugate pairs, and
+  their sum is minus the coefficient of x^4 (0 here).
+
+  Shows: the complex numbers @ℂ, an @Array of @ℂ, `polar', `/',
+  `conj' and `modulus'.
+
+  To compile, as usual in a terminal:
+  $ lisaac polynomial_roots -q -boost
+  $ ./polynomial_roots
+  */
+Private
+
+  - coefficients:Array ℂ :=
+  // p(x) = x^5 - x - 1, from the highest degree: 1, 0, 0, 0, -1, -1.
+  ( + r:Array ℂ
+    r := Array ℂ.create 6
+    r.at 0 put (1 + 0i)
+    r.at 4 put (-1 + 0i)
+    r.at 5 put (-1 + 0i)
+    r
+  )
+
+  - p x:ℂ :ℂ <-
+  // Horner: ((1.x + 0).x + 0)...
+  ( + r:ℂ
+    coefficients.foreach { a:ℂ
+      r := r * x + a
+    }
+    r
+  )
+
+Public
+
+  - main <-
+  ( + n:Int
+    + roots:Array ℂ
+    + d,sum:ℂ
+    + moved,error:Real64
+    + steps:Int
+
+    n := coefficients.count - 1
+    roots := Array ℂ.create n
+    // Start: points on a circle, not on a symmetry axis.
+    0.to (n - 1) do { k:Int
+      roots.at k put (ℂ.polar (1.0, 0.4 + Real64.two_pi * k.to_real64 / n.to_real64))
+    }
+    moved := 1.0
+    {(moved > 1.0E-14) && {steps < 500}}.while_do {
+      moved := 0.0
+      0.to (n - 1) do { k:Int
+        d := 1 + 0i
+        0.to (n - 1) do { j:Int
+          (k != j).if { d := d * (roots.at k - roots.at j); }
+        }
+        d := p (roots.at k) / d
+        roots.at k put (roots.at k - d)
+        moved := moved.max (d.modulus)
+      }
+      steps := steps + 1
+    }
+
+    Out # "Roots of x^5 - x - 1, found in " # steps # " steps:\n"
+    roots.foreach { r:ℂ
+      Out # "  " # r # '\n'
+      error := error.max ((p r).modulus)
+      sum := sum + r
+    }
+    Out # "All |p(r)| < 10^-14: " # (error < 1.0E-14) # '\n'
+    Out # "Sum of the roots: " # sum # '\n'
+  )

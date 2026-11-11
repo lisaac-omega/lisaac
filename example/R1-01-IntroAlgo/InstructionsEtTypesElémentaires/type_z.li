@@ -1,0 +1,61 @@
+Header
+  + name := Type_z
+/*
+  Le type @ℤ : les entiers relatifs, sans limite de taille.
+
+  Les valeurs de @y deviennent énormes, mais un @ℤ ne déborde jamais :
+  il utilise autant de mémoire que nécessaire.
+  écrire(...) affiche dans le terminal ; Out # ... # ... est une autre
+  écriture, plus compacte.
+
+  À essayer : comparer avec type_int.li, qui fait le même genre de
+  calcul avec le type @Int.
+  */
+  
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  (
+    // Lexique:
+    // Déclaration de deux variables de type @ℤ
+    + x:ℤ
+    + y:ℤ
+    
+    écrire("Exemple de variables de type ℤ\n")
+    x := 12
+    écrire("x vaut ") ; écrire(x) ; écrire("\n")  
+    
+    y := x + 4
+    
+    écrire("y vaut ") ; écrire(y) ; écrire("\n")
+    
+    y := y * y
+    
+    écrire("maintenant, y vaut ") ; écrire(y) ; écrire("\n")
+    
+    y := y * y * y
+    
+    écrire("et maintenant, y vaut ") ; écrire(y) ; écrire("\n")
+    
+    y := y * y * y * y
+    
+    écrire("et aussi, y vaut ") ; écrire(y) ; écrire("\n")
+    
+    y := y * y * y * y
+    
+    écrire("et alors , y = ") ; écrire(y) ; écrire("\n")
+    
+    y := y * y * y * y * y
+    
+    // Et voici une autre façon plus compacte de faire des affichages:
+    Out # "maintenant y vaut " # y # "\n"
+    
+    y := y / y
+    
+    Out # "Et finalement y =" # y # " et x au carré vaut " # (x * x) # '\n' 
+  )
+  

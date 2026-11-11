@@ -1,0 +1,24 @@
+Header
+  + name := Main
+/* Synchronous messages under contention: @k @Caller universes (8 by default, or the first
+   argument) each make 1_000_000 synchronous calls to the same @Counter; @Done prints the time.
+   Compile with `-cop -boost': `lisaac main -cop -boost', then `./main 8'. */
+
+Public
+
+  - main <-
+  ( + c:Counter
+    + d:Done
+    + k,n:Int
+    k := 8
+    n := 1_000_000
+    (Command_args.count > 1).if {
+      k := Command_args.at 1.to_int
+    }
+    c := Counter.new
+    d := Done.new
+    d.start k
+    1.to k do { i:Int
+      Caller.new.run c count n done d
+    }
+  )

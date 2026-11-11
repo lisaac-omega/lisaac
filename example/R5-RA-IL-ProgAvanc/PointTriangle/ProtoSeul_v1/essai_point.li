@@ -1,0 +1,26 @@
+Header
+  + name := Essai_point
+  /*run=./essai_point.li ; lisaac ${run} -q && ./${run%.li}*/
+Public
+  
+  - main <-
+  ( + p:Point
+    
+    p := Point
+    
+    p.x.println
+    
+    p.set_x 2 
+    
+    p.x.println
+    
+    /*
+    Aucun héritage par défaut.
+    + - attributs
+    Exportation Public / Private / Essai_Point / Directory.
+    Affectation impossible p.x := 2
+    Utiliser directement Point possible.
+    Variation sur les évaluations.
+    */
+  )
+  

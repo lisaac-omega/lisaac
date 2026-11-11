@@ -1,0 +1,29 @@
+Header
+  + name := Saisir_mois
+/*
+  Poly exercice 5 page 2.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+   
+  - saisir_mois: Int <-
+  ( + result:Int
+    écrire("Entrez le numéro du mois: ")
+    result := lire_entier
+    tant_que {(result < 1) ou (result > 12)} faire {
+      écrire("Entrez le numéro du mois (1 .. 12): ")
+      result := lire_entier
+    }
+    result
+  )
+  
+  - main <-
+  ( + mois:Int 
+    mois := saisir_mois
+    écrire("Numéro de mois = ")
+    écrire(mois)
+    écrire("\n")
+  )

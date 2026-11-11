@@ -1,0 +1,33 @@
+Header
+  - name := Reducer
+// Active object: adds the partial sums.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + expected:Int
+
+  + n:Int
+
+  + received:Int
+
+  + total:Int
+
+  - expect parts:Int total count:Int <-
+  (
+    expected := parts
+    n := count
+  )
+
+  - partial s:Int <-
+  (
+    received := received + 1
+    total := total + s
+    (received = expected).if {
+      Out # "Sum of 1.." # n # " by " # expected # " universes: " # total
+      Out # " (expected: " # (n * (n + 1) / 2) # ")\n"
+    }
+  )

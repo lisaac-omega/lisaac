@@ -1,0 +1,35 @@
+Header
+  - name := Report
+// Active object: when the @Latch opens, adds what the consumers received.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + consumers:Array Consumer := Array Consumer .create_with_capacity 4
+
+  + expected:Int
+
+  - expect n:Int <-
+  (
+    expected := n
+  )
+
+  - add c:Consumer <-
+  (
+    consumers.add_last c
+  )
+
+  - opened k:Int <-
+  // Asynchronous: all the consumers are closed (see @Latch).
+  ( + count,sum:Int
+    consumers.foreach { c:Consumer
+      Out # "consumer: " # c.count # " values\n"
+      count := count + c.count
+      sum := sum + c.sum
+    }
+    Out # count # " values received (" # expected # " sent), sum " # sum
+    Out # " (expected " # (expected * (expected + 1) / 2) # ").\n"
+  )

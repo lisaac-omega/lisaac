@@ -1,0 +1,33 @@
+Header
+  + name := Personne
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+  
+  + nom:String
+  
+  + age:Int
+  
+  - créer (n:String, a:Int): Self <-
+  ( + result: Self
+    result := clone
+    result.set_nom n
+    result.set_age a
+    result
+  )
+  
+Private
+  
+  - set_nom n:String <-
+  (
+    nom := n
+  )
+  
+Public
+  
+  - set_age a:Int <-
+  (
+    age := a
+  )
+  

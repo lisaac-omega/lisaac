@@ -1,0 +1,54 @@
+Header
+  + name := Spirale_longueurs
+/*
+  Niveau 4 - Spirale : les côtés grandissent (POLYSPI).
+
+  Le compteur @i de la boucle sert directement au dessin : au i-ème
+  segment, la tortue avance de @i * @p pixels. L'angle, lui, ne change pas.
+
+  Encore une autre écriture de la boucle avec compteur :
+      from 1 to nb do { i:Int ... }    s'écrit aussi    1.to nb do { i:Int ... }
+  C'est le message to ... do envoyé à l'entier 1.
+
+  Avec 90 degrés, on obtient une spirale carrée parfaite ; 89 ou 91
+  la font se tordre, 144 donne une étoile qui grandit...
+  (POLYSPI vient du livre « Turtle Geometry » d'Abelson et diSessa.)
+*/
+Inherit
+
+  + parent_curseur:Flat Curseur_tortue
+
+Public
+
+  // Les angles proposés par le curseur.
+  - valeurs: Array Int :=
+      new Array Int of (60, 72, 89, 90, 91, 108, 117, 119, 120, 121,
+                        135, 143, 144, 145, 150, 160, 170, 175, 179)
+
+  - choix_initial:Int <- 3; // 90°
+
+  - légende msg:String_buffer <-
+  (
+    msg.copy "angle = "
+    valeur.append_in msg
+    msg.append "°"
+  )
+
+  - spirale nb:Int angle a:Int pas p:Int <-
+  // L'angle reste le même, ce sont les côtés qui grandissent :
+  // à chaque segment, la tortue avance de @p pixels de plus.
+  (
+    1.to nb do { i:Int
+      avance (i * p)
+      tourne a
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Spirale : les côtés grandissent" départ (300, 290) taille (600, 640)
+    fond white crayon (1, Color.rgb(0, 130, 70))
+
+    spirale 140 angle valeur pas 2
+    curseur
+  )

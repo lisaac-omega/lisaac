@@ -1,0 +1,96 @@
+Header
+  + name := Knucleotide
+// The Computer Language Benchmarks Game: k-nucleotide.
+// Same algorithm as the C program #1: a nucleotide is 2 bits of an @Uint64 key, counted in the
+// @Hmap of the library. The 7 lengths are counted on the cores (@Parallel).
+
+Public
+
+  - seq:String_buffer
+  // Codes (0 to 3) of the third sequence.
+
+  - maps:C_array (Hmap Int Key Uint64) := C_array (Hmap Int Key Uint64) .create 19
+  // The counts of each length.
+
+  - code c:Char :Uint64 <-
+  // A, C, G, T (or a, c, g, t) -> 0, 1, 2, 3.
+  ( + m:Int
+    m := c.code & 7
+    ((m >> 1) ^ (m >> 2)).to_uint64
+  )
+
+  - count k:Int <-
+  // The keys of length @k in @maps.
+  ( + h:Hmap Int Key Uint64
+    + key,mask:Uint64
+
+    h := new Hmap Int Key Uint64
+    mask := (1.to_uint64 << (2 * k)) - 1
+    0.to (seq.upper) do { i:Int
+      key := ((key << 2) & mask) | seq.at i.code.to_uint64
+      (i >= k - 1).if { h.at key modify { n:Int; n + 1 }; }
+    }
+    maps.at k put h
+  )
+
+  - h:Hmap Int Key Uint64
+
+  - frequencies k:Int <-
+  // Sorted by count, then by key (@h is not local: used by the block of the sort).
+  ( + keys:Array Uint64
+
+    h := maps.at k
+    keys := Array Uint64 .create_with_capacity 16
+    h.foreach_key { key:Uint64; keys.add_last key; }
+    keys.quick_sort_with { (a,b:Uint64); (h.at a > h.at b) || {(h.at a = h.at b) && {a < b}} }
+    keys.foreach { key:Uint64
+      (k - 1).downto 0 do { j:Int; "ACGT".at (((key >> (2 * j)) & 3).to_int).print; }
+      ' '.print
+      (100.0.to_real32 * h.at key.to_real32 / (seq.count - k + 1).to_real32).to_real64.print_format_c "%.3f\n"
+    }
+    '\n'.print
+  )
+
+  - count_of s:String_alias <-
+  ( + key:Uint64
+    + found:Boolean
+    + v:Int
+
+    s.foreach { c:Char; key := (key << 2) | code c; }
+    (found, v) := maps.at (s.count).search key
+    Out # v # '\t' # s # '\n'
+  )
+
+  - main <-
+  ( + i,j:Int
+
+    // The third sequence, coded in place.
+    seq := Stdin.read_all
+    i := seq.index_of '\n' since (seq.first_substring_index ">THREE")
+    {(i < seq.count) && {seq.at i != '>'}}.while_do {
+      (seq.at i != '\n').if {
+        seq.put (code (seq.at i).to_int.to_char) to j
+        j := j + 1
+      }
+      i := i + 1
+    }
+    seq.set_count j
+    Parallel.times 4 do { part:Int
+      (part = 0).if {
+        count 18
+      }.elseif {part = 1} then {
+        count 12
+      }.elseif {part = 2} then {
+        count 6; count 1
+      } else {
+        count 4; count 3; count 2
+      }
+    }
+    frequencies 1
+    frequencies 2
+    count_of "GGT"
+    count_of "GGTA"
+    count_of "GGTATT"
+    count_of "GGTATTTTAATT"
+    count_of "GGTATTTTAATTTATAGT"
+  )

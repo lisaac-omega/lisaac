@@ -1,0 +1,34 @@
+Header
+  - name := Worker
+// Active object: each clone is a universe.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + total:Int
+
+  - read p:Params <-
+  // Asynchronous: @p is immutable (inferred), shared without copy.
+  (
+    total := total + p.scale
+  )
+
+  - take a:Array Int <-
+  // Asynchronous: @a is fresh and no more used by the sender: transferred.
+  (
+    a.foreach { x:Int
+      total := total + x
+    }
+  )
+
+  - fill b:Array Int :Int <-
+  // Synchronous: @b is lent by the caller, which waits.
+  (
+    1.to 3 do { i:Int
+      b.add_last (i * total)
+    }
+    b.count
+  )

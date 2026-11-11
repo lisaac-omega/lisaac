@@ -1,0 +1,17 @@
+Header
+  + name := Block_ex2
+Public
+  
+  - main <-
+  (+ b:{String; } // One parameter, no result
+    
+    b := { s:String;  s.print }
+    
+    "The coin flip gave ".print
+    (Random.init_clock.flip_coin).if {
+      b.value "heads.\n"
+    } else {
+      b.value "tails.\n"
+    }
+  )
+  

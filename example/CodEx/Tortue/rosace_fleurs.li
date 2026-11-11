@@ -1,0 +1,50 @@
+Header
+  + name := Rosace_fleurs
+/*
+  Niveau 3 - Rosace de pétales : la fleur.
+
+  On reprend l'idée de la feuille avec arc r degrés d, fourni par la
+  tortue, et une boucle n.times.
+
+  Un pétale, ce sont deux arcs de d degrés, dos à dos. La tortue tourne
+  en tout de d + (180 - d) + d + (180 - d) = 360 : elle revient à son
+  point et à sa direction de départ (théorème du tour total).
+
+  À essayer : remplacer degrés 60 par 90 (pétales ronds) ou 30 (fins).
+*/
+Inherit
+
+  + parent_rosace:Flat Rosace
+
+Public
+
+  - pétale r:Int degrés d:Int <-
+  (
+    arc r degrés d
+    tourne (180 - d)
+    arc r degrés d
+    tourne (180 - d)
+  )
+
+  - rosace n:Int rayon r:Int <-
+  // n pétales qui pivotent autour du même point : une fleur.
+  [
+    ((360 % n) = 0)
+  ]
+  ( + rotation:Int
+
+    rotation := 360 / n
+    n.times {
+      pétale r degrés 60
+      tourne rotation
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Rosace de pétales" départ (300, 280) taille (600, 640)
+    fond white crayon (2, Color.rgb(200, 40, 120))
+
+    rosace valeur rayon 200
+    curseur
+  )

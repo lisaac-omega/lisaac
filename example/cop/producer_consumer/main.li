@@ -1,0 +1,24 @@
+Header
+  + name := Main
+/* Producer and consumer with a bounded buffer: a fixed number of buffers goes round between
+   two universes. The @Producer fills a buffer and sends it to the @Consumer, which reads it and
+   gives it back, empty, to be filled again. A buffer is a `One' array (only one reference):
+   it moves from one universe to the other without copy and without lock, and after the start
+   no array is allocated any more. The number of buffers bounds the advance of the producer.
+   Compile with `-cop': `lisaac main -cop'. */
+
+Public
+
+  - main <-
+  ( + producer:Producer
+    + consumer:Consumer
+    + total:Int
+    consumer := Consumer.new
+    producer := Producer.new
+    // 4 buffers of 1000 numbers, 10_000 buffers to fill (or the first argument).
+    total := 10_000
+    (Command_args.count > 1).if {
+      total := Command_args.at 1.to_int
+    }
+    producer.start (4, 1000, total) to consumer
+  )

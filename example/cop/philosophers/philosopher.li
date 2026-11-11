@@ -1,0 +1,58 @@
+Header
+  - name := Philosopher
+// Active object (`-' in the name): thinks, asks for its two forks, eats, gives them back...
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + id:Int
+
+  + first:Semaphore Philosopher
+  + second:Semaphore Philosopher
+  // The fork with the smallest number first: no cycle of waits.
+
+  + latch:Latch Host
+
+  + meals:Int
+  // Meals still to eat.
+
+  + eaten:Int
+
+  - seat i:Int first f1:Semaphore Philosopher second f2:Semaphore Philosopher meals m:Int end l:Latch Host <-
+  // Asynchronous: its place at the table, its forks, then it starts.
+  (
+    id := i
+    first := f1
+    second := f2
+    meals := m
+    latch := l
+    first.acquire self tag 1
+  )
+
+  - acquired k:Int <-
+  // Asynchronous: its fork @k (1: the first, 2: the second) is its own (see @Semaphore).
+  (
+    (k = 1).if {
+      second.acquire self tag 2
+    } else {
+      eat
+    }
+  )
+
+Private
+
+  - eat <-
+  (
+    eaten := eaten + 1
+    meals := meals - 1
+    second.release
+    first.release
+    (meals > 0).if {
+      first.acquire self tag 1
+    } else {
+      latch.count_down
+    }
+  )

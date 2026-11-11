@@ -1,0 +1,35 @@
+Header
+  + name := Pi_digits
+/*
+  The decimals of π, as many as asked for (1000 by default), 50 per line.
+
+  `ℝ.π' is a lazy value: it is computed only when printed, to the
+  precision needed by the decimals asked for (Machin's formula
+  π = 16 atan(1/5) - 4 atan(1/239), with @ℤ).
+
+  Shows: the real numbers @ℝ, `ℝ.π' and `append_in ... decimal'.
+
+  To compile, as usual in a terminal:
+  $ lisaac pi_digits -q -boost
+  $ ./pi_digits 5000
+  */
+Public
+
+  - main <-
+  ( + n:Int
+    n := 1000
+    (Command_args.count = 2).if {
+      n := Command_args.at 1.to_int
+    }
+    String.tmp { tmp:String_buffer
+      ℝ.π.append_in tmp decimal n
+      Out # "3."
+      2.to (tmp.upper) do { j:Int
+        Out # tmp.at j
+        (((j - 1) % 50 = 0) && {j < tmp.upper}).if {
+          Out # "\n  "
+        }
+      }
+    }
+    Out # '\n'
+  )

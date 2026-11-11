@@ -1,0 +1,39 @@
+Header
+  + name := Representation_binaire
+/*
+  Il y a un problème avec 0 non ?
+  */
+Public
+  
+  - calculer_rep_binaire x:Int: String <-
+  ( + rep_bin, chaîne_reste:String
+    + quotient, dividende, reste:Int 
+      
+    rep_bin := ""
+    quotient := x
+    while {quotient != 0} do {
+      dividende := quotient
+      reste := dividende % 2
+      si (reste = 0) alors {
+        chaîne_reste := "0"
+      } sinon {
+        chaîne_reste := "1"
+      }
+      rep_bin := chaîne_reste + rep_bin
+      quotient := dividende / 2
+    }
+    rep_bin // est retourné
+  )
+  
+  - main <-
+  ( + i: Int
+    + r: String
+    
+    if ((Command_args.upper < 1) || {! ((Command_args.at 1).is_integer)}) then {
+      "Erreur dans la ligne de commande.\n".print
+      System.exit 1
+    }
+    i := (Command_args.at 1).to_int
+    r := calculer_rep_binaire(i)
+    Out # "Représentation binaire de " # i # " est " # r # '\n'
+  )

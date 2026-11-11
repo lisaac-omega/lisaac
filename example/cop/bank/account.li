@@ -1,0 +1,35 @@
+Header
+  - name := Account
+// Active object (`-' in the name): each clone is a universe, with its thread and its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + balance:Int
+  // Changed only by this universe: a synchronous read waits for the messages before it.
+
+  - open amount:Int <-
+  (
+    balance := amount
+  )
+
+  - transfer amount:Int to other:Account for c:Client <-
+  // Asynchronous: debits this account, then credits @other (if the balance is enough).
+  (
+    (balance >= amount).if {
+      balance := balance - amount
+      other.deposit amount for c
+    } else {
+      c.refused
+    }
+  )
+
+  - deposit amount:Int for c:Client <-
+  // Asynchronous: the end of a transfer.
+  (
+    balance := balance + amount
+    c.accepted
+  )

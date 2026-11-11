@@ -1,0 +1,26 @@
+Header
+  + name := Main
+/* What the compiler infers, without any annotation: @p is written only at its creation, so
+   @Params is immutable and @p is shared; @a is fresh and no more used after `take', so it is
+   transferred; @b is lent to the synchronous message `fill', which does not keep it.
+   Each of these three lines becomes an error at the compilation if @p is written after
+   `read', if @a is used after `take', or if `fill' keeps @b in a field which is used.
+   Compile with `-cop': `lisaac main -cop'; `-cop_report' shows `Immutable types: Params'. */
+
+Public
+
+  - main <-
+  ( + w:Worker
+    + p:Params
+    + a,b:Array Int
+    w := Worker.new
+    p := Params.create 10
+    w.read p
+    a := Array Int .create_with_capacity 3
+    a.add_last 1
+    a.add_last 2
+    w.take a
+    b := Array Int .create_with_capacity 3
+    w.fill b
+    Out # b.at 0 # " " # b.at 1 # " " # b.at 2 # "\n"
+  )

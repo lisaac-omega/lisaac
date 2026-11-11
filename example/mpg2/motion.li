@@ -1,0 +1,175 @@
+Header
+  + name := Motion
+/*
+  motion vector decoding.
+  */
+Inherit
+  
+  - parent_any_mpg2:Any_mpg2 := Any_mpg2
+  
+Public
+  
+  - motion_vectors (pmv:Pmv,dmvector:Vector,
+  motion_vertical_field_select:Array2(Boolean),
+  s,motion_vector_count:Int,mv_format:Boolean,h_r_size,v_r_size:Int,dmv,mvscale:Boolean) <-
+  // ISO/IEC 13818-2 sections 6.2.5.2, 6.3.17.2, and 7.6.3: Motion vectors   
+  //  
+  // int motion_vertical_field_select[2][2]
+  ( + bits:Boolean
+    
+    (motion_vector_count = 1).if {
+      ((mv_format = mv_field) && {! dmv}).if {        
+        bits := ld.get_boolean
+        motion_vertical_field_select.at (1,s) put bits
+        motion_vertical_field_select.at (0,s) put bits
+      }
+
+      motion_vector (pmv,0,s,dmvector,h_r_size,v_r_size,dmv,mvscale,False)
+
+      // update other motion vector predictors 
+      pmv.at (1,s,0) put (pmv.at (0,s,0))
+      pmv.at (1,s,1) put (pmv.at (0,s,1))
+    } else {
+      bits := ld.get_boolean
+      motion_vertical_field_select.at (0,s) put bits
+
+      motion_vector (pmv,0,s,dmvector,h_r_size,v_r_size,dmv,mvscale,False)
+      
+      bits := ld.get_boolean
+      motion_vertical_field_select.at (1,s) put bits
+      
+      motion_vector (pmv,1,s,dmvector,h_r_size,v_r_size,dmv,mvscale,False)
+    }
+  )
+
+  - motion_vector (pmv:Pmv,pmv1,pmv2:Int,dmvector:Vector,
+  h_r_size,v_r_size:Int,dmv,mvscale,full_pel_vector:Boolean) <-
+  // get and decode motion vector and differential motion vector for one prediction
+  //
+  // int dmv;              MPEG-2 only: get differential motion vectors 
+  // int mvscale;          MPEG-2 only: field vector in frame pic 
+  // int full_pel_vector;  MPEG-1 only 
+  ( + motion_code, motion_residual, new:Int
+    
+    // horizontal component 
+    // ISO/IEC 13818-2 Table B-10 
+    motion_code := Getvlc.get_motion_code
+    ((h_r_size != 0) && {motion_code != 0}).if {
+      motion_residual := ld.get_bits h_r_size
+    }
+    new := decode_motion_vector ((pmv.at (pmv1,pmv2,0)),h_r_size,motion_code,motion_residual,full_pel_vector)
+    pmv.at (pmv1,pmv2,0) put new
+    (dmv).if {
+      dmvector.put_first (Getvlc.get_dmvector)
+    }
+
+    // vertical component
+    motion_code     := Getvlc.get_motion_code
+    ((v_r_size != 0) && {motion_code != 0}).if {
+      motion_residual := ld.get_bits v_r_size
+    } else {
+      motion_residual := 0
+    }
+    (mvscale).if {      
+      pmv.at (pmv1,pmv2,1) put (pmv.at (pmv1,pmv2,1) >> 1)
+    }
+    new := decode_motion_vector ((pmv.at (pmv1,pmv2,1)),v_r_size,motion_code,motion_residual,full_pel_vector)
+    pmv.at (pmv1,pmv2,1) put new
+    (mvscale).if {
+      pmv.at (pmv1,pmv2,1) put (pmv.at (pmv1,pmv2,1) << 1)
+    }
+    (dmv).if {
+      dmvector.put_second (Getvlc.get_dmvector)
+    }
+  )
+  
+Private
+  
+  - decode_motion_vector (pred,r_size,motion_code,motion_residual:Int,full_pel_vector:Boolean) :Int <-
+  // calculate motion vector component 
+  // ISO/IEC 13818-2 section 7.6.3.1: Decoding the motion vectors 
+  // Note: the arithmetic here is more elegant than that which is shown 
+  // in 7.6.3.1.  The end results (PMV[][][]) should, however, be the same.
+  //
+  // int *pred;              BSBS: Return new @pred.
+  // int full_pel_vector;    MPEG-1 (ISO/IEC 11172-1) support
+  ( + lim, vec, result:Int
+
+    lim := 16 << r_size
+    (full_pel_vector).if {
+      vec := pred >> 1
+    } else {
+      vec := pred
+    }
+
+    (motion_code > 0).if {
+      vec := vec + ((motion_code - 1) << r_size) + motion_residual + 1
+      (vec >= lim).if {
+        vec := vec - (lim + lim)
+      }
+    } else {
+      (motion_code < 0).if {
+        vec := vec - (((-motion_code-1) << r_size) + motion_residual + 1)
+        (vec < -lim).if {
+          vec := vec + lim + lim
+        }
+      }
+    }
+    
+    (full_pel_vector).if {
+      result := vec << 1
+    } else {
+      result := vec
+    }
+    result
+  )
+  
+Public
+
+  - dual_prime_arithmetic (dmv:Array2(Int),dmvector:Vector,mvx,mvy:Int) <-
+  // ISO/IEC 13818-2 section 7.6.3.6: Dual prime additional arithmetic 
+  //
+  // int DMV[][2]
+  // int *dmvector;    differential motion vector
+  // int mvx, mvy;     decoded mv components (always in field format) 
+  ( + dmv00,dmv01,dmv10,dmv11:Int
+    + incx,incy:Int
+    + tmpx1,tmpy1,tmpx3,tmpy3:Int
+    
+    incx := (mvx > 0).to_int
+    incy := (mvy > 0).to_int
+    tmpx1 := ((mvx  + incx) >> 1) + dmvector.first
+    tmpy1 := ((mvy  + incy) >> 1) + dmvector.second
+    (picture_structure = frame_picture).if {
+      tmpx3 := ((3*mvx + incx) >> 1) + dmvector.first
+      tmpy3 := ((3*mvy + incy) >> 1) + dmvector.second
+      (top_field_first).if {
+        /// vector for prediction of top field from bottom field 
+        dmv00 := tmpx1
+        dmv01 := tmpy1 - 1
+        // vector for prediction of bottom field from top field 
+        dmv10 := tmpx3
+        dmv11 := tmpy3 + 1
+      } else {
+        // vector for prediction of top field from bottom field 
+        dmv00 := tmpx3
+        dmv01 := tmpy3 - 1
+        // vector for prediction of bottom field from top field 
+        dmv10 := tmpx1
+        dmv11 := tmpy1 + 1
+      }
+      dmv.at (1,0) put dmv10
+      dmv.at (1,1) put dmv11
+    } else {
+      // vector for prediction from field of opposite 'parity' 
+      dmv00 := tmpx1
+      // correct for vertical field shift 
+      (picture_structure = top_field).if {
+        dmv01 := tmpy1 - 1
+      } else {
+        dmv01 := tmpy1 + 1
+      }
+    }
+    dmv.at (0,0) put dmv00
+    dmv.at (0,1) put dmv01
+  )

@@ -1,0 +1,64 @@
+Header
+  + name := Sprite
+/*
+  A moving object of the Shooter game: the ship, a bullet, an enemy or
+  a star. Each object is a clone of this prototype, with its own
+  position (@x,@y), its own speed (@dx,@dy) and its own radius @r:
+  these slots are declared with + so that each clone has its own copy.
+  */
+Insert
+
+  - parent_clone:Clone := Clone
+
+Public
+
+  + x:Real32
+  + y:Real32
+  + dx:Real32
+  + dy:Real32
+  + r:Real32
+
+  + alive:Boolean
+
+  - new:Self <- clone
+
+  - at (px,py:Real32) speed (vx,vy:Real32) radius pr:Real32 :Self <-
+  // Initialize a fresh clone, for instance:
+  //   Sprite.new.at (100, 0) speed (0, 2) radius 16
+  (
+    (x,y) := (px,py)
+    (dx,dy) := (vx,vy)
+    r := pr
+    alive := True
+    self
+  )
+
+  - move <-
+  (
+    x := x + dx
+    y := y + dy
+  )
+
+  - go_to (px,py:Real32) <-
+  (
+    (x,y) := (px,py)
+  )
+
+  - bounce_between (left,right:Real32) <-
+  // Turn back horizontally when touching a side.
+  (
+    ((x < left + r) || {x > right - r}).if {
+      dx := - dx
+    }
+  )
+
+  - kill <- ( alive := False )
+
+  - hits s:Sprite :Boolean <-
+  // Two discs touch when the distance between their centers is less than
+  // the sum of their radius (squared, to avoid a square root).
+  ( + ddx,ddy:Real32
+
+    (ddx,ddy) := (x - s.x, y - s.y)
+    ddx * ddx + ddy * ddy < (r + s.r) * (r + s.r)
+  )

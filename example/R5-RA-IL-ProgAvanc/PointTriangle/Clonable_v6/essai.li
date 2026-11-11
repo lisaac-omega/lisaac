@@ -1,0 +1,27 @@
+Header
+  + name := Essai
+Insert
+  
+  - parent_utils:Utils := Utils
+  
+Public
+  
+  - main <-
+  ( + p1, p2, p3:Point
+    + t:Triangle
+    
+    p1 := new Point_polaire radius 1 angle 2
+    p2 := new Point x 2 y 3
+    p3 := new Point_polaire radius 3 angle 4
+    
+    
+    t := new Triangle p1 p1 p2 p2 p3 p3
+    
+    t.println
+    
+    /* 
+      Insert vs Inherit
+      abstract vs not_yet_implemented
+    */
+    
+  )

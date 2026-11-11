@@ -1,0 +1,53 @@
+Header
+  + name := Alien_ex5
+/*
+  Alien 5 - Des conditionnelles imbriquées.
+
+  Un si à l'intérieur d'un autre si : selon les couleurs rencontrées,
+  l'alien ne passe pas par les mêmes instructions, et @x ne prend pas
+  les mêmes valeurs.
+
+  À faire : suivre un seul chemin, en notant la couleur de chaque case
+  et la valeur de @x.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - main <-
+  ( + x:Int;
+    vitesse("moyenne")
+    x := 1
+    haut(x)
+    x := x + 1
+    si (couleur = rouge) alors {
+      gauche(x)
+      x := x + 1
+      si (couleur = blanc) alors {
+        droite(x)
+        x := x + 2
+      } sinon {
+        bas(x)        
+        si (couleur = bleu) alors {
+          x := x + 1
+        }
+      }
+    } sinon {
+      bas(x)
+      x := x + 2      
+      si (couleur = bleu) alors {
+        droite(x)
+        x := x + 2
+      } sinon {
+        bas(x)   
+        x := x + 2
+      }
+    }
+    droite(x)
+    si (couleur = blanc) alors {
+      haut(x)
+    }
+    fin
+  )

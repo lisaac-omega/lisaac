@@ -1,0 +1,26 @@
+Header
+  + name := Essai_point
+Insert
+  
+  - parent_utils:Utils := Utils
+  
+Public
+  
+  - main <-
+  ( + p, p2:Point
+    
+    p := new Point x 1 y 2
+    
+    p.println
+    
+    p2 := new p x 3 y 4
+    
+    p2.println
+    
+    crash_with_message "-boost"
+    
+    /* 
+    Exercice: faire un prototype clonable Triangle qui utilise 3 Points.
+    */
+    
+  )

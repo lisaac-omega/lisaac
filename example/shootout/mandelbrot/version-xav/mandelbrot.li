@@ -1,0 +1,89 @@
+Header
+  + name := Mandelbrot
+Inherit
+  
+  - parent_clone : Clone := Clone
+  
+Public
+
+  - cmd:     String_alias
+  - size:    Int
+  - shift:   Int
+  - fac:     Real64
+
+  - compute <-
+  (
+    "P4\n".print
+    cmd.print
+    ' '.print
+    cmd.print
+    "\n".print
+    
+    0.to (size - 1) do{ y:Int
+      compute_row y
+    }
+  )
+
+  - compute_row y:Int <-
+  ( + bits: Int8
+    + ci: Real64
+    + zr:Real64
+    + zi:Real64
+    + cr:Real64
+    + i:Int
+    + sh:Int8
+    + zrn:Real64
+    + zin:Real64
+
+    ci := (y.to_real64 * fac - 1.0)
+  
+    0.to (size - 1) do{ x:Int
+      zr := zi := zrn := zin := 0.0
+      zi := 0.0
+      cr := x.to_real64 * fac - 1.5
+      i := 50
+      zrn := 0.0
+      zin := 0.0
+
+      { zi := 2.0 * zr * zi + ci
+        zr := zrn - zin + cr
+        zin := zi * zi
+        zrn := zr * zr
+        i := i - 1
+      }.do_while{ ((zin + zrn) <= 4.0) && {i > 0}}
+
+      bits := `@bits << 1`:Int8
+
+      (i = 0).if{
+        bits := bits + 1
+      }
+
+      (x % 8 = 7).if{
+        bits.to_char.print
+        bits := 0
+      }
+    }
+
+
+    (shift != 0).if{
+      sh := shift.to_int8
+      bits := `@bits << @sh`:Int8
+      bits.to_char.print
+    }
+
+  )
+
+  - main <-
+  ( 
+    cmd := Command_args.at 1
+    size := cmd.to_int
+    fac := 2.0 / size
+
+    (size % 8 = 0).if{
+      shift := 0
+    }else{
+      shift := 8 - size % 8
+    }
+  
+    compute
+  )

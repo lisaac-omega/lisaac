@@ -1,0 +1,28 @@
+Header
+  - name := Host
+// Active object: when the @Latch opens, checks the meals of the philosophers.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + table:Array Philosopher := Array Philosopher .create_with_capacity 8
+
+  + expected:Int
+
+  - add p:Philosopher meals m:Int <-
+  (
+    table.add_last p
+    expected := expected + m
+  )
+
+  - opened k:Int <-
+  // Asynchronous: all the philosophers have eaten (see @Latch).
+  ( + total:Int
+    table.foreach { p:Philosopher
+      total := total + p.eaten
+    }
+    Out # table.count # " philosophers, " # total # " meals (" # expected # " expected).\n"
+  )

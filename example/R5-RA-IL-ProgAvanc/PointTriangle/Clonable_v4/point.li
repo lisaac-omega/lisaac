@@ -1,0 +1,42 @@
+Header
+  + name := Point
+Insert
+  
+  - parent_clone:Clone := Clone
+  
+Public
+  
+  + x:Int
+  
+  + y:Int
+  
+  - set_x vx:Int <-
+  (
+    x := vx
+  )
+  
+  - append_in b:String_buffer <-
+  (
+    "x=".append_in b ; x.append_in b ; ' '.append_in b
+    "y=".append_in b ; y.append_in b 
+  )
+  
+  - new self:Self x vx:Int y vy:Int :Self <-
+  [
+    self = Point
+  ]
+  ( + result:Self
+    
+    result := clone
+    result.set_x vx y vy
+    result  
+  )
+  
+Private  
+  
+  - set_x vx:Int y vy:Int <-
+  (
+    x := vx
+    y := vy
+  )
+  

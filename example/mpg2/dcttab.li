@@ -1,0 +1,24 @@
+Header
+  + name := Dcttab
+/*
+  Simple struct for table.
+  */
+Inherit
+  
+  - parent_clone:Clone := Clone
+  
+Mapping
+  
+  + map_run:Int8
+  
+  + map_level:Int8
+
+  + map_len:Int8
+
+Public
+  
+  - run:Int8 <- map_run
+  
+  - level:Int8 <- map_level
+
+  - len:Int8 <- map_len

@@ -1,0 +1,28 @@
+Header
+  + name := Lecture_clavier
+/*
+  Lire au clavier.
+
+  lire_chaine lit une ligne de texte, lire_entier lit un entier.
+  Le programme attend que l'on tape au clavier : il se lance dans un
+  terminal.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  ( + i: Int
+    + s: String
+    
+    écrire ("Quelle pizza ?\n")
+    s := lire_chaine
+    
+    écrire ("Combien de pizzas ?\n")
+    i := lire_entier
+    
+    Out # i # " pizzas " # s # '\n'
+  )
+  

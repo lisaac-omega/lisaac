@@ -1,0 +1,35 @@
+Header
+  + name := Dessin_quadrangle
+/*
+  Niveau 1 - Le carré : une instruction par ligne.
+
+  La tortue exécute les instructions dans l'ordre, de haut en bas :
+  elle avance de 80 pixels, tourne de 90 degrés vers la droite,
+  avance encore, etc. Le crayon est baissé : elle laisse une trace.
+
+  En Lisaac Ω, les parenthèses autour d'un argument simple sont
+  optionnelles : avance(80) et avance 80 veulent dire la même chose.
+  Les deux écritures sont mélangées ici exprès.
+
+  À essayer : remplacer 90 par 120, puis enlever une ligne avance.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - dessin <-
+  (
+    titre "Tortue - Carré" départ (50,50) taille (200, 200)
+    épaisseur_trait(3)
+    avance(80)
+    tourne(90)
+    avance(80)
+    tourne 90  // Sans parenthèses : c'est pareil.
+    avance 80
+    tourne 90
+    avance 80
+    // Quand l'argument est un calcul, on garde les parenthèses :
+    tourne(45 + 45)
+  )

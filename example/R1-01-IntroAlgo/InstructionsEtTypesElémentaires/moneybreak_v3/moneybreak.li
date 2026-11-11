@@ -1,0 +1,50 @@
+Header
+  + name := Moneybreak
+/*
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  ( // Lexique:
+    + somme:Int // somme à décomposer
+    + b50:Int // nombre de billet de 50€
+    + b10:Int // nombre de billet de 10€
+    + p2:Int // nombre de pièces de 2€
+    + p1:Int // nombre de pièces de 1€
+    
+    écrire("Somme à décomposer:")
+    somme := lire_entier
+    
+    // Division entière:
+    b50 := somme / 50
+    
+    // Reste de la division:
+    somme := somme % 50
+    
+    b10 := somme / 10
+    somme := somme % 10
+    p2 := somme / 2
+    p1 := somme % 2
+    
+    affiche("Billet", b50, 50)
+    affiche("Billet", b10, 10)
+    affiche("Piece", p2, 2)
+    affiche("Piece", p1, 1)
+  )
+  
+Private
+  - affiche (boup:String, nb:Int ,val:Int) <-
+  (
+    si (nb > 0) alors {
+      si (nb = 1) alors {
+        Out # "1 " # boup # " de " # val # "€\n"
+      } sinon {
+        Out # boup # "s de " # val # "€ : "# nb # '\n'
+      }
+    }  
+  )
+  

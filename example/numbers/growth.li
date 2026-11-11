@@ -1,0 +1,113 @@
+Header
+  + name := Growth
+/*
+  The race of three sequences of natural numbers, for n from 0 to 100:
+  2^n (blue), the Fibonacci numbers F(n) (green) and n! (red). The curve
+  is the number of digits: n! has 158 digits for n = 100.
+  
+  The gray line is 2^63, 19 digits: below, a @ℕ stays in one 64 bits word;
+  above, it becomes a big number. n! crosses it at n = 21, 2^n at n = 63
+  and F(n) at n = 93.
+  
+  Shows: the natural numbers @ℕ, `+' and `*' on @ℕ, a @Window.
+  
+  To compile, as usual in a terminal:
+  $ lisaac growth -q -boost
+  $ ./growth
+  */
+Inherit
+  
+  + parent_window:Flat Window
+  
+Private
+  
+  - last:Int := 100
+  
+  - power:Array Int := new Array Int capacity 101
+  - fibonacci:Array Int := new Array Int capacity 101
+  - factorial:Array Int := new Array Int capacity 101
+  // Number of digits of 2^n, F(n) and n!, for n from 0 to @last.
+  
+  - left:Real32 := 60
+  - top:Real32 := 30
+  - plot_width:Real32 := 600
+  - plot_height:Real32 := 400
+  - max_digits:Real32 := 160
+  
+  - digit_count n:ℕ :Int <-
+  ( + r:Int
+    String.tmp { tmp:String_buffer
+      n.append_in tmp
+      r := tmp.count
+    }
+    r
+  )
+  
+  - compute <-
+  ( + p,a,b,f,t:ℕ
+    p := ℕ.from_int64 1
+    a := ℕ.from_int64 0
+    b := ℕ.from_int64 1
+    f := ℕ.from_int64 1
+    0.to last do { n:Int
+      power.add_last (digit_count p)
+      fibonacci.add_last (digit_count a)
+      factorial.add_last (digit_count f)
+      p := p + p
+      t := a + b
+      a := b
+      b := t
+      f := f * ℕ.from_int64 (n + 1)
+    }
+  )
+  
+  - x_of n:Int :Real32 <- left + n * plot_width / last
+  
+  - y_of d:Real32 :Real32 <- top + plot_height - d * plot_height / max_digits
+  
+  - curve values:Array Int color c:Color <-
+  (
+    stroke {
+      move_to (x_of 0,y_of (values.first))
+      1.to last do { n:Int
+        line_to (x_of n,y_of (values.at n))
+      }
+    } width 2.5 color c
+  )
+  
+Public
+  
+  - draw <-
+  (
+    fill { rect (0,0) size (width,height); } color (Color.white)
+    stroke {
+      move_to (left,top)
+      line_to (left,top + plot_height)
+      line_to (left + plot_width,top + plot_height)
+    } width 1.5 color (Color.black)
+    stroke {
+      move_to (left,y_of 19)
+      line_to (left + plot_width,y_of 19)
+    } width 1.0 color (Color.rgb (150,150,150))
+    curve power color (Color.rgb (40,90,220))
+    curve fibonacci color (Color.rgb (30,160,60))
+    curve factorial color (Color.rgb (210,40,40))
+    font_size 16
+    fill_color (Color.black)
+    text (left + 5,top) msg "digits"
+    text (left + plot_width - 10,top + plot_height + 20) msg "n"
+    text (left + plot_width / 2 + 120,y_of 19 - 6) msg "2^63: limit of the word"
+    fill_color (Color.rgb (40,90,220))
+    text (x_of 75,y_of 30) msg "2^n"
+    fill_color (Color.rgb (30,160,60))
+    text (x_of 88,y_of 8) msg "F(n)"
+    fill_color (Color.rgb (210,40,40))
+    text (x_of 60,y_of 100) msg "n!"
+  )
+  
+  - main <-
+  (
+    compute
+    init "Growth with ℕ" size (700,480)
+    Paper.run
+  )

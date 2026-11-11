@@ -1,0 +1,27 @@
+Header
+  - name := Printer
+// Active object: the primes, displayed by one universe, in the order of its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + count:Int
+
+  - found p:Int <-
+  (
+    count := count + 1
+    Out # p
+    ((count % 15) = 0).if {
+      Out # '\n'
+    } else {
+      Out # ' '
+    }
+  )
+
+  - close <-
+  (
+    Out # '\n' # count # " primes.\n"
+  )

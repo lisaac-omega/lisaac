@@ -1,0 +1,39 @@
+Header
+  + name := Conditionnelle_simple
+/*
+  La conditionnelle simple : si ... alors ... sinon.
+
+  Afficher le résultat d'un étudiant à un module sachant que ce module
+  est sanctionné par une note d'oral de coefficient 1 et une note
+  d'écrit de coefficient 2. La moyenne doit être supérieure ou égale à
+  10 pour valider le module.
+  Le programme lit les notes au clavier : il se lance dans un terminal.
+  */
+
+Insert
+  
+  - french: French_corner := French_corner
+
+Public
+  
+  - main <-
+  ( // Lexique
+    + écrit:Real64 // la note d'écrit
+    + oral:Real64 // la note d'oral
+    + moyenne:Real64
+    
+    écrire("Note écrit: ")
+    écrit := lire_réel
+    
+    écrire("Note oral: ")
+    oral := lire_réel
+    
+    moyenne := ((écrit * 2) + oral).div 3
+    si (moyenne >= 10) alors {
+      écrire("Reçu\n")
+    } sinon {
+      écrire("Refusé\n")
+    }
+  )
+  
+  

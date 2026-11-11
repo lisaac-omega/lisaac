@@ -1,0 +1,33 @@
+Welcome to the Lisaac Ω world of CodEx !
+
+For French teachers looking for a serious, fully functional, and entirely object-oriented language to
+introduce a new approach to programming on solid foundations, Lisaac Ω is the ideal choice.
+
+Lisaac Ω is a strongly typed language that supports design by contract. It is also a compiled language,
+delivering the best performance across all platforms, even on smartphones.
+
+In addition, Lisaac Ω offers a revolutionary feature: the possibility to write programs using graphical instructions,
+making programming more intuitive and accessible than ever before.
+
+One of Lisaac Ω’s major strengths is its seamless bridge between mathematics and programming.
+Its syntax remains consistent with standard mathematical notations, and it includes fundamental mathematical
+types with their traditional symbols, such as the type Z for integers.
+
+Lisaac Ω is perfectly suited both for complete beginners discovering programming for the first time and for
+experienced developers working on professional, highly portable software projects.
+For advanced users, a wide range of graphical applications is available, along with the full source code of
+the compiler (command 'lisaac') and the complete source code of the code editor (command 'elit').
+
+In this repository, you will find a Lisaac Ω solution for the exercises available on:
+
+https://codex.forge.apps.education.fr/parcours/
+
+Lisaac Ω is free, entirely developed in France, and available on all platforms, including smartphones.
+It represents a true revolution in programming languages.
+
+Another unique advantage of Lisaac Ω is that it allows you, if you wish, to write code entirely in French,
+making programming even more accessible to beginners and more natural in an educational context.
+
+Choose a robust and innovative solution and give your students a solid foundation.
+
+Make the switch to Lisaac Ω today!

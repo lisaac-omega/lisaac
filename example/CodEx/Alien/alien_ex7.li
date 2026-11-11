@@ -1,0 +1,44 @@
+Header
+  + name := Alien_ex7
+/*
+  Alien 7 - Les mots-clés font partie du nom.
+
+  droite 3 haut 1 et droite 3 haut 1 bas 5 appellent deux procédures
+  différentes, écrites à la fin du fichier : en Lisaac Ω, les mots-clés
+  font partie du nom de la méthode. La seconde réutilise la première.
+
+  À faire : remplacer chaque appel par les déplacements qu'il fait.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - déplacement (a, b:Int) <-
+  (
+    gauche(a)
+    haut(b)
+  )
+  
+  - main <-
+  (
+    vitesse("très rapide")
+    déplacement(4,2)
+    droite 3 haut 1
+    droite 3 haut 1 bas 5
+    fin
+  )
+  
+  - droite d:Int haut b:Int <-
+  (
+    droite(d)
+    haut(b)
+  )
+  
+  - droite d:Int haut h:Int bas b:Int <-
+  (
+    droite d haut h
+    bas(b)
+  )
+  

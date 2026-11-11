@@ -1,0 +1,43 @@
+Header
+  + name := Play_wav
+
+Public
+
+  - main <-
+  ( + effect:Sound
+    + status:Int
+    + file:String_alias
+
+    (Command_args.count != 2).if { 
+      "Usage: play_wav file.wav".println
+      System.exit 1
+    }
+    file := Command_args.at 1
+
+    status := Audio.init
+    (status != Audio.success).if {
+      Out # "Initialisation audio impossible: " #| Audio.result_description status
+      System.exit 2
+    }
+
+    effect := Sound.new
+    status := effect.init_from_file file flags (Sound.flag_decode | Sound.flag_no_spatialization)
+    (status != Audio.success).if {
+      Out # "Chargement du WAV impossible: " #| Audio.result_description status
+      effect.delete
+      Audio.uninit
+      System.exit 3
+    }
+
+    status := effect.start
+    (status != Audio.success).if {
+      Out # "Lecture impossible: " #| Audio.result_description status
+    } else {
+      {! effect.at_end}.while_do {
+        Clock.usleep 10_000
+      }
+    }
+
+    effect.delete
+    Audio.uninit
+  )

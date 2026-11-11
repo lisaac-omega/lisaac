@@ -1,0 +1,44 @@
+Header
+  + name := Main
+/* The dining philosophers (Dijkstra, 1965). Five philosophers around a table, one fork between
+   two neighbours: to eat, a philosopher needs both forks next to him.
+   Everybody is a universe, and nobody blocks: a fork is a @Semaphore with one place; a
+   philosopher asks it (`acquire self tag 1') and goes on when it receives `acquired 1' (at
+   once if the fork is free, else when it is released: first asked, first served); then the
+   same for its second fork, with the tag 2.
+   No deadlock: each philosopher asks first the fork with the smallest number (an order on the
+   resources, so a cycle of waits is impossible). No starvation: the queue of a fork is fair.
+   At the end, each philosopher counts down a @Latch; when it opens, the @Host checks.
+   Compile with `-cop': `lisaac main -cop'. */
+
+Public
+
+  - main <-
+  ( + forks:Array (Semaphore Philosopher)
+    + latch:Latch Host
+    + host:Host
+    + p:Philosopher
+    + left,right:Semaphore Philosopher
+    + n,meals:Int
+    n := 5
+    meals := 1000
+    host := Host.new
+    latch := Latch Host .create n
+    latch.await host tag 0
+    forks := Array (Semaphore Philosopher) .create_with_capacity n
+    1.to n do { i:Int
+      forks.add_last (Semaphore Philosopher .create 1)
+    }
+    0.to (n - 1) do { i:Int
+      p := Philosopher.new
+      host.add p meals meals
+      left := forks.at i
+      right := forks.at ((i + 1) % n)
+      (i = n - 1).if {
+        // Its right fork is the fork 0: the smallest number first.
+        p.seat i first right second left meals meals end latch
+      } else {
+        p.seat i first left second right meals meals end latch
+      }
+    }
+  )

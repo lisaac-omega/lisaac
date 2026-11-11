@@ -1,0 +1,31 @@
+Header
+  + name := Alien_ex1
+/*
+  Alien 1 - Une instruction par ligne.
+
+  L'alien part de la case noire, au centre du damier. gauche(2) le fait
+  avancer de 2 cases vers la gauche, puis haut, droite et bas.
+  fin ouvre la fenêtre : l'alien rejoue alors tous ses déplacements,
+  à la vitesse choisie au début avec vitesse(...).
+
+  À faire : prévoir la case où l'alien s'arrête, puis lancer l'exemple.
+
+  Pour compiler, dans un terminal :
+  $ lisaac alien_ex1 -q -boost
+  $ ./alien_ex1
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+ 
+Public
+  
+  - main <-
+  (
+    vitesse("très lente")
+    gauche(2)
+    haut(3)
+    droite(4)
+    bas(5)
+    fin
+  )

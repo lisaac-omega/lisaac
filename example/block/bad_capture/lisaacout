@@ -1,0 +1,37 @@
+--WARNING----------
+ICI
+Line 8 column 13 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+  ( + capture:Int // In the stack
+             ^
+--WARNING----------
+This block is extern context sensitive (with `capture' local variable).
+Line 11 column 12 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+      b := { capture := capture + 1 }
+            ^
+
+Line 5 column 5 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+  + b:{} // Not in the stack
+     ^
+
+Line 8 column 13 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+  ( + capture:Int // In the stack
+             ^
+--WARNING----------
+ICI
+Line 8 column 13 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+  ( + capture:Int // In the stack
+             ^
+--WARNING----------
+This block is extern context sensitive (with `capture' local variable).
+Line 13 column 12 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+      b := { capture := capture + 2 }
+            ^
+
+Line 5 column 5 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+  + b:{} // Not in the stack
+     ^
+
+Line 8 column 13 in Bad_capture(.../example/block/bad_capture/bad_capture.li):
+  ( + capture:Int // In the stack
+             ^
+Flat IntFlat Int

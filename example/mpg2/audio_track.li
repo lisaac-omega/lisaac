@@ -1,0 +1,244 @@
+Header
+  + name := Audio_track
+/*
+  Audio of an MPEG program stream (MPEG-1 or MPEG-2).
+
+  The whole file is scanned once, before playing: the payload of the first
+  audio stream is gathered in memory, and @Sound decodes it (miniaudio reads
+  MPEG audio layers I, II and III).
+
+  The time stamps of the first audio and video packets give the position of
+  the sound relative to the picture.
+  */
+Inherit
+
+  - parent_any_mpg2:Any_mpg2 := Any_mpg2
+
+Private
+
+  //
+  // File reader.
+  //
+
+  - chunk_size:Int := 65536
+  - chunk:C_array Uint8
+  - chunk_pos:Int
+  - chunk_len:Int
+
+  - file:Pointer
+  - at_eof:Boolean
+
+  - refill <-
+  (
+    chunk_len := File_utils.read_raw file in chunk size chunk_size
+    chunk_pos := 0
+    (chunk_len <= 0).if {
+      chunk_len := 0
+      at_eof := True
+    }
+  )
+
+  - next_byte:Int <-
+  ( + result:Int
+
+    (chunk_pos >= chunk_len).if {
+      refill
+    }
+    (! at_eof).if {
+      result := chunk.at chunk_pos
+      chunk_pos := chunk_pos + 1
+    }
+    result
+  )
+
+  - next_word:Int <-
+  ( + val:Int
+
+    val := next_byte
+    (val << 8) | next_byte
+  )
+
+  - skip n:Int <-
+  // Outside of @chunk, the file is not read: this keeps long films fast to scan.
+  (
+    chunk_pos := chunk_pos + n.max 0
+    (chunk_pos > chunk_len).if {
+      File_utils.seek file at (File_utils.position file + chunk_pos - chunk_len)
+      refill
+    }
+  )
+
+  //
+  // Gathered audio.
+  //
+
+  - capacity:Int
+
+  - append_payload n:Int <-
+  ( + new_capacity:Int
+
+    ((size + n) > capacity).if {
+      new_capacity := (capacity * 2).max (size + n)
+      (data = NULL).if {
+        data := C_array Uint8.create new_capacity
+      } else {
+        data := data.realloc capacity with new_capacity
+      }
+      capacity := new_capacity
+    }
+    0.to (n - 1) do { i:Int
+      data.at (size + i) put (next_byte.to_uint8)
+    }
+    size := size + n
+  )
+
+  //
+  // Packets.
+  //
+
+  - pts:Int
+  - has_pts:Boolean
+
+  - read_pts first:Int <-
+  // 33 bits time stamp, on 5 bytes. The @first byte is already read.
+  ( + high,low:Int
+
+    high := next_word
+    low  := next_word
+    pts := (((first >> 1) & 7) << 30) | ((high >> 1) << 15) | (low >> 1)
+    has_pts := True
+  )
+
+  - read_pes_header:Int <-
+  // Reads the header which follows packet_length, keeps its time stamp.
+  // Result is the size of this header.
+  ( + code,result,len:Int
+
+    has_pts := False
+    code := next_byte
+    result := 1
+    ((code >> 6) = 02h).if {
+      // MPEG-2: flags(8) + flags(8) + PES_header_data_length(8)
+      code := next_byte
+      len  := next_byte
+      result := 3 + len
+      ((code & 80h) != 0).if {
+        read_pts next_byte
+        len := len - 5
+      }
+      skip len
+    } else {
+      // MPEG-1
+      {code = 0FFh}.while_do {
+        code := next_byte
+        result := result + 1
+      }
+      ((code >> 6) = 01h).if {
+        // STD_buffer_scale + STD_buffer_size
+        skip 1
+        code := next_byte
+        result := result + 2
+      }
+      ((code >> 4) = 02h).if {
+        read_pts code
+        result := result + 4
+      }.elseif {(code >> 4) = 03h} then {
+        read_pts code
+        skip 5
+        result := result + 9
+      }
+    }
+    result
+  )
+
+  - read_pack_header <-
+  ( + code:Int
+
+    code := next_byte
+    ((code >> 6) = 01h).if {
+      // MPEG-2
+      skip 8
+      code := next_byte
+      skip (code & 7)
+    } else {
+      // MPEG-1
+      skip 7
+    }
+  )
+
+  - video_pts:Int
+  - audio_pts:Int
+  - has_video_pts:Boolean
+  - has_audio_pts:Boolean
+  - stream_id:Int
+
+  - read_packet id:Int <-
+  ( + len,header:Int
+
+    (id = 0BAh).if {
+      read_pack_header
+    }.elseif {id >= 0BBh} then {
+      len := next_word
+      (((id & 0E0h) = 0C0h) && {(stream_id = 0) || {stream_id = id}}).if {
+        stream_id := id
+        header := read_pes_header
+        ((has_pts) && {! has_audio_pts}).if {
+          audio_pts := pts
+          has_audio_pts := True
+        }
+        append_payload (len - header)
+      }.elseif {((id & 0F0h) = 0E0h) && {! has_video_pts}} then {
+        header := read_pes_header
+        (has_pts).if {
+          video_pts := pts
+          has_video_pts := True
+        }
+        skip (len - header)
+      } else {
+        skip len
+      }
+    }
+  )
+
+Public
+
+  - data:C_array Uint8
+  - size:Int
+
+  - is_empty:Boolean <- size = 0
+
+  - start_time:Real32 <-
+  // Time in seconds of the first sound, relative to the first picture.
+  ( + result:Real32
+
+    (has_audio_pts && {has_video_pts}).if {
+      result := (audio_pts - video_pts).to_real32 / 90000.0
+    }
+    result
+  )
+
+  - load name:String <-
+  ( + code,id:Int
+    + is_first:Boolean
+
+    file := File_utils.open_read name
+    (file != NULL).if {
+      chunk := C_array Uint8.create chunk_size
+      is_first := True
+      {
+        code := ((code << 8) | next_byte) & 0FFFFFFFFh
+        ((code & 0FFFFFF00h) = 0100h).if {
+          id := code & 0FFh
+          ((is_first) && {id != 0BAh} && {id != 0E0h}).if {
+            // Elementary video stream: no audio.
+            at_eof := True
+          } else {
+            read_packet id
+          }
+          is_first := False
+          code := 0FFFFFFFFh
+        }
+      }.do_until {at_eof}
+      File_utils.close file
+    }
+  )

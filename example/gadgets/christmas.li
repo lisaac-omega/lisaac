@@ -1,0 +1,164 @@
+Header
+  + name := Christmas
+/*
+  Christmas on the desktop: snow falls, and from time to time Santa
+  Claus goes by in his sleigh, pulled by two reindeer (the first one is
+  Rudolph, with his red nose). Drag the sky to move it, Escape closes it.
+
+  Everything is drawn with circles, ellipses and lines: no image.
+
+  Shows: a @Gadget animated at each frame, snowflakes kept in three
+  arrays (@Array of @Real32), @Random, a drawing made of simple shapes
+  moved together by a translation (@translate in @save / @restore).
+
+  To compile, as usual in a terminal:
+  $ lisaac christmas -q -boost
+  $ ./christmas
+  */
+Inherit
+
+  + parent_gadget:Flat Gadget
+
+Public
+
+  - draw <-
+  ( + x,y:Real32
+    // The snow: each flake falls at its speed and swings a little.
+    0.to (flake_x.upper) do { i:Int
+      y := flake_y.at i + flake_s.at i
+      (y > height).if { y := -5; flake_x.at i put (random.real_32 * width); }
+      flake_y.at i put y
+      x := flake_x.at i + (y / 30 + i).sin * 0.6
+      flake_x.at i put x
+      begin_path
+      circle (x,y) radius (flake_s.at i)
+      fill_color (Color.rgba (255,255,255,220))
+      fill
+    }
+    // The sleigh crosses the sky in 10 s, then waits 6 s (the clock in µs).
+    time := ((Time.gettimeofday - start) % 16_000_000).to_real32 / 1_000_000
+    x := (time / 10) * (width + 520) - 400
+    y := height * 0.35 + (time * 3).sin * 20
+    sleigh (x,y)
+    // The wishes.
+    font_face_id (Font.sys (Font.bold))
+    font_size 34
+    text_align (align_center | align_middle)
+    fill_color (Color.rgba (0,0,0,90))
+    text (width / 2 + 2,height - 62) msg "Merry Christmas · Joyeux Noël"
+    fill_color (Color.rgb (200,30,40))
+    text (width / 2,height - 64) msg "Merry Christmas · Joyeux Noël"
+    signature (width / 2,height - 14)
+    Paper.refresh_again
+  )
+
+  - main <-
+  (
+    random := Random.new.init_clock
+    start := Time.gettimeofday
+    signature_color := Color.rgba (255,255,255,220)
+    0.to 149 do { i:Int
+      flake_x.add_last (random.real_32 * 900)
+      flake_y.add_last (random.real_32 * 380)
+      flake_s.add_last (random.real_32 * 2.5 + 1)
+    }
+    show "Merry Christmas · Lisaac Ω" size (900,380)
+  )
+
+Private
+
+  - random:Random
+
+  - time:Real32
+  - start:Uint64
+
+  // The snowflakes: position and size (also their speed).
+  - flake_x:Array Real32 := Array Real32.create_with_capacity 150
+  - flake_y:Array Real32 := Array Real32.create_with_capacity 150
+  - flake_s:Array Real32 := Array Real32.create_with_capacity 150
+
+  - sleigh (x,y:Real32) <-
+  // Santa and his sleigh, then two reindeer in front, from (@x,@y).
+  (
+    save
+    translate (x,y)
+    // The sleigh: its runner, its body, and the bag of presents.
+    begin_path
+    move_to (-10,40); line_to (120,40); arc_to (140,40) to (140,20) radius 12
+    stroke_width 4
+    stroke_color (Color.rgb (210,170,40))
+    stroke
+    begin_path
+    rect (0,0) size (110,34) radius 10
+    fill_color (Color.rgb (190,25,35))
+    fill
+    begin_path
+    circle (18,-10) radius 20
+    fill_color (Color.rgb (120,80,40))
+    fill
+    // Santa: his coat, his face, his beard and his hat.
+    begin_path
+    ellipse (65,-12) radius (20,22)
+    fill_color (Color.rgb (210,30,40))
+    fill
+    begin_path
+    circle (65,-40) radius 11
+    fill_color (Color.rgb (250,210,180))
+    fill
+    begin_path
+    ellipse (65,-30) radius (12,9)
+    fill_color white
+    fill
+    begin_path
+    move_to (54,-46); line_to (76,-46); line_to (84,-64)
+    close_path
+    fill_color (Color.rgb (210,30,40))
+    fill
+    begin_path
+    circle (84,-64) radius 4
+    fill_color white
+    fill
+    // The reins, then the two reindeer.
+    begin_path
+    move_to (80,-12); line_to (300,-2)
+    stroke_width 1.5
+    stroke_color (Color.rgb (90,60,30))
+    stroke
+    reindeer (190,0) nose (Color.rgb (110,70,40))
+    reindeer (300,-6) nose (Color.rgb (230,20,20))
+    restore
+  )
+
+  - reindeer (x,y:Real32) nose n:Color <-
+  // A reindeer looking to the right, its body centered on (@x,@y).
+  ( + fur:Color
+    fur := Color.rgb (140,90,50)
+    // Legs and antlers.
+    begin_path
+    move_to (x - 25,y + 8); line_to (x - 32,y + 34)
+    move_to (x - 12,y + 10); line_to (x - 8,y + 34)
+    move_to (x + 15,y + 10); line_to (x + 22,y + 34)
+    move_to (x + 28,y + 6); line_to (x + 38,y + 32)
+    move_to (x + 44,y - 32); line_to (x + 40,y - 52); line_to (x + 30,y - 60)
+    move_to (x + 41,y - 46); line_to (x + 50,y - 58)
+    stroke_width 3
+    stroke_color fur
+    stroke
+    // Body, neck and head.
+    begin_path
+    ellipse (x,y) radius (36,15)
+    fill_color fur
+    fill
+    begin_path
+    move_to (x + 25,y - 5); line_to (x + 42,y - 28); line_to (x + 34,y - 8)
+    close_path
+    fill
+    begin_path
+    ellipse (x + 48,y - 30) radius (13,9)
+    fill
+    // The nose.
+    begin_path
+    circle (x + 60,y - 30) radius 4
+    fill_color n
+    fill
+  )

@@ -1,0 +1,50 @@
+Header
+  + name := Plusieurs_triangles
+/*
+  Niveau 2 - Répéter et définir sa propre procédure.
+
+  répéter 3 fois { ... } exécute 3 fois les instructions entre accolades.
+  La méthode triangle est une procédure que l'on écrit une seule fois et
+  que l'on utilise ensuite autant de fois que l'on veut : triangle 300.
+
+  La variable épaisseur vaut 0 au départ : un entier est toujours
+  initialisé à 0 en Lisaac Ω.
+
+  Attention, détail invisible : l'instruction titre ... est écrite sur
+  trois lignes. Ces lignes finissent par \r\n (fin de ligne « Windows »),
+  ce qui veut dire en Lisaac Ω « l'instruction continue à la ligne
+  suivante ». Une fin de ligne \n seule termine l'instruction.
+
+  À essayer : répéter 12 fois, tourne 30, avance 0.
+*/
+Inherit
+  
+  + parent_tortue:Flat Tortue
+   
+Public
+  
+  - triangle pixel:Int <-
+  (
+    répéter 3 fois {
+      avance pixel
+      tourne 120
+    }
+  )
+  
+  - dessin <-
+  ( + épaisseur:Int
+    
+    titre "Plusieurs TriangleS" 
+    départ (50, 50)
+    taille (450,450)
+    couleur_trait lime
+    répéter 6 fois {
+      épaisseur := épaisseur + 2
+      épaisseur_trait épaisseur
+      triangle 300
+      tourne 7
+      lève_crayon
+      avance 20
+      baisse_crayon
+    }
+  )

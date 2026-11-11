@@ -1,0 +1,32 @@
+Header
+  + name := Max_2_int
+/*
+  Exercice 1 page 3 des exercices
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - maximum (r1, r2:Int): Int <-
+  ( + res:Int
+    
+    si (r1 > r2) alors {
+      res := r1
+    } sinon {
+      res := r2
+    }
+    res
+  )
+  
+  - main <-
+  ( + v1, v2, max:Int
+    
+    v1 := argument 1 entier
+    v2 := argument 2 entier
+    
+    max := maximum(v1, v2) 
+
+    écrire(max) ; écrire("\n")
+  )

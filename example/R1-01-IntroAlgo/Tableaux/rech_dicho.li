@@ -1,0 +1,42 @@
+Header
+  + name := Rech_dicho
+/*
+  Poly exercice 5 page 2.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+   
+  - rech_dicho(t:Array(Int), e:Int): Int <-
+  ( + a, b, m:Int
+    + trouvé:Boolean
+    
+    trouvé := faux
+    a := t.lower
+    b := t.upper
+    tant_que {(a <= b) et (non trouvé)} faire {
+      m := (a + b) / 2
+      si (t.at(m) = e) alors {
+        trouvé := vrai
+      } sinon {
+        si (t.at(m) > e) alors {
+          b := m - 1
+        } sinon {
+          a := m + 1
+        }
+      }
+    }
+    si (non trouvé) alors {
+      m := -1
+    }
+    m
+  )
+  
+  - main <-
+  ( + tab:Array(Int) 
+    
+    tab := new Array(Int) of (5, 13, 18, 23, 46, 53, 89, 97)
+    écrire(rech_dicho(tab,98)) ; écrire("\n") 
+  )

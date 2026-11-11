@@ -1,0 +1,55 @@
+Header
+  + name := Mandelbrot
+// The Computer Language Benchmarks Game: mandelbrot.
+// Same escape time algorithm as the C program #8 (50 iterations, limit 2.0), 8 pixels
+// (one output byte) at a time with 2 @Real64x4 (SIMD), the lines shared by the cores (@Parallel).
+
+Public
+
+  - n:Int
+  - bytes:Int
+  - image:C_array Uint8
+
+  - pixels (x,y:Int) :Uint8 <-
+  // The byte of the 8 pixels from (@x,@y).
+  ( + ci,cr1,cr2,zr1,zr2,zi1,zi2,tr1,tr2,ti1,ti2:Real64x4
+    + i,bits:Int
+
+    ci  := 2.0 * y.to_real64 / n.to_real64 - 1.0
+    cr1 := (Real64x4.create (0.0, 1.0, 2.0, 3.0) + x.to_real64) * 2.0 / n.to_real64 - 1.5
+    cr2 := (Real64x4.create (4.0, 5.0, 6.0, 7.0) + x.to_real64) * 2.0 / n.to_real64 - 1.5
+    bits := 0FFh
+    {(i = 50) || {bits = 0}}.until_do {
+      5.times {
+        zi1 := zr1 * zi1 * 2.0 + ci
+        zi2 := zr2 * zi2 * 2.0 + ci
+        zr1 := tr1 - ti1 + cr1
+        zr2 := tr2 - ti2 + cr2
+        tr1 := zr1 * zr1
+        tr2 := zr2 * zr2
+        ti1 := zi1 * zi1
+        ti2 := zi2 * zi2
+      }
+      i := i + 5
+      bits := ((tr1 + ti1).bits_le 4.0 << 4) | (tr2 + ti2).bits_le 4.0
+    }
+    // Outside of the image (last byte of a line).
+    (x + 8 > n).if { bits := bits & (0FF00h >> (n - x)); }
+    bits.to_uint8
+  )
+
+  - main <-
+  (
+    n := Command_args.at 1.to_int
+    bytes := (n + 7) / 8
+    image := C_array Uint8 .create (bytes * n)
+    Parallel.times (Parallel.cores) do { part:Int
+      part.to (n - 1) by (Parallel.cores) do { y:Int
+        0.to (bytes - 1) do { b:Int
+          image.at (y * bytes + b) put (pixels (b * 8, y))
+        }
+      }
+    }
+    Out # "P4\n" # n # ' ' # n # '\n'
+    Stdout.put_buffer image size (bytes * n)
+  )

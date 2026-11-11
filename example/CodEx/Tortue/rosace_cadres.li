@@ -1,0 +1,46 @@
+Header
+  + name := Rosace_cadres
+/*
+  Niveau 3 - Rosace de carrés : on passe à l'anglais.
+
+  Jusqu'ici, on a écrit les boucles en français. Toute la bibliothèque
+  Lisaac Ω est en anglais : à partir de maintenant, on fait comme elle.
+  La traduction est mot à mot :
+      répéter n fois { ... }    devient    repeat n times { ... }
+
+  La rosace : n carrés qui pivotent autour du même coin. carré est
+  une procédure déjà fournie par la tortue.
+
+  Le curseur en bas de la fenêtre (souris ou flèches gauche/droite)
+  choisit n parmi les diviseurs de 360 (voir rosace.li).
+
+  Le [ ... ] avant le corps est une précondition : n doit diviser 360.
+*/
+Inherit
+
+  + parent_rosace:Flat Rosace
+
+Public
+
+  - rosace n:Int côté c:Int <-
+  // n carrés de côté c qui pivotent autour du même coin.
+  [
+    ((360 % n) = 0)
+  ]
+  ( + rotation:Int
+
+    rotation := 360 / n
+    repeat n times {
+      carré c
+      tourne rotation
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Rosace de carrés" départ (300, 290) taille (600, 640)
+    fond white crayon (1, blue)
+
+    rosace valeur côté 150
+    curseur
+  )

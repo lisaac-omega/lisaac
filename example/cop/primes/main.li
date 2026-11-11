@@ -1,0 +1,25 @@
+Header
+  + name := Main
+/* The primes below 10_000_000, counted in parallel: 100 blocks of 100_000 numbers are given in
+   turn to 8 @Counter universes (asynchronous messages, queued in their FIFO); then each
+   @Counter.result is read (synchronous: it waits for the end of the blocks of the universe).
+   Compile with `-cop -boost': `lisaac main -cop -boost'. */
+
+Public
+
+  - main <-
+  ( + w:Array Counter
+    + total:Int
+    w := Array Counter .create_with_capacity 8
+    1.to 8 do { k:Int
+      w.add_last (Counter.new)
+    }
+    0.to 99 do { k:Int
+      // 100 blocks of 100_000 numbers, given in turn to the 8 universes.
+      w.at (k % 8).count_from (k * 100_000) to ((k + 1) * 100_000 - 1)
+    }
+    w.foreach { c:Counter
+      total := total + c.result
+    }
+    Out # total # " primes\n"
+  )

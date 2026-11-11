@@ -1,0 +1,31 @@
+Header
+  + name := Gadgets_show
+/*
+  The small desktop gadgets of the Lisaac Ω distribution, one after the
+  other: a sticky note, a tip of the day, two Ω eyes that follow the
+  mouse, an aquarium and a Christmas sky. Each one is a short program
+  written to be read, a model for your own gadgets: they all inherit
+  @Gadget (gadget.li), a window without border that moves with the mouse.
+
+  To compile, in a terminal:
+  $ cd lisaac/example/gadgets
+  $ lisaac gadgets_show -q -boost
+  $ ./gadgets_show
+  */
+Insert
+
+  - code_show:Code_show := Code_show
+
+Public
+
+  - main <-
+  (
+    show (
+      "postit.li", "background",
+      "did_you_know.li", "background",
+      "omega_eyes.li", "background",
+      "aquarium.li", "background",
+      "christmas.li", "background",
+      "gadget.li", "no-run"
+    )
+  )

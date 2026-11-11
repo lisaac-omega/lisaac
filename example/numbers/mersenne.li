@@ -1,0 +1,65 @@
+Header
+  + name := Mersenne
+/*
+  The Mersenne primes 2^p - 1, found with the Lucas-Lehmer test:
+  for an odd prime @p, 2^p - 1 is prime if and only if s(p-2) = 0
+  modulo 2^p - 1, with s(0) = 4 and s(k+1) = s(k)^2 - 2.
+
+  The values of @s have thousands of bits: with @ℤ, the code is just
+  the formula. With 2300, the largest prime found has 687 digits.
+
+  Shows: the unbounded integers @ℤ, `%' and `<<' on @ℤ.
+
+  To compile, as usual in a terminal:
+  $ lisaac mersenne -q -boost
+  $ ./mersenne 2300
+  */
+Private
+
+  - is_prime p:Int :Boolean <-
+  ( + d:Int
+    + r:Boolean
+    r := p >= 2
+    d := 2
+    {r && {d * d <= p}}.while_do {
+      r := p % d != 0
+      d := d + 1
+    }
+    r
+  )
+
+  - lucas_lehmer p:Int :Boolean <-
+  // Is 2^@p - 1 prime? (@p is an odd prime)
+  ( + m,s:ℤ
+    m := (ℤ.one << p) - 1
+    s := 4
+    (p - 2).times {
+      s := (s * s - 2) % m
+    }
+    s = 0
+  )
+
+Public
+
+  - main <-
+  ( + limit:Int
+    + m:ℤ
+    limit := 1300
+    (Command_args.count = 2).if {
+      limit := Command_args.at 1.to_int
+    }
+    Out # "Mersenne primes 2^p - 1 with p <= " # limit # ":\n"
+    2.to limit do { p:Int
+      ((is_prime p) && {(p = 2) || {lucas_lehmer p}}).if {
+        m := (ℤ.one << p) - 1
+        String.tmp { tmp:String_buffer
+          m.append_in tmp
+          Out # "p = " # p # ", " # tmp.count # " digit(s)"
+          (tmp.count <= 40).if {
+            Out # ": " # tmp
+          }
+          Out # '\n'
+        }
+      }
+    }
+  )

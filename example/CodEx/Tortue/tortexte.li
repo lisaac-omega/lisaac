@@ -1,0 +1,43 @@
+Header
+  + name := Tortexte
+/*
+  Annexe - La tortue écrit du texte.
+
+  texte "..." écrit à la position de la tortue, avec la couleur et
+  l'épaisseur du crayon (l'épaisseur donne la taille des lettres).
+
+  On regarde ici sous la carapace : turtle_x, turtle_y et pen_width sont
+  les variables internes de la tortue. Comme toute la bibliothèque,
+  l'intérieur de la tortue est écrit en anglais.
+
+  Out # ... affiche dans le terminal : lancez cet exemple en ligne de
+  commande pour voir ces affichages.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  + colors: Array Color := new Array Color of (lime, red, blue)
+
+  - dessin <-
+  ( + c: Color
+
+    debug_refresh
+
+    titre "Tortexte" taille (700, 500)
+
+    téléportation (1,499)
+
+    from 1 to 8 do { s:Int
+      épaisseur_trait s
+      Out # "épaisseur_trait=" # pen_width # '\n'
+      c := colors.at (s % colors.count)
+      couleur_trait c
+
+      texte "Tortue Ω"
+
+      téléportation (turtle_x + s * 15, turtle_y - s * 15)
+    }
+  )

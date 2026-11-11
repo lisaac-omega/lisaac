@@ -1,0 +1,206 @@
+Header
+  + name := Aquarium
+/*
+  An aquarium on the desktop: fish swim, seaweed waves, and bubbles rise
+  from a treasure in the shape of an Ω. Drag it to move it, Escape
+  closes it.
+
+  As a screen saver, on the whole screen (a click or a key closes it):
+  $ ./aquarium full
+
+  Everything is drawn with ellipses, circles and lines: no image. The
+  moves follow the real clock, so they keep their speed even when the
+  computer draws less images per second.
+
+  Shows: a @Gadget animated at each frame, a gradient (@Paint), the
+  fish kept in arrays (@Array), @Random, a full screen @Window.
+
+  To compile, as usual in a terminal:
+  $ lisaac aquarium -q -boost
+  $ ./aquarium
+  */
+Inherit
+
+  + parent_gadget:Flat Gadget
+
+Public
+
+  - draw <-
+  ( + t,dt,sand:Real32
+    + water:Paint
+    t := (Time.gettimeofday - start).to_real32 / 1_000_000
+    (dt,last) := ((t - last).min 0.1,t)
+    sand := height - 50
+    // The water, in a glass with round corners.
+    water := Paint.create_linear (0,0) to (0,height)
+      color (Color.rgb (70,170,220)) to (Color.rgb (10,50,110))
+    begin_path
+    rect (4,4) size (width - 8,height - 8) radius 24
+    fill_paint water
+    fill
+    water.free
+    // Nothing is drawn outside the glass (a fish which goes out).
+    intersect_scissor (4,4) size (width - 8,height - 8)
+    // The seaweed: lines that wave a little more at their top.
+    0.to 5 do { i:Int
+      seaweed (width * (0.08 + i * 0.17),sand + 10) time (t + i)
+    }
+    // The sand, and the Ω treasure.
+    begin_path
+    rect (4,sand) size (width - 8,height - sand - 4) radius 20
+    fill_color (Color.rgb (225,200,140))
+    fill
+    font_face_id (Font.sys (Font.bold))
+    font_size 70
+    text_align (align_center | align_baseline)
+    fill_color (Color.rgb (230,180,40))
+    text (width * 0.8,sand + 12) msg "Ω"
+    // The fish, then the bubbles in front of them.
+    0.to (fish_x.upper) do { i:Int
+      swim i during dt
+      fish i time t
+    }
+    bubbles (width * 0.8,sand - 40) time t during dt
+    reset_scissor
+    signature (width / 2,height - 14)
+    Paper.refresh_again
+  )
+
+  - event ev:Int :Boolean <-
+  // As a screen saver, a click closes it (after the visit of lisaac.org).
+  (
+    parent_gadget.event ev
+    (full && {(ev & ~1) = Hand.clic}).if { Paper.exit 0; }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (full).if { Paper.exit 0; }
+    parent_gadget.key s cmd c
+  )
+
+  - main <-
+  (
+    random := Random.new.init_clock
+    start := Time.gettimeofday
+    signature_color := Color.rgb (120,90,40)
+    full := (Command_args.upper >= 1) && {Command_args.at 1 = "full"}
+    fullscreen := full
+    0.to 8 do { i:Int
+      fish_x.add_last (random.real_32 * 900)
+      fish_y.add_last (random.real_32)
+      fish_v.add_last ((random.real_32 * 60 + 30) * (random.real_32 < 0.5).ok (-1.0) or 1.0)
+      fish_s.add_last (random.real_32 * 15 + 15)
+      fish_c.add_last (colors.at (i % colors.count))
+    }
+    0.to 11 do { i:Int
+      bubble_x.add_last 0
+      bubble_y.add_last (-100.0)
+    }
+    show "Aquarium · Lisaac Ω" size (900,520)
+  )
+
+Private
+
+  - random:Random
+
+  - full:Boolean
+
+  - start:Uint64
+
+  - last:Real32
+
+  // The fish: position (the height as a part of the water), speed
+  // (negative to the left), size and color.
+  - fish_x:Array Real32 := Array Real32.create_with_capacity 9
+  - fish_y:Array Real32 := Array Real32.create_with_capacity 9
+  - fish_v:Array Real32 := Array Real32.create_with_capacity 9
+  - fish_s:Array Real32 := Array Real32.create_with_capacity 9
+  - fish_c:Array Color := Array Color.create_with_capacity 9
+
+  - colors:Array Color := new Array Color of (
+    Color.rgb (255,140,0), Color.rgb (255,220,40), Color.rgb (240,70,90),
+    Color.rgb (120,220,120), Color.rgb (200,120,255)
+  )
+
+  // The bubbles (y < -50: waiting to start from the treasure).
+  - bubble_x:Array Real32 := Array Real32.create_with_capacity 12
+  - bubble_y:Array Real32 := Array Real32.create_with_capacity 12
+
+  - swim i:Int during dt:Real32 <-
+  // Moves the fish @i; out of the glass, it comes back on the other side.
+  ( + x,s:Real32
+    s := fish_s.at i
+    x := fish_x.at i + fish_v.at i * dt
+    (x > width + 2 * s).if { x := -2 * s; }
+    (x < -2 * s).if { x := width + 2 * s; }
+    fish_x.at i put x
+  )
+
+  - fish i:Int time t:Real32 <-
+  // A fish: its tail, its body, its fin and its eye, turned to its way.
+  ( + x,y,s,d:Real32
+    s := fish_s.at i
+    d := (fish_v.at i < 0).ok (-1.0) or 1.0
+    x := fish_x.at i
+    y := 40 + fish_y.at i * (height - 160) + (t * 2 + i).sin * 6
+    fill_color (fish_c.at i)
+    begin_path
+    move_to (x - d * s * 0.8,y)
+    line_to (x - d * s * 1.6,y - s * 0.6 + (t * 8 + i).sin * 3)
+    line_to (x - d * s * 1.6,y + s * 0.6 - (t * 8 + i).sin * 3)
+    close_path
+    fill
+    begin_path
+    ellipse (x,y) radius (s,s * 0.6)
+    fill
+    begin_path
+    move_to (x - d * s * 0.2,y - s * 0.5); line_to (x - d * s * 0.7,y - s * 0.9); line_to (x + d * s * 0.3,y - s * 0.55)
+    close_path
+    fill
+    begin_path
+    circle (x + d * s * 0.55,y - s * 0.12) radius (s * 0.17)
+    fill_color white
+    fill
+    begin_path
+    circle (x + d * s * 0.6,y - s * 0.12) radius (s * 0.08)
+    fill_color black
+    fill
+  )
+
+  - seaweed (x,y:Real32) time t:Real32 <-
+  // A strand of seaweed from (@x,@y), up to 140 pixels.
+  (
+    begin_path
+    move_to (x,y)
+    1.to 10 do { k:Int
+      line_to (x + (t + k * 0.4).sin * k * 1.5,y - k * 14)
+    }
+    stroke_width 7
+    stroke_color (Color.rgb (40,140,70))
+    stroke
+  )
+
+  - bubbles (x0,y0:Real32) time t:Real32 during dt:Real32 <-
+  // The bubbles rise and swing; a new one starts from time to time.
+  ( - next:Real32
+    + y:Real32
+    0.to (bubble_y.upper) do { i:Int
+      y := bubble_y.at i
+      (y > -50).if {
+        y := y - 70 * dt
+        (y < 10).if { y := -100; }
+        bubble_y.at i put y
+        begin_path
+        circle (bubble_x.at i + (t * 3 + i).sin * 4,y) radius (3 + i % 4)
+        stroke_width 1.5
+        stroke_color (Color.rgba (255,255,255,200))
+        stroke
+      }.elseif {t > next} then {
+        bubble_x.at i put (x0 + random.real_32 * 20 - 10)
+        bubble_y.at i put y0
+        next := t + 0.4
+      }
+    }
+  )

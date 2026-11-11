@@ -1,0 +1,265 @@
+Header
+  - name := Band
+/* Active object: a band of rows of the grid, which it updates step by step (Jacobi). Its
+   border rows go to its neighbors in `One' buffers, copied by the receiver and given back:
+   two buffers by block go round, without copy from one universe to another and without
+   allocation. A step starts when the borders of the neighbors for this step are there (a
+   neighbor may be one step ahead: the borders received are kept by parity of the step). */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + n:Int
+  // Columns (and rows of the whole grid).
+
+  + steps:Int
+
+  + first:Int
+  + count:Int
+  // Global rows [@first, @first + @count) of this band.
+
+  + up:Band
+  + down:Band
+  // The neighbors (NULL at the top and at the bottom of the grid).
+
+  + collector:Collector
+
+  + index:Int
+
+  + image:Boolean
+  // Its rows go to the @collector at the end (for the image).
+
+  + cur:Array Real
+  + nxt:Array Real
+
+  + ghost_up0:Array Real
+  + ghost_up1:Array Real
+  + ghost_down0:Array Real
+  + ghost_down1:Array Real
+  + has_up0:Boolean
+  + has_up1:Boolean
+  + has_down0:Boolean
+  + has_down1:Boolean
+  // The border rows of the neighbors, by parity of the step.
+
+  + out_up:One Array Real
+  + out_down:One Array Real
+  + pending_up:Boolean
+  + pending_down:Boolean
+  // The buffers to send a border (NULL: not given back yet, the send waits).
+
+  + t:Int
+  // Steps done.
+
+  - setup (size, nsteps, row, rows:Int) up u:Band down d:Band collector c:Collector index k:Int image img:Boolean <-
+  (
+    image := img
+    n := size
+    steps := nsteps
+    first := row
+    count := rows
+    up := u
+    down := d
+    collector := c
+    index := k
+    cur := Array Real .create (count * n)
+    nxt := Array Real .create (count * n)
+    (first = 0).if {
+      // The hot row.
+      0.to (n - 1) do { i:Int
+        cur.at i put 1.0
+        nxt.at i put 1.0
+      }
+    }
+    ghost_up0 := Array Real .create n
+    ghost_up1 := Array Real .create n
+    ghost_down0 := Array Real .create n
+    ghost_down1 := Array Real .create n
+    out_up := Array Real .create n
+    out_down := Array Real .create n
+  )
+
+  - start <-
+  (
+    send_up
+    send_down
+    try_step
+  )
+
+  - from_above buf:One Array Real step s:Int <-
+  // The last row of @up at step @s.
+  ( + g:Array Real
+    ((s & 1) = 0).if {
+      g := ghost_up0
+      has_up0 := True
+    } else {
+      g := ghost_up1
+      has_up1 := True
+    }
+    0.to (n - 1) do { j:Int
+      g.at j put (buf.at j)
+    }
+    up.give_back_down buf
+    try_step
+  )
+
+  - from_below buf:One Array Real step s:Int <-
+  // The first row of @down at step @s.
+  ( + g:Array Real
+    ((s & 1) = 0).if {
+      g := ghost_down0
+      has_down0 := True
+    } else {
+      g := ghost_down1
+      has_down1 := True
+    }
+    0.to (n - 1) do { j:Int
+      g.at j put (buf.at j)
+    }
+    down.give_back_up buf
+    try_step
+  )
+
+  - give_back_up buf:One Array Real <-
+  // The buffer of the first row, given back by @up.
+  (
+    out_up := buf
+    (pending_up).if {
+      send_up
+    }
+  )
+
+  - give_back_down buf:One Array Real <-
+  (
+    out_down := buf
+    (pending_down).if {
+      send_down
+    }
+  )
+
+Private
+
+  - send_up <-
+  // The first row (step @t) to @up, if the buffer is there.
+  ( + b:One Array Real
+    ((up != NULL) && {t < steps}).if {
+      (out_up = NULL).if {
+        pending_up := True
+      } else {
+        pending_up := False
+        b := out_up
+        0.to (n - 1) do { j:Int
+          b.at j put (cur.at j)
+        }
+        up.from_below b step t
+      }
+    }
+  )
+
+  - send_down <-
+  // The last row (step @t) to @down.
+  ( + b:One Array Real
+    + base:Int
+    ((down != NULL) && {t < steps}).if {
+      (out_down = NULL).if {
+        pending_down := True
+      } else {
+        pending_down := False
+        b := out_down
+        base := (count - 1) * n
+        0.to (n - 1) do { j:Int
+          b.at j put (cur.at (base + j))
+        }
+        down.from_above b step t
+      }
+    }
+  )
+
+  - ready:Boolean <-
+  // The borders of the neighbors for the step @t are there.
+  ( + ok_up,ok_down:Boolean
+    ok_up := (up = NULL) || {((t & 1) = 0) && {has_up0}} || {((t & 1) = 1) && {has_up1}}
+    ok_down := (down = NULL) || {((t & 1) = 0) && {has_down0}} || {((t & 1) = 1) && {has_down1}}
+    ok_up && {ok_down}
+  )
+
+  - try_step <-
+  ( + tmp,copy:Array Real
+    + s:Real
+    {(t < steps) && {ready}}.while_do {
+      compute
+      ((t & 1) = 0).if {
+        has_up0 := False
+        has_down0 := False
+      } else {
+        has_up1 := False
+        has_down1 := False
+      }
+      tmp := cur
+      cur := nxt
+      nxt := tmp
+      t := t + 1
+      send_up
+      send_down
+    }
+    (t = steps).if {
+      t := t + 1
+      0.to (count * n - 1) do { i:Int
+        s := s + cur.at i
+      }
+      (image).if {
+        // A new copy of the rows: transferred (fresh, no more used here).
+        copy := Array Real .create (count * n)
+        0.to (count * n - 1) do { i:Int
+          copy.at i put (cur.at i)
+        }
+        collector.rows copy first first
+      }
+      collector.result index sum s
+    }
+  )
+
+  - compute <-
+  // One step: @nxt from @cur and the borders of the step @t.
+  ( + ga,gb,ra,rb:Array Real
+    + ba,bb,r0,g:Int
+    ((t & 1) = 0).if {
+      ga := ghost_up0
+      gb := ghost_down0
+    } else {
+      ga := ghost_up1
+      gb := ghost_down1
+    }
+    0.to (count - 1) do { r:Int
+      g := first + r
+      r0 := r * n
+      ((g = 0) || {g = n - 1}).if {
+        // A fixed row of the boundary.
+        0.to (n - 1) do { j:Int
+          nxt.at (r0 + j) put (cur.at (r0 + j))
+        }
+      } else {
+        // The rows above and below: in @cur, or a border of a neighbor.
+        (r = 0).if {
+          ra := ga
+          ba := 0
+        } else {
+          ra := cur
+          ba := r0 - n
+        }
+        (r = count - 1).if {
+          rb := gb
+          bb := 0
+        } else {
+          rb := cur
+          bb := r0 + n
+        }
+        1.to (n - 2) do { j:Int
+          nxt.at (r0 + j) put (0.25 * (ra.at (ba + j) + rb.at (bb + j) + cur.at (r0 + j - 1) + cur.at (r0 + j + 1)))
+        }
+      }
+    }
+  )

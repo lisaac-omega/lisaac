@@ -1,0 +1,36 @@
+Header
+  + name := Division_euclidienne
+/*
+  Poly exercice page 2.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - division (a:ℤ, b:ℤ) : ℤ <-
+  ( + quotient,reste:ℤ;
+    reste := a;
+    quotient := 0;
+    tant_que { reste >= b } faire {
+      quotient := quotient + 1
+      reste := reste - b
+    }
+    quotient
+  )
+  
+  - main <-
+  ( + va, vb, q:ℤ
+    
+    écrire("Division Euclidienne\n")
+    
+    écrire("a:")
+    va := lire_entier
+    
+    écrire("b:")
+    vb := lire_entier
+    
+    q := division (va,vb)
+    écrire("quotient=") ; écrire(q) ; écrire("\n")
+  )

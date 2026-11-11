@@ -1,0 +1,40 @@
+Header
+  + name := Type_int
+/*
+  Le type @Int : des entiers limités à 64 bits.
+
+  2 à la puissance 62 tient encore dans un @Int, mais son carré déborde :
+  le résultat affiché est faux, sans aucun message d'erreur.
+  Pour les grands nombres, il faut utiliser le type @ℤ (voir type_z.li).
+  */
+  
+Insert
+  - french: French_corner := French_corner
+  
+Public
+   
+  - main <-
+  (    
+    // Déclaration de deux variables de type @Int
+    + x:Int
+    + y:Int
+    
+    écrire("Exemple de variables de type Int\n")
+    x := 2
+    
+    écrire("x vaut ") ; écrire(x) ; écrire("\n")  
+    
+    y := x + 4  
+    Out # "y vaut " # y # "\n"    
+    
+    // @x à la puissance 62:
+    y := x.pow 62
+    Out # "y à la puissance 62 donne " # y # "\n"
+    
+    // Ici y déborde car un Int est limité à 64 bits:
+    y := y * y
+    Out # "y = " # y # "\n"
+    
+    // Pour éviter les problèmes de débordement, utiliser le type @ℤ
+  )
+  

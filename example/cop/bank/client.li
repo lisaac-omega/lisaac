@@ -1,0 +1,61 @@
+Header
+  - name := Client
+// Active object: makes transfers, one after the answer to the other.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + accounts:Immutable_array Account
+
+  + latch:Latch Auditor
+
+  + left:Int
+
+  + seed:Int
+
+  + accepted_count:Int
+
+  + refused_count:Int
+
+  - start n:Int on a:Immutable_array Account seed s:Int end l:Latch Auditor <-
+  (
+    accounts := a
+    latch := l
+    left := n
+    seed := s
+    next
+  )
+
+  - accepted <-
+  // Asynchronous: the answer of the account credited.
+  (
+    accepted_count := accepted_count + 1
+    next
+  )
+
+  - refused <-
+  // Asynchronous: the answer of the account debited.
+  (
+    refused_count := refused_count + 1
+    next
+  )
+
+Private
+
+  - next <-
+  ( + from,to,amount:Int
+    (left = 0).if {
+      latch.count_down
+    } else {
+      left := left - 1
+      // Pseudo-random (a linear congruential generator).
+      seed := (seed * 1103515245 + 12345) % 2147483648
+      from := seed % accounts.count
+      to := (seed / 16) % accounts.count
+      amount := (seed / 1024) % 300
+      accounts.at from.transfer amount to (accounts.at to) for self
+    }
+  )

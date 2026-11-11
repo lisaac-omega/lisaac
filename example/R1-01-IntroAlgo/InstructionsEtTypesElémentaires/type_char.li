@@ -1,0 +1,34 @@
+Header
+  + name := Type_char
+/*
+  Le type @Char : un caractère.
+
+  Un caractère s'écrit entre apostrophes : 'A'. On peut comparer deux
+  caractères (c1 <= c2) et obtenir leur code ASCII avec code.
+  */
+  
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  ( + c1, c2: Char
+    + b: Boolean
+    + i:Int
+    
+    c1 := 'A'
+    c2 := 'Z'
+    Out # c1 # '\n'
+    
+    // Les opérateurs de comparaison existent aussi pour le type @Char
+    b := c1 <= c2
+    
+    
+    // Le code ascii:
+    i := code(c1)
+    Out # "code ascii " # c1 # " = " # (c1.code) # '\n'
+   
+  )
+  

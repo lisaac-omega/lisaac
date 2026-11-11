@@ -1,0 +1,38 @@
+Header
+  - name := Consumer
+// Active object: takes the values of the channel, one after the other.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + channel:Channel Int From Producer To Consumer
+
+  + latch:Latch Report
+
+  + count:Int
+
+  + sum:Int
+
+  - start ch:Channel Int From Producer To Consumer end l:Latch Report <-
+  (
+    channel := ch
+    latch := l
+    channel.take self tag 0
+  )
+
+  - receive v:Int tag k:Int <-
+  // Asynchronous: a value of the channel.
+  (
+    count := count + 1
+    sum := sum + v
+    channel.take self tag 0
+  )
+
+  - closed k:Int <-
+  // Asynchronous: no more value.
+  (
+    latch.count_down
+  )

@@ -1,0 +1,101 @@
+Header
+  + name := Fannkuch_redux
+// The Computer Language Benchmarks Game: fannkuch-redux.
+// As the C program #6: a permutation is an @Uint8x16, a flip or a rotation is one @shuffle.
+// The permutations are shared in @blocks by the cores (@Parallel).
+
+Public
+
+  - n:Int
+  - blocks:Int := 24
+  - fact:C_array Int := C_array Int .create 17
+  - rotate:C_array Uint8x16 := C_array Uint8x16 .create 17
+  // rotate.at i rotates the values 0 to i by one to the left.
+  - shift:C_array Uint8x16 := C_array Uint8x16 .create 17
+  // shift.at i: the rotations 1 to i.
+  - sums:C_array Int := C_array Int .create 64
+  - maxs:C_array Int := C_array Int .create 64
+
+  - permutations (start,end:Int) :(Int,Int) <-
+  // Checksum and maximum of flips of the permutations [@start, @end[.
+  ( + perm,p,s,cv,id,v:Uint8x16
+    + count:C_array Int
+    + idx,d,f,flips,i,sum,max:Int
+    + one:{Int;}
+
+    // The permutation number @start.
+    count := C_array Int .create 17
+    perm := Uint8x16.identity
+    idx := start
+    (n - 1).downto 1 do { j:Int
+      d := idx / fact.at j
+      idx := idx % fact.at j
+      count.at j put d
+      d.times { perm := perm.shuffle (rotate.at j); }
+    }
+    // The counts in a vector (@cv): the next permutation without branch.
+    id := Uint8x16.identity
+    1.to (n - 1) do { j:Int; cv := cv.at j put (count.at j.to_uint8); }
+    // 2 permutations by turn, as the C program #6: + then - the flips in the checksum.
+    one := { sg:Int
+      // The next permutation first: ready before the end of the flips (badly predicted).
+      // @i: the first count lower than its index; the counts before to 0, the count @i + 1.
+      p := perm
+      i := (cv - id).first_negative
+      perm := perm.shuffle (shift.at i)
+      v := Uint8x16.all i
+      cv := cv.and_not (v.greater_mask id) - id.equal_mask v
+      // The flips of @p. @s: 16 times its first value, the next one known before the flip.
+      f := p.first
+      (f != 0).if {
+        s := p.splat 0
+        flips := 0
+        {f != 0}.while_do {
+          (p, s) := (p.shuffle (s.reverse_mask), p.shuffle s)
+          flips := flips + 1
+          f := s.first
+        }
+        sum := sum + sg * flips
+        max := max.max flips
+      }
+    }
+    ((end - start) / 2).times { one.value 1; one.value (-1); }
+    (sum, max)
+  )
+
+  - main <-
+  ( + m:Uint8x16
+    + checksum,max_flips:Int
+
+    n := Command_args.at 1.to_int
+    // Blocks of an even size from an even start (2 permutations by turn): 24 if n >= 6.
+    (n < 6).if { blocks := 1; }
+    fact.at 0 put 1
+    1.to 16 do { i:Int
+      fact.at i put (fact.at (i - 1) * i)
+      m := Uint8x16.identity
+      0.to (i - 1) do { j:Int
+        m := m.at j put ((j + 1).to_uint8)
+      }
+      rotate.at i put (m.at i put 0)
+    }
+    m := Uint8x16.identity
+    1.to 16 do { i:Int
+      m := m.shuffle (rotate.at i)
+      shift.at i put m
+    }
+    Parallel.times (Parallel.cores) do { part:Int
+      + s,x,size:Int
+      size := fact.at n / blocks
+      part.to (blocks - 1) by (Parallel.cores) do { b:Int
+        (s, x) := permutations (b * size, (b + 1) * size)
+        sums.at part put (sums.at part + s)
+        maxs.at part put (maxs.at part.max x)
+      }
+    }
+    0.to (Parallel.cores - 1) do { p:Int
+      checksum := checksum + sums.at p
+      max_flips := max_flips.max (maxs.at p)
+    }
+    Out # checksum # "\nPfannkuchen(" # n # ") = " # max_flips # '\n'
+  )

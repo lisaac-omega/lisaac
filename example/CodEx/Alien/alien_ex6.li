@@ -1,0 +1,28 @@
+Header
+  + name := Alien_ex6
+/*
+  Alien 6 - La boucle avec un compteur.
+
+  de 1 à 3 répéter { i:Int ... } exécute le bloc trois fois, avec
+  @i = 1, puis 2, puis 3. Les déplacements grandissent à chaque tour.
+
+  À faire : écrire les déplacements tour par tour.
+  */
+Inherit
+  
+  + parent_alien:Flat Alien
+  
+Public 
+  
+  - main <-
+  (
+    vitesse("rapide")
+    bas(2)
+    gauche(5)
+    de 1 à 3 répéter { i:Int
+      haut(i)
+      droite(i + 1)
+    }
+    bas(2)
+    fin
+  )

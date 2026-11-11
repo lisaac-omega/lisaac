@@ -1,0 +1,74 @@
+Header
+  + name := Omega_eyes
+/*
+  Two big Ω on the desktop, whose eyes follow the mouse everywhere on
+  the screen. Useless, so essential. Drag them to move them, Escape
+  closes them.
+
+  Shows: a @Gadget redrawn at each frame (@Paper.refresh_again), the
+  position of the mouse even outside the window (@Paper.get_cursor_pos),
+  a little geometry: the pupil goes towards the mouse, but stays in
+  the eye.
+
+  To compile, as usual in a terminal:
+  $ lisaac omega_eyes -q -boost
+  $ ./omega_eyes
+  */
+Inherit
+
+  + parent_gadget:Flat Gadget
+
+Public
+
+  - draw <-
+  ( + mx,my:Int
+    (mx,my) := Paper.get_cursor_pos win_ptr
+    eye (width * 0.27,height * 0.45) mouse (mx,my)
+    eye (width * 0.73,height * 0.45) mouse (mx,my)
+    signature (width / 2,height - 10)
+    Paper.refresh_again
+  )
+
+  - main <-
+  (
+    signature_color := Color.rgba (255,255,255,220)
+    show "Ω eyes · Lisaac Ω" size (340,240)
+  )
+
+Private
+
+  - omega_size:Real32 := 200; // Size of an Ω.
+
+  - eye (cx,cy:Real32) mouse (mx,my:Int) <-
+  // An Ω centered on (@cx,@cy), with its eye in the hole of the Ω.
+  ( + ex,ey,rx,ry,dx,dy,d,px,py:Real32
+    // The white of the eye, in the hole of the Ω.
+    (ex,ey) := (cx,cy - omega_size * 0.07)
+    (rx,ry) := (omega_size * 0.17,omega_size * 0.21)
+    begin_path
+    ellipse (ex,ey) radius (rx,ry)
+    fill_color white
+    fill
+    // The Ω itself.
+    font_face_id (Font.sys (Font.roman))
+    font_size omega_size
+    text_align (align_center | align_middle)
+    fill_color (Color.rgb (40,90,170))
+    text (cx,cy) msg "Ω"
+    // The pupil: towards the mouse, at most at half of the eye.
+    (dx,dy) := (mx.to_real32 - ex,my.to_real32 - ey)
+    d := (dx * dx + dy * dy).sqrt
+    (px,py) := (ex,ey)
+    (d > 1).if {
+      px := ex + dx / d * (d.min (rx * 0.5))
+      py := ey + dy / d * (d.min (ry * 0.5))
+    }
+    begin_path
+    circle (px,py) radius (omega_size * 0.07)
+    fill_color (Color.rgb (20,20,20))
+    fill
+    begin_path
+    circle (px - omega_size * 0.025,py - omega_size * 0.025) radius (omega_size * 0.02)
+    fill_color white
+    fill
+  )

@@ -1,0 +1,23 @@
+Header
+  + name := Essai_point
+Public
+  
+  - main <-
+  ( + p, p2:Point
+    
+    p := Point.new .set_x 1 y 2
+    
+    p.println
+    
+    p2 := (Point.new) set_x 1 y 2
+    
+    p2.println
+    
+    /* 
+    Exercice: modifier point.li pour pouvoir écrire:
+    
+    p2 := new Point x 1 y 2
+    
+    */ 
+  )
+  

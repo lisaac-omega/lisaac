@@ -1,0 +1,80 @@
+Header
+  + name := Pidigits
+// The Computer Language Benchmarks Game: pidigits.
+// Same spigot algorithm as the C program #1, with the @ℤ of the library (no GMP).
+
+Private
+
+  - acc:ℤ
+  - den:ℤ
+  - num:ℤ
+
+  - set_acc x:ℤ <- ( acc.free; acc := x; )
+  - set_den x:ℤ <- ( den.free; den := x; )
+  - set_num x:ℤ <- ( num.free; num := x; )
+
+  - extract_digit nth:Int :Int <-
+  // (num * nth + acc) / den
+  ( + a,b,q:ℤ
+    + result:Int
+
+    a := num * nth
+    b := a + acc
+    q := b / den
+    result := q.to_real64.to_int; // A digit: exact.
+    a.free; b.free; q.free
+    result
+  )
+
+  - eliminate_digit d:Int <-
+  // acc := (acc - den * d) * 10 ; num := num * 10
+  ( + a,b:ℤ
+
+    a := den * d
+    b := acc - a
+    a.free
+    set_acc (b * 10)
+    b.free
+    set_num (num * 10)
+  )
+
+  - next_term k:Int <-
+  // acc := (acc + num * 2) * k2 ; den := den * k2 ; num := num * k
+  ( + k2:Int
+    + a,b:ℤ
+
+    k2 := k * 2 + 1
+    a := num * 2
+    b := acc + a
+    a.free
+    set_acc (b * k2)
+    b.free
+    set_den (den * k2)
+    set_num (num * k)
+  )
+
+Public
+
+  - main <-
+  ( + n,i,k,d:Int
+
+    n := Command_args.at 1.to_int
+    acc := 0
+    den := 1
+    num := 1
+    {i >= n}.until_do {
+      k := k + 1
+      next_term k
+      ((num <= acc) && {(d := extract_digit 3) = extract_digit 4}).if {
+        ('0'.code + d).to_char.print
+        i := i + 1
+        ((i % 10) = 0).if {
+          '\t'.print
+          ':'.print
+          i.print
+          '\n'.print
+        }
+        eliminate_digit d
+      }
+    }
+  )

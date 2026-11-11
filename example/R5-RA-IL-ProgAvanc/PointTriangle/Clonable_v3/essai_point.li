@@ -1,0 +1,25 @@
+Header
+  + name := Essai_point
+Public
+  
+  - main <-
+  ( + p, p2:Point
+    
+    p := new Point x 1 y 2
+    
+    p.println
+    
+    p2 := new p x 3 y 4
+    
+    p2.println
+    
+    ? {3 = 3}
+    /* 
+    
+    
+    Utils.crash_with_message "ici";
+    
+    
+    Exercice: comment forcer l'utilisation de Point uniquement.
+    */ 
+  )

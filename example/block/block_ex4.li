@@ -1,0 +1,16 @@
+Header
+  + name := Block_ex4
+Public
+  
+  - main <-
+  (+ b:{(Int, Int); Int} // Two parameters, one result
+    
+    "The coin flip gave ".print
+    if (Random.init_clock.flip_coin) then {
+      b := { (x:Int, y:Int) ; x + y}
+    } else {
+      b := { (z:Int, t:Int) ; z - t}
+    }
+    (b.value (2, 3)).println
+  )
+  

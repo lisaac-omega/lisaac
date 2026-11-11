@@ -1,0 +1,109 @@
+Header
+  + name := Card
+  /**/
+
+Insert
+  - parent_solitaire:Solitaire := Solitaire
+  
+Private
+  
+  - cards_file:String_alias := "cards.png"
+  
+  - cards_id:Int  
+  
+Public
+  
+  - width_real:Real32
+  - height_real:Real32
+  
+  - load_cards <-
+  ( + buf:C_array Uint8
+    + f:Pointer
+    + s,w,h:Int
+    f := System_io.asset_open cards_file
+    s := System_io.asset_size f
+    buf := C_array Uint8.create s
+    System_io.asset_read f in buf size s
+    System_io.asset_close f
+    //
+    cards_id := create_image buf size s flags 0
+    (w,h) := image_size cards_id
+    (width_real,height_real) := (w.to_real32/14, h.to_real32/4)
+  )
+  
+  + suit:Uint8
+  + rank:Uint8
+  + face_up:Boolean
+
+  - new:Self <- clone
+  
+  - color s:Uint8 rank r:Uint8 :Self <-
+  [ ? {s.in_range 0 to 3}
+    ? {r.in_range 1 to 13}
+  ]
+  (
+    suit := s
+    rank := r
+    self
+  )
+  
+  - draw_to (x,y:Real32) <-
+  ( + p:Paint
+    + xi,yi:Real32
+    
+    yi := y - suit.to_real32 * card_h
+    (face_up).if {
+      xi := x - (rank-1).to_real32 * card_w
+    } else {
+      xi := x - 13 * card_w
+    }
+    p := Paint.create_pattern (xi,yi) size (card_w*14,card_h*4) img_id cards_id angle 0 alpha 1
+    begin_path; rect (x,y) size (card_w,card_h) radius 5.0
+    fill_paint p; fill; p.free     
+  )
+  
+  - append_in b:String_buffer <-
+  ( + rk:Char
+    + st:Char
+    (face_up).if {
+      rk := rank_as_char
+      st := suit_as_char
+      b.add_last '['
+      b.extend rk
+      b.extend st
+      b.add_last ']'
+    } else {
+      b.copy "[#]"
+    }
+  )
+
+  - rank_as_char :Char <-
+  ( + result:Char
+    (rank = 1).if {
+      result := 'A'
+    }.elseif {rank = 10} then {
+      result := 'T'
+    }.elseif {rank = 11} then {
+      result := 'J'
+    }.elseif {rank = 12} then {
+      result := 'Q'
+    }.elseif {rank = 13} then {
+      result := 'K'
+    } else {
+      result := ('0'.code + rank.to_int).to_char
+    }
+    result
+  )
+
+  - suit_as_char :Char <- "SHDC".at suit // Spade (piq), Heart (coeur), Diamond (carreau), Club (trêfle)
+
+  - color:Uint8 <- ((suit + 1) & 10b = 0).ok 0 or 1 // 0:Black, 1:Red
+
+  - set_face_up f:Boolean <-
+  (
+    face_up := f
+  )
+
+  - is_king:Boolean <- (rank = 13)
+
+  - is_ace:Boolean <- (rank = 1)

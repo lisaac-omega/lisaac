@@ -1,0 +1,36 @@
+Header
+  + name := Dessin_hexagone
+/*
+  Niveau 2 - Une procédure avec deux arguments : le polygone régulier.
+
+  polygone @nb côté @pixel dessine un polygone de @nb côtés. Pour revenir
+  à son point de départ, la tortue doit faire un tour complet : elle
+  tourne donc de 360 / @nb à chaque sommet (60 degrés pour l'hexagone).
+
+  Les noms @polygone et @côté font partie du nom de la procédure : on l'appelle
+  avec @polygone 6 @côté 90, qui se lit presque comme une phrase.
+
+  À essayer : @polygone 8 @côté 90 (octogone), @polygone 5 @côté 120.
+*/
+Inherit
+
+  + parent_tortue:Flat Tortue
+
+Public
+
+  - polygone nb:Int côté pixel:Int <-
+  ( + r:Int
+
+    r := 360 / nb
+    répéter nb fois {
+      avance pixel ; tourne r
+    }
+  )
+
+  - dessin <-
+  (
+    titre "Hexagone" départ (100,100) taille (600, 600)
+    épaisseur_trait 4
+    couleur_trait rouge
+    polygone 6 côté 90
+  )

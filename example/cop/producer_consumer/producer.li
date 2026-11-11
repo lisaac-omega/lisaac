@@ -1,0 +1,54 @@
+Header
+  - name := Producer
+// Active object (`-' in the name): each clone is a universe, with its thread and its FIFO.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + consumer:Consumer
+
+  + size:Int
+  // Numbers in a buffer.
+
+  + todo:Int
+  // Buffers still to fill.
+
+  + next_value:Int
+  // The numbers produced: 1, 2, 3...
+
+  - start (buffers, n, total:Int) to c:Consumer <-
+  ( + buf:One Array Int
+    consumer := c
+    size := n
+    todo := total
+    consumer.expect (total * size)
+    1.to buffers do { i:Int
+      buf := Array Int .create_with_capacity size
+      fill buf
+    }
+  )
+
+  - give_back buf:One Array Int <-
+  // Asynchronous: an empty buffer, from the consumer.
+  (
+    fill buf
+  )
+
+Private
+
+  - fill buf:One Array Int <-
+  // Fills @buf and sends it, or keeps it if all is produced (then it is lost).
+  (
+    (todo > 0).if {
+      todo := todo - 1
+      buf.clear
+      1.to size do { i:Int
+        next_value := next_value + 1
+        buf.add_last next_value
+      }
+      consumer.take buf from self
+    }
+  )

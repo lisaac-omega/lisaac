@@ -1,0 +1,468 @@
+Header
+  + name := Solitaire
+/*
+  Klondike Solitaire in Lisaac Ω.
+  Click on the stock to turn up cards, drag the cards with the mouse
+  between the seven heaps and up to the four families (one per suit,
+  from the ace to the king). Fill the four families to win!
+
+  Shows: a mouse driven @Window, cards as clones of the @Card prototype
+  (see card.li), stacks stored in @Array, a layout that follows the
+  size of the window, an invariant checked by a contract.
+
+  To compile, as usual in a terminal:
+  $ lisaac solitaire -q -boost
+  $ ./solitaire
+
+  Originally written in June 2026 by Marcelin Ray.
+  */
+Inherit
+  + parent_window:Flat Window
+
+Private
+    
+  // Layout 
+  
+  - card_w:Real32 <- (width - 8 * card_gap) / 7                     // Card display width
+  - card_h:Real32 <- (card_w * Card.height_real) / Card.width_real  // Card display height
+  - card_gap:Real32 <- width * 0.02                                 // Horizontal spacing between stacks 
+  - overlap:Real32 <- card_h * 0.3                                  // Vertical overlap between cards 
+  - margin_x:Real32 <- card_gap                                     // Left margin 
+  - top_y:Real32 <- card_gap                                        // Y position of stock/waste/familys row 
+  - tab_y:Real32 <- top_y + card_h + top_y                          // Y position of the family row 
+  - deal_count:Int := 1                                             // Cards drawn per stock click (1 = standard Klondike) 
+  
+  // Selection & drag state
+  
+  - drag:Flat Array Card       // Selected/grabbed cards 
+  - drag_id:Int
+  - drag_clear:{}              // Code to put back selected cards (no change) 
+  - drag_flip:{}               // Code which may flip (change) 
+
+  - drag_ox:Real32             // Mouse offset X from the grabbed card's origin 
+  - drag_oy:Real32             // Mouse offset Y from the grabbed card's origin 
+  
+  
+  // Game data: 7 heaps columns, 4 familys, stock + waste 
+  // Each column is an Array of Card objects. The last card is the top/visible one. 
+  - init_flag:Boolean
+  - heap:Flat Array (Array Card)  
+  - family:Flat Array (Array Card)
+  - stock:Flat Array Card           // Face-down draw pile 
+  - waste:Flat Array Card           // Face-up discard pile, accumulates over draws 
+  
+  - invariant:True <-
+  ( + c:Int
+    heap  .foreach { t:Array Card; c := c + t.count }
+    ? {heap.count = 7}
+    family.foreach { t:Array Card; c := c + t.count }
+    ? {family.count = 4}
+    c := c + stock.count + waste.count + drag.count    
+    ? {c = 52}
+    True
+  )
+  
+  - init_game <-
+  // Initialize a fresh game
+  //   1. Create a shuffled deck of 52 cards
+  //   2. Deal to 7 tableau columns (1 card to T1, 2 to T2, ..., 7 to T7)
+  //   3. Last card of each column is face-up, rest face-down
+  //   4. Remaining 24 cards go to the stock pile 
+  ( + i:Int
+    + s:Uint8
+    + r:Uint8
+    + c:Card
+    Random.init_clock
+    // Build ordered stock: suit 0..3, rank 1..13 
+    from 0 to 3 do { si:Int
+      s := si.to_uint8
+      from 1 to 13 do { ri:Int
+        r := ri.to_uint8        
+        stock.add_last ((Card.new).color s rank r)
+      }
+    }
+    // Fisher-Yates shuffle
+    from (stock.upper) down_to 1 do { j:Int
+      i := Random.max j
+      stock.swap i with j
+    }
+    // Allocate tableau columns
+    7.times { heap.add_last (Array Card.create_with_capacity 13) }    
+    // Deal: column ci gets ci+1 cards, last one face-up 
+    from 0 to 6 do { ci:Int
+      from 0 to ci do { ri:Int
+        c := stock.last; stock.remove_last
+        (ri = ci).if { c.set_face_up True }
+        heap.at ci.add_last c
+      }
+    }
+    // Allocate empty family piles 
+    4.times { family.add_last (Array Card.create_with_capacity 13) }     
+    
+    invariant
+    Card.load_cards
+    init_flag := True
+  )
+  
+  // Draw
+  
+  - lisaac_omg <-
+  (
+    String.tmp { score_text:String_buffer
+      score_text # "Powered by Lisaac Ω  -  lisaac.org"
+      font_size (card_w / 3)
+      fill_color (Color.black)
+      text (margin_x, height - margin_x) msg score_text
+    }
+  )
+  
+  
+  - draw_empty (x,y:Real32) <-
+  (
+    begin_path; rect (x,y) size (card_w,card_h) radius 5.0
+    fill_color (Color.rgbaf(0,0,0,0.2))
+    stroke_width 2.0; stroke_color (Color.rgba(255,255,255,80))
+    fill; stroke
+  )  
+   
+  - draw_stock <-
+  // Render the stock stack (top-left)
+  ( + x,y:Real32
+    x := margin_x; y := top_y
+    if (stock.is_empty) then {
+      draw_empty (x,y)
+    } else {
+      stock.last.draw_to (x,y)
+      (stock.upper > 0).if {
+        stock.last.draw_to (x-3,y-3)
+      }
+    }
+  )
+      
+  - draw_waste <-
+  // Render the waste stack (top, right of stock)
+  ( + base_x,base_y,off:Real32
+    + start_i:Int    
+    base_x := margin_x + card_w + card_gap; base_y := top_y
+    (waste.is_empty).if {      
+      draw_empty (base_x,base_y)
+    } else {       
+      start_i := (waste.upper - 2).max 0
+      from start_i to (waste.upper) do { wii:Int
+        waste.at wii.draw_to (base_x + off, base_y)
+        off := off + 15.0
+      }
+    }
+  )
+
+  - draw_family <-
+  // Render the 4 family stacks (top-right)
+  ( + base_x:Real32
+    + col:Array Card    
+    base_x := margin_x + (card_w + card_gap) * 3.0
+    from 0 to 3 do { fi:Int
+      col := family.at fi      
+      (col.is_empty).if {
+        draw_empty (base_x,top_y)
+      } else {
+        col.last.draw_to (base_x, top_y)
+      } 
+      base_x := base_x + card_w + card_gap
+    }
+  )
+  
+  - draw_heap <-
+  // Render the 7 heap stacks (bottom)
+  ( + base_x,cx,cy:Real32       
+    base_x := margin_x
+    cx := base_x
+    heap.foreach { col:Array Card      
+      cy := tab_y
+      (col.is_empty).if {                
+        draw_empty (cx,cy)
+      } else {        
+        from 0 to (col.upper) do { ri:Int          
+          col.at ri.draw_to (cx, cy)
+          cy := cy + overlap
+        }        
+      }      
+      cx := cx + card_w + card_gap
+    }
+  )
+
+  - draw_drag <-
+  // Render dragged/selected cards following the cursor
+  ( + cy:Real32    
+    (! drag.is_empty).if {
+      cy := Hand.y_cur - drag_oy
+      drag.foreach { c:Card
+        c.draw_to (Hand.x_cur - drag_ox, cy)
+        cy := cy + overlap
+      }      
+    }
+  )
+
+Public
+
+  
+  - draw <-
+  (
+    (init_flag).if_false { init_game }
+    begin_path
+    fill_color (Color.rgb(0,105,0))
+    rect (0,0) size (width,height)
+    fill
+    //
+    lisaac_omg
+    draw_stock
+    draw_waste
+    draw_family
+    draw_heap
+    draw_drag
+    Paper.refresh_again
+  )
+
+  // Rectangle definitions for hit testing
+
+  - stock_rect : (Real32,Real32,Real32,Real32) <- 
+  (margin_x, top_y, card_w, card_h)
+
+  - waste_rect : (Real32,Real32,Real32,Real32) <- 
+  (margin_x + card_w + card_gap + waste.upper.min 2 * 15.0, top_y, card_w, card_h)
+
+  - family_rect fi:Int : (Real32,Real32,Real32,Real32) <-
+  (margin_x + (card_w + card_gap) * 3.0 + fi.to_real32 * (card_w + card_gap), top_y, card_w, card_h)
+
+  - heap_rect (ci:Int, ri:Int) : (Real32,Real32,Real32,Real32) <-  
+  (margin_x + ci.to_real32 * (card_w + card_gap), tab_y + ri.to_real32 * overlap, card_w, card_h)
+
+  - hit (mx:Real32,my:Real32) at (rx:Real32,ry:Real32,rw:Real32,rh:Real32) :Boolean <-
+  // Is point ( @mx , @my ) inside rectangle ( @rx , @ry , @rw , @rh ).
+  (mx.in_range rx to (rx+rw)) && {my.in_range ry to (ry+rh)}
+  
+  - hit_waste_idx (mx:Real32,my:Real32) :Boolean <- (! waste.is_empty) && {hit (mx,my) at waste_rect}
+
+  - hit_family (mx:Real32,my:Real32) :Int <-
+  // Hit test: @family stacks
+  //   Returns -1 or some valid @family index.
+  ( + fi:Int    
+    fi := family.upper
+    {(fi >= 0) && {! hit(mx,my) at (family_rect fi)}}.while_do {      
+      fi := fi - 1
+    }
+    fi
+  )
+
+  - hit_heap (mx:Real32,my:Real32) : (Int,Int) <-
+  // Hit test: @heap stacks
+  //   If nothing is hit, returns (-1, -1).
+  ( + ci,ri,fci,fri:Int
+    + col:Array Card    
+    fci := fri := -1    
+    {(ci <= 6) && {fci = -1}}.while_do {
+      col := heap.at ci
+      (col.is_empty).if {
+        (hit(mx,my) at (heap_rect (ci,0))).if {
+          // Empty column hit: 
+          (fci,fri) := (ci, -1)                      
+        }
+      } else {
+        ri := col.upper
+        {(ri >= 0) && {fci = -1}}.while_do {
+          (hit(mx,my) at (heap_rect (ci,ri))).if {
+            // Found a card:
+            (fci,fri) := (ci, ri)                    
+          }
+          ri := ri - 1
+        }        
+      }
+      ci := ci + 1
+    }
+    fci,fri
+  )
+
+  - deal <-
+  // Deal: draw card(s) from @stock to @waste 
+  ( + c:Card
+    + cnt:Int
+    if (stock.is_empty) then {
+      waste.foreach_backward { c:Card
+        c.set_face_up False
+        stock.add_last c
+      }
+      waste.clear
+    } else {
+      {(! stock.is_empty) && {cnt < deal_count}}.while_do {
+        c := stock.pop
+        c.set_face_up True
+        waste.add_last c
+        cnt := cnt + 1
+      }
+    }
+  )
+  
+  - drag_to_heap dest:Int <-
+  [ ? {! drag.is_empty} ]
+  ( + dst:Array Card
+    + dst_card:Card    
+    + ok:Boolean          
+    
+    dst := heap.at dest
+    (dst.is_empty).if {
+      ok := drag.first.is_king
+    } else {
+      dst_card := dst.last
+      ok := (drag.first.color != dst_card.color) && {drag.first.rank + 1 = dst_card.rank}
+    }
+    (ok).if { 
+      drag.foreach { c:Card; dst.add_last c }
+      drag.clear
+      drag_flip.value
+    } else {
+      drag_clear.value
+    }
+  )
+
+  - drag_to_family dest:Int <-
+  [ ? {drag.count = 1} ]
+  ( + fcol:Array Card
+    + c,fc:Card    
+    + ok:Boolean
+    
+    c := drag.first
+    fcol := family.at dest
+    (fcol.is_empty).if {
+      ok := c.is_ace        
+    } else {
+      fc := fcol.last
+      ok := (fc.suit = c.suit) && {c.rank = fc.rank + 1}
+    }
+    (ok).if {
+      fcol.add_last c
+      drag.clear
+      drag_flip.value
+    } else {
+      drag_clear.value
+    }
+  )
+
+  - try_select_at (mx:Real32,my:Real32) <-
+  // Try to select a card at mouse position (i.e. after this call @drag contains selected cards).
+  [ ? {drag.is_empty} ]
+  ( + ci,ri,fi:Int
+    + rx,ry,rw,rh:Real32
+    + col:Array Card
+    
+    drag_flip := {}
+    // Try @heap : 
+    (ci,ri) := hit_heap (mx,my)
+    ((ci >= 0) && {ri >= 0}).if {      
+      col := heap.at ci
+      (col.at ri.face_up).if {
+        (heap.at ci.upper - ri + 1).times {
+          drag.add_first (col.pop)
+        }
+        drag_id := ci
+        drag_clear := { 
+          drag.foreach { c:Card
+            heap.at drag_id.add_last c
+          }
+          drag.clear
+        }
+        drag_flip := {
+          (! heap.at drag_id.is_empty).if {
+            heap.at drag_id.last.set_face_up True
+          }
+        }
+        (rx,ry,rw,rh) := heap_rect (ci,ri)
+      }      
+    }
+    // Try @family stacks:
+    (drag.is_empty).if {
+      fi := hit_family (mx,my)
+      (fi >= 0).if {
+        (! family.at fi.is_empty).if {
+          drag.add_last (family.at fi.pop)
+          drag_id := fi
+          drag_clear := { family.at drag_id.add_last (drag.pop) }          
+          (rx,ry,rw,rh) := family_rect fi
+        }
+      }
+    }
+    // Try @waste stack:
+    (drag.is_empty).if {      
+      (hit_waste_idx (mx,my)).if {
+        drag.add_last (waste.pop)
+        drag_clear := { waste.add_last (drag.pop) }
+        (rx,ry,rw,rh) := waste_rect        
+      }
+    }
+    drag_ox := mx - rx
+    drag_oy := my - ry
+  )
+
+  - try_place_at (mx:Real32,my:Real32) <-
+  [ !drag.is_empty ]
+  ( + ci,ri,fi:Int
+    (ci,ri) := hit_heap (mx,my)
+    (ci >= 0).if {
+      drag_to_heap ci
+    } else {
+      fi := hit_family (mx,my)
+      (fi >= 0).if {
+        drag_to_family fi        
+      } else {
+        drag_clear.value  
+      }
+    }
+  )
+
+  - handle_click (mx:Real32,my:Real32) <-
+  ( 
+    (drag.is_empty).if {
+      (hit (mx,my) at stock_rect).if {
+        deal
+      }      
+    } else {
+      drag_clear.value
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + mx:Real32
+    + my:Real32
+    mx := Hand.x_cur
+    my := Hand.y_cur
+    
+    ? {invariant}
+    
+    (ev & ~1 = Hand clic).if {      
+      handle_click (mx,my)      
+    }
+    (ev & ~1 = Hand drag).if { 
+      (Hand is_begin).if {         
+        try_select_at (mx,my)
+      }      
+      ((Hand is_end) && {!drag.is_empty}).if {                
+        try_place_at (mx,my)
+      }
+    }
+    
+    ? {invariant}
+    
+    True
+  )
+  
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (s.first.to_upper = 'Q').if { System.exit 0 }
+  )
+
+Public
+
+  - main <-
+  (
+    init "Solitaire Klondike" size (800,1024)
+    Paper.run
+  )
+  

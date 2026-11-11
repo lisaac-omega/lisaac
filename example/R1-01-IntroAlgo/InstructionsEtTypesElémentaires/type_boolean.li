@@ -1,0 +1,33 @@
+Header
+  + name := Type_boolean
+/*
+  Le type @Boolean : vrai ou faux.
+
+  Les opérateurs et, ou et ! (non) combinent des booléens.
+  Une comparaison (<=, >=, !=, =) donne aussi un résultat de type
+  @Boolean, que l'on peut ranger dans une variable.
+  */
+  
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - main <-
+  (
+    // Déclaration de deux variables de type @Boolean
+    + b1, b2:Boolean
+    
+    b1 := vrai
+    b2 := faux
+    Out # b1 # " ou " # b2 # " = " # ((b1) ou b2) # "\n"
+    Out # b1 # " et " # b2 # " = " # ((b1) et b2) # "\n"
+    Out # "non " # b1 # " = " # (! b1) # "\n"
+    
+    // Les opérateurs de comparaison ont un résultat de type @Boolean
+    b1 := (3 <= 4)
+    b1 := (3 >= 4)
+    b1 := (3 != 4)
+  )
+  

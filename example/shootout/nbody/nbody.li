@@ -1,0 +1,97 @@
+Header
+  + name := Nbody
+// The Computer Language Benchmarks Game: n-body.
+// Same algorithm as the C program #9 (Miles): a body is a @Real64x4 (x, y, z, 0),
+// and the 10 distances^-3 are computed 4 by 4 (SIMD), with @Real64x4.rsqrt.
+
+Private
+
+  - solar_mass:Real64 := 4.0 * 3.141592653589793 * 3.141592653589793
+
+  - days_per_year:Real64 := 365.24
+
+  - pos:C_array Real64x4 := C_array Real64x4 .create 5
+  - vel:C_array Real64x4 := C_array Real64x4 .create 5
+
+  - mass:C_array Real64 := C_array Real64 .create 5
+
+
+  - mag4 (a,b,c,d:Real64x4) step dt:Real64 :Real64x4 <-
+  // @dt / distance^3 for the 4 pairs of differences @a, @b, @c and @d.
+  ( + m:Real64x4
+    m := Real64x4.sums (a * a, b * b, c * c, d * d).rsqrt
+    (m * m) * (m * dt)
+  )
+
+  - body i:Int at (x,y,z:Real64) speed (vx,vy,vz:Real64) mass m:Real64 <-
+  (
+    pos.at i put (Real64x4.create (x, y, z, 0.0))
+    vel.at i put (Real64x4.create (vx, vy, vz, 0.0) * days_per_year)
+    mass.at i put (m * solar_mass)
+  )
+
+  - advance n:Int step dt:Real64 <-
+  // The bodies are in local variables (registers) during the @n steps.
+  ( + p0,p1,p2,p3,p4,v0,v1,v2,v3,v4:Real64x4
+    + r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,w0,w1,w2,t:Real64x4
+    + m0,m1,m2,m3,m4:Real64
+
+    p0 := pos.at 0; p1 := pos.at 1; p2 := pos.at 2; p3 := pos.at 3; p4 := pos.at 4
+    v0 := vel.at 0; v1 := vel.at 1; v2 := vel.at 2; v3 := vel.at 3; v4 := vel.at 4
+    m0 := mass.at 0; m1 := mass.at 1; m2 := mass.at 2; m3 := mass.at 3; m4 := mass.at 4
+    n.times {
+      r0 := p1 - p0; r1 := p2 - p0; r2 := p2 - p1; r3 := p3 - p0; r4 := p3 - p1
+      r5 := p3 - p2; r6 := p4 - p0; r7 := p4 - p1; r8 := p4 - p2; r9 := p4 - p3
+      w0 := mag4 (r0, r1, r2, r3) step dt
+      w1 := mag4 (r4, r5, r6, r7) step dt
+      w2 := mag4 (r8, r9, r9, r9) step dt
+      t := r0 * w0.broadcast 0; v1 := v1 - t * m0; v0 := v0 + t * m1
+      t := r1 * w0.broadcast 1; v2 := v2 - t * m0; v0 := v0 + t * m2
+      t := r2 * w0.broadcast 2; v2 := v2 - t * m1; v1 := v1 + t * m2
+      t := r3 * w0.broadcast 3; v3 := v3 - t * m0; v0 := v0 + t * m3
+      t := r4 * w1.broadcast 0; v3 := v3 - t * m1; v1 := v1 + t * m3
+      t := r5 * w1.broadcast 1; v3 := v3 - t * m2; v2 := v2 + t * m3
+      t := r6 * w1.broadcast 2; v4 := v4 - t * m0; v0 := v0 + t * m4
+      t := r7 * w1.broadcast 3; v4 := v4 - t * m1; v1 := v1 + t * m4
+      t := r8 * w2.broadcast 0; v4 := v4 - t * m2; v2 := v2 + t * m4
+      t := r9 * w2.broadcast 1; v4 := v4 - t * m3; v3 := v3 + t * m4
+      p0 := p0 + v0 * dt; p1 := p1 + v1 * dt; p2 := p2 + v2 * dt; p3 := p3 + v3 * dt; p4 := p4 + v4 * dt
+    }
+    pos.at 0 put p0; pos.at 1 put p1; pos.at 2 put p2; pos.at 3 put p3; pos.at 4 put p4
+    vel.at 0 put v0; vel.at 1 put v1; vel.at 2 put v2; vel.at 3 put v3; vel.at 4 put v4
+  )
+
+  - energy:Real64 <-
+  ( + result:Real64
+    + d,v:Real64x4
+
+    0.to 4 do { i:Int
+      v := vel.at i
+      result := result + 0.5 * mass.at i * (v * v).sum
+      (i + 1).to 4 do { j:Int
+        d := pos.at i - pos.at j
+        result := result - mass.at i * mass.at j / (d * d).sum.sqrt
+      }
+    }
+    result
+  )
+
+Public
+
+  - main <-
+  ( + p:Real64x4
+
+    body 0 at (0.0, 0.0, 0.0) speed (0.0, 0.0, 0.0) mass 1.0
+    body 1 at (4.84143144246472090E+00, -1.16032004402742839E+00, -1.03622044471123109E-01) speed (1.66007664274403694E-03, 7.69901118419740425E-03, -6.90460016972063023E-05) mass 9.54791938424326609E-04
+    body 2 at (8.34336671824457987E+00, 4.12479856412430479E+00, -4.03523417114321381E-01) speed (-2.76742510726862411E-03, 4.99852801234917238E-03, 2.30417297573763929E-05) mass 2.85885980666130812E-04
+    body 3 at (1.28943695621391310E+01, -1.51111514016986312E+01, -2.23307578892655734E-01) speed (2.96460137564761618E-03, 2.37847173959480950E-03, -2.96589568540237556E-05) mass 4.36624404335156298E-05
+    body 4 at (1.53796971148509165E+01, -2.59193146099879641E+01, 1.79258772950371181E-01) speed (2.68067772490389322E-03, 1.62824170038242295E-03, -9.51592254519715870E-05) mass 5.15138902046611451E-05
+    // Offset momentum.
+    0.to 4 do { i:Int
+      p := p + vel.at i * mass.at i
+    }
+    vel.at 0 put (p * (-1.0 / solar_mass))
+    energy.print_format_c "%.9f\n"
+    advance (Command_args.at 1.to_int) step 0.01
+    energy.print_format_c "%.9f\n"
+  )

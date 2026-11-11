@@ -1,0 +1,44 @@
+Header
+  - name := Auditor
+// Active object: when the @Latch opens, checks the accounts.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + accounts:Immutable_array Account
+
+  + clients:Array Client := Array Client .create_with_capacity 8
+
+  + money:Int
+
+  - watch a:Immutable_array Account total m:Int <-
+  (
+    accounts := a
+    money := m
+  )
+
+  - add c:Client <-
+  (
+    clients.add_last c
+  )
+
+  - opened k:Int <-
+  // Asynchronous: all the clients have ended (see @Latch); each transfer is ended, the
+  // balances are final (synchronous reads).
+  ( + total,lowest,b,accepted,refused:Int
+    clients.foreach { c:Client
+      accepted := accepted + c.accepted_count
+      refused := refused + c.refused_count
+    }
+    lowest := money
+    accounts.foreach { a:Account
+      b := a.balance
+      total := total + b
+      lowest := lowest.min b
+    }
+    Out # (accepted + refused) # " transfers (" # accepted # " accepted, " # refused
+    Out # " refused): total " # total # " (expected " # money # "), lowest balance " # lowest # ".\n"
+  )

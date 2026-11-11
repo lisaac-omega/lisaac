@@ -1,0 +1,32 @@
+Header
+  + name := Agent_conversationnel
+/**/
+Insert
+  
+  - french: French_corner := French_corner
+  
+Public
+  
+  - longueur (ch:String) : Int <-
+  (
+    ch.count
+  )
+  
+  - main <-
+  ( + cout, prix_mot: Int
+    + token: String
+    
+    écrire "Entrer les tokens (stop pour finir).\n"
+    cout := 0
+    
+    token := lire_chaine
+    tant_que {token != "stop"} faire {
+      // token.println
+      prix_mot := (longueur(token) / 10) + 1
+      cout := cout + prix_mot
+      token := lire_chaine
+    }    
+    écrire "coût du message: "
+    écrire cout
+    écrire "\n"
+  )

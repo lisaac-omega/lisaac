@@ -1,0 +1,420 @@
+Header
+  + name := Gems
+/*
+  A small match-three game in Lisaac Ω.
+  Swap two neighbour gems (click one, then the other, or drag it) to
+  line up three gems of the same kind or more, horizontally or
+  vertically: they vanish, the gems above fall down and new ones come
+  in from the top. A fall may line up new gems by chance: each new wave
+  of the same move is worth more. A swap that lines up nothing is undone.
+  You have 20 moves to make your best score.
+  Key 'n': new game, key 'q': quit.
+
+  Shows: a Game whose motion is a small phase machine, one step every
+  @delay microseconds, so that each fall can be seen; one Array2 Int for
+  the board and one Array2 Boolean for the gems that vanish; a search of
+  every possible swap, to deal a new board when no move is left.
+
+  To compile, as usual in a terminal:
+  $ lisaac gems -q -boost
+  $ ./gems
+  */
+Inherit
+
+  + parent_game:Flat Game
+
+Private
+
+  // Data
+
+  - cols:Int := 8
+  - rows:Int := 8
+  - kinds:Int := 6      // Number of kinds of gems.
+  - cell:Int := 64      // Size of a cell, in pixels.
+  - top:Int := 50       // Height of the status bar.
+  - max_moves:Int := 20
+
+  // Each cell of @grid holds 0 (empty) or the kind of its gem, 1 to @kinds.
+  - grid:Array2 Int
+  // The gems of a line of three or more, which are about to vanish.
+  - marked:Array2 Boolean
+
+  - colors:Array Color :=
+    new Array Color of (black, Color.rgb(230,40,60), Color.rgb(40,120,240),
+      Color.rgb(50,190,70), Color.rgb(250,200,0), Color.rgb(170,60,220), Color.rgb(250,130,20))
+
+  // Phase of the game:
+  - idle:Int := 0       // Waiting for the player.
+  - undo:Int := 1       // A swap that lines up nothing, to be undone.
+  - check:Int := 2      // Look for lines of three or more.
+  - vanish:Int := 3     // The marked gems flash, then vanish.
+  - fall:Int := 4       // The gems fall down, one cell per step.
+  - phase:Int
+
+  - delay:Uint64 := 110_000
+  - timer:Uint64        // Time of the next step.
+
+  - score:Int
+  - best:Int
+  - moves:Int           // Moves left.
+  - wave:Int            // Number of the current wave of the move.
+
+  - selected:Boolean    // A gem is selected at (@sel_x,@sel_y).
+  - sel_x:Int
+  - sel_y:Int
+
+  // The last swap, to undo it:
+  - last_xa:Int
+  - last_ya:Int
+  - last_xb:Int
+  - last_yb:Int
+
+  // Services
+
+  - new_gem :Int <- 1 + Random.max (kinds - 1)
+
+  - run_of k:Int from (x,y:Int) step (dx,dy:Int) :Int <-
+  // Number of gems of kind @k next to (@x,@y), in the direction (@dx,@dy).
+  ( + i,j,n:Int
+
+    (i,j) := (x + dx, y + dy)
+    {(grid.valid_index (i,j)) && {grid.at (i,j) = k}}.while_do {
+      n := n + 1
+      (i,j) := (i + dx, j + dy)
+    }
+    n
+  )
+
+  - in_line (x,y:Int) :Boolean <-
+  // True when the gem at (@x,@y) belongs to a line of three or more.
+  ( + k,h,v:Int
+
+    k := grid.at (x,y)
+    (k > 0).if {
+      h := 1 + (run_of k from (x,y) step (-1,0)) + (run_of k from (x,y) step (1,0))
+      v := 1 + (run_of k from (x,y) step (0,-1)) + (run_of k from (x,y) step (0,1))
+    }
+    (h >= 3) || {v >= 3}
+  )
+
+  - makes_line (xa,ya:Int) with (xb,yb:Int) :Boolean <-
+  // True when swapping these two gems would line up three gems or more.
+  ( + r:Boolean
+
+    grid.swap (xa,ya) with (xb,yb)
+    r := (in_line (xa,ya)) || {in_line (xb,yb)}
+    grid.swap (xa,ya) with (xb,yb)
+    r
+  )
+
+  - has_move :Boolean <-
+  // True when at least one swap of the board lines up three gems.
+  ( + r:Boolean
+
+    0.to (rows - 1) do { y:Int
+      0.to (cols - 1) do { x:Int
+        ((x + 1 < cols) && {makes_line (x,y) with (x + 1,y)}).if { r := True }
+        ((y + 1 < rows) && {makes_line (x,y) with (x,y + 1)}).if { r := True }
+      }
+    }
+    r
+  )
+
+  - deal <-
+  // A new board, without any line of three, but with a move to play.
+  (
+    {
+      grid.set_all_with 0
+      0.to (rows - 1) do { y:Int
+        0.to (cols - 1) do { x:Int
+          { grid.at (x,y) put new_gem }.do_while { in_line (x,y) }
+        }
+      }
+    }.do_while { ! has_move }
+  )
+
+  - new_game <-
+  (
+    deal
+    (score, moves, selected, phase) := (0, max_moves, False, idle)
+  )
+
+  - mark_lines :Int <-
+  // Mark the gems of every line of three or more and return their number.
+  ( + n:Int
+
+    0.to (rows - 1) do { y:Int
+      0.to (cols - 1) do { x:Int
+        marked.at (x,y) put (in_line (x,y))
+        (marked.at (x,y)).if { n := n + 1 }
+      }
+    }
+    n
+  )
+
+  - remove_marked <-
+  (
+    0.to (rows - 1) do { y:Int
+      0.to (cols - 1) do { x:Int
+        (marked.at (x,y)).if {
+          grid.at (x,y) put 0
+          marked.at (x,y) put False
+        }
+      }
+    }
+  )
+
+  - fall_one_step :Boolean <-
+  // Each gem above a hole falls by one cell, and a new gem enters each
+  // empty cell of the top row. The loop goes up from the bottom: so a
+  // whole column above a hole falls in the same step. False when nothing
+  // has moved.
+  ( + moved:Boolean
+
+    (rows - 1).downto 1 do { y:Int
+      0.to (cols - 1) do { x:Int
+        ((grid.at (x,y) = 0) && {grid.at (x,y - 1) != 0}).if {
+          grid.swap (x,y) with (x,y - 1)
+          moved := True
+        }
+      }
+    }
+    0.to (cols - 1) do { x:Int
+      (grid.at (x,0) = 0).if {
+        grid.at (x,0) put new_gem
+        moved := True
+      }
+    }
+    moved
+  )
+
+  - play (xa,ya:Int) with (xb,yb:Int) <-
+  (
+    selected := False
+    grid.swap (xa,ya) with (xb,yb)
+    (last_xa, last_ya, last_xb, last_yb) := (xa, ya, xb, yb)
+    if ((in_line (xa,ya)) || {in_line (xb,yb)}) then {
+      moves := moves - 1
+      wave := 0
+      phase := check
+    } else {
+      phase := undo
+    }
+    timer := Time.gettimeofday + 2 * delay
+  )
+
+  - cell_at (px,py:Real32) :(Int,Int) <-
+  // The cell under the point (@px,@py), or (-1,-1) in the status bar.
+  ( + x,y:Int
+
+    (x,y) := (-1,-1)
+    (py >= top.to_real32).if {
+      x := (px / cell.to_real32).to_raw_int
+      y := ((py - top.to_real32) / cell.to_real32).to_raw_int
+    }
+    (x,y)
+  )
+
+  - draw_gem k:Int at (cx,cy:Real32) radius r:Real32 color c:Color <-
+  // Each kind of gem has its own shape, so that colour is not needed.
+  ( + h:Real32
+
+    h := r * 0.87
+    begin_path
+    k
+    .when 1 then { circle (cx,cy) radius r }
+    .when 2 then { rect (cx - h, cy - h) size (h * 2, h * 2) radius (r / 4) }
+    .when 3 then {
+      move_to (cx, cy - r)
+      line_to (cx + r, cy)
+      line_to (cx, cy + r)
+      line_to (cx - r, cy)
+      close_path
+    }
+    .when 4 then {
+      move_to (cx, cy - r)
+      line_to (cx + h, cy + r / 2)
+      line_to (cx - h, cy + r / 2)
+      close_path
+    }
+    .when 5 then {
+      move_to (cx + r, cy)
+      line_to (cx + r / 2, cy + h)
+      line_to (cx - r / 2, cy + h)
+      line_to (cx - r, cy)
+      line_to (cx - r / 2, cy - h)
+      line_to (cx + r / 2, cy - h)
+      close_path
+    }
+    .when 6 then {
+      // A cross: 12 corners, arms of width 2 @h.
+      h := r / 3
+      move_to (cx - h, cy - r)
+      line_to (cx + h, cy - r)
+      line_to (cx + h, cy - h)
+      line_to (cx + r, cy - h)
+      line_to (cx + r, cy + h)
+      line_to (cx + h, cy + h)
+      line_to (cx + h, cy + r)
+      line_to (cx - h, cy + r)
+      line_to (cx - h, cy + h)
+      line_to (cx - r, cy + h)
+      line_to (cx - r, cy - h)
+      line_to (cx - h, cy - h)
+      close_path
+    }
+    fill_color c
+    fill
+  )
+
+  - draw_cell (x,y:Int) <-
+  ( + px,py,cx,cy,r:Real32
+    + k:Int
+    + c:Color
+
+    (px,py) := ((x * cell).to_real32, (top + y * cell).to_real32)
+    (cx,cy) := (px + cell.to_real32 / 2, py + cell.to_real32 / 2)
+    begin_path
+    rect (px + 1, py + 1) size (cell - 2, cell - 2) radius 8
+    if ((selected) && {(x,y) = (sel_x,sel_y)}) then {
+      fill_color (Color.rgb(240,240,250))
+    }.elseif {(x + y).is_odd} then {
+      fill_color (Color.rgb(45,45,70))
+    } else {
+      fill_color (Color.rgb(55,55,85))
+    }
+    fill
+    k := grid.at (x,y)
+    (k > 0).if {
+      r := cell.to_real32 * 0.36
+      c := colors.at k
+      (marked.at (x,y)).if {
+        // Flash before vanishing: a bigger white gem.
+        (r,c) := (r * 1.15, white)
+      }
+      draw_gem k at (cx,cy) radius r color c
+    }
+  )
+
+Public
+
+  - main <-
+  (
+    Random.init_clock
+    grid := Array2 Int .create (cols,rows)
+    marked := Array2 Boolean .create (cols,rows)
+    new_game
+    init "Gems" size (cols * cell, top + rows * cell)
+    Paper.run
+  )
+
+  - motion <-
+  ( + t:Uint64
+    + n:Int
+
+    t := Time.gettimeofday
+    ((phase != idle) && {t > timer}).if {
+      timer := t + delay
+      if (phase = undo) then {
+        grid.swap (last_xa,last_ya) with (last_xb,last_yb)
+        phase := idle
+      }.elseif {phase = check} then {
+        n := mark_lines
+        if (n > 0) then {
+          wave := wave + 1
+          score := score + 10 * n * wave
+          phase := vanish
+          timer := t + 2 * delay
+        } else {
+          phase := idle
+          has_move.if_false { deal }
+          ((moves = 0) && {score > best}).if { best := score }
+        }
+      }.elseif {phase = vanish} then {
+        remove_marked
+        phase := fall
+      } else {
+        fall_one_step.if_false { phase := check }
+      }
+    }
+  )
+
+  - draw <-
+  ( + w,h:Int
+
+    (w,h) := (cols * cell, top + rows * cell)
+    begin_path
+    rect (0,0) size (w,h)
+    fill_color (Color.rgb(25,25,40))
+    fill
+    0.to (rows - 1) do { y:Int
+      0.to (cols - 1) do { x:Int
+        draw_cell (x,y)
+      }
+    }
+    // The status bar:
+    font_size 24
+    font_face_id (Font sys (Font bold))
+    text_align (align_middle | align_center)
+    fill_color white
+    String.tmp { msg:String_buffer
+      msg # "Score: " # score # "   Moves: " # moves # "   Best: " # best
+      text (w / 2, top / 2) msg msg
+    }
+    ((moves = 0) && {phase = idle}).if {
+      begin_path
+      rect (0, h / 2 - 60) size (w, 120)
+      fill_color (Color.black)
+      fill
+      fill_color white
+      String.tmp { msg:String_buffer
+        msg # "Final score: " # score
+        text (w / 2, h / 2 - 20) msg msg
+      }
+      text (w / 2, h / 2 + 20) msg "Click to play again"
+    }
+  )
+
+  - event ev:Int :Boolean <-
+  ( + x,y,x0,y0:Int
+    + dx,dy:Real32
+
+    (phase = idle).if {
+      if (moves = 0) then {
+        (ev = Hand clic).if { new_game }
+      }.elseif {ev = Hand clic} then {
+        (x,y) := cell_at (Hand.x_cur, Hand.y_cur)
+        (grid.valid_index (x,y)).if {
+          if ((selected) && {((x - sel_x).abs + (y - sel_y).abs) = 1}) then {
+            play (sel_x,sel_y) with (x,y)
+          }.elseif {(selected) && {(x,y) = (sel_x,sel_y)}} then {
+            selected := False
+          } else {
+            (selected, sel_x, sel_y) := (True, x, y)
+          }
+        }
+      }.elseif {((ev = Hand drag) || {ev = Hand ldrag}) && {Hand.is_end}} then {
+        // Drag a gem towards one of its four neighbours:
+        (x0,y0) := cell_at (Hand.x_begin, Hand.y_begin)
+        (dx,dy) := (Hand.x_cur - Hand.x_begin, Hand.y_cur - Hand.y_begin)
+        (x,y) := (x0,y0)
+        if (dx.abs > dy.abs) then {
+          if (dx > 0) then { x := x0 + 1 } else { x := x0 - 1 }
+        } else {
+          if (dy > 0) then { y := y0 + 1 } else { y := y0 - 1 }
+        }
+        ((grid.valid_index (x0,y0)) && {grid.valid_index (x,y)}).if {
+          play (x0,y0) with (x,y)
+        }
+      }
+    }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  (
+    (s.first.to_upper)
+    .when 'Q' then { System.exit 0 }
+    .when 'N' then { new_game }
+    True
+  )

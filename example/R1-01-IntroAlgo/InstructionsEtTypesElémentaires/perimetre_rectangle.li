@@ -1,0 +1,29 @@
+Header
+  + name := Perimetre_rectangle
+/*
+  Une première fonction : le périmètre d'un rectangle.
+
+  périmètre reçoit deux arguments, la longueur et la largeur, et rend
+  un résultat de type @Real64 : la dernière expression du corps de la
+  fonction est le résultat.
+  */
+  
+Public
+  
+  - périmètre (longueur:Real64, largeur:Real64): Real64 <-
+  // Calcul du périmètre d'un rectangle.
+  ( 
+    + résultat: Real64
+    
+    résultat := 2 * (longueur + largeur)
+    résultat
+  )
+  
+  - main <-
+  ( + p:Real64
+    
+    p := périmètre(3,4)
+    écrire(p) 
+    écrire("\n")
+  )
+  

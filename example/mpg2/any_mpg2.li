@@ -1,0 +1,273 @@
+Header
+  + name := Any_mpg2
+/*
+  Global variable and Define symbol.
+  */
+Inherit
+  
+  - parent_clone:Clone := Clone
+  
+Public
+  //
+  // X11 Interface.
+  //
+  
+  - scr:C_array Uint8
+  - width_scr:Int
+  - height_scr:Int
+  - id_scr:Int
+  - skip_output:Boolean // Late picture: decoded, but not displayed.
+  
+  //
+  // Compiler Flags.
+  //
+  
+  - trace:Boolean := False
+  
+  - verbose:Boolean := False
+  
+  - verbose_flag:Int
+  
+  // Layers: used by Verbose_Flag, Verifier_Flag, Stats_Flag, and Trace_Flag 
+  - no_layer        :Int := 0
+  - sequence_layer  :Int := 1
+  - picture_layer   :Int := 2
+  - slice_layer     :Int := 3
+  - macroblock_layer:Int := 4
+  - block_layer     :Int := 5
+  - event_layer     :Int := 6
+  - all_layers      :Int := 7
+  - filename_length :Int := 256
+  - mb_weight       :Int := 32
+  - mb_class4       :Int := 64
+  
+  //
+  // Error manager.
+  //
+  
+  - error_text:String_buffer := String_buffer.create 256
+  
+  - error text:String <-
+  (
+    Stderr.put_string text
+    exit exit_failure_code
+  )
+
+  - print_bits (code, bits, len :Int) <-
+  // Trace_Flag output 
+  (
+    0.to (len-1) do { i:Int
+      ((code >> (bits-1-i)) & 1).print
+    }
+  )
+  
+  //
+  // Define constant.
+  //
+ 
+  - error_code:Int := (-1)
+  
+  - picture_start_code     :Int := 0100h
+  - slice_start_code_min   :Int := 0101h
+  - slice_start_code_max   :Int := 01AFh
+  - user_data_start_code   :Int := 01B2h
+  - sequence_header_code   :Int := 01B3h
+  - extension_start_code   :Int := 01B5h
+  - sequence_end_code      :Int := 01B7h
+  - group_start_code       :Int := 01B8h
+  - iso_end_code           :Int := 01B9h
+  - pack_start_code        :Int := 01BAh
+  - system_start_code      :Int := 01BBh
+  - video_elementary_stream:Int := 01E0h
+
+  // scalable_mode 
+  - sc_none:Int := 0
+  - sc_dp  :Int := 1
+  - sc_spat:Int := 2
+  - sc_snr :Int := 3
+  - sc_temp:Int := 4
+
+  // picture coding type 
+  - i_type:Int := 1
+  - p_type:Int := 2
+  - b_type:Int := 3
+  - d_type:Int := 4
+
+  // picture structure 
+  - top_field    :Int := 1
+  - bottom_field :Int := 2
+  - frame_picture:Int := 3
+
+  // macroblock type 
+  - macroblock_intra                       :Int := 1
+  - macroblock_pattern                     :Int := 2
+  - macroblock_motion_backward             :Int := 4
+  - macroblock_motion_forward              :Int := 8
+  - macroblock_quant                       :Int := 16
+  - spatial_temporal_weight_code_flag      :Int := 32
+  - permitted_spatial_temporal_weight_class:Int := 64
+
+  // motion_type 
+  - mc_field:Int := 1
+  - mc_frame:Int := 2
+  - mc_16x8 :Int := 2
+  - mc_dmv  :Int := 3
+
+  // mv_format 
+  - mv_field:Boolean := False
+  - mv_frame:Boolean := True
+
+  // chroma_format 
+  - chroma420:Int := 1
+  - chroma422:Int := 2
+  - chroma444:Int := 3
+
+  // extension start code IDs 
+  - sequence_extension_id                 :Int := 1
+  - sequence_display_extension_id         :Int := 2
+  - quant_matrix_extension_id             :Int := 3
+  - copyright_extension_id                :Int := 4
+  - sequence_scalable_extension_id        :Int := 5
+  - picture_display_extension_id          :Int := 7
+  - picture_coding_extension_id           :Int := 8
+  - picture_spatial_scalable_extension_id :Int := 9
+  - picture_temporal_scalable_extension_id:Int := 10
+  - zig_zag                               :Int := 0
+  - profile_422                           :Int := (128+5)
+  - main_level                            :Int := 8
+
+
+  // choose between declaration (GLOBAL undefined)
+  // and definition (GLOBAL defined)
+  // GLOBAL is defined in exactly one file mpeg2dec.c)
+  
+  // output types (Output_Type) 
+  - t_x11   :Int := 0
+  - t_yuv   :Int := 1
+  - t_sif   :Int := 2
+  - t_tga   :Int := 3
+  - t_ppm   :Int := 4
+
+  //
+  // Global varibale.
+  //
+
+  // decoder operation control variables 
+  - output_type:Int
+  - hiqdither  :Int
+
+  // decoder operation control flags 
+//  - quiet_flag              :BOOLEAN
+//  - trace_flag              :BOOLEAN
+  - fault_flag              :Boolean
+//  - verbose_flag            :INTEGER
+  - spatial_flag            :Boolean
+  - system_stream_flag      :Boolean
+  - big_picture_flag        :Boolean
+  - user_data_flag          :Boolean
+  
+  // filenames 
+  - output_picture_filename             :String_alias
+  - main_bitstream_filename             :String_alias
+  //- output_picture_filename             :STRING_ALIAS
+  //- main_bitstream_filename             :STRING_ALIAS
+  
+  // buffers for multiuse purposes   
+  - clip:C_array Uint8 :=
+  // Clip table
+  ( + result:C_array Uint8
+     
+    result := (C_array Uint8.create (640+384)) + 384; //(-384) to 639
+    1.to 254 do { i:Int
+      result.at i put i
+    }
+    255.to 639 do { i:Int; result.at i put 255; }
+    //result.set_slice 255 to 639 with 255
+    result
+  )
+
+  // pointers to generic picture buffers 
+  - backward_reference_frame:C_array(C_array(Uint8)); // [3][]
+  - forward_reference_frame :C_array(C_array(Uint8)); // [3][]
+  - auxframe                :C_array(C_array(Uint8)); // [3][]
+  - current_frame           :C_array(C_array(Uint8)); // [3][]
+  
+  // pointers to scalability picture buffers 
+  - llframe0:C_array(C_array(Uint8)); // [3][]
+  - llframe1:C_array(C_array(Uint8)); // [3][]
+  - lltmp:C_array(Int16)
+
+  // non-normative variables derived from normative elements 
+  - coded_picture_width :Int
+  - coded_picture_height:Int
+  - chroma_width        :Int
+  - chroma_height       :Int
+  - block_count         :Int
+  - second_field        :Boolean
+  - profile             :Int
+  - level               :Int
+
+  // normative derived variables (as per ISO/IEC 13818-2) 
+  - horizontal_size:Int
+  - vertical_size  :Int
+  - aspect_ratio_information:Int
+  - frame_rate_code        :Int
+  - frame_rate_extension_n :Int
+  - frame_rate_extension_d :Int
+  - mb_width       :Int
+  - mb_height      :Int
+
+  // headers 
+      
+  // ISO/IEC 13818-2 section 6.2.2.3:  sequence_extension() 
+  - profile_and_level_indication:Int
+  - progressive_sequence        :Boolean
+  - chroma_format               :Int
+  
+  // ISO/IEC 13818-2 section 6.2.2.4:  sequence_display_extension()   
+  - matrix_coefficients     :Int
+    
+  // ISO/IEC 13818-2 section 6.2.3: picture_header() 
+  - temporal_reference      :Int
+  - picture_coding_type     :Int
+  - full_pel_forward_vector :Boolean
+  - forward_f_code          :Int
+  - full_pel_backward_vector:Boolean
+  - backward_f_code         :Int
+    
+  // ISO/IEC 13818-2 section 6.2.3.1: picture_coding_extension() header 
+//  - f_code:FIXED_ARRAY2(INTEGER) := FIXED_ARRAY2(INTEGER).create 2,2
+  - f_code:Array2(Int) := Array2(Int).create(2,2)
+  - intra_dc_precision        :Int
+  - picture_structure         :Int
+  - top_field_first           :Boolean
+  - frame_pred_frame_dct      :Boolean
+  - concealment_motion_vectors:Boolean
+  - intra_vlc_format          :Boolean
+  - repeat_first_field        :Boolean
+  - chroma_420_type           :Int
+  - progressive_frame         :Boolean
+   
+  // ISO/IEC 13818-2 section 6.2.2.5: sequence_scalable_extension() header 
+  - lower_layer_prediction_horizontal_size:Int
+  - lower_layer_prediction_vertical_size  :Int
+  - horizontal_subsampling_factor_m       :Int
+  - horizontal_subsampling_factor_n       :Int
+  - vertical_subsampling_factor_m         :Int
+  - vertical_subsampling_factor_n         :Int
+  
+  // ISO/IEC 13818-2 section 6.2.3.5: picture_spatial_scalable_extension() header 
+  - lower_layer_temporal_reference          :Int
+  - lower_layer_horizontal_offset           :Int
+  - lower_layer_vertical_offset             :Int
+  - spatial_temporal_weight_code_table_index:Int
+  - lower_layer_progressive_frame           :Boolean
+  - lower_layer_deinterlaced_field_select   :Boolean
+
+  - decode_layer :Int
+  - global_mba   :Int
+  - global_pic   :Int
+  - true_framenum:Int
+
+  // layer specific variables (needed for SNR and DP scalability) 
+  - ld   :Layer_data

@@ -1,0 +1,15 @@
+Header
+  + name := Int_or_z
+  /* */
+Public
+  
+  - main <-
+  ( + i: Int8 // Also try @Int8 @Int16 @Int32 @Int64  or @Int
+    + z: ℤ
+    
+    i := 5 // Also try 5, 6, 7, 8, ... , 12, 13, ..., 20, 21, or much more
+    println( i! ) 
+    z := i.to_z
+    println( z! )    
+  )
+  

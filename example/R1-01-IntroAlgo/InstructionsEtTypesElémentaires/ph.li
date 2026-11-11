@@ -1,0 +1,40 @@
+Header
+  + name := Ph
+/*
+  Exercice 7 du poly : acide ou alcalin ?
+
+  Selon le pH lu au clavier, le programme affiche très acide, acide,
+  neutre, alcaline ou très alcaline. Les si ... sinon sont imbriqués :
+  un seul des messages est affiché.
+  Le programme lit au clavier : il se lance dans un terminal.
+  */
+Insert
+  
+  - french: French_corner := French_corner
+    
+Public
+  
+  - main <-
+  ( 
+    + ph:Int;
+    
+    écrire("PH: ") 
+    ph := lire_entier
+    si ( ph = 7 ) alors {
+      écrire("neutre\n")
+    } sinon {
+      si ( ph < 2 ) alors {
+        écrire("très acide\n")
+      } sinon {
+        si ( ph < 7 ) alors {
+          écrire("acide\n")
+        } sinon {
+          si ( ph < 12 ) alors {
+            écrire("alcaline\n")
+          } sinon {      
+            écrire("très alcaline\n")
+          }
+        }
+      }
+    }
+  )

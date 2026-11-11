@@ -1,0 +1,37 @@
+Header
+  + name := Record_wav
+Public
+
+  - main <-
+  ( + status:Int
+    + channels,sample_rate:Uint32
+    + file:String_alias
+
+    (Command_args.count != 2).if { 
+      "Usage: record_wav output.wav".println
+      System.exit 1    
+    }
+    file := Command_args.at 1
+
+    Out # "Mono recording 16 bits / 48 kHz.\n"
+    channels := 1.to_uint32
+    sample_rate := 48_000.to_uint32
+
+    status := Audio.record_wav file channels channels rate sample_rate
+
+    (status != Audio.success).if {
+      Out # "Unable to switch on the microphone: " #| Audio.result_description status
+      System.exit 2
+    }
+
+    Out # "Press Enter to stop.\n"
+    Stdin.read_line
+
+    Audio.stop_recording
+
+    (Audio.capture_write_result != Audio.success).if {
+      Out # "Unable to write WAV file: " #| Audio.result_description (Audio.capture_write_result)
+    } else {
+      Out # "File created: " #| file
+    }
+  )

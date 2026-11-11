@@ -1,0 +1,18 @@
+Header
+  - name := Counter
+// Active object: the shared universe, called synchronously.
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  + total:Int
+
+  - add x:Int :Int <-
+  // Synchronous (a result).
+  (
+    total := total + x
+    total
+  )
