@@ -175,6 +175,9 @@ Public
     ((flag & transparent) != 0).if {
       `glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE)`
     }
+    ((flag & floating) != 0).if {
+      `glfwWindowHint(GLFW_FLOATING, GLFW_TRUE)`
+    }
   )
   
   - window_should_close:Boolean <-
@@ -193,6 +196,7 @@ Public
   - flag:Uint8 := decorated
   - decorated:Uint8   := 0000_0001b
   - transparent:Uint8 := 0000_0010b
+  - floating:Uint8    := 0000_0100b // Above the other windows.
   - set f:Uint8   <- ( flag := flag | f; )
   - unset f:Uint8 <- ( flag := flag & ~f; )
   

@@ -681,6 +681,12 @@ Public
           start_task
         } else {
           page := ready_page
+          if (! some_failure) then {
+            String.tmp { cmd:String_buffer
+              cmd # '\"' # lisaac_dir # "example/welcome/welcome\""
+              Environment.run cmd background
+            }
+          }
         }
       }
     }

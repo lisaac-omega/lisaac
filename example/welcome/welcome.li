@@ -72,6 +72,7 @@ Public
   (
     Paper unset (Paper decorated)
     Paper set (Paper transparent)
+    Paper set (Paper floating)
     init "Welcome" size (1200,1200)
     Paper run
   )
