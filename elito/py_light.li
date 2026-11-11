@@ -1,0 +1,172 @@
+Header
+  + name := Py_light
+Inherit
+  
+  + parent_x_light:Flat X_light
+  
+Public
+  
+  - language:String_alias := "(Python)"
+  - space_indent:Int := 4
+      
+  - make b:Buffer <-
+  ( 
+    buf := b
+  )
+    
+  - start st:Int line lin:Int <-
+  ( + low,up,upper,l:Int
+    
+    upper := buf.upper
+    
+    low := st
+    //    
+    up := st.min upper
+    l := 0
+    {(up < upper) && {l <= lin+1}}.while_do {
+      (buf.at up = '\n').if { l := l + 1; }
+      up := up + 1
+    }
+    low := low.max 0
+    (root != NULL).if { root.free; }
+    root := Light.create NULL type 0 range (low,up)
+    {
+      low := pass root upper up base low + 1
+    }.do_while {low <= up}
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( + c:Char
+    + i,ii,lo,s:Int
+    + rr:Light
+    + out,is_cap:Boolean
+    
+    i := bi
+    {! out}.while_do {      
+      (i > up).if {
+        out := True
+      }.elseif {(c := buf.at i) = '\"'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\"'} && {buf.at i != '\n'}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            ((buf.at (i+1) = ' ') || {buf.at (i+1) = '\n'}).if {
+              i := i + 1
+              {(i < up) && {(buf.at i = ' ') || {buf.at i = '\n'}}}.while_do { i := i + 1; }
+            } else {
+              i := i + 1
+            }
+          }
+          i := i + 1
+        }
+        r.add string_id range (lo,i)
+      }.elseif {c = '\''} then {  
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\''}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            i := i + 1
+          }
+          i := i + 1
+        }
+        r.add character_id range (lo,i)
+      }.elseif {c = '#'} then {        
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\n'}}.while_do { i := i + 1; }
+        r.add comment_line_id range (lo,i)
+      }.elseif {
+        (at i word "False")   || {at i word "class"}   || {at i word "finally"}|| 
+          {at i word "is"}      || {at i word "return"}  || {at i word "None"}   || 
+          {at i word "continue"}|| {at i word "for"}     || {at i word "lambda"} || 
+          {at i word "try"}     || {at i word "True"}    || {at i word "def"}    || 
+          {at i word "from"}    || {at i word "nonlocal"}|| {at i word "while"}  || 
+          {at i word "and"}     || {at i word "del"}     || {at i word "global"} || 
+          {at i word "not"}     || {at i word "with"}    || {at i word "as"}     ||
+          {at i word "elif"}    || {at i word "if"}      || {at i word "or"}     || 
+          {at i word "yield"}   || {at i word "assert"}  || {at i word "else"}   || 
+          {at i word "import"}  || {at i word "pass"}    || {at i word "break"}  || 
+          {at i word "except"}  || {at i word "in"}      || {at i word "raise"}  || 
+          {at i word "print"}
+      } then {
+        lo := i
+        i := i + last_string.upper
+        r.add keyword_id range (lo,i)
+      }.elseif {(c = '[') || {c = '('} || {c = '{'}} then {
+        + old_i:Int
+        rr := r.add block_id range (i,up)
+        i := i + 1
+        old_i := i
+        i := pass rr upper (root.upper) base i
+        //? {i>old_i}
+        rr.set_upper i
+      }.elseif {(c = ']') || {c = ')'} || {c = '}'}} then { 
+        i := i - 1
+        out := True
+      }.elseif {c.is_lower} then {                        
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i.is_identifier}}.while_do {            
+          i := i + 1
+        }
+        ii := i - 1
+        i := skip_space i upper up
+        r.add (((i <= up) && {buf.at i = '('}).ok slot_head_id or call_id) range (lo,ii)
+        i := i - 1
+      }.elseif {(i <= up-3) && { // = [+-/*%^|&~]=  >>= <<= 
+          (s := 0; buf.at i = '=') || 
+            {s := 1; (buf.at (i+1) = '=') && {"+-/*%^|&~".has (buf.at i)}} ||
+            {s := 2; (buf.at (i+2) = '=') && 
+            {((c := buf.at i) = '<') || {c = '>'}} && {c = buf.at (i+1)}} 
+      }} then { 
+        r.add assign_id range (i,i+s)
+        i := i + s
+      }.elseif {c.is_upper} then {
+        lo := i
+        i := i + 1
+        is_cap := True
+        {(i <= up) && {(c := buf.at i).is_identifier}}.while_do { 
+          is_cap := is_cap & c.is_upper_identifier
+          i := i + 1
+        }
+        i := i - 1
+        (lo = i).if {
+          r.add type_parameter_id range (lo,lo)
+        } else { + upp:Int
+          ii := lo - 1
+          upp := r.body.upper-1
+          {(upp>=0) && {buf.at ii = '.'} && {r.body.at upp.type = call_id}}.while_do {
+            r.body.at upp.set_type type_id
+            ii := r.body.at upp.lower - 1
+            upp := upp - 2
+          }
+          (is_cap).if {
+            r.add character_id range (lo,i)
+          } else {
+            r.add type_id range (lo,i)
+          }
+        }
+      }.elseif {c.is_digit} then {
+        lo := i
+        i := i + 1
+        {(i < up) && {((c := buf.at i).is_hexadecimal_digit) || 
+          {c = '_'} || {c = '\''} || {c.to_lower = 'x'} || {c.to_lower = 'b'}}}.while_do { 
+          i := i + 1
+        }
+        ((i <= up) && {"LUlu".has (buf.at i)}).if { i := i + 1; }
+        ((i <= up) && {"LUlu".has (buf.at i)}).if { i := i + 1; }
+        ((i <= up) && {"LUlu".has (buf.at i)}).if { i := i + 1; }
+        r.add number_id range (lo,i-1)
+      }.elseif {"!#$%^&<|*=~/?\\>".has c} then {
+        lo := i
+        {(i <= up) && {"!#$%^&<|*-+=~/?\\>".has (buf.at i)}}.while_do { i := i + 1; }
+        i := i - 1
+        r.add operator_id range (lo,i)
+      }.elseif {".,;".has c} then {
+        r.add separator_id range (i,i)
+      }
+      i := i + 1
+    }
+    i
+  )
+    

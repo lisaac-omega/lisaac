@@ -59,12 +59,12 @@ Public
       font_face_id (Font.sys (Font.bold))
       font_size (Code_show_look.small_size)
       (wt,x0,y0,x1,y1) := text_bounds (0,0) msg label
-      result := wt + 32
+      result := wt + Code_show_look.px 32
     }.elseif {kind = big} then {
       font_face_id (Font.sys (Font.bold))
       font_size (Code_show_look.big_size)
       (wt,x0,y0,x1,y1) := text_bounds (0,0) msg label
-      result := wt + 72
+      result := wt + Code_show_look.px 72
     } else {
       result := height_min
     }
@@ -82,7 +82,7 @@ Public
     } else {
       result := 44
     }
-    result
+    Code_show_look.px result
   )
 
   - draw <-
@@ -209,6 +209,7 @@ Public
     e := ev & ~1
     (e = Hand.in).if {
       set inside with (ev = Hand.in)
+      Clickable.show_hand ((ev = Hand.in) && {enabled})
     }.elseif {e = Hand.clic} then {
       enabled.if {
         focus := NULL

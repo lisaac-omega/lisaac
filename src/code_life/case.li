@@ -1,9 +1,9 @@
 Header
   + name := Case
 /* Case for Switch. */
-Inherit
+Insert
 
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Public
 

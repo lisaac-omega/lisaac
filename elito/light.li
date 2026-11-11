@@ -1,0 +1,174 @@
+Header
+  + name := Light
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Private
+  
+  - light_list:Array Light := Array Light.create_with_capacity 512
+  - idf_list:Array (Array String_alias) := Array (Array String_alias).create_with_capacity 32
+  
+  - new_idf cap:Int :Array String_alias <-
+  ( + result:Array String_alias
+    (idf_list.is_empty).if {
+      result := Array String_alias.create_with_capacity cap
+    } else {
+      result := idf_list.pop
+    }
+    result
+  )
+    
+Public
+  
+  + parent:Light
+  
+  + lower:Int
+  + upper:Int
+    
+  + type:Int
+  
+  + body:Array Light
+  
+  + local:Array String_alias
+  + argument:Array String_alias
+    
+  - set_upper up:Int <- ( upper := up; )
+  
+  - set_type t:Int   <- ( type := t;   )
+  
+  - create p:Light type t:Int range (lo,up:Int) :Light <-
+  ( + result:Light
+    (light_list.is_empty).if {      
+      result := clone
+    } else {
+      result := light_list.pop
+    }
+    result.make p type t range (lo,up)
+    result
+  )
+  
+  - add t:Int range (lo,up:Int) :Light <- Light.create self type t range (lo,up)
+  
+  - make p:Light type t:Int range (lo,up:Int) <-
+  (
+    lower := lo
+    upper := up
+    type := t
+    parent := p
+    (p != NULL).if { p.body.add_last self; }
+    (body = NULL).if {
+      body := Array Light.create_with_capacity 2
+    }
+  )
+  
+  - search_type t:Int in buf:Buffer <-
+  (     
+    string_tmp.clear
+    lower.to upper do { i:Int
+      string_tmp.add_last (buf.at i)
+    }
+    type := search (string_tmp.to_string_alias) default t
+  )
+  
+  - search n:String_alias default t:Int :Int <-
+  ( + result:Int
+    result := t
+    (local != NULL).if {
+      (local.has n).if { result := local_id; }
+    }
+    (argument != NULL).if {
+      (argument.has n).if { result := argument_id; }
+    }
+    ((result = t) && {parent != NULL}).if { result := parent.search n default t; }
+    result
+  )
+  
+  - get_type i:Int :Light <-
+  ( + result:Light
+    + j:Int
+    (i.in_range lower to upper).if {
+      {(j <= body.upper) && {result = NULL}}.while_do {
+        result := body.at j.get_type i
+        j := j + 1
+      }
+      (result = NULL).if { result := self; }
+    }
+    result
+  )
+  
+  - add_local l:Array String_alias <-
+  (
+    (local = NULL).if { local := new_idf (l.count); }
+    local.append_collection l
+  )
+  
+  - add_argument l:Array String_alias <-
+  (
+    (argument = NULL).if { argument := new_idf (l.count); }
+    argument.append_collection l
+  )
+      
+  - free <-
+  (
+    0.to (body.upper) do { i:Int
+      body.pop.free
+    }
+    ? {body.is_empty}
+    parent := NULL
+    (local != NULL).if { 
+      idf_list.add_last local
+      local.clear
+      local := NULL
+    }
+    (argument != NULL).if { 
+      idf_list.add_last argument
+      argument.clear
+      argument := NULL
+    }
+    light_list.add_last self
+  )
+  
+  - print <-
+  (
+    string_tmp.clear
+    sub_print
+  )
+  
+  - sub_print <-
+  (
+    string_tmp.print
+    type
+    .when text_id      then { "Text".print; }
+    .when comment_id   then { "Comment".print; }
+    .when comment_line_id        then { "Comment line".print; }
+    .when comment_line_intern_id then { "Comment line intern".print; }
+    .when string_id    then { "String".print; }
+    .when character_id then { "Character".print; }
+    .when external_id  then { "External".print; }
+    .when keyword_id   then { "Keyword".print; }
+    .when block_id     then { "Block".print; }
+    .when style_id     then { "Style +/-".print; }
+    .when assign_id    then { "Assign".print; }
+    .when type_id      then { "Type".print; }
+    .when type_parameter_id then { "Type parameter".print; }
+    .when slot_id      then { "Slot".print; }
+    .when slot_head_id then { "Slot Head".print; }
+    .when number_id    then { "Number".print; }
+    .when call_id      then { "Call slot".print; }
+    .when call_intern_id then { "Call slot (like arg)".print; }
+    .when local_id     then { "Local".print; }
+    .when argument_id  then { "Argument".print; }
+    .when operator_id  then { "Operator".print; }
+    .when separator_id then { "Separator".print; }
+    .when error_id     then { "ERROR !!".print; }
+    " [".print
+    lower.print; "..".print; upper.print
+    "]\n".print
+    string_tmp.append "  "
+    0.to (body.upper) do { i:Int
+      body.at i.sub_print
+    }
+    string_tmp.remove_tail 2
+  )
+    

@@ -1,0 +1,30 @@
+Header
+  - name := Timer W
+/* COP coordination: a delay. `after ms for self tag k' (asynchronous): @W (an active object)
+   receives the asynchronous message `timeout k' after @ms milliseconds, or a little later.
+   Each delay is a new universe which sleeps (the other universes go on, another worker
+   thread takes the place of the sleeping one). @W must have a slot `timeout k:Int'. */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  - new:Self <- clone
+
+  - after ms:Int for w:W tag k:Int <-
+  ( + t:Self
+    t := clone
+    t.sleep ms for w tag k
+  )
+
+  - sleep ms:Int for w:W tag k:Int <-
+  // In its own universe: sleeps, then answers.
+  (
+    (is_cop_active).if {
+      // Another worker of the pool takes the place of this one meanwhile (see the runtime).
+      `li_sleep_ms(@ms)`
+    } else {
+      Clock.usleep (ms.to_uint64 * 1000)
+    }
+    w.timeout k
+  )

@@ -1,0 +1,455 @@
+Header
+  + name := Flat ℝ
+  /*
+  The set ℝ denotes the set of real numbers. A value is exact as long as it can be:
+
+  - an exact value (@node = NULL) is a @ℚ: integers, decimals, quotients;
+  - a lazy value (@node != NULL) is an @R_node, which can give the value to any
+    precision: π, square roots, exp, ln, and every operation which uses them.
+
+  Printing gives correctly computed decimals, even after many operations: the
+  precision needed by each operation is computed backward, from the result.
+
+  `=' and `<' are exact between two exact values. With a lazy value, they compare
+  to 2^-@precision_bits (about 10^-1000 by default, see `precision ... do'):
+  two values closer than that are taken as equal.
+
+  Memory: an operation never frees nor changes its operands. Its result belongs
+  to the current region: `ℝ.region { ... }' frees everything computed in its block,
+  except the result of the block. Without any region, nothing is freed.
+  */
+Insert
+
+  - parent_numeric:Numeric := Numeric
+
+Directory
+
+  // The exact value is kept as two @ℤ, not as a @ℚ: a @Flat inside a @Flat
+  // is not always well compiled (2026-11).
+  + num:ℤ
+  + den_raw:ℤ
+
+  + node:R_node
+
+  - q:ℚ <-
+  // The exact value, which shares its integers with @self.
+  ( + d:ℤ
+    d := den_raw
+    (d = 0).if { d := 1; }
+    ℚ.raw (num,d)
+  )
+
+  - set (x:ℚ, n:R_node) <- (num,den_raw,node) := (x.num,x.den,n)
+
+  - exact x:ℚ :Self <-
+  // The exact value @x, which now belongs to the current region.
+  ( + r:Self
+    ((x.num.size_bits > 62) || {x.den.size_bits > 62}).if {
+      exacts.add_last x
+    }
+    r.set (x,NULL)
+    r
+  )
+
+  - lazy n:R_node :Self <-
+  ( + r:Self
+    + z:ℚ
+    r.set (z,n)
+    r
+  )
+
+  - new_node (o:Int, x,y:R_node) :R_node <-
+  ( + n:R_node
+    (pool.is_empty).if {
+      n := R_node.new
+    } else {
+      n := pool.last
+      pool.remove_last
+    }
+    n.set (o,x,y)
+    n.set_birth (nodes.count)
+    nodes.add_last n
+    n
+  )
+
+  - node_of x:Self :R_node <-
+  // The node of @x, a new leaf when @x is exact.
+  ( + n:R_node
+    (x.is_exact).if {
+      n := new_node (R_node.op_leaf,NULL,NULL)
+      n.set_q (x.q.copy)
+    } else {
+      n := x.node
+    }
+    n
+  )
+
+  - unary o:Int :Self <- lazy (new_node (o,node_of self,NULL))
+
+  - binary (o:Int, x,y:Self) :Self <- lazy (new_node (o,node_of x,node_of y))
+
+  - nodes:Array R_node := Array R_node.create_with_capacity 64
+
+  - pool:Array R_node := Array R_node.create_with_capacity 64
+
+  - exacts:Array ℚ := Array ℚ.create_with_capacity 64
+
+  - constant n:R_node :Self <-
+  // The constant @n, a node which is never freed.
+  (
+    n.set_birth (-2)
+    lazy n
+  )
+
+  - keep n:R_node from n0:Int <-
+  // Mark the nodes of the current region used by @n.
+  (
+    ((n != NULL) && {n.birth >= n0} && {! n.mark}).if {
+      n.set_mark True
+      keep (n.a) from n0
+      keep (n.b) from n0
+    }
+  )
+
+Public
+
+  - is_exact:Boolean <- node = NULL
+  // True for a @ℚ value, always printed and compared exactly.
+
+  // Precision of the comparisons.
+
+  - precision_bits:Int := 3322
+
+  - uncertain:Int
+  // Number of comparisons decided by the precision: the values were equal
+  // to 2^-@precision_bits, but maybe not equal.
+
+  - precision digits:Int do b:{} <-
+  // Run @b with comparisons to 10^-@digits.
+  [ ? {digits > 0}; ]
+  ( + old:Int
+    old := precision_bits
+    precision_bits := digits * 3322 / 1000 + 1
+    b.value
+    precision_bits := old
+  )
+
+  // Memory.
+
+  - nodes_count:Int <- nodes.count
+  // Number of nodes of the lazy values, in all the open regions.
+
+  - region_do b:{} <-
+  // Run @b, then free everything computed in @b.
+  (
+    region { b.value; zero }
+  )
+
+  - region b:{ℝ} :ℝ <-
+  // Value of @b. Everything computed in @b is freed, except this value:
+  // a value computed in @b must not be kept elsewhere.
+  ( + n0,e0,j:Int
+    + v,r:ℝ
+    + c:ℚ
+    + n:R_node
+    n0 := nodes.count
+    e0 := exacts.count
+    v := b.value
+    (v.is_exact).if {
+      c := v.q.copy
+    } else {
+      keep (v.node) from n0
+    }
+    j := n0
+    n0.to (nodes.upper) do { i:Int
+      n := nodes.at i
+      (n.mark).if {
+        n.set_mark False
+        n.set_birth j
+        nodes.at j put n
+        j := j + 1
+      } else {
+        n.release
+        pool.add_last n
+      }
+    }
+    nodes.remove_tail (nodes.count - j)
+    e0.to (exacts.upper) do { i:Int
+      (exacts.at i).free
+    }
+    exacts.remove_tail (exacts.count - e0)
+    (v.is_exact).if {
+      r := exact c
+    } else {
+      r := v
+    }
+    r
+  )
+
+  // Constants.
+
+  // Each constant is unique: always the same node, which keeps its best
+  // approximation.
+
+  - π:ℝ <- constant Pi
+
+  - e:ℝ <- constant Napier
+  // e = exp 1.
+
+  - ln_2:ℝ <- constant Ln_2
+
+  - init_q x:ℚ :ℝ <-
+  // The exact value @x, which is kept by the caller.
+  (
+    exact (x.copy)
+  )
+
+  // Arithmetic.
+
+  - self:Self '+' Left 80 <> other:Self :Self <-
+  ( + r:Self
+    ((is_exact) && {other.is_exact}).if {
+      r := exact (q + other.q)
+    } else {
+      r := binary (R_node.op_add,self,other)
+    }
+    r
+  )
+
+  - self:Self '-' Left 80 <> other:Self :Self <-
+  ( + r:Self
+    ((is_exact) && {other.is_exact}).if {
+      r := exact (q - other.q)
+    } else {
+      r := self + (- other)
+    }
+    r
+  )
+
+  - self:Self '*' Left 90 <> other:Self :Self <-
+  ( + r:Self
+    ((is_exact) && {other.is_exact}).if {
+      r := exact (q * other.q)
+    }.elseif {((is_exact) && {q.sign = 0}) || {(other.is_exact) && {other.q.sign = 0}}} then {
+      // r is 0.
+    } else {
+      r := binary (R_node.op_mul,self,other)
+    }
+    r
+  )
+
+  - self:Self '/' Left 90 <> other:Self :Self <-
+  [ ? {(! other.is_exact) || {other.q.sign != 0}}; ]
+  ( + r:Self
+    ((is_exact) && {other.is_exact}).if {
+      r := exact (q / other.q)
+    } else {
+      r := self * other.inv
+    }
+    r
+  )
+
+  - inv:Self <-
+  // 1 / @self.
+  [ ? {(! is_exact) || {q.sign != 0}}; ]
+  ( + r:Self
+    (is_exact).if {
+      r := exact (q.inv)
+    } else {
+      r := unary (R_node.op_inv)
+    }
+    r
+  )
+
+  - '-' self:Self :Self <-
+  ( + r:Self
+    (is_exact).if {
+      r := exact (- q)
+    } else {
+      r := unary (R_node.op_neg)
+    }
+    r
+  )
+
+  - '+' self:Self :Self <- self
+
+  - self:Self pow k:Int :Self <-
+  // @self to the power of @k, which can be negative.
+  ( + r,x:Self
+    + n:Int
+    r := 1
+    x := self
+    n := k.abs
+    {n > 0}.while_do {
+      (n.is_odd).if { r := r * x; }
+      n := n >> 1
+      (n > 0).if { x := x * x; }
+    }
+    (k < 0).if { r := r.inv; }
+    r
+  )
+
+  - abs:Self <-
+  ( + r:Self
+    (sign < 0).if { r := - self; } else { r := self; }
+    r
+  )
+
+  // Functions.
+
+  - sqrt:Self <-
+  // Square root, exact when @self is the square of a @ℚ.
+  ( + r:Self
+    + n,d,sn,sd,t,u:ℤ
+    (is_exact).if {
+      ? {q.sign >= 0}
+      n := q.num
+      d := q.den
+      sn := R_node.isqrt n
+      sd := R_node.isqrt d
+      t := sn * sn
+      u := sd * sd
+      ((t = n) && {u = d}).if {
+        r := exact (ℚ.init (sn,sd))
+      } else {
+        r := unary (R_node.op_sqrt)
+      }
+      sn.free
+      sd.free
+      t.free
+      u.free
+    } else {
+      r := unary (R_node.op_sqrt)
+    }
+    r
+  )
+
+  - exp:Self <-
+  ( + r:Self
+    ((is_exact) && {q.sign = 0}).if {
+      r := 1
+    }.elseif {(is_exact) && {q.num = 1} && {q.den = 1}} then {
+      r := e
+    } else {
+      r := unary (R_node.op_exp)
+    }
+    r
+  )
+
+  - ln:Self <-
+  // Natural logarithm, of a value > 0.
+  [ ? {(! is_exact) || {q.sign > 0}}; ]
+  ( + r:Self
+    ((is_exact) && {q.num = 1} && {q.den = 1}).if {
+      // r is 0.
+    }.elseif {(is_exact) && {q.num = 2} && {q.den = 1}} then {
+      r := ln_2
+    } else {
+      r := unary (R_node.op_ln)
+    }
+    r
+  )
+
+  // Comparisons.
+
+  - appr p:Int :ℤ <-
+  // A new @Result with |@self - Result 2^@p| < 2^@p.
+  ( + r:ℤ
+    (is_exact).if {
+      r := R_node.appr_q (q,p)
+    } else {
+      r := node.appr p
+    }
+    r
+  )
+
+  - sign:Int <- cmp 0
+
+  - cmp other:Self :Int <-
+  // 1, 0 or -1, exact between two exact values, else to 2^-@precision_bits.
+  ( + u,v,t,d:ℤ
+    + r:Int
+    ((is_exact) && {other.is_exact}).if {
+      r := q.cmp (other.q)
+    } else {
+      u := appr (- precision_bits - 2)
+      v := other.appr (- precision_bits - 2)
+      t := u - v
+      d := R_node.shift (t,-2)
+      r := (d > 0).to_int - (d < 0).to_int
+      (r = 0).if { uncertain := uncertain + 1; }
+      u.free
+      v.free
+      t.free
+      d.free
+    }
+    r
+  )
+
+  - self:Self '=' Right 50 <> other:Self :Boolean <- cmp other = 0
+
+  - self:Self '!==' Right 60 other:Self :Boolean <- cmp other != 0
+  - self:Self '>' Right 60 <> other:Self :Boolean <- cmp other > 0
+  - self:Self '<' Right 60 <> other:Self :Boolean <- cmp other < 0
+  - self:Self '>=' Right 60 <> other:Self :Boolean <- cmp other >= 0
+  - self:Self '<=' Right 60 <> other:Self :Boolean <- cmp other <= 0
+
+  // Conversion.
+
+  - to_real64:Real64 <-
+  // Nearest @Real64 (about), even for a lazy value.
+  ( + t:ℚ
+    + u:ℤ
+    + r:Real64
+    (is_exact).if {
+      r := q.to_real64
+    } else {
+      u := appr (-64)
+      t := ℚ.init (u, ℤ.one << 64)
+      r := t.to_real64
+      t.free
+      u.free
+    }
+    r
+  )
+
+  // Printing.
+
+  - default_decimals:Int := 20
+
+  - append_in b:String_buffer <- append_in b decimal default_decimals
+
+  - append_in b:String_buffer decimal n:Int <-
+  // @self with @n decimals, rounded to the nearest (for a lazy value, the
+  // last decimal can be wrong only for a value very close to the middle).
+  [ ? {n >= 0}; ]
+  ( + m,t,u,p10:ℤ
+    + bits:Int
+    p10 := (ℤ.init_si 10).pow n
+    (is_exact).if {
+      t := q.num * p10
+      m := R_node.round_div (t, q.den)
+    } else {
+      bits := n * 3322 / 1000 + 8
+      u := appr (- bits)
+      t := u * p10
+      u.free
+      u := ℤ.one << bits
+      m := R_node.round_div (t,u)
+      u.free
+    }
+    t.free
+    p10.free
+    (m < 0).if { b.add_last '-'; }
+    String.tmp { tmp:String_buffer
+      u := m.abs
+      u.append_in tmp
+      u.free
+      (tmp.count <= n).if { tmp.insert '0' to 0 on (n + 1 - tmp.count); }
+      0.to (tmp.upper) do { j:Int
+        ((j = tmp.count - n) && {n > 0}).if { b.add_last '.'; }
+        b.add_last (tmp.at j)
+      }
+    }
+    m.free
+  )

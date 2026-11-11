@@ -1,0 +1,28 @@
+Header
+  + name := Li_layout
+/* Memory layout of a type: the same one as the structure of the C code. */
+Insert
+
+  - parent_clone:Clone := Clone
+
+Public
+
+  + size:Int
+  + offsets:Hmap Int Key String_alias
+  // Fields which hold a @Flat structure.
+  + flats:Array Slot_data
+
+  - create:Self <-
+  ( + result:Self
+    result := clone
+    result.make
+    result
+  )
+
+  - make <-
+  (
+    offsets := new Hmap Int Key String_alias
+    flats := Array Slot_data .create_with_capacity 4
+  )
+
+  - set_size n:Int <- ( size := n; )

@@ -1,0 +1,25 @@
+Header
+  + name := Li_print_stack
+/* The `lisaac_stack_print' of the C code. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + step:Li_node
+
+  - create s:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make s
+    result
+  )
+
+  - make s:Li_node <- ( step := s; )
+
+  - eval fp:Int :Int <-
+  (
+    Li_runtime.print_stack (step.eval fp)
+    0
+  )

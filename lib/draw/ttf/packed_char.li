@@ -1,19 +1,38 @@
 Header
   + name := Packed_char
-/*Proto utile ?*/
+/* @stbtt_packedchar of stb_truetype v1.24: a character packed by
+   @Ttf.pack_font_ranges (its box in the bitmap, its offsets and advance). */
+Inherit
   
-Mapping
-  
-  + x0:Uint16;
-  + y0:Uint16;
-  + x1:Uint16;
-  + y1:Uint16;
-  + xoff:Real32;
-  + yoff:Real32;
-  + xadvance:Real32;
-  + xoff2:Real32;
-  + yoff2:Real32;
-  
+  - parent_clone:Clone := Clone
+
 Public
   
-  - reset_box <- ( x0:=y0:=x1:=y1:=0; )
+  - new:Self <- clone
+  
+  + x0:Uint16; // coordinates of bbox in bitmap
+  + y0:Uint16
+  + x1:Uint16
+  + y1:Uint16
+  + xoff:Real32
+  + yoff:Real32
+  + xadvance:Real32
+  + xoff2:Real32
+  + yoff2:Real32
+  
+  - reset_box <- ( x0 := y0 := x1 := y1 := 0; )
+  
+  - make (px0,py0,px1,py1:Int) offset (pxoff,pyoff:Real32) to (pxoff2,pyoff2:Real32) xadvance pxadvance:Real32 <-
+  (
+    (x0,y0) := (px0.to_raw_uint16,py0.to_raw_uint16)
+    (x1,y1) := (px1.to_raw_uint16,py1.to_raw_uint16)
+    (xoff,yoff) := (pxoff,pyoff)
+    (xoff2,yoff2) := (pxoff2,pyoff2)
+    xadvance := pxadvance
+  )
+  
+  - copy_from c:Packed_char <-
+  (
+    (x0,y0,x1,y1) := (c.x0,c.y0,c.x1,c.y1)
+    (xoff,yoff,xoff2,yoff2,xadvance) := (c.xoff,c.yoff,c.xoff2,c.yoff2,c.xadvance)
+  )

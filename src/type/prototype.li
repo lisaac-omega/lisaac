@@ -81,7 +81,6 @@ Public
     + args:Array Expr
     
     // Parent.
-    //last_position := position
     cur := first_slot
     {(cur != NULL) && {cur.id_section.is_inherit_or_insert}}.while_do {
       typ.slot_run.add_last (Slot.create cur type typ)
@@ -114,13 +113,11 @@ Public
                   slot_code.get_argument_type i.to_run_for NULL pos filename.default_value (slot_code.position)
                 )
               }
-              //slot_code.get_profil args self (typ.default)
               list_current := external_list
               expr := Prototype_cst.create position type (typ.default)
               base := Node.new_read (slot.position) slot slot
               receiver expr with args intern True
             } else {
-              //slot_code.get_profil args self (typ.default)
               list_current := external_list
               expr := Prototype_cst.create position type (typ.default)
               base := Node.new_read (slot.position) slot slot
@@ -248,15 +245,9 @@ Public
     index := prototype_list.count
     prototype_list.add_last self
     
-    //prototype_dico.fast_put self to f
     prototype_dico.at f put self
 
     // Read file.
-    //entry := FILE_SYSTEM.get f
-    //file ?= entry.open_read_only
-    //source := String_buffer.create (file.size)
-    //file.read source size (file.size)
-    //file.close
 
     file := File_utils.open_read f
     sz := File_utils.size file
@@ -265,7 +256,6 @@ Public
     File_utils.close file
 
     // Init.
-    //slot_list := HMAP ITM_SLOT KEY String_alias.create
     slot_list := new Hmap Itm_slot Key String_alias
     
     position  := Position.create self line 1 column 0
@@ -304,18 +294,13 @@ Public
       (debug_level_option != 0).if {
         string_tmp.copy "signal(SIGINT,interrupt_signal);\n  "
       }
+      (is_cop).if {
+        string_tmp.append "li_base = &li_main_base;\n  LI_INIT_PROTOS;\n  LI_OPEN_UNIVERSES;\n  "
+      }
       string_tmp.append
       "arg_count  = argc;\n\
       \  arg_vector = argv;\n"
       string_tmp # "  INIT_STRING_ALIAS;\n"
-      (is_cop).if {
-        string_tmp.append "#ifdef _PTHREAD_H\n\
-        \  pthread_key_create(&current_thread, NULL);\n\
-        \  pthread_attr_init(&thread_attr);\n\
-        \  pthread_mutex_lock(&main_mutex);\n\
-        \  /*pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);*/\n\
-        \#endif\n"
-      }
       cmd := string_tmp.to_string_alias
       i := External_c.create position text cmd
       access NULL persistant True type (Type_void.default)
@@ -323,6 +308,11 @@ Public
     }
     // Init Slot.    
     list_current.add_last (Slot_data.init_list)
+    (is_cop).if {
+      // The universes opened meanwhile start now: their bases copy the prototypes, now
+      // initialized (see `li_start_universes' in the runtime).
+      list_current.add_last (External_c.create position text "li_start_universes()" access NULL persistant True type (Type_void.default))
+    }
     // Main Call.
     slot_main := get_slot_main
     self_main := Prototype_cst.create position type (type_input.default)
@@ -356,7 +346,6 @@ Public
       }
       pass_count := pass_count + 1
       Node.extend_pass
-      //? {modify_count <0}
     }
 
     (is_quiet).if_false {      
@@ -378,7 +367,6 @@ Public
     (is_quiet).if_false {
       Stderr.put_string "Executing pass: "
     }
-    //pass_count_depend := pass_count
     pass_count := 0
     exec := {
       {
@@ -432,6 +420,12 @@ Public
       Stderr.put_integer pass_count 
       Stderr.put_string ")\n"
     }
+    (is_cop).if {
+      // Immutable types among the types which go from one universe to another.
+      Escape.evaluate
+      Escape.report
+      Escape.check_messages
+    }
     //
     (is_verbose).if {
       list_main.debug_display
@@ -454,79 +448,6 @@ Public
   // Shorter.
   //
   
-  /*
-  + comment_slot:String_alias
-  + comment_header:String_alias
-
-  - set_comment_slot t:String_alias <-
-  (
-    comment_slot := t
-  )
-
-  - set_comment_header t:String_alias <-
-  (
-    comment_header := t
-  )
-
-  - shorter_out buf:String_buffer <-
-  ( + title:String_alias
-    + s:ITM_SLOT
-    put name to buf like "title"
-
-    (comment_slot != NULL).if {
-      put comment_slot to buf like "prototype_comment_light"
-    }
-    (comment_header != NULL).if {
-      put comment_header to buf like "prototype_comment"
-    }
-
-    list_tmp.clear
-    shorter_get_all_slot_in list_tmp
-
-    // Table.
-    shorter_table list_tmp select { sl:ITM_SLOT
-      sl.id_section.is_inherit_or_insert
-    } title "Inherit/Insert Summary" in buf
-
-    shorter_table list_tmp select { sl:ITM_SLOT
-      sl.name.has_prefix "create"
-    } title "Constructor Summary" in buf
-
-    (list_tmp.lower).to (list_tmp.upper) do { j:Int
-      s := list_tmp.at j
-      (s.stat_shorter = 0).if {
-        title := s.comment_chapter
-        shorter_table list_tmp select { sl:ITM_SLOT
-          sl.comment_chapter = title
-        } title title in buf
-      }
-    }
-
-    // Detail.
-    shorter_detail list_tmp select { sl:ITM_SLOT
-      sl.id_section.is_inherit_or_insert
-    } title "Inherit/Insert Detail" in buf
-
-    shorter_detail list_tmp select { sl:ITM_SLOT
-      sl.name.has_prefix "create"
-    } title "Constructor Detail" in buf
-
-    (list_tmp.lower).to (list_tmp.upper) do { j:Int
-      s := list_tmp.at j
-      (s.stat_shorter = 1).if {
-        title := s.comment_chapter
-        shorter_detail list_tmp select { sl:ITM_SLOT
-          sl.comment_chapter = title
-        } title title in buf
-      }
-    }
-
-    (list_tmp.lower).to (list_tmp.upper) do { j:Int
-      list_tmp.at j.set_stat_shorter 0
-    }
-  )
-  */
-  
 Prototype
 
   - get_slot_main:Slot <-
@@ -545,145 +466,6 @@ Prototype
     result
   )
   
-  /*
-  - shorter_get_all_slot_in lst:ARRAY ITM_SLOT <-
-  ( + s:ITM_SLOT
-    + ps:ITM_TYPE_SIMPLE
-    + p:PROTOTYPE
-    + i:Int
-
-    s := first_slot
-    {s != NULL}.while_do {
-      (is_short_private || {! s.id_section.is_private}).if {
-        i := lst.lower
-        {(i <= lst.upper) && {lst.at i.name != s.name}}.while_do {
-          i := i + 1
-        }
-        (i > lst.upper).if {
-          lst.add_last s
-        }
-      }
-      s := s.next
-    }
-
-    // Parent.
-    s := first_slot
-    {(s != NULL) && {s.id_section.is_inherit_or_insert}}.while_do {
-      ps ?= s.result_type
-      ((ps != NULL) && {
-          ({s.style = '+'} && {ps.style = "Flat"}) ||
-          {s.name.has_prefix "inherit"} || {s.name.has_prefix "insert"}
-      }).if {
-        p := NULL
-        i := prototype_list.lower
-        {(i <= prototype_list.upper) && {p = NULL}}.while_do {
-          (prototype_list.at i.name = ps.name).if {
-            p := prototype_list.at i
-          }
-          i := i + 1
-        }
-        (p != NULL).if {
-          p.shorter_get_all_slot_in lst
-        }
-      }
-      s := s.next
-    }
-  )
-
-  - shorter_table lst:ARRAY ITM_SLOT select sel:{ITM_SLOT; Boolean}
-  title t:String_alias in buf:String_buffer <-
-  ( + is_first_cur:Boolean
-    + s:ITM_SLOT
-
-    is_first_cur := True
-    (lst.lower).to (lst.upper) do { i:Int
-      s := lst.at i
-      ((sel.value s) && {s.stat_shorter = 0}).if {
-        (is_first_cur).if {
-          (t = NULL).if {
-            put "Slot Summary" to buf like "table_begin"
-          } else {
-            put t to buf like "table_begin"
-          }
-          is_first_cur := False
-        }
-        s.set_stat_shorter 1
-        string_tmp.clear
-        string_tmp2.clear
-        s.pretty_name_in string_tmp2
-        put string_tmp2 to string_tmp like "table_slot_name"
-        (
-          (s.id_section.is_inherit_or_insert) &&
-          {
-            (
-              (s.style != '+') || {
-                + ts:ITM_TYPE_SIMPLE
-                ts ?= s.result_type 
-                (ts = NULL) || {ts.style != "Flat"}
-              }
-            ) &&
-            {! s.name.has_prefix "inherit"} &&
-            {! s.name.has_prefix "insert"}
-          }
-        ).if {
-          put " No developed." to string_tmp like "warning"
-        }
-        string_tmp2.clear
-        get_all_comment_slot (s.name) in string_tmp2
-        string_tmp3.clear
-        shorter_comment string_tmp2 in string_tmp3 light True
-        put string_tmp3 to string_tmp like "table_slot_comment"
-        put string_tmp to buf like "table_item"
-      }
-    }
-    (is_first_cur).if_false {
-      put NULL to buf like "table_end"
-    }
-  )
-
-  - shorter_detail lst:ARRAY ITM_SLOT select sel:{ITM_SLOT; Boolean}
-  title t:String_alias in buf:String_buffer <-
-  ( + is_first:Boolean
-    + s:ITM_SLOT
-
-    is_first := True
-    (lst.lower).to (lst.upper) do { i:Int
-      s := lst.at i
-      ((sel.value s) && {s.stat_shorter = 1}).if {
-        (is_first).if {
-          (t = NULL).if {
-            put "Detail slot" to buf like "sub_title"
-          } else {
-            put t to buf like "sub_title"
-          }
-          is_first := False
-        }
-        s.set_stat_shorter 2
-        //
-        string_tmp2.clear
-        s.pretty_name_in string_tmp2
-        put string_tmp2 to buf like "slot_title"
-        string_tmp.clear
-        s.position.prototype.append_filename string_tmp
-        string_tmp.append " line #"
-        s.position.line.append_in string_tmp
-        put string_tmp to buf like "prototype_path"
-        //
-        put "Section:" to buf like "subsub_title"
-        string_tmp.clear
-        s.id_section.append_in string_tmp
-        put string_tmp to buf like "Section"
-        //
-        put "Profile:" to buf like "subsub_title"
-        s.shorter_profile_in buf
-        //
-        string_tmp.clear
-        get_all_comment_slot (s.name) in string_tmp
-        shorter_comment string_tmp in buf light False
-      }
-    }
-  )*/
-
   - get_all_comment_slot n:String_alias in buf:String_buffer <-
   ( + s:Itm_slot
     + ps:Itm_type_simple
@@ -920,13 +702,11 @@ Private
       name := name_last i
     }
         
-  //proto := prototype_canonical_name.reference_at name
     proto := prototype_canonical_name.search name raw
     
     { proto = Prototype }.while_do {
       i := i + 1
       name  := name_last i      
-    //proto := prototype_canonical_name.reference_at name
       proto := prototype_canonical_name.search name raw
     }
 
@@ -939,7 +719,6 @@ Private
         "       is: ".print; longname.println
       }
 
-      //prototype_canonical_name.fast_put self to name
       prototype_canonical_name.at name put self
 
     } else {
@@ -955,9 +734,7 @@ Private
 
       // Add @Prototype marker and add more members to @name of both prototypes
       
-      //prototype_canonical_name.fast_put PROTOTYPE to name
       prototype_canonical_name.at name put Prototype
-      
       
       // Insert both prototypes again with another member to the name
       i := i + 1
@@ -975,26 +752,11 @@ Public
     dif := type_input.prototype.longname.first_diff longname
     (dif >= idx).if {
       
-      
-      /*
-      // DCDC finitos TRAVERSABLE
-      (slot_list.lower).to (slot_list.upper) do { j:Int
-        s := slot_list.at j
-        (s.is_used).if_false {
-          warning_error (s.position,"Slot not used.")
-        }
-      }
-      */
       slot_list.foreach_value { itms:Itm_slot
         (itms.is_used).if_false {
           warning_error (s.position,"Slot not used.")
         }
       }
-      
-      
-      
-      
-      
       
     }
   )

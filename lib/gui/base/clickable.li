@@ -1,0 +1,106 @@
+Header
+  + name := Clickable
+/*
+  Clickable zones of a @Window drawn by hand: insert @Clickable next to
+  the parent of the window (a slot parent_clickable in its Insert).
+
+  At each frame, @draw records the zones after @clear_zones, each one with
+  its number (@zone). Then @zone_under_hand gives the number of the zone
+  under the mouse (0 when none), for the events. @update_cursor, called in
+  the events, shows a hand over a zone, as for a link, and the arrow
+  elsewhere (@show_hand, also usable alone by a widget). @open_url opens a web page or a mail address with the tool of
+  the system.
+
+  A window that draws with a zoom or an offset redefines @hand_position,
+  to give the mouse in the coordinates of its zones.
+
+  The zones are shared by the program: one window with zones by program.
+  */
+
+Public
+
+  - clear_zones <-
+  (
+    zone_x.clear
+    zone_y.clear
+    zone_w.clear
+    zone_h.clear
+    zone_id.clear
+  )
+
+  - zone (x,y:Real32) size (w,h:Real32) id n:Int <-
+  [ ? {n != 0}; ]
+  (
+    zone_x.add_last x
+    zone_y.add_last y
+    zone_w.add_last w
+    zone_h.add_last h
+    zone_id.add_last n
+  )
+
+  - hand_position:(Real32,Real32) <- (Hand.x_cur,Hand.y_cur)
+  // The mouse, in the coordinates of the zones.
+
+  - is_over (x,y:Real32) size (w,h:Real32) :Boolean <-
+  ( + hx,hy:Real32
+    (hx,hy) := hand_position
+    (hx >= x) && {hx < x + w} && {hy >= y} && {hy < y + h}
+  )
+
+  - zone_under_hand:Int <-
+  // The number of the zone under the mouse (the last one drawn), or 0.
+  ( + result:Int
+    0.to (zone_id.upper) do { i:Int
+      (is_over (zone_x.at i,zone_y.at i) size (zone_w.at i,zone_h.at i)).if {
+        result := zone_id.at i
+      }
+    }
+    result
+  )
+
+  - update_cursor <- show_hand (zone_under_hand != 0)
+  // A hand over a zone, the arrow elsewhere.
+
+  - show_hand b:Boolean <-
+  // A hand (@b) or the arrow, in the window under the mouse. Also for a
+  // widget, when the mouse enters or leaves it (see @Code_show_button).
+  ( + w:Window
+    w := Hand.window_cur
+    ((b != is_hand) && {w != NULL}).if {
+      is_hand := b
+      (hand_cursor = NULL).if {
+        hand_cursor := Paper.get_cursor (`GLFW_HAND_CURSOR`:Int)
+        arrow_cursor := Paper.get_cursor (`GLFW_ARROW_CURSOR`:Int)
+      }
+      Paper.set_cursor (w.win_ptr) img (is_hand.ok hand_cursor or arrow_cursor)
+      Paper.refresh_again
+    }
+  )
+
+  - open_url url:String <-
+  // Opens @url (a web page or a mail address) with the tool of the system.
+  (
+    String.tmp { cmd:String_buffer
+      (System.name = "windows").if {
+        cmd # "start \"\" \"" # url # '\"'
+      }.elseif {System.name = "apple"} then {
+        cmd # "open \"" # url # '\"'
+      } else {
+        cmd # "xdg-open \"" # url # "\" >/dev/null 2>&1"
+      }
+      Environment.run cmd background
+    }
+  )
+
+Private
+
+  - zone_x:Array Real32 := Array Real32.create_with_capacity 32
+  - zone_y:Array Real32 := Array Real32.create_with_capacity 32
+  - zone_w:Array Real32 := Array Real32.create_with_capacity 32
+  - zone_h:Array Real32 := Array Real32.create_with_capacity 32
+  - zone_id:Array Int := Array Int.create_with_capacity 32
+
+  - is_hand:Boolean
+
+  - hand_cursor:Pointer
+  - arrow_cursor:Pointer

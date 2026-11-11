@@ -187,21 +187,6 @@ Public
   )
   [ ? {(new_capacity > Old capacity) ->> {new_capacity = capacity}}; ]
 
-  - prepare_space n:Int <-
-  // Makes sure that we have at least @n places, ready to use, after @upper.
-  [
-    deprecated True msg "Still used ? DC Jan 2026"
-    ? {n > 0}
-  ]
-  (
-    (upper - (capacity - 1) < (n << 2)).if {
-      set_capacity (2 * capacity)
-    }
-  )
-  [
-    ? {upper = Old upper}
-  ]
-  
   - clear <-
   // Clear out the current String_buffer.
   // Note: internal @storage memory is neither released nor shrunk.
@@ -805,7 +790,7 @@ Public
   )
   [
     +? {count = Old count}
-    +? {Result.is_not_null}
+    +? {Result != NULL}
   ]
 
   - from_external p:C_array(Char) <-
@@ -815,7 +800,7 @@ Public
   // compute the Lisaac @count. This extra null character
   // is not part of the Lisaac String_buffer.
   // Also consider @from_external_copy to choose the most appropriate.
-  ( ? {p.is_not_null}
+  ( ? {p != NULL}
 
     upper := -1
     {p.item (upper+1) = '\0'}.until_do {
@@ -838,7 +823,7 @@ Public
   // is not part of the Lisaac String_buffer.
   // Also consider @from_external to choose the most appropriate.
   ( + i:Int
-    ? {p.is_not_null}
+    ? {p != NULL}
     upper := -1
     {p.item i = '\0'}.until_do {
       add_last (p.item i)

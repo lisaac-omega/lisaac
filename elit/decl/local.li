@@ -4,8 +4,10 @@ Inherit
   + parent_decl:Flat Decl
   + parent_tok_itm:Flat Tok_itm
   
+Insert
+  - parent_recyclable:Recyclable := Recyclable
+
 Private
-  - stk:Flat Array (Exact Local)
   
 Public 
   
@@ -30,14 +32,14 @@ Public
   
   - length_max:Int
     
-  - new:Self <- ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <- parent_recyclable.new
   - free <-
   ( 
     style := 0    
     (ttok != NULL).if { ttok.free; ttok := NULL; }
     name_id := "Free"
     //stk.foreach { l:Exact LOCAL; (l = self).if { crash; }; };
-    stk.add_last self
+    parent_recyclable.free
   )
   
   /*

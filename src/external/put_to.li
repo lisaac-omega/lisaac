@@ -73,7 +73,7 @@ Public
     receiver := receiver.execute_link
     index    := index.execute_link
     value    := value.execute_link
-    //variable.set_write self
+    Escape.on_put self
     self
   )
 
@@ -119,12 +119,4 @@ Public
     buffer.append "]="
     value.display buffer
   )
-
-
-
-
-
-
-
-
 

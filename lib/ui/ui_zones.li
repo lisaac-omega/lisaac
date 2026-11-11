@@ -1,0 +1,65 @@
+Header
+  + name := Ui_zones
+/* The places of a box which react to the mouse: rectangles noted while it is drawn, with
+   what they are (a kind, an index, a name), the last noted on top. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + zx:Array Real32
+  + zy:Array Real32
+  + zw:Array Real32
+  + zh:Array Real32
+  + zk:Array Int
+  + zi:Array Int
+  + zs:Array String_alias
+
+  - new:Self <-
+  ( + r:Self
+    r := clone
+    r.make
+    r
+  )
+
+  - make <-
+  (
+    zx := Array Real32.create_with_capacity 32
+    zy := Array Real32.create_with_capacity 32
+    zw := Array Real32.create_with_capacity 32
+    zh := Array Real32.create_with_capacity 32
+    zk := Array Int.create_with_capacity 32
+    zi := Array Int.create_with_capacity 32
+    zs := Array String_alias.create_with_capacity 32
+  )
+
+  - clear <-
+  ( zx.clear; zy.clear; zw.clear; zh.clear; zk.clear; zi.clear; zs.clear )
+
+  - add (x,y:Real32) size (w,h:Real32) kind k:Int index i:Int name s:String_alias <-
+  (
+    zx.add_last x
+    zy.add_last y
+    zw.add_last w
+    zh.add_last h
+    zk.add_last k
+    zi.add_last i
+    zs.add_last s
+  )
+
+  - upper:Int <- zx.upper
+
+  - at (x,y:Real32) from i0:Int :Int <-
+  // The zone under @x,@y, the last noted from @i0 down (the one on top), or -1.
+  ( + i:Int
+    i := i0.min upper
+    {(i >= 0) && {! ((x >= zx.at i) && {x < zx.at i + zw.at i} && {y >= zy.at i} && {y < zy.at i + zh.at i})}}.while_do {
+      i := i - 1
+    }
+    i
+  )
+
+  - left i:Int :Real32 <- zx.at i
+  - kind i:Int :Int <- zk.at i
+  - index i:Int :Int <- zi.at i
+  - name i:Int :String_alias <- zs.at i

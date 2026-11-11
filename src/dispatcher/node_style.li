@@ -113,6 +113,7 @@ Private
     + new_type_self:Type_full
     + data_rd:Dta_rd
     + cop_arg:Expr
+    + lock:Cop_lock
     + new_val:Expr
     + val:Expr
 
@@ -128,10 +129,15 @@ Private
     (idx = 0).if {
       // Data.
       (cop_arg != NULL).if {
-        result.add_last (Cop_lock.create position with cop_arg)
+        lock := Cop_lock.create position with cop_arg
+        ((slot.style = '-') && {slot.id_section.is_inherit_or_insert}).if {
+          lock.set_static_read
+        }
+        result.add_last lock
+        Escape.add_sync_read (result_expr.static_type) position position
       }
       //
-      slot_dta := slot.slot_data
+      slot_dta := slot.slot_data_for (type_self.raw)
       slot_dta.init
       (slot.slot_data_list != NULL).if {
         (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { j:Int
@@ -160,29 +166,6 @@ Private
           rd ?= result_expr
         }
 
-        //(slot_dta.name == "storage").if {
-        /*
-        string_tmp.clear
-        string_tmp.copy (type_self.raw.name)
-        string_tmp.add_last ' '
-        string_tmp.append (t.name)
-        (data.slot != NULL).if {
-          string_tmp.add_last ' '
-          string_tmp.append (data.slot.name)
-        }
-        result.add_last (
-          EXTERNAL_C.create position text (string_tmp.to_string_alias) access NULL persistant True type (TYPE_NULL.default)
-        )
-         */
-          /*
-          "Data : ".print; slot_dta.intern_name.print
-          " dans ".print; type_self.raw.name.print
-          (profil_current != NULL).if {
-            profil_current.name.print
-          }
-          '\n'.print
-          */
-        //}
         result_var := rd.variable
         result.add_last (new_write result_var with (expr,slot_dta))
       }
@@ -192,6 +175,10 @@ Private
     } else {
       // Function.
       slot_cod := slot.slot_code idx
+      (is_type_primitive slot_cod).if {
+        // About the type, not the object: not a message (no empty `li_sync_begin/end').
+        cop_arg := NULL
+      }
       (slot_cod.id_section.is_inherit_or_insert).if {
         new_larg := Array Expr .create_with_capacity 1
         new_larg.add_last (data.self_arg.my_copy)
@@ -208,42 +195,16 @@ Private
       } else {
         new_type_self := type_self
       }
-      /*
-      string_tmp.copy "// "
-      new_type_self.display string_tmp
-      string_tmp.append "  /  "
-      type_self.display string_tmp
-      result.add_last (
-        EXTERNAL_C.create (data.position)
-        text (string_tmp.to_string_alias) access NULL persistant True type (TYPE_VOID.default)
-      )
-      */
       new_val := Cast.create new_type_self value (new_larg.first)
       new_larg.at 0 put new_val
-
-
-      /*
-      (new_larg.lower+1).to (new_larg.upper) do { j:Int
-        ts ?= slot_cod.get_argument_type j
-        ((ts != NULL) && {ts = ITM_TYPE_SIMPLE.type_self}).if {
-          (new_larg.at j.static_type != new_type_self).if {
-            new_type_self.print
-            new_larg.at j.static_type.print
-            ts.print
-            string_tmp.clear
-            (slot_cod.argument_list.lower).to (slot_cod.argument_list.upper) do { h:Int
-              slot_cod.argument_list.at h.append_in string_tmp
-            }
-            string_tmp.print
-            '\n'.print
-            warning_error (position,"BUG")
-            semantic_error (new_larg.at j.position,"Type not compatible Self.")
-          }
-          //new_val := CAST.create new_type_self value (new_larg.at j)
-          //new_larg.at j put new_val
+      (cop_arg != NULL).if {
+        // Types which go from one universe to another (see @Escape).
+        (new_larg.lower + 1).to (new_larg.upper) do { j:Int
+          Escape.add_transit (new_larg.at j.static_type)
         }
+        Escape.add_transit (result_expr.static_type)
       }
-      */
+
       (my_profil, wrt_lst) := slot_cod.get_profil new_larg self new_type_self
       //
       (result_expr.static_type.raw = Type_void).if {
@@ -253,6 +214,7 @@ Private
       } else {
         call := Call_slot.create position profil my_profil with wrt_lst cop NULL
         (cop_arg != NULL).if {
+          call.set_cop_sync
           result.add_last (Cop_lock.create position with cop_arg)
           result.add_last call
           result.add_last (Cop_unlock.create position)
@@ -275,7 +237,6 @@ Private
           rd ?= result_expr
           result_var := rd.variable
           (call.is_interrupt).if {
-            //val := PROTOTYPE_CST.create position type (TYPE_NULL.default)
             val := External_c.create position text "/* NODE_STYLE */"
             access NULL persistant False type (type_pointer.default)
           } else {
@@ -290,6 +251,19 @@ Private
   )
 
 Private
+
+  - is_type_primitive s:Slot_code :Boolean <-
+  // A primitive of the compiler about the type (@Utils: `is_expanded_type', `type_id_intern',
+  // `object_size', `is_cop_type'): it reads nothing of the universe of the receiver, so it is
+  // never a COP message, even on an active prototype (`V.object_size' in a generic collection).
+  ( + e:Itm_external
+    + result:Boolean
+    e ?= s.value
+    (e != NULL).if {
+      result := (e.text = "0") || {e.text = "1"} || {e.text = "12"} || {e.text = "15"}
+    }
+    result
+  )
 
   - new_write var:Variable with (e:Expr,slo:Slot_data) :Write <-
   ( + rd:Read

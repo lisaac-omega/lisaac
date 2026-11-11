@@ -7,6 +7,8 @@ Inherit
 Private
   
   - invxform:Transform := Transform.create
+  - flip_m1:Transform := Transform.create
+  - flip_m2:Transform := Transform.create
   
 Mapping, Public
   
@@ -105,6 +107,8 @@ Public
       tex := pen_gl.find_texture (paint.image)
       ((tex.flags & image_flipy) != 0).if {
         + m1,m2:Transform
+        m1 := flip_m1
+        m2 := flip_m2
         m1.translate(0.0,extent1 * 0.5)
         m1.multiply (paint.xform)
         m2.scale(1.0,-1.0)
@@ -116,7 +120,7 @@ Public
         invxform.inverse (paint.xform)
       }
       type := shader_fillimg
-      ((tex.type = texture_rgba) != 0).if {
+      (tex.type = texture_rgba).if {
         tex_type := ((tex.flags & image_premultiplied)!=0).ok 0 or 1
       } else {
         tex_type := 2

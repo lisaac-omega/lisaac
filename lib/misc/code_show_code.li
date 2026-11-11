@@ -15,7 +15,7 @@ Public
   + entry:Code_show_entry
   + top:Real32      // First visible row (may be fractional).
 
-  - margin:Real32 := 28
+  - margin:Real32 <- Code_show_look.px 28
 
   + rows:Array Int
   // Wrapped rows: quadruples (line of the comment, first byte, last byte,

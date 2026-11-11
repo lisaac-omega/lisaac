@@ -16,12 +16,6 @@ Private
 
 Public
 
-  - new_table (l,c:Int) <-
-  (
-    table.make (l,c)
-    line := column := 0
-  )
-
   - add n:String <-
   (
     ? {n != NULL}

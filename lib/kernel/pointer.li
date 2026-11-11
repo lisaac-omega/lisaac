@@ -13,12 +13,6 @@ Public
 
   - object_size:Int <- `sizeof(void *)`:Int
 
-  - is_null:Boolean <- (self = NULL)
-  // Is the external Pointer a NULL pointer ?
-
-  - is_not_null:Boolean <- ! is_null
-  // Is the external Pointer a non-NULL pointer ?
-
 
   - to_c_array:C_array(Uint8) <- Cast Self To (C_array Uint8).on self
   // Convert @pointer into @C_array .

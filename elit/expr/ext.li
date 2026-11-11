@@ -5,8 +5,10 @@ Inherit
   + parent_expr:Flat Expr
   //- parent_op:OP := OP
   
+Insert
+  - parent_recyclable:Recyclable := Recyclable
+
 Private  
-  - stack_ext:Flat Array (Exact Ext)
         
 Public
   
@@ -18,12 +20,12 @@ Public
   + persistant:Boolean
   
   - new:Self <-
-  ( + r:Self; (stack_ext.is_empty).if { r := clone; } else { r := stack_ext.pop; }; r)
+  parent_recyclable.new
   - free <-
   ( (ttok  != NULL).if { ttok.free;  ttok  := NULL }
     (lttok != NULL).if { lttok.free; lttok := NULL }
     persistant := False
-    stack_ext.add_last self
+    parent_recyclable.free
   )
   
   //

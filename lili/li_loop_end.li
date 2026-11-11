@@ -1,0 +1,16 @@
+Header
+  + name := Li_loop_end
+/* Back to the beginning of the enclosing @Li_loop. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  - create:Self <- clone
+
+  - eval fp:Int :Int <-
+  (
+    again := True
+    0
+  )

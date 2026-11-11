@@ -1,7 +1,0 @@
-Header
-  + name := Main
-Public
-  
-  - main <-
-  ( + i_am_unused:Int
-  )

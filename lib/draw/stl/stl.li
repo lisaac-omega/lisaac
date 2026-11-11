@@ -77,7 +77,7 @@ Public
     + s:Int
     //pth.println
     f := File_utils.open_read pth
-    (f.is_null).if {
+    (f = NULL).if {
       "Error: ".print
       pth.print
       " not open.".println

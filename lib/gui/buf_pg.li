@@ -41,7 +41,7 @@ Public
     set_pos_xy (b.last_pos_x,b.last_pos_y)
     w := b.new_gui
     (w != NULL).if { w.init_parent self; }
-    r := init p
+    r := init_win p
     r
   )
   

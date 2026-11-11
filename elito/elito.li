@@ -1,0 +1,241 @@
+Header
+  + name := Elito
+- external :=
+  `unsigned long col_elit[] = {
+  0x10502266,0x104B2565,0x10482A63,0x10432F63,0x104A3667,0x10453D68,0x104B466D,0x40574374,
+  0x20624E7F,0x205A527B,0x20675D88,0x20715B8D,0x207D639F,0x20736A93,0x208167B4,0x20797788,
+  0xFF73846C,0xFF847B9F,0xFF80A96F,0xFFA09AB4,0xFF78B956,0xFF86BB63,0xFFC2BACC,0xFFB9D8A7,
+  0xFFD6D3DC,0xFFFDFFFC};`;
+  
+Insert
+  
+  - parent_constant_pen:Constant_pen := Constant_pen
+  - parent_elito_common:Elito_common := Elito_common
+    
+Private
+  
+  - load_font id:String_alias path p:String_alias <-
+  // The font @p of the assets (`assets/font/' next to the executable), named @id.
+  ( + dta:Array Uint8
+    dta := Array Uint8.create_with_capacity 1024
+    String.tmp { pth:String_buffer
+      pth += "font/" += p
+      System_io.read_asset pth in dta
+    }
+    (Elito_window.pen.create_font_mem id data dta free True = -1).if {
+      string_tmp.copy "Error: Font `"
+      string_tmp.append p
+      string_tmp.append "' not loaded."
+      fail string_tmp
+    }
+  )
+  
+  - put_icone <-
+  ( + img:C_array Uint32
+    + c:Uint32
+    + l:Int
+    + w:Pointer
+    img := C_array Uint32.create (48*48)
+    `{ GLFWimage img`
+    0.to (48*48-1) do { i:Int
+      l := (
+        "gggggggggggggjjjjjkkntwzzzzzzzzzzzzzzztfffffffff\
+        \ggggggggggggjjjjkkknrrrsuuuuppyzzzzzzzzjffffffff\
+        \gggggggggggjjjkkkknnnnnvuuuupnkkyzzzzzzygfffffff\
+        \ggggggggggjjjkkkknnnnnnvuuuupnnnyzzzzzzyhhfffffe\
+        \gggggggggjjjkkknnnnnnnruuuuuvtzzzzzzzzzyihffffee\
+        \gggggggggjjjjjjknrrrtwyxxxzzzzzzzzzzzzzyihhffeee\
+        \ggggggggjjrtwzzzzzzzzzzzzzzzzzzzzzzzzzztiihhfeee\
+        \gggggggjjzzzzzzzzzzzzzzzzzzzzzzzzzzzzztiiihhfeee\
+        \gggggggjzzzzzzzzzzzzzzzzzzzzzzzzzzzzwrlkiiihffee\
+        \gggggggpzzzzzzzzzzzzzzzzxxxxuprnnmmlnlllkiihheee\
+        \gggggggpzzzzzzzzzzzzytuuuuuuupmmmmmmlnllkiihhhee\
+        \ggggggjjyzzzzzzzzzwnmouuuuuuupooommmlnllkiiihhee\
+        \ggggggjjkzzzzzzzzymooouuuuuuuroooommmlllliiihhee\
+        \ggggggjjjtzzzzzzzymmoouuuuuuurooooommllllkiihhee\
+        \ggggggjjkktzzzzzzzyooouuuuuuupooooommmllliiihhee\
+        \ggffggjjkkkrzzzzzzzyrouuuuuuuqooooommmlllkiihhee\
+        \gfffggjjkkknnyzzzzzzzyuuuuuuurooooommmllliiihhee\
+        \ffffggjjkkknnntyzzzzzzzzsuuuvrooooommmllliiihhee\
+        \fffgggjjjkknnnnmtzzzzzzzzyxuurooooommmllliiihhed\
+        \ffgfggjjjkknnnnmmmtzzzzzzzzzvrooooommmllliihhhed\
+        \gffffggjjkkknnnmmmooryzzzzzzzzwoooommmllliihheed\
+        \fffffggjjkkknnnnmmmmmouxzzzzzzzztmommmlliiihheed\
+        \fffffggjjjklknntwzzzzzzzzzzzzzzzzztmmmlliihhhedd\
+        \ffffffggjiiryyzzzzzzzzzzzzzzzzzzzzwrmlliiihheedd\
+        \fffffffhjtzzzzzzzzzzzzzzzzzzzywrmmmmllliihhheddd\
+        \ffffffftzzzzzzzzzzzzzzzzzzxvuommmmmmlliiihheeddd\
+        \ffffftyzzzzzzzzzzzzzzzyxvuvvvommmmllliiihhhedddd\
+        \fffftzzzzzzzzzzzzzzywnmvvvvvvmmmmllliiihhheedddd\
+        \ffftzzzzzzzzzzzzzzpllllsvvvvqmmlllliiiihheedddcc\
+        \fftzzzzzzzzzzzzzwklllllsvvvuplllliiiiihheeddcccc\
+        \ffzzzzzzzzzzzzztiikklllqvvvvnlliiiiihhheeeddcccc\
+        \fpzzzzzzzzzzzzthiiiiiilqvvvviiiiiiihhheeedcccccc\
+        \ftzzzzzzzzzzzzhhhiiiiiiiuvvsiiiiihhhheedcccccccc\
+        \fpzzzzzzzzzzzpehhhhhiiihsvvsiihhhhheeedccccccccc\
+        \ffzzzzzzzzzzzpeehhhhhhhhpvvhhhhhheeeedcccccccccc\
+        \ffwzzzzzzzzzzzndeeehhhhhgvschhheeeedcccccccccccc\
+        \ffdyzzzzzzzzzzzynedeeeeeeqjeeeeedddccccccccccccc\
+        \feeepzzzzzzzzzzzzzypgeeeeeeeddddddcccccccccccccb\
+        \eeeeekwzzzzzzzzzzzzzzzyyyyywwwwwwwwtrjgecbcccbbb\
+        \eeeeeedjyzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzwrebbbb\
+        \eeeeeeeeefpzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzlbbb\
+        \eeeeeeeeeedejryzzzzzzzzzzzzzzzzzzzzzzzzzzzzznbbb\
+        \eeeeeeeeeeddddddgwyyyyyyyyyywwwwwyzzzzzzzzzwbbbb\
+        \eeeeeeeeedddddddddddddddddccccccetzzzzzzzzhbbbba\
+        \eeeeeeedddddddddddddddddcccbbfwyzzzzzzzwlbbbbaaa\
+        \eeeeeedddddddddddddddddcdertzzzzzzzyyrcbbbbbaaaa\
+        \eeeeedddddddddddddddddjwzzzzzzzzzjcbbbbbbbbaaaaa\
+        \eeeddddddddddddddgtyyzzzzzztrnhcbbbbbbbbbaaaaaaa".at i - 'a'
+      ).to_int
+      c := `col_elit[@l]`:Uint32
+      img.at i put c
+    }
+    `img.width = 48; img.height = 48; img.pixels = (unsigned char *)@img`
+    w := Elito_window.win_ptr
+    `glfwSetWindowIcon(@w,1,&img)`
+    `}`
+  )
+  
+Public
+  
+  - load_directory <-
+  ( + buf:C_array Char
+    + cap:Int
+    // HOME:
+    string_tmp.copy (Environment.read_variable "HOME")
+    string_tmp.add_dirsep
+    home_directory := string_tmp.to_string_alias
+    // PWD: the real current directory, $PWD is not updated by a chdir of the
+    // launching program (@Code_show_player).
+    string_tmp.clear
+    Environment.pwd_in string_tmp
+    string_tmp.replace_all '\\' with '/'
+    string_tmp.extend_unless '/'
+    pwd_directory := string_tmp.to_string_alias
+    // ELITO: its data are in lisaac/elito, the executable may be in lisaac/bin.
+    string_tmp.copy (Command_args.executable_directory)
+    string_tmp.append "../elito/"
+    Dirent.reduce_path string_tmp
+    string_tmp.add_dirsep
+    elit_directory := string_tmp.to_string_alias
+    // LIB:
+    `{ FILE *cmd; cmd = popen("which lisaac","r");`
+    string_tmp.clear
+    buf := string_tmp.to_external
+    cap := string_tmp.capacity
+    string_tmp.set_upper (`fread(@buf,1,@cap,cmd)`:Int - 1)
+    `pclose(cmd); }`
+    (! string_tmp.is_empty).if {
+      string_tmp.remove_tail 7
+      string_tmp.append "../lib/"
+      Dirent.reduce_path string_tmp
+      string_tmp.add_dirsep
+      lib_directory := string_tmp.to_string_alias
+    }
+  )
+  
+  - main <-
+  ( + win:Div
+    + buf:Buffer
+    + zone:Div
+    + code:Uint64
+    Signal.infinite_recursion
+        
+    load_directory
+    
+    string_tmp.copy elit_directory
+    string_tmp.append "help.txt"
+    help_path := string_tmp.to_string_alias
+    Parser.read_cfg
+    
+    //KEYBOARD.set_type keyboard
+    
+    color := Color_store.get color_style
+    (color = NULL).if {
+      "\nError: ColorStyle `".print;
+      color_style.print
+      "' not found.\n".print
+      "Note: Modify your file `~/.elito.cfg'\n\n".print;
+      exit 0
+    }
+    
+    // On macOS, a window without decoration does not get the mouse (as elit, see @Build_lisaac).
+    Elito_window.open (default_width,default_height) title "Elito - Lisaac Editor" decorated (System.name = "apple")
+    Elito_window.set_window_position (x_position,y_position)
+    put_icone
+    load_font "sans"             path "Roboto-Regular.ttf"
+    load_font "sans-bold"        path "Roboto-Bold.ttf"
+    load_font "italic"           path "Roboto-Italic.ttf"
+    load_font "bold-italic"      path "Roboto-BoldItalic.ttf"
+    
+    Parser.read_key
+        
+    load_font "Code"             path roman
+    load_font "Code-Bold"        path bold
+    load_font "Code-Italic"      path italic
+    load_font "Code-Bold-Italic" path bold_italic
+    // For the characters missing in the code fonts (ℕ, ℤ, →, é...).
+    load_font "Code-Fallback"    path "DejaVuSansMono.ttf"
+    Elito_window.pen.add_fallback_font ("Code","Code-Fallback")
+    Elito_window.pen.add_fallback_font ("Code-Bold","Code-Fallback")
+    Elito_window.pen.add_fallback_font ("Code-Italic","Code-Fallback")
+    Elito_window.pen.add_fallback_font ("Code-Bold-Italic","Code-Fallback")
+    
+    // Easter egg: Alt Ctrl Shift Y, A, S (the first key is in the low 16 bits).
+    code := Key_code.alt | Key_code.ctrl | Key_code.shift | 's'.to_int
+    code := (code << 16) | Key_code.alt  | Key_code.ctrl  | Key_code.shift | 'a'.to_int
+    code := (code << 16) | Key_code.alt  | Key_code.ctrl  | Key_code.shift | 'y'.to_int
+    Shortcut.create code description NULL action { a:Shortcut; load_anim; Page.get_anim; }
+    
+    (Command_args.count > 1).if {
+      buf := Buffer.create (Command_args.at 1)
+    }.elseif {Buffer.previous_path != NULL} then {          
+      buf := Buffer.create (Buffer.previous_path)
+    } else {
+      buf := Buffer.create help_path
+    }
+      
+    win := Elito_window.root
+    Cmd_bar + Buffer_list.make_buffer_list
+    zone := (Div_zone.create_zone 100.0 + Page.create_page buf) / Cmd_bar.make
+    win + (menu_main / Buffer_bar.make_buffer_bar / zone.sizest).sizest.margin_r 2
+    
+    //menu.print
+    //win.set_debug_mode TRUE
+    win.refresh
+    Paper.run
+  )
+  
+  - draw pen:Pen <-
+  ( + win:Pointer
+    + val:Int
+    + p:Paint
+    - not_focus:Boolean
+    //- old_anim:INTEGER
+    win := Elito_window.win_ptr
+    val := `glfwGetWindowAttrib(@win,GLFW_FOCUSED)`:Int
+    (val = 0).if {
+      not_focus := True
+      //(old_anim = 0).if {
+      //  old_anim := PAPER.animation
+      //  PAPER.set_animation 0
+      //}
+      pen.begin_path
+      pen.rect (0,0) size (default_width,default_height)
+      p := Paint.create_box (32,32) size (default_width-64,default_height-64) 
+        radius 64 feather 64 
+        color (color.focus_off) 
+        to (Color.rgba(0FFh,0FFh,0FFh,0))
+      pen.fill_paint p
+      pen.fill
+      p.free
+    }.elseif {not_focus} then {
+      Buffer.list.foreach { b:Buffer; b.ask_check_reload; }
+      not_focus := False
+      //(old_anim != 0).if {
+      //  PAPER.set_animation old_anim
+      //}
+    }
+  )
+  

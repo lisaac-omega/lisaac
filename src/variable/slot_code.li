@@ -64,7 +64,6 @@ Public
               rd ?= rd.variable.require_first.value
               rd.variable.require_first.debug_display
             )
-            //list_current.debug_display
             semantic_error (position,"Lisaac BUG!!! SLOT_CODE l.61")
           }
           (typ_list.at idx = Type_null).if {
@@ -112,13 +111,16 @@ Public
             {pro.argument_list.count = args.count}
           ).if {            
             result := pro
+            ((pro.argument_list.first != NULL) && {Escape.is_one_expr (args.first) != pro.argument_list.first.type.is_one}).if {
+              // `One': a version for a `One' receiver, another for the others.
+              result := NULL
+            }
             i := args.lower + 1
             {(i <= args.upper) && {result != NULL}}.while_do {
               loc := pro.argument_list.at i
               (
                 (loc != NULL) && {loc.require_first != NULL} &&
                 {args.at i.static_type != loc.require_first.value.static_type} //&&
-                //{loc.type.raw != type_boolean} 2025
               ).if {
                 result := NULL
               }
@@ -171,31 +173,11 @@ Public
 
   + last_type_contract:Type
   + is_require:Boolean
-/*
-  - previous_contract:ITM_LIST <-
-  ( + slot:ITM_SLOT
-    + contract:ITM_LIST
-
-    (is_require).if {
-      slot := last_type_contract.search_require name
-    } else {
-      slot := last_type_contract.search_ensure name
-    }
-    (slot != NULL).if {
-      (is_require).if {
-	contract := slot.pattern_in
-      } else {
-	contract := slot.pattern_out
-      }
-      last_type_contract := last_type_contract.last_type_contract
-    }
-    contract
-  )
-*/
   - create_code is_first:Boolean <-
   ( + contract:Itm_list
     + slot:Itm_slot
     + result,res:Expr
+    + n:String_alias
     + mul:Expr_multiple
     + nb_list,nb_profil:Int
     
@@ -260,6 +242,11 @@ Public
     }
     (nb_list = 1).if {
       put_result result in (profil_slot.result_list.first)
+      n := value.read_name value
+      ((n != NULL) && {value.is_one_variable n}).if {
+        // `One': the result moves the variable (`kept' is NULL after, see @Itm_code.emit_move).
+        value.emit_move n
+      }
     }.elseif {nb_list > 1} then {
       (mul.lower).to (mul.upper) do { j:Int
         put_result (mul.at j) in (profil_slot.result_list.at j)

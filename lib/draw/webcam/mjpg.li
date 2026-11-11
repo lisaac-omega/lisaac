@@ -99,7 +99,7 @@ Public
     //
     (n != NULL).if {
       f := File_utils.open_write n
-      ? {f.is_not_null}
+      ? {f != NULL}
       File_utils.write f buffer img_jpg size sz
       File_utils.close f
     }

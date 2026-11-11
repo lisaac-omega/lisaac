@@ -70,7 +70,7 @@ Public
     res.init_parent p
   )
   
-  - init p:Win :Self <-
+  - init_win p:Win :Self <-
   (
     flag := 0
     init_parent p

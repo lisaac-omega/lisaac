@@ -1,9 +1,12 @@
 Header
   + name := Profil
 /*Method with costumization*/
+Insert
+  
+  + parent_lisaac_common:Flat Lisaac_common
+  
 Inherit
 
-  + parent_any:Flat Any
 
   - parent_parameter_to_type:Flat Parameter_to_type
 
@@ -31,7 +34,6 @@ Public
       result := type_self
     } else {
       // For Genericity.
-      //result := type_self.raw.parameter_to_type p
       result := slot_code.receiver_type.parameter_to_type p
       (result = NULL).if {
         // For Type parametric.
@@ -70,14 +72,6 @@ Public
 
   - add_call p:Profil <-
   ( + found:Boolean ; + cnt:Int
-    /*
-    if (set_call.has p) then {
-      cnt := set_call.at p
-      cnt := cnt + 1
-    } else {
-      cnt := 1
-    }
-    */
     // DCDC petite optim:
     (found, cnt) := set_call.search p
     if found then {
@@ -86,10 +80,7 @@ Public
       cnt := 1
     }
     
-    
-    //set_call.fast_put cnt to p
     set_call.at p put cnt
-    
     
     p.set_back.fast_add self
   )
@@ -104,82 +95,6 @@ Public
   - set_external_present b:Boolean <-
   (
     external_present := b
-  )
-
-  - genere_graph out:String_buffer <-
-  ( //+ key:PROFIL
-    //+ cnt:Int
-    + is_force:Boolean
-    //+ j:Int
-
-    if (external_present) then {
-      
-      
-      
-      /* // DCDC plus de TRAVERSABLE
-      j := set_call.lower
-      {(j <= set_call.upper) && {! is_force}}.while_do {
-        is_force := ! set_call.key j.external_present
-        j := j + 1
-      }
-      */
-      + dummy:Int
-      (is_force, dummy) := set_call.search_key {k:Profil
-        k.external_present
-      }
-      
-      
-      
-      
-    } else {
-      is_force := True
-    }
-    if is_force then {
-      
-      
-      
-      
-      /* // DCDC plus de TRAVERSABLE
-      (set_call.lower).to (set_call.upper) do { j:Int
-        key := set_call.key j
-        cnt := set_call.at j
-        output.append name
-        output.append " -> "
-        output.append (key.name)
-        (cnt > 1).if {
-          output.append "[label=\""
-          cnt.append_in output
-          output.append "\"]"
-        }
-        output.append ";\n"
-      }
-      */
-      
-      
-      set_call.foreach { (key:Profil, cnt:Int)
-        output.append name
-        output.append " -> "
-        output.append (key.name)
-        if (cnt > 1) then {
-          output.append "[label=\""
-          cnt.append_in output
-          output.append "\"]"
-        }
-        output.append ";\n"
-      }
-      
-      
-      
-      
-      
-      
-      
-      
-      (external_present).if {
-        out.append name
-        out.append " [color=red];\n"
-      }
-    }
   )
 
   //
@@ -206,6 +121,167 @@ Public
   + link_count:Int
   + cop_link_count:Int
 
+  //
+  // COP escape analysis (see @Escape), for the pass @esc_pass.
+  //
+
+  + esc_pass:Int
+  + esc_leaks:Boolean
+  // `self' escapes.
+  + esc_returns_fresh:Boolean
+  + esc_return_ok:Boolean
+  + esc_self_calls:Array Profil
+  + esc_self_writes:Array Escape_event
+  // Writes in `self' (directly or by the calls on `self').
+  + esc_arg_leaks:Array Int
+  // Indexes of the arguments (not `self') which escape: the function keeps them.
+  + esc_arg_not_fresh:Array Int
+  // Indexes of the arguments not always given fresh (not escaped) by the callers.
+
+  - esc_reset p:Int <-
+  (
+    esc_pass := p
+    esc_leaks := False
+    esc_returns_fresh := False
+    esc_return_ok := False
+    esc_self_calls := NULL
+    esc_self_writes := NULL
+    esc_arg_leaks := NULL
+    esc_part_leaks := NULL
+    esc_part_leak_index := NULL
+    esc_arg_leaks_out := NULL
+    esc_flow_targets := NULL
+    esc_flow_sources := NULL
+    esc_flow_types := NULL
+    esc_arg_not_fresh := NULL
+  )
+
+  - esc_is_arg_not_fresh j:Int :Boolean <-
+  (esc_arg_not_fresh != NULL) && {esc_arg_not_fresh.fast_first_index_of j <= esc_arg_not_fresh.upper}
+
+  - esc_set_arg_not_fresh j:Int :Boolean <-
+  ( + result:Boolean
+    (esc_is_arg_not_fresh j).if_false {
+      (esc_arg_not_fresh = NULL).if {
+        esc_arg_not_fresh := Array Int .create_with_capacity 2
+      }
+      esc_arg_not_fresh.add_last j
+      result := True
+    }
+    result
+  )
+
+  - esc_is_arg_leak j:Int :Boolean <-
+  (esc_arg_leaks != NULL) && {esc_arg_leaks.fast_first_index_of j <= esc_arg_leaks.upper}
+
+  - esc_add_arg_leak j:Int :Boolean <-
+  ( + result:Boolean
+    (esc_is_arg_leak j).if_false {
+      (esc_arg_leaks = NULL).if {
+        esc_arg_leaks := Array Int .create_with_capacity 2
+      }
+      esc_arg_leaks.add_last j
+      result := True
+    }
+    result
+  )
+
+  + esc_part_leaks:Array Type_full
+  + esc_part_leak_index:Array Int
+  // Parts of the arguments (objects reached by their fields) kept by the function: the type of
+  // the part, and the index of the argument (see @Escape.evaluate).
+
+  - esc_add_part_leak j:Int type t:Type_full :Boolean <-
+  ( + result:Boolean
+    + i:Int
+    (esc_part_leaks = NULL).if {
+      esc_part_leaks := Array Type_full .create_with_capacity 2
+      esc_part_leak_index := Array Int .create_with_capacity 2
+    }
+    i := esc_part_leaks.lower
+    {(i <= esc_part_leaks.upper) && {(esc_part_leak_index.at i != j) || {esc_part_leaks.at i != t}}}.while_do {
+      i := i + 1
+    }
+    (i > esc_part_leaks.upper).if {
+      esc_part_leaks.add_last t
+      esc_part_leak_index.add_last j
+      result := True
+    }
+    result
+  )
+
+  + esc_flow_targets:Array Int
+  + esc_flow_sources:Array Int
+  + esc_flow_types:Array Type_full
+  // What the function stores in its parameters (or their parts): in the parameter (target)
+  // @esc_flow_targets.at i, a value of type @esc_flow_types.at i, from the parameter (source)
+  // @esc_flow_sources.at i, or from elsewhere (-1). Index 0: `self' (see @Escape.evaluate).
+
+  - esc_add_flow t:Int from s:Int type ty:Type_full :Boolean <-
+  ( + result:Boolean
+    + i:Int
+    (esc_flow_targets = NULL).if {
+      esc_flow_targets := Array Int .create_with_capacity 2
+      esc_flow_sources := Array Int .create_with_capacity 2
+      esc_flow_types := Array Type_full .create_with_capacity 2
+    }
+    i := esc_flow_targets.lower
+    {(i <= esc_flow_targets.upper) && {(esc_flow_targets.at i != t) || {esc_flow_sources.at i != s} || {esc_flow_types.at i != ty}}}.while_do {
+      i := i + 1
+    }
+    (i > esc_flow_targets.upper).if {
+      esc_flow_targets.add_last t
+      esc_flow_sources.add_last s
+      esc_flow_types.add_last ty
+      result := True
+    }
+    result
+  )
+
+  + esc_arg_leaks_out:Array Int
+  // The arguments kept elsewhere than into the parameters (see @Escape.is_leak_out).
+
+  - esc_is_arg_leak_out j:Int :Boolean <-
+  (esc_arg_leaks_out != NULL) && {esc_arg_leaks_out.fast_first_index_of j <= esc_arg_leaks_out.upper}
+
+  - esc_add_arg_leak_out j:Int :Boolean <-
+  ( + result:Boolean
+    (esc_is_arg_leak_out j).if_false {
+      (esc_arg_leaks_out = NULL).if {
+        esc_arg_leaks_out := Array Int .create_with_capacity 2
+      }
+      esc_arg_leaks_out.add_last j
+      result := True
+    }
+    result
+  )
+
+  - esc_set_leaks <- ( esc_leaks := True; )
+  - esc_set_returns_fresh b:Boolean <- ( esc_returns_fresh := b; )
+  - esc_set_return_ok b:Boolean <- ( esc_return_ok := b; )
+
+  - esc_add_self_call p:Profil <-
+  (
+    (esc_self_calls = NULL).if {
+      esc_self_calls := Array Profil .create_with_capacity 2
+    }
+    (esc_self_calls.fast_first_index_of p > esc_self_calls.upper).if {
+      esc_self_calls.add_last p
+    }
+  )
+
+  - esc_add_self_write e:Escape_event :Boolean <-
+  ( + result:Boolean
+    (esc_self_writes = NULL).if {
+      esc_self_writes := Array Escape_event .create_with_capacity 2
+    }
+    (esc_self_writes.fast_first_index_of e > esc_self_writes.upper).if {
+      esc_self_writes.add_last e
+      result := True
+    }
+    result
+  )
+
   + name:String_alias
 
   - is_context_sensitive:Boolean <- abstract
@@ -223,10 +299,8 @@ Public
   )
 
   - recursivity_bit:Int8 := 10b
-  - tail_bit:Int8        := 01b
   - inlining_bit:Int8    := 01b
 
-  - is_tail_recursive:Boolean     <- stat = 11b
   - is_not_tail_recursive:Boolean <- stat = 10b
   - is_inlinable:Boolean          <- stat = 01b
   - is_recursive:Boolean          <- (stat & recursivity_bit) != 0
@@ -303,38 +377,6 @@ Public
   // Comparaison.
   //
 
-  - compatibility_with other:Profil <-
-  ( + n1,n2:Int
-    (argument_list.count != other.argument_list.count).if {
-      Position.put_error semantic text "Incorrect vector size argument."
-      code.position.put_position
-      other.code.position.put_position
-      Position.send_error
-    }
-    (argument_list.lower).to (argument_list.upper) do { j:Int
-      (argument_list.at j.type != other.argument_list.at j.type).if {
-        Position.put_error semantic text "Incorrect invariant type argument."
-        argument_list.at j.position.put_position
-        other.argument_list.at j.position.put_position
-        Position.send_error
-      }
-    }
-    (result_list.count != other.result_list.count).if {
-      Position.put_error semantic text "Incorrect vector size result."
-      code.position.put_position
-      other.code.position.put_position
-      Position.send_error
-    }
-    (result_list.lower).to (result_list.upper) do { j:Int
-      (result_list.at j.type != other.result_list.at j.type).if {
-        Position.put_error semantic text "Incorrect invariant type result."
-        result_list.at j.position.put_position
-        other.result_list.at j.position.put_position
-        Position.send_error
-      }
-    }
-  )
-
   - lookup n:String_alias :Local <-
   ( + j:Int
     + result:Local
@@ -389,7 +431,8 @@ Public
           lst := switch.list.at j.code
           (lst.is_empty).if_false {
             msg ?= lst.last
-            ((msg != NULL) && {msg.profil = self}).if {
+            // A COP message (to another universe) is not a recursive call: never a loop.
+            ((msg != NULL) && {msg.profil = self} && {msg.cop_argument = NULL} && {! msg.is_cop_sync}).if {
               count_recur := count_recur + 1
             }
           }
@@ -420,7 +463,6 @@ Public
     (stat = -1).if {
       count_intern_call := count_intern_call + 1
       (count_intern_call = 1).if {
-        //"PROFIL:".print; name.println
         old_list_current   := list_current
         old_profil_current := profil_current
         //
@@ -451,32 +493,19 @@ Public
 
     search_and_convert_tail_recursive
 
+    Escape.begin_profil self
     code ?= code.execute
     // Nettoyer les result ...
     (result_list != NULL).if {
-      /*
-      ((code.count > 0) && {code.last = CALL_NULL}).if {
-        (result_list.lower).to (result_list.upper) do { i:Int
-          ((result_list.at i != NULL) && {result_list.at i.ensure_count != 0}).if {            
-            result_list.at i put NULL
-          }
-        }
-      } else {*/
         (result_list.lower).to (result_list.upper) do { i:Int
           ((result_list.at i != NULL) && {result_list.at i.ensure_count = 0}).if {
             result_list.at i put NULL
           }
         }
-      //}
     }
     Local_seq.clear
 
     seq_call_and_loop := seq_call_and_loop + 1
-    /*
-    (name == "__infix_greater_equal__TEJ").if {
-      OUT # (seq_inline - old_seq_inline) # '/' # inline_lev # '\n'
-    }
-    */
     (
       (
         (
@@ -488,7 +517,6 @@ Public
       {self != profil_add_alias} && {self != profil_hash_code_alias}*/
       
     ).if {
-      //(name == "while_do__EKIC").if { "PROFIL:".print; link_count.println }
       stat := stat | inlining_bit
     }
     (
@@ -574,19 +602,46 @@ Public
     output.add_last ')'
   )
 
+  - foreach_cop_param action:{Local;} <-
+  // Arguments of a COP slot, passed by its message (`self' excluded).
+  ( + v:Local
+    (argument_list.lower).to (argument_list.upper) do { j:Int
+      v := argument_list.at j
+      ((v != NULL) && {v.name != "self"}).if {
+        action.value v
+      }
+    }
+  )
+
+  - append_cop_param n:Int in buffer:String_buffer <-
+  // Field of the @n-th argument in the message of the COP slot (`struct msg_...').
+  (
+    buffer.add_last 'p'
+    n.append_in buffer
+  )
+
+  - genere_cop_param_field buffer:String_buffer <-
+  ( + np:Int
+    foreach_cop_param { v:Local
+      buffer.append "  "
+      v.type.genere_declaration buffer
+      buffer.add_last ' '
+      v.type.genere_star_declaration buffer
+      append_cop_param np in buffer
+      buffer.append ";\n"
+      np := np + 1
+    }
+  )
+
   - genere_handler_cop <-
   (
-    output.append "lith_object *COP_"
+    output.append "void COP_"
     output.append name
-    output.append "(lith_object *obj,pthread_mutex_t *mutex)"
+    output.append "(lith_object *obj,lith_msg *msg)"
   )
 
   - genere <-
-  ( 
-    + ts:Type_full
-    + v:Local
-    + np:Int
-    + low:Int
+  ( + v:Local
 
     ((stat & recursivity_bit) != 0).if {
       counter_recursivity_function := counter_recursivity_function + 1
@@ -598,24 +653,6 @@ Public
     //
     profil_current := self
     ((link_count != 0) || {result_list.count != 0}).if {
-      ((is_cop) && {cop_link_count != 0} && {result_list.count = 0}).if {
-        // COP link.
-        not_yet_implemented
-        output.add_last '\n'
-        genere_handler_cop
-        output.append "\n{ "
-
-        output.append " self;\n\
-        \  self = "
-        output.append "ptr;\n\
-        \  pthread_mutex_lock (&(self->mutex));\n\
-        \  pthread_setspecific(current_thread,self);\n  "
-        output.append name
-        output.append "(self);\n"
-        output.append "  pthread_mutex_unlock (&(self->mutex));\n\
-        \  return(NULL);\n\
-        \};\n"
-      }
       // Version normal.
       output.add_last '\n'
       genere_handler_intern
@@ -628,63 +665,112 @@ Public
       indent.remove_tail 2
       output.append indent
       output.append "}\n"
+      ((is_cop) && {cop_link_count != 0} && {result_list.count = 0}).if {
+        // COP link: the procedure of the message calls the normal version.
+        genere_cop_procedure_begin
+        output.append "  "
+        output.append name
+        output.add_last '('
+        (argument_list.lower).to (argument_list.upper) do { j:Int
+          v := argument_list.at j
+          (v != NULL).if {
+            (output.last != '(').if {
+              output.add_last ','
+            }
+            output.append (v.intern_name)
+          }
+        }
+        output.append ");\n}\n"
+      }
     } else {
       (is_cop).if {
         // COP direct.
-        output.add_last '\n'
-        genere_handler_cop
-        output.add_last '\n'
-        add_comment output
-        //
-        output.append "{\n"
+        mark_cop_tail code
+        genere_cop_procedure_begin
         indent.append "  "
-        (argument_list.count > 0).if {
-          output.append indent
-          v := argument_list.first
-          ((v != NULL) && {v.name = "self"}).if { 
-            genere v result False in output
-            output.add_last '='
-            put_cast_self output
-            output.append "obj;\n"
-            low := 1
-          }
-        }
-        (argument_list.count-low > 0).if {
-          (low).to (argument_list.upper) do { j:Int
-            v := argument_list.at j
-            (v != NULL).if {
-              output.append indent
-              genere v result False in output
-              output.append "=("
-              ts := v.type
-              ts.genere_declaration output
-              output.add_last ' '
-              ts.genere_star_declaration output
-              output.append ")(("
-              put_cast_self output
-              output.append "obj)->param_"
-              np.append_in output
-              output.append ");\n"
-              np := np + 1
-            }
-          }
-          type_self.raw.set_param np
-        }
-        output.append "  pthread_mutex_unlock(&obj->mutex);\n"
-        output.append "  pthread_mutex_lock(mutex);\n"
-        //        
-        slot.receiver_type.name.print
-        '.'.print
-        slot.name.print; '\n'.print
-        
         code.genere_extern_result NULL
-        //
-        output.append "  return NULL;\n}\n"
         indent.remove_tail 2
+        output.append "}\n"
       }
     }
   )
-    
+
+  - mark_cop_tail lst:List <-
+  // The asynchronous messages at the end of @lst, through its branches: in the procedure of a
+  // message (COP direct: the function is called by messages only), the last action of the
+  // message (see @Call_slot.is_cop_tail).
+  ( + msg:Call_slot
+    + switch:Switch
+    + sub:List
+    ((lst != NULL) && {! lst.is_empty}).if {
+      msg ?= lst.last
+      switch ?= lst.last
+      sub ?= lst.last
+      ((msg != NULL) && {msg.cop_argument != NULL}).if {
+        msg.set_cop_tail
+      }
+      (switch != NULL).if {
+        (switch.list.lower).to (switch.list.upper) do { j:Int
+          mark_cop_tail (switch.list.at j.code)
+        }
+      }
+      (sub != NULL).if {
+        mark_cop_tail sub
+      }
+    }
+  )
+
+  - genere_cop_procedure_begin <-
+  // Beginning of the procedure `COP_...' of an asynchronous message: its arguments read
+  // in the message, then the message freed.
+  ( + v:Local
+    + np:Int
+
+    output.add_last '\n'
+    genere_handler_cop
+    output.add_last '\n'
+    add_comment output
+    output.append "{\n"
+    (argument_list.lower).to (argument_list.upper) do { j:Int
+      v := argument_list.at j
+      (v != NULL).if {
+        output.append "  "
+        genere v result False in output
+        (v.name = "self").if {
+          output.add_last '='
+          put_cast_self output
+          output.append "obj;\n"
+        } else {
+          output.append "=((struct msg_"
+          output.append name
+          output.append " *)msg)->"
+          append_cop_param np in output
+          output.append ";\n"
+          np := np + 1
+        }
+      }
+    }
+    output.append "  li_msg_free(msg);\n"
+    type_self.raw.add_cop_profil self
+    (is_cop_report).if {
+      "  ".print
+      slot.receiver_type.name.print
+      '.'.print
+      slot.name.print
+      '\n'.print
+    }
+  )
+
+  - genere_cop_msg_struct buffer:String_buffer <-
+  // Message of this COP slot: its arguments.
+  (
+    buffer.append "struct msg_"
+    buffer.append name
+    buffer.append " {\n  lith_msg h;\n"
+    genere_cop_param_field buffer
+    buffer.append "};\n"
+  )
+
   //
   // Display.
   //
@@ -744,32 +830,6 @@ Private
     buffer.append " */\n"
   )
 
-  /*
-  - recur_cpa buf:String_buffer arg n:Int <-
-  ( + var:LOCAL
-    + tmp:STRING
-
-    (n > argument_list.upper).if {
-      tmp := list_cpa.reference_at buf
-      (tmp = NULL).if {
-        list_cpa.add (buf.to_string_alias)
-      }
-    } else {
-      var := argument_list.at n
-      (var != NULL).if {
-        var.type_list.lower.to (var.type_list.upper) do { i:Int
-          buf.add_last ' '
-          buf.append (var.type_list.at i.name)
-          recur_cpa buf arg (n+1)
-          buf.keep_head (Old buf.count)
-        }
-      } else {
-        recur_cpa buf arg (n+1)
-      }
-    }
-  )
-  */
-
   - append_type buffer:String_buffer <-
   ( + v:Variable
     + nb_arg,nb_arg_poly,tmp:Int
@@ -809,20 +869,6 @@ Private
         nb_func_arg.at (nb_arg,nb_arg_poly) put tmp
       }
     }
-    /*
-    string_tmp.clear
-    nb_arg.append_in string_tmp
-    string_tmp.add_last ' '
-    s := slot
-    (s != NULL).if {
-      string_tmp.append (type_self.raw.name)
-      string_tmp.add_last ' '
-      string_tmp.append (s.name)
-    } else {
-      string_tmp.append name
-    }
-    recur_cpa string_tmp arg (argument_list.lower)
-    */
     (buffer.last = ',').if {
       buffer.remove_last
     }
@@ -879,7 +925,7 @@ Private
       body := switch.list.at k.code
       (body.is_empty).if_false {
         msg_slot ?= body.last
-        ((msg_slot != NULL) && {msg_slot.profil = self}).if {
+        ((msg_slot != NULL) && {msg_slot.profil = self} && {msg_slot.cop_argument = NULL} && {! msg_slot.is_cop_sync}).if {
           link_count := link_count - 1
           msg_slot.argument_to_assignment body index (body.upper) alias False style '!'
           body.at (body.upper) put (Loop_end.create (msg_slot.position) loop loop)

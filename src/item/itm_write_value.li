@@ -56,6 +56,8 @@ Public
         semantic_error (position,"Incorrect size result vector.")
       };      
       result := affect (itm_read.name) with val
+      move_from value to (itm_read.name)
+      check_one_field value to (itm_read.name)
     }
     result
   )

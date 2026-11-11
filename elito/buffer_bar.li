@@ -1,0 +1,175 @@
+Header
+  + name := Buffer_bar
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - is_display:Boolean
+  
+  - set_display b:Boolean <- 
+  ( 
+    (b != is_display).if {      
+      is_display := b
+      (! button.is_empty).if {
+        (b).if { update; }
+        Elito_window.root.refresh
+      }
+    }
+  )
+  
+  - value:Array String_alias := Array String_alias.create_with_capacity 10
+  - button:Array Button := Array Button.create_with_capacity 10
+  
+  - width_min:Real32 := 0
+  - height_min:Real32 <-
+  ( + result:Real32
+    (is_display).if {
+      result := parent_div.height_min
+    }
+    result
+  )
+    
+  - name:String_alias := "BUFFER"
+  
+  - count_view:Int
+  
+  - set_key_access k:Uint16 <- 
+  ( 
+    1.to 12 do { i:Int
+      Shortcut.create (Key_code.key_cmd | k | ('a'.to_uint8 + i - 1)) description "Buffer access." action
+        { s:Shortcut
+        + idx:Int
+        idx := (s.key_list & 0FFh) - 'a'.to_int
+        (! value.at idx.is_empty).if {
+          current_page.set_buffer (Buffer.create (value.at idx))
+        }
+      }
+    }
+  )
+  
+  - update <-
+  ( + i,j:Int
+    + bt:Button
+    + b:Buffer
+    + bh:Buffer_head
+    ((is_display) && {!button.is_empty}).if {
+      {(i <= button.upper) && {i <= Buffer.list.upper}}.while_do {      
+        bt := button.at i
+        b := Buffer.list.at i
+        string_tmp.copy (b.shortname)
+        (b.tag != NULL).if {
+          string_tmp.add_last ' '
+          string_tmp.append (b.tag)
+        }
+        ((! b.is_save) && {b.path.first != '<'}).if {
+          string_tmp.append " **"
+          bt.set_color (Color.rgb(0FFh,0B0h,0B0h))
+        } else {
+          bt.set_color (Color.white)
+        }
+        bt.set_text (string_tmp.to_string_alias)
+        value.at i put (b.path)
+        i := i + 1
+      }
+      j := Buffer.previous_list.lower
+      {(i <= button.upper) && {j <= Buffer.previous_list.upper}}.while_do {
+        bt := button.at i
+        bh := Buffer.previous_list.at j
+        string_tmp.copy (bh.shortname)
+        string_tmp.append " +"
+        bt.set_text (string_tmp.to_string_alias)
+        bt.set_color (Color.gray)
+        value.at i put (bh.path)
+        i := i + 1
+        j := j + 1
+      }
+      {i <= button.upper}.while_do {
+        bt := button.at i
+        bt.set_text "-"
+        bt.set_color (Color.black)
+        value.at i put ""
+        i := i + 1
+      }
+      refresh
+    }
+  )
+  
+  - make_buffer_bar:Self <-
+  ( + bt:Button
+        
+    make "-" to (0,0) size (10,10)
+    widest.height_lock.left.margin_hori 8
+    //
+    1.to 12 do { i:Int
+      bt := Button.create "-" action { c:Click
+        + j:Int
+        {(j <= button.upper) && {button.at j != c}}.while_do { j := j + 1; }
+        (! value.at j.is_empty).if {
+          current_page.set_buffer (Buffer.create (value.at j))
+        }
+      }.width_lock.left.margin_r 32
+      bt.set_design 1
+      button.add_last bt
+      value.add_last ""
+      string_tmp.copy "F"
+      i.append_in string_tmp
+      self + (Text.put (string_tmp.to_string_alias) face "sans-bold" | bt)
+    }
+    update
+    self
+  )
+  
+  - set_position (x,y:Real32) size (w,h:Real32) <-
+  [ /* Remove parent require */ ]
+  ( + nx,nw:Real32
+    + n:Div
+    + i:Int
+    (xo,yo) := (x,y)
+    (width,height) := (w,h)
+    (is_display).if {      
+      nx := x + margin_left
+      count_view := 0
+      {i <= child.upper}.while_do {
+        n := child.at i
+        nw := n.width_min
+        ((nx + nw) > w).if {
+          count_view := i
+          i := child.count
+        } else {
+          n.set_position (nx,y) size (nw,n.height_min)
+          nx := nx + nw
+          i := i + 1
+        }
+      }
+      (count_view = 0).if { count_view := i; }
+    }
+  )
+  
+  - draw pen:Pen <-
+  (  
+    (is_display).if {
+      pen.save
+      pen.begin_path
+      pen.rect_varying (xo+1,yo+1) size (width-2,height-3) radius (8,8,8,8)
+      //width.print; ','.print; height.println
+      //pen.fill_color (COLOR.rgba (255,255,255,128))
+      //pen.fill
+      pen.fill_color (Color.rgba (31,39,36,232))
+      pen.fill
+      pen.stroke_color (Color.rgba (0,0,0,32))
+      pen.stroke_width 3.0
+      pen.stroke
+      pen.restore
+      (is_leaf).if_false {
+        0.to (count_view-1) do { i:Int
+          child.at i.draw pen
+        }
+      }
+    }
+  )

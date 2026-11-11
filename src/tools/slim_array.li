@@ -37,7 +37,6 @@ Public
   // Test de vacuité :
   - is_empty:Boolean <- ( counter = 0 )
 
-
   //
   // Création/Initialisation :
   //
@@ -146,83 +145,6 @@ Public
     }
   )
 
-
-
-
-
-
-
-
   // MHMH : remplacé par utilisation de list
   // + first:E
 
-  /*
-  - last:E <-
-  ( + result:E
-    (list != NULL).if {
-      result := list.last
-    } else {
-      result := first
-    }
-    result
-  )
-  */
-
-
-  /*
-  - upper:Int <-
-  ( + result:Int
-    (first = NULL).if {
-      result := -1
-    }.elseif {list != NULL} then {
-      result := list.count
-    }
-    result
-  )
-  */
-
-  /*
-  - count:Int <- upper + 1
-  */
-
-  /*
-  - is_empty:Boolean <- first = NULL
-  */
-
-  /*
-  - item i:Int :E <-
-  ( + result:E
-
-    (i = 0).if {
-      result := first
-    } else {
-      result := list.at (i-1)
-    }
-    result
-  )
-  */
-
-  /*
-  - put e:E to i:Int <-
-  (
-    (i = 0).if {
-      first := e
-    } else {
-      list.put e to (i-1)
-    }
-  )
-  */
-
-  /*
-  - add_last e:E <-
-  (
-    (first = NULL).if {
-      first := e
-    } else {
-      (list = NULL).if {
-        list := ARRAY E .create_with_capacity 4
-      }
-      list.add_last e
-    }
-  )
-*/

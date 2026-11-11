@@ -1,0 +1,52 @@
+Header
+  + name := Self_to_type
+/*Type parameter -> type full, with Self := a concrete type, exact (data slot of type Self).*/
+Insert
+  
+  + parent_lisaac_common:Flat Lisaac_common
+  
+Inherit
+
+  - parent_parameter_to_type:Flat Parameter_to_type
+
+Public
+
+  + base:Parameter_to_type
+  // For the other type parameters (genericity of the type of the slot).
+
+  + self_type:Type_full
+
+  + is_self_used:Boolean
+  // Self is in the type: one copy of the data slot for each concrete type (see @Slot.slot_data_for).
+
+  - position:Position <- base.position
+
+  - parameter_to_type p:Itm_type_parameter :Type_full <-
+  ( + result:Type_full
+
+    (p.name = str_self).if {
+      is_self_used := True
+      result := self_type
+    } else {
+      result := base.parameter_to_type p
+    }
+    result
+  )
+
+  //
+  // Creation.
+  //
+
+  - create b:Parameter_to_type self t:Type_full :Self <-
+  ( + result:Self
+    result := clone
+    result.make b self t
+    result
+  )
+
+  - make b:Parameter_to_type self t:Type_full <-
+  (
+    base := b
+    self_type := t
+    is_self_used := False
+  )

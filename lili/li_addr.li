@@ -1,0 +1,21 @@
+Header
+  + name := Li_addr
+/* Address of a local: the value of a local @Flat structure. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + off:Int
+
+  - create o:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make o
+    result
+  )
+
+  - make o:Int <- ( off := o; )
+
+  - eval fp:Int :Int <- fp + off

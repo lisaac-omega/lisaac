@@ -1,0 +1,49 @@
+Header
+  + name := Key_code
+/*
+  Key codes of elito, on 16 bits: the modifiers of @Keyboard (@Keyboard.cmd)
+  in the high byte, the character (or the special key) in the low byte.
+  */
+Insert
+
+  - parent_utils:Utils := Utils
+
+Public
+
+  - ctrl:Uint16    := 0100h
+  - alt_gr:Uint16  := 0200h
+  - alt:Uint16     := 0400h
+  - key_cmd:Uint16 := 0800h
+  - shift:Uint16   := 1000h
+
+  - code c:Char cmd cm:Uint8 :Uint16 <-
+  // The code of the byte @c typed with the modifiers @cm (see @Keyboard.put).
+  (
+    (cm.to_uint16 << 8) | c.to_uint8.to_uint16
+  )
+
+  - key_to_string k:Uint16 :String <-
+  ( + c:Char
+    + result:String_buffer
+    result := String_buffer.create 16
+    ((k & ctrl)   != 0).if { result.append "Ctrl "  }
+    ((k & alt_gr) != 0).if { result.append "AltGr " }
+    ((k & alt)    != 0).if { result.append "Alt "   }
+    ((k & shift)  != 0).if { result.append "Shift " }
+    c := (k & 0FFh).to_uint8.to_char
+    ((k & key_cmd) != 0).if {
+      (c.in_range 'a' to 'l').if { result.add_last 'F'; ((c - 'a').to_int + 1).append_in result; }
+      .elseif {c = 'U'} then { result.append "Up"     }.elseif {c = 'D'} then { result.append "Down"   }
+      .elseif {c = 'L'} then { result.append "Left"   }.elseif {c = 'R'} then { result.append "Right"  }
+      .elseif {c = 'P'} then { result.append "PgUp"   }.elseif {c = 'N'} then { result.append "PgDown" }
+      .elseif {c = 'S'} then { result.append "Suppr"  }.elseif {c = 'I'} then { result.append "Inser"  }
+      .elseif {c = 'B'} then { result.append "Beg"    }.elseif {c = 'E'} then { result.append "End"    }
+      .elseif {c = '\27\'} then { result.append "Esc" }.elseif {c = '\t'} then { result.append "Tab"  }
+      .elseif {c = '\n'} then { result.append "Enter" }.elseif {c = '\b'} then { result.append "Del" } else {
+        result.add_last c
+      }
+    } else {
+      result.add_last c
+    }
+    result
+  )

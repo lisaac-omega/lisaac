@@ -1,19 +1,23 @@
 Header
   + name := Fontinfo
+/* @stbtt_fontinfo of stb_truetype v1.24 (Sean Barrett, public domain), and the
+   functions that take it: font tables, character to glyph mapping, glyph
+   outlines (TrueType and CFF), metrics, kerning (kern and GPOS tables), SVG
+   documents, bitmaps, signed distance fields and font names. */
 Inherit
-  
+
   - parent_ttf_constant:Ttf_constant := Ttf_constant
 
 Public
 
   + userdata:C_array Uint8
   - set_userdata d:C_array Uint8 <- ( userdata := d; )
-  
+
   + data:C_array Uint8; // pointer to .ttf file
-  + fontstart:Int;            // offset of start of font
+  + fontstart:Int;      // offset of start of font
 
   + num_glyphs:Int; // number of glyphs, needed for range checking
-  
+
   // table locations as offset from start of .ttf
   + loca:Int
   + head:Int
@@ -21,226 +25,359 @@ Public
   + hhea:Int
   + hmtx:Int
   + kern:Int
-  
+  + gpos:Int
+  + svg:Int
+
   // a cmap mapping for our chosen character encoding
   + index_map:Int
-  
+
   // format needed to map from glyph index to glyph
   + index_to_loc_format:Int
-  
+
+  + cff:Ttf_buf;         // cff font data
+  + charstrings:Ttf_buf; // the charstring index
+  + gsubrs:Ttf_buf;      // global charstring subroutines index
+  + subrs:Ttf_buf;       // private charstring subroutines index
+  + fontdicts:Ttf_buf;   // array of font dicts
+  + fdselect:Ttf_buf;    // map from glyph to fontdict
+
   - create_font dta:C_array Uint8 start ftstart:Int :Self <-
+  // As @stbtt_InitFont: @NULL if the font is not supported.
   ( + result:Self
     result := clone
-    result.init_font dta start ftstart
+    (! result.init_font dta start ftstart).if { result := NULL; }
     result
   )
-  
-  - init_font dta:C_array Uint8 start ftstart:Int <-
-  ( + cmap,t,encoding_record:Uint32
-    + num_tables:Int32
-    + n:Uint16
 
+  - init_font dta:C_array Uint8 start ftstart:Int :Boolean <-
+  ( + cmap,t,num_tables:Int
+    + result:Boolean
     data := dta
     fontstart := ftstart
+    cff := Ttf_buf.empty
 
-    cmap := find_table (dta, ftstart) name "cmap"
-    loca := find_table (dta, ftstart) name "loca"
-    head := find_table (dta, ftstart) name "head"
-    glyf := find_table (dta, ftstart) name "glyf"
-    hhea := find_table (dta, ftstart) name "hhea"
-    hmtx := find_table (dta, ftstart) name "hmtx"
-    kern := find_table (dta, ftstart) name "kern"; // not required
-    (
-      (cmap!=0) && {loca!=0} && {head!=0} && {glyf!=0} && {hhea!=0} && {hmtx!=0}
-    ).if {
+    cmap := find_table (dta, ftstart) name "cmap";  // required
+    loca := find_table (dta, ftstart) name "loca";  // required
+    head := find_table (dta, ftstart) name "head";  // required
+    glyf := find_table (dta, ftstart) name "glyf";  // required
+    hhea := find_table (dta, ftstart) name "hhea";  // required
+    hmtx := find_table (dta, ftstart) name "hmtx";  // required
+    kern := find_table (dta, ftstart) name "kern";  // not required
+    gpos := find_table (dta, ftstart) name "GPOS";  // not required
+
+    result := (cmap != 0) && {head != 0} && {hhea != 0} && {hmtx != 0}
+    result.if {
+      (glyf != 0).if {
+        // required for truetype
+        result := loca != 0
+      } else {
+        result := init_cff
+      }
+    }
+    result.if {
       t := find_table (dta, ftstart) name "maxp"
-      (t!=0).if {
-        num_glyphs := ttushort(dta+t+4)
+      (t != 0).if {
+        num_glyphs := u16(dta+t+4)
       } else {
         num_glyphs := 0FFFFh
       }
+      svg := -1
       // find a cmap encoding table we understand *now* to avoid searching
       // later. (todo: could make this installable)
       // the same regardless of glyph.
-      num_tables := ttushort(dta + cmap + 2)
+      num_tables := u16(dta + cmap + 2)
       index_map := 0
       0.to (num_tables-1) do { i:Int
+        + encoding_record:Int
         encoding_record := cmap + 4 + 8 * i
         // find an encoding we understand:
-        n := ttushort(dta+encoding_record)
-        (n = platform_id_microsoft).if {
-          n := ttushort(dta+encoding_record+2)
-          ((n = ms_eid_unicode_bmp) || {n = ms_eid_unicode_full}).if {
+        (u16(dta+encoding_record) = platform_id_microsoft).if {
+          + eid:Int
+          eid := u16(dta+encoding_record+2)
+          ((eid = ms_eid_unicode_bmp) || {eid = ms_eid_unicode_full}).if {
             // MS/Unicode
-            `/* Pb avec le compilo 0.42 en -boost */`
-            index_map := cmap + ttulong(dta+encoding_record+4)
+            index_map := cmap + u32(dta+encoding_record+4)
           }
-        }.elseif {n = platform_id_unicode} then {
+        }.elseif {u16(dta+encoding_record) = platform_id_unicode} then {
           // Mac/iOS has these
           // all the encodingIDs are unicode, so we don't bother to check it
-          index_map := cmap + ttulong(dta+encoding_record+4)
+          index_map := cmap + u32(dta+encoding_record+4)
         }
       }
-      (index_map != 0).if {
-        index_to_loc_format := ttushort(dta+head + 50)
+      (index_map = 0).if {
+        result := False
+      } else {
+        index_to_loc_format := u16(dta+head + 50)
       }
     }
+    result
   )
-    
-  - find_glyph_index unicode_pt:Uint32 :Int <-
-  ( + dta:C_array Uint8
-    + idx:Uint32
-    + format:Uint16
+
+  - init_cff:Boolean <-
+  // initialization for CFF / Type2 fonts (OTF)
+  ( + b,topdict,topdictidx:Ttf_buf
+    + ints:C_array Uint32
+    + cstype,charstrings_off,fdarrayoff,fdselectoff,cff_off:Int
+    + result:Boolean
+    cff_off := find_table (data, fontstart) name "CFF "
+    (cff_off != 0).if {
+      ints := C_array Uint32.create 1
+      fontdicts := Ttf_buf.empty
+      fdselect := Ttf_buf.empty
+      // @TODO this should use size from table (not 512MB)
+      cff := Ttf_buf.create (data+cff_off, 512*1024*1024)
+      b := cff.copy
+      // read the header
+      b.skip 2
+      b.seek (b.get8); // hdrsize
+      // @TODO the name INDEX could list multiple fonts,
+      // but we just use the first one.
+      b.cff_get_index;  // name INDEX
+      topdictidx := b.cff_get_index
+      topdict := topdictidx.cff_index_get 0
+      b.cff_get_index;  // string INDEX
+      gsubrs := b.cff_get_index
+      ints.at 0 put 0; topdict.dict_get_ints 17 count 1 in ints; charstrings_off := ints.at 0
+      ints.at 0 put 2; topdict.dict_get_ints (100h | 6) count 1 in ints; cstype := ints.at 0
+      ints.at 0 put 0; topdict.dict_get_ints (100h | 36) count 1 in ints; fdarrayoff := ints.at 0
+      ints.at 0 put 0; topdict.dict_get_ints (100h | 37) count 1 in ints; fdselectoff := ints.at 0
+      subrs := get_subrs (b, topdict)
+      // we only support Type 2 charstrings
+      result := (cstype = 2) && {charstrings_off != 0}
+      (result && {fdarrayoff != 0}).if {
+        // looks like a CID font
+        (fdselectoff = 0).if {
+          result := False
+        } else {
+          b.seek fdarrayoff
+          fontdicts := b.cff_get_index
+          fdselect := b.range (fdselectoff, b.size - fdselectoff)
+        }
+      }
+      result.if {
+        b.seek charstrings_off
+        charstrings := b.cff_get_index
+      }
+    }
+    result
+  )
+
+  - get_subrs (pcff,pfontdict:Ttf_buf) :Ttf_buf <-
+  // As @stbtt__get_subrs, on copies (the C passes the buffers by value).
+  ( + c,fontdict,pdict:Ttf_buf
+    + private_loc,subrsoff:C_array Uint32
+    + result:Ttf_buf
+    c := pcff.copy
+    fontdict := pfontdict.copy
+    private_loc := C_array Uint32.create 2
+    subrsoff := C_array Uint32.create 1
+    fontdict.dict_get_ints 18 count 2 in private_loc
+    ((private_loc.at 1 = 0) || {private_loc.at 0 = 0}).if {
+      result := Ttf_buf.empty
+    } else {
+      pdict := c.range (private_loc.at 1, private_loc.at 0)
+      pdict.dict_get_ints 19 count 1 in subrsoff
+      (subrsoff.at 0 = 0).if {
+        result := Ttf_buf.empty
+      } else {
+        c.seek (private_loc.at 1 + subrsoff.at 0)
+        result := c.cff_get_index
+      }
+    }
+    result
+  )
+
+  - get_svg:Int <-
+  ( + t,offset:Int
+    (svg < 0).if {
+      t := find_table (data, fontstart) name "SVG "
+      (t != 0).if {
+        offset := u32(data + t + 2)
+        svg := t + offset
+      } else {
+        svg := 0
+      }
+    }
+    svg
+  )
+
+  //
+  // Character to glyph mapping
+  //
+
+  - find_glyph_index unicode_codepoint:Int :Int <-
+  ( + format:Int
     + result:Int
-    
-    dta := data
-    idx := index_map
-    format := ttushort(dta + idx + 0)
+    format := u16(data + index_map + 0)
     (format = 0).if { // apple byte encoding
-      + bytes:Uint32
-      bytes := ttushort(dta + idx + 2)
-      (unicode_pt < bytes-6).if {
-        result := ttbyte(dta + idx + 6 + unicode_pt)
+      + bytes:Int
+      bytes := u16(data + index_map + 2)
+      (unicode_codepoint < bytes-6).if {
+        result := u8(data + index_map + 6 + unicode_codepoint)
       }
     }.elseif {format = 6} then {
       + first,count:Uint32
-      first := ttushort(dta + idx + 6)
-      count := ttushort(dta + idx + 8)
-      ((unicode_pt >= first) && {unicode_pt < first+count}).if {
-        result := ttushort(dta + idx + 10 + (unicode_pt - first)*2)
+      first := ttushort(data + index_map + 6)
+      count := ttushort(data + index_map + 8)
+      ((unicode_codepoint.to_raw_uint32 >= first) && {unicode_codepoint.to_raw_uint32 < first+count}).if {
+        result := u16(data + index_map + 10 + (unicode_codepoint - first)*2)
       }
     }.elseif {format = 2} then {
-      // @TODO: high-byte mapping for japanese/chinese/korean
-      not_yet_implemented
-    }.elseif {format = 4} then { 
-      // standard mapping for windows fonts: binary 
-      // search collection of ranges
-      + segcount,search_range,entry_selector,range_shift:Uint16
-      + end_count,search:Uint32
-      + offset,start,item:Uint16
-      segcount := ttushort(dta+idx+6) >> 1
-      search_range := ttushort(dta+idx+8) >> 1
-      entry_selector := ttushort(dta+idx+10)
-      range_shift := ttushort(dta+idx+12) >> 1
+      ? {False}; // @TODO: high-byte mapping for japanese/chinese/korean
+    }.elseif {format = 4} then {
+      // standard mapping for windows fonts: binary search collection of ranges
+      + segcount,search_range,entry_selector,range_shift:Int
+      + end_count,search:Int
+      segcount := u16(data+index_map+6) >> 1
+      search_range := u16(data+index_map+8) >> 1
+      entry_selector := u16(data+index_map+10)
+      range_shift := u16(data+index_map+12) >> 1
       // do a binary search of the segments
-      end_count := idx + 14
+      end_count := index_map + 14
       search := end_count
-      (unicode_pt <= 0FFFFh).if {
+      (unicode_codepoint <= 0FFFFh).if {
         // they lie from endCount .. endCount + segCount
         // but searchRange is the nearest power of two, so...
-        (unicode_pt >= ttushort(dta + search + range_shift*2)).if {
+        (unicode_codepoint >= u16(data + search + range_shift*2)).if {
           search := search + range_shift*2
         }
         // now decrement to bias correctly to find smallest
         search := search - 2
-        {entry_selector!=0}.while_do {
-          + end:Uint16
+        {entry_selector != 0}.while_do {
           search_range := search_range >> 1
-          end := ttushort(dta + search + search_range*2)
-          (unicode_pt > end).if {
+          (unicode_codepoint > u16(data + search + search_range*2)).if {
             search := search + search_range*2
           }
           entry_selector := entry_selector - 1
         }
         search := search + 2
-        item := ((search - end_count) >> 1).to_uint16
-        
-        ? {unicode_pt <= ttushort(dta + end_count + 2*item)}
-        start := ttushort(dta + idx + 14 + segcount*2 + 2 + 2*item)
-        (unicode_pt >= start).if {
-          offset := ttushort(dta + idx + 14 + segcount*6 + 2 + 2*item)
-          (offset = 0).if {
-            result := unicode_pt.to_int + ttshort(dta + (idx + 14 + segcount*4 + 2 + 2*item))
-          } else {
-            result := ttushort(dta + offset + (unicode_pt-start)*2 + idx + 14 + segcount*6 + 2 + 2*item)
+        {
+          + offset,start,item:Int
+          item := ((search - end_count) >> 1) & 0FFFFh
+          ? {unicode_codepoint <= u16(data + end_count + 2*item)}
+          start := u16(data + index_map + 14 + segcount*2 + 2 + 2*item)
+          (unicode_codepoint >= start).if {
+            offset := u16(data + index_map + 14 + segcount*6 + 2 + 2*item)
+            (offset = 0).if {
+              result := (unicode_codepoint + s16(data + index_map + 14 + segcount*4 + 2 + 2*item)) & 0FFFFh
+            } else {
+              result := u16(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item)
+            }
           }
-        }
+        }.value
       }
     }.elseif {(format = 12) || {format = 13}} then {
-      + ngroups:Int32
-      + low,high:Int32
-      ngroups := ttlong(dta+idx+12)
-      low := 0; high := ngroups
+      + ngroups:Uint32
+      + low,high:Int
+      + found:Boolean
+      ngroups := ttulong(data+index_map+12)
+      low := 0; high := ngroups.to_raw_int32
       // Binary search the right group.
-      {(low < high) && {result = 0}}.while_do {
-        + mid:Int32
+      {(low < high) && {! found}}.while_do {
+        + mid:Int
         + start_char,end_char:Uint32
         mid := low + ((high-low) >> 1); // rounds down, so low <= mid < high
-        start_char := ttulong(dta+idx+16+mid*12)
-        end_char := ttulong(dta+idx+16+mid*12+4)
-        (unicode_pt < start_char).if {
+        start_char := ttulong(data+index_map+16+mid*12)
+        end_char := ttulong(data+index_map+16+mid*12+4)
+        (unicode_codepoint.to_raw_uint32 < start_char).if {
           high := mid
-        }.elseif {unicode_pt > end_char} then {
+        }.elseif {unicode_codepoint.to_raw_uint32 > end_char} then {
           low := mid+1
         } else {
           + start_glyph:Uint32
-          start_glyph := ttulong(dta+idx+16+mid*12+8)
+          start_glyph := ttulong(data+index_map+16+mid*12+8)
           (format = 12).if {
-            result := start_glyph + unicode_pt-start_char
+            result := (start_glyph + unicode_codepoint.to_raw_uint32 - start_char).to_raw_int32
           } else { // format == 13
-            result := start_glyph
+            result := start_glyph.to_raw_int32
           }
+          found := True
         }
       }
+      // not found
     } else {
       // @TODO
-      not_yet_implemented
+      ? {False}
     }
     result
   )
-    
-  - get_codepoint_shape unicode_pt:Int in vertices:Array (Flat Tt_vertex) :Int <-
+
+  - get_codepoint_shape unicode_codepoint:Int :Array (Flat Tt_vertex) <-
   (
-    get_glyph_shape (find_glyph_index unicode_pt) in vertices
+    get_glyph_shape (find_glyph_index unicode_codepoint)
   )
-  
+
   - get_glyf_offset glyph_index:Int :Int <-
   ( + g1,g2:Int
     + result:Int
-
+    ? {cff.size = 0}
     ((glyph_index >= num_glyphs) || {index_to_loc_format >= 2}).if {
-      result := -1; // unknown index->glyph map format
+      result := -1; // glyph index out of range, or unknown index->glyph map format
     } else {
       (index_to_loc_format = 0).if {
-        g1 := glyf + ttushort(data + loca + glyph_index * 2) * 2
-        g2 := glyf + ttushort(data + loca + glyph_index * 2 + 2) * 2
+        g1 := glyf + u16(data + loca + glyph_index * 2) * 2
+        g2 := glyf + u16(data + loca + glyph_index * 2 + 2) * 2
       } else {
-        g1 := glyf + ttulong(data + loca + glyph_index * 4)
-        g2 := glyf + ttulong(data + loca + glyph_index * 4 + 4)
+        g1 := glyf + u32(data + loca + glyph_index * 4)
+        g2 := glyf + u32(data + loca + glyph_index * 4 + 4)
       }
-      result := (g1=g2).ok (-1) or g1; // if length is 0, return -1
+      result := (g1 = g2).ok (-1) or g1; // if length is 0, return -1
     }
     result
   )
 
-  - get_glyph_box glyph_index:Int
-  :(Int,Int,Int,Int) <-
+  - glyph_box glyph_index:Int :(Boolean,Int,Int,Int,Int) <-
+  // As @stbtt_GetGlyphBox: @False if the glyph has no box.
   ( + g,x0,y0,x1,y1:Int
-    g := get_glyf_offset glyph_index
-    (g >= 0).if {
-      x0 := ttshort (data + (g + 2))
-      y0 := ttshort (data + (g + 4))
-      x1 := ttshort (data + (g + 6))
-      y1 := ttshort (data + (g + 8))
+    + result:Boolean
+    (cff.size != 0).if {
+      (result,x0,y0,x1,y1) := get_glyph_info_t2 glyph_index
+      result := True
+    } else {
+      g := get_glyf_offset glyph_index
+      (g >= 0).if {
+        x0 := s16(data + g + 2)
+        y0 := s16(data + g + 4)
+        x1 := s16(data + g + 6)
+        y1 := s16(data + g + 8)
+        result := True
+      }
     }
-    x0,y0, x1,y1
+    result,x0,y0,x1,y1
   )
 
-  - get_codepoint_box info:Fontinfo code codepoint:Int
-  :(Int,Int,Int,Int) <-
+  - get_glyph_box glyph_index:Int :(Int,Int,Int,Int) <-
+  ( + x0,y0,x1,y1:Int
+    + ok:Boolean
+    (ok,x0,y0,x1,y1) := glyph_box glyph_index
+    x0,y0,x1,y1
+  )
+
+  - get_codepoint_box codepoint:Int :(Int,Int,Int,Int) <-
   (
-    get_glyph_box info index (find_glyph_index(info,codepoint))
+    get_glyph_box (find_glyph_index codepoint)
   )
 
   - is_glyph_empty glyph_index:Int :Boolean <-
-  ( + g:Int
-    g := get_glyf_offset glyph_index
-    (g < 0) || {ttshort(data + g) = 0}
+  ( + g,n,x0,y0,x1,y1:Int
+    + ok:Boolean
+    + result:Boolean
+    (cff.size != 0).if {
+      (ok,x0,y0,x1,y1,n) := run_glyph_info_t2 glyph_index
+      result := n = 0
+    } else {
+      g := get_glyf_offset glyph_index
+      result := (g < 0) || {s16(data + g) = 0}
+    }
+    result
   )
 
-  - close_shape (vertices:Array (Flat Tt_vertex),num_verts:Int)
-  offset (was_off,start_off:Boolean)
-  size (sx,sy,scx,scy,cx,cy:Int32) :Int <-
+  //
+  // Glyph outlines
+  //
+
+  - close_shape (vertices:Array (Flat Tt_vertex),num_verts:Int) offset (was_off,start_off:Boolean)
+  size (sx,sy,scx,scy,cx,cy:Int) :Int <-
   ( + num_vertices:Int
     num_vertices := num_verts
     (start_off).if {
@@ -253,102 +390,94 @@ Public
     } else {
       (was_off).if {
         vertices.at num_vertices.make vcurve pos (sx,sy,cx,cy)
-        num_vertices := num_vertices + 1
       } else {
         vertices.at num_vertices.make vline pos (sx,sy,0,0)
-        num_vertices := num_vertices + 1
       }
+      num_vertices := num_vertices + 1
     }
     num_vertices
   )
 
-  - get_glyph_shape glyph_index:Int :Array (Flat Tt_vertex) <-
-  ( + number_of_contours:Int16
-    + dta,end_pts_of_contours:C_array Uint8
+  - get_glyph_shape_tt glyph_index:Int :Array (Flat Tt_vertex) <-
+  ( + number_of_contours:Int
+    + end_pts_of_contours,points:C_array Uint8
     + vertices:Array (Flat Tt_vertex)
     + g,num_vertices:Int
-    dta := data
     g := get_glyf_offset glyph_index
-
-    (g >= 0).if { 
-      number_of_contours := ttshort(dta + g)
+    (g >= 0).if {
+      number_of_contours := s16(data + g)
       (number_of_contours > 0).if {
         + flags,flagcount:Uint8
-        + ins,i,j,m,n,next_move:Int32
+        + ins,i,j,m,n,next_move,off:Int
         + was_off,start_off:Boolean
-        + x,y,cx,cy,sx,sy, scx,scy:Int32
-        + points:C_array Uint8
-        + off:Int
-        end_pts_of_contours := dta + g + 10
-        ins := ttushort(dta + g + 10 + number_of_contours * 2)
-        points := dta + (g + 10 + number_of_contours * 2 + 2 + ins)
-        n := ttushort(end_pts_of_contours + (number_of_contours*2-2))+1
-        // a loose bound on how many vertices we might need
-        m := n + 2*number_of_contours
-        vertices := alloc_vertices m
-        next_move := flagcount := 0
+        + x,y,cx,cy,sx,sy,scx,scy:Int
+        end_pts_of_contours := data + g + 10
+        ins := u16(data + g + 10 + number_of_contours * 2)
+        points := data + (g + 10 + number_of_contours * 2 + 2 + ins)
+        n := 1 + u16(end_pts_of_contours + (number_of_contours*2-2))
+        m := n + 2*number_of_contours;  // a loose bound on how many vertices we might need
+        // (one more, as the C may read the flags of the point after the last one)
+        vertices := alloc_vertices (m + 1)
+        next_move := 0
+        flagcount := 0
         // in first pass, we load uninterpreted data into the allocated array
         // above, shifted to the end of the array so we won't overwrite it when
         // we create our final data starting from the front
-        // starting offset for uninterpreted data, regardless 
-        // of how m ends up being calculated
-        off := m - n
-        
-        // first load flags        
-        0.to (n-1) do { i:Int
+        off := m - n; // starting offset for uninterpreted data, regardless of how m ends up being calculated
+
+        // first load flags
+        0.to (n-1) do { k:Int
           (flagcount = 0).if {
-            flags := points.first.to_uint8
+            flags := points.first
             points := points + 1
             ((flags & 8) != 0).if {
-              flagcount := points.first.to_uint8
+              flagcount := points.first
               points := points + 1
             }
           } else {
             flagcount := flagcount - 1
           }
-          vertices.at (off+i).set_type flags
+          vertices.at (off+k).set_type flags
         }
-        
+
         // now load x coordinates
         x := 0
-        0.to (n-1) do { i:Int
-          flags := vertices.at (off+i).type
+        0.to (n-1) do { k:Int
+          flags := vertices.at (off+k).type
           ((flags & 2) != 0).if {
-            + dx:Int16
+            + dx:Int
             dx := points.first
             points := points + 1
-            x := x + ((flags & 16)!=0).ok dx or (-dx)
+            ((flags & 16) != 0).if { x := x + dx; } else { x := x - dx; }; // ???
           } else {
             ((flags & 16) = 0).if {
-              //"x:".print; x.print; ' '.print
-              //points.first.print; 'x'.print; points.second.print; '\n'.print
-              x := x + (points.first.to_int16<<8 | points.second)
+              x := x + ((points.at 0.to_int*256 + points.at 1).to_raw_int16)
               points := points + 2
             }
           }
-          //"ofs+i:".print; (off+i).print; " x:".print; x.to_int16.print; '\n'.print
-          vertices.at (off+i).set_x (x.to_int16)
+          vertices.at (off+k).set_x (x.to_raw_int16)
         }
 
         // now load y coordinates
         y := 0
-        0.to (n-1) do { i:Int
-          flags := vertices.at (off+i).type
+        0.to (n-1) do { k:Int
+          flags := vertices.at (off+k).type
           ((flags & 4) != 0).if {
-            + dy:Int16
+            + dy:Int
             dy := points.first
             points := points + 1
-            y := y + ((flags & 32)!=0).ok dy or (-dy)
+            ((flags & 32) != 0).if { y := y + dy; } else { y := y - dy; }; // ???
           } else {
             ((flags & 32) = 0).if {
-              y := y + (points.first.to_int16<<8 | points.second)
+              y := y + ((points.at 0.to_int*256 + points.at 1).to_raw_int16)
               points := points + 2
             }
           }
-          vertices.at (off+i).set_y (y.to_int16)
+          vertices.at (off+k).set_y (y.to_raw_int16)
         }
 
         // now convert them to our format
+        num_vertices := 0
         sx := sy := cx := cy := scx := scy := 0
         i := 0
         {i < n}.while_do {
@@ -357,30 +486,24 @@ Public
           y     := vertices.at (off+i).y
           (next_move = i).if {
             (i != 0).if {
-              num_vertices := close_shape (vertices,num_vertices)
-              offset (was_off, start_off)
-              size (sx,sy,scx,scy,cx,cy)
+              num_vertices := close_shape (vertices,num_vertices) offset (was_off, start_off) size (sx,sy,scx,scy,cx,cy)
             }
-            // now start the new one               
+            // now start the new one
             start_off := (flags & 1) = 0
             (start_off).if {
-              // if we start off with an off-curve point, 
-              // then when we need to find a point on the curve
-              // where we can start, and we need to save some 
-              // state for when we wraparound.
+              // if we start off with an off-curve point, then when we need to find a point on the curve
+              // where we can start, and we need to save some state for when we wraparound.
               scx := x
               scy := y
               ((vertices.at (off+i+1).type & 1) = 0).if {
-                // next point is also a curve point, 
-                // so interpolate an on-point curve
+                // next point is also a curve point, so interpolate an on-point curve
                 sx := (x + vertices.at (off+i+1).x) >> 1
                 sy := (y + vertices.at (off+i+1).y) >> 1
               } else {
                 // otherwise just use the next point as our start point
                 sx := vertices.at (off+i+1).x
                 sy := vertices.at (off+i+1).y
-                // we're using point i+1 as the starting point, so skip it
-                i := i + 1
+                i := i + 1; // we're using point i+1 as the starting point, so skip it
               }
             } else {
               sx := x
@@ -389,13 +512,12 @@ Public
             vertices.at num_vertices.make vmove pos (sx,sy,0,0)
             num_vertices := num_vertices + 1
             was_off := False
-            next_move := 1 + ttushort(end_pts_of_contours+j*2)
+            next_move := 1 + u16(end_pts_of_contours+j*2)
             j := j + 1
           } else {
             ((flags & 1) = 0).if { // if it's a curve
               (was_off).if {
-                // two off-curve control points in a row 
-                // means interpolate an on-curve midpoint
+                // two off-curve control points in a row means interpolate an on-curve midpoint
                 vertices.at num_vertices.make vcurve pos ((cx+x)>>1,(cy+y)>>1,cx,cy)
                 num_vertices := num_vertices + 1
               }
@@ -405,81 +527,75 @@ Public
             } else {
               (was_off).if {
                 vertices.at num_vertices.make vcurve pos (x,y,cx,cy)
-                num_vertices := num_vertices + 1
               } else {
                 vertices.at num_vertices.make vline pos (x,y,0,0)
-                num_vertices := num_vertices + 1
               }
+              num_vertices := num_vertices + 1
               was_off := False
             }
-            //"2)num_vertices:".print; num_vertices.print; '\n'.print
           }
           i := i + 1
         }
-        //"0)num_vertices:".print; num_vertices.print; '\n'.print
         num_vertices := close_shape (vertices,num_vertices) offset (was_off, start_off) size (sx,sy,scx,scy,cx,cy)
-        //"1)num_vertices:".print; num_vertices.print; '\n'.print
         vertices.set_upper (num_vertices-1)
-      }.elseif {number_of_contours = -1} then {
+      }.elseif {number_of_contours < 0} then {
         // Compound shapes.
         + more:Boolean
         + comp:C_array Uint8
-        comp := dta + g + 10
+        comp := data + g + 10
         more := True
         {more}.while_do {
-          + flags, gidx:Int16
-          + t0,m,n:Real32
+          + flags,gidx:Int
+          + m,n:Real32
           + comp_verts:Array (Flat Tt_vertex)
           + mtx0,mtx1,mtx2,mtx3,mtx4,mtx5:Real32
-          mtx0 := mtx3 := 1
-          
-          flags := ttshort comp; comp := comp + 2
-          gidx  := ttshort comp; comp := comp + 2
+          (mtx0,mtx1,mtx2,mtx3,mtx4,mtx5) := (1,0,0,1,0,0)
+          flags := u16 comp; comp := comp + 2
+          gidx  := u16 comp; comp := comp + 2
           ((flags & 2) != 0).if { // XY values
             ((flags & 1) != 0).if { // shorts
-              mtx4 := ttshort comp.to_real32; comp := comp + 2
-              mtx5 := ttshort comp.to_real32; comp := comp + 2
+              mtx4 := (s16 comp).to_real32; comp := comp + 2
+              mtx5 := (s16 comp).to_real32; comp := comp + 2
             } else {
-              mtx4 := ttchar comp.to_real32; comp := comp + 1
-              mtx5 := ttchar comp.to_real32; comp := comp + 1
+              mtx4 := (s8 comp).to_real32; comp := comp + 1
+              mtx5 := (s8 comp).to_real32; comp := comp + 1
             }
           } else {
             // @TODO handle matching point
-            not_yet_implemented
+            ? {False}
           }
           ((flags & (1<<3)) != 0).if { // WE_HAVE_A_SCALE
-            t0 := ttshort comp.to_real32/16384.0
-            mtx0 := t0; mtx3 := t0
+            mtx0 := (s16 comp).to_real32 / 16384.0
+            mtx3 := mtx0
             comp := comp + 2
             mtx1 := mtx2 := 0
           }.elseif {(flags & (1<<6)) != 0} then { // WE_HAVE_AN_X_AND_YSCALE
-            mtx0 := ttshort comp.to_real32/16384.0; comp := comp + 2
+            mtx0 := (s16 comp).to_real32 / 16384.0; comp := comp + 2
             mtx1 := mtx2 := 0
-            mtx3 := ttshort comp.to_real32/16384.0; comp := comp + 2
+            mtx3 := (s16 comp).to_real32 / 16384.0; comp := comp + 2
           }.elseif {(flags & (1<<7)) != 0} then { // WE_HAVE_A_TWO_BY_TWO
-            mtx0 := ttshort comp.to_real32/16384.0; comp := comp + 2
-            mtx1 := ttshort comp.to_real32/16384.0; comp := comp + 2
-            mtx2 := ttshort comp.to_real32/16384.0; comp := comp + 2
-            mtx3 := ttshort comp.to_real32/16384.0; comp := comp + 2
+            mtx0 := (s16 comp).to_real32 / 16384.0; comp := comp + 2
+            mtx1 := (s16 comp).to_real32 / 16384.0; comp := comp + 2
+            mtx2 := (s16 comp).to_real32 / 16384.0; comp := comp + 2
+            mtx3 := (s16 comp).to_real32 / 16384.0; comp := comp + 2
           }
           // Find transformation scales.
           m := (mtx0*mtx0 + mtx1*mtx1).sqrt
           n := (mtx2*mtx2 + mtx3*mtx3).sqrt
           // Get indexed glyph.
           comp_verts := get_glyph_shape gidx
-          //"comp_verts:".print; comp_verts.count.print; '\n'.print
-          (comp_verts.count > 0).if {
+          ((comp_verts != NULL) && {comp_verts.count > 0}).if {
             // Transform vertices.
-            0.to (comp_verts.upper) do { i:Int              
+            0.to (comp_verts.upper) do { i:Int
               + x,y:Real32
               (x,y) := (comp_verts.at i.x.to_real32,comp_verts.at i.y.to_real32)
-              comp_verts.at i.set_x ((m * (mtx0*x + mtx2*y + mtx4)).to_int16)
-              comp_verts.at i.set_y ((n * (mtx1*x + mtx3*y + mtx5)).to_int16)
+              comp_verts.at i.set_x ((m * (mtx0*x + mtx2*y + mtx4)).to_raw_int16)
+              comp_verts.at i.set_y ((n * (mtx1*x + mtx3*y + mtx5)).to_raw_int16)
               (x,y) := (comp_verts.at i.cx.to_real32,comp_verts.at i.cy.to_real32)
-              comp_verts.at i.set_cx ((m * (mtx0*x + mtx2*y + mtx4)).to_int16)
-              comp_verts.at i.set_cy ((n * (mtx1*x + mtx3*y + mtx5)).to_int16)
+              comp_verts.at i.set_cx ((m * (mtx0*x + mtx2*y + mtx4)).to_raw_int16)
+              comp_verts.at i.set_cy ((n * (mtx1*x + mtx3*y + mtx5)).to_raw_int16)
             }
-            // Append vertices.                        
+            // Append vertices.
             (vertices = NULL).if {
               vertices := comp_verts
             } else {
@@ -490,70 +606,637 @@ Public
           // More components ?
           more := (flags & (1<<5)) != 0
         }
-      }.elseif {number_of_contours < 0} then {
-        // @TODO other compound variations?
-        not_yet_implemented
       } else {
         // numberOfCounters == 0, do nothing
       }
     }
-    ((vertices != NULL) && {vertices.count != num_vertices}).if {
-      //"num_vertices:".print; vertices.count.print; '/'.print
-      //num_vertices.print; '\n'.print
-    }
     vertices
   )
 
-  - get_glyph_h_metrics glyph_index:Int :(Int,Int) <-
-  ( + num_of_long_hor_metrics:Uint16
-    + advance_width,left_side_bearing:Int
-    num_of_long_hor_metrics := ttushort(data+hhea + 34)
-    (glyph_index < num_of_long_hor_metrics).if {
-      advance_width    := ttshort(data + hmtx + 4*glyph_index)
-      left_side_bearing:= ttshort(data + hmtx + 4*glyph_index + 2)
-    } else {
-      advance_width    := ttshort(data + hmtx + 4*(num_of_long_hor_metrics-1))
-      left_side_bearing:= ttshort(data + hmtx + 4*num_of_long_hor_metrics + 2*(glyph_index - num_of_long_hor_metrics))
+  // Type 2 charstrings (CFF)
+
+  - get_subr (pidx:Ttf_buf, pn:Int) :Ttf_buf <-
+  ( + idx,result:Ttf_buf
+    + count,bias,n:Int
+    idx := pidx.copy
+    count := idx.cff_index_count
+    bias := 107
+    (count >= 33900).if {
+      bias := 32768
+    }.elseif {count >= 1240} then {
+      bias := 1131
     }
-    (advance_width,left_side_bearing)
+    n := pn + bias
+    ((n < 0) || {n >= count}).if {
+      result := Ttf_buf.empty
+    } else {
+      result := idx.cff_index_get n
+    }
+    result
   )
 
-  - get_glyph_kern_advance (glyph1,glyph2:Int) :Int <-
+  - cid_get_glyph_subrs glyph_index:Int :Ttf_buf <-
+  ( + fds:Ttf_buf
+    + nranges,start,end,v,fmt,fdselector,i:Int
+    fds := fdselect.copy
+    fdselector := -1
+    fds.seek 0
+    fmt := fds.get8
+    (fmt = 0).if {
+      // untested
+      fds.skip glyph_index
+      fdselector := fds.get8
+    }.elseif {fmt = 3} then {
+      nranges := fds.get16
+      start := fds.get16
+      i := 0
+      {(i < nranges) && {fdselector = -1}}.while_do {
+        v := fds.get8
+        end := fds.get16
+        ((glyph_index >= start) && {glyph_index < end}).if {
+          fdselector := v
+        } else {
+          start := end
+        }
+        i := i + 1
+      }
+    }
+    // (in C, the result of the next line is not used, and an unknown
+    // fdselector of -1 is given to stbtt__cff_index_get)
+    get_subrs (cff, fontdicts.cff_index_get fdselector)
+  )
+
+  - cs_stack:C_array Real32 := C_array Real32.create 48
+
+  - run_charstring glyph_index:Int in c:Csctx :Boolean <-
+  ( + in_header,has_subrs,clear_stack,done,result:Boolean
+    + maskbits,subr_stack_height,sp,v,i,b0:Int
+    + s:C_array Real32
+    + subr_stack:Array Ttf_buf
+    + subrs_l,b:Ttf_buf
+    + f:Real32
+    s := cs_stack
+    in_header := True
+    subrs_l := subrs
+    subr_stack := Array Ttf_buf.create 10
+    b := charstrings.cff_index_get glyph_index
+    {(b.cursor < b.size) && {! done}}.while_do {
+      i := 0
+      clear_stack := True
+      b0 := b.get8
+      ((b0 = 13h) || {b0 = 14h}).if {
+        // hintmask, cntrmask
+        (in_header).if {
+          maskbits := maskbits + (sp / 2); // implicit "vstem"
+        }
+        in_header := False
+        b.skip ((maskbits + 7) / 8)
+      }.elseif {(b0 = 01h) || {b0 = 03h} || {b0 = 12h} || {b0 = 17h}} then {
+        // hstem, vstem, hstemhm, vstemhm
+        maskbits := maskbits + (sp / 2)
+      }.elseif {b0 = 15h} then { // rmoveto
+        in_header := False
+        (sp < 2).if { done := True; } else {
+          c.rmove_to (s.at (sp-2), s.at (sp-1))
+        }
+      }.elseif {b0 = 04h} then { // vmoveto
+        in_header := False
+        (sp < 1).if { done := True; } else {
+          c.rmove_to (0, s.at (sp-1))
+        }
+      }.elseif {b0 = 16h} then { // hmoveto
+        in_header := False
+        (sp < 1).if { done := True; } else {
+          c.rmove_to (s.at (sp-1), 0)
+        }
+      }.elseif {b0 = 05h} then { // rlineto
+        (sp < 2).if { done := True; } else {
+          {i + 1 < sp}.while_do {
+            c.rline_to (s.at i, s.at (i+1))
+            i := i + 2
+          }
+        }
+      }.elseif {(b0 = 07h) || {b0 = 06h}} then {
+        // vlineto, hlineto: alternate vertical and horizontal lines
+        // (as the loop with a goto of the C)
+        + horizontal:Boolean
+        (sp < 1).if { done := True; } else {
+          horizontal := b0 = 06h
+          {i < sp}.while_do {
+            (horizontal).if {
+              c.rline_to (s.at i, 0)
+            } else {
+              c.rline_to (0, s.at i)
+            }
+            i := i + 1
+            horizontal := ! horizontal
+          }
+        }
+      }.elseif {(b0 = 1Fh) || {b0 = 1Eh}} then {
+        // hvcurveto, vhcurveto: alternate (as the loop with a goto of the C)
+        + horizontal:Boolean
+        (sp < 4).if { done := True; } else {
+          horizontal := b0 = 1Fh
+          {i + 3 < sp}.while_do {
+            + last:Real32
+            last := 0.0
+            (sp - i = 5).if { last := s.at (i+4); }
+            (horizontal).if {
+              c.rccurve_to (s.at i, 0, s.at (i+1), s.at (i+2), last, s.at (i+3))
+            } else {
+              c.rccurve_to (0, s.at i, s.at (i+1), s.at (i+2), s.at (i+3), last)
+            }
+            i := i + 4
+            horizontal := ! horizontal
+          }
+        }
+      }.elseif {b0 = 08h} then { // rrcurveto
+        (sp < 6).if { done := True; } else {
+          {i + 5 < sp}.while_do {
+            c.rccurve_to (s.at i, s.at (i+1), s.at (i+2), s.at (i+3), s.at (i+4), s.at (i+5))
+            i := i + 6
+          }
+        }
+      }.elseif {b0 = 18h} then { // rcurveline
+        (sp < 8).if { done := True; } else {
+          {i + 5 < sp - 2}.while_do {
+            c.rccurve_to (s.at i, s.at (i+1), s.at (i+2), s.at (i+3), s.at (i+4), s.at (i+5))
+            i := i + 6
+          }
+          (i + 1 >= sp).if { done := True; } else {
+            c.rline_to (s.at i, s.at (i+1))
+          }
+        }
+      }.elseif {b0 = 19h} then { // rlinecurve
+        (sp < 8).if { done := True; } else {
+          {i + 1 < sp - 6}.while_do {
+            c.rline_to (s.at i, s.at (i+1))
+            i := i + 2
+          }
+          (i + 5 >= sp).if { done := True; } else {
+            c.rccurve_to (s.at i, s.at (i+1), s.at (i+2), s.at (i+3), s.at (i+4), s.at (i+5))
+          }
+        }
+      }.elseif {(b0 = 1Ah) || {b0 = 1Bh}} then { // vvcurveto, hhcurveto
+        (sp < 4).if { done := True; } else {
+          f := 0.0
+          ((sp & 1) != 0).if { f := s.at i; i := i + 1; }
+          {i + 3 < sp}.while_do {
+            (b0 = 1Bh).if {
+              c.rccurve_to (s.at i, f, s.at (i+1), s.at (i+2), s.at (i+3), 0.0)
+            } else {
+              c.rccurve_to (f, s.at i, s.at (i+1), s.at (i+2), 0.0, s.at (i+3))
+            }
+            f := 0.0
+            i := i + 4
+          }
+        }
+      }.elseif {(b0 = 0Ah) || {b0 = 1Dh}} then { // callsubr, callgsubr
+        ((b0 = 0Ah) && {! has_subrs}).if {
+          (fdselect.size != 0).if {
+            subrs_l := cid_get_glyph_subrs glyph_index
+          }
+          has_subrs := True
+        }
+        // FALLTHROUGH
+        (sp < 1).if { done := True; } else {
+          sp := sp - 1
+          v := s.at sp.to_raw_int32
+          (subr_stack_height >= 10).if { done := True; } else {
+            subr_stack.at subr_stack_height put b
+            subr_stack_height := subr_stack_height + 1
+            (b0 = 0Ah).if {
+              b := get_subr (subrs_l, v)
+            } else {
+              b := get_subr (gsubrs, v)
+            }
+            (b.size = 0).if { done := True; } else {
+              b.set_cursor 0
+              clear_stack := False
+            }
+          }
+        }
+      }.elseif {b0 = 0Bh} then { // return
+        (subr_stack_height <= 0).if { done := True; } else {
+          subr_stack_height := subr_stack_height - 1
+          b := subr_stack.at subr_stack_height
+          clear_stack := False
+        }
+      }.elseif {b0 = 0Eh} then { // endchar
+        c.close_shape
+        result := True
+        done := True
+      }.elseif {b0 = 0Ch} then { // two-byte escape
+        + dx1,dx2,dx3,dx4,dx5,dx6,dy1,dy2,dy3,dy4,dy5,dy6:Real32
+        + dx,dy:Real32
+        + b1:Int
+        b1 := b.get8
+        (b1 = 22h).if {
+          // @TODO These "flex" implementations ignore the flex-depth and resolution,
+          // and always draw beziers.
+          // hflex
+          (sp < 7).if { done := True; } else {
+            dx1 := s.at 0
+            dx2 := s.at 1
+            dy2 := s.at 2
+            dx3 := s.at 3
+            dx4 := s.at 4
+            dx5 := s.at 5
+            dx6 := s.at 6
+            c.rccurve_to (dx1, 0, dx2, dy2, dx3, 0)
+            c.rccurve_to (dx4, 0, dx5, -dy2, dx6, 0)
+          }
+        }.elseif {b1 = 23h} then { // flex
+          (sp < 13).if { done := True; } else {
+            dx1 := s.at 0
+            dy1 := s.at 1
+            dx2 := s.at 2
+            dy2 := s.at 3
+            dx3 := s.at 4
+            dy3 := s.at 5
+            dx4 := s.at 6
+            dy4 := s.at 7
+            dx5 := s.at 8
+            dy5 := s.at 9
+            dx6 := s.at 10
+            dy6 := s.at 11
+            //fd is s[12]
+            c.rccurve_to (dx1, dy1, dx2, dy2, dx3, dy3)
+            c.rccurve_to (dx4, dy4, dx5, dy5, dx6, dy6)
+          }
+        }.elseif {b1 = 24h} then { // hflex1
+          (sp < 9).if { done := True; } else {
+            dx1 := s.at 0
+            dy1 := s.at 1
+            dx2 := s.at 2
+            dy2 := s.at 3
+            dx3 := s.at 4
+            dx4 := s.at 5
+            dx5 := s.at 6
+            dy5 := s.at 7
+            dx6 := s.at 8
+            c.rccurve_to (dx1, dy1, dx2, dy2, dx3, 0)
+            c.rccurve_to (dx4, 0, dx5, dy5, dx6, -(dy1+dy2+dy5))
+          }
+        }.elseif {b1 = 25h} then { // flex1
+          (sp < 11).if { done := True; } else {
+            dx1 := s.at 0
+            dy1 := s.at 1
+            dx2 := s.at 2
+            dy2 := s.at 3
+            dx3 := s.at 4
+            dy3 := s.at 5
+            dx4 := s.at 6
+            dy4 := s.at 7
+            dx5 := s.at 8
+            dy5 := s.at 9
+            dx6 := s.at 10
+            dy6 := dx6
+            dx := dx1+dx2+dx3+dx4+dx5
+            dy := dy1+dy2+dy3+dy4+dy5
+            (dx.abs > dy.abs).if {
+              dy6 := -dy
+            } else {
+              dx6 := -dx
+            }
+            c.rccurve_to (dx1, dy1, dx2, dy2, dx3, dy3)
+            c.rccurve_to (dx4, dy4, dx5, dy5, dx6, dy6)
+          }
+        } else {
+          done := True; // unimplemented
+        }
+      } else {
+        ((b0 != 255) && {b0 != 28} && {(b0 < 32) || {b0 > 254}}).if {
+          done := True; // reserved operator
+        } else {
+          // push immediate
+          (b0 = 255).if {
+            f := b.get32.to_raw_int32.to_real32 / 10000h
+          } else {
+            b.skip (-1)
+            f := b.cff_int.to_raw_int16.to_real32
+          }
+          (sp >= 48).if { done := True; } else {
+            s.at sp put f
+            sp := sp + 1
+            clear_stack := False
+          }
+        }
+      }
+      (clear_stack).if { sp := 0; }
+    }
+    // (False if no endchar)
+    result
+  )
+
+  - get_glyph_shape_t2 glyph_index:Int :Array (Flat Tt_vertex) <-
+  // runs the charstring twice, once to count and once to output (to avoid realloc)
+  ( + count_ctx,output_ctx:Csctx
+    + result:Array (Flat Tt_vertex)
+    count_ctx := Csctx.create True
+    output_ctx := Csctx.create False
+    (run_charstring glyph_index in count_ctx).if {
+      result := alloc_vertices (count_ctx.num_vertices)
+      output_ctx.set_pvertices result
+      (run_charstring glyph_index in output_ctx).if {
+        ? {output_ctx.num_vertices = count_ctx.num_vertices}
+      } else {
+        free_vertices result
+        result := NULL
+      }
+    }
+    ((result != NULL) && {result.is_empty}).if {
+      free_vertices result
+      result := NULL
+    }
+    result
+  )
+
+  - run_glyph_info_t2 glyph_index:Int :(Boolean,Int,Int,Int,Int,Int) <-
+  ( + c:Csctx
+    + r:Boolean
+    + x0,y0,x1,y1,n:Int
+    c := Csctx.create True
+    r := run_charstring glyph_index in c
+    (r).if {
+      (x0,y0,x1,y1,n) := (c.min_x, c.min_y, c.max_x, c.max_y, c.num_vertices)
+    }
+    r, x0, y0, x1, y1, n
+  )
+
+  - get_glyph_info_t2 glyph_index:Int :(Boolean,Int,Int,Int,Int) <-
+  ( + x0,y0,x1,y1,n:Int
+    + r:Boolean
+    (r,x0,y0,x1,y1,n) := run_glyph_info_t2 glyph_index
+    r,x0,y0,x1,y1
+  )
+
+  - get_glyph_shape glyph_index:Int :Array (Flat Tt_vertex) <-
+  // The vertices of the outline (@NULL if there is none).
+  ( + result:Array (Flat Tt_vertex)
+    (cff.size = 0).if {
+      result := get_glyph_shape_tt glyph_index
+    } else {
+      result := get_glyph_shape_t2 glyph_index
+    }
+    result
+  )
+
+  //
+  // Metrics
+  //
+
+  - get_glyph_h_metrics glyph_index:Int :(Int,Int) <-
+  ( + num_of_long_hor_metrics:Int
+    + advance_width,left_side_bearing:Int
+    num_of_long_hor_metrics := u16(data+hhea + 34)
+    (glyph_index < num_of_long_hor_metrics).if {
+      advance_width    := s16(data + hmtx + 4*glyph_index)
+      left_side_bearing:= s16(data + hmtx + 4*glyph_index + 2)
+    } else {
+      advance_width    := s16(data + hmtx + 4*(num_of_long_hor_metrics-1))
+      left_side_bearing:= s16(data + hmtx + 4*num_of_long_hor_metrics + 2*(glyph_index - num_of_long_hor_metrics))
+    }
+    advance_width,left_side_bearing
+  )
+
+  - kern_ok:Boolean <-
+  // we only look at the first table. it must be 'horizontal' and format 0.
+  (kern != 0) && {u16(data+kern+2) >= 1} && {u16(data+kern+8) = 1}; // number of tables, need at least 1 / horizontal flag must be set in format
+
+  - get_kerning_table_length:Int <-
+  ( + result:Int
+    kern_ok.if { result := u16(data+kern+10); }
+    result
+  )
+
+  - get_kerning_table table:Array Kerning_entry length table_length:Int :Int <-
+  // Fills @table (whose items exist) with up to @table_length entries.
+  ( + length:Int
+    + d:C_array Uint8
+    kern_ok.if {
+      d := data + kern
+      length := u16(d+10)
+      (table_length < length).if { length := table_length; }
+      0.to (length-1) do { k:Int
+        table.at k.make (u16(d+18+(k*6)), u16(d+20+(k*6)), s16(d+22+(k*6)))
+      }
+    }
+    length
+  )
+
+  - get_glyph_kern_info_advance (glyph1,glyph2:Int) :Int <-
   ( + l,r,m,result:Int
-    + needle, straw:Uint32
-    + dta:C_array Uint8
-    dta := data + kern
-    //"kern:".print; kern.print; ' '.print
-    //ttushort(dta+2).print; ' '.print
-    //ttushort(dta+8).print; '\n'.print
-    // we only look at the first table. it must be 'horizontal' and format 0.
-    // number of tables, need at least 1
-    // horizontal flag must be set in format
-    ((kern!=0) && {ttushort(dta+2) >= 1} && {ttushort(dta+8) = 1}).if { 
-      r := ttushort(dta+10) - 1
-      needle := glyph1 << 16 | glyph2
-      {(l <= r) && {result = 0}}.while_do {
+    + needle,straw:Uint32
+    + d:C_array Uint8
+    + found:Boolean
+    kern_ok.if {
+      d := data + kern
+      l := 0
+      r := u16(d+10) - 1
+      needle := (glyph1 << 16 | glyph2).to_raw_uint32
+      {(l <= r) && {! found}}.while_do {
         m := (l + r) >> 1
-        straw := ttulong(dta+18+(m*6)); // note: unaligned read
+        straw := ttulong(d+18+(m*6)); // note: unaligned read
         (needle < straw).if {
           r := m - 1
         }.elseif {needle > straw} then {
           l := m + 1
         } else {
-          result := ttshort(dta+22+(m*6))
+          result := s16(d+22+(m*6))
+          found := True
         }
       }
     }
     result
   )
 
+  - get_coverage_index (coverage_table:C_array Uint8, glyph:Int) :Int <-
+  ( + result,l,r,m:Int
+    + found:Boolean
+    result := -1
+    (u16 coverage_table)
+    .when 1 then {
+      + glyph_array:C_array Uint8
+      + straw:Int
+      l := 0
+      r := u16(coverage_table + 2) - 1
+      glyph_array := coverage_table + 4
+      {(l <= r) && {! found}}.while_do {
+        m := (l + r) >> 1
+        straw := u16(glyph_array + 2 * m)
+        (glyph < straw).if {
+          r := m - 1
+        }.elseif {glyph > straw} then {
+          l := m + 1
+        } else {
+          result := m
+          found := True
+        }
+      }
+    }
+    .when 2 then {
+      + range_array,range_record:C_array Uint8
+      + straw_start,straw_end:Int
+      l := 0
+      r := u16(coverage_table + 2) - 1
+      range_array := coverage_table + 4
+      // Binary search.
+      {(l <= r) && {! found}}.while_do {
+        m := (l + r) >> 1
+        range_record := range_array + 6 * m
+        straw_start := u16 range_record
+        straw_end := u16(range_record + 2)
+        (glyph < straw_start).if {
+          r := m - 1
+        }.elseif {glyph > straw_end} then {
+          l := m + 1
+        } else {
+          result := u16(range_record + 4) + glyph - straw_start
+          found := True
+        }
+      }
+    }
+    result
+  )
+
+  - get_glyph_class (class_def_table:C_array Uint8, glyph:Int) :Int <-
+  ( + result,l,r,m:Int
+    + found:Boolean
+    result := -1
+    (u16 class_def_table)
+    .when 1 then {
+      + start_glyph_id,glyph_count:Int
+      start_glyph_id := u16(class_def_table + 2)
+      glyph_count := u16(class_def_table + 4)
+      ((glyph >= start_glyph_id) && {glyph < start_glyph_id + glyph_count}).if {
+        result := u16(class_def_table + 6 + 2 * (glyph - start_glyph_id))
+      }
+    }
+    .when 2 then {
+      + class_range_records,class_range_record:C_array Uint8
+      + straw_start,straw_end:Int
+      l := 0
+      r := u16(class_def_table + 2) - 1
+      class_range_records := class_def_table + 4
+      // Binary search.
+      {(l <= r) && {! found}}.while_do {
+        m := (l + r) >> 1
+        class_range_record := class_range_records + 6 * m
+        straw_start := u16 class_range_record
+        straw_end := u16(class_range_record + 2)
+        (glyph < straw_start).if {
+          r := m - 1
+        }.elseif {glyph > straw_end} then {
+          l := m + 1
+        } else {
+          result := u16(class_range_record + 4)
+          found := True
+        }
+      }
+    }
+    result
+  )
+
+  - get_glyph_gpos_info_advance (glyph1,glyph2:Int) :Int <-
+  // Define to STBTT_assert(x) if you want to break on unimplemented formats.
+  ( + lookup_list,d:C_array Uint8
+    + lookup_count,result:Int
+    + done:Boolean
+    (gpos != 0).if {
+      d := data + gpos
+      ((u16(d+0) = 1) && {u16(d+2) = 0}).if { // Major version 1 / Minor version 0
+        lookup_list := d + u16(d+8)
+        lookup_count := u16 lookup_list
+        0.to (lookup_count-1) do { i:Int
+          + lookup_table,sub_table_offsets:C_array Uint8
+          + lookup_type,sub_table_count:Int
+          lookup_table := lookup_list + u16(lookup_list + 2 + 2 * i)
+          lookup_type := u16 lookup_table
+          sub_table_count := u16(lookup_table + 4)
+          sub_table_offsets := lookup_table + 6
+          ((lookup_type = 2) && {! done}).if { // Pair Adjustment Positioning Subtable
+            0.to (sub_table_count-1) do { sti:Int
+              + table:C_array Uint8
+              + pos_format,coverage_index:Int
+              table := lookup_table + u16(sub_table_offsets + 2 * sti)
+              pos_format := u16 table
+              coverage_index := get_coverage_index (table + u16(table + 2), glyph1)
+              ((coverage_index != -1) && {! done}).if {
+                (pos_format = 1).if {
+                  + l,r,m,straw,value_format1,value_format2,pair_value_count:Int
+                  + pair_value_table,pair_value_array,pair_value:C_array Uint8
+                  + value_record_pair_size_in_bytes:Int
+                  value_format1 := u16(table + 4)
+                  value_format2 := u16(table + 6)
+                  value_record_pair_size_in_bytes := 2
+                  pair_value_table := table + u16(table + 10 + 2 * coverage_index)
+                  pair_value_count := u16 pair_value_table
+                  pair_value_array := pair_value_table + 2
+                  // @TODO: Support more formats.
+                  ((value_format1 != 4) || {value_format2 != 0}).if {
+                    done := True; // return 0
+                  } else {
+                    ? {coverage_index < u16(table + 8)}
+                    r := pair_value_count - 1
+                    l := 0
+                    // Binary search.
+                    {(l <= r) && {! done}}.while_do {
+                      m := (l + r) >> 1
+                      pair_value := pair_value_array + (2 + value_record_pair_size_in_bytes) * m
+                      straw := u16 pair_value
+                      (glyph2 < straw).if {
+                        r := m - 1
+                      }.elseif {glyph2 > straw} then {
+                        l := m + 1
+                      } else {
+                        result := s16(pair_value + 2)
+                        done := True
+                      }
+                    }
+                  }
+                }.elseif {pos_format = 2} then {
+                  + value_format1,value_format2,glyph1class,glyph2class,class1_count,class2_count:Int
+                  value_format1 := u16(table + 4)
+                  value_format2 := u16(table + 6)
+                  glyph1class := get_glyph_class (table + u16(table + 8), glyph1)
+                  glyph2class := get_glyph_class (table + u16(table + 10), glyph2)
+                  class1_count := u16(table + 12)
+                  class2_count := u16(table + 14)
+                  ? {glyph1class < class1_count}
+                  ? {glyph2class < class2_count}
+                  // @TODO: Support more formats.
+                  ((value_format1 != 4) || {value_format2 != 0}).if {
+                    done := True; // return 0
+                  }.elseif {(glyph1class >= 0) && {glyph1class < class1_count} && {glyph2class >= 0} && {glyph2class < class2_count}} then {
+                    result := s16(table + 16 + 2 * (glyph1class * class2_count) + 2 * glyph2class)
+                    done := True
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - get_glyph_kern_advance (g1,g2:Int) :Int <-
+  ( + x_advance:Int
+    (gpos != 0).if {
+      x_advance := x_advance + get_glyph_gpos_info_advance (g1, g2)
+    }.elseif {kern != 0} then {
+      x_advance := x_advance + get_glyph_kern_info_advance (g1, g2)
+    }
+    x_advance
+  )
+
   - get_codepoint_kern_advance (ch1,ch2:Int) :Int <-
   ( + result:Int
-    // if no kerning table, don't waste time looking up 
-    // both codepoint->glyphs
-    (kern!=0).if { 
-      result := get_glyph_kern_advance
-      (find_glyph_index ch1,find_glyph_index ch2)
+    // if no kerning table, don't waste time looking up both codepoint->glyphs
+    ((kern != 0) || {gpos != 0}).if {
+      result := get_glyph_kern_advance (find_glyph_index ch1, find_glyph_index ch2)
     }
     result
   )
@@ -564,83 +1247,107 @@ Public
   )
 
   - get_font_v_metrics:(Int,Int,Int) <-
+  // ascent, descent, line gap
   (
-    ttshort(data+hhea + 4),
-    ttshort(data+hhea + 6),
-    ttshort(data+hhea + 8)
+    s16(data+hhea + 4), s16(data+hhea + 6), s16(data+hhea + 8)
+  )
+
+  - get_font_v_metrics_os2:(Boolean,Int,Int,Int) <-
+  // typo ascent, typo descent, typo line gap (@False if no OS/2 table)
+  ( + tab,a,d,l:Int
+    tab := find_table (data, fontstart) name "OS/2"
+    (tab != 0).if {
+      a := s16(data+tab + 68)
+      d := s16(data+tab + 70)
+      l := s16(data+tab + 72)
+    }
+    tab != 0, a, d, l
   )
 
   - get_font_bounding_box:(Int,Int,Int,Int) <-
   (
-    ttshort(data + head + 36),ttshort(data + head + 38),
-    ttshort(data + head + 40),ttshort(data + head + 42)
+    s16(data + head + 36), s16(data + head + 38), s16(data + head + 40), s16(data + head + 42)
   )
 
   - scale_for_pixel_height height:Real32 :Real32 <-
-  (
-    height / (ttshort(data + hhea + 4) - ttshort(data + hhea + 6)).to_real32
+  ( + fheight:Int
+    fheight := s16(data + hhea + 4) - s16(data + hhea + 6)
+    height / fheight.to_real32
   )
 
   - scale_for_mapping_em_to_pixels pixels:Real32 :Real32 <-
+  ( + units_per_em:Int
+    units_per_em := u16(data + head + 18)
+    pixels / units_per_em.to_real32
+  )
+
+  - free_shape v:Array (Flat Tt_vertex) <- free_vertices v
+
+  //
+  // SVG
+  //
+
+  - find_svg_doc gl:Int :C_array Uint8 <-
+  ( + svg_doc_list,result:C_array Uint8
+    + num_entries,i:Int
+    svg_doc_list := data + get_svg
+    num_entries := u16 svg_doc_list
+    {(i < num_entries) && {result = NULL}}.while_do {
+      + svg_doc:C_array Uint8
+      svg_doc := svg_doc_list + 2 + (12 * i)
+      ((gl >= u16 svg_doc) && {gl <= u16(svg_doc + 2)}).if {
+        result := svg_doc
+      }
+      i := i + 1
+    }
+    result
+  )
+
+  - get_glyph_svg gl:Int :(Int,C_array Uint8) <-
+  // The length and the text of the SVG document of the glyph (0 if none).
+  ( + svg_doc:C_array Uint8
+    + len:Int
+    + doc:C_array Uint8
+    (svg != 0).if {
+      svg_doc := find_svg_doc gl
+      (svg_doc != NULL).if {
+        doc := data + svg + u32(svg_doc + 4)
+        len := u32(svg_doc + 8)
+      }
+    }
+    len, doc
+  )
+
+  - get_codepoint_svg unicode_codepoint:Int :(Int,C_array Uint8) <-
   (
-    pixels / ttushort(data + head + 18)
+    get_glyph_svg (find_glyph_index unicode_codepoint)
   )
 
-  - free_shape v:Tt_vertex <-
-  (
-    not_yet_implemented
-    //STBTT_free(v, info->userdata)
-  )
+  //
+  // Bitmap rendering
+  //
 
+  - ifloor x:Real32 :Int <- x.floor
 
-  // antialiasing software rasterizer
-   
-  - get_glyph_bitmap_subpixel (scale_x, scale_y:Real32)
-  shift (shift_x,shift_y:Real32) 
-  glyph gly:Int :(Bitmap,Int,Int) <-
-  // width x height x xoff x yoff
-  [ ? {(scale_x != 0) || {scale_y != 0}}; ]
-  ( + ix0,iy0,ix1,iy1:Int
-    + gbm:Bitmap
-    + vertices:Array (Flat Tt_vertex)
-    + scal_x,scal_y:Real32
-    
-    vertices := get_glyph_shape gly
-    
-    (scal_x,scal_y) := (scale_x,scale_y)
-    (scal_x = 0).if { scal_x := scal_y; }
-    (scal_y = 0).if { scal_y := scal_x; }
+  - iceil x:Real32 :Int <- x.ceil.to_raw_int
 
-    (ix0,iy0,ix1,iy1) := get_glyph_bitmap_box_subpixel gly scale (scal_x, scal_y) shift (shift_x, shift_y)
-
-    // now we get the size   
-    gbm := Bitmap.create (ix1 - ix0,iy1 - iy0)
-    gbm.rasterize 0.35 vertex vertices scale (scal_x, scal_y) 
-    shift (shift_x, shift_y) offset (ix0, iy0) int 1
-    
-    free_vertices vertices
-    gbm,ix0,iy0
-  )
-
-  - get_glyph_bitmap_box_subpixel glyph:Int
-  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) 
-  :(Int,Int,Int,Int) <-  
-  ( + x0,y0,x1,y1:Int; // =0 suppresses compiler warning
+  - get_glyph_bitmap_box_subpixel glyph:Int scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32)
+  :(Int,Int,Int,Int) <-
+  ( + x0,y0,x1,y1:Int
     + ix0,iy0,ix1,iy1:Int
-    (x0,y0,x1,y1) := get_glyph_box glyph
-    // move to integral bboxes (treating pixels as 
-    // little squares, what pixels get touched)?
-    ix0 := (scale_x *  x0 + shift_x).floor
-    iy0 := (scale_y * -y1 + shift_y).floor
-    ix1 := (scale_x *  x1 + shift_x).ceiling
-    iy1 := (scale_y * -y0 + shift_y).ceiling
-    //ix0.print; ' '.print; iy0.print; ','.print
-    //ix1.print; ' '.print; iy1.print; '\n'.print
+    + ok:Boolean
+    (ok,x0,y0,x1,y1) := glyph_box glyph
+    ok.if {
+      // move to integral bboxes (treating pixels as little squares, what pixels get touched)?
+      ix0 := ifloor ( x0.to_real32 * scale_x + shift_x)
+      iy0 := ifloor (-y1.to_real32 * scale_y + shift_y)
+      ix1 := iceil  ( x1.to_real32 * scale_x + shift_x)
+      iy1 := iceil  (-y0.to_real32 * scale_y + shift_y)
+    }; // else: e.g. space character
     ix0,iy0,ix1,iy1
   )
 
-  - get_glyph_bitmap_box glyph:Int scale (scale_x,scale_y:Real32)
-  :(Int,Int,Int,Int) <-
+  - get_glyph_bitmap_box glyph:Int scale (scale_x,scale_y:Real32) :(Int,Int,Int,Int) <-
   (
     get_glyph_bitmap_box_subpixel glyph scale (scale_x,scale_y) shift (0.0,0.0)
   )
@@ -653,70 +1360,483 @@ Public
 
   - get_codepoint_bitmap_box codepoint:Int scale (scale_x,scale_y:Real32) :(Int,Int,Int,Int) <-
   (
-    get_codepoint_bitmap_box_subpixel codepoint scale (scale_x, scale_y)
-    shift (0.0,0.0)     
-  )
-  
-  - get_codepoint_bitmap_subpixel (scale_x,scale_y:Real32)
-  shift (shift_x,shift_y:Real32)
-  code codepoint:Int :(Bitmap,Int,Int) <-
-  (
-    get_glyph_bitmap_subpixel (scale_x, scale_y) shift (shift_x,shift_y) glyph (find_glyph_index codepoint) 
+    get_codepoint_bitmap_box_subpixel codepoint scale (scale_x, scale_y) shift (0.0,0.0)
   )
 
-  - make_codepoint_bitmap_subpixel output:C_array Uint8
-  size (out_w,out_h,out_stride:Int) scale (scale_x,scale_y:Real32)
-  shift (shift_x,shift_y:Real32) code codepoint:Int <-
-  (
-    make_glyph_bitmap_subpixel output size (out_w, out_h, out_stride) 
-    scale (scale_x,scale_y) shift (shift_x,shift_y)  
-    glyph (find_glyph_index codepoint)
+  - get_glyph_bitmap_subpixel (pscale_x,pscale_y:Real32) shift (shift_x,shift_y:Real32) glyph gly:Int :(Bitmap,Int,Int) <-
+  // The bitmap of the glyph (@NULL if both scales are 0; its pixels are @NULL
+  // if it is empty), and its offsets.
+  ( + ix0,iy0,ix1,iy1:Int
+    + gbm:Bitmap
+    + vertices:Array (Flat Tt_vertex)
+    + scale_x,scale_y:Real32
+    vertices := get_glyph_shape gly
+    (scale_x,scale_y) := (pscale_x,pscale_y)
+    (scale_x = 0).if { scale_x := scale_y; }
+    (scale_y = 0).if { scale_y := scale_x; }
+    (scale_x != 0).if {
+      (ix0,iy0,ix1,iy1) := get_glyph_bitmap_box_subpixel gly scale (scale_x, scale_y) shift (shift_x, shift_y)
+      // now we get the size
+      gbm := Bitmap.create NULL size (ix1 - ix0, iy1 - iy0) stride 0
+      ((gbm.w != 0) && {gbm.h != 0}).if {
+        gbm.make (C_array Uint8.create (gbm.w * gbm.h)) size (gbm.w, gbm.h) stride (gbm.w)
+        gbm.rasterize 0.35 vertex vertices scale (scale_x, scale_y) shift (shift_x, shift_y) offset (ix0, iy0) invert True
+      }
+    }
+    free_vertices vertices
+    gbm,ix0,iy0
   )
-  
-  - make_glyph_bitmap output:C_array Uint8
-  size (out_w,out_h:Int) stride out_stride:Int
-  scale (scale_x,scale_y:Real32) glyph glif:Int <-
+
+  - get_glyph_bitmap (scale_x,scale_y:Real32) glyph gly:Int :(Bitmap,Int,Int) <-
   (
-    make_glyph_bitmap_subpixel output size (out_w,out_h)
-    stride out_stride scale (scale_x, scale_y) shift (0.0,0.0) glyph glif
+    get_glyph_bitmap_subpixel (scale_x, scale_y) shift (0.0,0.0) glyph gly
   )
-  
-  - make_glyph_bitmap_subpixel output:C_array Uint8
-  size (out_w,out_h:Int) stride out_stride:Int scale (scale_x,scale_y:Real32)
-  shift (shift_x,shift_y:Real32) glyph glif:Int <-
+
+  - make_glyph_bitmap_subpixel output:C_array Uint8 size (out_w,out_h:Int) stride out_stride:Int
+  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) glyph glif:Int <-
   ( + ix0,iy0,tmp0,tmp1:Int
     + gbm:Bitmap
     + vertices:Array (Flat Tt_vertex)
-
     vertices := get_glyph_shape glif
-    
-    //"glif:".print; glif.print; '\n'.print
-    //(vertices = NULL).if { "Vertices NULL\n".print; }
-    
-    (ix0,iy0,tmp0,tmp1) := get_glyph_bitmap_box_subpixel glif 
-    scale (scale_x,scale_y) shift (shift_x,shift_y)
+    (ix0,iy0,tmp0,tmp1) := get_glyph_bitmap_box_subpixel glif scale (scale_x,scale_y) shift (shift_x,shift_y)
     gbm := Bitmap.create output size (out_w,out_h) stride out_stride
-
-    ((out_w!=0) && {out_h!=0}).if {
-      gbm.rasterize 0.35 vertex vertices 
-      scale (scale_x,scale_y) shift (shift_x, shift_y) 
-      offset (ix0,iy0) int 1
+    ((out_w != 0) && {out_h != 0}).if {
+      gbm.rasterize 0.35 vertex vertices scale (scale_x,scale_y) shift (shift_x, shift_y) offset (ix0,iy0) invert True
     }
-    
-    free_vertices vertices; //BSBS ATT.: Après bug avec éè comme texte!
+    free_vertices vertices
+  )
+
+  - make_glyph_bitmap output:C_array Uint8 size (out_w,out_h:Int) stride out_stride:Int
+  scale (scale_x,scale_y:Real32) glyph glif:Int <-
+  (
+    make_glyph_bitmap_subpixel output size (out_w,out_h) stride out_stride scale (scale_x, scale_y) shift (0.0,0.0) glyph glif
+  )
+
+  - get_codepoint_bitmap_subpixel (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) code codepoint:Int :(Bitmap,Int,Int) <-
+  (
+    get_glyph_bitmap_subpixel (scale_x, scale_y) shift (shift_x,shift_y) glyph (find_glyph_index codepoint)
+  )
+
+  - make_codepoint_bitmap_subpixel_prefilter output:C_array Uint8 size (out_w,out_h,out_stride:Int)
+  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) oversample (oversample_x,oversample_y:Int) code codepoint:Int :(Real32,Real32) <-
+  (
+    make_glyph_bitmap_subpixel_prefilter output size (out_w, out_h, out_stride) scale (scale_x, scale_y) shift (shift_x, shift_y) prefilter (oversample_x, oversample_y) glyph (find_glyph_index codepoint)
+  )
+
+  - make_codepoint_bitmap_subpixel output:C_array Uint8 size (out_w,out_h,out_stride:Int)
+  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) code codepoint:Int <-
+  (
+    make_glyph_bitmap_subpixel output size (out_w, out_h) stride out_stride scale (scale_x,scale_y) shift (shift_x,shift_y) glyph (find_glyph_index codepoint)
   )
 
   - get_codepoint_bitmap (scale_x,scale_y:Real32) code codepoint:Int :(Bitmap,Int,Int) <-
   (
     get_codepoint_bitmap_subpixel (scale_x, scale_y) shift (0.0,0.0) code codepoint
   )
-  
-Public  
-  
+
+  - make_codepoint_bitmap output:C_array Uint8 size (out_w,out_h,out_stride:Int) scale (scale_x,scale_y:Real32) code codepoint:Int <-
+  (
+    make_codepoint_bitmap_subpixel output size (out_w, out_h, out_stride) scale (scale_x, scale_y) shift (0.0,0.0) code codepoint
+  )
+
+  - make_glyph_bitmap_subpixel_prefilter output:C_array Uint8 size (out_w,out_h,out_stride:Int)
+  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) prefilter (prefilter_x,prefilter_y:Int) glyph glyph:Int :(Real32,Real32) <-
+  // Renders, then filters the bitmap; gives the sub-pixel shifts (sub_x, sub_y).
+  (
+    make_glyph_bitmap_subpixel output size (out_w - (prefilter_x - 1), out_h - (prefilter_y - 1)) stride out_stride scale (scale_x, scale_y) shift (shift_x, shift_y) glyph glyph
+    (prefilter_x > 1).if {
+      Ttf.h_prefilter (output, out_w, out_h, out_stride, prefilter_x)
+    }
+    (prefilter_y > 1).if {
+      Ttf.v_prefilter (output, out_w, out_h, out_stride, prefilter_y)
+    }
+    Ttf.oversample_shift prefilter_x, Ttf.oversample_shift prefilter_y
+  )
+
+  //
+  // Signed distance fields (SDF)
+  //
+
+  - ray_intersect_bezier (orig_x,orig_y,ray_x,ray_y,q0x,q0y,q1x,q1y,q2x,q2y:Real32) :(Int,Real32,Real32,Real32,Real32) <-
+  // The number of hits, and the hits [0][0], [0][1], [1][0], [1][1].
+  ( + q0perp,q1perp,q2perp,roperp,a,b,c,s0,s1:Real32
+    + num_s:Int
+    + h00,h01,h10,h11:Real32
+    q0perp := q0y*ray_x - q0x*ray_y
+    q1perp := q1y*ray_x - q1x*ray_y
+    q2perp := q2y*ray_x - q2x*ray_y
+    roperp := orig_y*ray_x - orig_x*ray_y
+    a := q0perp - 2*q1perp + q2perp
+    b := q1perp - q0perp
+    c := q0perp - roperp
+    (a != 0.0).if {
+      + discr:Real32
+      discr := b*b - a*c
+      (discr > 0.0).if {
+        + rcpna,d:Real32
+        rcpna := -1 / a
+        d := discr.sqrt
+        s0 := (b+d) * rcpna
+        s1 := (b-d) * rcpna
+        ((s0 >= 0.0) && {s0 <= 1.0}).if {
+          num_s := 1
+        }
+        ((d > 0.0) && {s1 >= 0.0} && {s1 <= 1.0}).if {
+          (num_s = 0).if { s0 := s1; }
+          num_s := num_s + 1
+        }
+      }
+    } else {
+      // 2*b*s + c = 0
+      // s = -c / (2*b)
+      s0 := c / (-2 * b)
+      ((s0 >= 0.0) && {s0 <= 1.0}).if {
+        num_s := 1
+      }
+    }
+    (num_s != 0).if {
+      + rcp_len2,rayn_x,rayn_y,q0d,q1d,q2d,rod,q10d,q20d,q0rd:Real32
+      rcp_len2 := 1 / (ray_x*ray_x + ray_y*ray_y)
+      rayn_x := ray_x * rcp_len2
+      rayn_y := ray_y * rcp_len2
+      q0d := q0x*rayn_x + q0y*rayn_y
+      q1d := q1x*rayn_x + q1y*rayn_y
+      q2d := q2x*rayn_x + q2y*rayn_y
+      rod := orig_x*rayn_x + orig_y*rayn_y
+      q10d := q1d - q0d
+      q20d := q2d - q0d
+      q0rd := q0d - rod
+      h00 := q0rd + s0*(2.0 - 2.0*s0)*q10d + s0*s0*q20d
+      h01 := a*s0+b
+      (num_s > 1).if {
+        h10 := q0rd + s1*(2.0 - 2.0*s1)*q10d + s1*s1*q20d
+        h11 := a*s1+b
+        num_s := 2
+      }
+    }
+    num_s,h00,h01,h10,h11
+  )
+
+  - compute_crossings_x (x,py:Real32) verts (nverts:Int, verts:Array (Flat Tt_vertex)) :Int <-
+  ( + y,y_frac:Real32
+    + winding:Int
+    y := py
+    // make sure y never passes through a vertex of the shape
+    y_frac := y % 1.0
+    (y_frac < 0.01).if {
+      y := y + 0.01
+    }.elseif {y_frac > 0.99} then {
+      y := y - 0.01
+    }
+    // test a ray from (-infinity,y) to (x,y)
+    0.to (nverts-1) do { i:Int
+      (verts.at i.type = vline).if {
+        + x0,y0,x1,y1:Int
+        x0 := verts.at (i-1).x; y0 := verts.at (i-1).y
+        x1 := verts.at i.x;     y1 := verts.at i.y
+        ((y > (y0.min y1).to_real32) && {y < (y0.max y1).to_real32} && {x > (x0.min x1).to_real32}).if {
+          + x_inter:Real32
+          x_inter := (y - y0.to_real32) / (y1 - y0).to_real32 * (x1-x0).to_real32 + x0.to_real32
+          (x_inter < x).if {
+            winding := winding + ((y0 < y1).ok 1 or (-1))
+          }
+        }
+      }
+      (verts.at i.type = vcurve).if {
+        + x0,y0,x1,y1,x2,y2,ax,ay,by:Int
+        x0 := verts.at (i-1).x; y0 := verts.at (i-1).y
+        x1 := verts.at i.cx;    y1 := verts.at i.cy
+        x2 := verts.at i.x;     y2 := verts.at i.y
+        ax := x0.min (x1.min x2); ay := y0.min (y1.min y2)
+        by := y0.max (y1.max y2)
+        ((y > ay.to_real32) && {y < by.to_real32} && {x > ax.to_real32}).if {
+          (((x0 = x1) && {y0 = y1}) || {(x1 = x2) && {y1 = y2}}).if {
+            x0 := verts.at (i-1).x
+            y0 := verts.at (i-1).y
+            x1 := verts.at i.x
+            y1 := verts.at i.y
+            ((y > (y0.min y1).to_real32) && {y < (y0.max y1).to_real32} && {x > (x0.min x1).to_real32}).if {
+              + x_inter:Real32
+              x_inter := (y - y0.to_real32) / (y1 - y0).to_real32 * (x1-x0).to_real32 + x0.to_real32
+              (x_inter < x).if {
+                winding := winding + ((y0 < y1).ok 1 or (-1))
+              }
+            }
+          } else {
+            + num_hits:Int
+            + h00,h01,h10,h11:Real32
+            (num_hits,h00,h01,h10,h11) := ray_intersect_bezier (x, y, 1, 0, x0.to_real32, y0.to_real32, x1.to_real32, y1.to_real32, x2.to_real32, y2.to_real32)
+            ((num_hits >= 1) && {h00 < 0}).if {
+              winding := winding + ((h01 < 0).ok (-1) or 1)
+            }
+            ((num_hits >= 2) && {h10 < 0}).if {
+              winding := winding + ((h11 < 0).ok (-1) or 1)
+            }
+          }
+        }
+      }
+    }
+    winding
+  )
+
+  - cuberoot x:Real32 :Real32 <-
+  ( + result:Real32
+    (x < 0).if {
+      result := -((-x).to_real64.pow ((1.0.to_real32 / 3.0).to_real64)).to_real32
+    } else {
+      result := (x.to_real64.pow ((1.0.to_real32 / 3.0).to_real64)).to_real32
+    }
+    result
+  )
+
+  - solve_cubic (a,b,c:Real32) in r:C_array Real32 :Int <-
+  // x^3 + a*x^2 + b*x + c = 0
+  ( + s,p,q,p3,d:Real32
+    + result:Int
+    s := -a / 3
+    p := b - a*a / 3
+    q := a * (2*a*a - 9*b) / 27 + c
+    p3 := p*p*p
+    d := q*q + 4*p3 / 27
+    (d >= 0).if {
+      + z,u,v:Real32
+      z := d.sqrt
+      u := (-q + z) / 2
+      v := (-q - z) / 2
+      u := cuberoot u
+      v := cuberoot v
+      r.at 0 put (s + u + v)
+      result := 1
+    } else {
+      + u,v,m,n:Real32
+      + t:Real32
+      u := (-p/3).sqrt
+      // (the C computes in double here, but casts before dividing by 3)
+      t := -27 / p3
+      v := (-(t.to_real64.sqrt) * q.to_real64 / 2).acos.to_real32 / 3; // p3 must be negative, since d is negative
+      m := v.to_real64.cos.to_real32
+      n := (v.to_real64 - 3.141592/2).cos.to_real32 * 1.732050808.to_real32
+      r.at 0 put (s + u * 2 * m)
+      r.at 1 put (s - u * (m + n))
+      r.at 2 put (s - u * (m - n))
+      result := 3
+    }
+    result
+  )
+
+  - sdf_res:C_array Real32 := C_array Real32.create 3
+
+  - get_glyph_sdf scale:Real32 glyph glyph:Int padding padding:Int onedge onedge_value:Uint8
+  dist pixel_dist_scale:Real32 :(C_array Uint8,Int,Int,Int,Int) <-
+  // The signed distance field of the glyph (@NULL if it is empty), with its
+  // width, height and offsets.
+  ( + scale_x,scale_y:Real32
+    + ix0,iy0,ix1,iy1,w,h:Int
+    + dat:C_array Uint8
+    (scale_x,scale_y) := (scale,scale)
+    (scale != 0).if {
+      (ix0,iy0,ix1,iy1) := get_glyph_bitmap_box_subpixel glyph scale (scale, scale) shift (0.0,0.0)
+      // if empty, return NULL
+      ((ix0 != ix1) && {iy0 != iy1}).if {
+        + precompute:C_array Real32
+        + verts:Array (Flat Tt_vertex)
+        + num_verts,j:Int
+        + res:C_array Real32
+        ix0 := ix0 - padding
+        iy0 := iy0 - padding
+        ix1 := ix1 + padding
+        iy1 := iy1 + padding
+        w := ix1 - ix0
+        h := iy1 - iy0
+        // invert for y-downwards bitmaps
+        scale_y := -scale_y
+        verts := get_glyph_shape glyph
+        (verts != NULL).if { num_verts := verts.count; }
+        dat := C_array Uint8.create (w * h)
+        precompute := C_array Real32.create (num_verts + 1)
+        res := sdf_res
+        j := num_verts-1
+        0.to (num_verts-1) do { i:Int
+          (verts.at i.type = vline).if {
+            + x0,y0,x1,y1,dist:Real32
+            x0 := verts.at i.xf * scale_x; y0 := verts.at i.yf * scale_y
+            x1 := verts.at j.xf * scale_x; y1 := verts.at j.yf * scale_y
+            dist := ((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0)).sqrt
+            precompute.at i put ((dist = 0).ok 0.0 or (1.0 / dist))
+          }.elseif {verts.at i.type = vcurve} then {
+            + x2,y2,x1,y1,x0,y0,bx,by,len2:Real32
+            x2 := verts.at j.xf * scale_x; y2 := verts.at j.yf * scale_y
+            x1 := verts.at i.cxf * scale_x; y1 := verts.at i.cyf * scale_y
+            x0 := verts.at i.xf * scale_x; y0 := verts.at i.yf * scale_y
+            bx := x0 - 2*x1 + x2; by := y0 - 2*y1 + y2
+            len2 := bx*bx + by*by
+            (len2 != 0.0).if {
+              precompute.at i put (1.0 / (bx*bx + by*by))
+            } else {
+              precompute.at i put 0.0
+            }
+          } else {
+            precompute.at i put 0.0
+          }
+          j := i
+        }
+        iy0.to (iy1-1) do { y:Int
+          ix0.to (ix1-1) do { x:Int
+            + val,min_dist,sx,sy,x_gspace,y_gspace:Real32
+            + winding:Int
+            min_dist := 999999.0
+            sx := x.to_real32 + 0.5
+            sy := y.to_real32 + 0.5
+            x_gspace := sx / scale_x
+            y_gspace := sy / scale_y
+            winding := compute_crossings_x (x_gspace, y_gspace) verts (num_verts, verts); // @OPTIMIZE: this could just be a rasterization, but needs to be line vs. non-tesselated curves so a new path
+            0.to (num_verts-1) do { i:Int
+              + x0,y0,dist2:Real32
+              x0 := verts.at i.xf * scale_x; y0 := verts.at i.yf * scale_y
+              // check against every point here rather than inside line/curve primitives -- @TODO: wrong if multiple 'moves' in a row produce a garbage point, and given culling, probably more efficient to do within line/curve
+              dist2 := (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy)
+              (dist2 < min_dist*min_dist).if {
+                min_dist := dist2.sqrt
+              }
+              (verts.at i.type = vline).if {
+                + x1,y1,dist:Real32
+                x1 := verts.at (i-1).xf * scale_x; y1 := verts.at (i-1).yf * scale_y
+                // coarse culling against bbox
+                //if (sx > STBTT_min(x0,x1)-min_dist && sx < STBTT_max(x0,x1)+min_dist &&
+                //    sy > STBTT_min(y0,y1)-min_dist && sy < STBTT_max(y0,y1)+min_dist)
+                dist := ((x1-x0)*(y0-sy) - (y1-y0)*(x0-sx)).to_real64.abs.to_real32 * precompute.at i
+                ? {i != 0}
+                (dist < min_dist).if {
+                  // check position along line
+                  // x' = x0 + t*(x1-x0), y' = y0 + t*(y1-y0)
+                  // minimize (x'-sx)*(x'-sx)+(y'-sy)*(y'-sy)
+                  + dx,dy,px,py,t:Real32
+                  dx := x1-x0; dy := y1-y0
+                  px := x0-sx; py := y0-sy
+                  // minimize (px+t*dx)^2 + (py+t*dy)^2 = px*px + 2*px*dx*t + t^2*dx*dx + py*py + 2*py*dy*t + t^2*dy*dy
+                  // derivative: 2*px*dx + 2*py*dy + (2*dx*dx+2*dy*dy)*t, set to 0 and solve
+                  t := -(px*dx + py*dy) / (dx*dx + dy*dy)
+                  ((t >= 0.0) && {t <= 1.0}).if {
+                    min_dist := dist
+                  }
+                }
+              }.elseif {verts.at i.type = vcurve} then {
+                + x2,y2,x1,y1,box_x0,box_y0,box_x1,box_y1:Real32
+                x2 := verts.at (i-1).xf * scale_x; y2 := verts.at (i-1).yf * scale_y
+                x1 := verts.at i.cxf * scale_x;    y1 := verts.at i.cyf * scale_y
+                box_x0 := (x0.min x1).min x2
+                box_y0 := (y0.min y1).min y2
+                box_x1 := (x0.max x1).max x2
+                box_y1 := (y0.max y1).max y2
+                // coarse culling against bbox to avoid computing cubic unnecessarily
+                ((sx > box_x0-min_dist) && {sx < box_x1+min_dist} && {sy > box_y0-min_dist} && {sy < box_y1+min_dist}).if {
+                  + num:Int
+                  + ax,ay,bx,by,mx,my,a_inv:Real32
+                  ax := x1-x0; ay := y1-y0
+                  bx := x0 - 2*x1 + x2; by := y0 - 2*y1 + y2
+                  mx := x0 - sx; my := y0 - sy
+                  a_inv := precompute.at i
+                  (a_inv = 0.0).if { // if a_inv is 0, it's 2nd degree so use quadratic formula
+                    + a,b,c:Real32
+                    a := 3*(ax*bx + ay*by)
+                    b := 2*(ax*ax + ay*ay) + (mx*bx+my*by)
+                    c := mx*ax+my*ay
+                    (a = 0.0).if { // if a is 0, it's linear
+                      (b != 0.0).if {
+                        res.at num put (-c/b)
+                        num := num + 1
+                      }
+                    } else {
+                      + discriminant:Real32
+                      discriminant := b*b - 4*a*c
+                      (discriminant < 0).if {
+                        num := 0
+                      } else {
+                        + root:Real32
+                        root := discriminant.sqrt
+                        res.at 0 put ((-b - root)/(2*a))
+                        res.at 1 put ((-b + root)/(2*a))
+                        num := 2; // don't bother distinguishing 1-solution case, as code below will still work
+                      }
+                    }
+                  } else {
+                    + b,c,d:Real32
+                    b := 3*(ax*bx + ay*by) * a_inv; // could precompute this as it doesn't depend on sample point
+                    c := (2*(ax*ax + ay*ay) + (mx*bx+my*by)) * a_inv
+                    d := (mx*ax+my*ay) * a_inv
+                    num := solve_cubic (b, c, d) in res
+                  }
+                  0.to 2 do { k:Int
+                    ((num >= k+1) && {res.at k >= 0.0} && {res.at k <= 1.0}).if {
+                      + t,it,px,py:Real32
+                      t := res.at k
+                      it := 1.0 - t
+                      px := it*it*x0 + 2*t*it*x1 + t*t*x2
+                      py := it*it*y0 + 2*t*it*y1 + t*t*y2
+                      dist2 := (px-sx)*(px-sx) + (py-sy)*(py-sy)
+                      (dist2 < min_dist * min_dist).if {
+                        min_dist := dist2.sqrt
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            (winding = 0).if {
+              min_dist := -min_dist;  // if outside the shape, value is negative
+            }
+            val := onedge_value.to_real32 + pixel_dist_scale * min_dist
+            (val < 0).if {
+              val := 0
+            }.elseif {val > 255} then {
+              val := 255
+            }
+            dat.at ((y-iy0)*w+(x-ix0)) put (val.to_raw_uint8)
+          }
+        }
+        free_vertices verts
+      }
+    }
+    dat,w,h,ix0,iy0
+  )
+
+  - get_codepoint_sdf scale:Real32 code codepoint:Int padding padding:Int onedge onedge_value:Uint8
+  dist pixel_dist_scale:Real32 :(C_array Uint8,Int,Int,Int,Int) <-
+  (
+    get_glyph_sdf scale glyph (find_glyph_index codepoint) padding padding onedge onedge_value dist pixel_dist_scale
+  )
+
+  //
+  // Font name matching
+  //
+
+  - get_font_name_string (platform_id, encoding_id, language_id, name_id:Int) :(C_array Uint8,Int) <-
+  // The name, in its encoding (UTF-16 big endian for Unicode or Microsoft), and
+  // its length in bytes; @NULL if not found.
+  ( + count,string_offset,i,nm,len:Int
+    + fc,result:C_array Uint8
+    fc := data
+    nm := find_table (fc, fontstart) name "name"
+    (nm != 0).if {
+      count := u16(fc+nm+2)
+      string_offset := nm + u16(fc+nm+4)
+      {(i < count) && {result = NULL}}.while_do {
+        + loc:Int
+        loc := nm + 6 + 12 * i
+        ((platform_id = u16(fc+loc+0)) && {encoding_id = u16(fc+loc+2)} && {language_id = u16(fc+loc+4)} && {name_id = u16(fc+loc+6)}).if {
+          len := u16(fc+loc+8)
+          result := fc + string_offset + u16(fc+loc+10)
+        }
+        i := i + 1
+      }
+    }
+    result,len
+  )
+
   // ARRAY TT_VERTEX
-  
+
   - stock_array_tt_vertex:Array (Array (Flat Tt_vertex)) := Array (Array (Flat Tt_vertex)).create_with_capacity 32
-  
+
   - alloc_vertices n:Int :Array (Flat Tt_vertex) <-
   ( + result:Array (Flat Tt_vertex)
     (stock_array_tt_vertex.is_empty).if {
@@ -726,19 +1846,13 @@ Public
       result.with_capacity n
       result.set_upper (n-1)
     }
-    /* BSBSBS
-    0.to (n-1) do { i:Int
-      result.add_last (TT_VERTEX.create)
-    };*/
-    result    
+    result
   )
-  
+
   - free_vertices t:Array (Flat Tt_vertex) <-
   (
     (t != NULL).if {
-      //{t.is_empty}.until_do { t.pop.free; }; BSBSBS
       t.clear
       stock_array_tt_vertex.add_last t
     }
   )
-  

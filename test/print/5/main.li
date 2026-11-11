@@ -1,9 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + r:Ureal_24_8
-    r := (0.5).to_ureal_24_8
-    r.print
-    Test.check (r.to_string) string "0.50000000"
-  )

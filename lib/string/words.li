@@ -1,0 +1,47 @@
+Header
+  + name := Words
+/* The words of a string, always in an @Array (empty if there is none): @String.split and
+   @String.split_at give @NULL for no word. */
+Public
+
+  - of s:String :Array String_buffer <-
+  // The words separated by blanks.
+  ( + r:Array String_buffer
+    r := s.split
+    (r = NULL).if { r := Array String_buffer.create_with_capacity 0 }
+    r
+  )
+
+  - spare:Array String_buffer := Array String_buffer.create_with_capacity 16
+  // Without garbage collector: the buffers given back by @of in, taken again.
+
+  - of s:String in r:Array String_buffer <-
+  // The words of @s separated by blanks, in @r: its buffers are taken again from a call to
+  // the next (no garbage collector), it gives nothing to keep.
+  ( + p,b:Int
+    + w:String_buffer
+    r.foreach { x:String_buffer; spare.add_last x }
+    r.clear
+    p := 0
+    {p <= s.upper}.while_do {
+      {(p <= s.upper) && {is_blank (s.at p)}}.while_do { p := p + 1 }
+      (p <= s.upper).if {
+        b := p
+        {(p <= s.upper) && {! is_blank (s.at p)}}.while_do { p := p + 1 }
+        (spare.is_empty).if { w := String_buffer.create (p - b) } else { w := spare.pop }
+        w.clear
+        b.to (p - 1) do { i:Int; w.add_last (s.at i) }
+        r.add_last w
+      }
+    }
+  )
+
+  - is_blank c:Char :Boolean <- (c = ' ') || {c = '\t'} || {c = '\n'} || {c = '\r'}
+
+  - of s:String at c:Char :Array String_buffer <-
+  // The parts separated by @c.
+  ( + r:Array String_buffer
+    r := s.split_at c
+    (r = NULL).if { r := Array String_buffer.create_with_capacity 0 }
+    r
+  )

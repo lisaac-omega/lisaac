@@ -1,0 +1,134 @@
+Header
+  + name := Ui_shortcut
+/* A sequence of keys which runs an action. The sequence is coded as in @Keyboard: for each
+   key, a byte of modifiers (@Keyboard.ctrl, @Keyboard.alt, @Keyboard.shift,
+   @Keyboard.key_cmd for a special key), then the character in UTF-8.
+   @step follows the keys typed: it is the place reached in the sequence. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + seq:String_alias
+  + act:Ui_act
+  + step:Int
+
+  - create s:String_alias act a:Ui_act :Self <-
+  ( + r:Self
+    r := clone
+    r.make s act a
+    r
+  )
+
+  - make s:String_alias act a:Ui_act <-
+  (
+    seq := s
+    act := a
+  )
+
+  - reset <- ( step := 0 )
+
+  - is_started:Boolean <- step > 0
+
+  - feed s:String cmd c:Uint8 :Boolean <-
+  // The key @s with the modifiers @c is typed: True when the sequence is complete.
+  // The shift is compared only when the sequence asks for it (`N, N' is typed with shift).
+  ( + m,mc:Uint8
+    + i,j:Int
+    + ok,r:Boolean
+    ok := step < seq.count
+    (ok).if {
+      m := seq.at step.to_uint8
+      (m > 0Fh).if { mc := c & 1Fh } else { mc := c & 0Fh }
+      ok := m = mc
+    }
+    (ok).if {
+      i := 0
+      j := step + 1
+      {(i < s.count) && {j < seq.count} && {s.at i = seq.at j}}.while_do {
+        i := i + 1
+        j := j + 1
+      }
+      ok := i = s.count
+      (ok).if { step := j }
+    }
+    (ok).if {
+      (step >= seq.count).if {
+        r := True
+        step := 0
+      }
+    } else {
+      step := 0
+    }
+    r
+  )
+
+  //
+  // Parsing of the text of the keys (`Ctrl Shift z', `Esc, b', `P,i,Space').
+  //
+
+  - parse t:String :String_alias <-
+  // The coded sequence, or @NULL if @t is not correct.
+  ( + r:String_alias
+    + ok:Boolean
+    + code:Uint8
+    + chars:String_buffer
+    ok := True
+    chars := String_buffer.create 8
+    String.tmp { b:String_buffer
+      (Words.of t at ',').foreach { st:String_buffer
+        code := 0
+        chars.clear
+        (Words.of st).foreach { w:String_buffer
+          code := add_word w code code in chars
+        }
+        ok := ok && {! chars.is_empty}
+        b.add_last (code.to_char)
+        b.append chars
+      }
+      (ok && {! b.is_empty}).if { r := b.to_string_alias }
+    }
+    r
+  )
+
+Private
+
+  - add_word w:String code c:Uint8 in b:String_buffer :Uint8 <-
+  // A word of a key: a modifier, a special key or a character (added in @b).
+  // The result is the new code of modifiers.
+  ( + r:Uint8
+    + ch:Char
+    r := c
+    (w == "Ctrl").if { r := c | Keyboard.ctrl
+    }.elseif {w == "Alt"}    then { r := c | Keyboard.alt
+    }.elseif {w == "Shift"}  then { r := c | Keyboard.shift
+    }.elseif {w == "Esc"}    then { r := c | Keyboard.key_cmd; b.add_last '\27\'
+    }.elseif {w == "Tab"}    then { r := c | Keyboard.key_cmd; b.add_last '\9\'
+    }.elseif {w == "Space"}  then { b.add_last ' '
+    }.elseif {w == "Beg"}    then { r := c | Keyboard.key_cmd; b.add_last 'B'
+    }.elseif {w == "End"}    then { r := c | Keyboard.key_cmd; b.add_last 'E'
+    }.elseif {w == "PgUp"}   then { r := c | Keyboard.key_cmd; b.add_last 'P'
+    }.elseif {w == "PgDown"} then { r := c | Keyboard.key_cmd; b.add_last 'N'
+    }.elseif {w == "Right"}  then { r := c | Keyboard.key_cmd; b.add_last 'R'
+    }.elseif {w == "Left"}   then { r := c | Keyboard.key_cmd; b.add_last 'L'
+    }.elseif {w == "Up"}     then { r := c | Keyboard.key_cmd; b.add_last 'U'
+    }.elseif {w == "Down"}   then { r := c | Keyboard.key_cmd; b.add_last 'D'
+    }.elseif {w == "Suppr"}  then { r := c | Keyboard.key_cmd; b.add_last 'S'
+    }.elseif {w == "Inser"}  then { r := c | Keyboard.key_cmd; b.add_last 'I'
+    }.elseif {w == "Enter"}  then { r := c | Keyboard.key_cmd; b.add_last '\10\'
+    }.elseif {w == "Del"}    then { r := c | Keyboard.key_cmd; b.add_last '\8\'
+    }.elseif {(w.count >= 2) && {w.first = 'F'} && {w.at 1.is_digit}} then {
+      r := c | Keyboard.key_cmd
+      ch := 'a'
+      String.tmp { n:String_buffer
+        n.copy w
+        n.remove_head 1
+        (n.to_int - 1).times { ch := ch.next }
+      }
+      b.add_last ch
+    } else {
+      // A character (perhaps in UTF-8).
+      b.append w
+    }
+    r
+  )

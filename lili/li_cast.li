@@ -1,0 +1,29 @@
+Header
+  + name := Li_cast
+/* Conversion between two scalar kinds (see @lili_cast). */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + value:Li_node
+  + from:Int
+  + to:Int
+
+  - create v:Li_node from f:Int to t:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make v from f to t
+    result
+  )
+
+  - make v:Li_node from f:Int to t:Int <- ( value := v; from := f; to := t; )
+
+  - eval fp:Int :Int <-
+  ( + a,f,t:Int
+    a := value.eval fp
+    f := from
+    t := to
+    `lili_cast(@f,@t,@a)`:(Int)
+  )

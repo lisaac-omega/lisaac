@@ -205,6 +205,8 @@ Public
   - type_id_intern:Int    <- `1`
   
   - is_cop_type:Boolean       <- `15`
+
+  - check_one_intern <- `27`
   
   - copy_intern_in other:Self <- `*@other = *@self`; // BSBS: Ne fonctionnera plus avec la nouvelle version !
   

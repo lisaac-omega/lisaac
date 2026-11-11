@@ -15,10 +15,10 @@ Public
   - h ph:Int v pv:Int tq ptq:Int <- ( (h,v,tq) := (ph,pv,ptq); )
   
   + hd:Int
-  - set_hd h:Int <- ( hd := h; )
+  - set_hd phd:Int <- ( hd := phd; )
   
   + ha:Int
-  - set_ha h:Int <- ( ha := h; )
+  - set_ha pha:Int <- ( ha := pha; )
   
   + dc_pred:Int
   - set_dc_pred d:Int <- ( dc_pred := d; )
@@ -55,3 +55,11 @@ Public
   - coeff_w cw:Int coeff_h ch:Int
   raw_coeff rc:C_array Int16 coeff c:C_array Int16 <-
   ( (coeff_w,coeff_h) := (cw,ch);  (raw_coeff,coeff) := (rc,c); )
+  
+  - clear <-
+  (
+    (id,h,v,tq,hd,ha,dc_pred,x,y,w2,h2) := (0,0,0,0,0,0,0,0,0,0,0)
+    (data,raw_data,linebuf) := (NULL,NULL,NULL)
+    (coeff,raw_coeff) := (NULL,NULL)
+    (coeff_w,coeff_h) := (0,0)
+  )

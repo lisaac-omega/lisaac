@@ -88,7 +88,7 @@ Public
   - from_collection3 model:Collection3(V) <-
   (
     make (model.line_minimum, model.column_minimum, model.depth_minimum)
-    to   (model.line_maximum, model.column_maximum, model.depth_maximum)
+      to   (model.line_maximum, model.column_maximum, model.depth_maximum)
 
     line_minimum.to line_maximum do { i:Int
       column_minimum.to column_maximum do { j:Int
@@ -142,7 +142,7 @@ Public
   //Assume all sub-collections of have the same indexing.
   (
     make (model.lower,model.first.lower,model.first.first.lower)
-    to   (model.upper,model.first.upper,model.first.first.upper)
+      to   (model.upper,model.first.upper,model.first.first.upper)
 
     (model.lower).to (model.upper) do { line:Int
       (model.first.lower).to (model.first.upper) do { column:Int
@@ -220,7 +220,7 @@ Public
   (
     (! valid_index (line,column,depth)).if {
       resize (line.min lower1,column.min lower2,depth.min lower3)
-      to     (line.max upper1,column.max upper2,depth.max upper3)
+        to     (line.max upper1,column.max upper2,depth.max upper3)
     }
     put x to (line,column,depth)
   )

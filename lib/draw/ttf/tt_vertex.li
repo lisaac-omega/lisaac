@@ -1,54 +1,50 @@
 Header
   + name :=  Tt_vertex
+/* @stbtt_vertex: a point of a glyph outline (move, line, quadratic curve with
+   the control point @cx,@cy, or cubic curve with @cx,@cy and @cx1,@cy1). */
 Inherit
-  
+
   - parent_clone:Clone := Clone
 
-Private  
-  /*
-  - stock:ARRAY TT_VERTEX := ARRAY TT_VERTEX.create_with_capacity 32
-  
-  - new:TT_VERTEX <-
-  ( + result:TT_VERTEX
-    (stock.is_empty).if {
-      result := TT_VERTEX.clone
-    } else {
-      result := stock.pop
-    }
-    result
-  )
-*/
 Public
-  
- // - create:TT_VERTEX <- new
-  
+
   + x:Int16
   - xf:Real32 <- x.to_real32
-  
+
   + y:Int16
   - yf:Real32 <- y.to_real32
-  
+
   + cx:Int16
   - cxf:Real32 <- cx.to_real32
-  
+
   + cy:Int16
   - cyf:Real32 <- cy.to_real32
-  
+
+  + cx1:Int16
+  + cy1:Int16
+
   + type:Uint8
   + padding:Uint8
-  
+
   - set_type t:Uint8 <- ( type := t; )
-  
+
   - make typ:Uint8 pos (px,py,pcx,pcy:Int32) <-
+  // As @stbtt_setvertex (the coordinates are truncated to 16 bits).
   (
     type    := typ
-    (x,y)   := (px .to_int16,py .to_int16)
-    (cx,cy) := (pcx.to_int16,pcy.to_int16)
+    (x,y)   := (px.to_raw_int16,py.to_raw_int16)
+    (cx,cy) := (pcx.to_raw_int16,pcy.to_raw_int16)
   )
-  
+
   - set_x  p:Int16 <- ( x  := p; )
   - set_y  p:Int16 <- ( y  := p; )
   - set_cx p:Int16 <- ( cx := p; )
   - set_cy p:Int16 <- ( cy := p; )
-  
-//  - free <- stock.add_last self
+  - set_cx1 p:Int16 <- ( cx1 := p; )
+  - set_cy1 p:Int16 <- ( cy1 := p; )
+
+  - copy_from v:Tt_vertex <-
+  (
+    (x,y,cx,cy,cx1,cy1) := (v.x,v.y,v.cx,v.cy,v.cx1,v.cy1)
+    (type,padding) := (v.type,v.padding)
+  )

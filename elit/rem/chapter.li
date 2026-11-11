@@ -3,16 +3,18 @@ Header
 Inherit
   + parent_tok_drw:Flat Tok_drw
   
+Insert
+  - parent_recyclable:Recyclable := Recyclable
+
 Private
-  - stk:Flat Array (Exact Chapter)
   
 Public
  
   + key:String_alias
     
   - new:Self <-
-  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
-  - free <- stk.add_last self
+  parent_recyclable.new
+  - free <- parent_recyclable.free
   
   // PARSER
   

@@ -15,6 +15,10 @@ Public
 
   - is_invariant:Boolean <- True
 
+  - is_pure:Boolean <- True
+
+  - is_reading v:Variable :Boolean <- False
+
   //
   // Typing.
   //

@@ -24,6 +24,11 @@ Public
     ? {link_count >= 0}
   )
 
+  - first_access v:Local :Int <- body.first_access v
+
+  - has_block:Boolean <- body.has_block
+  // @body is at least executed once (the end is a @Loop_end, unknown).
+
   //
   // Creation.
   //
@@ -95,6 +100,9 @@ Public
     ? {link_count = 0}
   )
 
+  + start_depth:Int
+  // Level of the code run before the first test (see @Read.execute_link).
+
   - execute:Instr <-
   ( + result:Instr
     + cur_seq_call_local_and_loop:Int
@@ -113,6 +121,10 @@ Public
       seq_inline := seq_inline + 1
       //
       result := self
+      start_depth := cond_depth
+      (Escape.is_active).if {
+        Escape.push_loop
+      }
       body.execute_case
       (loop_invariant = self).if {
         loop_list := list_current
@@ -123,8 +135,13 @@ Public
         //
         seq_call_local_and_loop := seq_call_local_and_loop + link_count
         seq_call_and_loop       := seq_call_and_loop + link_count
+        Escape.set_replay True
         body.execute_case
+        Escape.set_replay False
         loop_invariant := NULL
+      }
+      (Escape.is_active).if {
+        Escape.pop_loop
       }
     }
     result

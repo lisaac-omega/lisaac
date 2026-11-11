@@ -13,6 +13,10 @@ Public
   // Execute.
   //
   
+  - exec_conservator_left left_cst:Int_cst :Expr <- exec_size left_cst with right is_equal True
+
+  - exec_conservator_right right_cst:Int_cst :Expr <- exec_size right_cst with left is_equal True
+
   - exec left_cst:Int_cst and right_cst:Int_cst :Expr <-
   //-- C1 == C2 -> True/False
   ( + result:Prototype_cst
@@ -35,7 +39,6 @@ Public
   //-- Flat == NULL -> False
   //-- intersection (type_set(E),type_set(E')) = Empty -> False
   ( + result:Prototype_cst
-    + r:Prototype_cst
     + type_set_r,type_set_l:Types_tmp
     
     + ls,rs:String_cst
@@ -59,13 +62,7 @@ Public
       }
 
     } else {
-      r ?= right
-      (
-        (r != NULL) &&
-        {r.static_type.raw = Type_null} &&
-        {left.static_type.is_flat}  &&
-        {left.static_type.raw != type_pointer}
-      ).if {
+      (is_flat_with_null).if {
         left .remove
         right.remove
         result := Prototype_cst.create position type (type_false.default)

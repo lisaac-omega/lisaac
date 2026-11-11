@@ -32,7 +32,7 @@ Paper
     }
     cm := cmd
     name := `glfwGetKeyName(@k,@key)`:C_array Char
-    if (debug && {! name.is_null}) then {
+    if (debug && {name.to_pointer != NULL}) then {
       String.tmp { kn:String_buffer
         while {(name.at knidx) != '\0'} do {
           kn.add_last (name.at knidx)
@@ -41,7 +41,8 @@ Paper
         Out # " glfwGetKeyName:" # kn
       }
     }
-    if (name.is_null) then {
+    // A @C_array from an external is never @NULL for the compiler: test the pointer.
+    if (name.to_pointer = NULL) then {
       press.if {        
         (k)
         .when `GLFW_KEY_SPACE`:Int then { cc := ' ' }

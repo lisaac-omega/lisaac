@@ -14,13 +14,30 @@ Private
   
   + buckets:C_array(Hmap_node V Key K)
   // The @buckets storage area is the primary hash table of @capacity
-  // elements. To search some key, the first access is done in @buckets
-  // using the remainder of the division of the key @hash_code by
-  // @capacity. In order to try to avoid clashes, @capacity is always a
-  // prime number (selected using HASH_TABLE_SIZE).
+  // elements, a power of 2. To search some key, the first access is done in @buckets
+  // at @bucket_of its @hash_code: no division, and a good spreading of weak hash codes.
   
-  - minimum_capacity:Int := 193
-  // Minimum size for the 'buckets' storage area (prime number).
+  - minimum_capacity:Int := 256
+  // Minimum size for the 'buckets' storage area (power of 2).
+
+  + shift:Int
+  // 32 - log2(@capacity).
+
+  - bucket_of h:Int :Int <-
+  // Fibonacci hashing: the high bits of @h * 2^32 / golden ratio.
+  ((h.to_raw_uint32 * 09E3779B9h.to_raw_uint32) >> shift).to_int
+
+  - set_buckets n:Int <-
+  // Empty @buckets of the smallest power of 2 >= @n.
+  (
+    capacity := minimum_capacity
+    shift := 24
+    {capacity >= n}.until_do {
+      capacity := capacity << 1
+      shift := shift - 1
+    }
+    buckets := C_array(Hmap_node V Key K).create capacity
+  )
 
   - free_list:Flat Array (Hmap_node V Key K)
 
@@ -37,7 +54,7 @@ Public
   
   - new self:Self capacity c:Int :Self <- clone.with_capacity c
   // If you can roughly predict the required capacity, it is important for performance.
-  // Note that this capacity will be automatically adjusted to the next prime number  
+  // Note that this capacity will be automatically adjusted to the next power of 2.
   
 Private
   
@@ -47,12 +64,8 @@ Private
   // When first @remove occurs, storage size may naturally become
   // smaller than @medium_size. Afterall, tuning of storage size is
   // done automatically according to usage.
-  [
-    medium_size >= 97
-  ]
   ( 
-    capacity := Hash_table_size.prime_number_ceiling medium_size
-    buckets := C_array(Hmap_node V Key K).create capacity
+    set_buckets medium_size
     self
   )
   [    
@@ -71,7 +84,7 @@ Public
   // Is there a value currently associated with key @k?
   ( + idx:Int
     + node:Hmap_node V Key K
-    idx := k.hash_code % capacity
+    idx := bucket_of (k.hash_code)
     node := buckets.at idx
     until {(node = NULL) || {node.key = k}} do {
       node := node.next
@@ -86,7 +99,7 @@ Public
   ]
   ( + idx:Int 
     + node:Hmap_node V Key K
-    idx := k.hash_code % capacity
+    idx := bucket_of (k.hash_code)
     node := buckets.at idx
     until {node.key = k} do {
       node := node.next
@@ -100,7 +113,7 @@ Public
     + v:V
     + idx:Int
     + node:Hmap_node V Key K
-    idx := k.hash_code % capacity
+    idx := bucket_of (k.hash_code)
     node := buckets.at idx
     until {(node = NULL) || {node.key = k}} do {
       node := node.next
@@ -174,14 +187,14 @@ Public
     + node:Hmap_node V Key K
     {(ki:K,vi:V)
       h := ki.hash_code
-      idx := h % capacity
+      idx := bucket_of h
       node := buckets.at idx
       until {(node = NULL) || {node.key = ki}} do {
         node := node.next
       }
       (node = NULL).if {
         count := count + 1
-        set_capacity count.if { idx := h % capacity }
+        set_capacity count.if { idx := bucket_of h }
         node := new_node vi key ki next (buckets.at idx)
         buckets.at idx put node
       } else {
@@ -208,7 +221,7 @@ Public
     + node:Hmap_node V Key K
     set_capacity (count + n)
     { (ki:K, vi:V)
-      idx := ki.hash_code % capacity
+      idx := bucket_of (ki.hash_code)
       node := new_node vi key ki next (buckets.at idx)
       buckets.at idx put node
     }.value (k,v)
@@ -231,7 +244,7 @@ Public
   ]
   ( + node:Hmap_node V Key K
     {(ki:K,vi:V)
-      node := buckets.at (ki.hash_code % capacity)
+      node := buckets.at (bucket_of (ki.hash_code))
       until {node.key = ki} do {
         node := node.next
       }
@@ -239,6 +252,30 @@ Public
     }.value (k,v)
   )  
   
+  - at k:K modify blk:{V;V} <-
+  // One search: @blk receives the value of @k (the default of @V if @k is new)
+  // and returns its new value. For a counter: `h.at k modify { n:Int; n + 1 }'.
+  ( + h, idx:Int
+    + node:Hmap_node V Key K
+    + v:V
+    h := k.hash_code
+    idx := bucket_of h
+    node := buckets.at idx
+    until {(node = NULL) || {node.key = k}} do {
+      node := node.next
+    }
+    (node = NULL).if {
+      count := count + 1
+      set_capacity count.if { idx := bucket_of h }
+      buckets.at idx put (new_node (blk.value v) key k next (buckets.at idx))
+    } else {
+      node.set_value (blk.value (node.value))
+    }
+  )
+  [
+    ? {has k}
+  ]
+
   // Removing:
 
   - remove (k:K^n) <-
@@ -246,7 +283,7 @@ Public
   ( + idx:Int
     + node, previous_node:Hmap_node V Key K
     { ki:K
-      idx := (ki.hash_code) % capacity
+      idx := bucket_of (ki.hash_code)
       node := buckets.at idx
       if (node != NULL ) then {
         if (node.key = ki ) then {
@@ -327,21 +364,18 @@ Private
   - set_capacity n:Int :Boolean <-
   // There is no more free slots:the dictionary must grow.
   (n > capacity).if {
-    + idx, new_capacity,i:Int
+    + idx,i:Int
     + old_buckets:C_array(Hmap_node V Key K)
     + node1, node2:Hmap_node V Key K
     
     old_buckets  := buckets
-    new_capacity := Hash_table_size.prime_number_ceiling n
-    
-    buckets := C_array(Hmap_node V Key K).create new_capacity
     i := capacity -1
-    capacity := new_capacity
+    set_buckets n
     until {i < 0} do {
       node1 := old_buckets.at i
       {node1 = NULL}.until_do {
         node2 := node1.next
-        idx := node1.key.hash_code % capacity
+        idx := bucket_of (node1.key.hash_code)
         node1.set_next (buckets.at idx)
         buckets.at idx put node1
         node1 := node2

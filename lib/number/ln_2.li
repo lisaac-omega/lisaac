@@ -1,0 +1,28 @@
+Header
+  + name := Ln_2
+  /*
+  The node of the number ln 2, used by `ℝ.ln_2' and by every logarithm. The
+  prototype is itself the node: it is unique, never freed, and keeps its best
+  approximation for the whole program.
+
+  ln 2 = 2 atanh(1/3), in fixed point.
+  */
+Inherit
+  + parent_r_node:Flat R_node
+  // Its own fields (approximation), not those of the prototype @R_node.
+
+Private
+
+  - compute p:Int :ℤ <-
+  ( + z,s,u,r:ℤ
+    + w:Int
+    w := (- p).max 0 + 64
+    u := ℤ.one << w
+    z := u / 3
+    u.free
+    s := atanh (z,w)
+    z.free
+    r := shift (s, 1 - w - p)
+    s.free
+    r
+  )

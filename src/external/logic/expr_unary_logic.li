@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- right.is_invariant
 
+  - is_pure:Boolean <- right.is_pure
+
+  - is_reading v:Variable :Boolean <- right.is_reading v
+
   + right:Expr
 
   - symbol:Char <-

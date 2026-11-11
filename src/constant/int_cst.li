@@ -202,15 +202,6 @@ Private
       position.put_position
       list_current.position.put_position
       Position.send_error
-      //value := 0
     }
   )
-
-
-
-
-
-
-
-
 

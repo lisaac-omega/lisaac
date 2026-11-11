@@ -1,9 +1,0 @@
---SEMANTIC---------
-Argument assignment is not possible.
-Line 7 column 11 in Main(.../test/misc/23/main.li):
-  - bar foo:Int <-
-           ^
-
-Line 10 column 11 in Main(.../test/misc/23/main.li):
-    foo := foo
-           ^

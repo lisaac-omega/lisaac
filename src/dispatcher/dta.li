@@ -36,11 +36,24 @@ Public
 
 Node_type, Dta
 
+  - concrete_type:Type
+  // Concrete type of the receiver during @product (copy of a data slot of type Self).
+
+  - concrete_type_full:Type_full
+
   - product t:Type with e:Expr self type_self:Type_full :List <-
   ( + result:List
 
+    (type_self = NULL).if {
+      concrete_type := t
+      concrete_type_full := t.default.to_exact
+    } else {
+      concrete_type := type_self.raw
+      concrete_type_full := type_self
+    }
     result := List.create (e.position)
     (t = Type_null).if {      
+      Escape.on_null_call e
       result.add_last Call_null      
     } else {
       lookup t with e in result
@@ -60,11 +73,6 @@ Node_type, Dta
       result := True
     } else {
 
-      /*
-      "DTA: ".print
-      type_self.print
-      '\n'.print
-      */
       node.update_link type_self
       node ?= l.second
       (node != NULL).if {
@@ -99,6 +107,7 @@ Private
   ( + s:Slot
     + name:String_alias
     + node_style:Node_style
+    + nt:Node_type
     + r:Expr
 
     name := slot.name
@@ -112,7 +121,9 @@ Private
       r := s.result_type.get_expr_for typ
       node_style := Node_style.create (expr.my_copy,s) with self result r
       lst.add_last node_style
-      lst.add_last (Node_type.create r with self)
+      nt := Node_type.create r with self
+      nt.set_self_type_parent concrete_type_full
+      lst.add_last nt
     } else {
       // Direct call.
       s.is_equal_profil slot

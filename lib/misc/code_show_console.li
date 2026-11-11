@@ -13,8 +13,8 @@ Public
   + entry:Code_show_entry
   + back:Real32      // Rows scrolled back from the end.
 
-  - head_h:Real32 := 34
-  - margin:Real32 := 12
+  - head_h:Real32 <- Code_show_look.px 34
+  - margin:Real32 <- Code_show_look.px 12
 
   - create:Self <-
   ( + result:Self

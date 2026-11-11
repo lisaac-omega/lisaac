@@ -27,9 +27,25 @@ Public
     static_type := t; //.to_exact
   )
 
-  - my_copy:Self <-
+  + is_move:Boolean
+  // `One': the `NULL' written in the source of a move (see @Itm_code.emit_move).
+
+  + move_name:String_alias
+  // The variable moved.
+
+  - set_move n:String_alias <-
   (
-    Self.create position type static_type
+    is_move := True
+    move_name := n
+  )
+
+  - my_copy:Self <-
+  ( + result:Self
+    result := Self.create position type static_type
+    (is_move).if {
+      result.set_move move_name
+    }
+    result
   )
 
   //
@@ -48,6 +64,7 @@ Public
 
   - execute_link:Expr <-
   (
+    Escape.on_move_constant self
     self
   )
   

@@ -49,8 +49,6 @@ Public
     
   // Consultation style
   
-  - is_header:Boolean    <- style = "Header"
-  
   - is_inherit:Boolean   <- style = "Inherit"
 
   - is_insert:Boolean    <- style = "Insert"
@@ -66,8 +64,6 @@ Public
   // Consultation access
     
   - is_public:Boolean    <- access_name = "Public"
-  
-  - is_private:Boolean   <- access_name = "Private"
   
   - is_directory:Boolean <- access_name = "Directory"
   

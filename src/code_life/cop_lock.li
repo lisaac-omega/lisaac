@@ -9,6 +9,16 @@ Public
 
   + data:Expr
 
+  + is_static_read:Boolean
+  // The read of a `-' parent slot (`Inherit', `Insert') of an active prototype, on the way to
+  // a slot of the parent: resolved by the compiler, there is nothing to run in the universe
+  // (see @execute).
+
+  - set_static_read <-
+  (
+    is_static_read := True
+  )
+
   //
   // Creation.
   //
@@ -28,8 +38,12 @@ Public
   )
 
   - my_copy:Self <-
-  (
-    create position with (data.my_copy)
+  ( + result:Self
+    result := create position with (data.my_copy)
+    (is_static_read).if {
+      result.set_static_read
+    }
+    result
   )
 
   - remove <-
@@ -42,8 +56,26 @@ Public
   //
 
   - execute:Instr <-
-  (
-    self
+  ( + unlock:Cop_unlock
+    + result:Instr
+    result := self
+    (is_static_read).if {
+      // An empty synchronous message for a parent slot resolved statically: removed with its
+      // `Cop_unlock' (it waits for nothing the program needs).
+      (list_current.index < list_current.upper).if {
+        unlock ?= list_current.at (list_current.index + 1)
+        (unlock != NULL).if {
+          list_current.remove_index (list_current.index + 1)
+          data.remove
+          result := NULL
+        }
+      }
+    }
+    (result != NULL).if {
+      // The base of the universe changes: no propagation of a `-' slot value across.
+      seq_call_and_loop := seq_call_and_loop + 1
+    }
+    result
   )
 
   //
@@ -52,53 +84,14 @@ Public
   
   - genere <-
   (
-    output.append "// Pre thread.\n"
-    //  output.append "print_char('(');\n"
-    //  output.append "print_char('\\n');\n"
+    output.append "// Synchronous message.\n"
     output.append indent
-    output.append "{ lith_node node,*n;\n"
+    output.append "{ lith_sync li_sync;\n"
     indent.append "  "
     output.append indent
-    output.append "lith_object *obj;\n"
-    output.append indent
-    output.append "void *thread_save;\n"
-    output.append indent
-    output.append "struct generic_protocop *proto = (struct generic_protocop *)"
+    output.append "li_sync_begin(&li_sync,(lith_object *)("
     data.genere
-    output.append ";\n"
-    output.append indent
-    output.append "obj = &(proto->thread);\n"
-    output.append indent
-    output.append "node.next = NULL;\n"
-    output.append indent
-    output.append "pthread_mutex_init(&node.mutex,NULL);\n"
-    output.append indent
-    output.append "pthread_mutex_lock(&obj->mutex);\n"
-    output.append indent
-    output.append "n = obj->last;\n"
-    output.append indent
-    output.append "if (n == NULL) {\n"
-    output.append indent
-    output.append "  obj->first = &node;\n"
-    output.append indent
-    output.append "} else {\n"
-    output.append indent
-    output.append "  n->next = &node;\n"
-    output.append indent
-    output.append "  pthread_mutex_lock(&node.mutex);\n"
-    output.append indent
-    output.append "};\n"
-    output.append indent
-    output.append "obj->last = &node;\n"
-    output.append indent
-    output.append "pthread_mutex_unlock(&obj->mutex);\n"
-    //
-    output.append indent
-    output.append "pthread_mutex_lock (&node.mutex);\n"
-    output.append indent
-    output.append "thread_save=pthread_getspecific(current_thread);\n"
-    output.append indent
-    output.append "pthread_setspecific(current_thread,proto)"
+    output.append "))"
   )
 
   //

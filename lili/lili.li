@@ -1,0 +1,153 @@
+Header
+  + name := Lili
+/*
+  lili: an interpreter for Lisaac.
+  It runs the whole front end of the compiler, then executes its internal
+  representation, instead of generating C and waiting for the C compiler.
+*/
+Inherit
+
+  - parent_lisaac:Lisaac := Lisaac
+
+Private
+
+  - callees:Array Li_fn := Array Li_fn .create_with_capacity 16
+
+  - program_args:Array String_alias := Array String_alias .create_with_capacity 8
+
+  - cut_arguments <-
+  // What follows `--' goes to the interpreted program.
+  ( + i:Int
+    i := Command_args.lower
+    {(i <= Command_args.upper) && {Command_args.at i != "--"}}.while_do {
+      i := i + 1
+    }
+    (i <= Command_args.upper).if {
+      (i + 1).to (Command_args.upper) do { j:Int
+        program_args.add_last (Command_args.at j)
+      }
+      Command_args.option_shift "--"
+      program_args.foreach { a:String_alias
+        Command_args.option_shift a
+      }
+    }
+  )
+
+  - cache_directory:String_alias <-
+  ( + home:String_alias
+    + buf:String_buffer
+    + st:C_array Char
+    buf := String_buffer.create 256
+    home := Environment.read_variable "HOME"
+    ((home = NULL) || {home.is_empty}).if { home := "/tmp"; }
+    buf # home # "/.cache"
+    st := buf.to_external
+    `mkdir(@st,0777)`:(Int)
+    buf # "/lili"
+    st := buf.to_external
+    `mkdir(@st,0777)`:(Int)
+    buf.to_string_alias
+  )
+
+Public
+
+  - main <-
+  ( + fn:Li_fn
+    + p:Profil
+
+    cut_arguments
+    read_options
+    is_quiet := True
+    output_decl.copy "#include <stdint.h>\nint print_string(char *str);\n"
+    title "INCLUDE" in output_decl
+    title "EXTERNAL" in output_glob
+    output_list.add_last (String_buffer.create 4096)
+    output := output_list.first
+    load_main_object
+    type_input.prototype.depend
+
+    fn := Li_compiler.translate list_main
+    // The slots of the `External' section are called by the C code.
+    (Profil_list.profil_list.lower).to (Profil_list.profil_list.upper) do { j:Int
+      p := Profil_list.profil_list.at j
+      (p.is_external).if {
+        Li_stub.add_trampoline p index (callees.count)
+        callees.add_last (Li_compiler.fn_of p)
+        external_profils.add_last p
+      }
+    }
+    Li_compiler.flush_todo
+
+    run_with fn
+  )
+
+  - external_profils:Array Profil := Array Profil .create_with_capacity 16
+
+  - run_with fn:Li_fn <-
+  ( + cb:Int
+    + argc,i:Int
+    + argv:Int
+    + st:C_array Char
+    + s:String_buffer
+    + a:Int
+
+    argc := program_args.count + 1
+    argv := `(int64_t)calloc(@argc + 1,sizeof(char *))`:(Int)
+    s := String_buffer.create 256
+    s # input_path # input_name
+    st := s.to_external
+    `((char **)@argv)[0] = realpath(@st,NULL)`;
+    (`((char **)@argv)[0]`:(Int) = 0).if {
+      s # ".li"
+      st := s.to_external
+      `((char **)@argv)[0] = realpath(@st,NULL)`;
+      `({ char *p = ((char **)@argv)[0]; if (p) p[strlen(p) - 3] = 0; })`;
+    }
+    program_args.foreach { arg:String_alias
+      i := i + 1
+      s.clear
+      s # arg
+        st := s.to_external
+      `((char **)@argv)[@i] = strdup(@st)`;
+    }
+    cb := `(int64_t)lili_callback_entry`:(Int)
+    Li_runtime.init_stack
+    Li_runtime.set_trace (Environment.read_variable "LILI_TRACE" != NULL)
+    Li_stub.load (cache_directory) argc argc argv argv callback cb
+    a := Li_node.sp
+    Li_node.set_sp (a + fn.frame_size)
+    fn.eval a
+    `exit(0)`;
+  )
+
+  - dispatch idx:Int args a:Int result r:Int <-
+  ( + fn:Li_fn
+    + p:Profil
+    + nf,n,v,x:Int
+    + l:Local
+    + c:Int
+    fn := callees.at idx
+    p := external_profils.at idx
+    nf := Li_node.sp
+    Li_node.set_sp (nf + fn.frame_size)
+    (p.argument_list.lower).to (p.argument_list.upper) do { j:Int
+      l := p.argument_list.at j
+      (l != NULL).if {
+        x := a + c * 8
+        v := `*(int64_t *)(@x)`:(Int)
+        n := nf + l.list_level
+        `*(int64_t *)(@n) = @v`;
+        c := c + 1
+      }
+    }
+    v := fn.eval nf
+    Li_node.set_sp nf
+    `*(int64_t *)(@r) = @v`;
+  )
+
+External
+
+  - lili_callback_entry (idx,a,r:Int) <-
+  (
+    dispatch idx args a result r
+  )

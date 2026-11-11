@@ -1,0 +1,25 @@
+Header
+  + name := Separator
+Inherit
+  
+  + parent_div:Flat Div
+  
+Public
+  
+  - width_min:Real32 := 10.0
+  - height_min:Real32 := 9.0
+  
+  - draw pen:Pen <-
+  ( + pt:Paint
+    + c:Real32
+    pen.begin_path
+    pen.rect (xo,yo+3.0) size (width,3.0)
+    c := width/2.0
+    pt := Paint.create_radial (xo+c,yo+5.0) radius (c*0.33,c)
+      color (Color.rgba(0,0,0,16)) 
+      to (Color.rgba(0,255,0,128-32))
+    pen.fill_paint pt
+    pen.fill
+    pt.free
+  )
+    

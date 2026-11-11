@@ -1,0 +1,117 @@
+Header
+  + name := Ui_vkeyb
+/* A virtual keyboard (for a screen without keyboard): 4 planes of 35 keys, read in the
+   `KEYMAP' of a `.key' file (letters, upper case, digits, symbols). Special keys: `⬆'
+   (upper case), `⇧' and `ABC' (lower case), `🔢' (digits), `=/<' (symbols), `⌫' (delete
+   back), `⏎' (new line). A key pressed is given to @on_key as a key of the keyboard. */
+Inherit
+  + parent_box:Flat Ui_box
+
+Public
+
+  + planes:Array (Array String_alias)
+  + plane:Int
+  + on_key:{(String,Uint8); }
+  + key_x:Array Real32
+  + key_y:Array Real32
+  + key_w:Array Real32
+  + pressed:Int
+
+  - create p:Array (Array String_alias) action a:{(String,Uint8); } :Self <-
+  ( + r:Self
+    r := clone
+    r.make p action a
+    r
+  )
+
+  - make p:Array (Array String_alias) action a:{(String,Uint8); } <-
+  (
+    make_box
+    planes := p
+    on_key := a
+    key_x := Array Real32.create_with_capacity 36
+    key_y := Array Real32.create_with_capacity 36
+    key_w := Array Real32.create_with_capacity 36
+    pressed := -1
+  )
+
+  - keys:Array String_alias <- planes.at (plane.min (planes.upper))
+
+  - layout <-
+  // The rows of 10, 10, 9 and 6 keys of elit.
+  ( + w,h,x,y:Real32
+    + n:Int
+    key_x.clear; key_y.clear; key_w.clear
+    (w,h) := (width / 10,height / 4)
+    0.to (keys.upper) do { i:Int
+      (i = 0).if { (x,y) := (xo,yo) }
+      (i = 10).if { (x,y) := (xo,yo + h) }
+      (i = 20).if { (x,y) := (xo,yo + h * 2) }
+      (i = 29).if { (x,y) := (xo,yo + h * 3) }
+      n := 1
+      ((i = 20) || {i = 28} || {i = 29} || {i = 34}).if {
+        key_w.add_last (w * 1.5)
+      }.elseif {i = 32} then {
+        key_w.add_last (w * 4)
+      } else {
+        key_w.add_last w
+      }
+      key_x.add_last x
+      key_y.add_last y
+      x := x + key_w.last
+    }
+  )
+
+  - draw <-
+  ( + t:String_alias
+    layout
+    pen.begin_path
+    pen.rect (xo,yo) size (width,height) radius 8
+    pen.fill_color (Color.rgba (255,255,255,220))
+    pen.fill
+    pen.font_face_id (Font.sys (Font.roman))
+    pen.font_size (Font.size_sys)
+    pen.text_align (pen.align_center | pen.align_middle)
+    0.to (keys.upper.min (key_x.upper)) do { i:Int
+      t := keys.at i
+      pen.begin_path
+      pen.rect (key_x.at i + 3,key_y.at i + 3) size (key_w.at i - 6,height / 4 - 6) radius 8
+      (i = pressed).if {
+        pen.fill_color (Color.rgba (26,115,232,255))
+      } else {
+        pen.fill_color (Color.rgba (230,230,240,255))
+      }
+      pen.fill
+      pen.fill_color (Color.rgba (0,0,0,255))
+      (t == "🔢").if {
+        pen.text (key_x.at i + key_w.at i / 2,key_y.at i + height / 8) msg "?123"
+      } else {
+        pen.text (key_x.at i + key_w.at i / 2,key_y.at i + height / 8) msg t
+      }
+    }
+    pen.text_align (pen.align_left | pen.align_baseline)
+  )
+
+  - mouse ev:Int at (x,y:Real32) :Boolean <-
+  ( + t:String_alias
+    + i:Int
+    i := -1
+    0.to (key_x.upper) do { k:Int
+      ((x >= key_x.at k) && {x < key_x.at k + key_w.at k} && {y >= key_y.at k} && {y < key_y.at k + height / 4}).if { i := k }
+    }
+    pressed := i
+    (((ev = Hand.clic) || {ev = Hand.lclic}) && {i >= 0} && {i <= keys.upper}).if {
+      t := keys.at i
+      (t == "⬆").if { plane := 1
+      }.elseif {(t == "⇧") || {t == "ABC"}} then { plane := 0
+      }.elseif {t == "=/<"} then { plane := 3
+      }.elseif {t == "🔢"} then { plane := 2
+      }.elseif {t == "⏎"} then { on_key.value ("\n",Keyboard.key_cmd)
+      }.elseif {t == "⌫"} then { on_key.value ("\b",Keyboard.key_cmd)
+      } else {
+        on_key.value (t,0)
+      }
+      pressed := -1
+    }
+    True
+  )

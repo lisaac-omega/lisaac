@@ -1,0 +1,2383 @@
+Header
+  + name := Escape
+/* COP (`-cop'): escape analysis, to find the types whose objects are immutable after their
+   creation, among the types which go from one universe to another (see @add_transit).
+   A write in an object is an initialization if the object is fresh (created by `clone',
+   `malloc' or `calloc', or returned fresh by a function) and has not escaped yet. An object
+   escapes by a consumer which stores it: write in a `-' slot or in a field of a non fresh
+   object, argument of a call or of an external, `put' in an array, result of a function.
+   Each execution pass makes the inventory again (@new_pass): the last one, which changes
+   nothing, describes the final code. @evaluate and @report read it after the last pass. */
+Insert
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Public
+
+  + init_ctx:Int := -1
+  + init_ctx_type:Type
+  // The initialization being executed, out of a function (see @Escape_event.init_index).
+
+  - set_init_ctx (i:Int, t:Type) <-
+  (
+    init_ctx := i
+    init_ctx_type := t
+  )
+
+  - on_global g:Slot_data <-
+  // An access to the `-' slot @g (a field of the base of the universe).
+  ( + e:Escape_event
+    (is_active).if {
+      e := new_event (Escape_event.kind_global) obj NULL
+      e.set_target g
+    }
+  )
+
+  - needed_base_inits t:Type :Array Int <-
+  // The base slots (indexes of @Slot_data.init_lists_base, in order) that a universe of the
+  // active type @t must initialize: those its code can reach (its functions, the
+  // initialization of its fields, and by the calls in the same universe, not the COP
+  // messages), and those that their initializations reach. From the events of the last pass.
+  ( + reached:Array Profil
+    + inits:Array Int
+    + e:Escape_event
+    + p:Profil
+    + changed,in_ctx:Boolean
+    + k:Int
+    reached := Array Profil .create_with_capacity 64
+    inits := Array Int .create_with_capacity 16
+    (Slot_data.init_lists_always.lower).to (Slot_data.init_lists_always.upper) do { j:Int
+      inits.add_last (Slot_data.init_lists_always.at j)
+    }
+    {
+      changed := False
+      (events.lower).to (events.upper) do { j:Int
+        e := events.at j
+        p := e.profil
+        (p != NULL).if {
+          in_ctx := (reached.fast_first_index_of p <= reached.upper) || {is_profil_of p type t}
+        }.elseif {e.init_index >= 0} then {
+          in_ctx := inits.fast_first_index_of (e.init_index) <= inits.upper
+        } else {
+          in_ctx := e.init_type = t
+        }
+        (in_ctx).if {
+          ((p != NULL) && {reached.fast_first_index_of p > reached.upper}).if {
+            reached.add_last p
+            changed := True
+          }
+          ((e.kind = Escape_event.kind_site) && {e.call != NULL} && {reached.fast_first_index_of (e.call) > reached.upper}).if {
+            reached.add_last (e.call)
+            changed := True
+          }
+          ((e.kind = Escape_event.kind_global) && {e.target != NULL}).if {
+            k := e.target.base_init_index
+            ((k >= 0) && {inits.fast_first_index_of k > inits.upper}).if {
+              inits.add_last k
+              changed := True
+            }
+          }
+        }
+      }
+    }.do_while {changed}
+    // In the order of the initialization.
+    inits.bubble_sort
+    inits
+  )
+
+  - is_profil_of p:Profil type t:Type :Boolean <-
+  // A function of @t (its `self' is of this type): it runs in a universe of @t.
+  ( + ps:Profil_slot
+    ps ?= p
+    (ps != NULL) && {ps.type_self != NULL} && {ps.type_self.raw = t}
+  )
+
+  + is_into:Boolean
+  // An escape into a parameter, or into a new object: not elsewhere (see @Escape_obj.mark_out).
+
+  - pass:Int
+
+  - loop_current:Escape_loop
+
+  - events:Array Escape_event := Array Escape_event .create_with_capacity 1024
+
+  - objs:Array Escape_obj := Array Escape_obj .create_with_capacity 1024
+
+  - profils:Array Profil := Array Profil .create_with_capacity 256
+
+  - violations:Array Escape_event := Array Escape_event .create_with_capacity 64
+
+  - transit:Array Type := Array Type .create_with_capacity 16
+  // Types of the arguments and results of the COP messages (see @Node_style).
+
+  - async_calls:Array Call_slot := Array Call_slot .create_with_capacity 16
+  - sync_calls:Array Call_slot := Array Call_slot .create_with_capacity 16
+  // COP messages of the last pass, checked by @check_messages.
+
+  - sync_read_positions:Array Position := Array Position .create_with_capacity 16
+  - sync_read_types:Array Type_full := Array Type_full .create_with_capacity 16
+  // Synchronous reads of a data slot of an active object (see @Node_style).
+
+  - immutable_types:Array Type := Array Type .create_with_capacity 16
+  // Result of @report.
+
+  - proto_violations:Array Escape_event := Array Escape_event .create_with_capacity 16
+  // Writes in a prototype after the start of the program (see @mutable_prototypes).
+
+  - moved:Array Variable := Array Variable .create_with_capacity 8
+  // `One': the locals moved (on the current path), in the current function.
+
+  - branch_snapshots:Array (Array Variable) := Array (Array Variable) .create_with_capacity 8
+  - branch_unions:Array (Array Variable) := Array (Array Variable) .create_with_capacity 8
+
+  - move_errors:Array Escape_event := Array Escape_event .create_with_capacity 4
+
+  - move_constants:Array Prototype_cst := Array Prototype_cst .create_with_capacity 8
+  // The `NULL' of the moves executed in this pass, but the values of the moves themselves: the
+  // optimizer has put the `NULL' of a move in a read after it (a use after the move).
+
+  - null_call_errors:Array Prototype_cst := Array Prototype_cst .create_with_capacity 4
+  // Kept over the passes: a call on the `NULL' of a move (a use after the move, certain), which
+  // the optimizer removes then (see @Dta.product).
+
+  - on_null_call e:Expr <-
+  ( + pc:Prototype_cst
+    pc := move_constant_of e
+    ((is_cop) && {pc != NULL}).if {
+      (null_call_errors.lower).to (null_call_errors.upper) do { j:Int
+        ((pc != NULL) && {null_call_errors.at j.position = pc.position}).if {
+          pc := NULL
+        }
+      }
+      (pc != NULL).if {
+        null_call_errors.add_last pc
+      }
+    }
+  )
+
+  - move_constant_of e:Expr :Prototype_cst <-
+  // The `NULL' of a move (`One'), through the casts.
+  ( + x:Expr
+    + c:Cast
+    + pc:Prototype_cst
+    + result:Prototype_cst
+    x := e
+    c ?= x
+    {c = NULL}.until_do {
+      x := c.value
+      c ?= x
+    }
+    pc ?= x
+    ((pc != NULL) && {pc.is_move}).if {
+      result := pc
+    }
+    result
+  )
+
+  - on_move_constant c:Prototype_cst <-
+  (
+    ((is_active) && {c.is_move} && {! is_replay}).if {
+      move_constants.add_last c
+    }
+  )
+
+  - is_replay:Boolean
+  // Second execution of the body of a loop (see @Loop.execute): no check.
+
+  - set_replay b:Boolean <-
+  (
+    is_replay := b
+    clear_held
+  )
+
+  - one_static_errors:Array Escape_event := Array Escape_event .create_with_capacity 4
+  // `One' values (by their type) stored in an array, a field or a `-' slot not `One'.
+
+  - one_store_errors:Array Escape_event := Array Escape_event .create_with_capacity 4
+  // `One' objects stored in a container which is not `One' (array, field, global).
+
+  - one_keep_errors:Array Escape_event := Array Escape_event .create_with_capacity 4
+  // `One' objects kept by a parameter which is not `One' (see @run_events).
+
+  - one_stores:Array Escape_event := Array Escape_event .create_with_capacity 16
+  // Stores of a non `One' value in a `One' variable: it must be fresh (see @check_messages).
+
+  - held_objs:Array Escape_obj := Array Escape_obj .create_with_capacity 16
+  - held_vars:Array Variable := Array Variable .create_with_capacity 16
+  - held_lists:Array List := Array List .create_with_capacity 16
+  // `One': objects of the function, the `One' variable which holds each one (a local of the
+  // program, or a field of `self'; @NULL: released by a move), and the list of instructions
+  // where it was seen (see @is_held).
+
+  - pending_moves:Array Escape_event := Array Escape_event .create_with_capacity 4
+  - pending_vars:Array Variable := Array Variable .create_with_capacity 4
+  - pending_lists:Array List := Array List .create_with_capacity 4
+  // `One': copies of a field of `self' in another `One' variable, refused unless the field
+  // is moved after, in the same list (see @check_field_copy).
+
+  - mutable_prototypes:Array Type := Array Type .create_with_capacity 16
+  // Prototypes changed by the program (not active objects): one copy for each universe.
+
+  - is_generating_base:Boolean
+  // Generation of `li_init_base'.
+
+  - set_generating_base b:Boolean <- ( is_generating_base := b; )
+
+  - is_skipped_write w:Write_slot :Boolean <-
+  // In `li_init_base', the initialization of a shared prototype is not done again.
+  ( + e:Expr
+    + c:Cast
+    + pc:Prototype_cst
+    + result:Boolean
+    ((is_generating_base) && {w.is_proto_init}).if {
+      e := w.receiver
+      c ?= e
+      {c = NULL}.until_do {
+        e := c.value
+        c ?= e
+      }
+      pc ?= e
+      result := (pc = NULL) || {! pc.static_type.raw.is_cop_proto_in_base}
+    }
+    result
+  )
+
+  - is_active:Boolean <- (is_cop) && {is_executing_pass}
+
+  - new_pass <-
+  (
+    pass := pass + 1
+    loop_current := NULL
+    events.clear
+    objs.clear
+    profils.clear
+    async_calls.clear
+    sync_calls.clear
+    one_stores.clear
+    clear_held
+    moved.clear
+    branch_snapshots.clear
+    branch_unions.clear
+    move_errors.clear
+    move_constants.clear
+    one_static_errors.clear
+  )
+
+  - push_loop <-
+  (
+    clear_held
+    loop_current := Escape_loop.create loop_current
+    loop_current.set_moved_at_start (copy_of moved)
+  )
+
+  - pop_loop <-
+  // `One': a local moved in the body and read first in the body would be used again, at the
+  // next iteration.
+  ( + l:Variable
+    (is_replay).if_false {
+      (moved.lower).to (moved.upper) do { j:Int
+        l := moved.at j
+        ((loop_current.moved_at_start.fast_first_index_of l > loop_current.moved_at_start.upper) && {loop_current.is_first_read l}).if {
+          add_move_error (l.esc_move_position) local l loop True
+        }
+      }
+    }
+    clear_held
+    loop_current := loop_current.parent
+  )
+
+  - branch_begin <-
+  (
+    (is_active).if {
+      branch_snapshots.add_last (copy_of moved)
+      branch_unions.add_last (Array Variable .create_with_capacity 4)
+    }
+  )
+
+  - branch_case <-
+  // Each branch starts from the state before the branches.
+  (
+    (is_active).if {
+      moved.clear
+      add_all (branch_snapshots.last) in moved
+    }
+  )
+
+  - branch_case_end <-
+  (
+    (is_active).if {
+      add_all moved in (branch_unions.last)
+    }
+  )
+
+  - branch_end <-
+  // After the branches: moved if moved in one branch (possibly moved).
+  (
+    (is_active).if {
+      moved.clear
+      add_all (branch_unions.last) in moved
+      branch_snapshots.remove_last
+      branch_unions.remove_last
+    }
+  )
+
+  - add_sync_read t:Type_full position p:Position <-
+  (
+    sync_read_positions.add_last p
+    sync_read_types.add_last t
+    add_transit t
+  )
+
+  - add_transit t:Type_full <-
+  (
+    ((t != NULL) && {t.raw != Type_void} && {t.raw != Type_null} && {! t.is_flat_c} && {! is_array t}).if {
+      (transit.fast_first_index_of (t.raw) > transit.upper).if {
+        transit.add_last (t.raw)
+      }
+    }
+  )
+
+  //
+  // Inventory (during an execution pass).
+  //
+
+  - begin_profil p:Profil <-
+  // Beginning of the execution of @p: its `self' and its arguments, for the callers.
+  ( + l:Local
+    + o:Escape_obj
+    (is_active).if {
+      moved.clear
+      clear_held
+      touch_profil p
+      (p.argument_list != NULL).if {
+        (p.argument_list.lower).to (p.argument_list.upper) do { j:Int
+          l := p.argument_list.at j
+          (l != NULL).if {
+            (l.name = "self").if {
+              l.set_esc (new_obj 1 source p) origin NULL type NULL
+            } else {
+              // An argument: does @p keep it? (see @evaluate)
+              o := new_obj 4 source p
+              o.set_index j
+              l.set_esc o origin NULL type NULL
+            }
+          }
+        }
+      }
+    }
+  )
+
+  - on_write w:Write <-
+  ( + l:Local
+    + ws:Write_slot
+    + o,ro:Escape_obj
+    + e:Escape_event
+
+    (is_active).if {
+      l ?= w.variable
+      ws ?= w
+      o := obj_of (w.value)
+      ((l = NULL) && {w.variable.type != NULL} && {! w.variable.type.is_one} && {is_one_expr (w.value)} && {move_constant_of (w.value) = NULL}).if {
+        // `One': in a field or a `-' slot which is not `One' (a second reference).
+        e := Escape_event.create (Escape_event.kind_escape) obj NULL
+        e.set_position (user_position (w.value) or (w.position))
+        e.set_reason (one_name (w.value))
+        one_static_errors.add_last e
+      }
+      ((w.variable.type != NULL) && {w.variable.type.is_one} && {o != NULL} && {(o.kind = 0) || {o.kind = 2} || {o.kind = 4}}).if {
+        // Held by a `One' variable (see @Escape_obj.is_one).
+        o.set_one
+      }
+      ((w.variable.type != NULL) && {w.variable.type.is_one} && {(! is_one_expr (w.value)) || {(is_borrow_read (w.value)) && {! is_borrow (w.variable)}}} && {! w.value.is_constant} && {! w.is_proto_init} && {! is_held o for (w.variable)}).if {
+        // In a `One' variable: a fresh object only (checked at the end, see @check_messages).
+        // A borrow (`__tmp', `self' of an inlined function) does not own its object: what it
+        // reads is checked when it is stored in another `One' variable.
+        e := new_event (Escape_event.kind_one_store) obj o
+        (is_borrow_read (w.value)).if {
+          e.set_position (user_position (w.value) or (w.position))
+        } else {
+          e.set_position (w.position)
+        }
+        e.set_owner_type (w.variable.type.raw)
+        one_stores.add_last e
+      }
+      ((w.variable.type != NULL) && {w.variable.type.is_one} && {(l != NULL) || {(ws != NULL) && {is_current_self (ws.receiver)}}}).if {
+        check_field_copy w obj o
+        set_held w obj o
+      }
+      ((ws != NULL) && {! is_replay} && {is_self_receiver (ws.receiver)}).if {
+        // A field of `self'.
+        (is_move_write w).if {
+          (moved.fast_first_index_of (ws.slot) > moved.upper).if {
+            moved.add_last (ws.slot)
+          }
+          ws.slot.set_esc_move_position (w.position)
+        } else {
+          (moved.fast_first_index_of (ws.slot) <= moved.upper).if {
+            moved.remove (moved.fast_first_index_of (ws.slot))
+          }
+          access (ws.slot) read False
+        }
+      }
+      ((is_move_write w) && {! is_replay}).if {
+        remove_move_constant (w.value)
+      }
+      (l != NULL).if {
+        l.set_esc_write_position (w.position) pass pass
+      }
+      ((l != NULL) && {! is_replay}).if {
+        (is_move_write w).if {
+          // `One': moved (see @Itm_write.move_from).
+          (moved.fast_first_index_of l > moved.upper).if {
+            moved.add_last l
+          }
+          l.set_esc_move_position (w.position)
+        } else {
+          (moved.fast_first_index_of l <= moved.upper).if {
+            moved.remove (moved.fast_first_index_of l)
+          }
+          access l read False
+        }
+      }
+      (l != NULL).if {
+        ((o = NULL) && {is_fresh_source (w.value)}).if {
+          o := new_obj 0 source NULL
+        }
+        (is_result l).if {
+          touch_profil profil_current
+          e := new_event (Escape_event.kind_return) obj o
+        } else {
+          l.set_esc o origin (origin_of (w.value)) type (origin_type_of (w.value))
+        }
+      }.elseif {(ws != NULL) && {w.is_proto_init}} then {
+        // Initialization of a prototype: not a change; the value is shared with it.
+        (o != NULL).if {
+          e := new_event (Escape_event.kind_escape) obj o
+          e.set_position (w.position)
+        }
+      }.elseif {ws != NULL} then {
+        ro := container_of (ws.receiver)
+        add_flow o into ro type (w.value.static_type)
+        e := new_event (Escape_event.kind_write) obj ro
+        e.set_target (ws.slot)
+        e.set_owner_type (owner_type_of (ws.receiver))
+        e.set_position (w.position)
+        ((o != NULL) || {is_array (ws.slot.type)}).if {
+          e := new_event (Escape_event.kind_capture) obj o
+          e.set_owner ro
+          e.set_value_type (w.value.static_type)
+          e.set_target (ws.slot)
+          e.set_owner_type (owner_type_of (ws.receiver))
+          e.set_position (w.position)
+        }
+      }.elseif {o != NULL} then {
+        e := new_event (Escape_event.kind_escape) obj o
+        e.set_position (w.position)
+      }
+    }
+  )
+
+  - on_read r:Read <-
+  // Use of an object (see @check_sent).
+  ( + rd:Read_local
+    + rs:Read_slot
+    + o:Escape_obj
+    + e:Escape_event
+    (is_active).if {
+      rd ?= r
+      rs ?= r
+      ((rs != NULL) && {! is_replay} && {is_self_receiver (rs.receiver)}).if {
+        // A field of `self'.
+        (moved.fast_first_index_of (rs.slot) <= moved.upper).if {
+          add_move_error (r.position) local (rs.slot) loop False
+        }
+        access (rs.slot) read True
+      }
+      ((rd != NULL) && {! is_replay}).if {
+        (moved.fast_first_index_of (rd.local) <= moved.upper).if {
+          (r.position = rd.local.position).if {
+            // A read made by the compiler (its position is the declaration): the move.
+            add_move_error (rd.local.esc_move_position) local (rd.local) loop False
+          } else {
+            add_move_error (r.position) local (rd.local) loop False
+          }
+        }
+        access (rd.local) read True
+      }
+      (rd != NULL).if {
+        o := obj_of rd
+        ((o != NULL) && {o.kind != 3}).if {
+          e := new_event (Escape_event.kind_use) obj o
+          e.set_position (r.position)
+        }
+      }
+    }
+  )
+
+  - on_put p:Put_to <-
+  // Write in an array.
+  ( + o,ro:Escape_obj
+    + e:Escape_event
+    (is_active).if {
+      ((is_one_expr (p.value)) && {move_constant_of (p.value) = NULL}).if {
+        // `One': never in an array (a second reference).
+        e := Escape_event.create (Escape_event.kind_escape) obj NULL
+        e.set_position (user_position (p.value) or (p.position))
+        e.set_reason (one_name (p.value))
+        one_static_errors.add_last e
+      }
+      ro := obj_of (p.receiver)
+      add_flow (obj_of (p.value)) into ro type (p.value.static_type)
+      e := new_event (Escape_event.kind_write) obj ro
+      e.set_target (origin_of (p.receiver))
+      e.set_owner_type (origin_type_of (p.receiver))
+      e.set_array_type (p.receiver.static_type.raw)
+      e.set_position (p.position)
+      o := obj_of (p.value)
+      (o != NULL).if {
+        e := new_event (Escape_event.kind_escape) obj o
+        e.set_owner ro
+        e.set_value_type (p.value.static_type)
+        e.set_position (p.position)
+      }
+    }
+  )
+
+  - on_external x:External_c <-
+  // The objects given to an external escape (but the copy of the prototype in `clone', and
+  // the test of @NULL of the debug mode, see @Node_type.null_check).
+  ( + o:Escape_obj
+    + e:Escape_event
+    ((is_active) && {x.access_list != NULL} && {x.code != "*(@) = *(@)"} && {! x.code.has_prefix "realloc("} && {! x.code.has_prefix "/* COP One */"} && {! x.code.has_prefix "/* NULL check */"}).if {
+      (x.access_list.lower).to (x.access_list.upper) do { j:Int
+        o := obj_of (x.access_list.at j)
+        (o != NULL).if {
+          e := new_event (Escape_event.kind_escape) obj o
+          e.set_position (x.position)
+        }
+      }
+    }
+  )
+
+  - on_call c:Call_slot <-
+  // After the execution of the call @c: its receiver, its other arguments, its results.
+  ( + p:Profil
+    + w:Write
+    + v:Expr
+    + e:Escape_event
+    + l:Local
+    + is_self:Boolean
+    + site:Escape_event
+
+    (is_active).if {
+      p := c.profil
+      touch_profil p
+      // The call may change the fields of `self'.
+      clear_held_fields
+      (c.cop_argument != NULL).if {
+        async_calls.add_last c
+      }.elseif {c.is_cop_sync} then {
+        sync_calls.add_last c
+      }
+      is_self := (c.cop_argument = NULL) && {! p.argument_list.is_empty} && {p.argument_list.first != NULL} && {p.argument_list.first.name = "self"}
+      ((c.cop_argument = NULL) && {! c.is_cop_sync}).if {
+        // In the same universe: what @p stores in its parameters (see @evaluate).
+        site := add_site c self is_self
+      }
+      (c.argument_list.lower).to (c.argument_list.upper) do { j:Int
+        w := c.argument_list.at j
+        (w != NULL).if {
+          v := w.value
+          ((j = c.argument_list.lower) && {is_self}).if {
+            e := new_event (Escape_event.kind_call) obj (container_of v)
+            e.set_call p
+            e.set_target (origin_of v)
+            e.set_owner_type (receiver_type_of v)
+            e.set_array_type (v.static_type.raw)
+            e.set_position (c.position)
+          }.elseif {c.cop_argument = NULL} then {
+            // Escapes if @p keeps it (a synchronous message borrows it).
+            e := new_event (Escape_event.kind_pass) obj (obj_of v)
+            e.set_call p
+            e.set_index j
+            e.set_site_event site
+            e.set_position (c.position)
+            e.set_one_value (v.static_type.is_one)
+            ((c.is_cop_sync) && {is_one_param c index j}).if {
+              // A `One' object, kept by @p: moved, no more used after (see @is_transfer).
+              e := new_event (Escape_event.kind_send) obj (obj_of v)
+              e.set_call_site c
+              e.set_index j
+              e.set_position (c.position)
+            }
+          } else {
+            // Asynchronous message: to another universe (a transfer, see @check_sent).
+            e := new_event (Escape_event.kind_send) obj (obj_of v)
+            e.set_call_site c
+            e.set_index j
+            e.set_position (c.position)
+          }
+        }
+      }
+      (c.result_list.lower).to (c.result_list.upper) do { j:Int
+        (c.result_list.at j != NULL).if {
+          l ?= c.result_list.at j.write.variable
+          (l != NULL).if {
+            (is_clone p).if {
+              // `clone' (not inlined): a new object (or the same, without field).
+              l.set_esc (new_obj 0 source NULL) origin NULL type NULL
+            } else {
+              l.set_esc (new_obj 2 source p) origin NULL type NULL
+            }
+          }
+        }
+      }
+    }
+  )
+
+  //
+  // Evaluation (after the last pass).
+  //
+
+  - evaluate <-
+  ( + e:Escape_event
+    + o:Escape_obj
+    + p,q:Profil
+    + changed:Boolean
+
+    // Writes in `self' of the functions.
+    (events.lower).to (events.upper) do { j:Int
+      e := events.at j
+      o := e.obj
+      ((o != NULL) && {o.kind = 1}).if {
+        p := o.source
+        (e.kind = Escape_event.kind_write).if {
+          p.esc_add_self_write e
+        }.elseif {e.kind = Escape_event.kind_call} then {
+          p.esc_add_self_call (e.call)
+        }
+      }
+    }
+    // What the functions store in their parameters, from their parameters (for the leaks
+    // into parameters only, see @is_leak_out).
+    with_foreign := False
+    flows_fixpoint
+    // `self' and arguments kept by the functions, writes by the calls on `self'
+    // (least fixed point).
+    {
+      changed := False
+      (events.lower).to (events.upper) do { j:Int
+        e := events.at j
+        o := e.obj
+        ((o != NULL) && {(o.kind = 1) || {o.kind = 4}} && {is_leak e}).if {
+          p := o.source
+          (o.kind = 1).if {
+            (p.esc_leaks).if_false {
+              p.esc_set_leaks
+              changed := True
+            }
+          }.elseif {p.esc_add_arg_leak (o.index)} then {
+            changed := True
+          }
+          ((o.kind = 4) && {is_leak_out e} && {p.esc_add_arg_leak_out (o.index)}).if {
+            changed := True
+          }
+        }
+        ((o != NULL) && {o.kind = 6} && {is_leak e} && {o.source.esc_add_part_leak (o.index) type (o.part_type)}).if {
+          changed := True
+        }
+        ((o != NULL) && {(o.kind = 4) || {o.kind = 6}} && {e.kind = Escape_event.kind_pass} && {e.call.esc_part_leaks != NULL}).if {
+          // The function called keeps a part of its argument: a part of ours.
+          (e.call.esc_part_leaks.lower).to (e.call.esc_part_leaks.upper) do { i:Int
+            ((e.call.esc_part_leak_index.at i = e.index) && {o.source.esc_add_part_leak (o.index) type (e.call.esc_part_leaks.at i)}).if {
+              changed := True
+            }
+          }
+        }
+      }
+      (profils.lower).to (profils.upper) do { j:Int
+        p := profils.at j
+        (p.esc_self_calls != NULL).if {
+          (p.esc_self_calls.lower).to (p.esc_self_calls.upper) do { k:Int
+            q := p.esc_self_calls.at k
+            (q.esc_self_writes != NULL).if {
+              (q.esc_self_writes.lower).to (q.esc_self_writes.upper) do { i:Int
+                (p.esc_add_self_write (q.esc_self_writes.at i)).if {
+                  changed := True
+                }
+              }
+            }
+          }
+        }
+      }
+    }.do_while {changed}
+    // Functions which return a fresh object, arguments always given fresh (greatest fixed
+    // point).
+    (events.lower).to (events.upper) do { j:Int
+      e := events.at j
+      ((e.kind = Escape_event.kind_return) && {e.profil != NULL}).if {
+        e.profil.esc_set_returns_fresh True
+      }
+    }
+    {
+      changed := False
+      (profils.lower).to (profils.upper) do { j:Int
+        profils.at j.esc_set_return_ok True
+      }
+      is_arg_changed := False
+      run_events
+      changed := is_arg_changed
+      (profils.lower).to (profils.upper) do { j:Int
+        p := profils.at j
+        ((p.esc_returns_fresh) && {! p.esc_return_ok}).if {
+          p.esc_set_returns_fresh False
+          changed := True
+        }
+      }
+    }.do_while {changed}
+    check_loops
+    // What the functions store in their parameters: also from elsewhere, now that the escapes
+    // are known (see @Profil.esc_add_flow, @region_flows).
+    with_foreign := True
+    region_flows
+    flows_fixpoint
+    with_foreign := False
+  )
+
+  - flows_fixpoint <-
+  // What the functions store in their parameters (least fixed point, see @Profil.esc_add_flow).
+  ( + e:Escape_event
+    + q:Profil
+    + changed:Boolean
+    {
+      changed := False
+      (events.lower).to (events.upper) do { j:Int
+        e := events.at j
+        (e.kind = Escape_event.kind_flow).if {
+          (flow (e.obj) type (e.value_type) into (param_index (e.owner)) in (e.profil)).if {
+            changed := True
+          }
+        }.elseif {(e.kind = Escape_event.kind_site) && {e.call.esc_flow_targets != NULL}} then {
+          q := e.call
+          (q.esc_flow_targets.lower).to (q.esc_flow_targets.upper) do { k:Int
+            (site_flow e target (q.esc_flow_targets.at k) source (q.esc_flow_sources.at k) type (q.esc_flow_types.at k)).if {
+              changed := True
+            }
+          }
+        }
+      }
+    }.do_while {changed}
+  )
+
+  + with_foreign:Boolean
+  // The flows from elsewhere (-1): after the escapes are known.
+
+  - flow o:Escape_obj type t:Type_full into target:Int in p:Profil :Boolean <-
+  ( + s:Int
+    + result:Boolean
+    ((target >= 0) && {p != NULL}).if {
+      s := param_index o
+      (s >= 0).if {
+        result := p.esc_add_flow target from s type t
+      }.elseif {(with_foreign) && {is_foreign o}} then {
+        result := p.esc_add_flow target from (-1) type t
+      }
+    }
+    result
+  )
+
+  - site_flow e:Escape_event target t:Int source s:Int type ty:Type_full :Boolean <-
+  // The call @e stores (by its function) its argument @s (or a foreign value, -1) in its
+  // argument @t: for the caller, in its own parameter if the argument @t is one.
+  ( + target:Int
+    + result:Boolean
+    ((t >= 0) && {t <= e.site_objs.upper}).if {
+      target := param_index (e.site_objs.at t)
+      (target >= 0).if {
+        (s < 0).if {
+          (with_foreign).if {
+            result := e.profil.esc_add_flow target from (-1) type ty
+          }
+        }.elseif {s <= e.site_objs.upper} then {
+          result := flow (e.site_objs.at s) type (e.site_types.at s) into target in (e.profil)
+        }
+      }
+    }
+    result
+  )
+
+  - report <-
+  // The transit types (and the types of their fields), immutable or not: displayed with the
+  // option `-cop_report' (see `make.lip').
+  ( + list:Array Type
+    + reason:Array Escape_event
+    + e:Escape_event
+    + i:Int
+    + changed:Boolean
+
+    list := Array Type .create_with_capacity (transit.count * 2 + 1)
+    (transit.lower).to (transit.upper) do { j:Int
+      list.add_last (transit.at j)
+    }
+    {i <= list.upper}.while_do {
+      add_field_types (list.at i) in list
+      i := i + 1
+    }
+    // First reason of each type.
+    reason := Array Escape_event .create_with_capacity (list.count)
+    (list.lower).to (list.upper) do { j:Int
+      reason.add_last (violation_of (list.at j))
+    }
+    // A type with a field of a mutable type is mutable.
+    {
+      changed := False
+      (list.lower).to (list.upper) do { j:Int
+        (reason.at j = NULL).if {
+          e := field_violation (list.at j) in list reason reason
+          (e != NULL).if {
+            reason.at j put e
+            changed := True
+          }
+        }
+      }
+    }.do_while {changed}
+    immutable_types.clear
+    (list.lower).to (list.upper) do { j:Int
+      ((reason.at j = NULL) && {list.at j.prototype.style != '-'}).if {
+        immutable_types.add_last (list.at j)
+      }
+    }
+    mutable_prototypes.clear
+    (proto_violations.lower).to (proto_violations.upper) do { j:Int
+      (mutable_prototypes.fast_first_index_of (proto_violations.at j.owner_type) > mutable_prototypes.upper).if {
+        mutable_prototypes.add_last (proto_violations.at j.owner_type)
+      }
+    }
+    (is_cop_report).if {
+      display_report list reason reason
+      (mutable_prototypes.lower).to (mutable_prototypes.upper) do { j:Int
+        "Mutable prototype ".print
+        mutable_prototypes.at j.name.print
+        ": ".print
+        display_proto (mutable_prototypes.at j)
+        '\n'.print
+      }
+    }
+  )
+
+  - display_proto t:Type <-
+  ( + e:Escape_event
+    (proto_violations.lower).to (proto_violations.upper) do { j:Int
+      ((e = NULL) && {proto_violations.at j.owner_type = t}).if {
+        e := proto_violations.at j
+      }
+    }
+    display e
+  )
+
+  - display_report list:Array Type reason reason:Array Escape_event <-
+  ( + e:Escape_event
+    "Immutable types:".print
+    (list.lower).to (list.upper) do { j:Int
+      ((reason.at j = NULL) && {list.at j.prototype.style != '-'}).if {
+        ' '.print
+        list.at j.name.print
+      }
+    }
+    '\n'.print
+    // Active objects: a reference to a universe, changed only by its messages.
+    "Active types:".print
+    (list.lower).to (list.upper) do { j:Int
+      (list.at j.prototype.style = '-').if {
+        ' '.print
+        list.at j.name.print
+      }
+    }
+    '\n'.print
+    (list.lower).to (list.upper) do { j:Int
+      e := reason.at j
+      ((e != NULL) && {list.at j.prototype.style != '-'}).if {
+        "Mutable ".print
+        list.at j.name.print
+        ": ".print
+        display e
+        '\n'.print
+      }
+    }
+  )
+
+  - one_name e:Expr :String_alias <-
+  // The local read by @e (through the casts), or NULL.
+  ( + x:Expr
+    + c:Cast
+    + rd:Read_local
+    + result:String_alias
+    x := e
+    c ?= x
+    {c = NULL}.until_do {
+      x := c.value
+      c ?= x
+    }
+    rd ?= x
+    (rd != NULL).if {
+      result := rd.local.name
+    }
+    result
+  )
+
+  - user_position e:Expr or p:Position :Position <-
+  // For a local (as an argument of an inlined function): its last write (the call), else @p.
+  ( + x:Expr
+    + c:Cast
+    + rd:Read_local
+    + result:Position
+    result := p
+    x := e
+    c ?= x
+    {c = NULL}.until_do {
+      x := c.value
+      c ?= x
+    }
+    rd ?= x
+    ((rd != NULL) && {rd.local.esc_write_pass = pass} && {rd.local.esc_write_position.code != 0}).if {
+      result := rd.local.esc_write_position
+    }
+    result
+  )
+
+  - is_one_expr e:Expr :Boolean <-
+  // A value of a `One' type (through the casts).
+  ( + x:Expr
+    + c:Cast
+    + rd:Read_local
+    x := e
+    c ?= x
+    {c = NULL}.until_do {
+      x := c.value
+      c ?= x
+    }
+    rd ?= x
+    (x.static_type.is_one) || {(rd != NULL) && {rd.local.type.is_one}}
+  )
+
+  - clear_held <-
+  (
+    held_objs.clear
+    held_vars.clear
+    held_lists.clear
+    pending_moves.clear
+    pending_vars.clear
+    pending_lists.clear
+  )
+
+  - clear_held_fields <-
+  // After a call: it may change the fields of `self'.
+  ( + l:Local
+    (held_vars.upper).downto (held_vars.lower) do { j:Int
+      l ?= held_vars.at j
+      ((held_vars.at j != NULL) && {l = NULL}).if {
+        remove_held j
+      }
+    }
+  )
+
+  - remove_held j:Int <-
+  (
+    held_objs.remove j
+    held_vars.remove j
+    held_lists.remove j
+  )
+
+  - add_held o:Escape_obj by v:Variable <-
+  // @o is now held by @v (@NULL: by none), from here in the current list.
+  ( + i:Int
+    i := held_objs.fast_first_index_of o
+    (i <= held_objs.upper).if {
+      remove_held i
+    }
+    ((o != NULL) && {(o.kind = 0) || {o.kind = 2} || {o.kind = 4} || {o.kind = 6}}).if {
+      held_objs.add_last o
+      held_vars.add_last v
+      held_lists.add_last list_current
+    }
+  )
+
+  - held_index o:Escape_obj :Int <-
+  // The entry of @o, if seen in the current list (else, @held_objs.upper + 1).
+  ( + i:Int
+    i := held_objs.fast_first_index_of o
+    ((o = NULL) || {(i <= held_objs.upper) && {held_lists.at i != list_current}}).if {
+      i := held_objs.upper + 1
+    }
+    i
+  )
+
+  - is_borrow v:Variable :Boolean <-
+  // A temporary of the compiler (`__tmp', `self' of an inlined function): it reads a `One'
+  // variable without moving it, so it does not own its object.
+  ( + l:Local
+    l ?= v
+    (l != NULL) && {(l.name = "__tmp") || {l.name = "self"}}
+  )
+
+  - is_borrow_read e:Expr :Boolean <-
+  ( + rd:Read_local
+    rd ?= without_casts e
+    (rd != NULL) && {rd.local.type.is_one} && {is_borrow (rd.local)}
+  )
+
+  - owner_read e:Expr :Variable <-
+  // @e reads a `One' variable which owns its object: a field of `self', a local not borrow.
+  ( + x:Expr
+    + rd:Read_local
+    + rs:Read_slot
+    + result:Variable
+    x := without_casts e
+    rd ?= x
+    rs ?= x
+    ((rd != NULL) && {rd.local.type.is_one} && {! is_borrow (rd.local)}).if {
+      result := rd.local
+    }.elseif {(rs != NULL) && {rs.slot.type.is_one} && {is_current_self (rs.receiver)}} then {
+      result := rs.slot
+    }
+    result
+  )
+
+  - is_current_self e:Expr :Boolean <-
+  // @e is the object of the function (not the `self' of an inlined function on another one).
+  ( + o:Escape_obj
+    o := obj_of e
+    (o != NULL) && {o.kind = 1}
+  )
+
+  - without_casts e:Expr :Expr <-
+  ( + x:Expr
+    + c:Cast
+    x := e
+    c ?= x
+    {c = NULL}.until_do {
+      x := c.value
+      c ?= x
+    }
+    x
+  )
+
+  - check_field_copy w:Write obj o:Escape_obj <-
+  // `One': `b := buf' (a move of the field @buf of `self') is followed by `buf := NULL', in
+  // both modes (see @Itm_code.emit_move). A copy of a field without it (the optimizer has
+  // replaced the read of a borrow by the field, as `c2 := c1.me') gives two references.
+  ( + y:Variable
+    + e:Escape_event
+    + i:Int
+    (is_move_write w).if {
+      i := pending_vars.fast_first_index_of (w.variable)
+      ((i <= pending_vars.upper) && {pending_lists.at i = list_current}).if {
+        // The move: not a copy.
+        e := pending_moves.at i
+        events.remove (events.fast_first_index_of e)
+        one_stores.remove (one_stores.fast_first_index_of e)
+        pending_moves.remove i
+        pending_vars.remove i
+        pending_lists.remove i
+      }
+    }.elseif {! is_borrow (w.variable)} then {
+      y := owner_read (w.value)
+      ((y != NULL) && {y != w.variable} && {! is_local y}).if {
+        e := new_event (Escape_event.kind_one_store) obj o
+        e.set_position (w.position)
+        e.set_owner_type (w.variable.type.raw)
+        one_stores.add_last e
+        pending_moves.add_last e
+        pending_vars.add_last y
+        pending_lists.add_last list_current
+      }
+    }
+  )
+
+  - is_local v:Variable :Boolean <-
+  ( + l:Local
+    l ?= v
+    l != NULL
+  )
+
+  - set_held w:Write obj o:Escape_obj <-
+  // `One': after the write @w of @o in a local or a field of `self'.
+  ( + v,y:Variable
+    v := w.variable
+    (is_move_write w).if {
+      // @v is moved: its objects are released (its last reader takes them).
+      (held_vars.lower).to (held_vars.upper) do { j:Int
+        (held_vars.at j = v).if {
+          held_vars.at j put NULL
+          held_lists.at j put list_current
+        }
+      }
+    }.elseif {is_borrow v} then {
+      // A borrow of the variable read, which keeps its object.
+      y := owner_read (w.value)
+      ((y != NULL) && {held_index o > held_objs.upper}).if {
+        add_held o by y
+      }
+    } else {
+      // @v forgets its objects, and owns @o.
+      (held_vars.upper).downto (held_vars.lower) do { j:Int
+        (held_vars.at j = v).if {
+          remove_held j
+        }
+      }
+      add_held o by v
+    }
+  )
+
+  - is_held o:Escape_obj for v:Variable :Boolean <-
+  // `One': the write of @o in @v is not a store of a new object, because the optimizer has
+  // replaced a read (`__tmp := buf') by the object read: @v holds @o already, or @v is a
+  // borrow (see @is_borrow) of the variable which holds @o, or @o has been released by a move
+  // (`b := buf' then `buf := b'). In the same list of instructions only (no branch nor loop
+  // between), with no call between for a field (see @on_call). Two `One' variables of the
+  // program never get the same object.
+  ( + i:Int
+    + result:Boolean
+    i := held_index o
+    (i <= held_objs.upper).if {
+      result := (held_vars.at i = v) || {held_vars.at i = NULL} || {is_borrow v}
+    }
+    result
+  )
+
+  - is_self_receiver e:Expr :Boolean <-
+  // @e is `self' (a field of the current object).
+  ( + rd:Read_local
+    rd ?= e
+    (rd != NULL) && {rd.local.name = "self"}
+  )
+
+  - remove_move_constant v:Expr <-
+  ( + pc:Prototype_cst
+    + idx:Int
+    pc := move_constant_of v
+    (pc != NULL).if {
+      idx := move_constants.fast_first_index_of pc
+      (idx <= move_constants.upper).if {
+        move_constants.remove idx
+      }
+    }
+  )
+
+  - is_move_write w:Write :Boolean <-
+  // The write of a move (`One', see @Itm_code.emit_move): its `NULL' is written in the variable
+  // moved; elsewhere (as `self' of an inlined function), it is a copy of the `NULL' made by the
+  // optimizer (a use).
+  ( + pc:Prototype_cst
+    pc := move_constant_of (w.value)
+    (w.is_move) || {(pc != NULL) && {pc.move_name = w.variable.name}}
+  )
+
+  - is_one_arg p:Profil index k:Int :Boolean <-
+  ( + l:Local
+    l := p.argument_list.at k
+    (l != NULL) && {l.type.is_one}
+  )
+
+  - copy_of a:Array Variable :Array Variable <-
+  ( + result:Array Variable
+    result := Array Variable .create_with_capacity (a.count + 1)
+    add_all a in result
+    result
+  )
+
+  - add_all a:Array Variable in b:Array Variable <-
+  (
+    (a.lower).to (a.upper) do { j:Int
+      (b.fast_first_index_of (a.at j) > b.upper).if {
+        b.add_last (a.at j)
+      }
+    }
+  )
+
+  - access l:Variable read is_read:Boolean <-
+  // For the loops: the first access of @l in their body. @l was already accessed in the body
+  // of a loop when its mark is at least the @id of the loop; the outer loops have a smaller
+  // @id, so the walk stops at the first loop which has seen @l.
+  ( + lp:Escape_loop
+    + mark:Int
+    lp := loop_current
+    (lp != NULL).if {
+      mark := l.esc_loop_mark
+      {(lp = NULL) || {mark >= lp.id}}.until_do {
+        lp.first_access l read is_read
+        lp := lp.parent
+      }
+      l.set_esc_loop_mark (loop_current.id)
+    }
+  )
+
+  - add_move_error p:Position local l:Variable loop is_loop:Boolean <-
+  ( + e:Escape_event
+    (move_errors.lower).to (move_errors.upper) do { j:Int
+      (move_errors.at j.position = p).if {
+        e := move_errors.at j
+      }
+    }
+    (e = NULL).if {
+      add_new_move_error p local l loop is_loop
+    }
+  )
+
+  - add_new_move_error p:Position local l:Variable loop is_loop:Boolean <-
+  ( + e:Escape_event
+    e := Escape_event.create (Escape_event.kind_use) obj NULL
+    e.set_position p
+    e.set_call_position (l.esc_move_position)
+    e.set_reason (l.name)
+    e.set_ok is_loop
+    move_errors.add_last e
+  )
+
+  - check_messages <-
+  // What goes from one universe to another: arguments of the asynchronous messages, results
+  // of the synchronous ones, must be values, immutable or active objects. A synchronous
+  // message can borrow another argument, if its function does not keep it.
+  ( + c:Call_slot
+    + w:Write
+    + t:Type_full
+    + e:Escape_event
+    (one_static_errors.lower).to (one_static_errors.upper) do { j:Int
+      e := one_static_errors.at j
+      string_tmp.copy "COP: the `One' object"
+      (e.reason != NULL).if {
+        string_tmp.append " `"
+        string_tmp.append (e.reason)
+        string_tmp.append "' (given here)"
+      }
+      string_tmp.append " is stored in an array, or in a field or a `-' slot which is not `One': it would have two references."
+      semantic_error (e.position,string_tmp)
+    }
+    (one_store_errors.lower).to (one_store_errors.upper) do { j:Int
+      semantic_error (one_store_errors.at j.position,"COP: a `One' object is stored in a container which is not `One' (an array, a field, a global): it would have two references.")
+    }
+    (one_keep_errors.lower).to (one_keep_errors.upper) do { j:Int
+      e := one_keep_errors.at j
+      string_tmp.copy "COP: a `One' object is kept by `"
+      string_tmp.append (e.call.slot.name)
+      string_tmp.append "', whose parameter is not `One': it would have two references."
+      semantic_error (e.position,string_tmp)
+    }
+    (null_call_errors.lower).to (null_call_errors.upper) do { j:Int
+      string_tmp.copy "COP: the `One' variable `"
+      string_tmp.append (null_call_errors.at j.move_name)
+      string_tmp.append "' is moved here, and used after: it has no more reference."
+      semantic_error (null_call_errors.at j.position,string_tmp)
+    }
+    (move_constants.lower).to (move_constants.upper) do { j:Int
+      // A read after a move, replaced by the `NULL' of the move.
+      string_tmp.copy "COP: the `One' variable `"
+      string_tmp.append (move_constants.at j.move_name)
+      string_tmp.append "' is used after being moved (here), possibly in a branch: it has no more reference."
+      semantic_error (move_constants.at j.position,string_tmp)
+    }
+    (move_errors.lower).to (move_errors.upper) do { j:Int
+      e := move_errors.at j
+      string_tmp.copy "COP: the `One' variable `"
+      string_tmp.append (e.reason)
+      (e.is_ok).if {
+        string_tmp.append "' is moved in a loop (line "
+        e.call_position.line.append_in string_tmp
+        string_tmp.append ") and read again at the next iteration: give it a new object before."
+      } else {
+        string_tmp.append "' is used after being moved (line "
+        e.call_position.line.append_in string_tmp
+        string_tmp.append "), possibly in a branch: it has no more reference."
+      }
+      semantic_error (e.position,string_tmp)
+    }
+    (one_stores.lower).to (one_stores.upper) do { j:Int
+      (one_stores.at j.is_ok).if_false {
+        string_tmp.copy "COP: only a new object (fresh, not yet shared) can be stored in a `One' variable of type `"
+        string_tmp.append (one_stores.at j.owner_type.name)
+        string_tmp.append "'."
+        semantic_error (one_stores.at j.position,string_tmp)
+      }
+    }
+    (async_calls.lower).to (async_calls.upper) do { j:Int
+      check_block_argument (async_calls.at j)
+    }
+    (sync_calls.lower).to (sync_calls.upper) do { j:Int
+      check_block_argument (sync_calls.at j)
+    }
+    (async_calls.lower).to (async_calls.upper) do { j:Int
+      c := async_calls.at j
+      (c.argument_list.lower).to (c.argument_list.upper) do { k:Int
+        w := c.argument_list.at k
+        ((w != NULL) && {! is_self_arg k of c} && {is_one_param c index k}).if {
+          // A `One' object, moved to the other universe.
+          check_one_contents (w.value.static_type) at (c.position)
+          (is_transfer c index k).if_false {
+            one_error (c.position) type (w.value.static_type)
+          }
+        }.elseif {(w != NULL) && {! is_self_arg k of c} && {! is_transferable (w.value.static_type)} && {! is_transfer c index k}} then {
+          message_error (c.position) type (w.value.static_type) text "an argument of an asynchronous message goes to another universe"
+        }
+      }
+    }
+    (sync_calls.lower).to (sync_calls.upper) do { j:Int
+      c := sync_calls.at j
+      (c.argument_list.lower).to (c.argument_list.upper) do { k:Int
+        w := c.argument_list.at k
+        ((w != NULL) && {! is_self_arg k of c} && {is_one_param c index k} && {c.profil.esc_is_arg_leak k}).if {
+          // A `One' object kept by the message: moved to the other universe.
+          check_one_contents (w.value.static_type) at (c.position)
+          (is_transfer c index k).if_false {
+            one_error (c.position) type (w.value.static_type)
+          }
+        }.elseif {(w != NULL) && {! is_self_arg k of c} && {! is_transferable (w.value.static_type)} && {is_stored_in (c.profil) index k}} then {
+          string_tmp.copy "COP: `"
+          string_tmp.append (c.profil.slot.name)
+          string_tmp.append "' stores an object of its universe into its borrowed argument (type `"
+          w.value.static_type.append_name_in string_tmp
+          string_tmp.append "'): it would be shared after the synchronous message."
+          semantic_error (c.position,string_tmp)
+        }.elseif {(w != NULL) && {! is_self_arg k of c} && {! is_transferable (w.value.static_type)} && {(c.profil.esc_is_arg_leak k) || {is_part_kept (c.profil) index k}}} then {
+          string_tmp.copy "COP: an argument of type `"
+          w.value.static_type.append_name_in string_tmp
+          string_tmp.append "' is borrowed by a synchronous message, but `"
+          string_tmp.append (c.profil.slot.name)
+          string_tmp.append "' keeps it."
+          semantic_error (c.position,string_tmp)
+        }
+      }
+      (c.result_list.lower).to (c.result_list.upper) do { k:Int
+        (c.result_list.at k != NULL).if {
+          t := c.result_list.at k.write.variable.type
+          (t.is_one).if {
+            check_one_contents t at (c.position)
+          }
+          ((! is_transferable t) && {! c.profil.esc_returns_fresh} && {! t.is_one}).if {
+            message_error (c.position) type t text "the result of a synchronous message leaves its universe"
+          }
+        }
+      }
+    }
+    (sync_read_types.lower).to (sync_read_types.upper) do { j:Int
+      t := sync_read_types.at j
+      (is_transferable t).if_false {
+        message_error (sync_read_positions.at j) type t text "a data slot read by another universe"
+      }
+    }
+  )
+
+Private
+
+  - is_self_arg k:Int of c:Call_slot :Boolean <-
+  // The receiver of the message (the active object).
+  ( + l:Local
+    l := c.profil.argument_list.at k
+    (l = NULL) || {l.name = "self"}
+  )
+
+  - check_one_contents t:Type_full at p:Position <-
+  // The fields of a `One' object which goes to another universe: values, immutable objects,
+  // active objects, or `One' (its C arrays are owned by it).
+  ( + slot:Slot
+    + ft:Type_full
+    (t.raw.slot_run != NULL).if {
+      (t.raw.slot_run.lower).to (t.raw.slot_run.upper) do { j:Int
+        slot := t.raw.slot_run.at j
+        ((slot.style = '+') && {slot.slot_data_intern != NULL}).if {
+          ft := slot.slot_data_intern.type
+          ((! is_array ft) && {! ft.is_one} && {! is_transferable ft} && {! ((ft.is_flat) && {! ft.is_flat_ref} && {ft.raw != t.raw})}).if {
+            string_tmp.copy "COP: the `One' object of type `"
+            t.append_name_in string_tmp
+            string_tmp.append "' goes to another universe, but its field `"
+            string_tmp.append (slot.name)
+            string_tmp.append "' is shared (type `"
+            ft.append_name_in string_tmp
+            string_tmp.append "'): it must be a value, immutable, active, or `One'."
+            semantic_error (p,string_tmp)
+          }
+        }
+      }
+    }
+  )
+
+  - one_error p:Position type t:Type_full <-
+  (
+    string_tmp.copy "COP: a `One' object of type `"
+    t.append_name_in string_tmp
+    string_tmp.append "' goes to another universe (moved): it must not be used after."
+    semantic_error (p,string_tmp)
+  )
+
+  - message_error p:Position type t:Type_full text txt:String_alias <-
+  (
+    string_tmp.copy "COP: "
+    string_tmp.append txt
+    string_tmp.append ": its type `"
+    t.append_name_in string_tmp
+    string_tmp.append "' must be a value, immutable or an active object (or a fresh object, no more used after: a transfer)."
+    semantic_error (p,string_tmp)
+  )
+
+  - check_block_argument c:Call_slot <-
+  // A block is never sent to another universe: it is a closure on the universe of the caller
+  // (its code would run in the universe of the receiver, on the locals of the caller, as
+  // `m.foreach { e:Int; s := s + e; }' on a @Shared). A function called with a block is
+  // specialized for it (see @Slot_code.get_profil): its profile is context sensitive.
+  (
+    (c.profil.is_context_sensitive).if {
+      semantic_error (c.position,"COP: a block cannot be sent to another universe (it is a closure on the universe of the caller): give a value, or define the slot in the active object.")
+    }
+  )
+
+  - is_transferable t:Type_full :Boolean <-
+  // A value, an immutable object or an active object (a universe).
+  ( + r:Type
+    + result:Boolean
+    (t = NULL).if {
+      result := True
+    } else {
+      r := t.raw
+      ((r = Type_void) || {r = Type_null} || {t.is_flat_c}).if {
+        result := True
+      }.elseif {(r.is_block) || {is_array t}} then {
+        result := False
+      }.elseif {r.prototype.style = '-'} then {
+        result := True
+      }.elseif {(t.is_flat) && {! t.is_flat_ref}} then {
+        result := is_value_type r
+      } else {
+        result := immutable_types.fast_first_index_of r <= immutable_types.upper
+      }
+    }
+    result
+  )
+
+  - is_value_type r:Type :Boolean <-
+  // A flat type whose fields are values (no pointer).
+  ( + slot:Slot
+    + ft:Type_full
+    + result:Boolean
+    result := ! r.is_block
+    ((result) && {r.slot_run != NULL}).if {
+      (r.slot_run.lower).to (r.slot_run.upper) do { j:Int
+        slot := r.slot_run.at j
+        ((slot.style = '+') && {slot.slot_data_intern != NULL}).if {
+          ft := slot.slot_data_intern.type
+          (ft.is_flat_c).if_false {
+            result := result && {ft.is_flat} && {! ft.is_flat_ref} && {! is_array ft} && {ft.raw != r} && {is_value_type (ft.raw)}
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - value_obj_cache:Escape_obj
+
+  - value_obj:Escape_obj <-
+  (
+    (value_obj_cache = NULL).if {
+      value_obj_cache := Escape_obj.create 3 source NULL loop NULL
+    }
+    value_obj_cache
+  )
+
+  - proto_obj t:Type :Escape_obj <-
+  // The prototype @t (a value for an active object, a universe; see @mutable_prototypes).
+  ( + result:Escape_obj
+    ((t.is_block) || {t.prototype = NULL} || {t.prototype.style = '-'}).if {
+      result := value_obj
+    } else {
+      (t.esc_proto_pass != pass).if {
+        result := new_obj 5 source NULL
+        result.set_proto_type t
+        t.set_esc_proto result pass pass
+      }
+      result := t.esc_proto_obj
+    }
+    result
+  )
+
+  - new_obj k:Int source s:Profil :Escape_obj <-
+  ( + result:Escape_obj
+    result := Escape_obj.create k source s loop loop_current
+    objs.add_last result
+    result
+  )
+
+  - new_event k:Int obj o:Escape_obj :Escape_event <-
+  ( + result:Escape_event
+    result := Escape_event.create k obj o
+    result.set_init (init_ctx, init_ctx_type)
+    events.add_last result
+    result
+  )
+
+  - touch_profil p:Profil <-
+  (
+    ((p != NULL) && {p.esc_pass != pass}).if {
+      p.esc_reset pass
+      profils.add_last p
+    }
+  )
+
+  - is_result l:Local :Boolean <-
+  ( + result:Boolean
+    + res:Slim_array Local
+    (profil_current != NULL).if {
+      res := profil_current.result_list
+      (res != NULL).if {
+        (res.lower).to (res.upper) do { j:Int
+          (res.at j = l).if {
+            result := True
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - is_array t:Type_full :Boolean <-
+  ( + tg:Type_generic
+    tg ?= t.raw
+    (tg != NULL) && {tg.native_array_variable != NULL}
+  )
+
+  - is_clone p:Profil :Boolean <-
+  // @Clone.clone.
+  (p.slot != NULL) && {p.slot.name = "clone"} && {p.slot.receiver_type.name = "Clone"}
+
+  - element_type t:Type_full :Type_full <-
+  // The type of the elements of the array type @t.
+  ( + tg:Type_generic
+    tg ?= t.raw
+    tg.generic_list.first
+  )
+
+  - is_fresh_source e:Expr :Boolean <-
+  // Allocation of a new object or a new array.
+  ( + x:External_c
+    + c:Cast
+    + result:Boolean
+    x ?= e
+    (x != NULL).if {
+      result := (x.code.has_prefix "li_clone_alloc(") || {x.code.has_prefix "malloc("} || {x.code.has_prefix "calloc("} || {x.code.has_prefix "aligned_alloc("} || {x.code.has_prefix "li_aligned_alloc("}
+    } else {
+      c ?= e
+      (c != NULL).if {
+        result := is_fresh_source (c.value)
+      }
+    }
+    result
+  )
+
+  - escape_into o:Escape_obj loop l:Escape_loop <-
+  (
+    is_into := True
+    o.escape l
+    is_into := False
+  )
+
+  - store_into w:Escape_obj value o:Escape_obj type ty:Type_full :Boolean <-
+  // @o stored into @w: into a parameter (or a part of it), or into a new object of the
+  // function (its contents); else (False) elsewhere.
+  ( + t,s:Int
+    + result:Boolean
+    t := param_index w
+    (t >= 0).if {
+      (o.is_fresh_born).if {
+        o.add_target t type ty
+      }
+      result := True
+    }.elseif {(w != NULL) && {w.is_fresh_born} && {! w.is_escaped}} then {
+      s := param_index o
+      (s >= 0).if {
+        w.add_content s type ty
+      }.elseif {(o.is_fresh_born) && {o != w}} then {
+        w.add_child o type ty
+      } else {
+        w.add_content (-1) type ty
+      }
+      result := True
+    }
+    result
+  )
+
+  - pass_into e:Escape_event :Boolean <-
+  // The argument of the pass @e is kept by the function called only in its parameters (not
+  // elsewhere), which are, at this call, parameters of ours or new objects.
+  ( + q:Profil
+    + a:Escape_obj
+    + t:Int
+    + result:Boolean
+    q := e.call
+    ((! q.esc_is_arg_leak_out (e.index)) && {e.site_event != NULL} && {q.esc_flow_targets != NULL}).if {
+      result := True
+      (q.esc_flow_targets.lower).to (q.esc_flow_targets.upper) do { i:Int
+        (q.esc_flow_sources.at i = e.index).if {
+          t := q.esc_flow_targets.at i
+          ((t >= 0) && {t <= e.site_event.site_objs.upper}).if {
+            a := e.site_event.site_objs.at t
+            (store_into a value (e.obj) type (q.esc_flow_types.at i)).if_false {
+              result := False
+            }
+          } else {
+            result := False
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - is_leak_out e:Escape_event :Boolean <-
+  // The leak @e (of an argument) is elsewhere than into a parameter (see @Profil.esc_arg_leaks_out).
+  ( + k:Int
+    + q:Profil
+    + t:Int
+    + result:Boolean
+    k := e.kind
+    (k = Escape_event.kind_capture).if {
+      result := param_index (e.owner) < 0
+    }.elseif {k = Escape_event.kind_escape} then {
+      result := (e.owner = NULL) || {param_index (e.owner) < 0}
+    }.elseif {k = Escape_event.kind_pass} then {
+      q := e.call
+      result := (q.esc_is_arg_leak_out (e.index)) || {e.site_event = NULL} || {q.esc_flow_targets = NULL}
+      (result).if_false {
+        (q.esc_flow_targets.lower).to (q.esc_flow_targets.upper) do { i:Int
+          (q.esc_flow_sources.at i = e.index).if {
+            t := q.esc_flow_targets.at i
+            ((t < 0) || {t > e.site_event.site_objs.upper} || {param_index (e.site_event.site_objs.at t) < 0}).if {
+              result := True
+            }
+          }
+        }
+      }
+    } else {
+      result := True
+    }
+    result
+  )
+
+  - region_flows <-
+  // A new object not escaped elsewhere, stored into parameters: what it holds goes into each
+  // of them (from a parameter, or from elsewhere), and two of them share it.
+  ( + o:Escape_obj
+    + t:Int
+    (objs.lower).to (objs.upper) do { j:Int
+      o := objs.at j
+      ((o.is_fresh_born) && {! o.escaped_out} && {o.targets != NULL} && {o.profil != NULL}).if {
+        (o.targets.lower).to (o.targets.upper) do { i:Int
+          t := o.targets.at i
+          (o.targets.lower).to (o.targets.upper) do { k:Int
+            (o.targets.at k != t).if {
+              o.profil.esc_add_flow t from (o.targets.at k) type (o.obj_type)
+            }
+          }
+          visit := visit + 1
+          content_flows o into t in (o.profil)
+        }
+      }
+    }
+  )
+
+  - content_flows o:Escape_obj into t:Int in p:Profil <-
+  ( + c:Escape_obj
+    (o.visit != visit).if {
+      o.set_visit visit
+      (o.contents != NULL).if {
+        (o.contents.lower).to (o.contents.upper) do { i:Int
+          p.esc_add_flow t from (o.contents.at i) type (o.content_types.at i)
+        }
+      }
+      (o.children != NULL).if {
+        (o.children.lower).to (o.children.upper) do { i:Int
+          c := o.children.at i
+          (c.escaped_out).if {
+            p.esc_add_flow t from (-1) type (o.child_types.at i)
+          } else {
+            content_flows c into t in p
+          }
+        }
+      }
+    }
+  )
+
+  - add_flow o:Escape_obj into ro:Escape_obj type t:Type_full <-
+  // @o stored in @ro: noted if @ro is a parameter of the function, or a part of it.
+  ( + e:Escape_event
+    ((ro != NULL) && {param_index ro >= 0}).if {
+      e := new_event (Escape_event.kind_flow) obj o
+      e.set_owner ro
+      e.set_value_type t
+    }
+  )
+
+  - add_site c:Call_slot self is_self:Boolean :Escape_event <-
+  ( + e:Escape_event
+    + site_objs:Array Escape_obj
+    + types:Array Type_full
+    + v:Expr
+    site_objs := Array Escape_obj .create_with_capacity (c.argument_list.count)
+    types := Array Type_full .create_with_capacity (c.argument_list.count)
+    (c.argument_list.lower).to (c.argument_list.upper) do { j:Int
+      (c.argument_list.at j = NULL).if {
+        site_objs.add_last NULL
+        types.add_last NULL
+      } else {
+        v := c.argument_list.at j.value
+        ((j = c.argument_list.lower) && {is_self}).if {
+          site_objs.add_last (container_of v)
+        } else {
+          site_objs.add_last (obj_of v)
+        }
+        types.add_last (v.static_type)
+      }
+    }
+    e := new_event (Escape_event.kind_site) obj NULL
+    e.set_call (c.profil)
+    e.set_site (site_objs, types)
+    e
+  )
+
+  - param_index o:Escape_obj :Int <-
+  // The parameter of the function which is @o, or of which @o is a part (0: `self'), else -1.
+  ( + result:Int
+    result := -1
+    (o != NULL).if {
+      (o.kind = 1).if {
+        result := 0
+      }.elseif {(o.kind = 4) || {o.kind = 6}} then {
+        result := o.index
+      }
+    }
+    result
+  )
+
+  - is_foreign o:Escape_obj :Boolean <-
+  // A value which is not a parameter, nor a new object of the function kept only in its
+  // parameters (then see @region_flows).
+  ( + result:Boolean
+    (o = NULL).if {
+      result := True
+    }.elseif {o.kind = 5} then {
+      result := True
+    }.elseif {param_index o >= 0} then {
+      result := False
+    }.elseif {o.is_fresh_born} then {
+      result := o.escaped_out
+    } else {
+      result := ! is_fresh_arg o
+    }
+    result
+  )
+
+  - obj_of e:Expr :Escape_obj <-
+  ( + rd:Read_local
+    + rs:Read_slot
+    + ro:Escape_obj
+    + c:Cast
+    + pc:Prototype_cst
+    + l:Local
+    + result:Escape_obj
+    rd ?= e
+    rs ?= e
+    (rd != NULL).if {
+      l := rd.local
+      ((l.esc_pass = pass) && {l.esc_profil = profil_current}).if {
+        result := l.esc_obj
+      }.elseif {(l.type.is_flat) && {! l.type.is_flat_ref} && {! is_array (l.type)}} then {
+        // A flat local is a value: its writes do not change another object.
+        result := value_obj
+      }
+    }.elseif {(rs != NULL) && {is_reference (rs.slot.type)}} then {
+      // An object reached from an argument: a part of it (a synchronous message borrows the
+      // whole, see @Profil.esc_add_part_leak).
+      ro := obj_of (rs.receiver)
+      ((ro != NULL) && {(ro.kind = 1) || {ro.kind = 4} || {ro.kind = 6}}).if {
+        result := new_obj 6 source (ro.source)
+        (ro.kind = 1).if {
+          // A part of `self'.
+          result.set_index 0
+        } else {
+          result.set_index (ro.index)
+        }
+        result.set_part_type (rs.slot.type)
+      }
+    } else {
+      c ?= e
+      pc ?= e
+      (c != NULL).if {
+        result := obj_of (c.value)
+      }.elseif {is_realloc e} then {
+        // `realloc': the same array, bigger.
+        result := obj_of (realloc_array e)
+      }.elseif {pc != NULL} then {
+        // A prototype: its writes do not change the existing clones, but the prototype.
+        result := proto_obj (pc.static_type.raw)
+      }.elseif {e.is_constant} then {
+        // A constant, as a string literal (its fields are written at its creation, see
+        // @Itm_string.to_run_expr).
+        result := value_obj
+      }
+    }
+    result
+  )
+
+  - is_stored_in p:Profil index k:Int :Boolean <-
+  // The synchronous message @p stores, in its argument @k (or a part of it), a mutable object
+  // which is not of its caller: from elsewhere, or from its `self' (its universe).
+  ( + s:Int
+    + result:Boolean
+    (p.esc_flow_targets != NULL).if {
+      (p.esc_flow_targets.lower).to (p.esc_flow_targets.upper) do { i:Int
+        s := p.esc_flow_sources.at i
+        ((p.esc_flow_targets.at i = k) && {s <= 0} && {! is_transferable (p.esc_flow_types.at i)}).if {
+          result := True
+        }
+      }
+    }
+    result
+  )
+
+  - is_part_kept p:Profil index k:Int :Boolean <-
+  // A mutable part of the argument @k is kept by @p (an immutable one can be shared).
+  ( + result:Boolean
+    (p.esc_part_leaks != NULL).if {
+      (p.esc_part_leaks.lower).to (p.esc_part_leaks.upper) do { i:Int
+        ((p.esc_part_leak_index.at i = k) && {! is_transferable (p.esc_part_leaks.at i)}).if {
+          result := True
+        }
+      }
+    }
+    result
+  )
+
+  - is_reference t:Type_full :Boolean <-
+  // A pointer to a mutable object (not a value, not a universe).
+  ( + r:Type
+    r := t.raw
+    (r != Type_void) && {r != Type_null} && {! t.is_flat_c} && {! r.is_block} && {(! t.is_flat) || {t.is_flat_ref}} && {r.prototype.style != '-'}
+  )
+
+  - container_of e:Expr :Escape_obj <-
+  // The object changed by a write in @e, or by a call on @e: a flat field (as a flat parent)
+  // is a part of its object.
+  ( + rs:Read_slot
+    + c:Cast
+    + result:Escape_obj
+    rs ?= e
+    c ?= e
+    (c != NULL).if {
+      result := container_of (c.value)
+    }.elseif {(rs != NULL) && {rs.slot.type.is_flat} && {! rs.slot.type.is_flat_ref} && {! rs.slot.type.is_flat_c}} then {
+      result := container_of (rs.receiver)
+    } else {
+      result := obj_of e
+    }
+    result
+  )
+
+  - is_realloc e:Expr :Boolean <-
+  ( + x:External_c
+    x ?= e
+    (x != NULL) && {x.access_list != NULL} && {! x.access_list.is_empty} && {x.code.has_prefix "realloc("}
+  )
+
+  - realloc_array e:Expr :Expr <-
+  ( + x:External_c
+    x ?= e
+    x.access_list.first
+  )
+
+  - origin_of e:Expr :Slot_data <-
+  // The field from which the array @e comes.
+  ( + rd:Read_local
+    + rs:Read_slot
+    + c:Cast
+    + l:Local
+    + result:Slot_data
+    rd ?= e
+    rs ?= e
+    c ?= e
+    (rd != NULL).if {
+      l := rd.local
+      ((l.esc_pass = pass) && {l.esc_profil = profil_current}).if {
+        result := l.esc_origin
+      }
+    }.elseif {rs != NULL} then {
+      (is_array (rs.slot.type)).if {
+        result := rs.slot
+      }
+    }.elseif {c != NULL} then {
+      result := origin_of (c.value)
+    }.elseif {is_realloc e} then {
+      result := origin_of (realloc_array e)
+    }
+    result
+  )
+
+  - origin_type_of e:Expr :Type <-
+  // The type of the object which holds the array @e.
+  ( + rd:Read_local
+    + rs:Read_slot
+    + c:Cast
+    + l:Local
+    + result:Type
+    rd ?= e
+    rs ?= e
+    c ?= e
+    (rd != NULL).if {
+      l := rd.local
+      ((l.esc_pass = pass) && {l.esc_profil = profil_current}).if {
+        result := l.esc_origin_type
+      }
+    }.elseif {rs != NULL} then {
+      (is_array (rs.slot.type)).if {
+        result := owner_type_of (rs.receiver)
+      }
+    }.elseif {c != NULL} then {
+      result := origin_type_of (c.value)
+    }.elseif {is_realloc e} then {
+      result := origin_type_of (realloc_array e)
+    }
+    result
+  )
+
+  - owner_type_of e:Expr :Type <-
+  // The type of the object changed by a write in @e: without the casts and the flat fields
+  // (flat parents, as the @String of a @String_alias).
+  ( + rs:Read_slot
+    + c:Cast
+    + result:Type
+    rs ?= e
+    c ?= e
+    (c != NULL).if {
+      result := owner_type_of (c.value)
+    }.elseif {(rs != NULL) && {rs.slot.type.is_flat} && {! rs.slot.type.is_flat_ref}} then {
+      result := owner_type_of (rs.receiver)
+    } else {
+      result := e.static_type.raw
+    }
+    result
+  )
+
+  - receiver_type_of e:Expr :Type <-
+  // Receiver of a call: the array holder, or the object.
+  ( + result:Type
+    (is_array (e.static_type)).if {
+      result := origin_type_of e
+    } else {
+      result := owner_type_of e
+    }
+    result
+  )
+
+  - check_sent o:Escape_obj <-
+  // A use of @o (or of an object stored in it): its transfers, before, are not valid.
+  ( + x:Escape_obj
+    visit := visit + 1
+    x := o
+    {(x = NULL) || {x.visit = visit}}.until_do {
+      x.set_visit visit
+      (x.sent_event != NULL).if {
+        x.sent_event.set_ok False
+      }
+      x := x.parent
+    }
+  )
+
+  - visit:Int
+
+  - is_one_send e:Escape_event :Boolean <-
+  is_one_param (e.call_site) index (e.index)
+
+  - is_one_param c:Call_slot index k:Int :Boolean <-
+  // The parameter @k of the function of @c is `One'.
+  ( + l:Local
+    l := c.profil.argument_list.at k
+    (l != NULL) && {l.type.is_one}
+  )
+
+  - is_transfer c:Call_slot index k:Int :Boolean <-
+  // The argument @k of the asynchronous message @c is a valid transfer.
+  ( + e:Escape_event
+    + result:Boolean
+    (events.lower).to (events.upper) do { j:Int
+      e := events.at j
+      ((e.kind = Escape_event.kind_send) && {e.call_site = c} && {e.index = k} && {e.is_ok}).if {
+        result := True
+      }
+    }
+    result
+  )
+
+  - is_fresh_arg o:Escape_obj :Boolean <-
+  // A fresh object not escaped, or an argument always given fresh (see @evaluate).
+  (o != NULL) && {o.kind != 1} && {! o.is_escaped} && {(o.is_fresh) || {(o.kind = 4) && {! o.source.esc_is_arg_not_fresh (o.index)}}}
+
+  - is_leak e:Escape_event :Boolean <-
+  // The event @e stores its object somewhere (for `self' or an argument of a function).
+  ( + k:Int
+    + result:Boolean
+    k := e.kind
+    (k = Escape_event.kind_capture).if {
+      // In a flat local (as the context of a block): not stored in another object.
+      result := (e.owner = NULL) || {e.owner.kind != 3}
+    }.elseif {k = Escape_event.kind_call} then {
+      result := e.call.esc_leaks
+    }.elseif {k = Escape_event.kind_pass} then {
+      result := e.call.esc_is_arg_leak (e.index)
+    } else {
+      result := (k = Escape_event.kind_escape) || {k = Escape_event.kind_return}
+    }
+    result
+  )
+
+  - run_events <-
+  ( + e,t:Escape_event
+    + o,w:Escape_obj
+    + q:Profil
+    + ok:Boolean
+
+    violations.clear
+    proto_violations.clear
+    one_keep_errors.clear
+    one_store_errors.clear
+    (objs.lower).to (objs.upper) do { j:Int
+      objs.at j.reset
+    }
+    (events.lower).to (events.upper) do { j:Int
+      e := events.at j
+      o := e.obj
+      check_sent o
+      check_sent (e.owner)
+      (e.kind = Escape_event.kind_send).if {
+        // Transfer: fresh, not escaped, not in a loop where it was not born.
+        (is_one_send e).if {
+          // `One': moved (fresh or not), if no more used after.
+          e.set_ok ((o = NULL) || {e.loop = NULL} || {(o.birth_loop != NULL) && {o.birth_loop.is_inside (e.loop)}})
+        } else {
+          e.set_ok ((is_fresh_arg o) && {(e.loop = NULL) || {(o.birth_loop != NULL) && {o.birth_loop.is_inside (e.loop)}}})
+        }
+        (o != NULL).if {
+          o.set_sent_event e
+          o.escape (e.loop)
+        }
+      }.elseif {e.kind = Escape_event.kind_write} then {
+        write_on o event e target (e.target) type (e.owner_type) array (e.array_type) loop (e.loop)
+      }.elseif {e.kind = Escape_event.kind_escape} then {
+        ((o != NULL) && {o.is_one}).if {
+          // In an array, a global, an external: a second reference.
+          one_store_errors.add_last e
+        }
+        (o != NULL).if {
+          ((e.owner != NULL) && {store_into (e.owner) value o type (e.value_type)}).if {
+            // In an array of a parameter, or of a new object.
+            escape_into o loop (e.loop)
+          } else {
+            o.escape (e.loop)
+          }
+        }
+      }.elseif {e.kind = Escape_event.kind_call} then {
+        q := e.call
+        current_call := e
+        (q.esc_self_writes != NULL).if {
+          (q.esc_self_writes.lower).to (q.esc_self_writes.upper) do { k:Int
+            t := q.esc_self_writes.at k
+            (t.target = NULL).if {
+              // Write in the array `self' of @q: the array of the receiver.
+              write_on o event t target (e.target) type (e.owner_type) array (e.array_type) loop (e.loop)
+            } else {
+              write_on o event t target (t.target) type (e.owner_type) array NULL loop (e.loop)
+            }
+          }
+        }
+        current_call := NULL
+        ((q.esc_leaks) && {o != NULL}).if {
+          o.escape (e.loop)
+        }
+      }.elseif {e.kind = Escape_event.kind_capture} then {
+        w := e.owner
+        ((o != NULL) && {o.is_one} && {e.target != NULL} && {! e.target.type.is_one} && {(w = NULL) || {w.kind != 3}}).if {
+          // In a field which is not `One': a second reference.
+          one_store_errors.add_last e
+        }
+        ok := is_fresh_arg o
+        ((ok) && {w != NULL} && {w.kind = 3}).if {
+          // In a value (a flat local, as the context of a block).
+        }.elseif {(w != NULL) && {w.kind = 5}} then {
+          // In a prototype: shared.
+          (o != NULL).if {
+            o.escape (e.loop)
+          }
+        }.elseif {(ok) && {w != NULL} && {w.kind != 1} && {w.is_fresh} && {! w.is_escaped} && {w != o} && {o.kind != 3}} then {
+          // Not a value (@o of kind 3 is shared by the program: it is copied, it is not a child).
+          w.add_child o type (e.value_type)
+          ((w.is_fresh_born) && {param_index o >= 0}).if {
+            w.add_content (param_index o) type (e.value_type)
+          }
+        } else {
+          (o != NULL).if {
+            (store_into w value o type (e.value_type)).if {
+              escape_into o loop (e.loop)
+            } else {
+              o.escape (e.loop)
+            }
+          }
+          (((! ok) || {w = NULL}) && {is_array (e.target.type)} && {w != NULL} && {w.is_fresh}).if {
+            // A shared array in a field of a fresh object.
+            violation_reason := "shared array stored"
+            add_violation e target (e.target) type (e.owner_type) array NULL
+          }
+        }
+      }.elseif {e.kind = Escape_event.kind_one_store} then {
+        e.set_ok (is_fresh_arg o)
+        (o != NULL).if {
+          // Held by a `One' variable of the function: not elsewhere (where it goes after is
+          // seen by its own events).
+          escape_into o loop (e.loop)
+        }
+      }.elseif {e.kind = Escape_event.kind_pass} then {
+        (((e.is_one_value) || {(o != NULL) && {o.is_one}}) && {e.call.esc_is_arg_leak (e.index)} && {! is_one_arg (e.call) index (e.index)}).if {
+          // A `One' object kept by a parameter which is not `One': a second reference.
+          one_keep_errors.add_last e
+        }
+        ((! is_fresh_arg o) && {e.call.esc_set_arg_not_fresh (e.index)}).if {
+          is_arg_changed := True
+        }
+        ((o != NULL) && {e.call.esc_is_arg_leak (e.index)}).if {
+          (pass_into e).if {
+            // Kept by the function only in its parameters, which are ours or new objects.
+            escape_into o loop (e.loop)
+          } else {
+            o.escape (e.loop)
+          }
+        }
+      }.elseif {e.kind = Escape_event.kind_return} then {
+        ((o = NULL) || {o.kind = 1} || {! o.is_fresh} || {o.is_escaped}).if {
+          (e.profil != NULL).if {
+            e.profil.esc_set_return_ok False
+          }
+        }
+        (o != NULL).if {
+          o.escape (e.loop)
+        }
+      }
+    }
+  )
+
+  - write_on o:Escape_obj event e:Escape_event target g:Slot_data type t:Type array a:Type loop l:Escape_loop <-
+  ( + w:Escape_event
+    ((o = NULL) || {o.kind = 6}).if {
+      violation_reason := "unknown object"
+      add_violation e target g type t array a
+    }.elseif {o.kind = 1} then {
+      // Write in `self': for the callers (see @evaluate), but not after an escape.
+      (o.is_escaped).if {
+        violation_reason := "after escape of `self'"
+        add_violation e target g type t array a
+      }
+    }.elseif {o.kind = 3} then {
+      // A value.
+    }.elseif {o.kind = 5} then {
+      // A prototype changed by the program.
+      add_proto_violation e type (o.proto_type)
+    }.elseif {! o.is_fresh} then {
+      violation_reason := "not fresh"
+      add_violation e target g type t array a
+    }.elseif {o.is_escaped} then {
+      violation_reason := "after escape"
+      add_violation e target g type t array a
+    } else {
+      w := Escape_event.create (Escape_event.kind_write) obj o
+      w.set_target g
+      w.set_owner_type t
+      w.set_array_type a
+      w.set_position (e.position)
+      w.set_loop l
+      o.add_pending w
+    }
+  )
+
+  - check_loops <-
+  // A write in a loop, in an object born before the loop: not an initialization if the
+  // object escapes in the loop.
+  ( + o:Escape_obj
+    + w:Escape_event
+    + l:Escape_loop
+    (objs.lower).to (objs.upper) do { j:Int
+      o := objs.at j
+      (o.pending_writes != NULL).if {
+        (o.pending_writes.lower).to (o.pending_writes.upper) do { k:Int
+          w := o.pending_writes.at k
+          l := w.loop
+          {(l = NULL) || {(o.birth_loop != NULL) && {o.birth_loop.is_inside l}}}.until_do {
+            (o.is_escaped_in l).if {
+              violation_reason := "escape in the loop"
+              add_violation w target (w.target) type (w.owner_type) array (w.array_type)
+              l := NULL
+            } else {
+              l := l.parent
+            }
+          }
+        }
+      }
+    }
+  )
+
+
+  - violation_reason:String_alias
+  - current_call:Escape_event
+  - is_arg_changed:Boolean
+  // During @run_events: the reason of a violation, the call which does the write.
+
+  - add_proto_violation e:Escape_event type t:Type <-
+  ( + v:Escape_event
+    v := Escape_event.create (Escape_event.kind_write) obj NULL
+    v.set_owner_type t
+    v.set_position (e.position)
+    (current_call != NULL).if {
+      v.set_call (current_call.call)
+      v.set_call_position (current_call.position)
+    }
+    proto_violations.add_last v
+  )
+
+  - add_violation e:Escape_event target g:Slot_data type t:Type array a:Type <-
+  ( + v:Escape_event
+    ((t != NULL) && {! t.is_block} && {t.prototype != NULL} && {t.prototype.style != '-'}).if {
+      // The receiver may be the prototype itself (an alias): its prototype is changed too.
+      add_proto_violation e type t
+    }
+    v := Escape_event.create (Escape_event.kind_write) obj NULL
+    v.set_target g
+    v.set_owner_type t
+    v.set_array_type a
+    v.set_position (e.position)
+    v.set_reason violation_reason
+    (current_call != NULL).if {
+      v.set_call (current_call.call)
+      v.set_call_position (current_call.position)
+    }
+    violations.add_last v
+  )
+
+  - add_field_types t:Type in list:Array Type <-
+  // The types of the fields of @t (and of its flat fields) which are objects.
+  ( + slot:Slot
+    + ft:Type_full
+    (t.slot_run != NULL).if {
+      (t.slot_run.lower).to (t.slot_run.upper) do { j:Int
+        slot := t.slot_run.at j
+        ((slot.style = '+') && {slot.slot_data_intern != NULL}).if {
+          ft := slot.slot_data_intern.type
+          (is_array ft).if {
+            // An array: the type of its elements.
+            ft := element_type ft
+          }
+          ((ft.is_flat) && {! ft.is_flat_c} && {! ft.is_flat_ref} && {ft.raw != t}).if {
+            // A flat field (as a flat parent) is a part of the object: its fields.
+            add_field_types (ft.raw) in list
+          }.elseif {(! ft.is_flat_c) && {! is_array ft} && {ft.raw != Type_void} && {ft.raw != t} && {list.fast_first_index_of (ft.raw) > list.upper}} then {
+            list.add_last (ft.raw)
+          }
+        }
+      }
+    }
+  )
+
+  - violation_of t:Type :Escape_event <-
+  // First write which changes an object of type @t after its creation.
+  ( + v,result:Escape_event
+    (violations.lower).to (violations.upper) do { j:Int
+      v := violations.at j
+      (result = NULL).if {
+        (v.owner_type = t).if {
+          result := v
+        }.elseif {(v.target = NULL) && {v.array_type != NULL} && {has_array_field (v.array_type) in t}} then {
+          // Array of unknown origin, of the type of an array field of @t.
+          result := v
+        }
+      }
+    }
+    result
+  )
+
+  - has_array_field a:Type in t:Type :Boolean <-
+  ( + slot:Slot
+    + ft:Type_full
+    + result:Boolean
+    (t.slot_run != NULL).if {
+      (t.slot_run.lower).to (t.slot_run.upper) do { j:Int
+        slot := t.slot_run.at j
+        ((slot.style = '+') && {slot.slot_data_intern != NULL}).if {
+          ft := slot.slot_data_intern.type
+          ((is_array ft) && {ft.raw = a}).if {
+            result := True
+          }.elseif {(ft.is_flat) && {! ft.is_flat_c} && {ft.raw != t}} then {
+            result := result || {has_array_field a in (ft.raw)}
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - field_violation t:Type in list:Array Type reason reason:Array Escape_event :Escape_event <-
+  // The reason of a field of @t whose type is mutable.
+  ( + slot:Slot
+    + ft:Type_full
+    + idx:Int
+    + result:Escape_event
+    (t.slot_run != NULL).if {
+      (t.slot_run.lower).to (t.slot_run.upper) do { j:Int
+        slot := t.slot_run.at j
+        ((result = NULL) && {slot.style = '+'} && {slot.slot_data_intern != NULL}).if {
+          ft := slot.slot_data_intern.type
+          (is_array ft).if {
+            ft := element_type ft
+          }
+          ((ft.is_flat) && {! ft.is_flat_c} && {! ft.is_flat_ref} && {ft.raw != t}).if {
+            result := field_violation (ft.raw) in list reason reason
+          } else {
+            idx := list.fast_first_index_of (ft.raw)
+            ((idx <= list.upper) && {ft.raw != t}).if {
+              result := reason.at idx
+            }
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - display e:Escape_event <-
+  (
+    (e.target != NULL).if {
+      '`'.print
+      e.target.name.print
+      "' ".print
+    }.elseif {e.array_type != NULL} then {
+      "array ".print
+      e.array_type.name.print
+      " of unknown origin ".print
+    }
+    "written in ".print
+    e.position.prototype.name.print
+    " line ".print
+    e.position.line.print
+    (e.call != NULL).if {
+      ", by `".print
+      e.call.slot.name.print
+      "' called in ".print
+      e.call_position.prototype.name.print
+      " line ".print
+      e.call_position.line.print
+    }
+    (e.reason != NULL).if {
+      " (".print
+      e.reason.print
+      ')'.print
+    }
+  )

@@ -227,7 +227,6 @@ Slot_data
       // { ... }.value
       args := Alias_array Expr.copy args
       args.at 0 put (args.first.my_copy)
-      //rec := slot_msg.slot_data_intern.read position with rec
       base := Node.new_block position receiver rec with args
     }.elseif {args.count = 1} then {
       // Classic message without arguments.
@@ -262,8 +261,15 @@ Slot_data
       receiver rec with args intern implicit_self
     }
     list_current.add_last base
+    check_one_pointer rec slot slot_msg implicit implicit_self result (base.result_expr)
 
     (larg != NULL).if {
+      (is_block_value).if_false {
+        // `One' parameters: the arguments are moved (see @Itm_code.check_one_source).
+        (larg.lower).to (larg.upper) do { j:Int
+          check_one_source (larg.at j) to_one (is_one_param (slot_msg.argument_list.at (j + 1)))
+        }
+      }
       Alias_array Itm_code .free larg
     }
 
@@ -272,6 +278,39 @@ Slot_data
   )
 
 Private
+
+  - check_one_pointer rec:Expr slot s:Slot implicit is_implicit:Boolean result r:Expr <-
+  // `One': a pointer to a C array inside a `One' object (`o.storage', `o.to_external') does not
+  // leave it (a second reference), but from a `One' field (a move, see @Itm_code.emit_move).
+  ( + tg:Type_generic
+    + t:Type
+    + is_one_field:Boolean
+    ((! is_implicit) && {s != NULL} && {r != NULL} && {Escape.is_one_expr rec}).if {
+      tg ?= r.static_type.raw
+      ((tg != NULL) && {tg.native_array_variable != NULL}).if {
+        t := rec.static_type.raw
+        is_one_field := (s.slot_data_intern != NULL) && {s.slot_code_intern = NULL} && {s.slot_data_for t.type.is_one}
+        (is_one_field).if_false {
+          string_tmp.copy "COP: `"
+          string_tmp.append name
+          string_tmp.append "' gives a pointer to a C array of a `One' object: it would be a second reference (only a `One' field can be moved out)."
+          semantic_error (position,string_tmp)
+        }
+      }
+    }
+  )
+
+  - is_one_param a:Itm_argument :Boolean <-
+  ( + ia:Itm_arg
+    + ts:Itm_type_simple
+    + result:Boolean
+    ia ?= a
+    (ia != NULL).if {
+      ts ?= ia.type
+      result := (ts != NULL) && {ts.is_one}
+    }
+    result
+  )
 
   - add_arg e:Expr to idx:Int
   in args:Array Expr for slot:Slot block is_block_value:Boolean <-

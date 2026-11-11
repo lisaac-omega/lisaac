@@ -11,6 +11,12 @@ Public
 
   + is_self:Boolean
 
+  + self_type_parent:Type_full
+  // Dispatch on a parent (see @Dta.lookup): concrete type of the first receiver,
+  // used when the update has no type of self (data slot of type Self).
+
+  - set_self_type_parent t:Type_full <- ( self_type_parent := t; )
+
   //
   // Creation.
   //
@@ -69,12 +75,29 @@ Public
   )
 
   //
+  // Execute.
+  //
+
+  - execute:Instr <-
+  // Debug mode: a test of @NULL before a direct call (see @is_null_receiver).
+  ( + result:Instr
+    ((switch = NULL) && {first_code != NULL} && {is_null_receiver}).if {
+      data.remove
+      list_current.insert_before null_check
+      result := first_code.execute
+    } else {
+      result := parent_node.execute
+    }
+    result
+  )
+
+  //
   // Update.
   //
 
   - update:Boolean <-
   (
-    update_case NULL & update_depth NULL
+    update_case self_type_parent & update_depth self_type_parent
   )
 
 Node, Dta
@@ -96,14 +119,6 @@ Private
     + idx,idx2:Int
 
     typ_f := expr.static_type
-    /*
-    ((data.slot != NULL) && {data.slot.name != NULL} && {data.slot.name == "tmp_name"}).if {
-      warning_error (position,"NODE_TYPE")
-      typ_f.raw.name.print
-      '\n'.print
-      TYPES_TMP.print_all
-    }
-    */
     
     ((typ_f.is_flat || {typ_f.is_exact}) && {typ_f.raw != type_boolean}).if {
       (first_code = NULL).if {
@@ -118,20 +133,6 @@ Private
         lst_typ := Types_tmp.new
         expr.get_type lst_typ
 
-        /*
-        ((typ_f.raw = type_boolean) && {! lst_typ.is_empty}).if {
-          expr.debug_display; '\n'.print
-          (lst_typ.first = type_boolean).if {
-
-            crash_with_message "NODE_TYPE : BUG"
-          }
-          /*
-          lst_typ.print
-          '\n'.print
-          warning_error (position,"ICI")
-          */
-        }
-        */
         (! lst_typ.is_empty).if {
           (lst_typ.count = 1).if {
             (first_code = NULL).if {
@@ -165,11 +166,52 @@ Private
         }
         lst_typ.free
       } else {
-        //count_flat := count_flat + 1
-        //"Yes\n".print
       }
     }
     result
+  )
+
+  - is_null_receiver:Boolean <-
+  // Debug mode: a direct call (receiver of an exact type, see @update_case) whose receiver may
+  // be @NULL, as a field not yet written or set to @NULL (its possible types): without a test,
+  // a crash, or a call removed. Not for a C array (@C_array: a C pointer, where @NULL is
+  // allowed, as `realloc(NULL,...)'), a prototype mapped to a C type, a cast, a block.
+  // The test is out of the code of the call: the analysis (as @Escape) sees the same code.
+  ( + typ_f:Type_full
+    + pro:Prototype
+    + tg:Type_generic
+    + dc:Dta_cast
+    + db:Dta_block
+    + lst:Types_tmp
+    + idx:Int
+    + result:Boolean
+    (debug_level_option != 0).if {
+      typ_f := expr.static_type
+      pro := typ_f.raw.prototype
+      tg ?= typ_f.raw
+      dc ?= data
+      db ?= data
+      ((typ_f.is_exact) && {! typ_f.is_flat} && {typ_f.raw != type_boolean} && {pro != NULL} && {pro.type_c = NULL} && {(tg = NULL) || {tg.native_array_variable = NULL}} && {dc = NULL} && {db = NULL}).if {
+        lst := Types_tmp.new
+        expr.get_type lst
+        idx := lst.first_index
+        {(idx = -1) || {result}}.until_do {
+          result := lst.at idx = Type_null
+          idx := lst.next_index idx
+        }
+        lst.free
+      }
+    }
+    result
+  )
+
+  - null_check:Instr <-
+  // `Call on NULL' if the receiver is @NULL (as the @NULL case of a @Switch, see @Call_null);
+  // ignored by @Escape (see @Escape.on_external).
+  ( + acc:Array Expr
+    acc := Array Expr .create_with_capacity 1
+    acc.add_last expr
+    External_c.create (expr.position) text "/* NULL check */ if ((void *)(@) == NULL) { lisaac_stack_print(0); print_string(\"Call on NULL\\n\"); die_with_code(1); }" access acc persistant True type (Type_void.default)
   )
 
   - update_depth self_type:Type_full :Boolean <-
@@ -183,7 +225,6 @@ Private
           new_type_self := expr.static_type
           ((! new_type_self.is_flat) || {new_type_self.raw = type_boolean}).if {
             new_type_self := first_type.default.to_exact
-            //new_type_self := new_type_self.get_with (new_type_self.flag | TYPE_FULL.generic_bit)
           }
         } else {
           new_type_self := self_type
@@ -195,11 +236,9 @@ Private
       }
     } else {
       list := switch.list
-      //result := True; BSBS: Pas d'impact
       (list.lower).to (list.upper) do { j:Int
         (self_type = NULL).if {
           new_type_self := list.at j.id.default.to_exact
-          //new_type_self := new_type_self.get_with (new_type_self.flag | TYPE_FULL.generic_bit)
         } else {
           new_type_self := self_type
         }

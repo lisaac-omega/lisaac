@@ -49,13 +49,32 @@ Public
     intern_name := n
   )
 
-  - is_argument:Boolean <- (style = ' ')
-
   //
   // Type.
   //
 
   + type:Type_full
+
+  + esc_move_position:Position
+  // `One': its last move (see @Escape.moved).
+
+  - set_esc_move_position p:Position <- ( esc_move_position := p; )
+
+  + esc_loop_mark:Int
+  // The number of the innermost loop of its last access (see @Escape.access, @Escape_loop.id).
+
+  - set_esc_loop_mark n:Int <- ( esc_loop_mark := n; )
+
+  + esc_write_position:Position
+  + esc_write_pass:Int
+  // Its last write in the pass @esc_write_pass (for an argument of an inlined function: the
+  // call, see @Escape.user_position).
+
+  - set_esc_write_position p:Position pass n:Int <-
+  (
+    esc_write_position := p
+    esc_write_pass := n
+  )
 
   - set_type t:Type_full <-
   (
@@ -127,11 +146,9 @@ Public
       ((level_type < level_pass) && {! is_static}).if {
         ((is_executing_pass) || {require_first != NULL}).if {
           level_type := level_pass
-          //busy_set.fast_add self
           tmp_type := Types_tmp.new
           sub_get_type tmp_type
           type_set := tmp_type.update type_set
-          //busy_set.clear
         }
       }
       t.union type_set
@@ -254,8 +271,9 @@ Public
     // Require list.
     (require_first = e).if {
       (require_list != NULL).if {
-        require_first := require_list.first;  // BSBS: pourquoi conserver l'ordre?
-        require_list.remove_first;            // C'est plus rapide de faire remove_last
+        // The order of the writes does not matter: @remove_last instead of @remove_first.
+        require_first := require_list.last
+        require_list.remove_last
         (require_list.is_empty).if {
           require_list := NULL
         }
@@ -264,7 +282,6 @@ Public
       }
     } else {
       ? {require_list != NULL}
-      //e.debug_display
       (require_list = NULL).if {
         e.debug_display
         intern_name.print; '\n'.print
@@ -278,7 +295,6 @@ Public
       }
 
       idx := require_list.fast_first_index_of e
-      //? {idx <= require_list.upper}
 
       (idx > require_list.upper).if {
         e.debug_display
@@ -289,12 +305,12 @@ Public
           require_list.at j.debug_display
         }
 
-        //warning_error (position,"ICI")
         crash_with_message "******** VARIABLE.unwrite : BUG !!! **********\n"
 
       }
 
-      require_list.remove idx
+      require_list.at idx put (require_list.last)
+      require_list.remove_last
       (require_list.is_empty).if {
         require_list := NULL
       }
@@ -310,7 +326,6 @@ Public
   (
     read p with NULL
   )
-  //[ ? {ensure_count := Old ensure_count + 1}; ]
 
   - read p:Position with r:Expr :Read <-
   (
@@ -322,42 +337,18 @@ Public
 
     result := new_read position with r
     ensure_count := ensure_count + 1
-    /*
-    (intern_name == "__tmp__35").if {
-      "Create : ".print
-      result.object_id.print
-      '\n'.print
-    }
-    */
     result
   )
-  //[ ? {ensure_count := Old ensure_count + 1}; ]
 
   - unread e:Read <-
   (
-    /*
-    (intern_name == "__tmp__35").if {
-      "Delete : ".print
-      e.object_id.print
-      '\n'.print
-    }
-    */
     ensure_count := ensure_count - 1
     (ensure_count < 0).if {
-      //warning_error(e.position,"VARIABLE.unread")
       "C'est : ".print
       e.debug_display
       "\n dans :\n".print
-      //list_current.debug_display
-      //'\n'.print
       crash
     }
-  /*
-    (intern_name == "Result__ID").if {
-      "VARIABLE delete :".print
-      e.debug_display
-    }
-*/
 
 //    ? {ensure_count >= 0}
   )
@@ -400,7 +391,6 @@ Public
     buffer.append intern_name
     buffer.add_last ':'
     type.append_name_in buffer
-    //buffer.append (type.intern_name)
   )
 
   - display_type buffer:String_buffer <-
@@ -479,8 +469,4 @@ Variable, Prototype
       }
     }
   )
-
-
-
-
 

@@ -138,22 +138,76 @@ Public
   - create_slot_data <-
   ( + typ:Type_full
     + tm:Itm_type_multi
-    + ts:Itm_type_mono
 
     tm ?= result_type
     (tm != NULL).if {
       slot_data_list := Array Slot_data .create_with_capacity (tm.count-1)
       (tm.lower).to (tm.upper-1) do { k:Int
-        typ := tm.at k.to_run_for receiver_type pos (position.prototype.filename)
+        typ := to_run_type (tm.at k) for receiver_type
         slot_data_list.add_last (
           Slot_data.create common_slot type_full typ
         )
       }
-      typ := tm.last.to_run_for receiver_type pos (position.prototype.filename)
+      typ := to_run_type (tm.last) for receiver_type
     } else {
-      ts ?= result_type
-      typ := ts.to_run_for receiver_type pos (position.prototype.filename)
+      typ := to_run_type result_type for receiver_type
     }
     slot_data_intern := Slot_data.create common_slot type_full typ
+    (is_self_dependent).if {
+      slot_data_intern.set_self_type (receiver_type.default.to_exact)
+    }
+    ((is_self_dependent) && {tm != NULL}).if {
+      semantic_error (position,"Type `Self' is not yet possible in a vector data slot.")
+    }
+  )
+
+  //
+  // Data slot of type Self: one copy for each concrete type.
+  //
+
+  + is_self_dependent:Boolean
+  // The type of the data slot contains Self.
+
+  + self_copy_type:Array Type
+  + self_copy_list:Array Slot_data
+  // Copies of the data slot for the concrete types other than @receiver_type.
+
+  - to_run_type it:Itm_type for t:Type :Type_full <-
+  // Type of the data slot for the concrete type @t: Self := @t.
+  ( + p:Self_to_type
+    + ts:Itm_type_mono
+    + result:Type_full
+
+    ts ?= it
+    p := Self_to_type.create receiver_type self (t.default.to_exact)
+    result := ts.to_run_for p pos (position.prototype.filename)
+    (p.is_self_used).if {
+      is_self_dependent := True
+    }
+    result
+  )
+
+  - slot_data_for t:Type :Slot_data <-
+  // Data slot for a receiver of concrete type @t.
+  ( + idx:Int
+    + result:Slot_data
+
+    result := slot_data
+    ((is_self_dependent) && {t != NULL} && {t != receiver_type}).if {
+      (self_copy_type = NULL).if {
+        self_copy_type := Array Type .create_with_capacity 4
+        self_copy_list := Array Slot_data .create_with_capacity 4
+      }
+      idx := self_copy_type.fast_first_index_of t
+      (idx <= self_copy_type.upper).if {
+        result := self_copy_list.at idx
+      } else {
+        result := Slot_data.create common_slot type_full (to_run_type result_type for t)
+        result.set_self_type (t.default.to_exact)
+        self_copy_type.add_last t
+        self_copy_list.add_last result
+      }
+    }
+    result
   )
   

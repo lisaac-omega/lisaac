@@ -1,0 +1,62 @@
+Header
+  + name := Pool V
+/* Arena of reusable objects, as the pools of the APR C library: @item gives the next
+   one (a clone of @V the first time), @clear makes them all free at once.
+   Not shared between threads: one @Pool by thread.
+     pool := Pool Treenode .create
+     node := pool.item
+     pool.clear*/
+
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + storage:C_array V
+  + capacity:Int
+  + used:Int
+
+  - create:Self <-
+  ( + result:Self
+    result := clone
+    result.make
+    result
+  )
+
+  - make <-
+  (
+    capacity := 0
+    used := 0
+    grow
+  )
+
+  - item:V <-
+  // The next free object.
+  (
+    (used = capacity).if { grow; }
+    used := used + 1
+    storage.at (used - 1)
+  )
+
+  - clear <-
+  // All the objects are free.
+  (
+    used := 0
+  )
+
+Private
+
+  - grow <-
+  // Twice more objects (clones of @V).
+  ( + n:Int
+    n := (capacity * 2).max 1024
+    (capacity = 0).if {
+      storage := C_array V .create n
+    } else {
+      storage := storage.realloc capacity with n
+    }
+    capacity.to (n - 1) do { i:Int
+      storage.at i put (V.clone)
+    }
+    capacity := n
+  )

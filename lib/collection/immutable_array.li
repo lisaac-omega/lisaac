@@ -1,0 +1,93 @@
+Header
+  + name := Immutable_array V
+/* An array which never changes after its creation: no `put'. With `-cop', the escape
+   analysis of the compiler finds it immutable (as a @String_alias), so it can go from one
+   universe to another, without copy and without lock.
+   Without copy: @create_from takes a fresh @C_array, filled before; @create fills it with a
+   function. By copy: @create_copy. The elements must be immutable too (or values) for the
+   array to go to another universe. */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + storage:C_array V
+
+  + count:Int
+
+  - lower:Int := 0
+
+  - upper:Int <- count - 1
+
+  - is_empty:Boolean <- count = 0
+
+  - at i:Int :V <-
+  [ ? {i.in_range lower to upper}; ]
+  (
+    storage.at i
+  )
+
+  - first:V <- at lower
+
+  - last:V <- at upper
+
+  - foreach blk:{V;} <-
+  (
+    lower.to upper do { i:Int
+      blk.value (storage.at i)
+    }
+  )
+
+  //
+  // Creation.
+  //
+
+  - create_from sto:C_array V count n:Int :Self <-
+  // The array @sto (of @n elements), filled before, becomes this one: no more change of @sto.
+  [ ? {n >= 0}; ]
+  ( + result:Self
+    result := clone
+    result.make sto count n
+    result
+  )
+
+  - create n:Int with f:{Int; V} :Self <-
+  // The array of `f.value 0', ..., `f.value (n - 1)'.
+  [ ? {n >= 0}; ]
+  ( + sto:C_array V
+    sto := C_array V .create n
+    0.to (n - 1) do { i:Int
+      sto.at i put (f.value i)
+    }
+    create_from sto count n
+  )
+
+  - create_copy other:Array V :Self <-
+  // A copy of @other.
+  ( + sto:C_array V
+    + n:Int
+    n := other.count
+    sto := C_array V .create n
+    0.to (n - 1) do { i:Int
+      sto.at i put (other.at i)
+    }
+    create_from sto count n
+  )
+
+  - to_array:Array V <-
+  // A copy, which can change.
+  ( + result:Array V
+    result := Array V .create_with_capacity count
+    lower.to upper do { i:Int
+      result.add_last (storage.at i)
+    }
+    result
+  )
+
+Private
+
+  - make sto:C_array V count n:Int <-
+  (
+    storage := sto
+    count := n
+  )

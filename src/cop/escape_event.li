@@ -1,0 +1,127 @@
+Header
+  + name := Escape_event
+/* An event of the escape analysis (see @Escape), in the order of the code. */
+Insert
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Public
+
+  - kind_write:Int   := 0
+  - kind_escape:Int  := 1
+  - kind_call:Int    := 2
+  - kind_capture:Int := 3
+  - kind_return:Int  := 4
+  - kind_pass:Int    := 5
+  // Argument @index of a call to @call: escapes if @call keeps this argument.
+  - kind_use:Int     := 6
+  // A read of the object (see @Escape.check_sent).
+  - kind_one_store:Int := 8
+  // A non `One' value stored in a `One' variable: it must be fresh (see @is_ok).
+  - kind_send:Int    := 7
+  // Argument @index of the asynchronous message @call_site: transfer if the object is fresh
+  // and no more used after (see @is_ok).
+  - kind_flow:Int    := 9
+  // @obj (of type @value_type) is stored in @owner, a parameter of the function or a part of
+  // it (see @Escape.evaluate: what a synchronous message stores in what it borrows).
+  - kind_site:Int    := 10
+  // A call to @call, with the objects of its arguments (@site_objs, @site_types).
+  - kind_global:Int  := 11
+  // An access to the `-' slot @target (see @Escape.needed_base_inits).
+
+  + init_index:Int
+  + init_type:Type
+  // Out of a function (@profil = NULL): the initialization of the base slot @init_index (if
+  // not -1), or of the fields of the active type @init_type.
+
+  - set_init (i:Int, t:Type) <-
+  (
+    init_index := i
+    init_type := t
+  )
+
+  + value_type:Type_full
+
+  - set_value_type t:Type_full <- ( value_type := t; )
+
+  + site_event:Escape_event
+  // Pass: the call site (`kind_site'), with the objects of all the arguments.
+
+  - set_site_event e:Escape_event <- ( site_event := e; )
+
+  + site_objs:Array Escape_obj
+  + site_types:Array Type_full
+
+  - set_site (objs:Array Escape_obj, types:Array Type_full) <-
+  (
+    site_objs := objs
+    site_types := types
+  )
+
+  + call_site:Call_slot
+
+  + is_one_value:Boolean
+  // Pass: the argument is a `One' object.
+
+  - set_one_value b:Boolean <- ( is_one_value := b; )
+
+  + is_ok:Boolean
+
+  + index:Int
+
+  + kind:Int
+
+  + obj:Escape_obj
+  // The object written, which escapes, receiver of the call, captured or returned.
+
+  + owner:Escape_obj
+  // Capture: the object which stores @obj in a field.
+
+  + target:Slot_data
+  // Write: the field written, or the field holding the array written (NULL: array of unknown
+  // origin, of type @array_type, or array `self' of the function).
+
+  + array_type:Type
+
+  + owner_type:Type
+  // Write: the type of the object changed.
+
+  + call:Profil
+
+  + profil:Profil
+
+  + loop:Escape_loop
+
+  + position:Position
+
+  + call_position:Position
+  // Violation: the call through which the write is done (see @Escape.add_violation).
+
+  + reason:String_alias
+
+  - create k:Int obj o:Escape_obj :Self <-
+  ( + result:Self
+    result := clone
+    result.make k obj o
+    result
+  )
+
+  - make k:Int obj o:Escape_obj <-
+  (
+    kind := k
+    obj := o
+    profil := profil_current
+    loop := Escape.loop_current
+  )
+
+  - set_owner o:Escape_obj <- ( owner := o; )
+  - set_target t:Slot_data <- ( target := t; )
+  - set_array_type t:Type <- ( array_type := t; )
+  - set_call p:Profil <- ( call := p; )
+  - set_position p:Position <- ( position := p; )
+  - set_owner_type t:Type <- ( owner_type := t; )
+  - set_loop l:Escape_loop <- ( loop := l; )
+  - set_index i:Int <- ( index := i; )
+  - set_call_position p:Position <- ( call_position := p; )
+  - set_reason r:String_alias <- ( reason := r; )
+  - set_call_site c:Call_slot <- ( call_site := c; )
+  - set_ok b:Boolean <- ( is_ok := b; )

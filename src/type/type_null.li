@@ -17,7 +17,6 @@ Public
 
   - make_null <-
   (
-    //type_list.add_last self
     index := index_max
     index_max := index_max + 1
     

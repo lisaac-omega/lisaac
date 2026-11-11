@@ -5,7 +5,7 @@ Header
   - default := 0.0;
   - export := Real32, Real64, Real80,
   Real_16_16,  Real_24_8,  Real_26_6,
-  Ureal_16_16, Ureal_24_8, Ureal_26_6, ℂ;
+  Ureal_16_16, Ureal_24_8, Ureal_26_6, ℂ, ℝ;
   - lip     <-
   (
     add_lib "-lm";
@@ -13,9 +13,19 @@ Header
 Insert
   
   - parent_float_map64:Float_map64 := Float_map64
-  - inherit_numeric:Numeric := Numeric
+  - inherit_ordered_numeric:Ordered_numeric := Ordered_numeric
   
 Public
+
+  - to_r:ℝ <-
+  // The shortest decimal which gives @self back: 0.1 is 1/10.
+  ( + t:ℚ
+    + r:ℝ
+    t := ℚ.init_decimal to_real64
+    r := ℝ.init_q t
+    t.free
+    r
+  )
 
   - self:Self '+'  Left 80 <> other:Self :Self <- `@self + @other`:Self
   
@@ -160,7 +170,7 @@ Public
     b.restore_after_external
     */
     //Bug avec Valgrind (nov. 2025)
-    + val:Self
+    + val,half:Self
     + val_10:Int
     + char:Char
     + j:Int
@@ -172,17 +182,19 @@ Public
       b.add_last '-'
       val := - self
     }
-    (is_zero).if {      
-      b.add_last '0'
-    }.elseif {is_infinite} then {
+    (is_infinite).if {
       b.append "inf"
     }.elseif {is_nan} then {
       b.append "nan"
     } else {
       // Value case = 1.mantisse x 2^(exp-127)
       (val > Int.maximum.to_real32).if {
-        scientific_append_in b
+        val.scientific_append_in b
       } else {
+        // Rounded, not truncated: add half of the last digit.
+        half := 0.5
+        n.times { half := half / 10; }
+        val := val + half
         val_10 := val.to_int
         val_10.append_in b
         val := val - val_10
@@ -228,11 +240,11 @@ Public
       b.append "Nan"
     } else {
       // Value case.
-      {val > 10}.while_do {
+      {val >= 10}.while_do {
         val    := val / 10
         exp_10 := exp_10 + 1
       }
-      {val < 0}.while_do {
+      {val < 1}.while_do {
         val    := val * 10
         exp_10 := exp_10 - 1
       }

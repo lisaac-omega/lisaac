@@ -1,0 +1,19 @@
+Header
+  + name := Bench_loop
+/* Integer arithmetic and method calls, without any allocation. */
+Private
+  - fib n:Int :Int <-
+  ( + r:Int
+    (n < 2).if { r := n; } else { r := fib (n - 1) + fib (n - 2); }
+    r
+  )
+Public
+  - main <-
+  ( + s,i:Int
+    Out # fib 32 # '\n'
+    {i < 20_000_000}.while_do {
+      s := (s + i * 3) % 1009
+      i := i + 1
+    }
+    Out # s # '\n'
+  )

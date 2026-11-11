@@ -4,13 +4,14 @@ Header
 
 Inherit
   + parent_tok_itm:Flat Tok_itm
-  - parent_any:Any := Any
   
 Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
   - parent_lix_buf:Lix_buf := Lix_buf
+  - parent_recyclable:Recyclable := Recyclable
   
 Private
-  - stk_e:Flat Array (Exact Expr)
   
 Public
   - local_list:Flat Array Local
@@ -29,9 +30,9 @@ Public
   
   - type:Type <- ( abstract; Type)
     
-  - new:Self <- ( + r:Self; (stk_e.is_empty).if { r := clone; } else { r := stk_e.pop; }; r)
+  - new:Self <- parent_recyclable.new
   
-  - free <- ( stk_e.add_last self; )
+  - free <- parent_recyclable.free
   
   - new_parse t:Int <-
   (

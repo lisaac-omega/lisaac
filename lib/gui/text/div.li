@@ -54,7 +54,7 @@ Public
   ( + result:Self
     (is_mute != 0).if { result := Self; } else {
       (stkdiv.is_empty).if { result := clone; } else { result := stkdiv.pop; }
-      result.init (Div.parent)
+      result.init_win (Div.parent)
     }
     result
   )

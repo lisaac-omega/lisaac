@@ -1,0 +1,21 @@
+Header
+  - name := Shared E
+/* An object @E shared by several universes (`-cop'): an active object which holds it, inline
+   (`Flat'). Each call of a slot of @E from another universe is a message, executed in its
+   universe one after the other: mutual exclusion, without lock. A slot without result is
+   asynchronous (`add_last'), a slot with a result is synchronous (`count': it waits for the
+   previous messages). What goes in or out must be a value, an immutable object or an active
+   object (else, an error at the compilation); a block (`foreach') cannot be sent.
+   Each call is atomic, not a sequence of calls: for a composed operation, a slot of an heir.
+   `Insert': a @Shared @E is not an @E, the messages cannot be bypassed.
+     m := Shared (Array Int) .new
+     m.add_last 1
+     m.count.print
+*/
+Insert
+
+  + parent_e:Flat E
+
+Public
+
+  - new:Self <- clone

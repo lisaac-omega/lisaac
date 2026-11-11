@@ -155,21 +155,6 @@ Public
     +? {capacity >= Old capacity}
   ]
 
-  - prepare_space n:Int <-
-  // Makes sure that we have at least @n places, ready to use, after @upper.
-  [
-    deprecated True msg "Still used ? DC Jan 2026"
-    ? {n > 0}
-  ]
-  (
-    (upper - (capacity - 1) < n).if {
-      set_capacity (2 * capacity)
-    }
-  )
-  [
-    ? {upper = Old upper}
-  ]
-  
   - clear <-
   // Clear out the current String_buffer.
   // Note: internal @storage memory is neither released nor shrunk.
@@ -481,9 +466,13 @@ Public
     ? {i <= count}
     ? {nb > 0}
   ]
-  ( resize (count+nb)
-    storage.move i to upper by nb
-    i.to (i+nb-1) do { j:Int; storage.at j put ch; }
+  ( + j:Int
+    j := upper
+    resize (count+nb)
+    (i <= j).if {
+      storage.move i to j by nb
+    }
+    i.to (i+nb-1) do { k:Int; storage.at k put ch; }
   )
 
   - shrink min_index:Int to max_index:Int <-
@@ -693,7 +682,7 @@ Public
     {((i + 1) > upper) || {at (i + 1) != ' '}}.until_do {
       i := i + 1
     }
-    remove_first i
+    remove_head (i + 1)
     ? {is_empty || {at 0 != ' '}}
   )
 
@@ -918,7 +907,7 @@ Public
   )
   [
     +? {count = Old count}
-    +? {Result.is_not_null}
+    +? {Result != NULL}
   ]
 
   - from_external p:C_array(Char) <-
@@ -928,7 +917,7 @@ Public
   // compute the Lisaac @count. This extra null character
   // is not part of the Lisaac String_buffer.
   // Also consider @from_external_copy to choose the most appropriate.
-  ( ? {p.is_not_null}
+  ( ? {p != NULL}
 
     upper := -1
     {p.at (upper+1) = '\0'}.until_do {
@@ -951,7 +940,7 @@ Public
   // is not part of the Lisaac String_buffer.
   // Also consider @from_external to choose the most appropriate.
   ( + i:Int
-    ? {p.is_not_null}
+    ? {p != NULL}
     upper := -1
     {p.at i = '\0'}.until_do {
       add_last (p.at i)

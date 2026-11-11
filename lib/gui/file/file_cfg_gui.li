@@ -25,12 +25,12 @@ Public
       tmp += filename_cfg
       pth := tmp.to_string_alias
       f := File_utils.open_read tmp
-      (f.is_null).if {
+      (f = NULL).if {
         "Warning: Create `".print; pth.print; "' by default.\n".print;
         buftxt.clear
         System_io.read_asset filename_cfg in_txt buftxt
         f := File_utils.open_write pth
-        (f.is_null).if { "Error: No create `".print; pth.print; "'.".println; exit 1; };
+        (f = NULL).if { "Error: No create `".print; pth.print; "'.".println; exit 1; };
         File_utils.write f string buftxt
       } else {
         sz := File_utils.size f

@@ -1,0 +1,28 @@
+Header
+  + name := Li_set_local
+/* Write the word of a local. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + off:Int
+  + value:Li_node
+
+  - create o:Int value v:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make o value v
+    result
+  )
+
+  - make o:Int value v:Li_node <- ( off := o; value := v; )
+
+  - eval fp:Int :Int <-
+  ( + a,v:Int
+    v := value.eval fp
+    a := fp + off
+    `*(int64_t *)(@a) = @v`;
+    0
+  )

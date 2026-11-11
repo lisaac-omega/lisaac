@@ -1,9 +1,9 @@
 Header
   + name := Profil_list
 /*Profil list manager.*/
-Inherit
+Insert
 
-  + parent_any:Flat Any
+  + parent_lisaac_common:Flat Lisaac_common
 
 Lisaac
 
@@ -120,11 +120,15 @@ Public
     Variable.update
     life_limit := life_limit_base
     Profil.set_mode_recursive True
+    (is_cop).if {
+      Escape.new_pass
+    }
     profil_current := profil_slot := NULL
     list_current   := NULL
     Position.clean_context
     
     list_main.execute
+    execute_init_list_base
     
     //
     current := profil_list.lower
@@ -137,20 +141,41 @@ Public
     }
     //
     Profil.set_mode_recursive False
-    //current := 0
     clean
     reduce_profil := True
   )
 
   - inline_level_current:Int := 3
 
+  - execute_init_list_base <-
+  // With `-cop': the initialization of a new universe base, as a function apart from `main'.
+  (
+    (is_cop).if {
+      (Slot_data.init_lists_base.lower).to (Slot_data.init_lists_base.upper) do { j:Int
+        list_current := NULL
+        Escape.set_init_ctx (j, NULL)
+        Slot_data.init_lists_base.at j.execute
+      }
+      (Type.cop_init_types.lower).to (Type.cop_init_types.upper) do { j:Int
+        list_current := NULL
+        Escape.set_init_ctx (-1, Type.cop_init_types.at j)
+        Type.cop_init_types.at j.cop_init_list.execute
+      }
+      Escape.set_init_ctx (-1, NULL)
+    }
+  )
+
   - execute_pass <-
   (
     Variable.update
     life_limit := life_limit_base
+    (is_cop).if {
+      Escape.new_pass
+    }
     profil_slot := NULL
     list_current   := NULL
     list_main.execute
+    execute_init_list_base
     current := profil_list.lower
     {current < life_limit}.while_do {
       profil_current := profil_list.at current

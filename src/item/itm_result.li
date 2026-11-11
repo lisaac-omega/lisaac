@@ -46,6 +46,7 @@ Public
   ( + mul:Expr_multiple
     + val:Expr
     + result:Instr
+    + n:String_alias
 
     val := value.to_run_expr
     mul ?= val
@@ -57,6 +58,13 @@ Public
       result := to_run_intern (mul.last)
     } else {
       result := to_run_intern val
+      n := read_name value
+      ((n != NULL) && {is_one_variable n}).if {
+        // `One': the result moves the variable (`kept' is NULL after, see @emit_move).
+        list_current.add_last result
+        emit_move n
+        result := Nop
+      }
     }
     result
   )

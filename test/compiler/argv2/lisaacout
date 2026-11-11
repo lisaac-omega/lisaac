@@ -1,5 +1,0 @@
---WARNING----------
-Extra comma.
-Line 14 column 22 in Argv2(.../test/compiler/argv2/argv2.li):
-      "snake", "snake",
-                      ^

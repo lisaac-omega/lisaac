@@ -20,10 +20,14 @@ Public
 
   - get_type t:Types_tmp <-
   (
-    (living_type = NULL).if {
-      t.add (static_type.raw)
-    } else {
+    (living_type != NULL).if {
       t.union living_type
+    }.elseif {static_type.raw = type_boolean} then {
+      // `...`:Boolean is `...`:Boolean{True,False}: @Boolean itself has no living instance.
+      t.add type_true
+      t.add type_false
+    } else {
+      t.add (static_type.raw)
     }
   )
 
@@ -33,6 +37,21 @@ Public
 
   + code:String_alias
   + access_list:Array Expr
+
+  - is_reading v:Variable :Boolean <-
+  // @v can only be reached through @access_list (`@' in @code).
+  ( + result:Boolean
+    + j:Int
+
+    (access_list != NULL).if {
+      j := access_list.lower
+      {(j <= access_list.upper) && {! result}}.while_do {
+        result := access_list.at j.is_reading v
+        j := j + 1
+      }
+    }
+    result
+  )
 
   //
   // Creation.
@@ -124,6 +143,7 @@ Public
         access_list.at j put e
       }
     }
+    Escape.on_external self
     self
   )
 
@@ -157,7 +177,7 @@ Public
           output.add_last (code.at k)
         }
         beg := idx + 1
-        access_list.at j.genere
+        genere_access (access_list.at j)
         idx := code.index_of '@' since beg
       }
       // Copy end.
@@ -174,6 +194,45 @@ Public
     }
   )
   
+  - genere_access e:Expr <-
+  // A pointer with a non exact type is cast to its only possible type
+  // (without @Type_null): `*@self' needs the C structure (see @Read_slot.genere).
+  // A constant (a prototype) is already typed.
+  ( + tf:Type_full
+    + lst:Types_tmp
+    + t,typ:Type
+    + idx,nb:Int
+
+    tf := e.static_type
+    ((e.is_constant) || {tf.is_exact} || {tf.is_flat} || {tf.is_flat_ref} || {tf.raw.type_c != NULL}).if {
+      e.genere
+    } else {
+      lst := Types_tmp.new
+      e.get_type lst
+      idx := lst.first_index
+      {idx != -1}.while_do {
+        typ := lst.at idx
+        (typ != Type_null).if {
+          t := typ
+          nb := nb + 1
+        }
+        idx := lst.next_index idx
+      }
+      lst.free
+      ((nb = 1) && {t.type_c = NULL} && {! t.is_block}).if {
+        output.append "(("
+        t.put_reference_declaration output
+        output.add_last ' '
+        t.put_reference_star_declaration output
+        output.add_last ')'
+        e.genere
+        output.add_last ')'
+      } else {
+        e.genere
+      }
+    }
+  )
+
   //
   // Display.
   //

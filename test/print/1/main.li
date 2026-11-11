@@ -1,7 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  (
-    1.print
-  )

@@ -40,7 +40,6 @@ Public
 
   - is_block:Boolean := True
   
-  + itm_block:Itm_block
   + argument_list:Array Type_full
   + result_list:Array Type_full
 
@@ -115,52 +114,23 @@ Public
     } else {
       o ?= other
     }
-    /*
-    (o != NULL).if {
-      string_tmp.clear
-      append_name_in string_tmp
-      string_tmp.append " <=> "
-      o.append_name_in string_tmp
-      string_tmp.add_last '\n'
-      string_tmp.print
-    };*/
     (
       (o != NULL) && 
       {argument_list.count = o.argument_list.count} && 
       {result_list.count = o.result_list.count}
     ).if {
-      //"Test arg & result...\n".print
       result := True
       i := argument_list.lower
       {(result) && {i <= argument_list.upper}}.while_do {
         result := argument_list.at i == o.argument_list.at i
-        /*
-        (result).if_false {
-          string_tmp.clear
-          argument_list.at i.display string_tmp
-          string_tmp.append " != "
-          o.argument_list.at i.display string_tmp
-          string_tmp.add_last '\n'
-          string_tmp.print
-        };*/
         i := i + 1
       }
       i := result_list.lower
       {(result) && {i <= result_list.upper}}.while_do {
         result := result_list.at i == o.result_list.at i
-        /*
-        (result).if_false {
-          string_tmp.clear
-          result_list.at i.display string_tmp
-          string_tmp.append " != "
-          o.result_list.at i.display string_tmp
-          string_tmp.add_last '\n'
-          string_tmp.print
-        };*/
         i := i + 1
       }
     }
-    //(result).if_true { "OK!!\n".print; }
     result    
   )
   
@@ -278,6 +248,5 @@ Public
     }
     buf.add_last '}'
     // Debug
-    //buf.append "(TYPE_BLOCK)"
   )
   

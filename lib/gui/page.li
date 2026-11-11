@@ -166,8 +166,8 @@ Public
   ( + result:Self
     (pages_free.is_empty).if {
       result := clone
-      Footnote.new.init result
-      Resize.new.init result
+      Footnote.new.init_win result
+      Resize.new.init_win result
     } else {
       result := pages_free.pop
     }
@@ -184,9 +184,9 @@ Public
     pages_free.add_last self
   )
   
-  - init p:Win :Self <-
+  - init_win p:Win :Self <-
   ( read_object; cur_pg := self
-    parent_win.init p
+    parent_win.init_win p
   )
 /*  
   - item id:String_alias int v:Int :Boolean <-

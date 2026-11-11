@@ -3,8 +3,10 @@ Header
 Inherit
   + parent_expr:Flat Expr
   
+Insert
+  - parent_recyclable:Recyclable := Recyclable
+
 Private
-  - stk:Flat Array Wloc
   
 Public
   + loc:Local
@@ -20,9 +22,9 @@ Public
   )
   
   - new:Self <-
-  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  parent_recyclable.new
   - free <-
-  ( (expr != NULL).if { expr.free; expr := NULL; }; stk.add_last self; )
+  ( (expr != NULL).if { expr.free; expr := NULL; }; parent_recyclable.free; )
     
   - sub_draw <-
   (

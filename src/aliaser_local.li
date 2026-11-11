@@ -1,8 +1,8 @@
 Header
   + name := Aliaser_local
-Inherit
+Insert
 
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Aliaser_local,List
 
@@ -58,7 +58,6 @@ Public
       (loc.style = '+').if {
         add_var_size loc
       }
-      //loc.unwrite wr
       result := loc.intern_name
     }
     result
@@ -100,15 +99,7 @@ Public
       } else {
         top_context := loc.list_level
       }
-      /*
-      (loc.my_alias = NULL).if {
-        (p.is_first).if {
-          add_var_size loc
-        }
-        result := loc.intern_name
-      } else {*/
         result := loc.my_alias.intern_name
-      //}
     } else {
       (p.is_first).if {
         add_var_size loc
@@ -122,8 +113,6 @@ Public
   ( + tab:Array Local
     + j:Int
     + t:Type_full
-
-    //? {(v.style = '+') || {v.style = 'R'}}
 
     ((v.style != '+') && {v.style != 'R'}).if {
       v.intern_name.print; " style [".print; v.style.print; "] ".print

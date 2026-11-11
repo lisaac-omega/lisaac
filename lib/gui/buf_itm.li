@@ -42,7 +42,7 @@ Public
   - init p:Win idx i:Int :Self <-
   ( idx := i
     String.tmp { tmp:String_buffer; (idx+1).append_in tmp; tmp | ' '; fx := tmp.to_string_alias; }
-    init p
+    init_win p
   )
   
   - draw <-

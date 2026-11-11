@@ -1,0 +1,57 @@
+Header
+  - name := Semaphore W
+/* COP coordination: a number of free places, and the queue of the waiters.
+   An active object (a universe): `acquire' and `release' are asynchronous messages. A waiter
+   (an active object of type @W) does not block its universe: it asks with `acquire self tag k'
+   and receives the asynchronous message `acquired k' when a place is its own (at once if one is
+   free, else when it is released: first asked, first served). The tag @k, chosen by the waiter,
+   tells it what is answered (when it waits for several things). @W must have a slot
+   `acquired k:Int'. With one place, it is a lock (see `example/cop/philosophers'). */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + free:Int
+  // The free places.
+
+  + queue:Array W := Array W .create_with_capacity 4
+  + tags:Array Int := Array Int .create_with_capacity 4
+  // The waiters, in their order, and their tags.
+
+  - create n:Int :Self <-
+  // A new universe, with @n places.
+  ( + result:Self
+    result := clone
+    result.set_free n
+    result
+  )
+
+  - set_free n:Int <-
+  (
+    free := n
+  )
+
+  - acquire w:W tag k:Int <-
+  // A place for @w: `w.acquired k', now or later.
+  (
+    (free > 0).if {
+      free := free - 1
+      w.acquired k
+    } else {
+      queue.add_last w
+      tags.add_last k
+    }
+  )
+
+  - release <-
+  // A place given back: to the first waiter, if any.
+  (
+    (queue.is_empty).if {
+      free := free + 1
+    } else {
+      queue.first.acquired (tags.first)
+      queue.remove_first
+      tags.remove_first
+    }
+  )

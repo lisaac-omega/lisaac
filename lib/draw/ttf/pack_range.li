@@ -1,26 +1,47 @@
 Header
   + name := Pack_range
-Mapping
-  + font_size:Real32;
-  + first_unicode_codepoint_in_range:Int32; 
-  + array_of_unicode_codepoints:Array Int32;
-  + num_chars:Int32;
-  + chardata_for_range:Array Packed_char; 
-  + h_oversample:Uint8;
-  + v_oversample:Uint8; 
+/* @stbtt_pack_range of stb_truetype v1.24: a range of characters to pack, at
+   a size, with their resulting @chardata_for_range. */
+Inherit
   
-Public  
-/*  
-  - pack_font_range (spc:ARRAY PACK_CONTEXT,fontdata:ARRAY Uint8,
-    font_index:Int,size:REAL_32,first_unicode:Int, 
-  n_char:Int,chardata:PACKED_CHAR) :Int <-
-  ( 
-    // BSBS: Il faut faire ça dans un clone avant !
-    first_unicode_codepoint_in_range := first_unicode
-    array_of_unicode_codepoints := NULL
-    num_chars                   := n_char
-    chardata_for_range          := chardata
-    font_size                   := size
-    pack_font_ranges (spc, fontdata, font_index, &range, 1)
+  - parent_clone:Clone := Clone
+
+Public
+  
+  + font_size:Real32
+  + first_unicode_codepoint_in_range:Int; // if non-zero, then the chars are continuous, and this is the first codepoint
+  + array_of_unicode_codepoints:C_array Int; // if non-zero, then this is an array of unicode codepoints
+  + num_chars:Int
+  + chardata_for_range:Array Packed_char; // output
+  + h_oversample:Uint8; // don't set these, they're used internally
+  + v_oversample:Uint8
+  
+  - create size:Real32 first first:Int count n:Int codepoints a:C_array Int :Self <-
+  // The @chardata_for_range are created.
+  ( + result:Self
+    result := clone
+    result.make size first first count n codepoints a
+    result
   )
-*/
+  
+  - make size:Real32 first first:Int count n:Int codepoints a:C_array Int <-
+  (
+    font_size := size
+    first_unicode_codepoint_in_range := first
+    num_chars := n
+    array_of_unicode_codepoints := a
+    chardata_for_range := Array Packed_char.create_with_capacity n
+    n.times { chardata_for_range.add_last (Packed_char.new); }
+  )
+  
+  - set_oversample (h,v:Uint8) <- ( (h_oversample,v_oversample) := (h,v); )
+  
+  - codepoint j:Int :Int <-
+  ( + result:Int
+    (array_of_unicode_codepoints = NULL).if {
+      result := first_unicode_codepoint_in_range + j
+    } else {
+      result := array_of_unicode_codepoints.at j
+    }
+    result
+  )

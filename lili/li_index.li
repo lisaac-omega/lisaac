@@ -1,0 +1,23 @@
+Header
+  + name := Li_index
+/* Address of an element of a @C_array. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + base:Li_node
+  + index:Li_node
+  + stride:Int
+
+  - create b:Li_node index i:Li_node stride s:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make b index i stride s
+    result
+  )
+
+  - make b:Li_node index i:Li_node stride s:Int <- ( base := b; index := i; stride := s; )
+
+  - eval fp:Int :Int <- base.eval fp + index.eval fp * stride

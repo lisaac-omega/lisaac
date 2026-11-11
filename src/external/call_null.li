@@ -9,6 +9,9 @@ Public
 
   - my_copy:Self <- self
 
+  - first_access v:Local :Int <- 1
+  // Never returns: @v is never read after.
+
   - is_necessary:Boolean
 
   //

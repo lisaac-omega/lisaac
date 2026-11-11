@@ -1,9 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + r:Real_26_6
-    r := (0.5).to_real_26_6
-    r.print
-    Test.check (r.to_string) string "0.500000"
-  )

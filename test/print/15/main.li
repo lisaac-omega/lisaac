@@ -1,8 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + integer:Int
-    integer := -5
-    integer.print_hex
-  )

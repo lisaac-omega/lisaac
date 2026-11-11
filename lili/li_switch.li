@@ -1,0 +1,61 @@
+Header
+  + name := Li_switch
+/* Dispatch on the type of an object, or of a block. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + expr:Li_node
+  // Case of the `NULL' value, or else `NULL'.
+  + on_null:Li_node
+  // `ids' and `cases' are parallel; the last case is the default one.
+  + ids:Array Int
+  + cases:Array Li_node
+  // For a @Block, @expr is the address of a structure which is never `NULL'.
+  + is_block:Boolean
+  // The value of @expr is directly the id (@Type_id).
+  + is_id:Boolean
+
+  - create e:Li_node null n:Li_node ids i:Array Int cases c:Array Li_node
+  block b:Boolean id is:Boolean :Self <-
+  ( + result:Self
+    result := clone
+    result.make e null n ids i cases c block b id is
+    result
+  )
+
+  - make e:Li_node null n:Li_node ids i:Array Int cases c:Array Li_node
+  block b:Boolean id is:Boolean <-
+  ( expr := e; on_null := n; ids := i; cases := c; is_block := b; is_id := is; )
+
+  - eval fp:Int :Int <-
+  ( + v,id,j,up:Int
+    v := expr.eval fp
+    up := ids.upper
+    (is_id).if {
+      id := v
+    }.elseif {is_block} then {
+      id := `*(int *)(@v)`:(Int)
+    }.elseif {v != 0} then {
+      // Only a late binding type has an `__id', and it needs at least two cases.
+      id := 1
+      (up > 0).if {
+        id := `*(int *)(@v)`:(Int)
+      }
+    }
+    ((id = 0) && {! is_id}).if {
+      (on_null != NULL).if {
+        on_null.eval fp
+      } else {
+        Li_runtime.call_on_null
+      }
+    } else {
+      {(j < up) && {ids.at j != id}}.while_do {
+        j := j + 1
+      }
+      cases.at j.eval fp
+    }
+    0
+  )

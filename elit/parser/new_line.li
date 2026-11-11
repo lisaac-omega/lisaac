@@ -3,8 +3,10 @@ Header
 Inherit
   + parent_tok_drw:Flat Tok_drw
   
+Insert
+  - parent_recyclable:Recyclable := Recyclable
+
 Private
-  - stk:Flat Array (Exact New_line)
   
 Public
   
@@ -15,8 +17,8 @@ Public
   - is_ensure:Boolean  <- look_cc "˰" at pt_b
   
   - new:Self <-
-  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
-  - free <- stk.add_last self
+  parent_recyclable.new
+  - free <- parent_recyclable.free
       
   - parse:Tok_drw <-
   ( + result:New_line

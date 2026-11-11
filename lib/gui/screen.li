@@ -186,9 +186,9 @@ Public
   - object id:String_alias :Boolean <-
   (
     id
-    .case "HEADER"     then { Header.new.init self;     }
-    .case "PAGE_SPLIT" then { Page_split.new.init self; }
-    .case "PAGE"       then { Page.new.init self;       }
+    .case "HEADER"     then { Header.new.init_win self;     }
+    .case "PAGE_SPLIT" then { Page_split.new.init_win self; }
+    .case "PAGE"       then { Page.new.init_win self;       }
     = String_alias
   )
   
@@ -219,7 +219,7 @@ Private
   - init_common:Self <-
   (
     id_name := window_title
-    init NULL
+    init_win NULL
     Font.load pen
     set_pos (xo,yo)
     Keyboard.listen self

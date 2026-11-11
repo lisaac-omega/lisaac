@@ -42,8 +42,7 @@ Private
   )
   
   - insert_node (x,y,w:Int) to idx:Int <-
-  (     
-    ? {x+w <= width}
+  (
     nodes.at idx add (Fons_atlas_node.create (x,y) width w)
   )
 

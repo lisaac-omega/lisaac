@@ -73,6 +73,32 @@ Public
   )
 
   - current_item:Instr <- at index
+
+  - first_access v:Local :Int <- first_access v from lower
+
+  - has_block:Boolean <-
+  ( + j:Int
+    + result:Boolean
+
+    j := lower
+    {(j <= upper) && {! result}}.while_do {
+      result := at j.has_block
+      j := j + 1
+    }
+    result
+  )
+
+  - first_access v:Local from idx:Int :Int <-
+  // See @Instr.first_access, from the instruction @idx.
+  ( + result,j:Int
+
+    j := idx
+    {(j <= upper) && {result = 0}}.while_do {
+      result := at j.first_access v
+      j := j + 1
+    }
+    result
+  )
   
   - next_item:Instr <- // Used only PUSH BSBS: A virer !
   ( + result:Instr
@@ -91,6 +117,14 @@ Public
   )
   
   - last:Instr <- at upper
+
+  - first_or_null:Instr <-
+  ( + result:Instr
+    (upper >= 0).if {
+      result := expr_list.at 0
+    }
+    result
+  )
 
   - add_first i:Instr <-
   (
@@ -155,16 +189,34 @@ Public
     
 //Section Public
   
-  - inc_index <-
-  (
-    index := index + 1
-  )
-
   - insert_before e:Instr <-
   [ -? {e != NULL}; ]
   (
     add e to index
     index := index + 1
+  )
+
+  - insert_list_before l:List until up:Int <-
+  // Same as @insert_before for the instructions 0 to @up of @l, with only one shift.
+  [ -? {up <= l.upper}; ]
+  ( + n,new_capacity:Int
+
+    n := up + 1
+    (n > 0).if {
+      (upper + n >= capacity).if {
+        new_capacity := 2 * (upper + n + 1)
+        expr_list := expr_list.realloc capacity with new_capacity
+        capacity := new_capacity
+      }
+      upper.downto index do { j:Int
+        expr_list.at (j + n) put (expr_list.at j)
+      }
+      0.to up do { j:Int
+        expr_list.at (index + j) put (l.at j)
+      }
+      upper := upper + n
+      index := index + n
+    }
   )
 
   - insert e:Instr to idx:Int <-
@@ -241,11 +293,6 @@ Public
         
     execute_case
     //
-    /*
-    (self = SLOT_DATA.init_list).if {
-      OUT # '(' # pass_count # ")\n"
-    }
-    */
     (
       (list_current != NULL) && 
       {(self != Slot_data.init_list) || {pass_count > 1}} && 
@@ -257,9 +304,7 @@ Public
       // so it avoid shifting all elements of 1 position before shifting them
       // back because the list is no longer there.
       (is_empty).if_false {
-        lower.to (upper-1) do { j:Int
-          list_current.insert_before (at j)
-        }
+        list_current.insert_list_before self until (upper - 1)
         result := last
         ? {result != NULL}
         new_execute_pass
@@ -303,8 +348,6 @@ Public
     }
     ? {index = -1}
     
-    //"LIST BEG : ".print; print; '\n'.print
-
     index := lower
     {index <= upper}.while_do {
       old_seq_or_and := seq_or_and
@@ -324,8 +367,6 @@ Public
         remove_index index
       }
     }
-
-    //"LIST END : ".print; print; '\n'.print
 
     // Last.
     old_seq_or_and := seq_or_and
@@ -408,7 +449,10 @@ Public
     add_local (Aliaser_local.var_size.at 2) in string_tmp; // 32 bits
     add_local (Aliaser_local.var_size.at 1) in string_tmp; // 16 bits
     add_local (Aliaser_local.var_size.at 0) in string_tmp; //  8 bits
-    output.insert_string string_tmp to pos_local
+    // An empty body (an empty `li_init_base_N', `-cop'): no local, and @pos_local is past the end.
+    (string_tmp.is_empty).if_false {
+      output.insert_string string_tmp to pos_local
+    }
   )
   
   //
@@ -455,10 +499,6 @@ Private
   )
   
 Public
-/*
-  - stat_local:ARRAY Int := ARRAY Int .create 128
-  - stat_local_null:ARRAY Int := ARRAY Int .create 128
-*/
 Private
 
   - add_local tab:Array Local in buf:String_buffer <-
@@ -472,39 +512,6 @@ Private
       (tab.lower).to (tab.upper) do { j:Int
         loc := tab.at j
         loc.is_result.if_false {
-          /*
-          (loc.type.is_flat).if {
-            count_local_flat := count_local_flat + 1
-            stat_local.at 0 put (stat_local.at 0 + 1)
-          } else {
-            ((loc.type_set != NULL) && {! loc.type_set.is_empty}).if {
-              (loc.type.raw.subtype_list != NULL).if {
-                idx := loc.type.raw.subtype_list.count; //loc.type_set.count
-              } else {
-                idx := loc.type_set.count
-              }
-              stat_local.at idx put (stat_local.at idx + 1)
-
-
-              (loc.type_set.last = TYPE_MARK).if {
-
-                stat_local_null.at idx put (stat_local_null.at idx + 1)
-
-                (loc.type_set.count = 1).if {
-                  count_local_always_null := count_local_always_null + 1
-                } else {
-                  count_local_null := count_local_null + 1
-                }
-              }.elseif {loc.type_set.count = 1} then {
-                count_local_mono := count_local_mono + 1
-              } else {
-                count_local_not_null := count_local_not_null + 1
-              }
-            } else {
-              count_local_not_null := count_local_not_null + 1
-            }
-          }
-          */
           (loc.type.raw = Type_context).if {
             context_counter := context_counter + 1
           } else {
@@ -533,26 +540,6 @@ Private
       buf.append ";\n"
     }
   )
-/*  
-  - add_local_gros tab:ARRAY LOCAL in buf:String_buffer <-
-  // Generate C code to add locals
-  ( + loc:LOCAL
-    
-    (! tab.is_empty).if {
-      (tab.lower).to (tab.upper) do { j:Int
-        loc := tab.at j
-        loc.is_result.if_false {
-          buf.append indent
-          buf.append "Var "
-          buf.append (loc.intern_name)
-          buf.add_last ':'
-          buf.append (loc.type.raw.intern_name)
-          buf.append ";\n"
-        }
-      }
-    }
-  )
-*/
 
 Lisaac
 

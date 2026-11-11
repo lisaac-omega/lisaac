@@ -1,9 +1,9 @@
 Header
   + name := Type_full
 /*Type with attribute flags.*/
-Inherit
+Insert
 
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Type, Type_full // Private after fuck bug
 
@@ -63,17 +63,11 @@ Type,Node_type
   (
     the_parent_type := typ
     flag := code
-    //? {is_flat -> (! is_exact)}
   )
 
 Public
 
   - is_parameter_type:Boolean <- False
-  
-  - is_scalar:Boolean <-
-  (
-    is_flat && {raw.type_c != NULL}
-  )
   
   - raw:Type <- the_parent_type
 
@@ -88,6 +82,9 @@ Public
   - flat_ref_bit     :Uint8 := 0001_0000b
   - generic_bit      :Uint8 := 0010_0000b
   
+  - one_bit          :Uint8 := 0100_0000b
+  // COP: an object with only one reference (see @Escape).
+
   - escape_bit       :Uint8 := 1000_0000b
 
   // Access.
@@ -95,11 +92,12 @@ Public
   - is_flat          :Boolean <- (flag & flat_bit         ) != 0
   - is_default_flat  :Boolean <- (flag & default_flat_bit ) != 0
   - is_exact         :Boolean <- (flag & exact_bit        ) != 0
-  - is_default_exact :Boolean <- (flag & default_exact_bit) != 0
   - is_flat_ref      :Boolean <- (flag & flat_ref_bit     ) != 0
   - is_generic       :Boolean <- (flag & generic_bit      ) != 0
 
   - is_escape        :Boolean <- (flag & escape_bit       ) != 0
+
+  - is_one           :Boolean <- (flag & one_bit          ) != 0
 
   - is_flat_c:Boolean <- (is_flat) && {raw.type_c != NULL}
   - is_flat_without_default:Boolean <- (is_default_flat) && {prototype.default_value = NULL}
@@ -114,6 +112,9 @@ Public
 
   - append_name_in buffer:String_buffer <-
   (
+    (is_one).if {
+      buffer.append "One "
+    }
     (is_exact).if {
       buffer.append "Exact "
     }
@@ -147,17 +148,6 @@ Public
       result := self
     } else {
       result := get_with (flag | exact_bit)
-    }
-    result
-  )
-
-  - to_no_exact:Type_full <-
-  ( + result:Type_full
-
-    (is_flat).if {
-      result := self
-    } else {
-      result := get_with (flag & ~exact_bit)
     }
     result
   )
@@ -350,33 +340,3 @@ Public
     string_tmp.print
   )
   
-  - display_full buffer:String_buffer <-
-  ( 
-    display buffer
-    buffer.add_last ' '
-    buffer.add_last '['
-    (is_flat).if {
-      buffer.add_last 'e'
-    }
-    (is_default_flat).if {
-      buffer.add_last 'E'
-    }
-    (is_exact).if {
-      buffer.add_last 's'
-    }
-    (is_default_exact).if {
-      buffer.add_last 'S'
-    }
-    (is_generic).if {
-      buffer.add_last 'G'
-    }
-    buffer.add_last ']'
-  )
-  
-  - print_full <-
-  (
-    string_tmp.clear
-    display_full string_tmp
-    string_tmp.print
-  )
-

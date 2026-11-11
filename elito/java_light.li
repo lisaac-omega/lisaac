@@ -1,0 +1,288 @@
+Header
+  + name := Java_light
+Inherit
+  
+  + parent_x_light:Flat X_light
+  
+Public
+  
+  - language:String_alias := "(Java/Jsky)"
+  - space_indent:Int := 4
+  
+  + comment :Array Int
+  + external:Array Int
+  
+  - comment_before p:Int :Int <-
+  ( + result,i,lev:Int
+    {(i <= comment.upper) && {comment.at i.abs <= p}}.while_do {
+      (comment.at i >= 0).if {
+        lev := lev + 1
+      } else {
+        lev := (lev - 1).max 0
+        (lev = 0).if {
+          result := (-comment.at i)+1
+        }
+      }
+      i := i + 1
+    }
+    result.max p
+  )
+    
+  - make b:Buffer <-
+  ( + i,upper:Int
+    buf := b
+    comment := Array Int.create_with_capacity 16
+    external := Array Int.create_with_capacity 4
+    upper := buf.upper
+    {i < upper}.while_do {
+      ((buf.at i = '/') && {buf.at (i+1) = '*'}).if {
+        comment.add_last i
+      }.elseif {(buf.at i = '*') && {buf.at (i+1) = '/'}} then {
+        comment.add_last (-i-1)
+      }.elseif {buf.at i = '`'} then {
+        external.add_last i
+        { i := i + 1; }.do_while {(i <= upper) && {buf.at i = '`'}};
+        external.add_last (-i)
+      }.elseif {buf.at i = '\"'} then {
+        { 
+          (buf.at i = '\\').if { i := i + 1; }
+          i := i + 1
+        }.do_while {(i <= upper) && {buf.at i = '\"'}}
+      }.elseif {buf.at i = '\''} then {
+        { 
+          (buf.at i = '\\').if { i := i + 1; }
+          i := i + 1
+        }.do_while {(i <= upper) && {buf.at i = '\''}}
+      }
+      i := i + 1
+    }
+  )
+  
+  - update p:Int comment step:Int <-
+  ( + i,new:Int
+    i := comment.upper
+    {(i != 0) && {p < comment.at i.abs}}.while_do {
+      new := comment.at i
+      new := (new >= 0).ok (new+step) else {new-step}
+      comment.at i put new
+    }
+    i := 0
+    {(i != 0) && {p < external.at i.abs}}.while_do {
+      new := external.at i
+      new := (new >= 0).ok (new+step) else {new-step}
+      external.at i put new
+    }
+  )
+  
+  - start st:Int line lin:Int <-
+  ( + low,up,upper,l:Int
+    upper := buf.upper
+    low := comment_before st
+    {
+      low := low - 1
+      {(low > 0) && {buf.at (low-1) != '\n'}}.while_do { low := low - 1; }
+    }.do_until {(low <= 0) || {(at low word "    ") && {buf.at (low+4) != ' '}}}
+    ((at low word "    ") && {buf.at (low+4) = '}'}).if {
+      low := st
+    }
+    //
+    up := st.min upper
+    l := 0
+    {(up < upper) && {l <= lin+1}}.while_do {
+      (buf.at up = '\n').if { l := l + 1; }
+      up := up + 1
+    }
+    {(up >= upper) || {(at up word "   ") && {up+4<=upper} && {buf.at (up+4) != ' '}}}.until_do {      
+      up := up + 1
+      {(up < upper) && {buf.at (up-1) != '\n'}}.while_do { up := up + 1; }
+    }
+    //"start: ".print; st.print
+    
+    low := low.max 0
+    (root != NULL).if { root.free; }
+    root := Light.create NULL type 0 range (low,up)
+    {
+      //"Begin: ".print; low.print; '-'.print; up.print; '\n'.print
+      low := pass root upper up base low + 1
+    }.do_while {low <= up}
+    block_verify
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( + c:Char
+    + i,ii,lev,lo,s:Int
+    + rr:Light
+    + out,is_cap:Boolean
+    
+    i := bi
+    {! out}.while_do {      
+      (i > up).if {
+        out := True
+      }.elseif {((c := buf.at i) = '/') && {i < up} && {buf.at (i+1) = '*'}} then {
+        lo := i
+        lev := 1
+        i := i + 2
+        {(i < up) && {lev != 0}}.while_do {
+          ((buf.at i = '/') && {buf.at (i+1) = '*'}).if { lev := lev + 1; }
+          ((buf.at i = '*') && {buf.at (i+1) = '/'}).if { lev := lev - 1; }
+          i := i + 1
+        }
+        r.add comment_id range (lo,i)
+      }.elseif {c = '\"'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\"'} && {buf.at i != '\n'}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            ((buf.at (i+1) = ' ') || {buf.at (i+1) = '\n'}).if {
+              i := i + 1
+              {(i < up) && {(buf.at i = ' ') || {buf.at i = '\n'}}}.while_do { i := i + 1; }
+            } else {
+              i := i + 1
+            }
+          }
+          i := i + 1
+        }
+        r.add string_id range (lo,i)
+      }.elseif {c = '\''} then {  
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\''}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            i := i + 1
+          }
+          i := i + 1
+        }
+        r.add character_id range (lo,i)
+      }.elseif {c = '`'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '`'}}.while_do {          
+          i := i + 1
+        }
+        r.add external_id range (lo,i)
+      }.elseif {(c = '/') && {i < up} && {buf.at (i+1) = '/'}} then {        
+        lo := i
+        i := i + 2
+        {(i <= up) && {buf.at i != '\n'}}.while_do { i := i + 1; }
+        rr := r
+        {(rr != NULL) && {rr.type != block_id}}.while_do { rr := rr.parent; }
+        (rr = NULL).if {
+          r.add comment_line_id range (lo,i)
+        } else {
+          r.add comment_line_intern_id range (lo,i)
+        }
+      }.elseif {
+        (at i word "abstract")    || {at i word "assert"}   || {at i word "break"}     || 
+          {at i word "case"}        || {at i word "catch"}    || {at i word "class"}     || 
+          {at i word "const"}       || {at i word "continue"} || {at i word "default"}   || 
+          {at i word "do"}          || {at i word "else"}     || {at i word "enum"}      || 
+          {at i word "extends"}     || {at i word "final"}    || {at i word "finally"}   || 
+          {at i word "for"}         || {at i word "goto"}     || {at i word "if"}        || 
+          {at i word "implements"}  || {at i word "import"}   || {at i word "instanceof"}||
+          {at i word "interface"}   || {at i word "native"}   || {at i word "new"}       || 
+          {at i word "package"}     || {at i word "private"}  || {at i word "protected"} || 
+          {at i word "public"}      || {at i word "return"}   || {at i word "static"}    || 
+          {at i word "staticfp"}    || {at i word "super"}    || {at i word "switch"}    || 
+          {at i word "synchronized"}|| {at i word "this"}     || {at i word "throw"}     || 
+          {at i word "throws"}      || {at i word "transient"}|| {at i word "try"}       ||
+          {at i word "volatile"}    || {at i word "void"}     || {at i word "while"} 
+      } then {
+        lo := i
+        i := i + last_string.upper
+        r.add keyword_id range (lo,i)
+      }.elseif {                  
+        {at i word "boolean"}|| {at i word "char"}|| {at i word "double"}||
+          {at i word "float"}  || {at i word "int"} || {at i word "long"}  ||
+          {at i word "short"}  || {at i word "byte"}
+      } then {
+        lo := i
+        i := i + last_string.upper
+        r.add operator_id range (lo,i)
+      }.elseif {(c = '[') || {c = '('} || {c = '{'}} then {
+        + old_i:Int
+        rr := r.add block_id range (i,up)
+        i := i + 1
+        old_i := i
+        i := pass rr upper (root.upper) base i
+        //? {i>old_i}
+        rr.set_upper i
+      }.elseif {(c = ']') || {c = ')'} || {c = '}'}} then {
+        i := i - 1
+        out := True
+      }.elseif {(at i word "null") || {at i word "true"} || {at i word "false"}} then {  
+        lo := i
+        i := i + last_string.upper
+        r.add character_id range (lo,i)
+      }.elseif {c.is_lower} then {                        
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i.is_identifier}}.while_do {            
+          i := i + 1
+        }
+        ii := i - 1
+        i := skip_space i upper up
+        r.add (((i <= up) && {buf.at i = '('}).ok slot_head_id or call_id) range (lo,ii)
+        i := i - 1
+      }.elseif {(i <= up-3) && { // = [+-/*%^|&~]=  >>= <<= >>>= 
+          (s := 0; buf.at i = '=') || 
+            {s := 1; (buf.at (i+1) = '=') && {"+-/*%^|&~".has (buf.at i)}} ||
+            {s := 2; (buf.at (i+2) = '=') && {((c := buf.at i) = '<') || {c = '>'}} && {c = buf.at (i+1)}} ||  
+            {s := 3; (buf.at (i+3) = '=') && {buf.at i = '>'} && {buf.at (i+1) = '>'} && {buf.at (i+2) = '>'}} 
+      }} then { 
+        r.add assign_id range (i,i+s)
+        i := i + s
+      }.elseif {c.is_upper} then {
+        lo := i
+        i := i + 1
+        is_cap := True
+        {(i <= up) && {(c := buf.at i).is_identifier}}.while_do { 
+          is_cap := is_cap & c.is_upper_identifier
+          i := i + 1
+        }
+        i := i - 1
+        (lo = i).if {
+          r.add type_parameter_id range (lo,lo)
+        } else { + upp:Int
+          ii := lo - 1
+          upp := r.body.upper-1
+          {(upp>=0) && {buf.at ii = '.'} && {r.body.at upp.type = call_id}}.while_do {
+            r.body.at upp.set_type type_id
+            ii := r.body.at upp.lower - 1
+            upp := upp - 2
+          }
+          (is_cap).if {
+            r.add character_id range (lo,i)
+          } else {
+            r.add type_id range (lo,i)
+          }
+        }
+      }.elseif {c.is_digit} then {
+        lo := i
+        i := i + 1
+        {(i < up) && {((c := buf.at i).is_hexadecimal_digit) || 
+          {c = '_'} || {c = '\''} || {c.to_lower = 'x'} || {c.to_lower = 'b'}}}.while_do { 
+          i := i + 1
+        }
+        ((i <= up) && {"LUlu".has (buf.at i)}).if { i := i + 1; }
+        ((i <= up) && {"LUlu".has (buf.at i)}).if { i := i + 1; }
+        ((i <= up) && {"LUlu".has (buf.at i)}).if { i := i + 1; }
+        r.add number_id range (lo,i-1)
+      }.elseif {c = '@'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i.is_identifier}}.while_do { i := i + 1; }
+        i := i - 1
+        r.add comment_ref_id range (lo,i)
+      }.elseif {"!#$%^&<|*=~/?\\>".has c} then {
+        lo := i
+        {(i <= up) && {"!#$%^&<|*-+=~/?\\>".has (buf.at i)}}.while_do { i := i + 1; }
+        i := i - 1
+        r.add operator_id range (lo,i)
+      }.elseif {".,;".has c} then {
+        r.add separator_id range (i,i)
+      }
+      i := i + 1
+    }
+    i
+  )
+    

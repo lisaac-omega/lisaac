@@ -1,0 +1,88 @@
+Header
+  + name := Tex_light
+Inherit
+  
+  + parent_x_light:Flat X_light
+  
+Public
+  
+  - language:String_alias := "(LaTeX)"
+  - space_indent:Int := 2
+      
+  - make b:Buffer <-
+  ( 
+    buf := b
+  )
+  
+  - start st:Int line lin:Int <-
+  ( + low,up,upper,l:Int
+    upper := buf.upper
+    up := st.min upper
+    l := 0
+    {(up < upper) && {l <= lin+1}}.while_do {
+      (buf.at up = '\n').if { l := l + 1; }
+      up := up + 1
+    }
+    low := low.max 0
+    (root != NULL).if { root.free; }
+    root := Light.create NULL type 0 range (low,up)
+    {
+      low := pass root upper up base low + 1
+    }.do_while {low <= up}
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( + c:Char
+    + i,lo:Int
+    + out:Boolean
+    
+    i := bi
+    {! out}.while_do {      
+      (i > up).if {
+        out := True
+      }.elseif {((c := buf.at i) = '\\') && {i < up} && {buf.at (i+1) = '\\'}} then {        
+        r.add style_id range (i,i+1)
+        i := i + 1
+      }.elseif {c = '\"'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\"'} && {buf.at i != '\n'}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            ((buf.at (i+1) = ' ') || {buf.at (i+1) = '\n'}).if {
+              i := i + 1
+              {(i < up) && {(buf.at i = ' ') || {buf.at i = '\n'}}}.while_do { i := i + 1; }
+            } else {
+              i := i + 1
+            }
+          }
+          i := i + 1
+        }
+        r.add string_id range (lo,i)
+      }.elseif {c = '%'} then {        
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\n'}}.while_do { i := i + 1; }
+        r.add comment_line_intern_id range (lo,i)
+      }.elseif {c = '\\'} then {        
+        lo := i
+        { i := i + 1; }.do_while {(i <= up) && {buf.at i.is_separator}}
+        /*
+        ((at i word "it") || {at i word "bf"} || {at i word "tt"}).if {
+          
+        };*/
+        i := i + 1
+        (i < up).if { i := i + 1; }
+        {(i <= up) && {buf.at i.is_identifier}}.while_do { i := i + 1; }
+        i := i - 1
+        r.add number_id range (lo,i)
+      }.elseif {c = '{'} then {                
+        i := i + 1
+        lo := i
+        {(i <= up) && {buf.at i != '}'}}.while_do { i := i + 1; }
+        r.add call_id range (lo,i-1)
+      }
+      i := i + 1
+    }
+    i
+  )
+    

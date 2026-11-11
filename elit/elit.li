@@ -22,8 +22,8 @@ Header
   0xFF73846C,0xFF847B9F,0xFF80A96F,0xFFA09AB4,0xFF78B956,0xFF86BB63,0xFFC2BACC,0xFFB9D8A7,
   0xFFD6D3DC,0xFFFDFFFC};`;
 
-Inherit
-  - parent_any:Any := Any
+Insert
+  - parent_elit_common:Elit_common := Elit_common
   
 Private
   

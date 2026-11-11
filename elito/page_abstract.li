@@ -1,0 +1,28 @@
+Header
+  + name := Page_abstract
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - width_min:Real32  <- 100.0
+  - height_min:Real32 <- font_size
+  
+  - language:String_alias := "(Text)"
+  - shortname:String_alias <- "Completions"
+  - tag:String_alias := NULL
+  
+  - is_save:Boolean <- True
+  
+  - char_buf:String_buffer := String_buffer.create 1
+  - width_char:Real32
+  - height_char:Real32
+  - reset_size_char <- ( width_char := 0.0; )
+  
+  + pos_txt:String_buffer
+  

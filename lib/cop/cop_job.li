@@ -1,0 +1,29 @@
+Header
+  - name := Cop_job
+/* Active object (COP) of @Parallel: runs `job.value part' in its own thread.*/
+
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + job:{Int;}
+  + part:Int
+  + done:Boolean
+
+  - init (j:{Int;}, p:Int) :Self <-
+  // Synchronous (with a result). Not `run (j, p)': with a block argument, `run' would be
+  // specialized for each block and inlined, so no more parallel.
+  (
+    job := j
+    part := p
+    done := False
+    self
+  )
+
+  - run <-
+  // Asynchronous (no result).
+  (
+    job.value part
+    done := True
+  )

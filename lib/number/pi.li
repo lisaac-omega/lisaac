@@ -1,0 +1,61 @@
+Header
+  + name := Pi
+  /*
+  The node of the number π, used by `ℝ.π'. The prototype is itself the node:
+  it is unique, never freed, and keeps its best approximation for the whole
+  program.
+
+  Machin's formula: π = 16 atan(1/5) - 4 atan(1/239), in fixed point.
+  */
+Inherit
+  
+  + parent_r_node:Flat R_node
+  // Its own fields (approximation), not those of the prototype @R_node.
+
+Private
+
+  - compute p:Int :ℤ <-
+  ( + s,t,u,r:ℤ
+    + w:Int
+    w := (- p).max 0 + 64
+    t := atan_inv (5,w)
+    s := t * 16
+    t.free
+    t := atan_inv (239,w)
+    u := t * 4
+    t.free
+    t := s - u
+    s.free
+    u.free
+    r := shift (t, - w - p)
+    t.free
+    r
+  )
+
+  - atan_inv (n,w:Int) :ℤ <-
+  // atan(1/@n) = 1/n - 1/(3 n^3) + 1/(5 n^5) - ..., in fixed point with @w bits.
+  ( + t,s,v,u,one:ℤ
+    + k:Int
+    one := ℤ.one << w
+    t := one / n
+    one.free
+    s := t.copy
+    k := 1
+    {t !== 0}.while_do {
+      v := t / (n * n)
+      t.free
+      t := v
+      v := t / (2 * k + 1)
+      (k.is_odd).if {
+        u := s - v
+      } else {
+        u := s + v
+      }
+      s.free
+      v.free
+      s := u
+      k := k + 1
+    }
+    t.free
+    s
+  )

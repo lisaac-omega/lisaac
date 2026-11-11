@@ -1,0 +1,206 @@
+Header
+  + name := Li_runtime
+/*
+  The C helpers of the nodes.
+  kind: 0 Int8, 1 Uint8, 2 Int16, 3 Uint16, 4 Int32, 5 Uint32, 6 Int64,
+  7 Uint64 and pointers, 8 Real32, 9 Real64, 10 Real80, 11 @Flat structure.
+  op: 0 + 1 - 2 * 3 / 4 % 5 & 6 | 7 ^ 8 << 9 >> 10 < 11 <= 12 > 13 >= 14 == 15 !=
+*/
+  - lip <- ( add_lib "-ldl"; );
+
+  - include := `
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dlfcn.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+static uint64_t lili_hash(char *s,int64_t n) {
+  uint64_t h = 14695981039346656037ULL;
+  while (n-- > 0) h = (h ^ (unsigned char)*s++) * 1099511628211ULL;
+  return h;
+}
+static inline int64_t lili_d2w(double d) { int64_t r; memcpy(&r,&d,8); return r; }
+static inline double lili_w2d(int64_t w) { double d; memcpy(&d,&w,8); return d; }
+static inline int64_t lili_norm(int64_t k,int64_t v) {
+  switch (k) {
+  case 0: return (signed char)v;
+  case 1: return (unsigned char)v;
+  case 2: return (short)v;
+  case 3: return (unsigned short)v;
+  case 4: return (int32_t)v;
+  case 5: return (uint32_t)v;
+  default: return v;
+  }
+}
+static inline int64_t lili_load(int64_t k,int64_t a) {
+  switch (k) {
+  case 0: return *(signed char *)a;
+  case 1: return *(unsigned char *)a;
+  case 2: return *(short *)a;
+  case 3: return *(unsigned short *)a;
+  case 4: return *(int32_t *)a;
+  case 5: return *(uint32_t *)a;
+  case 8: return lili_d2w(*(float *)a);
+  case 10: return lili_d2w((double)*(long double *)a);
+  default: return *(int64_t *)a;
+  }
+}
+static inline void lili_store(int64_t k,int64_t a,int64_t v) {
+  switch (k) {
+  case 0: case 1: *(char *)a = v; break;
+  case 2: case 3: *(short *)a = v; break;
+  case 4: case 5: *(int32_t *)a = v; break;
+  case 8: *(float *)a = lili_w2d(v); break;
+  case 10: *(long double *)a = lili_w2d(v); break;
+  default: *(int64_t *)a = v;
+  }
+}
+static inline int64_t lili_op(int64_t o,int64_t k,int64_t a,int64_t b) {
+  int64_t r = 0;
+  switch (o) {
+  case 0: r = (int64_t)((uint64_t)a + (uint64_t)b); break;
+  case 1: r = (int64_t)((uint64_t)a - (uint64_t)b); break;
+  case 2: r = (int64_t)((uint64_t)a * (uint64_t)b); break;
+  case 3: r = (k == 7) ? (int64_t)((uint64_t)a / (uint64_t)b) : a / b; break;
+  case 4: r = (k == 7) ? (int64_t)((uint64_t)a % (uint64_t)b) : a % b; break;
+  case 5: r = a & b; break;
+  case 6: r = a | b; break;
+  case 7: r = a ^ b; break;
+  case 8: r = (int64_t)((uint64_t)a << b); break;
+  case 9: r = (k == 7) ? (int64_t)((uint64_t)a >> b) : a >> b; break;
+  case 10: return (k == 7) ? ((uint64_t)a < (uint64_t)b) : (a < b);
+  case 11: return (k == 7) ? ((uint64_t)a <= (uint64_t)b) : (a <= b);
+  case 12: return (k == 7) ? ((uint64_t)a > (uint64_t)b) : (a > b);
+  case 13: return (k == 7) ? ((uint64_t)a >= (uint64_t)b) : (a >= b);
+  case 14: return a == b;
+  case 15: return a != b;
+  }
+  return lili_norm(k,r);
+}
+static inline int64_t lili_real_op(int64_t o,int64_t k,int64_t wa,int64_t wb) {
+  double a = lili_w2d(wa), b = lili_w2d(wb), r = 0;
+  switch (o) {
+  case 0: r = a + b; break;
+  case 1: r = a - b; break;
+  case 2: r = a * b; break;
+  case 3: r = a / b; break;
+  case 10: return a < b;
+  case 11: return a <= b;
+  case 12: return a > b;
+  case 13: return a >= b;
+  case 14: return a == b;
+  case 15: return a != b;
+  }
+  if (k == 8) r = (float)r;
+  return lili_d2w(r);
+}
+static inline int64_t lili_cast(int64_t f,int64_t t,int64_t v) {
+  double d;
+  if (f < 8 && t < 8) return lili_norm(t,v);
+  d = (f >= 8) ? lili_w2d(v) : ((f == 7) ? (double)(uint64_t)v : (double)v);
+  if (t >= 8) {
+    if (t == 8) d = (float)d;
+    return lili_d2w(d);
+  }
+  return (t == 7) ? (int64_t)(uint64_t)d : lili_norm(t,(int64_t)d);
+}
+`;
+
+Insert
+
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Public
+
+  - is_trace:Boolean
+
+  - set_trace b:Boolean <- ( is_trace := b; )
+
+  - positions:Array Position := Array Position .create_with_capacity 4096
+
+  - print_stack step:Int <-
+  ( + stack:Array Int
+    + c,code:Int
+    + pos:Position
+    + buf:String_buffer
+    + col:Int
+    stack := Array Int .create_with_capacity 64
+    c := Li_node.top_context
+    step.times {
+      (c != 0).if {
+        c := `*(int64_t *)(@c)`:(Int)
+      }
+    }
+    {c != 0}.while_do {
+      stack.add_last c
+      c := `*(int64_t *)(@c)`:(Int)
+    }
+    buf := String_buffer.create 256
+    "\n============== BOTTOM ==============\n".print
+    stack.foreach_backward { x:Int
+      code := `((int64_t *)(@x))[1]`:(Int)
+      pos := positions.at code
+      buf.clear
+      buf # "Line #" # (pos.line) # " Column #" # (pos.column) # " in " # (pos.prototype.name) # " ("
+      pos.prototype.append_filename buf
+      buf # ").\n"
+      pos.extract_line_in buf
+      buf.add_last '\n'
+      buf.print
+      col := pos.column
+      col.times { ' '.print; }
+      "^\n".print
+    }
+    "================ TOP ===============\n".print
+  )
+
+  - call_on_null <-
+  (
+    (Li_compiler.is_debug).if {
+      print_stack 0
+      "Call on NULL\n".print
+    } else {
+      "Call on NULL\n(Do not use `-boost' option for print stack trace)\n".print
+    }
+    exit 1
+  )
+
+  - init_stack <-
+  ( + m,g:Int
+    // The interpreter recurses on the native stack.
+    g := `1L << 30`:Int
+    `({ struct rlimit rl; rl.rlim_cur = @g; rl.rlim_max = @g; setrlimit(RLIMIT_STACK,&rl); })`;
+    m := `(int64_t)mmap(NULL,@g,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE,-1,0)`:(Int)
+    Li_node.set_sp (m + 16)
+  )
+
+  - alloc n:Int :Int <- `(int64_t)calloc(1,(@n) + 8)`:(Int)
+
+  - poke a:Int value v:Int <- ( `*(int64_t *)(@a) = @v`; )
+
+  - poke32 a:Int value v:Int <- ( `*(int32_t *)(@a) = @v`; )
+
+  - poke_kind k:Int at a:Int value v:Int <- ( `lili_store(@k,@a,@v)`; )
+
+  - copy_bytes s:String_buffer :Int <-
+  ( + result,n:Int
+    + st:C_array Char
+    n := s.count
+    st := s.to_external
+    result := alloc n
+    `memcpy((void *)(@result),@st,@n)`;
+    result
+  )
+
+  - real_of s:String_buffer :Int <-
+  ( + st:C_array Char
+    st := s.to_external
+    `lili_d2w(strtod(@st,NULL))`:(Int)
+  )
+
+  - real_of_int v:Int :Int <- `lili_d2w((double)(@v))`:(Int)
+
+  - norm v:Int kind k:Int :Int <- `lili_norm(@k,@v)`:Int

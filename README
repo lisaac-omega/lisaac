@@ -22,12 +22,28 @@ From this directory (lisaac), run:
 
   ./install.sh
 
+It first checks the few system packages needed by the graphics and the sound, and
+proposes to install the missing ones (apt on Linux, brew on macOS, pacman in the
+"MSYS2 UCRT64" terminal on Windows). Then it compiles the compiler, and opens the
+graphical installer (itself written in Lisaac Ω), where you choose the parts to
+install: elit, elito, the calculator, the Logo turtle, the games.
+./install.sh --all installs everything without question; ./install.sh --text stays in
+the terminal (this is automatic when there is no display).
 In case of trouble, add the --verbose option.
+
+Everything stays in this directory: no administrator rights, no system file touched.
+Outside of it, only one line of your shell startup file (~/.bashrc or ~/.zshrc) is
+added, after "LISAAC-OMEGA TOOLS", to put lisaac/bin in your PATH. To uninstall, delete
+this directory and that line.
+
+Keep this directory where it is, and keep its name "lisaac".
+If you move it, run ./install.sh again from its new location.
 
 
 Two commands
 
-Once installed, two commands are enough for almost everything:
+The installation leaves its executables in lisaac/bin, which is added to your PATH.
+Two commands are enough for almost everything:
 - elit, the code editor and viewer;
 - lisaac, the command-line compiler.
 
@@ -52,11 +68,13 @@ Guided tours
 
 Each of these programs opens a window that shows a series of examples, with their code:
 
-  lisaac big_show && ./big_show               #  A general tour of Lisaac Ω.
-  lisaac game_show && ./game_show             #  The games (see below).
+  big_show                                    #  A general tour of Lisaac Ω.
+  tortue_show                                 #  The Logo turtle, for beginners (in French).
+  game_show                                   #  The games (see below).
   cd example && lisaac example_show && ./example_show
-  cd example/CodEx/Tortue && lisaac tortue_show && ./tortue_show
-                                              #  The Logo turtle, for beginners (in French).
+
+An example compiled at the installation (the drawings of the turtle, the games) starts
+at once; the others are compiled the first time.
 
 
 Games
@@ -65,6 +83,8 @@ Each game lives in its own directory of lisaac/example, with its source code (re
 comment at the top of each file):
 - snake, tetris, solitaire, arrow_out, connect_four, break, minesweeper, gems (match three
   gems or more), shooter, startrek.
+If you said yes to the games during the installation, they are in lisaac/bin: just type
+snake, tetris, solitaire, arrow_out, connect_four, breakout, minesweeper, gems or shooter.
 
 
 Contents of this directory

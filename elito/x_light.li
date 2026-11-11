@@ -1,0 +1,368 @@
+Header
+  + name := X_light
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+X_light, Buffer, Cmd_bar
+  
+  + buf:Buffer
+  + root:Light
+  
+  - buf_idf:Array String_alias := Array String_alias.create_with_capacity 16
+      
+Public
+  
+  - language:String_alias <- "(Text)"
+  - space_indent:Int := 8
+  
+  + comment :Array Int
+  + external:Array Int
+  
+  - comment_before p:Int :Int <-
+  ( + result,i,lev:Int
+    {(i <= comment.upper) && {comment.at i.abs <= p}}.while_do {
+      (comment.at i >= 0).if {
+        lev := lev + 1
+      } else {
+        lev := (lev - 1).max 0
+        (lev = 0).if {
+          result := (-comment.at i)+1
+        }
+      }
+      i := i + 1
+    }
+    result.max p
+  )
+  
+  - create b:Buffer :Self <-
+  ( + result:Self
+    result := clone
+    result.make b
+    result    
+  )
+  
+  - make b:Buffer <-
+  ( + i,upper:Int
+    buf := b
+    comment := Array Int.create_with_capacity 16
+    external := Array Int.create_with_capacity 4
+    upper := buf.upper
+    {i < upper}.while_do {
+      ((buf.at i = '/') && {buf.at (i+1) = '*'}).if {
+        comment.add_last i
+      }.elseif {(buf.at i = '*') && {buf.at (i+1) = '/'}} then {
+        comment.add_last (-i-1)
+      }.elseif {buf.at i = '`'} then {
+        external.add_last i
+        { i := i + 1; }.do_while {(i <= upper) && {buf.at i = '`'}};
+        external.add_last (-i)
+      }.elseif {buf.at i = '\"'} then {
+        { 
+          (buf.at i = '\\').if { i := i + 1; }
+          i := i + 1
+        }.do_while {(i <= upper) && {buf.at i = '\"'}}
+      }.elseif {buf.at i = '\''} then {
+        { 
+          (buf.at i = '\\').if { i := i + 1; }
+          i := i + 1
+        }.do_while {(i <= upper) && {buf.at i = '\''}}
+      }
+      i := i + 1
+    }
+  )
+  
+  - update p:Int comment step:Int <-
+  ( + i,new:Int
+    i := comment.upper
+    {(i != 0) && {p < comment.at i.abs}}.while_do {
+      new := comment.at i
+      new := (new >= 0).ok (new+step) else {new-step}
+      comment.at i put new
+    }
+    i := 0
+    {(i != 0) && {p < external.at i.abs}}.while_do {
+      new := external.at i
+      new := (new >= 0).ok (new+step) else {new-step}
+      external.at i put new
+    }
+  )
+  
+  - block_verify <-
+  ( + id,pt:Int
+    + li,lip:Light
+    + cl,cr:Char
+    pt := current_page.point
+    // Detect block valid () [] {}    
+    (pt > 0).if {
+      lip := root.get_type (pt-1)
+      ((lip != NULL) && {lip.type = block_id} && {"[({})]".has (buf.at (pt-1))}).if {
+        cl := buf.at (lip.lower)
+        (lip.upper <= current_page.upper).if {
+          cr := buf.at (lip.upper)
+          id := (
+            ((cl = '(') && {cr = ')'}) ||
+            {(cl = '{') && {cr = '}'}} ||
+            {(cl = '[') && {cr = ']'}}
+          ).ok block_ok_id or block_err_id
+          li := Light.create lip type id range (lip.lower,lip.lower)
+          lip.body.remove_last
+          lip.body.add_first li
+          li := Light.create lip type id range (lip.upper,lip.upper)
+        }
+      }
+    }
+  )
+  
+  - start st:Int line lin:Int <-
+  (     
+    // Nothing.
+  )
+  
+  - last_string:String_alias
+  - at i:Int word s:String_alias :Boolean <-
+  ( + j,upper:Int
+    upper := buf.upper
+    {(i >=0) && {i+j <= upper} && {j <= s.upper} && {buf.at (i+j) = s.at j}}.while_do { 
+      j := j + 1
+    }
+    ((j > s.upper) && {((i+j) > upper) || {!buf.at (i+j).is_identifier}}).if { 
+      last_string := s
+    }
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( 
+    abstract
+    0
+  )
+  
+  - pattern:String_alias
+  - set_pattern p:String_alias <- ( pattern := p; )
+  - ignore_pattern:Int
+  - set_ignore_pattern i:Int <- ( ignore_pattern := i; )
+  
+  - reference_at i:Int :(Boolean,Boolean) <-
+  // In a comment: is @i in a @reference (a `@' at the start of a word), and
+  // is it a prototype (@Bloc, @ℕ) rather than a slot or a variable (@i)?
+  ( + j:Int
+    + is_ref,is_type:Boolean
+    j := i
+    {(j > 0) && {is_word (buf.at j)}}.while_do { j := j - 1; }
+    is_ref := (buf.at j = '@') && {(j = 0) || {! is_word (buf.at (j-1))}} &&
+      {j < buf.upper} && {is_word (buf.at (j+1))}
+    (is_ref).if { is_type := is_prototype_at (j+1) in buf; }
+    is_ref,is_type
+  )
+  
+  - is_hidden_at i:Int :Boolean <-
+  // Not displayed: the `@' of a reference in a comment, the end of an
+  // operator displayed with its mathematical symbol (see @symbol_at).
+  ( + li:Light
+    + is_ref,is_type:Boolean
+    ((buf.at i = '@') && {root != NULL}).if {
+      li := root.get_type i
+      ((li != NULL) && {(li.type = comment_id) || {li.type = comment_line_id} || {li.type = comment_line_intern_id}}).if {
+        (is_ref,is_type) := reference_at i
+      }
+    }.elseif {(li := operator_at i) != NULL} then {
+      is_ref := i != li.lower
+    }
+    is_ref
+  )
+  
+  - symbol_at i:Int :String_alias <-
+  // The symbol displayed for the operator starting at @i, or NULL.
+  ( + li:Light
+    + result:String_alias
+    li := operator_at i
+    ((li != NULL) && {i = li.lower}).if { result := symbol_of li; }
+    result
+  )
+  
+  - operator_at i:Int :Light <-
+  // The operator around @i, if it has a mathematical symbol.
+  ( + li:Light
+    (root != NULL).if {
+      li := root.get_type i
+      ((li != NULL) && {(li.type != operator_id) || {symbol_of li = NULL}}).if { li := NULL; }
+    }
+    li
+  )
+  
+  - symbol_of li:Light :String_alias <-
+  // As in elit: <= ≤, >= ≥, != ≠, == ≡, * ×.
+  ( + result:String_alias
+    + c0,c1:Char
+    c0 := buf.at (li.lower)
+    (li.lower = li.upper).if {
+      (c0 = '*').if { result := "×"; }
+    }.elseif {(li.upper = li.lower + 1) && {(c1 := buf.at (li.upper)) = '='}} then {
+      (c0 = '<').if { result := "≤"; }
+        .elseif {c0 = '>'} then { result := "≥"; }
+        .elseif {c0 = '!'} then { result := "≠"; }
+        .elseif {c0 = '='} then { result := "≡"; }
+    }
+    result
+  )
+  
+  - in pen:Pen put c:Char to i:Int pos (x,y:Real32) :Light <-
+  ( + j:Int
+    + li:Light
+    + col:Color
+    + is_ref,is_type:Boolean
+    ((root = NULL) || {(li := root.get_type i) = NULL}).if {
+      set_font (pen,"Code-Bold")
+      col := color.black
+    } else {
+      set_font (pen,"Code-Bold")
+      (li.type = comment_id).if {
+        (is_ref,is_type) := reference_at i
+        (is_ref).if {
+          col := is_type.ok (color.type) or (color.comment_ref)
+        } else {
+          col := color.comment
+        }
+      }.elseif {(li.type = comment_line_id) || {li.type = comment_line_intern_id}} then {
+        (is_ref,is_type) := reference_at i
+        j := i
+        (buf.at j = '\'').if { j := j - 1; }
+        {(j > 0) && {buf.at j.is_identifier}}.while_do { j := j - 1; }
+        (is_ref).if {
+          col := is_type.ok (color.type) or (color.comment_ref)
+        }.elseif {buf.at j = '`'} then { 
+          col := color.comment_ref
+        } else {  
+          col := color.comment_line
+          (li.type = comment_line_id).if {
+            set_font (pen,"Code-Bold-Italic")
+          }
+        }
+      }.elseif {li.type = string_id} then {
+        col := color.string
+      }.elseif {li.type = character_id} then {
+        col := color.character
+      }.elseif {li.type = external_id} then {      
+        j := i
+        {buf.at j.is_identifier}.while_do { j := j - 1; }
+        (buf.at j = '@').if { col := color.external_access; }
+          else { col := color.external; }
+      }.elseif {li.type = keyword_id} then {
+        col := color.keyword
+      }.elseif {li.type = style_id} then {
+        col := color.style
+      }.elseif {li.type = assign_id} then {
+        col := color.assign
+      }.elseif {li.type = operator_id} then {
+        col := color.operator
+      }.elseif {(li.type = type_id) || {li.type = type_parameter_id}} then {  
+        col := color.type
+        (li.type = type_parameter_id).if {
+          set_font (pen,"Code-Bold-Italic")
+        }
+      }.elseif {li.type = number_id} then {
+        col := color.number
+      }.elseif {(li.type = local_id) || {li.type = argument_id}} then {      
+        col := color.local
+        (li.type = argument_id).if {
+          set_font (pen,"Code-Bold-Italic")
+        }
+      }.elseif {li.type = call_id} then {
+        col := color.slot
+      }.elseif {li.type = call_select_id} then {
+        pen.save
+        pen.begin_path
+        pen.move_to (x,y+Page.height_char-8)
+        pen.line_to (x+Page.width_char,y+Page.height_char-8)
+        pen.stroke_color (color.slot_select)
+        pen.stroke_width 1.0
+        pen.stroke
+        pen.restore
+        col := color.slot_select
+      }.elseif {li.type = slot_head_id} then {
+        col := color.slot_head
+        set_font (pen,"Code-Bold-Italic")
+      }.elseif {li.type = call_intern_id} then {  
+        set_font (pen,"Code-Bold-Italic")
+        col := color.slot_tiny
+      }.elseif {li.type = error_id} then {  
+        set_font (pen,"Code-Bold-Italic")
+        col := color.error
+      }.elseif {(li.type = block_ok_id) || {li.type = block_err_id}} then {
+        pen.save
+        pen.begin_path
+        pen.rect (x,y) size (Page.width_char,Page.height_char)
+        pen.fill_color ((li.type = block_ok_id).ok (color.block_ok) or (color.block_err))
+        pen.fill
+        pen.restore
+        col := color.none
+      }.elseif {li.type = comment_ref_id} then {          
+        col := color.comment_ref
+      } else {
+        col := color.none
+      }
+    }
+    ((pattern != NULL) && {ignore_pattern != i}).if {
+      + ip,ib,jp:Int
+      {
+        ip := pattern.index_of c since ip
+        (ip <= pattern.upper).if {
+          ib := i - ip
+          jp := 0
+          {
+            (jp <= pattern.upper) && {ib.in_range 0 to (buf.upper)} &&
+              {buf.at ib = pattern.at jp}
+          }.while_do {
+            ib := ib + 1
+            jp := jp + 1
+          }
+          (jp > pattern.upper).if {
+            pen.save
+            pen.begin_path
+            pen.rect (x,y) size (Page.width_char,Page.height_char)
+            pen.fill_color (color.block_ok)
+            pen.fill
+            pen.restore
+            ip := pattern.upper + 1
+          } else {
+            ip := ip + 1
+          }
+        }
+      }.do_while {ip <= pattern.upper}
+    }
+    pen.fill_color col
+    li    
+  )
+  
+  - zone pen:Pen put (x,y:Real32) to i:Int <-
+  ( + li:Light
+    + c:Int
+    //+ bi,idx:INTEGER
+    
+    li := root.get_type i
+    
+    {li != NULL}.while_do {
+      (li.type = type_id).if {
+        c := c + 1
+      }
+      li := li.parent
+      }
+    //((li != NULL) && {li.type=block_id}).if { c := c + 1; }
+      
+    //(bi,idx) := buf.index_to_bloc i
+    //c := bi
+    //
+    pen.save
+    pen.begin_path
+    pen.rect (x,y) size (Page.width_char,Page.height_char)
+    pen.fill_color (Color.rgb (255-c*32,255-c*32,255-c*32))
+    pen.fill
+    pen.restore
+  )
+  
+  - skip_space pi:Int upper up:Int :Int <-
+  ( + i:Int
+    i := pi
+    {(i <= up) && {" \n".has (buf.at i)}}.while_do { i := i + 1; }
+    i
+  )

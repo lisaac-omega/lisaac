@@ -1,0 +1,217 @@
+Header
+  + name := Escape_obj
+/* An abstract object of the escape analysis (see @Escape). */
+Insert
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Public
+
+  + kind:Int
+  // 0: fresh (clone, `malloc', `calloc'); 1: `self' of the function @source;
+  // 2: result of a call to @source (fresh if @source returns a fresh object);
+  // 3: a value (prototype, flat local): its writes are not mutations of an object;
+  // 4: argument @index of the function @source (not `self');
+  // 5: the prototype @proto_type (a named object, shared by the universes if not changed);
+  // 6: a part of the argument @index of @source (an object reached by its fields; index 0:
+  // a part of `self'), of type @part_type: as an unknown object, but kept, it is a part of the
+  // argument kept, and what is stored in it is stored in the argument.
+
+  + part_type:Type_full
+
+  - set_part_type t:Type_full <- ( part_type := t; )
+
+  + proto_type:Type
+
+  + is_one:Boolean
+  // Held by a `One' variable: it must not be stored in a container which is not `One'.
+
+  - set_one <- ( is_one := True; )
+
+  - set_proto_type t:Type <- ( proto_type := t; )
+
+  + index:Int
+
+  - set_index i:Int <- ( index := i; )
+
+  + source:Profil
+
+  + profil:Profil
+  // Function where it is known: a local is its alias only in this function.
+
+  + birth_loop:Escape_loop
+
+  - create k:Int source s:Profil loop l:Escape_loop :Self <-
+  ( + result:Self
+    result := clone
+    result.make k source s loop l
+    result
+  )
+
+  - make k:Int source s:Profil loop l:Escape_loop <-
+  (
+    kind := k
+    source := s
+    profil := profil_current
+    birth_loop := l
+  )
+
+  //
+  // Evaluation (see @Escape.evaluate).
+  //
+
+  + is_escaped:Boolean
+
+  + escape_loops:Array Escape_loop
+
+  + children:Array Escape_obj
+  // Fresh objects stored in the fields of this one: they escape with it.
+
+  + pending_writes:Array Escape_event
+  // Initialization writes, to check against the escapes in their loops.
+
+  + parent:Escape_obj
+  // The fresh object which stores this one in a field (see @add_child).
+
+  + sent_event:Escape_event
+  // Its transfer to another universe (see @Escape.check_sent).
+
+  + escaped_out:Boolean
+  // Escaped elsewhere than into a parameter of its function (or a part of it), or into a new
+  // object (see @Escape.store_into): what a new object stored into a borrowed argument must
+  // not be (a synchronous message gives it to its caller, it keeps nothing of it).
+
+  + targets:Array Int
+  + obj_type:Type_full
+  // A new object: the parameters (0: `self') into which it is stored, and its type.
+
+  + contents:Array Int
+  + content_types:Array Type_full
+  // What is stored into this new object: from a parameter (its index), or from elsewhere (-1).
+
+  + child_types:Array Type_full
+
+  - is_fresh_born:Boolean <- (kind = 0) || {(kind = 2) && {source.esc_returns_fresh}}
+
+  - mark_out <-
+  (
+    (escaped_out).if_false {
+      escaped_out := True
+      (children != NULL).if {
+        (children.lower).to (children.upper) do { j:Int
+          children.at j.mark_out
+        }
+      }
+    }
+  )
+
+  - add_target t:Int type ty:Type_full <-
+  (
+    (targets = NULL).if {
+      targets := Array Int .create_with_capacity 2
+    }
+    (targets.fast_first_index_of t > targets.upper).if {
+      targets.add_last t
+    }
+    (obj_type = NULL).if {
+      obj_type := ty
+    }
+  )
+
+  - add_content s:Int type ty:Type_full <-
+  (
+    (contents = NULL).if {
+      contents := Array Int .create_with_capacity 2
+      content_types := Array Type_full .create_with_capacity 2
+    }
+    contents.add_last s
+    content_types.add_last ty
+  )
+
+  + visit:Int
+  // Last visit by @Escape.check_sent (the parents may make a cycle).
+
+  - set_visit v:Int <- ( visit := v; )
+
+  - reset <-
+  (
+    is_escaped := False
+    escape_loops := NULL
+    children := NULL
+    pending_writes := NULL
+    parent := NULL
+    sent_event := NULL
+    escaped_out := False
+    targets := NULL
+    obj_type := NULL
+    contents := NULL
+    content_types := NULL
+    child_types := NULL
+  )
+
+  - is_fresh:Boolean <-
+  (kind = 0) || {kind = 3} || {kind = 5} || {(kind = 2) && {source.esc_returns_fresh}}
+
+  - escape l:Escape_loop <-
+  (
+    ((kind != 3) && {kind != 5}).if {
+      (escape_loops = NULL).if {
+        escape_loops := Array Escape_loop .create_with_capacity 2
+      }
+      escape_loops.add_last l
+      (Escape.is_into).if_false {
+        mark_out
+      }
+      (is_escaped).if_false {
+        is_escaped := True
+        (children != NULL).if {
+          (children.lower).to (children.upper) do { j:Int
+            children.at j.escape l
+          }
+        }
+      }
+    }
+  )
+
+  - add_child o:Escape_obj <-
+  (
+    add_child o type NULL
+  )
+
+  - add_child o:Escape_obj type ty:Type_full <-
+  (
+    (children = NULL).if {
+      children := Array Escape_obj .create_with_capacity 2
+      child_types := Array Type_full .create_with_capacity 2
+    }
+    children.add_last o
+    child_types.add_last ty
+    o.set_parent self
+    (escaped_out).if {
+      o.mark_out
+    }
+  )
+
+  - set_parent o:Escape_obj <- ( parent := o; )
+
+  - set_sent_event e:Escape_event <- ( sent_event := e; )
+
+  - add_pending w:Escape_event <-
+  (
+    (pending_writes = NULL).if {
+      pending_writes := Array Escape_event .create_with_capacity 4
+    }
+    pending_writes.add_last w
+  )
+
+  - is_escaped_in l:Escape_loop :Boolean <-
+  // An escape of this object in the loop @l (or a loop nested in it).
+  ( + result:Boolean
+    (escape_loops != NULL).if {
+      (escape_loops.lower).to (escape_loops.upper) do { j:Int
+        ((escape_loops.at j != NULL) && {escape_loops.at j.is_inside l}).if {
+          result := True
+        }
+      }
+    }
+    result
+  )

@@ -1,0 +1,76 @@
+Header
+  + name := Itm_type_parameter_style
+/* Parameter type with a style (`Flat E', `Exact E', `One E'): the style is added to the type
+   given for the parameter @base (see @Parser.read_type_begin), as @Itm_type_style for a
+   prototype. Used by @Shared: `Insert + parent_e:Flat E'. */
+Inherit
+
+  + parent_itm_type_parameter:Flat Itm_type_parameter
+
+Private
+
+  - dico_ps:Array Itm_type_parameter_style := Array Itm_type_parameter_style .create_with_capacity 8
+
+  - create p:Itm_type_parameter style s:Uint8 :Self <-
+  ( + result:Self
+    result := clone
+    result.make p style s
+    result
+  )
+
+  - make p:Itm_type_parameter style s:Uint8 <-
+  (
+    name  := p.name
+    base  := p
+    style := s
+  )
+
+Public
+
+  + base:Itm_type_parameter
+  // The parameter (`E'): the generic types find it by its identity.
+
+  + style:Uint8
+
+  - get p:Itm_type_parameter style s:Uint8 :Self <-
+  ( + result:Self
+    + idx:Int
+    idx := dico_ps.lower
+    {(idx <= dico_ps.upper) && {(dico_ps.at idx.base != p) || {dico_ps.at idx.style != s}}}.while_do {
+      idx := idx + 1
+    }
+    (idx <= dico_ps.upper).if {
+      result ?= dico_ps.at idx
+    } else {
+      result := create p style s
+      dico_ps.add_last result
+    }
+    result
+  )
+
+  - to_run_for p:Parameter_to_type pos path:String_alias :Type_full <-
+  ( + result:Type_full
+    result := base.to_run_for p pos path
+    (result != NULL).if {
+      result := result + style
+    }
+    result
+  )
+
+  //
+  // Display.
+  //
+
+  - append_in b:String_buffer <-
+  (
+    (is_one).if {
+      b.append "One "
+    }
+    (is_flat).if {
+      b.append "Flat "
+    }
+    (is_exact).if {
+      b.append "Exact "
+    }
+    base.append_in b
+  )

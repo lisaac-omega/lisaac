@@ -1,0 +1,32 @@
+Header
+  + name := Li_int_op
+/* Integer operation, whose result is normalized for @kind (see @lili_op). */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + op:Int
+  + kind:Int
+  + left:Li_node
+  + right:Li_node
+
+  - create o:Int kind k:Int left l:Li_node right r:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make o kind k left l right r
+    result
+  )
+
+  - make o:Int kind k:Int left l:Li_node right r:Li_node <-
+  ( op := o; kind := k; left := l; right := r; )
+
+  - eval fp:Int :Int <-
+  ( + a,b,o,k:Int
+    a := left.eval fp
+    b := right.eval fp
+    o := op
+    k := kind
+    `lili_op(@o,@k,@a,@b)`:(Int)
+  )

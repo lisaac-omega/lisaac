@@ -1,0 +1,179 @@
+Header
+  + name := Ttf_buf
+/* @stbtt__buf of stb_truetype v1.24: a bounded reader of bytes, used to parse
+   the CFF tables (OpenType fonts with PostScript outlines). In C, it is passed
+   by value: @copy gives an independent reader. */
+Inherit
+
+  - parent_clone:Clone := Clone
+
+Public
+
+  + data:C_array Uint8
+  + cursor:Int
+  + size:Int
+
+  - create (p:C_array Uint8, sz:Int) :Self <-
+  ( + result:Self
+    ? {sz < 4000_0000h}
+    result := clone
+    result.make (p, sz)
+    result
+  )
+
+  - make (p:C_array Uint8, sz:Int) <-
+  (
+    (data,size,cursor) := (p,sz,0)
+  )
+
+  - copy:Self <- clone
+
+  - empty:Self <- create (NULL, 0)
+
+  - set_cursor c:Int <- ( cursor := c; )
+
+  - get8:Uint8 <-
+  ( + result:Uint8
+    (cursor < size).if {
+      result := data.at cursor
+      cursor := cursor + 1
+    }
+    result
+  )
+
+  - peek8:Uint8 <-
+  ( + result:Uint8
+    (cursor < size).if {
+      result := data.at cursor
+    }
+    result
+  )
+
+  - seek o:Int <-
+  (
+    ? {! ((o > size) || {o < 0})}
+    ((o > size) || {o < 0}).if { cursor := size; } else { cursor := o; }
+  )
+
+  - skip o:Int <- seek (cursor + o)
+
+  - get n:Int :Uint32 <-
+  ( + v:Uint32
+    ? {(n >= 1) && {n <= 4}}
+    0.to (n-1) do { i:Int
+      v := (v << 8) | get8
+    }
+    v
+  )
+
+  - get16:Uint32 <- get 2
+
+  - get32:Uint32 <- get 4
+
+  - range (o,s:Int) :Self <-
+  ( + result:Self
+    result := empty
+    ((o < 0) || {s < 0} || {o > size} || {s > size - o}).if_false {
+      result.make (data + o, s)
+    }
+    result
+  )
+
+  // CFF
+
+  - cff_get_index:Self <-
+  ( + count,start,offsize:Int
+    start := cursor
+    count := get16
+    (count != 0).if {
+      offsize := get8
+      ? {(offsize >= 1) && {offsize <= 4}}
+      skip (offsize * count)
+      skip (((get offsize) - 1).to_raw_int32); // unsigned arithmetic, as in C
+    }
+    range (start, cursor - start)
+  )
+
+  - cff_int:Uint32 <-
+  ( + b0:Int
+    + result:Uint32
+    b0 := get8
+    ((b0 >= 32) && {b0 <= 246}).if {
+      result := (b0 - 139).to_raw_uint32
+    }.elseif {(b0 >= 247) && {b0 <= 250}} then {
+      result := ((b0 - 247)*256 + get8 + 108).to_raw_uint32
+    }.elseif {(b0 >= 251) && {b0 <= 254}} then {
+      result := (-(b0 - 251)*256 - get8 - 108).to_raw_uint32
+    }.elseif {b0 = 28} then {
+      result := get16
+    }.elseif {b0 = 29} then {
+      result := get32
+    } else {
+      ? {False}
+    }
+    result
+  )
+
+  - cff_skip_operand <-
+  ( + v,b0:Int
+    + stop:Boolean
+    b0 := peek8
+    ? {b0 >= 28}
+    (b0 = 30).if {
+      skip 1
+      {(cursor < size) && {! stop}}.while_do {
+        v := get8
+        (((v & 0Fh) = 0Fh) || {(v >> 4) = 0Fh}).if { stop := True; }
+      }
+    } else {
+      cff_int
+    }
+  )
+
+  - dict_get key:Int :Self <-
+  ( + result:Self
+    + start,end,op:Int
+    seek 0
+    {(cursor < size) && {result = NULL}}.while_do {
+      start := cursor
+      {peek8 >= 28}.while_do { cff_skip_operand; }
+      end := cursor
+      op := get8
+      (op = 12).if { op := get8.to_int | 100h; }
+      (op = key).if { result := range (start, end - start); }
+    }
+    (result = NULL).if { result := range (0, 0); }
+    result
+  )
+
+  - dict_get_ints key:Int count outcount:Int in out:C_array Uint32 <-
+  ( + operands:Self
+    + i:Int
+    operands := dict_get key
+    {(i < outcount) && {operands.cursor < operands.size}}.while_do {
+      out.at i put (operands.cff_int)
+      i := i + 1
+    }
+  )
+
+  - cff_index_count:Int <-
+  (
+    seek 0
+    get16
+  )
+
+  - cff_index_get i:Int :Self <-
+  // On a copy, as the C passes the buffer by value.
+  ( + b:Self
+    + count,offsize,start,end:Int
+    b := copy
+    b.seek 0
+    count := b.get16
+    offsize := b.get8
+    ? {(i >= 0) && {i < count}}
+    ? {(offsize >= 1) && {offsize <= 4}}
+    b.skip (i*offsize)
+    start := b.get offsize
+    end := b.get offsize
+    b.range (2 + (count+1)*offsize + start, end - start)
+  )

@@ -34,6 +34,37 @@ Public
 
   - count:Int <- list.count
 
+  - has_block:Boolean <-
+  ( + j:Int
+    + result:Boolean
+
+    j := list.lower
+    {(j <= list.upper) && {! result}}.while_do {
+      result := list.at j.code.has_block
+      j := j + 1
+    }
+    result
+  )
+
+  - first_access v:Local :Int <-
+  // @list has a case for each possible type of @expr.
+  ( + result,j:Int
+
+    ((list.is_empty) || {expr.is_reading v}).if {
+      result := 2
+    } else {
+      result := list.first.code.first_access v
+      j := list.lower + 1
+      {(j <= list.upper) && {result != 2}}.while_do {
+        (list.at j.code.first_access v != result).if {
+          result := 2
+        }
+        j := j + 1
+      }
+    }
+    result
+  )
+
   //
   // Creation.
   //
@@ -46,7 +77,6 @@ Public
     result.make n with e size s
     result
   )
-
 
   - make n:Node with e:Expr size s:Int <-
   ( + first:Case
@@ -124,19 +154,18 @@ Public
     + is_end:Boolean
     + count_empty,idx,idx2:Int
 
-    //switch_fusion; // BSBS: A revoir assure toi que le receiver ne bouge pas!!!
                       // Rappel toi du step=0 ds cortex
+
+    // Jump threading before the execution of the cases: the moved code is executed
+    // in this pass (else its profiles are not alive, see @Profil_list.set_life).
+    ((merge_next_copy) || {thread_next}).if {
+      new_execute_pass
+    }
 
     // Update.
     lst_typ := Types_tmp.new
     // BSBS: optim a voir si necessaire ...
-    /*
-    (expr.static_type.is_exact).if {
-      lst_typ.add (expr.static_type.raw)
-    } else {
-      */
       expr.get_type lst_typ
-    //}
     ? {lst_typ.count <= list.count}
     (lst_typ.count > list.count).if {
       "New type: ".print
@@ -149,35 +178,6 @@ Public
       }
       string_tmp.print
       '\n'.print
-      /*
-      string_tmp.clear
-      profil_current.display string_tmp
-      string_tmp.print
-
-
-      ( + wrt2:WRITE
-        + rd:READ
-        + var:VARIABLE
-
-        rd ?= expr
-        var := rd.variable
-        wrt2 := var.require_first
-        rd ?= wrt2.value
-        var := rd.variable
-
-        wrt2 := var.require_first
-        wrt2.debug_display
-        "==============\n".print
-        (var.require_list.lower).to (var.require_list.upper) do { i:Int
-          "==============\n".print
-          i.print; '\n'.print
-          wrt2 := var.require_list.at i
-          wrt2.debug_display
-          (i = 2).if {
-            warning_error (wrt2.position,"ICI")
-          }
-        }
-      );*/
       syntax_error (expr.position,"*****SWITCH BUG********")
     }
 
@@ -224,10 +224,8 @@ Public
         tb.dec_id
       }
       result := list.last.code.execute
-      //expr.debug_display; " (0)".println
       is_end := True
     }.elseif {count_empty = list.count} then {
-      //expr.debug_display; " (1)".println
       result := expr.execute_unlink
       (list.lower).to (list.upper) do { j:Int
         list.at j.remove
@@ -247,24 +245,30 @@ Public
         list.first .set_code (list.second.code)
         list.second.set_code lst
       }
-      /*
-      seq_or_and := seq_or_and + 1
-      seq_inline := seq_inline + 1
-      */
       expr := expr.execute_link
 
       Call_slot.reset_count_no_recursive
+      Escape.branch_begin
+      cond_depth := cond_depth + 1
       ((list.first.id = Type_null) && {list.count = 2}).if {
+        Escape.branch_case
         list.first .code.execute_case
+        Escape.branch_case_end
+        Escape.branch_case
         list.second.code.execute_case
+        Escape.branch_case_end
         ((list.second.id.is_block) && {debug_level_option != 0}).if {
           list.second.id.set_late_binding
         }
       } else {
         (list.lower).to (list.upper) do { j:Int
+          Escape.branch_case
           list.at j.execute
+          Escape.branch_case_end
         }
       }
+      Escape.branch_end
+      cond_depth := cond_depth - 1
       result := detect_logic_expr
       (result = NULL).if {
         result := self
@@ -275,10 +279,186 @@ Public
   )
 
   //
-  // Genere.
+  // Jump threading (`elseif' chains).
   //
 
-  - count_bug:Int
+  - leaves:Array List := Array List .create_with_capacity 16
+
+  - collect_leaves v:Local :Boolean <-
+  // Each path of @self ends with a write of a constant in @v, a @Boolean (in a nested @Switch too):
+  // the lists of these writes are added to @leaves.
+  ( + j:Int
+    + result:Boolean
+
+    result := True
+    j := list.lower
+    {(j <= list.upper) && {result}}.while_do {
+      result := collect_leaf (list.at j.code) of v
+      j := j + 1
+    }
+    result
+  )
+
+  - collect_leaf l:List of v:Local :Boolean <-
+  ( + wrt:Write_local
+    + sw:Switch
+    + result:Boolean
+
+    (! l.is_empty).if {
+      wrt ?= l.last
+      sw  ?= l.last
+      ((wrt != NULL) && {wrt.local = v} && {wrt.value.is_constant}).if {
+        leaves.add_last l
+        result := True
+      }.elseif {sw != NULL} then {
+        result := sw.collect_leaves v
+      }
+    }
+    result
+  )
+
+  - next_instr:Instr <-
+  // Instruction after @self in @list_current (NULL if none).
+  ( + idx:Int
+    + result:Instr
+
+    idx := list_current.index
+    ((idx >= list_current.lower) && {idx < list_current.upper} && {list_current.at idx = self}).if {
+      result := list_current.at (idx + 1)
+    }
+    result
+  )
+
+  - merge_next_copy:Boolean <-
+  // [@self; v := u], each path of @self ending with u := constant, and u is only read here:
+  // the constants are written in v and v := u is removed.
+  ( + wr,w:Write_local
+    + rd:Read_local
+    + u,v:Local
+    + result:Boolean
+
+    wr ?= next_instr
+    (wr != NULL).if {
+      rd ?= wr.value
+      (rd != NULL).if {
+        u := rd.local
+        v := wr.local
+        ((u != v) && {u.type = v.type} && {u.type.raw = type_boolean} && {u.ensure_count = 1} && {! u.is_result}).if {
+          leaves.clear
+          ((collect_leaves u) && {leaves.count = u.require_count}).if {
+            (leaves.lower).to (leaves.upper) do { j:Int
+              w ?= leaves.at j.last
+              leaves.at j.at (leaves.at j.upper) put (v.write (w.position) value (w.value))
+              u.unwrite w
+            }
+            wr.remove
+            list_current.remove_index (list_current.index + 1)
+            result := True
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - thread_next:Boolean <-
+  // [@self; switch v ...], each path of @self ending with v := constant:
+  // the case of the next switch for this constant is moved at the end of the path.
+  ( + nxt:Switch
+    + rd:Read_local
+    + w:Write_local
+    + t:Type
+    + uses:Array Int
+    + k,j:Int
+    + code:List
+    + not:Expr_not_logic
+    + wc:Write_local
+    + result:Boolean
+
+    nxt ?= next_instr
+    ((nxt != NULL) && {nxt.expr.is_pure}).if {
+      rd  ?= nxt.expr
+      not ?= nxt.expr
+      ((rd = NULL) && {not != NULL}).if {
+        // switch !v: True and False are swapped.
+        rd ?= not.right
+      }
+      ((rd != NULL) && {rd.local.type.raw = type_boolean}).if {
+        leaves.clear
+        // A block not yet inlined is not moved (its context, see @Profil_block).
+        ((collect_leaves (rd.local)) && {! nxt.has_block}).if {
+          // Case of @nxt for each leaf, and number of uses of each case.
+          result := True
+          uses := Array Int .create (nxt.list.count)
+          leaf_case.clear
+          j := leaves.lower
+          {(j <= leaves.upper) && {result}}.while_do {
+            w ?= leaves.at j.last
+            t := w.value.static_type.raw
+            (not != NULL).if {
+              (t = type_true).if {
+                t := type_false
+              }.elseif {t = type_false} then {
+                t := type_true
+              } else {
+                t := NULL
+              }
+            }
+            k := nxt.list.lower
+            {(k <= nxt.list.upper) && {nxt.list.at k.id != t}}.while_do {
+              k := k + 1
+            }
+            (k > nxt.list.upper).if {
+              result := False
+            } else {
+              leaf_case.add_last k
+              uses.at k put (uses.at k + 1)
+            }
+            j := j + 1
+          }
+          // A case copied in several paths must be empty or a write of a constant (as v := True).
+          k := nxt.list.lower
+          {(k <= nxt.list.upper) && {result}}.while_do {
+            (uses.at k > 1).if {
+              code := nxt.list.at k.code
+              wc ?= code.first_or_null
+              result := (code.is_empty) || {(code.count = 1) && {wc != NULL} && {wc.value.is_constant}}
+            }
+            k := k + 1
+          }
+          (result).if {
+            (leaves.lower).to (leaves.upper) do { i:Int
+              k := leaf_case.at i
+              code := nxt.list.at k.code
+              (uses.at k > 1).if {
+                code := code.my_copy
+                uses.at k put (uses.at k - 1)
+              } else {
+                uses.at k put (-1); // Moved.
+              }
+              (! code.is_empty).if {
+                leaves.at i.add_last code
+              }
+            }
+            (nxt.list.lower).to (nxt.list.upper) do { i:Int
+              (uses.at i = 0).if {
+                nxt.list.at i.code.remove
+              }
+            }
+            nxt.expr.remove
+            list_current.remove_index (list_current.index + 1)
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - leaf_case:Array Int := Array Int .create_with_capacity 16
+
+  //
+  // Genere.
+  //
 
   - genere <-
   ( + lst:List
@@ -290,6 +470,9 @@ Public
     + c1,c2:Case
     + lst_case:Array Case
     + cases:Array (Array Case)
+    + switch_beg,same_base,idx_end:Int
+    + is_same:Boolean
+    + sw:Switch
 
     Type.add_switch_global self
     (list.lower).to (list.upper) do { j:Int
@@ -335,7 +518,12 @@ Public
       //
       (list.count = 2).if {
         lst := list.second.code
-        (! list.second.code.is_empty).if {
+        sw  ?= lst.first_or_null
+        ((lst.count = 1) && {sw != NULL}).if {
+          // else if
+          output.append " else "
+          sw.genere
+        }.elseif {! lst.is_empty} then {
           output.append " else "
           output.append "/* "
           output.append (list.second.id.name)
@@ -376,6 +564,9 @@ Public
         c2.genere
       } else {
         polymorphic_counter := polymorphic_counter + 1
+        switch_beg := output.upper
+        is_same := expr.is_pure
+        same_base := same_beg.count
         output.append "switch "
         par {
           list.at first_case.id.put_access_id expr
@@ -396,9 +587,15 @@ Public
               }
               output.remove_last
             }
+            same_beg.add_last (output.upper)
+            // Its end is reserved now: a switch nested in this case pushes its own pairs after.
+            same_end.add_last (output.upper)
+            idx_end := same_end.upper
             lst_case.first.genere
+            same_end.at idx_end put (output.upper)
             output.append " break;\n"
           } else { // Debug...
+            is_same := False
             (lst_case.lower).to (lst_case.upper) do { i:Int
               output.append indent
               output.append "case "
@@ -410,17 +607,23 @@ Public
           }
         }
         // Debug...
-        //(debug_level_option != 0).if {
         //  output.append indent
         //  output.append "default:\n"
         //  output.append indent
         //  output.append "lisaac_stack_print(0); \
         //  \print_string(\"Call on twilight zone!!!\\n\"); \
         //  \die_with_code(1);\n"
-        //}
 
         output.append indent
         output.add_last '}'
+        (is_same).if {
+          keep_same_code switch_beg from same_base
+        }
+        // Nested switch: positions are a stack.
+        {same_beg.count = same_base}.until_do {
+          same_beg.remove_last
+          same_end.remove_last
+        }
       }
       free_list_cases cases
       (first_case != 0).if {
@@ -484,6 +687,7 @@ Private
   ( + result:Instr
     + wr_true,wr_false:Write
     + rd:Read
+    + rd_slot:Read_slot
     + val_true,val_false:Expr
     + a,b,c,d:Boolean
 
@@ -513,8 +717,11 @@ Private
           (a := val_true.is_constant) && {b := (val_true.static_type.raw = type_true)}
         ).if {
           // | or ||
+          // A @Read_slot dereferences its receiver (unless @Flat), possibly @NULL when @expr is @True:
+          // only the lazy || is safe.
           rd ?= val_false
-          (rd != NULL).if {
+          rd_slot ?= val_false
+          ((rd != NULL) && {(rd_slot = NULL) || {rd_slot.receiver.static_type.is_flat}}).if {
             // |
             wr_true.remove
             val_false := Expr_or_logic.create position with expr and val_false
@@ -533,8 +740,11 @@ Private
           (c := val_false.is_constant) && {d := (val_false.static_type.raw = type_false)}
         } then {
           // & or &&
+          // A @Read_slot dereferences its receiver (unless @Flat), possibly @NULL when @expr is @False:
+          // only the lazy && is safe.
           rd ?= val_true
-          (rd != NULL).if {
+          rd_slot ?= val_true
+          ((rd != NULL) && {(rd_slot = NULL) || {rd_slot.receiver.static_type.is_flat}}).if {
             // &
             wr_false.remove
             val_true := Expr_and_logic.create position with expr and val_true
@@ -563,63 +773,47 @@ Private
     result
   )
 
-  - switch_fusion <-
-  ( + other:Switch
-    + index:Int
-    + wrt:Write
-    + rd,rd2:Read
-
-    index := list_current.index + 1
-    (index <= list_current.upper).if {
-      other ?= list_current.at index
-      ((other != NULL) && {other.expr ~= expr} && {other.list.count = list.count}).if {
-        concat_switch other
-        list_current.at index put Nop
-        //warning_error (position,"ICI")
-      }
-      
-      (index < list_current.upper).if {
-        // BSBS: Dans ce cas la, tu devrai en avoir 250 !!!!
-        // Regarde pourquoi tu n'as que 14 cas !
-        wrt ?= list_current.at index
-        rd  ?= expr
-        ((wrt != NULL) && {rd != NULL} && {wrt.variable != rd.variable}).if {
-          rd2   ?= wrt.value
-          other ?= list_current.at (index + 1)
-          ((rd2 != NULL) && {other != NULL} &&
-          {other.expr ~= expr} && {other.list.count = list.count}).if {
-            count_switch_merging := count_switch_merging + 1
-            count_my_switch_merge := count_my_switch_merge + 1
-            (list.lower).to (list.upper-1) do { j:Int
-              list.at j.code.add_last (wrt.my_copy)
-            }
-            list.last.code.add_last wrt
-            list_current.at index put Nop
-            concat_switch other
-            list_current.at (index + 1) put Nop
-          }
-        }
-      }
-      
-    }
-  )
-
-  - concat_switch other:Switch <-
-  ( + other_list:Array Case
-    + code:List
-
-    other.expr.remove
-    other_list := other.list
-    (list.lower).to (list.upper) do { j:Int
-      code := list.at j.code
-      code.add_last (other_list.at j.code)
-    }
-    new_execute_pass
-  )
-
   //
   // Case fusion manager.
   //
+
+  - same_code:String_buffer := String_buffer.create 256
+
+  - same_beg:Array Int := Array Int .create_with_capacity 16
+
+  - same_end:Array Int := Array Int .create_with_capacity 16
+
+  - keep_same_code beg:Int from base:Int <-
+  // When each case of the switch generated (from @beg) has the same C code (same slot
+  // at the same offset, see @Type.prefix_slot), the dispatch is replaced by this code.
+  ( + is_same:Boolean
+    + j,k,b,len:Int
+
+    b   := same_beg.at base
+    len := same_end.at base - b
+    is_same := same_beg.count - base > 1
+    j := base + 1
+    {(j <= same_beg.upper) && {is_same}}.while_do {
+      (same_end.at j - same_beg.at j != len).if {
+        is_same := False
+      } else {
+        k := 1
+        {(k <= len) && {is_same}}.while_do {
+          is_same := output.at (b + k) = output.at (same_beg.at j + k)
+          k := k + 1
+        }
+      }
+      j := j + 1
+    }
+    (is_same).if {
+      same_code.clear
+      (b + 1).to (b + len) do { i:Int
+        same_code.add_last (output.at i)
+      }
+      output.remove_tail (output.upper - beg)
+      output.append same_code
+    }
+  )
 
   - store_list_cases:Array (Array (Array Case)) :=
   Array (Array (Array Case)).create_with_capacity 32

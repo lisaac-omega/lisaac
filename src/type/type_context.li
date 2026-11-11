@@ -20,7 +20,6 @@ Public
   - make_context <-
   (
     dico_type.at name put self
-    //slot_run := ARRAY SLOT .create_with_capacity 1; // BSBS: Plus utile !
     default := Type_full.create self with (Type_full.flat_bit)
   )
 
@@ -30,14 +29,22 @@ Public
   )
 
   - genere_struct <-
+  // The fields are volatile: only the handler of a stack overflow may read them
+  // (@Signal), so gcc -O2 would remove their writes.
   (
     output_decl.append
     "/* ___CONTEXT */\n\
     \typedef struct ___CONTEXT_struct _____CONTEXT; \n\
     \struct ___CONTEXT_struct {\n\
-    \  uint64_t code; \n\
-    \  _____CONTEXT *back; \n\
-    \};\n\
-    \extern uintptr_t top_context; \n\n"
-    output_glob.append "uintptr_t top_context; \n"
+    \  volatile uint64_t code; \n\
+    \  _____CONTEXT * volatile back; \n\
+    \};\n"
+    (is_cop).if {
+      // COP: one stack of contexts for each thread.
+      output_decl.append "extern LI_BASE_TLS uintptr_t top_context; \n\n"
+      output_glob.append "LI_BASE_TLS uintptr_t top_context; \n"
+    } else {
+      output_decl.append "extern uintptr_t top_context; \n\n"
+      output_glob.append "uintptr_t top_context; \n"
+    }
   )

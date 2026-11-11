@@ -1,0 +1,59 @@
+Header
+  + name := Ui_act
+/* An action of a `.key' file: its text in a menu, its commands (a script), the text of its
+   keys, and for a menu item which is a check box or a radio button, the name of the
+   function which tells if it is on (`chk', `rdo'). A separator of menu is an action
+   without text. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + text:String_alias
+  + cmd:String_alias
+  + key_text:String_alias
+  + check:String_alias
+  + radio:String_alias
+  + mouse:String_alias
+  + is_mute:Boolean
+  // What the program keeps on the action (its commands read once, ...).
+  + data:Clone
+  + check_data:Clone
+
+  - new:Self <-
+  ( + r:Self
+    r := clone
+    r.make
+    r
+  )
+
+  - make <-
+  (
+    text := ""
+    cmd := ""
+    key_text := ""
+    check := ""
+    radio := ""
+    mouse := ""
+  )
+
+  - is_separator:Boolean <- (text = "") && {cmd = ""}
+
+  - set_text t:String_alias <- ( text := t )
+  - set_cmd c:String_alias <- ( cmd := c )
+  - set_check c:String_alias <- ( check := c )
+  - set_radio c:String_alias <- ( radio := c )
+  - set_mouse m:String_alias <- ( mouse := m )
+  - set_mute b:Boolean <- ( is_mute := b )
+  - set_data d:Clone <- ( data := d )
+  - set_check_data d:Clone <- ( check_data := d )
+
+  - add_key_text t:String <-
+  (
+    String.tmp { tmp:String_buffer
+      tmp.copy key_text
+      (! tmp.is_empty).if { tmp.append " · " }
+      tmp.append t
+      key_text := tmp.to_string_alias
+    }
+  )

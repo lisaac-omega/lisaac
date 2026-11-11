@@ -1,5 +1,23 @@
 Header
   + name := Asm_builtin
+  /* TCC has no @__builtin_clzll. */
+  - include := `
+#if defined(__TINYC__)
+static int li_clzll(unsigned long long x)
+{ int n = 0;
+  while (!(x & (1ULL << 63))) { x <<= 1; n++; }
+  return n;
+}
+static int li_ctzll(unsigned long long x)
+{ int n = 0;
+  while (!(x & 1)) { x >>= 1; n++; }
+  return n;
+}
+#else
+#define li_clzll(x) __builtin_clzll(x)
+#define li_ctzll(x) __builtin_ctzll(x)
+#endif
+`
 Public
   - base_power_of_two (b:Int) :Int <-
   // Usually, b is supposed to be: 2 or 4 or 8 or 16 or 32 or 64
@@ -27,13 +45,24 @@ Public
     64 - clz u
   )
   
+  - ctz (x:Uint64) :Int <-
+  // Count Trailing Zeros
+  ( + result:Int
+    if (x = 0) then {
+      result := 64
+    } else {
+      result := `li_ctzll(@x)`:Int
+    }
+    result
+  )
+
   - clz (x:Uint64) :Int <-
   // Count Leading Zeros
   ( + result:Int
     if (x = 0) then {
       result := 64
     } else {
-      result := `__builtin_clzll(@x)`:Int
+      result := `li_clzll(@x)`:Int
     }
     result
   )

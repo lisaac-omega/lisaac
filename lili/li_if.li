@@ -1,0 +1,32 @@
+Header
+  + name := Li_if
+/* A @Boolean switch. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + cond:Li_node
+  + on_true:Li_node
+  + on_false:Li_node
+
+  - create c:Li_node then t:Li_node else e:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make c then t else e
+    result
+  )
+
+  - make c:Li_node then t:Li_node else e:Li_node <-
+  ( cond := c; on_true := t; on_false := e; )
+
+  - eval fp:Int :Int <-
+  (
+    (cond.eval fp != 0).if {
+      on_true.eval fp
+    } else {
+      on_false.eval fp
+    }
+    0
+  )

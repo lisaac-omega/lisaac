@@ -1,8 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + ca:C_array Char
-    ca := "data".to_external
-    Test.check_not_null ca
-  )

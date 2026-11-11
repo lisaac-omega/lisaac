@@ -76,7 +76,7 @@ Private
       out.at 0 put c;  out.at 1 put c
     } else {
       out.at 0 put (input.at 0)
-      out.at 1 put ((input.at 0.to_int * 3 + input.at 1 + 2)>>2)
+      out.at 1 put ((3*input.at 0 + input.at 1 + 2)>>2)
       i := 1
       {i < (w_lores-1)}.while_do {
         + n:Int
@@ -85,7 +85,7 @@ Private
         out.at (i*2+1) put ((n+input.at (i+1))>>2)
         i := i + 1
       }
-      out.at (i*2+0) put ((input.at (w_lores-2).to_int*3 + input.at (w_lores-1) + 2)>>2)
+      out.at (i*2+0) put ((3*input.at (w_lores-2) + input.at (w_lores-1) + 2)>>2)
       out.at (i*2+1) put ( input.at (w_lores-1))
       //STBI_NOTUSED(in_far)
     }
@@ -105,9 +105,8 @@ Private
       1.to (w_lores-1) do { i:Int
         t0 := t1
         t1 := 3*in_near.at i + in_far.at i
-        c := (3*t0 + t1 + 8) >> 4
-        out.at (i*2-1) put c
-        out.at (i*2  ) put c
+        out.at (i*2-1) put ((3*t0 + t1 + 8) >> 4)
+        out.at (i*2  ) put ((3*t1 + t0 + 8) >> 4)
       }
       out.at (w_lores*2-1) put ((t1+2)>>2)
     }

@@ -3,8 +3,41 @@ Header
 - include := `
 #include <signal.h>
 #include <unistd.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+/* Called on a stack overflow: the @handle slot. */
+static void (*li_signal_handler)(int);
+
+#ifdef _WIN32
+static LONG CALLBACK li_signal_veh(EXCEPTION_POINTERS *e) {
+  if (e->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW) li_signal_handler(SIGSEGV);
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
+/* The handler runs on its own stack: the one of the overflow is full. */
+static void li_signal_install(void) {
+#ifdef _WIN32
+  ULONG size = 65536;
+  SetThreadStackGuarantee(&size);
+  AddVectoredExceptionHandler(1, li_signal_veh);
+#else
+  stack_t sigstack;
+  struct sigaction act;
+  sigstack.ss_sp = malloc(SIGSTKSZ);
+  sigstack.ss_size = SIGSTKSZ;
+  sigstack.ss_flags = 0;
+  sigaltstack(&sigstack, NULL);
+  act.sa_flags = SA_ONSTACK;
+  sigemptyset(&act.sa_mask);
+  act.sa_handler = li_signal_handler;
+  sigaction(SIGSEGV, &act, NULL);
+#endif
+}
   `;
-    
+
 External,Public
 
   - handle s:Int32 <-
@@ -13,26 +46,19 @@ External,Public
   ]
   (
     Utils.is_debug_mode.if {
-      `lisaac_stack_print(10)`
+      // Skips the 10 last contexts, but not more than the existing ones: with gcc -O2,
+      // the chain of the contexts may be shorter.
+      `{ _____CONTEXT *u = (_____CONTEXT *)top_context; long n = 0; while (u != NULL && n < 10) { u = u->back; n++; } lisaac_stack_print(n); }`
       `print_string("Stack overflow (INFINITE RECURSION)\n")`
     }
     `_exit(EXIT_FAILURE)`
   )
-  
+
 Public
   - infinite_recursion <-
   (
     Utils.is_debug_mode.if {
-      `stack_t sigstack`
-      `struct sigaction act`
-      
-      `sigstack.ss_sp = malloc(SIGSTKSZ)`
-      `sigstack.ss_size = SIGSTKSZ`
-      `sigstack.ss_flags = 0`
-      `sigaltstack(&sigstack, NULL)`
-      `act.sa_flags = SA_ONSTACK`
-      `sigemptyset(&act.sa_mask)`
-      `act.sa_handler = handle`
-      `sigaction(SIGSEGV, &act, NULL)`
+      `li_signal_handler = (void (*)(int))handle`
+      `li_signal_install()`
     }
   )

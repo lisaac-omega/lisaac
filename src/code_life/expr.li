@@ -35,6 +35,12 @@ Public
 
   - is_constant:Boolean <- False
 
+  - is_pure:Boolean <- False
+
+  - is_reading v:Variable :Boolean <- True
+  // False if @v is surely not read by @self (default: unknown, so True).
+  // No side effect: may be dropped when its value is not used.
+
   //
   // Check type.
   //
@@ -161,7 +167,6 @@ Public
         result := to_import t pos p
       } else {        
         // Type Error
-        //crash;
         string_tmp.copy "Type `";
         t.append_name_in string_tmp
         string_tmp.append "' is invalid with `";
@@ -201,7 +206,6 @@ Public
     abstract
     NULL
   )
-  //[ ? {Result != NULL}; ]
     
   - execute_unlink:Instr <-
   (
@@ -209,7 +213,3 @@ Public
     NULL
   )
   
-  
-  
-  
-

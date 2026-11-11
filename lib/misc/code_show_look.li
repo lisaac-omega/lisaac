@@ -56,21 +56,34 @@ Public
     a
   )
 
+  // Scale of the whole look, which follows the size of the window (1 for
+  // the default size, see `Code_show_player.refresh'): the fonts and the
+  // fixed sizes of the widgets are multiplied by it.
+
+  - scale:Real32 := 1
+  - set_scale s:Real32 <- ( scale := s; )
+
+  - px v:Real32 :Real32 <- v * scale
+  // @v pixels at the default size.
+
   // Fonts:
 
   - mono:Int := -1
   - set_mono m:Int <- ( mono := m; )
 
-  - code_size:Real32 := 19
-  - set_code_size s:Real32 <- ( code_size := s; )
+  - code_base:Real32 := 19
+  - set_code_base s:Real32 <- ( code_base := s; )
+  // Size of the code at the default size, changed by the +/- keys.
 
-  - console_size:Real32 := 14
+  - code_size:Real32 <- code_base * scale
 
-  - ui_size:Real32 := 16
-  - small_size:Real32 := 13
-  - big_size:Real32 := 20
-  - list_size:Real32 := 22
-  - field_size:Real32 := 18
+  - console_size:Real32 <- 14 * scale
+
+  - ui_size:Real32 <- 16 * scale
+  - small_size:Real32 <- 13 * scale
+  - big_size:Real32 <- 20 * scale
+  - list_size:Real32 <- 22 * scale
+  - field_size:Real32 <- 18 * scale
 
 Private
 

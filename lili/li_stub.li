@@ -1,0 +1,501 @@
+Header
+  + name := Li_stub
+/*
+  The C of the externals: this is the only code which still needs a C compiler.
+  Each distinct external becomes a small function of a shared library. It only
+  depends on the externals of the program, and not on the program itself, so
+  this library comes from a cache nearly every time.
+*/
+Insert
+
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Private
+
+  - known:Hmap Int Key String_alias := new Hmap Int Key String_alias
+
+  - code:String_buffer := String_buffer.create 65536
+
+  - nodes:Array Li_extern := Array Li_extern .create_with_capacity 256
+
+  - count:Int
+
+  - arg_count:Int
+
+  - buf:String_buffer := String_buffer.create 256
+
+  - tmp:String_buffer := String_buffer.create 256
+
+  - decls:String_buffer := String_buffer.create 256
+
+  - tramp:String_buffer := String_buffer.create 256
+
+  - sizes:Hset Int := Hset Int .create
+
+  - c_type tf:Type_full in b:String_buffer <-
+  ( + tg:Type_generic
+    + r:Type
+    r := tf.raw
+    (r.prototype = NULL).if {
+      b # "void *"
+    }.elseif {Li_compiler.is_native_array r} then {
+      tg ?= r
+      c_type (tg.generic_list.first) in b
+      b # " *"
+    }.elseif {
+      (tf.is_flat) && {(! tf.is_flat_ref) || {tf.is_default_flat}} && {r.type_c != NULL}
+    } then {
+      b # (r.type_c)
+    }.elseif {(tf.is_flat) && {r.type_c != NULL}} then {
+      b # (r.type_c) # " *"
+    }.elseif {(r.type_c = NULL) && {! r.is_block} && {r != Type_null} && {r != Type_void}} then {
+      // A pointer on a structure: only its size is known by the C code.
+      + n:Int
+      n := Li_compiler.size_of_raw r
+      (sizes.has n).if_false {
+        sizes.fast_add n
+        decls # "typedef struct { char b[" # n # "]; } lili_s" # n # ";\n"
+      }
+      b # "lili_s" # n # " *"
+    } else {
+      b # "void *"
+    }
+  )
+
+  - put_arg i:Int type tf:Type_full <-
+  ( + k:Int
+    k := Li_compiler.kind_of tf
+    (k >= 8).if {
+      (k = 11).if {
+        buf # "(*(void **)a[" # i # "])"
+      }.elseif {k = 9} then {
+        buf # "(*(double *)a[" # i # "])"
+      } else {
+        buf # "(("
+        c_type tf in buf
+        buf # ")*(double *)a[" # i # "])"
+      }
+    } else {
+      buf # "(*("
+      c_type tf in buf
+      buf # " *)a[" # i # "])"
+    }
+  )
+
+Public
+
+  //
+  // A C scope which contains real instructions, as in:
+  //   `{time_t t = time(NULL)`
+  //   res := create (`t`:Int)
+  //   `}`
+  // Its C variables move to the level of the file, with a name of their own.
+  //
+
+  - scope_count:Int
+
+  - renames:Hmap String_alias Key String_alias := new Hmap String_alias Key String_alias
+
+  - rewritten:Hmap String_alias Key String_alias := new Hmap String_alias Key String_alias
+
+  - is_id_char c:Char :Boolean <- (c.is_letter_or_digit) || {c = '_'}
+
+  - is_decl st:String_buffer :Boolean <-
+  // `st' looks like `type name', and not like `name(...)' or `name = value'.
+  ( + i:Int
+    + result:Boolean
+    + w:String_alias
+    i := st.lower
+    {(i <= st.upper) && {is_id_char (st.at i)}}.while_do { i := i + 1; }
+    (i > st.lower).if {
+      tmp.clear
+      (st.lower).to (i - 1) do { n:Int
+        tmp.add_last (st.at n)
+      }
+      w := tmp.to_string_alias
+      {(i <= st.upper) && {st.at i = ' '}}.while_do { i := i + 1; }
+      (i <= st.upper).if {
+        result := (is_id_char (st.at i)) || {st.at i = '*'}
+      }
+      ((w = "return") || {w = "asm"} || {w = "__asm__"} || {w = "else"}).if {
+        result := False
+      }
+    }
+    result
+  )
+
+  - declare st:String_buffer in out:String_buffer <-
+  // Declare the variables of `st', and leave its initialization in `out'.
+  ( + eq,up,i,beg,end,first:Int
+    + typ,name,suffix:String_alias
+    + var:String_buffer
+
+    var := String_buffer.create 64
+    eq := st.index_of '=' since (st.lower)
+    up := eq - 1
+    (eq > st.upper).if { up := st.upper; }
+    // The first declarator: `up' goes back over the array bounds.
+    i := up
+    {(i > st.lower) && {st.at i = ' '}}.while_do { i := i - 1; }
+    first := st.index_of ',' since (st.lower)
+    (first > up).if { first := i + 1; }
+    i := first - 1
+    {(i > st.lower) && {st.at i = ' '}}.while_do { i := i - 1; }
+    (st.at i = ']').if {
+      {(i > st.lower) && {st.at i != '['}}.while_do { i := i - 1; }
+      i := i - 1
+    }
+    end := i
+    {(i >= st.lower) && {is_id_char (st.at i)}}.while_do { i := i - 1; }
+    beg := i + 1
+    tmp.clear
+    (st.lower).to (beg - 1) do { n:Int
+      tmp.add_last (st.at n)
+    }
+    typ := tmp.to_string_alias
+    {beg <= up}.while_do {
+      {(beg <= up) && {(st.at beg = ' ') || {st.at beg = ','} || {st.at beg = '*'}}}.while_do { beg := beg + 1; }
+      end := beg
+      {(end <= up) && {is_id_char (st.at end)}}.while_do { end := end + 1; }
+      tmp.clear
+      beg.to (end - 1) do { n:Int
+        tmp.add_last (st.at n)
+      }
+      name := tmp.to_string_alias
+      tmp.clear
+      {(end <= up) && {st.at end != ','}}.while_do {
+        tmp.add_last (st.at end)
+        end := end + 1
+      }
+      suffix := tmp.to_string_alias
+      (name.is_empty).if_false {
+        var.clear
+        var # "lili_v" # scope_count # '_' # name
+        renames.at name put (var.to_string_alias)
+        (typ.has_substring "static").if_false { decls # "static "; }
+        decls # typ # var # suffix # ";\n"
+      }
+      beg := end + 1
+    }
+    (eq <= st.upper).if {
+      out # name # ' '
+      eq.to (st.upper) do { n:Int
+        out.add_last (st.at n)
+      }
+      out # "; "
+    }
+  )
+
+  - is_declaration txt:String_alias :Boolean <-
+  ( + st:String_buffer
+    st := String_buffer.create (txt.count)
+    st # txt
+    is_decl st
+  )
+
+  - rewrite txt:String_alias <-
+  ( + i,j:Int
+    + st,out:String_buffer
+    + go_on:Boolean
+    st := String_buffer.create 128
+    out := String_buffer.create 128
+    i := txt.lower
+    {(i <= txt.upper) && {(txt.at i = ' ') || {txt.at i = '\n'} || {txt.at i = '{'}}}.while_do { i := i + 1; }
+    go_on := True
+    {(go_on) && {i <= txt.upper}}.while_do {
+      j := txt.index_of ';' since i
+      st.clear
+      i.to ((j - 1).min (txt.upper)) do { n:Int
+        st.add_last (txt.at n)
+      }
+      (is_decl st).if {
+        declare st in out
+        i := j + 1
+        {(i <= txt.upper) && {(txt.at i = ' ') || {txt.at i = '\n'}}}.while_do { i := i + 1; }
+      } else {
+        go_on := False
+      }
+    }
+    (go_on).if {
+      out # "(void)0"
+    } else {
+      i.to (txt.upper) do { n:Int
+        out.add_last (txt.at n)
+      }
+    }
+    // The end of the scope can be in the same text.
+    (Li_compiler.brace_balance (out.to_string_alias) < 0).if {
+      out.at (out.last_index_of '}') put ' '
+    }
+    rewritten.at txt put (out.to_string_alias)
+  )
+
+  - rename_in txt:String_alias :String_alias <-
+  // `txt' with the new names, out of the C strings.
+  ( + i,b:Int
+    + in_string:Boolean
+    + w:String_alias
+    + out:String_buffer
+    out := String_buffer.create (txt.count + 32)
+    i := txt.lower
+    {i <= txt.upper}.while_do {
+      (in_string).if {
+        out.add_last (txt.at i)
+        ((txt.at i = '"') && {txt.at (i - 1) != '\\'}).if {
+          in_string := False
+        }
+        i := i + 1
+      }.elseif {txt.at i = '"'} then {
+        in_string := True
+        out.add_last '"'
+        i := i + 1
+      }.elseif {is_id_char (txt.at i)} then {
+        b := i
+        {(i <= txt.upper) && {is_id_char (txt.at i)}}.while_do { i := i + 1; }
+        tmp.clear
+        b.to (i - 1) do { n:Int
+          tmp.add_last (txt.at n)
+        }
+        w := tmp.to_string_alias
+        (renames.has w).if {
+          out # (renames.at w)
+        } else {
+          out # w
+        }
+      } else {
+        out.add_last (txt.at i)
+        i := i + 1
+      }
+    }
+    out.to_string_alias
+  )
+
+  - open_scope <-
+  (
+    scope_count := scope_count + 1
+    renames.clear
+    rewritten.clear
+  )
+
+  - close_scope <-
+  (
+    renames.clear
+    rewritten.clear
+  )
+
+  - begin <-
+  (
+    buf.clear
+    arg_count := 0
+  )
+
+  - put e:External_c into target:Local <-
+  // The text of `e', with the value going to `target' if it is not `NULL'.
+  ( + beg,idx,k:Int
+    + txt:String_alias
+    + tf:Type_full
+
+    tf := e.static_type
+    k := Li_compiler.kind_of tf
+    (target != NULL).if {
+      (k >= 8).if {
+        buf # "*(double *)a[" # arg_count # "] = (double)("
+      } else {
+        buf # "*(int64_t *)a[" # arg_count # "] = (int64_t)(("
+        c_type tf in buf
+        buf # ")("
+      }
+      arg_count := arg_count + 1
+    }.elseif {tf.raw = Type_void} then {
+      // Nothing.
+    }.elseif {k >= 8} then {
+      buf # "*(double *)r = (double)("
+    } else {
+      buf # "*r = (int64_t)(("
+      c_type tf in buf
+      buf # ")("
+    }
+    txt := e.code
+    (rewritten.has txt).if {
+      txt := rewritten.at txt
+    }
+    (renames.is_empty).if_false {
+      txt := rename_in txt
+    }
+    (e.access_list != NULL).if {
+      beg := txt.lower
+      idx := txt.index_of '@' since beg
+      (e.access_list.lower).to (e.access_list.upper) do { j:Int
+        beg.to (idx-1) do { n:Int
+          buf.add_last (txt.at n)
+        }
+        beg := idx + 1
+        put_arg arg_count type (e.access_list.at j.static_type)
+        arg_count := arg_count + 1
+        idx := txt.index_of '@' since beg
+      }
+      beg.to (txt.upper) do { n:Int
+        buf.add_last (txt.at n)
+      }
+    } else {
+      buf # txt
+    }
+    (tf.raw = Type_void).if {
+      // A C scope can be opened or closed by the text.
+      ((! buf.is_empty) && {buf.last != '{'} && {buf.last != '}'}).if {
+        buf # ";"
+      }
+    }.elseif {k >= 8} then {
+      buf # ");"
+    } else {
+      buf # "));"
+    }
+    buf.add_last ' '
+  )
+
+  - finish:Int <-
+  ( + txt:String_alias
+    + result:Int
+    txt := buf.to_string_alias
+    (known.has txt).if {
+      result := known.at txt
+    } else {
+      result := count
+      count := count + 1
+      known.at txt put result
+      code # "static void lili_x" # result # "(int64_t *a,int64_t *r) { " # txt # " }\n"
+    }
+    result
+  )
+
+  - add_node n:Li_extern <- ( nodes.add_last n; )
+
+  // Called back by the C code, for the slots of the `External' section.
+  - add_trampoline p:Profil index i:Int <-
+  ( + a:Local
+    + res:Local
+    + n:Int
+    + ret:String_buffer
+
+    (p.result_list != NULL).if {
+      (p.result_list.lower).to (p.result_list.upper) do { j:Int
+        ((res = NULL) && {p.result_list.at j != NULL}).if {
+          res := p.result_list.at j
+        }
+      }
+    }
+    ret := String_buffer.create 32
+    (res = NULL).if {
+      ret # "void"
+    } else {
+      c_type (res.type) in ret
+    }
+    tramp # ret # ' ' # (p.name) # '('
+    (p.argument_list.lower).to (p.argument_list.upper) do { j:Int
+      a := p.argument_list.at j
+      (a != NULL).if {
+        (n != 0).if { tramp # ','; }
+        c_type (a.type) in tramp
+        tramp # " v" # n
+        n := n + 1
+      }
+    }
+    tramp # ") { int64_t a[" # (n + 1) # "]; int64_t r = 0; "
+    0.to (n - 1) do { j:Int
+      tramp # "a[" # j # "] = (int64_t)v" # j # "; "
+    }
+    tramp # "lili_callback(" # i # ",a,&r); "
+    (res != NULL).if {
+      tramp # "return (" # ret # ")r; "
+    }
+    tramp # "}\n"
+  )
+
+  - load dir:String_alias argc c:Int argv v:Int callback cb:Int <-
+  ( + full:String_buffer
+    + h:Uint64
+    + path,src:String_buffer
+    + st,st2:C_array Char
+    + lib,table,sym,n:Int
+    + cmd:String_buffer
+    + opts:String_alias
+    + fd:Pointer
+
+    full := String_buffer.create (output_decl.count + output_glob.count + code.count + 4096)
+    full # "#include <stdint.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\
+    \#include <math.h>\n#include <unistd.h>\n\
+    \char lili_exe[4096];\n\
+    \static ssize_t lili_readlink(const char *p,char *b,size_t n) {\n\
+    \  if (strcmp(p,\"/proc/self/exe\") != 0) return readlink(p,b,n);\n\
+    \  strncpy(b,lili_exe,n); return strlen(lili_exe);\n\
+    \}\n\
+    \#define readlink lili_readlink\n\
+    \void (*lili_callback)(int64_t,int64_t *,int64_t *);\n\
+    \int argc; char **argv; int arg_count; char **arg_vector; void *table_type[1];\n"
+    full # output_decl # decls # tramp # output_glob
+    full # "\nint print_string(char *str) { while (*str != 0) { fputc(*str,stdout); str++; }; return 0; }\n\
+    \void lisaac_stack_print(long n) { }\n\n"
+    full # code
+    full # "\nvoid *lili_table[] = {"
+    0.to (count - 1) do { j:Int
+      full # "(void *)lili_x" # j # ','
+    }
+    full # "(void *)0};\n"
+    st := full.to_external
+    n := full.count
+    h := `lili_hash((char *)(@st),@n)`:(Uint64)
+    path := String_buffer.create 256
+    path # dir # '/'
+    h.to_hexadecimal_in path
+    src := String_buffer.create 256
+    src # path # ".c"
+    path # ".so"
+    st := path.to_external
+    (`access(@st,R_OK)`:(Int) != 0).if {
+      fd := File_utils.open_write src
+      File_utils.write fd with full size (full.count)
+      File_utils.close fd
+      opts := Lip_code.get_string "lib_i"
+      cmd := String_buffer.create 512
+      cmd # "gcc -shared -fPIC -O0 -w -D_GNU_SOURCE "
+      (opts != NULL).if { cmd # opts # ' '; }
+      cmd # src # " -o " 
+      cmd # path
+        opts := Lip_code.get_string "lib_a"
+      (opts != NULL).if { cmd # ' ' # opts; }
+      opts := Lip_code.get_string "lib_lxx"
+      (opts != NULL).if { cmd # ' ' # opts; }
+      cmd # " -lm"
+      st2 := cmd.to_external
+      (`system(@st2)`:(Int) != 0).if {
+        "lili: the C compiler fails on the externals.\n".print
+        exit 1
+      }
+    }
+    st := path.to_external
+    lib := `(int64_t)dlopen(@st,RTLD_LAZY|RTLD_GLOBAL)`:(Int)
+    (lib = 0).if {
+      `fprintf(stderr,"lili: %s\n",dlerror())`;
+      exit 1
+    }
+    table := `(int64_t)dlsym((void *)@lib,"lili_table")`:(Int)
+    nodes.foreach { n:Li_extern
+      + idx,f:Int
+      idx := n.index
+      f := `((int64_t *)@table)[@idx]`:(Int)
+      n.set_fn f
+    }
+    sym := `(int64_t)dlsym((void *)@lib,"lili_callback")`:(Int)
+    `*(int64_t *)@sym = @cb`;
+    // For the interpreted program, its executable is next to its source.
+    sym := `(int64_t)dlsym((void *)@lib,"lili_exe")`:(Int)
+    `strncpy((char *)@sym,((char **)@v)[0],4095)`;
+    sym := `(int64_t)dlsym((void *)@lib,"arg_count")`:(Int)
+    `*(int *)@sym = @c`;
+    sym := `(int64_t)dlsym((void *)@lib,"argc")`:(Int)
+    `*(int *)@sym = @c`;
+    sym := `(int64_t)dlsym((void *)@lib,"arg_vector")`:(Int)
+    `*(char ***)@sym = (char **)@v`;
+    sym := `(int64_t)dlsym((void *)@lib,"argv")`:(Int)
+    `*(char ***)@sym = (char **)@v`;
+  )

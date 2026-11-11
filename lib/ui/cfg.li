@@ -1,0 +1,392 @@
+Header
+  + name := Cfg
+/* A value of a configuration file (`.cfg', `.key', `.sty' of elit): a string ("..." or
+   '...'), a number, @True or @False, `null', a list `[ ... ]' or an object `{ key: value, ...}'.
+   In an object, a key may come several times (`MENU' in a `.key'); the order is kept.
+   A file is the inside of an object, without the braces. Comments `//' and `/* */',
+   commas before a closing bracket are allowed. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  - k_null:Int   := 0
+  - k_string:Int := 1
+  - k_number:Int := 2
+  - k_bool:Int   := 3
+  - k_list:Int   := 4
+  - k_object:Int := 5
+
+  + kind:Int
+  + str:String_alias
+  + number:Real64
+  + bool:Boolean
+  + items:Array Cfg
+  + keys:Array String_alias
+
+  - new_kind k:Int :Self <-
+  ( + r:Self
+    r := clone
+    r.make k
+    r
+  )
+
+  - make k:Int <-
+  (
+    kind := k
+    str := ""
+    items := Array Cfg.create_with_capacity 4
+    keys := Array String_alias.create_with_capacity 4
+  )
+
+  - is_null:Boolean <- kind = k_null
+  - is_string:Boolean <- kind = k_string
+  - is_number:Boolean <- kind = k_number
+  - is_list:Boolean <- kind = k_list
+  - is_object:Boolean <- kind = k_object
+
+  - count:Int <- items.count
+  - item i:Int :Cfg <- items.at i
+  - key i:Int :String_alias <- keys.at i
+
+  - to_int:Int <- number.to_int
+  - to_real:Real32 <- number.to_real32
+
+  - get k:String :Cfg <-
+  // The first value of the key @k, or @NULL.
+  ( + i:Int
+    + r:Cfg
+    {(i < keys.count) && {r = NULL}}.while_do {
+      (keys.at i == k).if { r := items.at i }
+      i := i + 1
+    }
+    r
+  )
+
+  - string k:String default d:String_alias :String_alias <-
+  ( + c:Cfg
+    + r:String_alias
+    c := get k
+    ((c != NULL) && {c.is_string}).if { r := c.str } else { r := d }
+    r
+  )
+
+  - int k:String default d:Int :Int <-
+  ( + c:Cfg
+    + r:Int
+    c := get k
+    ((c != NULL) && {c.is_number}).if { r := c.to_int } else { r := d }
+    r
+  )
+
+  - real k:String default d:Real32 :Real32 <-
+  ( + c:Cfg
+    + r:Real32
+    c := get k
+    ((c != NULL) && {c.is_number}).if { r := c.to_real } else { r := d }
+    r
+  )
+
+  - boolean k:String default d:Boolean :Boolean <-
+  ( + c:Cfg
+    + r:Boolean
+    c := get k
+    ((c != NULL) && {c.kind = k_bool}).if { r := c.bool } else { r := d }
+    r
+  )
+
+  //
+  // Construction (to write a file).
+  //
+
+  - add k:String_alias value v:Cfg <-
+  (
+    keys.add_last k
+    items.add_last v
+  )
+
+  - add_item v:Cfg <- ( items.add_last v )
+
+  - new_string s:String :Cfg <-
+  ( + r:Cfg
+    r := new_kind k_string
+    r.set_str (s.to_string_alias)
+    r
+  )
+
+  - new_number n:Real64 :Cfg <-
+  ( + r:Cfg
+    r := new_kind k_number
+    r.set_number n
+    r
+  )
+
+  - new_bool b:Boolean :Cfg <-
+  ( + r:Cfg
+    r := new_kind k_bool
+    r.set_bool b
+    r
+  )
+
+  - set_str s:String_alias <- ( str := s )
+  - set_number n:Real64 <- ( number := n )
+  - set_bool b:Boolean <- ( bool := b )
+
+  //
+  // Reading.
+  //
+
+  - error:String_buffer := String_buffer.create 64
+
+  - parse_file s:String :Cfg <-
+  // The content of a file (an object without braces), or @NULL with @error.
+  ( + r:Cfg
+    error.clear
+    src := s
+    cur := 0
+    r := new_kind k_object
+    read_members r until '\0'
+    (error.is_empty).if_false { r := NULL }
+    r
+  )
+
+  - load path:String :Cfg <-
+  ( + t:String_buffer
+    + f:Pointer
+    + sz:Int
+    + r:Cfg
+    f := File_utils.open_read path
+    (f != NULL).if {
+      sz := File_utils.size f
+      t := String_buffer.create (sz + 1)
+      File_utils.read f in t size sz
+      File_utils.close f
+      r := parse_file t
+      (r = NULL).if { Out # "Error in `" # path # "': " # error # '\n' }
+    }
+    r
+  )
+
+  //
+  // Writing.
+  //
+
+  - append_file_in b:String_buffer <-
+  // Write @self (an object) as a file: its members without braces.
+  (
+    0.to (count - 1) do { i:Int
+      b.append (keys.at i)
+      b.append " : "
+      items.at i.append_in b indent 0
+      (i < count - 1).if { b.add_last ',' }
+      b.add_last '\n'
+    }
+  )
+
+  - append_in b:String_buffer indent n:Int <-
+  (
+    (kind = k_string).if {
+      b.add_last '\"'
+      str.foreach { c:Char
+        ((c = '\"') || {c = '\\'}).if { b.add_last '\\' }
+        b.add_last c
+      }
+      b.add_last '\"'
+    }.elseif {kind = k_number} then {
+      (number = number.to_int64.to_real64).if {
+        number.to_int64.append_in b
+      } else {
+        number.append_in b decimal (decimals_of number)
+      }
+    }.elseif {kind = k_bool} then {
+      b.append (bool.ok "true" or "false")
+    }.elseif {kind = k_null} then {
+      b.append "null"
+    }.elseif {kind = k_list} then {
+      b.append "[\n"
+      0.to (count - 1) do { i:Int
+        b.extend_multiple ' ' by (n + 2)
+        items.at i.append_in b indent (n + 2)
+        (i < count - 1).if { b.add_last ',' }
+        b.add_last '\n'
+      }
+      b.extend_multiple ' ' by n
+      b.add_last ']'
+    } else {
+      b.append "{\n"
+      0.to (count - 1) do { i:Int
+        b.extend_multiple ' ' by (n + 2)
+        b.append (keys.at i)
+        b.append " : "
+        items.at i.append_in b indent (n + 2)
+        (i < count - 1).if { b.add_last ',' }
+        b.add_last '\n'
+      }
+      b.extend_multiple ' ' by n
+      b.add_last '}'
+    }
+  )
+
+  - decimals_of x:Real64 :Int <-
+  // The fewest decimals (4 at least, as elit) which give the same @Real32 when they are
+  // read again: a place in pixels comes back exactly.
+  ( + d:Int
+    d := 4
+    {(d < 9) && {`({ char s_[64]; snprintf(s_,64,"%.*f",(int)@d,(double)@x); (float)strtod(s_,NULL) != (float)@x; })`:Int != 0}}.while_do { d := d + 1 }
+    d
+  )
+
+Private
+
+  - src:String
+  - cur:Int
+
+  - last:Char <-
+  ( + r:Char
+    (cur < src.count).if { r := src.at cur }
+    r
+  )
+
+  - look w:String :Boolean <-
+  ( + r:Boolean
+    + i:Int
+    r := cur + w.count <= src.count
+    {r && {i < w.count}}.while_do {
+      r := src.at (cur + i) = w.at i
+      i := i + 1
+    }
+    r
+  )
+
+  - err m:String <-
+  (
+    (error.is_empty).if {
+      error # m # " (line " # (src.occurrences '\n' until (cur.min (src.upper))) + 1 # ")"
+    }
+    cur := src.count
+  )
+
+  - skip_blank <-
+  ( + again:Boolean
+    again := True
+    {again}.while_do {
+      {(cur < src.count) && {(last = ' ') || {last = '\n'} || {last = '\r'} || {last = '\t'}}}.while_do { cur := cur + 1 }
+      ((cur + 1 < src.count) && {last = '/'} && {src.at (cur+1) = '/'}).if {
+        {(cur < src.count) && {last != '\n'}}.while_do { cur := cur + 1 }
+      }.elseif {(cur + 1 < src.count) && {last = '/'} && {src.at (cur+1) = '*'}} then {
+        cur := cur + 2
+        {(cur + 1 < src.count) && {(last != '*') || {src.at (cur+1) != '/'}}}.while_do { cur := cur + 1 }
+        cur := (cur + 2).min (src.count)
+      } else {
+        again := False
+      }
+    }
+  )
+
+  - read_members obj:Cfg until close:Char <-
+  // { KEY ':' VALUE ',' } up to @close.
+  ( + k:String_alias
+    + v:Cfg
+    skip_blank
+    {(cur < src.count) && {last != close}}.while_do {
+      k := read_key
+      skip_blank
+      (last = ':').if { cur := cur + 1 } else { err "`:' needed" }
+      v := read_value
+      obj.add k value v
+      skip_blank
+      (last = ',').if { cur := cur + 1; skip_blank }.elseif {last != close} then { err "`,' needed" }
+    }
+    (close != '\0').if {
+      (last = close).if { cur := cur + 1 } else { err "end of object needed" }
+    }
+  )
+
+  - read_key:String_alias <-
+  ( + r:String_alias
+    (last = '\"').if {
+      r := read_string '\"'
+    } else {
+      String.tmp { tmp:String_buffer
+        {(cur < src.count) && {last.is_identifier}}.while_do {
+          tmp.add_last last
+          cur := cur + 1
+        }
+        (tmp.is_empty).if { err "key needed" }
+        r := tmp.to_string_alias
+      }
+    }
+    r
+  )
+
+  - read_value:Cfg <-
+  ( + r:Cfg
+    skip_blank
+    (last = '{').if {
+      cur := cur + 1
+      r := new_kind k_object
+      read_members r until '}'
+    }.elseif {last = '['} then {
+      cur := cur + 1
+      r := new_kind k_list
+      skip_blank
+      {(cur < src.count) && {last != ']'}}.while_do {
+        r.add_item read_value
+        skip_blank
+        (last = ',').if { cur := cur + 1; skip_blank }.elseif {last != ']'} then { err "`,' needed" }
+      }
+      (last = ']').if { cur := cur + 1 } else { err "`]' needed" }
+    }.elseif {(last = '\"') || {last = '\''}} then {
+      r := new_kind k_string
+      r.set_str (read_string last)
+    }.elseif {last.is_digit || {last = '-'} || {last = '.'}} then {
+      r := new_kind k_number
+      r.set_number read_number
+    }.elseif {look "true"} then {
+      cur := cur + 4
+      r := new_bool True
+    }.elseif {look "false"} then {
+      cur := cur + 5
+      r := new_bool False
+    }.elseif {look "null"} then {
+      cur := cur + 4
+      r := new_kind k_null
+    } else {
+      err "value needed"
+      r := new_kind k_null
+    }
+    r
+  )
+
+  - read_string q:Char :String_alias <-
+  ( + r:String_alias
+    + c:Char
+    cur := cur + 1
+    String.tmp { tmp:String_buffer
+      {(cur < src.count) && {last != q}}.while_do {
+        c := last
+        ((c = '\\') && {cur + 1 < src.count}).if {
+          cur := cur + 1
+          c := last
+          (c = 'n').if { c := '\n' }.elseif {c = 't'} then { c := '\t' }
+        }
+        tmp.add_last c
+        cur := cur + 1
+      }
+      (last = q).if { cur := cur + 1 } else { err "end of string needed" }
+      r := tmp.to_string_alias
+    }
+    r
+  )
+
+  - read_number:Real64 <-
+  ( + r:Real64
+    String.tmp { tmp:String_buffer
+      {(cur < src.count) && {last.is_digit || {last = '-'} || {last = '.'} || {last = 'e'} || {last = 'E'}}}.while_do {
+        tmp.add_last last
+        cur := cur + 1
+      }
+      (tmp.is_integer).if { r := tmp.to_int.to_real64 } else { r := tmp.to_real64 }
+    }
+    r
+  )

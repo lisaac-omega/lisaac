@@ -4,8 +4,11 @@ Header
   
 Inherit
   + parent_win:Flat Win
-  - parent_any:Any := Any
 //  + parent_box:Flat BOX
+  
+Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
   
 Public
   
@@ -14,13 +17,13 @@ Public
     + w,h:Real32
     + blk:{Int; Win}
     win := Page.cur_pg.window
-    init win
+    init_win win
     (width,height) := (800,500)
     (xo,yo) := ((win.width-width)/2, (win.height-height)/2)
     old_focus := focus
     focus := self
     (child.is_empty).if {
-      blk := {d:Int; Win.new.init NULL.size (d,d).set size_locked}
+      blk := {d:Int; Win.new.init_win NULL.size (d,d).set size_locked}
       (w,h) := (150,96)
       (
         (

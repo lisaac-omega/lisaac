@@ -27,13 +27,6 @@ Public
     comment_chapter := c
   )
 
-  + stat_shorter:Int8
-
-  - set_stat_shorter s:Int8 <-
-  (
-    stat_shorter := s
-  )
-
   //
   // Profil
   //
@@ -74,17 +67,6 @@ Public
         semantic_error (position,"Incorrect type for inheritance slot.")
       }
     }
-    /*
-    "ITM_SLOT : ".print
-    name.print; ' '.print
-    ( +tmu:ITM_TYPE_MULTI
-      tmu ?= t
-      (tmu != NULL).if {
-        tmu.count.print
-      }
-    )
-    '\n'.print
-    */
     result_type := t
   )
 
@@ -118,17 +100,6 @@ Public
     (self != other).if {
       (result_type != other.result_type).if {
         string_tmp.copy "Invariance type result invalid."; // ("
-        //type.to_run.append_name_in string_tmp
-        //string_tmp.append " != "
-        //other.type.to_run.append_name_in string_tmp
-        //string_tmp.append ")."
-        /*
-        ( + tm:ITM_TYPE_PARAMETER
-          tm ?= other.result_type
-          tm.to_run_for .print
-          '\n'.print
-        )
-        */
         Position.put_error warning text string_tmp
         position.put_position
         (other.position).put_position
@@ -217,7 +188,6 @@ Public
     (affect = '<').if {
       value := e
     } else {
-      //semantic_error (position,"not_yet_implemented")
       value := default_value e in p
     }
   )
@@ -317,10 +287,7 @@ Private
     s.set_argument_list larg
     s.set_result_type result_type
     
-    
-    //t.slot_list.fast_put s to (s.name)
     t.slot_list.at(s.name) put s 
-    
     
     (t.generic_count = 0).if {
       a := Itm_prototype.create (v.position) type (Itm_type_simple.get (t.name))

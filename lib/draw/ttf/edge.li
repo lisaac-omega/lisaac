@@ -1,26 +1,14 @@
 Header
   + name := Edge
+/* @stbtt__edge of stb_truetype v1.24: an edge of the outline, from (@x0,@y0)
+   to (@x1,@y1) with @y0 <= @y1 (@invert gives the original direction). */
 Inherit
   
   - parent_clone:Clone := Clone
 
-Private  
+Public  
   
-  - stock:Array Edge := Array Edge.create_with_capacity 32
-
-  - new:Edge <-
-  ( + result:Edge
-    (stock.is_empty).if {
-      result := Edge.clone
-    } else {
-      result := stock.pop
-    }
-    result
-  )
-  
-Public
-  
-  - create:Edge <- new
+  - new:Self <- clone
   
   + x0:Real32
   + y0:Real32
@@ -29,25 +17,10 @@ Public
   + invert:Boolean
   
   - set_y0 y:Real32 <- ( y0 := y; )
-    
-  - create i:Boolean x0 px0:Real32 y0 py0:Real32 
-  x1 px1:Real32 y1 py1:Real32 :Edge <-
-  ( + result:Edge
-    result := new
-    result.make i x0 px0 y0 py0 x1 px1 y1 py1
-    result
-  )
   
-  - free <- stock.add_last self
-  
-Private
-  
-  - make i:Boolean x0 px0:Real32 y0 py0:Real32 
-  x1 px1:Real32 y1 py1:Real32 :Self <-
+  - make i:Boolean x0 px0:Real32 y0 py0:Real32 x1 px1:Real32 y1 py1:Real32 <-
   (
     invert := i
     (x0,y0) := (px0,py0)
     (x1,y1) := (px1,py1)
-    self
   )
-  

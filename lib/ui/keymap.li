@@ -1,0 +1,192 @@
+Header
+  + name := Keymap
+/* The content of a `.key' file: the menus (`MENU'), the lists of actions of the
+   commands in progress (`SUBACT', a search for example), the actions without menu (`ACT'),
+   and the planes of the virtual keyboard (`KEYMAP').
+   @key follows the typed keys in the active list of shortcuts: the one of all the actions,
+   or the one of a @SUBACT while a command is in progress. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + menu_names:Array String_alias
+  + menus:Array (Array Ui_act)
+  + subact_names:Array String_alias
+  + subacts:Array (Array Ui_act)
+  + acts:Array Ui_act
+  + vkeyb:Array (Array String_alias)
+
+  + shortcuts:Array Ui_shortcut
+  + sub_shortcuts:Array (Array Ui_shortcut)
+  + active:Array Ui_shortcut
+  + error:String_buffer
+
+  - new:Self <-
+  ( + r:Self
+    r := clone
+    r.make
+    r
+  )
+
+  - make <-
+  (
+    menu_names := Array String_alias.create_with_capacity 8
+    menus := Array (Array Ui_act).create_with_capacity 8
+    subact_names := Array String_alias.create_with_capacity 8
+    subacts := Array (Array Ui_act).create_with_capacity 8
+    acts := Array Ui_act.create_with_capacity 64
+    vkeyb := Array (Array String_alias).create_with_capacity 4
+    shortcuts := Array Ui_shortcut.create_with_capacity 128
+    sub_shortcuts := Array (Array Ui_shortcut).create_with_capacity 8
+    active := shortcuts
+    error := String_buffer.create 64
+  )
+
+  - load path:String :Boolean <-
+  ( + c:Cfg
+    c := Cfg.load path
+    (c != NULL).if { read c }
+    (c != NULL) && {error.is_empty}
+  )
+
+  - read c:Cfg <-
+  ( + o:Cfg
+    0.to (c.count - 1) do { i:Int
+      o := c.item i
+      (c.key i = "MENU").if {
+        menu_names.add_last (o.string "name" default "")
+        menus.add_last (read_acts (o.get "ACT") in shortcuts)
+      }.elseif {c.key i = "SUBACT"} then {
+        subact_names.add_last (o.string "name" default "")
+        sub_shortcuts.add_last (Array Ui_shortcut.create_with_capacity 8)
+        subacts.add_last (read_acts (o.get "ACT") in (sub_shortcuts.last))
+      }.elseif {c.key i = "ACT"} then {
+        acts.append_collection (read_acts o in shortcuts)
+      }.elseif {c.key i = "KEYMAP"} then {
+        0.to (o.count - 1) do { j:Int
+          vkeyb.add_last (Array String_alias.create_with_capacity 40)
+          0.to (o.item j.count - 1) do { k:Int
+            vkeyb.last.add_last (o.item j.item k.str)
+          }
+        }
+      }
+    }
+    sort shortcuts
+    sub_shortcuts.foreach { l:Array Ui_shortcut; sort l }
+  )
+
+  - subact n:String :Array Ui_act <-
+  ( + i:Int
+    + r:Array Ui_act
+    i := index_of_subact n
+    (i >= 0).if { r := subacts.at i }
+    r
+  )
+
+  //
+  // Typed keys.
+  //
+
+  - use_subact n:String <-
+  // While a command is in progress: only the shortcuts of its @SUBACT (none if it has none).
+  ( + i:Int
+    reset
+    i := index_of_subact n
+    (i >= 0).if { active := sub_shortcuts.at i } else { active := empty }
+  )
+
+  - use_main <-
+  (
+    reset
+    active := shortcuts
+  )
+
+  - is_in_sequence:Boolean <-
+  // A sequence of keys is started (`Esc' before `b').
+  ( + r:Boolean
+    active.foreach { s:Ui_shortcut; r := r || {s.is_started} }
+    r
+  )
+
+  - key s:String cmd c:Uint8 :Ui_act <-
+  // The action whose sequence ends with this key, or @NULL. All the shortcuts follow the
+  // key; the longest sequences are first.
+  ( + r:Ui_act
+    active.foreach { sc:Ui_shortcut
+      ((sc.feed s cmd c) && {r = NULL}).if { r := sc.act }
+    }
+    (r != NULL).if { reset }
+    r
+  )
+
+  - reset <- ( active.foreach { sc:Ui_shortcut; sc.reset } )
+
+  - act_of_mouse m:String :Ui_act <-
+  ( + r:Ui_act
+    acts.foreach { a:Ui_act
+      ((r = NULL) && {a.mouse == m}).if { r := a }
+    }
+    r
+  )
+
+Private
+
+  - empty:Array Ui_shortcut := Array Ui_shortcut.create_with_capacity 0
+
+  - index_of_subact n:String :Int <-
+  ( + i:Int
+    i := subact_names.upper
+    {(i >= 0) && {subact_names.at i !== n}}.while_do { i := i - 1 }
+    i
+  )
+
+  - read_acts l:Cfg in sc:Array Ui_shortcut :Array Ui_act <-
+  ( + r:Array Ui_act
+    + a:Ui_act
+    + o:Cfg
+    + seq:String_alias
+    r := Array Ui_act.create_with_capacity 16
+    (l != NULL).if {
+      0.to (l.count - 1) do { i:Int
+        o := l.item i
+        a := Ui_act.new
+        (o.is_object).if {
+          0.to (o.count - 1) do { j:Int
+            (o.key j = "cmd").if { a.set_cmd (o.item j.str)
+            }.elseif {o.key j = "txt"}   then { a.set_text (o.item j.str)
+            }.elseif {o.key j = "chk"}   then { a.set_check (o.item j.str)
+            }.elseif {o.key j = "rdo"}   then { a.set_radio (o.item j.str)
+            }.elseif {o.key j = "mouse"} then { a.set_mouse (o.item j.str)
+            }.elseif {o.key j = "mute"}  then { a.set_mute (o.item j.bool)
+            }.elseif {o.key j = "key"}   then {
+              seq := Ui_shortcut.parse (o.item j.str)
+              (seq = NULL).if {
+                error # "Incorrect key `" # o.item j.str # "'. "
+              } else {
+                a.add_key_text (o.item j.str)
+                sc.add_last (Ui_shortcut.create seq act a)
+              }
+            }
+          }
+        }
+        r.add_last a
+      }
+    }
+    r
+  )
+
+  - sort l:Array Ui_shortcut <-
+  // The longest sequences first (stable sort: the order of the file is kept).
+  ( + j:Int
+    + s:Ui_shortcut
+    1.to (l.upper) do { k:Int
+      s := l.at k
+      j := k - 1
+      {(j >= 0) && {l.at j.seq.count < s.seq.count}}.while_do {
+        l.at (j + 1) put (l.at j)
+        j := j - 1
+      }
+      l.at (j + 1) put s
+    }
+  )

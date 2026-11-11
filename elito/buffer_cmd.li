@@ -1,0 +1,303 @@
+Header
+  + name := Buffer_cmd
+- include := `
+#ifdef _WIN32
+/* Command of a console: cmd.exe, with stdout and stderr in the same pipe. */
+typedef struct { HANDLE out, in, proc; } li_cmd_t;
+#else
+#include <fcntl.h>
+#include <unistd.h>
+typedef struct { int out[2], err[2], in[2]; } li_cmd_t;
+#endif
+
+static void *li_cmd_new(void) {
+  li_cmd_t *c = calloc(1, sizeof(li_cmd_t));
+#ifndef _WIN32
+  c->out[0] = c->err[0] = c->in[1] = -1;
+#endif
+  return c;
+}
+
+/* Starts the command txt, without waiting. 0 on success. */
+static int li_cmd_run(li_cmd_t *c, const char *txt) {
+#ifdef _WIN32
+  SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+  STARTUPINFOA si;
+  PROCESS_INFORMATION pi;
+  HANDLE out_w, in_r;
+  char *line;
+  BOOL ok;
+  if (c->out != NULL) { CloseHandle(c->out); c->out = NULL; }
+  if (c->in != NULL) { CloseHandle(c->in); c->in = NULL; }
+  if (c->proc != NULL) { CloseHandle(c->proc); c->proc = NULL; }
+  if (!CreatePipe(&c->out, &out_w, &sa, 0)) return -1;
+  SetHandleInformation(c->out, HANDLE_FLAG_INHERIT, 0);
+  if (!CreatePipe(&in_r, &c->in, &sa, 0)) return -1;
+  SetHandleInformation(c->in, HANDLE_FLAG_INHERIT, 0);
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESTDHANDLES;
+  si.hStdOutput = out_w;
+  si.hStdError = out_w;
+  si.hStdInput = in_r;
+  line = malloc(strlen(txt) + 20);
+  strcpy(line, "cmd.exe /S /C \"");
+  strcat(line, txt);
+  strcat(line, "\"");
+  ok = CreateProcessA(NULL, line, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+  free(line);
+  CloseHandle(out_w);
+  CloseHandle(in_r);
+  if (!ok) return -1;
+  CloseHandle(pi.hThread);
+  c->proc = pi.hProcess;
+  return 0;
+#else
+  if (c->out[0] >= 0) { close(c->out[0]); close(c->err[0]); close(c->in[1]); }
+  if (pipe(c->out) || pipe(c->err) || pipe(c->in)) return -1;
+  fcntl(c->out[0], F_SETFL, O_NONBLOCK);
+  fcntl(c->err[0], F_SETFL, O_NONBLOCK);
+  if (fork() == 0) {
+    char *line = malloc(strlen(txt) + 16);
+    strcpy(line, "stdbuf -o0 -i0 ");
+    strcat(line, txt);
+    close(c->out[0]); close(c->err[0]); close(c->in[1]);
+    dup2(c->out[1], 1); dup2(c->err[1], 2); dup2(c->in[0], 0);
+    close(c->out[1]); close(c->err[1]); close(c->in[0]);
+    system(line);
+    fputs("\nProcess terminal finished.\n", stdout);
+    fputc(0, stdout);
+    fflush(stdout);
+    _exit(0);
+  }
+  close(c->out[1]); close(c->err[1]); close(c->in[0]);
+  return 0;
+#endif
+}
+
+/* Reads one char of stdout (err = 0) or stderr (err = 1), without waiting.
+   1: a char in *ch, 0: nothing, -1: the command is finished (windows). */
+static int li_cmd_read(li_cmd_t *c, int err, char *ch) {
+#ifdef _WIN32
+  DWORD avail, n;
+  if (err || c->out == NULL) return 0;
+  for (;;) {
+    if (!PeekNamedPipe(c->out, NULL, 0, NULL, &avail, NULL)) {
+      /* All the writers closed the pipe: the command is finished. */
+      CloseHandle(c->out); c->out = NULL;
+      if (c->proc != NULL) { CloseHandle(c->proc); c->proc = NULL; }
+      return -1;
+    }
+    if (avail == 0 || !ReadFile(c->out, ch, 1, &n, NULL) || n != 1) return 0;
+    if (*ch != '\r') return 1;
+  }
+#else
+  int fd = err ? c->err[0] : c->out[0];
+  return (fd >= 0 && read(fd, ch, 1) > 0) ? 1 : 0;
+#endif
+}
+
+static void li_cmd_write(li_cmd_t *c, char ch) {
+#ifdef _WIN32
+  DWORD n;
+  if (c->in != NULL) WriteFile(c->in, &ch, 1, &n, NULL);
+#else
+  if (c->in[1] >= 0) write(c->in[1], &ch, 1);
+#endif
+}
+`;
+
+Inherit
+
+  + parent_buffer:Flat Buffer
+
+Private
+
+  + command:Pointer // The C @li_cmd_t of the command, run by @fork (unix) or @cmd.exe (windows).
+
+  - buf:C_array Char := C_array Char.create 1
+
+  - read_pipe err:Int <-
+  // Reads what the command wrote on stdout (@err = 0) or stderr (@err = 1).
+  ( + lbuf:C_array Char
+    + p:Pointer
+    + r:Int
+    + c:Char
+    lbuf := buf
+    p := command
+    {(r := `li_cmd_read(@p,@err,@lbuf)`:(Int)) != 0}.while_do {
+      c := buf.first
+      (r < 0).if {
+        insert_end "\nProcess terminal finished.\n"
+        c := 0.to_char
+      }
+      (c = 0.to_char).if {
+        is_busy := False
+        (current_page.buffer = self).if {
+          go_eof
+        }
+      }.elseif {c = '\b'} then {
+        parent_buffer.remove upper
+      } else {
+        parent_buffer.insert c to (upper+1)
+      }
+    }
+    is_save := True
+  )
+
+  - insert_end txt:String <-
+  (
+    0.to (txt.upper) do { i:Int
+      parent_buffer.insert (txt.at i) to (upper+1)
+    }
+  )
+
+  - write_stdin c:Char <-
+  ( + p:Pointer
+    p := command
+    `li_cmd_write(@p,@c)`
+  )
+
+  - write_stdin_string txt:String <-
+  (
+    0.to (txt.upper) do { i:Int
+      write_stdin (txt.at i)
+    }
+  )
+  
+Public
+  
+  - count_buffer_cmd:Int
+  
+  - make p:String_alias <-
+  ( 
+    list.add_first self
+    cmd := String_buffer.create 80
+    count_buffer_cmd := count_buffer_cmd + 1
+    string_tmp.copy "<Console #"
+    count_buffer_cmd.append_in string_tmp
+    string_tmp.add_last '>'
+    shortname := path := string_tmp.to_string_alias
+    is_save := True
+    //change_name p
+    //stack := ARRAY UNDO.create stack_size
+    //
+    blocs := Array Bloc.create_with_capacity 1
+    blocs.add_last (Bloc.create "")
+    upper := -1
+    Buffer_bar.update
+    light := Cmd_light.create self
+    //
+    command := `li_cmd_new()`:(Pointer)
+  )
+
+  - update <-
+  (
+    read_pipe 1
+    read_pipe 0
+  )
+
+  - run ptxt:String_alias <-
+  ( + ltxt:C_array Char
+    + p:Pointer
+
+    parent_buffer.insert '\n' to (upper+1)
+    parent_buffer.insert '>'  to (upper+1)
+    parent_buffer.insert ' '  to (upper+1)
+    insert_end ptxt
+    parent_buffer.insert '\n' to (upper+1)
+
+    ltxt := ptxt.to_external
+    p := command
+    (`li_cmd_run(@p,@ltxt)`:(Int) = 0).if {
+      is_busy := True
+    } else {
+      insert_end "Cannot run the command.\n"
+    }
+  )
+  
+  //
+  // Nothing Action.
+  //
+  
+  - check_reload
+  - load pf:Pointer
+  - save
+  
+  + is_busy:Boolean
+  + cmd:String_buffer
+  + pt_cmd:Int
+  
+  - is_last_line:Boolean <-
+  ( + i:Int
+    i := current_page.point
+    {(i <= upper) && {at i != '\n'}}.while_do {
+      i := i + 1
+    }
+    i > upper
+  )
+  
+  - insert c:Char to i:Int :Boolean <- 
+  ( + result:Boolean
+    + ii:Int
+    
+    (is_busy).if {
+      ((! is_last_line) || {pt_cmd=0}).if {
+        cmd.clear
+        parent_buffer.insert '\n' to (upper+1)
+        parent_buffer.insert '>' to (upper+1)
+        parent_buffer.insert ' ' to (upper+1)
+        ii := upper+1
+        current_page.set_point ii
+        pt_cmd := ii
+      } else {
+        ii := i
+      }
+      (ii >= pt_cmd).if {      
+        (c = '\n').if {
+          result := parent_buffer.insert c to (upper+1)
+          cmd.add_last '\n'
+          write_stdin_string cmd
+          pt_cmd := 0
+        } else {
+          result := parent_buffer.insert c to ii
+          cmd.insert c to (ii-pt_cmd)
+        }
+      }
+    }
+    result
+  )
+  
+  - remove i:Int :Char <-
+  ( + result:Char
+    
+    (is_busy).if {
+      (i >= pt_cmd).if {      
+        result := parent_buffer.remove i
+        cmd.remove (i-pt_cmd)
+      } else {
+        current_page.set_point (upper+1)
+      }
+    }
+    result
+  )
+  
+  - at i:Int put c:Char <-
+  (
+    (is_busy).if {
+      (i >= pt_cmd).if {      
+        (c = '\n').if {
+          parent_buffer.insert c to (upper+1)
+          cmd.add_last '\n'
+          write_stdin_string cmd
+          pt_cmd := 0
+        }.elseif {i-pt_cmd <= cmd.upper} then {
+          parent_buffer.at i put c
+          cmd.at (i-pt_cmd) put c
+        }
+      }
+    }
+  )
+  
+  - stack_push t:Char char c:Char point p:Int
+  - stack_upper

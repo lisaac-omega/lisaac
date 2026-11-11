@@ -100,7 +100,7 @@ Public
       result := t != NULL
     } else {
       + dirent:Pointer
-      ((dirent := `readdir(@p)`:Pointer).is_not_null).if {
+      ((dirent := `readdir(@p)`:Pointer) != NULL).if {
         t := `((struct dirent *)@dirent)->d_name`:C_array Char
         result := True
       }
@@ -121,7 +121,7 @@ Public
       + file:Pointer
       //fn.print
       file := asset_open fn
-      (file.is_null).if {
+      (file = NULL).if {
         "Error `".print; fn.print; "' not found in assets.".println;
         exit 1
       }
@@ -194,7 +194,7 @@ Private
     + s:Int
     tmp += fn
     f := File_utils.open_read tmp
-    (f.is_not_null).if {
+    (f != NULL).if {
       s := File_utils.size f
       dta.set_capacity s
       File_utils.read f in dta size s

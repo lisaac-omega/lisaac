@@ -47,6 +47,16 @@ Public
   // Redefined in LIST, SWITCH and PROFIL
   // Used in LIST, CALL_SLOT, SWITCH and PROFIL
 
+  - first_access v:Local :Int <- 2
+  // Effect of @self on @v, from its beginning:
+  // 0: @v is neither read nor written,
+  // 1: @v is surely written before being read,
+  // 2: @v can be read (or unknown).
+  // Used to remove a default initialization (see @Write.execute).
+
+  - has_block:Boolean <- False
+  // A block is called, passed or written in @self (see @Switch.thread_next).
+
   - execute:Instr <-
   // TODO: Documentation
   // Deferred
@@ -112,16 +122,16 @@ Public
   // Not redefined anywhere, used in LIST, READ and WRITE
   ( + tmp_type:Types_tmp
     
-
     ((! v.is_static) && {! v.type.is_exact}).if {     
-      /*
-      ((v.type_set.count = 2) && {v.type_set.first = TYPE_NULL}).if {
-        v.set_type (v.type_set.at 1.default.to_exact)
-      */
       tmp_type := Types_tmp.new
       v.get_type tmp_type
       ((tmp_type.count = 2) && {tmp_type.first = Type_null}).if {        
-        v.set_type (tmp_type.at 1.default.to_exact)
+        (v.type.is_one).if {
+          // COP: still only one reference.
+          v.set_type (tmp_type.at 1.default.to_exact + Type_full.one_bit)
+        } else {
+          v.set_type (tmp_type.at 1.default.to_exact)
+        }
       }
       tmp_type.free
       

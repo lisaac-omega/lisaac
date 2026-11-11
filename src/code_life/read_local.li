@@ -42,13 +42,6 @@ Public
     local    := l
   )
   
-  /*
-  - my_copy:Self <-
-  ( + result:Self    
-    result ?= local.read position    
-    result
-  )*/
-
   //
   // Execute
   //
@@ -138,12 +131,4 @@ Public
     }
 
   )
-
-
-
-
-
-
-
-
 

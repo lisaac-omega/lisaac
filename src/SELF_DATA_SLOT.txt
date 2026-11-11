@@ -1,0 +1,146 @@
+Slots de donnée de type Self : spécification (4 novembre 2026)
+=============================================================
+
+1. Motivation
+-------------
+Le recyclage d'objets est recopié dans chaque prototype (elit : Local, Arg,
+Section, Slot_body, Slot_contract, Ext ; compilateur : Types_tmp...) :
+
+  - stk:Flat Array (Exact Local)
+  - new:Self <- ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - free <- ( ...remise à zéro...; stk.add_last self )
+
+On ne peut pas l'écrire une fois avec « - stk:Flat Array Self » : un
+slot '-' est un seul emplacement, partagé par la lignée, alors que Self change
+d'un héritier à l'autre. Aujourd'hui le compilateur refuse :
+
+  Cannot resolve type for type parameter Generic:Self
+
+But : écrire une seule fois
+
+  Header
+    + name := Recyclable
+  Public
+    - stk:Flat Array Self
+    - new:Self <- ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+    - free <- ( reset; stk.add_last self; )
+    - reset <- deferred
+
+et que chaque prototype qui l'insère ait sa propre pile.
+
+2. Principe
+-----------
+Le compilateur duplique déjà le code par type concret du receveur : un slot
+de méthode qui rend Self a un profil par type, où Self est stable. On étend le
+principe aux données :
+
+  Un slot de donnée dont le type contient Self est instancié par type
+  concret : une copie par type, où Self est ce type.
+
+Méthode : code dupliqué (comme aujourd'hui). Donnée : stockage dupliqué.
+
+3. Règle
+--------
+« Contient Self » : Self, Array Self, Flat Array Self, {Self},
+{Self; Boolean}, etc. Self est l'Exact du type dynamique : pas de style.
+
+Pour chaque type concret T qui a le slot (défini ou hérité), la copie de T a
+le type du slot où Self := T, comme Self dans un profil spécialisé pour T.
+
+Un slot dont le type ne contient pas Self ne change pas : un '-' reste partagé
+par toute la lignée, un '+' reste un champ.
+
+4. Stockage
+-----------
+- '-' : un global par type concret T, créé seulement pour les types vivants
+  (qui accèdent au slot). La valeur par défaut est initialisée par copie.
+  Une valeur initiale explicite « - s:... := expr » n'est pas encore
+  possible (erreur claire) : l'expression serait évaluée avec le Self du
+  porteur, pas de la copie.
+
+- '+' : un champ par type concret.
+  - Parent Flat (embarqué) : l'instance embarquée n'appartient qu'à un objet,
+    un seul type concret l'atteint : un seul champ, typé avec ce type.
+  - Parent non Flat (« - parent:A » ou « + parent:A ») : une même instance de
+    A peut être le parent d'héritiers de types différents. L'instance porte
+    un champ par type concret d'héritier qui peut l'atteindre, plus le sien
+    si A est receveur lui-même. Simple duplication de champs (décision du
+    4 novembre 2026) ; on verra plus tard si on peut faire mieux.
+
+- Choix de la copie : par le type concret du receveur (son __id).
+  - Profil spécialisé pour T : accès direct à la copie de T, sans coût.
+  - Receveur de plusieurs types : le switch sur __id, déjà là, lit la copie
+    de chaque type dans sa branche.
+  - Héritage dynamique (parent réaffecté) : sans effet, c'est l'__id de
+    l'objet reçu qui choisit.
+
+5. Typage et sûreté
+-------------------
+- Self est exact par nature : Self := Exact T dans la copie de T, et la
+  lecture d'un slot de donnée de type Self est typée avec Self exact (comme
+  le résultat de clone). Une écriture doit être exacte : « last := self » ou
+  un clone sont acceptés, « last := Pa.create 9 » est refusé (Pa.create
+  n'est pas exact).
+- Lecture à travers un receveur exact T : type du slot avec Self := T.
+- Lecture à travers un receveur non exact de type statique P : type statique
+  avec Self := P ; chaque branche du dispatch voit son type exact.
+- Écriture : comme aujourd'hui, seulement dans le prototype (pas de
+  « p.data := x ») ; de l'extérieur, par un setter « set_data x:Self ».
+- Dans un profil spécialisé pour T, « data := e » exige que e soit conforme
+  au type du slot avec Self := T. Exemple : dans Pa, « data := Pa.create » est
+  correct pour Pa mais faux dans le profil d'un héritier Pb : erreur pour Pb.
+- Setter appelé de l'extérieur : règle existante « Type expression (P) is not
+  Flat or Exact for Self argument type. » Pas de trou de covariance.
+
+6. Hors périmètre (pour l'instant)
+----------------------------------
+- Locale persistante « - x:Self » (refusée : « Type `Self' is not possible
+  for `-' style local. ») : elle est déjà dans un profil par type, on
+  pourrait l'autoriser plus tard.
+- Mieux que la duplication de champs pour un parent non Flat.
+
+7. Erreurs attendues
+--------------------
+- data := e, avec e non conforme pour un type concret T : erreur de type,
+  avec la position de l'affectation et le type T.
+- Setter x:Self appelé avec un argument ni Flat ni Exact : erreur existante.
+- Plus de « Cannot resolve type for type parameter Generic:Self » pour un
+  slot de donnée.
+
+8. Points d'implémentation repérés (à vérifier)
+-----------------------------------------------
+- variable/slot.li, create_slot_data : le type est résolu avec
+  receiver_type ; Type.parameter_to_type rend NULL pour Self. Il faut une
+  copie de Slot_data par type concret quand le type contient Self (table
+  Type -> Slot_data), comme Profil.parameter_to_type le fait pour les
+  méthodes (Self := type_self).
+- Accès : dispatcher/dta_rd.li résout déjà Self par self_arg.static_type ;
+  la lecture et l'écriture doivent prendre la copie du type du receveur.
+- Tout ce qui suppose « un slot '-' = un Slot_data » : propagation de
+  valeur des globaux (Local.get_last_value, g.style = '-'),
+  Slot_data.init / init_list, génération et nom des globaux.
+- '+' : Type.genere_struct (un champ par type d'héritier pour un parent non
+  Flat), Read_slot / Write_slot (choix du champ), le parent en tête
+  (Type.prefix_slot).
+
+9. Tests (à écrire avant l'implémentation)
+------------------------------------------
+Lignée : Pa (porteur), Pb et Pc héritent de Pa, Pd hérite de Pb.
+ 1. « - data:Self » : chaque type a sa copie ; Pb.set_data ne change pas
+    celle de Pc ni celle de Pa.
+ 2. Accès par receveur exact et par receveur de type Pa (dispatch).
+ 3. Initialisation « - n:Self := ... » et « - stk:Flat Array Self »
+    évaluée une fois par type.
+ 4. Recyclable : new / free pour Pb et Pc mélangés ; un objet recyclé
+    revient toujours dans la pile de son type, jamais dans une autre.
+ 5. « + data:Self » avec parent Flat : lecture typée exacte.
+ 6. « + data:Self » avec parent non Flat partagé par un Pb et un Pc :
+    chacun lit et écrit son champ.
+ 7. Refus : « data := Pa.create » dans un profil de Pb ; setter avec un
+    argument non exact.
+ 8. Héritage dynamique : parent réaffecté, la copie suit l'__id.
+ 9. Slot sans Self : toujours partagé par la lignée (non régression).
+10. -boost et debug : mêmes sorties.
+
+Validation finale : point fixe, suite complète ; puis passer Types_tmp et
+quelques prototypes d'elit à Recyclable.

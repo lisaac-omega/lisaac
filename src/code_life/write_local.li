@@ -11,6 +11,17 @@ Public
 
   - variable:Variable <- local
 
+  - first_access v:Local :Int <-
+  ( + result:Int
+
+    ((value = NULL) || {value.is_reading v}).if {
+      result := 2
+    }.elseif {local = v} then {
+      result := 1
+    }
+    result
+  )
+
   //
   // Creation.
   //
@@ -80,7 +91,7 @@ Public
         
     idf := Aliaser_local.write self
 
-    (quiet_generation).if_false {
+    ((! quiet_generation) && {! is_move_null}).if {
       (local.is_result).if {
         output.add_last '*'
         output.append (local.intern_name)

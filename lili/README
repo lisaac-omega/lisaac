@@ -1,0 +1,43 @@
+lili: an interpreter for Lisaac.
+
+lili runs the whole front end of the compiler (parsing, global analysis, all the
+passes), then executes its internal representation instead of generating C.
+Only the externals still need gcc, once: they go to a small shared library,
+cached in ~/.cache/lili, which does not change when the program changes.
+
+To build it, in this directory (nothing in ../src is modified):
+
+   lisaac lili lili.lip -q
+
+To run a program:
+
+   ./lili my_program
+   ./lili my_program -- arg1 arg2
+
+The options are the ones of lisaac (-boost removes the contracts). LILI_TRACE=1
+prints each call. To compare with the expected output of ../test:
+
+   ./compare.sh
+
+How it works:
+
+   lili.li         inherits Lisaac, and rewrites `main'
+   li_compiler.li  internal representation -> tree of Li_node
+   li_stub.li      the C of the externals, compiled and cached
+   li_runtime.li   C helpers, debug stack
+   li_*.li         one prototype for each kind of node
+
+Each `tr_...' of Li_compiler follows the `genere' slot of the matching node of
+the compiler. Memory is real memory, with the layout of the C structures: a
+scalar is a 64 bits word, and a Flat structure is represented by its address.
+
+Known limits:
+
+   - Real80 is computed as a double.
+   - -cop and interrupt slots are not supported.
+   - lisaac itself starts under lili (`-version' works), but a full compilation
+     stops on `Call of abstract' for `position' in Profil_block: not solved.
+   - lili is 20 to 140 times slower than the code compiled by gcc.
+   - Do not build lili with -boost or -no_debug: it crashes. The compiler turns
+     `(x != NULL) && {x.flag}' into a non lazy `&' (see `Read' in
+     ../src/code_life/switch.li and ../src/external/logic/expr_and_and_logic.li).

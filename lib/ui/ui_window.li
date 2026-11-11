@@ -1,0 +1,161 @@
+Header
+  + name := Ui_window
+/* A window of the system for @Paper (it is a @Window), which gives its drawing, its keys and
+   its mouse to a @Ui_box: the root of what it shows. The events of the mouse are those of
+   @Hand (click, double click, drag...), at the place @Hand.x_cur, @Hand.y_cur. */
+Inherit
+  + parent_window:Flat Window
+
+Public
+
+  + root:Ui_box
+
+  - new:Self <- clone
+
+  - set_root r:Ui_box <- ( root := r )
+
+  - open n:String_alias size (w,h:Int) root r:Ui_box :Self <-
+  (
+    root := r
+    init n size (w,h)
+  )
+
+  - draw <-
+  (
+    (root != NULL).if {
+      Ui_box.set_pen pen
+      Ui_box.set_window self
+      root.set_rect (0,0) size (width,height)
+      root.draw_all
+    }
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + r:Boolean
+    (root != NULL).if { r := root.key s cmd c }
+    Paper.refresh_again
+    r
+  )
+
+  - event ev:Int :Boolean <-
+  // During a drag captured by a box, the box has all the events until the end. The
+  // beginning of a drag goes to the box under the place where the button was pressed.
+  ( + r:Boolean
+    + c:Ui_box
+    Ui_box.set_pen pen
+    Ui_box.set_window self
+    (ev = Hand.move).if { Ui_box.set_shape 0 }
+    c := Ui_box.capture
+    (c != NULL).if {
+      r := c.mouse ev at (Hand.x_cur,Hand.y_cur)
+      ((((ev & ~1) != Hand.drag)) || {Hand.is_end}).if { Ui_box.set_capture NULL }
+    }.elseif {(root != NULL) && {((ev & ~1) = Hand.drag) && {Hand.is_begin}}} then {
+      // A drag begins where the button was pressed (it is seen after some pixels).
+      r := root.mouse ev at (Hand.x_begin,Hand.y_begin)
+    }.elseif {root != NULL} then {
+      r := root.mouse ev at (Hand.x_cur,Hand.y_cur)
+    }
+    (Ui_box.shape != shape_now).if {
+      shape_now := Ui_box.shape
+      Paper.set_cursor win_ptr img (cursor_of shape_now)
+    }
+    Paper.refresh_again
+    r
+  )
+
+  - shape_now:Int
+  - cursors:Array Pointer
+
+  - cursor_of k:Int :Pointer <-
+  // The shapes of the mouse of the system (made once).
+  (
+    (cursors = NULL).if {
+      cursors := Array Pointer.create_with_capacity 4
+      cursors.add_last (Paper.get_cursor `GLFW_ARROW_CURSOR`:Int)
+      cursors.add_last (Paper.get_cursor `GLFW_HRESIZE_CURSOR`:Int)
+      cursors.add_last (Paper.get_cursor `GLFW_VRESIZE_CURSOR`:Int)
+      // As elit: its own shapes to resize from the corner and to move the window.
+      cursors.add_last (Paper.create_cursor cursor_size_map size (24,24) hot (11,11))
+      cursors.add_last (Paper.create_cursor cursor_move_map size (24,24) hot (11,11))
+    }
+    cursors.at (k.max 0.min 4)
+  )
+
+  - cursor_size_map:C_array Uint32 :=
+  ( + result:C_array Uint32
+    result := C_array Uint32.create (24*24)
+    0.to (24*24-1) do { i:Int
+      "XXXXXXXXX               \
+      \X_______X               \
+      \X______X                \
+      \X_____X                 \
+      \X______X                \
+      \X_______X               \
+      \X__X_____X              \
+      \X_X X_____X       XX    \
+      \XX   X_____X     X_X    \
+      \      X_____X   X__X    \
+      \       X_____X X___X XXX\
+      \        X_____X____X X_X\
+      \         X_________X X_X\
+      \          X________X X_X\
+      \           X_______X X_X\
+      \          X________X X_X\
+      \         X_________X X_X\
+      \        X__________X X_X\
+      \       X___________X X_X\
+      \      XXXXXXXXXXXXXX X_X\
+      \                     X_X\
+      \         XXXXXXXXXXXXX_X\
+      \         X_____________X\
+      \         XXXXXXXXXXXXXXX".at i
+      .when 'X' then { result.at i put 0_FF_00_00_00h; }
+      .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
+    }
+    result
+  )
+  
+  - cursor_move_map:C_array Uint32 :=
+  ( + result:C_array Uint32
+    result := C_array Uint32.create (24*24)
+    0.to (24*24-1) do { i:Int
+      "           X            \
+      \          X_X           \
+      \         X___X          \
+      \        X_____X         \
+      \       X_______X        \
+      \       XXX___XXX        \
+      \         X___X          \
+      \    XX   X___X   XX     \
+      \   X_X   X___X   X_X    \
+      \  X__XXXXX___XXXXX__X   \
+      \ X_________X_________X  \
+      \X_________X X_________X \
+      \ X_________X_________X  \
+      \  X__XXXXX___XXXXX__X   \
+      \   X_X   X___X   X_X    \
+      \    XX   X___X   XX     \
+      \         X___X          \
+      \       XXX___XXX        \
+      \       X_______X        \
+      \        X_____X         \
+      \         X___X          \
+      \          X_X           \
+      \           X            \
+      \                        ".at i
+      .when 'X' then { result.at i put 0_FF_00_00_00h; }
+      .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
+    }
+    result
+  )
+
+  - mouse_scroll (dx,dy:Real64) <-
+  (
+    (root != NULL).if { root.scroll (dy.to_real32) at (Hand.x_cur,Hand.y_cur) }
+    Paper.refresh_again
+  )
+
+  - on_close <-
+  (
+    ((root = NULL) || {root.can_close}).if { Paper.exit 0 }
+  )

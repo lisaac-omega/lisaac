@@ -12,7 +12,6 @@ Public
 
   - is_short_code:Boolean
   - is_short_private:Boolean
-  - is_short_recursive:Boolean
 
   - put tok:String to buf:String_buffer like key:String_alias <-
   ( + lst:Linked_list(String_alias)

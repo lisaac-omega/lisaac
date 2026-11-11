@@ -1,0 +1,1679 @@
+Header
+  + name := Cmd_bar
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - name:String_alias := "Command Line"
+  
+  - height_line:Real32 <- font_size + 8.0
+  
+  - width_min:Real32  <- 100.0
+  - height_min:Real32 <- height_line*(help_line.ok 2 or 1)
+  
+  - cmd :String_buffer := String_buffer.create 128
+  - cmd2:String_buffer := String_buffer.create 128
+  - text:String_buffer
+  - cursor:Int
+  
+  - new_message txt:String <-
+  (
+    cmd.copy txt
+    select 12
+  )
+  
+  - type:Int
+  
+  - make:Self <-
+  ( + img:C_array Uint32
+    make NULL to (0,0) size (width_min,height_min)
+    text := String_buffer.create 128
+    img := cursor_pattern
+    `{ GLFWimage cursor`
+    `cursor.width = 24; cursor.height = 24; cursor.pixels = (unsigned char *)@img`
+    cursor_mouse := `glfwCreateCursor(&cursor,11,11)`:Pointer
+    `}`
+    height_lock
+  )
+  
+  - draw pen:Pen <-
+  ( + x,y,x0,y0,x1,y1,siz:Real32
+    + p:Paint
+    + i,beg,wtxt:Int
+    + c:Char
+    draw_debug pen
+    
+    pen.save
+    pen.begin_path
+    pen.rect_varying (xo+2,yo+2) size (width-4,height-6) radius (8,8,8,8)
+    pen.stroke_color (Color.rgba (0,0,0,255))
+    pen.stroke_width 0.8
+    (help_line).if {
+      p := Paint.create_linear (xo+2,yo+height*0.4) to (xo+2,yo+height*0.6)
+        color (color.background) to (Color.rgba (0FFh,0C0h,000h,232))
+      pen.fill_paint p
+    } else {
+      pen.fill_color (color.background)
+    }
+    pen.fill
+    pen.stroke
+    pen.restore
+    (help_line).if { p.free; }
+    
+    set_font (pen,"Code-Bold")
+    pen.text_align (Pen.align_left|Pen.align_top)
+    pen.fill_color (color.slot_head)
+    x := xo+8
+    y := yo+4
+    pen.text_box (x,y) width width msg cmd
+    (type != 0).if {
+      (x0,y0,x1,y1) := pen.text_box_bounds (x,y) width width msg cmd from 0 to (-1)
+      //
+      (width_char = 0.0).if {
+        + w,xx0,yy0,xx1,yy1:Real32
+        char_buf.copy "O"
+        (w,xx0,yy0,xx1,yy1) := pen.text_bounds (0,0) msg char_buf from 0 to (-1)
+        (width_char,height_char) := (xx1,yy1.min (height_line-10))
+      }
+      ((type < 12) || {type.in_range 14 to 15} || {type = 17} || {type.in_range 19 to 22} || {type = 25}).if {
+        x1 := x1 + width_char
+        wtxt := ((width - 4 - width_char*cmd2.count - x1) / width_char).to_int
+        (cursor >= wtxt).if {
+          beg := cursor - wtxt + 1
+        } else {
+          beg := 0
+        }
+        beg.to (text.upper) do { i:Int
+          (i = cursor).if {
+            display pen cursor (x1,y)
+          } else {
+            pen.fill_color (color.black)
+          }
+          c := text.at i
+          (c.code.in_range 0 to 7Fh).if {
+            char_buf.at 0 put c
+            pen.text (x1,y) msg char_buf from 0 to (-1)
+            //pen.text_box (x1,y) width width msg char_buf
+          } else {
+            string_tmp.clear
+            string_tmp.add_last '\0C3h\'
+            string_tmp.add_last ((c.to_uint8&1011_1111b).to_char)
+            pen.text (x1,y) msg string_tmp from 0 to (-1)
+          }
+          x1 := x1 + width_char
+        }
+        (cursor > text.upper).if {
+          display pen cursor (x1,y)
+        }
+      }
+      (! cmd2.is_empty).if {
+        set_font (pen,"Code-Bold")
+        pen.text_align (Pen.align_left|Pen.align_top)
+        pen.fill_color (color.slot_head)
+        pen.text_box (x1+width_char*2,y) width width msg cmd2
+      }
+    }
+    
+    (help_line).if {
+      + m:String_alias
+      + is_bold:Boolean
+      - dx:Real32
+      - old_m:String_alias
+
+      (type)
+      .when 2 or 3 then {
+        m := "    [Tab][?]:Completion or display completion list.    "
+      }.when 10 then {
+        m := "    [Tab][?]:Completion or display completion list.    "
+      }.when 4 then {
+        m := "    [Ctrl s][Ctrl Down]:To next  [Backspace]:Previous search  \
+        \[Ctrl w]:Expansion word  [Ctrl r][Ctrl Up]:Switch backward  [Ctrl g]:Cancel  \
+        \[Ctrl y][Ctrl v]:Paste  [Alt /]:Completion.    "
+      }.when 5 then {
+        m := "    [Ctrl r][Ctrl Up]:To next  [Backspace]:Previous search  \
+        \[Ctrl w]:Expansion word  [Ctrl s][Ctrl Down]:Switch foreward  [Ctrl g]:Cancel  \
+        \[Ctrl y][Ctrl v]:Paste  [Alt /]:Completion.    "
+      }.when 6 or 7 then {
+        m := "    [Ctrl y][Ctrl v]:Paste  [Alt /]:Completion.    "
+      }.when 8 then {
+        m := "    [Enter][Space][y]:To replace one match  [n][Down]:To skip to next  \
+        \[!]:To replace all.    "
+      }
+      .when 11 then {
+        m := "    [Ctrl /][Ctrl Down]:To next  [Ctrl Up]:Previous found.    "
+      }
+      .when 13 then {
+        m := "    [Ctrl _][Ctrl z]:Next cancellation. (Note: Undo o Undo = Redo)    "
+      }
+      .when 14 or 15 then {
+        m := "    [Tab][?]:Completion  (Note: This command activated on a type name speeds up your search).    "
+      }
+      .when 17 then {
+        m := "    [Tab][?]:Completion with your history  [Up]:Previous command  [Down]:Next command  \
+        \[Ctrl y][Ctrl v]:Paste.    "
+      }
+      .when 19 then {
+        m := "    [Tab][?]:Completion.    "
+      }
+      .when 21 then {
+        m := "    [Ctrl y][Ctrl v]:Paste  [Alt /]:Completion.    "
+      }
+      .when 22 then {
+        m := "    [Ctrl u]:Multiplied by 2.    "
+      }
+      .when 24 then {
+        m := "    [Esc y]:Previous copy (ring poll).    "
+      }
+      .when 25 then {
+        m := "    [Tab][?]:Completion or display completion list.    "
+      }
+      (m != NULL).if {
+        (old_m = NULL).if { Elito_window.inc_animation; }
+        pen.intersect_scissor (x,y0) size (width-16,height)
+        (m != old_m).if {
+          old_m := m
+          dx := 0
+        } else {
+          x := x - dx
+          dx := dx + 1.0
+          (dx > width_char*m.count).if { dx := 0; }
+        }
+        //
+        pen.text_align (Pen.align_left|Pen.align_top)
+        pen.fill_color (Color.rgb(0,0,0))
+        i := 0
+        {x < x0+width - 16}.while_do {
+          c := m.at (i%m.count)
+          (c = '[').if { is_bold := True;  }
+          (is_bold).if {
+            set_font (pen,"Code-Bold")
+          } else {
+            set_font (pen,"Code")
+          }
+          char_buf.at 0 put c
+          pen.text_box (x,y+height_line) width width msg char_buf
+          x := x + width_char
+          (c = ']').if { is_bold := False; }
+          i := i + 1
+        }
+        pen.reset_scissor
+      } else {
+        (old_m != NULL).if { Elito_window.dec_animation; }
+        old_m := NULL
+      }
+    }
+    //
+    // Resize window
+    //
+    siz := 24
+    pen.begin_path
+    p := Paint.create_linear (xo+width-siz/2.0-1+2,yo+height-siz/2.0-1) to (xo+width-1+2,yo+height-1)
+      color (Color.rgb(255,255,255)) to (Color.rgb(126,126,138)); //(COLOR.rgb(150,150,164))
+    pen.move_to (xo+width-siz-1+2,yo+height-1)
+    pen.line_to (xo+width-1+2,yo+height-siz-1)
+    pen.line_to (xo+width-1+2,yo+height-1)
+    pen.line_to (xo+width-siz-1+2,yo+height-1)
+    pen.stroke_color (Color.rgb(0,0,0))
+    pen.stroke
+    
+    pen.fill_paint p
+    pen.fill
+    
+    p.free
+  )
+  
+  - key_event k:Uint16 <-
+  ( + c:Char
+    + r,lo,up,ci,rep:Int
+    + new:String_alias
+    + todo:Shortcut
+    + is_func:Boolean
+    + start,end:Int
+    //"Keyb: ".print; k.println
+    ((type = 0) || {type = 23}).if {
+      (is_func,todo) := Shortcut.new_key k
+      is_func.if {
+        //SHORTCUT.is_eat.print; ' '.print; SHORTCUT.is_run.print; ' '.print; SHORTCUT.current_key.println
+        ((! Shortcut.is_eat) && {! Shortcut.is_run}).if {
+          beep
+          cmd.clear
+        }.elseif {(Shortcut.is_eat) && {Shortcut.is_run}} then {
+          ? {Shortcut.current_key != 0}
+          cmd.clear
+          Shortcut.append_current_key_in cmd
+        }.elseif {(Shortcut.is_eat) && {! Shortcut.is_run}} then {
+          ? {Shortcut.current_key = 0}
+          ? {todo != NULL}
+          (type = 0).if { cmd.clear; }
+          (Old type = 23).if {            
+            select 0
+            rep := repeat_times
+            repeat_times := 0
+            rep.times { Shortcut.play todo; }
+          } else {
+            Shortcut.play todo
+          }
+        }
+      } else {
+        (type = 23).if {
+          select 0
+          rep := repeat_times - 1
+          repeat_times := 0
+          rep.times { key_event k; }
+        }
+        (k & Key_code.key_cmd = 0).if {
+          current_page.insert_char ((k&0FFh).to_char)
+          current_page.stack_upper
+        } else {
+          (k & 0FFh)
+          .when 08h then { // Del
+            (start,end) := current_page.get_select
+            (start = -1).if {
+              current_page.remove_glyph
+            } else {
+              current_page.set_point start
+              start.to end do { i:Int
+                current_page.suppr_char
+              }
+              current_page.set_select_start (-1)
+            }
+            current_page.stack_upper
+          } 
+          .when 49h then { // Inser.
+            ((Keyboard.cmd & 10h) != 0).if {
+              paste
+            }
+          }
+          .when 53h then { // Suppr.            
+            ((Keyboard.cmd & 10h) != 0).if {
+              cut
+            } else {
+              (start,end) := current_page.get_select
+              (start = -1).if {
+                delete_char
+              } else {
+                current_page.set_point start
+                start.to end do { i:Int
+                  current_page.suppr_char
+                }
+                current_page.stack_upper
+                current_page.set_select_start (-1)
+              }
+            }
+          }
+          .when 0Ah then {
+            // Ctrl or Shift Enter: `\r\n', the instruction continues (as in elit).
+            ((k & (Key_code.ctrl | Key_code.shift)) != 0).if {
+              current_page.insert_char '\r'
+            }
+            current_page.insert_char '\n'
+            current_page.stack_upper
+            (go_prev_line True).if {
+              current_page.indent_line
+              go_next_line True
+              current_page.indent_line
+              current_page.stack_upper
+            }
+          }
+          //(k & 0FFh).print; '-'.print; (k & 0FFh).print_hexa; '\n'.print
+        }
+      }
+    }.elseif {type = 24} then {      
+      ((paste_state = 0) && {k&0FFh = 27} && {k&Key_code.key_cmd != 0}).if {
+        paste_state := 1
+      }.elseif {(paste_state = 1) && {(k&0FFh).to_char = 'y'} && {k&Key_code.key_cmd = 0}} then {
+        clipboard.count.times { current_page.remove_char; }
+        paste_state := 0
+        clipboard.clear
+        Clipboard.previous_in clipboard
+        0.to (clipboard.upper) do { i:Int
+          current_page.insert_char (clipboard.at i)
+        }
+        current_page.stack_upper
+      } else {        
+        select 0
+        key_event k
+      }
+    }.elseif {type = 9} then {
+      (k & Key_code.key_cmd = 0).if {
+        c := (k&0FFh).to_char
+        ((c = 'y') || {c = 'n'}).if {
+          (c = 'y').if {
+            Buffer.list.at index_exit.save
+          }
+          {
+            index_exit := index_exit - 1
+          }.do_while {(index_exit >= 0) && {Buffer.list.at index_exit.is_save=True}};// BUG COMPILO
+          (index_exit < 0).if {
+            Parser.update_cfg
+          } else {
+            cmd.copy "Save file `";
+            cmd.append (Buffer.list.at index_exit.path)
+            cmd.append "' ? [y/n]"
+          }
+        } else {
+          select 0
+        }
+      } else {
+        select 0
+      }
+    }.elseif {(type = 16) || {type = 26}} then {
+      (k & Key_code.key_cmd = 0).if {
+        c := (k&0FFh).to_char
+        ((c = 'y') || {c = 'n'}).if {
+          (c = 'y').if {
+            (type = 16).if {
+              current_page.buffer.load NULL
+              current_page.set_point (current_page.point.min (current_page.upper+1))
+              select 0
+            } else {
+              + i:Int
+              string_tmp.copy (current_page.buffer.path)
+              i := string_tmp.last_index_of '/'
+              (i != -1).if {
+                string_tmp.remove i to (string_tmp.upper)
+                File_utils.mkdir (string_tmp.to_string_alias).if_false {
+                  "Error: Create directory\n".print
+                }
+              }
+              select 0
+              current_page.buffer.save
+            }
+          } else {
+            select 0
+          }
+        }
+      }
+    }.elseif {type = 11} then {
+      (k & Key_code.key_cmd = 0).if {
+        ((k & Key_code.alt != 0) && {k & 0FFh='/'.to_int}).if {
+          (comp_key.is_empty).if {
+            beep
+          } else {
+            completion_next True
+          }
+        } else {
+          select 0
+          key_event k
+        }
+      }.elseif {k & Key_code.ctrl != 0} then {
+        c := (k & 0FFh).to_char
+        (c = 'D').if {
+          (comp_key.is_empty).if {
+            beep
+          } else {
+            completion_next True
+          }
+        }.elseif {c = 'U'} then {
+          (comp_list.is_empty).if {
+            select 0
+          } else {
+            string_tmp.clear
+            {
+              (current_page.point > 0) &&
+                {current_page.buffer.at (current_page.point-1).is_identifier}
+            }.while_do {
+              string_tmp.add_first (current_page.remove_char)
+            }
+            new := comp_list.pop
+            ((new == string_tmp) && {! comp_list.is_empty}).if { new := comp_list.pop; }
+            0.to (new.upper) do { k:Int
+              current_page.insert_char (new.at k)
+            }
+            current_page.stack_upper
+          }
+        } else {
+          select 0
+        }
+      } else {
+        select 0
+      }
+    }.elseif {type = 12} then {
+      cmd.clear
+      cmd2.clear
+      text.clear
+      select 0
+      key_event k
+    }.elseif {type = 13} then {
+      ((k & Key_code.key_cmd = 0) && {k & Key_code.ctrl != 0}).if {
+        (((k&0FFh).to_char='_') || {(k&0FFh).to_char='z'}).if {
+          (undo_point = current_page.buffer.stack_lo).if {
+            cmd.copy "No further undo information."
+          } else {
+            undo_next
+          }
+        } else {
+          cmd.clear
+          select 0
+          key_event k
+        }
+      } else {
+        cmd.clear
+        select 0
+        key_event k
+      }
+    }.elseif {type = 18} then {
+      ((k & Key_code.key_cmd = 0) && {k & Key_code.ctrl != 0} && {(k&0FFh) = 'k'}).if {
+        kill_line
+      } else {
+        select 0
+        key_event k
+      }
+    } else {
+      cmd2.clear
+      (k & Key_code.key_cmd = 0).if {
+        c := (k&0FFh).to_char
+        ((c.is_digit) || {type != 1}).if {          
+          ((k & Key_code.alt != 0) && {c = '/'}).if {
+            (((type.in_range 2 to 7) || {type = 21} || {type = 25}) && {c = '/'}).if {
+              + i:Int
+              String.tmp { tmp:String_buffer
+                i := cursor
+                {(i > 0) && {(c := text.at (i-1)).is_identifier}}.while_do {
+                  i := i - 1
+                  tmp.add_last c
+                }
+                (! tmp.is_empty).if {
+                  tmp.reverse
+                  ((! tmp.has_prefix comp_key) || {comp_key.is_empty}).if {
+                    Page.save_last_point
+                    //"New !!! ".print; tmp.println
+                    comp_key.copy tmp
+                    comp_list.clear
+                    comp_list.add_last (comp_key.to_string_alias)
+                    comp_buffer := Buffer.list.fast_first_index_of (current_page.buffer)
+                    comp_point := current_page.point-1
+                    (comp_point < 0).if { comp_point := current_page.upper; }
+                  }
+                  completion_next False
+                }
+              }
+            }
+          }.elseif {k & Key_code.ctrl != 0} then {
+            (((type = 4) || {type = 5}) && {c = 'g'}).if {
+              (! stack_search.is_empty).if {
+                current_page.set_point (stack_search.second + (type=4).ok 1 or 0)
+              }
+            }
+            (type = 4).if {
+              //
+              // Search.
+              (c = 's').if {
+                search_to_next
+              }.elseif {c = 'w'} then {
+                search_state := 0
+                stack_search.add_last (current_page.search_start)
+                stack_search.add_last (current_page.point-1)
+                lo := current_page.search_start
+                (lo = -1).if {
+                  lo := current_page.point
+                  current_page.set_search_start lo
+                }
+                go_next_word True
+                up := current_page.point - 1
+                text.clear
+                lo.to up do { i:Int
+                  text.add_last (current_page.buffer.at i)
+                }
+                cursor := text.count
+                //search_to_next
+                current_page.set_point lo
+                update_search lo point (lo+text.count) back False
+              }.elseif {c = 'r'} then {
+                type := 5; key_event k
+              } else { select 0; key_event k; }
+            }.elseif {type = 5} then {
+              //
+              // Backsearch.
+              (c = 'r').if {
+                searchback_to_next
+              }.elseif {c = 'w'} then {
+                search_state := 0
+                stack_search.add_last (current_page.search_start)
+                stack_search.add_last (current_page.point)
+                lo := current_page.point
+                go_next_word True
+                up := current_page.point-1
+                text.clear
+                lo.to up do { i:Int
+                  text.add_last (current_page.buffer.at i)
+                }
+                cursor := text.count
+                update_search (lo+text.upper) point lo back True
+              }.elseif {c = 's'} then {
+                type := 4; key_event k
+              } else { select 0; key_event k; }
+            }.elseif {((type.in_range 2 to 7) || {type = 21} || {type = 25} || {type = 17}) && {(c = 'y') || {c = 'v'}}} then {
+              clipboard.clear
+              Clipboard.get_in clipboard
+              (! clipboard.is_empty).if {
+                text.insert_string clipboard to cursor
+                cursor := cursor + clipboard.count
+              }
+            }.elseif {(type = 22) && {c = 'u'}} then { + i:Int
+              (text.is_integer).if {
+                i := text.to_int * 2
+                text.clear
+                i.append_in text
+                cursor := text.count
+              }
+            } else { select 0; key_event k; }
+          }.elseif {type = 8} then {
+            ((c = ' ') || {c = 'y'}).if {
+              do_replace
+              r := current_page.search_fore_with replace_key
+              update_replace r
+            }.elseif {c = 'n'} then {
+              r := current_page.search_fore_with replace_key
+              update_replace r
+            }.elseif {c = '!'} then {
+              + old_pt:Int
+              {
+                do_replace
+                old_pt := current_page.point
+                r := current_page.search_fore_with replace_key
+                update_replace r
+              }.do_while {current_page.point > old_pt}
+            } else {
+              select 0
+            }
+          }.elseif {(c = '?') && {
+              (type = 10) || {type = 19} || {type = 14} || {type = 15} || {type = 17} ||
+                {type = 2}  || {type = 3}  || {type = 25}
+          }} then {
+            tab_buffer_list
+          } else {
+            search_state := 0
+            text.insert c to cursor
+            cursor := cursor + 1
+            (type = 4).if {
+              stack_search.add_last (current_page.search_start)
+              stack_search.add_last (current_page.point-1)
+              (current_page.search_start != -1).if {
+                current_page.set_point (current_page.search_start)
+              }
+              r := current_page.search_fore_with text
+              update_search r point (r+text.count) back False
+            }.elseif {type = 5} then {
+              stack_search.add_last (current_page.search_start)
+              stack_search.add_last (current_page.point)
+              //current_page.set_point ((current_page.point).min (current_page.upper-text.upper+1))
+              current_page.set_search_start (current_page.point+text.upper)
+              r := current_page.search_back_with text malus 0
+              update_search (r+text.upper) point r back True
+            }
+          }
+        }
+      } else {
+        ci := k & 0FFh
+        ((type = 8) && {ci != 0Ah} && {ci.to_char != 'D'}).if {
+          select 0
+        } else {
+          (ci = 27).if {
+            select 0
+          }.elseif {ci = 82} then { // Right
+            ((type = 4) || {type = 5}).if {
+              select 0
+            } else {
+              cursor := (cursor + 1).min (text.count)
+            }
+          }.elseif {ci = 76} then { // Left
+            ((type = 4) || {type = 5}).if {
+              select 0
+            } else {
+              cursor := (cursor - 1).max 0
+            }
+          }.elseif {ci = 08} then { // Backspace
+            (cursor != 0).if {
+              ((type = 4) || {type = 5}).if {
+                (! stack_search.is_empty).if {
+                  (type = 4).if {
+                    up := stack_search.pop
+                    lo := stack_search.pop
+                    current_page.set_point (up+1)
+                    current_page.set_search_start lo
+                  } else {
+                    lo := stack_search.pop
+                    up := stack_search.pop
+                    current_page.set_point lo
+                    current_page.set_search_start up
+                  }
+                  text.clear
+                  (lo != -1).if {
+                    lo.to up do { i:Int
+                      text.add_last (current_page.buffer.at i)
+                    }
+                  }
+                  X_light.set_pattern (text.to_string_alias)
+                  cursor := text.count
+                }
+              } else {
+                cursor := cursor - 1
+                text.remove cursor
+              }
+            }
+          }.elseif {ci = 53h} then { // Suppr.
+            ((type=4) || {type=5}).if {
+              select 0
+            } else {
+              (cursor != text.count).if {
+                text.remove cursor
+              }
+            }
+          }.elseif {(ci = 09h) && {type != 20}} then { // Tab
+            ((type = 4) || {type = 5}).if {
+              select 0
+            } else {
+              tab_buffer_list
+            }
+          }.elseif {(ci.to_char = 'D') && {type = 17}} then {
+            (cur_cmd < list_cmd.upper).if {
+              cur_cmd := cur_cmd + 1
+              text.copy (list_cmd.at cur_cmd)
+              cursor := text.count
+            }.elseif {cur_cmd = list_cmd.upper} then {
+              cur_cmd := cur_cmd + 1
+              text.clear
+              cursor := text.count
+            }
+          }.elseif {(ci.to_char = 'U') && {type = 17}} then {
+            (cur_cmd > 0).if {
+              cur_cmd := cur_cmd - 1
+              text.copy (list_cmd.at cur_cmd)
+              cursor := text.count
+            }
+          }.elseif {(ci.to_char = 'D') && {k & Key_code.ctrl != 0} && {type = 4}} then {
+            search_to_next
+          }.elseif {(ci.to_char = 'U') && {k & Key_code.ctrl != 0} && {type = 4}} then {
+            type := 5; key_event k
+          }.elseif {(ci.to_char = 'D') && {type = 8}} then {           
+            r := current_page.search_fore_with replace_key
+            update_replace r
+          }.elseif {(ci.to_char = 'U') && {k & Key_code.ctrl != 0} && {type = 5}} then {
+            searchback_to_next
+          }.elseif {(ci.to_char = 'D') && {k & Key_code.ctrl != 0} && {type = 5}} then {
+            type := 4; key_event k
+          }.elseif {ci = 0Ah} then { // Enter
+            (type = 1).if {
+              + l:Int
+              (text.is_integer).if {
+                l := (text.to_int - 1).max 0
+                current_page.goto_line l
+              }
+              select 0
+            }.elseif {type = 21} then {
+              + l:Int
+              (text.is_integer).if {
+                l := text.to_int.min (current_page.upper)
+                current_page.set_point l
+              }
+              select 0
+            }.elseif {type = 22} then {              
+              (text.is_integer).if { select 23; }
+            }.elseif {(type = 2) || {type = 3} || {type = 10} || {type = 19} || {type = 14} || {type = 15} || {type = 25}} then {
+              set_text (text.to_string_alias)
+            }.elseif {type = 6} then {
+              (text.is_empty).if {                
+                r := current_page.search_fore_with replace_key
+                select 8
+                update_replace r
+              } else {                
+                replace_key.copy text
+                select 7
+                text.clear
+                cursor := text.count
+              }
+              X_light.set_pattern (replace_key.to_string_alias)
+            }.elseif {type = 7} then {
+              replace_value.copy text
+              select 8
+              text.clear
+              cursor := text.count
+              r := current_page.search_fore_with replace_key
+              update_replace r
+            }.elseif {type = 8} then {
+              do_replace
+              r := current_page.search_fore_with replace_key
+              update_replace r
+            }.elseif {type = 17} then { + b:Buffer_cmd
+              b ?= current_page.buffer
+              current_page.set_point (b.upper+1)
+              (! text.is_empty).if {
+                + txt:String_alias
+                + i:Int
+                txt := text.to_string_alias
+                {(i <= list_cmd.upper) && {list_cmd.at i != txt}}.while_do {
+                  i := i + 1
+                }
+                (i <= list_cmd.upper).if {
+                  (i < list_cmd.upper).if {
+                    list_cmd.remove i
+                    list_cmd.add_last txt
+                  }
+                } else {
+                  list_cmd.add_last txt
+                  (list_cmd.count > 32).if {
+                    list_cmd.remove_first
+                  }
+                }
+              }
+              b.run (list_cmd.last)
+              select 0
+            }.elseif {type = 20} then {
+              (text == "yes").if {
+                select_buffer.kill
+                select 0
+              }.elseif {text == "no"} then {
+                select 0
+              }
+            } else {
+              select 0
+            }
+          } else {
+            select 0
+          }
+          //(k & 0FFh).print; '-'.print; (k & 0FFh).print_hexa; '\n'.print
+        }
+      }
+    }
+  )
+  
+  - set_text txt:String_alias <-
+  ( + pth:String_alias
+    + idx,i,next_select:Int
+    + v:Array String_alias
+    + c:Char
+    text.copy txt
+    cursor := text.count
+    (type = 17).if {
+      Buffer_list.close
+    } else {
+      ((text.is_empty) || {text.last != '/'}).if {
+        next_select := 0
+        Buffer_list.close
+        (type = 2).if {          
+          current_page.set_buffer (Buffer.create (text.to_string_alias))
+          (type != 2).if {
+            next_select := type
+          }
+        }.elseif {type = 25} then {
+          //current_page.set_buffer (BUFFER.create (text.to_string_alias))
+          //"Insert file: ".print; text.to_string_alias.println
+          current_page.insert_file_from (text.to_string_alias)
+        }.elseif {type = 3} then {
+          current_page.buffer.change_name (text.to_string_alias)
+          save
+          Buffer_bar.update
+        } else { //.elseif {type = 10} then {
+          (text.is_empty).if {
+            (type = 10).if {
+              (Buffer.list.count >= 2).if {
+                pth := Buffer.list.second.path
+              }
+            } else { // Kill buffer
+              ((current_page.buffer.path = help_path) && {Buffer.list.count = 1}).if {
+                pth := Buffer.previous_list.first.path
+              } else {
+                pth := current_page.buffer.path
+              }
+            }
+          } else {
+            v := Buffer_list.value
+            {(idx <= v.upper) && {! v.at idx.has_substring text}}.while_do { idx := idx + 1; }
+            (idx <= v.upper).if {
+              string_tmp.copy (v.at idx)
+              (string_tmp.last = '+').if   { string_tmp.remove_tail 2; }.elseif
+                {string_tmp.last = '*'} then { string_tmp.remove_tail 3; }
+              (string_tmp.last = '>').if {
+                idx := string_tmp.last_index_of '<'
+                string_tmp.keep_head (idx-1)
+              }
+              (type.in_range 14 to 15).if {
+                string_tmp.replace_all_substring " " with "__"; // Old name (Just delete this line)
+                i := string_tmp.upper
+                {string_tmp.at i != '/'}.while_do {
+                  ((c := string_tmp.at i) = ' ').if { c := '-'; }
+                    else { c := c.to_lower; }
+                  string_tmp.at i put c
+                  i := i - 1
+                }
+                string_tmp.append ".li"
+              }
+              pth := string_tmp.to_string_alias
+            }
+          }
+          (pth != NULL).if {
+            (type = 19).if {              
+              i := 0
+              {(i <= Buffer.previous_list.upper) && {Buffer.previous_list.at i.path != pth}}.while_do { i := i + 1; }
+              (i <= Buffer.previous_list.upper).if {
+                Buffer.previous_list.remove i
+                Buffer_bar.update
+              } else {
+                i := 0
+                {(i <= Buffer.list.upper) && {Buffer.list.at i.path != pth}}.while_do { i := i + 1; }
+                ? {i <= Buffer.list.upper}
+                select_buffer := Buffer.list.at i
+                (Buffer.list.at i.is_save).if {
+                  select_buffer.kill
+                } else {                  
+                  next_select := 20
+                }
+              }
+            } else {
+              current_page.set_buffer (Buffer.create pth)
+            }
+          }
+        }
+        select next_select
+      }.elseif {(type = 10) || {type = 19}} then {
+        Buffer_list.match_buffer text
+      }.elseif {type = 14} then {
+        Buffer_list.match_explorer text in lib_directory
+      }.elseif {type = 15} then {
+        Buffer_list.match_explorer text in pwd_directory
+      } else {
+        //DIRENT.reduce_path text
+        Buffer_list.match_file text
+      }
+    }
+  )
+  
+  - select tt:Int <-
+  ( + t:Int
+    t := tt
+    (t)
+    .when 0 then {
+      ((type = 4) || {type = 5}).if {
+        (! text.is_empty).if { old_search.copy text; }
+      }
+      X_light.set_pattern NULL
+      current_page.set_search_start (-1)
+      Buffer_list.close
+      cmd.clear
+    }
+    //
+    // Go to line.
+    .when 1 then {
+      cmd.copy "Goto line: "
+      text.clear
+      cursor := 0
+    }
+    //
+    // File.
+    .when 2 then {
+      cmd.copy "Find file: "
+      text.copy (current_page.buffer.path)
+      text.remove_tail (current_page.buffer.shortname.count)
+      cursor := text.count
+    }
+    .when 3 then {
+      cmd.copy "Write file: "
+      text.copy (current_page.buffer.path)
+      text.remove_tail (current_page.buffer.shortname.count)
+      cursor := text.count
+    }
+    .when 27 then {      
+      + buf:Buffer
+      + up,i:Int
+      + c:Char
+      + is_path:{Char; Boolean}
+      cmd.copy "Find file: "
+      text.copy (current_page.buffer.path)
+      text.remove_tail (current_page.buffer.shortname.count)
+      buf := current_page.buffer
+      is_path := { c:Char
+        (c = '/') || {c.is_identifier} || {c = '.'} || {c = '-'}
+      }
+      string_tmp.clear
+      up := buf.upper + 1
+      i := current_page.point
+      {(i >= 0) && {is_path.value (buf.at i)}}.while_do { i := i - 1; }
+      {i < current_page.point}.while_do {        
+        i := i + 1
+        string_tmp.add_last (buf.at i)
+      }
+      (! string_tmp.is_empty).if {
+        i := i + 1
+        {(i != up) && {is_path.value (c:=buf.at i)}}.while_do {
+          string_tmp.add_last c
+          i := i + 1
+        }
+      }
+      text.append string_tmp
+      Dirent.reduce_path text
+      cursor := text.count
+      t := 2
+    }
+    //
+    // Search.
+    .when 4 then {
+      search_state := 0
+      stack_search.clear
+      cmd.copy "I-search: "
+      text.clear
+      cursor := text.count
+    }
+    .when 5 then {
+      search_state := 0
+      stack_search.clear
+      cmd.copy "I-search backward: "
+      text.clear
+      cursor := text.count
+    }
+    //
+    // Replace.
+    .when 6 then { // Replace (Begin)
+      replace_counter := 0
+      cmd.copy "Query replace"
+      (! replace_key.is_empty).if {
+        cmd.append " (default `";
+        cmd.append replace_key
+        cmd.append "' -> `";
+        cmd.append replace_value
+        cmd.append "')"
+      }
+      cmd.append ": "
+      text.clear
+      cursor := text.count
+    }
+    .when 7 then { // Replace ...
+      cmd.copy "Query replace `";
+      cmd.append replace_key
+      cmd.append "' with: "
+      text.clear
+      cursor := text.count
+    }
+    .when 8 then { // Replace (End)
+      cmd.copy "Query replacing `";
+      cmd.append replace_key
+      cmd.append "' with: `";
+      cmd.append replace_value
+      cmd.append "': "
+    }
+    //
+    // Exit
+    .when 9 then {
+      text.clear
+      cursor := text.count
+      Page.save_last_point
+      index_exit := Buffer.list.upper
+      {(index_exit >= 0) && {Buffer.list.at index_exit.is_save = True /* BUG COMPILO */}}.while_do {
+        index_exit := index_exit - 1
+      }
+      (index_exit < 0).if {
+        Parser.update_cfg
+      } else {
+        cmd.copy "Save file `";
+        cmd.append (Buffer.list.at index_exit.path)
+        cmd.append "' ? [y/n]"
+      }
+    }
+    //
+    // Buffer list
+    .when 10 then {
+      + b:Buffer
+      cmd.copy "Switch to buffer"
+      (Buffer.list.count >= 2).if {
+        b := Buffer.list.second
+        cmd.append " (default `";
+        cmd.append (b.shortname)
+        (b.tag != NULL).if {
+          cmd.add_last ' '
+          cmd.append (b.tag)
+        }
+        cmd.append "')"
+      }
+      cmd.add_last ':'
+      text.clear
+      cursor := text.count
+    }
+    //
+    // Completion
+    .when 11 then {
+      + pt:Int
+      + c:Char
+      cmd.copy "Expansion"
+      Page.save_last_point
+      pt := current_page.point - 1
+      text.clear
+      {(pt >=0) && {(c := current_page.buffer.at pt).is_identifier}}.while_do {
+        text.add_last c
+        pt := pt - 1
+      }
+      cursor := text.count
+      (! text.is_empty).if {
+        Page.save_last_point
+        text.reverse
+        comp_key.copy text
+        comp_list.clear
+        comp_list.add_last (text.to_string_alias)
+        comp_buffer := Buffer.list.fast_first_index_of (current_page.buffer)
+        comp_point := current_page.point - text.count
+        completion_next True
+      } else {
+        t := 0
+      }
+    }
+    //
+    // Message
+    .when 12 then {
+      text.clear
+      cmd2.clear
+      cursor := text.count
+    }
+    //
+    // Undo / Redo
+    .when 13 then {
+      undo_point := current_page.buffer.stack_up
+      (undo_point = current_page.buffer.stack_lo).if {
+        cmd.copy "No further undo information."
+        t := 12
+      } else {
+        cmd.copy "Undo!"
+        cmd2.clear
+        undo_point := (undo_point - 1) & (Buffer.stack_size-1)
+        undo_next
+      }
+    }
+    //
+    // Library Explorer / PWD Explorer
+    .when 14 or 15 then {
+      + l:Light
+      ((type = 14) && {lib_directory = NULL}).if {
+        cmd.copy "WARNING: `lisaac' command not found.";
+        t := 12
+      } else {
+        cmd.copy "Find prototype:"
+        text.clear
+        (current_page.buffer.light.root != NULL).if {
+          l := current_page.buffer.light.root.get_type (current_page.point)
+          (l.type = type_id).if {
+            (l.lower).to (l.upper) do { i:Int
+              text.add_last (current_page.buffer.at i)
+            }
+          }
+        }
+        cursor := text.count
+        type := t
+        tab_buffer_list
+      }
+    }
+    //
+    // Reload ?
+    .when 16 then {
+      cmd.copy "Changed on disk. Reload `";
+      cmd.append (current_page.buffer.path)
+      cmd.append "' ? [y/n]"
+      text.clear
+      cursor := text.count
+    }
+    //
+    // Execute command.
+    .when 17 then {
+      cmd.copy "Command line"
+      (! list_cmd.is_empty).if {
+        cmd.append " (default `";
+        cmd.append (list_cmd.last)
+        cmd.append "')"
+      }
+      cmd.add_last ':'
+      text.clear
+      cursor := text.count
+      cur_cmd := list_cmd.count
+    }
+    //
+    // Kill line.
+    .when 18 then {
+      Clipboard.put ""
+      kill_line
+    }  
+    //
+    // Kill Buffer.
+    .when 19 then {
+      + b:Buffer
+      + bh:Buffer_head
+      Page.save_last_point
+      b := current_page.buffer
+      ((b.path = help_path) && {Buffer.list.count = 1} && {Buffer.previous_list.is_empty}).if {
+        cmd.copy "No buffer to kill."
+        t := 12
+      } else {
+        cmd.copy "Kill buffer (default `";
+        ((b.path = help_path) && {Buffer.list.count = 1}).if {
+          bh := Buffer.previous_list.first
+          cmd.append (bh.shortname)
+          cmd.append " +"
+        } else {
+          cmd.append (b.shortname)
+          (b.tag != NULL).if { cmd.add_last ' '; cmd.append (b.tag); }
+        }
+        cmd.append "'): "
+        text.clear
+        cursor := text.count
+      }
+    }
+    .when 20 then {
+      cmd.copy "Buffer `";      
+      cmd.append (select_buffer.shortname)
+      (select_buffer.tag != NULL).if { cmd.add_last ' '; cmd.append (select_buffer.tag); }
+      cmd.append "' modified; kill anyway? (`yes' or `no'): "
+      text.clear
+      cursor := text.count
+    }
+    //
+    // Go to point.
+    .when 21 then {
+      cmd.copy "Goto point: "
+      text.clear
+      cursor := 0
+    }
+    //
+    // Repeat.
+    .when 22 then {
+      cmd.copy "Repeat: "
+      text.copy "2"
+      cursor := text.count
+    }
+    .when 23 then {
+      repeat_times := text.to_int
+      cmd.copy text
+      cmd.append " times: "
+      text.clear
+      cursor := 0
+    }
+    //
+    // Paste.
+    .when 24 then {
+      + start,end:Int
+      
+      clipboard.clear
+      Clipboard.get_in clipboard
+      (! clipboard.is_empty).if {
+        current_page.stack_upper
+        (start,end) := current_page.get_select
+        (start != -1).if {
+          current_page.set_point start
+          start.to end do { i:Int
+            current_page.suppr_char
+          }
+          current_page.set_select_start (-1)
+        }
+        0.to (clipboard.upper) do { i:Int
+          current_page.insert_char (clipboard.at i)
+        }
+        current_page.stack_upper
+        paste_state := 0
+      } else {
+        t := 0
+      }
+    }
+    //
+    // Insert file.
+    .when 25 then {
+      cmd.copy "Insert file: "
+      text.copy (current_page.buffer.path)
+      text.remove_tail (current_page.buffer.shortname.count)
+      cursor := text.count
+    }
+    //
+    // Create directory ?
+    .when 26 then {
+      + i:Int
+      cmd.copy "Directory `";
+      string_tmp.copy (current_page.buffer.path)
+      i := string_tmp.last_index_of '/'
+      (i != -1).if {
+        string_tmp.remove (i+1) to (string_tmp.upper)
+      }
+      cmd.append string_tmp
+      cmd.append "' does not exist; create? [y/n]"
+      text.clear
+      cursor := text.count
+    }
+    type := t
+  )
+  
+Public
+  
+  - index_exit:Int
+  
+  - old_search:String_buffer   := String_buffer.create 32
+  - stack_search:Array Int := Array Int.create_with_capacity 64
+  - search_state:Int
+  
+  - replace_key:String_buffer   := String_buffer.create 32
+  - replace_value:String_buffer := String_buffer.create 32
+  - replace_counter:Int
+  
+  - width_char:Real32
+  - height_char:Real32
+  - char_buf:String_buffer := String_buffer.create 1
+  - reset_size_char <- ( width_char := 0.0; )
+  
+  - display pen:Pen cursor (x,y:Real32) <-
+  (
+    pen.begin_path
+    pen.rect (x,y) size (width_char,height_char)
+    pen.fill_color (color.black)
+    pen.fill
+    pen.fill_color (color.white)
+  )
+  
+  //
+  // Open / Save / Buffer / Explorer
+  //
+  
+  - tab_buffer_list <-
+  ( + r:Int
+    + view:Boolean
+    ((type = 10) || {type = 19}).if {
+      r := Buffer_list.match_buffer text
+    }.elseif {type = 14} then {
+      r := Buffer_list.match_explorer text in lib_directory
+    }.elseif {type = 15} then {
+      r := Buffer_list.match_explorer text in pwd_directory
+    }.elseif {type = 17} then {
+      r := Buffer_list.match_cmd text
+    } else {
+      //DIRENT.reduce_path text
+      r := Buffer_list.match_file text
+    }
+    (r = -1).if {
+      cmd2.copy "[No match]"
+    } else {
+      cursor := text.count
+      (r = 1).if {
+        cmd2.copy "[Sole completion]"
+      }.elseif {text.count = Old text.count} then {
+        view := True
+      }
+    }
+    (view).if { Buffer_list.open;  }
+      else      { Buffer_list.close; }
+  )
+  
+  //
+  // Search.
+  //
+  
+  - search_to_next <-
+  ( + r:Int
+    (text.is_empty).if {
+      (old_search.is_empty).if {
+        cmd2.copy "[No previous search string]"
+      } else {
+        text.copy old_search
+        cursor := text.count
+      }
+    }
+    (! text.is_empty).if {      
+      stack_search.add_last (current_page.search_start)
+      stack_search.add_last (current_page.point-1)
+      r := current_page.search_fore_with text
+      update_search r point (r+text.count) back False
+    }
+  )
+  
+  - searchback_to_next <-
+  ( + r:Int
+    (text.is_empty).if {
+      (old_search.is_empty).if {
+        cmd2.copy "[No previous search string]"
+      } else {
+        text.copy old_search
+        cursor := text.count
+      }
+    }
+    (! text.is_empty).if {      
+      stack_search.add_last (current_page.search_start)
+      stack_search.add_last (current_page.point)
+      r := current_page.search_back_with text malus (-1)
+      update_search (r+text.upper) point r back True
+    }
+  )
+  
+  - update_search r:Int point pt:Int back b:Boolean <-
+  ( + is_loop:Boolean
+    X_light.set_pattern (text.to_string_alias)
+    ((r = -1) || {pt = -1}).if {
+      cmd2.copy "[No match]"
+    } else {
+      is_loop := ((!b) && {r<current_page.point}) || {(b) && {pt>current_page.point}}
+      //r.print; ','.print; current_page.point.println
+      //is_loop.print; ' '.print; search_state.print; '\n'.print
+      ((search_state = 0) && {is_loop}).if {
+        cmd2.copy "[Failing]"
+        beep
+        search_state := 1
+      }.elseif {(search_state = 1) && {is_loop}} then {
+        cmd2.copy "[Looped]"
+        search_state := 2
+        current_page.set_search_start r
+        current_page.set_point pt
+      } else {
+        search_state := 0
+        current_page.set_search_start r
+        current_page.set_point pt
+      }
+    }
+  )
+  
+  //
+  // Replace.
+  //
+  
+  - update_replace r:Int <-
+  (
+    (r < current_page.point).if {
+      cmd.copy "Replaced "
+      replace_counter.append_in cmd
+      cmd.append " occurrences."
+      select 12
+    } else {      
+      current_page.set_search_start r
+      current_page.set_point (r + replace_key.count)
+    }
+  )
+  
+  - do_replace <-
+  (
+    replace_counter := replace_counter + 1
+    replace_key.count.times { current_page.remove_char; }
+    0.to (replace_value.upper) do { i:Int
+      current_page.insert_char (replace_value.at i)
+    }
+    current_page.stack_upper
+  )
+  
+  //
+  // Completion
+  //
+  
+  - comp_list:Array String_alias := Array String_alias.create_with_capacity 16
+  - comp_buffer:Int
+  - comp_point:Int
+  - comp_key:String_buffer := String_buffer.create 64
+  
+  - completion_next is_buffer:Boolean <-
+  ( + up,i,j:Int
+    + b:Buffer
+    + out:Boolean
+    + c:Char
+    + new:String_alias
+    + next_buffer:{Boolean}
+    
+    next_buffer := {
+      + result:Boolean
+      ((!out) && {comp_point = b.last_point%(up+1)}).if {
+        comp_buffer := (comp_buffer + 1) % Buffer.list.count
+        b := Buffer.list.at comp_buffer
+        up := b.upper
+        comp_point := b.last_point
+        (Buffer.list.at comp_buffer != current_page.buffer).if {
+          result := True
+        } else {
+          (is_buffer).if {
+            cmd.copy "No further dynamic expansion for `";
+            cmd.append comp_key
+            cmd.append "' found."
+            {
+              (current_page.point > 0) &&
+                {current_page.buffer.at (current_page.point-1).is_identifier}
+            }.while_do {
+              current_page.remove_char
+            }
+            0.to (comp_key.upper) do { k:Int
+              current_page.insert_char (text.at k)
+            }
+            current_page.stack_upper
+            text.clear
+            cmd2.clear
+            select 12
+          } else {
+            cmd2.copy "No further dynamic expansion for `";
+            cmd2.append comp_key
+            cmd2.append "' found."
+            {
+              (cursor > 0) &&
+                {text.at (cursor-1).is_identifier}
+            }.while_do {
+              cursor := cursor - 1
+              text.remove cursor
+            }
+            0.to (comp_key.upper) do { k:Int
+              text.insert (comp_key.at k) to cursor
+              cursor := cursor + 1
+            }
+          }
+          comp_key.clear
+          out := True
+        }
+      }
+      result
+    }
+    b := Buffer.list.at comp_buffer
+    up := b.upper
+    next_buffer.value
+    {! out}.while_do {      
+      {
+        comp_point := comp_point - 1
+        (comp_point < 0). if { comp_point := up; }
+      }.do_while {
+        (comp_point != b.last_point%(up+1)) &&
+          {b.at comp_point != comp_key.first}
+      }
+      (b.at comp_point = comp_key.first).if {        
+        string_tmp.clear
+        i := comp_point
+        j := 0
+        {(i <= up) && {j <= comp_key.upper} && {(c := comp_key.at j) = b.at i}}.while_do {
+          string_tmp.add_last c
+          (i, j) := (i + 1, j + 1)
+        }
+        (j > comp_key.upper).if {
+          {(i <= up) && {(c := b.at i).is_identifier}}.while_do {
+            string_tmp.add_last c
+            i := i + 1
+          }
+          new := string_tmp.to_string_alias
+          (! comp_list.has new).if {
+            comp_list.add_last new
+            (is_buffer).if {
+              {
+                (current_page.point > 0) &&
+                  {current_page.buffer.at (current_page.point-1).is_identifier}
+              }.while_do {
+                current_page.remove_char
+              }
+              0.to (new.upper) do { k:Int
+                current_page.insert_char (new.at k)
+              }
+              current_page.stack_upper
+            } else {
+              {
+                (cursor > 0) &&
+                  {text.at (cursor-1).is_identifier}
+              }.while_do {
+                cursor := cursor - 1
+                text.remove cursor
+              }
+              0.to (new.upper) do { k:Int
+                text.insert (new.at k) to cursor
+                cursor := cursor + 1
+              }
+            }
+            (b != current_page.buffer).if {
+              cmd2.copy "found in `";
+              cmd2.append (b.shortname)
+              (b.tag != NULL).if {
+                cmd2.add_last ' '
+                cmd2.append (b.tag)
+              }
+              cmd2.append "'."
+            }
+            out := True
+          }
+        }
+      }
+      next_buffer.value
+    }
+  )
+  
+  //
+  // Undo / Redo
+  //
+  
+  - undo_point:Int
+  
+  - undo_next <-
+  ( + stop:Boolean
+    + u:Undo
+    
+    {(undo_point != current_page.buffer.stack_lo) && {! stop}}.while_do {
+      u := current_page.buffer.stack.at undo_point
+      stop := u.undo current_page
+      undo_point := (undo_point - 1) & (Buffer.stack_size-1)
+    }
+  )
+  
+  //
+  // Command line
+  //
+  
+  - list_cmd:Array String_alias := Array String_alias.create_with_capacity 32
+  - cur_cmd:Int
+  
+  //
+  // Kill line
+  //
+  
+  - kill_line <-
+  ( + c:Char
+    (current_page.point <= current_page.upper).if {
+      clipboard.clear
+      Clipboard.get_in clipboard
+      (current_page.buffer.at (current_page.point) = '\n').if {
+        clipboard.add_last '\n'
+        current_page.suppr_char
+      } else {
+        {
+          (current_page.point <= current_page.upper) &&
+            {(c := current_page.buffer.at (current_page.point)) != '\n'}
+        }.while_do {
+          clipboard.add_last c
+          current_page.suppr_char
+        }
+      }
+      Clipboard.put clipboard
+      current_page.stack_upper
+    }
+  )
+  
+  //
+  // Kill Buffer.
+  //
+  
+  - select_buffer:Buffer
+  
+  //
+  // Repeat.
+  //
+  
+  - repeat_times:Int
+  
+  //
+  // Paste.
+  //
+  
+  - paste_state:Int
+  
+  //
+  // Mouse
+  //
+  
+  - cursor_pattern:C_array Uint32 :=
+    ( + result:C_array Uint32
+    result := C_array Uint32.create (24*24)
+    0.to (24*24-1) do { i:Int
+      "XXXXXXXXX               \
+      \X_______X               \
+      \X______X                \
+      \X_____X                 \
+      \X______X                \
+      \X_______X               \
+      \X__X_____X              \
+      \X_X X_____X       XX    \
+      \XX   X_____X     X_X    \
+      \      X_____X   X__X    \
+      \       X_____X X___X XXX\
+      \        X_____X____X X_X\
+      \         X_________X X_X\
+      \          X________X X_X\
+      \           X_______X X_X\
+      \          X________X X_X\
+      \         X_________X X_X\
+      \        X__________X X_X\
+      \       X___________X X_X\
+      \      XXXXXXXXXXXXXX X_X\
+      \                     X_X\
+      \         XXXXXXXXXXXXX_X\
+      \         X_____________X\
+      \         XXXXXXXXXXXXXXX".at i
+      .when 'X' then { result.at i put 0_FF_00_00_00h; }
+      .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
+    }
+    result
+  )
+  
+  - cursor_mouse:Pointer
+  
+  - is_in:Boolean
+  - is_cur:Boolean
+  //- win_x:INTEGER
+  //- win_y:INTEGER
+  - touch_event t:Touch <-
+  ( + nw,nh/*,nx,ny*/:Int
+    - dx,dy:Int
+    (
+      (t.div = t.div_action) &&
+        {t.x > default_width -24} &&
+        {t.y > default_height-24}
+    ).if {
+      (! is_cur).if {
+        Elito_window.set_cursor cursor_mouse
+        is_cur := True
+      }
+      ((! is_in) && {t.z != 0}).if {        
+        is_in := True
+        //(win_x,win_y) := PAPER.get_window_position
+        (default_width, default_height) := Elito_window.window_size
+        //PAPER.set_cursor_position 
+        (dx,dy) := (default_width - t.x,default_height - t.y)
+      }
+    }.elseif {(t.z = 0.0) && {is_cur}} then {
+      Elito_window.set_cursor (Elito_window.get_cursor `GLFW_ARROW_CURSOR`:Int)
+      is_cur := False
+    }
+    ((t.z = 0.0) && {is_in}).if {      
+      is_in := False
+    }
+    ((t.z != 0.0) && {is_in}).if {
+      nw := t.x + dx
+      nh := t.y + dy
+      nw := nw.max (Elito_window.root.width_min .to_int)
+      nh := nh.max (Elito_window.root.height_min.to_int)
+      ((nw != default_width) || {nh != default_height}).if {        
+        //PAPER.set_xwindow_size (nw, nh)
+        Elito_window.set_window_size (nw,nh)
+        (default_width, default_height) := (nw, nh)
+      }
+    }
+  )
+  

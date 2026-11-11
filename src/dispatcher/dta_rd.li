@@ -17,10 +17,13 @@ Public
     (p.name = str_self).if {
       // For self.
       result := self_arg.static_type
+      (slot.affect != '<').if {
+        // Data slot: Self is exact, as in its copy for the concrete type (see @Slot.slot_data_for).
+        result := result.to_exact
+      }
     } else {
       // For genericity.
       result := slot.receiver_type.parameter_to_type p
-      //result := self_arg.static_type.raw.parameter_to_type p
     }
 
     result

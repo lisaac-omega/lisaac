@@ -59,7 +59,6 @@ Public
     + is_rec:Boolean
     + idx:Int
 
-
     (receiver != NULL).if {
       rec := receiver.run_expr
     }
@@ -155,7 +154,6 @@ Public
         semantic_error (position,"String argument needed.")
       }
       str.set_value (string_tmp2.to_string_alias)
-      //get_data (val
     } else {
       slot := get_method name
       (slot = NULL).if {
@@ -206,6 +204,28 @@ Public
     }.elseif {name = "get_string"} then {
       Stdin.read_line
       result := Lip_string.get (Stdin.last_string.to_string_alias)
+    }.elseif {name = "run_split"} then {
+      str ?= val
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      string_tmp2.clear
+      str.append_in string_tmp2
+      result := Lip_integer.get (run_split string_tmp2)
+    }.elseif {name = "split_files"} then {
+      str ?= val
+      (str = NULL).if {
+        semantic_error (position,"String argument needed.")
+      }
+      string_tmp2.clear
+      split_files.foreach { f:String_alias
+        string_tmp2.append " \""
+        string_tmp2.append f
+        string_tmp2.remove_tail (extension_count f)
+        str.append_in string_tmp2
+        string_tmp2.add_last '\"'
+      }
+      result := Lip_string.get (string_tmp2.to_string_alias)
     } else {
       slot := get_data name
       (slot = NULL).if {
@@ -221,6 +241,45 @@ Public
     }
     (val != NULL).if {
       val.free
+    }
+    result
+  )
+
+  - run_split cmd:String :Int <-
+  // Runs `cmd "file"' for each C file of `-split' (@split_files), all at the same time, then
+  // waits for all of them. The processes are started by @Environment, without a shell: the same
+  // on unix and windows. The first non zero exit status, or 0.
+  ( + ids:Array Int
+    + result,status:Int
+    ids := Array Int.create_with_capacity (split_files.count)
+    split_files.foreach { f:String_alias
+      String.tmp { line:String_buffer
+        line.copy cmd
+        line.append " \""
+        line.append f
+        line.add_last '\"'
+        ids.add_last (Environment.run line background)
+      }
+    }
+    ids.foreach { id:Int
+      (id = -1).if {
+        status := -1
+      } else {
+        status := Environment.wait_process id
+      }
+      ((result = 0) && {status != 0}).if {
+        result := status
+      }
+    }
+    result
+  )
+
+  - extension_count f:String :Int <-
+  // Number of characters of the extension of @f (2 for ".c"), 0 without extension.
+  ( + i,result:Int
+    i := f.last_index_of '.'
+    (i != -1).if {
+      result := f.count - i
     }
     result
   )
@@ -244,7 +303,6 @@ Public
         }
         (wimg = NULL).if { wimg := img; }
       }
-      //dir.print
       (dir.lower).to (dir.upper) do { j:Int
         entry := dir.at j
         (entry.name.has_suffix ".li").if {

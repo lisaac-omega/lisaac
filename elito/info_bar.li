@@ -1,0 +1,82 @@
+Header
+  + name := Info_bar
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - name:String_alias := "INFO BAR"
+    
+  - width_min:Real32  <- 100.0
+  - height_min:Real32 <- font_size + 8.0
+    
+  - page:Page_abstract <-
+  ( + result:Page_abstract
+    result ?= parent.child.at 0
+    ? {result != NULL}
+    result
+  )
+  
+  - is_save:Boolean        <- page.is_save
+  - shortname:String_alias <- page.shortname
+  - tag:String_alias       <- page.tag
+    
+  - create_info:Self <-
+  ( + result:Self
+    result := create NULL to (0,0) size (width_min,height_min)
+    result.height_lock
+  )
+  
+  - draw pen:Pen <-
+  ( + x,y:Real32
+    + bg:Paint
+    + t:String_alias
+    draw_debug pen
+    
+    bg := Paint.create_linear (xo,yo) to (xo,yo+height*0.7)
+      color (Color.rgba(200,200,220,255))
+      to    (
+      (page = current_page)
+      .ok  (Color.rgba(175,175,192,255))
+        else {Color.rgba(248,248,251,255)}
+    )
+    pen.begin_path
+    pen.rect_varying (xo+2,yo-0.5) size (width-4,height-3) radius (0,0,8,8)
+    pen.fill_paint bg
+    pen.fill
+    bg.free
+    
+    set_font (pen,"Code-Bold")
+    x := xo+8
+    y := yo+height/2
+    
+    (page = current_page).if {
+      pen.fill_color (Color.rgba(0,0,0,192))
+    } else {
+      pen.fill_color (Color.rgba(0,0,0,96))
+    }
+    // Save / Shortname / Tag    
+    string_tmp.copy (is_save.ok "--" or "**")
+    string_tmp.append "  "
+    string_tmp.append shortname
+    ((t := tag) != NULL).if {
+      string_tmp.add_last ' '
+      string_tmp.append t
+    }
+    pen.text_align (Pen.align_left|Pen.align_middle)
+    pen.text_box (x,y) width width msg string_tmp
+        
+    // Position
+    pen.text_align (Pen.align_left|Pen.align_middle)
+    pen.text_box (x+width/2.0-page.width_char*7.0,y) width width msg (page.pos_txt)
+    
+    // Language.    
+    set_font (pen,"Code")
+    pen.text_align (Pen.align_right|Pen.align_middle)
+    pen.text_box (x,y) width (width-8) msg (page.language)
+  )

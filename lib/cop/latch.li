@@ -1,0 +1,51 @@
+Header
+  - name := Latch W
+/* COP coordination: a count down, then the latch opens (once).
+   An active object (a universe): `count_down' and `await' are asynchronous messages. The
+   universes which end a work send `count_down'; a waiter (an active object of type @W) sends
+   `await self tag k' and receives the asynchronous message `opened k' when the count is zero
+   (at once if it is already). @W must have a slot `opened k:Int'. */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + count:Int
+
+  + queue:Array W := Array W .create_with_capacity 2
+  + tags:Array Int := Array Int .create_with_capacity 2
+
+  - create n:Int :Self <-
+  // A new universe, which opens after @n `count_down'.
+  ( + result:Self
+    result := clone
+    result.set_count n
+    result
+  )
+
+  - set_count n:Int <-
+  (
+    count := n
+  )
+
+  - count_down <-
+  (
+    count := count - 1
+    (count = 0).if {
+      queue.lower.to (queue.upper) do { i:Int
+        queue.at i.opened (tags.at i)
+      }
+      queue.clear
+      tags.clear
+    }
+  )
+
+  - await w:W tag k:Int <-
+  (
+    (count <= 0).if {
+      w.opened k
+    } else {
+      queue.add_last w
+      tags.add_last k
+    }
+  )

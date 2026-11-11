@@ -1,0 +1,71 @@
+Header
+  + name := Select_buffer
+Inherit
+  
+  - parent_action:Action := Action
+  
+Public
+  
+  - list:Array Select_buffer := Array Select_buffer.create_with_capacity 10
+  
+  - update <-
+  ( + i,j:Int
+    + bt:Button
+    + b:Buffer
+    + bh:Buffer_head
+    + sb:Select_buffer
+    {(i <= list.upper) && {i <= Buffer.list.upper}}.while_do {
+      sb := list.at i
+      bt := sb.button
+      b := Buffer.list.at i
+      string_tmp.copy (b.shortname)
+      (b.tag != NULL).if {
+        string_tmp.add_last ' '
+        string_tmp.append (b.tag)
+      }
+      (! b.is_save).if {
+        string_tmp.append "  **"
+      }
+      bt.set_text (string_tmp.to_string_alias)
+      sb.set_path (b.path)
+      i := i + 1
+    }
+    j := Buffer.previous_list.lower
+    {(i <= list.upper) && {j <= Buffer.previous_list.upper}}.while_do {
+      sb := list.at i
+      bt := sb.button
+      bh := Buffer.previous_list.at j
+      string_tmp.copy (bh.shortname)
+      string_tmp.append "  +"
+      bt.set_text (string_tmp.to_string_alias)
+      sb.set_path (bh.path)
+      i := i + 1
+      j := j + 1
+    }
+  )
+  
+Public
+  
+  + button:Button
+  + path:String_alias
+  - set_path p:String_alias <- ( path := p; )
+  
+  - create bt:Button :Self <-
+  ( + result:Self
+    result := clone
+    result.make bt
+    result
+  )
+  
+  - make bt:Button <-
+  (
+    button := bt
+    list.add_last self
+  )
+      
+  - run <- 
+  (
+    (path != NULL).if {
+      current_page.set_buffer (Buffer.create path)
+    }
+  )

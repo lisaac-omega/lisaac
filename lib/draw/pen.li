@@ -449,7 +449,7 @@ Public // Private
     t := pqx*dx  + pqy*dy
     (d > 0).if { t := t/d; }
     (t < 0).if   { t := 0; }.elseif 
-    {t > 1} then { t := 1; }
+      {t > 1} then { t := 1; }
     dx := px + t*pqx - x
     dy := py + t*pqy - y
     dx*dx + dy*dy
@@ -529,13 +529,13 @@ Pen
       (lx0,ly0,lx1,ly1) := choose_bevel ((p1.flags & pr_innerbevel)!=0, p0, p1) with lw
       a0 := (-dly0).atan2 (-dlx0)
       a1 := (-dly1).atan2 (-dlx1)
-      (a1 > a0).if { a1 := a1 - Real.two_pi; }
+      (a1 > a0).if { a1 := a1 - Real32.pi*2; }
       vset vtx with (lx0, ly0, lu,1)
       vset vtx with (p1.x - dlx0*rw, p1.y - dly0*rw, ru,1)
-      n := (((a0 - a1) / Real.pi) * ncap).ceiling.clamp 2 to ncap - 1
-      0.to n do { i:Int
+      n := ((((a0 - a1) / Real32.pi) * ncap.to_real32).ceil.to_raw_int).clamp 2 to ncap
+      0.to (n-1) do { i:Int
         + u,a,rx,ry:Real32
-        u := i.to_real32/n
+        u := i.to_real32/(n-1).to_real32
         a := a0 + u*(a1-a0)
         rx := p1.x + a.cos * rw
         ry := p1.y + a.sin * rw
@@ -549,13 +549,13 @@ Pen
       (rx0,ry0,rx1,ry1) := choose_bevel ((p1.flags & pr_innerbevel)!=0, p0, p1) with (-rw)
       a0 := dly0.atan2 dlx0
       a1 := dly1.atan2 dlx1
-      (a1 < a0).if { a1 := a1 + Real.two_pi; }
+      (a1 < a0).if { a1 := a1 + Real32.pi*2; }
       vset vtx with (p1.x + dlx0*rw, p1.y + dly0*rw, lu,1)
       vset vtx with (rx0, ry0, ru,1)
-      n := (((a1 - a0) / Real32.pi) * ncap).ceiling.clamp 2 to ncap - 1
-      0.to n do { i:Int
+      n := ((((a1 - a0) / Real32.pi) * ncap.to_real32).ceil.to_raw_int).clamp 2 to ncap
+      0.to (n-1) do { i:Int
         + u,a,lx,ly:Real32
-        u := i.to_real32/n
+        u := i.to_real32/(n-1).to_real32
         a := a0 + u*(a1-a0)
         lx := p1.x + a.cos * lw
         ly := p1.y + a.sin * lw
@@ -745,7 +745,7 @@ Pen
         ((p1.flags & pt_corner) != 0).if {
           (
             ((dmr2 * miter_limi*miter_limi) < 1.0) || 
-            {lin_join = bevel} || {lin_join = round}
+              {lin_join = bevel} || {lin_join = round}
           ).if {
             p1.set_flags (p1.flags | pt_bevel)
           }
@@ -780,6 +780,7 @@ Pen
       path := cache.paths.at i
       pts := path.points
       path.fill.clear
+      path.stroke.clear
       dst := path.stroke
 
       // Calculate fringe or stroke
@@ -1023,9 +1024,9 @@ Public
     y0 := command_y
     add_cmd (
       Pen_bezier.create_w1 
-      (x0+ 2.0/3.0*(cx - x0), y0 + 2.0/3.0*(cy - y0)) w2 
-      (x + 2.0/3.0*(cx -  x), y  + 2.0/3.0*(cy -  y)) to 
-      (x,y)
+        (x0+ 2.0/3.0*(cx - x0), y0 + 2.0/3.0*(cy - y0)) w2 
+        (x + 2.0/3.0*(cx -  x), y  + 2.0/3.0*(cy -  y)) to 
+        (x,y)
     )
   )
 
@@ -1044,8 +1045,8 @@ Public
       // Handle degenerate cases.
       (
         (eq (x0,y0) and (x1,y1)) || {eq (x1,y1) and (x2,y2)} ||
-        {dist_seg (x1,y1) with (x0,y0) and (x2,y2) < dist_tol*dist_tol} ||
-        {rad < dist_tol}
+          {dist_seg (x1,y1) with (x0,y0) and (x2,y2) < dist_tol*dist_tol} ||
+          {rad < dist_tol}
       ).if {
         line_to (x1,y1)
       } else {
@@ -1158,9 +1159,9 @@ Public
   - rect (x,y:Real32) to (x2,y2:Real32) <-
   ( + x0,y0,w,h:Real32
     (x < x2).if { x0 := x;  w := x2 - x + 1; }
-    else        { x0 := x2; w := x - x2 + 1; }
+      else        { x0 := x2; w := x - x2 + 1; }
     (y < y2).if { y0 := y;  h := y2 - y + 1; }
-    else        { y0 := y2; h := y - y2 + 1; }
+      else        { y0 := y2; h := y - y2 + 1; }
     rect (x0,y0) size (w,h)
   )
   
@@ -1323,8 +1324,8 @@ Public
     tcnt := pen_gl.verts.count - tofs
     
     call := call_type.create_image (paint.image)
-    path (pofs,pcnt) triangle (tofs,tcnt)
-    uniform (pen_gl.uniforms.count*pen_gl.frag_size)
+      path (pofs,pcnt) triangle (tofs,tcnt)
+      uniform (pen_gl.uniforms.count*pen_gl.frag_size)
     pen_gl.calls.add_last call
     
     (call_type = Call_fill).if {    
@@ -1393,7 +1394,7 @@ Public
     pcnt := pen_gl.paths.count - pofs
         
     call := Call_stroke.create_image (paint.image) path (pofs,pcnt) triangle (0,0)
-    uniform (pen_gl.uniforms.count*pen_gl.frag_size)
+      uniform (pen_gl.uniforms.count*pen_gl.frag_size)
     pen_gl.calls.add_last call
     
     ((pen_gl.flags & stencil_strokes) != 0).if {      
@@ -1425,7 +1426,7 @@ Public
     
     // Fill shader
     call := Call_triangles.create_image (paint.image)
-    path (0,0) triangle (tofs,tcnt) uniform (pen_gl.uniforms.count*pen_gl.frag_size)
+      path (0,0) triangle (tofs,tcnt) uniform (pen_gl.uniforms.count*pen_gl.frag_size)
     pen_gl.calls.add_last call
     //(verts.lower).to (verts.upper) do { i:Int; verts.item i.print; }
     frag := Frag.convert_paint(paint, scissor, 1.0, 1.0, -1.0)
@@ -1458,7 +1459,7 @@ Public
   - add_fallback_font_id (base_font:Int,fallback_font:Int) :Int <-
   [ ? {base_font != -1}; ? {fallback_font != -1}; ]
   (
-    fs.add_fallback_font (base_font, fallback_font)
+    fs.add_fallback_font base_font back fallback_font
   )
 
   - add_fallback_font (base_font,fallback_font:String_alias) :Int <-
@@ -1601,7 +1602,7 @@ Public
     
     ? {state.font_id != Fontstash.fons_invalid}
     fs.size (state.font_size*scal) spacing (state.letter_spacing*scal)
-    blur (state.font_blur*scal) align (state.text_align) font (state.font_id)
+      blur (state.font_blur*scal) align (state.text_align) font (state.font_id)
     cverts := (lend - pstart+1).max 2 * 6; // conservative estimate.
     verts := new_array_vertex cverts
     (verts = NULL).if { 
@@ -1662,7 +1663,7 @@ Public
       //"verts.count:".print; verts.count.print; '\n'.print
       //0.to (verts.upper) do { i:Int; verts.item i.print; }
       render_text verts
-      new_x := iter.nextx
+      new_x := iter.nextx * invscale
       iter.free
       prev_iter.free
     }
@@ -1738,10 +1739,10 @@ Public
       q := Fons_quad.create
 
       fs.size (state.font_size*scal)
-      spacing (state.letter_spacing*scal)
-      blur (state.font_blur*scal)
-      align (state.text_align)
-      font (state.font_id)
+        spacing (state.letter_spacing*scal)
+        blur (state.font_blur*scal)
+        align (state.text_align)
+        font (state.font_id)
 
       iter := fs.text_iter_init (x*scal, y*scal) msg string from start to end
       prev_iter := iter.create
@@ -1753,7 +1754,7 @@ Public
         prev_iter.copy iter
         positions.add_last (
           Glyph_position.create (iter.start) to (iter.x * invscale)
-          range (iter.x.min (q.x0) * invscale,iter.nextx.max (q.x1) * invscale)
+            range (iter.x.min (q.x0) * invscale,iter.nextx.max (q.x1) * invscale)
         )
       }
       q.free
@@ -1797,10 +1798,10 @@ Public
     end := (pend = -1).ok (string.count) or (pend)
     (start <= end).if {
       fs.size (state.font_size*scal)
-      spacing (state.letter_spacing*scal)
-      blur (state.font_blur*scal)
-      align (state.text_align)
-      font (state.font_id)
+        spacing (state.letter_spacing*scal)
+        blur (state.font_blur*scal)
+        align (state.text_align)
+        font (state.font_id)
 
       break_row_width := break_row_width * scal
       
@@ -1824,10 +1825,10 @@ Public
         c := iter.codepoint
         (
           (c =  9) || // \t
-          {c = 11} || // \v
-          {c = 12} || // \f
-          {c = 32} || // space
-          {c = 0A0h}  // NBSP
+            {c = 11} || // \v
+            {c = 12} || // \f
+            {c = 32} || // space
+            {c = 0A0h}  // NBSP
         ).if {
           type := cst_space
         }.elseif {c = 10} then {  // \n
@@ -1843,10 +1844,10 @@ Public
           // Always handle new lines.
           rows.add_last (
             Text_row.create ((row_start != -1).ok row_start or (iter.start))
-            to ((row_end != -1).ok row_end or (iter.start))
-           width (row_width*invscale)
-            range (row_min_x*invscale,row_max_x*invscale)
-           next  (iter.next)
+              to ((row_end != -1).ok row_end or (iter.start))
+              width (row_width*invscale)
+              range (row_min_x*invscale,row_max_x*invscale)
+              next  (iter.next)
           )
           //"0)End:".print; rows.last.end.print; ' '.print; row_end.print; '\n'.print
           (rows.count >= max_raws).if {
@@ -1906,7 +1907,7 @@ Public
                 // just break it from here.
                 rows.add_last (
                   Text_row.create row_start to (iter.start) width (row_width*invscale)
-                  range (row_min_x*invscale,row_max_x * invscale) next (iter.start)
+                    range (row_min_x*invscale,row_max_x * invscale) next (iter.start)
                 )
                 //"1)End:".print; rows.last.end.print; '\n'.print
                 (rows.count >= max_raws).if {
@@ -1927,7 +1928,7 @@ Public
                 // and start new line from the beginning of the new.
                 rows.add_last (
                   Text_row.create row_start to break_end
-                  width (break_width*invscale) range (row_min_x*invscale,break_max_x*invscale) next (word_start)
+                    width (break_width*invscale) range (row_min_x*invscale,break_max_x*invscale) next (word_start)
                 )
                 //"2)End:".print; rows.last.end.print; '\n'.print
                 (rows.count >= max_raws).if {
@@ -1959,9 +1960,9 @@ Public
       ((row_start != -1) && {!exit_flag}).if {
         rows.add_last (
           Text_row.create row_start to row_end
-          width (row_width*invscale)
-          range (row_min_x*invscale,row_max_x*invscale)
-          next  end
+            width (row_width*invscale)
+            range (row_min_x*invscale,row_max_x*invscale)
+            next  end
         )
         //"3)End:".print; rows.last.end.print; '\n'.print
       }
@@ -1986,10 +1987,10 @@ Public
     ? {state.font_id != Fontstash.fons_invalid}
 
     fs.size (state.font_size*scal) 
-    spacing (state.letter_spacing*scal)
-    blur (state.font_blur*scal)
-    align (state.text_align)
-    font (state.font_id)
+      spacing (state.letter_spacing*scal)
+      blur (state.font_blur*scal)
+      align (state.text_align)
+      font (state.font_id)
 
     (wdth,x0,y0,x1,y1) := 
     fs.text_bounds (x*scal,y*scal) msg string from start to end
@@ -2033,10 +2034,10 @@ Public
     miny := maxy := y
 
     fs.size (state.font_size*scal)
-    spacing (state.letter_spacing*scal)
-    blur (state.font_blur*scal)
-    align (state.text_align)
-    font (state.font_id)
+      spacing (state.letter_spacing*scal)
+      blur (state.font_blur*scal)
+      align (state.text_align)
+      font (state.font_id)
     (rminy,rmaxy) := fs.line_bounds 0
     rminy := rminy * invscale
     rmaxy := rmaxy * invscale
@@ -2087,10 +2088,10 @@ Public
     ? {state.font_id != Fontstash.fons_invalid}
 
     fs.size (state.font_size*scal) 
-    spacing (state.letter_spacing*scal)
-    blur (state.font_blur*scal) 
-    align (state.text_align) 
-    font (state.font_id)
+      spacing (state.letter_spacing*scal)
+      blur (state.font_blur*scal) 
+      align (state.text_align) 
+      font (state.font_id)
 
     (ascender,descender,lineh) := fs.vert_metrics
     ascender * invscale,

@@ -1,8 +1,0 @@
-Header
-  + name := Main
-Public
-  
-  - main <-
-  (
-    crash; // ok normal, vu que pas de Section Inherit
-  )

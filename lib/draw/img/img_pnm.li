@@ -1,98 +1,165 @@
 Header
   + name := Img_pnm
 /*
-    Portable Gray Map and Portable Pixel Map loader
-     
-    Known limitations:
-      Does not support comments in the header section
-      Does not support ASCII image data (formats P2 and P3)
-      Does not support 16-bit-per-channel
+    Portable Gray Map and Portable Pixel Map loader (stb_image v2.30)
+      Binary formats P5 and P6, 8 or 16 bits per channel (16-bit samples are
+      big-endian in the file, and reduced to 8 bits).
+      Also ASCII formats P2 and P3, which stb_image does not support.
   */
 Inherit
   - parent_image:Image := Image
-  
+
 Public
-  
+
   - name:String_alias := "PnM: PPM - Portable PixMap / PGM - Portable GrayMap"
-  
+
   - is_binary:Boolean
-  
+
+  - bits_per_channel:Int
+
   - test:Boolean <-
   ( + p, t:Char
+    + result:Boolean
     rewind
     p := get8.to_char
     t := get8.to_char
-    ((p = 'P') && {(t = '5') || {t = '6'} || {t = '2'} || {t = '3'}}).if { 
-      is_binary := (t = '5') || {t = '6'}
-      img_n := ((t = '6') || {t = '3'}).ok 3 or 1; // '5' is 1-component .pgm; '6'/'3' is 3-component .ppm 
-      get8
-    }
+    result := (p = 'P') && {(t = '5') || {t = '6'} || {t = '2'} || {t = '3'}}
+    rewind
+    result
   )
-  
+
   - info:Boolean <-
-  ( + result:Boolean
-    (test).if {      
+  // As @stbi__pnm_info: reads the header, sets @bits_per_channel (8 or 16).
+  ( + p, t:Char
+    + result:Boolean
+    + maxv:Int
+    rewind
+    p := get8.to_char
+    t := get8.to_char
+    ((p = 'P') && {(t = '5') || {t = '6'} || {t = '2'} || {t = '3'}}).if {
+      is_binary := (t = '5') || {t = '6'}
+      img_n := ((t = '6') || {t = '3'}).ok 3 or 1; // '5' is 1-component .pgm; '6' is 3-component .ppm
+      get8
       skip_space
       img_x := get_integer; // read width
-      skip_space
-      img_y := get_integer; // read height
-      skip_space
-      result := get_integer <= 255; // read max value
+      (img_x <= 0).if {
+        error := "invalid width"
+      } else {
+        skip_space
+        img_y := get_integer; // read height
+        (img_y <= 0).if {
+          error := "invalid width"
+        } else {
+          skip_space
+          maxv := get_integer; // read max value
+          (maxv > 65535).if {
+            error := "max value > 65535"
+          } else {
+            bits_per_channel := (maxv > 255).ok 16 or 8
+            result := True
+          }
+        }
+      }
     }
     result
   )
-  
+
   - load req_comp:Int :C_array Uint8 <-
   ( + out:C_array Uint8
     + siz:Int
+    + ok:Boolean
     (info).if {
-      siz := img_n * img_x * img_y
-      out := C_array Uint8.create siz
-      (((is_binary) && {getn out size siz}) || {get_ascii out size siz}).if {        
-        ((req_comp != 0) && {req_comp != img_n}).if {
+      ((img_y > max_dimensions) || {img_x > max_dimensions}).if {
+        error := "too large"
+      }.elseif {! mad4sizes_valid(img_n, img_x, img_y, bits_per_channel / 8, 0)} then {
+        error := "too large"
+      } else {
+        siz := img_n * img_x * img_y
+        out := C_array Uint8.create siz
+        (! is_binary).if {
+          ok := get_ascii out size siz
+        }.elseif {bits_per_channel = 8} then {
+          ok := (img_buffer + siz).to_pointer <= img_buffer_end.to_pointer
+          getn out size siz
+        } else {
+          ok := get_binary16 out size siz
+        }
+        (! ok).if {
+          error := "bad PNM"; // PNM file truncated
+          out := NULL
+        }
+        ((out != NULL) && {req_comp != 0} && {req_comp != img_n}).if {
           out := convert_format out from img_n to req_comp
         }
-      } else {
-        //FREE out
-        out := NULL
       }
     }
     out
   )
 
 Private
-  
+
+  - get_binary16 out:C_array Uint8 size s:Int :Boolean <-
+  // 16-bit samples: keep the high byte (the first one, big-endian), as
+  // @stbi__convert_16_to_8 does.
+  ( + result:Boolean
+    result := (img_buffer + 2*s).to_pointer <= img_buffer_end.to_pointer
+    result.if {
+      0.to (s-1) do { i:Int
+        out.at i put get8
+        get8
+      }
+    }
+    result
+  )
+
   - get_ascii out:C_array Uint8 size s:Int :Boolean <-
-  ( + i,v:Int
+  ( + i,v,shift:Int
+    shift := (bits_per_channel = 16).ok 8 or 0
     {(! at_eof) && {i < s} && {v != -1}}.while_do {
       skip_space
       v := get_integer
-      (v >= 0).if { 
-        out.at i put (v.to_int)
+      (v >= 0).if {
+        out.at i put ((v >> shift).to_raw_uint8)
         i := i + 1
       }
     }
     i = s
   )
-  
+
+  - is_space c:Char :Boolean <-
+  // ' ', '\t', '\n', '\v', '\f' or '\r'
+  (c = ' ') || {c.to_int.in_range 9 to 13}
+
   - skip_space <-
-  ( 
-    {(! at_eof) && {(last_get8.to_char.is_separator) || {last_get8 = '#'}}}.while_do {
-      (last_get8.to_char = '#').if { // Skip comment.
+  // As @stbi__pnm_skip_whitespace, with @last_get8 as the current char.
+  ( + stop:Boolean
+    {! stop}.while_do {
+      {(! at_eof) && {is_space (last_get8.to_char)}}.while_do {
         get8
-        {(! at_eof) && {get8.to_char != '\n'}}.while_do { }
+      }
+      ((at_eof) || {last_get8.to_char != '#'}).if {
+        stop := True
       } else {
-        get8
+        {(! at_eof) && {last_get8.to_char != '\n'} && {last_get8.to_char != '\r'}}.while_do {
+          get8
+        }
       }
     }
   )
 
   - get_integer:Int <-
+  // As @stbi__pnm_getinteger; -1 if there is no digit.
   ( + value:Int
-    ((! at_eof) && {last_get8.to_char.is_digit}).if {      
-      {(! at_eof) && {last_get8.to_char.is_digit}}.while_do {
+    + stop:Boolean
+    ((! at_eof) && {last_get8.to_char.is_digit}).if {
+      {(! at_eof) && {last_get8.to_char.is_digit} && {! stop}}.while_do {
         value := value * 10 + (last_get8 - '0'.to_int)
         get8
+        ((value > 214748364) || {(value = 214748364) && {last_get8.to_char > '7'}}).if {
+          error := "integer parse overflow"
+          value := 0
+          stop := True
+        }
       }
     } else {
       value := -1

@@ -40,22 +40,11 @@ Public
   - detect_alias <-
   (
     
-    /*
-    // DCDC PLUS de TRAVERSABLE
-    (dicog_type.lower).to (dicog_type.upper) do { j:Int
-      dicog_type.at j.detect_alias_struct
-    }
-    */
-    
     dicog_type.foreach_value { tg:Type_generic
       tg.detect_alias_struct
     }
     
-    
-    
-    
   )
-
 
   //
   // Import / Export
@@ -125,19 +114,7 @@ Public
     k := string_tmp.to_string_alias
     //
     
-    
     //DCDC
-    /*
-    base := dicog_type.fast_reference_at k
-    (base = NULL).if {
-      base := TYPE_GENERIC.clone
-      
-      // dicog_type.fast_put base to k
-      dicog_type.at k put base
-      
-      base.make itm_typ with proto generic gen key k
-    }
-    */
         
     (found, base) := dicog_type.search k
     found.if_false {
@@ -146,9 +123,6 @@ Public
       dicog_type.at k add base      
       base.make itm_typ with proto generic gen key k
     }
-    
-    
-    
     
     //
     styl := itm_typ.style
@@ -224,7 +198,6 @@ Public
   ( + mask_bit:Uint8
     + typ:Itm_type
 
-    //type_list.add_last self
     index     := index_max
     index_max := index_max + 1
     //
@@ -243,7 +216,6 @@ Public
     intern_name := get_intern name type True
     (itm_typ.name = str_n_a).if {
       native_array_variable := Slot_data.create (proto.position) name intern_name type (gen.first)
-      //native_array_variable := VARIABLE.create (proto.position) name intern_name type (gen.first)
       paper_list.add_last self
     }
 

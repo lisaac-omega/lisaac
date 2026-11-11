@@ -108,7 +108,7 @@ Public
   
   - free <- stock.add_last self
   
-  - init p:Win :Self <- ( parent_win.init p; read_object; self)
+  - init_win p:Win :Self <- ( parent_win.init_win p; read_object; self)
   
   - item id:String_alias str v:String_alias :Boolean <-
   (    
@@ -127,8 +127,8 @@ Public
   - object id:String_alias :Boolean <-
   (
     id
-    .case "PAGE_SPLIT" then { Page_split.new.init self; }
-    .case "PAGE"       then { Page.new.init self;       }
+    .case "PAGE_SPLIT" then { Page_split.new.init_win self; }
+    .case "PAGE"       then { Page.new.init_win self;       }
     = String_alias
   )
   

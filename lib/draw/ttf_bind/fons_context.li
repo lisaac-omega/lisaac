@@ -111,9 +111,9 @@ Public
   - add_fallback_font base:Int back fallback:Int :Int <-
   ( + base_font:Fons_font
     + result:Int
-    base_font := fonts.item base
+    base_font := fonts.at base
     (base_font.fallbacks.count < fons_max_fallbacks).if {
-      base_font.fallbacks.add_last fallbacks
+      base_font.fallbacks.add_last fallback
       result := 1
     }
     result
@@ -157,14 +157,14 @@ Public
     + dta:Array Uint8
 
     // Read in the font data.
-    fp := File_system.open_read pth
+    fp := File_utils.open_read pth
     (fp = NULL).if {
       result := fons_invalid
     } else {
-      sz := File_system.file_size fp
+      sz := File_utils.size fp
       dta := Array Uint8.create sz
-      File_system.read_raw fp in (dta.storage) size sz
-      File_system.close fp
+      File_utils.force_read_raw fp in (dta.storage) size sz
+      File_utils.close fp
       result := add_font_mem name_id data dta free True
     }
     result
@@ -173,11 +173,16 @@ Public
   - add_font_mem name_id:String_alias data dta:Array Uint8 
   free free_dta:Boolean :Int <-
   ( + font:Fons_font
-    
+    + result:Int
     scratch.clear
     font := Fons_font.create name_id data dta free free_dta
-    fonts.add_last font
-    fonts.upper
+    (font = NULL).if {
+      result := fons_invalid
+    } else {
+      fonts.add_last font
+      result := fonts.upper
+    }
+    result
   )
 
   - get_font_by_name name_id:String_alias :Int <-
@@ -200,7 +205,6 @@ Public
     + gx0,gy0,gx1,gy1,iblur:Int16
     + result:Fons_glyph
     siz := isize.to_real32/10.0
-    ? {isize >= 2}
     (piblur > 20).if {
       iblur := 20
     } else {
@@ -223,7 +227,7 @@ Public
       i := font.glyphs.at i.next
     }
     //(result != NULL).if { "Glyph found\n".print; }
-    (result = NULL).if {      
+    ((result = NULL) && {isize >= 2}).if { // (too small: NULL, as in C)      
       // Could not find glyph, create it.      
       scal := font.scale_for_pixel_height siz
       g := font.font.find_glyph_index codepoint
@@ -472,12 +476,15 @@ Public
     + end:Int
     (x,y) := (px,py)
     end := pend
+    (end = -1).if {
+      end := str.count
+    }
     state := get_state
     //iter.reset
     font  := fonts.at (state.font)
     isze := (state.size*10.0).to_int16
     iblr := state.blur.to_int16
-    scal := font.scale_for_pixel_height (state.size.to_real32)
+    scal := font.scale_for_pixel_height (isze.to_real32/10.0); // as C: the truncated size
     iter := Fons_text_iter.create font isize isze iblur iblr scale scal
     
     // Align horizontally
@@ -492,9 +499,6 @@ Public
     }
     // Align vertically.
     y := y + get_vert_align (iter.font) align (state.align) size (iter.isize)
-    (end = -1).if {
-      end := str.count
-    }
     iter.xy (x,y) spacing (state.spacing) str str 
     from start to end codepoint 0 prev_glyph_index (-1)
     iter

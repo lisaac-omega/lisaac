@@ -1,9 +1,0 @@
-Header
-  + name := Bug_copilo
-/**/
-  
-Public
-  - main <-
-  ( + str:String_buffer
-    str := new String_buffer capacity 4    
-  )

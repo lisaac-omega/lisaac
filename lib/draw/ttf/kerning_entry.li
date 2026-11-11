@@ -1,0 +1,16 @@
+Header
+  + name := Kerning_entry
+/* @stbtt_kerningentry of stb_truetype v1.24 (see @Fontinfo.get_kerning_table). */
+Inherit
+  
+  - parent_clone:Clone := Clone
+
+Public
+  
+  - new:Self <- clone
+  
+  + glyph1:Int; // use stbtt_FindGlyphIndex
+  + glyph2:Int
+  + advance:Int
+  
+  - make (g1,g2,a:Int) <- ( (glyph1,glyph2,advance) := (g1,g2,a); )

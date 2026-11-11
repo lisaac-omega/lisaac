@@ -441,20 +441,5 @@ Public
     ? {str.count = (2 + old_count)}
   )
 
-  // Miscellaneous:
-
-  - is_alpha:Boolean <-
-  // See @is_letter (yes this is just a call to @is_letter).
-  // Isn't @is_letter better English ;-)
-  ( + result:Boolean
-    result := is_letter
-    ? {result = is_letter}
-    result
-  )
-
-  // Hashing :
-
   - hash_code: Int <- code
-
-
-
+  

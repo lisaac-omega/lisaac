@@ -1,0 +1,263 @@
+Évolutions du compilateur Lisaac (2 au 4 novembre 2026)
+===================================================================
+
+Point de départ : src/ (avec la correction && / || sur Read_slot).
+Validation : bootstrap jusqu'au point fixe ; suite complète test/ + exemples
+(3207 tests) avec exactement les mêmes 20 erreurs que la référence
+(gmp.h, pcre2.h, emcc absents ; misc/22, solitaire/bug, elit/test déjà en échec).
+
+1. Correction : && et || sur un Read_slot
+   code_life/switch.li, external/logic/expr_and_and_logic.li, expr_or_or_logic.li
+   Un Read_slot (n.flag) n'est plus transformé en & / | strict : son récepteur
+   peut être NULL, gardé par le membre gauche. Exception : récepteur Flat.
+
+2. Vitesse du compilateur : ensembles de types (tools/types_tmp.li)
+   - order_test était appelé à chaque add/union, même en -boost (16 % du temps) :
+     c'est maintenant une postcondition.
+   - union : fusion linéaire au lieu d'insertions en place O(n*m), avec chemins
+     rapides (self vide : copie ; other petit : dichotomie). Même ordre de
+     résultat : C généré identique.
+
+3. C plus propre (utile pour TCC, lili et la lecture du C)
+   - any.li : Uint et Uint_cpu reconnus comme entiers -> les Cast de constantes
+     sont pliés, x - (0 - y) devient x + y.            (3142 -> 2 dans lisaac.c)
+   - Expr.is_pure + Expr_and_and_logic / Expr_or_or_logic.execute_unlink :
+     un && / || dont la valeur est ignorée et dont le membre droit est pur
+     disparaît (contrats [ valid_index i ] restés en -boost).   (1426 -> 0)
+   - Expr_binary_cmp.is_non_zero_size : 0 == sizeof(struct) -> False
+     (le compilateur n'émet jamais de struct vide, voir Type.genere_struct).
+                                              (if (0 == taille) : 1768 -> 202)
+   - Résultat : lisaac.c 311 161 -> 291 115 lignes.
+
+4. Code mort retiré
+   - 46 slots jamais appelés (analyse sans les commentaires, en comptant
+     le compilateur + elit + lili, qui incluent ../src ; slots de la lib exclus).
+   - 8 prototypes jamais référencés : Hello, Hello2, Hello3, Cast_creation,
+     Forall_data, Itm_super, Itm_type_generic_elt, Coupled.
+   - 76 blocs /* */ et 190 lignes // de code commenté. Gardés : les blocs
+     annotés « A FAIRE », « A REVOIR », « BSBS: Bug ».
+   - remove de Types_tmp utilisait « put ... to », qui n'existe pas sur C_array :
+     jamais compilé car jamais appelé.
+   Sources : 30 826 -> environ 28 800 lignes.
+
+5. -help : les chapitres (« Debug information: », « Optimization: »...) sont
+   de retour (parser.li). Depuis que \n termine une instruction, read_space
+   s'arrête sur \n : le commentaire de chapitre n'était plus lu avant un slot
+   public de make.lip, et le compteur de lignes vides (local à read_space) ne
+   dépassait jamais 1. Un println de debug du chapitre est retiré.
+
+6. Vitesse du compilateur (3 novembre 2026, mesuré avec callgrind)
+   - Types_tmp.union : si other est un Types_set, son C_array est lu
+     directement (plus de dispatch sur other à chaque élément) et la copie
+     dans un Types_tmp vide passe par copy_from.
+   - Type.load_prototype : un nom présent dans plusieurs chemins n'était pas
+     mis en cache (is_only) et path_file était reparcouru à chaque appel
+     (1 million d'appels, 3,7 %). Nouveau cache dico_path_name_to_prototype,
+     indexé par (call_path, n).
+   - Types_tmp.to_types : table bucket_hash (4096 listes, hachée sur count,
+     first, at 1 et le dernier) au lieu de parcourir tout bucket.
+   - Variable.unwrite : retrait en O(1) (échange avec le dernier) au lieu de
+     remove_first / remove, qui décalaient require_list (milliers d'écritures
+     pour certains globaux). L'ordre de require_list n'est pas utilisé.
+   - Résultat : 11,78 -> 10,82 milliards d'instructions (-8 %), temps réel
+     -2 à -3 %. Même C généré sur une même source (aux constantes de
+     position près).
+
+7. Initialisations par défaut mortes (code_life/write.li : is_dead_default)
+   x := 0 est retiré quand les instructions suivantes de la même liste
+   écrivent sûrement x avant de le lire, à travers les if, les switch et le
+   premier tour des boucles. Analyse conservatrice :
+   - Expr.is_reading v (True par défaut ; précis pour les constantes, Read,
+     Read_slot, Cast, Item, les opérateurs et External_c via access_list) ;
+   - Instr.first_access v : 0 (ni lu ni écrit), 1 (écrit avant toute
+     lecture), 2 (lu ou inconnu, par défaut, dont Call_slot et Loop_end).
+     List, Switch (tous les cas d'accord), Loop (body), Write_local /
+     Write_global / Write_slot, Nop, Call_null (ne revient pas : 1).
+   - Exclus : les structures Flat (pas les types C comme Int) et les
+     flat_ref, qui peuvent être lus par une référence, et les blocs.
+   Effet : 170 initialisations retirées sur lisaac.c (306 901 -> 306 711
+   lignes, même source). L'estimation de 5600 comptait surtout des cas
+   nécessaires (branche else, lecture dans une boucle, écriture dans une
+   seule branche) ; ce qui reste bloque surtout sur un appel (Call_slot).
+
+8. Évalué, non fait
+   - Flat Array : depuis l'allocateur par blocs, allouer un Array ne coûte
+     presque rien. Les vrais coûts sont ailleurs (voir pistes).
+   - create/make -> clone.make (make renvoyant self) : abandonné. Le C ne
+     compilait pas (clone d'un receveur non exact, corrigé en 9), et même
+     corrigé, le compilateur ainsi refait ne lit plus make.lip (un make
+     redéfini sans résultat dans un enfant casse « clone.make »).
+
+9. Suite (4 novembre 2026)
+   - Dispatch pour rien : 225 des 2740 switch sur __id du C du compilateur
+     lisent ou écrivent le même slot dans toutes les branches (213 de la
+     forme x := y.slot, par exemple Type.index), environ 3 % des
+     instructions. Mais l'offset diffère d'une branche à l'autre : le parent
+     Flat est rangé parmi les autres slots, avec son propre __id
+     (CNB = { __id; NG li__DNB { __id; ...; li__QXC } }). Seuls 2 switch
+     ont des branches identiques au texte près. Pour supprimer ces switch, il
+     faudrait mettre le parent Flat en tête et partager son __id (héritage
+     simple à la C++) : le C prend aujourd'hui l'adresse du parent embarqué
+     (&x->li__DNB) et l'utilise comme un objet du parent, avec son __id.
+     Fait ensuite : voir 10.
+   - Types_tmp.union / Type.index : essayé un tableau index_storage à côté
+     de storage (plus de dispatch). Résultat : +3 % d'instructions (deux
+     tableaux à copier), temps réel identique : retiré. Le dispatch par
+     table de sauts coûte peu ; union pèse par son nombre d'appels
+     (Variable.get_type copie type_set dans un Types_tmp à chaque lecture).
+   - List.insert_list_before : la fusion d'une liste dans son parent
+     (List.execute) insère toutes les instructions en un seul décalage, au
+     lieu d'un insert_before (donc un décalage) par instruction.
+     10,82 -> 10,77 milliards d'instructions. Même C.
+   - Initialisations mortes : Call_slot.first_access. Seul un bloc sensible
+     au contexte (profil.is_context_sensitive) atteint les locales de
+     l'appelant ; sinon l'appel lit les arguments et écrit les résultats.
+     41 initialisations de plus retirées (306 711 -> 306 671 lignes).
+   - Clone d'un receveur non exact (External_c.genere_access) : un @x dont le
+     type statique n'est pas exact, mais qui n'a qu'un type possible (hors
+     Type_null), est casté vers ce type, comme le fait Read_slot. Avant :
+     « *(dst) = *(src) » avec src en void * (copy_intern_in de clone).
+
+10. Parent Flat en tête de structure (4 novembre 2026)
+   - Type.prefix_slot : le premier parent Flat (section Inherit ou Insert)
+     d'une structure est placé en tête. Si le type est late binding, il
+     partage son __id avec ce parent (qui doit aussi être late binding) :
+     CNB = { NG li__DNB; } au lieu de { int __id; NG li__DNB; }. Les slots
+     du parent sont alors au même offset que dans le parent lui-même.
+     Exclus : type C, alias_slot, mapping, bloc, COP.
+     Sûr car un slot Flat a un type exact : on ne dispatche jamais sur un
+     parent embarqué, son __id ne servait à rien. Et la norme C permet de
+     convertir un pointeur de structure en pointeur vers son premier membre.
+   - Write_slot du parent entier (initialisation du prototype :
+     li__CNB__->li__DNB = *li__NG__) : l'__id du receveur est sauvé puis
+     remis.
+   - Read_slot / Write_slot à travers des parents en tête :
+     ((__li__NG *)x)->li__QXC au lieu de ((__li__CNB *)x)->li__DNB.li__QXC.
+   - Switch.genere : si chaque cas génère le même C (même slot au même
+     offset) et que l'expression est pure, le switch est remplacé par ce
+     code. Comparaison sur le texte généré, après coup : générer deux fois
+     un cas n'est pas neutre (Variable.unwrite).
+   - Résultat : 107 switch de moins dans le C du compilateur (2740 ->
+     2633), dont ceux de Type.index dans Types_tmp.union ; 10,77 -> 10,24
+     milliards d'instructions (-5 %), temps réel -2,5 %. Il reste 69 switch
+     « même slot » (parent sans __id, comme Write, ou second parent Flat),
+     qui ne coûtent presque rien.
+
+11. elseif en vrais « else if » C (jump threading, code_life/switch.li)
+   if renvoie un Boolean et elseif dispatche dessus : chaque niveau
+   écrivait t := True / False puis retestait t (« if (t) {t=1} else {...
+   t=u} »). Au début de Switch.execute :
+   - merge_next_copy : [switch ; v := u], chaque chemin du switch finissant
+     par u := constante et u n'étant lu que là : les constantes sont écrites
+     dans v et v := u disparaît.
+   - thread_next : [S1 ; switch v], chaque chemin de S1 finissant par
+     v := constante (dans des switch imbriqués aussi) : le cas du second
+     switch pour cette constante est déplacé au bout du chemin, et le second
+     switch disparaît. v reste écrit : la sémantique ne dépend pas de la
+     suite. « switch !v » est accepté (cas inversés).
+   - Garde-fous : v Boolean, constantes ; un cas copié dans plusieurs
+     chemins doit être vide ou une écriture de constante ; pas de bloc
+     (appel de Profil_block, argument ou écriture de bloc) dans le code
+     déplacé tant qu'il n'est pas inliné.
+   - Avant l'exécution des cas, et pas après : le code déplacé doit être
+     exécuté dans la même passe, sinon ses profils ne sont pas marqués
+     vivants (Profil_list.set_life) et sont libérés.
+   - Switch.genere : un else qui ne contient qu'un switch s'écrit « else if ».
+   - src/hello.li : plus aucune variable temporaire, 4 « else if ». C du
+     compilateur (même source) : 303 493 -> 300 914 lignes, 327 « else if »
+     (7 avant), 414 if de moins. Coût de l'analyse : +0,2 % d'instructions.
+
+12. Modulo (external/arithmetic, external/comparison)
+   Int.% est « self - ((self / other) * other) » (division C tronquée) :
+   même sens que le % du C, y compris négatif.
+   - Expr_sub : la règle E1 - ((E1 / E2) * E2) -> E1 % E2 ne voyait pas le
+     cas 2^n, car Expr_mul avait déjà fait de * 2^n un << n. Ajout de
+     E1 - ((E1 / 2^n) << n) -> E1 % 2^n.
+   - Expr_mod : E % 2^n -> E & (2^n - 1) seulement pour un entier non signé
+     (Any.is_unsigned_integer). C'était faux pour un signé négatif
+     (-3 % 2 = -1, -3 & 1 = 1) ; la règle restait cachée parce que le motif
+     n'était pas reconnu.
+   - Expr_binary_cmp.exec_size (== et !=) : 0 == E % 2^n -> 0 == (E & (2^n
+     - 1)), vrai quel que soit le signe.
+   - src/hello.li : « 0 == (li__KE - ((li__KE / 2) << 1)) » devient
+     « 0 == (li__KE & 1) ». Valeurs de i % 2, % 4, % 3 de -9 à 9, en signé et
+     non signé : sorties identiques à avant (boost et debug).
+
+13. Slots de donnée de type Self (spécification : SELF_DATA_SLOT.txt)
+   - Self_to_type (nouveau) : Self := Exact T pour un type concret T, les
+     autres paramètres via le type porteur ; note si Self est utilisé.
+   - Slot : is_self_dependent, slot_data_for t (une copie par type concret,
+     créée à la demande, avec set_self_type).
+   - Accès : Node_style.call_for (lecture, type_self), Dta.product /
+     concrete_type puis Dta_wr_value.finalise (écriture), Itm_write
+     (contrôle de type avec le Self du profil).
+   - '-' : un global par type. '+' : un champ par type dans la structure du
+     porteur (Type.genere_struct et voisins parcourent self_copy_list).
+   - Pas encore : valeur initiale explicite (erreur claire), slot vectoriel.
+   - tools/recyclable.li (nouveau) : recycle_stack:Flat Array Self,
+     new_recycled, recycle, init_recycled. Types_tmp l'utilise au lieu de sa
+     free_list.
+   - ATTENTION bootstrap : le compilateur utilise maintenant les slots Self ;
+     il faut partir d'un compilateur qui les connaît, pas de
+     bin/lisaac d'avant.
+
+14. Self exact, lectures externes, fusion (4 novembre 2026)
+   - Self est exact par nature : une copie prend Self := Exact T, et la
+     lecture d'un slot de donnée (Dta_rd.parameter_to_type) résout aussi
+     Self en exact, comme le résultat de clone. Avant, x.recycle_stack était
+     typé Array(Rx) au lieu de Array(Exact Rx) : une autre structure Flat,
+     jamais écrite (count = 0). Recyclable écrit « Flat Array Self ».
+   - Node_type.self_type_parent : le Node_type d'un parent (Dta.lookup)
+     garde le type concret du premier receveur, utilisé quand la mise à jour
+     n'en donne pas (Dta.concrete_type_full).
+   - Recyclable déplacé dans lib/kernel/recyclable.li (Insert Clone).
+     elit : 11 prototypes passent à Recyclable (Local, Arg, Section,
+     Slot_body, Slot_contract, Ext, Wloc, Chapter, Code_out, Slot_rmk,
+     New_line) : même C qu'avant aux identifiants près.
+   - test/self_slot/1 à 3 : tests permanents (Test.check).
+   - src2 fusionné dans src (src2 supprimé). src/hello.li gardé ; hello2,
+     hello3 et le code mort retiré dans src2 (section 4) supprimés de src.
+
+15. Recyclable simplifié (4 novembre 2026)
+   - lib/kernel/recyclable.li : new (pop ou clone puis init), init (objet
+     neuf), free ; recycle_stack:Flat Array Self en Private (le code hérité,
+     exécuté dans le profil de l'héritier, y a accès).
+   - Un prototype qui doit agir redéfinit free et finit par
+     parent_recyclable.free (renvoi au parent, le « super » de Java, voir
+     CLAUDE.md). Si un parent hérité (Inherit) définit déjà new ou free
+     (Tok_drw, Buffer, Expr...), il passe avant Recyclable (Insert) : le
+     prototype redéfinit alors new par « parent_recyclable.new ».
+   - Types_tmp : init <- make_types_tmp ; free finit par
+     parent_recyclable.free.
+   - elit : les 11 prototypes et Expr (sa pile stk_e) passent à
+     parent_recyclable.new / parent_recyclable.free.
+   - init p:Win -> init_win p:Win (lib/gui : Win, Window, Page, Page_split,
+     Header, Icon_line et leurs appels ; elit/about.li) : en Lisaac, init et
+     init p:Win sont le même slot (pas de surcharge par le nombre
+     d'arguments), et Recyclable.new appelle init. Les init à plusieurs
+     mots-clés (init p:Win buf b...) sont d'autres slots : inchangés.
+
+Patch de lib : lib.diff (appliqué sur ~/lisaac/lib le 3 novembre 2026)
+------------------------------------------------------------------------
+   - kernel/clone.li : allocation par blocs de 1 Mo par thread (li_clone_alloc)
+     au lieu d'un malloc par objet : les objets clonés ne sont jamais libérés.
+     Alignement 8, ou 16 si la taille est multiple de 16. Arduino garde malloc.
+     Comparé à Memory.alloc_size (memory.li remis en marche avec un mmap) :
+     binary_trees -41 % contre -32 %, compilateur -17 % dans les deux cas ;
+     Memory est limité à 4 Go (last_block[64]) et n'est pas sûr avec des threads.
+     free_allocation_memory (pour Memory) et les compteurs sont conservés.
+   - kernel/asm_builtin.li : clz sans __builtin_clzll sous TCC.
+     (z.li utilise encore __builtin_clzll / __builtin_ctzll directement.)
+   - kernel/memory.li : recompile de nouveau (contrat sur deux lignes, && en
+     fin de ligne avec \r\n, item -> at). Toujours inutilisable sur un système
+     hôte : search_capacity vaut not_yet_implemented.
+
+Pistes non faites
+-----------------
+   - Parent Flat sans __id (comme Write) : le mettre juste après l'__id de
+     l'enfant, au même offset partout, et y accéder par une structure
+     commune { int __id; Parent p; } (69 switch restants, peu coûteux).
+   - Variable.get_type : rendre type_set directement au lieu de l'unir dans
+     un Types_tmp, pour réduire les 12 millions d'appels à union.
+   - List.remove_index : un décalage à chaque instruction supprimée
+     (environ 1 % des instructions).

@@ -21,6 +21,25 @@ Public
   )
 
   //
+  // COP escape analysis (see @Escape): state of this local in the pass @esc_pass.
+  //
+
+  + esc_pass:Int
+  + esc_profil:Profil
+  + esc_obj:Escape_obj
+  + esc_origin:Slot_data
+  + esc_origin_type:Type
+
+  - set_esc o:Escape_obj origin g:Slot_data type t:Type <-
+  (
+    esc_pass := Escape.pass
+    esc_profil := profil_current
+    esc_obj := o
+    esc_origin := g
+    esc_origin_type := t
+  )
+
+  //
   // Copy alias manager.
   //
 
@@ -85,11 +104,9 @@ Public
     (my_alias != NULL).if {
       result := my_alias.read_direct p with NULL
     }.elseif {is_alias /*&& {list_level >= current_list_level}*/} then {
-      //intern_name.print; "list_level=".print; list_level.print; '/'.print; current_list_level.println
       // Case : Argument function (see CALL_SLOT)
       result := get_alias.read_direct p with NULL
     } else {
-      //? {! is_alias}
       result := read_direct p with NULL
     }
     result
@@ -117,8 +134,6 @@ Public
   (
     (last_seq = NULL).if {
       Local_seq.new self
-      //"LOCAL:".print
-      //intern_name.print; '\n'.print
     }
     (
       (! Profil.mode_recursive) &&
@@ -167,6 +182,7 @@ Public
     + rd:Read
     + l:Local
     + g:Slot_data
+    + keep:Boolean
     (
       (! Profil.mode_recursive) && {loop_invariant = NULL} &&
       {last_seq != NULL} && {last_seq.last_write != NULL}
@@ -182,6 +198,13 @@ Public
         (rd != NULL).if {
           l ?= rd.variable
           g ?= rd.variable
+        }
+        keep := (type.is_one) && {rd != NULL} && {! rd.variable.type.is_one}
+        (keep).if {
+          // `One': this variable is not replaced by a variable which is not `One' (the
+          // checks of `One' need it, see @Escape).
+          l := NULL
+          g := NULL
         }
         (
           ( // Constant propagation.
@@ -207,7 +230,7 @@ Public
           result := val.my_copy
         }.elseif {
           // Propagation step by step.
-          (last_seq.last_seq_or_and = seq_or_and) &&
+          (! keep) && {last_seq.last_seq_or_and = seq_or_and} &&
           {ensure_count = 1} && {list_current.index > list_current.lower} &&
           {list_current.at (list_current.index - 1) = last_seq.last_write}
         } then {
@@ -258,13 +281,10 @@ Public
     ? {p.code != 0}
     ? {t != NULL}
     
-    //list_level := current_list_level
-    
     position    := p
     name        := n
     is_result   := r
     intern_name := get_intern n type False
-    //(name = "block").if { "LOCAL:".print; intern_name.println }
 
     ((t.is_flat) && {! t.is_flat_c}).if {
       type := t + Type_full.flat_ref_bit

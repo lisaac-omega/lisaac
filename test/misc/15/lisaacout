@@ -1,5 +1,0 @@
---SEMANTIC---------
-Slot `crash' not found in `Main'.
-Line 7 column 9 in Main(.../test/misc/15/main.li):
-    crash; // ok normal, vu que pas de Section Inherit
-         ^

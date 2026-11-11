@@ -4,8 +4,10 @@ Inherit
   + parent_decl:Flat Decl
   + parent_tok_itm:Flat Tok_itm
   
+Insert
+  - parent_recyclable:Recyclable := Recyclable
+
 Private
-  - stk:Flat Array (Exact Arg)
   
 Public
   + lst:Flat Array Local
@@ -29,9 +31,9 @@ Public
   )
   
   - new:Self <-
-  ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  parent_recyclable.new
   
-  - free <- ( lst.foreach { l:Local; l.free; }; lst.clear; stk.add_last self; )
+  - free <- ( lst.foreach { l:Local; l.free; }; lst.clear; parent_recyclable.free; )
   
   - new_parse t:Int <-
   (

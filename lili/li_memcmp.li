@@ -1,0 +1,29 @@
+Header
+  + name := Li_memcmp
+/* Equality of two @Flat structures. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + left:Li_node
+  + right:Li_node
+  + size:Int
+
+  - create l:Li_node right r:Li_node size n:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make l right r size n
+    result
+  )
+
+  - make l:Li_node right r:Li_node size n:Int <- ( left := l; right := r; size := n; )
+
+  - eval fp:Int :Int <-
+  ( + a,b,n:Int
+    a := left.eval fp
+    b := right.eval fp
+    n := size
+    `memcmp((void *)(@a),(void *)(@b),@n) == 0`:(Int)
+  )

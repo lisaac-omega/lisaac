@@ -1,26 +1,30 @@
 Header
   + name :=  Rect
-Public
+/* @stbrp_rect of stb_truetype v1.24 (its fallback packer, without
+   stb_rect_pack.h). */
+Inherit
+  
+  - parent_clone:Clone := Clone
 
+Public
+  
+  - new:Self <- clone
+  
   + x:Int
   + y:Int
   + id:Int
   + w:Int
   + h:Int
-  + was_packed:Int
+  + was_packed:Boolean
+  
+  - set_size (pw,ph:Int) <- ( (w,h) := (pw,ph); )
+  
+  - set_xy (px,py:Int) <- ( (x,y) := (px,py); )
+  
+  - set_was_packed b:Boolean <- ( was_packed := b; )
   
   - move_pad pad:Int <-
   (
     (x,y) := (x + pad,y + pad)
     (w,h) := (w - pad,h - pad)
-  )
-  
-  - set_xy (px,py:Int) <- 
-  (
-    (x,y) := (px,py)
-  )
-  
-  - set_was_packed i:Int <-
-  (
-    was_packed := i
   )

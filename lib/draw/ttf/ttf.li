@@ -1,561 +1,179 @@
 Header
   + name := Ttf
-/*PACK_CONTEXT*/
+/* The functions of stb_truetype v1.24 that do not take a @Fontinfo: fonts in
+   a collection, font name matching, bitmap baking, and packing; a clone of
+   @Ttf is an @stbtt_pack_context (see @pack_begin). */
 Inherit
+
   - parent_ttf_constant:Ttf_constant := Ttf_constant
-  
+
 Public
-  
+
+  // stbtt_pack_context
+
   + user_allocator_context:C_array Uint8
   + pack_info:Context
-  + width:Int32
-  + height:Int32
-  + stride_in_bytes:Int32
-  + padding:Int32
-  + h_oversample:Uint32
-  + v_oversample:Uint32
-  + pixels:Array Uint8
-  + nodes:Array Uint8; // NODE (x:Int8)
+  + width:Int
+  + height:Int
+  + stride_in_bytes:Int
+  + padding:Int
+  + skip_missing:Boolean
+  + h_oversample:Int
+  + v_oversample:Int
+  + pixels:C_array Uint8
 
-/*
-unsigned char ttf_buffer[1<<20]
-unsigned char temp_bitmap[512*512]
+  - max_oversample:Int := 8
 
-stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
-GLuint ftex
-
-void my_stbtt_initfont(void)
-{
-   fread(ttf_buffer, 1, 1<<20, fopen("c:/windows/fonts/times.ttf", "rb"))
-   stbtt_BakeFontBitmap(ttf_buffer,0, 32.0, temp_bitmap,512,512, 32,96, cdata); // no guarantee this fits!
-   // can free ttf_buffer at this point
-   glGenTextures(1, &ftex)
-   glBindTexture(GL_TEXTURE_2D, ftex)
-   glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap)
-   // can free temp_bitmap at this point
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-}
-
-void my_stbtt_print(float x, float y, char *text)
-{
-   // assume orthographic projection with units = screen pixels, origin at top left
-   glEnable(GL_TEXTURE_2D)
-   glBindTexture(GL_TEXTURE_2D, ftex)
-   glBegin(GL_QUADS)
-   while (*text) {
-      if (*text >= 32 && *text < 128) {
-         stbtt_aligned_quad q
-         stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
-         glTexCoord2f(q.s0,q.t1); glVertex2f(q.x0,q.y0)
-         glTexCoord2f(q.s1,q.t1); glVertex2f(q.x1,q.y0)
-         glTexCoord2f(q.s1,q.t0); glVertex2f(q.x1,q.y1)
-         glTexCoord2f(q.s0,q.t0); glVertex2f(q.x0,q.y1)
-      }
-      ++text
-   }
-   glEnd()
-}
-*/
+  //
+  // Fonts in a font collection (.ttc)
+  //
 
   - isfont font:C_array Uint8 :Boolean <-
-  (
-    // check the version number
-    (tag4 font with ('1',0,0,0)) || // TrueType 1
-    {tag font with "typ1"}       || // Type 1 font -- No support!
-    {tag font with "OTTO"}       || // OpenType with CFF
-    {tag4 font with (0,1,0,0)}    // OpenType 1.0
-  )
+  // TrueType 1, TrueType with type 1 font (we don't support this!), OpenType
+  // with CFF, OpenType 1.0, Apple specification for TrueType fonts
+  (tag4 font with ('1'.to_uint8,0,0,0)) || {tag font with "typ1"} || {tag font with "OTTO"} || {tag4 font with (0,1,0,0)} || {tag font with "true"}
 
-  - get_font_offset font_collection:C_array Uint8 
-  for_index index:Int :Int <- 
-  ( + n:Int32
-    + result:Int
+  - get_font_offset font_collection:C_array Uint8 for_index index:Int :Int <-
+  // As @stbtt_GetFontOffsetForIndex: -1 if there is no font @index.
+  ( + result,n:Int
+    result := -1
     // if it's just a font, there's only one valid index
     (isfont font_collection).if {
-      result := (index = 0).ok 0 or (-1)
-    } else {
+      (index = 0).if { result := 0; }
+    }.elseif {tag font_collection with "ttcf"} then {
       // check if it's a TTC
-      result := -1
-      (tag font_collection with "ttcf").if {
-        // version 1?
-        ((ttulong(font_collection+4) = 00010000h) || {ttulong(font_collection+4) = 00020000h}).if {
-          n := ttlong(font_collection+8)
-          (index < n).if {
-            result := ttulong(font_collection+12+index*4)
-          }
+      // version 1?
+      ((u32(font_collection+4) = 00010000h) || {u32(font_collection+4) = 00020000h}).if {
+        n := s32(font_collection+8)
+        (index < n).if {
+          result := u32(font_collection+12+index*4)
         }
       }
     }
     result
   )
 
-  - get_glyph_bitmap info:Fontinfo scale (scale_x,scale_y:Real32) 
-  glyph glyf:Int :(Bitmap,Int,Int) <-
-  (
-    get_glyph_bitmap_subpixel info scale (scale_x, scale_y)
-    shift (0.0,0.0) glyph glyf
-  )
-
-  - make_codepoint_bitmap info:Fontinfo output output:Array Uint8
-  size (out_w,out_h:Int) stride out_stride:Int  
-  scale (scale_x,scale_y:Real32) glyph codepoint:Int <-
-  (
-    make_codepoint_bitmap_subpixel info output output size (out_w,out_h) 
-    stride out_stride scale (scale_x, scale_y) shift (0.0,0.0) glyph codepoint
-  )
-
-  // bitmap baking
-
-  - bake_font_bitmap(data:Array Uint8,offset:Int)  
-  height pixel_height:Real32 img pixels:Array Uint8 
-  size (pw,ph:Int) first (first_char,num_chars:Int)
-  to chardata:Array Backed_char :Int <-
-  ( + scale:Real32
-    + x,y,bottom_y, i:Int
-    + f:Flat Fontinfo
-    
-    f.init_font data start offset
-    
-    0.to (pw*ph) do { i:Int; pixels.put 0 to i; }; // background of 0 around pixels
-    x := y := 1
-    bottom_y := 1
-
-    scale := f.scale_for_pixel_height pixel_height
-
-    0.to (num_chars-1) do { i:Int
-      + advance, lsb, x0,y0,x1,y1,gw,gh,g:Int
-      
-      g := f.find_glyph_index (first_char + i)
-      (advance,lsb) := f.get_glyph_h_metrics g
-      (x0,y0,x1,y1) := f.get_glyph_bitmap_box g scale (scale,scale)
-      gw := x1-x0
-      gh := y1-y0
-      (x + gw + 1 >= pw).if {
-        y := bottom_y; x := 1; // advance to next row
+  - get_number_of_fonts font_collection:C_array Uint8 :Int <-
+  ( + result:Int
+    // if it's just a font, there's only one valid font
+    (isfont font_collection).if {
+      result := 1
+    }.elseif {tag font_collection with "ttcf"} then {
+      // check if it's a TTC
+      // version 1?
+      ((u32(font_collection+4) = 00010000h) || {u32(font_collection+4) = 00020000h}).if {
+        result := s32(font_collection+8)
       }
-      // check if it fits vertically AFTER potentially moving to next row
-      (y + gh + 1 >= ph).if { // BSBS: Pas utile.
-        crash_with_message "TTF: l.560"
-      }
-      ? {x+gw < pw}
-      ? {y+gh < ph}
-      make_glyph_bitmap f output (pixels+x+y*pw) size (gw,gh) 
-      stride pw scale (scale,scale) glyph g
-      
-      chardata.item i.make (x.to_int16,y.to_int16)
-      to ((x + gw).to_int16,(y + gh).to_int16)
-      offset (x0.to_real32,y0.to_real32) 
-      to (0.0,0.0) // ??? Pas sur !
-      xadvance (scale * advance)
-      
-      x := x + gw + 1
-      (y+gh+1 > bottom_y).if {
-        bottom_y := y+gh+1
-      }
-    }
-    bottom_y
-  )
-
-  // bitmap baking
-
-  - pack_begin pixel:Array Uint8
-  size (pw,ph,stride,pad:Int) 
-  alloc alloc_ctxt:C_array Uint8 :Int <-
-  ( not_yet_implemented
-    /*
-    + node:ARRAY NODE
-    + ctxt:CONTEXT
-    
-    ctxt := CONTEXT.create
-    node := ARRAY NODE.create_with_capacity (pw - pad)
-
-    user_allocator_context := alloc_ctxt
-    width := pw
-    height := ph
-    pixels := pixel
-    pack_info := ctxt
-    nodes := node
-    padding := pad
-    stride_in_bytes := (stride != 0).ok stride or pw
-    h_oversample := 1
-    v_oversample := 1
-    ctxt.init_target(pw-pad, ph-pad)
-    (pixel).if {
-      pixel.set_all 0
-    }; */
-  )
-/*  
-  - pack_end spc:PACK_CONTEXT <-
-  (
-    not_yet_implemented
-    //STBTT_free(spc->nodes    , spc->user_allocator_context)
-    //STBTT_free(spc->pack_info, spc->user_allocator_context)
-  )
-
-  - pack_set_oversampling spc:PACK_CONTEXT
-  size (h_oversample,v_oversample:UINTEGER) <-
-  (
-    ? {h_oversample <= max_oversample}
-    ? {v_oversample <= max_oversample}
-    (h_oversample <= max_oversample).if {
-      spc.set_h_oversample h_oversample
-    }
-    (v_oversample <= max_oversample).if {
-      spc.set_v_oversample v_oversample
-    }
-  )
-*/
-Private
-  /*
-  - buffer:ARRAY Uint8 := 
-  ARRAY Uint8.create_with_capacity max_oversample
-  */
-Public
-  /*
-  - h_prefilter (pixels:ARRAY Uint8) 
-  size (w,h,stride_in_bytes:Int) 
-  width kernel_width:UINTEGER <-
-  ( + safe_w:Int
-    + total,ofs,ofs2:UINTEGER
-    safe_w := w - kernel_width
-    0.to (h-1) do { j:Int
-      buffer.make kernel_width
-      total := 0
-      ofs2 := ofs
-      0.to safe_w do { i:Int
-        total := total + pixels.item ofs2 - buffer.item (i & over_mask)
-        buffer.put (pixels.item ofs2) to (buffer.item ((i+kernel_width)&over_mask))
-        pixels.put ((total / kernel_width).to_uint8) to ofs2
-        ofs2 := ofs2 + 1
-      }
-      (safe_w+1).to (w-1) do { i:Int
-        ? {pixels.item ofs2 = 0}
-        total := total - buffer.item (i & over_mask)
-        pixels.put ((total / kernel_width).to_uint8) to ofs2
-        ofs2 := ofs2 + 1
-      }
-      ofs := ofs + stride_in_bytes
-    }
-  )
-
-  - v_prefilter (pixels:ARRAY Uint8) 
-  size (w,h,stride_in_bytes:Int)
-  width kernel_width:UINTEGER <-
-  ( + safe_h,ofs:Int
-    + total:UINTEGER
-    
-    safe_h := h - kernel_width
-    0.to (w-1) do { j:Int
-      buffer.make kernel_width
-      total := 0
-      ofs := j
-      0.to safe_h do { i:Int
-        total := total+pixels.item ofs-buffer.item (i & over_mask)
-        buffer.put (pixels.item ofs) to ((i+kernel_width) & over_mask)
-        pixels.put ((total / kernel_width).to_uint8) to ofs
-        ofs := ofs + stride_in_bytes
-      }
-      (safe_h+1).to (h-1) do { i:Int
-        ? {pixels.item ofs = 0}
-        total := total - buffer.item (i & over_mask)
-        pixels.put ((total / kernel_width).to_uint8) to ofs
-        ofs := ofs + stride_in_bytes
-      }
-    }
-  );*/
-
-  - oversample_shift oversample:Int :Real32 <-
-  ( + result:Real32
-    (oversample != 0).if {
-      result := -(oversample - 1).to_real32 / (oversample*2)
     }
     result
   )
 
-  // rects array must be big enough to accommodate 
-  // all characters in the given ranges
-  - pack_font_ranges_gather_rects (info:Fontinfo,ranges:Array Pack_range, rects:Array (Flat Rect)) :Int <-
-  ( + i,j,k:Int
-    not_yet_implemented
-    /*
-    0.to (ranges.upper) do { i:Int
-      + fh,scal:REAL_32
-      fh := ranges.item i.font_size
-      scal := (fh > 0).ok (info.scale_for_pixel_height fh) 
-      or (info.scale_for_mapping_em_to_pixels (-fh))
-      ranges.item i.hv_oversample (h_oversample,v_oversample)
-      0.to (ranges.item i.num_chars-1) do { j:Int
-        + x0,y0,x1,y1,codepoint,glyph:Int
-        codepoint := (ranges.item i.array_of_unicode_codepoints = NULL)
-        .ok (ranges.item i.first_unicode_codepoint_in_range + j)
-        or  (ranges.item i.array_of_unicode_codepoints.item j)
-        glyph := info.find_glyph_index codepoint
-        (x0,y0,x1,y1) := info.get_glyph_bitmap_box_subpixel glyph
-        scale (scal * h_oversample,scale * v_oversample)
-        shift (0,0)
-                                         
-        rects.item k.set_size (
-          x1-x0 + padding + h_oversample-1,
-          y1-y0 + padding + v_oversample-1
-        )
-        k := k + 1
-      }
-    };*/
-    k
-  )
+  //
+  // Font name matching
+  //
 
-  // rects array must be big enough to accommodate 
-  // all characters in the given ranges
-  - pack_font info:Fontinfo 
-  ranges_render ranges:Array Pack_range 
-  into_rects rects:Array (Flat Rect) <-
-  ( + i,j,k,return_value:Int
-    + old_h_over,old_v_over:Int
-    + fh,scale,recip_h,recip_v,sub_x,sub_y:Real32
-    + r:Flat Rect
-    not_yet_implemented
-    /*
-    // save current values
-    old_h_over := h_oversample
-    old_v_over := v_oversample
-    return_value := 1
-    0.to (num_ranges-1) do { i:Int
-      fh := ranges.item i.font_size
-      scale := (fh > 0).ok (scale_for_pixel_height(info, fh))
-      or (scale_for_mapping_em_to_pixels(info, -fh))
-      h_oversample := ranges.item i.h_oversample
-      v_oversample := ranges.item i.v_oversample
-      recip_h := 1.0 / h_oversample
-      recip_v := 1.0 / v_oversample
-      sub_x := oversample_shift h_oversample
-      sub_y := oversample_shift v_oversample
-      0.to (ranges.item i.num_chars-1) do { j:Int
-        r := rects.item k
-        (r.was_packed).if {
-          not_yet_implemented
-          /*
-          + bc:PACKED_CHAR
-          + advance, lsb, x0,y0,x1,y1:Int
-          + codepoint,glyph:Int
-          + pad:COORD
-          bc := ranges.item i.chardata_for_range.item j
-          codepoint := (ranges.item i.array_of_unicode_codepoints = NULL).ok 
-          (ranges.item i.first_unicode_codepoint_in_range + j) or 
-          (ranges.item i.array_of_unicode_codepoints.item j)
-          glyph := info.find_glyph_index codepoint
-          pad := padding
-          
-          // pad on left and top
-          r.move_pad pad
-          (advance,lsb) := info.get_glyph_h_metrics glyph
-          (x0,y0,x1,y1) := info.get_glyph_bitmap_box glyph
-          size (scale * h_oversample,scale * v_oversample)
-
-          make_glyph_bitmap_subpixel(info,
-            pixels + r.x + r.y*stride_in_bytes,
-            r.w - h_oversample+1,
-            r.h - v_oversample+1,
-            stride_in_bytes,
-            scale * h_oversample,
-            scale * v_oversample,
-          0,0,glyph)
-          
-          (h_oversample > 1).if {
-            h_prefilter(pixels + r.x + r.y*stride_in_bytes,
-            r.w, r.h, stride_in_bytes,h_oversample)
-          }
-          (v_oversample > 1).if {
-            v_prefilter(pixels + r.x + r.y*stride_in_bytes,
-            r.w, r.h, stride_in_bytes,v_oversample)
-          }
-          bc.make (r.x,r.y) to (r.x + r.w,r.y + r.h)
-          offset (x0 * recip_h + sub_x,y0 * recip_v + sub_y)
-          to ((x0 + r.w) * recip_h + sub_x,(y0 + r.h) * recip_v + sub_y)
-          xadvance (scale * advance)
-          */
-        } else {
-          return_value := 0; // if any fail, report failure
-        }
-        k := k + 1
-      }
-    }
-    // restore original values
-    h_oversample := old_h_over
-    v_oversample := old_v_over
-    */
-    return_value
-  )
-
-  - pack_font_ranges_pack_rects prects:Array (Flat Rect) <-
-  (
-    pack_info.pack_rects prects
-  )
-  
-  - rects:Array (Flat Rect) := Array (Flat Rect).create_with_capacity 32
-  - pack_font_ranges fontdata:Array Uint8
-  index font_index:Int ranges ranges:Array Pack_range <-
-  ( + info:Fontinfo
-    + i,j,n,return_value:Int
-    not_yet_implemented
-    /*
-    // flag all characters as NOT packed
-    0.to (num_ranges-1) do { i:Int
-      0.to (ranges.item i.num_chars-1) do { j:Int
-        ranges.item i.chardata_for_range.item j.reset_box
-      }
-    }
-    0.to (num_ranges-1) do { i:Int
-      n := n + ranges.item i.num_chars
-    }
-         
-    rects.with_capacity n
-    
-    info.set_userdata user_allocator_context
-    info.init_font fontdata start (get_font_offset fontdata for_index font_index)
-
-    n := pack_font info ranges ranges gather_rects rects
-    
-    pack_font_ranges_pack_rects (rects, n)
-    return_value := pack_font info ranges_render ranges into_rects rects
-    */
-    return_value
-  )
-
-  // check if a utf8 string contains a prefix which 
-  // is the utf16 string; if so return length of matching utf8 string
-  - compare_utf8 s1:Array Uint8 to_utf16 s2:Array Uint8 :Int32 <-
-  ( + i,i2,result:Int32
-    + ch,ch2:Uint16
-    + c:Uint32
-    + len1:Int
-    
-    len1 := s1.count
-    {(i2 < s2.count) && {result != -1}}.while_do {
-      ch := s2.item i2 *256 + s2.item (i2+1)
+  - compare_utf8 (s1:C_array Uint8, len1:Int) to_utf16_bigendian_prefix (ps2:C_array Uint8, plen2:Int) :Int <-
+  // The length of the prefix of @s1 (UTF-8) that is @s2 (UTF-16 big
+  // endian), or -1.
+  ( + i,len2,ch:Int
+    + s2:C_array Uint8
+    + fail:Boolean
+    (s2,len2) := (ps2,plen2)
+    // convert utf16 to utf8 and compare the results while converting
+    {(len2 != 0) && {! fail}}.while_do {
+      ch := s2.at 0.to_int*256 + s2.at 1
       (ch < 80h).if {
-        ((i >= len1) || {s1.item i != ch}).if { 
-          result := -1
-        } else { 
+        (i >= len1).if { fail := True; } else {
+          (s1.at i != ch).if { fail := True; }
           i := i + 1
         }
       }.elseif {ch < 800h} then {
-        (
-          (i+1 >= len1) || 
-          {s1.item  i    != 0C0h + (ch >>  6)} ||
-          {s1.item (i+1) != 080h + (ch & 3Fh)}
-        ).if { result := -1; } 
-        else { i := i + 2; }
-      }.elseif {(ch >= 0D800h) && {ch < 0DC00h}} then {
-        ch2 := s2.item (i2+2) *256 + s2.item (i2+3)
-        c := ((ch - 0D800h) << 10) + (ch2 - 0DC00h) + 10000h
-        (
-          (i+3 >= len1) ||        
-          {s1.item  i    != 0F0h +  (c >> 18)       } || 
-          {s1.item (i+1) != 080h + ((c >> 12) & 3Fh)} ||
-          {s1.item (i+2) != 080h + ((c >>  6) & 3Fh)} || 
-          {s1.item (i+3) != 080h + ((c      ) & 3Fh)}
-        ).if { result := -1; } 
-        else { i := i + 4; i2 := i2 + 2; }
-      }.elseif {(ch >= 0DC00h) && {ch < 0E000h}} then {
-        result := -1
-      } else {
-        (
-          (i+2 >= len1) ||
-          {s1.item  i    != 0E0h +  (ch >>12)} ||
-          {s1.item (i+1) != 080h + ((ch >> 6) & 3Fh)} ||
-          {s1.item (i+2) != 080h + ((ch     ) & 3Fh)}
-        ).if { result := -1; } 
-        else { i := i + 3; }
-      }
-      i2 := i2 + 2
-    }
-    (result = 0).if { result := i; }
-    result
-  )
-
-  - get_font_name_string font:Fontinfo
-  platform platform_id:Int encoding encoding_id:Int
-  language language_id:Int name name_id:Int 
-  :(C_array Uint8,Int) <-
-  ( + i,count,string_offset,length:Int
-    + offset,nm:Uint32
-    + fc,result:C_array Uint8
-    fc := font.data
-    offset := font.fontstart
-    nm := find_table(fc, offset) name "name"
-    (nm).if { 
-      count := ttushort(fc+nm+2)
-      string_offset := nm + ttushort(fc+nm+4)
-      {(i < count) && {result = 0}}.while_do {
-        + loc:Uint32
-        loc := nm + 6 + 12 * i
-        (
-          (platform_id = ttushort(fc+loc+0)) &&
-          {encoding_id = ttushort(fc+loc+2)} &&
-          {language_id = ttushort(fc+loc+4)} &&
-          {name_id = ttushort(fc+loc+6)}
-        ).if {
-          length := ttushort(fc+loc+8)
-          result := fc+string_offset+ttushort(fc+loc+10)
+        (i+1 >= len1).if { fail := True; } else {
+          (s1.at i != 0C0h + (ch >> 6)).if { fail := True; }
+          i := i + 1
+          (! fail && {s1.at i != 80h + (ch & 3Fh)}).if { fail := True; }
+          i := i + 1
         }
-        i := i + 1
+      }.elseif {(ch >= 0D800h) && {ch < 0DC00h}} then {
+        + c,ch2:Int
+        ch2 := s2.at 2.to_int*256 + s2.at 3
+        (i+3 >= len1).if { fail := True; } else {
+          c := ((ch - 0D800h) << 10) + (ch2 - 0DC00h) + 10000h
+          (s1.at i != 0F0h + (c >> 18)).if { fail := True; }
+          i := i + 1
+          (! fail && {s1.at i != 80h + ((c >> 12) & 3Fh)}).if { fail := True; }
+          i := i + 1
+          (! fail && {s1.at i != 80h + ((c >>  6) & 3Fh)}).if { fail := True; }
+          i := i + 1
+          (! fail && {s1.at i != 80h + ((c      ) & 3Fh)}).if { fail := True; }
+          i := i + 1
+          s2 := s2 + 2; // plus another 2 below
+          len2 := len2 - 2
+        }
+      }.elseif {(ch >= 0DC00h) && {ch < 0E000h}} then {
+        fail := True
+      } else {
+        (i+2 >= len1).if { fail := True; } else {
+          (s1.at i != 0E0h + (ch >> 12)).if { fail := True; }
+          i := i + 1
+          (! fail && {s1.at i != 80h + ((ch >> 6) & 3Fh)}).if { fail := True; }
+          i := i + 1
+          (! fail && {s1.at i != 80h + ((ch     ) & 3Fh)}).if { fail := True; }
+          i := i + 1
+        }
       }
+      s2 := s2 + 2
+      len2 := len2 - 2
     }
-    result, length
+    (fail).if { i := -1; }
+    i
   )
 
-  - matchpair(fc:Array Uint8,nm:Uint32) name nam:String_alias 
-  target tgt_id:Int32 next nxt_id:Int32 :Int <-
-  ( + i,id,count,string_offset,platform,encoding,language:Int32
-    + matchlen,slen,off:Int32
-    + loc:Uint32
-    + result:Int
-    count := ttushort(fc+nm+2)
-    string_offset := nm + ttushort(fc+nm+4)
-    {(i < count) && {result = 0}}.while_do {
+  - compare_utf8 (s1:C_array Uint8, len1:Int) to_utf16_bigendian (s2:C_array Uint8, len2:Int) :Boolean <-
+  // returns 1/0 whether the first string interpreted as utf8 is identical to
+  // the second string interpreted as big-endian utf16... useful for strings from next func
+  (
+    len1 = compare_utf8 (s1, len1) to_utf16_bigendian_prefix (s2, len2)
+  )
+
+  - matchpair (fc:C_array Uint8, nm:Int, name:C_array Uint8, nlen:Int, target_id:Int, next_id:Int) :Boolean <-
+  ( + count,string_offset,i:Int
+    + result:Boolean
+    count := u16(fc+nm+2)
+    string_offset := nm + u16(fc+nm+4)
+    {(i < count) && {! result}}.while_do {
+      + loc,id:Int
       loc := nm + 6 + 12 * i
-      id := ttushort(fc+loc+6)
-      (id = tgt_id).if {
+      id := u16(fc+loc+6)
+      (id = target_id).if {
         // find the encoding
-        platform := ttushort(fc+loc+0)
-        encoding := ttushort(fc+loc+2)
-        language := ttushort(fc+loc+4)
+        + platform,encoding,language:Int
+        platform := u16(fc+loc+0)
+        encoding := u16(fc+loc+2)
+        language := u16(fc+loc+4)
         // is this a Unicode encoding?
-        ((platform = 0) || {(platform = 3) && {encoding = 1}} || 
-        {(platform = 3) && {encoding = 10}}).if {
-          slen := ttushort(fc+loc+8)
-          off := ttushort(fc+loc+10)
+        ((platform = 0) || {(platform = 3) && {encoding = 1}} || {(platform = 3) && {encoding = 10}}).if {
+          + slen,off,matchlen:Int
+          slen := u16(fc+loc+8)
+          off := u16(fc+loc+10)
           // check if there's a prefix match
-          matchlen := compare_utf8 (nam, nam.count) 
-          to_utf16 (fc+string_offset+off,slen)
+          matchlen := compare_utf8 (name, nlen) to_utf16_bigendian_prefix (fc+string_offset+off, slen)
           (matchlen >= 0).if {
-            // check for target_id+1 immediately following, 
-            // with same encoding & language
-            (
-              (i+1 < count) && 
-              {ttushort(fc+loc+12+6) = nxt_id } && 
-              {ttushort(fc+loc+12)   = platform} && 
-              {ttushort(fc+loc+12+2) = encoding} && 
-              {ttushort(fc+loc+12+4) = language}
-            ).if {
-              slen := ttushort(fc+loc+12+8)
-              off  := ttushort(fc+loc+12+10)
+            // check for target_id+1 immediately following, with same encoding & language
+            ((i+1 < count) && {u16(fc+loc+12+6) = next_id} && {u16(fc+loc+12) = platform} && {u16(fc+loc+12+2) = encoding} && {u16(fc+loc+12+4) = language}).if {
+              slen := u16(fc+loc+12+8)
+              off := u16(fc+loc+12+10)
               (slen = 0).if {
-                (matchlen = nam.count).if {
-                  result := 1
-                }
-              }.elseif {
-                (matchlen < nam.count) && {nam.item matchlen = ' '}
-              } then {
+                (matchlen = nlen).if { result := True; }
+              }.elseif {(matchlen < nlen) && {name.at matchlen = ' '.to_uint8}} then {
                 matchlen := matchlen + 1
-                (compare_utf8 (nam+matchlen, nam.count-matchlen) 
-                to_utf16 (fc+string_offset+off,slen)).if {
-                  result := 1
+                (compare_utf8 (name+matchlen, nlen-matchlen) to_utf16_bigendian (fc+string_offset+off, slen)).if {
+                  result := True
                 }
               }
-            }.elseif {matchlen = nam.count} then {
+            } else {
               // if nothing immediately following
-              result := 1
+              (matchlen = nlen).if { result := True; }
             }
           }
         }
@@ -566,57 +184,391 @@ Public
     result
   )
 
-  - matches (fc:String_alias,offset:Uint32) 
-  name nam:String_alias flags flag:Uint32 :Int <-
-  ( + nm,hd:Uint32
-    + result:Int
-    
-    (isfont(fc+offset)).if {
+  - matches (fc:C_array Uint8, offset:Int) name (name:C_array Uint8, nlen:Int) flags flags:Int :Boolean <-
+  ( + nm,hd:Int
+    + result:Boolean
+    (isfont (fc+offset)).if {
       // check italics/bold/underline flags in macStyle...
-      (flag).if {
-        hd := find_table(fc, offset) name "head"
-        ((ttushort(fc+hd+44) & 7) = (flag & 7)).if {
-          nm := find_table(fc, offset) name "name"
-          (nm).if {
-            // if we checked the macStyle flags, then just 
-            // check the family and ignore the subfamily
-            (
-              (matchpair(fc, nm) name nam target 16 next (-1)) ||
-              {matchpair(fc, nm) name nam target  1 next (-1)} ||
-              {matchpair(fc, nm) name nam target  3 next (-1)}
-            ).if {
-              result := 1
-            }
-          }
-        }
-      } else {
-        nm := find_table(fc, offset) name "name"
-        (nm).if {
-          (
-            (matchpair(fc, nm) name nam target 16 next 17) ||
-            {matchpair(fc, nm) name nam target  1 next  2} ||
-            {matchpair(fc, nm) name nam target  3 next(-1)}
-          ).if {
-            result := 1
-          }
+      result := True
+      (flags != 0).if {
+        hd := find_table (fc, offset) name "head"
+        ((u16(fc+hd+44) & 7) != (flags & 7)).if { result := False; }
+      }
+      result.if {
+        nm := find_table (fc, offset) name "name"
+        (nm = 0).if {
+          result := False
+        }.elseif {flags != 0} then {
+          // if we checked the macStyle flags, then just check the family and ignore the subfamily
+          result := matchpair (fc, nm, name, nlen, 16, -1) || {matchpair (fc, nm, name, nlen,  1, -1)} || {matchpair (fc, nm, name, nlen,  3, -1)}
+        } else {
+          result := matchpair (fc, nm, name, nlen, 16, 17) || {matchpair (fc, nm, name, nlen,  1,  2)} || {matchpair (fc, nm, name, nlen,  3, -1)}
         }
       }
     }
     result
   )
 
-  - find_matching_font font_collection:String_alias 
-  name name_utf8:String_alias flags flag:Uint32 :Int <-
-  ( + i,off:Int32
-    + result:Int
-    {result = 0}.while_do {
+  - find_matching_font font_collection:C_array Uint8 name name_utf8:String flags flags:Int :Int <-
+  // As @stbtt_FindMatchingFont: the offset of the font, or a negative number.
+  ( + i,off,result:Int
+    + name:C_array Uint8
+    + found:Boolean
+    name := Cast (C_array Char) To (C_array Uint8).on (name_utf8.to_external)
+    {! found}.while_do {
       off := get_font_offset font_collection for_index i
-      ((off < 0) ||
-      {matches(font_collection, off) name name_utf8 flags flag}).if {
+      (off < 0).if {
         result := off
+        found := True
+      }.elseif {matches (font_collection, off) name (name, name_utf8.count) flags flags} then {
+        result := off
+        found := True
       }
       i := i + 1
     }
     result
   )
 
+  //
+  // Bitmap baking
+  //
+
+  - bake_font_bitmap (data:C_array Uint8, offset:Int) height pixel_height:Real32
+  in (pixels:C_array Uint8, pw,ph:Int) chars (first_char,num_chars:Int) data chardata:Array Backed_char :Int <-
+  // As @stbtt_BakeFontBitmap: if positive, the first unused row of the bitmap;
+  // if negative, the negated number of characters that fit; 0 if no characters fit
+  // and no rows were used. @chardata has @num_chars items.
+  ( + scale:Real32
+    + x,y,bottom_y,i,result:Int
+    + f:Fontinfo
+    + stop:Boolean
+    f := Fontinfo.create_font data start offset
+    (f = NULL).if {
+      result := -1
+    } else {
+      pixels.clear_all (pw*ph-1); // background of 0 around pixels
+      x := y := 1
+      bottom_y := 1
+      scale := f.scale_for_pixel_height pixel_height
+      {(i < num_chars) && {! stop}}.while_do {
+        + advance,lsb,x0,y0,x1,y1,gw,gh,g:Int
+        g := f.find_glyph_index (first_char + i)
+        (advance, lsb) := f.get_glyph_h_metrics g
+        (x0,y0,x1,y1) := f.get_glyph_bitmap_box g scale (scale,scale)
+        gw := x1-x0
+        gh := y1-y0
+        (x + gw + 1 >= pw).if {
+          y := bottom_y
+          x := 1; // advance to next row
+        }
+        (y + gh + 1 >= ph).if { // check if it fits vertically AFTER potentially moving to next row
+          result := -i
+          stop := True
+        } else {
+          ? {x+gw < pw}
+          ? {y+gh < ph}
+          f.make_glyph_bitmap (pixels+x+y*pw) size (gw,gh) stride pw scale (scale,scale) glyph g
+          chardata.at i.make (x, y, x + gw, y + gh) offset (x0.to_real32, y0.to_real32) xadvance (scale * advance.to_real32)
+          x := x + gw + 1
+          (y+gh+1 > bottom_y).if {
+            bottom_y := y+gh+1
+          }
+          i := i + 1
+        }
+      }
+      (! stop).if { result := bottom_y; }
+    }
+    result
+  )
+
+  //
+  // Packing
+  //
+
+  - pack_begin (ppixels:C_array Uint8, pw,ph,pstride_in_bytes,ppadding:Int) context alloc_context:C_array Uint8 :Ttf <-
+  // As @stbtt_PackBegin: a new pack context, of which @ppixels is the bitmap
+  // (@ppixels may be @NULL to only compute the positions).
+  ( + result:Ttf
+    result := clone
+    result.make_pack (ppixels, pw, ph, pstride_in_bytes, ppadding) context alloc_context
+    result
+  )
+
+  - make_pack (ppixels:C_array Uint8, pw,ph,pstride_in_bytes,ppadding:Int) context alloc_context:C_array Uint8 <-
+  (
+    pack_info := Context.new
+    user_allocator_context := alloc_context
+    width := pw
+    height := ph
+    pixels := ppixels
+    padding := ppadding
+    (pstride_in_bytes != 0).if {
+      stride_in_bytes := pstride_in_bytes
+    } else {
+      stride_in_bytes := pw
+    }
+    h_oversample := 1
+    v_oversample := 1
+    skip_missing := False
+    pack_info.init_target (pw-ppadding, ph-ppadding)
+    (pixels != NULL).if {
+      pixels.clear_all (pw*ph-1); // background of 0 around pixels
+    }
+  )
+
+  - pack_end <-
+  (
+    pack_info := NULL
+  )
+
+  - pack_set_oversampling (h,v:Int) <-
+  (
+    ? {h <= max_oversample}
+    ? {v <= max_oversample}
+    (h <= max_oversample).if { h_oversample := h; }
+    (v <= max_oversample).if { v_oversample := v; }
+  )
+
+  - pack_set_skip_missing_codepoints skip:Boolean <-
+  (
+    skip_missing := skip
+  )
+
+  - over_mask:Int := 7; // STBTT_MAX_OVERSAMPLE-1
+
+  - prefilter_buffer:C_array Uint8 := C_array Uint8.create 8; // STBTT_MAX_OVERSAMPLE
+
+  - h_prefilter (ppixels:C_array Uint8, w,h,stride:Int, kernel_width:Int) <-
+  ( + buffer,pix:C_array Uint8
+    + safe_w,i:Int
+    + total:Uint32
+    buffer := prefilter_buffer
+    pix := ppixels
+    safe_w := w - kernel_width
+    buffer.clear_all (max_oversample - 1); // suppress bogus warning from VS2013 -analyze
+    0.to (h-1) do { j:Int
+      buffer.clear_all (kernel_width - 1)
+      total := 0
+      // make kernel_width a constant in common cases so compiler can optimize out the divide
+      i := 0
+      {i <= safe_w}.while_do {
+        total := total + pix.at i - buffer.at (i & over_mask)
+        buffer.at ((i+kernel_width) & over_mask) put (pix.at i)
+        pix.at i put ((total / kernel_width.to_uint32).to_raw_uint8)
+        i := i + 1
+      }
+      {i < w}.while_do {
+        ? {pix.at i = 0}
+        total := total - buffer.at (i & over_mask)
+        pix.at i put ((total / kernel_width.to_uint32).to_raw_uint8)
+        i := i + 1
+      }
+      pix := pix + stride
+    }
+  )
+
+  - v_prefilter (ppixels:C_array Uint8, w,h,stride:Int, kernel_width:Int) <-
+  ( + buffer,pix:C_array Uint8
+    + safe_h,i:Int
+    + total:Uint32
+    buffer := prefilter_buffer
+    pix := ppixels
+    safe_h := h - kernel_width
+    buffer.clear_all (max_oversample - 1); // suppress bogus warning from VS2013 -analyze
+    0.to (w-1) do { j:Int
+      buffer.clear_all (kernel_width - 1)
+      total := 0
+      // make kernel_width a constant in common cases so compiler can optimize out the divide
+      i := 0
+      {i <= safe_h}.while_do {
+        total := total + pix.at (i*stride) - buffer.at (i & over_mask)
+        buffer.at ((i+kernel_width) & over_mask) put (pix.at (i*stride))
+        pix.at (i*stride) put ((total / kernel_width.to_uint32).to_raw_uint8)
+        i := i + 1
+      }
+      {i < h}.while_do {
+        ? {pix.at (i*stride) = 0}
+        total := total - buffer.at (i & over_mask)
+        pix.at (i*stride) put ((total / kernel_width.to_uint32).to_raw_uint8)
+        i := i + 1
+      }
+      pix := pix + 1
+    }
+  )
+
+  - oversample_shift oversample:Int :Real32 <-
+  // The prefilter is a box filter of width "oversample",
+  // which shifts phase by (oversample - 1)/2 pixels in
+  // oversampled space. We want to shift in the opposite
+  // direction to counter this.
+  ( + result:Real32
+    (oversample != 0).if {
+      result := (-(oversample - 1)).to_real32 / (2.0.to_real32 * oversample.to_real32)
+    }
+    result
+  )
+
+  - scale info:Fontinfo for fh:Real32 :Real32 <-
+  ( + result:Real32
+    (fh > 0).if {
+      result := info.scale_for_pixel_height fh
+    } else {
+      result := info.scale_for_mapping_em_to_pixels (-fh)
+    }
+    result
+  )
+
+  - pack_font_ranges_gather_rects (info:Fontinfo, ranges:Array Pack_range, num_ranges:Int, rects:Array Rect) :Int <-
+  // rects array must be big enough to accommodate all characters in the given ranges
+  ( + k:Int
+    + missing_glyph_added:Boolean
+    0.to (num_ranges-1) do { i:Int
+      + r:Pack_range
+      + scale:Real32
+      r := ranges.at i
+      scale := scale info for (r.font_size)
+      r.set_oversample (h_oversample.to_raw_uint8, v_oversample.to_raw_uint8)
+      0.to (r.num_chars-1) do { j:Int
+        + x0,y0,x1,y1,codepoint,glyph:Int
+        codepoint := r.codepoint j
+        glyph := info.find_glyph_index codepoint
+        ((glyph = 0) && {skip_missing || {missing_glyph_added}}).if {
+          rects.at k.set_size (0, 0)
+        } else {
+          (x0,y0,x1,y1) := info.get_glyph_bitmap_box_subpixel glyph scale (scale * h_oversample.to_real32, scale * v_oversample.to_real32) shift (0,0)
+          rects.at k.set_size (x1-x0 + padding + h_oversample-1, y1-y0 + padding + v_oversample-1)
+          (glyph = 0).if {
+            missing_glyph_added := True
+          }
+        }
+        k := k + 1
+      }
+    }
+    k
+  )
+
+  - pack_font_ranges_render_into_rects (info:Fontinfo, ranges:Array Pack_range, num_ranges:Int, rects:Array Rect) :Boolean <-
+  // rects array must be big enough to accommodate all characters in the given ranges
+  // (stb_truetype keeps the index of the missing glyph, but not its range,
+  // and copies it from the current range: out of the array if it was found in
+  // another one. The range is kept here.)
+  ( + k,missing_glyph,old_h_over,old_v_over:Int
+    + missing_range:Pack_range
+    + return_value:Boolean
+    missing_glyph := -1
+    return_value := True
+    // save current values
+    old_h_over := h_oversample
+    old_v_over := v_oversample
+    0.to (num_ranges-1) do { i:Int
+      + rg:Pack_range
+      + scale,recip_h,recip_v,sub_x,sub_y:Real32
+      rg := ranges.at i
+      scale := scale info for (rg.font_size)
+      h_oversample := rg.h_oversample
+      v_oversample := rg.v_oversample
+      recip_h := 1.0 / h_oversample.to_real32
+      recip_v := 1.0 / v_oversample.to_real32
+      sub_x := oversample_shift h_oversample
+      sub_y := oversample_shift v_oversample
+      0.to (rg.num_chars-1) do { j:Int
+        + r:Rect
+        r := rects.at k
+        (r.was_packed && {r.w != 0} && {r.h != 0}).if {
+          + bc:Packed_char
+          + xoff,yoff,xoff2,yoff2:Real32
+          + advance,lsb,x0,y0,x1,y1,codepoint,glyph:Int
+          + p:C_array Uint8
+          bc := rg.chardata_for_range.at j
+          codepoint := rg.codepoint j
+          glyph := info.find_glyph_index codepoint
+          r.move_pad padding
+          // pad on left and top
+          (advance, lsb) := info.get_glyph_h_metrics glyph
+          (x0,y0,x1,y1) := info.get_glyph_bitmap_box glyph scale (scale * h_oversample.to_real32, scale * v_oversample.to_real32)
+          p := pixels + r.x + r.y*stride_in_bytes
+          info.make_glyph_bitmap_subpixel p size (r.w - h_oversample+1, r.h - v_oversample+1) stride stride_in_bytes scale (scale * h_oversample.to_real32, scale * v_oversample.to_real32) shift (0,0) glyph glyph
+          (h_oversample > 1).if {
+            h_prefilter (p, r.w, r.h, stride_in_bytes, h_oversample)
+          }
+          (v_oversample > 1).if {
+            v_prefilter (p, r.w, r.h, stride_in_bytes, v_oversample)
+          }
+          xoff  := x0.to_real32 * recip_h + sub_x
+          yoff  := y0.to_real32 * recip_v + sub_y
+          xoff2 := (x0 + r.w).to_real32 * recip_h + sub_x
+          yoff2 := (y0 + r.h).to_real32 * recip_v + sub_y
+          bc.make (r.x, r.y, r.x + r.w, r.y + r.h) offset (xoff, yoff) to (xoff2, yoff2) xadvance (scale * advance.to_real32)
+          (glyph = 0).if {
+            missing_glyph := j
+            missing_range := rg
+          }
+        }.elseif {skip_missing} then {
+          return_value := False
+        }.elseif {r.was_packed && {r.w = 0} && {r.h = 0} && {missing_glyph >= 0}} then {
+          rg.chardata_for_range.at j.copy_from (missing_range.chardata_for_range.at missing_glyph)
+        } else {
+          return_value := False; // if any fail, report failure
+        }
+        k := k + 1
+      }
+    }
+    // restore original values
+    h_oversample := old_h_over
+    v_oversample := old_v_over
+    return_value
+  )
+
+  - pack_font_ranges_pack_rects (rects:Array Rect, num_rects:Int) <-
+  (
+    pack_info.pack_rects rects count num_rects
+  )
+
+  - pack_font_ranges (fontdata:C_array Uint8, font_index:Int) ranges (ranges:Array Pack_range, num_ranges:Int) :Boolean <-
+  ( + info:Fontinfo
+    + n:Int
+    + rects:Array Rect
+    + return_value:Boolean
+    // flag all characters as NOT packed
+    0.to (num_ranges-1) do { i:Int
+      0.to (ranges.at i.num_chars-1) do { j:Int
+        ranges.at i.chardata_for_range.at j.reset_box
+      }
+    }
+    n := 0
+    0.to (num_ranges-1) do { i:Int
+      n := n + ranges.at i.num_chars
+    }
+    rects := Array Rect.create_with_capacity n
+    n.times { rects.add_last (Rect.new); }
+    info := Fontinfo.create_font fontdata start (get_font_offset fontdata for_index font_index)
+    info.set_userdata user_allocator_context
+    n := pack_font_ranges_gather_rects (info, ranges, num_ranges, rects)
+    pack_font_ranges_pack_rects (rects, n)
+    return_value := pack_font_ranges_render_into_rects (info, ranges, num_ranges, rects)
+    return_value
+  )
+
+  - pack_font_range (fontdata:C_array Uint8, font_index:Int) size font_size:Real32
+  range (first_unicode_codepoint_in_range, num_chars_in_range:Int) :(Boolean,Array Packed_char) <-
+  // As @stbtt_PackFontRange; the packed characters are created.
+  ( + range:Pack_range
+    + ranges:Array Pack_range
+    + result:Boolean
+    range := Pack_range.create font_size first first_unicode_codepoint_in_range count num_chars_in_range codepoints NULL
+    ranges := Array Pack_range.create_with_capacity 1
+    ranges.add_last range
+    result := pack_font_ranges (fontdata, font_index) ranges (ranges, 1)
+    result, range.chardata_for_range
+  )
+
+  - get_scaled_font_v_metrics (fontdata:C_array Uint8, index:Int) size size:Real32 :(Real32,Real32,Real32) <-
+  // ascent, descent, line gap
+  ( + i_ascent,i_descent,i_line_gap:Int
+    + sc:Real32
+    + info:Fontinfo
+    info := Fontinfo.create_font fontdata start (get_font_offset fontdata for_index index)
+    sc := scale info for size
+    (i_ascent, i_descent, i_line_gap) := info.get_font_v_metrics
+    i_ascent.to_real32 * sc, i_descent.to_real32 * sc, i_line_gap.to_real32 * sc
+  )

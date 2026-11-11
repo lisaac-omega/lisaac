@@ -1,9 +1,0 @@
-Header
-  + name := Main
-/**/
-
-Public 
-  - main <-
-  (
-    Test.check (' ' = 32)
-  )

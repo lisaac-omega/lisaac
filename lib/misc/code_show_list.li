@@ -18,8 +18,8 @@ Public
   + item_h:Real32 := 74
   // Between `item_min_h' and `item_max_h', so that the whole list fits
   // in the window when possible (see `clamp'); the fonts follow.
-  - item_min_h:Real32 := 46
-  - item_max_h:Real32 := 74
+  - item_min_h:Real32 <- Code_show_look.px 46
+  - item_max_h:Real32 <- Code_show_look.px 74
 
   - create e:Array Code_show_entry do a:{Int;} :Self <-
   ( + result:Self
@@ -109,18 +109,18 @@ Public
         font_size (Code_show_look.ui_size)
         text_align (align_left | align_middle)
         fill_color ((i = current).ok (Code_show_look.accent) or (Code_show_look.text_faint))
-        text (xo + 18, y + item_h / 2) msg tmp
+        text (xo + Code_show_look.px 18, y + item_h / 2) msg tmp
       }
       // Name and directory:
-      x := xo + 60
+      x := xo + Code_show_look.px 60
       save
-      intersect_scissor (x,y) size (width - 60 - 34,item_h)
+      intersect_scissor (x,y) size (width - Code_show_look.px 94,item_h)
       font_face_id (Font.sys (Font.bold))
-      font_size ((Code_show_look.list_size * item_h / item_max_h).max 16)
+      font_size ((Code_show_look.list_size * item_h / item_max_h).max (Code_show_look.px 16))
       fill_color (Code_show_look.text)
       text (x, y + item_h * 0.37) msg (e.exec)
       font_face_id (Font.sys (Font.roman))
-      font_size (((Code_show_look.small_size + 2) * item_h / item_max_h).max 12)
+      font_size (((Code_show_look.small_size + Code_show_look.px 2) * item_h / item_max_h).max (Code_show_look.px 12))
       fill_color (Code_show_look.text_dim)
       String.tmp { tmp:String_buffer
         (e.subdir.is_empty).if { tmp.append "."; } else { tmp.append (e.subdir); }
@@ -134,7 +134,7 @@ Public
       }
       restore
       // State, on the right:
-      r := xo + width - 22
+      r := xo + width - Code_show_look.px 22
       (e.phase = Code_show_entry.running).if {
         draw_equalizer (r, y + item_h / 2) seed i
       }.elseif {e.phase = Code_show_entry.compiling} then {
@@ -200,8 +200,10 @@ Public
     e := ev & ~1
     (e = Hand.in).if {
       (ev = Hand.out).if { hover := -1; } else { hover := row_at (Hand.y_cur); }
+      Clickable.show_hand (hover != -1)
     }.elseif {e = Hand.move} then {
       hover := row_at (Hand.y_cur)
+      Clickable.show_hand (hover != -1)
     }.elseif {e = Hand.clic} then {
       focus := NULL
       i := row_at (Hand.y_cur)

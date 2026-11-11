@@ -1,0 +1,77 @@
+Header
+  + name := Touch
+Insert
+
+  - parent_utils:Utils := Utils
+
+Public
+
+  - z_max:Int := 1
+
+  + id:Int
+  + x:Int
+  + y:Int
+  + z:Int; // For mouse z_max = 1, (button 0:released, 1:pressed)
+
+  - pressing:Real32 <- z.to_real32 / z_max
+
+  + is_pressed:Boolean
+  + is_released:Boolean
+
+  - div:Div
+  - div_action:Div
+
+  - set_xy (nx,ny:Int) <-
+  (
+    ((x != nx) || {y != ny}).if {
+      x := nx
+      y := ny
+      div := search
+      (z = 0).if {
+        (div != div_action).if { action; }
+        div_action := div
+      }
+      action
+    }
+  )
+
+  - set_z pz:Int <-
+  (
+    (z != pz).if {
+      is_pressed  := (z = 0) && {pz != 0}
+      is_released := (z != 0) && {pz = 0}
+      z := pz
+      // The @Div which receives the press keeps the touch until the release.
+      (is_pressed).if { div_action := search; }
+      action
+      is_pressed := is_released := False
+    }
+  )
+
+  - print <-
+  (
+    Out # "Touch #" # id # ':' # x # ',' # y # '-' # z # '\n'
+  )
+
+Private
+
+  - search:Div <-
+  ( + result:Div
+    + i:Int
+    + t:Array Div
+    t := Div_out.draw_stack
+    i := t.upper
+    {(i >= t.lower) && {result = NULL}}.while_do {
+      result := t.at i.search_div (x.to_real32,y.to_real32)
+      i := i - 1
+    }
+    ((result = NULL) && {Elito_window.root != NULL}).if {
+      result := Elito_window.root.search_div (x.to_real32,y.to_real32)
+    }
+    result
+  )
+
+  - action <-
+  (
+    (div_action != NULL).if { div_action.touch_event self; }
+  )

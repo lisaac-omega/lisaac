@@ -83,7 +83,7 @@ Public
   ( path := fn
     line := 0
     file := File_utils.open_read fn
-    file.is_not_null
+    file != NULL
   )
   
   - close <- File_utils.close file

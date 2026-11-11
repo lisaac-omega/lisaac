@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- left.is_invariant && {right.is_invariant}
 
+  - is_pure:Boolean <- left.is_pure && {right.is_pure}
+
+  - is_reading v:Variable :Boolean <- left.is_reading v || {right.is_reading v}
+
   + left:Expr
 
   + right:Expr

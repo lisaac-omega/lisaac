@@ -1,5 +1,40 @@
 Header
   + name := Clone
+  /* @clone allocates from per-thread chunks instead of one @malloc per object:
+     cloned objects are never freed. Arduino keeps @malloc. */
+  - include := `
+#include <stdlib.h>
+#include <stdint.h>
+#if defined(ARDUINO)
+#define li_clone_alloc(sz) malloc(((sz) + 3) & ~3)
+#else
+#define LI_CHUNK_SIZE (1UL << 20)
+#if defined(__TINYC__)
+#define LI_TLS
+#else
+#define LI_TLS __thread
+#endif
+static LI_TLS char *li_chunk_cur, *li_chunk_end;
+static void *li_clone_alloc_slow(unsigned long sz)
+{ char *r;
+  if (sz > LI_CHUNK_SIZE / 4) return malloc(sz);
+  r = (char *)malloc(LI_CHUNK_SIZE);
+  li_chunk_cur = r + sz;
+  li_chunk_end = r + LI_CHUNK_SIZE;
+  return r;
+}
+/* sizeof is a multiple of the alignment: only a size multiple of 16 may need 16. */
+static inline void *li_clone_alloc(unsigned long sz)
+{ char *r = li_chunk_cur;
+  sz = (sz + 7) & ~7UL;
+  // uintptr_t, not unsigned long: 32 bits on Windows 64 bits.
+  if ((sz & 15) == 0) r = (char *)(((uintptr_t)r + 15) & ~(uintptr_t)15);
+  if (__builtin_expect(r + sz > li_chunk_end, 0)) return li_clone_alloc_slow(sz);
+  li_chunk_cur = r + sz;
+  return r;
+}
+#endif
+`
 Insert
   
   - parent_print:Print := Print
@@ -46,7 +81,7 @@ Self
       result := self; // BSBS: Pas genial (result devrait etre diff Self)
     } else {
       typ_id := type_id_intern
-      ptr := `malloc((@sz + 3) & ~3)`:Pointer; // ANDROID
+      ptr := `li_clone_alloc(@sz)`:Pointer
       //( + tp:Int; tp := cnt_clone
         // `printf("%ld\n",@tp)`
       //)
@@ -56,10 +91,13 @@ Self
         //crash_with_message "Fuite memory!\n"
       }
       
-      clone_allocation_size := clone_allocation_size + sz
-      
-      // MHMH: enregistrement taille :
-      clone_total_size := clone_total_size + sz
+      // Statistics, not in COP: shared by the threads, they would cost much (cache line)
+      // and be false.
+      (! is_cop_active).if {
+        clone_allocation_size := clone_allocation_size + sz
+        // MHMH: enregistrement taille :
+        clone_total_size := clone_total_size + sz
+      }
       /* ANDROID
       (typ_id = -1).if
       {
@@ -69,12 +107,20 @@ Self
       ptr := MEMORY.alloc_type (typ_id.to_uint32) size sz
       }
       */
+      // Debug with `-cop': its `One' fields must be NULL (one reference each).
+      check_one_intern
       result := Cast Pointer To Self.on ptr
       //MEMORY.copy to_pointer to ptr size (CAST Pointer TO Uint32.on sz)
-      copy_intern_in result
       (is_cop_type).if {
-        `((lith_object *)@result)->first = NULL`
-        `((lith_object *)@result)->last  = NULL`
+        // Clone of a `-' prototype with `-cop': a new universe (FIFO, base), without the state
+        // of the universe of `self' (used meanwhile by the other threads).
+        ( + me:Self
+          me := self
+          `li_clone_active((lith_object *)@result,(lith_object *)@me,@sz)`
+        )
+        `li_universe_open((lith_object *)@result)`
+      } else {
+        copy_intern_in result
       }
     }
     result
@@ -84,6 +130,7 @@ Self
   
   - free_allocation_memory <-
   // Static free, don't use with GC.
+  // Only for an object allocated by @Memory: @clone does not use it any more.
   ( + ptr:Pointer
     + sz:Uint_cpu
     + typ_id:Int
@@ -93,7 +140,7 @@ Self
     {
       typ_id := type_id_intern
       //ptr := `free(@self)`
-      clone_allocation_size := clone_allocation_size - sz
+      (! is_cop_active).if { clone_allocation_size := clone_allocation_size - sz; }
       ptr := to_pointer
       (typ_id = -1).if { Memory.free ptr size sz; }
       else {  Memory.free ptr type (typ_id.to_uint32); }

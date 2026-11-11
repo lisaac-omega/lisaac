@@ -1,0 +1,31 @@
+Header
+  + name := Div_page
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - name:String_alias := "DIV PAGE"
+  
+  - width_min:Real32  <- font_size * 4
+  - height_min:Real32 <- font_size * 4
+    
+  - draw pen:Pen <-
+  (
+    parent_div.draw pen
+    pen.begin_path
+    pen.fill_color (Color.rgb (200,200,220))
+    pen.rect (xo+2,yo) size (7,height-Info_bar.height_min+1)
+    pen.rect (xo+width-8,yo) size (6,height-Info_bar.height_min+1)
+    pen.fill
+    //    
+    pen.begin_path
+    pen.rect_varying (xo+2,yo) size (width-4,height-3) radius (0,0,8,8)
+    pen.stroke_color (Color.rgb (0,0,0))
+    pen.stroke
+  )

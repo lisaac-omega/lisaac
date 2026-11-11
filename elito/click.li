@@ -1,0 +1,75 @@
+Header
+  + name := Click
+Inherit
+
+  + parent_div:Flat Div
+
+Public
+  
+  + style:Uint8
+  
+  - bit_on_off:Int := 0000_0000b
+  - bit_check:Int  := 0000_0001b
+  - bit_radio:Int  := 0000_0010b
+  - is_on_off:Boolean <- (style & 11b) = bit_on_off
+  - is_check:Boolean  <- (style & 11b) = bit_check
+  - is_radio:Boolean  <- (style & 11b) = bit_radio
+  
+  - bit_on:Int      := 0000_0100b
+  - bit_pressed:Int := 0000_1000b
+    
+  - on_off:Self <- ( style := bit_on_off; self)
+  - check:Self  <- ( style := bit_check;  self)
+  - radio:Self  <- ( style := bit_radio;  self)
+   
+  - on_released  <- ( style := (style & 0011b) | bit_on; )
+  - on_pressed   <- ( style := (style & 0011b) | bit_on | bit_pressed;  )
+  - off_released <- ( style := (style & 0011b); )
+  - off_pressed  <- ( style := (style & 0011b) | bit_pressed; )
+  - pressed:Self  <- ( style := style |  bit_pressed; self)
+  - released:Self <- ( style := style & ~bit_pressed; self)
+  - on       <- ( style := style |  bit_on; )
+  - off      <- ( style := style & ~bit_on; )
+  - switch   <- ( style := style ^  bit_on; )
+  - set_on v:Boolean :Self <- ( v.if { on; } else { off; }; self)
+  
+  - is_on:Boolean      <- (style & bit_on) != 0
+  - is_pressed:Boolean <- (style & bit_pressed) != 0
+    
+  + action:{Click; }; // := { c:CLICK; "Void action.\n".print; }
+  - set_action a:{Click; } <- ( action := a; )
+  
+  + actions:Array Action
+  - set_actions a:Array Action <- ( actions := a; )
+  
+  + is_in:Boolean
+  
+  //- set_in b:BOOLEAN <- ( is_in := b; )
+  
+  //
+  // Creation.
+  //
+
+  - create_action a:{Click;} :Self <- 
+  ( + result:Self
+    result := create_intern
+    result.set_action a
+    result
+  )
+
+  - clic (x,y:Real32) :Boolean <-
+  (    
+    (is_on_off).if {
+      action.value self
+    }.elseif {is_check} then {
+      switch
+      action.value self
+    }.elseif {is_radio} then {
+      (is_on).if_false {
+        on
+        action.value self
+      }
+    }
+    True
+  )
+  

@@ -1,0 +1,67 @@
+Header
+  + name := Escape_loop
+/* A loop of the code, for the escape analysis (see @Escape). */
+Insert
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Public
+
+  + parent:Escape_loop
+
+  + id:Int
+  // Increasing with the creation of the loops: a loop nested in @self has a greater @id. A
+  // local is accessed in the body when its @Variable.esc_loop_mark is at least @id (see
+  // @Escape.access).
+
+  - counter:Int
+
+  + first_read:Array Variable
+  // Locals whose first access in the body is a read (see @Escape.pop_loop).
+
+  + moved_at_start:Array Variable
+
+  - first_access l:Variable read is_read:Boolean <-
+  // The first access of @l in the body.
+  (
+    (is_read).if {
+      (first_read = NULL).if {
+        first_read := Array Variable .create_with_capacity 4
+      }
+      first_read.add_last l
+    }
+  )
+
+  - is_first_read l:Variable :Boolean <-
+  (first_read != NULL) && {first_read.fast_first_index_of l <= first_read.upper}
+
+  - set_moved_at_start m:Array Variable <- ( moved_at_start := m; )
+
+  - create p:Escape_loop :Self <-
+  ( + result:Self
+    result := clone
+    result.make p
+    result
+  )
+
+  - make p:Escape_loop <-
+  (
+    parent := p
+    counter := counter + 1
+    id := counter
+  )
+
+  - is_inside l:Escape_loop :Boolean <-
+  // @self is @l or a loop nested in @l (NULL: outside any loop).
+  ( + cur:Escape_loop
+    + result:Boolean
+    (l = NULL).if {
+      result := True
+    } else {
+      cur := self
+      {(cur = NULL) || {cur = l}}.until_do {
+        cur := cur.parent
+      }
+      result := cur = l
+    }
+    result
+  )

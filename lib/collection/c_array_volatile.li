@@ -154,7 +154,7 @@ Public
     -? {at >= 0}
     -? {other_lower >= 0}
     -? {other_upper >= other_lower - 1}
-    -? {(other_upper >= other_lower) ->> {other.is_not_null}}
+    -? {(other_upper >= other_lower) ->> {other != NULL}}
   ]
   ( + i:Int
 
@@ -168,7 +168,7 @@ Public
   - fast_memcmp other:C_array_volatile V until up:Int :Boolean <-
   // Same jobs as @memcmp but uses infix `=' instead @equal.
   [ ...
-    -? {(capacity > 0) ->> {other.is_not_null}}
+    -? {(capacity > 0) ->> {other != NULL}}
   ]
   ( + i:Int
 
@@ -185,7 +185,7 @@ Public
     -? {at >= 0}
     -? {other_lower >= 0}
     -? {other_upper >= other_lower - 1}
-    -? {(other_upper >= other_lower) ->> {other.is_not_null}}
+    -? {(other_upper >= other_lower) ->> {other != NULL}}
   ]
   ( + i:Int
 
@@ -682,10 +682,6 @@ Public
 
   - to_external:Pointer <- to_pointer
   // Gives access to the C pointer on the area of storage.
-
-  - is_null:Boolean <- to_pointer.is_null
-
-  - is_not_null:Boolean <- to_pointer.is_not_null
 
   // Guru Section
 

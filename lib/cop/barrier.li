@@ -1,0 +1,46 @@
+Header
+  - name := Barrier W
+/* COP coordination: a meeting point for @n parties, again and again (cyclic barrier).
+   An active object (a universe): each party (an active object of type @W) sends
+   `arrive self tag k' at the end of a phase; when the @n parties are there, each one receives
+   the asynchronous message `passed k' (its tag), and the next phase starts. @W must have a slot
+   `passed k:Int'. */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + parties:Int
+
+  + queue:Array W := Array W .create_with_capacity 4
+  + tags:Array Int := Array Int .create_with_capacity 4
+
+  + phase:Int
+  // The number of phases passed.
+
+  - create n:Int :Self <-
+  // A new universe, for @n parties.
+  ( + result:Self
+    result := clone
+    result.set_parties n
+    result
+  )
+
+  - set_parties n:Int <-
+  (
+    parties := n
+  )
+
+  - arrive w:W tag k:Int <-
+  (
+    queue.add_last w
+    tags.add_last k
+    (queue.count = parties).if {
+      phase := phase + 1
+      queue.lower.to (queue.upper) do { i:Int
+        queue.at i.passed (tags.at i)
+      }
+      queue.clear
+      tags.clear
+    }
+  )

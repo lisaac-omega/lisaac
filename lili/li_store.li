@@ -1,0 +1,32 @@
+Header
+  + name := Li_store
+/* Write memory, with the width of @kind (see @Li_kind). */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + receiver:Li_node
+  + off:Int
+  + kind:Int
+  + value:Li_node
+
+  - create r:Li_node off o:Int kind k:Int value v:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make r off o kind k value v
+    result
+  )
+
+  - make r:Li_node off o:Int kind k:Int value v:Li_node <-
+  ( receiver := r; off := o; kind := k; value := v; )
+
+  - eval fp:Int :Int <-
+  ( + a,k,v:Int
+    a := receiver.eval fp + off
+    v := value.eval fp
+    k := kind
+    `lili_store(@k,@a,@v)`;
+    0
+  )

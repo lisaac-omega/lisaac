@@ -1,0 +1,47 @@
+Header
+  + name := Li_call
+/* Call of a @Li_fn; its value is the result given back by value. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + fn:Li_fn
+  // Parallel arrays, for the arguments: value, offset in the new frame, and
+  // size for a @Flat structure which is copied, or else 0.
+  + args:Array Li_node
+  + offs:Array Int
+  + sizes:Array Int
+
+  - create f:Li_fn args a:Array Li_node offs o:Array Int sizes s:Array Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make f args a offs o sizes s
+    result
+  )
+
+  - make f:Li_fn args a:Array Li_node offs o:Array Int sizes s:Array Int <-
+  ( fn := f; args := a; offs := o; sizes := s; )
+
+  - eval fp:Int :Int <-
+  ( + nf,i,up,a,v,n,result:Int
+    nf := sp
+    up := args.upper
+    {i <= up}.while_do {
+      v := args.at i.eval fp
+      a := nf + offs.at i
+      n := sizes.at i
+      (n = 0).if {
+        `*(int64_t *)(@a) = @v`;
+      } else {
+        `memcpy((void *)(@a),(void *)(@v),@n)`;
+      }
+      i := i + 1
+    }
+    sp := nf + fn.frame_size
+    (Li_runtime.is_trace).if { fn.name.println; }
+    result := fn.eval nf
+    sp := nf
+    result
+  )

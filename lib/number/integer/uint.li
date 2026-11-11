@@ -11,7 +11,7 @@ Header
   Real, Real32, Real64, Real80,
   Pointer;
 Insert
-  - parent_numeric:Numeric := Numeric
+  - parent_ordered_numeric:Ordered_numeric := Ordered_numeric
 
 Public
 

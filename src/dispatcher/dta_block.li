@@ -64,14 +64,12 @@ Node_style, Self
     result
   )
   
-  
   - get_argument_at i:Int :Array Expr <-
   ( + result:Array Expr
     + n:Int
     n := (argument_list.count-1)/pow
     result := Array Expr .create_with_capacity (n+1)
     (copy_argument).if {
-      //"Copy All".println
       result.add_last (argument_list.first.my_copy)
       0.to (n-1) do { j:Int
         result.add_last (argument_list.at (1+j*pow+i).my_copy)
@@ -79,14 +77,10 @@ Node_style, Self
     } else {
       (i = 0).if {
         result.add_last (argument_list.first)
-        //"First rec".println
       } else {
         result.add_last (argument_list.first.my_copy)
-        //"Copy rec".println
-        //result.last.debug_display
       }
       0.to (n-1) do { j:Int
-        //"First Arg".println
         result.add_last (argument_list.at (1+j*pow+i))
       }
       (i = pow-1).if {
@@ -96,7 +90,6 @@ Node_style, Self
     result
   )
   
-
 Node_type, Dta
 
   - product t:Type with e:Expr self type_self:Type_full :List <-
@@ -111,10 +104,10 @@ Node_type, Dta
 
     result := List.create (e.position)
     (t = Type_null).if {
+      Escape.on_null_call e
       result.add_last Call_null      
     } else {
       t_block ?= t
-
 
       (t_block = NULL).if { // BSBS: debug
         "<<<".print
@@ -138,9 +131,7 @@ Node_type, Dta
           call := Call_slot.create (e.position) profil t_block with wrt_larg cop NULL
           result.add_last call
         }
-        //(result_expr.static_type.raw != Type_void).if {
         //  semantic_error (position,"Sorry, result with dispatch vector pow is not yet implemented.")
-        //};
       } else {
         wrt_larg := t_block.write_argument get_argument
         call := Call_slot.create (e.position) profil t_block with wrt_larg cop NULL
@@ -173,5 +164,4 @@ Node_type, Dta
   (
     True
   )
-
 

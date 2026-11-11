@@ -1,0 +1,111 @@
+Header
+  + name := Pcre
+/* Perl regular expression of the PCRE2 library, compiled with its JIT (very fast).
+   Each @Pcre has its own match state: one @Pcre by thread.
+     n := Pcre.create "a[ct]g" .count_in text
+     Pcre.create "<[^>]*>" .replace_in text by "|" to result
+   See also @Regex (POSIX, in Lisaac).*/
+  - include :=
+`
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <stdlib.h>
+#include <pcre2.h>
+typedef struct { pcre2_code *re; pcre2_match_data *md; pcre2_match_context *mc; PCRE2_SIZE *ov; } pcre_t;
+static inline void *pcre_new(const char *s)
+{ pcre_t *x = calloc(1, sizeof(pcre_t));
+  int err;
+  PCRE2_SIZE eo;
+  x->re = pcre2_compile((PCRE2_SPTR)s, PCRE2_ZERO_TERMINATED, 0, &err, &eo, NULL);
+  if (x->re == NULL) { free(x); return NULL; }
+  pcre2_jit_compile(x->re, PCRE2_JIT_COMPLETE);
+  x->md = pcre2_match_data_create(16, NULL);
+  x->mc = pcre2_match_context_create(NULL);
+  pcre2_jit_stack_assign(x->mc, NULL, pcre2_jit_stack_create(16384, 16384, NULL));
+  x->ov = pcre2_get_ovector_pointer(x->md);
+  return x;
+}
+`;
+
+  - lip <-
+  (
+    message_install "(Debian/Ubuntu: sudo apt-get install libpcre2-dev)";
+    add_lib "-lpcre2-8";
+  );
+
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + code:Pointer
+  // The compiled expression (NULL if it is not valid).
+
+  - create pattern:String :Self <- clone.make pattern
+
+  - make pattern:String :Self <-
+  ( + s:C_array Char
+    s := pattern.to_external
+    code := `pcre_new(@s)`:(Pointer)
+    self
+  )
+
+  - is_valid:Boolean <- code != NULL
+
+  - match text:String from pos:Int :Boolean <-
+  // The next match in @text from @pos: from @match_begin to @match_end (excluded).
+  [ ? {is_valid} ]
+  (
+    match (text.to_external) to (text.count) from pos
+  )
+
+  - match s:C_array Char to n:Int from pos:Int :Boolean <-
+  // The next match in [@pos, @n[ of @s.
+  ( + x:Pointer
+    x := code
+    `pcre2_jit_match(((pcre_t *)@x)->re, (PCRE2_SPTR)@s, @n, @pos, 0, ((pcre_t *)@x)->md, ((pcre_t *)@x)->mc)`:(Int) >= 0
+  )
+
+  - match_begin:Int <- ( + x:Pointer; x := code; `(int)((pcre_t *)@x)->ov[0]`:Int )
+
+  - match_end:Int <- ( + x:Pointer; x := code; `(int)((pcre_t *)@x)->ov[1]`:Int )
+
+  - count_in text:String :Int <- count_in text from 0 to (text.count)
+  // Number of matches in @text.
+
+  - count_in text:String from b:Int to e:Int :Int <-
+  // Number of matches in [@b, @e[ of @text.
+  ( + s:C_array Char
+    + result,pos:Int
+
+    s := text.to_external
+    pos := b
+    {match s to e from pos}.while_do {
+      result := result + 1
+      pos := match_end
+    }
+    result
+  )
+
+  - replace_in text:String by r:String to result:String_buffer <- replace_in text from 0 to (text.count) by r to result
+  // @result := @text where each match is replaced by @r.
+
+  - replace_in text:String from b:Int to e:Int by r:String to result:String_buffer <-
+  // @result := [@b, @e[ of @text where each match is replaced by @r.
+  ( + s:C_array Char
+    + pos,m:Int
+
+    s := text.to_external
+    result.clear
+    pos := b
+    {match s to e from pos}.while_do {
+      m := match_begin
+      (m > pos).if {
+        result.append text from pos to (m - 1)
+      }
+      result.append r
+      pos := match_end
+    }
+    (pos < e).if {
+      result.append text from pos to (e - 1)
+    }
+  )

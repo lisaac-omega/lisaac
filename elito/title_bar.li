@@ -1,0 +1,106 @@
+Header
+  + name := Title_bar
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+
+  - name:String_alias := "TITLE"
+  
+  - width_min:Real32 := 160
+  
+  - cursor_pattern:C_array Uint32 :=
+    ( + result:C_array Uint32
+    result := C_array Uint32.create (24*24)
+    0.to (24*24-1) do { i:Int
+      "           X            \
+      \          X_X           \
+      \         X___X          \
+      \        X_____X         \
+      \       X_______X        \
+      \       XXX___XXX        \
+      \         X___X          \
+      \    XX   X___X   XX     \
+      \   X_X   X___X   X_X    \
+      \  X__XXXXX___XXXXX__X   \
+      \ X_________X_________X  \
+      \X_________X X_________X \
+      \ X_________X_________X  \
+      \  X__XXXXX___XXXXX__X   \
+      \   X_X   X___X   X_X    \
+      \    XX   X___X   XX     \
+      \         X___X          \
+      \       XXX___XXX        \
+      \       X_______X        \
+      \        X_____X         \
+      \         X___X          \
+      \          X_X           \
+      \           X            \
+      \                        ".at i
+      .when 'X' then { result.at i put 0_FF_00_00_00h; }
+      .when '_' then { result.at i put 0_FF_FF_FF_FFh; }
+    }
+    result
+  )
+  
+  - cursor:Pointer
+  
+  - make:Self <-
+  ( + img:C_array Uint32
+    make "" to (0,0) size (10,10)
+    widest
+    img := cursor_pattern
+    `{ GLFWimage cursor`
+    `cursor.width = 24; cursor.height = 24; cursor.pixels = (unsigned char *)@img`
+    cursor := `glfwCreateCursor(&cursor,11,11)`:Pointer
+    `}`
+    Self
+  )
+    
+  - draw pen:Pen <-
+  (  
+    pen.save
+    pen.font_size 20.0
+    pen.font_face "bold-italic"
+    pen.text_align (pen.align_center|pen.align_middle)
+    pen.fill_color (Color.rgba (255,255,255,255))
+    pen.font_blur 4.0
+    pen.text_box (xo,yo+height/2) width width msg     
+      "ELITO  -  Lisaac Editor" from 0 to (-1)
+    pen.font_blur 0.0
+    pen.fill_color (Color.rgba (31,39,36,128+64))
+    pen.text_box (xo,yo+height/2) width width msg 
+      "ELITO  -  Lisaac Editor" from 0 to (-1)
+    pen.restore
+  )
+  
+  - is_in:Boolean
+  - touch_event t:Touch <-
+  ( + x,y:Int
+    - dx,dy:Int
+    (t.div = t.div_action).if {
+      (! is_in).if {
+        Elito_window.set_cursor cursor
+        is_in := True
+      }
+      (t.is_pressed).if {        
+        (dx,dy) := (t.x,t.y)
+      }
+    }.elseif {(t.pressing = 0.0) && {is_in}} then {
+      Elito_window.set_cursor (Elito_window.get_cursor `GLFW_ARROW_CURSOR`:Int)
+      is_in := False
+    }
+    (t.pressing != 0.0).if {
+      (x_position,y_position) := Elito_window.window_position
+      (x,y) := (t.x+x_position-dx,t.y+y_position-dy)
+      ((x != x_position) || {y != y_position}).if {
+        //x.print; ','.print; y.println
+        Elito_window.set_window_position (x,y)
+      }
+    }
+  )

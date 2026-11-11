@@ -2,8 +2,8 @@ Header
   + name := Decl
 /* root of all DECLarations */
 
-Inherit  
-  - parent_any:Any := Any
+Insert  
+  - parent_elit_common:Elit_common := Elit_common
     
 Public
   

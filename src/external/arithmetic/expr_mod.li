@@ -15,12 +15,12 @@ Public
 
   - exec_conservator_right right_cst:Int_cst :Expr <-
   //-- E %   0 -> Error
-  //-- E % 2^n -> E & (2^n -1)
+  //-- E % 2^n -> E & (2^n -1), only unsigned: -3 % 2 = -1 (see Expr_binary_cmp.exec_size).
   ( + result:Expr
 
     (right_cst.value = 0).if {
       warning_error (position,"Division by zero.")
-    }.elseif {right_cst.to_power != -1} then {
+    }.elseif {(right_cst.to_power != -1) && {is_unsigned_integer (static_type.raw.name)}} then {
       right_cst.set_value (right_cst.value - 1)
       result := Expr_and.create position with left and right_cst
     }

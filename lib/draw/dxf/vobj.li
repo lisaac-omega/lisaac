@@ -21,7 +21,7 @@ Public
   + masse:Real32
   - masse_cm2:Real32 <-
   ( + un_cm:Real32
-    Numeric.define_one_meter one_meter
+    Ordered_numeric.define_one_meter one_meter
     un_cm := 1.cm
     masse / (un_cm*un_cm)
   )

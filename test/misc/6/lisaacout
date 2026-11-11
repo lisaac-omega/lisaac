@@ -1,5 +1,0 @@
---WARNING----------
-Local slot `i_am_unused' not used.
-Line 6 column 17 in Main(.../test/misc/6/main.li):
-  ( + i_am_unused:Int
-                 ^

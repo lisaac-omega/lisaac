@@ -1,0 +1,37 @@
+Header
+  + name := Buffer_head
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+    
+Public
+  
+  + path:String_alias
+  + shortname:String_alias
+  + last_point:Int
+  + last_point_view:Int
+  - set_last_view pv:Int point p:Int <- 
+  ( 
+    (last_point_view,last_point) := (pv,p)
+  )
+  
+  - create p:String_alias view pv:Int point pt:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make p view pv point pt
+    result
+  )
+  
+  - make p:String_alias view pv:Int point pt:Int <-
+  ( + i:Int
+    path := p
+    string_tmp.copy p
+    i := p.last_index_of '/'
+    (i != -1).if {
+      string_tmp.remove_head (i+1)
+    }
+    shortname := string_tmp.to_string_alias
+    last_point := pt
+    last_point_view := pv
+  )
+  

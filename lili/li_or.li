@@ -1,0 +1,29 @@
+Header
+  + name := Li_or
+/* The lazy `||'. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + left:Li_node
+  + right:Li_node
+
+  - create l:Li_node right r:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make l right r
+    result
+  )
+
+  - make l:Li_node right r:Li_node <- ( left := l; right := r; )
+
+  - eval fp:Int :Int <-
+  ( + result:Int
+    result := left.eval fp
+    (result = 0).if {
+      result := right.eval fp
+    }
+    result
+  )

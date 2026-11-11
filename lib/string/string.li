@@ -262,15 +262,14 @@ Public
   - index_of ch:Char since start_index:Int :Int <-
   // Index of first occurrence of @c at or after @start_index,
   // result = upper + 1, if none.
-  ( + result:Int
+  ( + p:C_array Char
+    + n,result:Int
     ? { start_index.in_range 0 to count}
 
-    result := start_index
-
-    {(result > upper) || {ch = at result}}.until_do {
-      result := result + 1
-    }
-
+    // memchr: much faster than a loop on long strings.
+    p := storage + start_index
+    n := count - start_index
+    result := start_index + `({ char *q = memchr(@p, @ch, @n); q ? (int)(q - (char *)@p) : @n; })`:Int
     result
   )
 
@@ -331,8 +330,11 @@ Public
   
   - last_path_separator:Int <-
   ( + i:Int
+    
     i := upper
-    {(i >= 0) && {at i != '/'} && {at i != '\\'}}.while_do { i := i - 1; }
+    {(i >= 0) && {at i != '/'} && {at i != '\\'}}.while_do {
+      i := i - 1; 
+    }
     i
   )
 
@@ -1260,14 +1262,12 @@ Public
   ]
   ( + result:Array(String_buffer)
     ( count > 0 ).if {
-      split_buffer.clear
-      split_str sep in split_buffer
-      (! split_buffer.is_empty).if {
-        result := Array(String_buffer).create (split_buffer.lower) to (split_buffer.upper)
-        result.copy split_buffer
+      result := Array(String_buffer).create_with_capacity 8
+      split_str sep in result
+      (result.is_empty).if {
+        result := NULL
       }
     }
-
     result
   )
   [
@@ -1298,13 +1298,10 @@ Public
   // Char to find words. Gives Void or a non empty array.
   (
     + result:Array(String_buffer)
-    (upper >= 0 ).if {
-      split_buffer.clear
-      split_in split_buffer
-      (! split_buffer.is_empty).if {
-        result := Array(String_buffer).create (split_buffer.lower) to (split_buffer.upper)
-        result.copy split_buffer
-      }
+    result := Array(String_buffer).create_with_capacity 8
+    split_in result
+    (result.is_empty).if {
+      result := NULL
     }
     ? { (result != NULL) ->> { ! result.is_empty }}
 
@@ -1365,14 +1362,12 @@ Public
   (
     + result:Array(String_buffer)
     ( count > 0 ).if {
-      split_buffer.clear
-      split_at sep in split_buffer
-      (! split_buffer.is_empty).if {
-        result := Array(String_buffer).create (split_buffer.lower) to (split_buffer.upper)
-        result.copy split_buffer
+      result := Array(String_buffer).create_with_capacity 8
+      split_at sep in result
+      (result.is_empty).if {
+        result := NULL
       }
     }
-
     result
   )
   [
@@ -1501,7 +1496,6 @@ String
 
   - string_buffer:String_buffer := String_buffer.create 256; // Private, temporary once buffer.
 
-  - split_buffer:Array(String_buffer) := Array(String_buffer).create_with_capacity 4 lower 1
 
 Public
   
@@ -1512,10 +1506,9 @@ Public
   )
   
   - print <-
-  (    
-    0.to upper do { i:Int
-      Stdout.put_character (storage.at i)
-    }
+  // One block write.
+  (
+    Stdout.put_chars storage size count
   )
   
   - print_error <-

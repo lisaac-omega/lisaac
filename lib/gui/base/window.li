@@ -41,7 +41,7 @@ Public
   
   - size (w,h:Real32) :Self <-
   ( parent_win.size (w,h)
-    //(! win_ptr.is_null).if { Paper.set_window win_ptr size (w.to_int,h.to_int); }
+    //(win_ptr != NULL).if { Paper.set_window win_ptr size (w.to_int,h.to_int); }
     ask_refresh
     self
   )
@@ -68,7 +68,7 @@ Public
     //"End Frame".println
   )
   
-  - init p:Win :Self <-
+  - init_win p:Win :Self <-
   [ ? {p = NULL}; ]
   (
     win_ptr := Paper.create_window (width.to_int,height.to_int) title id_name for self
@@ -93,7 +93,7 @@ Public
   - init n:String_alias size (w,h:Int) :Self <-
   (
     (id_name,width,height) := (n,w,h)
-    init NULL
+    init_win NULL
   )
     
   - mouse_scroll (dx,dy:Real64)

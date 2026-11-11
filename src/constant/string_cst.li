@@ -121,7 +121,6 @@ Public
       }
       output_str.append ";\n"
       //
-      //dico_string.fast_put (-idx) to string
       dico_string.at string put (-idx)
       //
       (Profil_slot.profil_add_alias != NULL).if {

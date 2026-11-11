@@ -1,0 +1,1184 @@
+Header
+  + name := Parser
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Private
+  
+  - update:Boolean
+  - is_select_buffer:Boolean
+  
+  - syntax  :Int := 0
+  - semantic:Int := 1
+  - warning :Int := 2
+  - message :Int := 3
+  
+  - msg_err:String_buffer := String_buffer.create 256
+  - put_error typ:Int text txt:String <-
+  ( + pos:Int
+    + c,cols:Uint32
+    + char:Char
+    current_position
+    msg_err.clear
+    typ
+    .when syntax   then {
+      msg_err.append "--SYNTAX------------------------------\n"
+    }.when semantic then {
+      msg_err.append "--SEMANTIC----------------------------\n"
+    }.when warning  then {
+      msg_err.append "--WARNING-----------------------------\n"
+    }.when message  then {
+      msg_err.append "--MESSAGE-----------------------------\n"
+    }
+    msg_err.append txt
+    //
+    msg_err.append "\nLine "
+    pos_lin.append_in msg_err
+    msg_err.append " column "
+    pos_col.append_in msg_err
+    msg_err.append " in `";
+    msg_err.append path
+    msg_err.append "':\n"
+    // Search begin line :
+    1.to (pos_lin-1) do { l:Int
+      {source.at pos = '\n'}.until_do {
+        pos := pos + 1
+      }
+      pos := pos + 1
+    }
+    // copy line :
+    string_tmp.clear
+    cols := pos_col
+    {(pos > source.upper) ||
+      {source.at pos='\n'}}.until_do {
+      char := source.at pos
+      msg_err.add_last char
+      (c < cols).if {
+        (char = '\t').if {
+          string_tmp.add_last '\t'
+        } else {
+          string_tmp.add_last ' '
+        }
+      }
+      c   := c + 1
+      pos := pos + 1
+    }
+    msg_err.add_last '\n'
+    msg_err.append string_tmp
+    msg_err.append "^\n"
+    msg_err.add_last '\n'
+    msg_err.print_error
+    (typ != warning).if {
+      exit exit_failure_code
+    }
+  )
+  
+  - syntax_error   txt:String <- put_error syntax   text txt
+  - semantic_error txt:String <- put_error semantic text txt
+  - warning_error  txt:String <- put_error warning  text txt
+  
+  - source:String_buffer := String_buffer.create 4096
+  - path:String_alias
+
+  - position:Int
+
+  - pos_cur:Int
+  - pos_lin:Int
+  - pos_col:Int
+
+  - current_position <-
+  ( 
+    ? {pos_cur <= position}
+    {pos_cur = position}.until_do {
+      (source.at pos_cur = '\n').if {
+        pos_col := 0
+        pos_lin := pos_lin + 1
+      } else {
+        pos_col := pos_col + 1
+      }
+      pos_cur := pos_cur + 1
+    }
+  )
+  
+  - cur_char:Char <-
+  ( + result:Char
+    (position > source.upper).if {
+      result := 0.to_char
+      } else {
+      result := source.at position
+    }
+    result
+  )
+  
+  - last_character:Char
+  - last_integer:Int
+  - last_string:String_alias
+
+  - read_space:Boolean <-
+  ( + posold,pos,pos2:Int
+    + level_comment:Int
+
+    pos := position
+    posold := -1
+    {posold = position}.until_do {
+      posold := position
+
+      // Skip spaces :
+      {(cur_char = 0.to_char) || {cur_char > ' '}}.until_do {        
+        position := position + 1
+      }
+
+      (position < source.upper).if {
+        // Skip C++ comment style :
+        ((cur_char = '/') && {source.at (position + 1) = '/'}).if {
+          position := position + 2
+          pos2 := position
+          {
+            (cur_char = 0.to_char) ||
+              {cur_char = '\n'}
+          }.until_do {            
+            position := position + 1
+          }
+          position := position + 1
+        }
+      }
+      (position < source.upper).if {
+        // Skip C comment style :
+        pos2 := position
+        ((cur_char = '/') && {source.at (position+1) = '*'}).if {
+          position := position + 2
+          level_comment := 1
+          {
+            (cur_char = 0.to_char) || {level_comment = 0}
+          }.until_do {
+            ((cur_char = '/') && {source.at (position+1) = '*'}).if {
+              level_comment := level_comment + 1
+              position := position + 2
+            }.elseif {
+              (cur_char = '*') && {source.at (position+1) = '/'}
+            } then {
+              level_comment := level_comment - 1
+              position := position + 2
+            } else {
+              position := position+1
+            }
+          }
+          (level_comment != 0).if {
+            position := pos2
+            syntax_error "End of comment not found !"
+          }
+        }
+      }
+    }
+    ((position != pos) | (cur_char != 0.to_char))
+  )
+  
+  - get_position:Int <-
+  (
+    read_space
+    position
+  )
+
+  - read_character ch:Char :Boolean <-
+  ( + result:Boolean
+    // On passe les espaces :
+    (! read_space).if {
+      result := False
+    } else {
+      (cur_char = ch).if {
+        last_character := ch
+        position := position + 1
+        result := True
+      }
+    }
+    result
+  )
+  
+  // text       -> [A-Za-z0-9. -]+    
+  - read_text:Boolean <-
+  ( + result:Boolean
+    + posold:Int
+
+    // On passe les espaces :
+    (read_space && {cur_char != '-' }).if {
+      posold := position
+      string_tmp.clear
+      {
+        (cur_char = '\0') || {cur_char = '\n'} ||
+          {cur_char = '{' } || {cur_char = '}' } || 
+          {cur_char = '[' } || {cur_char = ']' } || 
+          {cur_char = '(' } || {cur_char = ')' } ||
+          {cur_char = '<' } || {cur_char = '>' }         
+      }.until_do {
+        string_tmp.add_last cur_char
+        position := position+1
+      }
+      {(! string_tmp.is_empty) && {string_tmp.last = ' '}}.while_do { 
+        string_tmp.remove_last
+      }
+      (! string_tmp.is_empty).if {        
+        last_string := string_tmp.to_string_alias
+        result := True
+      }
+    }
+    result
+  )
+    
+  //-- integer        -> number
+  //-- number         -> '0'-'9' {'0'-'9' | '_' | '\''} ['d']
+  //--                 | '0'-'9' {'0'-'9' | 'A'-'F' | 'a'-'f' | '_' | '\''} 'h'
+  //--                 | '0'-'7' {'0'-'7' | '_' | '\''} 'o'
+  //--                 | ('0' | '1') {'0' | '1' | '_' | '\''} 'b'
+  - read_integer:Boolean <-
+  ( + result:Boolean
+    + pos_old:Int
+
+    // On passe les espaces :
+    ((read_space) && {cur_char.is_digit}).if {
+      result := True
+      string_tmp.clear
+      string_tmp.add_last cur_char
+      pos_old := position
+      position := position + 1
+      {(cur_char.is_hexadecimal_digit) || {cur_char = '_'} || {cur_char = '\''}}.while_do {
+        ((cur_char != '_') && {cur_char != '\''}).if {
+          string_tmp.add_last cur_char
+        }
+        position := position + 1
+      }
+      (cur_char = 'h').if {
+        last_integer := string_tmp.to_hexadecimal
+        position := position+1
+      } else {
+        (string_tmp.last > '9').if {
+          string_tmp.remove_last
+          position := position - 1
+        }
+        (cur_char='o').if {
+          (! string_tmp.is_octal).if {
+            syntax_error "Incorrect octal number."
+          }
+          last_integer := string_tmp.to_octal
+          position := position+1
+        }.elseif {cur_char='b'} then {
+          (! string_tmp.is_bit).if {
+            syntax_error "Incorrect binary number."
+          }
+          last_integer := string_tmp.to_binary
+          position := position+1
+        } else {
+          (cur_char='d').if {
+            position := position+1
+          }
+          (! string_tmp.is_integer_64).if {
+            syntax_error "Incorrect decimal number."
+          }
+          last_integer := string_tmp.to_int64.to_uint64
+        }
+      }
+    }
+    result
+  )
+  
+  - write_text txt:String at p:Int <-
+  (
+    source.remove p to (position-1)
+    source.insert_string txt to p
+    position := p + txt.count
+    pos_cur := 0
+  )
+  
+  - write_integer num:Int at p:Int <-
+  (
+    source.remove p to (position-1)
+    string_tmp.clear
+    num.append_in string_tmp
+    source.insert_string string_tmp to p
+    position := p + string_tmp.count
+    pos_cur := 0
+  )
+  
+  - write_color c:Color at p:Int <-
+  (
+    source.remove p to (position-1)
+    string_tmp.clear
+    c.ri.append_in string_tmp
+    string_tmp.add_last ' '
+    c.gi.append_in string_tmp
+    string_tmp.add_last ' '
+    c.bi.append_in string_tmp
+    string_tmp.add_last ' '
+    c.ai.append_in string_tmp
+    source.insert_string string_tmp to p
+    position := p + string_tmp.count
+    pos_cur := 0
+  )
+  
+  - read_word st:String_alias :Boolean <-
+  ( + posold,idx:Int
+    + result:Boolean
+    + c:Char
+    // On passe les espaces :
+    (! read_space).if {
+      result := False
+    } else {
+      posold := position
+      idx := st.lower
+      {(idx > st.upper) || {cur_char.to_upper != st.at idx.to_upper}}.until_do {
+        position := position+1
+        idx := idx+1
+      }
+      c := cur_char
+      ((idx>st.upper) && {!c.is_letter} && {!c.is_digit} && {c != '_'}).if {
+        last_string := st
+        result := True
+      } else {
+        position := posold
+      }
+    }
+    result
+  )
+
+  //-- escape         -> '\\' separator {separator} '\\'
+  //--                 | '\\' escape_seq
+  //--                 | '\\' integer '\\'
+  //-- escape_seq     -> 'a' | 'b'  | 'f' | 'n'  | 'r'  | 't'
+  //--                 | 'v' | '\\' | '?' | '\'' | '\"' | '0'
+  - read_escape_character <-
+  ( + nothing:Boolean
+    + val:Int
+    cur_char.is_separator.if {
+      (begin_string != 0).if {        
+        read_space
+        begin_string := position
+      } else {
+        read_space
+      }
+      (cur_char='\\').if {                
+        string_tmp.remove_last
+        position := position+1
+      }.elseif {cur_char != 0.to_char} then {
+        syntax_error "Unknown escape sequence. (1)"
+      }
+    }.elseif {cur_char != 0.to_char} then {
+      ( (cur_char = 'a')  ||
+        {cur_char = 'b'}  ||
+        {cur_char = 'f'}  ||
+        {cur_char = 'n'}  ||
+        {cur_char = 'r'}  ||
+        {cur_char = 't'}  ||
+        {cur_char = 'v'}  ||
+        {cur_char = '\\'} ||
+        {cur_char = '?'}  ||
+        {cur_char = '\''} ||
+        {cur_char = '\"'}
+      ).if {
+        + idx:Int
+        string_tmp.remove_last
+        idx := "abfnrtv\\?\'\"".first_index_of cur_char
+        string_tmp.add_last ("\a\b\f\n\r\t\v\\\?\'\"".at idx)
+        position := position+1
+      }.elseif {cur_char.in_range '0' to '9'} then {
+        (
+          (cur_char='0') &&
+            {position<source.upper} &&
+            {! source.at(position+1).is_hexadecimal_digit}
+        ).if {
+          string_tmp.add_last cur_char
+          position := position+1
+        } else {
+          string_tmp2.copy string_tmp
+          nothing := read_integer; // result is Always TRUE.
+          string_tmp.copy string_tmp2
+          (last_integer > 255).if {
+            syntax_error "Invalid range character number [0,255]."
+          }
+          val := last_integer.to_int
+          string_tmp.add_last ((val / 64).decimal_digit)
+          string_tmp.add_last (((val % 64) / 8).decimal_digit)
+          string_tmp.add_last ((val % 8).decimal_digit)
+          (cur_char='\\').if {
+            position := position + 1
+          } else {
+            syntax_error "Char '\' is needed."
+          }
+        }
+      } else {
+        syntax_error "Unknown escape sequence. (2)"
+      }
+    }
+  )
+
+  //-- string         -> '\"' string_char '\"'
+  //-- string_char    -> escape
+  //--                 | ascii
+  - begin_string:Int
+  - read_string:Boolean <-
+  ( + result:Boolean
+    + old_pos:Int
+    // On passe les espaces :
+    ((read_space) && {cur_char='\"'}).if {
+      old_pos := begin_string := position
+      position := position+1
+      string_tmp.clear
+      {
+        (cur_char=0.to_char) ||
+          {cur_char='\n'} ||
+          {cur_char='\"'}
+      }.until_do {
+        string_tmp.add_last cur_char
+        (cur_char='\\').if {
+          position := position+1
+          read_escape_character
+        } else {
+          position := position+1
+        }
+      }
+      (cur_char='\"').if {
+        position := position+1
+        last_string := string_tmp.to_string_alias
+        result := True
+        begin_string := 0
+      } else {
+        syntax_error "Unterminated string constant."
+      }
+    }
+    result
+  )
+  
+  - load_all_key_and_color_style div:Div <-
+  ( + e:Dirent
+    + d:Directory
+    + b:Button
+    + o:Div_out
+    o := Div_out.create "<|".radius (2|1).widest
+    div + o
+    d ?= File_system.get elit_directory
+    (d != NULL).if {
+      d.open
+      (d.lower).to (d.upper) do { i:Int
+        e := d.at i
+        (e.name.has_suffix ".key").if {
+          string_tmp.copy (e.name)
+          string_tmp.at 0 put (string_tmp.first.to_upper)
+          string_tmp.remove_tail 4
+          b := Button.create (string_tmp.to_string_alias) action { c:Click
+            + dd:Div
+            + bu:Button
+            bu ?= c
+            string_tmp.copy (bu.txt)
+            string_tmp.at 0 put (string_tmp.first.to_lower)
+            string_tmp.append ".key"
+            path_key := string_tmp.to_string_alias
+            //path_key.println
+            dd := c.parent
+            {dd.name != "BUTTON"}.while_do { dd := dd.parent; }
+            dd.child.first.close
+            Parser.read_key
+            menu_main.refresh
+          }.widest
+          
+          b.set_design 1
+          o + b
+        }
+      }
+    }
+    o + Separator.create "<>".widest
+    0.to (Color_store.list.upper) do { i:Int
+      b := Button.create (Color_store.list.at i .name) action { c:Click
+        + bu:Button
+        + dd:Div
+        + col:Color_store
+        + txt:String_alias
+        bu ?= c
+        dd := c.parent
+        {dd.name != "BUTTON"}.while_do { dd := dd.parent; }
+        dd.child.first.close
+        txt := bu.txt.to_string_alias
+        (txt != color_style).if {
+          col := Color_store.get txt
+          (col = NULL).if {
+            "\nWarning: ColorStyle `".print;
+            txt.print
+            "' not found.\n".print
+            "Note: Modify your file `~/.elito.cfg'\n\n".print;          
+          } else {
+            color_style := txt
+            color := col
+          }
+        }
+      }.widest
+          
+      b.set_design 1
+      o + b
+    }
+  )
+    
+  //
+  // Grammar
+  //
+  
+  //++ MENU       -> { '<' text '>' { ITEM } }
+  //++             | "FunctionKeysAccess" SHORTCUT
+  - read_menu <-
+  ( + menu:Button
+    + div,subdiv:Div
+    + k:Uint16
+    (menu_main = NULL).if {
+      menu_main := div := Div_menu.create "-".widest.height_lock
+    } else {
+      div := menu_main
+      {div.child.is_empty}.until_do { div.child.remove_first; }
+      Shortcut.clear
+    }
+    read_space
+    (read_word "FunctionKeysAccess").if {
+      (! read_character '[').if { warning_error "'[' added."; }
+      k := read_shortcut
+      (k = 0).if { syntax_error "Touch is missing."; }
+      (! read_character ']').if { warning_error "']' added."; }
+      Buffer_bar.set_key_access k
+    } else {
+      Buffer_bar.set_key_access 0
+    }
+    read_space
+    {read_character '<'}.while_do {
+      (read_text).if {
+        menu := Button.create last_string action { c:Click
+          + b:Button
+          b ?= c
+          (! c.is_leaf).if {       
+            (c.child.first.is_open).if {
+              c.child.first.close
+            } else {
+              close_menu
+              c.child.first.open
+            }
+          }
+        }.width_lock.left
+        is_select_buffer := False
+        menu.set_design 1
+        menu.set_font "sans"
+        div + menu
+        (! read_character '>').if { warning_error "Added '>'."; }
+        subdiv := Div_out.create "<|".radius (2|1).widest
+        //(subdiv.is_close).if { "PARSER: close\n".print; } else { "PARSER: Open\n".print; }
+        menu + subdiv
+      } else {
+        (! read_character '>').if { warning_error "Added '>'."; }
+        subdiv := NULL
+      }
+      {read_item subdiv}.while_do { }
+      (is_select_buffer && {menu != NULL}).if {
+        menu.set_action { c:Click
+          + b:Button
+          b ?= c
+          (! c.is_leaf).if {       
+            (c.child.first.is_open).if {
+              c.child.first.close
+            } else {
+              close_menu
+              Select_buffer.update
+              c.child.first.open
+            }
+          }
+        }
+      }
+    }
+    menu := Button.create "+" action { c:Click
+      + b:Button
+      b ?= c
+      (! c.is_leaf).if {       
+        (c.child.first.is_open).if {
+          c.child.first.close
+        } else {
+          close_menu
+          c.child.first.open
+        }
+      }
+    }.width_lock.margin_hori 24
+    menu.set_design 1
+    div + Title_bar.make + menu
+    load_all_key_and_color_style menu
+  )
+  
+  //++ ITEM       -> text { '[' SHORTCUT {','SHORTCUT } ']' } '(' function {',' function} ')'
+  //++             | '-'
+  - shortcut:Array Shortcut := Array Shortcut.create_with_capacity 2
+  - shortcut_str:String_buffer := String_buffer.create 32
+  - read_item div:Div :Boolean <-
+  ( + result,is_menu:Boolean
+    + item:Div
+    + button:Button
+    + actions:Array Action
+    + a:Action
+    + key_list:Uint64
+    + key_shift:Int
+    + k:Uint16
+    + desc:String_alias
+    is_menu := div != NULL
+    (read_character '-').if {            
+      (is_menu).if {
+        div + Separator.create "<>".widest
+      }
+      result := True
+    }.elseif {read_text} then {      
+      desc := last_string
+      (is_menu).if {
+        button := Button.create last_string action { c:Click
+          + dd:Div
+          //c.set_in FALSE
+          dd := c.parent
+          {dd.name != "BUTTON"}.while_do { dd := dd.parent; }
+          dd.child.first.close
+          (c.actions != NULL).if {          
+            c.actions.foreach { a:Action; a.run; }
+          }
+        }.widest
+        button.set_design 1
+      }
+      shortcut.clear
+      shortcut_str.clear
+      {read_character '['}.while_do {
+        ((k := read_shortcut) = 0).if {  
+          syntax_error "Key needed."
+        }
+        (key_list,key_shift) := (k,16)
+        {read_character ','}.while_do {
+          ((k := read_shortcut) = 0).if {  
+            syntax_error "Key needed."
+          }
+          (key_list,key_shift) := (key_list|(k.to_uint64<<key_shift),key_shift+16)
+        }
+        (Shortcut.is_exist key_list).if {
+          warning_error "Double shortcut declaration."
+        }
+        shortcut.add_last (Shortcut.create key_list description desc)
+        (! shortcut_str.is_empty).if {
+          shortcut_str.append "  |  "
+        }
+        shortcut.last.append_in shortcut_str
+        (! read_character ']').if {
+          warning_error "Added ']'."
+        }
+      }
+      (shortcut_str.is_empty).if {
+        (button = NULL).if {
+          semantic_error "Item menu or Shortcut is missing."
+        }
+        item := button
+      }.elseif {button != NULL} then {
+        item := button|Text.put (shortcut_str.to_string_alias) face "sans-bold" align (Pen.align_right)
+      }
+      (! read_character '(').if {
+        syntax_error "(Function, ...) needed."
+      }
+      ((a := read_function button) = NULL).if {
+        syntax_error "Function needed."
+      }
+      actions := Array Action.create_with_capacity 1
+      actions.add_last a
+      {read_character ','}.while_do {
+        ((a := read_function button) = NULL).if {
+          syntax_error "Function needed."
+        }
+        actions.add_last a
+      }
+      (! read_character ')').if {
+        warning_error "Added ')'."
+      }
+      0.to (shortcut.upper) do { i:Int
+        shortcut.at i.set_actions actions
+      }
+      (button != NULL).if {
+        button.set_actions actions
+        div + item.widest
+      }
+      result := True
+    }
+    result
+  )
+  
+  //++ SHORTCUT   -> TOUCH { TOUCH }
+  - read_shortcut:Uint16 <-
+  (
+    code := 0
+    (! read_touch).if { syntax_error "Key needed."; }
+    {read_touch}.while_do { }
+    code
+  )
+  
+  //++ TOUCH      -> [a-z or all single character]
+  //++             | 'Alt'   | 'Ctrl' | 'Esc'   | 'Shift'  | 'Tab' | 'Space'
+  //++             | 'Beg'   | 'End'  | 'PgUp'  | 'PgDown' 
+  //++             | 'Right' | 'Left' | 'Up'    | 'Down'
+  //++             | 'Suppr' | 'Insr' | 'Enter' | 'Del'
+  //++             | 'F'[1-12] | 'On' | 'Off'
+  - code:Uint16
+  - read_touch:Boolean <-
+  ( 
+    (read_word "Alt"    ).if   { code := code | Key_code.alt;  }.elseif
+      {read_word "Ctrl"   } then { code := code | Key_code.ctrl; }.elseif 
+      {read_word "Shift"  } then { code := code | Key_code.shift;}.elseif 
+      {read_word "Esc"    } then { code := code | Key_code.key_cmd | 27; }.elseif
+      {read_word "Tab"    } then { code := code | Key_code.key_cmd |  9; }.elseif
+      {read_word "Space"  } then { code := code | ' '.to_uint8; }.elseif
+      {read_word "Beg"    } then { code := code | Key_code.key_cmd | 'B'.to_uint8; }.elseif
+      {read_word "End"    } then { code := code | Key_code.key_cmd | 'E'.to_uint8; }.elseif    
+      {read_word "PgUp"   } then { code := code | Key_code.key_cmd | 'P'.to_uint8; }.elseif
+      {read_word "PgDown" } then { code := code | Key_code.key_cmd | 'N'.to_uint8; }.elseif
+      {read_word "Right"  } then { code := code | Key_code.key_cmd | 'R'.to_uint8; }.elseif
+      {read_word "Left"   } then { code := code | Key_code.key_cmd | 'L'.to_uint8; }.elseif
+      {read_word "Up"     } then { code := code | Key_code.key_cmd | 'U'.to_uint8; }.elseif
+      {read_word "Down"   } then { code := code | Key_code.key_cmd | 'D'.to_uint8; }.elseif
+      {read_word "Suppr"  } then { code := code | Key_code.key_cmd | 'S'.to_uint8; }.elseif
+      {read_word "Inser"  } then { code := code | Key_code.key_cmd | 'I'.to_uint8; }.elseif
+      {read_word "Enter"  } then { code := code | Key_code.key_cmd | 0Ah;               }.elseif
+      {read_word "Del"    } then { code := code | Key_code.key_cmd | 8;                 }.elseif
+      {read_word "F1"     } then { code := code | Key_code.key_cmd | 'a'.to_uint8; }.elseif
+      {read_word "F2"     } then { code := code | Key_code.key_cmd | 'b'.to_uint8; }.elseif
+      {read_word "F3"     } then { code := code | Key_code.key_cmd | 'c'.to_uint8; }.elseif
+      {read_word "F4"     } then { code := code | Key_code.key_cmd | 'd'.to_uint8; }.elseif
+      {read_word "F5"     } then { code := code | Key_code.key_cmd | 'e'.to_uint8; }.elseif
+      {read_word "F6"     } then { code := code | Key_code.key_cmd | 'f'.to_uint8; }.elseif
+      {read_word "F7"     } then { code := code | Key_code.key_cmd | 'g'.to_uint8; }.elseif
+      {read_word "F8"     } then { code := code | Key_code.key_cmd | 'h'.to_uint8; }.elseif
+      {read_word "F9"     } then { code := code | Key_code.key_cmd | 'i'.to_uint8; }.elseif
+      {read_word "F10"    } then { code := code | Key_code.key_cmd | 'j'.to_uint8; }.elseif
+      {read_word "F11"    } then { code := code | Key_code.key_cmd | 'k'.to_uint8; }.elseif
+      {read_word "F12"    } then { code := code | Key_code.key_cmd | 'l'.to_uint8; }.elseif
+      {read_word "On"     } then { code := code | 1; }.elseif
+      {read_word "Off"    } then { code := code | 2; } else
+      {
+      read_space
+      (
+        (cur_char.in_range '0' to '9') ||
+          {cur_char.in_range 'a' to 'z'} ||
+          {cur_char.in_range 'A' to 'Z'} ||
+          {"<>&(-_)=#{|^@}+%*/.?;:!".has cur_char} // "'[]`°$£§\
+      ).if { 
+        code := (code | cur_char.to_uint8)
+        position := position + 1
+      }
+    }
+    code != Old code
+  )
+
+  // function   -> 'open' | 'save' | 'save_as' | 'exit' | ...
+  - read_function bt:Button :Action <-
+  ( + result:Action
+    (read_word "open"         ).if   { result := Function.create { open_file;    }; }.elseif 
+      {read_word "insert_file"  } then { result := Function.create { insert_file;  }; }.elseif
+      {read_word "open_at_point"} then { result := Function.create { open_at_point;}; }.elseif 
+      {read_word "save"         } then { result := Function.create { save;         }; }.elseif 
+      {read_word "save_as"      } then { result := Function.create { save_as;      }; }.elseif
+      {read_word "split_hori"   } then { result := Function.create { split_hori;   }; }.elseif
+      {read_word "split_vert"   } then { result := Function.create { split_vert;   }; }.elseif
+      {read_word "close_pg"     } then { result := Function.create { close_pg;     }; }.elseif
+      {read_word "change_pg"    } then { result := Function.create { change_pg;    }; }.elseif
+      {read_word "middle_pg"    } then { result := Function.create { middle_pg;    }; }.elseif    
+      {read_word "indent"       } then { result := Function.create { indent;       }; }.elseif    
+      {read_word "go_line"      } then { result := Function.create { go_line;      }; }.elseif
+      {read_word "go_next_line" } then { result := Function.create { go_next_line False; }; }.elseif
+      {read_word "go_prev_line" } then { result := Function.create { go_prev_line False; }; }.elseif
+      {read_word "lib_explorer" } then { result := Function.create { lib_explorer; }; }.elseif    
+      {read_word "path_explorer"} then { result := Function.create { path_explorer;}; }.elseif    
+      {read_word "about"        } then { result := Function.create { about;        }; }.elseif     
+      {read_word "font_size_upper"}  then { result := Function.create { font_size_upper; }; }.elseif
+      {read_word "font_size_lower"}  then { result := Function.create { font_size_lower; }; }.elseif    
+      {read_word "help_line_on" }    then { result := Function.create { set_help_line True; }; }.elseif    
+      {read_word "help_line_off"}    then { result := Function.create { set_help_line False;}; }.elseif
+      {read_word "help_line_switch"} then { result := Function.create { set_help_line (!help_line);}; }.elseif
+      {read_word "sound_switch"}     then { result := Function.create { set_sound (!sound); }; }.elseif
+      {read_word "buffer_line_on" }  then { result := Function.create { Buffer_bar.set_display True; }; }.elseif
+      {read_word "buffer_line_off"}  then { result := Function.create { Buffer_bar.set_display False;}; }.elseif
+      {read_word "buffer_line_switch"}  then { result := Function.create { Buffer_bar.set_display (!Buffer_bar.is_display);}; }.elseif
+      {read_word "exit"         } then { result := Function.create { exit_cmd;     }; }.elseif
+      {read_word "stop_cmd"     } then { result := Function.create { stop_cmd;     }; }.elseif
+      {read_word "delete_other_window"} then { result := Function.create { delete_other_window;}; }.elseif    
+      {read_word "kill_buffer"}         then { result := Function.create { kill_buffer;}; }.elseif    
+      {read_word "kill_all_buffer"}     then { result := Function.create { kill_all_buffer;}; }.elseif    
+      {read_word "buffer_list"  } then { result := Function.create { buffer_list;  }; }.elseif    
+      {read_word "undo"         } then { result := Function.create { undo;         }; }.elseif
+      {read_word "cut"          } then { result := Function.create { cut;          }; }.elseif
+      {read_word "cut_end_line" } then { result := Function.create { cut_end_line; }; }.elseif    
+      {read_word "suppr_select" } then { result := Function.create { suppr_select; }; }.elseif
+      {read_word "copy"         } then { result := Function.create { copy;         }; }.elseif
+      {read_word "paste"        } then { result := Function.create { paste;        }; }.elseif    
+      {read_word "select_on"    } then { result := Function.create { select_on;    }; }.elseif
+      {read_word "search_fore"  } then { result := Function.create { search_fore;  }; }.elseif
+      {read_word "search_back"  } then { result := Function.create { search_back;  }; }.elseif
+      {read_word "replace"      } then { result := Function.create { replace;      }; }.elseif    
+      {read_word "completion"   } then { result := Function.create { completion;   }; }.elseif
+      {read_word "to_upper"     } then { result := Function.create { to_upper;     }; }.elseif
+      {read_word "to_lower"     } then { result := Function.create { to_lower;     }; }.elseif
+      {read_word "to_delimiter" } then { result := Function.create { to_delimiter; }; }.elseif    
+      {read_word "go_point"     } then { result := Function.create { go_point;     }; }.elseif
+      {read_word "go_top"       } then { result := Function.create { go_top;       }; }.elseif
+      {read_word "go_eof"       } then { result := Function.create { go_eof;       }; }.elseif
+      {read_word "go_next_word" } then { result := Function.create { go_next_word False; }; }.elseif
+      {read_word "go_prev_word" } then { result := Function.create { go_prev_word False; }; }.elseif
+      {read_word "go_up_pg"     } then { result := Function.create { go_up_pg;     }; }.elseif
+      {read_word "go_down_pg"   } then { result := Function.create { go_down_pg;   }; }.elseif    
+      {read_word "go_beg_line"  } then { result := Function.create { go_beg_line False;  }; }.elseif
+      {read_word "go_end_line"  } then { result := Function.create { go_end_line False;  }; }.elseif
+      {read_word "go_next_char" } then { result := Function.create { go_next_char; }; }.elseif
+      {read_word "go_prev_char" } then { result := Function.create { go_prev_char; }; }.elseif
+      {read_word "complet_slot" } then { result := Function.create { complet_slot; }; }.elseif
+      {read_word "delete_char"}         then { result := Function.create { delete_char;}; }.elseif    
+      {read_word "start_macro"}   then { result := Function.create { start_macro;}; }.elseif    
+      {read_word "end_macro"}     then { result := Function.create { end_macro;};   }.elseif    
+      {read_word "call_macro"}    then { result := Function.create { call_macro;};  }.elseif
+      {read_word "repeater"}      then { result := Function.create { repeater;};    }.elseif
+      {read_word "insert"}        then { 
+      (! read_string).if { syntax_error "String needed."; }
+      result := Insert.create last_string
+    }.elseif {read_word "execute"       } then { 
+      (! read_string).if { syntax_error "String needed."; }
+      result := Execute.create last_string
+    }.elseif {read_word "select_buffer"} then {  
+      (bt = NULL).if {
+        semantic_error "Item menu is missing."
+      }
+      result := Select_buffer.create bt
+      is_select_buffer := True
+    }
+    result
+  )
+  
+  //
+  // Read Configuration
+  //
+  
+  // CONFIG -> { ELT }
+  // ELT    -> ( "Xpos" | "Ypos" | "Width" | "Height" | "Size" ) Int
+  //         | ( "Shortcut" | "Roman" | "Bold" | "Italic" | "BoldItalic" | "ColorStyle" ) Text
+  //        // | "Keyboard" ("Azerty" | "Qwerty")
+  //         | ("HelpLine" | "BufferLine" | "Sound") ("on" | "off")  
+  //         | "Buffer" '{' { Int Int Text  } '}'
+  //         | "Color Text '{' { Int Int Int Text } '}'
+  - read_config:Boolean <-
+  ( + idf:String_alias
+    + result:Boolean
+    + p:Int
+    {
+      result := True
+      ((read_word "Xpos") || {read_word "Ypos"} || {read_word "Width"} || 
+        {read_word "Height"} || {read_word "Size"}).if {
+        idf := last_string
+        p := get_position
+        (! read_integer).if {
+          syntax_error "Int is needed."
+        }
+        (update).if { + x,y:Int
+          (idf)
+          .when "Xpos" or "Ypos" then { 
+            (x,y) := Elito_window.window_position
+            write_integer ((idf = "Xpos").ok x or y) at p
+          }
+          .when "Width"  then { write_integer (Elito_window.root.width.to_int)  at p; }
+          .when "Height" then { write_integer (Elito_window.root.height.to_int) at p; }
+          .when "Size"   then { write_integer (font_size.to_int)         at p; }
+        } else {
+          (idf)
+          .when "Xpos"   then { x_position := last_integer;     }
+          .when "Ypos"   then { y_position := last_integer;     }          
+          .when "Width"  then { default_width := last_integer;  }
+          .when "Height" then { default_height := last_integer; }
+          .when "Size"   then { font_size := last_integer;      }
+        }
+      }.elseif {
+        (read_word "Shortcut") || {read_word "ColorStyle"} ||
+          {read_word "Roman"}    || {read_word "Bold"}       ||
+          {read_word "Italic"}   || {read_word "BoldItalic"}
+      } then {
+        idf := last_string
+        p := get_position
+        (! read_text).if {
+          syntax_error "String is needed."
+        }
+        (update).if {
+          (idf)
+          .when "Shortcut"   then { write_text path_key    at p; }
+          .when "ColorStyle" then { write_text color_style at p; }
+          .when "Roman"      then { write_text roman       at p; }
+          .when "Bold"       then { write_text bold        at p; }
+          .when "Italic"     then { write_text italic      at p; }
+          .when "BoldItalic" then { write_text bold_italic at p; }
+        } else {
+          (idf)
+          .when "Shortcut"   then { path_key    := last_string; }
+          .when "ColorStyle" then { color_style := last_string; }
+          .when "Roman"      then { roman       := last_string; }
+          .when "Bold"       then { bold        := last_string; }
+          .when "Italic"     then { italic      := last_string; }
+          .when "BoldItalic" then { bold_italic := last_string; }
+        }
+      /*  
+      }.elseif {read_word "Keyboard"} then {
+        p := get_position
+        ((read_word "Azerty") || {read_word "Qwerty"} || {read_word "Apple-Azerty"}).if {
+          (update).if {
+            write_text keyboard at p
+          } else {
+            keyboard := last_string
+          }
+        } else {
+          syntax_error "Unknown keyboard type."
+        };*/
+      }.elseif {read_word "HelpLine"} then {  
+        p := get_position
+        ((read_word "on") || {read_word "off"}).if {
+          (update).if {
+            write_text (help_line.ok "on" or "off") at p
+          } else {
+            help_line := (last_string = "on")
+          }
+        } else {
+          syntax_error "`on' or `off' value."
+        }
+      }.elseif {read_word "Sound"} then {  
+        p := get_position
+        ((read_word "on") || {read_word "off"}).if {
+          (update).if {
+            write_text (sound.ok "on" or "off") at p
+          } else {
+            sound := (last_string = "on")
+          }
+        } else {
+          syntax_error "`on' or `off' value."
+        }
+      }.elseif {read_word "BufferLine"} then {  
+        p := get_position
+        ((read_word "on") || {read_word "off"}).if {
+          (update).if {
+            write_text (Buffer_bar.is_display.ok "on" or "off") at p
+          } else {
+            Buffer_bar.set_display (last_string = "on")
+          }
+        } else {
+          syntax_error "`on' or `off' value."
+        }
+      }.elseif {read_word "Buffer"} then {        
+        + pv,pt:Uint64
+        + b:Buffer
+        + bh:Buffer_head
+        (read_character '{').if {
+          p := position
+          {! read_character '}'}.while_do {
+            (read_integer).if {
+              pv := last_integer
+            } else {
+              syntax_error "Position missing."
+            }
+            (read_integer).if {
+              pt := last_integer
+            } else {
+              syntax_error "Position missing."
+            }
+            (read_text).if {
+              (! update).if {
+                Buffer.previous_list.add_last (
+                  Buffer_head.create last_string view pv point pt
+                )
+                (Buffer.previous_path = NULL).if {
+                  Buffer.set_previous_path last_string
+                }
+              }
+            } else {
+              syntax_error "Path missing."
+            }
+          }
+          (update).if {
+            source.remove p to (position - 2)
+            string_tmp.clear
+            0.to (Buffer.list.upper) do { i:Int
+              b := Buffer.list.at i
+              ((b.path.first != '<') && {b.path != help_path}).if {
+                string_tmp.add_last '\n'
+                b.last_point_view.append_in string_tmp
+                string_tmp.add_last ' '
+                b.last_point.append_in string_tmp
+                string_tmp.add_last ' '
+                string_tmp.append (b.path)
+              }
+            }
+            (Buffer.list.count < 32).if { + up:Int
+              string_tmp.add_last '\n'
+              up := (32-Buffer.list.count).min (Buffer.previous_list.upper)
+              (Buffer.previous_list.lower).to up do { i:Int
+                string_tmp.add_last '\n'
+                bh := Buffer.previous_list.at i
+                bh.last_point_view.append_in string_tmp
+                string_tmp.add_last ' '
+                bh.last_point.append_in string_tmp
+                string_tmp.add_last ' '
+                string_tmp.append (bh.path)
+              }
+            }
+            string_tmp.add_last '\n'
+            source.insert_string string_tmp to p
+            position := p + string_tmp.count + 1
+          }
+        } else {
+          warning_error "`{' missing.";
+        }
+      }.elseif {read_word "Command"} then {        
+        (read_character '{').if {
+          read_space
+          p := position
+          {! read_character '}'}.while_do {            
+            (read_text).if {
+              (! update).if {
+                Cmd_bar.list_cmd.add_last last_string
+              }
+            } else {
+              syntax_error "Command missing."
+            }
+          }
+          (update).if {
+            source.remove p to (position - 2)
+            string_tmp.clear
+            0.to (Cmd_bar.list_cmd.upper) do { i:Int
+              string_tmp.append (Cmd_bar.list_cmd.at i)
+              string_tmp.add_last '\n'
+            }
+            source.insert_string string_tmp to p
+            position := p + string_tmp.count + 1
+          }
+        } else {
+          warning_error "`{' missing.";
+        }
+      }.elseif {read_word "Color"} then {        
+        + r,g,b,a:Uint8
+        + c:Color_store
+        (! read_text).if {
+          syntax_error "Name missing."
+        }
+        c := Color_store.create last_string
+        (read_character '{').if {          
+          {! read_character '}'}.while_do {
+            ((! read_integer) || {last_integer > 255}).if {
+              syntax_error "Red value incorrect."
+            }
+            r := last_integer.to_uint8
+            ((! read_integer) || {last_integer > 255}).if {
+              syntax_error "Green value incorrect."
+            }
+            g := last_integer.to_uint8
+            ((! read_integer) || {last_integer > 255}).if {
+              syntax_error "Blue value incorrect."
+            }
+            b := last_integer.to_uint8
+            ((! read_integer) || {last_integer > 255}).if {
+              syntax_error "Alpha value incorrect."
+            }
+            a := last_integer.to_uint8
+            (! read_text).if {
+              syntax_error "Identifier color not found."
+            }
+            (! c.set last_string rgba (r,g,b,a)).if {
+              warning_error "A false ID."
+            }
+          }
+        } else {
+          warning_error "`{' missing.";
+        }
+      } else {
+        result := False
+      }
+    }.do_while {result}
+    read_space
+    cur_char = 0.to_char
+  )
+    
+Public
+  
+  - read_key <-
+  ( + f:Pointer
+    + sz:Int
+    string_tmp.copy elit_directory
+    string_tmp.append path_key
+    path := string_tmp.to_string_alias
+    f := File_utils.open_read path
+    (f = NULL).if {
+      string_tmp.prepend "Warning: File `"; 
+      string_tmp.append "' is not open.\n"
+      fail string_tmp
+    }
+    sz := File_utils.size f
+    source.resize (sz+1)
+    File_utils.read f in source size sz
+    File_utils.close f
+    //    
+    position := pos_cur := 0
+    pos_lin := 1
+    pos_col := 0
+    read_menu
+  )
+  
+  - read_cfg <-
+  ( + f:Pointer
+    + sz:Int
+    
+    string_tmp.copy home_directory
+    string_tmp.append ".elito.cfg"
+    path := string_tmp.to_string_alias
+    f := File_utils.open_read path
+    (f = NULL).if {      
+      string_tmp.prepend "Warning: Create `";
+      string_tmp.append "' by default.\n"
+      string_tmp.println
+      string_tmp.copy "cp -f "
+      string_tmp.append elit_directory
+      string_tmp.append "elito.cfg "
+      string_tmp.append home_directory
+      string_tmp.append ".elito.cfg"
+      Environment.run string_tmp
+      f := File_utils.open_read path
+    }
+    sz := File_utils.size f
+    source.resize (sz+1)
+    File_utils.read f in source size sz
+    File_utils.close f
+    //   
+    position := pos_cur := 0
+    pos_lin := 1
+    pos_col := 0
+    (! read_config).if {
+      warning_error "Configuration incorrect."
+    }
+  )
+  
+  - update_cfg <-
+  ( + f:Pointer
+    + sz:Int
+    
+    string_tmp.copy home_directory
+    string_tmp.append ".elito.cfg"
+    path := string_tmp.to_string_alias
+    f := File_utils.open_read path
+    (f = NULL).if {
+      string_tmp.prepend "Error: File `";
+      string_tmp.append "' is not open.\n"
+      fail string_tmp
+    }
+    sz := File_utils.size f
+    source.resize (sz+1)
+    File_utils.read f in source size sz
+    File_utils.close f
+    //
+    position := pos_cur := 0
+    pos_lin := 1
+    pos_col := 0
+    update := True
+    (! read_config).if {
+      warning_error "Configuration incorrect."
+    }
+    //
+    f := File_utils.open_write path
+    File_utils.write f with source size (source.count)
+    File_utils.close f
+    exit 0
+  )

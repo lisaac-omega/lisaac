@@ -5,22 +5,24 @@ Inherit
 
   + parent_types_set:Flat Types_set
 
+Insert
+
+  - parent_recyclable:Recyclable := Recyclable
+
 Private
 
   - bucket:Array (Exact Types_set) := Array (Exact Types_set).create_with_capacity 3000; // BSBS: A mettre dans TYPES_SET
 
-  - free_list:Array Types_tmp := Array Types_tmp.create_with_capacity 200
+  - bucket_hash:Array (Array (Exact Types_set)) := Array (Array (Exact Types_set)).create 4096
+  // @bucket by hash code (see @to_types), to find a @Types_set without scanning all @bucket.
 
   + capacity:Int
 
-  - create_types_tmp:Types_tmp <-
-  ( + result:Types_tmp
+  - merge_storage:C_array Type
+  // Spare buffer of @union, swapped with @storage.
 
-    result := clone
-    result.make_types_tmp
-    result
-  )
-  
+  - merge_capacity:Int
+
   - make_types_tmp <-
   (
     count := 0
@@ -49,17 +51,7 @@ Public
   // Creation.
   //
   
-  - new:Types_tmp <-
-  ( + result:Types_tmp
-    
-    (free_list.is_empty).if {
-      result := create_types_tmp
-    } else {
-      result := free_list.last
-      free_list.remove_last
-    }
-    result
-  )
+  - init <- make_types_tmp
 
   - update t:Types :Types <-
   [
@@ -79,7 +71,8 @@ Public
   - to_types:Types <-
   ( + result:Types
     + nw,t:Exact Types_set
-    + j,i:Int
+    + lst:Array (Exact Types_set)
+    + j,i,h:Int
 
     (is_empty).if {
       result := types_empty
@@ -95,9 +88,15 @@ Public
           result := t
         }
       }*/ else {
-        j := bucket.lower
-        {(j < bucket.count) && {result = NULL}}.while_do { 
-          t := bucket.at j
+        h := (count + first.index * 3 + at 1.index * 7 + at (count - 1).index * 13) & 4095
+        lst := bucket_hash.at h
+        (lst = NULL).if {
+          lst := Array (Exact Types_set).create_with_capacity 4
+          bucket_hash.at h put lst
+        }
+        j := lst.lower
+        {(j <= lst.upper) && {result = NULL}}.while_do {
+          t := lst.at j
           ((count = t.count) && {at 1 = t.at 1} && {first = t.first}).if {
             i := 2
             {(i < count) && {at i = t.at i}}.while_do { i := i + 1; }
@@ -111,6 +110,7 @@ Public
           nw := Types_set.create self
           ? {nw != NULL}
           bucket.add_last nw
+          lst.add_last nw
           result := nw
         }
       }
@@ -127,7 +127,7 @@ Public
   - free <-
   (
     clear
-    free_list.add_last self
+    parent_recyclable.free
   )
 
   //
@@ -155,30 +155,99 @@ Public
         add t to idx
       }
     }
-    (order_test).if_false { "MERDE!\n".print; }
   )
+  [ ? {order_test}; ]
     
   - union other:Types <-
-  ( + idx1,idx2,t2idx:Int
+  // Linear merge into @merge_storage, then the two buffers are swapped.
+  // Same order as inserting each type of @other in place: @Types_set are shared by content.
+  ( + i,j,n,new_count,new_capacity,t2idx:Int
     + t2:Type
-    
-    {idx2 = other.count}.until_do {
-      t2    := other.at idx2
-      t2idx := t2.index
-      {(idx1 < count) && {at idx1.index < t2idx}}.while_do {
-        idx1 := idx1 + 1
-      }
-      {(idx1 < count) && {at idx1.index = t2idx} && {at idx1 != t2}}.while_do {
-        idx1 := idx1 + 1
-      }
-      ((idx1 = count) || {at idx1 != t2}).if {
-        add t2 to idx1
-      }
-      idx1 := idx1 + 1
-      idx2 := idx2 + 1
+    + out,src:C_array Type
+    + set:Types_set
+
+    // @other is a @Types_set or a single @Type: below, @src avoids a dispatch on @other by type.
+    set ?= other
+    (set = NULL).if {
+      n := 1
+    } else {
+      n := set.count
+      src := set.storage
     }
-    (order_test).if_false { "MERDE UNION!\n".print; }
+    (n = 0).if {
+      // Nothing.
+    }.elseif {is_empty} then {
+      (n > capacity).if {
+        storage := storage.realloc capacity with n
+        capacity := n
+      }
+      (set = NULL).if {
+        storage.at 0 put (other.first)
+      } else {
+        storage.copy_from src until (n - 1)
+      }
+      count := n
+    }.elseif {n <= 4} then {
+      // Few types: binary search and in place insertion.
+      {j = n}.until_do {
+        t2    := other.at j
+        t2idx := t2.index
+        i := lower_bound t2idx from i
+        {(i < count) && {at i.index = t2idx} && {at i != t2}}.while_do {
+          i := i + 1
+        }
+        ((i = count) || {at i != t2}).if {
+          add t2 to i
+        }
+        i := i + 1
+        j := j + 1
+      }
+    } else {
+      // @n > 4: @other is a @Types_set.
+      n := count + n
+      (n > merge_capacity).if {
+        new_capacity := n * 2
+        (new_capacity < 128).if {
+          new_capacity := 128
+        }
+        merge_storage := C_array Type .calloc_intern new_capacity
+        merge_capacity := new_capacity
+      }
+      out := merge_storage
+      {j = set.count}.until_do {
+        t2    := src.at j
+        t2idx := t2.index
+        {(i < count) && {at i.index < t2idx}}.while_do {
+          out.at new_count put (at i)
+          new_count := new_count + 1
+          i := i + 1
+        }
+        {(i < count) && {at i.index = t2idx} && {at i != t2}}.while_do {
+          out.at new_count put (at i)
+          new_count := new_count + 1
+          i := i + 1
+        }
+        ((i < count) && {at i = t2}).if {
+          i := i + 1
+        }
+        out.at new_count put t2
+        new_count := new_count + 1
+        j := j + 1
+      }
+      {i < count}.while_do {
+        out.at new_count put (at i)
+        new_count := new_count + 1
+        i := i + 1
+      }
+      merge_storage  := storage
+      storage        := out
+      new_capacity   := capacity
+      capacity       := merge_capacity
+      merge_capacity := new_capacity
+      count := new_count
+    }
   )
+  [ ? {order_test}; ]
 
 Private
   
@@ -210,6 +279,23 @@ Private
       }
       storage.at index put t
     }
+  )
+
+  - lower_bound idx:Int from beg:Int :Int <-
+  // First position from @beg whose type index is not lower than @idx.
+  ( + low,high,middle:Int
+
+    low  := beg
+    high := count
+    {low < high}.while_do {
+      middle := (low + high) >> 1
+      (at middle.index < idx).if {
+        low := middle + 1
+      } else {
+        high := middle
+      }
+    }
+    low
   )
 
   - search t:Type from beg:Int to end:Int :Int <-

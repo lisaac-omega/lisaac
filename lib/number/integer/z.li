@@ -6,7 +6,7 @@ Header
   */
   - type := `signed long long`;
   - default := (Cast Int To ℤ.on 0); 
-  - export := ℚ;
+  - export := ℚ, ℝ;
 Insert
   - parent_utils:Utils := Utils
   - parent_print:Print := Print
@@ -1556,7 +1556,68 @@ Div_inv
     q,r
   )
   
+  - divexact_1 (rp,ap:C_array Uint64, up:Int, pd:Uint64) <-
+  // @rp[0..@up] := @ap[0..@up] / @pd, when the division is exact (@rp can be @ap).
+  // Hensel division, as GMP's `mpn_divexact_1': one product by the inverse of @pd
+  // modulo 2^64 for each limb, without the long dependency of `qr_1_preinv'.
+  [ ? {pd != 0}; ]
+  ( + d,inv,c,s,l,q,h,lo,ls:Uint64
+    + shift:Int
+    shift := first_bit pd
+    d := pd >> shift
+    inv := binvert d
+    (shift = 0).if {
+      0.to up do { j:Int
+        s := ap.at j
+        l := s - c
+        q := l * inv
+        rp.at j put q
+        (h,lo) := umul_128 (q,d)
+        c := h + (l > s).to_int
+      }
+    } else {
+      ls := ap.at 0 >> shift
+      1.to up do { j:Int
+        s := ap.at j
+        ls := ls | (s << (64 - shift))
+        l := ls - c
+        q := l * inv
+        rp.at (j-1) put q
+        (h,lo) := umul_128 (q,d)
+        c := h + (l > ls).to_int
+        ls := s >> shift
+      }
+      rp.at up put ((ls - c) * inv)
+    }
+  )
+
+  - binvert d:Uint64 :Uint64 <-
+  // Inverse of the odd @d modulo 2^64.
+  [ ? {d.is_odd}; ]
+  ( + inv:Uint64
+    inv := (d * 3) ^ 2; // 5 bits right, then 10, 20, 40 and 80.
+    4.times { inv := inv * (2 - d * inv); }
+    inv
+  )
+  [ ? {Result * d = 1}; ]
+  
   // GCD tools
+  
+  - modexact_1_odd (ap:C_array Uint64, up:Int, d:Uint64) :Uint64 <-
+  // c such that @ap[0..@up] = c 2^(64 (@up+1)) modulo the odd @d, with c <= @d.
+  // Same loop as `divexact_1', without the quotient (as GMP's `mpn_modexact_1_odd').
+  [ ? {d.is_odd}; ]
+  ( + inv,c,s,l,q,h,lo:Uint64
+    inv := binvert d
+    0.to up do { j:Int
+      s := ap.at j
+      l := s - c
+      q := l * inv
+      (h,lo) := umul_128 (q,d)
+      c := h + (l > s).to_int
+    }
+    c
+  )
   
   - gcd_11 (pu,pv:Uint64) :Uint64 <-
   // Binary GCD on one limb: @pu and @pv are not null.
@@ -1565,25 +1626,19 @@ Div_inv
     + shift:Int
     (u,v) := (pu,pv)
     shift := first_bit (u | v)
-    u := u >> shift
-    v := v >> shift
-    (u.is_even).if { (u,v) := (v,u); }
-    v := v >> first_bit v
-    {u != v}.while_do {
-      (u > v).if {
-        u := u - v
-        u := u >> first_bit u
-      } else {
-        v := v - u
-        v := v >> first_bit v
-      }
-    }
+    u := u >> first_bit u
+    // @u is odd. A swap instead of two branches: gcc makes a `cmov'.
+    {
+      v := v >> first_bit v
+      (u > v).if { (u,v) := (v,u); }
+      v := v - u
+    }.do_while {v != 0}
     u << shift
   )
   
   // Input/Output tools
   
-  - get_base_info (b:Uint64) :(Int,Uint64) <-
+  - get_base_info b:Uint64 :(Int,Uint64) <-
   ( + m,bb:Uint64
     + exp:Int
     m := Uint64.maximum / b
@@ -1595,7 +1650,7 @@ Div_inv
     exp,bb
   )
   
-  - sizeinbase (base:Int) :Int <-  
+  - sizeinbase base:Int :Int <-  
   [ ? {base.in_range 2 to 62}; ? {is_big}; ]
   ( + un:Int
     + bits,n:Int
@@ -1636,7 +1691,7 @@ Div_inv
     result
   )
 
-  - native_put_in (sp:C_array Uint8) bits bits:Int :Int <-
+  - native_put_in sp:C_array Uint8 bits bits:Int :Int <-
   // bits = 1:Binary, 3:Octal, 4:Hexa, 6:FORMAT64
   ( + mask,digit:Uint8
     + sn, j,k:Int
@@ -1663,7 +1718,7 @@ Div_inv
     sn
   )
     
-  - native_from (sp:C_array Uint8,sn:Int) bits (bits:Int) in (rp:C_array Uint64,up:Int) <-
+  - native_from (sp:C_array Uint8,sn:Int) bits bits:Int in (rp:C_array Uint64,up:Int) <-
   ( + rn,j,idx:Int
     + shift:Int
     j := sn
@@ -1689,7 +1744,7 @@ Div_inv
     ? {rn-1 = up}
   )
   
-  - native_from (sp:C_array Uint8, sn:Int) base (b:Uint)
+  - native_from (sp:C_array Uint8, sn:Int) base b:Uint
   info (exp:Int,bb:Uint64) in (rp:C_array Uint64,up:Int) <-
   // Result is usually normalized, except for all-zero input, in which
   // case a single zero limb is written at *RP, and 1 is returned.
@@ -1727,7 +1782,7 @@ Div_inv
     (rn + 1).to up do { i:Int; rp.at i put 0; }; // @up is only an upper bound.
   )
   
-  - native_put_in (sp:C_array Uint8) base (base:Int)
+  - native_put_in sp:C_array Uint8 base base:Int
   info (exp:Uint,bb:Uint64) with (na:C_array Uint64,up:Int) :Int <-
   ( + binv:Div_inv
     + sn,un:Int
@@ -1802,7 +1857,7 @@ Public
     r    
   )
   
-  - init (sp:String) from idx:Int base (base:Int) :Self <-
+  - init sp:String from idx:Int base base:Int :Self <-
   ( + bits, value_of_a:Int
     + dn,k,j:Int
     + c,digit:Uint8
@@ -1852,9 +1907,9 @@ Public
     normalize na cap cap up up sign s
   )
   
-  - init (sp:String) base (base:Int) :Self <- init sp from 0 base base
+  - init sp:String base base:Int :Self <- init sp from 0 base base
     
-  - init (sp:String) :Self <- init sp base 10
+  - init sp:String :Self <- init sp base 10
   
   - init_d x:Real64 :Self <-
   // Truncate @x to an integer: 0 for NaN and infinities.
@@ -1946,7 +2001,7 @@ Public
     r
   )  
       
-  - self:Self '-' Left 80 other:Self :Self <-
+  - self:Self '-' Left 80 <> other:Self :Self <-
   ( + r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -1982,7 +2037,7 @@ Public
     r
   )
     
-  - self:Self '/' Left 90 other:Self :Self <-
+  - self:Self '/' Left 90 <> other:Self :Self <-
   ( + q,r:Self
     (is_big).if {      
       (other.is_big).if {
@@ -2042,7 +2097,27 @@ Public
     }
     q,r
   )
-  
+
+  - self:Self divexact other:Self :Self <-
+  // @self / @other, only when @other divides @self (like GMP's `mpz_divexact').
+  // With a big @self and a small @other, much faster than `/' (frequent with @ℚ).
+  [ ? {other !== 0}; ]
+  ( + aa,rr:C_array Uint64
+    + an,cap:Int
+    + r:Self
+    ((is_big) && {! other.is_big}).if {
+      aa := to_na
+      an := upper aa
+      cap := upper_to_cap (an+1)
+      rr := new cap
+      divexact_1 (rr,aa,an,other.to_abs64)
+      r := normalize rr cap cap up (an.to_uint64) sign (sign ^ other.sign)
+    } else {
+      r := self / other
+    }
+    r
+  )
+
   - '~' self:Self :Self <-
   ( + r:Self
     (is_big).if {
@@ -2103,26 +2178,76 @@ Public
   
   - self:Self gcd other:Self :Self <-
   // Greatest common divisor of @self and @other, always >= 0 (gcd(0,0) = 0).
-  ( + a,b,t:Self
-    a := self.abs
-    b := other.abs
-    {b.is_big}.while_do {
-      t := a % b
-      a.free
-      a := b
-      b := t
-    }
-    (b != 0).if {
-      t := a % b
-      a.free
-      (t = 0).if {
-        a := b
-      } else {
-        a := init_ui (gcd_11 (t.to_abs64,b.to_abs64))
+  ( + a:Self
+    + u,v:Uint64
+    ((! is_big) && {! other.is_big}).if {
+      // Two small values: no copy, no division (frequent with @ℚ).
+      u := to_abs64
+      v := other.to_abs64
+      (u = 0).if {
+        u := v
+      }.elseif {v != 0} then {
+        u := gcd_11 (u,v)
       }
+      a := init_ui u
+    } else {
+      a := gcd_big other
     }
     a
   )
+  
+Private
+  
+  - gcd_big other:Self :Self <-
+  // Euclid while both values are big, then `gcd_1'.
+  ( + a,b,t:Self
+    (other.is_big).if {
+      (is_big).if {
+        a := self.abs
+        b := other.abs
+        {b.is_big}.while_do {
+          t := a % b
+          a.free
+          a := b
+          b := t
+        }
+        t := gcd_1 (a,b)
+        a.free
+      } else {
+        t := gcd_1 (other,self)
+      }
+    } else {
+      t := gcd_1 (self,other)
+    }
+    t
+  )
+  
+  - gcd_1 (a,b:Self) :Self <-
+  // Greatest common divisor of @a and of @b, which is small.
+  ( + u,v:Uint64
+    + z:Int
+    + aa:C_array Uint64
+    + r:Self
+    v := b.to_abs64
+    (v = 0).if {
+      r := a.abs
+    }.elseif {! a.is_big} then {
+      u := a.to_abs64
+      (u = 0).if { u := v; } else { u := gcd_11 (u,v); }
+      r := init_ui u
+    } else {
+      // With an odd @v, gcd(@a,@v) = gcd(c,@v) because @a = c 2^(64 n) modulo @v.
+      aa := a.to_na
+      z := first_bit v
+      v := v >> z
+      u := modexact_1_odd (aa, upper aa, v)
+      (u = 0).if { u := v; } else { u := gcd_11 (u,v); }
+      r := init_ui (u << (z.min (a.scan1)))
+    }
+    r
+  )
+  
+Public
   
   - self:Self '!' :Self <-
   [
@@ -2182,10 +2307,10 @@ Public
   
   - self:Self '!==' Right 60 other:Self :Boolean <- cmp other != 0
   - self:Self '==' Right 60 other:Self :Boolean <- cmp other =  0
-  - self:Self '>' Right 60 other:Self :Boolean <- cmp other >  0
-  - self:Self '<' Right 60 other:Self :Boolean <- cmp other <  0
-  - self:Self '>=' Right 60 other:Self :Boolean <- cmp other >= 0
-  - self:Self '<=' Right 60 other:Self :Boolean <- cmp other <= 0
+  - self:Self '>' Right 60 <> other:Self :Boolean <- cmp other >  0
+  - self:Self '<' Right 60 <> other:Self :Boolean <- cmp other <  0
+  - self:Self '>=' Right 60 <> other:Self :Boolean <- cmp other >= 0
+  - self:Self '<=' Right 60 <> other:Self :Boolean <- cmp other <= 0
   
   // Shift
   
@@ -2224,8 +2349,45 @@ Public
   // Conversion
   
   - to_q:ℚ <- ℚ.init (self,one)
+
+  - to_r:ℝ <-
+  // Exact value of @self.
+  ( + t:ℚ
+    + r:ℝ
+    t := to_q
+    r := ℝ.init_q t
+    t.free
+    r
+  )
   
   - self:Self divq d:Self :ℚ <- ℚ.init (self,d)
+  
+  - to_int64:(Boolean,Int64) <-
+  // @True and the value of @self when it fits in an @Int64, else @False and 0.
+  ( + na:C_array Uint64
+    + v:Uint64
+    + ok:Boolean
+    + r:Int64
+    (is_big).if {
+      na := to_na
+      (upper na = 0).if {
+        v := na.at 0
+        (is_neg).if {
+          (v <= Int64.maximum + 1).if {
+            ok := True
+            r := (- v).to_raw_int64
+          }
+        }.elseif {v <= Int64.maximum} then {
+          ok := True
+          r := v.to_raw_int64
+        }
+      }
+    } else {
+      ok := True
+      r := to_i64
+    }
+    (ok,r)
+  )
   
   - to_real64:Real64 <-
   // Value of @self in a @Real64, truncated if needed.

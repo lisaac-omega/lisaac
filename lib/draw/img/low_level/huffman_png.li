@@ -19,15 +19,17 @@ Public
   - fast_bits:Int := 9; // larger handles more cases; smaller stomps less cache
     
   - zbuild_huffman sizelist:C_array Uint8 size num:Int :Self <-
+  // @NULL if the code lengths are corrupt (@Image.error says why).
   ( + result:Self
     result := clone
-    result.zmake_huffman sizelist size num
+    (! result.zmake_huffman sizelist size num).if { result := NULL; }
     result
   )
   
-  - zmake_huffman sizelist:C_array Uint8 size num:Int <-
+  - zmake_huffman sizelist:C_array Uint8 size num:Int :Boolean <-
   ( + k,lcode,idx:Int
     + next_code, sizes:C_array Int
+    + result:Boolean
     
     fast := C_array Uint16.create (1 << Img_zlib.zfast_bits)
     firstcode := C_array Uint16.create 16
@@ -44,64 +46,52 @@ Public
     0.to (num-1) do { i:Int
       idx := sizelist.at i
       sizes.at idx put (sizes.at idx + 1)
-      //"sizes:".print; sizes.at idx.print; '\n'.print
     }
-    //'\n'.print
     sizes.at 0 put 0
+    result := True
     1.to 15 do { i:Int
       (sizes.at i > (1 << i)).if {
-        "HUFFMAN 176: bad sizes\n".println
-        exit 0
+        result := Image.error_false "bad sizes"
       }
     }
-    lcode := 0
-    1.to 15 do { i:Int
-      next_code.at i put lcode
-      firstcode.at i put lcode
-      firstsymbol.at i put k
-      lcode := lcode + sizes.at i
-      (sizes.at i != 0).if {
-        (lcode-1 >= (1 << i)).if {
-          "bad codelengths\n".print
-          exit 0
+    result.if {
+      lcode := 0
+      1.to 15 do { i:Int
+        next_code.at i put lcode
+        firstcode.at i put lcode
+        firstsymbol.at i put k
+        lcode := lcode + sizes.at i
+        (sizes.at i != 0).if {
+          (lcode-1 >= (1 << i)).if { result := Image.error_false "bad codelengths"; }
         }
+        maxcode.at i put (lcode << (16-i)); // preshift for inner loop
+        lcode := lcode << 1
+        k := k + sizes.at i
       }
-      maxcode.at i put (lcode << (16-i)); // preshift for inner loop
-      lcode := lcode << 1
-      k := k + sizes.at i
+      maxcode.at 16 put 1_0000h; // sentinel
     }
-    //"*** k:".print; k.println
-    maxcode.at 16 put 1_0000h; // sentinel
-    0.to (num-1) do { i:Int
-      + s:Int
-      s := sizelist.at i
-      (s != 0).if {
-        + c:Int
-        + fastv:Uint16
-        c := next_code.at s - firstcode.at s + firstsymbol.at s
-        //"c:".print; c.print; " ".print
-        fastv := (s << 9) | i
-        //"fastv:".print; fastv.println
-        size.at c put s
-        value.at c put i
-        (s <= Img_zlib.zfast_bits).if {
-          + j:Int
-          j := next_code.at s.to_uint16.bit_reverse >> (16-s)
-          //"j:".print; j.print; " next_code:".print; next_code.at s.println
-          {j < (1 << Img_zlib.zfast_bits)}.while_do {
-            fast.at j put fastv
-            j := j + (1 << s)
+    result.if {
+      0.to (num-1) do { i:Int
+        + s:Int
+        s := sizelist.at i
+        (s != 0).if {
+          + c:Int
+          + fastv:Uint16
+          c := next_code.at s - firstcode.at s + firstsymbol.at s
+          fastv := ((s << 9) | i).to_raw_uint16
+          size.at c put s
+          value.at c put i
+          (s <= Img_zlib.zfast_bits).if {
+            + j:Int
+            j := next_code.at s.to_raw_uint16.bit_reverse >> (16-s)
+            {j < (1 << Img_zlib.zfast_bits)}.while_do {
+              fast.at j put fastv
+              j := j + (1 << s)
+            }
           }
+          next_code.at s put (next_code.at s + 1)
         }
-        next_code.at s put (next_code.at s + 1)
       }
     }
-    //'\n'.print
-    //"Fin Create:".print
-    //0.to ((1<<IMG_ZLIB.zfast_bits)-1) do { i:Int
-    //  fast.at i.print; ' '.print
-    //}
-    //"\n----\n".print
-    // FREE next_code
-    // FREE sizes
+    result
   )

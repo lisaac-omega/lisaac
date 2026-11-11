@@ -1,0 +1,79 @@
+Header
+  + name := Parallel
+/* Parallel loops on the active objects @Cop_job (compile with -cop, else in sequence):
+     Parallel.times (Parallel.cores) do { part:Int ... }
+     Parallel.background v do { v:Int ... }   // a job in the background, as a write
+   The block can use the slots of its prototype, not the local variables of the caller.*/
+  - include :=
+`
+#if defined(__linux__)
+#include <sched.h>
+static inline int parallel_cores(void)
+{ cpu_set_t s;
+  return (sched_getaffinity(0, sizeof(s), &s) == 0) ? CPU_COUNT(&s) : 1;
+}
+#elif defined(_SC_NPROCESSORS_ONLN)
+#include <unistd.h>
+static inline int parallel_cores(void) { return (int)sysconf(_SC_NPROCESSORS_ONLN); }
+#else
+static inline int parallel_cores(void) { return 1; }
+#endif
+`;
+
+Public
+
+  - cores:Int <- `parallel_cores()`:Int
+  // The cores available to the program (see taskset), at least 1.
+
+  - times n:Int do blk:{Int;} <-
+  // `blk.value 0', ..., `blk.value (n - 1)' in parallel, and wait for their end.
+  (
+    start n do blk
+    wait
+  )
+
+  - start n:Int do blk:{Int;} <-
+  // `blk.value 0', ..., `blk.value (n - 1)' in parallel, without waiting (see @wait).
+  (
+    {jobs.count < n}.while_do {
+      jobs.add_last (Cop_job.clone)
+    }
+    count := n
+    0.to (n - 1) do { p:Int
+      jobs.at p.init (blk, p).run
+    }
+  )
+
+  - wait <-
+  // Wait for the end of the last @start.
+  ( + ok:Boolean
+    0.to (count - 1) do { p:Int
+      ok := jobs.at p.done
+    }
+  )
+
+  - background v:Int do blk:{Int;} <-
+  // `blk.value v' in the background, after the end of the previous background job
+  // (see @wait_background).
+  (
+    (back = NULL).if {
+      back := Cop_job.clone
+    }
+    back.init (blk, v).run
+  )
+
+  - wait_background <-
+  // Wait for the end of the last background job.
+  ( + ok:Boolean
+    (back != NULL).if {
+      ok := back.done
+    }
+  )
+
+Private
+
+  - back:Cop_job
+
+  - jobs:Array Cop_job := Array Cop_job .create_with_capacity 16
+
+  - count:Int

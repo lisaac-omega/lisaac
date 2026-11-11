@@ -1,8 +1,8 @@
 Header
   + name := Lip_elit
 /* Used by Elit.*/
-Inherit
-  - parent_any:Any := Any
+Insert
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
   
 Public
   

@@ -10,10 +10,10 @@ Header
   Real_16_16, Real_24_8, Real_26_6 ,
   Real_32_32,
   Real, Real32, Real64, Real80,
-  Pointer, ℤ, ℚ, ℂ;  
+  Pointer, ℤ, ℚ, ℂ, ℝ;  
 Insert
   
-  - parent_numeric: /*EYE*/ Numeric := Numeric
+  - parent_ordered_numeric: /*EYE*/ Ordered_numeric := Ordered_numeric
   
 Public
 
@@ -510,7 +510,9 @@ Public
         j := j + 1
       }
     }
-    buffer.insert '0' to beg on (s + beg - buffer.count)
+    (s + beg > buffer.count).if {
+      buffer.insert '0' to beg on (s + beg - buffer.count)
+    }
   )
   
   - to_binary_in buffer:String_buffer format s:Int <-
@@ -540,7 +542,7 @@ Public
         j := j + 1
       }
     }
-    (s != 0).if {
+    (s + beg > buffer.count).if {
       buffer.insert '0' to beg on (s + beg - buffer.count)
     }
   )

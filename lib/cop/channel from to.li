@@ -1,0 +1,105 @@
+Header
+  - name := Channel V From P To C
+/* COP coordination: a bounded channel of values (@V: a value, an immutable or an active
+   object) from producers (active objects of type @P) to consumers (active objects of
+   type @C). An active object (a universe): all its slots are asynchronous messages.
+   - A producer sends `put v from self tag k', then waits for the message `ready k' before it
+     puts the next value: if the channel is full, `ready k' comes only when a place is free (the
+     producer can not go too fast: back pressure).
+   - A consumer sends `take self tag k' and receives `receive v tag k' (at once, or when a
+     value comes), or `closed k' when all the producers have sent `finish' and the channel is
+     empty.
+   The tag @k, chosen by the producer or the consumer, tells it what is answered (when it uses
+   several channels). @P must have a slot `ready k:Int', @C the slots `receive v:V tag k:Int'
+   and `closed k:Int'. */
+Inherit
+  - parent_clone:Clone := Clone
+
+Public
+
+  + capacity:Int
+
+  + producers:Int
+  // The producers which have not sent `finish'.
+
+  + values:Array V := Array V .create_with_capacity 16
+  // The values in the channel, in their order.
+
+  + held_values:Array V := Array V .create_with_capacity 4
+  + held_producers:Array P := Array P .create_with_capacity 4
+  + held_tags:Array Int := Array Int .create_with_capacity 4
+  // The values put when the channel was full: their producers wait for `ready'.
+
+  + consumers:Array C := Array C .create_with_capacity 4
+  + consumer_tags:Array Int := Array Int .create_with_capacity 4
+  // The consumers which wait for a value.
+
+  - create n:Int producers p:Int :Self <-
+  // A new universe: a channel of @n values, for @p producers.
+  ( + result:Self
+    result := clone
+    result.set_capacity n producers p
+    result
+  )
+
+  - set_capacity n:Int producers p:Int <-
+  (
+    capacity := n
+    producers := p
+  )
+
+  - put v:V from p:P tag k:Int <-
+  (
+    (! consumers.is_empty).if {
+      // A consumer waits: directly to it.
+      consumers.first.receive v tag (consumer_tags.first)
+      consumers.remove_first
+      consumer_tags.remove_first
+      p.ready k
+    }.elseif {values.count < capacity} then {
+      values.add_last v
+      p.ready k
+    } else {
+      held_values.add_last v
+      held_producers.add_last p
+      held_tags.add_last k
+    }
+  )
+
+  - take c:C tag k:Int <-
+  (
+    (values.is_empty).if {
+      (producers = 0).if {
+        c.closed k
+      } else {
+        consumers.add_last c
+        consumer_tags.add_last k
+      }
+    } else {
+      c.receive (values.first) tag k
+      values.remove_first
+      (held_values.is_empty).if_false {
+        // A place is free: the first held value comes in, its producer can go on.
+        values.add_last (held_values.first)
+        held_values.remove_first
+        held_producers.first.ready (held_tags.first)
+        held_producers.remove_first
+        held_tags.remove_first
+      }
+    }
+  )
+
+  - finish <-
+  // A producer has no more value.
+  (
+    producers := producers - 1
+    (producers = 0).if {
+      (values.is_empty).if {
+        consumers.lower.to (consumers.upper) do { i:Int
+          consumers.at i.closed (consumer_tags.at i)
+        }
+        consumers.clear
+        consumer_tags.clear
+      }
+    }
+  )

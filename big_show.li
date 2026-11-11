@@ -19,6 +19,8 @@ Header
   $ cd lisaac
   $ lisaac big_show -q -boost
   $ ./big_show
+  The installation also leaves the executable in lisaac/bin: then, just
+  type big_show, from any directory.
 
   Created and maintained by Benoît Sonntag and Dominique Colnet.
   */

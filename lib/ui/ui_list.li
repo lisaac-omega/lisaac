@@ -1,0 +1,188 @@
+Header
+  + name := Ui_list
+/* A list of names in columns, which opens upward over a line (as the completion of the
+   names of files of elit): the box grows from the line during @delay, the names have
+   their color, the one under the mouse is in evidence; the wheel, @page_down and an
+   elevator move in it; a click gives the index of the name to @on_pick. */
+Inherit
+  + parent_box:Flat Ui_box
+
+Public
+
+  + names:Array String_alias
+  + colors:Array Color
+  + bottom:Real32
+  + left:Real32
+  + right:Real32
+  + top_limit:Real32
+  + pos_y:Real32
+  + stamp:Uint64
+  + item_w:Real32
+  + on_pick:{Int; }
+  + col_on:Color
+  + col_off:Color
+
+  - delay:Uint64 := 300_000
+  - set_delay d:Uint64 <- ( delay := d.max 1 )
+  - margin:Real32 := 8
+
+  - new:Self <-
+  ( + r:Self
+    r := clone
+    r.make_box
+    r.make_list
+    r
+  )
+
+  - make_list <-
+  (
+    names := Array String_alias.create_with_capacity 32
+    colors := Array Color.create_with_capacity 32
+    set_hidden True
+  )
+
+  - set_colors (on,off:Color) <- ( (col_on,col_off) := (on,off) )
+  - set_action b:{Int; } <- ( on_pick := b )
+
+  - is_open:Boolean <- ! is_hidden
+
+  - clear <-
+  (
+    names.clear
+    colors.clear
+  )
+
+  - add n:String_alias color c:Color <-
+  (
+    names.add_last n
+    colors.add_last c
+  )
+
+  - open_over (x0,x1:Real32) at y:Real32 limit ytop:Real32 <-
+  // Open over the line at @y, from @x0 to @x1 (not higher than @ytop).
+  ( + w,a,b,c,d:Real32
+    (left,right,bottom,top_limit) := (x0,x1,y,ytop)
+    item_w := 0
+    pen.font_face_id (Font.sys (Font.bold))
+    pen.font_size (Font.size_sys)
+    names.foreach { n:String_alias
+      (w,a,b,c,d) := pen.text_bounds (0,0) msg n
+      item_w := item_w.max (w + margin * 2)
+    }
+    pos_y := 0
+    stamp := Time.gettimeofday
+    set_hidden False
+    place
+  )
+
+  - close <- ( set_hidden True )
+
+  - anchor (x0,x1:Real32) at y:Real32 limit ytop:Real32 <-
+  // The line under the box moved (the window changed).
+  ( (left,right,bottom,top_limit) := (x0,x1,y,ytop) )
+
+  - columns:Int <- ((right - left - 16) / item_w.max 1).to_int.max 1
+  - row_h:Real32 <- Font.size_sys
+  - full_h:Real32 <- ((names.count + columns - 1) / columns).to_real32 * row_h
+
+  - wanted_h:Real32 <- (bottom - top_limit).min (full_h + margin * 2 + 16)
+
+  - place <-
+  // The box now (it grows during @delay).
+  ( + dt:Uint64
+    + h:Real32
+    h := wanted_h
+    dt := Time.gettimeofday - stamp
+    (dt < delay).if {
+      h := h * dt.to_real32 / delay.to_real32
+      Paper.refresh_again
+    }
+    set_rect (left,bottom - h) size (right - left,h.max 1)
+  )
+
+  - page_down:Boolean <-
+  // The next page of the names (@False at the end).
+  ( + r:Boolean
+    + page:Real32
+    page := ((wanted_h - 16) / row_h).to_int.max 1.to_real32 * row_h
+    (pos_y + wanted_h - 16 < full_h).if {
+      pos_y := pos_y + page
+      r := True
+    }
+    r
+  )
+
+  - top_page <- ( pos_y := 0 )
+
+  - draw <-
+  ( + x,y,w,cw:Real32
+    + n:Int
+    + hot:Boolean
+    place
+    pen.save
+    pen.intersect_scissor (xo,yo) size (width + 8,height)
+    // As `rect_shadow' of elit (rounded at the top).
+    draw_shadow_box (xo,yo) size (width,height) radius (8,8,0,0) inside (col_off,col_on)
+    pen.intersect_scissor (xo + 7,yo + 7) size (width - 14,height - 14)
+    n := columns
+    cw := (width - 16) / n.to_real32
+    pen.font_size (Font.size_sys)
+    pen.text_align (pen.align_left | pen.align_middle)
+    0.to (names.upper) do { k:Int
+      x := xo + 8 + (k % n).to_real32 * cw
+      y := yo + 8 - pos_y + (k / n).to_real32 * row_h
+      ((y + row_h > yo) && {y < ymax}).if {
+        hot := (Hand.window_cur = window) && {Hand.x_cur.in_range x to (x + cw)} && {Hand.y_cur.in_range y to (y + row_h)}
+        (hot).if {
+          pen.begin_path
+          pen.fill_color col_on
+          pen.rect (x,y) size (cw,row_h) radius 8
+          pen.fill
+          pen.font_face_id (Font.sys (Font.bold))
+        } else {
+          pen.font_face_id (Font.sys (Font.roman))
+        }
+        pen.fill_color (colors.at k)
+        pen.text (x + margin,y + row_h / 2) msg (names.at k)
+      }
+    }
+    pen.restore
+    // The elevator.
+    (full_h > height - 16).if {
+      w := (height - 16) * (height - 16) / full_h
+      y := yo + 8 + (height - 16 - w) * pos_y / (full_h - height + 16).max 1
+      pen.begin_path
+      pen.rect (xmax - 12,y) size (6,w.max 12) radius 3
+      pen.fill_color (Color.rgba (0,0,0,77))
+      pen.fill
+    }
+    pen.text_align (pen.align_left | pen.align_baseline)
+  )
+
+  - index_at (x,y:Real32) :Int <-
+  ( + r,c,row,n:Int
+    + cw:Real32
+    r := -1
+    n := columns
+    cw := (width - 16) / n.to_real32
+    ((x >= xo + 8) && {y >= yo + 8}).if {
+      c := ((x - xo - 8) / cw).to_int
+      row := ((y - yo - 8 + pos_y) / row_h).to_int
+      ((c < n) && {row * n + c <= names.upper}).if { r := row * n + c }
+    }
+    r
+  )
+
+  - mouse ev:Int at (x,y:Real32) :Boolean <-
+  ( + i:Int
+    ((ev = Hand.clic) || {ev = Hand.lclic}).if {
+      i := index_at (x,y)
+      ((i >= 0) && {on_pick != NULL}).if { on_pick.value i }
+    }
+    True
+  )
+
+  - scroll d:Real32 at (x,y:Real32) <-
+  (
+    pos_y := (pos_y - d * row_h * 2).max 0.min ((full_h - wanted_h + 16).max 0)
+  )

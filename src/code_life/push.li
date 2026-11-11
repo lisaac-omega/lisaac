@@ -89,7 +89,6 @@ Public
     {! stair.is_empty}.while_do { stair.pop.set_rm }
   )
   
-  
   - execute:Instr <-
   ( + result:Instr
     + p:Push
@@ -117,28 +116,6 @@ Public
     result
   )
   
-  
-  /*
-  - execute:INSTR <-
-  ( + result:INSTR
-    + other:PUSH
-
-    result := self
-    other ?= list_current.next_item
-    (other != NULL).if {
-      (other.context = context).if {
-        result := NULL
-        (is_first).if {
-          other.set_first True
-        }
-      }.elseif {(is_first) && {! other.is_first}} then {
-        result := NULL
-      }
-    }
-    result
-  )
-  */
-  
   //
   // Genere
   //
@@ -158,9 +135,4 @@ Public
     buffer.append (context.intern_name)
     buffer.add_last ')'
   )
-
-
-
-
-
 

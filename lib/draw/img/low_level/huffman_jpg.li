@@ -30,60 +30,70 @@ Public
     self
   )
   
-  - make count:C_array Int <- // JPEG
+  - clear <-
+  (
+    fast.clear_all ((1 << fast_bits)-1)
+    code.clear_all 255
+    values.clear_all 255
+    size.clear_all 256
+    maxcode.clear_all 17
+    delt.clear_all 16
+  )
+  
+  - make count:C_array Int :Boolean <- // JPEG
+  // @False if the code lengths are corrupt.
   ( + k,cod:Int
-    //"1\n".print
+    + result:Boolean
+    result := True
     // build size list for each symbol (from JPEG spec)
     0.to 15 do { i:Int
       0.to (count.at i-1) do { j:Int
-        size.at k put (i+1)
-        k := k + 1
-      }
-    }
-    size.at k put 0
-//"2\n".print
-    // compute actual symbols (from jpeg spec)
-    cod := 0
-    k := 0
-    1.to 16 do { j:Int
-      // compute delta to add to code to compute symbol id
-//      "2.1\n".print
-      delt.at j put (k - cod)
-      (size.at k = j).if {
-        {size.at k = j}.while_do {
-//          "2.2 k=".print; k.println
-          code.at k put cod
+        (k < 257).if {
+          size.at k put (i+1)
           k := k + 1
-          cod := cod + 1
-        }
-        (cod-1 >= (1 << j)).if {
-          "bad code lengths\n".print
-          exit 0
-        }
-      }
-//      "3\n".print
-      // compute largest code + 1 for this size, preshifted as needed later
-//      "j=".print; j.println
-      maxcode.at j put (cod << (16-j))
-      cod := cod << 1
-    }
-    maxcode.at 17 put 0FFFF_FFFFh
-//"4\n".print
-    // build non-spec acceleration table; 255 is flag for not-accelerated
-    fast.set_all_with 255 until ((1 << fast_bits)-1)
-    0.to (k-1) do { i:Int
-      + s:Int
-      s := size.at i
-      (s <= fast_bits).if {
-        + c,m:Int
-        c := code.at i << (fast_bits-s)
-        m := 1 << (fast_bits-s)
-        0.to (m-1) do { j:Int
-          fast.at (c+j) put i
+          (k >= 257).if { result := False; }
         }
       }
     }
-//    "5\n".print
+    result.if {
+      size.at k put 0
+      // compute actual symbols (from jpeg spec)
+      cod := 0
+      k := 0
+      1.to 16 do { j:Int
+        // compute delta to add to code to compute symbol id
+        delt.at j put (k - cod)
+        (result && {size.at k = j}).if {
+          {size.at k = j}.while_do {
+            code.at k put cod
+            k := k + 1
+            cod := cod + 1
+          }
+          (cod-1 >= (1 << j)).if { result := False; }
+        }
+        // compute largest code + 1 for this size, preshifted as needed later
+        maxcode.at j put (cod << (16-j))
+        cod := cod << 1
+      }
+      maxcode.at 17 put 0FFFF_FFFFh
+    }
+    result.if {
+      // build non-spec acceleration table; 255 is flag for not-accelerated
+      fast.set_all_with 255 until ((1 << fast_bits)-1)
+      0.to (k-1) do { i:Int
+        + s:Int
+        s := size.at i
+        (s <= fast_bits).if {
+          + c,m:Int
+          c := code.at i << (fast_bits-s)
+          m := 1 << (fast_bits-s)
+          0.to (m-1) do { j:Int
+            fast.at (c+j) put i
+          }
+        }
+      }
+    }
+    result
   )
   
   - build_fast_ac (fast_ac:C_array Int16) <- // JPEG

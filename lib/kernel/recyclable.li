@@ -1,0 +1,38 @@
+Header
+  + name := Recyclable
+/*Recycling of objects: one stack for each concrete type (data slot of type Self).
+  Insert it, redefine @init (new object) and @free (end with `parent_recyclable.free') if needed.*/
+Insert
+  - parent_clone:Clone := Clone
+
+Private
+
+  - recycle_stack:Flat Array Self
+  // One copy for each type which inserts @Recyclable.
+
+Public
+
+  - new:Self <-
+  // A recycled object, or else a new one (see @init).
+  ( + result:Self
+
+    (recycle_stack.is_empty).if {
+      result := clone
+      result.init
+    } else {
+      result := recycle_stack.pop
+    }
+    result
+  )
+
+  - init <-
+  // Initialization of a new object (not of a recycled one).
+  (
+    // Nothing.
+  )
+
+  - free <-
+  // @self can be returned by @new.
+  (
+    recycle_stack.add_last self
+  )

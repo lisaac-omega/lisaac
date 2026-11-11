@@ -6,6 +6,27 @@ Header
    get high performances with NATIVE_ARRAYs, but you loose most valid bounds checks (as
    you can do in plain C code for example).
   */
+  - include := `
+static inline int li_is_zero(const void *p, unsigned long n)
+{ const unsigned char *b = p;
+  while (n-- > 0) if (*b++ != 0) return 0;
+  return 1;
+}
+#ifdef __ANDROID__
+// aligned_alloc exists only from API 28 on Android (posix_memalign from API 16).
+#include <stdlib.h>
+static inline void *li_aligned_alloc(unsigned long a, unsigned long n)
+{ void *p = NULL;
+  return posix_memalign(&p, a, n) == 0 ? p : NULL;
+}
+#elif defined(_WIN32)
+// No aligned_alloc in the Windows C runtime.
+#include <malloc.h>
+#define li_aligned_alloc(a, n) _aligned_malloc(n, a)
+#else
+#define li_aligned_alloc aligned_alloc
+#endif
+`;
 Insert
   
   - parent_clone: Clone := Clone
@@ -64,9 +85,22 @@ Public
     -? {nb_elements > 0}
   ]
   ( + result:C_array V
+    + v:V
+    + n,sz:Int
 
-    result := calloc_intern nb_elements
-    result.clear_all (nb_elements-1)
+    n := nb_elements
+    sz := element_sizeof
+    (`(__alignof__(@v) > 16)`:Boolean).if {
+      // SIMD vectors (@Real64x4...): malloc and calloc only align on 16 bytes.
+      result := `li_aligned_alloc(__alignof__(@v), (@n * @sz + __alignof__(@v) - 1) / __alignof__(@v) * __alignof__(@v))`:C_array V
+      result.clear_all (nb_elements-1)
+    }.elseif {`({ __typeof__(@v) li_z = @v; li_is_zero(&li_z, sizeof(li_z)); })`:Boolean} then {
+      // Default value of zeros (NULL, 0, 0.0...): calloc gives fresh pages, untouched.
+      result := `calloc(@n, @sz)`:C_array V
+    } else {
+      result := calloc_intern nb_elements
+      result.clear_all (nb_elements-1)
+    }
     result
   )
   [ //BSBS Old
@@ -221,7 +255,7 @@ Public
     -? {at >= 0}
     -? {other_lower >= 0}
     -? {other_upper >= other_lower - 1}
-    -? {(other_upper >= other_lower) ->> {other.is_not_null}}
+    -? {(other_upper >= other_lower) ->> {other != NULL}}
   ]
   ( + i:Int
     i := other_upper - other_lower
@@ -234,7 +268,7 @@ Public
   - fast_memcmp other:C_array V until up:Int :Boolean <-
   // Same jobs as @memcmp but uses infix `=' instead @equal.
   [ //BSBS Old
-    //-? {(capa > 0) ->> {other.is_not_null}}
+    //-? {(capa > 0) ->> {other != NULL}}
   ]
   ( + i:Int
 
@@ -251,7 +285,7 @@ Public
     -? {at >= 0}
     -? {other_lower >= 0}
     -? {other_upper >= other_lower - 1}
-    -? {(other_upper >= other_lower) ->> {other.is_not_null}}
+    -? {(other_upper >= other_lower) ->> {other != NULL}}
   ]
   ( + i:Int
 
@@ -513,13 +547,9 @@ Public
     -? {dest >= 0}
     -? {src_capacity >= 0}
   ]
-  ( + i1, i2:Int
-
-    i1 := dest
-    {i2 = src_capacity}.until_do {
-      at i1 put (src.at i2)
-      i2 := i2 + 1
-      i1 := i1 + 1
+  (
+    (src_capacity > 0).if {
+      `memmove((void *)(@self + @dest), (void *)@src, (size_t)@src_capacity * sizeof(*@self))`:(Pointer)
     }
   )
 
@@ -533,14 +563,11 @@ Public
     -? {src_min <= src_max + 1}
     -? {(src != self) | (dest != src_min)}
   ]
-  ( + i1, i2:Int
+  ( + n:Int
 
-    i1 := dest
-    i2 := src_min
-    {i2 > src_max}.until_do {
-      at i1 put (src.at i2)
-      i2 := i2 + 1
-      i1 := i1 + 1
+    n := src_max - src_min + 1
+    (n > 0).if {
+      `memmove((void *)(@self + @dest), (void *)(@src + @src_min), (size_t)@n * sizeof(*@self))`:(Pointer)
     }
   )
   
@@ -806,10 +833,6 @@ Public
   )
 
   // Interfacing with C:
-
-  - is_null:Boolean <- (to_pointer.is_null)
-
-  - is_not_null:Boolean <- (to_pointer.is_not_null)
 
   - to_external:Pointer <- to_pointer
   // Gives access to the C pointer on the area of storage.

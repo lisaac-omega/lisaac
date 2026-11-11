@@ -1,0 +1,34 @@
+Header
+  + name := Li_push
+/* Debug context: as the `lisaac_push' macros of the C code. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + off:Int
+  + code:Int
+  + is_first:Boolean
+
+  - create o:Int code c:Int first f:Boolean :Self <-
+  ( + result:Self
+    result := clone
+    result.make o code c first f
+    result
+  )
+
+  - make o:Int code c:Int first f:Boolean <- ( off := o; code := c; is_first := f; )
+
+  - eval fp:Int :Int <-
+  ( + a,v:Int
+    a := fp + off
+    (is_first).if {
+      v := top_context
+      `*(int64_t *)(@a) = @v`;
+    }
+    v := code
+    `((int64_t *)(@a))[1] = @v`;
+    set_top_context a
+    0
+  )

@@ -27,7 +27,7 @@ Public
   - msg t:String_alias do d:{} <-
   ( + w:Window
     w := Page.cur_pg.window
-    init w
+    init_win w
     (width,height) := (w.width,w.height)
     old_focus := focus
     focus := self

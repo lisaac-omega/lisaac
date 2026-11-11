@@ -1,0 +1,12 @@
+Header
+  + name := Div_column
+Inherit
+  
+  + parent_div:Flat Div
+  
+Public
+  
+  - self:Self '/' Left 20 other:Div :Div <-
+  ( 
+    (self + other).column
+  )

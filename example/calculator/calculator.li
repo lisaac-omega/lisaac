@@ -10,6 +10,14 @@ Header
   Without argument, it opens a window: type the expression with the
   mouse or the keyboard (Enter or '=' computes, Backspace deletes, Escape
   clears). The result is shown in the 4 bases 16, 10, 8 and 2.
+  The expression is edited at its cursor: a click puts it, the arrows,
+  Home, End and Delete move it or erase after it. A click on the line of
+  the previous computation (or the Up key) brings back its source, to
+  read it or edit it: a long expression is cut in lines, and the larger
+  the window, the more lines are shown, the keys keep a maximum size.
+  The keypad is a sub-window: its bar moves it, its bottom right corner
+  resizes it, a double click on its bar puts it back at the bottom; the
+  display takes the largest place left around it.
   Operators: + - * / (integer division) % (remainder) ^ (power)
   ! (factorial) and parentheses; the multiplication may also be written
   x or ×. In the window, a click on a line of the result (HEX, DEC, OCT
@@ -22,7 +30,8 @@ Header
   the grammar is one method, so that the priority of the operators comes
   from the grammar itself; the integers @ℤ that never overflow (try
   2^200 or 100!); a mouse driven @Window that draws its own keys on a
-  regular grid, with a click sound loaded from assets/key.wav.
+  regular grid and its own edit zone, with a hand cursor over what can
+  be clicked (@Clickable).
 
   To compile, as usual in a terminal:
   $ lisaac calculator -q -boost
@@ -49,17 +58,36 @@ Private
   - bin:String_buffer := String_buffer.create 80
   - error:String_buffer := String_buffer.create 80
 
+  // The source of the last computation, and its input base: a click on
+  // @history (or the Up key) brings it back to edit it.
+  - source:String_buffer := String_buffer.create 80
+  - source_base:Int := 10
+
+  // Index in @text where the next character goes.
+  - cursor:Int
+
+  // The edit zone, as drawn last: @edit_lines holds the index in @text
+  // of the first character of each line, @edit_widths the width of each
+  // character; @edit_first is the first line shown, @edit_shown the
+  // number of lines shown, and @edit_follow asks to scroll to the cursor.
+  - edit_lines:Array Int := Array Int.create_with_capacity 8
+  - edit_widths:Array Real32 := Array Real32.create_with_capacity 80
+  - edit_first:Int
+  - edit_shown:Int
+  - edit_left:Real32
+  - edit_row_height:Real32
+  - edit_follow:Boolean
+
   // Command line version.
 
   - compute src:String <-
   (
     String.tmp { tmp:String_buffer
-      (Calc_expr.evaluate src).if {
+      if (Calc_expr.evaluate src) then {
         Calc_expr.append (Calc_expr.value) in tmp base 10
         tmp.add_last '\n'
         tmp.print
       } else {
-        // The expression, then a '^' under the error.
         tmp.append "Error: "
         tmp.append (Calc_expr.error_message)
         tmp.add_last '\n'
@@ -78,7 +106,9 @@ Private
 
   - margin:Real32 := 16
   - gap:Real32 := 10
-  - panel_height:Real32 := 270
+  - panel_min_height:Real32 := 270
+  - key_max_width:Real32 := 110
+  - key_max_height:Real32 := 84
   - cols:Int := 6
   - rows:Int := 5
 
@@ -113,7 +143,7 @@ Private
     new Array Color of (Color.rgb(242,140,40), Color.rgb(46,170,100),
       Color.rgb(64,120,180), Color.rgb(132,92,190))
 
-  - base_line_y i:Int :Real32 <- margin + 120 + i * 34
+  - base_line_y i:Int :Real32 <- panel_y + panel_h - 150 + i * 34
 
   - results:Array String_buffer <-
   ( - r:Array String_buffer
@@ -121,31 +151,82 @@ Private
     r
   )
 
-  - key_sound:Sound
+  // The keypad is a sub-window: moved by its bar, resized by its bottom
+  // right corner. Until then (or after a double click on its bar), it is
+  // docked at the bottom, and its keys grow with the window up to a
+  // maximum size. The display takes the largest free place around it.
+  - pad_x:Real32
+  - pad_y:Real32
+  - pad_w:Real32
+  - pad_h:Real32
+  - pad_free:Boolean
+  - pad_drag:Int             // 1 when the keypad moves, 2 when it is resized.
+  - bar_height:Real32 := 24
+  - pad_in:Real32 := 10
+  - panel_x:Real32
+  - panel_y:Real32
+  - panel_w:Real32
+  - panel_h:Real32
 
-  - click p:Real32 <-
-  // Play the key sound, at the pitch @p (1 is normal).
-  (
-    (key_sound != NULL).if {
-      key_sound.stop
-      key_sound.seek_to_pcm_frame 0
-      key_sound.set_pitch p
-      key_sound.start
+  - pad_min_width:Real32 <- cols * 32 + gap * (cols - 1) + pad_in * 2
+
+  - pad_min_height:Real32 <- bar_height + pad_in + rows * 28 + gap * (rows - 1)
+
+  - layout <-
+  // Place the keypad in the window, and the display in the largest free
+  // place: above, below, at the left or at the right of the keypad.
+  ( + kw,kh,best,area:Real32
+    + x,y,w,h:Real32
+    pad_free.if {
+      pad_w := pad_w.min (width - margin * 2)
+      pad_w := pad_w.max pad_min_width
+      pad_h := pad_h.min (height - margin * 2)
+      pad_h := pad_h.max pad_min_height
+      pad_x := pad_x.min (width - margin - pad_w)
+      pad_x := pad_x.max margin
+      pad_y := pad_y.min (height - margin - pad_h)
+      pad_y := pad_y.max margin
+    } else {
+      kw := ((width - margin * 2 - pad_in * 2 - gap * (cols - 1)) / cols).min key_max_width
+      kh := ((height - margin * 3 - panel_min_height - bar_height - pad_in - gap * (rows - 1)) / rows).min key_max_height
+      pad_w := kw * cols + gap * (cols - 1) + pad_in * 2
+      pad_h := bar_height + pad_in + kh * rows + gap * (rows - 1)
+      pad_x := (width - pad_w) / 2
+      pad_y := height - margin - pad_h
+    }
+    best := -1
+    1.to 4 do { i:Int
+      i
+      .when 1 then { (x,y,w,h) := (margin, margin, width - margin * 2, pad_y - margin * 2); }
+      .when 2 then { (x,y,w,h) := (margin, pad_y + pad_h + margin, width - margin * 2, height - pad_y - pad_h - margin * 2); }
+      .when 3 then { (x,y,w,h) := (margin, margin, pad_x - margin * 2, height - margin * 2); }
+      .when 4 then { (x,y,w,h) := (pad_x + pad_w + margin, margin, width - pad_x - pad_w - margin * 2, height - margin * 2); }
+      // A place where the display fits is always better.
+      area := (w.max 0) * (h.max 0)
+      ((w >= 300) && {h >= panel_min_height}).if { area := area + 100_000_000; }
+      (area > best).if {
+        best := area
+        (panel_x, panel_y, panel_w, panel_h) := (x, y, w.max 1, h.max 1)
+      }
     }
   )
 
-  - key_width:Real32 <- (width - margin * 2 - gap * (cols - 1)) / cols
+  - is_on_bar (x,y:Real32) :Boolean <-
+  (x >= pad_x) && {x <= pad_x + pad_w} && {y >= pad_y} && {y <= pad_y + bar_height}
 
-  - key_height:Real32 <- (height - keys_top - margin - gap * (rows - 1)) / rows
+  - is_on_corner (x,y:Real32) :Boolean <-
+  (x >= pad_x + pad_w - 22) && {x <= pad_x + pad_w + 4} && {y >= pad_y + pad_h - 22} && {y <= pad_y + pad_h + 4}
 
-  - keys_top:Real32 <- margin * 2 + panel_height
+  - key_width:Real32 <- (pad_w - pad_in * 2 - gap * (cols - 1)) / cols
+
+  - key_height:Real32 <- (pad_h - bar_height - pad_in - gap * (rows - 1)) / rows
 
   - key_rect k:Int :(Real32,Real32,Real32,Real32) <-
   // Position and size of the key @k: the keys follow each other on the
   // grid, and the last one, "=", takes the 2 last cells.
   ( + x,y,w:Real32
-    x := margin + (k % cols) * (key_width + gap)
-    y := keys_top + (k / cols) * (key_height + gap)
+    x := pad_x + pad_in + (k % cols) * (key_width + gap)
+    y := pad_y + bar_height + (k / cols) * (key_height + gap)
     w := key_width
     (k = keys.upper).if { w := key_width * 2 + gap; }
     x, y, w, key_height
@@ -169,12 +250,138 @@ Private
   // Index in @bases of the result line under (@x,@y), -1 if none.
   ( + result:Int
     result := -1
-    ((x >= margin) && {x <= width - margin}).if {
+    ((x >= panel_x) && {x <= panel_x + panel_w}).if {
       0.to (bases.upper) do { i:Int
         ((y - base_line_y i).abs <= 16).if { result := i; }
       }
     }
     result
+  )
+
+  - is_on_history (x,y:Real32) :Boolean <-
+  (x >= panel_x) && {x <= panel_x + panel_w} && {y >= panel_y + 8} && {y <= panel_y + 40}
+
+  - edit_top:Real32 <- panel_y + 42
+
+  - edit_bottom:Real32 <- base_line_y 0 - 18
+
+  - line_end k:Int :Int <-
+  // Index in @text after the last character of the line @k.
+  ( + result:Int
+    result := text.count
+    (k < edit_lines.upper).if { result := edit_lines.at (k + 1); }
+    result
+  )
+
+  - append_glyph c:Char in buf:String_buffer <-
+  // The '*' is drawn as a true multiplication sign.
+  (
+    (c = '*').if { buf.append "×"; } else { buf.add_last c; }
+  )
+
+  - measure w:Real32 <-
+  // With the current font, the width of each character of @text, and
+  // its cut in lines of at most @w pixels.
+  ( + x:Real32
+    edit_widths.clear
+    edit_lines.clear
+    edit_lines.add_last 0
+    String.tmp { buf:String_buffer
+      0.to (text.upper) do { i:Int
+        buf.clear
+        append_glyph (text.at i) in buf
+        edit_widths.add_last (text_width buf)
+        ((x + edit_widths.last > w) && {i > edit_lines.last}).if {
+          edit_lines.add_last i
+          x := 0
+        }
+        x := x + edit_widths.last
+      }
+    }
+  )
+
+  - cursor_line:Int <-
+  ( + result:Int
+    {(result < edit_lines.upper) && {edit_lines.at (result + 1) <= cursor}}.while_do {
+      result := result + 1
+    }
+    result
+  )
+
+  - edit_at (x,y:Real32) :Int <-
+  // The position in @text nearest to (@x,@y), -1 if out of the edit zone.
+  ( + result,k:Int
+    + px,d,best:Real32
+    result := -1
+    ((x >= panel_x) && {x <= panel_x + panel_w} && {y >= edit_top} && {y < edit_top + edit_row_height * edit_shown}).if {
+      k := edit_first + ((y - edit_top) / edit_row_height).to_int
+      px := edit_left
+      result := edit_lines.at k
+      best := (x - px).abs
+      (edit_lines.at k).to (line_end k - 1) do { i:Int
+        px := px + edit_widths.at i
+        d := (x - px).abs
+        (d < best).if {
+          best := d
+          result := i + 1
+        }
+      }
+    }
+    result
+  )
+
+  - draw_edit <-
+  // The expression and its cursor: on one line in big, right aligned as
+  // on a calculator, else on several lines, which scroll to show the
+  // cursor when the zone is too small.
+  ( + w,x,y:Real32
+    + c:Int
+    w := panel_w - margin * 2
+    font_face_id (Font.sys (Font.bold))
+    font_size 38
+    measure w
+    (edit_lines.count = 1).if {
+      edit_row_height := 50
+      edit_left := panel_x + panel_w - margin
+      edit_widths.foreach { cw:Real32
+        edit_left := edit_left - cw
+      }
+    } else {
+      font_size 24
+      measure w
+      edit_row_height := 30
+      edit_left := panel_x + margin
+    }
+    edit_shown := ((edit_bottom - edit_top) / edit_row_height).to_int
+    edit_shown := edit_shown.min (edit_lines.count)
+    edit_shown := edit_shown.max 1
+    c := cursor_line
+    edit_follow.if {
+      edit_first := edit_first.min c
+      edit_first := edit_first.max (c - edit_shown + 1)
+      edit_follow := False
+    }
+    edit_first := edit_first.min (edit_lines.count - edit_shown)
+    edit_first := edit_first.max 0
+    fill_color white
+    text_align (align_left | align_middle)
+    String.tmp { buf:String_buffer
+      0.to (edit_shown - 1) do { i:Int
+        buf.clear
+        (edit_lines.at (edit_first + i)).to (line_end (edit_first + i) - 1) do { j:Int
+          append_glyph (text.at j) in buf
+        }
+        text (edit_left, edit_top + edit_row_height * i + edit_row_height / 2) msg buf
+      }
+    }
+    ((c >= edit_first) && {c < edit_first + edit_shown}).if {
+      x := edit_left
+      (edit_lines.at c).to (cursor - 1) do { i:Int
+        x := x + edit_widths.at i
+      }
+      y := edit_top + edit_row_height * (c - edit_first)
+      box (x, y + edit_row_height * 0.15) size (2, edit_row_height * 0.7) radius 1 color (Color.rgb(242,140,40))
+    }
   )
 
   - is_enabled t:String :Boolean <-
@@ -238,8 +445,8 @@ Private
 
   - draw_watermark <-
   // "Lisaac Ω" in shadow, at the bottom left of the display.
-  ( + x,y:Real32
-    (x,y) := (margin * 2, margin + panel_height - 20)
+  ( + x,y:Real32    
+    (x,y) := (panel_x + margin, panel_y + panel_h - 20)
     font_face_id (Font.sys (Font.italic))
     font_size 30
     text_align (align_left | align_middle)
@@ -257,20 +464,50 @@ Private
     selected := bases.at i = Calc_expr.input_base
     c := base_colors.at i
     selected.if {
-      box (margin + 6, y - 16) size (width - margin * 2 - 12, 32) radius 8 color (Color.rgb(30,34,46))
+      box (panel_x + 6, y - 16) size (panel_w - 12, 32) radius 8 color (Color.rgb(30,34,46))
     } else {
       c := c.set_af 0.35
     }
-    box (margin * 2, y - 12) size (48,24) radius 6 color c
+    box (panel_x + margin, y - 12) size (48,24) radius 6 color c
     font_face_id (Font.sys (Font.bold))
     font_size 14
     fill_color (selected.ok white or (Color.rgb(150,154,170)))
     text_align (align_center | align_middle)
-    text (margin * 2 + 24, y) msg (base_names.at i)
+    text (panel_x + margin + 24, y) msg (base_names.at i)
     font_face_id (Font.sys (Font.roman))
     font_size 18
     fill_color (selected.ok white or (Color.rgb(170,176,192)))
-    draw (results.at i) right (width - margin * 2) at y width (width - margin * 4 - 60) from_end False
+    draw (results.at i) right (panel_x + panel_w - margin) at y width (panel_w - margin * 2 - 60) from_end False
+  )
+
+  - draw_pad <-
+  // The frame of the keypad, with the grip of its bar on top and the
+  // one of its corner, lighter under the mouse.
+  ( + x,y:Real32
+    + c:Color
+    box (pad_x,pad_y) size (pad_w,pad_h) radius 14 color (Color.rgb(22,24,32))
+    c := Color.rgb(110,114,132)
+    ((pad_drag = 1) || {(pad_drag = 0) && {is_on_bar (Hand.x_cur, Hand.y_cur)}}).if {
+      c := Color.rgb(170,176,192)
+    }
+    x := pad_x + pad_w / 2 - 16
+    0.to 2 do { i:Int
+      box (x, pad_y + 7 + i * 4) size (32,2) radius 1 color c
+    }
+    c := Color.rgb(110,114,132)
+    ((pad_drag = 2) || {(pad_drag = 0) && {is_on_corner (Hand.x_cur, Hand.y_cur)}}).if {
+      c := Color.rgb(170,176,192)
+    }
+    (x,y) := (pad_x + pad_w - 6, pad_y + pad_h - 6)
+    box (x - 2, y - 2) size (3,3) radius 1 color c
+    box (x - 7, y - 2) size (3,3) radius 1 color c
+    box (x - 2, y - 7) size (3,3) radius 1 color c
+    // A word for the language, on the bar.
+    font_face_id (Font.sys (Font.italic))
+    font_size 13
+    text_align (align_left | align_middle)
+    fill_color (Color.rgb(110,114,132))
+    text (pad_x + 14, pad_y + bar_height / 2 + 1) msg "lisaac.org"
   )
 
   - draw_key k:Int <-
@@ -309,8 +546,28 @@ Private
       }
       Calc_expr.set_input_base b
       error.clear
-      click 1.0
+      cursor := text.count
+      edit_follow := True
     }
+  )
+
+  - recall <-
+  // The source of the last computation comes back, in its input base,
+  // to be read or edited.
+  (
+    (! source.is_empty).if {
+      text.copy source
+      cursor := text.count
+      Calc_expr.set_input_base source_base
+      error.clear
+      edit_follow := True
+    }
+  )
+
+  - insert s:String <-
+  (
+    text.insert_string s to cursor
+    cursor := cursor + s.count
   )
 
   - press t:String <-
@@ -319,23 +576,41 @@ Private
     (t == "AC").if {
       text.clear
       error.clear
+      cursor := 0
     }.elseif {t == "DEL"} then {
-      (! text.is_empty).if { text.remove_last; }
+      (cursor > 0).if {
+        cursor := cursor - 1
+        text.remove cursor
+      }
     }.elseif {t == "±"} then {
       (! text.is_empty).if {
         text.prepend "-("
         text.add_last ')'
+        cursor := text.count
       }
     }.elseif {t == "="} then {
       eval
     }.elseif {t == "×"} then {
-      text.add_last '*'
+      insert "*"
     }.elseif {t == "−"} then {
-      text.add_last '-'
+      insert "-"
     } else {
-      text.append t
+      insert t
     }
-    error.is_empty.if { click 1.0; } else { click 0.5; }
+    edit_follow := True
+  )
+
+  - edit_key c:Char <-
+  // The keys which move the cursor or erase after it.
+  (
+    c
+    .when 'L' then { cursor := (cursor - 1).max 0; }
+    .when 'R' then { cursor := (cursor + 1).min (text.count); }
+    .when 'B' then { cursor := 0; }
+    .when 'E' then { cursor := text.count; }
+    .when 'S' then { (cursor < text.count).if { text.remove cursor; }; }
+    .when 'U' then { recall; }
+    edit_follow := True
   )
 
   - eval <-
@@ -346,6 +621,8 @@ Private
     (! text.is_empty).if {
       (Calc_expr.evaluate text).if {
         z := Calc_expr.value
+        source.copy text
+        source_base := Calc_expr.input_base
         history.copy text
         history.append " ="
         0.to (bases.upper) do { i:Int
@@ -354,11 +631,14 @@ Private
         }
         text.clear
         Calc_expr.append z in text base (Calc_expr.input_base)
+        cursor := text.count
       } else {
         error.append (Calc_expr.error_message)
         error.append " (at character "
         (Calc_expr.error_index + 1).append_in error
         error.append ")"
+        // The cursor goes to the error.
+        cursor := Calc_expr.error_index.min (text.count)
       }
     }
   )
@@ -367,45 +647,97 @@ Public
 
   - draw <-
   (
+    layout
     box (0,0) size (width,height) radius 0 color (Color.rgb(30,32,42))
-    box (margin,margin) size (width - margin * 2, panel_height) radius 14 color (Color.rgb(14,16,22))
+    box (panel_x,panel_y) size (panel_w,panel_h) radius 14 color (Color.rgb(14,16,22))
     draw_watermark
     // The display.
     font_face_id (Font.sys (Font.roman))
     font_size 18
-    fill_color (Color.rgb(130,136,156))
-    draw history right (width - margin * 2) at (margin + 24) width (width - margin * 4) from_end True
-    font_face_id (Font.sys (Font.bold))
-    font_size 38
-    fill_color white
-    draw text right (width - margin * 2) at (margin + 68) width (width - margin * 4) from_end True
+    // Lighter under the mouse: a click brings its source back.
+    (is_on_history (Hand.x_cur, Hand.y_cur)).if {
+      fill_color (Color.rgb(200,204,220))
+    } else {
+      fill_color (Color.rgb(130,136,156))
+    }
+    draw history right (panel_x + panel_w - margin) at (panel_y + 24) width (panel_w - margin * 2) from_end True
+    draw_edit
     0.to (bases.upper) do { i:Int
       draw_base_line i
     }
     font_face_id (Font.sys (Font.roman))
     font_size 16
     fill_color (Color.rgb(255,96,96))
-    draw error right (width - margin * 2) at (margin + panel_height - 26) width (width - margin * 4 - 150) from_end False
-    // The keys.
+    draw error right (panel_x + panel_w - margin) at (panel_y + panel_h - 26) width (panel_w - margin * 2 - 150) from_end False
+    // The keypad.
+    draw_pad
     font_face_id (Font.sys (Font.bold))
-    font_size 24
+    font_size ((key_height * 0.4).min 24)
     0.to (keys.upper) do { k:Int
       draw_key k
     }
   )
 
+  - is_clickable (x,y:Real32) :Boolean <-
+  // An enabled key, a line of the result (its base) or the history line.
+  ( + k:Int
+    k := key_at (x,y)
+    ((k != -1) && {is_enabled (keys.at k)}) || {base_at (x,y) != -1} || {is_on_history (x,y)}
+  )
+
   - event ev:Int :Boolean <-
   ( + k:Int
+    ((ev = Hand.move) || {ev = Hand.in} || {ev = Hand.out}).if {
+      // A hand over what reacts to a click, as for a link.
+      Clickable.show_hand ((ev != Hand.out) && {is_clickable (Hand.x_cur, Hand.y_cur)})
+    }
     (ev = Hand.clic).if {
       k := key_at (Hand.x_cur, Hand.y_cur)
       ((k != -1) && {is_enabled (keys.at k)}).if {
         press (keys.at k)
       }.elseif {(k := base_at (Hand.x_cur, Hand.y_cur)) != -1} then {
         select_base k
+      }.elseif {is_on_bar (Hand.x_cur, Hand.y_cur)} then {
+        // A double click docks the keypad again.
+        (Hand.nb_clic > 0).if { pad_free := False; }
+      }.elseif {is_on_history (Hand.x_cur, Hand.y_cur)} then {
+        recall
+      }.elseif {(k := edit_at (Hand.x_cur, Hand.y_cur)) != -1} then {
+        cursor := k
       }
+    }.elseif {(ev = Hand.drag) || {ev = Hand.ldrag}} then {
+      Hand.is_begin.if {
+        pad_drag := 0
+        (is_on_corner (Hand.x_begin, Hand.y_begin)).if {
+          pad_drag := 2
+        }.elseif {is_on_bar (Hand.x_begin, Hand.y_begin)} then {
+          pad_drag := 1
+        }
+      }
+      (pad_drag = 1).if {
+        pad_free := True
+        pad_x := pad_x + Hand.dx
+        pad_y := pad_y + Hand.dy
+      }.elseif {pad_drag = 2} then {
+        pad_free := True
+        pad_w := pad_w + Hand.dx
+        pad_h := pad_h + Hand.dy
+      }
+      Hand.is_end.if { pad_drag := 0; }
     }
     Paper.refresh_again
     True
+  )
+
+  - mouse_scroll (dx,dy:Real64) <-
+  // The wheel scrolls the lines of a long expression.
+  (
+    (dy > 0).if {
+      edit_first := edit_first - 1
+    }.elseif {dy < 0} then {
+      edit_first := edit_first + 1
+    }
+    Paper.refresh_again
   )
 
   - key s:String cmd c:Uint8 :Boolean <-
@@ -416,6 +748,8 @@ Public
       .when '\0Ah\' then { press "="; }
       .when '\b'    then { press "DEL"; }
       .when '\27\'  then { press "AC"; }
+      .when 'L' or 'R' or 'B' then { edit_key ch; }
+      .when 'E' or 'S' or 'U' then { edit_key ch; }
     }.elseif {(c & (Keyboard.ctrl | Keyboard.alt)) != 0} then {
       // Nothing.
     }.elseif {ch = '='} then {
@@ -437,18 +771,19 @@ Public
 
   - main <-
   (
-    (Command_args.upper = 1).if {
-      compute (Command_args.at 1)
+    (Command_args.upper >= 1).if {
+      String.tmp { buf:String_buffer
+        Command_args.foreach { arg:String_alias
+          buf.append arg
+          buf.add_last ' '
+        }
+        compute (buf.to_string_alias)
+      }
     }.elseif {Command_args.upper > 1} then {
       Out # "Usage: " # (Command_args.at 0) # " [\"expression\"]\n"
       System.exit 1
     } else {
-      init "Calculator ℤ" size (460,720)
-      Audio.init
-      key_sound := Sound.new
-      (key_sound.init_from_asset "key.wav" != Audio.success).if {
-        key_sound := NULL; // No sound, but the calculator still works.
-      }
+      init "Calculator ℤ · Lisaac Ω" size (460,740)
       Paper.run
     }
   )

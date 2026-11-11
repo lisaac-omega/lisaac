@@ -12,6 +12,8 @@ Public
 
   - my_copy:Self <- self
 
+  - first_access v:Local :Int <- 0
+
   //
   // Execute.
   //

@@ -1,0 +1,629 @@
+Header
+  + name := Div
+Insert
+
+  - parent_clone:Clone := Clone
+  - parent_utils:Utils := Utils
+  
+Div
+
+  - set t:Int on msk:Uint16 :Self <-
+  ( 
+    attribute := (attribute & ~msk) | t
+    //(attribute != Old attribute).if { set_update_needed; }
+    self
+  )
+  
+  + update_needed:Boolean
+  
+  - set_update_needed <-
+  ( + n:Div
+    (update_needed).if_false {
+      update_needed := True
+      n := parent
+      {n != NULL}.while_do {
+        n.set_update_needed
+        n := n.parent
+      }
+    }
+  )
+  
+Public
+  
+  - name:String_alias := "DIV"
+  
+  - debug_mode:Boolean := False
+  - set_debug_mode b:Boolean <- ( debug_mode := b; )
+  
+  // Horizontal:
+  - bit_center:Int := 0000_0000b; // By default
+  - bit_left:Int   := 0000_0001b; // <
+  - bit_right:Int  := 0000_0010b; // >
+  - bit_widest:Int := 0000_0011b; // <>
+  - is_h typ:Int :Boolean <- (attribute & 0011b) = typ
+  
+  - center:Self <- set bit_center on 0000_0011b
+  - left:Self   <- set bit_left   on 0000_0011b
+  - right:Self  <- set bit_right  on 0000_0011b
+  - widest:Self <- set bit_widest on 0000_0011b
+  
+  // Vertical:
+  - bit_middle:Int  := 0000_0000b; // By default
+  - bit_top:Int     := 0000_0100b; // ^
+  - bit_bottom:Int  := 0000_1000b; // v
+  - bit_highest:Int := 0000_1100b; // ^v
+  - is_v t:Int :Boolean <- (attribute & 1100b) = t
+  
+  - middle:Self  <- set bit_middle  on 0000_1100b
+  - top:Self     <- set bit_top     on 0000_1100b
+  - bottom:Self  <- set bit_bottom  on 0000_1100b
+  - highest:Self <- set bit_highest on 0000_1100b
+  
+  - bit_sizest:Int := 0000_1111b; // ^v<>
+  - sizest:Self  <- set bit_sizest on 0000_1111b
+  
+  // Lock:
+  - bit_width_lock:Int  := 0001_0000b; // W
+  - bit_height_lock:Int := 0010_0000b; // H
+  - is_width_lock:Boolean  <- (attribute & bit_width_lock ) != 0
+  - is_height_lock:Boolean <- (attribute & bit_height_lock) != 0
+  
+  - width_lock:Self  <- ( attribute := (attribute & 1100_1111b) | bit_width_lock;  self)
+  - height_lock:Self <- ( attribute := (attribute & 1100_1111b) | bit_height_lock; self)
+  - size_lock:Self   <- 
+  ( attribute := (attribute & 1100_1111b) | bit_width_lock | bit_height_lock; self)
+  
+  // Representation:
+  - bit_free:Int   := 0000_0000b; // ? (Free) 
+  - bit_line:Int   := 0100_0000b; // -
+  - bit_column:Int := 1000_0000b; // | 
+  - bit_geode:Int  := 1100_0000b; // * 
+  - is styl:Int :Boolean <- (attribute & 1100_0000b) = styl
+  
+  - line:Self   <- set bit_line   on 1100_0000b
+  - column:Self <- set bit_column on 1100_0000b
+  - geode:Self  <- set bit_geode  on 1100_0000b
+  
+  - bit_open:Int  := 0_0000_0000b
+  - bit_close:Int := 1_0000_0000b
+  - is_open:Boolean  <- (attribute & 1_0000_0000b) = bit_open
+  - is_close:Boolean <- (attribute & 1_0000_0000b) = bit_close
+    
+  - open:Self  <- 
+  ( 
+    (is_close).if {
+      set bit_open  on 1_0000_0000b
+      refresh
+      Div_out.draw_stack.add_last self
+    }
+    self
+  )
+  
+  - close:Self <- 
+  ( + idx:Int
+    (is_open).if {
+      set bit_close on 1_0000_0000b
+      idx := Div_out.draw_stack.fast_first_index_of self
+      (idx != Div_out.draw_stack.count).if {
+        Div_out.draw_stack.remove idx
+      }
+    }
+    self
+  )
+    
+  // By default: Center, Middle, No lock, Close
+  + attribute:Uint16
+  
+  //
+  // Tree:
+  //
+  
+  + parent:Div
+  + child:Flat Array Div
+  
+  - set_parent p:Div <- ( parent := p; )
+  
+  - remove d:Div :Int <- 
+  ( + idx:Int
+    idx := child.fast_first_index_of d
+    child.remove idx
+    d.set_parent NULL
+    idx
+  )
+  
+  - self:Self '-' Left 10 other:Div :Self <- ( remove other; self )
+  
+  - self:Self '+' Left 10 other:Div :Self <-
+  // Append @other like child of @self.
+  (
+    child.add_last other
+    other.set_parent self
+    //set_update_needed
+    self
+  )
+  
+  - self:Self '+>' Left 10 other:Div :Self <- self + other
+  
+  - self:Self '<+' Left 10 other:Div :Self <-
+  // Append @other like child of @self.
+  ( 
+    child.add_first other
+    other.set_parent self
+    //set_update_needed
+    self
+  )
+  
+  - self:Self '*' Left 20 other:Div :Div <-
+  ( + result:Div
+    + d:Exact Div
+    d ?= self
+    (d = NULL).if {
+      result := Div.create_intern + self + other
+    } else {
+      result := d + other
+    }
+    result.set_update_needed
+    result
+  )
+  
+  - self:Self '|' Left 20 other:Div :Div <-
+  ( + result:Div
+    (other = NULL).if { result := self; }    
+      else { result := (Div_line.create_intern + self + other).line; }
+    result
+  )
+  
+  - self:Self '/' Left 20 other:Div :Div <-
+  ( + result:Div
+    (other = NULL).if { result := self; } 
+      else { result := (Div_column.create_intern + self + other).column; }
+    result
+  )
+     
+  + width_close :Real32
+  + height_close:Real32
+  
+  + margin_left:Real32
+  + margin_right:Real32
+  + margin_top:Real32
+  + margin_bottom:Real32
+  
+  - margin m:Real32 :Self <-
+  ( margin_bottom := margin_top := margin_right := margin_left := m; self)
+  - margin_hori m:Real32 :Self <-
+  ( margin_right := margin_left := m; self)
+  - margin_vert m:Real32 :Self <-
+  ( margin_top := margin_bottom := m; self)
+  - margin_b m:Real32 :Self <- ( margin_bottom := m; self)
+  - margin_t m:Real32 :Self <- ( margin_top    := m; self)
+  - margin_l m:Real32 :Self <- ( margin_left   := m; self)
+  - margin_r m:Real32 :Self <- ( margin_right  := m; self)
+  - margin_hori (l,r:Real32) vert (t,b:Real32) :Self <-
+  ( 
+    (margin_left,margin_right) := (l,r)
+    (margin_top,margin_bottom) := (t,b)
+    self
+  )
+  
+  + xo:Real32
+  + yo:Real32
+  + width:Real32
+  + height:Real32
+  - x_min:Real32 <- xo
+  - y_min:Real32 <- yo
+  - x_max:Real32 <- xo+width -1
+  - y_max:Real32 <- yo+height-1
+  - x_center:Real32 <- (x_min+x_max).to_real32 / 2.0
+  - y_center:Real32 <- (y_min+y_max).to_real32 / 2.0
+  
+  - set_size (w,h:Real32) <-
+  (
+    (width,height) := (w.max width_min,h.max height_min)
+  )
+  
+  - set_height h:Real32 <- ( height := h; )
+  
+  - translate (dx,dy:Real32) <- ( xo := xo + dx; yo := yo + dy; )
+  
+  - is_inside (x,y:Real32) :Boolean <- 
+  (
+    (is_open) &&
+      {x.in_range x_min to x_max} && 
+      {y.in_range y_min to y_max}
+  )
+  
+  - search_div (x,y:Real32) :Div <-
+  ( + result:Div
+    + i:Int
+    + t:Array Div
+    t := Div_out.draw_stack
+    i := t.upper
+    {(i >= t.lower) && {result = NULL}}.while_do {
+      result := t.at i.search_in_div (x,y)
+      i := i - 1
+    }
+    (result = NULL).if {
+      result := search_in_div (x,y)
+    }
+    result
+  )
+    
+  - search_in_div (x,y:Real32) :Div <-
+  ( + result:Div
+    + i:Int
+    (is_inside (x,y)).if {
+      i := child.upper
+      {(i >= child.lower) && {result = NULL}}.while_do {
+        result := child.at i.search_in_div (x,y)
+        i := i - 1
+      }
+      (result = NULL).if { result := self; }
+    }
+    result
+  )
+  
+  - index:Int <-
+  ( + p:Div
+    + i:Int
+    p := parent
+    {(i <= p.child.upper) && {p.child.at i != self}}.while_do { i := i + 1; }
+    i
+  )
+  
+  - next:Div <-
+  ( + result,p:Div
+    + i:Int
+    p := parent
+    {(i <= p.child.upper) && {p.child.at i != self}}.while_do { i := i + 1; }
+    i := i + 1
+    (i <= p.child.upper).if { result := p.child.at i; }
+    result
+  )
+  
+  - previous:Div <-
+  ( + result,p:Div
+    + i:Int
+    p := parent
+    i := p.child.upper
+    {(i >= 0) && {p.child.at i != self}}.while_do { i := i - 1; }
+    i := i - 1
+    (i >= 0).if { result := p.child.at i; }
+    result
+  )
+  
+  - is_leaf:Boolean <- child.is_empty
+  
+  // 
+  // Creation
+  //
+  
+  - create st:String_alias :Self <- create st to (0,0) size (20,20)
+  
+  - create st:String_alias size (w,h:Real32) :Self <- create st to (0,0) size (w,h)
+  
+  - create_size (w,h:Real32) :Self <- create NULL to (0,0) size (w,h)
+  
+  - create_intern:Self <- create NULL to (0,0) size (20,20)
+  
+  - create st:String_alias to (x,y:Real32) size (w,h:Real32) :Self <-  
+  ( + result:Self
+    result := clone
+    result.make st to (x,y) size (w,h)
+    result
+  )
+  
+  - free <- ( abstract; )
+  
+  - make st:String_alias to (x,y:Real32) size (w,h:Real32) <-
+  ( + attr:Uint8
+    attr := bit_line
+    (st != NULL).if {
+      0.to (st.upper) do { j:Int
+        (st.at j)
+        .when '<' then { attr := attr | bit_left;   }
+        .when '>' then { attr := attr | bit_right;  }
+        .when '^' then { attr := attr | bit_top;    }
+        .when 'v' then { attr := attr | bit_bottom; }
+        .when 'W' then { attr := attr | bit_width_lock;  }
+        .when 'H' then { attr := attr | bit_height_lock; }
+        .when 'S' then { attr := attr | bit_width_lock | bit_height_lock; }
+        .when '-' then { attr := (attr & 0011_1111b) | bit_line; }
+        .when '|' then { attr := (attr & 0011_1111b) | bit_column; }
+        .when '*' then { attr := (attr & 0011_1111b) | bit_geode;  }
+      }
+    }
+    attribute := attr
+    (xo,yo) := (x,y)
+    (width,height) := (w,h)
+    child.clear
+  )
+      
+  //
+  // Dimension.
+  //
+
+  - width_min:Real32 <- 
+  ( + result:Real32
+    (is_close).if {      
+      result := width_close
+    }.elseif {!is_leaf} then {
+      (is bit_geode).if {
+        + w,h:Real32
+        0.to (child.upper) do { i:Int
+          w := w.max (child.at i.width_min)
+          h := h.max (child.at i.height_min)
+        }
+        result := (w*h*child.count).sqrt
+        result := result.max (w*3.0)
+      }.elseif {is bit_line} then {
+        0.to (child.upper) do { i:Int
+          result := result + child.at i.width_min
+        }
+      } else { // is column
+        0.to (child.upper) do { i:Int
+          result := result.max (child.at i.width_min)
+        }
+      }
+      result := result + margin_left + margin_right
+    }
+    result  
+  )
+
+  - height_min:Real32 <- 
+  ( + result:Real32
+    (is_close).if {      
+      result := height_close
+    }.elseif {!is_leaf} then {
+      (is bit_geode).if {
+        + w,h:Real32
+        0.to (child.upper) do { i:Int
+          w := w.max (child.at i.width_min)
+          h := h.max (child.at i.height_min)
+        }
+        result := (w*h*child.count).sqrt
+        result := result.max (h*3.0)
+      }.elseif {is bit_line} then {
+        0.to (child.upper) do { i:Int
+          result := result.max (child.at i.height_min)
+          
+        }
+      } else { // is column 
+        0.to (child.upper) do { i:Int
+          result := result + child.at i.height_min
+        }
+      }
+      result := result + margin_top + margin_bottom
+    }
+    result  
+  )
+  
+  - set_position (x,y:Real32) size (w,h:Real32) <-
+  [
+   // -? {w >= width_min}
+   // ? {h >= height_min}
+  ]
+  ( + wm,hm,nx,ny,nw,nh,marg:Real32
+    + n:Div
+    //h.print; '/'.print; height_min.println
+    /*? {w >= width_min}
+    ? {h >= height_min}
+    ? {is_width_lock  -> (width_min  = w)}
+    ? {is_height_lock -> (height_min = h)};*/
+    
+    //((xo != x) || {yo != y} || {width != w} || {height != h}).if {
+    //"Pos ".print; x.print; '\n'.print
+    //(is_open).if {
+      (xo,yo) := (x,y)
+      (width,height) := (w,h)
+    //}
+      ((is_open) && {!is_leaf}).if {
+        wm := width_min
+        hm := height_min
+        (is bit_geode).if {
+          not_yet_implemented
+        }.elseif {is bit_line} then { // is line
+          + cnt,wmm:Real32
+          cnt := child.count_if { n:Div; wmm := wmm+n.width_min; ! n.is_width_lock}
+          nx := x
+          (is_h bit_left).if {
+            nx := nx + margin_left
+          }.elseif {is_h bit_right} then {
+            nx := nx + w - wmm - margin_right
+          }.elseif {is_h bit_center} then {          
+            nx := nx + (w - wmm) / 2
+          } else { // full            
+            nx := nx + margin_left
+            (cnt != 0).if { marg := (w - wmm - margin_left - margin_right) / cnt; }
+          }
+          0.to (child.upper) do { i:Int
+            n := child.at i
+            // Vertical:            
+            nh := (n.is_height_lock).ok (n.height_min) or 
+              ((is_v bit_highest).ok (h-margin_top-margin_bottom) or hm)
+            ny := (is_v bit_bottom).ok (y+h-nh-margin_bottom) or 
+              ((is_v bit_middle).ok (y+(h-nh)/2) or (y+margin_top))
+            // Horizontal:          
+            nw := n.width_min + (is_h bit_widest && {!n.is_width_lock}).ok marg or 0
+            //nw.print; ' '.print; marg.print;' '.print; w.print; '\n'.print
+            //'>'.print; nx.print; ','.print; ny.print; ' '.print
+            //nw.print; ','.print; nh.print; '\n'.print
+            nw := nw.max (n.width_min)
+            nh := nh.max (n.height_min)
+            n.set_position (nx,ny) size (nw,nh)
+            nx := nx + nw
+          }
+        } else { // is column        
+          + cnt:Int
+          + hmm:Real32
+          cnt := child.count_if { n:Div; hmm := hmm+n.height_min; ! n.is_height_lock}
+          ny := y
+          (is_v bit_top).if {
+            ny := ny + margin_top
+          }.elseif {is_v bit_bottom} then {
+            ny := ny + h - hmm - margin_bottom
+          }.elseif {is_v bit_middle} then {
+            ny := ny + (h - hmm) / 2
+          } else { // full
+            ny := ny + margin_top
+            (cnt != 0).if { marg := (h - hmm - margin_top - margin_bottom) / cnt; }
+          }
+          0.to (child.upper) do { i:Int
+            n := child.at i
+            // Horizontal:
+            nw := (n.is_width_lock).ok (n.width_min) or 
+              ((is_h bit_widest).ok (w-margin_left-margin_right) or wm)
+            nx := (is_h bit_right).ok (x+w-nw-margin_right) or 
+              ((is_h bit_center).ok (x+(w-nw)/2) or (x+margin_left))
+            // Vertical:          
+            nh := n.height_min + (is_v bit_highest && {!n.is_height_lock}).ok marg or 0
+            nw := nw.max (n.width_min)
+            nh := nh.max (n.height_min)
+            n.set_position (nx,ny) size (nw,nh)
+            ny := ny + nh
+          }
+        }
+      }
+    //}
+  )
+  
+  - refresh <-
+  (
+    //PAPER.inc_animation
+    set_position (xo,yo) size (width,height)
+    //PAPER.dec_animation
+  )
+  
+  - draw pen:Pen <-
+  (    
+    (is_open).if {
+      draw_debug pen
+      draw_child pen
+    }
+  )
+  
+  // Drawn above the tree (see @Div_out).
+  - draw_out pen:Pen <- ( )
+  
+  - draw_child pen:Pen <-
+  (
+    (is_leaf).if_false {
+      0.to (child.upper) do { i:Int
+        child.at i.draw pen
+      }
+    }
+  )
+  
+  - draw_debug pen:Pen <-
+  (    
+    (debug_mode).if {
+      pen.save
+      pen.begin_path
+      pen.rect_varying (xo,yo) size (width,height) radius (10.0,0.0,10.0,0.0)
+      pen.stroke_width 1.0
+      (focus = self).if {
+        pen.stroke_color (Color.rgb (0FFh,000h,000h))
+      } else {
+        pen.stroke_color (Color.rgb (000h,0FFh,000h))
+      }
+      pen.stroke
+      pen.restore
+    }
+  )
+  
+Public
+  
+  - focus:Div
+  - reset_focus <- ( focus := NULL; )
+  - set_focus d:Div :Boolean <-
+  ( + result:Boolean
+    (d != focus).if {
+      (focus != NULL).if { focus.lost_focus; }
+      focus := d
+      (focus != NULL).if { result := focus.get_focus; }
+    } else {
+      result := True
+    }
+    result
+  )
+  
+  - clic (x,y:Real32) :Boolean
+  - get_focus:Boolean
+  - lost_focus:Boolean
+  
+  // By default, a release inside @self is a click.
+  - touch_event t:Touch <-
+  (
+    ((t.is_released) && {is_inside (t.x,t.y)}).if { clic (t.x,t.y); }
+  )
+  
+Div
+  
+  - button pen:Pen to (cx,cy:Real32) radius r:Real32 <-
+  ( + fg:Paint
+        
+    fg := Paint.create_radial (cx+r/10.0,cy-r/10.0) radius (r/1.6,r)
+      color (Color.rgba(230,230,255,255)) 
+      to (Color.rgba(255,255,255,255))
+    pen.begin_path
+    pen.circle (cx,cy) radius r
+    pen.fill_paint fg
+    pen.fill
+    pen.stroke_width 1
+    pen.stroke_color (Color.rgba(180,180,200,255))
+    pen.stroke
+    fg.free
+  )
+  
+Public
+  
+  //
+  // Debug.
+  //
+  
+  - print_attribute <-
+  (
+    "hori.:".print
+    (is_h bit_center).if { '.'.print; }
+    (is_h bit_left  ).if { '<'.print; }
+    (is_h bit_right ).if { '>'.print; }
+    (is_h bit_widest).if { "<>".print; }
+    " vert.:".print
+    (is_v bit_middle ).if { '.'.print; }
+    (is_v bit_top    ).if { '^'.print; }
+    (is_v bit_bottom ).if { 'v'.print; }
+    (is_v bit_highest).if { "^v".print; }
+    " lock:".print
+    (is_width_lock ).if { 'W'.print; }
+    (is_height_lock).if { 'H'.print; }
+    " stat:".print
+    (is bit_close ).if { "!!!!CLOSE!!!!".print; }
+    (is bit_line  ).if { "LINE".print;  }
+    (is bit_column).if { "COLUMN".print;}
+    (is bit_geode ).if { "GEODE".print; }
+    '\n'.print
+  )
+  
+  - indent:String_buffer := String_buffer.create 8
+  
+  - print <-
+  (
+    indent.print; name.print; ": ".print
+    print_attribute
+    indent.print
+    "=>[".print; x_min.print; ','.print; y_min.print
+    ' '.print; x_max.print; ','.print; y_max.print
+    "] W:".print; width.print;  "(".print; width_min.print
+    ") H:".print; height.print; "(".print; height_min.print
+    ")\n".print
+    indent.print
+    "Margin:".print
+    " ^".print; margin_top.print; " v".print; margin_bottom.print
+    " <".print; margin_left.print; " >".print; margin_right.print
+    '\n'.print
+    (is_leaf).if_false {
+      indent.append "  "
+      child.foreach { c:Div; c.print; }
+      indent.remove_tail 2
+    }
+  )
+  

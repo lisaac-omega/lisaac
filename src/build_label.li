@@ -1,8 +1,8 @@
 Header
   + name := Build_label
-Inherit
+Insert
   
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
   
 Public
   
@@ -102,14 +102,12 @@ Public
         label_back := get string_tmp
         //              
         (is_inline).if {
-          //"Inline #".print; nline.print; '\n'.print
           // Begin inline:
           (convert_dico.is_empty).if {
             first_copy := label_back
           }
           // self inline:
           // DCDC
-          //new_label := convert_dico.fast_reference_at label
           new_label := convert_dico.reference_at label
           (new_label = NULL).if {            
             string_tmp.copy label
@@ -123,7 +121,6 @@ Public
             label := new_label
           }
           // DCDC
-          //new_label := convert_dico.fast_reference_at label_back
           new_label := convert_dico.reference_at label_back
           (new_label = NULL).if {
             ((label_back.first != '-') && {label_back != first_copy}).if {
@@ -178,7 +175,7 @@ Public
     string_tmp.remove_tail 2
     string_tmp.append "_label.s"
     output_file := File_utils.open_write string_tmp
-    (output_file.is_null).if {
+    (output_file = NULL).if {
       Stderr.put_string "Error: File is not created !\n"
       exit exit_failure_code
     }

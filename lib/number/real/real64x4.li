@@ -1,0 +1,93 @@
+Header
+  + name := Flat Real64x4
+/*4 @Real64 in one SIMD register (gcc vector extension): one operation for the 4 values.
+  A @Real or a @Real64 is converted to 4 times the same value: `z * 2.0 + c'.*/
+  - type    := `double __attribute__((vector_size(32)))`;
+  - default := (`((double __attribute__((vector_size(32)))){0.0,0.0,0.0,0.0})`:Real64x4);
+  - import  := Real, Real64;
+  - include :=
+`
+typedef double __attribute__((vector_size(32))) r64x4;
+static inline r64x4 r64x4_load(const double *p) { r64x4 v; __builtin_memcpy(&v, p, sizeof(v)); return v; }
+static inline void *r64x4_store(double *p, r64x4 v) { __builtin_memcpy(p, &v, sizeof(v)); return p; }
+#if defined(__GNUC__) && !defined(__clang__)
+#define r64x4_broadcast(x,i) __builtin_shuffle((x), (long long __attribute__((vector_size(32)))){(i),(i),(i),(i)})
+#else
+#define r64x4_broadcast(x,i) (((double __attribute__((vector_size(32)))){0.0,0.0,0.0,0.0}) + (x)[i])
+#endif
+#ifdef __AVX__
+#include <immintrin.h>
+#define r64x4_sqrt(x) _mm256_sqrt_pd(x)
+#define r64x4_rsqrt_seed(x) _mm256_cvtps_pd(_mm_rsqrt_ps(_mm256_cvtpd_ps(x)))
+static inline __m256d r64x4_sums(__m256d a, __m256d b, __m256d c, __m256d d)
+{ __m256d t0 = _mm256_hadd_pd(a, b), t1 = _mm256_hadd_pd(c, d);
+  return _mm256_permute2f128_pd(t0, t1, 0x21) + _mm256_blend_pd(t0, t1, 0xC); }
+#else
+#include <math.h>
+static inline double __attribute__((vector_size(32))) r64x4_sqrt(double __attribute__((vector_size(32))) x)
+{ x[0] = sqrt(x[0]); x[1] = sqrt(x[1]); x[2] = sqrt(x[2]); x[3] = sqrt(x[3]); return x; }
+static inline double __attribute__((vector_size(32))) r64x4_rsqrt_seed(double __attribute__((vector_size(32))) x)
+{ x[0] = 1.0 / sqrt(x[0]); x[1] = 1.0 / sqrt(x[1]); x[2] = 1.0 / sqrt(x[2]); x[3] = 1.0 / sqrt(x[3]); return x; }
+static inline r64x4 r64x4_sums(r64x4 a, r64x4 b, r64x4 c, r64x4 d)
+{ r64x4 r = {a[0]+a[1]+a[2]+a[3], b[0]+b[1]+b[2]+b[3], c[0]+c[1]+c[2]+c[3], d[0]+d[1]+d[2]+d[3]}; return r; }
+#endif
+`;
+
+Insert
+  - parent_utils:Utils := Utils
+
+Public
+
+  - create (a,b,c,d:Real64) :Self <- `((double __attribute__((vector_size(32)))){@a,@b,@c,@d})`:Self
+
+  - load p:C_array Real64 at i:Int :Self <- `r64x4_load(@p + @i)`:Self
+  // The 4 values from @p.at @i (no alignment needed).
+
+  - store p:C_array Real64 at i:Int <- `r64x4_store(@p + @i, @self)`:(Pointer)
+  // The 4 values to @p.at @i (no alignment needed).
+
+  - from_real64 r:Real64 :Self <- `(((double __attribute__((vector_size(32)))){0.0,0.0,0.0,0.0}) + @r)`:Self
+
+  - from_real r:Real :Self <- from_real64 (r.to_real64)
+
+  - at i:Int :Real64 <- `(@self)[@i]`:Real64
+
+  //
+  // Operations on the 4 values.
+  //
+
+  - self:Self '+' Left 80 <> other:Self :Self <- `@self + @other`:Self
+
+  - self:Self '-' Left 80 other:Self :Self <- `@self - @other`:Self
+
+  - self:Self '*' Left 90 <> other:Self :Self <- `@self * @other`:Self
+
+  - self:Self '/' Left 90 other:Self :Self <- `@self / @other`:Self
+
+  - sqrt:Self <- `r64x4_sqrt(@self)`:Self
+
+  - rsqrt:Self <-
+  // 1 / @sqrt, without division: an approximation (12 bits, in @Real32 on AVX)
+  // corrected by one step of order 3 (about 36 bits, as the C program #9 of n-body).
+  ( + x,y:Self
+    x := `r64x4_rsqrt_seed(@self)`:Self
+    y := self * x * x
+    // 0.375 y^2 and 1.25 y - 1.875 in parallel: a shorter chain of dependencies than Horner.
+    x * (y * 0.375 * y - (y * 1.25 - 1.875))
+  )
+
+  - broadcast i:Int :Self <- `r64x4_broadcast(@self, @i)`:Self
+  // 4 times the value @i.
+
+  - sums (a,b,c,d:Self) :Self <- `r64x4_sums(@a, @b, @c, @d)`:Self
+  // (@a.sum, @b.sum, @c.sum, @d.sum), without leaving the SIMD registers.
+
+  - sum:Real64 <- at 0 + at 1 + at 2 + at 3
+  // Sum of the 4 values.
+
+  - bits_le v:Real64 :Int <-
+  // Bit 3 for the first value, ..., bit 0 for the last: 1 if the value is lower or equal to @v.
+  ( + a,b,c,d:Real64
+    a := at 0; b := at 1; c := at 2; d := at 3
+    ((a <= v).to_int << 3) | ((b <= v).to_int << 2) | ((c <= v).to_int << 1) | (d <= v).to_int
+  )

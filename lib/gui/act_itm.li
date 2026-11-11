@@ -48,7 +48,7 @@ Public
   - height_min:Real32 <- is_separator.ok 16.0 or (Font.size_sys)
    
   - init p:Win act a:Act :Self <-
-  ( act := a; init p)
+  ( act := a; init_win p)
   
   - draw <-
   ( + y,x,s:Real32

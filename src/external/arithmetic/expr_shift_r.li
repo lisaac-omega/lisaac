@@ -41,13 +41,6 @@ Public
   - exec:Expr <-
   //-- E(unsigned) >> E(unsigned) -> 0
   ( + result:Expr
-    /*
-    (left ~= right) && {left.is_unsigned_type}.if {
-      result := INTEGER_CST.create position value 0 type static_type
-      left .remove
-      right.remove
-    }
-    */
     result
   )
 
@@ -79,7 +72,4 @@ Public
     }
     result
   )
-
-
-
 

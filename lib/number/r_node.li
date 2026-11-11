@@ -1,0 +1,422 @@
+Header
+  + name := R_node
+  /*
+  A node of a lazy @ℝ value: the operation @op applied to the nodes @a and @b,
+  or the exact value @q for a leaf. A node is never changed once built, so it
+  can be shared by several @ℝ values.
+
+  `appr p' gives the value to any precision: a new @ℤ @m with
+  |value - m 2^p| < 2^p (the convention of Boehm's constructive reals).
+  The best approximation already computed is kept: asking for a lower precision
+  costs only a shift.
+
+  The nodes belong to the current region of @ℝ: see `ℝ.region'.
+
+  A constant (@Pi, @Napier, @Ln_2) is an heir which redefines `compute':
+  the prototype is itself the node, unique and never freed.
+  */
+Insert
+  
+  - parent_clone:Clone := Clone
+
+Public
+
+  // Operations.
+  - op_leaf:Int := 0
+  - op_add:Int  := 1
+  - op_neg:Int  := 2
+  - op_mul:Int  := 3
+  - op_inv:Int  := 4
+  - op_sqrt:Int := 5
+  - op_exp:Int  := 6
+  - op_ln:Int   := 7
+
+  - new:R_node <- clone
+
+  + op:Int
+  + a:R_node
+  + b:R_node
+  + q:ℚ
+
+  + birth:Int
+  // Index in the node list of @ℝ, -1 once freed, -2 for a constant.
+
+  + mark:Boolean
+
+  - set (o:Int, x,y:R_node) <-
+  (
+    (op,a,b) := (o,x,y)
+    cache_ok := False
+    mark := False
+  )
+
+  - set_q x:ℚ <- ( q := x; )
+  // @x is now owned by @self.
+
+  - set_birth i:Int <- ( birth := i; )
+
+  - set_mark m:Boolean <- ( mark := m; )
+
+  - release <-
+  // Free the integers owned by @self, before it goes back to the pool.
+  (
+    (op = op_leaf).if { q.free; }
+    (cache_ok).if { cache.free; }
+    cache_ok := False
+    birth := -1
+  )
+
+  - appr p:Int :ℤ <-
+  // A new @Result with |value - Result 2^@p| < 2^@p.
+  [ ? {birth != -1}; ] // Else @self was freed with its region.
+  ( + r:ℤ
+    ((cache_ok) && {cache_p <= p}).if {
+      r := shift (cache, cache_p - p)
+    } else {
+      r := compute p
+      (cache_ok).if { cache.free; }
+      cache := r.copy
+      cache_p := p
+      cache_ok := True
+    }
+    r
+  )
+
+  - upper_exp:Int <-
+  // An @Int with |value| < 2^Result.
+  ( + u,t:ℤ
+    + r:Int
+    u := appr 0
+    t := u.abs
+    u.free
+    u := t + 1
+    t.free
+    r := u.size_bits
+    u.free
+    r
+  )
+
+  - lower_exp:Int <-
+  // An @Int with |value| > 2^Result. A value closer to 0 than the double
+  // of the precision of @ℝ is taken as 0, and stops the program.
+  ( + u,t:ℤ
+    + p,r:Int
+    + found:Boolean
+    {! found}.while_do {
+      u := appr p
+      t := u.abs
+      u.free
+      (t >= 2).if {
+        u := t - 1
+        r := p + u.size_bits - 1
+        u.free
+        found := True
+      } else {
+        (p < - 2 * ℝ.precision_bits - 64).if {
+          crash_with_message "ℝ: division by 0, or by a value too close to 0."
+        }
+        p := 2 * p - 32
+      }
+      t.free
+    }
+    r
+  )
+
+  // Integer tools: every result is a new @ℤ, the arguments are kept.
+
+  - shift (v:ℤ, s:Int) :ℤ <-
+  // @v 2^@s, rounded to the nearest when @s < 0.
+  ( + h,t,r:ℤ
+    (s >= 0).if {
+      r := v << s
+    } else {
+      h := ℤ.one << (- s - 1)
+      t := v + h
+      r := t >> (- s)
+      h.free
+      t.free
+    }
+    r
+  )
+
+  - round_div (n,d:ℤ) :ℤ <-
+  // @n / @d rounded to the nearest.
+  [ ? {d !== 0}; ]
+  ( + qq,rr,r2,da,r:ℤ
+    (qq,rr) := n /% d
+    r2 := rr.abs << 1
+    da := d.abs
+    (r2 >= da).if {
+      ((n < 0) = (d < 0)).if {
+        r := qq + 1
+      } else {
+        r := qq - 1
+      }
+      qq.free
+    } else {
+      r := qq
+    }
+    rr.free
+    r2.free
+    da.free
+    r
+  )
+
+  - isqrt n:ℤ :ℤ <-
+  // Floor of the square root of @n >= 0 (Newton, from above).
+  [ ? {n >= 0}; ]
+  ( + x,y:ℤ
+    (n < 2).if {
+      x := n.copy
+    } else {
+      x := ℤ.one << ((n.size_bits + 1) / 2)
+      y := newton (n,x)
+      {y < x}.while_do {
+        x.free
+        x := y
+        y := newton (n,x)
+      }
+      y.free
+    }
+    x
+  )
+
+  - appr_q (x:ℚ, p:Int) :ℤ <-
+  // A new @Result with |@x - Result 2^@p| <= 2^(@p-1).
+  ( + t,r:ℤ
+    (p <= 0).if {
+      t := x.num << (- p)
+      r := round_div (t, x.den)
+    } else {
+      t := x.den << p
+      r := round_div (x.num, t)
+    }
+    t.free
+    r
+  )
+
+Private
+
+  + cache_ok:Boolean
+  + cache_p:Int
+  + cache:ℤ
+
+  - newton (n,x:ℤ) :ℤ <-
+  // (@x + @n / @x) / 2.
+  ( + t,u,r:ℤ
+    t := n / x
+    u := x + t
+    r := u >> 1
+    t.free
+    u.free
+    r
+  )
+
+  - add_free (s,t:ℤ) :ℤ <-
+  // @s + @t, which are both freed.
+  ( + r:ℤ
+    r := s + t
+    s.free
+    t.free
+    r
+  )
+
+  - mul_shift (s,t:ℤ, w:Int) :ℤ <-
+  // (@s * @t) >> @w, with @s and @t kept.
+  ( + u,r:ℤ
+    u := s * t
+    r := u >> w
+    u.free
+    r
+  )
+
+  - compute p:Int :ℤ <-
+  ( + r:ℤ
+    (op = op_leaf).if {
+      r := appr_q (q,p)
+    }.elseif {op = op_add} then {
+      r := compute_add p
+    }.elseif {op = op_neg} then {
+      r := compute_neg p
+    }.elseif {op = op_mul} then {
+      r := compute_mul p
+    }.elseif {op = op_inv} then {
+      r := compute_inv p
+    }.elseif {op = op_sqrt} then {
+      r := compute_sqrt p
+    }.elseif {op = op_exp} then {
+      r := compute_exp p
+    } else {
+      r := compute_ln p
+    }
+    r
+  )
+
+  - compute_add p:Int :ℤ <-
+  // Both operands to 2^(p-2): error < 2^(p-1), plus 2^(p-1) for the rounding.
+  ( + t,r:ℤ
+    t := add_free (a.appr (p - 2), b.appr (p - 2))
+    r := shift (t, -2)
+    t.free
+    r
+  )
+
+  - compute_neg p:Int :ℤ <-
+  ( + t,r:ℤ
+    t := a.appr p
+    r := - t
+    t.free
+    r
+  )
+
+  - compute_mul p:Int :ℤ <-
+  // With |a| < 2^ua and |b| < 2^ub: a to 2^(p-ub-3) and b to 2^(p-ua-3).
+  ( + u,v,t,r:ℤ
+    + ua,ub,pa,pb:Int
+    ua := a.upper_exp
+    ub := b.upper_exp
+    (ua + ub <= p - 1).if {
+      r := 0
+    } else {
+      pa := p - ub - 3
+      pb := p - ua - 3
+      u := a.appr pa
+      v := b.appr pb
+      t := u * v
+      r := shift (t, pa + pb - p)
+      u.free
+      v.free
+      t.free
+    }
+    r
+  )
+
+  - compute_inv p:Int :ℤ <-
+  // With |a| > 2^la: a to 2^(p-3+2 la) is enough, since d(1/a) = da / a^2.
+  ( + u,t,r:ℤ
+    + la,pa,e:Int
+    la := a.lower_exp
+    (- la <= p - 1).if {
+      r := 0
+    } else {
+      pa := (p - 3 + 2 * la).min (la - 1)
+      u := a.appr pa
+      e := - pa - p
+      t := ℤ.one << e
+      r := round_div (t,u)
+      u.free
+      t.free
+    }
+    r
+  )
+
+  - compute_sqrt p:Int :ℤ <-
+  // With a to 2^(2p-6), the error of isqrt is < 2^(p-2), plus the rounding.
+  ( + u,t,r:ℤ
+    u := a.appr (2 * p - 6)
+    (u < -1).if {
+      crash_with_message "ℝ: square root of a negative number."
+    }
+    (u > 0).if {
+      t := isqrt u
+      r := shift (t, -3)
+      t.free
+    }
+    u.free
+    r
+  )
+
+  - compute_exp p:Int :ℤ <-
+  // exp(a) < 2^ue, so a is needed to 2^(p-ue-3). Then, in fixed point with
+  // @w bits, exp(x) = exp(x / 2^k)^(2^k), with |x / 2^k| <= 1/4 for Taylor.
+  ( + u,y,s,t,v:ℤ
+    + x0:Real64
+    + ue,pa,k,w,n:Int
+    u := a.appr 0
+    x0 := u.to_real64
+    u.free
+    ue := (((x0 + 1.0) * 1.4427).to_int + 1).max 1
+    pa := p - ue - 3
+    u := a.appr pa
+    k := (u.size_bits + pa + 2).max 0
+    w := (ue - p).max 0 + k + 64
+    y := shift (u, pa - k + w)
+    u.free
+    s := ℤ.one << w
+    t := s.copy
+    n := 1
+    {t !== 0}.while_do {
+      v := mul_shift (t,y,w)
+      t.free
+      t := v / n
+      v.free
+      s := add_free (s, t.copy)
+      n := n + 1
+    }
+    t.free
+    k.times {
+      v := mul_shift (s,s,w)
+      s.free
+      s := v
+    }
+    u := shift (s, - w - p)
+    s.free
+    u
+  )
+
+  - compute_ln p:Int :ℤ <-
+  // With a > 2^la: a to 2^(p+la-3), since d(ln a) = da / a.
+  // Then x = m 2^e with 1 <= m < 2, and ln x = e ln 2 + 2 atanh((m-1)/(m+1)).
+  ( + u,m,one,z,s,l2,t,r:ℤ
+    + la,pa,e,w:Int
+    la := a.lower_exp
+    pa := (p + la - 3).min (la - 1)
+    u := a.appr pa
+    (u <= 0).if {
+      crash_with_message "ℝ: logarithm of a negative number."
+    }
+    e := u.size_bits - 1 + pa
+    w := (- p).max 0 + 96
+    m := shift (u, w - u.size_bits + 1)
+    u.free
+    one := ℤ.one << w
+    t := m - one
+    u := t << w
+    t.free
+    t := m + one
+    z := u / t
+    u.free
+    t.free
+    m.free
+    s := atanh (z,w)
+    z.free
+    l2 := ℝ.ln_2.appr (1 - w) // ln 2 / 2, as the sum is doubled below.
+    one.free
+    t := l2 * e
+    l2.free
+    u := add_free (s,t)
+    r := shift (u, 1 - w - p)
+    u.free
+    r
+  )
+
+  - atanh (z:ℤ, w:Int) :ℤ <-
+  // atanh(z) = z + z^3/3 + z^5/5 + ..., in fixed point with @w bits, 0 <= @z < 1/2.
+  ( + z2,t,s,v:ℤ
+    + k:Int
+    z2 := mul_shift (z,z,w)
+    t := z.copy
+    s := z.copy
+    k := 1
+    {t !== 0}.while_do {
+      v := mul_shift (t,z2,w)
+      t.free
+      t := v
+      v := t / (2 * k + 1)
+      s := add_free (s,v)
+      k := k + 1
+    }
+    t.free
+    z2.free
+    s
+  )

@@ -47,7 +47,6 @@ Public
       wrt := write.variable.write (write.position) with NULL value rd
     }
     result := create wrt
-    //result.debug_display
     result
   )
 

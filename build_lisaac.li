@@ -1,14 +1,24 @@
 Header
   + name := Build_lisaac
-/*    Install and configure Lisaac Ω. */
-
-  - include := `#include <unistd.h>`;
-Insert
+  /*
+  Install and configure @Lisaac @Ω.
+  Run by install.sh, in text mode, it prepares the bare minimum: the
+  system packages needed by the graphical library, and lisaac in order
+  to compile the graphical installer (misc/installer/installer.li),
+  which compiles the other parts.
+  Without a display, or with --text, all is done here, in text mode.
+  Everything stays in the lisaac directory, except one line of the
+  shell startup file, which adds lisaac/bin to the PATH.
+  */
   
+  - include := `#include <unistd.h>`;
+  
+Insert
+
   - parent_mini_bash:Mini_bash := Mini_bash
 
 Private
-  
+
   + lisaac_dir:String_alias
   + system:String_alias
   + user_homedir:String_alias // "" for windows
@@ -16,23 +26,25 @@ Private
   + lisaac_bin_dir:String_alias
   + elit_dir:String_alias
   + rc_file:String_alias
-  
+
+  + step:Int
+  + step_count:Int
+
 Private
-  
+
   - chdir arg:String_alias or_exit <-
   (
     if verbose then {
-      ("cd \"" + arg + "\"").println
+      Out # "cd \"" # arg #| "\""
     }
     if (Environment.chdir arg != 0) then {
       die "Fail." exit 1
     }
     File_utils.pwd_in working_directory
   )
-  
+
   - cc_compile_bin_lisaac <-
   ( + exit_status:Int
-    "C compiling lisaac/bin/lisaac.c ... wait...".println
     chdir lisaac_bin_dir or_exit
     String.tmp {cmd: String_buffer
       cmd.append "gcc -Wno-unused lisaac.c -o lisaac -O2"
@@ -42,7 +54,7 @@ Private
       exit_status := execute_command cmd
     }
   )
-  
+
   - check_update_export_path <-
   (
     if (shell = "/bin/bash") then {
@@ -57,17 +69,31 @@ Private
       export_path ".cshrc" create False
     }
     if verbose then {
-      if (rc_file = NULL) then { 
-        "No rc_file.".println
+      if (rc_file = NULL) then {
+        Out # "No rc_file.\n"
       }
     }
   )
-  
+
+  - rc_files_text:String_alias <-
+  // The startup files that @check_update_export_path will update.
+  ( + result:String_alias
+    
+    if ((shell = "/bin/bash") || {system = "windows"}) then {
+      result := "~/.bashrc"
+    }.elseif {shell = "/bin/zsh"} then {
+      result := "~/.zshrc"
+    } else {
+      result := "~/.bashrc, ~/.zshrc or ~/.cshrc"
+    }
+    result
+  )
+
   - export_path rc:String_alias create create:Boolean <-
   ( + index:Int
-    ("Create/Update \"" + rc + "\".").println
+    
     if verbose then {
-      ("Checking export PATH for \"" + rc + "\".").println
+      Out # "Checking export PATH for \"" # rc # "\".\n"
     }
     chdir user_homedir or_exit
     if ((! File_utils.file_exists rc) && {create}) then {
@@ -78,10 +104,10 @@ Private
     }
     if (File_utils.file_exists rc) then {
       rc_file := rc
+      Out # "PATH updated in ~/" # rc # ".\n"
       String.tmp2 { (rc_txt, export_txt :String_buffer)
         export_txt.append "export PATH=\""
         export export_txt add lisaac_bin_dir
-        export export_txt add elit_dir
         export_txt.append "$PATH\"\n"
         (open_read rc in rc_txt).if {
           if ((index := rc_txt.first_substring_index comment_unix) < 0) then {
@@ -102,10 +128,13 @@ Private
       }
     }
   )
-  
+
   - update_make_lip <-
   ( + index:Int
-    "Update lisaac/make.lip config.".println
+    
+    verbose.if {
+      Out # "Update lisaac/make.lip config.\n"
+    }
     chdir lisaac_dir or_exit
     String.tmp { (lip_txt:String_buffer)
       (open_read "make.lip" in lip_txt).if_false {
@@ -120,12 +149,14 @@ Private
       write "make.lip" content lip_txt
     }
   )
-  
+
   - update_elit_cfg <-
   ( + index:Int
     + value:String_alias
-    
-    Out #| "Update lisaac/elit/assets/elit.cfg."
+
+    if verbose then {
+      Out # "Update lisaac/elit/assets/elit.cfg.\n"
+    }
     chdir elit_dir or_exit
     chdir "assets" or_exit
     String.tmp { elit_cfg:String_buffer
@@ -156,7 +187,7 @@ Private
       write "elit.cfg" content elit_cfg
     }
   )
-  
+
   - idx_after tag:String in txt:String from file_name:String_alias :Int <-
   ( + index:Int
     index := txt.first_substring_index tag
@@ -167,47 +198,142 @@ Private
   )
 
   - comment_unix    :String_alias := "\n# **** LISAAC-OMEGA TOOLS ****\n"
-  
+
   - user_homedir_detection <-
   (
     if ((user_homedir := Environment.read_variable "HOME") = NULL) then {
       die "Warning: No $HOME variable." exit 1
     }
   )
-    
+
   - system_detection <-
   ( + s:String_alias
     system := s := System.name
     if ((s != "windows") && {s != "android"} && {s != "apple"} && {s != "unix"}) then {
-      Out # "Warning: strange system name \"" # s # "\".\n"  
+      Out # "Warning: strange system name \"" # s # "\".\n"
     }
     if verbose then {
-      ("system=\"" + system + "\".").println
+      Out # "system=\"" # system #| "\"."
     }
   )
 
+  - has_display:Boolean <-
+  ( + result:Boolean
+    
+    if ((system = "windows") || {system = "apple"}) then {
+      result := True
+    }.elseif {system = "unix"} then {
+      result := (Environment.read_variable "DISPLAY" != NULL) || {Environment.read_variable "WAYLAND_DISPLAY" != NULL}
+    }
+    result
+  )
+
 Public
-  
+
   - main <-
-  (    
-    "Installing Lisaac Ω Compiler and Tools.".println
+  ( + all, no_games, text_mode:Boolean
+    + status:Int
+    
     File_utils.pwd_in working_directory
     working_directory.add_dirsep
-    
+
     verbose := Command_args.option_shift "--verbose"
+    all := Command_args.option_shift "--all"
+    no_games := Command_args.option_shift "--no-games"
+    text_mode := Command_args.option_shift "--text"
+    if (Command_args.option_shift "--help") then {
+      usage
+      System.exit 0
+    }
+    if ((Command_args.count > 1) && {Command_args.at 1 = "--step"}) then {
+      run_step
+      System.exit 0
+    }
     if (Command_args.count != 1) then {
-      ("Unknow option \"" + (Command_args.at 1) + "\".").println
-      "Usage: build_lisaac [--verbose]".println
+      Out # "Unknown option \"" # (Command_args.at 1) # "\".\n"
+      usage
       System.exit 1
     }
+    set_directories
+    shell_detection
+    if ((! text_mode) && {! has_display}) then {
+      text_mode := True
+    }
+
+    Out # '\n'
+    Out #| rule
+    Out # "   Lisaac Ω: installation\n"
+    Out #| rule
+    Out # "Everything stays in this directory. Outside of it, only one marked\n\
+    \line of " # rc_files_text # " puts lisaac/bin in your PATH.\n"
+    if text_mode then {
+      step_count := 10
+    } else {
+      step_count := 4
+    }
+
+    start_step "The system packages"
+    check_packages all
+
+    start_step "The compiler"
+    tip "bin/lisaac.c is the portable C that lisaac generated from its own\n\
+        \Lisaac Ω source code: gcc compiles it now, in a minute or two.\n\
+        \Please wait, nothing to type..."
+    cc_compile_bin_lisaac
+    Out # "Done.\n"
+
+    start_step "Configuration"
+    remove_old_elit_cfg
+    check_update_export_path
+    update_make_lip
+    update_elit_cfg
+    compile_new_assets
+
+    if (! text_mode) then {
+      start_step "The graphical installer"
+      tip "It is compiled in a few seconds, then opens in a new window:\n\
+          \please go on there."
+      status := graphical_install all
+      if (status = 0) then {
+        Out # "\nInstallation completed successfully.\n"
+        open_terminal_text
+        Out # "Then, read the README: elito README\n\n"
+      }.elseif {status = 3} then {
+        Out # "\nThe installation was stopped before the end.\n\
+        \Run ./install.sh again to complete it.\n\n"
+      } else {
+        Out # "\nThe graphical installer could not run: the installation goes on\n\
+        \here, in text mode.\n"
+        text_mode := True
+        step_count := step + 7
+      }
+    }
+    if text_mode then {
+      text_install all without_games no_games
+    }
+  )
+
+Private
+
+  - usage <-
+  (
+    Out # "Usage: ./install.sh [--verbose] [--all] [--text [--no-games]]\n\
+    \  --all       install everything, games included, without question\n\
+    \              (and the missing system packages, if any).\n\
+    \  --text      stay in this terminal, without graphical installer.\n\
+    \  --no-games  in text mode, install everything but the games.\n\
+    \  --verbose   show each command, to debug an installation.\n"
+  )
+
+  - set_directories <-
+  (
     if verbose then {
-      ("Running from \"" + working_directory + "\".").println
+      Out # "Running from \"" # working_directory # "\".\n"
     }
     system_detection
-    
     lisaac_dir := working_directory.to_string_alias
     if (lisaac_dir.has ' ') then {
-      Out # "Warning: Warning: Avoid spaces in the Lisaac Ω path.\n"
+      Out # "Warning: Avoid spaces in the Lisaac Ω path.\n"
       Out # "lisaac_dir=\"" # lisaac_dir # "\".\n"
     }
     if (lisaac_dir.has_suffix "lisaac/") then {
@@ -215,48 +341,255 @@ Public
     }.elseif {lisaac_dir.has_suffix "lisaac\\"} then {
       // windows
     } else {
-      die "buid_lisaac must be run from lisaac directory." exit 1
+      die "build_lisaac must be run from lisaac directory." exit 1
     }
     if verbose then {
-      ("lisaac_dir=\"" + lisaac_dir + "\".").println
+      Out # "lisaac_dir=\"" # lisaac_dir # "\".\n"
     }
     lisaac_bin_dir_set
     elit_dir_set
-    
     user_homedir_detection
     if verbose then {
-      ("user_homedir=\"" + user_homedir + "\".").println
+      Out # "user_homedir=\"" # user_homedir # "\".\n"
     }
-    remove_old_elit_cfg
-    shell_detection
-    cc_compile_bin_lisaac
-    check_update_export_path
-    update_make_lip
-    update_elit_cfg
-    compile_new_assets
-    compile_elit
-    big_show
-    welcome_omega
-    "Installation Completed Successfully.".println
+  )
+
+  // The graphical installer
+  
+  - graphical_install all:Boolean :Int <-
+  // Compile and run misc/installer: its exit status, 0 when the
+  // installation is complete, 3 when it was stopped.
+  ( + status:Int
     
+    chdir lisaac_dir or_exit
+    chdir "misc" or_exit
+    chdir "installer" or_exit
+    first_error_exit False do {
+      status := lisaac_command "installer -q -boost"
+      if (status = 0) then {
+        String.tmp { cmd:String_buffer
+          cmd.append "\""
+          cmd.append working_directory
+          cmd.add_dirsep
+          cmd.append "installer\""
+          if all then {
+            cmd.append " --all"
+          }
+          chdir lisaac_dir or_exit
+          status := execute_command cmd
+        }
+      } else {
+        status := 1
+      }
+    }
+    status
+  )
+
+  - run_step <-
+  // build_lisaac --step part [game launcher | gadget]: compile one part,
+  // quietly.
+  // Run by the graphical installer, from any directory.
+  ( + part:String
+    
+    String.tmp { dir:String_buffer
+      dir.copy (Command_args.executable_directory)
+      Environment.chdir dir
+      File_utils.pwd_in working_directory
+      working_directory.add_dirsep
+    }
+    set_directories
+    part := Command_args.at 2
+    if (part = "elit") then {
+      compile_elit
+    }.elseif {part = "elito"} then {
+      compile_elito
+    }.elseif {part = "calculator"} then {
+      compile_calculator
+    }.elseif {part = "turtle"} then {
+      if (compile_turtle != 0) then {
+        System.exit 1
+      }
+    }.elseif {part = "shows"} then {
+      compile_shows
+    }.elseif {(part = "game") && {Command_args.count = 5}} then {
+      if (! game (Command_args.at 3) as (Command_args.at 4)) then {
+        System.exit 1
+      }
+    }.elseif {(part = "gadget") && {Command_args.count = 4}} then {
+      if (! gadget (Command_args.at 3)) then {
+        System.exit 1
+      }
+    } else {
+      die ("Unknown step \"" + part + "\".") exit 1
+    }
+  )
+
+  // The text mode.
+  //
+
+  - text_install all:Boolean without_games no_games:Boolean <-
+  ( + with_games:Boolean
+    Out # "\n\
+    \To install, in lisaac/bin, all written in Lisaac Ω:\n\
+    \lisaac       The compiler, the base of everything (already compiled).\n\
+    \elit         The graphical environment, with the whole compiler inside:\n\
+    \             it shows the global compilation, the very heart of Lisaac Ω.\n\
+    \             Compiles in a few minutes.\n\
+    \elito        A light and fast editor. Compiles in under a minute.\n\
+    \calculator   A gadget: integers without size limit. A few seconds.\n\
+    \5 gadgets    For the desktop: a sticky note, a tip of the day, two Ω eyes,\n\
+    \             an aquarium and a Christmas sky. A few seconds each.\n\
+    \Logo turtle  To learn programming from the very first steps (in French),\n\
+    \             compiled in advance. About a minute.\n\
+    \9 games      Snake, Tetris, Solitaire, Arrow out, Connect four, Breakout,\n\
+    \ (optional)  Minesweeper, Gems and Shooter. A few seconds each.\n"
+    if all then {
+      with_games := True
+    }.elseif {no_games} then {
+      with_games := False
+    } else {
+      with_games := ask "Also compile the 9 games (a few seconds each)? [Y/n] "
+    }
+
+    start_step "elit, the graphical environment (a few minutes)"
+    compile_elit
+    start_step "elito, the light editor"
+    compile_elito
+    start_step "The calculator"
+    compile_calculator
+    start_step "The gadgets"
+    gadget "postit"
+    gadget "did_you_know"
+    gadget "omega_eyes"
+    gadget "aquarium"
+    gadget "christmas"
+    start_step "The Logo turtle"
+    compile_turtle
+    start_step "The games"
+    if with_games then {
+      game "snake" as "snake"
+      game "tetris" as "tetris"
+      game "solitaire" as "solitaire"
+      game "arrow_out" as "arrow_out"
+      game "connect_four" as "connect_four"
+      game "break" as "breakout"
+      game "minesweeper" as "minesweeper"
+      game "gems" as "gems"
+      game "shooter" as "shooter"
+    } else {
+      Out # "Not installed.\n"
+    }
+    start_step "The guided tours: welcome, big_show, tortue_show, game_show, gadgets_show"
+    compile_shows
+    farewell_text with_games
+    if has_display then {
+      launch_shows
+    }
+  )
+
+  - rule:String_alias := "===================================================================="
+
+  - farewell_text with_games:Boolean <-
+  (
+    Out # '\n'
+    Out #| rule
+    Out # "   Installation completed successfully.\n"
+    Out #| rule
+    Out # "\n\
+    \To start:\n\
+    \  elito README                  read the README first\n\
+    \  big_show                      a guided tour of Lisaac Ω\n\
+    \  tortue_show                   the Logo turtle, for beginners (in French)\n\
+    \  elit example/hello_world.li   read, compile and run a program\n\
+    \  lisaac example/hello_world.li && ./hello_world\n\
+    \  calculator '2^200'\n\
+    \  gadgets_show                  the gadgets: postit, did_you_know,\n\
+    \                                omega_eyes, aquarium, christmas\n"
+    if with_games then {
+      Out # "  snake, tetris, solitaire, arrow_out, connect_four, breakout,\n\
+      \  minesweeper, gems, shooter\n"
+    }
+    Out # "\n\
+    \Lisaac Ω is a true technological achievement: French, free of charge,\n\
+    \free software (GNU GPL v3), and it comes from the Grand Est region of\n\
+    \France. Its performance is real: in Lisaac Ω, you can write code that\n\
+    \runs faster than C, and that is safer. Main author: Benoît Sonntag\n\
+    \(Université de Strasbourg), with Dominique Colnet (Université de\n\
+    \Lorraine, LORIA, IUT Nancy-Charlemagne), creator of SmartEiffel.\n\
+    \\n\
+    \Whoever and wherever you are, let's talk! Requests from the French\n\
+    \Éducation nationale naturally come first. But we are also ready to help\n\
+    \any other organization, in France or abroad, with advice and support on\n\
+    \Lisaac Ω: teaching, portable software, robotics... Dominique Colnet would\n\
+    \be glad to come and present it (he speaks fluent English), as he already\n\
+    \did in the Reims and Lorraine académies.\n\
+    \  Dominique.Colnet@lisaac.org  (or Dominique.Colnet@loria.fr)\n\
+    \  https://lisaac.org\n\n"
+    open_terminal_text
+  )
+
+  - open_terminal_text <-
+  (
+    Out # "Keep this directory where it is, and keep its name \"lisaac\".\n\
+    \If you move it, run ./install.sh again from its new location.\n"
     String.tmp2 { (old_path, substr: String_buffer)
       Environment.read_variable "PATH" in old_path
       verbose.if {
-        Out # "Old PATH=\"" # old_path # "\"\n" 
-        Out # "lisaac_bin_dir=\"" # lisaac_bin_dir # "\"\n" 
+        Out # "Old PATH=\"" # old_path # "\"\n"
+        Out # "lisaac_bin_dir=\"" # lisaac_bin_dir # "\"\n"
       }
       substr.append lisaac_bin_dir
       substr.remove_last
-      if (! old_path.has_substring substr) then {
-        "Open a new terminal window.".println
-        "or:".println
-        ("source ~/" + rc_file).println
+      if ((! old_path.has_substring substr) && {rc_file != NULL}) then {
+        Out # "Now, open a new terminal window, or type: source ~/" #| rc_file
       }
     }
-    final_cleanup
   )
-  
-Private
+
+  - start_step title:String <-
+  (
+    step := step + 1
+    String.tmp { line:String_buffer
+      line.copy "\n["
+      step.append_in line
+      line.add_last '/'
+      step_count.append_in line
+      line.append "] "
+      line.append title
+      Out #| line
+    }
+    `fflush(stdout)`
+  )
+
+  - tip msg:String <-
+  (
+    Out #| msg
+    `fflush(stdout)`
+  )
+
+  - ask question:String :Boolean <-
+  // Yes, unless the answer starts with 'n' (or 'N').
+  ( + result:Boolean
+    result := True
+    Out # '\n'
+    Out # question
+    `fflush(stdout)`
+    String.tmp { answer:String_buffer
+      Stdin.read_line_in answer
+      while {(! answer.is_empty) && {answer.first = ' '}} do {
+        answer.remove_head 1
+      }
+      if ((! answer.is_empty) && {"nN".has (answer.first)}) then {
+        result := False
+      }
+    }
+    result
+  )
+
+  //
+  // Installation.
+  //
+
   - shell_detection <-
   (
     shell := Environment.read_variable "SHELL"
@@ -266,19 +599,19 @@ Private
       shell := "/bin/bash"
     }
     if (verbose) then {
-      ("shell=\"" + shell + "\".").println
+      Out # "shell=\"" # shell # "\".\n"
     }
   )
-  
+
   - die msg:String exit status:Int <-
   (
-    msg.println
+    Out #| msg
     if (! verbose) then {
-      "Rerun using --verbose to try to debug.".println
+      Out # "Rerun using --verbose to try to debug.\n"
     }
     System.exit status
   )
-  
+
   - lisaac_bin_dir_set <-
   (
     check lisaac_dir non_ascii_warning
@@ -289,14 +622,14 @@ Private
       Out # "lisaac_bin_dir=\"" # lisaac_bin_dir # "\".\n"
     }
   )
-  
+
   - elit_dir_set <-
   (
     chdir lisaac_dir or_exit
     chdir "elit" or_exit
     elit_dir := working_directory.to_string_alias
     if verbose then {
-      ("elit_dir=\"" + elit_dir + "\".").println
+      Out # "elit_dir=\"" # elit_dir # "\".\n"
     }
   )
 
@@ -304,19 +637,19 @@ Private
   ( + file:Pointer
     + s:Int
     if verbose then {
-      ("Open write \"" + file_name + "\".").println
+      Out # "Open write \"" # file_name # "\".\n"
     }
     file := File_utils.open_write file_name
     s := File_utils.write file with content size (content.count)
     if verbose then {
-      ("writen " + s.to_string + " bytes.").println
+      Out # "writen " # s.to_string # " bytes.\n"
     }
     File_utils.close file
     if verbose then {
-      ("Close \"" + file_name + "\".").println
+      Out # "Close \"" # file_name # "\".\n"
     }
   )
-  
+
   - export export_txt:String_buffer add dir:String_alias <-
   (
     export_txt.append dir
@@ -325,58 +658,303 @@ Private
     }
     export_txt.append ":"
   )
-  
-  - compile_elit <-
+
+  - lisaac_command options:String :Int <-
+  // Run lisaac, with @options, in the current directory.
   ( + exit_status:Int
-    
-    "Compiling lisaac/elit ... wait...".println
-    chdir elit_dir or_exit
     String.tmp { cmd:String_buffer
       cmd.append lisaac_bin_dir
       cmd.add_dirsep
-      cmd.append "lisaac elit -q -boost"
-      if (system != "windows") then {
-        // -split does work yet on "windows".
-        cmd.append " -split"
-      }
+      cmd.append "lisaac "
+      cmd.append options
       exit_status := execute_command cmd
-      
     }
+    exit_status
   )
-  
-  - big_show <-
+
+  - compile_elit <-
   (
-    "Compiling lisaac/big_show.li ...".println
+    chdir elit_dir or_exit
+    lisaac_command "elit -q -boost -split"
+    link_to_bin "elit"
+  )
+
+  - compile_elito <-
+  (
     chdir lisaac_dir or_exit
-    String.tmp { cmd:String_buffer
-      cmd.append lisaac_bin_dir
-      cmd.add_dirsep
-      cmd.append "lisaac big_show -q -boost"
-      execute_command cmd
+    chdir "elito" or_exit
+    lisaac_command "elito -q -boost"
+    link_to_bin "elito"
+  )
+
+  - compile_calculator <-
+  (
+    chdir lisaac_dir or_exit
+    chdir "example" or_exit
+    chdir "calculator" or_exit
+    lisaac_command "calculator -q -boost"
+    link_to_bin "calculator"
+  )
+
+  - game name:String as launcher:String :Boolean <-
+  // Compile the game of the directory example/@name, whose main file and
+  // executable are also called @name, and install it as @launcher.
+  // False if the compilation fails.
+  example name in name as launcher
+
+  - gadget name:String :Boolean <-
+  // Compile the gadget @name of example/gadgets, and install it.
+  example name in "gadgets" as name
+
+  - example name:String in dir:String as launcher:String :Boolean <-
+  // Compile the program @name of the directory example/@dir, and install
+  // it as @launcher. False if the compilation fails.
+  ( + status:Int
+    chdir lisaac_dir or_exit
+    chdir "example" or_exit
+    chdir (dir.to_string_alias) or_exit
+    first_error_exit False do {
+      status := lisaac_command (name + " -q -boost")
     }
-    String.tmp { cmd:String_buffer
-      cmd.append lisaac_dir
-      cmd.add_dirsep
-      cmd.append "big_show"
-      execute_command cmd background True
+    if (status = 0) then {
+      link_to_bin (name.to_string_alias) as (launcher.to_string_alias)
+      String.tmp { path:String_buffer
+        path.copy working_directory
+        path.add_dirsep
+        path.append name
+        path.append ".c"
+        file_remove path
+      }
+    } else {
+      Out # launcher # ": not installed, the compilation failed.\n"
+    }
+    status = 0
+  )
+
+  - link_to_bin name:String_alias <- link_to_bin name as name
+
+  - link_to_bin name:String_alias as launcher:String_alias <-
+  // Create in lisaac/bin a launcher @launcher for the executable @name of
+  // the current directory, which stays there: its assets are searched
+  // next to the executable. A symbolic link would not do, because on
+  // apple and windows the executable path is the one of the link. The
+  // launcher is a sh script, plus a `.cmd' file on windows for cmd and
+  // PowerShell. Its path to the executable is relative, from lisaac/bin.
+  ( + dir:String_alias
+    String.tmp2 { (rel, txt:String_buffer)
+    String.tmp { file:String_buffer
+      dir := working_directory.to_string_alias
+      rel.copy working_directory
+      rel.add_dirsep
+      if (! rel.has_prefix lisaac_dir) then {
+        die ("\"" + rel + "\" is not in \"" + lisaac_dir + "\".") exit 1
+      }
+      rel.remove_head (lisaac_dir.count)
+      rel.replace_all '\\' with '/'
+      rel.append name
+      if (system = "windows") then {
+        rel.append ".exe"
+      }
+      file.copy rel
+      file.prepend lisaac_dir
+      if (! File_utils.file_exists file) then {
+        die ("No executable \"" + file + "\".") exit 1
+      }
+      chdir lisaac_bin_dir or_exit
+      // Before the launchers, the executable itself was moved to lisaac/bin.
+      if (system = "windows") then {
+        file.copy launcher
+        file.append ".exe"
+        File_utils.remove file
+      }
+      txt.copy "#!/bin/sh\nexec \"$(dirname \"$0\")/../"
+      txt.append rel
+      txt.append "\" \"$@\"\n"
+      write launcher content txt
+      if (system = "windows") then {
+        rel.replace_all '/' with '\\'
+        txt.copy "@\"%~dp0..\\"
+        txt.append rel
+        txt.append "\" %*\r\n"
+        file.copy launcher
+        file.append ".cmd"
+        write (file.to_string_alias) content txt
+      } else {
+        file.copy "chmod +x "
+        file.append launcher
+        execute_command file
+      }
+      chdir dir or_exit
+    }}
+  )
+
+  - compile_turtle:Int <-
+  // Compile in advance, with -boost, the drawings of the Logo turtle,
+  // those listed in tortue_show.li: tortue_show then starts them at once
+  // (see @Code_show_player). The number of failures.
+  ( + i,j,status,failures:Int
+    + file:String_alias
+    chdir lisaac_dir or_exit
+    chdir "example" or_exit
+    chdir "CodEx" or_exit
+    chdir "Tortue" or_exit
+    String.tmp2 { (show,path:String_buffer)
+      (open_read "tortue_show.li" in show).if_false {
+        die "Cannot read tortue_show.li." exit 1
+      }
+      // Each "xxx.li" string of the show is a drawing.
+      i := show.first_substring_index ".li\""
+      while {i >= 0} do {
+        j := i
+        while {show.at (j - 1) != '\"'} do {
+          j := j - 1
+        }
+        path.clear
+        path.append show from j to (i - 1)
+        file := path.to_string_alias
+        first_error_exit False do {
+          status := lisaac_command (file + ".li -q -boost")
+        }
+        if (status != 0) then {
+          Out # file # ": the compilation failed.\n"
+          failures := failures + 1
+        }
+        path.copy working_directory
+        path.add_dirsep
+        path.append file
+        path.append ".c"
+        file_remove path
+        i := show.substring_index (".li\"", i + 4)
+      }
+    }
+    failures
+  )
+
+  //
+  // The system packages, as on the lisaac.org home page.
+  //
+
+  - quiet cmd:String :Int <-
+  // Run @cmd without showing anything: its exit status.
+  ( + status:Int
+    String.tmp { buf:String_buffer
+      buf.copy cmd
+      if (system = "windows") then {
+        buf.append " >NUL 2>&1"
+      } else {
+        buf.append " >/dev/null 2>&1"
+      }
+      first_error_exit False do {
+        status := execute_command buf
+      }
+    }
+    status
+  )
+
+  - has_command name:String :Boolean <-
+  ( + result:Boolean
+    if (system = "windows") then {
+      result := quiet ("where " + name) = 0
+    } else {
+      result := quiet ("command -v " + name) = 0
+    }
+    result
+  )
+
+  - check_packages all:Boolean <-
+  // On each system, the packages needed by the graphical library (GLFW,
+  // OpenGL) and the sound: when one is missing, propose the command
+  // of the lisaac.org home page, and run it if the user agrees.
+  ( + missing,run:Boolean
+    + list,cmd:String_alias
+    + status:Int
+    if (system = "unix") then {
+      list := "build-essential mesa-common-dev libgl1-mesa-dev pulseaudio-utils"
+      if (has_command "dpkg") then {
+        missing := quiet ("dpkg -s " + list) != 0
+        cmd := ("sudo apt-get update && sudo apt-get install -y " + list).to_string_alias
+      } else {
+        list := "the OpenGL development files (GL/gl.h, libGL) and paplay (pulseaudio-utils)"
+        missing := (! File_utils.file_exists "/usr/include/GL/gl.h") || {! has_command "paplay"}
+      }
+    }.elseif {system = "apple"} then {
+      list := "glfw pkg-config"
+      if (! has_command "brew") then {
+        Out # "Homebrew is needed to install glfw and pkg-config: see\n\
+        \https://brew.sh, then run ./install.sh again.\n"
+        System.exit 1
+      }
+      missing := quiet "brew list glfw" != 0
+      cmd := "brew install glfw pkg-config"
+    }.elseif {system = "windows"} then {
+      list := "unzip mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-glfw"
+      if (Environment.read_variable "MSYSTEM" != "UCRT64") then {
+        Out # "Warning: Lisaac Ω expects the \"MSYS2 UCRT64\" terminal of MSYS2\n\
+        \(https://www.msys2.org).\n"
+      }
+      missing := quiet ("pacman -Q " + list) != 0
+      cmd := ("pacman -S --needed --noconfirm " + list).to_string_alias
+    }
+    if (! missing) then {
+      tip "Already installed."
+    }.elseif {cmd = NULL} then {
+      Out # "Missing: " # list # ".\n\
+      \Install them with the package manager of your system, then\n\
+      \run ./install.sh again.\n"
+      System.exit 1
+    } else {
+      Out # "Some packages needed by the graphics or the sound are missing.\n\
+      \The command to install them is:\n\
+      \  " #| cmd
+      if all then {
+        run := True
+      } else {
+        run := ask "Run it now (it may ask for your password)? [Y/n] "
+      }
+      if run then {
+        first_error_exit False do {
+          status := execute_command cmd
+        }
+      }
+      if ((! run) || {status != 0}) then {
+        Out # "\nWithout these packages, nothing graphical can be compiled.\n\
+        \Run the command above, then ./install.sh again.\n"
+        System.exit 1
+      }
+      tip "Installed."
     }
   )
-  
-  - welcome_omega <-
+
+  - compile_shows <-
   (
-    "Compiling lisaac/example/welcome.li ... wait...".println
+    chdir lisaac_dir or_exit
+    lisaac_command "big_show -q -boost"
+    link_to_bin "big_show"
+    lisaac_command "game_show -q -boost"
+    link_to_bin "game_show"
+    chdir "example" or_exit
+    chdir "gadgets" or_exit
+    lisaac_command "gadgets_show -q -boost"
+    link_to_bin "gadgets_show"
+    chdir lisaac_dir or_exit
+    chdir "example" or_exit
+    chdir "CodEx" or_exit
+    chdir "Tortue" or_exit
+    lisaac_command "tortue_show -q -boost"
+    link_to_bin "tortue_show"
     chdir lisaac_dir or_exit
     chdir "example" or_exit
     chdir "welcome" or_exit
-    String.tmp { cmd:String_buffer
-      cmd.append lisaac_bin_dir
-      cmd.add_dirsep
-      cmd.append "lisaac welcome -q -boost"
-      execute_command cmd
-    }
+    lisaac_command "welcome -q -boost"
+  )
+
+  - launch_shows <-
+  (
     String.tmp { cmd:String_buffer
       cmd.append lisaac_dir
-      cmd.add_dirsep
+      cmd.append "big_show"
+      execute_command cmd background True
+      cmd.copy lisaac_dir
       cmd.append "example"
       cmd.add_dirsep
       cmd.append "welcome"
@@ -385,7 +963,7 @@ Private
       execute_command cmd background True
     }
   )
-  
+
   - remove_old_elit_cfg <-
   (
     String.tmp { path:String_buffer
@@ -393,7 +971,7 @@ Private
       path.add_dirsep
       path.append ".elit.cfg"
       if ( verbose ) then {
-        ("Remove old \"" + path + "\".").println
+        Out # "Remove old \"" # path # "\".\n"
       }
       File_utils.remove path
       if (File_utils.file_exists path) then {
@@ -401,24 +979,21 @@ Private
       }
     }
   )
-  
+
   - compile_new_assets <-
   (
-    "Compiling lisaac/misc/new_assets.li".println
+    if verbose then {
+      Out # "Compiling lisaac/misc/new_assets.li\n"
+    }
     chdir lisaac_dir or_exit
     chdir "misc" or_exit
-    String.tmp { cmd:String_buffer
-      cmd.append lisaac_bin_dir
-      cmd.add_dirsep
-      cmd.append "lisaac new_assets -q"
-      execute_command cmd
-    }
+    lisaac_command "new_assets -q"
   )
-  
+
   - check path:String non_ascii_warning <-
   ( + idx:Int
     + c:Char
-    
+
     {idx <= (path.upper)}.while_do {
       c := path.at idx
       (c = ' ').if {
@@ -430,41 +1005,3 @@ Private
       idx := idx + 1
     }
   )
-  
-  - final_cleanup <-
-  ( + i, status:Int
-    
-    verbose.if {
-      Out # "Final cleanup (after installation)\n"
-    }
-    chdir elit_dir or_exit
-    String.tmp { path:String_buffer
-      
-      path.copy elit_dir
-      path.add_dirsep
-      path.append "elit.h"
-      file_remove path
-      
-      path.copy elit_dir
-      path.add_dirsep
-      path.append "elit.c"
-      file_remove path
-      
-      path.copy elit_dir
-      path.add_dirsep
-      path.append "elit_data.c"
-      file_remove path
-      
-      {status = 0}.while_do {
-        path.copy elit_dir
-        path.add_dirsep
-        path.append "elit_code"
-        i.append_in path
-        path.append ".c"
-        status := file_remove path
-        (i > 100).if { status := 1 }
-        i := i + 1
-      }
-    }  
-  )
-  

@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- True
 
+  - is_pure:Boolean <- True
+
+  - is_reading v:Variable :Boolean <- False
+
   + receiver:Type_full
 
   - static_type:Type_full <- type_integer.default

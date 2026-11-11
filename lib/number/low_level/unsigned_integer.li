@@ -73,7 +73,9 @@ Public
 
   // Hashing:
 
-  - hash_code:Int <- to_int
+  - hash_code:Int <-
+  // Always positive (an index modulo a capacity): the high 32 bits are folded in the low ones.
+  ((self ^ (self >> 16 >> 16)).to_int & 07FFFFFFFh)
 
   // Looping
 

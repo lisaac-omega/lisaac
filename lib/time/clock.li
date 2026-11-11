@@ -15,8 +15,8 @@ Public
     + s,m,h:Uint8
     + y:Uint16
     `{
-    struct tm *t; time_t tt
-    tt = time(NULL)
+    struct tm *t; time_t tt;
+    tt = time(NULL);
     t = localtime(&tt)`;
     wd := `t->tm_wday`:Uint8 + 1
     d  := `t->tm_mday`:Uint8
@@ -34,8 +34,8 @@ Public
     + y:Uint16
 
     `{
-      struct tm *t; time_t tt
-      tt = time(NULL)
+      struct tm *t; time_t tt;
+      tt = time(NULL);
       t = localtime(&tt)`;
       wd := `t->tm_wday`:Uint8 + 1
       d  := `t->tm_mday`:Uint8
@@ -49,8 +49,8 @@ Public
   ( + s,m,h:Uint8
 
     `{
-      struct tm *t; time_t tt
-      tt = time(NULL)
+      struct tm *t; time_t tt;
+      tt = time(NULL);
       t = localtime(&tt)`;
       h := `t->tm_hour`:Uint8
       m := `t->tm_min` :Uint8

@@ -1,0 +1,26 @@
+Header
+  + name := Bench_obj
+/* Collections, strings and late binding. */
+Public
+  - main <-
+  ( + a:Array Int
+    + m:Hmap Int Key String_alias
+    + b:String_buffer
+    + s:Int
+    a := Array Int .create_with_capacity 16
+    from 1 to 2_000_000 do { i:Int
+      a.add_last (i * 7 % 1000)
+    }
+    a.foreach { x:Int
+      s := s + x
+    }
+    Out # s # '\n'
+    m := new Hmap Int Key String_alias
+    b := String_buffer.create 32
+    from 1 to 100_000 do { i:Int
+      b.clear
+      b # "key" # (i % 5000)
+      m.at (b.to_string_alias) put i
+    }
+    Out # m.count # '\n'
+  )

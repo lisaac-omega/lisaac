@@ -58,6 +58,7 @@ To explore the language step by step, we suggest starting with:
 - lisaac/example/print_args.li
 - lisaac/example/fibonacci.li
 - other examples in lisaac/example/*.li
+- lisaac/example/numbers/*.li, for the numbers ℤ, ℚ, ℝ and ℂ
 
 After these first simple examples, we suggest continuing with larger programs that are each located in their own directory:
 - lisaac/example/welcome/welcome.li

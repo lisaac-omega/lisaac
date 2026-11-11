@@ -10,7 +10,7 @@ Header
     | 02 welcome       |  The classical factorial example in    |
     | 03 ...           |  Lisaac Ω. ...                         |
     |                  |      (header comment of the file)      |
-    |   (playlist)     |      ( Voir le code dans elit )        |
+    |   (playlist)     |  ( Code dans elit ) ( Code dans elito )|
     |                  +----------------------------------------+
     |                  | CONSOLE status / compiler or output    |
     +==================+========================================+
@@ -19,7 +19,8 @@ Header
 
   Keyboard: Space/Enter run (or stop), Left/Right previous/next,
   Home/End first/last, Up/Down/PgUp/PgDn scroll the comment, C compile,
-  A auto mode, E open in elit, P edit the arguments, +/- zoom the comment.
+  A auto mode, E open in elit, O open in elito, P edit the arguments,
+  +/- zoom the comment.
   */
 Inherit
   
@@ -46,13 +47,14 @@ Public
   + b_compile:Code_show_button
   + b_auto:Code_show_button
   + b_elit:Code_show_button
+  + b_elito:Code_show_button
 
-  // Layout:
-  - header_h:Real32 := 56
-  - list_head_h:Real32 := 40
-  - file_bar_h:Real32 := 44
-  - transport_h:Real32 := 96
-  - elit_zone_h:Real32 := 92
+  // Layout (sizes at the default size, see `Code_show_look.scale'):
+  - header_h:Real32 <- Code_show_look.px 56
+  - list_head_h:Real32 <- Code_show_look.px 40
+  - file_bar_h:Real32 <- Code_show_look.px 44
+  - transport_h:Real32 <- Code_show_look.px 96
+  - elit_zone_h:Real32 <- Code_show_look.px 92
   + sidebar_w:Real32
   + console_h:Real32
 
@@ -71,7 +73,8 @@ Public
     b_next := Code_show_button.create (Code_show_button.round) icon (Code_show_button.i_next) label "" do { go (current + 1); }
     b_compile := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Compiler" do { compile (entries.at current) then_run False; }
     b_auto := Code_show_button.create (Code_show_button.pill) icon (Code_show_button.no_icon) label "Auto" do { set_auto (! auto); }
-    b_elit := Code_show_button.create (Code_show_button.big) icon (Code_show_button.no_icon) label "Voir le code dans elit" do { open_elit (entries.at current); }
+    b_elit := Code_show_button.create (Code_show_button.big) icon (Code_show_button.no_icon) label "Voir le code dans elit" do { open_in "bin/elit" entry (entries.at current); }
+    b_elito := Code_show_button.create (Code_show_button.big) icon (Code_show_button.no_icon) label "Voir le code dans elito" do { open_in "bin/elito" entry (entries.at current); }
     playlist.init_parent self
     code.init_parent self
     console.init_parent self
@@ -82,6 +85,7 @@ Public
     b_compile.init_parent self
     b_auto.init_parent self
     b_elit.init_parent self
+    b_elito.init_parent self
     select 0
     a.if { set_auto True; }
     Paper.run
@@ -141,7 +145,7 @@ Public
 
   - zoom d:Real32 <-
   (
-    Code_show_look.set_code_size (((Code_show_look.code_size + d).max 10).min 30)
+    Code_show_look.set_code_base (((Code_show_look.code_base + d).max 10).min 30)
     code.clamp
   )
 
@@ -157,7 +161,14 @@ Public
     String.tmp { buf:String_buffer
       buf.copy (lip "lisaac" str)
       buf.append name
-      (lip "target" str = "windows").if { buf.append ".exe"; }
+      (lip "target" str = "windows").if {
+        // In lisaac/bin, elit and elito are launchers (`.cmd'), see @Build_lisaac.
+        buf.append ".exe"
+        (! File_utils.exists buf).if {
+          buf.remove_tail 4
+          buf.append ".cmd"
+        }
+      }
       (File_utils.exists buf).if {
         buf.add_first '"'
         buf.add_last '"'
@@ -193,9 +204,42 @@ Public
     remove_file (e.log_path)
   )
 
+  - exec_file e:Code_show_entry in buf:String_buffer <-
+  // The executable of @e, with its absolute path.
+  (
+    buf.copy (e.dir)
+    buf.append (e.exec)
+    (lip "target" str = "windows").if { buf.append ".exe"; }
+  )
+
+  - is_fresh e:Code_show_entry :Boolean <-
+  // The executable of @e exists and is newer than its source file (for
+  // example, compiled at the installation): no need to compile it again.
+  ( + result:Boolean
+    String.tmp2 { (exe,src:String_buffer)
+      exec_file e in exe
+      src.copy (e.dir)
+      src.append (e.file)
+      result := File_utils.is_newer exe than src
+    }
+    result
+  )
+
   - compile e:Code_show_entry then_run r:Boolean <-
   ( + pid:Int
-    ((e.can_run) && {! e.is_active}).if {
+    ((e.can_run) && {! e.is_active} && {is_fresh e}).if {
+      e.set_keep_exec True
+      e.set_compiled True
+      e.clear_error
+      e.set_status (Code_show_entry.none)
+      e.message.copy "Déjà compilé."
+      r.if { run e; }
+      update_buttons
+    }.elseif {(e.can_run) && {! e.is_active}} then {
+      String.tmp { exe:String_buffer
+        exec_file e in exe
+        e.set_keep_exec (File_utils.exists exe)
+      }
       set_log e
       e.output.clear
       e.clear_error
@@ -285,10 +329,11 @@ Public
     }
   )
 
-  - open_elit e:Code_show_entry <-
+  - open_in editor:String_alias entry e:Code_show_entry <-
+  // Open the file of @e in @editor ("bin/elit" or "bin/elito").
   (
     String.tmp { cmd:String_buffer
-      cmd.copy (tool "elit/elit")
+      cmd.copy (tool editor)
       cmd.append " \""
       cmd.append (e.file)
       cmd.add_last '"'
@@ -370,14 +415,15 @@ Public
   )
 
   - cleanup e:Code_show_entry <-
-  // Remove executable and generated files (as the textual version did).
+  // Remove the generated files, and the executable when the show created
+  // it: an executable that was already there (installed) stays.
   (
     (! e.is_active).if {
       e.set_compiled False
       String.tmp { buf:String_buffer
         buf.copy (e.dir)
         buf.append (e.exec)
-        remove_file buf
+        (! e.keep_exec).if { remove_file buf; }
         buf.append ".c"
         remove_file buf
         buf.remove_last
@@ -388,7 +434,7 @@ Public
         remove_file buf
         buf.remove_tail 2
         buf.append ".exe"
-        remove_file buf
+        (! e.keep_exec).if { remove_file buf; }
       }
     }
   )
@@ -505,31 +551,38 @@ Public
     w.set_height (hh.max 1)
   )
 
+  - px v:Real32 :Real32 <- Code_show_look.px v
+
   - refresh <-
   ( + y,cx,cy,w,ty:Real32
-    sidebar_w := ((width * 0.34).max 300).min 460
-    console_h := ((height * 0.24).max 110).min 260
+    // Everything grows with the window, in proportion to its default size:
+    Code_show_look.set_scale ((((width / 1280).min (height / 820)).max 0.6).min 2.5)
+    sidebar_w := ((width * 0.34).max (px 300)).min (px 460)
+    console_h := ((height * 0.24).max (px 110)).min (px 260)
     y := header_h + list_head_h
     ty := height - transport_h
     place playlist at (0,y) size (sidebar_w, ty - y)
     y := header_h + file_bar_h
     place code at (sidebar_w,y) size (width - sidebar_w, ty - console_h - elit_zone_h - y)
     place console at (sidebar_w, ty - console_h) size (width - sidebar_w, console_h)
-    w := (b_elit.width_min.max 320).min (width - sidebar_w - 40)
-    place b_elit at (sidebar_w + (width - sidebar_w - w) / 2, ty - console_h - elit_zone_h + (elit_zone_h - 54) / 2) size (w,54)
+    // The two buttons side by side, centered, with a gap of 20:
+    w := ((b_elit.width_min.max (b_elito.width_min)).max (px 280)).min ((width - sidebar_w - px 60) / 2)
+    cy := ty - console_h - elit_zone_h + (elit_zone_h - px 54) / 2
+    place b_elit at (sidebar_w + (width - sidebar_w) / 2 - px 10 - w, cy) size (w,px 54)
+    place b_elito at (sidebar_w + (width - sidebar_w) / 2 + px 10, cy) size (w,px 54)
     // Transport:
     cx := width / 2
-    cy := ty + 4 + (transport_h - 4) / 2 - 6
-    place b_play at (cx - 30, cy - 30) size (60,60)
-    place b_prev at (cx - 104, cy - 22) size (44,44)
-    place b_next at (cx + 60, cy - 22) size (44,44)
+    cy := ty + 4 + (transport_h - 4) / 2 - px 6
+    place b_play at (cx - px 30, cy - px 30) size (px 60,px 60)
+    place b_prev at (cx - px 104, cy - px 22) size (px 44,px 44)
+    place b_next at (cx + px 60, cy - px 22) size (px 44,px 44)
     w := b_compile.width_min
-    place b_compile at (cx - 130 - w, cy - 15) size (w,30)
-    w := b_auto.width_min.max 70
-    place b_auto at (cx + 130, cy - 15) size (w,30)
-    w := (width - cx - 254).min 400
-    place field at (width - w - 24, cy - 12) size (w,42)
-    field.set_visible ((field.visible) && {w > 80})
+    place b_compile at (cx - px 130 - w, cy - px 15) size (w,px 30)
+    w := b_auto.width_min.max (px 70)
+    place b_auto at (cx + px 130, cy - px 15) size (w,px 30)
+    w := (width - cx - px 254).min (px 400)
+    place field at (width - w - px 24, cy - px 12) size (w,px 42)
+    field.set_visible ((field.visible) && {w > px 80})
     playlist.clamp
   )
 
@@ -551,24 +604,24 @@ Public
     hline (0,header_h - 1) width width
     text_align (align_left | align_middle)
     font_face_id (Font.sys (Font.bold))
-    font_size 21
+    font_size (px 21)
     fill_color (Code_show_look.accent)
-    x := text (22, header_h / 2) msg "Lisaac Ω"
+    x := text (px 22, header_h / 2) msg "Lisaac Ω"
     font_face_id (Font.sys (Font.roman))
-    font_size 19
+    font_size (px 19)
     fill_color (Code_show_look.text_faint)
-    x := text (x + 12, header_h / 2) msg "·"
+    x := text (x + px 12, header_h / 2) msg "·"
     fill_color (Code_show_look.text)
-    text (x + 12, header_h / 2) msg title
+    text (x + px 12, header_h / 2) msg title
     String.tmp { tmp:String_buffer
       (current < 9).if { tmp.add_last '0'; }
       (current + 1).append_in tmp
       tmp.append " / "
       entries.count.append_in tmp
-      mono_font 16
+      mono_font (px 16)
       text_align (align_right | align_middle)
       fill_color (Code_show_look.text_dim)
-      text (width - 22, header_h / 2) msg tmp
+      text (width - px 22, header_h / 2) msg tmp
     }
     // Playlist title:
     begin_path
@@ -583,7 +636,7 @@ Public
       tmp.append "PROGRAMME  ·  "
       entries.count.append_in tmp
       tmp.append " exemples"
-      text (18, header_h + list_head_h / 2) msg tmp
+      text (px 18, header_h + list_head_h / 2) msg tmp
     }
     begin_path
     rect (sidebar_w - 1,header_h) size (1,ty - header_h)
@@ -596,10 +649,10 @@ Public
     fill
     hline (sidebar_w,header_h + file_bar_h - 1) width (width - sidebar_w)
     save
-    intersect_scissor (sidebar_w,header_h) size (width - sidebar_w - 18,file_bar_h)
+    intersect_scissor (sidebar_w,header_h) size (width - sidebar_w - px 18,file_bar_h)
     text_align (align_left | align_middle)
     y := header_h + file_bar_h / 2
-    x := sidebar_w + 18
+    x := sidebar_w + px 18
     font_face_id (Font.sys (Font.roman))
     font_size (Code_show_look.ui_size)
     fill_color (Code_show_look.text_dim)
@@ -648,40 +701,40 @@ Public
       fill
     }
     cx := width / 2
-    cy := ty + 4 + (transport_h - 4) / 2 - 6
+    cy := ty + 4 + (transport_h - 4) / 2 - px 6
     // Now playing (left):
-    w := b_compile.xo - 40
-    (w > 60).if {
+    w := b_compile.xo - px 40
+    (w > px 60).if {
       save
-      intersect_scissor (0,ty + 4) size (w + 22,transport_h - 4)
+      intersect_scissor (0,ty + 4) size (w + px 22,transport_h - 4)
       text_align (align_left | align_middle)
       font_face_id (Font.sys (Font.bold))
-      font_size (Code_show_look.ui_size + 1)
+      font_size (Code_show_look.ui_size + px 1)
       fill_color (Code_show_look.text)
-      text (22, cy - 10) msg (e.exec)
+      text (px 22, cy - px 10) msg (e.exec)
       font_face_id (Font.sys (Font.roman))
       font_size (Code_show_look.small_size)
       (e.phase = Code_show_entry.running).if {
         fill_color (Code_show_look.running)
-        text (22, cy + 12) msg "en cours d'exécution"
+        text (px 22, cy + px 12) msg "en cours d'exécution"
       }.elseif {e.phase = Code_show_entry.compiling} then {
         fill_color (Code_show_look.accent)
-        text (22, cy + 12) msg "compilation ..."
+        text (px 22, cy + px 12) msg "compilation ..."
       }.elseif {auto} then {
         fill_color (Code_show_look.accent)
-        text (22, cy + 12) msg "mode automatique"
+        text (px 22, cy + px 12) msg "mode automatique"
       }.elseif {e.status = Code_show_entry.ok} then {
         fill_color (Code_show_look.ok)
-        text (22, cy + 12) msg "terminé"
+        text (px 22, cy + px 12) msg "terminé"
       }.elseif {e.status = Code_show_entry.compile_error} then {
         fill_color (Code_show_look.error)
-        text (22, cy + 12) msg "erreur de compilation"
+        text (px 22, cy + px 12) msg "erreur de compilation"
       }.elseif {e.status = Code_show_entry.run_error} then {
         fill_color (Code_show_look.error)
-        text (22, cy + 12) msg "erreur à l'exécution"
+        text (px 22, cy + px 12) msg "erreur à l'exécution"
       } else {
         fill_color (Code_show_look.text_dim)
-        text (22, cy + 12) msg ((e.can_run).ok "prêt" or "code seul")
+        text (px 22, cy + px 12) msg ((e.can_run).ok "prêt" or "code seul")
       }
       reset_scissor
       restore
@@ -692,7 +745,7 @@ Public
       font_size (Code_show_look.small_size)
       text_align (align_left | align_bottom)
       fill_color (Code_show_look.text_dim)
-      text (field.xo + 2, field.yo - 6) msg "ARGUMENTS"
+      text (field.xo + px 2, field.yo - px 6) msg "ARGUMENTS"
       (e.args !== (e.default_args)).if {
         String.tmp { tmp:String_buffer
           tmp.append "défaut : "
@@ -700,16 +753,16 @@ Public
           text_align (align_right | align_bottom)
           font_face_id (Font.sys (Font.roman))
           fill_color (Code_show_look.text_faint)
-          text (field.xmax, field.yo - 6) msg tmp
+          text (field.xmax, field.yo - px 6) msg tmp
         }
       }
     }
     // Keyboard hints:
     font_face_id (Font.sys (Font.roman))
-    font_size (Code_show_look.small_size - 2)
+    font_size (Code_show_look.small_size - px 2)
     text_align (align_center | align_bottom)
     fill_color (Code_show_look.text_faint)
-    text (cx, height - 6) msg "Espace : exécuter / arrêter   ·   flèches gauche / droite : précédent / suivant   ·   C : compiler   ·   A : auto   ·   E : elit   ·   + / - : taille du texte"
+    text (cx, height - 6) msg "Espace : exécuter / arrêter   ·   flèches gauche / droite : précédent / suivant   ·   C : compiler   ·   A : auto   ·   E : elit   ·   O : elito   ·   + / - : taille du texte"
   )
 
   - hline (x,y:Real32) width w:Real32 <-
@@ -774,7 +827,8 @@ Public
       .when ' ' then { play; }
       .when 'c' or 'C' then { compile (entries.at current) then_run False; }
       .when 'a' or 'A' then { set_auto (! auto); }
-      .when 'e' or 'E' then { open_elit (entries.at current); }
+      .when 'e' or 'E' then { open_in "bin/elit" entry (entries.at current); }
+      .when 'o' or 'O' then { open_in "bin/elito" entry (entries.at current); }
       .when 'p' or 'P' then { (field.visible).if { field.get_focus; }; }
       .when '+' or '=' then { zoom 1; }
       .when '-' then { zoom (-1); }

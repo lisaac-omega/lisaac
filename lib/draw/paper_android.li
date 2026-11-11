@@ -667,7 +667,7 @@ Private
     `{ struct engine* e=@e`
     ptr := `e->pen`:Pointer
     `}`
-    (ptr.is_null).if_false {
+    (ptr = NULL).if_false {
       pen := Cast Pointer To Pen.on ptr
     }
     pen

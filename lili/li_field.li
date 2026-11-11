@@ -1,0 +1,22 @@
+Header
+  + name := Li_field
+/* Address of a field: its value, for a @Flat structure. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + receiver:Li_node
+  + off:Int
+
+  - create r:Li_node off o:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make r off o
+    result
+  )
+
+  - make r:Li_node off o:Int <- ( receiver := r; off := o; )
+
+  - eval fp:Int :Int <- receiver.eval fp + off

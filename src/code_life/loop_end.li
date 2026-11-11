@@ -53,6 +53,7 @@ Public
 
     ((is_optimization) && {loop_invariant = NULL} && {loop.link_count = 1}).if {
       loop_invariant := loop
+      loop_cond_depth := loop.start_depth
     }
 
     seq_call_local_and_loop := seq_call_local_and_loop - 1

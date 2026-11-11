@@ -45,6 +45,7 @@ Public
   + pid:Int := -1
   + run_after_compile:Boolean
   + compiled:Boolean            // Executable present (compile only).
+  + keep_exec:Boolean           // Executable not created by the show: never removed.
   + capture:Boolean             // Output of the running process goes to `output'.
 
   - none:Int          := 0
@@ -65,6 +66,7 @@ Public
   - set_pid p:Int <- ( pid := p; )
   - set_run_after_compile b:Boolean <- ( run_after_compile := b; )
   - set_compiled b:Boolean <- ( compiled := b; )
+  - set_keep_exec b:Boolean <- ( keep_exec := b; )
   - set_capture b:Boolean <- ( capture := b; )
   - set_status s:Int <- ( status := s; )
   - set_exit_code c:Int <- ( exit_code := c; )

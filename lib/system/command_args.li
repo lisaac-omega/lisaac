@@ -35,20 +35,29 @@ void get_executable_path(char *buf, int64_t size) {
   
 Private  
   
-  - mybuffer:String_buffer := String_buffer.create 512
-  
   - arg_vector idx:Int :C_array(Char) <- `arg_vector[@idx]`:C_array(Char)
 
   - arg_count:Int <- `arg_count`:Int
 
-  - args:Array String_alias :=
+  // @args is built at its first use, not at the start: with `-cop', each universe has its
+  // `-' slots, and would build it (`to_string_alias' is a synchronous message to the table of
+  // the aliases, shared by all the universes).
+
+  - args_storage:Array String_alias
+
+  - args:Array String_alias <-
   ( + result:Array String_alias
-    result := new Array String_alias capacity arg_count
-    from 0 to (arg_count - 1) do { j:Int
-      mybuffer.from_external_copy (arg_vector j)
-      result.add_last (mybuffer.to_string_alias)
+    (args_storage = NULL).if {
+      String.tmp { buf:String_buffer
+        result := new Array String_alias capacity arg_count
+        from 0 to (arg_count - 1) do { j:Int
+          buf.from_external_copy (arg_vector j)
+          result.add_last (buf.to_string_alias)
+        }
+      }
+      args_storage := result
     }
-    result
+    args_storage
   )
   
 Public
@@ -79,21 +88,28 @@ Public
   
   - executable_directory:String_alias :=
   // Try to compute the absolute directory path. 
-  ( + buf:C_array Char
+  ( + cbuf:C_array Char
     + cap,i:Int
-    buf := mybuffer.to_external
-    cap := mybuffer.capacity
-    `get_executable_path(@buf, @cap)`
-    mybuffer.restore_after_external
-    i := mybuffer.last_path_separator
-    (i != -1).if { mybuffer.set_upper i; }
-    mybuffer.replace_all '\\' with '/'
-    mybuffer.to_string_alias
+    + result: String_alias
+    
+    String.tmp { buf:String_buffer
+      buf.set_capacity 1024
+      cbuf := buf.to_external
+      cap := buf.capacity
+      `get_executable_path(@cbuf, @cap)`
+      buf.restore_after_external
+      i := buf.last_path_separator
+      (i != -1).if { buf.set_upper i; }
+      buf.replace_all '\\' with '/'
+      result := buf.to_string_alias
+    }
+    result
   )
   
   - shift <-
   // Mimic bash/sh shift.
   ( + i:Int
+    
     i := 1 
     //Out # "Command_args " # (args.upper) # '\n'    
     until {i >= args.upper} do {

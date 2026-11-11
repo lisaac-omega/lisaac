@@ -15,6 +15,7 @@ Public
   - vmove:Int := 1
   - vline:Int := 2
   - vcurve:Int:= 3
+  - vcubic:Int:= 4
     
   - platform_id_unicode  :Int := 0
   - platform_id_mac      :Int := 1
@@ -71,50 +72,41 @@ Public
   
   // accessors to parse data from file
 
-  - ttbyte p:C_array Uint8 :Uint8 <- 
-  p.at 0.to_raw_uint8
+  // Big-endian readers (ttBYTE, ttCHAR, ttUSHORT, ttSHORT, ttULONG, ttLONG).
   
-  - ttchar p:C_array Uint8 :Int8  <- 
-  p.at 0.to_raw_int8
+  - ttbyte p:C_array Uint8 :Uint8 <- p.at 0
+  
+  - ttchar p:C_array Uint8 :Int8 <- p.at 0.to_raw_int8
 
-  - ttfixed p:C_array Uint8 :Int32 <- 
-  ttlong p
+  - ttfixed p:C_array Uint8 :Int32 <- ttlong p
   
-  - ttushort p:C_array Uint8 :Uint16 <- 
-  (p.at 0.to_raw_uint16<<8)|(p.at 1.to_raw_uint8)
+  - ttushort p:C_array Uint8 :Uint16 <- (p.at 0.to_uint16 << 8) | p.at 1
   
-  - ttshort p:C_array Uint8 :Int16  <- 
-  (p.at 0.to_raw_int16<<8)|(p.at 1.to_raw_uint8)
+  - ttshort p:C_array Uint8 :Int16 <- (ttushort p).to_raw_int16
   
-  - ttulong p:C_array Uint8 :Uint32 <- 
-  (p.at 0.to_raw_uint32<<24)|
-  (p.at 1.to_raw_uint8.to_raw_uint32<<16)|
-  (p.at 2.to_raw_uint8.to_raw_uint32<< 8)|
-  (p.at 3.to_raw_uint8)
+  - ttulong p:C_array Uint8 :Uint32 <- (p.at 0.to_uint32 << 24) | (p.at 1.to_uint32 << 16) | (p.at 2.to_uint32 << 8) | p.at 3
   
-  - ttlong p:C_array Uint8 :Int32 <- 
-  (p.at 0.to_raw_int32<<24)|
-  (p.at 1.to_raw_uint8.to_raw_int32<<16)|
-  (p.at 2.to_raw_uint8.to_raw_int32<< 8)|
-  (p.at 3.to_raw_uint8)
+  - ttlong p:C_array Uint8 :Int32 <- (ttulong p).to_raw_int32
   
-  - tag4 p:C_array Uint8 
-  with (c0,c1,c2,c3:Uint8) :Boolean <- (
-    (p.at 0 = c0) && {p.at 1 = c1} && 
-    {p.at 2 = c2} && {p.at 3 = c3}
-  )
+  // The same, as an @Int: the arithmetic is then done as in C (on @int).
+  
+  - u8  p:C_array Uint8 :Int <- p.at 0
+  - s8  p:C_array Uint8 :Int <- ttchar p
+  - u16 p:C_array Uint8 :Int <- ttushort p
+  - s16 p:C_array Uint8 :Int <- ttshort p
+  - u32 p:C_array Uint8 :Int <- ttulong p
+  - s32 p:C_array Uint8 :Int <- ttlong p
+  
+  - tag4 p:C_array Uint8 with (c0,c1,c2,c3:Uint8) :Boolean <-
+  (p.at 0 = c0) && {p.at 1 = c1} && {p.at 2 = c2} && {p.at 3 = c3}
   
   - tag p:C_array Uint8 with str:String_alias :Boolean <-
-  tag4 p with (str.at 0,str.at 1,str.at 2,str.at 3)
+  tag4 p with (str.at 0.to_uint8,str.at 1.to_uint8,str.at 2.to_uint8,str.at 3.to_uint8)
 
-  // @OPTIMIZE: binary search
-  - find_table (dta:C_array Uint8,start:Int) 
-  name tg:String_alias :Uint32 <-
-  ( + result:Uint32
-    + loc,i,num_tables,tabledir:Int
-    
-    num_tables := ttushort (dta+start+4)
-    tabledir := start + 12
+  - find_table (dta:C_array Uint8,fontstart:Int) name tg:String_alias :Int <-
+  ( + result,loc,i,num_tables,tabledir:Int
+    num_tables := ttushort (dta+fontstart+4)
+    tabledir := fontstart + 12
     {(i < num_tables) && {result = 0}}.while_do {
       loc := tabledir + 16*i
       (tag (dta+loc+0) with tg).if {

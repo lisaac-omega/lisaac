@@ -12,6 +12,35 @@ Public
   
   - put_character c:Char <- basic_io_putc c
 
+  - put_string str:String <-
+  // One block write (see @String.print).
+  (
+    str.print
+  )
+
+  - put_chars p:C_array Char size n:Int <-
+  // Write the @n first characters of @p.
+  ( + i:Int
+
+    (is_char_output).if {
+      {i = n}.until_do {
+        put_character (p.at i)
+        i := i + 1
+      }
+    } else {
+      `fwrite((void *)(@p),(size_t)1,(size_t)(@n),stdout)`:(Int)
+    }
+  )
+
+  - is_char_output:Boolean <- (lip "target" str = "arduino") || {lip "target" str = "android"}
+  // These targets write one character at a time (see @System_io.print_char).
+
+  - put_buffer buf:C_array Uint8 size n:Int <-
+  // Write the @n first bytes of @buf (binary output).
+  (
+    `fwrite((void *)(@buf),(size_t)1,(size_t)(@n),stdout)`:(Int)
+  )
+
 
 
 

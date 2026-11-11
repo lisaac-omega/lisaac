@@ -1,6 +1,25 @@
 Header
   + name := Stdin
 /*STanDard INput.*/
+  - include :=
+`
+#include <sys/stat.h>
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
+static inline int stdin_size(void)
+{ struct stat st;
+  return (fstat(0, &st) == 0 && S_ISREG(st.st_mode)) ? (int)st.st_size : 0;
+}
+static inline int stdin_huge_pages(char *p, long n)
+{ // Huge pages for a big buffer (less page faults), on its 2 MiB aligned part.
+#ifdef MADV_HUGEPAGE
+  char *b = (char *)(((unsigned long)p + (1UL << 21) - 1) & ~((1UL << 21) - 1));
+  if (b < p + n) madvise(b, (p + n - b) & ~((1L << 21) - 1), MADV_HUGEPAGE);
+#endif
+  return 0;
+}
+`;
 Inherit
   - inherit_input_stream:Input_stream := Input_stream
 
@@ -56,3 +75,49 @@ Public
     }
   )
   
+
+  //
+  // Reading in blocks.
+  //
+
+  - size:Int <- `stdin_size()`:(Int)
+  // Size of the input if it is a file, else 0.
+
+  - new_buffer:String_buffer <-
+  // A buffer for all the input: @size (if known) plus 1 MiB.
+  ( + result:String_buffer
+    + p:C_array Char
+    + n:Int
+
+    n := size + (1 << 20)
+    result := String_buffer.create n
+    p := result.to_external
+    `stdin_huge_pages(@p, @n)`:(Int)
+    result
+  )
+
+  - read_more buf:String_buffer :Int <-
+  // Appends the next bytes of the input to @buf (at most 1 MiB, more capacity if needed):
+  // their count, 0 at the end. The storage of @buf moves only if it has to grow, and one
+  // byte stays free: @String_buffer.to_external never moves it.
+  ( + p:C_array Char
+    + n:Int
+
+    (buf.capacity - buf.count < 1 << 20).if {
+      buf.set_capacity (buf.capacity * 2 + (1 << 20))
+    }
+    p := buf.to_external + buf.count
+    n := (buf.capacity - buf.count - 1).min (1 << 20)
+    n := `fread(@p, 1, @n, stdin)`:(Int)
+    buf.set_count (buf.count + n)
+    n
+  )
+
+  - read_all:String_buffer <-
+  // All the input in one buffer.
+  ( + result:String_buffer
+
+    result := new_buffer
+    {read_more result != 0}.while_do { }
+    result
+  )

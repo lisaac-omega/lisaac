@@ -32,41 +32,7 @@ Prototype
         j := j + 1
       }
     }
-    //(modify_count = 0).if { die_with_code 0; }
   )
-/*
-  - extend_pass <-
-  ( + j,continue:Int
-    + is_ok:Boolean
-    + index:Int
-    
-    index := node_list.lower
-    {
-      VARIABLE.update
-      j := index
-      modify_count := 0
-      {j <= node_list.upper}.while_do {
-        is_ok := node_list.at j.update
-        (is_ok).if {
-          node_list.remove j
-        } else {
-          j := j + 1
-          (modify_count = 0).if {
-            index := index + 1
-            (j != index).if {
-              node_list.swap (j-1) with index
-            }
-          } else {
-            continue := 1
-            modify_count := 0
-          }
-        }
-      }
-    }.do_while {index <= node_list.upper}
-    (continue = 0).if { die_with_code 0; }
-    modify_count := continue
-  )
-*/
 Public
 
   //
@@ -195,16 +161,8 @@ Public
     // Control argument type.
     lst_typ_f := block_model.argument_list
     pos       := block_model.position
-    /*
-    (larg.count > 1).if {
-      warning_error (larg.at 1.position,"pow?")
-      r ?= larg.at 1
-      (r = NULL).if { "MERDE".println } else { r.local.name.print; r.local.pow.println }
-    }
-    */
     //
     (debug_level_option != 0).if {
-      //(profil_current = NULL).if { crash_with_message "NODE" }
       list_current.add_last (
         Push.create p context (profil_current.context) first False
       )
@@ -212,7 +170,6 @@ Public
     //
     ((larg.count > 1) && {(r ?= larg.at 1) != NULL} && {r.local.pow > 1}).if { // ^n
       (pow,lpow) := (r.local.pow,r.local.lpow)
-      //"pow = ".print; pow.println
       i := 1 + pow
       {i <= larg.upper}.while_do {
         r ?= larg.at i
@@ -237,30 +194,6 @@ Public
         new_expr := larg.at j.check_type (lst_typ_f.at ((j-1)/pow)) with pos
         larg.at j put new_expr
       }      
-      //(pb != NULL).if { "YES!!!!".println } else { "NO!!!".println }
-      /*
-      0.to (pow-1) do { j:Int
-        narg := ALIAS_ARRAY EXPR.new
-        (j = pow-1).if {
-          narg.add_last (larg.first)
-          ne := e
-        } else {
-          narg.add_last (larg.first.my_copy)
-          ne := e.my_copy
-        }
-        //
-        0.to (((larg.count-1) / pow)-1) do { k:Int
-          narg.add_last (larg.at (1 + k*pow + j))
-        }
-        //
-        dta    := DTA_BLOCK.create block_model with narg
-        result := NODE_TYPE.create ne with dta
-        node_list.add_last result
-        list_current.add_last result
-      }
-      list_current.remove_last
-      ALIAS_ARRAY EXPR.free larg
-      */
     } else { // Standard
       (lst_typ_f.count+1 != larg.count).if {
         string_tmp.copy "Incorrect size of vector argument for this block. (Value:"
@@ -292,14 +225,6 @@ Public
   (
     data.position
   )
-  /*
-  + without_push:Boolean
-  
-  - without_push_on <-
-  (
-    without_push := True
-  )
-*/
   + data:Dta
 
   + expr:Expr
@@ -359,7 +284,6 @@ Public
     crash
   )
 
-
 Node, Dta
 
   //
@@ -414,11 +338,7 @@ Private
         (! t0.affect_with t1) && {! t1.is_export_to t0} && {! t0.is_import_to t1} &&
         {(exp := t0.is_export_to t1) || {t1.is_import_to t0}}
       ).if {
-        //"\nType Expr : ".print; t1.print; '\n'.print
-        //"Type arg  : ".print; t0.print;  '\n'.print
-        //"Export    : ".print; exp.println
         sl := t1.get_slot (s.name)
-        //"Slot      : ".print; (s != NULL).println
         (sl != NULL).if {
           (! sl.comm).if {
             warning_error (sl.position, "No commutativity for this slot.")

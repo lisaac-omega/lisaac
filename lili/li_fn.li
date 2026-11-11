@@ -1,0 +1,35 @@
+Header
+  + name := Li_fn
+/* A translated @Profil. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + frame_size:Int
+  + body:Li_node
+  // The result given back by value, or else `NULL'.
+  + result:Li_node
+  + name:String_alias
+
+  - create n:String_alias :Self <-
+  ( + r:Self
+    r := clone
+    r.set_name n
+    r
+  )
+
+  - set_name n:String_alias <- ( name := n; )
+
+  - set_frame_size n:Int body b:Li_node result r:Li_node <-
+  ( frame_size := n; body := b; result := r; )
+
+  - eval fp:Int :Int <-
+  ( + r:Int
+    body.eval fp
+    (result != NULL).if {
+      r := result.eval fp
+    }
+    r
+  )

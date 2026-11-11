@@ -1,0 +1,118 @@
+Header
+  + name := Text
+Inherit
+
+  + parent_div:Flat Div
+
+Public
+  
+  + fac:String_alias
+  + siz:Real32
+  + ali:Int
+  + col:Color
+  - color_default:Color := Color.rgba(200,255,255,255)
+  
+  + text:String_buffer
+
+  //
+  // Width / Height
+  //
+  
+  + width_min:Real32
+  + height_min:Real32
+  
+  //
+  // Creation.
+  //
+  
+  - put txt:String_alias face f:String_alias :Self <- 
+  put txt face f size 20.0 align (Pen.align_left) color color_default
+  
+  - put txt:String_alias face f:String_alias size s:Real32 :Self <- 
+  put txt face f size s align (Pen.align_left) color color_default
+  
+  - put txt:String_alias face f:String_alias align a:Int :Self <- 
+  put txt face f size 20.0 align a color color_default
+  
+  - put txt:String_alias face f:String_alias align a:Int color c:Color :Self <- 
+  put txt face f size 20.0 align a color c
+  
+  - put txt:String_alias :Self <- 
+  put txt face "sans" size 20.0 align (Pen.align_left) color color_default
+  
+  - put txt:String_alias align a:Int :Self <- 
+  put txt face "sans" size 20.0 align a color color_default
+  
+  - put txt:String_alias face f:String_alias size s:Real32 align a:Int color c:Color :Self <- 
+  ( + result:Self
+
+    result := clone
+    result.make txt face f size s align a color c
+    result
+  )
+
+  - make txt:String_alias face f:String_alias size s:Real32 align a:Int color c:Color <- 
+  ( 
+    text := String_buffer.create (txt.count)
+    text.copy txt
+    fac := f
+    siz := s
+    ali := a
+    col := c
+    center
+    line
+    //refresh
+    width_min := s * txt.count
+    height_min := s
+  )
+  
+  - color c:Color :Self       <- ( col := c; self)
+  - align a:Int :Self     <- ( ali := a; self)
+/*  
+  - refresh <-
+  ( + x0,y0,x1,y1:REAL_32
+    ((text.is_empty) || {PAPER.loc_pen = NULL}).if {
+      (width_min,height_min) := (siz,siz)
+    } else {
+      PAPER.loc_pen.font_size siz
+      PAPER.loc_pen.font_face fac
+      PAPER.loc_pen.text_align (PEN.align_left|PEN.align_top)
+      (x0,y0,x1,y1) := PAPER.loc_pen.text_box_bounds (0,0) width (PAPER.screen_width) msg text from 0 to (-1)
+      (width_min,height_min) := (x1-x0+5,y1)
+    }
+  );*/
+  
+  - size s:Real32 :Self      <-
+  ( 
+    siz := s
+    refresh
+    self
+  )
+  
+  - set_text txt:String_alias <-
+  (
+    text.copy txt
+  )
+  
+  - face f:String_alias :Self <- ( fac := f; self)
+  
+  //
+  // Display.
+  //
+  
+  - draw pen:Pen <-
+  ( + n:Real32
+    //debug_mode := TRUE
+    //draw_debug pen
+    //debug_mode := FALSE
+    
+    n := siz * (text.occurrences '\n' + 1)
+    pen.save
+    pen.font_size siz
+    pen.font_face fac
+    pen.text_align (ali | pen.align_top)
+    pen.fill_color col
+    pen.text_box (xo,yo+(height-n)/2.0) width width msg text from 0 to (-1)
+    pen.restore
+  )
+  

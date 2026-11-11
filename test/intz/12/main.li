@@ -1,9 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + a,b:ℤ
-    b := 1
-    a := a * b
-    Test.check (a = 0)
-  )

@@ -1,0 +1,1320 @@
+Header
+  + name := Li_compiler
+/*
+  Translate the internal representation of the compiler into a tree of
+  @Li_node. Each `tr_...' follows the `genere' slot of the matching node of
+  the compiler, which gives the meaning of this node.
+*/
+Insert
+
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
+
+Private
+
+  - nop:Li_node := Li_const.create 0
+
+  - layouts:Hmap Li_layout Key String_alias := new Hmap Li_layout Key String_alias
+
+  - fns:Hmap Li_fn Key String_alias := new Hmap Li_fn Key String_alias
+
+  - todo:Array Profil := Array Profil .create_with_capacity 1024
+
+  - todo_fn:Array Li_fn := Array Li_fn .create_with_capacity 1024
+
+  - globals:Hmap Int Key String_alias := new Hmap Int Key String_alias
+
+  - objects:Hmap Int Key String_alias := new Hmap Int Key String_alias
+
+  - strings_done:Hmap Int Key String_alias := new Hmap Int Key String_alias
+
+  - natives_done:Hmap Int Key String_alias := new Hmap Int Key String_alias
+
+  // Top of the frame of the @Profil being translated.
+  - frame_top:Int
+
+  - tmp:String_buffer := String_buffer.create 256
+
+Public
+
+  // The objects of the constant strings, for `INIT_STRING_ALIAS'.
+  - strings:Array Int := Array Int .create_with_capacity 256
+
+  - k_u64:Int := 7
+
+  - k_flat:Int := 11
+
+  - unsupported msg:String_alias <-
+  (
+    "lili: not yet supported: ".print
+    msg.print
+    '\n'.print
+    exit 1
+  )
+
+  //
+  // Kinds.
+  //
+
+  - is_native_array t:Type :Boolean <-
+  ((t.prototype != NULL) && {(t.prototype.name = str_n_a) || {t.prototype.name = str_n_a_v}})
+
+  - sel c:Boolean then a:Int else b:Int :Int <-
+  ( + result:Int
+    result := b
+    (c).if { result := a; }
+    result
+  )
+
+  - kind_c c:String_alias :Int <-
+  ( + k:Int
+    k := k_u64
+    (c.has '*').if {
+      k := k_u64
+    }.elseif {c.has_substring "long double"} then {
+      k := 10
+    }.elseif {c.has_substring "double"} then {
+      k := 9
+    }.elseif {c.has_substring "float"} then {
+      k := 8
+    }.elseif {c.has_substring "int64_t"} then {
+      k := sel (c.has_substring "uint") then 7 else 6
+    }.elseif {c.has_substring "uintptr_t"} then {
+      k := 7
+    }.elseif {c.has_substring "int32_t"} then {
+      k := sel (c.has_substring "uint") then 5 else 4
+    }.elseif {c.has_substring "long"} then {
+      k := sel (c.has_substring "unsigned") then 7 else 6
+    }.elseif {c.has_substring "short"} then {
+      k := sel (c.has_substring "unsigned") then 3 else 2
+    }.elseif {c.has_substring "char"} then {
+      k := sel (c.has_substring "unsigned") then 1 else 0
+    }.elseif {c.has_substring "int"} then {
+      k := sel (c.has_substring "unsigned") then 5 else 4
+    }
+    k
+  )
+
+  - kind_of tf:Type_full :Int <-
+  ( + r:Type
+    + k:Int
+    r := tf.raw
+    ((r.is_block) || {r = Type_context}).if {
+      k := k_flat
+    }.elseif {(r = Type_null) || {r = Type_void} || {r.prototype = NULL}} then {
+      k := k_u64
+    }.elseif {(! tf.is_flat) || {(tf.is_flat_ref) && {! tf.is_default_flat}}} then {
+      k := k_u64
+    }.elseif {is_native_array r} then {
+      k := k_u64
+    }.elseif {(r = type_true) || {r = type_false}} then {
+      k := 1
+    }.elseif {r.type_c != NULL} then {
+      k := kind_c (r.type_c)
+    } else {
+      k := k_flat
+    }
+    k
+  )
+
+  - size_of_kind k:Int :Int <-
+  ( + result:Int
+    result := 8
+    (k <= 1).if {
+      result := 1
+    }.elseif {k <= 3} then {
+      result := 2
+    }.elseif {(k <= 5) || {k = 8}} then {
+      result := 4
+    }.elseif {k = 10} then {
+      result := 16
+    }
+    result
+  )
+
+  - is_debug:Boolean <- debug_level_option != 0
+
+  - size_of_raw t:Type :Int <-
+  ( + result:Int
+    ((t.is_block) || {t = Type_context}).if {
+      result := 16
+    }.elseif {(t.prototype = NULL) || {is_native_array t}} then {
+      result := 8
+    }.elseif {(t = type_true) || {t = type_false}} then {
+      result := 1
+    }.elseif {t.type_c != NULL} then {
+      result := size_of_kind (kind_c (t.type_c))
+    } else {
+      result := layout_of t.size
+    }
+    result
+  )
+
+  - size_of tf:Type_full :Int <-
+  ( + k,result:Int
+    k := kind_of tf
+    (k = k_flat).if {
+      result := size_of_raw (tf.raw)
+    } else {
+      result := size_of_kind k
+    }
+    result
+  )
+
+  //
+  // Layout, in the order of `Type.genere_struct'.
+  //
+
+  - add_field s:Slot_data in t:Type to buckets:Array (Array Slot_data) <-
+  (
+    (t.prototype.is_mapping).if {
+      buckets.first.add_last s
+    }.elseif {(s.type.is_flat) && {! s.type.is_default_flat}} then {
+      buckets.at 4.add_last s
+    } else {
+      buckets.at (s.type.size).add_last s
+    }
+  )
+
+  - live_field s:Slot_data in t:Type to buckets:Array (Array Slot_data) <-
+  (
+    ((s.id_section.is_mapping) || {s.ensure_count > 0}).if {
+      add_field s in t to buckets
+    }
+  )
+
+  - layout_of t:Type :Li_layout <-
+  ( + result:Li_layout
+    + buckets:Array (Array Slot_data)
+    + slot:Slot
+    + sd:Slot_data
+    + tab:Array Slot_data
+    + off,sz,al,max_al:Int
+    + is_packed:Boolean
+
+    (layouts.has (t.intern_name)).if {
+      result := layouts.at (t.intern_name)
+    } else {
+      result := Li_layout.create
+      layouts.at (t.intern_name) put result
+      buckets := Array (Array Slot_data) .create_with_capacity 5
+      0.to 4 do { j:Int
+        buckets.add_last (Array Slot_data .create_with_capacity 8)
+      }
+      (t.slot_run != NULL).if {
+        (t.slot_run.lower).to (t.slot_run.upper) do { j:Int
+          slot := t.slot_run.at j
+          ((slot != NULL) && {slot.style = '+'}).if {
+            (slot.lower_style = 0).if {
+              (slot.slot_data_list != NULL).if {
+                (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:Int
+                  live_field (slot.slot_data_list.at k) in t to buckets
+                }
+              }
+              live_field (slot.slot_data) in t to buckets
+            }
+            sd := slot.slot_id
+            ((sd != NULL) && {sd.ensure_count > 0}).if {
+              add_field sd in t to buckets
+            }
+          }
+        }
+      }
+      is_packed := t.prototype.is_mapping
+      max_al := 1
+      (t.is_late_binding).if {
+        off := 4
+        max_al := 4
+      }
+      4.downto 0 do { j:Int
+        tab := buckets.at j
+        (tab.lower).to (tab.upper) do { i:Int
+          sd := tab.at i
+          sz := size_of (sd.type)
+          ((kind_of (sd.type) = k_flat) || {sz > 8}).if {
+            al := 8
+            result.flats.add_last sd
+          } else {
+            al := sz
+          }
+          (is_packed).if { al := 1; }
+          max_al := max_al.max al
+          off := (off + al - 1) / al * al
+          result.offsets.at (sd.intern_name) put off
+          off := off + sz
+        }
+      }
+      (off = 0).if {
+        off := 8
+        max_al := 8
+      }
+      result.set_size ((off + max_al - 1) / max_al * max_al)
+    }
+    result
+  )
+
+  - type_ids:Hmap Int Key String_alias := new Hmap Int Key String_alias
+
+  - id_of t:Type :Int <-
+  // `Type.index' only numbers the blocks.
+  ( + result:Int
+    (t.is_block).if {
+      result := 1_000_000 + t.index
+    } else {
+      (type_ids.has (t.intern_name)).if {
+        result := type_ids.at (t.intern_name)
+      } else {
+        result := type_ids.count + 1
+        type_ids.at (t.intern_name) put result
+      }
+    }
+    result
+  )
+
+  // Offset of `s' inside `t', maybe in a @Flat parent of `t'.
+  - offset_of s:Slot_data in t:Type :Int <-
+  ( + l:Li_layout
+    + result,i,o:Int
+    + f:Slot_data
+    l := layout_of t
+    result := -1
+    (l.offsets.has (s.intern_name)).if {
+      ((s.receiver_type = t) || {l.flats.is_empty}).if {
+        result := l.offsets.at (s.intern_name)
+      }
+    }
+    i := l.flats.lower
+    {(result < 0) && {i <= l.flats.upper}}.while_do {
+      f := l.flats.at i
+      (f.type.raw.is_block).if_false {
+        o := offset_of s in (f.type.raw)
+        (o >= 0).if {
+          result := l.offsets.at (f.intern_name) + o
+        }
+      }
+      i := i + 1
+    }
+    ((result < 0) && {l.offsets.has (s.intern_name)}).if {
+      result := l.offsets.at (s.intern_name)
+    }
+    result
+  )
+
+  - object_of t:Type :Int <-
+  ( + result:Int
+    (objects.has (t.intern_name)).if {
+      result := objects.at (t.intern_name)
+    } else {
+      result := Li_runtime.alloc (size_of_raw t)
+      objects.at (t.intern_name) put result
+      (t.is_late_binding).if {
+        Li_runtime.poke32 result value (id_of t)
+      }
+    }
+    result
+  )
+
+  - global_of s:Slot_data :Int <-
+  ( + result:Int
+    (globals.has (s.intern_name)).if {
+      result := globals.at (s.intern_name)
+    } else {
+      result := Li_runtime.alloc (size_of (s.type))
+      globals.at (s.intern_name) put result
+    }
+    result
+  )
+
+  - bytes_of str:String_alias :Int <-
+  (
+    tmp.copy str
+    tmp.unescape_c
+    tmp.add_last '\0'
+    Li_runtime.copy_bytes tmp
+  )
+
+  - native_of str:String_alias :Int <-
+  ( + result:Int
+    (natives_done.has str).if {
+      result := natives_done.at str
+    } else {
+      result := bytes_of str
+      natives_done.at str put result
+    }
+    result
+  )
+
+  - string_of cst:String_cst :Int <-
+  ( + t:Type
+    + storage,upper,o:Int
+    + s:Slot_data
+    + str:String_alias
+    + result:Int
+
+    str := cst.string
+    (strings_done.has str).if {
+      result := strings_done.at str
+    } else {
+      t := cst.static_type.raw
+      result := Li_runtime.alloc (size_of_raw t)
+      strings_done.at str put result
+      strings.add_last result
+      (t.is_late_binding).if {
+        Li_runtime.poke32 result value (id_of t)
+      }
+      storage := bytes_of str
+      upper := tmp.count - 2
+      s := type_string_alias.get_slot "upper" .slot_data_intern
+      (s.ensure_count != 0).if {
+        o := offset_of s in t
+        Li_runtime.poke_kind (kind_of (s.type)) at (result + o) value upper
+      }
+      s := type_string_alias.get_slot "storage" .slot_data_intern
+      (s.ensure_count != 0).if {
+        Li_runtime.poke (result + offset_of s in t) value storage
+      }
+      s := Slot_data.data_hash_code_alias
+      ((s != NULL) && {s.require_count > 0}).if {
+        tmp.remove_last
+        o := offset_of s in t
+        Li_runtime.poke_kind (kind_of (s.type)) at (result + o) value (tmp.hash_code)
+      }
+    }
+    result
+  )
+
+  //
+  // Local.
+  //
+
+  - new_local_slot n:Int :Int <-
+  ( + result:Int
+    result := frame_top
+    frame_top := frame_top + (n + 7) / 8 * 8
+    result
+  )
+
+  - off_of loc:Local :Int <-
+  ( + n:Int
+    (loc.list_level = 0).if {
+      (loc.is_result).if {
+        n := 8
+      } else {
+        n := size_of (loc.type)
+      }
+      loc.set_list_level (new_local_slot n)
+    }
+    loc.list_level
+  )
+
+  - read_local loc:Local :Li_node <-
+  ( + result:Li_node
+    + o:Int
+    o := off_of loc
+    (kind_of (loc.type) = k_flat).if {
+      (loc.is_result).if {
+        result := Li_local.create o
+      } else {
+        result := Li_addr.create o
+      }
+    } else {
+      (loc.is_result).if {
+        result := Li_load64.create (Li_local.create o) off 0
+      } else {
+        result := Li_local.create o
+      }
+    }
+    result
+  )
+
+  - write_local loc:Local value v:Li_node :Li_node <-
+  ( + result:Li_node
+    + o:Int
+    o := off_of loc
+    (kind_of (loc.type) = k_flat).if {
+      (loc.is_result).if {
+        result := Li_copy.create (Li_local.create o) from v size (size_of (loc.type))
+      } else {
+        result := Li_copy.create (Li_addr.create o) from v size (size_of (loc.type))
+      }
+    } else {
+      (loc.is_result).if {
+        result := Li_store.create (Li_local.create o) off 0 kind 6 value v
+      } else {
+        result := Li_set_local.create o value v
+      }
+    }
+    result
+  )
+
+  //
+  // Memory.
+  //
+
+  - load_at r:Li_node off o:Int type tf:Type_full :Li_node <-
+  ( + k:Int
+    + result:Li_node
+    k := kind_of tf
+    (k = k_flat).if {
+      result := Li_field.create r off o
+    }.elseif {(k = 6) || {k = 7} || {k = 9}} then {
+      result := Li_load64.create r off o
+    } else {
+      result := Li_load.create r off o kind k
+    }
+    result
+  )
+
+  - store_at r:Li_node off o:Int type tf:Type_full value v:Li_node :Li_node <-
+  ( + k:Int
+    + result:Li_node
+    k := kind_of tf
+    (k = k_flat).if {
+      result := Li_copy.create (Li_field.create r off o) from v size (size_of tf)
+    } else {
+      result := Li_store.create r off o kind k value v
+    }
+    result
+  )
+
+  //
+  // Expressions.
+  //
+
+  - convert v:Li_node from k1:Int to k2:Int :Li_node <-
+  ( + result:Li_node
+    result := v
+    ((k1 != k2) && {k1 != k_flat} && {k2 != k_flat}).if {
+      ((k2 < 6) || {k2 >= 8} || {k1 >= 8}).if {
+        result := Li_cast.create v from k1 to k2
+      }
+    }
+    result
+  )
+
+  - tr_value e:Expr to tf:Type_full :Li_node <-
+  ( + result:Li_node
+    + k1,k2:Int
+    result := tr e
+    (e.static_type.raw != Type_null).if {
+      k1 := kind_of (e.static_type)
+      k2 := kind_of tf
+      result := convert result from k1 to k2
+    }
+    result
+  )
+
+  - tr_int_cst c:Int_cst :Li_node <-
+  ( + k:Int
+    + v:Int
+    k := kind_of (c.static_type)
+    (k >= 8).if {
+      v := Li_runtime.real_of_int (c.value.to_int)
+    } else {
+      v := Li_runtime.norm (c.value.to_int) kind k
+    }
+    Li_const.create v
+  )
+
+  - tr_prototype t:Type_full :Li_node <-
+  ( + r:Type
+    + v:Int
+    r := t.raw
+    (r = type_true).if {
+      v := 1
+    }.elseif {r = type_false} then {
+      v := 0
+    }.elseif {r = Type_null} then {
+      v := 0
+    }.elseif {r.is_block} then {
+      v := id_of r
+    }.elseif {(kind_of t = k_flat) || {! t.is_flat} || {t.is_flat_ref}} then {
+      v := object_of r
+    }
+    Li_const.create v
+  )
+
+  - op_of s:String_alias :Int <-
+  ( + result:Int
+    (s = "+").if {
+      result := 0
+    }.elseif {s = "-"} then {
+      result := 1
+    }.elseif {s = "*"} then {
+      result := 2
+    }.elseif {s = "/"} then {
+      result := 3
+    }.elseif {s = "%"} then {
+      result := 4
+    }.elseif {s = "&"} then {
+      result := 5
+    }.elseif {s = "|"} then {
+      result := 6
+    }.elseif {s = "^"} then {
+      result := 7
+    }.elseif {s = "<<"} then {
+      result := 8
+    }.elseif {s = ">>"} then {
+      result := 9
+    }.elseif {s = "<"} then {
+      result := 10
+    }.elseif {s = "<="} then {
+      result := 11
+    }.elseif {s = ">"} then {
+      result := 12
+    }.elseif {s = ">="} then {
+      result := 13
+    }.elseif {s = "=="} then {
+      result := 14
+    }.elseif {s = "!="} then {
+      result := 15
+    } else {
+      unsupported s
+    }
+    result
+  )
+
+  - tr_binary e:Expr_binary :Li_node <-
+  ( + k:Int
+    + result:Li_node
+    k := kind_of (e.static_type)
+    (k >= 8).if {
+      result := Li_real_op.create (op_of (e.symbol)) kind k left (tr (e.left)) right (tr (e.right))
+    } else {
+      result := Li_int_op.create (op_of (e.symbol)) kind k left (tr (e.left)) right (tr (e.right))
+    }
+    result
+  )
+
+  - block_id n:Li_node :Li_node <- Li_load.create n off 0 kind 4
+
+  - tr_cmp e:Expr_binary_cmp :Li_node <-
+  ( + k,k2,op:Int
+    + l,r:Li_node
+    + lt,rt:Type_full
+    + result:Li_node
+
+    lt := e.left.static_type
+    rt := e.right.static_type
+    op := op_of (e.symbol)
+    k  := kind_of lt
+    k2 := kind_of rt
+    (lt.raw = Type_null).if {
+      k := k2
+    }
+    l := tr (e.left)
+    r := tr (e.right)
+    (lt.raw.is_block).if {
+      l := block_id l
+      k := 4
+    }
+    (rt.raw.is_block).if {
+      (lt.raw = Type_null).if {
+        l := nop
+      }
+      r := block_id r
+      k := 4
+    }
+    (k = k_flat).if {
+      result := Li_memcmp.create l right r size (size_of lt)
+      (op = 15).if {
+        result := Li_int_op.create 14 kind 6 left result right nop
+      }
+    }.elseif {k >= 8} then {
+      result := Li_real_op.create op kind k left (convert l from k to k) right (convert r from k2 to k)
+    } else {
+      ((k2 = k_u64) && {k < 8}).if { k := k_u64; }
+      result := Li_int_op.create op kind k left l right r
+    }
+    result
+  )
+
+  - is_close_scope t:String_alias :Boolean <-
+  ( + result:Boolean
+    result := True
+    (t.lower).to (t.upper) do { j:Int
+      ((t.at j != '}') && {t.at j != ' '} && {t.at j != '\n'} && {t.at j != ';'}).if {
+        result := False
+      }
+    }
+    result
+  )
+
+  - tr_external e:External_c :Li_node <-
+  ( + result:Li_node
+    + args:Array Li_node
+    + locals:Array Int
+    + ext:Li_extern
+    (e.code.has_substring "INIT_STRING_ALIAS").if {
+      result := Li_init_alias.create init_fn off init_off strings strings
+    }.elseif {is_close_scope (e.code)} then {
+      result := nop
+    } else {
+      args := Array Li_node .create_with_capacity 4
+      locals := Array Int .create_with_capacity 4
+      // Before `begin': an argument can be an external too.
+      add_args e to args and locals
+      Li_stub.begin
+      Li_stub.put e into NULL
+      ext := Li_extern.create (Li_stub.finish) args args locals locals
+      Li_stub.add_node ext
+      result := ext
+    }
+    result
+  )
+
+  - add_args e:External_c to args:Array Li_node and locals:Array Int <-
+  ( + rd:Read_local
+    + a:Expr
+    (e.access_list != NULL).if {
+      (e.access_list.lower).to (e.access_list.upper) do { j:Int
+        a := e.access_list.at j
+        rd ?= a
+        ((rd != NULL) && {! rd.local.is_result} && {kind_of (rd.local.type) != k_flat}).if {
+          args.add_last nop
+          locals.add_last (off_of (rd.local))
+        } else {
+          args.add_last (tr a)
+          locals.add_last (-1)
+        }
+      }
+    }
+  )
+
+  - brace_balance t:String_alias :Int <-
+  // What a C scope needs: several externals can share the same one.
+  ( + result:Int
+    (t.lower).to (t.upper) do { j:Int
+      (t.at j = '{').if {
+        result := result + 1
+      }.elseif {t.at j = '}'} then {
+        result := result - 1
+      }
+    }
+    result
+  )
+
+  - scope_end l:List from j:Int :Int <-
+  // The last instruction of the C scope opened at `j', or `j' itself.
+  ( + result,n:Int
+    + e:External_c
+    + i:Instr
+    result := j
+    e ?= l.at j
+    (e != NULL).if {
+      n := brace_balance (e.code)
+      // A plain C declaration lasts until the end of the list.
+      ((n = 0) && {e.static_type.raw = Type_void} && {Li_stub.is_declaration (e.code)}).if {
+        result := l.upper
+      }
+      {(n > 0) && {result < l.upper}}.while_do {
+        result := result + 1
+        i := l.at result
+        e ?= i
+        (e != NULL).if {
+          n := n + brace_balance (e.code)
+        }
+      }
+    }
+    result
+  )
+
+  - tr_open_scope l:List from j:Int to k:Int :Li_node <-
+  // Each instruction stays alone, the C variables move out of the scope.
+  ( + nodes:Array Li_node
+    + n:Li_node
+    + e:External_c
+    nodes := Array Li_node .create_with_capacity (k - j + 1)
+    Li_stub.open_scope
+    j.to k do { x:Int
+      e ?= l.at x
+      ((e != NULL) && {! is_close_scope (e.code)}).if {
+        Li_stub.rewrite (e.code)
+      }
+    }
+    j.to k do { x:Int
+      n := tr_instr (l.at x)
+      (n != nop).if {
+        nodes.add_last n
+      }
+    }
+    Li_stub.close_scope
+    Li_seq.create nodes
+  )
+
+  - is_simple_scope l:List from j:Int to k:Int :Boolean <-
+  ( + result:Boolean
+    + i:Instr
+    + e:External_c
+    + w:Write_local
+    result := True
+    j.to k do { n:Int
+      i := l.at n
+      e ?= i
+      w ?= i
+      (e = NULL).if {
+        (w = NULL).if {
+          result := False
+        } else {
+          e ?= w.value
+          (e = NULL).if {
+            result := False
+          }
+        }
+      }
+    }
+    result
+  )
+
+  - tr_scope l:List from j:Int to k:Int :Li_node <-
+  ( + args:Array Li_node
+    + locals:Array Int
+    + e:External_c
+    + w:Write_local
+    + i:Instr
+    + ext:Li_extern
+    args := Array Li_node .create_with_capacity 8
+    locals := Array Int .create_with_capacity 8
+    j.to k do { n:Int
+      i := l.at n
+      e ?= i
+      w ?= i
+      (e != NULL).if {
+        add_args e to args and locals
+      }.elseif {w != NULL} then {
+        e ?= w.value
+        (e = NULL).if {
+          unsupported "instruction inside a C scope"
+        }
+        args.add_last nop
+        locals.add_last (off_of (w.local))
+        add_args e to args and locals
+      } else {
+        unsupported "instruction inside a C scope"
+      }
+    }
+    Li_stub.begin
+    j.to k do { n:Int
+      i := l.at n
+      e ?= i
+      w ?= i
+      (e != NULL).if {
+        Li_stub.put e into NULL
+      } else {
+        e ?= w.value
+        Li_stub.put e into (w.local)
+      }
+    }
+    ext := Li_extern.create (Li_stub.finish) args args locals locals
+    Li_stub.add_node ext
+    ext
+  )
+
+  - tr e:Expr :Li_node <- tr_instr e
+
+  //
+  // Instructions.
+  //
+
+  - tr_list l:List :Li_node <-
+  ( + nodes:Array Li_node
+    + n,result:Li_node
+    + i,last:Int
+    nodes := Array Li_node .create_with_capacity (l.count)
+    i := l.lower
+    {i <= l.upper}.while_do {
+      last := scope_end l from i
+      (last = i).if {
+        n := tr_instr (l.at i)
+      }.elseif {is_simple_scope l from i to last} then {
+        n := tr_scope l from i to last
+      } else {
+        n := tr_open_scope l from i to last
+      }
+      (n != nop).if {
+        nodes.add_last n
+      }
+      i := last + 1
+    }
+    (nodes.count = 0).if {
+      result := nop
+    }.elseif {nodes.count = 1} then {
+      result := nodes.first
+    } else {
+      result := Li_seq.create nodes
+    }
+    result
+  )
+
+  - tr_switch s:Switch :Li_node <-
+  ( + list:Array Case
+    + first:Case
+    + t:Type
+    + result,on_null:Li_node
+    + ids:Array Int
+    + cases:Array Li_node
+    + c:Case
+    + tid:Type_id
+
+    list := s.list
+    first := list.first
+    ((first.id = type_true) || {first.id = type_false}).if {
+      + other:Li_node
+      other := nop
+      (list.count > 1).if {
+        other := tr_list (list.second.code)
+      }
+      (first.id = type_true).if {
+        result := Li_if.create (tr (s.expr)) then (tr_list (first.code)) else other
+      } else {
+        result := Li_if.create (tr (s.expr)) then other else (tr_list (first.code))
+      }
+    } else {
+      t := s.expr.static_type.raw
+      ids := Array Int .create_with_capacity (list.count)
+      cases := Array Li_node .create_with_capacity (list.count)
+      (list.lower).to (list.upper) do { j:Int
+        c := list.at j
+        (c.id = Type_null).if {
+          on_null := tr_list (c.code)
+        } else {
+          ids.add_last (id_of (c.id))
+          cases.add_last (tr_list (c.code))
+        }
+      }
+      (cases.is_empty).if {
+        ids.add_last 0
+        cases.add_last nop
+      }
+      tid ?= first.id
+      result := Li_switch.create (tr (s.expr)) null on_null ids ids cases cases block (t.is_block) id (tid != NULL)
+    }
+    result
+  )
+
+  - tr_call c:Call_slot :Li_node <-
+  ( + p:Profil
+    + fn:Li_fn
+    + args:Array Li_node
+    + offs,sizes:Array Int
+    + val:Write
+    + arg:Local
+    + wrt:Write_local
+    + result:Li_node
+    + first_res:Write_local
+    + i,j,n:Int
+    + pres:Slim_array Local
+
+    (c.cop_argument != NULL).if {
+      unsupported "COP call"
+    }
+    p := c.profil
+    (p.is_interrupt).if {
+      unsupported "interrupt slot"
+    }
+    fn := fn_of p
+    n := c.argument_list.count + c.result_list.count
+    args := Array Li_node .create_with_capacity n
+    offs := Array Int .create_with_capacity n
+    sizes := Array Int .create_with_capacity n
+    (c.argument_list.lower).to (c.argument_list.upper) do { a:Int
+      val := c.argument_list.at a
+      (val != NULL).if {
+        arg := p.argument_list.at a
+        (arg != NULL).if {
+          args.add_last (tr_value (val.value) to (arg.type))
+          offs.add_last (arg.list_level)
+          (kind_of (arg.type) = k_flat).if {
+            sizes.add_last (size_of (arg.type))
+          } else {
+            sizes.add_last 0
+          }
+        }
+      }
+    }
+    // The first result is given back by value, the others through a pointer.
+    pres := p.result_list
+    (pres != NULL).if {
+      j := pres.lower
+      {(j <= pres.upper) && {pres.at j = NULL}}.while_do { j := j + 1; }
+      j := j + 1
+      i := c.result_list.lower
+      {(i <= c.result_list.upper) && {c.result_list.at i = NULL}}.while_do { i := i + 1; }
+      (i <= c.result_list.upper).if {
+        first_res ?= c.result_list.at i.write
+        i := i + 1
+      }
+      {i <= c.result_list.upper}.while_do {
+        (c.result_list.at i != NULL).if {
+          {pres.at j = NULL}.while_do { j := j + 1; }
+          wrt ?= c.result_list.at i.write
+          args.add_last (Li_addr.create (off_of (wrt.local)))
+          offs.add_last (pres.at j.list_level)
+          sizes.add_last 0
+          j := j + 1
+        }
+        i := i + 1
+      }
+    }
+    result := Li_call.create fn args args offs offs sizes sizes
+    ((first_res != NULL) && {first_res.local.ensure_count != 0}).if {
+      result := write_local (first_res.local) value result
+    }
+    result
+  )
+
+  - tr_read_slot r:Read_slot :Li_node <-
+  ( + s:Slot_data
+    + t:Type
+    + result:Li_node
+    s := r.slot
+    t := s.receiver_type
+    (s.intern_name = "self").if {
+      result := Li_load64.create (tr (r.receiver)) off 8
+    }.elseif {s.intern_name = "__id"} then {
+      result := block_id (tr (r.receiver))
+    } else {
+      result := load_at (tr (r.receiver)) off (field_off s in t) type (s.type)
+    }
+    result
+  )
+
+  - tr_write_slot w:Write_slot :Li_node <-
+  ( + s:Slot_data
+    + result:Li_node
+    s := w.slot
+    (s.intern_name = "self").if {
+      result := Li_store.create (tr (w.receiver)) off 8 kind 7 value (tr (w.value))
+    }.elseif {s.intern_name = "__id"} then {
+      result := Li_store.create (tr (w.receiver)) off 0 kind 4 value (tr (w.value))
+    } else {
+      result := store_at (tr (w.receiver)) off (field_off s in (s.receiver_type)) type (s.type) value (tr_value (w.value) to (s.type))
+    }
+    result
+  )
+
+  - field_off s:Slot_data in t:Type :Int <-
+  ( + result:Int
+    result := offset_of s in t
+    (result < 0).if {
+      "lili: field `".print
+      s.name.print
+      "' not found in ".print
+      t.name.print
+      '\n'.print
+      exit 1
+    }
+    result
+  )
+
+  - tr_item e:Item :Li_node <-
+  ( + tf:Type_full
+    + a:Li_node
+    tf := e.static_type
+    a := Li_index.create (tr (e.receiver)) index (tr (e.index)) stride (size_of tf)
+    load_at a off 0 type tf
+  )
+
+  - tr_put_to e:Put_to :Li_node <-
+  ( + tg:Type_generic
+    + tf:Type_full
+    + a:Li_node
+    tg ?= e.receiver.static_type.raw
+    tf := tg.generic_list.first
+    a := Li_index.create (tr (e.receiver)) index (tr (e.index)) stride (size_of tf)
+    store_at a off 0 type tf value (tr_value (e.value) to tf)
+  )
+
+  - tr_instr i:Instr :Li_node <-
+  ( + result:Li_node
+    + lst:List
+    + sw:Switch
+    + loop:Loop
+    + lend:Loop_end
+    + wl:Write_local
+    + wg:Write_global
+    + ws:Write_slot
+    + rl:Read_local
+    + rg:Read_global
+    + rs:Read_slot
+    + call:Call_slot
+    + ext:External_c
+    + ic:Int_cst
+    + rc:Real_cst
+    + cc:Character_cst
+    + sc:String_cst
+    + nc:Native_array_character_cst
+    + pc:Prototype_cst
+    + bin:Expr_binary
+    + cmp:Expr_binary_cmp
+    + neg:Expr_neg
+    + nt:Expr_not
+    + nl:Expr_not_logic
+    + ll:Expr_binary_logic
+    + cst:Cast
+    + it:Item
+    + pt:Put_to
+    + so:Size_of
+    + gt:Get_type_id
+    + cn:Call_null
+    + nop_i:Nop
+    + psh:Push
+    + ps:Print_stack
+    + k:Int
+    + wr:Write
+    + symb:String_alias
+    + rd:Read
+
+    wr ?= i
+    ((wr != NULL) && {wr.quiet_generation}).if {
+      result := nop
+    }
+    (result = NULL).if { lst ?= i; (lst != NULL).if {
+      (lst != Prototype.external_list).if {
+        result := tr_list lst
+      } else {
+        result := nop
+      }
+    }; }
+    (result = NULL).if { wl ?= i; (wl != NULL).if {
+      result := write_local (wl.local) value (tr_value (wl.value) to (wl.local.type))
+    }; }
+    (result = NULL).if { rl ?= i; (rl != NULL).if {
+      result := read_local (rl.local)
+    }; }
+    (result = NULL).if { ic ?= i; (ic != NULL).if {
+      result := tr_int_cst ic
+    }; }
+    (result = NULL).if { rs ?= i; (rs != NULL).if {
+      result := tr_read_slot rs
+    }; }
+    (result = NULL).if { ws ?= i; (ws != NULL).if {
+      result := tr_write_slot ws
+    }; }
+    (result = NULL).if { sw ?= i; (sw != NULL).if {
+      result := tr_switch sw
+    }; }
+    (result = NULL).if { call ?= i; (call != NULL).if {
+      result := tr_call call
+    }; }
+    (result = NULL).if { cmp ?= i; (cmp != NULL).if {
+      result := tr_cmp cmp
+    }; }
+    (result = NULL).if { bin ?= i; (bin != NULL).if {
+      result := tr_binary bin
+    }; }
+    (result = NULL).if { ext ?= i; (ext != NULL).if {
+      result := tr_external ext
+    }; }
+    (result = NULL).if { rg ?= i; (rg != NULL).if {
+      result := load_at (Li_const.create (global_of (rg.global))) off 0 type (rg.global.type)
+    }; }
+    (result = NULL).if { wg ?= i; (wg != NULL).if {
+      result := store_at (Li_const.create (global_of (wg.global))) off 0 type (wg.global.type) value (tr_value (wg.value) to (wg.global.type))
+    }; }
+    (result = NULL).if { loop ?= i; (loop != NULL).if {
+      result := Li_loop.create (tr_list (loop.body))
+    }; }
+    (result = NULL).if { lend ?= i; (lend != NULL).if {
+      result := Li_loop_end.create
+    }; }
+    (result = NULL).if { pc ?= i; (pc != NULL).if {
+      result := tr_prototype (pc.static_type)
+    }; }
+    (result = NULL).if { cc ?= i; (cc != NULL).if {
+      tmp.copy (cc.text)
+      tmp.unescape_c
+      result := Li_const.create (Li_runtime.norm (tmp.first.to_uint8.to_int) kind 0)
+    }; }
+    (result = NULL).if { rc ?= i; (rc != NULL).if {
+      tmp.copy (rc.value)
+      k := kind_of (rc.static_type)
+      result := Li_const.create (Li_runtime.real_of tmp)
+    }; }
+    (result = NULL).if { sc ?= i; (sc != NULL).if {
+      result := Li_const.create (string_of sc)
+    }; }
+    (result = NULL).if { nc ?= i; (nc != NULL).if {
+      result := Li_const.create (native_of (nc.string))
+    }; }
+    (result = NULL).if { cst ?= i; (cst != NULL).if {
+      result := tr_value (cst.value) to (cst.static_type)
+    }; }
+    (result = NULL).if { neg ?= i; (neg != NULL).if {
+      k := kind_of (neg.static_type)
+      (k >= 8).if {
+        result := Li_real_op.create 1 kind k left (Li_const.create 0) right (tr (neg.right))
+      } else {
+        result := Li_int_op.create 1 kind k left nop right (tr (neg.right))
+      }
+    }; }
+    (result = NULL).if { nt ?= i; (nt != NULL).if {
+      result := Li_int_op.create 7 kind (kind_of (nt.static_type)) left (Li_const.create (-1)) right (tr (nt.right))
+    }; }
+    (result = NULL).if { nl ?= i; (nl != NULL).if {
+      result := Li_int_op.create 14 kind 6 left (tr (nl.right)) right nop
+    }; }
+    (result = NULL).if { ll ?= i; (ll != NULL).if {
+      symb := ll.symbol
+      (symb = "&&").if {
+        result := Li_and.create (tr (ll.left)) right (tr (ll.right))
+      }.elseif {symb = "||"} then {
+        result := Li_or.create (tr (ll.left)) right (tr (ll.right))
+      } else {
+        // `E && Var' became `E & Var' in the compiler, but `Var' can be a slot
+        // of a `NULL' object: stay lazy for this right side.
+        rd ?= ll.right
+        ((symb = "&") && {rd != NULL}).if {
+          result := Li_and.create (tr (ll.left)) right (tr (ll.right))
+        }.elseif {(symb = "|") && {rd != NULL}} then {
+          result := Li_or.create (tr (ll.left)) right (tr (ll.right))
+        } else {
+          result := Li_int_op.create (op_of symb) kind 1 left (tr (ll.left)) right (tr (ll.right))
+        }
+      }
+    }; }
+    (result = NULL).if { it ?= i; (it != NULL).if {
+      result := tr_item it
+    }; }
+    (result = NULL).if { pt ?= i; (pt != NULL).if {
+      result := tr_put_to pt
+    }; }
+    (result = NULL).if { so ?= i; (so != NULL).if {
+      result := Li_const.create (size_of_raw (so.receiver.raw))
+    }; }
+    (result = NULL).if { gt ?= i; (gt != NULL).if {
+      (gt.receiver.is_late_binding).if {
+        result := Li_const.create (-1)
+      } else {
+        result := Li_const.create (id_of (gt.receiver.raw))
+      }
+    }; }
+    (result = NULL).if { cn ?= i; (cn != NULL).if {
+      result := Li_crash.create
+    }; }
+    (result = NULL).if { nop_i ?= i; (nop_i != NULL).if {
+      result := nop
+    }; }
+    (result = NULL).if { psh ?= i; (psh != NULL).if {
+      Li_runtime.positions.add_last (psh.position)
+      result := Li_push.create (off_of (psh.context)) code (Li_runtime.positions.upper) first (psh.is_first)
+    }; }
+    (result = NULL).if { ps ?= i; (ps != NULL).if {
+      result := Li_print_stack.create (tr (ps.step))
+    }; }
+    (result = NULL).if {
+      string_tmp.clear
+      i.display string_tmp
+      string_tmp.print
+      unsupported (i.type_name)
+    }
+    result
+  )
+
+  //
+  // Profil.
+  //
+
+  - fn_of p:Profil :Li_fn <-
+  ( + result:Li_fn
+    + res:Slim_array Local
+    + arg:Local
+    + old,first:Int
+
+    (fns.has (p.name)).if {
+      result := fns.at (p.name)
+    } else {
+      (p.slot = NULL).if {
+        result := Li_fn.create (p.name)
+      } else {
+        string_tmp.copy (p.slot.receiver_type.name)
+        string_tmp.add_last '.'
+        string_tmp.append (p.slot.name)
+        result := Li_fn.create (string_tmp.to_string_alias)
+      }
+      fns.at (p.name) put result
+      // The arguments and the pointers on results come first in the frame.
+      old := frame_top
+      frame_top := 8
+      (p.argument_list != NULL).if {
+        (p.argument_list.lower).to (p.argument_list.upper) do { j:Int
+          arg := p.argument_list.at j
+          (arg != NULL).if {
+            off_of arg
+          }
+        }
+      }
+      res := p.result_list
+      (res != NULL).if {
+        first := res.lower
+        {(first <= res.upper) && {res.at first = NULL}}.while_do { first := first + 1; }
+        (first + 1).to (res.upper) do { j:Int
+          (res.at j != NULL).if {
+            // As in `Profil.genere_handler_intern'.
+            res.at j.set_result True
+            off_of (res.at j)
+          }
+        }
+      }
+      result.set_frame_size frame_top body NULL result NULL
+      frame_top := old
+      todo.add_last p
+      todo_fn.add_last result
+    }
+    result
+  )
+
+  - tr_profil p:Profil in fn:Li_fn <-
+  ( + body,res:Li_node
+    + first:Int
+    + r:Slim_array Local
+    frame_top := fn.frame_size
+    body := tr_list (p.code)
+    r := p.result_list
+    (r != NULL).if {
+      first := r.lower
+      {(first <= r.upper) && {r.at first = NULL}}.while_do { first := first + 1; }
+      (first <= r.upper).if {
+        res := read_local (r.at first)
+      }
+    }
+    fn.set_frame_size frame_top body body result res
+  )
+
+  - flush_todo <- run_todo
+
+  - run_todo <-
+  ( + p:Profil
+    + fn:Li_fn
+    {todo.is_empty}.until_do {
+      p := todo.last
+      fn := todo_fn.last
+      todo.remove_last
+      todo_fn.remove_last
+      tr_profil p in fn
+    }
+  )
+
+  - init_fn:Li_fn
+
+  - init_off:Int
+
+  - translate main_list:List :Li_fn <-
+  ( + main_fn:Li_fn
+    + p:Profil
+    + a:Local
+    p := Profil.profil_add_alias
+    (p != NULL).if {
+      init_fn := fn_of p
+      {(a = NULL) && {init_off < p.argument_list.count}}.while_do {
+        a := p.argument_list.at init_off
+        init_off := init_off + 1
+      }
+      init_off := a.list_level
+    }
+    main_fn := Li_fn.create "main"
+    frame_top := 8
+    main_fn.set_frame_size 0 body (tr_list main_list) result NULL
+    main_fn.set_frame_size frame_top body (main_fn.body) result NULL
+    run_todo
+    main_fn
+  )

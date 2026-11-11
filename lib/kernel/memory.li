@@ -334,8 +334,7 @@ Private
 
   - table_size idx:Uint_cpu :Pointer <-
   (
-    {idx.in_range 1 to (minimum_size/Pointer.object_size)} ?
-    "Memory: Bound table_size."
+    {idx.in_range 1 to (minimum_size/Pointer.object_size)} ? "Memory: Bound table_size."
     `&(table_size[@idx-1])`:Pointer
   )
 
@@ -346,7 +345,7 @@ Private
   - read_ptr p:Pointer :Pointer <-
   ( + mem:C_array(Pointer)
     mem := Cast Pointer To (C_array Pointer).on p
-    mem.item 0
+    mem.at 0
   )
 
   - put_ptr v:Pointer to p:Pointer <-
@@ -420,7 +419,7 @@ Private
     na_src := Cast Pointer To (C_array Pointer).on src
     na_dst := Cast Pointer To (C_array Pointer).on dst
     0.to_uint_cpu.to (siz - 1) do { j:Uint_cpu
-      na_dst.at j put (na_src.item j)
+      na_dst.at j put (na_src.at j)
     }
   )
 

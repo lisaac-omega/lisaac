@@ -22,7 +22,7 @@ Public
   - load_file:Self <-
   ( + f:Pointer
     + e:Dirent
-    (! (f := File_utils.open_read name).is_null).if {
+    ((f := File_utils.open_read name) != NULL).if {
       buf.read_file f
       File_utils.close f
       e := File_system.get name
@@ -97,7 +97,7 @@ Public
       }
     }
     f := File_utils.open_write name
-    (f.is_not_null).if {
+    (f != NULL).if {
       ? {buf.last = '\0'}
       buf.remove_last
       buf.save_file f

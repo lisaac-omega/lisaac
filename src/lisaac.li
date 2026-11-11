@@ -1,9 +1,9 @@
 Header
   + name := Lisaac
 /* The lisaac compiler. */
-Inherit
+Insert
 
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Public
 
@@ -21,6 +21,21 @@ Public
   )
 
 Private
+
+  - declare_context_from start:Int <-
+  // Debug mode: the function of a base slot (from @start in @output) uses the context of
+  // `main' (its traces), declared by its first `lisaac_push_first', which the optimizer may
+  // have removed: then declared here.
+  ( + name:String_alias
+    name := context_main.intern_name
+    string_tmp.copy "_____CONTEXT "
+    string_tmp.append name
+    ((output.substring_index (name, start) != -1) && {output.substring_index (string_tmp, start) = -1}).if {
+      string_tmp.insert_string "  " to 0
+      string_tmp.append ";\n"
+      output.insert_string string_tmp to start
+    }
+  )
 
   - output_name     :String_alias
   - output_extension:String_alias
@@ -41,7 +56,6 @@ Private
   \                                                                \n\
   \Options:                                                        \n\
   \--------                                                        \n"
-
 
   - display_usage <-
   (
@@ -118,7 +132,6 @@ Private
             t := s.argument.value.name
             arg := NULL
             (t = lip_boolean).if {
-              //cmd.to_upper
               ((cmd = str_true) || {cmd = "true"}).if {
                 arg := Lip_boolean.get True
               }.elseif {(cmd = str_false) || {cmd = "false"}} then {
@@ -204,7 +217,7 @@ Private
         string_tmp.add_last '\n'
       }
       f := File_utils.open_write "current_path.txt"
-      (f.is_null).if {
+      (f = NULL).if {
         Stderr.put_string "Error: File `current_path.txt' is not created !\n";
         exit exit_failure_code
       }
@@ -226,6 +239,7 @@ Private
     is_quiet           := Lip_code.get_boolean "is_quiet"
     is_library         := Lip_code.get_boolean "is_library"
     is_cop             := Lip_code.get_boolean "is_cop"
+    is_cop_report      := Lip_code.get_boolean "is_cop_report"
     is_speed_push      := Lip_code.get_boolean "is_speed_push"
     (Lip_code.get_boolean "multicore").if { core_count := Lip_code.get_integer "core_count" }
     //
@@ -268,11 +282,38 @@ Private
     Lip_code.init_path_file False
   )
 
+  - put_io_default buf:String_buffer <-
+  // `print_char' and `die_with_code' of @System_io (their C name), called by the code below
+  // (`Call on NULL', stack trace), are generated only if the program calls them: else, their
+  // default definition (Windows, Unix, MacOS), as in @System_io.
+  ( + has_print,has_die:Boolean
+    + p:Profil
+    (Profil_list.profil_list.lower).to (Profil_list.profil_list.upper) do { j:Int
+      p := Profil_list.profil_list.at j
+      // Generated as a C function (see @Profil.genere).
+      ((p.link_count != 0) || {p.result_list.count != 0}).if {
+        (p.name = "print_char").if { has_print := True; }
+        (p.name = "die_with_code").if { has_die := True; }
+      }
+    }
+    ((! has_print) || {! has_die}).if {
+      buf.append "#if !defined(ARDUINO) && !defined(__ANDROID__)\n#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n"
+      (has_print).if_false {
+        buf.append "void print_char(char c) { fputc((int)c,stdout); }\n"
+      }
+      (has_die).if_false {
+        buf.append "void die_with_code(int64_t code) { exit(code); }\n"
+      }
+      buf.append "#endif\n\n"
+    }
+  )
+
   - put_trace_code buf:String_buffer <-
   ( + proto:Prototype
 
     ((debug_level_option != 0) || {Call_null.is_necessary}).if {
       title "DEBUG MANAGER" in buf
+      put_io_default buf
            
       buf.append
       "int print_string(char *str) \n\
@@ -657,10 +698,6 @@ Private
     itm_type_n_a_character := Itm_type_generic.get str_n_a style 0 with type_gen
     type_n_a_char := itm_type_n_a_character.to_run.raw
     // C_array (C_array Char)
-    //type_gen  := ALIAS_ARRAY ITM_TYPE .new
-    //type_gen.add_last itm_type_n_a_character
-    //type_gen  := ALIAS_ARRAY ITM_TYPE .alias type_gen
-    //type_n_a_n_a_char := ITM_TYPE_GENERIC.get "C_array" style 0 with type_gen.to_run.raw
     // Input.
     string_tmp.copy input_name
     string_tmp.at 0 put (string_tmp.first.to_upper)
@@ -693,7 +730,6 @@ Private
 Public
 
   - tab:Array Int := Array Int .create 128
-  - tab_null:Array Int := Array Int .create 128
 
   //
   // Creation.
@@ -701,6 +737,8 @@ Public
 
   - main <-
   ( + file_output:Pointer
+    + start:Int
+    + alias_proto:Type
     + begin_time:Uint64
     + s:Lip_slot_code
     
@@ -750,7 +788,6 @@ Public
     }
     
     (core_count > 1).if {
-      //"** Multicore **".println
       core_count.times {
         output_list.add_last (String_buffer.create 4_000_000)
         output_list.last # "#include \"" # output_name # ".h\"\n"
@@ -791,131 +828,868 @@ Public
     title "CODE" in output
     
     (is_cop).if {
+      (debug_level_option != 0).if {
+        // Debug: the cycles of synchronous messages are detected (see `li_deadlock_check').
+        output_decl.append "#define LI_COP_DEBUG\n"
+      }
       output_decl.append
-      "#include <pthread.h>                                    \n\
-      \#include <limits.h>                                     \n\
-      \#define STACK_MIN (64 * 1024)                           \n\
-      \                                                        \n\
-      \void print_char(char car);                              \n\
-      \void die_with_code(int64_t code);                       \n\
-      \                                                        \n\            
-      \static pthread_key_t current_thread;                    \n\
-      \static pthread_attr_t thread_attr;                      \n\
-      \pthread_t c_thread;                                     \n\            
-      \pthread_mutex_t main_mutex;                             \n\
-      \int thread_counter;                                     \n\
-      \volatile int thread_counter_busy;                       \n\
-      \                                                        \n\
-      \// One `stack' per Thread:                              \n\ 
-      \static char thread_stack[512][STACK_MIN];               \n\
-      \                                                        \n\
-      \typedef struct lith_object_struct lith_object;          \n\
-      \typedef struct lith_node_struct lith_node;              \n\
-      \struct lith_node_struct {                               \n\
-      \  pthread_mutex_t mutex;                                \n\
-      \  lith_node *next;                                      \n\
-      \  lith_object *object;                                  \n\
-      \};                                                      \n\
-      \struct lith_object_struct {                             \n\
-      \  uint64_t __id; // Just for late binding.         \n\
-      \  lith_node *first;                                     \n\
-      \  lith_node *last;                                      \n\
-      \  lith_object *(*procedure)(lith_object *obj,pthread_mutex_t *mutex);    \n\
-      \  pthread_mutex_t mutex;                                \n\
-      \};                                                      \n\
-      \struct {                                                \n\
-      \  lith_node *first;                                     \n\
-      \  pthread_mutex_t mutex;                                \n\
-      \} pool;                                                 \n\
-      \                                                        \n\
-      \struct generic_protocop {                               \n\
-      \  lith_object thread;                                   \n\
-      \};                                                      \n\
-      \                                                        \n\
-      \void *thread_life(void *ptr)                            \n\
-      \{ lith_node node,*n;                                    \n\
-      \  lith_object *obj,*new_obj;                            \n\
-      \                                                        \n\
-      \  pthread_mutex_init(&node.mutex,NULL);                 \n\
-      \  pthread_mutex_lock(&node.mutex);                      \n\
-      \  node.object = (lith_object *)ptr;                     \n\
-      \  do {                                                  \n\
-      \    // Append fifo object.                              \n\
-      \    obj = node.object;                                  \n\
-      \    node.next = NULL;                                   \n\
-      \    n = obj->last;                                      \n\
-      \    if (n == NULL) {                                    \n\
-      \      obj->first = &node;                               \n\
-      \      pthread_mutex_unlock(&node.mutex);                \n\
-      \    } else {                                            \n\
-      \      n->next = &node;                                  \n\
-      \    };                                                  \n\
-      \    obj->last = &node;                                  \n\
-      \    pthread_setspecific(current_thread,(void *)obj);    \n\
-      \    // Run procedure.                                   \n\
-      \    new_obj = obj->procedure(obj,&node.mutex);          \n\
-      \    // Remove fifo object.                              \n\
-      \    pthread_mutex_lock(&obj->mutex);                    \n\
-      \    n = obj->first->next;                               \n\
-      \    if (n != NULL) {                                    \n\
-      \      pthread_mutex_unlock(&n->mutex);                  \n\
-      \    } else {                                            \n\
-      \      obj->last = NULL;                                 \n\
-      \    };                                                  \n\
-      \    obj->first = n;                                     \n\
-      \    pthread_mutex_unlock(&obj->mutex);                  \n\
-      \    if (new_obj != NULL) {                              \n\
-      \      node.object = new_obj;                            \n\
-      \    } else {                                            \n\
-      \      // Add in pool.                                   \n\
-      \      pthread_mutex_lock(&pool.mutex);                  \n\
-      \      node.next = pool.first;                           \n\
-      \      pool.first = &node;                               \n\
-      \      thread_counter_busy--;                            \n\
-      \      if (thread_counter_busy == 0) {                   \n\
-      \        pthread_mutex_unlock(&main_mutex);              \n\
-      \      };                                                \n\
-      \      pthread_mutex_unlock(&pool.mutex);                \n\
-      \      // Sleep.                                         \n\
-      \      pthread_mutex_lock(&node.mutex);                  \n\
-      \    };                                                  \n\
-      \  } while (1);                                          \n\
-      \  return NULL;                                          \n\
-      \};                                                      \n\
-      \                                                        \n\
-      \void run_procedure(lith_object *obj)                    \n\
-      \{ lith_node *node;                                      \n\
-      \  char *msg=\"COP Error!\\n\";                          \n\
-      \  // Pool manager.                                      \n\
-      \  pthread_mutex_lock(&pool.mutex);                      \n\
-      \  node = pool.first;                                    \n\
-      \  if (node != NULL) {                                   \n\
-      \    pool.first = node->next;                            \n\
-      \  } else {                                              \n\
-      \    thread_counter++;                                   \n\
-      \  };                                                    \n\
-      \  thread_counter_busy++;                                \n\
-      \  /*if (thread_counter_busy == 1) {                       \n\
-      \    pthread_mutex_lock(&main_mutex);                    \n\
-      \  };*/                                                    \n\
-      \  pthread_mutex_unlock(&pool.mutex);                    \n\
-      \  // Run thread.                                        \n\
-      \  if (node == NULL) {                                   \n\
-      \    pthread_attr_setstack(&thread_attr, thread_stack[thread_counter],STACK_MIN);            \n\
-      \    if ((thread_counter>512) || pthread_create(&c_thread,&thread_attr, thread_life, (void *)obj)) { \n\
-      \      while (*msg != 0) print_char(*(msg++));           \n\
-      \      die_with_code(1);                                 \n\
-      \    };                                                  \n\
-      \  } else {                                              \n\
-      \    node->object = obj;                                 \n\
-      \    pthread_mutex_unlock(&node->mutex);                 \n\
-      \  };                                                    \n\
-      \};                                                      \n\
-      \                                                        \n\
-      \void wait_all()                                         \n\
-      \{                                                       \n\
-      \  pthread_mutex_lock(&main_mutex);                      \n\
-      \}                                                     \n\n"
+      "#include <pthread.h>\n\
+      \#include <stdlib.h>\n\
+      \#include <string.h>\n\
+      \#include <sched.h>\n\
+      \#include <time.h>\n\
+      \#include <unistd.h>\n\
+      \\n\
+      \/* COP: each clone of a `-' prototype is a universe, with its FIFO of messages and its base\n\
+      \   (the `-' slots). The universes run on a pool of worker threads (one by core): a universe is\n\
+      \   only a FIFO and a state, its messages run to their end (see `doc/tla/CopScheduler.tla'). */\n\
+      \#if defined(__TINYC__)\n\
+      \#define LI_BASE_TLS\n\
+      \#else\n\
+      \#define LI_BASE_TLS __thread\n\
+      \#endif\n\
+      \struct universe_base;\n\
+      \extern LI_BASE_TLS struct universe_base *li_base;\n\
+      \extern struct universe_base li_main_base;\n\
+      \void li_init_base(void);\n\
+      \struct universe_base *li_alloc_base(void);\n\
+      \struct universe_base *li_new_base(void);\n\
+      \void print_char(char car);\n\
+      \void die_with_code(int64_t code);\n\
+      \\n\
+      \typedef struct lith_object_struct lith_object;\n\
+      \typedef struct lith_msg_struct lith_msg;\n\
+      \typedef struct li_pool_struct li_pool;\n\
+      \typedef struct li_worker_struct li_worker;\n\
+      \struct lith_msg_struct {\n\
+      \  lith_msg *next;\n\
+      \  void (*procedure)(lith_object *obj,lith_msg *msg); /* NULL: token of a synchronous message. */\n\
+      \  int cls; /* Size class in the pool of the thread @pool (-1: malloc). */\n\
+      \  li_pool *pool;\n\
+      \};\n\
+      \struct lith_object_struct {\n\
+      \  uint64_t __id; /* Just for late binding. */\n\
+      \  lith_msg *head; /* FIFO (Vyukov): read by the owner only... */\n\
+      \  lith_msg *tail; /* ...appended by everybody (atomic exchange). */\n\
+      \  int count; /* Atomic: the messages in the FIFO (with the ones being appended). */\n\
+      \  lith_msg stub;\n\
+      \  struct universe_base *base;\n\
+      \  void (*init_object)(lith_object *u); /* Its fields, in its universe (after the base). */\n\
+      \  int state; /* Atomic: LI_IDLE, LI_SCHED (in a run queue) or LI_RUN (owned by a thread). */\n\
+      \  lith_object *lazy; /* In `li_lazy': opened idle, with its initialization in its FIFO. */\n\
+      \#ifdef LI_COP_DEBUG\n\
+      \  lith_object *waits; /* Atomic: the universe it waits for (synchronous message), or NULL. */\n\
+      \#endif\n\
+      \};\n\
+      \struct generic_protocop {\n\
+      \  lith_object thread;\n\
+      \};\n\
+      \typedef struct {\n\
+      \  pthread_mutex_t mutex;\n\
+      \  pthread_cond_t cond;\n\
+      \} li_parker; /* Where a thread waits for a universe (one by thread, never freed). */\n\
+      \typedef struct {\n\
+      \  lith_msg tok; /* In the FIFO of @u: its turn. */\n\
+      \  lith_object *u;\n\
+      \  struct universe_base *base;\n\
+      \  lith_object *current;\n\
+      \  int granted; /* Atomic: the universe is given to the caller. */\n\
+      \  li_parker *parker;\n\
+      \} lith_sync;\n\
+      \\n\
+      \#define LI_IDLE  0\n\
+      \#define LI_SCHED 1\n\
+      \#define LI_RUN   2\n\
+      \#define LI_BATCH 64 /* Messages of a universe before the next one (fairness). */\n\
+      \#if defined(__x86_64__) || defined(__i386__)\n\
+      \#define li_pause() __builtin_ia32_pause()\n\
+      \#elif defined(__aarch64__)\n\
+      \#define li_pause() __asm__ __volatile__(\"yield\" ::: \"memory\")\n\
+      \#else\n\
+      \#define li_pause() __asm__ __volatile__(\"\" ::: \"memory\")\n\
+      \#endif\n\
+      \#define LI_MAX_SPINNING 2 /* Workers looking for work by spinning (the others sleep). */\n\
+      \\n\
+      \static LI_BASE_TLS lith_object *li_current; /* NULL: the main universe. */\n\
+      \\n\
+      \/* Messages: a pool for each thread, without lock. The receiver gives a message back to the\n\
+      \   pool of its sender (atomic stack @remote); the owner takes all the stack at once. */\n\
+      \#define LI_MSG_CLASSES 8 /* Sizes: 32, 64, ..., 256 bytes. */\n\
+      \struct li_pool_struct {\n\
+      \  lith_msg *local[LI_MSG_CLASSES];\n\
+      \  lith_msg *remote[LI_MSG_CLASSES];\n\
+      \};\n\
+      \static LI_BASE_TLS li_pool *li_my_pool;\n\
+      \\n\
+      \static lith_msg *li_msg_alloc(unsigned long sz)\n\
+      \{ int c = (int)((sz + 31) >> 5) - 1;\n\
+      \  lith_msg *m;\n\
+      \  li_pool *p = li_my_pool;\n\
+      \  if (c >= LI_MSG_CLASSES) {\n\
+      \    m = (lith_msg *)malloc(sz);\n\
+      \    m->cls = -1;\n\
+      \    return m;\n\
+      \  }\n\
+      \  if (p == NULL) {\n\
+      \    p = li_my_pool = (li_pool *)calloc(1,sizeof(li_pool));\n\
+      \  }\n\
+      \  m = p->local[c];\n\
+      \  if (m == NULL) {\n\
+      \    m = p->local[c] = __atomic_exchange_n(&p->remote[c],NULL,__ATOMIC_ACQUIRE);\n\
+      \  }\n\
+      \  if (m == NULL) {\n\
+      \    m = (lith_msg *)malloc((unsigned long)(c + 1) << 5);\n\
+      \    m->cls = c;\n\
+      \    m->pool = p;\n\
+      \  } else {\n\
+      \    p->local[c] = m->next;\n\
+      \  }\n\
+      \  return m;\n\
+      \}\n\
+      \\n\
+      \static void li_msg_free(lith_msg *m)\n\
+      \{ li_pool *p = m->pool;\n\
+      \  int c = m->cls;\n\
+      \  if (c < 0) {\n\
+      \    free(m);\n\
+      \  } else if (p == li_my_pool) {\n\
+      \    m->next = p->local[c];\n\
+      \    p->local[c] = m;\n\
+      \  } else {\n\
+      \    m->next = __atomic_load_n(&p->remote[c],__ATOMIC_RELAXED);\n\
+      \    while (!__atomic_compare_exchange_n(&p->remote[c],&m->next,m,1,__ATOMIC_RELEASE,__ATOMIC_RELAXED));\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static void li_cop_error(const char *msg)\n\
+      \{\n\
+      \  while (*msg != 0) print_char(*(msg++));\n\
+      \  die_with_code(1);\n\
+      \}\n\
+      \\n\
+      \/* The FIFO of a universe (Vyukov's intrusive queue: several senders, one owner). */\n\
+      \\n\
+      \static void li_link(lith_object *u,lith_msg *m)\n\
+      \{ lith_msg *prev;\n\
+      \  __atomic_store_n(&m->next,NULL,__ATOMIC_RELAXED);\n\
+      \  prev = __atomic_exchange_n(&u->tail,m,__ATOMIC_SEQ_CST);\n\
+      \  __atomic_store_n(&prev->next,m,__ATOMIC_RELEASE);\n\
+      \}\n\
+      \\n\
+      \static void li_push(lith_object *u,lith_msg *m)\n\
+      \/* Counted before it is linked: a thread which sees the count waits for the link (LI_BUSY). */\n\
+      \{\n\
+      \  __atomic_add_fetch(&u->count,1,__ATOMIC_SEQ_CST);\n\
+      \  li_link(u,m);\n\
+      \}\n\
+      \\n\
+      \#define LI_BUSY ((lith_msg *)1) /* A sender is between its two steps: try again. */\n\
+      \\n\
+      \static lith_msg *li_pop(lith_object *u)\n\
+      \/* By the owner of `u': the first message, NULL if the FIFO is empty, or LI_BUSY. */\n\
+      \{ lith_msg *h = u->head;\n\
+      \  lith_msg *next = __atomic_load_n(&h->next,__ATOMIC_ACQUIRE);\n\
+      \  if (h == &u->stub) {\n\
+      \    if (next == NULL) {\n\
+      \      return (__atomic_load_n(&u->tail,__ATOMIC_SEQ_CST) == h) ? NULL : LI_BUSY;\n\
+      \    }\n\
+      \    u->head = h = next;\n\
+      \    next = __atomic_load_n(&h->next,__ATOMIC_ACQUIRE);\n\
+      \  }\n\
+      \  if (next != NULL) {\n\
+      \    u->head = next;\n\
+      \    __atomic_sub_fetch(&u->count,1,__ATOMIC_SEQ_CST);\n\
+      \    return h;\n\
+      \  }\n\
+      \  if (h != __atomic_load_n(&u->tail,__ATOMIC_SEQ_CST)) return LI_BUSY;\n\
+      \  li_link(u,&u->stub);\n\
+      \  next = __atomic_load_n(&h->next,__ATOMIC_ACQUIRE);\n\
+      \  if (next != NULL) {\n\
+      \    u->head = next;\n\
+      \    __atomic_sub_fetch(&u->count,1,__ATOMIC_SEQ_CST);\n\
+      \    return h;\n\
+      \  }\n\
+      \  return LI_BUSY;\n\
+      \}\n\
+      \\n\
+      \static lith_msg *li_peek(lith_object *u)\n\
+      \/* By the owner of `u': the first message, without taking it (NULL: empty, or being appended). */\n\
+      \{ lith_msg *h = u->head;\n\
+      \  if (h == &u->stub) h = __atomic_load_n(&h->next,__ATOMIC_ACQUIRE);\n\
+      \  return h;\n\
+      \}\n\
+      \\n\
+      \static int li_is_empty(lith_object *u)\n\
+      \/* For any thread (`head' and `tail' do not tell it: the stub may be appended after a\n\
+      \   message which is not taken yet). */\n\
+      \{\n\
+      \  return __atomic_load_n(&u->count,__ATOMIC_SEQ_CST) == 0;\n\
+      \}\n\
+      \\n\
+      \/* The pool of workers: a run queue for each one (and `runnext': the universe which got a\n\
+      \   message from the current one runs next on the same thread, without waking up another),\n\
+      \   a global run queue for the other threads (main), and the stealing between workers. */\n\
+      \\n\
+      \struct li_worker_struct {\n\
+      \  pthread_mutex_t mutex;\n\
+      \  lith_object **buf;\n\
+      \  int head,count,cap;\n\
+      \  lith_object *runnext;\n\
+      \  int id;\n\
+      \  unsigned long ticks; /* Atomic: messages run (unchanged: busy with one long message). */\n\
+      \  int wake; /* A worker to wake up, after `li_sched_mutex' (see `li_find_work'). */\n\
+      \};\n\
+      \\n\
+      \#define LI_MAX_THREADS 1024\n\
+      \\n\
+      \static li_worker **li_workers;\n\
+      \static int li_nworkers;      /* Workers which take work (one by core). */\n\
+      \static int li_nthreads;      /* Threads of the pool (more when some are blocked). */\n\
+      \static int li_blocked;       /* Atomic: workers blocked in a system call (a delay...). */\n\
+      \static int li_idle;          /* Atomic: workers asleep. */\n\
+      \static int li_spinning;      /* Atomic: workers looking for work. */\n\
+      \static LI_BASE_TLS li_worker *li_me; /* NULL: not a worker (main). */\n\
+      \static pthread_mutex_t li_sched_mutex = PTHREAD_MUTEX_INITIALIZER;\n\
+      \static pthread_cond_t li_sched_cond = PTHREAD_COND_INITIALIZER;\n\
+      \static pthread_cond_t li_end_cond = PTHREAD_COND_INITIALIZER;\n\
+      \static li_worker li_global; /* For the threads which are not workers. */\n\
+      \static pthread_once_t li_once = PTHREAD_ONCE_INIT;\n\
+      \\n\
+      \static int li_wq_push(li_worker *w,lith_object *u)\n\
+      \/* The number of universes in the queue before (read with its lock). */\n\
+      \{ int was;\n\
+      \  pthread_mutex_lock(&w->mutex);\n\
+      \  was = w->count;\n\
+      \  if (w->count == w->cap) {\n\
+      \    int i,cap = (w->cap == 0) ? 64 : 2 * w->cap;\n\
+      \    lith_object **b = (lith_object **)malloc(cap * sizeof(lith_object *));\n\
+      \    for (i = 0; i < w->count; i++) b[i] = w->buf[(w->head + i) % w->cap];\n\
+      \    free(w->buf);\n\
+      \    w->buf = b; w->head = 0; w->cap = cap;\n\
+      \  }\n\
+      \  w->buf[(w->head + w->count) % w->cap] = u;\n\
+      \  __atomic_store_n(&w->count,w->count + 1,__ATOMIC_SEQ_CST);\n\
+      \  pthread_mutex_unlock(&w->mutex);\n\
+      \  return was;\n\
+      \}\n\
+      \\n\
+      \static lith_object *li_wq_pop(li_worker *w);\n\
+      \\n\
+      \static lith_object *li_wq_take(li_worker *from,li_worker *to,int n)\n\
+      \/* Takes up to @n universes of @from (one lock): the first is returned, the others go to the\n\
+      \   queue of @to. */\n\
+      \{ lith_object *batch[64];\n\
+      \  int i,k = 0;\n\
+      \  if (n > 64) n = 64;\n\
+      \  pthread_mutex_lock(&from->mutex);\n\
+      \  while ((k < n) && (from->count > 0)) {\n\
+      \    batch[k++] = from->buf[from->head];\n\
+      \    from->head = (from->head + 1) % from->cap;\n\
+      \    __atomic_store_n(&from->count,from->count - 1,__ATOMIC_SEQ_CST);\n\
+      \  }\n\
+      \  pthread_mutex_unlock(&from->mutex);\n\
+      \  for (i = 1; i < k; i++) li_wq_push(to,batch[i]);\n\
+      \  return (k > 0) ? batch[0] : NULL;\n\
+      \}\n\
+      \\n\
+      \static lith_object *li_wq_pop(li_worker *w)\n\
+      \{ lith_object *u = NULL;\n\
+      \  if (__atomic_load_n(&w->count,__ATOMIC_SEQ_CST) == 0) return NULL;\n\
+      \  pthread_mutex_lock(&w->mutex);\n\
+      \  if (w->count > 0) {\n\
+      \    u = w->buf[w->head];\n\
+      \    w->head = (w->head + 1) % w->cap;\n\
+      \    __atomic_store_n(&w->count,w->count - 1,__ATOMIC_SEQ_CST);\n\
+      \  }\n\
+      \  pthread_mutex_unlock(&w->mutex);\n\
+      \  return u;\n\
+      \}\n\
+      \\n\
+      \#define LI_SURPLUS 8\n\
+      \/* The universes which exchange small messages run better on the same thread (no transfer of\n\
+      \   cache lines): a worker takes from another one only a large surplus, or when the other one\n\
+      \   is busy with one long message (a computation). */\n\
+      \\n\
+      \static lith_object *li_wq_steal(li_worker *w,li_worker *thief,int all)\n\
+      \/* Taken by another worker: only a surplus (LI_SURPLUS universes: half of them), unless @all\n\
+      \   (the owner is busy with one long message): then any universe of its queue, or its\n\
+      \   `runnext'. */\n\
+      \{ lith_object *u = NULL;\n\
+      \  int n = __atomic_load_n(&w->count,__ATOMIC_SEQ_CST);\n\
+      \  if (n >= LI_SURPLUS) return li_wq_take(w,thief,n / 2);\n\
+      \  if ((n >= 1) && all) return li_wq_pop(w);\n\
+      \  if (all && (__atomic_load_n(&w->runnext,__ATOMIC_SEQ_CST) != NULL)) {\n\
+      \    pthread_mutex_lock(&w->mutex);\n\
+      \    u = __atomic_exchange_n(&w->runnext,NULL,__ATOMIC_SEQ_CST);\n\
+      \    pthread_mutex_unlock(&w->mutex);\n\
+      \  }\n\
+      \  return u;\n\
+      \}\n\
+      \\n\
+      \static void li_wake_one(void)\n\
+      \{\n\
+      \  if ((__atomic_load_n(&li_idle,__ATOMIC_SEQ_CST) > 0) && (__atomic_load_n(&li_spinning,__ATOMIC_SEQ_CST) == 0)) {\n\
+      \    pthread_mutex_lock(&li_sched_mutex);\n\
+      \    pthread_cond_signal(&li_sched_cond);\n\
+      \    pthread_mutex_unlock(&li_sched_mutex);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static void li_schedule(lith_object *u)\n\
+      \/* `u' has gone to LI_SCHED: in a run queue. */\n\
+      \{ li_worker *w = li_me;\n\
+      \  if (w == NULL) {\n\
+      \    /* From another thread (main): to the global queue; a worker is woken up if it was empty\n\
+      \       (else, one is already taking it, by batches). */\n\
+      \    if (li_wq_push(&li_global,u) == 0) li_wake_one();\n\
+      \  } else {\n\
+      \    lith_object *old = __atomic_exchange_n(&w->runnext,u,__ATOMIC_SEQ_CST);\n\
+      \    if (old != NULL) {\n\
+      \      li_wq_push(w,old);\n\
+      \      if (__atomic_load_n(&w->count,__ATOMIC_SEQ_CST) >= LI_SURPLUS) li_wake_one();\n\
+      \    }\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static void li_release(lith_object *u)\n\
+      \/* The owner gives `u' back (second check: a sender which saw LI_RUN did nothing). */\n\
+      \{ int e = LI_IDLE;\n\
+      \  __atomic_store_n(&u->state,LI_IDLE,__ATOMIC_SEQ_CST);\n\
+      \  if (!li_is_empty(u) && __atomic_compare_exchange_n(&u->state,&e,LI_SCHED,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) {\n\
+      \    li_schedule(u);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static LI_BASE_TLS li_parker *li_my_parker;\n\
+      \\n\
+      \static li_parker *li_parker_of_thread(void)\n\
+      \{ li_parker *p = li_my_parker;\n\
+      \  if (p == NULL) {\n\
+      \    p = li_my_parker = (li_parker *)malloc(sizeof(li_parker));\n\
+      \    pthread_mutex_init(&p->mutex,NULL);\n\
+      \    pthread_cond_init(&p->cond,NULL);\n\
+      \  }\n\
+      \  return p;\n\
+      \}\n\
+      \\n\
+      \static void li_grant(lith_sync *s)\n\
+      \/* The universe goes to the caller of the synchronous message `s', which waits. Its parker\n\
+      \   is read before `granted': after it, the caller may go on (and `s' is no more). */\n\
+      \{ li_parker *p = s->parker;\n\
+      \  __atomic_store_n(&s->granted,1,__ATOMIC_SEQ_CST);\n\
+      \  pthread_mutex_lock(&p->mutex);\n\
+      \  pthread_cond_signal(&p->cond);\n\
+      \  pthread_mutex_unlock(&p->mutex);\n\
+      \}\n\
+      \\n\
+      \/* Tail send (`li_send_tail'): an asynchronous message, the last action of the message which\n\
+      \   runs, waits in the thread (`li_tail_u', `li_tail_m') until the end of this message; then, if\n\
+      \   its receiver is idle, the worker owns it and runs the message at once, without the FIFO and\n\
+      \   the run queues (see `li_run'). `li_tail_ok': in a message run by a worker (not in a\n\
+      \   synchronous message, nor in a message to the same universe, run immediately). */\n\
+      \static LI_BASE_TLS int li_tail_ok;\n\
+      \static LI_BASE_TLS lith_object *li_tail_u;\n\
+      \static LI_BASE_TLS lith_msg *li_tail_m;\n\
+      \\n\
+      \static void li_send_now(lith_object *u,lith_msg *m)\n\
+      \/* To the FIFO of `u' (another universe), which is scheduled if it was idle. */\n\
+      \{ int e = LI_IDLE;\n\
+      \  li_push(u,m);\n\
+      \  if ((__atomic_load_n(&u->state,__ATOMIC_SEQ_CST) == LI_IDLE) &&\n\
+      \      __atomic_compare_exchange_n(&u->state,&e,LI_SCHED,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) {\n\
+      \    li_schedule(u);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static void li_tail_flush(void)\n\
+      \/* A tail send which waits goes before any other message of the thread. */\n\
+      \{ lith_object *v = li_tail_u;\n\
+      \  if (v != NULL) {\n\
+      \    li_tail_u = NULL;\n\
+      \    li_send_now(v,li_tail_m);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \#define LI_RELEASED 0\n\
+      \#define LI_GRANTED  1 /* Given to the caller of a synchronous message. */\n\
+      \#define LI_MINE     2 /* The token of the caller (a helper): its body runs now. */\n\
+      \\n\
+      \static int li_run(lith_object *u,lith_sync *mine)\n\
+      \/* By the owner of `u' (LI_RUN): its messages, in the universe `u'. A worker (@mine = NULL)\n\
+      \   runs a batch; the caller of a synchronous message runs until its token. */\n\
+      \{ lith_msg *m,*direct = NULL;\n\
+      \  int n = 0,ok;\n\
+      \  lith_object *cur = li_current;\n\
+      \  struct universe_base *base = li_base;\n\
+      \  li_current = u;\n\
+      \  li_base = u->base;\n\
+      \  for (;;) {\n\
+      \    if (direct != NULL) {\n\
+      \      m = direct;\n\
+      \      direct = NULL;\n\
+      \    } else {\n\
+      \      m = li_pop(u);\n\
+      \    }\n\
+      \    if (m == LI_BUSY) {\n\
+      \      li_pause();\n\
+      \    } else if (m == NULL) {\n\
+      \      li_current = cur; li_base = base;\n\
+      \      li_release(u);\n\
+      \      return LI_RELEASED;\n\
+      \    } else if (m->procedure != NULL) {\n\
+      \      if (li_me != NULL) __atomic_store_n(&li_me->ticks,li_me->ticks + 1,__ATOMIC_RELAXED);\n\
+      \      ok = li_tail_ok;\n\
+      \      li_tail_ok = (mine == NULL) && (li_me != NULL);\n\
+      \      m->procedure(u,m);\n\
+      \      li_tail_ok = ok;\n\
+      \      li_base = u->base; /* The first message initializes it. */\n\
+      \      n++;\n\
+      \      if (li_tail_u != NULL) {\n\
+      \        /* A tail send: if `u' has nothing more to do and the receiver `v' is idle, `u' is\n\
+      \           given back and `v' runs on this thread (its message first if its FIFO is empty). A\n\
+      \           batch bounds a chain of tail sends: the run queue of the worker is not starved. */\n\
+      \        lith_object *v = li_tail_u;\n\
+      \        int e = LI_IDLE;\n\
+      \        m = li_tail_m;\n\
+      \        li_tail_u = NULL;\n\
+      \        if ((n < LI_BATCH) && li_is_empty(u) &&\n\
+      \            __atomic_compare_exchange_n(&v->state,&e,LI_RUN,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) {\n\
+      \          li_release(u);\n\
+      \          u = v;\n\
+      \          li_current = u;\n\
+      \          li_base = u->base;\n\
+      \          if (li_is_empty(u)) {\n\
+      \            direct = m;\n\
+      \          } else {\n\
+      \            li_push(u,m);\n\
+      \          }\n\
+      \          continue;\n\
+      \        }\n\
+      \        li_send_now(v,m);\n\
+      \      }\n\
+      \      if ((mine == NULL) && (n >= LI_BATCH) && !li_is_empty(u)) {\n\
+      \        int e = LI_RUN;\n\
+      \        li_current = cur; li_base = base;\n\
+      \        __atomic_compare_exchange_n(&u->state,&e,LI_SCHED,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST);\n\
+      \        if (li_me != NULL) {\n\
+      \          li_wq_push(li_me,u);\n\
+      \          if (__atomic_load_n(&li_me->count,__ATOMIC_SEQ_CST) >= LI_SURPLUS) li_wake_one();\n\
+      \        } else {\n\
+      \          li_wq_push(&li_global,u);\n\
+      \          li_wake_one();\n\
+      \        }\n\
+      \        return LI_RELEASED;\n\
+      \      }\n\
+      \    } else {\n\
+      \      li_current = cur; li_base = base;\n\
+      \      if ((lith_sync *)m == mine) return LI_MINE;\n\
+      \      li_grant((lith_sync *)m);\n\
+      \      return LI_GRANTED;\n\
+      \    }\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static int li_try_own(lith_object *u)\n\
+      \{ int e = LI_IDLE;\n\
+      \  if (__atomic_compare_exchange_n(&u->state,&e,LI_RUN,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) return 1;\n\
+      \  e = LI_SCHED; /* Its entry in a run queue will be dropped. */\n\
+      \  return __atomic_compare_exchange_n(&u->state,&e,LI_RUN,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST);\n\
+      \}\n\
+      \\n\
+      \static lith_object *li_find_work(li_worker *w,unsigned long *seen)\n\
+      \/* @seen: the ticks of the other workers at the last call (NULL: no stealing of the last\n\
+      \   universe of a busy worker). */\n\
+      \{ lith_object *u;\n\
+      \  int i;\n\
+      \  if ((u = __atomic_exchange_n(&w->runnext,NULL,__ATOMIC_SEQ_CST)) != NULL) return u;\n\
+      \  if ((u = li_wq_pop(w)) != NULL) return u;\n\
+      \  if (__atomic_load_n(&li_global.count,__ATOMIC_SEQ_CST) > 0) {\n\
+      \    /* A batch: a share of the global queue, at most 32. */\n\
+      \    int k = __atomic_load_n(&li_global.count,__ATOMIC_SEQ_CST) / li_nworkers + 1;\n\
+      \    if (k > 32) k = 32;\n\
+      \    if ((u = li_wq_take(&li_global,w,k)) != NULL) {\n\
+      \      /* More work in the global queue: another worker (woken up by the caller, which may\n\
+      \         hold `li_sched_mutex'). */\n\
+      \      if (__atomic_load_n(&li_global.count,__ATOMIC_SEQ_CST) > 0) w->wake = 1;\n\
+      \      return u;\n\
+      \    }\n\
+      \  }\n\
+      \  int n = __atomic_load_n(&li_nthreads,__ATOMIC_SEQ_CST);\n\
+      \  for (i = 1; i < n; i++) {\n\
+      \    int k = (w->id + i) % n;\n\
+      \    li_worker *v = __atomic_load_n(&li_workers[k],__ATOMIC_SEQ_CST);\n\
+      \    if (v != NULL) {\n\
+      \      int stuck = 0;\n\
+      \      if (seen != NULL) {\n\
+      \        unsigned long t = __atomic_load_n(&v->ticks,__ATOMIC_RELAXED);\n\
+      \        stuck = (seen[k] == t);\n\
+      \        seen[k] = t;\n\
+      \      }\n\
+      \      if ((u = li_wq_steal(v,w,stuck)) != NULL) return u;\n\
+      \    }\n\
+      \  }\n\
+      \  return NULL;\n\
+      \}\n\
+      \\n\
+      \static int li_has_work(void)\n\
+      \/* Any universe in a run queue (to wait for the end of the program). */\n\
+      \{ int i,n = __atomic_load_n(&li_nthreads,__ATOMIC_SEQ_CST);\n\
+      \  if (__atomic_load_n(&li_global.count,__ATOMIC_SEQ_CST) > 0) return 1;\n\
+      \  for (i = 0; i < n; i++) {\n\
+      \    li_worker *v = __atomic_load_n(&li_workers[i],__ATOMIC_SEQ_CST);\n\
+      \    if ((v != NULL) && ((__atomic_load_n(&v->count,__ATOMIC_SEQ_CST) > 0) || (__atomic_load_n(&v->runnext,__ATOMIC_SEQ_CST) != NULL))) return 1;\n\
+      \  }\n\
+      \  return 0;\n\
+      \}\n\
+      \\n\
+      \static void *li_worker_life(void *p)\n\
+      \{ li_worker *w = (li_worker *)p;\n\
+      \  lith_object *u;\n\
+      \  int spin;\n\
+      \  unsigned long *seen = (unsigned long *)calloc(LI_MAX_THREADS,sizeof(unsigned long));\n\
+      \  li_me = w;\n\
+      \  for (;;) {\n\
+      \    if (w->wake) {\n\
+      \      w->wake = 0;\n\
+      \      li_wake_one();\n\
+      \    }\n\
+      \    u = li_find_work(w,NULL);\n\
+      \    if (u == NULL) {\n\
+      \      /* Looking for work a little, then asleep (woken up by a surplus, or after a while: a\n\
+      \         worker may be busy with a long message while a universe waits in its queue). */\n\
+      \      if (__atomic_add_fetch(&li_spinning,1,__ATOMIC_SEQ_CST) <= LI_MAX_SPINNING) {\n\
+      \        for (spin = 0; (spin < 4000) && ((u = li_find_work(w,((spin & 1023) == 1023) ? seen : NULL)) == NULL); spin++) li_pause();\n\
+      \      }\n\
+      \      __atomic_sub_fetch(&li_spinning,1,__ATOMIC_SEQ_CST);\n\
+      \      if ((u == NULL) && w->wake) {\n\
+      \        w->wake = 0;\n\
+      \        li_wake_one();\n\
+      \      }\n\
+      \      if (u == NULL) {\n\
+      \        /* Asleep: counted idle until it has a universe (also during its checks, done with\n\
+      \           `li_sched_mutex': `li_wait_all' sees all of it or nothing). */\n\
+      \        pthread_mutex_lock(&li_sched_mutex);\n\
+      \        __atomic_add_fetch(&li_idle,1,__ATOMIC_SEQ_CST);\n\
+      \        for (;;) {\n\
+      \          int all_idle = (__atomic_load_n(&li_idle,__ATOMIC_SEQ_CST) + __atomic_load_n(&li_blocked,__ATOMIC_SEQ_CST) >= __atomic_load_n(&li_nthreads,__ATOMIC_SEQ_CST));\n\
+      \          if ((u = li_find_work(w,seen)) != NULL) {\n\
+      \            /* The others, asleep without delay if all were idle, now watch this one. */\n\
+      \            if (all_idle) pthread_cond_broadcast(&li_sched_cond);\n\
+      \            break;\n\
+      \          }\n\
+      \          if (all_idle) {\n\
+      \            if (!li_has_work()) pthread_cond_broadcast(&li_end_cond);\n\
+      \            pthread_cond_wait(&li_sched_cond,&li_sched_mutex);\n\
+      \          } else {\n\
+      \            /* Another worker is busy: maybe with a long message, while a universe waits in\n\
+      \               its queue (taken after a while, see `li_find_work'). */\n\
+      \            struct timespec t;\n\
+      \            clock_gettime(CLOCK_REALTIME,&t);\n\
+      \            t.tv_nsec += 1000000;\n\
+      \            if (t.tv_nsec >= 1000000000) { t.tv_sec++; t.tv_nsec -= 1000000000; }\n\
+      \            pthread_cond_timedwait(&li_sched_cond,&li_sched_mutex,&t);\n\
+      \          }\n\
+      \        }\n\
+      \        __atomic_sub_fetch(&li_idle,1,__ATOMIC_SEQ_CST);\n\
+      \        pthread_mutex_unlock(&li_sched_mutex);\n\
+      \      }\n\
+      \    }\n\
+      \    { int e = LI_SCHED;\n\
+      \      if (__atomic_compare_exchange_n(&u->state,&e,LI_RUN,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) {\n\
+      \        li_run(u,NULL);\n\
+      \      }\n\
+      \    }\n\
+      \  }\n\
+      \  return NULL;\n\
+      \}\n\
+      \\n\
+      \static void li_new_worker(void)\n\
+      \/* With `li_sched_mutex'. */\n\
+      \{ pthread_t t;\n\
+      \  pthread_attr_t a;\n\
+      \  li_worker *w = (li_worker *)calloc(1,sizeof(li_worker));\n\
+      \  pthread_mutex_init(&w->mutex,NULL);\n\
+      \  w->id = li_nthreads;\n\
+      \  __atomic_store_n(&li_workers[li_nthreads],w,__ATOMIC_SEQ_CST);\n\
+      \  __atomic_store_n(&li_nthreads,li_nthreads + 1,__ATOMIC_SEQ_CST);\n\
+      \  pthread_attr_init(&a);\n\
+      \  pthread_attr_setdetachstate(&a,PTHREAD_CREATE_DETACHED);\n\
+      \  if (pthread_create(&t,&a,li_worker_life,(void *)w)) li_cop_error(\"COP Error: thread not created!\\n\");\n\
+      \  pthread_attr_destroy(&a);\n\
+      \}\n\
+      \\n\
+      \static void li_start_pool(void)\n\
+      \{ int i,n = 0;\n\
+      \  char *e = getenv(\"LI_THREADS\");\n\
+      \#if defined(__linux__) && defined(CPU_COUNT)\n\
+      \  cpu_set_t set;\n\
+      \  if (sched_getaffinity(0,sizeof(set),&set) == 0) n = CPU_COUNT(&set);\n\
+      \#endif\n\
+      \  if (e != NULL) n = atoi(e);\n\
+      \#if defined(_SC_NPROCESSORS_ONLN)\n\
+      \  if (n <= 0) n = (int)sysconf(_SC_NPROCESSORS_ONLN);\n\
+      \#endif\n\
+      \  if (n <= 0) n = 4;\n\
+      \  if (n > LI_MAX_THREADS / 2) n = LI_MAX_THREADS / 2;\n\
+      \  pthread_mutex_init(&li_global.mutex,NULL);\n\
+      \  li_workers = (li_worker **)calloc(LI_MAX_THREADS,sizeof(li_worker *));\n\
+      \  li_nworkers = n;\n\
+      \  pthread_mutex_lock(&li_sched_mutex);\n\
+      \  for (i = 0; i < n; i++) li_new_worker();\n\
+      \  pthread_mutex_unlock(&li_sched_mutex);\n\
+      \}\n\
+      \\n\
+      \void li_blocking_begin(void)\n\
+      \/* A worker blocks in a system call (a delay): another thread takes its place. */\n\
+      \{\n\
+      \  if (li_me != NULL) {\n\
+      \    pthread_mutex_lock(&li_sched_mutex);\n\
+      \    __atomic_add_fetch(&li_blocked,1,__ATOMIC_SEQ_CST);\n\
+      \    if ((li_nthreads - __atomic_load_n(&li_blocked,__ATOMIC_SEQ_CST) < li_nworkers) && (__atomic_load_n(&li_idle,__ATOMIC_SEQ_CST) == 0) && (li_nthreads < LI_MAX_THREADS)) li_new_worker();\n\
+      \    pthread_mutex_unlock(&li_sched_mutex);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \void li_blocking_end(void)\n\
+      \{\n\
+      \  if (li_me != NULL) {\n\
+      \    __atomic_sub_fetch(&li_blocked,1,__ATOMIC_SEQ_CST);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \void li_sleep_ms(int64_t ms)\n\
+      \{ struct timespec t;\n\
+      \  t.tv_sec = ms / 1000;\n\
+      \  t.tv_nsec = (ms % 1000) * 1000000;\n\
+      \  li_blocking_begin();\n\
+      \  while (nanosleep(&t,&t) != 0);\n\
+      \  li_blocking_end();\n\
+      \}\n\
+      \\n\
+      \static void li_init_procedure(lith_object *u,lith_msg *m)\n\
+      \/* First message of a universe: the initialization of its base (only the slots its code can\n\
+      \   reach, by its `init_object'), then of its object. */\n\
+      \{\n\
+      \  li_msg_free(m);\n\
+      \  if (u->init_object != NULL) u->init_object(u); else li_init_base();\n\
+      \}\n\
+      \\n\
+      \void li_clone_active(lith_object *r,lith_object *s,unsigned long sz)\n\
+      \/* The clone of an active object: its type and its fields, without the state of the universe\n\
+      \   of `s' (changed meanwhile by the other threads; `li_universe_open' makes a new one). */\n\
+      \{\n\
+      \  r->__id = s->__id;\n\
+      \  r->init_object = s->init_object;\n\
+      \  memcpy((char *)r + sizeof(lith_object),(char *)s + sizeof(lith_object),sz - sizeof(lith_object));\n\
+      \}\n\
+      \\n\
+      \static int li_deferred = 1; /* Atomic: the main thread initializes the program. */\n\
+      \static lith_object **li_parked;\n\
+      \static int li_nparked,li_cap_parked;\n\
+      \\n\
+      \static lith_object *li_lazy; /* Atomic: the universes opened lazily (a stack, see `lazy'). */\n\
+      \\n\
+      \void li_universe_open(lith_object *u)\n\
+      \/* A new universe for `u' (a clone, or a living prototype at the start of the program).\n\
+      \   Without waiting: the initialization of its base is the first message of its FIFO. During\n\
+      \   the initialization of the program (by the main thread), it does not start: its base copies\n\
+      \   prototypes that the main thread is initializing (see `li_start_universes'). */\n\
+      \{ lith_msg *m;\n\
+      \  pthread_once(&li_once,li_start_pool);\n\
+      \  u->stub.next = NULL;\n\
+      \  u->head = u->tail = &u->stub;\n\
+      \  u->count = 0;\n\
+      \  u->state = LI_IDLE;\n\
+      \  u->base = li_alloc_base();\n\
+      \  m = li_msg_alloc(sizeof(lith_msg));\n\
+      \  m->procedure = li_init_procedure;\n\
+      \  li_push(u,m);\n\
+      \  if (__atomic_load_n(&li_deferred,__ATOMIC_SEQ_CST) && (li_me == NULL)) {\n\
+      \    /* Parked: LI_SCHED without run queue (a message does not schedule it, the main thread\n\
+      \       may own it by a synchronous message). */\n\
+      \    if (li_nparked == li_cap_parked) {\n\
+      \      li_cap_parked = (li_cap_parked == 0) ? 64 : 2 * li_cap_parked;\n\
+      \      li_parked = (lith_object **)realloc(li_parked,li_cap_parked * sizeof(lith_object *));\n\
+      \    }\n\
+      \    li_parked[li_nparked++] = u;\n\
+      \    __atomic_store_n(&u->state,LI_SCHED,__ATOMIC_SEQ_CST);\n\
+      \  } else {\n\
+      \    /* Lazy: idle, with its initialization in its FIFO; its first message (or a synchronous\n\
+      \       message, or the end of the program) starts it. No scheduling for the initialization\n\
+      \       alone: no wakeup, no stealing of a tiny message. */\n\
+      \    u->lazy = __atomic_load_n(&li_lazy,__ATOMIC_SEQ_CST);\n\
+      \    while (!__atomic_compare_exchange_n(&li_lazy,&u->lazy,u,1,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST));\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \void li_start_universes(void)\n\
+      \/* The end of the initialization of the program: the parked universes start. */\n\
+      \{ int i;\n\
+      \  __atomic_store_n(&li_deferred,0,__ATOMIC_SEQ_CST);\n\
+      \  for (i = 0; i < li_nparked; i++) {\n\
+      \    lith_object *u = li_parked[i];\n\
+      \    if (__atomic_load_n(&u->state,__ATOMIC_SEQ_CST) == LI_SCHED) li_wq_push(&li_global,u);\n\
+      \  }\n\
+      \  free(li_parked);\n\
+      \  li_parked = NULL;\n\
+      \  li_nparked = li_cap_parked = 0;\n\
+      \  pthread_mutex_lock(&li_sched_mutex);\n\
+      \  pthread_cond_broadcast(&li_sched_cond);\n\
+      \  pthread_mutex_unlock(&li_sched_mutex);\n\
+      \}\n\
+      \\n\
+      \void li_send(lith_object *u,lith_msg *m,void (*proc)(lith_object *,lith_msg *))\n\
+      \/* Asynchronous message. */\n\
+      \{ m->procedure = proc;\n\
+      \  li_tail_flush();\n\
+      \  if (u == li_current) {\n\
+      \    /* Same universe: immediate (not the end of the message which runs). */\n\
+      \    int ok = li_tail_ok;\n\
+      \    li_tail_ok = 0;\n\
+      \    proc(u,m);\n\
+      \    li_tail_ok = ok;\n\
+      \  } else {\n\
+      \    li_send_now(u,m);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \void li_send_tail(lith_object *u,lith_msg *m,void (*proc)(lith_object *,lith_msg *))\n\
+      \/* Asynchronous message, the last action of the message which runs (`li_tail_ok'): it waits\n\
+      \   for the end of this message (see `li_run'). */\n\
+      \{ if (li_tail_ok && (u != li_current)) {\n\
+      \    m->procedure = proc;\n\
+      \    li_tail_flush();\n\
+      \    li_tail_u = u;\n\
+      \    li_tail_m = m;\n\
+      \  } else {\n\
+      \    li_send(u,m,proc);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \#ifdef LI_COP_DEBUG\n\
+      \static void li_deadlock_check(lith_object *me,lith_object *u)\n\
+      \/* Debug: `me' waits for `u'. If `u' waits for `me', through a chain of synchronous messages,\n\
+      \   none of them can go on: a deadlock. Each one writes its link before it reads the chain, so\n\
+      \   the last one which closes a cycle sees it. The main universe is never waited for. */\n\
+      \{ lith_object *v = u;\n\
+      \  if (me == NULL) return;\n\
+      \  __atomic_store_n(&me->waits,u,__ATOMIC_SEQ_CST);\n\
+      \  while (v != NULL) {\n\
+      \    if (v == me) li_cop_error(\"COP Error: deadlock: cycle of synchronous messages!\\n\");\n\
+      \    v = __atomic_load_n(&v->waits,__ATOMIC_SEQ_CST);\n\
+      \  }\n\
+      \}\n\
+      \#endif\n\
+      \\n\
+      \void li_sync_begin(lith_sync *s,lith_object *u)\n\
+      \/* Synchronous message: its token in the FIFO of `u', then the caller owns `u' and runs the\n\
+      \   messages before its token (it helps), or waits until the owner gives `u' to it. */\n\
+      \{ li_tail_flush();\n\
+      \  s->base = li_base;\n\
+      \  s->current = li_current;\n\
+      \  if (u == li_current) {\n\
+      \    /* Same universe: immediate. */\n\
+      \    s->u = NULL;\n\
+      \    return;\n\
+      \  }\n\
+      \  s->u = u;\n\
+      \#ifdef LI_COP_DEBUG\n\
+      \  li_deadlock_check(s->current,u);\n\
+      \#endif\n\
+      \  s->granted = 0;\n\
+      \  s->tok.procedure = NULL;\n\
+      \  if (li_is_empty(u) && li_try_own(u)) {\n\
+      \    /* Fast path: an idle universe, without token. */\n\
+      \  } else {\n\
+      \    int r,spin = 0;\n\
+      \    li_parker *p = s->parker = li_parker_of_thread();\n\
+      \    li_push(u,&s->tok);\n\
+      \    for (;;) {\n\
+      \      if (li_try_own(u)) {\n\
+      \        r = li_run(u,s);\n\
+      \        if (r == LI_MINE) break;\n\
+      \        if (r == LI_RELEASED) li_cop_error(\"COP Error: lost token!\\n\");\n\
+      \        /* LI_GRANTED: another caller before; wait for our turn. */\n\
+      \      }\n\
+      \      if (__atomic_load_n(&s->granted,__ATOMIC_SEQ_CST)) break;\n\
+      \      if (spin < 4000) {\n\
+      \        spin++;\n\
+      \        li_pause();\n\
+      \      } else {\n\
+      \        struct timespec t;\n\
+      \        pthread_mutex_lock(&p->mutex);\n\
+      \        if (!__atomic_load_n(&s->granted,__ATOMIC_SEQ_CST)) {\n\
+      \          /* Woken up by the grant, or soon: the universe may be free again (to own it). */\n\
+      \          clock_gettime(CLOCK_REALTIME,&t);\n\
+      \          t.tv_nsec += 200000;\n\
+      \          if (t.tv_nsec >= 1000000000) { t.tv_sec++; t.tv_nsec -= 1000000000; }\n\
+      \          pthread_cond_timedwait(&p->cond,&p->mutex,&t);\n\
+      \        }\n\
+      \        pthread_mutex_unlock(&p->mutex);\n\
+      \      }\n\
+      \    }\n\
+      \  }\n\
+      \  li_base = u->base;\n\
+      \  li_current = u;\n\
+      \}\n\
+      \\n\
+      \void li_sync_end(lith_sync *s)\n\
+      \{ lith_object *u = s->u;\n\
+      \  if (u != NULL) {\n\
+      \    li_base = s->base;\n\
+      \    li_current = s->current;\n\
+      \#ifdef LI_COP_DEBUG\n\
+      \    if (s->current != NULL) __atomic_store_n(&s->current->waits,NULL,__ATOMIC_SEQ_CST);\n\
+      \#endif\n\
+      \    { lith_msg *m = li_peek(u);\n\
+      \      if ((m != NULL) && (m->procedure == NULL)) {\n\
+      \        /* The token of another caller is the next one: `u' goes to it at once (without a\n\
+      \           release, a scheduling and a new owner which would give it again). */\n\
+      \        m = li_pop(u);\n\
+      \        if ((m != NULL) && (m != LI_BUSY)) {\n\
+      \          li_grant((lith_sync *)m);\n\
+      \          return;\n\
+      \        }\n\
+      \      }\n\
+      \    }\n\
+      \    li_release(u);\n\
+      \  }\n\
+      \}\n\
+      \\n\
+      \static int li_lazy_start(void)\n\
+      \/* The universes opened lazily which never started (their initialization is still in their\n\
+      \   FIFO) start now. The number of them. */\n\
+      \{ lith_object *u = __atomic_exchange_n(&li_lazy,NULL,__ATOMIC_SEQ_CST);\n\
+      \  int n = 0;\n\
+      \  while (u != NULL) {\n\
+      \    lith_object *next = u->lazy;\n\
+      \    int e = LI_IDLE;\n\
+      \    if (!li_is_empty(u) && __atomic_compare_exchange_n(&u->state,&e,LI_SCHED,0,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) {\n\
+      \      li_wq_push(&li_global,u);\n\
+      \      n++;\n\
+      \    }\n\
+      \    u = next;\n\
+      \  }\n\
+      \  if (n > 0) li_wake_one();\n\
+      \  return n;\n\
+      \}\n\
+      \\n\
+      \void li_wait_all(void)\n\
+      \/* End of the program: wait until all the workers are idle, without work; then the lazy\n\
+      \   universes which never started start, and again. */\n\
+      \{\n\
+      \  pthread_once(&li_once,li_start_pool);\n\
+      \  do {\n\
+      \    pthread_mutex_lock(&li_sched_mutex);\n\
+      \    while ((__atomic_load_n(&li_idle,__ATOMIC_SEQ_CST) + __atomic_load_n(&li_blocked,__ATOMIC_SEQ_CST) < __atomic_load_n(&li_nthreads,__ATOMIC_SEQ_CST)) ||\n\
+      \           (__atomic_load_n(&li_blocked,__ATOMIC_SEQ_CST) > 0) || li_has_work()) {\n\
+      \      pthread_cond_wait(&li_end_cond,&li_sched_mutex);\n\
+      \    }\n\
+      \    pthread_mutex_unlock(&li_sched_mutex);\n\
+      \  } while (li_lazy_start() > 0);\n\
+      \}\n\
+      \\n\
+      \void wait_all(void) { li_wait_all(); }\n\n"
     }
         
     // Source code.
@@ -932,14 +1706,53 @@ Public
     profil_current := NULL
     list_main.genere_extern_result NULL
 
+    (is_cop).if {
+      // End of the program: when all the universes are idle.
+      output.append "  li_wait_all();\n"
+    }
     output.append "  return(0);\n"
     indent.remove_tail 2
     output.append indent
     output.append "}\n\n"
-    
+
     (is_cop).if {
-      "Parallel slot's list detected:\n\
-      \------------------------------\n".print
+      // Initialization of a new universe base: one function for each slot (see
+      // @Slot_data.init_lists_base), `li_init_base' calls all of them.
+      (Slot_data.init_lists_base.lower).to (Slot_data.init_lists_base.upper) do { j:Int
+        output # "void li_init_base_" # j # "(void)\n{\n"
+        start := output.count
+        indent.append "  "
+        profil_current := NULL
+        Escape.set_generating_base True
+        Slot_data.init_lists_base.at j.genere_extern_result NULL
+        Escape.set_generating_base False
+        indent.remove_tail 2
+        (debug_level_option != 0).if {
+          declare_context_from start
+        }
+        output.append "}\n\n"
+      }
+      output.append "void li_init_base(void)\n{\n  LI_INIT_PROTOS;\n"
+      (Slot_data.init_lists_base.lower).to (Slot_data.init_lists_base.upper) do { j:Int
+        output # "  li_init_base_" # j # "();\n"
+      }
+      output.append "}\n\n"
+      output.append "struct universe_base *li_alloc_base(void)\n\
+      \{\n\
+      \  return (struct universe_base *)calloc(1,sizeof(struct universe_base));\n\
+      \}\n\n\
+      \struct universe_base *li_new_base(void)\n\
+      \// A new initialized base, which becomes the base of the current thread.\n\
+      \{\n\
+      \  li_base = li_alloc_base();\n\
+      \  li_init_base();\n\
+      \  return li_base;\n\
+      \}\n\n"
+    }
+    
+    (is_cop_report).if {
+      // The COP messages (`-cop_report', see `make.lip').
+      "COP messages:\n".print
     }
     
     Profil_list.genere
@@ -988,7 +1801,21 @@ Public
     
     ((Slot_data.data_hash_code_alias != NULL) && {Slot_data.data_hash_code_alias.require_count > 0}).if {
       output.append "void init_string_alias() {\n"
+      alias_proto := NULL
+      ((is_cop) && {Profil_slot.profil_add_alias != NULL}).if {
+        alias_proto := Profil_slot.profil_add_alias.type_self.raw
+        (alias_proto.prototype.style != '-').if {
+          alias_proto := NULL
+        }
+      }
+      (alias_proto != NULL).if {
+        // COP: the table of the aliases is an active object, the literals go in its universe.
+        output # "  lith_sync li_sync;\n  li_sync_begin(&li_sync,(lith_object *)(" # alias_proto.intern_name # "__));\n"
+      }
       output.append (String_cst.output_init)
+      (alias_proto != NULL).if {
+        output.append "  li_sync_end(&li_sync);\n"
+      }
       output.append "};\n"
     }
         
@@ -1016,7 +1843,7 @@ Public
     (output_list.count = 1).if {
       string_tmp |# output_name # output_extension
       file_output := File_utils.open_write string_tmp
-      (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      (file_output = NULL).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
       File_utils.write file_output with output_decl size (output_decl.count)
       File_utils.write file_output with output_glob size (output_glob.count)
       File_utils.write file_output with (output_list.first) size (output_list.first.count)
@@ -1025,32 +1852,29 @@ Public
       // Decl
       string_tmp |# output_name # ".h"
       file_output := File_utils.open_write string_tmp
-      (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      (file_output = NULL).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
       File_utils.write file_output with output_decl size (output_decl.count)
       File_utils.close file_output
       // Glob
       string_tmp |# output_name # "_data" # output_extension
       file_output := File_utils.open_write string_tmp
-      (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+      (file_output = NULL).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
       File_utils.write file_output with output_glob size (output_glob.count)
       File_utils.close file_output
+      split_files.add_last (string_tmp.to_string_alias)
       // Code
       0.to (output_list.upper) do { i:Int
         string_tmp |# output_name # "_code" # i # output_extension
         file_output := File_utils.open_write string_tmp
-        (file_output.is_null).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
+        (file_output = NULL).if { Out # "Error: File " # string_tmp # " is not created !\n"; exit exit_failure_code }
         File_utils.write file_output with (output_list.at i) size (output_list.at i.count)
         File_utils.close file_output
+        split_files.add_last (string_tmp.to_string_alias)
       }      
     }
     //
     //
     (is_all_warning).if {
-      /* // DCDC no more TRAVERSABLE
-      (PROTOTYPE.prototype_dico.lower).to (PROTOTYPE.prototype_dico.upper) do { j:Int
-        PROTOTYPE.prototype_dico.at j.detect_slot_not_used
-      }
-      */
       Prototype.prototype_dico.foreach_value { p:Prototype
           p.detect_slot_not_used
       }
@@ -1075,7 +1899,6 @@ Public
       print "  Call on self         : " stat late_binding_self_counter     for late_binding_counter
       //
       //print "  Recursivity function : "
-      //stat (PROFIL.counter_recursivity_function) for (PROFIL.counter_function)
       //
       (is_optimization).if {
         "  Invariant loop score : ".print; count_invariant.print; '\n'.print

@@ -1,0 +1,9 @@
+Header
+  + name := Action
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - run <- abstract

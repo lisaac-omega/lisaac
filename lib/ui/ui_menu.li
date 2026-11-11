@@ -1,0 +1,269 @@
+Header
+  + name := Ui_menu
+/* A menu which opens over the window: a list of @Ui_act (a separator is an action without
+   text), with their keys on the right, and a box for the check boxes and radio buttons.
+   @is_on tells if a check box or a radio button is on; @on_run executes an action.
+   The keys `Up', `Down', `Enter' and `Esc' move in it, run, close. */
+Inherit
+  + parent_box:Flat Ui_box
+
+Public
+
+  + acts:Array Ui_act
+  + selected:Int
+  + is_on:{Ui_act; Boolean}
+  + on_run:{Ui_act; }
+  + on_close:{}
+  + bg:Color
+  + fg:Color
+  + key_fg:Color
+  + border:Color
+  + hover:Color
+
+  + stamp:Uint64
+  - delay:Uint64 := 300_000
+  - set_delay d:Uint64 <- ( delay := d.max 1 )
+
+  - margin:Real32 := 8
+  - item_h:Real32 <- Font.size_sys
+  - sep_h:Real32 := 16
+
+  - create l:Array Ui_act :Self <-
+  ( + r:Self
+    r := clone
+    r.make_box
+    r.set_acts l
+    r
+  )
+
+  - set_acts l:Array Ui_act <-
+  (
+    acts := l
+    selected := -1
+  )
+
+  - set_colors (b,f,k,br,h:Color) <- ( (bg,fg,key_fg,border,hover) := (b,f,k,br,h) )
+
+  - set_actions (on:{Ui_act; Boolean}, run:{Ui_act; }, cl:{}) <-
+  (
+    is_on := on
+    on_run := run
+    on_close := cl
+  )
+
+  - open_at (x,y:Real32) in (w,h:Real32) <-
+  // Open at (@x,@y), inside a window of size (@w,@h); it unrolls during @delay.
+  ( + mw,mh,xx,yy:Real32
+    (mw,mh) := measure
+    xx := x.min (w - mw).max 0
+    yy := y.min (h - mh).max 0
+    set_rect (xx,yy) size (mw,mh)
+    selected := -1
+    stamp := Time.gettimeofday
+    set_hidden False
+  )
+
+  - measure:(Real32,Real32) <-
+  // As the menus of elit: the text in bold, the keys smaller on the right, the box of a
+  // check box or a radio button on the left.
+  ( + w,wt,a,x0,y0,x1,y1,h:Real32
+    acts.foreach { act:Ui_act
+      (act.is_separator).if {
+        h := h + sep_h
+      } else {
+        pen.font_face_id (Font.sys (Font.bold))
+        pen.font_size (Font.size_sys)
+        (wt,x0,y0,x1,y1) := pen.text_bounds (0,0) msg (act.text)
+        (act.key_text.count > 0).if {
+          pen.font_size (Font.size_sys - 4)
+          (a,x0,y0,x1,y1) := pen.text_bounds (0,0) msg (act.key_text)
+          wt := wt + a + 16
+        }
+        ((act.check.count > 0) || {act.radio.count > 0}).if { wt := wt + Font.size_sys }
+        w := w.max wt
+        h := h + item_h
+      }
+    }
+    (w + margin * 4, h + margin * 2)
+  )
+
+  - shift:Real32 <-
+  // During the animation, the items go down from the top (the menu is clipped).
+  ( + dt:Uint64
+    + r:Real32
+    dt := Time.gettimeofday - stamp
+    (dt < delay).if {
+      r := height * (dt.to_real32 / delay.to_real32 - 1.0)
+      Paper.refresh_again
+    }
+    r
+  )
+
+  - draw <-
+  ( + y,cy,x,h,hh:Real32
+    + act:Ui_act
+    hh := height + shift
+    pen.save
+    pen.intersect_scissor (xo,yo) size (width + 8,hh + 8)
+    draw_shadow_box (xo,yo) size (width,hh) radius (0,0,8,8) inside (border,bg)
+    y := yo + margin + hh - height
+    0.to (acts.upper) do { i:Int
+      act := acts.at i
+      (act.is_separator).if {
+        cy := y + sep_h / 2
+        pen.begin_path
+        pen.stroke_width 2
+        pen.stroke_color (Color.rgbaf (0,0,0,0.5))
+        pen.line (xo + margin * 2,cy - 1) to (xmax - margin * 2,cy - 1)
+        pen.stroke
+        pen.begin_path
+        pen.stroke_color (Color.rgbaf (1,1,1,0.5))
+        pen.line (xo + margin * 2,cy + 1) to (xmax - margin * 2,cy + 1)
+        pen.stroke
+        y := y + sep_h
+      } else {
+        h := item_h
+        cy := y + h / 2
+        (i = selected).if {
+          pen.begin_path
+          pen.fill_color bg
+          pen.rect (xo + margin,y) size (width - margin * 2,h) radius 8
+          pen.fill
+        }
+        x := xo + margin * 2
+        pen.fill_color fg
+        ((act.check.count > 0) || {act.radio.count > 0}).if {
+          draw_box act at (x,cy)
+          x := x + Font.size_sys
+        }
+        (i = selected).if {
+          pen.font_face_id (Font.sys (Font.bold))
+        } else {
+          pen.font_face_id (Font.sys (Font.roman))
+        }
+        pen.font_size (Font.size_sys)
+        pen.fill_color fg
+        pen.text_align (pen.align_left | pen.align_middle)
+        pen.text (x, cy) msg (act.text)
+        (act.key_text.count > 0).if {
+          pen.fill_color key_fg
+          pen.font_size (Font.size_sys - 4)
+          pen.text_align (pen.align_right | pen.align_middle)
+          pen.text (xmax - margin * 2, cy) msg (act.key_text)
+        }
+        y := y + h
+      }
+    }
+    pen.text_align (pen.align_left | pen.align_baseline)
+    pen.restore
+  )
+
+  - item_at y:Real32 :Int <-
+  ( + yy:Real32
+    + r,i:Int
+    r := -1
+    yy := yo + margin
+    {(i < acts.count) && {r < 0}}.while_do {
+      (acts.at i.is_separator).if {
+        yy := yy + sep_h
+      } else {
+        ((y >= yy) && {y < yy + item_h}).if { r := i }
+        yy := yy + item_h
+      }
+      i := i + 1
+    }
+    r
+  )
+
+  - mouse ev:Int at (x,y:Real32) :Boolean <-
+  (
+    selected := item_at y
+    ((ev = Hand.clic) || {ev = Hand.lclic}).if { run_selected }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  // Keys of the menu; the others close it (and are not used).
+  ( + r:Boolean
+    ((c & Keyboard.key_cmd) != 0).if {
+      (s.first = 'D').if {
+        move 1
+        r := True
+      }.elseif {s.first = 'U'} then {
+        move (-1)
+        r := True
+      }.elseif {s.first = '\10\'} then {
+        run_selected
+        r := True
+      }.elseif {s.first = '\27\'} then {
+        close
+        r := True
+      }
+    }
+    (! r).if { close }
+    r
+  )
+
+  - close <-
+  (
+    set_hidden True
+    (on_close != NULL).if { on_close.value }
+  )
+
+Private
+
+  - use_font <-
+  (
+    pen.font_face_id (Font.sys (Font.roman))
+    pen.font_size (Font.size_sys)
+  )
+
+  - move d:Int <-
+  ( + i,n:Int
+    i := selected
+    {
+      i := i + d
+      (i < 0).if { i := acts.upper }
+      (i > acts.upper).if { i := 0 }
+      n := n + 1
+    }.do_while {(n <= acts.count) && {acts.at i.is_separator}}
+    selected := i
+  )
+
+  - run_selected <-
+  ( + a:Ui_act
+    (selected.in_range 0 to (acts.upper)).if {
+      a := acts.at selected
+      (! a.is_separator).if {
+        close
+        on_run.value a
+      }
+    }
+  )
+
+  - draw_box a:Ui_act at (x,y:Real32) <-
+  // As elit: a circle (radio button) or a square crossed when it is on (check box).
+  ( + s:Real32
+    + on:Boolean
+    s := Font.size_sys / 2 - 5
+    on := is_on.value a
+    pen.begin_path
+    pen.stroke_color fg
+    pen.stroke_width 2
+    (a.radio.count > 0).if {
+      pen.circle (x + s,y) radius s
+      pen.stroke
+      (on).if {
+        pen.begin_path
+        pen.circle (x + s,y) radius (s - 4)
+        pen.fill
+      }
+    } else {
+      pen.rect (x,y - s) size (s * 2,s * 2)
+      (on).if {
+        pen.line (x,y - s) to (x + s * 2,y + s)
+        pen.line (x + s * 2,y - s) to (x,y + s)
+      }
+      pen.stroke
+    }
+  )

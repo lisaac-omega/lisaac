@@ -21,16 +21,19 @@ Public
   (  
     show (
       "hello_world.li",
-      "basics/array_example.li",
       "welcome/welcome.li",
+      "mpg2/mpeg2dec.li",
+      "basics/array_example.li",
       "calculator/calculator.li",
       "calculator/calculator.li", "run", "'(2+3)*4 + 2^100'",
       "startrek/startrek.li", "background",
       "slider/slider.li", "background",
       "mapping/nayeli.li", "background",
-      "arrow_out/arrow_out.li", "background",
       "draw2d/draw2d_shapes.li", "background",
+      "arrow_out/arrow_out.li", "background",
       "../game_show.li",
+      "numbers/number_show.li",
+      "gadgets/gadgets_show.li",
       "basics/factorial_example.li", "run", "1000",
       "fibonacci.li", "run", "1000"
     )

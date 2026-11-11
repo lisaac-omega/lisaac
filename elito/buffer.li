@@ -1,0 +1,610 @@
+Header
+  + name := Buffer
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - previous_list:Array Buffer_head := Array Buffer_head.create_with_capacity 32
+  - previous_path:String_alias
+  - set_previous_path p:String_alias <- ( previous_path := p; )
+  
+  - list:Array Buffer := Array Buffer.create_with_capacity 16
+  
+Public
+  
+  + path:String_alias
+  + shortname:String_alias
+  + tag:String_alias
+  + date:Date
+  + time:Time
+  + ask_reload:Boolean
+  + last_point:Int
+  + last_point_view:Int
+  
+  - set_last_view pv:Int point p:Int <- 
+  (
+    (last_point_view,last_point) := (pv,p)
+  )
+  
+  - ask_check_reload <- ( ask_reload := True; )
+  
+  + blocs:Array Bloc
+  + is_save:Boolean
+  + is_rdonly:Boolean
+  + light:X_light
+  + backup_ok:Boolean
+  
+  - set_tag t:String_alias <- ( tag := t; )
+      
+  + upper:Int
+  
+  - create pp:String_alias :Buffer <-
+  ( + result:Buffer
+    + p:String_alias
+    + i:Int
+    (pp.first != '<').if {
+      string_tmp.copy pwd_directory
+      string_tmp.append pp
+      Dirent.reduce_path string_tmp
+      p := string_tmp.to_string_alias
+    } else {
+      p := pp
+    }
+    //
+    {(i <= list.upper) && {list.at i.path != p}}.while_do { i := i + 1; }
+    (i <= list.upper).if {
+      result := list.at i
+      list.remove i
+      list.add_first result
+      Buffer_bar.update
+      result.check_reload
+    } else {
+      result := clone
+      result.make p
+    }
+    result
+  )
+  
+  - change_name p:String_alias <-
+  ( + i:Int
+    + short:String_alias
+    path := p
+    string_tmp.copy path
+    i := path.last_index_of '/'
+    (i != -1).if {
+      string_tmp.remove_head (i+1)
+    }
+    short := string_tmp.to_string_alias
+    // Tag.
+    i := 0
+    {(i <= list.upper) && {list.at i.shortname != short}}.while_do { i := i + 1; }
+    (i <= list.upper).if {
+      + is,io:Int
+      + o:Buffer
+      o := list.at i
+      (is,io) := reverse_first_difference_index (path,o.path)
+      (o.tag = NULL).if {
+        o.set_tag (build_tag (o.path) index io)
+      }
+      tag := build_tag path index is
+    }
+    shortname := short
+    is_save := False
+  )
+  
+  - make p:String_alias <-
+  ( + f:Pointer
+    + i:Int
+    + n:String_alias
+    + bh:Buffer_head
+    + is_img:Boolean
+    + image_id:Int
+    list.add_first self
+    {(i <= previous_list.upper) && {previous_list.at i.path != p}}.while_do { i := i + 1; }
+    (i <= previous_list.upper).if {
+      bh := previous_list.at i
+      last_point_view := bh.last_point_view
+      last_point      := bh.last_point
+      previous_list.remove i
+    }
+    change_name p
+    //
+    stack := Array Undo.create stack_size
+    //
+    is_img := (
+      (p.has_suffix ".jpg") || {p.has_suffix ".gif"} || {p.has_suffix ".png"} ||
+      {p.has_suffix ".tga"} || {p.has_suffix ".bmp"} || {p.has_suffix ".psd"} ||
+      {p.has_suffix ".ppm"} || {p.has_suffix ".pgm"}
+    )
+    (is_img).if {      
+      image_id := Elito_window.pen.create_image p flags 0
+      blocs := Array Bloc.create_with_capacity 1
+      string_tmp.copy          "Width : "
+      Image.img_x.append_in string_tmp
+      string_tmp.append " pix.\nHeight: "
+      Image.img_y.append_in string_tmp
+      string_tmp.append " pix.\nDepth : "
+      (Image.img_n << 3).append_in string_tmp
+      string_tmp.append " bits.\n"
+      string_tmp.add_last (1.to_char)
+      blocs.add_last (Bloc.create string_tmp)
+      upper := string_tmp.upper
+    } else {
+      f := File_utils.open_read p
+      ((f = NULL) && {p = previous_path}).if {
+        change_name help_path
+        last_point := last_point_view := 0
+        f := File_utils.open_read help_path
+        previous_path := NULL
+      }
+      (f = NULL).if {
+        blocs := Array Bloc.create_with_capacity 1
+        blocs.add_last (Bloc.create "")
+        upper := -1
+      } else {
+        load f
+      }
+    }
+    Buffer_bar.update
+    (shortname.last = '~').if {
+      string_tmp.copy shortname
+      string_tmp.remove_last
+      n := string_tmp.to_string_alias
+    } else {
+      n := shortname
+    }
+    (is_img).if {
+      light := Img_light.create self id image_id
+      is_save := is_rdonly := True
+    }.elseif {(n.has_suffix ".li") || {n.has_suffix ".lip"}} then {
+      light := Li_light.create self
+    }.elseif {n.has_suffix ".tex"} then {
+      light := Tex_light.create self
+    }.elseif {(n.has_suffix ".java") || {n.has_suffix ".jsky"}} then {
+      light := Java_light.create self
+    }.elseif {
+      (n.has_suffix ".c") || {n.has_suffix ".cpp"} ||
+        {n.has_suffix ".h"} || {n.has_suffix ".hpp"} ||
+        {n.has_suffix ".ino"}
+    } then {
+      light := C_light.create self
+    }.elseif {
+      (n.has_suffix ".py") || {n.has_suffix ".pyd"} || {n.has_suffix ".pyw"} 
+    } then {
+      light := Py_light.create self
+    } else {
+      light := X_light.create self
+    }
+    ? {! blocs.is_empty}
+  )
+  
+  - kill <-
+  ( + i,j:Int
+    previous_list.add_first (Buffer_head.create path view last_point_view point last_point)
+    {(j <= list.upper) && {list.at j != self}}.while_do { j := j + 1; }
+    list.remove j
+    {i <= Page.page_list.upper}.while_do { 
+      (Page.page_list.at i.buffer = self).if {
+        (list.is_empty).if {
+          Page.page_list.at i.set_buffer (Buffer.create help_path)
+        } else {
+          Page.page_list.at i.set_buffer (list.first)
+        }
+      }
+      i := i + 1
+    }
+    blocs.foreach { b:Bloc; b.free; }
+    Buffer_bar.update
+  )
+  
+  - check_reload <-
+  ( + entry:Dirent
+    + nd:Date
+    + nt:Time
+
+    (ask_reload).if {
+      entry := File_system.get path
+      (entry != NULL).if {
+        nd := entry.update_date
+        nt := entry.update_time
+        ((nd != date) || {nt != time}).if {
+          //"reload: ".print; path.println
+          beep
+          Cmd_bar.select 16
+        } else {
+          ask_reload := False
+        }
+      } else {
+        ask_reload := False
+      }
+    }
+  )
+  
+  - load pf:Pointer <-
+  ( + e:Dirent
+    + sz,s:Int
+    + b:Bloc
+    + f:Pointer
+    (pf = NULL).if {
+      f := File_utils.open_read path
+    } else {
+      f := pf
+    }
+    sz := File_utils.size f
+    upper := sz-1
+    last_point := last_point.min (upper+1)
+    (blocs != NULL).if {
+      blocs.foreach { bb:Bloc; bb.free; }
+      blocs.clear
+    } else {
+      (sz = 0).if {
+        blocs := Array Bloc.create_with_capacity 1
+      } else {
+        blocs := Array Bloc.create_with_capacity ((sz+size_bloc-1)/size_bloc)
+      }
+    }
+    (sz = 0).if {      
+      blocs.add_last (Bloc.create "")
+    } else {        
+      {sz > 0}.while_do {
+        (sz >= size_bloc).if { s := size_bloc; } else { s := sz; }
+        b := Bloc.create f size s
+        blocs.add_last b
+        sz := sz - size_bloc
+      }
+    }
+    File_utils.close f
+    //
+    e := File_system.get path
+    date := e.update_date
+    time := e.update_time
+    is_save := True
+    stack_lo := stack_up := 0
+    stack_update_save last_point
+    ask_reload := False
+  )
+  
+  - insert_file pth:String_alias to pt:Int <-
+  ( + sz,s,p:Int
+    + f:Pointer
+    p := pt
+    f := File_utils.open_read pth
+    (f != NULL).if {
+      sz := File_utils.size f
+      upper := upper + sz
+      (sz != 0).if {
+        {sz > 0}.while_do {
+          (sz >= size_bloc).if { s := size_bloc; } else { s := sz; }
+          File_utils.read f in string_tmp2 size s
+          0.to (s-1) do { i:Int
+            insert (string_tmp2.at i) to p
+            p := p + 1
+          }
+          sz := sz - size_bloc
+        }
+      }
+      File_utils.close f
+      is_save := False
+    }
+  )
+  
+  - save <-
+  ( + f:Pointer
+    + e:Dirent
+    (! backup_ok).if {
+      backup_ok := True
+      string_tmp.copy "cp -f "
+      string_tmp.append path
+      string_tmp.add_last ' '
+      string_tmp.append path
+      string_tmp.append "~ 2>/dev/null"
+      Environment.run string_tmp
+    }
+    f := File_utils.open_write path
+    (f = NULL).if {
+      beep
+      Cmd_bar.select 26
+    } else {
+      blocs.foreach { b:Bloc; b.write f; }
+      File_utils.close f
+      e := File_system.get path
+      date := e.update_date
+      time := e.update_time
+      ask_reload := False
+      is_save := True
+      stack_update_save last_point
+      Buffer_bar.update
+    }
+  )
+  
+  - set_save b:Boolean <-
+  (
+    (is_save != b).if {
+      is_save := b
+      Buffer_bar.update
+    }
+  )
+  
+  - update
+  
+  - insert c:Char to i:Int :Boolean <-
+  ( + b,nb,pb:Bloc
+    + bi,idx:Int
+    is_save := False
+    (Old is_save).if { Buffer_bar.update; }
+    check_reload
+    (bi,idx) := index_to_bloc i
+    (bi > blocs.upper).if {
+      bi := blocs.upper
+      idx := blocs.at bi.upper + 1
+    }
+    b := blocs.at bi
+    (b.upper = size_bloc-1).if { // Bloc full
+      ((idx = 0) && {bi != 0} && {(pb := blocs.at (bi-1)).upper != size_bloc-1}).if {
+        b := pb
+        idx := pb.upper + 1
+      } else {
+        nb := Bloc.create ""
+        (idx = 0).if {        
+          blocs.at bi add nb
+          b := nb
+        }.elseif {idx = size_bloc} then { // Add end of file
+          blocs.add_last nb
+          idx := 0
+          b := nb
+        } else { // Cut one bloc to two blocs
+          ? {nb.count = 0}
+          idx.to (b.upper) do { j:Int
+            nb.add_last (b.at j)
+          }
+          b.set_upper (idx-1)
+          blocs.at (bi+1) add nb
+          b.update_lines
+          nb.update_lines
+        }
+      }
+    }
+    (c = '\n').if { b.add_count_line 1; }
+    b.insert c to idx
+    upper := upper + 1
+    True
+  )
+  
+  - remove i:Int :Char <-
+  ( + b:Bloc
+    + bi,idx:Int
+    + result:Char
+    
+    is_save := False
+    (Old is_save).if { Buffer_bar.update; }
+    check_reload
+    (bi,idx) := index_to_bloc i
+    b := blocs.at bi
+    (b.upper = 0).if {    
+      ? {idx = 0}
+      result := b.first
+      (blocs.count = 1).if {
+        b.clear
+      } else {
+        blocs.remove bi
+        b.free
+      }
+    } else {      
+      (b.at idx = '\n').if {
+        b.add_count_line (-1)
+      }
+      result := b.at idx
+      b.remove idx
+    }
+    upper := upper - 1
+    result
+  )
+
+  - at i:Int :Char <-
+  ( + bi,idx:Int
+    (bi,idx) := index_to_bloc i
+    blocs.at bi.at idx
+  )
+
+  - at i:Int put c:Char <-
+  ( + bi,idx:Int
+    is_save := False
+    (Old is_save).if { Buffer_bar.update; }
+    check_reload
+    (bi,idx) := index_to_bloc i
+    blocs.at bi.at idx put c
+  )
+  
+  - goto_line l:Int :Int <-
+  ( + c,b,result:Int
+    + bl:Bloc
+    {(b <= blocs.upper) && {c+(bl:=blocs.at b).count_line < l}}.while_do {
+      c := c + bl.count_line
+      result := result + bl.count
+      b := b + 1
+    }
+    (b <= blocs.upper).if {
+      bl := blocs.at b
+      b := 0
+      {c != l}.while_do {
+        (bl.at b = '\n').if {
+          c := c + 1
+        }
+        b := b + 1
+      }
+      result := result + b
+    }
+    result
+  )
+  
+  - get_position i:Int :(Int,Int) <-
+  ( + bi,idx,lin,col,k:Int
+    + b:Bloc
+    (bi,idx) := index_to_bloc i
+    // Line:
+    0.to (bi-1) do { j:Int; lin := lin + blocs.at j.count_line; }
+    (bi <= blocs.upper).if {
+      b := blocs.at bi
+      (idx != 0).if {
+        lin := lin + b.occurrences '\n' until (idx-1)
+      }
+    }
+    // Column:
+    k := i-1
+    {(k >= 0) && {at k != '\n'}}.while_do { 
+      (! is_continuation (at k)).if { col := col + 1; }
+      k := k - 1
+    }
+    lin+1,col
+  )
+  
+  - get_type i:Int :Light <- 
+  ( + result:Light
+    (light.root != NULL).if {
+      result := light.root.get_type i
+    }
+    result
+  )
+  
+Buffer, X_light
+  
+  + old_i:Int
+  + old_upper:Int
+  
+  + cur_b:Int
+  + cur_i:Int; // [ 0 .. block_size-1 ]
+    
+  - index_to_bloc i:Int :(Int,Int) <-
+  ( + diff:Int
+    + b:Bloc
+    ? {! blocs.is_empty}
+    (i <= blocs.first.upper).if {
+      cur_b := 0
+      old_i := cur_i := i
+    }.elseif {old_upper != upper} then {
+      old_i := cur_b := cur_i := 0
+      {old_i != i}.while_do {
+        diff := i - old_i
+        ? {cur_b.in_range 0 to (blocs.upper)}
+        (diff > blocs.at cur_b.upper).if {
+          old_i := old_i + blocs.at cur_b.upper + 1
+          cur_b := cur_b + 1
+        } else {
+          cur_i := diff
+          old_i := old_i + diff
+        }
+      }
+      old_upper := upper
+    } else {
+      diff := i - old_i
+      old_i := i
+      (diff != 0).if {
+        (diff > 0).if { // Inc
+          {
+            b := blocs.at cur_b
+            (cur_i+diff <= b.upper).if {
+              cur_i := cur_i + diff
+              diff := 0
+            } else {
+              diff := diff - (b.upper - cur_i + 1)
+              cur_b := cur_b + 1
+              cur_i := 0
+            }
+          }.do_while {diff != 0}
+        } else { // Dec
+          diff := - diff
+          {            
+            (cur_i-diff >= 0).if {
+              cur_i := cur_i - diff
+              diff := 0
+            } else {
+              diff := diff - (cur_i+1)
+              cur_b := cur_b - 1
+              b := blocs.at cur_b
+              cur_i := b.upper
+            }
+          }.do_while {diff != 0}
+        }
+      }
+    }
+    cur_b,cur_i
+  )
+  
+Public
+  
+  //
+  // Stack undo
+  //
+  
+  - stack_size:Int := 32_768; // Always power two, please !
+  + stack:Array Undo
+  + stack_lo:Int
+  + stack_up:Int
+  + stack_full:Boolean
+    
+  - stack_push t:Char char c:Char point p:Int <-
+  (
+    ((stack.at stack_up = NULL) || {stack.at stack_up.type != 'B'} || {t != 'B'}).if {
+      stack_up := (stack_up + 1) & (stack_size-1)
+      (stack_up = stack_lo).if {
+        stack_lo := (stack_lo + 1) & (stack_size-1)
+        stack_full := True
+      }
+    }
+    // The entries are objects (not @Flat: a copy would be modified), created once.
+    (stack.at stack_up = NULL).if { stack.at stack_up put (Undo.create); }
+    stack.at stack_up.make t char c point p
+    //print_stack
+  )
+  
+  - stack_upper <-
+  (
+    (stack.at stack_up != NULL).if { stack.at stack_up.to_upper; }
+  )
+  
+  - stack_update_save val:Int <-
+  ( + i:Int
+    (stack_lo != stack_up).if {
+      i := (stack_lo + 1) & (stack_size-1)
+      {(i != stack_up) && {(stack.at i.type.to_int & 80h) = 0}}.while_do {
+        i := (i + 1) & (stack_size-1)
+      }
+      (i != stack_up).if {
+        stack.at i.set_type ((stack.at i.type.to_int & 7Fh).to_char)
+      }
+    }
+    stack_push 'B' char ' ' point val
+    stack.at stack_up.set_type (('B'.to_int | 80h).to_char)
+    //print_stack
+  )
+  
+  - print_stack <-
+  ( + i:Int
+    i := (stack_lo + 1) & (Buffer.stack_size-1)
+    {i != stack_up}.while_do {
+      stack.at i.print
+      i := (i + 1) & (Buffer.stack_size-1)
+    }
+    stack.at i.print
+    "=== TOP ===\n".print
+  )
+  
+Buffer, Buffer_list
+  
+  - build_tag pth:String_alias index i:Int :String_alias <-
+  ( + b,e:Int
+    + result:String_alias
+    (i = -1).if {
+      result := "</>"
+    } else {
+      b := pth.last_index_of '/' since i + 1
+      e := pth.index_of '/' since i - 1
+      string_tmp.copy "<"
+      b.to e do { j:Int; string_tmp.add_last (pth.at j); }
+      string_tmp.add_last '>'
+      result := string_tmp.to_string_alias
+    }
+    result
+  )

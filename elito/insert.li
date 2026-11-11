@@ -1,0 +1,26 @@
+Header
+  + name := Insert
+Inherit
+  
+  - parent_action:Action := Action
+  
+Public
+  
+  + text:String_alias
+  
+  - create txt:String_alias :Self <-
+  ( + result:Self
+    result := clone
+    result.make txt
+    result
+  )
+  
+  - make txt:String_alias <-
+  (
+    text := txt
+  )
+      
+  - run <- 
+  (
+    insert text
+  )

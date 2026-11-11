@@ -1,0 +1,29 @@
+Header
+  + name := Li_seq
+/* A sequence of instructions. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + list:Array Li_node
+
+  - create l:Array Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make l
+    result
+  )
+
+  - make l:Array Li_node <- ( list := l; )
+
+  - eval fp:Int :Int <-
+  ( + i,up:Int
+    up := list.upper
+    {i <= up}.while_do {
+      list.at i.eval fp
+      i := i + 1
+    }
+    0
+  )

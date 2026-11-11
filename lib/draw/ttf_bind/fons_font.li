@@ -26,13 +26,14 @@ Public
   
   - create n:String_alias data dta:Array Uint8 
   free f_dta:Boolean :Self <-
+  // @NULL if the font is not supported (as @fons__tt_loadFont).
   ( + result:Self
     result := clone
-    result.make n data dta free f_dta
+    (! result.make n data dta free f_dta).if { result := NULL; }
     result
   )
   
-  - make n:String_alias data dta:Array Uint8 free f_dta:Boolean <-
+  - make n:String_alias data dta:Array Uint8 free f_dta:Boolean :Boolean <-
   ( + fh:Int
     + ascent,descent,line_gap:Int
     glyphs := Array Fons_glyph.create_with_capacity fons_init_glyphs
@@ -49,13 +50,16 @@ Public
     free_data := f_dta
     // Init font    
     font := Fontinfo.create_font (dta.storage) start 0
-    // Store normalized line height. The real line height is got
-    // by multiplying the lineh by font size.
-    (ascent,descent,line_gap) := font.get_font_v_metrics
-    fh := ascent - descent
-    ascender := ascent.to_real32 / fh
-    descender := descent.to_real32 / fh
-    lineh := (fh + line_gap).to_real32 / fh
+    (font != NULL).if {
+      // Store normalized line height. The real line height is got
+      // by multiplying the lineh by font size.
+      (ascent,descent,line_gap) := font.get_font_v_metrics
+      fh := ascent - descent
+      ascender := ascent.to_real32 / fh
+      descender := descent.to_real32 / fh
+      lineh := (fh + line_gap).to_real32 / fh
+    }
+    font != NULL
   )
   
   - scale_for_pixel_height height:Real32 :Real32 <-

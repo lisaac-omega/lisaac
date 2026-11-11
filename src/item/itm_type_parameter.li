@@ -11,7 +11,6 @@ Public
   ( + result:Type_full
     (p != NULL).if { result := p.parameter_to_type self; }
     (result = NULL).if {
-    //((p = NULL) || {(result := p.parameter_to_type self) = NULL}).if { // BSBS: BUG LISAAC 0.42
       string_tmp.copy "Cannot resolve type for type parameter "
       append_in string_tmp
       (p != NULL).if {

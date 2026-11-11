@@ -1,8 +1,10 @@
 Header
-  + name := Alias V To A
+  - name := Alias V To A
 /*
    Aliaser with table + linked list.
    ALIAS V TO A; Example: ALIAS String_buffer TO String_alias
+   Active object (`-'): with `-cop', the table is one universe for all the program, so a
+   @String_alias stays unique (`register' is a synchronous message).
   */
   
   - include := `extern unsigned int hash_table[];`;

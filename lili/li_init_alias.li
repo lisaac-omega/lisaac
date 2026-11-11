@@ -1,0 +1,37 @@
+Header
+  + name := Li_init_alias
+/* The `INIT_STRING_ALIAS' of the C code: declare the constant strings. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + fn:Li_fn
+  + off:Int
+  + strings:Array Int
+
+  - create f:Li_fn off o:Int strings s:Array Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make f off o strings s
+    result
+  )
+
+  - make f:Li_fn off o:Int strings s:Array Int <- ( fn := f; off := o; strings := s; )
+
+  - eval fp:Int :Int <-
+  ( + nf,a,v:Int
+    (fn != NULL).if {
+      nf := sp
+      sp := nf + fn.frame_size
+      a := nf + off
+      strings.foreach { s:Int
+        v := s
+        `*(int64_t *)(@a) = @v`;
+        fn.eval nf
+      }
+      sp := nf
+    }
+    0
+  )

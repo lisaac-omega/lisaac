@@ -1,0 +1,104 @@
+Header
+  + name := Color_store
+Insert
+  
+  - parent_clone:Clone := Clone
+  
+Public
+  
+  - list:Array Color_store := Array Color_store.create_with_capacity 2
+  
+Public
+  
+  + name:String_alias
+  
+  - get n:String_alias :Color_store <-
+  ( + result:Color_store
+    + i:Int
+    {(i <= list.upper) && {list.at i.name != n}}.while_do { i := i + 1; }
+    (i <= list.upper).if { result := list.at i; }
+    result
+  )
+  
+  - create n:String_alias :Self <-
+  ( + result:Self
+    result := clone
+    result.make n
+    result
+  )
+  
+  - make n:String_alias <-
+  (
+    name := n
+    list.add_last self
+  )
+  
+  + background:Color      := Color.rgb  (240,240,255)
+  + focus_off:Color       := Color.rgba (191,255,191,64)
+  + elevator:Color        := Color.rgba (  0,  0,  0,32)
+  
+  + black:Color           := Color.rgb (  0,  0,  0)
+  + white:Color           := Color.rgb (255,255,255)
+  
+  + none:Color            := Color.rgb ( 30, 30, 30)
+  + comment:Color         := Color.rgb (159, 30, 30)
+  + comment_line:Color    := Color.rgb (159, 30, 30)
+  + comment_ref:Color     := Color.rgb ( 30, 30,255)
+  + string:Color          := Color.rgb (254,115, 33)
+  + character:Color       := Color.rgb (254,115, 33)
+  + external:Color        := Color.rgb (171,165, 30)
+  + external_access:Color := Color.rgb ( 32,  0,  0)
+  + keyword:Color         := Color.rgb (145, 76, 38)
+  + style:Color           := Color.rgb (255,  0,  0)
+  + assign:Color          := Color.rgb ( 30, 30, 30)
+  + operator:Color        := Color.rgb (145, 76, 38)
+  + type:Color            := Color.rgb ( 30,120, 30)
+  + number:Color          := Color.rgb (160, 32,240)
+  + local:Color           := Color.rgb ( 30, 30, 50)
+  + slot:Color            := Color.rgb ( 30, 30,255)
+  + slot_select:Color     := Color.rgb ( 30, 30,255)
+  + slot_head:Color       := Color.rgb ( 30, 30,255)
+  + slot_tiny:Color       := Color.rgb ( 30, 30,255);  // COLOR.rgb ( 96, 96,255)
+  + error:Color           := Color.rgb (255,255,  0)
+  + block_ok:Color        := Color.rgb ( 64,224,208)
+  + block_err:Color       := Color.rgb (160, 32,240)
+  
+  + select:Color       := Color.rgba (114,180,157,200)
+  + search:Color       := Color.rgba (205,  0,205,200)
+
+  - set n:String_alias rgba (r,g,b,a:Uint8) :Boolean <-
+  ( + c:Color
+    + res:Boolean
+    c := Color.rgba (r,g,b,a)
+    n
+    .when "Background"     then { background := c;      res := True; }
+    .when "FocusOff"       then { focus_off := c;       res := True; }
+    .when "Elevator"       then { elevator := c;        res := True; }
+    .when "Black"          then { black := c;           res := True; }
+    .when "White"          then { white := c;           res := True; }
+    .when "None"           then { none := c;            res := True; }    
+    .when "Comment"        then { comment := c;         res := True; }
+    .when "CommentLine"    then { comment_line := c;    res := True; }
+    .when "CommentRef"     then { comment_ref := c;     res := True; }
+    .when "String"         then { string := c;          res := True; }
+    .when "Character"      then { character := c;       res := True; }
+    .when "External"       then { external := c;        res := True; }
+    .when "ExternalAccess" then { external_access := c; res := True; }
+    .when "Keyword"        then { keyword := c;         res := True; }
+    .when "Style"          then { style := c;           res := True; }
+    .when "Assign"         then { assign := c;          res := True; }
+    .when "Operator"       then { operator := c;        res := True; }
+    .when "Type"           then { type := c;            res := True; }
+    .when "Number"         then { number := c;          res := True; }
+    .when "Local"          then { local := c;           res := True; }
+    .when "Slot"           then { slot := c;            res := True; }
+    .when "SlotSelect"     then { slot_select := c;     res := True; }
+    .when "SlotHead"       then { slot_head := c;       res := True; }
+    .when "SlotTiny"       then { slot_tiny := c;       res := True; }
+    .when "Error"          then { error := c;           res := True; }
+    .when "BlockOk"        then { block_ok := c;        res := True; }
+    .when "BlockErr"       then { block_err := c;       res := True; }
+    .when "Select"         then { select := c;          res := True; }
+    .when "Search"         then { search := c;          res := True; }
+    res
+  )

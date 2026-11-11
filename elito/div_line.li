@@ -1,0 +1,14 @@
+Header
+  + name := Div_line
+Inherit
+  
+  + parent_div:Flat Div
+  
+Public
+  
+  - self:Self '|' Left 20 other:Div :Div <-
+  ( 
+    (self + other).line
+  )
+
+  

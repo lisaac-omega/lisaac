@@ -48,13 +48,6 @@ Public
     + ts:Itm_type_mono
     + typ_gen:Type_generic
     + typ_sim:Type
-    /*
-    (s.name = "yop").if {
-      "PROFIL_SLOT : --- Yop ---".println;
-      call_lst.at 1.static_type.print;
-      '\n'.print;      
-    };
-    */
     (is_graph).if {
       set_call := new Hmap Int Key Profil
       set_back := Hset Profil.create
@@ -106,6 +99,15 @@ Public
     Itm_argument.reset_arg_count_tmp
     (item_lst.lower).to (item_lst.upper) do { j:Int
       item_lst.at j.to_run_in argument_list for self
+    }
+    (call_lst != NULL).if {
+      // `One': the version for a `One' argument (or receiver) has a `One' parameter.
+      (argument_list.lower).to (argument_list.upper) do { j:Int
+        loc := argument_list.at j
+        ((loc != NULL) && {j <= call_lst.upper} && {Escape.is_one_expr (call_lst.at j)} && {! loc.type.is_one}).if {
+          loc.set_type (loc.type + Type_full.one_bit)
+        }
+      }
     }
     ((s.id_section.is_external) && {argument_list.count > 1}).if {
       (argument_list.lower+1).to (argument_list.upper) do { j:Int

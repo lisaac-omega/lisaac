@@ -2,7 +2,10 @@ Header
   + name := File_cfg
 Inherit
   - parent_file_cfg_gui:File_cfg_gui := File_cfg_gui
-  - parent_any:Any := Any
+  
+Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
   
 Public
     

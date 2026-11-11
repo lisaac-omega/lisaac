@@ -1,1 +1,0 @@
-Char.to_integer_32 ?

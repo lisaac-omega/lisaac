@@ -64,12 +64,12 @@ Public
     engine_ptr := Audio.handle
     sound_ptr := ma_sound
 
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       allocate
       sound_ptr := ma_sound
     }
 
-    ((engine_ptr.is_null) || {sound_ptr.is_null}).if {
+    ((engine_ptr = NULL) || {sound_ptr = NULL}).if {
       result := Audio.invalid_operation
     } else {
       sound_initialized.if {
@@ -91,7 +91,7 @@ Public
 
     engine_ptr := Audio.handle
     config_ptr := `ma_calloc(sizeof(ma_sound_config), NULL)`:Pointer
-    ((! config_ptr.is_null) && {! engine_ptr.is_null}).if {
+    ((config_ptr != NULL) && {engine_ptr != NULL}).if {
       `*((ma_sound_config *)@config_ptr) = ma_sound_config_init_2((ma_engine *)@engine_ptr)`
     }
     config_ptr
@@ -101,7 +101,7 @@ Public
   ( + config_ptr:Pointer
 
     config_ptr := `ma_calloc(sizeof(ma_sound_config), NULL)`:Pointer
-    (! config_ptr.is_null).if {
+    (config_ptr != NULL).if {
       `*((ma_sound_config *)@config_ptr) = ma_sound_config_init()`
     }
     config_ptr
@@ -109,7 +109,7 @@ Public
 
   - config_delete config:Pointer <-
   (
-    (! config.is_null).if {
+    (config != NULL).if {
       `ma_free(@config, NULL)`
     }
   )
@@ -122,12 +122,12 @@ Public
     engine_ptr := Audio.handle
     sound_ptr := ma_sound
 
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       allocate
       sound_ptr := ma_sound
     }
 
-    ((engine_ptr.is_null) || {sound_ptr.is_null}).if {
+    ((engine_ptr = NULL) || {sound_ptr = NULL}).if {
       result := Audio.invalid_operation
     } else {
       sound_initialized.if {
@@ -149,12 +149,12 @@ Public
     sound_ptr := ma_sound
     source_ptr := source.raw_handle
 
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       allocate
       sound_ptr := ma_sound
     }
 
-    ((engine_ptr.is_null) || {sound_ptr.is_null} || {source_ptr.is_null}).if {
+    ((engine_ptr = NULL) || {sound_ptr = NULL} || {source_ptr = NULL}).if {
       result := Audio.invalid_operation
     } else {
       sound_initialized.if {
@@ -179,12 +179,12 @@ Public
     engine_ptr := Audio.handle
     sound_ptr := ma_sound
 
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       allocate
       sound_ptr := ma_sound
     }
 
-    ((engine_ptr.is_null) || {sound_ptr.is_null} || {ds = NULL}).if {
+    ((engine_ptr = NULL) || {sound_ptr = NULL} || {ds = NULL}).if {
       result := Audio.invalid_operation
     } else {
       sound_initialized.if {
@@ -210,7 +210,7 @@ Private
 
     decoder_ptr := ma_decoder
 
-    (! decoder_ptr.is_null).if {
+    (decoder_ptr != NULL).if {
       `ma_decoder_uninit((ma_decoder *)@decoder_ptr)`
       `ma_free(@decoder_ptr, NULL)`
       ma_decoder := NULL
@@ -236,12 +236,12 @@ Public
     engine_ptr := Audio.handle
     sound_ptr := ma_sound
 
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       allocate
       sound_ptr := ma_sound
     }
 
-    ((engine_ptr.is_null) || {sound_ptr.is_null}).if {
+    ((engine_ptr = NULL) || {sound_ptr = NULL}).if {
       result := Audio.invalid_operation
     } else {
 
@@ -256,7 +256,7 @@ Public
 
       decoder_ptr := `ma_calloc(sizeof(ma_decoder), NULL)`:Pointer
 
-      (decoder_ptr.is_null).if {
+      (decoder_ptr = NULL).if {
         result := Audio.out_of_memory
       } else {
         result := `ma_decoder_init_memory(@buf,(size_t)@size,NULL,(ma_decoder *)@decoder_ptr)`:(Int)
@@ -296,7 +296,7 @@ Public
     + result,sz:Int
     
     f := System_io_default.asset_open fn
-    (f.is_null).if {
+    (f = NULL).if {
       result := Audio.does_not_exist
     } else {      
       sz := System_io_default.asset_size f
@@ -316,12 +316,12 @@ Public
     engine_ptr := Audio.handle
     sound_ptr := ma_sound
 
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       allocate
       sound_ptr := ma_sound
     }
 
-    ((engine_ptr.is_null) || {sound_ptr.is_null} || {config.is_null}).if {
+    ((engine_ptr = NULL) || {sound_ptr = NULL} || {config = NULL}).if {
       result := Audio.invalid_operation
     } else {
       sound_initialized.if {
@@ -340,7 +340,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    ((! sound_ptr.is_null) && {sound_initialized}).if {
+    ((sound_ptr != NULL) && {sound_initialized}).if {
       `ma_sound_uninit((ma_sound *)@sound_ptr)`
       sound_initialized := False
     }
@@ -351,7 +351,7 @@ Public
 
     uninit
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_free(@sound_ptr, NULL)`
       ma_sound := NULL
     }
@@ -366,7 +366,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_start((ma_sound *)@sound_ptr)`:(Int)
@@ -379,7 +379,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_stop((ma_sound *)@sound_ptr)`:(Int)
@@ -392,7 +392,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_seek_to_pcm_frame((ma_sound *)@sound_ptr, @frame)`:(Int)
@@ -405,7 +405,7 @@ Public
     + result:Boolean
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_is_playing((ma_sound *)@sound_ptr)`:Int != 0
     }
     result
@@ -416,7 +416,7 @@ Public
     + result:Boolean
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_at_end((ma_sound *)@sound_ptr)`:Int != 0
     }
     result
@@ -428,7 +428,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_volume((ma_sound *)@sound_ptr, @vol)`
     }
   )
@@ -438,7 +438,7 @@ Public
     + result:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_volume((ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -448,7 +448,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_pan((ma_sound *)@sound_ptr, @pan)`
     }
   )
@@ -458,7 +458,7 @@ Public
     + result:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_pan((ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -468,7 +468,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_pitch((ma_sound *)@sound_ptr, @p)`
     }
   )
@@ -478,7 +478,7 @@ Public
     + result:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_pitch((ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -490,7 +490,7 @@ Public
 
     sound_ptr := ma_sound
     value := looping.to_int
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_looping((ma_sound *)@sound_ptr, (ma_bool32)@value)`
     }
   )
@@ -500,7 +500,7 @@ Public
     + result:Boolean
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_is_looping((ma_sound *)@sound_ptr)`:Int != 0
     }
     result
@@ -512,7 +512,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_start_time_in_pcm_frames((ma_sound *)@sound_ptr, @frame)`
     }
   )
@@ -521,7 +521,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_stop_time_in_pcm_frames((ma_sound *)@sound_ptr, @frame)`
     }
   )
@@ -530,7 +530,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_fade_in_pcm_frames((ma_sound *)@sound_ptr, @volume_begin, @volume_end, @frames)`
     }
   )
@@ -539,7 +539,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_position((ma_sound *)@sound_ptr, @x, @y, @z)`
     }
   )
@@ -548,7 +548,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_velocity((ma_sound *)@sound_ptr, @x, @y, @z)`
     }
   )
@@ -557,7 +557,7 @@ Public
   ( + sound_ptr:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_direction((ma_sound *)@sound_ptr, @x, @y, @z)`
     }
   )
@@ -568,7 +568,7 @@ Public
   ( + sound_ptr,result:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_engine((const ma_sound *)@sound_ptr)`:Pointer
     }
     result
@@ -578,7 +578,7 @@ Public
   ( + sound_ptr,result:Pointer
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_data_source((const ma_sound *)@sound_ptr)`:Pointer
     }
     result
@@ -589,7 +589,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_stop_with_fade_in_pcm_frames((ma_sound *)@sound_ptr, @fade_length)`:(Int)
@@ -602,7 +602,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_stop_with_fade_in_milliseconds((ma_sound *)@sound_ptr, @fade_length)`:(Int)
@@ -613,7 +613,7 @@ Public
   - reset_start_time <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_reset_start_time((ma_sound *)@sound_ptr)`
     }
   )
@@ -621,7 +621,7 @@ Public
   - reset_stop_time <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_reset_stop_time((ma_sound *)@sound_ptr)`
     }
   )
@@ -629,7 +629,7 @@ Public
   - reset_fade <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_reset_fade((ma_sound *)@sound_ptr)`
     }
   )
@@ -637,7 +637,7 @@ Public
   - reset_stop_time_and_fade <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_reset_stop_time_and_fade((ma_sound *)@sound_ptr)`
     }
   )
@@ -645,7 +645,7 @@ Public
   - set_pan_mode mode:Int <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_pan_mode((ma_sound *)@sound_ptr, (ma_pan_mode)@mode)`
     }
   )
@@ -654,7 +654,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Int
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_pan_mode((const ma_sound *)@sound_ptr)`:Int
     }
     result
@@ -666,7 +666,7 @@ Public
 
     sound_ptr := ma_sound
     value := enabled.to_int
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_spatialization_enabled((ma_sound *)@sound_ptr, (ma_bool32)@value)`
     }
   )
@@ -676,7 +676,7 @@ Public
     + result:Boolean
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_is_spatialization_enabled((const ma_sound *)@sound_ptr)`:Int != 0
     }
     result
@@ -685,7 +685,7 @@ Public
   - set_pinned_listener_index index:Uint32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_pinned_listener_index((ma_sound *)@sound_ptr, @index)`
     }
   )
@@ -695,7 +695,7 @@ Public
     + result:Uint32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_pinned_listener_index((const ma_sound *)@sound_ptr)`:Uint32
     }
     result
@@ -706,7 +706,7 @@ Public
     + result:Uint32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_listener_index((const ma_sound *)@sound_ptr)`:Uint32
     }
     result
@@ -717,7 +717,7 @@ Public
     + x,y,z:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       x := `ma_sound_get_direction_to_listener((const ma_sound *)@sound_ptr).x`:Real32
       y := `ma_sound_get_direction_to_listener((const ma_sound *)@sound_ptr).y`:Real32
       z := `ma_sound_get_direction_to_listener((const ma_sound *)@sound_ptr).z`:Real32
@@ -730,7 +730,7 @@ Public
     + x,y,z:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       x := `ma_sound_get_position((const ma_sound *)@sound_ptr).x`:Real32
       y := `ma_sound_get_position((const ma_sound *)@sound_ptr).y`:Real32
       z := `ma_sound_get_position((const ma_sound *)@sound_ptr).z`:Real32
@@ -743,7 +743,7 @@ Public
     + x,y,z:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       x := `ma_sound_get_direction((const ma_sound *)@sound_ptr).x`:Real32
       y := `ma_sound_get_direction((const ma_sound *)@sound_ptr).y`:Real32
       z := `ma_sound_get_direction((const ma_sound *)@sound_ptr).z`:Real32
@@ -756,7 +756,7 @@ Public
     + x,y,z:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       x := `ma_sound_get_velocity((const ma_sound *)@sound_ptr).x`:Real32
       y := `ma_sound_get_velocity((const ma_sound *)@sound_ptr).y`:Real32
       z := `ma_sound_get_velocity((const ma_sound *)@sound_ptr).z`:Real32
@@ -767,7 +767,7 @@ Public
   - set_attenuation_model model:Int <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_attenuation_model((ma_sound *)@sound_ptr, (ma_attenuation_model)@model)`
     }
   )
@@ -777,7 +777,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_attenuation_model((const ma_sound *)@sound_ptr)`:Int
     }
     result
@@ -786,7 +786,7 @@ Public
   - set_positioning positioning:Int <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_positioning((ma_sound *)@sound_ptr, (ma_positioning)@positioning)`
     }
   )
@@ -796,7 +796,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_positioning((const ma_sound *)@sound_ptr)`:Int
     }
     result
@@ -805,7 +805,7 @@ Public
   - set_rolloff rolloff:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_rolloff((ma_sound *)@sound_ptr, @rolloff)`
     }
   )
@@ -814,7 +814,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_rolloff((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -823,7 +823,7 @@ Public
   - set_min_gain gain:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_min_gain((ma_sound *)@sound_ptr, @gain)`
     }
   )
@@ -832,7 +832,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_min_gain((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -841,7 +841,7 @@ Public
   - set_max_gain gain:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_max_gain((ma_sound *)@sound_ptr, @gain)`
     }
   )
@@ -850,7 +850,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_max_gain((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -859,7 +859,7 @@ Public
   - set_min_distance distance:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_min_distance((ma_sound *)@sound_ptr, @distance)`
     }
   )
@@ -868,7 +868,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_min_distance((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -877,7 +877,7 @@ Public
   - set_max_distance distance:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_max_distance((ma_sound *)@sound_ptr, @distance)`
     }
   )
@@ -886,7 +886,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_max_distance((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -895,7 +895,7 @@ Public
   - set_cone inner_angle:Real32 outer outer_angle:Real32 gain outer_gain:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_cone((ma_sound *)@sound_ptr, @inner_angle, @outer_angle, @outer_gain)`
     }
   )
@@ -905,7 +905,7 @@ Public
     + inner_angle,outer_angle,outer_gain:Real32
 
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_get_cone((const ma_sound *)@sound_ptr, &@inner_angle, &@outer_angle, &@outer_gain)`
     }
     inner_angle,outer_angle,outer_gain
@@ -914,7 +914,7 @@ Public
   - set_doppler_factor factor:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_doppler_factor((ma_sound *)@sound_ptr, @factor)`
     }
   )
@@ -923,7 +923,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_doppler_factor((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -932,7 +932,7 @@ Public
   - set_directional_attenuation_factor factor:Real32 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_directional_attenuation_factor((ma_sound *)@sound_ptr, @factor)`
     }
   )
@@ -941,7 +941,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_directional_attenuation_factor((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -951,7 +951,7 @@ Public
     milliseconds milliseconds:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_fade_in_milliseconds((ma_sound *)@sound_ptr, @volume_begin, @volume_end, @milliseconds)`
     }
   )
@@ -960,7 +960,7 @@ Public
     frames frames:Uint64 starting_at start_time:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_fade_start_in_pcm_frames((ma_sound *)@sound_ptr, @volume_begin, @volume_end, @frames, @start_time)`
     }
   )
@@ -969,7 +969,7 @@ Public
     milliseconds milliseconds:Uint64 starting_at start_time:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_fade_start_in_milliseconds((ma_sound *)@sound_ptr, @volume_begin, @volume_end, @milliseconds, @start_time)`
     }
   )
@@ -978,7 +978,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Real32
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_current_fade_volume((const ma_sound *)@sound_ptr)`:Real32
     }
     result
@@ -987,7 +987,7 @@ Public
   - set_start_time_in_milliseconds time:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_start_time_in_milliseconds((ma_sound *)@sound_ptr, @time)`
     }
   )
@@ -995,7 +995,7 @@ Public
   - set_stop_time_in_milliseconds time:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_stop_time_in_milliseconds((ma_sound *)@sound_ptr, @time)`
     }
   )
@@ -1003,7 +1003,7 @@ Public
   - set_stop_time frame:Uint64 with_fade fade_length:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_stop_time_with_fade_in_pcm_frames((ma_sound *)@sound_ptr, @frame, @fade_length)`
     }
   )
@@ -1011,7 +1011,7 @@ Public
   - set_stop_time_milliseconds time:Uint64 with_fade fade_length:Uint64 <-
   ( + sound_ptr:Pointer
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       `ma_sound_set_stop_time_with_fade_in_milliseconds((ma_sound *)@sound_ptr, @time, @fade_length)`
     }
   )
@@ -1020,7 +1020,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Uint64
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_time_in_pcm_frames((const ma_sound *)@sound_ptr)`:Uint64
     }
     result
@@ -1030,7 +1030,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Uint64
     sound_ptr := ma_sound
-    (! sound_ptr.is_null).if {
+    (sound_ptr != NULL).if {
       result := `ma_sound_get_time_in_milliseconds((const ma_sound *)@sound_ptr)`:Uint64
     }
     result
@@ -1040,7 +1040,7 @@ Public
   ( + sound_ptr:Pointer
     + result:Int
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_seek_to_second((ma_sound *)@sound_ptr, @second)`:(Int)
@@ -1058,7 +1058,7 @@ Public
     + channels,sample_rate:Uint32
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_get_data_format((const ma_sound *)@sound_ptr, (ma_format *)&@format, &@channels, &@sample_rate, (ma_channel *)@channel_map, (size_t)@capacity)`:(Int)
@@ -1072,7 +1072,7 @@ Public
     + cursor:Uint64
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_get_cursor_in_pcm_frames((const ma_sound *)@sound_ptr, &@cursor)`:(Int)
@@ -1086,7 +1086,7 @@ Public
     + length:Uint64
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_get_length_in_pcm_frames((const ma_sound *)@sound_ptr, &@length)`:(Int)
@@ -1100,7 +1100,7 @@ Public
     + cursor:Real32
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_get_cursor_in_seconds((const ma_sound *)@sound_ptr, &@cursor)`:(Int)
@@ -1114,7 +1114,7 @@ Public
     + length:Real32
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_get_length_in_seconds((const ma_sound *)@sound_ptr, &@length)`:(Int)
@@ -1127,7 +1127,7 @@ Public
     + result:Int
 
     sound_ptr := ma_sound
-    (sound_ptr.is_null).if {
+    (sound_ptr = NULL).if {
       result := Audio.invalid_operation
     } else {
       result := `ma_sound_set_end_callback((ma_sound *)@sound_ptr, (ma_sound_end_proc)@callback, @user_data)`:(Int)

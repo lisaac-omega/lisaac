@@ -1,0 +1,200 @@
+Header
+  + name := Shortcut
+Insert
+  
+  - parent_clone:Clone := Clone
+  
+Private
+    
+  - string_tmp:String_buffer := String_buffer.create 16
+  
+  - list:Array Shortcut := Array Shortcut.create_with_capacity 32
+      
+  + cur_list:Uint64
+  + description:String_alias
+  
+  + actions:Array Action
+  + action:{Shortcut; }
+
+  - make k:Uint64 description d:String_alias <- 
+  ( 
+    list.add_last self
+    cur_list := key_list := k
+    description := d
+  )
+  
+  - make k:Uint64 description d:String_alias action a:{Shortcut;} <-
+  ( 
+    make k description d
+    action := a
+  )
+  
+  - display_stat title:String_alias <-
+  ( String.tmp.copy title
+    String.tmp.add_last ' '
+    append_current_key_in (String.tmp)
+    String.tmp.add_last '\n'
+    list.foreach { s:Shortcut
+      (s.cur_list != s.key_list).if {
+        s.append_all_in (String.tmp)
+      }
+    }
+    String.tmp.println
+  )
+  
+  - run k:Uint16 :Boolean <-
+  ( + result,v:Boolean
+    (
+      (
+        ((cur_list  = key_list) && {! is_run}) ||
+          {(cur_list != key_list) && {  is_run}}
+      ) && {
+        ((cur_list & Key_code.shift) != 0).if { 
+          v := k = cur_list.to_raw_uint16
+        } else { 
+          v := (k & ~Key_code.shift) = cur_list.to_raw_uint16
+        }
+        v
+      }
+    ).if {
+      cur_list := cur_list >> 16
+      (cur_list = 0).if {
+        todo := self
+        /*
+        (actions != NULL).if {
+          actions.foreach { a:ACTION; a.run; }
+        } else {
+          action.value self
+        };*/
+        cur_list := key_list
+        current_key := 0
+      } else { 
+        result := True
+      }
+      is_eat := True
+    } else {
+      cur_list := key_list
+    }
+    result    
+  )
+    
+Public
+  - todo:Shortcut
+  - is_run:Boolean
+  - is_eat:Boolean
+  - current_key:Uint64
+  
+  + key_list:Uint64
+  
+  - clear <-
+  (
+    list.clear
+  )
+
+  - create k:Uint64 description d:String_alias :Self <-
+  ( + result:Self
+    result := clone
+    result.make k description d
+    result
+  )
+  
+  - create k:Uint64 description d:String_alias action a:{Shortcut;} :Self <-
+  ( + result:Self
+    result := clone
+    result.make k description d action a
+    result
+  )
+  
+  - is_exist k:Uint64 :Boolean <-
+  ( + i:Int
+    {(i <= list.upper) && {list.at i.key_list != k}}.while_do {
+      i := i + 1
+    }
+    i <= list.upper
+  )
+  
+  - set_actions a:Array Action <- ( actions := a; )
+  
+  - new_key k:Uint16 :(Boolean,Shortcut) <-
+  ( + result:Boolean
+    + kk:Uint16
+    + kl,v:Uint64
+    + ltodo:Shortcut
+    kk := k & 0BFFFh; // Without num lock.
+    ((k & Key_code.key_cmd) = 0).if {
+      kk := (kk & 0FFh).to_char.to_lower.to_int | (kk & 0FF00h)
+    }
+    kl := kk
+    v := current_key
+    {v != 0}.while_do { v := v >> 16; kl := kl << 16; }
+    current_key := current_key | kl
+    //kk := kk & ~KEYBOARD.shift
+    //KEYBOARD.key_to_string kk.print; ' '.print; kk.print;  '\n'.print
+    //display_stat "Before"
+    todo := NULL
+    is_eat := False
+    list.foreach { elt:Shortcut; result := result | elt.run kk; }
+    is_run := result
+    (! is_eat).if { 
+      current_key := 0
+    }
+    //display_stat "After"
+    result := is_eat || {Old is_run}
+    ltodo := todo
+    result,ltodo
+  )
+  
+  - play s:Shortcut <-
+  (
+    (s != NULL).if {
+      (s.actions != NULL).if {
+        s.actions.foreach { a:Action; a.run; }
+      } else {
+        s.action.value s
+      }
+    }
+  )
+  
+  - append_current_key_in buf:String_buffer <-
+  ( + val:Uint64
+    val := current_key
+    {val != 0}.while_do {
+      buf.append (Key_code.key_to_string (val.to_raw_uint16))
+      val := val >> 16
+      (val != 0).if { buf.append ", "; }
+    }
+  )
+  
+  - append_in b:String_buffer <-
+  ( + val:Uint64
+    val := key_list
+    {val != 0}.while_do {
+      b.append (Key_code.key_to_string (val.to_raw_uint16))
+      val := val >> 16
+      (val != 0).if { b.append ", "; }
+    }
+  )
+  
+  - append_all_in b:String_buffer <-
+  ( + val:Uint64
+    + p:Int
+    (description != NULL).if {
+      p := b.upper
+      val := key_list
+      {val != 0}.while_do {
+        b.append (Key_code.key_to_string (val.to_raw_uint16))
+        val := val >> 16
+        (val != 0).if { b.append ", "; }
+      }
+      {(b.upper - p) < 32}.while_do { b.add_last ' '; }
+      b.append description
+      b.add_last '\n'
+    }
+  )
+  
+  - append_list_in b:String_buffer <-
+  (
+    list.foreach { k:Shortcut
+      k.append_all_in b
+    }
+  )

@@ -73,7 +73,5 @@ Public
     // Assignment result.
     affect nm with (node.result_expr)
     // Value result.
-    //assign.to_run_expr
   )
-
 

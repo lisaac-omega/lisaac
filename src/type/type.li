@@ -1,8 +1,11 @@
 Header
   + name := Type
 /*Type without style*/
+Insert
+  
+  + parent_lisaac_common:Flat Lisaac_common
+  
 Inherit
-  + parent_any:Flat Any
 
   - parent_parameter_to_type:Flat Parameter_to_type
   
@@ -27,14 +30,6 @@ Public
   //
   // Begin TYPES
   //
-  
-  /* Pas d'inpact...
-  + types_with_null:TYPES_SET
-  - set_types_with_null t:TYPES_SET <-
-  (
-    types_with_null := t
-  )
-  */
   
   - first_index:Int <- 0
   - count:Int <- 1
@@ -72,11 +67,77 @@ Public
     switch_list.add_last sw
   )
 
-  + param_count:Int
+  + cop_init_list:List
+  // With `-cop', active object: the initialization of its fields, in its universe (see
+  // @Slot_data.is_object_init).
 
-  - set_param n:Int <-
+  - cop_init_types:Array Type := Array Type .create_with_capacity 8
+
+  + esc_proto_obj:Escape_obj
+  + esc_proto_pass:Int
+  // The prototype for the escape analysis (see @Escape.proto_obj).
+
+  - set_esc_proto o:Escape_obj pass p:Int <-
   (
-    param_count := param_count.max n
+    esc_proto_obj := o
+    esc_proto_pass := p
+  )
+
+  - add_cop_init l:List <-
+  (
+    (cop_init_list = NULL).if {
+      cop_init_list := List.create (prototype.position)
+      cop_init_types.add_last self
+      (debug_level_option != 0).if {
+        cop_init_list.add_last (Push.create (prototype.position) context context_main first True)
+      }
+    }
+    cop_init_list.add_last l
+  )
+
+  - is_cop_proto_in_base:Boolean <-
+  // With `-cop': this prototype, changed by the program, has a copy in the base of each universe.
+  (is_cop) && {! default.is_default_flat} && {Escape.mutable_prototypes.fast_first_index_of self <= Escape.mutable_prototypes.upper}
+
+  - genere_cop_init_object <-
+  // C function `li_init_object_...': the base of a new universe of this active type, then the
+  // fields of its object, in this universe (called by the runtime: its first message).
+  ( + inits:Array Int
+    output # "void li_init_object_" # intern_name # "(lith_object *u)\n{\n"
+    // Its base: only the slots its code can reach (see @Escape.needed_base_inits).
+    output # "  LI_INIT_PROTOS;\n"
+    inits := Escape.needed_base_inits self
+    (inits.lower).to (inits.upper) do { j:Int
+      output # "  li_init_base_" # inits.at j # "();\n"
+    }
+    output # "  memset(((char *)u) + sizeof(lith_object),0,sizeof(__" # intern_name # ") - sizeof(lith_object));\n"
+    (cop_init_list != NULL).if {
+      indent.append "  "
+      profil_current := NULL
+      cop_init_list.genere_extern_result NULL
+      indent.remove_tail 2
+    }
+    output # "}\n\n"
+  )
+
+  + cop_profil_list:Array Profil
+  // Asynchronous COP slots of this active object: one message structure for each.
+
+  - genere_cop_msg_struct_list <-
+  (
+    (cop_profil_list != NULL).if {
+      (cop_profil_list.lower).to (cop_profil_list.upper) do { j:Int
+        cop_profil_list.at j.genere_cop_msg_struct output_decl
+      }
+    }
+  )
+
+  - add_cop_profil p:Profil <-
+  (
+    (cop_profil_list = NULL).if {
+      cop_profil_list := Array Profil.create_with_capacity 4
+    }
+    cop_profil_list.add_last p
   )
 
   + subtype_list:Hset Type
@@ -142,12 +203,10 @@ Public
     + r:Type
 
     proto := load_prototype (path,itm_typ.name) generic_count 0
-  //base := dico_type.reference_at (proto.filename)
     base := dico_type.search (proto.filename) raw
     (base = NULL).if {
       base := Type.clone
       
-      //dico_type.fast_put base to (proto.filename)
       dico_type.at (proto.filename) put base 
       
       base.make itm_typ with proto
@@ -186,7 +245,6 @@ Public
     }.while_do {
       ts  ?= slot_run.at j.result_type
       typ := ts.to_run_for self pos (slot_run.at j.position.prototype.filename).raw
-    //result := typ.prototype.slot_list.reference_at n
       result := typ.prototype.slot_list.search n raw
       ((result = NULL) || {result.pattern_in = NULL}).if {
         result := typ.search_require n
@@ -212,7 +270,6 @@ Public
     }.while_do {
       ts     ?= slot_run.at j.result_type
       typ    := ts.to_run_for self pos (slot_run.at j.position.prototype.filename).raw
-    //result := typ.prototype.slot_list.reference_at n
       result := typ.prototype.slot_list.search n raw
       ((result = NULL) || {result.pattern_out = NULL}).if {
         result := typ.search_ensure n
@@ -281,14 +338,6 @@ Public
     (j <= slot_run.upper).if {
       result := slot_run.at j
     } else {
-      /*
-      (n == "__init_page").if {
-        "TYPE: get_slot_local : ".print
-        prototype.filename.print; ' '.print; prototype.print
-        '\n'.print
-      }
-      */
-    //itm_slot := prototype.slot_list.reference_at n
       itm_slot := prototype.slot_list.search n raw
       (itm_slot != NULL).if {
         verify_itm_slot_parent itm_slot
@@ -304,7 +353,6 @@ Public
     + j:Int
     + it:Itm_type_mono
     
-  //result := prototype.slot_list.reference_at n
     result := prototype.slot_list.search n raw
     ((result = NULL) && {slot_run != NULL}).if {
       j := slot_run.lower
@@ -419,12 +467,6 @@ Public
   )
 
 Public
-  /*
-  - stat_global:ARRAY Int := ARRAY Int .create 128
-  - stat_global_null:ARRAY Int := ARRAY Int .create 128
-  - stat_slot:ARRAY Int := ARRAY Int .create 128
-  - stat_slot_null:ARRAY Int := ARRAY Int .create 128
-  */
 
   - genere_id_family <-
   ( + sw:Switch
@@ -459,6 +501,15 @@ Public
     
   - genere_all_struct <-
   ( + sd:Slot_data
+    + t:Type
+    (is_cop).if {
+      // Initialization of the fields of the active objects (before the base: its slots).
+      (genere_list.lower).to (genere_list.upper) do { j:Int
+        (genere_list.at j.prototype.style = '-').if {
+          genere_list.at j.genere_cop_init_object
+        }
+      }
+    }
     Type_null.genere_typedef
     genere_id
     (genere_list.lower).to (genere_list.upper) do { j:Int
@@ -472,32 +523,63 @@ Public
       Type_context.genere_typedef
       Type_context.genere_struct
     }
-    (genere_list_global.lower).to (genere_list_global.upper) do { j:Int
-      // In global.
-      /*
-      + s:SLOT_DATA
-      + idx:Int
-      s := genere_list_global.at j
-      (s.type.is_flat).if {
-        stat_global.put (stat_global.at 0 + 1) to 0
-      } else {
-        //(s.type.raw.subtype_list != NULL).if {
-        //  idx := s.type.raw.subtype_list.count; //s.type_set.count
-        //} else {
-          idx := s.type_set.count
-        //}
-        stat_global.put (stat_global.at idx + 1) to idx
-        (s.type_set.last = TYPE_MARK).if {
-          stat_global_null.put (stat_global_null.at idx + 1) to idx
+    (is_cop).if {
+      // Messages of the asynchronous COP slots (after the structures of their arguments).
+      (genere_list.lower).to (genere_list.upper) do { j:Int
+        genere_list.at j.genere_cop_msg_struct_list
+      }
+      (Slot_data.init_lists_base.lower).to (Slot_data.init_lists_base.upper) do { j:Int
+        output_decl # "void li_init_base_" # j # "(void);\n"
+      }
+      // Universes of the living prototypes of the active objects: opened at the start of `main'.
+      (genere_list.lower).to (genere_list.upper) do { j:Int
+        t := genere_list.at j
+        (t.prototype.style = '-').if {
+          output_decl # "void li_init_object_" # t.intern_name # "(lith_object *u);\n"
         }
       }
-      */
-      sd := genere_list_global.at j
-      (output_list.count > 1).if {
-        output_decl # "extern "
-        sd.genere output_decl
+      output_decl # "#define LI_OPEN_UNIVERSES do {"
+      (genere_list.lower).to (genere_list.upper) do { j:Int
+        t := genere_list.at j
+        (t.prototype.style = '-').if {
+          output_decl # " ((lith_object *)(" # t.intern_name # "__))->init_object = li_init_object_" # t.intern_name # ";"
+          output_decl # " li_universe_open((lith_object *)(" # t.intern_name # "__));"
+        }
       }
-      sd.genere output_glob
+      output_decl # " } while (0)\n"
+      // Universe base: the `-' slots, one copy for each universe (see @Read_global).
+      // The changed prototypes: a copy in each base, from their model.
+      output_decl # "#define LI_INIT_PROTOS do {"
+      (Escape.mutable_prototypes.lower).to (Escape.mutable_prototypes.upper) do { j:Int
+        t := Escape.mutable_prototypes.at j
+        (t.is_cop_proto_in_base).if {
+          output_decl # " li_base->proto_" # t.intern_name # " = " # t.intern_name # "_;"
+        }
+      }
+      output_decl # " } while (0)\n"
+      output_decl # "\nstruct universe_base {\n  int li_base_unused;\n"
+      (Escape.mutable_prototypes.lower).to (Escape.mutable_prototypes.upper) do { j:Int
+        t := Escape.mutable_prototypes.at j
+        (t.is_cop_proto_in_base).if {
+          output_decl # "  __" # t.intern_name # " proto_" # t.intern_name # ";\n"
+        }
+      }
+      (genere_list_global.lower).to (genere_list_global.upper) do { j:Int
+        output_decl # "  "
+        genere_list_global.at j.genere output_decl
+      }
+      output_decl # "};\n"
+      output_glob # "LI_BASE_TLS struct universe_base *li_base;\nstruct universe_base li_main_base;\n"
+    } else {
+      (genere_list_global.lower).to (genere_list_global.upper) do { j:Int
+        // In global.
+        sd := genere_list_global.at j
+        (output_list.count > 1).if {
+          output_decl # "extern "
+          sd.genere output_decl
+        }
+        sd.genere output_glob
+      }
     }
   )
 
@@ -522,6 +604,56 @@ Public
 
   + alias_slot:Slot_data
 
+  + prefix_slot_cache:Slot_data
+
+  + is_prefix_computed:Boolean
+
+  - prefix_slot:Slot_data <-
+  // Flat parent slot placed first in the C structure: it shares the @__id of @self
+  // (when late binding), and its slots are at the same offset as in its own type.
+  // Thus a dispatch reading the same slot in each type can be removed (see @Switch.genere).
+  ( + slot:Slot
+    + action:{Slot_data; }
+
+    (! is_prefix_computed).if {
+      is_prefix_computed := True
+      action := { s:Slot_data
+        ((prefix_slot_cache = NULL) && {s.ensure_count > 0} && {s.id_section.is_inherit_or_insert}).if {
+          ((s.type.is_flat) && {! s.type.is_flat_ref} && {! s.type.is_default_flat}).if {
+            ((s.type.raw.type_c = NULL) && {! s.type.raw.is_block} && {s.type.raw != self} && {s.type.raw.alias_slot = NULL}).if {
+              ((! is_late_binding) || {s.type.raw.is_late_binding}).if {
+                prefix_slot_cache := s
+              }
+            }
+          }
+        }
+      }
+      (
+        (type_c = NULL) && {alias_slot = NULL} && {slot_run != NULL} && {! is_block} &&
+        {! prototype.is_mapping} && {(! is_cop) || {prototype.style != '-'}}
+      ).if {
+        (slot_run.lower).to (slot_run.upper) do { j:Int
+          slot := slot_run.at j
+          ((slot.style = '+') && {slot.lower_style = 0}).if {
+            (slot.slot_data_list != NULL).if {
+              (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { k:Int
+                action.value (slot.slot_data_list.at k)
+              }
+            }
+            action.value (slot.slot_data)
+            (slot.self_copy_list != NULL).if {
+              // Data slot of type Self: one field for each concrete type.
+              (slot.self_copy_list.lower).to (slot.self_copy_list.upper) do { k:Int
+                action.value (slot.self_copy_list.at k)
+              }
+            }
+          }
+        }
+      }
+    }
+    prefix_slot_cache
+  )
+
   - alias_type:Type <- alias_slot.type.raw
 
   - detect_alias <-
@@ -539,7 +671,9 @@ Public
     + i,nb:Int
     + action:{Slot_data; }
 
-    (! is_late_binding).if {
+    // An active object (`-cop') has its own structure, which starts with its universe
+    // (@lith_object): never an alias of the structure of its flat parent.
+    ((! is_late_binding) && {(! is_cop) || {prototype = NULL} || {prototype.style != '-'}}).if {
       ((alias_slot = NULL) && {slot_run != NULL}).if {
 
         action := { s:Slot_data
@@ -565,6 +699,12 @@ Public
               }
             }
             action.value (slot.slot_data)
+            (slot.self_copy_list != NULL).if {
+              // Data slot of type Self: one field for each concrete type.
+              (slot.self_copy_list.lower).to (slot.self_copy_list.upper) do { k:Int
+                action.value (slot.self_copy_list.at k)
+              }
+            }
           }
           i := i + 1
         }
@@ -615,6 +755,12 @@ Public
             }
           }
           action.value (slot.slot_data)
+          (slot.self_copy_list != NULL).if {
+            // Data slot of type Self: one field for each concrete type.
+            (slot.self_copy_list.lower).to (slot.self_copy_list.upper) do { k:Int
+              action.value (slot.self_copy_list.at k)
+            }
+          }
         }
       }
       // Sort slot.
@@ -636,6 +782,12 @@ Public
               }
             }
             action.value (slot.slot_data)
+            (slot.self_copy_list != NULL).if {
+              // Data slot of type Self: one field for each concrete type.
+              (slot.self_copy_list.lower).to (slot.self_copy_list.upper) do { k:Int
+                action.value (slot.self_copy_list.at k)
+              }
+            }
           }
           slot_data := slot.slot_id
           ((slot_data != NULL) && {slot_data.ensure_count > 0}).if {
@@ -659,7 +811,6 @@ Public
             }
           }
 
-          
           ((name = str_true) || {name = str_false}).if {
             output_decl.append "#define "
             output_decl.append intern_name
@@ -685,18 +836,22 @@ Public
             (is_late_binding).if {
               " with id:".print
               id.print
-              //id_counter_with_type.print
             } else {
               " without id.".print
             }
             '\n'.print
           }
           string_tmp.clear
+          (prefix_slot != NULL).if {
+            string_tmp.append "  "
+            prefix_slot.genere string_tmp
+          }
           (is_late_binding).if {            
-            //id_counter_with_type.append_in output_decl
             id.append_in output_decl
             id_counter_with_type := id_counter_with_type + 1
-            string_tmp.append "  int __id;\n"
+            (prefix_slot = NULL).if {
+              string_tmp.append "  int __id;\n"
+            }
             (prototype.style = '-').if {
               semantic_error (position,"Late binding on '-' prototype is not yet implemented.")
             }
@@ -711,13 +866,6 @@ Public
           output_decl.add_last '\n'
           ((is_cop) && {prototype.style = '-'}).if {
             string_tmp.append "  lith_object thread;\n"
-            (param_count != 0).if {
-              1.to param_count do { n:Int
-                string_tmp.append "  int param_"
-                (n-1).append_in string_tmp
-                string_tmp.append ";\n"
-              }
-            }
           }
           4.downto 0 do { j:Int
             tab := slot_size.at j
@@ -760,9 +908,15 @@ Public
           (output_list.count > 1).if {
             output_decl # "extern __" # intern_name # ' ' # intern_name # "_;\n"
           }          
-          output_decl # "#define " # intern_name # "__ ("
-          (! default.is_default_flat).if { output_decl # '&' }
-          output_decl # intern_name # "_)\n"
+          (is_cop_proto_in_base).if {
+            // COP: a prototype changed by the program: one copy in the base of each universe,
+            // from the model `..._' (see @Escape.mutable_prototypes).
+            output_decl # "#define " # intern_name # "__ (&(li_base->proto_" # intern_name # "))\n"
+          } else {
+            output_decl # "#define " # intern_name # "__ ("
+            (! default.is_default_flat).if { output_decl # '&' }
+            output_decl # intern_name # "_)\n"
+          }
           //
           output_glob # "__" # intern_name # ' ' # intern_name # '_'
           (is_late_binding).if {
@@ -850,16 +1004,21 @@ Public
 Private
 
   - add_slot_struct s:Slot_data <-
+  // @prefix_slot is not sorted: it is the first.
+  (
+    (s != prefix_slot).if {
+      add_slot_struct_sorted s
+    }
+  )
+
+  - add_slot_struct_sorted s:Slot_data <-
   (/*
     + idx:Int
     (s.type.is_flat).if {
       stat_slot.put (stat_slot.at 0 + 1) to 0
     } else {
-      //(s.type.raw.subtype_list != NULL).if {
       //  idx := s.type.raw.subtype_list.count; //s.type_set.count
-      //} else {
         idx := s.type_set.count
-      //}
       stat_slot.put (stat_slot.at idx + 1) to idx
       (s.type_set.last = TYPE_MARK).if {
         stat_slot_null.put (stat_slot_null.at idx + 1) to idx
@@ -945,7 +1104,6 @@ Public
       e.genere
     }.elseif {t = type_block} then {
       e.genere
-      //output.append ".__id"
     } else {      
       output.append "((struct ___OBJ *)"
       e.genere
@@ -1038,11 +1196,16 @@ Type
     + read_char:{}
     + stat,found_index,cur_index:Int
     + is_only:Boolean
+    + dico_path:Hmap Prototype Key String_alias
     
-    //call_path.print; ' '.print; n.print; '\n'.print
-
-  //result := dico_name_to_prototype.reference_at n
     result := dico_name_to_prototype.search n raw
+    (result = NULL).if {
+      // @n is in several paths: the result depends on @call_path.
+      dico_path := dico_path_name_to_prototype.search n raw
+      (dico_path != NULL).if {
+        result := dico_path.search call_path raw
+      }
+    }
     (result = NULL).if {
       read_char := {
         cn := n.at idx_name
@@ -1135,11 +1298,10 @@ Type
         }
         Position.send_error
       } else {
-      //result := Prototype.prototype_dico.reference_at found
         result := Prototype.prototype_dico.search found raw
         (result = NULL).if {
           entry := File_utils.open_read found
-          (entry.is_not_null).if {
+          (entry != NULL).if {
             // Load prototype.
             File_utils.close entry
             result := Prototype.create found name n generic_count gen_count
@@ -1153,6 +1315,12 @@ Type
         }
         (is_only).if {
           dico_name_to_prototype.at n put result
+        }.elseif {result != NULL} then {
+          (dico_path = NULL).if {
+            dico_path := new Hmap Prototype Key String_alias
+            dico_path_name_to_prototype.at n put dico_path
+          }
+          dico_path.at call_path put result
         }
       }
     }
@@ -1168,15 +1336,12 @@ Type
       Position.send_error
     }
 
-    //result.filename.print; '\n'.print; '\n'.print
-
     result
   )
 
   - make itm_typ:Itm_type_simple with proto:Prototype <-
   ( + mask_bit:Uint8
     
-    //type_list.add_last self
     index     := index_max; //type_list.upper
     index_max := index_max + 1
     //
@@ -1225,6 +1390,8 @@ Type
   )
 
   - dico_name_to_prototype:Hmap Prototype Key String_alias := new Hmap Prototype Key String_alias
+
+  - dico_path_name_to_prototype:Hmap (Hmap Prototype Key String_alias) Key String_alias := new Hmap (Hmap Prototype Key String_alias) Key String_alias
 
 Type, Type_full
 
@@ -1285,7 +1452,6 @@ Type,Prototype
     }.while_do {
       ts ?= slot_run.at idx.result_type
       type_parent := ts.to_run_for self pos (slot_run.at idx.position.prototype.filename).raw
-    //other := type_parent.prototype.slot_list.reference_at (ref.name)
       other := type_parent.prototype.slot_list.search (ref.name) raw
       (other != NULL).if {
         ref.is_equal_profil other

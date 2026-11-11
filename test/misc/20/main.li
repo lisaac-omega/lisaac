@@ -1,5 +1,0 @@
-Header
-  + name := Main
-Public
-  
-  - main := "Hello world!\n".print

@@ -1,0 +1,38 @@
+Header
+  + name := Napier
+  /*
+  The node of the number e (Napier's constant, or Euler's number), used by
+  `ℝ.e'. The prototype is itself the node: it is unique, never freed, and
+  keeps its best approximation for the whole program.
+
+  e = 1 + 1/1! + 1/2! + 1/3! + ..., in fixed point.
+  */
+Inherit
+  + parent_r_node:Flat R_node
+  // Its own fields (approximation), not those of the prototype @R_node.
+
+Private
+
+  - compute p:Int :ℤ <-
+  // Each term is truncated: the error is less than one unit per term, far
+  // less than the 64 extra bits.
+  ( + s,t,v,r:ℤ
+    + w,n:Int
+    w := (- p).max 0 + 64
+    t := ℤ.one << w
+    s := t.copy
+    n := 1
+    {t !== 0}.while_do {
+      v := t / n
+      t.free
+      t := v
+      v := s + t
+      s.free
+      s := v
+      n := n + 1
+    }
+    t.free
+    r := shift (s, - w - p)
+    s.free
+    r
+  )

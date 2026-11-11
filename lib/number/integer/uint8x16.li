@@ -1,0 +1,99 @@
+Header
+  + name := Flat Uint8x16
+/*16 @Uint8 in one SIMD register (gcc vector extension): one operation for the 16 values.
+  @shuffle reorders the 16 values in one instruction (`pshufb' on x86 with SSSE3).*/
+  - type    := `unsigned char __attribute__((vector_size(16)))`;
+  - default := (`((unsigned char __attribute__((vector_size(16)))){0})`:Uint8x16);
+  - include :=
+`
+typedef unsigned char __attribute__((vector_size(16))) u8x16;
+#if defined(__SSSE3__)
+// pshufb itself: __builtin_shuffle adds an and 15 on the indexes.
+#define u8x16_shuffle(a,m) ((u8x16)__builtin_ia32_pshufb128((char __attribute__((vector_size(16))))(a), (char __attribute__((vector_size(16))))(m)))
+#elif defined(__GNUC__) && !defined(__clang__)
+#define u8x16_shuffle(a,m) __builtin_shuffle((a), (m))
+#else
+static inline u8x16 u8x16_shuffle(u8x16 a, u8x16 m)
+{ u8x16 r; int i; for (i = 0; i < 16; i++) r[i] = a[m[i] & 15]; return r; }
+#endif
+static inline int u8x16_movemask(u8x16 a)
+{
+#ifdef __SSE2__
+  return __builtin_ia32_pmovmskb128((char __attribute__((vector_size(16))))a);
+#else
+  int r = 0, i; for (i = 0; i < 16; i++) r |= (a[i] >> 7) << i; return r;
+#endif
+}
+static inline u8x16 u8x16_lower_signed(u8x16 a, u8x16 b)
+{ typedef signed char __attribute__((vector_size(16))) s8x16;
+  return (u8x16)((s8x16)a < (s8x16)b);
+}
+static inline u8x16 u8x16_reverse_mask(u8x16 f)
+{ typedef signed char __attribute__((vector_size(16))) s8x16;
+  const u8x16 id = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+  s8x16 d = (s8x16)(f - id);
+#ifdef __SSE4_1__
+  return (u8x16)__builtin_ia32_pblendvb128((char __attribute__((vector_size(16))))d,
+    (char __attribute__((vector_size(16))))id, (char __attribute__((vector_size(16))))d);
+#else
+  s8x16 lt = d < 0;
+  return (u8x16)((lt & (s8x16)id) | (~lt & d));
+#endif
+}
+`;
+
+Insert
+  - parent_utils:Utils := Utils
+
+Public
+
+  - identity:Self <- `((unsigned char __attribute__((vector_size(16)))){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15})`:Self
+  // (0, 1, 2, ..., 15).
+
+  - at i:Int :Uint8 <- `(@self)[@i]`:Uint8
+
+  - first:Uint8 <- `(unsigned char)((int __attribute__((vector_size(16))))(@self))[0]`:Uint8
+  // As @at 0, with one instruction (movd) instead of 2 (pextrb).
+
+  - at i:Int put v:Uint8 :Self <- `({ u8x16 r = @self; r[@i] = @v; r; })`:Self
+  // A copy of @self with @v at @i.
+
+  - splat i:Int :Self <- shuffle (all i)
+  // 16 times the value at @i.
+
+  - all v:Int :Self <- `((unsigned char __attribute__((vector_size(16)))){0}) + (unsigned char)@v`:Self
+  // 16 times @v.
+
+  - reverse_mask:Self <- `u8x16_reverse_mask(@self)`:Self
+  // For 16 times a value @f: the mask of @shuffle reversing the values 0 to @f.
+
+  //
+  // Operations on the 16 values (modulo 256).
+  //
+
+  - self:Self '+' Left 80 <> other:Self :Self <- `@self + @other`:Self
+
+  - self:Self '-' Left 80 other:Self :Self <- `@self - @other`:Self
+
+  - self:Self '&' Left 90 <> other:Self :Self <- `@self & @other`:Self
+
+  - and_not m:Self :Self <- `(@self) & ~(@m)`:Self
+  // @self where @m is 0, else 0.
+
+  - equal_mask other:Self :Self <- `(unsigned char __attribute__((vector_size(16))))(@self == @other)`:Self
+  // 255 where @self and @other are equal, else 0.
+
+  - lower_mask other:Self :Self <- `u8x16_lower_signed(@self, @other)`:Self
+  // 255 where @self < @other (as signed values), else 0.
+
+  - greater_mask other:Self :Self <- other.lower_mask self
+  // 255 where @self > @other (as signed values), else 0.
+
+  - first_negative:Int <- `__builtin_ctz(u8x16_movemask(@self) | 0x10000)`:Int
+  // Index of the first negative value (as signed), 16 if none: no branch.
+
+  - movemask:Int <- `u8x16_movemask(@self)`:Int
+  // Bit @i: the high bit of the value @i.
+
+  - shuffle m:Self :Self <- `u8x16_shuffle(@self, @m)`:Self
+  // (@self.at (@m.at 0), @self.at (@m.at 1), ...): the values of @self in the order of @m.

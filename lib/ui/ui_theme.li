@@ -1,0 +1,104 @@
+Header
+  + name := Ui_theme
+/* The look read in a `.sty' file: named colors (`[r, g, b, a]') and named images (a path in
+   the assets, `"img/menu.png"'). An unknown color is black, an unknown image is -1. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + color_names:Array String_alias
+  + colors:Array Color
+  + image_names:Array String_alias
+  + image_paths:Array String_alias
+  + image_ids:Array Int
+  // The images are loaded for each pen (each window has its context of drawing).
+  + cache_pens:Array Pen
+  + cache_ids:Array (Array Int)
+
+  - new:Self <-
+  ( + r:Self
+    r := clone
+    r.make
+    r
+  )
+
+  - make <-
+  (
+    color_names := Array String_alias.create_with_capacity 64
+    colors := Array Color.create_with_capacity 64
+    image_names := Array String_alias.create_with_capacity 32
+    image_paths := Array String_alias.create_with_capacity 32
+    image_ids := Array Int.create_with_capacity 32
+    cache_pens := Array Pen.create_with_capacity 2
+    cache_ids := Array (Array Int).create_with_capacity 2
+  )
+
+  - load path:String :Boolean <-
+  ( + c:Cfg
+    c := Cfg.load path
+    (c != NULL).if { read c }
+    c != NULL
+  )
+
+  - read c:Cfg <-
+  ( + v:Cfg
+    0.to (c.count - 1) do { i:Int
+      v := c.item i
+      ((v.is_list) && {v.count = 4}).if {
+        color_names.add_last (c.key i)
+        colors.add_last (Color.rgba (v.item 0.to_int.to_uint8, v.item 1.to_int.to_uint8, v.item 2.to_int.to_uint8, v.item 3.to_int.to_uint8))
+      }.elseif {v.is_string} then {
+        image_names.add_last (c.key i)
+        image_paths.add_last (v.str)
+        image_ids.add_last (-2)
+      }
+    }
+  )
+
+  - has_color n:String :Boolean <- index n in color_names >= 0
+
+  - color n:String :Color <-
+  ( + i:Int
+    + r:Color
+    i := index n in color_names
+    (i >= 0).if { r := colors.at i } else { r := Color.rgba (0,0,0,255) }
+    r
+  )
+
+  - image n:String pen p:Pen dir d:String :Int <-
+  // The image @n, loaded with @p from the directory @d (the first time for this pen).
+  ( + i,k,r:Int
+    + ids:Array Int
+    i := index n in image_names
+    r := -1
+    (i >= 0).if {
+      k := cache_pens.fast_first_index_of p
+      (k > cache_pens.upper).if {
+        cache_pens.add_last p
+        ids := Array Int.create_with_capacity (image_names.count)
+        image_names.foreach { x:String_alias; ids.add_last (-2) }
+        cache_ids.add_last ids
+        k := cache_pens.upper
+      }
+      ids := cache_ids.at k
+      (ids.at i = -2).if {
+        String.tmp { tmp:String_buffer
+          tmp.copy d
+          tmp.append (image_paths.at i)
+          ids.at i put (p.create_image tmp flags 0)
+        }
+      }
+      r := ids.at i
+    }
+    r
+  )
+
+Private
+
+  - index n:String in l:Array String_alias :Int <-
+  ( + i:Int
+    i := l.upper
+    {(i >= 0) && {l.at i !== n}}.while_do { i := i - 1 }
+    i
+  )

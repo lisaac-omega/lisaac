@@ -1,0 +1,445 @@
+Header
+  + name := Li_light
+Inherit
+  
+  + parent_x_light:Flat X_light
+  
+Public
+  
+  - language:String_alias := "(Lisaac)"
+  - space_indent:Int := 2
+    
+  - make b:Buffer <-
+  ( + i,upper:Int
+    buf := b
+    comment := Array Int.create_with_capacity 16
+    external := Array Int.create_with_capacity 4
+    upper := buf.upper
+    {i < upper}.while_do {
+      ((buf.at i = '/') && {buf.at (i+1) = '*'}).if {
+        comment.add_last i
+      }.elseif {(buf.at i = '*') && {buf.at (i+1) = '/'}} then {
+        comment.add_last (-i-1)
+      }.elseif {buf.at i = '`'} then {
+        external.add_last i
+        { i := i + 1; }.do_while {(i <= upper) && {buf.at i = '`'}};
+        external.add_last (-i)
+      }.elseif {buf.at i = '\"'} then {
+        { 
+          (buf.at i = '\\').if { i := i + 1; }
+          i := i + 1
+        }.do_while {(i <= upper) && {buf.at i = '\"'}}
+      }.elseif {buf.at i = '\''} then {
+        { 
+          (buf.at i = '\\').if { i := i + 1; }
+          i := i + 1
+        }.do_while {(i <= upper) && {buf.at i = '\''}}
+      }
+      i := i + 1
+    }
+  )
+  
+  - update p:Int comment step:Int <-
+  ( + i,new:Int
+    i := comment.upper
+    {(i != 0) && {p < comment.at i.abs}}.while_do {
+      new := comment.at i
+      new := (new >= 0).ok (new+step) else {new-step}
+      comment.at i put new
+    }
+    i := 0
+    {(i != 0) && {p < external.at i.abs}}.while_do {
+      new := external.at i
+      new := (new >= 0).ok (new+step) else {new-step}
+      external.at i put new
+    }
+  )
+  
+  - start st:Int line lin:Int <-
+  ( + low,up,upper,l,pt,p,t,cur:Int
+    + li,lip:Light
+
+    upper := buf.upper
+    low := comment_before st + 1
+    {
+      low := low - 1
+      {(low > 0) && {buf.at (low-1) != '\n'}}.while_do { low := low - 1; }
+    }.do_until {
+      (low = 0) || {at low word "Section"} || 
+        {at low word "  +"} || {at low word "  -"}
+    }
+//    ((at low word "  ") && {buf.at (low+2) = ')'}).if {
+//      low := st
+//    }
+    //
+    up := st
+    l := 0
+    {(up < upper) && {l <= lin+1}}.while_do {
+      (buf.at up = '\n').if { l := l + 1; }
+      up := up + 1
+    }
+    //    
+    { 
+      (up >= upper) || {at up word "Section"} || 
+        {at up word "  +"} || {at up word "  -"} 
+    }.until_do {
+      up := up + 1
+      {(up < upper) && {buf.at (up-1) != '\n'}}.while_do { up := up + 1; }
+    }
+    //"Begin: ".print; low.print; '-'.print; up.print; '\n'.print
+    (root != NULL).if { root.free; root := NULL; }
+    (upper >= 0).if {
+      root := Light.create NULL type 0 range (low,up)
+      cur := low
+      //"------\n".print
+      {
+        //"Pass\n".print
+        cur := pass root upper up base cur + 1
+      }.do_while {cur <= up}
+      //"---FIn-\n".print
+      // Underline message.
+      p := pt := current_page.point
+      li := root.get_type p
+      ((li != NULL) && {li.type = call_id}).if {
+        lip := li.parent
+        p := li.lower-1
+        {
+          li := root.get_type p
+          (li != NULL).if { t := li.type; } else { t := -1; }
+          (t = call_id).if { li.set_type call_select_id; }
+          ((li != NULL) && {li != lip}).if { p := li.lower; }
+          p := p - 1
+        }.do_while {(p >= low) && {t != assign_id} && {t != operator_id} && {t != separator_id}}
+        p := pt
+        {
+          li := root.get_type p
+          (li != NULL).if { t := li.type; } else { t := -1; }
+          (t = call_id).if { li.set_type call_select_id; }
+          ((li != NULL) && {li != lip}).if { p := li.upper; }
+          p := p + 1
+        }.do_while {(p <= up) && {t != assign_id} && {t != operator_id} && {t != separator_id}}
+      }
+      block_verify
+      //"Fin block ver\n".print
+    }
+    //"End\n".print
+  )
+  
+  - is_line_start i:Int :Boolean <-
+  // Is @i the first word of a line which does not continue the previous one?
+  ( + j:Int
+    j := i - 1
+    {(j >= 0) && {(buf.at j = ' ') || {buf.at j = '\t'}}}.while_do { j := j - 1; }
+    (j >= 0) && {buf.at j = '\n'} && {(j = 0) || {buf.at (j-1) != '\r'}}
+  )
+  
+  - convert r:Light start st:Int type t:Int <-
+  ( + e:Light
+    (st).to (r.body.upper) do { k:Int
+      e := r.body.at k
+      ((e.type = call_id) || {e.type = slot_head_id}).if { e.set_type t; }
+    }
+  )
+  
+  - skip_comment r:Light pos bi:Int upper up:Int :Int <-
+  ( + c:Char
+    + i,lo,lev:Int
+    + rr:Light
+    + out:Boolean
+    i := bi
+    {(i <= up) && {! out}}.while_do {
+      (((c := buf.at i) = '/') && {i < up} && {buf.at (i+1) = '*'}).if {
+        lo := i
+        lev := 1
+        i := i + 2
+        {(i < up) && {lev != 0}}.while_do {
+          ((buf.at i = '/') && {buf.at (i+1) = '*'}).if { lev := lev + 1; }
+          ((buf.at i = '*') && {buf.at (i+1) = '/'}).if { lev := lev - 1; }
+          i := i + 1
+        }
+        r.add comment_id range (lo,i)
+      }.elseif {(c = '/') && {i < up} && {buf.at (i+1) = '/'}} then {        
+        lo := i
+        i := i + 2
+        {(i <= up) && {buf.at i != '\n'}}.while_do { i := i + 1; }
+        rr := r
+        {(rr != NULL) && {rr.type != block_id}}.while_do { rr := rr.parent; }
+        (rr = NULL).if {
+          r.add comment_line_id range (lo,i)
+        } else {
+          r.add comment_line_intern_id range (lo,i)
+        }
+      }.elseif {(c != ' ') && {c != '\t'} && {c != '\n'}} then {
+        out := True
+        i := i - 1
+      }
+      i := i + 1
+    }
+    i
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( + c:Char
+    + i,lo:Int
+    + rr:Light
+    + out:Boolean
+    - in_slot:Boolean
+    + color_idf:{}
+    color_idf := {            
+      + stat,t,k:Int
+      + cur,prev:Light
+      k := r.body.lower
+      {k <= r.body.upper}.while_do {
+        cur := r.body.at k
+        t := cur.type
+        (is_line_start (cur.lower)).if {
+          // A new line (without `\r') is a new instruction.
+          (prev != NULL).if { prev.search_type call_id in buf; prev := NULL; }
+          stat := 0
+        }
+        (t = call_id).if {          
+          (stat)
+          .when 0 then { prev := cur; stat := 1; }
+          .when 1 then { prev := NULL; cur.search_type call_intern_id in buf; stat := 2; }
+          .when 2 then { stat := 1; }
+        }.elseif {
+          (t = separator_id) || {t = assign_id} || {t = external_id} || {t = operator_id}
+        } then {
+          (prev != NULL).if { prev.search_type call_id in buf; prev := NULL; }
+          (buf.at (cur.lower)= '.').if { stat := 2; } else { stat := 0; }
+        }.elseif {
+          (t = block_id)   || {t = number_id} || {t = character_id} || {t = string_id} || 
+            {t = keyword_id} || {t = type_id}   || {t = type_parameter_id}
+        } then {
+          (stat)
+          .when 0 then { /* stat := 0; */ }
+          .when 1 then { prev := NULL; stat := 2; }
+          .when 2 then { stat := 0; }; /* Error */
+        }.elseif {(t = local_id) || {t = argument_id}} then {
+          (stat = 1).if { k := r.body.upper; prev := NULL; }
+        }.elseif {(t = comment_id) || {t = comment_line_id} || {t = comment_line_intern_id}} then {
+          // Nothing.
+        } else {
+          stat := 0
+          prev := NULL
+        }
+        k := k + 1
+      }
+      (prev != NULL).if { prev.search_type call_id in buf; }
+    }
+    //
+    i := bi
+    //bi.print; '-'.print; up.println
+    {! out}.while_do {
+      i := skip_comment r pos i upper up
+      (i > up).if {
+        out := True
+      }.elseif {(c := buf.at i) = '\"'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\"'} && {buf.at i != '\n'}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            ((buf.at (i+1) = ' ') || {buf.at (i+1) = '\n'}).if {
+              i := i + 1
+              {(i < up) && {(buf.at i = ' ') || {buf.at i = '\n'}}}.while_do { i := i + 1; }
+            } else {
+              i := i + 1
+              ((buf.at i.is_digit) && {(i<up) && {buf.at (i+1).is_hexadecimal_digit}}).if {
+                {(i < up) && {buf.at i != '\\'}}.while_do { i := i + 1; }
+              }
+            }
+          }
+          i := i + 1
+        }
+        r.add string_id range (lo,i)
+      }.elseif {c = '\''} then {  
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '\''} && {buf.at i != '\n'}}.while_do {
+          ((i < up) && {buf.at i = '\\'}).if {
+            i := i + 1
+            ((buf.at i.is_digit) && {(i<up) && {buf.at (i+1).is_hexadecimal_digit}}).if {
+              {(i < up) && {buf.at i != '\\'} && {buf.at i != '\n'}}.while_do { i := i + 1; }
+            }
+          }
+          i := i + 1
+        }
+        r.add character_id range (lo,i)
+      }.elseif {c = '`'} then {
+        lo := i
+        i := i + 1
+        {(i <= up) && {buf.at i != '`'}}.while_do {          
+          i := i + 1
+        }
+        r.add external_id range (lo,i)
+      }.elseif {at i word "Section"} then { 
+        lo := i
+        i := i + 8
+        {
+          (i <= up) && {((c := buf.at i) = ' ') || {c.is_identifier} || {c = ','}}
+        }.while_do { i := i + 1; }
+        r.add keyword_id range (lo,i)
+      }.elseif {
+        (at i word "Self") || {at i word "Left"}   || {at i word "Right"} || 
+          {at i word "Old"}  || {at i word "Exact"} || {at i word "Once"}  ||
+          {at i word "Flat"} || {at i word "Result"}   || {at i word "Result_1"} ||
+          {at i word "Result_2"} || {at i word "Result_3"} || {at i word "Result_4"} 
+      } then { 
+        lo := i
+        i := i + last_string.upper
+        r.add keyword_id range (lo,i)
+      }.elseif {(c = '[') || {c = '('} || {c = '{'}} then {
+        + old_i:Int
+        rr := r.add block_id range (i,up)
+        i := i + 1
+        old_i := i
+        i := pass rr upper (root.upper) base i
+        //? {i>old_i}
+        rr.set_upper i
+      }.elseif {(c = ']') || {c = ')'} || {c = '}'}} then {
+        color_idf.value
+        i := i - 1
+        out := True
+      }.elseif {(c = '+') || {c = '-'}} then {
+        ((i-3 >= 0) && {buf.at (i-3) = '\n'}).if {                           
+          (r.parent = NULL).if {
+            r.add style_id range (i,i)
+            rr := r.add slot_id range (i+1,up)
+            ? {rr.body.is_empty}
+            i := pass rr upper (root.upper) base (i+1)
+          } else {
+            i := i - 2
+            r.set_upper (i-1)
+            out := True
+            in_slot := False
+            color_idf.value
+          }
+        } else {
+          lo := i
+          {(i <= up) && {"!@#$%^&<|*-+=~/?\\>".has (buf.at i)}}.while_do { i := i + 1; }
+          i := i - 1
+          r.add operator_id range (lo,i)
+        }
+      }.elseif {(c = ';') && {r.type = slot_id}} then {
+        r.set_upper i
+        out := True
+        in_slot := False
+        color_idf.value
+      }.elseif {(c.is_lower) || {(! c.is_ascii) && {! is_prototype_at i in buf}}} then {
+        + idf:String_alias
+        + start,i_start:Int
+        + is_ok:Boolean
+        buf_idf.clear
+        start := r.body.count
+        i_start := i
+        {
+          lo := i
+          i := i + 1
+          string_tmp.clear
+          string_tmp.add_last c
+          {(i <= up) && {((c := buf.at i).is_lower_identifier) || {! c.is_ascii}}}.while_do {
+            string_tmp.add_last c
+            i := i + 1
+          }
+          r.add (in_slot.ok call_id or slot_head_id) range (lo,i-1)
+          idf := string_tmp.to_string_alias
+          buf_idf.add_last idf
+          i := skip_comment r pos i upper up
+          is_ok := ((i <= up) && {buf.at i = ','}).if {
+            r.add separator_id range (i,i)
+            i := i + 1
+            i := skip_comment r pos i upper up
+          }
+        }.do_while {(i <= up) && {is_ok} && {((c := buf.at i).is_lower) || {! c.is_ascii}}}
+        ((i < up) && {buf.at i = ':'} && {buf.at (i+1) != '='}).if {
+          // Declaration Local / Argument.                    
+          (start != 0).if {
+            rr := r.body.at (start-1)
+            ((rr.upper != rr.lower) || {rr.type != operator_id}).if {
+              rr := NULL
+            }
+          } else { rr := NULL; }
+          //0.to (buf_idf.upper) do { i:INTEGER; buf_idf.at i.print; ' '.print; }; '\n'.print
+          //"L:".print; r.type.print; ' '.print; "PL:".print; r.parent.type.println; slot_id.println
+          //"-------\n".print
+          ((r.type = block_id) && {in_slot}).if {           
+            (rr != NULL).if { // Local in block
+              r.add_local buf_idf
+              rr.set_type style_id
+              convert r start start type local_id
+            } else { // Argument in Block:
+              (buf.at (r.lower)='(').if {
+                r.parent.add_argument buf_idf
+              } else {
+                r.add_argument buf_idf
+              }
+              convert r start start type argument_id
+            }
+          } else { // Argument of Slot:             
+            ((start != 0) || {r.type = block_id}).if {
+              convert r start start type argument_id
+              rr := r
+              {(rr != NULL) && {rr.type != slot_id}}.while_do {
+                rr := rr.parent
+              }
+              //r.type.println
+              (rr != NULL).if { rr.add_argument buf_idf; }
+            }
+          }
+        }.elseif {in_slot} then {
+          // Call slot / Local / Argument. (see after...)
+        } else {
+          // Error...
+          //(start).to (r.body.upper) do { k:INTEGER; r.body.at k.set_type error_id; }
+        }
+        i := i - 1
+      }.elseif {(i < up) && {
+          (((c = ':') || {c = '?'}) && {buf.at (i+1) = '='}) ||
+            {(c = '<') && {buf.at (i+1) = '-'}}
+      }} then { 
+        in_slot := True
+        r.add assign_id range (i,i+1)
+        i := i + 1
+      }.elseif {((i = 0) || {buf.at (i-1) = '\n'}) && {(c := buf.at i).is_upper}} then {
+        // A section at the start of a line: Header, Insert, Public, Paper, Div ...
+        lo := i
+        {(i <= up) && {((c := buf.at i) = ' ') || {is_word c} || {c = ','}}}.while_do { i := i + 1; }
+        i := i - 1
+        r.add keyword_id range (lo,i)
+      }.elseif {is_prototype_at i in buf} then {
+        // A prototype: Bloc, String_alias, ℕ ... (a single letter is a type parameter).
+        lo := i
+        i := i + 1
+        {(i <= up) && {is_word (buf.at i)}}.while_do { i := i + 1; }
+        i := i - 1
+        ((lo = i) || {(! r.body.is_empty) && {r.body.last.type = type_id}}).if {
+          r.add type_parameter_id range (lo,i)
+        } else {
+          r.add type_id range (lo,i)
+        }
+      }.elseif {c.is_digit} then {
+        lo := i
+        i := i + 1
+        {(i < up) && {((c := buf.at i).is_hexadecimal_digit) || 
+          {c = '_'} || {c = '\''}}}.while_do { 
+          i := i + 1
+        }
+        ((i <= up) && {(c := buf.at i) != 'd'} && {c != 'h'} && {c != 'o'} && {c != 'b'}).if {
+          i := i - 1
+        }
+        r.add number_id range (lo,i.min up)
+      }.elseif {"!@#$%^&<|*=~/?\\>".has c} then {
+        lo := i
+        {(i <= up) && {"!@#$%^&<|*-+=~/?\\>".has (buf.at i)}}.while_do { i := i + 1; }
+        i := i - 1
+        r.add operator_id range (lo,i)
+      }.elseif {".,;".has c} then {
+        r.add separator_id range (i,i)
+      }
+      i := i + 1
+    }
+    (in_slot).if {
+      color_idf.value
+    }
+    i
+  )

@@ -48,12 +48,14 @@ Public
 
   - execute_access_unlink:Instr <-
   (
+    Escape.on_global global
     global.execute
     NULL
   )
 
   - execute_access_link <-
   (
+    Escape.on_global global
     global.execute
   )
 
@@ -63,6 +65,10 @@ Public
 
   - genere <-
   (
+    (is_cop).if {
+      // Field of the universe base.
+      output.append "li_base->"
+    }
     output.append (variable.intern_name)
   )
 

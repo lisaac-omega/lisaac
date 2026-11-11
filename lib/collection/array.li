@@ -196,7 +196,7 @@ Public
   
   - new_storage c:Int <-
   [
-    deprecated True msg "array.li:l154:Still used ? DC Jan 2026"
+    deprecated True msg "array.li:l199:Still used ? DC Jan 2026"
   ]
   (
     (c = 0).if {
@@ -226,7 +226,7 @@ Public
   - make_with_map_object obj:Clone <-
   // BSBS: A revoir.
   [ 
-    deprecated True msg "array.li:l183:Still used ? DC Jan 2026"
+    deprecated True msg "array.li:l229:Still used ? DC Jan 2026"
     element_sizeof = 1
   ]
   (
@@ -346,8 +346,8 @@ Public
 
   - fast_replace_all old_value:V with new_value:V <-
   (
-    storage.fast_replace_all old_value 
-    with new_value until (count - 1)
+    storage.fast_replace_all old_value
+      with new_value until (count - 1)
   )
 
   - reverse <-
@@ -397,9 +397,10 @@ Public
 
   - get_buffer_from_byte i:Int size_bytes s:Int :Array Uint8 <-
   [
-    deprecated True msg "array.li:l353:Still used ? DC Jan 2026"
+    deprecated True msg "array.li:l400:Still used ? DC Jan 2026"
   ]
   ( + tab:C_array Uint8
+    
     tab := Cast (C_array V) To (C_array Uint8).on storage
     Array Uint8.create_with_native_array_byte (tab + i) size s
   )
@@ -418,7 +419,7 @@ Public
     storage.to_pointer
   )
   [
-    Result.is_not_null
+    Result != NULL
   ]
 
   - to_c_array:C_array V <-
@@ -433,7 +434,7 @@ Public
     storage
   )
   [
-    Result.is_not_null
+    Result != NULL
   ]
 
 Public

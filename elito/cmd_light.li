@@ -1,0 +1,95 @@
+Header
+  + name := Cmd_light
+Inherit
+  
+  + parent_x_light:Flat X_light
+  
+Public
+  
+  - language:String_alias := "(Shell)"
+  - space_indent:Int := 2
+      
+  - make b:Buffer <- ( buf := b; )
+    
+  - start st:Int line lin:Int <-
+  ( + low,up,upper,l:Int
+    
+    upper := buf.upper
+    low := st
+    //    
+    up := st.min upper
+    l := 0
+    {(up < upper) && {l <= lin+1}}.while_do {
+      (buf.at up = '\n').if { l := l + 1; }
+      up := up + 1
+    }
+    low := low.max 0
+    (root != NULL).if { root.free; }
+    root := Light.create NULL type 0 range (low,up)
+    {
+      low := pass root upper up base low + 1
+    }.do_while {low <= up}
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( + i,lo:Int
+    + out:Boolean
+        
+    i := bi
+    {! out}.while_do {      
+      (i > up).if {
+        out := True
+      }.elseif {at i word "--WARNING----------"} then {
+        lo := i
+        i := i + last_string.upper
+        r.add number_id range (lo,i)
+      }.elseif {at i word "--SYNTAX-----------"} then {
+        lo := i
+        i := i + last_string.upper
+        r.add comment_line_intern_id range (lo,i)
+      }.elseif {at i word "--SEMANTIC---------"} then {  
+        lo := i
+        i := i + last_string.upper
+        r.add string_id range (lo,i)
+      }.elseif {at i word "--MESSAGE----------"} then {  
+        lo := i
+        i := i + last_string.upper
+        r.add comment_id range (lo,i)
+      }.elseif {at i word "Line"} then {
+        lo := i
+        i := i + last_string.upper
+        {(i <= up) && {buf.at i != '\n'}}.while_do {          
+          i := i + 1
+        }
+        r.add slot_head_id range (lo,i)
+        i := i + 1
+        lo := i
+        {(i <= up) && {buf.at i != '\n'}}.while_do {          
+          i := i + 1
+        }
+        r.add operator_id range (lo,i)
+        i := i + 1
+        lo := i
+        {(i <= up) && {buf.at i != '\n'} && {buf.at i != '^'}}.while_do {          
+          i := i + 1
+        }
+        r.add style_id range (lo,i)
+      }.elseif {
+        (i < up) && {i > 0} && {buf.at (i-1) = '\n'} && 
+          {buf.at i = '>'} && {buf.at (i+1) = ' '}
+      } then {        
+        lo := i
+        {(i <= up) && {buf.at i != '\n'}}.while_do {          
+          i := i + 1
+        }
+        r.add style_id range (lo,lo)
+        r.add type_id range (lo+1,i)
+      }.elseif {at i word "Process terminal finished."} then {
+        lo := i
+        i := i + last_string.upper
+        r.add comment_id range (lo,i)
+      }
+      i := i + 1
+    }
+    i
+  )

@@ -1,0 +1,904 @@
+Header
+  + name := Page
+Inherit
+  
+  + parent_page_abs:Flat Page_abstract
+  
+Public
+  
+  - page_list:Array Page := Array Page.create_with_capacity 4
+  
+  - get_index_page:Int <-
+  ( + i:Int
+    {page_list.at i != current_page}.while_do { i := i + 1; }
+    i
+  )
+  
+  - next_page <- 
+  ( + i:Int
+    i := get_index_page
+    i := (i + 1) % page_list.count
+    current_page.buffer.set_last_view (current_page.point_view) point (current_page.point)
+    current_page := page_list.at i
+  )
+  
+  - remove_page <-
+  ( + i:Int
+    i := get_index_page
+    page_list.remove i
+    i := i % page_list.count
+    current_page.buffer.set_last_view (current_page.point_view) point (current_page.point)
+    current_page := page_list.at i
+  )
+  
+  - save_last_point <-
+  ( + p:Page
+    0.to (page_list.upper) do { i:Int
+      p := page_list.at i
+      page_list.at i.buffer.set_last_view (p.point_view) point (p.point)
+    }
+    current_page.buffer.set_last_view (current_page.point_view) point (current_page.point)
+  )
+  
+Public
+  
+  - name:String_alias := "TEXT"
+    
+  + buffer:Buffer
+  + point:Int
+  + point_view:Int
+  + point_end_view:Int
+  + lin:Int
+  + col:Int
+  
+  - language:String_alias  <- buffer.light.language
+  - is_save:Boolean        <- buffer.is_save
+  - shortname:String_alias <- buffer.shortname
+  - tag:String_alias       <- buffer.tag
+  - upper:Int          <- buffer.upper
+  
+  + select_start:Int
+  + search_start:Int
+  - set_select_start p:Int <- ( select_start := p; )
+  - set_search_start p:Int <- ( search_start := p; )
+  
+  - lines_view:Int  <- (height / height_char).to_int - 1
+  - set_point p:Int <- 
+  ( 
+    point := p
+  )
+  
+  - scroll_lines n:Int <-
+  // Moves the view of @n lines (up when @n < 0), the point stays in the view.
+  ( + v,e,l,up:Int
+    up := buffer.upper
+    v := point_view
+    (n < 0).if {
+      (-n).times {
+        (v > 0).if {
+          v := v - 1
+          {(v > 0) && {buffer.at (v-1) != '\n'}}.while_do { v := v - 1; }
+        }
+      }
+    } else {
+      n.times {
+        e := v
+        {(e <= up) && {buffer.at e != '\n'}}.while_do { e := e + 1; }
+        (e < up).if { v := e + 1; }
+      }
+    }
+    // End of the new view (as @set_point_view).
+    e := v
+    l := lines_view
+    {(e <= up) && {l >= 0}}.while_do {
+      (buffer.at e = '\n').if { l := l - 1; }
+      e := e + 1
+    }
+    e := (e - 1).max 0
+    (point < v).if {
+      point := v
+    }.elseif {point > e} then {
+      point := e
+      {(point > v) && {buffer.at (point-1) != '\n'}}.while_do { point := point - 1; }
+    }
+    set_point_view v
+  )
+  
+  - set_point_view p:Int <- 
+  ( + l,e,up:Int
+    + old_current:Page
+    point_view := e := p.max 0
+    //? {(point_view = 0) || {buffer.at (point_view-1) = '\n'}}
+    up := buffer.upper
+    l := lines_view
+    {(e <= up) && {l >= 0}}.while_do {      
+      (buffer.at e = '\n').if { l := l - 1; }
+      e := e + 1
+    }
+    point_end_view := (e-1).max 0
+    ((point < point_view) || {point > point_end_view}).if {
+      old_current := current_page
+      current_page := self
+      middle_pg
+      current_page := old_current
+    }
+  )
+    
+  - refresh_light <-
+  ( 
+    (self != current_page).if { current_page.update_position; }
+    set_point_view point_view
+    (buffer.light != NULL).if { buffer.light.start point_view line lines_view; }
+    update_position
+  )
+      
+  - create_page buf:Buffer :Div <-
+  ( + result:Self
+    result := create NULL to (0,0) size (width_min,height_min)
+    result.make_page buf
+    Div_page.create "^v<>|" + result + Info_bar.create_info
+  )
+  
+  - make_page buf:Buffer <-
+  (    
+    pos_txt := String_buffer.create 16
+    (page_list.is_empty).if {
+      page_list.add_last self
+      current_page := self
+    } else {
+      page_list.at ((get_index_page+1)%page_list.count) add self
+    }
+    set_buffer buf
+  )
+  
+  - set_position (x,y:Real32) size (w,h:Real32) <-
+  ( 
+    (xo,yo) := (x+8,y)
+    (width,height) := (w-16,h)
+  )
+  
+  - set_buffer buf:Buffer <-
+  ( 
+    (buf != buffer).if {
+      (buffer != NULL).if { buffer.set_last_view point_view point point; }
+      buffer := buf
+      search_start := select_start := -1
+      old_point := old_point_view := -1
+      point := buf.last_point.min (buf.upper+1)
+      point_view := buf.last_point_view.min point
+      //? {(point_view = 0) || {buffer.at (point_view-1) = '\n'}}
+      old_upper := buf.upper
+    }
+    point := point.min (buf.upper+1)
+  )
+  
+  + old_point:Int
+  + old_point_view:Int
+  + old_upper:Int
+  - update_position <-
+  ( + up,pg_pt,pg_pt_v,d:Int
+    + p:Uint64
+    + pg:Page
+    ((old_point != point) || {old_point_view != point_view} || {old_upper != upper}).if {
+      (current_page = self).if {
+        d := upper-old_upper
+        (d != 0).if {
+          0.to (page_list.upper) do { i:Int
+            pg := page_list.at i
+            ((pg != self) && {pg.buffer = buffer}).if {
+              pg_pt   := pg.point
+              pg_pt_v := pg.point_view
+              (pg_pt  >=point).if { pg.set_point      ((pg_pt  +d).max 0); }
+              (pg_pt_v>=point).if { pg.set_point_view ((pg_pt_v+d).max 0); }
+            }
+          }
+        }
+      }
+      old_upper := upper
+      old_point := point
+      old_point_view := point_view
+      (lin,col) := buffer.get_position point
+      // Position string.
+      pos_txt.clear
+      up := buffer.upper.max 1 + 1
+      p := (((100.to_uint64<<(32+24)) / up) * point + (1<<(32+23))) >> (32+24)
+      //up.print; '/'.print; point_end_view.print; '='.print; p.println
+      ((point_end_view+2 >= up) || {p >= 100} || {point >= up}).if {      
+        pos_txt.append "Bot"
+      }.elseif {point_view = 0} then {
+        pos_txt.append "Top"
+      } else {
+        (p.to_string.count>2).if {
+          "*****************************\n".print
+          p.println
+          crash
+        }
+        p.append_in pos_txt format 2 with '0'
+        pos_txt.add_last '%'
+      }
+      pos_txt.append " L"
+      lin.append_in pos_txt
+      pos_txt.append " C"
+      col.append_in pos_txt
+      pos_txt.append " P"
+      point.append_in pos_txt
+    }
+  )
+  
+  - get_anim <-
+  (
+    (! anim.is_empty).if { dx_anim := 0; anim_idx := 0; Elito_window.inc_animation; }
+  )
+  
+  - dx_anim:Real32 := 1001.0
+  
+  - draw_anim pen:Pen <-
+  // The animation is at the right, at the top or at the bottom, then goes out on the right.
+  ( + p:Paint
+    + imgw,imgh:Int
+    + imgx,imgy,t:Real32
+    - old_t:Real32
+    (dx_anim < 1000).if {
+      t := Clock.seconds
+      (self = current_page).if {
+        (imgw,imgh) := pen.image_size anim_id
+        imgx := xo + width - imgw + dx_anim
+        imgy := yo + anim_top.ok 0.0 or (height-imgh)
+        p := Paint.create_pattern (imgx,imgy) size (imgw,imgh) img_id anim_id angle 0 alpha 1
+        pen.begin_path
+        pen.rect (imgx,imgy) size (imgw,imgh)
+        pen.fill_paint p
+        pen.fill
+        p.free
+        (t-old_t > 0.1).if {
+          anim_idx := anim_idx + 1
+          (anim_idx < anim.count).if {
+            pen.update_image (anim.at anim_idx) id anim_id
+            old_t := t
+          } else {
+            dx_anim := dx_anim + dx_anim*0.3 + 0.5
+            (dx_anim > imgw).if { dx_anim := 1001; Elito_window.dec_animation; }
+          }
+        }
+      }
+    }
+  )
+  
+//- co:UINTEGER_8
+  - draw pen:Pen <-
+  ( + x,y,px,py,by0,by1:Real32
+    + c:Char
+    + i,up,max_line,beg_l,end_l:Int
+    + bg:Paint
+    + is_bot,is_right:Boolean
+    + light:X_light
+    + gap_view:Int
+    + back_col:Color
+    + symbol:String_alias
+    
+    + elevator_y:Real32
+    + elevator_h:Real32
+    //co := 0
+    buffer.update
+    up := buffer.upper
+    draw_debug pen
+    //"draw beg: ".print; point.println
+    x := xo
+    y := yo
+    pen.begin_path
+    pen.rect (x,y) size (width,height)
+    pen.fill_color (color.background)
+    pen.fill
+        
+    pen.begin_path
+    elevator_y := -1
+    (up > 1).if {
+      by0 := (height-8) / up * point_view
+      by1 := (height-8) / up * point_end_view
+      ((by0 != 0) || {by1 < height-8}).if {
+        elevator_h := (by1 - by0).max 16
+        by0 := by0.min (height-16-8)
+        elevator_y := yo+by0+4
+        pen.rect (xo+width-12,elevator_y) size (8,elevator_h) radius 4
+        pen.fill_color (color.elevator)
+        pen.fill
+      }
+    }
+    
+    pen.intersect_scissor (x,y) size (width,height)
+    draw_anim pen
+    set_font (pen,"Code-Bold")
+    pen.text_align (Pen.align_left|Pen.align_top)
+    (width_char = 0.0).if {
+      + w,x0,y0,x1,y1:Real32
+      char_buf.copy "O"
+      (w,x0,y0,x1,y1) := pen.text_bounds (0,0) msg char_buf from 0 to (-1)
+      (width_char,height_char) := (x1,y1-1)
+    }
+    light := buffer.light
+    refresh_light
+    // Horizontal gap    
+    beg_l := point
+    {(beg_l > 0) && {buffer.at (beg_l-1) != '\n'}}.while_do { beg_l := beg_l - 1; }
+    end_l := beg_l
+    {(end_l <= up) && {buffer.at end_l != '\n'}}.while_do { 
+      end_l := end_l + 1
+    }
+    max_line := (width / width_char).to_int
+    ((end_l - beg_l) > max_line).if {
+      gap_view := ((point - beg_l + 24) - max_line).max 0 & ~0Fh
+    }
+    // Begin Pen.
+    (px,py) := (x-width_char*gap_view,y)
+    pen.fill_color (color.black)
+    i := point_view
+    {(i <= up) && {py <= y_max}}.while_do {
+      c := buffer.at i
+      /* visual bloc  
+      ( - b_old,b,idx_old,idx:INTEGER
+        
+        (b,idx) := buffer.index_to_bloc i
+        (b != b_old).if {
+          (co = 0A0h).if {
+            co := 0FFh
+          } else {
+            co := 0A0h
+          }
+          b_old := b
+        }
+        pen.save
+        pen.begin_path
+        pen.rect (px,py) size (width_char,height_char)
+        pen.fill_color (COLOR.rgb (co,0FFh,0FFh))
+        pen.fill
+        pen.restore
+      )
+      */
+      (c = '\n').if {
+        /* // Display '\n'
+        pen.save
+        pen.begin_path
+        pen.rect (px+width_char*0.33,py+height_char*0.33) size (width_char*0.33,height_char*0.33)
+        pen.fill_color back_col
+        pen.fill
+        pen.restore
+        */
+        //
+        (i = point).if { display pen cursor (px,py); }
+        (px,py) := (x-width_char*gap_view,py+height_char)
+      }.elseif {(! i.in_range beg_l to end_l) && {light.is_hidden_at i}} then {
+        // Not displayed, except on the line of the cursor (see @is_hidden).
+      }.elseif {(! i.in_range beg_l to end_l) && {(symbol := light.symbol_at i) != NULL}} then {
+        // An operator displayed with its symbol (≤, ≠, ×...), except on the line of the cursor.
+        light.in pen put c to i pos (px,py)
+        pen.text (px,py) msg symbol from 0 to (-1)
+        px := px + width_char
+      } else {  
+        pen.fill_color (color.black)
+        //light.zone pen put (px,py) to i
+        ((back_col := color.select; is_select i) || {back_col := color.search; is_search i}).if {
+          (back_col = color.search).if { light.set_ignore_pattern i; }
+          pen.save
+          pen.begin_path
+          pen.rect (px,py) size (width_char,height_char)
+          pen.fill_color back_col
+          pen.fill
+          pen.restore
+        }
+        light.in pen put c to i pos (px,py)
+        is_right := is_right | (px > width-width_char)
+        (i = point).if { display pen cursor (px,py); }
+        (c = '\t').if {
+          px := px + width_char*8
+        }.elseif {c = '\r'} then {
+          // `\r\n': the instruction continues on the next line (as in elit).
+          (i != point).if { pen.fill_color (Color.gray); }
+          pen.text (px,py) msg "↩" from 0 to (-1)
+          px := px + width_char
+        } else {          
+          (c.is_ascii).if {
+            char_buf.at 0 put c
+            pen.text (px,py) msg char_buf from 0 to (-1)
+          } else {
+            // UTF-8: the first byte and its continuation bytes make one character.
+            string_tmp.clear
+            string_tmp.add_last c
+            {(i < up) && {is_continuation (buffer.at (i+1))}}.while_do {
+              i := i + 1
+              string_tmp.add_last (buffer.at i)
+            }
+            pen.text (px,py) msg string_tmp from 0 to (-1)
+          }
+          px := px + width_char
+        }
+      }
+      i := i + 1
+    }
+    (i = point).if { display pen cursor (px,py); }
+    is_bot := i >= up
+    pen.reset_scissor
+    // End pen.
+    (is_right).if { // Right
+      bg := Paint.create_linear (x+width,y) to (x+width-height_char,y)
+        color (Color.rgba(0,0,0,32))
+        to    (Color.rgba(0,0,0,0))
+      pen.begin_path
+      pen.rect (x+width-height_char,y) size (height_char,height)
+      pen.fill_paint bg
+      pen.fill
+      bg.free
+    }
+    (gap_view != 0).if { // Left
+      bg := Paint.create_linear (x,y) to (x+height_char,y)
+        color (Color.rgba(0,0,0,32))
+        to    (Color.rgba(0,0,0,0))
+      pen.begin_path
+      pen.rect (x,y) size (height_char,height)
+      pen.fill_paint bg
+      pen.fill
+      bg.free
+    }
+    (point_view != 0).if { // Top
+      bg := Paint.create_linear (x,y) to (x,y+height_char)
+        color (Color.rgba(0,0,0,32))
+        to    (Color.rgba(0,0,0,0))
+      pen.begin_path
+      pen.rect (x,y) size (width,height_char)
+      pen.fill_paint bg
+      pen.fill
+      bg.free
+    }
+    (! is_bot).if { // Bot
+      bg := Paint.create_linear (x,y_max) to (x,y_max-height_char+1)
+        color (Color.rgba(0,0,0,32))
+        to    (Color.rgba(0,0,0,0))
+      pen.begin_path
+      pen.rect (x,y_max-height_char+1) size (width,height_char)
+      pen.fill_paint bg
+      pen.fill
+      bg.free
+    }
+    //"draw end: ".print; point.println
+  )
+  
+  - display pen:Pen cursor (x,y:Real32) <-
+  ( 
+    pen.begin_path
+    pen.rect (x,y) size (width_char,height_char)
+    (self = current_page).if {      
+      pen.fill_color (color.black)
+      pen.fill
+      pen.fill_color (color.white)
+    } else {
+      pen.stroke_color (color.black)
+      pen.stroke
+    }
+  )
+  
+  - is_hidden i:Int :Boolean <-
+  // The `@' of a reference in a comment and the end of an operator shown as a
+  // symbol are hidden, except on the line of the point.
+  ( + b,e:Int
+    b := point
+    {(b > 0) && {buffer.at (b-1) != '\n'}}.while_do { b := b - 1; }
+    e := point
+    {(e <= buffer.upper) && {buffer.at e != '\n'}}.while_do { e := e + 1; }
+    (! i.in_range b to e) && {buffer.light.is_hidden_at i}
+  )
+  
+  - get_point (x,y:Real32) :Int <-
+  ( + l,result,up:Int
+    + px:Real32
+    l := (y / height_char).to_int
+    result := point_view
+    up := buffer.upper
+    {(result <= up) && {l != 0}}.while_do {
+      (buffer.at result = '\n').if { l := l - 1; }
+      result := result + 1
+    }
+    px := width_char
+    {(result <= up) && {buffer.at result != '\n'} && {px < x}}.while_do {
+      result := result + 1
+      {(result <= up) && {(is_continuation (buffer.at result)) || {is_hidden result}}}.while_do {
+        result := result + 1
+      }
+      px := px + width_char
+    }
+    ((result <= up) && {is_tail result in buffer}).if { result := result - 1; }
+    result
+  )
+  
+  - touch_event t:Touch <-
+  ( - point_mouse:Int
+    - mode:Int
+    - y_middle:Int
+    + old_pt:Int
+    
+    (t.id = 0).if {
+      //
+      // Left button
+      y_middle := -1
+      (t.is_pressed).if {            
+        close_menu
+        search_start := -1
+        current_page.buffer.set_last_view (current_page.point_view) point (current_page.point)
+        current_page := self
+        point := get_point (t.x.to_real32-xo,t.y.to_real32-yo)
+        select_start := point
+        (point_mouse = point).if {
+          (mode)
+          .when 0 then { mode := 1; select_word point to point; }
+          .when 1 then { mode := 2; select_line point to point; }
+          .when 2 then { mode := 0; select_start := point;      }
+        } else {
+          mode := 0
+        }
+      }.elseif {t.is_released} then {
+        (point = select_start).if {
+          point_mouse := point
+          select_start := -1
+          Cmd_bar.select 0
+        } else {
+          + start,end:Int
+          (start,end) := get_select
+          string_tmp.clear
+          (start.max 0).to (end.min (buffer.upper)) do { i:Int
+            string_tmp.add_last (buffer.at i)
+          }
+          Clipboard.put string_tmp
+        }
+      }.elseif {t.z != 0} then {
+        point := get_point (t.x.to_real32-xo,t.y.to_real32-yo)
+        (mode)
+        .when 1 then { select_word point_mouse to point; }
+        .when 2 then { select_line point_mouse to point; }
+        (y_max-height_char < t.y).if {
+          old_pt := point
+          point := point_view
+          go_next_line True
+          point_view := point
+          //? {(point_view = 0) || {buffer.at (point_view-1) = '\n'}}
+          point := old_pt
+        }
+        (y_min+height_char > t.y).if {
+          old_pt := point
+          point := point_view
+          go_prev_line True
+          point_view := point
+          //? {(point_view = 0) || {buffer.at (point_view-1) = '\n'}}
+          point := old_pt
+        }
+      }
+    }.elseif {t.id = 1} then {
+      //
+      // Button right
+      //"Button right\n".print
+    }.elseif {t.id = 8} then {
+      //
+      // Middle button
+      (y_middle < 0).if { y_middle := t.y; } else {
+        ((t.y - y_middle).abs = 10).if {
+          ((t.y - y_middle) > 0).if {
+            go_prev_line False
+          } else {
+            go_next_line False
+          }
+          y_middle := -1
+        } else { y_middle := t.y; }
+      }
+    } else {
+      // Nothing.
+    }
+  )
+  
+  - select_word i1:Int to i2:Int <-
+  ( 
+    point := i1
+    (i1 < i2).if { go_prev_word True; } else { go_next_word True; }
+    select_start := point
+    point := i2
+    (i1 < i2).if { go_next_word True; } else { go_prev_word True; }
+  )
+  
+  - select_line i1:Int to i2:Int <-
+  ( 
+    point := i1
+    (i1 < i2).if { go_beg_line True; } else { go_end_line True; }
+    select_start := point
+    point := i2
+    (i1 < i2).if { go_end_line True; } else { go_beg_line True; }
+  )
+  
+  - get_select:(Int,Int) <-
+  ( + start,end,s,p:Int
+    (s,p) := (select_start,point)
+    (s != -1).if {
+      (s < p).if {
+        (start,end) := (s,p-1)
+      }.elseif {s > p} then {
+        (start,end) := (p,s-1)
+      } else {
+        start := end := -1
+      }
+    } else {
+      start := end := -1
+    }
+    start,end
+  )
+  
+  - get_line b:Int to e:Int :Int <-
+  ( + result:Int
+    b.to e do { i:Int
+      (buffer.at i = '\n').if { result := result + 1; }
+    }
+    result
+  )
+  
+  - goto_line l:Int <- ( point := buffer.goto_line l; )
+  
+  - is_select i:Int :Boolean <-
+  ( + start,end:Int
+    (start,end) := get_select
+    (start != -1) && {i.in_range start to end}
+  )
+  
+  - is_search i:Int :Boolean <-
+  (
+    (search_start != -1) && 
+      {
+      (i.in_range search_start to point) || 
+        {i.in_range point to search_start}
+    } 
+  )
+  
+  - insert_char c:Char <-
+  (
+    (! buffer.is_rdonly).if {
+      stack_push 'i' char c point point
+      (buffer.insert c to point).if {
+        point := point + 1
+      }
+    }
+  )
+  
+  - remove_char:Char <-
+  ( + result:Char
+    ((point != 0) && {! buffer.is_rdonly}).if {
+      point := point - 1
+      result := buffer.remove point
+      stack_push 'r' char result point point
+    } else {
+      beep
+    }
+    result
+  )
+  
+  - remove_glyph <-
+  // Remove the character before the point (all its UTF-8 bytes, or `\r\n').
+  ( + b:Int
+    (point = 0).if { beep; } else {
+      b := point - 1
+      {(b > 0) && {is_tail b in buffer}}.while_do { b := b - 1; }
+      (point - b).times { remove_char; }
+    }
+  )
+  
+  - suppr_glyph <-
+  // Remove the character at the point (all its UTF-8 bytes, or `\r\n').
+  ( + e:Int
+    (point > buffer.upper).if { beep; } else {
+      e := point + 1
+      {(e <= buffer.upper) && {is_tail e in buffer}}.while_do { e := e + 1; }
+      (e - point).times { suppr_char; }
+    }
+  )
+  
+  - suppr_char:Char <-
+  ( + result:Char
+    ((point <= buffer.upper) && {! buffer.is_rdonly}).if {            
+      result := buffer.remove point
+      stack_push 'r' char result point point
+    } else {
+      beep
+    }
+    result
+  )
+  
+  - insert_file_from pth:String_alias <-
+  (
+    buffer.insert_file pth to point
+  )
+  
+Public
+  
+  //
+  // Undo/Redo
+  //
+    
+  - stack_push t:Char char c:Char point p:Int <- 
+  buffer.stack_push t char c point p
+  
+  - stack_upper <- stack_push 'B' char '\0' point point
+    
+Public
+  
+  - search_back_with txt:String malus dx:Int :Int <-
+  ( + p,i,up:Int
+    up := buffer.upper
+    p := (point+dx).min (up-txt.upper)
+    (p + txt.upper <= up).if {
+      {(p >= 0) && {i >= 0}}.while_do {        
+        i := txt.count
+        { i := i - 1; }.do_while {(i >= 0) && {buffer.at (p+i) = txt.at i}}
+        p := p - 1
+      }
+    }
+    (i >= 0).if {
+      p := up - txt.upper
+      (p > 0).if {
+        {(p >= point) && {i >= 0}}.while_do {
+          i := txt.count
+          { i := i - 1; }.do_while {(i >= 0) && {buffer.at (p+i) = txt.at i}}
+          p := p - 1
+        }
+      }
+    }
+    ((i < 0) && {!txt.is_empty}).ok (p+1) or (-1)
+  )
+  
+  - search_fore_with txt:String :Int <-
+  ( + p,up,i:Int
+    p := point
+    up := buffer.upper
+    {(p + txt.count <= up) && {i <= txt.upper}}.while_do {
+      i := 0
+      {(i <= txt.upper) && {buffer.at (p+i) = txt.at i}}.while_do { i := i + 1; }
+      p := p + 1
+    }
+    (i <= txt.upper).if {
+      p := 0
+      {(p + txt.count <= point) && {i <= txt.upper}}.while_do {
+        i := 0
+        {(i <= txt.upper) && {buffer.at (p+i) = txt.at i}}.while_do { i := i + 1; }
+        p := p + 1
+      }
+    }
+    (i > txt.upper).ok (p - 1) or (-1)
+  )
+    
+  - ends_with_r l:Int :Boolean <-
+  // Does the line starting at @l end with `\r\n'?
+  ( + e:Int
+    e := l
+    {(e >= 0) && {e <= buffer.upper} && {buffer.at e != '\n'}}.while_do { e := e + 1; }
+    (l >= 0) && {e <= buffer.upper} && {e > 0} && {buffer.at (e-1) = '\r'}
+  )
+  
+  - line_before l:Int :Int <-
+  // Start of the line before the line starting at @l (-1 if none).
+  ( + b:Int
+    (l <= 0).if { b := -1; } else {
+      b := l - 1
+      {(b > 0) && {buffer.at (b-1) != '\n'}}.while_do { b := b - 1; }
+    }
+    b
+  )
+  
+  - indent_line <-
+  ( + ii,prev,cur,ind,i,base,up,pl:Int
+    + is_ok,is_py:Boolean
+    + l:Light
+    //"Indent\n".print
+    refresh_light
+    go_beg_line True
+    i := point
+    up := buffer.upper
+    (i != 0).if {
+      ii := i
+      {(ii <= up) && {buffer.at ii = ' '}}.while_do { ii := ii + 1; }
+      l := buffer.get_type ii
+      ((l = NULL) || {l.type != keyword_id} || {
+          (! buffer.light.at (l.lower) word "Section") && 
+            {! buffer.light.at (l.lower) word "def"}
+      }).if {        
+        {
+          is_ok := False
+          i := i - 1
+          {(i > 0) && {buffer.at (i-1) != '\n'}}.while_do {             
+            i := i - 1
+            is_ok := is_ok || {buffer.at i != ' '}
+            is_py := is_py || {is_ok && {buffer.at i = ':'}}
+          }
+        }.do_until {(i = 0) || {is_ok}}
+        l := buffer.get_type i
+        ((l != NULL) && {l.type = keyword_id} && {
+            (buffer.light.at (l.lower) word "Section") || 
+              {buffer.light.at (l.lower) word "def"}
+        }).if {
+          ind := buffer.light.space_indent
+        } else {
+          pl := i
+          {(i <= up) && {buffer.at i = ' '}}.while_do {      
+            i := i + 1
+            base := base + 1
+          }
+          //"Base:".print; base.println
+          string_tmp.clear
+          prev := count_block i dir 1 in string_tmp
+          //"Prev:".print; prev.println
+          go_end_line True
+          i := point - 1
+          string_tmp2.clear
+          cur := count_block i dir (-1) in string_tmp2
+          //"Cur.:".print; cur.println
+          ind := (base+prev - cur) & ~1
+          // Continuation (`\r\n'): +2 after the first line of an instruction,
+          // back to its level after its last line.
+          (ends_with_r pl).if {
+            (! ends_with_r (line_before pl)).if { ind := ind + 2; }
+          }.elseif {ends_with_r (line_before pl)} then {
+            ind := (ind - 2).max 0
+          }
+          //"Prev: ".print; string_tmp.println
+          //"Cur.: ".print; string_tmp2.println
+          (buffer.light.language = "(Python)").if {
+            (is_py).if {
+              ind := ind + buffer.light.space_indent
+            }.elseif { 
+              (string_tmp.has_substring "return")   ||
+                {string_tmp.has_substring "continue"} ||
+                {string_tmp.has_substring "break"}    ||
+                {string_tmp.has_substring "pass"}     ||
+                {string_tmp.has_substring "raise"}    ||
+                {string_tmp.has_substring "print"}
+            } then {
+              ind := ind - buffer.light.space_indent
+            }
+          }
+        }
+      }
+    }
+    go_beg_line True
+    i := point
+    {(i <= buffer.upper) && {buffer.at i = ' '}}.while_do {
+      suppr_char
+    }
+    ind.times { insert_char ' '; }
+    // Delete space in end of line:     
+    i := point
+    {(i <= buffer.upper) && {buffer.at i != '\n'}}.while_do { i := i + 1; }
+    (i <= buffer.upper).if { i := i - 1; }
+    {(i >= point) && {i <= buffer.upper} && {buffer.at i = ' '}}.while_do {
+      buffer.remove i
+      i := i - 1
+    }
+  )
+  
+Private
+  
+  - count_block ii:Int dir d:Int in buf:String_buffer :Int <-
+  ( + result,up,i:Int
+    + c:Char
+    + l:Light
+    i := ii
+    up := buffer.upper
+    {(i <= up) && {buffer.at i != '\n'}}.while_do {      
+      l := buffer.get_type i
+      c := buffer.at i
+      ((l != NULL) && {
+          (l.type = block_id) || {l.type = block_ok_id} || {l.type = block_err_id}          
+      }).if {        
+        ((c = '(') || {c = '['} || {c = '{'}).if {
+          result := (result + d*buffer.light.space_indent).max 0
+        }.elseif {          
+          (c = ')') || {c = ']'} || {c = '}'}
+        } then {          
+          result := (result - d*buffer.light.space_indent).max 0
+        }
+      }
+      buf.add_last c
+      i := i + d
+    }
+    result
+  )
+    

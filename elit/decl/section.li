@@ -4,11 +4,11 @@ Inherit
   + parent_tok_drw:Flat Tok_drw
   
 Insert
-  - parent_any:Any := Any
+  - parent_elit_common:Elit_common := Elit_common
   //- parent_lix_buf:Lix_buf := Lix_buf
+  - parent_recyclable:Recyclable := Recyclable
   
 Private
-  - stk:Flat Array (Exact Section)
 
 Public  
   
@@ -71,14 +71,14 @@ Public
   
   + err:Int
   
-  - new:Self <- ( + r:Self; (stk.is_empty).if { r := clone; } else { r := stk.pop; }; r)
+  - new:Self <- parent_recyclable.new
   
   - free <-
   ( + i:Int    
     + se:Section
     + sl:Slot 
     (exports != NULL).if { exports.free; exports := NULL }
-    stk.add_last self 
+    parent_recyclable.free 
     //
     i := (tok_cur - 1).min (toks.upper) // BSBS: c'est bizarre le min n'est pas nécessaire normalement
     {(i > 0) && {se = NULL}}.while_do {      

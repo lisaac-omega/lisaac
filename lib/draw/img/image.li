@@ -41,6 +41,12 @@ Public
     crash
     exit 0
   )
+
+  // As @stbi__err: note the reason @e of the failure and return @False
+  // (or @NULL). @load returns @NULL on a corrupt or unsupported image.
+  - error_false e:String_alias :Boolean <- ( error := e; False )
+
+  - error_null e:String_alias :C_array Uint8 <- ( error := e; NULL )
   
   - set buf:C_array Uint8 size len:Int coder c:Image <-
   (
@@ -56,13 +62,14 @@ Public
     img_buffer_end := img_buffer_original_end := buffer+len
     result := True
     //coder := IMG_GIF
-    (Img_jpg.test).if   { coder := Img_jpg; }.elseif
-    {Img_gif.test} then { coder := Img_gif; }.elseif
-    {Img_png.test} then { coder := Img_png; }.elseif
-    {Img_tga.test} then { coder := Img_tga; }.elseif
+    // same order as stb_image: the TGA test is weak, so it comes last
+    (Img_png.test).if   { coder := Img_png; }.elseif
     {Img_bmp.test} then { coder := Img_bmp; }.elseif
+    {Img_gif.test} then { coder := Img_gif; }.elseif
     {Img_psd.test} then { coder := Img_psd; }.elseif
-    {Img_pnm.test} then { coder := Img_pnm; } else
+    {Img_jpg.test} then { coder := Img_jpg; }.elseif
+    {Img_pnm.test} then { coder := Img_pnm; }.elseif
+    {Img_tga.test} then { coder := Img_tga; } else
     { error := "Image not of any known type, or corrupt"
       coder := NULL
       result := False
@@ -70,21 +77,27 @@ Public
     result
   )
   
+  - file_buffer:C_array Uint8; // owned by @init filename (the buffer of @init buffer is the caller's)
+  
   - init filename:String :Boolean <-
+  // @False if the file can not be read (as @stbi_load: "can't fopen").
   ( + f:Pointer
     + sz:Int
     + buf:C_array Uint8
+    + result:Boolean
     f := File_utils.open_read filename
-    sz := File_utils.size f
-    buf := img_buffer_original
-    buf := `realloc(@buf,@sz)`:C_array Uint8
-    File_utils.read_raw f in buf size sz
-    File_utils.close f
-    //0.to 63 do { i:Int; i.print; ':'.print; buf.item i.print; ' '.print
-    //  ((i%0Fh) = 0).if { '\n'.print; }
-    //}; '\n'.print
-    img_buffer_original := buf
-    init buf size sz    
+    (f = NULL).if {
+      error := "can't fopen"
+    } else {
+      sz := File_utils.size f
+      buf := file_buffer
+      buf := `realloc(@buf,@sz)`:C_array Uint8
+      file_buffer := buf
+      File_utils.read_raw f in buf size sz
+      File_utils.close f
+      result := init buf size sz
+    }
+    result
   )
   
   - rewind <-
@@ -181,7 +194,7 @@ Public
   
 Private
   
-  - memcpy(dst,src:C_array Uint8,sz:Int) <- `memcpy(@dst,@src,@sz)`
+  - memcpy(pdst,psrc:C_array Uint8,sz:Int) <- `memcpy(@pdst,@psrc,@sz)`
   
   - src:C_array Uint8
   - dst:C_array Uint8
@@ -241,19 +254,23 @@ Image
   - last_get8:Uint8
   
   - get8:Uint8 <-
-  ( //? {img_buffer < img_buffer_end}
-    last_get8 := img_buffer.first
-    //last_get8.println
-    img_buffer := img_buffer + 1
+  // 0 at the end of the buffer, as @stbi__get8.
+  (
+    (img_buffer.to_pointer < img_buffer_end.to_pointer).if {
+      last_get8 := img_buffer.first
+      img_buffer := img_buffer + 1
+    } else {
+      last_get8 := 0
+    }
     last_get8
   )
 
   - at_eof:Boolean <- ( img_buffer.to_pointer >= img_buffer_end.to_pointer )
 
   - skip n:Int <-
-  [ ? {n >= 0}; ]
+  // A negative @n goes to the end, as @stbi__skip.
   ( 
-    ((img_buffer_end.to_pointer - img_buffer.to_pointer) < n).if {
+    ((n < 0) || {(img_buffer_end.to_pointer - img_buffer.to_pointer) < n}).if {
       img_buffer := img_buffer_end
       //"-------------------------> FIN SKIP BUF!\n".print
     } else {      
@@ -262,11 +279,13 @@ Image
   )
 
   - getn buffer:C_array Uint8 size n:Int :Boolean <-
-  (     
+  ( + result:Boolean
     ((img_buffer+n).to_pointer <= img_buffer_end.to_pointer).if {
-      buffer.copy_from img_buffer until (n-1)
+      (n > 0).if { buffer.copy_from img_buffer until (n-1); }
       img_buffer := img_buffer + n
+      result := True
     }
+    result
   )
 
   - get16be:Uint16 <-
@@ -295,6 +314,40 @@ Image
 
   - bytecast x:Int :Uint8 <- (x & 0FFh).to_uint8;  // truncate int to byte without warnings
   
+  // Size checks of @stbi__mul2sizes_valid and co.: the result fits in a
+  // positive 32-bit @Int (as in stb_image, where an @Int is 32 bits).
+  
+  - int_max:Int := 2147483647
+  
+  - max_dimensions:Int := 1 << 24; // as @STBI_MAX_DIMENSIONS
+  
+  - mul2sizes_valid (a,b:Int) :Boolean <-
+  ( + result:Boolean
+    ((a < 0) || {b < 0}).if {
+      result := False
+    }.elseif {b = 0} then {
+      result := True; // mul-by-0 is always safe
+    } else {
+      result := a <= int_max / b
+    }
+    result
+  )
+  
+  - addsizes_valid (a,b:Int) :Boolean <- (b >= 0) && {a <= int_max - b}
+  
+  - mad2sizes_valid (a,b,add:Int) :Boolean <-
+  mul2sizes_valid(a, b) && {addsizes_valid(a*b, add)}
+  
+  - mad3sizes_valid (a,b,c,add:Int) :Boolean <-
+  mul2sizes_valid(a, b) && {mul2sizes_valid(a*b, c)} && {addsizes_valid(a*b*c, add)}
+  
+  - mad4sizes_valid (a,b,c,d,add:Int) :Boolean <-
+  mul2sizes_valid(a, b) && {mul2sizes_valid(a*b, c)} && {mul2sizes_valid(a*b*c, d)} && {addsizes_valid(a*b*c*d, add)}
+  
+  - compute_y3 (r,g,b:Uint8) :Uint8 <-
+  // As @stbi__compute_y.
+  (((r.to_uint32*77) + (g.to_uint32*150) + (b.to_uint32*29)) >> 8).to_raw_uint8
+
   - compute_y c:Uint32 :Uint32 <- 
   ((((c&0FFh)*77) + (((c>>8)&0FFh)*150) +  (29*(c>>16))) >> 8)
   

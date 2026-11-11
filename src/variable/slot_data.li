@@ -311,77 +311,128 @@ Public
   //
   
   - init_list:List := List.create Position
+
+  - init_lists_base:Array List := Array List .create_with_capacity 64
+  // With `-cop': second translation of the initial values of the `-' slots, in the same order,
+  // for the base of a new universe: one list (C function `li_init_base_<index>') for each
+  // slot, so that a universe initializes only the slots its code can reach (see
+  // @Escape.needed_base_inits).
+
+  + base_init_index:Int := -1
+  // Index of its list in @init_lists_base.
+
+  - init_lists_always:Array Int := Array Int .create_with_capacity 16
+  // The lists of @init_lists_base for the fields (`+') of the prototypes copied into the base:
+  // needed by any universe (the clones of the prototype copy them).
+
+  + self_type:Type_full
+  // For a data slot of type Self: Self of this copy (see @Slot.slot_data_for).
+
+  - set_self_type t:Type_full <- ( self_type := t; )
   
   + value_init:List
 
+  + value_init_base:List
+
+  + is_object_init:Boolean
+  // With `-cop': a field of an active object, initialized in the universe of the object, at
+  // its creation (see @Type.add_cop_init), not by `main'.
+
   - init <-
-  ( + val,rec,rec_call:Expr
+  ( + val,rec:Expr
     + wrt:Write
-    + old_list:List
-    + rd:Itm_read_arg1
-    + old_profil_current:Profil
-    + old_profil_slot:Profil_slot
     /*
     string_tmp.copy "init : "
     string_tmp.append name
     warning_error (position,string_tmp)
     */
     ((value_init = NULL) && {(affect != '<') || {self = slot_id}}).if {
-      /*
-      ((style = '+') && {receiver_type.default.is_default_flat}).if {
-        /* 14Mars
-        (receiver_type.type_c != NULL).if {
-          semantic_error (position,"Clonable slot impossible with C type mapping prototype.")
-        } */       
-        receiver_type.prototype.set_complex_flat
-      }
-      */
       (self = slot_id).if {     
         val := Prototype_cst.create position type type
         (style = '+').if {
           rec := Prototype_cst.create position type (receiver_type.default)
         }
         wrt := write position with rec value val
+        wrt.set_proto_init
         init_list.add_first wrt
         value_init := List; // BSBS: Pas utile (Faire en sorte de faire un init unique!)
         ? {init_list.index = -1}
       } else {
         // Init with complex code.
-        old_list := list_current
-        old_profil_current := profil_current
-        old_profil_slot    := profil_slot
-        profil_current := profil_slot := NULL
-        value_init := list_current := List.create position
-        (value = NULL).if {
-          val := type.default_value position
-        } else {
-          rd ?= value
-          ((rd != NULL) && {rd.arg = NULL}).if {
-            rec_call := Prototype_cst.create position type (receiver_type.default)
-            val := rd.to_run NULL with_self (rec_call,False,False) args NULL
-          } else {
-            val := value.to_run_expr; // ICI
-            //(type.raw.is_block).if { list_current.debug_display; }
-          }
+        ((is_cop) && {style = '+'} && {receiver_type.prototype.style = '-'}).if {
+          is_object_init := True
         }
-        val := val.check_type type with position
-        (style = '+').if {
-          rec := Prototype_cst.create position type (receiver_type.default)
+        value_init := new_value_init
+        ((is_cop) && {(style = '-') || {! is_object_init}}).if {
+          // For a new universe: its `-' slots, and its copies of the changed prototypes (the
+          // writes in the shared ones are not generated, see @Escape.is_skipped_write).
+          value_init_base := new_value_init
         }
-        (debug_level_option != 0).if {
-          value_init.add_last (
-            Push.create position context context_main first False
-          )
-        }
-        wrt := write position with rec value val
-        (is_zero val).if { wrt.set_quiet_generation; }
-        value_init.add_last wrt
-        
-        list_current   := old_list
-        profil_current := old_profil_current
-        profil_slot    := old_profil_slot
       }
     }
+  )
+
+  - new_value_init:List <-
+  // Code of the initial value, ending with its write in this slot.
+  ( + val,rec,rec_call:Expr
+    + wrt:Write
+    + old_list:List
+    + rd:Itm_read_arg1
+    + old_profil_current:Profil
+    + old_profil_slot:Profil_slot
+    + result:List
+
+    old_list := list_current
+    old_profil_current := profil_current
+    old_profil_slot    := profil_slot
+    profil_current := profil_slot := NULL
+    ((self_type != NULL) && {value != NULL}).if {
+      // The initial value is evaluated with the Self of the prototype, not of this copy.
+      semantic_error (position,"Initial value is not yet possible for a data slot of type `Self' (one copy for each type).")
+    }
+    result := list_current := List.create position
+    (value = NULL).if {
+      val := type.default_value position
+    } else {
+      rd ?= value
+      ((is_object_init) && {rd != NULL}).if {
+        // `T.__init_x' (see @Itm_slot.default_value), in the universe of the new object: on
+        // its `self', not a message to the prototype `T'.
+        rec_call := External_c.create position text "li_current" access NULL persistant False type (receiver_type.default)
+        val := rd.to_run NULL with_self (rec_call,True,False) args NULL
+      }.elseif {(is_cop) && {rd != NULL} && {receiver_type.prototype.style = '-'}} then {
+        // `T.__init_x' of an active type `T': a direct call, in the universe which is
+        // initialized (a message to `T' would make a cycle between the initializations).
+        rec_call := Prototype_cst.create position type (receiver_type.default)
+        val := rd.to_run NULL with_self (rec_call,True,False) args NULL
+      }.elseif {(rd != NULL) && {rd.arg = NULL}} then {
+        rec_call := Prototype_cst.create position type (receiver_type.default)
+        val := rd.to_run NULL with_self (rec_call,False,False) args NULL
+      } else {
+        val := value.to_run_expr; // ICI
+      }
+    }
+    val := val.check_type type with position
+    (is_object_init).if {
+      // The object of the current universe (see @Type.add_cop_init).
+      rec := External_c.create position text "li_current" access NULL persistant False type (receiver_type.default)
+    }.elseif {style = '+'} then {
+      rec := Prototype_cst.create position type (receiver_type.default)
+    }
+    (debug_level_option != 0).if {
+      result.add_last (
+        Push.create position context context_main first False
+      )
+    }
+    wrt := write position with rec value val
+    (is_zero val).if { wrt.set_quiet_generation; }
+    wrt.set_proto_init
+    result.add_last wrt
+
+    list_current   := old_list
+    profil_current := old_profil_current
+    profil_slot    := old_profil_slot
+    result
   )
 
   //
@@ -432,12 +483,32 @@ Public
       profil_slot    := NULL
 
       val.execute
-      
+      (is_object_init).if {
+        receiver_type.add_cop_init val
+      } else {
+        ? {init_list.index = -1}
+        init_list.add_last val
+      }
+      (value_init_base != NULL).if {
+        val := value_init_base
+        value_init_base := NULL
+        Escape.set_init_ctx (init_lists_base.count, NULL)
+        val.execute
+        Escape.set_init_ctx (-1, NULL)
+        (debug_level_option != 0).if {
+          // Debug mode: its function has its own context, as `main'.
+          val.add_first (Push.create position context context_main first True)
+        }
+        base_init_index := init_lists_base.count
+        (style = '+').if {
+          init_lists_always.add_last base_init_index
+        }
+        init_lists_base.add_last val
+      }
+
       profil_slot    := old_profil_slot
       profil_current := old_profil_current
       list_current   := old_list_current
-      ? {init_list.index = -1}
-      init_list.add_last val
     }
   )
 
@@ -499,18 +570,6 @@ Variable
     result
   )
 
-  /*
-  - new_access r:EXPR :ACCESS <-
-  ( + result:ACCESS
-
-    (style = '-').if {
-      result := ACCESS_GLOBAL.create self
-    } else {
-      result := ACCESS_SLOT.create self with r
-    }
-    result
-  )
-  */
   - is_zero e:Expr :Boolean <-
   ( + pro:Prototype_cst
     + int:Int_cst

@@ -1,8 +1,14 @@
 Header
   + name := Context
-/*stbrp_context*/
+/* @stbrp_context of stb_truetype v1.24: the "super-crappy" packer used when
+   stb_rect_pack.h is not available (rows from left to right). */
+Inherit
   
+  - parent_clone:Clone := Clone
+
 Public  
+  
+  - new:Self <- clone
   
   + width:Int
   + height:Int
@@ -15,29 +21,29 @@ Public
     (width,height) := (pw,ph)
     x := y := bottom_y := 0
   )
-
-  - pack_rects rects:Array (Flat Rect) <-
+  
+  - pack_rects rects:Array Rect count num_rects:Int <-
   ( + i:Int
-    + break:Boolean
-    {(i < rects.count) && {! break}}.while_do { 
-      (x + rects.item i.w > width).if {
-        (x,y) := (0,bottom_y)
+    + stop:Boolean
+    {(i < num_rects) && {! stop}}.while_do { 
+      (x + rects.at i.w > width).if {
+        x := 0
+        y := bottom_y
       }
-      (y + rects.item i.h > height).if {
-        break := True
+      (y + rects.at i.h > height).if {
+        stop := True
       } else {
-        rects.item i.set_xy (x,y)
-        rects.item i.set_was_packed 1
-        x := x + rects.item i.w
-        (y + rects.item i.h > bottom_y).if {
-          bottom_y := y + rects.item i.h
+        rects.at i.set_xy (x,y)
+        rects.at i.set_was_packed True
+        x := x + rects.at i.w
+        (y + rects.at i.h > bottom_y).if {
+          bottom_y := y + rects.at i.h
         }
         i := i + 1
       }
     }
-    {i < rects.count}.while_do {
-      rects.item i.set_was_packed 0
+    {i < num_rects}.while_do {
+      rects.at i.set_was_packed False
       i := i + 1
     }
   )
-

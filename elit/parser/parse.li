@@ -1,8 +1,8 @@
 Header
   + name := Parse
-Inherit 
+Insert 
   - parse_txt_buf:Txt_buf := Txt_buf
-  - parent_any:Any := Any
+  - parent_elit_common:Elit_common := Elit_common
       
 Public
   

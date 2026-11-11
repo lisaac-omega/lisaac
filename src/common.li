@@ -1,13 +1,13 @@
 Header
   + name := Common
 /*Common code to shorter and the compiler*/
-Inherit
+Insert
 
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Public
 
-  - version :String_alias := "0.6 (Ω)"
+  - version :String_alias := "0.7 (Ω)"
 
   - command_line_header name:String_alias :String_alias <-
   ( + before, after :String_alias

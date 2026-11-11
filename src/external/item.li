@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- receiver.is_invariant && {index.is_invariant}
 
+  - is_pure:Boolean <- receiver.is_pure && {index.is_pure}
+
+  - is_reading v:Variable :Boolean <- receiver.is_reading v || {index.is_reading v}
+
   + receiver:Expr
 
   + index:Expr

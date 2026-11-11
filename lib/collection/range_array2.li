@@ -70,7 +70,7 @@ Public
   - from_collection2 model:Collection2(V) <-
   (
     make (model.line_minimum,model.column_minimum)
-    to   (model.line_maximum,model.column_maximum)
+      to   (model.line_maximum,model.column_maximum)
 
     line_minimum.to line_maximum do { i:Int
       column_minimum.to column_maximum do { j:Int

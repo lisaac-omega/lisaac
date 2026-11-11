@@ -1,5 +1,6 @@
 Header
   + name := Flat ℚ;
+  - export := ℝ;
   /*
   The set ℚ (from the Italian quoziente, meaning quotient) denotes the set of rational numbers,
   which includes every quotient n/d of two integers, with d != 0.
@@ -30,13 +31,17 @@ Private
   + den_raw:ℤ
   
   - set (n,d:ℤ) <- (num,den_raw) := (n,d)
-  
+
+ℝ
+
   - raw (n,d:ℤ) :Self <-
   // Value of @n / @d, already canonical: @n and @d are now owned by the result.
   ( + r:Self
     r.set (n,d)
     r
   )
+
+Private
   
   - raw_sign (n,d:ℤ) :Self <-
   // Same as @raw, with @d which can be negative.
@@ -58,12 +63,12 @@ Private
     + r:Self
     ((an !== 0) && {bn !== 0}).if {
       g := an.gcd bd
-      n1 := an / g
-      d2 := bd / g
+      n1 := an.divexact g
+      d2 := bd.divexact g
       g.free
       g := bn.gcd ad
-      n2 := bn / g
-      d1 := ad / g
+      n2 := bn.divexact g
+      d1 := ad.divexact g
       g.free
       n := n1 * n2
       d := d1 * d2
@@ -87,8 +92,8 @@ Public
     + r:Self
     (n !== 0).if {
       g := n.gcd d
-      rn := n / g
-      rd := d / g
+      rn := n.divexact g
+      rd := d.divexact g
       g.free
       r := raw_sign (rn,rd)
     }
@@ -116,6 +121,29 @@ Public
     r
   )
   
+  - init_decimal x:Real64 :Self <-
+  // The shortest decimal which gives @x back: 1/10 for 0.1, where `init_d'
+  // gives the exact binary value 3602879701896397/36028797018963968.
+  [ ? {(! x.is_nan) && {! x.is_infinite}}; ]
+  ( + k,e:Int
+    + m:Int64
+    + p,t:ℤ
+    + r:Self
+    k := `({int k; char b[40]; for (k = 1; k < 17; k++) { snprintf(b,40,"%.*e",k-1,@x); if (strtod(b,0) == @x) break; } k;})`:Int
+    m := `({char b[40], *s = b; long long m = 0; snprintf(b,40,"%.*e",(int)(@k-1),@x); if (*s == '-') s++; for (; *s != 'e'; s++) if (*s != '.') m = 10*m + (*s - '0'); (@x < 0) ? -m : m;})`:Int64
+    e := `({char b[40]; snprintf(b,40,"%.*e",(int)(@k-1),@x); atoi(strchr(b,'e') + 1);})`:Int - (k - 1)
+    p := (ℤ.init_si 10).pow (e.abs)
+    t := ℤ.init_si m
+    (e >= 0).if {
+      r := raw (t * p,ℤ.one)
+    } else {
+      r := init (t,p)
+    }
+    p.free
+    t.free
+    r
+  )
+
   - init_s (sp:String) base (base:Int) :Self <-
   // Read `num' or `num/den', with @sp canonical or not.
   ( + i:Int
@@ -160,19 +188,19 @@ Public
       x.free
       y.free
     } else {
-      t := other.den / g
+      t := other.den.divexact g
       x := num * t
       t.free
-      d := den / g
+      d := den.divexact g
       y := other.num * d
       n := x + y
       x.free
       y.free
       x := n.gcd g
-      t := n / x
+      t := n.divexact x
       n.free
       n := t
-      y := other.den / x
+      y := other.den.divexact x
       t := y * d
       d.free
       d := t
@@ -183,7 +211,7 @@ Public
     raw (n,d)
   )
   
-  - self:Self '-' Left 80 other:Self :Self <-
+  - self:Self '-' Left 80 <> other:Self :Self <-
   ( + n:ℤ
     + r:Self
     n := - other.num
@@ -197,7 +225,7 @@ Public
     mul (num,den,other.num,other.den)
   )
   
-  - self:Self '/' Left 90 other:Self :Self <-
+  - self:Self '/' Left 90 <> other:Self :Self <-
   [ ? {other.num !== 0}; ]
   (
     mul (num,den,other.den,other.num)
@@ -271,13 +299,16 @@ Public
   
   - self:Self '!==' Right 60 other:Self :Boolean <- ! (self = other)
   - self:Self '==' Right 60 other:Self :Boolean <- self = other
-  - self:Self '>' Right 60 other:Self :Boolean <- cmp other >  0
-  - self:Self '<' Right 60 other:Self :Boolean <- cmp other <  0
-  - self:Self '>=' Right 60 other:Self :Boolean <- cmp other >= 0
-  - self:Self '<=' Right 60 other:Self :Boolean <- cmp other <= 0
+  - self:Self '>' Right 60 <> other:Self :Boolean <- cmp other >  0
+  - self:Self '<' Right 60 <> other:Self :Boolean <- cmp other <  0
+  - self:Self '>=' Right 60 <> other:Self :Boolean <- cmp other >= 0
+  - self:Self '<=' Right 60 <> other:Self :Boolean <- cmp other <= 0
   
   // Conversion
   
+  - to_r:ℝ <- ℝ.init_q self
+  // Exact value of @self.
+
   - to_z:ℤ <- num / den
   // Integer part of @self, rounded toward zero.
   

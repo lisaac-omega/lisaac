@@ -1,0 +1,797 @@
+Header
+  + name := Elito_common
+Insert  
+  - parent_clone:Clone := Clone
+  - parent_utils:Utils := Utils
+  
+Public
+  
+  // Easter egg (Alt Ctrl Shift Y, A, S): an animation of `data/'.
+  - anim:Array (C_array Uint8) := Array (C_array Uint8).create_with_capacity 128
+  - anim_id:Int := -1
+  - anim_idx:Int
+  - anim_top:Boolean
+  - anim_file:C_array Uint8
+  
+  - home_directory:String_alias
+  - elit_directory:String_alias
+  - pwd_directory:String_alias
+  - lib_directory:String_alias
+  
+  - help_path:String_alias
+  
+  - path_key:String_alias  := "emacs.key"
+  - color_style:String_alias := "Classic"
+  - color:Color_store
+  - x_position:Int := 0
+  - y_position:Int := 0
+  - default_width:Int  := 1500
+  - default_height:Int := 1024
+  - roman:String_alias       := "TlwgMono.ttf"
+  - bold:String_alias        := "TlwgMono-Bold.ttf"
+  - italic:String_alias      := "TlwgMono-Oblique.ttf"
+  - bold_italic:String_alias := "TlwgMono-BoldOblique.ttf"
+  - font_size:Real32 := 40.0
+  - help_line:Boolean
+  - sound:Boolean
+      
+  - set_font (pen:Pen,f:String_alias) <-
+  (
+    pen.font_size font_size
+    pen.font_face f
+  )
+  
+  - clipboard:String_buffer   := String_buffer.create (size_bloc+1)
+  - string_tmp:String_buffer  := String_buffer.create (size_bloc+1)
+  - string_tmp2:String_buffer := String_buffer.create (size_bloc+1)
+    
+  // UTF-8: a character is a first byte followed by continuation bytes.
+  
+  - is_continuation c:Char :Boolean <- (c.to_uint8 & 0C0h) = 80h
+  
+  - is_tail i:Int in b:Buffer :Boolean <-
+  // Is @i inside a character: a continuation byte, or the `\n' of `\r\n'
+  // (an instruction continued on the next line is one character).
+  ( + c:Char
+    c := b.at i
+    (is_continuation c) || {(c = '\n') && {i > 0} && {b.at (i-1) = '\r'}}
+  )
+  
+  - is_word c:Char :Boolean <- (c.is_identifier) || {! c.is_ascii}
+  // A letter, a digit, `_' or a byte of a non ASCII character.
+  
+  - is_prototype_at i:Int in s:Buffer :Boolean <-
+  // Starts with an upper case letter, or with ℕ, ℤ, ℚ, ℝ, ℂ (E2h 84h ...).
+  ( + c:Char
+    c := s.at i
+    (c.is_upper) || {(c.to_uint8 = 0E2h) && {i < s.upper} && {(s.at (i + 1)).to_uint8 = 084h}}
+  )
+  
+  - first_difference_index (a,b:String) :Int <-
+  // The first index where @a and @b differ (the smallest count if one is a prefix of the other).
+  ( + i,n:Int
+    n := a.count.min (b.count)
+    {(i < n) && {a.at i = b.at i}}.while_do { i := i + 1; }
+    i
+  )
+  
+  - reverse_first_difference_index (a,b:String) :(Int,Int) <-
+  // The indexes in @a and @b of the first difference, starting from the end.
+  ( + i,j:Int
+    (i,j) := (a.upper,b.upper)
+    {(i >= 0) && {j >= 0} && {a.at i = b.at j}}.while_do { (i,j) := (i - 1,j - 1); }
+    i,j
+  )
+  
+  - fail msg:String <-
+  (
+    "Error: \n".print
+    msg.print
+    '\n'.print
+    exit 0
+  )
+    
+  - size_bloc:Int := 4096; // Power 2
+    
+  - text_id:Int      := 00h
+  - comment_id:Int   := 01h
+  - comment_line_id:Int := 02h
+  - comment_line_intern_id:Int := 03h
+  - string_id:Int    := 04h
+  - character_id:Int := 05h
+  - external_id:Int  := 06h
+  - keyword_id:Int   := 07h
+  - block_id:Int     := 08h
+  - style_id:Int     := 09h
+  - assign_id:Int    := 0Ah
+  - type_id:Int      := 0Bh
+  - type_parameter_id:Int := 0Ch
+  - slot_id:Int      := 0Dh
+  - slot_head_id:Int := 0Eh
+  - number_id:Int    := 0Fh
+  - call_id:Int      := 10h
+  - call_select_id:Int:= 11h
+  - call_intern_id:Int:= 12h
+  - local_id:Int     := 13h
+  - argument_id:Int  := 14h
+  - operator_id:Int  := 15h
+  - separator_id:Int := 16h
+  - error_id:Int     := 17h
+  - block_ok_id:Int  := 18h
+  - block_err_id:Int := 19h
+  - comment_ref_id:Int:= 20h
+  
+  - current_page:Page
+  - div_pages:Div
+  - menu_main:Div
+  
+  - beep <-
+  (
+    sound.if {
+      String.tmp { tmp:String_buffer
+        tmp += "paplay " += elit_directory += "bell.oga &"
+        Environment.run tmp
+      }
+    }
+  )
+  
+  - close_menu <-
+  (
+    menu_main.child.foreach { bb:Div
+      (! bb.is_leaf).if {         
+        bb.child.first.close
+      }
+    }
+  )
+  
+  - set_help_line b:Boolean <-
+  (
+    (help_line != b).if {
+      help_line := b
+      Elito_window.root.refresh
+    }
+  )
+  
+  - set_sound b:Boolean <-
+  (
+    sound := b
+  )
+    
+  - open_file <- Cmd_bar.select 2
+  
+  - insert_file <- Cmd_bar.select 25
+  
+  - open_at_point <- Cmd_bar.select 27
+  
+  - save <- 
+  (
+    string_tmp.copy "Wrote `";
+    string_tmp.append (current_page.buffer.path)
+    string_tmp.append "'."
+    Cmd_bar.new_message string_tmp
+    Page.save_last_point
+    current_page.buffer.save
+  )
+  
+  - save_as <- Cmd_bar.select 3
+  
+  - exit_cmd <- Cmd_bar.select 9
+  
+  - sub_split is_h:Boolean <-
+  ( + d,nd,old_d:Div_zone
+    + idx:Int
+    d ?= current_page.parent.parent
+    old_d := d
+    (d.child.count = 2).if {
+      idx := d.remove (current_page.parent)
+      nd := Div_zone.create_zone 1.0 +> current_page.parent
+      (idx = 0).if { d <+ nd; } else { d +> nd; }
+      d := nd
+    }
+    Page.save_last_point
+    d +> Page.create_page (current_page.buffer)
+    (is_h).if { d.column_zone 0.5; } else { d.line_zone 0.5; }
+    old_d.refresh
+  )
+  
+  - split_hori <- 
+  (
+    (current_page.height > Div_page.height_min * 2.0).if {
+      sub_split True
+    }
+  )
+  
+  - split_vert <- 
+  (
+    (current_page.width > Div_page.width_min * 2.0).if {
+      sub_split False
+    }
+  )
+  
+  - close_pg <- 
+  ( + d,p:Div_zone
+    + old_page:Page
+    + idx:Int
+    (Page.page_list.count != 1).if {     
+      old_page := current_page
+      Page.remove_page
+      d ?= old_page.parent.parent
+      ? {d.child.count = 2}
+      d - old_page.parent
+      p ?= d.parent
+      (p != NULL).if {
+        idx := p.remove d
+        (idx = 0).if { p <+ d.child.first; } else { p +> d.child.first; }
+        d.free
+        p.refresh
+      } else {
+        d.refresh
+      }
+    }
+  )
+  
+  - delete_other_window <-
+  ( + old_page:Page
+    old_page := current_page
+    {Page.page_list.count != 1}.while_do {
+      {current_page = old_page}.while_do { change_pg; }
+      close_pg
+    }
+  )
+  
+  - change_pg <- Page.next_page
+  
+  - middle_pg <- 
+  ( + old_pt:Int
+    old_pt := current_page.point
+    (current_page.lines_view/2).times { go_prev_line True; }
+    go_beg_line True
+    current_page.set_point_view (current_page.point)
+    current_page.set_point old_pt
+  )
+  
+  - kill_buffer <- Cmd_bar.select 19
+  
+  - kill_all_buffer <-
+  ( + i,j:Int
+    + b:Buffer
+    {!Buffer.previous_list.is_empty}.while_do {
+      Buffer.previous_list.remove_first
+    }
+    i := Buffer.list.upper
+    {i >= 0}.while_do {
+      j := 0
+      b := Buffer.list.at i
+      {(j <= Page.page_list.upper) && {Page.page_list.at j.buffer != b}}.while_do {
+        j := j + 1
+      }
+      ((b.is_save) && {j > Page.page_list.upper}).if {
+        b.kill
+      }
+      i := i - 1
+    }
+    Buffer_bar.update
+  )
+  
+  - undo <- Cmd_bar.select 13
+  
+  - stop_cmd <- 
+  (
+    beep
+    current_page.set_select_start (-1)
+    current_page.set_search_start (-1)
+  )
+  
+  - copy <-
+  ( + start,end:Int
+    (start,end) := current_page.get_select
+    (start = -1).if {
+      Clipboard.put ""
+    } else {
+      current_page.set_point start
+      clipboard.clear
+      start.to end do { i:Int
+        clipboard.add_last (current_page.buffer.at i)
+      }
+      Clipboard.put clipboard
+      current_page.set_select_start (-1)
+    }
+  )
+  
+  - cut <- 
+  ( + start,end:Int
+    (start,end) := current_page.get_select
+    //start.print; '-'.print; end.println
+    (start = -1).if {
+      Clipboard.put ""
+    } else {
+      current_page.set_point start
+      clipboard.clear
+      start.to end do { i:Int
+        clipboard.add_last (current_page.buffer.at i)
+      }
+      Clipboard.put clipboard
+      start.to end do { i:Int
+        current_page.suppr_char
+      }
+      current_page.stack_upper
+      current_page.set_select_start (-1)
+    }
+  )
+  
+  - suppr_select <- 
+  ( + start,end:Int
+    (start,end) := current_page.get_select
+    //start.print; '-'.print; end.println
+    (start != -1).if {      
+      current_page.set_point start
+      start.to end do { i:Int
+        current_page.suppr_char
+      }
+      current_page.stack_upper
+      current_page.set_select_start (-1)
+    }
+  )
+  
+  - cut_end_line <- Cmd_bar.select 18
+  
+  - paste <- Cmd_bar.select 24
+    
+  - select_on <- current_page.set_select_start (current_page.point)
+  
+  - select_on_off <- 
+  ( - me:Boolean
+    ((Keyboard.cmd & 10h) != 0).if {
+      (!me).if {
+        current_page.set_select_start (current_page.point)
+        me := True
+      }
+    } else {
+      (me).if { current_page.set_select_start (-1); }
+      me := False
+    }
+  )
+  
+  - search_fore <- Cmd_bar.select 4
+
+  - search_back <- Cmd_bar.select 5
+  
+  - replace     <- Cmd_bar.select 6
+
+  - completion  <- Cmd_bar.select 11
+  
+  - to_upper <- 
+  ( + buf:Buffer
+    + up,i:Int
+    + c:Char
+    buf := current_page.buffer
+    up := buf.upper + 1
+    i := current_page.point
+    {(i != up) && {!buf.at i.is_identifier}}.while_do { i := i + 1; }
+    {(i != up) && { buf.at i.is_identifier}}.while_do { 
+      c := buf.at i
+      current_page.stack_push 'r' char c point i
+      c := c.to_upper
+      current_page.stack_push 'i' char c point i
+      buf.at i put c
+      i := i + 1
+    }
+    current_page.stack_upper
+    current_page.set_point i
+  )
+  
+  - to_lower <- 
+  ( + buf:Buffer
+    + up,i:Int
+    + c:Char
+    buf := current_page.buffer
+    up := buf.upper + 1
+    i := current_page.point
+    {(i != up) && {!buf.at i.is_identifier}}.while_do { i := i + 1; }
+    {(i != up) && { buf.at i.is_identifier}}.while_do { 
+      c := buf.at i
+      current_page.stack_push 'r' char c point i
+      c := c.to_lower
+      current_page.stack_push 'i' char c point i
+      buf.at i put c
+      i := i + 1
+    }
+    current_page.stack_upper
+    current_page.set_point i
+  )
+  
+  - to_delimiter <- 
+  ( + buf:Buffer
+    + up,i:Int
+    + c:Char
+    buf := current_page.buffer
+    up := buf.upper + 1
+    i := current_page.point
+    {(i <= up) && {!buf.at i.is_identifier}}.while_do { i := i + 1; }
+    {(i <= up) && { buf.at i.is_identifier}}.while_do { 
+      c := buf.at i
+      (c.is_upper).if {
+        current_page.stack_push 'r' char c point i
+        c := c.to_lower
+        ((i>0) && {buf.at (i-1).is_identifier}).if {          
+          current_page.stack_push 'i' char '_' point i
+          buf.at i put '_'
+          i := i + 1
+          buf.insert c to i
+        } else {
+          buf.at i put c
+        }
+        current_page.stack_push 'i' char c point i
+      }
+      i := i + 1
+    }
+    current_page.stack_upper
+    current_page.set_point i
+  )
+  
+  - indent <- 
+  ( + b,e,n:Int
+    (b,e) := current_page.get_select
+    (b = -1).if { b := current_page.point; e := b - 1; }
+    n := current_page.get_line b to e
+    current_page.set_point (b-1)
+    0.to n do { i:Int
+      current_page.set_point (current_page.point + 1)
+      (current_page.point < current_page.point_view).if {
+        middle_pg
+      }
+      current_page.indent_line
+      //"Indent ".print; i.println
+      go_end_line True
+      (current_page.point > current_page.point_end_view).if { 
+        middle_pg
+      }
+    }
+    current_page.set_select_start (-1)
+  )
+  
+  - go_line  <- Cmd_bar.select 1
+  - go_point <- Cmd_bar.select 21
+  
+  - go_top <- 
+  ( 
+    current_page.set_point 0
+    middle_pg
+  )
+  
+  - go_eof <- 
+  ( 
+    current_page.set_point (current_page.buffer.upper+1)
+    middle_pg
+  )
+  
+  - go_next_word intern:Boolean <- 
+  ( + buf:Buffer
+    + up,i:Int
+    select_on_off
+    buf := current_page.buffer
+    up := buf.upper + 1
+    i := current_page.point
+    {(i != up) && {! is_word (buf.at i)}}.while_do { i := i + 1; }
+    {(i != up) && {is_word (buf.at i)}}.while_do { i := i + 1; }
+    current_page.set_point i
+    ((!intern) && {i > current_page.point_end_view}).if {
+      middle_pg
+    }
+  )
+  
+  - go_prev_word intern:Boolean <- 
+  ( + buf:Buffer
+    + i:Int
+    select_on_off
+    buf := current_page.buffer
+    i := current_page.point
+    (i != 0).if {
+      { i := i - 1; }.do_while {(i != 0) && {! is_word (buf.at i)}}
+      (i != 0).if {
+        { i := i - 1; }.do_while {(i != 0) && {is_word (buf.at i)}}
+        (i != 0).if { i := i + 1; }
+      }
+      current_page.set_point i
+      ((!intern) && {i < current_page.point_view}).if {
+        middle_pg
+      }
+    }
+  )
+  
+  - go_up_pg <- 
+  ( 
+    select_on_off
+    current_page.set_point (current_page.point_view)
+    current_page.lines_view.times { go_prev_line True; }
+    go_beg_line True
+    current_page.set_point_view (current_page.point)
+  )
+  
+  - go_down_pg <- 
+  ( 
+    select_on_off
+    current_page.set_point (current_page.point_view)
+    current_page.lines_view.times { go_next_line True; }
+    go_beg_line True
+    current_page.set_point_view (current_page.point)
+  )
+  
+  - go_next_line intern:Boolean <- 
+  ( + buf:Buffer
+    + i,c,up:Int
+    (! intern).if { select_on_off; }
+    (old_col = -1).if {
+      old_col := current_page.col
+    }
+    buf := current_page.buffer
+    up := buf.upper+1
+    i := current_page.point
+    (i != up).if {
+      {(i != up) && {buf.at i != '\n'}}.while_do { i := i + 1; }
+      (i != up).if {
+        { 
+          i := i + 1
+          {(i != up) && {is_continuation (buf.at i)}}.while_do { i := i + 1; }
+          c := c + 1
+        }.do_while {(i != up) && {buf.at i != '\n'} && {c <= old_col}}
+        ((i != up) && {is_tail i in buf}).if { i := i - 1; }
+      }
+      current_page.set_point i
+      (intern).if_false {
+        (i > current_page.point_end_view).if { 
+          middle_pg
+          old_col := current_page.col
+        }
+      }
+    }.elseif {!intern} then { beep; }
+  )
+  
+  - go_prev_line intern:Boolean :Boolean <- 
+  ( + buf:Buffer
+    + i,c:Int
+    + result:Boolean
+    (! intern).if { select_on_off; }
+    (old_col = -1).if {
+      old_col := current_page.col
+    }
+    buf := current_page.buffer
+    i := current_page.point
+    i := i.min (current_page.buffer.upper+1); // BSBS: Patch after 'undo'
+    {(i > 0) && {buf.at (i-1) != '\n'}}.while_do { i := i - 1; }
+    (i != 0).if {
+      result := True
+      i := i - 1
+      {(i > 0) && {buf.at (i-1) != '\n'}}.while_do { i := i - 1; }
+      {(c != old_col) && {buf.at i != '\n'}}.while_do {
+        i := i + 1
+        {is_continuation (buf.at i)}.while_do { i := i + 1; }
+        c := c + 1
+      }
+      (is_tail i in buf).if { i := i - 1; }
+      current_page.set_point i
+      (intern).if_false {
+        (i < current_page.point_view).if {
+          middle_pg
+          old_col := current_page.col
+        }
+      }
+    }.elseif {!intern} then { beep; }
+    result
+  )
+  
+  - go_beg_line intern:Boolean <- 
+  ( + buf:Buffer
+    + i:Int
+    (! intern).if { select_on_off; }
+    buf := current_page.buffer
+    i := current_page.point
+    {(i > 0) && {buf.at (i-1) != '\n'}}.while_do { i := i - 1; }
+    current_page.set_point i
+    old_col := -1
+  )
+  
+  - go_end_line intern:Boolean <- 
+  ( + buf:Buffer
+    + up,i:Int
+    (! intern).if { select_on_off; }
+    buf := current_page.buffer
+    up := buf.upper+1
+    i := current_page.point
+    {(i != up) && {buf.at i != '\n'}}.while_do { i := i + 1; }
+    ((i > 0) && {i != up} && {buf.at (i-1) = '\r'}).if { i := i - 1; }
+    current_page.set_point i
+    old_col := -1
+  )
+  
+  - go_next_char <- 
+  ( + buf:Buffer
+    + i:Int
+    select_on_off
+    buf := current_page.buffer
+    i := current_page.point
+    (i != buf.upper+1).if {
+      i := i + 1
+      {(i <= buf.upper) && {is_tail i in buf}}.while_do { i := i + 1; }
+    } else { beep; }
+    current_page.set_point i
+    old_col := -1
+    (i > current_page.point_end_view).if {
+      middle_pg
+    }
+  )
+  
+  - go_prev_char <- 
+  ( + buf:Buffer
+    + i:Int
+    select_on_off
+    buf := current_page.buffer
+    i := current_page.point
+    (i != 0).if {
+      i := i - 1
+      {(i > 0) && {is_tail i in buf}}.while_do { i := i - 1; }
+    } else { beep; }
+    current_page.set_point i
+    old_col := -1
+    (i < current_page.point_view).if {
+      middle_pg
+    }
+  )
+  
+  - delete_char <-
+  (    
+    current_page.suppr_glyph
+    current_page.stack_upper
+  )
+  
+  - complet_slot <- 
+  ( 
+    "completion slot: Not yet implemented.\n".print
+  )
+  
+  - buffer_list <- Cmd_bar.select 10
+  
+  - lib_explorer  <- Cmd_bar.select 14
+  - path_explorer <- Cmd_bar.select 15
+    
+  - load_anim <-
+  // The frames of a random `data/data-N.dta': a GIF whose first byte (`G')
+  // is a `B'. The release keeps only some of them: take the next one found.
+  ( + img:C_array Uint8
+    + f:Pointer
+    + sz,n,k:Int
+    n := Clock.seconds.to_int % 26
+    k := 26
+    {(f = NULL) && {k > 0}}.while_do {
+      String.tmp { tmp:String_buffer
+        tmp.append elit_directory
+        tmp.append "data/data-"
+        n.append_in tmp
+        tmp.append ".dta"
+        f := File_utils.open_read tmp
+      }
+      (f = NULL).if { n := (n + 1) % 26; }
+      k := k - 1
+    }
+    (f != NULL).if {
+      anim_top := n >= 23; // The swings hang from the top.
+      sz := File_utils.size f
+      anim_file := C_array Uint8.create sz
+      File_utils.force_read_raw f in anim_file size sz
+      File_utils.close f
+      anim_file.at 0 put ('G'.to_uint8)
+      anim.clear; // ATT. Memory.
+      (Image.init anim_file size sz).if {
+        img := Image.load (Image.rgb_alpha)
+        anim.add_last img
+        (anim_id != -1).if { Elito_window.pen.delete_image anim_id; }
+        anim_id := Elito_window.pen.create_image_rgba img size (Image.img_x,Image.img_y) flags 0
+        {
+          img := Img_gif.load_next 0 begin False
+          (img != NULL).if { anim.add_last img; }
+        }.do_while {img != NULL}
+      }
+    }
+  )
+  
+  - insert txt:String <- 
+  ( 
+    0.to (txt.upper) do { i:Int
+      current_page.insert_char (txt.at i)
+    }
+    current_page.stack_upper
+  )
+  
+  - execute cmd:String_alias <-
+  ( + b:Buffer_cmd
+    b ?= current_page.buffer
+    (b = NULL).if {
+      current_page.set_buffer (Buffer_cmd.create "<>")
+    }
+    Cmd_bar.select 17
+    (! cmd.is_empty).if {
+      Cmd_bar.set_text cmd
+    }
+  )
+  
+  - font_size_upper <-
+  (
+    font_size := (font_size + 1.0).min 80.0
+    Page_abstract.reset_size_char
+    Cmd_bar.reset_size_char
+    Elito_window.root.refresh
+  )
+  
+  - font_size_lower <-
+  (
+    font_size := (font_size - 1.0).max 20.0
+    Page_abstract.reset_size_char
+    Cmd_bar.reset_size_char
+    Elito_window.root.refresh
+  )
+  
+  - start_macro <-
+  (
+    (Elito_window.record).if {
+      Cmd_bar.cmd.copy "Already defining macro."
+    } else {
+      Cmd_bar.cmd.copy "Defining macro."
+      Elito_window.set_record True
+    }
+  )
+  
+  - end_macro   <-
+  (
+    (Elito_window.record).if {
+      Cmd_bar.cmd.copy "Macro defined."
+      Elito_window.set_record False
+    }
+  )
+  
+  - call_macro  <-
+  (
+    (Elito_window.record).if {
+      Cmd_bar.cmd.copy "Macro under definition."
+    } else {      
+      Elito_window.play
+      Cmd_bar.cmd.copy "Macro finished."
+    }
+  )
+  
+  - repeater <- Cmd_bar.select 22
+  
+  - about <- 
+  ( 
+    "\n---------------------------------------\n".print
+    "- Elito: Editor for Lisaac source code -\n".print
+    "---------------------------------------\n".print
+    "Version: ".print; (version>>8).print; '.'.print; (version & 0FFh).println
+    '\n'.print
+    " - path key            : ".print; path_key.println
+    " - position            : ".print; x_position.print; ','.print; y_position.println
+    " - width x height      : ".print; default_width.print; " x ".print; default_height.println
+    " - fonts               : ".print; roman.print; ", ".print; bold.print; ", ".print; italic.print
+    ", ".print; bold_italic.println
+    " - Font size           : ".print; font_size.println
+    " - Color style         : ".print; color_style.println
+    " - Help bar            : ".print; help_line  .ok "On" or "Off".println
+    " - Buffer bar          : ".print; Buffer_bar.is_display.ok "On" or "Off".println
+    " - Home directory      : ".print; home_directory.println
+    " - Elito directory      : ".print; elit_directory.println
+    " - Path Work Directory : ".print; pwd_directory.println
+    " - Library directory   : ".print
+    (lib_directory != NULL).if { lib_directory.println; } 
+      else { "Lisaac not found.\n".print; }
+    "Shortcut:\n=========\n".print
+    String.tmp { tmp:String_buffer
+      Shortcut.append_list_in tmp
+      tmp.print
+    }
+  )
+  
+  
+Private
+  
+  - old_col:Int
+  
+  - version:Int := 1_01h

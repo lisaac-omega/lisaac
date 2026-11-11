@@ -1,0 +1,177 @@
+Header
+  + name := Div_zone
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Private
+  
+  - stack:Array Div_zone := Array Div_zone.create_with_capacity 2
+    
+Public
+  
+  - name:String_alias := "DIV ZONE"
+  
+  - width_min:Real32  <- 
+  ( + result:Real32
+    (child.count = 2).if {
+      (is bit_line).if {
+        result := child.first.width_min + child.second.width_min
+      } else {
+        result := child.first.width_min.max (child.second.width_min)
+      }
+    } else {
+      result := 100.0
+    }
+    result    
+  )
+  
+  - height_min:Real32 <- 
+  ( + result:Real32
+    (child.count = 2).if {
+      (is bit_line).if {
+        result := child.first.height_min.max (child.second.height_min)
+      } else {
+        result := child.first.height_min + child.second.height_min
+      }
+    } else {
+      result := font_size*4
+    }
+    result
+  )
+  
+  + parted:Real32
+  
+  - set_parted p:Real32 <-
+  [ ? {p.in_range 0.0 to 100.0}; ]
+  ( parted := p;                 )
+  
+  - create_zone p:Real32 :Div_zone <-
+  ( + result:Div_zone
+    (stack.is_empty).if {
+      result := clone
+    } else {
+      result := stack.pop
+    }
+    result.make "<>^v" to (0,0) size (width_min,height_min)
+    result.set_parted p
+    result
+  )
+  
+  - free <- ( stack.add_last self; )
+  
+  - column_zone p:Real32 <- ( column; parted := p; )
+  - line_zone p:Real32   <- ( line;   parted := p; )
+  
+  - set_position (x,y:Real32) size (w,h:Real32) <-
+  ( + nw,nh:Real32
+    ? {child.count.in_range 1 to 2}
+    (xo,yo) := (x,y)
+    (width,height) := (w,h)
+    (child.count = 1).if {
+      child.first.set_position (x,y) size (w,h)
+    } else {
+      (is bit_line).if { // is line
+        nw := (w * parted).max (child.first.width_min).min (w-child.second.width_min)
+        child.first .set_position (x,y)    size (nw,h)
+        child.second.set_position (x+nw,y) size (w-nw,h)
+      } else { // is column        
+        nh := (h * parted).max (child.first.height_min).min (h-child.second.height_min)
+        child.first .set_position (x,y)    size (w,nh)
+        child.second.set_position (x,y+nh) size (w,h-nh)
+      }
+    }
+  )
+  
+Private
+  
+  - is_first_h d:Div :Boolean <-
+  [ ? {child.count = 2}; ]
+  ( + dd:Div
+    dd := d.parent
+    {(dd != NULL) && {dd != child.first} && {dd != child.second}}.while_do {
+      dd := dd.parent
+    }
+    dd = child.first
+  )
+  
+  - is_first_v d:Div with x:Real32 :Boolean <-
+  ( + dd:Div
+    + dp:Div_page
+    dp ?= d
+    dd := dp
+    {(dd != NULL) && {dd != child.first} && {dd != child.second}}.while_do {
+      dd := dd.parent
+    }
+    ((dd = child.first)  && {x >= dd.xo+dd.width*0.55}) ||
+      {(dd = child.second) && {x <= dd.xo+dd.width*0.45}}
+  )
+  
+  + is_in:Boolean
+  + delta:Real32
+  
+Public
+  
+  - touch_event t:Touch <-
+  ( + new_parted:Real32
+    (child.count = 2).if {
+      (is bit_column).if { // Horizontal        
+        (is_first_h (t.div_action)).if {
+          (t.div = t.div_action).if {
+            (! is_in).if {
+              Elito_window.set_cursor (Elito_window.get_cursor `GLFW_VRESIZE_CURSOR`:Int)
+              is_in := True
+            }
+            (t.is_pressed).if {            
+              delta := t.div.yo+t.div.height - t.y
+            }
+          }.elseif {(t.pressing = 0.0) && {is_in}} then {
+            Elito_window.set_cursor (Elito_window.get_cursor `GLFW_ARROW_CURSOR`:Int)
+            is_in := False
+          }
+          (t.pressing != 0.0).if {          
+            new_parted := (delta + t.y - yo) / height
+            ((new_parted - parted).abs >= 0.01).if {
+              parted := new_parted
+              refresh
+            }
+          }
+        } else {          
+          parent.touch_event t
+        }
+      } else { // Vertical
+        (is_first_v (t.div_action) with (t.x)).if {
+          (t.div = t.div_action).if {
+            (! is_in).if {
+              Elito_window.set_cursor (Elito_window.get_cursor `GLFW_HRESIZE_CURSOR`:Int)
+              is_in := True
+            }
+            (t.is_pressed).if {            
+              delta := child.first.xo+child.first.width - t.x
+            }
+          }.elseif {(t.pressing = 0.0) && {is_in}} then {
+            Elito_window.set_cursor (Elito_window.get_cursor `GLFW_ARROW_CURSOR`:Int)
+            is_in := False
+          }
+          (t.pressing != 0.0).if {          
+            new_parted := (delta + t.x - xo) / width
+            ((new_parted*width).to_int != (parted*width).to_int).if {
+              parted := new_parted
+              refresh
+            }
+          }
+        } else {          
+          parent.touch_event t
+        }
+      }
+    } else {
+      parent.touch_event t
+    }
+  )
+
+  
+  

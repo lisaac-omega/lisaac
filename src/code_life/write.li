@@ -31,12 +31,51 @@ Public
 
   + quiet_generation:Boolean
 
+  - is_move_null:Boolean <-
+  // In `-boost', the `NULL' of a move (`One') in a local is not generated (see
+  // @Itm_code.emit_move): the local is no more used, checked statically. The `NULL' of a moved
+  // field is always generated (see @Write_slot.genere).
+  ( + e:Expr
+    + c:Cast
+    + pc:Prototype_cst
+    + result:Boolean
+    (debug_level_option = 0).if {
+      e := value
+      c ?= e
+      {c = NULL}.until_do {
+        e := c.value
+        c ?= e
+      }
+      pc ?= e
+      result := (pc != NULL) && {pc.is_move}
+    }
+    result
+  )
+
+  + is_move:Boolean
+  // `One': the `NULL' written in the source of a move (see @Itm_write.move_from, @Escape).
+
+  - set_move <-
+  (
+    is_move := True
+  )
+
+  + is_proto_init:Boolean
+  // Initialization of a slot of a prototype, at the start of the program (see @Escape).
+
+  - set_proto_init <-
+  (
+    is_proto_init := True
+  )
+
   - set_quiet_generation <-
   (
     quiet_generation := True
   )
 
   - is_invariant:Boolean <- value.is_invariant
+
+  - has_block:Boolean <- (value != NULL) && {value.static_type.raw.is_block}
 
   - variable:Variable <-
   (
@@ -112,16 +151,6 @@ Public
         {(variable.is_local) || {variable.style = '-'}}        // BSBS: Ce cas dans rentrer dans set_write
       } || {
         (rd_loc != NULL) && {rd_loc.local.require_count = 0} && {rd_loc.local.ensure_count = 1} && {!variable.type.raw.is_block} && {
-          /*
-            "WRITE :".print
-            variable.intern_name.print; " := ".print
-            variable.type.print
-            (variable.type.raw != NULL).if {
-              variable.type.raw.is_block.print
-            }
-            variable.style.print
-            rd_loc.local.intern_name.println
-          */
           True
         }
       }          
@@ -162,9 +191,34 @@ Public
         execute_access_link
         value := value.execute_link
         seq_index := seq_index + 1
-        variable.set_write self
-        result := self
-      //}
+        (is_dead_default).if {
+          remove
+          new_execute_pass
+        } else {
+          variable.set_write self
+          Escape.on_write self
+          result := self
+        }
+    }
+    result
+  )
+
+  - is_dead_default:Boolean <-
+  // A constant (default value) is written in a local which is surely written
+  // again before being read, by the next instructions of @list_current.
+  // @Flat structures are excluded (not the C types, as @Int): a flat reference can read them.
+  ( + l:Local
+    + idx:Int
+    + result:Boolean
+
+    l ?= variable
+    ((l != NULL) && {value.is_constant} && {list_current != NULL}).if {
+      idx := list_current.index
+      ((idx >= list_current.lower) && {idx <= list_current.upper} && {list_current.at idx = self}).if {
+        (((! l.type.is_flat) || {l.type.is_flat_c}) && {! l.type.is_flat_ref} && {! l.type.raw.is_block}).if {
+          result := list_current.first_access l from (idx + 1) = 1
+        }
+      }
     }
     result
   )
@@ -227,7 +281,6 @@ Public
     buffer.add_last ']'
 
     buffer.append " :="
-    //to_pointer.append_in buffer
     display_ref buffer
     buffer.add_last ' '
 

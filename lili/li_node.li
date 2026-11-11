@@ -1,0 +1,30 @@
+Header
+  + name := Li_node
+/*
+  A node of the executable tree of `lili'.
+  @Li_compiler builds this tree from the internal representation of the
+  compiler, once its passes are done.
+  Everything is a 64 bits word: a scalar is held normalized for its type, a
+  real as the bits of a double, and a @Flat structure by its address. `fp' is
+  the address of the current frame.
+*/
+Insert
+
+  - parent_clone:Clone := Clone
+
+Public
+
+  // Top of the stack of frames.
+  - sp:Int
+
+  // Set by @Li_loop_end, to ask the enclosing @Li_loop for one more turn.
+  - again:Boolean
+
+  - eval fp:Int :Int <- abstract
+
+  - set_sp a:Int <- ( sp := a; )
+
+  // Top of the debug contexts: a context is two words, `back' and `code'.
+  - top_context:Int
+
+  - set_top_context a:Int <- ( top_context := a; )

@@ -1,0 +1,125 @@
+Header
+  + name := Elito_window
+/*
+  The window of elito: it holds the tree of @Div of the editor (@root),
+  lays it out at the size of the window, draws it, and turns the events
+  of @Keyboard and @Hand into the old events of the editor (key codes of
+  @Key_code and @Touch).
+  */
+Inherit
+
+  + parent_window:Flat Window
+
+Public
+
+  - root:Div
+
+  - touch:Touch := Touch
+
+  - open (w,h:Int) title t:String_alias decorated d:Boolean <-
+  (
+    (d).if_false { Paper.unset (Paper.decorated); }
+    init t size (w,h)
+    root := Div.create_size (w.to_real32,h.to_real32).sizest
+    Paper.refresh_again
+  )
+
+  // Animation: while @animation > 0, the window is drawn again and again.
+
+  - animation:Int
+  - inc_animation <- ( animation := animation + 1; Paper.refresh_again; )
+  - dec_animation <- ( animation := (animation - 1).max 0; )
+
+  // Window.
+
+  - window_position:(Int,Int) <- Paper.get_window_pos win_ptr
+  - set_window_position (x,y:Int) <- Paper.set_window win_ptr pos (x,y)
+
+  - window_size:(Int,Int) <- Paper.get_window_size win_ptr
+  - set_window_size (w,h:Int) <- Paper.set_window win_ptr size (w,h)
+
+  - set_cursor c:Pointer <- Paper.set_cursor win_ptr img c
+  - get_cursor v:Int :Pointer <- Paper.get_cursor v
+
+  // Keyboard macro.
+
+  - record:Boolean
+  - macro:Array Uint16 := Array Uint16.create_with_capacity 32
+
+  - set_record b:Boolean <-
+  (
+    (b).if { macro.clear; }
+    record := b
+  )
+
+  - play <-
+  (
+    0.to (macro.upper) do { i:Int
+      Cmd_bar.key_event (macro.at i)
+    }
+  )
+
+  // Events.
+  
+  - scroll_sum:Real64
+  
+  - mouse_scroll (dx,dy:Real64) <-
+  // Mouse wheel or trackpad: 3 lines by notch (the small steps of a trackpad add up).
+  ( + n:Int
+    scroll_sum := scroll_sum + dy
+    n := scroll_sum.to_int
+    (n != 0).if {
+      scroll_sum := scroll_sum - n.to_real64
+      Elito_common.current_page.scroll_lines (- 3 * n)
+      Paper.refresh_again
+    }
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <-
+  ( + k:Uint16
+    0.to (s.upper) do { i:Int
+      k := Key_code.code (s.at i) cmd c
+      (record).if { macro.add_last k; }
+      Cmd_bar.key_event k
+    }
+    True
+  )
+
+  - event ev:Int :Boolean <-
+  ( + x,y:Int
+    (x,y) := (Hand.x_cur.to_int,Hand.y_cur.to_int)
+    (ev = Hand.move.to_int).if {
+      touch.set_xy (x,y)
+    }.elseif {(ev = Hand.clic.to_int) || {ev = Hand.lclic.to_int}} then {
+      touch.set_xy (x,y)
+      touch.set_z 1
+      touch.set_z 0
+    }.elseif {(ev = Hand.drag.to_int) || {ev = Hand.ldrag.to_int}} then {
+      (Hand.is_begin).if {
+        touch.set_xy (Hand.x_begin.to_int,Hand.y_begin.to_int)
+        touch.set_z 1
+      }
+      touch.set_xy (x,y)
+      (Hand.is_end).if { touch.set_z 0; }
+    }
+    True
+  )
+
+  // Display.
+
+  - draw <-
+  (
+    (root != NULL).if {
+      ((root.width != width) || {root.height != height}).if {
+        root.set_position (0,0) size (width,height)
+      }
+      root.draw pen
+      0.to (Div_out.draw_stack.upper) do { i:Int
+        Div_out.draw_stack.at i.draw_out pen
+      }
+      Elito.draw pen
+    }
+    (animation > 0).if { Paper.refresh_again; }
+  )
+
+

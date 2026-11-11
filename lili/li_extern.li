@@ -1,0 +1,55 @@
+Header
+  + name := Li_extern
+/* An external C, through its function in the `.so' of @Li_stub. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  // Argument values, and the local offset when the C code works directly on a
+  // local (it can then write it), or else -1.
+  + args:Array Li_node
+  + locals:Array Int
+  + index:Int
+  + fn:Int
+
+  - create i:Int args a:Array Li_node locals l:Array Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make i args a locals l
+    result
+  )
+
+  - make i:Int args a:Array Li_node locals l:Array Int <-
+  ( index := i; args := a; locals := l; )
+
+  - set_fn f:Int <- ( fn := f; )
+
+  - eval fp:Int :Int <-
+  ( + t,val,i,up,n,v,a,f,result:Int
+    // On the stack: `n' addresses, `n' values, then the result.
+    up := args.upper
+    n := up + 1
+    t := sp
+    val := t + n * 8
+    result := val + n * 8
+    sp := result + 16
+    {i <= up}.while_do {
+      (locals.at i >= 0).if {
+        v := fp + locals.at i
+      } else {
+        v := args.at i.eval fp
+        a := val + i * 8
+        `*(int64_t *)(@a) = @v`;
+        v := a
+      }
+      a := t + i * 8
+      `*(int64_t *)(@a) = @v`;
+      i := i + 1
+    }
+    f := fn
+    `((void (*)(int64_t *,int64_t *))(@f))((int64_t *)(@t),(int64_t *)(@result))`;
+    sp := t
+    `*(int64_t *)(@result)`:(Int)
+  )

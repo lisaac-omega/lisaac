@@ -3,7 +3,7 @@ Header
 /*Float (C `double` mapping).*/
   - type     := `double`;
   - default  := (0.to_raw_real64);
-  - export   := Real, Real80;
+  - export   := Real, Real80, ℂ, ℝ;
 Insert
   - parent_float_map64:Float_map64 := Float_map64
   - parent_float_real:Float_real := Float_real

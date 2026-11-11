@@ -3,8 +3,11 @@ Header
 Inherit
   - parent_json:Json := Json
   - parent_texp:Texp := Texp
-  - parent_any:Any := Any
 
+Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
+  
 Private
     
   - vars:Hmap Int Key String_alias := Hmap Int Key String_alias new
@@ -350,7 +353,7 @@ Public
     }
     
     filename := pth.to_string_alias
-    ((f := File_utils.open_read filename).is_null).if {
+    ((f := File_utils.open_read filename) = NULL).if {
       "Attempt to open-read file path \"".print; filename.print; "\" failed.\n".print
       exit 1
     }.elseif {(sz := File_utils.size f) > 0} then {
@@ -408,7 +411,7 @@ Public
   ( + f:Pointer
     + sz:Int
     + key,val:String_alias
-    ((f := File_utils.open_read n).is_null).if {
+    ((f := File_utils.open_read n) = NULL).if {
       "Attempt to open-read file path \"".print; n.print; "\" failed.\n".print
       exit 1
     }.elseif {(sz := File_utils.size f) > 0} then {

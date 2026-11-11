@@ -103,6 +103,8 @@ Public
   - set_line_join cap:Int <- ( line_join := cap; )
   
   - set_stroke_width w:Real32 <- ( stroke_width := w; )
+
+  - set_alpha a:Real32 <- ( alpha := a; )
   
   - set_miter_limit l:Real <- ( miter_limit := l; )
   

@@ -1,0 +1,16 @@
+Header
+  + name := Li_crash
+/* An explicit call on `NULL'. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  - create:Self <- clone
+
+  - eval fp:Int :Int <-
+  (
+    Li_runtime.call_on_null
+    0
+  )

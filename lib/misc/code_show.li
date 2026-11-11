@@ -30,7 +30,14 @@ Header
     --auto            Start in auto mode.
     --verbose         Print the commands.
 
-  The executable and C files are removed after each run.
+  The paths of the list are relative to the directory of the show, so the
+  executable can be started from anywhere, even from lisaac/bin for a show
+  of the lisaac directory.
+
+  An executable newer than its source file (compiled at the installation,
+  for example) is run as it is, without compiling again. After each run,
+  the C files are removed, and the executable too, unless it was already
+  there before the show compiled it.
   */
 Insert
 
@@ -41,6 +48,21 @@ Private
   + exec_directory:String_alias
 
   + background: Boolean := True
+
+  - chdir_to_show_directory <-
+  // Go to the directory of the executable, or to its parent for lisaac/bin.
+  (
+    String.tmp { dir:String_buffer
+      dir.copy (Command_args.executable_directory)
+      (dir.has_suffix "/bin/").if {
+        dir.append "../"
+      }
+      (Environment.chdir dir != 0).if {
+        Out # (Command_args.at 0) # ": cannot chdir into \"" # dir # "\".\n"
+        System.exit 1
+      }
+    }
+  )
 
   - show list:String_alias^n <-
   ( + path_li:String_alias
@@ -58,6 +80,7 @@ Private
       Out # "Possible options: --auto --verbose\n"
       System.exit 1
     }
+    chdir_to_show_directory
     File_utils.pwd_in working_directory
     working_directory.add_dirsep
     exec_directory := working_directory.to_string_alias

@@ -1,0 +1,136 @@
+Header
+  + name := Button
+Inherit
+  
+  + parent_click:Flat Click
+  
+Public
+  
+  - name:String_alias := "BUTTON"
+  
+  - width_min:Real32  <- margin_left + margin_right + width_txt
+  - height_min:Real32 <- margin_top + margin_bottom + height_txt
+  
+  + font:String_alias
+  + txt:String
+  + color:Color
+  + width_txt:Real32
+  + height_txt:Real32
+  
+  + design:Int
+  
+  - set_design d:Int :Self  <- ( design := d; self)
+  - set_font f:String_alias :Self <- ( font := f;   self)
+  - set_color c:Color :Self <- ( color := c;  self)
+  
+  - set_text t:String <- 
+  ( + pen:Pen
+    + x0,y0,x1,y1,w:Real32
+    txt := t
+    pen := Elito_window.pen
+    (pen = NULL).if {
+      (width_txt,height_txt) := (10.0*t.count,20.0)
+    } else {
+      pen.font_size 20.0
+      pen.font_face "sans-bold"
+      pen.text_align (Pen.align_left|Pen.align_top)
+      (w,x0,y0,x1,y1) := pen.text_bounds (0,0) msg t from 0 to (-1)
+      (width_txt,height_txt) := (x1,y1)
+    }
+  )
+
+  - create t:String action a:{Click;} :Self <-
+  [ ? {t != NULL}; ]
+  ( + result:Self
+    result := create_action a.check
+    result.set_text t
+    result.set_action a
+    result.set_font "sans-bold"
+    result.set_color (Color.white)
+    result.margin 5.0
+  )
+  
+  - draw pen:Pen <-
+  (
+    pen.save
+    (design)
+    .when 0 then { draw_classic pen; }
+    .when 1 then { draw_item pen;    }
+    parent_click.draw pen
+    pen.restore
+  )
+  
+  - draw_item pen:Pen <-
+  ( + x,y:Real32
+    + p:Paint
+    pen.font_size 20.0
+    pen.text_align (Pen.align_left|Pen.align_middle)
+    (x,y) := (xo+margin_left,yo+height/2-1)
+    (is_in).if {      
+      p := Paint.create_linear (x_min,y_max) to (x_max,y_min) 
+        color (Color.rgba(31,39,36,128)) to (Color.rgba(31,39,36,0))
+      pen.begin_path
+      pen.rect (xo+1,yo+1) size (width-2,height-3) radius 8
+      pen.fill_paint p
+      pen.fill
+      p.free
+      //
+      pen.font_face "sans-bold"
+      pen.fill_color (Color.rgba(0,0,0,255))
+      pen.text_box (x+1.0,y+1.0) width width msg txt
+      pen.fill_color (Color.rgba(0,255,0,255))
+    } else {
+      pen.font_face font
+      pen.fill_color (Color.rgba(0,0,0,255))
+      pen.text_box (x+1.0,y+1.0) width width msg txt
+      pen.fill_color color
+    }
+    pen.text_box (x,y) width width msg txt
+  )
+  
+  - draw_classic pen:Pen <-
+  ( + bg:Paint
+    + corner:Real32
+    + x0,y0,x1,y1,w,h:Real32
+    
+    draw_debug pen
+    
+    corner := 4.0
+        
+    x0 := xo+margin_left
+    y0 := yo+margin_top
+    x1 := xo+width-margin_right
+    y1 := yo+height-margin_bottom
+    w := x1-x0+1
+    h := y1-y0+1
+    
+    pen.begin_path
+    pen.rect (x0,y0) size (w,h) radius (corner-0.5)
+    pen.fill_color (Color.rgba(0,0,0,16))
+    pen.fill
+    
+    bg := Paint.create_linear (x0,y0) to (x0,y1)
+      color (Color.rgba(255,255,255,32))
+      to    (Color.rgba(  0,  0,  0,32))
+    
+    pen.begin_path
+    pen.rect (x0+1,y0+1) size (w-2,h-2) radius (corner-1)
+    pen.fill_paint bg
+    pen.fill
+    bg.free
+    
+    pen.begin_path
+    pen.rect (x0+0.5,y0+0.5) size (w-1,h-1) radius (corner-0.5)
+    pen.stroke_color (Color.rgba(0,0,0,48))
+    pen.stroke
+    
+    pen.font_size 20.0
+    pen.font_face "sans-bold"
+    pen.text_align (Pen.align_center|Pen.align_middle)
+    pen.fill_color (Color.rgba(255,255,255,160))
+    pen.text_box (xo+margin_left,yo+height/2-1) width w msg txt
+    (is_pressed).if_false {
+      pen.fill_color (Color.rgba(0,0,0,160))
+      pen.text_box (xo+margin_left,yo+height/2) width w msg txt
+    }
+  )

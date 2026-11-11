@@ -1,0 +1,773 @@
+Header
+  + name := Installer
+
+/*
+  The graphical installer of Lisaac Ω, itself written in Lisaac Ω.
+
+  It is compiled and started by build_lisaac (see ../../build_lisaac.li),
+  once the compiler and the configuration are ready. It presents
+  Lisaac Ω, lets the user choose the parts to install, then compiles
+  them one after the other: each part is a `build_lisaac --step ...'
+  command, run in the background, so that the window stays alive.
+
+  Exit status: 0 when the installation is complete, 3 when the window
+  is closed before (build_lisaac then tells to run install.sh again).
+
+  Shows: a @Game drawn by hand (boxes, texts, images), clickable zones
+  with a hand cursor (@Clickable, inserted next to @Game),
+  processes run in the background and polled at each frame.
+
+  Created and maintained by Benoît Sonntag and Dominique Colnet.
+  */
+Inherit
+
+  + parent_game:Flat Game
+
+Insert
+
+  - parent_colors:Flat Colors
+  - parent_clickable:Clickable := Clickable
+
+Private
+
+  //
+  // The parts to install.
+  //
+
+  - lisaac_part:Int := 0
+  - gadgets_part:Int := 4
+  - turtle_part:Int := 5
+  - games_part:Int := 6
+  - tours_part:Int := 7
+
+  - part_name:Array String_alias :=
+  new Array String_alias of ("lisaac", "elit", "elito", "calculator", "5 gadgets", "Logo turtle", "9 games", "guided tours")
+
+  - part_time:Array String_alias :=
+  new Array String_alias of ("already compiled", "compiles in a few minutes", "compiles in under a minute", "compiles in a few seconds", "a few seconds each", "about a minute", "a few seconds each", "a few seconds")
+
+  - part_about:Array String_alias :=
+  new Array String_alias of (
+    "The compiler, the base of everything. bin/lisaac.c is the portable C \
+    \it generated from its own Lisaac Ω source code. Already compiled.",
+    "The graphical environment, with the whole compiler inside. True \
+    \mathematical symbols, and a view of the global compilation, the very \
+    \heart of Lisaac Ω. Young, with plenty of room to grow.",
+    "A light and fast editor, for classic everyday editing.",
+    "A gadget: integers without size limit, in a window or in a terminal.",
+    "For the desktop: a sticky note, a tip of the day, two Ω eyes \
+    \that follow the mouse, an aquarium and a Christmas sky. Short \
+    \programs, models for your own gadgets.",
+    "To learn programming from the very first steps (in French): drawings, \
+    \from a square to fractals, compiled in advance so that tortue_show \
+    \starts them at once.",
+    "Snake, Tetris, Solitaire, Arrow out, Connect four, Breakout, \
+    \Minesweeper, Gems and Shooter: small programs, written to be read. \
+    \Snake and Solitaire were first written by students.",
+    "welcome, big_show, tortue_show, game_show and gadgets_show: tours of \
+    \the language, its examples, the Logo turtle, the games and the gadgets."
+  )
+
+  - selected:Array Boolean
+
+  // State of each part:
+  - waiting:Int := 0
+  - running:Int := 1
+  - done:Int := 2
+  - failed:Int := 3
+  - skipped:Int := 4
+
+  - part_state:Array Int
+
+  //
+  // The tasks: one `build_lisaac --step' command each.
+  //
+
+  - task_step:Array String_alias
+  - task_part:Array Int
+  - task_label:Array String_alias
+
+  - next_task:Int
+  - current:Int := -1
+  - pid:Int := -1
+
+  // For each part: its number of tasks, of finished ones, of failed ones.
+  - part_count:Array Int
+  - part_finished:Array Int
+  - part_failures:Array Int
+
+  - add_task step:String_alias part p:Int label l:String_alias <-
+  (
+    task_step.add_last step
+    task_part.add_last p
+    task_label.add_last l
+    part_count.at p put (part_count.at p + 1)
+  )
+
+  - install <-
+  // Build the list of the tasks, from the selected parts.
+  (
+    task_step := Array String_alias.create_with_capacity 16
+    task_part := Array Int.create_with_capacity 16
+    task_label := Array String_alias.create_with_capacity 16
+    1.to (part_name.upper) do { p:Int
+      if (! selected.at p) then {
+        part_state.at p put skipped
+      }
+    }
+    if (selected.at 1) then { add_task "elit" part 1 label "" }
+    if (selected.at 2) then { add_task "elito" part 2 label "" }
+    if (selected.at 3) then { add_task "calculator" part 3 label "" }
+    if (selected.at gadgets_part) then {
+      add_task "gadget postit" part gadgets_part label "postit"
+      add_task "gadget did_you_know" part gadgets_part label "did_you_know"
+      add_task "gadget omega_eyes" part gadgets_part label "omega_eyes"
+      add_task "gadget aquarium" part gadgets_part label "aquarium"
+      add_task "gadget christmas" part gadgets_part label "christmas"
+    }
+    if (selected.at turtle_part) then { add_task "turtle" part turtle_part label "" }
+    if (selected.at games_part) then {
+      add_task "game snake snake" part games_part label "snake"
+      add_task "game tetris tetris" part games_part label "tetris"
+      add_task "game solitaire solitaire" part games_part label "solitaire"
+      add_task "game arrow_out arrow_out" part games_part label "arrow_out"
+      add_task "game connect_four connect_four" part games_part label "connect_four"
+      add_task "game break breakout" part games_part label "breakout"
+      add_task "game minesweeper minesweeper" part games_part label "minesweeper"
+      add_task "game gems gems" part games_part label "gems"
+      add_task "game shooter shooter" part games_part label "shooter"
+    }
+    add_task "shows" part tours_part label ""
+    page := installing_page
+  )
+
+  - start_task <-
+  // Run the task @next_task in the background.
+  ( + p:Int
+    current := next_task
+    next_task := next_task + 1
+    p := task_part.at current
+    part_state.at p put running
+    String.tmp { cmd:String_buffer
+      cmd # '\"' # lisaac_dir # "build_lisaac\" --step " # (task_step.at current)
+      pid := Environment.run cmd background
+    }
+    if (pid = -1) then {
+      end_task 1
+    }
+  )
+
+  - end_task status:Int <-
+  ( + p:Int
+    p := task_part.at current
+    part_finished.at p put (part_finished.at p + 1)
+    if (status != 0) then {
+      part_failures.at p put (part_failures.at p + 1)
+    }
+    if (part_finished.at p = part_count.at p) then {
+      part_state.at p put ((part_failures.at p = 0).ok done or failed)
+    }
+    (current, pid) := (-1, -1)
+  )
+
+  - some_failure:Boolean <-
+  ( + result:Boolean
+    part_state.foreach { s:Int
+      result := result || {s = failed}
+    }
+    result
+  )
+
+  //
+  // The pages.
+  //
+
+  - welcome_page:Int := 0
+  - installing_page:Int := 1
+  - ready_page:Int := 2
+
+  - page:Int
+
+  - frame:Int
+
+  - tips:Array String_alias :=
+  new Array String_alias of (
+    "Everything you see here, this installer included, is written in \
+    \Lisaac Ω and compiled on your own machine.",
+    "The compiler compiles itself: bin/lisaac.c, the portable C, was \
+    \generated by lisaac from its own Lisaac Ω source code.",
+    "Even `if' and `while' are not keywords in Lisaac Ω: they are ordinary \
+    \methods of the library, and the compiler makes them cost nothing.",
+    "Lisaac Ω has no classes: every object is a prototype, and new objects \
+    \are its clones.",
+    "Types are checked at compile time, contracts (pre- and \
+    \postconditions) while debugging. Add -boost for the fast executable.",
+    "The same program runs on Linux, macOS, Windows, Android and in a web \
+    \browser.",
+    "elit shows the code with true mathematical symbols, and lets you \
+    \watch the compilation of the whole program at work.",
+    "The calculator has no size limit: in a terminal, try calculator '100!'"
+  )
+
+  //
+  // Paths.
+  //
+
+  - lisaac_dir:String_alias
+  // With a final `/'.
+
+  - img_dir:String
+
+  - run_tool name:String with arg:String <-
+  // Start @name (from lisaac/bin) on @arg, without waiting.
+  (
+    String.tmp { cmd:String_buffer
+      cmd # '\"' # lisaac_dir # "bin/" # name # '\"'
+      if (arg != NULL) then {
+        cmd # " \"" # arg # '\"'
+      }
+      Environment.run cmd background
+    }
+  )
+
+  - read_readme <-
+  (
+    if (selected.at 2) then {
+      run_tool "elito" with (lisaac_dir + "README")
+    }.elseif {selected.at 1} then {
+      run_tool "elit" with (lisaac_dir + "README")
+    } else {
+      open_url (lisaac_dir + "README")
+    }
+  )
+
+  //
+  // Look.
+  //
+
+  - page_width:Real32 := 1120
+  - page_height:Real32 := 860
+  - left_width:Real32 := 380
+  - margin:Real32 := 32
+
+  - ink:Color := Color.rgb(240,244,250)
+  - ink_dim:Color := Color.rgba(220,228,240,200)
+  - accent:Color := Color.rgb(46,184,110)
+  - highlight:Color := Color.rgb(242,190,70)
+  - wrong:Color := Color.rgb(230,80,70)
+  - card:Color := Color.rgba(255,255,255,16)
+
+  - logo_img:Int
+  - partner_img:Array Int
+  - partner_url:Array String_alias :=
+  new Array String_alias of (
+    "https://www.univ-lorraine.fr/", "https://www.unistra.fr/",
+    "https://www.loria.fr/", "https://www.inria.fr/"
+  )
+
+  // Origin of the page, centered in the window, and its zoom, which
+  // follows the size of the window, texts included:
+  - ox:Real32
+  - oy:Real32
+  - zoom:Real32 := 1
+
+  - update_zoom <-
+  // The page as large as possible in the window, within limits that
+  // keep it readable.
+  (
+    zoom := (((width / page_width).min (height / page_height)).max 0.5).min 2.5
+    (ox,oy) := (((width - page_width * zoom) / 2).max 0, ((height - page_height * zoom) / 2).max 0)
+  )
+
+  //
+  // Clickable zones, recorded at each frame by @draw (see @Clickable).
+  //
+
+  - install_id:Int := 1
+  - quit_id:Int := 2
+  - readme_id:Int := 3
+  - tour_id:Int := 4
+  - close_id:Int := 5
+  - site_id:Int := 6
+  - mail_id:Int := 7
+  - mail2_id:Int := 8
+  - check_id:Int := 10 // + part
+  - partner_id:Int := 20 // + partner
+
+Public
+
+  - hand_position:(Real32,Real32) <-
+  // The mouse in the coordinates of the page (see @update_zoom).
+  ((Hand.x_cur - ox) / zoom, (Hand.y_cur - oy) / zoom)
+
+Private
+
+  //
+  // Drawing tools.
+  //
+
+  - box (x,y:Real32) size (w,h:Real32) radius r:Real32 color c:Color <-
+  (
+    begin_path
+    rect (x,y) size (w,h) radius r
+    fill_color c
+    fill
+  )
+
+  - outline (x,y:Real32) size (w,h:Real32) radius r:Real32 color c:Color <-
+  (
+    begin_path
+    rect (x,y) size (w,h) radius r
+    stroke_color c
+    stroke_width 1.5
+    stroke
+  )
+
+  - font s:Real32 bold b:Boolean color c:Color <-
+  (
+    font_size s
+    font_face_id (Font sys ((b).ok (Font bold) or (Font roman)))
+    fill_color c
+    text_align (align_left | align_top)
+  )
+
+  - say (x,y:Real32) msg m:String :Real32 <-
+  // One line of text: the result is its end, on the right.
+  (
+    text (x,y) msg m
+  )
+
+  - para (x,y:Real32) width w:Real32 msg m:String :Real32 <-
+  // A paragraph, broken in lines of width @w: the result is the y
+  // below it.
+  ( + asc,des,lineh:Real32
+    (asc,des,lineh) := text_metrics
+    text_box (x,y) width w msg m + lineh
+  )
+
+  - picture img:Int at (x,y:Real32) fit (w,h:Real32) <-
+  // The image @img, as large as possible in (@w,@h), centered.
+  ( + iw,ih:Int
+    + s,dw,dh:Real32
+    + p:Paint
+    if (img > 0) then {
+      (iw,ih) := image_size img
+      s := (w / iw.to_real32).min (h / ih.to_real32)
+      (dw,dh) := (iw.to_real32 * s, ih.to_real32 * s)
+      p := Paint.create_pattern (x + (w - dw) / 2, y + (h - dh) / 2) size (dw,dh) img_id img angle 0 alpha 1
+      begin_path
+      rect (x + (w - dw) / 2, y + (h - dh) / 2) size (dw,dh)
+      fill_paint p
+      fill
+      p.free
+    }
+  )
+
+  - button (x,y:Real32) size (w,h:Real32) msg m:String id n:Int primary p:Boolean <-
+  ( + over:Boolean
+    over := is_over (x,y) size (w,h)
+    if p then {
+      box (x,y) size (w,h) radius (h / 2) color ((over).ok (accent.set_af 1) or (accent.set_af 0.85))
+    } else {
+      box (x,y) size (w,h) radius (h / 2) color ((over).ok (Color.rgba(255,255,255,40)) or card)
+      outline (x,y) size (w,h) radius (h / 2) color ink_dim
+    }
+    font 18 bold True color ink
+    text_align (align_center | align_middle)
+    text (x + w / 2, y + h / 2) msg m
+    zone (x,y) size (w,h) id n
+  )
+
+  - tick (x,y:Real32) size s:Real32 color c:Color <-
+  (
+    begin_path
+    move_to (x + s * 0.22, y + s * 0.52)
+    line_to (x + s * 0.43, y + s * 0.72)
+    line_to (x + s * 0.78, y + s * 0.30)
+    stroke_color c
+    stroke_width 3
+    stroke
+  )
+
+  - cross (x,y:Real32) size s:Real32 color c:Color <-
+  (
+    begin_path
+    move_to (x + s * 0.28, y + s * 0.28)
+    line_to (x + s * 0.72, y + s * 0.72)
+    move_to (x + s * 0.72, y + s * 0.28)
+    line_to (x + s * 0.28, y + s * 0.72)
+    stroke_color c
+    stroke_width 3
+    stroke
+  )
+
+  - spinner (x,y:Real32) size s:Real32 <-
+  ( + a:Real32
+    a := frame.to_real32 / 8
+    begin_path
+    arc (x + s / 2, y + s / 2) radius (s * 0.38) angle (a, a + 4.2) direction 2
+    stroke_color highlight
+    stroke_width 3
+    stroke
+  )
+
+  //
+  // The left panel: who we are.
+  //
+
+  - draw_left <-
+  ( + x,y,w,pw,ph:Real32
+    // The panel goes to the edges of the window, whatever its shape.
+    box (- ox / zoom, - oy / zoom) size (left_width + ox / zoom, height / zoom) radius 0 color (Color.rgba(0,0,0,60))
+    (x,w) := (margin, left_width - 2 * margin)
+    box (x,20) size (w,118) radius 12 color ((is_over (x,20) size (w,118)).ok white or (Color.rgba(255,255,255,235)))
+    picture logo_img at (x + 12,26) fit (w - 24,106)
+    zone (x,20) size (w,118) id site_id
+    font 46 bold True color ink
+    text_align (align_center | align_top)
+    text (left_width / 2, 150) msg "Lisaac Ω"
+    font 16 bold False color ink_dim
+    y := para (x,210) width w msg "A programming language designed to teach programming on solid \
+    \foundations, from the very first steps up to real software."
+    //
+    y := y + 22
+    font 21 bold True color ink
+    say (x,y) msg "Benoît Sonntag"
+    font 15 bold False color highlight
+    say (x,y + 26) msg "Main author"
+    font 14 bold False color ink_dim
+    y := para (x,y + 46) width w msg "Associate professor at the Université de Strasbourg, author of \
+    \the Lisaac language, expert in compilation and system programming. \
+    \Thanks to his expertise, the Lisaac Ω compiler reaches performance \
+    \comparable to, or even better than, C and C++."
+    y := y + 14
+    font 21 bold True color ink
+    say (x,y) msg "Dominique Colnet"
+    font 14 bold False color ink_dim
+    y := para (x,y + 26) width w msg "Professor at the IUT Nancy-Charlemagne, Université de Lorraine, \
+    \and member of the LORIA. Author of SmartEiffel, the GNU Eiffel \
+    \compiler, and supervisor of Benoît's PhD thesis. A specialist in \
+    \programming languages, compilation and software engineering, he is \
+    \fully involved in Lisaac Ω and still very active, working hand in hand \
+    \with Benoît Sonntag."
+    //
+    (pw,ph) := ((w - 12) / 2, 64)
+    y := page_height - 2 * ph - 70
+    0.to 3 do { i:Int
+      + px,py:Real32
+      (px,py) := (x + (i % 2).to_real32 * (pw + 12), y + (i / 2).to_real32 * (ph + 12))
+      box (px,py) size (pw,ph) radius 8 color ((is_over (px,py) size (pw,ph)).ok white or (Color.rgba(255,255,255,230)))
+      picture (partner_img.at i) at (px + 8, py + 6) fit (pw - 16, ph - 12)
+      zone (px,py) size (pw,ph) id (partner_id + i)
+    }
+    font 17 bold True color ((is_over (x, page_height - 44) size (w,24)).ok highlight or accent)
+    text_align (align_center | align_top)
+    text (left_width / 2, page_height - 44) msg "https://lisaac.org"
+    zone (x, page_height - 44) size (w,24) id site_id
+  )
+
+  //
+  // The right panel: the pages.
+  //
+
+  - draw_parts (x,top:Real32) width w:Real32 :Real32 <-
+  // The list of the parts, with their check box or their state.
+  ( + s,ty,end,y:Real32
+    + st:Int
+    y := top
+    s := 26
+    0.to (part_name.upper) do { p:Int
+      st := part_state.at p
+      if (page = welcome_page) then {
+        // Empty boxes with a tick, not the green disks of the installed parts.
+        if ((p = lisaac_part) || {p = tours_part}) then {
+          outline (x,y) size (s,s) radius 6 color (ink_dim.set_af 0.4)
+          tick (x,y) size s color (ink_dim.set_af 0.6)
+        } else {
+          box (x,y) size (s,s) radius 6 color card
+          outline (x,y) size (s,s) radius 6 color ((selected.at p).ok accent or ink_dim)
+          if (selected.at p) then {
+            tick (x,y) size s color accent
+          }
+          zone (x - 4, y - 4) size (w, 50) id (check_id + p)
+        }
+      }.elseif {st = running} then {
+        spinner (x,y) size s
+      }.elseif {(st = done) || {p = lisaac_part}} then {
+        box (x,y) size (s,s) radius (s / 2) color accent
+        tick (x,y) size s color ink
+      }.elseif {st = failed} then {
+        box (x,y) size (s,s) radius (s / 2) color wrong
+        cross (x,y) size s color ink
+      }.elseif {st = skipped} then {
+        outline (x,y) size (s,s) radius (s / 2) color (ink_dim.set_af 0.3)
+      } else {
+        outline (x,y) size (s,s) radius (s / 2) color ink_dim
+      }
+      //
+      font 19 bold True color ((st = skipped).ok (ink_dim.set_af 0.4) or ink)
+      end := say (x + 42, y + 2) msg (part_name.at p)
+      font 14 bold True color ((st = skipped).ok (ink_dim.set_af 0.4) or highlight)
+      String.tmp { msg:String_buffer
+        msg # "in Lisaac Ω  ·  " # (part_time.at p)
+        if (st = skipped) then {
+          msg # "  ·  not installed"
+        }.elseif {(st = running) && {part_count.at p > 1}} then {
+          msg # "  ·  " # (task_label.at current) # " ("
+          msg # (part_finished.at p + 1) # '/' # (part_count.at p) # ')'
+        }.elseif {(st = failed) && {part_count.at p > 1}} then {
+          msg # "  ·  " # (part_failures.at p) # " failed"
+        }
+        say (end + 14, y + 6) msg msg
+      }
+      font 14 bold False color ((st = skipped).ok (ink_dim.set_af 0.3) or ink_dim)
+      ty := para (x + 42, y + 28) width (w - 42) msg (part_about.at p)
+      y := ty + 12
+    }
+    y
+  )
+
+  - draw_welcome (x,top:Real32) width w:Real32 <-
+  ( + by,y:Real32
+    y := top
+    font 34 bold True color ink
+    say (x,y) msg "Install Lisaac Ω"
+    font 15 bold False color ink_dim
+    y := para (x,y + 46) width w msg "Free software (GNU GPL v3), designed and developed in French public \
+    \higher education and research. A sovereign and open tool to teach \
+    \programming, from the first steps up to the compiler itself."
+    font 16 bold True color highlight
+    say (x,y + 14) msg "Choose the parts to install:"
+    y := draw_parts (x,y + 46) width w
+    //
+    by := page_height - margin - 48
+    box (x, by - 92) size (w,78) radius 10 color card
+    font 15 bold True color accent
+    say (x + 16, by - 82) msg "A clean installation"
+    font 14 bold False color ink_dim
+    para (x + 16, by - 60) width (w - 32) msg "Everything stays in the lisaac directory: no administrator rights, no \
+    \system file touched, nothing downloaded, no telemetry. Only one marked \
+    \line of your shell startup file puts lisaac/bin in your PATH."
+    button (x + w - 180, by) size (180,48) msg "Install" id install_id primary True
+    button (x + w - 330, by) size (130,48) msg "Quit" id quit_id primary False
+  )
+
+  - draw_installing (x,y:Real32) width w:Real32 <-
+  ( + by,ratio:Real32
+    + tip:String_alias
+    font 34 bold True color ink
+    say (x,y) msg "Installing..."
+    font 15 bold False color ink_dim
+    para (x,y + 46) width w msg "Each part is compiled from its Lisaac Ω source code, right here. \
+    \elit, the largest, takes a few minutes."
+    draw_parts (x,y + 90) width w
+    //
+    by := page_height - margin - 120
+    ratio := (next_task - (pid != -1).to_int).to_real32 / task_step.count.to_real32
+    box (x,by) size (w,8) radius 4 color card
+    box (x,by) size (w * ratio,8) radius 4 color accent
+    box (x, by + 24) size (w,96) radius 10 color card
+    font 15 bold True color highlight
+    say (x + 16, by + 36) msg "Did you know?"
+    tip := tips.at ((frame / 420) % tips.count)
+    font 15 bold False color ink
+    para (x + 16, by + 60) width (w - 32) msg tip
+  )
+
+  - draw_ready (x,top:Real32) width w:Real32 <-
+  ( + by,cy,y,h,ly:Real32
+    y := top
+    font 34 bold True color ink
+    say (x,y) msg "Lisaac Ω is ready"
+    font 15 bold False color ink_dim
+    y := para (x,y + 46) width w msg "Open a new terminal window: every command is now in your PATH, \
+    \from any directory."
+    if some_failure then {
+      font 15 bold True color wrong
+      y := para (x,y + 6) width w msg "Some parts could not be compiled: to see why, run \
+      \./install.sh --verbose in a terminal."
+    }
+    //
+    y := y + 12
+    // One more line for the games, one more for the gadgets.
+    h := 152 + 28 * ((selected.at games_part).to_int + (selected.at gadgets_part).to_int)
+    box (x,y) size (w,h) radius 10 color (Color.rgba(0,0,0,90))
+    cy := y + 14
+    font 16 bold True color accent
+    say (x + 18, cy) msg "elito README"
+    say (x + 18, cy + 28) msg "big_show"
+    say (x + 18, cy + 56) msg "tortue_show"
+    say (x + 18, cy + 84) msg "elit example/hello_world.li"
+    say (x + 18, cy + 112) msg "calculator '2^200'"
+    font 15 bold False color ink_dim
+    say (x + 300, cy + 2) msg "read the README first"
+    say (x + 300, cy + 30) msg "a guided tour of Lisaac Ω"
+    say (x + 300, cy + 58) msg "the Logo turtle, for beginners (in French)"
+    say (x + 300, cy + 86) msg "read, compile and run a program"
+    say (x + 300, cy + 114) msg "integers without limit"
+    ly := cy + 142
+    font 15 bold True color highlight
+    if (selected.at games_part) then {
+      say (x + 18, ly) msg "snake, tetris, solitaire, arrow_out, connect_four, breakout, minesweeper, gems, shooter"
+      ly := ly + 28
+    }
+    if (selected.at gadgets_part) then {
+      say (x + 18, ly) msg "gadgets_show, postit, did_you_know, omega_eyes, aquarium, christmas"
+    }
+    //
+    y := y + h + 16
+    box (x,y) size (w,224) radius 10 color card
+    font 17 bold True color ink
+    say (x + 16, y + 14) msg "Whoever and wherever you are, let's talk!"
+    font 15 bold False color ink
+    para (x + 16, y + 42) width (w - 32) msg "Lisaac Ω is a true technological achievement: French, \
+    \free of charge, free software, and it comes from the Grand Est region of France. \
+    \Its performance is real: in Lisaac Ω, you can write code that runs faster than C, \
+    \and that is safer."
+    font 15 bold False color ink_dim
+    para (x + 16, y + 106) width (w - 32) msg "Requests from the French Éducation nationale \
+    \naturally come first. But we are also ready to help any other organization, in \
+    \France or abroad, with advice and support on Lisaac Ω: teaching, portable software, \
+    \robotics... Dominique Colnet would be glad to come and present it (he speaks fluent \
+    \English), as he already did in the Reims and Lorraine académies."
+    font 16 bold True color ((is_over (x + 16, y + 188) size (260,22)).ok highlight or accent)
+    say (x + 16, y + 188) msg "Dominique.Colnet@lisaac.org"
+    zone (x + 16, y + 188) size (260,22) id mail_id
+    font 15 bold False color ((is_over (x + 300, y + 189) size (260,22)).ok highlight or ink_dim)
+    say (x + 300, y + 189) msg "or Dominique.Colnet@loria.fr"
+    zone (x + 300, y + 189) size (260,22) id mail2_id
+    //
+    y := y + 244
+    font 14 bold False color ink_dim
+    y := para (x,y) width w msg "Designed and developed in French public higher education and \
+    \research, with the support of the Université de Strasbourg, the Université de \
+    \Lorraine, the IUT Nancy-Charlemagne, the LORIA and INRIA."
+    font 15 bold True color highlight
+    para (x,y + 8) width w msg "New to Lisaac Ω? Start with the README: \
+    \it explains the essentials in a few minutes."
+    //
+    by := page_height - margin - 48
+    button (x + w - 220, by) size (220,48) msg "Read the README" id readme_id primary True
+    button (x + w - 400, by) size (164,48) msg "Take the tour" id tour_id primary False
+    button (x + w - 520, by) size (104,48) msg "Close" id close_id primary False
+  )
+
+Public
+
+  - init_graph <-
+  (
+    img_dir := lisaac_dir + "elit/assets/img/"
+    logo_img := create_image (img_dir + "lisaac.png") flags 0
+    partner_img := Array Int.create_with_capacity 4
+    partner_img.add_last (create_image (img_dir + "partner_ul.png") flags 0)
+    partner_img.add_last (create_image (img_dir + "partner_uds.png") flags 0)
+    partner_img.add_last (create_image (img_dir + "partner_loria.png") flags 0)
+    partner_img.add_last (create_image (img_dir + "partner_inria.png") flags 0)
+  )
+
+  - motion <-
+  // At each frame: follow the task in progress, or start the next one.
+  ( + status:Int
+    frame := frame + 1
+    if (page = installing_page) then {
+      if (pid != -1) then {
+        status := Environment.poll_process pid
+        if (status != -2) then {
+          end_task status
+        }
+      }
+      if (pid = -1) then {
+        if (next_task < task_step.count) then {
+          start_task
+        } else {
+          page := ready_page
+        }
+      }
+    }
+  )
+
+  - draw <-
+  ( + p:Paint
+    + x,w:Real32
+    p := Paint.create_linear (0,0) to (0,height) color (Color.rgb(14,22,44)) to (Color.rgb(30,50,92))
+    begin_path
+    rect (0,0) size (width,height)
+    fill_paint p
+    fill
+    p.free
+    //
+    update_zoom
+    save
+    translate (ox,oy)
+    scale (zoom,zoom)
+    clear_zones
+    draw_left
+    (x,w) := (left_width + 40, page_width - left_width - 40 - margin)
+    if (page = welcome_page) then {
+      draw_welcome (x,margin) width w
+    }.elseif {page = installing_page} then {
+      draw_installing (x,margin) width w
+    } else {
+      draw_ready (x,margin) width w
+    }
+    restore
+  )
+
+  - event ev:Int :Boolean <-
+  ( + id:Int
+    update_cursor
+    if (ev = Hand clic) then {
+      id := zone_under_hand
+      if (id = install_id) then {
+        install
+      }.elseif {id = quit_id} then {
+        Paper.exit 3
+      }.elseif {id = close_id} then {
+        Paper.exit 0
+      }.elseif {id = readme_id} then {
+        read_readme
+      }.elseif {id = tour_id} then {
+        run_tool "big_show" with NULL
+      }.elseif {id = site_id} then {
+        open_url "https://lisaac.org"
+      }.elseif {id = mail_id} then {
+        open_url "mailto:Dominique.Colnet@lisaac.org"
+      }.elseif {id = mail2_id} then {
+        open_url "mailto:Dominique.Colnet@loria.fr"
+      }.elseif {id >= partner_id} then {
+        open_url (partner_url.at (id - partner_id))
+      }.elseif {id >= check_id} then {
+        selected.at (id - check_id) put (! selected.at (id - check_id))
+      }
+    }
+    True
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <- True
+
+  - on_close <-
+  (
+    Paper.exit ((page = ready_page).ok 0 or 3)
+  )
+
+  - main <-
+  (
+    String.tmp { dir:String_buffer
+      dir.copy (Command_args.executable_directory)
+      dir.append "../../"
+      Dirent.reduce_path dir
+      lisaac_dir := dir.to_string_alias
+    }
+    selected := Array Boolean.create (part_name.count)
+    selected.set_all_with True
+    part_state := Array Int.create (part_name.count)
+    part_count := Array Int.create (part_name.count)
+    part_finished := Array Int.create (part_name.count)
+    part_failures := Array Int.create (part_name.count)
+    if (Command_args.option_shift "--all") then {
+      // build_lisaac --all: install everything, without question.
+      install
+    }
+    init "Lisaac Ω installation" size (page_width.to_int, page_height.to_int)
+    Paper.run
+  )

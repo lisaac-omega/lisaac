@@ -2,10 +2,13 @@ Header
   + name := Type
 Inherit
   - parent_clone:Clone := Clone
-  - parent_any:Any := Any
   
 //Section Insert
 //  - parent_print:PRINT := PRINT
+  
+Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
   
 Public
   

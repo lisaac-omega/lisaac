@@ -1,0 +1,102 @@
+Header
+  + name := Csctx
+/* @stbtt__csctx of stb_truetype v1.24: the context of a CFF charstring run,
+   which either counts the vertices and their bounds (@bounds), or stores them. */
+Inherit
+
+  - parent_ttf_constant:Ttf_constant := Ttf_constant
+
+Public
+
+  + bounds:Boolean
+  + started:Boolean
+  + first_x:Real32
+  + first_y:Real32
+  + x:Real32
+  + y:Real32
+  + min_x:Int32
+  + max_x:Int32
+  + min_y:Int32
+  + max_y:Int32
+  + pvertices:Array (Flat Tt_vertex)
+  + num_vertices:Int
+
+  - create b:Boolean :Self <-
+  // As @STBTT__CSCTX_INIT.
+  ( + result:Self
+    result := clone
+    result.make b
+    result
+  )
+
+  - make b:Boolean <-
+  (
+    bounds := b
+    started := False
+    (first_x,first_y,x,y) := (0,0,0,0)
+    (min_x,max_x,min_y,max_y) := (0,0,0,0)
+    pvertices := NULL
+    num_vertices := 0
+  )
+
+  - set_pvertices v:Array (Flat Tt_vertex) <- ( pvertices := v; )
+
+  - track_vertex (px,py:Int32) <-
+  (
+    ((px > max_x) || {! started}).if { max_x := px; }
+    ((py > max_y) || {! started}).if { max_y := py; }
+    ((px < min_x) || {! started}).if { min_x := px; }
+    ((py < min_y) || {! started}).if { min_y := py; }
+    started := True
+  )
+
+  - v (type:Uint8, px,py,pcx,pcy,pcx1,pcy1:Int32) <-
+  (
+    (bounds).if {
+      track_vertex (px, py)
+      (type = vcubic).if {
+        track_vertex (pcx, pcy)
+        track_vertex (pcx1, pcy1)
+      }
+    } else {
+      pvertices.at num_vertices.make type pos (px,py,pcx,pcy)
+      pvertices.at num_vertices.set_cx1 (pcx1.to_raw_int16)
+      pvertices.at num_vertices.set_cy1 (pcy1.to_raw_int16)
+    }
+    num_vertices := num_vertices + 1
+  )
+
+  - close_shape <-
+  (
+    ((first_x != x) || {first_y != y}).if {
+      v (vline, first_x.to_raw_int32, first_y.to_raw_int32, 0, 0, 0, 0)
+    }
+  )
+
+  - rmove_to (dx,dy:Real32) <-
+  (
+    close_shape
+    x := x + dx
+    first_x := x
+    y := y + dy
+    first_y := y
+    v (vmove, x.to_raw_int32, y.to_raw_int32, 0, 0, 0, 0)
+  )
+
+  - rline_to (dx,dy:Real32) <-
+  (
+    x := x + dx
+    y := y + dy
+    v (vline, x.to_raw_int32, y.to_raw_int32, 0, 0, 0, 0)
+  )
+
+  - rccurve_to (dx1,dy1,dx2,dy2,dx3,dy3:Real32) <-
+  ( + cx1,cy1,cx2,cy2:Real32
+    cx1 := x + dx1
+    cy1 := y + dy1
+    cx2 := cx1 + dx2
+    cy2 := cy1 + dy2
+    x := cx2 + dx3
+    y := cy2 + dy3
+    v (vcubic, x.to_raw_int32, y.to_raw_int32, cx1.to_raw_int32, cy1.to_raw_int32, cx2.to_raw_int32, cy2.to_raw_int32)
+  )

@@ -26,10 +26,8 @@ Public
     make p name n type t
     {(i <= list_idf.upper) && {list_idf.at i.n_idf != nn}}.while_do { i := i + 1; }
     (i > list_idf.upper).if {
-      //n.print; " new".println
       list_idf.add_last self     
     } else {
-      //n.print; " resuse".println
       first := list_idf.at i
     }
     n_idf := nn;
@@ -53,7 +51,6 @@ Public
     }
     
     (first = NULL).if {    
-      //"Creation de ".print; n_idf.println
       lpow := Local.create position name n_idf style ' ' type (type_integer.default)      
       arg_lst.add_last lpow
       (verify).if {
@@ -66,7 +63,6 @@ Public
       l := arg_lst.at i      
       lpow := l.lpow
       nv := l.pow
-      //"Reuse de ".print; n_idf.print; nv.println
     };
     tf := t.to_run_for p pos (position.prototype.filename)
     //
@@ -98,7 +94,6 @@ Public
     //+ n:INTEGER_CST
     tf := type.to_run_for p pos (position.prototype.filename)
     (first = NULL).if {
-      //n ?= larg.at idx
       nv := pow //n.value
       ridx := idx + 1      
     } else {
@@ -113,4 +108,3 @@ Public
     ridx + nv
   )
 
-  

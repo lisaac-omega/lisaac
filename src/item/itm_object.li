@@ -1,9 +1,9 @@
 Header
   + name := Itm_object
 /*Parent item object*/
-Inherit
+Insert
 
-  + parent_any:Flat Any
+  + parent_lisaac_common:Flat Lisaac_common
 
   //- parent_hashable:HASHABLE := HASHABLE
 
@@ -77,11 +77,6 @@ Public
   //
 
   - verify:Boolean
-
-  - set_verify v:Boolean <-
-  (
-    verify := v
-  )
 
   - pop_stack_until stack_top:Int <-
   ( + var,var2:Local
@@ -172,15 +167,25 @@ Public
   )
   
   - product_cmp (v1,v2:Expr) ext ext:Expr_binary_cmp pos p:Position :Expr <-
-  ( + result:Expr
+  ( + result,r1:Expr
     + s:Slot
     + a:Array Expr
     + n:Node
-    s := v1.static_type.get_slot "__infix_equal"
+    + t1,t2:Type_full
+    r1 := v1
+    (t1,t2) := (v1.static_type, v2.static_type)
+    s := t1.get_slot "__infix_equal"
+    ((s = NULL) && {t1.is_flat} && {t2.is_flat} && {! t1.affect_with t2} && {t1.is_export_to t2}).if {
+      // Like `<>': `3 = z' with @z:@ℚ converts 3, then calls the `=' of @ℚ.
+      s := t2.get_slot "__infix_equal"
+      (s != NULL).if {
+        r1 := v1.to_export t2 pos p
+      }
+    }
     (s != NULL).if {
       a := Array Expr.create_with_capacity 2
-      a.add_last v1; a.add_last v2
-      n := Node.new_read p slot s receiver (v1.my_copy) with a intern False
+      a.add_last r1; a.add_last v2
+      n := Node.new_read p slot s receiver (r1.my_copy) with a intern False
       list_current.add_last n
       result := n.result_expr
       (ext.symbol = "!=").if {

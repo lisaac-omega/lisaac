@@ -31,13 +31,6 @@ Public
     condition := rec
     then := the
     else := els
-    /*
-    (then.last != NULL).if {
-      warning_error (then.last.position,"Unreachable expression.")
-    }
-    ((else != NULL) && {else.last != NULL}).if {
-      warning_error (else.last.position,"Unreachable expression.")
-    }*/
   )
 
   //

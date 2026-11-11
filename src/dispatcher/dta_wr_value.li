@@ -59,20 +59,6 @@ Public
 
 Node_type, Dta
 
-  /*
-  - product t:TYPE with e:EXPR self type_self:TYPE_FULL :LIST <-
-  ( + result:LIST
-
-    result := LIST.create (e.position)
-    (t = TYPE_NULL).if {
-      crash      
-    } else {
-      lookup t with e in result
-    }
-    result
-  )
-  */  
-
   - update_branch l:List self type_self:Type_full :Boolean <-
   ( + result:Boolean
     + wrt_slot:Write_slot
@@ -112,7 +98,7 @@ Dta
       new_value  := value
       copy_value := True
     }
-    sd := s.slot_data
+    sd := s.slot_data_for concrete_type
     em ?= new_value
     (em != NULL).if {
       (em.lower).to (em.upper - 1) do { j:Int

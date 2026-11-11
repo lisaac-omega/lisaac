@@ -1,0 +1,26 @@
+Header
+  + name := Function
+Inherit
+    
+  - parent_action:Action := Action
+  
+Public
+  
+  + action:{}
+  
+  - create a:{} :Self <-
+  ( + result:Self
+    result := clone
+    result.make a
+    result
+  )
+  
+  - make a:{} <-
+  (
+    action := a
+  )
+  
+  - run <- 
+  (
+    action.value
+  )

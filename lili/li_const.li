@@ -1,0 +1,21 @@
+Header
+  + name := Li_const
+/* A constant word. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + value:Int
+
+  - create v:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make v
+    result
+  )
+
+  - make v:Int <- ( value := v; )
+
+  - eval fp:Int :Int <- value

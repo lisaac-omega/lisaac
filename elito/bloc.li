@@ -1,0 +1,132 @@
+Header
+  + name := Bloc
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Private
+  
+  - stock_bloc:Array Bloc := Array Bloc.create_with_capacity 32
+        
+Private
+  
+  + text:String_buffer
+  
+Public
+  
+  + count_line:Int
+    
+  - count:Int <- text.count
+  - upper:Int <- text.upper
+  
+  - create txt:String :Bloc <-
+  ( + result:Bloc
+    (stock_bloc.is_empty).if {
+      result := clone
+    } else {
+      result := stock_bloc.pop
+    }
+    result.make txt
+    result
+  )
+  
+  - make txt:String <-
+  [ ? {txt.count <= size_bloc}; ]
+  ( + bug:Boolean
+    (text = NULL).if { bug:=True; text := String_buffer.create size_bloc; }
+    text.copy txt
+    (text.capacity > size_bloc).if {
+      "Cap.:".print; text.capacity.println
+      "txt.:".print; txt.println
+      (bug).if { "NEW BLOC\n".print; } else { "OLD BLOC\n".print; }
+    }
+    ? {text.capacity <= size_bloc}
+    (text.is_empty).if {
+      count_line := 0
+    } else {
+      count_line := text.occurrences '\n'
+    }
+  )
+  
+  - create f:Pointer size s:Int :Bloc <-
+  ( + result:Bloc
+    (stock_bloc.is_empty).if {
+      result := clone
+    } else {
+      result := stock_bloc.pop
+    }
+    result.make f size s
+    result
+  )
+  
+  - write f:Pointer <-
+  (
+    File_utils.write f with text size count
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - make f:Pointer size s:Int <-  
+  ( ? {s>0}
+    (text = NULL).if { text := String_buffer.create size_bloc; }
+    File_utils.read f in text size s
+    count_line := text.occurrences '\n'
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - free <- 
+  ( 
+    stock_bloc.add_last self
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - at i:Int put c:Char <- 
+  (
+    text.at i put c
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - at i:Int :Char <- text.at i
+  
+  - remove i:Int <- 
+  (
+    text.remove i
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - insert c:Char to i:Int <- 
+  (
+    text.insert c to i
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - add_last c:Char <- 
+  (
+    text.add_last c
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - set_upper up:Int <-
+  (
+    text.set_upper up
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - first:Char <- text.first
+  
+  - clear <-
+  (
+    text.clear
+    ? {text.capacity <= size_bloc}
+  )
+  
+  - occurrences c:Char until up:Int :Int <-
+  (
+    text.occurrences c until up
+  )
+  
+  - add_count_line n:Int <- ( count_line := count_line + n; )
+  
+  - update_lines <-
+  (
+    count_line := text.occurrences '\n'
+  )

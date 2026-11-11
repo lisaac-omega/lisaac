@@ -1,8 +1,8 @@
 Header
   + name := Itm_pattern
-Inherit
+Insert
 
-  - parent_any:Any := Any
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Public
   

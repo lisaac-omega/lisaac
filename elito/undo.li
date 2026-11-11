@@ -1,0 +1,54 @@
+Header
+  + name := Undo
+Insert
+  
+  - parent_clone:Clone := Clone
+  - parent_utils:Utils := Utils
+    
+Public
+  
+  + point:Int
+  
+  + type:Char
+  + char:Char
+  
+  - create:Self <- clone
+  
+  - to_upper <- ( type := type.to_upper; )
+  
+  - set_type t:Char <- ( type := t; )
+  
+  - make t:Char char c:Char point p:Int <-
+  [ ? {(t = 'i') || {t = 'r'} || {t = 'B'}}; ]
+  (   
+    point := p
+    (type,char) := (t,c)
+  )
+  
+  - undo pg:Page :Boolean <- 
+  ( + result:Boolean
+    + b:Buffer
+    pg.set_point point
+    (type.to_int & 7Fh).to_char
+    .when 'i' then { pg.suppr_char; }
+    .when 'r' then { pg.insert_char char; }
+    .when 'B' then { pg.stack_upper; result := True; }
+    ((type.to_int & 80h) != 0).if {
+      pg.buffer.set_save True
+      b := pg.buffer
+      b.stack.at (b.stack_up).set_type (('B'.to_int | 80h).to_char)
+    }
+    result
+  )
+  
+  - print <-
+  ( 
+    ((type.to_int & 80h) != 0).if {
+      "SAVE! ".print
+      (type.to_int & 7Fh).to_char.print
+    } else {
+      type.print
+    }
+    ' '.print; char.print; ' '.print; point.println
+  )
+  

@@ -1,0 +1,28 @@
+Header
+  + name := Li_load
+/* Read memory, with the width of @kind (see @Li_kind). */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + receiver:Li_node
+  + off:Int
+  + kind:Int
+
+  - create r:Li_node off o:Int kind k:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make r off o kind k
+    result
+  )
+
+  - make r:Li_node off o:Int kind k:Int <- ( receiver := r; off := o; kind := k; )
+
+  - eval fp:Int :Int <-
+  ( + a,k:Int
+    a := receiver.eval fp + off
+    k := kind
+    `lili_load(@k,@a)`:(Int)
+  )

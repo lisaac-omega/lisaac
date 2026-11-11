@@ -1,0 +1,77 @@
+Header
+  + name := Div_out
+Inherit
+  
+  + parent_div:Flat Div
+  
+Public
+  
+  - draw_stack:Array Div := Array Div.create_with_capacity 4
+  
+Public
+  
+  + msk_radius:Uint8
+  
+  - center_position:Boolean <- (msk_radius & 10h) != 0
+  
+  - force_center:Self <- ( msk_radius := msk_radius | 10h; self)
+  
+  - radius msk:Int :Self <- ( msk_radius := (msk_radius & 0F0h) | msk; self)
+  
+  - create st:String_alias :Self <- parent_div.create st.close.margin 8
+  
+  - set_position (x,y:Real32) size (w,h:Real32) <-
+  [ /* clear require */ ]
+  ( + x0,y0,x1,y1,ww,hh,xx,yy:Real32
+    + p:Div
+    ((is_open) && {!is_leaf}).if {
+      (x0,y0) := (parent.x_min,parent.y_min)
+      (x1,y1) := (parent.x_max,parent.y_max)
+      (ww,hh) := (width_min,height_min)
+      p := parent
+      {p.parent != NULL}.while_do {
+        p := p.parent
+      }
+      (center_position).if {
+        xx := (x0+x1-ww) / 2.0
+      } else {
+        xx := x0.max 0.0.min (p.x_max-ww)
+      }
+      (y0 > p.y_max-y1).if {
+        yy := y0 - hh + 1.0
+      } else {
+        yy := y1 + 1.0
+      }
+      parent_div.set_position (xx,yy) size (ww,hh)
+    }
+  )
+      
+  // Drawn above everything by @Elito_window, not by its parent.
+  - draw pen:Pen <- ( )
+  
+  - draw_out pen:Pen <-
+  ( 
+    (is_open).if {
+      pen.save
+      pen.begin_path
+      pen.rect_varying (xo,yo) size (width,height) radius (rad 8,rad 4,rad 2,rad 1)
+      //width.print; ','.print; height.println
+      pen.fill_color (Color.rgba (255,255,255,128))
+      pen.fill
+      pen.fill_color (Color.rgba (31,39,36,128+64))
+      pen.fill
+      pen.stroke_color (Color.rgba (0,0,0,32))
+      pen.stroke_width 3.0
+      pen.stroke
+      pen.restore
+      (is_leaf).if_false {
+        0.to (child.upper) do { i:Int
+          child.at i.draw pen
+        }
+      }
+    }
+  )
+  
+Private
+  
+  - rad f:Int :Int <- ((msk_radius & f) != 0).ok 8 or 0

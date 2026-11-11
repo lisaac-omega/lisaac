@@ -1,0 +1,77 @@
+Header
+  + name := Unicode
+/* Codes of Unicode characters: case of the letters (latin, greek, cyrillic), and writing
+   in UTF-8. */
+Public
+
+  - is_upper c:Int :Boolean <-
+  (
+    (c.in_range 041h to 05Ah) || {(c.in_range 0C0h to 0DEh) && {c != 0D7h}} || {c.in_range 0391h to 03A9h} || {c.in_range 0400h to 042Fh} || {c = 01E9Eh}
+  )
+
+  - is_lower c:Int :Boolean <-
+  (
+    (c.in_range 061h to 07Ah) || {(c.in_range 0DFh to 0FFh) && {c != 0F7h}} || {c.in_range 03B1h to 03C9h} || {c.in_range 0430h to 045Fh}
+  )
+
+  - to_upper c:Int :Int <-
+  ( + r:Int
+    r := c
+    (c.in_range 061h to 07Ah).if {
+      r := c - 32
+    }.elseif {(c.in_range 0E0h to 0FEh) && {c != 0F7h}} then {
+      r := c - 32
+    }.elseif {c = 0DFh} then {
+      r := 01E9Eh
+    }.elseif {(c.in_range 03B1h to 03C9h) && {c != 03C2h}} then {
+      r := c - 32
+    }.elseif {c.in_range 0430h to 044Fh} then {
+      r := c - 32
+    }.elseif {c.in_range 0450h to 045Fh} then {
+      r := c - 80
+    }
+    r
+  )
+
+  - to_lower c:Int :Int <-
+  ( + r:Int
+    r := c
+    (c.in_range 041h to 05Ah).if {
+      r := c + 32
+    }.elseif {(c.in_range 0C0h to 0DEh) && {c != 0D7h}} then {
+      r := c + 32
+    }.elseif {c = 01E9Eh} then {
+      r := 0DFh
+    }.elseif {(c.in_range 0391h to 03A9h) && {c != 03A2h}} then {
+      r := c + 32
+    }.elseif {c.in_range 0410h to 042Fh} then {
+      r := c + 32
+    }.elseif {c.in_range 0400h to 040Fh} then {
+      r := c + 80
+    }
+    r
+  )
+
+  - upper c:Int in b:String_buffer <- ( append (to_upper c) in b )
+
+  - lower c:Int in b:String_buffer <- ( append (to_lower c) in b )
+
+  - append c:Int in b:String_buffer <-
+  // Write the character @c in UTF-8.
+  (
+    (c < 080h).if {
+      b.add_last (c.to_char)
+    }.elseif {c < 0800h} then {
+      b.add_last ((0C0h | (c >> 6)).to_char)
+      b.add_last ((080h | (c & 03Fh)).to_char)
+    }.elseif {c < 010000h} then {
+      b.add_last ((0E0h | (c >> 12)).to_char)
+      b.add_last ((080h | ((c >> 6) & 03Fh)).to_char)
+      b.add_last ((080h | (c & 03Fh)).to_char)
+    } else {
+      b.add_last ((0F0h | (c >> 18)).to_char)
+      b.add_last ((080h | ((c >> 12) & 03Fh)).to_char)
+      b.add_last ((080h | ((c >> 6) & 03Fh)).to_char)
+      b.add_last ((080h | (c & 03Fh)).to_char)
+    }
+  )

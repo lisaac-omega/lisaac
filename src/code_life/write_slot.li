@@ -13,6 +13,15 @@ Public
 
   - variable:Variable <- slot
 
+  - first_access v:Local :Int <-
+  ( + result:Int
+
+    ((value = NULL) || {value.is_reading v} || {receiver.is_reading v}).if {
+      result := 2
+    }
+    result
+  )
+
   + receiver:Expr
 
   // Creation.
@@ -69,14 +78,54 @@ Public
 
   // Genere
   
+  - prefix_receiver:Read_slot <-
+  ( + result:Read_slot
+    result ?= receiver
+    result
+  )
+
+  - is_prefix_write:Boolean <-
+  // The whole prefix parent of a late binding type is written: its @__id is the @__id of the receiver.
+  (slot = slot.receiver_type.prefix_slot) && {slot.receiver_type.is_late_binding}
+
+  - genere_receiver_pointer <-
+  ( + tf:Type_full
+
+    tf := receiver.static_type
+    ((tf.is_flat) && {(! tf.is_flat_ref) || {tf.is_default_flat}}).if {
+      output.append "&("
+      receiver.genere
+      output.add_last ')'
+    } else {
+      receiver.genere
+    }
+  )
+
   - genere <-
   ( + tf:Type_full
     + t:Type
 
     t := slot.receiver_type
     t.add_genere_list
-    (! quiet_generation).if {
-      (t.alias_slot = variable).if {
+    ((! quiet_generation) && {! Escape.is_skipped_write self}).if {
+      // The `NULL' of a moved field (`One') is written in `-boost' too: the field may be read
+      // after (compared to `NULL'), the two modes must agree (see @Write.is_move_null).
+      (is_prefix_write).if {
+        output.append "{uint32_t __li_id=((struct ___OBJ *)"
+        genere_receiver_pointer
+        output.append ")->__id; "
+      }
+      ((t.alias_slot = NULL) && {prefix_receiver != NULL} && {prefix_receiver.is_prefix_read}).if {
+        // Through prefix parents: ((Parent *)receiver)->slot.
+        output.append "(("
+        t.put_reference_declaration output
+        output.add_last ' '
+        t.put_reference_star_declaration output
+        output.add_last ')'
+        prefix_receiver.genere_prefix_pointer
+        output.append ")->"
+        output.append (variable.intern_name)
+      }.elseif {t.alias_slot = variable} then {
         tf := receiver.static_type
         ((tf.is_exact) || {tf.is_flat_ref}).if {
           output.append "(*"
@@ -97,7 +146,8 @@ Public
       } else {
         // Receiver.        
         tf := receiver.static_type
-        ((tf.is_exact) || {(tf.is_flat_ref) && {!tf.is_default_flat} /* 14Mars */}).if {
+        // A flat receiver (even exact, as `Flat Array') is a structure: `.', as @Read_slot.
+        (((tf.is_exact) && {! tf.is_flat}) || {(tf.is_flat_ref) && {!tf.is_default_flat} /* 14Mars */}).if {
           receiver.genere
           output.append "->"
         }.elseif {tf.is_flat} then {
@@ -122,6 +172,11 @@ Public
       } else {
         output.add_last '='
         genere_value
+      }
+      (is_prefix_write).if {
+        output.append "; ((struct ___OBJ *)"
+        genere_receiver_pointer
+        output.append ")->__id=__li_id;}"
       }
     }
   )

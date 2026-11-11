@@ -4,9 +4,9 @@ Inherit
   + parent_tok_drw:Flat Tok_drw
 Insert
   - parent_lix_buf:Lix_buf := Lix_buf
+  - parent_recyclable:Recyclable := Recyclable
     
 Private
-  - stk_s:Flat Array (Exact Slot_body)
 Public
   - is_major:Boolean := False
   
@@ -15,10 +15,10 @@ Public
   + slot:Slot
   - set_slot s:Slot <- ( slot := s; )
       
-  - new:Self <- ( + r:Self; stk_s.is_empty.if { r := clone; } else { r := stk_s.pop; }; r)
+  - new:Self <- parent_recyclable.new
   
   - free <-
-  ( (expr != NULL).if { expr.free; expr := NULL; }; stk_s.add_last self; )
+  ( (expr != NULL).if { expr.free; expr := NULL; }; parent_recyclable.free; )
       
   - detect:Boolean <-
   ( + c:Char

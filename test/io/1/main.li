@@ -1,8 +1,0 @@
-Header
-  + name := Main
-Public
-  
-  - main <-
-  (
-    Test.check (Command_args.count) integer 1
-  )

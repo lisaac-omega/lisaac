@@ -17,7 +17,6 @@ Public
 
   - slot:Slot <-
   (
-    //crash_with_message "PROFIL_BLOCK.slot"
     NULL
   )
 
@@ -83,7 +82,6 @@ Public
 
     list := base.list
     position := list.position
-    //stack_top := stack_local .upper + 1
 
     Profil_list.add self
     type_self   := Itm_type_simple.type_self.to_run_for profil_slot pos (position.prototype.filename)
@@ -106,7 +104,6 @@ Public
     (index != 0).if {
       crash_with_message "PROFIL_BLOCK: Saloooooope!"
     }
-    //type_list.add_last self
     index := index_max
     index_max := index_max + 1
     index_copy := index
@@ -128,7 +125,6 @@ Public
     // Append arguments.
     a_list := Alias_array Type_full .new
     (base.argument != NULL).if {
-      //arg_type_tmp :=
       argument_list := new Array Local capacity (base.argument.count+1)
       argument_list.add_last NULL
       base.argument.to_run_in argument_list for self

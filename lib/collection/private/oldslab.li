@@ -33,7 +33,7 @@ Array_list
     count := 0
     low := 0
     cache_tic := 0
-    storage.is_null.if {
+    (storage = NULL).if {
       storage := C_array V.create capacity
     }
   )
@@ -71,7 +71,7 @@ Array_list
   
   - is_full:Boolean <-
   [
-    ? {! storage.is_null}
+    ? {storage != NULL}
   ]
   (
     count = capacity
@@ -89,7 +89,7 @@ Array_list
   
   - cache_update clock_tic:Uint64 <-
   [
-    ? {! storage.is_null}
+    ? {storage != NULL}
     ? {! is_empty}
   ]
   (
@@ -98,7 +98,7 @@ Array_list
   
   - cache clock_tic:Uint64 update new_lower:Int <-
   [
-    ? {! storage.is_null}
+    ? {storage != NULL}
     ? {! is_empty}
   ]
   (
@@ -118,7 +118,7 @@ Array_list
   
   - is_empty:Boolean <-
   [
-    ? {! storage.is_null}
+    ? {storage != NULL}
   ]
   (
     count = 0
@@ -127,7 +127,7 @@ Array_list
   - contains idx:Int :Boolean <-
   // Assumes cache_lower is correct.
   [
-    ? {! storage.is_null}
+    ? {storage != NULL}
   ]
   ( + result:Boolean
     (idx >= cache_lower).if {

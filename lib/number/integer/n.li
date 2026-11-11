@@ -1,0 +1,221 @@
+Header
+  + name := Flat ℕ;
+  /*
+  The set ℕ (from the Italian naturale) denotes the set of natural numbers 0, 1, 2, ...
+  
+  On purpose, there is no automatic conversion from or to another type: a negative value
+  would be incorrect. Use @from_int64 or @from_z to build one, @to_z or @to_int64 to get out.
+  Some operations are not internal: the difference of two @ℕ is a @ℤ.
+  
+  Representation, in one 64 bits word: a value v < 2^63 is stored as 2 v (the word goes up
+  to 2^64 - 2, one bit more than @ℤ, which needs a sign); a larger value is stored as a
+  positive big @ℤ (odd word), whose arithmetic is used.
+  Like @ℤ, memory is manual: a result owns its value, the operands are never
+  changed or kept, and @free releases a value which is no more used.
+  */
+  - type := `signed long long`;
+  - default := (Cast Int To ℕ.on 0);
+Insert
+  - parent_utils:Utils := Utils
+  - parent_print:Print := Print
+  
+Private
+  
+  - raw:Uint64 <- Cast ℕ To Uint64.on self
+  
+  - is_big:Boolean <- raw.is_odd
+  
+  - small:Uint64 <- raw >> 1
+  // Value of @self, when it is not big.
+  
+  - big:ℤ <- Cast ℕ To ℤ.on self
+  // Value of @self, when it is big: shares the memory of @self.
+  
+  - as_z:ℤ <-
+  // Value of @self as a @ℤ, to be released with @free_z.
+  ( + r:ℤ
+    (is_big).if {
+      r := big
+    } else {
+      r := ℤ.init_ui small
+    }
+    r
+  )
+  
+  - free_z z:ℤ <-
+  // Release @z, given by @as_z.
+  ( (! is_big).if { z.free; }; )
+  
+  - from_u64 v:Uint64 :ℕ <-
+  ( + r:ℕ
+    ((v >> 63) = 0).if {
+      r := Cast Uint64 To ℕ.on (v << 1)
+    } else {
+      r := Cast ℤ To ℕ.on (ℤ.init_ui v)
+    }
+    r
+  )
+  
+  - from_z_owned x:ℤ :ℕ <-
+  // Same value as @x, >= 0: @x is now owned by the result.
+  [ ? {x >= 0}; ]
+  ( + r:ℕ
+    + ok:Boolean
+    + v:Int64
+    (ok,v) := x.to_int64
+    (ok).if {
+      x.free
+      r := Cast Uint64 To ℕ.on (v.to_raw_uint64 << 1)
+    } else {
+      r := Cast ℤ To ℕ.on x
+    }
+    r
+  )
+  
+  - cmp other:Self :Int <-
+  // Sign of @self - @other: a big value is always greater than a small one.
+  ( + r:Int
+    (is_big).if {
+      (other.is_big).if {
+        r := (big > other.big).to_int - (big < other.big).to_int
+      } else {
+        r := 1
+      }
+    }.elseif {other.is_big} then {
+      r := -1
+    }.elseif {raw < other.raw} then {
+      r := -1
+    }.elseif {raw > other.raw} then {
+      r := 1
+    }
+    r
+  )
+  
+Public
+  
+  // Init / Input
+  
+  - from_int64 x:Int64 :ℕ <-
+  [ ? {x >= 0}; ]
+  Cast Uint64 To ℕ.on (x.to_raw_uint64 << 1)
+  
+  - from_z x:ℤ :ℕ <-
+  [ ? {x >= 0}; ]
+  from_z_owned (x.copy)
+  
+  - init sp:String from idx:Int base base:Int :Self <-
+  // Value of the digits of @sp in @base, from @idx: like @ℤ, without sign.
+  [ ? {sp.at idx != '-'}; ]
+  from_z_owned (ℤ.init sp from idx base base)
+  
+  - init sp:String base base:Int :Self <- init sp from 0 base base
+  
+  - init sp:String :Self <- init sp base 10
+  
+  - copy:ℕ <-
+  ( + r:ℕ
+    (is_big).if {
+      r := Cast ℤ To ℕ.on (big.copy)
+    } else {
+      r := self
+    }
+    r
+  )
+  
+  - free <- ( (is_big).if { big.free; }; )
+  
+  // Arithmetic.
+  
+  - self:Self '+' Left 80 other:Self :Self <-
+  ( + r:Self
+    + a,b:ℤ
+    ((is_big) || {other.is_big}).if {
+      a := as_z
+      b := other.as_z
+      r := from_z_owned (a + b)
+      free_z a
+      other.free_z b
+    } else {
+      r := from_u64 (small + other.small)
+    }
+    r
+  )
+  
+  - self:Self '*' Left 90 other:Self :Self <-
+  ( + r:Self
+    + a,b:ℤ
+    + u,v,hi:Uint64
+    ((! is_big) && {! other.is_big}).if {
+      u := small
+      v := other.small
+      hi := `(unsigned long long)(((unsigned __int128)@u * @v) >> 64)`:Uint64
+    }
+    ((is_big) || {other.is_big} || {hi != 0}).if {
+      a := as_z
+      b := other.as_z
+      r := from_z_owned (a * b)
+      free_z a
+      other.free_z b
+    } else {
+      r := from_u64 (`(unsigned long long)(@u * @v)`:Uint64)
+    }
+    r
+  )
+  
+  - self:Self '-' Left 80 other:Self :ℤ <-
+  // Not internal: the result is negative when @other > @self.
+  ( + r:ℤ
+    + a,b:ℤ
+    ((is_big) || {other.is_big}).if {
+      a := as_z
+      b := other.as_z
+      r := a - b
+      free_z a
+      other.free_z b
+    } else {
+      r := ℤ.init_si (small.to_raw_int64 - other.small.to_raw_int64)
+    }
+    r
+  )
+  
+  // Comparison.
+  
+  - self:Self '=' Right 50 <> other:Self :Boolean <- cmp other =  0
+  - self:Self '>' Right 60 other:Self :Boolean <- cmp other >  0
+  - self:Self '<' Right 60 other:Self :Boolean <- cmp other <  0
+  - self:Self '>=' Right 60 other:Self :Boolean <- cmp other >= 0
+  - self:Self '<=' Right 60 other:Self :Boolean <- cmp other <= 0
+  
+  // Conversion.
+  
+  - to_z:ℤ <-
+  ( + r:ℤ
+    (is_big).if {
+      r := big.copy
+    } else {
+      r := ℤ.init_ui small
+    }
+    r
+  )
+  
+  - to_int64:(Boolean,Int64) <-
+  // @True and the value of @self when it fits in an @Int64, else @False and 0.
+  ( + ok:Boolean
+    + r:Int64
+    (! is_big).if {
+      ok := True
+      r := small.to_raw_int64
+    }
+    (ok,r)
+  )
+  
+  // Output.
+  
+  - append_in b:String_buffer <-
+  (
+    (is_big).if {
+      big.append_in b
+    } else {
+      small.append_in b
+    }
+  )

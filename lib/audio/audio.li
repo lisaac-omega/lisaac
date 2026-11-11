@@ -39,7 +39,7 @@ External
     encoder_ptr := `((ma_device *)@dev)->pUserData`:Pointer
     result := success
 
-    ((! encoder_ptr.is_null) && {! input.is_null}).if {
+    ((encoder_ptr != NULL) && {input != NULL}).if {
       result := `ma_encoder_write_pcm_frames((ma_encoder *)@encoder_ptr, @input, (ma_uint64)@frame_count, NULL)`:(Int)
     }
     capture_result := result
@@ -83,12 +83,12 @@ Public
     (! engine_initialized).if {
       engine_ptr := ma_engine
 
-      (engine_ptr.is_null).if {
+      (engine_ptr = NULL).if {
         engine_ptr := `ma_calloc(sizeof(ma_engine), NULL)`:Pointer
         ma_engine := engine_ptr
       }
 
-      (engine_ptr.is_null).if {
+      (engine_ptr = NULL).if {
         result := out_of_memory
       } else {
         result := `ma_engine_init(NULL, (ma_engine *)@engine_ptr)`:(Int)
@@ -102,11 +102,11 @@ Public
   ( + engine_ptr:Pointer
 
     engine_ptr := ma_engine
-    ((! engine_ptr.is_null) && {engine_initialized}).if {
+    ((engine_ptr != NULL) && {engine_initialized}).if {
       `ma_engine_uninit((ma_engine *)@engine_ptr)`
       engine_initialized := False
     }
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_free(@engine_ptr, NULL)`
       ma_engine := NULL
     }
@@ -119,7 +119,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_start((ma_engine *)@engine_ptr)`:(Int)
@@ -132,7 +132,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_stop((ma_engine *)@engine_ptr)`:(Int)
@@ -148,7 +148,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       path := file.to_external
@@ -162,7 +162,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_set_volume((ma_engine *)@engine_ptr, @volume)`:(Int)
@@ -175,7 +175,7 @@ Public
     + result:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_volume((ma_engine *)@engine_ptr)`:Real32
     }
     result
@@ -186,7 +186,7 @@ Public
     + result:Uint32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_sample_rate((ma_engine *)@engine_ptr)`:Uint32
     }
     result
@@ -197,7 +197,7 @@ Public
     + result:Uint64
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_time_in_pcm_frames((ma_engine *)@engine_ptr)`:Uint64
     }
     result
@@ -208,7 +208,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_set_time_in_pcm_frames((ma_engine *)@engine_ptr, @frame)`:(Int)
@@ -224,7 +224,7 @@ Public
   ( + config_ptr:Pointer
 
     config_ptr := `ma_calloc(sizeof(ma_engine_config), NULL)`:Pointer
-    (! config_ptr.is_null).if {
+    (config_ptr != NULL).if {
       `*((ma_engine_config *)@config_ptr) = ma_engine_config_init()`
     }
     config_ptr
@@ -232,7 +232,7 @@ Public
 
   - config_delete config:Pointer <-
   (
-    (! config.is_null).if {
+    (config != NULL).if {
       `ma_free(@config, NULL)`
     }
   )
@@ -245,12 +245,12 @@ Public
     (! engine_initialized).if {
       engine_ptr := ma_engine
 
-      (engine_ptr.is_null).if {
+      (engine_ptr = NULL).if {
         engine_ptr := `ma_calloc(sizeof(ma_engine), NULL)`:Pointer
         ma_engine := engine_ptr
       }
 
-      (engine_ptr.is_null).if {
+      (engine_ptr = NULL).if {
         result := out_of_memory
       } else {
         result := `ma_engine_init((const ma_engine_config *)@config, (ma_engine *)@engine_ptr)`:(Int)
@@ -266,7 +266,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_read_pcm_frames((ma_engine *)@engine_ptr, @frames_out, @frame_count, (ma_uint64 *)@frames_read)`:(Int)
@@ -278,7 +278,7 @@ Public
   ( + engine_ptr,result:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_node_graph((ma_engine *)@engine_ptr)`:Pointer
     }
     result
@@ -288,7 +288,7 @@ Public
   ( + engine_ptr,result:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_resource_manager((ma_engine *)@engine_ptr)`:Pointer
     }
     result
@@ -298,7 +298,7 @@ Public
   ( + engine_ptr,result:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_device((ma_engine *)@engine_ptr)`:Pointer
     }
     result
@@ -308,7 +308,7 @@ Public
   ( + engine_ptr,result:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_log((ma_engine *)@engine_ptr)`:Pointer
     }
     result
@@ -318,7 +318,7 @@ Public
   ( + engine_ptr,result:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_endpoint((ma_engine *)@engine_ptr)`:Pointer
     }
     result
@@ -329,7 +329,7 @@ Public
     + result:Uint64
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_time_in_milliseconds((const ma_engine *)@engine_ptr)`:Uint64
     }
     result
@@ -340,7 +340,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_set_time_in_milliseconds((ma_engine *)@engine_ptr, @time)`:(Int)
@@ -354,7 +354,7 @@ Public
     + result:Uint64
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_time((const ma_engine *)@engine_ptr)`:Uint64
     }
     result
@@ -365,7 +365,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_set_time((ma_engine *)@engine_ptr, @time)`:(Int)
@@ -378,7 +378,7 @@ Public
     + result:Uint32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_channels((const ma_engine *)@engine_ptr)`:Uint32
     }
     result
@@ -389,7 +389,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       result := `ma_engine_set_gain_db((ma_engine *)@engine_ptr, @gain_db)`:(Int)
@@ -402,7 +402,7 @@ Public
     + result:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_gain_db((ma_engine *)@engine_ptr)`:Real32
     }
     result
@@ -413,7 +413,7 @@ Public
     + result:Uint32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_get_listener_count((const ma_engine *)@engine_ptr)`:Uint32
     }
     result
@@ -424,7 +424,7 @@ Public
     + result:Uint32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_find_closest_listener((const ma_engine *)@engine_ptr, @x, @y, @z)`:Uint32
     }
     result
@@ -434,7 +434,7 @@ Public
   ( + engine_ptr:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_set_position((ma_engine *)@engine_ptr, @index, @x, @y, @z)`
     }
   )
@@ -444,7 +444,7 @@ Public
     + x,y,z:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       x := `ma_engine_listener_get_position((const ma_engine *)@engine_ptr, @index).x`:Real32
       y := `ma_engine_listener_get_position((const ma_engine *)@engine_ptr, @index).y`:Real32
       z := `ma_engine_listener_get_position((const ma_engine *)@engine_ptr, @index).z`:Real32
@@ -456,7 +456,7 @@ Public
   ( + engine_ptr:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_set_direction((ma_engine *)@engine_ptr, @index, @x, @y, @z)`
     }
   )
@@ -466,7 +466,7 @@ Public
     + x,y,z:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       x := `ma_engine_listener_get_direction((const ma_engine *)@engine_ptr, @index).x`:Real32
       y := `ma_engine_listener_get_direction((const ma_engine *)@engine_ptr, @index).y`:Real32
       z := `ma_engine_listener_get_direction((const ma_engine *)@engine_ptr, @index).z`:Real32
@@ -478,7 +478,7 @@ Public
   ( + engine_ptr:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_set_velocity((ma_engine *)@engine_ptr, @index, @x, @y, @z)`
     }
   )
@@ -488,7 +488,7 @@ Public
     + x,y,z:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       x := `ma_engine_listener_get_velocity((const ma_engine *)@engine_ptr, @index).x`:Real32
       y := `ma_engine_listener_get_velocity((const ma_engine *)@engine_ptr, @index).y`:Real32
       z := `ma_engine_listener_get_velocity((const ma_engine *)@engine_ptr, @index).z`:Real32
@@ -501,7 +501,7 @@ Public
   ( + engine_ptr:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_set_cone((ma_engine *)@engine_ptr, @index, @inner_angle, @outer_angle, @outer_gain)`
     }
   )
@@ -511,7 +511,7 @@ Public
     + inner_angle,outer_angle,outer_gain:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_get_cone((const ma_engine *)@engine_ptr, @index, &@inner_angle, &@outer_angle, &@outer_gain)`
     }
     inner_angle,outer_angle,outer_gain
@@ -521,7 +521,7 @@ Public
   ( + engine_ptr:Pointer
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_set_world_up((ma_engine *)@engine_ptr, @index, @x, @y, @z)`
     }
   )
@@ -531,7 +531,7 @@ Public
     + x,y,z:Real32
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       x := `ma_engine_listener_get_world_up((const ma_engine *)@engine_ptr, @index).x`:Real32
       y := `ma_engine_listener_get_world_up((const ma_engine *)@engine_ptr, @index).y`:Real32
       z := `ma_engine_listener_get_world_up((const ma_engine *)@engine_ptr, @index).z`:Real32
@@ -545,7 +545,7 @@ Public
 
     engine_ptr := ma_engine
     value := enabled.to_int
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       `ma_engine_listener_set_enabled((ma_engine *)@engine_ptr, @index, (ma_bool32)@value)`
     }
   )
@@ -555,7 +555,7 @@ Public
     + result:Boolean
 
     engine_ptr := ma_engine
-    (! engine_ptr.is_null).if {
+    (engine_ptr != NULL).if {
       result := `ma_engine_listener_is_enabled((const ma_engine *)@engine_ptr, @index)`:Int != 0
     }
     result
@@ -567,7 +567,7 @@ Public
     + result:Int
 
     engine_ptr := ma_engine
-    (engine_ptr.is_null).if {
+    (engine_ptr = NULL).if {
       result := invalid_operation
     } else {
       path := file.to_external
@@ -605,7 +605,7 @@ Public
     device_config_ptr := `ma_calloc(sizeof(ma_device_config), NULL)`:Pointer
 
     (
-      encoder_ptr.is_null || {encoder_config_ptr.is_null} || {device_ptr.is_null} || {device_config_ptr.is_null}
+      (encoder_ptr = NULL) || {encoder_config_ptr = NULL} || {device_ptr = NULL} || {device_config_ptr = NULL}
     ).if {
       result := out_of_memory
     } else {
@@ -636,10 +636,10 @@ Public
       }
     }
 
-    (! encoder_config_ptr.is_null).if {
+    (encoder_config_ptr != NULL).if {
       `ma_free(@encoder_config_ptr, NULL)`
     }
-    (! device_config_ptr.is_null).if {
+    (device_config_ptr != NULL).if {
       `ma_free(@device_config_ptr, NULL)`
     }
 
@@ -650,10 +650,10 @@ Public
       (encoder_ok).if {
         `ma_encoder_uninit((ma_encoder *)@encoder_ptr)`
       }
-      (! device_ptr.is_null).if {
+      (device_ptr != NULL).if {
         `ma_free(@device_ptr, NULL)`
       }
-      (! encoder_ptr.is_null).if {
+      (encoder_ptr != NULL).if {
         `ma_free(@encoder_ptr, NULL)`
       }
     }
@@ -666,13 +666,13 @@ Public
     device_ptr := ma_device
     encoder_ptr := ma_encoder
 
-    (! device_ptr.is_null).if {
+    (device_ptr != NULL).if {
       `ma_device_uninit((ma_device *)@device_ptr)`
       `ma_free(@device_ptr, NULL)`
       ma_device := NULL
     }
 
-    (! encoder_ptr.is_null).if {
+    (encoder_ptr != NULL).if {
       `ma_encoder_uninit((ma_encoder *)@encoder_ptr)`
       `ma_free(@encoder_ptr, NULL)`
       ma_encoder := NULL
@@ -684,7 +684,7 @@ Public
     + result:Boolean
 
     device_ptr := ma_device
-    (! device_ptr.is_null).if {
+    (device_ptr != NULL).if {
       result := `ma_device_is_started((ma_device *)@device_ptr)`:Int != 0
     }
     result

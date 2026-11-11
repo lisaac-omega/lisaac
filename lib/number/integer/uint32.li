@@ -22,8 +22,8 @@ Public
     (Asm_builtin.clz self) - 32
   
   - ctz:Int <-
-  // Count Trailing Zeros
-  ( 32 - 1 - (self & -self).clz)
+  // Count Trailing Zeros (32 for 0).
+  (Asm_builtin.ctz self).min 32
 
   // Conversion with test.
   - ep0:Self <- (self @> 2) ^ (self @> 13) ^ (self @> 22)

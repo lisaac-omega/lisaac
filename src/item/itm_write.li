@@ -70,6 +70,50 @@ Public
 
 Private
 
+  - check_one_field src:Itm_code to dst:String_alias <-
+  // `One': a `One' field of another object (`o.f') is moved only into a `One' variable (else
+  // `o' would keep it too).
+  ( + r1:Itm_read_arg1
+    + loc:Local
+    + typ:Type
+    + slot:Slot
+    r1 ?= without_parentheses src
+    ((r1 != NULL) && {r1.arg != NULL} && {read_name (r1.arg) != NULL} && {is_data_variable (read_name (r1.arg))} && {! is_one_variable dst}).if {
+      loc := lookup (read_name (r1.arg))
+      (loc != NULL).if {
+        typ := loc.type.raw
+        slot := typ.get_slot (r1.name)
+        ((slot != NULL) && {slot.slot_data_intern != NULL} && {slot.slot_code_intern = NULL} && {slot.slot_data_for typ.type.is_one}).if {
+          string_tmp.copy "COP: the `One' field `"
+          string_tmp.append (r1.name)
+          string_tmp.append "' of another object can be moved only into a `One' variable: `"
+          string_tmp.append dst
+          string_tmp.append "' is not `One'."
+          semantic_error (position,string_tmp)
+        }
+      }
+    }
+  )
+
+  - move_from src:Itm_code to dst:String_alias <-
+  // COP, `One' type (only one reference): `a := b' moves `b' (see @Itm_code.emit_move).
+  (
+    ((read_name src != dst) && {is_one_variable dst}).if {
+      check_one_source src to_one True
+    }
+  )
+
+  - check_one v:Expr to t:Type_full name n:String_alias <-
+  // A `One' object can be stored only in a `One' variable (else, a second reference).
+  (
+    ((v.static_type.is_one) && {! t.is_one}).if {
+      string_tmp.copy "COP: a `One' object (only one reference) can be stored only in a `One' variable: `"
+      string_tmp.append n
+      string_tmp.append "' would be a second reference."
+      semantic_error (position,string_tmp)
+    }
+  )
+
   - affect name:String_alias with v:Expr :Expr <-
   ( + loc:Local
     + result:Expr
@@ -132,7 +176,7 @@ Private
     }
     // Control type.
     em ?= v
-    slot_dta := slot.slot_data
+    slot_dta := slot.slot_data_for typ
     (em != NULL).if {
       lst := em.expr_list
       (lst.lower).to (lst.upper - 1) do { j:Int
@@ -143,6 +187,7 @@ Private
       lst.at (lst.upper) put new_val
       new_val := em
     } else {
+      check_one v to (slot_dta.type) name name
       new_val := v.check_type (slot_dta.type) with (slot.position)
     }
     //

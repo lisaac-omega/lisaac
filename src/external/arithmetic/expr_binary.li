@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- left.is_invariant && {right.is_invariant}
 
+  - is_pure:Boolean <- left.is_pure && {right.is_pure}
+
+  - is_reading v:Variable :Boolean <- left.is_reading v || {right.is_reading v}
+
   + left:Expr
 
   + right:Expr
@@ -24,7 +28,6 @@ Public
   - get_type t:Types_tmp <-
   (
     left .get_type t
-    //right.get_type t
   )
 
   //
@@ -180,12 +183,4 @@ Public
     right.display buffer
     buffer.add_last ')'
   )
-
-
-
-
-
-
-
-
 

@@ -1,7 +1,0 @@
-Header
-  + name := Array_of
-Public
-  - main <-
-  ( + a:Array Int
-    a := new Array Int of (4,3,2,1)
-  )

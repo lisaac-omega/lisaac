@@ -89,9 +89,9 @@ Public
   )
   
   - init p:Win name (n:String_alias) bar b:{Win; } :Self <-
-  ( Bar.new.init self
+  ( Bar.new.init_win self
     (do_bar,id_name) := (b,n)
-    init p
+    init_win p
   )
   
   - event ev:Int :Boolean <-

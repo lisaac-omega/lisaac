@@ -105,9 +105,9 @@ Public
       ? {list.upper = -1}
       p := path.to_external
       dir := `opendir(@p)`:Pointer
-      dir.is_not_null.if {        
+      (dir != NULL).if {        
         is_open := True
-        {(dirent := `readdir(@dir)`:Pointer).is_not_null}.while_do {
+        {(dirent := `readdir(@dir)`:Pointer) != NULL}.while_do {
           n := `((struct dirent *)@dirent)->d_name`:C_array(Char)
           String.tmp { tmp:String_buffer
             tmp.append path

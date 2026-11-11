@@ -22,11 +22,6 @@ Public
 
   + profil:Profil
 
-  - set_profil p:Profil <-
-  (
-    profil := p
-  )
-
   - source:List <- profil.code
 
   - is_interrupt:Boolean <- profil.is_interrupt
@@ -44,6 +39,71 @@ Public
   + cop_argument:Expr
 
   + is_cop_return:Boolean
+
+  + is_cop_sync:Boolean
+  // Synchronous COP message: never inlined, so that its function says what it keeps of its
+  // arguments, borrowed from the caller (see @Escape.check_messages).
+
+  - set_cop_sync <-
+  (
+    is_cop_sync := True
+  )
+
+  + is_cop_tail:Boolean
+  // Asynchronous COP message, the last action of the message which runs (see
+  // @Profil.mark_cop_tail): `li_send_tail', the receiver may run next on the same thread,
+  // without its FIFO (like a tail call).
+
+  - set_cop_tail <-
+  (
+    is_cop_tail := True
+  )
+
+  - has_block:Boolean <-
+  ( + pb:Profil_block
+    + wrt:Write
+    + j:Int
+    + result:Boolean
+
+    pb ?= profil
+    result := pb != NULL
+    j := argument_list.lower
+    {(j <= argument_list.upper) && {! result}}.while_do {
+      wrt := argument_list.at j
+      result := (wrt != NULL) && {wrt.has_block}
+      j := j + 1
+    }
+    result
+  )
+
+  - first_access v:Local :Int <-
+  // Only a context sensitive block can reach the locals of the caller.
+  ( + result,j:Int
+    + wrt:Write
+    + res:Res
+
+    ((profil.is_context_sensitive) || {cop_argument != NULL}).if {
+      result := 2
+    } else {
+      j := argument_list.lower
+      {(j <= argument_list.upper) && {result = 0}}.while_do {
+        wrt := argument_list.at j
+        ((wrt != NULL) && {(wrt.value = NULL) || {wrt.value.is_reading v}}).if {
+          result := 2
+        }
+        j := j + 1
+      }
+      j := result_list.lower
+      {(j <= result_list.upper) && {result = 0}}.while_do {
+        res := result_list.at j
+        ((res != NULL) && {res.write.variable = v}).if {
+          result := 1
+        }
+        j := j + 1
+      }
+    }
+    result
+  )
 
   - set_args args:Array Write <-
   (
@@ -92,7 +152,6 @@ Public
     + res:Res
     result := clone
     
-    //"COPY CALL_SLOT : ".print
     //debug_display
     
     new_arg := Array Write .create_with_capacity (argument_list.count)
@@ -103,7 +162,6 @@ Public
         // No Alias := Alias.
         wrt := argument_list.at j
         wrt := wrt.variable.write_direct (wrt.position) with NULL value (wrt.value.my_copy)
-        //wrt := argument_list.at j.my_copy
       }
       new_arg.add_last wrt
     }
@@ -173,16 +231,14 @@ Private
       position.put_position
       Position.send_error
     }
-    (! profil.is_no_inlinable).if {
-    //(profil.is_inlinable).if {
-      ((profil.link_count = 1) && {!profil.is_recursive}).if {
+    // A COP message is never inlined: it runs in the universe of its receiver (and a
+    // synchronous one is checked, see @is_cop_sync).
+    ((! profil.is_no_inlinable) && {cop_argument = NULL} && {! is_cop_sync}).if {
+      // Simple inlining moves the code of the profile: no COP message must use it.
+      ((profil.link_count = 1) && {profil.cop_link_count = 0} && {!profil.is_recursive}).if {
         //
         // Inlining simple.
         //
-        /*
-        (profil.name == "while_do__EKIC").if {          
-          "INLINE SIMPLE:".print; profil.name.print; ' '.print; profil.stat.println
-        };*/
           
         (list_current.old_seq_or_and = seq_or_and).if {
           argument_to_assignment source index 0 alias False style '+'
@@ -204,21 +260,13 @@ Private
           new_execute_pass
           is_good := True
           
-          //result.debug_display
         }
-      //} else {  
       }.elseif {profil.is_inlinable} then {
         //
         // Inline by copy:
         //
-        /*
-        (profil.name == "while_do__EKIC").if {
-          "INLINE COPY CALL_SLOT : ".print; profil.name.println
-        }
-        */  
         //debug_display
 
-        
         (list_current.old_seq_or_and = seq_or_and).if {
           profil.unlink self
 
@@ -233,8 +281,6 @@ Private
           } else {
             Local.alias_on
           }
-
-          //LOCAL.alias_on
 
           new_src := source.my_copy
           argument_to_assignment new_src index 0 alias True style '+'
@@ -265,8 +311,6 @@ Private
             Local.alias_off
           }
 
-          //LOCAL.alias_off
-                  
           result := new_src.execute
           is_good := True
           new_execute_pass
@@ -284,8 +328,6 @@ Private
 
     // Pour l'instant ne change pas le profil
     // il faut faire une copie de l'ancien !!
-
-    //profil := profil.update self link False
 
     (argument_list.lower).to (argument_list.upper) do { j:Int
       wrt ?= argument_list.at j
@@ -306,14 +348,6 @@ Private
       (res != NULL).if {
         loc ?= res.write.value
         ? {loc != NULL}
-        /*
-        ( 
-          (loc.local.require_count = 0).if {
-            "CALL_SLOT : ".print
-            loc.local.intern_name.println
-          }
-        )
-        */
         (
           (loc.local.require_count > 0) && {
             (res.ensure_count != 0) || {loc.ensure_count > 1}
@@ -329,16 +363,6 @@ Private
     
     (cop_argument != NULL).if {
       cop_argument := cop_argument.execute_link
-      (
-        (! is_cop_return) && {profil_current != NULL} &&
-        {profil_current.cop_link_count != 0} &&
-        {profil_current.link_count = 0} &&
-        {profil_current.result_list.is_empty}
-      ).if {
-        // BSBS: Il faut produire reellement 2 versions (une COP et une non COP)
-        // Ainsi tu pourras generaliser l'optim et l'appliquer que sur la version COP.
-        is_cop_return := profil_current.i_am_the_last self
-      }
     }
     (profil.is_context_sensitive).if {
       seq_call_local_and_loop := seq_call_local_and_loop + 1
@@ -366,6 +390,7 @@ Public
     (is_good,result) := execute_inline
     (! is_good).if {
       execute_normal
+      Escape.on_call self
       (source.is_empty).if {
         // Suppression.
         profil.unlink self
@@ -383,25 +408,6 @@ Public
   // Display.
   //
 
-  - display_style buffer:String_buffer <-
-  ( + t:Hset Type
-    buffer.append (profil.name)
-    buffer.add_last '('
-
-    type_list.lower.to (type_list.upper) do { j:Int
-      t := type_list.at j
-      t.lower.to (t.upper - 1) do { k:Int
-        buffer.append (t.at k.name)
-        buffer.add_last 'x'
-      }
-      buffer.append (t.last.name)
-      (j != type_list.upper).if {
-        buffer.add_last ','
-      }
-    }
-    buffer.add_last ')'
-  )
-
   - display buffer:String_buffer <-
   ( + arg,res:Write
     + i_result:Int
@@ -418,7 +424,6 @@ Public
       buffer.add_last ']'
       
       buffer.append " :="
-      //res.to_pointer.append_in buffer
       res.display_ref buffer
       buffer.add_last ' '
     }
@@ -456,22 +461,6 @@ Public
     }
   )
 
-  - display_light <-
-  (
-    string_tmp.copy "CALL '"
-    string_tmp.append (profil.name)
-    string_tmp.append "' "
-    string_tmp.append (position.prototype.intern_name)
-    //position.put_light_position_in(string_tmp)
-    string_tmp.append " --> "
-    string_tmp.append (source.position.prototype.intern_name)
-    //source.position.put_light_position_in(string_tmp)
-    string_tmp.append " (Version "
- //   string_tmp.append (proto_self_current.intern_name)
-    string_tmp.append ")\n"
-    string_tmp.print
-  )
-
   //
   // Generation.
   //
@@ -483,7 +472,7 @@ Public
     + wrt:Write_local
     + np:Int
     + low:Int
-    + back,i_result:Int
+    + i_result:Int
     //+ t:TYPE_FULL
 
     (cop_argument != NULL).if {
@@ -499,44 +488,38 @@ Public
       cop_argument.genere
       output := Old output
       //
-      (argument_list.count-low > 0).if {
-        back := output.count
-        output.append "pthread_mutex_lock (&("        
-        output.append string_cop_arg
-        output.append "->thread.mutex));\n"
-        (low).to (argument_list.upper) do { j:Int
-          val := argument_list.at j
-          (val != NULL).if {
-            output.append indent
-            output.append string_cop_arg
-            output.append "->param_"
-            np.append_in output
-            output.append "=(int)"
-            val.genere_value
-            output.append ";\n"
-            np := np + 1
-          } else {
-            //"arg null\n".print
-          }
-        }
-        output.append indent
-        (np = 0).if {
-          output.keep_head back
-        }
-      }
-      output.append string_cop_arg
-      output.append "->thread.procedure = COP_"
+      // Asynchronous message: its arguments in a message for the FIFO of the universe.
+      output.append "{ struct msg_"
       output.append (profil.name)
-      output.append ";\n"
-      output.append indent
-      (is_cop_return).if {
-        output.append "return"
-      } else {
-        output.append "run_procedure"
+      output.append " *li_msg=(struct msg_"
+      output.append (profil.name)
+      output.append " *)li_msg_alloc(sizeof(struct msg_"
+      output.append (profil.name)
+      output.append "));\n"
+      (low).to (argument_list.upper) do { j:Int
+        val := argument_list.at j
+        (val != NULL).if {
+          output.append indent
+          output.append "  li_msg->"
+          profil.append_cop_param np in output
+          output.add_last '='
+          val.genere_value
+          output.append ";\n"
+          np := np + 1
+        }
       }
-      output.append "((lith_object *)"
+      output.append indent
+      (is_cop_tail).if {
+        output.append "  li_send_tail((lith_object *)("
+      } else {
+        output.append "  li_send((lith_object *)("
+      }
       output.append string_cop_arg
-      output.add_last ')'
+      output.append "),&li_msg->h,COP_"
+      output.append (profil.name)
+      output.append ");\n"
+      output.append indent
+      output.add_last '}'
     } else {
       (result_list.is_empty).if_false {
         {(i_result <= result_list.upper) && {result_list.at i_result = NULL}}.while_do {
@@ -575,11 +558,6 @@ Public
             (output.last != '(').if {
               output.add_last ','
             }
-            /*
-            t := val.static_type
-            (
-              (t.is_exact) || {t.is_flat_ref} || {t.is_flat}
-            ).if {*/
               val.genere_value
             /*} else {
               output.append "(("
@@ -611,82 +589,11 @@ Public
     }
   )
   
-
   //
   // Intern routine.
   //
 
 Profil
-/*
-  - to_tail_recursive:LOOP <-
-  ( + switch:SWITCH
-    + msg_slot:CALL_SLOT
-    + body:LIST
-    + wrt:WRITE
-    + new_val:EXPR
-    + new_wrt:INSTR
-    + result:LOOP
-    + push:PUSH
-
-    result := LOOP.create position name (profil.name) body source
-
-    //
-    // Main List.
-    //
-
-    // Argument -> Affectation.
-    wrt := argument_list.first
-    (wrt != NULL).if {
-      argument_list.at 0 put NULL
-      (! wrt.value.static_type.is_flat).if {
-	new_val := CAST.create (wrt.static_type) value (wrt.value)
-	wrt.set_value new_val
-      }
-      wrt.variable.set_style '+'
-      new_wrt := wrt.execute
-      (new_wrt != NULL).if {
-	list_current.insert new_wrt to (list_current.index)
-      }
-    }
-    (argument_list.lower + 1).to (argument_list.upper) do { k:Int
-      wrt := argument_list.at k
-      (wrt != NULL).if {
-	argument_list.at k put NULL
-	wrt.variable.set_style '+'
-	new_wrt := wrt.execute
-	(new_wrt != NULL).if {
-	  list_current.insert new_wrt to (list_current.index)
-	}
-      }
-    }
-
-    (debug_level_option != 0).if {
-      push ?= source.first
-      list_current.insert (push.my_copy) to (list_current.index)
-      push.set_first False
-    }
-
-    // Extract Switch/body:
-    switch ?= source.last
-    (switch.list.lower).to (switch.list.upper) do { k:Int
-      body := switch.list.at k.code
-      (body.is_empty).if_false {
-        msg_slot ?= body.last
-        ((msg_slot != NULL) && {msg_slot.profil = profil}).if {
-          // DEBUG
-          (msg_slot = self).if {
-            semantic_error (position,"CALL_SLOT : BUG!!!!")
-          }
-          // FIN DEBUG
-          msg_slot.argument_to_assignment body index (body.upper) alias False
-          body.at (body.upper)
-          put (LOOP_END.create (msg_slot.position) loop result)
-	}
-      }
-    }
-    result
-  )
-  */
   - argument_to_assignment lst:List
   index idx:Int
   alias is_alias:Boolean

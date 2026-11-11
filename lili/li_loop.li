@@ -1,0 +1,32 @@
+Header
+  + name := Li_loop
+/* A loop: the body loops as long as it ends on a @Li_loop_end. */
+Inherit
+
+  - parent_li_node:Li_node := Li_node
+
+Public
+
+  + body:Li_node
+
+  - create b:Li_node :Self <-
+  ( + result:Self
+    result := clone
+    result.make b
+    result
+  )
+
+  - set_body b:Li_node <- ( body := b; )
+
+  - make b:Li_node <- ( body := b; )
+
+  - eval fp:Int :Int <-
+  (
+    {
+      again := False
+      body.eval fp
+      again
+    }.while_do { }
+    again := False
+    0
+  )

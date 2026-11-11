@@ -1,0 +1,226 @@
+Header
+  + name := Ui_box
+/* A rectangle of a @Ui_window which draws itself and receives the keys and the mouse.
+   Its heirs redefine @draw, @key, @mouse, @scroll; @pen is the pen of the window being
+   drawn. The children are drawn after their parent, and receive the mouse first. */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  - pen:Pen
+  - set_pen p:Pen <- ( pen := p )
+
+  // The window being drawn, or which receives the mouse.
+  - window:Ui_window
+  - set_window w:Ui_window <- ( window := w )
+
+  // The box which takes all the mouse until the end of a drag (moving something).
+  - capture:Ui_box
+  - set_capture b:Ui_box <- ( capture := b )
+
+  // The shape of the mouse wanted by the box under it (0 arrow, 1 to resize from left to
+  // right, 2 from top to bottom, 3 from the corner, 4 to move): asked when the mouse
+  // moves.
+  - shape:Int
+  - set_shape k:Int <- ( shape := k )
+
+  + xo:Real32
+  + yo:Real32
+  + width:Real32
+  + height:Real32
+  + children:Array Ui_box
+  + is_hidden:Boolean
+
+  - new:Self <-
+  ( + r:Self
+    r := clone
+    r.make_box
+    r
+  )
+
+  - make_box <- ( children := Array Ui_box.create_with_capacity 4 )
+
+  - add b:Ui_box <-
+  (
+    (children = NULL).if { make_box }
+    children.add_last b
+  )
+
+  - remove b:Ui_box <-
+  ( + i:Int
+    i := children.fast_first_index_of b
+    (i <= children.upper).if { children.remove i }
+  )
+
+  - set_hidden b:Boolean <- ( is_hidden := b )
+
+  - set_rect (x,y:Real32) size (w,h:Real32) <-
+  (
+    (xo,yo,width,height) := (x,y,w,h)
+    layout
+  )
+
+  - xmax:Real32 <- xo + width
+  - ymax:Real32 <- yo + height
+
+  - is_inside (x,y:Real32) :Boolean <- (x >= xo) && {x < xmax} && {y >= yo} && {y < ymax}
+
+  - layout <-
+  // Place the children (called when the rectangle changes).
+  ( )
+
+  - draw <- ( )
+
+  - draw_over <-
+  // Drawn over the children.
+  ( )
+
+  - draw_all <-
+  (
+    (! is_hidden).if {
+      draw
+      (children != NULL).if { children.foreach { b:Ui_box; b.draw_all } }
+      draw_over
+    }
+  )
+
+  - key s:String cmd c:Uint8 :Boolean <- False
+
+  - mouse ev:Int at (x,y:Real32) :Boolean <-
+  // A child under the mouse takes it first (the last drawn is above).
+  ( + r:Boolean
+    + i:Int
+    (children != NULL).if { i := children.upper } else { i := -1 }
+    {(i >= 0) && {! r}}.while_do {
+      ((! children.at i.is_hidden) && {children.at i.is_inside (x,y)}).if {
+        r := children.at i.mouse ev at (x,y)
+      }
+      i := i - 1
+    }
+    r
+  )
+
+  - scroll d:Real32 at (x,y:Real32) <-
+  ( + i:Int
+    + done:Boolean
+    (children != NULL).if { i := children.upper } else { i := -1 }
+    {(i >= 0) && {! done}}.while_do {
+      ((! children.at i.is_hidden) && {children.at i.is_inside (x,y)}).if {
+        children.at i.scroll d at (x,y)
+        done := True
+      }
+      i := i - 1
+    }
+  )
+
+  - can_close:Boolean <- True
+
+  //
+  // Drawings shared by the boxes.
+  //
+
+  - draw_shadow_box (x,y:Real32) size (w,h:Real32) radius (tl,tr,br,bl:Real32) inside (c0,c1:Color) <-
+  // As `rect_shadow' of elit (menus, lists, bubbles): the box @x,@y,@w,@h with its corners
+  // of radius @tl, @tr, @br, @bl, the shadow it casts on the right and below, its relief
+  // (@c0 on the sides, @c1 inside) and a black line around it.
+  ( + p:Paint
+    pen.begin_path
+    p := Paint.create_box (x + 8,y + 8) size (w - 8,h - 8) radius 8 feather 16 color (Color.rgba (0,0,0,255)) to (Color.rgba (0,0,0,0))
+    pen.rect_varying (x,y) size (w + 8,h + 8) radius (tl,tr,br,bl)
+    pen.fill_paint p
+    pen.fill
+    p.free
+    pen.begin_path
+    p := Paint.create_box (x + 4,y + 4) size (w - 8,h - 8) radius 8 feather 8 color c0 to c1
+    pen.rect_varying (x,y) size (w,h) radius (tl,tr,br,bl)
+    pen.fill_paint p
+    pen.fill
+    p.free
+    pen.begin_path
+    pen.stroke_color (Color.rgba (0,0,0,255))
+    pen.stroke_width 1
+    pen.rect_varying (x,y) size (w,h) radius (tl,tr,br,bl)
+    pen.stroke
+  )
+
+  - draw_paper (x,y:Real32) size (w,h:Real32) color c:Color <-
+  // A screen which is unrolled from under what is above it (the help, the messages of the
+  // compiler): the rectangle in the color @c, and the shadow on its top.
+  ( + p:Paint
+    pen.begin_path
+    pen.fill_color c
+    pen.rect (x,y) size (w,h)
+    pen.fill
+    pen.begin_path
+    p := Paint.create_linear (x,y + 1) to (x,y + 11) color (Color.rgbaf (0,0,0,0.35)) to (Color.rgbaf (0,0,0,0))
+    pen.rect (x,y + 1) size (w,10)
+    pen.fill_paint p
+    pen.fill
+    p.free
+  )
+
+  // The parts of the text of a tip (@tip_text): light, bold.
+  - tip_gray_on:Char := '\1\'
+  - tip_gray_off:Char := '\2\'
+  - tip_bold_on:Char := '\3\'
+  - tip_bold_off:Char := '\4\'
+
+  - tip_text b:String_buffer at (x,y:Real32) color fg:Color draw d:Boolean :Real32 <-
+  // The text of a tip (a bubble) in the color @fg: the parts between @tip_gray_on and
+  // @tip_gray_off light, those between @tip_bold_on and @tip_bold_off bold; drawn at @x,@y
+  // when @d; its width.
+  ( + p,q:Int
+    + xx,w,x0,y0,x1,y1:Real32
+    + c:Color
+    + gray,bold:Boolean
+    + ch:Char
+    xx := x
+    p := 0
+    {p <= b.upper}.while_do {
+      q := p
+      {(q <= b.upper) && {b.at q > tip_bold_off}}.while_do { q := q + 1 }
+      (q > p).if {
+        (bold).if { pen.font_face_id (Font.sys (Font.bold)) } else { pen.font_face_id (Font.sys (Font.roman)) }
+        c := fg
+        (gray).if { c := c.set_af 0.45 }
+        (d).if {
+          pen.fill_color c
+          xx := pen.text (xx,y) msg b from p to (q - 1)
+        } else {
+          (w,x0,y0,x1,y1) := pen.text_bounds (0,0) msg b from p to (q - 1)
+          xx := xx + w
+        }
+      }
+      (q <= b.upper).if {
+        ch := b.at q
+        (ch = tip_gray_on).if { gray := True }
+        (ch = tip_gray_off).if { gray := False }
+        (ch = tip_bold_on).if { bold := True }
+        (ch = tip_bold_off).if { bold := False }
+      }
+      p := q + 1
+    }
+    xx - x
+  )
+
+  - draw_caret x:Real32 from y0:Real32 to y1:Real32 color c:Color <-
+  // As elit: the cursor, an I-beam at @x from @y0 to @y1, in the color @c.
+  (
+    pen.stroke_color c
+    pen.begin_path
+    pen.stroke_width 4
+    pen.line (x,y0 + 4) to (x,y1 - 4)
+    pen.stroke
+    pen.begin_path
+    pen.stroke_width 2
+    pen.move_to (x - 4,y0)
+    pen.arc_to (x - 1,y0) to (x - 1,y0 + 4) radius 4
+    pen.move_to (x + 4,y0)
+    pen.arc_to (x + 1,y0) to (x + 1,y0 + 4) radius 4
+    pen.move_to (x - 4,y1)
+    pen.arc_to (x - 1,y1) to (x - 1,y1 - 4) radius 4
+    pen.move_to (x + 4,y1)
+    pen.arc_to (x + 1,y1) to (x + 1,y1 - 4) radius 4
+    pen.stroke
+  )

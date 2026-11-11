@@ -1,0 +1,52 @@
+Header
+  + name := Clipboard
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+  
+Public
+  
+  - lower:Int
+  - upper:Int
+  - cursor:Int
+  
+  - ring:Array String_buffer :=
+    ( + result:Array String_buffer
+    result := Array String_buffer.create_with_capacity 8
+    8.times {
+      result.add_last (String_buffer.create (size_bloc+1))
+    }
+    result
+  )
+  
+  - put buf:String <-
+  (
+    (buf !== ring.at upper).if {
+      upper := (upper + 1) % ring.count
+      ring.at upper.copy buf
+      (lower = upper).if {
+        lower := (lower + 1) % ring.count
+      }
+    }
+    Paper.set_clipboard buf
+  )
+  
+  - get_in buf:String_buffer <-
+  (
+    Paper.get_clipboard_in buf
+    (buf !== ring.at upper).if {
+      upper := (upper + 1) % ring.count
+      ring.at upper.copy buf
+      (lower = upper).if {
+        lower := (lower + 1) % ring.count
+      }
+    }
+    cursor := upper
+  )
+  
+  - previous_in buf:String_buffer <-
+  (
+    cursor := (cursor - 1) % ring.count
+    (cursor = lower).if { cursor := upper; }
+    buf.copy (ring.at cursor)
+  )

@@ -1,0 +1,480 @@
+Header
+  + name := Buffer_list
+Inherit
+  
+  + parent_div:Flat Div
+  
+Insert
+  
+  - parent_elito_common:Elito_common := Elito_common
+    
+Public
+  
+  - width_min:Real32  <- Elito_window.root.width - 128
+  - height_min:Real32 <- Elito_window.root.height / 2.0
+  
+  - make_buffer_list:Div <-
+  (
+    make "<>^v" to (0,0) size (100,100)
+    Div_out.create "^v<>".force_center.radius (8|4).margin_hori (16,16) vert (16,2) + self
+  )
+  
+  - name:String_alias := "BUFFER LIST"
+  
+  - buffer:String_buffer := String_buffer.create 4096
+    
+  - point_view:Int
+  - next_view:Int
+  - select:Int := -1
+
+  - value:Array String_alias := Array String_alias.create_with_capacity 64
+  - max:Int
+  
+  - count:Int <- key.count
+  
+  - open:Self <-
+  ( 
+    (parent.is_open).if {
+      point_view := next_view
+    } else {      
+      parent.open
+    }
+    self
+  )
+  
+  - close:Self <- ( parent.close; self)
+        
+  - extract_name txt:String_alias :String_alias <-
+  ( + idx:Int
+    + result:String_alias
+    (Cmd_bar.type = 17).if {
+      result := txt
+    } else {
+      string_tmp.copy txt
+      (string_tmp.last = '/').if {
+        idx := string_tmp.last_index_of '/' since (string_tmp.upper-1)
+      } else {
+        idx := string_tmp.last_index_of '/'
+      }
+      string_tmp.remove_head (idx+1)
+      result := string_tmp.to_string_alias
+    }
+    result
+  )
+  
+  - match_buffer txt:String_buffer :Int <- 
+  ( + result:Int
+    + i,idx:Int
+    + b:Buffer
+    + pth,ext,ext_first:String_alias
+    + bh:Buffer_head
+    value.clear
+    max := 0
+    idx := 4096
+    {i <= Buffer.list.upper}.while_do {      
+      b := Buffer.list.at i
+      string_tmp.copy (b.path)
+      (b.tag != NULL).if {
+        string_tmp.add_last ' '
+        string_tmp.append (b.tag)
+      }
+      (! b.is_save).if { string_tmp.append " **"; }
+      pth := string_tmp.to_string_alias
+      ext := extract_name pth
+      (ext.has_prefix txt).if {
+        (ext_first = NULL).if { ext_first := ext; }
+        max := ext.count.max max
+        value.add_last pth
+        idx := (first_difference_index (ext_first,ext)).min idx
+        result := result | (ext.count = txt.count).to_int
+      }
+      i := i + 1
+    }
+    i := Buffer.previous_list.lower
+    {i <= Buffer.previous_list.upper}.while_do {      
+      bh := Buffer.previous_list.at i
+      string_tmp.copy (bh.path)
+      string_tmp.append " +"
+      pth := string_tmp.to_string_alias
+      ext := extract_name pth
+      (ext.has_prefix txt).if {
+        (ext_first = NULL).if { ext_first := ext; }
+        max := ext.count.max max
+        value.add_last pth
+        idx := (first_difference_index (ext_first,ext)).min idx
+        result := result | (ext.count = txt.count).to_int
+      }
+      i := i + 1
+    }
+    max := max + 4
+    // Completion.
+    (! value.is_empty).if {
+      value.quick_sort_with { (a,b:String_alias)
+        extract_name a < extract_name b
+      }
+      txt.copy ext_first
+      txt.keep_head idx
+    } else { result := -1; }
+    result
+  )
+  
+  - match_file txt:String_buffer :Int <-
+  ( + idx:Int
+    + e:Dirent
+    + d:Directory
+    + result:Int
+    + pre:String_alias
+    value.clear
+    string_tmp.copy txt
+    string_tmp2.copy txt
+    idx := string_tmp.last_index_of '/'
+    (idx < 0).if {
+      string_tmp.copy "./"
+    } else { 
+      string_tmp.keep_head (idx+1)
+      Dirent.reduce_path string_tmp
+      (string_tmp.is_empty).if { string_tmp.copy "/"; }
+      string_tmp2.remove_head (idx+1)
+    }
+    pre := string_tmp2.to_string_alias
+    e := File_system.get string_tmp
+    ((e != NULL) && {e.is_directory}).if {
+      d ?= e
+      d.open
+      idx := 4096
+      max := 0
+      (d.lower).to (d.upper) do { i:Int
+        e := d.at i
+        (e.name.has_prefix pre).if {
+          (e.is_directory).if { 
+            string_tmp.copy (e.path); string_tmp.add_dirsep
+            value.add_last (string_tmp.to_string_alias)
+          } else {            
+            value.add_last (e.path)
+          }
+          max := e.name.count.max max
+          idx := (first_difference_index (value.first,value.last)).min idx
+          result := result | (value.last.count = txt.count).to_int
+        }
+      }
+      d.close
+      max := max + 4
+      // Completion.
+      (! value.is_empty).if {
+        value.quick_sort_with { (a,b:String_alias)
+          extract_name a < extract_name b
+        }
+        txt.copy (value.first)
+        txt.keep_head idx
+        ((txt.count != 1) && {txt.last = '/'}).if {
+          string_tmp.copy txt
+          string_tmp.append "../"
+          value.add_first (string_tmp.to_string_alias)
+        }
+      } else { result := -1; }
+    } else { result := -1; }
+    result
+  )
+  
+Private
+ 
+  - load_proto base:String_alias with pre:String <-
+  ( + e:Dirent
+    + d:Directory
+    + j:Int
+    + c:Char
+    + v,short:String_alias
+    
+    e := File_system.get base
+    ((e != NULL) && {e.is_directory}).if {
+      d ?= e
+      d.open
+      (d.lower).to (d.upper) do { i:Int
+        e := d.at i
+        (e.is_directory).if { 
+          string_tmp.copy (e.path); string_tmp.add_dirsep
+          load_proto (string_tmp.to_string_alias) with pre
+        }.elseif {e.path.has_suffix ".li"} then {
+          string_tmp.copy (e.path)
+          string_tmp.remove_tail 3
+          string_tmp.replace_all_substring "__" with " "; // Old name (Just delete this line)
+          j := string_tmp.upper
+          {string_tmp.at j != '/'}.while_do {
+            ((c := string_tmp.at j) = '-').if { c := ' '; }
+              else { c := c.to_upper; }
+            string_tmp.at j put c
+            j := j - 1
+          }
+          v := string_tmp.to_string_alias
+          short := extract_name v
+          j := value.lower
+          {(j <= value.upper) && {short != remove_tag (extract_name (value.at j))}}.while_do {
+            j := j + 1
+          }
+          (j <= value.upper).if {
+            + idx_s,idx_o:Int
+            + o:String_alias
+            o := remove_tag (value.at j)
+            (idx_s,idx_o) := reverse_first_difference_index (v,o)
+            string_tmp.copy (Buffer.build_tag o index idx_o)
+            string_tmp.add_first ' '
+            string_tmp.prepend o
+            o := string_tmp.to_string_alias
+            value.at j put o
+            max := extract_name o.count.max max
+            //
+            string_tmp.copy (Buffer.build_tag v index idx_s)
+            string_tmp.add_first ' '
+            string_tmp.prepend v
+            v := string_tmp.to_string_alias
+            short := extract_name v
+          }
+          value.add_last v
+        }
+      }
+      d.close
+    }
+  )
+  
+  - remove_tag t:String_alias :String_alias <-
+  ( + idx:Int
+    string_tmp.copy t
+    (string_tmp.last = '>').if {
+      idx := string_tmp.last_index_of '<'
+      string_tmp.keep_head (idx-1)
+    }
+    string_tmp.to_string_alias
+  )
+    
+Public
+  
+  - match_explorer txt:String_buffer in base:String_alias :Int <-
+  ( + idx,j:Int
+    + result:Int
+    + ref,short:String_alias
+    + c:Char
+    
+    value.clear
+    j := txt.lower
+    {(j <= txt.upper) && {(c := txt.at j) != '<'}}.while_do {
+      txt.at j put (c.to_upper)
+      j := j + 1
+    }
+    load_proto base with txt
+    max := 0
+    value.upper.downto 0 do { i:Int
+      short := extract_name (value.at i)
+      (! short.has_prefix txt).if {
+        value.remove i
+      } else {
+        max := short.count.max max
+      }
+    }
+    max := max + 4
+    (! value.is_empty).if {
+      value.quick_sort_with { (a,b:String_alias)
+        extract_name a < extract_name b
+      }
+      ref := extract_name (value.first)
+      idx := ref.count
+      1.to (value.upper) do { i:Int
+        idx := (first_difference_index (ref,extract_name (value.at i))).min idx
+      }
+      txt.copy ref
+      txt.keep_head idx
+      result := (value.count = 1).to_int
+    } else { result := -1; }
+    result
+  )
+  
+  - match_cmd txt:String_buffer :Int <-
+  ( + idx:Int
+    + result:Int
+    + ref,short:String_alias
+    
+    value.clear
+    max := 0
+    0.to (Cmd_bar.list_cmd.upper) do { i:Int
+      short := Cmd_bar.list_cmd.at i
+      (short.has_prefix txt).if {
+        value.add_last short
+        max := short.count.max max
+      }
+    }
+    max := max + 4
+    (! value.is_empty).if {
+      value.quick_sort_with { (a,b:String_alias)
+        a < b
+      }
+      ref := value.first
+      idx := ref.count
+      1.to (value.upper) do { i:Int
+        idx := (first_difference_index (ref,value.at i)).min idx
+      }
+      txt.copy ref
+      txt.keep_head idx
+      result := (value.count = 1).to_int
+    } else { result := -1; }
+    result
+  )
+  
+  - refresh_light l:Int <-
+  ( + n:Int
+    + s:String_alias
+    n := l / max
+    buffer.clear
+    0.to (value.upper) do { i:Int
+      s := extract_name (value.at i)
+      buffer.append s
+      (max - s.count).times { buffer.add_last ' '; }
+      (((i+1)%n) = 0).if { buffer.add_last '\n'; }
+    }
+  )
+  
+  - get_index (i:Int) length l:Int :Int <-
+  ( + n,lin,mx:Int
+    mx  := max
+    n   := l / mx
+    lin := n * mx + 1
+    i / lin * n + (i % lin) / mx
+  )
+  
+  - draw pen:Pen <-
+  ( + x,y,px,py:Real32
+    + c:Char
+    + i,len,idx,nb_line:Int
+    + bg:Paint
+    + is_bot:Boolean
+    
+    draw_debug pen
+    
+    x := xo
+    y := yo
+    pen.begin_path
+    pen.rect (x,y) size (width,height)
+    pen.fill_color (color.background)
+    pen.fill
+    pen.intersect_scissor (x,y) size (width,height)
+    set_font (pen,"Code-Bold")
+    pen.text_align (Pen.align_left|Pen.align_top)
+    len := (width+Page.width_char*4).to_int / Page.width_char.to_int
+    refresh_light len
+    // Begin Pen.
+    (px,py) := (x,y)
+    pen.fill_color (Color.rgba(0,0,0,255))
+    (point_view > buffer.upper).if { point_view := 0; }
+    i := point_view
+    {(i <= buffer.upper) && {py <= y_max}}.while_do {
+      c := buffer.at i
+      (c = '\n').if {        
+        (px,py) := (x,py+Page.height_char)
+        nb_line := nb_line + 1
+      } else {  
+        pen.fill_color (color.black)
+        idx := get_index i length len
+        (((i-point_view-nb_line)%max < max-4) && {select = idx}).if {
+          pen.save
+          pen.begin_path
+          pen.rect (px,py) size (Page.width_char,Page.height_char)
+          pen.fill_color (color.select)
+          pen.fill
+          pen.restore
+        }
+        ((idx <= value.upper) && {Cmd_bar.type != 17}).if { + n:String_alias
+          n := value.at idx
+          (n.last = '~').if {
+            pen.fill_color (color.comment)
+          }.elseif {(n.has_substring ".li") || {
+              (extract_name n.first.is_upper) && {! extract_name n.has '.'}
+          }} then { // Include ".lip" ;-)
+            pen.fill_color (color.type)
+          }.elseif {n.has_substring ".jsky"} then {
+            pen.fill_color (color.number)
+          }.elseif {n.last = '/'} then {
+            pen.fill_color (color.slot)
+          }.elseif {n.has_substring ".java"} then {
+            pen.fill_color (color.operator)
+          }.elseif {n.has_substring ".py"} then {
+            pen.fill_color (color.external)
+          }.elseif {(n.has_substring ".c") || {n.has_substring ".h"}} then { // Include ".cpp", "hpp"
+            pen.fill_color (color.character)
+          }.elseif {(n.has_substring ".txt") || {n.has_substring ".sh"} || 
+            {n.has_substring ".tex"}} then {
+            pen.fill_color (color.comment_ref)
+          }.elseif {n.first_index_of '.' > n.upper} then {
+            pen.fill_color (color.comment_line)
+          }
+        }
+        (! c.code.in_range 0 to 7Fh).if { 
+          //c.print; c.code.print; '\n'.print
+          c := '?'
+        }
+        Page.char_buf.at 0 put c
+        pen.text (px,py) msg (Page.char_buf) from 0 to (-1)
+        px := px + Page.width_char
+      }
+      i := i + 1
+    }
+    is_bot := i >= buffer.upper
+    pen.reset_scissor
+    // End pen.    
+    (point_view != 0).if {
+      bg := Paint.create_linear (x,y) to (x,y+Page.height_char)
+        color (Color.rgba(0,0,0,32))
+        to    (Color.rgba(0,0,0,0))
+      pen.begin_path
+      pen.rect (x,y) size (width,Page.height_char)
+      pen.fill_paint bg
+      pen.fill
+      bg.free
+    }
+    (is_bot).if {
+      next_view := 0
+    } else {
+      {(i > 0) && {buffer.at i != '\n'}}.while_do { i := i - 1; }
+      i := i - 1
+      {(i >= 0) && {buffer.at i != '\n'}}.while_do { i := i - 1; }
+      i := i + 1
+      next_view := i
+      bg := Paint.create_linear (x,y_max) to (x,y_max-Page.height_char+1)
+        color (Color.rgba(0,0,0,32))
+        to    (Color.rgba(0,0,0,0))
+      pen.begin_path
+      pen.rect (x,y_max-Page.height_char+1) size (width,Page.height_char)
+      pen.fill_paint bg
+      pen.fill
+      bg.free
+    }
+  )
+  
+  - touch_event t:Touch <-
+  ( + x,y,xc,yc:Int
+    + n,lin,mx,l,pt:Int
+    (x,y) := (t.x,t.y)
+    (
+      (x.in_range (x_min.to_int) to (x_max.to_int)) && 
+        {y.in_range (y_min.to_int) to (y_max.to_int)}
+    ).if {
+      xc := ((x.to_real32 - x_min) / Page.width_char ).to_int
+      yc := ((y.to_real32 - y_min) / Page.height_char).to_int
+      mx := max
+      l := (width+Page.width_char*4).to_int / Page.width_char.to_int
+      n   := l / mx
+      lin := n * mx + 1
+      pt := point_view + yc * lin + xc
+      select := get_index pt length l
+      ((t.is_released) && {select <= value.upper}).if {
+        Cmd_bar.set_text (value.at select)
+      }
+    } else {
+      select := -1
+    }
+  )
+
+  - print <-
+  (
+    0.to (value.upper) do { i:Int
+      value.at i.print
+      '\n'.print
+    }
+  )

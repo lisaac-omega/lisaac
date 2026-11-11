@@ -20,10 +20,6 @@ Public
 
   + code:Array Itm_code
 
-  + is_check_name:Boolean
-
-  - is_check_local:Int
-
   //
   // Constructor
   //
@@ -98,7 +94,6 @@ Public
     + nb_result:Int
     + lr:Array Expr
     
-    //current_list_level := current_list_level + 1;
     stack_top  := stack_local .upper + 1
     result_top := stack_result.upper + 1
 
@@ -107,7 +102,6 @@ Public
       (local_list.lower).to (local_list.upper) do { j:Int
         var := local_list.at j.to_run
         stack_local.add_last var
-        //"ITM_LIST: ".print; var.name.println
         var.init
       }
     }
@@ -144,7 +138,6 @@ Public
     stack_result.set_upper (result_top-1); // remove_since result_top
     ? {stack_result.upper = Old stack_result.upper}
     //
-    //current_list_level := current_list_level - 1;
     result
   )
 
@@ -173,7 +166,4 @@ Public
 Itm_list, Itm_result
 
   - stack_result:Array Local := Array Local .create_with_capacity 16
-
-
-
 

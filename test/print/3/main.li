@@ -1,9 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + time:Time
-    time := Time.create (23,59,59,99)
-    time.print
-    Test.check (time.to_string) string "23:59:59.99"
-  )

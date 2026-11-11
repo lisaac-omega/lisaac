@@ -1,9 +1,0 @@
-Header
-  + name := Main
-Public
-  - main <-
-  ( + bool:Boolean
-    bool.print
-    Test.check (bool.to_string) string "False"
-    Test.check (True.to_string) string "True"
-  )

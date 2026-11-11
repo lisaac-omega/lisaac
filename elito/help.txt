@@ -1,0 +1,75 @@
+ ---------------------------------------
+ - eLIt: Editor for Lisaac source code -
+ ---------------------------------------
+
+  + toto:INT;
+
+ Welcome,
+ôîté
+
+ eLIt is written in Lisaac for writing Lisaac code.
+
+ The best editor to write in Lisaac used to be Emacs. 
+ Despite his qualities, it was not designed to address 
+ the variety of Lisaac's syntax (very few keywords and 
+ identifiers between arguments).  
+ To address this issue and to get the community on board,
+ we decided to create eLIt. Simple and beautiful were our 
+ drivers to develop this tool.
+
+ * Keyboard shortcuts & main panel are defined in files with 
+   the "*.key" extension. You can modify or add them.
+
+ * There are also a number of definable parameters in the
+   "~/.elit" file.
+
+ Have fun and enjoy the power of Lisaac !
+
+
+ Install:
+ ========
+
+ * Library used: pthread, X11, dl, GL
+
+   Ubuntu/Debian:
+     sudo apt-get install freeglut3-dev
+     sudo apt-get install libglfw3-dev
+     sudo apt-get install libgles2-mesa-dev
+
+ * Add the `elit' directory to your `.bashrc' to easily 
+   access `elit' command:
+
+   export PATH=/home/$USER/elit:$PATH
+
+ Shortcut support:
+ =================
+
+ - emacs.key (default)
+ - standard.key
+
+ Keyboard support:
+ =================
+
+ - Azerty (default)
+ - Qwerty
+ - Azerty (F or Apple, Mac book pro)
+
+ Syntax highlighting:
+ ====================
+
+ - Lisaac (of course)
+ - Java/Jsky
+ - C/C++
+ - Python
+
+ Reading image formats: 
+ ======================
+
+ - JPG - Joint Photographic Experts Group   
+ - PNG - Portable Network Graphics (W3C)    
+ - BMP - BitMaP (Microdobe & IBM)
+ - GIF - Graphics Interchange Format (CompuServe)
+ - PPM - Portable PixMap
+ - PGM - Portable GrayMap
+ - PSD - PhotoShop Document (Adobe)
+- TGA - Truevision Targa

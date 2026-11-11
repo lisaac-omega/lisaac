@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- value.is_invariant
 
+  - is_pure:Boolean <- value.is_pure
+
+  - is_reading v:Variable :Boolean <- value.is_reading v
+
   + static_type:Type_full
 
   + value:Expr

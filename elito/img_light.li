@@ -1,0 +1,199 @@
+Header
+  + name := Img_light
+Inherit
+  
+  + parent_x_light:Flat X_light
+  
+Public
+  
+  - language:String_alias := "(Bitmap)"
+  - space_indent:Int := 2
+  
+  + image_id:Int
+  
+  - create b:Buffer id img_id:Int :Self <-
+  ( + result:Self
+    result := clone
+    result.make b id img_id
+    result    
+  )
+
+  - make b:Buffer id img_id:Int <-
+  ( 
+    buf := b
+    image_id := img_id
+  )
+    
+  - start st:Int line lin:Int <-
+  (     
+    (root != NULL).if { root.free; }
+    root := Light.create NULL type 0 range (0,buf.upper)
+    pass root upper (buf.upper) base 0
+  )
+  
+  - pass r:Light upper up:Int base bi:Int :Int <-
+  ( + i,lo:Int
+    + out:Boolean
+    
+    i := bi
+    {! out}.while_do {      
+      (i > up).if {
+        out := True
+      }.elseif {
+        (at i word "Width") || {at i word "Height"} || {at i word "Depth"}
+      } then {
+        lo := i
+        i := i + last_string.upper
+        r.add keyword_id range (lo,i)
+      }.elseif {
+        (at i word "pix.") || {at i word "bits."}
+      } then {
+        lo := i
+        i := i + last_string.upper
+        r.add comment_id range (lo,i)
+      }.elseif {buf.at i = 1.to_char} then {
+        r.add external_id range (i,i)
+      }
+      i := i + 1
+    }
+    i
+  )
+  
+  - display pen:Pen image (x,y:Real32) <-
+  ( + p:Paint
+    + iw,ih:Real32
+    + imgw,imgh:Int
+    (imgw,imgh) := pen.image_size image_id
+    (iw,ih) := (imgw,imgh)
+    p := Paint.create_pattern (x,y) size (iw, ih) img_id image_id angle 0 alpha 1
+    pen.begin_path
+    pen.rect (x,y) size (iw,ih)
+    pen.fill_paint p
+    pen.fill
+    p.free
+  )
+  
+  - in pen:Pen put c:Char to i:Int pos (x,y:Real32) :Light <-
+  ( + j:Int
+    + li:Light
+    + col:Color
+    ((root = NULL) || {(li := root.get_type i) = NULL}).if {
+      set_font (pen,"Code-Bold")
+      col := color.black
+    } else {
+      set_font (pen,"Code-Bold")
+      (li.type = comment_id).if {
+        j := i
+        {buf.at j.is_identifier}.while_do { j := j - 1; }
+        (buf.at j = '@').if { 
+          col := color.comment_ref
+        } else {
+          col := color.comment
+        }
+      }.elseif {(li.type = comment_line_id) || {li.type = comment_line_intern_id}} then {
+        j := i
+        (buf.at j = '\'').if { j := j - 1; }
+        {buf.at j.is_identifier}.while_do { j := j - 1; }
+        ((buf.at j = '`') || {buf.at j = '@'}).if { 
+          col := color.comment_ref
+        } else {  
+          col := color.comment_line
+          (li.type = comment_line_id).if {
+            set_font (pen,"Code-Bold-Italic")
+          }
+        }
+      }.elseif {li.type = string_id} then {
+        col := color.string
+      }.elseif {li.type = character_id} then {
+        col := color.character
+      }.elseif {li.type = external_id} then {      
+        j := i
+        display pen image (x,y)
+      }.elseif {li.type = keyword_id} then {
+        col := color.keyword
+      }.elseif {li.type = style_id} then {
+        col := color.style
+      }.elseif {li.type = assign_id} then {
+        col := color.assign
+      }.elseif {li.type = operator_id} then {
+        col := color.operator
+      }.elseif {(li.type = type_id) || {li.type = type_parameter_id}} then {  
+        col := color.type
+        (li.type = type_parameter_id).if {
+          set_font (pen,"Code-Bold-Italic")
+        }
+      }.elseif {li.type = number_id} then {
+        col := color.number
+      }.elseif {(li.type = local_id) || {li.type = argument_id}} then {      
+        col := color.local
+        (li.type = argument_id).if {
+          set_font (pen,"Code-Bold-Italic")
+        }
+      }.elseif {li.type = call_id} then {
+        col := color.slot
+      }.elseif {li.type = call_select_id} then {
+        pen.save
+        pen.begin_path
+        pen.move_to (x,y+Page.height_char-8)
+        pen.line_to (x+Page.width_char,y+Page.height_char-8)
+        pen.stroke_color (color.slot_select)
+        pen.stroke_width 1.0
+        pen.stroke
+        pen.restore
+        col := color.slot_select
+      }.elseif {li.type = slot_head_id} then {
+        col := color.slot_head
+        set_font (pen,"Code-Bold-Italic")
+      }.elseif {li.type = call_intern_id} then {  
+        set_font (pen,"Code-Bold-Italic")
+        col := color.slot_tiny
+      }.elseif {li.type = error_id} then {  
+        set_font (pen,"Code-Bold-Italic")
+        col := color.error
+      }.elseif {(li.type = block_ok_id) || {li.type = block_err_id}} then {
+        pen.save
+        pen.begin_path
+        pen.rect (x,y) size (Page.width_char,Page.height_char)
+        pen.fill_color ((li.type = block_ok_id).ok (color.block_ok) or (color.block_err))
+        pen.fill
+        pen.restore
+        col := color.none
+      }.elseif {li.type = comment_ref_id} then {          
+        col := color.comment_ref
+      } else {
+        col := color.none
+      }
+    }
+    ((pattern != NULL) && {ignore_pattern != i}).if {
+      + ip,ib,jp:Int
+      {
+        ip := pattern.index_of c since ip
+        (ip <= pattern.upper).if {
+          ib := i - ip
+          jp := 0
+          {
+            (jp <= pattern.upper) && {ib.in_range 0 to (buf.upper)} &&
+              {buf.at ib = pattern.at jp}
+          }.while_do {
+            ib := ib + 1
+            jp := jp + 1
+          }
+          (jp > pattern.upper).if {
+            pen.save
+            pen.begin_path
+            pen.rect (x,y) size (Page.width_char,Page.height_char)
+            pen.fill_color (color.block_ok)
+            pen.fill
+            pen.restore
+            ip := pattern.upper + 1
+          } else {
+            ip := ip + 1
+          }
+        }
+      }.do_while {ip <= pattern.upper}
+    }
+    pen.fill_color col
+    li    
+  )
+
+  

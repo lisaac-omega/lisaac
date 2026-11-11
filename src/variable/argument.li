@@ -34,11 +34,6 @@ Public
   // To profil
   //
 
-  - to_local:Local <-
-  (
-    Local.create position name name style ' ' type (type.fix)
-  )
-
   //
   // Display.
   //

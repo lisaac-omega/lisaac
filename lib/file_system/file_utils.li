@@ -209,6 +209,12 @@ static int li_cpdir(const char *src, const char *dst) {
   return 0;
 }
 
+/* 1 if a and b exist and a was modified after b (or in the same second). */
+static int li_is_newer(const char *a, const char *b) {
+  struct stat sa, sb;
+  if (stat(a,&sa) != 0 || stat(b,&sb) != 0) return 0;
+  return sa.st_mtime >= sb.st_mtime;
+}
 
 `;
 Inherit
@@ -390,22 +396,24 @@ Public
   
   // Other:
   
+  - is_newer some_path:String than other_path:String :Boolean <-
+  // True if both exist and @some_path was modified after @other_path
+  // (or in the same second), for example an executable and its source.
+  ( + p,q:C_array Char
+    
+    p := some_path.to_external
+    q := other_path.to_external
+    `li_is_newer(@p,@q)`:Int = 1
+  )
+  
   - exists some_path:String : Boolean <-
   (
     (li_path_kind some_path) != 0
   )
   
-  - add_dirsep path:String_buffer <-
-  // If not alreday at the end, add the correct directory separator.
-  ( + directory_separator:Char
-    
-    if (System.name = "windows") then {
-      directory_separator := '\\'
-    } else {
-      directory_separator := '/'
-    }
-    path.extend_unless directory_separator
-  )
+  - directory_separator: Char <- (System.name = "windows").ok '\\' or '/'
+  
+  - add_dirsep path:String_buffer <- ( path.extend_unless directory_separator )
   
 Private
   

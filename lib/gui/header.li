@@ -58,7 +58,7 @@ Public
     o.child.foreach { w:Win; w.dup self; }
   )
     
-  - init p:Win :Self <- ( read_object; init_parent p)
+  - init_win p:Win :Self <- ( read_object; init_parent p)
   
   - flip <- ( set_open ((!is on).ok parent or NULL); )
   
@@ -93,7 +93,7 @@ Public
   - object id:String_alias :Boolean <-
   (
     id
-    .case "ICON_LINE" then { Icon_line.new.init self; }
+    .case "ICON_LINE" then { Icon_line.new.init_win self; }
     = String_alias
   )
   

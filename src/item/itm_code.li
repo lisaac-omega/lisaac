@@ -17,6 +17,169 @@ Public
   - is_constant:Boolean <- False
 
   //
+  // COP: `One' (an object with only one reference, see @Escape).
+  //
+
+  - read_name src:Itm_code :String_alias <-
+  // The name read by @src if it is a read without argument (a variable), else NULL.
+  ( + rd:Itm_read
+    + r1:Itm_read_arg1
+    + r2:Itm_read_arg2
+    + rn:Itm_read_args
+    + result:String_alias
+    rd ?= src
+    r1 ?= src
+    r2 ?= src
+    rn ?= src
+    ((rd != NULL) && {(r1 = NULL) || {r1.arg = NULL}} && {r2 = NULL} && {rn = NULL}).if {
+      result := rd.name
+    }
+    result
+  )
+
+  - is_argument n:String_alias :Boolean <-
+  // An argument of the function.
+  ( + loc:Local
+    loc := lookup n
+    (loc != NULL) && {loc.style = ' '}
+  )
+
+  - is_data_variable n:String_alias :Boolean <-
+  // A local or a data slot (not a function without argument).
+  ( + loc:Local
+    + slot:Slot
+    + result:Boolean
+    loc := lookup n
+    (loc != NULL).if {
+      result := True
+    } else {
+      loc := lookup "self"
+      (loc != NULL).if {
+        slot := loc.type.raw.get_slot n
+        result := (slot != NULL) && {slot.slot_data_intern != NULL} && {slot.slot_code_intern = NULL}
+      }
+    }
+    result
+  )
+
+  - is_one_variable n:String_alias :Boolean <-
+  // A local or a slot of `self' of type `One'.
+  ( + loc:Local
+    + slot:Slot
+    + typ:Type
+    + result:Boolean
+    loc := lookup n
+    (loc != NULL).if {
+      result := (loc.style != '-') && {loc.type.is_one}
+    } else {
+      loc := lookup "self"
+      (loc != NULL).if {
+        typ := loc.type.raw
+        slot := typ.get_slot n
+        ((slot != NULL) && {slot.style = '+'} && {slot.slot_data_intern != NULL} && {slot.slot_code_intern = NULL}).if {
+          result := slot.slot_data_for typ.type.is_one
+        }
+      }
+    }
+    result
+  )
+
+  - emit_move n:String_alias <-
+  // The `One' variable @n is moved: `n := NULL', marked (see @Prototype_cst.is_move). For a
+  // local, generated in debug mode only (checked statically, see @Escape.on_write); for a
+  // field, in both modes (it may be compared to `NULL' after, see @Write_slot.genere).
+  ( + nul:Prototype_cst
+    + loc,myself:Local
+    + slot:Slot
+    + typ:Type
+    + rec:Expr
+    + node:Node
+    + wrt:Write
+    nul := Prototype_cst.create position type (Type_null.default)
+    nul.set_move n
+    loc := lookup n
+    (loc != NULL).if {
+      wrt := loc.write position value (nul.check_type (loc.type) with position)
+      wrt.set_move
+      list_current.add_last wrt
+    } else {
+      myself := lookup "self"
+      rec := myself.read position
+      typ := rec.static_type.raw
+      slot := typ.get_slot n
+      node := Node.new_write position slot slot receiver rec value (nul.check_type (slot.slot_data_for typ.type) with position)
+      list_current.add_last node
+    }
+  )
+
+  - without_parentheses src:Itm_code :Itm_code <-
+  // @src without its parentheses: `(o.f)' is `o.f'.
+  ( + l:Itm_list
+    + r:Itm_result
+    + result:Itm_code
+    result := src
+    l ?= result
+    {(l != NULL) && {l.code.count = 1} && {(l.local_list = NULL) || {l.local_list.is_empty}} && {(l.static_list = NULL) || {l.static_list.is_empty}}}.while_do {
+      result := l.code.first
+      r ?= result
+      (r != NULL).if {
+        // The last expression of a group.
+        result := r.value
+      }
+      l ?= result
+    }
+    result
+  )
+
+  - check_one_source s:Itm_code to_one is_one:Boolean <-
+  // A `One' destination (variable or parameter) gets @s: moved if @s is a `One' variable;
+  // a shared reference (a variable not `One') is refused.
+  ( + n:String_alias
+    + src:Itm_code
+    + r1:Itm_read_arg1
+    + rec:Expr
+    + typ:Type
+    + slot:Slot
+    + nul:Prototype_cst
+    + node:Node
+    (is_one).if {
+      src := without_parentheses s
+      n := read_name src
+      r1 ?= src
+      ((n = NULL) && {r1 != NULL} && {r1.arg != NULL} && {read_name (r1.arg) != NULL} && {is_data_variable (read_name (r1.arg))}).if {
+        // `o.f', with `o' a variable.
+        rec := r1.arg.to_run_expr
+        typ := rec.static_type.raw
+        slot := typ.get_slot (r1.name)
+        ((slot != NULL) && {slot.slot_data_intern != NULL} && {slot.slot_code_intern = NULL}).if {
+          (slot.slot_data_for typ.type.is_one).if {
+            // A `One' field of another object: moved (`o.f := NULL').
+            nul := Prototype_cst.create position type (Type_null.default)
+            nul.set_move (r1.name)
+            node := Node.new_write position slot slot receiver rec value (nul.check_type (slot.slot_data_for typ.type) with position)
+            list_current.add_last node
+          } else {
+            string_tmp.copy "COP: a `One' destination receives a shared reference: the field `"
+            string_tmp.append (r1.name)
+            string_tmp.append "' is not `One'."
+            semantic_error (position,string_tmp)
+          }
+        }
+      }
+      (n != NULL).if {
+        (is_one_variable n).if {
+          emit_move n
+        }.elseif {is_data_variable n} then {
+          string_tmp.copy "COP: a `One' destination receives a shared reference: declare `"
+          string_tmp.append n
+          string_tmp.append "' as `One' (it is moved), or give a new object."
+          semantic_error (position,string_tmp)
+        }
+      }
+    }
+  )
+
+  //
   // Runnable.
   //
 

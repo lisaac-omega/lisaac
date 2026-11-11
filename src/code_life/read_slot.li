@@ -11,6 +11,10 @@ Public
 
   - is_invariant:Boolean <- slot.is_invariant receiver
 
+  - is_pure:Boolean <- receiver.is_pure
+
+  - is_reading v:Variable :Boolean <- receiver.is_reading v
+
   + slot:Slot_data
 
   + receiver:Expr
@@ -18,6 +22,37 @@ Public
   - variable:Variable <- slot
 
   - get_last_value:Expr <- variable.get_last_value receiver
+
+  - is_prefix_read:Boolean <-
+  // @self reads the prefix parent (see @Type.prefix_slot) of a receiver reached by a pointer:
+  // same address as the receiver.
+  ( + rs:Read_slot
+    + tf:Type_full
+    + result:Boolean
+
+    (slot = slot.receiver_type.prefix_slot).if {
+      rs ?= receiver
+      ((rs != NULL) && {rs.is_prefix_read}).if {
+        result := True
+      } else {
+        tf := receiver.static_type
+        result := (! tf.is_flat) || {(tf.is_flat_ref) && {! tf.is_default_flat}}
+      }
+    }
+    result
+  )
+
+  - genere_prefix_pointer <-
+  // Pointer of @self, with @is_prefix_read.
+  ( + rs:Read_slot
+
+    rs ?= receiver
+    ((rs != NULL) && {rs.is_prefix_read}).if {
+      rs.genere_prefix_pointer
+    } else {
+      receiver.genere
+    }
+  )
 
   //
   // Comparison.
@@ -57,13 +92,6 @@ Public
   ( + result:Self
     
     result ?= slot.read position with (receiver.my_copy)
-    /*(slot.intern_name = "self").if {
-      "---------------------------".println
-      debug_display
-      //receiver.type_name.println
-      "-------".println
-      result.debug_display
-    };*/
     result
   )
 
@@ -93,6 +121,18 @@ Public
   // Genere
   //
 
+  - prefix_receiver:Read_slot <-
+  ( + result:Read_slot
+    result ?= receiver
+    result
+  )
+
+  - is_prefix_receiver:Boolean <-
+  // @receiver is a prefix parent: @slot is read with a cast to its type.
+  (
+    (slot.receiver_type.alias_slot = NULL) && {prefix_receiver != NULL} && {prefix_receiver.is_prefix_read}
+  )
+
   - genere <-
   ( + tf,tf2:Type_full
     + t:Type
@@ -108,6 +148,17 @@ Public
       output.add_last ')'
       receiver.genere
       output.append ".self)"
+    }.elseif {is_prefix_receiver} then {
+      // Through prefix parents: ((Parent *)receiver)->slot.
+      output.append "(("
+      t := slot.receiver_type
+      t.put_reference_declaration output
+      output.add_last ' '
+      t.put_reference_star_declaration output
+      output.add_last ')'
+      prefix_receiver.genere_prefix_pointer
+      output.append ")->"
+      output.append (variable.intern_name)
     } else {      
       tf := receiver.static_type
       t  := slot.receiver_type
@@ -161,13 +212,4 @@ Public
     buffer.append "->"
     parent_read.display buffer
   )
-
-
-
-
-
-
-
-
-
 

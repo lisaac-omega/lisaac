@@ -7,8 +7,8 @@ Header
    `grep "//--" parser.li' : Syntax rules.
    `grep "////" parser.li' : lip grammar.
   */
-Inherit
-  - parent_any:Any := Any
+Insert
+  - parent_lisaac_common:Lisaac_common := Lisaac_common
 
 Public
   
@@ -101,32 +101,9 @@ Public
   - last_comment_slot  :String_alias
   - skip_comment:Boolean
   
-  /*
-  - put_new_line_comment str:String_buffer with cmt:String_alias <-
-  ( + lst:LINKED_LIST(String_alias) ; + idx,idx_beg:Int 
-    
-    // DCDC 
-    //lst := PARSER.short_dico.fast_reference_at cmt
-    lst := PARSER.dico.reference_at cmt
-    (lst != NULL).if {    
-      {(idx := str.index_of '\n' since (idx+1)) < str.upper}.while_do {
-        idx_beg := idx
-        idx := idx + 1
-        {
-          (idx <= str.upper) &&
-          {str.at idx <= ' ' } &&
-          {str.at idx != '\n'}
-        }.while_do {
-          idx := idx + 1
-        }
-        (str.at idx = '\n').if {
-          str.replace_substring (lst.first) from idx_beg to (idx-1)
-          idx := idx_beg + (lst.first.count)-1
-        }
-      }
-    }
-  )
-  */
+  - space_stat:Int
+  // Newlines seen by @read_space_nl before a comment: 2 means after a blank line
+  // (chapter comment). Not a local of @read_space: a `\n' ends @read_space.
   
   - read_space_nl:Boolean <-
   ( + pos,p:Int
@@ -134,12 +111,19 @@ Public
       string_tmp3.clear
       string_tmp4.clear
     }
+    space_stat := 0
     p := position
     {
       pos := position
       read_space
-      (cur_char = '\n').if { position := position + 1; }
+      (cur_char = '\n').if {
+        position := position + 1
+        ((is_shorter2) && {space_stat < 2}).if {
+          space_stat := space_stat + 1
+        }
+      }
     }.do_while {pos != position}
+    space_stat := 0
     
     ((is_shorter2) && {! skip_comment}).if {
       (string_tmp3.is_empty).if {
@@ -160,7 +144,6 @@ Public
   - read_space:Boolean <-
   ( + posold,pos,pos2:Int
     + level_comment:Int
-    + stat:Int
     + c:Char
 
     pos := position
@@ -174,12 +157,11 @@ Public
         {cur_char <= ' '} && 
         {(cur_char != '\n') || {(position > 0) && {source.at (position-1) = '\r'}}}
       }.while_do {
-      //{(cur_char = 0.to_char) || {(cur_char > ' ') || {cur_char = '\n'}}}.until_do {
         (is_shorter2).if {
           (cur_char = '\n').if {
-            (stat)
-            .when 0 then { stat := 1; }
-            .when 1 then { stat := 2; }
+            (space_stat)
+            .when 0 then { space_stat := 1; }
+            .when 1 then { space_stat := 2; }
             .when 2 then {            }
           }
         }
@@ -192,7 +174,7 @@ Public
         pos2 := position
         {((c := cur_char) != '\0') && {c != '\n'} && {c != '\r'}}.while_do {
           (is_shorter2).if {
-            (stat)
+            (space_stat)
             .when 0 or 1 then {
               string_tmp3.add_last c
             }
@@ -204,8 +186,11 @@ Public
         }
         (c = '\n').if { position := position - 1; }
         (is_shorter2).if {
-          (stat)
-          .when 0 or 1 then { string_tmp3.add_last '\n'; }
+          (space_stat)
+          .when 0 or 1 then {
+            string_tmp3.add_last '\n'
+            space_stat := 0; // Comment of the slot: the next line goes on.
+          }
           .when 2      then { string_tmp4.add_last '\n'; }
         }
         position := position + 1
@@ -325,7 +310,6 @@ Public
       string_tmp.add_last c; position := position + 1
     }.elseif {read_utf8 && utf8} then {
       first.if { string_tmp.clear; }
-    //s := utf8_dico.reference_at last_utf8
       s := utf8_dico.search last_utf8 raw
       (s = NULL).if { string_tmp.append last_utf8 } else { string_tmp.append s }
       position := position + last_utf8.count
@@ -353,7 +337,7 @@ Public
       last_string := string_tmp.to_string_alias     
       (
         (last_string = "Old")  || {last_string = "Exact"}  || 
-        {last_string = "Flat"} || {last_string = "Result"} || 
+        {last_string = "Flat"} || {last_string = "Result"} || {last_string = "One"} || 
         {
           (last_string.has_prefix "Result_") && {
             i := "Result_".count
@@ -427,9 +411,6 @@ Public
           }
           f.if {
             last_real := tmp.to_string_alias
-            //e1 := e1 - e0
-            //(! tmp.is_integer_64).if { syntax_error (current_position,"Not number."); }
-            //last_real := tmp.to_int64.to_real32 * 10.0.pow e1
             is_real := True
           } else {
             (! tmp.is_integer_64).if { syntax_error (current_position,"Incorrect decimal number."); }
@@ -603,12 +584,8 @@ Public
   ( //+ pos_sec:Int
     + p:Int
     
-    //pos_sec := position
-    
     read_space_nl
 
-    //pos_sec := position
-    
     last_comment_extern := NULL
     //
     // Read Section Header.
@@ -755,7 +732,6 @@ Public
       read_char ';'; // Optionnel
  
       // Added slot in prototype :
-    //s := object.slot_list.reference_at (last_slot.name)
       s := object.slot_list.search (last_slot.name) raw
       (s != NULL).if {
         Position.put_error semantic text "Double slot declaration."
@@ -789,10 +765,6 @@ Public
         }
       }
       arg := read_loc_arg False
-      /*
-      ((arg != NULL) && {arg.is_self} && {read_char '.'}).if {                
-        warning_error (current_position,"Compatibility Old Lisaac.")
-      }*/
       
       (read_char '\'').if {
         (idf_beg).if { syntax_error (current_position,"Incorrect slot identifier."); }
@@ -1184,22 +1156,26 @@ Public
   )
     
   - read_type_begin:(Itm_type_mono, Uint8, String_alias) <-
-  //++ TYPE_BEGIN   -> ("Exact" | "Flat") cap_identifier{('.'|'...')cap_identifier}  
+  //++ TYPE_BEGIN   -> ["One"] ("Exact" | "Flat") cap_identifier{('.'|'...')cap_identifier}  
   ( + style:Uint8
     + result:Itm_type_mono
+    + par:Itm_type_parameter
     + nam:String_alias
     + old_pos,pos_before:Int
     + continue:Boolean
     
+    (read_word "One").if {
+      // COP: an object with only one reference (before `Flat' or `Exact').
+      style := Type_full.one_bit
+    }
     ((read_word "Flat") || {read_word "Exact"}).if {
       (last_string = "Flat").if {
-        style := Type_full.flat_bit
+        style := style | Type_full.flat_bit
       } else {
-        style := Type_full.exact_bit
+        style := style | Type_full.exact_bit
       }
     }
     // PROTOTYPE
-    //style := style | (read_char '\\'.to_int << 7); // See TYPE_FULL for bit number.
     (read_cap_idf).if {
       old_pos    := position
       
@@ -1226,9 +1202,15 @@ Public
       //
       nam := string_tmp2.to_string_alias      
       (is_parameter_type).if {
-        (style != 0).if { warning_error (current_position,"Style Flat, Exact or \'\\\' is ignored."); }
+        ((style & Type_full.escape_bit) != 0).if { warning_error (current_position,"Style \'\\\' is ignored."); }
         result := Itm_type_parameter.get nam
+        ((style & ~Type_full.escape_bit) != 0).if {
+          // `Flat E': the style is added to the type given for `E'.
+          par ?= result
+          result := Itm_type_parameter_style.get par style (style & ~Type_full.escape_bit)
+        }
       }.elseif {nam = str_self} then {
+        // Self is always exact: no style.
         ((style & ~Type_full.escape_bit) != 0).if { warning_error (current_position,"Style Flat or Exact ignored."); }
         ((style & Type_full.escape_bit) != 0).if {            
           result := Itm_type_simple.type_self_with_escape
@@ -1258,7 +1240,6 @@ Public
           // Multiple Genericity.
           genericity := Alias_array Itm_type.new
           genericity.add_last t
-          //warning_error (current_position,"LA")
           {read_cap_idf}.while_do {
             string_tmp2.copy nam
             string_tmp2.add_last ' '
@@ -1270,7 +1251,6 @@ Public
             }
             genericity.add_last t
           }
-          //nam.print; '\n'.print
           genericity := Alias_array Itm_type.alias genericity
           result     := Itm_type_generic.get nam style styl with genericity
         } else { 
@@ -1802,7 +1782,6 @@ Public
             }
           }
           (object.shortname != name).if {
-            //Out # object.shortname # " " # name # '\n'
             warning_error (current_position,"Incorrect name (filename != name).")
           }
         } else {
@@ -2037,7 +2016,7 @@ Public
     
     (sec = "Public").if {
       is_shorter2 := True
-      read_space
+      read_space_nl; // Not @read_space: it stops on `\n', before the chapter comment.
       is_shorter2 := False
       (last_comment_extern != NULL).if {      
         string_tmp.copy last_comment_extern
@@ -2081,8 +2060,6 @@ Public
           syntax_error (current_position,"Incorrect expression type.")
         }
         data := Lip_slot_data.create current_position name n value cst argument False
-        //data.set_value cst
-        //cst.free
         ((n = "upper") || {n = "lower"} || {n = "upper_star"} || {n = "lower_star"} || {n = "symbol"}).if {
           + v:Lip_string
           + err:String_alias
@@ -2130,9 +2107,6 @@ Public
           warning_error (pos,"Comment needed.")
         } else {
           slot_code.set_comment last_comment_slot
-          (last_comment_extern != NULL).if {
-            last_comment_extern.println
-          }
           slot_code.set_comment_chapter last_comment_extern
         }
       }
@@ -2293,7 +2267,6 @@ Public
       cod.add_last instr
       read_space_nl
     }
-    //cod.add_last instr
   )
 
   - readlip_expr_base:Lip_code <-
@@ -2417,13 +2390,11 @@ Public
     result
   )
 
-
 Public
 
   //
   // Parser Entry.
   //
-
 
   - go_on obj:Prototype <-
   (
@@ -2445,7 +2416,7 @@ Public
   ( + entry:Pointer
     //OUT # "Open " # path_lip # '\n'
     entry := File_utils.open_read path_lip
-    (entry.is_not_null).if {      
+    (entry != NULL).if {      
       File_utils.close entry
       object := Prototype.create path_lip name path_lip generic_count 0
 

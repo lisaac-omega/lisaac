@@ -179,13 +179,8 @@ Public
       (n_t = NULL).if {
         // '=' or '!='.        
         ext ?= val_list.at max_pos
-        //ext.set_left left and_right right
         (left,right) := cmp_verify (left.position) between (left,right)
         val := product_cmp (left,right) ext ext pos (left.position)
-        //loc  := type_boolean.default.get_temporary (ext.position)
-        //instr:= loc.write (ext.position) value ext
-        //list_current.add_last instr
-        //val := loc.read (instr.position)
       } else {
         // SW_READ.
         l_arg := Array Expr .create_with_capacity 2
@@ -246,7 +241,4 @@ Private
     string_tmp.add_last '.'
     semantic_error (p,string_tmp)
   )
-
-
-
 

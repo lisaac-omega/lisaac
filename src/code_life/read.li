@@ -9,6 +9,10 @@ Public
 
   - is_slot:Boolean <- False
 
+  - is_pure:Boolean <- True
+
+  - is_reading v:Variable :Boolean <- variable = v
+
   - variable:Variable <-
   (
     abstract
@@ -53,7 +57,6 @@ Public
     + j:Int
     + val:Expr
     + req_list:Array Write
-    //? { variable.require_first != NULL }
     /* BSBS: A REVOIR
     ((variable.require_first = NULL) && {!variable.type.is_flat}).if {
       variable.intern_name.print; '\n'.print
@@ -110,6 +113,7 @@ Public
     + wrt:Write
     //+ old_loop_invariant:LOOP
 
+    Escape.on_read self
     simplify_type variable
     
     //
@@ -122,9 +126,6 @@ Public
     ).if {
       cst := is_require_constant;  // BSBS: Ce cas devrait rentrer dans get_last_value
       ((cst != NULL) && {variable.style != 'R'} && {! variable.type.is_flat_without_default}).if { 
-        /*variable.type.prototype.is_complex_flat.if {
-          Out # variable.intern_name # " " # variable.type.prototype.name # " Constant propa\n"
-        };*/
         //
         // CONSTANT propagation.
         //
@@ -138,9 +139,6 @@ Public
       }.elseif {
         ((val := get_last_value) != NULL) && {(! variable.type.is_flat_without_default) || {! val.is_constant}}
       } then {
-        /*variable.type.prototype.is_complex_flat.if {
-          Out # variable.intern_name # " " # variable.type.prototype.name # " Step by step propa\n"
-        };*/
         //
         // VALUE_EXPR propagation, step by step.
         //
@@ -154,19 +152,16 @@ Public
       //
       // Normal.
       //
-      ((is_slot) && {loop_invariant != NULL} && {is_invariant}).if {
-        //old_loop_invariant := loop_invariant
-        //loop_invariant := NULL
+      // Only a read run before the first test of the loop (its condition, or the body of a
+      // `do_while'): else, its receiver may be @NULL (`(l != NULL) && {l.f}', or no iteration).
+      ((is_slot) && {loop_invariant != NULL} && {cond_depth <= loop_cond_depth} && {is_invariant}).if {
         //
         l := static_type.get_temporary position
         wrt := l.write position value self
         loop_list.insert_before wrt
         result := l.read position
         //
-        //wrt.execute
-        //result := result.execute_link
         //
-        //loop_invariant := old_loop_invariant
         count_invariant := count_invariant + 1
       } else {
         
@@ -186,9 +181,7 @@ Public
 
   - display_ref buffer:String_buffer <-
   ( + req_list:Array Write
-    //is_verbose.if {
       buffer.add_last '<'
-      //buffer.append (object_id.to_string_buffer)
       buffer.add_last 'R'
       (variable.require_first != NULL).if {
         variable.require_first.object_id.append_in buffer
@@ -205,7 +198,6 @@ Public
       buffer.append "/E"
       variable.ensure_count.append_in buffer
       buffer.add_last '>'
-    //}
   )
 
   - display buffer:String_buffer <-
@@ -216,13 +208,4 @@ Public
     buffer.add_last ']'
     display_ref buffer
   )
-
-
-
-
-
-
-
-
-
 

@@ -1,0 +1,369 @@
+Header
+  + name := Ui_toolbar
+/* The top of a window, as elit: a thin handle (a click opens or closes the whole, a drag
+   moves the window), then lines of icons. An icon opens its bar on its right, one open bar
+   by line, and turns of a quarter; the bars and the whole open and close with an
+   animation of @delay microseconds. An icon is moved with the mouse to another place of
+   its line, to another line, or under the last one (a new line).
+   The heirs give the images of the icons (@icon_image) and the content of the bars
+   (@draw_bar, @mouse_bar): it is drawn from the left of the bar, and slides with it. */
+Inherit
+  + parent_box:Flat Ui_box
+
+Public
+
+  + lines:Array (Array Ui_tool)
+  + is_open:Boolean
+  + open_stamp:Uint64
+  + col_on:Color
+  + col_off:Color
+  + drag_tool:Ui_tool
+  + drag_dx:Real32
+  + drag_dy:Real32
+  + is_moving:Boolean
+
+  - delay:Uint64 := 400_000
+  - set_delay d:Uint64 <- ( delay := d.max 1 )
+
+  - handle_h:Real32 := 8
+  - dim:Real32 <- Font.size_sys + 8
+
+  - make_toolbar <-
+  (
+    lines := Array (Array Ui_tool).create_with_capacity 4
+    is_open := True
+  )
+
+  - set_colors (on,off:Color) <- ( (col_on,col_off) := (on,off) )
+
+  //
+  // The lines of icons (for the configuration).
+  //
+
+  - clear_lines <- ( lines.clear )
+
+  - add_line <- ( lines.add_last (Array Ui_tool.create_with_capacity 4) )
+
+  - add_tool id:String_alias open o:Boolean <-
+  // A new icon at the end of the last line (its bar open or not, without animation).
+  ( + t:Ui_tool
+    (lines.is_empty).if { add_line }
+    t := Ui_tool.create id
+    t.set_on o stamp 0
+    lines.last.add_last t
+  )
+
+  - set_open b:Boolean <- ( (is_open,open_stamp) := (b,0) )
+
+  - open_index l:Int :Int <-
+  // The icon of the line @l whose bar is open, or -1.
+  ( + r,i:Int
+    r := -1
+    i := lines.at l.upper
+    {(i >= 0) && {r < 0}}.while_do {
+      (lines.at l.at i.is_on).if { r := i }
+      i := i - 1
+    }
+    r
+  )
+
+  //
+  // Animation.
+  //
+
+  - progress t:Uint64 :Real32 <-
+  // From 0 to 1 during @delay after the time @t.
+  ( + dt:Uint64
+    + r:Real32
+    dt := Time.gettimeofday - t
+    (dt < delay).if {
+      r := dt.to_real32 / delay.to_real32
+      Paper.refresh_again
+    } else {
+      r := 1
+    }
+    r
+  )
+
+  - openness on:Boolean stamp t:Uint64 :Real32 <-
+  ( + p:Real32
+    p := progress t
+    (! on).if { p := 1.0 - p }
+    p
+  )
+
+  - stamp_for on:Boolean from v:Real32 :Uint64 <-
+  // The time of a change to @on, which starts from the openness @v (the animation goes back
+  // from where it is).
+  ( + p:Real32
+    (on).if { p := v } else { p := 1.0 - v }
+    Time.gettimeofday - (p * delay.to_real32).to_uint64
+  )
+
+  - flip <-
+  ( + v:Real32
+    v := openness is_open stamp open_stamp
+    is_open := ! is_open
+    open_stamp := stamp_for is_open from v
+  )
+
+  - set_tool t:Ui_tool on b:Boolean <-
+  ( + v:Real32
+    (t.is_on != b).if {
+      v := openness (t.is_on) stamp (t.stamp)
+      t.set_on b stamp (stamp_for b from v)
+    }
+  )
+
+  - toggle_tool t:Ui_tool in l:Array Ui_tool <-
+  // The bar of @t opens (the other one of the line closes), or closes.
+  ( + b:Boolean
+    b := ! t.is_on
+    l.foreach { o:Ui_tool; (o != t).if { set_tool o on False } }
+    set_tool t on b
+  )
+
+  //
+  // Size.
+  //
+
+  - full_height:Real32 <- handle_h + dim * lines.count.to_real32
+
+  - wanted_height:Real32 <-
+  // The height now (during the animation of the whole).
+  ( handle_h + dim * lines.count.to_real32 * openness is_open stamp open_stamp )
+
+  - bar_max l:Array Ui_tool :Real32 <- width - dim * l.count.to_real32 + dim / 2
+
+  - place <-
+  // The place of the icons in their lines, and the width of their bar now.
+  ( + x,bm,w:Real32
+    lines.foreach { l:Array Ui_tool
+      x := xo
+      bm := bar_max l
+      l.foreach { t:Ui_tool
+        t.set_x x
+        t.set_bar_w (1.0 + (bm - 1.0) * openness (t.is_on) stamp (t.stamp))
+        w := (dim / 2 + t.bar_w).max dim
+        x := x + w
+      }
+    }
+  )
+
+  //
+  // Drawing.
+  //
+
+  - draw <-
+  ( + y,h,mx,my:Real32
+    + hot:Boolean
+    place
+    h := wanted_height
+    (mx,my) := (Hand.x_cur,Hand.y_cur)
+    // The handle.
+    hot := is_moving || {(Hand.window_cur = window) && {my.in_range yo to (yo + handle_h)} && {mx.in_range xo to xmax}}
+    pen.begin_path
+    pen.rect (xo + 0.5,yo + 0.5) size (width - 1,handle_h - 2) radius ((handle_h - 1) / 2)
+    (hot).if { pen.fill_color col_on } else { pen.fill_color col_off }
+    pen.stroke_color (Color.rgba (0,0,0,255))
+    pen.stroke_width 1
+    pen.stroke
+    pen.fill
+    // The lines, in the open part.
+    (h > handle_h + 0.5).if {
+      pen.save
+      pen.intersect_scissor (xo,yo + handle_h) size (width,h - handle_h)
+      y := yo + handle_h
+      lines.foreach { l:Array Ui_tool
+        l.foreach { t:Ui_tool
+          (t != drag_tool).if { draw_tool t at (t.x,y) line l }
+        }
+        y := y + dim
+      }
+      pen.restore
+    }
+    (drag_tool != NULL).if {
+      draw_icon drag_tool at (Hand.x_cur - drag_dx,Hand.y_cur - drag_dy)
+    }
+  )
+
+  - draw_tool t:Ui_tool at (x,y:Real32) line l:Array Ui_tool <-
+  ( + bx,bm:Real32
+    + p:Paint
+    (t.bar_w > 1.5).if {
+      bx := x + dim / 2
+      bm := bar_max l
+      pen.begin_path
+      p := Paint.create_linear (bx,y + dim - 8) to (bx,y + dim) color col_off to col_on
+      pen.rect_varying (bx,y + 4) size (t.bar_w,dim - 8) radius (0,8,8,0)
+      pen.fill_paint p
+      pen.fill
+      p.free
+      pen.save
+      pen.intersect_scissor (bx,y) size ((t.bar_w - 8).max 0,dim)
+      draw_bar (t.id) at (bx + t.bar_w - bm + dim / 2,y) height dim
+      pen.restore
+    }
+    draw_icon t at (x,y)
+  )
+
+  - draw_icon t:Ui_tool at (x,y:Real32) <-
+  // A square which turns of a quarter when its bar opens, with its image.
+  ( + d,a,p,g:Real32
+    + pt:Paint
+    + im:Int
+    p := progress (t.stamp)
+    (t.is_on).if { a := -Real32.pi / 2 * p } else { a := -Real32.pi / 2 * (1.0 - p) }
+    pen.save
+    pen.translate (x + dim / 2,y + dim / 2)
+    pen.rotate a
+    d := dim / 2 - 2
+    pen.begin_path
+    pen.rect (-d,-d) size (d + d,d + d) radius 8
+    pen.fill_color col_off
+    pen.stroke_color (Color.rgba (0,0,0,255))
+    pen.stroke_width 1
+    pen.stroke
+    pen.fill
+    (t.is_on).if { g := p } else { g := (0.5 - p).max 0 }
+    pen.begin_path
+    pen.rect (-d,-d) size (d + d,d + d) radius 8
+    pt := Paint.create_box (-d - 2,-d + 2) size (d + d - 2,d + d - 2) radius 8 feather 4 color (Color.rgba (0,0,0,0)) to (Color.rgbaf (g,g,g,0.6 + g * 0.3))
+    pen.fill_paint pt
+    pen.fill
+    pt.free
+    im := icon_image (t.id)
+    (im >= 0).if {
+      d := d - 4
+      pt := Paint.create_pattern (-d,-d) size (d + d,d + d) img_id im angle 0 alpha 1
+      pen.begin_path
+      pen.rect (-d,-d) size (d + d,d + d)
+      pen.fill_paint pt
+      pen.fill
+      pt.free
+    }
+    pen.restore
+  )
+
+  //
+  // Mouse.
+  //
+
+  - mouse ev:Int at (x,y:Real32) :Boolean <-
+  ( + e,li,ti:Int
+    + l:Array Ui_tool
+    + t:Ui_tool
+    + bm:Real32
+    + done:Boolean
+    e := ev & ~1
+    (drag_tool != NULL).if {
+      move_tool (x,y)
+      done := True
+    }.elseif {is_moving} then {
+      move_window
+      done := True
+    }.elseif {y < yo + handle_h} then {
+      set_shape 4
+      (e = Hand.clic).if {
+        flip
+      }.elseif {(e = Hand.drag) && {Hand.is_begin}} then {
+        is_moving := True
+        set_capture self
+        move_window
+      }
+      done := True
+    }
+    (! done).if {
+      li := ((y - yo - handle_h) / dim).to_int
+      (li.in_range 0 to (lines.upper)).if {
+        l := lines.at li
+        ti := l.upper
+        {(ti >= 0) && {l.at ti.x > x}}.while_do { ti := ti - 1 }
+        (ti >= 0).if {
+          t := l.at ti
+          (x - t.x < dim).if {
+            // The icon.
+            (e = Hand.clic).if {
+              toggle_tool t in l
+            }.elseif {(e = Hand.drag) && {Hand.is_begin}} then {
+              set_tool t on False
+              drag_tool := t
+              (drag_dx,drag_dy) := (x - t.x,y - (yo + handle_h + li.to_real32 * dim))
+              set_capture self
+            }
+          }.elseif {t.bar_w > 1.5} then {
+            bm := bar_max l
+            mouse_bar (t.id) ev ev at (x,y) from (t.x + dim / 2 + t.bar_w - bm + dim / 2)
+          }
+        }
+      }
+    }
+    True
+  )
+
+  - move_window <-
+  // The handle is dragged: the window follows the mouse.
+  ( + px,py,mx,my:Real32
+    (window != NULL).if {
+      (px,py) := window.get_pos
+      (mx,my) := window.get_cursor_pos
+      ((mx != Hand.x_begin) || {my != Hand.y_begin}).if {
+        window.set_pos (px + mx - Hand.x_begin,py + my - Hand.y_begin)
+      }
+    }
+    (Hand.is_end).if { is_moving := False }
+  )
+
+  - move_tool (x,y:Real32) <-
+  // The icon follows the mouse: it goes in the line under the mouse (a new one under the
+  // last), at the place of its left side; an empty line is removed.
+  ( + li,d:Int
+    + l:Array Ui_tool
+    + xx:Real32
+    remove_tool drag_tool
+    li := ((y - yo - handle_h) / dim).to_int.max 0
+    (li > lines.upper).if {
+      add_line
+      l := lines.last
+    } else {
+      l := lines.at li
+    }
+    place
+    xx := x - drag_dx
+    {(d <= l.upper) && {l.at d.x + dim * 0.5 < xx}}.while_do { d := d + 1 }
+    l.add_last drag_tool
+    l.insert_with_last d
+    (Hand.is_end).if {
+      drag_tool := NULL
+      remove_empty_lines
+    }
+  )
+
+  - remove_tool t:Ui_tool <-
+  ( + i,k:Int
+    i := lines.upper
+    {i >= 0}.while_do {
+      k := lines.at i.fast_first_index_of t
+      (k <= lines.at i.upper).if { lines.at i.remove k }
+      i := i - 1
+    }
+  )
+
+  - remove_empty_lines <-
+  ( + i:Int
+    i := lines.upper
+    {i >= 0}.while_do {
+      (lines.at i.is_empty).if { lines.remove i }
+      i := i - 1
+    }
+  )
+
+  //
+  // For the heirs.
+  //
+
+  - icon_image id:String_alias :Int <- -1
+
+  - draw_bar id:String_alias at (x,y:Real32) height h:Real32 <- ( )
+
+  - mouse_bar id:String_alias ev ev:Int at (x,y:Real32) from x0:Real32 :Boolean <- False

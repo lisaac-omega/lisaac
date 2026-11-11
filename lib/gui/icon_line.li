@@ -48,7 +48,7 @@ Public
     stock.add_last self
   )
   
-  - init p:Win :Self <- ( read_object; init_parent p)
+  - init_win p:Win :Self <- ( read_object; init_parent p)
   
   // Parsing.
   

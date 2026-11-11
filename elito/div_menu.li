@@ -1,0 +1,30 @@
+Header
+  + name := Div_menu
+Inherit
+  
+  + parent_div:Flat Div
+  
+Public
+  
+  - name:String_alias := "MENU"
+  
+  - draw pen:Pen <-
+  (  
+    pen.save
+    pen.begin_path
+    pen.rect_varying (xo+1,yo+1) size (width-2,height-3) radius (8,8,8,8)
+    //width.print; ','.print; height.println
+    pen.fill_color (Color.rgba (255,255,255,128))
+    pen.fill
+    pen.fill_color (Color.rgba (31,39,36,128+64))
+    pen.fill
+    pen.stroke_color (Color.rgba (0,0,0,32))
+    pen.stroke_width 3.0
+    pen.stroke
+    pen.restore
+    (is_leaf).if_false {
+      0.to (child.upper) do { i:Int
+        child.at i.draw pen
+      }
+    }
+  )

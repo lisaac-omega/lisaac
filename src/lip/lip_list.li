@@ -33,19 +33,11 @@ Public
   (
     run_intern
     list.last.run
-    /*
-    (list.last != NULL).if {
-      semantic_error (position,"Incorrect expression.")
-    }*/
   )
 
   - run_expr:Lip_constant <-
   (
     run_intern
-    /*
-    (list.last = NULL).if {
-      semantic_error (position,"Unreachable expression.(1)")
-    }*/
     list.last.run_expr
   )
 

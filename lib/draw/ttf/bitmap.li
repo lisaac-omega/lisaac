@@ -1,498 +1,593 @@
 Header
   + name := Bitmap
+/* @stbtt__bitmap of stb_truetype v1.24, and its rasterizer (version 2:
+   antialiasing by exact coverage, without supersampling). */
 Inherit
-  
+
   - parent_ttf_constant:Ttf_constant := Ttf_constant
-  
+
 Public
-  
+
   + w:Int
   + h:Int
   + stride:Int
   + pixels:C_array Uint8
-  
-  //- bug:Int
-  
+
   - create (pw,ph:Int) :Self <-
   ( + result:Self
     result := clone
-    //(bug > 50).if { crash; }; bug := bug + 1
     result.make (C_array Uint8.create (pw*ph)) size (pw,ph) stride pw
     result
   )
-  
-  - create pix:C_array Uint8 size (pw,ph:Int) 
-  stride s:Int :Self <-
+
+  - create pix:C_array Uint8 size (pw,ph:Int) stride s:Int :Self <-
   ( + result:Self
     result := clone
-    //(bug > 650).if { crash; }; bug := bug + 1
     result.make pix size (pw,ph) stride s
     result
   )
 
-  - make pix:C_array Uint8 size (pw,ph:Int) 
-  stride s:Int <-
+  - make pix:C_array Uint8 size (pw,ph:Int) stride s:Int <-
   (
     (w,h) := (pw,ph)
     stride := s
     pixels := pix
   )
-  
+
   - at (x,y:Int) :Uint8 <- pixels.at (y*stride+x)
-      
-  //  Rasterizer
-  
-  - scanline_data:Array Real32 := Array Real32.create 129
+
+  //
+  // Rasterizer
+  //
+
+  - handle_clipped_edge (scanline:C_array Real32, x:Int, e:Active_edge, px0,py0,px1,py1:Real32) <-
+  // the edge passed in here does not cross the vertical line at x or the vertical line at x+1
+  // (i.e. it has already been clipped to those)
+  ( + x0,y0,x1,y1,xf:Real32
+    (x0,y0,x1,y1) := (px0,py0,px1,py1)
+    xf := x.to_real32
+    ((y0 = y1) || {y0 > e.ey} || {y1 < e.sy}).if_false {
+      ? {y0 < y1}
+      ? {e.sy <= e.ey}
+      (y0 < e.sy).if {
+        x0 := x0 + (x1-x0) * (e.sy - y0) / (y1-y0)
+        y0 := e.sy
+      }
+      (y1 > e.ey).if {
+        x1 := x1 + (x1-x0) * (e.ey - y1) / (y1-y0)
+        y1 := e.ey
+      }
+      ((x0 <= xf) && {x1 <= xf}).if {
+        scanline.at x put (scanline.at x + e.direction * (y1-y0))
+      }.elseif {(x0 >= xf+1) && {x1 >= xf+1}} then {
+        // nothing
+      } else {
+        ? {(x0 >= xf) && {x0 <= xf+1} && {x1 >= xf} && {x1 <= xf+1}}
+        scanline.at x put (scanline.at x + e.direction * (y1-y0) * (1-((x0-xf)+(x1-xf))/2)); // coverage = 1 - average x position
+      }
+    }
+  )
+
+  - fill_active_edges_new (scanline,scanline_fill:C_array Real32, len:Int, pe:Active_edge, y_top:Real32) <-
+  ( + y_bottom,lenf:Real32
+    + e:Active_edge
+    y_bottom := y_top+1
+    lenf := len.to_real32
+    e := pe
+    {e != NULL}.while_do {
+      // brute force every pixel
+      // compute intersection points with top & bottom
+      ? {e.ey >= y_top}
+      (e.fdx = 0).if {
+        + x0:Real32
+        x0 := e.fx
+        (x0 < lenf).if {
+          (x0 >= 0).if {
+            handle_clipped_edge (scanline, x0.to_raw_int, e, x0,y_top, x0,y_bottom)
+            handle_clipped_edge (scanline_fill-1, x0.to_raw_int+1, e, x0,y_top, x0,y_bottom)
+          } else {
+            handle_clipped_edge (scanline_fill-1, 0, e, x0,y_top, x0,y_bottom)
+          }
+        }
+      } else {
+        + x0,dx,xb,x_top,x_bottom,sy0,sy1,dy:Real32
+        x0 := e.fx
+        dx := e.fdx
+        xb := x0 + dx
+        dy := e.fdy
+        ? {(e.sy <= y_bottom) && {e.ey >= y_top}}
+        // compute endpoints of line segment clipped to this scanline (if the
+        // line segment starts on this scanline. x0 is the intersection of the
+        // line with y_top, but that may be off the line segment.
+        (e.sy > y_top).if {
+          x_top := x0 + dx * (e.sy - y_top)
+          sy0 := e.sy
+        } else {
+          x_top := x0
+          sy0 := y_top
+        }
+        (e.ey < y_bottom).if {
+          x_bottom := x0 + dx * (e.ey - y_top)
+          sy1 := e.ey
+        } else {
+          x_bottom := xb
+          sy1 := y_bottom
+        }
+        ((x_top >= 0) && {x_bottom >= 0} && {x_top < lenf} && {x_bottom < lenf}).if {
+          // from here on, we don't have to range check x values
+          (x_top.to_raw_int = x_bottom.to_raw_int).if {
+            + height,xf:Real32
+            + x:Int
+            // simple case, only spans one pixel
+            x := x_top.to_raw_int
+            xf := x.to_real32
+            height := sy1 - sy0
+            ? {(x >= 0) && {x < len}}
+            scanline.at x put (scanline.at x + e.direction * (1-((x_top - xf) + (x_bottom-xf))/2) * height)
+            scanline_fill.at x put (scanline_fill.at x + e.direction * height); // everything right of this pixel is filled
+          } else {
+            + x1,x2:Int
+            + y_crossing,step,sign,area,t:Real32
+            // covers 2+ pixels
+            (x_top > x_bottom).if {
+              // flip scanline vertically; signed area is the same
+              sy0 := y_bottom - (sy0 - y_top)
+              sy1 := y_bottom - (sy1 - y_top)
+              t := sy0; sy0 := sy1; sy1 := t
+              t := x_bottom; x_bottom := x_top; x_top := t
+              dx := -dx
+              dy := -dy
+              t := x0; x0 := xb; xb := t
+            }
+            x1 := x_top.to_raw_int
+            x2 := x_bottom.to_raw_int
+            // compute intersection with y axis at x1+1
+            y_crossing := ((x1+1).to_real32 - x0) * dy + y_top
+            sign := e.direction
+            // area of the rectangle covered from y0..y_crossing
+            area := sign * (y_crossing-sy0)
+            // area of the triangle (x_top,y0), (x+1,y0), (x+1,y_crossing)
+            scanline.at x1 put (scanline.at x1 + area * (1-((x_top - x1.to_real32)+(x1+1-x1).to_real32)/2))
+            step := sign * dy
+            (x1+1).to (x2-1) do { x:Int
+              scanline.at x put (scanline.at x + (area + step/2))
+              area := area + step
+            }
+            y_crossing := y_crossing + dy * (x2 - (x1+1)).to_real32
+            ? {area.to_real64.abs <= 1.01}
+            scanline.at x2 put (scanline.at x2 + (area + sign * (1-((x2-x2).to_real32+(x_bottom-x2.to_real32))/2) * (sy1-y_crossing)))
+            scanline_fill.at x2 put (scanline_fill.at x2 + sign * (sy1-sy0))
+          }
+        } else {
+          // if edge goes outside of box we're drawing, we require
+          // clipping logic. since this does not match the intended use
+          // of this library, we use a different, very slow brute
+          // force implementation
+          0.to (len-1) do { x:Int
+            // cases:
+            //
+            // there can be up to two intersections with the pixel. any intersection
+            // with left or right edges can be handled by splitting into two (or three)
+            // regions. intersections with top & bottom do not necessitate case-wise logic.
+            //
+            // the old way of doing this found the intersections with the left & right edges,
+            // then used some simple logic to produce up to three segments in sorted order
+            // from top-to-bottom. however, this had a problem: if an x edge was epsilon
+            // across the x border, then the corresponding y position might not be distinct
+            // from the other y segment, and it might ignored as an empty segment. to avoid
+            // that, we need to explicitly produce segments based on x positions.
+
+            // rename variables to clearly-defined pairs
+            + y0,x1,x2,x3,y3,y1,y2:Real32
+            y0 := y_top
+            x1 := x.to_real32
+            x2 := (x+1).to_real32
+            x3 := xb
+            y3 := y_bottom
+            // x = e->x + e->dx * (y-y_top)
+            // (y-y_top) = (x - e->x) / e->dx
+            // y = (x - e->x) / e->dx + y_top
+            y1 := (x.to_real32 - x0) / dx + y_top
+            y2 := ((x+1).to_real32 - x0) / dx + y_top
+            ((x0 < x1) && {x3 > x2}).if {         // three segments descending down-right
+              handle_clipped_edge (scanline,x,e, x0,y0, x1,y1)
+              handle_clipped_edge (scanline,x,e, x1,y1, x2,y2)
+              handle_clipped_edge (scanline,x,e, x2,y2, x3,y3)
+            }.elseif {(x3 < x1) && {x0 > x2}} then {  // three segments descending down-left
+              handle_clipped_edge (scanline,x,e, x0,y0, x2,y2)
+              handle_clipped_edge (scanline,x,e, x2,y2, x1,y1)
+              handle_clipped_edge (scanline,x,e, x1,y1, x3,y3)
+            }.elseif {(x0 < x1) && {x3 > x1}} then {  // two segments across x, down-right
+              handle_clipped_edge (scanline,x,e, x0,y0, x1,y1)
+              handle_clipped_edge (scanline,x,e, x1,y1, x3,y3)
+            }.elseif {(x3 < x1) && {x0 > x1}} then {  // two segments across x, down-left
+              handle_clipped_edge (scanline,x,e, x0,y0, x1,y1)
+              handle_clipped_edge (scanline,x,e, x1,y1, x3,y3)
+            }.elseif {(x0 < x2) && {x3 > x2}} then {  // two segments across x+1, down-right
+              handle_clipped_edge (scanline,x,e, x0,y0, x2,y2)
+              handle_clipped_edge (scanline,x,e, x2,y2, x3,y3)
+            }.elseif {(x3 < x2) && {x0 > x2}} then {  // two segments across x+1, down-left
+              handle_clipped_edge (scanline,x,e, x0,y0, x2,y2)
+              handle_clipped_edge (scanline,x,e, x2,y2, x3,y3)
+            } else {  // one segment
+              handle_clipped_edge (scanline,x,e, x0,y0, x3,y3)
+            }
+          }
+        }
+      }
+      e := e.next
+    }
+  )
+
+  - scanline_data:C_array Real32 := C_array Real32.create 129
+  - scanline_big:C_array Real32
+  - scanline_big_capacity:Int
+
+  - rasterize_sorted_edges e:Array Edge count n:Int sub vsubsample:Int offset (off_x,off_y:Int) <-
   // directly AA rasterize edges w/o supersampling
-  - rasterize_sorted_edges e:Array Edge sub vsubsample:Int 
-  offset (off_x,off_y:Int) <-
-  ( + sum:Real32
+  ( + active,step:Active_edge
     + y,j,ie:Int
-    + active,prev:Active_edge
     + scanline,scanline2:C_array Real32
-    
-    scanline_data.resize (w*2+1)
-    scanline  := scanline_data.storage
+    (w > 64).if {
+      (scanline_big_capacity < w*2+1).if {
+        scanline_big_capacity := w*2+1
+        scanline_big := C_array Real32.create scanline_big_capacity
+      }
+      scanline := scanline_big
+    } else {
+      scanline := scanline_data
+    }
     scanline2 := scanline + w
-
     y := off_y
-    //"AFF:".print
-    //0.to (e.upper) do { i:Int; e.at i.y1.print; ' '.print; }; '\n'.print
-    e.add_last (Edge.create False x0 0 y0 ((off_y + h) + 1) x1 0 y1 0)
-
+    e.at n.set_y0 ((off_y + h).to_real32 + 1)
     {j < h}.while_do {
-      + scan_y_top,scan_y_bottom:Real32
-      + step:Active_edge
       // find center of pixel for this scanline
-      scan_y_top    := 0.0 + y
-      scan_y_bottom := 1.0 + y
-      step := active
-      prev := NULL
-//"scan_y_top:".print; scan_y_top.print; '\n'.print
-      scanline .clear_all (w-1)
+      + scan_y_top,scan_y_bottom,sum:Real32
+      + prev:Active_edge
+      scan_y_top    := y.to_real32 + 0.0
+      scan_y_bottom := y.to_real32 + 1.0
+      scanline.clear_all (w-1)
       scanline2.clear_all w
-
-      // update all active edges
+      // update all active edges;
       // remove all active edges that terminate before the top of this scanline
+      step := active
       {step != NULL}.while_do {
         + z:Active_edge
         z := step
-//        "ey:".print; z.ey.print; '\n'.print
         (z.ey <= scan_y_top).if {
           step := z.next; // delete from list
-          (active = z).if {
-            active := step
-          } else {
-            prev.set_next step
-          }
+          (prev = NULL).if { active := step; } else { prev.set_next step; }
           ? {z.direction != 0}
-          z.set_direction 0; // BSBS: pas utile.
-          //z.free
+          z.set_direction 0
+          z.free
         } else {
           prev := step
           step := step.next; // advance through list
         }
       }
-      //"scan_y_bottom:".print; scan_y_bottom.print; '\n'.print
-      //"e.at ie.y0 :".print; e.at ie.y0.print; '\n'.print
       // insert all edges that start before the bottom of this scanline
       {e.at ie.y0 <= scan_y_bottom}.while_do {
-        //"y0:".print; e.at ie.y0.print; ' '.print
-        //"y1:".print; e.at ie.y1.print; '\n'.print
         (e.at ie.y0 != e.at ie.y1).if {
           + z:Active_edge
           z := Active_edge.create (e.at ie) offset off_x start scan_y_top
-          //          "create ".print; z.ey.print; '\n'.print
-          //(z != NULL).if {
-          //(z.ey < scan_y_top).if {
-          //  "EEEEEERRRROOOORRRRR\n".print
-          //  e.at ie.y1.print; ' '.print; z.ey.print; ' '.print
-          // scan_y_top.print; '\n'.print
-          // crash
-          //}
-            ? {z.ey >= scan_y_top}
-            // insert at front
-            z.set_next active
-            active := z
-          //}
+          ((j = 0) && {off_y != 0}).if {
+            (z.ey < scan_y_top).if {
+              // this can happen due to subpixel positioning and some kind of fp rounding error i think
+              z.set_ey scan_y_top
+            }
+          }
+          ? {z.ey >= scan_y_top}; // if we get really unlucky a tiny bit of an edge can be out of bounds
+          // insert at front
+          z.set_next active
+          active := z
         }
         ie := ie + 1
       }
-
       // now process all active edges
       (active != NULL).if {
-        //"Line\n".print
-        Active_edge.fill_active_edges_new scanline and (scanline2+1) 
-        length w with active top_y scan_y_top
+        fill_active_edges_new (scanline, scanline2+1, w, active, scan_y_top)
       }
-      
       sum := 0
       0.to (w-1) do { i:Int
         + k:Real32
         + m:Int
         sum := sum + scanline2.at i
-        //`printf("%6.4f ",@sum)`
-        //(sum = 0).if { "0.0000 ".print; }
-        //else { sum.print; ' '.print; }
         k := scanline.at i + sum
-        //`printf("%6.4f ",@k)`
-        k := k.abs*255 + 0.5
-        m := k.to_int
+        k := k.to_real64.abs.to_real32*255 + 0.5
+        m := k.to_raw_int
         (m > 255).if { m := 255; }
-        pixels.at (j*stride + i) put (m.to_uint8)
-        //"#*+-".at (m.to_uint8>>6).print; //m.print
+        pixels.at (j*stride + i) put (m.to_raw_uint8)
       }
-      //'\n'.print
       // advance all the edges
       step := active
       {step != NULL}.while_do {
-        + z:Active_edge
-        z := step
-        z.set_fx (z.fx + z.fdx); // advance to position for current scanline
+        step.set_fx (step.fx + step.fdx); // advance to position for current scanline
         step := step.next; // advance through list
       }
       y := y + 1
       j := j + 1
     }
-    Active_edge.free_all
-  )
-
-  - compare (a,b:Edge) :Boolean <- (a.y0 < b.y0)
-
-  - sort_edges_ins_sort p:Array Edge low l:Int up n:Int <-
-  ( + j:Int
-    + t,b,a:Edge
-    + break:Boolean
-    
-    1.to (n-1) do { i:Int
-      t := p.at i
-      a := t
-      j := i
-      break := False
-      {(j > 0) && {!break}}.while_do {
-        b := p.at (j-1)
-        (compare(a,b)).if { 
-          p.at j put b
-          j := j - 1
-        } else {
-          break := True
-        }
-      }
-      (i != j).if { p.at j put t; }
+    {active != NULL}.while_do {
+      step := active
+      active := active.next
+      step.free
     }
   )
 
-  - sort_edges_quicksort p:Array Edge low pl:Int up pn:Int <-
-  ( + t:Edge
-    + m,i,j,z,l,n:Int
-    + c01,c12,c:Boolean
-    // threshhold for transitioning to insertion sort 
-    (l,n) := (pl,pn)
-    {n-l > 12}.while_do {
-      // compute median of three 
-      m := (l+n) >> 1
-      c01 := compare (p.at l,p.at m)
-      c12 := compare (p.at m,p.at (n-1))
-      // if 0 >= mid >= end, or 0 < mid < end, then use mid 
-      (c01 != c12).if {
-        // otherwise, we'll need to swap something else to middle 
-        c := compare(p.at l,p.at (n-1))
-        // 0>mid && mid<n:  0>n => n; 0<n => 0 
-        // 0<mid && mid>n:  0>n => 0; 0<n => n 
-        z := (c = c12).ok l or (n-1)
-        t := p.at z
-        p.at z put (p.at m)
-        p.at m put t
-      }
-      // now p[m] is the median-of-three 
-      // swap it to the beginning so it won't move around 
-      p.swap l with m
+  - compare (a,b:Edge) :Boolean <- a.y0 < b.y0
 
-      // partition loop 
-      i := l+1
+  - sort_edges_ins_sort p:Array Edge low l:Int count n:Int <-
+  ( + j:Int
+    + t:Edge
+    1.to (n-1) do { i:Int
+      t := p.at (l+i)
+      j := i
+      {(j > 0) && {compare (t, p.at (l+j-1))}}.while_do {
+        p.at (l+j) put (p.at (l+j-1))
+        j := j - 1
+      }
+      (i != j).if {
+        p.at (l+j) put t
+      }
+    }
+  )
+
+  - sort_edges_quicksort p:Array Edge low pl:Int count pn:Int <-
+  ( + l,n:Int
+    + t:Edge
+    + c01,c12,c,stop:Boolean
+    + m,i,j:Int
+    (l,n) := (pl,pn)
+    // threshold for transitioning to insertion sort
+    {n > 12}.while_do {
+      // compute median of three
+      m := n >> 1
+      c01 := compare (p.at l, p.at (l+m))
+      c12 := compare (p.at (l+m), p.at (l+n-1))
+      // if 0 >= mid >= end, or 0 < mid < end, then use mid
+      (c01 != c12).if {
+        // otherwise, we'll need to swap something else to middle
+        + z:Int
+        c := compare (p.at l, p.at (l+n-1))
+        // 0>mid && mid<n:  0>n => n; 0<n => 0
+        // 0<mid && mid>n:  0>n => 0; 0<n => n
+        (c = c12).if { z := 0; } else { z := n-1; }
+        t := p.at (l+z)
+        p.at (l+z) put (p.at (l+m))
+        p.at (l+m) put t
+      }
+      // now p[m] is the median-of-three
+      // swap it to the beginning so it won't move around
+      t := p.at l
+      p.at l put (p.at (l+m))
+      p.at (l+m) put t
+      // partition loop
+      i := 1
       j := n-1
-      {
-        // handling of equality is crucial here 
-        // for sentinels & efficiency with duplicates 
-        {compare(p.at i,p.at l)}.while_do { i := i + 1; }
-        {compare(p.at l,p.at j)}.while_do { j := j - 1; }
-        // make sure we haven't crossed 
-        (c := i < j).if {
-          p.swap i with j
+      stop := False
+      {! stop}.while_do {
+        // handling of equality is crucial here
+        // for sentinels & efficiency with duplicates
+        {compare (p.at (l+i), p.at l)}.while_do { i := i + 1; }
+        {compare (p.at l, p.at (l+j))}.while_do { j := j - 1; }
+        // make sure we haven't crossed
+        (i >= j).if {
+          stop := True
+        } else {
+          t := p.at (l+i)
+          p.at (l+i) put (p.at (l+j))
+          p.at (l+j) put t
           i := i + 1
           j := j - 1
         }
-      }.do_while {c}
-      // recurse on smaller side, iterate on larger 
+      }
+      // recurse on smaller side, iterate on larger
       (j < (n-i)).if {
-        sort_edges_quicksort p low l up j
-        l := l+i
-        n := n-i
+        sort_edges_quicksort p low l count j
+        l := l + i
+        n := n - i
       } else {
-        sort_edges_quicksort p low i up (n-i)
+        sort_edges_quicksort p low (l+i) count (n-i)
         n := j
       }
     }
   )
 
-  - sort_edges p:Array Edge low l:Int up n:Int <-
+  - sort_edges p:Array Edge count n:Int <-
   (
-    sort_edges_quicksort p low l up n
-    sort_edges_ins_sort p low l up n
+    sort_edges_quicksort p low 0 count n
+    sort_edges_ins_sort p low 0 count n
   )
 
-  - rasterize pts:Array Tt_point len wcount:Array Int 
-  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32)
-  offset (off_x,off_y:Int) inv invert:Int <-
+  - edges:Array Edge := Array Edge.create_with_capacity 64
+
+  - rasterize pts:C_array Real32 windings wcount:C_array Int count windings_count:Int
+  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) offset (off_x,off_y:Int) invert invert:Boolean <-
+  // The points are (x,y) pairs.
   ( + y_scale_inv:Real32
     + e:Array Edge
-    + n,j,m:Int
-    + vsubsample:Int
-    + inv:Boolean
-    
-    //"POINTS:".print
-    //(pts.lower).to (pts.upper) do { i:Int; i.print; pts.at i.print; }; '\n'.print
-    
+    + n,m,j,vsubsample:Int
+    (invert).if { y_scale_inv := -scale_y; } else { y_scale_inv := scale_y; }
     vsubsample := 1
-    (invert != 0).if {
-      y_scale_inv := -scale_y
-    } else {
-      y_scale_inv := scale_y
-    }
     // vsubsample should divide 255 evenly; otherwise we won't reach full opacity
-//"wcount.upper:".print; wcount.count.print; '\n'.print
     // now we have to blow out the windings into explicit edge lists
-    n := 0
-    0.to (wcount.upper) do { i:Int
+    0.to (windings_count-1) do { i:Int
       n := n + wcount.at i
-      //wcount.at i.print; ' '.print
     }
-    //"n>:".print; n.print; '\n'.print; exit(0)
-    e := alloc_edges (n+1); // add an extra one as a sentinel
+    e := edges
+    {e.count < n+1}.while_do { e.add_last (Edge.new); }; // add an extra one as a sentinel
     n := 0
-
     m := 0
-    //"win:".print; wcount.upper.print; '\n'.print
-    0.to (wcount.upper) do { i:Int
-      + p:Int
-      p := m
+    0.to (windings_count-1) do { i:Int
+      + p:C_array Real32
+      p := pts + 2*m
       m := m + wcount.at i
-      j := wcount.at i -1
-      0.to (wcount.at i-1) do { k:Int
+      j := wcount.at i - 1
+      0.to (wcount.at i - 1) do { k:Int
         + a,b:Int
-        a := k
-        b := j
+        (a,b) := (k,j)
         // skip the edge if horizontal
-        (pts.at (p+j).y != pts.at (p+k).y).if {
+        (p.at (2*j+1) != p.at (2*k+1)).if {
           // add edge from j to k to the list
-          //n.print; '\n'.print
-          inv := False
-          (
-            ((invert=1) && {pts.at (p+j).y > pts.at (p+k).y}) ||
-            {(invert=0) && {pts.at (p+j).y < pts.at (p+k).y}}
-          ).if {
-            inv := True
-            a := j; b := k
+          + inv:Boolean
+          + ex0,ey0,ex1,ey1:Real32
+          (invert).if {
+            inv := p.at (2*j+1) > p.at (2*k+1)
+          } else {
+            inv := p.at (2*j+1) < p.at (2*k+1)
           }
-          e.add_last (Edge.create inv
-            x0 ( pts.at (p+a).x * scale_x     + shift_x)
-            y0 ((pts.at (p+a).y * y_scale_inv + shift_y) * vsubsample)
-            x1 ( pts.at (p+b).x * scale_x     + shift_x)
-            y1 ((pts.at (p+b).y * y_scale_inv + shift_y) * vsubsample)
-          )
+          (inv).if {
+            (a,b) := (j,k)
+          }
+          ex0 := p.at (2*a) * scale_x + shift_x
+          ey0 := (p.at (2*a+1) * y_scale_inv + shift_y) * vsubsample.to_real32
+          ex1 := p.at (2*b) * scale_x + shift_x
+          ey1 := (p.at (2*b+1) * y_scale_inv + shift_y) * vsubsample.to_real32
+          e.at n.make inv x0 ex0 y0 ey0 x1 ex1 y1 ey1
           n := n + 1
         }
         j := k
       }
     }
-
     // now sort the edges by their highest point (should snap to integer, and then by x)
-    //STBTT_sort(e, n, sizeof(e[0]), stbtt__edge_compare)
-    //0.to (e.upper) do { i:Int; e.at i.y0.print; ' '.print; }; '\n'.print
-    sort_edges e low 0 up (e.count)
-    //"\nAfter sort:".print; 0.to (e.upper) do { i:Int; e.at i.y1.print; ' '.print; }; '\n'.print
-    //"n:".print; n.print; '/'.print; e.count.print; '\n'.print
-    //? {n = e.count}
-    // now, traverse the scanlines and find the intersections 
-    // on each scanline, use xor winding rule
-    rasterize_sorted_edges e sub vsubsample offset (off_x,off_y)
-    
-    free_edges e
+    sort_edges e count n
+    // now, traverse the scanlines and find the intersections on each scanline, use xor winding rule
+    rasterize_sorted_edges e count n sub vsubsample offset (off_x, off_y)
   )
 
-  // tesselate until threshhold p is happy...
-  - tesselate_curve points:Array Tt_point from (x0,y0:Real32) 
-  w (x1,y1:Real32) to (x2,y2:Real32) 
-  space space_sqr:Real32 level n:Int <-
+  - add_point (points:C_array Real32, n:Int, x,y:Real32) <-
+  (
+    (points != NULL).if { // during first pass, it's unallocated
+      points.at (2*n) put x
+      points.at (2*n+1) put y
+    }
+  )
+
+  - num_points:Int
+
+  - tesselate_curve points:C_array Real32 from (x0,y0,x1,y1,x2,y2:Real32) flatness objspace_flatness_squared:Real32 level n:Int <-
+  // tesselate until threshold p is happy... @TODO warped to compensate for non-linear stretching
   ( + mx,my,dx,dy:Real32
     // midpoint
-    //`printf("%2.2f,%2.2f  %2.2f,%2.2f  %2.2f,%2.2f\n",@x0,@y0,@x1,@y1,@x2,@y2)`
-    (mx,my) := ((x0 + x1*2 + x2)/4, (y0 + y1*2 + y2)/4)
+    mx := (x0 + 2*x1 + x2)/4
+    my := (y0 + 2*y1 + y2)/4
     // versus directly drawn line
-    (dx,dy) := ((x0+x2)/2 - mx, (y0+y2)/2 - my)
+    dx := (x0+x2)/2 - mx
+    dy := (y0+y2)/2 - my
     (n <= 16).if { // 65536 segments on one curve better be enough!
-      (dx*dx+dy*dy > space_sqr).if { 
-        // half-pixel error allowed... need to be smaller if AA
-        tesselate_curve points from (x0,y0) w ((x0+x1)/2.0,(y0+y1)/2.0) 
-        to (mx,my) space space_sqr level (n+1)
-        tesselate_curve points from (mx,my) w ((x1+x2)/2.0,(y1+y2)/2.0) 
-        to (x2,y2) space space_sqr level (n+1)
+      (dx*dx+dy*dy > objspace_flatness_squared).if { // half-pixel error allowed... need to be smaller if AA
+        tesselate_curve points from (x0,y0, (x0+x1)/2.0,(y0+y1)/2.0, mx,my) flatness objspace_flatness_squared level (n+1)
+        tesselate_curve points from (mx,my, (x1+x2)/2.0,(y1+y2)/2.0, x2,y2) flatness objspace_flatness_squared level (n+1)
       } else {
-        points.add_last (Tt_point.make (x2,y2))
+        add_point (points, num_points, x2, y2)
+        num_points := num_points + 1
       }
     }
   )
 
-  // returns number of contours
-  - flatten_curves vertices:Array (Flat Tt_vertex) pix objspace_flatness:Real32
-  :(Array Tt_point,Array Int) <-
-  ( + points:Array Tt_point
-    + x,y:Real32
-    + objspace_flatness_squared:Real32
-    + n,start:Int
-    + contour_lengths:Array Int
-    
+  - tesselate_cubic points:C_array Real32 from (x0,y0,x1,y1,x2,y2,x3,y3:Real32) flatness objspace_flatness_squared:Real32 level n:Int <-
+  // @TODO this "flatness" calculation is just made-up nonsense that seems to work well enough
+  ( + dx0,dy0,dx1,dy1,dx2,dy2,dx,dy,longlen,shortlen,flatness_squared:Real32
+    dx0 := x1-x0
+    dy0 := y1-y0
+    dx1 := x2-x1
+    dy1 := y2-y1
+    dx2 := x3-x2
+    dy2 := y3-y2
+    dx := x3-x0
+    dy := y3-y0
+    // (the sum is done in double, as in C)
+    longlen := ((dx0*dx0+dy0*dy0).to_real64.sqrt + (dx1*dx1+dy1*dy1).to_real64.sqrt + (dx2*dx2+dy2*dy2).to_real64.sqrt).to_real32
+    shortlen := (dx*dx+dy*dy).sqrt
+    flatness_squared := longlen*longlen-shortlen*shortlen
+    (n <= 16).if { // 65536 segments on one curve better be enough!
+      (flatness_squared > objspace_flatness_squared).if {
+        + x01,y01,x12,y12,x23,y23,xa,ya,xb,yb,mx,my:Real32
+        x01 := (x0+x1)/2
+        y01 := (y0+y1)/2
+        x12 := (x1+x2)/2
+        y12 := (y1+y2)/2
+        x23 := (x2+x3)/2
+        y23 := (y2+y3)/2
+        xa := (x01+x12)/2
+        ya := (y01+y12)/2
+        xb := (x12+x23)/2
+        yb := (y12+y23)/2
+        mx := (xa+xb)/2
+        my := (ya+yb)/2
+        tesselate_cubic points from (x0,y0, x01,y01, xa,ya, mx,my) flatness objspace_flatness_squared level (n+1)
+        tesselate_cubic points from (mx,my, xb,yb, x23,y23, x3,y3) flatness objspace_flatness_squared level (n+1)
+      } else {
+        add_point (points, num_points, x3, y3)
+        num_points := num_points + 1
+      }
+    }
+  )
+
+  - flatten_curves vertices:Array (Flat Tt_vertex) flatness objspace_flatness:Real32 :(C_array Real32,C_array Int,Int) <-
+  // returns number of contours: the points, the lengths of the contours, and their number
+  ( + points:C_array Real32
+    + contour_lengths:C_array Int
+    + objspace_flatness_squared,x,y:Real32
+    + n,start,num_verts:Int
     objspace_flatness_squared := objspace_flatness * objspace_flatness
+    (vertices != NULL).if { num_verts := vertices.count; }
     // count how many "moves" there are to get the contour count
-    (vertices != NULL).if {
-      0.to (vertices.upper) do { i:Int
-        (vertices.at i.type = vmove).if {
-          n := n + 1
-        }
-      }
-      //"vertices.upper:".print; vertices.upper.print; '\n'.print
+    0.to (num_verts-1) do { i:Int
+      (vertices.at i.type = vmove).if { n := n + 1; }
     }
-    
     (n != 0).if {
-      contour_lengths := alloc_winding_len n
-      //"===>n:".print; n.print; '\n'.print
-      points := alloc_windings 256
-      // make two passes through the points so we don't need to realloc          
-      
-      x := y := 0
-      //num_points := 0
-      n := -1
-      0.to (vertices.upper) do { i:Int
-        (vertices.at i.type)
-        .when vmove then {
-          // start the next contour
-          (n >= 0).if {
-            //"len:".print; points.count.print; ' '.print; start.print; '\n'.print
-            contour_lengths.at n put (points.count - start)
-          }
-          n := n + 1
-          start := points.count
-          (x,y) := (vertices.at i.xf,vertices.at i.yf)
-          points.add_last (Tt_point.make (x,y))
-        }.when vline then {
-          (x,y) := (vertices.at i.xf, vertices.at i.yf)
-          points.add_last (Tt_point.make (x,y))
-        }.when vcurve then {
-          //"cnt curv0:".print; points.count.print; '\n'.print
-          tesselate_curve points from (x,y) 
-          w  (vertices.at i.cxf,vertices.at i.cyf) 
-          to (vertices.at i. xf,vertices.at i. yf)
-          space objspace_flatness_squared level 0
-          (x,y) := (vertices.at i.xf, vertices.at i.yf)
-          //"cnt curv1:".print; points.count.print; '\n'.print
+      contour_lengths := C_array Int.create n
+      // make two passes through the points so we don't need to realloc
+      0.to 1 do { pass:Int
+        (pass = 1).if {
+          points := C_array Real32.create (num_points * 2)
         }
+        num_points := 0
+        n := -1
+        x := y := 0
+        0.to (num_verts-1) do { i:Int
+          + v:Flat Tt_vertex
+          v := vertices.at i
+          (v.type = vmove).if {
+            // start the next contour
+            (n >= 0).if {
+              contour_lengths.at n put (num_points - start)
+            }
+            n := n + 1
+            start := num_points
+            x := v.xf; y := v.yf
+            add_point (points, num_points, x, y)
+            num_points := num_points + 1
+          }.elseif {v.type = vline} then {
+            x := v.xf; y := v.yf
+            add_point (points, num_points, x, y)
+            num_points := num_points + 1
+          }.elseif {v.type = vcurve} then {
+            tesselate_curve points from (x, y, v.cxf, v.cyf, v.xf, v.yf) flatness objspace_flatness_squared level 0
+            x := v.xf; y := v.yf
+          }.elseif {v.type = vcubic} then {
+            tesselate_cubic points from (x, y, v.cxf, v.cyf, v.cx1.to_real32, v.cy1.to_real32, v.xf, v.yf) flatness objspace_flatness_squared level 0
+            x := v.xf; y := v.yf
+          }
+        }
+        contour_lengths.at n put (num_points - start)
       }
-      //"pts.count:".print; points.count.print; ' '.print
-      //" start:".print; start.print; '\n'.print
-      contour_lengths.at n put (points.count - start)
+      n := n + 1
     }
-    points,contour_lengths
+    points, contour_lengths, n
   )
 
-  - rasterize flatness_in_pixels:Real32 
-  vertex vertices:Array (Flat Tt_vertex) scale (scale_x,scale_y:Real32) 
-  shift (shift_x,shift_y:Real32) offset (x_off,y_off:Int) 
-  int invert:Int <-
-  ( + scal:Real32
-    + winding_lengths:Array Int
-    + windings:Array Tt_point
-    scal := (scale_x > scale_y).ok scale_y or scale_x
-    (windings,winding_lengths) := 
-    flatten_curves vertices pix (flatness_in_pixels / scal)
-    //"BMP L385\n".print
-    (windings != NULL).if {      
-      rasterize windings len winding_lengths 
-      scale (scale_x, scale_y) shift (shift_x, shift_y)
-      offset (x_off, y_off) inv invert
-      free_winding_len winding_lengths
-      free_windings windings
+  - rasterize flatness_in_pixels:Real32 vertex vertices:Array (Flat Tt_vertex)
+  scale (scale_x,scale_y:Real32) shift (shift_x,shift_y:Real32) offset (x_off,y_off:Int) invert invert:Boolean <-
+  // As @stbtt_Rasterize: rasterize a shape with quadratic beziers into this bitmap.
+  ( + scale:Real32
+    + winding_count:Int
+    + winding_lengths:C_array Int
+    + windings:C_array Real32
+    (scale_x > scale_y).if { scale := scale_y; } else { scale := scale_x; }
+    (windings, winding_lengths, winding_count) := flatten_curves vertices flatness (flatness_in_pixels / scale)
+    (windings != NULL).if {
+      rasterize windings windings winding_lengths count winding_count scale (scale_x, scale_y) shift (shift_x, shift_y) offset (x_off, y_off) invert invert
     }
   )
-
-  - free_bitmap bitmap:Bitmap <-
-  (
-    not_yet_implemented
-    //STBTT_free(bitmap, userdata)
-  )
-  
-Private
-  
-  // ARRAY EDGE
-  
-  - stock_array_edge:Array (Array Edge) := Array (Array Edge).create_with_capacity 16
-  
-  - alloc_edges n:Int :Array Edge <-
-  ( + result:Array Edge
-    (stock_array_edge.is_empty).if {
-      result := Array Edge.create_with_capacity n
-    } else {
-      result := stock_array_edge.pop
-      result.with_capacity n
-    }
-    //n.times { result.add_last (EDGE.create); }
-    result
-  )
-  
-  - free_edges t:Array Edge <-
-  (
-    {t.is_empty}.until_do { t.pop.free; }
-    stock_array_edge.add_last t
-  )
-  
-  // ARRAY TT_POINT
-  
-  - stock_array_tt_point:Array (Array Tt_point) := Array (Array Tt_point).create_with_capacity 16
-  
-  - alloc_windings n:Int :Array Tt_point <-
-  ( + result:Array Tt_point
-    (stock_array_tt_point.is_empty).if {
-      result := Array Tt_point.create_with_capacity n
-    } else {
-      result := stock_array_tt_point.pop
-      result.with_capacity n
-    }
-    result
-  )
-  
-  - free_windings t:Array Tt_point <-
-  (
-    t.clear
-    stock_array_tt_point.add_last t
-  )
-  
-  // ARRAY Int
-  
-  - stock_array_integer:Array (Array Int) := Array (Array Int).create_with_capacity 16
-  
-  - alloc_winding_len n:Int :Array Int <-
-  ( + result:Array Int
-    (stock_array_integer.is_empty).if {
-      result := Array Int.create n
-    } else {
-      result := stock_array_integer.pop
-      result.make n
-    }
-    result
-  )
-  
-  - free_winding_len t:Array Int <-
-  (
-    t.clear
-    stock_array_integer.add_last t
-  )
-  

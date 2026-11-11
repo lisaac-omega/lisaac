@@ -2,8 +2,11 @@ Header
   + name := Proto
 Inherit
   + parent_tok_drw:Flat Tok_drw
-  - parent_any:Any := Any
  // - parent_lix_buf:LIX_BUF := LIX_BUF
+Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
+  
 File_cfg
   - list:Flat Array Proto
   

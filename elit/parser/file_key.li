@@ -1,7 +1,10 @@
 Header
   + name := File_key
+Insert
+  
+  - parent_elit_common:Elit_common := Elit_common
+  
 Inherit
-  - parent_any:Any := Any
   - parent_file_key_gui:File_key_gui := File_key_gui
   
 Public

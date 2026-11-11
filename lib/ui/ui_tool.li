@@ -1,0 +1,27 @@
+Header
+  + name := Ui_tool
+/* An icon of a @Ui_toolbar, with its bar: its name (@id), the bar open or closed
+   (@is_on), the time of its last change (@stamp, for the animation), and its place in its
+   line (@x, @bar_w: the width of its bar now). */
+Insert
+  - parent_clone:Clone := Clone
+
+Public
+
+  + id:String_alias
+  + is_on:Boolean
+  + stamp:Uint64
+  + x:Real32
+  + bar_w:Real32
+
+  - create i:String_alias :Self <-
+  ( + r:Self
+    r := clone
+    r.set_id i
+    r
+  )
+
+  - set_id i:String_alias <- ( id := i )
+  - set_on b:Boolean stamp t:Uint64 <- ( (is_on,stamp) := (b,t) )
+  - set_x v:Real32 <- ( x := v )
+  - set_bar_w v:Real32 <- ( bar_w := v )

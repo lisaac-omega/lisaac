@@ -9,6 +9,10 @@ Public
 
   - is_invariant:Boolean <- left.is_invariant && {right.is_invariant}
 
+  - is_pure:Boolean <- left.is_pure && {right.is_pure}
+
+  - is_reading v:Variable :Boolean <- left.is_reading v || {right.is_reading v}
+
   + left:Expr
 
   + right:Expr
@@ -86,6 +90,20 @@ Public
     }
   )
 
+  - is_flat_with_null:Boolean <-
+  // One side is @NULL and the other an expanded value (not a @Pointer, which may be
+  // @NULL): never equal. On the left too: `s = 1' with @s known to be @NULL.
+  ( + l,r:Prototype_cst
+    + result:Boolean
+    l ?= left
+    r ?= right
+    result := (r != NULL) && {r.static_type.raw = Type_null} && {left.static_type.is_flat} && {left.static_type.raw != type_pointer}
+    (result).if_false {
+      result := (l != NULL) && {l.static_type.raw = Type_null} && {right.static_type.is_flat} && {right.static_type.raw != type_pointer}
+    }
+    result
+  )
+
   //
   // Execute
   //
@@ -151,6 +169,75 @@ Public
 
   - exec_conservator:Expr <- NULL
   - exec_conservator_left  left_cst :Int_cst :Expr <- NULL
+
+  - is_size e:Expr :Boolean <-
+  // @e is the size of a struct, maybe through a @Cast: never 0,
+  // the compiler never generates an empty struct (see @Type.genere_struct).
+  ( + so:Size_of
+    + ca:Cast
+    + t:Type
+    + result:Boolean
+
+    so ?= e
+    ca ?= e
+    (so != NULL).if {
+      t := so.receiver.raw
+      result := (t.type_c = NULL) && {t.prototype.name != str_n_a} && {t.prototype.name != str_n_a_v}
+    }.elseif {ca != NULL} then {
+      result := is_size (ca.value)
+    }
+    result
+  )
+
+  - is_non_zero_size e:Expr :Boolean <-
+  // @e is a size (see @is_size), or a variable only written with sizes.
+  ( + rd:Read
+    + var:Variable
+    + result:Boolean
+
+    rd ?= e
+    ((rd != NULL) && {rd.variable.require_first != NULL}).if {
+      var := rd.variable
+      result := is_size (var.require_first.value)
+      ((result) && {var.require_list != NULL}).if {
+        (var.require_list.lower).to (var.require_list.upper) do { j:Int
+          result := result && {is_size (var.require_list.at j.value)}
+        }
+      }
+    } else {
+      result := is_size e
+    }
+    result
+  )
+
+  - exec_size left_cst:Int_cst with e:Expr is_equal eq:Boolean :Expr <-
+  //-- 0 == sizeof(struct) -> False
+  //-- 0 != sizeof(struct) -> True
+  //-- 0 == E % 2^n -> 0 == (E & (2^n - 1)), and with != (true with a negative E too)
+  ( + result:Expr
+    + mod:Expr_mod
+    + c:Int_cst
+
+    (left_cst.value = 0).if {
+      mod ?= e
+      (is_non_zero_size e).if {
+        (eq).if {
+          result := Prototype_cst.create position type (type_false.default)
+        } else {
+          result := Prototype_cst.create position type (type_true.default)
+        }
+        left_cst.remove
+        e.remove
+      }.elseif {mod != NULL} then {
+        c ?= mod.right
+        ((c != NULL) && {c.value > 0} && {c.to_power != -1}).if {
+          c.set_value (c.value - 1)
+          result := Self.create position with left_cst and (Expr_and.create (mod.position) with (mod.left) and c)
+        }
+      }
+    }
+    result
+  )
   - exec_conservator_right right_cst:Int_cst :Expr <- NULL
 
   - exec left_cst:Int_cst and right_cst:Int_cst :Expr <- NULL

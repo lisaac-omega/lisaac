@@ -126,7 +126,7 @@ Public
   - run n:String_alias <-
   ( + i:Int
     {(i <= acts.upper) && {acts.at i.text_r != n}}.while_do { i := i + 1; }
-    ((i > acts.upper) || {! acts.at i.run}).if { Any.beep; }
+    ((i > acts.upper) || {! acts.at i.run}).if { Any_gui.beep; }
   )
   
 Private

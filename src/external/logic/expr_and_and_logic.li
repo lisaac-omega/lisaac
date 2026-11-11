@@ -14,8 +14,16 @@ Public
   //
 
   - execute_unlink:Instr <-
-  (
-    execute_link
+  // Value not used: a pure right side is never needed.
+  ( + result:Instr
+
+    right.is_pure.if {
+      right.remove
+      result := left.execute_unlink
+    } else {
+      result := execute_link
+    }
+    result
   )
 
   - execute_link:Expr <-
@@ -30,7 +38,9 @@ Public
     seq_or_and := seq_or_and + 1
     seq_inline := seq_inline + 1
     //
+    cond_depth := cond_depth + 1
     right := right.execute_link
+    cond_depth := cond_depth - 1
     //
     left_cst  ?= left
     right_cst ?= right
@@ -85,11 +95,14 @@ Public
 
   - exec_conservator:Expr <-
   //-- E && Var -> E & Var
+  // Not for a @Read_slot: its receiver may be @NULL, guarded by @left (unless @Flat).
   ( + rd:Read
+    + rd_slot:Read_slot
     + result:Expr
 
     rd ?= right
-    (rd != NULL).if {
+    rd_slot ?= right
+    ((rd != NULL) && {(rd_slot = NULL) || {rd_slot.receiver.static_type.is_flat}}).if {
       result := Expr_and_logic.create position with left and right
     }
     result

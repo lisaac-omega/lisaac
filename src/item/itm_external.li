@@ -161,7 +161,11 @@ Public
         exp1 := profil_slot.argument_list.first.read position
         result := Read_lip.create exp1 type type
       }
-      .when 27 to 31 then { // FREE
+      .when 27 then { // check_one_intern: in debug with `-cop', the `One' fields of `self' are NULL.
+        check_one_product
+        result := Prototype_cst.create position type (Type_void.default)
+      }
+      .when 28 to 31 then { // FREE
         syntax_error (position,"Free external lisaac code.")
       }
     } else {
@@ -195,6 +199,29 @@ Private
           (slot.slot_data_list.lower).to (slot.slot_data_list.upper) do { j:Int
             product_access (slot.slot_data_list.at j)
           }
+        }
+      }
+    }
+  )
+
+  - check_one_product <-
+  // Before a clone (see @Clone.clone): a `One' field not NULL would have two references.
+  ( + type:Type_full
+    + slot:Slot
+    + sl_dta:Slot_data
+    + acc:Array Expr
+    type := profil_slot.argument_list.first.type
+    ((is_cop) && {debug_level_option != 0} && {type.prototype.style != '-'}).if {
+      (type.slot_run.lower).to (type.slot_run.upper) do { i:Int
+        slot := type.slot_run.at i
+        sl_dta := slot.slot_data_intern
+        ((sl_dta != NULL) && {sl_dta.style = '+'} && {sl_dta.type.is_one}).if {
+          acc := Array Expr .create_with_capacity 1
+          acc.add_last (sl_dta.read position with (profil_slot.argument_list.first.read position))
+          string_tmp.copy "/* COP One */ if (@ != NULL) { lisaac_stack_print(0); print_string(\"COP: clone of an object whose `One' field `"
+          string_tmp.append (slot.name)
+          string_tmp.append "' is not NULL: two references.\\n\"); die_with_code(1); }"
+          list_current.add_last (External_c.create position text (string_tmp.to_string_alias) access acc persistant True type (Type_void.default))
         }
       }
     }

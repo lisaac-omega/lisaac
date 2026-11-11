@@ -36,22 +36,30 @@ Public
     vertexes.clear
   )
     
+  + ncmds:Int; // number of commands already flattened
+
   - flatten_paths cmds:Array Pen_cmd <-
+  // As @nvg__flattenPaths, but the commands added since the previous call (a
+  // fill then a stroke of the same path, without @begin_path) are flattened
+  // too, once (nanovg ignores them).
   ( + path:Path
     + tx_min,ty_min,tx_max,ty_max:Real32
-
-    // Flatten
-    0.to (cmds.upper) do { i:Int
-      cmds.at i.to_path self
-    }
-    x_min := y_min :=  1000_000
-    x_max := y_max := -1000_000
-    // Calculate the direction and length of line segments.
-    0.to (paths.upper) do { j:Int
-      path := paths.at j
-      (tx_min,ty_min,tx_max,ty_max) := path.flatten
-      (x_min,y_min) := (x_min.min tx_min,y_min.min ty_min)
-      (x_max,y_max) := (x_max.max tx_max,y_max.max ty_max)
+    (paths.is_empty).if { ncmds := 0; }
+    (ncmds < cmds.count).if {
+      // Flatten
+      ncmds.to (cmds.upper) do { i:Int
+        cmds.at i.to_path self
+      }
+      ncmds := cmds.count
+      x_min := y_min :=  1000_000
+      x_max := y_max := -1000_000
+      // Calculate the direction and length of line segments.
+      0.to (paths.upper) do { j:Int
+        path := paths.at j
+        (tx_min,ty_min,tx_max,ty_max) := path.flatten
+        (x_min,y_min) := (x_min.min tx_min,y_min.min ty_min)
+        (x_max,y_max) := (x_max.max tx_max,y_max.max ty_max)
+      }
     }
   )
   

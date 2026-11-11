@@ -104,4 +104,3 @@ Private
     circle (x0 + x * (width-40).div 2, y0 + y * (height-40).div 2) radius 20
     fill
   )
-  
